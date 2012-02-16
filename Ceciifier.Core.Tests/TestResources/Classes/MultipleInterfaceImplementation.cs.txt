@@ -1,0 +1,5 @@
+﻿abstract class MultipleInterfaceImplementation : System.IDisposable, System.IEquatable<string>
+{
+	public abstract void Dispose();
+	public abstract bool Equals(string other);
+}

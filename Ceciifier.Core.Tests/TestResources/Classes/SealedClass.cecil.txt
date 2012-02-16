@@ -1,0 +1,3 @@
+﻿TypeDefinition t1 = new TypeDefinition("", "SealedClass", TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit | TypeAttributes.Public | TypeAttributes.Sealed, assembly.MainModule.Import(typeof(System.Object)));
+assembly.MainModule.Types.Add(t1);
+t1.Methods.Add(new MethodDefinition(".ctor", MethodAttributes.RTSpecialName | MethodAttributes.FamANDAssem | MethodAttributes.Family | MethodAttributes.HideBySig | MethodAttributes.SpecialName, assembly.MainModule.TypeSystem.Void));

@@ -1,0 +1,4 @@
+﻿TypeDefinition t1 = new TypeDefinition("", "ExplicityDefaultCtor", TypeAttributes.AnsiClass, );
+assembly.MainModule.Types.Add(t1);
+var m1 = new MethodDefinition(".ctor");
+t1.Methods.Add(m1);

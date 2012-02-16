@@ -1,0 +1,10 @@
+﻿class IfStatement
+{
+	public void Foo(int i)
+	{
+		if (i > 10)
+		{
+			Foo(i-1);
+		}
+	}
+}

@@ -1,0 +1,6 @@
+﻿using System;
+class RefFields 
+{
+	private RefFields selfRef;
+	private IDisposable disp;
+}

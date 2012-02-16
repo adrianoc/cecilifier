@@ -1,0 +1,11 @@
+﻿class NonVirtualMethodCall
+{
+	private void Foo()
+	{
+		Bar(42);
+	}
+
+	private void Bar(int i)
+	{
+	}
+}

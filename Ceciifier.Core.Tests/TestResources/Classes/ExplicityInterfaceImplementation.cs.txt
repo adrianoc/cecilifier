@@ -1,0 +1,7 @@
+﻿using System;
+class InterfaceImplementation : IDisposable
+{
+	void IDisposable.Dispose()
+	{
+	}
+}

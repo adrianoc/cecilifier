@@ -1,0 +1,14 @@
+﻿class IfThenElseStatement
+{
+	public void Foo(int i)
+	{
+		if (i > 42)
+		{
+			Foo(i - 1);
+		}
+		else
+		{
+			Foo(i - 42);
+		}
+	}
+}

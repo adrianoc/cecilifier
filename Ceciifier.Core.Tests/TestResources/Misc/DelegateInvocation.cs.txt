@@ -1,0 +1,4 @@
+﻿class VolitileField
+{
+	private volatile static int i;
+}
