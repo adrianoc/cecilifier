@@ -1,3 +1,2 @@
 ﻿TypeDefinition t1 = new TypeDefinition("", "PartialClass", TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit, assembly.MainModule.Import(typeof(System.Object)));
-assembly.MainModule.Types.Add(t1);
-t1.Methods.Add(new MethodDefinition(".ctor", MethodAttributes.RTSpecialName | MethodAttributes.FamANDAssem | MethodAttributes.Family | MethodAttributes.HideBySig | MethodAttributes.SpecialName, assembly.MainModule.TypeSystem.Void));
+!* Non interisting stuff... 

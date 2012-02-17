@@ -1,0 +1,5 @@
+﻿!~1Type definition...
+!~1var method_Foo = new MethodDefinition("Foo", MethodAttributes.Public, assembly.MainModule.TypeSystem.Void);
+!~1t1.Methods.Add(method_Foo);
+!~1method_Foo.Parameters.Add(new ParameterDefinition("i", ParameterAttributes.None, assembly.MainModule.TypeSystem.Int32));
+!*

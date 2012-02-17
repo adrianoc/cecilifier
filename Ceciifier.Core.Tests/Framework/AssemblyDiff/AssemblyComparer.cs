@@ -1,6 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using Mono.Cecil;
+using Mono.Cecil.Cil;
+using Mono.Collections.Generic;
 
 namespace Ceciifier.Core.Tests.Framework.AssemblyDiff
 {
@@ -111,7 +113,10 @@ namespace Ceciifier.Core.Tests.Framework.AssemblyDiff
 					if (!memberVisitor.VisitAttributes(sourceMethod, targetMethod)) return false;
 				}
 
-				ret = ret && !CheckMethodBody(memberVisitor, sourceMethod, targetMethod);
+				if (!CheckMethodBody(memberVisitor, sourceMethod, targetMethod))
+				{
+					ret = false;
+				}
 			}
 
 			return ret;
@@ -124,6 +129,8 @@ namespace Ceciifier.Core.Tests.Framework.AssemblyDiff
 				return visitor.VisitBody(source, target);
 			}
 
+			if (source.Body == null) return true;
+
 			var targetInstructions = target.Body.Instructions.GetEnumerator();
 			foreach (var instruction in source.Body.Instructions)
 			{
@@ -132,7 +139,7 @@ namespace Ceciifier.Core.Tests.Framework.AssemblyDiff
 					return visitor.VisitBody(source, target, instruction);
 				}
 
-				if (instruction != targetInstructions.Current)
+				if (instruction.OpCode != targetInstructions.Current.OpCode)
 				{
 					return visitor.VisitBody(source, target, instruction);
 				}

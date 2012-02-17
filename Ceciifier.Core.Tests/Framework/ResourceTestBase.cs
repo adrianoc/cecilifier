@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Ceciifier.Core.Tests.Framework.AssemblyDiff;
 using Cecilifier.Core.Extensions;
 using Mono.Cecil;
@@ -16,9 +17,11 @@ namespace Ceciifier.Core.Tests.Framework
 			var expected = ReadResource(resourceName, "cecil");
 
 			var expectedCecilDriver = new StreamReader(expected).ReadToEnd().AsCecilApplication();
-			Assert.AreEqual(expectedCecilDriver, Cecilfy(tbc));
+			var generated = Cecilfy(tbc);
 
-			var compiledCecilifierPath = CompilationServices.CompileExe(expectedCecilDriver, typeof(TypeDefinition).Assembly, typeof(IQueryable).Assembly);
+			AssertCecilified(expectedCecilDriver, generated);
+
+			var compiledCecilifierPath = CompilationServices.CompileExe(generated, typeof(TypeDefinition).Assembly, typeof(IQueryable).Assembly);
 
 			var actualAssemblyPath = Path.Combine(Path.GetTempPath(), resourceName + ".dll");
 			Directory.CreateDirectory(Path.GetDirectoryName(actualAssemblyPath));
@@ -31,6 +34,39 @@ namespace Ceciifier.Core.Tests.Framework
 			Console.WriteLine("Compiled from res: {0}", expectedAssemblyPath);
 			
 			CompareAssemblies(expectedAssemblyPath, actualAssemblyPath);
+		}
+
+		private static void AssertCecilified(string expected, string actual)
+		{
+			var expectedReader = new StringReader(expected);
+			var actualReader = new ExtendedStringReader(actual);
+
+			string actualLine;
+			while ( (actualLine = actualReader.ReadLine()) != null )
+			{
+				var expectedLine = expectedReader.ReadLine();
+				if (expectedLine == null)
+				{
+					Assert.Fail("Expectation file is to short.");
+				}
+
+				var rawExpectation = expectedLine.Replace("\t", "").Trim();
+				if (rawExpectation.StartsWith("!*")) return;
+
+				var match = Regex.Match(rawExpectation, "!~(?<linesToSkip>[0-9])*.*");
+				if (match.Success)
+				{
+					int linesToIgnore = Int32.Parse(match.Groups[1].Value) - 1;
+					actualReader.IgnoreNextLines = linesToIgnore;
+					continue;
+				}
+
+				if (rawExpectation == "!") continue;
+
+				Assert.AreEqual(expectedLine, actualLine, expected + "\r\n-------------------\r\n"+actual);
+			}
+
+			Assert.AreEqual(expected, actual);
 		}
 
 		private static string ReadToEnd(Stream tbc)

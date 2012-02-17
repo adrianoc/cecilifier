@@ -12,28 +12,28 @@ namespace Ceciifier.Core.Tests
 			AssertResourceTest(@"Methods\ExplicityDefaultCtor");
 		}
 		
-		[Test, Ignore("Not Implemented yet")]
+		[Test]
 		public void TestMultipleParameters()
 		{
 			AssertResourceTest(@"Methods\MultipleParameters");
 		}
 
-		[Test, Ignore("Not Implemented yet")]
+		[Test]
 		public void TestNoParameters()
 		{
 			AssertResourceTest(@"Methods\NoParameters");
 		}
 
-		[Test, Ignore("Not Implemented yet")]
+		[Test]
 		public void TestSingleSimpleParameter()
 		{
 			AssertResourceTest(@"Methods\SingleSimpleParameter");
 		}
 
 		[Test, Ignore("Not Implemented yet")]
-		public void TestVariableParameterCount()
+		public void TestVariableNumberOfParameters()
 		{
-			AssertResourceTest(@"Methods\VariableParameterCount");
+			AssertResourceTest(@"Methods\VariableNumberOfParameters");
 		}
 		
 		[Test, Ignore("Not Implemented yet")]
@@ -46,6 +46,18 @@ namespace Ceciifier.Core.Tests
 		public void TestAbstractMethod()
 		{
 			AssertResourceTest(@"Methods\AbstractMethod");
+		}
+
+		[Test, Ignore("Not Implemented yet")]
+		public void TestReturnValueMethod()
+		{
+			AssertResourceTest(@"Methods\ReturnValue");
+		}
+
+		[Test, Ignore("Not Implemented yet")]
+		public void TestInOutRefParameters()
+		{
+			AssertResourceTest(@"Methods\InOutRefParameters");
 		}
 	}
 }

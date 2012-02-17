@@ -1,4 +1,6 @@
-﻿class VolitileField
+﻿class MultipleParameters
 {
-	private volatile static int i;
+	private void Foo(int i, string s)
+	{
+	}
 }

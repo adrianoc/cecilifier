@@ -1,4 +1,6 @@
-﻿class VolitileField
+﻿class SingleSimpleParameter
 {
-	private volatile static int i;
+	public void Foo(int i)
+	{
+	}
 }

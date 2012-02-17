@@ -1,3 +1,8 @@
 ﻿TypeDefinition t1 = new TypeDefinition("", "Simple", TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit, assembly.MainModule.Import(typeof(System.Object)));
 assembly.MainModule.Types.Add(t1);
-t1.Methods.Add(new MethodDefinition(".ctor", MethodAttributes.RTSpecialName | MethodAttributes.FamANDAssem | MethodAttributes.Family | MethodAttributes.HideBySig | MethodAttributes.SpecialName, assembly.MainModule.TypeSystem.Void));
+var ctor1 = new MethodDefinition(".ctor", MethodAttributes.RTSpecialName | MethodAttributes.Family | MethodAttributes.HideBySig | MethodAttributes.SpecialName, assembly.MainModule.TypeSystem.Void);
+t1.Methods.Add(ctor1);
+var il2 = ctor1.Body.GetILProcessor();
+ctor1.Body.Instructions.Add(il2.Create(OpCodes.Ldarg_0));
+ctor1.Body.Instructions.Add(il2.Create(OpCodes.Call, assembly.MainModule.Import(DefaultCtorFor(t1.BaseType.Resolve(), assembly))));
+ctor1.Body.Instructions.Add(il2.Create(OpCodes.Ret));

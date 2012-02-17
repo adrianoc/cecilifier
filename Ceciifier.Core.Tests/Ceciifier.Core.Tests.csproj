@@ -54,6 +54,7 @@
     <Compile Include="Framework\AssemblyDiff\StrictFieldDiffVisitor.cs" />
     <Compile Include="Framework\AssemblyDiff\StrictMethodDiffVisitor.cs" />
     <Compile Include="Framework\AssemblyDiff\StrictTypeDiffVisitor.cs" />
+    <Compile Include="Framework\ExtendedStringReader.cs" />
     <Compile Include="Framework\Formatter.cs" />
     <Compile Include="Framework\TestFramework.cs" />
     <Compile Include="Framework\CompilationServices.cs" />
@@ -202,6 +203,12 @@
     <Content Include="TestResources\Methods\AbstractMethod.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Content Include="TestResources\Methods\ReturnValue.cecil.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="TestResources\Methods\ReturnValue.cs.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="TestResources\Methods\ExplicityDefaultCtor.cecil.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
@@ -220,10 +227,10 @@
     <Content Include="TestResources\Methods\MultipleParameters.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Methods\VariableParameterCount.cecil.txt">
+    <Content Include="TestResources\Methods\VariableNumberOfParameters.cecil.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Methods\VariableParameterCount.cs.txt">
+    <Content Include="TestResources\Methods\VariableNumberOfParameters.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="TestResources\Methods\SingleSimpleParameter.cecil.txt">

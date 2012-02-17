@@ -2,4 +2,4 @@
 assembly.MainModule.Types.Add(t1);
 var ft1 = new FieldDefinition("i", FieldAttributes.Private, assembly.MainModule.TypeSystem.Int32);
 t1.Fields.Add(ft1);
-t1.Methods.Add(new MethodDefinition(".ctor", MethodAttributes.RTSpecialName | MethodAttributes.FamANDAssem | MethodAttributes.Family | MethodAttributes.HideBySig | MethodAttributes.SpecialName, assembly.MainModule.TypeSystem.Void));
+!* Not relevant for this test.

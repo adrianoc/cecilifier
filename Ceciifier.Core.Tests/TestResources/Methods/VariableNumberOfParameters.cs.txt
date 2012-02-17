@@ -1,0 +1,6 @@
+﻿class VariableNumberOfParameters
+{
+	public void Foo(params string[] args)
+	{
+	}
+}

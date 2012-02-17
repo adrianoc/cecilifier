@@ -1,5 +1,6 @@
-﻿TypeDefinition t1 = new TypeDefinition("", "VolitileField", TypeAttributes.AnsiClass);
-assembly.MainModule.Types.Add(t1);
-var ft1 = new FieldDefinition("i", FieldAttributes.Private | FieldAttributes.Static, assembly.MainModule.Import(typeof(int)));
-var ft2 = new RequiredModifierType(assembly.MainModule.Import(typeof(System.Runtime.CompilerServices.IsVolatile), ft1);
-t1.Fields.Add(ft2);
+﻿!~2 Type definition
+var method_Foo = new MethodDefinition("Foo", MethodAttributes.Private, assembly.MainModule.TypeSystem.Void);
+t1.Methods.Add(method_Foo);
+method_Foo.Parameters.Add(new ParameterDefinition("i", ParameterAttributes.None, assembly.MainModule.TypeSystem.Int32));
+method_Foo.Parameters.Add(new ParameterDefinition("s", ParameterAttributes.None, assembly.MainModule.TypeSystem.String));
+!*
