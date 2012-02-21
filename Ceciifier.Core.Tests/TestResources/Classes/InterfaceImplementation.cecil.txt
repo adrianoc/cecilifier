@@ -1,4 +1,5 @@
-﻿TypeDefinition t1 = new TypeDefinition("", "InterfaceImplementation", TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit | TypeAttributes.Abstract, assembly.MainModule.Import(typeof(System.Object)));
+﻿!*
+TypeDefinition t1 = new TypeDefinition("", "InterfaceImplementation", TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit | TypeAttributes.Abstract, assembly.MainModule.Import(typeof(System.Object)));
 t1.Interfaces.Add(assembly.MainModule.Import(typeof(IDisposable)));
 assembly.MainModule.Types.Add(t1);
 var method_Dispose = new MethodDefinition("Dispose", MethodAttributes.Public | MethodAttributes.Abstract, assembly.MainModule.TypeSystem.Void);

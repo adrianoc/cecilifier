@@ -4,6 +4,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Cecilifier.Core.Extensions;
+using Roslyn.Compilers;
 using Roslyn.Compilers.CSharp;
 
 namespace Cecilifier.Core.AST
@@ -164,7 +165,18 @@ namespace Cecilifier.Core.AST
 		private string MethodModifiersToCecil(MethodDeclarationSyntax methodDeclaration)
 		{
 			var cecilModifiersStr = ModifiersToCecil("MethodAttributes", methodDeclaration.Modifiers);
-			return (cecilModifiersStr == string.Empty ? "MethodAttributes.Private" : cecilModifiersStr) + "  | MethodAttributes.HideBySig";
+			var methodSymbol = (MethodSymbol) semanticModel.GetDeclaredSymbol(methodDeclaration);
+
+			//TypeSymbol itf = semanticModel.Compilation.GetSpecialType(SpecialType.System_IDisposable);
+
+			var x = methodSymbol.ContainingType.Interfaces.SelectMany(i => i.GetMembers()).Where(m => m.Name == methodSymbol.Name);
+			
+			//TypeSymbol declaringType = itf;
+			var declaringType = methodSymbol.ContainingType.FindImplementationForInterfaceMember(methodSymbol.ConstructedFrom);
+			//Console.WriteLine("{0} -> {1}", declaringType.Name, declaringType.TypeKind);
+			
+			
+			return (cecilModifiersStr == string.Empty ? "MethodAttributes.Private" : cecilModifiersStr) + " | MethodAttributes.HideBySig";
 		}
 
 		private static string TypeModifiersToCecil(ClassDeclarationSyntax node)
