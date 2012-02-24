@@ -1,4 +1,4 @@
 ﻿!~2 Not relevant: Type initialization
-var method_Foo = new MethodDefinition("Foo", MethodAttributes.Public, assembly.MainModule.TypeSystem.Void);
-t1.Methods.Add(method_Foo);
+var method_NoParameters_Foo = new MethodDefinition("Foo", MethodAttributes.Public | MethodAttributes.HideBySig, assembly.MainModule.TypeSystem.Void);
+t1.Methods.Add(method_NoParameters_Foo);
 !*

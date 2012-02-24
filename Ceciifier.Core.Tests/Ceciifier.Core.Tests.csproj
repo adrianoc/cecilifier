@@ -54,14 +54,14 @@
     <Compile Include="Framework\AssemblyDiff\StrictFieldDiffVisitor.cs" />
     <Compile Include="Framework\AssemblyDiff\StrictMethodDiffVisitor.cs" />
     <Compile Include="Framework\AssemblyDiff\StrictTypeDiffVisitor.cs" />
-    <Compile Include="Framework\ExtendedStringReader.cs" />
+    <Compile Include="Framework\IgnoringStringReader.cs" />
     <Compile Include="Framework\Formatter.cs" />
     <Compile Include="Framework\TestFramework.cs" />
     <Compile Include="Framework\CompilationServices.cs" />
     <Compile Include="Framework\ResourceTestBase.cs" />
     <Compile Include="Tests\CodeBlock.cs" />
     <Compile Include="Tests\FieldsTestCase.cs" />
-    <Compile Include="Tests\ClassesTestCase.cs" />
+    <Compile Include="Tests\TypesTestCase.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Tests\MethodTestCase.cs" />
     <Compile Include="Tests\MiscTestCase.cs" />
@@ -77,52 +77,64 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="TestResources\Classes\AbstractClass.cecil.txt">
+    <Content Include="TestResources\Types\AbstractClass.cecil.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Classes\AbstractClass.cs.txt">
+    <Content Include="TestResources\Types\AbstractClass.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Classes\MultipleInterfaceImplementation.cecil.txt">
+    <Content Include="TestResources\Types\InterfaceDefinition.cecil.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Classes\MultipleInterfaceImplementation.cs.txt">
+    <Content Include="TestResources\Types\InterfaceDefinition.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Classes\Inheritance.cecil.txt">
+    <Content Include="TestResources\Types\InheritanceSameCompilationUnit.cecil.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Classes\Inheritance.cs.txt">
+    <Content Include="TestResources\Types\InheritanceSameCompilationUnit.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Classes\ExplicityInterfaceImplementation.cecil.txt">
+    <Content Include="TestResources\Types\MultipleInterfaceImplementation.cecil.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Classes\ExplicityInterfaceImplementation.cs.txt">
+    <Content Include="TestResources\Types\MultipleInterfaceImplementation.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Classes\InterfaceImplementation.cecil.txt">
+    <Content Include="TestResources\Types\Inheritance.cecil.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Classes\InterfaceImplementation.cs.txt">
+    <Content Include="TestResources\Types\Inheritance.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Classes\InnerClass.cecil.txt">
+    <Content Include="TestResources\Types\ExplicityInterfaceImplementation.cecil.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Classes\InnerClass.cs.txt">
+    <Content Include="TestResources\Types\ExplicityInterfaceImplementation.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Classes\PartialClass.cecil.txt">
+    <Content Include="TestResources\Types\InterfaceImplementation.cecil.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Classes\PartialClass.cs.txt">
+    <Content Include="TestResources\Types\InterfaceImplementation.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Classes\SealedClass.cecil.txt">
+    <Content Include="TestResources\Types\InnerClass.cecil.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Classes\SealedClass.cs.txt">
+    <Content Include="TestResources\Types\InnerClass.cs.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="TestResources\Types\PartialClass.cecil.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="TestResources\Types\PartialClass.cs.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="TestResources\Types\SealedClass.cecil.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="TestResources\Types\SealedClass.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="TestResources\CodeBlock\Conditional\IfThenElseStatement.cs.txt.cecil.txt">
@@ -191,10 +203,10 @@
     <Content Include="TestResources\Fields\SingleField.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Classes\Simplest.cecil.txt">
+    <Content Include="TestResources\Types\Simplest.cecil.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Classes\Simplest.cs.txt">
+    <Content Include="TestResources\Types\Simplest.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="TestResources\Methods\AbstractMethod.cecil.txt">

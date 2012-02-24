@@ -1,9 +1,0 @@
-﻿TypeDefinition t1 = new TypeDefinition("", "MultipleInterfaceImplementation", TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit | TypeAttributes.Abstract, assembly.MainModule.Import(typeof(System.Object)));
-t1.Interfaces.Add(assembly.MainModule.Import(typeof(System.IDisposable)));
-t1.Interfaces.Add(assembly.MainModule.Import(typeof(System.IEquatable<string>)));
-assembly.MainModule.Types.Add(t1);
-var method_Dispose = new MethodDefinition("Dispose", MethodAttributes.Public | MethodAttributes.Abstract, assembly.MainModule.TypeSystem.Void);
-t1.Methods.Add(method_Dispose);
-var method_Equals = new MethodDefinition("Equals", MethodAttributes.Public | MethodAttributes.Abstract, assembly.MainModule.TypeSystem.Boolean);
-t1.Methods.Add(method_Equals);
-!* Common ctor injection code

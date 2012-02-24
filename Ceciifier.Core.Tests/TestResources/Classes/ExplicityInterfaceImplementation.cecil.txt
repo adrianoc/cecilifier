@@ -1,6 +1,0 @@
-﻿!
-t1.Interfaces.Add(assembly.MainModule.Import(typeof(IDisposable)));
-!
-var method_Dispose = new MethodDefinition("System.IDisposable.Dispose", MethodAttributes.Private | MethodAttributes.HideBySig, assembly.MainModule.TypeSystem.Void);
-t1.Methods.Add(method_Dispose);
-!*

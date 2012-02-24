@@ -1,6 +1,7 @@
-﻿!~2 Standard type declaration
-var method_Foo = new MethodDefinition("Foo", MethodAttributes.Public, assembly.MainModule.TypeSystem.Void);
-t1.Methods.Add(method_Foo);
-method_Foo.Parameters.Add(new ParameterDefinition("i", ParameterAttributes.None, assembly.MainModule.TypeSystem.Int32));
-var il_Foo = method_Foo.Body.GetILProcessor();
-ctor1.Body.Instructions.Add(il2.Create(OpCodes.Ret));
+﻿!~2
+var method_SingleSimpleParameter_Foo = new MethodDefinition("Foo", MethodAttributes.Public | MethodAttributes.HideBySig, assembly.MainModule.TypeSystem.Void);
+t1.Methods.Add(method_SingleSimpleParameter_Foo);
+var il_SingleSimpleParameter_Foo = method_SingleSimpleParameter_Foo.Body.GetILProcessor();
+method_SingleSimpleParameter_Foo.Parameters.Add(new ParameterDefinition("i", ParameterAttributes.None, assembly.MainModule.TypeSystem.Int32));
+method_SingleSimpleParameter_Foo.Body.Instructions.Add(il_SingleSimpleParameter_Foo.Create(OpCodes.Ret));
+!~6 Ctor

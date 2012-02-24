@@ -1,5 +1,7 @@
 ﻿using System;
 abstract class InterfaceImplementation : IDisposable
 {
-	public abstract void Dispose();
+	public void Dispose()
+	{
+	}
 }

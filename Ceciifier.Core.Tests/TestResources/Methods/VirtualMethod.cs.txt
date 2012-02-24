@@ -1,4 +1,9 @@
-﻿class VolitileField
+﻿class Virtual
 {
-	private volatile static int i;
+	public virtual void VirtualMethod() {}
+}
+
+class Override : Virtual
+{
+	override public void VirtualMethod() {}
 }

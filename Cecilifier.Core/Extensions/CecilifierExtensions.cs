@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Linq;
+using Roslyn.Compilers;
+using Roslyn.Compilers.CSharp;
 
 namespace Cecilifier.Core.Extensions
 {
@@ -42,6 +45,52 @@ namespace Cecilifier.Core.Extensions
 
                         }}
                       ", cecilSnipet);
+		}
+
+		public static MethodSymbol FindLastDefinition(this MethodSymbol self)
+		{
+			if (self == null) return null;
+			return FindLastDefinition(self, self.ContainingType) ?? self;
+		}
+
+		private static MethodSymbol FindLastDefinition(MethodSymbol method, NamedTypeSymbol toBeChecked)
+		{
+			if (toBeChecked == null) return null;
+
+			var found = toBeChecked.GetMembers().OfType<MethodSymbol>().Where(candidate => CompareMethods(candidate, method)).SingleOrDefault();
+			if (found == method || found == null)
+			{
+				found = FindLastDefinition(method, toBeChecked.Interfaces);
+				found = found ?? FindLastDefinition(method, toBeChecked.BaseType);
+			}
+
+			return found;
+		}
+
+		private static MethodSymbol FindLastDefinition(MethodSymbol method, ReadOnlyArray<NamedTypeSymbol> implementedItfs)
+		{
+			foreach(var itf in implementedItfs)
+			{
+				var found = FindLastDefinition(method, itf);
+				if (found != null) return found;
+			}
+
+			return null;
+		}
+
+		private static bool CompareMethods(MethodSymbol lhs, MethodSymbol rhs)
+		{
+			if (lhs.Name != rhs.Name) return false;
+
+			if (lhs.ReturnType != rhs.ReturnType) return false;
+			
+			if (lhs.Parameters.Count != rhs.Parameters.Count) return false;
+			for(int i = 0; i < lhs.Parameters.Count; i++)
+			{
+				if (lhs.Parameters[i].Type != rhs.Parameters[i].Type) return false;
+			}
+
+			return true;
 		}
 	}
 }

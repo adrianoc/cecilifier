@@ -1,0 +1,4 @@
+﻿interface Itf
+{
+	public void ItfMethod();
+}
