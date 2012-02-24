@@ -26,7 +26,15 @@ namespace Ceciifier.Core.Tests.Framework
 			var actualAssemblyPath = Path.Combine(Path.GetTempPath(), resourceName + ".dll");
 			Directory.CreateDirectory(Path.GetDirectoryName(actualAssemblyPath));
 
-			TestFramework.Execute(compiledCecilifierPath, actualAssemblyPath);
+			try
+			{
+				TestFramework.Execute(compiledCecilifierPath, actualAssemblyPath);
+			}
+			catch(Exception ex)
+			{
+				Assert.Fail("Fail to execute generated cecil snipet: " + ex + "\r\n" + generated);
+			}
+
 			var expectedAssemblyPath = CompilationServices.CompileDLL(ReadToEnd(tbc));
 
 			Console.WriteLine("Cecil build assembly path: {0}", actualAssemblyPath);
@@ -39,7 +47,7 @@ namespace Ceciifier.Core.Tests.Framework
 		private static void AssertCecilified(string expected, string actual)
 		{
 			var expectedReader = new StringReader(expected);
-			var actualReader = new ExtendedStringReader(actual);
+			var actualReader = new IgnoringStringReader(actual);
 
 			string actualLine;
 			while ( (actualLine = actualReader.ReadLine()) != null )
@@ -66,7 +74,7 @@ namespace Ceciifier.Core.Tests.Framework
 				Assert.AreEqual(expectedLine, actualLine, expected + "\r\n-------------------\r\n"+actual);
 			}
 
-			Assert.AreEqual(expected, actual);
+			Assert.IsNull(expectedReader.ReadLine());
 		}
 
 		private static string ReadToEnd(Stream tbc)
