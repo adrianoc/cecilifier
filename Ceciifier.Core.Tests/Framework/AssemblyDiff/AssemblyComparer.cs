@@ -1,6 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Mono.Cecil;
+using Mono.Cecil.Cil;
 
 namespace Ceciifier.Core.Tests.Framework.AssemblyDiff
 {
@@ -129,8 +131,9 @@ namespace Ceciifier.Core.Tests.Framework.AssemblyDiff
 
 			if (source.Body == null) return true;
 
-			var targetInstructions = target.Body.Instructions.GetEnumerator();
-			foreach (var instruction in source.Body.Instructions)
+			Func<Instruction, bool> ignoreNops = i => i.OpCode != OpCodes.Nop;
+			var targetInstructions = target.Body.Instructions.Where(ignoreNops).GetEnumerator();
+			foreach (var instruction in source.Body.Instructions.Where(ignoreNops))
 			{
 				if (!targetInstructions.MoveNext())
 				{
