@@ -1,15 +1,10 @@
-﻿TypeDefinition t1 = new TypeDefinition("", "MultipleInterfaceImplementation", TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit | TypeAttributes.Abstract, assembly.MainModule.Import(typeof(System.Object)));
+﻿!~1 Type definition MultipleInterfaceImplementation
 t1.Interfaces.Add(assembly.MainModule.Import(typeof(System.IDisposable)));
 t1.Interfaces.Add(assembly.MainModule.Import(typeof(System.IEquatable<string>)));
-assembly.MainModule.Types.Add(t1);
-var method_MultipleInterfaceImplementation_Dispose = new MethodDefinition("Dispose", MethodAttributes.Public | MethodAttributes.Abstract | MethodAttributes.HideBySig, assembly.MainModule.TypeSystem.Void);
+!~1 Add type to assembly
+var method_MultipleInterfaceImplementation_Dispose = new MethodDefinition("Dispose", MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.Virtual | MethodAttributes.NewSlot | MethodAttributes.Abstract, assembly.MainModule.TypeSystem.Void);
 t1.Methods.Add(method_MultipleInterfaceImplementation_Dispose);
-var method_MultipleInterfaceImplementation_Equals = new MethodDefinition("Equals", MethodAttributes.Public | MethodAttributes.Abstract | MethodAttributes.HideBySig, assembly.MainModule.TypeSystem.Boolean);
+var method_MultipleInterfaceImplementation_Equals = new MethodDefinition("Equals", MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.Virtual | MethodAttributes.NewSlot | MethodAttributes.Abstract, assembly.MainModule.TypeSystem.Boolean);
 t1.Methods.Add(method_MultipleInterfaceImplementation_Equals);
 method_MultipleInterfaceImplementation_Equals.Parameters.Add(new ParameterDefinition("other", ParameterAttributes.None, assembly.MainModule.TypeSystem.String));
-var ctor1 = new MethodDefinition(".ctor", MethodAttributes.RTSpecialName | MethodAttributes.Family | MethodAttributes.HideBySig | MethodAttributes.SpecialName, assembly.MainModule.TypeSystem.Void);
-t1.Methods.Add(ctor1);
-var il2 = ctor1.Body.GetILProcessor();
-ctor1.Body.Instructions.Add(il2.Create(OpCodes.Ldarg_0));
-ctor1.Body.Instructions.Add(il2.Create(OpCodes.Call, assembly.MainModule.Import(DefaultCtorFor(t1.BaseType.Resolve(), assembly))));
-ctor1.Body.Instructions.Add(il2.Create(OpCodes.Ret));
+!~6 Ctor definition
