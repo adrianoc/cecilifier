@@ -31,7 +31,7 @@ namespace Ceciifier.Core.Tests.Framework
 
 			if (!string.IsNullOrWhiteSpace(err.ToString()))
 			{
-				throw new ApplicationException("Error: " + err + "\r\nOuput: " + @out);
+				throw new ApplicationException("Error: " + err + "\r\nOuput: " + @out + "\r\nExecutable: " + executable);
 			}
 		}
 	}

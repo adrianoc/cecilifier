@@ -34,6 +34,7 @@ namespace Ceciifier.Core.Tests.Framework
 
 			parameters.OutputAssembly = Path.Combine(tempFolder, Path.GetRandomFileName() + (exe ? ".exe" : ".dll"));
 			parameters.GenerateExecutable = exe;
+			parameters.IncludeDebugInformation = true;
 
 			var results = provider.CompileAssemblyFromSource(parameters, source);
 
