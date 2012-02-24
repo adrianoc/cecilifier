@@ -33,13 +33,13 @@ namespace Ceciifier.Core.Tests.Framework.AssemblyDiff
 
 		public bool VisitReturnType(MethodDefinition source, MethodDefinition target)
 		{
-			output.WriteLine(string.Format("[{0}] Method return types differs. Expected '{1}' got {2}.", target.DeclaringType.FullName, source.ReturnType.FullName, target.ReturnType.FullName));
+			output.WriteLine(string.Format("[{0}] Method return types differs. Expected '{1}' got {2}.", target.FullName, source.ReturnType.FullName, target.ReturnType.FullName));
 			return false;
 		}
 
 		public bool VisitAttributes(MethodDefinition source, MethodDefinition target)
 		{
-			output.WriteLine(string.Format("[{0}] Method attributes differs. Expected '{1}' got {2}.", target.DeclaringType.FullName, source.Attributes, target.Attributes));
+			output.WriteLine(string.Format("[{0}] Method attributes differs. Expected '{1}' got {2}.", target.FullName, source.Attributes, target.Attributes));
 			return false;
 		}
 
