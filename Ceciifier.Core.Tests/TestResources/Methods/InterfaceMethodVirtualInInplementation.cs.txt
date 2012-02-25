@@ -1,0 +1,7 @@
+﻿using System;
+class InterfaceMethodVirtualInInplementation : IDisposable
+{
+	public virtual void Dispose()
+	{
+	}
+}

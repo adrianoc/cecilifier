@@ -59,5 +59,11 @@ namespace Ceciifier.Core.Tests
 		{
 			AssertResourceTest(@"Methods\InOutRefParameters");
 		}
+
+		[Test]
+		public void TestInterfaceMethodVirtualInInplementation()
+		{
+			AssertResourceTest(@"Methods\InterfaceMethodVirtualInInplementation");
+		}
 	}
 }

@@ -1,5 +1,5 @@
 ﻿using System;
-abstract class InterfaceImplementation : IDisposable
+class InterfaceImplementation : IDisposable
 {
 	public void Dispose()
 	{
