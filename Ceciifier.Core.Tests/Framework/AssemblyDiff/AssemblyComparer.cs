@@ -56,14 +56,22 @@ namespace Ceciifier.Core.Tests.Framework.AssemblyDiff
 				//ret = ret && CheckTypeGenericInformation(typeVisitor, sourceType, targetType);
 				ret = ret && CheckTypeMembers(typeVisitor, sourceType, targetType);
 				ret = ret && CheckTypeInheritance(typeVisitor, sourceType, targetType);
+				ret = ret && CheckImplementedInterfaces(typeVisitor, sourceType, targetType);
 			}
 
 			//TODO: Check missing classes
 			return ret;
 		}
 
+		private bool CheckImplementedInterfaces(ITypeDiffVisitor typeVisitor, TypeDefinition sourceType, TypeDefinition targetType)
+		{
+			//TODO: Check the interfaces
+			return sourceType.Interfaces.Count == targetType.Interfaces.Count;
+		}
+
 		private bool CheckTypeInheritance(ITypeDiffVisitor typeVisitor, TypeDefinition source, TypeDefinition target)
 		{
+			if (target.BaseType == null && source.BaseType == null) return true;
 			if (target.BaseType != null && (source.BaseType.FullName == target.BaseType.FullName)) return true;
 			
 			return typeVisitor.VisitBaseType(source.BaseType.Resolve(), target);

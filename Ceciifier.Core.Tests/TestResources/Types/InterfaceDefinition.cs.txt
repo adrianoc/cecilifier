@@ -1,4 +1,4 @@
 ﻿interface Itf
 {
-	public void ItfMethod();
+	void ItfMethod();
 }

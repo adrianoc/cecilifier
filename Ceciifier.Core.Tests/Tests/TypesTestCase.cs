@@ -66,7 +66,7 @@ namespace Ceciifier.Core.Tests
 			AssertResourceTest(@"Types\InheritanceSameCompilationUnit");
 		}
 		
-		[Test, Ignore("Not implemented yet")]
+		[Test]
 		public void InterfaceDefinitionTest()
 		{
 			AssertResourceTest(@"Types\InterfaceDefinition");
