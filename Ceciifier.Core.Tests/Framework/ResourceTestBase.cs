@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -95,7 +96,12 @@ namespace Ceciifier.Core.Tests.Framework
 
 		private Stream ReadResource(string resourceName, string type)
 		{
-			return new FileStream(Path.Combine("TestResources", resourceName + "." + type + ".txt"), FileMode.Open, FileAccess.Read, FileShare.Read);
+			return ReadResource(resourceName.GetPathOf(type));
+		}
+
+		private Stream ReadResource(string path)
+		{
+			return new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
 		}
 
 		private string Cecilfy(Stream stream)

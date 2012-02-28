@@ -1,4 +1,4 @@
-﻿TypeDefinition t1 = new TypeDefinition("", "Simple", TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit, assembly.MainModule.Import(typeof(System.Object)));
+﻿TypeDefinition t1 = new TypeDefinition("", "Simple", TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit, assembly.MainModule.Import(typeof(Object)));
 assembly.MainModule.Types.Add(t1);
 var ctor1 = new MethodDefinition(".ctor", MethodAttributes.RTSpecialName | MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName, assembly.MainModule.TypeSystem.Void);
 t1.Methods.Add(ctor1);

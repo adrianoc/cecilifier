@@ -1,5 +1,4 @@
-﻿TypeDefinition t1 = new TypeDefinition("", "Simple", TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit, assembly.MainModule.Import(typeof(System.Object)));
-assembly.MainModule.Types.Add(t1);
+﻿!~2 Type definition Simple
 var ft1 = new FieldDefinition("i", FieldAttributes.Private | FieldAttributes.Static, assembly.MainModule.TypeSystem.Int32);
 t1.Fields.Add(ft1);
 !* Not relevant for this test.

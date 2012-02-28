@@ -18,7 +18,7 @@ namespace Ceciifier.Core.Tests
 			AssertResourceTest(@"Misc\TryCatchFinally");
 		}
 
-		[Test, Ignore("Not Implemented yet")]
+		[Test]
 		public void TestNamespaces()
 		{
 			AssertResourceTest(@"Misc\Namespaces");

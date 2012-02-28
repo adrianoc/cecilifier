@@ -26,6 +26,22 @@ namespace Cecilifier.Core.AST
 			base.VisitBlock(node);
 		}
 
+		protected override void VisitNamespaceDeclaration(NamespaceDeclarationSyntax node)
+		{
+			try
+			{
+				var namespaceHierarchy = node.AncestorsAndSelf().OfType<NamespaceDeclarationSyntax>().Reverse();
+				currentNameSpace = namespaceHierarchy.Aggregate("",(acc, curr) => acc + "." + curr.Name.GetText());
+
+				currentNameSpace = currentNameSpace.StartsWith(".") ? currentNameSpace.Substring(1) : currentNameSpace;
+				base.VisitNamespaceDeclaration(node);
+			}
+			finally
+			{
+				currentNameSpace = string.Empty;
+			}
+		}
+
 		protected override void VisitInterfaceDeclaration(InterfaceDeclarationSyntax node)
 		{
 			HandleInterfaceDeclaration(node);
@@ -156,7 +172,7 @@ namespace Cecilifier.Core.AST
 
 		private string MethodModifiersToCecil(MethodDeclarationSyntax methodDeclaration)
 		{
-			string modifiers = MapExplicityModifiers(methodDeclaration);
+			var modifiers = MapExplicityModifiers(methodDeclaration);
 
 			var defaultAccessibility = "MethodAttributes.Private";
 			if (modifiers == string.Empty)
@@ -346,7 +362,7 @@ namespace Cecilifier.Core.AST
 
 			var varName = LocalVariableNameForId(NextLocalVariableTypeId());
 
-			AddCecilExpression("TypeDefinition {0} = new TypeDefinition(\"\", \"{1}\", {2}{3});", varName, node.Identifier.Value, TypeModifiersToCecil(node), !string.IsNullOrWhiteSpace(baseType) ? ", " + baseType : "");
+			AddCecilExpression("TypeDefinition {0} = new TypeDefinition(\"{1}\", \"{2}\", {3}{4});", varName, currentNameSpace, node.Identifier.Value, TypeModifiersToCecil(node), !string.IsNullOrWhiteSpace(baseType) ? ", " + baseType : "");
 
 			foreach (var itfName in ImplementedInterfacesFor(node.BaseListOpt))
 			{
@@ -427,6 +443,7 @@ namespace Cecilifier.Core.AST
 		private readonly SemanticModel semanticModel;
 		private IDictionary<TypeDeclarationSyntax, TypeInfo> typeToTypeInfo = new Dictionary<TypeDeclarationSyntax, TypeInfo>();
 		private Stack<LocalVariable> nodeStack = new Stack<LocalVariable>();
+		private string currentNameSpace;
 
 		class LocalVariable
 		{

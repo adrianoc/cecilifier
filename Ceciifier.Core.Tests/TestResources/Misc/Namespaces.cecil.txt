@@ -1,5 +1,6 @@
-﻿TypeDefinition t1 = new TypeDefinition("", "VolitileField", TypeAttributes.AnsiClass);
-assembly.MainModule.Types.Add(t1);
-var ft1 = new FieldDefinition("i", FieldAttributes.Private | FieldAttributes.Static, assembly.MainModule.Import(typeof(int)));
-var ft2 = new RequiredModifierType(assembly.MainModule.Import(typeof(System.Runtime.CompilerServices.IsVolatile), ft1);
-t1.Fields.Add(ft2);
+﻿TypeDefinition t1 = new TypeDefinition("Foo", "Namespaces", TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit, assembly.MainModule.Import(typeof(Object)));
+!~7 add type to module + ctor
+TypeDefinition t2 = new TypeDefinition("Foo.Bar", "InsideBar", TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit, assembly.MainModule.Import(typeof(Object)));
+!~7 add type to module + ctor
+TypeDefinition t3 = new TypeDefinition("Foo.Bar.Baz", "InsideBaz", TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit, assembly.MainModule.Import(typeof(Object)));
+!~7 add type to module + ctor
