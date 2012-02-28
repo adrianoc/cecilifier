@@ -14,6 +14,12 @@ namespace Cecilifier.Core.Extensions
 							: str;
 		}
 
+
+		public static string MapModifier(this SyntaxToken modifier)
+		{
+			return modifier.Kind == SyntaxKind.ProtectedKeyword ? "Family" : modifier.ValueText.CamelCase();
+		}
+
 		public static string AppendModifier(this string to, string modifier)
 		{
 			if (string.IsNullOrWhiteSpace(modifier)) return to;

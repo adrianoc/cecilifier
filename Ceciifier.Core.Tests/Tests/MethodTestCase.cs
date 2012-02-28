@@ -6,7 +6,7 @@ namespace Ceciifier.Core.Tests
 	[TestFixture]
 	public class MethodTestCase : ResourceTestBase
 	{
-		[Test, Ignore("Not Implemented yet")]
+		[Test]
 		public void TestExplicityDefaultCtor()
 		{
 			AssertResourceTest(@"Methods\ExplicityDefaultCtor");
@@ -42,7 +42,7 @@ namespace Ceciifier.Core.Tests
 			AssertResourceTest(@"Methods\VirtualMethod");
 		}
 
-		[Test, Ignore("Not Implemented yet")]
+		[Test]
 		public void TestAbstractMethod()
 		{
 			AssertResourceTest(@"Methods\AbstractMethod");

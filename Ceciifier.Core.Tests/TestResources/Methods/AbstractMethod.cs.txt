@@ -1,4 +1,4 @@
-﻿class VolitileField
+﻿abstract class AbstractClass
 {
-	private volatile static int i;
+	protected abstract void AbstractMethod();
 }

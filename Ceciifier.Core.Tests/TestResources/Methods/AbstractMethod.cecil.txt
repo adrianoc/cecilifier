@@ -1,5 +1,4 @@
-﻿TypeDefinition t1 = new TypeDefinition("", "VolitileField", TypeAttributes.AnsiClass);
-assembly.MainModule.Types.Add(t1);
-var ft1 = new FieldDefinition("i", FieldAttributes.Private | FieldAttributes.Static, assembly.MainModule.Import(typeof(int)));
-var ft2 = new RequiredModifierType(assembly.MainModule.Import(typeof(System.Runtime.CompilerServices.IsVolatile), ft1);
-t1.Fields.Add(ft2);
+﻿!~2 type definition: AbstractClass
+var method_AbstractClass_AbstractMethod = new MethodDefinition("AbstractMethod", MethodAttributes.Family | MethodAttributes.HideBySig | MethodAttributes.Virtual | MethodAttributes.NewSlot | MethodAttributes.Abstract, assembly.MainModule.TypeSystem.Void);
+t1.Methods.Add(method_AbstractClass_AbstractMethod);
+!~6 ctor
