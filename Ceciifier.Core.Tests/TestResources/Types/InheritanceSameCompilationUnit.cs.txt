@@ -1,4 +1,5 @@
 ﻿class Base {}
+
 class InheritanceSameCompilationUnit : Base
 {
 }

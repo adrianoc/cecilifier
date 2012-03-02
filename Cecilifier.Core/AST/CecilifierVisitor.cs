@@ -4,15 +4,43 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Cecilifier.Core.Extensions;
+using Roslyn.Compilers;
 using Roslyn.Compilers.CSharp;
 
 namespace Cecilifier.Core.AST
 {
+	class TestVisitor : SyntaxWalker
+	{
+		protected override void VisitMemberAccessExpression(MemberAccessExpressionSyntax node)
+		{
+			Console.Write("{0}", node);
+		}
+
+		protected override void VisitArgumentList(ArgumentListSyntax node)
+		{
+			Console.Write("(");
+			base.VisitArgumentList(node);
+			Console.WriteLine(")");
+		}
+		protected override void VisitArgument(ArgumentSyntax node)
+		{
+			Console.Write("{0}", node);
+			base.VisitArgument(node);
+		}
+	}
+
 	class CecilifierVisitor : SyntaxWalker
 	{
 		public CecilifierVisitor(SemanticModel semanticModel)
 		{
 			this.semanticModel = semanticModel;
+		}
+
+		protected override void VisitInvocationExpression(InvocationExpressionSyntax node)
+		{
+			//new TestVisitor().Visit(node);
+			AddCecilExpression(" IE: {0}", node);
+			base.VisitInvocationExpression(node);
 		}
 
 		protected override void VisitBlock(BlockSyntax node)
@@ -60,7 +88,7 @@ namespace Cecilifier.Core.AST
 			{
 				var fieldAttributes = FieldModifiersToCecil(node);
 
-				var type = ResolveType(node.Declaration.Type);
+				var type = ResolveLocalVariable(node.Declaration.Type.PlainName) ?? ResolveType(node.Declaration.Type);
 				var fieldId = string.Format("ft{0}", NextLocalVariableId());
 				var fieldType = ProcessRequiredModifiers(node, type) ?? type;
 				var fieldDeclaration = string.Format("var {0} = new FieldDefinition(\"{1}\", {2}, {3});", 
@@ -80,29 +108,23 @@ namespace Cecilifier.Core.AST
 		{
 			var declaringType = (TypeDeclarationSyntax)node.Parent;
 			typeToTypeInfo[declaringType].CtorInjector = delegate { };
+
+			var returnType = semanticModel.Compilation.Assembly.GetSpecialType(SpecialType.System_Void);
+			ProcessMethodDeclaration(node, "ctor", ".ctor", ResolveType(returnType), simpleName =>
+			{
+				var ctorLocalVar = LocalVariableNameForCurrentNode();
+				var ilVar = LocalVariableNameFor("il", declaringType.Identifier.ValueText, simpleName);
+				var declaringTypelocalVar = ResolveLocalVariable(declaringType.Identifier.ValueText);
+				AddCecilExpression(@"{0}.Body.Instructions.Add({1}.Create(OpCodes.Ldarg_0));", ctorLocalVar, ilVar);
+				AddCecilExpression(@"{0}.Body.Instructions.Add({1}.Create(OpCodes.Call, assembly.MainModule.Import(DefaultCtorFor({2}.BaseType.Resolve(), assembly))));", ctorLocalVar, ilVar, declaringTypelocalVar);
+				
+				base.VisitConstructorDeclaration(node);
+			} );
 		}
 
 		protected override void VisitMethodDeclaration(MethodDeclarationSyntax node)
 		{
-			var declaringType = (TypeDeclarationSyntax)node.Parent;
-
-			var methodVar = LocalVariableNameFor("method", declaringType.Identifier.ValueText, node.Identifier.ValueText);
-			AddCecilExpression("var {0} = new MethodDefinition(\"{1}\", {2}, {3});", methodVar, MethodNameOf(node), MethodModifiersToCecil(node), ResolveType(node.ReturnType));
-
-			var id = ResolveType(declaringType.Identifier.ValueText);
-			AddCecilExpression("{0}.Methods.Add({1});", id, methodVar);
-
-			var isAbstract = semanticModel.GetDeclaredSymbol(node).IsAbstract;
-			string ilVar = null;
-			if (!isAbstract)
-			{
-				ilVar = LocalVariableNameFor("il", declaringType.Identifier.ValueText, node.Identifier.ValueText);
-				AddCecilExpression(@"var {0} = {1}.Body.GetILProcessor();", ilVar, methodVar);
-			}
-			
-			WithCurrentNode(node, methodVar, () => base.VisitMethodDeclaration(node));
-
-			if (!isAbstract) AddCecilExpression(@"{0}.Body.Instructions.Add({1}.Create(OpCodes.Ret));", methodVar, ilVar);
+			ProcessMethodDeclaration(node, node.Identifier.ValueText, MethodNameOf(node), ResolveType(node.ReturnType), _ => base.VisitMethodDeclaration(node));
 		}
 
 		protected override void VisitParameter(ParameterSyntax node)
@@ -148,6 +170,18 @@ namespace Cecilifier.Core.AST
 			base.VisitArgumentList(node);
 		}
 
+		protected override void VisitMemberAccessExpression(MemberAccessExpressionSyntax node)
+		{
+			AddCecilExpression(" MAE: {0}", node);
+			base.VisitMemberAccessExpression(node);
+		}
+
+		protected override void VisitConstructorInitializer(ConstructorInitializerSyntax node)
+		{
+			AddCecilExpression("---> CI: {0}", node);
+			base.VisitConstructorInitializer(node);
+		}
+
 		public string Output
 		{
 			get
@@ -157,6 +191,28 @@ namespace Cecilifier.Core.AST
 			}
 		}
 
+		private void ProcessMethodDeclaration<T>(T node, string simpleName, string fqName, string returnType, Action<string> runWithCurrent) where T : BaseMethodDeclarationSyntax
+		{
+			var declaringType = (TypeDeclarationSyntax)node.Parent;
+			var declaringTypeName = declaringType.Identifier.ValueText;
+
+			var methodVar = LocalVariableNameFor("method", declaringTypeName, simpleName);
+			AddCecilExpression("var {0} = new MethodDefinition(\"{1}\", {2}, {3});", methodVar, fqName, MethodModifiersToCecil(node), returnType);
+			AddCecilExpression("{0}.Methods.Add({1});", ResolveLocalVariable(declaringTypeName), methodVar);
+
+			var isAbstract = semanticModel.GetDeclaredSymbol(node).IsAbstract;
+			string ilVar = null;
+			if (!isAbstract)
+			{
+				ilVar = LocalVariableNameFor("il", declaringTypeName, simpleName);
+				AddCecilExpression(@"var {0} = {1}.Body.GetILProcessor();", ilVar, methodVar);
+			}
+
+			WithCurrentNode(node, methodVar, simpleName, runWithCurrent);
+
+			if (!isAbstract) AddCecilExpression(@"{0}.Body.Instructions.Add({1}.Create(OpCodes.Ret));", methodVar, ilVar);
+		}
+		
 		private string ProcessRequiredModifiers(FieldDeclarationSyntax fieldDeclaration, string originalType)
 		{
 			if (fieldDeclaration.Modifiers.Any(m => m.ContextualKind == SyntaxKind.VolatileKeyword))
@@ -170,7 +226,7 @@ namespace Cecilifier.Core.AST
 			return null;
 		}
 
-		private string MethodModifiersToCecil(MethodDeclarationSyntax methodDeclaration)
+		private string MethodModifiersToCecil(BaseMethodDeclarationSyntax methodDeclaration)
 		{
 			var modifiers = MapExplicityModifiers(methodDeclaration);
 
@@ -196,10 +252,14 @@ namespace Cecilifier.Core.AST
 			var validModifiers = RemoveSourceModifiersWithNoILEquivalent(methodDeclaration);
 
 			var cecilModifiersStr = ModifiersToCecil("MethodAttributes", validModifiers.ToList(), defaultAccessibility);
+			if (methodDeclaration.Kind == SyntaxKind.ConstructorDeclaration)
+			{
+				cecilModifiersStr = cecilModifiersStr.AppendModifier(CtorFlags);
+			}
 			return cecilModifiersStr + " | MethodAttributes.HideBySig".AppendModifier(modifiers);
 		}
 
-		private static string MapExplicityModifiers(MethodDeclarationSyntax methodDeclaration)
+		private static string MapExplicityModifiers(BaseMethodDeclarationSyntax methodDeclaration)
 		{
 			foreach (var mod in methodDeclaration.Modifiers)
 			{
@@ -220,7 +280,7 @@ namespace Cecilifier.Core.AST
 			return methodSymbol.ExplicitInterfaceImplementations.Count > 0;
 		}
 
-		private static IEnumerable<SyntaxToken> RemoveSourceModifiersWithNoILEquivalent(MethodDeclarationSyntax methodDeclaration)
+		private static IEnumerable<SyntaxToken> RemoveSourceModifiersWithNoILEquivalent(BaseMethodDeclarationSyntax methodDeclaration)
 		{
 			return methodDeclaration.Modifiers.Where(
 				mod => (mod.Kind != SyntaxKind.OverrideKeyword 
@@ -289,31 +349,39 @@ namespace Cecilifier.Core.AST
 
 		private string ResolveType(string typeName)
 		{
-			var typeDeclaration = typeToTypeInfo.Keys.OfType<TypeDeclarationSyntax>().Where(td => td.Identifier.ValueText == typeName).SingleOrDefault();
-			if (typeDeclaration != null)
-			{
-				return typeToTypeInfo[typeDeclaration].LocalVariable;
-			}
-
+			//return ResolveLocalVariable(typeName) ?? ImportExpressionFor(typeName);
 			return ImportExpressionFor(typeName);
+		}
+
+		private string ResolveLocalVariable(string typeName)
+		{
+			var typeDeclaration = typeToTypeInfo.Keys.OfType<TypeDeclarationSyntax>().Where(td => td.Identifier.ValueText == typeName).SingleOrDefault();
+			return typeDeclaration != null ? typeToTypeInfo[typeDeclaration].LocalVariable : null;
 		}
 
 		private string ResolveType(TypeSyntax type)
 		{
 			switch(type.Kind)
 			{
-				case SyntaxKind.PredefinedType: return "assembly.MainModule.TypeSystem." + semanticModel.GetSemanticInfo(type).Type.Name;
+				case SyntaxKind.PredefinedType: return ResolveType(semanticModel.GetSemanticInfo(type).Type);
 				case SyntaxKind.ArrayType: return "new ArrayType(" + ResolveType(type.DescendentNodes().OfType<TypeSyntax>().Single()) + ")";
 			}
 
 			return ResolveType(type.PlainName);
 		}
 
+		private static string ResolveType(TypeSymbol typeSymbol)
+		{
+			return "assembly.MainModule.TypeSystem." + typeSymbol.Name;
+		}
+
 
 		private string ProcessBase(ClassDeclarationSyntax classDeclaration)
 		{
 			var classSymbol = (TypeSymbol) semanticModel.GetDeclaredSymbol(classDeclaration);
-			return ResolveType(classSymbol.BaseType.Name);
+			var baseTypeName = classSymbol.BaseType.Name;
+			
+			return ResolveLocalVariable(baseTypeName) ?? ResolveType(baseTypeName);
 		}
 
 		private IEnumerable<string> ImplementedInterfacesFor(BaseListSyntax bases)
@@ -379,7 +447,7 @@ namespace Cecilifier.Core.AST
 		private void DefaultCtorInjector(string localVar, TypeDeclarationSyntax declaringClass)
 		{
 			var ctorLocalVar = TempLocalVar("ctor");
-			AddCecilExpression(@"var {0} = new MethodDefinition("".ctor"", MethodAttributes.RTSpecialName | {1} | MethodAttributes.HideBySig | MethodAttributes.SpecialName, assembly.MainModule.TypeSystem.Void);", ctorLocalVar, DefaultCtorAccessibilityFor(declaringClass));
+			AddCecilExpression(@"var {0} = new MethodDefinition("".ctor"", {1} | {2} | MethodAttributes.HideBySig, assembly.MainModule.TypeSystem.Void);", ctorLocalVar, CtorFlags, DefaultCtorAccessibilityFor(declaringClass));
 			AddCecilExpression(@"{0}.Methods.Add({1});", localVar, ctorLocalVar);
 			var ilVar = TempLocalVar("il");
 			AddCecilExpression(@"var {0} = {1}.Body.GetILProcessor();", ilVar, ctorLocalVar);
@@ -401,12 +469,12 @@ namespace Cecilifier.Core.AST
 			buffer.AppendFormat("{0}\r\n", string.Format(format, args));
 		}
 
-		private void WithCurrentNode(MemberDeclarationSyntax node, string localVariable, Action action)
+		private void WithCurrentNode(MemberDeclarationSyntax node, string localVariable, string typeName, Action<string> action)
 		{
 			try
 			{
 				nodeStack.Push(new LocalVariable(node, localVariable));
-				action();
+				action(typeName);
 			}
 			finally
 			{
@@ -436,6 +504,7 @@ namespace Cecilifier.Core.AST
 		}
 
 		private const string ModifiersSeparator = " | ";
+		private const string CtorFlags = "MethodAttributes.RTSpecialName | MethodAttributes.SpecialName";
 
 		private StringBuilder buffer = new StringBuilder();
 		private int currentTypeId;

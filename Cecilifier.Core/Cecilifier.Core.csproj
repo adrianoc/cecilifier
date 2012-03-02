@@ -38,6 +38,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AST\CecilifierVisitor.cs" />
+    <Compile Include="AST\ConstructorDeclarationVisitor.cs" />
+    <Compile Include="AST\IVisitorContext.cs" />
+    <Compile Include="AST\SyntaxWalkerBase.cs" />
     <Compile Include="Cecilifier.cs" />
     <Compile Include="Extensions\CecilifierExtensions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

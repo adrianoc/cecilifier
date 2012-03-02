@@ -61,9 +61,21 @@ namespace Ceciifier.Core.Tests
 		}
 
 		[Test]
+		public void TestDefaultCtorFromBaseClass()
+		{
+			AssertResourceTest(@"Methods\DefaultCtorFromBaseClass");
+		}
+
+		[Test]
 		public void TestInterfaceMethodVirtualInInplementation()
 		{
 			AssertResourceTest(@"Methods\InterfaceMethodVirtualInInplementation");
+		}
+
+		[Test]
+		public void TestCtorWithParameters()
+		{
+			AssertResourceTest(@"Methods\CtorWithParameters");
 		}
 	}
 }

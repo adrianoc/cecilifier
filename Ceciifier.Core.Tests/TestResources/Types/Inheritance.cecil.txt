@@ -1,6 +1,6 @@
 ﻿TypeDefinition t1 = new TypeDefinition("", "Inheritance", TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit, assembly.MainModule.Import(typeof(ApplicationException)));
 assembly.MainModule.Types.Add(t1);
-var ctor1 = new MethodDefinition(".ctor", MethodAttributes.RTSpecialName | MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName, assembly.MainModule.TypeSystem.Void);
+var ctor1 = new MethodDefinition(".ctor", MethodAttributes.RTSpecialName | MethodAttributes.SpecialName | MethodAttributes.Public | MethodAttributes.HideBySig, assembly.MainModule.TypeSystem.Void);
 t1.Methods.Add(ctor1);
 var il2 = ctor1.Body.GetILProcessor();
 ctor1.Body.Instructions.Add(il2.Create(OpCodes.Ldarg_0));

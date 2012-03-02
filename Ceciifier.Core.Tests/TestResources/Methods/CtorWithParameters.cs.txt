@@ -1,0 +1,16 @@
+﻿class Base
+{
+	protected Base(string s) {}
+}
+
+class CtorWithParameters : Base
+{
+	public CtorWithParameters() : base("foo")
+	{
+	}
+
+	public CtorWithParameters(string s) : base(s)
+	{
+		System.Console.WriteLine("bla");
+	}
+}
