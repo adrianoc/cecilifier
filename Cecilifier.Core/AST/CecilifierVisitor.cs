@@ -9,7 +9,7 @@ using Roslyn.Compilers.CSharp;
 
 namespace Cecilifier.Core.AST
 {
-	class TestVisitor : SyntaxWalker
+	/*class TestVisitor : SyntaxWalker
 	{
 		protected override void VisitMemberAccessExpression(MemberAccessExpressionSyntax node)
 		{
@@ -27,7 +27,7 @@ namespace Cecilifier.Core.AST
 			Console.Write("{0}", node);
 			base.VisitArgument(node);
 		}
-	}
+	}*/
 
 	class CecilifierVisitor : SyntaxWalker
 	{
@@ -38,7 +38,6 @@ namespace Cecilifier.Core.AST
 
 		protected override void VisitInvocationExpression(InvocationExpressionSyntax node)
 		{
-			//new TestVisitor().Visit(node);
 			AddCecilExpression(" IE: {0}", node);
 			base.VisitInvocationExpression(node);
 		}
@@ -52,22 +51,6 @@ namespace Cecilifier.Core.AST
 			}
 
 			base.VisitBlock(node);
-		}
-
-		protected override void VisitNamespaceDeclaration(NamespaceDeclarationSyntax node)
-		{
-			try
-			{
-				var namespaceHierarchy = node.AncestorsAndSelf().OfType<NamespaceDeclarationSyntax>().Reverse();
-				currentNameSpace = namespaceHierarchy.Aggregate("",(acc, curr) => acc + "." + curr.Name.GetText());
-
-				currentNameSpace = currentNameSpace.StartsWith(".") ? currentNameSpace.Substring(1) : currentNameSpace;
-				base.VisitNamespaceDeclaration(node);
-			}
-			finally
-			{
-				currentNameSpace = string.Empty;
-			}
 		}
 
 		protected override void VisitInterfaceDeclaration(InterfaceDeclarationSyntax node)
@@ -526,7 +509,7 @@ namespace Cecilifier.Core.AST
 			public SyntaxNode SyntaxNode { get; set; }
 		}
 
-		private	class TypeInfo
+		internal class TypeInfo
 		{
 			public readonly string LocalVariable;
 			public Action<string, TypeDeclarationSyntax> CtorInjector;

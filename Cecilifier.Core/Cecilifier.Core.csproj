@@ -38,16 +38,22 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AST\CecilifierVisitor.cs" />
+    <Compile Include="AST\CompilationUnitVisitor.cs" />
     <Compile Include="AST\ConstructorDeclarationVisitor.cs" />
+    <Compile Include="AST\TypeDeclarationVisitor.cs" />
+    <Compile Include="AST\FieldDeclarationVisitor.cs" />
     <Compile Include="AST\IVisitorContext.cs" />
+    <Compile Include="AST\MethodDeclarationVisitor.cs" />
     <Compile Include="AST\SyntaxWalkerBase.cs" />
+    <Compile Include="Misc\LocalVariable.cs" />
+    <Compile Include="Misc\TypeInfo.cs" />
     <Compile Include="Cecilifier.cs" />
+    <Compile Include="Misc\CecilifierContext.cs" />
     <Compile Include="Extensions\CecilifierExtensions.cs" />
+    <Compile Include="Misc\TypeDeclarationResolver.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Cecil\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

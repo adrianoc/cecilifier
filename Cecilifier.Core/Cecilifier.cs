@@ -1,6 +1,7 @@
 ﻿using System.IO;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
+using Cecilifier.Core.Misc;
 using Roslyn.Compilers;
 using Roslyn.Compilers.CSharp;
 
@@ -16,10 +17,12 @@ namespace Cecilifier.Core
 			var comp = Compilation.Create("Teste").AddReferences(new AssemblyFileReference(typeof(object).Assembly.Location)).AddSyntaxTrees(syntaxTree);
 			var semanticModel = comp.GetSemanticModel(syntaxTree);
 		
-			var visitor = new CecilifierVisitor(semanticModel);
+			//var visitor = new CecilifierVisitor(semanticModel);
+			IVisitorContext ctx = new CecilifierContext(semanticModel);
+			var visitor = new CompilationUnitVisitor(ctx);
 			visitor.Visit(syntaxTree.Root);
 
-			return new StringReader(visitor.Output.AsCecilApplication());
+			return new StringReader(ctx.Output.AsCecilApplication());
 		}
 	}
 }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using Cecilifier.Core.Misc;
 using Roslyn.Compilers;
 using Roslyn.Compilers.CSharp;
 
@@ -57,6 +58,11 @@ namespace Cecilifier.Core.Extensions
 		{
 			if (self == null) return null;
 			return FindLastDefinition(self, self.ContainingType) ?? self;
+		}
+
+		public static BaseTypeDeclarationSyntax ResolveDeclaringType(this SyntaxNode node)
+		{
+			return new TypeDeclarationResolver().Resolve(node);
 		}
 
 		private static MethodSymbol FindLastDefinition(MethodSymbol method, NamedTypeSymbol toBeChecked)
