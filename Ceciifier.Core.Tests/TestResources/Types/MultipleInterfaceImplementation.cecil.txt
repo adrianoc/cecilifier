@@ -2,9 +2,9 @@
 t1.Interfaces.Add(assembly.MainModule.Import(typeof(System.IDisposable)));
 t1.Interfaces.Add(assembly.MainModule.Import(typeof(System.IEquatable<string>)));
 !~1 Add type to assembly
-var method_MultipleInterfaceImplementation_Dispose = new MethodDefinition("Dispose", MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.Virtual | MethodAttributes.NewSlot | MethodAttributes.Abstract, assembly.MainModule.TypeSystem.Void);
-t1.Methods.Add(method_MultipleInterfaceImplementation_Dispose);
-var method_MultipleInterfaceImplementation_Equals = new MethodDefinition("Equals", MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.Virtual | MethodAttributes.NewSlot | MethodAttributes.Abstract, assembly.MainModule.TypeSystem.Boolean);
-t1.Methods.Add(method_MultipleInterfaceImplementation_Equals);
-method_MultipleInterfaceImplementation_Equals.Parameters.Add(new ParameterDefinition("other", ParameterAttributes.None, assembly.MainModule.TypeSystem.String));
+var MultipleInterfaceImplementation_Dispose_ = new MethodDefinition("Dispose", MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.Virtual | MethodAttributes.NewSlot | MethodAttributes.Abstract, assembly.MainModule.TypeSystem.Void);
+t1.Methods.Add(MultipleInterfaceImplementation_Dispose_);
+var MultipleInterfaceImplementation_Equals_string = new MethodDefinition("Equals", MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.Virtual | MethodAttributes.NewSlot | MethodAttributes.Abstract, assembly.MainModule.TypeSystem.Boolean);
+t1.Methods.Add(MultipleInterfaceImplementation_Equals_string);
+MultipleInterfaceImplementation_Equals_string.Parameters.Add(new ParameterDefinition("other", ParameterAttributes.None, assembly.MainModule.TypeSystem.String));
 !~6 Ctor definition

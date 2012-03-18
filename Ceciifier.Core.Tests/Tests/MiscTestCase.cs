@@ -17,11 +17,23 @@ namespace Ceciifier.Core.Tests
 		{
 			AssertResourceTest(@"Misc\TryCatchFinally");
 		}
+		
+        [Test, Ignore("Not Implemented yet")]
+		public void TestExpressions()
+		{
+            AssertResourceTest(@"Misc\Expressions");
+		}
 
 		[Test]
 		public void TestNamespaces()
 		{
 			AssertResourceTest(@"Misc\Namespaces");
 		}
+
+        [Test]
+        public void TestAccessibilityModifiers()
+        {
+            AssertResourceTest(@"Misc\AccessibilityModifiers");
+        }
 	}
 }

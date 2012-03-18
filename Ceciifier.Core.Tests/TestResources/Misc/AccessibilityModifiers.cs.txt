@@ -1,0 +1,10 @@
+﻿public class PublicClass 
+{
+	internal int internalField;
+}
+
+internal class InternalClass 
+{
+	private int privateField;
+	protected internal int protectedInternalField;
+}

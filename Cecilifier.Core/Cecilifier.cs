@@ -1,4 +1,6 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
+using System.Linq;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
@@ -14,10 +16,19 @@ namespace Cecilifier.Core
 			var syntaxTree = SyntaxTree.ParseCompilationUnit(new StreamReader(content).ReadToEnd());
 
 			//TODO: Get the list of referenced assemblies as an argument
-			var comp = Compilation.Create("Teste").AddReferences(new AssemblyFileReference(typeof(object).Assembly.Location)).AddSyntaxTrees(syntaxTree);
-			var semanticModel = comp.GetSemanticModel(syntaxTree);
+			var comp = Compilation.Create(
+                                  "Teste", 
+                                  new CompilationOptions(assemblyKind:AssemblyKind.DynamicallyLinkedLibrary),
+		                          new[] { syntaxTree },
+                                  new[] { MetadataReference.Create(typeof(object).Assembly.Location) });
+
+            foreach (var diag in comp.GetDiagnostics())
+            {
+                Console.WriteLine(diag.Info.GetMessage());
+            }
+            
+            var semanticModel = comp.GetSemanticModel(syntaxTree);
 		
-			//var visitor = new CecilifierVisitor(semanticModel);
 			IVisitorContext ctx = new CecilifierContext(semanticModel);
 			var visitor = new CompilationUnitVisitor(ctx);
 			visitor.Visit(syntaxTree.Root);
@@ -26,3 +37,7 @@ namespace Cecilifier.Core
 		}
 	}
 }
+
+
+
+

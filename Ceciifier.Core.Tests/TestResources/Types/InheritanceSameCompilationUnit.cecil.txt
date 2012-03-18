@@ -1,4 +1,4 @@
 ﻿!~2 Type definition
 !~6 Ctor definition
-TypeDefinition t2 = new TypeDefinition("", "InheritanceSameCompilationUnit", TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit, t1);
+TypeDefinition t2 = new TypeDefinition("", "InheritanceSameCompilationUnit", TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit | TypeAttributes.NotPublic, t1);
 !*

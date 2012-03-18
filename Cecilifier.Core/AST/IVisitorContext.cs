@@ -9,10 +9,13 @@ namespace Cecilifier.Core.AST
 	{
 		string Namespace { get; set; }
 		string Output { get; }
+	    SemanticModel SemanticModel { get; }
+
 		LocalVariable CurrentLocalVariable { get; }
 		MethodSymbol GetDeclaredSymbol(BaseMethodDeclarationSyntax methodDeclaration);
 		TypeSymbol GetDeclaredSymbol(ClassDeclarationSyntax classDeclaration);
 		SemanticInfo GetSemanticInfo(TypeSyntax node);
+        SemanticInfo GetSemanticInfo(ExpressionSyntax expressionSyntax);
 		NamedTypeSymbol GetSpecialType(SpecialType specialType);
 		
 		void WriteCecilExpression(string msg, params object[] args);
@@ -26,5 +29,7 @@ namespace Cecilifier.Core.AST
 		string ResolveLocalVariable(string typeName);
 		void SetDefaultCtorInjectorFor(BaseTypeDeclarationSyntax type, Action<string, BaseTypeDeclarationSyntax> ctorInjector);
 		void EnsureCtorDefinedForCurrentType();
+	    string this[string name] { get; set; }
+	    void Remove(string varName);
 	}
 }

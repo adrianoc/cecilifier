@@ -40,11 +40,16 @@
     <Compile Include="AST\CecilifierVisitor.cs" />
     <Compile Include="AST\CompilationUnitVisitor.cs" />
     <Compile Include="AST\ConstructorDeclarationVisitor.cs" />
+    <Compile Include="AST\ConstructorInitializerVisitor.cs" />
+    <Compile Include="AST\ExpressionVisitor.cs" />
+    <Compile Include="AST\IMemoryLocationResolver.cs" />
+    <Compile Include="AST\SyntaxTreeDump.cs" />
     <Compile Include="AST\TypeDeclarationVisitor.cs" />
     <Compile Include="AST\FieldDeclarationVisitor.cs" />
     <Compile Include="AST\IVisitorContext.cs" />
     <Compile Include="AST\MethodDeclarationVisitor.cs" />
     <Compile Include="AST\SyntaxWalkerBase.cs" />
+    <Compile Include="Extensions\MethodExtensions.cs" />
     <Compile Include="Misc\LocalVariable.cs" />
     <Compile Include="Misc\TypeInfo.cs" />
     <Compile Include="Cecilifier.cs" />

@@ -1,4 +1,4 @@
-﻿TypeDefinition t1 = new TypeDefinition("", "Simple", TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit, assembly.MainModule.Import(typeof(Object)));
+﻿TypeDefinition t1 = new TypeDefinition("", "Simple", TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit | TypeAttributes.NotPublic, assembly.MainModule.Import(typeof(Object)));
 assembly.MainModule.Types.Add(t1);
 var ft1 = new FieldDefinition("i", FieldAttributes.Private, assembly.MainModule.TypeSystem.Int32);
 t1.Fields.Add(ft1);

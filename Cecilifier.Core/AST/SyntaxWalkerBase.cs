@@ -26,6 +26,16 @@ namespace Cecilifier.Core.AST
 		{
 			Context.WriteCecilExpression("{0}\r\n", string.Format(format, args));
 		}
+		
+        protected void AddCilInstruction(string methodVar, string ilVar, string instruction, object arg)
+		{
+            AddCecilExpression(@"{0}.Body.Instructions.Add({1}.Create({2}, {3}));", methodVar, ilVar, instruction, arg);
+		}
+
+        protected void AddCilInstruction(string methodVar, string ilVar, string instruction)
+		{
+            AddCecilExpression(@"{0}.Body.Instructions.Add({1}.Create({2}));", methodVar, ilVar, instruction);
+		}
 
 		protected MethodSymbol DeclaredSymbolFor<T>(T node) where T : BaseMethodDeclarationSyntax
 		{
@@ -98,7 +108,7 @@ namespace Cecilifier.Core.AST
 
 		protected static string TypeModifiersToCecil(TypeDeclarationSyntax node)
 		{
-			var convertedModifiers = ModifiersToCecil("TypeAttributes", node.Modifiers, string.Empty);
+			var convertedModifiers = ModifiersToCecil("TypeAttributes", node.Modifiers, "NotPublic");
 			var typeAttribute = node.Kind == SyntaxKind.ClassDeclaration
 									? "TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit"
 									: "TypeAttributes.Interface | TypeAttributes.Abstract";
@@ -108,16 +118,17 @@ namespace Cecilifier.Core.AST
 
 		protected static string ModifiersToCecil(string targetEnum, IEnumerable<SyntaxToken> modifiers, string @default)
 		{
-			var validModifiers = modifiers.Where(ExcludeHasNoMetadataRepresentation);
-			if (validModifiers.Count() == 0) return @default;
+            var validModifiers = modifiers.Where(ExcludeHasNoCILRepresentation);
+			if (validModifiers.Count() == 0) return targetEnum + "." + @default;
 
-			var cecilModifierStr = validModifiers.Aggregate("", (acc, token) => acc + (ModifiersSeparator + targetEnum + "." + token.MapModifier()));
+            var cecilModifierStr = validModifiers.Aggregate("", (acc, token) => acc + (ModifiersSeparator + token.MapModifier(targetEnum)));
 			return cecilModifierStr.Substring(ModifiersSeparator.Length);
 		}
 
-		private static bool ExcludeHasNoMetadataRepresentation(SyntaxToken token)
+		protected static bool ExcludeHasNoCILRepresentation(SyntaxToken token)
 		{
-			return token.ContextualKind != SyntaxKind.PartialKeyword && token.ContextualKind != SyntaxKind.VolatileKeyword;
+			return token.Kind != SyntaxKind.PartialKeyword 
+                && token.Kind != SyntaxKind.VolatileKeyword;
 		}
 
 		protected string ResolveLocalVariable(BaseTypeDeclarationSyntax typeDeclaration)
@@ -134,14 +145,14 @@ namespace Cecilifier.Core.AST
 		{
 			switch (type.Kind)
 			{
-				case SyntaxKind.PredefinedType: return ResolveType(Context.GetSemanticInfo(type).Type);
+				case SyntaxKind.PredefinedType: return ResolvePredefinedType(Context.GetSemanticInfo(type).Type);
 				case SyntaxKind.ArrayType: return "new ArrayType(" + ResolveType(type.DescendentNodes().OfType<TypeSyntax>().Single()) + ")";
 			}
 
 			return ResolveType(type.PlainName);
 		}
 
-		protected string ResolveType(TypeSymbol typeSymbol)
+		protected string ResolvePredefinedType(TypeSymbol typeSymbol)
 		{
 			return "assembly.MainModule.TypeSystem." + typeSymbol.Name;
 		}

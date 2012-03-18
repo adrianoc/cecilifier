@@ -1,0 +1,48 @@
+﻿using System;
+
+class Expressions
+{
+	public void Run(DateTime d)
+	{
+		int value;
+		var o = (object) 42;
+		var exp1 = s;
+		var exp2 = s + s.Length.ToString();
+		var exp3 = 42.ToString();
+		var exp4 = ((object) (42 + 1)).ToString();
+		var exp5 = ((int) o) + 1;
+		var exp6 = new DateTime();
+		var exp7 = new DateTime().AddDays(1);
+		var exp8 = Foo(Constant);
+		var exp9 = d.AddDays(1);
+	}
+
+	public void AssignToField(int i)
+	{
+		n = i;
+	}
+	
+	public void ExpressionStatements(int i, DateTime d)
+	{
+		// (object) 42; => Not supported
+		// s + s.Length.ToString(); => Not supported
+		42.ToString();
+		((object) (42 + 1)).ToString();
+		// ((int) o) + 1; => Not supported
+		new DateTime();
+		new DateTime().AddDays(1);
+		Foo(Constant);
+		d.AddDays(1);
+	}
+
+	public int Foo(int i)
+	{
+		var j = i + 2;
+		return j;
+	}
+
+	private int n = 10;
+	private string s = "string";
+	//private const int Constant = 42;
+	private int Constant = 42;
+}

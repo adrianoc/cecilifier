@@ -37,9 +37,27 @@ namespace Ceciifier.Core.Tests
 		}
 
 		[Test, Ignore("Not Implemented yet")]
-		public void TestInitializedField()
+        public void TestInitializedFieldNoCtor()
 		{
-			AssertResourceTest(@"Fields\InitializedField");
+            AssertResourceTest(@"Fields\InitializedFieldNoCtor");
+		}
+		
+        [Test, Ignore("Not Implemented yet")]
+		public void TestInitializedFieldSingleCtor()
+		{
+            AssertResourceTest(@"Fields\InitializedFieldSingleCtor");
+		}
+		
+        [Test, Ignore("Not Implemented yet")]
+		public void TestInitializedFieldMultipleCtor()
+		{
+			AssertResourceTest(@"Fields\InitializedFieldMultipleCtor");
+		}
+        
+        [Test, Ignore("Not Implemented yet")]
+        public void TestInitializedFieldWithBaseCtor()
+		{
+            AssertResourceTest(@"Fields\InitializedFieldWithBaseCtor");
 		}
 
 		[Test]

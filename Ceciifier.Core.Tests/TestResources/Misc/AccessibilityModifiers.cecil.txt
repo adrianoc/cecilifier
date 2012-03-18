@@ -1,0 +1,12 @@
+﻿TypeDefinition t1 = new TypeDefinition("", "PublicClass", TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit | TypeAttributes.Public, assembly.MainModule.Import(typeof(Object)));
+!~1 
+var ft1 = new FieldDefinition("internalField", FieldAttributes.Assembly, assembly.MainModule.TypeSystem.Int32);
+t1.Fields.Add(ft1);
+!~6
+TypeDefinition t2 = new TypeDefinition("", "InternalClass", TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit | TypeAttributes.NotPublic, assembly.MainModule.Import(typeof(Object)));
+!~1
+var ft4 = new FieldDefinition("privateField", FieldAttributes.Private, assembly.MainModule.TypeSystem.Int32);
+t2.Fields.Add(ft4);
+var ft5 = new FieldDefinition("protectedInternalField", FieldAttributes.FamORAssem, assembly.MainModule.TypeSystem.Int32);
+t2.Fields.Add(ft5);
+!~6

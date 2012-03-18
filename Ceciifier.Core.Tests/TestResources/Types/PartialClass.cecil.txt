@@ -1,2 +1,2 @@
-﻿TypeDefinition t1 = new TypeDefinition("", "PartialClass", TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit, assembly.MainModule.Import(typeof(Object)));
+﻿TypeDefinition t1 = new TypeDefinition("", "PartialClass", TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit | TypeAttributes.NotPublic, assembly.MainModule.Import(typeof(Object)));
 !* Non interisting stuff... 

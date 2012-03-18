@@ -292,7 +292,7 @@ namespace Cecilifier.Core.AST
 			var validModifiers = modifiers.Where(ExcludeHasNoMetadataRepresentation);
 			if (validModifiers.Count() == 0) return @default;
 
-			var cecilModifierStr = validModifiers.Aggregate("", (acc, token) => acc + (ModifiersSeparator + targetEnum + "." + token.MapModifier()));
+            var cecilModifierStr = validModifiers.Aggregate("", (acc, token) => acc + (ModifiersSeparator + token.MapModifier(targetEnum)));
 			return cecilModifierStr.Substring(ModifiersSeparator.Length);
 		}
 

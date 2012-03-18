@@ -15,6 +15,11 @@ namespace Cecilifier.Core.Misc
 			this.semanticModel = semanticModel;
 		}
 
+	    public SemanticModel SemanticModel
+	    {
+            get { return semanticModel; }
+	    }
+
 		public string Namespace
 		{
 			get { return @namespace; }
@@ -33,13 +38,18 @@ namespace Cecilifier.Core.Misc
 
 		public TypeSymbol GetDeclaredSymbol(ClassDeclarationSyntax classDeclaration)
 		{
-			return semanticModel.GetDeclaredSymbol(classDeclaration);
+            return semanticModel.GetDeclaredSymbol(classDeclaration);
 		}
 
 		public SemanticInfo GetSemanticInfo(TypeSyntax node)
 		{
 			return semanticModel.GetSemanticInfo(node);
 		}
+
+        public SemanticInfo GetSemanticInfo(ExpressionSyntax expressionSyntax)
+        {
+            return semanticModel.GetSemanticInfo(expressionSyntax);
+        }
 
 		public NamedTypeSymbol GetSpecialType(SpecialType specialType)
 		{
@@ -96,7 +106,18 @@ namespace Cecilifier.Core.Misc
 			}
 		}
 
-		public string Output
+	    public string this[string name]
+	    {
+            get { return vars[name]; }
+	        set { vars[name] = value; }
+	    }
+
+        public void Remove(string varName)
+        {
+            vars.Remove(varName);
+        }
+        
+	    public string Output
 		{
 			get
 			{
@@ -114,5 +135,6 @@ namespace Cecilifier.Core.Misc
 		private Stack<LocalVariable> nodeStack = new Stack<LocalVariable>();
 		protected IDictionary<BaseTypeDeclarationSyntax, TypeInfo> typeToTypeInfo = new Dictionary<BaseTypeDeclarationSyntax, TypeInfo>();
 		private string @namespace;
+	    private IDictionary<string, string> vars =new Dictionary<string, string>();
 	}
 }

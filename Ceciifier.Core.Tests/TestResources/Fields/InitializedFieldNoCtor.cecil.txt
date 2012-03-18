@@ -1,0 +1,20 @@
+﻿!~2 InitializedField local var.
+var field_i = new FieldDefinition("i", assembly.MainModule.TypeSystem.Int32);
+t1.Fields.Add(field_i);
+var field_s = new FieldDefinition("s", assembly.MainModule.TypeSystem.String);
+t1.Fields.Add(field_s);
+var method_InitializedField_ctor = new MethodDefinition(".ctor", CTOR_FLAGS, assembly.MainModule.Import(assembly.MainModule.TypeSystem.Object));
+t1.Methods.Add(method_InitializedField_ctor);
+var il_InitializedField_ctor = method_InitializedField_ctor.Body.GetILProcessor();
+method_InitializedField_ctor.Body.Instructions.Add(il_InitializedField_ctor.Create(OpCodes.Ldarg_0));
+method_InitializedField_ctor.Body.Instructions.Add(il_InitializedField_ctor.Create(OpCodes.Ldc.i4, 10));
+method_InitializedField_ctor.Body.Instructions.Add(il_InitializedField_ctor.Create(OpCodes.Stfld, field_i));
+method_InitializedField_ctor.Body.Instructions.Add(il_InitializedField_ctor.Create(OpCodes.Ldarg_0));
+method_InitializedField_ctor.Body.Instructions.Add(il_InitializedField_ctor.Create(OpCodes.Ldc.i4, 10));
+method_InitializedField_ctor.Body.Instructions.Add(il_InitializedField_ctor.Create(OpCodes.Ldstr, "Magic Number: {0}"));
+method_InitializedField_ctor.Body.Instructions.Add(il_InitializedField_ctor.Create(OpCodes.Ldc.i4, 42));
+method_InitializedField_ctor.Body.Instructions.Add(il_InitializedField_ctor.Create(OpCodes.Call, assembly.MainModule.Import(typeof(string).Methods.GetMethod("Format", , PUBLIC | INSTANCE, new[] {typeof(string), typeof(int) } ;
+method_InitializedField_ctor.Body.Instructions.Add(il_InitializedField_ctor.Create(OpCodes.Stfld, field_s));
+
+
+

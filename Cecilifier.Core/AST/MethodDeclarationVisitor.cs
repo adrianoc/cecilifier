@@ -15,6 +15,7 @@ namespace Cecilifier.Core.AST
 		protected override void VisitMethodDeclaration(MethodDeclarationSyntax node)
 		{
 			ProcessMethodDeclaration(node, node.Identifier.ValueText, MethodNameOf(node), ResolveType(node.ReturnType), _ => base.VisitMethodDeclaration(node));
+            new SyntaxTreeDump("MD", node);
 		}
 
 		protected override void VisitParameter(ParameterSyntax node)
@@ -35,15 +36,14 @@ namespace Cecilifier.Core.AST
 			var declaringType = (TypeDeclarationSyntax)node.Parent;
 			var declaringTypeName = declaringType.Identifier.ValueText;
 
-			var methodVar = LocalVariableNameFor("method", declaringTypeName, simpleName);
+			var methodVar = LocalVariableNameFor(declaringTypeName, simpleName, node.MangleName());
 			AddCecilExpression("var {0} = new MethodDefinition(\"{1}\", {2}, {3});", methodVar, fqName, MethodModifiersToCecil(node), returnType);
 			AddCecilExpression("{0}.Methods.Add({1});", ResolveLocalVariable(declaringTypeName), methodVar);
 
 			var isAbstract = DeclaredSymbolFor(node).IsAbstract;
-			string ilVar = null;
 			if (!isAbstract)
 			{
-				ilVar = LocalVariableNameFor("il", declaringTypeName, simpleName);
+				ilVar = LocalVariableNameFor("il", declaringTypeName, simpleName, node.MangleName());
 				AddCecilExpression(@"var {0} = {1}.Body.GetILProcessor();", ilVar, methodVar);
 			}
 
@@ -52,11 +52,11 @@ namespace Cecilifier.Core.AST
 			if (!isAbstract) AddCecilExpression(@"{0}.Body.Instructions.Add({1}.Create(OpCodes.Ret));", methodVar, ilVar);
 		}
 
-		private string MethodModifiersToCecil(BaseMethodDeclarationSyntax methodDeclaration)
+	    private string MethodModifiersToCecil(BaseMethodDeclarationSyntax methodDeclaration)
 		{
 			var modifiers = MapExplicityModifiers(methodDeclaration);
 
-			var defaultAccessibility = "MethodAttributes.Private";
+			var defaultAccessibility = "Private";
 			if (modifiers == string.Empty)
 			{
 				var methodSymbol = DeclaredSymbolFor(methodDeclaration);
@@ -70,7 +70,7 @@ namespace Cecilifier.Core.AST
 					if (lastDeclaredIn.ContainingType.TypeKind == TypeKind.Interface)
 					{
 						modifiers = "MethodAttributes.Virtual | MethodAttributes.NewSlot | " + (lastDeclaredIn.ContainingType == methodSymbol.ContainingType ? "MethodAttributes.Abstract" : "MethodAttributes.Final");
-						defaultAccessibility = lastDeclaredIn.ContainingType == methodSymbol.ContainingType ? "MethodAttributes.Public" : "MethodAttributes.Private";
+						defaultAccessibility = lastDeclaredIn.ContainingType == methodSymbol.ContainingType ? "Public" : "Private";
 					}
 				}
 			}
@@ -123,5 +123,8 @@ namespace Cecilifier.Core.AST
 		{
 			return DeclaredSymbolFor(method).Name;
 		}
+
+	    protected string ilVar;
+	    internal const string IlVar = "il";
 	}
 }

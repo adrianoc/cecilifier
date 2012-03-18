@@ -63,13 +63,14 @@ namespace Ceciifier.Core.Tests.Framework.AssemblyDiff
 			return ret;
 		}
 
-		private bool CheckImplementedInterfaces(ITypeDiffVisitor typeVisitor, TypeDefinition sourceType, TypeDefinition targetType)
+		private static bool CheckImplementedInterfaces(ITypeDiffVisitor typeVisitor, TypeDefinition sourceType, TypeDefinition targetType)
 		{
-			//TODO: Check the interfaces
-			return sourceType.Interfaces.Count == targetType.Interfaces.Count;
+            if (sourceType.Interfaces.Count != targetType.Interfaces.Count) return false;
+
+		    return sourceType.Interfaces.Except(targetType.Interfaces, new InterfaceComparer()).Any() == false;
 		}
 
-		private bool CheckTypeInheritance(ITypeDiffVisitor typeVisitor, TypeDefinition source, TypeDefinition target)
+		private static bool CheckTypeInheritance(ITypeDiffVisitor typeVisitor, TypeDefinition source, TypeDefinition target)
 		{
 			if (target.BaseType == null && source.BaseType == null) return true;
 			if (target.BaseType != null && (source.BaseType.FullName == target.BaseType.FullName)) return true;
@@ -78,7 +79,7 @@ namespace Ceciifier.Core.Tests.Framework.AssemblyDiff
 		}
 
 
-		private bool CheckTypeMembers(ITypeDiffVisitor typeVisitor, TypeDefinition source, TypeDefinition target)
+		private static bool CheckTypeMembers(ITypeDiffVisitor typeVisitor, TypeDefinition source, TypeDefinition target)
 		{
 			if (!CheckFields(typeVisitor, source, target)) return false;
 
@@ -98,7 +99,7 @@ namespace Ceciifier.Core.Tests.Framework.AssemblyDiff
 		private static bool CheckMethods(ITypeDiffVisitor typeVisitor, TypeDefinition source, TypeDefinition target)
 		{
 			var ret = true;
-			var targetMethods = target.Methods.ToDictionary(m => m.Name);
+			var targetMethods = target.Methods.ToDictionary(m => m.FullName);
 			foreach (var sourceMethod in source.Methods)
 			{
 				var memberVisitor = typeVisitor.VisitMember(sourceMethod);
@@ -110,7 +111,7 @@ namespace Ceciifier.Core.Tests.Framework.AssemblyDiff
 					continue;
 				}
 
-				var targetMethod = targetMethods[sourceMethod.Name];
+				var targetMethod = targetMethods[sourceMethod.FullName];
 				if (sourceMethod.ReturnType.FullName != targetMethod.ReturnType.FullName)
 				{
 					if (!memberVisitor.VisitReturnType(sourceMethod, targetMethod)) return false;
@@ -189,12 +190,12 @@ namespace Ceciifier.Core.Tests.Framework.AssemblyDiff
 
 		private static bool CheckTypeMember<T>(IMemberDiffVisitor memberVisitor, IMemberDefinition sourceMember, TypeDefinition target, IDictionary<string, T> targetMembers) where T : IMemberDefinition
 		{
-			if (!targetMembers.ContainsKey(sourceMember.Name))
+			if (!targetMembers.ContainsKey(sourceMember.FullName))
 			{
 				return memberVisitor.VisitMissing(sourceMember, target);
 			}
 
-			var targetMember = targetMembers[sourceMember.Name];
+			var targetMember = targetMembers[sourceMember.FullName];
 			if (sourceMember.FullName != targetMember.FullName)
 			{
 				if (!memberVisitor.VisitName(sourceMember, targetMember)) return false;
@@ -208,10 +209,22 @@ namespace Ceciifier.Core.Tests.Framework.AssemblyDiff
 			return true;
 		}
 
-		private bool CheckTypeAttributes(ITypeDiffVisitor typeVisitor, TypeDefinition source, TypeDefinition target)
+		private static bool CheckTypeAttributes(ITypeDiffVisitor typeVisitor, TypeDefinition source, TypeDefinition target)
 		{
 			return source.Attributes == target.Attributes || typeVisitor.VisitAttributes(source, target);
 		}
 	}
 
+    internal class InterfaceComparer : IEqualityComparer<TypeReference>
+    {
+        public bool Equals(TypeReference x, TypeReference y)
+        {
+            return x.Name == y.Name;
+        }
+
+        public int GetHashCode(TypeReference obj)
+        {
+            return obj.Name.GetHashCode();
+        }
+    }
 }

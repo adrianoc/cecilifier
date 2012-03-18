@@ -1,16 +1,43 @@
-﻿class Base
+﻿using System;
+
+class Base
 {
-	protected Base(string s) {}
+	internal Base(string s) {}
 }
 
 class CtorWithParameters : Base
 {
-	public CtorWithParameters() : base("foo")
+	public CtorWithParameters(string s) : base(s)
 	{
 	}
 
-	public CtorWithParameters(string s) : base(s)
+	public CtorWithParameters() : base(42.ToString())
 	{
-		System.Console.WriteLine("bla");
+	}
+
+	public CtorWithParameters(int n) : this(Process(n) + "foo")
+	{
+	}
+
+	public CtorWithParameters(object o) : this(o.ToString())
+	{
+	}
+
+	public CtorWithParameters(float notUsed) : this("literal")
+	{
+	}
+
+	public CtorWithParameters(double notUsed) : this(new Base("42"))
+	{
+	}
+
+	public CtorWithParameters(bool notUsed) : this(new Base("bar").ToString())
+	{
+	}
+
+	private static string Process(int n)
+	{
+		n = n + n /2;
+		return n.ToString();
 	}
 }

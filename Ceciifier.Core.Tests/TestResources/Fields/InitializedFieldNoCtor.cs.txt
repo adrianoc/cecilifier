@@ -1,4 +1,4 @@
-﻿class InitializedField
+﻿class InitializedFieldNoCtor
 {
 	private int i = 10;
 	private string s = string.Format("Magic Number: {0}", 42);

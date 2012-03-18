@@ -1,0 +1,12 @@
+﻿class NoParameters
+{
+	public void Foo() 
+	{
+		Bar();
+	}
+
+	private void Bar()
+	{
+		Foo();
+	}
+}

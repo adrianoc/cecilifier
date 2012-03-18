@@ -1,0 +1,28 @@
+﻿class Base
+{
+	protecte int baseI = 42;
+
+	public Base()
+	{
+	}
+
+	public Base(int n)
+	{
+		baseI = n;
+	}
+}
+
+class InitializedFieldWithBaseCtor
+{
+	private int i = 10;
+	private int j;
+	
+	public InitializedFieldWithBaseCtor() : this(43)
+	{
+		j = 30;
+	}
+	
+	public InitializedFieldWithBaseCtor(int n) : this(n + 1)
+	{
+	}
+}

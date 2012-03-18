@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Reflection;
 using Cecilifier.Core.Misc;
 using Roslyn.Compilers;
 using Roslyn.Compilers.CSharp;
@@ -16,14 +17,22 @@ namespace Cecilifier.Core.Extensions
 		}
 
 
-		public static string MapModifier(this SyntaxToken modifier)
+		public static string MapModifier(this SyntaxToken modifier, string targetEnum)
 		{
-			return modifier.Kind == SyntaxKind.ProtectedKeyword ? "Family" : modifier.ValueText.CamelCase();
+		    //FIXME: Mapping need to be performed per member/type (field, method, class, etc)
+            switch (modifier.Kind)
+		    {
+                case SyntaxKind.ProtectedKeyword: return targetEnum + ".Family";
+                case SyntaxKind.InternalKeyword: return targetEnum + "." + (modifier.Parent.Kind == SyntaxKind.ClassDeclaration ? "NotPublic" : "Assembly");
+		    }
+
+            return targetEnum + "." + modifier.ValueText.CamelCase();
 		}
 
 		public static string AppendModifier(this string to, string modifier)
 		{
-			if (string.IsNullOrWhiteSpace(modifier)) return to;
+            if (string.IsNullOrWhiteSpace(modifier)) return to;
+            if (string.IsNullOrEmpty(to)) return modifier;
 
 			return to + " | " + modifier;
 		}
@@ -31,7 +40,7 @@ namespace Cecilifier.Core.Extensions
 		public static string AsCecilApplication(this string cecilSnipet)
 		{
 			return string.Format(
-					 @"using Mono.Cecil;
+                     @"using Mono.Cecil;
 					   using Mono.Cecil.Cil;
                        using System; 
 					   using System.Linq;
@@ -45,18 +54,25 @@ namespace Cecilifier.Core.Extensions
 							   assembly.Write(args[0]);                              
 						   }}
 
-						   private static MethodReference DefaultCtorFor(TypeDefinition type, AssemblyDefinition assembly)
+						   private static MethodReference DefaultCtorFor(TypeDefinition type)
 						   {{
-								return type.Methods.Where(m => m.IsConstructor && m.Parameters.Count == 0).Single();
+								var ctor = type.Methods.Where(m => m.IsConstructor && m.Parameters.Count == 0).SingleOrDefault();
+                                return ctor ?? DefaultCtorFor(type.BaseType.Resolve()); 
   						   }}
 
+                           private static System.Reflection.MethodInfo ResolveMethod(string assemblyName, string declaringTypeName, string methodName, params string[] paramTypes)
+                           {{
+                                var containingAssembly = System.Reflection.Assembly.Load(new System.Reflection.AssemblyName(assemblyName));
+                                var declaringType = containingAssembly.GetType(declaringTypeName);
+                                return declaringType.GetMethod(methodName, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance, null, paramTypes.Select(typeName => Type.GetType(typeName)).ToArray(), null);
+                           }}
                         }}
                       ", cecilSnipet);
 		}
 
 		public static MethodSymbol FindLastDefinition(this MethodSymbol self)
 		{
-			if (self == null) return null;
+            if (self == null) return null;
 			return FindLastDefinition(self, self.ContainingType) ?? self;
 		}
 

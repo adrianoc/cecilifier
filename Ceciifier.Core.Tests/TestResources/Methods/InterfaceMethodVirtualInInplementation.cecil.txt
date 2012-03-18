@@ -1,8 +1,8 @@
 ﻿!
 t1.Interfaces.Add(assembly.MainModule.Import(typeof(IDisposable)));
 !
-var method_InterfaceMethodVirtualInInplementation_Dispose = new MethodDefinition("Dispose", MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.Virtual | MethodAttributes.NewSlot, assembly.MainModule.TypeSystem.Void);
-t1.Methods.Add(method_InterfaceMethodVirtualInInplementation_Dispose);
-var il_InterfaceMethodVirtualInInplementation_Dispose = method_InterfaceMethodVirtualInInplementation_Dispose.Body.GetILProcessor();
-method_InterfaceMethodVirtualInInplementation_Dispose.Body.Instructions.Add(il_InterfaceMethodVirtualInInplementation_Dispose.Create(OpCodes.Ret));
+var InterfaceMethodVirtualInInplementation_Dispose_ = new MethodDefinition("Dispose", MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.Virtual | MethodAttributes.NewSlot, assembly.MainModule.TypeSystem.Void);
+t1.Methods.Add(InterfaceMethodVirtualInInplementation_Dispose_);
+var il_InterfaceMethodVirtualInInplementation_Dispose_ = InterfaceMethodVirtualInInplementation_Dispose_.Body.GetILProcessor();
+InterfaceMethodVirtualInInplementation_Dispose_.Body.Instructions.Add(il_InterfaceMethodVirtualInInplementation_Dispose_.Create(OpCodes.Ret));
 !~6 Ctor definition

@@ -1,0 +1,15 @@
+﻿class InitializedFieldMultipleCtor
+{
+	private int i = 10;
+	private string s = string.Format("Magic Number: {0}", 42);
+	private string notInitialized;
+
+	public InitializedFieldSingleCtor() : this("I was initialized in the ctor")
+	{
+	}
+	
+	public InitializedFieldSingleCtor(string msg)
+	{
+		notInitalized = msg;	
+	}
+}

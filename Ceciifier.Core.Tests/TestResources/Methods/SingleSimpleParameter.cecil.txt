@@ -1,7 +1,7 @@
 ﻿!~2
-var method_SingleSimpleParameter_Foo = new MethodDefinition("Foo", MethodAttributes.Public | MethodAttributes.HideBySig, assembly.MainModule.TypeSystem.Void);
-t1.Methods.Add(method_SingleSimpleParameter_Foo);
-var il_SingleSimpleParameter_Foo = method_SingleSimpleParameter_Foo.Body.GetILProcessor();
-method_SingleSimpleParameter_Foo.Parameters.Add(new ParameterDefinition("i", ParameterAttributes.None, assembly.MainModule.TypeSystem.Int32));
-method_SingleSimpleParameter_Foo.Body.Instructions.Add(il_SingleSimpleParameter_Foo.Create(OpCodes.Ret));
+var SingleSimpleParameter_Foo_int = new MethodDefinition("Foo", MethodAttributes.Public | MethodAttributes.HideBySig, assembly.MainModule.TypeSystem.Void);
+t1.Methods.Add(SingleSimpleParameter_Foo_int);
+var il_SingleSimpleParameter_Foo_int = SingleSimpleParameter_Foo_int.Body.GetILProcessor();
+SingleSimpleParameter_Foo_int.Parameters.Add(new ParameterDefinition("i", ParameterAttributes.None, assembly.MainModule.TypeSystem.Int32));
+SingleSimpleParameter_Foo_int.Body.Instructions.Add(il_SingleSimpleParameter_Foo_int.Create(OpCodes.Ret));
 !~6 Ctor
