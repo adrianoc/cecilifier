@@ -43,7 +43,7 @@ namespace Cecilifier.Core.AST
 		{
 			if (classDeclaration.Parent.Kind == SyntaxKind.ClassDeclaration)
 			{
-				AddCecilExpression("{0}.DeclaringType = {1};", localVariable, ResolveLocalVariable(classDeclaration.Parent.ResolveDeclaringType()));
+				AddCecilExpression("{0}.DeclaringType = {1};", localVariable, ResolveTypeLocalVariable(classDeclaration.Parent.ResolveDeclaringType()));
 			}
 		}
 
@@ -52,7 +52,7 @@ namespace Cecilifier.Core.AST
 			var classSymbol = DeclaredSymbolFor(classDeclaration);
 			var baseTypeName = classSymbol.BaseType.Name;
 			
-			return ResolveLocalVariable(baseTypeName) ?? ResolveType(baseTypeName);
+			return ResolveTypeLocalVariable(baseTypeName) ?? ResolveType(baseTypeName);
 		}
 
 		private IEnumerable<string> ImplementedInterfacesFor(BaseListSyntax bases)

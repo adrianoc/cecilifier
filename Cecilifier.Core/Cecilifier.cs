@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.Linq;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
@@ -32,6 +31,8 @@ namespace Cecilifier.Core
 			IVisitorContext ctx = new CecilifierContext(semanticModel);
 			var visitor = new CompilationUnitVisitor(ctx);
 			visitor.Visit(syntaxTree.Root);
+
+			new SyntaxTreeDump("TREE: ", syntaxTree.Root);
 
 			return new StringReader(ctx.Output.AsCecilApplication());
 		}

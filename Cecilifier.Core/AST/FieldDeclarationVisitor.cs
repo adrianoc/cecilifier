@@ -21,7 +21,7 @@ namespace Cecilifier.Core.AST
 				//var fieldAttributes = FieldModifiersToCecil(node);
 			    var fieldAttributes = MapAttributes(node.Modifiers);
 
-				var type = ResolveLocalVariable(node.Declaration.Type.PlainName) ?? ResolveType(node.Declaration.Type);
+				var type = ResolveTypeLocalVariable(node.Declaration.Type.PlainName) ?? ResolveType(node.Declaration.Type);
 				var fieldId = string.Format("ft{0}", NextLocalVariableId());
 				var fieldType = ProcessRequiredModifiers(node, type) ?? type;
 				var fieldDeclaration = string.Format("var {0} = new FieldDefinition(\"{1}\", {2}, {3});",
@@ -31,7 +31,7 @@ namespace Cecilifier.Core.AST
 																fieldType);
 
 				AddCecilExpression(fieldDeclaration);
-				AddCecilExpression("{0}.Fields.Add({1});", ResolveLocalVariable(node.Parent.ResolveDeclaringType()), fieldId);
+				AddCecilExpression("{0}.Fields.Add({1});", ResolveTypeLocalVariable(node.Parent.ResolveDeclaringType()), fieldId);
 			}
 
 			base.VisitFieldDeclaration(node);

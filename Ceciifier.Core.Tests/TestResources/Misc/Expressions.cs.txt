@@ -2,6 +2,11 @@
 
 class Expressions
 {
+	private Expressions(int n)
+	{
+		this.n = n + 1;
+	}
+
 	public void Run(DateTime d)
 	{
 		int value;
@@ -15,6 +20,7 @@ class Expressions
 		var exp7 = new DateTime().AddDays(1);
 		var exp8 = Foo(Constant);
 		var exp9 = d.AddDays(1);
+		var exp10 = new Expressions(41);
 	}
 
 	public void AssignToField(int i)
@@ -33,6 +39,10 @@ class Expressions
 		new DateTime().AddDays(1);
 		Foo(Constant);
 		d.AddDays(1);
+
+		var n = i;
+		n++;
+		++n;
 	}
 
 	public int Foo(int i)

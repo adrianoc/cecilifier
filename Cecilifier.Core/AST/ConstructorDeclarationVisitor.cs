@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using Cecilifier.Core.Extensions;
+using Mono.Cecil.Cil;
 using Roslyn.Compilers;
 using Roslyn.Compilers.CSharp;
 
@@ -8,6 +9,7 @@ namespace Cecilifier.Core.AST
 {
 	class ConstructorDeclarationVisitor : MethodDeclarationVisitor
 	{
+
 		public ConstructorDeclarationVisitor(IVisitorContext context) : base(context)
 		{
 		}
@@ -23,28 +25,25 @@ namespace Cecilifier.Core.AST
 			ProcessMethodDeclaration(node, "ctor", ".ctor", ResolvePredefinedType(returnType), simpleName =>
 			{
 				var ctorLocalVar = LocalVariableNameForCurrentNode();
-				var declaringTypelocalVar = ResolveLocalVariable(declaringType.Identifier.ValueText);
-				//TODO: Replace with AddCilInstruction
-                AddCecilExpression(@"{0}.Body.Instructions.Add({1}.Create(OpCodes.Ldarg_0));", ctorLocalVar, ilVar);
-				AddCecilExpression(@"{0}.Body.Instructions.Add({1}.Create(OpCodes.Call, assembly.MainModule.Import(DefaultCtorFor({2}.BaseType.Resolve()))));", ctorLocalVar, ilVar, declaringTypelocalVar);
-
+				AddCilInstruction(ilVar, OpCodes.Ldarg_0);
 				callBaseMethod(node);
+
+				if (!ctorAdded)
+				{
+					var declaringTypelocalVar = ResolveTypeLocalVariable(declaringType.Identifier.ValueText);
+
+					//TODO: Replace with AddCilInstruction
+					AddCecilExpression(@"{0}.Body.Instructions.Add({1}.Create(OpCodes.Call, assembly.MainModule.Import(DefaultCtorFor({2}.BaseType.Resolve()))));", ctorLocalVar, ilVar, declaringTypelocalVar);
+				}
 			});
 		}
 
-        protected override void VisitConstructorInitializer(ConstructorInitializerSyntax node)
+		protected override void VisitConstructorInitializer(ConstructorInitializerSyntax node)
         {
-            try
-            {
-                Context["il"] = ilVar;
-                new ConstructorInitializerVisitor(Context).Visit(node);
-            }
-            finally
-            {
-                Context.Remove("il");
-            }
+            ctorAdded = true;
+			new ConstructorInitializerVisitor(Context, ilVar).Visit(node);
         }
-        
+		
 		protected override string AppendSpecificModifiers(string cecilModifiersStr)
 		{
 			return cecilModifiersStr.AppendModifier(CtorFlags);
@@ -73,6 +72,7 @@ namespace Cecilifier.Core.AST
 		}
 
 
+		private bool ctorAdded;
 		private const string CtorFlags = "MethodAttributes.RTSpecialName | MethodAttributes.SpecialName";
 	}
 }

@@ -103,6 +103,12 @@
     <Content Include="TestResources\Members\ForwardReferences.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Content Include="TestResources\Methods\MutuallyRecursive.cecil.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="TestResources\Methods\MutuallyRecursive.cs.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="TestResources\Methods\CtorWithParameters.cecil.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>

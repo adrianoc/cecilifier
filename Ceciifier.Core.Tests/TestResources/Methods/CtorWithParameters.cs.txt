@@ -35,9 +35,35 @@ class CtorWithParameters : Base
 	{
 	}
 
-	private static string Process(int n)
+	/*
+	public CtorWithParameters(int n1, int n2) : this( Process(n1, n2) )
 	{
-		n = n + n /2;
+	}
+
+	public CtorWithParameters(int n1, string n2) : this( NewInstance(n1) )
+	{
+	}
+
+	private static CtorWithParameters NewInstance(int n)
+	{
+		return new CtorWithParameters(n);
+	}
+	*/
+
+	private static string Process(double n)
+	{
+		n = n + n / 2.0;
 		return n.ToString();
+	}
+
+	private static string Process(int n, int j) 
+	{
+		new CtorWithParameters(10).Sum(1, 2);
+		return (n + j).ToString();
+	}
+
+	private int Sum(int i, int j)
+	{
+		return i + j;
 	}
 }

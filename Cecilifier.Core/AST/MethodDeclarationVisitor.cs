@@ -15,7 +15,6 @@ namespace Cecilifier.Core.AST
 		protected override void VisitMethodDeclaration(MethodDeclarationSyntax node)
 		{
 			ProcessMethodDeclaration(node, node.Identifier.ValueText, MethodNameOf(node), ResolveType(node.ReturnType), _ => base.VisitMethodDeclaration(node));
-            new SyntaxTreeDump("MD", node);
 		}
 
 		protected override void VisitParameter(ParameterSyntax node)
@@ -31,28 +30,53 @@ namespace Cecilifier.Core.AST
 			base.VisitPropertyDeclaration(node);
 		}
 
+		protected override void VisitExpressionStatement(ExpressionStatementSyntax node)
+		{
+			new ExpressionVisitor(Context, ilVar).Visit(node.Expression);
+		}
+
 		protected void ProcessMethodDeclaration<T>(T node, string simpleName, string fqName, string returnType, Action<string> runWithCurrent) where T : BaseMethodDeclarationSyntax
 		{
 			var declaringType = (TypeDeclarationSyntax)node.Parent;
 			var declaringTypeName = declaringType.Identifier.ValueText;
 
-			var methodVar = LocalVariableNameFor(declaringTypeName, simpleName, node.MangleName());
-			AddCecilExpression("var {0} = new MethodDefinition(\"{1}\", {2}, {3});", methodVar, fqName, MethodModifiersToCecil(node), returnType);
-			AddCecilExpression("{0}.Methods.Add({1});", ResolveLocalVariable(declaringTypeName), methodVar);
+			var methodVar = LocalVariableNameFor(declaringTypeName, simpleName, node.MangleName(Context.SemanticModel));
+
+			AddOrUpdateMethodDefinition(methodVar, fqName, MethodModifiersToCecil(node), returnType);
+			AddCecilExpression("{0}.Methods.Add({1});", ResolveTypeLocalVariable(declaringTypeName), methodVar);
 
 			var isAbstract = DeclaredSymbolFor(node).IsAbstract;
 			if (!isAbstract)
 			{
-				ilVar = LocalVariableNameFor("il", declaringTypeName, simpleName, node.MangleName());
+				ilVar = LocalVariableNameFor("il", declaringTypeName, simpleName, node.MangleName(Context.SemanticModel));
 				AddCecilExpression(@"var {0} = {1}.Body.GetILProcessor();", ilVar, methodVar);
 			}
 
 			WithCurrentNode(node, methodVar, simpleName, runWithCurrent);
 
+			//TODO: Move this to default ctor handling and rely on VisitReturnStatement here instead
 			if (!isAbstract) AddCecilExpression(@"{0}.Body.Instructions.Add({1}.Create(OpCodes.Ret));", methodVar, ilVar);
 		}
 
-	    private string MethodModifiersToCecil(BaseMethodDeclarationSyntax methodDeclaration)
+		private void AddOrUpdateMethodDefinition(string methodVar, string fqName, string methodModifiers, string returnType)
+		{
+			if (Context.Contains(methodVar))
+			{
+				AddCecilExpression("{0}.Attributes = {1};", methodVar, methodModifiers);
+			}
+			else
+			{
+				AddMethodDefinition(Context, methodVar, fqName, methodModifiers, returnType);
+			}
+		}
+
+		public static void AddMethodDefinition(IVisitorContext context, string methodVar, string fqName, string methodModifiers, string returnType)
+		{
+			context.WriteCecilExpression("var {0} = new MethodDefinition(\"{1}\", {2}, {3});\r\n", methodVar, fqName, methodModifiers, returnType);
+			context[methodVar] = "";
+		}
+
+		private string MethodModifiersToCecil(BaseMethodDeclarationSyntax methodDeclaration)
 		{
 			var modifiers = MapExplicityModifiers(methodDeclaration);
 
@@ -125,6 +149,5 @@ namespace Cecilifier.Core.AST
 		}
 
 	    protected string ilVar;
-	    internal const string IlVar = "il";
 	}
 }

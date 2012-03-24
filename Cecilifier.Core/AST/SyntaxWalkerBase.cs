@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
+using Mono.Cecil.Cil;
 using Roslyn.Compilers;
 using Roslyn.Compilers.CSharp;
 
@@ -27,14 +28,14 @@ namespace Cecilifier.Core.AST
 			Context.WriteCecilExpression("{0}\r\n", string.Format(format, args));
 		}
 		
-        protected void AddCilInstruction(string methodVar, string ilVar, string instruction, object arg)
-		{
-            AddCecilExpression(@"{0}.Body.Instructions.Add({1}.Create({2}, {3}));", methodVar, ilVar, instruction, arg);
+        protected void AddCilInstruction(string ilVar, OpCode opCode, object arg)
+        {
+        	AddCecilExpression(@"{0}.Append({0}.Create({1}, {2}));", ilVar, opCode.ConstantName(), arg);
 		}
 
-        protected void AddCilInstruction(string methodVar, string ilVar, string instruction)
+        protected void AddCilInstruction(string ilVar, OpCode opCode)
 		{
-            AddCecilExpression(@"{0}.Body.Instructions.Add({1}.Create({2}));", methodVar, ilVar, instruction);
+			AddCecilExpression(@"{0}.Append({0}.Create({1}));", ilVar, opCode.ConstantName());
 		}
 
 		protected MethodSymbol DeclaredSymbolFor<T>(T node) where T : BaseMethodDeclarationSyntax
@@ -75,6 +76,7 @@ namespace Cecilifier.Core.AST
 			return "t" + localVarId;
 		}
 
+		//FIXME: Duplicated in MethodExtensions
 		protected string LocalVariableNameFor(string prefix, params string[] parts)
 		{
 			return parts.Aggregate(prefix, (acc, curr) => acc + "_" + curr);
@@ -131,14 +133,14 @@ namespace Cecilifier.Core.AST
                 && token.Kind != SyntaxKind.VolatileKeyword;
 		}
 
-		protected string ResolveLocalVariable(BaseTypeDeclarationSyntax typeDeclaration)
+		protected string ResolveTypeLocalVariable(BaseTypeDeclarationSyntax typeDeclaration)
 		{
-			return ResolveLocalVariable(typeDeclaration.Identifier.ValueText);
+			return ResolveTypeLocalVariable(typeDeclaration.Identifier.ValueText);
 		}
 
-		protected string ResolveLocalVariable(string typeName)
+		protected string ResolveTypeLocalVariable(string typeName)
 		{
-			return Context.ResolveLocalVariable(typeName);
+			return Context.ResolveTypeLocalVariable(typeName);
 		}
 
 		protected string ResolveType(TypeSyntax type)

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Cecilifier.Core.Misc;
 using Roslyn.Compilers;
 using Roslyn.Compilers.CSharp;
@@ -12,6 +13,7 @@ namespace Cecilifier.Core.AST
 	    SemanticModel SemanticModel { get; }
 
 		LocalVariable CurrentLocalVariable { get; }
+		LinkedListNode<string> CurrentLine { get; }
 		MethodSymbol GetDeclaredSymbol(BaseMethodDeclarationSyntax methodDeclaration);
 		TypeSymbol GetDeclaredSymbol(ClassDeclarationSyntax classDeclaration);
 		SemanticInfo GetSemanticInfo(TypeSyntax node);
@@ -26,10 +28,12 @@ namespace Cecilifier.Core.AST
 		int NextFieldId();
 		int NextLocalVariableTypeId();
 		void RegisterTypeLocalVariable(TypeDeclarationSyntax node, string varName, Action<string, BaseTypeDeclarationSyntax> ctorInjector);
-		string ResolveLocalVariable(string typeName);
+		string ResolveTypeLocalVariable(string typeName);
 		void SetDefaultCtorInjectorFor(BaseTypeDeclarationSyntax type, Action<string, BaseTypeDeclarationSyntax> ctorInjector);
 		void EnsureCtorDefinedForCurrentType();
 	    string this[string name] { get; set; }
+		bool Contains(string name);
 	    void Remove(string varName);
+		void MoveLineAfter(LinkedListNode<string> instruction, LinkedListNode<string> after);
 	}
 }

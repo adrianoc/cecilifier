@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Cecilifier.Core.AST;
 using Roslyn.Compilers;
 using Roslyn.Compilers.CSharp;
@@ -31,6 +30,11 @@ namespace Cecilifier.Core.Misc
 			get { return nodeStack.Peek(); }
 		}
 
+		public LinkedListNode<string> CurrentLine
+		{
+			get { return output.Last; }
+		}
+
 		public MethodSymbol GetDeclaredSymbol(BaseMethodDeclarationSyntax methodDeclaration)
 		{
 			return (MethodSymbol) semanticModel.GetDeclaredSymbol(methodDeclaration);
@@ -58,7 +62,7 @@ namespace Cecilifier.Core.Misc
 
 		public void WriteCecilExpression(string msg, params object[] args)
 		{
-			builder.AppendFormat(msg, args);
+			output.AddLast(string.Format(msg, args));
 		}
 
 		public void PushLocalVariable(LocalVariable localVariable)
@@ -86,7 +90,7 @@ namespace Cecilifier.Core.Misc
 			typeToTypeInfo[node] = new TypeInfo(varName, ctorInjector);
 		}
 
-		public string ResolveLocalVariable(string typeName)
+		public string ResolveTypeLocalVariable(string typeName)
 		{
 			var typeDeclaration = typeToTypeInfo.Keys.OfType<TypeDeclarationSyntax>().Where(td => td.Identifier.ValueText == typeName).SingleOrDefault();
 			return typeDeclaration != null ? typeToTypeInfo[typeDeclaration].LocalVariable : null;
@@ -112,22 +116,33 @@ namespace Cecilifier.Core.Misc
 	        set { vars[name] = value; }
 	    }
 
-        public void Remove(string varName)
+		public bool Contains(string name)
+		{
+			return vars.ContainsKey(name);
+		}
+
+		public void Remove(string varName)
         {
             vars.Remove(varName);
         }
-        
-	    public string Output
+
+		public void MoveLineAfter(LinkedListNode<string> instruction, LinkedListNode<string> after)
+		{
+			output.AddAfter(after, instruction.Value);
+			output.Remove(instruction);
+		}
+
+		public string Output
 		{
 			get
 			{
 				EnsureCtorDefinedForCurrentType();
-				return builder.ToString();
+				return output.Aggregate("", (acc, curr) => acc + curr);
 			}
 		}
 
 		private readonly SemanticModel semanticModel;
-		private StringBuilder builder = new StringBuilder();
+		private readonly LinkedList<string> output = new LinkedList<string>();
 		
 		private int currentTypeId;
 		private int currentFieldId;

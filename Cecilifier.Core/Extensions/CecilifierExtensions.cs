@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using System.Reflection;
 using Cecilifier.Core.Misc;
 using Roslyn.Compilers;
 using Roslyn.Compilers.CSharp;
@@ -19,7 +18,6 @@ namespace Cecilifier.Core.Extensions
 
 		public static string MapModifier(this SyntaxToken modifier, string targetEnum)
 		{
-		    //FIXME: Mapping need to be performed per member/type (field, method, class, etc)
             switch (modifier.Kind)
 		    {
                 case SyntaxKind.ProtectedKeyword: return targetEnum + ".Family";

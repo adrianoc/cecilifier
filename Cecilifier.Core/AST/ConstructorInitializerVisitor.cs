@@ -1,6 +1,6 @@
 ﻿using System;
 using Cecilifier.Core.Extensions;
-using Roslyn.Compilers;
+using Mono.Cecil.Cil;
 using Roslyn.Compilers.CSharp;
 
 namespace Cecilifier.Core.AST
@@ -9,8 +9,9 @@ namespace Cecilifier.Core.AST
     // class ConstructorInitializerVisitor : CilEmiterSyntaxWalker, IMemoryLocationResolver
     class ConstructorInitializerVisitor : SyntaxWalkerBase, IMemoryLocationResolver
     {
-        internal ConstructorInitializerVisitor(IVisitorContext ctx) : base(ctx)
+        internal ConstructorInitializerVisitor(IVisitorContext ctx, string ilVar) : base(ctx)
         {
+        	this.ilVar = ilVar;
         }
 
         protected override void VisitConstructorInitializer(ConstructorInitializerSyntax node)
@@ -19,11 +20,12 @@ namespace Cecilifier.Core.AST
             
             var info = Context.SemanticModel.GetSemanticInfo(node);
             var targetCtor = (MethodSymbol)info.Symbol;
-            
-            AddCilInstruction(Context.CurrentLocalVariable.VarName, Context["il"], "OpCodes.Call", MethodResolverExpression(targetCtor));
+
+			AddCilInstruction(ilVar, OpCodes.Call, targetCtor.MethodResolverExpression(Context));
             
             var declaringType = (BaseTypeDeclarationSyntax) node.Parent.Parent;
             Context.SetDefaultCtorInjectorFor(declaringType, delegate { });
+
             //FIXME: Fix ctor construction
             //
             // 1. Field initialization
@@ -34,35 +36,36 @@ namespace Cecilifier.Core.AST
             // 4. Ctor body
         }
 
-        private string MethodResolverExpression(MethodSymbol method)
-        {
-            //FIXME: Handle forward declarations..
-            //       One option is to not generate cecil calls as we visit the AST; instead
-            //       we could "accumulate" and generate later
-            if (method.ContainingAssembly == Context.SemanticModel.Compilation.Assembly)
-            {
-                //FIXME: Keep the name of the variables used to construct types/members in a map
-                return LocalVariableNameFor(method.ContainingType.Name, method.Name.Replace(".", ""), method.MangleName());
-            }
+		protected override void VisitArgument(ArgumentSyntax node)
+		{
+			new ExpressionVisitor(Context, ilVar).Visit(node.Expression);
+			argIndex++;
+		}
 
-            var declaringTypeName =
-                method.ContainingType.ToDisplayString(
-                            new SymbolDisplayFormat(typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces));
+		//private string MethodResolverExpression(MethodSymbol method)
+		//{
+		//    //FIXME: Handle forward declarations..
+		//    //       One option is to not generate cecil calls as we visit the AST; instead
+		//    //       we could "accumulate" and generate later
+		//    if (method.ContainingAssembly == Context.SemanticModel.Compilation.Assembly)
+		//    {
+		//        //FIXME: Keep the name of the variables used to construct types/members in a map
+		//        return LocalVariableNameFor(method.ContainingType.Name, method.Name.Replace(".", ""), method.MangleName());
+		//    }
 
-            return String.Format("assembly.MainModule.Import(ResolveMethod(\"{0}\", \"{1}\", \"{2}\"{3}))",
-                                 method.ContainingAssembly.AssemblyName.FullName,
-                                 declaringTypeName,
-                                 method.Name,
-                                 method.Parameters.Aggregate("", (acc, curr) => ", \"" + curr.Name + "\""));
-        }
+		//    var declaringTypeName =
+		//        method.ContainingType.ToDisplayString(
+		//                    new SymbolDisplayFormat(typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces));
 
-        protected override void VisitArgument(ArgumentSyntax node)
-        {
-            new ExpressionVisitor(Context, this).Visit(node.Expression);
-            argIndex++;
-        }
-
+		//    return String.Format("assembly.MainModule.Import(ResolveMethod(\"{0}\", \"{1}\", \"{2}\"{3}))",
+		//                         method.ContainingAssembly.AssemblyName.FullName,
+		//                         declaringTypeName,
+		//                         method.Name,
+		//                         method.Parameters.Aggregate("", (acc, curr) => ", \"" + curr.Name + "\""));
+		//}
+ 
         private int argIndex = 0;
         private int localVarIndex = 0;
+    	private string ilVar;
     }
 }

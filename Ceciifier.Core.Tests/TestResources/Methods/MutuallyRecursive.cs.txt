@@ -1,0 +1,14 @@
+﻿using System;
+
+class MutuallyRecursive 
+{
+	public void A()
+	{
+		B();
+	}
+
+	public void B()
+	{
+		A();
+	}
+}

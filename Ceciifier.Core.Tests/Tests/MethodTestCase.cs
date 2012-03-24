@@ -77,5 +77,11 @@ namespace Ceciifier.Core.Tests
 		{
 			AssertResourceTest(@"Methods\CtorWithParameters");
 		}
+
+		[Test]
+		public void TestMutuallyRecursive()
+		{
+			AssertResourceTest(@"Methods\MutuallyRecursive");
+		}
 	}
 }

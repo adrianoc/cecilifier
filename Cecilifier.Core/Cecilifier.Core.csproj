@@ -31,6 +31,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Mono.Cecil">
+      <HintPath>..\Libs\Mono.Cecil.dll</HintPath>
+    </Reference>
     <Reference Include="Roslyn.Compilers, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
     <Reference Include="Roslyn.Compilers.CSharp, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
     <Reference Include="System" />
@@ -50,6 +53,8 @@
     <Compile Include="AST\MethodDeclarationVisitor.cs" />
     <Compile Include="AST\SyntaxWalkerBase.cs" />
     <Compile Include="Extensions\MethodExtensions.cs" />
+    <Compile Include="Extensions\OpCodesExtensions.cs" />
+    <Compile Include="Extensions\TypeExtensions.cs" />
     <Compile Include="Misc\LocalVariable.cs" />
     <Compile Include="Misc\TypeInfo.cs" />
     <Compile Include="Cecilifier.cs" />
