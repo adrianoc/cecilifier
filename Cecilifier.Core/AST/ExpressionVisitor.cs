@@ -94,6 +94,11 @@ namespace Cecilifier.Core.AST
 			var method = member.Symbol as MethodSymbol;
 			if (method != null)
 			{
+				if (!method.IsStatic && method.IsDefinedInCurrentType(Context) && node.Parent.Kind == SyntaxKind.InvocationExpression)
+				{
+					AddCilInstruction(ilVar, OpCodes.Ldarg_0);
+				}
+
 				EnsureMethodAvailable(method);
 				AddCilInstruction(ilVar, OpCodes.Call, method.MethodResolverExpression(Context));
 			}
