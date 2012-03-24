@@ -16,7 +16,7 @@ namespace Cecilifier.Core.AST
             Ident(ident, level => 
             {
                 ident = level;
-                Console.WriteLine("{2}[{0}] : {1}", node.GetType().Name, node, level);
+                Console.WriteLine("{2}[{0}/{3}] : {1}", node.GetType().Name, node, level, node.Kind);
                 base.Visit(node);
             });
         }

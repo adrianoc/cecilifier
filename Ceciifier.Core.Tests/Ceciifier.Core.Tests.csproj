@@ -61,6 +61,7 @@
     <Compile Include="Framework\CompilationServices.cs" />
     <Compile Include="Framework\ResourceTestBase.cs" />
     <Compile Include="Tests\CodeBlock.cs" />
+    <Compile Include="Tests\ExpressionTestCase.cs" />
     <Compile Include="Tests\FieldsTestCase.cs" />
     <Compile Include="Tests\MembersTestCase.cs" />
     <Compile Include="Tests\TypesTestCase.cs" />
@@ -79,6 +80,24 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="TestResources\Expressions\Box.cecil.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="TestResources\Expressions\Box.cs.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="TestResources\Expressions\LocalVariableAssignment.cecil.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="TestResources\Expressions\LocalVariableAssignment.cs.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="TestResources\Expressions\ParameterAssignment.cecil.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="TestResources\Expressions\ParameterAssignment.cs.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="TestResources\Fields\InitializedFieldWithBaseCtor.cecil.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
@@ -127,10 +146,10 @@
     <Content Include="TestResources\Methods\InterfaceMethodVirtualInInplementation.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Misc\Expressions.cecil.txt">
+    <Content Include="TestResources\Expressions\Expressions.cecil.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Misc\Expressions.cs.txt">
+    <Content Include="TestResources\Expressions\Expressions.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="TestResources\Types\AbstractClass.cecil.txt">

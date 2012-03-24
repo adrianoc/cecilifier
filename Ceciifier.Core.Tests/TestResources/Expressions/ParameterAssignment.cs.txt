@@ -1,0 +1,7 @@
+﻿class ParameterAssignment
+{
+	private static void Method(int i)
+	{
+		i = 4242;
+	}
+}

@@ -28,9 +28,14 @@ namespace Cecilifier.Core.AST
 			Context.WriteCecilExpression("{0}\r\n", string.Format(format, args));
 		}
 		
-        protected void AddCilInstruction(string ilVar, OpCode opCode, object arg)
+        protected void AddCilInstruction<T>(string ilVar, OpCode opCode, T arg)
         {
         	AddCecilExpression(@"{0}.Append({0}.Create({1}, {2}));", ilVar, opCode.ConstantName(), arg);
+		}
+
+        protected void AddCilInstructionCastOperand<T>(string ilVar, OpCode opCode, T arg)
+        {
+        	AddCecilExpression(@"{0}.Append({0}.Create({1}, ({2}) {3}));", ilVar, opCode.ConstantName(), typeof(T).Name, arg);
 		}
 
         protected void AddCilInstruction(string ilVar, OpCode opCode)

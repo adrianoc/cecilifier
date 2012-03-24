@@ -1,0 +1,8 @@
+﻿class SimpleAssignment
+{
+	private static void Method()
+	{
+		int i;
+		i = 10;
+	}
+}

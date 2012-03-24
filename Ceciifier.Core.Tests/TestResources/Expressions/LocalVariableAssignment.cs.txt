@@ -1,0 +1,8 @@
+﻿class LocalVariableAssignment
+{
+	private static void Method(int i)
+	{
+		int j;
+		j = i;		
+	}
+}

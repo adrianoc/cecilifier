@@ -17,11 +17,18 @@ namespace Cecilifier.Core.AST
 
         protected override void VisitBinaryExpression(BinaryExpressionSyntax node)
         {
-        	Visit(node.Right);
-			//TODO: Handle operator.
-			Visit(node.Left);
-
-        	//TypeSymbolFor(node.Right);
+			if (node.Kind == SyntaxKind.AssignExpression)
+			{
+				Visit(node.Right);
+				//TODO: Handle operator.
+				new AssignmentVisitor(Context, ilVar).Visit(node.Left);
+			}
+			else
+			{
+				Visit(node.Left);
+				//TODO: Handle operator.
+				Visit(node.Right);
+			}
         }
 
         protected override void VisitLiteralExpression(LiteralExpressionSyntax node)
@@ -90,46 +97,24 @@ namespace Cecilifier.Core.AST
 		protected override void VisitIdentifierName(IdentifierNameSyntax node)
 		{
 			var member = Context.SemanticModel.GetSemanticInfo(node);
-			
-			var method = member.Symbol as MethodSymbol;
-			if (method != null)
+
+			switch (member.Symbol.Kind)
 			{
-				if (!method.IsStatic && method.IsDefinedInCurrentType(Context) && node.Parent.Kind == SyntaxKind.InvocationExpression)
-				{
-					AddCilInstruction(ilVar, OpCodes.Ldarg_0);
-				}
+				case SymbolKind.Method:
+					ProcessMethodCall(node, member.Symbol as MethodSymbol);
+					break;
 
-				EnsureMethodAvailable(method);
-				AddCilInstruction(ilVar, OpCodes.Call, method.MethodResolverExpression(Context));
-			}
-			else
-			{
-				var param = member.Symbol as ParameterSymbol;
-				if (param == null) return;
+				case SymbolKind.Parameter:
+					ProcessParameter(member.Symbol as ParameterSymbol);
+					break;
 
-				WriteLine(" {0} : {1}", param.Ordinal, param.Name);
-				switch (param.Ordinal)
-				{
-					case 0:
-						AddCilInstruction(ilVar, OpCodes.Ldarg_1);
-						break;
-					
-					case 1:
-						AddCilInstruction(ilVar, OpCodes.Ldarg_2);
-						break;
-
-					case 2:
-						AddCilInstruction(ilVar, OpCodes.Ldarg_3);
-						break;
-
-					default:
-						AddCilInstruction(ilVar, OpCodes.Ldarg, param.Ordinal + 1);
-						break;
-				}
+				case SymbolKind.Local:
+					ProcessLocalVariable(member.Symbol as LocalSymbol);
+					break;
 			}
 		}
 
-		//protected override void VisitArgument(ArgumentSyntax node)
+    	//protected override void VisitArgument(ArgumentSyntax node)
 		//{
 		//    WriteLine("[{0}] : {1} ({2})", new StackFrame().GetMethod().Name, node, node.Parent.Parent);
 		//    // node.Parent.Parent => possible method definition...
@@ -283,10 +268,44 @@ namespace Cecilifier.Core.AST
 			callFixList.Push(Context.CurrentLine);
 		}
 
-		//private TypeSymbol TypeSymbolFor(ExpressionSyntax node)
-		//{
-		//    return Context.SemanticModel.GetSemanticInfo(node).Type;
-		//}
+		private void ProcessLocalVariable(LocalSymbol localVariable)
+		{
+			AddCilInstruction(ilVar, OpCodes.Ldloc, 1);
+			//AddCilInstruction(ilVar, OpCodes.Ldloc, localVariable.Name);
+		}
+
+		private void ProcessParameter(ParameterSymbol param)
+		{
+			switch (param.Ordinal)
+			{
+				case 0:
+					AddCilInstruction(ilVar, OpCodes.Ldarg_1);
+					break;
+
+				case 1:
+					AddCilInstruction(ilVar, OpCodes.Ldarg_2);
+					break;
+
+				case 2:
+					AddCilInstruction(ilVar, OpCodes.Ldarg_3);
+					break;
+
+				default:
+					AddCilInstruction(ilVar, OpCodes.Ldarg, param.Ordinal + 1);
+					break;
+			}
+		}
+
+		private void ProcessMethodCall(IdentifierNameSyntax node, MethodSymbol method)
+		{
+			if (!method.IsStatic && method.IsDefinedInCurrentType(Context) && node.Parent.Kind == SyntaxKind.InvocationExpression)
+			{
+				AddCilInstruction(ilVar, OpCodes.Ldarg_0);
+			}
+
+			EnsureMethodAvailable(method);
+			AddCilInstruction(ilVar, OpCodes.Call, method.MethodResolverExpression(Context));
+		}
 
 		// TypeSyntax ?
         // InstanceExpressionSyntax ?
