@@ -40,7 +40,11 @@ namespace Cecilifier.Core.AST
 
 				case SyntaxKind.NumericLiteralExpression:
 					var opCode = LoadOpCodeFor(node);
-					AddCilInstruction(ilVar, opCode, node.GetFullText());
+					AddCilInstruction(ilVar, opCode.Item1, node.GetFullText());
+					if (opCode.Item2 != null)
+					{
+						AddCilInstruction(ilVar, OpCodes.Box, opCode.Item2);
+					}
 					break;
 
 				default:
@@ -228,18 +232,24 @@ namespace Cecilifier.Core.AST
     		Console.WriteLine(msg, args);
     	}
 
-		private OpCode LoadOpCodeFor(LiteralExpressionSyntax node)
+		private Tuple<OpCode, object> LoadOpCodeFor(LiteralExpressionSyntax node)
 		{
 			var info = Context.SemanticModel.GetSemanticInfo(node);
+
 			switch (info.Type.SpecialType)
 			{
-				case SpecialType.System_Single: return OpCodes.Ldc_R4;
-				case SpecialType.System_Double: return OpCodes.Ldc_R8;
+				case SpecialType.System_Single:
+					return Tuple.Create<OpCode, object>(OpCodes.Ldc_R4, !info.ImplicitConversion.IsBoxing ? null : ResolvePredefinedType(info.Type));
+
+				case SpecialType.System_Double:
+					return Tuple.Create<OpCode, object>(OpCodes.Ldc_R8, !info.ImplicitConversion.IsBoxing ? null : ResolvePredefinedType(info.Type));
 				
 				case SpecialType.System_Int16:
-				case SpecialType.System_Int32: return OpCodes.Ldc_I4;
+				case SpecialType.System_Int32:
+					return Tuple.Create<OpCode, object>(OpCodes.Ldc_I4, !info.ImplicitConversion.IsBoxing ? null : ResolvePredefinedType(info.Type));
 
-				case SpecialType.System_Int64: return OpCodes.Ldc_I8;
+				case SpecialType.System_Int64:
+					return Tuple.Create<OpCode, object>(OpCodes.Ldc_I8, !info.ImplicitConversion.IsBoxing ? null : ResolvePredefinedType(info.Type));
 			}
 
 			throw new ArgumentException(string.Format("Literal type {0} not supported.", info.Type.Name), "node");

@@ -1,8 +1,8 @@
-﻿class SimpleAssignment
+﻿class Box
 {
 	private static void Method()
 	{
-		int i;
+		object i;
 		i = 10;
 	}
 }
