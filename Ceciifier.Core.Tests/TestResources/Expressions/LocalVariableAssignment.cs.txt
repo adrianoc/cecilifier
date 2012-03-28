@@ -3,6 +3,6 @@
 	private static void Method(int i)
 	{
 		int j;
-		j = i;		
+		j = i;
 	}
 }

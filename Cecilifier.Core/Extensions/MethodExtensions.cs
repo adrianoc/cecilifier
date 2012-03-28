@@ -22,6 +22,11 @@ namespace Cecilifier.Core.Extensions
         {
     		return method.Parameters.Aggregate("", (acc, curr) => acc + curr.Type.Name.ToLower());
         }
+    	
+		public static int ParameterIndex(this MethodSymbol method, ParameterSymbol param)
+		{
+			return param.Ordinal + (method.IsStatic ? 0 : 1);
+		}
 
     	public static string MethodResolverExpression(this MethodSymbol method, IVisitorContext ctx)
 		{

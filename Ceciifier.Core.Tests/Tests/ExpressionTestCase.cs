@@ -19,6 +19,12 @@ namespace Ceciifier.Core.Tests
 		}
 
 		[Test]
+		public void TestMultipleLocalVariableAssignment()
+		{
+			AssertResourceTest(@"Expressions\MultipleLocalVariableAssignment");
+		}
+
+		[Test]
 		public void TestSimpeBox()
 		{
 			AssertResourceTest(@"Expressions\Box");

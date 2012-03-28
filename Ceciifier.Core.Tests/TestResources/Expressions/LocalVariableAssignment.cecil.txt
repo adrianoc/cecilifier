@@ -1,2 +1,7 @@
 ﻿!~2 Type definition LocalVariableAssignment
-!*
+!*3
+LocalVariableAssignment_Method_int32.Parameters.Add(new ParameterDefinition("i", ParameterAttributes.None, assembly.MainModule.TypeSystem.Int32));
+LocalVariableAssignment_Method_int32.Body.Variables.Add(new VariableDefinition("j", assembly.MainModule.TypeSystem.Int32));
+il_LocalVariableAssignment_Method_int32.Append(il_LocalVariableAssignment_Method_int32.Create(OpCodes.Ldarg_0));
+il_LocalVariableAssignment_Method_int32.Append(il_LocalVariableAssignment_Method_int32.Create(OpCodes.Stloc, LocalVariableAssignment_Method_int32.Body.Variables.Where(v => v.Name == "j").Single().Index));
+!*7 Ctor

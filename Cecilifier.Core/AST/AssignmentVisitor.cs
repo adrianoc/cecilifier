@@ -17,21 +17,22 @@ namespace Cecilifier.Core.AST
 			switch (member.Symbol.Kind)
 			{
 				case SymbolKind.Parameter:
-					ParameterAssign(member.Symbol as ParameterSymbol);
+					ParameterAssignment(member.Symbol as ParameterSymbol);
 					break;
 
 				case SymbolKind.Local:
-					LocalVariableAssign(member.Symbol as LocalSymbol);
+					LocalVariableAssignment(member.Symbol as LocalSymbol);
 					break;
 			}
 		}
 
-		private void LocalVariableAssign(LocalSymbol localVariable)
+		private void LocalVariableAssignment(LocalSymbol localVariable)
 		{
-			AddCilInstruction(ilVar, OpCodes.Stloc, 1);
+			var methodVar = LocalVariableNameForCurrentNode();
+			AddCilInstruction(ilVar, OpCodes.Stloc, string.Format("{0}.Body.Variables.Where(v => v.Name == \"{1}\").Single().Index", methodVar, localVariable.Name));
 		}
 
-		private void ParameterAssign(ParameterSymbol parameter)
+		private void ParameterAssignment(ParameterSymbol parameter)
 		{
 			AddCilInstructionCastOperand(ilVar, OpCodes.Starg_S, (byte) parameter.Ordinal);
 		}

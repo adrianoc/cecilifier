@@ -35,6 +35,16 @@ namespace Cecilifier.Core.AST
 			new ExpressionVisitor(Context, ilVar).Visit(node.Expression);
 		}
 
+		protected override void VisitLocalDeclarationStatement(LocalDeclarationStatementSyntax node)
+		{
+			var methodVar = LocalVariableNameForCurrentNode();
+			foreach(var localVar in node.Declaration.Variables)
+			{
+				AddCecilExpression(
+					"{0}.Body.Variables.Add(new VariableDefinition(\"{1}\", assembly.MainModule.TypeSystem.Int32));", methodVar, localVar.Identifier.ValueText);
+			}
+		}
+
 		protected void ProcessMethodDeclaration<T>(T node, string simpleName, string fqName, string returnType, Action<string> runWithCurrent) where T : BaseMethodDeclarationSyntax
 		{
 			var declaringType = (TypeDeclarationSyntax)node.Parent;

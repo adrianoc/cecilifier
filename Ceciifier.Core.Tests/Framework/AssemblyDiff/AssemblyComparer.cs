@@ -149,7 +149,7 @@ namespace Ceciifier.Core.Tests.Framework.AssemblyDiff
 					return visitor.VisitBody(source, target, instruction);
 				}
 
-				if (instruction.OpCode != targetInstructions.Current.OpCode)
+				if (!EqualOrEquivalent(instruction, targetInstructions.Current))
 				{
 					return visitor.VisitBody(source, target, instruction);
 				}
@@ -161,6 +161,36 @@ namespace Ceciifier.Core.Tests.Framework.AssemblyDiff
 			}
 
 			return true;
+		}
+
+		private static bool EqualOrEquivalent(Instruction instruction, Instruction current)
+		{
+			if (instruction.OpCode == current.OpCode) return true;
+
+			switch (instruction.OpCode.Code)
+			{
+				case Code.Ldarg_0: return current.OpCode.Code == Code.Ldarg && (int) current.Operand == 0;
+				case Code.Ldarg_1: return current.OpCode.Code == Code.Ldarg && (int) current.Operand == 1;
+				case Code.Ldarg_2: return current.OpCode.Code == Code.Ldarg && (int) current.Operand == 2;
+				case Code.Ldarg_3: return current.OpCode.Code == Code.Ldarg && (int) current.Operand == 3;
+
+				case Code.Ldloc_0: return current.OpCode.Code == Code.Ldloc && VarIndex(current.Operand) == 0;
+				case Code.Ldloc_1: return current.OpCode.Code == Code.Ldloc && VarIndex(current.Operand) == 1;
+				case Code.Ldloc_2: return current.OpCode.Code == Code.Ldloc && VarIndex(current.Operand) == 2;
+				case Code.Ldloc_3: return current.OpCode.Code == Code.Ldloc && VarIndex(current.Operand) == 3;
+
+				case Code.Stloc_0: return current.OpCode.Code == Code.Stloc && VarIndex(current.Operand) == 0;
+				case Code.Stloc_1: return current.OpCode.Code == Code.Stloc && VarIndex(current.Operand) == 1;
+				case Code.Stloc_2: return current.OpCode.Code == Code.Stloc && VarIndex(current.Operand) == 2;
+				case Code.Stloc_3: return current.OpCode.Code == Code.Stloc && VarIndex(current.Operand) == 3;
+			}
+			return false;
+
+		}
+
+		private static int VarIndex(object operand)
+		{
+			return ((VariableDefinition) operand).Index;
 		}
 
 		private static bool CheckFields(ITypeDiffVisitor typeVisitor, TypeDefinition source, TypeDefinition target)

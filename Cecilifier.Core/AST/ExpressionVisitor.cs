@@ -20,7 +20,6 @@ namespace Cecilifier.Core.AST
 			if (node.Kind == SyntaxKind.AssignExpression)
 			{
 				Visit(node.Right);
-				//TODO: Handle operator.
 				new AssignmentVisitor(Context, ilVar).Visit(node.Left);
 			}
 			else
@@ -276,22 +275,27 @@ namespace Cecilifier.Core.AST
 
 		private void ProcessParameter(ParameterSymbol param)
 		{
+			var method = param.ContainingSymbol as MethodSymbol;
 			switch (param.Ordinal)
 			{
 				case 0:
-					AddCilInstruction(ilVar, OpCodes.Ldarg_1);
+					AddCilInstruction(ilVar, method.IsStatic ? OpCodes.Ldarg_0 : OpCodes.Ldarg_1);
 					break;
 
 				case 1:
-					AddCilInstruction(ilVar, OpCodes.Ldarg_2);
+					AddCilInstruction(ilVar, method.IsStatic ? OpCodes.Ldarg_1 : OpCodes.Ldarg_2);
 					break;
 
 				case 2:
-					AddCilInstruction(ilVar, OpCodes.Ldarg_3);
-					break;
-
 				default:
-					AddCilInstruction(ilVar, OpCodes.Ldarg, param.Ordinal + 1);
+					if (method.IsStatic)
+					{
+						AddCilInstruction(ilVar, OpCodes.Ldarg_3);
+					}
+					else
+					{
+						AddCilInstruction(ilVar, OpCodes.Ldarg, param.Ordinal);	
+					}
 					break;
 			}
 		}

@@ -86,6 +86,12 @@
     <Content Include="TestResources\Expressions\Box.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Content Include="TestResources\Expressions\MultipleLocalVariableAssignment.cecil.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="TestResources\Expressions\MultipleLocalVariableAssignment.cs.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="TestResources\Expressions\LocalVariableAssignment.cecil.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
