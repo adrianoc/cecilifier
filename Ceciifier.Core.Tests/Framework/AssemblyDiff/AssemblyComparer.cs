@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Cecilifier.Core.Extensions;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 
@@ -139,6 +140,12 @@ namespace Ceciifier.Core.Tests.Framework.AssemblyDiff
 			}
 
 			if (source.Body == null) return true;
+
+			if (source.Body.Variables.Except(target.Body.Variables, TypeExtensions.Comparer).Any())
+			{
+				visitor.VisitLocalVariables(source, target);
+				return false;
+			}
 
 			Func<Instruction, bool> ignoreNops = i => i.OpCode != OpCodes.Nop;
 			var targetInstructions = target.Body.Instructions.Where(ignoreNops).GetEnumerator();

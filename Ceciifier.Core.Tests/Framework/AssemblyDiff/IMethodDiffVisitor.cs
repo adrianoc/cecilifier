@@ -1,4 +1,5 @@
-﻿using Mono.Cecil;
+﻿using System.Collections.Generic;
+using Mono.Cecil;
 using Mono.Cecil.Cil;
 
 namespace Ceciifier.Core.Tests.Framework.AssemblyDiff
@@ -9,5 +10,6 @@ namespace Ceciifier.Core.Tests.Framework.AssemblyDiff
 		bool VisitAttributes(MethodDefinition source, MethodDefinition target);
 		bool VisitBody(MethodDefinition source, MethodDefinition target);
 		bool VisitBody(MethodDefinition source, MethodDefinition target, Instruction instruction);
+		void VisitLocalVariables(MethodDefinition source, MethodDefinition target);
 	}
 }

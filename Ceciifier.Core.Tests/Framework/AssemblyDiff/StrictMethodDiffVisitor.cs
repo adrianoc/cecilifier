@@ -1,6 +1,9 @@
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
+using Mono.Collections.Generic;
 
 namespace Ceciifier.Core.Tests.Framework.AssemblyDiff
 {
@@ -53,6 +56,16 @@ namespace Ceciifier.Core.Tests.Framework.AssemblyDiff
 		{
 			output.WriteLine(string.Format("[{0}] Method body differs from {1} at offset {2} (Instruction: {3}).", target.FullName, source.FullName, instruction.Offset, instruction));
 			return false;
+		}
+
+		public void VisitLocalVariables(MethodDefinition source, MethodDefinition target)
+		{
+			output.WriteLine(string.Format("[{0}] Methods has different sets of local variables: {1} and {2}.", target.FullName, FormatLocalVariables(source.Body.Variables), FormatLocalVariables(target.Body.Variables)));
+		}
+
+		private string FormatLocalVariables(Collection<VariableDefinition> variables)
+		{
+			return variables.Aggregate("", (acc, curr) => acc + ", " + curr.Name + "(" + curr.VariableType.Name + ")");
 		}
 	}
 }
