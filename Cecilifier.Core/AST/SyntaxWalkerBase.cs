@@ -179,6 +179,22 @@ namespace Cecilifier.Core.AST
 			return Context.GetSpecialType(specialType);
 		}
 
+		protected string LocalVariableIndex(string methodVar, LocalSymbol localVariable)
+		{
+			return LocalVariableIndex(methodVar, localVariable.Name);
+		}
+
+		private static string LocalVariableIndex(string methodVar, string name)
+		{
+			return string.Format("{0}.Body.Variables.Where(v => v.Name == \"{1}\").Single().Index", methodVar, name);
+		}
+
+		protected string LocalVariableIndex(string localVariable)
+		{
+			return LocalVariableIndex(LocalVariableNameForCurrentNode(), localVariable);
+		}
+
 		protected const string ModifiersSeparator = " | ";
+
 	}
 }

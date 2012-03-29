@@ -4,5 +4,11 @@
 	{
 		int j;
 		j = i;
+
+		MyMethod(j);
+	}
+
+	private static void MyMethod(float f)
+	{
 	}
 }

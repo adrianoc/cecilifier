@@ -29,7 +29,7 @@ namespace Cecilifier.Core.AST
 		private void LocalVariableAssignment(LocalSymbol localVariable)
 		{
 			var methodVar = LocalVariableNameForCurrentNode();
-			AddCilInstruction(ilVar, OpCodes.Stloc, string.Format("{0}.Body.Variables.Where(v => v.Name == \"{1}\").Single().Index", methodVar, localVariable.Name));
+			AddCilInstruction(ilVar, OpCodes.Stloc, LocalVariableIndex(methodVar, localVariable));
 		}
 
 		private void ParameterAssignment(ParameterSymbol parameter)

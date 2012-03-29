@@ -40,8 +40,7 @@ namespace Cecilifier.Core.AST
 			var methodVar = LocalVariableNameForCurrentNode();
 			foreach(var localVar in node.Declaration.Variables)
 			{
-				AddCecilExpression(
-					"{0}.Body.Variables.Add(new VariableDefinition(\"{1}\", assembly.MainModule.TypeSystem.Int32));", methodVar, localVar.Identifier.ValueText);
+				AddCecilExpression("{0}.Body.Variables.Add(new VariableDefinition(\"{1}\", {2}));", methodVar, localVar.Identifier.ValueText, ResolveType(node.Declaration.Type));
 			}
 		}
 

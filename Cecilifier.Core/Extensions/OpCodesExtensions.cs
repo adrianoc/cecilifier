@@ -7,6 +7,7 @@ namespace Cecilifier.Core.Extensions
 	{
 		public static string ConstantName(this OpCode opCode)
 		{
+			//FIXME: Use opCode.Code.ToString()
 			return opCodesConstantNames[opCode];
 		}
 

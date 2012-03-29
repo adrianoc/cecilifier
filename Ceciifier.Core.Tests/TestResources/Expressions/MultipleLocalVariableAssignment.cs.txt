@@ -1,9 +1,12 @@
 ﻿class MultipleLocalVariableAssignment
 {
-	private static void Method(int i)
+	private static void Method(int i, string str)
 	{
 		int j,s;
 		j = i;
-		s = i;		
+		s = i;
+
+		string res;
+		res = str;
 	}
 }
