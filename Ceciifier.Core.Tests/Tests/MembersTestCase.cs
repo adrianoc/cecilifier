@@ -6,7 +6,7 @@ namespace Ceciifier.Core.Tests.Tests
     [TestFixture]
     public class MembersTestCase : ResourceTestBase
     {
-        [Test, Ignore("Not supported")]
+        [Test]
         public void TestForwardReferences()
         {
             AssertResourceTest(@"Members\ForwardReferences");

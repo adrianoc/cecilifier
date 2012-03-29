@@ -72,7 +72,7 @@ namespace Ceciifier.Core.Tests
 			AssertResourceTest(@"Types\InterfaceDefinition");
 		}
 
-		[Test, Ignore("Not implemented yet")]
+		[Test]
 		public void TypeInitializeTest()
 		{
 			AssertResourceTest(@"Types\TypeInitializer");
