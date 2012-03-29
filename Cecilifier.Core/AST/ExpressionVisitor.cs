@@ -361,7 +361,6 @@ namespace Cecilifier.Core.AST
 
     	private void InjectRequiredConversions(SemanticInfo semanticInfo)
     	{
-			//TODO: this kind of conversion will be required for local variables/constants also
     		if (semanticInfo.ImplicitConversion.IsNumeric)
     		{
     			switch (semanticInfo.ConvertedType.SpecialType)

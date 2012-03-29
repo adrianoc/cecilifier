@@ -30,7 +30,6 @@ namespace Cecilifier.Core.Extensions
 
     	public static string MethodResolverExpression(this MethodSymbol method, IVisitorContext ctx)
 		{
-			//FIXME: Handle forward declarations..
 			if (method.IsDefinedInCurrentType(ctx))
 			{
 				//FIXME: Keep the name of the variables used to construct types/members in a map

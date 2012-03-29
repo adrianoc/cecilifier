@@ -39,7 +39,6 @@ namespace Cecilifier.Core.AST
 		protected override void VisitArgument(ArgumentSyntax node)
 		{
 			new ExpressionVisitor(Context, ilVar).Visit(node.Expression);
-			argIndex++;
 		}
 
 		//private string MethodResolverExpression(MethodSymbol method)
@@ -63,9 +62,7 @@ namespace Cecilifier.Core.AST
 		//                         method.Name,
 		//                         method.Parameters.Aggregate("", (acc, curr) => ", \"" + curr.Name + "\""));
 		//}
- 
-        private int argIndex = 0;
-        private int localVarIndex = 0;
+
     	private string ilVar;
     }
 }

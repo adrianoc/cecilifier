@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using Mono.Cecil.Cil;
+﻿using Mono.Cecil.Cil;
 
 namespace Cecilifier.Core.Extensions
 {
@@ -7,19 +6,7 @@ namespace Cecilifier.Core.Extensions
 	{
 		public static string ConstantName(this OpCode opCode)
 		{
-			//FIXME: Use opCode.Code.ToString()
-			return opCodesConstantNames[opCode];
+			return "OpCodes." + opCode.Code;
 		}
-
-		static OpCodesExtensions()
-		{
-			foreach (var field in typeof(OpCodes).GetFields())
-			{
-				if (field.FieldType != typeof(OpCode)) continue;
-
-				opCodesConstantNames[(OpCode) field.GetValue(null)] = "OpCodes." + field.Name;
-			}
-		}
-		private static IDictionary<OpCode, string> opCodesConstantNames = new Dictionary<OpCode, string>();
 	}
 }
