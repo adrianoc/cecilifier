@@ -1,0 +1,15 @@
+﻿class AddOperations
+{
+	private static void Integers(int a)
+	{
+		int i;
+		i = 10 + a;
+	}
+
+	private static void IntegerString(string a, int n)
+	{
+		string s;
+		s = a + 10;
+		s = "constant" + n; 
+	}
+}

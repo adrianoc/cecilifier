@@ -29,5 +29,11 @@ namespace Ceciifier.Core.Tests
 		{
 			AssertResourceTest(@"Expressions\Box");
 		}
+		
+		[Test]
+		public void TestAdd()
+		{
+			AssertResourceTest(@"Expressions\Operators\Add");
+		}
 	}
 }

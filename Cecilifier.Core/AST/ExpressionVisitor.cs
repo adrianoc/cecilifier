@@ -25,12 +25,57 @@ namespace Cecilifier.Core.AST
 			else
 			{
 				Visit(node.Left);
-				//TODO: Handle operator.
 				Visit(node.Right);
+
+				var handler = OperatorHandlerFor(node.OperatorToken);
+				handler(Context, ilVar, Context.SemanticModel.GetSemanticInfo(node.Left).Type, Context.SemanticModel.GetSemanticInfo(node.Right).Type);
 			}
         }
 
-        protected override void VisitLiteralExpression(LiteralExpressionSyntax node)
+    	private Action<IVisitorContext, string, TypeSymbol, TypeSymbol> OperatorHandlerFor(SyntaxToken operatorToken)
+    	{
+			if (operatorHandlers.ContainsKey(operatorToken.Kind))
+			{
+				return operatorHandlers[operatorToken.Kind];
+			}
+
+    		throw new Exception(string.Format("Operator {0} not supported yet (expression: {1})", operatorToken.ValueText, operatorToken.Parent));
+    	}
+
+    	//class OperatorHandlerKey
+		//{
+		//    SyntaxToken op;
+		//    TypeSymbol right;
+		//    TypeSymbol left;
+
+		//    public OperatorHandlerKey(SyntaxToken op, TypeSymbol left, TypeSymbol right)
+		//    {
+		//        this.op = op;
+		//        this.left = left;
+		//        this.right = right;
+		//    }
+
+		//    public override bool Equals(object obj)
+		//    {
+		//        OperatorHandlerKey other = obj as OperatorHandlerKey;
+		//        return Equals(other);
+		//    }
+
+		//    public bool Equals(OperatorHandlerKey other)
+		//    {
+		//        if (other == null) return false;
+		//        return other.op.ValueText == op.ValueText
+		//               && other.left.Name == left.Name
+		//               && other.right.Name == right.Name;
+		//    }
+
+		//    public override int GetHashCode()
+		//    {
+		//        return op.ValueText.GetHashCode() + 37*(left.Name.GetHashCode() + right.Name.GetHashCode());
+		//    }
+		//}
+
+    	protected override void VisitLiteralExpression(LiteralExpressionSyntax node)
         {
 			switch(node.Kind)
 			{
@@ -108,11 +153,11 @@ namespace Cecilifier.Core.AST
 					break;
 
 				case SymbolKind.Parameter:
-					ProcessParameter(member.Symbol as ParameterSymbol);
+					ProcessParameter(member);
 					break;
 
 				case SymbolKind.Local:
-					ProcessLocalVariable(member.Symbol as LocalSymbol);
+					ProcessLocalVariable(node, member);
 					break;
 			}
 		}
@@ -277,14 +322,16 @@ namespace Cecilifier.Core.AST
 			callFixList.Push(Context.CurrentLine);
 		}
 
-		private void ProcessLocalVariable(LocalSymbol localVariable)
+		private void ProcessLocalVariable(IdentifierNameSyntax localVar, SemanticInfo varInfo)
 		{
-			AddCilInstruction(ilVar, OpCodes.Ldloc, 1);
-			//AddCilInstruction(ilVar, OpCodes.Ldloc, localVariable.Name);
+			AddCilInstruction(ilVar, OpCodes.Ldloc, LocalVariableIndex(localVar.PlainName));
+			InjectRequiredConversions(varInfo);
 		}
 
-		private void ProcessParameter(ParameterSymbol param)
+		private void ProcessParameter(SemanticInfo paramInfo)
 		{
+			var param = paramInfo.Symbol as ParameterSymbol;
+
 			var method = param.ContainingSymbol as MethodSymbol;
 			switch (param.Ordinal)
 			{
@@ -308,9 +355,48 @@ namespace Cecilifier.Core.AST
 					}
 					break;
 			}
+
+			InjectRequiredConversions(paramInfo);
 		}
 
-		private void ProcessMethodCall(IdentifierNameSyntax node, MethodSymbol method)
+    	private void InjectRequiredConversions(SemanticInfo semanticInfo)
+    	{
+			//TODO: this kind of conversion will be required for local variables/constants also
+    		if (semanticInfo.ImplicitConversion.IsNumeric)
+    		{
+    			switch (semanticInfo.ConvertedType.SpecialType)
+    			{
+    				case SpecialType.System_Single:
+    					AddCilInstruction(ilVar, OpCodes.Conv_R4);
+    					return;
+    				case SpecialType.System_Double:
+    					AddCilInstruction(ilVar, OpCodes.Conv_R8);
+    					return;
+
+    				case SpecialType.System_Byte:
+    					AddCilInstruction(ilVar, OpCodes.Conv_I1);
+    					return;
+    				case SpecialType.System_Int16:
+    					AddCilInstruction(ilVar, OpCodes.Conv_I2);
+    					return;
+    				case SpecialType.System_Int32:
+    					AddCilInstruction(ilVar, OpCodes.Conv_I4);
+    					return;
+    				case SpecialType.System_Int64:
+    					AddCilInstruction(ilVar, OpCodes.Conv_I8);
+    					return;
+
+    				default:
+    					throw new Exception(string.Format("Conversion from {0} to {1}  not implemented.", semanticInfo.Type, semanticInfo.ConvertedType));
+    			}
+    		}
+    		else if (semanticInfo.ImplicitConversion.IsBoxing)
+    		{
+    			AddCilInstruction(ilVar, OpCodes.Box, ResolvePredefinedType(semanticInfo.Type));
+    		}
+    	}
+
+    	private void ProcessMethodCall(IdentifierNameSyntax node, MethodSymbol method)
 		{
 			if (!method.IsStatic && method.IsDefinedInCurrentType(Context) && node.Parent.Kind == SyntaxKind.InvocationExpression)
 			{
@@ -318,7 +404,7 @@ namespace Cecilifier.Core.AST
 			}
 
 			EnsureMethodAvailable(method);
-			AddCilInstruction(ilVar, OpCodes.Call, method.MethodResolverExpression(Context));
+			AddCilInstruction(ilVar, method.IsVirtual || method.IsAbstract || method.IsOverride ? OpCodes.Callvirt : OpCodes.Call, method.MethodResolverExpression(Context));
 		}
 
 		// TypeSyntax ?
@@ -336,8 +422,31 @@ namespace Cecilifier.Core.AST
         // StackAllocArrayCreationExpressionSyntax
         // QueryExpressionSyntax
 		
-		//private readonly IMemoryLocationResolver resolver;
+		static ExpressionVisitor()
+		{
+			operatorHandlers[SyntaxKind.PlusToken] = (ctx, ilVar, left, right) =>
+			{
+				if (left.SpecialType == SpecialType.System_String)
+				{
+					ctx.WriteCecilExpression("{0}.Append({0}.Create({1}, assembly.MainModule.Import(typeof(string).GetMethod(\"Concat\", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public, null, new[] {{ typeof(Object), typeof(Object) }}, null))));", ilVar, OpCodes.Call.ConstantName());
+				}
+				else
+				{
+					//TODO: Use AddCilInstruction instead.
+					ctx.WriteCecilExpression(@"{0}.Append({0}.Create({1}));", ilVar, OpCodes.Add.ConstantName());
+				}
+			};
+		}
+
+    	//private readonly IMemoryLocationResolver resolver;
 		private readonly string ilVar;
     	private Stack<LinkedListNode<string>> callFixList = new Stack<LinkedListNode<string>>();
+    	
+		private static Action<IVisitorContext, string> NoOpInstance = delegate { };
+		private static IDictionary<SyntaxKind, Action<IVisitorContext, string, TypeSymbol, TypeSymbol>> operatorHandlers = new Dictionary<SyntaxKind, Action<IVisitorContext, string, TypeSymbol, TypeSymbol>>();
     }
+
+	internal interface IOperatorHandler
+	{
+	}
 }
