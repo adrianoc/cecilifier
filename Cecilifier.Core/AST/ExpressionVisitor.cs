@@ -225,7 +225,7 @@ namespace Cecilifier.Core.AST
 			base.Visit(node.Expression);
 
 			var info = Context.GetSemanticInfo(node.Expression);
-			if (info.Type.SpecialType != SpecialType.System_Void)
+			if (node.Expression.Kind != SyntaxKind.AssignExpression &&  info.Type.SpecialType != SpecialType.System_Void)
 			{
 				AddCilInstruction(ilVar, OpCodes.Pop);
 			}
