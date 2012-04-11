@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Reflection;
 using Cecilifier.Core.AST;
 using Roslyn.Compilers.CSharp;
 
@@ -28,6 +29,25 @@ namespace Cecilifier.Core.Extensions
 			return param.Ordinal + (method.IsStatic ? 0 : 1);
 		}
 
+		public static string Modifiers(this MethodSymbol method)
+		{
+			var bindingFlags = method.IsStatic ? BindingFlags.Static : BindingFlags.Instance;
+			bindingFlags |= method.DeclaredAccessibility == Accessibility.Public ? BindingFlags.Public : BindingFlags.NonPublic;
+
+
+			string res = "";
+			var enumType = typeof (BindingFlags);
+			foreach (BindingFlags flag in Enum.GetValues(enumType))
+			{
+				if (bindingFlags.HasFlag(flag))
+				{
+					res = res + "|" + enumType.FullName + "." + flag;
+				}
+			}
+			
+			return res.Length > 0 ? res.Substring(1) : String.Empty;
+		}
+
     	public static string MethodResolverExpression(this MethodSymbol method, IVisitorContext ctx)
 		{
 			if (method.IsDefinedInCurrentType(ctx))
@@ -38,10 +58,11 @@ namespace Cecilifier.Core.Extensions
 
 			var declaringTypeName = method.ContainingType.FullyQualifiedName();
 
-			return String.Format("assembly.MainModule.Import(TypeHelpers.ResolveMethod(\"{0}\", \"{1}\", \"{2}\"{3}))",
+			return String.Format("assembly.MainModule.Import(TypeHelpers.ResolveMethod(\"{0}\", \"{1}\", \"{2}\",{3}{4}))",
 								 method.ContainingAssembly.AssemblyName.FullName,
 								 declaringTypeName,
 								 method.Name,
+								 method.Modifiers(),
 								 method.Parameters.Aggregate("", (acc, curr) => ", \"" + curr.Type.FullyQualifiedName() + "\""));
 		}
 
