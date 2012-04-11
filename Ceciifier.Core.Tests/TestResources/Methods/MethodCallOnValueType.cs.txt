@@ -1,0 +1,7 @@
+﻿class MethodCallOnValueType
+{
+	public void Foo(int i)
+	{
+		i.ToString();
+	}
+}

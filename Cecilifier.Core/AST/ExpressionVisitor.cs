@@ -153,7 +153,7 @@ namespace Cecilifier.Core.AST
 					break;
 
 				case SymbolKind.Parameter:
-					ProcessParameter(member);
+					ProcessParameter(node, member);
 					break;
 
 				case SymbolKind.Local:
@@ -161,15 +161,6 @@ namespace Cecilifier.Core.AST
 					break;
 			}
 		}
-
-    	//protected override void VisitArgument(ArgumentSyntax node)
-		//{
-		//    WriteLine("[{0}] : {1} ({2})", new StackFrame().GetMethod().Name, node, node.Parent.Parent);
-		//    // node.Parent.Parent => possible method definition...
-		//    var info = Context.SemanticModel.GetDeclaredSymbol(node);
-		//    info = Context.SemanticModel.GetDeclaredSymbol(node.Expression);
-			
-		//}
 
 		protected override void VisitThisExpression(ThisExpressionSyntax node)
 		{
@@ -328,35 +319,56 @@ namespace Cecilifier.Core.AST
 			InjectRequiredConversions(varInfo);
 		}
 
-		private void ProcessParameter(SemanticInfo paramInfo)
+		private void ProcessParameter(IdentifierNameSyntax node, SemanticInfo paramInfo)
 		{
+			OpCode []optimizedLdArgs = { OpCodes.Ldarg_0, OpCodes.Ldarg_1, OpCodes.Ldarg_2, OpCodes.Ldarg_3};
+
 			var param = paramInfo.Symbol as ParameterSymbol;
 
 			var method = param.ContainingSymbol as MethodSymbol;
-			switch (param.Ordinal)
+			if (node.Parent.Kind == SyntaxKind.MemberAccessExpression && paramInfo.Type.IsValueType)
 			{
-				case 0:
-					AddCilInstruction(ilVar, method.IsStatic ? OpCodes.Ldarg_0 : OpCodes.Ldarg_1);
-					break;
-
-				case 1:
-					AddCilInstruction(ilVar, method.IsStatic ? OpCodes.Ldarg_1 : OpCodes.Ldarg_2);
-					break;
-
-				case 2:
-				default:
-					if (method.IsStatic)
-					{
-						AddCilInstruction(ilVar, OpCodes.Ldarg_3);
-					}
-					else
-					{
-						AddCilInstruction(ilVar, OpCodes.Ldarg, param.Ordinal);	
-					}
-					break;
+				AddCilInstruction(ilVar, OpCodes.Ldarga, param.Ordinal + +(method.IsStatic ? 0 : 1));
+			}
+			else
+			{
+				if (param.Ordinal >= 2)
+				{
+					AddCilInstruction(ilVar, OpCodes.Ldarg, param.Ordinal);
+				}
+				else
+				{
+					var loadOpCode = optimizedLdArgs[param.Ordinal + (method.IsStatic ? 0 : 1)];
+					AddCilInstruction(ilVar, loadOpCode);
+				}
 			}
 
+
 			InjectRequiredConversions(paramInfo);
+			//switch (param.Ordinal)
+			//{
+			//    case 0:
+			//        AddCilInstruction(ilVar, method.IsStatic ? OpCodes.Ldarg_0 : OpCodes.Ldarg_1);
+			//        break;
+
+			//    case 1:
+			//        AddCilInstruction(ilVar, method.IsStatic ? OpCodes.Ldarg_1 : OpCodes.Ldarg_2);
+			//        break;
+
+			//    case 2:
+			//    default:
+			//        if (method.IsStatic)
+			//        {
+			//            AddCilInstruction(ilVar, OpCodes.Ldarg_3);
+			//        }
+			//        else
+			//        {
+			//            AddCilInstruction(ilVar, OpCodes.Ldarg, param.Ordinal);	
+			//        }
+			//        break;
+			//}
+
+			//InjectRequiredConversions(paramInfo);
 		}
 
     	private void InjectRequiredConversions(SemanticInfo semanticInfo)
