@@ -36,7 +36,9 @@ namespace Ceciifier.Core.Tests.Framework
 				Assert.Fail("Fail to execute generated cecil snipet: " + ex + "\r\n" + generated);
 			}
 
-			var expectedAssemblyPath = CompilationServices.CompileDLL(ReadToEnd(tbc));
+			var expectedAssemblyPath = CompilationServices.CompileDLL(
+												Path.Combine(Path.GetDirectoryName(actualAssemblyPath), Path.GetFileNameWithoutExtension(actualAssemblyPath) + "_expected"),
+												ReadToEnd(tbc));
 
 			Console.WriteLine("Cecil build assembly path: {0}", actualAssemblyPath);
 			Console.WriteLine("Cecil runner path: {0}", compiledCecilifierPath);

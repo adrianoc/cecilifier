@@ -13,28 +13,34 @@ namespace Ceciifier.Core.Tests.Framework
 		{
 			return InternalCompile(source, false, references);
 		}
+
+		public static string CompileDLL(string targetPath, string source, params Assembly[] references)
+		{
+			return InternalCompile(targetPath, source, false, references);
+		}
 		
 		public static string CompileExe(string source, params Assembly[] references)
 		{
 			return InternalCompile(source, true, references);
 		}
 
-		private static string InternalCompile(string source, bool exe, params Assembly[] references)
+		private static string InternalCompile(string targetPath, string source, bool exe, params Assembly[] references)
 		{
 			var provider = new CSharpCodeProvider();
 			var parameters = new CompilerParameters();
 
-			var tempFolder = Path.Combine(Path.GetTempPath(), "CecilifierTests_" + source.GetHashCode());
-			if (!Directory.Exists(tempFolder))
+			var targetFolder = Path.GetDirectoryName(targetPath);
+			if (!Directory.Exists(targetFolder))
 			{
-				Directory.CreateDirectory(tempFolder);
+				Directory.CreateDirectory(targetFolder);
 			}
 
-			parameters.ReferencedAssemblies.AddRange(CopyReferencedAssembliesTo(tempFolder, references));
+			parameters.ReferencedAssemblies.AddRange(CopyReferencedAssembliesTo(targetFolder, references));
 
-			parameters.OutputAssembly = Path.Combine(tempFolder, Path.GetRandomFileName() + (exe ? ".exe" : ".dll"));
+			parameters.OutputAssembly = targetPath + (exe ? ".exe" : ".dll");
 			parameters.GenerateExecutable = exe;
 			parameters.IncludeDebugInformation = true;
+			//parameters.CompilerOptions = "/o+";
 
 			var results = provider.CompileAssemblyFromSource(parameters, source);
 
@@ -46,6 +52,17 @@ namespace Ceciifier.Core.Tests.Framework
 			return results.PathToAssembly;
 		}
 
+		private static string InternalCompile(string source, bool exe, params Assembly[] references)
+		{
+			var tempFolder = Path.Combine(Path.GetTempPath(), "CecilifierTests_" + source.GetHashCode());
+			if (!Directory.Exists(tempFolder))
+			{
+				Directory.CreateDirectory(tempFolder);
+			}
+
+			return InternalCompile(Path.Combine(tempFolder, Path.GetRandomFileName()), source, exe, references);
+		}
+
 		private static string[] CopyReferencedAssembliesTo(string targetFolder, Assembly[] references)
 		{
 			var referencedAssemblies = new string[references.Length];
@@ -54,8 +71,7 @@ namespace Ceciifier.Core.Tests.Framework
 			Array.ForEach(references, @ref =>
 			{
 				var assemblyPath = Path.Combine(targetFolder, Path.GetFileName(@ref.Location));
-			    File.Copy(@ref.Location, assemblyPath, true);
-
+				File.Copy(@ref.Location, assemblyPath, true);
 				referencedAssemblies[curr++] = assemblyPath;
 			});
 
