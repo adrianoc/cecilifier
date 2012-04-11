@@ -191,7 +191,17 @@ namespace Ceciifier.Core.Tests.Framework.AssemblyDiff
 				case Code.Stloc_2: return current.OpCode.Code == Code.Stloc && VarIndex(current.Operand) == 2;
 				case Code.Stloc_3: return current.OpCode.Code == Code.Stloc && VarIndex(current.Operand) == 3;
 
-				case Code.Ldc_I4_S: return current.OpCode.Code == Code.Ldc_I4;
+				case Code.Ldarga_S: return current.OpCode.Code == Code.Ldarga;
+
+				case Code.Ldc_I4_S:
+				case Code.Ldc_I4_1:
+				case Code.Ldc_I4_2:
+				case Code.Ldc_I4_3:
+				case Code.Ldc_I4_4:
+				case Code.Ldc_I4_5:
+				case Code.Ldc_I4_6:
+				case Code.Ldc_I4_7:
+				case Code.Ldc_I4_8: return current.OpCode.Code == Code.Ldc_I4;
 			}
 			return false;
 
