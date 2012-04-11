@@ -3,5 +3,6 @@
 	private static void Method(int i)
 	{
 		int j = 42;
+		System.Console.WriteLine("Value: {0}", j);
 	}
 }

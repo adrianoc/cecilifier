@@ -2,7 +2,7 @@
 {
 	private static void Method()
 	{
-		object i;
-		i = 10;
+		object i = 10;
+		System.Console.WriteLine(i);
 	}
 }

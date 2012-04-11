@@ -3,10 +3,15 @@
 	private static void Method(int i, string str)
 	{
 		int j,s;
+		
 		j = i;
 		s = i;
 
-		string res;
-		res = str;
+		string res = str;
+
+		System.Console.WriteLine("Use local variables to avoid CS compiler optimization...");
+		System.Console.WriteLine(res);
+		System.Console.WriteLine(j);
+		System.Console.WriteLine(s);
 	}
 }
