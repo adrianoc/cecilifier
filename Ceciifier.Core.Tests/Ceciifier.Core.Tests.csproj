@@ -140,6 +140,12 @@
     <Content Include="TestResources\Members\ForwardReferences.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Content Include="TestResources\Methods\ExternalMethodReference.cecil.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="TestResources\Methods\ExternalMethodReference.cs.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="TestResources\Methods\MethodCallOnValueType.cecil.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
