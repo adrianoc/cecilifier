@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cecilifier.Core", "Cecilifi
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ceciifier.Core.Tests", "Ceciifier.Core.Tests\Ceciifier.Core.Tests.csproj", "{C06B547B-E46B-4952-97D7-85470588192D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cecilifier.Runtime", "Cecilifier.Runtime\Cecilifier.Runtime.csproj", "{35DDC066-1D76-49AE-8D10-39A709E709EC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -47,6 +49,16 @@ Global
 		{C06B547B-E46B-4952-97D7-85470588192D}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{C06B547B-E46B-4952-97D7-85470588192D}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{C06B547B-E46B-4952-97D7-85470588192D}.Release|x86.ActiveCfg = Release|Any CPU
+		{35DDC066-1D76-49AE-8D10-39A709E709EC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{35DDC066-1D76-49AE-8D10-39A709E709EC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{35DDC066-1D76-49AE-8D10-39A709E709EC}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{35DDC066-1D76-49AE-8D10-39A709E709EC}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{35DDC066-1D76-49AE-8D10-39A709E709EC}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{35DDC066-1D76-49AE-8D10-39A709E709EC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{35DDC066-1D76-49AE-8D10-39A709E709EC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{35DDC066-1D76-49AE-8D10-39A709E709EC}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{35DDC066-1D76-49AE-8D10-39A709E709EC}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{35DDC066-1D76-49AE-8D10-39A709E709EC}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

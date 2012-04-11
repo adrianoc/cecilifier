@@ -99,7 +99,7 @@ namespace Cecilifier.Core.AST
 				var ilVar = LocalVariableNameFor("il", declaringType.Identifier.ValueText, simpleName);
 				var declaringTypelocalVar = ResolveLocalVariable(declaringType.Identifier.ValueText);
 				AddCecilExpression(@"{0}.Body.Instructions.Add({1}.Create(OpCodes.Ldarg_0));", ctorLocalVar, ilVar);
-				AddCecilExpression(@"{0}.Body.Instructions.Add({1}.Create(OpCodes.Call, assembly.MainModule.Import(DefaultCtorFor({2}.BaseType.Resolve(), assembly))));", ctorLocalVar, ilVar, declaringTypelocalVar);
+				AddCecilExpression(@"{0}.Body.Instructions.Add({1}.Create(OpCodes.Call, assembly.MainModule.Import(TypeHelpers.DefaultCtorFor({2}.BaseType.Resolve(), assembly))));", ctorLocalVar, ilVar, declaringTypelocalVar);
 				
 				base.VisitConstructorDeclaration(node);
 			} );
@@ -436,7 +436,7 @@ namespace Cecilifier.Core.AST
 			AddCecilExpression(@"var {0} = {1}.Body.GetILProcessor();", ilVar, ctorLocalVar);
 
 			AddCecilExpression(@"{0}.Body.Instructions.Add({1}.Create(OpCodes.Ldarg_0));", ctorLocalVar, ilVar);
-			AddCecilExpression(@"{0}.Body.Instructions.Add({1}.Create(OpCodes.Call, assembly.MainModule.Import(DefaultCtorFor({2}.BaseType.Resolve(), assembly))));", ctorLocalVar, ilVar, localVar);
+			AddCecilExpression(@"{0}.Body.Instructions.Add({1}.Create(OpCodes.Call, assembly.MainModule.Import(TypeHelpers.DefaultCtorFor({2}.BaseType.Resolve(), assembly))));", ctorLocalVar, ilVar, localVar);
 			AddCecilExpression(@"{0}.Body.Instructions.Add({1}.Create(OpCodes.Ret));", ctorLocalVar, ilVar);
 		}
 

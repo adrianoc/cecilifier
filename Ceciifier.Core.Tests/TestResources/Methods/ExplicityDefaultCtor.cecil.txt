@@ -4,5 +4,5 @@ var ExplicityDefaultCtor_ctor_ = new MethodDefinition(".ctor", MethodAttributes.
 t1.Methods.Add(ExplicityDefaultCtor_ctor_);
 var il_ExplicityDefaultCtor_ctor_ = ExplicityDefaultCtor_ctor_.Body.GetILProcessor();
 il_ExplicityDefaultCtor_ctor_.Append(il_ExplicityDefaultCtor_ctor_.Create(OpCodes.Ldarg_0));
-il_ExplicityDefaultCtor_ctor_.Append(il_ExplicityDefaultCtor_ctor_.Create(OpCodes.Call, assembly.MainModule.Import(DefaultCtorFor(t1.BaseType.Resolve()))));
+il_ExplicityDefaultCtor_ctor_.Append(il_ExplicityDefaultCtor_ctor_.Create(OpCodes.Call, assembly.MainModule.Import(TypeHelpers.DefaultCtorFor(t1.BaseType.Resolve()))));
 ExplicityDefaultCtor_ctor_.Body.Instructions.Add(il_ExplicityDefaultCtor_ctor_.Create(OpCodes.Ret));

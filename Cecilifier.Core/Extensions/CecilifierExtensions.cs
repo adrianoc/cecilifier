@@ -42,6 +42,7 @@ namespace Cecilifier.Core.Extensions
 					   using Mono.Cecil.Cil;
                        using System; 
 					   using System.Linq;
+					   using Cecilifier.Runtime;
                
 					   public class SnipetRunner
 					   {{
@@ -51,19 +52,6 @@ namespace Cecilifier.Core.Extensions
 							   {0}
 							   assembly.Write(args[0]);                              
 						   }}
-
-						   private static MethodReference DefaultCtorFor(TypeDefinition type)
-						   {{
-								var ctor = type.Methods.Where(m => m.IsConstructor && m.Parameters.Count == 0).SingleOrDefault();
-                                return ctor ?? DefaultCtorFor(type.BaseType.Resolve()); 
-  						   }}
-
-                           private static System.Reflection.MethodInfo ResolveMethod(string assemblyName, string declaringTypeName, string methodName, params string[] paramTypes)
-                           {{
-                                var containingAssembly = System.Reflection.Assembly.Load(new System.Reflection.AssemblyName(assemblyName));
-                                var declaringType = containingAssembly.GetType(declaringTypeName);
-                                return declaringType.GetMethod(methodName, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance, null, paramTypes.Select(typeName => Type.GetType(typeName)).ToArray(), null);
-                           }}
                         }}
                       ", cecilSnipet);
 		}

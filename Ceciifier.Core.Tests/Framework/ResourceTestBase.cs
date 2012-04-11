@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using Ceciifier.Core.Tests.Framework.AssemblyDiff;
 using Cecilifier.Core.Extensions;
+using Cecilifier.Runtime;
 using Mono.Cecil;
 using NUnit.Framework;
 
@@ -22,7 +23,7 @@ namespace Ceciifier.Core.Tests.Framework
 
 			AssertCecilified(expectedCecilDriver, generated);
 
-			var compiledCecilifierPath = CompilationServices.CompileExe(generated, typeof(TypeDefinition).Assembly, typeof(IQueryable).Assembly);
+			var compiledCecilifierPath = CompilationServices.CompileExe(generated, typeof(TypeDefinition).Assembly, typeof(IQueryable).Assembly, typeof(TypeHelpers).Assembly);
 
 			var actualAssemblyPath = Path.Combine(Path.GetTempPath(), resourceName + ".dll");
 			Directory.CreateDirectory(Path.GetDirectoryName(actualAssemblyPath));

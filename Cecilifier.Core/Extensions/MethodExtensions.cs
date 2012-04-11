@@ -38,7 +38,7 @@ namespace Cecilifier.Core.Extensions
 
 			var declaringTypeName = method.ContainingType.FullyQualifiedName();
 
-			return String.Format("assembly.MainModule.Import(ResolveMethod(\"{0}\", \"{1}\", \"{2}\"{3}))",
+			return String.Format("assembly.MainModule.Import(TypeHelpers.ResolveMethod(\"{0}\", \"{1}\", \"{2}\"{3}))",
 								 method.ContainingAssembly.AssemblyName.FullName,
 								 declaringTypeName,
 								 method.Name,

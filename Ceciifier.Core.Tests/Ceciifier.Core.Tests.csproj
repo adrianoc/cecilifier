@@ -78,6 +78,10 @@
       <Project>{0F3DB4A6-92A7-41ED-AE89-E99F78D6E4F3}</Project>
       <Name>Cecilifier.Core</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Cecilifier.Runtime\Cecilifier.Runtime.csproj">
+      <Project>{35DDC066-1D76-49AE-8D10-39A709E709EC}</Project>
+      <Name>Cecilifier.Runtime</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Content Include="TestResources\Expressions\Box.cecil.txt">
