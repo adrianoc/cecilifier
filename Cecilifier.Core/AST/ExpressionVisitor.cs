@@ -260,7 +260,7 @@ namespace Cecilifier.Core.AST
 			var info = Context.GetSemanticInfo(node.Expression);
 			if (info.Type.SpecialType != SpecialType.System_Void)
 			{
-				//AddCilInstruction(ilVar, OpCodes.Pop);
+				AddCilInstruction(ilVar, OpCodes.Pop);
 			}
         }
 
