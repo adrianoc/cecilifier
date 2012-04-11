@@ -42,39 +42,6 @@ namespace Cecilifier.Core.AST
     		throw new Exception(string.Format("Operator {0} not supported yet (expression: {1})", operatorToken.ValueText, operatorToken.Parent));
     	}
 
-    	//class OperatorHandlerKey
-		//{
-		//    SyntaxToken op;
-		//    TypeSymbol right;
-		//    TypeSymbol left;
-
-		//    public OperatorHandlerKey(SyntaxToken op, TypeSymbol left, TypeSymbol right)
-		//    {
-		//        this.op = op;
-		//        this.left = left;
-		//        this.right = right;
-		//    }
-
-		//    public override bool Equals(object obj)
-		//    {
-		//        OperatorHandlerKey other = obj as OperatorHandlerKey;
-		//        return Equals(other);
-		//    }
-
-		//    public bool Equals(OperatorHandlerKey other)
-		//    {
-		//        if (other == null) return false;
-		//        return other.op.ValueText == op.ValueText
-		//               && other.left.Name == left.Name
-		//               && other.right.Name == right.Name;
-		//    }
-
-		//    public override int GetHashCode()
-		//    {
-		//        return op.ValueText.GetHashCode() + 37*(left.Name.GetHashCode() + right.Name.GetHashCode());
-		//    }
-		//}
-
     	protected override void VisitLiteralExpression(LiteralExpressionSyntax node)
         {
 			switch(node.Kind)
@@ -121,12 +88,12 @@ namespace Cecilifier.Core.AST
 		 *			push n 
 		 *			Call DoIt(Int32, Int32) <--+
 		 *			push 10                    |
-		 *			push x                     |  Should be the here
+		 *			push x                     |  Should be here
 		 *			add                        |
 		 *			push y                     |
 		 *			         <-----------------+
 		 * 
-		 * To fix this we visit in the later order (exp, args) and move the call operation after visiting the arguments
+		 * To fix this we visit in the order [exp, args] and move the call operation after visiting the arguments
 		 */
 		protected override void VisitInvocationExpression(InvocationExpressionSyntax node)
         {
