@@ -42,7 +42,7 @@ namespace Cecilifier.Core.Extensions
 								 method.ContainingAssembly.AssemblyName.FullName,
 								 declaringTypeName,
 								 method.Name,
-								 method.Parameters.Aggregate("", (acc, curr) => ", \"" + curr.Name + "\""));
+								 method.Parameters.Aggregate("", (acc, curr) => ", \"" + curr.Type.FullyQualifiedName() + "\""));
 		}
 
     	public static string LocalVariableName(this MethodSymbol method)

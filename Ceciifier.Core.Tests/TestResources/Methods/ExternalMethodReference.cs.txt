@@ -1,0 +1,7 @@
+﻿class ExternalMethodReference
+{
+	public void Foo()
+	{
+		System.Console.WriteLine("ExternalMethodReference");
+	}
+}

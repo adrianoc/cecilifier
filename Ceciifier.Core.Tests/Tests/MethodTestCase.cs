@@ -89,5 +89,11 @@ namespace Ceciifier.Core.Tests
 		{
 			AssertResourceTest(@"Methods\MethodCallOnValueType");
 		}
+		
+		[Test]
+		public void TestExternalMethodReference()
+		{
+			AssertResourceTest(@"Methods\ExternalMethodReference");
+		}
 	}
 }
