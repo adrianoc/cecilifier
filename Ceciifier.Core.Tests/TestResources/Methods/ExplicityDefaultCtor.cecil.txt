@@ -1,8 +1,8 @@
-﻿TypeDefinition t1 = new TypeDefinition("", "ExplicityDefaultCtor", TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit, assembly.MainModule.Import(typeof(Object)));
+﻿TypeDefinition t1 = new TypeDefinition("", "ExplicityDefaultCtor", TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit | TypeAttributes.NotPublic, assembly.MainModule.Import(typeof(Object)));
 assembly.MainModule.Types.Add(t1);
 var ExplicityDefaultCtor_ctor_ = new MethodDefinition(".ctor", MethodAttributes.Public | MethodAttributes.RTSpecialName | MethodAttributes.SpecialName | MethodAttributes.HideBySig, assembly.MainModule.TypeSystem.Void);
 t1.Methods.Add(ExplicityDefaultCtor_ctor_);
 var il_ExplicityDefaultCtor_ctor_ = ExplicityDefaultCtor_ctor_.Body.GetILProcessor();
-ExplicityDefaultCtor_ctor_.Body.Instructions.Add(il_ExplicityDefaultCtor_ctor_.Create(OpCodes.Ldarg_0));
-ExplicityDefaultCtor_ctor_.Body.Instructions.Add(il_ExplicityDefaultCtor_ctor_.Create(OpCodes.Call, assembly.MainModule.Import(DefaultCtorFor(t1.BaseType.Resolve()))));
+il_ExplicityDefaultCtor_ctor_.Append(il_ExplicityDefaultCtor_ctor_.Create(OpCodes.Ldarg_0));
+il_ExplicityDefaultCtor_ctor_.Append(il_ExplicityDefaultCtor_ctor_.Create(OpCodes.Call, assembly.MainModule.Import(DefaultCtorFor(t1.BaseType.Resolve()))));
 ExplicityDefaultCtor_ctor_.Body.Instructions.Add(il_ExplicityDefaultCtor_ctor_.Create(OpCodes.Ret));

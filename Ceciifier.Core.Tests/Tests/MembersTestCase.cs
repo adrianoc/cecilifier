@@ -1,7 +1,7 @@
 ﻿using Ceciifier.Core.Tests.Framework;
 using NUnit.Framework;
 
-namespace Ceciifier.Core.Tests.Tests
+namespace Ceciifier.Core.Tests
 {
     [TestFixture]
     public class MembersTestCase : ResourceTestBase

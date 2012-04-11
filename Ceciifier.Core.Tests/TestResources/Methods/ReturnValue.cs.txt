@@ -1,4 +1,8 @@
-﻿class NoParameters
+﻿class ReturnValue
 {
-	public void Foo() {}
+	public int Foo() 
+	{
+		int i = 42;
+		return i + 1;
+	}
 }

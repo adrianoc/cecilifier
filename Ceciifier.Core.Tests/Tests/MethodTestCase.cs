@@ -48,8 +48,8 @@ namespace Ceciifier.Core.Tests
 			AssertResourceTest(@"Methods\AbstractMethod");
 		}
 
-		[Test, Ignore("Not Implemented yet")]
-		public void TestReturnValueMethod()
+		[Test]
+		public void TestReturnValue()
 		{
 			AssertResourceTest(@"Methods\ReturnValue");
 		}
@@ -82,6 +82,12 @@ namespace Ceciifier.Core.Tests
 		public void TestMutuallyRecursive()
 		{
 			AssertResourceTest(@"Methods\MutuallyRecursive");
+		}
+
+		[Test]
+		public void TestMethodCallOnValueType()
+		{
+			AssertResourceTest(@"Methods\MethodCallOnValueType");
 		}
 	}
 }

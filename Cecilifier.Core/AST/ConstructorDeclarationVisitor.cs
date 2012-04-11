@@ -31,7 +31,7 @@ namespace Cecilifier.Core.AST
 				{
 					var declaringTypelocalVar = ResolveTypeLocalVariable(declaringType.Identifier.ValueText);
 
-					AddCilInstruction(ilVar, OpCodes.Call, string.Format("assembly.MainModule.Import(DefaultCtorFor({0}.BaseType.Resolve()))));", declaringTypelocalVar));
+					AddCilInstruction(ilVar, OpCodes.Call, string.Format("assembly.MainModule.Import(DefaultCtorFor({0}.BaseType.Resolve()))", declaringTypelocalVar));
 				}
 			});
 		}

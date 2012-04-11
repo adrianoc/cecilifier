@@ -1,4 +1,5 @@
-﻿using Mono.Cecil.Cil;
+﻿using System;
+using Mono.Cecil.Cil;
 using Roslyn.Compilers.CSharp;
 
 namespace Cecilifier.Core.AST
@@ -34,6 +35,7 @@ namespace Cecilifier.Core.AST
 
 		private void ParameterAssignment(ParameterSymbol parameter)
 		{
+			Console.WriteLine("----------> {0} : {1}", parameter.Name, parameter.Ordinal);
 			AddCilInstructionCastOperand(ilVar, OpCodes.Starg_S, (byte) parameter.Ordinal);
 		}
 

@@ -255,8 +255,14 @@ namespace Cecilifier.Core.AST
 
         protected override void VisitExpressionStatement(ExpressionStatementSyntax node)
         {
-			WriteLine("[{0}] : {1}", new StackFrame().GetMethod().Name, node);
-		}
+			base.Visit(node.Expression);
+
+			var info = Context.GetSemanticInfo(node.Expression);
+			if (info.Type.SpecialType != SpecialType.System_Void)
+			{
+				//AddCilInstruction(ilVar, OpCodes.Pop);
+			}
+        }
 
 		protected override void VisitConstructorInitializer(ConstructorInitializerSyntax node)
 		{
@@ -415,7 +421,8 @@ namespace Cecilifier.Core.AST
 			}
 
 			EnsureMethodAvailable(method);
-			AddCilInstruction(ilVar, method.IsVirtual || method.IsAbstract || method.IsOverride ? OpCodes.Callvirt : OpCodes.Call, method.MethodResolverExpression(Context));
+			AddCilInstruction(ilVar, method.IsVirtual || method.IsAbstract ? OpCodes.Callvirt : OpCodes.Call, method.MethodResolverExpression(Context));
+			//AddCilInstruction(ilVar, method.IsVirtual || method.IsAbstract || method.IsOverride ? OpCodes.Callvirt : OpCodes.Call, method.MethodResolverExpression(Context));
 		}
 
 		// TypeSyntax ?
@@ -435,6 +442,7 @@ namespace Cecilifier.Core.AST
 		
 		static ExpressionVisitor()
 		{
+			//TODO: Use AddCilInstruction instead.
 			operatorHandlers[SyntaxKind.PlusToken] = (ctx, ilVar, left, right) =>
 			{
 				if (left.SpecialType == SpecialType.System_String)
@@ -443,9 +451,13 @@ namespace Cecilifier.Core.AST
 				}
 				else
 				{
-					//TODO: Use AddCilInstruction instead.
 					ctx.WriteCecilExpression(@"{0}.Append({0}.Create({1}));", ilVar, OpCodes.Add.ConstantName());
 				}
+			};
+			
+			operatorHandlers[SyntaxKind.SlashToken] = (ctx, ilVar, left, right) =>
+			{
+				ctx.WriteCecilExpression(@"{0}.Append({0}.Create({1}));", ilVar, OpCodes.Div.ConstantName());
 			};
 		}
 

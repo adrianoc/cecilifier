@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.Extensions;
+using Mono.Cecil.Cil;
 using Roslyn.Compilers.CSharp;
 
 namespace Cecilifier.Core.AST
@@ -23,6 +24,12 @@ namespace Cecilifier.Core.AST
 			AddCecilExpression("{0}.Parameters.Add(new ParameterDefinition(\"{1}\", ParameterAttributes.None, {2}));", methodVar, node.Identifier.ValueText, ResolveType(node.TypeOpt));
 			base.VisitParameter(node);
 		}
+		
+		protected override void VisitReturnStatement(ReturnStatementSyntax node)
+		{
+			new ExpressionVisitor(Context, ilVar).Visit(node.ExpressionOpt);
+			AddCilInstruction(ilVar, OpCodes.Ret);
+		}
 
 		protected override void VisitPropertyDeclaration(PropertyDeclarationSyntax node)
 		{
@@ -32,7 +39,8 @@ namespace Cecilifier.Core.AST
 
 		protected override void VisitExpressionStatement(ExpressionStatementSyntax node)
 		{
-			new ExpressionVisitor(Context, ilVar).Visit(node.Expression);
+			new ExpressionVisitor(Context, ilVar).Visit(node);
+			//new ExpressionVisitor(Context, ilVar).Visit(node.Expression);
 		}
 
 		protected override void VisitLocalDeclarationStatement(LocalDeclarationStatementSyntax node)
@@ -41,7 +49,16 @@ namespace Cecilifier.Core.AST
 			foreach(var localVar in node.Declaration.Variables)
 			{
 				AddCecilExpression("{0}.Body.Variables.Add(new VariableDefinition(\"{1}\", {2}));", methodVar, localVar.Identifier.ValueText, ResolveType(node.Declaration.Type));
+				ProcessVariableInitialization(localVar);
 			}
+		}
+
+		private void ProcessVariableInitialization(VariableDeclaratorSyntax localVar)
+		{
+			if (localVar.InitializerOpt == null) return;
+			
+			new ExpressionVisitor(Context, ilVar).Visit(localVar.InitializerOpt);
+			AddCilInstruction(ilVar, OpCodes.Stloc, LocalVariableIndex(localVar.Identifier.ValueText));
 		}
 
 		protected void ProcessMethodDeclaration<T>(T node, string simpleName, string fqName, string returnType, Action<string> runWithCurrent) where T : BaseMethodDeclarationSyntax
@@ -63,8 +80,11 @@ namespace Cecilifier.Core.AST
 
 			WithCurrentNode(node, methodVar, simpleName, runWithCurrent);
 
-			//TODO: Move this to default ctor handling and rely on VisitReturnStatement here instead
-			if (!isAbstract) AddCecilExpression(@"{0}.Body.Instructions.Add({1}.Create(OpCodes.Ret));", methodVar, ilVar);
+			////TODO: Move this to default ctor handling and rely on VisitReturnStatement here instead
+			if (!isAbstract && !node.DescendentNodes().Where(n => n.Kind == SyntaxKind.ReturnStatement).Any())
+			{
+				AddCecilExpression(@"{0}.Body.Instructions.Add({1}.Create(OpCodes.Ret));", methodVar, ilVar);
+			}
 		}
 
 		private void AddOrUpdateMethodDefinition(string methodVar, string fqName, string methodModifiers, string returnType)
@@ -72,6 +92,7 @@ namespace Cecilifier.Core.AST
 			if (Context.Contains(methodVar))
 			{
 				AddCecilExpression("{0}.Attributes = {1};", methodVar, methodModifiers);
+				AddCecilExpression("{0}.HasThis = !{0}.IsStatic;", methodVar);
 			}
 			else
 			{

@@ -25,12 +25,6 @@ namespace Ceciifier.Core.Tests
 		}
 
 		[Test, Ignore("Not Implemented yet")]
-		public void TernaryOperatorTest()
-		{
-			AssertResourceTest(@"CodeBlock\Conditional\");
-		}
-
-		[Test, Ignore("Not Implemented yet")]
 		public void SwitchStatementTest()
 		{
 			AssertResourceTest(@"CodeBlock\Conditional\");

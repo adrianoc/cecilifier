@@ -41,5 +41,11 @@ namespace Ceciifier.Core.Tests
 		{
 			AssertResourceTest(@"Expressions\Operators\Add");
 		}
+
+		[Test, Ignore("Not Implemented yet")]
+		public void TernaryOperatorTest()
+		{
+			AssertResourceTest(@"Expressions\Operators\Ternary");
+		}
 	}
 }
