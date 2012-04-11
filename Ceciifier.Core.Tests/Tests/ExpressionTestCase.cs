@@ -23,6 +23,12 @@ namespace Ceciifier.Core.Tests
 		{
 			AssertResourceTest(@"Expressions\MultipleLocalVariableAssignment");
 		}
+		
+		[Test]
+		public void TestLocalVariableInitialization()
+		{
+			AssertResourceTest(@"Expressions\LocalVariableInitialization");
+		}
 
 		[Test]
 		public void TestSimpeBox()

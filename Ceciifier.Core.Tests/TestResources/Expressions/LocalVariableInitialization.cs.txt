@@ -1,0 +1,7 @@
+﻿class LocalVariableInitialization
+{
+	private static void Method(int i)
+	{
+		int j = 42;
+	}
+}
