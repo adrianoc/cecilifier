@@ -4,6 +4,7 @@
 	{
 		int i;
 		i = 10 + a;
+		System.Console.WriteLine(i);
 	}
 
 	private static void IntegerString(string a, int n)
@@ -11,5 +12,6 @@
 		string s;
 		s = a + 10;
 		s = "constant" + n; 
+		System.Console.WriteLine(s);
 	}
 }
