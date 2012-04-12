@@ -20,13 +20,15 @@ namespace Cecilifier.Core.AST
 
 		protected override void VisitParameter(ParameterSyntax node)
 		{
-			//var p = new ParameterDefinition("x", ParameterAttributes.None, new ArrayType(assembly.MainModule.TypeSystem.Int32));
-			//p.CustomAttributes.Add(new CustomAttribute(assembly.MainModule.Import(typeof(ParamArrayAttribute).GetConstructor(BindingFlags.Public | BindingFlags.Instance, null, new Type[0], null))));
-
 			var methodVar = LocalVariableNameForCurrentNode();
-			var paramVar = NextLocalVariableId();
-
+			var paramVar = LocalVariableNameFor("param_", node.Identifier.ValueText + DateTime.Now.Ticks);
 			AddCecilExpression("var {0} = new ParameterDefinition(\"{1}\", ParameterAttributes.None, {2});", paramVar, node.Identifier.ValueText, ResolveType(node.TypeOpt));
+			
+			if (node.GetFirstToken().Kind == SyntaxKind.ParamsKeyword)
+			{
+				AddCecilExpression("{0}.CustomAttributes.Add(new CustomAttribute(assembly.MainModule.Import(typeof(ParamArrayAttribute).GetConstructor(BindingFlags.Public | BindingFlags.Instance, null, new Type[0], null))));", paramVar);
+			}
+
 			AddCecilExpression("{0}.Parameters.Add({1});", methodVar, paramVar);
 			base.VisitParameter(node);
 		}
