@@ -30,7 +30,7 @@ namespace Ceciifier.Core.Tests
 			AssertResourceTest(@"Methods\SingleSimpleParameter");
 		}
 
-		[Test, Ignore("Not Implemented yet")]
+		[Test]
 		public void TestVariableNumberOfParameters()
 		{
 			AssertResourceTest(@"Methods\VariableNumberOfParameters");

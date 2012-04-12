@@ -24,7 +24,7 @@ namespace Cecilifier.Core.AST
 			//p.CustomAttributes.Add(new CustomAttribute(assembly.MainModule.Import(typeof(ParamArrayAttribute).GetConstructor(BindingFlags.Public | BindingFlags.Instance, null, new Type[0], null))));
 
 			var methodVar = LocalVariableNameForCurrentNode();
-			var paramVar = LocalVariableNameFor("param_", node.GetHashCode() + "");
+			var paramVar = NextLocalVariableId();
 
 			AddCecilExpression("var {0} = new ParameterDefinition(\"{1}\", ParameterAttributes.None, {2});", paramVar, node.Identifier.ValueText, ResolveType(node.TypeOpt));
 			AddCecilExpression("{0}.Parameters.Add({1});", methodVar, paramVar);
