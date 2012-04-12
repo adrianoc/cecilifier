@@ -1,7 +1,0 @@
-﻿!~2
-var SingleSimpleParameter_Foo_int32 = new MethodDefinition("Foo", MethodAttributes.Public | MethodAttributes.HideBySig, assembly.MainModule.TypeSystem.Void);
-t1.Methods.Add(SingleSimpleParameter_Foo_int32);
-var il_SingleSimpleParameter_Foo_int32 = SingleSimpleParameter_Foo_int32.Body.GetILProcessor();
-SingleSimpleParameter_Foo_int32.Parameters.Add(new ParameterDefinition("i", ParameterAttributes.None, assembly.MainModule.TypeSystem.Int32));
-SingleSimpleParameter_Foo_int32.Body.Instructions.Add(il_SingleSimpleParameter_Foo_int32.Create(OpCodes.Ret));
-!~6 Ctor

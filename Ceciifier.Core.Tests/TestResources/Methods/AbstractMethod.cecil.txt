@@ -1,4 +1,0 @@
-﻿!~2 type definition: AbstractClass
-var AbstractClass_AbstractMethod_ = new MethodDefinition("AbstractMethod", MethodAttributes.Family | MethodAttributes.HideBySig | MethodAttributes.Virtual | MethodAttributes.NewSlot | MethodAttributes.Abstract, assembly.MainModule.TypeSystem.Void);
-t1.Methods.Add(AbstractClass_AbstractMethod_);
-!~6 ctor

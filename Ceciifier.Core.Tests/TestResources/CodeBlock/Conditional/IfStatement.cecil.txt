@@ -1,7 +1,0 @@
-﻿-------- ERROR ---------
-TypeDefinition t1 = new TypeDefinition("", "VolitileField", TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit, assembly.MainModule.Import(typeof(System.Object)));
-assembly.MainModule.Types.Add(t1);
-var mod_req2 = new RequiredModifierType(assembly.MainModule.TypeSystem.Int32, assembly.MainModule.Import(typeof(System.Runtime.CompilerServices.IsVolatile)));
-var ft1 = new FieldDefinition("i", FieldAttributes.Private | FieldAttributes.Static, mod_req2);
-t1.Fields.Add(ft1);
-t1.Methods.Add(new MethodDefinition(".ctor", MethodAttributes.RTSpecialName | MethodAttributes.FamANDAssem | MethodAttributes.Family | MethodAttributes.HideBySig | MethodAttributes.SpecialName, assembly.MainModule.TypeSystem.Void));

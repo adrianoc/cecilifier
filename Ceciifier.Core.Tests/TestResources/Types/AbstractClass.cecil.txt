@@ -1,2 +1,0 @@
-﻿TypeDefinition t1 = new TypeDefinition("", "AbstractClass", TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit | TypeAttributes.Public | TypeAttributes.Abstract, assembly.MainModule.Import(typeof(Object)));
-!*

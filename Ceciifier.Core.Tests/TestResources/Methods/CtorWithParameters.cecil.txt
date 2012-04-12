@@ -1,8 +1,0 @@
-﻿!*
-!~2 Base definition
-!~6 Base ctor
-!~2 DefaultCtorFromBaseClass definition
-var method_DefaultCtorFromBaseClass_ctor = new MethodDefinition(".ctor", MethodAttributes.Public | MethodAttributes.RTSpecialName  | MethodAttributes.SpecialName | MethodAttributes.HideBySig, assembly.MainModule.TypeSystem.Void);
-t1.Methods.Add(method_DefaultCtorFromBaseClass_ctor);
-var il_DefaultCtorFromBaseClass_ctor = method_ExplicityDefaultCtor_ctor.Body.GetILProcessor();
-method_DefaultCtorFromBaseClass_ctor.Body.Instructions.Add(il_DefaultCtorFromBaseClass_ctor.Create(OpCodes.Ret));

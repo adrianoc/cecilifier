@@ -1,7 +1,0 @@
-﻿TypeDefinition t1 = new TypeDefinition("", "Simple", TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit | TypeAttributes.NotPublic, assembly.MainModule.Import(typeof(Object)));
-assembly.MainModule.Types.Add(t1);
-var ft1 = new FieldDefinition("i", FieldAttributes.Private, assembly.MainModule.TypeSystem.Int32);
-t1.Fields.Add(ft1);
-var ft2 = new FieldDefinition("j", FieldAttributes.Private, assembly.MainModule.TypeSystem.Int32);
-t1.Fields.Add(ft2);
-!* Not relevant for this test.

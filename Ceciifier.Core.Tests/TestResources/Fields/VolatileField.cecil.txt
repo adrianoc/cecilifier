@@ -1,5 +1,0 @@
-﻿!~2 Type definition VolitileField
-var mod_req2 = new RequiredModifierType(assembly.MainModule.TypeSystem.Int32, assembly.MainModule.Import(typeof(System.Runtime.CompilerServices.IsVolatile)));
-var ft1 = new FieldDefinition("i", FieldAttributes.Private | FieldAttributes.Static, mod_req2);
-t1.Fields.Add(ft1);
-!* Not relevant for this test.

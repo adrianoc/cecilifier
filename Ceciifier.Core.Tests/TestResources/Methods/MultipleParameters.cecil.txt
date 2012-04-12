@@ -1,7 +1,0 @@
-﻿!~2 Type definition
-var MultipleParameters_Foo_int32string = new MethodDefinition("Foo", MethodAttributes.Private | MethodAttributes.HideBySig, assembly.MainModule.TypeSystem.Void);
-t1.Methods.Add(MultipleParameters_Foo_int32string);
-!~1 il processor for the method ..
-MultipleParameters_Foo_int32string.Parameters.Add(new ParameterDefinition("i", ParameterAttributes.None, assembly.MainModule.TypeSystem.Int32));
-MultipleParameters_Foo_int32string.Parameters.Add(new ParameterDefinition("s", ParameterAttributes.None, assembly.MainModule.TypeSystem.String));
-!*

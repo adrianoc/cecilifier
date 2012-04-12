@@ -1,6 +1,0 @@
-﻿TypeDefinition t1 = new TypeDefinition("Foo", "Namespaces", TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit | TypeAttributes.NotPublic, assembly.MainModule.Import(typeof(Object)));
-!~7 add type to module + ctor
-TypeDefinition t2 = new TypeDefinition("Foo.Bar", "InsideBar", TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit | TypeAttributes.NotPublic, assembly.MainModule.Import(typeof(Object)));
-!~7 add type to module + ctor
-TypeDefinition t3 = new TypeDefinition("Foo.Bar.Baz", "InsideBaz", TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit | TypeAttributes.NotPublic, assembly.MainModule.Import(typeof(Object)));
-!~7 add type to module + ctor

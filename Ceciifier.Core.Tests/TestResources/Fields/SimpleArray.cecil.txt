@@ -1,4 +1,0 @@
-﻿!~2 Type definition (SimpleArray)
-var ft1 = new FieldDefinition("i", FieldAttributes.Private, new ArrayType(assembly.MainModule.TypeSystem.Int32));
-t1.Fields.Add(ft1);
-!* Not relevant for this test.

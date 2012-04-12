@@ -1,7 +1,0 @@
-﻿TypeDefinition t1 = new TypeDefinition("", "OuterClass", TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit | TypeAttributes.NotPublic, assembly.MainModule.Import(typeof(Object)));
-assembly.MainModule.Types.Add(t1);
-!~6 t1 ctor
-TypeDefinition t2 = new TypeDefinition("", "InnerClass", TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit | TypeAttributes.Public, assembly.MainModule.Import(typeof(Object)));
-assembly.MainModule.Types.Add(t2);
-t2.DeclaringType = t1;
-!~6 t1 ctor

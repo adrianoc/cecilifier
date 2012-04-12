@@ -1,3 +1,0 @@
-﻿!~2 Type definition
-!* ADD VIRTUAL METHOD CREATION HERE
-!* prolog...

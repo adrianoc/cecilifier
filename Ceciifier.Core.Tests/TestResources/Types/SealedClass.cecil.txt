@@ -1,2 +1,0 @@
-﻿TypeDefinition t1 = new TypeDefinition("", "SealedClass", TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit | TypeAttributes.Public | TypeAttributes.Sealed, assembly.MainModule.Import(typeof(Object)));
-!* Not relevant for this test.

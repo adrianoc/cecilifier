@@ -1,5 +1,0 @@
-﻿!~2 Type definition ParameterAssignment
-!~4
-il_ParameterAssignment_Method_int32.Append(il_ParameterAssignment_Method_int32.Create(OpCodes.Ldc_I4, 4242));
-il_ParameterAssignment_Method_int32.Append(il_ParameterAssignment_Method_int32.Create(OpCodes.Starg_S, (Byte) 0));
-!*
