@@ -1,0 +1,16 @@
+﻿class TypeInferenceInDeclarations
+{
+	public void Foo()
+	{
+		var i = 10;
+		var j = i + 10;
+		var x = Bar(j) ;
+
+		System.Console.WriteLine(x);
+	}
+
+	private string Bar(int notUsed)
+	{
+		return "42";
+	}
+}

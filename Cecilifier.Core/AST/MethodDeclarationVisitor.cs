@@ -48,7 +48,6 @@ namespace Cecilifier.Core.AST
 		protected override void VisitExpressionStatement(ExpressionStatementSyntax node)
 		{
 			new ExpressionVisitor(Context, ilVar).Visit(node);
-			//new ExpressionVisitor(Context, ilVar).Visit(node.Expression);
 		}
 
 		protected override void VisitLocalDeclarationStatement(LocalDeclarationStatementSyntax node)
@@ -56,9 +55,18 @@ namespace Cecilifier.Core.AST
 			var methodVar = LocalVariableNameForCurrentNode();
 			foreach(var localVar in node.Declaration.Variables)
 			{
-				AddCecilExpression("{0}.Body.Variables.Add(new VariableDefinition(\"{1}\", {2}));", methodVar, localVar.Identifier.ValueText, ResolveType(node.Declaration.Type));
+				AddLocalVariable(node.Declaration.Type, localVar, methodVar);
 				ProcessVariableInitialization(localVar);
 			}
+		}
+
+		private void AddLocalVariable(TypeSyntax type, VariableDeclaratorSyntax localVar, string methodVar)
+		{
+			string resolvedVarType = type.IsVar 
+										? ResolveExpressionType(localVar.InitializerOpt.Value)
+										: ResolveType(type);
+
+			AddCecilExpression("{0}.Body.Variables.Add(new VariableDefinition(\"{1}\", {2}));", methodVar, localVar.Identifier.ValueText, resolvedVarType);
 		}
 
 		private void ProcessVariableInitialization(VariableDeclaratorSyntax localVar)

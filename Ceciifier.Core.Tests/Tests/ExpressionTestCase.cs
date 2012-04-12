@@ -47,5 +47,11 @@ namespace Ceciifier.Core.Tests
 		{
 			AssertResourceTest(@"Expressions\Operators\Ternary");
 		}
+
+		[Test]
+		public void TypeInferenceInDeclarationsTest()
+		{
+			AssertResourceTest(@"Expressions\TypeInferenceInDeclarations");
+		}
 	}
 }

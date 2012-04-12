@@ -148,6 +148,17 @@ namespace Cecilifier.Core.AST
 			return Context.ResolveTypeLocalVariable(typeName);
 		}
 
+		protected string ResolveExpressionType(ExpressionSyntax expression)
+		{
+			if (expression == null)
+			{
+				throw new ArgumentNullException("expression");
+			}
+
+			var info = Context.GetSemanticInfo(expression);
+			return ResolveType(info.Type.FullyQualifiedName());
+		}
+
 		protected string ResolveType(TypeSyntax type)
 		{
 			switch (type.Kind)
