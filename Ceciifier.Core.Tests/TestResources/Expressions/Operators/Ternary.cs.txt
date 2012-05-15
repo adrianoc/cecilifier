@@ -1,0 +1,8 @@
+﻿class Ternary
+{
+	private static void Foo(int i, bool b)
+	{
+		System.Console.WriteLine( i > 10 ? ">" : "<=");
+		System.Console.WriteLine( b ? "true" : "false");
+	}
+}
