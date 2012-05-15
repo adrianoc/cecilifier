@@ -10,34 +10,51 @@ namespace Ceciifier.Core.Tests.Framework
 {
 	public class ResourceTestBase
 	{
+		protected void AssertResourceTestBinary(string resourceBasePath)
+		{
+			string expectedAssemblyPath = resourceBasePath.GetPathOfBinaryResource("Expected.dll");
+			
+			var tbc = ReadResource(resourceBasePath, "cs");
+			AssertResourceTest(resourceBasePath, expectedAssemblyPath, tbc);
+		}
+
 		protected void AssertResourceTest(string resourceName)
 		{
 			var tbc = ReadResource(resourceName, "cs");
 
+			var actualAssemblyPath = Path.Combine(Path.GetTempPath(), resourceName + ".dll");
+
+			var expectedAssemblyPath = CompilationServices.CompileDLL(
+												Path.Combine(Path.GetDirectoryName(actualAssemblyPath), Path.GetFileNameWithoutExtension(actualAssemblyPath) + "_expected"),
+												ReadToEnd(tbc));
+
+			AssertResourceTest(resourceName, expectedAssemblyPath, tbc);
+		}
+
+		private void AssertResourceTest(string resourceBasePath, string expectedAssemblyPath, Stream tbc)
+		{
+			var actualAssemblyPath = Path.Combine(Path.GetTempPath(), resourceBasePath + ".dll");
+
 			var generated = Cecilfy(tbc);
 
-			var compiledCecilifierPath = CompilationServices.CompileExe(generated, typeof(TypeDefinition).Assembly, typeof(IQueryable).Assembly, typeof(TypeHelpers).Assembly);
+			var compiledCecilifierPath = CompilationServices.CompileExe(generated, typeof(TypeDefinition).Assembly,
+																		typeof(IQueryable).Assembly, typeof(TypeHelpers).Assembly);
 
-			var actualAssemblyPath = Path.Combine(Path.GetTempPath(), resourceName + ".dll");
 			Directory.CreateDirectory(Path.GetDirectoryName(actualAssemblyPath));
 
 			try
 			{
 				TestFramework.Execute(compiledCecilifierPath, actualAssemblyPath);
 			}
-			catch(Exception ex)
+			catch (Exception ex)
 			{
 				Assert.Fail("Fail to execute generated cecil snipet: " + ex + "\r\n" + generated);
 			}
 
-			var expectedAssemblyPath = CompilationServices.CompileDLL(
-												Path.Combine(Path.GetDirectoryName(actualAssemblyPath), Path.GetFileNameWithoutExtension(actualAssemblyPath) + "_expected"),
-												ReadToEnd(tbc));
-
 			Console.WriteLine("Cecil build assembly path: {0}", actualAssemblyPath);
 			Console.WriteLine("Cecil runner path: {0}", compiledCecilifierPath);
 			Console.WriteLine("Compiled from res: {0}", expectedAssemblyPath);
-			
+
 			CompareAssemblies(expectedAssemblyPath, actualAssemblyPath);
 		}
 
@@ -59,7 +76,7 @@ namespace Ceciifier.Core.Tests.Framework
 
 		private Stream ReadResource(string resourceName, string type)
 		{
-			return ReadResource(resourceName.GetPathOf(type));
+			return ReadResource(resourceName.GetPathOfTextResource(type));
 		}
 
 		private Stream ReadResource(string path)
@@ -69,6 +86,7 @@ namespace Ceciifier.Core.Tests.Framework
 
 		private string Cecilfy(Stream stream)
 		{
+			stream.Position = 0;
 			return Cecilifier.Core.Cecilifier.Process(stream).ReadToEnd();
 		}
 	}
