@@ -105,8 +105,29 @@ namespace Cecilifier.Core.AST
         }
 
     	protected override void VisitConditionalExpression(ConditionalExpressionSyntax node)
-        {
-			WriteLine("[{0}] : {1}", new StackFrame().GetMethod().Name, node);
+    	{
+    		int count = 0;
+    		Func<OpCode, string> Emit = op =>
+    		                            	{
+    		                            			var instVarName = op.Name + "_" + node.GetHashCode() + "_" + count++;
+													AddCecilExpression(@"var {0} = {1}.Create({2});", instVarName, ilVar, op.ConstantName());
+
+    		                                 		return instVarName;
+    		                                 	};
+
+    		var conditionEnd = Emit(OpCodes.Nop);
+			var whenFalse = Emit(OpCodes.Nop);
+			
+			Visit(node.Condition);
+			AddCilInstruction(ilVar, OpCodes.Brfalse_S, whenFalse);
+
+			Visit(node.WhenTrue);
+			AddCilInstruction(ilVar, OpCodes.Br_S, conditionEnd);
+
+			AddCecilExpression("{0}.Append({1});", ilVar, whenFalse);
+			Visit(node.WhenFalse);
+
+			AddCecilExpression("{0}.Append({1});", ilVar, conditionEnd);
         }
 
 		protected override void VisitIdentifierName(IdentifierNameSyntax node)
@@ -425,6 +446,11 @@ namespace Cecilifier.Core.AST
 			operatorHandlers[SyntaxKind.SlashToken] = (ctx, ilVar, left, right) =>
 			{
 				ctx.WriteCecilExpression(@"{0}.Append({0}.Create({1}));", ilVar, OpCodes.Div.ConstantName());
+			};
+
+			operatorHandlers[SyntaxKind.GreaterThanToken] = (ctx, ilVar, left, right) =>
+			{
+				ctx.WriteCecilExpression(@"{0}.Append({0}.Create({1}));", ilVar, OpCodes.Cgt.ConstantName());
 			};
 		}
 

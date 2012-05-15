@@ -87,6 +87,9 @@
     <Content Include="TestResources\Expressions\Box.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Content Include="TestResources\Expressions\Operators\Ternary.cs.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="TestResources\Expressions\TypeInferenceInDeclarations.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
