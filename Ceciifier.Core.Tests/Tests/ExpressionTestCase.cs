@@ -31,7 +31,7 @@ namespace Ceciifier.Core.Tests
 		}
 
 		[Test]
-		public void TestSimpeBox()
+		public void TestBox()
 		{
 			AssertResourceTest(@"Expressions\Box");
 		}
@@ -43,15 +43,21 @@ namespace Ceciifier.Core.Tests
 		}
 
 		[Test]
-		public void TernaryOperatorTest()
+		public void TestTernaryOperator()
 		{
 			AssertResourceTestBinary(@"Expressions\Operators\Ternary");
 		}
 
 		[Test]
-		public void TypeInferenceInDeclarationsTest()
+		public void TestTypeInferenceInDeclarations()
 		{
 			AssertResourceTest(@"Expressions\TypeInferenceInDeclarations");
+		}
+
+		[Test]
+		public void TestValueTypeAddress()
+		{
+			AssertResourceTest(@"Expressions\ValueTypeAddress");
 		}
 	}
 }
