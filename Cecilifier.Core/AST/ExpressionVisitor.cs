@@ -106,17 +106,16 @@ namespace Cecilifier.Core.AST
 
     	protected override void VisitConditionalExpression(ConditionalExpressionSyntax node)
     	{
-    		int count = 0;
-    		Func<OpCode, string> Emit = op =>
-    		                            	{
-    		                            			var instVarName = op.Name + "_" + node.GetHashCode() + "_" + count++;
-													AddCecilExpression(@"var {0} = {1}.Create({2});", instVarName, ilVar, op.ConstantName());
+    		Func<OpCode, string> emit = op =>
+			{
+    			var instVarName = op.Name + op.Name.UniqueId();
+				AddCecilExpression(@"var {0} = {1}.Create({2});", instVarName, ilVar, op.ConstantName());
 
-    		                                 		return instVarName;
-    		                                 	};
+				return instVarName;
+			};
 
-    		var conditionEnd = Emit(OpCodes.Nop);
-			var whenFalse = Emit(OpCodes.Nop);
+    		var conditionEnd = emit(OpCodes.Nop);
+			var whenFalse = emit(OpCodes.Nop);
 			
 			Visit(node.Condition);
 			AddCilInstruction(ilVar, OpCodes.Brfalse_S, whenFalse);
@@ -150,16 +149,17 @@ namespace Cecilifier.Core.AST
 			}
 		}
 
-		protected override void VisitThisExpression(ThisExpressionSyntax node)
-		{
-			WriteLine("[{0}] : {1}", new StackFrame().GetMethod().Name, node);
-		}
-
+		
     	protected override void VisitMemberAccessExpression(MemberAccessExpressionSyntax exp)
         {
 			Visit(exp.Expression);
         	Visit(exp.Name);
         }
+
+		protected override void VisitThisExpression(ThisExpressionSyntax node)
+		{
+			WriteLine("[{0}] : {1}", new StackFrame().GetMethod().Name, node);
+		}
 
         protected override void VisitPrefixUnaryExpression(PrefixUnaryExpressionSyntax node)
         {
@@ -395,9 +395,11 @@ namespace Cecilifier.Core.AST
     					throw new Exception(string.Format("Conversion from {0} to {1}  not implemented.", semanticInfo.Type, semanticInfo.ConvertedType));
     			}
     		}
-    		else if (semanticInfo.ImplicitConversion.IsBoxing)
+    		
+			if (semanticInfo.ImplicitConversion.IsBoxing)
     		{
-    			AddCilInstruction(ilVar, OpCodes.Box, ResolvePredefinedType(semanticInfo.Type));
+    			//AddCilInstruction(ilVar, OpCodes.Box, ResolvePredefinedType(semanticInfo.Type));
+    			AddCilInstruction(ilVar, OpCodes.Box, semanticInfo.Type);
     		}
     	}
 
@@ -407,27 +409,11 @@ namespace Cecilifier.Core.AST
 			{
 				AddCilInstruction(ilVar, OpCodes.Ldarg_0);
 			}
-
+			
 			EnsureMethodAvailable(method);
-			AddCilInstruction(ilVar, method.IsVirtual || method.IsAbstract ? OpCodes.Callvirt : OpCodes.Call, method.MethodResolverExpression(Context));
-			//AddCilInstruction(ilVar, method.IsVirtual || method.IsAbstract || method.IsOverride ? OpCodes.Callvirt : OpCodes.Call, method.MethodResolverExpression(Context));
+    		AddMethodCall(ilVar, method);
 		}
 
-		// TypeSyntax ?
-        // InstanceExpressionSyntax ?
-
-        // 
-        // AnonymousMethodExpressionSyntax
-        // SimpleLambdaExpressionSyntax
-        // ParenthesizedLambdaExpressionSyntax
-        // 
-        // 
-        // AnonymousObjectCreationExpressionSyntax
-        // ArrayCreationExpressionSyntax
-        // ImplicitArrayCreationExpressionSyntax
-        // StackAllocArrayCreationExpressionSyntax
-        // QueryExpressionSyntax
-		
 		static ExpressionVisitor()
 		{
 			//TODO: Use AddCilInstruction instead.
@@ -444,14 +430,11 @@ namespace Cecilifier.Core.AST
 			};
 			
 			operatorHandlers[SyntaxKind.SlashToken] = (ctx, ilVar, left, right) =>
-			{
 				ctx.WriteCecilExpression(@"{0}.Append({0}.Create({1}));", ilVar, OpCodes.Div.ConstantName());
-			};
 
-			operatorHandlers[SyntaxKind.GreaterThanToken] = (ctx, ilVar, left, right) =>
-			{
+			operatorHandlers[SyntaxKind.GreaterThanToken] = (ctx, ilVar, left, right) => 
 				ctx.WriteCecilExpression(@"{0}.Append({0}.Create({1}));", ilVar, OpCodes.Cgt.ConstantName());
-			};
+			
 		}
 
     	//private readonly IMemoryLocationResolver resolver;

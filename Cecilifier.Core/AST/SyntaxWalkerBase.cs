@@ -28,6 +28,17 @@ namespace Cecilifier.Core.AST
 			Context.WriteCecilExpression("{0}\r\n", string.Format(format, args));
 		}
 		
+        protected void AddMethodCall(string ilVar, MethodSymbol method)
+        {
+        	OpCode opCode = method.IsVirtual || method.IsAbstract ? OpCodes.Callvirt : OpCodes.Call;
+        	AddCecilExpression(@"{0}.Append({0}.Create({1}, {2}));", ilVar, opCode.ConstantName(), method.MethodResolverExpression(Context));
+		}
+
+        protected void AddCilInstruction(string ilVar, OpCode opCode, TypeSymbol type)
+        {
+        	AddCecilExpression(@"{0}.Append({0}.Create({1}, {2}));", ilVar, opCode.ConstantName(), ResolvePredefinedType(type));
+		}
+
         protected void AddCilInstruction<T>(string ilVar, OpCode opCode, T arg)
         {
         	AddCecilExpression(@"{0}.Append({0}.Create({1}, {2}));", ilVar, opCode.ConstantName(), arg);

@@ -15,7 +15,11 @@ namespace Cecilifier.Core.Extensions
 							: str;
 		}
 
-
+		public static int UniqueId(this string key)
+		{
+			return idGenerator.IdFor(key);
+		}
+		
 		public static string MapModifier(this SyntaxToken modifier, string targetEnum)
 		{
             switch (modifier.Kind)
@@ -108,5 +112,7 @@ namespace Cecilifier.Core.Extensions
 
 			return true;
 		}
+
+		private static IdGenerator idGenerator = new IdGenerator();
 	}
 }

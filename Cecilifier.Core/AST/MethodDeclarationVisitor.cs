@@ -21,7 +21,7 @@ namespace Cecilifier.Core.AST
 		protected override void VisitParameter(ParameterSyntax node)
 		{
 			var methodVar = LocalVariableNameForCurrentNode();
-			var paramVar = LocalVariableNameFor("param_", node.Identifier.ValueText + DateTime.Now.Ticks);
+			var paramVar = LocalVariableNameFor("param_", node.Identifier.ValueText + node.Identifier.ValueText.UniqueId());
 			AddCecilExpression("var {0} = new ParameterDefinition(\"{1}\", ParameterAttributes.None, {2});", paramVar, node.Identifier.ValueText, ResolveType(node.TypeOpt));
 			
 			if (node.GetFirstToken().Kind == SyntaxKind.ParamsKeyword)
@@ -96,10 +96,10 @@ namespace Cecilifier.Core.AST
 
 			WithCurrentNode(node, methodVar, simpleName, runWithCurrent);
 
-			////TODO: Move this to default ctor handling and rely on VisitReturnStatement here instead
-			if (!isAbstract && !node.DescendentNodes().Where(n => n.Kind == SyntaxKind.ReturnStatement).Any())
+			//TODO: Move this to default ctor handling and rely on VisitReturnStatement here instead
+			if (!isAbstract && !node.DescendentNodes().Any(n => n.Kind == SyntaxKind.ReturnStatement))
 			{
-				AddCecilExpression(@"{0}.Body.Instructions.Add({1}.Create(OpCodes.Ret));", methodVar, ilVar);
+				AddCilInstruction(ilVar, OpCodes.Ret);
 			}
 		}
 
