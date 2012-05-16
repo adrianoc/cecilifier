@@ -24,6 +24,12 @@ namespace Cecilifier.Core.AST
 			base.VisitClassDeclaration(node);
 		}
 
+		protected override void VisitStructDeclaration(StructDeclarationSyntax node)
+		{
+			HandleTypeDeclaration(node, ProcessBase(node), delegate { } );
+			base.VisitStructDeclaration(node);
+		}
+
 		protected override void VisitFieldDeclaration(FieldDeclarationSyntax node)
 		{
 			new FieldDeclarationVisitor(Context).Visit(node);
@@ -47,7 +53,7 @@ namespace Cecilifier.Core.AST
 			}
 		}
 
-		private string ProcessBase(ClassDeclarationSyntax classDeclaration)
+		private string ProcessBase(TypeDeclarationSyntax classDeclaration)
 		{
 			var classSymbol = DeclaredSymbolFor(classDeclaration);
 			var baseTypeName = classSymbol.BaseType.Name;

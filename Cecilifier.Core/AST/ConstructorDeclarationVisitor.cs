@@ -24,10 +24,13 @@ namespace Cecilifier.Core.AST
 			var returnType = GetSpecialType(SpecialType.System_Void);
 			ProcessMethodDeclaration(node, "ctor", ".ctor", ResolvePredefinedType(returnType), simpleName =>
 			{
-				AddCilInstruction(ilVar, OpCodes.Ldarg_0);
+				if (declaringType.Kind != SyntaxKind.StructDeclaration)
+				{
+					AddCilInstruction(ilVar, OpCodes.Ldarg_0);
+				}
 				callBaseMethod(node);
-
-				if (!ctorAdded)
+				
+				if (!ctorAdded && declaringType.Kind != SyntaxKind.StructDeclaration)
 				{
 					var declaringTypelocalVar = ResolveTypeLocalVariable(declaringType.Identifier.ValueText);
 					AddCilInstruction(ilVar, OpCodes.Call, string.Format("assembly.MainModule.Import(TypeHelpers.DefaultCtorFor({0}.BaseType.Resolve()))", declaringTypelocalVar));

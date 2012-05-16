@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using Roslyn.Compilers.CSharp;
 
 namespace Cecilifier.Core.AST
@@ -30,6 +31,11 @@ namespace Cecilifier.Core.AST
 			new TypeDeclarationVisitor(Context).Visit(node);
 		}
 
+		protected override void VisitStructDeclaration(StructDeclarationSyntax node)
+		{
+			new TypeDeclarationVisitor(Context).Visit(node);
+		}
+
 		protected override void VisitInterfaceDeclaration(InterfaceDeclarationSyntax node)
 		{
 			new TypeDeclarationVisitor(Context).Visit(node);
@@ -37,6 +43,7 @@ namespace Cecilifier.Core.AST
 
 		protected override void VisitEnumDeclaration(EnumDeclarationSyntax node)
 		{
+			throw new NotImplementedException();
 		}
 	}
 }

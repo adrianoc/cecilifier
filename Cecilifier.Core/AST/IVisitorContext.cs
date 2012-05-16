@@ -15,7 +15,7 @@ namespace Cecilifier.Core.AST
 		LocalVariable CurrentLocalVariable { get; }
 		LinkedListNode<string> CurrentLine { get; }
 		MethodSymbol GetDeclaredSymbol(BaseMethodDeclarationSyntax methodDeclaration);
-		TypeSymbol GetDeclaredSymbol(ClassDeclarationSyntax classDeclaration);
+		TypeSymbol GetDeclaredSymbol(TypeDeclarationSyntax classDeclaration);
 		SemanticInfo GetSemanticInfo(TypeSyntax node);
         SemanticInfo GetSemanticInfo(ExpressionSyntax expressionSyntax);
 		NamedTypeSymbol GetSpecialType(SpecialType specialType);

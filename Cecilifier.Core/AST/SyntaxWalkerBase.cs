@@ -59,7 +59,7 @@ namespace Cecilifier.Core.AST
 			return Context.GetDeclaredSymbol(node);
 		}
 
-		protected TypeSymbol DeclaredSymbolFor(ClassDeclarationSyntax node)
+		protected TypeSymbol DeclaredSymbolFor(TypeDeclarationSyntax node)
 		{
 			return Context.GetDeclaredSymbol(node);
 		}
@@ -127,11 +127,24 @@ namespace Cecilifier.Core.AST
 		protected static string TypeModifiersToCecil(TypeDeclarationSyntax node)
 		{
 			var convertedModifiers = ModifiersToCecil("TypeAttributes", node.Modifiers, "NotPublic");
-			var typeAttribute = node.Kind == SyntaxKind.ClassDeclaration
-									? "TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit"
-									: "TypeAttributes.Interface | TypeAttributes.Abstract";
+			var typeAttribute = DefaultTypeAttributeFor(node);
 
 			return typeAttribute.AppendModifier(convertedModifiers);
+		}
+
+		private static string DefaultTypeAttributeFor(TypeDeclarationSyntax node)
+		{
+			const string basicClassAttrs = "TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit";
+			switch (node.Kind)
+			{
+				case SyntaxKind.StructDeclaration: return "TypeAttributes.SequentialLayout | TypeAttributes.Sealed |" + basicClassAttrs; 
+				case SyntaxKind.ClassDeclaration:		return basicClassAttrs;
+				case SyntaxKind.InterfaceDeclaration:	return "TypeAttributes.Interface | TypeAttributes.Abstract";
+				
+				case SyntaxKind.EnumDeclaration: throw new NotImplementedException();
+			}
+
+			throw new Exception("Not supported type declaration: " + node);
 		}
 
 		protected static string ModifiersToCecil(string targetEnum, IEnumerable<SyntaxToken> modifiers, string @default)

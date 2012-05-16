@@ -40,7 +40,7 @@ namespace Cecilifier.Core.Misc
 			return (MethodSymbol) semanticModel.GetDeclaredSymbol(methodDeclaration);
 		}
 
-		public TypeSymbol GetDeclaredSymbol(ClassDeclarationSyntax classDeclaration)
+		public TypeSymbol GetDeclaredSymbol(TypeDeclarationSyntax classDeclaration)
 		{
             return semanticModel.GetDeclaredSymbol(classDeclaration);
 		}

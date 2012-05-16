@@ -1,0 +1,6 @@
+﻿struct SimpleValueType
+{
+	public SimpleValueType(int i)
+	{
+	}
+}

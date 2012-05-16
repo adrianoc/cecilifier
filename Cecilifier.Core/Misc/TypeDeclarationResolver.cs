@@ -12,6 +12,11 @@ namespace Cecilifier.Core.Misc
 			return declaringType;
 		}
 
+		protected override void VisitStructDeclaration(StructDeclarationSyntax node)
+		{
+			declaringType = node;
+		}
+
 		protected override void VisitClassDeclaration(ClassDeclarationSyntax node)
 		{
 			declaringType = node;

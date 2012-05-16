@@ -71,6 +71,12 @@ namespace Ceciifier.Core.Tests
 		{
 			AssertResourceTest(@"Types\InterfaceDefinition");
 		}
+		
+		[Test]
+		public void SimpleValueTypeTest()
+		{
+			AssertResourceTest(@"Types\SimpleValueType");
+		}
 
 		[Test, Ignore("Not implemented yet")]
 		public void TypeInitializeTest()
