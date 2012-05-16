@@ -111,6 +111,9 @@
     <Content Include="TestResources\Expressions\ParameterAssignment.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Content Include="TestResources\Expressions\ValueTypeAddress.cs.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="TestResources\Fields\InitializedFieldWithBaseCtor.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>

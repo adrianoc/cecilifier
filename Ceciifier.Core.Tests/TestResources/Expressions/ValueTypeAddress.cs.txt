@@ -1,0 +1,17 @@
+﻿class ValueTypeAddress
+{
+	private static void CallMethodOnValueTypeLiteral()
+	{
+		System.Console.WriteLine(42.ToString());
+	}
+
+	private static void CallMethodOnValueTypeReturn()
+	{
+		System.Console.WriteLine(Value().ToString());
+	}
+
+	private static int Value()
+	{
+		return 0;
+	}
+}
