@@ -126,7 +126,7 @@ namespace Cecilifier.Core.AST
 
 		protected static string TypeModifiersToCecil(TypeDeclarationSyntax node)
 		{
-			var convertedModifiers = ModifiersToCecil("TypeAttributes", node.Modifiers, "NotPublic");
+			var convertedModifiers = ModifiersToCecil("TypeAttributes", node.Modifiers, "NotPublic", ExcludeHasNoCILRepresentationInTypes);
 			var typeAttribute = DefaultTypeAttributeFor(node);
 
 			return typeAttribute.AppendModifier(convertedModifiers);
@@ -137,7 +137,7 @@ namespace Cecilifier.Core.AST
 			const string basicClassAttrs = "TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit";
 			switch (node.Kind)
 			{
-				case SyntaxKind.StructDeclaration: return "TypeAttributes.SequentialLayout | TypeAttributes.Sealed |" + basicClassAttrs; 
+				case SyntaxKind.StructDeclaration:		return "TypeAttributes.SequentialLayout | TypeAttributes.Sealed |" + basicClassAttrs; 
 				case SyntaxKind.ClassDeclaration:		return basicClassAttrs;
 				case SyntaxKind.InterfaceDeclaration:	return "TypeAttributes.Interface | TypeAttributes.Abstract";
 				
@@ -149,17 +149,29 @@ namespace Cecilifier.Core.AST
 
 		protected static string ModifiersToCecil(string targetEnum, IEnumerable<SyntaxToken> modifiers, string @default)
 		{
-            var validModifiers = modifiers.Where(ExcludeHasNoCILRepresentation);
-			if (validModifiers.Count() == 0) return targetEnum + "." + @default;
+			return ModifiersToCecil(targetEnum, modifiers, @default, ExcludeHasNoCILRepresentation);
+		}
 
-            var cecilModifierStr = validModifiers.Aggregate("", (acc, token) => acc + (ModifiersSeparator + token.MapModifier(targetEnum)));
+		private static string ModifiersToCecil(string targetEnum, IEnumerable<SyntaxToken> modifiers, string @default,
+		                                       Func<SyntaxToken, bool> meaninglessModifiersFilter)
+		{
+			var validModifiers = modifiers.Where(meaninglessModifiersFilter);
+			if (!validModifiers.Any()) return targetEnum + "." + @default;
+
+			var cecilModifierStr = validModifiers.Aggregate("",
+			                                                (acc, token) =>
+			                                                acc + (ModifiersSeparator + token.MapModifier(targetEnum)));
 			return cecilModifierStr.Substring(ModifiersSeparator.Length);
+		}
+
+		private static bool ExcludeHasNoCILRepresentationInTypes(SyntaxToken token)
+		{
+			return ExcludeHasNoCILRepresentation(token) && token.Kind != SyntaxKind.PrivateKeyword;
 		}
 
 		protected static bool ExcludeHasNoCILRepresentation(SyntaxToken token)
 		{
-			return token.Kind != SyntaxKind.PartialKeyword 
-                && token.Kind != SyntaxKind.VolatileKeyword;
+			return token.Kind != SyntaxKind.PartialKeyword && token.Kind != SyntaxKind.VolatileKeyword;
 		}
 
 		protected string ResolveTypeLocalVariable(BaseTypeDeclarationSyntax typeDeclaration)
