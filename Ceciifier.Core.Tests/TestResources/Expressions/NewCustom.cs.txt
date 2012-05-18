@@ -1,0 +1,29 @@
+﻿class NewCustom
+{
+	private struct MyStruct
+	{
+	}
+
+	private static void NewReferenceNoArgs()
+	{
+		System.Console.WriteLine(new NewCustom());
+	}
+
+	private static void NewReferenceWithArgs()
+	{
+		System.Console.WriteLine(new NewCustom(42, "42"));
+	}
+	
+	private NewCustom(int n, string s)
+	{
+	}
+
+	private NewCustom()
+	{
+	}
+	
+	private static void NewStruct()
+	{
+		System.Console.WriteLine(new MyStruct());
+	}
+}

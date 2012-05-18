@@ -232,6 +232,15 @@ namespace Cecilifier.Core.AST
 			var ctorInfo = Context.SemanticModel.GetSemanticInfo(node.Type);
 
 			var methodSymbol = (MethodSymbol) ctorInfo.Symbol;
+			if (!ctorInfo.Type.IsReferenceType && methodSymbol.Parameters.Count == 0)
+			{
+				//EnsureTypeAvailable(ctorInfo.Type);
+				//var typeLocalVar = ResolveTypeLocalVariable(ctorInfo.Type.FullyQualifiedName());
+				//AddCilInstruction(ilVar, OpCodes.Initobj, typeLocalVar ?? ResolveType(node.Type));
+				AddCilInstruction(ilVar, OpCodes.Initobj, ctorInfo.Type.ResolverExpression(Context));
+				return;
+			}
+
 			EnsureMethodAvailable(methodSymbol);
 
 			AddCilInstruction(ilVar, OpCodes.Newobj, methodSymbol.MethodResolverExpression(Context));
@@ -251,11 +260,6 @@ namespace Cecilifier.Core.AST
 				AddCilInstruction(ilVar, OpCodes.Pop);
 			}
         }
-
-		protected override void VisitConstructorInitializer(ConstructorInitializerSyntax node)
-		{
-			WriteLine("[{0}] : {1}", new StackFrame().GetMethod().Name, node);
-		}
 
     	private void WriteLine(string msg, params object[] args)
     	{

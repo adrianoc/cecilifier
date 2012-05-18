@@ -59,5 +59,11 @@ namespace Ceciifier.Core.Tests
 		{
 			AssertResourceTest(@"Expressions\ValueTypeAddress");
 		}
+
+		[Test]
+		public void TestNewCustom()
+		{
+			AssertResourceTest(@"Expressions\NewCustom");
+		}
 	}
 }
