@@ -62,9 +62,10 @@ namespace Cecilifier.Core.AST
 
 		private void AddLocalVariable(TypeSyntax type, VariableDeclaratorSyntax localVar, string methodVar)
 		{
+			
 			string resolvedVarType = type.IsVar 
 										? ResolveExpressionType(localVar.InitializerOpt.Value)
-										: ResolveType(type);
+										: ResolveTypeLocalVariable(type.PlainName) ?? ResolveType(type);
 
 			AddCecilExpression("{0}.Body.Variables.Add(new VariableDefinition(\"{1}\", {2}));", methodVar, localVar.Identifier.ValueText, resolvedVarType);
 		}

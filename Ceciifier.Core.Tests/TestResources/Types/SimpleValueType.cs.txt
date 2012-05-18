@@ -1,10 +1,16 @@
 ﻿struct SimpleValueType
 {
+	private struct SubStruct
+	{
+	}
+	
 	public SimpleValueType(int i)
 	{
 	}
 
-	private struct SubStruct
+	private void LocalVariable()
 	{
+		SimpleValueType spt;
+		SubStruct ss;
 	}
 }
