@@ -45,11 +45,11 @@ namespace Cecilifier.Core.AST
 			new MethodDeclarationVisitor(Context).Visit(node);
 		}
 		
-		private void SetDeclaringType(TypeDeclarationSyntax classDeclaration, string localVariable)
+		private void SetDeclaringType(TypeDeclarationSyntax classDeclaration, string childLocalVar)
 		{
-			if (classDeclaration.Parent.Kind == SyntaxKind.ClassDeclaration)
+			if (IsNestedTypeDeclaration(classDeclaration))
 			{
-				AddCecilExpression("{0}.DeclaringType = {1};", localVariable, ResolveTypeLocalVariable(classDeclaration.Parent.ResolveDeclaringType()));
+				AddCecilExpression("{0}.NestedTypes.Add({1});", ResolveTypeLocalVariable(classDeclaration.Parent.ResolveDeclaringType()), childLocalVar);
 			}
 		}
 
@@ -93,7 +93,7 @@ namespace Cecilifier.Core.AST
 
 		private void HandleTypeDeclaration(TypeDeclarationSyntax node, string baseType, Action<string, BaseTypeDeclarationSyntax> ctorInjector)
 		{
-			EnsureCurrentTypeHasADefaultCtor();
+			//EnsureCurrentTypeHasADefaultCtor();
 
 			var varName = LocalVariableNameForId(NextLocalVariableTypeId());
 
@@ -104,7 +104,11 @@ namespace Cecilifier.Core.AST
 				AddCecilExpression("{0}.Interfaces.Add({1});", varName, ResolveType(itfName));
 			}
 
-			AddCecilExpression("assembly.MainModule.Types.Add({0});", varName);
+			//TODO: Looks like a bug in Mono.Cecil
+			if (!IsNestedTypeDeclaration(node))
+			{
+				AddCecilExpression("assembly.MainModule.Types.Add({0});", varName);
+			}
 
 			SetDeclaringType(node, varName);
 			RegisterTypeLocalVariable(node, varName, ctorInjector);

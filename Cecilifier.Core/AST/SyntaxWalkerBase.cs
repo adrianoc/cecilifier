@@ -124,12 +124,22 @@ namespace Cecilifier.Core.AST
 			return string.Format("assembly.MainModule.Import(typeof({0}))", typeName);
 		}
 
-		protected static string TypeModifiersToCecil(TypeDeclarationSyntax node)
+		protected string TypeModifiersToCecil(TypeDeclarationSyntax node)
 		{
-			var convertedModifiers = ModifiersToCecil("TypeAttributes", node.Modifiers, "NotPublic", ExcludeHasNoCILRepresentationInTypes);
-			var typeAttribute = DefaultTypeAttributeFor(node);
+			var typeAttributes = DefaultTypeAttributeFor(node);
 
-			return typeAttribute.AppendModifier(convertedModifiers);
+			if (IsNestedTypeDeclaration(node))
+			{
+				return typeAttributes.AppendModifier(ModifiersToCecil(node.Modifiers, m => "TypeAttributes.Nested" + m.ValueText.CamelCase()));
+			}
+
+			var convertedModifiers = ModifiersToCecil("TypeAttributes", node.Modifiers, "NotPublic", ExcludeHasNoCILRepresentationInTypes);
+			return typeAttributes.AppendModifier(convertedModifiers);
+		}
+
+		protected static bool IsNestedTypeDeclaration(TypeDeclarationSyntax node)
+		{
+			return node.Parent.Kind != SyntaxKind.NamespaceDeclaration && node.Parent.Kind != SyntaxKind.CompilationUnit;
 		}
 
 		private static string DefaultTypeAttributeFor(TypeDeclarationSyntax node)
@@ -158,9 +168,14 @@ namespace Cecilifier.Core.AST
 			var validModifiers = modifiers.Where(meaninglessModifiersFilter);
 			if (!validModifiers.Any()) return targetEnum + "." + @default;
 
-			var cecilModifierStr = validModifiers.Aggregate("",
-			                                                (acc, token) =>
-			                                                acc + (ModifiersSeparator + token.MapModifier(targetEnum)));
+			return ModifiersToCecil(validModifiers, m => m.MapModifier(targetEnum));
+		}
+
+		private static string ModifiersToCecil(IEnumerable<SyntaxToken> modifiers, Func<SyntaxToken, string> mapp)
+		{
+			var cecilModifierStr = modifiers.Aggregate("",  (acc, token) =>
+			                                                acc + (ModifiersSeparator + mapp(token)));
+
 			return cecilModifierStr.Substring(ModifiersSeparator.Length);
 		}
 

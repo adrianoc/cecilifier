@@ -3,4 +3,8 @@
 	public SimpleValueType(int i)
 	{
 	}
+
+	private struct SubStruct
+	{
+	}
 }
