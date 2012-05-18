@@ -26,4 +26,22 @@
 	{
 		System.Console.WriteLine(new MyStruct());
 	}
+
+	private static MyStruct NewStructAsReturnValue()
+	{
+		return new MyStruct();
+	}
+
+	private static MyStruct NewStructAssigned()
+	{
+		MyStruct ms = new MyStruct();
+		return ms;
+	}
+
+	private void AssignToField()
+	{
+		msf = new MyStruct();
+	}
+
+	private MyStruct msf;
 }

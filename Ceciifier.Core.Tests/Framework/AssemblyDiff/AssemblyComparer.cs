@@ -232,7 +232,7 @@ namespace Ceciifier.Core.Tests.Framework.AssemblyDiff
 
 		private static bool CheckFields(ITypeDiffVisitor typeVisitor, TypeDefinition source, TypeDefinition target)
 		{
-			var targetFields = target.Fields.ToDictionary(f => f.Name);
+			var targetFields = target.Fields.ToDictionary(f => f.FullName);
 			foreach (var sourceMember in source.Fields)
 			{
 				var memberVisitor = typeVisitor.VisitMember(sourceMember);
@@ -240,7 +240,7 @@ namespace Ceciifier.Core.Tests.Framework.AssemblyDiff
 
 				if (!CheckTypeMember(memberVisitor, sourceMember, target, targetFields)) continue;
 
-				var targetField = targetFields[sourceMember.Name];
+				var targetField = targetFields[sourceMember.FullName];
 				if (sourceMember.FieldType.FullName != targetField.FieldType.FullName)
 				{
 					if (!memberVisitor.VisitFieldType(sourceMember, targetField)) return false;
