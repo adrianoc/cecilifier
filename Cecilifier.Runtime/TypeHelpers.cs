@@ -24,5 +24,11 @@ namespace Cecilifier.Runtime
 			                               paramTypes.Select(typeName => Type.GetType(typeName)).ToArray(), 
 										   null);
 		}
+
+		public static Type ResolveType(string assemblyName, string typeName)
+		{
+			var containingAssembly = Assembly.Load(new AssemblyName(assemblyName));
+			return containingAssembly.GetType(typeName);
+		}
 	}
 }

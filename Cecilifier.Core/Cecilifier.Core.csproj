@@ -52,6 +52,7 @@
     <Compile Include="AST\IVisitorContext.cs" />
     <Compile Include="AST\MethodDeclarationVisitor.cs" />
     <Compile Include="AST\SyntaxWalkerBase.cs" />
+    <Compile Include="Extensions\ISymboExtensions.cs" />
     <Compile Include="Extensions\MethodExtensions.cs" />
     <Compile Include="Extensions\OpCodesExtensions.cs" />
     <Compile Include="Extensions\TypeExtensions.cs" />

@@ -71,11 +71,6 @@ namespace Cecilifier.Core.Extensions
     		return LocalVariableNameFor(method.ContainingType.Name, method.Name.Replace(".", ""), method.MangleName());
     	}
 
-    	public static bool IsDefinedInCurrentType(this MethodSymbol method, IVisitorContext ctx)
-		{
-			return method.ContainingAssembly == ctx.SemanticModel.Compilation.Assembly;
-		}
-
 		private static string LocalVariableNameFor(string prefix, params string[] parts)
 		{
 			return parts.Aggregate(prefix, (acc, curr) => acc + "_" + curr);
