@@ -63,6 +63,11 @@ namespace Ceciifier.Core.Tests.Framework.AssemblyDiff
 			output.WriteLine(string.Format("[{0}] Methods has different sets of local variables: {1} and {2}.", target.FullName, FormatLocalVariables(source.Body.Variables), FormatLocalVariables(target.Body.Variables)));
 		}
 
+		public void VisitDuplication(MethodDefinition method)
+		{
+			output.WriteLine(string.Format("Duplicated method found: {0}.", method.FullName));
+		}
+
 		private string FormatLocalVariables(Collection<VariableDefinition> variables)
 		{
 			return variables.Aggregate("", (acc, curr) => acc + ", " + curr.Name + "(" + curr.VariableType.Name + ")");

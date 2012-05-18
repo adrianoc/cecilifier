@@ -41,16 +41,23 @@ namespace Ceciifier.Core.Tests.Framework.AssemblyDiff
 
 			var ret = true;
 			ISet<TypeDefinition> firstTypes = new HashSet<TypeDefinition>(sourceModule.Types);
-			foreach (var sourceType in firstTypes.Where(t => t.FullName != "<Module>"))
+
+			foreach (var sourceType in firstTypes.SelectMany(t => t.NestedTypes).Concat(firstTypes).Where(t => t.FullName != "<Module>"))
 			{
+				var targetType = targetModule.Types.SelectMany(ct => ct.NestedTypes).Concat(targetModule.Types).SingleOrDefault(t => t.FullName == sourceType.FullName);
+				
 				var typeVisitor = visitor.VisitType(sourceType);
 				if (typeVisitor == null) continue;
-
-				var targetType = targetModule.Types.SingleOrDefault(t => t.FullName == sourceType.FullName);
+				
 				if (targetType == default(TypeDefinition))
 				{
 					if (!typeVisitor.VisitMissing(sourceType, targetModule)) return false;
 					continue;
+				}
+
+				if (sourceType.IsNested != targetType.IsNested)
+				{
+					throw new Exception("Types differ: " + sourceType.Name + " / " + targetType.Name + " : " + sourceType.IsNested);
 				}
 
 				ret = ret && CheckTypeAttributes(typeVisitor, sourceType, targetType);
@@ -99,6 +106,17 @@ namespace Ceciifier.Core.Tests.Framework.AssemblyDiff
 
 		private static bool CheckMethods(ITypeDiffVisitor typeVisitor, TypeDefinition source, TypeDefinition target)
 		{
+			List<IGrouping<string, MethodDefinition>> list = target.Methods.GroupBy(m => m.FullName).ToList();
+
+			var duplication = list.Where(g => g.Count() > 1);
+			if (duplication.Any())
+			{
+				var duplicated = duplication.First().ElementAt(0);
+				typeVisitor.VisitMember(duplicated).VisitDuplication(duplicated);
+				
+				return false;
+			}
+
 			var ret = true;
 			var targetMethods = target.Methods.ToDictionary(m => m.FullName);
 			foreach (var sourceMethod in source.Methods)
@@ -141,7 +159,7 @@ namespace Ceciifier.Core.Tests.Framework.AssemblyDiff
 
 			if (source.Body == null) return true;
 
-			if (source.Body.Variables.Except(target.Body.Variables, TypeExtensions.Comparer).Any())
+			if (source.Body.Variables.Except(target.Body.Variables, VariableDefinitionComparer.Instance).Any())
 			{
 				visitor.VisitLocalVariables(source, target);
 				return false;
