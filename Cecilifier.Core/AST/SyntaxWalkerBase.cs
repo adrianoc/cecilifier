@@ -212,13 +212,20 @@ namespace Cecilifier.Core.AST
 
 		protected string ResolveType(TypeSyntax type)
 		{
+			var resolved = ResolveTypeLocalVariable(type.PlainName);
+			return resolved 
+					?? ResolvePredefinedAndArrayTypes(type) 
+					?? ResolveType(type.PlainName);
+		}
+
+		private string ResolvePredefinedAndArrayTypes(TypeSyntax type)
+		{
 			switch (type.Kind)
 			{
 				case SyntaxKind.PredefinedType: return ResolvePredefinedType(Context.GetSemanticInfo(type).Type);
-				case SyntaxKind.ArrayType: return "new ArrayType(" + ResolveType(type.DescendentNodes().OfType<TypeSyntax>().Single()) + ")";
+				case SyntaxKind.ArrayType:      return "new ArrayType(" + ResolveType(type.DescendentNodes().OfType<TypeSyntax>().Single()) + ")";
 			}
-
-			return ResolveType(type.PlainName);
+			return null;
 		}
 
 		protected string ResolvePredefinedType(TypeSymbol typeSymbol)

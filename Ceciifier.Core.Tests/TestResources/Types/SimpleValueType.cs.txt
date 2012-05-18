@@ -13,4 +13,8 @@
 		SimpleValueType spt;
 		SubStruct ss;
 	}
+	
+	private void AsParameter(SubStruct ss)
+	{
+	}
 }

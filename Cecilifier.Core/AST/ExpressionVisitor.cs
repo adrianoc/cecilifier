@@ -234,9 +234,10 @@ namespace Cecilifier.Core.AST
 			var methodSymbol = (MethodSymbol) ctorInfo.Symbol;
 			if (!ctorInfo.Type.IsReferenceType && methodSymbol.Parameters.Count == 0)
 			{
-				//EnsureTypeAvailable(ctorInfo.Type);
-				//var typeLocalVar = ResolveTypeLocalVariable(ctorInfo.Type.FullyQualifiedName());
-				//AddCilInstruction(ilVar, OpCodes.Initobj, typeLocalVar ?? ResolveType(node.Type));
+				if (node.Parent.Kind == SyntaxKind.EqualsValueClause)
+				{
+					// load the field/parameter whatever
+				}
 				AddCilInstruction(ilVar, OpCodes.Initobj, ctorInfo.Type.ResolverExpression(Context));
 				return;
 			}
