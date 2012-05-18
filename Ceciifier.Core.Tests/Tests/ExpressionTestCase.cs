@@ -60,6 +60,12 @@ namespace Ceciifier.Core.Tests
 			AssertResourceTest(@"Expressions\ValueTypeAddress");
 		}
 
+		[Test, Ignore("newing primitives are not supported.")]
+		public void TestNewPrimitive()
+		{
+			AssertResourceTest(@"Expressions\NewPrimitive");
+		}
+
 		[Test]
 		public void TestNewCustom()
 		{

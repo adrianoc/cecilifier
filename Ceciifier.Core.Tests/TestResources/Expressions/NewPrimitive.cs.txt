@@ -1,0 +1,17 @@
+﻿class NewPrimitive
+{
+	private static void NewInt32()
+	{
+		System.Console.WriteLine(new System.Int32().ToString());
+	}
+
+	private static void NewInt64()
+	{
+		System.Console.WriteLine(new System.Int64().ToString());
+	}
+	
+	private static void NewChar()
+	{
+		System.Console.WriteLine(new System.Char().ToString());
+	}	
+}
