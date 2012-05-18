@@ -95,5 +95,11 @@ namespace Ceciifier.Core.Tests
 		{
 			AssertResourceTest(@"Methods\ExternalMethodReference");
 		}
+
+		[Test]
+		public void TestTypeWithNoArgCtorAndInnerClass()
+		{
+			AssertResourceTest(@"Methods\TypeWithNoArgCtorAndInnerClass");
+		}
 	}
 }

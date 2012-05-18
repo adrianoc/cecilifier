@@ -1,5 +1,18 @@
 ﻿class ValueTypeAddress
 {
+	private static void CallMethodOnValueTypeLocal()
+	{
+		int i = 42;
+		System.Console.WriteLine(i.ToString());
+	}
+	
+	private static void MultipleMethodCallsOnValueTypeLocal()
+	{
+		int i = 42;
+		System.Console.WriteLine(i.ToString());
+		System.Console.WriteLine(i.ToString());
+	}
+
 	private static void CallMethodOnValueTypeLiteral()
 	{
 		System.Console.WriteLine(42.ToString());
@@ -10,8 +23,46 @@
 		System.Console.WriteLine(Value().ToString());
 	}
 
+	private static void CallMethodOnValueTypeNewExpression()
+	{
+		System.Console.WriteLine(new System.Int32().ToString());
+	}
+
+	private static void CallMethodOnCustomValueTypeNewExpression()
+	{
+		System.Console.WriteLine(new MyValueType("x").Value());
+	}
+
+	private static void CallMethodOnCustomValueTypePointer()
+	{
+		/*
+		unsafe
+		{
+			NOT SUPPORTED IN ROSLYN YET (AS OF 16/05/2012)
+
+			int i = 42;
+			int *pi = &i;
+
+			
+			System.Console.WriteLine((*pi).ToString());
+		}
+			*/
+	}
+
 	private static int Value()
 	{
 		return 0;
+	}
+
+	private struct MyValueType
+	{
+		public MyValueType(string s)
+		{
+		}
+
+		public string Value()
+		{
+			return "";
+		}
 	}
 }

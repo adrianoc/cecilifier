@@ -1,0 +1,8 @@
+﻿class ForwardTypeReference 
+{
+	private Referenced refed;
+
+	private class Referenced
+	{
+	}
+}

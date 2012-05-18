@@ -1,0 +1,11 @@
+﻿
+class TypeWithNoArgCtorAndInnerClass
+{
+	private class Trigger
+	{
+	}
+
+	private TypeWithNoArgCtorAndInnerClass()
+	{
+	}
+}

@@ -83,5 +83,11 @@ namespace Ceciifier.Core.Tests
 		{
 			AssertResourceTest(@"Types\TypeInitializer");
 		}
+
+		[Test, Ignore("Not supported yet")]
+		public void ForwardTypeReferenceTest()
+		{
+			AssertResourceTest(@"Types\ForwardTypeReference");
+		}
 	}
 }

@@ -40,7 +40,7 @@ namespace Ceciifier.Core.Tests.Framework
 			parameters.OutputAssembly = targetPath + (exe ? ".exe" : ".dll");
 			parameters.GenerateExecutable = exe;
 			parameters.IncludeDebugInformation = true;
-			parameters.CompilerOptions = "/o+";
+			parameters.CompilerOptions = "/o+ /unsafe";
 
 			var results = provider.CompileAssemblyFromSource(parameters, source);
 
