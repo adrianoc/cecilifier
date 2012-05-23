@@ -30,5 +30,16 @@ namespace Cecilifier.Runtime
 			var containingAssembly = Assembly.Load(new AssemblyName(assemblyName));
 			return containingAssembly.GetType(typeName);
 		}
+
+		public static FieldInfo ResolveField(string declaringType, string fieldName)
+		{
+			var type = Type.GetType(declaringType);
+			if (type == null)
+			{
+				throw new Exception("Could not resolve field: '" + fieldName + "'. Type '" + declaringType + "' not found.");
+			}
+
+			return type.GetField(fieldName);
+		}
 	}
 }

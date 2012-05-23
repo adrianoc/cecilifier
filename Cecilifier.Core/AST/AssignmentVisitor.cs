@@ -1,4 +1,4 @@
-﻿using System;
+﻿using Cecilifier.Core.Extensions;
 using Mono.Cecil.Cil;
 using Roslyn.Compilers.CSharp;
 
@@ -24,7 +24,16 @@ namespace Cecilifier.Core.AST
 				case SymbolKind.Local:
 					LocalVariableAssignment(member.Symbol as LocalSymbol);
 					break;
+
+				case SymbolKind.Field:
+					FieldAssignment(member.Symbol as FieldSymbol);
+					break;
 			}
+		}
+
+		private void FieldAssignment(FieldSymbol field)
+		{
+			AddCilInstruction(ilVar, OpCodes.Stfld, field.FieldResolverExpression(Context));
 		}
 
 		private void LocalVariableAssignment(LocalSymbol localVariable)
@@ -35,7 +44,6 @@ namespace Cecilifier.Core.AST
 
 		private void ParameterAssignment(ParameterSymbol parameter)
 		{
-			Console.WriteLine("----------> {0} : {1}", parameter.Name, parameter.Ordinal);
 			AddCilInstructionCastOperand(ilVar, OpCodes.Starg_S, (byte) parameter.Ordinal);
 		}
 

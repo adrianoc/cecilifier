@@ -16,20 +16,18 @@ namespace Cecilifier.Core.AST
 
 		protected override void VisitFieldDeclaration(FieldDeclarationSyntax node)
 		{
+			var type = ResolveType(node.Declaration.Type);
+			var fieldType = ProcessRequiredModifiers(node, type) ?? type;
+			var fieldAttributes = MapAttributes(node.Modifiers);
+			
 			foreach (var field in node.Declaration.Variables)
 			{
-				//var fieldAttributes = FieldModifiersToCecil(node);
-			    var fieldAttributes = MapAttributes(node.Modifiers);
-
-				var type = ResolveType(node.Declaration.Type);
-				var fieldId = string.Format("ft{0}", NextLocalVariableId());
-				var fieldType = ProcessRequiredModifiers(node, type) ?? type;
+				var fieldId = LocalVariableNameFor("fld", node.ResolveDeclaringType().Identifier.ValueText, field.Identifier.ValueText.CamelCase());
 				var fieldDeclaration = string.Format("var {0} = new FieldDefinition(\"{1}\", {2}, {3});",
 																fieldId,
 																field.Identifier.Value,
 																fieldAttributes,
 																fieldType);
-
 				AddCecilExpression(fieldDeclaration);
 				AddCecilExpression("{0}.Fields.Add({1});", ResolveTypeLocalVariable(node.Parent.ResolveDeclaringType()), fieldId);
 			}
@@ -37,25 +35,17 @@ namespace Cecilifier.Core.AST
 			base.VisitFieldDeclaration(node);
 		}
 
-        //private static string FieldModifiersToCecil(FieldDeclarationSyntax node)
-        //{
-        //    return ModifiersToCecil("FieldAttributes", node.Modifiers, string.Empty);
-        //}
-
 	    private string ProcessRequiredModifiers(FieldDeclarationSyntax fieldDeclaration, string originalType)
-		{
-			if (fieldDeclaration.Modifiers.Any(m => m.ContextualKind == SyntaxKind.VolatileKeyword))
-			{
-				var id = string.Format("mod_req{0}", NextLocalVariableId());
-				var mod_req = string.Format("var {0} = new RequiredModifierType({1}, {2});", id, originalType, ImportExpressionFor(typeof(IsVolatile)));
-				AddCecilExpression(mod_req);
-				return id;
-			}
+	    {
+	    	if (!fieldDeclaration.Modifiers.Any(m => m.ContextualKind == SyntaxKind.VolatileKeyword)) return null;
+	    	
+			var id = string.Format("mod_req{0}", NextLocalVariableId());
+	    	var mod_req = string.Format("var {0} = new RequiredModifierType({1}, {2});", id, originalType, ImportExpressionFor(typeof (IsVolatile)));
+	    	AddCecilExpression(mod_req);
+	    	return id;
+	    }
 
-			return null;
-		}
-
-        protected string MapAttributes(IEnumerable<SyntaxToken> modifiers)
+		protected string MapAttributes(IEnumerable<SyntaxToken> modifiers)
         {
             var noInternalOrProtected = modifiers.Where(t => t.Kind != SyntaxKind.InternalKeyword && t.Kind != SyntaxKind.ProtectedKeyword);
             var str = noInternalOrProtected.Where(ExcludeHasNoCILRepresentation).Aggregate("",

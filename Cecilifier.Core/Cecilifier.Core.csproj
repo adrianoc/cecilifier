@@ -46,12 +46,14 @@
     <Compile Include="AST\ConstructorInitializerVisitor.cs" />
     <Compile Include="AST\ExpressionVisitor.cs" />
     <Compile Include="AST\IMemoryLocationResolver.cs" />
+    <Compile Include="AST\StackTransitionAnalizer.cs" />
     <Compile Include="AST\SyntaxTreeDump.cs" />
     <Compile Include="AST\TypeDeclarationVisitor.cs" />
     <Compile Include="AST\FieldDeclarationVisitor.cs" />
     <Compile Include="AST\IVisitorContext.cs" />
     <Compile Include="AST\MethodDeclarationVisitor.cs" />
     <Compile Include="AST\SyntaxWalkerBase.cs" />
+    <Compile Include="Extensions\FieldExtensions.cs" />
     <Compile Include="Extensions\ISymboExtensions.cs" />
     <Compile Include="Extensions\MethodExtensions.cs" />
     <Compile Include="Extensions\OpCodesExtensions.cs" />

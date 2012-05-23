@@ -15,6 +15,12 @@ namespace Cecilifier.Core.AST
         	this.ilVar = ilVar;
         }
 
+		protected override void VisitEqualsValueClause(EqualsValueClauseSyntax node)
+		{
+			base.VisitEqualsValueClause(node);
+			InjectRequiredConversions(node.Value);
+		}
+
         protected override void VisitBinaryExpression(BinaryExpressionSyntax node)
         {
 			if (node.Kind == SyntaxKind.AssignExpression)
@@ -25,8 +31,11 @@ namespace Cecilifier.Core.AST
 			else
 			{
 				Visit(node.Left);
+				InjectRequiredConversions(node.Left);
+				
 				Visit(node.Right);
-
+				InjectRequiredConversions(node.Right);
+				
 				var handler = OperatorHandlerFor(node.OperatorToken);
 				handler(Context, ilVar, Context.SemanticModel.GetSemanticInfo(node.Left).Type, Context.SemanticModel.GetSemanticInfo(node.Right).Type);
 			}
@@ -51,12 +60,7 @@ namespace Cecilifier.Core.AST
 					break;
 
 				case SyntaxKind.NumericLiteralExpression:
-					var opCode = LoadOpCodeFor(node);
-					AddCilInstruction(ilVar, opCode.Item1, node.GetFullText());
-					if (opCode.Item2 != null)
-					{
-						AddCilInstruction(ilVar, OpCodes.Box, opCode.Item2);
-					}
+					AddCilInstruction(ilVar, LoadOpCodeFor(node), node.GetFullText());
 					break;
 
 				default:
@@ -149,6 +153,11 @@ namespace Cecilifier.Core.AST
 			}
 		}
 
+		protected override void VisitArgument(ArgumentSyntax node)
+		{
+			base.VisitArgument(node);
+			InjectRequiredConversions(node.Expression);
+		}
 		
     	protected override void VisitMemberAccessExpression(MemberAccessExpressionSyntax exp)
         {
@@ -232,15 +241,7 @@ namespace Cecilifier.Core.AST
 			var ctorInfo = Context.SemanticModel.GetSemanticInfo(node.Type);
 
 			var methodSymbol = (MethodSymbol) ctorInfo.Symbol;
-			if (!ctorInfo.Type.IsReferenceType && methodSymbol.Parameters.Count == 0)
-			{
-				if (node.Parent.Kind == SyntaxKind.EqualsValueClause)
-				{
-					// load the field/parameter whatever
-				}
-				AddCilInstruction(ilVar, OpCodes.Initobj, ctorInfo.Type.ResolverExpression(Context));
-				return;
-			}
+			if (TryProcessNoArgsCtorInvocationOnValueType(node, methodSymbol, ctorInfo)) return;
 
 			EnsureMethodAvailable(methodSymbol);
 
@@ -251,7 +252,49 @@ namespace Cecilifier.Core.AST
 			FixCallSite();
 		}
 
-        protected override void VisitExpressionStatement(ExpressionStatementSyntax node)
+    	private bool TryProcessNoArgsCtorInvocationOnValueType(ObjectCreationExpressionSyntax node, MethodSymbol methodSymbol, SemanticInfo ctorInfo)
+    	{
+    		if (ctorInfo.Type.IsReferenceType || methodSymbol.Parameters.Count > 0) return false;
+
+    		string localVarName;
+			if (node.Parent.Kind == SyntaxKind.EqualsValueClause)
+			{
+				var firstAncestorOrSelf = node.FirstAncestorOrSelf<LocalDeclarationStatementSyntax>();
+				var v = firstAncestorOrSelf.Declaration.Variables[0];
+				localVarName = v.Identifier.ValueText;
+
+				AddCilInstruction(ilVar, OpCodes.Ldloca_S, LocalVariableIndexWithCast<byte>(localVarName));
+			}
+    		else
+			{
+				//TODO: We already have code to add local variables in MethodDeclarationVisitor
+				var resolvedVarType = ResolveType(node.Type);
+				var tempLocalName = LocalVariableNameFor("tmp_", "tmp_".UniqueId().ToString());
+				AddCecilExpression("var {0} = new VariableDefinition(\"{1}\", {2});", tempLocalName, tempLocalName, resolvedVarType);
+				
+				AddCecilExpression("{0}.Body.Variables.Add({1});", Context.CurrentLocalVariable.VarName, tempLocalName);
+
+				AddCilInstruction(ilVar, OpCodes.Ldloca_S, LocalVariableIndexWithCast<byte>(tempLocalName));
+				localVarName = tempLocalName;
+			}
+    		
+			AddCilInstruction(ilVar, OpCodes.Initobj, ctorInfo.Type.ResolverExpression(Context));
+
+			if (ConsumesStack(node.Parent))
+			{
+				//TODO: FIX. The load instruction depends on the usage of the "newly" instantiated valuetype
+				AddCilInstruction(ilVar, OpCodes.Ldloc, LocalVariableIndex(localVarName));
+			}
+
+    		return true;
+    	}
+
+    	private bool ConsumesStack(SyntaxNode node)
+    	{
+    		return new StackTransitionAnalizer(node).ConsumesStack();
+    	}
+
+    	protected override void VisitExpressionStatement(ExpressionStatementSyntax node)
         {
 			base.Visit(node.Expression);
 
@@ -267,24 +310,24 @@ namespace Cecilifier.Core.AST
     		Console.WriteLine(msg, args);
     	}
 
-		private Tuple<OpCode, object> LoadOpCodeFor(LiteralExpressionSyntax node)
+		private OpCode LoadOpCodeFor(LiteralExpressionSyntax node)
 		{
 			var info = Context.SemanticModel.GetSemanticInfo(node);
 
 			switch (info.Type.SpecialType)
 			{
 				case SpecialType.System_Single:
-					return Tuple.Create<OpCode, object>(OpCodes.Ldc_R4, !info.ImplicitConversion.IsBoxing ? null : ResolvePredefinedType(info.Type));
+					return OpCodes.Ldc_R4;
 
 				case SpecialType.System_Double:
-					return Tuple.Create<OpCode, object>(OpCodes.Ldc_R8, !info.ImplicitConversion.IsBoxing ? null : ResolvePredefinedType(info.Type));
+					return OpCodes.Ldc_R8;
 				
 				case SpecialType.System_Int16:
 				case SpecialType.System_Int32:
-					return Tuple.Create<OpCode, object>(OpCodes.Ldc_I4, !info.ImplicitConversion.IsBoxing ? null : ResolvePredefinedType(info.Type));
+					return OpCodes.Ldc_I4;
 
 				case SpecialType.System_Int64:
-					return Tuple.Create<OpCode, object>(OpCodes.Ldc_I8, !info.ImplicitConversion.IsBoxing ? null : ResolvePredefinedType(info.Type));
+					return OpCodes.Ldc_I8;
 			}
 
 			throw new ArgumentException(string.Format("Literal type {0} not supported.", info.Type.Name), "node");
@@ -315,7 +358,6 @@ namespace Cecilifier.Core.AST
 		private void ProcessLocalVariable(IdentifierNameSyntax localVar, SemanticInfo varInfo)
 		{
 			AddCilInstruction(ilVar, OpCodes.Ldloc, LocalVariableIndex(localVar.PlainName));
-			InjectRequiredConversions(varInfo);
 		}
 
 		private void ProcessParameter(IdentifierNameSyntax node, SemanticInfo paramInfo)
@@ -341,34 +383,15 @@ namespace Cecilifier.Core.AST
 					AddCilInstruction(ilVar, loadOpCode);
 				}
 			}
-
-
-			InjectRequiredConversions(paramInfo);
-			//switch (param.Ordinal)
-			//{
-			//    case 0:
-			//        AddCilInstruction(ilVar, method.IsStatic ? OpCodes.Ldarg_0 : OpCodes.Ldarg_1);
-			//        break;
-
-			//    case 1:
-			//        AddCilInstruction(ilVar, method.IsStatic ? OpCodes.Ldarg_1 : OpCodes.Ldarg_2);
-			//        break;
-
-			//    case 2:
-			//    default:
-			//        if (method.IsStatic)
-			//        {
-			//            AddCilInstruction(ilVar, OpCodes.Ldarg_3);
-			//        }
-			//        else
-			//        {
-			//            AddCilInstruction(ilVar, OpCodes.Ldarg, param.Ordinal);	
-			//        }
-			//        break;
-			//}
-
-			//InjectRequiredConversions(paramInfo);
 		}
+
+    	private void InjectRequiredConversions(ExpressionSyntax expression)
+    	{
+			var info = Context.SemanticModel.GetSemanticInfo(expression);
+			if (info == null) return;
+
+			InjectRequiredConversions(info);
+    	}
 
     	private void InjectRequiredConversions(SemanticInfo semanticInfo)
     	{
@@ -403,7 +426,6 @@ namespace Cecilifier.Core.AST
     		
 			if (semanticInfo.ImplicitConversion.IsBoxing)
     		{
-    			//AddCilInstruction(ilVar, OpCodes.Box, ResolvePredefinedType(semanticInfo.Type));
     			AddCilInstruction(ilVar, OpCodes.Box, semanticInfo.Type);
     		}
     	}

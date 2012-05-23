@@ -36,7 +36,7 @@ namespace Cecilifier.Core.AST
 
         protected void AddCilInstruction(string ilVar, OpCode opCode, TypeSymbol type)
         {
-        	AddCecilExpression(@"{0}.Append({0}.Create({1}, {2}));", ilVar, opCode.ConstantName(), ResolvePredefinedType(type));
+        	AddCecilExpression(@"{0}.Append({0}.Create({1}, {2}));", ilVar, opCode.ConstantName(), ResolveType(type));
 		}
 
         protected void AddCilInstruction<T>(string ilVar, OpCode opCode, T arg)
@@ -210,6 +210,14 @@ namespace Cecilifier.Core.AST
 			return ResolveType(info.Type.FullyQualifiedName());
 		}
 
+		protected string ResolveType(TypeSymbol type)
+		{
+			var resolved = ResolveTypeLocalVariable(type.Name);
+			return resolved 
+					?? ResolvePredefinedAndArrayTypes(type) 
+					?? ResolveType(type.Name);
+		}
+		
 		protected string ResolveType(TypeSyntax type)
 		{
 			var resolved = ResolveTypeLocalVariable(type.PlainName);
@@ -218,6 +226,19 @@ namespace Cecilifier.Core.AST
 					?? ResolveType(type.PlainName);
 		}
 
+		private string ResolvePredefinedAndArrayTypes(TypeSymbol type)
+		{
+			if (type.SpecialType == SpecialType.None) return null;
+
+			if (type.SpecialType == SpecialType.System_Array)
+			{
+				ArrayTypeSymbol ats = (ArrayTypeSymbol) type;
+				return "new ArrayType(" + ResolveType(ats.ElementType) + ")";
+			}
+
+			return ResolvePredefinedType(type);
+		}
+		
 		private string ResolvePredefinedAndArrayTypes(TypeSyntax type)
 		{
 			switch (type.Kind)
@@ -261,6 +282,11 @@ namespace Cecilifier.Core.AST
 		protected string LocalVariableIndex(string localVariable)
 		{
 			return LocalVariableIndex(LocalVariableNameForCurrentNode(), localVariable);
+		}
+
+		protected string LocalVariableIndexWithCast<CASTTYPE>(string localVariable)
+		{
+			return "(" + typeof(CASTTYPE).Name +")" + LocalVariableIndex(LocalVariableNameForCurrentNode(), localVariable);
 		}
 
 		protected const string ModifiersSeparator = " | ";

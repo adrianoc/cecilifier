@@ -4,5 +4,11 @@
 	{
 		object i = 10;
 		System.Console.WriteLine(i);
+
+		Foo(42);
+	}
+
+	private static void Foo(object o)
+	{
 	}
 }

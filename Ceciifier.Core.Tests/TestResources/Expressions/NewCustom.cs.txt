@@ -3,6 +3,8 @@
 	private struct MyStruct
 	{
 	}
+	
+	private MyStruct msf;
 
 	private static void NewReferenceNoArgs()
 	{
@@ -35,13 +37,18 @@
 	private static MyStruct NewStructAssigned()
 	{
 		MyStruct ms = new MyStruct();
-		return ms;
+		ms = new MyStruct();
+		return ms;		
+	}
+
+	private static void AssignToParameter(MyStruct msp, ref MyStruct mspr)
+	{
+		msp = new MyStruct();
+		mspr = new MyStruct();
 	}
 
 	private void AssignToField()
 	{
 		msf = new MyStruct();
 	}
-
-	private MyStruct msf;
 }

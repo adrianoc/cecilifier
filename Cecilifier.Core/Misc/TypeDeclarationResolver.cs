@@ -1,4 +1,5 @@
-﻿using Roslyn.Compilers.CSharp;
+﻿using System.Linq;
+using Roslyn.Compilers.CSharp;
 
 namespace Cecilifier.Core.Misc
 {
@@ -25,6 +26,12 @@ namespace Cecilifier.Core.Misc
 		protected override void VisitEnumDeclaration(EnumDeclarationSyntax node)
 		{
 			declaringType = node;
+		}
+
+		protected override void VisitFieldDeclaration(FieldDeclarationSyntax node)
+		{
+			declaringType =
+				(BaseTypeDeclarationSyntax) node.Ancestors().Where(a => a.Kind == SyntaxKind.ClassDeclaration || a.Kind == SyntaxKind.StructDeclaration).Single();
 		}
 	}
 }
