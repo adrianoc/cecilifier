@@ -10,7 +10,17 @@ namespace Cecilifier.Core.AST
 {
     class ExpressionVisitor : SyntaxWalkerBase
     {
-    	internal ExpressionVisitor(IVisitorContext ctx, string ilVar) : base(ctx)
+		internal static bool Visit(IVisitorContext ctx, string ilVar, SyntaxNode node)
+		{
+			if (node == null) return false;
+
+			var ev = new ExpressionVisitor(ctx, ilVar);
+			ev.Visit(node);
+
+			return ev.valueTypeNoArgObjCreation;
+		}
+
+    	private ExpressionVisitor(IVisitorContext ctx, string ilVar) : base(ctx)
         {
         	this.ilVar = ilVar;
         }
@@ -26,7 +36,10 @@ namespace Cecilifier.Core.AST
 			if (node.Kind == SyntaxKind.AssignExpression)
 			{
 				Visit(node.Right);
-				new AssignmentVisitor(Context, ilVar).Visit(node.Left);
+				if (!valueTypeNoArgObjCreation)
+				{
+					new AssignmentVisitor(Context, ilVar).Visit(node.Left);
+				}
 			}
 			else
 			{
@@ -41,17 +54,7 @@ namespace Cecilifier.Core.AST
 			}
         }
 
-    	private Action<IVisitorContext, string, TypeSymbol, TypeSymbol> OperatorHandlerFor(SyntaxToken operatorToken)
-    	{
-			if (operatorHandlers.ContainsKey(operatorToken.Kind))
-			{
-				return operatorHandlers[operatorToken.Kind];
-			}
-
-    		throw new Exception(string.Format("Operator {0} not supported yet (expression: {1})", operatorToken.ValueText, operatorToken.Parent));
-    	}
-
-    	protected override void VisitLiteralExpression(LiteralExpressionSyntax node)
+		protected override void VisitLiteralExpression(LiteralExpressionSyntax node)
         {
 			switch(node.Kind)
 			{
@@ -254,39 +257,13 @@ namespace Cecilifier.Core.AST
 
     	private bool TryProcessNoArgsCtorInvocationOnValueType(ObjectCreationExpressionSyntax node, MethodSymbol methodSymbol, SemanticInfo ctorInfo)
     	{
-    		if (ctorInfo.Type.IsReferenceType || methodSymbol.Parameters.Count > 0) return false;
+    		if (ctorInfo.Type.IsReferenceType || methodSymbol.Parameters.Count > 0)
+    		{
+    			return false;
+    		}
 
-    		string localVarName;
-			if (node.Parent.Kind == SyntaxKind.EqualsValueClause)
-			{
-				var firstAncestorOrSelf = node.FirstAncestorOrSelf<LocalDeclarationStatementSyntax>();
-				var v = firstAncestorOrSelf.Declaration.Variables[0];
-				localVarName = v.Identifier.ValueText;
-
-				AddCilInstruction(ilVar, OpCodes.Ldloca_S, LocalVariableIndexWithCast<byte>(localVarName));
-			}
-    		else
-			{
-				//TODO: We already have code to add local variables in MethodDeclarationVisitor
-				var resolvedVarType = ResolveType(node.Type);
-				var tempLocalName = LocalVariableNameFor("tmp_", "tmp_".UniqueId().ToString());
-				AddCecilExpression("var {0} = new VariableDefinition(\"{1}\", {2});", tempLocalName, tempLocalName, resolvedVarType);
-				
-				AddCecilExpression("{0}.Body.Variables.Add({1});", Context.CurrentLocalVariable.VarName, tempLocalName);
-
-				AddCilInstruction(ilVar, OpCodes.Ldloca_S, LocalVariableIndexWithCast<byte>(tempLocalName));
-				localVarName = tempLocalName;
-			}
-    		
-			AddCilInstruction(ilVar, OpCodes.Initobj, ctorInfo.Type.ResolverExpression(Context));
-
-			if (ConsumesStack(node.Parent))
-			{
-				//TODO: FIX. The load instruction depends on the usage of the "newly" instantiated valuetype
-				AddCilInstruction(ilVar, OpCodes.Ldloc, LocalVariableIndex(localVarName));
-			}
-
-    		return true;
+    		new ValueTypeNoArgCtorInvocationVisitor(Context, ilVar, ctorInfo).Visit(node.Parent);
+			return valueTypeNoArgObjCreation = true;
     	}
 
     	private bool ConsumesStack(SyntaxNode node)
@@ -441,6 +418,16 @@ namespace Cecilifier.Core.AST
     		AddMethodCall(ilVar, method);
 		}
 
+		private Action<IVisitorContext, string, TypeSymbol, TypeSymbol> OperatorHandlerFor(SyntaxToken operatorToken)
+		{
+			if (operatorHandlers.ContainsKey(operatorToken.Kind))
+			{
+				return operatorHandlers[operatorToken.Kind];
+			}
+
+			throw new Exception(string.Format("Operator {0} not supported yet (expression: {1})", operatorToken.ValueText, operatorToken.Parent));
+		}
+
 		static ExpressionVisitor()
 		{
 			//TODO: Use AddCilInstruction instead.
@@ -464,7 +451,7 @@ namespace Cecilifier.Core.AST
 			
 		}
 
-    	//private readonly IMemoryLocationResolver resolver;
+    	private bool valueTypeNoArgObjCreation;
 		private readonly string ilVar;
     	private Stack<LinkedListNode<string>> callFixList = new Stack<LinkedListNode<string>>();
     	

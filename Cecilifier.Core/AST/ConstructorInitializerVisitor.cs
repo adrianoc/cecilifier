@@ -38,7 +38,7 @@ namespace Cecilifier.Core.AST
 
 		protected override void VisitArgument(ArgumentSyntax node)
 		{
-			new ExpressionVisitor(Context, ilVar).Visit(node.Expression);
+			ExpressionVisitor.Visit(Context, ilVar, node.Expression);
 		}
 
 		//private string MethodResolverExpression(MethodSymbol method)

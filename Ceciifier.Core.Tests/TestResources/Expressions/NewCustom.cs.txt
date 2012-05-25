@@ -5,6 +5,7 @@
 	}
 	
 	private MyStruct msf;
+	private static MyStruct msfStatic;
 
 	private static void NewReferenceNoArgs()
 	{
@@ -50,5 +51,10 @@
 	private void AssignToField()
 	{
 		msf = new MyStruct();
+	}
+
+	private void AssignToStaticField()
+	{
+		msfStatic = new MyStruct();
 	}
 }

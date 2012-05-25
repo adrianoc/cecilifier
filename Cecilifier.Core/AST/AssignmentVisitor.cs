@@ -14,6 +14,7 @@ namespace Cecilifier.Core.AST
 		protected override void VisitIdentifierName(IdentifierNameSyntax node)
 		{
 			var member = Context.SemanticModel.GetSemanticInfo(node);
+			if (member.Type.IsValueType && node.Parent.Kind == SyntaxKind.ObjectCreationExpression && ((ObjectCreationExpressionSyntax)node.Parent).ArgumentListOpt.Arguments.Count == 0) return;
 
 			switch (member.Symbol.Kind)
 			{

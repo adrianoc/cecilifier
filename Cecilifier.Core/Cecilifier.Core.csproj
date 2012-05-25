@@ -41,6 +41,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AST\AssignmentVisitor.cs" />
+    <Compile Include="AST\NoArgsValueTypeObjectCreatingInAssignmentVisitor.cs" />
     <Compile Include="AST\CompilationUnitVisitor.cs" />
     <Compile Include="AST\ConstructorDeclarationVisitor.cs" />
     <Compile Include="AST\ConstructorInitializerVisitor.cs" />
@@ -53,6 +54,7 @@
     <Compile Include="AST\IVisitorContext.cs" />
     <Compile Include="AST\MethodDeclarationVisitor.cs" />
     <Compile Include="AST\SyntaxWalkerBase.cs" />
+    <Compile Include="AST\ValueTypeNoArgCtorInvocationVisitor.cs" />
     <Compile Include="Extensions\FieldExtensions.cs" />
     <Compile Include="Extensions\ISymboExtensions.cs" />
     <Compile Include="Extensions\MethodExtensions.cs" />

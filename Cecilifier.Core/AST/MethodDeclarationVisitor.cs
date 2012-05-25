@@ -35,7 +35,7 @@ namespace Cecilifier.Core.AST
 		
 		protected override void VisitReturnStatement(ReturnStatementSyntax node)
 		{
-			new ExpressionVisitor(Context, ilVar).Visit(node.ExpressionOpt);
+			ExpressionVisitor.Visit(Context, ilVar, node.ExpressionOpt);
 			AddCilInstruction(ilVar, OpCodes.Ret);
 		}
 
@@ -47,7 +47,7 @@ namespace Cecilifier.Core.AST
 
 		protected override void VisitExpressionStatement(ExpressionStatementSyntax node)
 		{
-			new ExpressionVisitor(Context, ilVar).Visit(node);
+			ExpressionVisitor.Visit(Context, ilVar, node);
 		}
 
 		protected override void VisitLocalDeclarationStatement(LocalDeclarationStatementSyntax node)
@@ -72,9 +72,8 @@ namespace Cecilifier.Core.AST
 
 		private void ProcessVariableInitialization(VariableDeclaratorSyntax localVar)
 		{
-			if (localVar.InitializerOpt == null) return;
-			
-			new ExpressionVisitor(Context, ilVar).Visit(localVar.InitializerOpt);
+			if (ExpressionVisitor.Visit(Context, ilVar, localVar.InitializerOpt)) return;
+
 			AddCilInstruction(ilVar, OpCodes.Stloc, LocalVariableIndex(localVar.Identifier.ValueText));
 		}
 
