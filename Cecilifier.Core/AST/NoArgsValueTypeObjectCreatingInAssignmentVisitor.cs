@@ -1,6 +1,7 @@
 ﻿using System;
 using Cecilifier.Core.Extensions;
 using Mono.Cecil.Cil;
+using Roslyn.Compilers;
 using Roslyn.Compilers.CSharp;
 
 namespace Cecilifier.Core.AST
@@ -25,20 +26,23 @@ namespace Cecilifier.Core.AST
 
 				case SymbolKind.Field:
 					var fs = (FieldSymbol) info.Symbol;
+					string fieldResolverExpression = fs.FieldResolverExpression(Context);
+
 					if (info.Symbol.IsStatic)
 					{
-						AddCilInstruction(ilVar, OpCodes.Ldsflda, fs.FieldResolverExpression(Context));
+						AddCilInstruction(ilVar, OpCodes.Ldsflda, fieldResolverExpression);
 					}
 					else
 					{
 						AddCilInstruction(ilVar, OpCodes.Ldarg_0);
-						AddCilInstruction(ilVar, OpCodes.Ldflda, fs.FieldResolverExpression(Context));
+						AddCilInstruction(ilVar, OpCodes.Ldflda, fieldResolverExpression);
 					}
 					break;
 					
 				case SymbolKind.Parameter:
+					var parameterSymbol = ((ParameterSymbol) info.Symbol);
+					AddCilInstruction(ilVar, parameterSymbol.RefKind == RefKind.None ? OpCodes.Ldarga : OpCodes.Ldarg, parameterSymbol.Ordinal);
 					break;
-					//throw new NotImplementedException("Parameters are not supported in " + node.Parent);
 			}
 		}
 
