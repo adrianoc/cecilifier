@@ -14,12 +14,12 @@ namespace Cecilifier.Core.AST
         	this.ilVar = ilVar;
         }
 
-        protected override void VisitConstructorInitializer(ConstructorInitializerSyntax node)
+	    public override void VisitConstructorInitializer(ConstructorInitializerSyntax node)
         {
             base.VisitConstructorInitializer(node);
             
-            var info = Context.SemanticModel.GetSemanticInfo(node);
-            var targetCtor = (MethodSymbol)info.Symbol;
+            var info = Context.SemanticModel.GetSymbolInfo(node);
+            var targetCtor = (MethodSymbol) info.Symbol;
 
 			AddCilInstruction(ilVar, OpCodes.Call, targetCtor.MethodResolverExpression(Context));
             
@@ -36,7 +36,7 @@ namespace Cecilifier.Core.AST
             // 4. Ctor body
         }
 
-		protected override void VisitArgument(ArgumentSyntax node)
+	    public override void VisitArgument(ArgumentSyntax node)
 		{
 			ExpressionVisitor.Visit(Context, ilVar, node.Expression);
 		}

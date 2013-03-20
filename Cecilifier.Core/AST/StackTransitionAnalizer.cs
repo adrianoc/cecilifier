@@ -15,7 +15,7 @@ namespace Cecilifier.Core.AST
 			return consumesStack;
 		}
 
-		protected override void VisitExpressionStatement(ExpressionStatementSyntax node)
+		public override void VisitExpressionStatement(ExpressionStatementSyntax node)
 		{
 			consumesStack = false;
 		}

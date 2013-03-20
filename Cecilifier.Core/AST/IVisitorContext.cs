@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Cecilifier.Core.Misc;
 using Roslyn.Compilers;
 using Roslyn.Compilers.CSharp;
+using TypeInfo = Roslyn.Compilers.CSharp.TypeInfo;
 
 namespace Cecilifier.Core.AST
 {
@@ -16,8 +17,8 @@ namespace Cecilifier.Core.AST
 		LinkedListNode<string> CurrentLine { get; }
 		MethodSymbol GetDeclaredSymbol(BaseMethodDeclarationSyntax methodDeclaration);
 		TypeSymbol GetDeclaredSymbol(TypeDeclarationSyntax classDeclaration);
-		SemanticInfo GetSemanticInfo(TypeSyntax node);
-        SemanticInfo GetSemanticInfo(ExpressionSyntax expressionSyntax);
+		TypeInfo GetTypeInfo(TypeSyntax node);
+        TypeInfo GetTypeInfo(ExpressionSyntax expressionSyntax);
 		NamedTypeSymbol GetSpecialType(SpecialType specialType);
 		
 		void WriteCecilExpression(string msg, params object[] args);

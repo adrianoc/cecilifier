@@ -10,7 +10,7 @@ namespace Cecilifier.Core.AST
 		{
 		}
 
-		protected override void VisitNamespaceDeclaration(NamespaceDeclarationSyntax node)
+		public override void VisitNamespaceDeclaration(NamespaceDeclarationSyntax node)
 		{
 			try
 			{
@@ -26,22 +26,22 @@ namespace Cecilifier.Core.AST
 			}
 		}
 
-		protected override void VisitClassDeclaration(ClassDeclarationSyntax node)
+		public override void VisitClassDeclaration(ClassDeclarationSyntax node)
 		{
 			new TypeDeclarationVisitor(Context).Visit(node);
 		}
 
-		protected override void VisitStructDeclaration(StructDeclarationSyntax node)
+		public override void VisitStructDeclaration(StructDeclarationSyntax node)
 		{
 			new TypeDeclarationVisitor(Context).Visit(node);
 		}
 
-		protected override void VisitInterfaceDeclaration(InterfaceDeclarationSyntax node)
+		public override void VisitInterfaceDeclaration(InterfaceDeclarationSyntax node)
 		{
 			new TypeDeclarationVisitor(Context).Visit(node);
 		}
 
-		protected override void VisitEnumDeclaration(EnumDeclarationSyntax node)
+		public override void VisitEnumDeclaration(EnumDeclarationSyntax node)
 		{
 			throw new NotImplementedException();
 		}

@@ -45,14 +45,14 @@ namespace Cecilifier.Core.Misc
             return semanticModel.GetDeclaredSymbol(classDeclaration);
 		}
 
-		public SemanticInfo GetSemanticInfo(TypeSyntax node)
+		public Roslyn.Compilers.CSharp.TypeInfo GetTypeInfo(TypeSyntax node)
 		{
-			return semanticModel.GetSemanticInfo(node);
+			return semanticModel.GetTypeInfo(node);
 		}
 
-        public SemanticInfo GetSemanticInfo(ExpressionSyntax expressionSyntax)
+        public Roslyn.Compilers.CSharp.TypeInfo GetTypeInfo(ExpressionSyntax expressionSyntax)
         {
-            return semanticModel.GetSemanticInfo(expressionSyntax);
+            return semanticModel.GetTypeInfo(expressionSyntax);
         }
 
 		public NamedTypeSymbol GetSpecialType(SpecialType specialType)

@@ -14,7 +14,7 @@ namespace Cecilifier.Core.AST
 		{
 		}
 
-		protected override void VisitFieldDeclaration(FieldDeclarationSyntax node)
+		public override void VisitFieldDeclaration(FieldDeclarationSyntax node)
 		{
 			var type = ResolveType(node.Declaration.Type);
 			var fieldType = ProcessRequiredModifiers(node, type) ?? type;
@@ -37,7 +37,7 @@ namespace Cecilifier.Core.AST
 
 	    private string ProcessRequiredModifiers(FieldDeclarationSyntax fieldDeclaration, string originalType)
 	    {
-	    	if (!fieldDeclaration.Modifiers.Any(m => m.ContextualKind == SyntaxKind.VolatileKeyword)) return null;
+	    	if (!fieldDeclaration.Modifiers.Any(m => m.Kind == SyntaxKind.VolatileKeyword)) return null;
 	    	
 			var id = string.Format("mod_req{0}", NextLocalVariableId());
 	    	var mod_req = string.Format("var {0} = new RequiredModifierType({1}, {2});", id, originalType, ImportExpressionFor(typeof (IsVolatile)));

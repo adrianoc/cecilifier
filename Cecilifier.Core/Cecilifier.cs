@@ -12,14 +12,14 @@ namespace Cecilifier.Core
 	{
 		public static StringReader Process(Stream content)
 		{
-			var syntaxTree = SyntaxTree.ParseCompilationUnit(new StreamReader(content).ReadToEnd());
+			var syntaxTree = SyntaxTree.ParseText(new StreamReader(content).ReadToEnd());
 
 			//TODO: Get the list of referenced assemblies as an argument
 			var comp = Compilation.Create(
                                   "Teste", 
-                                  new CompilationOptions(assemblyKind:AssemblyKind.DynamicallyLinkedLibrary),
+                                  new CompilationOptions(OutputKind.DynamicallyLinkedLibrary),
 		                          new[] { syntaxTree },
-                                  new[] { MetadataReference.Create(typeof(object).Assembly.Location) });
+                                  new[] { MetadataReference.CreateAssemblyReference(typeof(object).Assembly.FullName) });
 
             foreach (var diag in comp.GetDiagnostics())
             {
@@ -30,9 +30,12 @@ namespace Cecilifier.Core
 		
 			IVisitorContext ctx = new CecilifierContext(semanticModel);
 			var visitor = new CompilationUnitVisitor(ctx);
-			visitor.Visit(syntaxTree.Root);
+			
+			CompilationUnitSyntax root;
+			syntaxTree.TryGetRoot(out root);
+			visitor.Visit(root);
 
-			new SyntaxTreeDump("TREE: ", syntaxTree.Root);
+			new SyntaxTreeDump("TREE: ", root);
 
 			return new StringReader(ctx.Output.AsCecilApplication());
 		}

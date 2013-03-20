@@ -30,7 +30,7 @@ namespace Cecilifier.Core.Extensions
 			}
 
 			return String.Format("assembly.MainModule.Import(TypeHelpers.ResolveType(\"{0}\", \"{1}\", \"{2}\"))",
-								 type.ContainingAssembly.AssemblyName.FullName,
+								 type.ContainingAssembly.Name,
 								 type.FullyQualifiedName(),
 								 type.Name);
 		}

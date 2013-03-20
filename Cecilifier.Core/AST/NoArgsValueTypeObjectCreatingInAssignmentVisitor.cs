@@ -15,13 +15,14 @@ namespace Cecilifier.Core.AST
 			this.ilVar = ilVar;
 		}
 
-		protected override void VisitIdentifierName(IdentifierNameSyntax node)
+		public override void VisitIdentifierName(IdentifierNameSyntax node)
 		{
-			var info = Context.GetSemanticInfo(node);
+			var info = new SymbolInfo();
+			//var info = Context.GetDeclaredSymbol(node);
 			switch (info.Symbol.Kind)
 			{
 				case SymbolKind.Local:
-					AddCilInstruction(ilVar, OpCodes.Ldloca_S, LocalVariableIndexWithCast<byte>(node.PlainName));
+					AddCilInstruction(ilVar, OpCodes.Ldloca_S, LocalVariableIndexWithCast<byte>(node.ToFullString()));
 					break;
 
 				case SymbolKind.Field:
@@ -46,7 +47,7 @@ namespace Cecilifier.Core.AST
 			}
 		}
 
-		protected override void VisitLocalDeclarationStatement(LocalDeclarationStatementSyntax node)
+		public override void VisitLocalDeclarationStatement(LocalDeclarationStatementSyntax node)
 		{
 			AddCilInstruction(ilVar, OpCodes.Ldloca_S, LocalVariableIndexWithCast<byte>(node.Declaration.Variables[0].Identifier.ValueText));
 		}

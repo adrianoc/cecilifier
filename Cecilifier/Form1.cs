@@ -25,7 +25,7 @@ namespace Cecilifier
 		private void toolStripRun_Click(object sender, EventArgs e)
 		{
 
-			var ast = SyntaxTree.ParseCompilationUnit(textEditorControl1.Text);
+			var ast = SyntaxTree.ParseText(textEditorControl1.Text);
 //            var syntaxTree = SyntaxTree.ParseCompilationUnit(textEditorControl1.Text);
 //            var syntaxTree2 = SyntaxTree.ParseCompilationUnit(@"
 //

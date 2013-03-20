@@ -11,10 +11,10 @@ namespace Cecilifier.Core.AST
 			this.ilVar = ilVar;
 		}
 
-		protected override void VisitIdentifierName(IdentifierNameSyntax node)
+		public override void VisitIdentifierName(IdentifierNameSyntax node)
 		{
-			var member = Context.SemanticModel.GetSemanticInfo(node);
-			if (member.Type.IsValueType && node.Parent.Kind == SyntaxKind.ObjectCreationExpression && ((ObjectCreationExpressionSyntax)node.Parent).ArgumentListOpt.Arguments.Count == 0) return;
+			var member = Context.SemanticModel.GetSymbolInfo(node);
+			if (member.Symbol.ContainingType.IsValueType && node.Parent.Kind == SyntaxKind.ObjectCreationExpression && ((ObjectCreationExpressionSyntax)node.Parent).ArgumentList.Arguments.Count == 0) return;
 
 			switch (member.Symbol.Kind)
 			{

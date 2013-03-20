@@ -12,35 +12,35 @@ namespace Cecilifier.Core.AST
 		{
 		}
 
-		protected override void VisitInterfaceDeclaration(InterfaceDeclarationSyntax node)
+		public override void VisitInterfaceDeclaration(InterfaceDeclarationSyntax node)
 		{
 			HandleInterfaceDeclaration(node);
 			base.VisitInterfaceDeclaration(node);
 		}
 
-		protected override void VisitClassDeclaration(ClassDeclarationSyntax node)
+		public override void VisitClassDeclaration(ClassDeclarationSyntax node)
 		{
 			HandleClassDeclaration(node, ProcessBase(node));
 			base.VisitClassDeclaration(node);
 		}
 
-		protected override void VisitStructDeclaration(StructDeclarationSyntax node)
+		public override void VisitStructDeclaration(StructDeclarationSyntax node)
 		{
 			HandleTypeDeclaration(node, ProcessBase(node), delegate { } );
 			base.VisitStructDeclaration(node);
 		}
 
-		protected override void VisitFieldDeclaration(FieldDeclarationSyntax node)
+		public override void VisitFieldDeclaration(FieldDeclarationSyntax node)
 		{
 			new FieldDeclarationVisitor(Context).Visit(node);
 		}
 
-		protected override void VisitConstructorDeclaration(ConstructorDeclarationSyntax node)
+		public override void VisitConstructorDeclaration(ConstructorDeclarationSyntax node)
 		{
 			new ConstructorDeclarationVisitor(Context).Visit(node);
 		}
 
-		protected override void VisitMethodDeclaration(MethodDeclarationSyntax node)
+		public override void VisitMethodDeclaration(MethodDeclarationSyntax node)
 		{
 			new MethodDeclarationVisitor(Context).Visit(node);
 		}
@@ -70,7 +70,7 @@ namespace Cecilifier.Core.AST
 				var info = SemanticInfoFor(@base);
 				if (info.Type.TypeKind == TypeKind.Interface)
 				{
-					var itfFQName = @base.DescendentTokens().OfType<SyntaxToken>().Aggregate("", (acc, curr) => acc + curr.ValueText);
+					var itfFQName = @base.DescendantTokens().OfType<SyntaxToken>().Aggregate("", (acc, curr) => acc + curr.ValueText);
 					yield return itfFQName;
 				}
 			}
@@ -99,7 +99,7 @@ namespace Cecilifier.Core.AST
 
 			AddCecilExpression("TypeDefinition {0} = new TypeDefinition(\"{1}\", \"{2}\", {3}{4});", varName, Context.Namespace, node.Identifier.Value, TypeModifiersToCecil(node), !string.IsNullOrWhiteSpace(baseType) ? ", " + baseType : "");
 
-			foreach (var itfName in ImplementedInterfacesFor(node.BaseListOpt))
+			foreach (var itfName in ImplementedInterfacesFor(node.BaseList))
 			{
 				AddCecilExpression("{0}.Interfaces.Add({1});", varName, ResolveType(itfName));
 			}

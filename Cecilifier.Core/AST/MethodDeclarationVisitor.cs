@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.Extensions;
 using Mono.Cecil.Cil;
+using Roslyn.Compilers;
 using Roslyn.Compilers.CSharp;
 
 namespace Cecilifier.Core.AST
@@ -13,44 +14,52 @@ namespace Cecilifier.Core.AST
 		{
 		}
 
-		protected override void VisitMethodDeclaration(MethodDeclarationSyntax node)
+		public override void VisitMethodDeclaration(MethodDeclarationSyntax node)
 		{
 			ProcessMethodDeclaration(node, node.Identifier.ValueText, MethodNameOf(node), ResolveType(node.ReturnType), _ => base.VisitMethodDeclaration(node));
 		}
 
-		protected override void VisitParameter(ParameterSyntax node)
+		public override void VisitParameter(ParameterSyntax node)
 		{
-			var methodVar = LocalVariableNameForCurrentNode();
 			var paramVar = LocalVariableNameFor("param_", node.Identifier.ValueText + node.Identifier.ValueText.UniqueId());
-			AddCecilExpression("var {0} = new ParameterDefinition(\"{1}\", ParameterAttributes.None, {2});", paramVar, node.Identifier.ValueText, ResolveType(node.TypeOpt));
+			
+			var paramSymbol = Context.SemanticModel.GetDeclaredSymbol(node);
+			string resolvedType = ResolveType(node.Type);
+			if (paramSymbol.RefKind != RefKind.None)
+			{
+				resolvedType = "new ByReferenceType(" + resolvedType + ")";
+			}
+
+			AddCecilExpression("var {0} = new ParameterDefinition(\"{1}\", ParameterAttributes.None, {2});", paramVar, node.Identifier.ValueText, resolvedType);
 			
 			if (node.GetFirstToken().Kind == SyntaxKind.ParamsKeyword)
 			{
 				AddCecilExpression("{0}.CustomAttributes.Add(new CustomAttribute(assembly.MainModule.Import(typeof(ParamArrayAttribute).GetConstructor(BindingFlags.Public | BindingFlags.Instance, null, new Type[0], null))));", paramVar);
 			}
 
+			var methodVar = LocalVariableNameForCurrentNode();
 			AddCecilExpression("{0}.Parameters.Add({1});", methodVar, paramVar);
 			base.VisitParameter(node);
 		}
-		
-		protected override void VisitReturnStatement(ReturnStatementSyntax node)
+
+		public override void VisitReturnStatement(ReturnStatementSyntax node)
 		{
-			ExpressionVisitor.Visit(Context, ilVar, node.ExpressionOpt);
+			ExpressionVisitor.Visit(Context, ilVar, node.Expression);
 			AddCilInstruction(ilVar, OpCodes.Ret);
 		}
 
-		protected override void VisitPropertyDeclaration(PropertyDeclarationSyntax node)
+		public override void VisitPropertyDeclaration(PropertyDeclarationSyntax node)
 		{
 			AddCecilExpression("[PropertyDeclaration] {0}", node);
 			base.VisitPropertyDeclaration(node);
 		}
 
-		protected override void VisitExpressionStatement(ExpressionStatementSyntax node)
+		public override void VisitExpressionStatement(ExpressionStatementSyntax node)
 		{
 			ExpressionVisitor.Visit(Context, ilVar, node);
 		}
 
-		protected override void VisitLocalDeclarationStatement(LocalDeclarationStatementSyntax node)
+		public override void VisitLocalDeclarationStatement(LocalDeclarationStatementSyntax node)
 		{
 			var methodVar = LocalVariableNameForCurrentNode();
 			foreach(var localVar in node.Declaration.Variables)
@@ -64,7 +73,7 @@ namespace Cecilifier.Core.AST
 		{
 			
 			string resolvedVarType = type.IsVar 
-										? ResolveExpressionType(localVar.InitializerOpt.Value)
+										? ResolveExpressionType(localVar.Initializer.Value)
 										: ResolveType(type);
 
 			AddCecilExpression("{0}.Body.Variables.Add(new VariableDefinition(\"{1}\", {2}));", methodVar, localVar.Identifier.ValueText, resolvedVarType);
@@ -72,7 +81,7 @@ namespace Cecilifier.Core.AST
 
 		private void ProcessVariableInitialization(VariableDeclaratorSyntax localVar)
 		{
-			if (ExpressionVisitor.Visit(Context, ilVar, localVar.InitializerOpt)) return;
+			if (ExpressionVisitor.Visit(Context, ilVar, localVar.Initializer)) return;
 
 			AddCilInstruction(ilVar, OpCodes.Stloc, LocalVariableIndex(localVar.Identifier.ValueText));
 		}
@@ -97,7 +106,7 @@ namespace Cecilifier.Core.AST
 			WithCurrentNode(node, methodVar, simpleName, runWithCurrent);
 
 			//TODO: Move this to default ctor handling and rely on VisitReturnStatement here instead
-			if (!isAbstract && !node.DescendentNodes().Any(n => n.Kind == SyntaxKind.ReturnStatement))
+			if (!isAbstract && !node.DescendantNodes().Any(n => n.Kind == SyntaxKind.ReturnStatement))
 			{
 				AddCilInstruction(ilVar, OpCodes.Ret);
 			}

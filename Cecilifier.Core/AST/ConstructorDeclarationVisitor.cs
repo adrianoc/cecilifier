@@ -14,7 +14,7 @@ namespace Cecilifier.Core.AST
 		{
 		}
 
-		protected override void VisitConstructorDeclaration(ConstructorDeclarationSyntax node)
+		public override void VisitConstructorDeclaration(ConstructorDeclarationSyntax node)
 		{
 			var declaringType = node.Parent.ResolveDeclaringType();
 			Context.SetDefaultCtorInjectorFor(declaringType, delegate { });
@@ -38,7 +38,7 @@ namespace Cecilifier.Core.AST
 			});
 		}
 
-		protected override void VisitConstructorInitializer(ConstructorInitializerSyntax node)
+		public override void VisitConstructorInitializer(ConstructorInitializerSyntax node)
         {
             ctorAdded = true;
 			new ConstructorInitializerVisitor(Context, ilVar).Visit(node);

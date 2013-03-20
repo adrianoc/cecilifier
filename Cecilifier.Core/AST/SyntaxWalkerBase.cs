@@ -6,6 +6,7 @@ using Cecilifier.Core.Misc;
 using Mono.Cecil.Cil;
 using Roslyn.Compilers;
 using Roslyn.Compilers.CSharp;
+using TypeInfo = Roslyn.Compilers.CSharp.TypeInfo;
 
 namespace Cecilifier.Core.AST
 {
@@ -64,9 +65,9 @@ namespace Cecilifier.Core.AST
 			return Context.GetDeclaredSymbol(node);
 		}
 
-		protected SemanticInfo SemanticInfoFor(TypeSyntax node)
+		protected TypeInfo SemanticInfoFor(TypeSyntax node)
 		{
-			return Context.GetSemanticInfo(node);
+			return Context.GetTypeInfo(node);
 		}
 
 		protected void WithCurrentNode(MemberDeclarationSyntax node, string localVariable, string typeName, Action<string> action)
@@ -206,7 +207,7 @@ namespace Cecilifier.Core.AST
 				throw new ArgumentNullException("expression");
 			}
 
-			var info = Context.GetSemanticInfo(expression);
+			var info = Context.GetTypeInfo(expression);
 			return ResolveType(info.Type.FullyQualifiedName());
 		}
 
@@ -220,10 +221,10 @@ namespace Cecilifier.Core.AST
 		
 		protected string ResolveType(TypeSyntax type)
 		{
-			var resolved = ResolveTypeLocalVariable(type.PlainName);
+			var resolved = ResolveTypeLocalVariable("" /*type.Name*/);
 			return resolved 
 					?? ResolvePredefinedAndArrayTypes(type) 
-					?? ResolveType(type.PlainName);
+					?? ResolveType("" /*type.Name*/);
 		}
 
 		private string ResolvePredefinedAndArrayTypes(TypeSymbol type)
@@ -232,7 +233,7 @@ namespace Cecilifier.Core.AST
 
 			if (type.SpecialType == SpecialType.System_Array)
 			{
-				ArrayTypeSymbol ats = (ArrayTypeSymbol) type;
+				var ats = (ArrayTypeSymbol) type;
 				return "new ArrayType(" + ResolveType(ats.ElementType) + ")";
 			}
 
@@ -243,8 +244,8 @@ namespace Cecilifier.Core.AST
 		{
 			switch (type.Kind)
 			{
-				case SyntaxKind.PredefinedType: return ResolvePredefinedType(Context.GetSemanticInfo(type).Type);
-				case SyntaxKind.ArrayType:      return "new ArrayType(" + ResolveType(type.DescendentNodes().OfType<TypeSyntax>().Single()) + ")";
+				case SyntaxKind.PredefinedType: return ResolvePredefinedType(Context.GetTypeInfo(type).Type);
+				case SyntaxKind.ArrayType: return "new ArrayType(" + ResolveType(type.DescendantNodes().OfType<TypeSyntax>().Single()) + ")";
 			}
 			return null;
 		}

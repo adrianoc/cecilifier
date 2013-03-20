@@ -25,47 +25,61 @@ namespace Cecilifier.Core.AST
         	this.ilVar = ilVar;
         }
 
-		protected override void VisitEqualsValueClause(EqualsValueClauseSyntax node)
+	    public override void VisitEqualsValueClause(EqualsValueClauseSyntax node)
 		{
 			base.VisitEqualsValueClause(node);
 			InjectRequiredConversions(node.Value);
 		}
 
-        protected override void VisitBinaryExpression(BinaryExpressionSyntax node)
+	    public override void VisitBinaryExpression(BinaryExpressionSyntax node)
         {
 			if (node.Kind == SyntaxKind.AssignExpression)
 			{
-				Visit(node.Right);
-				if (!valueTypeNoArgObjCreation)
-				{
-					new AssignmentVisitor(Context, ilVar).Visit(node.Left);
-				}
+				ProcessAssignmentExpression(node);
 			}
 			else
 			{
-				Visit(node.Left);
-				InjectRequiredConversions(node.Left);
-				
-				Visit(node.Right);
-				InjectRequiredConversions(node.Right);
-				
-				var handler = OperatorHandlerFor(node.OperatorToken);
-				handler(Context, ilVar, Context.SemanticModel.GetSemanticInfo(node.Left).Type, Context.SemanticModel.GetSemanticInfo(node.Right).Type);
+				ProcessBinaryExpression(node);
 			}
         }
 
-		protected override void VisitLiteralExpression(LiteralExpressionSyntax node)
+    	private void ProcessBinaryExpression(BinaryExpressionSyntax node)
+    	{
+    		Visit(node.Left);
+    		InjectRequiredConversions(node.Left);
+
+    		Visit(node.Right);
+    		InjectRequiredConversions(node.Right);
+
+    		var handler = OperatorHandlerFor(node.OperatorToken);
+    		handler(
+				Context, 
+				ilVar, 
+				Context.SemanticModel.GetTypeInfo(node.Left).Type,
+				Context.SemanticModel.GetTypeInfo(node.Right).Type);
+    	}
+
+    	private void ProcessAssignmentExpression(BinaryExpressionSyntax node)
+    	{
+			Visit(node.Right);
+    		if (!valueTypeNoArgObjCreation)
+    		{
+    			new AssignmentVisitor(Context, ilVar).Visit(node.Left);
+    		}
+    	}
+
+	    public override void VisitLiteralExpression(LiteralExpressionSyntax node)
         {
 			switch(node.Kind)
 			{
 				case SyntaxKind.StringLiteralExpression:
-					AddCilInstruction(ilVar, OpCodes.Ldstr, node.GetFullText());
+					AddCilInstruction(ilVar, OpCodes.Ldstr, node.ToFullString());
 					break;
 
 				case SyntaxKind.NumericLiteralExpression:
-					AddCilInstruction(ilVar, LoadOpCodeFor(node), node.GetFullText());
+					AddCilInstruction(ilVar, LoadOpCodeFor(node), node.ToString());
 					break;
-
+				
 				default:
 					throw new ArgumentException("Literal of type " + node + " not supported yet.");
 			}
@@ -102,7 +116,7 @@ namespace Cecilifier.Core.AST
 		 * 
 		 * To fix this we visit in the order [exp, args] and move the call operation after visiting the arguments
 		 */
-		protected override void VisitInvocationExpression(InvocationExpressionSyntax node)
+	    public override void VisitInvocationExpression(InvocationExpressionSyntax node)
         {
 			Visit(node.Expression);
 			PushCall();
@@ -111,7 +125,7 @@ namespace Cecilifier.Core.AST
 			FixCallSite();
         }
 
-    	protected override void VisitConditionalExpression(ConditionalExpressionSyntax node)
+	    public override void VisitConditionalExpression(ConditionalExpressionSyntax node)
     	{
     		Func<OpCode, string> emit = op =>
 			{
@@ -136,9 +150,9 @@ namespace Cecilifier.Core.AST
 			AddCecilExpression("{0}.Append({1});", ilVar, conditionEnd);
         }
 
-		protected override void VisitIdentifierName(IdentifierNameSyntax node)
+	    public override void VisitIdentifierName(IdentifierNameSyntax node)
 		{
-			var member = Context.SemanticModel.GetSemanticInfo(node);
+			var member = Context.SemanticModel.GetSymbolInfo(node);
 
 			switch (member.Symbol.Kind)
 			{
@@ -156,94 +170,94 @@ namespace Cecilifier.Core.AST
 			}
 		}
 
-		protected override void VisitArgument(ArgumentSyntax node)
+	    public override void VisitArgument(ArgumentSyntax node)
 		{
 			base.VisitArgument(node);
 			InjectRequiredConversions(node.Expression);
 		}
-		
-    	protected override void VisitMemberAccessExpression(MemberAccessExpressionSyntax exp)
+
+	    public override void VisitMemberAccessExpression(MemberAccessExpressionSyntax exp)
         {
 			Visit(exp.Expression);
         	Visit(exp.Name);
         }
 
-		protected override void VisitThisExpression(ThisExpressionSyntax node)
+	    public override void VisitThisExpression(ThisExpressionSyntax node)
 		{
 			WriteLine("[{0}] : {1}", new StackFrame().GetMethod().Name, node);
 		}
 
-        protected override void VisitPrefixUnaryExpression(PrefixUnaryExpressionSyntax node)
+	    public override void VisitPrefixUnaryExpression(PrefixUnaryExpressionSyntax node)
         {
 			WriteLine("[{0}] : {1}", new StackFrame().GetMethod().Name, node);
         }
 
-        protected override void VisitPostfixUnaryExpression(PostfixUnaryExpressionSyntax node)
+	    public override void VisitPostfixUnaryExpression(PostfixUnaryExpressionSyntax node)
         {
 			WriteLine("[{0}] : {1}", new StackFrame().GetMethod().Name, node);
 		}
 
-        protected override void VisitParenthesizedExpression(ParenthesizedExpressionSyntax node)
+	    public override void VisitParenthesizedExpression(ParenthesizedExpressionSyntax node)
         {
 			WriteLine("[{0}] : {1}", new StackFrame().GetMethod().Name, node);
 		}
 
-        protected override void VisitMakeRefExpression(MakeRefExpressionSyntax node)
+	    public override void VisitMakeRefExpression(MakeRefExpressionSyntax node)
         {
 			WriteLine("[{0}] : {1}", new StackFrame().GetMethod().Name, node);
 		}
 
-        protected override void VisitRefTypeExpression(RefTypeExpressionSyntax node)
+	    public override void VisitRefTypeExpression(RefTypeExpressionSyntax node)
         {
 			WriteLine("[{0}] : {1}", new StackFrame().GetMethod().Name, node);
 		}
 
-        protected override void VisitRefValueExpression(RefValueExpressionSyntax node)
+	    public override void VisitRefValueExpression(RefValueExpressionSyntax node)
         {
 			WriteLine("[{0}] : {1}", new StackFrame().GetMethod().Name, node);
 		}
 
-        protected override void VisitCheckedExpression(CheckedExpressionSyntax node)
+	    public override void VisitCheckedExpression(CheckedExpressionSyntax node)
         {
 			WriteLine("[{0}] : {1}", new StackFrame().GetMethod().Name, node);
 		}
 
-        protected override void VisitDefaultExpression(DefaultExpressionSyntax node)
+	    public override void VisitDefaultExpression(DefaultExpressionSyntax node)
         {
 			WriteLine("[{0}] : {1}", new StackFrame().GetMethod().Name, node);
 		}
 
-        protected override void VisitTypeOfExpression(TypeOfExpressionSyntax node)
+	    public override void VisitTypeOfExpression(TypeOfExpressionSyntax node)
         {
 			WriteLine("[{0}] : {1}", new StackFrame().GetMethod().Name, node);
 		}
 
-        protected override void VisitSizeOfExpression(SizeOfExpressionSyntax node)
+	    public override void VisitSizeOfExpression(SizeOfExpressionSyntax node)
         {
 			WriteLine("[{0}] : {1}", new StackFrame().GetMethod().Name, node);
 		}
 
-        protected override void VisitElementAccessExpression(ElementAccessExpressionSyntax node)
+	    public override void VisitElementAccessExpression(ElementAccessExpressionSyntax node)
         {
 			WriteLine("[{0}] : {1}", new StackFrame().GetMethod().Name, node);
 		}
 
-        protected override void VisitCastExpression(CastExpressionSyntax node)
+	    public override void VisitCastExpression(CastExpressionSyntax node)
         {
 			WriteLine("[{0}] : {1}", new StackFrame().GetMethod().Name, node);
 		}
 
-        protected override void VisitInitializerExpression(InitializerExpressionSyntax node)
+	    public override void VisitInitializerExpression(InitializerExpressionSyntax node)
         {
 			WriteLine("[{0}] : {1}", new StackFrame().GetMethod().Name, node);
 		}
 
-		protected override void VisitObjectCreationExpression(ObjectCreationExpressionSyntax node)
+	    public override void VisitObjectCreationExpression(ObjectCreationExpressionSyntax node)
 		{
 			//TODO: Refactor to reuse code from VisitIdentifierName....
-			var ctorInfo = Context.SemanticModel.GetSemanticInfo(node.Type);
+			var ctorInfo = Context.SemanticModel.GetSymbolInfo(node.Type);
 
-			var methodSymbol = (MethodSymbol) ctorInfo.Symbol;
+		    var methodSymbol = (MethodSymbol) ctorInfo.Symbol;
 			if (TryProcessNoArgsCtorInvocationOnValueType(node, methodSymbol, ctorInfo)) return;
 
 			EnsureMethodAvailable(methodSymbol);
@@ -251,13 +265,13 @@ namespace Cecilifier.Core.AST
 			AddCilInstruction(ilVar, OpCodes.Newobj, methodSymbol.MethodResolverExpression(Context));
 			PushCall();
 
-			Visit(node.ArgumentListOpt);
+			Visit(node.ArgumentList);
 			FixCallSite();
 		}
 
-    	private bool TryProcessNoArgsCtorInvocationOnValueType(ObjectCreationExpressionSyntax node, MethodSymbol methodSymbol, SemanticInfo ctorInfo)
+    	private bool TryProcessNoArgsCtorInvocationOnValueType(ObjectCreationExpressionSyntax node, MethodSymbol methodSymbol, SymbolInfo ctorInfo)
     	{
-    		if (ctorInfo.Type.IsReferenceType || methodSymbol.Parameters.Count > 0)
+    		if (ctorInfo.Symbol.ContainingType.IsReferenceType || methodSymbol.Parameters.Count > 0)
     		{
     			return false;
     		}
@@ -271,11 +285,11 @@ namespace Cecilifier.Core.AST
     		return new StackTransitionAnalizer(node).ConsumesStack();
     	}
 
-    	protected override void VisitExpressionStatement(ExpressionStatementSyntax node)
+	    public override void VisitExpressionStatement(ExpressionStatementSyntax node)
         {
 			base.Visit(node.Expression);
 
-			var info = Context.GetSemanticInfo(node.Expression);
+			var info = Context.GetTypeInfo(node.Expression);
 			if (node.Expression.Kind != SyntaxKind.AssignExpression &&  info.Type.SpecialType != SpecialType.System_Void)
 			{
 				AddCilInstruction(ilVar, OpCodes.Pop);
@@ -289,7 +303,7 @@ namespace Cecilifier.Core.AST
 
 		private OpCode LoadOpCodeFor(LiteralExpressionSyntax node)
 		{
-			var info = Context.SemanticModel.GetSemanticInfo(node);
+			var info = Context.SemanticModel.GetTypeInfo(node);
 
 			switch (info.Type.SpecialType)
 			{
@@ -307,7 +321,7 @@ namespace Cecilifier.Core.AST
 					return OpCodes.Ldc_I8;
 			}
 
-			throw new ArgumentException(string.Format("Literal type {0} not supported.", info.Type.Name), "node");
+			throw new ArgumentException(string.Format("Literal type {0} not supported.", info.Type), "node");
 		}
 
 		private void EnsureMethodAvailable(MethodSymbol method)
@@ -332,19 +346,20 @@ namespace Cecilifier.Core.AST
 			callFixList.Push(Context.CurrentLine);
 		}
 
-		private void ProcessLocalVariable(IdentifierNameSyntax localVar, SemanticInfo varInfo)
+		private void ProcessLocalVariable(IdentifierNameSyntax localVar, SymbolInfo varInfo)
 		{
-			AddCilInstruction(ilVar, OpCodes.Ldloc, LocalVariableIndex(localVar.PlainName));
+			//TODO: REVIEW - COMMENTED DUE TO NEW ROSLYN VERSION
+			//AddCilInstruction(ilVar, OpCodes.Ldloc, LocalVariableIndex(localVar));
 		}
 
-		private void ProcessParameter(IdentifierNameSyntax node, SemanticInfo paramInfo)
+		private void ProcessParameter(IdentifierNameSyntax node, SymbolInfo paramInfo)
 		{
 			OpCode []optimizedLdArgs = { OpCodes.Ldarg_0, OpCodes.Ldarg_1, OpCodes.Ldarg_2, OpCodes.Ldarg_3};
 
 			var param = paramInfo.Symbol as ParameterSymbol;
 
 			var method = param.ContainingSymbol as MethodSymbol;
-			if (node.Parent.Kind == SyntaxKind.MemberAccessExpression && paramInfo.Type.IsValueType)
+			if (node.Parent.Kind == SyntaxKind.MemberAccessExpression && paramInfo.Symbol.ContainingType.IsValueType)
 			{
 				AddCilInstruction(ilVar, OpCodes.Ldarga, param.Ordinal + +(method.IsStatic ? 0 : 1));
 			}
@@ -364,47 +379,46 @@ namespace Cecilifier.Core.AST
 
     	private void InjectRequiredConversions(ExpressionSyntax expression)
     	{
-			var info = Context.SemanticModel.GetSemanticInfo(expression);
-			if (info == null) return;
+			var info = Context.SemanticModel.GetSymbolInfo(expression);
 
 			InjectRequiredConversions(info);
     	}
 
-    	private void InjectRequiredConversions(SemanticInfo semanticInfo)
+    	private void InjectRequiredConversions(SymbolInfo semanticInfo)
     	{
-    		if (semanticInfo.ImplicitConversion.IsNumeric)
-    		{
-    			switch (semanticInfo.ConvertedType.SpecialType)
-    			{
-    				case SpecialType.System_Single:
-    					AddCilInstruction(ilVar, OpCodes.Conv_R4);
-    					return;
-    				case SpecialType.System_Double:
-    					AddCilInstruction(ilVar, OpCodes.Conv_R8);
-    					return;
+			//if (semanticInfo.Symbol)
+			//{
+			//	switch (semanticInfo.ConvertedType.SpecialType)
+			//	{
+			//		case SpecialType.System_Single:
+			//			AddCilInstruction(ilVar, OpCodes.Conv_R4);
+			//			return;
+			//		case SpecialType.System_Double:
+			//			AddCilInstruction(ilVar, OpCodes.Conv_R8);
+			//			return;
 
-    				case SpecialType.System_Byte:
-    					AddCilInstruction(ilVar, OpCodes.Conv_I1);
-    					return;
-    				case SpecialType.System_Int16:
-    					AddCilInstruction(ilVar, OpCodes.Conv_I2);
-    					return;
-    				case SpecialType.System_Int32:
-    					AddCilInstruction(ilVar, OpCodes.Conv_I4);
-    					return;
-    				case SpecialType.System_Int64:
-    					AddCilInstruction(ilVar, OpCodes.Conv_I8);
-    					return;
+			//		case SpecialType.System_Byte:
+			//			AddCilInstruction(ilVar, OpCodes.Conv_I1);
+			//			return;
+			//		case SpecialType.System_Int16:
+			//			AddCilInstruction(ilVar, OpCodes.Conv_I2);
+			//			return;
+			//		case SpecialType.System_Int32:
+			//			AddCilInstruction(ilVar, OpCodes.Conv_I4);
+			//			return;
+			//		case SpecialType.System_Int64:
+			//			AddCilInstruction(ilVar, OpCodes.Conv_I8);
+			//			return;
 
-    				default:
-    					throw new Exception(string.Format("Conversion from {0} to {1}  not implemented.", semanticInfo.Type, semanticInfo.ConvertedType));
-    			}
-    		}
+			//		default:
+			//			throw new Exception(string.Format("Conversion from {0} to {1}  not implemented.", semanticInfo.Type, semanticInfo.ConvertedType));
+			//	}
+			//}
     		
-			if (semanticInfo.ImplicitConversion.IsBoxing)
-    		{
-    			AddCilInstruction(ilVar, OpCodes.Box, semanticInfo.Type);
-    		}
+			//if (semanticInfo.ImplicitConversion.IsBoxing)
+			//{
+			//	AddCilInstruction(ilVar, OpCodes.Box, semanticInfo.Type);
+			//}
     	}
 
     	private void ProcessMethodCall(IdentifierNameSyntax node, MethodSymbol method)

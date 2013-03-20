@@ -101,5 +101,11 @@ namespace Ceciifier.Core.Tests
 		{
 			AssertResourceTest(@"Methods\TypeWithNoArgCtorAndInnerClass");
 		}
+
+		[Test]
+		public void TestParameterModifiers()
+		{
+			AssertResourceTest(@"Methods\ParameterModifiers");
+		}
 	}
 }

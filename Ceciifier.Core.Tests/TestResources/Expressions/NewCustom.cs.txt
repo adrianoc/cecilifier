@@ -42,10 +42,11 @@
 		return ms;		
 	}
 
-	private static void AssignToParameter(MyStruct msp, ref MyStruct mspr)
+	private static void AssignToParameter(MyStruct msp, ref MyStruct mspr, out MyStruct mspo)
 	{
 		msp = new MyStruct();
 		mspr = new MyStruct();
+		mspo = new MyStruct();
 	}
 
 	private void AssignToField()
