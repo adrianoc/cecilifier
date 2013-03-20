@@ -348,8 +348,7 @@ namespace Cecilifier.Core.AST
 
 		private void ProcessLocalVariable(IdentifierNameSyntax localVar, SymbolInfo varInfo)
 		{
-			//TODO: REVIEW - COMMENTED DUE TO NEW ROSLYN VERSION
-			//AddCilInstruction(ilVar, OpCodes.Ldloc, LocalVariableIndex(localVar));
+			AddCilInstruction(ilVar, OpCodes.Ldloc, LocalVariableIndex(localVar.ToString()));
 		}
 
 		private void ProcessParameter(IdentifierNameSyntax node, SymbolInfo paramInfo)
@@ -379,46 +378,45 @@ namespace Cecilifier.Core.AST
 
     	private void InjectRequiredConversions(ExpressionSyntax expression)
     	{
-			var info = Context.SemanticModel.GetSymbolInfo(expression);
-
+			var info = Context.SemanticModel.GetTypeInfo(expression);
 			InjectRequiredConversions(info);
     	}
 
-    	private void InjectRequiredConversions(SymbolInfo semanticInfo)
+    	private void InjectRequiredConversions(TypeInfo typeInfo)
     	{
-			//if (semanticInfo.Symbol)
-			//{
-			//	switch (semanticInfo.ConvertedType.SpecialType)
-			//	{
-			//		case SpecialType.System_Single:
-			//			AddCilInstruction(ilVar, OpCodes.Conv_R4);
-			//			return;
-			//		case SpecialType.System_Double:
-			//			AddCilInstruction(ilVar, OpCodes.Conv_R8);
-			//			return;
+    		if (typeInfo.ImplicitConversion.IsNumeric)
+			{
+				switch (typeInfo.ConvertedType.SpecialType)
+				{
+					case SpecialType.System_Single:
+						AddCilInstruction(ilVar, OpCodes.Conv_R4);
+						return;
+					case SpecialType.System_Double:
+						AddCilInstruction(ilVar, OpCodes.Conv_R8);
+						return;
 
-			//		case SpecialType.System_Byte:
-			//			AddCilInstruction(ilVar, OpCodes.Conv_I1);
-			//			return;
-			//		case SpecialType.System_Int16:
-			//			AddCilInstruction(ilVar, OpCodes.Conv_I2);
-			//			return;
-			//		case SpecialType.System_Int32:
-			//			AddCilInstruction(ilVar, OpCodes.Conv_I4);
-			//			return;
-			//		case SpecialType.System_Int64:
-			//			AddCilInstruction(ilVar, OpCodes.Conv_I8);
-			//			return;
+					case SpecialType.System_Byte:
+						AddCilInstruction(ilVar, OpCodes.Conv_I1);
+						return;
+					case SpecialType.System_Int16:
+						AddCilInstruction(ilVar, OpCodes.Conv_I2);
+						return;
+					case SpecialType.System_Int32:
+						AddCilInstruction(ilVar, OpCodes.Conv_I4);
+						return;
+					case SpecialType.System_Int64:
+						AddCilInstruction(ilVar, OpCodes.Conv_I8);
+						return;
 
-			//		default:
-			//			throw new Exception(string.Format("Conversion from {0} to {1}  not implemented.", semanticInfo.Type, semanticInfo.ConvertedType));
-			//	}
-			//}
-    		
-			//if (semanticInfo.ImplicitConversion.IsBoxing)
-			//{
-			//	AddCilInstruction(ilVar, OpCodes.Box, semanticInfo.Type);
-			//}
+					default:
+						throw new Exception(string.Format("Conversion from {0} to {1}  not implemented.", typeInfo.Type, typeInfo.ConvertedType));
+				}
+			}
+
+			if (typeInfo.ImplicitConversion.IsBoxing)
+			{
+				AddCilInstruction(ilVar, OpCodes.Box, typeInfo.Type);
+			}
     	}
 
     	private void ProcessMethodCall(IdentifierNameSyntax node, MethodSymbol method)
