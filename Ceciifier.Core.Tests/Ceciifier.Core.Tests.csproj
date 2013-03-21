@@ -135,6 +135,9 @@
     <Content Include="TestResources\Members\ForwardReferences.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Content Include="TestResources\Methods\SelfRefCtor.cs.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="TestResources\Methods\ParameterModifiers.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>

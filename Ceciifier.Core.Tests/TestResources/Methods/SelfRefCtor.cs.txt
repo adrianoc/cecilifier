@@ -1,0 +1,9 @@
+﻿using System;
+
+class SelfRefCtor
+{
+	public static SelfRefCtor Create()
+	{
+		return new SelfRefCtor();
+	}
+}

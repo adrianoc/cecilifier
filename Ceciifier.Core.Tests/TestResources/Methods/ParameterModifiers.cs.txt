@@ -3,7 +3,6 @@
 	private void Foo(ref int i, out string s, ref ParameterModifiers pm)
 	{
 		s = "foo";
-		pm = new ParameterModifiers();
 		i  = 42;
 	}
 }

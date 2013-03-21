@@ -61,6 +61,12 @@ namespace Ceciifier.Core.Tests
 		}
 
 		[Test]
+		public void TestSelfReferencingCtor()
+		{
+			AssertResourceTest(@"Methods\SelfRefCtor");
+		}
+
+		[Test]
 		public void TestDefaultCtorFromBaseClass()
 		{
 			AssertResourceTest(@"Methods\DefaultCtorFromBaseClass");
