@@ -70,7 +70,7 @@ namespace Ceciifier.Core.Tests.Framework
 			var visitor = new StrictAssemblyDiffVisitor();
 			if (!comparer.Compare(visitor))
 			{
-				Assert.Fail(string.Format("Expected and generated assemblies differs:\r\n\tExpected:  {0}\r\n\tGenerated: {1}\r\n\r\n{2}", comparer.First, comparer.Second, visitor.Reason));
+				Assert.Fail("Expected and generated assemblies differs:\r\n\tExpected:  {0}\r\n\tGenerated: {1}\r\n\r\n{2}", comparer.First, comparer.Second, visitor.Reason);
 			}
 		}
 

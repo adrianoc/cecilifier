@@ -221,10 +221,10 @@ namespace Cecilifier.Core.AST
 		
 		protected string ResolveType(TypeSyntax type)
 		{
-			var resolved = ResolveTypeLocalVariable("" /*type.Name*/);
+			var resolved = ResolveTypeLocalVariable(type.ToString());
 			return resolved 
 					?? ResolvePredefinedAndArrayTypes(type) 
-					?? ResolveType("" /*type.Name*/);
+					?? ResolveType(type.ToString());
 		}
 
 		private string ResolvePredefinedAndArrayTypes(TypeSymbol type)
