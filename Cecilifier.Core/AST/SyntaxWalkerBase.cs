@@ -45,7 +45,7 @@ namespace Cecilifier.Core.AST
         	AddCecilExpression(@"{0}.Append({0}.Create({1}, {2}));", ilVar, opCode.ConstantName(), arg);
 		}
 
-        protected void AddCilInstructionCastOperand<T>(string ilVar, OpCode opCode, T arg)
+        protected internal void AddCilInstructionCastOperand<T>(string ilVar, OpCode opCode, T arg)
         {
         	AddCecilExpression(@"{0}.Append({0}.Create({1}, ({2}) {3}));", ilVar, opCode.ConstantName(), typeof(T).Name, arg);
 		}
@@ -285,11 +285,31 @@ namespace Cecilifier.Core.AST
 			return LocalVariableIndex(LocalVariableNameForCurrentNode(), localVariable);
 		}
 
-		protected string LocalVariableIndexWithCast<CASTTYPE>(string localVariable)
+		protected string LocalVariableIndexWithCast<TCast>(string localVariable)
 		{
-			return "(" + typeof(CASTTYPE).Name +")" + LocalVariableIndex(LocalVariableNameForCurrentNode(), localVariable);
+			return "(" + typeof(TCast).Name +")" + LocalVariableIndex(LocalVariableNameForCurrentNode(), localVariable);
 		}
 
+		protected void ProcessParameter(string ilVar, ExpressionSyntax node, ParameterSymbol paramSymbol)
+		{
+			OpCode[] optimizedLdArgs = {OpCodes.Ldarg_0, OpCodes.Ldarg_1, OpCodes.Ldarg_2, OpCodes.Ldarg_3};
+
+			var method = paramSymbol.ContainingSymbol as MethodSymbol;
+			if (node.Parent.Kind == SyntaxKind.MemberAccessExpression && paramSymbol.ContainingType.IsValueType)
+			{
+				AddCilInstruction(ilVar, OpCodes.Ldarga, paramSymbol.Ordinal + +(method.IsStatic ? 0 : 1));
+			}
+			else if (paramSymbol.Ordinal > 3)
+			{
+				AddCilInstruction(ilVar, OpCodes.Ldarg, paramSymbol.Ordinal.ToCecilIndex());
+			}
+			else
+			{
+				var loadOpCode = optimizedLdArgs[paramSymbol.Ordinal + (method.IsStatic ? 0 : 1)];
+				AddCilInstruction(ilVar, loadOpCode);
+			}
+		}
+		
 		protected const string ModifiersSeparator = " | ";
 
 	}

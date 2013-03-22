@@ -31,6 +31,8 @@ namespace Cecilifier.Core.AST
 			}
 
 			AddCecilExpression("var {0} = new ParameterDefinition(\"{1}\", ParameterAttributes.None, {2});", paramVar, node.Identifier.ValueText, resolvedType);
+
+			AddExtraAttributes(paramVar, paramSymbol);
 			
 			if (node.GetFirstToken().Kind == SyntaxKind.ParamsKeyword)
 			{
@@ -40,6 +42,14 @@ namespace Cecilifier.Core.AST
 			var methodVar = LocalVariableNameForCurrentNode();
 			AddCecilExpression("{0}.Parameters.Add({1});", methodVar, paramVar);
 			base.VisitParameter(node);
+		}
+
+		private void AddExtraAttributes(string paramVar, ParameterSymbol symbol)
+		{
+			if (symbol.RefKind == RefKind.Out)
+			{
+				AddCecilExpression("{0}.Attributes = ParameterAttributes.Out;", paramVar);
+			}
 		}
 
 		public override void VisitReturnStatement(ReturnStatementSyntax node)

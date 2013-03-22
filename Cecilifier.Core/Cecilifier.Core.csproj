@@ -64,6 +64,7 @@
     <Compile Include="AST\ConstructorInitializerVisitor.cs" />
     <Compile Include="AST\ExpressionVisitor.cs" />
     <Compile Include="AST\IMemoryLocationResolver.cs" />
+    <Compile Include="AST\ParameterVisitor.cs" />
     <Compile Include="AST\StackTransitionAnalizer.cs" />
     <Compile Include="AST\SyntaxTreeDump.cs" />
     <Compile Include="AST\TypeDeclarationVisitor.cs" />
@@ -78,6 +79,7 @@
     <Compile Include="Extensions\OpCodesExtensions.cs" />
     <Compile Include="Extensions\TypeExtensions.cs" />
     <Compile Include="Misc\IdGenerator.cs" />
+    <Compile Include="Misc\IntExtensions.cs" />
     <Compile Include="Misc\LocalVariable.cs" />
     <Compile Include="Misc\TypeInfo.cs" />
     <Compile Include="Cecilifier.cs" />

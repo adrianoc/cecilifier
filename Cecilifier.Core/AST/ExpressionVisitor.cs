@@ -61,10 +61,13 @@ namespace Cecilifier.Core.AST
 
     	private void ProcessAssignmentExpression(BinaryExpressionSyntax node)
     	{
+			var visitor = new AssignmentVisitor(Context, ilVar);
+    		visitor.PreProcessRefOutAssignments(node.Left);
+			
 			Visit(node.Right);
     		if (!valueTypeNoArgObjCreation)
     		{
-    			new AssignmentVisitor(Context, ilVar).Visit(node.Left);
+    			visitor.Visit(node.Left);
     		}
     	}
 
@@ -76,6 +79,7 @@ namespace Cecilifier.Core.AST
 					AddCilInstruction(ilVar, OpCodes.Ldstr, node.ToFullString());
 					break;
 
+				case SyntaxKind.CharacterLiteralExpression:
 				case SyntaxKind.NumericLiteralExpression:
 					AddCilInstruction(ilVar, LoadOpCodeFor(node), node.ToString());
 					break;
@@ -161,7 +165,7 @@ namespace Cecilifier.Core.AST
 					break;
 
 				case SymbolKind.Parameter:
-					ProcessParameter(node, member);
+					ProcessParameter(ilVar, node, member.Symbol as ParameterSymbol);
 					break;
 
 				case SymbolKind.Local:
@@ -304,7 +308,6 @@ namespace Cecilifier.Core.AST
 		private OpCode LoadOpCodeFor(LiteralExpressionSyntax node)
 		{
 			var info = Context.SemanticModel.GetTypeInfo(node);
-
 			switch (info.Type.SpecialType)
 			{
 				case SpecialType.System_Single:
@@ -319,6 +322,9 @@ namespace Cecilifier.Core.AST
 
 				case SpecialType.System_Int64:
 					return OpCodes.Ldc_I8;
+
+				case SpecialType.System_Char:
+					return OpCodes.Ldc_I4;
 			}
 
 			throw new ArgumentException(string.Format("Literal type {0} not supported.", info.Type), "node");
@@ -351,32 +357,8 @@ namespace Cecilifier.Core.AST
 			AddCilInstruction(ilVar, OpCodes.Ldloc, LocalVariableIndex(localVar.ToString()));
 		}
 
-		private void ProcessParameter(IdentifierNameSyntax node, SymbolInfo paramInfo)
-		{
-			OpCode []optimizedLdArgs = { OpCodes.Ldarg_0, OpCodes.Ldarg_1, OpCodes.Ldarg_2, OpCodes.Ldarg_3};
 
-			var param = paramInfo.Symbol as ParameterSymbol;
-
-			var method = param.ContainingSymbol as MethodSymbol;
-			if (node.Parent.Kind == SyntaxKind.MemberAccessExpression && paramInfo.Symbol.ContainingType.IsValueType)
-			{
-				AddCilInstruction(ilVar, OpCodes.Ldarga, param.Ordinal + +(method.IsStatic ? 0 : 1));
-			}
-			else
-			{
-				if (param.Ordinal >= 2)
-				{
-					AddCilInstruction(ilVar, OpCodes.Ldarg, param.Ordinal);
-				}
-				else
-				{
-					var loadOpCode = optimizedLdArgs[param.Ordinal + (method.IsStatic ? 0 : 1)];
-					AddCilInstruction(ilVar, loadOpCode);
-				}
-			}
-		}
-
-    	private void InjectRequiredConversions(ExpressionSyntax expression)
+	    private void InjectRequiredConversions(ExpressionSyntax expression)
     	{
 			var info = Context.SemanticModel.GetTypeInfo(expression);
 			InjectRequiredConversions(info);

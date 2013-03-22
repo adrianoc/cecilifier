@@ -1,8 +1,10 @@
 ﻿class ParameterModifiers
 {
-	private void Foo(ref int i, out string s, ref ParameterModifiers pm)
+	private void Foo(ref int i, out string os, ref string rs, ref ParameterModifiers pm, ref char ch)
 	{
-		s = "foo";
+		os = "foo";
+		rs = "rs_foo";
 		i  = 42;
+		ch = 'b';
 	}
 }
