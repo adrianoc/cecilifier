@@ -24,7 +24,6 @@ namespace Cecilifier.Core.AST
 			AddCilInstruction(ilVar, OpCodes.Call, targetCtor.MethodResolverExpression(Context));
             
             var declaringType = (BaseTypeDeclarationSyntax) node.Parent.Parent;
-            Context.SetDefaultCtorInjectorFor(declaringType, delegate { });
 
             //FIXME: Fix ctor construction
             //

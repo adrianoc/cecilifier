@@ -10,7 +10,7 @@ namespace Cecilifier.Core.Extensions
     {
         public static string MangleName(this BaseMethodDeclarationSyntax method, SemanticModel sm)
         {
-        	var methodSymbol = sm.GetDeclaredSymbol(method) as MethodSymbol;
+        	var methodSymbol = sm.GetDeclaredSymbol(method);
 			if (methodSymbol == null)
 			{
 				throw new Exception("Failled to retrieve method symbol for " + method);

@@ -44,14 +44,6 @@ namespace Cecilifier.Core.AST
 			base.VisitParameter(node);
 		}
 
-		private void AddExtraAttributes(string paramVar, ParameterSymbol symbol)
-		{
-			if (symbol.RefKind == RefKind.Out)
-			{
-				AddCecilExpression("{0}.Attributes = ParameterAttributes.Out;", paramVar);
-			}
-		}
-
 		public override void VisitReturnStatement(ReturnStatementSyntax node)
 		{
 			ExpressionVisitor.Visit(Context, ilVar, node.Expression);
@@ -96,10 +88,9 @@ namespace Cecilifier.Core.AST
 			AddCilInstruction(ilVar, OpCodes.Stloc, LocalVariableIndex(localVar.Identifier.ValueText));
 		}
 
-		protected void ProcessMethodDeclaration<T>(T node, string simpleName, string fqName, string returnType, Action<string> runWithCurrent) where T : BaseMethodDeclarationSyntax
+		protected string ProcessMethodDeclaration<T>(T node, string simpleName, string fqName, string returnType, Action<string> runWithCurrent) where T : BaseMethodDeclarationSyntax
 		{
-			var declaringType = (TypeDeclarationSyntax)node.Parent;
-			var declaringTypeName = declaringType.Identifier.ValueText;
+			var declaringTypeName = DeclaringTypeNameFor(node);
 
 			var methodVar = LocalVariableNameFor(declaringTypeName, simpleName, node.MangleName(Context.SemanticModel));
 
@@ -120,6 +111,14 @@ namespace Cecilifier.Core.AST
 			{
 				AddCilInstruction(ilVar, OpCodes.Ret);
 			}
+
+			return methodVar;
+		}
+
+		protected static string DeclaringTypeNameFor<T>(T node) where T : BaseMethodDeclarationSyntax
+		{
+			var declaringType = (TypeDeclarationSyntax) node.Parent;
+			return declaringType.Identifier.ValueText;
 		}
 
 		private void AddOrUpdateMethodDefinition(string methodVar, string fqName, string methodModifiers, string returnType)
@@ -139,6 +138,14 @@ namespace Cecilifier.Core.AST
 		{
 			context.WriteCecilExpression("var {0} = new MethodDefinition(\"{1}\", {2}, {3});\r\n", methodVar, fqName, methodModifiers, returnType);
 			context[methodVar] = "";
+		}
+
+		private void AddExtraAttributes(string paramVar, ParameterSymbol symbol)
+		{
+			if (symbol.RefKind == RefKind.Out)
+			{
+				AddCecilExpression("{0}.Attributes = ParameterAttributes.Out;", paramVar);
+			}
 		}
 
 		private string MethodModifiersToCecil(BaseMethodDeclarationSyntax methodDeclaration)

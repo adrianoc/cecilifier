@@ -260,9 +260,9 @@ namespace Cecilifier.Core.AST
 			return ImportExpressionFor(typeName);
 		}
 
-		protected void RegisterTypeLocalVariable(TypeDeclarationSyntax node, string varName, Action<string, BaseTypeDeclarationSyntax> ctorInjector)
+		protected void RegisterTypeLocalVariable(TypeDeclarationSyntax node, string varName)
 		{
-			Context.RegisterTypeLocalVariable(node, varName, ctorInjector);
+			Context.RegisterTypeLocalVariable(node, varName);
 		}
 
 		protected NamedTypeSymbol GetSpecialType(SpecialType specialType)

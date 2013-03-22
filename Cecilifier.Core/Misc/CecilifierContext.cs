@@ -37,7 +37,7 @@ namespace Cecilifier.Core.Misc
 
 		public MethodSymbol GetDeclaredSymbol(BaseMethodDeclarationSyntax methodDeclaration)
 		{
-			return (MethodSymbol) semanticModel.GetDeclaredSymbol(methodDeclaration);
+			return semanticModel.GetDeclaredSymbol(methodDeclaration);
 		}
 
 		public TypeSymbol GetDeclaredSymbol(TypeDeclarationSyntax classDeclaration)
@@ -85,9 +85,9 @@ namespace Cecilifier.Core.Misc
 			return ++currentTypeId;
 		}
 
-		public void RegisterTypeLocalVariable(TypeDeclarationSyntax node, string varName, Action<string, BaseTypeDeclarationSyntax> ctorInjector)
+		public void RegisterTypeLocalVariable(TypeDeclarationSyntax node, string varName)
 		{
-			typeToTypeInfo[node] = new TypeInfo(varName, ctorInjector);
+			typeToTypeInfo[node] = new TypeInfo(varName);
 		}
 
 		public string ResolveTypeLocalVariable(string typeName)
@@ -96,21 +96,7 @@ namespace Cecilifier.Core.Misc
 			return typeDeclaration != null ? typeToTypeInfo[typeDeclaration].LocalVariable : null;
 		}
 
-		public void SetDefaultCtorInjectorFor(BaseTypeDeclarationSyntax type, Action<string, BaseTypeDeclarationSyntax> ctorInjector)
-		{
-			typeToTypeInfo[type].CtorInjector = ctorInjector;
-		}
-
-		public void EnsureCtorDefinedForCurrentType()
-		{
-			foreach (var pair in typeToTypeInfo)
-			{
-				pair.Value.CtorInjector(pair.Value.LocalVariable, pair.Key);
-				pair.Value.CtorInjector = delegate { };
-			}
-		}
-
-	    public string this[string name]
+		public string this[string name]
 	    {
             get { return vars[name]; }
 	        set { vars[name] = value; }
@@ -136,7 +122,6 @@ namespace Cecilifier.Core.Misc
 		{
 			get
 			{
-				EnsureCtorDefinedForCurrentType();
 				return output.Aggregate("", (acc, curr) => acc + curr);
 			}
 		}

@@ -9,7 +9,6 @@ namespace Cecilifier.Core.AST
 {
 	class ConstructorDeclarationVisitor : MethodDeclarationVisitor
 	{
-
 		public ConstructorDeclarationVisitor(IVisitorContext context) : base(context)
 		{
 		}
@@ -17,7 +16,6 @@ namespace Cecilifier.Core.AST
 		public override void VisitConstructorDeclaration(ConstructorDeclarationSyntax node)
 		{
 			var declaringType = node.Parent.ResolveDeclaringType();
-			Context.SetDefaultCtorInjectorFor(declaringType, delegate { });
 
             Action<ConstructorDeclarationSyntax> callBaseMethod = base.VisitConstructorDeclaration;
  
@@ -28,6 +26,7 @@ namespace Cecilifier.Core.AST
 				{
 					AddCilInstruction(ilVar, OpCodes.Ldarg_0);
 				}
+				
 				callBaseMethod(node);
 				
 				if (!ctorAdded && declaringType.Kind != SyntaxKind.StructDeclaration)
@@ -51,15 +50,18 @@ namespace Cecilifier.Core.AST
 
 		internal void DefaultCtorInjector(string localVar, BaseTypeDeclarationSyntax declaringClass)
 		{
-			var ctorLocalVar = TempLocalVar("ctor");
+			var ctorLocalVar = LocalVariableNameFor(declaringClass.Identifier.ValueText, "ctor", "");
+
 			AddCecilExpression(@"var {0} = new MethodDefinition("".ctor"", {1} | {2} | MethodAttributes.HideBySig, assembly.MainModule.TypeSystem.Void);", ctorLocalVar, CtorFlags, DefaultCtorAccessibilityFor(declaringClass));
 			AddCecilExpression(@"{0}.Methods.Add({1});", localVar, ctorLocalVar);
 			var ilVar = TempLocalVar("il");
-            AddCecilExpression(@"var {0} = {1}.Body.GetILProcessor();", ilVar, ctorLocalVar);
+			AddCecilExpression(@"var {0} = {1}.Body.GetILProcessor();", ilVar, ctorLocalVar);
 
-            AddCilInstruction(ilVar, OpCodes.Ldarg_0);
-            AddCilInstruction(ilVar, OpCodes.Call, string.Format("assembly.MainModule.Import(TypeHelpers.DefaultCtorFor({0}.BaseType.Resolve()))", localVar));
-            AddCilInstruction(ilVar, OpCodes.Ret);
+			AddCilInstruction(ilVar, OpCodes.Ldarg_0);
+			AddCilInstruction(ilVar, OpCodes.Call, string.Format("assembly.MainModule.Import(TypeHelpers.DefaultCtorFor({0}.BaseType.Resolve()))", localVar));
+			AddCilInstruction(ilVar, OpCodes.Ret);
+
+			Context[ctorLocalVar] = "";
 		}
 
 		private static string DefaultCtorAccessibilityFor(BaseTypeDeclarationSyntax declaringClass)

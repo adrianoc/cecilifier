@@ -26,7 +26,7 @@ namespace Cecilifier.Core.AST
 
 		public override void VisitStructDeclaration(StructDeclarationSyntax node)
 		{
-			HandleTypeDeclaration(node, ProcessBase(node), delegate { } );
+			HandleTypeDeclaration(node, ProcessBase(node));
 			base.VisitStructDeclaration(node);
 		}
 
@@ -34,12 +34,7 @@ namespace Cecilifier.Core.AST
 		{
 			new FieldDeclarationVisitor(Context).Visit(node);
 		}
-
-		public override void VisitConstructorDeclaration(ConstructorDeclarationSyntax node)
-		{
-			new ConstructorDeclarationVisitor(Context).Visit(node);
-		}
-
+		
 		public override void VisitMethodDeclaration(MethodDeclarationSyntax node)
 		{
 			new MethodDeclarationVisitor(Context).Visit(node);
@@ -76,29 +71,22 @@ namespace Cecilifier.Core.AST
 			}
 		}
 
-		private void EnsureCurrentTypeHasADefaultCtor()
-		{
-			Context.EnsureCtorDefinedForCurrentType();
-		}
-
 		private void HandleInterfaceDeclaration(TypeDeclarationSyntax node)
 		{
-			HandleTypeDeclaration(node, string.Empty, delegate {});	
+			HandleTypeDeclaration(node, string.Empty);	
 		}
 
 		private void HandleClassDeclaration(TypeDeclarationSyntax node, string baseType)
 		{
-			HandleTypeDeclaration(node, baseType, new ConstructorDeclarationVisitor(Context).DefaultCtorInjector);	
+			HandleTypeDeclaration(node, baseType);	
 		}
 
-		private void HandleTypeDeclaration(TypeDeclarationSyntax node, string baseType, Action<string, BaseTypeDeclarationSyntax> ctorInjector)
+		private void HandleTypeDeclaration(TypeDeclarationSyntax node, string baseType)
 		{
-			//EnsureCurrentTypeHasADefaultCtor();
-
 			var varName = LocalVariableNameForId(NextLocalVariableTypeId());
 
 			AddCecilExpression("TypeDefinition {0} = new TypeDefinition(\"{1}\", \"{2}\", {3}{4});", varName, Context.Namespace, node.Identifier.Value, TypeModifiersToCecil(node), !string.IsNullOrWhiteSpace(baseType) ? ", " + baseType : "");
-
+			
 			foreach (var itfName in ImplementedInterfacesFor(node.BaseList))
 			{
 				AddCecilExpression("{0}.Interfaces.Add({1});", varName, ResolveType(itfName));
@@ -111,7 +99,49 @@ namespace Cecilifier.Core.AST
 			}
 
 			SetDeclaringType(node, varName);
-			RegisterTypeLocalVariable(node, varName, ctorInjector);
+			RegisterTypeLocalVariable(node, varName);
+
+			EnsureCurrentTypeHasADefaultCtor(node, varName);
 		}
+
+		private void EnsureCurrentTypeHasADefaultCtor(TypeDeclarationSyntax node, string typeLocalVar)
+		{
+			node.Accept(new DefaultCtorVisitor(Context, typeLocalVar));
+		}
+	}
+
+	internal class DefaultCtorVisitor : SyntaxVisitor
+	{
+		private readonly IVisitorContext context;
+
+		public DefaultCtorVisitor(IVisitorContext context, string localVarName)
+		{
+			this.localVarName = localVarName;
+			this.context = context;
+		}
+
+		public override void VisitClassDeclaration(ClassDeclarationSyntax node)
+		{
+			foreach (var member in node.Members.Where(m => m.Kind != SyntaxKind.ClassDeclaration))
+			{
+				member.Accept(this);
+			}
+			
+			if (!defaultCtorFound)
+			{
+				new ConstructorDeclarationVisitor(context).DefaultCtorInjector(localVarName, node);
+			}
+		}
+
+		public override void VisitConstructorDeclaration(ConstructorDeclarationSyntax ctorNode)
+		{
+			if (ctorNode.ParameterList.Parameters.Count > 0) return;
+
+			defaultCtorFound = true;
+			new ConstructorDeclarationVisitor(context).Visit(ctorNode);
+		}
+
+		private bool defaultCtorFound;
+		private string localVarName;
 	}
 }

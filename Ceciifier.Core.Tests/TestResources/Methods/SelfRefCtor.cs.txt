@@ -6,4 +6,6 @@ class SelfRefCtor
 	{
 		return new SelfRefCtor();
 	}
+
+
 }

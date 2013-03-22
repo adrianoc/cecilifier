@@ -28,10 +28,8 @@ namespace Cecilifier.Core.AST
 
 		int NextFieldId();
 		int NextLocalVariableTypeId();
-		void RegisterTypeLocalVariable(TypeDeclarationSyntax node, string varName, Action<string, BaseTypeDeclarationSyntax> ctorInjector);
+		void RegisterTypeLocalVariable(TypeDeclarationSyntax node, string varName);
 		string ResolveTypeLocalVariable(string typeName);
-		void SetDefaultCtorInjectorFor(BaseTypeDeclarationSyntax type, Action<string, BaseTypeDeclarationSyntax> ctorInjector);
-		void EnsureCtorDefinedForCurrentType();
 	    string this[string name] { get; set; }
 		bool Contains(string name);
 	    void Remove(string varName);
