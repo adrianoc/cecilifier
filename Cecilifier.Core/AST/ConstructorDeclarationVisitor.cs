@@ -15,6 +15,8 @@ namespace Cecilifier.Core.AST
 
 		public override void VisitConstructorDeclaration(ConstructorDeclarationSyntax node)
 		{
+			if (node.ParameterList.Parameters.Count == 0) return;
+
 			var declaringType = node.Parent.ResolveDeclaringType();
 
             Action<ConstructorDeclarationSyntax> callBaseMethod = base.VisitConstructorDeclaration;
