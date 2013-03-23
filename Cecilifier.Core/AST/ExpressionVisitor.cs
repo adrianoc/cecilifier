@@ -359,49 +359,45 @@ namespace Cecilifier.Core.AST
 
 
 	    private void InjectRequiredConversions(ExpressionSyntax expression)
-    	{
-			var info = Context.SemanticModel.GetTypeInfo(expression);
-			InjectRequiredConversions(info);
-    	}
+	    {
+		    var typeInfo = Context.SemanticModel.GetTypeInfo(expression);
 
-    	private void InjectRequiredConversions(TypeInfo typeInfo)
-    	{
-    		if (typeInfo.ImplicitConversion.IsNumeric)
-			{
-				switch (typeInfo.ConvertedType.SpecialType)
-				{
-					case SpecialType.System_Single:
-						AddCilInstruction(ilVar, OpCodes.Conv_R4);
-						return;
-					case SpecialType.System_Double:
-						AddCilInstruction(ilVar, OpCodes.Conv_R8);
-						return;
+		    if (typeInfo.ImplicitConversion.IsNumeric)
+		    {
+			    switch (typeInfo.ConvertedType.SpecialType)
+			    {
+				    case SpecialType.System_Single:
+					    AddCilInstruction(ilVar, OpCodes.Conv_R4);
+					    return;
+				    case SpecialType.System_Double:
+					    AddCilInstruction(ilVar, OpCodes.Conv_R8);
+					    return;
 
-					case SpecialType.System_Byte:
-						AddCilInstruction(ilVar, OpCodes.Conv_I1);
-						return;
-					case SpecialType.System_Int16:
-						AddCilInstruction(ilVar, OpCodes.Conv_I2);
-						return;
-					case SpecialType.System_Int32:
-						AddCilInstruction(ilVar, OpCodes.Conv_I4);
-						return;
-					case SpecialType.System_Int64:
-						AddCilInstruction(ilVar, OpCodes.Conv_I8);
-						return;
+				    case SpecialType.System_Byte:
+					    AddCilInstruction(ilVar, OpCodes.Conv_I1);
+					    return;
+				    case SpecialType.System_Int16:
+					    AddCilInstruction(ilVar, OpCodes.Conv_I2);
+					    return;
+				    case SpecialType.System_Int32:
+					    AddCilInstruction(ilVar, OpCodes.Conv_I4);
+					    return;
+				    case SpecialType.System_Int64:
+					    AddCilInstruction(ilVar, OpCodes.Conv_I8);
+					    return;
 
-					default:
-						throw new Exception(string.Format("Conversion from {0} to {1}  not implemented.", typeInfo.Type, typeInfo.ConvertedType));
-				}
-			}
+				    default:
+					    throw new Exception(string.Format("Conversion from {0} to {1}  not implemented.", typeInfo.Type, typeInfo.ConvertedType));
+			    }
+		    }
 
-			if (typeInfo.ImplicitConversion.IsBoxing)
-			{
-				AddCilInstruction(ilVar, OpCodes.Box, typeInfo.Type);
-			}
-    	}
+		    if (typeInfo.ImplicitConversion.IsBoxing)
+		    {
+			    AddCilInstruction(ilVar, OpCodes.Box, typeInfo.Type);
+		    }
+	    }
 
-    	private void ProcessMethodCall(IdentifierNameSyntax node, MethodSymbol method)
+	    private void ProcessMethodCall(IdentifierNameSyntax node, MethodSymbol method)
 		{
 			if (!method.IsStatic && method.IsDefinedInCurrentType(Context) && node.Parent.Kind == SyntaxKind.InvocationExpression)
 			{

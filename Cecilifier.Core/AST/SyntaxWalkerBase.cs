@@ -292,6 +292,12 @@ namespace Cecilifier.Core.AST
 
 		protected void ProcessParameter(string ilVar, ExpressionSyntax node, ParameterSymbol paramSymbol)
 		{
+			if (paramSymbol.Type.IsValueType && node.Parent.Accept(new UsageVisitor()) == UsageKind.CallTarget)
+			{
+				AddCilInstruction(ilVar, OpCodes.Ldarga, paramSymbol.Ordinal.ToCecilIndex());
+				return;
+			}
+
 			OpCode[] optimizedLdArgs = {OpCodes.Ldarg_0, OpCodes.Ldarg_1, OpCodes.Ldarg_2, OpCodes.Ldarg_3};
 
 			var method = paramSymbol.ContainingSymbol as MethodSymbol;
@@ -312,5 +318,19 @@ namespace Cecilifier.Core.AST
 		
 		protected const string ModifiersSeparator = " | ";
 
+	}
+
+	internal class UsageVisitor : SyntaxVisitor<UsageKind>
+	{
+		public override UsageKind VisitMemberAccessExpression(MemberAccessExpressionSyntax node)
+		{
+			return UsageKind.CallTarget;
+		}
+	}
+
+	internal enum UsageKind
+	{
+		None		= 0,
+		CallTarget	= 1,
 	}
 }

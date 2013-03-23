@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Cecilifier.Core.Misc;
 using Roslyn.Compilers;
 using Roslyn.Compilers.CSharp;
@@ -9,8 +8,9 @@ namespace Cecilifier.Core.AST
 {
 	interface IVisitorContext
 	{
-		string Namespace { get; set; }
 		string Output { get; }
+		
+		string Namespace { get; set; }
 	    SemanticModel SemanticModel { get; }
 
 		LocalVariable CurrentLocalVariable { get; }
