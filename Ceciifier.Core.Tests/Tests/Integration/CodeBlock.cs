@@ -1,10 +1,10 @@
-﻿using Ceciifier.Core.Tests.Framework;
+﻿using Ceciifier.Core.Tests.Tests.Integration;
 using NUnit.Framework;
 
 namespace Ceciifier.Core.Tests
 {
 	[TestFixture]
-	class BlockTestCase : ResourceTestBase
+	class BlockTestCase : IntegrationResourceBasedTest
 	{
 		[Test, Ignore("Not Implemented yet")]
 		public void NonVirtualMethodCallTest()

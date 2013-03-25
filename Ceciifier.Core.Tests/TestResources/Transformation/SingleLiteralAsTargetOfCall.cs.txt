@@ -1,0 +1,7 @@
+﻿class SingleLiteralAsTargetOfCall
+{
+	void Method()
+	{
+		10.ToString();
+	}
+}

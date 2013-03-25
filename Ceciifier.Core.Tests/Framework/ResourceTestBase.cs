@@ -14,13 +14,13 @@ namespace Ceciifier.Core.Tests.Framework
 		{
 			string expectedAssemblyPath = resourceBasePath.GetPathOfBinaryResource("Expected.dll", kind);
 			
-			var tbc = ReadResource(resourceBasePath, "cs");
+			var tbc = ReadResource(resourceBasePath, "cs", kind);
 			AssertResourceTest(resourceBasePath, expectedAssemblyPath, tbc);
 		}
 
-		protected void AssertResourceTest(string resourceName)
+		protected void AssertResourceTest(string resourceName, TestKind kind)
 		{
-			var tbc = ReadResource(resourceName, "cs");
+			var tbc = ReadResource(resourceName, "cs", kind);
 
 			var actualAssemblyPath = Path.Combine(Path.GetTempPath(), resourceName + ".dll");
 
@@ -74,9 +74,9 @@ namespace Ceciifier.Core.Tests.Framework
 			}
 		}
 
-		private Stream ReadResource(string resourceName, string type)
+		protected Stream ReadResource(string resourceName, string type, TestKind kind)
 		{
-			return ReadResource(resourceName.GetPathOfTextResource(type, TestKind.Integration));
+			return ReadResource(resourceName.GetPathOfTextResource(type, kind));
 		}
 
 		private Stream ReadResource(string path)

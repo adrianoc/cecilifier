@@ -1,10 +1,11 @@
 ﻿using Ceciifier.Core.Tests.Framework;
+using Ceciifier.Core.Tests.Tests.Integration;
 using NUnit.Framework;
 
 namespace Ceciifier.Core.Tests
 {
 	[TestFixture]
-	public class ExpressionTestCase : ResourceTestBase
+	public class ExpressionTestCase : IntegrationResourceBasedTest
 	{
 		[Test]
 		public void TestParameterAssignment()

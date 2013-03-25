@@ -1,0 +1,8 @@
+﻿class SingleLiteralAsTargetOfCall
+{
+	void Method()
+	{
+		int Method_int_10 = 10;
+		Method_int_10.ToString();
+	}
+}

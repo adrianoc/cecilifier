@@ -1,10 +1,10 @@
-﻿using Ceciifier.Core.Tests.Framework;
+﻿using Ceciifier.Core.Tests.Tests.Integration;
 using NUnit.Framework;
 
 namespace Ceciifier.Core.Tests
 {
 	[TestFixture]
-	public class MethodTestCase : ResourceTestBase
+	public class MethodTestCase : IntegrationResourceBasedTest
 	{
 		[Test]
 		public void TestExplicityDefaultCtor()

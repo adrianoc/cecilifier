@@ -1,0 +1,8 @@
+﻿class MultipleLiteralAsTargetOfCall
+{
+	void Method()
+	{
+		10.ToString();
+		true.ToString();
+	}
+}
