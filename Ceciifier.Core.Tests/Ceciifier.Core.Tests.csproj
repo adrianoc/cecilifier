@@ -59,6 +59,7 @@
     <Compile Include="Framework\AssemblyDiff\StrictTypeDiffVisitor.cs" />
     <Compile Include="Framework\IgnoringStringReader.cs" />
     <Compile Include="Framework\Formatter.cs" />
+    <Compile Include="Framework\TestKind.cs" />
     <Compile Include="Framework\StringExtensions.cs" />
     <Compile Include="Framework\TestFramework.cs" />
     <Compile Include="Framework\CompilationServices.cs" />
@@ -73,8 +74,10 @@
     <Compile Include="Tests\MiscTestCase.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="TestResources\Events\" />
-    <Folder Include="TestResources\Properties\" />
+    <Folder Include="TestResources\Integration\Events\" />
+    <Folder Include="TestResources\Integration\Properties\" />
+    <Folder Include="TestResources\Transformations\" />
+    <Folder Include="Tests\Transformations\" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Cecilifier.Core\Cecilifier.Core.csproj">
@@ -87,193 +90,193 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="TestResources\Expressions\Box.cs.txt">
+    <Content Include="TestResources\Integration\Expressions\Box.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Expressions\NewPrimitive.cs.txt">
+    <Content Include="TestResources\Integration\Expressions\NewPrimitive.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Expressions\NewCustom.cs.txt">
+    <Content Include="TestResources\Integration\Expressions\NewCustom.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Expressions\Operators\Ternary.cs.txt">
+    <Content Include="TestResources\Integration\Expressions\Operators\Ternary.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Expressions\Operators\TernaryExpected.dll">
+    <Content Include="TestResources\Integration\Expressions\Operators\TernaryExpected.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Expressions\TypeInferenceInDeclarations.cs.txt">
+    <Content Include="TestResources\Integration\Expressions\TypeInferenceInDeclarations.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Expressions\LocalVariableInitialization.cs.txt">
+    <Content Include="TestResources\Integration\Expressions\LocalVariableInitialization.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Expressions\Operators\Add.cs.txt">
+    <Content Include="TestResources\Integration\Expressions\Operators\Add.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Expressions\MultipleLocalVariableAssignment.cs.txt">
+    <Content Include="TestResources\Integration\Expressions\MultipleLocalVariableAssignment.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Expressions\LocalVariableAssignment.cs.txt">
+    <Content Include="TestResources\Integration\Expressions\LocalVariableAssignment.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Expressions\ParameterAssignment.cs.txt">
+    <Content Include="TestResources\Integration\Expressions\ParameterAssignment.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Expressions\ValueTypeAddress.cs.txt">
+    <Content Include="TestResources\Integration\Expressions\ValueTypeAddress.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Fields\InitializedFieldWithBaseCtor.cs.txt">
+    <Content Include="TestResources\Integration\Fields\InitializedFieldWithBaseCtor.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Fields\InitializedFieldMultipleCtor.cs.txt">
+    <Content Include="TestResources\Integration\Fields\InitializedFieldMultipleCtor.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Fields\InitializedFieldSingleCtor.cs.txt">
+    <Content Include="TestResources\Integration\Fields\InitializedFieldSingleCtor.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Members\ForwardReferences.cs.txt">
+    <Content Include="TestResources\Integration\Members\ForwardReferences.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Methods\SelfRefCtor.cs.txt">
+    <Content Include="TestResources\Integration\Methods\SelfRefCtor.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Methods\ParameterModifiers.cs.txt">
+    <Content Include="TestResources\Integration\Methods\ParameterModifiers.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Methods\TypeWithNoArgCtorAndInnerClass.cs.txt">
+    <Content Include="TestResources\Integration\Methods\TypeWithNoArgCtorAndInnerClass.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Methods\ExternalMethodReference.cs.txt">
+    <Content Include="TestResources\Integration\Methods\ExternalMethodReference.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Methods\MethodCallOnValueType.cs.txt">
+    <Content Include="TestResources\Integration\Methods\MethodCallOnValueType.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Methods\MutuallyRecursive.cs.txt">
+    <Content Include="TestResources\Integration\Methods\MutuallyRecursive.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Methods\CtorWithParameters.cs.txt">
+    <Content Include="TestResources\Integration\Methods\CtorWithParameters.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Methods\DefaultCtorFromBaseClass.cs.txt">
+    <Content Include="TestResources\Integration\Methods\DefaultCtorFromBaseClass.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Methods\InterfaceMethodVirtualInInplementation.cs.txt">
+    <Content Include="TestResources\Integration\Methods\InterfaceMethodVirtualInInplementation.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Expressions\Expressions.cs.txt">
+    <Content Include="TestResources\Integration\Expressions\Expressions.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Types\AbstractClass.cs.txt">
+    <Content Include="TestResources\Integration\Types\AbstractClass.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Misc\AccessibilityModifiers.cs.txt">
+    <Content Include="TestResources\Integration\Misc\AccessibilityModifiers.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Types\ForwardTypeReference.cs.txt">
+    <Content Include="TestResources\Integration\Types\ForwardTypeReference.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Types\SimpleValueType.cs.txt">
+    <Content Include="TestResources\Integration\Types\SimpleValueType.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Types\TypeInitializer.cs.txt">
+    <Content Include="TestResources\Integration\Types\TypeInitializer.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Types\InterfaceDefinition.cs.txt">
+    <Content Include="TestResources\Integration\Types\InterfaceDefinition.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Types\InheritanceSameCompilationUnit.cs.txt">
+    <Content Include="TestResources\Integration\Types\InheritanceSameCompilationUnit.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Types\MultipleInterfaceImplementation.cs.txt">
+    <Content Include="TestResources\Integration\Types\MultipleInterfaceImplementation.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Types\Inheritance.cs.txt">
+    <Content Include="TestResources\Integration\Types\Inheritance.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Types\ExplicityInterfaceImplementation.cs.txt">
+    <Content Include="TestResources\Integration\Types\ExplicityInterfaceImplementation.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Types\InterfaceImplementation.cs.txt">
+    <Content Include="TestResources\Integration\Types\InterfaceImplementation.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Types\InnerClass.cs.txt">
+    <Content Include="TestResources\Integration\Types\InnerClass.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Types\PartialClass.cs.txt">
+    <Content Include="TestResources\Integration\Types\PartialClass.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Types\SealedClass.cs.txt">
+    <Content Include="TestResources\Integration\Types\SealedClass.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\CodeBlock\Conditional\IfThenElseStatement.cs.txt">
+    <Content Include="TestResources\Integration\CodeBlock\Conditional\IfThenElseStatement.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\CodeBlock\Conditional\IfStatement.cs.txt">
+    <Content Include="TestResources\Integration\CodeBlock\Conditional\IfStatement.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\CodeBlock\MethodCall\NonVirtualMethodCall.cs.txt">
+    <Content Include="TestResources\Integration\CodeBlock\MethodCall\NonVirtualMethodCall.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Fields\JaggedArray.cs.txt">
+    <Content Include="TestResources\Integration\Fields\JaggedArray.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Fields\SimpleArray.cs.txt">
+    <Content Include="TestResources\Integration\Fields\SimpleArray.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Fields\VolatileField.cs.txt">
+    <Content Include="TestResources\Integration\Fields\VolatileField.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Fields\SingleRefField.cs.txt">
+    <Content Include="TestResources\Integration\Fields\SingleRefField.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Fields\SimpleFieldsInSingleDeclaration.cs.txt">
+    <Content Include="TestResources\Integration\Fields\SimpleFieldsInSingleDeclaration.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Fields\SingleFieldMultipleModifiers.cs.txt">
+    <Content Include="TestResources\Integration\Fields\SingleFieldMultipleModifiers.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Fields\InitializedFieldNoCtor.cs.txt">
+    <Content Include="TestResources\Integration\Fields\InitializedFieldNoCtor.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Fields\SingleField.cs.txt">
+    <Content Include="TestResources\Integration\Fields\SingleField.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Types\Simplest.cs.txt">
+    <Content Include="TestResources\Integration\Types\Simplest.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Methods\AbstractMethod.cs.txt">
+    <Content Include="TestResources\Integration\Methods\AbstractMethod.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Methods\ReturnValue.cs.txt">
+    <Content Include="TestResources\Integration\Methods\ReturnValue.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Methods\ExplicityDefaultCtor.cs.txt">
+    <Content Include="TestResources\Integration\Methods\ExplicityDefaultCtor.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Methods\VirtualMethod.cs.txt">
+    <Content Include="TestResources\Integration\Methods\VirtualMethod.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Methods\MultipleParameters.cs.txt">
+    <Content Include="TestResources\Integration\Methods\MultipleParameters.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Methods\VariableNumberOfParameters.cs.txt">
+    <Content Include="TestResources\Integration\Methods\VariableNumberOfParameters.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Methods\SingleSimpleParameter.cs.txt">
+    <Content Include="TestResources\Integration\Methods\SingleSimpleParameter.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Methods\NoParameters.cs.txt">
+    <Content Include="TestResources\Integration\Methods\NoParameters.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Misc\Namespaces.cs.txt">
+    <Content Include="TestResources\Integration\Misc\Namespaces.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Misc\TryCatchFinally.cs.txt">
+    <Content Include="TestResources\Integration\Misc\TryCatchFinally.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Misc\DelegateInvocation.cs.txt">
+    <Content Include="TestResources\Integration\Misc\DelegateInvocation.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

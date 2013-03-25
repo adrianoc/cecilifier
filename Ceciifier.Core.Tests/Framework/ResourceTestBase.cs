@@ -76,7 +76,7 @@ namespace Ceciifier.Core.Tests.Framework
 
 		private Stream ReadResource(string resourceName, string type)
 		{
-			return ReadResource(resourceName.GetPathOfTextResource(type));
+			return ReadResource(resourceName.GetPathOfTextResource(type, TestKind.Integration));
 		}
 
 		private Stream ReadResource(string path)

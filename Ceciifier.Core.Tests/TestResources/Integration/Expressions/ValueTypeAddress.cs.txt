@@ -6,14 +6,14 @@
 		System.Console.WriteLine(i.ToString());
 	}
 	
-	private static void MultipleMethodCallsOnValueTypeLocal()
+	private static void MultipleMethodCallsOnLocalValueType()
 	{
 		int i = 42;
 		System.Console.WriteLine(i.ToString());
 		System.Console.WriteLine(i.ToString());
 	}
 
-	private static void CallMethodOnValueTypeLiteral()
+	private static void CallMethodOnLiteralValueType()
 	{
 		System.Console.WriteLine(42.ToString());
 	}
