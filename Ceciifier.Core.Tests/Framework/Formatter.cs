@@ -3,7 +3,7 @@ using System.IO;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 
-namespace Ceciifier.Core.Tests.Framework
+namespace Cecilifier.Core.Tests.Framework
 {
 	public static class Formatter
 	{

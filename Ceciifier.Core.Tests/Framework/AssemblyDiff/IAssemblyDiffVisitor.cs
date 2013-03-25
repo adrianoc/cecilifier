@@ -1,6 +1,6 @@
 ﻿using Mono.Cecil;
 
-namespace Ceciifier.Core.Tests.Framework.AssemblyDiff
+namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 {
 	interface IAssemblyDiffVisitor
 	{

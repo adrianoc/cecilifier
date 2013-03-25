@@ -1,6 +1,6 @@
-﻿using Ceciifier.Core.Tests.Framework;
+﻿using Cecilifier.Core.Tests.Framework;
 
-namespace Ceciifier.Core.Tests.Tests.Integration
+namespace Cecilifier.Core.Tests.Tests.Integration
 {
 	public class IntegrationResourceBasedTest : ResourceTestBase
 	{

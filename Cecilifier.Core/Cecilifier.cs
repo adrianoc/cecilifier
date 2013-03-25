@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.Linq;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
@@ -58,41 +57,4 @@ namespace Cecilifier.Core
 			//return SyntaxTree.Create((CompilationUnitSyntax) root.Accept(new LiteralToLocalVariableVisitor()));
 		}
 	}
-
-	internal class LiteralToLocalVariableVisitor : SyntaxRewriter
-	{
-		public override SyntaxNode VisitMemberAccessExpression(MemberAccessExpressionSyntax node)
-		{
-			if (node.Expression.Kind == SyntaxKind.NumericLiteralExpression)
-			{
-				var old = (LiteralExpressionSyntax)node.Expression;
-				var jIdentifier = Syntax.Identifier("m")
-											.WithLeadingTrivia(old.GetLeadingTrivia())
-											.WithTrailingTrivia(old.GetTrailingTrivia());
-
-				return Syntax.MemberAccessExpression(SyntaxKind.MemberAccessExpression, Syntax.IdentifierName(jIdentifier), node.Name);
-
-			}
-
-			return base.VisitMemberAccessExpression(node);
-		}
-
-		public override SyntaxNode VisitBlock(BlockSyntax node)
-		{
-			var typeSyntax = Syntax.ParseTypeName("int").WithLeadingTrivia(node.ChildNodes().First().GetLeadingTrivia());
-			var m = Syntax.VariableDeclarator("m").WithLeadingTrivia(Syntax.Space);
-			var constM = Syntax.VariableDeclaration(typeSyntax, Syntax.SeparatedList(m));
-
-			var withNewLocal = node.WithStatements(Syntax.List(new[] 
-			{
-				Syntax.LocalDeclarationStatement(constM)
-			}.Concat(node.Statements)));
-
-			return base.VisitBlock(withNewLocal);
-		}
-	}
 }
-
-
-
-

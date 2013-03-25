@@ -1,7 +1,7 @@
 ﻿using System.IO;
 using Mono.Cecil;
 
-namespace Ceciifier.Core.Tests.Framework.AssemblyDiff
+namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 {
 	class StrictTypeDiffVisitor : ITypeDiffVisitor
 	{

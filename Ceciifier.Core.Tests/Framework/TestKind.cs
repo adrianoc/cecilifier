@@ -1,4 +1,4 @@
-﻿namespace Ceciifier.Core.Tests.Framework
+﻿namespace Cecilifier.Core.Tests.Framework
 {
 	public enum TestKind
 	{

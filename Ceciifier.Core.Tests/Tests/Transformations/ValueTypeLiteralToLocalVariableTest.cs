@@ -1,11 +1,11 @@
 ﻿using System.IO;
-using Cecilifier.Cores.Tests.Framework;
+using Cecilifier.Core.AST;
+using Cecilifier.Core.Tests.Framework;
 using NUnit.Framework;
 using Roslyn.Compilers;
 using Roslyn.Compilers.CSharp;
-using Cecilifier.Core.AST;
 
-namespace Ceciifier.Core.Tests.Tests.Transformations
+namespace Cecilifier.Core.Tests.Transformations
 {
 	[TestFixture]
 	public class ValueTypeLiteralToLocalVariableTest : ResourceTestBase

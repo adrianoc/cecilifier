@@ -2,7 +2,7 @@
 using System.Diagnostics;
 using System.Text;
 
-namespace Ceciifier.Core.Tests.Framework
+namespace Cecilifier.Core.Tests.Framework
 {
 	class TestFramework
 	{

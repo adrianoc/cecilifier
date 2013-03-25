@@ -8,8 +8,8 @@
     <ProjectGuid>{C06B547B-E46B-4952-97D7-85470588192D}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Ceciifier.Core.Tests</RootNamespace>
-    <AssemblyName>Ceciifier.Core.Tests</AssemblyName>
+    <RootNamespace>Cecilifier.Core.Tests</RootNamespace>
+    <AssemblyName>Cecilifier.Core.Tests</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />

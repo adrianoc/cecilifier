@@ -5,7 +5,7 @@ using System.Linq;
 using System.Reflection;
 using Microsoft.CSharp;
 
-namespace Ceciifier.Core.Tests.Framework
+namespace Cecilifier.Core.Tests.Framework
 {
 	class CompilationServices
 	{

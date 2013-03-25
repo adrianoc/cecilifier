@@ -1,4 +1,4 @@
-﻿namespace Ceciifier.Core.Tests.Framework.AssemblyDiff
+﻿namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 {
 	class ComparisonResult : IComparisonResult
 	{

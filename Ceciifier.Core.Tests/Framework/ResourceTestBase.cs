@@ -1,12 +1,12 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
-using Ceciifier.Core.Tests.Framework.AssemblyDiff;
+using Cecilifier.Core.Tests.Framework.AssemblyDiff;
 using Cecilifier.Runtime;
 using Mono.Cecil;
 using NUnit.Framework;
 
-namespace Ceciifier.Core.Tests.Framework
+namespace Cecilifier.Core.Tests.Framework
 {
 	public class ResourceTestBase
 	{
@@ -87,7 +87,7 @@ namespace Ceciifier.Core.Tests.Framework
 		private string Cecilfy(Stream stream)
 		{
 			stream.Position = 0;
-			return Cecilifier.Core.Cecilifier.Process(stream).ReadToEnd();
+			return Cecilifier.Process(stream).ReadToEnd();
 		}
 	}
 }

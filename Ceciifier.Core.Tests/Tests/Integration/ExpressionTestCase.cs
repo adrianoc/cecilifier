@@ -1,8 +1,7 @@
-﻿using Ceciifier.Core.Tests.Framework;
-using Ceciifier.Core.Tests.Tests.Integration;
+﻿using Cecilifier.Core.Tests.Framework;
 using NUnit.Framework;
 
-namespace Ceciifier.Core.Tests
+namespace Cecilifier.Core.Tests.Tests.Integration
 {
 	[TestFixture]
 	public class ExpressionTestCase : IntegrationResourceBasedTest

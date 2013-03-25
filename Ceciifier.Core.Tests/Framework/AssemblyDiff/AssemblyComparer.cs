@@ -5,7 +5,7 @@ using Cecilifier.Core.Extensions;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 
-namespace Ceciifier.Core.Tests.Framework.AssemblyDiff
+namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 {
 	class AssemblyComparer
 	{

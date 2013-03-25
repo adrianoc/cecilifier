@@ -1,6 +1,6 @@
 ﻿using System.IO;
 
-namespace Ceciifier.Core.Tests.Framework
+namespace Cecilifier.Core.Tests.Framework
 {
 	static class StringExtensions
 	{

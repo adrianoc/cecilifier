@@ -1,7 +1,6 @@
-﻿using Ceciifier.Core.Tests.Tests.Integration;
-using NUnit.Framework;
+﻿using NUnit.Framework;
 
-namespace Ceciifier.Core.Tests
+namespace Cecilifier.Core.Tests.Tests.Integration
 {
 	[TestFixture]
 	public class MiscTestCase : IntegrationResourceBasedTest
