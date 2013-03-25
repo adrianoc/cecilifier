@@ -45,7 +45,7 @@ namespace Ceciifier.Core.Tests
 		[Test]
 		public void TestTernaryOperator()
 		{
-			AssertResourceTestBinary(@"Expressions\Operators\Ternary");
+			AssertResourceTestBinary(@"Expressions\Operators\Ternary", TestKind.Integration);
 		}
 
 		[Test]

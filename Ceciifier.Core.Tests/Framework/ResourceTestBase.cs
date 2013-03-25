@@ -10,9 +10,9 @@ namespace Ceciifier.Core.Tests.Framework
 {
 	public class ResourceTestBase
 	{
-		protected void AssertResourceTestBinary(string resourceBasePath)
+		protected void AssertResourceTestBinary(string resourceBasePath, TestKind kind)
 		{
-			string expectedAssemblyPath = resourceBasePath.GetPathOfBinaryResource("Expected.dll");
+			string expectedAssemblyPath = resourceBasePath.GetPathOfBinaryResource("Expected.dll", kind);
 			
 			var tbc = ReadResource(resourceBasePath, "cs");
 			AssertResourceTest(resourceBasePath, expectedAssemblyPath, tbc);

@@ -1,6 +1,6 @@
 ﻿namespace Ceciifier.Core.Tests.Framework
 {
-	internal enum TestKind
+	public enum TestKind
 	{
 		Integration,
 		Transformation
