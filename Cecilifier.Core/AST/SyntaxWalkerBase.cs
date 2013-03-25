@@ -292,6 +292,7 @@ namespace Cecilifier.Core.AST
 
 		protected void ProcessParameter(string ilVar, ExpressionSyntax node, ParameterSymbol paramSymbol)
 		{
+			//TODO: Get rid of code duplication in ExpressionVisitor.ProcessLocalVariable(IdentifierNameSyntax localVar, SymbolInfo varInfo)
 			if (paramSymbol.Type.IsValueType && node.Parent.Accept(new UsageVisitor()) == UsageKind.CallTarget)
 			{
 				AddCilInstruction(ilVar, OpCodes.Ldarga, paramSymbol.Ordinal.ToCecilIndex());

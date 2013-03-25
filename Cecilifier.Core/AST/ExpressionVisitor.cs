@@ -354,6 +354,13 @@ namespace Cecilifier.Core.AST
 
 		private void ProcessLocalVariable(IdentifierNameSyntax localVar, SymbolInfo varInfo)
 		{
+			var symbol = (LocalSymbol) varInfo.Symbol;
+			if (symbol.Type.IsValueType && localVar.Parent.Accept(new UsageVisitor()) == UsageKind.CallTarget)
+			{
+				AddCilInstruction(ilVar, OpCodes.Ldloca_S, "(byte) " + LocalVariableIndex(localVar.ToString()));
+				return;
+			}
+
 			AddCilInstruction(ilVar, OpCodes.Ldloc, LocalVariableIndex(localVar.ToString()));
 		}
 
