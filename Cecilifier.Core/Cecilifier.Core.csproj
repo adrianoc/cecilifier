@@ -58,6 +58,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AST\AssignmentVisitor.cs" />
+    <Compile Include="AST\LiteralToLocalVariableVisitor.cs" />
     <Compile Include="AST\NoArgsValueTypeObjectCreatingInAssignmentVisitor.cs" />
     <Compile Include="AST\CompilationUnitVisitor.cs" />
     <Compile Include="AST\ConstructorDeclarationVisitor.cs" />

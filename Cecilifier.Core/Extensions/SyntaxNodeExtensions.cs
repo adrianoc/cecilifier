@@ -4,7 +4,7 @@ namespace Cecilifier.Core.Extensions
 {
 	public static class SyntaxNodeExtensions
 	{
-		public static SyntaxNode WithNewLine(this SyntaxNode node)
+		public static T WithNewLine<T>(this T node) where T : SyntaxNode
 		{
 			return node.WithTrailingTrivia(Syntax.CarriageReturnLineFeed);
 		}
