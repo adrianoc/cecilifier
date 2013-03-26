@@ -45,17 +45,19 @@ namespace Cecilifier.Core.Tests.Framework
 			try
 			{
 				TestFramework.Execute(compiledCecilifierPath, actualAssemblyPath);
+
+				CompareAssemblies(expectedAssemblyPath, actualAssemblyPath);
 			}
 			catch (Exception ex)
 			{
-				Assert.Fail("Fail to execute generated cecil snipet: " + ex + "\r\n" + generated);
+				Console.WriteLine("Cecil build assembly path: {0}", actualAssemblyPath);
+				Console.WriteLine("Cecil runner path: {0}", compiledCecilifierPath);
+				Console.WriteLine("Compiled from res: {0}", expectedAssemblyPath);
+
+				Console.WriteLine("Fail to execute generated cecil snipet: {0}\r\n{1}", ex, generated);
+
+				throw;
 			}
-
-			Console.WriteLine("Cecil build assembly path: {0}", actualAssemblyPath);
-			Console.WriteLine("Cecil runner path: {0}", compiledCecilifierPath);
-			Console.WriteLine("Compiled from res: {0}", expectedAssemblyPath);
-
-			CompareAssemblies(expectedAssemblyPath, actualAssemblyPath);
 		}
 
 		private static string ReadToEnd(Stream tbc)
