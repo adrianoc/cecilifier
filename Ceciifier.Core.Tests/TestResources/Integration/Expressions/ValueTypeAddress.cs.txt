@@ -23,6 +23,11 @@
 		System.Console.WriteLine(Value().ToString());
 	}
 
+	private static void MultipleCallMethodOnValueTypeReturn()
+	{
+		System.Console.WriteLine("{0} {1}", Value().ToString(), Value().ToString());
+	}
+
 	private static void CallMethodOnValueTypeNewExpression()
 	{
 		System.Console.WriteLine(new System.Int32().ToString());
