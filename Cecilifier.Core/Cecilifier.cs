@@ -50,11 +50,11 @@ namespace Cecilifier.Core
 
 		private SyntaxTree RunTransformations(SyntaxTree tree)
 		{
-			return tree;
-			//CompilationUnitSyntax root;
-			//tree.TryGetRoot(out root);
+			CompilationUnitSyntax root;
+			tree.TryGetRoot(out root);
+			var cu = (CompilationUnitSyntax) root.Accept(new LiteralToLocalVariableVisitor());
 
-			//return SyntaxTree.Create((CompilationUnitSyntax) root.Accept(new LiteralToLocalVariableVisitor()));
+			return SyntaxTree.Create(cu);
 		}
 	}
 }

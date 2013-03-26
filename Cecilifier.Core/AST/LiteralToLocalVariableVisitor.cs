@@ -11,14 +11,16 @@ namespace Cecilifier.Core.AST
 	{
 		public override SyntaxNode VisitBlock(BlockSyntax block)
 		{
-			var methodDecl = EnclosingMethodDeclaration(block);
-			if (methodDecl == null)
-			{
-				throw new NotSupportedException("Expansion of literals to locals outside methods not supported yet: " + block.ToFullString());
-			}
+			var literalsToFix = LiteralUsedAsMethodInvocationTarget(block);
 
+			var methodDecl = EnclosingMethodDeclaration(block);
+			if (methodDecl == null && literalsToFix.Count > 0)
+			{
+				throw new NotSupportedException("Expansion of literals to locals outside methods not supported yet: " + block.ToFullString() + "  " + block.SyntaxTree.GetLineSpan(block.Span, true));
+			}
+			
 			var transformedBlock = block;
-			foreach (var literal in LiteralUsedAsMethodInvocationTarget(block))
+			foreach (var literal in literalsToFix)
 			{
 				transformedBlock = InsertLocalVariableStatementFor(literal, methodDecl.Identifier.ValueText, transformedBlock);
 			}
