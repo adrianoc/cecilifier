@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Cecilifier.Core.Extensions;
 using Roslyn.Compilers.CSharp;
 
@@ -8,11 +9,6 @@ namespace Cecilifier.Core.AST
 {
 	internal class LiteralToLocalVariableVisitor : SyntaxRewriter
 	{
-		public LiteralToLocalVariableVisitor(SemanticModel semanticModel)
-		{
-			this.semanticModel = semanticModel;
-		}
-
 		public override SyntaxNode VisitBlock(BlockSyntax block)
 		{
 			var methodDecl = EnclosingMethodDeclaration(block);
@@ -48,14 +44,19 @@ namespace Cecilifier.Core.AST
 
 		private BlockSyntax InsertLocalVariableStatementFor(LiteralExpressionSyntax literal, string methodName, BlockSyntax block)
 		{
-			var literalTypeName = LiteralTypeNameFor(literal);
+			var typeSyntax = varTypeSyntax(block);
+			var lineSpan = literal.SyntaxTree.GetLineSpan(literal.Span, true);
 
-			var typeSyntax = Syntax.ParseTypeName(literalTypeName).WithLeadingTrivia(block.ChildNodes().First().GetLeadingTrivia());
-			var varDecl = Syntax.VariableDeclaration(typeSyntax, Syntax.SeparatedList(VariableDeclaratorFor(literal, literalTypeName, methodName)));
+			var varDecl = Syntax.VariableDeclaration(typeSyntax, Syntax.SeparatedList(VariableDeclaratorFor(literal, string.Format("{0}_{1}", lineSpan.StartLinePosition.Line, lineSpan.StartLinePosition.Character), methodName)));
 
 			var newBlockBody = InsertLocalVariableDeclarationInto(block, varDecl);
 
 			return block.WithStatements(newBlockBody);
+		}
+
+		private static TypeSyntax varTypeSyntax(BlockSyntax block)
+		{
+			return Syntax.ParseTypeName("var").WithLeadingTrivia(block.ChildNodes().First().GetLeadingTrivia());
 		}
 
 		private static SyntaxList<StatementSyntax> InsertLocalVariableDeclarationInto(BlockSyntax block, VariableDeclarationSyntax varDecl)
@@ -90,7 +91,12 @@ namespace Cecilifier.Core.AST
 
 		private static string LocalVarNameFor(LiteralExpressionSyntax literal, string typeName, string context)
 		{
-			return string.Format("{0}_{1}_{2}", context, typeName, literal);
+			return string.Format("{0}_{1}_{2}", context, typeName, Normalize(literal.ToString()));
+		}
+
+		private static string Normalize(string value)
+		{
+			return Regex.Replace(value, @"\.", "_");
 		}
 
 		private static MethodDeclarationSyntax EnclosingMethodDeclaration(BlockSyntax block)
@@ -98,13 +104,6 @@ namespace Cecilifier.Core.AST
 			return (MethodDeclarationSyntax)block.Ancestors().Where(anc => anc.Kind == SyntaxKind.MethodDeclaration).SingleOrDefault();
 		}
 
-		private string LiteralTypeNameFor(LiteralExpressionSyntax literal)
-		{
-			var literalType = semanticModel.GetTypeInfo(literal).Type;
-			return literalType.ToMinimalDisplayString(literal.GetLocation(), semanticModel);
-		}
-
-		private readonly SemanticModel semanticModel;
 		private readonly IDictionary<string, string> literalToLocalVariable = new Dictionary<string, string>();
 	}
 }

@@ -38,7 +38,7 @@ namespace Cecilifier.Core.Tests.Transformations
 					new[] {MetadataReference.CreateAssemblyReference(typeof (object).Assembly.FullName)});
 
 				var transformedTree = ApplyTransformationTo(syntaxTree,
-				                                            new LiteralToLocalVariableVisitor(comp.GetSemanticModel(syntaxTree)));
+				                                            new LiteralToLocalVariableVisitor());
 
 				var expectedTree = SyntaxTree.ParseText(expected.ReadToEnd());
 

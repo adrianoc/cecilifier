@@ -2,9 +2,9 @@
 {
 	void Method()
 	{
-		int Method_int_10 = 10;
-		bool Method_bool_true = true;
-		Method_int_10.ToString();
-		Method_bool_true.ToString();
+		var Method_4_2_10 = 10;
+		var Method_5_2_true = true;
+		Method_4_2_10.ToString();
+		Method_5_2_true.ToString();
 	}
 }
