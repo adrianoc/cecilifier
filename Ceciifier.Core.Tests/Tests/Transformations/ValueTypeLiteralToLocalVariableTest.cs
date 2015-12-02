@@ -22,6 +22,12 @@ namespace Cecilifier.Core.Tests.Transformations
 			AssertTransformation("MultipleLiteralAsTargetOfCall");
 		}
 
+		[Test]
+		public void ValueTypeReturnAsTargetOfCall()
+		{
+			AssertTransformation("ValueTypeReturnAsTargetOfCall");
+		}
+
 		private void AssertTransformation(string resourceName)
 		{
 			var source = ReadResource(resourceName, "cs", TestKind.Transformation);
@@ -38,7 +44,7 @@ namespace Cecilifier.Core.Tests.Transformations
 					new[] {MetadataReference.CreateAssemblyReference(typeof (object).Assembly.FullName)});
 
 				var transformedTree = ApplyTransformationTo(syntaxTree,
-				                                            new LiteralToLocalVariableVisitor());
+				                                            new ValueTypeToLocalVariableVisitor());
 
 				var expectedTree = SyntaxTree.ParseText(expected.ReadToEnd());
 
@@ -49,7 +55,7 @@ namespace Cecilifier.Core.Tests.Transformations
 			}
 		}
 
-		private static SyntaxTree ApplyTransformationTo(SyntaxTree tree, LiteralToLocalVariableVisitor visitor)
+		private static SyntaxTree ApplyTransformationTo(SyntaxTree tree, ValueTypeToLocalVariableVisitor visitor)
 		{
 			CompilationUnitSyntax root;
 			tree.TryGetRoot(out root);

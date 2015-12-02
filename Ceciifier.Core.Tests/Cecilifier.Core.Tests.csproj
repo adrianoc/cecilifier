@@ -287,6 +287,12 @@
     <Content Include="TestResources\Integration\Misc\DelegateInvocation.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Content Include="TestResources\Transformation\ValueTypeReturnAsTargetOfCall.cs.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="TestResources\Transformation\ValueTypeReturnAsTargetOfCall.out.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="TestResources\Transformation\MultipleLiteralAsTargetOfCall.out.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>

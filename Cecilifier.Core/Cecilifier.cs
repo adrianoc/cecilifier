@@ -52,7 +52,7 @@ namespace Cecilifier.Core
 		{
 			CompilationUnitSyntax root;
 			tree.TryGetRoot(out root);
-			var cu = (CompilationUnitSyntax) root.Accept(new LiteralToLocalVariableVisitor());
+			var cu = (CompilationUnitSyntax) root.Accept(new ValueTypeToLocalVariableVisitor());
 
 			return SyntaxTree.Create(cu);
 		}

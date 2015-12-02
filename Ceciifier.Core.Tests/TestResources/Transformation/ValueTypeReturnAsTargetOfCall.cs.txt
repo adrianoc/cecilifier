@@ -1,0 +1,18 @@
+﻿class ValueTypeReturnAsTargetOfCall
+{
+	void Method()
+	{
+		PropertyValue.ToString();
+		MethodValue().ToString();
+	}
+
+	int PropertyValue
+	{
+		get { return 10; }
+	}
+
+	int MethodValue() 
+	{
+		return 42;
+	}
+}
