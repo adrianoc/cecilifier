@@ -17,9 +17,10 @@ namespace Cecilifier
 			
 			if (Directory.Exists(dir))
 			{
-				FileSyntaxModeProvider syntaxProvider = new FileSyntaxModeProvider(dir);
+				var syntaxProvider = new FileSyntaxModeProvider(dir);
 				HighlightingManager.Manager.AddSyntaxModeFileProvider(syntaxProvider);
 				textEditorControl1.SetHighlighting("C#");
+				textEditorControl2.SetHighlighting("C#");
 			}
 		}
 
