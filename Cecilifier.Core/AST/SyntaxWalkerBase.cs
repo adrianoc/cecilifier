@@ -88,12 +88,6 @@ namespace Cecilifier.Core.AST
 			return "t" + localVarId;
 		}
 
-		//FIXME: Duplicated in MethodExtensions
-		protected string LocalVariableNameFor(string prefix, params string[] parts)
-		{
-			return parts.Aggregate(prefix, (acc, curr) => acc + "_" + curr);
-		}
-
 		protected string LocalVariableNameForCurrentNode()
 		{
 			var node = Context.CurrentLocalVariable;

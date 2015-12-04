@@ -72,7 +72,7 @@ namespace Cecilifier.Core.Extensions
     		return LocalVariableNameFor(method.ContainingType.Name, method.Name.Replace(".", ""), method.MangleName());
     	}
 
-		private static string LocalVariableNameFor(string prefix, params string[] parts)
+		public static string LocalVariableNameFor(string prefix, params string[] parts)
 		{
 			return parts.Aggregate(prefix, (acc, curr) => acc + "_" + curr);
 		}

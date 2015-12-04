@@ -54,7 +54,7 @@ namespace Cecilifier.Core.AST
 
 		internal void DefaultCtorInjector(string localVar, BaseTypeDeclarationSyntax declaringClass)
 		{
-			var ctorLocalVar = LocalVariableNameFor(declaringClass.Identifier.ValueText, "ctor", "");
+			var ctorLocalVar = MethodExtensions.LocalVariableNameFor(declaringClass.Identifier.ValueText, new[] {"ctor", ""});
 
 			AddCecilExpression(@"var {0} = new MethodDefinition("".ctor"", {1} | {2} | MethodAttributes.HideBySig, assembly.MainModule.TypeSystem.Void);", ctorLocalVar, CtorFlags, DefaultCtorAccessibilityFor(declaringClass));
 			AddCecilExpression(@"{0}.Methods.Add({1});", localVar, ctorLocalVar);

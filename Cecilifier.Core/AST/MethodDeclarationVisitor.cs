@@ -22,7 +22,7 @@ namespace Cecilifier.Core.AST
 
 		public override void VisitParameter(ParameterSyntax node)
 		{
-			var paramVar = LocalVariableNameFor("param_", node.Identifier.ValueText + node.Identifier.ValueText.UniqueId());
+			var paramVar = MethodExtensions.LocalVariableNameFor("param_", new[] {node.Identifier.ValueText + node.Identifier.ValueText.UniqueId()});
 			
 			var paramSymbol = Context.SemanticModel.GetDeclaredSymbol(node);
 			string resolvedType = ResolveType(node.Type);
@@ -93,7 +93,7 @@ namespace Cecilifier.Core.AST
 		{
 			var declaringTypeName = DeclaringTypeNameFor(node);
 
-			var methodVar = LocalVariableNameFor(declaringTypeName, simpleName, node.MangleName(Context.SemanticModel));
+			var methodVar = MethodExtensions.LocalVariableNameFor(declaringTypeName, new[] {simpleName, node.MangleName(Context.SemanticModel)});
 
 			AddOrUpdateMethodDefinition(methodVar, fqName, MethodModifiersToCecil(node), returnType);
 			AddCecilExpression("{0}.Methods.Add({1});", ResolveTypeLocalVariable(declaringTypeName), methodVar);
@@ -101,7 +101,7 @@ namespace Cecilifier.Core.AST
 			var isAbstract = DeclaredSymbolFor(node).IsAbstract;
 			if (!isAbstract)
 			{
-				ilVar = LocalVariableNameFor("il", declaringTypeName, simpleName, node.MangleName(Context.SemanticModel));
+				ilVar = MethodExtensions.LocalVariableNameFor("il", declaringTypeName, simpleName, node.MangleName(Context.SemanticModel));
 				AddCecilExpression(@"var {0} = {1}.Body.GetILProcessor();", ilVar, methodVar);
 			}
 

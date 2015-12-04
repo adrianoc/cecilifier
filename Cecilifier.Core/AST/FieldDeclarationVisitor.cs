@@ -24,7 +24,7 @@ namespace Cecilifier.Core.AST
 			
 			foreach (var field in node.Declaration.Variables)
 			{
-				var fieldId = LocalVariableNameFor("fld", node.ResolveDeclaringType().Identifier.ValueText, field.Identifier.ValueText.CamelCase());
+				var fieldId = MethodExtensions.LocalVariableNameFor("fld", new[] {node.ResolveDeclaringType().Identifier.ValueText, field.Identifier.ValueText.CamelCase()});
 				var fieldDeclaration = string.Format("var {0} = new FieldDefinition(\"{1}\", {2}, {3});",
 																fieldId,
 																field.Identifier.Value,

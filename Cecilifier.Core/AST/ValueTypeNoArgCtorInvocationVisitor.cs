@@ -49,7 +49,7 @@ namespace Cecilifier.Core.AST
 		private void DeclareAndInitializeValueTypeLocalVariable()
 		{
 			var resolvedVarType = ResolveType(ctorInfo.Symbol.ContainingType);
-			var tempLocalName = LocalVariableNameFor("tmp_", "tmp_".UniqueId().ToString());
+			var tempLocalName = MethodExtensions.LocalVariableNameFor("tmp_", new[] {"tmp_".UniqueId().ToString()});
 			AddCecilExpression("var {0} = new VariableDefinition(\"{1}\", {2});", tempLocalName, tempLocalName, resolvedVarType);
 
 			AddCecilExpression("{0}.Body.Variables.Add({1});", Context.CurrentLocalVariable.VarName, tempLocalName);
