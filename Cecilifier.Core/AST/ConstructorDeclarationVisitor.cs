@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Linq;
 using Cecilifier.Core.Extensions;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Mono.Cecil.Cil;
-using Roslyn.Compilers;
-using Roslyn.Compilers.CSharp;
 
 namespace Cecilifier.Core.AST
 {
@@ -15,7 +16,8 @@ namespace Cecilifier.Core.AST
 
 		public override void VisitConstructorDeclaration(ConstructorDeclarationSyntax node)
 		{
-			if (node.ParameterList.Parameters.Count == 0) return;
+			// Why return for parameterless ctors ???
+			//if (node.ParameterList.Parameters.Count == 0) return;
 
 			var declaringType = node.Parent.ResolveDeclaringType();
 
@@ -24,14 +26,14 @@ namespace Cecilifier.Core.AST
 			var returnType = GetSpecialType(SpecialType.System_Void);
 			ProcessMethodDeclaration(node, "ctor", ".ctor", ResolvePredefinedType(returnType), simpleName =>
 			{
-				if (declaringType.Kind != SyntaxKind.StructDeclaration)
+				if (declaringType.Kind() != SyntaxKind.StructDeclaration)
 				{
 					AddCilInstruction(ilVar, OpCodes.Ldarg_0);
 				}
 				
 				callBaseMethod(node);
 				
-				if (!ctorAdded && declaringType.Kind != SyntaxKind.StructDeclaration)
+				if (!ctorAdded && declaringType.Kind() != SyntaxKind.StructDeclaration)
 				{
 					var declaringTypelocalVar = ResolveTypeLocalVariable(declaringType.Identifier.ValueText);
 					AddCilInstruction(ilVar, OpCodes.Call, string.Format("assembly.MainModule.Import(TypeHelpers.DefaultCtorFor({0}.BaseType.Resolve()))", declaringTypelocalVar));
@@ -68,7 +70,7 @@ namespace Cecilifier.Core.AST
 
 		private static string DefaultCtorAccessibilityFor(BaseTypeDeclarationSyntax declaringClass)
 		{
-			return declaringClass.Modifiers.Any(m => m.Kind == SyntaxKind.AbstractKeyword)
+			return declaringClass.Modifiers.Any(m => m.Kind() == SyntaxKind.AbstractKeyword)
 								? "MethodAttributes.Family"
 								: "MethodAttributes.Public";
 		}

@@ -1,9 +1,10 @@
 ﻿using System.IO;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Tests.Framework;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using NUnit.Framework;
-using Roslyn.Compilers;
-using Roslyn.Compilers.CSharp;
 
 namespace Cecilifier.Core.Tests.Transformations
 {
@@ -35,18 +36,17 @@ namespace Cecilifier.Core.Tests.Transformations
 			using (var expected = new StreamReader(ReadResource(resourceName, "out", TestKind.Transformation)))
 			using (var sourceReader = new StreamReader(source))
 			{
-				var syntaxTree = SyntaxTree.ParseText(sourceReader.ReadToEnd());
+				var syntaxTree = CSharpSyntaxTree.ParseText(sourceReader.ReadToEnd());
 
-				var comp = Compilation.Create(
-					"Test",
-					new CompilationOptions(OutputKind.DynamicallyLinkedLibrary),
-					new[] {syntaxTree},
-					new[] {MetadataReference.CreateAssemblyReference(typeof (object).Assembly.FullName)});
+				var comp = CSharpCompilation.Create(
+							"Test",
+							new[] { syntaxTree },
+							new[] {MetadataReference.CreateFromFile(typeof(object).Assembly.Location)},
+							new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
-				var transformedTree = ApplyTransformationTo(syntaxTree,
-				                                            new ValueTypeToLocalVariableVisitor());
+				var transformedTree = ApplyTransformationTo(syntaxTree, new ValueTypeToLocalVariableVisitor());
 
-				var expectedTree = SyntaxTree.ParseText(expected.ReadToEnd());
+				var expectedTree = CSharpSyntaxTree.ParseText(expected.ReadToEnd());
 
 				Assert.AreEqual(
 					expectedTree.ToString(),
@@ -57,10 +57,10 @@ namespace Cecilifier.Core.Tests.Transformations
 
 		private static SyntaxTree ApplyTransformationTo(SyntaxTree tree, ValueTypeToLocalVariableVisitor visitor)
 		{
-			CompilationUnitSyntax root;
+			SyntaxNode root;
 			tree.TryGetRoot(out root);
 
-			return SyntaxTree.Create((CompilationUnitSyntax) root.Accept(visitor));
+			return CSharpSyntaxTree.Create((CompilationUnitSyntax) ((CompilationUnitSyntax)root).Accept(visitor));
 		}
 	}
 }

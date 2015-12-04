@@ -1,26 +1,25 @@
 ﻿using System;
 using System.Collections.Generic;
 using Cecilifier.Core.AST;
+using Microsoft.CodeAnalysis;
 using Mono.Cecil.Cil;
-using Roslyn.Compilers;
-using Roslyn.Compilers.CSharp;
 
 namespace Cecilifier.Core.Extensions
 {
 	static class TypeExtensions
 	{
-		public static string FullyQualifiedName(this TypeSymbol type)
+		public static string FullyQualifiedName(this ITypeSymbol type)
 		{
 			var format = new SymbolDisplayFormat(typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces);
 			return type.ToDisplayString(format);
 		}
 		
-		public static string FrameworkSimpleName(this TypeSymbol type)
+		public static string FrameworkSimpleName(this ITypeSymbol type)
 		{
 			return type.ToDisplayString(new SymbolDisplayFormat());
 		}
 
-		public static string ResolverExpression(this TypeSymbol type, IVisitorContext ctx)
+		public static string ResolverExpression(this ITypeSymbol type, IVisitorContext ctx)
 		{
 			if (type.IsDefinedInCurrentType(ctx))
 			{

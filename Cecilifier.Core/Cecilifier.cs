@@ -3,8 +3,9 @@ using System.IO;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
-using Roslyn.Compilers;
-using Roslyn.Compilers.CSharp;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Cecilifier.Core
 {
@@ -18,20 +19,21 @@ namespace Cecilifier.Core
 
 		private StringReader Run(Stream content)
 		{
-			var syntaxTree = SyntaxTree.ParseText(new StreamReader(content).ReadToEnd());
+			var syntaxTree = CSharpSyntaxTree.ParseText(new StreamReader(content).ReadToEnd());
 
-			syntaxTree = RunTransformations(syntaxTree);
+			//TODO: What exactly are we transforming ?
+			//syntaxTree = RunTransformations(syntaxTree);
 
 			//TODO: Get the list of referenced assemblies as an argument
-			var comp = Compilation.Create(
-				"Teste",
-				new CompilationOptions(OutputKind.DynamicallyLinkedLibrary),
-				new[] { syntaxTree },
-				new[] { MetadataReference.CreateAssemblyReference(typeof (object).Assembly.FullName) });
+			var comp = CSharpCompilation.Create(
+							"Teste",
+							new[] { syntaxTree },
+							new[] { MetadataReference.CreateFromFile(typeof(object).Assembly.Location) },
+							new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
 			foreach (var diag in comp.GetDiagnostics())
 			{
-				Console.WriteLine(diag.Info.GetMessage());
+				Console.WriteLine(diag.GetMessage());
 			}
 
 			var semanticModel = comp.GetSemanticModel(syntaxTree);
@@ -39,7 +41,7 @@ namespace Cecilifier.Core
 			IVisitorContext ctx = new CecilifierContext(semanticModel);
 			var visitor = new CompilationUnitVisitor(ctx);
 
-			CompilationUnitSyntax root;
+			SyntaxNode root;
 			syntaxTree.TryGetRoot(out root);
 			visitor.Visit(root);
 
@@ -50,11 +52,12 @@ namespace Cecilifier.Core
 
 		private SyntaxTree RunTransformations(SyntaxTree tree)
 		{
-			CompilationUnitSyntax root;
+			SyntaxNode root;
 			tree.TryGetRoot(out root);
-			var cu = (CompilationUnitSyntax) root.Accept(new ValueTypeToLocalVariableVisitor());
 
-			return SyntaxTree.Create(cu);
+			var cu = (CompilationUnitSyntax) ((CompilationUnitSyntax) root).Accept(new ValueTypeToLocalVariableVisitor());
+
+			return CSharpSyntaxTree.Create(cu);
 		}
 	}
 }

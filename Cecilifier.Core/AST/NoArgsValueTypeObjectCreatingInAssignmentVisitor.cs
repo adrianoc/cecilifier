@@ -1,8 +1,8 @@
 ﻿using System;
 using Cecilifier.Core.Extensions;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Mono.Cecil.Cil;
-using Roslyn.Compilers;
-using Roslyn.Compilers.CSharp;
 
 namespace Cecilifier.Core.AST
 {
@@ -26,7 +26,7 @@ namespace Cecilifier.Core.AST
 					break;
 
 				case SymbolKind.Field:
-					var fs = (FieldSymbol) info.Symbol;
+					var fs = (IFieldSymbol) info.Symbol;
 					string fieldResolverExpression = fs.FieldResolverExpression(Context);
 
 					if (info.Symbol.IsStatic)
@@ -41,7 +41,7 @@ namespace Cecilifier.Core.AST
 					break;
 					
 				case SymbolKind.Parameter:
-					var parameterSymbol = ((ParameterSymbol) info.Symbol);
+					var parameterSymbol = ((IParameterSymbol) info.Symbol);
 					AddCilInstruction(ilVar, parameterSymbol.RefKind == RefKind.None ? OpCodes.Ldarga : OpCodes.Ldarg, parameterSymbol.Ordinal);
 					break;
 			}

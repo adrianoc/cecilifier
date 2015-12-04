@@ -1,9 +1,10 @@
 ﻿using System;
-using Roslyn.Compilers.CSharp;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 
 namespace Cecilifier.Core.AST
 {
-    class SyntaxTreeDump : SyntaxWalker
+    class SyntaxTreeDump : CSharpSyntaxWalker
     {
         public SyntaxTreeDump(string msg, SyntaxNode node)
         {
@@ -16,7 +17,7 @@ namespace Cecilifier.Core.AST
             Ident(ident, level => 
             {
                 ident = level;
-                Console.WriteLine("{2}[{0}/{3}] : {1}", node.GetType().Name, node, level, node.Kind);
+                Console.WriteLine("{2}[{0}/{3}] : {1}", node.GetType().Name, node, level, node.Kind());
                 base.Visit(node);
             });
         }

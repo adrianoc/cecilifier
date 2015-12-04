@@ -1,9 +1,11 @@
 ﻿using System.Linq;
-using Roslyn.Compilers.CSharp;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Cecilifier.Core.Misc
 {
-	class TypeDeclarationResolver : SyntaxWalker
+	class TypeDeclarationResolver : CSharpSyntaxWalker
 	{
 		private BaseTypeDeclarationSyntax declaringType;
 
@@ -30,7 +32,7 @@ namespace Cecilifier.Core.Misc
 
 		public override void VisitFieldDeclaration(FieldDeclarationSyntax node)
 		{
-			declaringType = (BaseTypeDeclarationSyntax) node.Ancestors().Where(a => a.Kind == SyntaxKind.ClassDeclaration || a.Kind == SyntaxKind.StructDeclaration).Single();
+			declaringType = (BaseTypeDeclarationSyntax) node.Ancestors().Where(a => a.Kind() == SyntaxKind.ClassDeclaration || a.Kind() == SyntaxKind.StructDeclaration).Single();
 		}
 	}
 }

@@ -1,8 +1,8 @@
 ﻿using System;
-using Cecilifier.Core.Extensions;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Mono.Cecil.Cil;
-using Roslyn.Compilers;
-using Roslyn.Compilers.CSharp;
 
 namespace Cecilifier.Core.AST
 {
@@ -16,36 +16,36 @@ namespace Cecilifier.Core.AST
 		public override void VisitIdentifierName(IdentifierNameSyntax node)
 		{
 			var member = Context.SemanticModel.GetSymbolInfo(node);
-			if (member.Symbol.ContainingType.IsValueType && node.Parent.Kind == SyntaxKind.ObjectCreationExpression && ((ObjectCreationExpressionSyntax)node.Parent).ArgumentList.Arguments.Count == 0) return;
+			if (member.Symbol.ContainingType.IsValueType && node.Parent.Kind() == SyntaxKind.ObjectCreationExpression && ((ObjectCreationExpressionSyntax)node.Parent).ArgumentList.Arguments.Count == 0) return;
 
 			switch (member.Symbol.Kind)
 			{
 				case SymbolKind.Parameter:
-					ParameterAssignment(member.Symbol as ParameterSymbol);
+					ParameterAssignment(member.Symbol  as IParameterSymbol);
 					break;
 
 				case SymbolKind.Local:
-					LocalVariableAssignment(member.Symbol as LocalSymbol);
+					LocalVariableAssignment(member.Symbol as ILocalSymbol);
 					break;
 
 				case SymbolKind.Field:
-					FieldAssignment(member.Symbol as FieldSymbol);
+					FieldAssignment(member.Symbol as IFieldSymbol);
 					break;
 			}
 		}
 
-		private void FieldAssignment(FieldSymbol field)
+		private void FieldAssignment(IFieldSymbol field)
 		{
-			AddCilInstruction(ilVar, OpCodes.Stfld, field.FieldResolverExpression(Context));
+			AddCilInstruction(ilVar, OpCodes.Stfld, field.Type);
 		}
 
-		private void LocalVariableAssignment(LocalSymbol localVariable)
+		private void LocalVariableAssignment(ILocalSymbol localVariable)
 		{
 			var methodVar = LocalVariableNameForCurrentNode();
 			AddCilInstruction(ilVar, OpCodes.Stloc, LocalVariableIndex(methodVar, localVariable));
 		}
 
-		private void ParameterAssignment(ParameterSymbol parameter)
+		private void ParameterAssignment(IParameterSymbol parameter)
 		{
 			if (parameter.RefKind == RefKind.None)
 			{

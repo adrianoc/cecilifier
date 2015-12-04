@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
-using Roslyn.Compilers.CSharp;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Cecilifier.Core.AST
 {
@@ -15,7 +16,7 @@ namespace Cecilifier.Core.AST
 			try
 			{
 				var namespaceHierarchy = node.AncestorsAndSelf().OfType<NamespaceDeclarationSyntax>().Reverse();
-				var @namespace = namespaceHierarchy.Aggregate("",(acc, curr) => acc + "." + curr.Name.GetText());
+				var @namespace = namespaceHierarchy.Aggregate("",(acc, curr) => acc + "." + curr.Name.WithoutTrivia().ToString());
 
 				Context.Namespace = @namespace.StartsWith(".") ? @namespace.Substring(1) : @namespace;
 				base.VisitNamespaceDeclaration(node);

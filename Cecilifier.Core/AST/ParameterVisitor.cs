@@ -1,4 +1,5 @@
-﻿using Roslyn.Compilers.CSharp;
+﻿using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Cecilifier.Core.AST
 {
@@ -10,10 +11,10 @@ namespace Cecilifier.Core.AST
 
 		public override void VisitIdentifierName(IdentifierNameSyntax node)
 		{
-			symbol = Context.SemanticModel.GetSymbolInfo(node).Symbol as ParameterSymbol;
+			symbol = Context.SemanticModel.GetSymbolInfo(node).Symbol as IParameterSymbol;
 		}
 
-		public static ParameterSymbol Process(IVisitorContext context, ExpressionSyntax node)
+		public static IParameterSymbol Process(IVisitorContext context, ExpressionSyntax node)
 		{
 			var visitor = new ParameterVisitor(context);
 			visitor.Visit(node);
@@ -21,6 +22,6 @@ namespace Cecilifier.Core.AST
 			return visitor.symbol;
 		}
 
-		private ParameterSymbol symbol;
+		private IParameterSymbol symbol;
 	}
 }

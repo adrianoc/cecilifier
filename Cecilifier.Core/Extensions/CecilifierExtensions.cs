@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections.Immutable;
 using System.Linq;
 using Cecilifier.Core.Misc;
-using Roslyn.Compilers;
-using Roslyn.Compilers.CSharp;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Cecilifier.Core.Extensions
 {
@@ -22,10 +24,10 @@ namespace Cecilifier.Core.Extensions
 		
 		public static string MapModifier(this SyntaxToken modifier, string targetEnum)
 		{
-            switch (modifier.Kind)
+            switch (modifier.Kind())
 		    {
                 case SyntaxKind.ProtectedKeyword: return targetEnum + ".Family";
-				case SyntaxKind.InternalKeyword: return targetEnum + "." + (modifier.Parent.Kind == SyntaxKind.ClassDeclaration ? "NotPublic" : "Assembly");
+				case SyntaxKind.InternalKeyword: return targetEnum + "." + (modifier.Parent.Kind() == SyntaxKind.ClassDeclaration ? "NotPublic" : "Assembly");
 		    }
 
             return targetEnum + "." + modifier.ValueText.CamelCase();
@@ -62,7 +64,7 @@ namespace Cecilifier.Core.Extensions
                       ", cecilSnipet);
 		}
 
-		public static MethodSymbol FindLastDefinition(this MethodSymbol self)
+		public static IMethodSymbol FindLastDefinition(this IMethodSymbol self)
 		{
             if (self == null) return null;
 			return FindLastDefinition(self, self.ContainingType) ?? self;
@@ -73,11 +75,11 @@ namespace Cecilifier.Core.Extensions
 			return new TypeDeclarationResolver().Resolve(node);
 		}
 
-		private static MethodSymbol FindLastDefinition(MethodSymbol method, NamedTypeSymbol toBeChecked)
+		private static IMethodSymbol FindLastDefinition(IMethodSymbol method, INamedTypeSymbol toBeChecked)
 		{
 			if (toBeChecked == null) return null;
 
-			var found = toBeChecked.GetMembers().OfType<MethodSymbol>().Where(candidate => CompareMethods(candidate, method)).SingleOrDefault();
+			var found = toBeChecked.GetMembers().OfType<IMethodSymbol>().Where(candidate => CompareMethods(candidate, method)).SingleOrDefault();
 			if (found == method || found == null)
 			{
 				found = FindLastDefinition(method, toBeChecked.Interfaces);
@@ -87,7 +89,7 @@ namespace Cecilifier.Core.Extensions
 			return found;
 		}
 
-		private static MethodSymbol FindLastDefinition(MethodSymbol method, ReadOnlyArray<NamedTypeSymbol> implementedItfs)
+		private static IMethodSymbol FindLastDefinition(IMethodSymbol method, ImmutableArray<INamedTypeSymbol> implementedItfs)
 		{
 			foreach(var itf in implementedItfs)
 			{
@@ -98,14 +100,14 @@ namespace Cecilifier.Core.Extensions
 			return null;
 		}
 
-		private static bool CompareMethods(MethodSymbol lhs, MethodSymbol rhs)
+		private static bool CompareMethods(IMethodSymbol lhs, IMethodSymbol rhs)
 		{
 			if (lhs.Name != rhs.Name) return false;
 
 			if (lhs.ReturnType != rhs.ReturnType) return false;
 			
-			if (lhs.Parameters.Count != rhs.Parameters.Count) return false;
-			for(int i = 0; i < lhs.Parameters.Count; i++)
+			if (lhs.Parameters.Count() != rhs.Parameters.Count()) return false;
+			for(int i = 0; i < lhs.Parameters.Count(); i++)
 			{
 				if (lhs.Parameters[i].Type != rhs.Parameters[i].Type) return false;
 			}

@@ -4,7 +4,9 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Cecilifier.Core.Extensions;
-using Roslyn.Compilers.CSharp;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Cecilifier.Core.AST
 {
@@ -37,7 +39,7 @@ namespace Cecilifier.Core.AST
 
 	    private string ProcessRequiredModifiers(FieldDeclarationSyntax fieldDeclaration, string originalType)
 	    {
-	    	if (!fieldDeclaration.Modifiers.Any(m => m.Kind == SyntaxKind.VolatileKeyword)) return null;
+	    	if (!fieldDeclaration.Modifiers.Any(m => m.Kind() == SyntaxKind.VolatileKeyword)) return null;
 	    	
 			var id = string.Format("mod_req{0}", NextLocalVariableId());
 	    	var mod_req = string.Format("var {0} = new RequiredModifierType({1}, {2});", id, originalType, ImportExpressionFor(typeof (IsVolatile)));
@@ -47,13 +49,13 @@ namespace Cecilifier.Core.AST
 
 		protected string MapAttributes(IEnumerable<SyntaxToken> modifiers)
         {
-            var noInternalOrProtected = modifiers.Where(t => t.Kind != SyntaxKind.InternalKeyword && t.Kind != SyntaxKind.ProtectedKeyword);
+            var noInternalOrProtected = modifiers.Where(t => t.Kind() != SyntaxKind.InternalKeyword && t.Kind() != SyntaxKind.ProtectedKeyword);
             var str = noInternalOrProtected.Where(ExcludeHasNoCILRepresentation).Aggregate("",
                 (acc, curr) => (acc.Length > 0 
                                     ? acc + " | " 
                                     : "") + curr.MapModifier("FieldAttributes"));
 
-            Func<SyntaxToken, bool> predicate = t => t.Kind == SyntaxKind.InternalKeyword || t.Kind == SyntaxKind.ProtectedKeyword;
+            Func<SyntaxToken, bool> predicate = t => t.Kind() == SyntaxKind.InternalKeyword || t.Kind() == SyntaxKind.ProtectedKeyword;
             return
                 modifiers.Count(predicate) == 2
                     ? "FieldAttributes.FamORAssem" + str
@@ -62,7 +64,7 @@ namespace Cecilifier.Core.AST
 
         private static FieldAttributes MapAttribute(SyntaxToken token)
         {
-            switch(token.Kind)
+            switch(token.Kind())
             {
                 case SyntaxKind.InternalKeyword: return FieldAttributes.Assembly;
                 case SyntaxKind.ProtectedKeyword: return FieldAttributes.Family;

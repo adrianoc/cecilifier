@@ -1,5 +1,5 @@
 ﻿using Cecilifier.Core.AST;
-using Roslyn.Compilers.Common;
+using Microsoft.CodeAnalysis;
 
 namespace Cecilifier.Core.Extensions
 {

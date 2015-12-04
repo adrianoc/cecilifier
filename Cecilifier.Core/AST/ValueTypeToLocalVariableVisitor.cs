@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Cecilifier.Core.Extensions;
-using Roslyn.Compilers.CSharp;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Cecilifier.Core.AST
 {
-	internal class ValueTypeToLocalVariableVisitor : SyntaxRewriter
+	internal class ValueTypeToLocalVariableVisitor : CSharpSyntaxRewriter
 	{
 		public override SyntaxNode VisitBlock(BlockSyntax block)
 		{
@@ -16,7 +18,7 @@ namespace Cecilifier.Core.AST
 			var methodDecl = EnclosingMethodDeclaration(block);
 			if (methodDecl == null && callSitesToFix.Count > 0)
 			{
-				throw new NotSupportedException("Expansion of literals to locals outside methods not supported yet: " + block.ToFullString() + "  " + block.SyntaxTree.GetLineSpan(block.Span, true));
+				throw new NotSupportedException("Expansion of literals to locals outside methods not supported yet: " + block.ToFullString() + "  " + block.SyntaxTree.GetLineSpan(block.Span));
 			}
 			
 			var transformedBlock = block;
@@ -30,7 +32,7 @@ namespace Cecilifier.Core.AST
 
 		public override SyntaxNode VisitMemberAccessExpression(MemberAccessExpressionSyntax node)
 		{
-			if (node.Parent.Kind != SyntaxKind.InvocationExpression) return node;
+			if (node.Parent.Kind() != SyntaxKind.InvocationExpression) return node;
 
 			var newMae = node.Expression.Accept(new ValueTypeOnCallSiteFixer(node, callSiteToLocalVariable));
 
@@ -40,9 +42,11 @@ namespace Cecilifier.Core.AST
 		private BlockSyntax InsertLocalVariableStatementFor(ExpressionSyntax callSite, string methodName, BlockSyntax block)
 		{
 			var typeSyntax = VarTypeSyntax(block);
-			var lineSpan = callSite.SyntaxTree.GetLineSpan(callSite.Span, true);
+			var lineSpan = callSite.SyntaxTree.GetLineSpan(callSite.Span);
 
-			var varDecl = Syntax.VariableDeclaration(typeSyntax, Syntax.SeparatedList(VariableDeclaratorFor(callSite, string.Format("{0}_{1}", lineSpan.StartLinePosition.Line, lineSpan.StartLinePosition.Character), methodName)));
+			var varDecl = SyntaxFactory.VariableDeclaration(
+								typeSyntax, 
+								SyntaxFactory.SeparatedList(new[] { VariableDeclaratorFor(callSite, string.Format("{0}_{1}", lineSpan.StartLinePosition.Line, lineSpan.StartLinePosition.Character), methodName) }));
 
 			var newBlockBody = InsertLocalVariableDeclarationIntoBeforeCallSite(block, varDecl, callSite);
 
@@ -51,22 +55,20 @@ namespace Cecilifier.Core.AST
 
 		private static TypeSyntax VarTypeSyntax(BlockSyntax block)
 		{
-			return Syntax.ParseTypeName("var").WithLeadingTrivia(block.ChildNodes().First().GetLeadingTrivia());
+			return SyntaxFactory.ParseTypeName("var").WithLeadingTrivia(block.ChildNodes().First().GetLeadingTrivia());
 		}
 
 		private static SyntaxList<StatementSyntax> InsertLocalVariableDeclarationIntoBeforeCallSite(BlockSyntax block, VariableDeclarationSyntax varDecl, ExpressionSyntax callSite)
 		{
 			var stmts = block.Statements;
 
-			var callSiteStatement = callSite.Ancestors().Where(node => node.Kind == SyntaxKind.ExpressionStatement).First();
+			var callSiteStatement = callSite.Ancestors().Where(node => node.Kind() == SyntaxKind.ExpressionStatement).First();
 
-			var i = stmts.IndexOf(stmt => stmt.EquivalentTo(callSiteStatement));
+			var i = stmts.IndexOf(stmt => stmt.IsEquivalentTo(callSiteStatement));
 			
-			var newStmts = stmts.Insert(
-									i, 
-									new StatementSyntax[] { Syntax.LocalDeclarationStatement(varDecl).WithNewLine() });
+			var newStmts = stmts.Insert(i, SyntaxFactory.LocalDeclarationStatement(varDecl).WithNewLine());
 
-			return Syntax.List(newStmts.AsEnumerable());
+			return SyntaxFactory.List(newStmts.AsEnumerable());
 		}
 
 		private VariableDeclaratorSyntax VariableDeclaratorFor(ExpressionSyntax callSite, string typeName, string context)
@@ -74,13 +76,13 @@ namespace Cecilifier.Core.AST
 			var localVariableName = LocalVarNameFor(callSite, typeName, context);
 			callSiteToLocalVariable[callSite.ToString()] = localVariableName;
 
-			var declarator = Syntax.VariableDeclarator(localVariableName).WithLeadingTrivia(Syntax.Space);
-			return declarator.WithInitializer(Syntax.EqualsValueClause(InitializeTrivia(callSite)).WithLeadingTrivia(Syntax.Space));
+			var declarator = SyntaxFactory.VariableDeclarator(localVariableName).WithLeadingTrivia(SyntaxFactory.Space);
+			return declarator.WithInitializer(SyntaxFactory.EqualsValueClause(InitializeTrivia(callSite)).WithLeadingTrivia(SyntaxFactory.Space));
 		}
 
 		private static T InitializeTrivia<T>(T callSite) where T : SyntaxNode
 		{
-			return callSite.ReplaceTrivia(callSite.GetLeadingTrivia().AsEnumerable(), (trivia, syntaxTrivia) => Syntax.TriviaList(Syntax.Space));
+			return callSite.ReplaceTrivia(callSite.GetLeadingTrivia().AsEnumerable(), (trivia, syntaxTrivia) => SyntaxFactory.Space);
 		}
 
 		private IList<ExpressionSyntax> InvocationsOnValueTypes(BlockSyntax block)
@@ -95,13 +97,13 @@ namespace Cecilifier.Core.AST
 
 		private static MethodDeclarationSyntax EnclosingMethodDeclaration(BlockSyntax block)
 		{
-			return (MethodDeclarationSyntax)block.Ancestors().Where(anc => anc.Kind == SyntaxKind.MethodDeclaration).SingleOrDefault();
+			return (MethodDeclarationSyntax)block.Ancestors().Where(anc => anc.Kind() == SyntaxKind.MethodDeclaration).SingleOrDefault();
 		}
 
 		private readonly IDictionary<string, string> callSiteToLocalVariable = new Dictionary<string, string>();
 	}
 
-	internal class NameExtractorVisitor : SyntaxVisitor<string>
+	internal class NameExtractorVisitor : CSharpSyntaxVisitor<string>
 	{
 		private static Lazy<NameExtractorVisitor> instance = new Lazy<NameExtractorVisitor>( () => new NameExtractorVisitor() );
 
@@ -131,7 +133,7 @@ namespace Cecilifier.Core.AST
 		}
 	}
 
-	internal class ValueTypeOnCallSiteFixer : SyntaxVisitor<MemberAccessExpressionSyntax>
+	internal class ValueTypeOnCallSiteFixer : CSharpSyntaxVisitor<MemberAccessExpressionSyntax>
 	{
 		private readonly MemberAccessExpressionSyntax parent;
 		private readonly IDictionary<string, string> callSiteToLocalVariable;
@@ -160,20 +162,20 @@ namespace Cecilifier.Core.AST
 		private MemberAccessExpressionSyntax ReplaceExpressionOnMemberAccessExpression(ExpressionSyntax node)
 		{
 			var localVarName = callSiteToLocalVariable[node.ToString()];
-			var localVarIdentifier = Syntax.Identifier(localVarName)
+			var localVarIdentifier = SyntaxFactory.Identifier(localVarName)
 			                               .WithLeadingTrivia(node.GetLeadingTrivia())
 			                               .WithTrailingTrivia(node.GetTrailingTrivia());
 
-			return Syntax.MemberAccessExpression(SyntaxKind.MemberAccessExpression, Syntax.IdentifierName(localVarIdentifier), parent.Name);
+			return SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression, SyntaxFactory.IdentifierName(localVarIdentifier), parent.Name);
 		}
 	}
 
-	internal class MemberAccessOnValueTypeCollectorVisitor : SyntaxWalker
+	internal class MemberAccessOnValueTypeCollectorVisitor : CSharpSyntaxWalker
 	{
 		public static IList<ExpressionSyntax> Collect(SyntaxNode block)
 		{
 			var collected = new List<ExpressionSyntax>();
-			block.Accept(new MemberAccessOnValueTypeCollectorVisitor(collected));
+			((BlockSyntax)block).Accept(new MemberAccessOnValueTypeCollectorVisitor(collected));
 
 			return collected;
 		}
@@ -204,7 +206,7 @@ namespace Cecilifier.Core.AST
 		private void AddNodeIfRequired(ExpressionSyntax node)
 		{
 			var mae = node.Parent as MemberAccessExpressionSyntax;
-			if (mae != null && mae.Expression == node && mae.Parent.Kind == SyntaxKind.InvocationExpression)
+			if (mae != null && mae.Expression == node && mae.Parent.Kind() == SyntaxKind.InvocationExpression)
 			{
 				collected.Add(node);
 			}

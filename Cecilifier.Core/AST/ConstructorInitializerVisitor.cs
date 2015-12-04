@@ -1,7 +1,8 @@
 ﻿using System;
 using Cecilifier.Core.Extensions;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Mono.Cecil.Cil;
-using Roslyn.Compilers.CSharp;
 
 namespace Cecilifier.Core.AST
 {
@@ -19,7 +20,7 @@ namespace Cecilifier.Core.AST
             base.VisitConstructorInitializer(node);
             
             var info = Context.SemanticModel.GetSymbolInfo(node);
-            var targetCtor = (MethodSymbol) info.Symbol;
+            var targetCtor = (IMethodSymbol) info.Symbol;
 
 			AddCilInstruction(ilVar, OpCodes.Call, targetCtor.MethodResolverExpression(Context));
             
@@ -40,7 +41,7 @@ namespace Cecilifier.Core.AST
 			ExpressionVisitor.Visit(Context, ilVar, node.Expression);
 		}
 
-		//private string MethodResolverExpression(MethodSymbol method)
+		//private string MethodResolverExpression(IMethodSymbol method)
 		//{
 		//    //FIXME: Handle forward declarations..
 		//    //       One option is to not generate cecil calls as we visit the AST; instead

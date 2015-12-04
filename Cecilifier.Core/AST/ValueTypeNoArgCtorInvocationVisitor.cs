@@ -1,6 +1,8 @@
 ﻿using Cecilifier.Core.Extensions;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Mono.Cecil.Cil;
-using Roslyn.Compilers.CSharp;
 
 namespace Cecilifier.Core.AST
 {
@@ -32,7 +34,7 @@ namespace Cecilifier.Core.AST
 
 		public override void VisitBinaryExpression(BinaryExpressionSyntax node)
 		{
-			if (node.Kind == SyntaxKind.AssignExpression)
+			if (node.Kind() == SyntaxKind.SimpleAssignmentExpression)
 			{
 				new NoArgsValueTypeObjectCreatingInAssignmentVisitor(Context, ilVar).Visit(node.Left);
 				AddCilInstruction(ilVar, OpCodes.Initobj, ctorInfo.Symbol.ContainingType.ResolverExpression(Context));

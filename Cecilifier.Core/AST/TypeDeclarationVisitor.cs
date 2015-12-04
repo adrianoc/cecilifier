@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.Extensions;
-using Roslyn.Compilers.CSharp;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Cecilifier.Core.AST
 {
@@ -39,7 +41,7 @@ namespace Cecilifier.Core.AST
 		{
 			new ConstructorDeclarationVisitor(Context).Visit(node);
 		}
-		
+
 		public override void VisitMethodDeclaration(MethodDeclarationSyntax node)
 		{
 			new MethodDeclarationVisitor(Context).Visit(node);
@@ -67,7 +69,7 @@ namespace Cecilifier.Core.AST
 
 			foreach (var @base in bases.Types)
 			{
-				var info = SemanticInfoFor(@base);
+				var info = Context.GetTypeInfo(@base.Type);
 				if (info.Type.TypeKind == TypeKind.Interface)
 				{
 					var itfFQName = @base.DescendantTokens().OfType<SyntaxToken>().Aggregate("", (acc, curr) => acc + curr.ValueText);
@@ -115,7 +117,7 @@ namespace Cecilifier.Core.AST
 		}
 	}
 
-	internal class DefaultCtorVisitor : SyntaxVisitor
+	internal class DefaultCtorVisitor : CSharpSyntaxWalker
 	{
 		private readonly IVisitorContext context;
 
@@ -125,9 +127,22 @@ namespace Cecilifier.Core.AST
 			this.context = context;
 		}
 
+		public override void VisitStructDeclaration(StructDeclarationSyntax node)
+		{
+			foreach (var member in node.Members.Where(m => m.Kind() != SyntaxKind.ClassDeclaration && m.Kind() != SyntaxKind.StructDeclaration && m.Kind() != SyntaxKind.EnumDeclaration))
+			{
+				member.Accept(this);
+			}
+
+			if (!defaultCtorFound)
+			{
+				new ConstructorDeclarationVisitor(context).DefaultCtorInjector(localVarName, node);
+			}
+		}
+
 		public override void VisitClassDeclaration(ClassDeclarationSyntax node)
 		{
-			foreach (var member in node.Members.Where(m => m.Kind != SyntaxKind.ClassDeclaration))
+			foreach (var member in node.Members.Where(m => m.Kind() != SyntaxKind.ClassDeclaration))
 			{
 				member.Accept(this);
 			}
@@ -143,7 +158,7 @@ namespace Cecilifier.Core.AST
 			if (ctorNode.ParameterList.Parameters.Count > 0) return;
 
 			defaultCtorFound = true;
-			new ConstructorDeclarationVisitor(context).Visit(ctorNode);
+			//new ConstructorDeclarationVisitor(context).Visit(ctorNode);
 		}
 
 		private bool defaultCtorFound;

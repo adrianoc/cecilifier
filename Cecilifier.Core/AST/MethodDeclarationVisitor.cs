@@ -2,9 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.Extensions;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Mono.Cecil.Cil;
-using Roslyn.Compilers;
-using Roslyn.Compilers.CSharp;
 
 namespace Cecilifier.Core.AST
 {
@@ -34,7 +35,7 @@ namespace Cecilifier.Core.AST
 
 			AddExtraAttributes(paramVar, paramSymbol);
 			
-			if (node.GetFirstToken().Kind == SyntaxKind.ParamsKeyword)
+			if (node.GetFirstToken().Kind() == SyntaxKind.ParamsKeyword)
 			{
 				AddCecilExpression("{0}.CustomAttributes.Add(new CustomAttribute(assembly.MainModule.Import(typeof(ParamArrayAttribute).GetConstructor(BindingFlags.Public | BindingFlags.Instance, null, new Type[0], null))));", paramVar);
 			}
@@ -107,7 +108,7 @@ namespace Cecilifier.Core.AST
 			WithCurrentNode(node, methodVar, simpleName, runWithCurrent);
 
 			//TODO: Move this to default ctor handling and rely on VisitReturnStatement here instead
-			if (!isAbstract && !node.DescendantNodes().Any(n => n.Kind == SyntaxKind.ReturnStatement))
+			if (!isAbstract && !node.DescendantNodes().Any(n => n.Kind() == SyntaxKind.ReturnStatement))
 			{
 				AddCilInstruction(ilVar, OpCodes.Ret);
 			}
@@ -140,7 +141,7 @@ namespace Cecilifier.Core.AST
 			context[methodVar] = "";
 		}
 
-		private void AddExtraAttributes(string paramVar, ParameterSymbol symbol)
+		private void AddExtraAttributes(string paramVar, IParameterSymbol symbol)
 		{
 			if (symbol.RefKind == RefKind.Out)
 			{
@@ -189,7 +190,7 @@ namespace Cecilifier.Core.AST
 		{
 			foreach (var mod in methodDeclaration.Modifiers)
 			{
-				switch (mod.Kind)
+				switch (mod.Kind())
 				{
 					case SyntaxKind.VirtualKeyword:  return "MethodAttributes.Virtual | MethodAttributes.NewSlot";
 					case SyntaxKind.OverrideKeyword: return "MethodAttributes.Virtual";
@@ -201,18 +202,18 @@ namespace Cecilifier.Core.AST
 			return string.Empty;
 		}
 
-		private static bool IsExplicityMethodImplementation(MethodSymbol methodSymbol)
+		private static bool IsExplicityMethodImplementation(IMethodSymbol methodSymbol)
 		{
-			return methodSymbol.ExplicitInterfaceImplementations.Count > 0;
+			return methodSymbol.ExplicitInterfaceImplementations.Count() > 0;
 		}
 
 		private static IEnumerable<SyntaxToken> RemoveSourceModifiersWithNoILEquivalent(BaseMethodDeclarationSyntax methodDeclaration)
 		{
 			return methodDeclaration.Modifiers.Where(
-				mod => (mod.Kind != SyntaxKind.OverrideKeyword 
-				        && mod.Kind != SyntaxKind.AbstractKeyword 
-				        && mod.Kind != SyntaxKind.VirtualKeyword 
-				        && mod.Kind != SyntaxKind.SealedKeyword));
+				mod => (mod.Kind() != SyntaxKind.OverrideKeyword 
+				        && mod.Kind() != SyntaxKind.AbstractKeyword 
+				        && mod.Kind() != SyntaxKind.VirtualKeyword 
+				        && mod.Kind() != SyntaxKind.SealedKeyword));
 		}
 
 		private string MethodNameOf(MethodDeclarationSyntax method)

@@ -1,4 +1,5 @@
-﻿using Roslyn.Compilers.CSharp;
+﻿using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 
 namespace Cecilifier.Core.Extensions
 {
@@ -6,7 +7,7 @@ namespace Cecilifier.Core.Extensions
 	{
 		public static T WithNewLine<T>(this T node) where T : SyntaxNode
 		{
-			return node.WithTrailingTrivia(Syntax.CarriageReturnLineFeed);
+			return node.WithTrailingTrivia(SyntaxFactory.CarriageReturnLineFeed);
 		}
 	}
 }

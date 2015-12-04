@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.AST;
-using Roslyn.Compilers;
-using Roslyn.Compilers.CSharp;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Cecilifier.Core.Misc
 {
@@ -35,27 +35,27 @@ namespace Cecilifier.Core.Misc
 			get { return output.Last; }
 		}
 
-		public MethodSymbol GetDeclaredSymbol(BaseMethodDeclarationSyntax methodDeclaration)
+		public IMethodSymbol GetDeclaredSymbol(BaseMethodDeclarationSyntax methodDeclaration)
 		{
-			return semanticModel.GetDeclaredSymbol(methodDeclaration);
+			return (IMethodSymbol) semanticModel.GetDeclaredSymbol(methodDeclaration);
 		}
 
-		public TypeSymbol GetDeclaredSymbol(TypeDeclarationSyntax classDeclaration)
+		public ITypeSymbol GetDeclaredSymbol(TypeDeclarationSyntax classDeclaration)
 		{
-            return semanticModel.GetDeclaredSymbol(classDeclaration);
+			return (ITypeSymbol) semanticModel.GetDeclaredSymbol(classDeclaration);
 		}
 
-		public Roslyn.Compilers.CSharp.TypeInfo GetTypeInfo(TypeSyntax node)
+		public Microsoft.CodeAnalysis.TypeInfo GetTypeInfo(TypeSyntax node)
 		{
 			return semanticModel.GetTypeInfo(node);
 		}
 
-        public Roslyn.Compilers.CSharp.TypeInfo GetTypeInfo(ExpressionSyntax expressionSyntax)
+        public Microsoft.CodeAnalysis.TypeInfo GetTypeInfo(ExpressionSyntax expressionSyntax)
         {
             return semanticModel.GetTypeInfo(expressionSyntax);
         }
 
-		public NamedTypeSymbol GetSpecialType(SpecialType specialType)
+		public INamedTypeSymbol GetSpecialType(SpecialType specialType)
 		{
 			return semanticModel.Compilation.GetSpecialType(specialType);
 		}

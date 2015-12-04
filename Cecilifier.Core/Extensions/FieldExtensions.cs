@@ -1,11 +1,11 @@
 ﻿using Cecilifier.Core.AST;
-using Roslyn.Compilers.CSharp;
+using Microsoft.CodeAnalysis;
 
 namespace Cecilifier.Core.Extensions
 {
 	static class FieldExtensions
 	{
-		public static string FieldResolverExpression(this FieldSymbol field, IVisitorContext context)
+		public static string FieldResolverExpression(this IFieldSymbol field, IVisitorContext context)
 		{
 			if (field.IsDefinedInCurrentType(context))
 			{

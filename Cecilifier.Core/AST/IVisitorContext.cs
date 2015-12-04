@@ -1,8 +1,8 @@
 ﻿using System.Collections.Generic;
 using Cecilifier.Core.Misc;
-using Roslyn.Compilers;
-using Roslyn.Compilers.CSharp;
-using TypeInfo = Roslyn.Compilers.CSharp.TypeInfo;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using TypeInfo = Microsoft.CodeAnalysis.TypeInfo;
 
 namespace Cecilifier.Core.AST
 {
@@ -15,11 +15,11 @@ namespace Cecilifier.Core.AST
 
 		LocalVariable CurrentLocalVariable { get; }
 		LinkedListNode<string> CurrentLine { get; }
-		MethodSymbol GetDeclaredSymbol(BaseMethodDeclarationSyntax methodDeclaration);
-		TypeSymbol GetDeclaredSymbol(TypeDeclarationSyntax classDeclaration);
+		IMethodSymbol GetDeclaredSymbol(BaseMethodDeclarationSyntax methodDeclaration);
+		ITypeSymbol GetDeclaredSymbol(TypeDeclarationSyntax classDeclaration);
 		TypeInfo GetTypeInfo(TypeSyntax node);
         TypeInfo GetTypeInfo(ExpressionSyntax expressionSyntax);
-		NamedTypeSymbol GetSpecialType(SpecialType specialType);
+		INamedTypeSymbol GetSpecialType(SpecialType specialType);
 		
 		void WriteCecilExpression(string msg, params object[] args);
 		
