@@ -60,9 +60,9 @@ namespace Cecilifier.Core.AST
 			return block.WithStatements(newBlockBody);
 		}
 
-		private static TypeSyntax VarTypeSyntax(BlockSyntax block)
+		private static TypeSyntax VarTypeSyntax(SyntaxNode node)
 		{
-			return SyntaxFactory.ParseTypeName("var").WithLeadingTrivia(block.ChildNodes().First().GetLeadingTrivia());
+			return SyntaxFactory.ParseTypeName("var").WithLeadingTrivia(node.ChildNodes().First().GetLeadingTrivia());
 		}
 
 		private static SyntaxList<StatementSyntax> InsertLocalVariableDeclarationBeforeCallSite(BlockSyntax block, VariableDeclarationSyntax varDecl, ExpressionSyntax callSite)
@@ -92,9 +92,9 @@ namespace Cecilifier.Core.AST
 			return callSite.ReplaceTrivia(callSite.GetLeadingTrivia().AsEnumerable(), (trivia, syntaxTrivia) => SyntaxFactory.Space);
 		}
 
-		private IList<ExpressionSyntax> InvocationsOnValueTypes(BlockSyntax block)
+		private IList<ExpressionSyntax> InvocationsOnValueTypes(CSharpSyntaxNode expressionsContainer)
 		{
-			return MemberAccessOnValueTypeCollectorVisitor.Collect(semanticModel, block);
+			return MemberAccessOnValueTypeCollectorVisitor.Collect(semanticModel, expressionsContainer);
 		}
 
 		private static string LocalVarNameFor(ExpressionSyntax callSite, string typeName, string context)
@@ -188,7 +188,7 @@ namespace Cecilifier.Core.AST
 
 	internal class MemberAccessOnValueTypeCollectorVisitor : CSharpSyntaxWalker
 	{
-		public static IList<ExpressionSyntax> Collect(SemanticModel semanticModel, BlockSyntax block)
+		public static IList<ExpressionSyntax> Collect(SemanticModel semanticModel, CSharpSyntaxNode block)
 		{
 			var collected = new List<ExpressionSyntax>();
 			block.Accept(new MemberAccessOnValueTypeCollectorVisitor(semanticModel, collected));

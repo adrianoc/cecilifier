@@ -1,5 +1,4 @@
-﻿using System;
-using Cecilifier.Core.Extensions;
+﻿using Cecilifier.Core.Extensions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Mono.Cecil.Cil;

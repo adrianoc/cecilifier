@@ -295,10 +295,16 @@
     <Content Include="TestResources\Integration\Misc\DelegateInvocation.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Content Include="TestResources\Transformation\ValueTypeReturnAsTargetOfCallInsideBaseContructorInvocation.cs.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="TestResources\Transformation\ValueTypeReturnAsTargetOfCallInsideContructor.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="TestResources\Transformation\ValueTypeReturnAsTargetOfCall.cs.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="TestResources\Transformation\ValueTypeReturnAsTargetOfCallInsideBaseContructorInvocation.out.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="TestResources\Transformation\ValueTypeReturnAsTargetOfCallInsideContructor.out.txt">
