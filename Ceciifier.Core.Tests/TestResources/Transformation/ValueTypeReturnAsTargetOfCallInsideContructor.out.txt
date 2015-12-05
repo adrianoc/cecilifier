@@ -1,0 +1,8 @@
+﻿class ValueTypeReturnAsTargetOfCallInsideContructor
+{
+    public ValueTypeReturnAsTargetOfCallInsideContructor()
+    {
+        var ValueTypeReturnAsTargetOfCallInsideContructor_4_8_42 = 42;
+        ValueTypeReturnAsTargetOfCallInsideContructor_4_8_42.ToString();
+    }
+}

@@ -29,6 +29,12 @@ namespace Cecilifier.Core.Tests.Transformations
 			AssertTransformation("ValueTypeReturnAsTargetOfCall");
 		}
 
+		[Test]
+		public void ValueTypeReturnAsTargetOfCallInsideContructor()
+		{
+			AssertTransformation("ValueTypeReturnAsTargetOfCallInsideContructor");
+		}
+
 		private void AssertTransformation(string resourceName)
 		{
 			var source = ReadResource(resourceName, "cs", TestKind.Transformation);

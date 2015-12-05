@@ -20,8 +20,8 @@ namespace Cecilifier.Core.AST
 		{
             var callSitesToFix = InvocationsOnValueTypes(block);
 
-			var methodDecl = EnclosingMethodDeclaration(block);
-			if (methodDecl == null && callSitesToFix.Count > 0)
+			var memberName = EnclosingMethodName(block);
+			if (memberName == null && callSitesToFix.Count > 0)
 			{
 				throw new NotSupportedException("Expansion of literals to locals outside methods not supported yet: " + block.ToFullString() + "  " + block.SyntaxTree.GetLineSpan(block.Span));
 			}
@@ -29,7 +29,7 @@ namespace Cecilifier.Core.AST
 			var transformedBlock = block;
 			foreach (var callSite in callSitesToFix.Reverse())
 			{
-				transformedBlock = InsertLocalVariableStatementFor(callSite, methodDecl.Identifier.ValueText, transformedBlock);
+				transformedBlock = InsertLocalVariableStatementFor(callSite, memberName, transformedBlock);
 			}
 
 			return base.VisitBlock(transformedBlock);
@@ -102,9 +102,17 @@ namespace Cecilifier.Core.AST
 			return string.Format("{0}_{1}_{2}", context, typeName, callSite.Accept(NameExtractorVisitor.Instance));
 		}
 
-		private static MethodDeclarationSyntax EnclosingMethodDeclaration(BlockSyntax block)
+		private static string EnclosingMethodName(BlockSyntax block)
 		{
-			return (MethodDeclarationSyntax)block.Ancestors().Where(anc => anc.Kind() == SyntaxKind.MethodDeclaration).SingleOrDefault();
+			var declaringMethod = block.Ancestors().OfType<MethodDeclarationSyntax>().FirstOrDefault();
+			if (declaringMethod != null)
+				return declaringMethod.Identifier.ValueText;
+
+			var declaringCtor = block.Ancestors().OfType<ConstructorDeclarationSyntax>().FirstOrDefault();
+			if (declaringCtor != null)
+				return declaringCtor.Identifier.ValueText;
+
+			return null;
 		}
 
 		private readonly IDictionary<string, string> callSiteToLocalVariable = new Dictionary<string, string>();
