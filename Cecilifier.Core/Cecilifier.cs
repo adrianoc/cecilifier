@@ -36,7 +36,7 @@ namespace Cecilifier.Core
 			var semanticModel = comp.GetSemanticModel(syntaxTree);
 
 			//TODO: What exactly are we transforming ?
-			//syntaxTree = RunTransformations(syntaxTree, semanticModel);
+			syntaxTree = RunTransformations(syntaxTree, semanticModel);
 
 			var comp2 = CSharpCompilation.Create(
 							"Test",

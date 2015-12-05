@@ -3,8 +3,8 @@
 	void Method()
 	{
 		var Method_4_2_10 = 10;
-		var Method_5_2_true = true;
 		Method_4_2_10.ToString();
+		var Method_5_2_true = true;
 		Method_5_2_true.ToString();
 	}
 }

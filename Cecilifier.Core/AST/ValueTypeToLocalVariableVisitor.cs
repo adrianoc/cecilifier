@@ -18,7 +18,7 @@ namespace Cecilifier.Core.AST
 
 		public override SyntaxNode VisitBlock(BlockSyntax block)
 		{
-			var callSitesToFix = InvocationsOnValueTypes(block);
+            var callSitesToFix = InvocationsOnValueTypes(block);
 
 			var methodDecl = EnclosingMethodDeclaration(block);
 			if (methodDecl == null && callSitesToFix.Count > 0)
@@ -27,7 +27,7 @@ namespace Cecilifier.Core.AST
 			}
 			
 			var transformedBlock = block;
-			foreach (var callSite in callSitesToFix)
+			foreach (var callSite in callSitesToFix.Reverse())
 			{
 				transformedBlock = InsertLocalVariableStatementFor(callSite, methodDecl.Identifier.ValueText, transformedBlock);
 			}
@@ -39,7 +39,9 @@ namespace Cecilifier.Core.AST
 		{
 			if (node.Parent.Kind() != SyntaxKind.InvocationExpression) return node;
 
-			var newMae = node.Expression.Accept(new ValueTypeOnCallSiteFixer(node, callSiteToLocalVariable));
+			MemberAccessExpressionSyntax newMae = null;
+			if (callSiteToLocalVariable.ContainsKey(node.Expression.ToString()))
+				newMae = node.Expression.Accept(new ValueTypeOnCallSiteFixer(node, callSiteToLocalVariable));
 
 			return newMae ?? base.VisitMemberAccessExpression(node);
 		}
@@ -162,7 +164,7 @@ namespace Cecilifier.Core.AST
 			return ReplaceExpressionOnMemberAccessExpression(node);
 		}
 
-		private MemberAccessExpressionSyntax ReplaceExpressionOnMemberAccessExpression(ExpressionSyntax node)
+		private MemberAccessExpressionSyntax ReplaceExpressionOnMemberAccessExpression(SyntaxNode node)
 		{
 			var localVarName = callSiteToLocalVariable[node.ToString()];
 			var localVarIdentifier = SyntaxFactory.Identifier(localVarName)
@@ -191,8 +193,12 @@ namespace Cecilifier.Core.AST
 			var mae = node.Expression as MemberAccessExpressionSyntax;
 			if (mae != null)
 			{
-				var s = semanticModel.GetTypeInfo(mae.Expression);
-				if (s.Type.IsValueType)
+				var s= semanticModel.GetSymbolInfo(mae.Expression);
+				if (s.Symbol != null && (s.Symbol.Kind == SymbolKind.Field || s.Symbol.Kind == SymbolKind.Parameter || s.Symbol.Kind == SymbolKind.Local))
+					return;
+
+				var ti = semanticModel.GetTypeInfo(mae.Expression);
+				if (ti.Type.IsValueType)
 					collected.Add(mae.Expression);
 			}
 			base.VisitInvocationExpression(node);

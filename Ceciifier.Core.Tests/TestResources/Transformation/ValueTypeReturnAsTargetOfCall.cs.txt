@@ -35,15 +35,15 @@
         ((int) o).ToString();
 	}
 
-	void OnChainedInvocations()
-	{
-    	var s = 42.ToString().Substring(0);
-	}
+    void OnChainedInvocations()
+    {
+    	var s = 42.GetHashCode().Substring(0);
+    }
 
 	void OnLocalVariable()
 	{
         int local = 42;
-    	local.ToString();
+        local.ToString();
 	}
 
 	int PropertyValue
