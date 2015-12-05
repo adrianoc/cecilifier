@@ -54,7 +54,7 @@ namespace Cecilifier.Core.Tests.Tests.Integration
 			AssertResourceTest(@"Expressions\TypeInferenceInDeclarations");
 		}
 
-		[Test]
+		[Test, Ignore("REQUIRES TRANSFORMATION")]
 		public void TestValueTypeAddress()
 		{
 			AssertResourceTest(@"Expressions\ValueTypeAddress");

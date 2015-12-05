@@ -1,9 +1,49 @@
 ﻿class ValueTypeReturnAsTargetOfCall
 {
-	void Method()
+	void OnConst()
 	{
-		PropertyValue.ToString();
+		42.ToString();
+	}
+
+	void OnMethod()
+	{
 		MethodValue().ToString();
+	}
+
+	void OnProperty()
+	{
+    	PropertyValue.ToString();
+	}
+
+	void OnField()
+	{
+    	field.ToString();
+	}
+
+	void OnParameter(int param)
+	{
+    	param.ToString();
+	}
+
+	void OnDelegate(System.Func<int> del)
+	{
+        del().ToString();
+	}
+
+	void OnCast(object o)
+	{
+        ((int) o).ToString();
+	}
+
+	void OnChainedInvocations()
+	{
+    	var s = 42.ToString().Substring(0);
+	}
+
+	void OnLocalVariable()
+	{
+        int local = 42;
+    	local.ToString();
 	}
 
 	int PropertyValue
@@ -15,4 +55,6 @@
 	{
 		return 42;
 	}
+
+    int field = 42;
 }
