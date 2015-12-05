@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.Extensions;
 using Microsoft.CodeAnalysis;
@@ -129,7 +128,7 @@ namespace Cecilifier.Core.AST
 
 		public override void VisitStructDeclaration(StructDeclarationSyntax node)
 		{
-			foreach (var member in node.Members.Where(m => m.Kind() != SyntaxKind.ClassDeclaration && m.Kind() != SyntaxKind.StructDeclaration && m.Kind() != SyntaxKind.EnumDeclaration))
+			foreach (var member in NonTypeMembersOf(node))
 			{
 				member.Accept(this);
 			}
@@ -142,7 +141,7 @@ namespace Cecilifier.Core.AST
 
 		public override void VisitClassDeclaration(ClassDeclarationSyntax node)
 		{
-			foreach (var member in node.Members.Where(m => m.Kind() != SyntaxKind.ClassDeclaration))
+			foreach (var member in NonTypeMembersOf(node))
 			{
 				member.Accept(this);
 			}
@@ -153,12 +152,16 @@ namespace Cecilifier.Core.AST
 			}
 		}
 
+		private static IEnumerable<MemberDeclarationSyntax> NonTypeMembersOf(TypeDeclarationSyntax node)
+		{
+			return node.Members.Where(m => m.Kind() != SyntaxKind.ClassDeclaration && m.Kind() != SyntaxKind.StructDeclaration && m.Kind() != SyntaxKind.EnumDeclaration);
+		}
+
 		public override void VisitConstructorDeclaration(ConstructorDeclarationSyntax ctorNode)
 		{
 			if (ctorNode.ParameterList.Parameters.Count > 0) return;
 
 			defaultCtorFound = true;
-			//new ConstructorDeclarationVisitor(context).Visit(ctorNode);
 		}
 
 		private bool defaultCtorFound;

@@ -17,12 +17,12 @@ namespace Cecilifier.Core.AST
 
 		public override void VisitIdentifierName(IdentifierNameSyntax node)
 		{
-			var info = new SymbolInfo();
-			//var info = Context.GetDeclaredSymbol(node);
+			//var info = new SymbolInfo();
+			var info = Context.SemanticModel.GetSymbolInfo(node);
 			switch (info.Symbol.Kind)
 			{
 				case SymbolKind.Local:
-					AddCilInstruction(ilVar, OpCodes.Ldloca_S, LocalVariableIndexWithCast<byte>(node.ToFullString()));
+					AddCilInstruction(ilVar, OpCodes.Ldloca_S, LocalVariableIndex(node.Identifier.ValueText));
 					break;
 
 				case SymbolKind.Field:
@@ -42,6 +42,7 @@ namespace Cecilifier.Core.AST
 					
 				case SymbolKind.Parameter:
 					var parameterSymbol = ((IParameterSymbol) info.Symbol);
+					//AddCilInstruction(ilVar, parameterSymbol.RefKind == RefKind.None ? OpCodes.Ldarga : OpCodes.Ldarg, Context.Parameters.BackingVariableNameFor(parameterSymbol.Name));
 					AddCilInstruction(ilVar, parameterSymbol.RefKind == RefKind.None ? OpCodes.Ldarga : OpCodes.Ldarg, parameterSymbol.Ordinal);
 					break;
 			}
@@ -49,7 +50,7 @@ namespace Cecilifier.Core.AST
 
 		public override void VisitLocalDeclarationStatement(LocalDeclarationStatementSyntax node)
 		{
-			AddCilInstruction(ilVar, OpCodes.Ldloca_S, LocalVariableIndexWithCast<byte>(node.Declaration.Variables[0].Identifier.ValueText));
+			AddCilInstruction(ilVar, OpCodes.Ldloca_S, LocalVariableIndex(node.Declaration.Variables[0].Identifier.ValueText));
 		}
 	}
 }

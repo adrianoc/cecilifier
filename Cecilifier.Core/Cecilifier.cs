@@ -21,9 +21,6 @@ namespace Cecilifier.Core
 		{
 			var syntaxTree = CSharpSyntaxTree.ParseText(new StreamReader(content).ReadToEnd());
 
-			//TODO: What exactly are we transforming ?
-			//syntaxTree = RunTransformations(syntaxTree);
-
 			//TODO: Get the list of referenced assemblies as an argument
 			var comp = CSharpCompilation.Create(
 							"Teste",
@@ -38,24 +35,33 @@ namespace Cecilifier.Core
 
 			var semanticModel = comp.GetSemanticModel(syntaxTree);
 
-			IVisitorContext ctx = new CecilifierContext(semanticModel);
+			//TODO: What exactly are we transforming ?
+			//syntaxTree = RunTransformations(syntaxTree, semanticModel);
+
+			var comp2 = CSharpCompilation.Create(
+							"Test",
+							new[] { syntaxTree },
+							new[] { MetadataReference.CreateFromFile(typeof(object).Assembly.Location) },
+							new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+
+			IVisitorContext ctx = new CecilifierContext(comp2.GetSemanticModel(syntaxTree));
 			var visitor = new CompilationUnitVisitor(ctx);
 
 			SyntaxNode root;
 			syntaxTree.TryGetRoot(out root);
 			visitor.Visit(root);
 
-			new SyntaxTreeDump("TREE: ", root);
+			//new SyntaxTreeDump("TREE: ", root);
 
 			return new StringReader(ctx.Output.AsCecilApplication());
 		}
 
-		private SyntaxTree RunTransformations(SyntaxTree tree)
+		private SyntaxTree RunTransformations(SyntaxTree tree, SemanticModel semanticModel)
 		{
 			SyntaxNode root;
 			tree.TryGetRoot(out root);
 
-			var cu = (CompilationUnitSyntax) ((CompilationUnitSyntax) root).Accept(new ValueTypeToLocalVariableVisitor());
+			var cu = (CompilationUnitSyntax) ((CompilationUnitSyntax) root).Accept(new ValueTypeToLocalVariableVisitor(semanticModel));
 
 			return CSharpSyntaxTree.Create(cu);
 		}

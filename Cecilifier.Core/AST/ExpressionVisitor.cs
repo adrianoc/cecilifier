@@ -46,43 +46,19 @@ namespace Cecilifier.Core.AST
 
 		public override void VisitBinaryExpression(BinaryExpressionSyntax node)
         {
-			if (node.Kind() == SyntaxKind.SimpleAssignmentExpression)
-			{
-				ProcessAssignmentExpression(node);
-			}
-			else
-			{
-				ProcessBinaryExpression(node);
-			}
-        }
+			Visit(node.Left);
+			InjectRequiredConversions(node.Left);
 
-    	private void ProcessBinaryExpression(BinaryExpressionSyntax node)
-    	{
-    		Visit(node.Left);
-    		InjectRequiredConversions(node.Left);
+			Visit(node.Right);
+			InjectRequiredConversions(node.Right);
 
-    		Visit(node.Right);
-    		InjectRequiredConversions(node.Right);
-
-    		var handler = OperatorHandlerFor(node.OperatorToken);
-    		handler(
+			var handler = OperatorHandlerFor(node.OperatorToken);
+			handler(
 				Context, 
 				ilVar, 
 				Context.SemanticModel.GetTypeInfo(node.Left).Type,
 				Context.SemanticModel.GetTypeInfo(node.Right).Type);
-    	}
-
-    	private void ProcessAssignmentExpression(BinaryExpressionSyntax node)
-    	{
-			var visitor = new AssignmentVisitor(Context, ilVar);
-    		visitor.PreProcessRefOutAssignments(node.Left);
-			
-			Visit(node.Right);
-    		if (!valueTypeNoArgObjCreation)
-    		{
-    			visitor.Visit(node.Left);
-    		}
-    	}
+        }
 
 	    public override void VisitLiteralExpression(LiteralExpressionSyntax node)
         {
@@ -184,6 +160,10 @@ namespace Cecilifier.Core.AST
 				case SymbolKind.Local:
 					ProcessLocalVariable(node, member);
 					break;
+
+				case SymbolKind.Property:
+					ProcessProperty(node, member.Symbol as IPropertySymbol);
+					break;
 			}
 		}
 
@@ -274,7 +254,6 @@ namespace Cecilifier.Core.AST
 			//TODO: Refactor to reuse code from VisitIdentifierName....
 			var ctorInfo = Context.SemanticModel.GetSymbolInfo(node);
 
-			Console.WriteLine("_-------------------------> {0}  {1}", ctorInfo.Symbol, ctorInfo.Symbol.Kind);
 			var method = (IMethodSymbol) ctorInfo.Symbol;
 			if (TryProcessNoArgsCtorInvocationOnValueType(node, method, ctorInfo)) return;
 
@@ -305,6 +284,7 @@ namespace Cecilifier.Core.AST
 
 	    public override void VisitExpressionStatement(ExpressionStatementSyntax node)
         {
+			Context.WriteCecilExpression("\r\n// {0}\r\n", node);
 			base.Visit(node.Expression);
 
 			var info = Context.GetTypeInfo(node.Expression);
@@ -366,21 +346,45 @@ namespace Cecilifier.Core.AST
 			callFixList.Push(Context.CurrentLine);
 		}
 
+		private void ProcessProperty(IdentifierNameSyntax node, IPropertySymbol propertySymbol)
+		{
+			var parentExp = (CSharpSyntaxNode) node.Parent;
+
+			if (parentExp.Kind() == SyntaxKind.SimpleAssignmentExpression)
+			{
+				AddMethodCall(ilVar, propertySymbol.SetMethod);
+			}
+			else
+			{
+				AddMethodCall(ilVar, propertySymbol.GetMethod);
+			}
+		}
+
 		private void ProcessLocalVariable(IdentifierNameSyntax localVar, SymbolInfo varInfo)
 		{
 			var symbol = (ILocalSymbol) varInfo.Symbol;
 			var localVarParent = (CSharpSyntaxNode) localVar.Parent;
 			if (symbol.Type.IsValueType && localVarParent.Accept(new UsageVisitor()) == UsageKind.CallTarget)
 			{
-				AddCilInstruction(ilVar, OpCodes.Ldloca_S, "(byte) " + LocalVariableIndex(localVar.ToString()));
+				AddCilInstruction(ilVar, OpCodes.Ldloca_S, LocalVariableIndex(localVar.ToString()));
 				return;
 			}
 
 			AddCilInstruction(ilVar, OpCodes.Ldloc, LocalVariableIndex(localVar.ToString()));
 		}
 
+		private void ProcessMethodCall(IdentifierNameSyntax node, IMethodSymbol method)
+		{
+			if (!method.IsStatic && method.IsDefinedInCurrentType(Context) && node.Parent.Kind() == SyntaxKind.InvocationExpression)
+			{
+				AddCilInstruction(ilVar, OpCodes.Ldarg_0);
+			}
 
-	    private void InjectRequiredConversions(ExpressionSyntax expression)
+			EnsureMethodAvailable(method);
+			AddMethodCall(ilVar, method);
+		}
+
+		private void InjectRequiredConversions(ExpressionSyntax expression)
 	    {
 		    var typeInfo = Context.SemanticModel.GetTypeInfo(expression);
 
@@ -420,18 +424,7 @@ namespace Cecilifier.Core.AST
 			    AddCilInstruction(ilVar, OpCodes.Box, typeInfo.Type);
 		    }
 	    }
-
-	    private void ProcessMethodCall(IdentifierNameSyntax node, IMethodSymbol method)
-		{
-			if (!method.IsStatic && method.IsDefinedInCurrentType(Context) && node.Parent.Kind() == SyntaxKind.InvocationExpression)
-			{
-				AddCilInstruction(ilVar, OpCodes.Ldarg_0);
-			}
-			
-			EnsureMethodAvailable(method);
-    		AddMethodCall(ilVar, method);
-		}
-
+		
 		private Action<IVisitorContext, string, ITypeSymbol, ITypeSymbol> OperatorHandlerFor(SyntaxToken operatorToken)
 		{
 			if (operatorHandlers.ContainsKey(operatorToken.Kind()))
@@ -449,20 +442,16 @@ namespace Cecilifier.Core.AST
 			{
 				if (left.SpecialType == SpecialType.System_String)
 				{
-					ctx.WriteCecilExpression("{0}.Append({0}.Create({1}, assembly.MainModule.Import(typeof(string).GetMethod(\"Concat\", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public, null, new[] {{ typeof(Object), typeof(Object) }}, null))));", ilVar, OpCodes.Call.ConstantName());
+					WriteCecilExpression(ctx, "{0}.Append({0}.Create({1}, assembly.MainModule.Import(typeof(string).GetMethod(\"Concat\", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public, null, new[] {{ typeof(Object), typeof(Object) }}, null))));", ilVar, OpCodes.Call.ConstantName());
 				}
 				else
 				{
-					ctx.WriteCecilExpression(@"{0}.Append({0}.Create({1}));", ilVar, OpCodes.Add.ConstantName());
+					WriteCecilExpression(ctx, @"{0}.Append({0}.Create({1}));", ilVar, OpCodes.Add.ConstantName());
 				}
 			};
 			
-			operatorHandlers[SyntaxKind.SlashToken] = (ctx, ilVar, left, right) =>
-				ctx.WriteCecilExpression(@"{0}.Append({0}.Create({1}));", ilVar, OpCodes.Div.ConstantName());
-
-			operatorHandlers[SyntaxKind.GreaterThanToken] = (ctx, ilVar, left, right) => 
-				ctx.WriteCecilExpression(@"{0}.Append({0}.Create({1}));", ilVar, OpCodes.Cgt.ConstantName());
-			
+			operatorHandlers[SyntaxKind.SlashToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, @"{0}.Append({0}.Create({1}));", ilVar, OpCodes.Div.ConstantName());
+			operatorHandlers[SyntaxKind.GreaterThanToken] = (ctx, ilVar, left, right) =>  WriteCecilExpression(ctx, @"{0}.Append({0}.Create({1}));", ilVar, OpCodes.Cgt.ConstantName());
 		}
 
     	private bool valueTypeNoArgObjCreation;

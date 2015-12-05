@@ -28,10 +28,9 @@ namespace Cecilifier.Core.Extensions
 				return ctx.ResolveTypeLocalVariable(type.Name);
 			}
 
-			return String.Format("assembly.MainModule.Import(TypeHelpers.ResolveType(\"{0}\", \"{1}\", \"{2}\"))",
+			return String.Format("assembly.MainModule.Import(TypeHelpers.ResolveType(\"{0}\", \"{1}\"))",
 								 type.ContainingAssembly.Name,
-								 type.FullyQualifiedName(),
-								 type.Name);
+								 type.FullyQualifiedName());
 		}
 	}
 

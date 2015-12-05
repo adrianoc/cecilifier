@@ -13,6 +13,7 @@ namespace Cecilifier.Core.AST
 		string Namespace { get; set; }
 	    SemanticModel SemanticModel { get; }
 
+		IMethodParameterContext Parameters { get; set; }
 		LocalVariable CurrentLocalVariable { get; }
 		LinkedListNode<string> CurrentLine { get; }
 		IMethodSymbol GetDeclaredSymbol(BaseMethodDeclarationSyntax methodDeclaration);

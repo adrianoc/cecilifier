@@ -23,7 +23,7 @@ namespace Cecilifier.Core.AST
 			var firstAncestorOrSelf = node.FirstAncestorOrSelf<LocalDeclarationStatementSyntax>();
 			var varName = firstAncestorOrSelf.Declaration.Variables[0].Identifier.ValueText;
 
-			AddCilInstruction(ilVar, OpCodes.Ldloca_S, LocalVariableIndexWithCast<byte>(varName));
+			AddCilInstruction(ilVar, OpCodes.Ldloca_S, LocalVariableIndex(varName));
 			AddCilInstruction(ilVar, OpCodes.Initobj, ctorInfo.Symbol.ContainingType.ResolverExpression(Context));
 		}
 
@@ -32,13 +32,16 @@ namespace Cecilifier.Core.AST
 			DeclareAndInitializeValueTypeLocalVariable();
 		}
 
-		public override void VisitBinaryExpression(BinaryExpressionSyntax node)
+		public override void VisitMemberAccessExpression(MemberAccessExpressionSyntax node)
 		{
-			if (node.Kind() == SyntaxKind.SimpleAssignmentExpression)
-			{
-				new NoArgsValueTypeObjectCreatingInAssignmentVisitor(Context, ilVar).Visit(node.Left);
-				AddCilInstruction(ilVar, OpCodes.Initobj, ctorInfo.Symbol.ContainingType.ResolverExpression(Context));
-			}
+			//base.VisitMemberAccessExpression(node);
+			DeclareAndInitializeValueTypeLocalVariable();
+		}
+
+		public override void VisitAssignmentExpression(AssignmentExpressionSyntax node)
+		{
+			new NoArgsValueTypeObjectCreatingInAssignmentVisitor(Context, ilVar).Visit(node.Left);
+			AddCilInstruction(ilVar, OpCodes.Initobj, ctorInfo.Symbol.ContainingType.ResolverExpression(Context));
 		}
 
 		public override void VisitArgument(ArgumentSyntax node)
@@ -54,7 +57,7 @@ namespace Cecilifier.Core.AST
 
 			AddCecilExpression("{0}.Body.Variables.Add({1});", Context.CurrentLocalVariable.VarName, tempLocalName);
 
-			AddCilInstruction(ilVar, OpCodes.Ldloca_S, LocalVariableIndexWithCast<byte>(tempLocalName));
+			AddCilInstruction(ilVar, OpCodes.Ldloca_S, LocalVariableIndex(tempLocalName));
 			AddCilInstruction(ilVar, OpCodes.Initobj, ctorInfo.Symbol.ContainingType.ResolverExpression(Context));
 			AddCilInstruction(ilVar, OpCodes.Ldloc, LocalVariableIndex(tempLocalName));
 		}

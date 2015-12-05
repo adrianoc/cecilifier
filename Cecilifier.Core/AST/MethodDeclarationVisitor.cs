@@ -17,12 +17,15 @@ namespace Cecilifier.Core.AST
 
 		public override void VisitMethodDeclaration(MethodDeclarationSyntax node)
 		{
-			ProcessMethodDeclaration(node, node.Identifier.ValueText, MethodNameOf(node), ResolveType(node.ReturnType), _ => base.VisitMethodDeclaration(node));
+			using (new MethodParametersContext(Context))
+			{
+				ProcessMethodDeclaration(node, node.Identifier.ValueText, MethodNameOf(node), ResolveType(node.ReturnType), _ => base.VisitMethodDeclaration(node));
+			}
 		}
 
 		public override void VisitParameter(ParameterSyntax node)
 		{
-			var paramVar = MethodExtensions.LocalVariableNameFor("param_", new[] {node.Identifier.ValueText + node.Identifier.ValueText.UniqueId()});
+			var paramVar = Context.Parameters.Register(node.Identifier.ValueText);
 			
 			var paramSymbol = Context.SemanticModel.GetDeclaredSymbol(node);
 			string resolvedType = ResolveType(node.Type);
@@ -222,5 +225,45 @@ namespace Cecilifier.Core.AST
 		}
 
 	    protected string ilVar;
+	}
+
+	internal class MethodParametersContext : IDisposable, IMethodParameterContext
+	{
+		public MethodParametersContext(IVisitorContext context)
+		{
+			parentContext = context;
+			context.Parameters = this;
+		}
+
+		public void Dispose()
+		{
+			parentContext.Parameters = null;
+		}
+
+		public string Register(string paramName)
+		{
+			var localVarName = paramName + "_" + paramNameToLocalVarBackingNameMapping.Count + "_" + paramName.UniqueId();
+			paramNameToLocalVarBackingNameMapping[paramName] = localVarName;
+
+			return localVarName;
+		}
+
+		public string BackingVariableNameFor(string name)
+		{
+			string localVar;
+			if (paramNameToLocalVarBackingNameMapping.TryGetValue(name, out localVar))
+				return localVar;
+
+			throw new ArgumentException(string.Format("No backing variable registered for parameter '{0}'", name));
+		}
+
+		private IDictionary<string, string> paramNameToLocalVarBackingNameMapping = new Dictionary<string, string>();
+		private IVisitorContext parentContext;
+	}
+
+	internal interface IMethodParameterContext
+	{
+		string Register(string paramName);
+		string BackingVariableNameFor(string name);
 	}
 }

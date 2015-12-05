@@ -19,6 +19,8 @@ namespace Cecilifier.Core.Misc
             get { return semanticModel; }
 	    }
 
+		public IMethodParameterContext Parameters { get; set; }
+
 		public string Namespace
 		{
 			get { return @namespace; }

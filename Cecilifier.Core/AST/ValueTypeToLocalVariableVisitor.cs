@@ -11,6 +11,11 @@ namespace Cecilifier.Core.AST
 {
 	internal class ValueTypeToLocalVariableVisitor : CSharpSyntaxRewriter
 	{
+		public ValueTypeToLocalVariableVisitor(SemanticModel semanticModel)
+		{
+			this.semanticModel = semanticModel;
+		}
+
 		public override SyntaxNode VisitBlock(BlockSyntax block)
 		{
 			var callSitesToFix = InvocationsOnValueTypes(block);
@@ -48,7 +53,7 @@ namespace Cecilifier.Core.AST
 								typeSyntax, 
 								SyntaxFactory.SeparatedList(new[] { VariableDeclaratorFor(callSite, string.Format("{0}_{1}", lineSpan.StartLinePosition.Line, lineSpan.StartLinePosition.Character), methodName) }));
 
-			var newBlockBody = InsertLocalVariableDeclarationIntoBeforeCallSite(block, varDecl, callSite);
+			var newBlockBody = InsertLocalVariableDeclarationBeforeCallSite(block, varDecl, callSite);
 
 			return block.WithStatements(newBlockBody);
 		}
@@ -58,11 +63,11 @@ namespace Cecilifier.Core.AST
 			return SyntaxFactory.ParseTypeName("var").WithLeadingTrivia(block.ChildNodes().First().GetLeadingTrivia());
 		}
 
-		private static SyntaxList<StatementSyntax> InsertLocalVariableDeclarationIntoBeforeCallSite(BlockSyntax block, VariableDeclarationSyntax varDecl, ExpressionSyntax callSite)
+		private static SyntaxList<StatementSyntax> InsertLocalVariableDeclarationBeforeCallSite(BlockSyntax block, VariableDeclarationSyntax varDecl, ExpressionSyntax callSite)
 		{
 			var stmts = block.Statements;
 
-			var callSiteStatement = callSite.Ancestors().Where(node => node.Kind() == SyntaxKind.ExpressionStatement).First();
+			var callSiteStatement = callSite.Ancestors().First(node => node.Parent.Kind() == SyntaxKind.Block);
 
 			var i = stmts.IndexOf(stmt => stmt.IsEquivalentTo(callSiteStatement));
 			
@@ -87,7 +92,7 @@ namespace Cecilifier.Core.AST
 
 		private IList<ExpressionSyntax> InvocationsOnValueTypes(BlockSyntax block)
 		{
-			return MemberAccessOnValueTypeCollectorVisitor.Collect(block);
+			return MemberAccessOnValueTypeCollectorVisitor.Collect(semanticModel, block);
 		}
 
 		private static string LocalVarNameFor(ExpressionSyntax callSite, string typeName, string context)
@@ -101,6 +106,7 @@ namespace Cecilifier.Core.AST
 		}
 
 		private readonly IDictionary<string, string> callSiteToLocalVariable = new Dictionary<string, string>();
+		private readonly SemanticModel semanticModel;
 	}
 
 	internal class NameExtractorVisitor : CSharpSyntaxVisitor<string>
@@ -135,9 +141,6 @@ namespace Cecilifier.Core.AST
 
 	internal class ValueTypeOnCallSiteFixer : CSharpSyntaxVisitor<MemberAccessExpressionSyntax>
 	{
-		private readonly MemberAccessExpressionSyntax parent;
-		private readonly IDictionary<string, string> callSiteToLocalVariable;
-
 		public ValueTypeOnCallSiteFixer(MemberAccessExpressionSyntax parent, IDictionary<string, string> callSiteToLocalVariable)
 		{
 			this.parent = parent;
@@ -168,56 +171,40 @@ namespace Cecilifier.Core.AST
 
 			return SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression, SyntaxFactory.IdentifierName(localVarIdentifier), parent.Name);
 		}
+
+		private readonly MemberAccessExpressionSyntax parent;
+		private readonly IDictionary<string, string> callSiteToLocalVariable;
 	}
 
 	internal class MemberAccessOnValueTypeCollectorVisitor : CSharpSyntaxWalker
 	{
-		public static IList<ExpressionSyntax> Collect(SyntaxNode block)
+		public static IList<ExpressionSyntax> Collect(SemanticModel semanticModel, BlockSyntax block)
 		{
 			var collected = new List<ExpressionSyntax>();
-			((BlockSyntax)block).Accept(new MemberAccessOnValueTypeCollectorVisitor(collected));
+			block.Accept(new MemberAccessOnValueTypeCollectorVisitor(semanticModel, collected));
 
 			return collected;
 		}
 
 		public override void VisitInvocationExpression(InvocationExpressionSyntax node)
 		{
-			AddNodeIfRequired(node);
+			var mae = node.Expression as MemberAccessExpressionSyntax;
+			if (mae != null)
+			{
+				var s = semanticModel.GetTypeInfo(mae.Expression);
+				if (s.Type.IsValueType)
+					collected.Add(mae.Expression);
+			}
 			base.VisitInvocationExpression(node);
 		}
 
-		public override void VisitLiteralExpression(LiteralExpressionSyntax node)
+		private MemberAccessOnValueTypeCollectorVisitor(SemanticModel semanticModel, IList<ExpressionSyntax> collected)
 		{
-			AddNodeIfRequired(node);
-			base.VisitLiteralExpression(node);
-		}
-
-		public override void VisitIdentifierName(IdentifierNameSyntax node)
-		{
-			var ie = node.Parent as InvocationExpressionSyntax;
-			if (ie != null && ie.Expression == node)
-			{
-				collected.Add(node);
-			}
-
-			base.VisitIdentifierName(node);
-		}
-
-		private void AddNodeIfRequired(ExpressionSyntax node)
-		{
-			var mae = node.Parent as MemberAccessExpressionSyntax;
-			if (mae != null && mae.Expression == node && mae.Parent.Kind() == SyntaxKind.InvocationExpression)
-			{
-				collected.Add(node);
-			}
-		}
-
-		private MemberAccessOnValueTypeCollectorVisitor(IList<ExpressionSyntax> collected)
-		{
+			this.semanticModel = semanticModel;
 			this.collected = collected;
 		}
 
+		private readonly SemanticModel semanticModel;
 		private readonly IList<ExpressionSyntax> collected;
-	
 	}
 }

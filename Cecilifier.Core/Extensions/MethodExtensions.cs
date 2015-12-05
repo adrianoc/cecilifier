@@ -50,7 +50,8 @@ namespace Cecilifier.Core.Extensions
 		}
 
     	public static string MethodResolverExpression(this IMethodSymbol method, IVisitorContext ctx)
-		{
+    	{
+			//if (method.IsDefinedInCurrentType(ctx) && method.MethodKind == MethodKind.Ordinary)
 			if (method.IsDefinedInCurrentType(ctx))
 			{
 				//FIXME: Keep the name of the variables used to construct types/members in a map

@@ -41,10 +41,10 @@ namespace Cecilifier.Core.Tests.Transformations
 				var comp = CSharpCompilation.Create(
 							"Test",
 							new[] { syntaxTree },
-							new[] {MetadataReference.CreateFromFile(typeof(object).Assembly.Location)},
+							new[] { MetadataReference.CreateFromFile(typeof(object).Assembly.Location) },
 							new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
-				var transformedTree = ApplyTransformationTo(syntaxTree, new ValueTypeToLocalVariableVisitor());
+				var transformedTree = ApplyTransformationTo(syntaxTree, new ValueTypeToLocalVariableVisitor(comp.GetSemanticModel(syntaxTree)));
 
 				var expectedTree = CSharpSyntaxTree.ParseText(expected.ReadToEnd());
 
@@ -52,6 +52,7 @@ namespace Cecilifier.Core.Tests.Transformations
 					expectedTree.ToString(),
 					transformedTree.ToString(),
 					string.Format("Expected: {0}\r\n---------------- got -------------------\r\n{1}\r\n", expectedTree, transformedTree));
+
 			}
 		}
 

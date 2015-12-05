@@ -1,4 +1,5 @@
 ﻿using System;
+using Cecilifier.Core.Extensions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -49,7 +50,8 @@ namespace Cecilifier.Core.AST
 		{
 			if (parameter.RefKind == RefKind.None)
 			{
-				AddCilInstructionCastOperand(ilVar, OpCodes.Starg_S, (byte) parameter.Ordinal);
+				var localVar = Context.Parameters.BackingVariableNameFor(parameter.Name);
+				AddCilInstruction(ilVar, OpCodes.Starg_S, localVar);
 			}
 			else
 			{

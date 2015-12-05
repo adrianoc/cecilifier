@@ -30,9 +30,12 @@ namespace Cecilifier.Core.AST
 				{
 					AddCilInstruction(ilVar, OpCodes.Ldarg_0);
 				}
-				
-				callBaseMethod(node);
-				
+
+				using (new MethodParametersContext(Context))
+				{
+					callBaseMethod(node);
+				}
+
 				if (!ctorAdded && declaringType.Kind() != SyntaxKind.StructDeclaration)
 				{
 					var declaringTypelocalVar = ResolveTypeLocalVariable(declaringType.Identifier.ValueText);

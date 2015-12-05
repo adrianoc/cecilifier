@@ -26,12 +26,12 @@ namespace Cecilifier.Core.AST
 
 		protected void AddCecilExpression(string format, params object[] args)
 		{
-			Context.WriteCecilExpression("{0}\r\n", string.Format(format, args));
+			WriteCecilExpression(Context, format, args);
 		}
 		
         protected void AddMethodCall(string ilVar, IMethodSymbol method)
         {
-        	OpCode opCode = method.IsVirtual || method.IsAbstract ? OpCodes.Callvirt : OpCodes.Call;
+        	var opCode = method.IsVirtual || method.IsAbstract ? OpCodes.Callvirt : OpCodes.Call;
         	AddCecilExpression(@"{0}.Append({0}.Create({1}, {2}));", ilVar, opCode.ConstantName(), method.MethodResolverExpression(Context));
 		}
 
@@ -174,6 +174,11 @@ namespace Cecilifier.Core.AST
 			return ExcludeHasNoCILRepresentation(token) && token.Kind() != SyntaxKind.PrivateKeyword;
 		}
 
+		protected static void WriteCecilExpression(IVisitorContext context, string format, params object[] args)
+		{
+			context.WriteCecilExpression("{0}\r\n", string.Format(format, args));
+		}
+
 		protected static bool ExcludeHasNoCILRepresentation(SyntaxToken token)
 		{
 			return token.Kind() != SyntaxKind.PartialKeyword && token.Kind() != SyntaxKind.VolatileKeyword;
@@ -264,7 +269,7 @@ namespace Cecilifier.Core.AST
 
 		private static string LocalVariableIndex(string methodVar, string name)
 		{
-			return string.Format("{0}.Body.Variables.Where(v => v.Name == \"{1}\").Single().Index", methodVar, name);
+			return string.Format("{0}.Body.Variables.Where(v => v.Name == \"{1}\").Single()", methodVar, name);
 		}
 
 		protected string LocalVariableIndex(string localVariable)
@@ -283,7 +288,7 @@ namespace Cecilifier.Core.AST
 			//TODO: Get rid of code duplication in ExpressionVisitor.ProcessLocalVariable(IdentifierNameSyntax localVar, SymbolInfo varInfo)
 			if (paramSymbol.Type.IsValueType && parent.Accept(new UsageVisitor()) == UsageKind.CallTarget)
 			{
-				AddCilInstruction(ilVar, OpCodes.Ldarga, paramSymbol.Ordinal.ToCecilIndex());
+				AddCilInstruction(ilVar, OpCodes.Ldarga, Context.Parameters.BackingVariableNameFor(paramSymbol.Name));
 				return;
 			}
 
@@ -292,7 +297,7 @@ namespace Cecilifier.Core.AST
 			var method = paramSymbol.ContainingSymbol as IMethodSymbol;
 			if (node.Parent.Kind() == SyntaxKind.SimpleMemberAccessExpression && paramSymbol.ContainingType.IsValueType)
 			{
-				AddCilInstruction(ilVar, OpCodes.Ldarga, paramSymbol.Ordinal + +(method.IsStatic ? 0 : 1));
+				AddCilInstruction(ilVar, OpCodes.Ldarga, Context.Parameters.BackingVariableNameFor(paramSymbol.Name));
 			}
 			else if (paramSymbol.Ordinal > 3)
 			{
