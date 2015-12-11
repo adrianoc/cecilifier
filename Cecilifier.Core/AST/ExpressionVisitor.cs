@@ -144,28 +144,31 @@ namespace Cecilifier.Core.AST
         }
 
 	    public override void VisitIdentifierName(IdentifierNameSyntax node)
-		{
-			var member = Context.SemanticModel.GetSymbolInfo(node);
+	    {
+		    var member = Context.SemanticModel.GetSymbolInfo(node);
 
-			switch (member.Symbol.Kind)
-			{
-				case SymbolKind.Method:
-					ProcessMethodCall(node, member.Symbol as IMethodSymbol);
-					break;
+		    switch (member.Symbol.Kind)
+		    {
+			    case SymbolKind.Method:
+				    ProcessMethodCall(node, member.Symbol as IMethodSymbol);
+				    break;
 
-				case SymbolKind.Parameter:
-					ProcessParameter(ilVar, node, member.Symbol as IParameterSymbol);
-					break;
+			    case SymbolKind.Parameter:
+				    ProcessParameter(ilVar, node, member.Symbol as IParameterSymbol);
+				    break;
 
-				case SymbolKind.Local:
-					ProcessLocalVariable(node, member);
-					break;
+			    case SymbolKind.Local:
+				    ProcessLocalVariable(node, member);
+				    break;
 
-				case SymbolKind.Property:
-					ProcessProperty(node, member.Symbol as IPropertySymbol);
-					break;
-			}
-		}
+			    case SymbolKind.Property:
+				    ProcessProperty(node, member.Symbol as IPropertySymbol);
+				    break;
+
+			    default:
+					throw new Exception(string.Format("Member '{1}' of type '{0}' are not supported as of today.", member.Symbol.Kind, node.Identifier.ValueText));
+		    }
+	    }
 
 	    public override void VisitArgument(ArgumentSyntax node)
 		{
