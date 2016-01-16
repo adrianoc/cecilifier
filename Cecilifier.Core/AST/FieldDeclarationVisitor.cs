@@ -42,7 +42,7 @@ namespace Cecilifier.Core.AST
 	    	if (!fieldDeclaration.Modifiers.Any(m => m.Kind() == SyntaxKind.VolatileKeyword)) return null;
 	    	
 			var id = string.Format("mod_req{0}", NextLocalVariableId());
-	    	var mod_req = string.Format("var {0} = new RequiredModifierType({1}, {2});", id, originalType, ImportExpressionFor(typeof (IsVolatile)));
+	    	var mod_req = string.Format("var {0} = new RequiredModifierType({1}, {2});", id, originalType, ImportExpressionForType(typeof (IsVolatile)));
 	    	AddCecilExpression(mod_req);
 	    	return id;
 	    }

@@ -104,12 +104,12 @@ namespace Cecilifier.Core.AST
 			return Context.NextLocalVariableTypeId();
 		}
 
-		protected string ImportExpressionFor(Type type)
+		protected string ImportExpressionForType(Type type)
 		{
-			return ImportExpressionFor(type.FullName);
+			return ImportExpressionForType(type.FullName);
 		}
 
-		protected string ImportExpressionFor(string typeName)
+		protected string ImportExpressionForType(string typeName)
 		{
 			return string.Format("assembly.MainModule.Import(typeof({0}))", typeName);
 		}
@@ -249,7 +249,7 @@ namespace Cecilifier.Core.AST
 
 		protected string ResolveType(string typeName)
 		{
-			return ImportExpressionFor(typeName);
+			return ImportExpressionForType(typeName);
 		}
 
 		protected void RegisterTypeLocalVariable(TypeDeclarationSyntax node, string varName)
@@ -292,8 +292,6 @@ namespace Cecilifier.Core.AST
 				return;
 			}
 
-			OpCode[] optimizedLdArgs = {OpCodes.Ldarg_0, OpCodes.Ldarg_1, OpCodes.Ldarg_2, OpCodes.Ldarg_3};
-
 			var method = paramSymbol.ContainingSymbol as IMethodSymbol;
 			if (node.Parent.Kind() == SyntaxKind.SimpleMemberAccessExpression && paramSymbol.ContainingType.IsValueType)
 			{
@@ -305,6 +303,7 @@ namespace Cecilifier.Core.AST
 			}
 			else
 			{
+				OpCode[] optimizedLdArgs = { OpCodes.Ldarg_0, OpCodes.Ldarg_1, OpCodes.Ldarg_2, OpCodes.Ldarg_3 };
 				var loadOpCode = optimizedLdArgs[paramSymbol.Ordinal + (method.IsStatic ? 0 : 1)];
 				AddCilInstruction(ilVar, loadOpCode);
 			}
