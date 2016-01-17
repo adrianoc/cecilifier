@@ -71,6 +71,17 @@ namespace Cecilifier.Core.AST
 				case SyntaxKind.CharacterLiteralExpression:
 				case SyntaxKind.NumericLiteralExpression:
 					AddCilInstruction(ilVar, LoadOpCodeFor(node), node.ToString());
+
+					var localVarParent = (CSharpSyntaxNode) node.Parent;
+					if (localVarParent.Accept(new UsageVisitor()) == UsageKind.CallTarget)
+					{
+						var tempLocalName = MethodExtensions.LocalVariableNameFor("tmp_", new[] { "tmp_".UniqueId().ToString() });
+						AddCecilExpression("var {0} = new VariableDefinition(\"{1}\", assembly.MainModule.TypeSystem.Int32);", tempLocalName, tempLocalName);
+						AddCecilExpression("{0}.Body.Variables.Add({1});", Context.CurrentLocalVariable.VarName, tempLocalName);
+
+						AddCilInstruction(ilVar, OpCodes.Stloc, LocalVariableIndex(tempLocalName));
+						AddCilInstruction(ilVar, OpCodes.Ldloca_S, LocalVariableIndex(tempLocalName));
+					}
 					break;
 				
 				default:
@@ -110,8 +121,8 @@ namespace Cecilifier.Core.AST
 		 * To fix this we visit in the order [exp, args] and move the call operation after visiting the arguments
 		 */
 	    public override void VisitInvocationExpression(InvocationExpressionSyntax node)
-        {
-			Visit(node.Expression);
+	    {
+		    Visit(node.Expression);
 			PushCall();
 
 			Visit(node.ArgumentList);
@@ -164,9 +175,6 @@ namespace Cecilifier.Core.AST
 			    case SymbolKind.Property:
 				    ProcessProperty(node, member.Symbol as IPropertySymbol);
 				    break;
-
-			    default:
-					throw new Exception(string.Format("Member '{1}' of type '{0}' are not supported as of today.", member.Symbol.Kind, node.Identifier.ValueText));
 		    }
 	    }
 
@@ -197,12 +205,24 @@ namespace Cecilifier.Core.AST
 			WriteLine("[{0}] : {1}", new StackFrame().GetMethod().Name, node);
 		}
 
-	    public override void VisitParenthesizedExpression(ParenthesizedExpressionSyntax node)
-        {
-			WriteLine("[{0}] : {1}", new StackFrame().GetMethod().Name, node);
+		public override void VisitParenthesizedExpression(ParenthesizedExpressionSyntax node)
+		{
+			base.VisitParenthesizedExpression(node);
+
+			var localVarParent = (CSharpSyntaxNode) node.Parent;
+			if (localVarParent.Accept(new UsageVisitor()) == UsageKind.CallTarget)
+			{
+				var symbolInfo = this.Context.SemanticModel.GetSymbolInfo(node.Expression);
+				var tempLocalName = MethodExtensions.LocalVariableNameFor("tmp_", new[] { "tmp_".UniqueId().ToString() });
+				AddCecilExpression("var {0} = new VariableDefinition(\"{1}\", assembly.MainModule.TypeSystem.Int32);", tempLocalName, tempLocalName);
+				AddCecilExpression("{0}.Body.Variables.Add({1});", Context.CurrentLocalVariable.VarName, tempLocalName);
+
+				AddCilInstruction(ilVar, OpCodes.Stloc, LocalVariableIndex(tempLocalName));
+				AddCilInstruction(ilVar, OpCodes.Ldloca_S, LocalVariableIndex(tempLocalName));
+			}
 		}
 
-	    public override void VisitMakeRefExpression(MakeRefExpressionSyntax node)
+		public override void VisitMakeRefExpression(MakeRefExpressionSyntax node)
         {
 			WriteLine("[{0}] : {1}", new StackFrame().GetMethod().Name, node);
 		}
