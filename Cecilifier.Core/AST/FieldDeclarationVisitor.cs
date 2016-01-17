@@ -50,16 +50,15 @@ namespace Cecilifier.Core.AST
 		protected string MapAttributes(IEnumerable<SyntaxToken> modifiers)
         {
             var noInternalOrProtected = modifiers.Where(t => t.Kind() != SyntaxKind.InternalKeyword && t.Kind() != SyntaxKind.ProtectedKeyword);
-            var str = noInternalOrProtected.Where(ExcludeHasNoCILRepresentation).Aggregate("",
-                (acc, curr) => (acc.Length > 0 
-                                    ? acc + " | " 
-                                    : "") + curr.MapModifier("FieldAttributes"));
+            var str = noInternalOrProtected.Where(ExcludeHasNoCILRepresentation).Aggregate("", (acc, curr) => (acc.Length > 0  ? acc + " | " : "") + curr.MapModifier("FieldAttributes"));
 
-            Func<SyntaxToken, bool> predicate = t => t.Kind() == SyntaxKind.InternalKeyword || t.Kind() == SyntaxKind.ProtectedKeyword;
-            return
-                modifiers.Count(predicate) == 2
-                    ? "FieldAttributes.FamORAssem" + str
-                    : modifiers.Where(predicate).Select(MapAttribute).Aggregate("", (acc, curr) => "FieldAttributes." + curr) + str;
+			if (!modifiers.Any())
+				return "FieldAttributes.Assembly";
+
+			Func<SyntaxToken, bool> predicate = t => t.Kind() == SyntaxKind.InternalKeyword || t.Kind() == SyntaxKind.ProtectedKeyword;
+            return modifiers.Count(predicate) == 2
+									? "FieldAttributes.FamORAssem" + str
+									: modifiers.Where(predicate).Select(MapAttribute).Aggregate("", (acc, curr) => "FieldAttributes." + curr) + str;
         }
 
         private static FieldAttributes MapAttribute(SyntaxToken token)

@@ -151,6 +151,9 @@
     <Content Include="TestResources\Integration\Fields\InitializedFieldSingleCtor.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Content Include="TestResources\Integration\Fields\InternalFields.cs.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="TestResources\Integration\Members\ForwardReferences.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>

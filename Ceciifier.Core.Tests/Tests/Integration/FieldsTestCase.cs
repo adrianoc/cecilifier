@@ -12,6 +12,12 @@ namespace Cecilifier.Core.Tests.Tests.Integration
 		}
 
 		[Test]
+		public void TestInternalFields()
+		{
+			AssertResourceTest(@"Fields\InternalFields");
+		}
+
+		[Test]
 		public void TestSingleFieldMultipleModifiers()
 		{
 			AssertResourceTest(@"Fields\SingleFieldMultipleModifiers");
