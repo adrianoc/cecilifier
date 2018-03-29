@@ -3,6 +3,8 @@ using System.CodeDom.Compiler;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Security.Cryptography;
+using System.Text;
 using Microsoft.CSharp;
 
 namespace Cecilifier.Core.Tests.Framework
@@ -35,9 +37,14 @@ namespace Cecilifier.Core.Tests.Framework
 				Directory.CreateDirectory(targetFolder);
 			}
 
-			parameters.ReferencedAssemblies.AddRange(CopyReferencedAssembliesTo(targetFolder, references));
+		    var hash = BitConverter.ToString(SHA1.Create().ComputeHash(Encoding.ASCII.GetBytes(source))).Replace("-", "");
+		    var outputFilePath = $"{targetPath}-{hash}.{(exe ? "exe" : "dll")}";
 
-			parameters.OutputAssembly = targetPath + (exe ? ".exe" : ".dll");
+		    if (File.Exists(outputFilePath))
+		        return outputFilePath;
+
+            parameters.ReferencedAssemblies.AddRange(CopyReferencedAssembliesTo(targetFolder, references));
+            parameters.OutputAssembly = outputFilePath;
 			parameters.GenerateExecutable = exe;
 			parameters.IncludeDebugInformation = true;
 			parameters.CompilerOptions = "/o+ /unsafe";

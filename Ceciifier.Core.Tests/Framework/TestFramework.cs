@@ -17,8 +17,8 @@ namespace Cecilifier.Core.Tests.Framework
 			var process = Process.Start(processInfo);
 
 
-			StringBuilder err = new StringBuilder();
-			StringBuilder @out = new StringBuilder();
+			var err = new StringBuilder();
+			var @out = new StringBuilder();
 
 			process.ErrorDataReceived += (sender, arg) => err.AppendLine(arg.Data);
 			process.OutputDataReceived += (sender, arg) => @out.AppendLine(arg.Data);

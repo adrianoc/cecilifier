@@ -21,30 +21,32 @@ namespace Cecilifier.Core.Tests.Framework
 			string expectedAssemblyPath = resourceBasePath.GetPathOfBinaryResource("Expected.dll", kind);
 			
 			var tbc = ReadResource(resourceBasePath, "cs", kind);
-			AssertResourceTest(resourceBasePath, expectedAssemblyPath, tbc);
+		    var actualAssemblyPath = Path.Combine(Path.GetTempPath(), "CecilifierTests/", resourceBasePath + ".dll");
+			AssertResourceTest(actualAssemblyPath, expectedAssemblyPath, tbc);
 		}
 
 		protected void AssertResourceTest(string resourceName, TestKind kind)
 		{
 			var tbc = ReadResource(resourceName, "cs", kind);
 
-			var actualAssemblyPath = Path.Combine(Path.GetTempPath(), resourceName + ".dll");
+			var actualAssemblyPath = Path.Combine(Path.GetTempPath(), "CecilifierTests/", resourceName + ".dll");
 
 			var expectedAssemblyPath = CompilationServices.CompileDLL(
 												Path.Combine(Path.GetDirectoryName(actualAssemblyPath), Path.GetFileNameWithoutExtension(actualAssemblyPath) + "_expected"),
 												ReadToEnd(tbc));
 
-			AssertResourceTest(resourceName, expectedAssemblyPath, tbc);
+			AssertResourceTest(actualAssemblyPath, expectedAssemblyPath, tbc);
+
+            Console.WriteLine();
+            Console.WriteLine("Expected assembly path : {0}", expectedAssemblyPath);
+            Console.WriteLine("Actual   assembly path : {0}", actualAssemblyPath);
 		}
 
-		private void AssertResourceTest(string resourceBasePath, string expectedAssemblyPath, Stream tbc)
+		private void AssertResourceTest(string actualAssemblyPath, string expectedAssemblyPath, Stream tbc)
 		{
-			var actualAssemblyPath = Path.Combine(Path.GetTempPath(), resourceBasePath + ".dll");
-
 			var generated = Cecilfy(tbc);
 
-			var compiledCecilifierPath = CompilationServices.CompileExe(generated, typeof(TypeDefinition).Assembly,
-																		typeof(IQueryable).Assembly, typeof(TypeHelpers).Assembly);
+			var compiledCecilifierPath = CompilationServices.CompileExe(generated, typeof(TypeDefinition).Assembly, typeof(IQueryable).Assembly, typeof(TypeHelpers).Assembly);
 
 			Directory.CreateDirectory(Path.GetDirectoryName(actualAssemblyPath));
 

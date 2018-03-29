@@ -106,7 +106,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 
 		private static bool CheckMethods(ITypeDiffVisitor typeVisitor, TypeDefinition source, TypeDefinition target)
 		{
-			List<IGrouping<string, MethodDefinition>> list = target.Methods.GroupBy(m => m.FullName).ToList();
+			var list = target.Methods.GroupBy(m => m.FullName).ToList();
 
 			var duplication = list.Where(g => g.Count() > 1);
 			if (duplication.Any())

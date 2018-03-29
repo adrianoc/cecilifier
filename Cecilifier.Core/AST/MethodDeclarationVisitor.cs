@@ -96,7 +96,7 @@ namespace Cecilifier.Core.AST
 		{
 			var declaringTypeName = DeclaringTypeNameFor(node);
 
-			var methodVar = MethodExtensions.LocalVariableNameFor(declaringTypeName, new[] {simpleName, node.MangleName(Context.SemanticModel)});
+			var methodVar = MethodExtensions.LocalVariableNameFor(declaringTypeName, simpleName, node.MangleName(Context.SemanticModel));
 
 			AddOrUpdateMethodDefinition(methodVar, fqName, MethodModifiersToCecil(node), returnType);
 			AddCecilExpression("{0}.Methods.Add({1});", ResolveTypeLocalVariable(declaringTypeName), methodVar);
