@@ -3,3 +3,4 @@ obj
 _Resharper*
 *.user
 *.suo
+Packages/*
