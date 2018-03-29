@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.23107.0
+# Visual Studio 15
+VisualStudioVersion = 15.0.26430.12
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cecilifier", "Cecilifier\Cecilifier.csproj", "{634A0950-707E-47A5-BB86-33D4370514DA}"
 EndProject
@@ -10,8 +10,6 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cecilifier.Core.Tests", "Ceciifier.Core.Tests\Cecilifier.Core.Tests.csproj", "{C06B547B-E46B-4952-97D7-85470588192D}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cecilifier.Runtime", "Cecilifier.Runtime\Cecilifier.Runtime.csproj", "{35DDC066-1D76-49AE-8D10-39A709E709EC}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleApplication1", "c:\users\adriano\documents\visual studio 2015\Projects\ConsoleApplication1\ConsoleApplication1.csproj", "{0BF88116-8CF2-4688-8F68-AC14FD60DE8E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -63,18 +61,6 @@ Global
 		{35DDC066-1D76-49AE-8D10-39A709E709EC}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{35DDC066-1D76-49AE-8D10-39A709E709EC}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{35DDC066-1D76-49AE-8D10-39A709E709EC}.Release|x86.ActiveCfg = Release|Any CPU
-		{0BF88116-8CF2-4688-8F68-AC14FD60DE8E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{0BF88116-8CF2-4688-8F68-AC14FD60DE8E}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{0BF88116-8CF2-4688-8F68-AC14FD60DE8E}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{0BF88116-8CF2-4688-8F68-AC14FD60DE8E}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{0BF88116-8CF2-4688-8F68-AC14FD60DE8E}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{0BF88116-8CF2-4688-8F68-AC14FD60DE8E}.Debug|x86.Build.0 = Debug|Any CPU
-		{0BF88116-8CF2-4688-8F68-AC14FD60DE8E}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{0BF88116-8CF2-4688-8F68-AC14FD60DE8E}.Release|Any CPU.Build.0 = Release|Any CPU
-		{0BF88116-8CF2-4688-8F68-AC14FD60DE8E}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{0BF88116-8CF2-4688-8F68-AC14FD60DE8E}.Release|Mixed Platforms.Build.0 = Release|Any CPU
-		{0BF88116-8CF2-4688-8F68-AC14FD60DE8E}.Release|x86.ActiveCfg = Release|Any CPU
-		{0BF88116-8CF2-4688-8F68-AC14FD60DE8E}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

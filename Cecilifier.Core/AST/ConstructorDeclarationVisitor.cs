@@ -16,7 +16,7 @@ namespace Cecilifier.Core.AST
 
 		public override void VisitConstructorDeclaration(ConstructorDeclarationSyntax node)
 		{
-			// Why return for parameterless ctors ???
+			//TODO: Why return for parameterless ctors ???
 			//if (node.ParameterList.Parameters.Count == 0) return;
 
 			var declaringType = node.Parent.ResolveDeclaringType();
@@ -33,24 +33,25 @@ namespace Cecilifier.Core.AST
 
 				using (new MethodParametersContext(Context))
 				{
+                    // If this ctor has an initializer the call to the base ctor will happen when we visit call base.VisitConstructorDeclaration()
+                    // otherwise we need to call it here.
+				    if (node.Initializer == null && declaringType.Kind() != SyntaxKind.StructDeclaration)
+				    {
+				        var declaringTypelocalVar = ResolveTypeLocalVariable(declaringType.Identifier.ValueText);
+				        AddCilInstruction(ilVar, OpCodes.Call, string.Format("assembly.MainModule.Import(TypeHelpers.DefaultCtorFor({0}.BaseType.Resolve()))", declaringTypelocalVar));
+				    }
 					callBaseMethod(node);
 				}
-
-				if (!ctorAdded && declaringType.Kind() != SyntaxKind.StructDeclaration)
-				{
-					var declaringTypelocalVar = ResolveTypeLocalVariable(declaringType.Identifier.ValueText);
-					AddCilInstruction(ilVar, OpCodes.Call, string.Format("assembly.MainModule.Import(TypeHelpers.DefaultCtorFor({0}.BaseType.Resolve()))", declaringTypelocalVar));
-				}
-			});
+            });
 		}
 
-		public override void VisitConstructorInitializer(ConstructorInitializerSyntax node)
+        public override void VisitConstructorInitializer(ConstructorInitializerSyntax node)
         {
             ctorAdded = true;
-			new ConstructorInitializerVisitor(Context, ilVar).Visit(node);
+            new ConstructorInitializerVisitor(Context, ilVar).Visit(node);
         }
-		
-		protected override string AppendSpecificModifiers(string cecilModifiersStr)
+
+        protected override string AppendSpecificModifiers(string cecilModifiersStr)
 		{
 			return cecilModifiersStr.AppendModifier(CtorFlags);
 		}

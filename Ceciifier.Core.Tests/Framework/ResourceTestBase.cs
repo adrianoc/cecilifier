@@ -10,6 +10,12 @@ namespace Cecilifier.Core.Tests.Framework
 {
 	public class ResourceTestBase
 	{
+	    [SetUp]
+	    public void Setup()
+	    {
+            Directory.SetCurrentDirectory(TestContext.CurrentContext.TestDirectory);
+	    }
+
 		protected void AssertResourceTestBinary(string resourceBasePath, TestKind kind)
 		{
 			string expectedAssemblyPath = resourceBasePath.GetPathOfBinaryResource("Expected.dll", kind);

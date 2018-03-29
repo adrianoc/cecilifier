@@ -1,8 +1,0 @@
-﻿class SingleLiteralAsTargetOfCall
-{
-	void Method()
-	{
-		var Method_4_2_10 = 10;
-		Method_4_2_10.ToString();
-	}
-}

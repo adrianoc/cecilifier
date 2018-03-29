@@ -1,0 +1,5 @@
+﻿class InternalFields
+{
+    int implicit_field;
+    internal string explicit_field;
+}

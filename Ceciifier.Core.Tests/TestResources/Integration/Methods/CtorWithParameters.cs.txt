@@ -7,6 +7,10 @@ class Base
 
 class CtorWithParameters : Base
 {
+	public CtorWithParameters(uint ui) : base(ui.ToString())
+	{
+	}
+
 	public CtorWithParameters(string s) : base(s)
 	{
 	}

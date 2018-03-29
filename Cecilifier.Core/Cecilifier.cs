@@ -25,7 +25,11 @@ namespace Cecilifier.Core
 			var comp = CSharpCompilation.Create(
 							"Teste",
 							new[] { syntaxTree },
-							new[] { MetadataReference.CreateFromFile(typeof(object).Assembly.Location) },
+							new[]
+							{
+								MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
+								MetadataReference.CreateFromFile(typeof(File).Assembly.Location),
+							},
 							new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
 			foreach (var diag in comp.GetDiagnostics())
@@ -35,16 +39,7 @@ namespace Cecilifier.Core
 
 			var semanticModel = comp.GetSemanticModel(syntaxTree);
 
-			//TODO: What exactly are we transforming ?
-			syntaxTree = RunTransformations(syntaxTree, semanticModel);
-
-			var comp2 = CSharpCompilation.Create(
-							"Test",
-							new[] { syntaxTree },
-							new[] { MetadataReference.CreateFromFile(typeof(object).Assembly.Location) },
-							new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
-
-			IVisitorContext ctx = new CecilifierContext(comp2.GetSemanticModel(syntaxTree));
+			IVisitorContext ctx = new CecilifierContext(semanticModel);
 			var visitor = new CompilationUnitVisitor(ctx);
 
 			SyntaxNode root;

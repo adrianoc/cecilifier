@@ -45,9 +45,9 @@
     <Reference Include="Mono.Cecil">
       <HintPath>..\Libs\Mono.Cecil.dll</HintPath>
     </Reference>
-    <Reference Include="nunit.framework, Version=2.6.2.12296, Culture=neutral, PublicKeyToken=96d09a1eb7f44a77, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\NUnit.2.6.2\lib\nunit.framework.dll</HintPath>
+    <Reference Include="nunit.framework, Version=3.0.5813.39031, Culture=neutral, PublicKeyToken=2638cd05610744eb, processorArchitecture=MSIL">
+      <HintPath>..\packages\NUnit.3.0.1\lib\net45\nunit.framework.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Collections.Immutable, Version=1.1.37.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
@@ -80,6 +80,7 @@
     <Compile Include="Framework\TestFramework.cs" />
     <Compile Include="Framework\CompilationServices.cs" />
     <Compile Include="Framework\ResourceTestBase.cs" />
+    <Compile Include="Tests\Integration\ValueTypesTests.cs" />
     <Compile Include="Tests\Integration\CodeBlock.cs" />
     <Compile Include="Tests\Integration\ExpressionTestCase.cs" />
     <Compile Include="Tests\Integration\FieldsTestCase.cs" />
@@ -89,7 +90,6 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Tests\Integration\MethodTestCase.cs" />
     <Compile Include="Tests\Integration\MiscTestCase.cs" />
-    <Compile Include="Tests\Transformations\ValueTypeLiteralToLocalVariableTest.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="TestResources\Integration\Events\" />
@@ -298,34 +298,19 @@
     <Content Include="TestResources\Integration\Misc\DelegateInvocation.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Transformation\ValueTypeReturnAsTargetOfCallInsideBaseContructorInvocation.cs.txt">
+    <Content Include="TestResources\Integration\ValueTypes\AsTargetOfCall\ValueTypeReturnAsTargetOfCallInsideBaseContructorInvocation.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Transformation\ValueTypeReturnAsTargetOfCallInsideContructor.cs.txt">
+    <Content Include="TestResources\Integration\ValueTypes\AsTargetOfCall\ValueTypeReturnAsTargetOfCallInsideContructor.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Transformation\ValueTypeReturnAsTargetOfCall.cs.txt">
+    <Content Include="TestResources\Integration\ValueTypes\AsTargetOfCall\ValueTypeReturnAsTargetOfCall.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Transformation\ValueTypeReturnAsTargetOfCallInsideBaseContructorInvocation.out.txt">
+    <Content Include="TestResources\Integration\ValueTypes\AsTargetOfCall\MultipleLiteralAsTargetOfCall.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestResources\Transformation\ValueTypeReturnAsTargetOfCallInsideContructor.out.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="TestResources\Transformation\ValueTypeReturnAsTargetOfCall.out.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="TestResources\Transformation\MultipleLiteralAsTargetOfCall.out.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="TestResources\Transformation\MultipleLiteralAsTargetOfCall.cs.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="TestResources\Transformation\SingleLiteralAsTargetOfCall.out.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="TestResources\Transformation\SingleLiteralAsTargetOfCall.cs.txt">
+    <Content Include="TestResources\Integration\ValueTypes\AsTargetOfCall\SingleLiteralAsTargetOfCall.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

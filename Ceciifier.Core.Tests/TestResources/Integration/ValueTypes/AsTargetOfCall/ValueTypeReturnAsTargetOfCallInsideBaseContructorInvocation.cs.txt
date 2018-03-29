@@ -1,0 +1,11 @@
+﻿class C
+{
+    public C(string s) {}
+}
+
+class ValueTypeReturnAsTargetOfCallInsideBaseContructorInvocation : C
+{
+    public ValueTypeReturnAsTargetOfCallInsideBaseContructorInvocation() : base(42.ToString())
+    {
+    }
+}

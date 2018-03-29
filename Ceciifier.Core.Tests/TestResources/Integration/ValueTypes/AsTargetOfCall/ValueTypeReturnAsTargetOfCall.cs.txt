@@ -37,7 +37,7 @@
 
     void OnChainedInvocations()
     {
-    	var s = 42.GetHashCode().Substring(0);
+    	var s = 42.GetHashCode().ToString();
     }
 
 	void OnLocalVariable()
@@ -56,5 +56,5 @@
 		return 42;
 	}
 
-    int field = 42;
+    private int field = 42;
 }
