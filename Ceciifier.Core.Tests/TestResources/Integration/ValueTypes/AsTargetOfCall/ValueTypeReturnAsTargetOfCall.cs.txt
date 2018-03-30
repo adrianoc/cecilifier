@@ -56,5 +56,10 @@
 		return 42;
 	}
 
+	public ValueTypeReturnAsTargetOfCall()
+	{
+		field = 42;
+	}
+
     private int field = 42;
 }

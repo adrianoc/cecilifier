@@ -70,27 +70,37 @@ namespace Cecilifier.Core.AST
 
 				case SyntaxKind.CharacterLiteralExpression:
 				case SyntaxKind.NumericLiteralExpression:
-					AddCilInstruction(ilVar, LoadOpCodeFor(node), node.ToString());
-
-					var localVarParent = (CSharpSyntaxNode) node.Parent;
-					if (localVarParent.Accept(new UsageVisitor()) == UsageKind.CallTarget)
-					{
-						var tempLocalName = MethodExtensions.LocalVariableNameFor("tmp_", new[] { "tmp_".UniqueId().ToString() });
-						AddCecilExpression("var {0} = new VariableDefinition(\"{1}\", assembly.MainModule.TypeSystem.Int32);", tempLocalName, tempLocalName);
-						AddCecilExpression("{0}.Body.Variables.Add({1});", Context.CurrentLocalVariable.VarName, tempLocalName);
-
-						AddCilInstruction(ilVar, OpCodes.Stloc, LocalVariableIndex(tempLocalName));
-						AddCilInstruction(ilVar, OpCodes.Ldloca_S, LocalVariableIndex(tempLocalName));
-					}
+				    AddLocalVariableAndHandleCallOnValueTypeLiterals(node, "assembly.MainModule.TypeSystem.Int32", node.ToString());
 					break;
-				
-				default:
-					throw new ArgumentException("Literal of type " + node + " not supported yet.");
+
+			    case SyntaxKind.TrueLiteralExpression:
+			    case SyntaxKind.FalseLiteralExpression:
+			        AddLocalVariableAndHandleCallOnValueTypeLiterals(node, "assembly.MainModule.TypeSystem.Boolean", Boolean.Parse(node.ToString()) ? 1 :0);
+			        break;
+
+                default:
+					throw new ArgumentException($"Literal ( {node}) of type {node.Kind()} not supported yet.");
 			}
+
+            void AddLocalVariableAndHandleCallOnValueTypeLiterals(LiteralExpressionSyntax literalNode, string cecilTypeSystemReference, object literalValue)
+            {
+                AddCilInstruction(ilVar, OpCodes.Ldc_I4, literalValue);
+                var localVarParent = (CSharpSyntaxNode) literalNode.Parent;
+                if (localVarParent.Accept(new UsageVisitor()) == UsageKind.CallTarget)
+                {
+                    var tempLocalName = MethodExtensions.LocalVariableNameFor("tmp_", "tmp_".UniqueId().ToString());
+
+                    AddCecilExpression("var {0} = new VariableDefinition(\"{1}\", {2});", tempLocalName, tempLocalName, cecilTypeSystemReference);
+                    AddCecilExpression("{0}.Body.Variables.Add({1});", Context.CurrentLocalVariable.VarName, tempLocalName);
+
+                    AddCilInstruction(ilVar, OpCodes.Stloc, LocalVariableIndex(tempLocalName));
+                    AddCilInstruction(ilVar, OpCodes.Ldloca_S, LocalVariableIndex(tempLocalName));
+                }
+            }
 		}
 
 
-		/*
+        /*
 		 *            +--> ArgumentList
 		 *            |
 		 *       /---------\
@@ -120,7 +130,7 @@ namespace Cecilifier.Core.AST
 		 * 
 		 * To fix this we visit in the order [exp, args] and move the call operation after visiting the arguments
 		 */
-	    public override void VisitInvocationExpression(InvocationExpressionSyntax node)
+        public override void VisitInvocationExpression(InvocationExpressionSyntax node)
 	    {
 		    Visit(node.Expression);
 			PushCall();
@@ -342,6 +352,9 @@ namespace Cecilifier.Core.AST
 
 				case SpecialType.System_Char:
 					return OpCodes.Ldc_I4;
+
+                case SpecialType.System_Boolean:
+                    return OpCodes.Ldc_I4;
 			}
 
 			throw new ArgumentException(string.Format("Literal type {0} not supported.", info.Type), "node");
