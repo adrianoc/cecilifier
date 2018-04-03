@@ -46,7 +46,7 @@ namespace Cecilifier.Core.Tests.Framework
 		{
 			var generated = Cecilfy(tbc);
 
-			var compiledCecilifierPath = CompilationServices.CompileExe(generated, typeof(TypeDefinition).Assembly, typeof(IQueryable).Assembly, typeof(TypeHelpers).Assembly);
+			var compiledCecilifierPath = CompilationServices.CompileExe(generated, typeof(TypeDefinition).Assembly, typeof(Mono.Cecil.Rocks.ILParser).Assembly, typeof(IQueryable).Assembly, typeof(TypeHelpers).Assembly);
 
 			Directory.CreateDirectory(Path.GetDirectoryName(actualAssemblyPath));
 

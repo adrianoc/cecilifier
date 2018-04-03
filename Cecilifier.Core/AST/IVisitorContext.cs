@@ -35,5 +35,10 @@ namespace Cecilifier.Core.AST
 		bool Contains(string name);
 	    void Remove(string varName);
 		void MoveLineAfter(LinkedListNode<string> instruction, LinkedListNode<string> after);
+
+	    void EnterScope();
+	    void LeaveScope();
+	    void AddLocalVariableMapping(string variableName, string cecilVarDeclName);
+	    string MapLocalVariableNameToCecil(string localVariableName);
 	}
 }

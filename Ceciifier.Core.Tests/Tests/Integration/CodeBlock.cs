@@ -11,13 +11,13 @@ namespace Cecilifier.Core.Tests.Tests.Integration
 			AssertResourceTest(@"CodeBlock\MethodCall\NonVirtualMethodCall");
 		}
 
-		[Test, Ignore("Not Implemented yet")]
+        [Test]
 		public void IfThenElseStatementTest()
 		{
 			AssertResourceTest(@"CodeBlock\Conditional\IfThenElseStatement");
 		}
 
-		[Test, Ignore("Not Implemented yet")]
+		[Test]
 		public void IfStatementTest()
 		{
 			AssertResourceTest(@"CodeBlock\Conditional\IfStatement");

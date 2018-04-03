@@ -179,6 +179,11 @@ namespace Cecilifier.Core.AST
 			context.WriteCecilExpression("{0}\r\n", string.Format(format, args));
 		}
 
+	    protected static void WriteCecilExpression(IVisitorContext context, string value)
+		{
+			context.WriteCecilExpression($"{value}\r\n");
+		}
+
 		protected static bool ExcludeHasNoCILRepresentation(SyntaxToken token)
 		{
 			return token.Kind() != SyntaxKind.PartialKeyword && token.Kind() != SyntaxKind.VolatileKeyword;
@@ -264,23 +269,13 @@ namespace Cecilifier.Core.AST
 
 		protected string LocalVariableIndex(string methodVar, ILocalSymbol localVariable)
 		{
-			return LocalVariableIndex(methodVar, localVariable.Name);
+		    return Context.MapLocalVariableNameToCecil(localVariable.Name);
 		}
 
-		private static string LocalVariableIndex(string methodVar, string name)
+		protected string LocalVariableFromName(string localVariable)
 		{
-			return string.Format("{0}.Body.Variables.Where(v => v.Name == \"{1}\").Single()", methodVar, name);
-		}
-
-		protected string LocalVariableIndex(string localVariable)
-		{
-			return LocalVariableIndex(LocalVariableNameForCurrentNode(), localVariable);
-		}
-
-		protected string LocalVariableIndexWithCast<TCast>(string localVariable)
-		{
-			return "(" + typeof(TCast).Name +")" + LocalVariableIndex(LocalVariableNameForCurrentNode(), localVariable);
-		}
+            return Context.MapLocalVariableNameToCecil(localVariable);
+        }
 
 		protected void ProcessParameter(string ilVar, ExpressionSyntax node, IParameterSymbol paramSymbol)
 		{

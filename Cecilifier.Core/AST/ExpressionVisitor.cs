@@ -89,12 +89,11 @@ namespace Cecilifier.Core.AST
                 if (localVarParent.Accept(new UsageVisitor()) == UsageKind.CallTarget)
                 {
                     var tempLocalName = MethodExtensions.LocalVariableNameFor("tmp_", "tmp_".UniqueId().ToString());
-
-                    AddCecilExpression("var {0} = new VariableDefinition(\"{1}\", {2});", tempLocalName, tempLocalName, cecilTypeSystemReference);
+                    AddCecilExpression("var {0} = new VariableDefinition({1});", tempLocalName, cecilTypeSystemReference);
                     AddCecilExpression("{0}.Body.Variables.Add({1});", Context.CurrentLocalVariable.VarName, tempLocalName);
 
-                    AddCilInstruction(ilVar, OpCodes.Stloc, LocalVariableIndex(tempLocalName));
-                    AddCilInstruction(ilVar, OpCodes.Ldloca_S, LocalVariableIndex(tempLocalName));
+                    AddCilInstruction(ilVar, OpCodes.Stloc, $"{tempLocalName}");
+                    AddCilInstruction(ilVar, OpCodes.Ldloca_S, $"{tempLocalName}");
                 }
             }
 		}
@@ -222,13 +221,12 @@ namespace Cecilifier.Core.AST
 			var localVarParent = (CSharpSyntaxNode) node.Parent;
 			if (localVarParent.Accept(new UsageVisitor()) == UsageKind.CallTarget)
 			{
-				var symbolInfo = this.Context.SemanticModel.GetSymbolInfo(node.Expression);
-				var tempLocalName = MethodExtensions.LocalVariableNameFor("tmp_", new[] { "tmp_".UniqueId().ToString() });
-				AddCecilExpression("var {0} = new VariableDefinition(\"{1}\", assembly.MainModule.TypeSystem.Int32);", tempLocalName, tempLocalName);
+				var tempLocalName = MethodExtensions.LocalVariableNameFor("tmp_", "tmp_".UniqueId().ToString());
+				AddCecilExpression("var {0} = new VariableDefinition(assembly.MainModule.TypeSystem.Int32);", tempLocalName);
 				AddCecilExpression("{0}.Body.Variables.Add({1});", Context.CurrentLocalVariable.VarName, tempLocalName);
 
-				AddCilInstruction(ilVar, OpCodes.Stloc, LocalVariableIndex(tempLocalName));
-				AddCilInstruction(ilVar, OpCodes.Ldloca_S, LocalVariableIndex(tempLocalName));
+				AddCilInstruction(ilVar, OpCodes.Stloc, tempLocalName);
+				AddCilInstruction(ilVar, OpCodes.Ldloca_S, tempLocalName);
 			}
 		}
 
@@ -402,11 +400,11 @@ namespace Cecilifier.Core.AST
 			var localVarParent = (CSharpSyntaxNode) localVar.Parent;
 			if (symbol.Type.IsValueType && localVarParent.Accept(new UsageVisitor()) == UsageKind.CallTarget)
 			{
-				AddCilInstruction(ilVar, OpCodes.Ldloca_S, LocalVariableIndex(localVar.ToString()));
+				AddCilInstruction(ilVar, OpCodes.Ldloca_S, Context.MapLocalVariableNameToCecil(symbol.Name));
 				return;
 			}
 
-			AddCilInstruction(ilVar, OpCodes.Ldloc, LocalVariableIndex(localVar.ToString()));
+			AddCilInstruction(ilVar, OpCodes.Ldloc, Context.MapLocalVariableNameToCecil(symbol.Name));
 		}
 
 		private void ProcessMethodCall(IdentifierNameSyntax node, IMethodSymbol method)
@@ -486,8 +484,9 @@ namespace Cecilifier.Core.AST
 				}
 			};
 			
-			operatorHandlers[SyntaxKind.SlashToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, @"{0}.Append({0}.Create({1}));", ilVar, OpCodes.Div.ConstantName());
-			operatorHandlers[SyntaxKind.GreaterThanToken] = (ctx, ilVar, left, right) =>  WriteCecilExpression(ctx, @"{0}.Append({0}.Create({1}));", ilVar, OpCodes.Cgt.ConstantName());
+			operatorHandlers[SyntaxKind.SlashToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Append({ilVar}.Create({OpCodes.Div.ConstantName()}));");
+		    operatorHandlers[SyntaxKind.GreaterThanToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Append({ilVar}.Create({OpCodes.Cgt.ConstantName()}));");
+			operatorHandlers[SyntaxKind.MinusToken] = (ctx, ilVar, left, right) =>  WriteCecilExpression(ctx, $"{ilVar}.Append({ilVar}.Create({OpCodes.Sub.ConstantName()}));");
 		}
 
     	private bool valueTypeNoArgObjCreation;

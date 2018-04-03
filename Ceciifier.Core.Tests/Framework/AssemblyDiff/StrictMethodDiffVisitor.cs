@@ -69,7 +69,10 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 
 		private string FormatLocalVariables(Collection<VariableDefinition> variables)
 		{
-			return variables.Aggregate("", (acc, curr) => acc + ", " + curr.Name + "(" + curr.VariableType.Name + ")");
+			//return variables.Aggregate("", (acc, curr) => acc + ", " + curr. + "(" + curr.VariableType.Name + ")");
+            //TODO: VariableDefinition has no name????
+
+		    return "?";
 		}
 	}
 }

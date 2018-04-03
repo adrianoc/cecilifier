@@ -20,12 +20,12 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 
 		public string First
 		{
-			get { return first.MainModule.FullyQualifiedName ; }
+			get { return first.MainModule.FileName; }
 		}
 
 		public string Second
 		{
-			get { return second.MainModule.FullyQualifiedName; }
+			get { return second.MainModule.FileName; }
 		}
 
 		public bool Compare(IAssemblyDiffVisitor visitor)
@@ -283,16 +283,16 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 		}
 	}
 
-    internal class InterfaceComparer : IEqualityComparer<TypeReference>
+    internal class InterfaceComparer : IEqualityComparer<InterfaceImplementation>
     {
-        public bool Equals(TypeReference x, TypeReference y)
+        public bool Equals(InterfaceImplementation x, InterfaceImplementation y)
         {
-            return x.Name == y.Name;
+            return x.InterfaceType == y.InterfaceType;
         }
 
-        public int GetHashCode(TypeReference obj)
+        public int GetHashCode(InterfaceImplementation obj)
         {
-            return obj.Name.GetHashCode();
+            return obj.InterfaceType.Name.GetHashCode();
         }
     }
 }

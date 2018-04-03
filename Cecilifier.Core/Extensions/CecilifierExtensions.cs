@@ -44,8 +44,9 @@ namespace Cecilifier.Core.Extensions
 		public static string AsCecilApplication(this string cecilSnipet)
 		{
 			return string.Format(
-					 @"using Mono.Cecil;
+                     @"using Mono.Cecil;
 					   using Mono.Cecil.Cil;
+                       using Mono.Cecil.Rocks;
                        using System; 
 					   using System.Linq;
 					   using BindingFlags = System.Reflection.BindingFlags;

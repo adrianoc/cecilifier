@@ -20,7 +20,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 
 		public bool VisitMissing(TypeDefinition source, ModuleDefinition target)
 		{
-			output.WriteLine(string.Format("[{0}] Type {1} could not be found.", target.FullyQualifiedName, source.FullName));
+			output.WriteLine(string.Format("[{0}] Type {1} could not be found.", target.FileName, source.FullName));
 			return false;
 		}
 

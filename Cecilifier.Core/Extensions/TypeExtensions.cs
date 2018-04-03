@@ -46,12 +46,12 @@ namespace Cecilifier.Core.Extensions
 			if (x == null && y == null) return true;
 			if (x == null || y == null) return false;
 
-			return x.Name == y.Name && x.VariableType.FullName == y.VariableType.FullName;
+			return x.Index == y.Index && x.VariableType.FullName == y.VariableType.FullName;
 		}
 
 		public int GetHashCode(VariableDefinition obj)
 		{
-			return obj.Name.GetHashCode() + 37*obj.VariableType.FullName.GetHashCode();
+            return obj.Index.GetHashCode() + 37 * obj.VariableType.FullName.GetHashCode();
 		}
 
 		private static Lazy<IEqualityComparer<VariableDefinition>> instance = new Lazy<IEqualityComparer<VariableDefinition>>(delegate { return new VariableDefinitionComparer() ; });

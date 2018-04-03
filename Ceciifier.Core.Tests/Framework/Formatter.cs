@@ -7,7 +7,6 @@ namespace Cecilifier.Core.Tests.Framework
 {
 	public static class Formatter
 	{
-
 		public static string FormatInstruction(Instruction instruction)
 		{
 			var writer = new StringWriter();
@@ -28,22 +27,22 @@ namespace Cecilifier.Core.Tests.Framework
 
 			WriteVariables(writer, body);
 
-			foreach (Instruction instruction in body.Instructions)
-			{
-				var sequence_point = instruction.SequencePoint;
-				if (sequence_point != null)
-				{
-					writer.Write('\t');
-					WriteSequencePoint(writer, sequence_point);
-					writer.WriteLine();
-				}
+			foreach (var instruction in body.Instructions)
+		    {
+		        var sequence_point = method.DebugInformation.GetSequencePoint(instruction);
+		        if (sequence_point != null)
+		        {
+		            writer.Write('\t');
+		            WriteSequencePoint(writer, sequence_point);
+		            writer.WriteLine();
+		        }
 
-				writer.Write('\t');
-				WriteInstruction(writer, instruction);
-				writer.WriteLine();
-			}
+		        writer.Write('\t');
+		        WriteInstruction(writer, instruction);
+		        writer.WriteLine();
+		    }
 
-			WriteExceptionHandlers(writer, body);
+		    WriteExceptionHandlers(writer, body);
 		}
 
 		static void WriteVariables(TextWriter writer, MethodBody body)

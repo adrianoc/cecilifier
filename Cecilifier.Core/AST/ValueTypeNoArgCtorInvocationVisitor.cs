@@ -22,7 +22,7 @@ namespace Cecilifier.Core.AST
 			var firstAncestorOrSelf = node.FirstAncestorOrSelf<LocalDeclarationStatementSyntax>();
 			var varName = firstAncestorOrSelf.Declaration.Variables[0].Identifier.ValueText;
 
-			AddCilInstruction(ilVar, OpCodes.Ldloca_S, LocalVariableIndex(varName));
+			AddCilInstruction(ilVar, OpCodes.Ldloca_S, LocalVariableFromName(varName));
 			AddCilInstruction(ilVar, OpCodes.Initobj, ctorInfo.Symbol.ContainingType.ResolverExpression(Context));
 		}
 
@@ -52,13 +52,13 @@ namespace Cecilifier.Core.AST
 		{
 			var resolvedVarType = ResolveType(ctorInfo.Symbol.ContainingType);
 			var tempLocalName = MethodExtensions.LocalVariableNameFor("tmp_", new[] {"tmp_".UniqueId().ToString()});
-			AddCecilExpression("var {0} = new VariableDefinition(\"{1}\", {2});", tempLocalName, tempLocalName, resolvedVarType);
+			AddCecilExpression("var {0} = new VariableDefinition({1});", tempLocalName, resolvedVarType);
 
 			AddCecilExpression("{0}.Body.Variables.Add({1});", Context.CurrentLocalVariable.VarName, tempLocalName);
 
-			AddCilInstruction(ilVar, OpCodes.Ldloca_S, LocalVariableIndex(tempLocalName));
+			AddCilInstruction(ilVar, OpCodes.Ldloca_S, tempLocalName);
 			AddCilInstruction(ilVar, OpCodes.Initobj, ctorInfo.Symbol.ContainingType.ResolverExpression(Context));
-			AddCilInstruction(ilVar, OpCodes.Ldloc, LocalVariableIndex(tempLocalName));
+			AddCilInstruction(ilVar, OpCodes.Ldloc, tempLocalName);
 		}
 	}
 }

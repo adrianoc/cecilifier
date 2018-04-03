@@ -1,6 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Remoting.Messaging;
 using Cecilifier.Core.AST;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -64,7 +64,12 @@ namespace Cecilifier.Core.Misc
 
 		public void WriteCecilExpression(string msg, params object[] args)
 		{
-			output.AddLast(string.Format(msg, args));
+            var expression = string.Format(msg, args);
+		    if (expression.Contains("2.0"))
+		    {
+		        msg = msg + " ";
+		    }
+		    output.AddLast(expression);
 		}
 
 		public void PushLocalVariable(LocalVariable localVariable)
@@ -120,7 +125,35 @@ namespace Cecilifier.Core.Misc
 			output.Remove(instruction);
 		}
 
-		public string Output
+	    public void EnterScope()
+	    {
+	        scopes.Add(new Dictionary<string, string>());
+	    }
+
+	    public void LeaveScope()
+	    {
+	        scopes.RemoveAt(scopes.Count - 1);
+	    }
+
+	    public void AddLocalVariableMapping(string variableName, string cecilVarDeclName)
+	    {
+	        scopes[scopes.Count - 1].Add(variableName, cecilVarDeclName);
+	    }
+
+	    public string MapLocalVariableNameToCecil(string localVariableName)
+	    {
+	        for (int i = scopes.Count - 1; i >= 0; i--)
+	        {
+	            if (scopes[i].TryGetValue(localVariableName, out var found))
+	            {
+	                return found;
+	            }
+	        }
+
+	        return null;
+	    }
+
+	    public string Output
 		{
 			get
 			{
@@ -135,6 +168,7 @@ namespace Cecilifier.Core.Misc
 		private int currentFieldId;
 
 		private Stack<LocalVariable> nodeStack = new Stack<LocalVariable>();
+		private IList<IDictionary<string, string>> scopes = new List<IDictionary<string, string>>();
 		protected IDictionary<BaseTypeDeclarationSyntax, TypeInfo> typeToTypeInfo = new Dictionary<BaseTypeDeclarationSyntax, TypeInfo>();
 		private string @namespace;
 	    private IDictionary<string, string> vars =new Dictionary<string, string>();
