@@ -4,6 +4,7 @@ using Cecilifier.Core.Extensions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Mono.Cecil;
 
 namespace Cecilifier.Core.AST
 {
@@ -95,7 +96,7 @@ namespace Cecilifier.Core.AST
 			
 			foreach (var itfName in ImplementedInterfacesFor(node.BaseList))
 			{
-				AddCecilExpression("{0}.Interfaces.Add({1});", varName, ResolveType(itfName));
+				AddCecilExpression("{0}.Interfaces.Add(new InterfaceImplementation({1}));", varName, ResolveType(itfName));
 			}
 
 			//TODO: Looks like a bug in Mono.Cecil
