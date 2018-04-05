@@ -287,7 +287,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
     {
         public bool Equals(InterfaceImplementation x, InterfaceImplementation y)
         {
-            return x.InterfaceType == y.InterfaceType;
+            return x.InterfaceType.FullName == y.InterfaceType.FullName;
         }
 
         public int GetHashCode(InterfaceImplementation obj)
