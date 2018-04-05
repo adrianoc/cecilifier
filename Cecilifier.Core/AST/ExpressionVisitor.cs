@@ -84,7 +84,7 @@ namespace Cecilifier.Core.AST
 
             void AddLocalVariableAndHandleCallOnValueTypeLiterals(LiteralExpressionSyntax literalNode, string cecilTypeSystemReference, object literalValue)
             {
-                AddCilInstruction(ilVar, OpCodes.Ldc_I4, literalValue);
+                AddCilInstruction(ilVar, LoadOpCodeFor(literalNode), literalValue);
                 var localVarParent = (CSharpSyntaxNode) literalNode.Parent;
                 if (localVarParent.Accept(new UsageVisitor()) == UsageKind.CallTarget)
                 {
