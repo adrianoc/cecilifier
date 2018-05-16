@@ -14,13 +14,13 @@ namespace Cecilifier.Core.Tests.Tests.Integration
         [Test]
 		public void IfThenElseStatementTest()
 		{
-			AssertResourceTest(@"CodeBlock\Conditional\IfThenElseStatement");
-		}
+		    AssertResourceTestWithExplictExpectation(@"CodeBlock\Conditional\IfThenElseStatement", "System.Void IfThenElseStatement::Foo(System.Int32)");
+        }
 
 		[Test]
 		public void IfStatementTest()
 		{
-			AssertResourceTest(@"CodeBlock\Conditional\IfStatement");
+			AssertResourceTestWithExplictExpectation(@"CodeBlock\Conditional\IfStatement", "System.Void IfStatement::Foo(System.Int32)");
 		}
 
 		[Test, Ignore("Not Implemented yet")]

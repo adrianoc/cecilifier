@@ -5,6 +5,7 @@ using Cecilifier.Core.Tests.Framework.AssemblyDiff;
 using Cecilifier.Runtime;
 using Mono.Cecil;
 using NUnit.Framework;
+using NUnit.Framework.Constraints;
 
 namespace Cecilifier.Core.Tests.Framework
 {
@@ -25,24 +26,43 @@ namespace Cecilifier.Core.Tests.Framework
 			AssertResourceTest(actualAssemblyPath, expectedAssemblyPath, tbc);
 		}
 
+	    protected void AssertResourceTestWithExplictExpectation(string resourceName, string methodSignature)
+	    {
+	        using (var tbc = ReadResource(resourceName, "cs", TestKind.Integration))
+	        using (var expectedILStream = ReadResource(resourceName, "cs.il", TestKind.Integration))
+	        {
+	            var expectedIL = ReadToEnd(expectedILStream);
+
+	            var actualAssemblyPath = Path.Combine(Path.GetTempPath(), "CecilifierTests/", resourceName + ".dll");
+
+	            AssertResourceTestWithExplicitExpectedIL(actualAssemblyPath, expectedIL, methodSignature, tbc);
+
+	            Console.WriteLine();
+	            Console.WriteLine("Expected IL: {0}", expectedIL);
+	            Console.WriteLine("Actual assembly path : {0}", actualAssemblyPath);
+	        }
+	    }
+
 		protected void AssertResourceTest(string resourceName, TestKind kind)
 		{
-			var tbc = ReadResource(resourceName, "cs", kind);
+		    using (var tbc = ReadResource(resourceName, "cs", kind))
+		    {
+		        var actualAssemblyPath = Path.Combine(Path.GetTempPath(), "CecilifierTests/", resourceName + ".dll");
 
-			var actualAssemblyPath = Path.Combine(Path.GetTempPath(), "CecilifierTests/", resourceName + ".dll");
+		        var expectedAssemblyPath = CompilationServices.CompileDLL(
+		                                                Path.Combine(Path.GetDirectoryName(actualAssemblyPath), 
+		                                                Path.GetFileNameWithoutExtension(actualAssemblyPath) + "_expected"),
+		                                                ReadToEnd(tbc));
 
-			var expectedAssemblyPath = CompilationServices.CompileDLL(
-												Path.Combine(Path.GetDirectoryName(actualAssemblyPath), Path.GetFileNameWithoutExtension(actualAssemblyPath) + "_expected"),
-												ReadToEnd(tbc));
+		        AssertResourceTest(actualAssemblyPath, expectedAssemblyPath, tbc);
 
-			AssertResourceTest(actualAssemblyPath, expectedAssemblyPath, tbc);
-
-            Console.WriteLine();
-            Console.WriteLine("Expected assembly path : {0}", expectedAssemblyPath);
-            Console.WriteLine("Actual   assembly path : {0}", actualAssemblyPath);
+		        Console.WriteLine();
+		        Console.WriteLine("Expected assembly path : {0}", expectedAssemblyPath);
+		        Console.WriteLine("Actual   assembly path : {0}", actualAssemblyPath);
+		    }
 		}
 
-		private void AssertResourceTest(string actualAssemblyPath, string expectedAssemblyPath, Stream tbc)
+	    private void AssertResourceTest(string actualAssemblyPath, string expectedAssemblyPath, Stream tbc)
 		{
 			var generated = Cecilfy(tbc);
 
@@ -68,8 +88,48 @@ namespace Cecilifier.Core.Tests.Framework
 			}
 		}
 
+	    private void AssertResourceTestWithExplicitExpectedIL(string actualAssemblyPath, string expectedIL, string methodSignature, Stream tbc)
+	    {
+	        var generated = Cecilfy(tbc);
+
+	        var compiledCecilifierPath = CompilationServices.CompileExe(generated, typeof(TypeDefinition).Assembly, typeof(Mono.Cecil.Rocks.ILParser).Assembly, typeof(IQueryable).Assembly, typeof(TypeHelpers).Assembly);
+
+	        Directory.CreateDirectory(Path.GetDirectoryName(actualAssemblyPath));
+
+	        try
+	        {
+	            TestFramework.Execute(compiledCecilifierPath, actualAssemblyPath);
+	        }
+	        catch (Exception ex)
+	        {
+	            Console.WriteLine("Cecil build assembly path: {0}", actualAssemblyPath);
+	            Console.WriteLine("Cecil runner path: {0}", compiledCecilifierPath);
+
+	            Console.WriteLine("Fail to execute generated cecil snipet: {0}\r\n{1}", ex, generated);
+
+	            throw;
+	        }
+
+	        var actualIL = GetILFrom(actualAssemblyPath, methodSignature);
+	        Assert.That(actualIL, Is.EqualTo(expectedIL), $"Actual IL differs from expected.\r\nActual Assembly Path = {actualAssemblyPath}");
+	    }
+
+        private string GetILFrom(string actualAssemblyPath, string methodSignature)
+	    {
+	        using (var assembly = AssemblyDefinition.ReadAssembly(actualAssemblyPath))
+	        {
+                var method = assembly.MainModule.Types.SelectMany(t => t.Methods).SingleOrDefault(m => m.FullName == methodSignature);
+	            if (method == null)
+	            {
+                    Assert.Fail($"Method {methodSignature} could not be found in {actualAssemblyPath}");
+	            }
+
+	            return Formatter.FormatMethodBody(method).Replace("\t", "");
+	        }
+	    }
+
 		private static string ReadToEnd(Stream tbc)
-		{
+		{   
 			tbc.Seek(0, SeekOrigin.Begin);
 			return new StreamReader(tbc).ReadToEnd();
 		}

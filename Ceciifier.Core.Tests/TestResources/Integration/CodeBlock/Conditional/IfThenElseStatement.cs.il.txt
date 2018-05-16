@@ -1,0 +1,19 @@
+﻿.locals ()
+IL_0000: ldarg.1
+IL_0001: ldc.i4.s 42
+IL_0003: cgt
+IL_0005: brfalse.s IL_0012
+IL_0007: ldarg.0
+IL_0008: ldarg.1
+IL_0009: ldc.i4.1
+IL_000a: sub
+IL_000b: call System.Void IfThenElseStatement::Foo(System.Int32)
+IL_0010: br.s IL_001d
+IL_0012: nop
+IL_0013: ldarg.0
+IL_0014: ldarg.1
+IL_0015: ldc.i4.s 42
+IL_0017: sub
+IL_0018: call System.Void IfThenElseStatement::Foo(System.Int32)
+IL_001d: nop
+IL_001e: ret

@@ -267,17 +267,23 @@ namespace Cecilifier.Core.AST
 
             WriteCecilExpression(Context, "//if body");
             ExpressionVisitor.Visit(Context, _ilVar, node.Statement);
-            WriteCecilExpression(Context, $"{_ilVar}.Append(elseStatementProlog);");
 
-            var branchToEndOfIfStatementVarName = LocalVariableNameForId(NextLocalVariableTypeId());
             WriteCecilExpression(Context, $"var elseStatementEnd = {_ilVar}.Create(OpCodes.Nop);");
-            WriteCecilExpression(Context, $"var {branchToEndOfIfStatementVarName} = {_ilVar}.Create(OpCodes.Br, elseStatementEnd);");
-            WriteCecilExpression(Context, $"{_ilVar}.Append({branchToEndOfIfStatementVarName});");
-
             if (node.Else != null)
             {
+                
+                var branchToEndOfIfStatementVarName = LocalVariableNameForId(NextLocalVariableTypeId());
+                WriteCecilExpression(Context, $"var {branchToEndOfIfStatementVarName} = {_ilVar}.Create(OpCodes.Br, elseStatementEnd);");
+                WriteCecilExpression(Context, $"{_ilVar}.Append({branchToEndOfIfStatementVarName});");
+
+                WriteCecilExpression(Context, $"{_ilVar}.Append(elseStatementProlog);");
                 ExpressionVisitor.Visit(Context, _ilVar, node.Else);
             }
+            else
+            {
+                WriteCecilExpression(Context, $"{_ilVar}.Append(elseStatementProlog);");
+            }
+
             WriteCecilExpression(Context, $"{_ilVar}.Append(elseStatementEnd);");
             WriteCecilExpression(Context, $"{Context.CurrentLocalVariable.VarName}.Body.OptimizeMacros();");
         }

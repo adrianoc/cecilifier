@@ -103,6 +103,7 @@
   <ItemGroup>
     <Folder Include="TestResources\Integration\Events\" />
     <Folder Include="TestResources\Integration\Properties\" />
+    <Folder Include="Tests\TestFramework.Tests\" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Cecilifier.Core\Cecilifier.Core.csproj">
@@ -115,6 +116,12 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="TestResources\Integration\CodeBlock\Conditional\IfStatement.cs.il.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="TestResources\Integration\CodeBlock\Conditional\IfThenElseStatement.cs.il.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="TestResources\Integration\Expressions\Box.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
@@ -329,6 +336,9 @@
   <ItemGroup>
     <Analyzer Include="..\packages\Microsoft.CodeAnalysis.Analyzers.1.1.0\analyzers\dotnet\cs\Microsoft.CodeAnalysis.Analyzers.dll" />
     <Analyzer Include="..\packages\Microsoft.CodeAnalysis.Analyzers.1.1.0\analyzers\dotnet\cs\Microsoft.CodeAnalysis.CSharp.Analyzers.dll" />
+  </ItemGroup>
+  <ItemGroup>
+    <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
