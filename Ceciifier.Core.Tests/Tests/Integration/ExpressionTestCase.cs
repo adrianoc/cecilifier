@@ -42,6 +42,18 @@ namespace Cecilifier.Core.Tests.Tests.Integration
 			AssertResourceTest(@"Expressions\Operators\Add");
 		}
 
+	    [Test]
+		public void TestEquals()
+		{
+			AssertResourceTest(@"Expressions\Operators\Equals");
+		}
+
+	    [Test]
+		public void TestLessThan()
+		{
+			AssertResourceTest(@"Expressions\Operators\LessThan");
+		}
+
 		[Test]
 		public void TestTernaryOperator()
 		{

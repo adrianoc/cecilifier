@@ -23,6 +23,12 @@ namespace Cecilifier.Core.Tests.Tests.Integration
 			AssertResourceTestWithExplictExpectation(@"CodeBlock\Conditional\IfStatement", "System.Void IfStatement::Foo(System.Int32)");
 		}
 
+		[Test]
+		public void NestedIfStatementTest()
+		{
+			AssertResourceTestWithExplictExpectation(@"CodeBlock\Conditional\NestedIfStatement", "System.Void NestedIfStatement::Foo(System.Int32)");
+		}
+
 		[Test, Ignore("Not Implemented yet")]
 		public void SwitchStatementTest()
 		{

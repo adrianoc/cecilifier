@@ -116,6 +116,12 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="TestResources\Integration\CodeBlock\Conditional\NestedIfStatement.cs.il.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="TestResources\Integration\CodeBlock\Conditional\NestedIfStatement.cs.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="TestResources\Integration\CodeBlock\Conditional\IfStatement.cs.il.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -129,6 +135,12 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="TestResources\Integration\Expressions\NewCustom.cs.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="TestResources\Integration\Expressions\Operators\LessThan.cs.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="TestResources\Integration\Expressions\Operators\Equals.cs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="TestResources\Integration\Expressions\Operators\Ternary.cs.txt">

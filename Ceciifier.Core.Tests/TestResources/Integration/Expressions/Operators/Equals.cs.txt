@@ -1,0 +1,7 @@
+﻿class Equals
+{
+	private static bool M(int a)
+	{
+		return a == 42;
+	}
+}

@@ -486,6 +486,8 @@ namespace Cecilifier.Core.AST
 			
 			operatorHandlers[SyntaxKind.SlashToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Append({ilVar}.Create({OpCodes.Div.ConstantName()}));");
 		    operatorHandlers[SyntaxKind.GreaterThanToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Append({ilVar}.Create({OpCodes.Cgt.ConstantName()}));");
+		    operatorHandlers[SyntaxKind.EqualsEqualsToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Append({ilVar}.Create({OpCodes.Ceq.ConstantName()}));");
+		    operatorHandlers[SyntaxKind.LessThanToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Append({ilVar}.Create({OpCodes.Clt.ConstantName()}));");
 			operatorHandlers[SyntaxKind.MinusToken] = (ctx, ilVar, left, right) =>  WriteCecilExpression(ctx, $"{ilVar}.Append({ilVar}.Create({OpCodes.Sub.ConstantName()}));");
 		}
 

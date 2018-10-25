@@ -1,0 +1,15 @@
+﻿class NestedIfStatement
+{
+	public void Foo(int i)
+	{
+		if (i > 10)
+		{
+			if (i == 20)
+				Foo(i-1);
+		}
+		else
+		{
+			Foo (i + 1);
+		}
+	}
+}

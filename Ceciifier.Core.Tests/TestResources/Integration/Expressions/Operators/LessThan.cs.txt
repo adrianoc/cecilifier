@@ -1,0 +1,7 @@
+﻿class LessThan
+{
+	private static bool M(int a)
+	{
+		return a < 42;
+	}
+}
