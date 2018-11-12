@@ -8,109 +8,109 @@ namespace Cecilifier.Core.Tests.Tests.Integration
 		[Test]
 		public void TestExplicityDefaultCtor()
 		{
-			AssertResourceTest(@"Methods\ExplicityDefaultCtor");
+			AssertResourceTest(@"Methods/ExplicityDefaultCtor");
 		}
 		
 		[Test]
 		public void TestMultipleParameters()
 		{
-			AssertResourceTest(@"Methods\MultipleParameters");
+			AssertResourceTest(@"Methods/MultipleParameters");
 		}
 
 		[Test]
 		public void TestNoParameters()
 		{
-			AssertResourceTest(@"Methods\NoParameters");
+			AssertResourceTest(@"Methods/NoParameters");
 		}
 
 		[Test]
 		public void TestSingleSimpleParameter()
 		{
-			AssertResourceTest(@"Methods\SingleSimpleParameter");
+			AssertResourceTest(@"Methods/SingleSimpleParameter");
 		}
 
 		[Test]
 		public void TestVariableNumberOfParameters()
 		{
-			AssertResourceTest(@"Methods\VariableNumberOfParameters");
+			AssertResourceTest(@"Methods/VariableNumberOfParameters");
 		}
 		
 		[Test, Ignore("Not Implemented yet")]
 		public void TestVirtualMethod()
 		{
-			AssertResourceTest(@"Methods\VirtualMethod");
+			AssertResourceTest(@"Methods/VirtualMethod");
 		}
 
 		[Test]
 		public void TestAbstractMethod()
 		{
-			AssertResourceTest(@"Methods\AbstractMethod");
+			AssertResourceTest(@"Methods/AbstractMethod");
 		}
 
 		[Test]
 		public void TestReturnValue()
 		{
-			AssertResourceTest(@"Methods\ReturnValue");
+			AssertResourceTest(@"Methods/ReturnValue");
 		}
 
 		[Test, Ignore("Not Implemented yet")]
 		public void TestInOutRefParameters()
 		{
-			AssertResourceTest(@"Methods\InOutRefParameters");
+			AssertResourceTest(@"Methods/InOutRefParameters");
 		}
 
 		[Test]
 		public void TestSelfReferencingCtor()
 		{
-			AssertResourceTest(@"Methods\SelfRefCtor");
+			AssertResourceTest(@"Methods/SelfRefCtor");
 		}
 
 		[Test]
 		public void TestDefaultCtorFromBaseClass()
 		{
-			AssertResourceTest(@"Methods\DefaultCtorFromBaseClass");
+			AssertResourceTest(@"Methods/DefaultCtorFromBaseClass");
 		}
 
 		[Test]
 		public void TestInterfaceMethodVirtualInInplementation()
 		{
-			AssertResourceTest(@"Methods\InterfaceMethodVirtualInInplementation");
+			AssertResourceTest(@"Methods/InterfaceMethodVirtualInInplementation");
 		}
 
 		[Test]
 		public void TestCtorWithParameters()
 		{
-			AssertResourceTest(@"Methods\CtorWithParameters");
+			AssertResourceTest(@"Methods/CtorWithParameters");
 		}
 
 		[Test]
 		public void TestMutuallyRecursive()
 		{
-			AssertResourceTest(@"Methods\MutuallyRecursive");
+			AssertResourceTest(@"Methods/MutuallyRecursive");
 		}
 
 		[Test]
 		public void TestMethodCallOnValueType()
 		{
-			AssertResourceTest(@"Methods\MethodCallOnValueType");
+			AssertResourceTest(@"Methods/MethodCallOnValueType");
 		}
 		
 		[Test]
 		public void TestExternalMethodReference()
 		{
-			AssertResourceTest(@"Methods\ExternalMethodReference");
+			AssertResourceTest(@"Methods/ExternalMethodReference");
 		}
 
 		[Test]
 		public void TestTypeWithNoArgCtorAndInnerClass()
 		{
-			AssertResourceTest(@"Methods\TypeWithNoArgCtorAndInnerClass");
+			AssertResourceTest(@"Methods/TypeWithNoArgCtorAndInnerClass");
 		}
 
 		[Test]
 		public void TestParameterModifiers()
 		{
-			AssertResourceTest(@"Methods\ParameterModifiers");
+			AssertResourceTest(@"Methods/ParameterModifiers");
 		}
 	}
 }

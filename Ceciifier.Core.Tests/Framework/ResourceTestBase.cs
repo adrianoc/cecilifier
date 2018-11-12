@@ -1,11 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using Cecilifier.Core.Tests.Framework.AssemblyDiff;
 using Cecilifier.Runtime;
+using Microsoft.CodeAnalysis;
 using Mono.Cecil;
 using NUnit.Framework;
-using NUnit.Framework.Constraints;
 
 namespace Cecilifier.Core.Tests.Framework
 {
@@ -47,74 +49,132 @@ namespace Cecilifier.Core.Tests.Framework
 		{
 		    using (var tbc = ReadResource(resourceName, "cs", kind))
 		    {
-		        var actualAssemblyPath = Path.Combine(Path.GetTempPath(), "CecilifierTests/", resourceName + ".dll");
+			    var cecilifierTestsFolder = Path.Combine(Path.GetTempPath(), "CecilifierTests");
+			    
+		        var actualAssemblyPath = Path.Combine(cecilifierTestsFolder, resourceName + ".dll");
+		        var resourceCompiledAssemblyPath = CompilationServices.CompileDLL(
+		                                                Path.Combine(Path.GetDirectoryName(actualAssemblyPath), Path.GetFileNameWithoutExtension(actualAssemblyPath) + "_expected"),
+		                                                ReadToEnd(tbc),
+														GetTrustedAssembliesPath().ToArray());
 
-		        var expectedAssemblyPath = CompilationServices.CompileDLL(
-		                                                Path.Combine(Path.GetDirectoryName(actualAssemblyPath), 
-		                                                Path.GetFileNameWithoutExtension(actualAssemblyPath) + "_expected"),
-		                                                ReadToEnd(tbc));
+			    Console.WriteLine();
+			    Console.WriteLine("Compiled from res        : {0}", resourceCompiledAssemblyPath);
+			    Console.WriteLine("Generated from Cecilifier: {0}", actualAssemblyPath);
 
-		        AssertResourceTest(actualAssemblyPath, expectedAssemblyPath, tbc);
-
-		        Console.WriteLine();
-		        Console.WriteLine("Expected assembly path : {0}", expectedAssemblyPath);
-		        Console.WriteLine("Actual   assembly path : {0}", actualAssemblyPath);
+			    AssertResourceTest(actualAssemblyPath, resourceCompiledAssemblyPath, tbc);
 		    }
 		}
 
 	    private void AssertResourceTest(string actualAssemblyPath, string expectedAssemblyPath, Stream tbc)
+	    {
+		    CecilifyAndExecute(tbc, actualAssemblyPath);
+		    CompareAssemblies(expectedAssemblyPath, actualAssemblyPath);
+	    }
+
+		private void AssertResourceTestWithExplicitExpectedIL(string actualAssemblyPath, string expectedIL, string methodSignature, Stream tbc)
 		{
-			var generated = Cecilfy(tbc);
+			CecilifyAndExecute(tbc, actualAssemblyPath);
+			/*var generated = Cecilfy(tbc);
 
-			var compiledCecilifierPath = CompilationServices.CompileExe(generated, typeof(TypeDefinition).Assembly, typeof(Mono.Cecil.Rocks.ILParser).Assembly, typeof(IQueryable).Assembly, typeof(TypeHelpers).Assembly);
+			var refsToCopy = new[]
+			{
+				typeof(TypeDefinition).Assembly.Location, 
+				typeof(Mono.Cecil.Rocks.ILParser).Assembly.Location, 
+				typeof(IQueryable).Assembly.Location, 
+				typeof(TypeHelpers).Assembly.Location
+			};
 
+			var references = GetTrustedAssembliesPath();
+			
+				
+			var compiledCecilifierPath = CompilationServices.CompileExe(generated, references.ToArray());
+			
 			Directory.CreateDirectory(Path.GetDirectoryName(actualAssemblyPath));
 
 			try
 			{
-				TestFramework.Execute(compiledCecilifierPath, actualAssemblyPath);
-
-				CompareAssemblies(expectedAssemblyPath, actualAssemblyPath);
+			    TestFramework.Execute(compiledCecilifierPath, actualAssemblyPath);
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine("Cecil build assembly path: {0}", actualAssemblyPath);
-				Console.WriteLine("Cecil runner path: {0}", compiledCecilifierPath);
-				Console.WriteLine("Compiled from res: {0}", expectedAssemblyPath);
+			    Console.WriteLine("Cecil build assembly path: {0}", actualAssemblyPath);
+			    Console.WriteLine("Cecil runner path: {0}", compiledCecilifierPath);
 
+			    Console.WriteLine("Fail to execute generated cecil snipet: {0}\r\n{1}", ex, generated);
+
+			    throw;
+			}*/
+
+			var actualIL = GetILFrom(actualAssemblyPath, methodSignature);
+			Assert.That(actualIL, Is.EqualTo(expectedIL), $"Actual IL differs from expected.\r\nActual Assembly Path = {actualAssemblyPath}");
+		}
+		
+		private void CecilifyAndExecute(Stream tbc, string outputAssembyPath)
+		{
+			var generated = Cecilfy(tbc);
+
+			var references = GetTrustedAssembliesPath();
+
+			var refsToCopy = new List<string>
+			{
+				typeof(Mono.Cecil.Rocks.ILParser).Assembly.Location,
+				typeof(TypeHelpers).Assembly.Location
+			};
+			
+			
+			/*
+			 * Workaroud for issue with Mono.Cecil.
+			 * but it looks like NUnit3TestAdapter (3.10) ships with a Mono.Cecil that is incompatible (or has a bug) in which
+			 * it fails to resolve assemblies (and throws an exception) in the generated executable (looks like that version of Mono.Cecil is targeting netcore 1.0)
+			 *
+			 * If we use use the one targeting netstandard1.3 the same executable works.
+			 *
+			 * - If we update the version of NUnit3Adapter we can revisit this (a new version most likely will work and we can remove the workaround
+			 *   and copy from typeof(TypeReference).Assembly.Location instead.
+			 * - If we update Mono.Cecil version we'll need to update this reference. 
+			 */
+
+			var nugetCecilPath =Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".nuget/packages/mono.cecil/0.10.0/lib/netstandard1.3/Mono.Cecil.dll"); 
+			refsToCopy.Add(nugetCecilPath);
+			
+			foreach (var refPath in refsToCopy)
+			{
+				references.Add(refPath);
+			}
+
+			var cecilifierRunnerPath = CompilationServices.CompileExe(generated, references.ToArray());
+			
+			Directory.CreateDirectory(Path.GetDirectoryName(outputAssembyPath));
+			try
+			{
+				CopyFilesNextToGeneratedExecutable(cecilifierRunnerPath, refsToCopy);
+				
+				TestFramework.Execute("dotnet", cecilifierRunnerPath + " " + outputAssembyPath);
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine("Cecil runner path: {0}", cecilifierRunnerPath);
 				Console.WriteLine("Fail to execute generated cecil snipet: {0}\r\n{1}", ex, generated);
 
 				throw;
 			}
 		}
 
-	    private void AssertResourceTestWithExplicitExpectedIL(string actualAssemblyPath, string expectedIL, string methodSignature, Stream tbc)
-	    {
-	        var generated = Cecilfy(tbc);
+		private void CopyFilesNextToGeneratedExecutable(string cecilifierRunnerPath, List<string> refsToCopy)
+		{
+			var targetPath = Path.GetDirectoryName(cecilifierRunnerPath);
+			foreach (var fileToCopy in refsToCopy)
+			{
+				File.Copy(fileToCopy, Path.Combine(targetPath, Path.GetFileName(fileToCopy)));
+			}
+			
+			var sourceRuntimeConfigJson = Path.ChangeExtension(GetType().Assembly.Location, ".runtimeconfig.json"); 
+			var targetRuntimeConfigJson = Path.ChangeExtension(cecilifierRunnerPath, ".runtimeconfig.json");
+			
+			File.Copy(sourceRuntimeConfigJson, targetRuntimeConfigJson);
+		}
 
-	        var compiledCecilifierPath = CompilationServices.CompileExe(generated, typeof(TypeDefinition).Assembly, typeof(Mono.Cecil.Rocks.ILParser).Assembly, typeof(IQueryable).Assembly, typeof(TypeHelpers).Assembly);
-
-	        Directory.CreateDirectory(Path.GetDirectoryName(actualAssemblyPath));
-
-	        try
-	        {
-	            TestFramework.Execute(compiledCecilifierPath, actualAssemblyPath);
-	        }
-	        catch (Exception ex)
-	        {
-	            Console.WriteLine("Cecil build assembly path: {0}", actualAssemblyPath);
-	            Console.WriteLine("Cecil runner path: {0}", compiledCecilifierPath);
-
-	            Console.WriteLine("Fail to execute generated cecil snipet: {0}\r\n{1}", ex, generated);
-
-	            throw;
-	        }
-
-	        var actualIL = GetILFrom(actualAssemblyPath, methodSignature);
-	        Assert.That(actualIL, Is.EqualTo(expectedIL), $"Actual IL differs from expected.\r\nActual Assembly Path = {actualAssemblyPath}");
-	    }
-
-        private string GetILFrom(string actualAssemblyPath, string methodSignature)
+		private string GetILFrom(string actualAssemblyPath, string methodSignature)
 	    {
 	        using (var assembly = AssemblyDefinition.ReadAssembly(actualAssemblyPath))
 	        {
@@ -154,10 +214,15 @@ namespace Cecilifier.Core.Tests.Framework
 			return new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
 		}
 
+		private IList<string> GetTrustedAssembliesPath()
+		{
+			return ((string) AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")).Split(Path.PathSeparator).ToList();
+		}
+		
 		private string Cecilfy(Stream stream)
 		{
 			stream.Position = 0;
-			return Cecilifier.Process(stream).ReadToEnd();
+			return Cecilifier.Process(stream, GetTrustedAssembliesPath()).ReadToEnd();
 		}
 	}
 }

@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.Remoting.Messaging;
 using Cecilifier.Core.AST;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -64,11 +63,7 @@ namespace Cecilifier.Core.Misc
 
 		public void WriteCecilExpression(string msg, params object[] args)
 		{
-            var expression = string.Format(msg, args);
-		    if (expression.Contains("2.0"))
-		    {
-		        msg = msg + " ";
-		    }
+			var expression = string.Format(msg, args);
 		    output.AddLast(expression);
 		}
 

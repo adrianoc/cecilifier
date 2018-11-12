@@ -5,32 +5,28 @@ using System.Linq;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.Emit;
+using Microsoft.CodeAnalysis.Text;
 using Microsoft.CSharp;
 
 namespace Cecilifier.Core.Tests.Framework
 {
 	class CompilationServices
 	{
-		public static string CompileDLL(string source, params Assembly[] references)
-		{
-			return InternalCompile(source, false, references);
-		}
-
-		public static string CompileDLL(string targetPath, string source, params Assembly[] references)
+		public static string CompileDLL(string targetPath, string source, params string[] references)
 		{
 			return InternalCompile(targetPath, source, false, references);
 		}
 		
-		public static string CompileExe(string source, params Assembly[] references)
+		public static string CompileExe(string source, params string[] references)
 		{
 			return InternalCompile(source, true, references);
 		}
 
-		private static string InternalCompile(string targetPath, string source, bool exe, params Assembly[] references)
+		private static string InternalCompile(string targetPath, string source, bool exe, params string[] references)
 		{
-			var provider = new CSharpCodeProvider();
-			var parameters = new CompilerParameters();
-
 			var targetFolder = Path.GetDirectoryName(targetPath);
 			if (!Directory.Exists(targetFolder))
 			{
@@ -43,23 +39,33 @@ namespace Cecilifier.Core.Tests.Framework
 		    if (File.Exists(outputFilePath))
 		        return outputFilePath;
 
-            parameters.ReferencedAssemblies.AddRange(CopyReferencedAssembliesTo(targetFolder, references));
-            parameters.OutputAssembly = outputFilePath;
-			parameters.GenerateExecutable = exe;
-			parameters.IncludeDebugInformation = true;
-			parameters.CompilerOptions = "/o+ /unsafe";
+			var syntaxTree = SyntaxFactory.ParseSyntaxTree(SourceText.From(source), new CSharpParseOptions());
+			
+			var compilationOptions = new CSharpCompilationOptions(
+				exe ? OutputKind.ConsoleApplication : OutputKind.DynamicallyLinkedLibrary,
+				optimizationLevel: OptimizationLevel.Release);
+			
+			var compilation=  CSharpCompilation.Create(
+				Path.GetFileNameWithoutExtension(outputFilePath), 
+				new[] { syntaxTree }, 
+				references.Select(r => MetadataReference.CreateFromFile(r)).ToArray(),
+				compilationOptions);
 
-			var results = provider.CompileAssemblyFromSource(parameters, source);
-
-			if (results.Errors.Count > 0)
+			var diagnostics = compilation.GetDiagnostics();
+			if (diagnostics.Any(d => d.Severity == DiagnosticSeverity.Error))
 			{
-				throw new Exception(results.Errors.OfType<CompilerError>().Aggregate("", (acc, curr) => acc + "\r\n" + curr.ToString()) + "\r\n\r\n" + source);
+				throw new Exception(diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).Aggregate("", (acc, curr) => acc + "\r\n" + curr.ToString()) + "\r\n\r\n" + source);
 			}
 
-			return results.PathToAssembly;
+			using (var outputAssembly = File.Create(outputFilePath))
+			{
+				compilation.Emit(outputAssembly);
+			}
+
+			return outputFilePath;
 		}
 
-		private static string InternalCompile(string source, bool exe, params Assembly[] references)
+		private static string InternalCompile(string source, bool exe, params string[] references)
 		{
 			var tempFolder = Path.Combine(Path.GetTempPath(), "CecilifierTests_" + source.GetHashCode());
 			if (!Directory.Exists(tempFolder))

@@ -12,7 +12,7 @@ namespace Cecilifier.Core.Tests.Tests.Integration
 		[TestCase("ValueTypeReturnAsTargetOfCallInsideContructor")]
 		public void ValueTypeAsTargetOfCall(string testResourceBaseName)
 		{
-			AssertResourceTest($@"ValueTypes\AsTargetOfCall\{testResourceBaseName}");
+			AssertResourceTest($@"ValueTypes/AsTargetOfCall/{testResourceBaseName}");
 		}
 	}
 }

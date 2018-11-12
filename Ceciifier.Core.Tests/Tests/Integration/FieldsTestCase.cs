@@ -8,73 +8,73 @@ namespace Cecilifier.Core.Tests.Tests.Integration
 		[Test]
 		public void TestSingleField()
 		{
-			AssertResourceTest(@"Fields\SingleField");
+			AssertResourceTest(@"Fields/SingleField");
 		}
 
 		[Test]
 		public void TestInternalFields()
 		{
-			AssertResourceTest(@"Fields\InternalFields");
+			AssertResourceTest(@"Fields/InternalFields");
 		}
 
 		[Test]
 		public void TestSingleFieldMultipleModifiers()
 		{
-			AssertResourceTest(@"Fields\SingleFieldMultipleModifiers");
+			AssertResourceTest(@"Fields/SingleFieldMultipleModifiers");
 		}
 
 		[Test]
 		public void TestSimpleFieldsInSingleDeclaration()
 		{
-			AssertResourceTest(@"Fields\SimpleFieldsInSingleDeclaration");
+			AssertResourceTest(@"Fields/SimpleFieldsInSingleDeclaration");
 		}
 
 		[Test]
 		public void TestVolatileField()
 		{
-			AssertResourceTest(@"Fields\VolatileField");
+			AssertResourceTest(@"Fields/VolatileField");
 		}
 
 		[Test]
 		public void TestSingleRefField()
 		{
-			AssertResourceTest(@"Fields\SingleRefField");
+			AssertResourceTest(@"Fields/SingleRefField");
 		}
 
 		[Test, Ignore("Not Implemented yet")]
         public void TestInitializedFieldNoCtor()
 		{
-            AssertResourceTest(@"Fields\InitializedFieldNoCtor");
+            AssertResourceTest(@"Fields/InitializedFieldNoCtor");
 		}
 		
         [Test, Ignore("Not Implemented yet")]
 		public void TestInitializedFieldSingleCtor()
 		{
-            AssertResourceTest(@"Fields\InitializedFieldSingleCtor");
+            AssertResourceTest(@"Fields/InitializedFieldSingleCtor");
 		}
 		
         [Test, Ignore("Not Implemented yet")]
 		public void TestInitializedFieldMultipleCtor()
 		{
-			AssertResourceTest(@"Fields\InitializedFieldMultipleCtor");
+			AssertResourceTest(@"Fields/InitializedFieldMultipleCtor");
 		}
         
         [Test, Ignore("Not Implemented yet")]
         public void TestInitializedFieldWithBaseCtor()
 		{
-            AssertResourceTest(@"Fields\InitializedFieldWithBaseCtor");
+            AssertResourceTest(@"Fields/InitializedFieldWithBaseCtor");
 		}
 
 		[Test]
 		public void TestSimpleArray()
 		{
-			AssertResourceTest(@"Fields\SimpleArray");
+			AssertResourceTest(@"Fields/SimpleArray");
 		}
 
 		[Test, Ignore("Not Implemented yet")]
 		public void TestJaggedArray()
 		{
-			AssertResourceTest(@"Fields\JaggedArray");
+			AssertResourceTest(@"Fields/JaggedArray");
 		}
 	}
 }

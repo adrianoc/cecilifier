@@ -1,87 +1,87 @@
-﻿using Cecilifier.Core.Tests.Framework;
+﻿using System;
+using Cecilifier.Core.Tests.Framework;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Tests.Integration
 {
-	[TestFixture]
 	public class ExpressionTestCase : IntegrationResourceBasedTest
 	{
 		[Test]
 		public void TestParameterAssignment()
 		{
-			AssertResourceTest(@"Expressions\ParameterAssignment");
+			AssertResourceTest(@"Expressions/ParameterAssignment");
 		}
 
 		[Test]
 		public void TestLocalVariableAssignment()
 		{
-			AssertResourceTest(@"Expressions\LocalVariableAssignment");
+			AssertResourceTest(@"Expressions/LocalVariableAssignment");
 		}
 
 		[Test]
 		public void TestMultipleLocalVariableAssignment()
 		{
-			AssertResourceTest(@"Expressions\MultipleLocalVariableAssignment");
+			AssertResourceTest(@"Expressions/MultipleLocalVariableAssignment");
 		}
 		
 		[Test]
 		public void TestLocalVariableInitialization()
 		{
-			AssertResourceTest(@"Expressions\LocalVariableInitialization");
+			AssertResourceTest(@"Expressions/LocalVariableInitialization");
 		}
 
 		[Test]
 		public void TestBox()
 		{
-			AssertResourceTest(@"Expressions\Box");
+			AssertResourceTest(@"Expressions/Box");
 		}
 		
 		[Test]
 		public void TestAdd()
 		{
-			AssertResourceTest(@"Expressions\Operators\Add");
+			AssertResourceTest(@"Expressions/Operators/Add");
 		}
 
 	    [Test]
 		public void TestEquals()
 		{
-			AssertResourceTest(@"Expressions\Operators\Equals");
+			AssertResourceTest(@"Expressions/Operators/Equals");
 		}
 
 	    [Test]
 		public void TestLessThan()
 		{
-			AssertResourceTest(@"Expressions\Operators\LessThan");
+			AssertResourceTest(@"Expressions/Operators/LessThan");
 		}
 
 		[Test]
 		public void TestTernaryOperator()
 		{
-			AssertResourceTestBinary(@"Expressions\Operators\Ternary", TestKind.Integration);
+			AssertResourceTestBinary(@"Expressions/Operators/Ternary", TestKind.Integration);
 		}
 
 		[Test]
 		public void TestTypeInferenceInDeclarations()
 		{
-			AssertResourceTest(@"Expressions\TypeInferenceInDeclarations");
+			AssertResourceTest(@"Expressions/TypeInferenceInDeclarations");
 		}
 
 		[Test, Ignore("REQUIRES TRANSFORMATION")]
 		public void TestValueTypeAddress()
 		{
-			AssertResourceTest(@"Expressions\ValueTypeAddress");
+			AssertResourceTest(@"Expressions/ValueTypeAddress");
 		}
 
 		[Test, Ignore("newing primitives are not supported.")]
 		public void TestNewPrimitive()
 		{
-			AssertResourceTest(@"Expressions\NewPrimitive");
+			AssertResourceTest(@"Expressions/NewPrimitive");
 		}
 
 		[Test]
 		public void TestNewCustom()
 		{
-			AssertResourceTest(@"Expressions\NewCustom");
+			AssertResourceTest(@"Expressions/NewCustom");
 		}
 	}
 }

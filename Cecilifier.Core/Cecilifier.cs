@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
@@ -11,25 +13,20 @@ namespace Cecilifier.Core
 {
 	public sealed class Cecilifier
 	{
-		public static StringReader Process(Stream content)
+		public static StringReader Process(Stream content, IList<string> references)
 		{
 			var cecilifier = new Cecilifier();
-			return cecilifier.Run(content);
+			return cecilifier.Run(content, references);
 		}
 
-		private StringReader Run(Stream content)
+		private StringReader Run(Stream content, IList<string> references)
 		{
 			var syntaxTree = CSharpSyntaxTree.ParseText(new StreamReader(content).ReadToEnd());
 
-			//TODO: Get the list of referenced assemblies as an argument
 			var comp = CSharpCompilation.Create(
 							"Teste",
 							new[] { syntaxTree },
-							new[]
-							{
-								MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
-								MetadataReference.CreateFromFile(typeof(File).Assembly.Location),
-							},
+							references.Select(refPath => MetadataReference.CreateFromFile(refPath)),
 							new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
 			foreach (var diag in comp.GetDiagnostics())

@@ -8,7 +8,7 @@ namespace Cecilifier.Core.Tests.Tests.Integration
         [Test]
         public void TestForwardReferences()
         {
-            AssertResourceTest(@"Members\ForwardReferences");
+            AssertResourceTest(@"Members/ForwardReferences");
         }
     }
 }
