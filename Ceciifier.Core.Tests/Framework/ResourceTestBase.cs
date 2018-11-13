@@ -94,7 +94,7 @@ namespace Cecilifier.Core.Tests.Framework
 			
 			/*
 			 * Workaroud for issue with Mono.Cecil.
-			 * but it looks like NUnit3TestAdapter (3.10) ships with a Mono.Cecil that is incompatible (or has a bug) in which
+			 * It looks like NUnit3TestAdapter (3.10) ships with a Mono.Cecil that is incompatible (or has a bug) in which
 			 * it fails to resolve assemblies (and throws an exception) in the generated executable (looks like that version of Mono.Cecil is targeting netcore 1.0)
 			 *
 			 * If we use use the one targeting netstandard1.3 the same executable works.
