@@ -17,9 +17,7 @@ namespace Cecilifier.Core.AST
 
 	    public override void VisitBlock(BlockSyntax node)
 	    {
-	        Context.EnterScope();
-	        base.VisitBlock(node);
-	        Context.LeaveScope();
+		    StatementVisitor.Visit(Context, ilVar, node);
 	    }
 
         public override void VisitMethodDeclaration(MethodDeclarationSyntax node)
@@ -53,12 +51,6 @@ namespace Cecilifier.Core.AST
 			var methodVar = LocalVariableNameForCurrentNode();
 			AddCecilExpression("{0}.Parameters.Add({1});", methodVar, paramVar);
 			base.VisitParameter(node);
-		}
-
-		public override void VisitReturnStatement(ReturnStatementSyntax node)
-		{
-			ExpressionVisitor.Visit(Context, ilVar, node.Expression);
-			AddCilInstruction(ilVar, OpCodes.Ret);
 		}
 
 		public override void VisitPropertyDeclaration(PropertyDeclarationSyntax node)
@@ -266,7 +258,7 @@ namespace Cecilifier.Core.AST
             WriteCecilExpression(Context, $"{_ilVar}.Append({_ilVar}.Create(OpCodes.Brfalse, elseStatementProlog));");
 
             WriteCecilExpression(Context, "//if body");
-            ExpressionVisitor.Visit(Context, _ilVar, node.Statement);
+            StatementVisitor.Visit(Context, _ilVar, node.Statement);
 
             WriteCecilExpression(Context, $"var elseStatementEnd = {_ilVar}.Create(OpCodes.Nop);");
             if (node.Else != null)
@@ -288,6 +280,44 @@ namespace Cecilifier.Core.AST
             WriteCecilExpression(Context, $"{Context.CurrentLocalVariable.VarName}.Body.OptimizeMacros();");
         }
     }
+	
+	internal class StatementVisitor : SyntaxWalkerBase
+	{
+		internal StatementVisitor(IVisitorContext ctx) : base(ctx)
+		{
+		}
+		
+		internal static void Visit(IVisitorContext context, string ilVar, StatementSyntax node)
+		{
+			_ilVar = ilVar;
+			node.Accept(new StatementVisitor(context));
+		}
+
+		public override void VisitBlock(BlockSyntax node)
+		{
+			Context.EnterScope();
+			base.VisitBlock(node);
+			Context.LeaveScope();
+		}
+		
+		public override void VisitReturnStatement(ReturnStatementSyntax node)
+		{
+			ExpressionVisitor.Visit(Context, _ilVar, node.Expression);
+			AddCilInstruction(_ilVar, OpCodes.Ret);
+		}
+
+		public override void VisitExpressionStatement(ExpressionStatementSyntax node)
+		{
+			ExpressionVisitor.Visit(Context, _ilVar, node);
+		}
+
+		public override void VisitIfStatement(IfStatementSyntax node)
+		{
+			IfStatementVisitor.Visit(Context, _ilVar, node);
+		}
+
+		private static string _ilVar;
+	}
 
     internal class MethodParametersContext : IDisposable, IMethodParameterContext
 	{

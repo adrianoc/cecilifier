@@ -74,39 +74,9 @@ namespace Cecilifier.Core.Tests.Framework
 		private void AssertResourceTestWithExplicitExpectedIL(string actualAssemblyPath, string expectedIL, string methodSignature, Stream tbc)
 		{
 			CecilifyAndExecute(tbc, actualAssemblyPath);
-			/*var generated = Cecilfy(tbc);
-
-			var refsToCopy = new[]
-			{
-				typeof(TypeDefinition).Assembly.Location, 
-				typeof(Mono.Cecil.Rocks.ILParser).Assembly.Location, 
-				typeof(IQueryable).Assembly.Location, 
-				typeof(TypeHelpers).Assembly.Location
-			};
-
-			var references = GetTrustedAssembliesPath();
-			
-				
-			var compiledCecilifierPath = CompilationServices.CompileExe(generated, references.ToArray());
-			
-			Directory.CreateDirectory(Path.GetDirectoryName(actualAssemblyPath));
-
-			try
-			{
-			    TestFramework.Execute(compiledCecilifierPath, actualAssemblyPath);
-			}
-			catch (Exception ex)
-			{
-			    Console.WriteLine("Cecil build assembly path: {0}", actualAssemblyPath);
-			    Console.WriteLine("Cecil runner path: {0}", compiledCecilifierPath);
-
-			    Console.WriteLine("Fail to execute generated cecil snipet: {0}\r\n{1}", ex, generated);
-
-			    throw;
-			}*/
 
 			var actualIL = GetILFrom(actualAssemblyPath, methodSignature);
-			Assert.That(actualIL, Is.EqualTo(expectedIL), $"Actual IL differs from expected.\r\nActual Assembly Path = {actualAssemblyPath}");
+			Assert.That(actualIL, Is.EqualTo(expectedIL), $"Actual IL differs from expected.\r\nActual Assembly Path = {actualAssemblyPath}\r\nActual IL:{actualIL}");
 		}
 		
 		private void CecilifyAndExecute(Stream tbc, string outputAssembyPath)
