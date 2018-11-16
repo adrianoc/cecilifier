@@ -1,0 +1,27 @@
+@page
+@model CecilifierApplication
+@using Microsoft.AspNetCore.Mvc.RazorPages
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@functions
+{
+}
+
+@{
+    ViewData["Title"] = "Cecilifier";
+}
+
+<div class="row">
+    <div class="col-md-6">
+        <form method="post">
+            <div class="form-group">
+                <label asp-for="CSharpCode" class="control-label">Enter your C# code</label>
+                <input asp-for="CSharpCode" class="form-control"></input>
+            </div>
+            <div class="form-group">
+                <label asp-for="CecilifiedCode" class="control-label">Cecilified Code</label>
+                <input asp-for="CecilifiedCode" class="form-control"></input>
+            </div>
+            <button type="submit" value="Submit">Subeu</button>
+        </form>
+    </div>
+</div>
