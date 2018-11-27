@@ -17,9 +17,7 @@ namespace Cecilifier.Core.AST
 
 	    public override void VisitBlock(BlockSyntax node)
 	    {
-	        Context.EnterScope();
-	        base.VisitBlock(node);
-	        Context.LeaveScope();
+		    StatementVisitor.Visit(Context, ilVar, node);
 	    }
 
         public override void VisitMethodDeclaration(MethodDeclarationSyntax node)
@@ -55,60 +53,23 @@ namespace Cecilifier.Core.AST
 			base.VisitParameter(node);
 		}
 
-		public override void VisitReturnStatement(ReturnStatementSyntax node)
-		{
-			ExpressionVisitor.Visit(Context, ilVar, node.Expression);
-			AddCilInstruction(ilVar, OpCodes.Ret);
-		}
-
 		public override void VisitPropertyDeclaration(PropertyDeclarationSyntax node)
 		{
 			AddCecilExpression("[PropertyDeclaration] {0}", node);
 			base.VisitPropertyDeclaration(node);
 		}
 
-		public override void VisitExpressionStatement(ExpressionStatementSyntax node)
-		{
-			ExpressionVisitor.Visit(Context, ilVar, node);
-		}
+//		public override void VisitExpressionStatement(ExpressionStatementSyntax node)
+//		{
+//			ExpressionVisitor.Visit(Context, ilVar, node);
+//		}
+//
+//	    public override void VisitIfStatement(IfStatementSyntax node)
+//	    {
+//	        IfStatementVisitor.Visit(Context, ilVar, node);
+//	    }
 
-	    public override void VisitIfStatement(IfStatementSyntax node)
-	    {
-	        IfStatementVisitor.Visit(Context, ilVar, node);
-	    }
-
-	    public override void VisitLocalDeclarationStatement(LocalDeclarationStatementSyntax node)
-		{
-			var methodVar = LocalVariableNameForCurrentNode();
-			foreach(var localVar in node.Declaration.Variables)
-			{
-				AddLocalVariable(node.Declaration.Type, localVar, methodVar);
-				ProcessVariableInitialization(localVar);
-			}
-		}
-
-		private void AddLocalVariable(TypeSyntax type, VariableDeclaratorSyntax localVar, string methodVar)
-		{
-			
-			string resolvedVarType = type.IsVar 
-										? ResolveExpressionType(localVar.Initializer.Value)
-										: ResolveType(type);
-
-		    var cecilVarDeclName = TempLocalVar("cecilVar_");
-		    AddCecilExpression("var {0} = new VariableDefinition({1});", cecilVarDeclName, resolvedVarType);
-		    AddCecilExpression("{0}.Body.Variables.Add({1});", methodVar, cecilVarDeclName);
-
-		    Context.AddLocalVariableMapping(localVar.Identifier.ToString(), cecilVarDeclName);
-		}
-
-		private void ProcessVariableInitialization(VariableDeclaratorSyntax localVar)
-		{
-			if (ExpressionVisitor.Visit(Context, ilVar, localVar.Initializer)) return;
-
-			AddCilInstruction(ilVar, OpCodes.Stloc, LocalVariableFromName(localVar.Identifier.ValueText));
-		}
-
-		protected string ProcessMethodDeclaration<T>(T node, string simpleName, string fqName, string returnType, Action<string> runWithCurrent) where T : BaseMethodDeclarationSyntax
+	    protected string ProcessMethodDeclaration<T>(T node, string simpleName, string fqName, string returnType, Action<string> runWithCurrent) where T : BaseMethodDeclarationSyntax
 		{
 			var declaringTypeName = DeclaringTypeNameFor(node);
 
@@ -170,13 +131,13 @@ namespace Cecilifier.Core.AST
 
 		private string MethodModifiersToCecil(BaseMethodDeclarationSyntax methodDeclaration)
 		{
-			var modifiers = MapExplicityModifiers(methodDeclaration);
+			var modifiers = MapExplicitModifiers(methodDeclaration);
 
 			var defaultAccessibility = "Private";
 			if (modifiers == string.Empty)
 			{
 				var methodSymbol = DeclaredSymbolFor(methodDeclaration);
-				if (IsExplicityMethodImplementation(methodSymbol))
+				if (IsExplicitMethodImplementation(methodSymbol))
 				{
 					modifiers = "MethodAttributes.Virtual | MethodAttributes.NewSlot | MethodAttributes.Final";
 				}
@@ -205,7 +166,7 @@ namespace Cecilifier.Core.AST
 			return cecilModifiersStr;
 		}
 
-		private static string MapExplicityModifiers(BaseMethodDeclarationSyntax methodDeclaration)
+		private static string MapExplicitModifiers(BaseMethodDeclarationSyntax methodDeclaration)
 		{
 			foreach (var mod in methodDeclaration.Modifiers)
 			{
@@ -221,7 +182,7 @@ namespace Cecilifier.Core.AST
 			return string.Empty;
 		}
 
-		private static bool IsExplicityMethodImplementation(IMethodSymbol methodSymbol)
+		private static bool IsExplicitMethodImplementation(IMethodSymbol methodSymbol)
 		{
 			return methodSymbol.ExplicitInterfaceImplementations.Count() > 0;
 		}
@@ -262,32 +223,103 @@ namespace Cecilifier.Core.AST
             WriteCecilExpression(Context, $"// if ({node.Condition})");
             ExpressionVisitor.Visit(Context, _ilVar, node.Condition);
 
-            WriteCecilExpression(Context, $"var elseStatementProlog = {_ilVar}.Create(OpCodes.Nop);");
-            WriteCecilExpression(Context, $"{_ilVar}.Append({_ilVar}.Create(OpCodes.Brfalse, elseStatementProlog));");
+	        var elsePrologVarName = TempLocalVar("esp");
+            WriteCecilExpression(Context, $"var {elsePrologVarName} = {_ilVar}.Create(OpCodes.Nop);");
+            WriteCecilExpression(Context, $"{_ilVar}.Append({_ilVar}.Create(OpCodes.Brfalse, {elsePrologVarName}));");
 
             WriteCecilExpression(Context, "//if body");
-            ExpressionVisitor.Visit(Context, _ilVar, node.Statement);
+            StatementVisitor.Visit(Context, _ilVar, node.Statement);
 
-            WriteCecilExpression(Context, $"var elseStatementEnd = {_ilVar}.Create(OpCodes.Nop);");
+	        var elseEndTargetVarName = TempLocalVar("ese");
+            WriteCecilExpression(Context, $"var {elseEndTargetVarName} = {_ilVar}.Create(OpCodes.Nop);");
             if (node.Else != null)
             {
                 
                 var branchToEndOfIfStatementVarName = LocalVariableNameForId(NextLocalVariableTypeId());
-                WriteCecilExpression(Context, $"var {branchToEndOfIfStatementVarName} = {_ilVar}.Create(OpCodes.Br, elseStatementEnd);");
+                WriteCecilExpression(Context, $"var {branchToEndOfIfStatementVarName} = {_ilVar}.Create(OpCodes.Br, {elseEndTargetVarName});");
                 WriteCecilExpression(Context, $"{_ilVar}.Append({branchToEndOfIfStatementVarName});");
 
-                WriteCecilExpression(Context, $"{_ilVar}.Append(elseStatementProlog);");
+                WriteCecilExpression(Context, $"{_ilVar}.Append({elsePrologVarName});");
                 ExpressionVisitor.Visit(Context, _ilVar, node.Else);
             }
             else
             {
-                WriteCecilExpression(Context, $"{_ilVar}.Append(elseStatementProlog);");
+                WriteCecilExpression(Context, $"{_ilVar}.Append({elsePrologVarName});");
             }
 
-            WriteCecilExpression(Context, $"{_ilVar}.Append(elseStatementEnd);");
+            WriteCecilExpression(Context, $"{_ilVar}.Append({elseEndTargetVarName});");
             WriteCecilExpression(Context, $"{Context.CurrentLocalVariable.VarName}.Body.OptimizeMacros();");
         }
     }
+	
+	internal class StatementVisitor : SyntaxWalkerBase
+	{
+		internal StatementVisitor(IVisitorContext ctx) : base(ctx)
+		{
+		}
+		
+		internal static void Visit(IVisitorContext context, string ilVar, StatementSyntax node)
+		{
+			_ilVar = ilVar;
+			node.Accept(new StatementVisitor(context));
+		}
+
+		public override void VisitBlock(BlockSyntax node)
+		{
+			Context.EnterScope();
+			base.VisitBlock(node);
+			Context.LeaveScope();
+		}
+		
+		public override void VisitReturnStatement(ReturnStatementSyntax node)
+		{
+			ExpressionVisitor.Visit(Context, _ilVar, node.Expression);
+			AddCilInstruction(_ilVar, OpCodes.Ret);
+		}
+
+		public override void VisitExpressionStatement(ExpressionStatementSyntax node)
+		{
+			ExpressionVisitor.Visit(Context, _ilVar, node);
+		}
+
+		public override void VisitIfStatement(IfStatementSyntax node)
+		{
+			IfStatementVisitor.Visit(Context, _ilVar, node);
+		}
+
+		public override void VisitLocalDeclarationStatement(LocalDeclarationStatementSyntax node)
+		{
+			var methodVar = LocalVariableNameForCurrentNode();
+			foreach(var localVar in node.Declaration.Variables)
+			{
+				AddLocalVariable(node.Declaration.Type, localVar, methodVar);
+				ProcessVariableInitialization(localVar);
+			}
+		}
+
+		private void AddLocalVariable(TypeSyntax type, VariableDeclaratorSyntax localVar, string methodVar)
+		{
+			
+			string resolvedVarType = type.IsVar 
+				? ResolveExpressionType(localVar.Initializer.Value)
+				: ResolveType(type);
+
+			var cecilVarDeclName = TempLocalVar("cecilVar_");
+			AddCecilExpression("var {0} = new VariableDefinition({1});", cecilVarDeclName, resolvedVarType);
+			AddCecilExpression("{0}.Body.Variables.Add({1});", methodVar, cecilVarDeclName);
+
+			Context.AddLocalVariableMapping(localVar.Identifier.ToString(), cecilVarDeclName);
+		}
+
+		private void ProcessVariableInitialization(VariableDeclaratorSyntax localVar)
+		{
+			if (ExpressionVisitor.Visit(Context, _ilVar, localVar.Initializer)) return;
+
+			AddCilInstruction(_ilVar, OpCodes.Stloc, LocalVariableFromName(localVar.Identifier.ValueText));
+		}
+
+		private static string _ilVar;
+	}
 
     internal class MethodParametersContext : IDisposable, IMethodParameterContext
 	{
@@ -321,11 +353,5 @@ namespace Cecilifier.Core.AST
 
 		private IDictionary<string, string> paramNameToLocalVarBackingNameMapping = new Dictionary<string, string>();
 		private IVisitorContext parentContext;
-	}
-
-	internal interface IMethodParameterContext
-	{
-		string Register(string paramName);
-		string BackingVariableNameFor(string name);
 	}
 }

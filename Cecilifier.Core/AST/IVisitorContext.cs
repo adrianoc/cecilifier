@@ -6,6 +6,12 @@ using TypeInfo = Microsoft.CodeAnalysis.TypeInfo;
 
 namespace Cecilifier.Core.AST
 {
+	internal interface IMethodParameterContext
+	{
+		string Register(string paramName);
+		string BackingVariableNameFor(string name);
+	}
+
 	interface IVisitorContext
 	{
 		string Output { get; }
@@ -16,6 +22,7 @@ namespace Cecilifier.Core.AST
 		IMethodParameterContext Parameters { get; set; }
 		LocalVariable CurrentLocalVariable { get; }
 		LinkedListNode<string> CurrentLine { get; }
+		
 		IMethodSymbol GetDeclaredSymbol(BaseMethodDeclarationSyntax methodDeclaration);
 		ITypeSymbol GetDeclaredSymbol(TypeDeclarationSyntax classDeclaration);
 		TypeInfo GetTypeInfo(TypeSyntax node);
