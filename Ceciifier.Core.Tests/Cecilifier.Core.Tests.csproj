@@ -19,4 +19,25 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <Compile Remove="TestResources\Integration\Expressions\Operators\Add2.cs" />
+    <Content Include="TestResources\Integration\Expressions\Operators\Add2.cs.il.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="TestResources\Integration\Expressions\Operators\Add2.cs.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <None Remove="TestResources\Integration\Expressions\Box.cs.il.txt" />
+    <Content Include="TestResources\Integration\Expressions\Box.cs.il.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <None Remove="TestResources\Integration\Expressions\LocalVariableAssignment.cs.il.txt" />
+    <Content Include="TestResources\Integration\Expressions\LocalVariableAssignment.cs.il.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <None Remove="TestResources\Integration\Expressions\MultipleLocalVariableAssignment.cs.il.txt" />
+    <Content Include="TestResources\Integration\Expressions\MultipleLocalVariableAssignment.cs.il.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 </Project>

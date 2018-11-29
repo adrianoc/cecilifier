@@ -1,0 +1,10 @@
+public class AddOperations2
+{
+    private static void IntegerString(string a, int n)
+    {
+        string s;
+        s = a + 10;
+        s = "constant" + n; 
+        System.Console.WriteLine(s);
+    }       
+}

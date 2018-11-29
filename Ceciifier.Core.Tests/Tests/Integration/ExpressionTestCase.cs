@@ -15,13 +15,13 @@ namespace Cecilifier.Core.Tests.Tests.Integration
 		[Test]
 		public void TestLocalVariableAssignment()
 		{
-			AssertResourceTest(@"Expressions/LocalVariableAssignment");
+			AssertResourceTestWithExplictExpectation(@"Expressions/LocalVariableAssignment", "System.Void LocalVariableAssignment::Method(System.Int32)");
 		}
 
 		[Test]
 		public void TestMultipleLocalVariableAssignment()
 		{
-			AssertResourceTest(@"Expressions/MultipleLocalVariableAssignment");
+			AssertResourceTestWithExplictExpectation(@"Expressions/MultipleLocalVariableAssignment", "System.Void MultipleLocalVariableAssignment::Method(System.Int32,System.String)");
 		}
 		
 		[Test]
@@ -33,16 +33,22 @@ namespace Cecilifier.Core.Tests.Tests.Integration
 		[Test]
 		public void TestBox()
 		{
-			AssertResourceTest(@"Expressions/Box");
+			AssertResourceTestWithExplictExpectation(@"Expressions/Box", "System.Void Box::Method()");
 		}
 		
 		[Test]
 		public void TestAdd()
 		{
-			AssertResourceTest(@"Expressions/Operators/Add");
+			AssertResourceTestWithExplictExpectation(@"Expressions/Operators/Add", "System.Void AddOperations::Integers(System.Int32)");
 		}
 
-	    [Test]
+		[Test]
+		public void TestAdd2()
+		{
+			AssertResourceTestWithExplictExpectation(@"Expressions/Operators/Add2", "System.Void AddOperations2::IntegerString(System.String,System.Int32)");
+		}
+
+		[Test]
 		public void TestEquals()
 		{
 			AssertResourceTest(@"Expressions/Operators/Equals");
