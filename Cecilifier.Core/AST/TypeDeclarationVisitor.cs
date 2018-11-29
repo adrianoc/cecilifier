@@ -105,6 +105,12 @@ namespace Cecilifier.Core.AST
 				AddCecilExpression("assembly.MainModule.Types.Add({0});", varName);
 			}
 
+			if (node.Kind() == SyntaxKind.StructDeclaration && node.Members.Count == 0)
+			{
+				AddCecilExpression($"{varName}.ClassSize = 1;");	
+				AddCecilExpression($"{varName}.PackingSize = 0;");	
+			}
+
 			SetDeclaringType(node, varName);
 			RegisterTypeLocalVariable(node, varName);
 
@@ -132,11 +138,6 @@ namespace Cecilifier.Core.AST
 			foreach (var member in NonTypeMembersOf(node))
 			{
 				member.Accept(this);
-			}
-
-			if (!defaultCtorFound)
-			{
-				new ConstructorDeclarationVisitor(context).DefaultCtorInjector(localVarName, node);
 			}
 		}
 
