@@ -37,8 +37,9 @@
 
 	private static MyStruct NewStructAssigned()
 	{
-		MyStruct ms = new MyStruct();
+		MyStruct ms;
 		ms = new MyStruct();
+		
 		return ms;		
 	}
 
