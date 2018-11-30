@@ -69,7 +69,7 @@ namespace Cecilifier.Core.Tests.Tests.Integration
 		[Test]
 		public void TestTypeInferenceInDeclarations()
 		{
-			AssertResourceTest(@"Expressions/TypeInferenceInDeclarations");
+			AssertResourceTestWithExplictExpectation(@"Expressions/TypeInferenceInDeclarations", "System.Void TypeInferenceInDeclarations::Foo()");
 		}
 
 		[Test, Ignore("REQUIRES TRANSFORMATION")]
