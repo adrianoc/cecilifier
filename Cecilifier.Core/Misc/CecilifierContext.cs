@@ -61,10 +61,9 @@ namespace Cecilifier.Core.Misc
 			return semanticModel.Compilation.GetSpecialType(specialType);
 		}
 
-		public void WriteCecilExpression(string msg, params object[] args)
+		public void WriteCecilExpression(string expression )
 		{
-			var expression = string.Format(msg, args);
-		    output.AddLast(expression);
+		    output.AddLast("\t\t" + expression);
 		}
 
 		public void PushLocalVariable(LocalVariable localVariable)
@@ -87,14 +86,14 @@ namespace Cecilifier.Core.Misc
 			return ++currentTypeId;
 		}
 
-		public void RegisterTypeLocalVariable(TypeDeclarationSyntax node, string varName)
+		public void RegisterTypeLocalVariable(string typeName, string varName)
 		{
-			typeToTypeInfo[node] = new TypeInfo(varName);
+			typeToTypeInfo[typeName] = new TypeInfo(varName);
 		}
 
 		public string ResolveTypeLocalVariable(string typeName)
 		{
-			var typeDeclaration = typeToTypeInfo.Keys.OfType<TypeDeclarationSyntax>().Where(td => td.Identifier.ValueText == typeName).SingleOrDefault();
+			var typeDeclaration = typeToTypeInfo.Keys.SingleOrDefault(candidate => candidate == typeName);
 			return typeDeclaration != null ? typeToTypeInfo[typeDeclaration].LocalVariable : null;
 		}
 
@@ -156,16 +155,25 @@ namespace Cecilifier.Core.Misc
 			}
 		}
 
+		public TypeScope BeginType(string typeName)
+		{
+			typeDefinitions.Push(typeName);
+			return new TypeScope(typeDefinitions);
+		}
+
+		public string CurrentType => typeDefinitions.TryPeek(out var typeVar) ? typeVar : null;
+
 		private readonly SemanticModel semanticModel;
 		private readonly LinkedList<string> output = new LinkedList<string>();
 		
 		private int currentTypeId;
 		private int currentFieldId;
 
+		private Stack<string> typeDefinitions = new Stack<string>();
 		private Stack<LocalVariable> nodeStack = new Stack<LocalVariable>();
 		private IList<IDictionary<string, string>> scopes = new List<IDictionary<string, string>>();
-		protected IDictionary<BaseTypeDeclarationSyntax, TypeInfo> typeToTypeInfo = new Dictionary<BaseTypeDeclarationSyntax, TypeInfo>();
+		private Dictionary<string, TypeInfo> typeToTypeInfo = new Dictionary<string, TypeInfo>();
 		private string @namespace;
-	    private IDictionary<string, string> vars =new Dictionary<string, string>();
+	    private Dictionary<string, string> vars =new Dictionary<string, string>();
 	}
 }

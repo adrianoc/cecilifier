@@ -35,7 +35,7 @@ namespace Cecilifier.Core.Tests.Tests.Integration
 			AssertResourceTest(@"Methods/VariableNumberOfParameters");
 		}
 		
-		[Test, Ignore("Not Implemented yet")]
+		[Test]
 		public void TestVirtualMethod()
 		{
 			AssertResourceTest(@"Methods/VirtualMethod");

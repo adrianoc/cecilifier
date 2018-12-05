@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.Extensions;
+using Cecilifier.Core.Misc;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -17,19 +18,28 @@ namespace Cecilifier.Core.AST
 		public override void VisitInterfaceDeclaration(InterfaceDeclarationSyntax node)
 		{
 			HandleInterfaceDeclaration(node);
-			base.VisitInterfaceDeclaration(node);
+			using (Context.BeginType(node.Identifier.ValueText))
+			{
+				base.VisitInterfaceDeclaration(node);
+			}
 		}
 
 		public override void VisitClassDeclaration(ClassDeclarationSyntax node)
 		{
 			HandleClassDeclaration(node, ProcessBase(node));
-			base.VisitClassDeclaration(node);
+			using (Context.BeginType(node.Identifier.ValueText))
+			{
+				base.VisitClassDeclaration(node);
+			}
 		}
 
 		public override void VisitStructDeclaration(StructDeclarationSyntax node)
 		{
 			HandleTypeDeclaration(node, ProcessBase(node));
-			base.VisitStructDeclaration(node);
+			using (Context.BeginType(node.Identifier.ValueText))
+			{
+				base.VisitStructDeclaration(node);
+			}
 		}
 
 		public override void VisitFieldDeclaration(FieldDeclarationSyntax node)
@@ -47,14 +57,6 @@ namespace Cecilifier.Core.AST
 			new MethodDeclarationVisitor(Context).Visit(node);
 		}
 		
-		private void SetDeclaringType(TypeDeclarationSyntax classDeclaration, string childLocalVar)
-		{
-			if (IsNestedTypeDeclaration(classDeclaration))
-			{
-				AddCecilExpression("{0}.NestedTypes.Add({1});", ResolveTypeLocalVariable(classDeclaration.Parent.ResolveDeclaringType()), childLocalVar);
-			}
-		}
-
 		private string ProcessBase(TypeDeclarationSyntax classDeclaration)
 		{
 			var classSymbol = DeclaredSymbolFor(classDeclaration);
@@ -91,28 +93,8 @@ namespace Cecilifier.Core.AST
 		private void HandleTypeDeclaration(TypeDeclarationSyntax node, string baseType)
 		{
 			var varName = LocalVariableNameForId(NextLocalVariableTypeId());
-
-			AddCecilExpression("TypeDefinition {0} = new TypeDefinition(\"{1}\", \"{2}\", {3}{4});", varName, Context.Namespace, node.Identifier.Value, TypeModifiersToCecil(node), !string.IsNullOrWhiteSpace(baseType) ? ", " + baseType : "");
-			
-			foreach (var itfName in ImplementedInterfacesFor(node.BaseList))
-			{
-				AddCecilExpression("{0}.Interfaces.Add(new InterfaceImplementation({1}));", varName, ResolveType(itfName));
-			}
-
-			//TODO: Looks like a bug in Mono.Cecil
-			if (!IsNestedTypeDeclaration(node))
-			{
-				AddCecilExpression("assembly.MainModule.Types.Add({0});", varName);
-			}
-
-			if (node.Kind() == SyntaxKind.StructDeclaration && node.Members.Count == 0)
-			{
-				AddCecilExpression($"{varName}.ClassSize = 1;");	
-				AddCecilExpression($"{varName}.PackingSize = 0;");	
-			}
-
-			SetDeclaringType(node, varName);
-			RegisterTypeLocalVariable(node, varName);
+			bool isStructWithNoFields = node.Kind() == SyntaxKind.StructDeclaration && node.Members.Count == 0;
+			AddCecilExpressions(CecilDefinitionsFactory.Type(Context, varName, node.Identifier.ValueText, TypeModifiersToCecil(node), baseType, isStructWithNoFields, ImplementedInterfacesFor(node.BaseList).Select(i => ResolveType(i))));
 
 			EnsureCurrentTypeHasADefaultCtor(node, varName);
 		}

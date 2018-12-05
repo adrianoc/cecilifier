@@ -1,0 +1,14 @@
+﻿public delegate void CustomDel(int i);
+
+class DelegateTest_Parameters
+{
+	public void Foo(CustomDel d)
+	{
+	    d(12);
+	}
+	
+	public void Bar(System.Action a)
+	{
+	    a();
+	}
+}

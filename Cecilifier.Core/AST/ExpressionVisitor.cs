@@ -315,7 +315,7 @@ namespace Cecilifier.Core.AST
 
 	    public override void VisitExpressionStatement(ExpressionStatementSyntax node)
         {
-			Context.WriteCecilExpression("\r\n// {0}\r\n", node);
+			Context.WriteCecilExpression($"\r\n// {node}\r\n");
 			base.Visit(node.Expression);
 
 			var info = Context.GetTypeInfo(node.Expression);

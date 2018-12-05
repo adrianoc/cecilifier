@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using Cecilifier.Core.Extensions;
+using Cecilifier.Core.Misc;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -47,7 +48,6 @@ namespace Cecilifier.Core.AST
 
         public override void VisitConstructorInitializer(ConstructorInitializerSyntax node)
         {
-            ctorAdded = true;
             new ConstructorInitializerVisitor(Context, ilVar).Visit(node);
         }
 
@@ -58,16 +58,18 @@ namespace Cecilifier.Core.AST
 
 		internal void DefaultCtorInjector(string localVar, BaseTypeDeclarationSyntax declaringClass)
 		{
-			var ctorLocalVar = MethodExtensions.LocalVariableNameFor(declaringClass.Identifier.ValueText, new[] {"ctor", ""});
+			
+			var ctorMethodDefinitionExp = CecilDefinitionsFactory.Constructor(out var ctorLocalVar, declaringClass.Identifier.ValueText, DefaultCtorAccessibilityFor(declaringClass));
+			AddCecilExpression(ctorMethodDefinitionExp);
+			AddCecilExpression($"{localVar}.Methods.Add({ctorLocalVar});");
+			
+			var ctorBodyIL = TempLocalVar("il");
+			
+			AddCecilExpression($@"var {ctorBodyIL} = {ctorLocalVar}.Body.GetILProcessor();");
 
-			AddCecilExpression(@"var {0} = new MethodDefinition("".ctor"", {1} | {2} | MethodAttributes.HideBySig, assembly.MainModule.TypeSystem.Void);", ctorLocalVar, CtorFlags, DefaultCtorAccessibilityFor(declaringClass));
-			AddCecilExpression(@"{0}.Methods.Add({1});", localVar, ctorLocalVar);
-			var ilVar = TempLocalVar("il");
-			AddCecilExpression(@"var {0} = {1}.Body.GetILProcessor();", ilVar, ctorLocalVar);
-
-			AddCilInstruction(ilVar, OpCodes.Ldarg_0);
-			AddCilInstruction(ilVar, OpCodes.Call, string.Format("assembly.MainModule.Import(TypeHelpers.DefaultCtorFor({0}.BaseType.Resolve()))", localVar));
-			AddCilInstruction(ilVar, OpCodes.Ret);
+			AddCilInstruction(ctorBodyIL, OpCodes.Ldarg_0);
+			AddCilInstruction(ctorBodyIL, OpCodes.Call, string.Format("assembly.MainModule.Import(TypeHelpers.DefaultCtorFor({0}.BaseType.Resolve()))", localVar));
+			AddCilInstruction(ctorBodyIL, OpCodes.Ret);
 
 			Context[ctorLocalVar] = "";
 		}
@@ -79,8 +81,6 @@ namespace Cecilifier.Core.AST
 								: "MethodAttributes.Public";
 		}
 
-
-		private bool ctorAdded;
-		private const string CtorFlags = "MethodAttributes.RTSpecialName | MethodAttributes.SpecialName";
+		public const string CtorFlags = "MethodAttributes.RTSpecialName | MethodAttributes.SpecialName";
 	}
 }

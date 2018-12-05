@@ -24,6 +24,14 @@ namespace Cecilifier.Runtime
 			                               paramTypes.Select(typeName => Type.GetType(typeName)).ToArray(), 
 										   null);
 		}
+		
+		public static MethodInfo ResolveMethod(string assemblyName, string declaringTypeName, string methodName)
+		{
+			var containingAssembly = Assembly.Load(new AssemblyName(assemblyName));
+			var declaringType = containingAssembly.GetType(declaringTypeName);
+
+			return declaringType.GetMethod(methodName);
+		}
 
 		public static Type ResolveType(string assemblyName, string typeName)
 		{
