@@ -64,6 +64,10 @@ namespace Cecilifier.Core.AST
         {
 			switch(node.Kind())
 			{
+				case SyntaxKind.NullLiteralExpression:
+					AddCilInstruction(ilVar, OpCodes.Ldnull);
+					break;
+				
 				case SyntaxKind.StringLiteralExpression:
 					AddCilInstruction(ilVar, OpCodes.Ldstr, node.ToFullString());
 					break;
@@ -405,6 +409,7 @@ namespace Cecilifier.Core.AST
 			}
 
 			AddCilInstruction(ilVar, OpCodes.Ldloc, Context.MapLocalVariableNameToCecil(symbol.Name));
+			HandlePotentialDelegateInvocationOn(localVar, symbol.Type, ilVar);
 		}
 
 		private void ProcessMethodCall(IdentifierNameSyntax node, IMethodSymbol method)

@@ -312,7 +312,7 @@ namespace Cecilifier.Core.AST
 			}
 		}
 
-		private void HandlePotentialDelegateInvocationOn(IdentifierNameSyntax node, ITypeSymbol typeSymbol, string ilVar)
+		protected void HandlePotentialDelegateInvocationOn(IdentifierNameSyntax node, ITypeSymbol typeSymbol, string ilVar)
 		{
 			var invocation = node.Parent as InvocationExpressionSyntax;
 			if (invocation == null || invocation.Expression != node)

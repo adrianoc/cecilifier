@@ -6,6 +6,7 @@ namespace Cecilifier.Core.Tests.Tests.Integration
 	public class MiscTestCase : IntegrationResourceBasedTest
 	{
 		[TestCase("Parameters")]
+		[TestCase("LocalVariables")]
 		public void TestDelegateInvocation(string storageType)
 		{
 			AssertResourceTest($@"Misc/DelegateInvocation_{storageType}");
