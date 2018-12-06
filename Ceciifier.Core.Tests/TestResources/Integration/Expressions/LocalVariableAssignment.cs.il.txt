@@ -1,6 +1,0 @@
-﻿.locals (System.Int32 V_0)
-IL_0000: ldarg.0
-IL_0001: stloc V_0
-IL_0005: ldloc V_0
-IL_0009: call System.Void LocalVariableAssignment::Method(System.Int32)
-IL_000e: ret

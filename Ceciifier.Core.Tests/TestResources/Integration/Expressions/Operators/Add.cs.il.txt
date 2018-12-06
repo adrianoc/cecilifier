@@ -1,8 +1,0 @@
-﻿.locals (System.Int32 V_0)
-IL_0000: ldc.i4 10
-IL_0005: ldarg.0
-IL_0006: add
-IL_0007: stloc V_0
-IL_000b: ldloc V_0
-IL_000f: call System.Void System.Console::WriteLine(System.Int32)
-IL_0014: ret

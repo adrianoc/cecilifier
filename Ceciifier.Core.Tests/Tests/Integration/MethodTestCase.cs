@@ -50,7 +50,7 @@ namespace Cecilifier.Core.Tests.Tests.Integration
 		[Test]
 		public void TestReturnValue()
 		{
-			AssertResourceTestWithExplictExpectation(@"Methods/ReturnValue", "System.Int32 ReturnValue::Foo()");
+			AssertResourceTest(@"Methods/ReturnValue");
 		}
 
 		[Test, Ignore("Not Implemented yet")]
