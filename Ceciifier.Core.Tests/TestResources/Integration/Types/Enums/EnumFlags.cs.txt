@@ -1,4 +1,4 @@
-﻿[Flags]
+﻿[System.Flags]
 public enum EnumFlags
 {
     First   = 0x01,

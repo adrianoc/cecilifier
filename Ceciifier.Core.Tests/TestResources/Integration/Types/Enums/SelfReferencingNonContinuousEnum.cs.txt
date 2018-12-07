@@ -1,0 +1,8 @@
+﻿public enum SelfReferencingNonContinuousEnum
+{
+    First,
+    Second = 20,
+    Third,
+    Fourth = Second - 3,
+    Fifth
+}

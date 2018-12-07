@@ -3,5 +3,6 @@
     First,
     Second,
     Third = Second + 1,
-    Fourth = First + 3
+    Fourth = First + 3,
+    Fifth
 }
