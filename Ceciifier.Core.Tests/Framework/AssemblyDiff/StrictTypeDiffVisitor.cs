@@ -30,6 +30,12 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 			return false;
 		}
 
+		public bool VisitCustomAttributes(TypeDefinition source, TypeDefinition target)
+		{
+			output.WriteLine("[{0}] Custom attributes differs for types {0} and {1}", target.FullName, target.FullName);
+			return false;
+		}
+
 		public IFieldDiffVisitor VisitMember(FieldDefinition field)
 		{
 			return new StrictFieldDiffVisitor(output);
