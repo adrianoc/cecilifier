@@ -91,24 +91,9 @@ namespace Cecilifier.Core.Tests.Framework
 			var refsToCopy = new List<string>
 			{
 				typeof(Mono.Cecil.Rocks.ILParser).Assembly.Location,
+				typeof(TypeReference).Assembly.Location,
 				typeof(TypeHelpers).Assembly.Location
 			};
-			
-			
-			/*
-			 * Workaroud for issue with Mono.Cecil.
-			 * It looks like NUnit3TestAdapter (3.10) ships with a Mono.Cecil that is incompatible (or has a bug) in which
-			 * it fails to resolve assemblies (and throws an exception) in the generated executable (looks like that version of Mono.Cecil is targeting netcore 1.0)
-			 *
-			 * If we use use the one targeting netstandard1.3 the same executable works.
-			 *
-			 * - If we update the version of NUnit3Adapter we can revisit this (a new version most likely will work and we can remove the workaround
-			 *   and copy from typeof(TypeReference).Assembly.Location instead.
-			 * - If we update Mono.Cecil version we'll need to update this reference. 
-			 */
-
-			var nugetCecilPath =Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".nuget/packages/mono.cecil/0.10.0/lib/netstandard1.3/Mono.Cecil.dll"); 
-			refsToCopy.Add(nugetCecilPath);
 			
 			foreach (var refPath in refsToCopy)
 			{
