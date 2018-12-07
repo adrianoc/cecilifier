@@ -59,7 +59,19 @@ namespace Cecilifier.Core.Misc
             return exps;
         }
         
-
+        public static IEnumerable<string> Field(string declaringTypeVar, string fieldVar, string name, string fieldType, string fieldAttributes, params string[] properties)
+        {
+            var exps = new List<string>();
+            var fieldExp = ($"var {fieldVar} = new FieldDefinition(\"{name}\", {fieldAttributes}, {fieldType})");
+            if (properties.Length > 0)
+                exps.Add($"{fieldExp} {{ {string.Join(',', properties) } }};");
+            else
+                exps.Add($"{fieldExp};");
+            
+            exps.Add($"{declaringTypeVar}.Fields.Add({fieldVar});");
+            return exps;
+        }
+        
         public static IEnumerable<string> Parameter(ParameterSyntax node, SemanticModel semanticModel, string methodVar, string paramVar, string resolvedType)
         {
             var exps = new List<string>();
@@ -90,5 +102,6 @@ namespace Cecilifier.Core.Misc
                 exps.Add($"{paramVar}.Attributes = ParameterAttributes.Out;");
             }
         }
+
     }
 }

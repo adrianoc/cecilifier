@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Cecilifier.Core.Extensions;
+using Cecilifier.Core.Misc;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -18,20 +19,17 @@ namespace Cecilifier.Core.AST
 
 		public override void VisitFieldDeclaration(FieldDeclarationSyntax node)
 		{
+			var declaringTypeVar = ResolveTypeLocalVariable(node.Parent.ResolveDeclaringType());
+			
 			var type = ResolveType(node.Declaration.Type);
 			var fieldType = ProcessRequiredModifiers(node, type) ?? type;
 			var fieldAttributes = MapAttributes(node.Modifiers);
 			
 			foreach (var field in node.Declaration.Variables)
 			{
-				var fieldId = MethodExtensions.LocalVariableNameFor("fld", new[] {node.ResolveDeclaringType().Identifier.ValueText, field.Identifier.ValueText.CamelCase()});
-				var fieldDeclaration = string.Format("var {0} = new FieldDefinition(\"{1}\", {2}, {3});",
-																fieldId,
-																field.Identifier.Value,
-																fieldAttributes,
-																fieldType);
-				AddCecilExpression(fieldDeclaration);
-				AddCecilExpression("{0}.Fields.Add({1});", ResolveTypeLocalVariable(node.Parent.ResolveDeclaringType()), fieldId);
+				var fieldVar = MethodExtensions.LocalVariableNameFor("fld", node.ResolveDeclaringType().Identifier.ValueText, field.Identifier.ValueText.CamelCase());
+				var exps = CecilDefinitionsFactory.Field(declaringTypeVar, fieldVar, field.Identifier.ValueText, fieldType, fieldAttributes);
+				AddCecilExpressions(exps);
 			}
 
 			base.VisitFieldDeclaration(node);
@@ -47,7 +45,7 @@ namespace Cecilifier.Core.AST
 	    	return id;
 	    }
 
-		protected string MapAttributes(IEnumerable<SyntaxToken> modifiers)
+		private string MapAttributes(IEnumerable<SyntaxToken> modifiers)
         {
             var noInternalOrProtected = modifiers.Where(t => t.Kind() != SyntaxKind.InternalKeyword && t.Kind() != SyntaxKind.ProtectedKeyword);
             var str = noInternalOrProtected.Where(ExcludeHasNoCILRepresentation).Aggregate("", (acc, curr) => (acc.Length > 0  ? acc + " | " : "") + curr.MapModifier("FieldAttributes"));
