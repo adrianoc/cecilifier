@@ -13,9 +13,12 @@ namespace Cecilifier.Core.Tests.Framework
 {
 	public class ResourceTestBase
 	{
+		private string cecilifiedCode;
+		
 	    [SetUp]
 	    public void Setup()
 	    {
+		    cecilifiedCode = string.Empty;
             Directory.SetCurrentDirectory(TestContext.CurrentContext.TestDirectory);
 	    }
 
@@ -81,7 +84,7 @@ namespace Cecilifier.Core.Tests.Framework
 		
 		private void CecilifyAndExecute(Stream tbc, string outputAssembyPath)
 		{
-			var generated = Cecilfy(tbc);
+			cecilifiedCode = Cecilfy(tbc);
 
 			var references = GetTrustedAssembliesPath();
 
@@ -112,7 +115,7 @@ namespace Cecilifier.Core.Tests.Framework
 				references.Add(refPath);
 			}
 
-			var cecilifierRunnerPath = CompilationServices.CompileExe(generated, references.ToArray());
+			var cecilifierRunnerPath = CompilationServices.CompileExe(cecilifiedCode, references.ToArray());
 			
 			Directory.CreateDirectory(Path.GetDirectoryName(outputAssembyPath));
 			try
@@ -124,7 +127,7 @@ namespace Cecilifier.Core.Tests.Framework
 			catch (Exception ex)
 			{
 				Console.WriteLine("Cecil runner path: {0}", cecilifierRunnerPath);
-				Console.WriteLine("Fail to execute generated cecil snipet: {0}\r\n{1}", ex, generated);
+				Console.WriteLine("Fail to execute generated cecil snipet: {0}\r\n{1}", ex, cecilifiedCode);
 
 				throw;
 			}
@@ -170,7 +173,7 @@ namespace Cecilifier.Core.Tests.Framework
 			var visitor = new StrictAssemblyDiffVisitor();
 			if (!comparer.Compare(visitor))
 			{
-				Assert.Fail("Expected and generated assemblies differs:\r\n\tExpected:  {0}\r\n\tGenerated: {1}\r\n\r\n{2}", comparer.First, comparer.Second, visitor.Reason);
+				Assert.Fail("Expected and generated assemblies differs:\r\n\tExpected:  {0}\r\n\tGenerated: {1}\r\n\r\n{2}\r\n\r\nCecilified Code:\r\n{3}", comparer.First, comparer.Second, visitor.Reason, cecilifiedCode);
 			}
 		}
 
