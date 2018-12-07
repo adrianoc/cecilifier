@@ -2,7 +2,7 @@
 using Cecilifier.Core.Tests.Framework;
 using NUnit.Framework;
 
-namespace Cecilifier.Core.Tests.Tests.Integration
+namespace Cecilifier.Core.Tests.Integration
 {
 	public class ExpressionTestCase : IntegrationResourceBasedTest
 	{
