@@ -265,6 +265,18 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 				{
 					if (!memberVisitor.VisitAttributes(sourceMember, targetField)) return false;
 				}
+
+				if (sourceMember.HasConstant != targetField.HasConstant)
+				{
+					memberVisitor.VisitConstant(sourceMember, targetField);
+					return false;
+				}
+
+				if (sourceMember.HasConstant && sourceMember.Constant.ToString() != targetField.Constant.ToString())
+				{
+					memberVisitor.VisitConstant(sourceMember, targetField);
+					return false;
+				}
 			}
 			return true;
 		}
