@@ -1,0 +1,7 @@
+﻿public enum SelfReferencingEnum
+{
+    First,
+    Second,
+    Third = Second + 1,
+    Fourth = First + 3
+}

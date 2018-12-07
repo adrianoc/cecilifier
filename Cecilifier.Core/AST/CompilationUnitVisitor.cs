@@ -4,9 +4,7 @@ using System.Linq;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Mono.Cecil;
 
 namespace Cecilifier.Core.AST
 {
@@ -49,7 +47,7 @@ namespace Cecilifier.Core.AST
 
 		public override void VisitEnumDeclaration(EnumDeclarationSyntax node)
 		{
-			throw new NotImplementedException();
+			new EnumDeclarationVisitor(Context).Visit(node);
 		}
 
 		public override void VisitDelegateDeclaration(DelegateDeclarationSyntax node)
