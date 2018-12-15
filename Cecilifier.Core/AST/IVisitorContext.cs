@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Cecilifier.Core.Misc;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -20,7 +21,6 @@ namespace Cecilifier.Core.AST
 	    SemanticModel SemanticModel { get; }
 
 		IMethodParameterContext Parameters { get; set; }
-		LocalVariable CurrentLocalVariable { get; }
 		LinkedListNode<string> CurrentLine { get; }
 		
 		IMethodSymbol GetDeclaredSymbol(BaseMethodDeclarationSyntax methodDeclaration);
@@ -29,14 +29,15 @@ namespace Cecilifier.Core.AST
         TypeInfo GetTypeInfo(ExpressionSyntax expressionSyntax);
 		INamedTypeSymbol GetSpecialType(SpecialType specialType);
 		
-		void WriteCecilExpression(string msg, params object[] args);
+		void WriteCecilExpression(string msg);
 		
 		void PushLocalVariable(LocalVariable localVariable);
 		LocalVariable PopLocalVariable();
+		LocalVariable CurrentLocalVariable { get; }
 
 		int NextFieldId();
 		int NextLocalVariableTypeId();
-		void RegisterTypeLocalVariable(TypeDeclarationSyntax node, string varName);
+		void RegisterTypeLocalVariable(string typeName, string varName);
 		string ResolveTypeLocalVariable(string typeName);
 	    string this[string name] { get; set; }
 		bool Contains(string name);
@@ -47,5 +48,23 @@ namespace Cecilifier.Core.AST
 	    void LeaveScope();
 	    void AddLocalVariableMapping(string variableName, string cecilVarDeclName);
 	    string MapLocalVariableNameToCecil(string localVariableName);
+
+		TypeScope BeginType(string typeName);
+		string CurrentType { get; }
+	}
+
+	struct TypeScope : IDisposable
+	{
+		private readonly Stack<string> _typeDefStack;
+
+		public TypeScope(Stack<string> typeDefStack)
+		{
+			_typeDefStack = typeDefStack;
+		}
+
+		public void Dispose()
+		{
+			_typeDefStack.Pop();
+		}
 	}
 }

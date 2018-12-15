@@ -1,6 +1,6 @@
 ﻿using NUnit.Framework;
 
-namespace Cecilifier.Core.Tests.Tests.Integration
+namespace Cecilifier.Core.Tests.Integration.Types
 {
 	[TestFixture]
 	class TypesTestCase : IntegrationResourceBasedTest
@@ -75,6 +75,14 @@ namespace Cecilifier.Core.Tests.Tests.Integration
 		public void SimpleValueTypeTest()
 		{
 			AssertResourceTest(@"Types/SimpleValueType");
+		}
+		
+		[TestCase("SimpleTypeWithAttribute")]
+		[TestCase("AttributeWithProperty")]
+		[TestCase("AttributeFromSameAssembly")]
+		public void AttributeTests(string typeName)
+		{
+			AssertResourceTest($@"Types/{typeName}");	
 		}
 
 		[Test, Ignore("Not implemented yet")]

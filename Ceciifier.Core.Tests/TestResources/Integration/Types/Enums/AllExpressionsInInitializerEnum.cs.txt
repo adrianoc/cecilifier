@@ -1,0 +1,8 @@
+﻿public enum AllExpressionsInInitializerEnum
+{
+    First,
+    Second = First + 2,
+    Third = Second * 3 - Fourth,
+    Fourth = 1,
+    Fifth = First * 2 + 1
+}

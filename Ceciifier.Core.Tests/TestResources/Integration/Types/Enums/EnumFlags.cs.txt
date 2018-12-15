@@ -1,0 +1,7 @@
+﻿[System.Flags]
+public enum EnumFlags
+{
+    First   = 0x01,
+    Second  = 0x02,
+    Third   = 0x04    
+}

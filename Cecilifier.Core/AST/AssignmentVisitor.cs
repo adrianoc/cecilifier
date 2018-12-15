@@ -43,7 +43,7 @@ namespace Cecilifier.Core.AST
 		private void LocalVariableAssignment(ILocalSymbol localVariable)
 		{
 			var methodVar = LocalVariableNameForCurrentNode();
-			AddCilInstruction(ilVar, OpCodes.Stloc, LocalVariableIndex(methodVar, localVariable));
+			AddCilInstruction(ilVar, OpCodes.Stloc, LocalVariableIndex(localVariable));
 		}
 
 		private void ParameterAssignment(IParameterSymbol parameter)
@@ -86,7 +86,7 @@ namespace Cecilifier.Core.AST
 			var paramSymbol = ParameterVisitor.Process(Context, node);
 			if (paramSymbol != null && paramSymbol.RefKind != RefKind.None)
 			{
-				ProcessParameter(ilVar, node, paramSymbol);
+				ProcessParameter(ilVar, (IdentifierNameSyntax) node, paramSymbol);
 			}
 		}
 

@@ -64,6 +64,10 @@ namespace Cecilifier.Core.AST
         {
 			switch(node.Kind())
 			{
+				case SyntaxKind.NullLiteralExpression:
+					AddCilInstruction(ilVar, OpCodes.Ldnull);
+					break;
+				
 				case SyntaxKind.StringLiteralExpression:
 					AddCilInstruction(ilVar, OpCodes.Ldstr, node.ToFullString());
 					break;
@@ -315,7 +319,7 @@ namespace Cecilifier.Core.AST
 
 	    public override void VisitExpressionStatement(ExpressionStatementSyntax node)
         {
-			Context.WriteCecilExpression("\r\n// {0}\r\n", node);
+			Context.WriteCecilExpression($"\r\n// {node}\r\n");
 			base.Visit(node.Expression);
 
 			var info = Context.GetTypeInfo(node.Expression);
@@ -405,6 +409,7 @@ namespace Cecilifier.Core.AST
 			}
 
 			AddCilInstruction(ilVar, OpCodes.Ldloc, Context.MapLocalVariableNameToCecil(symbol.Name));
+			HandlePotentialDelegateInvocationOn(localVar, symbol.Type, ilVar);
 		}
 
 		private void ProcessMethodCall(IdentifierNameSyntax node, IMethodSymbol method)

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Microsoft.CodeAnalysis;
@@ -19,11 +20,21 @@ namespace Cecilifier.Core.AST
 			this.ctx = ctx;
 		}
 
-		protected IVisitorContext Context
-		{
-			get { return ctx; }
-		}
+		protected IVisitorContext Context => ctx;
 
+		protected void AddCecilExpressions(IEnumerable<string> exps)
+		{
+			foreach (var exp in exps)
+			{
+				AddCecilExpression(exp);
+			}
+		}
+		
+		protected void AddCecilExpression(string exp)
+		{
+			WriteCecilExpression(Context, exp);
+		}
+		
 		protected void AddCecilExpression(string format, params object[] args)
 		{
 			WriteCecilExpression(Context, format, args);
@@ -45,12 +56,7 @@ namespace Cecilifier.Core.AST
         	AddCecilExpression(@"{0}.Append({0}.Create({1}, {2}));", ilVar, opCode.ConstantName(), arg);
 		}
 
-        protected internal void AddCilInstructionCastOperand<T>(string ilVar, OpCode opCode, T arg)
-        {
-        	AddCecilExpression(@"{0}.Append({0}.Create({1}, ({2}) {3}));", ilVar, opCode.ConstantName(), typeof(T).Name, arg);
-		}
-
-        protected void AddCilInstruction(string ilVar, OpCode opCode)
+		protected void AddCilInstruction(string ilVar, OpCode opCode)
 		{
 			AddCecilExpression(@"{0}.Append({0}.Create({1}));", ilVar, opCode.ConstantName());
 		}
@@ -65,7 +71,7 @@ namespace Cecilifier.Core.AST
 			return Context.GetDeclaredSymbol(node);
 		}
 
-		protected void WithCurrentNode(MemberDeclarationSyntax node, string localVariable, string typeName, Action<string> action)
+		protected void WithCurrentNode(SyntaxNode node, string localVariable, string typeName, Action<string> action)
 		{
 			try
 			{
@@ -127,12 +133,12 @@ namespace Cecilifier.Core.AST
 			return typeAttributes.AppendModifier(convertedModifiers);
 		}
 
-		protected static bool IsNestedTypeDeclaration(TypeDeclarationSyntax node)
+		protected static bool IsNestedTypeDeclaration(SyntaxNode node)
 		{
 			return node.Parent.Kind() != SyntaxKind.NamespaceDeclaration && node.Parent.Kind() != SyntaxKind.CompilationUnit;
 		}
 
-		private static string DefaultTypeAttributeFor(TypeDeclarationSyntax node)
+		protected static string DefaultTypeAttributeFor(SyntaxNode node)
 		{
 			const string basicClassAttrs = "TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit";
 			switch (node.Kind())
@@ -140,6 +146,7 @@ namespace Cecilifier.Core.AST
 				case SyntaxKind.StructDeclaration:		return "TypeAttributes.SequentialLayout | TypeAttributes.Sealed |" + basicClassAttrs; 
 				case SyntaxKind.ClassDeclaration:		return basicClassAttrs;
 				case SyntaxKind.InterfaceDeclaration:	return "TypeAttributes.Interface | TypeAttributes.Abstract";
+				case SyntaxKind.DelegateDeclaration:	return "TypeAttributes.Sealed";
 				
 				case SyntaxKind.EnumDeclaration: throw new NotImplementedException();
 			}
@@ -152,8 +159,7 @@ namespace Cecilifier.Core.AST
 			return ModifiersToCecil(targetEnum, modifiers, @default, ExcludeHasNoCILRepresentation);
 		}
 
-		private static string ModifiersToCecil(string targetEnum, IEnumerable<SyntaxToken> modifiers, string @default,
-		                                       Func<SyntaxToken, bool> meaninglessModifiersFilter)
+		private static string ModifiersToCecil(string targetEnum, IEnumerable<SyntaxToken> modifiers, string @default, Func<SyntaxToken, bool> meaninglessModifiersFilter)
 		{
 			var validModifiers = modifiers.Where(meaninglessModifiersFilter);
 			if (!validModifiers.Any()) return targetEnum + "." + @default;
@@ -176,7 +182,7 @@ namespace Cecilifier.Core.AST
 
 		protected static void WriteCecilExpression(IVisitorContext context, string format, params object[] args)
 		{
-			context.WriteCecilExpression("{0}\r\n", string.Format(format, args));
+			context.WriteCecilExpression($"{string.Format(format, args)}\r\n");
 		}
 
 	    protected static void WriteCecilExpression(IVisitorContext context, string value)
@@ -234,14 +240,14 @@ namespace Cecilifier.Core.AST
 				return "new ArrayType(" + ResolveType(ats.ElementType) + ")";
 			}
 
-			return ResolvePredefinedType(type);
+			return ResolvePredefinedType(type.Name);
 		}
 		
 		private string ResolvePredefinedAndArrayTypes(TypeSyntax type)
 		{
 			switch (type.Kind())
 			{
-				case SyntaxKind.PredefinedType: return ResolvePredefinedType(Context.GetTypeInfo(type).Type);
+				case SyntaxKind.PredefinedType: return ResolvePredefinedType(Context.GetTypeInfo(type).Type.Name);
 				case SyntaxKind.ArrayType: return "new ArrayType(" + ResolveType(type.DescendantNodes().OfType<TypeSyntax>().Single()) + ")";
 			}
 			return null;
@@ -249,7 +255,12 @@ namespace Cecilifier.Core.AST
 
 		protected string ResolvePredefinedType(ITypeSymbol type)
 		{
-			return "assembly.MainModule.TypeSystem." + type.Name;
+			return ResolvePredefinedType(type.Name);
+		}		
+		
+		protected string ResolvePredefinedType(string typeName)
+		{
+			return "assembly.MainModule.TypeSystem." + typeName;
 		}
 
 		protected string ResolveType(string typeName)
@@ -257,17 +268,12 @@ namespace Cecilifier.Core.AST
 			return ImportExpressionForType(typeName);
 		}
 
-		protected void RegisterTypeLocalVariable(TypeDeclarationSyntax node, string varName)
-		{
-			Context.RegisterTypeLocalVariable(node, varName);
-		}
-
 		protected INamedTypeSymbol GetSpecialType(SpecialType specialType)
 		{
 			return Context.GetSpecialType(specialType);
 		}
 
-		protected string LocalVariableIndex(string methodVar, ILocalSymbol localVariable)
+		protected string LocalVariableIndex(ILocalSymbol localVariable)
 		{
 		    return Context.MapLocalVariableNameToCecil(localVariable.Name);
 		}
@@ -277,7 +283,7 @@ namespace Cecilifier.Core.AST
             return Context.MapLocalVariableNameToCecil(localVariable);
         }
 
-		protected void ProcessParameter(string ilVar, ExpressionSyntax node, IParameterSymbol paramSymbol)
+		protected void ProcessParameter(string ilVar, IdentifierNameSyntax node, IParameterSymbol paramSymbol)
 		{
 			var parent = (CSharpSyntaxNode) node.Parent;
 			//TODO: Get rid of code duplication in ExpressionVisitor.ProcessLocalVariable(IdentifierNameSyntax localVar, SymbolInfo varInfo)
@@ -301,9 +307,31 @@ namespace Cecilifier.Core.AST
 				OpCode[] optimizedLdArgs = { OpCodes.Ldarg_0, OpCodes.Ldarg_1, OpCodes.Ldarg_2, OpCodes.Ldarg_3 };
 				var loadOpCode = optimizedLdArgs[paramSymbol.Ordinal + (method.IsStatic ? 0 : 1)];
 				AddCilInstruction(ilVar, loadOpCode);
+				
+				HandlePotentialDelegateInvocationOn(node, paramSymbol.Type, ilVar);
 			}
 		}
-		
+
+		protected void HandlePotentialDelegateInvocationOn(IdentifierNameSyntax node, ITypeSymbol typeSymbol, string ilVar)
+		{
+			var invocation = node.Parent as InvocationExpressionSyntax;
+			if (invocation == null || invocation.Expression != node)
+				return;
+
+			var localDelegateDeclaration = Context.ResolveTypeLocalVariable(typeSymbol.Name);
+			if (localDelegateDeclaration != null)
+			{
+				AddCilInstruction(ilVar, OpCodes.Callvirt, $"{localDelegateDeclaration}.Methods.Single(m => m.Name == \"Invoke\")");
+			}
+			else
+			{
+				var declaringTypeName = typeSymbol.FullyQualifiedName();
+				var methodInvocation =  $"assembly.MainModule.Import(TypeHelpers.ResolveMethod(\"{typeSymbol.ContainingAssembly.Name}\", \"{declaringTypeName}\", \"Invoke\"))";
+
+				AddCilInstruction(ilVar, OpCodes.Callvirt, methodInvocation);
+			}
+		}
+
 		protected const string ModifiersSeparator = " | ";
 
 	}

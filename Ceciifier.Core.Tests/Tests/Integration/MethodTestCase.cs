@@ -1,6 +1,6 @@
 ﻿using NUnit.Framework;
 
-namespace Cecilifier.Core.Tests.Tests.Integration
+namespace Cecilifier.Core.Tests.Integration
 {
 	[TestFixture]
 	public class MethodTestCase : IntegrationResourceBasedTest
@@ -35,7 +35,7 @@ namespace Cecilifier.Core.Tests.Tests.Integration
 			AssertResourceTest(@"Methods/VariableNumberOfParameters");
 		}
 		
-		[Test, Ignore("Not Implemented yet")]
+		[Test]
 		public void TestVirtualMethod()
 		{
 			AssertResourceTest(@"Methods/VirtualMethod");
@@ -50,7 +50,7 @@ namespace Cecilifier.Core.Tests.Tests.Integration
 		[Test]
 		public void TestReturnValue()
 		{
-			AssertResourceTestWithExplictExpectation(@"Methods/ReturnValue", "System.Int32 ReturnValue::Foo()");
+			AssertResourceTest(@"Methods/ReturnValue");
 		}
 
 		[Test, Ignore("Not Implemented yet")]

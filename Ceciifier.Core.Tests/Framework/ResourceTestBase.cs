@@ -13,9 +13,12 @@ namespace Cecilifier.Core.Tests.Framework
 {
 	public class ResourceTestBase
 	{
+		private string cecilifiedCode;
+		
 	    [SetUp]
 	    public void Setup()
 	    {
+		    cecilifiedCode = string.Empty;
             Directory.SetCurrentDirectory(TestContext.CurrentContext.TestDirectory);
 	    }
 
@@ -81,38 +84,23 @@ namespace Cecilifier.Core.Tests.Framework
 		
 		private void CecilifyAndExecute(Stream tbc, string outputAssembyPath)
 		{
-			var generated = Cecilfy(tbc);
+			cecilifiedCode = Cecilfy(tbc);
 
 			var references = GetTrustedAssembliesPath();
 
 			var refsToCopy = new List<string>
 			{
 				typeof(Mono.Cecil.Rocks.ILParser).Assembly.Location,
+				typeof(TypeReference).Assembly.Location,
 				typeof(TypeHelpers).Assembly.Location
 			};
-			
-			
-			/*
-			 * Workaroud for issue with Mono.Cecil.
-			 * It looks like NUnit3TestAdapter (3.10) ships with a Mono.Cecil that is incompatible (or has a bug) in which
-			 * it fails to resolve assemblies (and throws an exception) in the generated executable (looks like that version of Mono.Cecil is targeting netcore 1.0)
-			 *
-			 * If we use use the one targeting netstandard1.3 the same executable works.
-			 *
-			 * - If we update the version of NUnit3Adapter we can revisit this (a new version most likely will work and we can remove the workaround
-			 *   and copy from typeof(TypeReference).Assembly.Location instead.
-			 * - If we update Mono.Cecil version we'll need to update this reference. 
-			 */
-
-			var nugetCecilPath =Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".nuget/packages/mono.cecil/0.10.0/lib/netstandard1.3/Mono.Cecil.dll"); 
-			refsToCopy.Add(nugetCecilPath);
 			
 			foreach (var refPath in refsToCopy)
 			{
 				references.Add(refPath);
 			}
 
-			var cecilifierRunnerPath = CompilationServices.CompileExe(generated, references.ToArray());
+			var cecilifierRunnerPath = CompilationServices.CompileExe(cecilifiedCode, references.ToArray());
 			
 			Directory.CreateDirectory(Path.GetDirectoryName(outputAssembyPath));
 			try
@@ -124,7 +112,7 @@ namespace Cecilifier.Core.Tests.Framework
 			catch (Exception ex)
 			{
 				Console.WriteLine("Cecil runner path: {0}", cecilifierRunnerPath);
-				Console.WriteLine("Fail to execute generated cecil snipet: {0}\r\n{1}", ex, generated);
+				Console.WriteLine("Fail to execute generated cecil snipet: {0}\r\n{1}", ex, cecilifiedCode);
 
 				throw;
 			}
@@ -170,7 +158,7 @@ namespace Cecilifier.Core.Tests.Framework
 			var visitor = new StrictAssemblyDiffVisitor();
 			if (!comparer.Compare(visitor))
 			{
-				Assert.Fail("Expected and generated assemblies differs:\r\n\tExpected:  {0}\r\n\tGenerated: {1}\r\n\r\n{2}", comparer.First, comparer.Second, visitor.Reason);
+				Assert.Fail("Expected and generated assemblies differs:\r\n\tExpected:  {0}\r\n\tGenerated: {1}\r\n\r\n{2}\r\n\r\nCecilified Code:\r\n{3}", comparer.First, comparer.Second, visitor.Reason, cecilifiedCode);
 			}
 		}
 

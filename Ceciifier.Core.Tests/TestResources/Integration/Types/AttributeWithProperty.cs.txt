@@ -1,0 +1,4 @@
+﻿[System.Diagnostics.Tracing.EventData(Name="test")]
+class AttributeWithProperty 
+{
+}

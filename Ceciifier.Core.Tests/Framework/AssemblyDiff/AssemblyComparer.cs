@@ -4,6 +4,7 @@ using System.Linq;
 using Cecilifier.Core.Extensions;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
+using Mono.Collections.Generic;
 
 namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 {
@@ -60,6 +61,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 					throw new Exception("Types differ: " + sourceType.Name + " / " + targetType.Name + " : " + sourceType.IsNested);
 				}
 
+				ret = ret && CheckTypeCustomAttributes(typeVisitor, sourceType, targetType);
 				ret = ret && CheckTypeAttributes(typeVisitor, sourceType, targetType);
 				//ret = ret && CheckTypeGenericInformation(typeVisitor, sourceType, targetType);
 				ret = ret && CheckTypeMembers(typeVisitor, sourceType, targetType);
@@ -69,6 +71,62 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 
 			//TODO: Check missing classes
 			return ret;
+		}
+
+		private bool CheckTypeCustomAttributes(ITypeDiffVisitor typeVisitor, TypeDefinition sourceType, TypeDefinition targetType)
+		{
+			if (sourceType.HasCustomAttributes != targetType.HasCustomAttributes)
+			{
+				if (!typeVisitor.VisitCustomAttributes(sourceType, targetType))
+					return false;
+			}
+
+			if (!sourceType.HasCustomAttributes)
+					return true;
+
+			foreach (var customAttribute in sourceType.CustomAttributes)
+			{
+				var found = targetType.CustomAttributes.Any(candidate => CustomAttributeMatches(candidate, customAttribute));
+				if (!found)
+					return false;
+			}
+			
+			return true;
+		}
+
+		private bool CustomAttributeMatches(CustomAttribute lhs, CustomAttribute rhs)
+		{
+			if (lhs.Constructor.ToString() != rhs.Constructor.ToString())
+				return false;
+
+			if (lhs.HasConstructorArguments != rhs.HasConstructorArguments)
+				return false;
+
+			if (lhs.HasConstructorArguments)
+			{
+				if (!lhs.ConstructorArguments.SequenceEqual(rhs.ConstructorArguments, CustomAttributeComparer.Instance))
+					return false;
+			}
+
+			if (lhs.HasProperties != rhs.HasProperties)
+				return false;
+
+			if (lhs.HasProperties)
+			{
+				if (!lhs.Properties.SequenceEqual(rhs.Properties, CustomAttributeNamedArgumentComparer.Instance))
+					return false;
+			}
+
+			if (lhs.HasFields != rhs.HasFields)
+				return false;
+			
+			if (lhs.HasFields)
+			{
+				if (!lhs.Fields.SequenceEqual(rhs.Fields, CustomAttributeNamedArgumentComparer.Instance))
+					return false;
+			}
+			
+			return true;
 		}
 
 		private static bool CheckImplementedInterfaces(ITypeDiffVisitor typeVisitor, TypeDefinition sourceType, TypeDefinition targetType)
@@ -165,9 +223,8 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 				return false;
 			}
 
-			Func<Instruction, bool> ignoreNops = i => i.OpCode != OpCodes.Nop;
-			var targetInstructions = target.Body.Instructions.Where(ignoreNops).GetEnumerator();
-			foreach (var instruction in source.Body.Instructions.Where(ignoreNops))
+			var targetInstructions = SkipIrrelevantInstructions(target.Body.Instructions).GetEnumerator();
+			foreach (var instruction in SkipIrrelevantInstructions(source.Body.Instructions))
 			{
 				if (!targetInstructions.MoveNext())
 				{
@@ -186,6 +243,14 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 			}
 
 			return true;
+		}
+
+		private static IEnumerable<Instruction> SkipIrrelevantInstructions(Collection<Instruction> instructions)
+		{
+			var instructionFilter = LenientInstructionComparer.Instantiate();
+			return instructions
+				.Where(instructionFilter.IgnoreNops)
+				.Where(instructionFilter.IgnoreNonRequiredLocalVariableAssignments);
 		}
 
 		private static bool EqualOrEquivalent(Instruction instruction, Instruction current)
@@ -221,6 +286,12 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 				case Code.Ldc_I4_6:
 				case Code.Ldc_I4_7:
 				case Code.Ldc_I4_8: return current.OpCode.Code == Code.Ldc_I4;
+				
+				case Code.Pop:
+					if (current.Previous == null || instruction.Previous == null)
+						return false;
+					
+					return current.OpCode.Code == Code.Stloc && current.Previous.OpCode.IsCall() && instruction.Previous.OpCode.IsCall() && LenientInstructionComparer.HasNoLocalVariableLoads(instruction.Next, instruction.Operand);
 			}
 			return false;
 
@@ -250,6 +321,18 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 				if (sourceMember.Attributes != targetField.Attributes)
 				{
 					if (!memberVisitor.VisitAttributes(sourceMember, targetField)) return false;
+				}
+
+				if (sourceMember.HasConstant != targetField.HasConstant)
+				{
+					memberVisitor.VisitConstant(sourceMember, targetField);
+					return false;
+				}
+
+				if (sourceMember.HasConstant && sourceMember.Constant.ToString() != targetField.Constant.ToString())
+				{
+					memberVisitor.VisitConstant(sourceMember, targetField);
+					return false;
 				}
 			}
 			return true;
@@ -283,7 +366,61 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 		}
 	}
 
-    internal class InterfaceComparer : IEqualityComparer<InterfaceImplementation>
+	internal class CustomAttributeNamedArgumentComparer : IEqualityComparer<CustomAttributeNamedArgument>
+	{
+		public bool Equals(CustomAttributeNamedArgument x, CustomAttributeNamedArgument y)
+		{
+			if (x.Name != y.Name)
+				return false;
+
+			return CustomAttributeComparer.Instance.Equals(x.Argument, y.Argument);
+		}
+
+		public int GetHashCode(CustomAttributeNamedArgument obj)
+		{
+			return 0;
+		}
+
+		static CustomAttributeNamedArgumentComparer()
+		{
+			Instance = new CustomAttributeNamedArgumentComparer();
+		}
+		
+		public static IEqualityComparer<CustomAttributeNamedArgument> Instance { get; }
+	}
+
+	internal class CustomAttributeComparer : IEqualityComparer<CustomAttributeArgument>
+	{
+		public bool Equals(CustomAttributeArgument x, CustomAttributeArgument y)
+		{
+			if (x.Type.ToString() != y.Type.ToString())
+				return false;
+
+			if (x.Value != null && y.Value == null)
+				return false;
+			
+			if (x.Value == null && y.Value != null)
+				return false;
+
+			return x.Value != null
+				? x.Value.ToString() == y.Value.ToString()
+				: true;
+		}
+
+		public int GetHashCode(CustomAttributeArgument obj)
+		{
+			return 0;
+		}
+
+		static CustomAttributeComparer()
+		{
+			Instance = new CustomAttributeComparer();	
+		}
+		
+		public static IEqualityComparer<CustomAttributeArgument> Instance { get; }
+	}
+
+	internal class InterfaceComparer : IEqualityComparer<InterfaceImplementation>
     {
         public bool Equals(InterfaceImplementation x, InterfaceImplementation y)
         {
@@ -295,4 +432,77 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
             return obj.InterfaceType.Name.GetHashCode();
         }
     }
+
+	internal struct LenientInstructionComparer
+	{
+		public static LenientInstructionComparer Instantiate()
+		{
+			var instance = new LenientInstructionComparer();
+			instance.toBeIgnored = new HashSet<Instruction>();
+
+			return instance;
+		}
+		
+		public bool IgnoreNops(Instruction i)
+		{
+			return i.OpCode != OpCodes.Nop;
+		}
+		
+		public bool IgnoreNonRequiredLocalVariableAssignments(Instruction inst)
+		{
+			if (toBeIgnored.Remove(inst))
+			{
+				return false;
+			}
+
+			if (inst.Next == null)
+				return true;
+			
+			if (inst.OpCode != OpCodes.Stloc || inst.Next.OpCode != OpCodes.Ldloc || inst.Operand != inst.Next.Operand)
+			{
+				return true;
+			}
+			
+			// We have an *stloc X* followed by an *ldloc X* so lets check if we have any other reference to the same
+			// local var.
+			var ignoredInstructions = new HashSet<Instruction>();
+			ignoredInstructions.Add(inst.Next); // if no other load from *X* is found we need to ignore current instruction (stloc X) and also the next one (ldloc X)
+			
+			var current = inst.Next.Next;
+			while (current != null)
+			{
+				// found some other instruction accessing *X*
+				if (current.Operand == inst.Operand)
+				{
+					if (current.OpCode == OpCodes.Stloc)
+					{
+						ignoredInstructions.Add(current.Next);
+					}
+					else
+					{
+						// it is not a stloc so the instruction is important and we should use it in the comparison...
+						return true;
+					}
+					
+				}
+
+				current = current.Next;
+			}
+
+			toBeIgnored = ignoredInstructions;
+			return false;
+		}
+		
+		public static bool HasNoLocalVariableLoads(Instruction instruction, object operand)
+		{
+			while (instruction != null && (instruction.OpCode != OpCodes.Ldloc || instruction.Operand != operand))
+			{
+				instruction = instruction.Next;
+			}
+
+			return instruction == null;
+		}
+		
+		private HashSet<Instruction> toBeIgnored;
+	}
 }

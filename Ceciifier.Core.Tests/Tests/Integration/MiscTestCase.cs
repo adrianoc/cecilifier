@@ -1,14 +1,15 @@
 ﻿using NUnit.Framework;
 
-namespace Cecilifier.Core.Tests.Tests.Integration
+namespace Cecilifier.Core.Tests.Integration
 {
 	[TestFixture]
 	public class MiscTestCase : IntegrationResourceBasedTest
 	{
-		[Test, Ignore("Not Implemented yet")]
-		public void TestDelegateInvocation()
+		[TestCase("Parameters")]
+		[TestCase("LocalVariables")]
+		public void TestDelegateInvocation(string storageType)
 		{
-			AssertResourceTest(@"Misc/DelegateInvocation");
+			AssertResourceTest($@"Misc/DelegateInvocation_{storageType}");
 		}
 
 		[Test, Ignore("Not Implemented yet")]

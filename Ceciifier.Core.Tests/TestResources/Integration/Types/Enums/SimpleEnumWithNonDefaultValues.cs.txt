@@ -1,0 +1,5 @@
+﻿public enum SimpleEnumWithNonDefaultValues
+{
+    First = 0x42,
+    Second    
+}

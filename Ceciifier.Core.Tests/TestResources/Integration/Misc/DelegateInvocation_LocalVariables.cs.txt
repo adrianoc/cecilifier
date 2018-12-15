@@ -1,0 +1,16 @@
+﻿public delegate void CustomDel(int i);
+
+class DelegateTest_LocalVariables
+{
+	public void Foo()
+	{
+	    CustomDel d = null;
+	    d(12);
+	}
+	
+	public void Bar()
+	{
+	    System.Action a = null;
+	    a();
+	}
+}

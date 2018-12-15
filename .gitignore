@@ -4,3 +4,5 @@ _Resharper*
 *.user
 *.suo
 Packages/*
+
+\.idea/\.idea\.Cecilifier/
