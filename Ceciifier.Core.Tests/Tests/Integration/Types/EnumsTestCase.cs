@@ -10,7 +10,7 @@ namespace Cecilifier.Core.Tests.Integration.Types
         [TestCase("SelfReferencingEnum")]
         [TestCase("SelfReferencingNonContinuousEnum")]
         [TestCase("AllExpressionsInInitializerEnum")]
-        [TestCase("EnumFlags", IgnoreReason = "Type Attributes not supported yet")]
+        [TestCase("EnumFlags")]
         public void SimplestTest(string testCaseName)
         {
             AssertResourceTest($@"Types/Enums/{testCaseName}");

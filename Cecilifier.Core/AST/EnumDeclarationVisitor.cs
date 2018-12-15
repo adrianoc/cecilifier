@@ -8,7 +8,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Cecilifier.Core.AST
 {
-    internal class EnumDeclarationVisitor : SyntaxWalkerBase
+    internal class EnumDeclarationVisitor : TypeDeclarationVisitorBase
     {
         private EnumMemberValueCollector _memberCollector;
         public EnumDeclarationVisitor(IVisitorContext context) : base(context)
@@ -33,6 +33,8 @@ namespace Cecilifier.Core.AST
                 var fieldVar = MethodExtensions.LocalVariableNameFor("valueField", node.Identifier.ValueText);
                 var valueFieldExp = CecilDefinitionsFactory.Field(enumType, fieldVar, "value__", "assembly.MainModule.TypeSystem.Int32", "FieldAttributes.SpecialName | FieldAttributes.RTSpecialName | FieldAttributes.Public");
                 AddCecilExpressions(valueFieldExp);
+                
+                HandleAttributesInTypeDeclaration(node, enumType);
 				
                 base.VisitEnumDeclaration(node);
             }
