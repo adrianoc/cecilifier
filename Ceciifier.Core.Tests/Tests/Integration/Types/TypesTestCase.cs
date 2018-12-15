@@ -76,6 +76,14 @@ namespace Cecilifier.Core.Tests.Integration.Types
 		{
 			AssertResourceTest(@"Types/SimpleValueType");
 		}
+		
+		[TestCase("SimpleTypeWithAttribute")]
+		[TestCase("AttributeWithProperty")]
+		[TestCase("AttributeFromSameAssembly")]
+		public void AttributeTests(string typeName)
+		{
+			AssertResourceTest($@"Types/{typeName}");	
+		}
 
 		[Test, Ignore("Not implemented yet")]
 		public void TypeInitializeTest()

@@ -1,0 +1,9 @@
+﻿[System.Obsolete]
+class SimpleTypeWithAttribute 
+{
+}
+
+[System.Obsolete("obsolete msg", true)]
+class MoreComplexTypeWithAttribute 
+{
+}

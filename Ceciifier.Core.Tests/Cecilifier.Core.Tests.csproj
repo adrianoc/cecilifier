@@ -57,5 +57,13 @@
     <Content Include="TestResources\Integration\Types\Enums\SimpleEnumWithNonDefaultValues.cs.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <None Remove="TestResources\Integration\Types\AttributeFromSameAssembly.cs.txt" />
+    <Content Include="TestResources\Integration\Types\AttributeFromSameAssembly.cs.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <None Remove="TestResources\Integration\Types\AttributeWithProperty.cs.txt" />
+    <Content Include="TestResources\Integration\Types\AttributeWithProperty.cs.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 </Project>
