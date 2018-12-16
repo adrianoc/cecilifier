@@ -88,7 +88,7 @@ namespace Cecilifier.Core.AST
 
             void AddLocalVariableAndHandleCallOnValueTypeLiterals(LiteralExpressionSyntax literalNode, string cecilTypeSystemReference, object literalValue)
             {
-                AddCilInstruction(ilVar, LoadOpCodeFor(literalNode), literalValue);
+	            AddCilInstruction(ilVar, LoadOpCodeFor(literalNode), literalValue);
                 var localVarParent = (CSharpSyntaxNode) literalNode.Parent;
                 if (localVarParent.Accept(new UsageVisitor()) == UsageKind.CallTarget)
                 {
@@ -312,12 +312,7 @@ namespace Cecilifier.Core.AST
 			return valueTypeNoArgObjCreation = true;
     	}
 
-    	private bool ConsumesStack(SyntaxNode node)
-    	{
-    		return new StackTransitionAnalizer(node).ConsumesStack();
-    	}
-
-	    public override void VisitExpressionStatement(ExpressionStatementSyntax node)
+		public override void VisitExpressionStatement(ExpressionStatementSyntax node)
         {
 			Context.WriteCecilExpression($"\r\n// {node}\r\n");
 			base.Visit(node.Expression);

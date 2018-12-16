@@ -278,6 +278,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 				case Code.Ldarg_S: return current.OpCode.Code == Code.Ldarg;
 
 				case Code.Ldc_I4_S:
+				case Code.Ldc_I4_0:
 				case Code.Ldc_I4_1:
 				case Code.Ldc_I4_2:
 				case Code.Ldc_I4_3:

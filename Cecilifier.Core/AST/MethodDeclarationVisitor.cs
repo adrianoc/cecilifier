@@ -48,23 +48,13 @@ namespace Cecilifier.Core.AST
 			base.VisitPropertyDeclaration(node);
 		}
 
-//		public override void VisitExpressionStatement(ExpressionStatementSyntax node)
-//		{
-//			ExpressionVisitor.Visit(Context, ilVar, node);
-//		}
-//
-//	    public override void VisitIfStatement(IfStatementSyntax node)
-//	    {
-//	        IfStatementVisitor.Visit(Context, ilVar, node);
-//	    }
-
-	    protected string ProcessMethodDeclaration<T>(T node, string simpleName, string fqName, string returnType, Action<string> runWithCurrent) where T : BaseMethodDeclarationSyntax
+	    protected void ProcessMethodDeclaration<T>(T node, string simpleName, string fqName, string returnType, Action<string> runWithCurrent) where T : BaseMethodDeclarationSyntax
 		{
 			var declaringTypeName = DeclaringTypeNameFor(node);
 
 			var methodVar = MethodExtensions.LocalVariableNameFor(declaringTypeName, simpleName, node.MangleName(Context.SemanticModel));
 
-			AddOrUpdateMethodDefinition(methodVar, fqName, MethodModifiersToCecil(node), returnType);
+			AddOrUpdateMethodDefinition(methodVar, fqName, node.Modifiers.MethodModifiersToCecil(ModifiersToCecil, GetSpecificModifiers(), DeclaredSymbolFor(node)), returnType);
 			AddCecilExpression("{0}.Methods.Add({1});", ResolveTypeLocalVariable(declaringTypeName), methodVar);
 
 			var isAbstract = DeclaredSymbolFor(node).IsAbstract;
@@ -81,8 +71,6 @@ namespace Cecilifier.Core.AST
 			{
 				AddCilInstruction(ilVar, OpCodes.Ret);
 			}
-
-			return methodVar;
 		}
 
 		protected static string DeclaringTypeNameFor<T>(T node) where T : BaseMethodDeclarationSyntax
@@ -110,71 +98,9 @@ namespace Cecilifier.Core.AST
 			context[methodVar] = "";
 		}
 
-		private string MethodModifiersToCecil(BaseMethodDeclarationSyntax methodDeclaration)
+		protected virtual string GetSpecificModifiers()
 		{
-			var modifiers = MapExplicitModifiers(methodDeclaration);
-
-			var defaultAccessibility = "Private";
-			if (modifiers == string.Empty)
-			{
-				var methodSymbol = DeclaredSymbolFor(methodDeclaration);
-				if (IsExplicitMethodImplementation(methodSymbol))
-				{
-					modifiers = "MethodAttributes.Virtual | MethodAttributes.NewSlot | MethodAttributes.Final";
-				}
-				else
-				{
-					var lastDeclaredIn = methodSymbol.FindLastDefinition();
-					if (lastDeclaredIn.ContainingType.TypeKind == TypeKind.Interface)
-					{
-						modifiers = "MethodAttributes.Virtual | MethodAttributes.NewSlot | " + (lastDeclaredIn.ContainingType == methodSymbol.ContainingType ? "MethodAttributes.Abstract" : "MethodAttributes.Final");
-						defaultAccessibility = lastDeclaredIn.ContainingType == methodSymbol.ContainingType ? "Public" : "Private";
-					}
-				}
-			}
-
-			var validModifiers = RemoveSourceModifiersWithNoILEquivalent(methodDeclaration);
-
-			var cecilModifiersStr = ModifiersToCecil("MethodAttributes", validModifiers.ToList(), defaultAccessibility);
-
-			cecilModifiersStr = AppendSpecificModifiers(cecilModifiersStr);
-
-			return cecilModifiersStr + " | MethodAttributes.HideBySig".AppendModifier(modifiers);
-		}
-
-		protected virtual string AppendSpecificModifiers(string cecilModifiersStr)
-		{
-			return cecilModifiersStr;
-		}
-
-		private static string MapExplicitModifiers(BaseMethodDeclarationSyntax methodDeclaration)
-		{
-			foreach (var mod in methodDeclaration.Modifiers)
-			{
-				switch (mod.Kind())
-				{
-					case SyntaxKind.VirtualKeyword:  return "MethodAttributes.Virtual | MethodAttributes.NewSlot";
-					case SyntaxKind.OverrideKeyword: return "MethodAttributes.Virtual";
-					case SyntaxKind.AbstractKeyword: return "MethodAttributes.Virtual | MethodAttributes.NewSlot | MethodAttributes.Abstract";
-					case SyntaxKind.SealedKeyword:   return "MethodAttributes.Final";
-					case SyntaxKind.NewKeyword:      return "??? new ??? dont know yet!";
-				}
-			}
-			return string.Empty;
-		}
-
-		private static bool IsExplicitMethodImplementation(IMethodSymbol methodSymbol)
-		{
-			return methodSymbol.ExplicitInterfaceImplementations.Count() > 0;
-		}
-
-		private static IEnumerable<SyntaxToken> RemoveSourceModifiersWithNoILEquivalent(BaseMethodDeclarationSyntax methodDeclaration)
-		{
-			return methodDeclaration.Modifiers.Where(
-				mod => (mod.Kind() != SyntaxKind.OverrideKeyword 
-				        && mod.Kind() != SyntaxKind.AbstractKeyword 
-				        && mod.Kind() != SyntaxKind.VirtualKeyword 
-				        && mod.Kind() != SyntaxKind.SealedKeyword));
+			return null;
 		}
 
 		private string MethodNameOf(MethodDeclarationSyntax method)
@@ -189,7 +115,7 @@ namespace Cecilifier.Core.AST
     {
         private static string _ilVar;
 
-        internal IfStatementVisitor(IVisitorContext ctx) : base(ctx)
+	    private IfStatementVisitor(IVisitorContext ctx) : base(ctx)
         {
         }
 
