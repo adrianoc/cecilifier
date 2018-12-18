@@ -8,7 +8,7 @@ namespace Cecilifier.Core.Tests.Integration
         [TestCase("SimpleProperty")]
         [TestCase("SimpleAutoProperty")]
         [TestCase("Indexer")]
-        [TestCase("IndexerOverload")]
+        [TestCase("IndexerOverloads")]
         public void TestProperties(string testName)
         {
             AssertResourceTest("Properties/" + testName);

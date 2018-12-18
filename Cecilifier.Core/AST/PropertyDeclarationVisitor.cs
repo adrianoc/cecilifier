@@ -21,7 +21,7 @@ namespace Cecilifier.Core.AST
 
             foreach (var accessor in node.AccessorList.Accessors)
             {
-                var accessorModifiers = accessor.Modifiers.MethodModifiersToCecil(ModifiersToCecil, "MethodAttributes.SpecialName");
+                var accessorModifiers = node.Modifiers.MethodModifiersToCecil(ModifiersToCecil, "MethodAttributes.SpecialName");
                 switch (accessor.Keyword.Kind())
                 {
                     case SyntaxKind.GetKeyword:
@@ -35,8 +35,19 @@ namespace Cecilifier.Core.AST
                         var ilVar = TempLocalVar("ilVar_get_");
                         var ilProcessorExp = $"var {ilVar} = {getMethodVar}.Body.GetILProcessor();";
                         AddCecilExpression(ilProcessorExp);
-                        
-                        StatementVisitor.Visit(Context, ilVar, accessor.Body);
+
+                        if (accessor.Body == null) //is this an auto property ?
+                        {
+                            AddBackingFieldIfNeeded(accessor);
+
+                            AddCilInstruction(ilVar, OpCodes.Ldarg_0); // TODO: This assumes instance properties...
+                            AddCilInstruction(ilVar, OpCodes.Ldfld, backingFieldVar);
+                            AddCilInstruction(ilVar, OpCodes.Ret);
+                        }
+                        else
+                        {
+                            StatementVisitor.Visit(Context, ilVar, accessor.Body);
+                        }
                         break;
                     
                     case SyntaxKind.SetKeyword:
@@ -50,7 +61,19 @@ namespace Cecilifier.Core.AST
                         
                         AddCecilExpression($"{setMethodVar}.Parameters.Add(new ParameterDefinition({propertyType}));");
                         AddCecilExpression($"var {ilSetVar} = {setMethodVar}.Body.GetILProcessor();");
-                        StatementVisitor.Visit(Context, ilSetVar, accessor.Body);
+
+                        if (accessor.Body == null) //is this an auto property ?
+                        {
+                            AddBackingFieldIfNeeded(accessor);
+                            
+                            AddCilInstruction(ilSetVar, OpCodes.Ldarg_0); // TODO: This assumes instance properties...
+                            AddCilInstruction(ilSetVar, OpCodes.Ldarg_1);
+                            AddCilInstruction(ilSetVar, OpCodes.Stfld, backingFieldVar);
+                        }
+                        else
+                        {
+                            StatementVisitor.Visit(Context, ilSetVar, accessor.Body);
+                        }
                         AddCilInstruction(ilSetVar, OpCodes.Ret);
                         AddCecilExpression($"{propertyDeclaringTypeVar}.Methods.Add({setMethodVar});");
                         break;
@@ -58,6 +81,22 @@ namespace Cecilifier.Core.AST
             }
 
             AddCecilExpression($"{propertyDeclaringTypeVar}.Properties.Add({propDefVar});");
+
+            void AddBackingFieldIfNeeded(AccessorDeclarationSyntax accessor)
+            {
+                if (backingFieldVar != null)
+                    return;
+
+                backingFieldVar = TempLocalVar("bf");
+                var backingFieldName = $"<{propName}>k__BackingField";
+                var x = new[]
+                {
+                    $"var {backingFieldVar} = new FieldDefinition(\"{backingFieldName}\", {ModifiersToCecil("FieldAttributes", accessor.Modifiers, "Private")}, {propertyType});",
+                    $"{propertyDeclaringTypeVar}.Fields.Add({backingFieldVar});"
+                };
+                
+                AddCecilExpressions(x);
+            }
         }
 
         private string AddPropertyDefinition(string propName, string propertyType)
@@ -68,5 +107,7 @@ namespace Cecilifier.Core.AST
 
             return propDefVar;
         }
+
+        private string backingFieldVar;
     }
 }
