@@ -46,6 +46,11 @@ namespace Cecilifier.Core.AST
 			new FieldDeclarationVisitor(Context).Visit(node);
 		}
 
+		public override void VisitIndexerDeclaration(IndexerDeclarationSyntax node)
+		{
+			new PropertyDeclarationVisitor(Context).Visit(node);
+		}
+
 		public override void VisitPropertyDeclaration(PropertyDeclarationSyntax node)
 		{
 			new PropertyDeclarationVisitor(Context).Visit(node);
