@@ -42,7 +42,7 @@ namespace Cecilifier.Core.AST
 		
         protected void AddMethodCall(string ilVar, IMethodSymbol method)
         {
-        	var opCode = method.IsVirtual || method.IsAbstract ? OpCodes.Callvirt : OpCodes.Call;
+        	var opCode = method.IsVirtual || method.IsAbstract || method.MethodKind == MethodKind.PropertyGet || method.MethodKind == MethodKind.PropertySet ? OpCodes.Callvirt : OpCodes.Call;
         	AddCecilExpression(@"{0}.Append({0}.Create({1}, {2}));", ilVar, opCode.ConstantName(), method.MethodResolverExpression(Context));
 		}
 
