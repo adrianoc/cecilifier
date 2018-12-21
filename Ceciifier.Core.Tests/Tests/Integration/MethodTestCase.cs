@@ -1,10 +1,18 @@
-﻿using NUnit.Framework;
+using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration
 {
 	[TestFixture]
 	public class MethodTestCase : IntegrationResourceBasedTest
 	{
+		[Test, Combinatorial]
+		public void TestMethodInvocation(
+			[Values("QualifiedRecursive", "UnqualifiedRecursive")] string testNamePrefix,
+			[Values("WithParams", "NoParams")] string testName)
+		{
+			AssertResourceTest($"Methods/Invocation/{testNamePrefix}{testName}");
+		}
+		
 		[Test]
 		public void TestExplicityDefaultCtor()
 		{

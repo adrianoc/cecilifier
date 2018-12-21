@@ -1,0 +1,9 @@
+﻿class QualifiedRecursiveNoParams
+{
+    QualifiedRecursiveNoParams o;
+	
+	public void Foo()
+	{
+	    o.Foo();
+	}
+}

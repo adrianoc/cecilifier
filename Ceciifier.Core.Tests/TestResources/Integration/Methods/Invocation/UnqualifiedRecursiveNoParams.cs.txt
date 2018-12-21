@@ -1,0 +1,7 @@
+﻿class UnqualifiedRecursiveNoParams
+{
+	public void Foo()
+	{
+	    Foo();
+	}
+}
