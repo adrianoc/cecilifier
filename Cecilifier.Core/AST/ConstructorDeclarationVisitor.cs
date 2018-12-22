@@ -32,18 +32,16 @@ namespace Cecilifier.Core.AST
 					AddCilInstruction(ilVar, OpCodes.Ldarg_0);
 				}
 
-				using (new MethodParametersContext(Context))
+				// If this ctor has an initializer the call to the base ctor will happen when we visit call base.VisitConstructorDeclaration()
+				// otherwise we need to call it here.
+				if (node.Initializer == null && declaringType.Kind() != SyntaxKind.StructDeclaration)
 				{
-                    // If this ctor has an initializer the call to the base ctor will happen when we visit call base.VisitConstructorDeclaration()
-                    // otherwise we need to call it here.
-				    if (node.Initializer == null && declaringType.Kind() != SyntaxKind.StructDeclaration)
-				    {
-				        var declaringTypelocalVar = ResolveTypeLocalVariable(declaringType.Identifier.ValueText);
-				        AddCilInstruction(ilVar, OpCodes.Call, string.Format("assembly.MainModule.Import(TypeHelpers.DefaultCtorFor({0}.BaseType.Resolve()))", declaringTypelocalVar));
-				    }
-					callBaseMethod(node);
+					var declaringTypelocalVar = Context.DefinitionVariables.GetLastOf(MemberKind.Type).VariableName;
+					AddCilInstruction(ilVar, OpCodes.Call, string.Format("assembly.MainModule.Import(TypeHelpers.DefaultCtorFor({0}.BaseType.Resolve()))", declaringTypelocalVar));
 				}
-            });
+
+				callBaseMethod(node);
+			});
 		}
 
         public override void VisitConstructorInitializer(ConstructorInitializerSyntax node)
@@ -51,9 +49,9 @@ namespace Cecilifier.Core.AST
             new ConstructorInitializerVisitor(Context, ilVar).Visit(node);
         }
 
-        protected override string AppendSpecificModifiers(string cecilModifiersStr)
+        protected override string GetSpecificModifiers()
 		{
-			return cecilModifiersStr.AppendModifier(CtorFlags);
+			return CecilifierExtensions.AppendModifier(string.Empty, CtorFlags);
 		}
 
 		internal void DefaultCtorInjector(string localVar, BaseTypeDeclarationSyntax declaringClass)

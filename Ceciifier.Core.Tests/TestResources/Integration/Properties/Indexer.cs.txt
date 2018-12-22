@@ -1,0 +1,8 @@
+﻿class Indexer
+{
+	private int this[int i] 
+	{
+	    get { return i; }
+	    set {}
+	}
+}

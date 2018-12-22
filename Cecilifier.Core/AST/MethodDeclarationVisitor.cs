@@ -23,7 +23,7 @@ namespace Cecilifier.Core.AST
 
         public override void VisitMethodDeclaration(MethodDeclarationSyntax node)
 		{
-			using (new MethodParametersContext(Context))
+			//using (new MethodParametersContext(Context))
 			{
 				ProcessMethodDeclaration(node, node.Identifier.ValueText, MethodNameOf(node), ResolveType(node.ReturnType), _ => base.VisitMethodDeclaration(node));
 			}
@@ -31,13 +31,19 @@ namespace Cecilifier.Core.AST
 
 		public override void VisitParameter(ParameterSyntax node)
 		{
-			var paramVar = Context.Parameters.Register(node.Identifier.ValueText);
-			
-			var exps = CecilDefinitionsFactory.Parameter(node, Context.SemanticModel, LocalVariableNameForCurrentNode(), paramVar, ResolveType(node.Type)); 
-			foreach (var exp in exps)
+			var declaringMethodName = ".ctor";
+			if (node.Parent.Parent.IsKind(SyntaxKind.MethodDeclaration))
 			{
-				AddCecilExpression(exp);
+				var declaringMethod = (MethodDeclarationSyntax) node.Parent.Parent;
+				declaringMethodName = declaringMethod.Identifier.ValueText;
 			}
+			
+			var paramVar = TempLocalVar(node.Identifier.ValueText); 
+			
+			Context.DefinitionVariables.Register(declaringMethodName, node.Identifier.ValueText, MemberKind.Parameter, paramVar);
+			
+			var exps = CecilDefinitionsFactory.Parameter(node, Context.SemanticModel, Context.DefinitionVariables.GetVariable(declaringMethodName, MemberKind.Method).VariableName, paramVar, ResolveType(node.Type));
+			AddCecilExpressions(exps);
 			
 			base.VisitParameter(node);
 		}
@@ -48,24 +54,14 @@ namespace Cecilifier.Core.AST
 			base.VisitPropertyDeclaration(node);
 		}
 
-//		public override void VisitExpressionStatement(ExpressionStatementSyntax node)
-//		{
-//			ExpressionVisitor.Visit(Context, ilVar, node);
-//		}
-//
-//	    public override void VisitIfStatement(IfStatementSyntax node)
-//	    {
-//	        IfStatementVisitor.Visit(Context, ilVar, node);
-//	    }
-
-	    protected string ProcessMethodDeclaration<T>(T node, string simpleName, string fqName, string returnType, Action<string> runWithCurrent) where T : BaseMethodDeclarationSyntax
+	    protected void ProcessMethodDeclaration<T>(T node, string simpleName, string fqName, string returnType, Action<string> runWithCurrent) where T : BaseMethodDeclarationSyntax
 		{
 			var declaringTypeName = DeclaringTypeNameFor(node);
 
 			var methodVar = MethodExtensions.LocalVariableNameFor(declaringTypeName, simpleName, node.MangleName(Context.SemanticModel));
 
-			AddOrUpdateMethodDefinition(methodVar, fqName, MethodModifiersToCecil(node), returnType);
-			AddCecilExpression("{0}.Methods.Add({1});", ResolveTypeLocalVariable(declaringTypeName), methodVar);
+			AddOrUpdateMethodDefinition(methodVar, fqName, node.Modifiers.MethodModifiersToCecil(ModifiersToCecil, GetSpecificModifiers(), DeclaredSymbolFor(node)), returnType);
+			AddCecilExpression("{0}.Methods.Add({1});", Context.DefinitionVariables.GetLastOf(MemberKind.Type).VariableName, methodVar);
 
 			var isAbstract = DeclaredSymbolFor(node).IsAbstract;
 			if (!isAbstract)
@@ -74,15 +70,13 @@ namespace Cecilifier.Core.AST
 				AddCecilExpression(@"var {0} = {1}.Body.GetILProcessor();", ilVar, methodVar);
 			}
 
-			WithCurrentNode(node, methodVar, simpleName, runWithCurrent);
+			WithCurrentNode(node, methodVar, fqName, runWithCurrent);
 
 			//TODO: Move this to default ctor handling and rely on VisitReturnStatement here instead
 			if (!isAbstract && !node.DescendantNodes().Any(n => n.Kind() == SyntaxKind.ReturnStatement))
 			{
 				AddCilInstruction(ilVar, OpCodes.Ret);
 			}
-
-			return methodVar;
 		}
 
 		protected static string DeclaringTypeNameFor<T>(T node) where T : BaseMethodDeclarationSyntax
@@ -110,71 +104,9 @@ namespace Cecilifier.Core.AST
 			context[methodVar] = "";
 		}
 
-		private string MethodModifiersToCecil(BaseMethodDeclarationSyntax methodDeclaration)
+		protected virtual string GetSpecificModifiers()
 		{
-			var modifiers = MapExplicitModifiers(methodDeclaration);
-
-			var defaultAccessibility = "Private";
-			if (modifiers == string.Empty)
-			{
-				var methodSymbol = DeclaredSymbolFor(methodDeclaration);
-				if (IsExplicitMethodImplementation(methodSymbol))
-				{
-					modifiers = "MethodAttributes.Virtual | MethodAttributes.NewSlot | MethodAttributes.Final";
-				}
-				else
-				{
-					var lastDeclaredIn = methodSymbol.FindLastDefinition();
-					if (lastDeclaredIn.ContainingType.TypeKind == TypeKind.Interface)
-					{
-						modifiers = "MethodAttributes.Virtual | MethodAttributes.NewSlot | " + (lastDeclaredIn.ContainingType == methodSymbol.ContainingType ? "MethodAttributes.Abstract" : "MethodAttributes.Final");
-						defaultAccessibility = lastDeclaredIn.ContainingType == methodSymbol.ContainingType ? "Public" : "Private";
-					}
-				}
-			}
-
-			var validModifiers = RemoveSourceModifiersWithNoILEquivalent(methodDeclaration);
-
-			var cecilModifiersStr = ModifiersToCecil("MethodAttributes", validModifiers.ToList(), defaultAccessibility);
-
-			cecilModifiersStr = AppendSpecificModifiers(cecilModifiersStr);
-
-			return cecilModifiersStr + " | MethodAttributes.HideBySig".AppendModifier(modifiers);
-		}
-
-		protected virtual string AppendSpecificModifiers(string cecilModifiersStr)
-		{
-			return cecilModifiersStr;
-		}
-
-		private static string MapExplicitModifiers(BaseMethodDeclarationSyntax methodDeclaration)
-		{
-			foreach (var mod in methodDeclaration.Modifiers)
-			{
-				switch (mod.Kind())
-				{
-					case SyntaxKind.VirtualKeyword:  return "MethodAttributes.Virtual | MethodAttributes.NewSlot";
-					case SyntaxKind.OverrideKeyword: return "MethodAttributes.Virtual";
-					case SyntaxKind.AbstractKeyword: return "MethodAttributes.Virtual | MethodAttributes.NewSlot | MethodAttributes.Abstract";
-					case SyntaxKind.SealedKeyword:   return "MethodAttributes.Final";
-					case SyntaxKind.NewKeyword:      return "??? new ??? dont know yet!";
-				}
-			}
-			return string.Empty;
-		}
-
-		private static bool IsExplicitMethodImplementation(IMethodSymbol methodSymbol)
-		{
-			return methodSymbol.ExplicitInterfaceImplementations.Count() > 0;
-		}
-
-		private static IEnumerable<SyntaxToken> RemoveSourceModifiersWithNoILEquivalent(BaseMethodDeclarationSyntax methodDeclaration)
-		{
-			return methodDeclaration.Modifiers.Where(
-				mod => (mod.Kind() != SyntaxKind.OverrideKeyword 
-				        && mod.Kind() != SyntaxKind.AbstractKeyword 
-				        && mod.Kind() != SyntaxKind.VirtualKeyword 
-				        && mod.Kind() != SyntaxKind.SealedKeyword));
+			return null;
 		}
 
 		private string MethodNameOf(MethodDeclarationSyntax method)
@@ -189,7 +121,7 @@ namespace Cecilifier.Core.AST
     {
         private static string _ilVar;
 
-        internal IfStatementVisitor(IVisitorContext ctx) : base(ctx)
+	    private IfStatementVisitor(IVisitorContext ctx) : base(ctx)
         {
         }
 
@@ -229,7 +161,7 @@ namespace Cecilifier.Core.AST
             }
 
             WriteCecilExpression(Context, $"{_ilVar}.Append({elseEndTargetVarName});");
-            WriteCecilExpression(Context, $"{Context.CurrentLocalVariable.VarName}.Body.OptimizeMacros();");
+            WriteCecilExpression(Context, $"{Context.DefinitionVariables.GetLastOf(MemberKind.Method).VariableName}.Body.OptimizeMacros();");
         }
     }
 	
@@ -247,9 +179,10 @@ namespace Cecilifier.Core.AST
 
 		public override void VisitBlock(BlockSyntax node)
 		{
-			Context.EnterScope();
-			base.VisitBlock(node);
-			Context.LeaveScope();
+			using (Context.DefinitionVariables.EnterScope())
+			{
+				base.VisitBlock(node);
+			}
 		}
 		
 		public override void VisitReturnStatement(ReturnStatementSyntax node)
@@ -270,7 +203,7 @@ namespace Cecilifier.Core.AST
 
 		public override void VisitLocalDeclarationStatement(LocalDeclarationStatementSyntax node)
 		{
-			var methodVar = LocalVariableNameForCurrentNode();
+			var methodVar = Context.DefinitionVariables.GetLastOf(MemberKind.Method).VariableName;
 			foreach(var localVar in node.Declaration.Variables)
 			{
 				AddLocalVariable(node.Declaration.Type, localVar, methodVar);
@@ -280,59 +213,25 @@ namespace Cecilifier.Core.AST
 
 		private void AddLocalVariable(TypeSyntax type, VariableDeclaratorSyntax localVar, string methodVar)
 		{
-			
 			string resolvedVarType = type.IsVar 
 				? ResolveExpressionType(localVar.Initializer.Value)
 				: ResolveType(type);
 
-			var cecilVarDeclName = TempLocalVar("cecilVar_");
+			var cecilVarDeclName = TempLocalVar($"lv_{localVar.Identifier.ValueText}");
 			AddCecilExpression("var {0} = new VariableDefinition({1});", cecilVarDeclName, resolvedVarType);
 			AddCecilExpression("{0}.Body.Variables.Add({1});", methodVar, cecilVarDeclName);
 
-			Context.AddLocalVariableMapping(localVar.Identifier.ToString(), cecilVarDeclName);
+			Context.DefinitionVariables.Register(string.Empty, localVar.Identifier.ValueText, MemberKind.LocalVariable, cecilVarDeclName);
 		}
 
 		private void ProcessVariableInitialization(VariableDeclaratorSyntax localVar)
 		{
 			if (ExpressionVisitor.Visit(Context, _ilVar, localVar.Initializer)) return;
 
-			AddCilInstruction(_ilVar, OpCodes.Stloc, LocalVariableFromName(localVar.Identifier.ValueText));
+			var localVarDef = Context.DefinitionVariables.GetVariable(localVar.Identifier.ValueText, MemberKind.LocalVariable);
+			AddCilInstruction(_ilVar, OpCodes.Stloc, localVarDef.VariableName);
 		}
 
 		private static string _ilVar;
-	}
-
-    internal class MethodParametersContext : IDisposable, IMethodParameterContext
-	{
-		public MethodParametersContext(IVisitorContext context)
-		{
-			parentContext = context;
-			context.Parameters = this;
-		}
-
-		public void Dispose()
-		{
-			parentContext.Parameters = null;
-		}
-
-		public string Register(string paramName)
-		{
-			var localVarName = paramName + "_" + paramNameToLocalVarBackingNameMapping.Count + "_" + paramName.UniqueId();
-			paramNameToLocalVarBackingNameMapping[paramName] = localVarName;
-
-			return localVarName;
-		}
-
-		public string BackingVariableNameFor(string name)
-		{
-			string localVar;
-			if (paramNameToLocalVarBackingNameMapping.TryGetValue(name, out localVar))
-				return localVar;
-
-			throw new ArgumentException(string.Format("No backing variable registered for parameter '{0}'", name));
-		}
-
-		private IDictionary<string, string> paramNameToLocalVarBackingNameMapping = new Dictionary<string, string>();
-		private IVisitorContext parentContext;
 	}
 }

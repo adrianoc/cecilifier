@@ -42,15 +42,14 @@ namespace Cecilifier.Core.AST
 
 		private void LocalVariableAssignment(ILocalSymbol localVariable)
 		{
-			var methodVar = LocalVariableNameForCurrentNode();
-			AddCilInstruction(ilVar, OpCodes.Stloc, LocalVariableIndex(localVariable));
+			AddCilInstruction(ilVar, OpCodes.Stloc, Context.DefinitionVariables.GetVariable(localVariable.Name, MemberKind.LocalVariable).VariableName);
 		}
 
 		private void ParameterAssignment(IParameterSymbol parameter)
 		{
 			if (parameter.RefKind == RefKind.None)
 			{
-				var localVar = Context.Parameters.BackingVariableNameFor(parameter.Name);
+				var localVar = Context.DefinitionVariables.GetVariable(parameter.Name, MemberKind.Parameter).VariableName;
 				AddCilInstruction(ilVar, OpCodes.Starg_S, localVar);
 			}
 			else

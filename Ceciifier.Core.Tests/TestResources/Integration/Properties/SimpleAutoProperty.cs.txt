@@ -1,0 +1,7 @@
+﻿class SimpleAutoProperty
+{
+	private int P 
+	{
+	    get; set;
+	}
+}

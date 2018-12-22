@@ -21,31 +21,31 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 		public bool VisitName(IMemberDefinition source, IMemberDefinition target)
 		{
 			output.WriteLine(string.Format("Field simple name ('{0}') matches, but not FQN. Expected {1} got {2}.", source.Name, source.FullName, target.FullName));
-			return true;
+			return false;
 		}
 
 		public bool VisitDeclaringType(IMemberDefinition source, IMemberDefinition target)
 		{
 			output.WriteLine(string.Format("Declaring type differs. Expected '{0}' got '{1}'.", source.FullName, target.FullName));
-			return true;
+			return false;
 		}
 
 		public bool VisitFieldType(FieldDefinition source, FieldDefinition target)
 		{
 			output.WriteLine(string.Format("[{0}] Field type differs. Expected '{1}' got '{2}'.", target.FullName, source.FieldType.FullName, target.FieldType.FullName));
-			return true;
+			return false;
 		}
 
 		public bool VisitAttributes(FieldDefinition source, FieldDefinition target)
 		{
-			output.WriteLine(string.Format("[{0}] Type attributes differs. Expected '{1}' got '{2}'.", target.FullName, source.Attributes, target.Attributes));
-			return true;
+			output.WriteLine(string.Format("[{0}] Field attributes differs. Expected '{1}' got '{2}'.", target.FullName, source.Attributes, target.Attributes));
+			return false;
 		}
 
 		public bool VisitConstant(FieldDefinition source, FieldDefinition target)
 		{
 			output.WriteLine("[{0}] Field constant values differs. Expected '{1}' got '{2}'.", target.FullName , source.Constant, target.Constant);
-			return true;
+			return false;
 		}
 	}
 }

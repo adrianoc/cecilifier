@@ -1,0 +1,14 @@
+﻿class Indexer
+{
+	private int this[int i] 
+	{
+	    get { return i; }
+	    set {}
+	}
+	
+	private int this[string s] 
+	{
+	    get { return s.Length; }
+	    set {}
+	}
+}

@@ -25,7 +25,7 @@ namespace Cecilifier.Core.Extensions
 			{
 				//TODO: This assumes the type in question as already been visited.
 				//		see: Types\ForwardTypeReference
-				return ctx.ResolveTypeLocalVariable(type.Name);
+				return ctx.DefinitionVariables.GetTypeVariable(type.Name).VariableName;
 			}
 
 			return String.Format("assembly.MainModule.Import(TypeHelpers.ResolveType(\"{0}\", \"{1}\"))",

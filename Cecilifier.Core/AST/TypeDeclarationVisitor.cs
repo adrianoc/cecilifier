@@ -5,11 +5,10 @@ using Cecilifier.Core.Misc;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Mono.Cecil;
 
 namespace Cecilifier.Core.AST
 {
-	class TypeDeclarationVisitor : SyntaxWalkerBase
+	class TypeDeclarationVisitor : TypeDeclarationVisitorBase
 	{
 		public TypeDeclarationVisitor(IVisitorContext context) : base(context)
 		{
@@ -17,8 +16,8 @@ namespace Cecilifier.Core.AST
 
 		public override void VisitInterfaceDeclaration(InterfaceDeclarationSyntax node)
 		{
-			HandleInterfaceDeclaration(node);
-			using (Context.BeginType(node.Identifier.ValueText))
+			var definitionVar =  HandleInterfaceDeclaration(node);
+			using(Context.DefinitionVariables.WithCurrent("", node.Identifier.ValueText, MemberKind.Type, definitionVar))
 			{
 				base.VisitInterfaceDeclaration(node);
 			}
@@ -26,8 +25,8 @@ namespace Cecilifier.Core.AST
 
 		public override void VisitClassDeclaration(ClassDeclarationSyntax node)
 		{
-			HandleClassDeclaration(node, ProcessBase(node));
-			using (Context.BeginType(node.Identifier.ValueText))
+			var definitionVar = HandleClassDeclaration(node, ProcessBase(node));
+			using(Context.DefinitionVariables.WithCurrent("", node.Identifier.ValueText, MemberKind.Type, definitionVar))
 			{
 				base.VisitClassDeclaration(node);
 			}
@@ -35,8 +34,8 @@ namespace Cecilifier.Core.AST
 
 		public override void VisitStructDeclaration(StructDeclarationSyntax node)
 		{
-			HandleTypeDeclaration(node, ProcessBase(node));
-			using (Context.BeginType(node.Identifier.ValueText))
+			var definitionVar = HandleTypeDeclaration(node, ProcessBase(node));
+			using(Context.DefinitionVariables.WithCurrent("", node.Identifier.ValueText, MemberKind.Type, definitionVar))
 			{
 				base.VisitStructDeclaration(node);
 			}
@@ -45,6 +44,16 @@ namespace Cecilifier.Core.AST
 		public override void VisitFieldDeclaration(FieldDeclarationSyntax node)
 		{
 			new FieldDeclarationVisitor(Context).Visit(node);
+		}
+
+		public override void VisitIndexerDeclaration(IndexerDeclarationSyntax node)
+		{
+			new PropertyDeclarationVisitor(Context).Visit(node);
+		}
+
+		public override void VisitPropertyDeclaration(PropertyDeclarationSyntax node)
+		{
+			new PropertyDeclarationVisitor(Context).Visit(node);
 		}
 
 		public override void VisitConstructorDeclaration(ConstructorDeclarationSyntax node)
@@ -80,17 +89,17 @@ namespace Cecilifier.Core.AST
 			}
 		}
 
-		private void HandleInterfaceDeclaration(TypeDeclarationSyntax node)
+		private string HandleInterfaceDeclaration(TypeDeclarationSyntax node)
 		{
-			HandleTypeDeclaration(node, string.Empty);	
+			return HandleTypeDeclaration(node, string.Empty);	
 		}
 
-		private void HandleClassDeclaration(TypeDeclarationSyntax node, string baseType)
+		private string HandleClassDeclaration(TypeDeclarationSyntax node, string baseType)
 		{
-			HandleTypeDeclaration(node, baseType);	
+			return HandleTypeDeclaration(node, baseType);	
 		}
 
-		private void HandleTypeDeclaration(TypeDeclarationSyntax node, string baseType)
+		private string HandleTypeDeclaration(TypeDeclarationSyntax node, string baseType)
 		{
 			var varName = LocalVariableNameForId(NextLocalVariableTypeId());
 			bool isStructWithNoFields = node.Kind() == SyntaxKind.StructDeclaration && node.Members.Count == 0;
@@ -99,34 +108,8 @@ namespace Cecilifier.Core.AST
 			EnsureCurrentTypeHasADefaultCtor(node, varName);
 			
 			HandleAttributesInTypeDeclaration(node, varName);
-		}
 
-		private void HandleAttributesInTypeDeclaration(TypeDeclarationSyntax node, string varName)
-		{
-			if (node.AttributeLists.Count == 0)
-				return;
-			
-			foreach (var attribute in node.AttributeLists.SelectMany(al => al.Attributes))
-			{
-				var attrsExp = CecilDefinitionsFactory.Attribute(varName, Context, attribute, (attrType, attrArgs) =>
-								{
-									var typeVar = Context.ResolveTypeLocalVariable(attrType.FullyQualifiedName());
-									if (typeVar == null)
-									{
-										//attribute is not declared in the same assembly....
-										var ctorArgumentTypes = $"new Type[{attrArgs.Length}] {{ {string.Join(",", attrArgs.Select(arg => $"typeof({Context.GetTypeInfo(arg.Expression).Type.Name})"))} }}";
-										return $"assembly.MainModule.ImportReference(typeof({attrType.FullyQualifiedName()}).GetConstructor({ctorArgumentTypes}))";
-									}
-				
-									// Attribute is defined in the same assembly. We need to find the variable that holds its "ctor declaration"
-									var attrCtor = attrType.GetMembers().OfType<IMethodSymbol>().SingleOrDefault(m => m.MethodKind == MethodKind.Constructor && m.Parameters.Length == attrArgs.Length);
-									var attrCtorVar = MethodExtensions.LocalVariableNameFor(attrType.Name, "ctor", attrCtor.MangleName());
-				
-									return attrCtorVar;
-								});
-				
-				AddCecilExpressions(attrsExp);
-			}
+			return varName;
 		}
 
 		private void EnsureCurrentTypeHasADefaultCtor(TypeDeclarationSyntax node, string typeLocalVar)

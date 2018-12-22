@@ -3,12 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Cecilifier.Core.AST
 {
-    internal class EnumDeclarationVisitor : SyntaxWalkerBase
+    internal class EnumDeclarationVisitor : TypeDeclarationVisitorBase
     {
         private EnumMemberValueCollector _memberCollector;
         public EnumDeclarationVisitor(IVisitorContext context) : base(context)
@@ -25,7 +26,7 @@ namespace Cecilifier.Core.AST
             var exps = CecilDefinitionsFactory.Type(Context, enumType, node.Identifier.ValueText, attrs + " | TypeAttributes.Sealed", ResolveType("System.Enum"), false, new string[0]);
             AddCecilExpressions(exps);
 
-            using (Context.BeginType(node.Identifier.ValueText))
+            using(Context.DefinitionVariables.WithCurrent(node.Parent.IsKind(SyntaxKind.CompilationUnit) ? "" : node.Parent.ResolveDeclaringType().Identifier.ValueText, node.Identifier.ValueText, MemberKind.Type, enumType))
             {
                 //.class private auto ansi MyEnum
                 //TODO: introduce TypeSystem.CoreLib.Enum/Action/etc...
@@ -33,6 +34,8 @@ namespace Cecilifier.Core.AST
                 var fieldVar = MethodExtensions.LocalVariableNameFor("valueField", node.Identifier.ValueText);
                 var valueFieldExp = CecilDefinitionsFactory.Field(enumType, fieldVar, "value__", "assembly.MainModule.TypeSystem.Int32", "FieldAttributes.SpecialName | FieldAttributes.RTSpecialName | FieldAttributes.Public");
                 AddCecilExpressions(valueFieldExp);
+                
+                HandleAttributesInTypeDeclaration(node, enumType);
 				
                 base.VisitEnumDeclaration(node);
             }
@@ -43,11 +46,10 @@ namespace Cecilifier.Core.AST
             // Adds a field like:
             // .field public static literal valuetype xxx.MyEnum Second = int32(1)
             var enumMemberValue = _memberCollector[node];
-            var declaringEnum = (EnumDeclarationSyntax) node.Parent;
-            var enumVar = ResolveTypeLocalVariable(declaringEnum.Identifier.ValueText);
+            var enumVar = Context.DefinitionVariables.GetLastOf(MemberKind.Type).VariableName;
 			
-            var fieldVar = MethodExtensions.LocalVariableNameFor($"em_{Context.CurrentType}_{NextLocalVariableId()}", node.Identifier.ValueText);
-            var exp  = CecilDefinitionsFactory.Field(enumVar, fieldVar, node.Identifier.ValueText, enumVar, "FieldAttributes.Static | FieldAttributes.Literal | FieldAttributes.Public", $"Constant = {enumMemberValue}");
+            var fieldVar = MethodExtensions.LocalVariableNameFor($"em_{Context.DefinitionVariables.Current.MemberName}_{NextLocalVariableId()}", node.Identifier.ValueText);
+            var exp  = CecilDefinitionsFactory.Field(enumVar, fieldVar, node.Identifier.ValueText, enumVar, "FieldAttributes.Static | FieldAttributes.Literal | FieldAttributes.Public | FieldAttributes.HasDefault", $"Constant = {enumMemberValue}");
             AddCecilExpressions(exp);
 
             base.VisitEnumMemberDeclaration(node);

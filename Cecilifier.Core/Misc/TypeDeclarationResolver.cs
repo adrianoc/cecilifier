@@ -30,6 +30,11 @@ namespace Cecilifier.Core.Misc
 			declaringType = node;
 		}
 
+		public override void VisitInterfaceDeclaration(InterfaceDeclarationSyntax node)
+		{
+			declaringType = node;
+		}
+
 		public override void VisitFieldDeclaration(FieldDeclarationSyntax node)
 		{
 			declaringType = (BaseTypeDeclarationSyntax) node.Ancestors().Where(a => a.Kind() == SyntaxKind.ClassDeclaration || a.Kind() == SyntaxKind.StructDeclaration).Single();

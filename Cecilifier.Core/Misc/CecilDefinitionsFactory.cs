@@ -40,14 +40,15 @@ namespace Cecilifier.Core.Misc
                 exps.Add($"{typeVar}.Interfaces.Add(new InterfaceImplementation({itfName}));");
             }
 
-            if (context.CurrentType == null)
+            var currentType = context.DefinitionVariables.GetLastOf(MemberKind.Type);
+            if (currentType.IsValid)
             {
-                exps.Add($"assembly.MainModule.Types.Add({typeVar});");
+                // type is a inner type of *context.CurrentType* 
+                exps.Add($"{currentType.VariableName}.NestedTypes.Add({typeVar});");
             }
             else
             {
-                // type is a inner type of *context.CurrentType* 
-                exps.Add($"{context.ResolveTypeLocalVariable(context.CurrentType)}.NestedTypes.Add({typeVar});");
+                exps.Add($"assembly.MainModule.Types.Add({typeVar});");
             }
 
             if (isStructWithNoFields)
@@ -55,9 +56,6 @@ namespace Cecilifier.Core.Misc
                 exps.Add($"{typeVar}.ClassSize = 1;");	
                 exps.Add($"{typeVar}.PackingSize = 0;");	
             }
-
-            context.RegisterTypeLocalVariable(typeName, typeVar);
-            
             return exps;
         }
         

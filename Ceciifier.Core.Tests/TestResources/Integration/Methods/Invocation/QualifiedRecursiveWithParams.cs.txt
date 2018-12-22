@@ -1,0 +1,7 @@
+﻿class QualifiedRecursiveWithParams
+{
+    public void Foo(QualifiedRecursiveWithParams o)
+	{
+	    o.Foo(o);
+	}
+}

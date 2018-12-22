@@ -1,0 +1,8 @@
+﻿class SimpleProperty
+{
+	private int P 
+	{
+	    get { return 0; }
+	    set {}
+	}
+}
