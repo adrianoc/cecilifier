@@ -57,7 +57,7 @@ namespace Cecilifier.Core.AST
 			var typeDef = CecilDefinitionsFactory.Type(Context, typeVar, node.Identifier.ValueText, DefaultTypeAttributeFor(node).AppendModifier(accessibility), ResolveType("System.MulticastDelegate"), false, Array.Empty<string>(), "IsAnsiClass = true");
 			AddCecilExpressions(typeDef);
 			
-			using(Context.BeginType(node.Identifier.ValueText))
+			using(Context.DefinitionVariables.WithCurrent("", node.Identifier.ValueText, MemberKind.Type, typeVar))
 			{
 				// Delegate ctor
 				AddCecilExpression(CecilDefinitionsFactory.Constructor(out var ctorLocalVar, node.Identifier.Text, "MethodAttributes.FamANDAssem | MethodAttributes.Family", "IsRuntime = true"));

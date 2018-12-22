@@ -22,7 +22,7 @@ namespace Cecilifier.Core.AST
 			switch (info.Symbol.Kind)
 			{
 				case SymbolKind.Local:
-					AddCilInstruction(ilVar, OpCodes.Ldloca_S, LocalVariableFromName(node.Identifier.ValueText));
+					AddCilInstruction(ilVar, OpCodes.Ldloca_S, Context.DefinitionVariables.GetVariable(node.Identifier.ValueText, MemberKind.LocalVariable).VariableName);
 					break;
 
 				case SymbolKind.Field:
@@ -50,7 +50,7 @@ namespace Cecilifier.Core.AST
 
 		public override void VisitLocalDeclarationStatement(LocalDeclarationStatementSyntax node)
 		{
-			AddCilInstruction(ilVar, OpCodes.Ldloca_S, LocalVariableFromName(node.Declaration.Variables[0].Identifier.ValueText));
+			AddCilInstruction(ilVar, OpCodes.Ldloca_S, Context.DefinitionVariables.GetVariable(node.Declaration.Variables[0].Identifier.ValueText, MemberKind.LocalVariable).VariableName);
 		}
 	}
 }

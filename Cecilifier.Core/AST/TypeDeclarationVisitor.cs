@@ -1,10 +1,10 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Mono.Cecil;
 
 namespace Cecilifier.Core.AST
 {
@@ -16,8 +16,8 @@ namespace Cecilifier.Core.AST
 
 		public override void VisitInterfaceDeclaration(InterfaceDeclarationSyntax node)
 		{
-			HandleInterfaceDeclaration(node);
-			using (Context.BeginType(node.Identifier.ValueText))
+			var definitionVar =  HandleInterfaceDeclaration(node);
+			using(Context.DefinitionVariables.WithCurrent("", node.Identifier.ValueText, MemberKind.Type, definitionVar))
 			{
 				base.VisitInterfaceDeclaration(node);
 			}
@@ -25,8 +25,8 @@ namespace Cecilifier.Core.AST
 
 		public override void VisitClassDeclaration(ClassDeclarationSyntax node)
 		{
-			HandleClassDeclaration(node, ProcessBase(node));
-			using (Context.BeginType(node.Identifier.ValueText))
+			var definitionVar = HandleClassDeclaration(node, ProcessBase(node));
+			using(Context.DefinitionVariables.WithCurrent("", node.Identifier.ValueText, MemberKind.Type, definitionVar))
 			{
 				base.VisitClassDeclaration(node);
 			}
@@ -34,8 +34,8 @@ namespace Cecilifier.Core.AST
 
 		public override void VisitStructDeclaration(StructDeclarationSyntax node)
 		{
-			HandleTypeDeclaration(node, ProcessBase(node));
-			using (Context.BeginType(node.Identifier.ValueText))
+			var definitionVar = HandleTypeDeclaration(node, ProcessBase(node));
+			using(Context.DefinitionVariables.WithCurrent("", node.Identifier.ValueText, MemberKind.Type, definitionVar))
 			{
 				base.VisitStructDeclaration(node);
 			}
@@ -89,17 +89,17 @@ namespace Cecilifier.Core.AST
 			}
 		}
 
-		private void HandleInterfaceDeclaration(TypeDeclarationSyntax node)
+		private string HandleInterfaceDeclaration(TypeDeclarationSyntax node)
 		{
-			HandleTypeDeclaration(node, string.Empty);	
+			return HandleTypeDeclaration(node, string.Empty);	
 		}
 
-		private void HandleClassDeclaration(TypeDeclarationSyntax node, string baseType)
+		private string HandleClassDeclaration(TypeDeclarationSyntax node, string baseType)
 		{
-			HandleTypeDeclaration(node, baseType);	
+			return HandleTypeDeclaration(node, baseType);	
 		}
 
-		private void HandleTypeDeclaration(TypeDeclarationSyntax node, string baseType)
+		private string HandleTypeDeclaration(TypeDeclarationSyntax node, string baseType)
 		{
 			var varName = LocalVariableNameForId(NextLocalVariableTypeId());
 			bool isStructWithNoFields = node.Kind() == SyntaxKind.StructDeclaration && node.Members.Count == 0;
@@ -108,6 +108,8 @@ namespace Cecilifier.Core.AST
 			EnsureCurrentTypeHasADefaultCtor(node, varName);
 			
 			HandleAttributesInTypeDeclaration(node, varName);
+
+			return varName;
 		}
 
 		private void EnsureCurrentTypeHasADefaultCtor(TypeDeclarationSyntax node, string typeLocalVar)

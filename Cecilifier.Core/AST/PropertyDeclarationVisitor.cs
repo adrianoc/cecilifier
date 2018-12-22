@@ -16,7 +16,7 @@ namespace Cecilifier.Core.AST
         public override void VisitIndexerDeclaration(IndexerDeclarationSyntax node)
         {
             var propertyType = ResolveType(node.Type);
-            var propertyDeclaringTypeVar = ResolveTypeLocalVariable(Context.CurrentType);
+            var propertyDeclaringTypeVar = Context.DefinitionVariables.Current.VariableName;
             var propName = "Item";
             
             AddDefaultMemberAttribute(propertyDeclaringTypeVar, propName);
@@ -55,7 +55,7 @@ namespace Cecilifier.Core.AST
         public override void VisitPropertyDeclaration(PropertyDeclarationSyntax node)
         {
             var propertyType = ResolveType(node.Type);
-            var propertyDeclaringTypeVar = ResolveTypeLocalVariable(Context.CurrentType);
+            var propertyDeclaringTypeVar = Context.DefinitionVariables.GetLastOf(MemberKind.Type).VariableName;
             var propName = node.Identifier.ValueText;
             
             var propDefVar = AddPropertyDefinition(propName, propertyType);

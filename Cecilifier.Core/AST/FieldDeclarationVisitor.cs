@@ -19,7 +19,7 @@ namespace Cecilifier.Core.AST
 
 		public override void VisitFieldDeclaration(FieldDeclarationSyntax node)
 		{
-			var declaringTypeVar = ResolveTypeLocalVariable(node.Parent.ResolveDeclaringType());
+			var declaringTypeVar = Context.DefinitionVariables.GetLastOf(MemberKind.Type).VariableName;
 			
 			var type = ResolveType(node.Declaration.Type);
 			var fieldType = ProcessRequiredModifiers(node, type) ?? type;

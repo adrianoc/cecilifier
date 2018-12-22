@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Linq.Expressions;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Microsoft.CodeAnalysis;
@@ -42,7 +41,10 @@ namespace Cecilifier.Core.AST
 		
         protected void AddMethodCall(string ilVar, IMethodSymbol method)
         {
-        	var opCode = method.IsVirtual || method.IsAbstract || method.MethodKind == MethodKind.PropertyGet || method.MethodKind == MethodKind.PropertySet ? OpCodes.Callvirt : OpCodes.Call;
+        	var opCode = (method.IsVirtual || method.IsAbstract  || method.MethodKind == MethodKind.PropertyGet || method.MethodKind == MethodKind.PropertySet) 
+							? OpCodes.Callvirt 
+							: OpCodes.Call;
+	        
         	AddCecilExpression(@"{0}.Append({0}.Create({1}, {2}));", ilVar, opCode.ConstantName(), method.MethodResolverExpression(Context));
 		}
 
@@ -71,16 +73,11 @@ namespace Cecilifier.Core.AST
 			return Context.GetDeclaredSymbol(node);
 		}
 
-		protected void WithCurrentNode(SyntaxNode node, string localVariable, string typeName, Action<string> action)
+		protected void WithCurrentNode(BaseMethodDeclarationSyntax node, string localVariable, string methodName, Action<string> action)
 		{
-			try
+			using (Context.DefinitionVariables.WithCurrent(string.Empty, methodName, MemberKind.Method, localVariable))
 			{
-				Context.PushLocalVariable(new LocalVariable(node, localVariable));
-				action(typeName);
-			}
-			finally
-			{
-				Context.PopLocalVariable();
+				action(methodName);
 			}
 		}
 
@@ -92,12 +89,6 @@ namespace Cecilifier.Core.AST
 		protected static string LocalVariableNameForId(int localVarId)
 		{
 			return "t" + localVarId;
-		}
-
-		protected string LocalVariableNameForCurrentNode()
-		{
-			var node = Context.CurrentLocalVariable;
-			return node.VarName;
 		}
 
 		protected int NextLocalVariableId()
@@ -133,7 +124,7 @@ namespace Cecilifier.Core.AST
 			return typeAttributes.AppendModifier(convertedModifiers);
 		}
 
-		protected static bool IsNestedTypeDeclaration(SyntaxNode node)
+		private static bool IsNestedTypeDeclaration(SyntaxNode node)
 		{
 			return node.Parent.Kind() != SyntaxKind.NamespaceDeclaration && node.Parent.Kind() != SyntaxKind.CompilationUnit;
 		}
@@ -195,14 +186,9 @@ namespace Cecilifier.Core.AST
 			return token.Kind() != SyntaxKind.PartialKeyword && token.Kind() != SyntaxKind.VolatileKeyword;
 		}
 
-		protected string ResolveTypeLocalVariable(BaseTypeDeclarationSyntax typeDeclaration)
-		{
-			return ResolveTypeLocalVariable(typeDeclaration.Identifier.ValueText);
-		}
-
 		protected string ResolveTypeLocalVariable(string typeName)
 		{
-			return Context.ResolveTypeLocalVariable(typeName);
+			return Context.DefinitionVariables.GetVariable(typeName, MemberKind.Type).VariableName;
 		}
 
 		protected string ResolveExpressionType(ExpressionSyntax expression)
@@ -273,30 +259,20 @@ namespace Cecilifier.Core.AST
 			return Context.GetSpecialType(specialType);
 		}
 
-		protected string LocalVariableIndex(ILocalSymbol localVariable)
-		{
-		    return Context.MapLocalVariableNameToCecil(localVariable.Name);
-		}
-
-		protected string LocalVariableFromName(string localVariable)
-		{
-            return Context.MapLocalVariableNameToCecil(localVariable);
-        }
-
 		protected void ProcessParameter(string ilVar, IdentifierNameSyntax node, IParameterSymbol paramSymbol)
 		{
 			var parent = (CSharpSyntaxNode) node.Parent;
 			//TODO: Get rid of code duplication in ExpressionVisitor.ProcessLocalVariable(IdentifierNameSyntax localVar, SymbolInfo varInfo)
 			if (paramSymbol.Type.IsValueType && parent.Accept(new UsageVisitor()) == UsageKind.CallTarget)
 			{
-				AddCilInstruction(ilVar, OpCodes.Ldarga, Context.Parameters.BackingVariableNameFor(paramSymbol.Name));
+				AddCilInstruction(ilVar, OpCodes.Ldarga, Context.DefinitionVariables.GetVariable(paramSymbol.Name, MemberKind.Parameter).VariableName);
 				return;
 			}
 
 			var method = paramSymbol.ContainingSymbol as IMethodSymbol;
 			if (node.Parent.Kind() == SyntaxKind.SimpleMemberAccessExpression && paramSymbol.ContainingType.IsValueType)
 			{
-				AddCilInstruction(ilVar, OpCodes.Ldarga, Context.Parameters.BackingVariableNameFor(paramSymbol.Name));
+				AddCilInstruction(ilVar, OpCodes.Ldarga, Context.DefinitionVariables.GetVariable(paramSymbol.Name, MemberKind.Parameter).VariableName);
 			}
 			else if (paramSymbol.Ordinal > 3)
 			{
@@ -318,7 +294,7 @@ namespace Cecilifier.Core.AST
 			if (invocation == null || invocation.Expression != node)
 				return;
 
-			var localDelegateDeclaration = Context.ResolveTypeLocalVariable(typeSymbol.Name);
+			var localDelegateDeclaration = ResolveTypeLocalVariable(typeSymbol.Name);
 			if (localDelegateDeclaration != null)
 			{
 				AddCilInstruction(ilVar, OpCodes.Callvirt, $"{localDelegateDeclaration}.Methods.Single(m => m.Name == \"Invoke\")");
@@ -332,7 +308,7 @@ namespace Cecilifier.Core.AST
 			}
 		}
 
-		protected const string ModifiersSeparator = " | ";
+		private const string ModifiersSeparator = " | ";
 
 	}
 

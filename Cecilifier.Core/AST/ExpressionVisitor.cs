@@ -94,7 +94,7 @@ namespace Cecilifier.Core.AST
                 {
                     var tempLocalName = MethodExtensions.LocalVariableNameFor("tmp_", "tmp_".UniqueId().ToString());
                     AddCecilExpression("var {0} = new VariableDefinition({1});", tempLocalName, cecilTypeSystemReference);
-                    AddCecilExpression("{0}.Body.Variables.Add({1});", Context.CurrentLocalVariable.VarName, tempLocalName);
+                    AddCecilExpression("{0}.Body.Variables.Add({1});", Context.DefinitionVariables.GetLastOf(MemberKind.Method).VariableName, tempLocalName);
 
                     AddCilInstruction(ilVar, OpCodes.Stloc, $"{tempLocalName}");
                     AddCilInstruction(ilVar, OpCodes.Ldloca_S, $"{tempLocalName}");
@@ -227,7 +227,7 @@ namespace Cecilifier.Core.AST
 			{
 				var tempLocalName = MethodExtensions.LocalVariableNameFor("tmp_", "tmp_".UniqueId().ToString());
 				AddCecilExpression("var {0} = new VariableDefinition(assembly.MainModule.TypeSystem.Int32);", tempLocalName);
-				AddCecilExpression("{0}.Body.Variables.Add({1});", Context.CurrentLocalVariable.VarName, tempLocalName);
+				AddCecilExpression("{0}.Body.Variables.Add({1});", Context.DefinitionVariables.GetLastOf(MemberKind.Method).VariableName, tempLocalName);
 
 				AddCilInstruction(ilVar, OpCodes.Stloc, tempLocalName);
 				AddCilInstruction(ilVar, OpCodes.Ldloca_S, tempLocalName);
@@ -399,11 +399,11 @@ namespace Cecilifier.Core.AST
 			var localVarParent = (CSharpSyntaxNode) localVar.Parent;
 			if (symbol.Type.IsValueType && localVarParent.Accept(new UsageVisitor()) == UsageKind.CallTarget)
 			{
-				AddCilInstruction(ilVar, OpCodes.Ldloca_S, Context.MapLocalVariableNameToCecil(symbol.Name));
+				AddCilInstruction(ilVar, OpCodes.Ldloca_S, Context.DefinitionVariables.GetVariable(symbol.Name, MemberKind.LocalVariable).VariableName);
 				return;
 			}
 
-			AddCilInstruction(ilVar, OpCodes.Ldloc, Context.MapLocalVariableNameToCecil(symbol.Name));
+			AddCilInstruction(ilVar, OpCodes.Ldloc, Context.DefinitionVariables.GetVariable(symbol.Name, MemberKind.LocalVariable).VariableName);
 			HandlePotentialDelegateInvocationOn(localVar, symbol.Type, ilVar);
 		}
 
