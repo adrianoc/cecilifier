@@ -51,7 +51,7 @@ namespace Cecilifier.Core.AST
             var str = noInternalOrProtected.Where(ExcludeHasNoCILRepresentation).Aggregate("", (acc, curr) => (acc.Length > 0  ? acc + " | " : "") + curr.MapModifier("FieldAttributes"));
 
 			if (!modifiers.Any())
-				return "FieldAttributes.Assembly";
+				return "FieldAttributes.Private";
 
 			Func<SyntaxToken, bool> predicate = t => t.Kind() == SyntaxKind.InternalKeyword || t.Kind() == SyntaxKind.ProtectedKeyword;
             return modifiers.Count(predicate) == 2

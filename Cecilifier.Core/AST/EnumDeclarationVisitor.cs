@@ -49,7 +49,7 @@ namespace Cecilifier.Core.AST
             var enumVar = ResolveTypeLocalVariable(declaringEnum.Identifier.ValueText);
 			
             var fieldVar = MethodExtensions.LocalVariableNameFor($"em_{Context.CurrentType}_{NextLocalVariableId()}", node.Identifier.ValueText);
-            var exp  = CecilDefinitionsFactory.Field(enumVar, fieldVar, node.Identifier.ValueText, enumVar, "FieldAttributes.Static | FieldAttributes.Literal | FieldAttributes.Public", $"Constant = {enumMemberValue}");
+            var exp  = CecilDefinitionsFactory.Field(enumVar, fieldVar, node.Identifier.ValueText, enumVar, "FieldAttributes.Static | FieldAttributes.Literal | FieldAttributes.Public | FieldAttributes.HasDefault", $"Constant = {enumMemberValue}");
             AddCecilExpressions(exp);
 
             base.VisitEnumMemberDeclaration(node);
