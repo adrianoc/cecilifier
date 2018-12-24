@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.Extensions;
@@ -277,13 +277,13 @@ namespace Cecilifier.Core.AST
 			else if (paramSymbol.Ordinal > 3)
 			{
 				AddCilInstruction(ilVar, OpCodes.Ldarg, paramSymbol.Ordinal.ToCecilIndex());
+				HandlePotentialDelegateInvocationOn(node, paramSymbol.Type, ilVar);
 			}
 			else
 			{
 				OpCode[] optimizedLdArgs = { OpCodes.Ldarg_0, OpCodes.Ldarg_1, OpCodes.Ldarg_2, OpCodes.Ldarg_3 };
 				var loadOpCode = optimizedLdArgs[paramSymbol.Ordinal + (method.IsStatic ? 0 : 1)];
 				AddCilInstruction(ilVar, loadOpCode);
-				
 				HandlePotentialDelegateInvocationOn(node, paramSymbol.Type, ilVar);
 			}
 		}
