@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.Extensions;
@@ -26,7 +26,7 @@ namespace Cecilifier.Core.AST
 			foreach (var exp in exps)
 			{
 				AddCecilExpression(exp);
-			}
+			}	
 		}
 		
 		protected void AddCecilExpression(string exp)
@@ -39,11 +39,11 @@ namespace Cecilifier.Core.AST
 			WriteCecilExpression(Context, format, args);
 		}
 		
-        protected void AddMethodCall(string ilVar, IMethodSymbol method)
+        protected void AddMethodCall(string ilVar, IMethodSymbol method, bool isAccessOnThisOrObjectCreation = false)
         {
-        	var opCode = (method.IsVirtual || method.IsAbstract  || method.MethodKind == MethodKind.PropertyGet || method.MethodKind == MethodKind.PropertySet) 
-							? OpCodes.Callvirt 
-							: OpCodes.Call;
+			var opCode = (method.IsStatic || (method.IsDefinedInCurrentType(Context) && isAccessOnThisOrObjectCreation)|| method.ContainingType.IsValueType) && !(method.IsVirtual || method.IsAbstract) ? OpCodes.Call : OpCodes.Callvirt;
+	        if (method.IsStatic)
+		        opCode = OpCodes.Call;
 	        
         	AddCecilExpression(@"{0}.Append({0}.Create({1}, {2}));", ilVar, opCode.ConstantName(), method.MethodResolverExpression(Context));
 		}

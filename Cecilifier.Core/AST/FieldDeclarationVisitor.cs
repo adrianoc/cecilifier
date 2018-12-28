@@ -30,8 +30,9 @@ namespace Cecilifier.Core.AST
 				var fieldVar = MethodExtensions.LocalVariableNameFor("fld", node.ResolveDeclaringType().Identifier.ValueText, field.Identifier.ValueText.CamelCase());
 				var exps = CecilDefinitionsFactory.Field(declaringTypeVar, fieldVar, field.Identifier.ValueText, fieldType, fieldAttributes);
 				AddCecilExpressions(exps);
-			}
 
+				Context.DefinitionVariables.Register("", field.Identifier.ValueText, MemberKind.Field, fieldVar);
+			}
 			base.VisitFieldDeclaration(node);
 		}
 

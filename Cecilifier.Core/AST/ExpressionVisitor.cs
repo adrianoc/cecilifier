@@ -40,6 +40,7 @@ namespace Cecilifier.Core.AST
 			Visit(node.Right);
 			if (!valueTypeNoArgObjCreation)
 			{
+				//TODO: This is wrong. It assumes *Left* is either a parameter, local variable or direct access to a field/property. See test *PropertyAccessors* 
 				visitor.Visit(node.Left);
 			}
 		}
@@ -144,16 +145,16 @@ namespace Cecilifier.Core.AST
 
 	    public override void VisitConditionalExpression(ConditionalExpressionSyntax node)
     	{
-    		Func<OpCode, string> emit = op =>
-			{
-    			var instVarName = op.Name + op.Name.UniqueId();
-				AddCecilExpression(@"var {0} = {1}.Create({2});", instVarName, ilVar, op.ConstantName());
+		    string Emit(OpCode op)
+		    {
+			    var instVarName = op.Name + op.Name.UniqueId();
+			    AddCecilExpression(@"var {0} = {1}.Create({2});", instVarName, ilVar, op.ConstantName());
 
-				return instVarName;
-			};
+			    return instVarName;
+		    }
 
-    		var conditionEnd = emit(OpCodes.Nop);
-			var whenFalse = emit(OpCodes.Nop);
+		    var conditionEnd = Emit(OpCodes.Nop);
+			var whenFalse = Emit(OpCodes.Nop);
 			
 			Visit(node.Condition);
 			AddCilInstruction(ilVar, OpCodes.Brfalse_S, whenFalse);
@@ -170,7 +171,6 @@ namespace Cecilifier.Core.AST
 	    public override void VisitIdentifierName(IdentifierNameSyntax node)
 	    {
 		    var member = Context.SemanticModel.GetSymbolInfo(node);
-
 		    switch (member.Symbol.Kind)
 		    {
 			    case SymbolKind.Method:
@@ -185,6 +185,10 @@ namespace Cecilifier.Core.AST
 				    ProcessLocalVariable(node, member);
 				    break;
 
+			    case SymbolKind.Field:
+				    ProcessField(member.Symbol as IFieldSymbol);
+				    break;
+			    
 			    case SymbolKind.Property:
 				    ProcessProperty(node, member.Symbol as IPropertySymbol);
 				    break;
@@ -381,18 +385,38 @@ namespace Cecilifier.Core.AST
 
 		private void ProcessProperty(IdentifierNameSyntax node, IPropertySymbol propertySymbol)
 		{
+			var parentMae = node.Parent as MemberAccessExpressionSyntax;
+			var isAccessOnThisOrObjectCreation = true;
+			if (parentMae != null)
+			{
+				isAccessOnThisOrObjectCreation = parentMae.Expression.IsKind(SyntaxKind.ObjectCreationExpression);
+			}
+			 
 			var parentExp = (CSharpSyntaxNode) node.Parent;
-
+			//TODO: This logic is incorrect. The parent or the property accessor may be a MemberAccessExpression (for instance).
 			if (parentExp.Kind() == SyntaxKind.SimpleAssignmentExpression)
 			{
-				AddMethodCall(ilVar, propertySymbol.SetMethod);
+				AddMethodCall(ilVar, propertySymbol.SetMethod, isAccessOnThisOrObjectCreation);
 			}
 			else
 			{
-				AddMethodCall(ilVar, propertySymbol.GetMethod);
+				AddMethodCall(ilVar, propertySymbol.GetMethod, isAccessOnThisOrObjectCreation);
 			}
 		}
-
+		
+	    private void ProcessField(IFieldSymbol fieldSymbol)
+		{
+			if (fieldSymbol.IsStatic && fieldSymbol.IsDefinedInCurrentType(Context))
+			{
+				throw new Exception("Static field handling not implemented yet");
+			}
+			else
+			{
+				AddCilInstruction(ilVar, OpCodes.Ldarg_0);
+				AddCilInstruction(ilVar, OpCodes.Ldfld, Context.DefinitionVariables.GetVariable(fieldSymbol.Name, MemberKind.Field).VariableName);
+			}
+		}
+	    
 		private void ProcessLocalVariable(IdentifierNameSyntax localVar, SymbolInfo varInfo)
 		{
 			var symbol = (ILocalSymbol) varInfo.Symbol;
@@ -415,7 +439,15 @@ namespace Cecilifier.Core.AST
 			}
 
 			EnsureMethodAvailable(method);
-			AddMethodCall(ilVar, method);
+			var isAccessOnThis = !node.Parent.IsKind(SyntaxKind.SimpleMemberAccessExpression);
+
+			var mae = node.Parent as MemberAccessExpressionSyntax;
+			if (mae?.Expression.IsKind(SyntaxKind.ObjectCreationExpression) == true)
+			{
+				isAccessOnThis = true;
+			}
+
+			AddMethodCall(ilVar, method, isAccessOnThis);
 		}
 
 		private void InjectRequiredConversions(ExpressionSyntax expression)
