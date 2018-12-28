@@ -46,10 +46,10 @@ namespace Cecilifier.Core.AST
             // Adds a field like:
             // .field public static literal valuetype xxx.MyEnum Second = int32(1)
             var enumMemberValue = _memberCollector[node];
-            var enumVar = Context.DefinitionVariables.GetLastOf(MemberKind.Type).VariableName;
+            var enumVarDef = Context.DefinitionVariables.GetLastOf(MemberKind.Type);
 			
-            var fieldVar = MethodExtensions.LocalVariableNameFor($"em_{Context.DefinitionVariables.Current.MemberName}_{NextLocalVariableId()}", node.Identifier.ValueText);
-            var exp  = CecilDefinitionsFactory.Field(enumVar, fieldVar, node.Identifier.ValueText, enumVar, "FieldAttributes.Static | FieldAttributes.Literal | FieldAttributes.Public | FieldAttributes.HasDefault", $"Constant = {enumMemberValue}");
+            var fieldVar = MethodExtensions.LocalVariableNameFor($"em_{enumVarDef.MemberName}_{NextLocalVariableId()}", node.Identifier.ValueText);
+            var exp  = CecilDefinitionsFactory.Field(enumVarDef.VariableName, fieldVar, node.Identifier.ValueText, enumVarDef.VariableName, "FieldAttributes.Static | FieldAttributes.Literal | FieldAttributes.Public | FieldAttributes.HasDefault", $"Constant = {enumMemberValue}");
             AddCecilExpressions(exp);
 
             base.VisitEnumMemberDeclaration(node);

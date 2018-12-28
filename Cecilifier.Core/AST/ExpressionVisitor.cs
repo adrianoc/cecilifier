@@ -371,6 +371,7 @@ namespace Cecilifier.Core.AST
 			//TODO: Try to reuse SyntaxWalkerBase.ResolveType(TypeSyntax)
 			var returnType = ResolveTypeLocalVariable(method.ReturnType.Name) ?? ResolvePredefinedType(method.ReturnType);
 			MethodDeclarationVisitor.AddMethodDefinition(Context, varName, method.Name, "MethodAttributes.Private", returnType);
+			Context.DefinitionVariables.Register(string.Empty, method.Name, MemberKind.Method, varName);
 		}
 
 		private void FixCallSite()

@@ -23,10 +23,7 @@ namespace Cecilifier.Core.AST
 
         public override void VisitMethodDeclaration(MethodDeclarationSyntax node)
 		{
-			//using (new MethodParametersContext(Context))
-			{
-				ProcessMethodDeclaration(node, node.Identifier.ValueText, MethodNameOf(node), ResolveType(node.ReturnType), _ => base.VisitMethodDeclaration(node));
-			}
+			ProcessMethodDeclaration(node, node.Identifier.ValueText, MethodNameOf(node), ResolveType(node.ReturnType), _ => base.VisitMethodDeclaration(node));
 		}
 
 		public override void VisitParameter(ParameterSyntax node)

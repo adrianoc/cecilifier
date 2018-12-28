@@ -56,8 +56,7 @@ namespace Cecilifier.Core.Extensions
 			//if (method.IsDefinedInCurrentType(ctx) && method.MethodKind == MethodKind.Ordinary)
 			if (method.IsDefinedInCurrentType(ctx))
 			{
-				//FIXME: Keep the name of the variables used to construct types/members in a map
-				return LocalVariableName(method);
+				return ctx.DefinitionVariables.GetVariable(method.Name, MemberKind.Method).VariableName;
 			}
 
 			var declaringTypeName = method.ContainingType.FullyQualifiedName();
