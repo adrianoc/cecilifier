@@ -110,37 +110,6 @@ namespace Cecilifier.Core.AST
             }
 		}
 
-
-        /*
-		 *            +--> ArgumentList
-		 *            |
-		 *       /---------\
-		 * n.DoIt(10 + x, y);
-		 * \----/
-		 *	 |
-		 *	 +---> Expression: MemberAccessExpression
-		 * 
-		 * We do not have a natural order to visit the expression and the argument list:
-		 * 
-		 * - If we visit in the order: arguments, expression (which would be the natural order)
-		 *			push 10
-		 *			push x
-		 *			add
-		 *			push y
-		 *			push n <-- Should be the first
-		 *			Call DoIt(Int32, Int32)
-		 * 
-		 * - If we visit in the order: expression, arguments
-		 *			push n 
-		 *			Call DoIt(Int32, Int32) <--+
-		 *			push 10                    |
-		 *			push x                     |  Should be here
-		 *			add                        |
-		 *			push y                     |
-		 *			         <-----------------+
-		 * 
-		 * To fix this we visit in the order [exp, args] and move the call operation after visiting the arguments
-		 */
         public override void VisitInvocationExpression(InvocationExpressionSyntax node)
 	    {
 		    HandleMethodInvocation(node.Expression, node.ArgumentList);
@@ -509,6 +478,36 @@ namespace Cecilifier.Core.AST
 			throw new Exception(string.Format("Operator {0} not supported yet (expression: {1})", operatorToken.ValueText, operatorToken.Parent));
 		}
 
+	    /*
+	     *            +--> ArgumentList
+		 *            |
+		 *       /---------\
+		 * n.DoIt(10 + x, y);
+		 * \----/
+		 *	 |
+		 *	 +---> Expression: MemberAccessExpression
+		 * 
+		 * We do not have a natural order to visit the expression and the argument list:
+		 * 
+		 * - If we visit in the order: arguments, expression (which would be the natural order)
+		 *			push 10
+		 *			push x
+		 *			add
+		 *			push y
+		 *			push n <-- Should be the first
+		 *			Call DoIt(Int32, Int32)
+		 * 
+		 * - If we visit in the order: expression, arguments
+		 *			push n 
+		 *			Call DoIt(Int32, Int32) <--+
+		 *			push 10                    |
+		 *			push x                     |  Should be here
+		 *			add                        |
+		 *			push y                     |
+		 *			         <-----------------+
+		 * 
+		 * To fix this we visit in the order [exp, args] and move the call operation after visiting the arguments
+		 */
 	    private void HandleMethodInvocation(SyntaxNode target, SyntaxNode args)
 	    {
 		    Visit(target);
