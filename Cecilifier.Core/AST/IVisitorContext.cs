@@ -130,8 +130,6 @@ namespace Cecilifier.Core.AST
 		{
 			return new ScopedDefinitionVariable(_definitionStack, _definitionStack.Count);
 		}
-		
-		public DefinitionVariable Current => _definitionVariables.Count > 0 ?  _definitionVariables[_definitionVariables.Count - 1] : DefinitionVariable.NotFound;
 
 		private List<DefinitionVariable> _definitionVariables = new List<DefinitionVariable>();
 		private List<DefinitionVariable> _definitionStack = new List<DefinitionVariable>();

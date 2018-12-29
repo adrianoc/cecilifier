@@ -16,7 +16,7 @@ namespace Cecilifier.Core.AST
         public override void VisitIndexerDeclaration(IndexerDeclarationSyntax node)
         {
             var propertyType = ResolveType(node.Type);
-            var propertyDeclaringTypeVar = Context.DefinitionVariables.Current.VariableName;
+            var propertyDeclaringTypeVar = Context.DefinitionVariables.GetLastOf(MemberKind.Type).VariableName;
             var propName = "Item";
             
             AddDefaultMemberAttribute(propertyDeclaringTypeVar, propName);
@@ -74,6 +74,7 @@ namespace Cecilifier.Core.AST
                 {
                     case SyntaxKind.GetKeyword:
                         var getMethodVar = TempLocalVar(propertyDeclaringTypeVar + "_get_");
+                        Context.DefinitionVariables.Register(string.Empty, $"get_{propName}", MemberKind.Method, getMethodVar);
 
                         AddCecilExpression($"var {getMethodVar} = new MethodDefinition(\"get_{propName}\", {accessorModifiers}, {propertyType});");
                         parameters?.ForEach(paramVar => AddCecilExpression($"{getMethodVar}.Parameters.Add({paramVar});"));
@@ -102,6 +103,7 @@ namespace Cecilifier.Core.AST
 
                     case SyntaxKind.SetKeyword:
                         var setMethodVar = TempLocalVar(propertyDeclaringTypeVar + "_set_");
+                        Context.DefinitionVariables.Register(string.Empty, $"set_{propName}", MemberKind.Method, setMethodVar);
                         var ilSetVar = TempLocalVar("ilVar_set_");
 
                         AddCecilExpression($"var {setMethodVar} = new MethodDefinition(\"set_{propName}\", {accessorModifiers}, {ResolvePredefinedType("Void")});");

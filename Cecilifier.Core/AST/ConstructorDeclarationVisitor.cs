@@ -54,19 +54,18 @@ namespace Cecilifier.Core.AST
 			return CecilifierExtensions.AppendModifier(string.Empty, CtorFlags);
 		}
 
-		internal void DefaultCtorInjector(string localVar, BaseTypeDeclarationSyntax declaringClass)
+		internal void DefaultCtorInjector(string typeDefVar, BaseTypeDeclarationSyntax declaringClass)
 		{
-			
-			var ctorMethodDefinitionExp = CecilDefinitionsFactory.Constructor(out var ctorLocalVar, declaringClass.Identifier.ValueText, DefaultCtorAccessibilityFor(declaringClass));
+			var ctorMethodDefinitionExp = CecilDefinitionsFactory.Constructor(Context, out var ctorLocalVar, declaringClass.Identifier.ValueText, DefaultCtorAccessibilityFor(declaringClass));
 			AddCecilExpression(ctorMethodDefinitionExp);
-			AddCecilExpression($"{localVar}.Methods.Add({ctorLocalVar});");
+			AddCecilExpression($"{typeDefVar}.Methods.Add({ctorLocalVar});");
 			
 			var ctorBodyIL = TempLocalVar("il");
 			
 			AddCecilExpression($@"var {ctorBodyIL} = {ctorLocalVar}.Body.GetILProcessor();");
 
 			AddCilInstruction(ctorBodyIL, OpCodes.Ldarg_0);
-			AddCilInstruction(ctorBodyIL, OpCodes.Call, string.Format("assembly.MainModule.Import(TypeHelpers.DefaultCtorFor({0}.BaseType.Resolve()))", localVar));
+			AddCilInstruction(ctorBodyIL, OpCodes.Call, string.Format("assembly.MainModule.Import(TypeHelpers.DefaultCtorFor({0}.BaseType.Resolve()))", typeDefVar));
 			AddCilInstruction(ctorBodyIL, OpCodes.Ret);
 
 			Context[ctorLocalVar] = "";

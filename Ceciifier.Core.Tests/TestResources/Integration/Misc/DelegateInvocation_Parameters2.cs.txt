@@ -1,0 +1,7 @@
+﻿class DelegateInvocation_Parameters2
+{
+	public void Bar(int p1, int p2, int p3, int p4, System.Action a)
+	{
+	    a();
+	}
+}

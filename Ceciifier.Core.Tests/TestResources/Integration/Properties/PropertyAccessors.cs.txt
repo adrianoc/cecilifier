@@ -1,0 +1,10 @@
+﻿class PropertyAccessors
+{
+	private int P { get; set; }
+	
+	public void Foo(PropertyAccessors o)
+	{
+	    o.P = 1;
+	    P = 42;
+	}
+}

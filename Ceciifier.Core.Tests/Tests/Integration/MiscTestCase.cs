@@ -6,6 +6,7 @@ namespace Cecilifier.Core.Tests.Integration
 	public class MiscTestCase : IntegrationResourceBasedTest
 	{
 		[TestCase("Parameters")]
+		[TestCase("Parameters2")]
 		[TestCase("LocalVariables")]
 		public void TestDelegateInvocation(string storageType)
 		{

@@ -34,17 +34,25 @@ namespace Cecilifier.Core.AST
 
 	    public override void VisitAssignmentExpression(AssignmentExpressionSyntax node)
 	    {
-			var visitor = new AssignmentVisitor(Context, ilVar);
-			visitor.PreProcessRefOutAssignments(node.Left);
+		    var leftNodeMae = node.Left as MemberAccessExpressionSyntax;
+		    CSharpSyntaxNode exp = leftNodeMae != null ? leftNodeMae.Name : node.Left;
+		    if (Context.SemanticModel.GetSymbolInfo(exp).Symbol?.Kind == SymbolKind.Property) // check if the left hand side of the assignment is a property and handle that as a method (set) call.
+		    {
+			    HandleMethodInvocation(node.Left, node.Right);
+			    return;
+		    }
 
+		    var visitor = new AssignmentVisitor(Context, ilVar);
+			visitor.PreProcessRefOutAssignments(node.Left);
+		    
 			Visit(node.Right);
 			if (!valueTypeNoArgObjCreation)
 			{
 				visitor.Visit(node.Left);
 			}
-		}
+	    }
 
-		public override void VisitBinaryExpression(BinaryExpressionSyntax node)
+	    public override void VisitBinaryExpression(BinaryExpressionSyntax node)
         {
 			Visit(node.Left);
 			InjectRequiredConversions(node.Left);
@@ -102,58 +110,23 @@ namespace Cecilifier.Core.AST
             }
 		}
 
-
-        /*
-		 *            +--> ArgumentList
-		 *            |
-		 *       /---------\
-		 * n.DoIt(10 + x, y);
-		 * \----/
-		 *	 |
-		 *	 +---> Expression: MemberAccessExpression
-		 * 
-		 * We do not have a natural order to visit the expression and the argument list:
-		 * 
-		 * - If we visit in the order: arguments, expression (which would be the natural order)
-		 *			push 10
-		 *			push x
-		 *			add
-		 *			push y
-		 *			push n <-- Should be the first
-		 *			Call DoIt(Int32, Int32)
-		 * 
-		 * - If we visit in the order: expression, arguments
-		 *			push n 
-		 *			Call DoIt(Int32, Int32) <--+
-		 *			push 10                    |
-		 *			push x                     |  Should be here
-		 *			add                        |
-		 *			push y                     |
-		 *			         <-----------------+
-		 * 
-		 * To fix this we visit in the order [exp, args] and move the call operation after visiting the arguments
-		 */
         public override void VisitInvocationExpression(InvocationExpressionSyntax node)
 	    {
-		    Visit(node.Expression);
-			PushCall();
-
-			Visit(node.ArgumentList);
-			FixCallSite();
+		    HandleMethodInvocation(node.Expression, node.ArgumentList);
         }
 
 	    public override void VisitConditionalExpression(ConditionalExpressionSyntax node)
     	{
-    		Func<OpCode, string> emit = op =>
-			{
-    			var instVarName = op.Name + op.Name.UniqueId();
-				AddCecilExpression(@"var {0} = {1}.Create({2});", instVarName, ilVar, op.ConstantName());
+		    string Emit(OpCode op)
+		    {
+			    var instVarName = op.Name + op.Name.UniqueId();
+			    AddCecilExpression(@"var {0} = {1}.Create({2});", instVarName, ilVar, op.ConstantName());
 
-				return instVarName;
-			};
+			    return instVarName;
+		    }
 
-    		var conditionEnd = emit(OpCodes.Nop);
-			var whenFalse = emit(OpCodes.Nop);
+		    var conditionEnd = Emit(OpCodes.Nop);
+			var whenFalse = Emit(OpCodes.Nop);
 			
 			Visit(node.Condition);
 			AddCilInstruction(ilVar, OpCodes.Brfalse_S, whenFalse);
@@ -170,7 +143,6 @@ namespace Cecilifier.Core.AST
 	    public override void VisitIdentifierName(IdentifierNameSyntax node)
 	    {
 		    var member = Context.SemanticModel.GetSymbolInfo(node);
-
 		    switch (member.Symbol.Kind)
 		    {
 			    case SymbolKind.Method:
@@ -185,6 +157,10 @@ namespace Cecilifier.Core.AST
 				    ProcessLocalVariable(node, member);
 				    break;
 
+			    case SymbolKind.Field:
+				    ProcessField(member.Symbol as IFieldSymbol);
+				    break;
+			    
 			    case SymbolKind.Property:
 				    ProcessProperty(node, member.Symbol as IPropertySymbol);
 				    break;
@@ -367,6 +343,7 @@ namespace Cecilifier.Core.AST
 			//TODO: Try to reuse SyntaxWalkerBase.ResolveType(TypeSyntax)
 			var returnType = ResolveTypeLocalVariable(method.ReturnType.Name) ?? ResolvePredefinedType(method.ReturnType);
 			MethodDeclarationVisitor.AddMethodDefinition(Context, varName, method.Name, "MethodAttributes.Private", returnType);
+			Context.DefinitionVariables.Register(string.Empty, method.Name, MemberKind.Method, varName);
 		}
 
 		private void FixCallSite()
@@ -381,18 +358,42 @@ namespace Cecilifier.Core.AST
 
 		private void ProcessProperty(IdentifierNameSyntax node, IPropertySymbol propertySymbol)
 		{
-			var parentExp = (CSharpSyntaxNode) node.Parent;
-
-			if (parentExp.Kind() == SyntaxKind.SimpleAssignmentExpression)
+			var parentMae = node.Parent as MemberAccessExpressionSyntax;
+			var isAccessOnThisOrObjectCreation = true;
+			if (parentMae != null)
 			{
-				AddMethodCall(ilVar, propertySymbol.SetMethod);
+				isAccessOnThisOrObjectCreation = parentMae.Expression.IsKind(SyntaxKind.ObjectCreationExpression);
+			}
+			 
+			var parentExp = node.Parent;
+			if (!parentExp.IsKind(SyntaxKind.SimpleMemberAccessExpression)) // if this is an *unqualified* access we need to load *this*
+			{
+				AddCilInstruction(ilVar, OpCodes.Ldarg_0);
+			}
+			
+			if (parentExp.Kind() == SyntaxKind.SimpleAssignmentExpression || (parentMae != null && parentMae.Name.Identifier == node.Identifier && parentMae.Parent.IsKind(SyntaxKind.SimpleAssignmentExpression)))
+			{
+				AddMethodCall(ilVar, propertySymbol.SetMethod, isAccessOnThisOrObjectCreation);
 			}
 			else
 			{
-				AddMethodCall(ilVar, propertySymbol.GetMethod);
+				AddMethodCall(ilVar, propertySymbol.GetMethod, isAccessOnThisOrObjectCreation);
 			}
 		}
-
+		
+	    private void ProcessField(IFieldSymbol fieldSymbol)
+		{
+			if (fieldSymbol.IsStatic && fieldSymbol.IsDefinedInCurrentType(Context))
+			{
+				throw new Exception("Static field handling not implemented yet");
+			}
+			else
+			{
+				AddCilInstruction(ilVar, OpCodes.Ldarg_0);
+				AddCilInstruction(ilVar, OpCodes.Ldfld, Context.DefinitionVariables.GetVariable(fieldSymbol.Name, MemberKind.Field).VariableName);
+			}
+		}
+	    
 		private void ProcessLocalVariable(IdentifierNameSyntax localVar, SymbolInfo varInfo)
 		{
 			var symbol = (ILocalSymbol) varInfo.Symbol;
@@ -415,7 +416,15 @@ namespace Cecilifier.Core.AST
 			}
 
 			EnsureMethodAvailable(method);
-			AddMethodCall(ilVar, method);
+			var isAccessOnThis = !node.Parent.IsKind(SyntaxKind.SimpleMemberAccessExpression);
+
+			var mae = node.Parent as MemberAccessExpressionSyntax;
+			if (mae?.Expression.IsKind(SyntaxKind.ObjectCreationExpression) == true)
+			{
+				isAccessOnThis = true;
+			}
+
+			AddMethodCall(ilVar, method, isAccessOnThis);
 		}
 
 		private void InjectRequiredConversions(ExpressionSyntax expression)
@@ -469,6 +478,45 @@ namespace Cecilifier.Core.AST
 			throw new Exception(string.Format("Operator {0} not supported yet (expression: {1})", operatorToken.ValueText, operatorToken.Parent));
 		}
 
+	    /*
+	     *            +--> ArgumentList
+		 *            |
+		 *       /---------\
+		 * n.DoIt(10 + x, y);
+		 * \----/
+		 *	 |
+		 *	 +---> Expression: MemberAccessExpression
+		 * 
+		 * We do not have a natural order to visit the expression and the argument list:
+		 * 
+		 * - If we visit in the order: arguments, expression (which would be the natural order)
+		 *			push 10
+		 *			push x
+		 *			add
+		 *			push y
+		 *			push n <-- Should be the first
+		 *			Call DoIt(Int32, Int32)
+		 * 
+		 * - If we visit in the order: expression, arguments
+		 *			push n 
+		 *			Call DoIt(Int32, Int32) <--+
+		 *			push 10                    |
+		 *			push x                     |  Should be here
+		 *			add                        |
+		 *			push y                     |
+		 *			         <-----------------+
+		 * 
+		 * To fix this we visit in the order [exp, args] and move the call operation after visiting the arguments
+		 */
+	    private void HandleMethodInvocation(SyntaxNode target, SyntaxNode args)
+	    {
+		    Visit(target);
+		    PushCall();
+
+		    Visit(args);
+		    FixCallSite();
+	    }
+	    
 		static ExpressionVisitor()
 		{
 			//TODO: Use AddCilInstruction instead.
@@ -494,9 +542,8 @@ namespace Cecilifier.Core.AST
     	private bool valueTypeNoArgObjCreation;
 		private readonly string ilVar;
     	private Stack<LinkedListNode<string>> callFixList = new Stack<LinkedListNode<string>>();
-    	
-		private static Action<IVisitorContext, string> NoOpInstance = delegate { };
-		private static IDictionary<SyntaxKind, Action<IVisitorContext, string, ITypeSymbol, ITypeSymbol>> operatorHandlers = new Dictionary<SyntaxKind, Action<IVisitorContext, string, ITypeSymbol, ITypeSymbol>>();
+
+	    private static IDictionary<SyntaxKind, Action<IVisitorContext, string, ITypeSymbol, ITypeSymbol>> operatorHandlers = new Dictionary<SyntaxKind, Action<IVisitorContext, string, ITypeSymbol, ITypeSymbol>>();
     }
 
 	internal interface IOperatorHandler

@@ -26,7 +26,7 @@ namespace Cecilifier.Core.AST
 			foreach (var exp in exps)
 			{
 				AddCecilExpression(exp);
-			}
+			}	
 		}
 		
 		protected void AddCecilExpression(string exp)
@@ -39,11 +39,11 @@ namespace Cecilifier.Core.AST
 			WriteCecilExpression(Context, format, args);
 		}
 		
-        protected void AddMethodCall(string ilVar, IMethodSymbol method)
+        protected void AddMethodCall(string ilVar, IMethodSymbol method, bool isAccessOnThisOrObjectCreation = false)
         {
-        	var opCode = (method.IsVirtual || method.IsAbstract  || method.MethodKind == MethodKind.PropertyGet || method.MethodKind == MethodKind.PropertySet) 
-							? OpCodes.Callvirt 
-							: OpCodes.Call;
+			var opCode = (method.IsStatic || (method.IsDefinedInCurrentType(Context) && isAccessOnThisOrObjectCreation)|| method.ContainingType.IsValueType) && !(method.IsVirtual || method.IsAbstract) ? OpCodes.Call : OpCodes.Callvirt;
+	        if (method.IsStatic)
+		        opCode = OpCodes.Call;
 	        
         	AddCecilExpression(@"{0}.Append({0}.Create({1}, {2}));", ilVar, opCode.ConstantName(), method.MethodResolverExpression(Context));
 		}
@@ -277,13 +277,13 @@ namespace Cecilifier.Core.AST
 			else if (paramSymbol.Ordinal > 3)
 			{
 				AddCilInstruction(ilVar, OpCodes.Ldarg, paramSymbol.Ordinal.ToCecilIndex());
+				HandlePotentialDelegateInvocationOn(node, paramSymbol.Type, ilVar);
 			}
 			else
 			{
 				OpCode[] optimizedLdArgs = { OpCodes.Ldarg_0, OpCodes.Ldarg_1, OpCodes.Ldarg_2, OpCodes.Ldarg_3 };
 				var loadOpCode = optimizedLdArgs[paramSymbol.Ordinal + (method.IsStatic ? 0 : 1)];
 				AddCilInstruction(ilVar, loadOpCode);
-				
 				HandlePotentialDelegateInvocationOn(node, paramSymbol.Type, ilVar);
 			}
 		}
