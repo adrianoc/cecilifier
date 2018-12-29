@@ -42,6 +42,9 @@
     <Content Include="TestResources\Integration\Properties\IndexerOverloads.cs.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="TestResources\Integration\Properties\PropertyAccessors.cs.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="TestResources\Integration\Types\Enums\AllExpressionsInInitializerEnum.cs.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

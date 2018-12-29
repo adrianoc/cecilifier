@@ -34,18 +34,25 @@ namespace Cecilifier.Core.AST
 
 	    public override void VisitAssignmentExpression(AssignmentExpressionSyntax node)
 	    {
-			var visitor = new AssignmentVisitor(Context, ilVar);
-			visitor.PreProcessRefOutAssignments(node.Left);
+		    var leftNodeMae = node.Left as MemberAccessExpressionSyntax;
+		    CSharpSyntaxNode exp = leftNodeMae != null ? leftNodeMae.Name : node.Left;
+		    if (Context.SemanticModel.GetSymbolInfo(exp).Symbol?.Kind == SymbolKind.Property) // check if the left hand side of the assignment is a property and handle that as a method (set) call.
+		    {
+			    HandleMethodInvocation(node.Left, node.Right);
+			    return;
+		    }
 
+		    var visitor = new AssignmentVisitor(Context, ilVar);
+			visitor.PreProcessRefOutAssignments(node.Left);
+		    
 			Visit(node.Right);
 			if (!valueTypeNoArgObjCreation)
 			{
-				//TODO: This is wrong. It assumes *Left* is either a parameter, local variable or direct access to a field/property. See test *PropertyAccessors* 
 				visitor.Visit(node.Left);
 			}
-		}
+	    }
 
-		public override void VisitBinaryExpression(BinaryExpressionSyntax node)
+	    public override void VisitBinaryExpression(BinaryExpressionSyntax node)
         {
 			Visit(node.Left);
 			InjectRequiredConversions(node.Left);
@@ -136,11 +143,7 @@ namespace Cecilifier.Core.AST
 		 */
         public override void VisitInvocationExpression(InvocationExpressionSyntax node)
 	    {
-		    Visit(node.Expression);
-			PushCall();
-
-			Visit(node.ArgumentList);
-			FixCallSite();
+		    HandleMethodInvocation(node.Expression, node.ArgumentList);
         }
 
 	    public override void VisitConditionalExpression(ConditionalExpressionSyntax node)
@@ -393,9 +396,13 @@ namespace Cecilifier.Core.AST
 				isAccessOnThisOrObjectCreation = parentMae.Expression.IsKind(SyntaxKind.ObjectCreationExpression);
 			}
 			 
-			var parentExp = (CSharpSyntaxNode) node.Parent;
-			//TODO: This logic is incorrect. The parent or the property accessor may be a MemberAccessExpression (for instance).
-			if (parentExp.Kind() == SyntaxKind.SimpleAssignmentExpression)
+			var parentExp = node.Parent;
+			if (!parentExp.IsKind(SyntaxKind.SimpleMemberAccessExpression)) // if this is an *unqualified* access we need to load *this*
+			{
+				AddCilInstruction(ilVar, OpCodes.Ldarg_0);
+			}
+			
+			if (parentExp.Kind() == SyntaxKind.SimpleAssignmentExpression || (parentMae != null && parentMae.Name.Identifier == node.Identifier && parentMae.Parent.IsKind(SyntaxKind.SimpleAssignmentExpression)))
 			{
 				AddMethodCall(ilVar, propertySymbol.SetMethod, isAccessOnThisOrObjectCreation);
 			}
@@ -502,6 +509,15 @@ namespace Cecilifier.Core.AST
 			throw new Exception(string.Format("Operator {0} not supported yet (expression: {1})", operatorToken.ValueText, operatorToken.Parent));
 		}
 
+	    private void HandleMethodInvocation(SyntaxNode target, SyntaxNode args)
+	    {
+		    Visit(target);
+		    PushCall();
+
+		    Visit(args);
+		    FixCallSite();
+	    }
+	    
 		static ExpressionVisitor()
 		{
 			//TODO: Use AddCilInstruction instead.
@@ -527,9 +543,8 @@ namespace Cecilifier.Core.AST
     	private bool valueTypeNoArgObjCreation;
 		private readonly string ilVar;
     	private Stack<LinkedListNode<string>> callFixList = new Stack<LinkedListNode<string>>();
-    	
-		private static Action<IVisitorContext, string> NoOpInstance = delegate { };
-		private static IDictionary<SyntaxKind, Action<IVisitorContext, string, ITypeSymbol, ITypeSymbol>> operatorHandlers = new Dictionary<SyntaxKind, Action<IVisitorContext, string, ITypeSymbol, ITypeSymbol>>();
+
+	    private static IDictionary<SyntaxKind, Action<IVisitorContext, string, ITypeSymbol, ITypeSymbol>> operatorHandlers = new Dictionary<SyntaxKind, Action<IVisitorContext, string, ITypeSymbol, ITypeSymbol>>();
     }
 
 	internal interface IOperatorHandler
