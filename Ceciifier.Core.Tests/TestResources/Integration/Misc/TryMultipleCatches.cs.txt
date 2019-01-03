@@ -1,4 +1,4 @@
-﻿class TryCatchFinally
+﻿class TryMultipleCatches
 {
 	public void Foo(int i)
 	{
@@ -6,11 +6,11 @@
 	    {
 	        Foo(1);
 	    }
-	    catch(System.Exception ex)
+	    catch(System.ArgumentException ae)
 	    {
 	        Foo(2);
 	    }
-	    finally
+	    catch(System.Exception ex)
 	    {
 	        Foo(3);
 	    }

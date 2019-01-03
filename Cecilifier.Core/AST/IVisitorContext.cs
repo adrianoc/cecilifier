@@ -1,27 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using Cecilifier.Core.Misc;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using TypeInfo = Microsoft.CodeAnalysis.TypeInfo;
 
 namespace Cecilifier.Core.AST
 {
-	
 	public enum MemberKind
 	{
 		Type,
-		Enum,
-		Struct,
-		Interface,
 		Field,
-		Property,
-		Event,
 		Method,
-		Delegate,
 		Parameter,
-		LocalVariable
+		LocalVariable,
+		TryCatchLeaveTarget
 	}
 
 	public struct DefinitionVariable : IEquatable<DefinitionVariable>
@@ -62,6 +54,11 @@ namespace Cecilifier.Core.AST
 		{
 			if (ReferenceEquals(null, obj)) return false;
 			return obj is DefinitionVariable other && Equals(other);
+		}
+
+		public static implicit operator string(DefinitionVariable variable)
+		{
+			return variable.VariableName;
 		}
 	}
 
@@ -131,6 +128,8 @@ namespace Cecilifier.Core.AST
 			return new ScopedDefinitionVariable(_definitionStack, _definitionStack.Count);
 		}
 
+		public string LastInstructionVar { get; set; }
+		
 		private List<DefinitionVariable> _definitionVariables = new List<DefinitionVariable>();
 		private List<DefinitionVariable> _definitionStack = new List<DefinitionVariable>();
 	}
@@ -159,5 +158,8 @@ namespace Cecilifier.Core.AST
 	    string this[string name] { get; set; }
 		bool Contains(string name);
 		void MoveLineAfter(LinkedListNode<string> instruction, LinkedListNode<string> after);
+		
+		event Action<string> InstructionAdded;
+		void TriggerInstructionAdded(string instVar);
 	}
 }
