@@ -9,11 +9,13 @@ namespace Cecilifier.Core.Tests.Tests.Integration
         [TestCase("TryCatch")]
         [TestCase("TryFinally")]
         [TestCase("TryCatchFinally", true)]
+        [TestCase("NestedTryCatchFinally", true)]
         [TestCase("TryMultipleCatches")]
+        [TestCase("NestedTryCatch")]
         public void TestExceptionHandlers(string testName, bool compareWithExplicitIL = false)
         {
             if (compareWithExplicitIL)
-                AssertResourceTestWithExplictExpectation($"TryCatchFinally/{testName}", "System.Void TryCatchFinally::Foo(System.Int32)");
+                AssertResourceTestWithExplictExpectation($"TryCatchFinally/{testName}", "System.Void NestedTryCatchFinally::Foo(System.Int32)");
             else
                 AssertResourceTest($"TryCatchFinally/{testName}");
         }

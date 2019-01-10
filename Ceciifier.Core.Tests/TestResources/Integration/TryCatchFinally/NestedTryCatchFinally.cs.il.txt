@@ -1,0 +1,37 @@
+﻿.locals ()
+IL_0000: ldarg.0
+IL_0001: ldc.i4 1
+IL_0006: call System.Void NestedTryCatchFinally::Foo(System.Int32)
+IL_000b: ldarg.0
+IL_000c: ldc.i4 2
+IL_0011: call System.Void NestedTryCatchFinally::Foo(System.Int32)
+IL_0016: ldarg.0
+IL_0017: ldc.i4 3
+IL_001c: call System.Void NestedTryCatchFinally::Foo(System.Int32)
+IL_0021: leave IL_0043
+IL_0026: pop
+IL_0027: ldarg.0
+IL_0028: ldc.i4 4
+IL_002d: call System.Void NestedTryCatchFinally::Foo(System.Int32)
+IL_0032: leave IL_0043
+IL_0037: ldarg.0
+IL_0038: ldc.i4 5
+IL_003d: call System.Void NestedTryCatchFinally::Foo(System.Int32)
+IL_0042: endfinally
+IL_0043: nop
+IL_0044: leave IL_0066
+IL_0049: pop
+IL_004a: ldarg.0
+IL_004b: ldc.i4 6
+IL_0050: call System.Void NestedTryCatchFinally::Foo(System.Int32)
+IL_0055: leave IL_0066
+IL_005a: ldarg.0
+IL_005b: ldc.i4 7
+IL_0060: call System.Void NestedTryCatchFinally::Foo(System.Int32)
+IL_0065: endfinally
+IL_0066: nop
+IL_0067: ret
+.try IL_0016 to IL_0026 catch System.Exception handler IL_0026 to IL_0037
+.try IL_0016 to IL_0037 finally handler IL_0037 to IL_0043
+.try IL_000b to IL_0049 catch System.Exception handler IL_0049 to IL_005a
+.try IL_000b to IL_005a finally handler IL_005a to IL_0066

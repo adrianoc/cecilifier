@@ -1,0 +1,31 @@
+﻿class NestedTryCatchFinally
+{
+	public void Foo(int i)
+	{
+        Foo(1);
+        try
+        {
+            Foo(2);
+        	try
+            {
+                Foo(3);
+            }
+            catch(System.Exception ex2)
+            {
+                Foo(4);
+            }
+            finally
+            {
+                Foo(5);
+            }
+        }
+		catch(Exception ex)
+        {
+			Foo(6);
+        }
+        finally
+        {
+			Foo(7);
+        }
+	}
+}

@@ -1,0 +1,22 @@
+﻿class NestedTryCatch
+{
+	public void Foo(int i)
+	{
+	    try
+	    {
+			Foo(1);
+			try
+			{
+				Foo(2);
+			}
+			catch(System.Exception ex)
+			{
+				Foo(3);
+			}
+		}
+	    catch(System.Exception ex1)
+	    {
+	        Foo(4);
+	    }
+	}
+}
