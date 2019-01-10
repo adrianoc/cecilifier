@@ -13,15 +13,6 @@ namespace Cecilifier.Core.Tests.Integration
 			AssertResourceTest($@"Misc/DelegateInvocation_{storageType}");
 		}
 
-		[TestCase("TryCatch")]
-		[TestCase("TryFinally")]
-		[TestCase("TryCatchFinally")]
-		[TestCase("TryMultipleCatches")]
-		public void TestExceptoinHandlers(string testName)
-		{
-			AssertResourceTest($"Misc/{testName}");
-		}
-		
 		[Test]
 		public void TestNamespaces()
 		{

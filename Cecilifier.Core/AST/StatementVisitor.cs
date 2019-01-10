@@ -139,14 +139,11 @@ namespace Cecilifier.Core.AST
             {
                 Context.InstructionAdded -= SetFinallyStart;
                 exceptionHandlerTable[finallyEntryIndex].HandlerStart = instVar;
+                exceptionHandlerTable[finallyEntryIndex].TryEnd = instVar;
 
-                if (finallyEntryIndex == 0)
+                if (finallyEntryIndex != 0)
                 {
-                    // We have only try/finally blocks, so the end of the try (index 0) is the first instruction of the *finally*
-                    exceptionHandlerTable[0].TryEnd = instVar;
-                }
-                else
-                {
+                    // We have one or more catch blocks... set the end of the last catch block as the first instruction of the *finally*
                     exceptionHandlerTable[finallyEntryIndex - 1].HandlerEnd = instVar;
                 }
             }

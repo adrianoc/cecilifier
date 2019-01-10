@@ -1,0 +1,18 @@
+﻿.locals ()
+IL_0000: ldarg.0
+IL_0001: ldc.i4 1
+IL_0006: call System.Void TryCatchFinally::Foo(System.Int32)
+IL_000b: leave IL_002d
+IL_0010: pop
+IL_0011: ldarg.0
+IL_0012: ldc.i4 2
+IL_0017: call System.Void TryCatchFinally::Foo(System.Int32)
+IL_001c: leave IL_002d
+IL_0021: ldarg.0
+IL_0022: ldc.i4 3
+IL_0027: call System.Void TryCatchFinally::Foo(System.Int32)
+IL_002c: endfinally
+IL_002d: nop
+IL_002e: ret
+.try IL_0000 to IL_0010 catch System.Exception handler IL_0010 to IL_0021
+.try IL_0000 to IL_0021 finally handler IL_0021 to IL_002d
