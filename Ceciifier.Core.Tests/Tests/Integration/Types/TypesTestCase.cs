@@ -42,9 +42,9 @@ namespace Cecilifier.Core.Tests.Integration.Types
 		}
 		
 		[Test]
-		public void ExplicityInterfaceImplementationTest()
+		public void ExplicitInterfaceImplementationTest()
 		{
-			AssertResourceTest(@"Types/ExplicityInterfaceImplementation");
+			AssertResourceTest(@"Types/ExplicitInterfaceImplementation");
 		}
 		
 		[Test]

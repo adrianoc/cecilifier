@@ -8,8 +8,8 @@ namespace Cecilifier.Core.Tests.Integration
 		//[TestCase("ValueTypeReturnAsTargetOfCall")]
 		[TestCase("MultipleLiteralAsTargetOfCall")]
 		[TestCase("SingleLiteralAsTargetOfCall")]
-		[TestCase("ValueTypeReturnAsTargetOfCallInsideBaseContructorInvocation")]
-		[TestCase("ValueTypeReturnAsTargetOfCallInsideContructor")]
+		[TestCase("ValueTypeReturnAsTargetOfCallInsideBaseConstructorInvocation")]
+		[TestCase("ValueTypeReturnAsTargetOfCallInsideConstructor")]
 		public void ValueTypeAsTargetOfCall(string testResourceBaseName)
 		{
 			AssertResourceTest($@"ValueTypes/AsTargetOfCall/{testResourceBaseName}");
