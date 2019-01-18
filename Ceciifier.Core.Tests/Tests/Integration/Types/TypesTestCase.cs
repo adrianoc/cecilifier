@@ -85,7 +85,7 @@ namespace Cecilifier.Core.Tests.Integration.Types
 			AssertResourceTest($@"Types/{typeName}");	
 		}
 
-		[Test, Ignore("Not implemented yet")]
+		[Test]
 		public void TypeInitializeTest()
 		{
 			AssertResourceTest(@"Types/TypeInitializer");
