@@ -1,0 +1,18 @@
+﻿class TryCatchFinally
+{
+	public void Foo(int i)
+	{
+	    try
+	    {
+	        Foo(1);
+	    }
+	    catch(System.Exception ex)
+	    {
+	        Foo(2);
+	    }
+	    finally
+	    {
+	        Foo(3);
+	    }
+	}
+}

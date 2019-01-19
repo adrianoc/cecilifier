@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.AST;
 using Microsoft.CodeAnalysis;
@@ -89,7 +90,14 @@ namespace Cecilifier.Core.Misc
 			output.Remove(instruction);
 		}
 
-	    public string Output
+		public event Action<string> InstructionAdded;
+
+		public void TriggerInstructionAdded(string instVar)
+		{
+			InstructionAdded?.Invoke(instVar);	
+		}
+
+		public string Output
 		{
 			get
 			{

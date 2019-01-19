@@ -1,0 +1,18 @@
+﻿class TryMultipleCatches
+{
+	public void Foo(int i)
+	{
+	    try
+	    {
+	        Foo(1);
+	    }
+	    catch(System.ArgumentException ae)
+	    {
+	        Foo(2);
+	    }
+	    catch(System.Exception ex)
+	    {
+	        Foo(3);
+	    }
+	}
+}

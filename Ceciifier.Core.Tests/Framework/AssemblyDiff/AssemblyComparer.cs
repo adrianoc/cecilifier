@@ -255,7 +255,13 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 
 		private static bool EqualOrEquivalent(Instruction instruction, Instruction current)
 		{
-			if (instruction.OpCode == current.OpCode) return true;
+			while (instruction != null && instruction.OpCode == OpCodes.Nop)
+				instruction = instruction.Next;
+			
+			while (current != null && current.OpCode == OpCodes.Nop)
+				current = current.Next;
+			
+			if (instruction?.OpCode == current?.OpCode) return true;
 
 			switch (instruction.OpCode.Code)
 			{
@@ -288,12 +294,21 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 				case Code.Ldc_I4_7:
 				case Code.Ldc_I4_8: return current.OpCode.Code == Code.Ldc_I4;
 				
+				case Code.Leave:
+				case Code.Leave_S:
+				case Code.Br:
+				case Code.Brfalse:
+				case Code.Brfalse_S:
+				case Code.Brtrue:
+				case Code.Brtrue_S: return current.OpCode.FlowControl == FlowControl.Branch && EqualOrEquivalent((Instruction) instruction.Operand, (Instruction) current.Operand);
+				
 				case Code.Pop:
 					if (current.Previous == null || instruction.Previous == null)
 						return false;
 					
 					return current.OpCode.Code == Code.Stloc && current.Previous.OpCode.IsCall() && instruction.Previous.OpCode.IsCall() && LenientInstructionComparer.HasNoLocalVariableLoads(instruction.Next, instruction.Operand);
 			}
+			
 			return false;
 
 		}

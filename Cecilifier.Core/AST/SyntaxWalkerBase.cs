@@ -45,22 +45,37 @@ namespace Cecilifier.Core.AST
 	        if (method.IsStatic)
 		        opCode = OpCodes.Call;
 	        
-        	AddCecilExpression(@"{0}.Append({0}.Create({1}, {2}));", ilVar, opCode.ConstantName(), method.MethodResolverExpression(Context));
+	        AddCilInstruction(ilVar, opCode, method.MethodResolverExpression(Context));
 		}
 
         protected void AddCilInstruction(string ilVar, OpCode opCode, ITypeSymbol type)
         {
-        	AddCecilExpression(@"{0}.Append({0}.Create({1}, {2}));", ilVar, opCode.ConstantName(), ResolveType(type));
-		}
+	        AddCilInstruction(ilVar, opCode, ResolveType(type));
+        }
 
         protected void AddCilInstruction<T>(string ilVar, OpCode opCode, T arg)
         {
-        	AddCecilExpression(@"{0}.Append({0}.Create({1}, {2}));", ilVar, opCode.ConstantName(), arg);
+	        var instVar = CreateCilInstruction(ilVar, opCode, arg);
+	        AddCecilExpression($"{ilVar}.Append({instVar});");
+        }
+
+		protected string AddCilInstruction(string ilVar, OpCode opCode)
+		{
+			var instVar = CreateCilInstruction(ilVar, opCode);
+			AddCecilExpression($"{ilVar}.Append({instVar});");
+
+			return instVar;
 		}
 
-		protected void AddCilInstruction(string ilVar, OpCode opCode)
+		protected string CreateCilInstruction(string ilVar, OpCode opCode, object operand = null)
 		{
-			AddCecilExpression(@"{0}.Append({0}.Create({1}));", ilVar, opCode.ConstantName());
+			var operandStr = operand == null ? string.Empty : $", {operand}";
+			var instVar = TempLocalVar(opCode.Code.ToString());
+			AddCecilExpression($"var {instVar} = {ilVar}.Create({opCode.ConstantName()}{operandStr});");
+			
+			ctx.TriggerInstructionAdded(instVar);
+			
+			return ctx.DefinitionVariables.LastInstructionVar = instVar;
 		}
 
 		protected IMethodSymbol DeclaredSymbolFor<T>(T node) where T : BaseMethodDeclarationSyntax
@@ -73,7 +88,7 @@ namespace Cecilifier.Core.AST
 			return Context.GetDeclaredSymbol(node);
 		}
 
-		protected void WithCurrentNode(BaseMethodDeclarationSyntax node, string localVariable, string methodName, Action<string> action)
+		protected void WithCurrentNode(string localVariable, string methodName, Action<string> action)
 		{
 			using (Context.DefinitionVariables.WithCurrent(string.Empty, methodName, MemberKind.Method, localVariable))
 			{

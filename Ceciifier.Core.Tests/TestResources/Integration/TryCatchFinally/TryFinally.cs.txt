@@ -1,0 +1,14 @@
+﻿class TryFinally
+{
+	public void Foo(int i)
+	{
+	    try
+	    {
+	        Foo(1);
+	    }
+	    finally
+	    {
+	        Foo(3);
+	    }
+	}
+}
