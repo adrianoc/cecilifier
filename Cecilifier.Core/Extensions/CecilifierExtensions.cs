@@ -28,6 +28,7 @@ namespace Cecilifier.Core.Extensions
 		    {
                 case SyntaxKind.ProtectedKeyword: return targetEnum + ".Family";
 				case SyntaxKind.InternalKeyword: return targetEnum + "." + (modifier.Parent.Kind() == SyntaxKind.ClassDeclaration ? "NotPublic" : "Assembly");
+				case SyntaxKind.StaticKeyword: return targetEnum + "." + "Static";
 		    }
 
             return targetEnum + "." + modifier.ValueText.CamelCase();

@@ -128,8 +128,8 @@ namespace Cecilifier.Core.AST
 
 		protected string TypeModifiersToCecil(TypeDeclarationSyntax node)
 		{
-			var typeAttributes = DefaultTypeAttributeFor(node);
-
+            var hasStaticCtor = node.DescendantNodes().OfType<ConstructorDeclarationSyntax>().Any(d => d.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword)));
+			var typeAttributes = DefaultTypeAttributeFor(node, hasStaticCtor);
 			if (IsNestedTypeDeclaration(node))
 			{
 				return typeAttributes.AppendModifier(ModifiersToCecil(node.Modifiers, m => "TypeAttributes.Nested" + m.ValueText.CamelCase()));
@@ -144,9 +144,9 @@ namespace Cecilifier.Core.AST
 			return node.Parent.Kind() != SyntaxKind.NamespaceDeclaration && node.Parent.Kind() != SyntaxKind.CompilationUnit;
 		}
 
-		protected static string DefaultTypeAttributeFor(SyntaxNode node)
+		protected static string DefaultTypeAttributeFor(SyntaxNode node, bool hasStaticCtor = false)
 		{
-			const string basicClassAttrs = "TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit";
+			var basicClassAttrs = "TypeAttributes.AnsiClass" + (hasStaticCtor ? "" : " | TypeAttributes.BeforeFieldInit");
 			switch (node.Kind())
 			{
 				case SyntaxKind.StructDeclaration:		return "TypeAttributes.SequentialLayout | TypeAttributes.Sealed |" + basicClassAttrs; 
@@ -167,18 +167,28 @@ namespace Cecilifier.Core.AST
 
 		private static string ModifiersToCecil(string targetEnum, IEnumerable<SyntaxToken> modifiers, string @default, Func<SyntaxToken, bool> meaninglessModifiersFilter)
 		{
-			var validModifiers = modifiers.Where(meaninglessModifiersFilter);
-			if (!validModifiers.Any()) return targetEnum + "." + @default;
+			var validModifiers = modifiers.Where(meaninglessModifiersFilter).ToList();
 
-			return ModifiersToCecil(validModifiers, m => m.MapModifier(targetEnum));
+		    var hasAccessibilityModifier = validModifiers.Any(m =>
+		        m.IsKind(SyntaxKind.PublicKeyword) || m.IsKind(SyntaxKind.PrivateKeyword) ||
+		        m.IsKind(SyntaxKind.ProtectedKeyword) || m.IsKind(SyntaxKind.InternalKeyword));
+
+		    var modifiersStr = ModifiersToCecil(validModifiers, m => m.MapModifier(targetEnum));
+		    if (!validModifiers.Any() || !hasAccessibilityModifier)
+		        modifiersStr = modifiersStr.AppendModifier(targetEnum + "." + @default);
+
+            return modifiersStr;
 		}
 
-		private static string ModifiersToCecil(IEnumerable<SyntaxToken> modifiers, Func<SyntaxToken, string> mapp)
+	    private static string ModifiersToCecil(IEnumerable<SyntaxToken> modifiers, Func<SyntaxToken, string> map)
 		{
 			var cecilModifierStr = modifiers.Aggregate("",  (acc, token) =>
-			                                                acc + (ModifiersSeparator + mapp(token)));
+			                                                acc + (ModifiersSeparator + map(token)));
 
-			return cecilModifierStr.Substring(ModifiersSeparator.Length);
+            if (cecilModifierStr.Length > 0)
+                cecilModifierStr = cecilModifierStr.Substring(ModifiersSeparator.Length);
+
+		    return cecilModifierStr;
 		}
 
 		private static bool ExcludeHasNoCILRepresentationInTypes(SyntaxToken token)

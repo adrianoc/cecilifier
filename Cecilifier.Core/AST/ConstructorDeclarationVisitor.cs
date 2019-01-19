@@ -20,29 +20,50 @@ namespace Cecilifier.Core.AST
 			//TODO: Why return for parameterless ctors ???
 			//if (node.ParameterList.Parameters.Count == 0) return;
 
-			var declaringType = node.Parent.ResolveDeclaringType();
-
-            Action<ConstructorDeclarationSyntax> callBaseMethod = base.VisitConstructorDeclaration;
- 
-			var returnType = GetSpecialType(SpecialType.System_Void);
-			ProcessMethodDeclaration(node, "ctor", ".ctor", ResolvePredefinedType(returnType), simpleName =>
-			{
-				if (declaringType.Kind() != SyntaxKind.StructDeclaration)
-				{
-					AddCilInstruction(ilVar, OpCodes.Ldarg_0);
-				}
-
-				// If this ctor has an initializer the call to the base ctor will happen when we visit call base.VisitConstructorDeclaration()
-				// otherwise we need to call it here.
-				if (node.Initializer == null && declaringType.Kind() != SyntaxKind.StructDeclaration)
-				{
-					var declaringTypelocalVar = Context.DefinitionVariables.GetLastOf(MemberKind.Type).VariableName;
-					AddCilInstruction(ilVar, OpCodes.Call, string.Format("assembly.MainModule.Import(TypeHelpers.DefaultCtorFor({0}.BaseType.Resolve()))", declaringTypelocalVar));
-				}
-
-				callBaseMethod(node);
-			});
+		    if (node.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword)))
+		    {
+		        HandleStaticConstructor(node);
+		    }
+		    else
+		    {
+		        HandleInstanceConstructor(node);
+		    }
 		}
+
+	    private void HandleStaticConstructor(ConstructorDeclarationSyntax node)
+	    {
+	        var returnType = GetSpecialType(SpecialType.System_Void);
+	        ProcessMethodDeclaration(node, "cctor", ".cctor", ResolvePredefinedType(returnType), ctorVar =>
+	        {
+	            node.Body.Accept(this);
+	        });
+	    }
+
+        private void HandleInstanceConstructor(ConstructorDeclarationSyntax node)
+	    {
+	        var declaringType = node.Parent.ResolveDeclaringType();
+
+	        Action<ConstructorDeclarationSyntax> callBaseMethod = base.VisitConstructorDeclaration;
+
+	        var returnType = GetSpecialType(SpecialType.System_Void);
+	        ProcessMethodDeclaration(node, "ctor", ".ctor", ResolvePredefinedType(returnType), ctorVar =>
+	        {
+	            if (declaringType.Kind() != SyntaxKind.StructDeclaration)
+	            {
+	                AddCilInstruction(ilVar, OpCodes.Ldarg_0);
+	            }
+
+	            // If this ctor has an initializer the call to the base ctor will happen when we visit call base.VisitConstructorDeclaration()
+	            // otherwise we need to call it here.
+	            if (node.Initializer == null && declaringType.Kind() != SyntaxKind.StructDeclaration)
+	            {
+	                var declaringTypeLocalVar = Context.DefinitionVariables.GetLastOf(MemberKind.Type).VariableName;
+	                AddCilInstruction(ilVar, OpCodes.Call, string.Format("assembly.MainModule.Import(TypeHelpers.DefaultCtorFor({0}.BaseType.Resolve()))", declaringTypeLocalVar));
+	            }
+
+	            callBaseMethod(node);
+	        });
+	    }
 
         public override void VisitConstructorInitializer(ConstructorInitializerSyntax node)
         {
