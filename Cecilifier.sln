@@ -5,7 +5,7 @@ VisualStudioVersion = 15.0.26430.12
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cecilifier.Core", "Cecilifier.Core\Cecilifier.Core.csproj", "{0F3DB4A6-92A7-41ED-AE89-E99F78D6E4F3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cecilifier.Core.Tests", "Ceciifier.Core.Tests\Cecilifier.Core.Tests.csproj", "{C06B547B-E46B-4952-97D7-85470588192D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cecilifier.Core.Tests", "Cecilifier.Core.Tests\Cecilifier.Core.Tests.csproj", "{C06B547B-E46B-4952-97D7-85470588192D}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cecilifier.Runtime", "Cecilifier.Runtime\Cecilifier.Runtime.csproj", "{35DDC066-1D76-49AE-8D10-39A709E709EC}"
 EndProject
