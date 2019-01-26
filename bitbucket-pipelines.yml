@@ -7,6 +7,6 @@ pipelines:
           - dotnetcore
         script: # Modify the comma`nds below to build your repository.
           - export PROJECT_NAME=Cecilifier.sln
-          - export TEST_NAME=Ceciifier.Core.Tests/Cecilifier.Core.Tests.csproj
+          - export TEST_NAME=Cecilifier.Core.Tests/Cecilifier.Core.Tests.csproj
           - dotnet build $PROJECT_NAME
           - dotnet test $TEST_NAME
