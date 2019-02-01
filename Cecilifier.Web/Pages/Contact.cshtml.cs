@@ -12,7 +12,7 @@ namespace Cecilifier.Web.Pages
 
         public void OnGet()
         {
-            Message = "Your contact page.";
+            Message = "You can reach me through twitter (@adrianoverona) / Patreon (https://patreon.com/cecilifier)";
         }
     }
 }

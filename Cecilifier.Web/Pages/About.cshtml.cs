@@ -12,7 +12,7 @@ namespace Cecilifier.Web.Pages
 
         public void OnGet()
         {
-            Message = "Your application description page.";
+            Message = "Using Mono.Cecil the easy way :)";
         }
     }
 }
