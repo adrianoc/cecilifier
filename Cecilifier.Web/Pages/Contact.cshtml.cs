@@ -8,11 +8,6 @@ namespace Cecilifier.Web.Pages
 {
     public class ContactModel : PageModel
     {
-        public string Message { get; set; }
-
-        public void OnGet()
-        {
-            Message = "You can reach me through twitter (@adrianoverona) / Patreon (https://patreon.com/cecilifier)";
-        }
+        public string Message { get; set; } = "";
     }
 }

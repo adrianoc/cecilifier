@@ -20,6 +20,7 @@ namespace Cecilifier.Web
         public static IWebHostBuilder CreateWebHostBuilder(string[] args) =>
             WebHost.CreateDefaultBuilder(args)
                 .UseUrls("http://0.0.0.0:8080")
+                //.UseUrls("http://0.0.0.0:8080", "https://0.0.0.0:8081")
                 .UseStartup<Startup>();
     }
 }

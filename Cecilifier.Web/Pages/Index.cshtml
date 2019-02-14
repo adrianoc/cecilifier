@@ -11,21 +11,26 @@
 }
 <br/>
 <div>
-    <form method="post">
         <div class="form-group">
-            <label asp-for="CSharpCode" class="control-label">Enter your C# code</label>
-            <textarea asp-for="CSharpCode" class="form-control" id="_csharpcode"></textarea>
+            <label class="control-label">Enter your C# code</label>
+            <textarea id="_csharpcode"></textarea>
         </div>
-        <button type="submit" value="Submit">Cecilifier your code!</button>
+        
+        <button type="submit" id="sendbutton">Cecilifier your code!</button>
+        
         <div class="form-group">
-            <label asp-for="CecilifiedCode" class="control-label">Cecilified Code</label>
-            <textarea asp-for="CecilifiedCode" class="form-control" id="_cecilifiedcode"></textarea>
+            <label class="control-label">Cecilified Code</label>
+            <textarea id="_cecilifiedcode"></textarea>
             <div style="font-family:Lucida Console; font-size: 2">Editor powered by https://github.com/ashmind/mirrorsharp</div>
         </div>
-    </form>
 </div>
 
-<script> 
+<script>
+    var websocket;
+    var sendButton;
+    var cecilifiedCode;
+    var csharpCode;
+    
     var csharpeditor = CodeMirror.fromTextArea(
         document.getElementById("_csharpcode"), 
         {
@@ -35,8 +40,6 @@
             theme: "blackboard"
         });
 
-    csharpeditor.setValue("@Model.CSharpCode");
-    
     var editor = CodeMirror.fromTextArea(
         document.getElementById("_cecilifiedcode"), 
         {
@@ -45,5 +48,42 @@
             mode: "text/x-csharp",
             theme: "darcula"
         });
+
     
+    initializeWebSocket();
+    
+    function initializeWebSocket() {
+        var scheme = document.location.protocol === "https:" ? "wss" : "ws";
+        var port = document.location.port ? (":" + document.location.port) : "";
+        var connectionURL = scheme + "://" + document.location.hostname + port + "/ws" ;
+        
+        websocket = new WebSocket(connectionURL);
+        
+        sendButton = document.getElementById("sendbutton");
+        cecilifiedCode = document.getElementById("_cecilifiedcode");
+        csharpCode = document.getElementById("_csharpcode");
+        
+        sendbutton.onclick = function() {
+            if (!websocket || websocket.readyState !== WebSocket.OPEN) {
+                alert("socket not connected");
+                return;
+            }
+            websocket.send(csharpeditor.getValue());
+        };
+        
+        websocket.onopen = function (event) {
+        };
+        
+        websocket.onclose = function (event) {
+        };
+        
+        websocket.onerror = function(event) {
+            console.error("WebSocket error observed:", event);
+        };
+        
+        websocket.onmessage = function (event) {
+            // this is where we get the cecilified code back...
+            editor.setValue(event.data);
+        };
+    }
 </script>
