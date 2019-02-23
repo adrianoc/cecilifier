@@ -14,12 +14,12 @@ How to help
 ---
 - Using it
 - Finding issues
-- Fixing issues
-- Improving test coverage
+- [Fixing issues](https://github.com/adrianoc/cecilifier/issues)
+- [Improving tests](https://github.com/adrianoc/cecilifier/tree/master/Cecilifier.Core.Tests)
 - Improving documentation
 - Adding features
 - Sending feedback
-- Consider donating to the project through [Patreon](https://www.patreon.com/adrianoverona)
+- Consider donating to the project through [Patreon](https://www.patreon.com/adrianoverona) or if you prefer, you can send bitcoins to bc1qrsdyejzljtk7yxszhgsrt90smf6x07jatpmd6n9yfzw7659cme4s860t27
 
 License
 ---
@@ -62,22 +62,24 @@ How To build
 ---
 In order to build it you need at least .Net Core SDK 2.0
 
-- Pull the [git repo](https://bitbucket.org/vagaus/cecilifier)
+- Pull the [git repo](https://github.com/adrianoc/cecilifier)
 - Open a console in the folder with the pulled source code
 - run dotnet build
 
-You can run the website frontend locally by typing:
+You can run the website locally by typing:
 `cd Cecilifier.Web`
 `dotnet run`
 
-Then you can open a browser in `https://localhost:5000`
+Then you can open a browser in `https://localhost:8080`
 
 
 # How to add tests
 ---
 First, and most importantly, tests should be self contained, clearly describing what they are testing and run quickly (unfortunately it is very likely that some of the existing tests does not meet this criteria, but nevertheless, we should strive to ;)
 
-Existing tests work basically taking a [snippet of code](https://bitbucket.org/vagaus/cecilifier/src/master/Cecilifier.Core.Tests/TestResources/Integration/CodeBlock/Conditional/IfStatement.cs.txt), _Cecilifying_ it (generating the Mono.Cecil API calls to produce an assembly equivalent to the compiled snippet), compiling it,  and finally either comparing the two assemblies or comparing the generated IL for some method with the expected output [as in this example](https://bitbucket.org/vagaus/cecilifier/src/master/Cecilifier.Core.Tests/TestResources/Integration/CodeBlock/Conditional/IfStatement.cs.il.txt). Ideally all tests should use the assembly comparison approach (as opposed to forcing developers to store the expected IL) but in some cases the comparison code would became to complex and in such cases I think it is ok to store the expected IL (anyway, I try to minimize the number of such tests).
+Existing tests work basically taking a [snippet of code](https://github.com/adrianoc/cecilifier/blob/dev/Cecilifier.Core.Tests/TestResources/Integration/CodeBlock/Conditional/IfStatement.cs.txt), _Cecilifying_ it (generating the Mono.Cecil API calls to produce an assembly equivalent to the compiled snippet), compiling it,  and finally either comparing the two assemblies or comparing the generated IL for some method with the expected output [as in this example](https://github.com/adrianoc/cecilifier/blob/dev/Cecilifier.Core.Tests/TestResources/Integration/CodeBlock/Conditional/IfStatement.cs.il.txt). 
+
+Ideally all tests should use the assembly comparison approach (as opposed to forcing developers to store the expected IL) but in some cases the comparison code would became to complex and in such cases I think it is ok to store the expected IL (anyway, I try to minimize the number of such tests).
 
 How to report issues
 ---
@@ -95,12 +97,11 @@ You can use Cecilifier [google group](https://groups.google.com/forum/#!forum/ce
 
 Build Status
 ---
-https://img.shields.io/bitbucket/pipelines/vagaus/cecilifier.svg
-
+[![Build Status](https://travis-ci.com/adrianoc/cecilifier.svg?branch=master)](https://travis-ci.com/adrianoc/cecilifier)
 
 Potential improvements
 ---
-For a list of potential improvements check [Cecilifier trello board](https://trello.com/b/2z5ke9Ll)
+
 
 Disclaimer(s)
 ---
@@ -110,9 +111,3 @@ Disclaimer(s)
 - I do not claim that the generated code is suitable or even correct - I do have tests though :)
 - I have not tried to clean up the code too much, so there are some really bad code duplication
 
-TASKS
---
-- **Open** git repo
-- Cecilifier forum: tps://groups.google.com/forum/#!forum/cecilifier
-- Post blog
-- Twitter
