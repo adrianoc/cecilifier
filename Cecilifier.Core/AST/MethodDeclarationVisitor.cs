@@ -15,7 +15,12 @@ namespace Cecilifier.Core.AST
 		{
 		}
 
-	    public override void VisitBlock(BlockSyntax node)
+		public override void VisitArrowExpressionClause(ArrowExpressionClauseSyntax node)
+		{
+			LogUnsupportedSyntax(node);
+		}
+		
+		public override void VisitBlock(BlockSyntax node)
 	    {
 		    StatementVisitor.Visit(Context, ilVar, node);
 	    }

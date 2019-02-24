@@ -18,6 +18,41 @@ namespace Cecilifier.Core.AST
             node.Accept(new StatementVisitor(context));
         }
 
+        public override void VisitYieldStatement(YieldStatementSyntax node)
+        {
+            LogUnsupportedSyntax(node);
+        }
+
+        public override void VisitForStatement(ForStatementSyntax node)
+        {
+            LogUnsupportedSyntax(node);
+        }
+
+        public override void VisitForEachStatement(ForEachStatementSyntax node)
+        {
+            LogUnsupportedSyntax(node);
+        }
+
+        public override void VisitWhileStatement(WhileStatementSyntax node)
+        {
+            LogUnsupportedSyntax(node);
+        }
+
+        public override void VisitSwitchStatement(SwitchStatementSyntax node)
+        {
+            LogUnsupportedSyntax(node);
+        }
+
+        public override void VisitLockStatement(LockStatementSyntax node)
+        {
+            LogUnsupportedSyntax(node);
+        }
+
+        public override void VisitUnsafeStatement(UnsafeStatementSyntax node)
+        {
+            LogUnsupportedSyntax(node);
+        }
+
         public override void VisitBlock(BlockSyntax node)
         {
             using (Context.DefinitionVariables.EnterScope())

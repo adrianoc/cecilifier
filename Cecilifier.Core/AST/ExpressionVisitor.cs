@@ -26,6 +26,36 @@ namespace Cecilifier.Core.AST
         	this.ilVar = ilVar;
         }
 
+	    public override void VisitSimpleLambdaExpression(SimpleLambdaExpressionSyntax node)
+	    {
+		    LogUnsupportedSyntax(node);
+	    }
+
+	    public override void VisitAwaitExpression(AwaitExpressionSyntax node)
+	    {
+		    LogUnsupportedSyntax(node);
+	    }
+
+	    public override void VisitTupleExpression(TupleExpressionSyntax node)
+	    {
+		    LogUnsupportedSyntax(node);
+	    }
+
+	    public override void VisitInterpolatedStringExpression(InterpolatedStringExpressionSyntax node)
+	    {
+		    LogUnsupportedSyntax(node);
+	    }
+
+	    public override void VisitIsPatternExpression(IsPatternExpressionSyntax node)
+	    {
+		    LogUnsupportedSyntax(node);
+	    }
+
+	    public override void VisitRefExpression(RefExpressionSyntax node)
+	    {
+		    LogUnsupportedSyntax(node);
+	    }
+	    
 	    public override void VisitEqualsValueClause(EqualsValueClauseSyntax node)
 		{
 			base.VisitEqualsValueClause(node);
