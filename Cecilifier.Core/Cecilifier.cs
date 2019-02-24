@@ -24,7 +24,7 @@ namespace Cecilifier.Core
 			var syntaxTree = CSharpSyntaxTree.ParseText(new StreamReader(content).ReadToEnd());
 
 			var comp = CSharpCompilation.Create(
-							"Teste",
+							"CecilifiedAssembly",
 							new[] { syntaxTree },
 							references.Select(refPath => MetadataReference.CreateFromFile(refPath)),
 							new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
@@ -34,9 +34,15 @@ namespace Cecilifier.Core
 				Console.WriteLine(diag.GetMessage());
 			}
 
+			if (comp.GetDiagnostics().Any(d => d.Severity == DiagnosticSeverity.Error))
+			{
+				Console.WriteLine("Code contains compiler errors (see above) and will not be cecilified.");
+				return new StringReader(string.Empty);
+			}
+
 			var semanticModel = comp.GetSemanticModel(syntaxTree);
 
-			IVisitorContext ctx = new CecilifierContext(semanticModel);
+			var ctx = new CecilifierContext(semanticModel);
 			var visitor = new CompilationUnitVisitor(ctx);
 
 			SyntaxNode root;
