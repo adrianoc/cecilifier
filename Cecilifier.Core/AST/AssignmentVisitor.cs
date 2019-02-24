@@ -16,6 +16,11 @@ namespace Cecilifier.Core.AST
 
 		public override void VisitIdentifierName(IdentifierNameSyntax node)
 		{
+			//TODO: tuple declaration with an initializer is represented as an assignment
+			//      revisit the following if when we handle tuples
+			if (node.IsVar)
+				return;
+			
 			var member = Context.SemanticModel.GetSymbolInfo(node);
 			if (member.Symbol.ContainingType.IsValueType && node.Parent.Kind() == SyntaxKind.ObjectCreationExpression && ((ObjectCreationExpressionSyntax)node.Parent).ArgumentList.Arguments.Count == 0) return;
 
