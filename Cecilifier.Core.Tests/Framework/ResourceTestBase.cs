@@ -58,7 +58,7 @@ namespace Cecilifier.Core.Tests.Framework
 		        var resourceCompiledAssemblyPath = CompilationServices.CompileDLL(
 		                                                Path.Combine(Path.GetDirectoryName(actualAssemblyPath), Path.GetFileNameWithoutExtension(actualAssemblyPath) + "_expected"),
 		                                                ReadToEnd(tbc),
-														GetTrustedAssembliesPath().ToArray());
+														Utils.GetTrustedAssembliesPath().ToArray());
 
 			    Console.WriteLine();
 			    Console.WriteLine("Compiled from res        : {0}", resourceCompiledAssemblyPath);
@@ -86,7 +86,7 @@ namespace Cecilifier.Core.Tests.Framework
 		{
 			cecilifiedCode = Cecilfy(tbc);
 
-			var references = GetTrustedAssembliesPath();
+			var references = Utils.GetTrustedAssembliesPath();
 
 			var refsToCopy = new List<string>
 			{
@@ -171,16 +171,11 @@ namespace Cecilifier.Core.Tests.Framework
 		{
 			return new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
 		}
-
-		private IList<string> GetTrustedAssembliesPath()
-		{
-			return ((string) AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")).Split(Path.PathSeparator).ToList();
-		}
-		
+	
 		private string Cecilfy(Stream stream)
 		{
 			stream.Position = 0;
-			return Cecilifier.Process(stream, GetTrustedAssembliesPath()).ReadToEnd();
+			return Cecilifier.Process(stream, Utils.GetTrustedAssembliesPath()).ReadToEnd();
 		}
 	}
 }
