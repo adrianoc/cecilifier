@@ -30,7 +30,7 @@ namespace Cecilifier.Core.Tests.Integration
             Assert.That(cecilifiedCode, Does.Match("Syntax 'Yield(Return|Break)Statement' is not supported"));
         }
         
-        [TestCase("Func<int, string> f = i => i.ToString();", TestName= "Simple Lambda")]
+        [TestCase("void F() { Func<int, string> f; f = i => i.ToString(); }", TestName= "Simple Lambda")]
         [TestCase("void F(Func<int, string> f) {{ F(i => i.ToString()); }}", TestName= "Lambda as param")]
         public void LambdaExpression(string lambda)
         {
@@ -40,11 +40,11 @@ namespace Cecilifier.Core.Tests.Integration
         [Test]
         public void AwaitExpression()
         {
-            AssertUnsupportedFeature("class Foo { public async int Foo(System.IO.Stream s, byte []b) { await s.ReadAsync(b); } }", "Syntax 'AwaitExpression' is not supported");
+            AssertUnsupportedFeature("class Foo { public async System.Threading.Tasks.Task<int> F(System.IO.Stream s, byte []b) { await s.ReadAsync(b); return 1; } }", "Syntax 'AwaitExpression' is not supported");
         }
         
         [TestCase("var (a,b)")]
-        [TestCase("(int a, int b)")]
+        [TestCase("(int a, bool b)")]
         public void TupleExpression(string tuple)
         {
             AssertUnsupportedFeature($"class Foo {{ public (int, bool) F() {{ return (1, true); }} void M() {{ {tuple} = F(); }} }}", "Syntax 'TupleExpression' is not supported");

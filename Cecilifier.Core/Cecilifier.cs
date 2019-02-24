@@ -27,7 +27,7 @@ namespace Cecilifier.Core
 							"CecilifiedAssembly",
 							new[] { syntaxTree },
 							references.Select(refPath => MetadataReference.CreateFromFile(refPath)),
-							new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+							new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, allowUnsafe:true));
 
 			foreach (var diag in comp.GetDiagnostics())
 			{
