@@ -15,12 +15,24 @@
     <link rel="stylesheet" href="~/lib/codemirror/lib/codemirror.css">
     <link rel="stylesheet" href="~/lib/codemirror/theme/darcula.css">
     <link rel="stylesheet" href="~/lib/codemirror/theme/blackboard.css">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.0/css/all.css" integrity="sha384-lZN37f5QGtY3VHgisS14W3ExzMWZxybE1SJSEsQp9S+oqd12jhcu+A56Ebc1zFSJ" crossorigin="anonymous">
+    <link href="https://fonts.googleapis.com/css?family=Nunito+Sans" rel="stylesheet"> 
     <script src="~/lib/codemirror/mode/clike/clike.js"></script>
 
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>@ViewData["Title"] - Cecilifier.Web</title>
 
+    <div class="alert success" style="opacity: 1">
+        <span class="closebtn">&times;</span>
+        <strong>If you use this site/project consider <a href="https://www.patreon.com/cecilifier" target="_donating">donating</a></strong>.
+    </div>
+    
+    <div class="alert error" id="cecilifier_error">
+        <span class="closebtn" onclick="this.parentElement.style.display='none';">&times;</span>
+        <div></div>
+    </div>
+    
     <environment include="Development">
         <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.css"/>
         <link rel="stylesheet" href="~/css/site.css"/>
@@ -31,6 +43,91 @@
               asp-fallback-test-class="sr-only" asp-fallback-test-property="position" asp-fallback-test-value="absolute"/>
         <link rel="stylesheet" href="~/css/site.min.css" asp-append-version="true"/>
     </environment>
+
+    <style>
+        .fab:hover
+        {
+            opacity: 1;
+            color: none;
+        }
+
+        .fab
+        {
+            opacity: 0.5;
+            color: none;
+        }
+
+        a:link { color: black; text-decoration:none; }
+        a:visited { color: black; text-decoration:none; }
+
+        .back_social
+        {
+            background: rgb(206, 208, 209);
+            width: 100%;
+        }
+
+        #inner {
+            display: table;
+            margin: 0 auto;
+        }
+    </style>
+    
+    <!-- ALERT -->
+    <style>
+        .alert {
+            display: table;
+            margin: 0 auto;
+            padding: 20px;
+            width: 80%;
+            background-color: #f44336;
+            color: white;
+            opacity: 1;
+            transition: opacity 0.6s;
+            margin-bottom: 15px;
+            font-family: 'Nunito+Sans'; 
+            text-align: center
+         }
+
+        .alert.success { background-color: #4CAF50;}
+        .alert.info { background-color: #2196F3;}
+        .alert.warning { background-color: #ff9800;}
+        .alert.error { background-color: #620b05; color: #eae6c1; text-align: left; position: absolute; opacity: 0}
+
+        .closebtn {
+            margin-left: 15px;
+            color: white;
+            font-weight: bold;
+            float: right;
+            font-size: 22px;
+            line-height: 20px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .closebtn:hover {
+            color: black;
+        }
+    </style>
+    
+    <script>
+        setTimeout(
+            function fadeOut(){
+                var close = document.getElementsByClassName("closebtn");
+                var div = close[0].parentElement;
+        
+                var opacity = Number(div.style.opacity);
+                opacity = opacity - 0.1;
+        
+                if (opacity > 0.4) {
+                    div.style.opacity = opacity.toString();
+                    setTimeout(fadeOut, 400);
+                }
+                else {
+                    div.style.display = "none"; 
+                }
+        
+            }, 2000);
+    </script>
 </head>
 <body>
 <nav class="navbar navbar-inverse navbar-fixed-top">
@@ -60,8 +157,17 @@
     @RenderBody()
     <hr/>
     <footer>
-        See <a href="https://github.com/adrianoc/cecilifier">Cecilifier on GitHub</a>
-        <p>&copy; 2018 - Adriano Carlos Verona - Cecilifier</p>
+        <div class="back_social">
+            <div id="inner">
+                <a class="fab fa-linkedin" href="https://www.linkedin.com/in/adrianoc/" target="_li_cecilifier"></a>
+                <a class="fab fa-github" href="https://github.com/adrianoc/cecilifier"target="_gh_cecilifier"></a>
+                <a class="fab fa-twitter" href="https://twitter.com/adrianoverona"target="_tw_cecilifier"></a>
+                <a class="fab fa-blogger" href="https://programing-fun.blogspot.com/"target="_bs_cecilifier"></a>
+                <a class="fab fa-patreon" href="https://www.patreon.com/cecilifier"target="_pa_cecilifier"></a>
+            </div>
+    
+            <p id="inner" style="font-family: 'Nunito+Sans', cursive; font-size: 12px;">&copy; 2019 - Adriano Carlos Verona</p>
+        </div>
     </footer>
 </div>
 

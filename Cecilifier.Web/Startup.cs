@@ -6,6 +6,8 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Web;
+using Cecilifier.Core.Misc;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -86,10 +88,26 @@ namespace Cecilifier.Web
                 {
                     using (var code = new MemoryStream(buffer, 0, result.Count))
                     {
-                        var cecilifiedCode = Core.Cecilifier.Process(code, GetTrustedAssembliesPath());
-
-                        var dataToReturn = Encoding.UTF8.GetBytes(cecilifiedCode.ReadToEnd()).AsMemory();
-                        await webSocket.SendAsync(dataToReturn, result.MessageType, result.EndOfMessage, CancellationToken.None);
+                        try
+                        {
+                            var cecilifiedCode = Core.Cecilifier.Process(code, GetTrustedAssembliesPath());
+                            
+                            var cecilifiedStr = HttpUtility.JavaScriptStringEncode(cecilifiedCode.ReadToEnd());
+                            
+                            var r = $"{{ \"status\" : 0, \"cecilifiedCode\" : \"{cecilifiedStr}\" }}";
+                            var dataToReturn = Encoding.UTF8.GetBytes(r).AsMemory();
+                            await webSocket.SendAsync(dataToReturn, result.MessageType, result.EndOfMessage, CancellationToken.None);
+                        }
+                        catch (SyntaxErrorException ex)
+                        {
+                            var dataToReturn = Encoding.UTF8.GetBytes($"{{ \"status\" : 1,  \"syntaxError\": \"{ HttpUtility.JavaScriptStringEncode(ex.Message)}\"  }}").AsMemory();
+                            await webSocket.SendAsync(dataToReturn, result.MessageType, result.EndOfMessage, CancellationToken.None);
+                        }
+                        catch (Exception ex)
+                        {
+                            var dataToReturn = Encoding.UTF8.GetBytes($"{{ \"status\" : 2,  \"error\": \"{ HttpUtility.JavaScriptStringEncode(ex.ToString())}\"  }}").AsMemory();
+                            await webSocket.SendAsync(dataToReturn, result.MessageType, result.EndOfMessage, CancellationToken.None);
+                        }
                     }
 
                     result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);

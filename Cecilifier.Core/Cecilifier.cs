@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Cecilifier.Core.AST;
@@ -29,15 +28,11 @@ namespace Cecilifier.Core
 							references.Select(refPath => MetadataReference.CreateFromFile(refPath)),
 							new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, allowUnsafe:true));
 
-			foreach (var diag in comp.GetDiagnostics())
-			{
-				Console.WriteLine(diag.GetMessage());
-			}
 
-			if (comp.GetDiagnostics().Any(d => d.Severity == DiagnosticSeverity.Error))
+			var errors = comp.GetDiagnostics().Where(d => d.Severity == DiagnosticSeverity.Error).Select(s => s.ToString()).ToArray();
+			if (errors.Length > 0)
 			{
-				Console.WriteLine("Code contains compiler errors (see above) and will not be cecilified.");
-				return new StringReader(string.Empty);
+				throw new SyntaxErrorException($"Code contains compiler errors:\n\n{string.Join("\n", errors)}");
 			}
 
 			var semanticModel = comp.GetSemanticModel(syntaxTree);
