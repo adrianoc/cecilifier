@@ -1,6 +1,6 @@
 using System;
 
-namespace Cecilifier.Core.Misc
+namespace Cecilifier.Core
 {
     public class SyntaxErrorException : Exception
     {
