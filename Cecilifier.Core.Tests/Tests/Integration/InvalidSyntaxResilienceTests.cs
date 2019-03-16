@@ -13,7 +13,7 @@ namespace Cecilifier.Core.Tests.Integration
         {
             var codeString = "class C { void F(int i) { sitch(i) {} } }";
             var code = new MemoryStream(Encoding.ASCII.GetBytes(codeString));
-            Cecilifier.Process(code, Utils.GetTrustedAssembliesPath()).ReadToEnd();
+            Assert.Throws<SyntaxErrorException>(() => Cecilifier.Process(code, Utils.GetTrustedAssembliesPath()).ReadToEnd());
         }
     }
 }
