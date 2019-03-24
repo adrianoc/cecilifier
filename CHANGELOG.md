@@ -1,9 +1,10 @@
-My change log.... :)
 
-##fixes
+## 24/March/2019
+
+### Changed
 	- *call* instruction emitted with invalid target in some scenarios
-	- calls to overloaded methods/ctors always resolved to the first member processed.
-	- take operands of call/calli/callvirt into account when comparing assemblies.
+	- fixed calls to overloaded methods/ctors always being resolved to the first member processed.
+	- take operands of various instructions (eg, call/calli/callvirt) into account when comparing assemblies.
 
-##features
+### Added
 	- Support access of generic static/instance methods.
