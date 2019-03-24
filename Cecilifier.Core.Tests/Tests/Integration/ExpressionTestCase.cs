@@ -89,5 +89,11 @@ namespace Cecilifier.Core.Tests.Integration
 		{
 			AssertResourceTest(@"Expressions/NewCustom");
 		}
+		
+		[Test, Ignore("Not implemented yet")]
+		public void TestNewArray()
+		{
+			AssertResourceTest(@"Expressions/NewArray");
+		}
 	}
 }
