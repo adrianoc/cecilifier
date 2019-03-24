@@ -60,7 +60,7 @@ namespace Cecilifier.Core.AST
 			using(Context.DefinitionVariables.WithCurrent("", node.Identifier.ValueText, MemberKind.Type, typeVar))
 			{
 				// Delegate ctor
-				AddCecilExpression(CecilDefinitionsFactory.Constructor(Context, out var ctorLocalVar, node.Identifier.Text, "MethodAttributes.FamANDAssem | MethodAttributes.Family", "IsRuntime = true"));
+				AddCecilExpression(CecilDefinitionsFactory.Constructor(Context, out var ctorLocalVar, node.Identifier.Text, "MethodAttributes.FamANDAssem | MethodAttributes.Family", new[] {"System.Object", "System.IntPtr"}, "IsRuntime = true"));
 				AddCecilExpression($"{ctorLocalVar}.Parameters.Add(new ParameterDefinition({ResolvePredefinedType("Object")}));");
 				AddCecilExpression($"{ctorLocalVar}.Parameters.Add(new ParameterDefinition({ResolvePredefinedType("IntPtr")}));");
 				AddCecilExpression($"{typeVar}.Methods.Add({ctorLocalVar});");

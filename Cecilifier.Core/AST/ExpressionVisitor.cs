@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using Cecilifier.Core.Extensions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -172,29 +173,12 @@ namespace Cecilifier.Core.AST
 
 	    public override void VisitIdentifierName(IdentifierNameSyntax node)
 	    {
-		    var member = Context.SemanticModel.GetSymbolInfo(node);
-		    switch (member.Symbol.Kind)
-		    {
-			    case SymbolKind.Method:
-				    ProcessMethodCall(node, member.Symbol as IMethodSymbol);
-				    break;
+		    HandleIdentifier(node);
+	    }
 
-			    case SymbolKind.Parameter:
-				    ProcessParameter(ilVar, node, member.Symbol as IParameterSymbol);
-				    break;
-
-			    case SymbolKind.Local:
-				    ProcessLocalVariable(node, member);
-				    break;
-
-			    case SymbolKind.Field:
-				    ProcessField(member.Symbol as IFieldSymbol);
-				    break;
-			    
-			    case SymbolKind.Property:
-				    ProcessProperty(node, member.Symbol as IPropertySymbol);
-				    break;
-		    }
+	    public override void VisitGenericName(GenericNameSyntax node)
+	    {
+		   HandleIdentifier(node);
 	    }
 
 	    public override void VisitArgument(ArgumentSyntax node)
@@ -373,7 +357,7 @@ namespace Cecilifier.Core.AST
 			//TODO: Try to reuse SyntaxWalkerBase.ResolveType(TypeSyntax)
 			var returnType = ResolveTypeLocalVariable(method.ReturnType.Name) ?? ResolvePredefinedType(method.ReturnType);
 			MethodDeclarationVisitor.AddMethodDefinition(Context, varName, method.Name, "MethodAttributes.Private", returnType);
-			Context.DefinitionVariables.Register(string.Empty, method.Name, MemberKind.Method, varName);
+			Context.DefinitionVariables.RegisterMethod(method.ContainingType.Name, method.Name, method.Parameters.Select(p => p.Type.Name).ToArray(), varName);
 		}
 
 		private void FixCallSite()
@@ -386,7 +370,7 @@ namespace Cecilifier.Core.AST
 			callFixList.Push(Context.CurrentLine);
 		}
 
-		private void ProcessProperty(IdentifierNameSyntax node, IPropertySymbol propertySymbol)
+		private void ProcessProperty(SimpleNameSyntax node, IPropertySymbol propertySymbol)
 		{
 			var parentMae = node.Parent as MemberAccessExpressionSyntax;
 			var isAccessOnThisOrObjectCreation = true;
@@ -420,11 +404,11 @@ namespace Cecilifier.Core.AST
 			else
 			{
 				AddCilInstruction(ilVar, OpCodes.Ldarg_0);
-				AddCilInstruction(ilVar, OpCodes.Ldfld, Context.DefinitionVariables.GetVariable(fieldSymbol.Name, MemberKind.Field).VariableName);
+				AddCilInstruction(ilVar, OpCodes.Ldfld, Context.DefinitionVariables.GetVariable(fieldSymbol.Name, MemberKind.Field, fieldSymbol.ContainingType.Name).VariableName);
 			}
 		}
 	    
-		private void ProcessLocalVariable(IdentifierNameSyntax localVar, SymbolInfo varInfo)
+		private void ProcessLocalVariable(SimpleNameSyntax localVar, SymbolInfo varInfo)
 		{
 			var symbol = (ILocalSymbol) varInfo.Symbol;
 			var localVarParent = (CSharpSyntaxNode) localVar.Parent;
@@ -438,7 +422,7 @@ namespace Cecilifier.Core.AST
 			HandlePotentialDelegateInvocationOn(localVar, symbol.Type, ilVar);
 		}
 
-		private void ProcessMethodCall(IdentifierNameSyntax node, IMethodSymbol method)
+		private void ProcessMethodCall(SimpleNameSyntax node, IMethodSymbol method)
 		{
 			if (!method.IsStatic && method.IsDefinedInCurrentType(Context) && node.Parent.Kind() == SyntaxKind.InvocationExpression)
 			{
@@ -547,6 +531,33 @@ namespace Cecilifier.Core.AST
 		    FixCallSite();
 	    }
 	    
+	    private void HandleIdentifier(SimpleNameSyntax node)
+	    {
+		    var member = Context.SemanticModel.GetSymbolInfo(node);
+		    switch (member.Symbol.Kind)
+		    {
+			    case SymbolKind.Method:
+				    ProcessMethodCall(node, member.Symbol as IMethodSymbol);
+				    break;
+
+			    case SymbolKind.Parameter:
+				    ProcessParameter(ilVar, node, member.Symbol as IParameterSymbol);
+				    break;
+
+			    case SymbolKind.Local:
+				    ProcessLocalVariable(node, member);
+				    break;
+
+			    case SymbolKind.Field:
+				    ProcessField(member.Symbol as IFieldSymbol);
+				    break;
+
+			    case SymbolKind.Property:
+				    ProcessProperty(node, member.Symbol as IPropertySymbol);
+				    break;
+		    }
+	    }
+
 		static ExpressionVisitor()
 		{
 			//TODO: Use AddCilInstruction instead.
@@ -554,7 +565,8 @@ namespace Cecilifier.Core.AST
 			{
 				if (left.SpecialType == SpecialType.System_String)
 				{
-					WriteCecilExpression(ctx, "{0}.Append({0}.Create({1}, assembly.MainModule.Import(typeof(string).GetMethod(\"Concat\", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public, null, new[] {{ typeof(Object), typeof(Object) }}, null))));", ilVar, OpCodes.Call.ConstantName());
+					var concatArgType = right.SpecialType == SpecialType.System_String ? "string" : "object";
+					WriteCecilExpression(ctx, $"{ilVar}.Append({ilVar}.Create({OpCodes.Call.ConstantName()}, assembly.MainModule.Import(typeof(string).GetMethod(\"Concat\", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public, null, new[] {{ typeof({concatArgType}), typeof({concatArgType}) }}, null))));");
 				}
 				else
 				{

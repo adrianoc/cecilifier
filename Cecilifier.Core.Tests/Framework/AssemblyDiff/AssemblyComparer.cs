@@ -260,8 +260,17 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 			
 			while (current != null && current.OpCode == OpCodes.Nop)
 				current = current.Next;
-			
-			if (instruction?.OpCode == current?.OpCode) return true;
+
+			if (instruction?.OpCode == current?.OpCode)
+			{
+				if (_instructionValidator.TryGetValue(instruction.OpCode.Code, out var validator))
+				{
+					return validator(instruction, current);
+				}
+				
+				Console.WriteLine($"No specific validation for {instruction.OpCode} operands!");
+				return true;
+			}
 
 			switch (instruction.OpCode.Code)
 			{
@@ -380,6 +389,99 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 		{
 			return source.Attributes == target.Attributes || typeVisitor.VisitAttributes(source, target);
 		}
+		
+		private static Dictionary<Code, Func<Instruction, Instruction, bool>> _instructionValidator =
+			new Dictionary<Code, Func<Instruction, Instruction, bool>>()
+			{
+				{Code.Ret, AlwaysValid},
+				{Code.Nop, AlwaysValid},
+				{Code.Pop, AlwaysValid},
+				{Code.Ldarg_0, AlwaysValid},
+				{Code.Ldarg_1, AlwaysValid},
+				{Code.Ldarg_2, AlwaysValid},
+				{Code.Ldarg_3, AlwaysValid},
+				
+				{Code.Call, ValidateCalls},
+				{Code.Calli, ValidateCalls},
+				{Code.Callvirt, ValidateCalls},
+				{Code.Newobj, ValidateCalls},
+				
+				{Code.Ldftn, ValidateCalls},
+				{Code.Ldloca, ValidateLocalVariableIndex},
+				{Code.Ldloca_S, ValidateLocalVariableIndex},
+				{Code.Ldloc, ValidateLocalVariableIndex},
+				{Code.Ldloc_S, ValidateLocalVariableIndex},
+				{Code.Stloc, ValidateLocalVariableIndex},
+				{Code.Stloc_S, ValidateLocalVariableIndex},
+				
+				{Code.Castclass, ValidateTypeReference},
+				{Code.Box, ValidateTypeReference},
+				{Code.Isinst, ValidateTypeReference},
+				{Code.Newarr, ValidateTypeReference},
+				
+				{Code.Ldfld, ValidateField},
+				{Code.Stfld, ValidateField},
+			};
+
+
+		private static bool AlwaysValid(Instruction lhs, Instruction rhs)
+		{
+			return true;
+		}
+		
+		private static bool ValidateCalls(Instruction lhs, Instruction rhs)
+		{
+			var m1 = (MethodReference) lhs.Operand;
+			var m2 = (MethodReference) rhs.Operand;
+
+			return MethodReferenceComparer.Instance.Compare(m1, m2) == 0;
+		}	
+		
+		private static bool ValidateLocalVariableIndex(Instruction lhs, Instruction rhs)
+		{
+			var varDefLhs = (VariableDefinition) lhs.Operand;
+			var varDefRhs = (VariableDefinition) rhs.Operand;
+			
+			return varDefLhs.VariableType.FullName == varDefRhs.VariableType.FullName &&
+				varDefLhs.IsPinned == varDefRhs.IsPinned;
+		}
+
+		private static bool ValidateTypeReference(TypeReference typeLhs, TypeReference typeRhs)
+		{
+			var typeNameMatches =  typeLhs.FullName == typeRhs.FullName;
+			if (!typeNameMatches)
+				return false;
+
+			switch (typeLhs)
+			{
+				case ArrayType lhsAt:
+					var rhsAt = typeRhs as ArrayType;
+					return ValidateTypeReference(lhsAt.ElementType, rhsAt?.ElementType);
+				
+				case GenericInstanceType _:
+					var rhsGen = typeRhs as GenericInstanceType;
+					return rhsGen != null;
+			}
+
+			return true;
+			
+		}
+		
+		private static bool ValidateTypeReference(Instruction lhs, Instruction rhs)
+		{
+			var typeLhs = (TypeReference) lhs.Operand;
+			var typeRhs = (TypeReference) rhs.Operand;
+
+			return ValidateTypeReference(typeLhs, typeRhs);
+		}
+
+		private static bool ValidateField(Instruction lhs, Instruction rhs)
+		{
+			var fieldLhs = (FieldReference) lhs.Operand;
+			var fieldRhs = (FieldReference) rhs.Operand;
+			
+			return fieldLhs.FieldType.FullName == fieldRhs.FieldType.FullName;
+		}
 	}
 
 	internal class CustomAttributeNamedArgumentComparer : IEqualityComparer<CustomAttributeNamedArgument>
@@ -458,12 +560,12 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 
 			return instance;
 		}
-		
+
 		public bool IgnoreNops(Instruction i)
 		{
 			return i.OpCode != OpCodes.Nop;
 		}
-		
+
 		public bool IgnoreNonRequiredLocalVariableAssignments(Instruction inst)
 		{
 			if (toBeIgnored.Remove(inst))
@@ -473,17 +575,18 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 
 			if (inst.Next == null)
 				return true;
-			
+
 			if (inst.OpCode != OpCodes.Stloc || inst.Next.OpCode != OpCodes.Ldloc || inst.Operand != inst.Next.Operand)
 			{
 				return true;
 			}
-			
+
 			// We have an *stloc X* followed by an *ldloc X* so lets check if we have any other reference to the same
 			// local var.
 			var ignoredInstructions = new HashSet<Instruction>();
-			ignoredInstructions.Add(inst.Next); // if no other load from *X* is found we need to ignore current instruction (stloc X) and also the next one (ldloc X)
-			
+			ignoredInstructions
+				.Add(inst.Next); // if no other load from *X* is found we need to ignore current instruction (stloc X) and also the next one (ldloc X)
+
 			var current = inst.Next.Next;
 			while (current != null)
 			{
@@ -499,7 +602,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 						// it is not a stloc so the instruction is important and we should use it in the comparison...
 						return true;
 					}
-					
+
 				}
 
 				current = current.Next;
@@ -508,7 +611,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 			toBeIgnored = ignoredInstructions;
 			return false;
 		}
-		
+
 		public static bool HasNoLocalVariableLoads(Instruction instruction, object operand)
 		{
 			while (instruction != null && (instruction.OpCode != OpCodes.Ldloc || instruction.Operand != operand))
@@ -518,7 +621,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 
 			return instruction == null;
 		}
-		
+
 		private HashSet<Instruction> toBeIgnored;
 	}
 }
