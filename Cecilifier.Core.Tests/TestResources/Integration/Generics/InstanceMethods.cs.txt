@@ -1,0 +1,6 @@
+using System;
+using System.Collections.Generic;
+class C
+{
+    void F(IList<int> l) { l.Add(42); }    
+}

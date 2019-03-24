@@ -1,0 +1,6 @@
+using System;
+class C
+{
+    int F(string[] a) { return Array.BinarySearch(a, "Foo"); }
+    int F1(string[] a) { return Array.BinarySearch(a, 0, 0, "Foo"); }
+}
