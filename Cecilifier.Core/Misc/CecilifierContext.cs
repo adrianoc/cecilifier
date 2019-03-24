@@ -58,7 +58,7 @@ namespace Cecilifier.Core.Misc
 			return semanticModel.Compilation.GetSpecialType(specialType);
 		}
 
-		public void WriteCecilExpression(string expression )
+		public void WriteCecilExpression(string expression)
 		{
 		    output.AddLast("\t\t" + expression);
 		}

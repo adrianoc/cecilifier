@@ -102,6 +102,10 @@ namespace Cecilifier.Core.Tests.Framework
 
 			var cecilifierRunnerPath = CompilationServices.CompileExe(cecilifiedCode, references.ToArray());
 			
+			Console.WriteLine("------- Cecilified Code -------");
+			Console.WriteLine(cecilifiedCode);
+			Console.WriteLine("^^^^^^^ Cecilified Code ^^^^^^^");
+
 			Directory.CreateDirectory(Path.GetDirectoryName(outputAssembyPath));
 			try
 			{
@@ -112,8 +116,6 @@ namespace Cecilifier.Core.Tests.Framework
 			catch (Exception ex)
 			{
 				Console.WriteLine("Cecil runner path: {0}", cecilifierRunnerPath);
-				Console.WriteLine("Fail to execute generated cecil snipet: {0}\r\n{1}", ex, cecilifiedCode);
-
 				throw;
 			}
 		}

@@ -136,9 +136,8 @@ namespace Cecilifier.Core.AST
 
 	interface IVisitorContext
 	{
-		string Output { get; }
-		
 		string Namespace { get; set; }
+		
 	    SemanticModel SemanticModel { get; }
 		
 		DefinitionVariableManager DefinitionVariables { get; }
