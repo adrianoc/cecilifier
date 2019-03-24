@@ -77,7 +77,7 @@ namespace Cecilifier.Core.AST
 
 		internal void DefaultCtorInjector(string typeDefVar, BaseTypeDeclarationSyntax declaringClass)
 		{
-			var ctorMethodDefinitionExp = CecilDefinitionsFactory.Constructor(Context, out var ctorLocalVar, declaringClass.Identifier.ValueText, DefaultCtorAccessibilityFor(declaringClass));
+			var ctorMethodDefinitionExp = CecilDefinitionsFactory.Constructor(Context, out var ctorLocalVar, declaringClass.Identifier.ValueText, DefaultCtorAccessibilityFor(declaringClass), System.Array.Empty<string>());
 			AddCecilExpression(ctorMethodDefinitionExp);
 			AddCecilExpression($"{typeDefVar}.Methods.Add({ctorLocalVar});");
 			

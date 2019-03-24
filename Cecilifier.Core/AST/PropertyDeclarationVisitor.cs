@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Microsoft.CodeAnalysis.CSharp;
@@ -59,14 +60,14 @@ namespace Cecilifier.Core.AST
             var propName = node.Identifier.ValueText;
             
             var propDefVar = AddPropertyDefinition(propName, propertyType);
-
-            ProcessPropertyAccessors(node, propertyDeclaringTypeVar, propName, propertyType, propDefVar);
+            ProcessPropertyAccessors(node, propertyDeclaringTypeVar, propName, propertyType, propDefVar, NoParameters);
 
             AddCecilExpression($"{propertyDeclaringTypeVar}.Properties.Add({propDefVar});");
         }
 
-        private void ProcessPropertyAccessors(BasePropertyDeclarationSyntax node, string propertyDeclaringTypeVar, string propName, string propertyType, string propDefVar, List<string> parameters = null)
+        private void ProcessPropertyAccessors(BasePropertyDeclarationSyntax node, string propertyDeclaringTypeVar, string propName, string propertyType, string propDefVar, List<string> parameters)
         {
+            var declaringType = node.ResolveDeclaringType();
             foreach (var accessor in node.AccessorList.Accessors)
             {
                 var accessorModifiers = node.Modifiers.MethodModifiersToCecil(ModifiersToCecil, "MethodAttributes.SpecialName");
@@ -74,10 +75,10 @@ namespace Cecilifier.Core.AST
                 {
                     case SyntaxKind.GetKeyword:
                         var getMethodVar = TempLocalVar(propertyDeclaringTypeVar + "_get_");
-                        Context.DefinitionVariables.Register(string.Empty, $"get_{propName}", MemberKind.Method, getMethodVar);
+                        Context.DefinitionVariables.RegisterMethod(declaringType.Identifier.Text, $"get_{propName}", parameters?.ToArray(), getMethodVar);
 
                         AddCecilExpression($"var {getMethodVar} = new MethodDefinition(\"get_{propName}\", {accessorModifiers}, {propertyType});");
-                        parameters?.ForEach(paramVar => AddCecilExpression($"{getMethodVar}.Parameters.Add({paramVar});"));
+                        parameters.ForEach(paramVar => AddCecilExpression($"{getMethodVar}.Parameters.Add({paramVar});"));
                         AddCecilExpression($"{getMethodVar}.Body = new MethodBody({getMethodVar});");
                         AddCecilExpression($"{propDefVar}.GetMethod = {getMethodVar};");
                         AddCecilExpression($"{propertyDeclaringTypeVar}.Methods.Add({getMethodVar});");
@@ -103,11 +104,13 @@ namespace Cecilifier.Core.AST
 
                     case SyntaxKind.SetKeyword:
                         var setMethodVar = TempLocalVar(propertyDeclaringTypeVar + "_set_");
-                        Context.DefinitionVariables.Register(string.Empty, $"set_{propName}", MemberKind.Method, setMethodVar);
+                        var localParams = new List<string>(parameters);
+                        localParams.Add(Context.GetTypeInfo(node.Type).Type.Name); // Setters always have at least one `value` parameter.
+                        Context.DefinitionVariables.RegisterMethod(declaringType.Identifier.Text, $"set_{propName}", localParams.ToArray(), setMethodVar);
                         var ilSetVar = TempLocalVar("ilVar_set_");
 
                         AddCecilExpression($"var {setMethodVar} = new MethodDefinition(\"set_{propName}\", {accessorModifiers}, {ResolvePredefinedType("Void")});");
-                        parameters?.ForEach(paramVar => AddCecilExpression($"{setMethodVar}.Parameters.Add({paramVar});"));
+                        parameters.ForEach(paramVar => AddCecilExpression($"{setMethodVar}.Parameters.Add({paramVar});"));
                         
                         AddCecilExpression($"{setMethodVar}.Body = new MethodBody({setMethodVar});");
                         AddCecilExpression($"{propDefVar}.SetMethod = {setMethodVar};");
@@ -160,6 +163,8 @@ namespace Cecilifier.Core.AST
 
             return propDefVar;
         }
+
+        private static List<string> NoParameters = new List<string>();
 
         private string backingFieldVar;
     }

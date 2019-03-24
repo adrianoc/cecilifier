@@ -53,23 +53,31 @@ namespace Cecilifier.Core.Extensions
 
     	public static string MethodResolverExpression(this IMethodSymbol method, IVisitorContext ctx)
     	{
-			//if (method.IsDefinedInCurrentType(ctx) && method.MethodKind == MethodKind.Ordinary)
 			if (method.IsDefinedInCurrentType(ctx))
 			{
-				return ctx.DefinitionVariables.GetVariable(method.Name, MemberKind.Method).VariableName;
+				var tbf = method.AsMethodDefinitionVariable();
+				return ctx.DefinitionVariables.GetMethodVariable(tbf).VariableName;
 			}
 
 			var declaringTypeName = method.ContainingType.FullyQualifiedName();
 
-			return String.Format("assembly.MainModule.Import(TypeHelpers.ResolveMethod(\"{0}\", \"{1}\", \"{2}\",{3}{4}))",
+			return string.Format("assembly.MainModule.Import(TypeHelpers.ResolveMethod(\"{0}\", \"{1}\", \"{2}\",{3}{4}))",
 								 method.ContainingAssembly.Name,
 								 declaringTypeName,
 								 method.Name,
 								 method.Modifiers(),
-								 method.Parameters.Aggregate("", (acc, curr) => ", \"" + curr.Type.FullyQualifiedName() + "\""));
+								 method.Parameters.Aggregate("", (acc, curr) => acc + ", \"" + curr.Type.FullyQualifiedName() + "\""));
 		}
 
-    	public static string LocalVariableName(this IMethodSymbol method)
+	    public static MethodDefinitionVariable AsMethodDefinitionVariable(this IMethodSymbol method)
+	    {
+		    return new MethodDefinitionVariable(
+			    method.ContainingType.Name, 
+			    method.Name, 
+			    method.Parameters.Select(p => p.Type.Name).ToArray());
+	    }
+	    
+	    public static string LocalVariableName(this IMethodSymbol method)
     	{
     		return LocalVariableNameFor(method.ContainingType.Name, method.Name.Replace(".", ""), method.MangleName());
     	}

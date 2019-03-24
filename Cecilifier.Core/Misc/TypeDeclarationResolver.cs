@@ -39,5 +39,25 @@ namespace Cecilifier.Core.Misc
 		{
 			declaringType = (BaseTypeDeclarationSyntax) node.Ancestors().Where(a => a.Kind() == SyntaxKind.ClassDeclaration || a.Kind() == SyntaxKind.StructDeclaration).Single();
 		}
+
+		public override void VisitMethodDeclaration(MethodDeclarationSyntax node)
+		{
+			Visit(node.Parent);
+		}
+
+		public override void VisitPropertyDeclaration(PropertyDeclarationSyntax node)
+		{
+			Visit(node.Parent);
+		}
+
+		public override void VisitIndexerDeclaration(IndexerDeclarationSyntax node)
+		{
+			Visit(node.Parent);
+		}
+
+		public override void VisitConstructorDeclaration(ConstructorDeclarationSyntax node)
+		{
+			Visit(node.Parent);
+		}
 	}
 }

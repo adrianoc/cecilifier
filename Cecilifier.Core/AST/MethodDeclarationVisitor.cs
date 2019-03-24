@@ -33,19 +33,30 @@ namespace Cecilifier.Core.AST
 		public override void VisitParameter(ParameterSyntax node)
 		{
 			var declaringMethodName = ".ctor";
+
+			var declaringMethodOrCtor = (BaseMethodDeclarationSyntax) node.Parent.Parent;
+			
+			var declaringType = declaringMethodOrCtor.ResolveDeclaringType();
+
 			if (node.Parent.Parent.IsKind(SyntaxKind.MethodDeclaration))
 			{
-				var declaringMethod = (MethodDeclarationSyntax) node.Parent.Parent;
+				var declaringMethod = (MethodDeclarationSyntax) declaringMethodOrCtor;
 				declaringMethodName = declaringMethod.Identifier.ValueText;
 			}
+
+			var paramVar = TempLocalVar(node.Identifier.ValueText);
+			Context.DefinitionVariables.RegisterNonMethod(string.Empty, node.Identifier.ValueText, MemberKind.Parameter, paramVar);
+
+			var tbf = new MethodDefinitionVariable(
+				declaringType.Identifier.Text, 
+				declaringMethodName, 
+				declaringMethodOrCtor.ParameterList.Parameters.Select(p => Context.GetTypeInfo(p.Type).Type.Name).ToArray());
 			
-			var paramVar = TempLocalVar(node.Identifier.ValueText); 
+			var declaringMethodVariable = Context.DefinitionVariables.GetMethodVariable(tbf).VariableName;
 			
-			Context.DefinitionVariables.Register(declaringMethodName, node.Identifier.ValueText, MemberKind.Parameter, paramVar);
-			
-			var exps = CecilDefinitionsFactory.Parameter(node, Context.SemanticModel, Context.DefinitionVariables.GetVariable(declaringMethodName, MemberKind.Method).VariableName, paramVar, ResolveType(node.Type));
+			var exps = CecilDefinitionsFactory.Parameter(node, Context.SemanticModel, declaringMethodVariable, paramVar, ResolveType(node.Type));
 			AddCecilExpressions(exps);
-			
+
 			base.VisitParameter(node);
 		}
 
@@ -71,7 +82,7 @@ namespace Cecilifier.Core.AST
 				AddCecilExpression(@"var {0} = {1}.Body.GetILProcessor();", ilVar, methodVar);
 			}
 
-			WithCurrentNode(methodVar, fqName, runWithCurrent);
+			WithCurrentMethod(declaringTypeName,  methodVar, fqName, node.ParameterList.Parameters.Select(p => Context.GetTypeInfo(p.Type).Type.Name).ToArray(), runWithCurrent);
 
 			//TODO: Move this to default ctor handling and rely on VisitReturnStatement here instead
 			if (!isAbstract && !node.DescendantNodes().Any(n => n.Kind() == SyntaxKind.ReturnStatement))

@@ -11,10 +11,10 @@ namespace Cecilifier.Core.Misc
 {
     internal sealed class CecilDefinitionsFactory
     {
-        public static string Constructor(IVisitorContext context, out string ctorLocalVar, string typeName, string methodAccessibility, string methodDefinitionPropertyValues = null)
+        public static string Constructor(IVisitorContext context, out string ctorLocalVar, string typeName, string methodAccessibility, string[] paramTypes, string methodDefinitionPropertyValues = null)
         {
             ctorLocalVar = MethodExtensions.LocalVariableNameFor(typeName, "ctor", "");
-            context.DefinitionVariables.Register(string.Empty, ".ctor", MemberKind.Method, ctorLocalVar);
+            context.DefinitionVariables.RegisterMethod(typeName, ".ctor",  paramTypes, ctorLocalVar);
 
             var exp = $@"var {ctorLocalVar} = new MethodDefinition("".ctor"", {methodAccessibility} | MethodAttributes.HideBySig | {ConstructorDeclarationVisitor.CtorFlags}, assembly.MainModule.TypeSystem.Void)";
             if (methodDefinitionPropertyValues != null)

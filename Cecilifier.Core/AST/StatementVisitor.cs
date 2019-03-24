@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Reflection.Metadata;
+using Cecilifier.Core.Extensions;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Mono.Cecil.Cil;
 
@@ -208,7 +209,7 @@ namespace Cecilifier.Core.AST
             AddCecilExpression("var {0} = new VariableDefinition({1});", cecilVarDeclName, resolvedVarType);
             AddCecilExpression("{0}.Body.Variables.Add({1});", methodVar, cecilVarDeclName);
 
-            Context.DefinitionVariables.Register(string.Empty, localVar.Identifier.ValueText, MemberKind.LocalVariable, cecilVarDeclName);
+            Context.DefinitionVariables.RegisterNonMethod(string.Empty, localVar.Identifier.ValueText, MemberKind.LocalVariable, cecilVarDeclName);
         }
 
         private void ProcessVariableInitialization(VariableDeclaratorSyntax localVar)

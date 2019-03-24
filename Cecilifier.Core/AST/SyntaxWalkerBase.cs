@@ -88,9 +88,9 @@ namespace Cecilifier.Core.AST
 			return Context.GetDeclaredSymbol(node);
 		}
 
-		protected void WithCurrentNode(string localVariable, string methodName, Action<string> action)
+		protected void WithCurrentMethod(string declaringTypeName, string localVariable, string methodName, string[] paramTypes, Action<string> action)
 		{
-			using (Context.DefinitionVariables.WithCurrent(string.Empty, methodName, MemberKind.Method, localVariable))
+			using (Context.DefinitionVariables.WithCurrentMethod(declaringTypeName, methodName, paramTypes, localVariable))
 			{
 				action(methodName);
 			}
@@ -220,7 +220,7 @@ namespace Cecilifier.Core.AST
 		{
 			if (expression == null)
 			{
-				throw new ArgumentNullException("expression");
+				throw new ArgumentNullException(nameof(expression));
 			}
 
 			var info = Context.GetTypeInfo(expression);
@@ -284,7 +284,7 @@ namespace Cecilifier.Core.AST
 			return Context.GetSpecialType(specialType);
 		}
 
-		protected void ProcessParameter(string ilVar, IdentifierNameSyntax node, IParameterSymbol paramSymbol)
+		protected void ProcessParameter(string ilVar, SimpleNameSyntax node, IParameterSymbol paramSymbol)
 		{
 			var parent = (CSharpSyntaxNode) node.Parent;
 			//TODO: Get rid of code duplication in ExpressionVisitor.ProcessLocalVariable(IdentifierNameSyntax localVar, SymbolInfo varInfo)
@@ -313,7 +313,7 @@ namespace Cecilifier.Core.AST
 			}
 		}
 
-		protected void HandlePotentialDelegateInvocationOn(IdentifierNameSyntax node, ITypeSymbol typeSymbol, string ilVar)
+		protected void HandlePotentialDelegateInvocationOn(SimpleNameSyntax node, ITypeSymbol typeSymbol, string ilVar)
 		{
 			var invocation = node.Parent as InvocationExpressionSyntax;
 			if (invocation == null || invocation.Expression != node)
