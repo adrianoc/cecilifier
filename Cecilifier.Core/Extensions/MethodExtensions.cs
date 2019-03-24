@@ -61,6 +61,13 @@ namespace Cecilifier.Core.Extensions
 
 			var declaringTypeName = method.ContainingType.FullyQualifiedName();
 
+		    if (method.IsGenericMethod)
+		    {
+			    var typeArgs = method.ConstructedFrom.Parameters.AsStringNewArrayExpression();
+			    var typeParameters = method.TypeArguments.AsStringNewArrayExpression();
+			    return $"assembly.MainModule.Import(TypeHelpers.ResolveGenericMethod(\"{method.ContainingAssembly.Name}\", \"{declaringTypeName}\", \"{method.Name}\",{method.Modifiers()}, {typeParameters}, {typeArgs}))";
+		    }
+		    
 			return string.Format("assembly.MainModule.Import(TypeHelpers.ResolveMethod(\"{0}\", \"{1}\", \"{2}\",{3}{4}))",
 								 method.ContainingAssembly.Name,
 								 declaringTypeName,
