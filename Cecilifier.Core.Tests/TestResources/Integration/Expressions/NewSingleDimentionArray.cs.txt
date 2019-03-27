@@ -1,0 +1,56 @@
+﻿public struct S
+{
+    public int value;
+}
+
+class NewSingleDimentionArray
+{
+	private static int[] Inferred()
+	{
+		return new [] {1, 2};
+	}
+
+	private static int[] ExplicitType()
+	{
+		return new int[] { 1, 2 };
+	}
+
+	private static int[] EmptyArray()
+	{
+		return new int[0];
+	}
+
+	private static int[] ExpressionInInitializer(int n)
+	{
+		return new int[] { Foo(n), Foo(n+1) } ;
+	}
+	
+	private static int[] ExpressionInRank(int n)
+	{
+	    return new int[ Foo(n) ];
+	}
+
+	private static object[] OfObject(object p)
+	{
+		return new object[] { p, "2"};
+	}
+	
+	private static object[] ValueTypeBox()
+	{
+		return new object[] { 1, true };
+	}
+	
+	private static string[] Strings()
+	{
+	    return new string[1];
+	}
+	
+	private static NewSingleDimentionArray[] TypeDefinedInSameAssembly()
+	{
+	    return new NewSingleDimentionArray[2];
+	}
+	
+	private static S[] CustomValueType() { return new S[1]; }
+		
+	private static int Foo(int n) { return 10 / n; }
+}

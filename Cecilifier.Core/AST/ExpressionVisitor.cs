@@ -27,6 +27,33 @@ namespace Cecilifier.Core.AST
         	this.ilVar = ilVar;
         }
 
+	    public override void VisitArrayCreationExpression(ArrayCreationExpressionSyntax node)
+	    {
+		    if (node.Initializer == null)
+		    {
+			    node.Type.RankSpecifiers[0].Accept(this);
+		    }
+		    else
+		    {
+			    AddCilInstruction(ilVar, OpCodes.Ldc_I4, node.Initializer.Expressions.Count);
+		    }
+		    
+		    var elementTypeInfo = Context.GetTypeInfo(node.Type.ElementType);
+		    ProcessArrayCreation(elementTypeInfo.Type, node.Initializer);
+	    }
+
+	    public override void VisitImplicitArrayCreationExpression(ImplicitArrayCreationExpressionSyntax node)
+	    {
+		    var arrayType = Context.GetTypeInfo(node);
+		    if (arrayType.Type == null)
+			    throw new Exception($"Unable to infer array type: {node}");
+
+		    AddCilInstruction(ilVar, OpCodes.Ldc_I4, node.Initializer.Expressions.Count);
+
+		    var arrayTypeSymbol = (IArrayTypeSymbol) arrayType.Type;
+		    ProcessArrayCreation(arrayTypeSymbol.ElementType, node.Initializer);
+	    }
+	    
 	    public override void VisitSimpleLambdaExpression(SimpleLambdaExpressionSyntax node)
 	    {
 		    LogUnsupportedSyntax(node);
@@ -346,6 +373,24 @@ namespace Cecilifier.Core.AST
 
 			throw new ArgumentException(string.Format("Literal type {0} not supported.", info.Type), "node");
 		}
+	    
+	    private OpCode StelemOpCodeFor(ITypeSymbol type)
+	    {
+		    switch (type.SpecialType)
+		    {
+				case SpecialType.System_Byte: return OpCodes.Stelem_I1;
+				case SpecialType.System_Int16: return OpCodes.Stelem_I2;
+				case SpecialType.System_Int32: return OpCodes.Stelem_I4;
+				case SpecialType.System_Int64: return OpCodes.Stelem_I8;
+				case SpecialType.System_Single: return OpCodes.Stelem_R4;
+				case SpecialType.System_Double: return OpCodes.Stelem_R8;
+				
+			    case SpecialType.None: // custom types.
+				case SpecialType.System_String:
+			    case SpecialType.System_Object: return OpCodes.Stelem_Ref;
+		    }
+		    throw new Exception($"Element type {type.Name} not supported.");
+	    }
 
 		private void EnsureMethodAvailable(IMethodSymbol method)
 		{
@@ -558,6 +603,26 @@ namespace Cecilifier.Core.AST
 		    }
 	    }
 
+	    private void ProcessArrayCreation(ITypeSymbol elementType, InitializerExpressionSyntax initializer)
+	    {
+		    AddCilInstruction(ilVar, OpCodes.Newarr, ResolveType(elementType));
+
+		    var stelemOpCode = StelemOpCodeFor(elementType);
+		    for (int i = 0; i < initializer?.Expressions.Count; i++)
+		    {
+			    AddCilInstruction(ilVar, OpCodes.Dup);
+			    AddCilInstruction(ilVar, OpCodes.Ldc_I4, i);
+			    initializer.Expressions[i].Accept(this);
+
+			    var itemType = Context.GetTypeInfo(initializer.Expressions[i]);
+			    if (elementType.IsReferenceType && itemType.Type != null && itemType.Type.IsValueType)
+			    {
+				    AddCilInstruction(ilVar, OpCodes.Box, ResolveType(itemType.Type));
+			    }
+			    AddCilInstruction(ilVar, stelemOpCode);
+		    }
+	    }
+
 		static ExpressionVisitor()
 		{
 			//TODO: Use AddCilInstruction instead.
@@ -587,8 +652,4 @@ namespace Cecilifier.Core.AST
 
 	    private static IDictionary<SyntaxKind, Action<IVisitorContext, string, ITypeSymbol, ITypeSymbol>> operatorHandlers = new Dictionary<SyntaxKind, Action<IVisitorContext, string, ITypeSymbol, ITypeSymbol>>();
     }
-
-	internal interface IOperatorHandler
-	{
-	}
 }
