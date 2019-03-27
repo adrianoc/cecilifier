@@ -107,17 +107,10 @@ namespace Cecilifier.Core.Tests.Framework
 			Console.WriteLine("^^^^^^^ Cecilified Code ^^^^^^^");
 
 			Directory.CreateDirectory(Path.GetDirectoryName(outputAssembyPath));
-			try
-			{
-				CopyFilesNextToGeneratedExecutable(cecilifierRunnerPath, refsToCopy);
+			CopyFilesNextToGeneratedExecutable(cecilifierRunnerPath, refsToCopy);
+			Console.WriteLine("Cecil runner path: {0}", cecilifierRunnerPath);
 				
-				TestFramework.Execute("dotnet", cecilifierRunnerPath + " " + outputAssembyPath);
-			}
-			catch (Exception ex)
-			{
-				Console.WriteLine("Cecil runner path: {0}", cecilifierRunnerPath);
-				throw;
-			}
+			TestFramework.Execute("dotnet", cecilifierRunnerPath + " " + outputAssembyPath);
 		}
 
 		private void CopyFilesNextToGeneratedExecutable(string cecilifierRunnerPath, List<string> refsToCopy)
