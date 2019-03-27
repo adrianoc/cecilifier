@@ -37,7 +37,7 @@ namespace Cecilifier.Core.Misc
 
 		public override void VisitFieldDeclaration(FieldDeclarationSyntax node)
 		{
-			declaringType = (BaseTypeDeclarationSyntax) node.Ancestors().Where(a => a.Kind() == SyntaxKind.ClassDeclaration || a.Kind() == SyntaxKind.StructDeclaration).Single();
+			declaringType = (BaseTypeDeclarationSyntax) node.Ancestors().Where(a => a.Kind() == SyntaxKind.ClassDeclaration || a.Kind() == SyntaxKind.StructDeclaration).First();
 		}
 
 		public override void VisitMethodDeclaration(MethodDeclarationSyntax node)

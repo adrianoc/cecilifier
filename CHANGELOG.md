@@ -1,3 +1,12 @@
+## Unreleased
+
+## Changed
+	- fixed type resolution crashing in some scenarios
+	- wrong opcode being generated for some types
+
+## Added
+	- Support for instantiating single dimensional arrays 
+
 
 ## 24/March/2019
 

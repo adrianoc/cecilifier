@@ -90,10 +90,10 @@ namespace Cecilifier.Core.Tests.Integration
 			AssertResourceTest(@"Expressions/NewCustom");
 		}
 		
-		[Test, Ignore("Not implemented yet")]
-		public void TestNewArray()
+		[Test]
+		public void TestNewSingleDimentionArray()
 		{
-			AssertResourceTest(@"Expressions/NewArray");
+			AssertResourceTest(@"Expressions/NewSingleDimentionArray");
 		}
 	}
 }
