@@ -102,7 +102,8 @@ namespace Cecilifier.Core.AST
 
 		    var visitor = new AssignmentVisitor(Context, ilVar);
 			visitor.PreProcessRefOutAssignments(node.Left);
-		    
+
+		    visitor.InstrutionPreceedingValueToLoad = Context.CurrentLine;
 			Visit(node.Right);
 			if (!valueTypeNoArgObjCreation)
 			{

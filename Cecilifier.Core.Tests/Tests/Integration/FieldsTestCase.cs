@@ -41,6 +41,12 @@ namespace Cecilifier.Core.Tests.Integration
 			AssertResourceTest(@"Fields/SingleRefField");
 		}
 
+		[Test]
+		public void TestAssignment()
+		{
+			AssertResourceTest(@"Fields/Assignment");	
+		}
+
 		[Test, Ignore("Not Implemented yet")]
         public void TestInitializedFieldNoCtor()
 		{
