@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.Extensions;
@@ -6,7 +6,9 @@ using Cecilifier.Core.Misc;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Mono.Cecil;
 using Mono.Cecil.Cil;
+using Mono.Cecil.Rocks;
 
 namespace Cecilifier.Core.AST
 {
@@ -53,6 +55,15 @@ namespace Cecilifier.Core.AST
 	        AddCilInstruction(ilVar, opCode, ResolveType(type));
         }
 
+		protected void InsertCilInstructionAfter<T>(LinkedListNode<string> instruction, string ilVar, OpCode opCode, T arg = default)
+		{
+			var instVar = CreateCilInstruction(ilVar, opCode, arg);
+			Context.MoveLineAfter(Context.CurrentLine, instruction);
+			
+			AddCecilExpression($"{ilVar}.Append({instVar});");
+			Context.MoveLineAfter(Context.CurrentLine, instruction.Next);
+		}
+		
         protected void AddCilInstruction<T>(string ilVar, OpCode opCode, T arg)
         {
 	        var instVar = CreateCilInstruction(ilVar, opCode, arg);

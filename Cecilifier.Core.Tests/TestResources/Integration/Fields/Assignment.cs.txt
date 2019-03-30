@@ -1,0 +1,9 @@
+﻿class Assignment
+{
+    private int field;
+    
+    public void Foo(int i)
+    {
+        field = i;
+    }
+}

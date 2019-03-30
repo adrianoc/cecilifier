@@ -1,5 +1,5 @@
 ﻿using System;
-using Cecilifier.Core.Extensions;
+using System.Collections.Generic;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -13,6 +13,8 @@ namespace Cecilifier.Core.AST
 		{
 			this.ilVar = ilVar;
 		}
+
+		public LinkedListNode<string> InstrutionPreceedingValueToLoad { get; set; }
 
 		public override void VisitIdentifierName(IdentifierNameSyntax node)
 		{
@@ -42,7 +44,18 @@ namespace Cecilifier.Core.AST
 
 		private void FieldAssignment(IFieldSymbol field)
 		{
-			AddCilInstruction(ilVar, OpCodes.Stfld, field.Type);
+			OpCode storeOpCode;
+			if (field.IsStatic)
+			{
+				storeOpCode = OpCodes.Stsfld;
+			}
+			else
+			{
+				storeOpCode = OpCodes.Stfld;
+				InsertCilInstructionAfter<string>(InstrutionPreceedingValueToLoad, ilVar, OpCodes.Ldarg_0);
+			}
+
+			AddCilInstruction(ilVar, storeOpCode, Context.DefinitionVariables.GetVariable(field.Name, MemberKind.Field, field.ContainingType.Name).VariableName);
 		}
 
 		private void LocalVariableAssignment(ILocalSymbol localVariable)
@@ -54,12 +67,12 @@ namespace Cecilifier.Core.AST
 		{
 			if (parameter.RefKind == RefKind.None)
 			{
-				var localVar = Context.DefinitionVariables.GetVariable(parameter.Name, MemberKind.Parameter).VariableName;
-				AddCilInstruction(ilVar, OpCodes.Starg_S, localVar);
+				var paramVariable = Context.DefinitionVariables.GetVariable(parameter.Name, MemberKind.Parameter).VariableName;
+				AddCilInstruction(ilVar, OpCodes.Starg_S, paramVariable);
 			}
 			else
 			{
-				OpCode opCode = OpCodes.Stind_Ref;
+				var opCode = OpCodes.Stind_Ref;
 				switch (parameter.Type.SpecialType)
 				{
 					case SpecialType.None:
