@@ -1,4 +1,12 @@
-## Unreleased
+## unreleased
+
+## Changed
+	- fixed field assignment (generated code was completely wrong)
+
+## Added
+	- Support for declaring fields/properties of generic types (only types defined in external assemblies for now)
+
+## 24/March/2019
 
 ## Changed
 	- fixed type resolution crashing in some scenarios
