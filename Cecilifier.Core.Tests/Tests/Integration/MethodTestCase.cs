@@ -80,9 +80,9 @@ namespace Cecilifier.Core.Tests.Integration
 		}
 
 		[Test]
-		public void TestInterfaceMethodVirtualInInplementation()
+		public void TestInterfaceMethodVirtualImplementation()
 		{
-			AssertResourceTest(@"Methods/InterfaceMethodVirtualInInplementation");
+			AssertResourceTest(@"Methods/InterfaceMethodVirtualImplementation");
 		}
 
 		[Test]
