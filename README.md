@@ -39,10 +39,13 @@ Supported Features
 	- Fields
 - Exception handling
 
+- Single dimentional arrays
+- Static generic methods
+
 Unsupported Features
 ---
 - Generics 
-	- Type /method declarations
+	- Type / method declarations
 	- Type / method instantiation
 
 - Events
@@ -67,13 +70,15 @@ In order to build it you need at least .Net Core SDK 2.0
 - run dotnet build
 
 You can run the website locally by typing:
-`cd Cecilifier.Web`
-`dotnet run`
 
-Then you can open a browser in `https://localhost:8080`
+> `cd Cecilifier.Web`
+
+> `dotnet run`
+
+Then you can open a browser at `https://localhost:8080`
 
 
-# How to add tests
+How to add tests
 ---
 First, and most importantly, tests should be self contained, clearly describing what they are testing and run quickly (unfortunately it is very likely that some of the existing tests does not meet this criteria, but nevertheless, we should strive to ;)
 
