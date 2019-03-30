@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.Extensions;
@@ -241,7 +241,8 @@ namespace Cecilifier.Core.AST
 		protected string ResolveType(ITypeSymbol type)
 		{
 			return ResolveTypeLocalVariable(type.Name) 
-					?? ResolvePredefinedAndArrayTypes(type) 
+					?? ResolvePredefinedAndArrayTypes(type)
+			        ?? ResolveGenericType(type)
 					?? ResolveType(type.Name);
 		}
 		
@@ -249,9 +250,43 @@ namespace Cecilifier.Core.AST
 		{
 			return ResolveTypeLocalVariable(type.ToString()) 
 					?? ResolvePredefinedAndArrayTypes(type) 
-					?? ResolveType(type.ToString());
+					?? ResolvePlainOrGenericType(type);
+		}
+		
+		private string ResolvePlainOrGenericType(TypeSyntax type)
+		{
+			if (type is GenericNameSyntax genType)
+			{
+				var typeInfo = Context.GetTypeInfo(genType);
+				return ResolveGenericType(typeInfo.Type);
+			}
+
+			return ResolveType(type.ToString());
 		}
 
+		private string ResolveGenericType(ITypeSymbol type)
+		{
+			var genericTypeSymbol = type as INamedTypeSymbol;
+			if (genericTypeSymbol == null)
+				return null;
+			
+			var genericType = ResolveType(OpenGenericTypeName(genericTypeSymbol.ConstructedFrom));
+			var args = string.Join(",", genericTypeSymbol.TypeArguments.Select(a => ResolveType(a)));
+			return $"{genericType}.MakeGenericInstanceType({args})";
+		}
+
+		private string OpenGenericTypeName(ITypeSymbol type)
+		{
+			var genericTypeWithTypeParameters = type.ToString();
+			
+			var genOpenBraceIndex = genericTypeWithTypeParameters.IndexOf('<');
+			var genCloseBraceIndex = genericTypeWithTypeParameters.LastIndexOf('>');
+
+			var nts = (INamedTypeSymbol) type;
+			var commas = new string(',', nts.TypeParameters.Length -1);
+			return genericTypeWithTypeParameters.Remove(genOpenBraceIndex + 1, genCloseBraceIndex - genOpenBraceIndex - 1).Insert(genOpenBraceIndex+1, commas);
+		}
+		
 		private string ResolvePredefinedAndArrayTypes(ITypeSymbol type)
 		{
 			if (type.SpecialType == SpecialType.None) return null;
