@@ -156,7 +156,7 @@ namespace Cecilifier.Core.AST
 
 		public override void VisitConstructorDeclaration(ConstructorDeclarationSyntax ctorNode)
 		{
-            // bailout in case the ctor have parameters or is static (a cctor)
+            // bailout in case the ctor has parameters or is static (a cctor)
 			if (ctorNode.ParameterList.Parameters.Count > 0 || ctorNode.Modifiers.Any(t => t.IsKind(SyntaxKind.StaticKeyword)))
 			    return;
 
