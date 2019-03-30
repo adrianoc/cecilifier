@@ -1,0 +1,14 @@
+using System.Collections.Generic;
+
+class GenericTypesAsMembers
+{
+    public IList<int> field;
+    public IList<int> Property { get { return field; } set { field = value; } }
+    
+    public IList<string> Method(IList<string> l)
+    {
+        return l;
+    }
+    
+    private IDictionary<int, string> typeWithMultipleTypeParameters;
+}

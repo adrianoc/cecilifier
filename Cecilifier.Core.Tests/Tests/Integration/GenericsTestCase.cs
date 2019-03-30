@@ -22,5 +22,11 @@ namespace Cecilifier.Core.Tests.Integration
         {
             AssertResourceTest(@"Generics/StaticExplicitMethods");   
         }
+
+        [Test]
+        public void TestGenericTypesAsMembers()
+        {
+            AssertResourceTest(@"Generics/GenericTypesAsMembers");            
+        }
     }
 }
