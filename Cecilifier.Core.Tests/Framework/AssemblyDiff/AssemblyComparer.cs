@@ -393,13 +393,13 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 		private static Dictionary<Code, Func<Instruction, Instruction, bool>> _instructionValidator =
 			new Dictionary<Code, Func<Instruction, Instruction, bool>>()
 			{
-				{Code.Ret, AlwaysValid},
-				{Code.Nop, AlwaysValid},
-				{Code.Pop, AlwaysValid},
-				{Code.Ldarg_0, AlwaysValid},
-				{Code.Ldarg_1, AlwaysValid},
-				{Code.Ldarg_2, AlwaysValid},
-				{Code.Ldarg_3, AlwaysValid},
+				{Code.Ret, OperandObliviousValidator},
+				{Code.Nop, OperandObliviousValidator},
+				{Code.Pop, OperandObliviousValidator},
+				{Code.Ldarg_0, OperandObliviousValidator},
+				{Code.Ldarg_1, OperandObliviousValidator},
+				{Code.Ldarg_2, OperandObliviousValidator},
+				{Code.Ldarg_3, OperandObliviousValidator},
 				
 				{Code.Call, ValidateCalls},
 				{Code.Calli, ValidateCalls},
@@ -421,10 +421,15 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 				
 				{Code.Ldfld, ValidateField},
 				{Code.Stfld, ValidateField},
+				
+				{Code.Stind_Ref, OperandObliviousValidator},
+				{Code.Stind_I2, OperandObliviousValidator},
+				{Code.Stind_I4, OperandObliviousValidator},
+				{Code.Stind_I8, OperandObliviousValidator},
 			};
 
 
-		private static bool AlwaysValid(Instruction lhs, Instruction rhs)
+		private static bool OperandObliviousValidator(Instruction lhs, Instruction rhs)
 		{
 			return true;
 		}
