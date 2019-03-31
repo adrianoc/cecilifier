@@ -3,23 +3,20 @@ using Mono.Cecil;
 
 namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 {
-	class StrictAssemblyDiffVisitor : IAssemblyDiffVisitor
-	{
-		public string Reason
-		{
-			get { return output.ToString(); }
-		}
+    internal class StrictAssemblyDiffVisitor : IAssemblyDiffVisitor
+    {
+        private readonly TextWriter output = new StringWriter();
 
-		public bool VisitModules(AssemblyDefinition sourceModule, AssemblyDefinition target)
-		{
-			return false;
-		}
+        public string Reason => output.ToString();
 
-		public ITypeDiffVisitor VisitType(TypeDefinition sourceType)
-		{
-			return new StrictTypeDiffVisitor(output);
-		}
+        public bool VisitModules(AssemblyDefinition sourceModule, AssemblyDefinition target)
+        {
+            return false;
+        }
 
-		private TextWriter output = new StringWriter();
-	}
+        public ITypeDiffVisitor VisitType(TypeDefinition sourceType)
+        {
+            return new StrictTypeDiffVisitor(output);
+        }
+    }
 }

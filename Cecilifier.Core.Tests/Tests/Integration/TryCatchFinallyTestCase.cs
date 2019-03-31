@@ -15,9 +15,13 @@ namespace Cecilifier.Core.Tests.Tests.Integration
         public void TestExceptionHandlers(string testName, bool compareWithExplicitIL = false)
         {
             if (compareWithExplicitIL)
+            {
                 AssertResourceTestWithExplictExpectation($"TryCatchFinally/{testName}", $"System.Void {testName}::Foo(System.Int32)");
+            }
             else
+            {
                 AssertResourceTest($"TryCatchFinally/{testName}");
+            }
         }
     }
 }

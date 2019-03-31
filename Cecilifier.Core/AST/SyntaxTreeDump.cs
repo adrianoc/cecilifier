@@ -4,8 +4,10 @@ using Microsoft.CodeAnalysis.CSharp;
 
 namespace Cecilifier.Core.AST
 {
-    class SyntaxTreeDump : CSharpSyntaxWalker
+    internal class SyntaxTreeDump : CSharpSyntaxWalker
     {
+        private string ident = "";
+
         public SyntaxTreeDump(string msg, SyntaxNode node)
         {
             Console.WriteLine(msg);
@@ -14,7 +16,7 @@ namespace Cecilifier.Core.AST
 
         public override void Visit(SyntaxNode node)
         {
-            Ident(ident, level => 
+            Ident(ident, level =>
             {
                 ident = level;
                 Console.WriteLine("{2}[{0}/{3}] : {1}", node.GetType().Name, node, level, node.Kind());
@@ -27,7 +29,5 @@ namespace Cecilifier.Core.AST
             action(ident + "\t");
             ident = level;
         }
-
-        private string ident = "";
     }
 }

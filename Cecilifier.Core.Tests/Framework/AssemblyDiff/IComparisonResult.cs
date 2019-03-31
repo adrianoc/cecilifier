@@ -1,6 +1,6 @@
 ﻿namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 {
-	interface IComparisonResult
-	{
-	}
+    internal interface IComparisonResult
+    {
+    }
 }

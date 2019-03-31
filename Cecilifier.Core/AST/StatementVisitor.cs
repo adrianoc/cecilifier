@@ -1,18 +1,16 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System.Reflection.Metadata;
-using Cecilifier.Core.Extensions;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
+﻿using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Mono.Cecil.Cil;
 
 namespace Cecilifier.Core.AST
 {
     internal class StatementVisitor : SyntaxWalkerBase
     {
+        private static string _ilVar;
+
         internal StatementVisitor(IVisitorContext ctx) : base(ctx)
         {
         }
-		
+
         internal static void Visit(IVisitorContext context, string ilVar, StatementSyntax node)
         {
             _ilVar = ilVar;
@@ -61,7 +59,7 @@ namespace Cecilifier.Core.AST
                 base.VisitBlock(node);
             }
         }
-		
+
         public override void VisitReturnStatement(ReturnStatementSyntax node)
         {
             ExpressionVisitor.Visit(Context, _ilVar, node.Expression);
@@ -81,7 +79,7 @@ namespace Cecilifier.Core.AST
         public override void VisitLocalDeclarationStatement(LocalDeclarationStatementSyntax node)
         {
             var methodVar = Context.DefinitionVariables.GetLastOf(MemberKind.Method).VariableName;
-            foreach(var localVar in node.Declaration.Variables)
+            foreach (var localVar in node.Declaration.Variables)
             {
                 AddLocalVariable(node.Declaration.Type, localVar, methodVar);
                 ProcessVariableInitialization(localVar);
@@ -107,7 +105,7 @@ namespace Cecilifier.Core.AST
 
             AddCilInstruction(_ilVar, OpCodes.Leave, firstInstructionAfterTryCatchBlock);
 
-            for (int i = 0; i < node.Catches.Count; i++)
+            for (var i = 0; i < node.Catches.Count; i++)
             {
                 HandleCatchClause(node.Catches[i], exceptionHandlerTable, i, firstInstructionAfterTryCatchBlock);
             }
@@ -127,7 +125,9 @@ namespace Cecilifier.Core.AST
                 AddCecilExpression($"{methodVar}.Body.ExceptionHandlers.Add(new ExceptionHandler(ExceptionHandlerType.{handlerEntry.Kind})");
                 AddCecilExpression("{");
                 if (handlerEntry.Kind == ExceptionHandlerType.Catch)
+                {
                     AddCecilExpression($"    CatchType = {handlerEntry.CatchType},");
+                }
 
                 AddCecilExpression($"    TryStart = {handlerEntry.TryStart},");
                 AddCecilExpression($"    TryEnd = {handlerEntry.TryEnd},");
@@ -141,7 +141,7 @@ namespace Cecilifier.Core.AST
         {
             exceptionHandlerTable[currentIndex].Kind = ExceptionHandlerType.Catch;
             exceptionHandlerTable[currentIndex].HandlerStart = AddCilInstruction(_ilVar, OpCodes.Pop); // pops the exception object from stack...
- 
+
             if (currentIndex == 0)
             {
                 // The last instruction of the try block is the first instruction of the first catch block
@@ -163,7 +163,9 @@ namespace Cecilifier.Core.AST
         private void HandleFinallyClause(FinallyClauseSyntax node, ExceptionHandlerEntry[] exceptionHandlerTable)
         {
             if (node == null)
+            {
                 return;
+            }
 
             var finallyEntryIndex = exceptionHandlerTable.Length - 1;
 
@@ -183,25 +185,16 @@ namespace Cecilifier.Core.AST
                     exceptionHandlerTable[finallyEntryIndex - 1].HandlerEnd = instVar;
                 }
             }
+
             Context.InstructionAdded += SetFinallyStart;
-            
+
             base.VisitFinallyClause(node);
             AddCilInstruction(_ilVar, OpCodes.Endfinally);
         }
-        
-        struct ExceptionHandlerEntry
-        {
-            public ExceptionHandlerType Kind;
-            public string CatchType;
-            public string TryStart;
-            public string TryEnd;
-            public string HandlerStart;
-            public string HandlerEnd;
-        }
-        
+
         private void AddLocalVariable(TypeSyntax type, VariableDeclaratorSyntax localVar, string methodVar)
         {
-            string resolvedVarType = type.IsVar 
+            var resolvedVarType = type.IsVar
                 ? ResolveExpressionType(localVar.Initializer.Value)
                 : ResolveType(type);
 
@@ -214,12 +207,23 @@ namespace Cecilifier.Core.AST
 
         private void ProcessVariableInitialization(VariableDeclaratorSyntax localVar)
         {
-            if (ExpressionVisitor.Visit(Context, _ilVar, localVar.Initializer)) return;
+            if (ExpressionVisitor.Visit(Context, _ilVar, localVar.Initializer))
+            {
+                return;
+            }
 
             var localVarDef = Context.DefinitionVariables.GetVariable(localVar.Identifier.ValueText, MemberKind.LocalVariable);
             AddCilInstruction(_ilVar, OpCodes.Stloc, localVarDef.VariableName);
         }
 
-        private static string _ilVar;
+        private struct ExceptionHandlerEntry
+        {
+            public ExceptionHandlerType Kind;
+            public string CatchType;
+            public string TryStart;
+            public string TryEnd;
+            public string HandlerStart;
+            public string HandlerEnd;
+        }
     }
 }

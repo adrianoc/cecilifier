@@ -7,111 +7,97 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Cecilifier.Core.Misc
 {
-	class CecilifierContext : IVisitorContext
-	{
-		public CecilifierContext(SemanticModel semanticModel)
-		{
-			this.semanticModel = semanticModel;
-			DefinitionVariables = new DefinitionVariableManager();
-		}
+    internal class CecilifierContext : IVisitorContext
+    {
+        private readonly LinkedList<string> output = new LinkedList<string>();
 
-	    public SemanticModel SemanticModel
-	    {
-            get { return semanticModel; }
-	    }
+        private int currentFieldId;
 
-		public DefinitionVariableManager DefinitionVariables { get; } = new DefinitionVariableManager();
+        private int currentTypeId;
 
-		public string Namespace
-		{
-			get { return @namespace; }
-			set { @namespace = value; }
-		}
+        private readonly Dictionary<string, string> vars = new Dictionary<string, string>();
 
-		public LinkedListNode<string> CurrentLine
-		{
-			get { return output.Last; }
-		}
+        public CecilifierContext(SemanticModel semanticModel)
+        {
+            SemanticModel = semanticModel;
+            DefinitionVariables = new DefinitionVariableManager();
+        }
 
-		public IMethodSymbol GetDeclaredSymbol(BaseMethodDeclarationSyntax methodDeclaration)
-		{
-			return (IMethodSymbol) semanticModel.GetDeclaredSymbol(methodDeclaration);
-		}
+        public string Output
+        {
+            get { return output.Aggregate("", (acc, curr) => acc + curr); }
+        }
 
-		public ITypeSymbol GetDeclaredSymbol(TypeDeclarationSyntax classDeclaration)
-		{
-			return (ITypeSymbol) semanticModel.GetDeclaredSymbol(classDeclaration);
-		}
+        public SemanticModel SemanticModel { get; }
 
-		public TypeInfo GetTypeInfo(TypeSyntax node)
-		{
-			return semanticModel.GetTypeInfo(node);
-		}
+        public DefinitionVariableManager DefinitionVariables { get; } = new DefinitionVariableManager();
+
+        public string Namespace { get; set; }
+
+        public LinkedListNode<string> CurrentLine => output.Last;
+
+        public IMethodSymbol GetDeclaredSymbol(BaseMethodDeclarationSyntax methodDeclaration)
+        {
+            return (IMethodSymbol) SemanticModel.GetDeclaredSymbol(methodDeclaration);
+        }
+
+        public ITypeSymbol GetDeclaredSymbol(TypeDeclarationSyntax classDeclaration)
+        {
+            return (ITypeSymbol) SemanticModel.GetDeclaredSymbol(classDeclaration);
+        }
+
+        public TypeInfo GetTypeInfo(TypeSyntax node)
+        {
+            return SemanticModel.GetTypeInfo(node);
+        }
 
         public TypeInfo GetTypeInfo(ExpressionSyntax expressionSyntax)
         {
-            return semanticModel.GetTypeInfo(expressionSyntax);
+            return SemanticModel.GetTypeInfo(expressionSyntax);
         }
 
-		public INamedTypeSymbol GetSpecialType(SpecialType specialType)
-		{
-			return semanticModel.Compilation.GetSpecialType(specialType);
-		}
+        public INamedTypeSymbol GetSpecialType(SpecialType specialType)
+        {
+            return SemanticModel.Compilation.GetSpecialType(specialType);
+        }
 
-		public void WriteCecilExpression(string expression)
-		{
-		    output.AddLast("\t\t" + expression);
-		}
+        public void WriteCecilExpression(string expression)
+        {
+            output.AddLast("\t\t" + expression);
+        }
 
-		public int NextFieldId()
-		{
-			return ++currentFieldId;
-		}
+        public int NextFieldId()
+        {
+            return ++currentFieldId;
+        }
 
-		public int NextLocalVariableTypeId()
-		{
-			return ++currentTypeId;
-		}
+        public int NextLocalVariableTypeId()
+        {
+            return ++currentTypeId;
+        }
 
-		public string this[string name]
-	    {
-            get { return vars[name]; }
-	        set { vars[name] = value; }
-	    }
+        public string this[string name]
+        {
+            get => vars[name];
+            set => vars[name] = value;
+        }
 
-		public bool Contains(string name)
-		{
-			return vars.ContainsKey(name);
-		}
+        public bool Contains(string name)
+        {
+            return vars.ContainsKey(name);
+        }
 
-		public void MoveLineAfter(LinkedListNode<string> instruction, LinkedListNode<string> after)
-		{
-			output.AddAfter(after, instruction.Value);
-			output.Remove(instruction);
-		}
+        public void MoveLineAfter(LinkedListNode<string> instruction, LinkedListNode<string> after)
+        {
+            output.AddAfter(after, instruction.Value);
+            output.Remove(instruction);
+        }
 
-		public event Action<string> InstructionAdded;
+        public event Action<string> InstructionAdded;
 
-		public void TriggerInstructionAdded(string instVar)
-		{
-			InstructionAdded?.Invoke(instVar);	
-		}
-
-		public string Output
-		{
-			get
-			{
-				return output.Aggregate("", (acc, curr) => acc + curr);
-			}
-		}
-
-		private readonly SemanticModel semanticModel;
-		private readonly LinkedList<string> output = new LinkedList<string>();
-		
-		private int currentTypeId;
-		private int currentFieldId;
-
-		private string @namespace;
-	    private Dictionary<string, string> vars =new Dictionary<string, string>();
-	}
+        public void TriggerInstructionAdded(string instVar)
+        {
+            InstructionAdded?.Invoke(instVar);
+        }
+    }
 }

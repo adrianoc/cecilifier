@@ -10,53 +10,53 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Cecilifier.Core
 {
-	public sealed class Cecilifier
-	{
-		public static StringReader Process(Stream content, IList<string> references)
-		{
-			var cecilifier = new Cecilifier();
-			return cecilifier.Run(content, references);
-		}
+    public sealed class Cecilifier
+    {
+        public static StringReader Process(Stream content, IList<string> references)
+        {
+            var cecilifier = new Cecilifier();
+            return cecilifier.Run(content, references);
+        }
 
-		private StringReader Run(Stream content, IList<string> references)
-		{
-			var syntaxTree = CSharpSyntaxTree.ParseText(new StreamReader(content).ReadToEnd());
+        private StringReader Run(Stream content, IList<string> references)
+        {
+            var syntaxTree = CSharpSyntaxTree.ParseText(new StreamReader(content).ReadToEnd());
 
-			var comp = CSharpCompilation.Create(
-							"CecilifiedAssembly",
-							new[] { syntaxTree },
-							references.Select(refPath => MetadataReference.CreateFromFile(refPath)),
-							new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, allowUnsafe:true));
+            var comp = CSharpCompilation.Create(
+                "CecilifiedAssembly",
+                new[] {syntaxTree},
+                references.Select(refPath => MetadataReference.CreateFromFile(refPath)),
+                new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, allowUnsafe: true));
 
 
-			var errors = comp.GetDiagnostics().Where(d => d.Severity == DiagnosticSeverity.Error).Select(s => s.ToString()).ToArray();
-			if (errors.Length > 0)
-			{
-				throw new SyntaxErrorException($"Code contains compiler errors:\n\n{string.Join("\n", errors)}");
-			}
+            var errors = comp.GetDiagnostics().Where(d => d.Severity == DiagnosticSeverity.Error).Select(s => s.ToString()).ToArray();
+            if (errors.Length > 0)
+            {
+                throw new SyntaxErrorException($"Code contains compiler errors:\n\n{string.Join("\n", errors)}");
+            }
 
-			var semanticModel = comp.GetSemanticModel(syntaxTree);
+            var semanticModel = comp.GetSemanticModel(syntaxTree);
 
-			var ctx = new CecilifierContext(semanticModel);
-			var visitor = new CompilationUnitVisitor(ctx);
+            var ctx = new CecilifierContext(semanticModel);
+            var visitor = new CompilationUnitVisitor(ctx);
 
-			SyntaxNode root;
-			syntaxTree.TryGetRoot(out root);
-			visitor.Visit(root);
+            SyntaxNode root;
+            syntaxTree.TryGetRoot(out root);
+            visitor.Visit(root);
 
-			//new SyntaxTreeDump("TREE: ", root);
+            //new SyntaxTreeDump("TREE: ", root);
 
-			return new StringReader(ctx.Output.AsCecilApplication());
-		}
+            return new StringReader(ctx.Output.AsCecilApplication());
+        }
 
-		private SyntaxTree RunTransformations(SyntaxTree tree, SemanticModel semanticModel)
-		{
-			SyntaxNode root;
-			tree.TryGetRoot(out root);
+        private SyntaxTree RunTransformations(SyntaxTree tree, SemanticModel semanticModel)
+        {
+            SyntaxNode root;
+            tree.TryGetRoot(out root);
 
-			var cu = (CompilationUnitSyntax) ((CompilationUnitSyntax) root).Accept(new ValueTypeToLocalVariableVisitor(semanticModel));
+            var cu = (CompilationUnitSyntax) ((CompilationUnitSyntax) root).Accept(new ValueTypeToLocalVariableVisitor(semanticModel));
 
-			return CSharpSyntaxTree.Create(cu);
-		}
-	}
+            return CSharpSyntaxTree.Create(cu);
+        }
+    }
 }
