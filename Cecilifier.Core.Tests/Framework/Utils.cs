@@ -7,7 +7,7 @@ namespace Cecilifier.Core.Tests.Framework
 {
     public struct Utils
     {
-        public  static IList<string> GetTrustedAssembliesPath()
+        public static IList<string> GetTrustedAssembliesPath()
         {
             return ((string) AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")).Split(Path.PathSeparator).ToList();
         }

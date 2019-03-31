@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Microsoft.CodeAnalysis.CSharp;
@@ -10,6 +9,10 @@ namespace Cecilifier.Core.AST
 {
     internal class PropertyDeclarationVisitor : SyntaxWalkerBase
     {
+        private static readonly List<string> NoParameters = new List<string>();
+
+        private string backingFieldVar;
+
         public PropertyDeclarationVisitor(IVisitorContext context) : base(context)
         {
         }
@@ -19,7 +22,7 @@ namespace Cecilifier.Core.AST
             var propertyType = ResolveType(node.Type);
             var propertyDeclaringTypeVar = Context.DefinitionVariables.GetLastOf(MemberKind.Type).VariableName;
             var propName = "Item";
-            
+
             AddDefaultMemberAttribute(propertyDeclaringTypeVar, propName);
             var propDefVar = AddPropertyDefinition(propName, propertyType);
 
@@ -28,7 +31,7 @@ namespace Cecilifier.Core.AST
             {
                 var paramVar = TempLocalVar(parameter.Identifier.ValueText);
                 paramsVar.Add(paramVar);
-                
+
                 var exps = CecilDefinitionsFactory.Parameter(parameter, Context.SemanticModel, propDefVar, paramVar, ResolveType(parameter.Type));
                 AddCecilExpressions(exps);
             }
@@ -41,7 +44,7 @@ namespace Cecilifier.Core.AST
         private void AddDefaultMemberAttribute(string definitionVar, string value)
         {
             var ctorVar = TempLocalVar("ctor");
-            var customAttrVar  = TempLocalVar("customAttr");
+            var customAttrVar = TempLocalVar("customAttr");
             var exps = new[]
             {
                 $"var {ctorVar} = assembly.MainModule.ImportReference(typeof(System.Reflection.DefaultMemberAttribute).GetConstructor(new Type[] {{ typeof(string) }}));",
@@ -49,7 +52,7 @@ namespace Cecilifier.Core.AST
                 $"{customAttrVar}.ConstructorArguments.Add(new CustomAttributeArgument({ResolvePredefinedType("String")}, \"{value}\"));",
                 $"{definitionVar}.CustomAttributes.Add({customAttrVar});"
             };
-            
+
             AddCecilExpressions(exps);
         }
 
@@ -58,7 +61,7 @@ namespace Cecilifier.Core.AST
             var propertyType = ResolveType(node.Type);
             var propertyDeclaringTypeVar = Context.DefinitionVariables.GetLastOf(MemberKind.Type).VariableName;
             var propName = node.Identifier.ValueText;
-            
+
             var propDefVar = AddPropertyDefinition(propName, propertyType);
             ProcessPropertyAccessors(node, propertyDeclaringTypeVar, propName, propertyType, propDefVar, NoParameters);
 
@@ -111,7 +114,7 @@ namespace Cecilifier.Core.AST
 
                         AddCecilExpression($"var {setMethodVar} = new MethodDefinition(\"set_{propName}\", {accessorModifiers}, {ResolvePredefinedType("Void")});");
                         parameters.ForEach(paramVar => AddCecilExpression($"{setMethodVar}.Parameters.Add({paramVar});"));
-                        
+
                         AddCecilExpression($"{setMethodVar}.Body = new MethodBody({setMethodVar});");
                         AddCecilExpression($"{propDefVar}.SetMethod = {setMethodVar};");
 
@@ -136,11 +139,13 @@ namespace Cecilifier.Core.AST
                         break;
                 }
             }
-            
+
             void AddBackingFieldIfNeeded(AccessorDeclarationSyntax accessor)
             {
                 if (backingFieldVar != null)
+                {
                     return;
+                }
 
                 backingFieldVar = TempLocalVar("bf");
                 var backingFieldName = $"<{propName}>k__BackingField";
@@ -152,7 +157,6 @@ namespace Cecilifier.Core.AST
 
                 AddCecilExpressions(x);
             }
-
         }
 
         private string AddPropertyDefinition(string propName, string propertyType)
@@ -163,9 +167,5 @@ namespace Cecilifier.Core.AST
 
             return propDefVar;
         }
-
-        private static List<string> NoParameters = new List<string>();
-
-        private string backingFieldVar;
     }
 }

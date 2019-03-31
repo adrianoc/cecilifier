@@ -2,21 +2,21 @@
 
 namespace Cecilifier.Core.Misc
 {
-	class IdGenerator
-	{
-		public int IdFor(string key)
-		{
-			var nextId = 1;
-			if (idMap.ContainsKey(key))
-			{
-				nextId = idMap[key] + 1;
-			}
+    internal class IdGenerator
+    {
+        private readonly IDictionary<string, int> idMap = new Dictionary<string, int>();
 
-			idMap[key] = nextId;
+        public int IdFor(string key)
+        {
+            var nextId = 1;
+            if (idMap.ContainsKey(key))
+            {
+                nextId = idMap[key] + 1;
+            }
 
-			return nextId;
-		}
+            idMap[key] = nextId;
 
-		private IDictionary<string, int> idMap = new Dictionary<string, int>();
-	}
+            return nextId;
+        }
+    }
 }

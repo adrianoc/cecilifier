@@ -4,25 +4,25 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Cecilifier.Core.AST
 {
-	class StackTransitionAnalizer : CSharpSyntaxWalker
-	{
-		public StackTransitionAnalizer(SyntaxNode node)
-		{
-			this.node = node;
-		}
+    internal class StackTransitionAnalizer : CSharpSyntaxWalker
+    {
+        private readonly SyntaxNode node;
+        private bool consumesStack = true;
 
-		public bool ConsumesStack()
-		{
-			Visit(node);
-			return consumesStack;
-		}
+        public StackTransitionAnalizer(SyntaxNode node)
+        {
+            this.node = node;
+        }
 
-		public override void VisitExpressionStatement(ExpressionStatementSyntax node)
-		{
-			consumesStack = false;
-		}
+        public bool ConsumesStack()
+        {
+            Visit(node);
+            return consumesStack;
+        }
 
-		private readonly SyntaxNode node;
-		private bool consumesStack = true;
-	}
+        public override void VisitExpressionStatement(ExpressionStatementSyntax node)
+        {
+            consumesStack = false;
+        }
+    }
 }

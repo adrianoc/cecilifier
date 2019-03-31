@@ -12,6 +12,7 @@ namespace Cecilifier.Core.AST
     internal class EnumDeclarationVisitor : TypeDeclarationVisitorBase
     {
         private EnumMemberValueCollector _memberCollector;
+
         public EnumDeclarationVisitor(IVisitorContext context) : base(context)
         {
         }
@@ -20,23 +21,25 @@ namespace Cecilifier.Core.AST
         {
             _memberCollector = new EnumMemberValueCollector();
             node.Accept(_memberCollector);
-            
+
             var enumType = TempLocalVar(node.Identifier.ValueText);
             var attrs = ModifiersToCecil("TypeAttributes", node.Modifiers, "Private");
             var exps = CecilDefinitionsFactory.Type(Context, enumType, node.Identifier.ValueText, attrs + " | TypeAttributes.Sealed", ResolveType("System.Enum"), false, new string[0]);
             AddCecilExpressions(exps);
 
-            using(Context.DefinitionVariables.WithCurrent(node.Parent.IsKind(SyntaxKind.CompilationUnit) ? "" : node.Parent.ResolveDeclaringType().Identifier.ValueText, node.Identifier.ValueText, MemberKind.Type, enumType))
+            using (Context.DefinitionVariables.WithCurrent(node.Parent.IsKind(SyntaxKind.CompilationUnit) ? "" : node.Parent.ResolveDeclaringType().Identifier.ValueText, node.Identifier.ValueText, MemberKind.Type,
+                enumType))
             {
                 //.class private auto ansi MyEnum
                 //TODO: introduce TypeSystem.CoreLib.Enum/Action/etc...
-				
+
                 var fieldVar = MethodExtensions.LocalVariableNameFor("valueField", node.Identifier.ValueText);
-                var valueFieldExp = CecilDefinitionsFactory.Field(enumType, fieldVar, "value__", "assembly.MainModule.TypeSystem.Int32", "FieldAttributes.SpecialName | FieldAttributes.RTSpecialName | FieldAttributes.Public");
+                var valueFieldExp = CecilDefinitionsFactory.Field(enumType, fieldVar, "value__", "assembly.MainModule.TypeSystem.Int32",
+                    "FieldAttributes.SpecialName | FieldAttributes.RTSpecialName | FieldAttributes.Public");
                 AddCecilExpressions(valueFieldExp);
-                
+
                 HandleAttributesInTypeDeclaration(node, enumType);
-				
+
                 base.VisitEnumDeclaration(node);
             }
         }
@@ -47,9 +50,10 @@ namespace Cecilifier.Core.AST
             // .field public static literal valuetype xxx.MyEnum Second = int32(1)
             var enumMemberValue = _memberCollector[node];
             var enumVarDef = Context.DefinitionVariables.GetLastOf(MemberKind.Type);
-			
+
             var fieldVar = MethodExtensions.LocalVariableNameFor($"em_{enumVarDef.MemberName}_{NextLocalVariableId()}", node.Identifier.ValueText);
-            var exp  = CecilDefinitionsFactory.Field(enumVarDef.VariableName, fieldVar, node.Identifier.ValueText, enumVarDef.VariableName, "FieldAttributes.Static | FieldAttributes.Literal | FieldAttributes.Public | FieldAttributes.HasDefault", $"Constant = {enumMemberValue}");
+            var exp = CecilDefinitionsFactory.Field(enumVarDef.VariableName, fieldVar, node.Identifier.ValueText, enumVarDef.VariableName,
+                "FieldAttributes.Static | FieldAttributes.Literal | FieldAttributes.Public | FieldAttributes.HasDefault", $"Constant = {enumMemberValue}");
             AddCecilExpressions(exp);
 
             base.VisitEnumMemberDeclaration(node);
@@ -57,9 +61,9 @@ namespace Cecilifier.Core.AST
 
         private class EnumMemberValueCollector : CSharpSyntaxVisitor<int>
         {
-            private int _lastEnumMemberValue = -1;
+            private readonly Dictionary<EnumMemberDeclarationSyntax, int> _dict = new Dictionary<EnumMemberDeclarationSyntax, int>();
             private EnumDeclarationSyntax _enum;
-            private Dictionary<EnumMemberDeclarationSyntax, int> _dict  = new Dictionary<EnumMemberDeclarationSyntax, int>();
+            private int _lastEnumMemberValue = -1;
 
             public int this[EnumMemberDeclarationSyntax member] => _dict[member];
 
@@ -82,7 +86,7 @@ namespace Cecilifier.Core.AST
                     _lastEnumMemberValue = existingValue;
                     return existingValue;
                 }
-                
+
                 int value;
                 if (node.EqualsValue != null)
                 {
@@ -95,36 +99,38 @@ namespace Cecilifier.Core.AST
 
                 _dict[node] = value;
                 _lastEnumMemberValue = value;
-                
+
                 return value;
             }
 
             public override int VisitLiteralExpression(LiteralExpressionSyntax node)
             {
                 if (node.Kind() != SyntaxKind.NumericLiteralExpression)
+                {
                     throw new InvalidOperationException($"Invalid literal type: {node}");
-                
+                }
+
                 var value = node.ToString();
                 if (value.StartsWith("0x"))
                 {
                     return Convert.ToInt32(value.Substring(2), 16);
                 }
 
-                return Int32.Parse(value);
+                return int.Parse(value);
             }
 
             public override int VisitBinaryExpression(BinaryExpressionSyntax node)
             {
                 var leftValue = node.Left.Accept(this);
                 var rightValue = node.Right.Accept(this);
-                
+
                 switch (node.OperatorToken.Kind())
                 {
                     case SyntaxKind.PlusToken: return leftValue + rightValue;
                     case SyntaxKind.MinusToken: return leftValue - rightValue;
                     case SyntaxKind.AsteriskToken: return leftValue * rightValue;
                 }
-                
+
                 throw new InvalidOperationException($"Operator {node.OperatorToken} is not supported yet as enum member initializer");
             }
 
@@ -135,7 +141,7 @@ namespace Cecilifier.Core.AST
                 {
                     enumMember.Accept(this);
                 }
-                
+
                 return _dict[enumMember];
             }
         }

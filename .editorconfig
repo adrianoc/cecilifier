@@ -1,0 +1,22 @@
+#EditorConfig is awesome: https://EditorConfig.org
+
+root = true
+
+[*.js]
+#nothing
+
+[*.cs]
+max_line_length=215
+end_of_line = lf
+insert_final_newline = true
+charset = utf-8
+indent_style = space
+indent_size = 4
+
+csharp_preserve_single_line_statements = false
+csharp_prefer_braces = true:none
+csharp_new_line_before_open_brace = all
+csharp_new_line_before_else = true
+csharp_new_line_before_catch = true
+csharp_new_line_before_finally = true
+csharp_new_line_before_members_in_object_initializers = true

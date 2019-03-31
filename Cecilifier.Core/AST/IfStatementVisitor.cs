@@ -32,7 +32,6 @@ namespace Cecilifier.Core.AST
             WriteCecilExpression(Context, $"var {elseEndTargetVarName} = {_ilVar}.Create(OpCodes.Nop);");
             if (node.Else != null)
             {
-                
                 var branchToEndOfIfStatementVarName = LocalVariableNameForId(NextLocalVariableTypeId());
                 WriteCecilExpression(Context, $"var {branchToEndOfIfStatementVarName} = {_ilVar}.Create(OpCodes.Br, {elseEndTargetVarName});");
                 WriteCecilExpression(Context, $"{_ilVar}.Append({branchToEndOfIfStatementVarName});");

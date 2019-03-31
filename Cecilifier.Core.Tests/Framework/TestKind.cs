@@ -1,8 +1,8 @@
 ﻿namespace Cecilifier.Core.Tests.Framework
 {
-	public enum TestKind
-	{
-		Integration,
-		Transformation
-	}
+    public enum TestKind
+    {
+        Integration,
+        Transformation
+    }
 }

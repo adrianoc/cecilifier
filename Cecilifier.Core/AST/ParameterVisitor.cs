@@ -3,25 +3,25 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Cecilifier.Core.AST
 {
-	class ParameterVisitor : SyntaxWalkerBase
-	{
-		internal ParameterVisitor(IVisitorContext ctx) : base(ctx)
-		{
-		}
+    internal class ParameterVisitor : SyntaxWalkerBase
+    {
+        private IParameterSymbol symbol;
 
-		public override void VisitIdentifierName(IdentifierNameSyntax node)
-		{
-			symbol = Context.SemanticModel.GetSymbolInfo(node).Symbol as IParameterSymbol;
-		}
+        internal ParameterVisitor(IVisitorContext ctx) : base(ctx)
+        {
+        }
 
-		public static IParameterSymbol Process(IVisitorContext context, ExpressionSyntax node)
-		{
-			var visitor = new ParameterVisitor(context);
-			visitor.Visit(node);
+        public override void VisitIdentifierName(IdentifierNameSyntax node)
+        {
+            symbol = Context.SemanticModel.GetSymbolInfo(node).Symbol as IParameterSymbol;
+        }
 
-			return visitor.symbol;
-		}
+        public static IParameterSymbol Process(IVisitorContext context, ExpressionSyntax node)
+        {
+            var visitor = new ParameterVisitor(context);
+            visitor.Visit(node);
 
-		private IParameterSymbol symbol;
-	}
+            return visitor.symbol;
+        }
+    }
 }

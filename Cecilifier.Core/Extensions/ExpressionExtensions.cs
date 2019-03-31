@@ -31,7 +31,7 @@ namespace Cecilifier.Core.Extensions
                 var enumMember = (IFieldSymbol) type.Type.GetMembers().Single(member => member.Kind == SymbolKind.Field && member.IsStatic && member.Name == node.Name.Identifier.ValueText);
                 return enumMember.ConstantValue.ToString();
             }
-            
+
             return $"{node.Expression.ToString()}.{node.Name.Identifier.ValueText}";
         }
 
@@ -41,12 +41,13 @@ namespace Cecilifier.Core.Extensions
             {
                 case SyntaxKind.StringLiteralExpression:
                     return $"\"{node.Token.ValueText}\"";
-                
+
                 case SyntaxKind.NumericLiteralExpression:
                 case SyntaxKind.TrueLiteralExpression:
                 case SyntaxKind.FalseLiteralExpression:
                     return node.Token.ValueText;
             }
+
             return base.VisitLiteralExpression(node);
         }
     }
