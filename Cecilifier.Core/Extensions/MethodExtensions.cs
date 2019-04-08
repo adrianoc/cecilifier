@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices.ComTypes;
 using Cecilifier.Core.AST;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -58,22 +59,21 @@ namespace Cecilifier.Core.Extensions
                 var tbf = method.AsMethodDefinitionVariable();
                 return ctx.DefinitionVariables.GetMethodVariable(tbf).VariableName;
             }
-
-            var declaringTypeName = method.ContainingType.FullyQualifiedName();
-
+            
+            var declaringTypeName = method.ContainingType.ReflectionTypeName(out var typeParameters);
             if (method.IsGenericMethod)
             {
-                var typeArgs = method.ConstructedFrom.Parameters.AsStringNewArrayExpression();
-                var typeParameters = method.TypeArguments.AsStringNewArrayExpression();
-                return
-                    $"assembly.MainModule.Import(TypeHelpers.ResolveGenericMethod(\"{method.ContainingAssembly.Name}\", \"{declaringTypeName}\", \"{method.Name}\",{method.Modifiers()}, {typeParameters}, {typeArgs}))";
+                var paramTypes = method.ConstructedFrom.Parameters.AsStringNewArrayExpression();
+                var typeArguments = method.TypeArguments.AsStringNewArrayExpression();
+                return $"assembly.MainModule.Import(TypeHelpers.ResolveGenericMethod(\"{method.ContainingAssembly.Name}\", \"{declaringTypeName}\", \"{method.Name}\",{method.Modifiers()}, {typeArguments}, {paramTypes}))";
             }
 
-            return string.Format("assembly.MainModule.Import(TypeHelpers.ResolveMethod(\"{0}\", \"{1}\", \"{2}\",{3}{4}))",
+            return string.Format("assembly.MainModule.Import(TypeHelpers.ResolveMethod(\"{0}\", \"{1}\", \"{2}\",{3},\"{4}\"{5}))",
                 method.ContainingAssembly.Name,
                 declaringTypeName,
                 method.Name,
                 method.Modifiers(),
+                string.Join(',', typeParameters),
                 method.Parameters.Aggregate("", (acc, curr) => acc + ", \"" + curr.Type.FullyQualifiedName() + "\""));
         }
 

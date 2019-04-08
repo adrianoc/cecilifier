@@ -5,10 +5,9 @@ namespace Cecilifier.Core.Tests.Integration
     public class GenericsTestCase : IntegrationResourceBasedTest
     {
         [Test]
-        [Ignore("Requires Support for Generic Types")]
-        public void TestGenericInstanceMethods()
+        public void TestInstanceNonGenericMethodsOnGenericTypes()
         {
-            AssertResourceTest(@"Generics/InstanceMethods");
+            AssertResourceTest(@"Generics/InstanceNonGenericMethodsOnGenericTypes");
         }
 
         [Test]

@@ -1,0 +1,9 @@
+using System;
+using System.Collections.Generic;
+
+class C
+{
+    void OnDict(IDictionary<int, string> d) { d.Add(1, "One"); }
+    void Foo(IList<int> l) { l.Add(42); }
+    void Bar(IList<string> l) { l.Insert(42, "Bar"); }
+}

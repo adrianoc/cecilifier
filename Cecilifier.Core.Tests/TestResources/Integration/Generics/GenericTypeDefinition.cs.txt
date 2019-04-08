@@ -1,0 +1,7 @@
+class GenericClass<T>
+{
+}
+
+public struct GenericStruct<T> 
+{
+}
