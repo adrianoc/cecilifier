@@ -49,25 +49,33 @@ namespace Cecilifier.Runtime
 
                 if (found)
                 {
-                    return mc.MakeGenericMethod(typeArguments.Select(ta => Type.GetType(ta)).ToArray());
+                    return mc.MakeGenericMethod(typeArguments.Select(Type.GetType).ToArray());
                 }
             }
 
             return null;
         }
 
-        public static MethodInfo ResolveMethod(string assemblyName, string declaringTypeName, string methodName, BindingFlags bindingFlags, params string[] paramTypes)
+        public static MethodInfo ResolveMethod(string assemblyName, string declaringTypeName, string methodName, BindingFlags bindingFlags, string typeArgumentList, params string[] paramTypes)
         {
             var containingAssembly = Assembly.Load(new AssemblyName(assemblyName));
             var declaringType = containingAssembly.GetType(declaringTypeName);
 
-            return declaringType.GetMethod(methodName,
+            if (declaringType.IsGenericType)
+            {
+                var typeArguments = typeArgumentList.Split(',');
+                declaringType = declaringType.MakeGenericType(typeArguments.Select(Type.GetType).ToArray());
+            }
+
+            var resolveMethod = declaringType.GetMethod(methodName,
                 bindingFlags,
                 null,
                 paramTypes.Select(typeName => Type.GetType(typeName)).ToArray(),
                 null);
-        }
 
+            return resolveMethod;
+        }
+       
         public static MethodInfo ResolveMethod(string assemblyName, string declaringTypeName, string methodName)
         {
             var containingAssembly = Assembly.Load(new AssemblyName(assemblyName));
@@ -106,19 +114,18 @@ namespace Cecilifier.Runtime
                 return false;
             }
 
-            var candiateElementType = candidate.ParameterType.HasElementType ? candidate.ParameterType.GetElementType() : candidate.ParameterType;
-            if (candiateElementType.IsGenericParameter ^ original.IsTypeParameter)
+            var candidateElementType = candidate.ParameterType.HasElementType ? candidate.ParameterType.GetElementType() : candidate.ParameterType;
+            if (candidateElementType.IsGenericParameter ^ original.IsTypeParameter)
             {
                 return false;
             }
 
             if (original.IsTypeParameter)
             {
-                return candiateElementType.Name == original.FullName;
-                ;
+                return candidateElementType.Name == original.FullName;
             }
 
-            return candiateElementType.FullName == original.FullName;
+            return candidateElementType.FullName == original.FullName;
         }
     }
 

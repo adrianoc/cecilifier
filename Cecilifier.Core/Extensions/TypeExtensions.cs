@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text.RegularExpressions;
 using Cecilifier.Core.AST;
 using Microsoft.CodeAnalysis;
 using Mono.Cecil.Cil;
@@ -19,7 +21,7 @@ namespace Cecilifier.Core.Extensions
             return type.ToDisplayString(new SymbolDisplayFormat());
         }
 
-        public static string ResolverExpression(this ITypeSymbol type, IVisitorContext ctx)
+        public static string ResolveExpression(this ITypeSymbol type, IVisitorContext ctx)
         {
             if (type.IsDefinedInCurrentType(ctx))
             {
@@ -28,10 +30,32 @@ namespace Cecilifier.Core.Extensions
                 return ctx.DefinitionVariables.GetTypeVariable(type.Name).VariableName;
             }
 
-            return string.Format("assembly.MainModule.Import(TypeHelpers.ResolveType(\"{0}\", \"{1}\"))",
-                type.ContainingAssembly.Name,
-                type.FullyQualifiedName());
+            string typeName;
+            if (type is INamedTypeSymbol namedType)
+            {
+                var genTypeName = Regex.Replace(namedType.ConstructedFrom.ToString(), "<.*>", "<" + new string(',', namedType.TypeArguments.Length - 1) + ">");
+                typeName = genTypeName;
+            }
+            else
+            {
+                typeName = type.FullyQualifiedName();
+            }
+
+            return $"assembly.MainModule.Import(TypeHelpers.ResolveType(\"{type.ContainingAssembly.Name}\", \"{typeName}\"))";
         }
+
+        public static string ReflectionTypeName(this ITypeSymbol type, out IList<string> typeParameters)
+        {
+            if (type is INamedTypeSymbol namedType && namedType.IsGenericType) //TODO: namedType.IsUnboundGenericType ? Open 
+            {
+                typeParameters = namedType.TypeArguments.Select(typeArg => typeArg.FullyQualifiedName()).ToArray();
+                return Regex.Replace(namedType.ConstructedFrom.ToString(), "<.*>", "`" + namedType.TypeArguments.Length );
+            }
+
+            typeParameters = Array.Empty<string>();
+            return type.FullyQualifiedName();
+        }
+        
     }
 
     public sealed class VariableDefinitionComparer : IEqualityComparer<VariableDefinition>
