@@ -8,6 +8,7 @@
 
 @{
     ViewData["Title"] = "Cecilifier";
+    var fromGist = Model.FromGist;
 }
 <br/>
 <div>
@@ -51,7 +52,17 @@
 
     
     initializeWebSocket();
-
+    
+    var fromGist = "@fromGist";
+    csharpeditor.setValue(
+        fromGist
+        .replace(/&quot;/g, '"')
+        .replace(/&gt;/g, '>')
+        .replace(/&lt;/g, '<')
+        .replace(/&#x27;/g, "'")
+        .replace(/&#x2B;/g, '&')
+        );
+    
     function clearError() {
         setErrInternal(null);
     }
