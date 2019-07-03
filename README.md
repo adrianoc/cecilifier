@@ -6,7 +6,7 @@ About
 ---
 Cecilifier is a tool meant to make it easier to learn how to use [Mono.Cecil](https://github.com/jbevain/cecil) a library used to manipulate MS IL. It was developed after the idea of [asmifier](https://asm.ow2.io/faq.html#Q10). You can read more details about it in its [announcement blog](https://programing-fun.blogspot.com/2019/02/making-it-easier-to-getting-started.html).
 
-You can use it live in [this site](https://cecilifier.appspot.com/).
+You can use it live in [this site](https://cecilifier.me/).
 
 Feel free to send comments, issues, MR, etc; I cannot promise I'll be responsive but I'll do my best.
 
