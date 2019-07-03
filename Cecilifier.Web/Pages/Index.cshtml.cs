@@ -10,9 +10,11 @@ namespace Cecilifier.Web.Pages
     public class CecilifierApplication : PageModel
     {
         public string FromGist { get; set; } = string.Empty;
+        public string ErrorAccessingGist { get; private set; } = string.Empty;
         
         public async void OnGet()
         {
+            ErrorAccessingGist = null;
             if (Request.Query.TryGetValue("gistid", out var gistid))
             {
                 var gistHttp = new HttpClient();
@@ -25,13 +27,19 @@ namespace Cecilifier.Web.Pages
                     var root = JObject.Parse(await task.Result.Content.ReadAsStringAsync());
                     var source = root["files"].First().Children()["content"].FirstOrDefault().ToString();
 
-                    FromGist = source.Replace("\n", @"\n").Replace("\t", @"\t");
+                    FromGist = Encode(source);
                 }
                 else
                 {
-                    //TODO: How to report errors to user?
+                    ErrorAccessingGist = Encode($"Error accessing GistId = {gistid}: {task.Result.StatusCode}\\n{task.Result.RequestMessage}");
                 }
             }
+
+            string Encode(string msg)
+            {
+                return msg.Replace("\n", @"\n").Replace("\t", @"\t");
+            }
+            
         }
     }
 }
