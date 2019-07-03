@@ -56,7 +56,7 @@ Unsupported Features
 
 How to use it
 ---
-- The easiest way is to [browse to its site](https://cecilifier.appspot.com/).
+- The easiest way is to [browse to its site](https://cecilifier.me/).
 - Another alternative is to build and run it  locally (see bellow)
 
 Orthogonal to these options, after you Cecilifier some code you can create a project and debug the generated code to get more insight about how Mono.Cecil works.
