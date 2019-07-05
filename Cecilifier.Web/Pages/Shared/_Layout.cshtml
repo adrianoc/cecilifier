@@ -12,6 +12,11 @@
     </script>
 
     <script src="~/lib/codemirror/lib/codemirror.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/showdown@1.9.0/dist/showdown.min.js"></script>
+    <script src="~/js/release_notes.js"></script>
+    <link rel="stylesheet" href="~/css/release_notes.css">
+    
     <link rel="stylesheet" href="~/lib/codemirror/lib/codemirror.css">
     <link rel="stylesheet" href="~/lib/codemirror/theme/darcula.css">
     <link rel="stylesheet" href="~/lib/codemirror/theme/blackboard.css">
@@ -21,7 +26,7 @@
 
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>@ViewData["Title"] - Cecilifier.Web</title>
+    <title>@ViewData["Title"] - Cecilifier</title>
 
     <div class="alert success" style="opacity: 1">
         <span class="closebtn">&times;</span>
@@ -129,7 +134,7 @@
             }, 2000);
     </script>
 </head>
-<body>
+<body onload="showReleaseNotes()">
 <nav class="navbar navbar-inverse navbar-fixed-top">
     <div class="container">
         <div class="navbar-header">
@@ -139,7 +144,7 @@
                 <span class="icon-bar"></span>
                 <span class="icon-bar"></span>
             </button>
-            <a asp-page="/Index" class="navbar-brand">Cecilifier.Web</a>
+            <a asp-page="/Index" class="navbar-brand">Cecilifier Version @this.GetType().Assembly.GetName().Version</a>
         </div>
         <div class="navbar-collapse collapse">
             <ul class="nav navbar-nav">
