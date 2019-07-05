@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Mono.Cecil.Cil;
@@ -70,10 +71,11 @@ namespace Cecilifier.Core.AST
 
         private void ProcessPropertyAccessors(BasePropertyDeclarationSyntax node, string propertyDeclaringTypeVar, string propName, string propertyType, string propDefVar, List<string> parameters)
         {
+            var propInfo = (IPropertySymbol) Context.SemanticModel.GetDeclaredSymbol(node);
             var declaringType = node.ResolveDeclaringType();
             foreach (var accessor in node.AccessorList.Accessors)
             {
-                var accessorModifiers = node.Modifiers.MethodModifiersToCecil(ModifiersToCecil, "MethodAttributes.SpecialName");
+                var accessorModifiers = node.Modifiers.MethodModifiersToCecil(ModifiersToCecil, "MethodAttributes.SpecialName", propInfo.GetMethod ?? propInfo.SetMethod);
                 switch (accessor.Keyword.Kind())
                 {
                     case SyntaxKind.GetKeyword:
@@ -82,14 +84,18 @@ namespace Cecilifier.Core.AST
 
                         AddCecilExpression($"var {getMethodVar} = new MethodDefinition(\"get_{propName}\", {accessorModifiers}, {propertyType});");
                         parameters.ForEach(paramVar => AddCecilExpression($"{getMethodVar}.Parameters.Add({paramVar});"));
+                        AddCecilExpression($"{propertyDeclaringTypeVar}.Methods.Add({getMethodVar});");
+
                         AddCecilExpression($"{getMethodVar}.Body = new MethodBody({getMethodVar});");
                         AddCecilExpression($"{propDefVar}.GetMethod = {getMethodVar};");
-                        AddCecilExpression($"{propertyDeclaringTypeVar}.Methods.Add({getMethodVar});");
 
                         var ilVar = TempLocalVar("ilVar_get_");
                         var ilProcessorExp = $"var {ilVar} = {getMethodVar}.Body.GetILProcessor();";
                         AddCecilExpression(ilProcessorExp);
 
+                        if (propInfo.ContainingType.TypeKind == TypeKind.Interface)
+                            break;
+                        
                         if (accessor.Body == null) //is this an auto property ?
                         {
                             AddBackingFieldIfNeeded(accessor);
@@ -114,12 +120,16 @@ namespace Cecilifier.Core.AST
 
                         AddCecilExpression($"var {setMethodVar} = new MethodDefinition(\"set_{propName}\", {accessorModifiers}, {ResolvePredefinedType("Void")});");
                         parameters.ForEach(paramVar => AddCecilExpression($"{setMethodVar}.Parameters.Add({paramVar});"));
+                        AddCecilExpression($"{propertyDeclaringTypeVar}.Methods.Add({setMethodVar});");
 
                         AddCecilExpression($"{setMethodVar}.Body = new MethodBody({setMethodVar});");
                         AddCecilExpression($"{propDefVar}.SetMethod = {setMethodVar};");
 
                         AddCecilExpression($"{setMethodVar}.Parameters.Add(new ParameterDefinition({propertyType}));");
                         AddCecilExpression($"var {ilSetVar} = {setMethodVar}.Body.GetILProcessor();");
+
+                        if (propInfo.ContainingType.TypeKind == TypeKind.Interface)
+                            break;
 
                         if (accessor.Body == null) //is this an auto property ?
                         {
@@ -135,7 +145,6 @@ namespace Cecilifier.Core.AST
                         }
 
                         AddCilInstruction(ilSetVar, OpCodes.Ret);
-                        AddCecilExpression($"{propertyDeclaringTypeVar}.Methods.Add({setMethodVar});");
                         break;
                 }
             }

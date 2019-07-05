@@ -57,6 +57,12 @@ namespace Cecilifier.Core.Tests.Integration.Types
         }
 
         [Test]
+        public void InterfaceWithPropertiesTest()
+        {
+            AssertResourceTest(@"Types/InterfaceWithProperties");
+        }
+        
+        [Test]
         public void InterfaceImplementationTest()
         {
             AssertResourceTest(@"Types/InterfaceImplementation");

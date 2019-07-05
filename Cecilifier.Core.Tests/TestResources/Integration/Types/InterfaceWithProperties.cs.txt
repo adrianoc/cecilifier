@@ -1,0 +1,5 @@
+﻿interface InterfaceWithProperties
+{
+	int PropGetOnly { get; }
+	string PropGetSet { get; set; }
+}
