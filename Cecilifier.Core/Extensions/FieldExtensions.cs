@@ -1,5 +1,6 @@
 ﻿using Cecilifier.Core.AST;
 using Microsoft.CodeAnalysis;
+using static Cecilifier.Core.Misc.Utils;
 
 namespace Cecilifier.Core.Extensions
 {
@@ -14,7 +15,7 @@ namespace Cecilifier.Core.Extensions
 
             var declaringTypeName = field.ContainingType.FullyQualifiedName();
 
-            return string.Format("assembly.MainModule.Import(TypeHelpers.ResolveField(\"{0}\",\"{1}\"))", declaringTypeName, field.Name);
+            return ImportFromMainModule($"TypeHelpers.ResolveField(\"{declaringTypeName}\",\"{field.Name}\")");
         }
     }
 }

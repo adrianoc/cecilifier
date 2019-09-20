@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
@@ -57,7 +57,7 @@ namespace Cecilifier.Core.AST
                 if (node.Initializer == null && declaringType.Kind() != SyntaxKind.StructDeclaration)
                 {
                     var declaringTypeLocalVar = Context.DefinitionVariables.GetLastOf(MemberKind.Type).VariableName;
-                    AddCilInstruction(ilVar, OpCodes.Call, string.Format("assembly.MainModule.Import(TypeHelpers.DefaultCtorFor({0}.BaseType.Resolve()))", declaringTypeLocalVar));
+                    AddCilInstruction(ilVar, OpCodes.Call, Utils.ImportFromMainModule($"TypeHelpers.DefaultCtorFor({declaringTypeLocalVar}.BaseType.Resolve())"));
                 }
 
                 callBaseMethod(node);
@@ -85,7 +85,7 @@ namespace Cecilifier.Core.AST
             AddCecilExpression($@"var {ctorBodyIL} = {ctorLocalVar}.Body.GetILProcessor();");
 
             AddCilInstruction(ctorBodyIL, OpCodes.Ldarg_0);
-            AddCilInstruction(ctorBodyIL, OpCodes.Call, string.Format("assembly.MainModule.Import(TypeHelpers.DefaultCtorFor({0}.BaseType.Resolve()))", typeDefVar));
+            AddCilInstruction(ctorBodyIL, OpCodes.Call, Utils.ImportFromMainModule($"TypeHelpers.DefaultCtorFor({typeDefVar}.BaseType.Resolve())"));
             AddCilInstruction(ctorBodyIL, OpCodes.Ret);
 
             Context[ctorLocalVar] = "";

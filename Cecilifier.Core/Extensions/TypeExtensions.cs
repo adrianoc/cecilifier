@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using Cecilifier.Core.AST;
 using Microsoft.CodeAnalysis;
 using Mono.Cecil.Cil;
+using static Cecilifier.Core.Misc.Utils;
 
 namespace Cecilifier.Core.Extensions
 {
@@ -41,7 +42,7 @@ namespace Cecilifier.Core.Extensions
                 typeName = type.FullyQualifiedName();
             }
 
-            return $"assembly.MainModule.Import(TypeHelpers.ResolveType(\"{type.ContainingAssembly.Name}\", \"{typeName}\"))";
+            return ImportFromMainModule($"TypeHelpers.ResolveType(\"{type.ContainingAssembly.Name}\", \"{typeName}\")");
         }
 
         public static string ReflectionTypeName(this ITypeSymbol type, out IList<string> typeParameters)

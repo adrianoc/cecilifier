@@ -7,6 +7,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Mono.Cecil.Cil;
+using static Cecilifier.Core.Misc.Utils;
 
 namespace Cecilifier.Core.AST
 {
@@ -134,9 +135,9 @@ namespace Cecilifier.Core.AST
             return ImportExpressionForType(type.FullName);
         }
 
-        protected string ImportExpressionForType(string typeName)
+        private string ImportExpressionForType(string typeName)
         {
-            return string.Format("assembly.MainModule.Import(typeof({0}))", typeName);
+            return ImportFromMainModule($"typeof({typeName})");
         }
 
         protected string TypeModifiersToCecil(TypeDeclarationSyntax node)
@@ -387,7 +388,7 @@ namespace Cecilifier.Core.AST
             else
             {
                 var declaringTypeName = typeSymbol.FullyQualifiedName();
-                var methodInvocation = $"assembly.MainModule.Import(TypeHelpers.ResolveMethod(\"{typeSymbol.ContainingAssembly.Name}\", \"{declaringTypeName}\", \"Invoke\"))";
+                var methodInvocation = ImportFromMainModule($"TypeHelpers.ResolveMethod(\"{typeSymbol.ContainingAssembly.Name}\", \"{declaringTypeName}\", \"Invoke\")");
 
                 AddCilInstruction(ilVar, OpCodes.Callvirt, methodInvocation);
             }
