@@ -1,7 +1,7 @@
 ﻿using Cecilifier.Core.Tests.Integration;
 using NUnit.Framework;
 
-namespace Cecilifier.Core.Tests.Tests.Integration
+namespace Cecilifier.Core.Tests.Integration
 {
     [TestFixture]
     public class TryCatchFinallyTestCase : IntegrationResourceBasedTest

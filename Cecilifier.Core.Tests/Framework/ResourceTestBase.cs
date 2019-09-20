@@ -53,17 +53,17 @@ namespace Cecilifier.Core.Tests.Framework
             {
                 var cecilifierTestsFolder = Path.Combine(Path.GetTempPath(), "CecilifierTests");
 
-                var actualAssemblyPath = Path.Combine(cecilifierTestsFolder, resourceName + ".dll");
+                var cecilifiedAssemblyPath = Path.Combine(cecilifierTestsFolder, resourceName + ".dll");
                 var resourceCompiledAssemblyPath = CompilationServices.CompileDLL(
-                    Path.Combine(Path.GetDirectoryName(actualAssemblyPath), Path.GetFileNameWithoutExtension(actualAssemblyPath) + "_expected"),
+                    Path.Combine(Path.GetDirectoryName(cecilifiedAssemblyPath), Path.GetFileNameWithoutExtension(cecilifiedAssemblyPath) + "_expected"),
                     ReadToEnd(tbc),
                     Utils.GetTrustedAssembliesPath().ToArray());
 
                 Console.WriteLine();
                 Console.WriteLine("Compiled from res        : {0}", resourceCompiledAssemblyPath);
-                Console.WriteLine("Generated from Cecilifier: {0}", actualAssemblyPath);
+                Console.WriteLine("Generated from Cecilifier: {0}", cecilifiedAssemblyPath);
 
-                AssertResourceTest(actualAssemblyPath, resourceCompiledAssemblyPath, tbc);
+                AssertResourceTest(cecilifiedAssemblyPath, resourceCompiledAssemblyPath, tbc);
             }
         }
 
