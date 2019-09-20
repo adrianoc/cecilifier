@@ -105,8 +105,17 @@ namespace Cecilifier.Core.AST
         {
             var varName = LocalVariableNameForId(NextLocalVariableTypeId());
             var isStructWithNoFields = node.Kind() == SyntaxKind.StructDeclaration && node.Members.Count == 0;
-            AddCecilExpressions(CecilDefinitionsFactory.Type(Context, varName, node.Identifier.ValueText, TypeModifiersToCecil(node), baseType, isStructWithNoFields,
-                ImplementedInterfacesFor(node.BaseList).Select(i => ResolveType(i))));
+            var typeDefinitionExp = CecilDefinitionsFactory.Type(
+                                            Context, 
+                                            varName,
+                                            node.Identifier.ValueText, 
+                                            TypeModifiersToCecil(node), 
+                                            baseType, 
+                                            isStructWithNoFields, 
+                                            ImplementedInterfacesFor(node.BaseList).Select(i => ResolveType(i)),
+                                            node.TypeParameterList);
+            
+            AddCecilExpressions(typeDefinitionExp);
 
             EnsureCurrentTypeHasADefaultCtor(node, varName);
 
