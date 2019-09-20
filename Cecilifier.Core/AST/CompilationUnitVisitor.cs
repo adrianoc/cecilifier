@@ -54,8 +54,17 @@ namespace Cecilifier.Core.AST
         {
             var typeVar = LocalVariableNameForId(NextLocalVariableTypeId());
             var accessibility = ModifiersToCecil("TypeAttributes", node.Modifiers, "Private");
-            var typeDef = CecilDefinitionsFactory.Type(Context, typeVar, node.Identifier.ValueText, DefaultTypeAttributeFor(node).AppendModifier(accessibility), ResolveType("System.MulticastDelegate"), false,
-                Array.Empty<string>(), "IsAnsiClass = true");
+            var typeDef = CecilDefinitionsFactory.Type(
+                Context, 
+                typeVar, 
+                node.Identifier.ValueText, 
+                DefaultTypeAttributeFor(node).AppendModifier(accessibility), 
+                ResolveType("System.MulticastDelegate"), 
+                false,
+                Array.Empty<string>(),
+                node.TypeParameterList, 
+                "IsAnsiClass = true");
+            
             AddCecilExpressions(typeDef);
 
             using (Context.DefinitionVariables.WithCurrent("", node.Identifier.ValueText, MemberKind.Type, typeVar))

@@ -25,9 +25,14 @@ namespace Cecilifier.Core.Misc
             return exp + ";";
         }
 
-        public static IEnumerable<string> Type(IVisitorContext context, string typeVar, string typeName, string attrs, string baseTypeName, bool isStructWithNoFields, IEnumerable<string> interfaces,
-            params string[] properties)
+        public static IEnumerable<string> Type(IVisitorContext context, string typeVar, string typeName, string attrs, string baseTypeName, bool isStructWithNoFields, IEnumerable<string> interfaces, TypeParameterListSyntax typeParameters = null, params string[] properties)
         {
+            var typeParamList = typeParameters?.Parameters.ToArray() ?? Array.Empty<TypeParameterSyntax>();
+            if (typeParamList.Length > 0)
+            {
+                typeName = typeName + "`" + typeParamList.Length;
+            }
+            
             var exps = new List<string>();
             var typeDefExp = $"var {typeVar} = new TypeDefinition(\"{context.Namespace}\", \"{typeName}\", {attrs}{(!string.IsNullOrWhiteSpace(baseTypeName) ? ", " + baseTypeName : "")})";
             if (properties.Length > 0)
@@ -61,6 +66,16 @@ namespace Cecilifier.Core.Misc
                 exps.Add($"{typeVar}.PackingSize = 0;");
             }
 
+            foreach (var typeParameter in typeParamList)
+            {
+                var genericParamName = typeParameter.Identifier.Text;
+                
+                var genParamDefVar = $"{typeVar}_{genericParamName}";
+                exps.Add($"var {genParamDefVar} = new Mono.Cecil.GenericParameter(\"{genericParamName}\", {typeVar});");
+                context.DefinitionVariables.RegisterNonMethod(string.Empty, genericParamName, MemberKind.Type, genParamDefVar);
+                exps.Add($"{typeVar}.GenericParameters.Add({genParamDefVar});");    
+            }
+            
             return exps;
         }
 
