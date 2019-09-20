@@ -50,7 +50,7 @@ namespace Cecilifier.Core.Extensions
             return to + " | " + modifier;
         }
 
-        public static string AsCecilApplication(this string cecilSnipet)
+        public static string AsCecilApplication(this string cecilSnippet)
         {
             return string.Format(
                 @"using Mono.Cecil;
@@ -62,15 +62,15 @@ using BindingFlags = System.Reflection.BindingFlags;
 
 using Cecilifier.Runtime;
                
-public class SnipetRunner
+public class SnippetRunner
 {{
 	public static void Main(string[] args)
 	{{
-		var assembly = AssemblyDefinition.CreateAssembly(new AssemblyNameDefinition(""name"", Version.Parse(""1.0.0.0"")), ""moduleName"", ModuleKind.Console);
-		{0}
+		var assembly = AssemblyDefinition.CreateAssembly(new AssemblyNameDefinition(""name"", Version.Parse(""1.0.0.0"")), ""moduleName"", ModuleKind.Dll);
+{0}
 		assembly.Write(args[0]);                              
 	}}
-}}", cecilSnipet);
+}}", cecilSnippet);
         }
 
         public static IMethodSymbol FindLastDefinition(this IMethodSymbol self)

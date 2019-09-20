@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
@@ -19,9 +19,6 @@ namespace Cecilifier.Core.AST
 
         public override void VisitConstructorDeclaration(ConstructorDeclarationSyntax node)
         {
-            //TODO: Why return for parameterless ctors ???
-            //if (node.ParameterList.Parameters.Count == 0) return;
-
             if (node.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword)))
             {
                 HandleStaticConstructor(node);

@@ -105,27 +105,6 @@ namespace Cecilifier.Core.Misc
             return exps;
         }
 
-        /*
- * cecil expressions for:
- * - Find out the ctor to be used
- * -
- *
- *  node.AttributeLists[0].Attributes[0].ArgumentList.Arguments[0]
- * 
- *			                                           attr.Name							 attr.ArgumentList.Arguments { Expression }  (NameEquals == null ??)
- *                                                 ----------------                          ---------------------------       
- * 
- *  var ctor = a.MainModule.ImportReference(typeof(ObsoleteAttribute).GetConstructor(new[] { typeof(string), typeof(bool) }));
- *  var customAttribute = new CustomAttribute(ctor);
- *
- *    																	Symbol(attr.argument.Expression)
- *                                                                       ==============================
- *  customAttribute.ConstructorArguments.Add(new CustomAttributeArgument(a.MainModule.TypeSystem.String, "EU sou a lenda"));
- *  customAttribute.ConstructorArguments.Add(new CustomAttributeArgument(a.MainModule.TypeSystem.Boolean, true));
- *  customAttribute.Properties.Add(new CustomAttributeNamedArgument("IsError", new CustomAttributeArgument(a.MainModule.TypeSystem.Boolean, true)));
- *  t.CustomAttributes.Add(customAttribute);
- * 
- */
         public static IEnumerable<string> Attribute(string typeVar, IVisitorContext context, AttributeSyntax attribute, Func<ITypeSymbol, AttributeArgumentSyntax[], string> ctorResolver)
         {
             var exps = new List<string>();
