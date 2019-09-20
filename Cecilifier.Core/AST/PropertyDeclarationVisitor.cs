@@ -5,6 +5,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Mono.Cecil.Cil;
+using static Cecilifier.Core.Misc.Utils;
 
 namespace Cecilifier.Core.AST
 {
@@ -48,7 +49,7 @@ namespace Cecilifier.Core.AST
             var customAttrVar = TempLocalVar("customAttr");
             var exps = new[]
             {
-                $"var {ctorVar} = assembly.MainModule.ImportReference(typeof(System.Reflection.DefaultMemberAttribute).GetConstructor(new Type[] {{ typeof(string) }}));",
+                $"var {ctorVar} = {ImportFromMainModule("typeof(System.Reflection.DefaultMemberAttribute).GetConstructor(new Type[] { typeof(string) })")};",
                 $"var {customAttrVar} = new CustomAttribute({ctorVar});",
                 $"{customAttrVar}.ConstructorArguments.Add(new CustomAttributeArgument({ResolvePredefinedType("String")}, \"{value}\"));",
                 $"{definitionVar}.CustomAttributes.Add({customAttrVar});"

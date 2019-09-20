@@ -3,6 +3,7 @@ using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using static Cecilifier.Core.Misc.Utils;
 
 namespace Cecilifier.Core.AST
 {
@@ -28,7 +29,7 @@ namespace Cecilifier.Core.AST
                     {
                         //attribute is not declared in the same assembly....
                         var ctorArgumentTypes = $"new Type[{attrArgs.Length}] {{ {string.Join(",", attrArgs.Select(arg => $"typeof({Context.GetTypeInfo(arg.Expression).Type.Name})"))} }}";
-                        return $"assembly.MainModule.ImportReference(typeof({attrType.FullyQualifiedName()}).GetConstructor({ctorArgumentTypes}))";
+                        return ImportFromMainModule($"typeof({attrType.FullyQualifiedName()}).GetConstructor({ctorArgumentTypes})");
                     }
 
                     // Attribute is defined in the same assembly. We need to find the variable that holds its "ctor declaration"
