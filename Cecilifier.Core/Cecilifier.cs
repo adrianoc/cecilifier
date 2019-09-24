@@ -20,7 +20,7 @@ namespace Cecilifier.Core
 
         private StringReader Run(Stream content, IList<string> references)
         {
-            var syntaxTree = CSharpSyntaxTree.ParseText(new StreamReader(content).ReadToEnd());
+            var syntaxTree = CSharpSyntaxTree.ParseText(new StreamReader(content).ReadToEnd(), new CSharpParseOptions(LanguageVersion.CSharp8));
 
             var comp = CSharpCompilation.Create(
                 "CecilifiedAssembly",

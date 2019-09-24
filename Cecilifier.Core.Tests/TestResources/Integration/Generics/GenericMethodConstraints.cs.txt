@@ -1,0 +1,18 @@
+using System;
+
+class GenericMethodConstraints
+{
+    void A<T>() where T : class  {}
+    void B<T>() where T : struct {}
+    
+    //void C<T>() where T : Enum {} //TODO: Fail with error [/tmp/CecilifierTests/Generics/GenericMethodConstraints.dll] Type Microsoft.CodeAnalysis.EmbeddedAttribute could not be found.
+    //void D<T>() where T : notnull {}
+    void E<T>() where T : unmanaged {}
+    
+    void F<T>() where T : new() {}
+    void G<T,S>() where T : S {}
+    void H<T>() where T : struct, IDisposable  {} // Multiple constraints
+    void I<T>() where T : IDisposable  {}
+    void J<T>() where T : IEquatable<T> {}
+    void K<T>() where T : IEquatable<int> {}
+}

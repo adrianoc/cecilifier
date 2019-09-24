@@ -45,12 +45,30 @@ namespace Cecilifier.Core.AST
             var opCode = (method.IsStatic || method.IsDefinedInCurrentType(Context) && isAccessOnThisOrObjectCreation || method.ContainingType.IsValueType) && !(method.IsVirtual || method.IsAbstract)
                 ? OpCodes.Call
                 : OpCodes.Callvirt;
+            
             if (method.IsStatic)
             {
                 opCode = OpCodes.Call;
             }
-
-            AddCilInstruction(ilVar, opCode, method.MethodResolverExpression(Context));
+            
+            if (method.IsGenericMethod && method.IsDefinedInCurrentType(Context))
+            {
+                // if the method in question is a generic method and it is defined in the same assembly create a generic instance
+                var resolvedMethodVar = TempLocalVar($"resolved_{method.Name}");
+                var m1 = $"var {resolvedMethodVar} = {method.MethodResolverExpression(Context)};";
+                
+                var genInstVar = TempLocalVar($"genInst_{method.Arity}_{method.Name}");
+                var m = $"var {genInstVar} = new GenericInstanceMethod({resolvedMethodVar});";
+                AddCecilExpression(m1);
+                AddCecilExpression(m);
+                for(int i = 0; i < method.TypeArguments.Length; i++)
+                    AddCecilExpression($"{genInstVar}.GenericArguments.Add({resolvedMethodVar}.GenericParameters[{i}]);");
+                AddCilInstruction(ilVar, opCode, genInstVar);
+            }
+            else
+            {
+                AddCilInstruction(ilVar, opCode, method.MethodResolverExpression(Context));
+            }
         }
 
         protected void AddCilInstruction(string ilVar, OpCode opCode, ITypeSymbol type)

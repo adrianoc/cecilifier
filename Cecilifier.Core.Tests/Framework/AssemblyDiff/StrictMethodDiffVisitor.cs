@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Mono.Collections.Generic;
@@ -64,6 +66,25 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
         public void VisitDuplication(MethodDefinition method)
         {
             output.WriteLine("Duplicated method found: {0}.", method.FullName);
+        }
+
+        public bool VisitGenerics(MethodDefinition source, MethodDefinition target)
+        {
+            if (source.GenericParameters.Count != target.GenericParameters.Count)
+            {
+                output.Write($"[{source.FullName}] Mismatch in generic parameters.\n\t{ToString(source.GenericParameters)} : {source.Module.FileName}\n\t{ToString(target.GenericParameters)}: {target.Module.FileName}");
+                return false;
+            }
+            
+            return true;
+
+            string ToString(IEnumerable<GenericParameter> genericParameters)
+            {
+                if (!genericParameters.Any())
+                    return "None";
+                
+                return string.Join(',', genericParameters.Select(gp => gp.Name));
+            }
         }
 
         private string FormatLocalVariables(Collection<VariableDefinition> variables)

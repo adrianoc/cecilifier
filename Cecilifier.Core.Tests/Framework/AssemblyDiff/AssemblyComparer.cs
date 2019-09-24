@@ -71,7 +71,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                 }
             }
 
-            //TODO: Correcly handle multiple modules.
+            // We don't handle multi-module assemblies. It seems they are very rare in practice
             var sourceModule = first.MainModule;
             var targetModule = second.MainModule;
 
@@ -286,6 +286,11 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                     }
                 }
 
+                if (!memberVisitor.VisitGenerics(sourceMethod, targetMethod))
+                {
+                    ret = false;
+                }
+
                 if (!CheckMethodBody(memberVisitor, sourceMethod, targetMethod))
                 {
                     ret = false;
@@ -294,6 +299,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 
             return ret;
         }
+
 
         private static bool CheckMethodBody(IMethodDiffVisitor visitor, MethodDefinition source, MethodDefinition target)
         {
