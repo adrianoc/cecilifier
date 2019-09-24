@@ -11,5 +11,6 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
         bool VisitBody(MethodDefinition source, MethodDefinition target, Instruction instruction);
         void VisitLocalVariables(MethodDefinition source, MethodDefinition target);
         void VisitDuplication(MethodDefinition method);
+        bool VisitGenerics(MethodDefinition source, MethodDefinition target);
     }
 }

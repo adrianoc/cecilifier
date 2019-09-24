@@ -39,5 +39,18 @@ namespace Cecilifier.Core.Tests.Integration
         {
             AssertResourceTest(@"Generics/GenericTypeDefinitionWithMembers");
         }
+
+        [Test]
+        public void TestGenericMethods()
+        {
+            AssertResourceTest(@"Generics/GenericMethods");
+        }
+
+        [Test]
+        [Ignore("Not working")]
+        public void TestGenericMethodConstraints()
+        {
+            AssertResourceTest(@"Generics/GenericMethodConstraints");
+        }
     }
 }

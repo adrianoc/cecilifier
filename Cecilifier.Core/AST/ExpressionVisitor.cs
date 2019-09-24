@@ -291,52 +291,52 @@ namespace Cecilifier.Core.AST
 
         public override void VisitMakeRefExpression(MakeRefExpressionSyntax node)
         {
-            WriteLine("[{0}] : {1}", new StackFrame().GetMethod().Name, node);
+            LogUnsupportedSyntax(node);
         }
 
         public override void VisitRefTypeExpression(RefTypeExpressionSyntax node)
         {
-            WriteLine("[{0}] : {1}", new StackFrame().GetMethod().Name, node);
+            LogUnsupportedSyntax(node);
         }
 
         public override void VisitRefValueExpression(RefValueExpressionSyntax node)
         {
-            WriteLine("[{0}] : {1}", new StackFrame().GetMethod().Name, node);
+            LogUnsupportedSyntax(node);
         }
 
         public override void VisitCheckedExpression(CheckedExpressionSyntax node)
         {
-            WriteLine("[{0}] : {1}", new StackFrame().GetMethod().Name, node);
+            LogUnsupportedSyntax(node);
         }
 
         public override void VisitDefaultExpression(DefaultExpressionSyntax node)
         {
-            WriteLine("[{0}] : {1}", new StackFrame().GetMethod().Name, node);
+            LogUnsupportedSyntax(node);
         }
 
         public override void VisitTypeOfExpression(TypeOfExpressionSyntax node)
         {
-            WriteLine("[{0}] : {1}", new StackFrame().GetMethod().Name, node);
+            LogUnsupportedSyntax(node);
         }
 
         public override void VisitSizeOfExpression(SizeOfExpressionSyntax node)
         {
-            WriteLine("[{0}] : {1}", new StackFrame().GetMethod().Name, node);
+            LogUnsupportedSyntax(node);
         }
 
         public override void VisitElementAccessExpression(ElementAccessExpressionSyntax node)
         {
-            WriteLine("[{0}] : {1}", new StackFrame().GetMethod().Name, node);
+            LogUnsupportedSyntax(node);
         }
 
         public override void VisitCastExpression(CastExpressionSyntax node)
         {
-            WriteLine("[{0}] : {1}", new StackFrame().GetMethod().Name, node);
+            LogUnsupportedSyntax(node);
         }
 
         public override void VisitInitializerExpression(InitializerExpressionSyntax node)
         {
-            WriteLine("[{0}] : {1}", new StackFrame().GetMethod().Name, node);
+            LogUnsupportedSyntax(node);
         }
 
         public override void VisitObjectCreationExpression(ObjectCreationExpressionSyntax node)
@@ -350,7 +350,7 @@ namespace Cecilifier.Core.AST
                 return;
             }
 
-            EnsureMethodAvailable(method);
+            EnsureMethodAvailable(method, Array.Empty<TypeParameterSyntax>());
 
             AddCilInstruction(ilVar, OpCodes.Newobj, method.MethodResolverExpression(Context));
             PushCall();
@@ -434,7 +434,18 @@ namespace Cecilifier.Core.AST
             throw new Exception($"Element type {type.Name} not supported.");
         }
 
-        private void EnsureMethodAvailable(IMethodSymbol method)
+        /*
+         * Support for scenario in which a method is being referenced before it has been declared. This can happen for instance in code like:
+         *
+         * class C
+         * {
+         *     void Foo() { Bar(); }
+         *     void Bar() {}
+         * }
+         *
+         * In this case when the first reference to Bar() is found (in method Foo()) the method itself has not been defined yet.
+         */
+        private void EnsureMethodAvailable(IMethodSymbol method, TypeParameterSyntax[] typeParameters)
         {
             if (!method.IsDefinedInCurrentType(Context))
             {
@@ -449,7 +460,7 @@ namespace Cecilifier.Core.AST
 
             //TODO: Try to reuse SyntaxWalkerBase.ResolveType(TypeSyntax)
             var returnType = ResolveTypeLocalVariable(method.ReturnType.Name) ?? ResolvePredefinedType(method.ReturnType);
-            MethodDeclarationVisitor.AddMethodDefinition(Context, varName, method.Name, "MethodAttributes.Private", returnType);
+            MethodDeclarationVisitor.AddMethodDefinition(Context, varName, method.Name, "MethodAttributes.Private", returnType, typeParameters);
             Context.DefinitionVariables.RegisterMethod(method.ContainingType.Name, method.Name, method.Parameters.Select(p => p.Type.Name).ToArray(), varName);
         }
 
@@ -520,7 +531,8 @@ namespace Cecilifier.Core.AST
                 AddCilInstruction(ilVar, OpCodes.Ldarg_0);
             }
 
-            EnsureMethodAvailable(method);
+            //TODO: We need to find the InvocationSyntax that node represents...
+            EnsureMethodAvailable(method, Array.Empty<TypeParameterSyntax>());
             var isAccessOnThis = !node.Parent.IsKind(SyntaxKind.SimpleMemberAccessExpression);
 
             var mae = node.Parent as MemberAccessExpressionSyntax;

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
@@ -29,7 +30,13 @@ namespace Cecilifier.Core.AST
 
         public override void VisitMethodDeclaration(MethodDeclarationSyntax node)
         {
-            ProcessMethodDeclaration(node, node.Identifier.ValueText, MethodNameOf(node), ResolveType(node.ReturnType), _ => base.VisitMethodDeclaration(node));
+            ProcessMethodDeclaration(
+                node, 
+                node.Identifier.ValueText, 
+                MethodNameOf(node), 
+                ResolveType(node.ReturnType), 
+                _ => base.VisitMethodDeclaration(node), 
+                node.TypeParameterList?.Parameters.ToArray());
         }
 
         public override void VisitParameter(ParameterSyntax node)
@@ -68,13 +75,14 @@ namespace Cecilifier.Core.AST
             base.VisitPropertyDeclaration(node);
         }
 
-        protected void ProcessMethodDeclaration<T>(T node, string simpleName, string fqName, string returnType, Action<string> runWithCurrent) where T : BaseMethodDeclarationSyntax
+        protected void ProcessMethodDeclaration<T>(T node, string simpleName, string fqName, string returnType, Action<string> runWithCurrent, IList<TypeParameterSyntax> typeParameters = null) where T : BaseMethodDeclarationSyntax
         {
+            typeParameters = typeParameters ?? Array.Empty<TypeParameterSyntax>();
             var declaringTypeName = DeclaringTypeNameFor(node);
 
             var methodVar = MethodExtensions.LocalVariableNameFor(declaringTypeName, simpleName, node.MangleName(Context.SemanticModel));
 
-            AddOrUpdateMethodDefinition(methodVar, fqName, node.Modifiers.MethodModifiersToCecil(ModifiersToCecil, GetSpecificModifiers(), DeclaredSymbolFor(node)), returnType);
+            AddOrUpdateMethodDefinition(methodVar, fqName, node.Modifiers.MethodModifiersToCecil(ModifiersToCecil, GetSpecificModifiers(), DeclaredSymbolFor(node)), returnType, typeParameters);
             AddCecilExpression("{0}.Methods.Add({1});", Context.DefinitionVariables.GetLastOf(MemberKind.Type).VariableName, methodVar);
 
             var isAbstract = DeclaredSymbolFor(node).IsAbstract;
@@ -99,7 +107,7 @@ namespace Cecilifier.Core.AST
             return declaringType.Identifier.ValueText;
         }
 
-        private void AddOrUpdateMethodDefinition(string methodVar, string fqName, string methodModifiers, string returnType)
+        private void AddOrUpdateMethodDefinition(string methodVar, string fqName, string methodModifiers, string returnType, IList<TypeParameterSyntax> typeParameters)
         {
             if (Context.Contains(methodVar))
             {
@@ -108,14 +116,25 @@ namespace Cecilifier.Core.AST
             }
             else
             {
-                AddMethodDefinition(Context, methodVar, fqName, methodModifiers, returnType);
+                AddMethodDefinition(Context, methodVar, fqName, methodModifiers, returnType, typeParameters);
             }
         }
 
-        public static void AddMethodDefinition(IVisitorContext context, string methodVar, string fqName, string methodModifiers, string returnType)
+        public static void AddMethodDefinition(IVisitorContext context, string methodVar, string fqName, string methodModifiers, string returnType, IList<TypeParameterSyntax> typeParameters)
         {
             context.WriteCecilExpression($"var {methodVar} = new MethodDefinition(\"{fqName}\", {methodModifiers}, {returnType});\r\n");
             context[methodVar] = "";
+
+            //TODO: Remove code duplication from CecilDefinitionFactory.Type() method.
+            foreach (var typeParameter in typeParameters)
+            {
+                var genericParamName = typeParameter.Identifier.Text;
+                
+                var genParamDefVar = $"{methodVar}_{genericParamName}";
+                context.WriteCecilExpression($"var {genParamDefVar} = new Mono.Cecil.GenericParameter(\"{genericParamName}\", {methodVar});");
+                context.DefinitionVariables.RegisterNonMethod(string.Empty, genericParamName, MemberKind.Type, genParamDefVar);
+                context.WriteCecilExpression($"{methodVar}.GenericParameters.Add({genParamDefVar});");    
+            }
         }
 
         protected virtual string GetSpecificModifiers()
