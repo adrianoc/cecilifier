@@ -2,7 +2,7 @@
 
 namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 {
-    internal interface IFieldDiffVisitor : IMemberDiffVisitor
+    public interface IFieldDiffVisitor : IMemberDiffVisitor
     {
         bool VisitFieldType(FieldDefinition source, FieldDefinition target);
         bool VisitAttributes(FieldDefinition source, FieldDefinition target);

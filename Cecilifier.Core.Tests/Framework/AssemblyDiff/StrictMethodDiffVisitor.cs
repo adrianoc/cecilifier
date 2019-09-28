@@ -1,19 +1,14 @@
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Mono.Collections.Generic;
 
 namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 {
-    internal class StrictMethodDiffVisitor : IMethodDiffVisitor
+    internal class StrictMethodDiffVisitor : BaseStrictDiffVisitor, IMethodDiffVisitor
     {
-        private readonly TextWriter output;
-
-        public StrictMethodDiffVisitor(TextWriter output)
+        public StrictMethodDiffVisitor(TextWriter output) : base(output)
         {
-            this.output = output;
         }
 
         public bool VisitMissing(IMemberDefinition member, TypeDefinition target)
@@ -70,21 +65,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 
         public bool VisitGenerics(MethodDefinition source, MethodDefinition target)
         {
-            if (source.GenericParameters.Count != target.GenericParameters.Count)
-            {
-                output.Write($"[{source.FullName}] Mismatch in generic parameters.\n\t{ToString(source.GenericParameters)} : {source.Module.FileName}\n\t{ToString(target.GenericParameters)}: {target.Module.FileName}");
-                return false;
-            }
-            
-            return true;
-
-            string ToString(IEnumerable<GenericParameter> genericParameters)
-            {
-                if (!genericParameters.Any())
-                    return "None";
-                
-                return string.Join(',', genericParameters.Select(gp => gp.Name));
-            }
+            return ValidateGenericParameters(source.GenericParameters, target.GenericParameters, source.Module.FileName, target.Module.FileName);
         }
 
         private string FormatLocalVariables(Collection<VariableDefinition> variables)

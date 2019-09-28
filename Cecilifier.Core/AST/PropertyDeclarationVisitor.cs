@@ -51,7 +51,7 @@ namespace Cecilifier.Core.AST
             {
                 $"var {ctorVar} = {ImportFromMainModule("typeof(System.Reflection.DefaultMemberAttribute).GetConstructor(new Type[] { typeof(string) })")};",
                 $"var {customAttrVar} = new CustomAttribute({ctorVar});",
-                $"{customAttrVar}.ConstructorArguments.Add(new CustomAttributeArgument({ResolvePredefinedType("String")}, \"{value}\"));",
+                $"{customAttrVar}.ConstructorArguments.Add(new CustomAttributeArgument({Context.TypeResolver.ResolvePredefinedType("String")}, \"{value}\"));",
                 $"{definitionVar}.CustomAttributes.Add({customAttrVar});"
             };
 
@@ -119,7 +119,7 @@ namespace Cecilifier.Core.AST
                         Context.DefinitionVariables.RegisterMethod(declaringType.Identifier.Text, $"set_{propName}", localParams.ToArray(), setMethodVar);
                         var ilSetVar = TempLocalVar("ilVar_set_");
 
-                        AddCecilExpression($"var {setMethodVar} = new MethodDefinition(\"set_{propName}\", {accessorModifiers}, {ResolvePredefinedType("Void")});");
+                        AddCecilExpression($"var {setMethodVar} = new MethodDefinition(\"set_{propName}\", {accessorModifiers}, {Context.TypeResolver.ResolvePredefinedType("Void")});");
                         parameters.ForEach(paramVar => AddCecilExpression($"{setMethodVar}.Parameters.Add({paramVar});"));
                         AddCecilExpression($"{propertyDeclaringTypeVar}.Methods.Add({setMethodVar});");
 

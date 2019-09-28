@@ -59,7 +59,7 @@ namespace Cecilifier.Core.AST
                 typeVar, 
                 node.Identifier.ValueText, 
                 DefaultTypeAttributeFor(node).AppendModifier(accessibility), 
-                ResolveType("System.MulticastDelegate"), 
+                Context.TypeResolver.Resolve("System.MulticastDelegate"), 
                 false,
                 Array.Empty<string>(),
                 node.TypeParameterList, 
@@ -72,8 +72,8 @@ namespace Cecilifier.Core.AST
                 // Delegate ctor
                 AddCecilExpression(CecilDefinitionsFactory.Constructor(Context, out var ctorLocalVar, node.Identifier.Text, "MethodAttributes.FamANDAssem | MethodAttributes.Family",
                     new[] {"System.Object", "System.IntPtr"}, "IsRuntime = true"));
-                AddCecilExpression($"{ctorLocalVar}.Parameters.Add(new ParameterDefinition({ResolvePredefinedType("Object")}));");
-                AddCecilExpression($"{ctorLocalVar}.Parameters.Add(new ParameterDefinition({ResolvePredefinedType("IntPtr")}));");
+                AddCecilExpression($"{ctorLocalVar}.Parameters.Add(new ParameterDefinition({Context.TypeResolver.ResolvePredefinedType("Object")}));");
+                AddCecilExpression($"{ctorLocalVar}.Parameters.Add(new ParameterDefinition({Context.TypeResolver.ResolvePredefinedType("IntPtr")}));");
                 AddCecilExpression($"{typeVar}.Methods.Add({ctorLocalVar});");
 
                 AddDelegateMethod(typeVar, "Invoke", ResolveType(node.ReturnType), node.ParameterList.Parameters,
@@ -82,7 +82,7 @@ namespace Cecilifier.Core.AST
                 // BeginInvoke() method
                 var beginInvokeMethodVar = TempLocalVar("beginInvoke");
                 AddCecilExpression(
-                    $@"var {beginInvokeMethodVar} = new MethodDefinition(""BeginInvoke"", MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.NewSlot | MethodAttributes.Virtual, {ResolveType("System.IAsyncResult")})
+                    $@"var {beginInvokeMethodVar} = new MethodDefinition(""BeginInvoke"", MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.NewSlot | MethodAttributes.Virtual, {Context.TypeResolver.Resolve("System.IAsyncResult")})
 					{{
 						HasThis = true,
 						IsRuntime = true,
@@ -94,12 +94,12 @@ namespace Cecilifier.Core.AST
                     AddCecilExpressions(paramExps);
                 }
 
-                AddCecilExpression($"{beginInvokeMethodVar}.Parameters.Add(new ParameterDefinition({ResolveType("System.AsyncCallback")}));");
-                AddCecilExpression($"{beginInvokeMethodVar}.Parameters.Add(new ParameterDefinition({ResolvePredefinedType("Object")}));");
+                AddCecilExpression($"{beginInvokeMethodVar}.Parameters.Add(new ParameterDefinition({Context.TypeResolver.Resolve("System.AsyncCallback")}));");
+                AddCecilExpression($"{beginInvokeMethodVar}.Parameters.Add(new ParameterDefinition({Context.TypeResolver.ResolvePredefinedType("Object")}));");
                 AddCecilExpression($"{typeVar}.Methods.Add({beginInvokeMethodVar});");
 
                 AddDelegateMethod(typeVar, "EndInvoke", ResolveType(node.ReturnType), node.ParameterList.Parameters,
-                    (methodVar, param) => CecilDefinitionsFactory.Parameter(param, Context.SemanticModel, methodVar, TempLocalVar("ar"), ResolveType("System.IAsyncResult")));
+                    (methodVar, param) => CecilDefinitionsFactory.Parameter(param, Context.SemanticModel, methodVar, TempLocalVar("ar"), Context.TypeResolver.Resolve("System.IAsyncResult")));
 
                 base.VisitDelegateDeclaration(node);
             }

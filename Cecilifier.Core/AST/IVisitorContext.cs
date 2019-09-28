@@ -294,5 +294,19 @@ namespace Cecilifier.Core.AST
 
         event Action<string> InstructionAdded;
         void TriggerInstructionAdded(string instVar);
+        
+        ITypeResolver TypeResolver { get; }
+    }
+
+    internal interface ITypeResolver
+    {
+        string Resolve(ITypeSymbol type);
+        string Resolve(string typeName);
+        
+        string ResolvePredefinedType(string typeName);
+        string ResolvePredefinedType(ITypeSymbol type);
+        string ResolvePredefinedAndComposedTypes(ITypeSymbol type);
+        string ResolveGenericType(ITypeSymbol type);
+        string ResolveTypeLocalVariable(string typeName);
     }
 }

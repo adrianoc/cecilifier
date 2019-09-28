@@ -73,7 +73,7 @@ namespace Cecilifier.Core.AST
 
         protected void AddCilInstruction(string ilVar, OpCode opCode, ITypeSymbol type)
         {
-            AddCilInstruction(ilVar, opCode, ResolveType(type));
+            AddCilInstruction(ilVar, opCode, Context.TypeResolver.Resolve(type));
         }
 
         protected void InsertCilInstructionAfter<T>(LinkedListNode<string> instruction, string ilVar, OpCode opCode, T arg = default)
@@ -247,11 +247,6 @@ namespace Cecilifier.Core.AST
             return token.Kind() != SyntaxKind.PartialKeyword && token.Kind() != SyntaxKind.VolatileKeyword;
         }
 
-        protected string ResolveTypeLocalVariable(string typeName)
-        {
-            return Context.DefinitionVariables.GetVariable(typeName, MemberKind.Type).VariableName;
-        }
-
         protected string ResolveExpressionType(ExpressionSyntax expression)
         {
             if (expression == null)
@@ -260,20 +255,12 @@ namespace Cecilifier.Core.AST
             }
 
             var info = Context.GetTypeInfo(expression);
-            return ResolveType(info.Type.FullyQualifiedName());
-        }
-
-        protected string ResolveType(ITypeSymbol type)
-        {
-            return ResolveTypeLocalVariable(type.Name)
-                   ?? ResolvePredefinedAndArrayTypes(type)
-                   ?? ResolveGenericType(type)
-                   ?? ResolveType(type.Name);
+            return Context.TypeResolver.Resolve(info.Type.FullyQualifiedName());
         }
 
         protected string ResolveType(TypeSyntax type)
         {
-            return ResolveTypeLocalVariable(type.ToString())
+            return Context.TypeResolver.ResolveTypeLocalVariable(type.ToString())
                    ?? ResolvePredefinedAndArrayTypes(type)
                    ?? ResolvePlainOrGenericType(type);
         }
@@ -283,77 +270,21 @@ namespace Cecilifier.Core.AST
             if (type is GenericNameSyntax genType)
             {
                 var typeInfo = Context.GetTypeInfo(genType);
-                return ResolveGenericType(typeInfo.Type);
+                return Context.TypeResolver.ResolveGenericType(typeInfo.Type);
             }
 
-            return ResolveType(type.ToString());
-        }
-
-        private string ResolveGenericType(ITypeSymbol type)
-        {
-            var genericTypeSymbol = type as INamedTypeSymbol;
-            if (genericTypeSymbol == null)
-            {
-                return null;
-            }
-
-            var genericType = ResolveType(OpenGenericTypeName(genericTypeSymbol.ConstructedFrom));
-            var args = string.Join(",", genericTypeSymbol.TypeArguments.Select(a => ResolveType(a)));
-            return $"{genericType}.MakeGenericInstanceType({args})";
-        }
-
-        private string OpenGenericTypeName(ITypeSymbol type)
-        {
-            var genericTypeWithTypeParameters = type.ToString();
-
-            var genOpenBraceIndex = genericTypeWithTypeParameters.IndexOf('<');
-            var genCloseBraceIndex = genericTypeWithTypeParameters.LastIndexOf('>');
-
-            var nts = (INamedTypeSymbol) type;
-            var commas = new string(',', nts.TypeParameters.Length - 1);
-            return genericTypeWithTypeParameters.Remove(genOpenBraceIndex + 1, genCloseBraceIndex - genOpenBraceIndex - 1).Insert(genOpenBraceIndex + 1, commas);
-        }
-
-        private string ResolvePredefinedAndArrayTypes(ITypeSymbol type)
-        {
-            if (type.SpecialType == SpecialType.None)
-            {
-                return null;
-            }
-
-            if (type.SpecialType == SpecialType.System_Array)
-            {
-                var ats = (IArrayTypeSymbol) type;
-                return "new ArrayType(" + ResolveType(ats.ElementType) + ")";
-            }
-
-            return ResolvePredefinedType(type.Name);
+            return Context.TypeResolver.Resolve(type.ToString());
         }
 
         private string ResolvePredefinedAndArrayTypes(TypeSyntax type)
         {
             switch (type.Kind())
             {
-                case SyntaxKind.PredefinedType: return ResolvePredefinedType(Context.GetTypeInfo(type).Type.Name);
+                case SyntaxKind.PredefinedType: return Context.TypeResolver.ResolvePredefinedType(Context.GetTypeInfo(type).Type.Name);
                 case SyntaxKind.ArrayType: return "new ArrayType(" + ResolveType(type.DescendantNodes().OfType<TypeSyntax>().Single()) + ")";
             }
 
             return null;
-        }
-
-        protected string ResolvePredefinedType(ITypeSymbol type)
-        {
-            return ResolvePredefinedType(type.Name);
-        }
-
-        protected string ResolvePredefinedType(string typeName)
-        {
-            return "assembly.MainModule.TypeSystem." + typeName;
-        }
-
-        protected string ResolveType(string typeName)
-        {
-            return ImportExpressionForType(typeName);
         }
 
         protected INamedTypeSymbol GetSpecialType(SpecialType specialType)
@@ -398,7 +329,7 @@ namespace Cecilifier.Core.AST
                 return;
             }
 
-            var localDelegateDeclaration = ResolveTypeLocalVariable(typeSymbol.Name);
+            var localDelegateDeclaration = Context.TypeResolver.ResolveTypeLocalVariable(typeSymbol.Name);
             if (localDelegateDeclaration != null)
             {
                 AddCilInstruction(ilVar, OpCodes.Callvirt, $"{localDelegateDeclaration}.Methods.Single(m => m.Name == \"Invoke\")");

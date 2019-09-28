@@ -3,7 +3,7 @@ using Mono.Cecil.Cil;
 
 namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 {
-    internal interface IMethodDiffVisitor : IMemberDiffVisitor
+    public interface IMethodDiffVisitor : IMemberDiffVisitor
     {
         bool VisitReturnType(MethodDefinition source, MethodDefinition target);
         bool VisitAttributes(MethodDefinition source, MethodDefinition target);

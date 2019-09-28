@@ -2,7 +2,7 @@
 
 namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 {
-    internal interface IMemberDiffVisitor
+    public interface IMemberDiffVisitor
     {
         bool VisitMissing(IMemberDefinition member, TypeDefinition target);
         bool VisitName(IMemberDefinition source, IMemberDefinition target);

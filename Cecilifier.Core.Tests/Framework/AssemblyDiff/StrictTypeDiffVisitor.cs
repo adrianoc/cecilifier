@@ -3,13 +3,10 @@ using Mono.Cecil;
 
 namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 {
-    internal class StrictTypeDiffVisitor : ITypeDiffVisitor
+    internal class StrictTypeDiffVisitor : BaseStrictDiffVisitor, ITypeDiffVisitor
     {
-        private readonly TextWriter output;
-
-        public StrictTypeDiffVisitor(TextWriter output)
+        public StrictTypeDiffVisitor(TextWriter output) : base(output)
         {
-            this.output = output;
         }
 
         public bool VisitAttributes(TypeDefinition source, TypeDefinition target)
@@ -34,6 +31,11 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
         {
             output.WriteLine("[{0}] Custom attributes differs for types {0} and {1}", target.FullName, target.FullName);
             return false;
+        }
+
+        public bool VisitGenerics(TypeDefinition source, TypeDefinition target)
+        {
+            return ValidateGenericParameters(source.GenericParameters, target.GenericParameters, source.Module.FileName, target.Module.FileName);
         }
 
         public IFieldDiffVisitor VisitMember(FieldDefinition field)

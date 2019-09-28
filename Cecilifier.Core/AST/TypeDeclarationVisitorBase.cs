@@ -24,7 +24,7 @@ namespace Cecilifier.Core.AST
             {
                 var attrsExp = CecilDefinitionsFactory.Attribute(varName, Context, attribute, (attrType, attrArgs) =>
                 {
-                    var typeVar = ResolveTypeLocalVariable(attrType.Name);
+                    var typeVar = Context.TypeResolver.ResolveTypeLocalVariable(attrType.Name);
                     if (typeVar == null)
                     {
                         //attribute is not declared in the same assembly....

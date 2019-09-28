@@ -1,0 +1,15 @@
+using System;
+
+class GenericTypeConstraints<A,B,C,D,E,F,G,H,I,J> 
+        where A : class 
+        where B : struct 
+        where C : new() 
+        where D : A
+        where E : struct, IDisposable
+        where F : IEquatable<F>
+        where G : IEquatable<string>
+        where H : Enum //TODO: Fail with error [/tmp/CecilifierTests/Generics/GenericMethodConstraints.dll] Type Microsoft.CodeAnalysis.EmbeddedAttribute could not be found.
+        where I : notnull
+        where J : unmanaged // TODO: Roslyn compilation emits Microsoft.CodeAnalysis.EmbeddedAttribute & System.Runtime.CompilerServices.IsUnmanagedAttribute
+{
+}

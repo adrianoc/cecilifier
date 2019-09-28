@@ -49,6 +49,11 @@ namespace Cecilifier.Core.Tests.Framework
 
         protected void AssertResourceTest(string resourceName, TestKind kind)
         {
+            AssertResourceTest(resourceName, kind, new StrictAssemblyDiffVisitor());
+        }
+        
+        internal void AssertResourceTest(string resourceName, TestKind kind, IAssemblyDiffVisitor visitor)
+        {
             using (var tbc = ReadResource(resourceName, "cs", kind))
             {
                 var cecilifierTestsFolder = Path.Combine(Path.GetTempPath(), "CecilifierTests");
@@ -63,14 +68,19 @@ namespace Cecilifier.Core.Tests.Framework
                 Console.WriteLine("Compiled from res        : {0}", resourceCompiledAssemblyPath);
                 Console.WriteLine("Generated from Cecilifier: {0}", cecilifiedAssemblyPath);
 
-                AssertResourceTest(cecilifiedAssemblyPath, resourceCompiledAssemblyPath, tbc);
+                AssertResourceTest(cecilifiedAssemblyPath, resourceCompiledAssemblyPath, tbc, visitor);
             }
         }
 
-        private void AssertResourceTest(string actualAssemblyPath, string expectedAssemblyPath, Stream tbc)
+        private void AssertResourceTest(string actualAssemblyPath, string expectedAssemblyPath, Stream tbc, IAssemblyDiffVisitor visitor)
         {
             CecilifyAndExecute(tbc, actualAssemblyPath);
-            CompareAssemblies(expectedAssemblyPath, actualAssemblyPath);
+            CompareAssemblies(expectedAssemblyPath, actualAssemblyPath, visitor);
+        }
+        
+        private void AssertResourceTest(string actualAssemblyPath, string expectedAssemblyPath, Stream tbc)
+        {
+            AssertResourceTest(actualAssemblyPath, expectedAssemblyPath, tbc, new StrictAssemblyDiffVisitor());
         }
 
         private void AssertResourceTestWithExplicitExpectedIL(string actualAssemblyPath, string expectedIL, string methodSignature, Stream tbc)
@@ -146,18 +156,21 @@ namespace Cecilifier.Core.Tests.Framework
             return new StreamReader(tbc).ReadToEnd();
         }
 
-        private void CompareAssemblies(string expectedAssemblyPath, string actualAssemblyPath)
+        private void CompareAssemblies(string expectedAssemblyPath, string actualAssemblyPath, IAssemblyDiffVisitor visitor)
         {
             var comparer = new AssemblyComparer(expectedAssemblyPath, actualAssemblyPath);
-            var visitor = new StrictAssemblyDiffVisitor();
             if (!comparer.Compare(visitor))
             {
-                Assert.Fail("Expected and generated assemblies differs:\r\n\tExpected:  {0}\r\n\tGenerated: {1}\r\n\r\n{2}\r\n\r\nCecilified Code:\r\n{3}", comparer.First, comparer.Second, visitor.Reason,
-                    cecilifiedCode);
+                Assert.Fail("Expected and generated assemblies differs:\r\n\tExpected:  {0}\r\n\tGenerated: {1}\r\n\r\n{2}\r\n\r\nCecilified Code:\r\n{3}", comparer.First, comparer.Second, visitor.Reason, cecilifiedCode);
             }
         }
+        
+        private void CompareAssemblies(string expectedAssemblyPath, string actualAssemblyPath)
+        {
+            CompareAssemblies(expectedAssemblyPath, actualAssemblyPath, new StrictAssemblyDiffVisitor());
+        }
 
-        protected Stream ReadResource(string resourceName, string type, TestKind kind)
+        private Stream ReadResource(string resourceName, string type, TestKind kind)
         {
             return ReadResource(resourceName.GetPathOfTextResource(type, kind));
         }

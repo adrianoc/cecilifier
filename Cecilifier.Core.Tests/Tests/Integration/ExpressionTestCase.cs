@@ -44,7 +44,7 @@ namespace Cecilifier.Core.Tests.Integration
         [Test]
         public void TestAdd2()
         {
-            AssertResourceTest(@"Expressions/Operators/Add2");
+            AssertResourceTestWithExplictExpectation(@"Expressions/Operators/Add2", "System.Void AddOperations2::IntegerString(System.String,System.Int32)");
         }
 
         [Test]
