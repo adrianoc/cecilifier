@@ -70,7 +70,7 @@ namespace Cecilifier.Core.AST
             var classSymbol = DeclaredSymbolFor(classDeclaration);
             var baseTypeName = classSymbol.BaseType.Name;
 
-            return ResolveTypeLocalVariable(baseTypeName) ?? ResolveType(baseTypeName);
+            return Context.TypeResolver.ResolveTypeLocalVariable(baseTypeName) ?? Context.TypeResolver.Resolve(baseTypeName);
         }
 
         private IEnumerable<string> ImplementedInterfacesFor(BaseListSyntax bases)
@@ -112,7 +112,7 @@ namespace Cecilifier.Core.AST
                                             TypeModifiersToCecil(node), 
                                             baseType, 
                                             isStructWithNoFields, 
-                                            ImplementedInterfacesFor(node.BaseList).Select(i => ResolveType(i)),
+                                            ImplementedInterfacesFor(node.BaseList).Select(i => Context.TypeResolver.Resolve(i)),
                                             node.TypeParameterList);
             
             AddCecilExpressions(typeDefinitionExp);

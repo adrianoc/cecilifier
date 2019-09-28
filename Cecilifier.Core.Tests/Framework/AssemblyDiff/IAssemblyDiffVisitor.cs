@@ -6,5 +6,6 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
     {
         bool VisitModules(AssemblyDefinition source, AssemblyDefinition target);
         ITypeDiffVisitor VisitType(TypeDefinition sourceType);
+        string Reason { get; }
     }
 }

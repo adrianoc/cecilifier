@@ -459,7 +459,7 @@ namespace Cecilifier.Core.AST
             }
 
             //TODO: Try to reuse SyntaxWalkerBase.ResolveType(TypeSyntax)
-            var returnType = ResolveTypeLocalVariable(method.ReturnType.Name) ?? ResolvePredefinedType(method.ReturnType);
+            var returnType = Context.TypeResolver.ResolveTypeLocalVariable(method.ReturnType.Name) ?? Context.TypeResolver.ResolvePredefinedType(method.ReturnType);
             MethodDeclarationVisitor.AddMethodDefinition(Context, varName, method.Name, "MethodAttributes.Private", returnType, typeParameters);
             Context.DefinitionVariables.RegisterMethod(method.ContainingType.Name, method.Name, method.Parameters.Select(p => p.Type.Name).ToArray(), varName);
         }
@@ -663,7 +663,7 @@ namespace Cecilifier.Core.AST
 
         private void ProcessArrayCreation(ITypeSymbol elementType, InitializerExpressionSyntax initializer)
         {
-            AddCilInstruction(ilVar, OpCodes.Newarr, ResolveType(elementType));
+            AddCilInstruction(ilVar, OpCodes.Newarr, Context.TypeResolver.Resolve(elementType));
 
             var stelemOpCode = StelemOpCodeFor(elementType);
             for (var i = 0; i < initializer?.Expressions.Count; i++)
@@ -675,7 +675,7 @@ namespace Cecilifier.Core.AST
                 var itemType = Context.GetTypeInfo(initializer.Expressions[i]);
                 if (elementType.IsReferenceType && itemType.Type != null && itemType.Type.IsValueType)
                 {
-                    AddCilInstruction(ilVar, OpCodes.Box, ResolveType(itemType.Type));
+                    AddCilInstruction(ilVar, OpCodes.Box, Context.TypeResolver.Resolve(itemType.Type));
                 }
 
                 AddCilInstruction(ilVar, stelemOpCode);

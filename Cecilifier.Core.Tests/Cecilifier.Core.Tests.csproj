@@ -18,9 +18,15 @@
     <None Update="TestResources\**">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="TestResources\Integration\Generics\GenericTypeConstraints.cs.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Compile Remove="TestResources\Integration\Expressions\Operators\Add2.cs" />
+    <Content Include="TestResources\Integration\Expressions\Operators\Add2.cs.il.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="TestResources\Integration\Expressions\Operators\Add2.cs.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

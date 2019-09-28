@@ -56,7 +56,6 @@ namespace Cecilifier.Core.Extensions
             typeParameters = Array.Empty<string>();
             return type.FullyQualifiedName();
         }
-        
     }
 
     public sealed class VariableDefinitionComparer : IEqualityComparer<VariableDefinition>

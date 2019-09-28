@@ -39,16 +39,20 @@ Supported Features
 	- Fields
 - Exception handling
 
-- Single dimentional arrays
+- Single dimensional arrays
 - Static generic methods
 
+- Generics 
+    Type definition (still missing more complex type inheritance) 
+     
 Unsupported Features
 ---
 - Generics 
-	- Type / method declarations
+	- Method declarations
 	- Type / method instantiation
 
 - Events
+- default expression
 - Enumerator methods
 - async/await
 - Newer C# syntax (expression bodied members, elvis operator, static import, to name some)
@@ -116,3 +120,7 @@ Disclaimer(s)
 - I do not claim that the generated code is suitable or even correct - I do have tests though :)
 - I have not tried to clean up the code too much, so there are some really bad code duplication
 
+Thanks
+---
+
+I'd like to thank JetBrains for donating me a [Rider](https://www.jetbrains.com/rider/) license.   

@@ -71,13 +71,46 @@ namespace Cecilifier.Core.Misc
                 var genericParamName = typeParameter.Identifier.Text;
                 
                 var genParamDefVar = $"{typeVar}_{genericParamName}";
-                exps.Add($"var {genParamDefVar} = new Mono.Cecil.GenericParameter(\"{genericParamName}\", {typeVar});");
                 context.DefinitionVariables.RegisterNonMethod(string.Empty, genericParamName, MemberKind.Type, genParamDefVar);
-                exps.Add($"{typeVar}.GenericParameters.Add({genParamDefVar});");    
+                exps.Add($"var {genParamDefVar} = new Mono.Cecil.GenericParameter(\"{genericParamName}\", {typeVar});");
+                AddConstraints(genParamDefVar, typeParameter);
+                exps.Add($"{typeVar}.GenericParameters.Add({genParamDefVar});");
             }
             
             return exps;
+            
+            void AddConstraints(string genParamDefVar, TypeParameterSyntax typeParameter)
+            {
+                var symbol = context.SemanticModel.GetDeclaredSymbol(typeParameter);
+                if (symbol.HasConstructorConstraint || symbol.HasValueTypeConstraint) // struct constraint implies new()
+                {
+                    exps.Add($"{genParamDefVar}.HasDefaultConstructorConstraint = true;");
+                }
+
+                if (symbol.HasReferenceTypeConstraint)
+                {
+                    exps.Add($"{genParamDefVar}.HasReferenceTypeConstraint = true;");
+                }
+                
+                if (symbol.HasValueTypeConstraint)
+                {
+                    var systemValueTypeRef = Utils.ImportFromMainModule("typeof(System.ValueType)");
+                    var constraintType = symbol.HasUnmanagedTypeConstraint
+                        ? $"{systemValueTypeRef}.MakeRequiredModifierType({context.TypeResolver.Resolve("System.Runtime.InteropServices.UnmanagedType")})" 
+                        : systemValueTypeRef;
+
+                    exps.Add($"{genParamDefVar}.Constraints.Add(new GenericParameterConstraint({constraintType}));");
+                    exps.Add($"{genParamDefVar}.HasNotNullableValueTypeConstraint = true;");
+                }
+ 
+                //TODO: symbol.HasNotNullConstraint causes no difference in the generated assembly?
+                foreach (var type in symbol.ConstraintTypes)
+                {
+                    exps.Add($"{genParamDefVar}.Constraints.Add(new GenericParameterConstraint({context.TypeResolver.Resolve(type)}));");
+                }
+            }
         }
+
 
         public static IEnumerable<string> Field(string declaringTypeVar, string fieldVar, string name, string fieldType, string fieldAttributes, params string[] properties)
         {

@@ -24,7 +24,7 @@ namespace Cecilifier.Core.AST
 
             var enumType = TempLocalVar(node.Identifier.ValueText);
             var attrs = ModifiersToCecil("TypeAttributes", node.Modifiers, "Private");
-            var typeDef = CecilDefinitionsFactory.Type(Context, enumType, node.Identifier.ValueText, attrs + " | TypeAttributes.Sealed", ResolveType("System.Enum"), false, Array.Empty<string>());
+            var typeDef = CecilDefinitionsFactory.Type(Context, enumType, node.Identifier.ValueText, attrs + " | TypeAttributes.Sealed", Context.TypeResolver.Resolve("System.Enum"), false, Array.Empty<string>());
             AddCecilExpressions(typeDef);
 
             using (Context.DefinitionVariables.WithCurrent(node.Parent.IsKind(SyntaxKind.CompilationUnit) ? "" : node.Parent.ResolveDeclaringType().Identifier.ValueText, node.Identifier.ValueText, MemberKind.Type,

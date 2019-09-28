@@ -131,9 +131,9 @@ namespace Cecilifier.Core.AST
                 var genericParamName = typeParameter.Identifier.Text;
                 
                 var genParamDefVar = $"{methodVar}_{genericParamName}";
-                context.WriteCecilExpression($"var {genParamDefVar} = new Mono.Cecil.GenericParameter(\"{genericParamName}\", {methodVar});");
+                context.WriteCecilExpression($"var {genParamDefVar} = new Mono.Cecil.GenericParameter(\"{genericParamName}\", {methodVar});\r\n");
                 context.DefinitionVariables.RegisterNonMethod(string.Empty, genericParamName, MemberKind.Type, genParamDefVar);
-                context.WriteCecilExpression($"{methodVar}.GenericParameters.Add({genParamDefVar});");    
+                context.WriteCecilExpression($"{methodVar}.GenericParameters.Add({genParamDefVar});\r\n");
             }
         }
 

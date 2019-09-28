@@ -105,7 +105,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 
                 ret = ret && CheckTypeCustomAttributes(typeVisitor, sourceType, targetType);
                 ret = ret && CheckTypeAttributes(typeVisitor, sourceType, targetType);
-                //ret = ret && CheckTypeGenericInformation(typeVisitor, sourceType, targetType);
+                ret = ret && CheckTypeGenericInformation(typeVisitor, sourceType, targetType);
                 ret = ret && CheckTypeMembers(typeVisitor, sourceType, targetType);
                 ret = ret && CheckTypeInheritance(typeVisitor, sourceType, targetType);
                 ret = ret && CheckImplementedInterfaces(typeVisitor, sourceType, targetType);
@@ -113,6 +113,11 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 
             //TODO: Check missing classes
             return ret;
+        }
+
+        private bool CheckTypeGenericInformation(ITypeDiffVisitor typeVisitor, TypeDefinition source, TypeDefinition target)
+        {
+            return typeVisitor.VisitGenerics(source, target);
         }
 
         private bool CheckTypeCustomAttributes(ITypeDiffVisitor typeVisitor, TypeDefinition sourceType, TypeDefinition targetType)
