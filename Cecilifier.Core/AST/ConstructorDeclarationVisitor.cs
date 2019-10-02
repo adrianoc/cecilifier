@@ -82,10 +82,29 @@ namespace Cecilifier.Core.AST
             AddCecilExpression($@"var {ctorBodyIL} = {ctorLocalVar}.Body.GetILProcessor();");
 
             AddCilInstruction(ctorBodyIL, OpCodes.Ldarg_0);
-            AddCilInstruction(ctorBodyIL, OpCodes.Call, Utils.ImportFromMainModule($"TypeHelpers.DefaultCtorFor({typeDefVar}.BaseType.Resolve())"));
+            AddCilInstruction(ctorBodyIL, OpCodes.Call, ResolveDefaultCtorFor(typeDefVar, declaringClass));
             AddCilInstruction(ctorBodyIL, OpCodes.Ret);
 
             Context[ctorLocalVar] = "";
+        }
+
+        private string ResolveDefaultCtorFor(string typeDefVar, BaseTypeDeclarationSyntax type)
+        {
+            var typeSymbol = Context.GetDeclaredSymbol(type);
+            if (typeSymbol == null)
+            {
+            }
+
+            var baseTypeVarDef = Context.TypeResolver.ResolveTypeLocalVariable(typeSymbol.BaseType.Name);
+            var ts = (INamedTypeSymbol) typeSymbol;
+            if (ts.BaseType.IsGenericType && baseTypeVarDef != null)
+            {
+                var genericTypeExp = $"{ts.BaseType.TypeArguments.Select(arg => Context.TypeResolver.Resolve(arg)).Aggregate((acc, curr) => acc + "," + curr)}";
+                return $"new MethodReference(\".ctor\", {Context.TypeResolver.ResolvePredefinedType("Void")} ,{baseTypeVarDef}.MakeGenericInstanceType({genericTypeExp})) {{ HasThis = true }}";
+            }
+            
+            // Non generic base type
+            return Utils.ImportFromMainModule($"TypeHelpers.DefaultCtorFor({typeDefVar}.BaseType.Resolve())");
         }
 
         private static string DefaultCtorAccessibilityFor(BaseTypeDeclarationSyntax declaringClass)

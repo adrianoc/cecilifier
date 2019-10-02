@@ -45,7 +45,7 @@ namespace Cecilifier.Core.Misc
             return (IMethodSymbol) SemanticModel.GetDeclaredSymbol(methodDeclaration);
         }
 
-        public ITypeSymbol GetDeclaredSymbol(TypeDeclarationSyntax classDeclaration)
+        public ITypeSymbol GetDeclaredSymbol(BaseTypeDeclarationSyntax classDeclaration)
         {
             return (ITypeSymbol) SemanticModel.GetDeclaredSymbol(classDeclaration);
         }

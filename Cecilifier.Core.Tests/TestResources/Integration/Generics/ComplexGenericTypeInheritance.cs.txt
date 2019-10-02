@@ -1,0 +1,9 @@
+using System.Collections.Generic;
+
+class G<S, T>
+{
+}
+
+class TestType<X> : G<int, X>
+{
+}

@@ -10,7 +10,7 @@ namespace Cecilifier.Runtime
     {
         public static MethodReference DefaultCtorFor(TypeDefinition type)
         {
-            var ctor = type.Methods.Where(m => m.IsConstructor && m.Parameters.Count == 0).SingleOrDefault();
+            var ctor = type.Methods.SingleOrDefault(m => m.IsConstructor && m.Parameters.Count == 0);
             return ctor ?? DefaultCtorFor(type.BaseType.Resolve());
         }
 
