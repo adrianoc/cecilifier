@@ -68,7 +68,7 @@ public class SnippetRunner
 	{{
 		var assembly = AssemblyDefinition.CreateAssembly(new AssemblyNameDefinition(""name"", Version.Parse(""1.0.0.0"")), ""moduleName"", ModuleKind.Dll);
 {0}
-		assembly.Write(args[0]);                              
+		assembly.Write(args[0]);
 	}}
 }}", cecilSnippet);
         }

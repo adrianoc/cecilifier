@@ -111,7 +111,12 @@ namespace Cecilifier.Core.Misc
             }
         }
 
-
+        public static string GenericParameter(IVisitorContext context, string typeVar, string genericParamName, string genParamDefVar)
+        {
+            context.DefinitionVariables.RegisterNonMethod(string.Empty, genericParamName, MemberKind.Type, genParamDefVar);
+            return $"var {genParamDefVar} = new Mono.Cecil.GenericParameter(\"{genericParamName}\", {typeVar});";
+        }
+        
         public static IEnumerable<string> Field(string declaringTypeVar, string fieldVar, string name, string fieldType, string fieldAttributes, params string[] properties)
         {
             var exps = new List<string>();
@@ -200,5 +205,6 @@ namespace Cecilifier.Core.Misc
                 exps.Add($"{paramVar}.Attributes = ParameterAttributes.Out;");
             }
         }
+
     }
 }

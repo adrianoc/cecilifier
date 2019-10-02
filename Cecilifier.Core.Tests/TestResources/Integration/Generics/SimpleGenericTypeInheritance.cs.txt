@@ -1,0 +1,9 @@
+using System.Collections.Generic;
+
+class G<T>
+{
+}
+
+class GenericTypeInheritFromTypeInSameAssembly<T> : G<T>
+{
+}

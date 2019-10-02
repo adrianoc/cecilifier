@@ -44,10 +44,12 @@ namespace Cecilifier.Core.Tests.Integration
             AssertResourceTest(@"Generics/GenericTypeDefinitionWithMembers");
         }
         
-        [Test, Ignore("Not Working")]
-        public void TestGenericTypesInheritance()
+        [TestCase("GenericTypesInheritance", TestName = "GenericTypesInheritance")]
+        [TestCase("SimpleGenericTypeInheritance", TestName = "SimpleGenericTypeInheritance")]
+        [TestCase("ComplexGenericTypeInheritance", TestName = "ComplexGenericTypeInheritance")]
+        public void TestGenericTypesInheritance(string testScenario)
         {
-            AssertResourceTest(@"Generics/GenericTypesInheritance");
+            AssertResourceTest($"Generics/{testScenario}");
         }
         
         [Test]

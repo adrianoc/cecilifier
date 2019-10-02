@@ -280,7 +280,7 @@ namespace Cecilifier.Core.AST
         string this[string name] { get; set; }
 
         IMethodSymbol GetDeclaredSymbol(BaseMethodDeclarationSyntax methodDeclaration);
-        ITypeSymbol GetDeclaredSymbol(TypeDeclarationSyntax classDeclaration);
+        ITypeSymbol GetDeclaredSymbol(BaseTypeDeclarationSyntax classDeclaration);
         TypeInfo GetTypeInfo(TypeSyntax node);
         TypeInfo GetTypeInfo(ExpressionSyntax expressionSyntax);
         INamedTypeSymbol GetSpecialType(SpecialType specialType);

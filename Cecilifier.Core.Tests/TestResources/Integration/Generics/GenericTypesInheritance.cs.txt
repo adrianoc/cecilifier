@@ -4,19 +4,15 @@ class G<T>
 {
 }
 
-class GenericTypeInheritFromTypeInSameAssembly<T> : G<T>
-{
-}
-
 class TypeInheritFromTypeInSameAssembly : G<int>
 {
 }
 
-class GenericTypeInheritFromTypeInDifferentAssembly<T> : List<T>
+class GenericTypeInheritFromTypeInDifferentAssembly<T>// : List<T>
 {
 }
 
-class TypeInheritFromTypeInDifferentAssembly : List<int>
+class TypeInheritFromTypeInDifferentAssembly //: List<int>
 {
 }
 

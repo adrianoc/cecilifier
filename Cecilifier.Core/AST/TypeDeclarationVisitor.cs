@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.Misc;
 using Microsoft.CodeAnalysis;
@@ -24,7 +25,7 @@ namespace Cecilifier.Core.AST
 
         public override void VisitClassDeclaration(ClassDeclarationSyntax node)
         {
-            var definitionVar = HandleClassDeclaration(node, ProcessBase(node));
+            var definitionVar = HandleTypeDeclaration(node);
             using (Context.DefinitionVariables.WithCurrent("", node.Identifier.ValueText, MemberKind.Type, definitionVar))
             {
                 base.VisitClassDeclaration(node);
@@ -33,7 +34,7 @@ namespace Cecilifier.Core.AST
 
         public override void VisitStructDeclaration(StructDeclarationSyntax node)
         {
-            var definitionVar = HandleTypeDeclaration(node, ProcessBase(node));
+            var definitionVar = HandleTypeDeclaration(node);
             using (Context.DefinitionVariables.WithCurrent("", node.Identifier.ValueText, MemberKind.Type, definitionVar))
             {
                 base.VisitStructDeclaration(node);
@@ -70,7 +71,24 @@ namespace Cecilifier.Core.AST
             var classSymbol = DeclaredSymbolFor(classDeclaration);
             var baseTypeName = classSymbol.BaseType.Name;
 
-            return Context.TypeResolver.ResolveTypeLocalVariable(baseTypeName) ?? Context.TypeResolver.Resolve(baseTypeName);
+            var resolvedBaseType = Context.TypeResolver.ResolveTypeLocalVariable(baseTypeName) ?? Context.TypeResolver.Resolve(baseTypeName);
+            if (classSymbol.BaseType.IsGenericType)
+            {
+                resolvedBaseType = $"{resolvedBaseType}.MakeGenericInstanceType({classSymbol.BaseType.TypeArguments.Select(ResolveTypeArgument).Aggregate((acc, curr) => acc + "," + curr)})";
+            }
+            
+            return resolvedBaseType;
+        }
+
+        private string ResolveTypeArgument(ITypeSymbol typeArg)
+        {
+            if (typeArg is ITypeParameterSymbol typeParameterSymbol && Context.TypeResolver.ResolveTypeLocalVariable(typeArg.Name) == null)
+            {
+                // We need to forward "declare" the variable....
+                return CecilDefinitionsFactory.GenericParameter(Context, $"tv_{typeParameterSymbol.Name}_{typeParameterSymbol.Ordinal}", typeArg.Name, "");
+            }
+
+            return Context.TypeResolver.Resolve(typeArg);
         }
 
         private IEnumerable<string> ImplementedInterfacesFor(BaseListSyntax bases)
@@ -93,12 +111,12 @@ namespace Cecilifier.Core.AST
 
         private string HandleInterfaceDeclaration(TypeDeclarationSyntax node)
         {
-            return HandleTypeDeclaration(node, string.Empty);
+            return HandleTypeDeclaration(node, null);
         }
 
-        private string HandleClassDeclaration(TypeDeclarationSyntax node, string baseType)
+        private string HandleTypeDeclaration(TypeDeclarationSyntax node)
         {
-            return HandleTypeDeclaration(node, baseType);
+            return HandleTypeDeclaration(node, Context.TypeResolver.ResolvePredefinedType("Object"));
         }
 
         private string HandleTypeDeclaration(TypeDeclarationSyntax node, string baseType)
@@ -117,9 +135,18 @@ namespace Cecilifier.Core.AST
             
             AddCecilExpressions(typeDefinitionExp);
 
+            if (baseType != null)
+            {
+                // we postpone setting the base type because it may depend on generic parameters defined in the class itself (for instance 'class C<T> : Base<T> {}')
+                // and these are introduced by the code in CecilDefinitionsFactory.Type().
+                WriteCecilExpression(Context, $"{varName}.BaseType = {ProcessBase(node)};");
+            }
+
             EnsureCurrentTypeHasADefaultCtor(node, varName);
 
             HandleAttributesInTypeDeclaration(node, varName);
+            
+            Context.WriteCecilExpression(Environment.NewLine);
 
             return varName;
         }
