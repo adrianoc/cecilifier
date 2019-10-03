@@ -7,6 +7,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Mono.Cecil.Cil;
+using static System.Environment; 
 
 namespace Cecilifier.Core.AST
 {
@@ -125,16 +126,10 @@ namespace Cecilifier.Core.AST
             context.WriteCecilExpression($"var {methodVar} = new MethodDefinition(\"{fqName}\", {methodModifiers}, {returnType});\r\n");
             context[methodVar] = "";
 
-            //TODO: Remove code duplication from CecilDefinitionFactory.Type() method.
-            foreach (var typeParameter in typeParameters)
-            {
-                var genericParamName = typeParameter.Identifier.Text;
-                
-                var genParamDefVar = $"{methodVar}_{genericParamName}";
-                context.WriteCecilExpression($"var {genParamDefVar} = new Mono.Cecil.GenericParameter(\"{genericParamName}\", {methodVar});\r\n");
-                context.DefinitionVariables.RegisterNonMethod(string.Empty, genericParamName, MemberKind.Type, genParamDefVar);
-                context.WriteCecilExpression($"{methodVar}.GenericParameters.Add({genParamDefVar});\r\n");
-            }
+            var exps = new List<string>(); 
+            CecilDefinitionsFactory.ProcessGenericTypeParameters(methodVar, context, typeParameters, exps);
+            
+            exps.ForEach(exp => context.WriteCecilExpression($"{exp}{NewLine}"));
         }
 
         protected virtual string GetSpecificModifiers()

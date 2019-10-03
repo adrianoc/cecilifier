@@ -8,8 +8,8 @@ class GenericTypeConstraints<A,B,C,D,E,F,G,H,I,J>
         where E : struct, IDisposable
         where F : IEquatable<F>
         where G : IEquatable<string>
-        where H : Enum //TODO: Fail with error [/tmp/CecilifierTests/Generics/GenericMethodConstraints.dll] Type Microsoft.CodeAnalysis.EmbeddedAttribute could not be found.
+        where H : Enum 
         where I : notnull
-        where J : unmanaged // TODO: Roslyn compilation emits Microsoft.CodeAnalysis.EmbeddedAttribute & System.Runtime.CompilerServices.IsUnmanagedAttribute
+        where J : unmanaged
 {
 }

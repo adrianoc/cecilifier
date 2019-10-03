@@ -2,16 +2,15 @@ using System;
 
 class GenericMethodConstraints
 {
-    void A<T>() where T : class  {}
-    void B<T>() where T : struct {}
-    
-    //void C<T>() where T : Enum {} //TODO: Fail with error [/tmp/CecilifierTests/Generics/GenericMethodConstraints.dll] Type Microsoft.CodeAnalysis.EmbeddedAttribute could not be found.
-    //void D<T>() where T : notnull {}
-    //void E<T>() where T : unmanaged {} // TODO: Roslyn compilation emits Microsoft.CodeAnalysis.EmbeddedAttribute & System.Runtime.CompilerServices.IsUnmanagedAttribute
-    void F<T>() where T : new() {}
-    void G<T,S>() where T : S {}
-    void H<T>() where T : struct, IDisposable  {} // Multiple constraints
-    void I<T>() where T : IDisposable  {}
-    void J<T>() where T : IEquatable<T> {}
-    void K<T>() where T : IEquatable<int> {}
+    void A<T1>()   where T1  : class  {}
+    void B<T2>()   where T2  : struct {}    
+    void C<T3>()   where T3  : Enum {}
+    void D<T4>()   where T4  : notnull {}
+    void E<T5>()   where T5  : unmanaged {}
+    void F<T6>()   where T6  : new() {}
+    void G<S,T7>() where T7  : S {}
+    void H<T8>()   where T8  : struct, IDisposable  {} // Multiple constraints
+    void I<T9>()   where T9  : IDisposable  {}
+    void J<T10>()  where T10 : IEquatable<T10> {}
+    void K<T11>()  where T11 : IEquatable<int> {}
 }

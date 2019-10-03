@@ -165,11 +165,6 @@ namespace Cecilifier.Core.Tests.Framework
             }
         }
         
-        private void CompareAssemblies(string expectedAssemblyPath, string actualAssemblyPath)
-        {
-            CompareAssemblies(expectedAssemblyPath, actualAssemblyPath, new StrictAssemblyDiffVisitor());
-        }
-
         private Stream ReadResource(string resourceName, string type, TestKind kind)
         {
             return ReadResource(resourceName.GetPathOfTextResource(type, kind));
