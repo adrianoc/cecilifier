@@ -58,10 +58,18 @@ namespace Cecilifier.Core.Tests.Integration
             AssertResourceTest(@"Generics/GenericMethods");
         }
 
-        [Test, Ignore("Not Working")]
+        [Test]
         public void TestGenericMethodConstraints()
         {
-            AssertResourceTest(@"Generics/GenericMethodConstraints");
+            var toBeIgnored = new[]
+            {
+                "System.Runtime.CompilerServices.NullableAttribute",
+                "Microsoft.CodeAnalysis.EmbeddedAttribute",
+                "System.Runtime.CompilerServices.IsUnmanagedAttribute",
+                "System.Runtime.CompilerServices.NullableContextAttribute"
+            };
+            
+            AssertResourceTest(@"Generics/GenericMethodConstraints", TestKind.Integration, new CompilerInjectedAttributesIgnorer(toBeIgnored));
         }
         
         [Test]

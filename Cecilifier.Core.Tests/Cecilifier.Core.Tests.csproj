@@ -21,6 +21,9 @@
     <None Update="TestResources\Integration\Generics\GenericTypeConstraints.cs.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="TestResources\Integration\Generics\GenericMethodConstraints.cs.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Compile Remove="TestResources\Integration\Expressions\Operators\Add2.cs" />
