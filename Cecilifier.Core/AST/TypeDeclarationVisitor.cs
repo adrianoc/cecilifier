@@ -85,7 +85,7 @@ namespace Cecilifier.Core.AST
             if (typeArg is ITypeParameterSymbol typeParameterSymbol && Context.TypeResolver.ResolveTypeLocalVariable(typeArg.Name) == null)
             {
                 // We need to forward "declare" the variable....
-                return CecilDefinitionsFactory.GenericParameter(Context, $"tv_{typeParameterSymbol.Name}_{typeParameterSymbol.Ordinal}", typeArg.Name, "");
+                return CecilDefinitionsFactory.GenericParameter(Context, $"tv_{typeParameterSymbol.Name}_{typeParameterSymbol.Ordinal}", typeArg.Name, "", typeParameterSymbol);
             }
 
             return Context.TypeResolver.Resolve(typeArg);

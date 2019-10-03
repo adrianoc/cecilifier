@@ -84,6 +84,13 @@ namespace Cecilifier.Core.Tests.Integration
             
             AssertResourceTest(@"Generics/GenericTypeConstraints", TestKind.Integration, new CompilerInjectedAttributesIgnorer(toBeIgnored));
         }
+
+        [Test]
+        public void TestCoContraVariance()
+        {
+            AssertResourceTest(@"Generics/CoContraVariance");
+        }
+        
     }
 
     public class CompilerInjectedAttributesIgnorer : IAssemblyDiffVisitor, ITypeDiffVisitor

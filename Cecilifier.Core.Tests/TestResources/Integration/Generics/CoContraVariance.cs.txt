@@ -1,0 +1,7 @@
+using System;
+
+public delegate DO Del<in DI, out DO>(DI i);
+
+interface CoContraVariance<in I, out O> 
+{
+}

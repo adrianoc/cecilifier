@@ -70,12 +70,27 @@ namespace Cecilifier.Core.Misc
             return exps;
         }
 
-        public static string GenericParameter(IVisitorContext context, string typeVar, string genericParamName, string genParamDefVar)
+        public static string GenericParameter(IVisitorContext context, string typeVar, string genericParamName, string genParamDefVar, ITypeParameterSymbol typeParameterSymbol)
         {
             context.DefinitionVariables.RegisterNonMethod(string.Empty, genericParamName, MemberKind.Type, genParamDefVar);
-            return $"var {genParamDefVar} = new Mono.Cecil.GenericParameter(\"{genericParamName}\", {typeVar});";
+            return $"var {genParamDefVar} = new Mono.Cecil.GenericParameter(\"{genericParamName}\", {typeVar}) {Variance(typeParameterSymbol)};";
         }
-        
+
+        private static string  Variance(ITypeParameterSymbol typeParameterSymbol)
+        {
+            if (typeParameterSymbol.Variance == VarianceKind.In)
+            {
+                return "{ IsContravariant = true }";
+            }
+            
+            if (typeParameterSymbol.Variance == VarianceKind.Out)
+            {
+                return "{ IsCovariant = true }";
+            }
+
+            return string.Empty;
+        }
+
         public static IEnumerable<string> Field(string declaringTypeVar, string fieldVar, string name, string fieldType, string fieldAttributes, params string[] properties)
         {
             var exps = new List<string>();
@@ -161,41 +176,51 @@ namespace Cecilifier.Core.Misc
         {
             foreach (var typeParameter in typeParamList)
             {
+                var symbol = context.SemanticModel.GetDeclaredSymbol(typeParameter);
                 var genericParamName = typeParameter.Identifier.Text;
                 
                 var genParamDefVar = $"{memberDefVar}_{genericParamName}";
+                
                 context.DefinitionVariables.RegisterNonMethod(string.Empty, genericParamName, MemberKind.Type, genParamDefVar);
-                exps.Add($"var {genParamDefVar} = new Mono.Cecil.GenericParameter(\"{genericParamName}\", {memberDefVar});");
-                AddConstraints(genParamDefVar, typeParameter);
+                exps.Add(GenericParameter(context, memberDefVar, genericParamName, genParamDefVar, symbol));
+                AddConstraints(genParamDefVar, symbol);
                 exps.Add($"{memberDefVar}.GenericParameters.Add({genParamDefVar});");
             }
             
-            void AddConstraints(string genParamDefVar, TypeParameterSyntax typeParameter)
+            void AddConstraints(string genParamDefVar, ITypeParameterSymbol typeParam)
             {
-                var symbol = context.SemanticModel.GetDeclaredSymbol(typeParameter);
-                if (symbol.HasConstructorConstraint || symbol.HasValueTypeConstraint) // struct constraint implies new()
+                if (typeParam.HasConstructorConstraint || typeParam.HasValueTypeConstraint) // struct constraint implies new()
                 {
                     exps.Add($"{genParamDefVar}.HasDefaultConstructorConstraint = true;");
                 }
 
-                if (symbol.HasReferenceTypeConstraint)
+                if (typeParam.HasReferenceTypeConstraint)
                 {
                     exps.Add($"{genParamDefVar}.HasReferenceTypeConstraint = true;");
                 }
                 
-                if (symbol.HasValueTypeConstraint)
+                if (typeParam.HasValueTypeConstraint)
                 {
                     var systemValueTypeRef = Utils.ImportFromMainModule("typeof(System.ValueType)");
-                    var constraintType = symbol.HasUnmanagedTypeConstraint
+                    var constraintType = typeParam.HasUnmanagedTypeConstraint
                         ? $"{systemValueTypeRef}.MakeRequiredModifierType({context.TypeResolver.Resolve("System.Runtime.InteropServices.UnmanagedType")})" 
                         : systemValueTypeRef;
 
                     exps.Add($"{genParamDefVar}.Constraints.Add(new GenericParameterConstraint({constraintType}));");
                     exps.Add($"{genParamDefVar}.HasNotNullableValueTypeConstraint = true;");
                 }
+
+                if (typeParam.Variance == VarianceKind.In)
+                {
+                    exps.Add($"{genParamDefVar}.IsContravariant = true;");
+                }
+                else if (typeParam.Variance == VarianceKind.Out)
+                {
+                    exps.Add($"{genParamDefVar}.IsCovariant = true;");
+                }
  
                 //TODO: symbol.HasNotNullConstraint causes no difference in the generated assembly?
-                foreach (var type in symbol.ConstraintTypes)
+                foreach (var type in typeParam.ConstraintTypes)
                 {
                     exps.Add($"{genParamDefVar}.Constraints.Add(new GenericParameterConstraint({context.TypeResolver.Resolve(type)}));");
                 }
