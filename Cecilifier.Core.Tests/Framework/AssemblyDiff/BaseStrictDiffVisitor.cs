@@ -29,6 +29,18 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
             foreach (var sourceParam in source)
             {
                 var targetParam = target[i++];
+                if (sourceParam.IsContravariant != targetParam.IsContravariant)
+                {
+                    output.WriteLine($"Difference in contra-variance for '{sourceParam.Name}' :\n\tSource ({sourceFileName}): {sourceParam.IsContravariant}\n\tTarget ({targetFileName}): {targetParam.IsContravariant}");
+                    ret = false;
+                }
+                
+                if (sourceParam.IsCovariant != targetParam.IsCovariant)
+                {
+                    output.WriteLine($"Difference in co-variance for '{sourceParam.Name}' :\n\tSource ({sourceFileName}): {sourceParam.IsCovariant}\n\tTarget ({targetFileName}): {targetParam.IsCovariant}");
+                    ret = false;
+                }
+
                 if (sourceParam.HasReferenceTypeConstraint != targetParam.HasReferenceTypeConstraint)
                 {
                     output.WriteLine($"Difference in 'class' constraint for '{sourceParam.Name}' :\n\tSource ({sourceFileName}): {sourceParam.HasReferenceTypeConstraint}\n\tTarget ({targetFileName}): {targetParam.HasReferenceTypeConstraint}");
