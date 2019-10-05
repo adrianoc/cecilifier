@@ -54,7 +54,7 @@ namespace Cecilifier.Core.AST
                 if (node.Initializer == null && declaringType.Kind() != SyntaxKind.StructDeclaration)
                 {
                     var declaringTypeLocalVar = Context.DefinitionVariables.GetLastOf(MemberKind.Type).VariableName;
-                    AddCilInstruction(ilVar, OpCodes.Call, Utils.ImportFromMainModule($"TypeHelpers.DefaultCtorFor({declaringTypeLocalVar}.BaseType.Resolve())"));
+                    AddCilInstruction(ilVar, OpCodes.Call, Utils.ImportFromMainModule($"TypeHelpers.DefaultCtorFor({declaringTypeLocalVar}.BaseType)"));
                 }
 
                 callBaseMethod(node);
@@ -104,7 +104,7 @@ namespace Cecilifier.Core.AST
             }
             
             // Non generic base type
-            return Utils.ImportFromMainModule($"TypeHelpers.DefaultCtorFor({typeDefVar}.BaseType.Resolve())");
+            return Utils.ImportFromMainModule($"TypeHelpers.DefaultCtorFor({typeDefVar}.BaseType)");
         }
 
         private static string DefaultCtorAccessibilityFor(BaseTypeDeclarationSyntax declaringClass)
