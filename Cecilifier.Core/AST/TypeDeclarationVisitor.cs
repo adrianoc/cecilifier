@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -69,10 +70,9 @@ namespace Cecilifier.Core.AST
         private string ProcessBase(TypeDeclarationSyntax classDeclaration)
         {
             var classSymbol = DeclaredSymbolFor(classDeclaration);
-            var baseTypeName = classSymbol.BaseType.Name;
 
-            var resolvedBaseType = Context.TypeResolver.ResolveTypeLocalVariable(baseTypeName) ?? Context.TypeResolver.Resolve(baseTypeName);
-            if (classSymbol.BaseType.IsGenericType)
+            var resolvedBaseType = Context.TypeResolver.ResolveTypeLocalVariable(classSymbol.BaseType.Name) ?? Context.TypeResolver.Resolve(classSymbol.BaseType);
+            if (classSymbol.BaseType.IsGenericType && classSymbol.BaseType.IsDefinedInCurrentType(Context))
             {
                 resolvedBaseType = $"{resolvedBaseType}.MakeGenericInstanceType({classSymbol.BaseType.TypeArguments.Select(ResolveTypeArgument).Aggregate((acc, curr) => acc + "," + curr)})";
             }

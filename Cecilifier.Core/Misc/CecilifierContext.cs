@@ -130,7 +130,7 @@ namespace Cecilifier.Core.Misc
 
         public string ResolvePredefinedAndComposedTypes(ITypeSymbol type)
         {
-            if (type.SpecialType == SpecialType.None || type.TypeKind == TypeKind.Interface || type.SpecialType == SpecialType.System_Enum)
+            if (type.SpecialType == SpecialType.None || type.TypeKind == TypeKind.Interface || type.SpecialType == SpecialType.System_Enum || type.SpecialType == SpecialType.System_ValueType)
             {
                 return null;
             }

@@ -8,11 +8,19 @@ namespace Cecilifier.Runtime
 {
     public class TypeHelpers
     {
-        public static MethodReference DefaultCtorFor(TypeDefinition type)
+        public static MethodReference DefaultCtorFor(TypeReference type)
         {
-            var ctor = type.Methods.SingleOrDefault(m => m.IsConstructor && m.Parameters.Count == 0);
-            return ctor ?? DefaultCtorFor(type.BaseType.Resolve());
+            var resolved = type.Resolve();
+            if (resolved == null)
+                return null;
+            
+            var ctor = resolved.Methods.SingleOrDefault(m => m.IsConstructor && m.Parameters.Count == 0 && !m.IsStatic);
+            if (ctor == null)
+                return DefaultCtorFor(resolved.BaseType);
+
+            return new MethodReference(".ctor", type.Module.TypeSystem.Void, type) { HasThis = true };
         }
+       
 
         public static MethodInfo ResolveGenericMethod(string assemblyName, string declaringTypeName, string methodName, BindingFlags bindingFlags, IEnumerable<string> typeArguments,
             IEnumerable<ParamData> paramTypes)

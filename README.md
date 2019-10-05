@@ -43,14 +43,13 @@ Supported Features
 - Static generic methods
 
 - Generics 
-    Type definition (still missing more complex type inheritance) 
+	- Type / method instantiation
+    - Type / Method definition
+    - Constraints
+    - Co/Contra variance 
      
 Unsupported Features
 ---
-- Generics 
-	- Method declarations
-	- Type / method instantiation
-
 - Events
 - default expression
 - Enumerator methods
