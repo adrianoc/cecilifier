@@ -15,7 +15,10 @@
 
     <script src="https://cdn.jsdelivr.net/npm/showdown@1.9.0/dist/showdown.min.js"></script>
     <script src="~/js/release_notes.js"></script>
+    <script src="~/js/cecilifier.js"></script>
+    
     <link rel="stylesheet" href="~/css/release_notes.css">
+    <link rel="stylesheet" href="~/css/button.css">
     
     <link rel="stylesheet" href="~/lib/codemirror/lib/codemirror.css">
     <link rel="stylesheet" href="~/lib/codemirror/theme/darcula.css">
@@ -29,11 +32,6 @@
     <meta name="description" content="Cecilifier is a tool aiming to make learning using Mono.Cecil easier by taking code snippets and generating Cecil APIs calls that creates an assembly equivalent to the compiled code snippet. It may also help you to learn more about MSIL (also known simply as IL)." />
 
     <title>Cecilifier - Learn Mono.Cecil by example</title>
-
-    <div class="alert success" style="opacity: 1">
-        <span class="closebtn">&times;</span>
-        <strong>If you use this site/project consider <a href="https://www.patreon.com/cecilifier" target="_donating">donating</a></strong>.
-    </div>
     
     <div class="alert error" id="cecilifier_error">
         <span class="closebtn" onclick="this.parentElement.style.display='none';">&times;</span>
@@ -160,7 +158,7 @@
 
 <partial name="_CookieConsentPartial"/>
 
-<div class="container body-content">
+<div class="container body-content" style="width: 70%">
     @RenderBody()
     <hr/>
     <footer>

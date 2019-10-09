@@ -2,11 +2,16 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp2.1</TargetFramework>
-    <LangVersion>7.3</LangVersion>
+    <LangVersion>8</LangVersion>
+    <AssemblyVersion>1.3.0</AssemblyVersion>
   </PropertyGroup>
 
   <ItemGroup>
     <Content Include="wwwroot\lib\node_modules\codemirror\**" CopyToPublishDirectory="Always" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Resources\TypeHelpers.cs" />
   </ItemGroup>
 
   <ItemGroup>
