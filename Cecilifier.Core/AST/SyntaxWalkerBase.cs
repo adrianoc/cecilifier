@@ -296,9 +296,11 @@ namespace Cecilifier.Core.AST
         {
             var parent = (CSharpSyntaxNode) node.Parent;
             //TODO: Get rid of code duplication in ExpressionVisitor.ProcessLocalVariable(IdentifierNameSyntax localVar, SymbolInfo varInfo)
-            if (paramSymbol.Type.IsValueType && parent.Accept(new UsageVisitor()) == UsageKind.CallTarget)
+            if ((paramSymbol.Type.IsValueType && parent.Accept(new UsageVisitor()) == UsageKind.CallTarget) || node.Parent.IsKind(SyntaxKind.AddressOfExpression))
             {
                 AddCilInstruction(ilVar, OpCodes.Ldarga, Context.DefinitionVariables.GetVariable(paramSymbol.Name, MemberKind.Parameter).VariableName);
+                if (node.Parent.IsKind(SyntaxKind.AddressOfExpression))
+                    AddCilInstruction(ilVar, OpCodes.Conv_U);
                 return;
             }
 

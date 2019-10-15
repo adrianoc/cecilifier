@@ -42,7 +42,8 @@ namespace Cecilifier.Core.Tests.Framework
 
             var compilationOptions = new CSharpCompilationOptions(
                 exe ? OutputKind.ConsoleApplication : OutputKind.DynamicallyLinkedLibrary,
-                optimizationLevel: OptimizationLevel.Release);
+                optimizationLevel: OptimizationLevel.Release,
+                allowUnsafe: true);
 
             var compilation = CSharpCompilation.Create(
                 Path.GetFileNameWithoutExtension(outputFilePath),

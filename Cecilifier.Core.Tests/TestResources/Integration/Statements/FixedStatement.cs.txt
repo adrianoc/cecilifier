@@ -1,0 +1,6 @@
+
+unsafe void FixedStatement()
+{
+    int i = 0;
+    fixed (int* p = &i) {  }
+}

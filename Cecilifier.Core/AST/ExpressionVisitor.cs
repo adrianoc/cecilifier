@@ -6,6 +6,7 @@ using Cecilifier.Core.Extensions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Operations;
 using Mono.Cecil.Cil;
 
 namespace Cecilifier.Core.AST
@@ -260,17 +261,24 @@ namespace Cecilifier.Core.AST
 
         public override void VisitThisExpression(ThisExpressionSyntax node)
         {
-            WriteLine("[{0}] : {1}", new StackFrame().GetMethod().Name, node);
+            LogUnsupportedSyntax(node);
         }
 
         public override void VisitPrefixUnaryExpression(PrefixUnaryExpressionSyntax node)
         {
-            WriteLine("[{0}] : {1}", new StackFrame().GetMethod().Name, node);
+            if (node.OperatorToken.Kind() == SyntaxKind.AmpersandToken)
+            {
+                Visit(node.Operand);
+            }
+            else
+            {
+                LogUnsupportedSyntax(node);
+            }
         }
 
         public override void VisitPostfixUnaryExpression(PostfixUnaryExpressionSyntax node)
         {
-            WriteLine("[{0}] : {1}", new StackFrame().GetMethod().Name, node);
+            LogUnsupportedSyntax(node);
         }
 
         public override void VisitParenthesizedExpression(ParenthesizedExpressionSyntax node)
@@ -380,11 +388,6 @@ namespace Cecilifier.Core.AST
             {
                 AddCilInstruction(ilVar, OpCodes.Pop);
             }
-        }
-
-        private void WriteLine(string msg, params object[] args)
-        {
-            Console.WriteLine(msg, args);
         }
 
         private OpCode LoadOpCodeFor(LiteralExpressionSyntax node)
@@ -514,11 +517,14 @@ namespace Cecilifier.Core.AST
         {
             var symbol = (ILocalSymbol) varInfo.Symbol;
             var localVarParent = (CSharpSyntaxNode) localVar.Parent;
-            if (symbol.Type.IsValueType && localVarParent.Accept(new UsageVisitor()) == UsageKind.CallTarget)
+            if ((symbol.Type.IsValueType && localVarParent.Accept(new UsageVisitor()) == UsageKind.CallTarget) || localVarParent.IsKind(SyntaxKind.AddressOfExpression))
             {
-                AddCilInstruction(ilVar, OpCodes.Ldloca_S, Context.DefinitionVariables.GetVariable(symbol.Name, MemberKind.LocalVariable).VariableName);
+                AddCilInstruction(ilVar, OpCodes.Ldloca, Context.DefinitionVariables.GetVariable(symbol.Name, MemberKind.LocalVariable).VariableName);
+                if (localVarParent.IsKind(SyntaxKind.AddressOfExpression))
+                    AddCilInstruction(ilVar, OpCodes.Conv_U);
                 return;
             }
+
 
             AddCilInstruction(ilVar, OpCodes.Ldloc, Context.DefinitionVariables.GetVariable(symbol.Name, MemberKind.LocalVariable).VariableName);
             HandlePotentialDelegateInvocationOn(localVar, symbol.Type, ilVar);

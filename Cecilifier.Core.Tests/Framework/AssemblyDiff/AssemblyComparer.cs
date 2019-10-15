@@ -396,6 +396,8 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 
                 case Code.Ldarga_S: return current.OpCode.Code == Code.Ldarga;
                 case Code.Ldarg_S: return current.OpCode.Code == Code.Ldarg;
+                
+                case Code.Ldloca_S: return current.OpCode.Code == Code.Ldloca;
 
                 case Code.Ldc_I4_S:
                 case Code.Ldc_I4_0:
@@ -688,8 +690,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
             // We have an *stloc X* followed by an *ldloc X* so lets check if we have any other reference to the same
             // local var.
             var ignoredInstructions = new HashSet<Instruction>();
-            ignoredInstructions
-                .Add(inst.Next); // if no other load from *X* is found we need to ignore current instruction (stloc X) and also the next one (ldloc X)
+            ignoredInstructions.Add(inst.Next); // if no other load from *X* is found we need to ignore current instruction (stloc X) and also the next one (ldloc X)
 
             var current = inst.Next.Next;
             while (current != null)
