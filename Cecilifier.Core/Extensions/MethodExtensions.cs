@@ -96,8 +96,7 @@ namespace Cecilifier.Core.Extensions
             return parts.Aggregate(prefix, (acc, curr) => acc + "_" + curr);
         }
 
-        public static string MethodModifiersToCecil(this SyntaxTokenList modifiers, Func<string, IList<SyntaxToken>, string, string> modifiersToCecil, string specificModifiers = null,
-            IMethodSymbol methodSymbol = null)
+        public static string MethodModifiersToCecil(this SyntaxTokenList modifiers, Func<string, IList<SyntaxToken>, string, string> modifiersToCecil, string specificModifiers = null, IMethodSymbol methodSymbol = null)
         {
             var modifiersStr = MapExplicitModifiers(modifiers);
 
@@ -160,7 +159,8 @@ namespace Cecilifier.Core.Extensions
                 mod => mod.Kind() != SyntaxKind.OverrideKeyword
                        && mod.Kind() != SyntaxKind.AbstractKeyword
                        && mod.Kind() != SyntaxKind.VirtualKeyword
-                       && mod.Kind() != SyntaxKind.SealedKeyword);
+                       && mod.Kind() != SyntaxKind.SealedKeyword
+                       && mod.Kind() != SyntaxKind.UnsafeKeyword);
         }
     }
 }

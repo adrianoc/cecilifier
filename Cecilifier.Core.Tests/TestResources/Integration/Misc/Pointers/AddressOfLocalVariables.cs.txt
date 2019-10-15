@@ -1,0 +1,9 @@
+class C
+{
+    unsafe int* AddressOfLocalVariables()
+    {
+       int i = 42;
+       int *p = &i;
+       return p;
+    }
+}

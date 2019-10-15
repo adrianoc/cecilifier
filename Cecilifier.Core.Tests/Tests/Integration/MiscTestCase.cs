@@ -24,5 +24,13 @@ namespace Cecilifier.Core.Tests.Integration
         {
             AssertResourceTest(@"Misc/Namespaces");
         }
+
+        [TestCase("AddressOfParameters", TestName = "Parameters")]
+        [TestCase("AddressOfLocalVariables", TestName = "Local Variables")]
+        [TestCase("AssignmentOfAddressOfLocalVariables", TestName = "Local Variable Assignment")]
+        public void TestPointerTypes(string testName)
+        {
+            AssertResourceTest($@"Misc/Pointers/{testName}");       
+        }
     }
 }

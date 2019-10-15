@@ -1,0 +1,8 @@
+class C
+{
+    unsafe int* AddressOfParameter(int i)
+    {
+       int *p = &i;       
+       return p;
+    }
+}
