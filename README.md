@@ -47,10 +47,11 @@ Supported Features
     - Type / Method definition
     - Constraints
     - Co/Contra variance 
+- Pointer types (int*, void*, etc)
+- Fixed statement
      
 Unsupported Features
 ---
-- Events
 - default expression
 - Enumerator methods
 - async/await
