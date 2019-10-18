@@ -11,9 +11,10 @@ namespace Cecilifier.Core.AST
     {
         private readonly string ilVar;
 
-        internal AssignmentVisitor(IVisitorContext ctx, string ilVar) : base(ctx)
+        internal AssignmentVisitor(IVisitorContext ctx, string ilVar, AssignmentExpressionSyntax node) : base(ctx)
         {
             this.ilVar = ilVar;
+            PreProcessRefOutAssignments(node.Left);
         }
 
         public LinkedListNode<string> InstrutionPreceedingValueToLoad { get; set; }
@@ -109,7 +110,7 @@ namespace Cecilifier.Core.AST
             }
         }
 
-        public void PreProcessRefOutAssignments(ExpressionSyntax node)
+        void PreProcessRefOutAssignments(ExpressionSyntax node)
         {
             var paramSymbol = ParameterVisitor.Process(Context, node);
             if (paramSymbol != null && paramSymbol.RefKind != RefKind.None)

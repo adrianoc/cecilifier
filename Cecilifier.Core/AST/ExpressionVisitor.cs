@@ -138,9 +138,8 @@ namespace Cecilifier.Core.AST
                 return;
             }
 
-            var visitor = new AssignmentVisitor(Context, ilVar);
-            visitor.PreProcessRefOutAssignments(node.Left);
-
+            var visitor = new AssignmentVisitor(Context, ilVar, node);
+            
             visitor.InstrutionPreceedingValueToLoad = Context.CurrentLine;
             Visit(node.Right);
             if (!valueTypeNoArgObjCreation)
@@ -517,14 +516,10 @@ namespace Cecilifier.Core.AST
         {
             var symbol = (ILocalSymbol) varInfo.Symbol;
             var localVarParent = (CSharpSyntaxNode) localVar.Parent;
-            if ((symbol.Type.IsValueType && localVarParent.Accept(new UsageVisitor()) == UsageKind.CallTarget) || localVarParent.IsKind(SyntaxKind.AddressOfExpression))
+            if (HandleLoadAddress(ilVar, symbol.Type, localVarParent, OpCodes.Ldloca, symbol.Name, MemberKind.LocalVariable))
             {
-                AddCilInstruction(ilVar, OpCodes.Ldloca, Context.DefinitionVariables.GetVariable(symbol.Name, MemberKind.LocalVariable).VariableName);
-                if (localVarParent.IsKind(SyntaxKind.AddressOfExpression))
-                    AddCilInstruction(ilVar, OpCodes.Conv_U);
                 return;
             }
-
 
             AddCilInstruction(ilVar, OpCodes.Ldloc, Context.DefinitionVariables.GetVariable(symbol.Name, MemberKind.LocalVariable).VariableName);
             HandlePotentialDelegateInvocationOn(localVar, symbol.Type, ilVar);

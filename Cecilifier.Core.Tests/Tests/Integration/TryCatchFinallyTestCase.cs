@@ -16,7 +16,7 @@ namespace Cecilifier.Core.Tests.Integration
         {
             if (compareWithExplicitIL)
             {
-                AssertResourceTestWithExplictExpectation($"TryCatchFinally/{testName}", $"System.Void {testName}::Foo(System.Int32)");
+                AssertResourceTestWithExplicitExpectation($"TryCatchFinally/{testName}", $"System.Void {testName}::Foo(System.Int32)");
             }
             else
             {

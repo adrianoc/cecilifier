@@ -295,16 +295,11 @@ namespace Cecilifier.Core.AST
         protected void ProcessParameter(string ilVar, SimpleNameSyntax node, IParameterSymbol paramSymbol)
         {
             var parent = (CSharpSyntaxNode) node.Parent;
-            //TODO: Get rid of code duplication in ExpressionVisitor.ProcessLocalVariable(IdentifierNameSyntax localVar, SymbolInfo varInfo)
-            if ((paramSymbol.Type.IsValueType && parent.Accept(new UsageVisitor()) == UsageKind.CallTarget) || node.Parent.IsKind(SyntaxKind.AddressOfExpression))
+            if (HandleLoadAddress(ilVar, paramSymbol.Type, parent, OpCodes.Ldarga, paramSymbol.Name, MemberKind.Parameter))
             {
-                AddCilInstruction(ilVar, OpCodes.Ldarga, Context.DefinitionVariables.GetVariable(paramSymbol.Name, MemberKind.Parameter).VariableName);
-                if (node.Parent.IsKind(SyntaxKind.AddressOfExpression))
-                    AddCilInstruction(ilVar, OpCodes.Conv_U);
                 return;
             }
 
-            var method = paramSymbol.ContainingSymbol as IMethodSymbol;
             if (node.Parent.Kind() == SyntaxKind.SimpleMemberAccessExpression && paramSymbol.ContainingType.IsValueType)
             {
                 AddCilInstruction(ilVar, OpCodes.Ldarga, Context.DefinitionVariables.GetVariable(paramSymbol.Name, MemberKind.Parameter).VariableName);
@@ -316,11 +311,26 @@ namespace Cecilifier.Core.AST
             }
             else
             {
+                var method = paramSymbol.ContainingSymbol as IMethodSymbol;
                 OpCode[] optimizedLdArgs = {OpCodes.Ldarg_0, OpCodes.Ldarg_1, OpCodes.Ldarg_2, OpCodes.Ldarg_3};
                 var loadOpCode = optimizedLdArgs[paramSymbol.Ordinal + (method.IsStatic ? 0 : 1)];
                 AddCilInstruction(ilVar, loadOpCode);
                 HandlePotentialDelegateInvocationOn(node, paramSymbol.Type, ilVar);
             }
+        }
+
+        protected bool HandleLoadAddress(string ilVar, ITypeSymbol symbol, CSharpSyntaxNode parent, OpCode opCode, string symbolName, MemberKind memberKind)
+        {
+            if ((symbol.IsValueType && parent.Accept(new UsageVisitor()) == UsageKind.CallTarget) || parent.IsKind(SyntaxKind.AddressOfExpression))
+            {
+                AddCilInstruction(ilVar, opCode, Context.DefinitionVariables.GetVariable(symbolName, memberKind).VariableName);
+                if (parent.IsKind(SyntaxKind.AddressOfExpression))
+                    AddCilInstruction(ilVar, OpCodes.Conv_U);
+
+                return true;
+            }
+
+            return false;
         }
 
         protected void HandlePotentialDelegateInvocationOn(SimpleNameSyntax node, ITypeSymbol typeSymbol, string ilVar)
