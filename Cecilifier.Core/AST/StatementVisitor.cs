@@ -52,6 +52,16 @@ namespace Cecilifier.Core.AST
             LogUnsupportedSyntax(node);
         }
 
+        public override void VisitFixedStatement(FixedStatementSyntax node)
+        {
+            using (Context.WithFlag("fixed"))
+            {
+                HandleVariableDeclaration(node.Declaration);
+            }
+            
+            Visit(node.Statement);
+        }
+
         public override void VisitBlock(BlockSyntax node)
         {
             using (Context.DefinitionVariables.EnterScope())
@@ -78,12 +88,7 @@ namespace Cecilifier.Core.AST
 
         public override void VisitLocalDeclarationStatement(LocalDeclarationStatementSyntax node)
         {
-            var methodVar = Context.DefinitionVariables.GetLastOf(MemberKind.Method).VariableName;
-            foreach (var localVar in node.Declaration.Variables)
-            {
-                AddLocalVariable(node.Declaration.Type, localVar, methodVar);
-                ProcessVariableInitialization(localVar);
-            }
+            HandleVariableDeclaration(node.Declaration);
         }
 
         public override void VisitTryStatement(TryStatementSyntax node)
@@ -194,10 +199,22 @@ namespace Cecilifier.Core.AST
 
         private void AddLocalVariable(TypeSyntax type, VariableDeclaratorSyntax localVar, string methodVar)
         {
+            var isFixedStatement = Context.HasFlag("fixed");
+            if (isFixedStatement)
+            {
+                type = ((PointerTypeSyntax) type).ElementType;
+            }
+            
             var resolvedVarType = type.IsVar
                 ? ResolveExpressionType(localVar.Initializer.Value)
                 : ResolveType(type);
 
+
+            if (isFixedStatement)
+            {
+                resolvedVarType = $"{resolvedVarType}.MakeByReferenceType()";
+            }
+            
             var cecilVarDeclName = TempLocalVar($"lv_{localVar.Identifier.ValueText}");
             AddCecilExpression("var {0} = new VariableDefinition({1});", cecilVarDeclName, resolvedVarType);
             AddCecilExpression("{0}.Body.Variables.Add({1});", methodVar, cecilVarDeclName);
@@ -214,6 +231,16 @@ namespace Cecilifier.Core.AST
 
             var localVarDef = Context.DefinitionVariables.GetVariable(localVar.Identifier.ValueText, MemberKind.LocalVariable);
             AddCilInstruction(_ilVar, OpCodes.Stloc, localVarDef.VariableName);
+        }
+
+        private void HandleVariableDeclaration(VariableDeclarationSyntax declaration)
+        {
+            var methodVar = Context.DefinitionVariables.GetLastOf(MemberKind.Method).VariableName;
+            foreach (var localVar in declaration.Variables)
+            {
+                AddLocalVariable(declaration.Type, localVar, methodVar);
+                ProcessVariableInitialization(localVar);
+            }
         }
 
         private struct ExceptionHandlerEntry

@@ -1,0 +1,7 @@
+.locals (System.Int32& V_0)
+IL_0000: ldarg.0
+IL_0001: ldflda System.Int32 FixedStatementTest::i
+IL_0006: stloc V_0
+IL_000a: ldloc V_0
+IL_000e: conv.u
+IL_000f: ret

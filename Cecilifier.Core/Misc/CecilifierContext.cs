@@ -10,6 +10,7 @@ namespace Cecilifier.Core.Misc
 {
     internal class CecilifierContext : IVisitorContext
     {
+        private readonly ISet<string> flags = new HashSet<string>();
         private readonly LinkedList<string> output = new LinkedList<string>();
 
         private int currentFieldId;
@@ -102,6 +103,26 @@ namespace Cecilifier.Core.Misc
         public void TriggerInstructionAdded(string instVar)
         {
             InstructionAdded?.Invoke(instVar);
+        }
+
+        public IDisposable WithFlag(string name)
+        {
+            return new ContextFlagReseter(this, name);
+        }
+
+        public bool HasFlag(string name)
+        {
+            return flags.Contains(name);
+        }
+
+        internal void SetFlag(string name)
+        {
+            flags.Add(name);
+        }
+        
+        internal void ClearFlag(string name)
+        {
+            flags.Remove(name);
         }
     }
 

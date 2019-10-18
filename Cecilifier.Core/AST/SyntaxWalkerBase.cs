@@ -319,12 +319,12 @@ namespace Cecilifier.Core.AST
             }
         }
 
-        protected bool HandleLoadAddress(string ilVar, ITypeSymbol symbol, CSharpSyntaxNode parent, OpCode opCode, string symbolName, MemberKind memberKind)
+        protected bool HandleLoadAddress(string ilVar, ITypeSymbol symbol, CSharpSyntaxNode parent, OpCode opCode, string symbolName, MemberKind memberKind, string parentName = null)
         {
             if ((symbol.IsValueType && parent.Accept(new UsageVisitor()) == UsageKind.CallTarget) || parent.IsKind(SyntaxKind.AddressOfExpression))
             {
-                AddCilInstruction(ilVar, opCode, Context.DefinitionVariables.GetVariable(symbolName, memberKind).VariableName);
-                if (parent.IsKind(SyntaxKind.AddressOfExpression))
+                AddCilInstruction(ilVar, opCode, Context.DefinitionVariables.GetVariable(symbolName, memberKind, parentName).VariableName);
+                if (!Context.HasFlag("fixed") && parent.IsKind(SyntaxKind.AddressOfExpression))
                     AddCilInstruction(ilVar, OpCodes.Conv_U);
 
                 return true;
