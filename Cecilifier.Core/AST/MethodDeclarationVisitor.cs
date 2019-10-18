@@ -102,7 +102,7 @@ namespace Cecilifier.Core.AST
             }
         }
 
-        protected static string DeclaringTypeNameFor<T>(T node) where T : BaseMethodDeclarationSyntax
+        private static string DeclaringTypeNameFor<T>(T node) where T : BaseMethodDeclarationSyntax
         {
             var declaringType = (TypeDeclarationSyntax) node.Parent;
             return declaringType.Identifier.ValueText;

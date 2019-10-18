@@ -20,7 +20,7 @@ namespace Cecilifier.Core.Tests.Integration
         [Test]
         public void TestMultipleLocalVariableAssignment()
         {
-            AssertResourceTestWithExplictExpectation(@"Expressions/MultipleLocalVariableAssignment", "System.Void MultipleLocalVariableAssignment::Method(System.Int32,System.String)");
+            AssertResourceTestWithExplicitExpectation(@"Expressions/MultipleLocalVariableAssignment", "System.Void MultipleLocalVariableAssignment::Method(System.Int32,System.String)");
         }
 
         [Test]
@@ -44,7 +44,7 @@ namespace Cecilifier.Core.Tests.Integration
         [Test]
         public void TestAdd2()
         {
-            AssertResourceTestWithExplictExpectation(@"Expressions/Operators/Add2", "System.Void AddOperations2::IntegerString(System.String,System.Int32)");
+            AssertResourceTestWithExplicitExpectation(@"Expressions/Operators/Add2", "System.Void AddOperations2::IntegerString(System.String,System.Int32)");
         }
 
         [Test]
@@ -68,7 +68,7 @@ namespace Cecilifier.Core.Tests.Integration
         [Test]
         public void TestTypeInferenceInDeclarations()
         {
-            AssertResourceTestWithExplictExpectation(@"Expressions/TypeInferenceInDeclarations", "System.Void TypeInferenceInDeclarations::Foo()");
+            AssertResourceTestWithExplicitExpectation(@"Expressions/TypeInferenceInDeclarations", "System.Void TypeInferenceInDeclarations::Foo()");
         }
 
         [Test]

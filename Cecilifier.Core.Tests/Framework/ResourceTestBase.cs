@@ -30,7 +30,7 @@ namespace Cecilifier.Core.Tests.Framework
             AssertResourceTest(actualAssemblyPath, expectedAssemblyPath, tbc);
         }
 
-        protected void AssertResourceTestWithExplictExpectation(string resourceName, string methodSignature)
+        protected void AssertResourceTestWithExplicitExpectation(string resourceName, string methodSignature)
         {
             using (var tbc = ReadResource(resourceName, "cs", TestKind.Integration))
             using (var expectedILStream = ReadResource(resourceName, "cs.il", TestKind.Integration))
