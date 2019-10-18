@@ -296,6 +296,12 @@ namespace Cecilifier.Core.AST
         void TriggerInstructionAdded(string instVar);
         
         ITypeResolver TypeResolver { get; }
+
+        #region Flags Handling
+        IDisposable WithFlag(string name);
+        bool HasFlag(string name);
+
+        #endregion
     }
 
     internal interface ITypeResolver

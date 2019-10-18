@@ -501,7 +501,7 @@ namespace Cecilifier.Core.AST
             }
         }
 
-        private void ProcessField(IFieldSymbol fieldSymbol)
+        private void ProcessField(SimpleNameSyntax node, IFieldSymbol fieldSymbol)
         {
             if (fieldSymbol.IsStatic && fieldSymbol.IsDefinedInCurrentType(Context))
             {
@@ -509,6 +509,11 @@ namespace Cecilifier.Core.AST
             }
 
             AddCilInstruction(ilVar, OpCodes.Ldarg_0);
+
+            if (HandleLoadAddress(ilVar, fieldSymbol.Type, (CSharpSyntaxNode) node.Parent, OpCodes.Ldflda, fieldSymbol.Name, MemberKind.Field, fieldSymbol.ContainingType.Name))
+            {
+                return;
+            }
             AddCilInstruction(ilVar, OpCodes.Ldfld, Context.DefinitionVariables.GetVariable(fieldSymbol.Name, MemberKind.Field, fieldSymbol.ContainingType.Name).VariableName);
         }
 
@@ -523,6 +528,15 @@ namespace Cecilifier.Core.AST
 
             AddCilInstruction(ilVar, OpCodes.Ldloc, Context.DefinitionVariables.GetVariable(symbol.Name, MemberKind.LocalVariable).VariableName);
             HandlePotentialDelegateInvocationOn(localVar, symbol.Type, ilVar);
+            HandlePotentialFixedLoad(localVar, symbol);
+        }
+
+        private void HandlePotentialFixedLoad(SyntaxNode localVar, ILocalSymbol symbol)
+        {
+            if (!symbol.IsFixed)
+                return;
+
+            AddCilInstruction(ilVar, OpCodes.Conv_U);
         }
 
         private void ProcessMethodCall(SimpleNameSyntax node, IMethodSymbol method)
@@ -653,7 +667,7 @@ namespace Cecilifier.Core.AST
                     break;
 
                 case SymbolKind.Field:
-                    ProcessField(member.Symbol as IFieldSymbol);
+                    ProcessField(node, member.Symbol as IFieldSymbol);
                     break;
 
                 case SymbolKind.Property:

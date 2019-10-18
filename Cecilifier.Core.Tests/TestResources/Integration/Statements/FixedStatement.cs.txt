@@ -1,6 +1,11 @@
-
-unsafe void FixedStatement()
+class FixedStatementTest
 {
-    int i = 0;
-    fixed (int* p = &i) {  }
+    public int i;
+    unsafe int* FixedStatement()
+    {
+        fixed (int* p = &i) 
+        {
+            return p;
+        }
+    }
 }
