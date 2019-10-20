@@ -48,6 +48,11 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
             return new StrictMethodDiffVisitor(output);
         }
 
+        public IEventDiffVisitor VisitMember(EventDefinition @event)
+        {
+            return new StrictEventDiffVisitor(output);
+        }
+
         public void VisitEnd(TypeDefinition type)
         {
         }
