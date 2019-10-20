@@ -8,6 +8,7 @@ using Cecilifier.Core.Misc;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using CSharpExtensions = Microsoft.CodeAnalysis.CSharp.CSharpExtensions;
 
 namespace Cecilifier.Core.AST
 {
@@ -19,28 +20,47 @@ namespace Cecilifier.Core.AST
 
         public override void VisitFieldDeclaration(FieldDeclarationSyntax node)
         {
+            var variableDeclarationSyntax = node.Declaration;
+            var modifiers = node.Modifiers;
+            var declaringType = node.ResolveDeclaringType();
+
+            HandleFieldDeclaration(variableDeclarationSyntax, modifiers, declaringType);
+
+            base.VisitFieldDeclaration(node);
+        }
+
+        internal static IEnumerable<string> HandleFieldDeclaration(IVisitorContext context, VariableDeclarationSyntax variableDeclarationSyntax, SyntaxTokenList modifiers, BaseTypeDeclarationSyntax declaringType)
+        {
+            var visitor = new FieldDeclarationVisitor(context);
+            return visitor.HandleFieldDeclaration(variableDeclarationSyntax, modifiers, declaringType);
+        }
+
+        private IEnumerable<string> HandleFieldDeclaration(VariableDeclarationSyntax variableDeclarationSyntax, SyntaxTokenList modifiers, BaseTypeDeclarationSyntax declaringType)
+        {
             var declaringTypeVar = Context.DefinitionVariables.GetLastOf(MemberKind.Type).VariableName;
 
-            var type = ResolveType(node.Declaration.Type);
-            var fieldType = ProcessRequiredModifiers(node, type) ?? type;
-            var fieldAttributes = MapAttributes(node.Modifiers);
-
-            var declaringType = node.ResolveDeclaringType();
-            foreach (var field in node.Declaration.Variables)
+            var fieldDefVars = new List<string>(variableDeclarationSyntax.Variables.Count);
+            
+            var type = ResolveType(variableDeclarationSyntax.Type);
+            var fieldType = ProcessRequiredModifiers(modifiers, type) ?? type;
+            var fieldAttributes = MapAttributes(modifiers);
+            foreach (var field in variableDeclarationSyntax.Variables)
             {
                 var fieldVar = MethodExtensions.LocalVariableNameFor("fld", declaringType.Identifier.ValueText, field.Identifier.ValueText.CamelCase());
+                fieldDefVars.Add(fieldVar);
+                
                 var exps = CecilDefinitionsFactory.Field(declaringTypeVar, fieldVar, field.Identifier.ValueText, fieldType, fieldAttributes);
                 AddCecilExpressions(exps);
 
                 Context.DefinitionVariables.RegisterNonMethod(declaringType.Identifier.Text, field.Identifier.ValueText, MemberKind.Field, fieldVar);
             }
 
-            base.VisitFieldDeclaration(node);
+            return fieldDefVars;
         }
 
-        private string ProcessRequiredModifiers(FieldDeclarationSyntax fieldDeclaration, string originalType)
+        private string ProcessRequiredModifiers(SyntaxTokenList modifiers, string originalType)
         {
-            if (!fieldDeclaration.Modifiers.Any(m => m.Kind() == SyntaxKind.VolatileKeyword))
+            if (modifiers.All(m => m.Kind() != SyntaxKind.VolatileKeyword))
             {
                 return null;
             }

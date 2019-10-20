@@ -35,9 +35,14 @@ namespace Cecilifier.Core.Misc
             declaringType = node;
         }
 
+        public override void VisitEventFieldDeclaration(EventFieldDeclarationSyntax node)
+        {
+            declaringType = ParentTypeDeclarationFor(node);
+        }
+
         public override void VisitFieldDeclaration(FieldDeclarationSyntax node)
         {
-            declaringType = (BaseTypeDeclarationSyntax) node.Ancestors().Where(a => a.Kind() == SyntaxKind.ClassDeclaration || a.Kind() == SyntaxKind.StructDeclaration).First();
+            declaringType = ParentTypeDeclarationFor(node);
         }
 
         public override void VisitMethodDeclaration(MethodDeclarationSyntax node)
@@ -58,6 +63,11 @@ namespace Cecilifier.Core.Misc
         public override void VisitConstructorDeclaration(ConstructorDeclarationSyntax node)
         {
             Visit(node.Parent);
+        }
+        
+        private static BaseTypeDeclarationSyntax ParentTypeDeclarationFor(SyntaxNode node)
+        {
+            return (BaseTypeDeclarationSyntax) node.Ancestors().Where(a => a.Kind() == SyntaxKind.ClassDeclaration || a.Kind() == SyntaxKind.StructDeclaration).First();
         }
     }
 }

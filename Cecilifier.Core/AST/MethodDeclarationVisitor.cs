@@ -123,13 +123,10 @@ namespace Cecilifier.Core.AST
 
         public static void AddMethodDefinition(IVisitorContext context, string methodVar, string fqName, string methodModifiers, string returnType, IList<TypeParameterSyntax> typeParameters)
         {
-            context.WriteCecilExpression($"var {methodVar} = new MethodDefinition(\"{fqName}\", {methodModifiers}, {returnType});\r\n");
             context[methodVar] = "";
-
-            var exps = new List<string>(); 
-            CecilDefinitionsFactory.ProcessGenericTypeParameters(methodVar, context, typeParameters, exps);
-            
-            exps.ForEach(exp => context.WriteCecilExpression($"{exp}{NewLine}"));
+            var exps = CecilDefinitionsFactory.Method(context, methodVar, fqName, methodModifiers, returnType, typeParameters);
+            foreach(var exp in exps)
+                context.WriteCecilExpression($"{exp}{NewLine}");
         }
 
         protected virtual string GetSpecificModifiers()

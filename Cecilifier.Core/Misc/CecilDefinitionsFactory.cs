@@ -11,6 +11,15 @@ namespace Cecilifier.Core.Misc
 {
     internal sealed class CecilDefinitionsFactory
     {
+        public static IEnumerable<string> Method(IVisitorContext context, string methodVar, string methodName, string methodModifiers, string returnType, IList<TypeParameterSyntax> typeParameters)
+        {
+            var exps = new List<string>(); 
+            exps.Add($"var {methodVar} = new MethodDefinition(\"{methodName}\", {methodModifiers}, {returnType});");
+            ProcessGenericTypeParameters(methodVar, context, typeParameters, exps);
+
+            return exps;
+        }
+        
         public static string Constructor(IVisitorContext context, out string ctorLocalVar, string typeName, string methodAccessibility, string[] paramTypes, string methodDefinitionPropertyValues = null)
         {
             ctorLocalVar = MethodExtensions.LocalVariableNameFor(typeName, "ctor", "");
@@ -172,7 +181,7 @@ namespace Cecilifier.Core.Misc
             }
         }
 
-        internal static void ProcessGenericTypeParameters(string memberDefVar, IVisitorContext context, IList<TypeParameterSyntax> typeParamList, IList<string> exps)
+        private static void ProcessGenericTypeParameters(string memberDefVar, IVisitorContext context, IList<TypeParameterSyntax> typeParamList, IList<string> exps)
         {
             foreach (var typeParameter in typeParamList)
             {
@@ -227,6 +236,38 @@ namespace Cecilifier.Core.Misc
             }
         }
         
+        public static IEnumerable<string> MethodBody(string methodVar, InstructionRepresentation[] instructions)
+        {
+            var tagToInstructionDefMapping = new Dictionary<string, string>();
+            var exps = new List<string>();
+            exps.Add($"{methodVar}.Body = new MethodBody({methodVar});");
+            
+            var ilVar = $"{methodVar}_il";
+            exps.Add($"var {ilVar} = {methodVar}.Body.GetILProcessor();");
+            var methodInstVar = $"{methodVar}_inst";
+            exps.Add($"var {methodInstVar} = {methodVar}.Body.Instructions;");
+            
+            foreach (var inst in instructions)
+            {
+                var instVar = "_";
+                if (inst.tag != null)
+                {
+                    instVar = $"{inst.tag}_inst_{instructions.GetHashCode()}";
+                    exps.Add($"Instruction {instVar};");
+                    tagToInstructionDefMapping[inst.tag] = instVar;
+                }
+
+                var operand = inst.operand?.Insert(0, ", ") 
+                                ?? inst.branchTargetTag?.Replace(inst.branchTargetTag, $", {tagToInstructionDefMapping[inst.branchTargetTag]}")
+                                ?? string.Empty;
+                
+                exps.Add($"{methodInstVar}.Add({instVar} = {ilVar}.Create({inst.opCode.ConstantName()}{operand}));");
+                
+            }
+
+            return exps;
+        }
+        
         private static void AddExtraAttributes(IList<string> exps, string paramVar, IParameterSymbol symbol)
         {
             if (symbol.RefKind == RefKind.Out)
@@ -234,6 +275,5 @@ namespace Cecilifier.Core.Misc
                 exps.Add($"{paramVar}.Attributes = ParameterAttributes.Out;");
             }
         }
-
     }
 }
