@@ -141,6 +141,11 @@ namespace Cecilifier.Core.Tests.Integration
             return typeVisitor.VisitMember(method);
         }
 
+        public IEventDiffVisitor VisitMember(EventDefinition @event)
+        {
+            return typeVisitor.VisitMember(@event);
+        }
+
         public string Reason => other.Reason;
 
         internal CompilerInjectedAttributesIgnorer(string[] toBeIgnored)

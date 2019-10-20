@@ -224,23 +224,28 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 
         private static bool CheckTypeMembers(ITypeDiffVisitor typeVisitor, TypeDefinition source, TypeDefinition target)
         {
-            if (!CheckFields(typeVisitor, source, target))
+            return CheckFields(typeVisitor, source, target)
+                   && CheckMethods(typeVisitor, source, target)
+                   && CheckEvents(typeVisitor, source, target); 
+        }
+
+        private static bool CheckEvents(ITypeDiffVisitor typeVisitor, TypeDefinition source, TypeDefinition target)
+        {
+            foreach (var sourceEvent in source.Events)
             {
-                return false;
+                var eventVisitor = typeVisitor.VisitMember(sourceEvent);
+                var targetEvent = eventVisitor.VisitEvent(sourceEvent, target);
+
+                if (targetEvent == null)
+                    return false;
+                
+                var ret = eventVisitor.VisitType(sourceEvent, targetEvent)
+                          && eventVisitor.VisitAttributes(sourceEvent, targetEvent)
+                          && eventVisitor.VisitAccessors(sourceEvent, targetEvent);
+
+                if (!ret)
+                    return false;
             }
-
-            if (!CheckMethods(typeVisitor, source, target))
-            {
-                return false;
-            }
-
-            //foreach (var sourceEvent in source.Events)
-            //{
-            //}
-
-            //foreach (var sourcePropertie in source.Properties)
-            //{
-            //}
 
             return true;
         }
@@ -332,7 +337,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                     return visitor.VisitBody(source, target, instruction);
                 }
 
-                if (!EqualOrEquivalent(instruction, targetInstructions.Current))
+                if (!EqualOrEquivalent(instruction, targetInstructions.Current, source.IsStatic))
                 {
                     return visitor.VisitBody(source, target, instruction);
                 }
@@ -354,7 +359,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                 .Where(instructionFilter.IgnoreNonRequiredLocalVariableAssignments);
         }
 
-        private static bool EqualOrEquivalent(Instruction instruction, Instruction current)
+        private static bool EqualOrEquivalent(Instruction instruction, Instruction current, bool isStatic)
         {
             while (instruction != null && instruction.OpCode == OpCodes.Nop)
             {
@@ -377,12 +382,13 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                 return true;
             }
 
+            var paramIndexOffset = isStatic ? 0 : 1;
             switch (instruction.OpCode.Code)
             {
-                case Code.Ldarg_0: return current.OpCode.Code == Code.Ldarg && (int) current.Operand == 0;
-                case Code.Ldarg_1: return current.OpCode.Code == Code.Ldarg && (int) current.Operand == 1;
-                case Code.Ldarg_2: return current.OpCode.Code == Code.Ldarg && (int) current.Operand == 2;
-                case Code.Ldarg_3: return current.OpCode.Code == Code.Ldarg && (int) current.Operand == 3;
+                case Code.Ldarg_0: return current.OpCode.Code == Code.Ldarg && (((ParameterDefinition) current.Operand).Index + paramIndexOffset) == 0;
+                case Code.Ldarg_1: return current.OpCode.Code == Code.Ldarg && (((ParameterDefinition) current.Operand).Index + paramIndexOffset) == 1;
+                case Code.Ldarg_2: return current.OpCode.Code == Code.Ldarg && (((ParameterDefinition) current.Operand).Index + paramIndexOffset) == 2;
+                case Code.Ldarg_3: return current.OpCode.Code == Code.Ldarg && (((ParameterDefinition) current.Operand).Index + paramIndexOffset) == 3;
 
                 case Code.Ldloc_0: return current.OpCode.Code == Code.Ldloc && VarIndex(current.Operand) == 0;
                 case Code.Ldloc_1: return current.OpCode.Code == Code.Ldloc && VarIndex(current.Operand) == 1;
@@ -416,7 +422,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                 case Code.Brfalse:
                 case Code.Brfalse_S:
                 case Code.Brtrue:
-                case Code.Brtrue_S: return current.OpCode.FlowControl == FlowControl.Branch && EqualOrEquivalent((Instruction) instruction.Operand, (Instruction) current.Operand);
+                case Code.Brtrue_S: return current.OpCode.FlowControl == FlowControl.Branch && EqualOrEquivalent((Instruction) instruction.Operand, (Instruction) current.Operand, isStatic);
 
                 case Code.Pop:
                     if (current.Previous == null || instruction.Previous == null)
