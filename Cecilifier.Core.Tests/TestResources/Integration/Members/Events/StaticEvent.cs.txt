@@ -1,0 +1,4 @@
+﻿public class StaticEvent
+{
+    public static event System.EventHandler TheEvent;
+}

@@ -1,0 +1,13 @@
+﻿public class SimpleEvent
+{
+    public event System.EventHandler TheEvent;
+}
+
+/*
+TODO:
+ - Modifiers
+ - Events in base classes
+ - Events with explicit add/remove methods
+ - Generic Events (see tests under Generics/)
+ - Events typed to types defined in the same assembly
+*/

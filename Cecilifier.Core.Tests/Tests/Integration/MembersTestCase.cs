@@ -10,5 +10,12 @@ namespace Cecilifier.Core.Tests.Integration
         {
             AssertResourceTest(@"Members/ForwardReferences");
         }
+        
+        [TestCase("SimpleEvent")]
+        [TestCase("StaticEvent")]
+        public void TestEvents(string testName)
+        {
+            AssertResourceTest($@"Members/Events/{testName}");
+        }
     }
 }

@@ -67,6 +67,16 @@ namespace Cecilifier.Core.AST
             new MethodDeclarationVisitor(Context).Visit(node);
         }
 
+        public override void VisitEventDeclaration(EventDeclarationSyntax node)
+        {
+            new EventDeclarationVisitor(Context).Visit(node);
+        }
+
+        public override void VisitEventFieldDeclaration(EventFieldDeclarationSyntax node)
+        {
+            new EventDeclarationVisitor(Context).Visit(node);
+        }
+
         private string ProcessBase(TypeDeclarationSyntax classDeclaration)
         {
             var classSymbol = DeclaredSymbolFor(classDeclaration);
