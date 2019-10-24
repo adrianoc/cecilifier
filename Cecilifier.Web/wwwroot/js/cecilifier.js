@@ -13,6 +13,17 @@ function initializeSite() {
             theme: "blackboard"
         });
 
+    csharpCode.setOption("extraKeys", {
+        "Ctrl-G": function(cm) {
+            simulateClick("downloadProject");            
+        },
+        
+        "Shift-Ctrl-C": function(cm) {
+            simulateClick("sendbutton");
+        }
+
+    });
+    
     cecilifiedCode = CodeMirror.fromTextArea(
         document.getElementById("_cecilifiedcode"),
         {
@@ -134,4 +145,8 @@ function simulateClick(elementId) {
     });
     var cb = document.getElementById(elementId);
     var cancelled = !cb.dispatchEvent(event);
+}
+
+function copyToClipboard(elementId) {
+    navigator.clipboard.writeText(cecilifiedCode.getValue("\r\n"));
 }
