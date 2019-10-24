@@ -43,6 +43,18 @@ namespace Cecilifier.Core.AST
             AddCecilExpression($"{propertyDeclaringTypeVar}.Properties.Add({propDefVar});");
         }
 
+        public override void VisitPropertyDeclaration(PropertyDeclarationSyntax node)
+        {
+            var propertyType = ResolveType(node.Type);
+            var propertyDeclaringTypeVar = Context.DefinitionVariables.GetLastOf(MemberKind.Type).VariableName;
+            var propName = node.Identifier.ValueText;
+
+            var propDefVar = AddPropertyDefinition(propName, propertyType);
+            ProcessPropertyAccessors(node, propertyDeclaringTypeVar, propName, propertyType, propDefVar, NoParameters);
+
+            AddCecilExpression($"{propertyDeclaringTypeVar}.Properties.Add({propDefVar});");
+        }
+
         private void AddDefaultMemberAttribute(string definitionVar, string value)
         {
             var ctorVar = TempLocalVar("ctor");
@@ -57,19 +69,7 @@ namespace Cecilifier.Core.AST
 
             AddCecilExpressions(exps);
         }
-
-        public override void VisitPropertyDeclaration(PropertyDeclarationSyntax node)
-        {
-            var propertyType = ResolveType(node.Type);
-            var propertyDeclaringTypeVar = Context.DefinitionVariables.GetLastOf(MemberKind.Type).VariableName;
-            var propName = node.Identifier.ValueText;
-
-            var propDefVar = AddPropertyDefinition(propName, propertyType);
-            ProcessPropertyAccessors(node, propertyDeclaringTypeVar, propName, propertyType, propDefVar, NoParameters);
-
-            AddCecilExpression($"{propertyDeclaringTypeVar}.Properties.Add({propDefVar});");
-        }
-
+        
         private void ProcessPropertyAccessors(BasePropertyDeclarationSyntax node, string propertyDeclaringTypeVar, string propName, string propertyType, string propDefVar, List<string> parameters)
         {
             var propInfo = (IPropertySymbol) Context.SemanticModel.GetDeclaredSymbol(node);
@@ -102,7 +102,8 @@ namespace Cecilifier.Core.AST
                             AddBackingFieldIfNeeded(accessor);
 
                             AddCilInstruction(ilVar, OpCodes.Ldarg_0); // TODO: This assumes instance properties...
-                            AddCilInstruction(ilVar, OpCodes.Ldfld, backingFieldVar);
+                            AddCilInstruction(ilVar, OpCodes.Ldfld, MakeGenericTypeIfAppropriate(propInfo, backingFieldVar, propertyDeclaringTypeVar));
+                            
                             AddCilInstruction(ilVar, OpCodes.Ret);
                         }
                         else
@@ -138,7 +139,7 @@ namespace Cecilifier.Core.AST
 
                             AddCilInstruction(ilSetVar, OpCodes.Ldarg_0); // TODO: This assumes instance properties...
                             AddCilInstruction(ilSetVar, OpCodes.Ldarg_1);
-                            AddCilInstruction(ilSetVar, OpCodes.Stfld, backingFieldVar);
+                            AddCilInstruction(ilSetVar, OpCodes.Stfld, MakeGenericTypeIfAppropriate(propInfo, backingFieldVar, propertyDeclaringTypeVar));
                         }
                         else
                         {
@@ -159,14 +160,30 @@ namespace Cecilifier.Core.AST
 
                 backingFieldVar = TempLocalVar("bf");
                 var backingFieldName = $"<{propName}>k__BackingField";
-                var x = new[]
+                var backingFieldExps = new[]
                 {
                     $"var {backingFieldVar} = new FieldDefinition(\"{backingFieldName}\", {ModifiersToCecil("FieldAttributes", accessor.Modifiers, "Private")}, {propertyType});",
                     $"{propertyDeclaringTypeVar}.Fields.Add({backingFieldVar});"
                 };
 
-                AddCecilExpressions(x);
+                AddCecilExpressions(backingFieldExps);
             }
+        }
+
+        private string MakeGenericTypeIfAppropriate(IPropertySymbol propInfo, string existingFieldVar, string propertyDeclaringTypeVar)
+        {
+            if (!(propInfo.ContainingSymbol is INamedTypeSymbol ts) || !ts.IsGenericType || !propInfo.IsDefinedInCurrentType(Context))
+                return existingFieldVar;
+
+            //TODO: Register the following variable?
+            var genTypeVar = TempLocalVar($"gt_{propInfo.Name}_{propInfo.Parameters.Length}");
+            AddCecilExpressions(new[]
+            {
+                $"var {genTypeVar} = {propertyDeclaringTypeVar}.MakeGenericInstanceType({propertyDeclaringTypeVar}.GenericParameters.ToArray());",
+                $"var {genTypeVar}_ = new FieldReference({backingFieldVar}.Name, {backingFieldVar}.FieldType, {genTypeVar});",
+            });
+
+            return $"{genTypeVar}_";
         }
 
         private string AddPropertyDefinition(string propName, string propertyType)
