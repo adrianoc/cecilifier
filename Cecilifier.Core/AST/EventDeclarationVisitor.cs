@@ -35,6 +35,7 @@ namespace Cecilifier.Core.AST
             var eventName = node.Identifier.ValueText;
 
             var eventDefVar = AddEventDefinition(eventName, eventType);
+            AddCecilExpression($"{eventDeclaringTypeVar}.Properties.Add({eventDefVar});");
         }
 
         // Handles field like events (i.e, no add/remove accessors)
@@ -49,12 +50,16 @@ namespace Cecilifier.Core.AST
             }
             */
 
+            //TODO: semantic model fails to resolve the event. Bug?
+            //var eventSymbol = Context.SemanticModel.GetDeclaredSymbol(node);
+            
+            eventDeclaringTypeVar = Context.DefinitionVariables.GetLastOf(MemberKind.Type).VariableName;
+
             var backingFieldVar = AddBackingField(node); // backing field will have same name as the event
             var isStatic = node.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword));
             var addAccessorVar = AddAddAccessor(node, backingFieldVar, isStatic);
             var removeAccessorVar = AddRemoveAccessor(node, backingFieldVar, isStatic);
 
-            var eventDeclaringTypeVar = Context.DefinitionVariables.GetLastOf(MemberKind.Type).VariableName;
             AddCecilExpression($"{eventDeclaringTypeVar}.Methods.Add({addAccessorVar});");
             AddCecilExpression($"{eventDeclaringTypeVar}.Methods.Add({removeAccessorVar});");
             
@@ -74,7 +79,7 @@ namespace Cecilifier.Core.AST
             var addMethodExps = CecilDefinitionsFactory.Method(Context, addMethodVar, $"remove_{decl.Identifier.Text}", accessorModifiers, Context.TypeResolver.ResolvePredefinedType("Void"), Array.Empty<TypeParameterSyntax>());
             var paramsExps = AddParameterTo(addMethodVar, backingFieldVar);
             var localVarsExps = CreateLocalVarsForAddMethod(addMethodVar, backingFieldVar);
-            var bodyExps = RemoveMethodBody(backingFieldVar, addMethodVar, node.Declaration.Type, isStatic);
+            var bodyExps = RemoveMethodBody(node, backingFieldVar, addMethodVar, node.Declaration.Type, isStatic);
             
             foreach (var exp in addMethodExps.Concat(paramsExps).Concat(bodyExps).Concat(localVarsExps))
             {
@@ -96,7 +101,7 @@ namespace Cecilifier.Core.AST
             var addMethodExps = CecilDefinitionsFactory.Method(Context, addMethodVar, $"add_{decl.Identifier.Text}", accessorModifiers, Context.TypeResolver.ResolvePredefinedType("Void"), Array.Empty<TypeParameterSyntax>());
             var paramsExps = AddParameterTo(addMethodVar, backingFieldVar);
             var localVarsExps = CreateLocalVarsForAddMethod(addMethodVar, backingFieldVar);
-            var bodyExps = AddMethodBody(backingFieldVar, addMethodVar, node.Declaration.Type, isStatic);
+            var bodyExps = AddMethodBody(node, backingFieldVar, addMethodVar, node.Declaration.Type, isStatic);
             
             foreach (var exp in addMethodExps.Concat(paramsExps).Concat(bodyExps).Concat(localVarsExps))
             {
@@ -105,6 +110,24 @@ namespace Cecilifier.Core.AST
             
             return addMethodVar;
         }
+        
+        //TODO: Use symbol (instead of syntax node), remove code duplication from property handling
+        private string MakeGenericTypeIfAppropriate(EventFieldDeclarationSyntax node, string existingFieldVar)
+        {
+            var declaringClass = ((ClassDeclarationSyntax) node.Parent);
+            if (declaringClass.TypeParameterList == null || declaringClass.TypeParameterList.IsMissing)
+                return existingFieldVar;
+
+            //TODO: Register the following variable?
+            var genTypeVar = TempLocalVar($"gt_{node.Declaration.Variables[0].Identifier.Text}_{node.GetLocation().SourceSpan.Start}");
+            AddCecilExpressions(new[]
+            {
+                $"var {genTypeVar} = {eventDeclaringTypeVar}.MakeGenericInstanceType({eventDeclaringTypeVar}.GenericParameters.ToArray());",
+                $"var {genTypeVar}_ = new FieldReference({existingFieldVar}.Name, {existingFieldVar}.FieldType, {genTypeVar});",
+            });
+
+            return $"{genTypeVar}_";
+        }
 
         private IEnumerable<string> CreateLocalVarsForAddMethod(string addMethodVar, string backingFieldVar)
         {
@@ -112,19 +135,21 @@ namespace Cecilifier.Core.AST
                 yield return $"{addMethodVar}.Body.Variables.Add(new VariableDefinition({backingFieldVar}.FieldType));";
         }
         
-        private IEnumerable<string> RemoveMethodBody(string backingFieldVar, string removeMethodVar, TypeSyntax eventType, bool isStatic)
+        private IEnumerable<string> RemoveMethodBody(EventFieldDeclarationSyntax node, string backingFieldVar, string removeMethodVar, TypeSyntax eventType, bool isStatic)
         {
             var (ldfld, ldflda) = isStatic ? (OpCodes.Ldsfld, OpCodes.Ldsflda) : (OpCodes.Ldfld, OpCodes.Ldflda);
             
             var removeMethod = Utils.ImportFromMainModule("typeof(Delegate).GetMethod(\"Remove\")");
             var compareExchangeExps = CompareExchangeMethodResolvingExps(backingFieldVar, out var compExcVar);
-            
+
+            var fieldVar = MakeGenericTypeIfAppropriate(node, backingFieldVar);
+
             // static member access does not have a *this* so simply replace with *Nop*
             var lgarg_0 = isStatic ? OpCodes.Nop : OpCodes.Ldarg_0;
             var bodyExps = CecilDefinitionsFactory.MethodBody(removeMethodVar, new[]
             {
                 lgarg_0,
-                ldfld.WithOperand(backingFieldVar),
+                ldfld.WithOperand(fieldVar),
                 OpCodes.Stloc_0,
                 OpCodes.Ldloc_0.WithInstructionMarker("LoopStart"),
                 OpCodes.Stloc_1,
@@ -134,7 +159,7 @@ namespace Cecilifier.Core.AST
                 OpCodes.Castclass.WithOperand(ResolveType(eventType)),
                 OpCodes.Stloc_2,
                 lgarg_0,
-                ldflda.WithOperand(backingFieldVar),
+                ldflda.WithOperand(fieldVar),
                 OpCodes.Ldloc_2,
                 OpCodes.Ldloc_1,
                 OpCodes.Call.WithOperand(compExcVar),
@@ -148,19 +173,21 @@ namespace Cecilifier.Core.AST
             return compareExchangeExps.Concat(bodyExps);
         }
         
-        private IEnumerable<string> AddMethodBody(string backingFieldVar, string addMethodVar, TypeSyntax eventType, bool isStatic)
+        private IEnumerable<string> AddMethodBody(EventFieldDeclarationSyntax node, string backingFieldVar, string addMethodVar, TypeSyntax eventType, bool isStatic)
         {
             var (ldfld, ldflda) = isStatic ? (OpCodes.Ldsfld, OpCodes.Ldsflda) : (OpCodes.Ldfld, OpCodes.Ldflda);
 
             var combineMethod = Utils.ImportFromMainModule("typeof(Delegate).GetMethods().Single(m => m.Name == \"Combine\" && m.IsStatic && m.GetParameters().Length == 2)");
             var compareExchangeExps = CompareExchangeMethodResolvingExps(backingFieldVar, out var compExcVar);
 
+            var fieldVar = MakeGenericTypeIfAppropriate(node, backingFieldVar);
+
             // static member access does not have a *this* so simply replace with *Nop*
             var lgarg_0 = isStatic ? OpCodes.Nop : OpCodes.Ldarg_0;
             var bodyExps = CecilDefinitionsFactory.MethodBody(addMethodVar, new[]
             {
                 lgarg_0,
-                ldfld.WithOperand(backingFieldVar),
+                ldfld.WithOperand(fieldVar),
                 OpCodes.Stloc_0,
                 OpCodes.Ldloc_0.WithInstructionMarker("LoopStart"),
                 OpCodes.Stloc_1,
@@ -170,7 +197,7 @@ namespace Cecilifier.Core.AST
                 OpCodes.Castclass.WithOperand(ResolveType(eventType)),
                 OpCodes.Stloc_2,
                 lgarg_0,
-                ldflda.WithOperand(backingFieldVar),
+                ldflda.WithOperand(fieldVar),
                 OpCodes.Ldloc_2,
                 OpCodes.Ldloc_1,
                 OpCodes.Call.WithOperand(compExcVar),
@@ -233,5 +260,7 @@ namespace Cecilifier.Core.AST
 
             return eventDefVar;
         }
+
+        private string eventDeclaringTypeVar;
     }
 }

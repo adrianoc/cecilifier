@@ -73,6 +73,30 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                 }
             }
 
+            for (int i = 0; i < x.GenericParameters.Count; i++)
+            {
+                var gemParamComp = x.GenericParameters[i].FullName.CompareTo(y.GenericParameters[i].FullName);
+                if (genParamComp != 0)
+                {
+                    return genParamComp;
+                }
+            }
+
+            if (x.IsGenericInstance)
+            {
+                var xGen = (GenericInstanceMethod) x;
+                var yGen = (GenericInstanceMethod) y;
+
+                for (int i = 0; i < xGen.GenericArguments.Count; i++)
+                {
+                    var compGenArg = xGen.GenericArguments[i].FullName.CompareTo(yGen.GenericArguments[i].FullName);
+                    if (compGenArg == 0)
+                        continue;
+
+                    return compGenArg;
+                }
+            }
+
             return 0;
         }
     }

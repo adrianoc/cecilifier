@@ -25,5 +25,5 @@ public struct GenericInterface<T>
 {
     T TheProperty  { get; set; }
     T TheMethod(T p) { return p; }
-    //event EventHandler<T> TheEvent;    
+    //event EventHandler<T> TheEvent;
 }

@@ -39,6 +39,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                 {Code.Isinst, ValidateTypeReference},
                 {Code.Newarr, ValidateTypeReference},
 
+                {Code.Ldflda, ValidateField},
                 {Code.Ldfld, ValidateField},
                 {Code.Stfld, ValidateField},
 
@@ -582,7 +583,8 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
             var fieldLhs = (FieldReference) lhs.Operand;
             var fieldRhs = (FieldReference) rhs.Operand;
 
-            return fieldLhs.FieldType.FullName == fieldRhs.FieldType.FullName;
+            return fieldLhs.FieldType.FullName == fieldRhs.FieldType.FullName 
+                   && fieldLhs.FullName == fieldRhs.FullName;
         }
     }
 
