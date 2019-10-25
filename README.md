@@ -45,15 +45,18 @@ Supported Features
 - Generics 
 	- Type / method instantiation
     - Type / Method definition
+    - Generic events
     - Constraints
-    - Co/Contra variance 
+    - Co/Contra variance     
 - Pointer types (int*, void*, etc)
 - Fixed statement
      
 Unsupported Features
 ---
+- Events (wip, support most common cases)
 - default expression
 - Enumerator methods
+- Delegate
 - async/await
 - Newer C# syntax (expression bodied members, elvis operator, static import, to name some)
 - Much more :(

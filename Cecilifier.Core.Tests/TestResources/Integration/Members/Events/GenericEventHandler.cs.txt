@@ -1,6 +1,5 @@
 ﻿public class GenericEventHandler<T>
 {
     public event System.EventHandler<int> TheEventInt;
-    //Not working. Fails to properly resolve T
-    //public event System.EventHandler<T> TheEventT;
+    public event System.EventHandler<T> TheEventT;
 }

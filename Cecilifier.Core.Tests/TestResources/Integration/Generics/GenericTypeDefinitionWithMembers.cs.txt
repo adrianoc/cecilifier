@@ -1,12 +1,13 @@
 using System;
 
+//public delegate T TheDelegate<T>(T t);
+
 public class GenericClass<T>
 {
     public T theField;
     public T TheProperty  { get; set; }
     public T TheMethod(T p) { return p; }
     
-    //public event EventHandler<T> TheEvent;    
     //public delegate T TheDelegate(T t);
 }
 
@@ -16,14 +17,13 @@ public struct GenericStruct<T>
     public T TheProperty  { get; set; }
     public T TheMethod(T p) { return p; }
     
-    //public event EventHandler<T> TheEvent;    
     //public delegate T TheDelegate(T t);
 }
 
-
-public struct GenericInterface<T> 
+public interface IGenericInterface<T> 
 {
     T TheProperty  { get; set; }
-    T TheMethod(T p) { return p; }
-    //event EventHandler<T> TheEvent;
+    T TheMethod(T p);
+    
+    //event EventHandler<T> TheEventT;
 }
