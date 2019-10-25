@@ -267,10 +267,9 @@ namespace Cecilifier.Core.AST
 
         private string ResolvePlainOrGenericType(TypeSyntax type)
         {
-            if (type is GenericNameSyntax genType)
+            if (Context.GetTypeInfo(type).Type is INamedTypeSymbol namedTypeSymbol && namedTypeSymbol.IsGenericType)
             {
-                var typeInfo = Context.GetTypeInfo(genType);
-                return Context.TypeResolver.ResolveGenericType(typeInfo.Type);
+                return Context.TypeResolver.ResolveGenericType(namedTypeSymbol);
             }
 
             return Context.TypeResolver.Resolve(type.ToString());
