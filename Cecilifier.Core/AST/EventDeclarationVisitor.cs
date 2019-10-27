@@ -55,63 +55,104 @@ namespace Cecilifier.Core.AST
             
             eventDeclaringTypeVar = Context.DefinitionVariables.GetLastOf(MemberKind.Type).VariableName;
 
-            var backingFieldVar = AddBackingField(node); // backing field will have same name as the event
+            var backingFieldVar = string.Empty;
+
+            var declaringType = node.ResolveDeclaringType();
+            if (!declaringType.IsKind(SyntaxKind.InterfaceDeclaration))
+            {
+                backingFieldVar = AddBackingField(node); // backing field will have same name as the event
+            }
+            
+            var eventType = ResolveType(node.Declaration.Type);
+
             var isStatic = node.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword));
-            var addAccessorVar = AddAddAccessor(node, backingFieldVar, isStatic);
-            var removeAccessorVar = AddRemoveAccessor(node, backingFieldVar, isStatic);
+            var addAccessorVar = AddAddAccessor(node, backingFieldVar, isStatic, declaringType, eventType);
+            var removeAccessorVar = AddRemoveAccessor(node, backingFieldVar, isStatic, declaringType, eventType);
 
             AddCecilExpression($"{eventDeclaringTypeVar}.Methods.Add({addAccessorVar});");
             AddCecilExpression($"{eventDeclaringTypeVar}.Methods.Add({removeAccessorVar});");
             
             var eventName = node.Declaration.Variables[0].Identifier.Text;
-            AddEventDefinition(eventDeclaringTypeVar, eventName, $"{backingFieldVar}.FieldType", addAccessorVar, removeAccessorVar);
+            AddEventDefinition(eventDeclaringTypeVar, eventName, eventType, addAccessorVar, removeAccessorVar);
         }
 
-        private string AddRemoveAccessor(EventFieldDeclarationSyntax node, string backingFieldVar, bool isStatic)
+        private string AddRemoveAccessor(EventFieldDeclarationSyntax node, string backingFieldVar, bool isStatic, SyntaxNode declaringType, string eventType)
         {
             if (node.Declaration.Variables.Count > 1)
                 throw new NotSupportedException($"Only one event per declaration is supported.");
 
             var decl = node.Declaration.Variables[0];
-            var addMethodVar = TempLocalVar($"{decl.Identifier.Text}_add");
-            var accessorModifiers = node.Modifiers.MethodModifiersToCecil(ModifiersToCecil, "MethodAttributes.SpecialName");
+            var removeMethodVar = TempLocalVar($"{decl.Identifier.Text}_remove");
+            var isInterfaceDef = declaringType.IsKind(SyntaxKind.InterfaceDeclaration);
+            var accessorModifiers = AccessModifiersForEventAccessors(node, isInterfaceDef);
 
-            var addMethodExps = CecilDefinitionsFactory.Method(Context, addMethodVar, $"remove_{decl.Identifier.Text}", accessorModifiers, Context.TypeResolver.ResolvePredefinedType("Void"), Array.Empty<TypeParameterSyntax>());
-            var paramsExps = AddParameterTo(addMethodVar, backingFieldVar);
-            var localVarsExps = CreateLocalVarsForAddMethod(addMethodVar, backingFieldVar);
-            var bodyExps = RemoveMethodBody(node, backingFieldVar, addMethodVar, node.Declaration.Type, isStatic);
+            var removeMethodExps = CecilDefinitionsFactory.Method(Context, removeMethodVar, $"remove_{decl.Identifier.Text}", accessorModifiers, Context.TypeResolver.ResolvePredefinedType("Void"), Array.Empty<TypeParameterSyntax>());
+            var paramsExps = AddParameterTo(removeMethodVar, eventType);
+
+            removeMethodExps = removeMethodExps.Concat(paramsExps);
+            if (!isInterfaceDef)
+            {
+                var localVarsExps = CreateLocalVarsForAddMethod(removeMethodVar, backingFieldVar);
+                var bodyExps = RemoveMethodBody(node, backingFieldVar, removeMethodVar, node.Declaration.Type, isStatic);
+                removeMethodExps  = removeMethodExps.Concat(bodyExps).Concat(localVarsExps);
+            }
             
-            foreach (var exp in addMethodExps.Concat(paramsExps).Concat(bodyExps).Concat(localVarsExps))
+            foreach (var exp in removeMethodExps)
             {
                 WriteCecilExpression(Context, exp);
             }
             
-            return addMethodVar;            
+            return removeMethodVar;            
         }
 
-        private string AddAddAccessor(EventFieldDeclarationSyntax node, string backingFieldVar, bool isStatic)
+        private string AddAddAccessor(EventFieldDeclarationSyntax node, string backingFieldVar, bool isStatic, SyntaxNode declaringType, string eventType)
         {
             if (node.Declaration.Variables.Count > 1)
                 throw new NotSupportedException($"Only one event per declaration is supported.");
 
             var decl = node.Declaration.Variables[0];
             var addMethodVar = TempLocalVar($"{decl.Identifier.Text}_add");
-            var accessorModifiers = node.Modifiers.MethodModifiersToCecil(ModifiersToCecil, "MethodAttributes.SpecialName");
-
+            var isInterfaceDef = declaringType.IsKind(SyntaxKind.InterfaceDeclaration);
+            
+            var accessorModifiers = AccessModifiersForEventAccessors(node, isInterfaceDef);
             var addMethodExps = CecilDefinitionsFactory.Method(Context, addMethodVar, $"add_{decl.Identifier.Text}", accessorModifiers, Context.TypeResolver.ResolvePredefinedType("Void"), Array.Empty<TypeParameterSyntax>());
-            var paramsExps = AddParameterTo(addMethodVar, backingFieldVar);
-            var localVarsExps = CreateLocalVarsForAddMethod(addMethodVar, backingFieldVar);
-            var bodyExps = AddMethodBody(node, backingFieldVar, addMethodVar, node.Declaration.Type, isStatic);
+
+            var paramsExps = AddParameterTo(addMethodVar, eventType);
+            addMethodExps = addMethodExps.Concat(paramsExps);
             
-            foreach (var exp in addMethodExps.Concat(paramsExps).Concat(bodyExps).Concat(localVarsExps))
+            if (!isInterfaceDef)
+            {
+                var localVarsExps = CreateLocalVarsForAddMethod(addMethodVar, backingFieldVar);
+                var bodyExps = AddMethodBody(node, backingFieldVar, addMethodVar, node.Declaration.Type, isStatic);
+
+                addMethodExps = addMethodExps.Concat(bodyExps).Concat(localVarsExps);
+            }
+
+            foreach (var exp in addMethodExps)
             {
                 WriteCecilExpression(Context, exp);
             }
-            
+
             return addMethodVar;
         }
-        
+
+        private static string AccessModifiersForEventAccessors(EventFieldDeclarationSyntax node, bool isInterfaceDef)
+        {
+            string accessorModifiers;
+            if (isInterfaceDef)
+            {
+                accessorModifiers = "MethodAttributes.SpecialName | MethodAttributes.Public | MethodAttributes.NewSlot | MethodAttributes.Virtual | MethodAttributes.Abstract | MethodAttributes.HideBySig";
+            }
+            else
+            {
+                accessorModifiers = node.Modifiers.MethodModifiersToCecil(ModifiersToCecil, "MethodAttributes.SpecialName");
+            }
+
+            return accessorModifiers;
+        }
+
         //TODO: Use symbol (instead of syntax node), remove code duplication from property handling
+        //      It looks like there's a bug since Roslyn is failing to resolve  the symbol for the event
         private string MakeGenericTypeIfAppropriate(EventFieldDeclarationSyntax node, string existingFieldVar)
         {
             var declaringClass = ((ClassDeclarationSyntax) node.Parent);
@@ -223,11 +264,11 @@ namespace Cecilifier.Core.AST
             return new[] {exp1, exp2, exp3 };
         }
 
-        private IEnumerable<string> AddParameterTo(string methodVar, string backingFieldVar)
+        private IEnumerable<string> AddParameterTo(string methodVar, string fieldType)
         {
             return new[]
             {
-                $"{methodVar}.Parameters.Add(new ParameterDefinition(\"value\", ParameterAttributes.None, {backingFieldVar}.FieldType));",
+                $"{methodVar}.Parameters.Add(new ParameterDefinition(\"value\", ParameterAttributes.None, {fieldType}));",
             };
         }
 

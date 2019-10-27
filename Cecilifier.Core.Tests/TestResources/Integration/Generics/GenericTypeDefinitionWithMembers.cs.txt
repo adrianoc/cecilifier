@@ -25,5 +25,5 @@ public interface IGenericInterface<T>
     T TheProperty  { get; set; }
     T TheMethod(T p);
     
-    //event EventHandler<T> TheEventT;
+    event EventHandler<T> TheEventT;
 }

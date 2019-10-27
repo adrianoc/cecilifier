@@ -90,13 +90,13 @@ namespace Cecilifier.Core.AST
                         AddCecilExpression($"{getMethodVar}.Body = new MethodBody({getMethodVar});");
                         AddCecilExpression($"{propDefVar}.GetMethod = {getMethodVar};");
 
-                        var ilVar = TempLocalVar("ilVar_get_");
-                        var ilProcessorExp = $"var {ilVar} = {getMethodVar}.Body.GetILProcessor();";
-                        AddCecilExpression(ilProcessorExp);
-
                         if (propInfo.ContainingType.TypeKind == TypeKind.Interface)
                             break;
                         
+                        var ilVar = TempLocalVar("ilVar_get_");
+                        var ilProcessorExp = $"var {ilVar} = {getMethodVar}.Body.GetILProcessor();";
+                        
+                        AddCecilExpression(ilProcessorExp);
                         if (accessor.Body == null) //is this an auto property ?
                         {
                             AddBackingFieldIfNeeded(accessor);
