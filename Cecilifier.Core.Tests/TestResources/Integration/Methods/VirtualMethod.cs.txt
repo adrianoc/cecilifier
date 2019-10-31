@@ -7,3 +7,22 @@ class Override : Virtual
 {
 	override public void VirtualMethod() {}
 }
+
+class User 
+{
+    void InvokeMethodFromSameAssembly(Virtual v, Override o)
+    {
+        v.VirtualMethod();
+        o.VirtualMethod();
+    }
+    
+    void InvokeMethodFromDifferentAssembly(string s)
+    {
+        s.GetHashCode();
+    }
+    
+    void InvokeGenericMethodFromDifferentAssembly()
+    {
+        System.Array.Empty<int>();
+    }
+}
