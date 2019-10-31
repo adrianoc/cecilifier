@@ -547,7 +547,7 @@ namespace Cecilifier.Core.AST
             }
 
             //TODO: We need to find the InvocationSyntax that node represents...
-            EnsureMethodAvailable(method, Array.Empty<TypeParameterSyntax>());
+            EnsureMethodAvailable(method.OverriddenMethod ?? method.OriginalDefinition, Array.Empty<TypeParameterSyntax>());
             var isAccessOnThis = !node.Parent.IsKind(SyntaxKind.SimpleMemberAccessExpression);
 
             var mae = node.Parent as MemberAccessExpressionSyntax;

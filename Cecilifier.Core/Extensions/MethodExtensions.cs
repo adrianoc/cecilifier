@@ -57,10 +57,10 @@ namespace Cecilifier.Core.Extensions
         {
             if (method.IsDefinedInCurrentType(ctx))
             {
-                var tbf = method.AsMethodDefinitionVariable();
+                var tbf = (method.OverriddenMethod ?? method).AsMethodDefinitionVariable();
                 return ctx.DefinitionVariables.GetMethodVariable(tbf).VariableName;
             }
-            
+
             var declaringTypeName = method.ContainingType.ReflectionTypeName(out var typeParameters);
             if (method.IsGenericMethod)
             {
@@ -69,6 +69,9 @@ namespace Cecilifier.Core.Extensions
                 return $"assembly.MainModule.Import(TypeHelpers.ResolveGenericMethod(\"{method.ContainingAssembly.Name}\", \"{declaringTypeName}\", \"{method.Name}\",{method.Modifiers()}, {typeArguments}, {paramTypes}))";
             }
 
+            if (!method.ContainingType.IsValueType && !method.ContainingType.IsGenericType)
+                declaringTypeName = (method.OverriddenMethod ?? method).ContainingType.FullyQualifiedName();
+            
             return ImportFromMainModule(string.Format("TypeHelpers.ResolveMethod(\"{0}\", \"{1}\", \"{2}\",{3},\"{4}\"{5})",
                 method.ContainingAssembly.Name,
                 declaringTypeName,
