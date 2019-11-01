@@ -1,4 +1,8 @@
-﻿using Microsoft.CodeAnalysis.CSharp.Syntax;
+using System;
+using System.Collections.Generic;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Mono.Cecil.Cil;
 
 namespace Cecilifier.Core.AST
@@ -6,6 +10,12 @@ namespace Cecilifier.Core.AST
     internal class StatementVisitor : SyntaxWalkerBase
     {
         private static string _ilVar;
+        private HashSet<SyntaxKind> _ignoreForLogging = new HashSet<SyntaxKind>(new[]
+        {
+            SyntaxKind.Block,
+            SyntaxKind.TryStatement,
+            SyntaxKind.CatchClause,
+        });
 
         internal StatementVisitor(IVisitorContext ctx) : base(ctx)
         {

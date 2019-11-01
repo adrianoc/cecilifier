@@ -280,7 +280,8 @@ namespace Cecilifier.Core.AST
             switch (type.Kind())
             {
                 case SyntaxKind.PredefinedType: return Context.TypeResolver.ResolvePredefinedType(Context.GetTypeInfo(type).Type.Name);
-                case SyntaxKind.ArrayType: return "new ArrayType(" + ResolveType(type.DescendantNodes().OfType<TypeSyntax>().Single()) + ")";
+                case SyntaxKind.ArrayType: return ResolveType(type.DescendantNodes().OfType<TypeSyntax>().Single()) + ".MakeArrayType()";
+                case SyntaxKind.PointerType: return ResolveType(type.DescendantNodes().OfType<TypeSyntax>().Single()) + ".MakePointerType()";
             }
 
             return null;

@@ -1,8 +1,9 @@
-﻿using System;
+﻿    using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using Cecilifier.Core.Extensions;
+    using System.Net.NetworkInformation;
+    using Cecilifier.Core.Extensions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -15,7 +16,9 @@ namespace Cecilifier.Core.AST
     {
         private static readonly IDictionary<SyntaxKind, Action<IVisitorContext, string, ITypeSymbol, ITypeSymbol>> operatorHandlers =
             new Dictionary<SyntaxKind, Action<IVisitorContext, string, ITypeSymbol, ITypeSymbol>>();
-
+        
+        private static readonly IDictionary<string, uint> predefinedTypeSize = new Dictionary<string, uint>();
+        
         private readonly string ilVar;
         private readonly Stack<LinkedListNode<string>> callFixList = new Stack<LinkedListNode<string>>();
 
@@ -23,14 +26,17 @@ namespace Cecilifier.Core.AST
 
         static ExpressionVisitor()
         {
+            predefinedTypeSize["int"] = sizeof(int);
+            predefinedTypeSize["byte"] = sizeof(byte);
+            predefinedTypeSize["long"] = sizeof(long);
+            
             //TODO: Use AddCilInstruction instead.
             operatorHandlers[SyntaxKind.PlusToken] = (ctx, ilVar, left, right) =>
             {
                 if (left.SpecialType == SpecialType.System_String)
                 {
                     var concatArgType = right.SpecialType == SpecialType.System_String ? "string" : "object";
-                    WriteCecilExpression(ctx,
-                        $"{ilVar}.Append({ilVar}.Create({OpCodes.Call.ConstantName()}, assembly.MainModule.Import(typeof(string).GetMethod(\"Concat\", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public, null, new[] {{ typeof({concatArgType}), typeof({concatArgType}) }}, null))));");
+                    WriteCecilExpression(ctx,$"{ilVar}.Append({ilVar}.Create({OpCodes.Call.ConstantName()}, assembly.MainModule.Import(typeof(string).GetMethod(\"Concat\", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public, null, new[] {{ typeof({concatArgType}), typeof({concatArgType}) }}, null))));");
                 }
                 else
                 {
@@ -39,10 +45,28 @@ namespace Cecilifier.Core.AST
             };
 
             operatorHandlers[SyntaxKind.SlashToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Append({ilVar}.Create({OpCodes.Div.ConstantName()}));");
-            operatorHandlers[SyntaxKind.GreaterThanToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Append({ilVar}.Create({OpCodes.Cgt.ConstantName()}));");
+            operatorHandlers[SyntaxKind.GreaterThanToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Append({ilVar}.Create({CompareOperatorFor(ctx, left, right).ConstantName()}));");
             operatorHandlers[SyntaxKind.EqualsEqualsToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Append({ilVar}.Create({OpCodes.Ceq.ConstantName()}));");
             operatorHandlers[SyntaxKind.LessThanToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Append({ilVar}.Create({OpCodes.Clt.ConstantName()}));");
             operatorHandlers[SyntaxKind.MinusToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Append({ilVar}.Create({OpCodes.Sub.ConstantName()}));");
+        }
+
+        private static OpCode CompareOperatorFor(IVisitorContext ctx, ITypeSymbol left, ITypeSymbol right)
+        {
+            switch (left.SpecialType)
+            {
+            case SpecialType.System_UInt16:
+            case SpecialType.System_UInt32:
+            case SpecialType.System_UInt64:
+            case SpecialType.System_Byte:
+                return OpCodes.Cgt_Un;
+            
+            case SpecialType.None:
+                return left.Kind == SymbolKind.PointerType ? OpCodes.Cgt_Un : OpCodes.Cgt;
+                
+            default:
+                return OpCodes.Cgt;
+            }
         }
 
         private ExpressionVisitor(IVisitorContext ctx, string ilVar) : base(ctx)
@@ -61,6 +85,41 @@ namespace Cecilifier.Core.AST
             ev.Visit(node);
 
             return ev.valueTypeNoArgObjCreation;
+        }
+
+        public override void VisitStackAllocArrayCreationExpression(StackAllocArrayCreationExpressionSyntax node)
+        {
+            /*
+                // S *s = stackalloc S[n];
+                IL_0007: ldarg.1
+                IL_0008: conv.u
+                IL_0009: sizeof MyStruct
+                IL_000f: mul.ovf.un
+                IL_0010: localloc
+                
+                // int *i = stackalloc int[10];
+                IL_0001: ldc.i4.s 40
+                IL_0003: conv.u
+                IL_0004: localloc
+             */
+            var type = (ArrayTypeSyntax) node.Type;
+            var countNode = type.RankSpecifiers[0].Sizes[0];
+            if (type.RankSpecifiers.Count == 1 && countNode.IsKind(SyntaxKind.NumericLiteralExpression))
+            {
+                var sizeLiteral = Int32.Parse(countNode.GetFirstToken().Text) * predefinedTypeSize[type.ElementType.GetText().ToString()];
+                
+                AddCilInstruction(ilVar, OpCodes.Ldc_I4, sizeLiteral);
+                AddCilInstruction(ilVar, OpCodes.Conv_U);
+                AddCilInstruction(ilVar, OpCodes.Localloc);
+            }
+            else
+            {
+                countNode.Accept(this);
+                AddCilInstruction(ilVar, OpCodes.Conv_U);
+                AddCilInstruction(ilVar, OpCodes.Sizeof, ResolveType(type.ElementType));
+                AddCilInstruction(ilVar, OpCodes.Mul_Ovf_Un);
+                AddCilInstruction(ilVar, OpCodes.Localloc);
+            }
         }
 
         public override void VisitArrayCreationExpression(ArrayCreationExpressionSyntax node)
