@@ -1,0 +1,16 @@
+﻿struct S
+{
+    int i;
+    byte b;
+}
+
+class StackAlloc
+{
+    private unsafe bool M(int n)
+	{
+	    int *i = stackalloc int[10];
+	    S *s = stackalloc S[n];
+
+        return i > s;	    
+	}
+}
