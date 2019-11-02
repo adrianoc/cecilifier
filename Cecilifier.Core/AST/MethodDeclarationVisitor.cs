@@ -11,7 +11,7 @@ using static System.Environment;
 
 namespace Cecilifier.Core.AST
 {
-    internal class MethodDeclarationVisitor : SyntaxWalkerBase
+    internal class MethodDeclarationVisitor : TypeDeclarationVisitorBase
     {
         protected string ilVar;
 
@@ -86,6 +86,8 @@ namespace Cecilifier.Core.AST
             AddOrUpdateMethodDefinition(methodVar, fqName, node.Modifiers.MethodModifiersToCecil(ModifiersToCecil, GetSpecificModifiers(), DeclaredSymbolFor(node)), returnType, typeParameters);
             AddCecilExpression("{0}.Methods.Add({1});", Context.DefinitionVariables.GetLastOf(MemberKind.Type).VariableName, methodVar);
 
+            HandleAttributesInMemberDeclaration(node, methodVar);
+            
             var isAbstract = DeclaredSymbolFor(node).IsAbstract;
             if (!isAbstract)
             {

@@ -13,7 +13,7 @@ namespace Cecilifier.Core.AST
         {
         }
 
-        protected void HandleAttributesInTypeDeclaration(BaseTypeDeclarationSyntax node, string varName)
+        protected void HandleAttributesInMemberDeclaration(MemberDeclarationSyntax node, string varName)
         {
             if (node.AttributeLists.Count == 0)
             {
@@ -29,6 +29,7 @@ namespace Cecilifier.Core.AST
                     {
                         //attribute is not declared in the same assembly....
                         var ctorArgumentTypes = $"new Type[{attrArgs.Length}] {{ {string.Join(",", attrArgs.Select(arg => $"typeof({Context.GetTypeInfo(arg.Expression).Type.Name})"))} }}";
+
                         return ImportFromMainModule($"typeof({attrType.FullyQualifiedName()}).GetConstructor({ctorArgumentTypes})");
                     }
 
@@ -42,5 +43,6 @@ namespace Cecilifier.Core.AST
                 AddCecilExpressions(attrsExp);
             }
         }
+        
     }
 }

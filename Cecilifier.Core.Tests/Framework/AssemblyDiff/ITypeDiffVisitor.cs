@@ -21,6 +21,9 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
         
         bool VisitType(EventDefinition source, EventDefinition target);
         bool VisitAttributes(EventDefinition source, EventDefinition target);
+        
         bool VisitAccessors(EventDefinition source, EventDefinition target);
+
+        bool VisitCustomAttributes(EventDefinition source, EventDefinition target);
     }
 }

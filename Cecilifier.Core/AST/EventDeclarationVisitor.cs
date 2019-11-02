@@ -10,7 +10,7 @@ using Mono.Cecil.Cil;
 
 namespace Cecilifier.Core.AST
 {
-    internal class EventDeclarationVisitor : SyntaxWalkerBase
+    internal class EventDeclarationVisitor : TypeDeclarationVisitorBase
     {
         public EventDeclarationVisitor(IVisitorContext context) : base(context)
         {
@@ -73,7 +73,9 @@ namespace Cecilifier.Core.AST
             AddCecilExpression($"{eventDeclaringTypeVar}.Methods.Add({removeAccessorVar});");
             
             var eventName = node.Declaration.Variables[0].Identifier.Text;
-            AddEventDefinition(eventDeclaringTypeVar, eventName, eventType, addAccessorVar, removeAccessorVar);
+            
+            var evtDefVar = AddEventDefinition(eventDeclaringTypeVar, eventName, eventType, addAccessorVar, removeAccessorVar);
+            HandleAttributesInMemberDeclaration(node, evtDefVar);
         }
 
         private string AddRemoveAccessor(EventFieldDeclarationSyntax node, string backingFieldVar, bool isStatic, SyntaxNode declaringType, string eventType)
@@ -280,17 +282,19 @@ namespace Cecilifier.Core.AST
                 ? node.Modifiers.Add(privateModifier) 
                 : node.Modifiers.Replace(accessibilityModifier, privateModifier);
 
-            var fields = FieldDeclarationVisitor.HandleFieldDeclaration(Context, node.Declaration, backingFieldModifiers, node.ResolveDeclaringType());
+            var fields = FieldDeclarationVisitor.HandleFieldDeclaration(Context, node, node.Declaration, backingFieldModifiers, node.ResolveDeclaringType());
             return fields.First();
         }
 
-        private void AddEventDefinition(string eventDeclaringTypeVar, string eventName, string eventType, string addAccessor, string removeAccessor)
+        private string AddEventDefinition(string eventDeclaringTypeVar, string eventName, string eventType, string addAccessor, string removeAccessor)
         {
             var evtDefVar = TempLocalVar("evt");
             WriteCecilExpression(Context,$"var {evtDefVar} = new EventDefinition(\"{eventName}\", EventAttributes.None, {eventType});");
             WriteCecilExpression(Context,$"{evtDefVar}.AddMethod = {addAccessor};");
             WriteCecilExpression(Context,$"{evtDefVar}.RemoveMethod = {removeAccessor};");
             WriteCecilExpression(Context,$"{eventDeclaringTypeVar}.Events.Add({evtDefVar});");
+
+            return evtDefVar;
         }
         
         private string AddEventDefinition(string eventName, string eventType)

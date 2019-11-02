@@ -29,6 +29,11 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
             return false;
         }
 
+        public bool VisitCustomAttributes(IMemberDefinition source, IMemberDefinition target)
+        {
+            return Utils.CheckCustomAttributes(output, source, target);
+        }
+
         public bool VisitReturnType(MethodDefinition source, MethodDefinition target)
         {
             output.WriteLine("[{0}] Method return types differs. Expected '{1}' got {2}.", target.FullName, source.ReturnType.FullName, target.ReturnType.FullName);

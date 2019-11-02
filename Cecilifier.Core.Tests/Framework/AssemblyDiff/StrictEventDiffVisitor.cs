@@ -45,5 +45,10 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
             
             return ret;
         }
+
+        public bool VisitCustomAttributes(EventDefinition source, EventDefinition target)
+        {
+            return Utils.CheckCustomAttributes(_output, source, target);
+        }
     }
 }

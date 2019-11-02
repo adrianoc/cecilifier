@@ -1,0 +1,18 @@
+class C
+{
+    
+    [System.Obsolete]
+    C() {}
+    
+    [System.Obsolete]
+    void Method() {}
+   
+    [System.Obsolete]
+    int field;
+
+    //[System.Obsolete]
+    //string Property { get; set; }
+   
+    [System.Obsolete]
+    event System.EventHandler Event;
+}

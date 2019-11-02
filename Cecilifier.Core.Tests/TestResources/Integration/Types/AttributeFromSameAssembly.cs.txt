@@ -6,15 +6,14 @@ class SomeAttribute : System.Attribute
     public SomeAttribute() {}
     public SomeAttribute(int i) {}
     
-    //TODO: Uncomment when property support gets introduced
-    //public bool Value { get; set ;}
+    public bool Value { get; set ;}
 }
 
 [Some]
-//[Some(10)]
-
-//[Some(10, Value = true)]
-//[Some(Value = true)]
+[Some(10)]
+[Some(10, Value = true)]
+[Some(Value = true)]
 class AttributeFromSameAssembly 
 {
+   
 }
