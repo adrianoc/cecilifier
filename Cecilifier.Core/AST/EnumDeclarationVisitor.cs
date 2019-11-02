@@ -38,7 +38,7 @@ namespace Cecilifier.Core.AST
                     "FieldAttributes.SpecialName | FieldAttributes.RTSpecialName | FieldAttributes.Public");
                 AddCecilExpressions(valueFieldExp);
 
-                HandleAttributesInTypeDeclaration(node, enumType);
+                HandleAttributesInMemberDeclaration(node, enumType);
 
                 base.VisitEnumDeclaration(node);
             }

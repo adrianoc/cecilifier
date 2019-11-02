@@ -12,7 +12,7 @@ using CSharpExtensions = Microsoft.CodeAnalysis.CSharp.CSharpExtensions;
 
 namespace Cecilifier.Core.AST
 {
-    internal class FieldDeclarationVisitor : SyntaxWalkerBase
+    internal class FieldDeclarationVisitor : TypeDeclarationVisitorBase
     {
         internal FieldDeclarationVisitor(IVisitorContext ctx) : base(ctx)
         {
@@ -24,18 +24,19 @@ namespace Cecilifier.Core.AST
             var modifiers = node.Modifiers;
             var declaringType = node.ResolveDeclaringType();
 
-            HandleFieldDeclaration(variableDeclarationSyntax, modifiers, declaringType);
-
+            HandleFieldDeclaration(node, variableDeclarationSyntax, modifiers, declaringType);
+            
             base.VisitFieldDeclaration(node);
         }
 
-        internal static IEnumerable<string> HandleFieldDeclaration(IVisitorContext context, VariableDeclarationSyntax variableDeclarationSyntax, SyntaxTokenList modifiers, BaseTypeDeclarationSyntax declaringType)
+        internal static IEnumerable<string> HandleFieldDeclaration(IVisitorContext context, MemberDeclarationSyntax node, VariableDeclarationSyntax variableDeclarationSyntax,
+            SyntaxTokenList modifiers, BaseTypeDeclarationSyntax declaringType)
         {
             var visitor = new FieldDeclarationVisitor(context);
-            return visitor.HandleFieldDeclaration(variableDeclarationSyntax, modifiers, declaringType);
+            return visitor.HandleFieldDeclaration(node, variableDeclarationSyntax, modifiers, declaringType);
         }
 
-        private IEnumerable<string> HandleFieldDeclaration(VariableDeclarationSyntax variableDeclarationSyntax, SyntaxTokenList modifiers, BaseTypeDeclarationSyntax declaringType)
+        private IEnumerable<string> HandleFieldDeclaration(MemberDeclarationSyntax node, VariableDeclarationSyntax variableDeclarationSyntax, SyntaxTokenList modifiers, BaseTypeDeclarationSyntax declaringType)
         {
             var declaringTypeVar = Context.DefinitionVariables.GetLastOf(MemberKind.Type).VariableName;
 
@@ -44,6 +45,7 @@ namespace Cecilifier.Core.AST
             var type = ResolveType(variableDeclarationSyntax.Type);
             var fieldType = ProcessRequiredModifiers(modifiers, type) ?? type;
             var fieldAttributes = MapAttributes(modifiers);
+
             foreach (var field in variableDeclarationSyntax.Variables)
             {
                 var fieldVar = MethodExtensions.LocalVariableNameFor("fld", declaringType.Identifier.ValueText, field.Identifier.ValueText.CamelCase());
@@ -51,6 +53,8 @@ namespace Cecilifier.Core.AST
                 
                 var exps = CecilDefinitionsFactory.Field(declaringTypeVar, fieldVar, field.Identifier.ValueText, fieldType, fieldAttributes);
                 AddCecilExpressions(exps);
+                
+                HandleAttributesInMemberDeclaration(node, fieldVar);
 
                 Context.DefinitionVariables.RegisterNonMethod(declaringType.Identifier.Text, field.Identifier.ValueText, MemberKind.Field, fieldVar);
             }

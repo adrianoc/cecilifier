@@ -89,7 +89,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                     continue;
                 }
 
-                if (targetType == default(TypeDefinition))
+                if (targetType == null)
                 {
                     if (!typeVisitor.VisitMissing(sourceType, targetModule))
                     {
@@ -123,78 +123,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 
         private bool CheckTypeCustomAttributes(ITypeDiffVisitor typeVisitor, TypeDefinition sourceType, TypeDefinition targetType)
         {
-            if (sourceType.HasCustomAttributes != targetType.HasCustomAttributes)
-            {
-                if (!typeVisitor.VisitCustomAttributes(sourceType, targetType))
-                {
-                    return false;
-                }
-            }
-
-            if (!sourceType.HasCustomAttributes)
-            {
-                return true;
-            }
-
-            foreach (var customAttribute in sourceType.CustomAttributes)
-            {
-                var found = targetType.CustomAttributes.Any(candidate => CustomAttributeMatches(candidate, customAttribute));
-                if (!found)
-                {
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
-        private bool CustomAttributeMatches(CustomAttribute lhs, CustomAttribute rhs)
-        {
-            if (lhs.Constructor.ToString() != rhs.Constructor.ToString())
-            {
-                return false;
-            }
-
-            if (lhs.HasConstructorArguments != rhs.HasConstructorArguments)
-            {
-                return false;
-            }
-
-            if (lhs.HasConstructorArguments)
-            {
-                if (!lhs.ConstructorArguments.SequenceEqual(rhs.ConstructorArguments, CustomAttributeComparer.Instance))
-                {
-                    return false;
-                }
-            }
-
-            if (lhs.HasProperties != rhs.HasProperties)
-            {
-                return false;
-            }
-
-            if (lhs.HasProperties)
-            {
-                if (!lhs.Properties.SequenceEqual(rhs.Properties, CustomAttributeNamedArgumentComparer.Instance))
-                {
-                    return false;
-                }
-            }
-
-            if (lhs.HasFields != rhs.HasFields)
-            {
-                return false;
-            }
-
-            if (lhs.HasFields)
-            {
-                if (!lhs.Fields.SequenceEqual(rhs.Fields, CustomAttributeNamedArgumentComparer.Instance))
-                {
-                    return false;
-                }
-            }
-
-            return true;
+            return typeVisitor.VisitCustomAttributes( sourceType, targetType);
         }
 
         private static bool CheckImplementedInterfaces(ITypeDiffVisitor typeVisitor, TypeDefinition sourceType, TypeDefinition targetType)
@@ -242,7 +171,8 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                 
                 var ret = eventVisitor.VisitType(sourceEvent, targetEvent)
                           && eventVisitor.VisitAttributes(sourceEvent, targetEvent)
-                          && eventVisitor.VisitAccessors(sourceEvent, targetEvent);
+                          && eventVisitor.VisitAccessors(sourceEvent, targetEvent)
+                          && eventVisitor.VisitCustomAttributes(sourceEvent, targetEvent);
 
                 if (!ret)
                     return false;
@@ -296,6 +226,9 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                         return false;
                     }
                 }
+
+                if (!memberVisitor.VisitCustomAttributes(sourceMethod, targetMethod))
+                    return false;
 
                 if (!memberVisitor.VisitGenerics(sourceMethod, targetMethod))
                 {
@@ -487,6 +420,11 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                     memberVisitor.VisitConstant(sourceMember, targetField);
                     return false;
                 }
+
+                if (!memberVisitor.VisitCustomAttributes(sourceMember, targetField))
+                {
+                    return false;
+                }
             }
 
             return true;
@@ -585,81 +523,6 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 
             return fieldLhs.FieldType.FullName == fieldRhs.FieldType.FullName 
                    && fieldLhs.FullName == fieldRhs.FullName;
-        }
-    }
-
-    internal class CustomAttributeNamedArgumentComparer : IEqualityComparer<CustomAttributeNamedArgument>
-    {
-        static CustomAttributeNamedArgumentComparer()
-        {
-            Instance = new CustomAttributeNamedArgumentComparer();
-        }
-
-        public static IEqualityComparer<CustomAttributeNamedArgument> Instance { get; }
-
-        public bool Equals(CustomAttributeNamedArgument x, CustomAttributeNamedArgument y)
-        {
-            if (x.Name != y.Name)
-            {
-                return false;
-            }
-
-            return CustomAttributeComparer.Instance.Equals(x.Argument, y.Argument);
-        }
-
-        public int GetHashCode(CustomAttributeNamedArgument obj)
-        {
-            return 0;
-        }
-    }
-
-    internal class CustomAttributeComparer : IEqualityComparer<CustomAttributeArgument>
-    {
-        static CustomAttributeComparer()
-        {
-            Instance = new CustomAttributeComparer();
-        }
-
-        public static IEqualityComparer<CustomAttributeArgument> Instance { get; }
-
-        public bool Equals(CustomAttributeArgument x, CustomAttributeArgument y)
-        {
-            if (x.Type.ToString() != y.Type.ToString())
-            {
-                return false;
-            }
-
-            if (x.Value != null && y.Value == null)
-            {
-                return false;
-            }
-
-            if (x.Value == null && y.Value != null)
-            {
-                return false;
-            }
-
-            return x.Value != null
-                ? x.Value.ToString() == y.Value.ToString()
-                : true;
-        }
-
-        public int GetHashCode(CustomAttributeArgument obj)
-        {
-            return 0;
-        }
-    }
-
-    internal class InterfaceComparer : IEqualityComparer<InterfaceImplementation>
-    {
-        public bool Equals(InterfaceImplementation x, InterfaceImplementation y)
-        {
-            return x.InterfaceType.FullName == y.InterfaceType.FullName;
-        }
-
-        public int GetHashCode(InterfaceImplementation obj)
-        {
-            return obj.InterfaceType.Name.GetHashCode();
         }
     }
 

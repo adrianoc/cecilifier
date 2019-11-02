@@ -141,7 +141,7 @@ namespace Cecilifier.Core.Misc
             return exps;
         }
 
-        public static IEnumerable<string> Attribute(string typeVar, IVisitorContext context, AttributeSyntax attribute, Func<ITypeSymbol, AttributeArgumentSyntax[], string> ctorResolver)
+        public static IEnumerable<string> Attribute(string attrTargetVar, IVisitorContext context, AttributeSyntax attribute, Func<ITypeSymbol, AttributeArgumentSyntax[], string> ctorResolver)
         {
             var exps = new List<string>();
             var attrType = context.GetTypeInfo(attribute.Name);
@@ -171,7 +171,7 @@ namespace Cecilifier.Core.Misc
                 }
             }
 
-            exps.Add($"{typeVar}.CustomAttributes.Add({customAttrVar});");
+            exps.Add($"{attrTargetVar}.CustomAttributes.Add({customAttrVar});");
 
             return exps;
 

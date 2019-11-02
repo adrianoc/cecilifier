@@ -30,6 +30,11 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
             return false;
         }
 
+        public bool VisitCustomAttributes(IMemberDefinition source, IMemberDefinition target)
+        {
+            return Utils.CheckCustomAttributes(output, source, target);
+        }
+
         public bool VisitFieldType(FieldDefinition source, FieldDefinition target)
         {
             output.WriteLine("[{0}] Field type differs. Expected '{1}' got '{2}'.", target.FullName, source.FieldType.FullName, target.FieldType.FullName);

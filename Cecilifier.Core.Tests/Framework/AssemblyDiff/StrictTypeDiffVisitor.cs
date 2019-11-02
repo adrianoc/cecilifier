@@ -17,6 +17,9 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 
         public bool VisitMissing(TypeDefinition source, ModuleDefinition target)
         {
+            if (Utils.compilerEmmitedAttributesToIgnore.Contains(source.FullName))
+                return true;
+            
             output.WriteLine("[{0}] Type {1} could not be found.", target.FileName, source.FullName);
             return false;
         }
@@ -29,8 +32,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 
         public bool VisitCustomAttributes(TypeDefinition source, TypeDefinition target)
         {
-            output.WriteLine("[{0}] Custom attributes differs for types {0} and {1}", target.FullName, target.FullName);
-            return false;
+            return Utils.CheckCustomAttributes(output, source, target);
         }
 
         public bool VisitGenerics(TypeDefinition source, TypeDefinition target)
