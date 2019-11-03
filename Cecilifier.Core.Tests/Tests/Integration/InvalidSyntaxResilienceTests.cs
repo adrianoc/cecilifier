@@ -12,8 +12,10 @@ namespace Cecilifier.Core.Tests.Integration
         public void InvalidIdentifier()
         {
             var codeString = "class C { void F(int i) { sitch(i) {} } }";
-            var code = new MemoryStream(Encoding.ASCII.GetBytes(codeString));
-            Assert.Throws<SyntaxErrorException>(() => Cecilifier.Process(code, Utils.GetTrustedAssembliesPath()).ReadToEnd());
+            using (var code = new MemoryStream(Encoding.ASCII.GetBytes(codeString)))
+            {
+                Assert.Throws<SyntaxErrorException>(() => Cecilifier.Process(code, Utils.GetTrustedAssembliesPath()).GeneratedCode.ReadToEnd());
+            }
         }
     }
 }

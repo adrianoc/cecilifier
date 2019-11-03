@@ -14,6 +14,8 @@ namespace Cecilifier.Core.AST
         {
         }
 
+        public BaseTypeDeclarationSyntax MainType => mainType;
+
         public override void VisitNamespaceDeclaration(NamespaceDeclarationSyntax node)
         {
             try
@@ -32,6 +34,7 @@ namespace Cecilifier.Core.AST
 
         public override void VisitClassDeclaration(ClassDeclarationSyntax node)
         {
+            UpdateMainType(node);
             new TypeDeclarationVisitor(Context).Visit(node);
         }
 
@@ -124,5 +127,23 @@ namespace Cecilifier.Core.AST
                 AddCecilExpression($"{typeLocalVar}.Methods.Add({methodLocalVar});");
             }
         }
+        
+        private void UpdateMainType(BaseTypeDeclarationSyntax node)
+        {
+            if (mainType == null)
+                mainType = node;
+
+            var typeInfo = Context.SemanticModel.GetTypeInfo(node);
+            if (typeInfo.Type == null)
+                return;
+
+            var mainTypeInfo = Context.SemanticModel.GetTypeInfo(mainType);
+            if (typeInfo.Type.GetMembers().Length > mainTypeInfo.Type?.GetMembers().Length)
+            {
+                mainType = node;
+            }
+        }
+
+        private BaseTypeDeclarationSyntax mainType;
     }
 }

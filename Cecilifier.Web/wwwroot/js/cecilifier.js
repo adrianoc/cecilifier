@@ -93,7 +93,7 @@ function initializeWebSocket() {
         if (response.status == 0) {
             if (response.kind == 'Z') {
                 setTimeout(function() {
-                    var buttonId = create(base64ToArrayBuffer(response.cecilifiedCode), 'myfile.zip', 'application/zip');
+                    var buttonId = createProjectZip(base64ToArrayBuffer(response.cecilifiedCode), "'" + response.mainTypeName + ".zip'", 'application/zip');
                     simulateClick(buttonId);
                 });
             }
@@ -117,7 +117,7 @@ function send(websocket, format) {
 
     websocket.send(format + csharpCode.getValue());
 }
-function create(text, name, type) {
+function createProjectZip(text, name, type) {
     var buttonId = "dlbtn";
     var dlbtn = document.getElementById(buttonId);
     var file = new Blob([text], {type: type});

@@ -99,7 +99,7 @@ namespace Cecilifier.Web
                             if (deployKind == 'Z')
                             {
                                 var responeData = ZipProject( 
-                                    ("Program.cs", cecilifiedCode.ReadToEnd()),
+                                    ("Program.cs", cecilifiedCode.GeneratedCode.ReadToEnd()),
                                     ("Cecilified.csproj", @"<Project Sdk=""Microsoft.NET.Sdk"">
     <PropertyGroup>
         <OutputType>Exe</OutputType>
@@ -118,13 +118,13 @@ namespace Cecilifier.Web
                                 {
                                     output = output.Slice(0, bytesWritten);
                                 }
-                                var r = $"{{ \"status\" : 0, \"kind\": \"Z\", \"cecilifiedCode\" : \"{Encoding.UTF8.GetString(output)}\" }}";
+                                var r = $"{{ \"status\" : 0, \"kind\": \"Z\", \"mainTypeName\":\"{cecilifiedCode.MainTypeName}\", \"cecilifiedCode\" : \"{Encoding.UTF8.GetString(output)}\" }}";
                                 var dataToReturn = Encoding.UTF8.GetBytes(r).AsMemory();
                                 webSocket.SendAsync(dataToReturn, result.MessageType, result.EndOfMessage, CancellationToken.None);
                             }
                             else
                             {
-                                var cecilifiedStr = HttpUtility.JavaScriptStringEncode(cecilifiedCode.ReadToEnd());
+                                var cecilifiedStr = HttpUtility.JavaScriptStringEncode(cecilifiedCode.GeneratedCode.ReadToEnd());
                                 var r = $"{{ \"status\" : 0, \"kind\": \"C\", \"cecilifiedCode\" : \"{cecilifiedStr}\" }}";
                                 var dataToReturn = Encoding.UTF8.GetBytes(r).AsMemory();
                                 webSocket.SendAsync(dataToReturn, result.MessageType, result.EndOfMessage, CancellationToken.None);

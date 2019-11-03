@@ -178,7 +178,7 @@ namespace Cecilifier.Core.Tests.Framework
         private string Cecilfy(Stream stream)
         {
             stream.Position = 0;
-            return Cecilifier.Process(stream, Utils.GetTrustedAssembliesPath()).ReadToEnd();
+            return Cecilifier.Process(stream, Utils.GetTrustedAssembliesPath()).GeneratedCode.ReadToEnd();
         }
     }
 }

@@ -25,9 +25,11 @@ namespace Cecilifier.Core.Tests.Integration
         public void EnumeratorBlocks(string statement)
         {
             var code = new MemoryStream(Encoding.ASCII.GetBytes($"class Test {{ System.Collections.IEnumerable Do() {{ {statement}; }} }} "));
-            var cecilifiedCode = Cecilifier.Process(code, Utils.GetTrustedAssembliesPath()).ReadToEnd();
-
-            Assert.That(cecilifiedCode, Does.Match("Syntax 'Yield(Return|Break)Statement' is not supported"));
+            using (var stream = Cecilifier.Process(code, Utils.GetTrustedAssembliesPath()).GeneratedCode)
+            {
+                var cecilifiedCode = stream.ReadToEnd();
+                Assert.That(cecilifiedCode, Does.Match("Syntax 'Yield(Return|Break)Statement' is not supported"));
+            }
         }
 
         [TestCase("void F() { Func<int, string> f; f = i => i.ToString(); }", TestName = "Simple Lambda")]
@@ -66,9 +68,11 @@ namespace Cecilifier.Core.Tests.Integration
         private static void AssertUnsupportedFeature(string codeString, string expectedMessage)
         {
             var code = new MemoryStream(Encoding.ASCII.GetBytes(codeString));
-            var cecilifiedCode = Cecilifier.Process(code, Utils.GetTrustedAssembliesPath()).ReadToEnd();
-
-            Assert.That(cecilifiedCode, Contains.Substring(expectedMessage));
+            using(var stream = Cecilifier.Process(code, Utils.GetTrustedAssembliesPath()).GeneratedCode)
+            {
+                var cecilifiedCode = stream.ReadToEnd();
+                Assert.That(cecilifiedCode, Contains.Substring(expectedMessage));
+            }
         }
 
         [Test]
