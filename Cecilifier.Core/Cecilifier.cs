@@ -12,22 +12,20 @@ namespace Cecilifier.Core
 {
     public sealed class Cecilifier
     {
-        public static StringReader Process(Stream content, IList<string> references)
+        public static CecilifierResult Process(Stream content, IList<string> references)
         {
             var cecilifier = new Cecilifier();
             return cecilifier.Run(content, references);
         }
 
-        private StringReader Run(Stream content, IList<string> references)
+        private CecilifierResult Run(Stream content, IList<string> references)
         {
             var syntaxTree = CSharpSyntaxTree.ParseText(new StreamReader(content).ReadToEnd(), new CSharpParseOptions(LanguageVersion.CSharp8));
-
             var comp = CSharpCompilation.Create(
                 "CecilifiedAssembly",
                 new[] {syntaxTree},
                 references.Select(refPath => MetadataReference.CreateFromFile(refPath)),
                 new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, allowUnsafe: true));
-
 
             var errors = comp.GetDiagnostics().Where(d => d.Severity == DiagnosticSeverity.Error).Select(s => s.ToString()).ToArray();
             if (errors.Length > 0)
@@ -46,7 +44,7 @@ namespace Cecilifier.Core
 
             //new SyntaxTreeDump("TREE: ", root);
 
-            return new StringReader(ctx.Output.AsCecilApplication());
+            return new CecilifierResult(new StringReader(ctx.Output.AsCecilApplication()), visitor.MainType != null ? visitor.MainType.Identifier.Text : "Cecilified");
         }
 
         private SyntaxTree RunTransformations(SyntaxTree tree, SemanticModel semanticModel)
@@ -58,5 +56,17 @@ namespace Cecilifier.Core
 
             return CSharpSyntaxTree.Create(cu);
         }
+    }
+
+    public struct CecilifierResult
+    {
+        public CecilifierResult(StringReader generatedCode, string mainTypeName)
+        {
+            GeneratedCode = generatedCode;
+            MainTypeName = mainTypeName;
+        }
+
+        public StringReader GeneratedCode { get; set; }
+        public string MainTypeName { get; set; }
     }
 }
