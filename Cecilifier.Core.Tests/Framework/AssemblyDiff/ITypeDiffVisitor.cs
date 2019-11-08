@@ -13,17 +13,6 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
         IFieldDiffVisitor VisitMember(FieldDefinition field);
         IMethodDiffVisitor VisitMember(MethodDefinition method);
         IEventDiffVisitor VisitMember(EventDefinition @event);
-    }
-
-    public interface IEventDiffVisitor
-    {
-        EventDefinition VisitEvent(EventDefinition sourceEvent, TypeDefinition target);
-        
-        bool VisitType(EventDefinition source, EventDefinition target);
-        bool VisitAttributes(EventDefinition source, EventDefinition target);
-        
-        bool VisitAccessors(EventDefinition source, EventDefinition target);
-
-        bool VisitCustomAttributes(EventDefinition source, EventDefinition target);
+        IPropertyDiffVisitor VisitMember(PropertyDefinition property);
     }
 }

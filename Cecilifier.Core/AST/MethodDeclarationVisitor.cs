@@ -11,7 +11,7 @@ using static System.Environment;
 
 namespace Cecilifier.Core.AST
 {
-    internal class MethodDeclarationVisitor : TypeDeclarationVisitorBase
+    internal class MethodDeclarationVisitor : SyntaxWalkerBase
     {
         protected string ilVar;
 

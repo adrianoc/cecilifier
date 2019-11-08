@@ -1,6 +1,5 @@
 class C
 {
-    
     [System.Obsolete]
     C() {}
     
@@ -10,8 +9,8 @@ class C
     [System.Obsolete]
     int field;
 
-    //[System.Obsolete]
-    //string Property { get; set; }
+    [System.Obsolete]
+    string Property { get; set; }
    
     [System.Obsolete]
     event System.EventHandler Event;

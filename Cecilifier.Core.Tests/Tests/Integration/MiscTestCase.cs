@@ -32,5 +32,20 @@ namespace Cecilifier.Core.Tests.Integration
         {
             AssertResourceTest($@"Misc/Pointers/{testName}");       
         }
+        
+        [TestCase("Class")]
+        [TestCase("Interface")]
+        [TestCase("Enum")]
+        [TestCase("Struct"), Ignore("Generates Invalid IL.")]
+        public void AttributesOnMembers(string typeKind)
+        {
+            AssertResourceTest($@"Misc/Attributes/AttributesOn{typeKind}AndMembers");
+        }
+
+        [Test, Ignore("Not implemented yet")]
+        public void TestAttributesOnExplicitTargets()
+        {
+            AssertResourceTest($@"Misc/Attributes/AttributesOnExplicitTargets");
+        }
     }
 }

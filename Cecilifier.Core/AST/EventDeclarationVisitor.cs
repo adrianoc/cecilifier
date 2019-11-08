@@ -10,7 +10,7 @@ using Mono.Cecil.Cil;
 
 namespace Cecilifier.Core.AST
 {
-    internal class EventDeclarationVisitor : TypeDeclarationVisitorBase
+    internal class EventDeclarationVisitor : SyntaxWalkerBase
     {
         public EventDeclarationVisitor(IVisitorContext context) : base(context)
         {
@@ -157,8 +157,8 @@ namespace Cecilifier.Core.AST
         //      It looks like there's a bug since Roslyn is failing to resolve  the symbol for the event
         private string MakeGenericTypeIfAppropriate(EventFieldDeclarationSyntax node, string existingFieldVar)
         {
-            var declaringClass = ((ClassDeclarationSyntax) node.Parent);
-            if (declaringClass.TypeParameterList == null || declaringClass.TypeParameterList.IsMissing)
+            var typeDecl = ((TypeDeclarationSyntax) node.Parent);
+            if (typeDecl.TypeParameterList == null || typeDecl.TypeParameterList.IsMissing)
                 return existingFieldVar;
 
             //TODO: Register the following variable?

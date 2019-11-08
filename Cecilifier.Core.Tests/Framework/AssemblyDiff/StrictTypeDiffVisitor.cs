@@ -55,6 +55,11 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
             return new StrictEventDiffVisitor(output);
         }
 
+        public IPropertyDiffVisitor VisitMember(PropertyDefinition property)
+        {
+            return new StrictPropertyDiffVisitor(output);
+        }
+
         public void VisitEnd(TypeDefinition type)
         {
         }

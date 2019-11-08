@@ -41,6 +41,8 @@ namespace Cecilifier.Core.AST
             ProcessPropertyAccessors(node, propertyDeclaringTypeVar, propName, propertyType, propDefVar, paramsVar);
 
             AddCecilExpression($"{propertyDeclaringTypeVar}.Properties.Add({propDefVar});");
+            
+            HandleAttributesInMemberDeclaration(node, propDefVar);
         }
 
         public override void VisitPropertyDeclaration(PropertyDeclarationSyntax node)
@@ -53,6 +55,8 @@ namespace Cecilifier.Core.AST
             ProcessPropertyAccessors(node, propertyDeclaringTypeVar, propName, propertyType, propDefVar, NoParameters);
 
             AddCecilExpression($"{propertyDeclaringTypeVar}.Properties.Add({propDefVar});");
+            
+            HandleAttributesInMemberDeclaration(node, propDefVar);
         }
 
         private void AddDefaultMemberAttribute(string definitionVar, string value)

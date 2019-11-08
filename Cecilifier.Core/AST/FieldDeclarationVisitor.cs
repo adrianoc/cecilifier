@@ -12,7 +12,7 @@ using CSharpExtensions = Microsoft.CodeAnalysis.CSharp.CSharpExtensions;
 
 namespace Cecilifier.Core.AST
 {
-    internal class FieldDeclarationVisitor : TypeDeclarationVisitorBase
+    internal class FieldDeclarationVisitor : SyntaxWalkerBase
     {
         internal FieldDeclarationVisitor(IVisitorContext ctx) : base(ctx)
         {

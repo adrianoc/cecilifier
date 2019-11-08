@@ -156,7 +156,30 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
         {
             return CheckFields(typeVisitor, source, target)
                    && CheckMethods(typeVisitor, source, target)
-                   && CheckEvents(typeVisitor, source, target); 
+                   && CheckEvents(typeVisitor, source, target) 
+                   && CheckProperties(typeVisitor, source, target); 
+        }
+
+        private static bool CheckProperties(ITypeDiffVisitor typeVisitor, TypeDefinition source, TypeDefinition target)
+        {
+            foreach (var sourceProperty in source.Properties)
+            {
+                var propertyVisitor = typeVisitor.VisitMember(sourceProperty);
+                var targetProperty = propertyVisitor.VisitProperty(sourceProperty, target);
+
+                if (targetProperty == null)
+                    return false;
+                
+                var ret = propertyVisitor.VisitType(sourceProperty, targetProperty)
+                          && propertyVisitor.VisitAttributes(sourceProperty, targetProperty)
+                          && propertyVisitor.VisitAccessors(sourceProperty, targetProperty)
+                          && propertyVisitor.VisitCustomAttributes(sourceProperty, targetProperty);
+
+                if (!ret)
+                    return false;
+            }
+
+            return true;
         }
 
         private static bool CheckEvents(ITypeDiffVisitor typeVisitor, TypeDefinition source, TypeDefinition target)
