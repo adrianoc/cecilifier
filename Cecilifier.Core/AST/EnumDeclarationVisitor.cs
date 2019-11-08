@@ -9,7 +9,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Cecilifier.Core.AST
 {
-    internal class EnumDeclarationVisitor : TypeDeclarationVisitorBase
+    internal class EnumDeclarationVisitor : SyntaxWalkerBase
     {
         private EnumMemberValueCollector _memberCollector;
 
@@ -55,6 +55,8 @@ namespace Cecilifier.Core.AST
             var exp = CecilDefinitionsFactory.Field(enumVarDef.VariableName, fieldVar, node.Identifier.ValueText, enumVarDef.VariableName,
                 "FieldAttributes.Static | FieldAttributes.Literal | FieldAttributes.Public | FieldAttributes.HasDefault", $"Constant = {enumMemberValue}");
             AddCecilExpressions(exp);
+            
+            HandleAttributesInMemberDeclaration(node, fieldVar);
 
             base.VisitEnumMemberDeclaration(node);
         }

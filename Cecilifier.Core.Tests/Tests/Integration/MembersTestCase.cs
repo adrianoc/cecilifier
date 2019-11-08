@@ -18,11 +18,5 @@ namespace Cecilifier.Core.Tests.Integration
         {
             AssertResourceTest($@"Members/Events/{testName}");
         }
-
-        [Test]
-        public void AttributesOnMembers()
-        {
-            AssertResourceTest(@"Members/AttributesOnMembers");
-        }
     }
 }

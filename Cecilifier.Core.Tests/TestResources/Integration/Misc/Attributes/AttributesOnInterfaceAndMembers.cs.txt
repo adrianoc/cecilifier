@@ -1,0 +1,11 @@
+interface I
+{
+    [System.Obsolete]
+    void Method();
+   
+    [System.Obsolete]
+    string Property { get; set; }
+   
+    [System.Obsolete]
+    event System.EventHandler Event;
+}

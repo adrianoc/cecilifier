@@ -56,6 +56,11 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
             return typeVisitor.VisitMember(@event);
         }
 
+        public IPropertyDiffVisitor VisitMember(PropertyDefinition property)
+        {
+            return typeVisitor.VisitMember(property);
+        }
+
         public string Reason => other.Reason;
 
         internal CompilerInjectedAttributesIgnorer(string[] toBeIgnored)

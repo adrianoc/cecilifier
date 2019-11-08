@@ -1,0 +1,22 @@
+struct S
+{
+    [System.Obsolete]
+    S(int i) 
+    { 
+        field = i;
+        Event = null;
+        Property = ""; 
+    }
+    
+    [System.Obsolete]
+    void Method() {}
+   
+    [System.Obsolete]
+    int field;
+
+    [System.Obsolete]
+    string Property { get; set; }
+   
+    [System.Obsolete]
+    event System.EventHandler Event;
+}

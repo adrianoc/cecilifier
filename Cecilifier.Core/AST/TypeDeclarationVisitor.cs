@@ -9,7 +9,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Cecilifier.Core.AST
 {
-    internal class TypeDeclarationVisitor : TypeDeclarationVisitorBase
+    internal class TypeDeclarationVisitor : SyntaxWalkerBase
     {
         public TypeDeclarationVisitor(IVisitorContext context) : base(context)
         {

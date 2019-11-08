@@ -1,0 +1,8 @@
+[System.Obsolete]
+public enum E
+{
+    E0,
+    
+    [System.Obsolete]
+    E1
+}

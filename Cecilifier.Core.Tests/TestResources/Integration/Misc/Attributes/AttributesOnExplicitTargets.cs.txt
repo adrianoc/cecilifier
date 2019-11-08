@@ -1,0 +1,12 @@
+[assembly:System.Reflection.AssemblyVersion("1.0.0.0")]
+
+class LocalAttribute : System.Attribute {}
+
+class C
+{    
+    [return:Local]    
+    void Method([param:Local] int i) {}
+
+    [field:Local]
+    string Property { get; set; }  
+}
