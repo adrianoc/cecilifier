@@ -354,15 +354,25 @@ namespace Cecilifier.Core.AST
                 AddCilInstruction(ilVar, OpCodes.Callvirt, methodInvocation);
             }
         }
-        
-        protected void HandleAttributesInMemberDeclaration(MemberDeclarationSyntax node, string varName)
+
+        protected void HandleAttributesInMemberDeclaration(in SyntaxList<AttributeListSyntax> nodeAttributeLists, Func<AttributeTargetSpecifierSyntax, SyntaxKind, bool> predicate, SyntaxKind toMatch, string whereToAdd)
         {
-            if (node.AttributeLists.Count == 0)
+            var tattributeLists = nodeAttributeLists.Where(c => predicate(c.Target, toMatch));
+            HandleAttributesInMemberDeclaration(tattributeLists, whereToAdd);
+        }
+
+        protected static bool TargetDoesNotMatch(AttributeTargetSpecifierSyntax target, SyntaxKind operand) => target == null || !target.Identifier.IsKind(operand);
+        protected static bool TargetMatches(AttributeTargetSpecifierSyntax target, SyntaxKind operand) => target != null && target.Identifier.IsKind(operand);
+        
+
+        protected void HandleAttributesInMemberDeclaration(IEnumerable<AttributeListSyntax> attributeLists, string varName)
+        {
+            if (!attributeLists.Any())
             {
                 return;
             }
 
-            foreach (var attribute in node.AttributeLists.SelectMany(al => al.Attributes))
+            foreach (var attribute in attributeLists.SelectMany(al => al.Attributes))
             {
                 var attrsExp = CecilDefinitionsFactory.Attribute(varName, Context, attribute, (attrType, attrArgs) =>
                 {

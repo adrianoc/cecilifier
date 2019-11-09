@@ -1,3 +1,4 @@
+[System.Obsolete]
 class C
 {
     [System.Obsolete]

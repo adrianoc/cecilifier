@@ -16,6 +16,12 @@ namespace Cecilifier.Core.AST
 
         public BaseTypeDeclarationSyntax MainType => mainType;
 
+        public override void VisitCompilationUnit(CompilationUnitSyntax node)
+        {
+            HandleAttributesInMemberDeclaration(node.AttributeLists, "assembly");
+            base.VisitCompilationUnit(node);
+        }
+
         public override void VisitNamespaceDeclaration(NamespaceDeclarationSyntax node)
         {
             try
@@ -69,6 +75,7 @@ namespace Cecilifier.Core.AST
                 "IsAnsiClass = true");
             
             AddCecilExpressions(typeDef);
+            HandleAttributesInMemberDeclaration(node.AttributeLists, typeVar);
 
             using (Context.DefinitionVariables.WithCurrent("", node.Identifier.ValueText, MemberKind.Type, typeVar))
             {
@@ -103,7 +110,7 @@ namespace Cecilifier.Core.AST
 
                 AddDelegateMethod(typeVar, "EndInvoke", ResolveType(node.ReturnType), node.ParameterList.Parameters,
                     (methodVar, param) => CecilDefinitionsFactory.Parameter(param, Context.SemanticModel, methodVar, TempLocalVar("ar"), Context.TypeResolver.Resolve("System.IAsyncResult")));
-
+               
                 base.VisitDelegateDeclaration(node);
             }
 

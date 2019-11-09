@@ -1,3 +1,4 @@
+[System.Obsolete]
 struct S
 {
     [System.Obsolete]

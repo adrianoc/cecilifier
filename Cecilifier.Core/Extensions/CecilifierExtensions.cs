@@ -52,8 +52,7 @@ namespace Cecilifier.Core.Extensions
 
         public static string AsCecilApplication(this string cecilSnippet)
         {
-            return string.Format(
-                @"using Mono.Cecil;
+            return $@"using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Mono.Cecil.Rocks;
 using System; 
@@ -67,10 +66,10 @@ public class SnippetRunner
 	public static void Main(string[] args)
 	{{
 		var assembly = AssemblyDefinition.CreateAssembly(new AssemblyNameDefinition(""name"", Version.Parse(""1.0.0.0"")), ""moduleName"", ModuleKind.Dll);
-{0}
+{cecilSnippet}
 		assembly.Write(args[0]);
 	}}
-}}", cecilSnippet);
+}}";
         }
 
         public static IMethodSymbol FindLastDefinition(this IMethodSymbol self)

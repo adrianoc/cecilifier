@@ -75,7 +75,7 @@ namespace Cecilifier.Core.AST
             var eventName = node.Declaration.Variables[0].Identifier.Text;
             
             var evtDefVar = AddEventDefinition(eventDeclaringTypeVar, eventName, eventType, addAccessorVar, removeAccessorVar);
-            HandleAttributesInMemberDeclaration(node, evtDefVar);
+            HandleAttributesInMemberDeclaration(node.AttributeLists, evtDefVar);
         }
 
         private string AddRemoveAccessor(EventFieldDeclarationSyntax node, string backingFieldVar, bool isStatic, SyntaxNode declaringType, string eventType)
