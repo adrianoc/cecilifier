@@ -54,7 +54,7 @@ namespace Cecilifier.Core.AST
                 var exps = CecilDefinitionsFactory.Field(declaringTypeVar, fieldVar, field.Identifier.ValueText, fieldType, fieldAttributes);
                 AddCecilExpressions(exps);
                 
-                HandleAttributesInMemberDeclaration(node, fieldVar);
+                HandleAttributesInMemberDeclaration(node.AttributeLists, fieldVar);
 
                 Context.DefinitionVariables.RegisterNonMethod(declaringType.Identifier.Text, field.Identifier.ValueText, MemberKind.Field, fieldVar);
             }

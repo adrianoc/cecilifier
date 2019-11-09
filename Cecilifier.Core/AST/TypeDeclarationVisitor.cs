@@ -154,7 +154,7 @@ namespace Cecilifier.Core.AST
 
             EnsureCurrentTypeHasADefaultCtor(node, varName);
 
-            HandleAttributesInMemberDeclaration(node, varName);
+            HandleAttributesInMemberDeclaration(node.AttributeLists, varName);
             
             Context.WriteCecilExpression(Environment.NewLine);
 

@@ -14,8 +14,10 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                 // if all attrs in the expected assembly are in the ignore list we handle as if it had no attrs at all.
                 if (source.HasCustomAttributes && source.CustomAttributes.All(ca => compilerEmmitedAttributesToIgnore.Contains(ca.Constructor.DeclaringType.FullName)))
                     return true;
-                
-                output.WriteLine($"'{source.FullName}'{(!source.HasCustomAttributes ? "don't" : "")} have custom attributes in {source.DeclaringType.Module.FileName} while '{target.DeclaringType.Module.FileName}' {(target.HasCustomAttributes ?  "does" : "doesn't")} have.");
+
+                var sourceFileName = (source is TypeDefinition sourceDef ? sourceDef : source.DeclaringType).Module.FileName;
+                var targetFileName = (target is TypeDefinition targetDef ? targetDef : source.DeclaringType).Module.FileName;
+                output.WriteLine($"'{source.FullName}'{(!source.HasCustomAttributes ? "don't" : "")} have custom attributes in {sourceFileName} while '{targetFileName}' {(target.HasCustomAttributes ? "does" : "doesn't")} have.");
                 return false;
             }
 

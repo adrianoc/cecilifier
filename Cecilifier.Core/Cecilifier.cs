@@ -38,8 +38,7 @@ namespace Cecilifier.Core
             var ctx = new CecilifierContext(semanticModel);
             var visitor = new CompilationUnitVisitor(ctx);
 
-            SyntaxNode root;
-            syntaxTree.TryGetRoot(out root);
+            syntaxTree.TryGetRoot(out var root);
             visitor.Visit(root);
 
             //new SyntaxTreeDump("TREE: ", root);

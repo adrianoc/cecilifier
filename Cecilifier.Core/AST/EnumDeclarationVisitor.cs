@@ -38,7 +38,7 @@ namespace Cecilifier.Core.AST
                     "FieldAttributes.SpecialName | FieldAttributes.RTSpecialName | FieldAttributes.Public");
                 AddCecilExpressions(valueFieldExp);
 
-                HandleAttributesInMemberDeclaration(node, enumType);
+                HandleAttributesInMemberDeclaration(node.AttributeLists, enumType);
 
                 base.VisitEnumDeclaration(node);
             }
@@ -56,7 +56,7 @@ namespace Cecilifier.Core.AST
                 "FieldAttributes.Static | FieldAttributes.Literal | FieldAttributes.Public | FieldAttributes.HasDefault", $"Constant = {enumMemberValue}");
             AddCecilExpressions(exp);
             
-            HandleAttributesInMemberDeclaration(node, fieldVar);
+            HandleAttributesInMemberDeclaration(node.AttributeLists, fieldVar);
 
             base.VisitEnumMemberDeclaration(node);
         }

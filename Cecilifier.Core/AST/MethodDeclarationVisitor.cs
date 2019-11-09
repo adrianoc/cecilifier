@@ -66,6 +66,8 @@ namespace Cecilifier.Core.AST
 
             var exps = CecilDefinitionsFactory.Parameter(node, Context.SemanticModel, declaringMethodVariable, paramVar, ResolveType(node.Type));
             AddCecilExpressions(exps);
+            
+            HandleAttributesInMemberDeclaration(node.AttributeLists, paramVar);
 
             base.VisitParameter(node);
         }
@@ -86,8 +88,9 @@ namespace Cecilifier.Core.AST
             AddOrUpdateMethodDefinition(methodVar, fqName, node.Modifiers.MethodModifiersToCecil(ModifiersToCecil, GetSpecificModifiers(), DeclaredSymbolFor(node)), returnType, typeParameters);
             AddCecilExpression("{0}.Methods.Add({1});", Context.DefinitionVariables.GetLastOf(MemberKind.Type).VariableName, methodVar);
 
-            HandleAttributesInMemberDeclaration(node, methodVar);
-            
+            HandleAttributesInMemberDeclaration(node.AttributeLists, TargetDoesNotMatch, SyntaxKind.ReturnKeyword, methodVar); // Normal method attrs.
+            HandleAttributesInMemberDeclaration(node.AttributeLists, TargetMatches,      SyntaxKind.ReturnKeyword, $"{methodVar}.MethodReturnType"); // [return:Attr]
+
             var isAbstract = DeclaredSymbolFor(node).IsAbstract;
             if (!isAbstract)
             {
