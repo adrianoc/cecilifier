@@ -2,22 +2,21 @@
 struct S
 {
     [System.Obsolete]
-    S(int i) 
-    { 
-        field = i;
-        Event = null;
-        Property = ""; 
+    S(int i)    
+    {
+        // code in the ctor for structs is broken. Uncomment when that gets fixed.
+        // See #31
+        //field = i; 
     }
     
     [System.Obsolete]
     void Method() {}
    
     [System.Obsolete]
-    int field;
-
-    [System.Obsolete]
-    string Property { get; set; }
-   
-    [System.Obsolete]
-    event System.EventHandler Event;
+    int Property { get { return 0; } set {} }
+    
+    // code in the ctor for structs is broken. Uncomment when that gets fixed. 
+    // See #31
+    //[System.Obsolete]
+    //int field;    
 }

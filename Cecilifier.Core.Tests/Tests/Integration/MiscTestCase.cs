@@ -37,7 +37,7 @@ namespace Cecilifier.Core.Tests.Integration
         [TestCase("ClassAndMembers")]
         [TestCase("InterfaceAndMembers")]
         [TestCase("EnumAndMembers")]
-        //[TestCase("Struct"), Ignore("Generates Invalid IL.")]
+        [TestCase("StructAndMembers")]
         public void AttributesOnMembers(string typeKind)
         {
             AssertResourceTest($@"Misc/Attributes/AttributesOn{typeKind}");
