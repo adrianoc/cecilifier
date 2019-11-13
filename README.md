@@ -117,7 +117,7 @@ Potential improvements
 
 Disclaimer(s)
 ---
-- TL;DR; Use at your own :)
+- TL;DR; Use at your own risk :)
 - I am not a web designer/developer, so keep your expectations low (regarding the web site)
 - I do not claim to be an expert in Mono.Cecil; the code certainly does not handle a lot of cases
 - I do not claim that the generated code is suitable or even correct - I do have tests though :)
