@@ -14,8 +14,8 @@
     <script src="~/lib/codemirror/lib/codemirror.js"></script>
 
     <script src="https://cdn.jsdelivr.net/npm/showdown@1.9.0/dist/showdown.min.js"></script>
-    <script src="~/js/release_notes.js"></script>
     <script src="~/js/cecilifier.js"></script>
+    <script src="~/js/release_notes.js"></script>
     
     <link rel="stylesheet" href="~/css/release_notes.css">
     <link rel="stylesheet" href="~/css/button.css">
@@ -24,7 +24,7 @@
     <link rel="stylesheet" href="~/lib/codemirror/theme/darcula.css">
     <link rel="stylesheet" href="~/lib/codemirror/theme/blackboard.css">
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.0/css/all.css" integrity="sha384-lZN37f5QGtY3VHgisS14W3ExzMWZxybE1SJSEsQp9S+oqd12jhcu+A56Ebc1zFSJ" crossorigin="anonymous">
-    <link href="https://fonts.googleapis.com/css?family=Nunito+Sans" rel="stylesheet"> 
+    <link href="https://fonts.googleapis.com/css?family=Big+Shoulders+Text|Roboto&display=swap" rel="stylesheet">  
     <script src="~/lib/codemirror/mode/clike/clike.js"></script>
 
     <meta charset="utf-8"/>
@@ -81,18 +81,19 @@
     <style>
         .alert {
             display: table;
-            margin: 0 auto;
-            padding: 20px;
-            width: 80%;
+            padding: 10px;
+            width: 100%;
             background-color: #f44336;
             color: white;
             opacity: 1;
             transition: opacity 0.6s;
-            margin-bottom: 15px;
-            font-family: 'Nunito+Sans'; 
+            margin: 0 auto 15px;
+            font-family: 'Big Shoulders Text',monospace;
+            font-size: 14px; 
             text-align: center
          }
 
+        .alert.info2 { background-color: #888888; opacity: 0 }
         .alert.success { background-color: #4CAF50;}
         .alert.info { background-color: #2196F3;}
         .alert.warning { background-color: #ff9800;}
@@ -168,6 +169,7 @@
                 <a class="fab fa-github" href="https://github.com/adrianoc/cecilifier"target="_gh_cecilifier"></a>
                 <a class="fab fa-twitter" href="https://twitter.com/adrianoverona"target="_tw_cecilifier"></a>
                 <a class="fab fa-blogger" href="https://programing-fun.blogspot.com/"target="_bs_cecilifier"></a>
+                <a class="fab fa-stack-overflow" href="https://stackoverflow.com/users/157321/vagaus"target="_so_cecilifier"></a>
                 <a class="fab fa-patreon" href="https://www.patreon.com/cecilifier"target="_pa_cecilifier"></a>
             </div>
     
@@ -175,6 +177,7 @@
         </div>
     </footer>
 </div>
+
 
 <environment include="Development">
     <script src="~/lib/jquery/dist/jquery.js"></script>

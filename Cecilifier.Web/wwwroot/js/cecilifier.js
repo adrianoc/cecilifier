@@ -37,27 +37,27 @@ function initializeSite() {
     initializeWebSocket();
 }
 
+function setAlert(div_id, msg) {
+    var div = document.getElementById(div_id);
+
+    if (msg == null) {
+        div.style.opacity = "0";
+        div.style.position = "absolute";
+        div.children[1].innerHTML = "";
+    } else {
+        div.style.opacity = "1";
+        div.style.position = "relative";
+        div.children[1].innerHTML = msg;
+        div.style.display = "block";
+    }
+}
+
 function clearError() {
-    setErrInternal(null);
+    setAlert("cecilifier_error", null);
 }
 
 function setError(str) {
-    setErrInternal(str);
-}
-
-function setErrInternal(errorMsg) {
-    var errorDiv = document.getElementById("cecilifier_error");
-
-    if (errorMsg == null) {
-        errorDiv.style.opacity = 0;
-        errorDiv.style.position = "absolute";
-        errorDiv.children[1].innerHTML = "";
-    } else {
-        errorDiv.style.opacity = 1;
-        errorDiv.style.position = "relative";
-        errorDiv.children[1].innerHTML = errorMsg;
-        errorDiv.style.display = "block";
-    }
+    setAlert("cecilifier_error", str);
 }
 
 function initializeWebSocket() {
