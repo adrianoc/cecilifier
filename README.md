@@ -56,7 +56,7 @@ Unsupported Features
 - Events (wip, support most common cases)
 - default expression
 - Enumerator methods
-- Delegate
+- Delegate (generic)
 - async/await
 - Newer C# syntax (expression bodied members, elvis operator, static import, to name some)
 - Much more :(
