@@ -10,14 +10,6 @@
     ViewData["Title"] = "Cecilifier";
     var fromGist = Model.FromGist;
 }
-
-<div id="myNav" class="overlay">
-  <a href="javascript:void(0)" class="closebtn" onclick="closeNav()">&times;</a>
-  <div class="overlay-content">
-  <span id="release_notes" />
-  </div>
-</div>
-
 <br/>
 <div>
     
@@ -39,6 +31,10 @@
         <div style="font-family:Lucida Console; font-size: 2">Editor powered by <a href="https://github.com/codemirror/codemirror">CodeMirror</a></div>
     </div>
     <a href="javascript:void(0)" id="dlbtn" style="display: none"><button></button></a>
+    <div class="alert info2" id="cecilifier_new_release">
+        <span class="closebtn" onclick="this.parentElement.style.display='none';">&times;</span>
+        <div></div>
+    </div>
 </div>
 
 <script>

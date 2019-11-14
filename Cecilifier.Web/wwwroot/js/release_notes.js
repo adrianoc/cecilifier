@@ -30,22 +30,15 @@ function showReleaseNotes() {
         var itemsToShow = json.filter(function(item, index, array) {
             return new Date(item.published_at) > firstTime;
         });
-
-        if (itemsToShow.length == 0)
+        
+        if (itemsToShow.length === 0)
             return;
 
-        openNav();
         setCookie("lastVersion", itemsToShow[0].published_at, 1000);
-
-        var span = document.getElementById("release_notes");
-        var div = document.createElement('div');
-
-        var converter = new showdown.Converter();
-        converter.setFlavor('github');
-        var html = itemsToShow.map(item => `${new Date(item.published_at).toLocaleString()} ${item.tag_name} ${item.name}<br/><hr />${converter.makeHtml(item.body)}`).join("<br/></br>");
-
-        div.innerHTML = `<font color='white'>${html}</font>`;
-        span.appendChild(div);
+        
+        var latest = itemsToShow[0];
+        var html = `New version <a href='${latest.html_url}' target="_blank">${latest.tag_name} ${latest.name}</a> has been released on ${new Date(latest.published_at).toLocaleString()}.`;
+        setAlert("cecilifier_new_release", html);
     });
 }
 
