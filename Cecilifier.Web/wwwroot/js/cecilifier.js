@@ -86,11 +86,14 @@ function initializeWebSocket() {
     websocket.onerror = function(event) {
         console.error("WebSocket error observed:", event);
     };
-
+    
     websocket.onmessage = function (event) {
         // this is where we get the cecilified code back...
         var response = JSON.parse(event.data);
         if (response.status == 0) {
+            var cecilifiedCounter = document.getElementById('cecilified_counter');
+            cecilifiedCounter.innerText = response.counter;
+
             if (response.kind == 'Z') {
                 setTimeout(function() {
                     var buttonId = createProjectZip(base64ToArrayBuffer(response.cecilifiedCode), "'" + response.mainTypeName + ".zip'", 'application/zip');

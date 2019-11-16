@@ -9,6 +9,8 @@ namespace Cecilifier.Web.Pages
 {
     public class CecilifierApplication : PageModel
     {
+        public static int Count;
+        
         public string FromGist { get; set; } = string.Empty;
         public string ErrorAccessingGist { get; private set; } = string.Empty;
         
@@ -17,6 +19,7 @@ namespace Cecilifier.Web.Pages
             ErrorAccessingGist = null;
             if (Request.Query.TryGetValue("gistid", out var gistid))
             {
+                Count++;
                 var gistHttp = new HttpClient();
                 gistHttp.DefaultRequestHeaders.Add("User-Agent", "Cecilifier");
                 var task = gistHttp.GetAsync($"https://api.github.com/gists/{gistid}");

@@ -11,6 +11,7 @@ using System.Text;
 using System.Threading;
 using System.Web;
 using Cecilifier.Core;
+using Cecilifier.Web.Pages;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -91,6 +92,8 @@ namespace Cecilifier.Web
                 {
                     using (var code = new MemoryStream(buffer, 0, result.Count))
                     {
+                        CecilifierApplication.Count++;
+                        
                         try
                         {
                             var deployKind = code.ReadByte();
@@ -118,14 +121,14 @@ namespace Cecilifier.Web
                                 {
                                     output = output.Slice(0, bytesWritten);
                                 }
-                                var r = $"{{ \"status\" : 0, \"kind\": \"Z\", \"mainTypeName\":\"{cecilifiedCode.MainTypeName}\", \"cecilifiedCode\" : \"{Encoding.UTF8.GetString(output)}\" }}";
+                                var r = $"{{ \"status\" : 0, \"counter\": {CecilifierApplication.Count}, \"kind\": \"Z\", \"mainTypeName\":\"{cecilifiedCode.MainTypeName}\", \"cecilifiedCode\" : \"{Encoding.UTF8.GetString(output)}\" }}";
                                 var dataToReturn = Encoding.UTF8.GetBytes(r).AsMemory();
                                 webSocket.SendAsync(dataToReturn, result.MessageType, result.EndOfMessage, CancellationToken.None);
                             }
                             else
                             {
                                 var cecilifiedStr = HttpUtility.JavaScriptStringEncode(cecilifiedCode.GeneratedCode.ReadToEnd());
-                                var r = $"{{ \"status\" : 0, \"kind\": \"C\", \"cecilifiedCode\" : \"{cecilifiedStr}\" }}";
+                                var r = $"{{ \"status\" : 0, \"counter\": {CecilifierApplication.Count}, \"kind\": \"C\", \"cecilifiedCode\" : \"{cecilifiedStr}\" }}";
                                 var dataToReturn = Encoding.UTF8.GetBytes(r).AsMemory();
                                 webSocket.SendAsync(dataToReturn, result.MessageType, result.EndOfMessage, CancellationToken.None);
                             }
