@@ -10,7 +10,6 @@
     ViewData["Title"] = "Cecilifier";
     var fromGist = Model.FromGist;
 }
-<br/>
 <div>
     
     <div class="form-group" data-tooltip="Type any valid C# code to generate the equivalent Cecil api calls. " data-tooltip-location="right">
@@ -45,15 +44,6 @@
         setError("@Model.ErrorAccessingGist");
     }
     else {
-        var fromGist = "@fromGist";
-        csharpCode.setValue(
-            fromGist
-                .replace(/&quot;/g, '"')
-                .replace(/&gt;/g, '>')
-                .replace(/&lt;/g, '<')
-                .replace(/&#x27;/g, "'")
-                .replace(/&#x2B;/g, '+')
-                .replace(/&#x38;/g, '&')
-        );
+        setValueFromGist("@fromGist");
     }
 </script>
