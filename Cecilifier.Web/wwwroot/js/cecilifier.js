@@ -1,5 +1,4 @@
 var websocket;
-var sendButton;
 var cecilifiedCode;
 var csharpCode;
 
@@ -90,11 +89,11 @@ function initializeWebSocket() {
     websocket.onmessage = function (event) {
         // this is where we get the cecilified code back...
         var response = JSON.parse(event.data);
-        if (response.status == 0) {
+        if (response.status === 0) {
             var cecilifiedCounter = document.getElementById('cecilified_counter');
             cecilifiedCounter.innerText = response.counter;
 
-            if (response.kind == 'Z') {
+            if (response.kind === 'Z') {
                 setTimeout(function() {
                     var buttonId = createProjectZip(base64ToArrayBuffer(response.cecilifiedCode), "'" + response.mainTypeName + ".zip'", 'application/zip');
                     simulateClick(buttonId);
@@ -103,9 +102,9 @@ function initializeWebSocket() {
             else {
                 cecilifiedCode.setValue(response.cecilifiedCode);
             }
-        } else if (response.status == 1) {
+        } else if (response.status === 1) {
             setError(response.syntaxError.replace(/\n/g, "<br/>"));
-        } else if (response.status == 2) {
+        } else if (response.status === 2) {
             setError("Something went wrong. Please report the following error in the google group or in the git repository:\n" + response.error);
         }
     };
@@ -152,4 +151,31 @@ function simulateClick(elementId) {
 
 function copyToClipboard(elementId) {
     navigator.clipboard.writeText(cecilifiedCode.getValue("\r\n"));
+}
+
+function cecilifyFromGist(counter) {
+    if (websocket.readyState !== WebSocket.OPEN) {
+        if (counter < 4) {
+            setTimeout(cecilifyFromGist, 500, counter + 1);
+        }
+    }
+    else {
+        simulateClick("sendbutton");
+    }
+}
+
+function setValueFromGist(snipet) {
+    if (snipet === null || snipet.length === 0)
+        return;
+
+    csharpCode.setValue(
+            snipet
+            .replace(/&quot;/g, '"')
+            .replace(/&gt;/g, '>')
+            .replace(/&lt;/g, '<')
+            .replace(/&#x27;/g, "'")
+            .replace(/&#x2B;/g, '+')
+            .replace(/&#x38;/g, '&'));
+
+    cecilifyFromGist(1);
 }
