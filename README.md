@@ -19,7 +19,7 @@ How to help
 - Improving documentation
 - Adding features
 - Sending feedback
-- Consider donating to the project through [github sponsorhip](https://github.com/sponsors/adrianoc)
+- Consider donating to the project through [github sponsorship](https://github.com/sponsors/adrianoc)
 
 License
 ---
