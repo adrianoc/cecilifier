@@ -10,8 +10,8 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 {
     internal class AssemblyComparer
     {
-        private static readonly Dictionary<Code, Func<Instruction, Instruction, bool>> _instructionValidator =
-            new Dictionary<Code, Func<Instruction, Instruction, bool>>
+        private static readonly Dictionary<Code, Func<Instruction, Instruction, (bool, int)>> _instructionValidator =
+            new Dictionary<Code, Func<Instruction, Instruction, (bool, int)>>
             {
                 {Code.Ret, OperandObliviousValidator},
                 {Code.Nop, OperandObliviousValidator},
@@ -20,7 +20,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                 {Code.Ldarg_1, OperandObliviousValidator},
                 {Code.Ldarg_2, OperandObliviousValidator},
                 {Code.Ldarg_3, OperandObliviousValidator},
-
+                
                 {Code.Call, ValidateCalls},
                 {Code.Calli, ValidateCalls},
                 {Code.Callvirt, ValidateCalls},
@@ -33,6 +33,8 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                 {Code.Ldloc_S, ValidateLocalVariableIndex},
                 {Code.Stloc, ValidateLocalVariableIndex},
                 {Code.Stloc_S, ValidateLocalVariableIndex},
+                
+                {Code.Ldc_I4_M1, ValidateLoadMinusOne},
 
                 {Code.Castclass, ValidateTypeReference},
                 {Code.Box, ValidateTypeReference},
@@ -287,14 +289,19 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
             }
 
             var targetInstructions = SkipIrrelevantInstructions(target.Body.Instructions).GetEnumerator();
+            int skipCount = 0;
             foreach (var instruction in SkipIrrelevantInstructions(source.Body.Instructions))
             {
+                while (skipCount-- > 0 && !targetInstructions.MoveNext())
+                {
+                }
+                
                 if (!targetInstructions.MoveNext())
                 {
                     return visitor.VisitBody(source, target, instruction);
                 }
 
-                if (!EqualOrEquivalent(instruction, targetInstructions.Current, source.IsStatic))
+                if (!EqualOrEquivalent(instruction, targetInstructions.Current, source.IsStatic, out skipCount))
                 {
                     return visitor.VisitBody(source, target, instruction);
                 }
@@ -316,8 +323,9 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                 .Where(instructionFilter.IgnoreNonRequiredLocalVariableAssignments);
         }
 
-        private static bool EqualOrEquivalent(Instruction instruction, Instruction current, bool isStatic)
+        private static bool EqualOrEquivalent(Instruction instruction, Instruction current, bool isStatic, out int skipCount)
         {
+            skipCount = 0;
             while (instruction != null && instruction.OpCode == OpCodes.Nop)
             {
                 instruction = instruction.Next;
@@ -328,15 +336,12 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                 current = current.Next;
             }
 
-            if (instruction?.OpCode == current?.OpCode)
+            if (_instructionValidator.TryGetValue(instruction.OpCode.Code, out var validator))
             {
-                if (_instructionValidator.TryGetValue(instruction.OpCode.Code, out var validator))
-                {
-                    return validator(instruction, current);
-                }
-
-                Console.WriteLine($"No specific validation for {instruction.OpCode} operands!");
-                return true;
+                var (ret , c) = validator(instruction, current);
+                skipCount = c;
+                
+                return ret;
             }
 
             var paramIndexOffset = isStatic ? 0 : 1;
@@ -372,6 +377,8 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                 case Code.Ldc_I4_6:
                 case Code.Ldc_I4_7:
                 case Code.Ldc_I4_8: return current.OpCode.Code == Code.Ldc_I4;
+                
+                case Code.Ldc_I4_M1: return current.OpCode.Code == Code.Ldc_I4 && (int) current.Operand == -1 && current.Next.OpCode == OpCodes.Neg;
 
                 case Code.Leave:
                 case Code.Leave_S:
@@ -379,7 +386,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                 case Code.Brfalse:
                 case Code.Brfalse_S:
                 case Code.Brtrue:
-                case Code.Brtrue_S: return current.OpCode.FlowControl == FlowControl.Branch && EqualOrEquivalent((Instruction) instruction.Operand, (Instruction) current.Operand, isStatic);
+                case Code.Brtrue_S: return current.OpCode.FlowControl == FlowControl.Branch && EqualOrEquivalent((Instruction) instruction.Operand, (Instruction) current.Operand, isStatic, out skipCount);
 
                 case Code.Pop:
                     if (current.Previous == null || instruction.Previous == null)
@@ -390,8 +397,14 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                     return current.OpCode.Code == Code.Stloc && current.Previous.OpCode.IsCall() && instruction.Previous.OpCode.IsCall() &&
                            LenientInstructionComparer.HasNoLocalVariableLoads(instruction.Next, instruction.Operand);
             }
+            
+            if (instruction?.OpCode != current?.OpCode)
+            {
+                Console.WriteLine($"No specific validation for {instruction.OpCode} operands!");
+                return false;
+            }
 
-            return false;
+            return true;
         }
 
         private static int VarIndex(object operand)
@@ -487,26 +500,35 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
         }
 
 
-        private static bool OperandObliviousValidator(Instruction lhs, Instruction rhs)
+        private static (bool, int) OperandObliviousValidator(Instruction lhs, Instruction rhs)
         {
-            return true;
+            return (true, 0);
         }
 
-        private static bool ValidateCalls(Instruction lhs, Instruction rhs)
+        private static (bool, int) ValidateCalls(Instruction lhs, Instruction rhs)
         {
             var m1 = (MethodReference) lhs.Operand;
             var m2 = (MethodReference) rhs.Operand;
 
-            return MethodReferenceComparer.Instance.Compare(m1, m2) == 0;
+            var ret = MethodReferenceComparer.Instance.Compare(m1, m2) == 0;
+            return (ret, 0);
         }
 
-        private static bool ValidateLocalVariableIndex(Instruction lhs, Instruction rhs)
+        private static (bool, int) ValidateLocalVariableIndex(Instruction lhs, Instruction rhs)
         {
             var varDefLhs = (VariableDefinition) lhs.Operand;
             var varDefRhs = (VariableDefinition) rhs.Operand;
 
-            return varDefLhs.VariableType.FullName == varDefRhs.VariableType.FullName &&
-                   varDefLhs.IsPinned == varDefRhs.IsPinned;
+            var ret = varDefLhs.VariableType.FullName == varDefRhs.VariableType.FullName &&
+                      varDefLhs.IsPinned == varDefRhs.IsPinned;
+
+            return (ret, 0);
+        }
+        
+        private static (bool, int) ValidateLoadMinusOne(Instruction lhs, Instruction rhs)
+        {
+            var ret = rhs.OpCode == OpCodes.Ldc_I4 && (int) rhs.Operand == 1 && rhs?.Next?.OpCode == OpCodes.Neg;
+            return (ret, 1);
         }
 
         private static bool ValidateTypeReference(TypeReference typeLhs, TypeReference typeRhs)
@@ -531,21 +553,22 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
             return true;
         }
 
-        private static bool ValidateTypeReference(Instruction lhs, Instruction rhs)
+        private static (bool, int) ValidateTypeReference(Instruction lhs, Instruction rhs)
         {
             var typeLhs = (TypeReference) lhs.Operand;
             var typeRhs = (TypeReference) rhs.Operand;
 
-            return ValidateTypeReference(typeLhs, typeRhs);
+            return (ValidateTypeReference(typeLhs, typeRhs), 0);
         }
 
-        private static bool ValidateField(Instruction lhs, Instruction rhs)
+        private static (bool, int) ValidateField(Instruction lhs, Instruction rhs)
         {
             var fieldLhs = (FieldReference) lhs.Operand;
             var fieldRhs = (FieldReference) rhs.Operand;
 
-            return fieldLhs.FieldType.FullName == fieldRhs.FieldType.FullName 
-                   && fieldLhs.FullName == fieldRhs.FullName;
+            var ret = fieldLhs.FieldType.FullName == fieldRhs.FieldType.FullName
+                      && fieldLhs.FullName == fieldRhs.FullName;
+            return (ret, 0);
         }
     }
 
