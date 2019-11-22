@@ -1,4 +1,4 @@
-﻿using Cecilifier.Core.Tests.Framework;
+using Cecilifier.Core.Tests.Framework;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration
@@ -101,6 +101,12 @@ namespace Cecilifier.Core.Tests.Integration
         public void TestNewSingleDimentionArray()
         {
             AssertResourceTest(@"Expressions/NewSingleDimentionArray");
+        }
+
+        [TestCase("Minus")]
+        public void TestUnaryExpressions(string testName)
+        {    
+            AssertResourceTest($@"Expressions/Operators/Unary/{testName}");
         }
     }
 }
