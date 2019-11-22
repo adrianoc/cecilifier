@@ -19,7 +19,7 @@ How to help
 - Improving documentation
 - Adding features
 - Sending feedback
-- Consider donating to the project through [Patreon](https://www.patreon.com/cecilifier) or if you prefer, you can send bitcoins to bc1qrsdyejzljtk7yxszhgsrt90smf6x07jatpmd6n9yfzw7659cme4s860t27
+- Consider donating to the project through [github sponsorhip](https://github.com/sponsors/adrianoc)
 
 License
 ---
