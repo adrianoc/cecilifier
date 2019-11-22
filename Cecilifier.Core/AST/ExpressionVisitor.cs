@@ -86,7 +86,7 @@ namespace Cecilifier.Core.AST
 
             return ev.valueTypeNoArgObjCreation;
         }
-
+        
         public override void VisitStackAllocArrayCreationExpression(StackAllocArrayCreationExpressionSyntax node)
         {
             /*
@@ -327,6 +327,12 @@ namespace Cecilifier.Core.AST
             if (node.OperatorToken.Kind() == SyntaxKind.AmpersandToken)
             {
                 Visit(node.Operand);
+            }
+            else if (node.IsKind(SyntaxKind.UnaryMinusExpression))
+            {
+                Visit(node.Operand);
+                InjectRequiredConversions(node.Operand);
+                AddCilInstruction(ilVar, OpCodes.Neg);
             }
             else
             {

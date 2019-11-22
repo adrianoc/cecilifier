@@ -1,0 +1,11 @@
+﻿class Minus
+{
+    int f;
+	int M(int p)
+	{
+        var l = -1; // constant
+        f = -l;	    
+	    p = -f; // field	     
+	    return -M(-p); // return / parameter
+	}
+}
