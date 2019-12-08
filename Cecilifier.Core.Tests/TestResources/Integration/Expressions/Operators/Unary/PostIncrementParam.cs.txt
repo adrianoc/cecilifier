@@ -1,0 +1,8 @@
+﻿class PostIncrementParam
+{
+    int M(int p)
+	{
+	    var r = p++;
+	    return r;
+	}
+}

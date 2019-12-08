@@ -1,0 +1,14 @@
+﻿.locals (System.Int32 V_0)
+IL_0000: ldarg.0
+IL_0001: ldarg.1
+IL_0002: stfld System.Int32 PreIncrementField::f
+IL_0007: ldarg.0
+IL_0008: ldfld System.Int32 PreIncrementField::f
+IL_000d: ldc.i4.1
+IL_000e: add
+IL_000f: stloc V_0
+IL_0013: ldloc V_0
+IL_0017: ldarg.0
+IL_0018: ldloc V_0
+IL_001c: stfld System.Int32 PreIncrementField::f
+IL_0021: ret

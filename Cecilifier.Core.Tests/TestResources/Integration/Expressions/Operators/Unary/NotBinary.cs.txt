@@ -1,0 +1,11 @@
+﻿class NotBinary
+{
+    int f;
+	int M(int p)
+	{
+        var l = ~1; // constant	    
+	    p = ~f ; // field
+	    l = ~l; // local 
+	    return ~M(~p); // return / parameter
+	}
+}

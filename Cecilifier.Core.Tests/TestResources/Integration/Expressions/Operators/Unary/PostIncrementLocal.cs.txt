@@ -1,0 +1,9 @@
+﻿class PostIncrementLocal
+{
+    int M(int p)
+	{
+	    var local = p;
+	    var r = local++;
+	    return r;
+	}
+}

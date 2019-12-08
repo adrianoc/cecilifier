@@ -1,0 +1,11 @@
+﻿class Not
+{
+    bool f;
+	bool M(bool p)
+	{
+        var l = !true; // constant	    
+	    p = !f ; // field
+	    l = !l; // local 
+	    return !M(!p); // return / parameter
+	}
+}

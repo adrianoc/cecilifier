@@ -1,0 +1,8 @@
+﻿class PreIncrementLocal
+{
+    int M(int p)
+	{
+	    var local = p;
+	    return ++local;
+	}
+}

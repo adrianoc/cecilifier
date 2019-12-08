@@ -344,6 +344,9 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                 return ret;
             }
 
+            if (instruction?.OpCode == current?.OpCode)
+                return true;
+
             var paramIndexOffset = isStatic ? 0 : 1;
             switch (instruction.OpCode.Code)
             {
@@ -566,8 +569,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
             var fieldLhs = (FieldReference) lhs.Operand;
             var fieldRhs = (FieldReference) rhs.Operand;
 
-            var ret = fieldLhs.FieldType.FullName == fieldRhs.FieldType.FullName
-                      && fieldLhs.FullName == fieldRhs.FullName;
+            var ret = fieldLhs.FieldType.FullName == fieldRhs.FieldType.FullName && fieldLhs.FullName == fieldRhs.FullName;
             return (ret, 0);
         }
     }

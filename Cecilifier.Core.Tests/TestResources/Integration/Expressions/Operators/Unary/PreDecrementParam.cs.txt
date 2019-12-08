@@ -1,0 +1,7 @@
+﻿class PreDecrementParam
+{
+	int M(int p)
+	{
+	    return --p;
+	}
+}
