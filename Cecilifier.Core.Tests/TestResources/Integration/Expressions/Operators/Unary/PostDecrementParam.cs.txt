@@ -1,0 +1,7 @@
+﻿class PostDecrementParam
+{
+	int M(int p)
+	{
+	    return p--;
+	}
+}

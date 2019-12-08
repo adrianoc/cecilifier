@@ -1,4 +1,4 @@
-using Cecilifier.Core.Tests.Framework;
+﻿using Cecilifier.Core.Tests.Framework;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration
@@ -104,9 +104,18 @@ namespace Cecilifier.Core.Tests.Integration
         }
 
         [TestCase("Minus")]
+        [TestCase("Not")]
+        [TestCase("NotBinary")]
         public void TestUnaryExpressions(string testName)
         {    
             AssertResourceTest($@"Expressions/Operators/Unary/{testName}");
+        }
+        
+        [Test]
+        public void TestIncrementDecrementExpressions([Values("Pre", "Post")] string kind, [Values("Increment", "Decrement")] string expressionType, [Values("Param", "Field", "Local")] string memberType)
+        {
+            var testName = $"{kind}{expressionType}{memberType}";
+            AssertResourceTestWithExplicitExpectation($@"Expressions/Operators/Unary/{testName}", $"System.Int32 {testName}::M(System.Int32)");
         }
     }
 }

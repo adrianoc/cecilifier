@@ -1,0 +1,7 @@
+﻿class PreIncrementParam
+{
+    int M(int p)
+	{
+	    return ++p;
+	}
+}

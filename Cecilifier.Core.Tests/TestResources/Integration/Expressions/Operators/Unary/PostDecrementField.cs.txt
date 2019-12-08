@@ -1,0 +1,9 @@
+﻿class PostDecrementField
+{
+    int f;
+	int M(int p)
+	{
+	    f = p;
+	    return f--;
+	}
+}

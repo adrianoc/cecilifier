@@ -4,7 +4,8 @@ using System.Diagnostics;
 using System.Linq;
     using System.Net.NetworkInformation;
     using Cecilifier.Core.Extensions;
-using Microsoft.CodeAnalysis;
+    using Cecilifier.Core.Misc;
+    using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Operations;
@@ -199,7 +200,7 @@ namespace Cecilifier.Core.AST
 
             var visitor = new AssignmentVisitor(Context, ilVar, node);
             
-            visitor.InstrutionPreceedingValueToLoad = Context.CurrentLine;
+            visitor.InstructionPrecedingValueToLoad = Context.CurrentLine;
             Visit(node.Right);
             if (!valueTypeNoArgObjCreation)
             {
@@ -334,6 +335,14 @@ namespace Cecilifier.Core.AST
                 InjectRequiredConversions(node.Operand);
                 AddCilInstruction(ilVar, OpCodes.Neg);
             }
+            else if (node.IsKind(SyntaxKind.PreDecrementExpression))
+            {
+                ProcessPrefixPostfixOperators(node.Operand, OpCodes.Sub, true);
+            }
+            else if (node.IsKind(SyntaxKind.PreIncrementExpression))
+            {
+                ProcessPrefixPostfixOperators(node.Operand, OpCodes.Add, true);
+            }
             else
             {
                 LogUnsupportedSyntax(node);
@@ -342,7 +351,18 @@ namespace Cecilifier.Core.AST
 
         public override void VisitPostfixUnaryExpression(PostfixUnaryExpressionSyntax node)
         {
-            LogUnsupportedSyntax(node);
+            if (node.IsKind(SyntaxKind.PostDecrementExpression))
+            {
+                ProcessPrefixPostfixOperators(node.Operand, OpCodes.Sub, false);
+            }
+            else if (node.IsKind(SyntaxKind.PostIncrementExpression))
+            {
+                ProcessPrefixPostfixOperators(node.Operand, OpCodes.Add, false);
+            }
+            else
+            {
+                LogUnsupportedSyntax(node);
+            }
         }
 
         public override void VisitParenthesizedExpression(ParenthesizedExpressionSyntax node)
@@ -429,6 +449,61 @@ namespace Cecilifier.Core.AST
 
             Visit(node.ArgumentList);
             FixCallSite();
+        }
+
+        private void ProcessPrefixPostfixOperators(ExpressionSyntax operand, OpCode opCode, bool isPrefix)
+        {
+            Visit(operand);
+            InjectRequiredConversions(operand);
+
+            var assignmentVisitor = new AssignmentVisitor(Context, ilVar);
+
+            var operandInfo = Context.SemanticModel.GetSymbolInfo(operand);
+            if (operandInfo.Symbol != null && operandInfo.Symbol.Kind != SymbolKind.Field) // Fields requires more complex handling to load the owning reference.
+            {
+                if (!isPrefix) // For *postfix* operators we duplicate the value *before* applying the operator...
+                {
+                    AddCilInstruction(ilVar, OpCodes.Dup);
+                }
+
+                AddCilInstruction(ilVar, OpCodes.Ldc_I4_1);
+                AddCilInstruction(ilVar, opCode);
+
+                if (isPrefix) // For prefix operators we duplicate the value *after* applying the operator...
+                {
+                    AddCilInstruction(ilVar, OpCodes.Dup);
+                }
+                
+                //assign (top of stack to the operand)
+                assignmentVisitor.InstructionPrecedingValueToLoad = Context.CurrentLine;
+                operand.Accept(assignmentVisitor);
+                return;
+            }
+
+            var tempLocalName = MethodExtensions.LocalVariableNameFor("tmp_", "tmp_".UniqueId().ToString());
+
+            AddCecilExpression($"var {tempLocalName} = new VariableDefinition({Context.TypeResolver.Resolve(Context.SemanticModel.GetTypeInfo(operand).Type)});");
+            AddCecilExpression($"{Context.DefinitionVariables.GetLastOf(MemberKind.Method).VariableName}.Body.Variables.Add({tempLocalName});");
+
+            if (isPrefix)
+            {
+                AddCilInstruction(ilVar, OpCodes.Ldc_I4_1);
+                AddCilInstruction(ilVar, opCode);
+            }
+
+            AddCilInstruction(ilVar, OpCodes.Stloc, tempLocalName);
+            AddCilInstruction(ilVar, OpCodes.Ldloc, tempLocalName);
+            assignmentVisitor.InstructionPrecedingValueToLoad = Context.CurrentLine;
+            AddCilInstruction(ilVar, OpCodes.Ldloc, tempLocalName);
+            
+            if (!isPrefix)
+            {
+                AddCilInstruction(ilVar, OpCodes.Ldc_I4_1);
+                AddCilInstruction(ilVar, opCode);
+            }
+            
+            // assign (top of stack to the operand)
+            operand.Accept(assignmentVisitor);
         }
 
         private bool TryProcessNoArgsCtorInvocationOnValueType(ObjectCreationExpressionSyntax node, IMethodSymbol methodSymbol, SymbolInfo ctorInfo)
