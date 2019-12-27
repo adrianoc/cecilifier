@@ -16,8 +16,13 @@ namespace Cecilifier.Core.AST
             this.ilVar = ilVar;
             PreProcessRefOutAssignments(node.Left);
         }
+        
+        internal AssignmentVisitor(IVisitorContext ctx, string ilVar) : base(ctx)
+        {
+            this.ilVar = ilVar;
+        }
 
-        public LinkedListNode<string> InstrutionPreceedingValueToLoad { get; set; }
+        public LinkedListNode<string> InstructionPrecedingValueToLoad { get; set; }
 
         public override void VisitIdentifierName(IdentifierNameSyntax node)
         {
@@ -60,7 +65,7 @@ namespace Cecilifier.Core.AST
             else
             {
                 storeOpCode = OpCodes.Stfld;
-                InsertCilInstructionAfter<string>(InstrutionPreceedingValueToLoad, ilVar, OpCodes.Ldarg_0);
+                InsertCilInstructionAfter<string>(InstructionPrecedingValueToLoad, ilVar, OpCodes.Ldarg_0);
             }
 
             AddCilInstruction(ilVar, storeOpCode, Context.DefinitionVariables.GetVariable(field.Name, MemberKind.Field, field.ContainingType.Name).VariableName);
