@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -52,7 +52,26 @@ namespace Cecilifier.Core.AST
                 case SymbolKind.Field:
                     FieldAssignment(member.Symbol as IFieldSymbol);
                     break;
+                
+                case SymbolKind.Property:
+                    PropertyAssignment(member.Symbol as IPropertySymbol);
+                    break;
             }
+        }
+
+        private void PropertyAssignment(IPropertySymbol property)
+        {
+            // TODO: Handle:
+            // 1. Static properties.
+            // 2. Property invocation in MAE.
+
+            OpCode storeOpCode;
+            if (!property.IsStatic)
+            {
+                InsertCilInstructionAfter<string>(InstructionPrecedingValueToLoad, ilVar, OpCodes.Ldarg_0);
+            }
+
+            AddMethodCall(ilVar, property.SetMethod, isAccessOnThisOrObjectCreation:false);
         }
 
         private void FieldAssignment(IFieldSymbol field)

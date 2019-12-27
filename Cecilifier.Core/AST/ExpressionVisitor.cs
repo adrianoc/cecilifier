@@ -459,7 +459,7 @@ namespace Cecilifier.Core.AST
             var assignmentVisitor = new AssignmentVisitor(Context, ilVar);
 
             var operandInfo = Context.SemanticModel.GetSymbolInfo(operand);
-            if (operandInfo.Symbol != null && operandInfo.Symbol.Kind != SymbolKind.Field) // Fields requires more complex handling to load the owning reference.
+            if (operandInfo.Symbol != null && operandInfo.Symbol.Kind != SymbolKind.Field && operandInfo.Symbol.Kind != SymbolKind.Property) // Fields / Properties requires more complex handling to load the owning reference.
             {
                 if (!isPrefix) // For *postfix* operators we duplicate the value *before* applying the operator...
                 {

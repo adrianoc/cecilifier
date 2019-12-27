@@ -1,0 +1,10 @@
+﻿class PostIncrementProp
+{
+    int Prop { get; set; }
+    
+    int M(int p)
+	{
+	    Prop = p;
+	    return Prop++;
+	}
+}

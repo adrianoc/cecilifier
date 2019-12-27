@@ -112,7 +112,7 @@ namespace Cecilifier.Core.Tests.Integration
         }
         
         [Test]
-        public void TestIncrementDecrementExpressions([Values("Pre", "Post")] string kind, [Values("Increment", "Decrement")] string expressionType, [Values("Param", "Field", "Local")] string memberType)
+        public void TestIncrementDecrementExpressions([Values("Pre", "Post")] string kind, [Values("Increment", "Decrement")] string expressionType, [Values("Param", "Field", "Local", "Prop")] string memberType)
         {
             var testName = $"{kind}{expressionType}{memberType}";
             AssertResourceTestWithExplicitExpectation($@"Expressions/Operators/Unary/{testName}", $"System.Int32 {testName}::M(System.Int32)");
