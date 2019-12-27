@@ -343,6 +343,17 @@ namespace Cecilifier.Core.AST
             {
                 ProcessPrefixPostfixOperators(node.Operand, OpCodes.Add, true);
             }
+            else if (node.IsKind(SyntaxKind.LogicalNotExpression))
+            {
+                node.Operand.Accept(this);
+                AddCilInstruction(ilVar, OpCodes.Ldc_I4_0);
+                AddCilInstruction(ilVar, OpCodes.Ceq);
+            }
+            else if (node.IsKind(SyntaxKind.BitwiseNotExpression))
+            {
+                node.Operand.Accept(this);
+                AddCilInstruction(ilVar, OpCodes.Not);
+            }
             else
             {
                 LogUnsupportedSyntax(node);
