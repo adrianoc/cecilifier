@@ -1,6 +1,6 @@
-﻿using System.Reflection;
-using Microsoft.AspNetCore;
+﻿using System.IO;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Hosting;
 
 namespace Cecilifier.Web
 {
@@ -8,12 +8,18 @@ namespace Cecilifier.Web
     {
         public static void Main(string[] args)
         {
-            CreateWebHostBuilder(args).Build().Run();
+            var host = new HostBuilder()
+                .UseContentRoot(Directory.GetCurrentDirectory())
+                .ConfigureWebHostDefaults(webBuilder =>
+                {
+                    webBuilder.UseKestrel(serverOptions => { })
+                        .UseIISIntegration()
+                        .UseUrls("http://0.0.0.0:8081")
+                        .UseStartup<Startup>();
+                })
+                .Build();
+            
+            host.Run();
         }
-
-        public static IWebHostBuilder CreateWebHostBuilder(string[] args) =>
-            WebHost.CreateDefaultBuilder(args)
-                .UseUrls("https://0.0.0.0:8081")
-                .UseStartup<Startup>();
     }
 }
