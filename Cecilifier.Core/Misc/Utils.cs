@@ -6,7 +6,7 @@ namespace Cecilifier.Core.Misc
     {
         public static string ImportFromMainModule(string expression)
         {
-            return $"TypeHelpers.Fix(assembly.MainModule.ImportReference({expression}), assembly.MainModule)";
+            return $"assembly.MainModule.ImportReference({expression})";
         }
     }
 }

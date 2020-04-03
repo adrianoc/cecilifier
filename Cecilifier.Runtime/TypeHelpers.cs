@@ -3,59 +3,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Mono.Cecil;
-using Mono.Cecil.Cil;
+using Mono.Cecil.Rocks;
+using Mono.Collections.Generic;
+using CustomAttributeNamedArgument = Mono.Cecil.CustomAttributeNamedArgument;
+using ICustomAttributeProvider = Mono.Cecil.ICustomAttributeProvider;
 
 namespace Cecilifier.Runtime
 {
     public class TypeHelpers
     {
-        static AssemblyNameReference _systemRuntimeRef;
-
-        static TypeHelpers()
-        {
-            var systemRuntime = AppDomain.CurrentDomain.GetAssemblies().Single(mr => mr.GetName().Name == "System.Runtime");
-
-            // in most platforms, referencing System.Object and other types ends up adding a reference to System.Private.CoreLib (not that in these platforms, System.Runtime has type forwarders for these types).
-            // To avoid this reference to System.Private.CoreLib we update these types to pretend they come from System.Runtime instead.
-            _systemRuntimeRef = new AssemblyNameReference(systemRuntime.GetName().Name, systemRuntime.GetName().Version)
-            {
-                PublicKeyToken = new byte[] { 0xb0, 0x3f, 0x5f, 0x7f, 0x11, 0xd5, 0x0a, 0x3a }
-            };
-        }
-        
-        /// <summary>Changes types referencing mscorlib so they appear to be defined in System.Runtime.dll</summary>
-        /// <param name="self">type to be checked</param>
-        /// <param name="mainModule">module which assembly references will be added to/removed from</param>
-        /// <returns>the same type reference passed as the parameter. This allows the method to be used in chains of calls.</returns>
-        public static TypeReference Fix(TypeReference self, ModuleDefinition mainModule)
-        {
-            if (self.DeclaringType != null)
-            {
-                Fix(self.DeclaringType, mainModule);
-            }
-            else
-            {
-                if (self.Scope.Name == "mscorlib")
-                {
-                    if (!mainModule.AssemblyReferences.Any(a => a.Name == _systemRuntimeRef.Name))
-                    {
-                        mainModule.AssemblyReferences.Add(_systemRuntimeRef);
-                        mainModule.AssemblyReferences.Remove((AssemblyNameReference) self.Scope);
-                    }
-                    
-                    self.Scope = _systemRuntimeRef;
-                }
-            }
-
-            return self;
-        }
-
-        public static T Fix<T>(T member, ModuleDefinition mainModule) where T : MemberReference
-        {
-            Fix(member.DeclaringType, mainModule);
-            return member;
-        }
-        
         public static MethodReference DefaultCtorFor(TypeReference type)
         {
             var resolved = type.Resolve();
@@ -182,6 +138,180 @@ namespace Cecilifier.Runtime
             }
 
             return candidateElementType.FullName == original.FullName;
+        }
+    }
+
+    public struct PrivateCoreLibFixer
+    {
+        static AssemblyNameReference _systemRuntimeRef;
+
+        static PrivateCoreLibFixer()
+        {
+            var systemRuntime = AppDomain.CurrentDomain.GetAssemblies().Single(mr => mr.GetName().Name == "System.Runtime");
+
+            // in most platforms, referencing System.Object and other types ends up adding a reference to System.Private.CoreLib (not that in these platforms, System.Runtime has type forwarders for these types).
+            // To avoid this reference to System.Private.CoreLib we update these types to pretend they come from System.Runtime instead.
+            _systemRuntimeRef = new AssemblyNameReference(systemRuntime.GetName().Name, systemRuntime.GetName().Version)
+            {
+                PublicKeyToken = new byte[] { 0xb0, 0x3f, 0x5f, 0x7f, 0x11, 0xd5, 0x0a, 0x3a }
+            };
+        }
+        
+        /// <summary>Changes types referencing mscorlib so they appear to be defined in System.Runtime.dll</summary>
+        /// <param name="mainModule">module which assembly references will be added to/removed from</param>
+        public static void FixReferences(ModuleDefinition mainModule)
+        {
+            foreach (var t in mainModule.GetAllTypes())
+            {
+                FixType(t, mainModule);
+            }
+
+            var toBeRemoved = mainModule.AssemblyReferences.Where(a => a.Name == "mscorlib" || a.Name == "System.Private.CoreLib").ToArray();
+            foreach (var tbr in toBeRemoved)
+            {
+                mainModule.AssemblyReferences.Remove(tbr);
+            }
+        }
+        
+        private static void FixType(TypeDefinition type, ModuleDefinition mainModule)
+        {
+            FixTypeReferences(type.BaseType, mainModule);
+            FixAttributes(type.CustomAttributes, mainModule);
+            
+            foreach (var field in type.Fields)
+            {
+                FixTypeReferences(field.FieldType.GetElementType(), mainModule);
+            }
+
+            foreach (var property in type.Properties)
+            {
+                FixTypeReferences(property.PropertyType.GetElementType(), mainModule);
+                FixParameters(property.Parameters, mainModule);
+            }
+            
+            foreach (var method in type.Methods)
+            {
+                FixTypeReferences(method, mainModule);
+            }
+
+            foreach (var @event in type.Events)
+            {
+                FixTypeReferences(@event.EventType.GetElementType(), mainModule);
+            }
+        }
+
+        private static void FixTypeReferences(MethodReference method, ModuleDefinition mainModule)
+        {
+            FixTypeReferences(method.ReturnType.GetElementType(), mainModule);
+            //FixTypeReference(method.MethodReturnType., mainModule);
+            FixParameters(method.Parameters, mainModule);
+            
+            TryFixTypeReferencesInGenericInstance(method, mainModule);
+        }
+
+        private static void FixAttributes(Collection<CustomAttribute> customAttributes, ModuleDefinition mainModule)
+        {
+            foreach (var attribute in customAttributes)
+            {
+                FixTypeReferences(attribute.AttributeType.GetElementType(), mainModule);
+                FixTypeReferences(attribute.Constructor, mainModule);
+                FixTypeReferences(attribute.Fields, mainModule);
+                FixTypeReferences(attribute.Properties, mainModule);
+                FixTypeReferences(attribute.ConstructorArguments, mainModule);
+            }
+        }
+
+        private static void FixTypeReferences(Collection<CustomAttributeArgument> attributeConstructorArguments, ModuleDefinition mainModule)
+        {
+            foreach (var constructorArgument in attributeConstructorArguments)
+            {
+                FixTypeReferences(constructorArgument, mainModule);
+            }
+        }
+
+        private static void FixTypeReferences(Collection<CustomAttributeNamedArgument> attributeFields, ModuleDefinition mainModule)
+        {
+            foreach (var attributeField in attributeFields)
+            {
+                FixTypeReferences(attributeField.Argument, mainModule);
+            }
+        }
+
+        private static void FixTypeReferences(CustomAttributeArgument customAttributeArgument, ModuleDefinition mainModule)
+        {
+            FixTypeReferences(customAttributeArgument.Type.GetElementType(), mainModule);
+            if (customAttributeArgument.Value is TypeReference t) 
+                FixTypeReferences(t, mainModule);
+        }
+
+        private static void FixParameters(Collection<ParameterDefinition> parameters, ModuleDefinition mainModule)
+        {
+            foreach (var parameter in parameters)
+            {
+                FixTypeReferences(parameter.ParameterType.GetElementType(), mainModule);
+            }
+        }
+
+        private static void FixTypeReferences(TypeReference t, ModuleDefinition mainModule)
+        {
+            if (t == null) 
+                return;
+            
+            if (t.Scope.Name == "mscorlib" || t.Scope.Name == "System.Private.CoreLib")
+            {
+                if (!mainModule.AssemblyReferences.Any(a => a.Name == _systemRuntimeRef.Name))
+                {
+                    mainModule.AssemblyReferences.Add(_systemRuntimeRef);    
+                }
+                  
+                if (t is GenericInstanceType gt)
+                {
+                }
+                else
+                {
+                    t.Scope = _systemRuntimeRef;
+                }
+            }
+
+
+            if (t is ICustomAttributeProvider customAttributeProvider)
+            {
+                FixAttributes(customAttributeProvider.CustomAttributes, mainModule);
+            }
+
+            TryFixTypeReferencesInGenericInstance(t, mainModule);
+        }
+
+        private static void TryFixTypeReferencesInGenericInstance(MemberReference memberReference, ModuleDefinition mainModule)
+        {
+            if (memberReference is IGenericInstance gi)
+            {
+                foreach (var genericArgument in gi.GenericArguments)
+                {
+                    FixTypeReferences(genericArgument.GetElementType(), mainModule);
+                }
+
+                if (gi is GenericInstanceType git)
+                {
+                    foreach (var genericParameter in git.GenericParameters)
+                    {
+                        FixTypeReferences(genericParameter.GetElementType(), mainModule);
+                        FixTypeReferences(genericParameter.Constraints, mainModule);
+                    }
+
+                    FixTypeReferences(git.ElementType, mainModule);
+                }
+                
+            }
+        }
+
+        private static void FixTypeReferences(Collection<GenericParameterConstraint> genericConstraints, ModuleDefinition mainModule)
+        {
+            foreach (var genericConstraint in genericConstraints)
+            {
+                FixTypeReferences(genericConstraint.ConstraintType.GetElementType(), mainModule);
+                FixAttributes(genericConstraint.CustomAttributes, mainModule);
+            }
         }
     }
 
