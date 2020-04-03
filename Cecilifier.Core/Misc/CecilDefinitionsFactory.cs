@@ -117,20 +117,19 @@ namespace Cecilifier.Core.Misc
             return exps;
         }
 
-        public static IEnumerable<string> Parameter(ParameterSyntax node, SemanticModel semanticModel, string methodVar, string paramVar, string resolvedType)
+        public static IEnumerable<string> Parameter(string name, RefKind byRef, bool isParams, bool isArray, SemanticModel semanticModel, string methodVar, string paramVar, string resolvedType)
         {
             var exps = new List<string>();
-            var paramSymbol = semanticModel.GetDeclaredSymbol(node);
-            if (paramSymbol.RefKind != RefKind.None)
+            if (RefKind.None != byRef)
             {
                 resolvedType = "new ByReferenceType(" + resolvedType + ")";
             }
 
-            exps.Add($"var {paramVar} = new ParameterDefinition(\"{node.Identifier.Text}\", ParameterAttributes.None, {resolvedType});");
+            exps.Add($"var {paramVar} = new ParameterDefinition(\"{name}\", ParameterAttributes.None, {resolvedType});");
 
-            AddExtraAttributes(exps, paramVar, paramSymbol);
+            AddExtraAttributes(exps, paramVar, byRef);
 
-            if (node.GetFirstToken().Kind() == SyntaxKind.ParamsKeyword)
+            if (isParams)
             {
                 exps.Add($"{paramVar}.CustomAttributes.Add(new CustomAttribute(assembly.MainModule.Import(typeof(ParamArrayAttribute).GetConstructor(BindingFlags.Public | BindingFlags.Instance, null, new Type[0], null))));");
             }
@@ -138,6 +137,21 @@ namespace Cecilifier.Core.Misc
             exps.Add($"{methodVar}.Parameters.Add({paramVar});");
 
             return exps;
+        }
+        
+        public static IEnumerable<string> Parameter(ParameterSyntax node, SemanticModel semanticModel, string methodVar, string paramVar, string resolvedType)
+        {
+            var exps = new List<string>();
+            var paramSymbol = semanticModel.GetDeclaredSymbol(node);
+            return Parameter(
+                node.Identifier.Text, 
+                paramSymbol.RefKind, 
+                isParams: node.GetFirstToken().Kind() == SyntaxKind.ParamsKeyword, 
+                isArray: false, 
+                semanticModel,
+                methodVar,
+                paramVar,
+                resolvedType);
         }
 
         public static IEnumerable<string> Attribute(string attrTargetVar, IVisitorContext context, AttributeSyntax attribute, Func<ITypeSymbol, AttributeArgumentSyntax[], string> ctorResolver)
@@ -267,9 +281,9 @@ namespace Cecilifier.Core.Misc
             return exps;
         }
         
-        private static void AddExtraAttributes(IList<string> exps, string paramVar, IParameterSymbol symbol)
+        private static void AddExtraAttributes(IList<string> exps, string paramVar, RefKind byRef)
         {
-            if (symbol.RefKind == RefKind.Out)
+            if (byRef == RefKind.Out)
             {
                 exps.Add($"{paramVar}.Attributes = ParameterAttributes.Out;");
             }

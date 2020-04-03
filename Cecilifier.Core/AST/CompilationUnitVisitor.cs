@@ -4,6 +4,7 @@ using System.Linq;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Cecilifier.Core.AST
@@ -94,9 +95,10 @@ namespace Cecilifier.Core.AST
                     (methodVar, param) => CecilDefinitionsFactory.Parameter(param, Context.SemanticModel, methodVar, TempLocalVar($"{param.Identifier.ValueText}"), ResolveType(param.Type)));
 
                 // BeginInvoke() method
+                var methodName = "BeginInvoke";
                 var beginInvokeMethodVar = TempLocalVar("beginInvoke");
                 AddCecilExpression(
-                    $@"var {beginInvokeMethodVar} = new MethodDefinition(""BeginInvoke"", MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.NewSlot | MethodAttributes.Virtual, {Context.TypeResolver.Resolve("System.IAsyncResult")})
+                    $@"var {beginInvokeMethodVar} = new MethodDefinition(""{methodName}"", MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.NewSlot | MethodAttributes.Virtual, {Context.TypeResolver.Resolve("System.IAsyncResult")})
 					{{
 						HasThis = true,
 						IsRuntime = true,
@@ -112,14 +114,41 @@ namespace Cecilifier.Core.AST
                 AddCecilExpression($"{beginInvokeMethodVar}.Parameters.Add(new ParameterDefinition({Context.TypeResolver.ResolvePredefinedType("Object")}));");
                 AddCecilExpression($"{typeVar}.Methods.Add({beginInvokeMethodVar});");
 
-                AddDelegateMethod(typeVar, "EndInvoke", ResolveType(node.ReturnType), node.ParameterList.Parameters,
-                    (methodVar, param) => CecilDefinitionsFactory.Parameter(param, Context.SemanticModel, methodVar, TempLocalVar("ar"), Context.TypeResolver.Resolve("System.IAsyncResult")));
+                // EndInvoke() method
+                var endInvokeMethodVar = TempLocalVar("endInvoke");
+
+                var endInvokeExps = CecilDefinitionsFactory.Method(
+                    Context,
+                    endInvokeMethodVar,
+                    "EndInvoke",
+                    "MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.NewSlot | MethodAttributes.Virtual",
+                    ResolveType(node.ReturnType),
+                    Array.Empty<TypeParameterSyntax>()
+                );
+                endInvokeExps = endInvokeExps.Concat(new[]
+                {
+                    $"{endInvokeMethodVar}.HasThis = true;",
+                    $"{endInvokeMethodVar}.IsRuntime = true;",
+                });
+                
+                var endInvokeParamExps = CecilDefinitionsFactory.Parameter(
+                    "ar", 
+                    RefKind.None,
+                    false,
+                    false,
+                    Context.SemanticModel,
+                    endInvokeMethodVar,
+                    TempLocalVar("ar"),
+                    Context.TypeResolver.Resolve("System.IAsyncResult"));
+
+                AddCecilExpressions(endInvokeExps);
+                AddCecilExpressions(endInvokeParamExps);
+                AddCecilExpression($"{typeVar}.Methods.Add({endInvokeMethodVar});");
                
                 base.VisitDelegateDeclaration(node);
             }
 
-            void AddDelegateMethod(string typeLocalVar, string methodName, string returnTypeName, in SeparatedSyntaxList<ParameterSyntax> parameters,
-                Func<string, ParameterSyntax, IEnumerable<string>> paramterHandler)
+            void AddDelegateMethod(string typeLocalVar, string methodName, string returnTypeName, in SeparatedSyntaxList<ParameterSyntax> parameters, Func<string, ParameterSyntax, IEnumerable<string>> parameterHandler)
             {
                 var methodLocalVar = TempLocalVar(methodName.ToLower());
 
@@ -132,7 +161,7 @@ namespace Cecilifier.Core.AST
 
                 foreach (var param in parameters)
                 {
-                    AddCecilExpressions(paramterHandler(methodLocalVar, param));
+                    AddCecilExpressions(parameterHandler(methodLocalVar, param));
                 }
 
                 AddCecilExpression($"{typeLocalVar}.Methods.Add({methodLocalVar});");
