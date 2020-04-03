@@ -1,10 +1,12 @@
+using System;
+
 namespace Cecilifier.Core.Misc
 {
     internal struct Utils
     {
         public static string ImportFromMainModule(string expression)
         {
-            return $"assembly.MainModule.ImportReference({expression})";
+            return $"TypeHelpers.Fix(assembly.MainModule.ImportReference({expression}), assembly.MainModule)";
         }
     }
 }

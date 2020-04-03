@@ -132,8 +132,7 @@ namespace Cecilifier.Core.Misc
 
             if (node.GetFirstToken().Kind() == SyntaxKind.ParamsKeyword)
             {
-                exps.Add(
-                    $"{paramVar}.CustomAttributes.Add(new CustomAttribute(assembly.MainModule.Import(typeof(ParamArrayAttribute).GetConstructor(BindingFlags.Public | BindingFlags.Instance, null, new Type[0], null))));");
+                exps.Add($"{paramVar}.CustomAttributes.Add(new CustomAttribute(assembly.MainModule.Import(typeof(ParamArrayAttribute).GetConstructor(BindingFlags.Public | BindingFlags.Instance, null, new Type[0], null))));");
             }
 
             exps.Add($"{methodVar}.Parameters.Add({paramVar});");
@@ -177,7 +176,7 @@ namespace Cecilifier.Core.Misc
 
             string CustomAttributeArgument(TypeInfo argType, AttributeArgumentSyntax attrArg)
             {
-                return $"new CustomAttributeArgument(assembly.MainModule.ImportReference(typeof({argType.Type.FullyQualifiedName()})), {attrArg.Expression.EvaluateConstantExpression(context.SemanticModel)})";
+                return $"new CustomAttributeArgument({context.TypeResolver.Resolve(argType.Type.FullyQualifiedName())}, {attrArg.Expression.EvaluateConstantExpression(context.SemanticModel)})";
             }
         }
 
