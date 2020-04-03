@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Cecilifier.Core.AST;
@@ -20,11 +20,14 @@ namespace Cecilifier.Core
 
         private CecilifierResult Run(Stream content, IList<string> references)
         {
-            var syntaxTree = CSharpSyntaxTree.ParseText(new StreamReader(content).ReadToEnd(), new CSharpParseOptions(LanguageVersion.CSharp8));
+            using var stream = new StreamReader(content);
+            var syntaxTree = CSharpSyntaxTree.ParseText(stream.ReadToEnd(), new CSharpParseOptions(LanguageVersion.CSharp8));
+            var metadataReferences = references.Select(refPath => MetadataReference.CreateFromFile(refPath)).ToArray();
+            
             var comp = CSharpCompilation.Create(
                 "CecilifiedAssembly",
                 new[] {syntaxTree},
-                references.Select(refPath => MetadataReference.CreateFromFile(refPath)),
+                metadataReferences,
                 new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, allowUnsafe: true));
 
             var errors = comp.GetDiagnostics().Where(d => d.Severity == DiagnosticSeverity.Error).Select(s => s.ToString()).ToArray();

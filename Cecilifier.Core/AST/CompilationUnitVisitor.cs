@@ -86,7 +86,11 @@ namespace Cecilifier.Core.AST
                 AddCecilExpression($"{ctorLocalVar}.Parameters.Add(new ParameterDefinition({Context.TypeResolver.ResolvePredefinedType("IntPtr")}));");
                 AddCecilExpression($"{typeVar}.Methods.Add({ctorLocalVar});");
 
-                AddDelegateMethod(typeVar, "Invoke", ResolveType(node.ReturnType), node.ParameterList.Parameters,
+                AddDelegateMethod(
+                    typeVar, 
+                    "Invoke", 
+                    ResolveType(node.ReturnType), 
+                    node.ParameterList.Parameters,
                     (methodVar, param) => CecilDefinitionsFactory.Parameter(param, Context.SemanticModel, methodVar, TempLocalVar($"{param.Identifier.ValueText}"), ResolveType(param.Type)));
 
                 // BeginInvoke() method

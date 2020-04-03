@@ -29,9 +29,14 @@ namespace Cecilifier.Core.Tests.Framework
             process.EnableRaisingEvents = true;
             process.WaitForExit();
 
+            if (!string.IsNullOrWhiteSpace(@out.ToString()))
+            {
+                Console.WriteLine($"{Environment.NewLine}Output: {@out}");
+            }
+            
             if (!string.IsNullOrWhiteSpace(err.ToString()))
             {
-                throw new ApplicationException("Error: " + err + "\r\nOuput: " + @out + "\r\nExecutable: " + executable);
+                throw new ApplicationException("Error: " + err + $"{Environment.NewLine}Executable: {executable}");
             }
         }
     }

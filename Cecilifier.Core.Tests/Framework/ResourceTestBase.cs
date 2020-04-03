@@ -95,19 +95,15 @@ namespace Cecilifier.Core.Tests.Framework
         {
             cecilifiedCode = Cecilfy(tbc);
 
-            var references = Utils.GetTrustedAssembliesPath();
-
+            var references = Utils.GetTrustedAssembliesPath().Where(a => !a.Contains("mscorlib"));
             var refsToCopy = new List<string>
             {
                 typeof(ILParser).Assembly.Location,
                 typeof(TypeReference).Assembly.Location,
-                typeof(TypeHelpers).Assembly.Location
+                typeof(TypeHelpers).Assembly.Location,
             };
 
-            foreach (var refPath in refsToCopy)
-            {
-                references.Add(refPath);
-            }
+            references = references.Concat(refsToCopy).ToList();
 
             var cecilifierRunnerPath = CompilationServices.CompileExe(cecilifiedCode, references.ToArray());
 
