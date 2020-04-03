@@ -145,7 +145,7 @@ namespace Cecilifier.Core.Misc
 
         public string Resolve(string typeName) => Utils.ImportFromMainModule($"typeof({typeName})");
         
-        public string ResolvePredefinedType(string typeName) => $"TypeHelpers.Fix(assembly.MainModule.TypeSystem.{typeName}, assembly.MainModule)";
+        public string ResolvePredefinedType(string typeName) => $"assembly.MainModule.TypeSystem.{typeName}";
 
         public string ResolvePredefinedType(ITypeSymbol type) => ResolvePredefinedType(type.Name);
 
