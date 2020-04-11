@@ -6,3 +6,4 @@ _Resharper*
 Packages/*
 
 \.idea/\.idea\.Cecilifier/
+Cecilifier.Web/appsettings.Production.json
