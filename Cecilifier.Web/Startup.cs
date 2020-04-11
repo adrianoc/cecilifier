@@ -5,9 +5,12 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Net;
 using System.Net.WebSockets;
 using System.Resources;
+using System.Runtime.CompilerServices;
 using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Web;
 using Cecilifier.Core;
@@ -16,6 +19,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -24,6 +28,16 @@ namespace Cecilifier.Web
 {
     public class Startup
     {
+        private const string ProjectContents = @"<Project Sdk=""Microsoft.NET.Sdk"">
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>netcoreapp3.0</TargetFramework>
+    </PropertyGroup>
+    <ItemGroup>
+        <PackageReference Include=""Mono.Cecil"" Version=""0.11.0"" />
+    </ItemGroup>
+</Project>";
+        
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
@@ -87,47 +101,48 @@ namespace Cecilifier.Web
 
             void CecilifyCode(WebSocket webSocket)
             {
-                var buffer = new byte[1024 * 4];
+                var buffer = ArrayPool<byte>.Shared.Rent(64 * 1024);
                 var result = webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None).Result;
                 while (!result.CloseStatus.HasValue)
                 {
                     using (var code = new MemoryStream(buffer, 0, result.Count))
                     {
                         CecilifierApplication.Count++;
-                        
                         try
                         {
                             var deployKind = code.ReadByte();
+                            var publishSourcePolicy = code.ReadByte();
+                            
                             var cecilifiedCode = Core.Cecilifier.Process(code, GetTrustedAssembliesPath());
 
                             if (deployKind == 'Z')
                             {
-                                var responeData = ZipProject( 
+                                if (publishSourcePolicy == 'A')
+                                    SendMessageWithCodeToChat("One more happy user (project)", $"Total so far: {CecilifierApplication.Count}", "4437377", buffer, result.Count);
+                                
+                                var responeData = ZipProject(
                                     ("Program.cs", cecilifiedCode.GeneratedCode.ReadToEnd()),
-                                    ("Cecilified.csproj", @"<Project Sdk=""Microsoft.NET.Sdk"">
-    <PropertyGroup>
-        <OutputType>Exe</OutputType>
-        <TargetFramework>netcoreapp3.0</TargetFramework>
-    </PropertyGroup>
-    <ItemGroup>
-        <PackageReference Include=""Mono.Cecil"" Version=""0.11.0"" />
-    </ItemGroup>
-</Project>"),
+                                    ("Cecilified.csproj", ProjectContents),
                                     NameAndContentFromResource("Cecilifier.Web.Runtime")
-                                    );
+                                );
 
-                                var output = new Span<byte>(new byte[8192]);
-                                var ret = Base64.EncodeToUtf8(responeData.Span, output,  out var bytesConsumed, out var bytesWritten);
+                                var output = new Span<byte>(buffer);
+                                var ret = Base64.EncodeToUtf8(responeData.Span, output, out var bytesConsumed, out var bytesWritten);
                                 if (ret == OperationStatus.Done)
                                 {
                                     output = output.Slice(0, bytesWritten);
                                 }
-                                var r = $"{{ \"status\" : 0, \"counter\": {CecilifierApplication.Count}, \"kind\": \"Z\", \"mainTypeName\":\"{cecilifiedCode.MainTypeName}\", \"cecilifiedCode\" : \"{Encoding.UTF8.GetString(output)}\" }}";
+
+                                var r =
+                                    $"{{ \"status\" : 0, \"counter\": {CecilifierApplication.Count}, \"kind\": \"Z\", \"mainTypeName\":\"{cecilifiedCode.MainTypeName}\", \"cecilifiedCode\" : \"{Encoding.UTF8.GetString(output)}\" }}";
                                 var dataToReturn = Encoding.UTF8.GetBytes(r).AsMemory();
                                 webSocket.SendAsync(dataToReturn, result.MessageType, result.EndOfMessage, CancellationToken.None);
                             }
                             else
                             {
+                                if (publishSourcePolicy == 'A')
+                                    SendMessageWithCodeToChat("One more happy user", $"Total so far: {CecilifierApplication.Count}", "4437377", buffer, result.Count);
+                                
                                 var cecilifiedStr = HttpUtility.JavaScriptStringEncode(cecilifiedCode.GeneratedCode.ReadToEnd());
                                 var r = $"{{ \"status\" : 0, \"counter\": {CecilifierApplication.Count}, \"kind\": \"C\", \"cecilifiedCode\" : \"{cecilifiedStr}\" }}";
                                 var dataToReturn = Encoding.UTF8.GetBytes(r).AsMemory();
@@ -136,13 +151,21 @@ namespace Cecilifier.Web
                         }
                         catch (SyntaxErrorException ex)
                         {
-                            var dataToReturn = Encoding.UTF8.GetBytes($"{{ \"status\" : 1,  \"syntaxError\": \"{ HttpUtility.JavaScriptStringEncode(ex.Message)}\"  }}").AsMemory();
+                            SendSyntaxErrorToChat(ex, buffer, result.Count);
+
+                            var dataToReturn = Encoding.UTF8.GetBytes($"{{ \"status\" : 1,  \"syntaxError\": \"{HttpUtility.JavaScriptStringEncode(ex.Message)}\"  }}").AsMemory();
                             webSocket.SendAsync(dataToReturn, result.MessageType, result.EndOfMessage, CancellationToken.None);
                         }
                         catch (Exception ex)
                         {
-                            var dataToReturn = Encoding.UTF8.GetBytes($"{{ \"status\" : 2,  \"error\": \"{ HttpUtility.JavaScriptStringEncode(ex.ToString())}\"  }}").AsMemory();
+                            SendExceptionToChat(ex, buffer, result.Count);
+
+                            var dataToReturn = Encoding.UTF8.GetBytes($"{{ \"status\" : 2,  \"error\": \"{HttpUtility.JavaScriptStringEncode(ex.ToString())}\"  }}").AsMemory();
                             webSocket.SendAsync(dataToReturn, result.MessageType, result.EndOfMessage, CancellationToken.None);
+                        }
+                        finally
+                        {
+                            ArrayPool<byte>.Shared.Return(buffer);
                         }
                     }
 
@@ -196,6 +219,64 @@ namespace Cecilifier.Web
             }
             
         }
+
+        private void SendExceptionToChat(Exception exception, byte []code, int length)
+        {
+            SendMessageWithCodeToChat("Exception processing request",  exception.ToString(), "15746887", code, length);
+        }
+
+        private void SendSyntaxErrorToChat(SyntaxErrorException syntaxErrorException, byte[] code, int length)
+        {
+            SendMessageWithCodeToChat("Syntax Error",  syntaxErrorException.Message, "15746887", code, length);
+        }
+        
+        private void SendMessageWithCodeToChat(string title, string msg, string color, byte[] code, int length)
+        {
+            var stream = new MemoryStream(code,2, length - 2); // skip byte with info whether user wants zipped project or not & publishing source (discord) or not.
+            using var reader = new StreamReader(stream);
+            SendMessageToChat(title,  $"{msg}\n\n***********\n\n```{reader.ReadToEnd()}```", color);
+        }
+
+        private void SendMessageToChat(string title, string msg, string color)
+        {
+            var toSend = $@"{{
+            ""embeds"": [
+            {{
+                ""title"": ""{title}"",
+                ""description"": ""{JsonEncodedText.Encode(msg)}"",
+                ""color"": {color}
+            }}
+            ]
+        }}";
+
+            var discordChannelUrl = Configuration["DiscordChannelUrl"];
+            
+            var discordPostRequest = WebRequest.Create(discordChannelUrl);
+            discordPostRequest.ContentType = "application/json";
+            discordPostRequest.Method = WebRequestMethods.Http.Post;
+
+            var buffer = Encoding.ASCII.GetBytes(toSend);
+            
+            discordPostRequest.ContentLength = buffer.Length;
+            var stream = discordPostRequest.GetRequestStream();
+            stream.Write(buffer, 0, buffer.Length);
+            stream.Close();
+
+            try
+            {
+                var response = (HttpWebResponse) discordPostRequest.GetResponse();
+                if (response.StatusCode != HttpStatusCode.NoContent)
+                {
+                    Console.WriteLine($"Discord returned status: {response.StatusCode}");
+                }
+                
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Unable to send message to discord channel. Exception caught:\n\n{e}");
+            }
+        }
+        
 
         (string fileName, string contents) NameAndContentFromResource(string resourceName)
         {

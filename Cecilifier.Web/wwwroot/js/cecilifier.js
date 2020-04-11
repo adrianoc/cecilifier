@@ -33,7 +33,39 @@ function initializeSite() {
         });
 
 
+    setSendToDiscordTooltip();
+    
     initializeWebSocket();
+}
+
+function onSendToDiscordCheckBoxChanged()
+{
+    setSendToDiscordTooltip();
+}
+
+function setSendToDiscordTooltip()
+{
+    let msgBody = "the source from the top textbox will be sent to an internal discord channel (accessible only to Cecilifier's author)";
+    let msg = null;
+    if (getSendToDiscordValue())
+    {
+        msg = "Publish On: " + msgBody +  ". Preferable if the contents of the code is not sensitive. This helps Cecilifier developer to better understand usage pattern.";
+    }
+    else
+    {
+        msg = "Publish Off: " + msgBody +  " only in case of errors.";
+    }
+    
+    msg = msg + "\r\nClick on the link at the bottom of this page to join the general discussion discord channel.";
+
+    let label = document.getElementById("postToDiscordLabel");
+    label.setAttribute("data-tooltip", msg);
+}
+
+function getSendToDiscordValue()
+{
+    let checkbox = document.getElementById("postToDiscord");
+    return checkbox.checked;
 }
 
 function setAlert(div_id, msg) {
@@ -68,12 +100,12 @@ function initializeWebSocket() {
 
     var sendButton = document.getElementById("sendbutton");
     sendButton.onclick = function() {
-        send(websocket, 'C');
+        send(websocket, 'C', getSendToDiscordValue());
     };
     
     var downloadProjectButton = document.getElementById("downloadProject");
     downloadProjectButton.onclick = function() {
-        send(websocket, 'Z');
+        send(websocket, 'Z', getSendToDiscordValue());
     };
 
     websocket.onopen = function (event) {
@@ -110,14 +142,14 @@ function initializeWebSocket() {
     };
 }
 
-function send(websocket, format) {
+function send(websocket, format, sendToDiscordOption) {
     if (!websocket || websocket.readyState !== WebSocket.OPEN) {
         alert("socket not connected");
         return;
     }
     clearError();
 
-    websocket.send(format + csharpCode.getValue());
+    websocket.send(format + (sendToDiscordOption ? 'A' : 'E') + csharpCode.getValue());
 }
 function createProjectZip(text, name, type) {
     var buttonId = "dlbtn";

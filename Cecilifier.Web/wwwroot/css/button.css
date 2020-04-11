@@ -336,3 +336,67 @@
     border-color: transparent transparent rgba(55, 64, 70, 0.9) transparent;
     transform-origin: bottom;
 }
+
+/* Checkbox: https://code-boxx.com/pure-simple-css-toggle-button/ */
+/* Hide default input */
+.toggle input {
+    display: inline-block;
+    *display: inline;
+}
+
+/* The container and background */
+.toggle {
+    position: relative;
+    display: inline-block;
+    width: 90px;
+    height: 30px;
+}
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #bc2612;
+    border: 1px solid #aaa;
+    border-radius: 5px;
+    transition: all 0.4s;
+}
+
+/* The sliding button */
+.slider:before {
+    position: absolute;
+    content: "";
+    width: 38px;
+    height: 24px;
+    left: 2px;
+    top: 2px;
+    background-color: #eee;
+    border-radius: 5px;
+    transition: all 0.4s;
+}
+
+/* On checked */
+input:checked + .slider {
+    background-color: #8cbc13;
+}
+input:checked + .slider:before {
+    transform: translateX(40px);
+}
+
+/* "OFF" Text */
+.slider:after {
+    position: absolute;
+    content: "OFF";
+    top: 6px;
+    right: 5px;
+    color: #fff;
+    font-size: 0.9em;
+}
+
+/* "ON" Text */
+input:checked + .slider:after {
+    content: "ON";
+    left: -40px;
+}

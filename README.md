@@ -70,7 +70,7 @@ Orthogonal to these options, after you Cecilifier some code you can create a pro
 
 How To build
 ---
-In order to build it you need at least .Net Core SDK 2.0
+In order to build it you need at least .Net Core SDK 3.1
 
 - Pull the [git repo](https://github.com/adrianoc/cecilifier)
 - Open a console in the folder with the pulled source code
@@ -106,6 +106,8 @@ Including a failing test is the best way to ensure the processing of the issue w
 Community
 ---
 You can use Cecilifier [google group](https://groups.google.com/forum/#!forum/cecilifier) to ask for help, make suggestions, start discussions about potential improvements, etc. You can also reach me through twitter [@adrianoverona](https://twitter.com/adrianoverona)
+
+There's also a discord server (created on April/2020); feel free to join at https://discord.gg/7P2sCk9 (I cannot guarantee that I'll be responsive but I'll do my best).
 
 Build Status
 ---
