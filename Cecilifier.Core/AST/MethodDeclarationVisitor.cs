@@ -28,7 +28,7 @@ namespace Cecilifier.Core.AST
         {
             StatementVisitor.Visit(Context, ilVar, node);
         }
-
+        
         public override void VisitMethodDeclaration(MethodDeclarationSyntax node)
         {
             ProcessMethodDeclaration(
@@ -38,6 +38,16 @@ namespace Cecilifier.Core.AST
                 ResolveType(node.ReturnType), 
                 _ => base.VisitMethodDeclaration(node), 
                 node.TypeParameterList?.Parameters.ToArray());
+        }
+
+        public override void VisitParameterList(ParameterListSyntax node)
+        {
+            if (node.Parameters.Count > 0)
+            {
+                Context.WriteNewLine();
+                Context.WriteComment($"Parameters of '{node.Parent.HumanReadableSummary()}'");
+            }
+            base.VisitParameterList(node);
         }
 
         public override void VisitParameter(ParameterSyntax node)
@@ -72,12 +82,6 @@ namespace Cecilifier.Core.AST
             base.VisitParameter(node);
         }
 
-        public override void VisitPropertyDeclaration(PropertyDeclarationSyntax node)
-        {
-            AddCecilExpression("[PropertyDeclaration] {0}", node);
-            base.VisitPropertyDeclaration(node);
-        }
-
         protected void ProcessMethodDeclaration<T>(T node, string simpleName, string fqName, string returnType, Action<string> runWithCurrent, IList<TypeParameterSyntax> typeParameters = null) where T : BaseMethodDeclarationSyntax
         {
             typeParameters = typeParameters ?? Array.Empty<TypeParameterSyntax>();
@@ -100,7 +104,6 @@ namespace Cecilifier.Core.AST
 
             WithCurrentMethod(declaringTypeName, methodVar, fqName, node.ParameterList.Parameters.Select(p => Context.GetTypeInfo(p.Type).Type.Name).ToArray(), runWithCurrent);
 
-            //TODO: Move this to default ctor handling and rely on VisitReturnStatement here instead
             if (!isAbstract && !node.DescendantNodes().Any(n => n.Kind() == SyntaxKind.ReturnStatement))
             {
                 AddCilInstruction(ilVar, OpCodes.Ret);
@@ -128,6 +131,9 @@ namespace Cecilifier.Core.AST
 
         public static void AddMethodDefinition(IVisitorContext context, string methodVar, string fqName, string methodModifiers, string returnType, IList<TypeParameterSyntax> typeParameters)
         {
+            context.WriteNewLine();
+            context.WriteComment($"Method : {fqName}");
+
             context[methodVar] = "";
             var exps = CecilDefinitionsFactory.Method(context, methodVar, fqName, methodModifiers, returnType, typeParameters);
             foreach(var exp in exps)
