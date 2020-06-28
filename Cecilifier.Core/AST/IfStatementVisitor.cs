@@ -18,7 +18,6 @@ namespace Cecilifier.Core.AST
 
         public override void VisitIfStatement(IfStatementSyntax node)
         {
-            WriteCecilExpression(Context, $"// if ({node.Condition})");
             ExpressionVisitor.Visit(Context, _ilVar, node.Condition);
 
             var elsePrologVarName = TempLocalVar("esp");
@@ -46,6 +45,7 @@ namespace Cecilifier.Core.AST
 
             WriteCecilExpression(Context, $"{_ilVar}.Append({elseEndTargetVarName});");
             WriteCecilExpression(Context, $"{Context.DefinitionVariables.GetLastOf(MemberKind.Method).VariableName}.Body.OptimizeMacros();");
+            WriteCecilExpression(Context, $"// end if ({node.Condition})");
         }
     }
 }

@@ -1,7 +1,5 @@
-using System;
-using System.Collections.Generic;
+using Cecilifier.Core.Extensions;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Mono.Cecil.Cil;
 
@@ -10,14 +8,8 @@ namespace Cecilifier.Core.AST
     internal class StatementVisitor : SyntaxWalkerBase
     {
         private static string _ilVar;
-        private HashSet<SyntaxKind> _ignoreForLogging = new HashSet<SyntaxKind>(new[]
-        {
-            SyntaxKind.Block,
-            SyntaxKind.TryStatement,
-            SyntaxKind.CatchClause,
-        });
 
-        internal StatementVisitor(IVisitorContext ctx) : base(ctx)
+        private StatementVisitor(IVisitorContext ctx) : base(ctx)
         {
         }
 
@@ -25,6 +17,14 @@ namespace Cecilifier.Core.AST
         {
             _ilVar = ilVar;
             node.Accept(new StatementVisitor(context));
+        }
+
+        public override void Visit(SyntaxNode node)
+        {
+            Context.WriteNewLine();
+            Context.WriteComment(node.HumanReadableSummary());
+            
+            base.Visit(node);
         }
 
         public override void VisitYieldStatement(YieldStatementSyntax node)
@@ -226,6 +226,7 @@ namespace Cecilifier.Core.AST
             }
             
             var cecilVarDeclName = TempLocalVar($"lv_{localVar.Identifier.ValueText}");
+
             AddCecilExpression("var {0} = new VariableDefinition({1});", cecilVarDeclName, resolvedVarType);
             AddCecilExpression("{0}.Body.Variables.Add({1});", methodVar, cecilVarDeclName);
 

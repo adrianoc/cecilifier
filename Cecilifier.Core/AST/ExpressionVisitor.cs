@@ -1,14 +1,10 @@
-﻿    using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-    using System.Net.NetworkInformation;
-    using Cecilifier.Core.Extensions;
-    using Cecilifier.Core.Misc;
-    using Microsoft.CodeAnalysis;
+using Cecilifier.Core.Extensions;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Operations;
 using Mono.Cecil.Cil;
 
 namespace Cecilifier.Core.AST
@@ -87,7 +83,7 @@ namespace Cecilifier.Core.AST
 
             return ev.valueTypeNoArgObjCreation;
         }
-        
+
         public override void VisitStackAllocArrayCreationExpression(StackAllocArrayCreationExpressionSyntax node)
         {
             /*
@@ -530,7 +526,6 @@ namespace Cecilifier.Core.AST
 
         public override void VisitExpressionStatement(ExpressionStatementSyntax node)
         {
-            Context.WriteCecilExpression($"\r\n// {node}\r\n");
             base.Visit(node.Expression);
 
             var info = Context.GetTypeInfo(node.Expression);

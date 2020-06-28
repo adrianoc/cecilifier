@@ -286,6 +286,8 @@ namespace Cecilifier.Core.AST
         INamedTypeSymbol GetSpecialType(SpecialType specialType);
 
         void WriteCecilExpression(string msg);
+        void WriteComment(string comment);
+        void WriteNewLine();
 
         int NextFieldId();
         int NextLocalVariableTypeId();

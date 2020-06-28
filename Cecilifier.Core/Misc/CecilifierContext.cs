@@ -71,6 +71,17 @@ namespace Cecilifier.Core.Misc
             output.AddLast("\t\t" + expression);
         }
 
+        public void WriteComment(string comment)
+        {
+            output.AddLast("\t\t//" + comment);
+            output.AddLast($"{Environment.NewLine}");
+        }
+        
+        public void WriteNewLine()
+        {
+            output.AddLast($"{Environment.NewLine}");
+        }
+
         public int NextFieldId()
         {
             return ++currentFieldId;
