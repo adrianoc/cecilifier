@@ -1,3 +1,7 @@
+using System.IO;
+using System.Linq;
+using System.Text;
+using Cecilifier.Core.Tests.Framework;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration
@@ -122,6 +126,22 @@ namespace Cecilifier.Core.Tests.Integration
         public void TestVirtualMethod()
         {
             AssertResourceTest(@"Methods/VirtualMethod");
+        }
+        
+        [Test]
+        public void LocalVariableDeclarations_Are_CommentedOut()
+        {
+            AssertCecilifiedCodeContainsSnippet(
+                "class C { int S(int i, int j) { int l = i / 2; return l + j; } }",
+                "//int l = i / 2; ");
+        }
+
+        private void AssertCecilifiedCodeContainsSnippet(string code, string expectedSnippet)
+        {
+            var cecilifier = Cecilifier.Process(new MemoryStream(Encoding.UTF8.GetBytes(code)), Utils.GetTrustedAssembliesPath().ToArray());
+            var generated = cecilifier.GeneratedCode.ReadToEnd();
+
+            Assert.That(generated, Does.Contain(expectedSnippet), "Expected snippet not found");
         }
     }
 }
