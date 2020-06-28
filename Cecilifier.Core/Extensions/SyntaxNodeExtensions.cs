@@ -12,13 +12,23 @@ namespace Cecilifier.Core.Extensions
             return node.WithTrailingTrivia(SyntaxFactory.CarriageReturnLineFeed);
         }
 
+        /// <summary>
+        /// Returns a human readable summary of the <paramref name="node"/> containing nodes/tokens until (including) first one with a new line trivia.
+        /// </summary>
+        /// <param name="node"></param>
+        /// <returns>human readable summary of the <paramref name="node"/></returns>
+        /// <remarks>
+        /// Any leading / trailing new lines are removed
+        /// </remarks>
         public static string HumanReadableSummary(this SyntaxNode node)
         {
+            // ignores attribute lists since they are the parent of ParameterLists (this is odd. I'd expect the parent node of a ParameterList to be a method/property/event declaration)
             var found = true;
-            var nodesAndTokens = node.ChildNodesAndTokens().ToArray().TakeWhile( c =>
+            var nodesAndTokens = node.ChildNodesAndTokens().ToArray().Where(t => !t.IsKind(SyntaxKind.AttributeList)).TakeWhile( c =>
             {
                 var previous = found;
                 found = !c.HasTrailingTrivia || !c.GetTrailingTrivia().Any(t => t.IsKind(SyntaxKind.EndOfLineTrivia));
+
                 return previous;
             }).ToArray();
 
@@ -38,7 +48,11 @@ namespace Cecilifier.Core.Extensions
 
             foreach (var item in nodesAndTokens.Skip(1))
             {
-                s.Append(item.ToFullString());
+                var leading = item.GetLeadingTrivia().Where(t => !t.IsKind(SyntaxKind.EndOfLineTrivia)).ToSyntaxTriviaList();
+                s.Append(leading);
+                s.Append(item);
+                var trailing = item.GetTrailingTrivia().Where(t => !t.IsKind(SyntaxKind.EndOfLineTrivia)).ToSyntaxTriviaList();
+                s.Append(trailing);
             }
 
             return s.ToString();
