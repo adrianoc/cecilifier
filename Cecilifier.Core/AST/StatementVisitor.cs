@@ -61,6 +61,14 @@ namespace Cecilifier.Core.AST
         {
             LogUnsupportedSyntax(node);
         }
+        
+        public override void VisitThrowStatement(ThrowStatementSyntax node) => LogUnsupportedSyntax(node);
+        public override void VisitLocalFunctionStatement(LocalFunctionStatementSyntax node) => LogUnsupportedSyntax(node);
+        public override void VisitBreakStatement(BreakStatementSyntax node) => LogUnsupportedSyntax(node);
+        public override void VisitCheckedStatement(CheckedStatementSyntax node) => LogUnsupportedSyntax(node);
+        public override void VisitContinueStatement(ContinueStatementSyntax node) => LogUnsupportedSyntax(node);
+        public override void VisitDoStatement(DoStatementSyntax node) => LogUnsupportedSyntax(node);
+        public override void VisitGotoStatement(GotoStatementSyntax node) => LogUnsupportedSyntax(node);
 
         public override void VisitFixedStatement(FixedStatementSyntax node)
         {

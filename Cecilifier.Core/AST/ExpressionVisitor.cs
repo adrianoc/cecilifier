@@ -178,6 +178,13 @@ namespace Cecilifier.Core.AST
             LogUnsupportedSyntax(node);
         }
 
+        public override void VisitThrowExpression(ThrowExpressionSyntax node) => LogUnsupportedSyntax(node);
+        public override void VisitRangeExpression(RangeExpressionSyntax node) => LogUnsupportedSyntax(node);
+        public override void VisitSwitchExpression(SwitchExpressionSyntax node) => LogUnsupportedSyntax(node);
+        public override void VisitAnonymousObjectCreationExpression(AnonymousObjectCreationExpressionSyntax node) => LogUnsupportedSyntax(node);
+        public override void VisitOmittedArraySizeExpression(OmittedArraySizeExpressionSyntax node) => LogUnsupportedSyntax(node);
+        public override void VisitImplicitStackAllocArrayCreationExpression(ImplicitStackAllocArrayCreationExpressionSyntax node) => LogUnsupportedSyntax(node);
+
         public override void VisitEqualsValueClause(EqualsValueClauseSyntax node)
         {
             base.VisitEqualsValueClause(node);
