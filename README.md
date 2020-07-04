@@ -50,6 +50,7 @@ Supported Features
     - Co/Contra variance     
 - Pointer types (int*, void*, etc)
 - Fixed statement
+- for statment
      
 Unsupported Features
 ---

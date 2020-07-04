@@ -1,0 +1,11 @@
+class ForStatement
+{
+    int M()
+    {
+        int ret = 0;
+        for(int i = 42; i < 10; i = i+1) 
+            ret = ret + i;
+        
+        return ret;
+    }
+}

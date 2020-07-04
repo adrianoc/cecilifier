@@ -10,5 +10,11 @@ namespace Cecilifier.Core.Tests.Integration
         {    
             AssertResourceTestWithExplicitExpectation(@"Statements/FixedStatement", "System.Int32* FixedStatementTest::FixedStatement()");
         }
+        
+        [Test]
+        public void TestForStatement()
+        {    
+            AssertResourceTestWithExplicitExpectation(@"Statements/ForStatement", "System.Int32 ForStatement::M()");
+        }
     }
 }
