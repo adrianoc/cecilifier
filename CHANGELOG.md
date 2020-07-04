@@ -1,10 +1,14 @@
 ## unreleased
 
+## 04/July/2020
+
 ## Changed
-	- fixed field assignment (generated code was completely wrong)
+	- better comments on each generated code section
+	- report errors on discord channel
 
 ## Added
-	- Support for declaring fields/properties of generic types (only types defined in external assemblies for now)
+	- a lot of other stuff that has not been reported since March/2019 :(
+	- Support for for statements	
 
 ## 24/March/2019
 

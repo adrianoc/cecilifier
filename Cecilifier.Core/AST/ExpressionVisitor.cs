@@ -66,7 +66,7 @@ namespace Cecilifier.Core.AST
             }
         }
 
-        private ExpressionVisitor(IVisitorContext ctx, string ilVar) : base(ctx)
+        internal ExpressionVisitor(IVisitorContext ctx, string ilVar) : base(ctx)
         {
             this.ilVar = ilVar;
         }

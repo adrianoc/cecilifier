@@ -54,7 +54,6 @@ namespace Cecilifier.Core.Tests.Integration
             AssertUnsupportedFeature(code, $"Syntax '{expectedComment}' is not supported");
         }
 
-        [TestCase("for(;;);", "ForStatement", TestName = "ForStatement")]
         [TestCase("foreach(var i in ints);", "ForEachStatement", TestName = "ForEachStatement")]
         [TestCase("while(true);", "WhileStatement", TestName = "WhileStatement")]
         [TestCase("switch(ints.Length) { case 1: break; }", "SwitchStatement", TestName = "SwitchStatement")]
