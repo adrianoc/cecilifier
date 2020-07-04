@@ -1,4 +1,6 @@
+using System.Reflection;
 using Cecilifier.Core.Extensions;
+using Cecilifier.Core.Misc;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Mono.Cecil.Cil;
@@ -34,7 +36,35 @@ namespace Cecilifier.Core.AST
 
         public override void VisitForStatement(ForStatementSyntax node)
         {
-            LogUnsupportedSyntax(node);
+            var expressionVisitor = new ExpressionVisitor(Context, _ilVar);
+
+            // Initialization
+            HandleVariableDeclaration(node.Declaration);
+            foreach (var init in node.Initializers)
+            {
+                init.Accept(expressionVisitor);
+            }
+
+            var forEndLabel = TempLocalVar("fel");
+            WriteCecilExpression(Context, $"var {forEndLabel} = {_ilVar}.Create(OpCodes.Nop);");
+
+            var forConditionLabel = AddCilInstruction(_ilVar, OpCodes.Nop);
+            
+            // Condition
+            node.Condition.Accept(expressionVisitor);
+            AddCilInstruction(_ilVar, OpCodes.Brfalse, forEndLabel);
+            
+            // Body
+            node.Statement.Accept(this);
+
+            // Increment
+            foreach (var inc in node.Incrementors)
+            {
+                inc.Accept(expressionVisitor);
+            }
+            
+            AddCilInstruction(_ilVar, OpCodes.Br, forConditionLabel);
+            WriteCecilExpression(Context, $"{_ilVar}.Append({forEndLabel});");
         }
 
         public override void VisitForEachStatement(ForEachStatementSyntax node)
