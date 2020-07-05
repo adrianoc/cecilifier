@@ -12,50 +12,50 @@ namespace Cecilifier.Core.Tests.Integration
         [Test]
         public void TestAbstractMethod()
         {
-            AssertResourceTest(@"Methods/AbstractMethod");
+            AssertResourceTest(@"Members/Methods/AbstractMethod");
         }
 
         [Test]
         public void TestCtorWithParameters()
         {
-            AssertResourceTest(@"Methods/CtorWithParameters");
+            AssertResourceTest(@"Members/Methods/CtorWithParameters");
         }
 
         [Test]
         public void TestDefaultCtorFromBaseClass()
         {
-            AssertResourceTest(@"Methods/DefaultCtorFromBaseClass");
+            AssertResourceTest(@"Members/Methods/DefaultCtorFromBaseClass");
         }
 
         [Test]
         public void TestExplicityDefaultCtor()
         {
-            AssertResourceTest(@"Methods/ExplicityDefaultCtor");
+            AssertResourceTest(@"Members/Methods/ExplicityDefaultCtor");
         }
 
         [Test]
         public void TestExternalMethodReference()
         {
-            AssertResourceTest(@"Methods/ExternalMethodReference");
+            AssertResourceTest(@"Members/Methods/ExternalMethodReference");
         }
 
         [Test]
         [Ignore("Not Implemented yet")]
         public void TestInOutRefParameters()
         {
-            AssertResourceTest(@"Methods/InOutRefParameters");
+            AssertResourceTest(@"Members/Methods/InOutRefParameters");
         }
 
         [Test]
         public void TestInterfaceMethodVirtualImplementation()
         {
-            AssertResourceTest(@"Methods/InterfaceMethodVirtualImplementation");
+            AssertResourceTest(@"Members/Methods/InterfaceMethodVirtualImplementation");
         }
 
         [Test]
         public void TestMethodCallOnValueType()
         {
-            AssertResourceTest(@"Methods/MethodCallOnValueType");
+            AssertResourceTest(@"Members/Methods/MethodCallOnValueType");
         }
 
         [Test]
@@ -65,67 +65,67 @@ namespace Cecilifier.Core.Tests.Integration
             string testNamePrefix,
             [Values("WithParams", "NoParams")] string testName)
         {
-            AssertResourceTest($"Methods/Invocation/{testNamePrefix}{testName}");
+            AssertResourceTest($"Members/Methods/Invocation/{testNamePrefix}{testName}");
         }
 
         [Test]
         public void TestMultipleParameters()
         {
-            AssertResourceTest(@"Methods/MultipleParameters");
+            AssertResourceTest(@"Members/Methods/MultipleParameters");
         }
 
         [Test]
         public void TestMutuallyRecursive()
         {
-            AssertResourceTest(@"Methods/MutuallyRecursive");
+            AssertResourceTest(@"Members/Methods/MutuallyRecursive");
         }
 
         [Test]
         public void TestNoParameters()
         {
-            AssertResourceTest(@"Methods/NoParameters");
+            AssertResourceTest(@"Members/Methods/NoParameters");
         }
 
         [Test]
         public void TestParameterModifiers()
         {
-            AssertResourceTest(@"Methods/ParameterModifiers");
+            AssertResourceTest(@"Members/Methods/ParameterModifiers");
         }
 
         [Test]
         public void TestReturnValue()
         {
-            AssertResourceTest(@"Methods/ReturnValue");
+            AssertResourceTest(@"Members/Methods/ReturnValue");
         }
 
         [Test]
         public void TestSelfReferencingCtor()
         {
-            AssertResourceTest(@"Methods/SelfRefCtor");
+            AssertResourceTest(@"Members/Methods/SelfRefCtor");
         }
 
         [Test]
         public void TestSingleSimpleParameter()
         {
-            AssertResourceTest(@"Methods/SingleSimpleParameter");
+            AssertResourceTest(@"Members/Methods/SingleSimpleParameter");
         }
 
         [Test]
         public void TestTypeWithNoArgCtorAndInnerClass()
         {
-            AssertResourceTest(@"Methods/TypeWithNoArgCtorAndInnerClass");
+            AssertResourceTest(@"Members/Methods/TypeWithNoArgCtorAndInnerClass");
         }
 
         [Test]
         public void TestVariableNumberOfParameters()
         {
-            AssertResourceTest(@"Methods/VariableNumberOfParameters");
+            AssertResourceTest(@"Members/Methods/VariableNumberOfParameters");
         }
 
         [Test]
         public void TestVirtualMethod()
         {
-            AssertResourceTest(@"Methods/VirtualMethod");
+            AssertResourceTest(@"Members/Methods/VirtualMethod");
         }
         
         [Test]
