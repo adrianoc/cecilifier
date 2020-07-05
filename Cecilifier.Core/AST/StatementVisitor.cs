@@ -1,7 +1,6 @@
-using System.Reflection;
 using Cecilifier.Core.Extensions;
-using Cecilifier.Core.Misc;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Mono.Cecil.Cil;
 
@@ -278,8 +277,26 @@ namespace Cecilifier.Core.AST
                 return;
             }
 
+            InjectConversionAfterLoadIfRequired(localVar);
+            
             var localVarDef = Context.DefinitionVariables.GetVariable(localVar.Identifier.ValueText, MemberKind.LocalVariable);
             AddCilInstruction(_ilVar, OpCodes.Stloc, localVarDef.VariableName);
+        }
+
+        private void InjectConversionAfterLoadIfRequired(VariableDeclaratorSyntax localVar)
+        {
+            // null is assignable to anything, i.e, no conversion is needed.
+            if (localVar.Initializer.Value.IsKind(SyntaxKind.NullLiteralExpression))
+                return;
+
+            var conversion = Context.SemanticModel.Compilation.ClassifyConversion(
+                Context.SemanticModel.GetTypeInfo(localVar.Initializer.Value).Type,
+                Context.SemanticModel.GetTypeInfo(((VariableDeclarationSyntax) localVar.Parent).Type).Type);
+
+            if (!conversion.IsIdentity && conversion.IsImplicit && !conversion.IsBoxing)
+            {
+                AddMethodCall(_ilVar, conversion.MethodSymbol);
+            }
         }
 
         private void HandleVariableDeclaration(VariableDeclarationSyntax declaration)

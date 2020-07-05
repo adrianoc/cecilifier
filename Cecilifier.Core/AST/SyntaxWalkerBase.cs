@@ -319,18 +319,26 @@ namespace Cecilifier.Core.AST
             }
         }
 
-        protected bool HandleLoadAddress(string ilVar, ITypeSymbol symbol, CSharpSyntaxNode parent, OpCode opCode, string symbolName, MemberKind memberKind, string parentName = null)
+        protected bool HandleLoadAddress(string ilVar, ITypeSymbol symbol, CSharpSyntaxNode parentNode, OpCode opCode, string symbolName, MemberKind memberKind, string parentName = null)
         {
-            if ((symbol.IsValueType && parent.Accept(new UsageVisitor()) == UsageKind.CallTarget) || parent.IsKind(SyntaxKind.AddressOfExpression))
+            // in this case we need to call System.Index.GetOffset(int32) on a value type (System.Index)
+            // which requires the address of the value type.
+            var isSystemIndexUsedAsIndex = IsSystemIndexUsedAsIndex(symbol, parentNode);
+            if (isSystemIndexUsedAsIndex || parentNode.IsKind(SyntaxKind.AddressOfExpression) || (symbol.IsValueType && parentNode.Accept(new UsageVisitor()) == UsageKind.CallTarget))
             {
                 AddCilInstruction(ilVar, opCode, Context.DefinitionVariables.GetVariable(symbolName, memberKind, parentName).VariableName);
-                if (!Context.HasFlag("fixed") && parent.IsKind(SyntaxKind.AddressOfExpression))
+                if (!Context.HasFlag("fixed") && parentNode.IsKind(SyntaxKind.AddressOfExpression))
                     AddCilInstruction(ilVar, OpCodes.Conv_U);
 
                 return true;
             }
 
             return false;
+        }
+
+        private static bool IsSystemIndexUsedAsIndex(ITypeSymbol symbol, CSharpSyntaxNode parentNode)
+        {
+            return parentNode.Parent.IsKind(SyntaxKind.BracketedArgumentList) && symbol.FullyQualifiedName() == "System.Index";
         }
 
         protected void HandlePotentialDelegateInvocationOn(SimpleNameSyntax node, ITypeSymbol typeSymbol, string ilVar)

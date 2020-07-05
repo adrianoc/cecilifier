@@ -1,0 +1,8 @@
+﻿public class C 
+{
+    public int M(int j, int[] data)
+    {
+        System.Index i = 42;         
+        return data[i];
+    }
+}

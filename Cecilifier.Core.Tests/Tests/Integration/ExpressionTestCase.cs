@@ -126,5 +126,17 @@ namespace Cecilifier.Core.Tests.Integration
         {
             AssertResourceTest($@"Expressions/{prefix}IndexerAccess");
         }
+
+        [Test]
+        public void TestRangeExpression()
+        {
+            AssertResourceTest(@"Expressions/RangeExpression");
+        }
+        
+        [Test]
+        public void TestIndexExpression()
+        {
+            AssertResourceTestWithExplicitExpectation(@"Expressions/IndexExpression", "System.Int32 C::M(System.Int32,System.Int32[])");
+        }
     }
 }
