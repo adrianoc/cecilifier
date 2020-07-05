@@ -12,7 +12,7 @@ namespace Cecilifier.Core.Tests.Integration
         [TestCase("PropertyAccessors")]
         public void TestProperties(string testName)
         {
-            AssertResourceTest("Properties/" + testName);
+            AssertResourceTest("Members/Properties/" + testName);
         }
     }
 }
