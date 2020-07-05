@@ -98,9 +98,9 @@ namespace Cecilifier.Core.Tests.Integration
         }
 
         [Test]
-        public void TestNewSingleDimentionArray()
+        public void TestNewSingleDimensionArray()
         {
-            AssertResourceTest(@"Expressions/NewSingleDimentionArray");
+            AssertResourceTest(@"Expressions/NewSingleDimensionArray");
         }
 
         [TestCase("Minus")]
