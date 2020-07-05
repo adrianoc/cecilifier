@@ -26,7 +26,7 @@ namespace Cecilifier.Core.Extensions
         {
             if (type.IsDefinedInCurrentType(ctx))
             {
-                //TODO: This assumes the type in question as already been visited.
+                //TODO: This assumes the type in question has already been visited.
                 //		see: Types\ForwardTypeReference
                 return ctx.DefinitionVariables.GetTypeVariable(type.Name).VariableName;
             }

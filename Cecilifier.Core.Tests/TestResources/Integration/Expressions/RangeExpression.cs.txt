@@ -1,0 +1,12 @@
+﻿public class C 
+{
+    public int M(int j, int[] data)
+    {
+        //var r = j..4;
+        //var fe = ^2;
+        System.Index i = 42;         
+        
+        //return data[i];
+        return 0;
+    }
+}

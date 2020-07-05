@@ -95,6 +95,8 @@ namespace Cecilifier.Core.AST
             return ev.valueTypeNoArgObjCreation;
         }
 
+        public override void VisitRangeExpression(RangeExpressionSyntax node) => LogUnsupportedSyntax(node);
+
         public override void VisitStackAllocArrayCreationExpression(StackAllocArrayCreationExpressionSyntax node)
         {
             /*
@@ -162,32 +164,32 @@ namespace Cecilifier.Core.AST
         public override void VisitElementAccessExpression(ElementAccessExpressionSyntax node)
         {
             var expressionInfo = Context.SemanticModel.GetSymbolInfo(node.Expression);
-            if (expressionInfo.Symbol != null)
+            if (expressionInfo.Symbol == null)
+                return;
+
+            node.Expression.Accept(this);
+            node.ArgumentList.Accept(this);
+
+            var targetType = expressionInfo.Symbol.Accept(new ElementTypeSymbolResolver());
+            if (_opCodesForLdElem.TryGetValue(targetType.SpecialType, out var opCode))
             {
-                node.Expression.Accept(this);
-                node.ArgumentList.Accept(this);
-                
-                var targetType = expressionInfo.Symbol.Accept(new ElementTypeSymbolResolver());
-                if (_opCodesForLdElem.TryGetValue(targetType.SpecialType, out var opCode))
+                AddCilInstruction(ilVar, opCode);
+            }
+            else if (targetType.IsReferenceType)
+            {
+                var indexer = targetType.GetMembers().OfType<IPropertySymbol>().FirstOrDefault(p => p.IsIndexer && p.Parameters.Length == node.ArgumentList.Arguments.Count);
+                if (indexer != null)
                 {
-                    AddCilInstruction(ilVar, opCode);
-                }
-                else if (targetType.IsReferenceType)
-                {
-                    var indexer = targetType.GetMembers().OfType<IPropertySymbol>().FirstOrDefault(p => p.IsIndexer && p.Parameters.Length == node.ArgumentList.Arguments.Count);
-                    if (indexer != null)
-                    {
-                        AddMethodCall(ilVar, indexer.GetMethod);
-                    }
-                    else
-                    {
-                        AddCilInstruction(ilVar, OpCodes.Ldelem_Ref);
-                    }
+                    AddMethodCall(ilVar, indexer.GetMethod);
                 }
                 else
                 {
-                    Context.WriteComment($"Element Access not supported for type '{targetType.ToDisplayString()}' in node : {node}");
+                    AddCilInstruction(ilVar, OpCodes.Ldelem_Ref);
                 }
+            }
+            else
+            {
+                Context.WriteComment($"Element Access not supported for type '{targetType.ToDisplayString()}' in node : {node}");
             }
         }
         
@@ -222,7 +224,6 @@ namespace Cecilifier.Core.AST
         }
 
         public override void VisitThrowExpression(ThrowExpressionSyntax node) => LogUnsupportedSyntax(node);
-        public override void VisitRangeExpression(RangeExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitSwitchExpression(SwitchExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitAnonymousObjectCreationExpression(AnonymousObjectCreationExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitOmittedArraySizeExpression(OmittedArraySizeExpressionSyntax node) => LogUnsupportedSyntax(node);
@@ -238,7 +239,7 @@ namespace Cecilifier.Core.AST
         {
             var leftNodeMae = node.Left as MemberAccessExpressionSyntax;
             CSharpSyntaxNode exp = leftNodeMae != null ? leftNodeMae.Name : node.Left;
-            // check if the left hand side of the assignment is a property and handle that as a method (set) call.
+            // check if the left hand side of the assignment is a property (but not indexers) and handle that as a method (set) call.
             var expSymbol = Context.SemanticModel.GetSymbolInfo(exp).Symbol;
             if (expSymbol is IPropertySymbol propertySymbol && !propertySymbol.IsIndexer)
             {
@@ -356,8 +357,26 @@ namespace Cecilifier.Core.AST
 
         public override void VisitArgument(ArgumentSyntax node)
         {
+            // in the case the parent of the argument syntax is an array access
+            // *CurrentLine* wil represent the instruction that loaded the array
+            // reference into the stack.
+            //
+            // If the argument is a System.Index the actual offset to be used
+            // need to be calculated based on the length of the array (due to 
+            // Index supporting the concept of *from the end*)
+            //
+            // In this case InjectRequiredConversions will call the Action
+            // passed and we can add the same instruction to load 
+            // the array again (the array reference is necessary to 
+            // compute it's length)
+            var last = Context.CurrentLine;
+            
             base.VisitArgument(node);
-            InjectRequiredConversions(node.Expression);
+            InjectRequiredConversions(node.Expression, () =>
+            {
+                AddCecilExpression(last.Value);
+            });
+            
         }
 
         public override void VisitMemberAccessExpression(MemberAccessExpressionSyntax exp)
@@ -401,6 +420,10 @@ namespace Cecilifier.Core.AST
             {
                 node.Operand.Accept(this);
                 AddCilInstruction(ilVar, OpCodes.Not);
+            }
+            else if (node.IsKind(SyntaxKind.IndexExpression))
+            {
+                Console.WriteLine();
             }
             else
             {
@@ -709,18 +732,18 @@ namespace Cecilifier.Core.AST
             AddCilInstruction(ilVar, OpCodes.Ldfld, Context.DefinitionVariables.GetVariable(fieldSymbol.Name, MemberKind.Field, fieldSymbol.ContainingType.Name).VariableName);
         }
 
-        private void ProcessLocalVariable(SimpleNameSyntax localVar, SymbolInfo varInfo)
+        private void ProcessLocalVariable(SimpleNameSyntax localVarSyntax, SymbolInfo varInfo)
         {
             var symbol = (ILocalSymbol) varInfo.Symbol;
-            var localVarParent = (CSharpSyntaxNode) localVar.Parent;
-            if (HandleLoadAddress(ilVar, symbol.Type, localVarParent, OpCodes.Ldloca, symbol.Name, MemberKind.LocalVariable))
+            var localVar = (CSharpSyntaxNode) localVarSyntax.Parent;
+            if (HandleLoadAddress(ilVar, symbol.Type, localVar, OpCodes.Ldloca, symbol.Name, MemberKind.LocalVariable))
             {
                 return;
             }
 
             AddCilInstruction(ilVar, OpCodes.Ldloc, Context.DefinitionVariables.GetVariable(symbol.Name, MemberKind.LocalVariable).VariableName);
-            HandlePotentialDelegateInvocationOn(localVar, symbol.Type, ilVar);
-            HandlePotentialFixedLoad(localVar, symbol);
+            HandlePotentialDelegateInvocationOn(localVarSyntax, symbol.Type, ilVar);
+            HandlePotentialFixedLoad(localVarSyntax, symbol);
         }
 
         private void HandlePotentialFixedLoad(SyntaxNode localVar, ILocalSymbol symbol)
@@ -751,7 +774,7 @@ namespace Cecilifier.Core.AST
             AddMethodCall(ilVar, method, isAccessOnThis);
         }
 
-        private void InjectRequiredConversions(ExpressionSyntax expression)
+        private void InjectRequiredConversions(ExpressionSyntax expression, Action loadArrayIntoStack = null)
         {
             var typeInfo = Context.SemanticModel.GetTypeInfo(expression);
 
@@ -788,6 +811,17 @@ namespace Cecilifier.Core.AST
             if (conversion.IsImplicit && conversion.IsBoxing)
             {
                 AddCilInstruction(ilVar, OpCodes.Box, typeInfo.Type);
+            }
+            
+            if (conversion.IsIdentity && typeInfo.Type.Name == "Index" && loadArrayIntoStack != null)
+            {
+                // We are indexing an array/indexer using System.Index; In this case
+                // we need to convert from System.Index to *int* which is done through
+                // the method System.Index::GetOffset(int32)
+                loadArrayIntoStack();
+                AddCilInstruction(ilVar, OpCodes.Ldlen);
+                AddCilInstruction(ilVar, OpCodes.Conv_I4);
+                AddMethodCall(ilVar, (IMethodSymbol) typeInfo.Type.GetMembers().Single(m => m.Name == "GetOffset"));
             }
         }
 

@@ -1,4 +1,5 @@
 using System.IO;
+using System.Linq;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Mono.Collections.Generic;
@@ -75,10 +76,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 
         private string FormatLocalVariables(Collection<VariableDefinition> variables)
         {
-            //return variables.Aggregate("", (acc, curr) => acc + ", " + curr. + "(" + curr.VariableType.Name + ")");
-            //TODO: VariableDefinition has no name????
-
-            return "?";
+            return variables.Aggregate("", (acc, curr) => acc + curr.VariableType.Name + ", ");
         }
     }
 }
