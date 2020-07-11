@@ -141,7 +141,6 @@ namespace Cecilifier.Core.Misc
         
         public static IEnumerable<string> Parameter(ParameterSyntax node, SemanticModel semanticModel, string methodVar, string paramVar, string resolvedType)
         {
-            var exps = new List<string>();
             var paramSymbol = semanticModel.GetDeclaredSymbol(node);
             return Parameter(
                 node.Identifier.Text, 

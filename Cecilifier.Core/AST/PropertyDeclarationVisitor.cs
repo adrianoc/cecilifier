@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
@@ -13,7 +12,7 @@ namespace Cecilifier.Core.AST
 {
     internal class PropertyDeclarationVisitor : SyntaxWalkerBase
     {
-        private static readonly List<string> NoParameters = new List<string>();
+        private static readonly List<ParamData> NoParameters = new List<ParamData>();
 
         private string backingFieldVar;
 
@@ -30,11 +29,15 @@ namespace Cecilifier.Core.AST
             AddDefaultMemberAttribute(propertyDeclaringTypeVar, propName);
             var propDefVar = AddPropertyDefinition(propName, propertyType);
 
-            var paramsVar = new List<string>();
+            var paramsVar = new List<ParamData>();
             foreach (var parameter in node.ParameterList.Parameters)
             {
                 var paramVar = TempLocalVar(parameter.Identifier.ValueText);
-                paramsVar.Add(paramVar);
+                paramsVar.Add(new ParamData
+                {
+                    VariableName = paramVar,
+                    Type = Context.GetTypeInfo(parameter.Type).Type.Name
+                });
 
                 var exps = CecilDefinitionsFactory.Parameter(parameter, Context.SemanticModel, propDefVar, paramVar, ResolveType(parameter.Type));
                 AddCecilExpressions(exps);
@@ -78,7 +81,7 @@ namespace Cecilifier.Core.AST
             AddCecilExpressions(exps);
         }
         
-        private void ProcessPropertyAccessors(BasePropertyDeclarationSyntax node, string propertyDeclaringTypeVar, string propName, string propertyType, string propDefVar, List<string> parameters)
+        private void ProcessPropertyAccessors(BasePropertyDeclarationSyntax node, string propertyDeclaringTypeVar, string propName, string propertyType, string propDefVar, List<ParamData> parameters)
         {
             var propInfo = (IPropertySymbol) Context.SemanticModel.GetDeclaredSymbol(node);
             var declaringType = node.ResolveDeclaringType();
@@ -89,10 +92,10 @@ namespace Cecilifier.Core.AST
                 {
                     case SyntaxKind.GetKeyword:
                         var getMethodVar = TempLocalVar(propertyDeclaringTypeVar + "_get_");
-                        Context.DefinitionVariables.RegisterMethod(declaringType.Identifier.Text, $"get_{propName}", parameters?.ToArray(), getMethodVar);
+                        Context.DefinitionVariables.RegisterMethod(declaringType.Identifier.Text, $"get_{propName}", parameters.Select(p => p.Type).ToArray(), getMethodVar);
 
                         AddCecilExpression($"var {getMethodVar} = new MethodDefinition(\"get_{propName}\", {accessorModifiers}, {propertyType});");
-                        parameters.ForEach(paramVar => AddCecilExpression($"{getMethodVar}.Parameters.Add({paramVar});"));
+                        parameters.ForEach(p => AddCecilExpression($"{getMethodVar}.Parameters.Add({p.VariableName});"));
                         AddCecilExpression($"{propertyDeclaringTypeVar}.Methods.Add({getMethodVar});");
 
                         AddCecilExpression($"{getMethodVar}.Body = new MethodBody({getMethodVar});");
@@ -123,13 +126,13 @@ namespace Cecilifier.Core.AST
 
                     case SyntaxKind.SetKeyword:
                         var setMethodVar = TempLocalVar(propertyDeclaringTypeVar + "_set_");
-                        var localParams = new List<string>(parameters);
+                        var localParams = new List<string>(parameters.Select(p => p.Type));
                         localParams.Add(Context.GetTypeInfo(node.Type).Type.Name); // Setters always have at least one `value` parameter.
                         Context.DefinitionVariables.RegisterMethod(declaringType.Identifier.Text, $"set_{propName}", localParams.ToArray(), setMethodVar);
                         var ilSetVar = TempLocalVar("ilVar_set_");
 
                         AddCecilExpression($"var {setMethodVar} = new MethodDefinition(\"set_{propName}\", {accessorModifiers}, {Context.TypeResolver.ResolvePredefinedType("Void")});");
-                        parameters.ForEach(paramVar => AddCecilExpression($"{setMethodVar}.Parameters.Add({paramVar});"));
+                        parameters.ForEach(p => AddCecilExpression($"{setMethodVar}.Parameters.Add({p.VariableName});"));
                         AddCecilExpression($"{propertyDeclaringTypeVar}.Methods.Add({setMethodVar});");
 
                         AddCecilExpression($"{setMethodVar}.Body = new MethodBody({setMethodVar});");
@@ -202,5 +205,11 @@ namespace Cecilifier.Core.AST
 
             return propDefVar;
         }
+    }
+
+    struct ParamData
+    {
+        public string VariableName; // the name of the variable in the generated code that holds the ParameterDefinition instance.
+        public string Type;
     }
 }

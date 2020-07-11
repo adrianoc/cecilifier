@@ -1,0 +1,7 @@
+﻿class ArrayWriteIndexerAccess
+{
+    void Assign(string []ss) 
+    {
+        ss[0] = "Hello World"; 
+    }
+}

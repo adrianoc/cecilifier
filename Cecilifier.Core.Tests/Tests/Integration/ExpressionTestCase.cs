@@ -117,5 +117,14 @@ namespace Cecilifier.Core.Tests.Integration
             var testName = $"{kind}{expressionType}{memberType}";
             AssertResourceTestWithExplicitExpectation($@"Expressions/Operators/Unary/{testName}", $"System.Int32 {testName}::M(System.Int32)");
         }
+
+        [TestCase("ArrayRead")]
+        [TestCase("PropertyRead")]
+        [TestCase("ArrayWrite")]
+        [TestCase("PropertyWrite")]
+        public void TestIndexerAccess(string prefix)
+        {
+            AssertResourceTest($@"Expressions/{prefix}IndexerAccess");
+        }
     }
 }

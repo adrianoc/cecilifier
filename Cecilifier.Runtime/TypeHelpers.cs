@@ -149,7 +149,7 @@ namespace Cecilifier.Runtime
         {
             var systemRuntime = AppDomain.CurrentDomain.GetAssemblies().Single(mr => mr.GetName().Name == "System.Runtime");
 
-            // in most platforms, referencing System.Object and other types ends up adding a reference to System.Private.CoreLib (not that in these platforms, System.Runtime has type forwarders for these types).
+            // in most platforms, referencing System.Object and other types ends up adding a reference to System.Private.CoreLib (note that in these platforms, System.Runtime has type forwarders for these types).
             // To avoid this reference to System.Private.CoreLib we update these types to pretend they come from System.Runtime instead.
             _systemRuntimeRef = new AssemblyNameReference(systemRuntime.GetName().Name, systemRuntime.GetName().Version)
             {
