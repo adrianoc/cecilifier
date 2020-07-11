@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.InteropServices.ComTypes;
 using Cecilifier.Core.AST;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -18,7 +17,7 @@ namespace Cecilifier.Core.Extensions
             var methodSymbol = (IMethodSymbol) ModelExtensions.GetDeclaredSymbol(sm, method);
             if (methodSymbol == null)
             {
-                throw new Exception("Failled to retrieve method symbol for " + method);
+                throw new Exception("Failed to retrieve method symbol for " + method);
             }
 
             return methodSymbol.MangleName();
@@ -136,7 +135,7 @@ namespace Cecilifier.Core.Extensions
 
         private static bool IsExplicitMethodImplementation(IMethodSymbol methodSymbol)
         {
-            return methodSymbol.ExplicitInterfaceImplementations.Count() > 0;
+            return methodSymbol.ExplicitInterfaceImplementations.Any();
         }
 
         private static string MapExplicitModifiers(SyntaxTokenList modifiers)

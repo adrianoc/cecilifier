@@ -15,6 +15,17 @@ namespace Cecilifier.Core.AST
             new Dictionary<SyntaxKind, Action<IVisitorContext, string, ITypeSymbol, ITypeSymbol>>();
         
         private static readonly IDictionary<string, uint> predefinedTypeSize = new Dictionary<string, uint>();
+        private static readonly IDictionary<SpecialType, OpCode> _opCodesForLdElem = new Dictionary<SpecialType, OpCode>()
+        {
+            [SpecialType.System_Byte] = OpCodes.Ldelem_I1,
+            [SpecialType.System_Boolean] = OpCodes.Ldelem_U1,
+            [SpecialType.System_Int16] = OpCodes.Ldelem_I2,
+            [SpecialType.System_Int32] = OpCodes.Ldelem_I4,
+            [SpecialType.System_Int64] = OpCodes.Ldelem_I8,
+            [SpecialType.System_Single] = OpCodes.Ldelem_R4,
+            [SpecialType.System_Double] = OpCodes.Ldelem_R8,
+            [SpecialType.System_Object] = OpCodes.Ldelem_Ref,
+        };
         
         private readonly string ilVar;
         private readonly Stack<LinkedListNode<string>> callFixList = new Stack<LinkedListNode<string>>();
@@ -148,6 +159,38 @@ namespace Cecilifier.Core.AST
             ProcessArrayCreation(arrayTypeSymbol.ElementType, node.Initializer);
         }
 
+        public override void VisitElementAccessExpression(ElementAccessExpressionSyntax node)
+        {
+            var expressionInfo = Context.SemanticModel.GetSymbolInfo(node.Expression);
+            if (expressionInfo.Symbol != null)
+            {
+                node.Expression.Accept(this);
+                node.ArgumentList.Accept(this);
+                
+                var targetType = expressionInfo.Symbol.Accept(new ElementTypeSymbolResolver());
+                if (_opCodesForLdElem.TryGetValue(targetType.SpecialType, out var opCode))
+                {
+                    AddCilInstruction(ilVar, opCode);
+                }
+                else if (targetType.IsReferenceType)
+                {
+                    var indexer = targetType.GetMembers().OfType<IPropertySymbol>().FirstOrDefault(p => p.IsIndexer && p.Parameters.Length == node.ArgumentList.Arguments.Count);
+                    if (indexer != null)
+                    {
+                        AddMethodCall(ilVar, indexer.GetMethod);
+                    }
+                    else
+                    {
+                        AddCilInstruction(ilVar, OpCodes.Ldelem_Ref);
+                    }
+                }
+                else
+                {
+                    Context.WriteComment($"Element Access not supported for type '{targetType.ToDisplayString()}' in node : {node}");
+                }
+            }
+        }
+        
         public override void VisitSimpleLambdaExpression(SimpleLambdaExpressionSyntax node)
         {
             LogUnsupportedSyntax(node);
@@ -195,7 +238,9 @@ namespace Cecilifier.Core.AST
         {
             var leftNodeMae = node.Left as MemberAccessExpressionSyntax;
             CSharpSyntaxNode exp = leftNodeMae != null ? leftNodeMae.Name : node.Left;
-            if (Context.SemanticModel.GetSymbolInfo(exp).Symbol?.Kind == SymbolKind.Property) // check if the left hand side of the assignment is a property and handle that as a method (set) call.
+            // check if the left hand side of the assignment is a property and handle that as a method (set) call.
+            var expSymbol = Context.SemanticModel.GetSymbolInfo(exp).Symbol;
+            if (expSymbol is IPropertySymbol propertySymbol && !propertySymbol.IsIndexer)
             {
                 HandleMethodInvocation(node.Left, node.Right);
                 return;
@@ -430,11 +475,6 @@ namespace Cecilifier.Core.AST
             LogUnsupportedSyntax(node);
         }
 
-        public override void VisitElementAccessExpression(ElementAccessExpressionSyntax node)
-        {
-            LogUnsupportedSyntax(node);
-        }
-
         public override void VisitCastExpression(CastExpressionSyntax node)
         {
             LogUnsupportedSyntax(node);
@@ -613,8 +653,7 @@ namespace Cecilifier.Core.AST
                 return;
             }
 
-            //TODO: Try to reuse SyntaxWalkerBase.ResolveType(TypeSyntax)
-            var returnType = Context.TypeResolver.ResolveTypeLocalVariable(method.ReturnType.Name) ?? Context.TypeResolver.ResolvePredefinedType(method.ReturnType);
+            var returnType = Context.TypeResolver.Resolve(method.ReturnType);
             MethodDeclarationVisitor.AddMethodDefinition(Context, varName, method.Name, "MethodAttributes.Private", returnType, typeParameters);
             Context.DefinitionVariables.RegisterMethod(method.ContainingType.Name, method.Name, method.Parameters.Select(p => p.Type.Name).ToArray(), varName);
         }
@@ -717,7 +756,6 @@ namespace Cecilifier.Core.AST
             var typeInfo = Context.SemanticModel.GetTypeInfo(expression);
 
             var conversion = Context.SemanticModel.GetConversion(expression);
-            //TODO: 
             if (conversion.IsImplicit && conversion.IsNumeric)
             {
                 switch (typeInfo.ConvertedType.SpecialType)
@@ -848,6 +886,49 @@ namespace Cecilifier.Core.AST
 
                 AddCilInstruction(ilVar, stelemOpCode);
             }
+        }
+    }
+
+    internal class ElementTypeSymbolResolver : SymbolVisitor<ITypeSymbol>
+    {
+        public override ITypeSymbol VisitEvent(IEventSymbol symbol)
+        {
+            return symbol.Type.Accept(this);
+        }
+
+        public override ITypeSymbol VisitField(IFieldSymbol symbol)
+        {
+            return symbol.Type.Accept(this);
+        }
+
+        public override ITypeSymbol VisitLocal(ILocalSymbol symbol)
+        {
+            return symbol.Type.Accept(this);
+        }
+
+        public override ITypeSymbol VisitMethod(IMethodSymbol symbol)
+        {
+            return symbol.ReturnType.Accept(this);
+        }
+
+        public override ITypeSymbol VisitProperty(IPropertySymbol symbol)
+        {
+            return symbol.Type.Accept(this);
+        }
+
+        public override ITypeSymbol VisitParameter(IParameterSymbol symbol)
+        {
+            return symbol.Type.Accept(this);
+        }
+
+        public override ITypeSymbol VisitArrayType(IArrayTypeSymbol symbol)
+        {
+            return symbol.ElementType;
+        }
+
+        public override ITypeSymbol VisitNamedType(INamedTypeSymbol symbol)
+        {
+            return symbol;
         }
     }
 }

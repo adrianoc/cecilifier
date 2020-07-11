@@ -1,0 +1,23 @@
+﻿using System.Collections.Generic;
+class PropertyReadIndexerAccess
+{
+    int Read(IList<int> list) 
+    { 
+        return list[0]; 
+    }
+
+    object ReadObject(IList<object> list) 
+    { 
+        return list[0]; 
+    }
+    
+    bool this[bool b]
+    {
+        get { return b; }
+    }
+    
+    bool T(PropertyReadIndexerAccess i)
+    { 
+        return i[false];
+    }
+}

@@ -35,6 +35,7 @@ Supported Features
 	- Interfaces
 -  Member  declaration
 	- Properties
+	- Indexers
 	- Methods
 	- Fields
 - Exception handling

@@ -24,6 +24,57 @@ namespace Cecilifier.Core.AST
 
         public LinkedListNode<string> InstructionPrecedingValueToLoad { get; set; }
 
+        /*
+         * ExpressionVisitor (the caller that ends up triggering this method) assumes
+         * that it needs to visit the right node followed by the left one. For array
+         * element access this will cause issues because the value to be stored
+         * need to be loaded after the array reference and the index, i.e, after
+         * visiting the *left* node.
+         *
+         * To fix this we remember the instruction that precedes the load instructions
+         * and move all the instructions from that point until the first instruction
+         * added by visiting the left node.
+         */
+        public override void VisitElementAccessExpression(ElementAccessExpressionSyntax node)
+        {
+            var last = Context.CurrentLine;
+            ExpressionVisitor.Visit(Context, ilVar, node.Expression);
+            foreach (var arg in node.ArgumentList.Arguments)
+            {
+                ExpressionVisitor.Visit(Context, ilVar, arg);
+            }
+
+            // Counts the # of instructions used to load the value to be stored
+            var c = InstructionPrecedingValueToLoad;
+            int instCount = 0;
+            while (c != last)
+            {
+                c = c.Next;
+                instCount++;
+            }
+
+            // move the instruction after the instructions that loads the array reference
+            // and index.
+            c = InstructionPrecedingValueToLoad.Next;
+            while (instCount-- > 0)
+            {
+                var next = c.Next;
+                Context.MoveLineAfter(c, Context.CurrentLine);
+                c = next;
+            }
+
+            var expSymbol = Context.SemanticModel.GetSymbolInfo(node).Symbol;
+            if (expSymbol is IPropertySymbol propertySymbol)
+            {
+                AddMethodCall(ilVar, propertySymbol.SetMethod);
+            }
+            else
+            {
+                AddCilInstruction(ilVar, OpCodes.Stelem_Ref);
+            }
+            
+        }
+
         public override void VisitIdentifierName(IdentifierNameSyntax node)
         {
             //TODO: tuple declaration with an initializer is represented as an assignment
@@ -42,7 +93,7 @@ namespace Cecilifier.Core.AST
             switch (member.Symbol.Kind)
             {
                 case SymbolKind.Parameter:
-                    ParameterAssignment(member.Symbol as IParameterSymbol);
+                    ParameterAssignment((IParameterSymbol) member.Symbol);
                     break;
 
                 case SymbolKind.Local:
@@ -65,7 +116,6 @@ namespace Cecilifier.Core.AST
             // 1. Static properties.
             // 2. Property invocation in MAE.
 
-            OpCode storeOpCode;
             if (!property.IsStatic)
             {
                 InsertCilInstructionAfter<string>(InstructionPrecedingValueToLoad, ilVar, OpCodes.Ldarg_0);
@@ -100,7 +150,14 @@ namespace Cecilifier.Core.AST
             if (parameter.RefKind == RefKind.None)
             {
                 var paramVariable = Context.DefinitionVariables.GetVariable(parameter.Name, MemberKind.Parameter).VariableName;
-                AddCilInstruction(ilVar, OpCodes.Starg_S, paramVariable);
+                if (parameter.Type.TypeKind == TypeKind.Array)
+                {
+                    AddCilInstruction(ilVar, OpCodes.Stelem_Ref);
+                }
+                else
+                {
+                    AddCilInstruction(ilVar, OpCodes.Starg_S, paramVariable);
+                }
             }
             else
             {

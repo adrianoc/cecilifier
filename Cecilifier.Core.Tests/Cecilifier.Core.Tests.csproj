@@ -24,5 +24,14 @@
     <Content Update="TestResources\Integration\Statements\ForStatement.cs.il.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Update="TestResources\Integration\Expressions\ArrayIndexerAccess.cs.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Update="TestResources\Integration\Expressions\PropertyIndexerAccess.cs.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Update="TestResources\Integration\Expressions\ArrayWriteIndexerAccess.cs.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 </Project>

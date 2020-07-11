@@ -1,0 +1,12 @@
+﻿class ArrayReadIndexerAccess
+{
+    int Read(int []array) 
+    { 
+        return array[0]; 
+    }
+
+    object ReadObject(object []array)
+    { 
+        return array[0]; 
+    }
+}

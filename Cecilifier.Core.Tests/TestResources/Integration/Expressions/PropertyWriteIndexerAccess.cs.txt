@@ -1,0 +1,14 @@
+﻿using System.Collections.Generic;
+class PropertyWriteIndexerAccess
+{
+    bool this[bool b]
+    {
+        set { }
+    }
+    
+    void Assign(IList<int> list, PropertyWriteIndexerAccess o) 
+    { 
+        list[0] = 42;
+        o[false] = true;
+    }
+}

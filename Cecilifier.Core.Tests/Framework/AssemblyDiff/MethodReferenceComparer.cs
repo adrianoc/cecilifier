@@ -9,8 +9,13 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 
         public int Compare(MethodReference x, MethodReference y)
         {
+            if (x == null && y != null)
+                return -1;
+            
+            if (x != null && y == null)
+                return 1;
+            
             var nameComp = x.DeclaringType.FullName.CompareTo(y.DeclaringType.FullName);
-
             if (nameComp != 0)
             {
                 return nameComp;
