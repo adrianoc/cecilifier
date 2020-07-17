@@ -127,7 +127,7 @@ function initializeWebSocket() {
 
             if (response.kind === 'Z') {
                 setTimeout(function() {
-                    var buttonId = createProjectZip(base64ToArrayBuffer(response.cecilifiedCode), "'" + response.mainTypeName + ".zip'", 'application/zip');
+                    var buttonId = createProjectZip(base64ToArrayBuffer(response.cecilifiedCode), response.mainTypeName + ".zip", 'application/zip');
                     simulateClick(buttonId);
                 });
             }
