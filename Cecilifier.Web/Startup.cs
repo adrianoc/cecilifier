@@ -222,7 +222,26 @@ namespace Cecilifier.Web
 
         private void SendExceptionToChat(Exception exception, byte []code, int length)
         {
-            SendMessageWithCodeToChat("Exception processing request",  exception.ToString(), "15746887", code, length);
+            var stasktrace = JsonEncodedText.Encode(exception.StackTrace);
+            
+            var toSend = $@"{{
+            ""content"":""Exception processing request : {JsonEncodedText.Encode(exception.Message)}"",
+            ""embeds"": [
+            {{
+                ""description"": ""{stasktrace}"",
+                ""fields"": [
+                    {{        
+                        ""name"": ""C# Code"",
+                        ""value"": ""{JsonEncodedText.Encode(CodeInBytesToString(code, length))}""
+                    }}
+                ],
+                ""color"": ""15746887""
+            }}
+            ]
+        }}";
+            
+            SendJsonMessageToChat(toSend);
+            
         }
 
         private void SendSyntaxErrorToChat(SyntaxErrorException syntaxErrorException, byte[] code, int length)
@@ -230,32 +249,29 @@ namespace Cecilifier.Web
             SendMessageWithCodeToChat("Syntax Error",  syntaxErrorException.Message, "15746887", code, length);
         }
         
+        private string CodeInBytesToString(byte[] code, int length)
+        {
+            var stream = new MemoryStream(code,2, length - 2); // skip byte with info whether user wants zipped project or not & publishing source (discord) or not.
+            using var reader = new StreamReader(stream);
+            return reader.ReadToEnd();
+        }
+        
         private void SendMessageWithCodeToChat(string title, string msg, string color, byte[] code, int length)
         {
             var stream = new MemoryStream(code,2, length - 2); // skip byte with info whether user wants zipped project or not & publishing source (discord) or not.
             using var reader = new StreamReader(stream);
-            SendMessageToChat(title,  $"{msg}\n\n***********\n\n```{reader.ReadToEnd()}```", color);
+            SendTextMessageToChat(title,  $"{msg}\n\n***********\n\n```{reader.ReadToEnd()}```", color);
         }
 
-        private void SendMessageToChat(string title, string msg, string color)
+        private void SendJsonMessageToChat(string jsonMessage)
         {
-            var toSend = $@"{{
-            ""embeds"": [
-            {{
-                ""title"": ""{title}"",
-                ""description"": ""{JsonEncodedText.Encode(msg)}"",
-                ""color"": {color}
-            }}
-            ]
-        }}";
-
             var discordChannelUrl = Configuration["DiscordChannelUrl"];
             
             var discordPostRequest = WebRequest.Create(discordChannelUrl);
             discordPostRequest.ContentType = "application/json";
             discordPostRequest.Method = WebRequestMethods.Http.Post;
 
-            var buffer = Encoding.ASCII.GetBytes(toSend);
+            var buffer = Encoding.ASCII.GetBytes(jsonMessage);
             
             discordPostRequest.ContentLength = buffer.Length;
             var stream = discordPostRequest.GetRequestStream();
@@ -275,6 +291,21 @@ namespace Cecilifier.Web
             {
                 Console.WriteLine($"Unable to send message to discord channel. Exception caught:\n\n{e}");
             }
+        }
+        
+        private void SendTextMessageToChat(string title, string msg, string color)
+        {
+            var toSend = $@"{{
+            ""embeds"": [
+            {{
+                ""title"": ""{title}"",
+                ""description"": ""{JsonEncodedText.Encode(msg)}"",
+                ""color"": {color}
+            }}
+            ]
+        }}";
+
+            SendJsonMessageToChat(toSend);
         }
         
 
