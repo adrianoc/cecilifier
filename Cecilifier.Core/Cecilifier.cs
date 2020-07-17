@@ -43,10 +43,11 @@ namespace Cecilifier.Core
 
             syntaxTree.TryGetRoot(out var root);
             visitor.Visit(root);
-
+            
             //new SyntaxTreeDump("TREE: ", root);
 
-            return new CecilifierResult(new StringReader(ctx.Output.AsCecilApplication()), visitor.MainType != null ? visitor.MainType.Identifier.Text : "Cecilified");
+            var mainTypeName = visitor.MainType != null ? visitor.MainType.Identifier.Text : "Cecilified";
+            return new CecilifierResult(new StringReader(ctx.Output.AsCecilApplication(mainTypeName, visitor.MainMethodDefinitionVariable)), mainTypeName);
         }
 
         private SyntaxTree RunTransformations(SyntaxTree tree, SemanticModel semanticModel)

@@ -50,8 +50,11 @@ namespace Cecilifier.Core.Extensions
             return to + " | " + modifier;
         }
 
-        public static string AsCecilApplication(this string cecilSnippet)
+        public static string AsCecilApplication(this string cecilSnippet, string assemblyName, string entryPointVar = null)
         {
+            var moduleKind = entryPointVar == null ? "ModuleKind.Dll" : "ModuleKind.Console";
+            var entryPointStatement = entryPointVar != null ? $"\t\t\tassembly.EntryPoint = {entryPointVar};\n" : string.Empty;
+                 
             return $@"using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Mono.Cecil.Rocks;
@@ -65,10 +68,12 @@ public class SnippetRunner
 {{
 	public static void Main(string[] args)
 	{{
-		var assembly = AssemblyDefinition.CreateAssembly(new AssemblyNameDefinition(""name"", Version.Parse(""1.0.0.0"")), ""moduleName"", ModuleKind.Dll);
-{cecilSnippet}
-        PrivateCoreLibFixer.FixReferences(assembly.MainModule);
-		assembly.Write(args[0]);
+		using(var assembly = AssemblyDefinition.CreateAssembly(new AssemblyNameDefinition(""{assemblyName}"", Version.Parse(""1.0.0.0"")), ""moduleName"", {moduleKind}))
+        {{
+{cecilSnippet}{entryPointStatement}
+            PrivateCoreLibFixer.FixReferences(assembly.MainModule);
+		    assembly.Write(args[0]);
+        }}
 	}}
 }}";
         }

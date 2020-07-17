@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.AST;
-using Cecilifier.Core.Extensions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
@@ -18,12 +17,15 @@ namespace Cecilifier.Core.Misc
         private int currentTypeId;
 
         private readonly Dictionary<string, string> vars = new Dictionary<string, string>();
+        private string identation;
 
-        public CecilifierContext(SemanticModel semanticModel)
+        public CecilifierContext(SemanticModel semanticModel, byte identation = 3)
         {
             SemanticModel = semanticModel;
             DefinitionVariables = new DefinitionVariableManager();
             TypeResolver = new TypeResolverImpl(this);
+
+            this.identation = new String('\t', identation);
         }
 
         public string Output
@@ -68,12 +70,12 @@ namespace Cecilifier.Core.Misc
 
         public void WriteCecilExpression(string expression)
         {
-            output.AddLast("\t\t" + expression);
+            output.AddLast($"{identation}{expression}");
         }
 
         public void WriteComment(string comment)
         {
-            output.AddLast("\t\t//" + comment);
+            output.AddLast($"{identation}//{comment}");
             output.AddLast($"{Environment.NewLine}");
         }
         

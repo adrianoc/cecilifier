@@ -15,6 +15,7 @@ namespace Cecilifier.Core.AST
         }
 
         public BaseTypeDeclarationSyntax MainType => mainType;
+        public string MainMethodDefinitionVariable { get; private set; }
 
         public override void VisitCompilationUnit(CompilationUnitSyntax node)
         {
@@ -40,8 +41,8 @@ namespace Cecilifier.Core.AST
 
         public override void VisitClassDeclaration(ClassDeclarationSyntax node)
         {
-            UpdateMainType(node);
             new TypeDeclarationVisitor(Context).Visit(node);
+            UpdateTypeInformation(node);
         }
 
         public override void VisitStructDeclaration(StructDeclarationSyntax node)
@@ -167,17 +168,24 @@ namespace Cecilifier.Core.AST
             }
         }
         
-        private void UpdateMainType(BaseTypeDeclarationSyntax node)
+        private void UpdateTypeInformation(BaseTypeDeclarationSyntax node)
         {
             if (mainType == null)
                 mainType = node;
 
-            var typeInfo = Context.SemanticModel.GetTypeInfo(node);
-            if (typeInfo.Type == null)
+            var typeSymbol = Context.SemanticModel.GetDeclaredSymbol(node) as ITypeSymbol;
+            if (typeSymbol == null)
                 return;
 
-            var mainTypeInfo = Context.SemanticModel.GetTypeInfo(mainType);
-            if (typeInfo.Type.GetMembers().Length > mainTypeInfo.Type?.GetMembers().Length)
+            if (MainMethodDefinitionVariable == null)
+            {
+                var mainMethod = (IMethodSymbol) typeSymbol.GetMembers().SingleOrDefault(m => m is IMethodSymbol method && method.IsStatic && method.Name == "Main" && method.ReturnsVoid);
+                if (mainMethod != null)
+                    MainMethodDefinitionVariable = Context.DefinitionVariables.GetMethodVariable(mainMethod.AsMethodDefinitionVariable());
+            }
+
+            var mainTypeSymbol = (ITypeSymbol) Context.SemanticModel.GetDeclaredSymbol(mainType);
+            if (typeSymbol.GetMembers().Length > mainTypeSymbol?.GetMembers().Length)
             {
                 mainType = node;
             }
