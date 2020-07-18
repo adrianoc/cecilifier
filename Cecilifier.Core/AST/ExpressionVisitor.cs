@@ -95,8 +95,6 @@ namespace Cecilifier.Core.AST
             return ev.valueTypeNoArgObjCreation;
         }
 
-        public override void VisitRangeExpression(RangeExpressionSyntax node) => LogUnsupportedSyntax(node);
-
         public override void VisitStackAllocArrayCreationExpression(StackAllocArrayCreationExpressionSyntax node)
         {
             /*
@@ -193,42 +191,6 @@ namespace Cecilifier.Core.AST
             }
         }
         
-        public override void VisitSimpleLambdaExpression(SimpleLambdaExpressionSyntax node)
-        {
-            LogUnsupportedSyntax(node);
-        }
-
-        public override void VisitAwaitExpression(AwaitExpressionSyntax node)
-        {
-            LogUnsupportedSyntax(node);
-        }
-
-        public override void VisitTupleExpression(TupleExpressionSyntax node)
-        {
-            LogUnsupportedSyntax(node);
-        }
-
-        public override void VisitInterpolatedStringExpression(InterpolatedStringExpressionSyntax node)
-        {
-            LogUnsupportedSyntax(node);
-        }
-
-        public override void VisitIsPatternExpression(IsPatternExpressionSyntax node)
-        {
-            LogUnsupportedSyntax(node);
-        }
-
-        public override void VisitRefExpression(RefExpressionSyntax node)
-        {
-            LogUnsupportedSyntax(node);
-        }
-
-        public override void VisitThrowExpression(ThrowExpressionSyntax node) => LogUnsupportedSyntax(node);
-        public override void VisitSwitchExpression(SwitchExpressionSyntax node) => LogUnsupportedSyntax(node);
-        public override void VisitAnonymousObjectCreationExpression(AnonymousObjectCreationExpressionSyntax node) => LogUnsupportedSyntax(node);
-        public override void VisitOmittedArraySizeExpression(OmittedArraySizeExpressionSyntax node) => LogUnsupportedSyntax(node);
-        public override void VisitImplicitStackAllocArrayCreationExpression(ImplicitStackAllocArrayCreationExpressionSyntax node) => LogUnsupportedSyntax(node);
-
         public override void VisitEqualsValueClause(EqualsValueClauseSyntax node)
         {
             base.VisitEqualsValueClause(node);
@@ -385,10 +347,6 @@ namespace Cecilifier.Core.AST
             Visit(exp.Name);
         }
 
-        public override void VisitThisExpression(ThisExpressionSyntax node)
-        {
-            LogUnsupportedSyntax(node);
-        }
 
         public override void VisitPrefixUnaryExpression(PrefixUnaryExpressionSyntax node)
         {
@@ -461,51 +419,6 @@ namespace Cecilifier.Core.AST
                 AddCilInstruction(ilVar, OpCodes.Stloc, tempLocalName);
                 AddCilInstruction(ilVar, OpCodes.Ldloca_S, tempLocalName);
             }
-        }
-
-        public override void VisitMakeRefExpression(MakeRefExpressionSyntax node)
-        {
-            LogUnsupportedSyntax(node);
-        }
-
-        public override void VisitRefTypeExpression(RefTypeExpressionSyntax node)
-        {
-            LogUnsupportedSyntax(node);
-        }
-
-        public override void VisitRefValueExpression(RefValueExpressionSyntax node)
-        {
-            LogUnsupportedSyntax(node);
-        }
-
-        public override void VisitCheckedExpression(CheckedExpressionSyntax node)
-        {
-            LogUnsupportedSyntax(node);
-        }
-
-        public override void VisitDefaultExpression(DefaultExpressionSyntax node)
-        {
-            LogUnsupportedSyntax(node);
-        }
-
-        public override void VisitTypeOfExpression(TypeOfExpressionSyntax node)
-        {
-            LogUnsupportedSyntax(node);
-        }
-
-        public override void VisitSizeOfExpression(SizeOfExpressionSyntax node)
-        {
-            LogUnsupportedSyntax(node);
-        }
-
-        public override void VisitCastExpression(CastExpressionSyntax node)
-        {
-            LogUnsupportedSyntax(node);
-        }
-
-        public override void VisitInitializerExpression(InitializerExpressionSyntax node)
-        {
-            LogUnsupportedSyntax(node);
         }
 
         public override void VisitObjectCreationExpression(ObjectCreationExpressionSyntax node)
@@ -604,6 +517,29 @@ namespace Cecilifier.Core.AST
                 AddCilInstruction(ilVar, OpCodes.Pop);
             }
         }
+
+        public override void VisitThisExpression(ThisExpressionSyntax node) => LogUnsupportedSyntax(node);
+        public override void VisitRangeExpression(RangeExpressionSyntax node) => LogUnsupportedSyntax(node);
+        public override void VisitSimpleLambdaExpression(SimpleLambdaExpressionSyntax node) => LogUnsupportedSyntax(node);
+        public override void VisitAwaitExpression(AwaitExpressionSyntax node) => LogUnsupportedSyntax(node);
+        public override void VisitTupleExpression(TupleExpressionSyntax node) => LogUnsupportedSyntax(node);
+        public override void VisitInterpolatedStringExpression(InterpolatedStringExpressionSyntax node) => LogUnsupportedSyntax(node);
+        public override void VisitIsPatternExpression(IsPatternExpressionSyntax node) => LogUnsupportedSyntax(node);
+        public override void VisitRefExpression(RefExpressionSyntax node) => LogUnsupportedSyntax(node);
+        public override void VisitThrowExpression(ThrowExpressionSyntax node) => LogUnsupportedSyntax(node);
+        public override void VisitSwitchExpression(SwitchExpressionSyntax node) => LogUnsupportedSyntax(node);
+        public override void VisitAnonymousObjectCreationExpression(AnonymousObjectCreationExpressionSyntax node) => LogUnsupportedSyntax(node);
+        public override void VisitOmittedArraySizeExpression(OmittedArraySizeExpressionSyntax node) => LogUnsupportedSyntax(node);
+        public override void VisitImplicitStackAllocArrayCreationExpression(ImplicitStackAllocArrayCreationExpressionSyntax node) => LogUnsupportedSyntax(node);
+        public override void VisitMakeRefExpression(MakeRefExpressionSyntax node) => LogUnsupportedSyntax(node);
+        public override void VisitRefTypeExpression(RefTypeExpressionSyntax node) => LogUnsupportedSyntax(node);
+        public override void VisitRefValueExpression(RefValueExpressionSyntax node) => LogUnsupportedSyntax(node);
+        public override void VisitCheckedExpression(CheckedExpressionSyntax node) => LogUnsupportedSyntax(node);
+        public override void VisitDefaultExpression(DefaultExpressionSyntax node) => LogUnsupportedSyntax(node);
+        public override void VisitTypeOfExpression(TypeOfExpressionSyntax node) => LogUnsupportedSyntax(node);
+        public override void VisitSizeOfExpression(SizeOfExpressionSyntax node) => LogUnsupportedSyntax(node);
+        public override void VisitCastExpression(CastExpressionSyntax node) => LogUnsupportedSyntax(node);
+        public override void VisitInitializerExpression(InitializerExpressionSyntax node) => LogUnsupportedSyntax(node);
 
         private OpCode LoadOpCodeFor(LiteralExpressionSyntax node)
         {
