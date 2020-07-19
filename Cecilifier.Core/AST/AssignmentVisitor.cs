@@ -137,6 +137,9 @@ namespace Cecilifier.Core.AST
                 InsertCilInstructionAfter<string>(InstructionPrecedingValueToLoad, ilVar, OpCodes.Ldarg_0);
             }
 
+            if (field.IsVolatile)
+                AddCilInstruction(ilVar, OpCodes.Volatile);
+            
             AddCilInstruction(ilVar, storeOpCode, Context.DefinitionVariables.GetVariable(field.Name, MemberKind.Field, field.ContainingType.Name).VariableName);
         }
 

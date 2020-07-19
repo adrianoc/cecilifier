@@ -1,4 +1,9 @@
-﻿class VolitileField
+﻿class VolatileField
 {
-	private volatile static int i;
+	private volatile int i;
+	public int Foo(int j)
+	{
+	    i = i + j; 
+	    return j;
+	}
 }

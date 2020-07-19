@@ -665,7 +665,12 @@ namespace Cecilifier.Core.AST
             {
                 return;
             }
-            AddCilInstruction(ilVar, OpCodes.Ldfld, Context.DefinitionVariables.GetVariable(fieldSymbol.Name, MemberKind.Field, fieldSymbol.ContainingType.Name).VariableName);
+
+            if (fieldSymbol.IsVolatile)
+                AddCilInstruction(ilVar, OpCodes.Volatile);
+
+            var fieldDeclarationVariable = Context.DefinitionVariables.GetVariable(fieldSymbol.Name, MemberKind.Field, fieldSymbol.ContainingType.Name).VariableName;
+            AddCilInstruction(ilVar, OpCodes.Ldfld, fieldDeclarationVariable);
         }
 
         private void ProcessLocalVariable(SimpleNameSyntax localVarSyntax, SymbolInfo varInfo)

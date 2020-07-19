@@ -69,9 +69,10 @@ namespace Cecilifier.Core.AST
                 return null;
             }
 
-            var id = string.Format("mod_req{0}", NextLocalVariableId());
-            var mod_req = string.Format("var {0} = new RequiredModifierType({1}, {2});", id, originalType, ImportExpressionForType(typeof(IsVolatile)));
+            var id = $"mod_req{NextLocalVariableId()}";
+            var mod_req = $"var {id} = new RequiredModifierType({ImportExpressionForType(typeof(IsVolatile))}, {originalType});";
             AddCecilExpression(mod_req);
+            
             return id;
         }
 

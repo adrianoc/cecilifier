@@ -1,5 +1,14 @@
 ## unreleased
 
+## Changed
+	- fix error reporting on discord channel
+	- fix volatile field handling
+    - do not quote (') zipped project file.
+    
+## Added
+    - basic support for Range/Index
+    - set assembly entry point with Main() method from first class one is defined
+
 ## 04/July/2020
 
 ## Changed
