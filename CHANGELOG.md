@@ -7,6 +7,7 @@
     
 ## Added
     - basic support for Range/Index
+    - support for switch statements
     - set assembly entry point with Main() method from first class one is defined
 
 ## 04/July/2020

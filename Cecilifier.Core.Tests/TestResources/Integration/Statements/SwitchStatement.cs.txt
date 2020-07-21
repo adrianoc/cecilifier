@@ -1,0 +1,18 @@
+class SwitchStatement
+{
+    int M(int j)
+    {
+        switch(j + 2)
+        {
+            case 0:
+            case 1: 
+                System.Console.WriteLine(j+2);
+                j = 2;
+                break;
+                 
+            case 2: return -1;
+            default: j = 3; break;
+        }
+        return j;
+    }
+}

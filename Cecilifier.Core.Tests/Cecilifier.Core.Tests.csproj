@@ -42,5 +42,11 @@
     <Content Update="TestResources\Integration\Expressions\IndexExpression.cs.il.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Update="TestResources\Integration\Statements\SwitchStatement.cs.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Update="TestResources\Integration\Statements\SwitchStatement.cs.il.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 </Project>

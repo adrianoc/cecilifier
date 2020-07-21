@@ -1,0 +1,35 @@
+.locals (System.Int32 V_0)
+IL_0000: ldarg.1
+IL_0001: ldc.i4 2
+IL_0006: add
+IL_0007: stloc V_0
+IL_000b: ldloc V_0
+IL_000f: ldc.i4 0
+IL_0014: beq.s IL_0036
+IL_0016: ldloc V_0
+IL_001a: ldc.i4 1
+IL_001f: beq.s IL_0036
+IL_0021: ldloc V_0
+IL_0025: ldc.i4 2
+IL_002a: beq.s IL_004f
+IL_002c: br IL_0057
+IL_0031: br IL_0064
+IL_0036: nop
+IL_0037: ldarg.1
+IL_0038: ldc.i4 2
+IL_003d: add
+IL_003e: call System.Void System.Console::WriteLine(System.Int32)
+IL_0043: ldc.i4 2
+IL_0048: starg.s 1
+IL_004a: br IL_0064
+IL_004f: nop
+IL_0050: ldc.i4 1
+IL_0055: neg
+IL_0056: ret
+IL_0057: nop
+IL_0058: ldc.i4 3
+IL_005d: starg.s 1
+IL_005f: br IL_0064
+IL_0064: nop
+IL_0065: ldarg.1
+IL_0066: ret

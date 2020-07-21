@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using Cecilifier.Core.Extensions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -65,6 +68,76 @@ namespace Cecilifier.Core.AST
             AddCilInstruction(_ilVar, OpCodes.Br, forConditionLabel);
             WriteCecilExpression(Context, $"{_ilVar}.Append({forEndLabel});");
         }
+    
+        public override void VisitSwitchStatement(SwitchStatementSyntax node)
+        {
+            var switchExpressionType = ResolveExpressionType(node.Expression);
+            var evaluatedExpressionVariable = $"switch_{node.GetLocation().GetLineSpan().Span.Start.Line}";
+            AddLocalVariable(switchExpressionType, evaluatedExpressionVariable);
+
+            var expressionVisitor = new ExpressionVisitor(Context, _ilVar);
+            node.Expression.Accept(expressionVisitor);
+            AddCilInstruction(_ilVar, OpCodes.Stloc, evaluatedExpressionVariable); // stores evaluated expression in local var
+            
+            // Add label to end of switch
+            var endOfSwitchLabel = CreateCilInstruction(_ilVar, OpCodes.Nop);
+            breakToInstructionVars.Push(endOfSwitchLabel);
+            
+            // Write the switch conditions.
+            var nextTestLabels = node.Sections.Select(_ => CreateCilInstruction(_ilVar, OpCodes.Nop)).ToArray();
+            var currentLabelIndex = 0;
+            foreach (var switchSection in node.Sections)
+            {
+                if (switchSection.Labels.First().Kind() == SyntaxKind.DefaultSwitchLabel)
+                {
+                    AddCilInstruction(_ilVar, OpCodes.Br, nextTestLabels[currentLabelIndex]);   
+                    continue;
+                }
+                
+                foreach (var sectionLabel in switchSection.Labels)
+                {
+                    Context.WriteComment($"{sectionLabel.ToString()} (condition)");
+                    AddCilInstruction(_ilVar, OpCodes.Ldloc, evaluatedExpressionVariable);
+                    sectionLabel.Accept(expressionVisitor);
+                    AddCilInstruction(_ilVar, OpCodes.Beq_S, nextTestLabels[currentLabelIndex]);
+                    Context.WriteNewLine();
+                }
+                currentLabelIndex++;
+            }
+
+            // if at runtime the code hits this point it means none of the labels matched.
+            // so, just jump to the end of the switch.
+            AddCilInstruction(_ilVar, OpCodes.Br, endOfSwitchLabel);
+            
+            // Write the statements for each switch section...
+            currentLabelIndex = 0;
+            foreach (var switchSection in node.Sections)
+            {
+                Context.WriteComment($"{switchSection.Labels.First().ToString()} (code)");
+                AddCecilExpression($"{_ilVar}.Append({nextTestLabels[currentLabelIndex]});");
+                foreach (var statement in switchSection.Statements)
+                {
+                    statement.Accept(this);
+                }
+                Context.WriteNewLine();
+                currentLabelIndex++;
+            }
+            
+            Context.WriteComment("End of switch");
+            AddCecilExpression($"{_ilVar}.Append({endOfSwitchLabel});");
+
+            breakToInstructionVars.Pop();
+        }
+
+        public override void VisitBreakStatement(BreakStatementSyntax node)
+        {
+            if (breakToInstructionVars.Count == 0)
+            {
+                throw new InvalidOperationException("Invalid break.");
+            }
+
+            AddCilInstruction(_ilVar, OpCodes.Br, breakToInstructionVars.Peek());
+        }
 
         public override void VisitForEachStatement(ForEachStatementSyntax node)
         {
@@ -72,11 +145,6 @@ namespace Cecilifier.Core.AST
         }
 
         public override void VisitWhileStatement(WhileStatementSyntax node)
-        {
-            LogUnsupportedSyntax(node);
-        }
-
-        public override void VisitSwitchStatement(SwitchStatementSyntax node)
         {
             LogUnsupportedSyntax(node);
         }
@@ -93,7 +161,6 @@ namespace Cecilifier.Core.AST
         
         public override void VisitThrowStatement(ThrowStatementSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitLocalFunctionStatement(LocalFunctionStatementSyntax node) => LogUnsupportedSyntax(node);
-        public override void VisitBreakStatement(BreakStatementSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitCheckedStatement(CheckedStatementSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitContinueStatement(ContinueStatementSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitDoStatement(DoStatementSyntax node) => LogUnsupportedSyntax(node);
@@ -269,6 +336,20 @@ namespace Cecilifier.Core.AST
 
             Context.DefinitionVariables.RegisterNonMethod(string.Empty, localVar.Identifier.ValueText, MemberKind.LocalVariable, cecilVarDeclName);
         }
+        
+        private void AddLocalVariable(string varType, string variableName)
+        {
+            var currentMethod = Context.DefinitionVariables.GetLastOf(MemberKind.Method);
+            if (!currentMethod.IsValid)
+                throw new InvalidOperationException("Could not resolve current method declaration variable.");
+            
+            var cecilVarDeclName = variableName;
+
+            AddCecilExpression("var {0} = new VariableDefinition({1});", cecilVarDeclName, varType);
+            AddCecilExpression("{0}.Body.Variables.Add({1});", currentMethod.VariableName, cecilVarDeclName);
+
+            Context.DefinitionVariables.RegisterNonMethod(string.Empty, variableName, MemberKind.LocalVariable, cecilVarDeclName);
+        }
 
         private void ProcessVariableInitialization(VariableDeclaratorSyntax localVar)
         {
@@ -318,5 +399,10 @@ namespace Cecilifier.Core.AST
             public string HandlerStart;
             public string HandlerEnd;
         }
+        
+        // Stack with name of variables that holds instructions that a *break statement* 
+        // will jump to. Each statement that supports *breaking* must push the instruction
+        // target of the break and pop it back when it gets out of scope.
+        private Stack<string> breakToInstructionVars = new Stack<string>();
     }
 }
