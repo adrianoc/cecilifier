@@ -16,5 +16,11 @@ namespace Cecilifier.Core.Tests.Integration
         {    
             AssertResourceTestWithExplicitExpectation(@"Statements/ForStatement", "System.Int32 ForStatement::M()");
         }
+        
+        [Test]
+        public void TestSwitchStatement()
+        {    
+            AssertResourceTestWithExplicitExpectation(@"Statements/SwitchStatement", "System.Int32 SwitchStatement::M(System.Int32)");
+        }
     }
 }
