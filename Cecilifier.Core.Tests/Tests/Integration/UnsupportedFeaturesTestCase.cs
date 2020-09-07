@@ -56,7 +56,6 @@ namespace Cecilifier.Core.Tests.Integration
 
         [TestCase("foreach(var i in ints);", "ForEachStatement", TestName = "ForEachStatement")]
         [TestCase("while(true);", "WhileStatement", TestName = "WhileStatement")]
-        [TestCase("switch(ints.Length) { case 1: break; }", "SwitchStatement", TestName = "SwitchStatement")]
         [TestCase("lock(ints) {}", "LockStatement", TestName = "LockStatement")]
         [TestCase("unsafe {}", "UnsafeStatement", TestName = "UnsafeStatement")]
         public void TestStatements(string statement, string expectedInError)
