@@ -190,6 +190,9 @@ namespace Cecilifier.Core.Misc
             string CustomAttributeArgument(TypeInfo argType, AttributeArgumentSyntax attrArg)
             {
                 return $"new CustomAttributeArgument({context.TypeResolver.Resolve(argType.Type.FullyQualifiedName())}, {attrArg.Expression.EvaluateConstantExpression(context.SemanticModel)})";
+                // // ExpressionVisitor.Visit(context, "?", attrArg.Expression);
+                // //TODO: we cannot assume the argument is a constant. At least arrays are accepted also. Any other type?
+                // return $"new CustomAttributeArgument(assembly.MainModule.ImportReference(typeof({argType.Type.FullyQualifiedName()})), {attrArg.Expression.EvaluateConstantExpression(context.SemanticModel)})";
             }
         }
 

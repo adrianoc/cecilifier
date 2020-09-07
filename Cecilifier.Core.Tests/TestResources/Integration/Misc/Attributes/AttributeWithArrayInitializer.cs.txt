@@ -1,0 +1,10 @@
+public class CustomAttribute : System.Attribute 
+{
+    public string s;
+    public int[] intArray;
+
+    public CustomAttribute(string s, bool [] array){ this.s = s; }
+}
+
+[Custom("Hello Wolrd", new [] { false }, intArray = new [] { 1 })]
+public class C { }
