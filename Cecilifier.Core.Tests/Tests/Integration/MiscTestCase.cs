@@ -48,5 +48,11 @@ namespace Cecilifier.Core.Tests.Integration
         {
             AssertResourceTest($@"Misc/Attributes/AttributesOnExplicitTargets");
         }
+
+        [Test]
+        public void TestAttributeWithArrayInitializer()
+        {
+            AssertResourceTest($@"Misc/Attributes/AttributeWithArrayInitializer");
+        }
     }
 }

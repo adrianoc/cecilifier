@@ -1,0 +1,67 @@
+diff --git a/Cecilifier.Core.Tests/TestResources/Integration/Misc/Attributes/AttributeWithArrayInitializer.cs.txt b/Cecilifier.Core.Tests/TestResources/Integration/Misc/Attributes/AttributeWithArrayInitializer.cs.txt
+index 8ba3f5a..f730ec6 100644
+--- a/Cecilifier.Core.Tests/TestResources/Integration/Misc/Attributes/AttributeWithArrayInitializer.cs.txt
++++ b/Cecilifier.Core.Tests/TestResources/Integration/Misc/Attributes/AttributeWithArrayInitializer.cs.txt
+@@ -1,22 +1,10 @@
+-[System.Obsolete]
+-struct S
++public class CustomAttribute : System.Attribute 
+ {
+-    [System.Obsolete]
+-    S(int i)    
+-    {
+-        // code in the ctor for structs is broken. Uncomment when that gets fixed.
+-        // See #31
+-        //field = i; 
+-    }
+-    
+-    [System.Obsolete]
+-    void Method() {}
+-   
+-    [System.Obsolete]
+-    int Property { get { return 0; } set {} }
+-    
+-    // code in the ctor for structs is broken. Uncomment when that gets fixed. 
+-    // See #31
+-    //[System.Obsolete]
+-    //int field;    
+-}
+\ No newline at end of file
++    public string s;
++    public int[] intArray;
++
++    public CustomAttribute(string s, bool [] array){ this.s = s; }
++}
++
++[Custom("Hello Wolrd", new [] { false }, intArray = new [] { 1 })]
++public class C { }
+\ No newline at end of file
+diff --git a/Cecilifier.Core.Tests/Tests/Integration/MiscTestCase.cs b/Cecilifier.Core.Tests/Tests/Integration/MiscTestCase.cs
+index f8b1679..a065d61 100644
+--- a/Cecilifier.Core.Tests/Tests/Integration/MiscTestCase.cs
++++ b/Cecilifier.Core.Tests/Tests/Integration/MiscTestCase.cs
+@@ -48,5 +48,11 @@ namespace Cecilifier.Core.Tests.Integration
+         {
+             AssertResourceTest($@"Misc/Attributes/AttributesOnExplicitTargets");
+         }
++
++        [Test]
++        public void TestAttributeWithArrayInitializer()
++        {
++            AssertResourceTest($@"Misc/Attributes/AttributeWithArrayInitializer");
++        }
+     }
+ }
+diff --git a/Cecilifier.Core/Misc/CecilDefinitionsFactory.cs b/Cecilifier.Core/Misc/CecilDefinitionsFactory.cs
+index 434f055..c7ed75a 100644
+--- a/Cecilifier.Core/Misc/CecilDefinitionsFactory.cs
++++ b/Cecilifier.Core/Misc/CecilDefinitionsFactory.cs
+@@ -177,6 +177,8 @@ namespace Cecilifier.Core.Misc
+ 
+             string CustomAttributeArgument(TypeInfo argType, AttributeArgumentSyntax attrArg)
+             {
++                // ExpressionVisitor.Visit(context, "?", attrArg.Expression);
++                //TODO: we cannot assume the argument is a constant. At least arrays are accepted also. Any other type?
+                 return $"new CustomAttributeArgument(assembly.MainModule.ImportReference(typeof({argType.Type.FullyQualifiedName()})), {attrArg.Expression.EvaluateConstantExpression(context.SemanticModel)})";
+             }
+         }
