@@ -84,7 +84,7 @@ You can run the website locally by typing:
 
 > `dotnet run`
 
-Then you can open a browser at `https://localhost:8080`
+Then you can open a browser at `http://localhost:8081`
 
 
 How to add tests
