@@ -175,12 +175,8 @@ namespace Cecilifier.Core.Misc
                     exps.Add($"{customAttrVar}.ConstructorArguments.Add({CustomAttributeArgument(argType, attrArg)});");
                 }
 
-                // process properties
-                foreach (var propertyArg in attribute.ArgumentList.Arguments.Except(attributeArguments))
-                {
-                    var argType = context.GetTypeInfo(propertyArg.Expression);
-                    exps.Add($"{customAttrVar}.Properties.Add(new CustomAttributeNamedArgument(\"{propertyArg.NameEquals.Name.Identifier.ValueText}\", {CustomAttributeArgument(argType, propertyArg)}));");
-                }
+                ProcessAttributeNamedArguments(SymbolKind.Property, "Properties");
+                ProcessAttributeNamedArguments(SymbolKind.Field, "Fields");
             }
 
             exps.Add($"{attrTargetVar}.CustomAttributes.Add({customAttrVar});");
@@ -189,10 +185,17 @@ namespace Cecilifier.Core.Misc
 
             string CustomAttributeArgument(TypeInfo argType, AttributeArgumentSyntax attrArg)
             {
-                return $"new CustomAttributeArgument({context.TypeResolver.Resolve(argType.Type.FullyQualifiedName())}, {attrArg.Expression.EvaluateConstantExpression(context.SemanticModel)})";
-                // // ExpressionVisitor.Visit(context, "?", attrArg.Expression);
-                // //TODO: we cannot assume the argument is a constant. At least arrays are accepted also. Any other type?
-                // return $"new CustomAttributeArgument(assembly.MainModule.ImportReference(typeof({argType.Type.FullyQualifiedName()})), {attrArg.Expression.EvaluateConstantExpression(context.SemanticModel)})";
+                return $"new CustomAttributeArgument({context.TypeResolver.Resolve(argType.Type)}, {attrArg.Expression.EvaluateAsCustomAttributeArgument(context)})";
+            }
+
+            void ProcessAttributeNamedArguments(SymbolKind symbolKind, string container)
+            {
+                var attrMemberNames = attrType.Type.GetMembers().Where(m => m.Kind == symbolKind).Select(m => m.Name).ToHashSet();
+                foreach (var namedArgument in attribute.ArgumentList.Arguments.Except(attributeArguments).Where(arg => attrMemberNames.Contains(arg.NameEquals.Name.Identifier.Text)))
+                {
+                    var argType = context.GetTypeInfo(namedArgument.Expression);
+                    exps.Add($"{customAttrVar}.{container}.Add(new CustomAttributeNamedArgument(\"{namedArgument.NameEquals.Name.Identifier.ValueText}\", {CustomAttributeArgument(argType, namedArgument)}));");
+                }
             }
         }
 

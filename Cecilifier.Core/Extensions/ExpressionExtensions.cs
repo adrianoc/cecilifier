@@ -1,4 +1,6 @@
 using System.Linq;
+using System.Text;
+using Cecilifier.Core.AST;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -7,24 +9,25 @@ namespace Cecilifier.Core.Extensions
 {
     public static class ExpressionExtensions
     {
-        public static string EvaluateConstantExpression(this ExpressionSyntax expression, SemanticModel semanticModel)
+        internal static string EvaluateAsCustomAttributeArgument(this ExpressionSyntax expression, IVisitorContext context)
         {
-            return expression.Accept(new ConstantEvaluator(semanticModel));
+            return expression.Accept(new CustomAttributeArgumentEvaluator(context));
         }
     }
 
-    public class ConstantEvaluator : CSharpSyntaxVisitor<string>
+    //TODO: Handle other expressions? typeof() ?
+    public class CustomAttributeArgumentEvaluator : CSharpSyntaxVisitor<string>
     {
-        private readonly SemanticModel _semanticModel;
+        private readonly IVisitorContext _context;
 
-        public ConstantEvaluator(SemanticModel semanticModel)
+        internal CustomAttributeArgumentEvaluator(IVisitorContext context)
         {
-            _semanticModel = semanticModel;
+            _context = context;
         }
 
         public override string VisitMemberAccessExpression(MemberAccessExpressionSyntax node)
         {
-            var type = _semanticModel.GetTypeInfo(node.Expression);
+            var type = _context.SemanticModel.GetTypeInfo(node.Expression);
             if (type.Type != null && type.Type.TypeKind == TypeKind.Enum)
             {
                 // if this is a enum member reference, return the enum member value.
@@ -49,6 +52,35 @@ namespace Cecilifier.Core.Extensions
             }
 
             return base.VisitLiteralExpression(node);
+        }
+
+        public override string VisitArrayCreationExpression(ArrayCreationExpressionSyntax node)
+        {
+            if (node.Initializer == null)
+            {
+                return $"new CustomAttributeArgument[{node.Type.RankSpecifiers[0].Sizes[0]}]";
+            }
+            
+            var elementType = _context.TypeResolver.Resolve(_context.SemanticModel.GetTypeInfo(node.Type.ElementType).Type);
+            return CustomAttributeArgumentArray(node.Initializer, elementType);
+        }
+
+        public override string VisitImplicitArrayCreationExpression(ImplicitArrayCreationExpressionSyntax node)
+        {
+            var elementType = _context.TypeResolver.Resolve(_context.SemanticModel.GetTypeInfo(node.Initializer.Expressions[0]).Type);
+            return CustomAttributeArgumentArray(node.Initializer, elementType);
+        }
+
+        private string CustomAttributeArgumentArray(InitializerExpressionSyntax initializer, string elementType)
+        {
+            var sb = new StringBuilder($"new CustomAttributeArgument[] {{");
+            foreach (var exp in initializer.Expressions)
+            {
+                sb.Append($"new CustomAttributeArgument({elementType}, {exp.Accept(this)}),");
+            }
+
+            sb.Append("}");
+            return sb.ToString();
         }
     }
 }

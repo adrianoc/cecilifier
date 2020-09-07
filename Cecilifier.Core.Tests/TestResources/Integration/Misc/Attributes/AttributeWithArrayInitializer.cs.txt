@@ -1,10 +1,37 @@
+using System;
+
+public enum E 
+{
+    First,
+    Second
+}
+
 public class CustomAttribute : System.Attribute 
 {
     public string s;
     public int[] intArray;
+    public int[] intArray2;
+    public int[] intArrayExplicitZero;
+    public int[] intArrayNull;
+    public ConsoleColor[] eArray;
+    public E[] e2Array;
+    
+    public string PropertyString { get; set; }
 
-    public CustomAttribute(string s, bool [] array){ this.s = s; }
+    public CustomAttribute(string s, bool [] array) { this.s = s; }
 }
 
-[Custom("Hello Wolrd", new [] { false }, intArray = new [] { 1 })]
-public class C { }
+[Custom(
+    "Hello World", 
+    new [] { true },
+    PropertyString = "Foo", 
+    eArray = new [] { ConsoleColor.Red },
+    e2Array = new []  { E.Second },
+    intArray = new [] { 1, 2, 3 }, 
+    intArray2 = new int[] { 4 },
+    intArrayExplicitZero = new int[0]
+    // intArrayNull = null // NOT SUPPORTED
+    )
+]
+
+public class T { }

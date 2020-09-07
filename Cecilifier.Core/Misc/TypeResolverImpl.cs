@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using Cecilifier.Core.AST;
 using Microsoft.CodeAnalysis;
@@ -29,15 +30,14 @@ namespace Cecilifier.Core.Misc
 
         public string ResolvePredefinedAndComposedTypes(ITypeSymbol type)
         {
+            if (type is IArrayTypeSymbol array)
+            {
+                return Resolve(array.ElementType) + ".MakeArrayType()";
+            }
+            
             if (type.SpecialType == SpecialType.None || type.TypeKind == TypeKind.Interface || type.SpecialType == SpecialType.System_Enum || type.SpecialType == SpecialType.System_ValueType)
             {
                 return null;
-            }
-
-            if (type.SpecialType == SpecialType.System_Array)
-            {
-                var ats = (IArrayTypeSymbol) type;
-                return "new ArrayType(" + Resolve(ats.ElementType) + ")";
             }
 
             return ResolvePredefinedType(type.Name);
