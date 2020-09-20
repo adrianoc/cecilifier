@@ -4,6 +4,6 @@ _Resharper*
 *.user
 *.suo
 Packages/*
-
-\.idea/\.idea\.Cecilifier/
+build
+\.idea/
 Cecilifier.Web/appsettings.Production.json

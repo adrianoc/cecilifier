@@ -1,9 +1,15 @@
-## unreleased
+## Unreleased
+
+## Added
+    - rider/resharper plugin POC. 
+
+## 10/Sep/2020
 
 ## Changed
 	- fix error reporting on discord channel
 	- fix volatile field handling
     - do not quote (') zipped project file.
+    - Fix handling of attributes taking arrays as parameters/properties/fields.
     
 ## Added
     - basic support for Range/Index

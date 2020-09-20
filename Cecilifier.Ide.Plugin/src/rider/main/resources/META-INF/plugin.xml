@@ -1,0 +1,28 @@
+<idea-plugin require-restart="true">
+  <id>cecilifier.ide.plugin-rider</id>
+  <name>Cecilifier.Ide.Plugin</name>
+  <version>0.1.0</version>
+  <vendor url="https://cecilifier.me">Adriano Carlos Verona</vendor>
+  <idea-version since-build="_PLACEHOLDER_" until-build="_PLACEHOLDER_" />
+  <depends>com.intellij.modules.rider</depends>
+
+  <description>
+<![CDATA[
+<p>Cecilifier is a tool meant to make it easier to learn how to use Mono.Cecil (https://github.com/jbevain/cecil) a library used to manipulate MS IL. 
+It was developed after the idea of asmifier (https://asm.ow2.io/faq.html#Q10). 
+
+You can read more details about it in its announcement blog(https://programing-fun.blogspot.com/2019/02/making-it-easier-to-getting-started.html).</p>
+]]>
+  </description>
+
+  <extensions defaultExtensionNs="com.intellij">
+    <applicationConfigurable groupId="language" instance="com.jetbrains.rider.plugins.cecilifier.ide.plugin.SampleOptionsPage" id="SampleOptionsPage" />
+  </extensions>
+
+  <actions>
+    <action id="CecilifierAction" class="com.jetbrains.rider.plugins.cecilifier.ide.plugin.CecilifierAction"
+            text="RunCecilifier" description="Run cecil">
+    </action>
+  </actions>
+  
+</idea-plugin>
