@@ -3,6 +3,10 @@ using System.IO;
 
 namespace Cecilifier.App
 {
+    /*
+     * Program used by Cecilifier.Ide.Plugin.Rider (which cannot reference Cecilifier.Core.dll because
+     * it cannot target netcoreapp3.1)
+     */
     class Program
     {
         static int Main(string[] args)

@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Reflection;
 using System.Text;
 using JetBrains.Application.DataContext;
 using JetBrains.Application.UI.Actions;
@@ -14,7 +15,6 @@ using JetBrains.ReSharper.Feature.Services.Util;
 using JetBrains.ReSharper.Psi.DataContext;
 using JetBrains.ReSharper.Psi.Files;
 using JetBrains.Util;
-using JetBrains.Util.Logging;
 
 namespace ReSharperPlugin.Cecilifier.Ide.Plugin
 {
@@ -48,9 +48,10 @@ namespace ReSharperPlugin.Cecilifier.Ide.Plugin
                 psi.RedirectStandardError = true;
                 psi.RedirectStandardOutput = true;
                 psi.FileName = "dotnet";
-                psi.Arguments = $"/home/adriano/Development/Adriano/study/DotNet/Cecilifier/Cecilifier.App/bin/Debug/netcoreapp3.1/Cecilifier.App.dll {filePath} {referenceListFilePath}";
 
-                //TODO: figure out correct path.
+                var cecilifierPath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "Cecilifier");
+                psi.Arguments = $"{cecilifierPath}/Cecilifier.App.dll {filePath} {referenceListFilePath}";
+
                 var cecilifierProcess = Process.Start(psi);
                 if (!cecilifierProcess.WaitForExit(5000))
                 {
