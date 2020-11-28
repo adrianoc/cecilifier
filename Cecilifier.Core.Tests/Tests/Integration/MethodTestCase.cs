@@ -129,6 +129,19 @@ namespace Cecilifier.Core.Tests.Integration
         }
         
         [Test]
+        public void TestReturnDelegate()
+        {
+            AssertResourceTest("Members/Methods/ReturnDelegate");
+        }
+        
+        [TestCase("Implicit")]
+        [TestCase("Explicit", Ignore = "Not supported")]
+        public void TestDelegateAsParameter(string implicitOrExplicit)
+        {
+            AssertResourceTest($"Members/Methods/{implicitOrExplicit}Delegate_AsParameter");
+        }
+        
+        [Test]
         public void LocalVariableDeclarations_Are_CommentedOut()
         {
             AssertCecilifiedCodeContainsSnippet(

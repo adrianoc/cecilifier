@@ -34,8 +34,10 @@ namespace Cecilifier.Core.Extensions
             string typeName;
             if (type is INamedTypeSymbol namedType)
             {
-                var genTypeName = Regex.Replace(namedType.ConstructedFrom.ToString(), "<.*>", "<" + new string(',', namedType.TypeArguments.Length - 1) + ">");
-                typeName = genTypeName;
+                throw new Exception();
+                // var typeParametersWithCLSNames = string.Join(",", namedType.TypeArguments.Select(t => t.MetadataName));
+                // var genTypeName = Regex.Replace(namedType.ToString(), "<.*>", $"<{typeParametersWithCLSNames}>");
+                // typeName = genTypeName;
             }
             else
             {

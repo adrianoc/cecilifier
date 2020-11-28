@@ -1,0 +1,10 @@
+﻿class Test
+{
+    static string M(int i) { return i.ToString(); }
+  
+  	void Foo(System.Func<int, string> conv1)
+    {
+        conv1 = M;
+        System.Console.WriteLine(conv1);
+    }
+}

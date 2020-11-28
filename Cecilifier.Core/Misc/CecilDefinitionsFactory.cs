@@ -85,7 +85,7 @@ namespace Cecilifier.Core.Misc
             return $"var {genParamDefVar} = new Mono.Cecil.GenericParameter(\"{genericParamName}\", {typeVar}) {Variance(typeParameterSymbol)};";
         }
 
-        private static string  Variance(ITypeParameterSymbol typeParameterSymbol)
+        private static string Variance(ITypeParameterSymbol typeParameterSymbol)
         {
             if (typeParameterSymbol.Variance == VarianceKind.In)
             {

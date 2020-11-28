@@ -370,9 +370,14 @@ namespace Cecilifier.Core.AST
             if (localVar.Initializer.Value.IsKind(SyntaxKind.NullLiteralExpression))
                 return;
 
+            var source = Context.SemanticModel.GetTypeInfo(localVar.Initializer.Value).Type;
+            if (source == null)
+                return; // if we fail to resolve the type of the value used in the initialization we do not try to perform any conversions.
+            
+            var destination = Context.SemanticModel.GetTypeInfo(((VariableDeclarationSyntax) localVar.Parent).Type).Type;
             var conversion = Context.SemanticModel.Compilation.ClassifyConversion(
-                Context.SemanticModel.GetTypeInfo(localVar.Initializer.Value).Type,
-                Context.SemanticModel.GetTypeInfo(((VariableDeclarationSyntax) localVar.Parent).Type).Type);
+                source,
+                destination);
 
             if (!conversion.IsIdentity && conversion.IsImplicit && !conversion.IsBoxing)
             {
