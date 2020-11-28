@@ -138,5 +138,15 @@ namespace Cecilifier.Core.Tests.Integration
         {
             AssertResourceTestWithExplicitExpectation(@"Expressions/IndexExpression", "System.Int32 C::M(System.Int32,System.Int32[])");
         }
+        
+        [TestCase("Parameters")]
+        [TestCase("LocalVariables")]
+        [TestCase("Instance_Method")]
+        [TestCase("Static_Method")]
+        [TestCase("LocalVariablesInitializer")]
+        public void TestDelegateAssignment(string memberType)
+        {
+            AssertResourceTest($"Expressions/DelegateAssignment_{memberType}");
+        }
     }
 }

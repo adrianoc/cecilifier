@@ -1,0 +1,11 @@
+﻿class Test
+{
+    string M(int i) { return i.ToString(); }
+  
+  	void Foo()
+    {
+        System.Func<int, string> conv;
+        conv = this.M;
+        System.Console.WriteLine(conv);
+    }
+}

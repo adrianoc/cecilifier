@@ -1,5 +1,3 @@
-using System;
-
 namespace Cecilifier.Core.Misc
 {
     internal struct Utils

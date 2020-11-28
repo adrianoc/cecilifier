@@ -70,6 +70,10 @@ namespace Cecilifier.Core.Misc
 
         public void WriteCecilExpression(string expression)
         {
+            if (expression.Contains("Test_M_int32"))
+            {
+                int x = 10;
+            }
             output.AddLast($"{identation}{expression}");
         }
 

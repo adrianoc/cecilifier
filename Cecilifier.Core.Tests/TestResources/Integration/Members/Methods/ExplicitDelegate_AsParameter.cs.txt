@@ -1,0 +1,10 @@
+﻿using System;
+class Test
+{
+    static string M(int i) { return i.ToString(); }
+  
+  	void Foo(Func<int, string> f)
+    {
+        Foo(new Func<int, string>(M));
+    }
+}
