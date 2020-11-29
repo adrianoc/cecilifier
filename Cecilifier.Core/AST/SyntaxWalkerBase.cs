@@ -356,10 +356,9 @@ namespace Cecilifier.Core.AST
             }
             else
             {
-                var declaringTypeName = typeSymbol.FullyQualifiedName();
-                var methodInvocation = ImportFromMainModule($"TypeHelpers.ResolveMethod(\"{typeSymbol.ContainingAssembly.Name}\", \"{declaringTypeName}\", \"Invoke\")");
-
-                AddCilInstruction(ilVar, OpCodes.Callvirt, methodInvocation);
+                var invokeMethod = (IMethodSymbol) typeSymbol.GetMembers("Invoke").SingleOrDefault();
+                var resolvedMethod = invokeMethod.MethodResolverExpression(Context);
+                AddCilInstruction(ilVar, OpCodes.Callvirt, resolvedMethod);
             }
         }
 
