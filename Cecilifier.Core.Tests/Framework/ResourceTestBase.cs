@@ -123,7 +123,7 @@ namespace Cecilifier.Core.Tests.Framework
             var targetPath = Path.GetDirectoryName(cecilifierRunnerPath);
             foreach (var fileToCopy in refsToCopy)
             {
-                File.Copy(fileToCopy, Path.Combine(targetPath, Path.GetFileName(fileToCopy)));
+                File.Copy(fileToCopy, Path.Combine(targetPath, Path.GetFileName(fileToCopy)), true);
             }
 
             var sourceRuntimeConfigJson = Path.ChangeExtension(GetType().Assembly.Location, ".runtimeconfig.json");
