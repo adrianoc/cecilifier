@@ -5,6 +5,6 @@
   	void Foo(System.Func<int, string> conv1)
     {
         conv1 = M;
-        System.Console.WriteLine(conv1);
+        System.Console.WriteLine(conv1(42));
     }
 }
