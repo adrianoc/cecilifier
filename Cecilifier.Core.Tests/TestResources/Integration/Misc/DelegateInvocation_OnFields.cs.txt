@@ -1,0 +1,18 @@
+﻿using System;
+
+public delegate void CustomDel(int i);
+
+class DelegateInvocation_OnFields
+{
+    Action<int> f;
+        
+	public void OnAction()
+	{
+	    f(42);
+	}
+	
+	public void OnCustomDel(CustomDel d)
+	{
+	    d(42);
+	}	
+}
