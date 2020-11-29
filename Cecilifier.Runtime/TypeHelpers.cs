@@ -68,7 +68,7 @@ namespace Cecilifier.Runtime
             return null;
         }
 
-        public static MethodInfo ResolveMethod(string assemblyName, string declaringTypeName, string methodName, BindingFlags bindingFlags, string typeArgumentList, params string[] paramTypes)
+        public static MethodBase ResolveMethod(string assemblyName, string declaringTypeName, string methodName, BindingFlags bindingFlags, string typeArgumentList, params string[] paramTypes)
         {
             var containingAssembly = Assembly.Load(new AssemblyName(assemblyName));
             var declaringType = containingAssembly.GetType(declaringTypeName);
@@ -79,21 +79,72 @@ namespace Cecilifier.Runtime
                 declaringType = declaringType.MakeGenericType(typeArguments.Select(Type.GetType).ToArray());
             }
 
-            var resolveMethod = declaringType.GetMethod(methodName,
+            if (methodName == ".ctor")
+            {
+                var resolvedCtor = declaringType.GetConstructor(
+                    bindingFlags,
+                    null,
+                    paramTypes.Select(Type.GetType).ToArray(),
+                    null);
+
+                if (resolvedCtor == null)
+                {
+                    throw new InvalidOperationException($"Failed to resolve ctor [{assemblyName}] {declaringType}({string.Join(',', paramTypes)})");
+                }
+                
+                return resolvedCtor;
+            }
+            
+            var resolvedMethod = declaringType.GetMethod(methodName,
                 bindingFlags,
                 null,
-                paramTypes.Select(typeName => Type.GetType(typeName)).ToArray(),
+                paramTypes.Select(Type.GetType).ToArray(),
                 null);
 
-            return resolveMethod;
+            if (resolvedMethod == null)
+            {
+                throw new InvalidOperationException($"Failed to resolve method [{assemblyName}] {declaringType}.{methodName}({string.Join(',', paramTypes)})");
+            }
+            
+            return resolvedMethod;
+        }
+        
+        public static MethodBase ResolveCtor(string assemblyName, string declaringTypeName, BindingFlags bindingFlags, string typeArgumentList, params string[] paramTypes)
+        {
+            var containingAssembly = Assembly.Load(new AssemblyName(assemblyName));
+            var declaringType = containingAssembly.GetType(declaringTypeName);
+
+            if (declaringType.IsGenericType)
+            {
+                var typeArguments = typeArgumentList.Split(',');
+                declaringType = declaringType.MakeGenericType(typeArguments.Select(Type.GetType).ToArray());
+            }
+
+            var foundCtor = declaringType.GetConstructor(
+                bindingFlags,
+                null,
+                paramTypes.Select(Type.GetType).ToArray(),
+                null);
+
+            return foundCtor;
         }
        
         public static MethodInfo ResolveMethod(string assemblyName, string declaringTypeName, string methodName)
         {
             var containingAssembly = Assembly.Load(new AssemblyName(assemblyName));
             var declaringType = containingAssembly.GetType(declaringTypeName);
+            if (declaringType == null)
+            {
+                throw new InvalidOperationException($"Failed to resolve type [{assemblyName}] {declaringTypeName}");
+            }
 
-            return declaringType.GetMethod(methodName);
+            var resolvedMethod = declaringType.GetMethod(methodName);
+            if (resolvedMethod == null)
+            {
+                throw new InvalidOperationException($"Failed to resolve method [{assemblyName}] {declaringTypeName}.{methodName}(?)");
+            }
+            
+            return resolvedMethod;
         }
 
         public static Type ResolveType(string assemblyName, string typeName)
