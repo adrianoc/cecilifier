@@ -596,43 +596,24 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                 return false;
             }
 
-            if (inst.Next == null)
+            if (inst.OpCode != OpCodes.Stloc || inst.Next == null)
             {
                 return true;
             }
 
-            if (inst.OpCode != OpCodes.Stloc || inst.Next.OpCode != OpCodes.Ldloc || inst.Operand != inst.Next.Operand)
-            {
-                return true;
-            }
-
-            // We have an *stloc X* followed by an *ldloc X* so lets check if we have any other reference to the same
-            // local var.
-            var ignoredInstructions = new HashSet<Instruction>();
-            ignoredInstructions.Add(inst.Next); // if no other load from *X* is found we need to ignore current instruction (stloc X) and also the next one (ldloc X)
-
-            var current = inst.Next.Next;
-            while (current != null)
-            {
-                // found some other instruction accessing *X*
-                if (current.Operand == inst.Operand)
-                {
-                    if (current.OpCode == OpCodes.Stloc)
-                    {
-                        ignoredInstructions.Add(current.Next);
-                    }
-                    else
-                    {
-                        // it is not a stloc so the instruction is important and we should use it in the comparison...
-                        return true;
-                    }
-                }
-
+            var current = inst.Next;
+            while (current != null && current.OpCode == OpCodes.Nop)
                 current = current.Next;
+                
+            if (current != null && current.OpCode == OpCodes.Ldloc && current.Operand == inst.Operand)
+            {
+                toBeIgnored.Add(current);
+                return false;
             }
+            
+            toBeIgnored.Clear();
 
-            toBeIgnored = ignoredInstructions;
-            return false;
+            return true;
         }
 
         public static bool HasNoLocalVariableLoads(Instruction instruction, object operand)
