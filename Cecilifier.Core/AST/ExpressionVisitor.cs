@@ -733,12 +733,17 @@ namespace Cecilifier.Core.AST
                 
                 // we have a reference to a method used to initialize a delegate
                 // and need to load the referenced method token and instantiate the delegate. For instance:
+                //IL_0002: ldarg.0
                 //IL_0002: ldftn string Test::M(int32)
                 //IL_0008: newobj instance void class [System.Private.CoreLib]System.Func`2<int32, string>::.ctor(object, native int)
 
                 if (method.IsStatic)
                 {
                     AddCilInstruction(ilVar, OpCodes.Ldnull);
+                }
+                else if (!node.Parent.IsKind(SyntaxKind.ThisExpression) && node.Parent == firstParentNotPartOfName)
+                {
+                    AddCilInstruction(ilVar, OpCodes.Ldarg_0);
                 }
                 
                 AddCilInstruction(ilVar, OpCodes.Ldftn, method.MethodResolverExpression(Context));

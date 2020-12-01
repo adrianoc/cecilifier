@@ -2,10 +2,13 @@
 {
     string M(int i) { return i.ToString(); }
   
-  	void Foo()
+  	void Foo(Test t)
     {
         System.Func<int, string> conv;
-        conv = this.M;
+        conv = t.M;
+        System.Console.WriteLine(conv);
+        
+        conv = M;
         System.Console.WriteLine(conv);
     }
 }
