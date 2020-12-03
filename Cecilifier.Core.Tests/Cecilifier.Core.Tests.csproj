@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-      <TargetFramework>netcoreapp3.1</TargetFramework>
-      <LangVersion>8</LangVersion>
+      <TargetFramework>net5.0</TargetFramework>
+      <LangVersion>9</LangVersion>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="3.3.1" />
@@ -16,36 +16,6 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="TestResources\**">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Update="TestResources\Integration\Statements\ForStatement.cs.txt">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Update="TestResources\Integration\Statements\ForStatement.cs.il.txt">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Update="TestResources\Integration\Expressions\ArrayIndexerAccess.cs.txt">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Update="TestResources\Integration\Expressions\PropertyIndexerAccess.cs.txt">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Update="TestResources\Integration\Expressions\ArrayWriteIndexerAccess.cs.txt">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Update="TestResources\Integration\Expressions\RangeExpression.cs.txt">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Update="TestResources\Integration\Expressions\IndexExpression.cs.txt">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Update="TestResources\Integration\Expressions\IndexExpression.cs.il.txt">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Update="TestResources\Integration\Statements\SwitchStatement.cs.txt">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Update="TestResources\Integration\Statements\SwitchStatement.cs.il.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
