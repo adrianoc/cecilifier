@@ -1,14 +1,23 @@
-﻿class Test
+﻿using System;
+class Test
 {
+    Func<int, string> field;
+    
     string M(int i) { return i.ToString(); }
   
-  	void Foo(Test t)
+  	void Foo(Test t, Func<int, string> param)
     {
-        System.Func<int, string> conv;
+        Func<int, string> conv;
         conv = t.M;
-        System.Console.WriteLine(conv);
+        conv(42);
         
         conv = M;
-        System.Console.WriteLine(conv);
+        conv(43);
+        
+        field = M;
+        field(44);
+        
+        param = M;
+        param(45);
     }
 }

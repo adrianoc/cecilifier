@@ -669,6 +669,8 @@ namespace Cecilifier.Core.AST
 
             var fieldDeclarationVariable = Context.DefinitionVariables.GetVariable(fieldSymbol.Name, MemberKind.Field, fieldSymbol.ContainingType.Name).VariableName;
             AddCilInstruction(ilVar, OpCodes.Ldfld, fieldDeclarationVariable);
+            
+            HandlePotentialDelegateInvocationOn(node, fieldSymbol.Type, ilVar);
         }
 
         private void ProcessLocalVariable(SimpleNameSyntax localVarSyntax, SymbolInfo varInfo)
