@@ -148,5 +148,11 @@ namespace Cecilifier.Core.Tests.Integration
         {
             AssertResourceTest($"Expressions/DelegateAssignment_{memberType}");
         }
+        
+        [Test]
+        public void TestDelegateInvocation()
+        {
+            AssertResourceTest("Expressions/DelegateInvocation");
+        }
     }
 }
