@@ -1,0 +1,11 @@
+using System;
+
+class GenericTypeUsedAsConstraint<T> { }
+
+class Other<S> where S : GenericTypeUsedAsConstraint<int> {}
+
+class Other2<T,S> where S : GenericTypeUsedAsConstraint<T> {}
+
+class Other3<S, X> where S : GenericTypeUsedAsConstraint<X> {}
+
+class Other4<S,T> where S : GenericTypeUsedAsConstraint<T> {}

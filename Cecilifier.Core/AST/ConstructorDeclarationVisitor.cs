@@ -92,18 +92,14 @@ namespace Cecilifier.Core.AST
         {
             var typeSymbol = Context.GetDeclaredSymbol(type);
             if (typeSymbol == null)
+                return Utils.ImportFromMainModule($"TypeHelpers.DefaultCtorFor({typeDefVar}.BaseType)");
+            
+            var baseTypeVarDef = Context.TypeResolver.ResolveTypeLocalVariable(typeSymbol.BaseType);
+            if (baseTypeVarDef != null)
             {
+                return $"new MethodReference(\".ctor\", {Context.TypeResolver.ResolvePredefinedType("Void")} ,{baseTypeVarDef}) {{ HasThis = true }}";
             }
 
-            var baseTypeVarDef = Context.TypeResolver.ResolveTypeLocalVariable(typeSymbol.BaseType.Name);
-            var ts = (INamedTypeSymbol) typeSymbol;
-            if (ts.BaseType.IsGenericType && baseTypeVarDef != null)
-            {
-                var genericTypeExp = $"{ts.BaseType.TypeArguments.Select(arg => Context.TypeResolver.Resolve(arg)).Aggregate((acc, curr) => acc + "," + curr)}";
-                return $"new MethodReference(\".ctor\", {Context.TypeResolver.ResolvePredefinedType("Void")} ,{baseTypeVarDef}.MakeGenericInstanceType({genericTypeExp})) {{ HasThis = true }}";
-            }
-            
-            // Non generic base type
             return Utils.ImportFromMainModule($"TypeHelpers.DefaultCtorFor({typeDefVar}.BaseType)");
         }
 

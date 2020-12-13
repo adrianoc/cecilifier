@@ -16,7 +16,7 @@ namespace Cecilifier.Core.Misc
 
         public string Resolve(ITypeSymbol type)
         {
-            return ResolveTypeLocalVariable(type.Name)
+            return ResolveTypeLocalVariable(type)
                    ?? ResolvePredefinedAndComposedTypes(type)
                    ?? ResolveGenericType(type)
                    ?? Resolve(type.Name);
@@ -45,17 +45,31 @@ namespace Cecilifier.Core.Misc
 
         public string ResolveGenericType(ITypeSymbol type)
         {
-            if (!(type is INamedTypeSymbol genericTypeSymbol) || !genericTypeSymbol.IsGenericType)
+            if (!(type is INamedTypeSymbol { IsGenericType: true } genericTypeSymbol))
             {
                 return null;
             }
 
             var genericType = Resolve(OpenGenericTypeName(genericTypeSymbol.ConstructedFrom));
-            var args = string.Join(",", genericTypeSymbol.TypeArguments.Select(a => Resolve((ITypeSymbol) a)));
-            return $"{genericType}.MakeGenericInstanceType({args})";
+            return MakeGenericInstanceType(genericType, genericTypeSymbol);
         }
 
-        public string ResolveTypeLocalVariable(string typeName) => _context.DefinitionVariables.GetVariable(typeName, MemberKind.Type).VariableName;
+        public string ResolveTypeLocalVariable(ITypeSymbol type)
+        {
+            var found = _context.DefinitionVariables.GetVariable(type.Name, MemberKind.Type).VariableName;
+            if (found != null && type is INamedTypeSymbol {IsGenericType: true} genericTypeSymbol)
+            {
+                return MakeGenericInstanceType(found, genericTypeSymbol);
+            }
+            
+            return found;
+        }
+
+        private string MakeGenericInstanceType(string found, INamedTypeSymbol genericTypeSymbol)
+        {
+            var args = string.Join(",", genericTypeSymbol.TypeArguments.Select(Resolve));
+            return $"{found}.MakeGenericInstanceType({args})";
+        }
 
         private string OpenGenericTypeName(ITypeSymbol type)
         {

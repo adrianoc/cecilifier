@@ -201,17 +201,28 @@ namespace Cecilifier.Core.Misc
 
         private static void ProcessGenericTypeParameters(string memberDefVar, IVisitorContext context, IList<TypeParameterSyntax> typeParamList, IList<string> exps)
         {
+            // forward declare all generic type parameters to allow one type parameter to reference any of the others; this is useful in constraints for example:
+            // class Foo<T,S> where T: S  { }
+            var tba = new List<(string genParamDefVar, ITypeParameterSymbol typeParameterSymbol)>();
             foreach (var typeParameter in typeParamList)
             {
                 var symbol = context.SemanticModel.GetDeclaredSymbol(typeParameter);
                 var genericParamName = typeParameter.Identifier.Text;
                 
                 var genParamDefVar = $"{memberDefVar}_{genericParamName}";
-                
+
+                // TODO: Generic parameters should be removed as soon as their declaring member gets out of scope. It looks like they being kept around
+                // In the same way, local variables should also be removed.
                 context.DefinitionVariables.RegisterNonMethod(string.Empty, genericParamName, MemberKind.Type, genParamDefVar);
                 exps.Add(GenericParameter(context, memberDefVar, genericParamName, genParamDefVar, symbol));
-                AddConstraints(genParamDefVar, symbol);
-                exps.Add($"{memberDefVar}.GenericParameters.Add({genParamDefVar});");
+                
+                tba.Add((genParamDefVar, symbol));
+            }
+            
+            foreach (var entry in tba)
+            {
+                AddConstraints(entry.genParamDefVar, entry.typeParameterSymbol);
+                exps.Add($"{memberDefVar}.GenericParameters.Add({entry.genParamDefVar});");
             }
             
             void AddConstraints(string genParamDefVar, ITypeParameterSymbol typeParam)

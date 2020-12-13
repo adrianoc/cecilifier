@@ -67,6 +67,12 @@ namespace Cecilifier.Core.Tests.Integration
         }
 
         [Test]
+        public void TestGenericTypeUsedAsConstraint()
+        {
+            AssertResourceTest("Generics/GenericTypeUsedAsConstraint");
+        }
+
+        [Test]
         public void TestCoContraVariance()
         {
             AssertResourceTest(@"Generics/CoContraVariance");
