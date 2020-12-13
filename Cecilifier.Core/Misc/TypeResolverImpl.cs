@@ -34,7 +34,12 @@ namespace Cecilifier.Core.Misc
             {
                 return Resolve(array.ElementType) + ".MakeArrayType()";
             }
-            
+
+            if (type is IPointerTypeSymbol pointerType)
+            {
+                return Resolve(pointerType.PointedAtType) + ".MakePointerType()";
+            }
+
             if (type.SpecialType == SpecialType.None || type.TypeKind == TypeKind.Interface || type.SpecialType == SpecialType.System_Enum || type.SpecialType == SpecialType.System_ValueType)
             {
                 return null;
@@ -50,6 +55,11 @@ namespace Cecilifier.Core.Misc
                 return null;
             }
 
+            if (type.IsTupleType)
+            {
+                return null;
+            }
+            
             var genericType = Resolve(OpenGenericTypeName(genericTypeSymbol.ConstructedFrom));
             return MakeGenericInstanceType(genericType, genericTypeSymbol);
         }
