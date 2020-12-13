@@ -255,38 +255,15 @@ namespace Cecilifier.Core.AST
             }
 
             var info = Context.GetTypeInfo(expression);
-            return Context.TypeResolver.Resolve(info.Type.FullyQualifiedName());
+            return Context.TypeResolver.Resolve(info.Type);
         }
         
         protected string ResolveType(TypeSyntax type)
         {
             var typeToCheck = type is RefTypeSyntax refType ? refType.Type : type;
             var typeInfo = Context.GetTypeInfo(typeToCheck);
-            return Context.TypeResolver.ResolveTypeLocalVariable(typeInfo.Type)
-                   ?? ResolvePredefinedAndArrayTypes(typeToCheck)
-                   ?? ResolvePlainOrGenericType(typeToCheck);
-        }
-
-        private string ResolvePlainOrGenericType(TypeSyntax type)
-        {
-            if (Context.GetTypeInfo(type).Type is INamedTypeSymbol namedTypeSymbol && namedTypeSymbol.IsGenericType)
-            {
-                return Context.TypeResolver.ResolveGenericType(namedTypeSymbol);
-            }
-
-            return Context.TypeResolver.Resolve(type.ToString());
-        }
-
-        private string ResolvePredefinedAndArrayTypes(TypeSyntax type)
-        {
-            switch (type.Kind())
-            {
-                case SyntaxKind.PredefinedType: return Context.TypeResolver.ResolvePredefinedType(Context.GetTypeInfo(type).Type.Name);
-                case SyntaxKind.ArrayType: return ResolveType(type.DescendantNodes().OfType<TypeSyntax>().Single()) + ".MakeArrayType()";
-                case SyntaxKind.PointerType: return ResolveType(type.DescendantNodes().OfType<TypeSyntax>().Single()) + ".MakePointerType()";
-            }
-
-            return null;
+            
+            return Context.TypeResolver.Resolve(typeInfo.Type);
         }
 
         protected INamedTypeSymbol GetSpecialType(SpecialType specialType)
