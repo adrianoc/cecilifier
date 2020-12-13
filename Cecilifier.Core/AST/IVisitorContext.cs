@@ -315,6 +315,6 @@ namespace Cecilifier.Core.AST
         string ResolvePredefinedType(ITypeSymbol type);
         string ResolvePredefinedAndComposedTypes(ITypeSymbol type);
         string ResolveGenericType(ITypeSymbol type);
-        string ResolveTypeLocalVariable(string typeName);
+        string ResolveTypeLocalVariable(ITypeSymbol type);
     }
 }

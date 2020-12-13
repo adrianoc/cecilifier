@@ -80,25 +80,7 @@ namespace Cecilifier.Core.AST
         private string ProcessBase(TypeDeclarationSyntax classDeclaration)
         {
             var classSymbol = DeclaredSymbolFor(classDeclaration);
-
-            var resolvedBaseType = Context.TypeResolver.ResolveTypeLocalVariable(classSymbol.BaseType.Name) ?? Context.TypeResolver.Resolve(classSymbol.BaseType);
-            if (classSymbol.BaseType.IsGenericType && classSymbol.BaseType.IsDefinedInCurrentType(Context))
-            {
-                resolvedBaseType = $"{resolvedBaseType}.MakeGenericInstanceType({classSymbol.BaseType.TypeArguments.Select(ResolveTypeArgument).Aggregate((acc, curr) => acc + "," + curr)})";
-            }
-            
-            return resolvedBaseType;
-        }
-
-        private string ResolveTypeArgument(ITypeSymbol typeArg)
-        {
-            if (typeArg is ITypeParameterSymbol typeParameterSymbol && Context.TypeResolver.ResolveTypeLocalVariable(typeArg.Name) == null)
-            {
-                // We need to forward "declare" the variable....
-                return CecilDefinitionsFactory.GenericParameter(Context, $"tv_{typeParameterSymbol.Name}_{typeParameterSymbol.Ordinal}", typeArg.Name, "", typeParameterSymbol);
-            }
-
-            return Context.TypeResolver.Resolve(typeArg);
+            return Context.TypeResolver.Resolve(classSymbol.BaseType);
         }
 
         private IEnumerable<string> ImplementedInterfacesFor(BaseListSyntax bases)

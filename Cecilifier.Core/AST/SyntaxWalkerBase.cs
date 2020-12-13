@@ -257,12 +257,14 @@ namespace Cecilifier.Core.AST
             var info = Context.GetTypeInfo(expression);
             return Context.TypeResolver.Resolve(info.Type.FullyQualifiedName());
         }
-
+        
         protected string ResolveType(TypeSyntax type)
         {
-            return Context.TypeResolver.ResolveTypeLocalVariable(type.ToString())
-                   ?? ResolvePredefinedAndArrayTypes(type)
-                   ?? ResolvePlainOrGenericType(type);
+            var typeToCheck = type is RefTypeSyntax refType ? refType.Type : type;
+            var typeInfo = Context.GetTypeInfo(typeToCheck);
+            return Context.TypeResolver.ResolveTypeLocalVariable(typeInfo.Type)
+                   ?? ResolvePredefinedAndArrayTypes(typeToCheck)
+                   ?? ResolvePlainOrGenericType(typeToCheck);
         }
 
         private string ResolvePlainOrGenericType(TypeSyntax type)
@@ -349,7 +351,7 @@ namespace Cecilifier.Core.AST
                 return;
             }
 
-            var localDelegateDeclaration = Context.TypeResolver.ResolveTypeLocalVariable(typeSymbol.Name);
+            var localDelegateDeclaration = Context.TypeResolver.ResolveTypeLocalVariable(typeSymbol);
             if (localDelegateDeclaration != null)
             {
                 AddCilInstruction(ilVar, OpCodes.Callvirt, $"{localDelegateDeclaration}.Methods.Single(m => m.Name == \"Invoke\")");
@@ -383,7 +385,7 @@ namespace Cecilifier.Core.AST
             {
                 var attrsExp = CecilDefinitionsFactory.Attribute(varName, Context, attribute, (attrType, attrArgs) =>
                 {
-                    var typeVar = Context.TypeResolver.ResolveTypeLocalVariable(attrType.Name);
+                    var typeVar = Context.TypeResolver.ResolveTypeLocalVariable(attrType);
                     if (typeVar == null)
                     {
                         //attribute is not declared in the same assembly....
