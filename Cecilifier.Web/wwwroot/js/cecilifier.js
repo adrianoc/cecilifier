@@ -22,6 +22,7 @@ function initializeSite() {
         }
 
     });
+    csharpCode.setSize(null, window.innerHeight * 0.2);
     
     cecilifiedCode = CodeMirror.fromTextArea(
         document.getElementById("_cecilifiedcode"),
@@ -31,11 +32,16 @@ function initializeSite() {
             mode: "text/x-csharp",
             theme: "darcula"
         });
-
+    cecilifiedCode.setSize(null, window.innerHeight * 0.55);
 
     setSendToDiscordTooltip();
     
     initializeWebSocket();
+
+    window.onresize = function(ev) {
+        csharpCode.setSize(null, window.innerHeight * 0.2);
+        cecilifiedCode.setSize(null, window.innerHeight * 0.55);
+    }
 }
 
 function onSendToDiscordCheckBoxChanged()
