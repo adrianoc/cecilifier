@@ -18,7 +18,7 @@ namespace Cecilifier.Web
                 {
                     webBuilder.UseKestrel(serverOptions => { })
                         .UseIISIntegration()
-                        .UseUrls("http://0.0.0.0:8081")
+                        .UseUrls(config["ApplicationUrl"])
                         .UseConfiguration(config)
                         .UseStartup<Startup>();
                 })
