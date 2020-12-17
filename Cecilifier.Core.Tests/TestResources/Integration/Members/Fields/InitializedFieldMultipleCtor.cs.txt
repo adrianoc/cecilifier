@@ -10,6 +10,6 @@
 	
 	public InitializedFieldSingleCtor(string msg)
 	{
-		notInitalized = msg;	
+		notInitialized = msg;	
 	}
 }
