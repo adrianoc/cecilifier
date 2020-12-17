@@ -1,0 +1,13 @@
+﻿using System;
+
+var s = "message";
+Console.WriteLine(s);
+Console.WriteLine("Top level statements...");
+
+//Bug with forward reference to Foo 
+//Console.WriteLine(new Foo());
+
+//Issue #65
+//Console.WriteLine(args.Length);
+
+class Foo { }

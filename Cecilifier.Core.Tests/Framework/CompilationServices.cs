@@ -17,6 +17,11 @@ namespace Cecilifier.Core.Tests.Framework
             return InternalCompile(targetPath, source, false, references);
         }
 
+        public static string CompileExe(string targetPath, string source, params string[] references)
+        {
+            return InternalCompile(targetPath, source, true, references);
+        }
+        
         public static string CompileExe(string source, params string[] references)
         {
             return InternalCompile(source, true, references);
