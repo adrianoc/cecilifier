@@ -6,6 +6,6 @@
 
 	public InitializedFieldSingleCtor()
 	{
-		notInitalized = "I was initialized in the ctor";	
+		notInitialized = "I was initialized in the ctor";	
 	}
 }

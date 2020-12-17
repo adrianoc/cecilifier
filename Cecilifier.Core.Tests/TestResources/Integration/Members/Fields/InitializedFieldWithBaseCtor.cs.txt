@@ -1,6 +1,6 @@
 ﻿class Base
 {
-	protecte int baseI = 42;
+	protected int baseI = 42;
 
 	public Base()
 	{
