@@ -1,4 +1,5 @@
-﻿using NUnit.Framework;
+﻿using Cecilifier.Core.Tests.Framework;
+using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration
 {
@@ -54,6 +55,12 @@ namespace Cecilifier.Core.Tests.Integration
         public void TestAttributeWithArrayInitializer()
         {
             AssertResourceTest($@"Misc/Attributes/AttributeWithArrayInitializer");
+        }
+        
+        [Test]
+        public void TestTopLevelStatements()
+        {
+            AssertResourceTest($@"Misc/TopLevelStatements", true);
         }
     }
 }

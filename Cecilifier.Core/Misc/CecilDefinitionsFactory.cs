@@ -79,7 +79,7 @@ namespace Cecilifier.Core.Misc
             return exps;
         }
 
-        public static string GenericParameter(IVisitorContext context, string typeVar, string genericParamName, string genParamDefVar, ITypeParameterSymbol typeParameterSymbol)
+        private static string GenericParameter(IVisitorContext context, string typeVar, string genericParamName, string genParamDefVar, ITypeParameterSymbol typeParameterSymbol)
         {
             context.DefinitionVariables.RegisterNonMethod(string.Empty, genericParamName, MemberKind.Type, genParamDefVar);
             return $"var {genParamDefVar} = new Mono.Cecil.GenericParameter(\"{genericParamName}\", {typeVar}) {Variance(typeParameterSymbol)};";
@@ -267,15 +267,20 @@ namespace Cecilifier.Core.Misc
         
         public static IEnumerable<string> MethodBody(string methodVar, InstructionRepresentation[] instructions)
         {
+            var ilVar = $"{methodVar}_il";
+            return MethodBody(methodVar, ilVar, instructions);
+        }
+
+        public static IEnumerable<string> MethodBody(string methodVar, string ilVar, InstructionRepresentation[] instructions)
+        {
             var tagToInstructionDefMapping = new Dictionary<string, string>();
             var exps = new List<string>();
             exps.Add($"{methodVar}.Body = new MethodBody({methodVar});");
-            
-            var ilVar = $"{methodVar}_il";
+
             exps.Add($"var {ilVar} = {methodVar}.Body.GetILProcessor();");
             var methodInstVar = $"{methodVar}_inst";
             exps.Add($"var {methodInstVar} = {methodVar}.Body.Instructions;");
-            
+
             foreach (var inst in instructions)
             {
                 var instVar = "_";
@@ -286,17 +291,30 @@ namespace Cecilifier.Core.Misc
                     tagToInstructionDefMapping[inst.tag] = instVar;
                 }
 
-                var operand = inst.operand?.Insert(0, ", ") 
-                                ?? inst.branchTargetTag?.Replace(inst.branchTargetTag, $", {tagToInstructionDefMapping[inst.branchTargetTag]}")
-                                ?? string.Empty;
-                
+                var operand = inst.operand?.Insert(0, ", ")
+                              ?? inst.branchTargetTag?.Replace(inst.branchTargetTag, $", {tagToInstructionDefMapping[inst.branchTargetTag]}")
+                              ?? string.Empty;
+
                 exps.Add($"{methodInstVar}.Add({instVar} = {ilVar}.Create({inst.opCode.ConstantName()}{operand}));");
-                
             }
 
             return exps;
         }
         
+        public static string DefaultTypeAttributeFor(SyntaxKind syntaxKind, bool hasStaticCtor)
+        {
+            var basicClassAttrs = "TypeAttributes.AnsiClass" + (hasStaticCtor ? "" : " | TypeAttributes.BeforeFieldInit");
+            return syntaxKind switch
+            {
+                SyntaxKind.StructDeclaration => "TypeAttributes.SequentialLayout | TypeAttributes.Sealed |" + basicClassAttrs,
+                SyntaxKind.ClassDeclaration => basicClassAttrs,
+                SyntaxKind.InterfaceDeclaration => "TypeAttributes.Interface | TypeAttributes.Abstract",
+                SyntaxKind.DelegateDeclaration => "TypeAttributes.Sealed",
+                SyntaxKind.EnumDeclaration => throw new NotImplementedException(),
+                _ => throw new Exception("Not supported type declaration: " + syntaxKind)
+            };
+        }
+
         private static void AddExtraAttributes(IList<string> exps, string paramVar, RefKind byRef)
         {
             if (byRef == RefKind.Out)

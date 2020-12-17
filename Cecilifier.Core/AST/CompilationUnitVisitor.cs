@@ -38,6 +38,21 @@ namespace Cecilifier.Core.AST
                 Context.Namespace = string.Empty;
             }
         }
+     
+        public override void VisitGlobalStatement(GlobalStatementSyntax node)
+        {
+            if (_globalStatementHandler == null)
+            {
+                Context.WriteComment("Begin of global statements.");
+                _globalStatementHandler = new GlobalStatementHandler(Context);
+            }
+
+            if (_globalStatementHandler.HandleGlobalStatement(node))
+            {
+                Context.WriteComment("End of global statements.");
+                _globalStatementHandler = null;
+            }
+        }
 
         public override void VisitClassDeclaration(ClassDeclarationSyntax node)
         {
@@ -68,7 +83,7 @@ namespace Cecilifier.Core.AST
                 Context, 
                 typeVar, 
                 node.Identifier.ValueText, 
-                DefaultTypeAttributeFor(node).AppendModifier(accessibility), 
+                 CecilDefinitionsFactory.DefaultTypeAttributeFor(node.Kind(), false).AppendModifier(accessibility), 
                 Context.TypeResolver.Resolve("System.MulticastDelegate"), 
                 false,
                 Array.Empty<string>(),
@@ -173,7 +188,7 @@ namespace Cecilifier.Core.AST
             if (mainType == null)
                 mainType = node;
 
-            var typeSymbol = Context.SemanticModel.GetDeclaredSymbol(node) as ITypeSymbol;
+            var typeSymbol = ModelExtensions.GetDeclaredSymbol(Context.SemanticModel, node) as ITypeSymbol;
             if (typeSymbol == null)
                 return;
 
@@ -184,7 +199,7 @@ namespace Cecilifier.Core.AST
                     MainMethodDefinitionVariable = Context.DefinitionVariables.GetMethodVariable(mainMethod.AsMethodDefinitionVariable());
             }
 
-            var mainTypeSymbol = (ITypeSymbol) Context.SemanticModel.GetDeclaredSymbol(mainType);
+            var mainTypeSymbol = (ITypeSymbol) ModelExtensions.GetDeclaredSymbol(Context.SemanticModel, mainType);
             if (typeSymbol.GetMembers().Length > mainTypeSymbol?.GetMembers().Length)
             {
                 mainType = node;
@@ -192,5 +207,6 @@ namespace Cecilifier.Core.AST
         }
 
         private BaseTypeDeclarationSyntax mainType;
+        private GlobalStatementHandler _globalStatementHandler;
     }
 }

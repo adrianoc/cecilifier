@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -23,12 +24,12 @@ namespace Cecilifier.Core
             using var stream = new StreamReader(content);
             var syntaxTree = CSharpSyntaxTree.ParseText(stream.ReadToEnd(), new CSharpParseOptions(LanguageVersion.CSharp9));
             var metadataReferences = references.Select(refPath => MetadataReference.CreateFromFile(refPath)).ToArray();
-            
+
             var comp = CSharpCompilation.Create(
                 "CecilifiedAssembly",
                 new[] {syntaxTree},
                 metadataReferences,
-                new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, allowUnsafe: true));
+                new CSharpCompilationOptions(OutputKindFor(syntaxTree), allowUnsafe: true));
 
             var errors = comp.GetDiagnostics().Where(d => d.Severity == DiagnosticSeverity.Error).Select(s => s.ToString()).ToArray();
             if (errors.Length > 0)
@@ -48,6 +49,15 @@ namespace Cecilifier.Core
 
             var mainTypeName = visitor.MainType != null ? visitor.MainType.Identifier.Text : "Cecilified";
             return new CecilifierResult(new StringReader(ctx.Output.AsCecilApplication(mainTypeName, visitor.MainMethodDefinitionVariable)), mainTypeName);
+        }
+
+        private static OutputKind OutputKindFor(SyntaxTree syntaxTree)
+        {
+            var outputKind = syntaxTree.GetRoot().DescendantNodes().Any(node => node.IsKind(SyntaxKind.GlobalStatement)) 
+                ? OutputKind.ConsoleApplication 
+                : OutputKind.DynamicallyLinkedLibrary;
+
+            return outputKind;
         }
 
         private SyntaxTree RunTransformations(SyntaxTree tree, SemanticModel semanticModel)

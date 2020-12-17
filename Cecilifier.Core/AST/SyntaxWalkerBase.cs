@@ -153,7 +153,7 @@ namespace Cecilifier.Core.AST
             return ImportExpressionForType(type.FullName);
         }
 
-        private string ImportExpressionForType(string typeName)
+        private static string ImportExpressionForType(string typeName)
         {
             return ImportFromMainModule($"typeof({typeName})");
         }
@@ -161,7 +161,7 @@ namespace Cecilifier.Core.AST
         protected string TypeModifiersToCecil(TypeDeclarationSyntax node)
         {
             var hasStaticCtor = node.DescendantNodes().OfType<ConstructorDeclarationSyntax>().Any(d => d.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword)));
-            var typeAttributes = DefaultTypeAttributeFor(node, hasStaticCtor);
+            var typeAttributes = CecilDefinitionsFactory.DefaultTypeAttributeFor(node.Kind(), hasStaticCtor);
             if (IsNestedTypeDeclaration(node))
             {
                 return typeAttributes.AppendModifier(ModifiersToCecil(node.Modifiers, m => "TypeAttributes.Nested" + m.ValueText.CamelCase()));
@@ -174,22 +174,6 @@ namespace Cecilifier.Core.AST
         private static bool IsNestedTypeDeclaration(SyntaxNode node)
         {
             return node.Parent.Kind() != SyntaxKind.NamespaceDeclaration && node.Parent.Kind() != SyntaxKind.CompilationUnit;
-        }
-
-        protected static string DefaultTypeAttributeFor(SyntaxNode node, bool hasStaticCtor = false)
-        {
-            var basicClassAttrs = "TypeAttributes.AnsiClass" + (hasStaticCtor ? "" : " | TypeAttributes.BeforeFieldInit");
-            switch (node.Kind())
-            {
-                case SyntaxKind.StructDeclaration: return "TypeAttributes.SequentialLayout | TypeAttributes.Sealed |" + basicClassAttrs;
-                case SyntaxKind.ClassDeclaration: return basicClassAttrs;
-                case SyntaxKind.InterfaceDeclaration: return "TypeAttributes.Interface | TypeAttributes.Abstract";
-                case SyntaxKind.DelegateDeclaration: return "TypeAttributes.Sealed";
-
-                case SyntaxKind.EnumDeclaration: throw new NotImplementedException();
-            }
-
-            throw new Exception("Not supported type declaration: " + node);
         }
 
         protected static string ModifiersToCecil(string targetEnum, IEnumerable<SyntaxToken> modifiers, string @default)
