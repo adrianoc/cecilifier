@@ -57,7 +57,7 @@ namespace Cecilifier.Core.AST
 
             var backingFieldVar = string.Empty;
 
-            var declaringType = node.ResolveDeclaringType();
+            var declaringType = node.ResolveDeclaringType<TypeDeclarationSyntax>();
             if (!declaringType.IsKind(SyntaxKind.InterfaceDeclaration))
             {
                 backingFieldVar = AddBackingField(node); // backing field will have same name as the event
@@ -282,7 +282,7 @@ namespace Cecilifier.Core.AST
                 ? node.Modifiers.Add(privateModifier) 
                 : node.Modifiers.Replace(accessibilityModifier, privateModifier);
 
-            var fields = FieldDeclarationVisitor.HandleFieldDeclaration(Context, node, node.Declaration, backingFieldModifiers, node.ResolveDeclaringType());
+            var fields = FieldDeclarationVisitor.HandleFieldDeclaration(Context, node, node.Declaration, backingFieldModifiers, node.ResolveDeclaringType<TypeDeclarationSyntax>());
             return fields.First();
         }
 

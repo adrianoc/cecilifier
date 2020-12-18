@@ -39,18 +39,20 @@ namespace Cecilifier.Core.AST
 
         private void HandleInstanceConstructor(ConstructorDeclarationSyntax node)
         {
-            var declaringType = node.Parent.ResolveDeclaringType();
+            var declaringType = node.Parent.ResolveDeclaringType<TypeDeclarationSyntax>();
 
             Action<ConstructorDeclarationSyntax> callBaseMethod = base.VisitConstructorDeclaration;
 
             var returnType = GetSpecialType(SpecialType.System_Void);
             ProcessMethodDeclaration(node, "ctor", ".ctor", Context.TypeResolver.ResolvePredefinedType(returnType), ctorVar =>
             {
+                ProcessFieldInitialization(declaringType, ilVar);
+
                 if (declaringType.Kind() != SyntaxKind.StructDeclaration)
                 {
                     AddCilInstruction(ilVar, OpCodes.Ldarg_0);
                 }
-
+               
                 // If this ctor has an initializer the call to the base ctor will happen when we visit call base.VisitConstructorDeclaration()
                 // otherwise we need to call it here.
                 if (node.Initializer == null && declaringType.Kind() != SyntaxKind.StructDeclaration)
@@ -60,8 +62,6 @@ namespace Cecilifier.Core.AST
                 }
 
                 callBaseMethod(node);
-                
-                //TODO: Initialize fields...
             });
         }
 
@@ -107,7 +107,7 @@ namespace Cecilifier.Core.AST
             return ctorLocalVar;
         }
 
-        private void ProcessFieldInitialization(ClassDeclarationSyntax declaringClass, string ctorBodyIL)
+        private void ProcessFieldInitialization(TypeDeclarationSyntax declaringClass, string ctorBodyIL)
         {
             foreach (var fieldDeclaration in declaringClass.Members.OfType<FieldDeclarationSyntax>())
             {

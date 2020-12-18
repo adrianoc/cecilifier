@@ -88,9 +88,9 @@ public class SnippetRunner
             return FindLastDefinition(self, self.ContainingType) ?? self;
         }
 
-        public static BaseTypeDeclarationSyntax ResolveDeclaringType(this SyntaxNode node)
+        public static T ResolveDeclaringType<T>(this SyntaxNode node) where T : BaseTypeDeclarationSyntax
         {
-            return new TypeDeclarationResolver().Resolve(node);
+            return (T) new TypeDeclarationResolver().Resolve(node);
         }
 
         private static IMethodSymbol FindLastDefinition(IMethodSymbol method, INamedTypeSymbol toBeChecked)

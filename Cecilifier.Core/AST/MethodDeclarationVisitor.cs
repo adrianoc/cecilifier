@@ -56,7 +56,7 @@ namespace Cecilifier.Core.AST
 
             var declaringMethodOrCtor = (BaseMethodDeclarationSyntax) node.Parent.Parent;
 
-            var declaringType = declaringMethodOrCtor.ResolveDeclaringType();
+            var declaringType = declaringMethodOrCtor.ResolveDeclaringType<TypeDeclarationSyntax>();
 
             if (node.Parent.Parent.IsKind(SyntaxKind.MethodDeclaration))
             {

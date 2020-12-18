@@ -84,7 +84,7 @@ namespace Cecilifier.Core.AST
         private void ProcessPropertyAccessors(BasePropertyDeclarationSyntax node, string propertyDeclaringTypeVar, string propName, string propertyType, string propDefVar, List<ParamData> parameters)
         {
             var propInfo = (IPropertySymbol) Context.SemanticModel.GetDeclaredSymbol(node);
-            var declaringType = node.ResolveDeclaringType();
+            var declaringType = node.ResolveDeclaringType<TypeDeclarationSyntax>();
             foreach (var accessor in node.AccessorList.Accessors)
             {
                 var accessorModifiers = node.Modifiers.MethodModifiersToCecil(ModifiersToCecil, "MethodAttributes.SpecialName", propInfo.GetMethod ?? propInfo.SetMethod);
