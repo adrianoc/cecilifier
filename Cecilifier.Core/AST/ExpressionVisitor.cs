@@ -611,6 +611,7 @@ namespace Cecilifier.Core.AST
             }
 
             var returnType = Context.TypeResolver.Resolve(method.ReturnType);
+            
             MethodDeclarationVisitor.AddMethodDefinition(Context, varName, method.Name, "MethodAttributes.Private", returnType, typeParameters);
             Context.DefinitionVariables.RegisterMethod(method.ContainingType.Name, method.Name, method.Parameters.Select(p => p.Type.Name).ToArray(), varName);
         }

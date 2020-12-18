@@ -1,11 +1,7 @@
-﻿using System;
-
-class SelfRefCtor
+﻿class SelfRefCtor
 {
 	public static SelfRefCtor Create()
 	{
 		return new SelfRefCtor();
 	}
-
-
 }
