@@ -1,12 +1,10 @@
 ﻿using System;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Mono.Cecil;
 using Mono.Cecil.Cil;
 
 namespace Cecilifier.Core.AST
@@ -46,7 +44,8 @@ namespace Cecilifier.Core.AST
             var returnType = GetSpecialType(SpecialType.System_Void);
             ProcessMethodDeclaration(node, "ctor", ".ctor", Context.TypeResolver.ResolvePredefinedType(returnType), ctorVar =>
             {
-                ProcessFieldInitialization(declaringType, ilVar);
+                if (node.Initializer == null || node.Initializer.IsKind(SyntaxKind.BaseConstructorInitializer)) 
+                    ProcessFieldInitialization(declaringType, ilVar);
 
                 if (declaringType.Kind() != SyntaxKind.StructDeclaration)
                 {
@@ -114,6 +113,8 @@ namespace Cecilifier.Core.AST
                 var dec = fieldDeclaration.Declaration.Variables[0];
                 if (dec.Initializer != null && !fieldDeclaration.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword)))
                 {
+                    Context.WriteNewLine();
+                    Context.WriteComment(fieldDeclaration.ToString());
                     AddCilInstruction(ctorBodyIL, OpCodes.Ldarg_0);
                 }
 

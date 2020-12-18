@@ -12,7 +12,6 @@ namespace Cecilifier.Core.Tests.Integration
         }
 
         [Test]
-        [Ignore("Not Implemented yet")]
         public void TestInitializedFieldMultipleCtor()
         {
             AssertResourceTest(@"Members/Fields/InitializedFieldMultipleCtor");
@@ -31,7 +30,6 @@ namespace Cecilifier.Core.Tests.Integration
         }
 
         [Test]
-        [Ignore("Not Implemented yet")]
         public void TestInitializedFieldWithBaseCtor()
         {
             AssertResourceTest(@"Members/Fields/InitializedFieldWithBaseCtor");
