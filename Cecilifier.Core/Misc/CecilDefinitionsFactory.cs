@@ -23,6 +23,11 @@ namespace Cecilifier.Core.Misc
         public static string Constructor(IVisitorContext context, out string ctorLocalVar, string typeName, string methodAccessibility, string[] paramTypes, string methodDefinitionPropertyValues = null)
         {
             ctorLocalVar = MethodExtensions.LocalVariableNameFor(typeName, "ctor", "");
+            return Constructor(context, ctorLocalVar, typeName, methodAccessibility, paramTypes, methodDefinitionPropertyValues);
+        }
+
+        internal static string Constructor(IVisitorContext context, string ctorLocalVar, string typeName, string methodAccessibility, string[] paramTypes, string methodDefinitionPropertyValues = null)
+        {
             context.DefinitionVariables.RegisterMethod(typeName, ".ctor", paramTypes, ctorLocalVar);
 
             var exp = $@"var {ctorLocalVar} = new MethodDefinition("".ctor"", {methodAccessibility} | MethodAttributes.HideBySig | {ConstructorDeclarationVisitor.CtorFlags}, assembly.MainModule.TypeSystem.Void)";

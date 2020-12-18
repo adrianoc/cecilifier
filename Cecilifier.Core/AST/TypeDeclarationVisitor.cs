@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.Extensions;
@@ -30,6 +30,7 @@ namespace Cecilifier.Core.AST
             using (Context.DefinitionVariables.WithCurrent("", node.Identifier.ValueText, MemberKind.Type, definitionVar))
             {
                 base.VisitClassDeclaration(node);
+                EnsureCurrentTypeHasADefaultCtor(node, definitionVar);
             }
         }
 
@@ -39,6 +40,7 @@ namespace Cecilifier.Core.AST
             using (Context.DefinitionVariables.WithCurrent("", node.Identifier.ValueText, MemberKind.Type, definitionVar))
             {
                 base.VisitStructDeclaration(node);
+                EnsureCurrentTypeHasADefaultCtor(node, definitionVar);
             }
         }
 
@@ -133,8 +135,6 @@ namespace Cecilifier.Core.AST
                 // and these are introduced by the code in CecilDefinitionsFactory.Type().
                 WriteCecilExpression(Context, $"{varName}.BaseType = {ProcessBase(node)};");
             }
-
-            EnsureCurrentTypeHasADefaultCtor(node, varName);
 
             HandleAttributesInMemberDeclaration(node.AttributeLists, varName);
             

@@ -19,7 +19,6 @@ namespace Cecilifier.Core.Tests.Integration
         }
 
         [Test]
-        [Ignore("Not Implemented yet")]
         public void TestInitializedFieldNoCtor()
         {
             AssertResourceTest(@"Members/Fields/InitializedFieldNoCtor");
