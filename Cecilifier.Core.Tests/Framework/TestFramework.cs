@@ -16,7 +16,6 @@ namespace Cecilifier.Core.Tests.Framework
 
             var process = Process.Start(processInfo);
 
-
             var err = new StringBuilder();
             var @out = new StringBuilder();
 

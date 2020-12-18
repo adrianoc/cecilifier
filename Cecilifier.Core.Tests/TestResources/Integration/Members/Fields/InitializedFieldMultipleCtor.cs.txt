@@ -4,12 +4,16 @@
 	private string s = string.Format("Magic Number: {0}", 42);
 	private string notInitialized;
 
-	public InitializedFieldSingleCtor() : this("I was initialized in the ctor")
+	public InitializedFieldMultipleCtor(string msg)
+	{
+		notInitialized = msg;	
+	}
+
+	public InitializedFieldMultipleCtor() : this("I was initialized in the ctor")
 	{
 	}
 	
-	public InitializedFieldSingleCtor(string msg)
+	public InitializedFieldMultipleCtor(int i) : base()
 	{
-		notInitialized = msg;	
 	}
 }

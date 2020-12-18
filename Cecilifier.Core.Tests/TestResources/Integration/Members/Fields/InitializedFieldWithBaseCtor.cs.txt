@@ -12,17 +12,15 @@
 	}
 }
 
-class InitializedFieldWithBaseCtor
+class InitializedFieldWithBaseCtor : Base
 {
 	private int i = 10;
 	private int j;
 	
-	public InitializedFieldWithBaseCtor() : this(43)
+	public InitializedFieldWithBaseCtor() : base(43)
 	{
-		j = 30;
+		j = 3000;
 	}
 	
-	public InitializedFieldWithBaseCtor(int n) : this(n + 1)
-	{
-	}
+	public InitializedFieldWithBaseCtor(int n) : base(n + 1) {	}
 }
