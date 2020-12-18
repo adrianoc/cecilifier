@@ -22,7 +22,7 @@ namespace Cecilifier.Core.AST
         {
             var variableDeclarationSyntax = node.Declaration;
             var modifiers = node.Modifiers;
-            var declaringType = node.ResolveDeclaringType();
+            var declaringType = node.ResolveDeclaringType<TypeDeclarationSyntax>();
 
             HandleFieldDeclaration(node, variableDeclarationSyntax, modifiers, declaringType);
             

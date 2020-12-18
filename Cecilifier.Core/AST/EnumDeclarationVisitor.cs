@@ -27,7 +27,7 @@ namespace Cecilifier.Core.AST
             var typeDef = CecilDefinitionsFactory.Type(Context, enumType, node.Identifier.ValueText, attrs + " | TypeAttributes.Sealed", Context.TypeResolver.Resolve("System.Enum"), false, Array.Empty<string>());
             AddCecilExpressions(typeDef);
 
-            using (Context.DefinitionVariables.WithCurrent(node.Parent.IsKind(SyntaxKind.CompilationUnit) ? "" : node.Parent.ResolveDeclaringType().Identifier.ValueText, node.Identifier.ValueText, MemberKind.Type,
+            using (Context.DefinitionVariables.WithCurrent(node.Parent.IsKind(SyntaxKind.CompilationUnit) ? "" : node.Parent.ResolveDeclaringType<TypeDeclarationSyntax>().Identifier.ValueText, node.Identifier.ValueText, MemberKind.Type,
                 enumType))
             {
                 //.class private auto ansi MyEnum
