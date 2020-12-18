@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.Extensions;
@@ -110,7 +110,7 @@ namespace Cecilifier.Core.AST
 
         private string HandleTypeDeclaration(TypeDeclarationSyntax node)
         {
-            return HandleTypeDeclaration(node, Context.TypeResolver.ResolvePredefinedType("Object"));
+            return HandleTypeDeclaration(node, Context.TypeResolver.ResolvePredefinedType(GetSpecialType(SpecialType.System_Object)));
         }
 
         private string HandleTypeDeclaration(TypeDeclarationSyntax node, string baseType)
