@@ -1,5 +1,7 @@
 ﻿class InitializedFieldNoCtor
 {
+	// Bug: Static fields are not supported.
+	// public static bool b = true;
 	private int i = 10;
-	private string s = string.Format("Magic Number: {0}", 42);
+	private string s = string.Format("{0}", 42);
 }
