@@ -200,7 +200,7 @@ namespace Cecilifier.Core.AST
         public override void VisitAssignmentExpression(AssignmentExpressionSyntax node)
         {
             var leftNodeMae = node.Left as MemberAccessExpressionSyntax;
-            CSharpSyntaxNode exp = leftNodeMae != null ? leftNodeMae.Name : node.Left;
+            CSharpSyntaxNode exp = leftNodeMae?.Name ?? node.Left;
             // check if the left hand side of the assignment is a property (but not indexers) and handle that as a method (set) call.
             var expSymbol = Context.SemanticModel.GetSymbolInfo(exp).Symbol;
             if (expSymbol is IPropertySymbol propertySymbol && !propertySymbol.IsIndexer)
@@ -249,12 +249,12 @@ namespace Cecilifier.Core.AST
 
                 case SyntaxKind.CharacterLiteralExpression:
                 case SyntaxKind.NumericLiteralExpression:
-                    AddLocalVariableAndHandleCallOnValueTypeLiterals(node, "assembly.MainModule.TypeSystem.Int32", node.ToString());
+                    AddLocalVariableAndHandleCallOnValueTypeLiterals(node, Context.TypeResolver.ResolvePredefinedType(GetSpecialType(SpecialType.System_Int32)), node.ToString());
                     break;
 
                 case SyntaxKind.TrueLiteralExpression:
                 case SyntaxKind.FalseLiteralExpression:
-                    AddLocalVariableAndHandleCallOnValueTypeLiterals(node, "assembly.MainModule.TypeSystem.Boolean", bool.Parse(node.ToString()) ? 1 : 0);
+                    AddLocalVariableAndHandleCallOnValueTypeLiterals(node, Context.TypeResolver.ResolvePredefinedType(GetSpecialType(SpecialType.System_Boolean)), bool.Parse(node.ToString()) ? 1 : 0);
                     break;
 
                 default:
