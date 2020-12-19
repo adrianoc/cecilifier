@@ -22,31 +22,6 @@ namespace Cecilifier.Core.Extensions
             return type.ToDisplayString(new SymbolDisplayFormat());
         }
 
-        public static string ResolveExpression(this ITypeSymbol type, IVisitorContext ctx)
-        {
-            if (type.IsDefinedInCurrentType(ctx))
-            {
-                //TODO: This assumes the type in question has already been visited.
-                //		see: Types\ForwardTypeReference
-                return ctx.DefinitionVariables.GetTypeVariable(type.Name).VariableName;
-            }
-
-            string typeName;
-            if (type is INamedTypeSymbol namedType)
-            {
-                throw new Exception();
-                // var typeParametersWithCLSNames = string.Join(",", namedType.TypeArguments.Select(t => t.MetadataName));
-                // var genTypeName = Regex.Replace(namedType.ToString(), "<.*>", $"<{typeParametersWithCLSNames}>");
-                // typeName = genTypeName;
-            }
-            else
-            {
-                typeName = type.FullyQualifiedName();
-            }
-
-            return ImportFromMainModule($"TypeHelpers.ResolveType(\"{type.ContainingAssembly.Name}\", \"{typeName}\")");
-        }
-
         public static string ReflectionTypeName(this ITypeSymbol type, out IList<string> typeParameters)
         {
             if (type is INamedTypeSymbol namedType && namedType.IsGenericType) //TODO: namedType.IsUnboundGenericType ? Open 
