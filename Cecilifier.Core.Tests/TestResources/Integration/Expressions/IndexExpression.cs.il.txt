@@ -1,4 +1,4 @@
-﻿.locals (System.Index V_0)
+﻿.locals init (System.Index V_0)
 IL_0000: ldc.i4 42
 IL_0005: call System.Index System.Index::op_Implicit(System.Int32)
 IL_000a: stloc V_0

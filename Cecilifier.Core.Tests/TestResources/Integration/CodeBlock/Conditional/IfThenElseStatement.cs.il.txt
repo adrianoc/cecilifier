@@ -1,4 +1,4 @@
-﻿.locals ()
+﻿.locals init ()
 IL_0000: ldarg.1
 IL_0001: ldc.i4.s 42
 IL_0003: cgt

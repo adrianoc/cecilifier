@@ -1,4 +1,4 @@
-.locals (System.Int32& V_0)
+.locals init (System.Int32& V_0)
 IL_0000: ldarg.0
 IL_0001: ldflda System.Int32 FixedStatementTest::i
 IL_0006: stloc V_0
