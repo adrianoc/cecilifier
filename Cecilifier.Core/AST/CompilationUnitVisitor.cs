@@ -49,6 +49,7 @@ namespace Cecilifier.Core.AST
 
             if (_globalStatementHandler.HandleGlobalStatement(node))
             {
+                Context.WriteNewLine();
                 Context.WriteComment("End of global statements.");
                 _globalStatementHandler = null;
             }
