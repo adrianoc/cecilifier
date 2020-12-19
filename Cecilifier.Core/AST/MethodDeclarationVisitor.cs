@@ -99,7 +99,8 @@ namespace Cecilifier.Core.AST
             if (!isAbstract)
             {
                 ilVar = MethodExtensions.LocalVariableNameFor("il", declaringTypeName, simpleName, node.MangleName(Context.SemanticModel));
-                AddCecilExpression(@"var {0} = {1}.Body.GetILProcessor();", ilVar, methodVar);
+                AddCecilExpression($"{methodVar}.Body.InitLocals = true;");
+                AddCecilExpression($"var {ilVar} = {methodVar}.Body.GetILProcessor();");
             }
 
             WithCurrentMethod(declaringTypeName, methodVar, fqName, node.ParameterList.Parameters.Select(p => Context.GetTypeInfo(p.Type).Type.Name).ToArray(), runWithCurrent);

@@ -1,4 +1,4 @@
-﻿.locals (System.Int32 V_0)
+﻿.locals init (System.Int32 V_0)
 IL_0000: ldarg.0
 IL_0001: ldarg.1
 IL_0002: call System.Void PostDecrementProp::set_Prop(System.Int32)

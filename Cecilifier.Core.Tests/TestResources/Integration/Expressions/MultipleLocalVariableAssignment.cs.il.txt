@@ -1,4 +1,4 @@
-﻿.locals (System.Int32 V_0, System.Int32 V_1, System.String V_2)
+﻿.locals init (System.Int32 V_0, System.Int32 V_1, System.String V_2)
 IL_0000: ldarg.0
 IL_0001: stloc V_0
 IL_0005: ldarg.0

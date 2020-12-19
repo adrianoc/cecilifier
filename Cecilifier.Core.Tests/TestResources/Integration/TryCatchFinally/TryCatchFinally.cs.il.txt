@@ -1,4 +1,4 @@
-﻿.locals ()
+﻿.locals init ()
 IL_0000: ldarg.0
 IL_0001: ldc.i4 1
 IL_0006: call System.Void TryCatchFinally::Foo(System.Int32)
