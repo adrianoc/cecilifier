@@ -48,12 +48,12 @@ namespace Cecilifier.Core.AST
             ilVar = "topLevelMainIl";
             var mainBodyExps = CecilDefinitionsFactory.MethodBody(methodVar, ilVar, Array.Empty<InstructionRepresentation>());
                 
-            AddCecilExpressions(typeExps);
-            AddCecilExpressions(methodExps);
-            AddCecilExpressions(mainParametersExps);
-            AddCecilExpressions(mainBodyExps);
+            WriteCecilExpressions(typeExps);
+            WriteCecilExpressions(methodExps);
+            WriteCecilExpressions(mainParametersExps);
+            WriteCecilExpressions(mainBodyExps);
                 
-            AddCecilExpression($"{typeVar}.Methods.Add({methodVar});");
+            WriteCecilExpression($"{typeVar}.Methods.Add({methodVar});");
         }
 
         public bool HandleGlobalStatement(GlobalStatementSyntax node)
@@ -80,17 +80,18 @@ namespace Cecilifier.Core.AST
             }
         }
 
-        private void AddCecilExpressions(IEnumerable<string> expressions)
+        private void WriteCecilExpressions(IEnumerable<string> expressions)
         {
             foreach (var exp in expressions)
             {
-                context.WriteCecilExpression(exp);
+                WriteCecilExpression(exp);
             }
         }
 
-        private void AddCecilExpression(string expression)
+        private void WriteCecilExpression(string expression)
         {
             context.WriteCecilExpression(expression);
+            context.WriteNewLine();
         }
         
         private readonly string ilVar;
