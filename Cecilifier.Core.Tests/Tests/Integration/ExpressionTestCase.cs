@@ -78,7 +78,6 @@ namespace Cecilifier.Core.Tests.Integration
         }
 
         [Test]
-        [Ignore("REQUIRES TRANSFORMATION")]
         public void TestValueTypeAddress()
         {
             AssertResourceTest(@"Expressions/ValueTypeAddress");

@@ -7,7 +7,6 @@ using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Cecilifier.Core
 {
@@ -58,16 +57,6 @@ namespace Cecilifier.Core
                 : OutputKind.DynamicallyLinkedLibrary;
 
             return outputKind;
-        }
-
-        private SyntaxTree RunTransformations(SyntaxTree tree, SemanticModel semanticModel)
-        {
-            SyntaxNode root;
-            tree.TryGetRoot(out root);
-
-            var cu = (CompilationUnitSyntax) ((CompilationUnitSyntax) root).Accept(new ValueTypeToLocalVariableVisitor(semanticModel));
-
-            return CSharpSyntaxTree.Create(cu);
         }
     }
 
