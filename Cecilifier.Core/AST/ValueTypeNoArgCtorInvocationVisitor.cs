@@ -33,7 +33,6 @@ namespace Cecilifier.Core.AST
 
         public override void VisitMemberAccessExpression(MemberAccessExpressionSyntax node)
         {
-            //base.VisitMemberAccessExpression(node);
             DeclareAndInitializeValueTypeLocalVariable();
         }
 
@@ -56,9 +55,31 @@ namespace Cecilifier.Core.AST
 
             AddCecilExpression("{0}.Body.Variables.Add({1});", Context.DefinitionVariables.GetLastOf(MemberKind.Method).VariableName, tempLocalName);
 
-            AddCilInstruction(ilVar, OpCodes.Ldloca_S, tempLocalName);
-            AddCilInstruction(ilVar, OpCodes.Initobj, Context.TypeResolver.Resolve(ctorInfo.Symbol.ContainingType));
-            AddCilInstruction(ilVar, OpCodes.Ldloc, tempLocalName);
+            switch (ctorInfo.Symbol.ContainingType.SpecialType)
+            {
+                case SpecialType.System_Byte:
+                case SpecialType.System_Int16:
+                case SpecialType.System_Int32:
+                case SpecialType.System_Int64:
+                    AddCilInstruction(ilVar, OpCodes.Ldc_I4_0);
+                    AddCilInstruction(ilVar, OpCodes.Stloc, tempLocalName);
+                    AddCilInstruction(ilVar, OpCodes.Ldloca_S, tempLocalName);
+                    break;
+                    
+                case SpecialType.None:
+                    AddCilInstruction(ilVar, OpCodes.Ldloca_S, tempLocalName);
+                    AddCilInstruction(ilVar, OpCodes.Initobj, Context.TypeResolver.Resolve(ctorInfo.Symbol.ContainingType));
+                    
+                    //TODO: Loading the value is likely wrong; it may be necessary
+                    //      to load the address of the value type if the parent
+                    //      is a method invocation.
+                    AddCilInstruction(ilVar, OpCodes.Ldloc, tempLocalName);
+                    break;
+                
+                default:
+                    Context.WriteComment($"Instantiating {ctorInfo.Symbol.Name} is not supported.");
+                    break;
+            }
         }
     }
 }

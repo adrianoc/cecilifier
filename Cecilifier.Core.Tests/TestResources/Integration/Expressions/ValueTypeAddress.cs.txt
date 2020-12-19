@@ -1,4 +1,11 @@
-﻿class ValueTypeAddress
+﻿public struct MyValueType
+{
+    public MyValueType(string s) { }
+
+	public string Value() { return ""; }
+}
+
+class ValueTypeAddress
 {
 	private static void CallMethodOnValueTypeLocal()
 	{
@@ -17,20 +24,15 @@
 	{
 		System.Console.WriteLine(42.ToString());
 	}
-
-	private static void CallMethodOnValueTypeReturn()
-	{
-		System.Console.WriteLine(Value().ToString());
-	}
-
-	private static void MultipleCallMethodOnValueTypeReturn()
-	{
-		System.Console.WriteLine("{0} {1}", Value().ToString(), Value().ToString());
-	}
-
+	
 	private static void CallMethodOnValueTypeNewExpression()
 	{
 		System.Console.WriteLine(new System.Int32().ToString());
+	}
+	
+	private static void CallMethodOnValueTypeReturn()
+	{
+		System.Console.WriteLine(Value().ToString());
 	}
 
 	private static void CallMethodOnCustomValueTypeNewExpression()
@@ -38,36 +40,12 @@
 		System.Console.WriteLine(new MyValueType("x").Value());
 	}
 
-	private static void CallMethodOnCustomValueTypePointer()
+	/*
+	private static void MultipleCallMethodOnValueTypeReturn()
 	{
-		/*
-		unsafe
-		{
-			NOT SUPPORTED IN ROSLYN YET (AS OF 16/05/2012)
-
-			int i = 42;
-			int *pi = &i;
-
-			
-			System.Console.WriteLine((*pi).ToString());
-		}
-			*/
+		System.Console.WriteLine("{0} {1}", Value().ToString(), Value().ToString());
 	}
+	*/
 
-	private static int Value()
-	{
-		return 0;
-	}
-
-	private struct MyValueType
-	{
-		public MyValueType(string s)
-		{
-		}
-
-		public string Value()
-		{
-			return "";
-		}
-	}
+    private static int Value() { return 0; }
 }

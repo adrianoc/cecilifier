@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.Extensions;
@@ -265,23 +265,17 @@ namespace Cecilifier.Core.AST
             {
                 AddCilInstruction(ilVar, LoadOpCodeFor(literalNode), literalValue);
                 var localVarParent = (CSharpSyntaxNode) literalNode.Parent;
-                if (localVarParent.Accept(new UsageVisitor()) == UsageKind.CallTarget)
-                {
-                    var tempLocalName = MethodExtensions.LocalVariableNameFor("tmp_", "tmp_".UniqueId().ToString());
-                    AddCecilExpression("var {0} = new VariableDefinition({1});", tempLocalName, cecilTypeSystemReference);
-                    AddCecilExpression("{0}.Body.Variables.Add({1});", Context.DefinitionVariables.GetLastOf(MemberKind.Method).VariableName, tempLocalName);
-
-                    AddCilInstruction(ilVar, OpCodes.Stloc, $"{tempLocalName}");
-                    AddCilInstruction(ilVar, OpCodes.Ldloca_S, $"{tempLocalName}");
-                }
+                if (localVarParent.Accept(new UsageVisitor()) == UsageKind.CallTarget) 
+                    StoreTopOfStackInLocalVariableAndLoadItsAddress(cecilTypeSystemReference);
             }
         }
 
         public override void VisitInvocationExpression(InvocationExpressionSyntax node)
         {
             HandleMethodInvocation(node.Expression, node.ArgumentList);
+            StoreTopOfStackInLocalVariableAndLoadItsAddressIfNeeded(node);
         }
-
+        
         public override void VisitConditionalExpression(ConditionalExpressionSyntax node)
         {
             string Emit(OpCode op)
@@ -432,6 +426,8 @@ namespace Cecilifier.Core.AST
 
             Visit(node.ArgumentList);
             FixCallSite();
+            
+            StoreTopOfStackInLocalVariableAndLoadItsAddressIfNeeded(node);
         }
 
         private void ProcessPrefixPostfixOperators(ExpressionSyntax operand, OpCode opCode, bool isPrefix)
@@ -539,6 +535,32 @@ namespace Cecilifier.Core.AST
         public override void VisitCastExpression(CastExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitInitializerExpression(InitializerExpressionSyntax node) => LogUnsupportedSyntax(node);
 
+        private void StoreTopOfStackInLocalVariableAndLoadItsAddressIfNeeded(ExpressionSyntax node)
+        {
+            var invocation = (InvocationExpressionSyntax) node.Ancestors().FirstOrDefault(a => a.IsKind(SyntaxKind.InvocationExpression));
+            if (invocation == null || invocation.ArgumentList.Arguments.Any(argumentExp => argumentExp.Expression == node))
+                return;
+
+            var targetOfInvocationType = Context.SemanticModel.GetTypeInfo(node);
+            if (targetOfInvocationType.Type == null)
+                return;
+
+            if (!targetOfInvocationType.Type.IsValueType)
+                return;
+
+            StoreTopOfStackInLocalVariableAndLoadItsAddress(Context.TypeResolver.Resolve(targetOfInvocationType.Type));
+        }
+        
+        private void StoreTopOfStackInLocalVariableAndLoadItsAddress(string resolvedType)
+        {
+            var tempLocalName = MethodExtensions.LocalVariableNameFor("tmp_", "tmp_".UniqueId().ToString());
+            AddCecilExpression($"var {tempLocalName} = new VariableDefinition({resolvedType});");
+            AddCecilExpression($"{Context.DefinitionVariables.GetLastOf(MemberKind.Method).VariableName}.Body.Variables.Add({tempLocalName});");
+
+            AddCilInstruction(ilVar, OpCodes.Stloc, tempLocalName);
+            AddCilInstruction(ilVar, OpCodes.Ldloca_S, tempLocalName);
+        }
+        
         private OpCode LoadOpCodeFor(LiteralExpressionSyntax node)
         {
             var info = Context.SemanticModel.GetTypeInfo(node);
