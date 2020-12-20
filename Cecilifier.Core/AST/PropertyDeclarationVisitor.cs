@@ -113,7 +113,7 @@ namespace Cecilifier.Core.AST
                             AddBackingFieldIfNeeded(accessor);
 
                             AddCilInstruction(ilVar, OpCodes.Ldarg_0); // TODO: This assumes instance properties...
-                            AddCilInstruction(ilVar, OpCodes.Ldfld, MakeGenericTypeIfAppropriate(propInfo, backingFieldVar, propertyDeclaringTypeVar));
+                            AddCilInstruction(ilVar, OpCodes.Ldfld, Utils.MakeGenericTypeIfAppropriate(Context, propInfo, backingFieldVar, propertyDeclaringTypeVar));
                             
                             AddCilInstruction(ilVar, OpCodes.Ret);
                         }
@@ -150,7 +150,7 @@ namespace Cecilifier.Core.AST
 
                             AddCilInstruction(ilSetVar, OpCodes.Ldarg_0); // TODO: This assumes instance properties...
                             AddCilInstruction(ilSetVar, OpCodes.Ldarg_1);
-                            AddCilInstruction(ilSetVar, OpCodes.Stfld, MakeGenericTypeIfAppropriate(propInfo, backingFieldVar, propertyDeclaringTypeVar));
+                            AddCilInstruction(ilSetVar, OpCodes.Stfld, Utils.MakeGenericTypeIfAppropriate(Context, propInfo, backingFieldVar, propertyDeclaringTypeVar));
                         }
                         else
                         {
@@ -179,22 +179,6 @@ namespace Cecilifier.Core.AST
 
                 AddCecilExpressions(backingFieldExps);
             }
-        }
-
-        private string MakeGenericTypeIfAppropriate(IPropertySymbol propInfo, string existingFieldVar, string propertyDeclaringTypeVar)
-        {
-            if (!(propInfo.ContainingSymbol is INamedTypeSymbol ts) || !ts.IsGenericType || !propInfo.IsDefinedInCurrentType(Context))
-                return existingFieldVar;
-
-            //TODO: Register the following variable?
-            var genTypeVar = TempLocalVar($"gt_{propInfo.Name}_{propInfo.Parameters.Length}");
-            AddCecilExpressions(new[]
-            {
-                $"var {genTypeVar} = {propertyDeclaringTypeVar}.MakeGenericInstanceType({propertyDeclaringTypeVar}.GenericParameters.ToArray());",
-                $"var {genTypeVar}_ = new FieldReference({backingFieldVar}.Name, {backingFieldVar}.FieldType, {genTypeVar});",
-            });
-
-            return $"{genTypeVar}_";
         }
 
         private string AddPropertyDefinition(string propName, string propertyType)
