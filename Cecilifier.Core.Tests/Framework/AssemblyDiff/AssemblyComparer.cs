@@ -79,7 +79,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
             var targetModule = second.MainModule;
 
             var ret = true;
-            ISet<TypeDefinition> firstTypes = new HashSet<TypeDefinition>(sourceModule.Types);
+            var firstTypes = new HashSet<TypeDefinition>(sourceModule.Types);
 
             foreach (var sourceType in firstTypes.SelectMany(t => t.NestedTypes).Concat(firstTypes).Where(t => t.FullName != "<Module>"))
             {
