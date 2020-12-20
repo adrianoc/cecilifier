@@ -113,7 +113,6 @@ namespace Cecilifier.Core.AST
         private void PropertyAssignment(IPropertySymbol property)
         {
             // TODO: Handle:
-            // 1. Static properties.
             // 2. Property invocation in MAE.
 
             if (!property.IsStatic)
