@@ -7,6 +7,7 @@ namespace Cecilifier.Core.Tests.Integration
     {
         [TestCase("SimpleProperty")]
         [TestCase("SimpleAutoProperty")]
+        [TestCase("SimpleStaticProperty")]
         [TestCase("Indexer")]
         [TestCase("IndexerOverloads")]
         [TestCase("PropertyAccessors")]

@@ -1,0 +1,13 @@
+﻿class SimpleStaticProperty
+{
+	private static bool B 
+	{
+	    get { return false; }
+	    set {}
+	}
+	
+	bool M()
+	{
+	    return SimpleStaticProperty.B;
+	}
+}
