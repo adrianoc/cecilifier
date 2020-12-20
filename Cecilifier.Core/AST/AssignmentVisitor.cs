@@ -112,9 +112,6 @@ namespace Cecilifier.Core.AST
 
         private void PropertyAssignment(IPropertySymbol property)
         {
-            // TODO: Handle:
-            // 2. Property invocation in MAE.
-
             if (!property.IsStatic)
             {
                 InsertCilInstructionAfter<string>(InstructionPrecedingValueToLoad, ilVar, OpCodes.Ldarg_0);

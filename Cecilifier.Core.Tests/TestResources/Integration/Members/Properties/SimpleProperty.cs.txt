@@ -5,4 +5,6 @@
 	    get { return 0; }
 	    set {}
 	}
+	
+	int M(SimpleProperty s) { return s.P; }  
 }
