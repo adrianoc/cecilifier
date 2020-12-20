@@ -40,13 +40,6 @@ namespace Cecilifier.Core.Tests.Integration
         }
 
         [Test]
-        [Ignore("Not Implemented yet")]
-        public void TestInOutRefParameters()
-        {
-            AssertResourceTest(@"Members/Methods/InOutRefParameters");
-        }
-
-        [Test]
         public void TestInterfaceMethodVirtualImplementation()
         {
             AssertResourceTest(@"Members/Methods/InterfaceMethodVirtualImplementation");

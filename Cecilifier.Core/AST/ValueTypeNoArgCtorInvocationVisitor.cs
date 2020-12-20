@@ -57,11 +57,14 @@ namespace Cecilifier.Core.AST
 
             switch (ctorInfo.Symbol.ContainingType.SpecialType)
             {
+                case SpecialType.System_Char:
                 case SpecialType.System_Byte:
                 case SpecialType.System_Int16:
                 case SpecialType.System_Int32:
                 case SpecialType.System_Int64:
                     AddCilInstruction(ilVar, OpCodes.Ldc_I4_0);
+                    if (ctorInfo.Symbol.ContainingType.SpecialType == SpecialType.System_Int64)
+                        AddCilInstruction(ilVar, OpCodes.Conv_I8);
                     AddCilInstruction(ilVar, OpCodes.Stloc, tempLocalName);
                     AddCilInstruction(ilVar, OpCodes.Ldloca_S, tempLocalName);
                     break;
