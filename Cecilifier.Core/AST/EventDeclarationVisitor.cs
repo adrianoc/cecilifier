@@ -50,8 +50,8 @@ namespace Cecilifier.Core.AST
             }
             */
 
-            //TODO: semantic model fails to resolve the event. Bug?
-            //var eventSymbol = Context.SemanticModel.GetDeclaredSymbol(node);
+
+            var eventSymbol = (IEventSymbol) Context.SemanticModel.GetDeclaredSymbol(node.Declaration.Variables[0]);
             
             eventDeclaringTypeVar = Context.DefinitionVariables.GetLastOf(MemberKind.Type).VariableName;
 
@@ -65,9 +65,8 @@ namespace Cecilifier.Core.AST
             
             var eventType = ResolveType(node.Declaration.Type);
 
-            var isStatic = node.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword));
-            var addAccessorVar = AddAddAccessor(node, backingFieldVar, isStatic, declaringType, eventType);
-            var removeAccessorVar = AddRemoveAccessor(node, backingFieldVar, isStatic, declaringType, eventType);
+            var addAccessorVar = AddAddAccessor(node, eventSymbol, backingFieldVar, eventType);
+            var removeAccessorVar = AddRemoveAccessor(node, eventSymbol, backingFieldVar, eventType);
 
             AddCecilExpression($"{eventDeclaringTypeVar}.Methods.Add({addAccessorVar});");
             AddCecilExpression($"{eventDeclaringTypeVar}.Methods.Add({removeAccessorVar});");
@@ -78,24 +77,20 @@ namespace Cecilifier.Core.AST
             HandleAttributesInMemberDeclaration(node.AttributeLists, evtDefVar);
         }
 
-        private string AddRemoveAccessor(EventFieldDeclarationSyntax node, string backingFieldVar, bool isStatic, SyntaxNode declaringType, string eventType)
+        private string AddRemoveAccessor(EventFieldDeclarationSyntax node, IEventSymbol eventSymbol, string backingFieldVar, string eventType)
         {
-            if (node.Declaration.Variables.Count > 1)
-                throw new NotSupportedException($"Only one event per declaration is supported.");
-
-            var decl = node.Declaration.Variables[0];
-            var removeMethodVar = TempLocalVar($"{decl.Identifier.Text}_remove");
-            var isInterfaceDef = declaringType.IsKind(SyntaxKind.InterfaceDeclaration);
+            var removeMethodVar = TempLocalVar($"{eventSymbol.Name}_remove");
+            var isInterfaceDef = eventSymbol.ContainingType.TypeKind == TypeKind.Interface;
             var accessorModifiers = AccessModifiersForEventAccessors(node, isInterfaceDef);
 
-            var removeMethodExps = CecilDefinitionsFactory.Method(Context, removeMethodVar, $"remove_{decl.Identifier.Text}", accessorModifiers, Context.TypeResolver.ResolvePredefinedType("Void"), Array.Empty<TypeParameterSyntax>());
+            var removeMethodExps = CecilDefinitionsFactory.Method(Context, removeMethodVar, $"remove_{eventSymbol.Name}", accessorModifiers, Context.TypeResolver.ResolvePredefinedType("Void"), Array.Empty<TypeParameterSyntax>());
             var paramsExps = AddParameterTo(removeMethodVar, eventType);
 
             removeMethodExps = removeMethodExps.Concat(paramsExps);
             if (!isInterfaceDef)
             {
                 var localVarsExps = CreateLocalVarsForAddMethod(removeMethodVar, backingFieldVar);
-                var bodyExps = RemoveMethodBody(node, backingFieldVar, removeMethodVar, node.Declaration.Type, isStatic);
+                var bodyExps = RemoveMethodBody(eventSymbol, backingFieldVar, removeMethodVar);
                 removeMethodExps  = removeMethodExps.Concat(bodyExps).Concat(localVarsExps);
             }
             
@@ -107,17 +102,13 @@ namespace Cecilifier.Core.AST
             return removeMethodVar;            
         }
 
-        private string AddAddAccessor(EventFieldDeclarationSyntax node, string backingFieldVar, bool isStatic, SyntaxNode declaringType, string eventType)
+        private string AddAddAccessor(EventFieldDeclarationSyntax node, IEventSymbol eventSymbol, string backingFieldVar, string eventType)
         {
-            if (node.Declaration.Variables.Count > 1)
-                throw new NotSupportedException($"Only one event per declaration is supported.");
-
-            var decl = node.Declaration.Variables[0];
-            var addMethodVar = TempLocalVar($"{decl.Identifier.Text}_add");
-            var isInterfaceDef = declaringType.IsKind(SyntaxKind.InterfaceDeclaration);
+            var addMethodVar = TempLocalVar($"{eventSymbol.Name}_add");
+            var isInterfaceDef = eventSymbol.ContainingType.TypeKind == TypeKind.Interface;
             
             var accessorModifiers = AccessModifiersForEventAccessors(node, isInterfaceDef);
-            var addMethodExps = CecilDefinitionsFactory.Method(Context, addMethodVar, $"add_{decl.Identifier.Text}", accessorModifiers, Context.TypeResolver.ResolvePredefinedType("Void"), Array.Empty<TypeParameterSyntax>());
+            var addMethodExps = CecilDefinitionsFactory.Method(Context, addMethodVar, $"add_{eventSymbol.Name}", accessorModifiers, Context.TypeResolver.ResolvePredefinedType("Void"), Array.Empty<TypeParameterSyntax>());
 
             var paramsExps = AddParameterTo(addMethodVar, eventType);
             addMethodExps = addMethodExps.Concat(paramsExps);
@@ -125,7 +116,7 @@ namespace Cecilifier.Core.AST
             if (!isInterfaceDef)
             {
                 var localVarsExps = CreateLocalVarsForAddMethod(addMethodVar, backingFieldVar);
-                var bodyExps = AddMethodBody(node, backingFieldVar, addMethodVar, node.Declaration.Type, isStatic);
+                var bodyExps = AddMethodBody(eventSymbol, backingFieldVar, addMethodVar);
 
                 addMethodExps = addMethodExps.Concat(bodyExps).Concat(localVarsExps);
             }
@@ -153,39 +144,21 @@ namespace Cecilifier.Core.AST
             return accessorModifiers;
         }
 
-        //TODO: Use symbol (instead of syntax node), remove code duplication from property handling
-        //      It looks like there's a bug since Roslyn is failing to resolve  the symbol for the event
-        private string MakeGenericTypeIfAppropriate(EventFieldDeclarationSyntax node, string existingFieldVar)
-        {
-            var typeDecl = ((TypeDeclarationSyntax) node.Parent);
-            if (typeDecl.TypeParameterList == null || typeDecl.TypeParameterList.IsMissing)
-                return existingFieldVar;
-
-            //TODO: Register the following variable?
-            var genTypeVar = TempLocalVar($"gt_{node.Declaration.Variables[0].Identifier.Text}_{node.GetLocation().SourceSpan.Start}");
-            AddCecilExpressions(new[]
-            {
-                $"var {genTypeVar} = {eventDeclaringTypeVar}.MakeGenericInstanceType({eventDeclaringTypeVar}.GenericParameters.ToArray());",
-                $"var {genTypeVar}_ = new FieldReference({existingFieldVar}.Name, {existingFieldVar}.FieldType, {genTypeVar});",
-            });
-
-            return $"{genTypeVar}_";
-        }
-
         private IEnumerable<string> CreateLocalVarsForAddMethod(string addMethodVar, string backingFieldVar)
         {
             for (int i = 0; i < 3; i++)
                 yield return $"{addMethodVar}.Body.Variables.Add(new VariableDefinition({backingFieldVar}.FieldType));";
         }
         
-        private IEnumerable<string> RemoveMethodBody(EventFieldDeclarationSyntax node, string backingFieldVar, string removeMethodVar, TypeSyntax eventType, bool isStatic)
+        private IEnumerable<string> RemoveMethodBody(IEventSymbol eventSymbol, string backingFieldVar, string removeMethodVar)
         {
+            var isStatic = eventSymbol.IsStatic;
             var (ldfld, ldflda) = isStatic ? (OpCodes.Ldsfld, OpCodes.Ldsflda) : (OpCodes.Ldfld, OpCodes.Ldflda);
             
             var removeMethod = Utils.ImportFromMainModule("typeof(Delegate).GetMethod(\"Remove\")");
             var compareExchangeExps = CompareExchangeMethodResolvingExps(backingFieldVar, out var compExcVar);
 
-            var fieldVar = MakeGenericTypeIfAppropriate(node, backingFieldVar);
+            var fieldVar = Utils.MakeGenericTypeIfAppropriate(Context, eventSymbol, backingFieldVar, eventDeclaringTypeVar);
 
             // static member access does not have a *this* so simply replace with *Nop*
             var lgarg_0 = isStatic ? OpCodes.Nop : OpCodes.Ldarg_0;
@@ -199,7 +172,7 @@ namespace Cecilifier.Core.AST
                 OpCodes.Ldloc_1,
                 OpCodes.Ldarg.WithOperand(isStatic ? "0" : "1"),
                 OpCodes.Call.WithOperand(removeMethod),
-                OpCodes.Castclass.WithOperand(ResolveType(eventType)),
+                OpCodes.Castclass.WithOperand(Context.TypeResolver.Resolve(eventSymbol.Type)),
                 OpCodes.Stloc_2,
                 lgarg_0,
                 ldflda.WithOperand(fieldVar),
@@ -216,14 +189,15 @@ namespace Cecilifier.Core.AST
             return compareExchangeExps.Concat(bodyExps);
         }
         
-        private IEnumerable<string> AddMethodBody(EventFieldDeclarationSyntax node, string backingFieldVar, string addMethodVar, TypeSyntax eventType, bool isStatic)
+        private IEnumerable<string> AddMethodBody(IEventSymbol eventSymbol, string backingFieldVar, string addMethodVar)
         {
+            var isStatic = eventSymbol.IsStatic;
             var (ldfld, ldflda) = isStatic ? (OpCodes.Ldsfld, OpCodes.Ldsflda) : (OpCodes.Ldfld, OpCodes.Ldflda);
 
             var combineMethod = Utils.ImportFromMainModule("typeof(Delegate).GetMethods().Single(m => m.Name == \"Combine\" && m.IsStatic && m.GetParameters().Length == 2)");
             var compareExchangeExps = CompareExchangeMethodResolvingExps(backingFieldVar, out var compExcVar);
 
-            var fieldVar = MakeGenericTypeIfAppropriate(node, backingFieldVar);
+            var fieldVar = Utils.MakeGenericTypeIfAppropriate(Context, eventSymbol, backingFieldVar, eventDeclaringTypeVar);
 
             // static member access does not have a *this* so simply replace with *Nop*
             var lgarg_0 = isStatic ? OpCodes.Nop : OpCodes.Ldarg_0;
@@ -237,7 +211,7 @@ namespace Cecilifier.Core.AST
                 OpCodes.Ldloc_1,
                 OpCodes.Ldarg.WithOperand(isStatic ? "0" : "1"),
                 OpCodes.Call.WithOperand(combineMethod),
-                OpCodes.Castclass.WithOperand(ResolveType(eventType)),
+                OpCodes.Castclass.WithOperand(Context.TypeResolver.Resolve(eventSymbol.Type)),
                 OpCodes.Stloc_2,
                 lgarg_0,
                 ldflda.WithOperand(fieldVar),
