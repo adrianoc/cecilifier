@@ -138,7 +138,7 @@ namespace Cecilifier.Core.AST
                         AddCecilExpression($"{setMethodVar}.Body = new MethodBody({setMethodVar});");
                         AddCecilExpression($"{propDefVar}.SetMethod = {setMethodVar};");
 
-                        AddCecilExpression($"{setMethodVar}.Parameters.Add(new ParameterDefinition({propertyType}));");
+                        AddCecilExpression($"{setMethodVar}.Parameters.Add(new ParameterDefinition(\"value\", ParameterAttributes.None, {propertyType}));");
                         AddCecilExpression($"var {ilSetVar} = {setMethodVar}.Body.GetILProcessor();");
 
                         if (propInfo.ContainingType.TypeKind == TypeKind.Interface)
