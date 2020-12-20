@@ -84,7 +84,6 @@ namespace Cecilifier.Core.Tests.Integration
         }
 
         [Test]
-        [Ignore("newing primitives are not supported.")]
         public void TestNewPrimitive()
         {
             AssertResourceTest(@"Expressions/NewPrimitive");

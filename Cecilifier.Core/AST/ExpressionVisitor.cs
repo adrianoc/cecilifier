@@ -249,24 +249,24 @@ namespace Cecilifier.Core.AST
 
                 case SyntaxKind.CharacterLiteralExpression:
                 case SyntaxKind.NumericLiteralExpression:
-                    AddLocalVariableAndHandleCallOnValueTypeLiterals(node, Context.TypeResolver.ResolvePredefinedType(GetSpecialType(SpecialType.System_Int32)), node.ToString());
+                    AddLocalVariableAndHandleCallOnValueTypeLiterals(node, GetSpecialType(SpecialType.System_Int32), node.ToString());
                     break;
 
                 case SyntaxKind.TrueLiteralExpression:
                 case SyntaxKind.FalseLiteralExpression:
-                    AddLocalVariableAndHandleCallOnValueTypeLiterals(node, Context.TypeResolver.ResolvePredefinedType(GetSpecialType(SpecialType.System_Boolean)), bool.Parse(node.ToString()) ? 1 : 0);
+                    AddLocalVariableAndHandleCallOnValueTypeLiterals(node, GetSpecialType(SpecialType.System_Boolean), bool.Parse(node.ToString()) ? 1 : 0);
                     break;
 
                 default:
                     throw new ArgumentException($"Literal ( {node}) of type {node.Kind()} not supported yet.");
             }
 
-            void AddLocalVariableAndHandleCallOnValueTypeLiterals(LiteralExpressionSyntax literalNode, string cecilTypeSystemReference, object literalValue)
+            void AddLocalVariableAndHandleCallOnValueTypeLiterals(LiteralExpressionSyntax literalNode, ITypeSymbol expressionType, object literalValue)
             {
                 AddCilInstruction(ilVar, LoadOpCodeFor(literalNode), literalValue);
                 var localVarParent = (CSharpSyntaxNode) literalNode.Parent;
                 if (localVarParent.Accept(new UsageVisitor()) == UsageKind.CallTarget) 
-                    StoreTopOfStackInLocalVariableAndLoadItsAddress(cecilTypeSystemReference);
+                    StoreTopOfStackInLocalVariableAndLoadItsAddress(expressionType);
             }
         }
 
@@ -548,13 +548,13 @@ namespace Cecilifier.Core.AST
             if (!targetOfInvocationType.Type.IsValueType)
                 return;
 
-            StoreTopOfStackInLocalVariableAndLoadItsAddress(Context.TypeResolver.Resolve(targetOfInvocationType.Type));
+            StoreTopOfStackInLocalVariableAndLoadItsAddress(targetOfInvocationType.Type);
         }
         
-        private void StoreTopOfStackInLocalVariableAndLoadItsAddress(string resolvedType)
+        private void StoreTopOfStackInLocalVariableAndLoadItsAddress(ITypeSymbol type)
         {
             var tempLocalName = MethodExtensions.LocalVariableNameFor("tmp_", "tmp_".UniqueId().ToString());
-            AddCecilExpression($"var {tempLocalName} = new VariableDefinition({resolvedType});");
+            AddCecilExpression($"var {tempLocalName} = new VariableDefinition({Context.TypeResolver.Resolve(type)});");
             AddCecilExpression($"{Context.DefinitionVariables.GetLastOf(MemberKind.Method).VariableName}.Body.Variables.Add({tempLocalName});");
 
             AddCilInstruction(ilVar, OpCodes.Stloc, tempLocalName);
@@ -622,15 +622,11 @@ namespace Cecilifier.Core.AST
         private void EnsureMethodAvailable(IMethodSymbol method, TypeParameterSyntax[] typeParameters)
         {
             if (!method.IsDefinedInCurrentType(Context))
-            {
                 return;
-            }
 
             var varName = method.LocalVariableName();
             if (Context.Contains(varName))
-            {
                 return;
-            }
 
             var returnType = Context.TypeResolver.Resolve(method.ReturnType);
             
