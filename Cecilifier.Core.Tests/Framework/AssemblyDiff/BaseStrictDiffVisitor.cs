@@ -72,8 +72,6 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                 foreach (var sourceConstraint in sourceParam.Constraints.OrderBy(c => c.ConstraintType.FullName))
                 {
                     var targetConstraint = sortedTargetConstraintTypes[constraintIndex++];
-                    //TODO: Compare minimum # of constraints
-
                     if (sourceConstraint.ConstraintType.FullName != targetConstraint.ConstraintType.FullName)
                     {
                         output.WriteLine($"Generic constraint types ({sourceConstraint.ConstraintType.FullName} / {targetConstraint.ConstraintType.FullName}) differ on generic type parameter '{sourceParam.Name}'");
