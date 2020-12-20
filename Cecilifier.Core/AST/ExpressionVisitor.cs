@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.Extensions;
@@ -314,7 +314,7 @@ namespace Cecilifier.Core.AST
         public override void VisitArgument(ArgumentSyntax node)
         {
             // in the case the parent of the argument syntax is an array access
-            // *CurrentLine* wil represent the instruction that loaded the array
+            // *CurrentLine* will represent the instruction that loaded the array
             // reference into the stack.
             //
             // If the argument is a System.Index the actual offset to be used
