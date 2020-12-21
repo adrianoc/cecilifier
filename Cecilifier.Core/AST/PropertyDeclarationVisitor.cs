@@ -105,10 +105,8 @@ namespace Cecilifier.Core.AST
                             break;
                         
                         var ilVar = TempLocalVar("ilVar_get_");
-                        var ilProcessorExp = $"var {ilVar} = {getMethodVar}.Body.GetILProcessor();";
-                        
-                        AddCecilExpression(ilProcessorExp);
-                        if (accessor.Body == null) //is this an auto property ?
+                        AddCecilExpression($"var {ilVar} = {getMethodVar}.Body.GetILProcessor();");
+                        if (accessor.Body == null && accessor.ExpressionBody == null) //is this an auto property ?
                         {
                             AddBackingFieldIfNeeded(accessor);
 
@@ -117,9 +115,15 @@ namespace Cecilifier.Core.AST
                             
                             AddCilInstruction(ilVar, OpCodes.Ret);
                         }
-                        else
+                        else if (accessor.Body != null)
                         {
                             StatementVisitor.Visit(Context, ilVar, accessor.Body);
+                        }
+                        else
+                        {
+                            var expressionVisitor = new ExpressionVisitor(Context, ilVar);
+                            accessor.ExpressionBody.Accept(expressionVisitor);
+                            AddCilInstruction(ilVar, OpCodes.Ret);
                         }
 
                         break;
@@ -144,7 +148,7 @@ namespace Cecilifier.Core.AST
                         if (propInfo.ContainingType.TypeKind == TypeKind.Interface)
                             break;
 
-                        if (accessor.Body == null) //is this an auto property ?
+                        if (accessor.Body == null && accessor.ExpressionBody == null) //is this an auto property ?
                         {
                             AddBackingFieldIfNeeded(accessor);
 
@@ -152,10 +156,15 @@ namespace Cecilifier.Core.AST
                             AddCilInstruction(ilSetVar, OpCodes.Ldarg_1);
                             AddCilInstruction(ilSetVar, OpCodes.Stfld, Utils.MakeGenericTypeIfAppropriate(Context, propInfo, backingFieldVar, propertyDeclaringTypeVar));
                         }
-                        else
+                        else if (accessor.Body != null)
                         {
                             StatementVisitor.Visit(Context, ilSetVar, accessor.Body);
                         }
+                        else
+                        {
+                            var expressionVisitor = new ExpressionVisitor(Context, ilSetVar);
+                            accessor.ExpressionBody.Accept(expressionVisitor);
+                        }      
 
                         AddCilInstruction(ilSetVar, OpCodes.Ret);
                         break;

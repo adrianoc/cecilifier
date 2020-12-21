@@ -1,0 +1,27 @@
+﻿using System;
+class ExpressionBodiedMembers
+{
+	public static void StaticVoid() => Console.WriteLine(); 
+	public static int StaticNonVoid() => 1; 
+	public static void StaticVoidParam(string s) => Console.WriteLine(s); 
+	public static int StaticNonVoidParam(int i) => i + 1; 
+	
+	public void InstanceVoid() => Console.WriteLine(); 
+	public int InstanceNonVoid() => 1;
+	public void InstanceVoidParam(string s) => Console.WriteLine(s); 
+	public int InstanceNonVoidParam(int i) => i + 1;
+	
+	public int Prop 
+	{
+	    get => 10;
+	    set => Console.WriteLine(value);
+	}
+	
+	/*
+	public string this[int i]
+	{
+	    get => i.ToString();
+	    set => Console.WriteLine(i.ToString() + ":" + value);
+	}
+	*/
+} 
