@@ -8,6 +8,7 @@ namespace Cecilifier.Core.Tests.Integration.Types
         [TestCase("SimpleTypeWithAttribute")]
         [TestCase("AttributeWithProperty")]
         [TestCase("AttributeFromSameAssembly")]
+        [TestCase("AttributeWithTypeOfExpression")]
         public void AttributeTests(string typeName)
         {
             AssertResourceTest($@"Types/{typeName}");

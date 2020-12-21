@@ -1,0 +1,16 @@
+﻿using System;
+
+[AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
+class SomeAttribute : System.Attribute 
+{
+    public SomeAttribute() {}
+    public SomeAttribute(Type t) {}
+    
+    public Type Type { get; set ;}
+}
+
+[Some(typeof(string))]
+[Some(Type = typeof(int))]
+class AttributeWithTypeOfExpression 
+{   
+}
