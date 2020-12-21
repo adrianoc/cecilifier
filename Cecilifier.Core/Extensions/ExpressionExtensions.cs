@@ -15,7 +15,6 @@ namespace Cecilifier.Core.Extensions
         }
     }
 
-    //TODO: Handle other expressions? typeof() ?
     public class CustomAttributeArgumentEvaluator : CSharpSyntaxVisitor<string>
     {
         private readonly IVisitorContext _context;
@@ -23,6 +22,12 @@ namespace Cecilifier.Core.Extensions
         internal CustomAttributeArgumentEvaluator(IVisitorContext context)
         {
             _context = context;
+        }
+
+        public override string VisitTypeOfExpression(TypeOfExpressionSyntax node)
+        {
+            var typeSymbol = _context.SemanticModel.GetTypeInfo(node.Type);
+            return _context.TypeResolver.Resolve(typeSymbol.Type);
         }
 
         public override string VisitMemberAccessExpression(MemberAccessExpressionSyntax node)
