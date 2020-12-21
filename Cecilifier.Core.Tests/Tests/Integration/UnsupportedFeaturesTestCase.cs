@@ -11,15 +11,6 @@ namespace Cecilifier.Core.Tests.Integration
     [TestFixture]
     public class UnsupportedFeaturesTestCase
     {
-        [TestCase("void Do() => System.Console.WriteLine();", TestName = "Instance method with no return")]
-        [TestCase("static void Do() => System.Console.WriteLine();", TestName = "Static method with no return")]
-        [TestCase("int Do() => 1;", TestName = "Instance method with return")]
-        [TestCase("static int Do() => 1;", TestName = "Static method with return")]
-        public void ExpressionBodiedMethods(string methodImpl)
-        {
-            AssertUnsupportedFeature($"class Test {{ {methodImpl} }}", "Syntax 'ArrowExpressionClause' is not supported");
-        }
-
         [TestCase("yield return 1", TestName = "YieldReturn")]
         [TestCase("yield break", TestName = "YieldBreak")]
         public void EnumeratorBlocks(string statement)

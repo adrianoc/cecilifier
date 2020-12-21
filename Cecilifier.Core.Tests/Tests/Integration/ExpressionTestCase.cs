@@ -152,5 +152,11 @@ namespace Cecilifier.Core.Tests.Integration
         {
             AssertResourceTest("Expressions/DelegateInvocation");
         }
+        
+        [Test]
+        public void TestExpressionBodiedMembers()
+        {
+            AssertResourceTest("Expressions/ExpressionBodiedMembers");
+        }
     }
 }
