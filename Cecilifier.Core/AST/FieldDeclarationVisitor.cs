@@ -65,9 +65,7 @@ namespace Cecilifier.Core.AST
         private string ProcessRequiredModifiers(SyntaxTokenList modifiers, string originalType)
         {
             if (modifiers.All(m => m.Kind() != SyntaxKind.VolatileKeyword))
-            {
                 return null;
-            }
 
             var id = $"mod_req{NextLocalVariableId()}";
             var mod_req = $"var {id} = new RequiredModifierType({ImportExpressionForType(typeof(IsVolatile))}, {originalType});";

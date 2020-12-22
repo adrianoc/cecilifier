@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Microsoft.CodeAnalysis;
@@ -14,12 +15,9 @@ namespace Cecilifier.Core.AST
     internal class PropertyDeclarationVisitor : SyntaxWalkerBase
     {
         private static readonly List<ParamData> NoParameters = new List<ParamData>();
-
         private string backingFieldVar;
 
-        public PropertyDeclarationVisitor(IVisitorContext context) : base(context)
-        {
-        }
+        public PropertyDeclarationVisitor(IVisitorContext context) : base(context) { }
 
         public override void VisitIndexerDeclaration(IndexerDeclarationSyntax node)
         {
@@ -80,7 +78,7 @@ namespace Cecilifier.Core.AST
             {
                 $"var {ctorVar} = {ImportFromMainModule("typeof(System.Reflection.DefaultMemberAttribute).GetConstructor(new Type[] { typeof(string) })")};",
                 $"var {customAttrVar} = new CustomAttribute({ctorVar});",
-                $"{customAttrVar}.ConstructorArguments.Add(new CustomAttributeArgument({Context.TypeResolver.ResolvePredefinedType("String")}, \"{value}\"));",
+                $"{customAttrVar}.ConstructorArguments.Add(new CustomAttributeArgument({Context.TypeResolver.Resolve(GetSpecialType(SpecialType.System_String))}, \"{value}\"));",
                 $"{definitionVar}.CustomAttributes.Add({customAttrVar});"
             };
 
@@ -91,14 +89,14 @@ namespace Cecilifier.Core.AST
         {
             var propInfo = (IPropertySymbol) Context.SemanticModel.GetDeclaredSymbol(node);
             var declaringType = node.ResolveDeclaringType<TypeDeclarationSyntax>();
-            foreach (var accessor in node.AccessorList.Accessors)
+            foreach (var accessor in node.AccessorList!.Accessors)
             {
                 Context.WriteNewLine();
                 var accessorModifiers = node.Modifiers.MethodModifiersToCecil(ModifiersToCecil, "MethodAttributes.SpecialName", propInfo.GetMethod ?? propInfo.SetMethod);
                 switch (accessor.Keyword.Kind())
                 {
                     case SyntaxKind.GetKeyword:
-                        Context.WriteComment("getter");
+                        Context.WriteComment(" Getter");
                         var getMethodVar = TempLocalVar(propertyDeclaringTypeVar + "_get_");
                         Context.DefinitionVariables.RegisterMethod(declaringType.Identifier.Text, $"get_{propName}", parameters.Select(p => p.Type).ToArray(), getMethodVar);
 
@@ -116,7 +114,7 @@ namespace Cecilifier.Core.AST
                         AddCecilExpression($"var {ilVar} = {getMethodVar}.Body.GetILProcessor();");
                         if (accessor.Body == null && accessor.ExpressionBody == null) //is this an auto property ?
                         {
-                            AddBackingFieldIfNeeded(accessor);
+                            AddBackingFieldIfNeeded(accessor, node.AccessorList.Accessors.Any(acc => acc.IsKind(SyntaxKind.InitAccessorDeclaration)));
 
                             AddCilInstruction(ilVar, OpCodes.Ldarg_0); // TODO: This assumes instance properties...
                             AddCilInstruction(ilVar, OpCodes.Ldfld, Utils.MakeGenericTypeIfAppropriate(Context, propInfo, backingFieldVar, propertyDeclaringTypeVar));
@@ -133,71 +131,85 @@ namespace Cecilifier.Core.AST
                             accessor.ExpressionBody.Accept(expressionVisitor);
                             AddCilInstruction(ilVar, OpCodes.Ret);
                         }
-
                         break;
 
+                    case SyntaxKind.InitKeyword:
+                        Context.WriteComment(" Init");
+                        var setterReturnType = $"new RequiredModifierType({ImportExpressionForType(typeof(IsExternalInit))}, {Context.TypeResolver.Resolve(GetSpecialType(SpecialType.System_Void))})";
+                        AddSetterMethod(accessorModifiers, setterReturnType, accessor);
+                        break;
+                    
                     case SyntaxKind.SetKeyword:
-                        Context.WriteComment("setter");
-                        var setMethodVar = TempLocalVar(propertyDeclaringTypeVar + "_set_");
-                        var localParams = new List<string>(parameters.Select(p => p.Type));
-                        localParams.Add(Context.GetTypeInfo(node.Type).Type.Name); // Setters always have at least one `value` parameter.
-                        Context.DefinitionVariables.RegisterMethod(declaringType.Identifier.Text, $"set_{propName}", localParams.ToArray(), setMethodVar);
-                        var ilSetVar = TempLocalVar("ilVar_set_");
-
-                        AddCecilExpression($"var {setMethodVar} = new MethodDefinition(\"set_{propName}\", {accessorModifiers}, {Context.TypeResolver.ResolvePredefinedType("Void")});");
-                        parameters.ForEach(p => AddCecilExpression($"{setMethodVar}.Parameters.Add({p.VariableName});"));
-                        AddCecilExpression($"{propertyDeclaringTypeVar}.Methods.Add({setMethodVar});");
-
-                        AddCecilExpression($"{setMethodVar}.Body = new MethodBody({setMethodVar});");
-                        AddCecilExpression($"{propDefVar}.SetMethod = {setMethodVar};");
-
-                        AddCecilExpression($"{setMethodVar}.Parameters.Add(new ParameterDefinition(\"value\", ParameterAttributes.None, {propertyType}));");
-                        AddCecilExpression($"var {ilSetVar} = {setMethodVar}.Body.GetILProcessor();");
-
-                        if (propInfo.ContainingType.TypeKind == TypeKind.Interface)
-                            break;
-
-                        if (accessor.Body == null && accessor.ExpressionBody == null) //is this an auto property ?
-                        {
-                            AddBackingFieldIfNeeded(accessor);
-
-                            AddCilInstruction(ilSetVar, OpCodes.Ldarg_0); // TODO: This assumes instance properties...
-                            AddCilInstruction(ilSetVar, OpCodes.Ldarg_1);
-                            AddCilInstruction(ilSetVar, OpCodes.Stfld, Utils.MakeGenericTypeIfAppropriate(Context, propInfo, backingFieldVar, propertyDeclaringTypeVar));
-                        }
-                        else if (accessor.Body != null)
-                        {
-                            StatementVisitor.Visit(Context, ilSetVar, accessor.Body);
-                        }
-                        else
-                        {
-                            var expressionVisitor = new ExpressionVisitor(Context, ilSetVar);
-                            accessor.ExpressionBody.Accept(expressionVisitor);
-                        }      
-
-                        AddCilInstruction(ilSetVar, OpCodes.Ret);
+                        Context.WriteComment(" Setter");
+                        AddSetterMethod(accessorModifiers, Context.TypeResolver.Resolve(GetSpecialType(SpecialType.System_Void)), accessor);
                         break; 
                     default:
                         throw new NotImplementedException($"Accessor: {accessor.Keyword}");
                 }
             }
 
-            void AddBackingFieldIfNeeded(AccessorDeclarationSyntax accessor)
+            void AddBackingFieldIfNeeded(AccessorDeclarationSyntax accessor, bool hasInitProperty)
             {
                 if (backingFieldVar != null)
-                {
                     return;
-                }
 
                 backingFieldVar = TempLocalVar("bf");
                 var backingFieldName = $"<{propName}>k__BackingField";
+                var modifiers = ModifiersToCecil("FieldAttributes", accessor.Modifiers, "Private");
+                if (hasInitProperty)
+                {
+                    modifiers = modifiers + " | FieldAttributes.InitOnly";
+                }
+                
                 var backingFieldExps = new[]
                 {
-                    $"var {backingFieldVar} = new FieldDefinition(\"{backingFieldName}\", {ModifiersToCecil("FieldAttributes", accessor.Modifiers, "Private")}, {propertyType});",
+                    $"var {backingFieldVar} = new FieldDefinition(\"{backingFieldName}\", {modifiers}, {propertyType});",
                     $"{propertyDeclaringTypeVar}.Fields.Add({backingFieldVar});"
                 };
 
                 AddCecilExpressions(backingFieldExps);
+            }
+
+            void AddSetterMethod(string accessorModifiers, string setterReturnType, AccessorDeclarationSyntax accessor)
+            {
+                var setMethodVar = TempLocalVar(propertyDeclaringTypeVar + "_set_");
+                var localParams = new List<string>(parameters.Select(p => p.Type));
+                localParams.Add(Context.GetTypeInfo(node.Type).Type.Name); // Setters always have at least one `value` parameter.
+                Context.DefinitionVariables.RegisterMethod(declaringType.Identifier.Text, $"set_{propName}", localParams.ToArray(), setMethodVar);
+                var ilSetVar = TempLocalVar("ilVar_set_");
+
+                AddCecilExpression($"var {setMethodVar} = new MethodDefinition(\"set_{propName}\", {accessorModifiers}, {setterReturnType});");
+                parameters.ForEach(p => AddCecilExpression($"{setMethodVar}.Parameters.Add({p.VariableName});"));
+                AddCecilExpression($"{propertyDeclaringTypeVar}.Methods.Add({setMethodVar});");
+
+                AddCecilExpression($"{setMethodVar}.Body = new MethodBody({setMethodVar});");
+                AddCecilExpression($"{propDefVar}.SetMethod = {setMethodVar};");
+
+                AddCecilExpression($"{setMethodVar}.Parameters.Add(new ParameterDefinition(\"value\", ParameterAttributes.None, {propertyType}));");
+                AddCecilExpression($"var {ilSetVar} = {setMethodVar}.Body.GetILProcessor();");
+
+                if (propInfo.ContainingType.TypeKind == TypeKind.Interface)
+                    return;
+
+                if (accessor.Body == null && accessor.ExpressionBody == null) //is this an auto property ?
+                {
+                    AddBackingFieldIfNeeded(accessor, node.AccessorList.Accessors.Any(acc => acc.IsKind(SyntaxKind.InitAccessorDeclaration)));
+
+                    AddCilInstruction(ilSetVar, OpCodes.Ldarg_0); // TODO: This assumes instance properties...
+                    AddCilInstruction(ilSetVar, OpCodes.Ldarg_1);
+                    AddCilInstruction(ilSetVar, OpCodes.Stfld, Utils.MakeGenericTypeIfAppropriate(Context, propInfo, backingFieldVar, propertyDeclaringTypeVar));
+                }
+                else if (accessor.Body != null)
+                {
+                    StatementVisitor.Visit(Context, ilSetVar, accessor.Body);
+                }
+                else
+                {
+                    var expressionVisitor = new ExpressionVisitor(Context, ilSetVar);
+                    accessor.ExpressionBody.Accept(expressionVisitor);
+                }
+
+                AddCilInstruction(ilSetVar, OpCodes.Ret);
             }
         }
 
