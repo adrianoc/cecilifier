@@ -76,6 +76,9 @@ namespace Cecilifier.Core.AST
 
         internal void DefaultCtorInjector(string typeDefVar, ClassDeclarationSyntax declaringClass)
         {
+            
+            Context.WriteNewLine();
+            Context.WriteComment($"** Constructor: {declaringClass.Identifier}() **");
             var ctorLocalVar = AddOrUpdateCtorDefinition(declaringClass);
 
             AddCecilExpression($"{typeDefVar}.Methods.Add({ctorLocalVar});");

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
@@ -22,6 +23,9 @@ namespace Cecilifier.Core.AST
 
         public override void VisitIndexerDeclaration(IndexerDeclarationSyntax node)
         {
+            Context.WriteNewLine();
+            Context.WriteComment($"** Property indexer **");
+            
             var propertyType = ResolveType(node.Type);
             var propertyDeclaringTypeVar = Context.DefinitionVariables.GetLastOf(MemberKind.Type).VariableName;
             var propName = "Item";
@@ -53,6 +57,8 @@ namespace Cecilifier.Core.AST
 
         public override void VisitPropertyDeclaration(PropertyDeclarationSyntax node)
         {
+            Context.WriteNewLine();
+            Context.WriteComment($"** Property: {node.Identifier} **");
             var propertyType = ResolveType(node.Type);
             var propertyDeclaringTypeVar = Context.DefinitionVariables.GetLastOf(MemberKind.Type).VariableName;
             var propName = node.Identifier.ValueText;
@@ -87,10 +93,12 @@ namespace Cecilifier.Core.AST
             var declaringType = node.ResolveDeclaringType<TypeDeclarationSyntax>();
             foreach (var accessor in node.AccessorList.Accessors)
             {
+                Context.WriteNewLine();
                 var accessorModifiers = node.Modifiers.MethodModifiersToCecil(ModifiersToCecil, "MethodAttributes.SpecialName", propInfo.GetMethod ?? propInfo.SetMethod);
                 switch (accessor.Keyword.Kind())
                 {
                     case SyntaxKind.GetKeyword:
+                        Context.WriteComment("getter");
                         var getMethodVar = TempLocalVar(propertyDeclaringTypeVar + "_get_");
                         Context.DefinitionVariables.RegisterMethod(declaringType.Identifier.Text, $"get_{propName}", parameters.Select(p => p.Type).ToArray(), getMethodVar);
 
@@ -129,6 +137,7 @@ namespace Cecilifier.Core.AST
                         break;
 
                     case SyntaxKind.SetKeyword:
+                        Context.WriteComment("setter");
                         var setMethodVar = TempLocalVar(propertyDeclaringTypeVar + "_set_");
                         var localParams = new List<string>(parameters.Select(p => p.Type));
                         localParams.Add(Context.GetTypeInfo(node.Type).Type.Name); // Setters always have at least one `value` parameter.
@@ -167,7 +176,9 @@ namespace Cecilifier.Core.AST
                         }      
 
                         AddCilInstruction(ilSetVar, OpCodes.Ret);
-                        break;
+                        break; 
+                    default:
+                        throw new NotImplementedException($"Accessor: {accessor.Keyword}");
                 }
             }
 
