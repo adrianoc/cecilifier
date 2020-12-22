@@ -2,6 +2,12 @@
 {
 	private int P { get; set; }
 	
+	private bool B 
+	{
+	    get;
+	    init; 
+	}
+	
 	public void Foo(PropertyAccessors o)
 	{
 	    o.P = 1;
