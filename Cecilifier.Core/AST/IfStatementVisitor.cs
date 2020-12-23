@@ -1,4 +1,5 @@
 ﻿using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Mono.Cecil.Cil;
 
 namespace Cecilifier.Core.AST
 {
@@ -22,9 +23,9 @@ namespace Cecilifier.Core.AST
 
             var elsePrologVarName = TempLocalVar("esp");
             WriteCecilExpression(Context, $"var {elsePrologVarName} = {_ilVar}.Create(OpCodes.Nop);");
-            WriteCecilExpression(Context, $"{_ilVar}.Append({_ilVar}.Create(OpCodes.Brfalse, {elsePrologVarName}));");
+            AddCilInstruction(_ilVar, OpCodes.Brfalse, elsePrologVarName);
 
-            WriteCecilExpression(Context, "//if body");
+            Context.WriteComment("if body");
             StatementVisitor.Visit(Context, _ilVar, node.Statement);
 
             var elseEndTargetVarName = TempLocalVar("ese");
@@ -45,7 +46,7 @@ namespace Cecilifier.Core.AST
 
             WriteCecilExpression(Context, $"{_ilVar}.Append({elseEndTargetVarName});");
             WriteCecilExpression(Context, $"{Context.DefinitionVariables.GetLastOf(MemberKind.Method).VariableName}.Body.OptimizeMacros();");
-            WriteCecilExpression(Context, $"// end if ({node.Condition})");
+            Context.WriteComment($" end if ({node.Condition})");
         }
     }
 }
