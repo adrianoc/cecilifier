@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.Extensions;
+using Cecilifier.Core.Misc;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -29,11 +30,6 @@ namespace Cecilifier.Core.AST
             Context.WriteComment(node.HumanReadableSummary());
             
             base.Visit(node);
-        }
-
-        public override void VisitYieldStatement(YieldStatementSyntax node)
-        {
-            LogUnsupportedSyntax(node);
         }
 
         public override void VisitForStatement(ForStatementSyntax node)
@@ -139,33 +135,6 @@ namespace Cecilifier.Core.AST
             AddCilInstruction(_ilVar, OpCodes.Br, breakToInstructionVars.Peek());
         }
 
-        public override void VisitForEachStatement(ForEachStatementSyntax node)
-        {
-            LogUnsupportedSyntax(node);
-        }
-
-        public override void VisitWhileStatement(WhileStatementSyntax node)
-        {
-            LogUnsupportedSyntax(node);
-        }
-
-        public override void VisitLockStatement(LockStatementSyntax node)
-        {
-            LogUnsupportedSyntax(node);
-        }
-
-        public override void VisitUnsafeStatement(UnsafeStatementSyntax node)
-        {
-            LogUnsupportedSyntax(node);
-        }
-        
-        public override void VisitThrowStatement(ThrowStatementSyntax node) => LogUnsupportedSyntax(node);
-        public override void VisitLocalFunctionStatement(LocalFunctionStatementSyntax node) => LogUnsupportedSyntax(node);
-        public override void VisitCheckedStatement(CheckedStatementSyntax node) => LogUnsupportedSyntax(node);
-        public override void VisitContinueStatement(ContinueStatementSyntax node) => LogUnsupportedSyntax(node);
-        public override void VisitDoStatement(DoStatementSyntax node) => LogUnsupportedSyntax(node);
-        public override void VisitGotoStatement(GotoStatementSyntax node) => LogUnsupportedSyntax(node);
-
         public override void VisitFixedStatement(FixedStatementSyntax node)
         {
             using (Context.WithFlag("fixed"))
@@ -236,6 +205,18 @@ namespace Cecilifier.Core.AST
             WriteExceptionHandlers(exceptionHandlerTable);
         }
 
+        public override void VisitForEachStatement(ForEachStatementSyntax node) { LogUnsupportedSyntax(node); }
+        public override void VisitWhileStatement(WhileStatementSyntax node) { LogUnsupportedSyntax(node); }
+        public override void VisitLockStatement(LockStatementSyntax node) { LogUnsupportedSyntax(node); }
+        public override void VisitUnsafeStatement(UnsafeStatementSyntax node) { LogUnsupportedSyntax(node); }
+        public override void VisitThrowStatement(ThrowStatementSyntax node) => LogUnsupportedSyntax(node);
+        public override void VisitLocalFunctionStatement(LocalFunctionStatementSyntax node) => LogUnsupportedSyntax(node);
+        public override void VisitCheckedStatement(CheckedStatementSyntax node) => LogUnsupportedSyntax(node);
+        public override void VisitContinueStatement(ContinueStatementSyntax node) => LogUnsupportedSyntax(node);
+        public override void VisitDoStatement(DoStatementSyntax node) => LogUnsupportedSyntax(node);
+        public override void VisitGotoStatement(GotoStatementSyntax node) => LogUnsupportedSyntax(node);
+        public override void VisitYieldStatement(YieldStatementSyntax node) { LogUnsupportedSyntax(node); }
+        
         private void WriteExceptionHandlers(ExceptionHandlerEntry[] exceptionHandlerTable)
         {
             string methodVar = Context.DefinitionVariables.GetLastOf(MemberKind.Method);
