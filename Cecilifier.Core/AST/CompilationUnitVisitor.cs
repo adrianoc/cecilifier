@@ -44,7 +44,7 @@ namespace Cecilifier.Core.AST
             if (_globalStatementHandler == null)
             {
                 Context.WriteComment("Begin of global statements.");
-                _globalStatementHandler = new GlobalStatementHandler(Context);
+                _globalStatementHandler = new GlobalStatementHandler(Context, node);
             }
 
             if (_globalStatementHandler.HandleGlobalStatement(node))
