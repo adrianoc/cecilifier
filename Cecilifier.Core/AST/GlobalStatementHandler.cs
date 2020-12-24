@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Microsoft.CodeAnalysis;
@@ -10,10 +11,12 @@ namespace Cecilifier.Core.AST
 {
     public class GlobalStatementHandler
     {
-        internal GlobalStatementHandler(IVisitorContext context)
+        internal GlobalStatementHandler(IVisitorContext context, GlobalStatementSyntax firstGlobalStatement)
         {
             this.context = context;
-           
+
+            hasReturnStatement = firstGlobalStatement.Parent.DescendantNodes().Any(node => node.IsKind(SyntaxKind.ReturnStatement));
+
             var typeModifiers = CecilDefinitionsFactory.DefaultTypeAttributeFor(SyntaxKind.ClassDeclaration, false).AppendModifier("TypeAttributes.NotPublic | TypeAttributes.Abstract | TypeAttributes.Sealed");
             var typeVar = MethodExtensions.LocalVariableNameFor("topLevelStatements", context.NextLocalVariableTypeId() + "");
             var typeExps = CecilDefinitionsFactory.Type(
@@ -31,7 +34,7 @@ namespace Cecilifier.Core.AST
                 methodVar, 
                 "<Main>$", 
                 "MethodAttributes.Private | MethodAttributes.HideBySig | MethodAttributes.Static", 
-                context.TypeResolver.ResolvePredefinedType("Void"), 
+                context.TypeResolver.Resolve(context.GetSpecialType(hasReturnStatement ? SpecialType.System_Int32 : SpecialType.System_Void)), 
                 Array.Empty<TypeParameterSyntax>());
 
             var paramVar = MethodExtensions.LocalVariableNameFor("args", context.NextLocalVariableTypeId() + "");
@@ -71,7 +74,9 @@ namespace Cecilifier.Core.AST
                 return false;
             }
 
-            context.WriteCecilExpression($"{methodVar}.Body.Instructions.Add({ilVar}.Create(OpCodes.Ret));");
+            if (!node.Statement.IsKind(SyntaxKind.ReturnStatement))
+                context.WriteCecilExpression($"{methodVar}.Body.Instructions.Add({ilVar}.Create(OpCodes.Ret));");
+            
             return true;
 
             bool IsLastGlobalStatement(CompilationUnitSyntax compilation, int globalStatementIndex)
@@ -97,5 +102,6 @@ namespace Cecilifier.Core.AST
         private readonly string ilVar;
         private readonly string methodVar;
         private readonly IVisitorContext context;
+        private bool hasReturnStatement;
     }
 }

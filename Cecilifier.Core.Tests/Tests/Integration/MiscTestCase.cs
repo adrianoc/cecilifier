@@ -57,10 +57,11 @@ namespace Cecilifier.Core.Tests.Integration
             AssertResourceTest($@"Misc/Attributes/AttributeWithArrayInitializer");
         }
         
-        [Test]
-        public void TestTopLevelStatements()
+        [TestCase("TopLevelStatementsExplicitReturn")]
+        [TestCase("TopLevelStatements")]
+        public void TestTopLevelStatements(string testName)
         {
-            AssertResourceTest($@"Misc/TopLevelStatements", true);
+            AssertResourceTest($"Misc/{testName}", true);
         }
     }
 }
