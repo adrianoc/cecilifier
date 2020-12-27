@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Cecilifier.Core.Extensions;
 using Mono.Cecil;
@@ -347,6 +348,8 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
             if (instruction?.OpCode == current?.OpCode)
                 return true;
 
+            Debug.Assert(current != null);
+            
             var paramIndexOffset = isStatic ? 0 : 1;
             switch (instruction.OpCode.Code)
             {
@@ -383,6 +386,12 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                 
                 case Code.Ldc_I4_M1: return current.OpCode.Code == Code.Ldc_I4 && (int) current.Operand == -1 && current.Next.OpCode == OpCodes.Neg;
 
+                case Code.Ldc_R8:
+                    return AreEquivalentLoads(current, Code.Conv_R8, ref skipCount);
+                
+                case Code.Ldc_R4:
+                    return AreEquivalentLoads(current, Code.Conv_R4, ref skipCount);
+
                 case Code.Leave:
                 case Code.Leave_S:
                 case Code.Br:
@@ -408,6 +417,15 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
             }
 
             return true;
+        }
+
+        private static bool AreEquivalentLoads(Instruction current, Code convInstruction, ref int skipCount)
+        {
+            var areEquivalentLoads = current.OpCode.Code == Code.Ldc_I4 && (current.Next?.OpCode.Code == convInstruction);
+            if (areEquivalentLoads)
+                skipCount = 1;
+            
+            return areEquivalentLoads;
         }
 
         private static int VarIndex(object operand)

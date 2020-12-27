@@ -1,0 +1,27 @@
+﻿class TimesOperations
+{
+    private int field;
+    
+	private int Prop { get => 1; }
+	
+	private void Integers(int a)
+	{
+	    System.Console.WriteLine(Prop * 3);
+	    
+	    System.Console.WriteLine(field * 3);
+	    
+		int i = 10 * a;
+		System.Console.WriteLine(i * 3);		
+	}
+	
+	private void FloatingPrecision(int ip, float fp)
+	{
+		float f = 42.0f * ip;
+		System.Console.WriteLine(f * 3);
+		System.Console.WriteLine(42f * fp);
+		System.Console.WriteLine(fp * fp);
+		
+		double d = 42.0 * ip;
+		System.Console.WriteLine(d * 3);
+	}
+}

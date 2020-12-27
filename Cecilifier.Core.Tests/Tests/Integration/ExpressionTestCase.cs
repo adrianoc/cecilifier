@@ -54,6 +54,12 @@ namespace Cecilifier.Core.Tests.Integration
         }
 
         [Test]
+        public void TestTimes()
+        {
+            AssertResourceTest(@"Expressions/Operators/Times");
+        }
+        
+        [Test]
         public void TestEquals()
         {
             AssertResourceTest(@"Expressions/Operators/Equals");
