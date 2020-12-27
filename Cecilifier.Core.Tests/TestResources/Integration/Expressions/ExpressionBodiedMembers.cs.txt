@@ -18,6 +18,11 @@ class ExpressionBodiedMembers
 	}
 	
 	/*
+	not supported
+	public int Prop2 => 42;
+	*/
+	
+	/*
 	public string this[int i]
 	{
 	    get => i.ToString();

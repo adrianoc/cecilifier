@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Cecilifier.Core.Extensions;
 using Microsoft.CodeAnalysis;
@@ -266,6 +267,8 @@ namespace Cecilifier.Core.AST
             {
                 AddCilInstruction(ilVar, LoadOpCodeFor(literalNode), literalValue);
                 var localVarParent = (CSharpSyntaxNode) literalNode.Parent;
+                Debug.Assert(localVarParent != null);
+                
                 if (localVarParent.Accept(new UsageVisitor()) == UsageKind.CallTarget) 
                     StoreTopOfStackInLocalVariableAndLoadItsAddress(expressionType);
             }
@@ -798,10 +801,10 @@ namespace Cecilifier.Core.AST
         private void InjectRequiredConversions(ExpressionSyntax expression, Action loadArrayIntoStack = null)
         {
             var typeInfo = Context.SemanticModel.GetTypeInfo(expression);
-
             var conversion = Context.SemanticModel.GetConversion(expression);
             if (conversion.IsImplicit && conversion.IsNumeric)
             {
+                Debug.Assert(typeInfo.ConvertedType != null);
                 switch (typeInfo.ConvertedType.SpecialType)
                 {
                     case SpecialType.System_Single:
@@ -825,7 +828,7 @@ namespace Cecilifier.Core.AST
                         return;
 
                     default:
-                        throw new Exception(string.Format("Conversion from {0} to {1}  not implemented.", typeInfo.Type, typeInfo.ConvertedType));
+                        throw new Exception($"Conversion from {typeInfo.Type} to {typeInfo.ConvertedType}  not implemented.");
                 }
             }
 
@@ -833,8 +836,7 @@ namespace Cecilifier.Core.AST
             {
                 AddCilInstruction(ilVar, OpCodes.Box, typeInfo.Type);
             }
-            
-            if (conversion.IsIdentity && typeInfo.Type.Name == "Index" && loadArrayIntoStack != null)
+            else if (conversion.IsIdentity && typeInfo.Type.Name == "Index" && loadArrayIntoStack != null)
             {
                 // We are indexing an array/indexer using System.Index; In this case
                 // we need to convert from System.Index to *int* which is done through

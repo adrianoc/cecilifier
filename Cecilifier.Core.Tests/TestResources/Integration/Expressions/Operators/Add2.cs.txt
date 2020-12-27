@@ -1,4 +1,4 @@
-//Current version of Rosly introduces a local variable, uses its address and calls Concat(string,string) (for optimizations)
+//Current version of Roslyn introduces a local variable, uses its address and calls Concat(string,string) (for optimizations)
 //For now we are simply going to rely on explicit IL for validation. In the future we may consider changing the code
 //generation to match Roslyn behavior.
  
