@@ -242,7 +242,14 @@ namespace Cecilifier.Core.AST
             switch (node.Kind())
             {
                 case SyntaxKind.NullLiteralExpression:
-                    AddCilInstruction(ilVar, OpCodes.Ldnull);
+                    var nodeType = Context.SemanticModel.GetTypeInfo(node);
+                    if (nodeType.ConvertedType?.TypeKind == TypeKind.Pointer)
+                    {
+                        AddCilInstruction(ilVar, OpCodes.Ldc_I4_0);
+                        AddCilInstruction(ilVar, OpCodes.Conv_U);
+                    }
+                    else
+                        AddCilInstruction(ilVar, OpCodes.Ldnull);
                     break;
 
                 case SyntaxKind.StringLiteralExpression:
@@ -726,56 +733,64 @@ namespace Cecilifier.Core.AST
             if (invocationParent != null)
             {
                 ProcessMethodCall(node, method);
+                return;
             }
-            else
+
+            // this is not an invocation. We need to figure out whether this is an assignment, return, etc
+            var firstParentNotPartOfName = node.Ancestors().First(a => a.Kind() != SyntaxKind.QualifiedName 
+                                                                       && a.Kind() != SyntaxKind.SimpleMemberAccessExpression
+                                                                       && a.Kind() != SyntaxKind.EqualsValueClause
+                                                                       && a.Kind() != SyntaxKind.VariableDeclarator);
+
+            if (firstParentNotPartOfName is PrefixUnaryExpressionSyntax unaryPrefix && unaryPrefix.IsKind(SyntaxKind.AddressOfExpression))
             {
-                // this is not an invocation. We need to figure out whether this is an assignment, return, etc
-                var firstParentNotPartOfName = node.Ancestors().First(a => a.Kind() != SyntaxKind.QualifiedName 
-                                                                           && a.Kind() != SyntaxKind.SimpleMemberAccessExpression
-                                                                           && a.Kind() != SyntaxKind.EqualsValueClause
-                                                                           && a.Kind() != SyntaxKind.VariableDeclarator);
-                
-                var delegateType = firstParentNotPartOfName switch
-                {
-                    ArgumentSyntax arg => ((IMethodSymbol) Context.SemanticModel.GetSymbolInfo(arg.Parent.Parent).Symbol).Parameters[arg.FirstAncestorOrSelf<ArgumentListSyntax>().Arguments.IndexOf(arg)].Type,
-                    AssignmentExpressionSyntax assignment => Context.SemanticModel.GetSymbolInfo(assignment.Left).Symbol switch
-                    {
-                        ILocalSymbol local => local.Type,
-                        IParameterSymbol param => param.Type,
-                        IFieldSymbol field => field.Type,
-                        IPropertySymbol prop => prop.Type,
-                        _ => throw new NotSupportedException($"Assignment to {assignment.Left} ({assignment.Kind()}) is not supported.")
-                    },
-                    VariableDeclarationSyntax variableDeclaration => Context.SemanticModel.GetTypeInfo(variableDeclaration.Type).Type,
-                    ReturnStatementSyntax returnStatement => returnStatement.FirstAncestorOrSelf<MemberDeclarationSyntax>() switch
-                    {
-                        MethodDeclarationSyntax md => Context.SemanticModel.GetTypeInfo(md.ReturnType).Type,
-                        _ => throw new NotSupportedException($"Return is not supported.")
-                    },
-                    
-                    _ => throw new NotSupportedException($"Referencing method {method} in expression {firstParentNotPartOfName} ({firstParentNotPartOfName.Kind()}) is not supported.")
-                };
-                
-                // we have a reference to a method used to initialize a delegate
-                // and need to load the referenced method token and instantiate the delegate. For instance:
-                //IL_0002: ldarg.0
-                //IL_0002: ldftn string Test::M(int32)
-                //IL_0008: newobj instance void class [System.Private.CoreLib]System.Func`2<int32, string>::.ctor(object, native int)
-
-                if (method.IsStatic)
-                {
-                    AddCilInstruction(ilVar, OpCodes.Ldnull);
-                }
-                else if (!node.Parent.IsKind(SyntaxKind.ThisExpression) && node.Parent == firstParentNotPartOfName)
-                {
-                    AddCilInstruction(ilVar, OpCodes.Ldarg_0);
-                }
-                
                 AddCilInstruction(ilVar, OpCodes.Ldftn, method.MethodResolverExpression(Context));
-
-                var delegateCtor = delegateType.GetMembers().OfType<IMethodSymbol>().FirstOrDefault(m => m.Name == ".ctor"); 
-                AddCilInstruction(ilVar, OpCodes.Newobj, delegateCtor.MethodResolverExpression(Context));
+                return;
             }
+                
+            var delegateType = firstParentNotPartOfName switch
+            {
+                ArgumentSyntax arg => ((IMethodSymbol) Context.SemanticModel.GetSymbolInfo(arg.Parent.Parent).Symbol).Parameters[arg.FirstAncestorOrSelf<ArgumentListSyntax>().Arguments.IndexOf(arg)].Type,
+                    
+                AssignmentExpressionSyntax assignment => Context.SemanticModel.GetSymbolInfo(assignment.Left).Symbol switch
+                {
+                    ILocalSymbol local => local.Type,
+                    IParameterSymbol param => param.Type,
+                    IFieldSymbol field => field.Type,
+                    IPropertySymbol prop => prop.Type,
+                    _ => throw new NotSupportedException($"Assignment to {assignment.Left} ({assignment.Kind()}) is not supported.")
+                },
+                    
+                VariableDeclarationSyntax variableDeclaration => Context.SemanticModel.GetTypeInfo(variableDeclaration.Type).Type,
+                    
+                ReturnStatementSyntax returnStatement => returnStatement.FirstAncestorOrSelf<MemberDeclarationSyntax>() switch
+                {
+                    MethodDeclarationSyntax md => Context.SemanticModel.GetTypeInfo(md.ReturnType).Type,
+                    _ => throw new NotSupportedException($"Return is not supported.")
+                },
+                        
+                _ => throw new NotSupportedException($"Referencing method {method} in expression {firstParentNotPartOfName} ({firstParentNotPartOfName.GetType().FullName}) is not supported.")
+            };
+                
+            // we have a reference to a method used to initialize a delegate
+            // and need to load the referenced method token and instantiate the delegate. For instance:
+            //IL_0002: ldarg.0
+            //IL_0002: ldftn string Test::M(int32)
+            //IL_0008: newobj instance void class [System.Private.CoreLib]System.Func`2<int32, string>::.ctor(object, native int)
+
+            if (method.IsStatic)
+            {
+                AddCilInstruction(ilVar, OpCodes.Ldnull);
+            }
+            else if (!node.Parent.IsKind(SyntaxKind.ThisExpression) && node.Parent == firstParentNotPartOfName)
+            {
+                AddCilInstruction(ilVar, OpCodes.Ldarg_0);
+            }
+
+            AddCilInstruction(ilVar, OpCodes.Ldftn, method.MethodResolverExpression(Context));
+
+            var delegateCtor = delegateType.GetMembers().OfType<IMethodSymbol>().FirstOrDefault(m => m.Name == ".ctor"); 
+            AddCilInstruction(ilVar, OpCodes.Newobj, delegateCtor.MethodResolverExpression(Context));
         }
         
         private void ProcessMethodCall(SimpleNameSyntax node, IMethodSymbol method)

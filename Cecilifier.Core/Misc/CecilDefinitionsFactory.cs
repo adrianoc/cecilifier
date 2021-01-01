@@ -11,6 +11,22 @@ namespace Cecilifier.Core.Misc
 {
     internal sealed class CecilDefinitionsFactory
     {
+        public static string CallSite(ITypeResolver resolver, IFunctionPointerTypeSymbol functionPointer)
+        {
+            return FunctionPointerTypeBasedCecilEquivalent(
+                resolver, 
+                functionPointer, 
+                (hasThis, parameters, returnType) => $"new CallSite({returnType}) {{ {hasThis}, {parameters} }}");
+        }
+
+        public static string FunctionPointerType(ITypeResolver resolver, IFunctionPointerTypeSymbol functionPointer)
+        {
+            return FunctionPointerTypeBasedCecilEquivalent(
+                resolver, 
+                functionPointer, 
+                (hasThis, parameters, returnType) => $"new FunctionPointerType() {{ {hasThis}, ReturnType = {returnType}, {parameters} }}");
+        }
+        
         public static IEnumerable<string> Method(IVisitorContext context, string methodVar, string methodName, string methodModifiers, string returnType, IList<TypeParameterSyntax> typeParameters)
         {
             var exps = new List<string>(); 
@@ -122,16 +138,21 @@ namespace Cecilifier.Core.Misc
             return exps;
         }
 
-        public static IEnumerable<string> Parameter(string name, RefKind byRef, bool isParams, bool isArray, SemanticModel semanticModel, string methodVar, string paramVar, string resolvedType)
+        public static string Parameter(string name, RefKind byRef, bool isParams, string resolvedType)
         {
-            var exps = new List<string>();
             if (RefKind.None != byRef)
             {
                 resolvedType = "new ByReferenceType(" + resolvedType + ")";
             }
 
-            exps.Add($"var {paramVar} = new ParameterDefinition(\"{name}\", ParameterAttributes.None, {resolvedType});");
+            return  $"new ParameterDefinition(\"{name}\", ParameterAttributes.None, {resolvedType})";
+        }
+        
+        public static IEnumerable<string> Parameter(string name, RefKind byRef, bool isParams, string methodVar, string paramVar, string resolvedType)
+        {
+            var exps = new List<string>();
 
+            exps.Add($"var {paramVar} = {Parameter(name, byRef, isParams, resolvedType)};");
             AddExtraAttributes(exps, paramVar, byRef);
 
             if (isParams)
@@ -147,14 +168,22 @@ namespace Cecilifier.Core.Misc
         public static IEnumerable<string> Parameter(ParameterSyntax node, SemanticModel semanticModel, string methodVar, string paramVar, string resolvedType)
         {
             var paramSymbol = semanticModel.GetDeclaredSymbol(node);
+            //return new[] { Parameter(paramSymbol, resolvedType)};
             return Parameter(
                 node.Identifier.Text, 
                 paramSymbol.RefKind, 
-                isParams: node.GetFirstToken().Kind() == SyntaxKind.ParamsKeyword, 
-                isArray: false, 
-                semanticModel,
+                isParams: node.GetFirstToken().Kind() == SyntaxKind.ParamsKeyword,
                 methodVar,
                 paramVar,
+                resolvedType);
+        }
+        
+        public static string Parameter(IParameterSymbol paramSymbol, string resolvedType)
+        {
+            return Parameter(
+                paramSymbol.Name, 
+                paramSymbol.RefKind, 
+                isParams: paramSymbol.IsParams,
                 resolvedType);
         }
 
@@ -319,13 +348,21 @@ namespace Cecilifier.Core.Misc
                 _ => throw new Exception("Not supported type declaration: " + syntaxKind)
             };
         }
-
+        
         private static void AddExtraAttributes(IList<string> exps, string paramVar, RefKind byRef)
         {
             if (byRef == RefKind.Out)
             {
                 exps.Add($"{paramVar}.Attributes = ParameterAttributes.Out;");
             }
+        }
+
+        private static string FunctionPointerTypeBasedCecilEquivalent(ITypeResolver resolver, IFunctionPointerTypeSymbol functionPointer, Func<string, string, string, string> factory)
+        {
+            var hasThis = $"HasThis = false";
+            var parameters = $"Parameters={{ {string.Join(',', functionPointer.Signature.Parameters.Select(p => CecilDefinitionsFactory.Parameter(p, resolver.Resolve(p.Type))))} }}";
+            var returnType = resolver.Resolve(functionPointer.Signature.ReturnType);
+            return factory(hasThis, parameters, returnType);
         }
     }
 }
