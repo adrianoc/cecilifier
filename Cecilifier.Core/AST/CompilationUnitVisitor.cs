@@ -151,8 +151,6 @@ namespace Cecilifier.Core.AST
                     "ar", 
                     RefKind.None,
                     false,
-                    false,
-                    Context.SemanticModel,
                     endInvokeMethodVar,
                     TempLocalVar("ar"),
                     Context.TypeResolver.Resolve("System.IAsyncResult"));

@@ -42,8 +42,6 @@ namespace Cecilifier.Core.AST
                 "args", 
                 RefKind.None, 
                 false, 
-                true,
-                context.SemanticModel, 
                 methodVar, 
                 paramVar, 
                 context.TypeResolver.ResolvePredefinedType("String") + ".MakeArrayType()");

@@ -40,6 +40,11 @@ namespace Cecilifier.Core.Misc
                 return Resolve(pointerType.PointedAtType) + ".MakePointerType()";
             }
 
+            if (type is IFunctionPointerTypeSymbol functionPointer)
+            {
+                return CecilDefinitionsFactory.FunctionPointerType(this, functionPointer);
+            }
+
             if (type.SpecialType == SpecialType.None || type.TypeKind == TypeKind.Interface || type.SpecialType == SpecialType.System_Enum || type.SpecialType == SpecialType.System_ValueType)
             {
                 return null;

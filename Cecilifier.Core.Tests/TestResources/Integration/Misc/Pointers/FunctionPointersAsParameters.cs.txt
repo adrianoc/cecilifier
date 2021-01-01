@@ -1,0 +1,9 @@
+unsafe class FunctionPointersAsParameters
+{
+    static int F() => 10;
+    
+    int TestFunctionPointerAsParameter(delegate*<int> func)
+    {
+        return func() + TestFunctionPointerAsParameter(&F);
+    }
+}

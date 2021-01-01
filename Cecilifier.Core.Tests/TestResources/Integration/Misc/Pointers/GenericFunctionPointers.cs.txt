@@ -1,0 +1,13 @@
+unsafe class GenericFunctionPointers
+{
+    static T Identity<T>(T t) => t;
+    
+    void TestGenericFunctionPointer()
+    {
+        delegate*<int,int> fp = &Identity<int>;
+        System.Console.Write(fp(1)); 
+        
+        delegate*<int,int> fp2 = &Identity;
+        System.Console.Write(fp2(2));
+    }
+}

@@ -1,0 +1,10 @@
+unsafe class VoidFunctionPointers
+{
+    static void F() {}
+    
+    void TestVoidFunction()
+    {
+        delegate*<void> fp = &F;
+        fp(); 
+    }
+}

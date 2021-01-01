@@ -35,6 +35,15 @@ namespace Cecilifier.Core.Tests.Integration
             AssertResourceTest($@"Misc/Pointers/{testName}");       
         }
         
+        [TestCase("FunctionPointers", TestName = "Basic Tests")]
+        [TestCase("VoidFunctionPointers")]
+        [TestCase("FunctionPointersAsParameters")]
+        [TestCase("GenericFunctionPointers", IgnoreReason = "Generic methods are not supported. See issue #68")]
+        public void TestFunctionPointer(string testName)
+        {
+            AssertResourceTest($@"Misc/Pointers/{testName}");       
+        }
+        
         [TestCase("Delegate")]
         [TestCase("ClassAndMembers")]
         [TestCase("InterfaceAndMembers")]

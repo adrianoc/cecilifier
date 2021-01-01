@@ -6,6 +6,7 @@ using Cecilifier.Core.Misc;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Mono.Cecil;
 using Mono.Cecil.Cil;
 using static Cecilifier.Core.Misc.Utils;
 
@@ -228,7 +229,7 @@ namespace Cecilifier.Core.AST
 
         protected static bool ExcludeHasNoCILRepresentation(SyntaxToken token)
         {
-            return token.Kind() != SyntaxKind.PartialKeyword && token.Kind() != SyntaxKind.VolatileKeyword;
+            return !token.IsKind(SyntaxKind.PartialKeyword) && !token.IsKind(SyntaxKind.VolatileKeyword) && !token.IsKind(SyntaxKind.UnsafeKeyword);
         }
 
         protected string ResolveExpressionType(ExpressionSyntax expression)
@@ -309,6 +310,12 @@ namespace Cecilifier.Core.AST
             var invocation = node.Parent as InvocationExpressionSyntax;
             if (invocation == null || invocation.Expression != node)
             {
+                return;
+            }
+            
+            if (typeSymbol is IFunctionPointerTypeSymbol functionPointer)
+            {
+                AddCilInstruction(ilVar, OpCodes.Calli, CecilDefinitionsFactory.CallSite(Context.TypeResolver, functionPointer));
                 return;
             }
 

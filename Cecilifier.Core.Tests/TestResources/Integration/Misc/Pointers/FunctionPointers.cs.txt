@@ -1,0 +1,21 @@
+unsafe class FunctionPointers
+{
+    static int F() => 10;
+    static int F2(string s) => s.Length;
+    
+    void TestIntFunction()
+    {
+        delegate*<int> fp = &F;
+        //System.Console.Write(fp == null);
+
+        System.Console.Write(fp()); 
+    }
+    
+    int TestIntFunctionWithParameters()
+    {
+        delegate*<string, int> fp = &F2;
+        System.Console.WriteLine(fp == null);
+        return 0;
+        //return fp("test");
+    }
+}
