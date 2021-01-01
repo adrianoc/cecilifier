@@ -23,7 +23,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                 {Code.Ldarg_3, OperandObliviousValidator},
                 
                 {Code.Call, ValidateCalls},
-                {Code.Calli, ValidateCalls},
+                {Code.Calli, ValidateCallSite},
                 {Code.Callvirt, ValidateCalls},
                 {Code.Newobj, ValidateCalls},
 
@@ -532,6 +532,15 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
             var m2 = (MethodReference) rhs.Operand;
 
             var ret = MethodReferenceComparer.Instance.Compare(m1, m2) == 0;
+            return (ret, 0);
+        }
+        
+        private static (bool, int) ValidateCallSite(Instruction lhs, Instruction rhs)
+        {
+            var leftCallSite = (CallSite) lhs.Operand;
+            var rightCallSite = (CallSite) rhs.Operand;
+
+            var ret = MethodSignatureComparer.Instance.Compare(leftCallSite, rightCallSite) == 0;
             return (ret, 0);
         }
 
