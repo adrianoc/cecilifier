@@ -9,11 +9,11 @@ namespace Cecilifier.Core.AST
     public enum MemberKind
     {
         Type,
+        TypeParameter,
         Field,
         Method,
         Parameter,
-        LocalVariable,
-        TryCatchLeaveTarget
+        LocalVariable
     }
 
     public class DefinitionVariable : IEquatable<DefinitionVariable>
@@ -160,24 +160,35 @@ namespace Cecilifier.Core.AST
         }
     }
 
-    public struct ScopedDefinitionVariable : IDisposable
+    public unsafe struct ScopedDefinitionVariable : IDisposable
     {
         private readonly List<DefinitionVariable> _definitionVariables;
         private readonly int _currentSize;
+        private delegate*<IList<DefinitionVariable>, int, void> _unregister;
 
-        public ScopedDefinitionVariable(List<DefinitionVariable> definitionVariables, int currentSize)
+        public ScopedDefinitionVariable(List<DefinitionVariable> definitionVariables, int currentSize, bool dontUnregisterTypesAndMembers = false)
         {
             _definitionVariables = definitionVariables;
             _currentSize = currentSize;
+            _unregister = dontUnregisterTypesAndMembers ? &ConditionalUnregister : &UnconditionalUnregister; 
         }
 
         public void Dispose()
         {
-            if (_definitionVariables.Count > _currentSize)
+            for (int i = _definitionVariables.Count - 1; i >=  _currentSize; i--)
             {
-                _definitionVariables.RemoveRange(_currentSize, _definitionVariables.Count - _currentSize);
+                _unregister(_definitionVariables, i);
             }
         }
+        
+        static void ConditionalUnregister(IList<DefinitionVariable> variables, int index)
+        {
+            var v = variables[index];
+            if (v.Kind == MemberKind.LocalVariable || v.Kind == MemberKind.Parameter || v.Kind == MemberKind.TypeParameter) 
+                variables.RemoveAt(index);
+        }
+            
+        static void UnconditionalUnregister(IList<DefinitionVariable> variables, int index) => variables.RemoveAt(index);
     }
 
     public class DefinitionVariableManager
@@ -232,20 +243,14 @@ namespace Cecilifier.Core.AST
             return DefinitionVariable.NotFound;
         }
 
-        public DefinitionVariable GetTypeVariable(string typeName)
-        {
-            return GetVariable(typeName, MemberKind.Type);
-        }
-
         public DefinitionVariable GetLastOf(MemberKind kind)
         {
             var index = _definitionStack.FindLastIndex(c => c.Kind == kind);
-            if (index == -1)
+            return index switch
             {
-                return DefinitionVariable.NotFound;
-            }
-
-            return _definitionStack[index];
+                -1 => DefinitionVariable.NotFound,
+                _ => _definitionStack[index]
+            };
         }
 
         public ScopedDefinitionVariable WithCurrentMethod(string parentName, string memberName, string[] paramTypes, string definitionVariableName)
@@ -264,7 +269,7 @@ namespace Cecilifier.Core.AST
 
         public ScopedDefinitionVariable EnterScope()
         {
-            return new ScopedDefinitionVariable(_definitionStack, _definitionStack.Count);
+            return new ScopedDefinitionVariable(_definitionVariables, _definitionVariables.Count, true);
         }
     }
 

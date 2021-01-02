@@ -639,9 +639,7 @@ namespace Cecilifier.Core.AST
             if (Context.Contains(varName))
                 return;
 
-            var returnType = Context.TypeResolver.Resolve(method.ReturnType);
-            
-            MethodDeclarationVisitor.AddMethodDefinition(Context, varName, method.Name, "MethodAttributes.Private", returnType, typeParameters);
+            MethodDeclarationVisitor.AddMethodDefinition(Context, varName, method.Name, "MethodAttributes.Private", method.ReturnType, typeParameters);
             Context.DefinitionVariables.RegisterMethod(method.ContainingType.Name, method.Name, method.Parameters.Select(p => p.Type.Name).ToArray(), varName);
         }
 

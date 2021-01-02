@@ -48,10 +48,11 @@ namespace Cecilifier.Core.Tests.Integration
             AssertResourceTest($"Generics/{testScenario}");
         }
         
-        [Test]
-        public void TestGenericMethods()
+        [TestCase("GenericMethods")]
+        [TestCase("GenericMethodReturningGenericTypeParameter")]
+        public void TestGenericMethods(string testName)
         {
-            AssertResourceTest(@"Generics/GenericMethods");
+            AssertResourceTest($"Generics/{testName}");
         }
 
         [Test]

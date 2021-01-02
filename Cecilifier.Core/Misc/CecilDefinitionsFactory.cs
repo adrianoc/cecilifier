@@ -13,7 +13,7 @@ namespace Cecilifier.Core.Misc
     {
         public static string CallSite(ITypeResolver resolver, IFunctionPointerTypeSymbol functionPointer)
         {
-            return FunctionPointerTypeBasedCecilEquivalent(
+            return FunctionPointerTypeBasedCecilType(
                 resolver, 
                 functionPointer, 
                 (hasThis, parameters, returnType) => $"new CallSite({returnType}) {{ {hasThis}, {parameters} }}");
@@ -21,17 +21,32 @@ namespace Cecilifier.Core.Misc
 
         public static string FunctionPointerType(ITypeResolver resolver, IFunctionPointerTypeSymbol functionPointer)
         {
-            return FunctionPointerTypeBasedCecilEquivalent(
+            return FunctionPointerTypeBasedCecilType(
                 resolver, 
                 functionPointer, 
                 (hasThis, parameters, returnType) => $"new FunctionPointerType() {{ {hasThis}, ReturnType = {returnType}, {parameters} }}");
         }
         
-        public static IEnumerable<string> Method(IVisitorContext context, string methodVar, string methodName, string methodModifiers, string returnType, IList<TypeParameterSyntax> typeParameters)
+        public static IEnumerable<string> Method(IVisitorContext context, string methodVar, string methodName, string methodModifiers, ITypeSymbol returnType, IList<TypeParameterSyntax> typeParameters)
         {
-            var exps = new List<string>(); 
-            exps.Add($"var {methodVar} = new MethodDefinition(\"{methodName}\", {methodModifiers}, {returnType});");
-            ProcessGenericTypeParameters(methodVar, context, typeParameters, exps);
+            var returnTypeIsTypeParameter = returnType is ITypeParameterSymbol;
+            return Method(context, methodVar, methodName, methodModifiers, returnType,  returnTypeIsTypeParameter, typeParameters);
+        }
+
+        private static IEnumerable<string> Method(IVisitorContext context, string methodVar, string methodName, string methodModifiers, ITypeSymbol returnType, bool returnTypeIsTypeParameter, IList<TypeParameterSyntax> typeParameters)
+        {
+            var exps = new List<string>();
+            if (returnTypeIsTypeParameter)
+            {
+                exps.Add($"var {methodVar} = new MethodDefinition(\"{methodName}\", {methodModifiers}, {context.TypeResolver.ResolvePredefinedType("Void")});");
+                ProcessGenericTypeParameters(methodVar, context, typeParameters, exps);
+                exps.Add($"{methodVar}.ReturnType = {context.TypeResolver.Resolve(returnType)};");
+            }
+            else
+            {
+                exps.Add($"var {methodVar} = new MethodDefinition(\"{methodName}\", {methodModifiers}, {context.TypeResolver.Resolve(returnType)});");
+                ProcessGenericTypeParameters(methodVar, context, typeParameters, exps);
+            }
 
             return exps;
         }
@@ -102,7 +117,7 @@ namespace Cecilifier.Core.Misc
 
         private static string GenericParameter(IVisitorContext context, string typeVar, string genericParamName, string genParamDefVar, ITypeParameterSymbol typeParameterSymbol)
         {
-            context.DefinitionVariables.RegisterNonMethod(string.Empty, genericParamName, MemberKind.Type, genParamDefVar);
+            context.DefinitionVariables.RegisterNonMethod(string.Empty, genericParamName, MemberKind.TypeParameter, genParamDefVar);
             return $"var {genParamDefVar} = new Mono.Cecil.GenericParameter(\"{genericParamName}\", {typeVar}) {Variance(typeParameterSymbol)};";
         }
 
@@ -168,7 +183,6 @@ namespace Cecilifier.Core.Misc
         public static IEnumerable<string> Parameter(ParameterSyntax node, SemanticModel semanticModel, string methodVar, string paramVar, string resolvedType)
         {
             var paramSymbol = semanticModel.GetDeclaredSymbol(node);
-            //return new[] { Parameter(paramSymbol, resolvedType)};
             return Parameter(
                 node.Identifier.Text, 
                 paramSymbol.RefKind, 
@@ -245,9 +259,7 @@ namespace Cecilifier.Core.Misc
                 
                 var genParamDefVar = $"{memberDefVar}_{genericParamName}";
 
-                // TODO: Generic parameters should be removed as soon as their declaring member gets out of scope. It looks like they being kept around
-                // In the same way, local variables should also be removed.
-                context.DefinitionVariables.RegisterNonMethod(string.Empty, genericParamName, MemberKind.Type, genParamDefVar);
+                context.DefinitionVariables.RegisterNonMethod(string.Empty, genericParamName, MemberKind.TypeParameter, genParamDefVar);
                 exps.Add(GenericParameter(context, memberDefVar, genericParamName, genParamDefVar, symbol));
                 
                 tba.Add((genParamDefVar, symbol));
@@ -357,7 +369,7 @@ namespace Cecilifier.Core.Misc
             }
         }
 
-        private static string FunctionPointerTypeBasedCecilEquivalent(ITypeResolver resolver, IFunctionPointerTypeSymbol functionPointer, Func<string, string, string, string> factory)
+        private static string FunctionPointerTypeBasedCecilType(ITypeResolver resolver, IFunctionPointerTypeSymbol functionPointer, Func<string, string, string, string> factory)
         {
             var hasThis = $"HasThis = false";
             var parameters = $"Parameters={{ {string.Join(',', functionPointer.Signature.Parameters.Select(p => CecilDefinitionsFactory.Parameter(p, resolver.Resolve(p.Type))))} }}";

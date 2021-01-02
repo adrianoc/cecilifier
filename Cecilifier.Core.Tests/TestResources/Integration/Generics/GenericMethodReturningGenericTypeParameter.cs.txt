@@ -1,0 +1,4 @@
+class GenericMethodReturningGenericTypeParameter
+{
+    T B<T>(T tt) { return B(tt); }    
+}

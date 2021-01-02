@@ -138,7 +138,7 @@ namespace Cecilifier.Core.AST
                     endInvokeMethodVar,
                     "EndInvoke",
                     "MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.NewSlot | MethodAttributes.Virtual",
-                    ResolveType(node.ReturnType),
+                    Context.GetTypeInfo(node.ReturnType).Type,
                     Array.Empty<TypeParameterSyntax>()
                 );
                 endInvokeExps = endInvokeExps.Concat(new[]
