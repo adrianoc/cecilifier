@@ -17,6 +17,8 @@ class ExpressionBodiedMembers
 	    set => Console.WriteLine(value);
 	}
 	
+	T Generic<T>(T p) => p; 
+	
 	/*
 	not supported
 	public int Prop2 => 42;
