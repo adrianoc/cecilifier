@@ -903,11 +903,22 @@ namespace Cecilifier.Core.AST
 		 */
         private void HandleMethodInvocation(SyntaxNode target, SyntaxNode args)
         {
-            Visit(target);
-            PushCall();
+            var targetTypeInfo = Context.SemanticModel.GetTypeInfo(target).Type;
+            if (targetTypeInfo?.TypeKind == TypeKind.FunctionPointer)
+            {
+                // if *target* is a function pointer, then we'll emmit a calli, which 
+                // expects the stack as : <arg1, arg2, .. argn, function ptr>
+                Visit(args);
+                Visit(target);
+            }
+            else
+            {
+                Visit(target);
+                PushCall();
 
-            Visit(args);
-            FixCallSite();
+                Visit(args);
+                FixCallSite();
+            }
         }
 
         private void HandleIdentifier(SimpleNameSyntax node)
