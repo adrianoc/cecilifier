@@ -32,11 +32,17 @@ namespace Cecilifier.Core.AST
         
         public override void VisitMethodDeclaration(MethodDeclarationSyntax node)
         {
+            var returnType = node.ReturnType switch
+            {
+                RefTypeSyntax refType => refType.Type,
+                _ => node.ReturnType
+            };
+                
             ProcessMethodDeclaration(
                 node, 
                 node.Identifier.ValueText, 
                 MethodNameOf(node), 
-                ResolveType(node.ReturnType), 
+                Context.GetTypeInfo(returnType).Type, 
                 _ => base.VisitMethodDeclaration(node), 
                 node.TypeParameterList?.Parameters.ToArray());
         }
@@ -83,32 +89,35 @@ namespace Cecilifier.Core.AST
             base.VisitParameter(node);
         }
 
-        protected void ProcessMethodDeclaration<T>(T node, string simpleName, string fqName, string returnType, Action<string> runWithCurrent, IList<TypeParameterSyntax> typeParameters = null) where T : BaseMethodDeclarationSyntax
+        protected void ProcessMethodDeclaration<T>(T node, string simpleName, string fqName, ITypeSymbol returnType, Action<string> runWithCurrent, IList<TypeParameterSyntax> typeParameters = null) where T : BaseMethodDeclarationSyntax
         {
-            typeParameters = typeParameters ?? Array.Empty<TypeParameterSyntax>();
             var declaringTypeName = DeclaringTypeNameFor(node);
-
             var methodVar = MethodExtensions.LocalVariableNameFor(declaringTypeName, simpleName, node.MangleName(Context.SemanticModel));
 
-            AddOrUpdateMethodDefinition(methodVar, fqName, node.Modifiers.MethodModifiersToCecil(ModifiersToCecil, GetSpecificModifiers(), DeclaredSymbolFor(node)), returnType, typeParameters);
-            AddCecilExpression("{0}.Methods.Add({1});", Context.DefinitionVariables.GetLastOf(MemberKind.Type).VariableName, methodVar);
-
-            HandleAttributesInMemberDeclaration(node.AttributeLists, TargetDoesNotMatch, SyntaxKind.ReturnKeyword, methodVar); // Normal method attrs.
-            HandleAttributesInMemberDeclaration(node.AttributeLists, TargetMatches,      SyntaxKind.ReturnKeyword, $"{methodVar}.MethodReturnType"); // [return:Attr]
-
-            var isAbstract = DeclaredSymbolFor(node).IsAbstract;
-            if (!isAbstract)
+            using (Context.DefinitionVariables.EnterScope())
             {
-                ilVar = MethodExtensions.LocalVariableNameFor("il", declaringTypeName, simpleName, node.MangleName(Context.SemanticModel));
-                AddCecilExpression($"{methodVar}.Body.InitLocals = true;");
-                AddCecilExpression($"var {ilVar} = {methodVar}.Body.GetILProcessor();");
-            }
+                typeParameters = typeParameters ?? Array.Empty<TypeParameterSyntax>();
 
-            WithCurrentMethod(declaringTypeName, methodVar, fqName, node.ParameterList.Parameters.Select(p => Context.GetTypeInfo(p.Type).Type.Name).ToArray(), runWithCurrent);
+                AddOrUpdateMethodDefinition(methodVar, fqName, node.Modifiers.MethodModifiersToCecil(ModifiersToCecil, GetSpecificModifiers(), DeclaredSymbolFor(node)), returnType, typeParameters);
+                AddCecilExpression("{0}.Methods.Add({1});", Context.DefinitionVariables.GetLastOf(MemberKind.Type).VariableName, methodVar);
 
-            if (!isAbstract && !node.DescendantNodes().Any(n => n.IsKind(SyntaxKind.ReturnStatement)))
-            {
-                AddCilInstruction(ilVar, OpCodes.Ret);
+                HandleAttributesInMemberDeclaration(node.AttributeLists, TargetDoesNotMatch, SyntaxKind.ReturnKeyword, methodVar); // Normal method attrs.
+                HandleAttributesInMemberDeclaration(node.AttributeLists, TargetMatches, SyntaxKind.ReturnKeyword, $"{methodVar}.MethodReturnType"); // [return:Attr]
+
+                var isAbstract = DeclaredSymbolFor(node).IsAbstract;
+                if (!isAbstract)
+                {
+                    ilVar = MethodExtensions.LocalVariableNameFor("il", declaringTypeName, simpleName, node.MangleName(Context.SemanticModel));
+                    AddCecilExpression($"{methodVar}.Body.InitLocals = true;");
+                    AddCecilExpression($"var {ilVar} = {methodVar}.Body.GetILProcessor();");
+                }
+
+                WithCurrentMethod(declaringTypeName, methodVar, fqName, node.ParameterList.Parameters.Select(p => Context.GetTypeInfo(p.Type).Type.Name).ToArray(), runWithCurrent);
+
+                if (!isAbstract && !node.DescendantNodes().Any(n => n.IsKind(SyntaxKind.ReturnStatement)))
+                {
+                    AddCilInstruction(ilVar, OpCodes.Ret);
+                }
             }
         }
 
@@ -118,7 +127,7 @@ namespace Cecilifier.Core.AST
             return declaringType.Identifier.ValueText;
         }
 
-        private void AddOrUpdateMethodDefinition(string methodVar, string fqName, string methodModifiers, string returnType, IList<TypeParameterSyntax> typeParameters)
+        private void AddOrUpdateMethodDefinition(string methodVar, string fqName, string methodModifiers, ITypeSymbol returnType, IList<TypeParameterSyntax> typeParameters)
         {
             if (Context.Contains(methodVar))
             {
@@ -131,7 +140,7 @@ namespace Cecilifier.Core.AST
             }
         }
 
-        public static void AddMethodDefinition(IVisitorContext context, string methodVar, string fqName, string methodModifiers, string returnType, IList<TypeParameterSyntax> typeParameters)
+        public static void AddMethodDefinition(IVisitorContext context, string methodVar, string fqName, string methodModifiers, ITypeSymbol returnType, IList<TypeParameterSyntax> typeParameters)
         {
             context.WriteNewLine();
             context.WriteComment($"Method : {fqName}");

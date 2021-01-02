@@ -71,7 +71,7 @@ namespace Cecilifier.Core.Misc
 
         public string ResolveTypeLocalVariable(ITypeSymbol type)
         {
-            var found = _context.DefinitionVariables.GetVariable(type.Name, MemberKind.Type).VariableName;
+            var found = _context.DefinitionVariables.GetVariable(type.Name, MemberKind.Type).VariableName ?? _context.DefinitionVariables.GetVariable(type.Name, MemberKind.TypeParameter).VariableName;
             if (found != null && type is INamedTypeSymbol {IsGenericType: true} genericTypeSymbol)
             {
                 return MakeGenericInstanceType(found, genericTypeSymbol);

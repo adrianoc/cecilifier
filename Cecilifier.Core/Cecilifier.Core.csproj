@@ -4,6 +4,7 @@
     <TargetFramework>net5.0</TargetFramework>
     <LangVersion>9</LangVersion>
     <AssemblyVersion>1.11.0</AssemblyVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
