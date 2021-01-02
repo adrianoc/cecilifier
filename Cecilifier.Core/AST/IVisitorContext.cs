@@ -310,16 +310,4 @@ namespace Cecilifier.Core.AST
 
         #endregion
     }
-
-    internal interface ITypeResolver
-    {
-        string Resolve(ITypeSymbol type);
-        string Resolve(string typeName);
-        
-        string ResolvePredefinedType(string typeName);
-        string ResolvePredefinedType(ITypeSymbol type);
-        string ResolvePredefinedAndComposedTypes(ITypeSymbol type);
-        string ResolveGenericType(ITypeSymbol type);
-        string ResolveTypeLocalVariable(ITypeSymbol type);
-    }
 }

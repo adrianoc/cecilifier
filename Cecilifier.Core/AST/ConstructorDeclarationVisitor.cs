@@ -142,7 +142,7 @@ namespace Cecilifier.Core.AST
             var baseTypeVarDef = Context.TypeResolver.ResolveTypeLocalVariable(typeSymbol.BaseType);
             if (baseTypeVarDef != null)
             {
-                return $"new MethodReference(\".ctor\", {Context.TypeResolver.ResolvePredefinedType("Void")} ,{baseTypeVarDef}) {{ HasThis = true }}";
+                return $"new MethodReference(\".ctor\", {Context.TypeResolver.Resolve(GetSpecialType(SpecialType.System_Void))} ,{baseTypeVarDef}) {{ HasThis = true }}";
             }
 
             return Utils.ImportFromMainModule($"TypeHelpers.DefaultCtorFor({typeDefVar}.BaseType)");
