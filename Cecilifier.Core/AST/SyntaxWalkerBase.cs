@@ -6,7 +6,6 @@ using Cecilifier.Core.Misc;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Mono.Cecil;
 using Mono.Cecil.Cil;
 using static Cecilifier.Core.Misc.Utils;
 

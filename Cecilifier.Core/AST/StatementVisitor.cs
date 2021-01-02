@@ -145,14 +145,6 @@ namespace Cecilifier.Core.AST
             Visit(node.Statement);
         }
 
-        public override void VisitBlock(BlockSyntax node)
-        {
-            using (Context.DefinitionVariables.EnterScope())
-            {
-                base.VisitBlock(node);
-            }
-        }
-
         public override void VisitReturnStatement(ReturnStatementSyntax node)
         {
             ExpressionVisitor.Visit(Context, _ilVar, node.Expression);
