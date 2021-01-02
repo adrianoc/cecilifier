@@ -1,4 +1,3 @@
-using System;
 using System.Linq;
 using Cecilifier.Core.AST;
 using Microsoft.CodeAnalysis;
@@ -23,12 +22,10 @@ namespace Cecilifier.Core.Misc
         }
 
         public string Resolve(string typeName) => Utils.ImportFromMainModule($"typeof({typeName})");
-        
-        public string ResolvePredefinedType(string typeName) => $"assembly.MainModule.TypeSystem.{typeName}";
 
-        public string ResolvePredefinedType(ITypeSymbol type) => ResolvePredefinedType(type.Name);
+        public string ResolvePredefinedType(ITypeSymbol type) => $"assembly.MainModule.TypeSystem.{type.Name}";
 
-        public string ResolvePredefinedAndComposedTypes(ITypeSymbol type)
+        private string ResolvePredefinedAndComposedTypes(ITypeSymbol type)
         {
             if (type is IArrayTypeSymbol array)
             {
@@ -50,10 +47,10 @@ namespace Cecilifier.Core.Misc
                 return null;
             }
 
-            return ResolvePredefinedType(type.Name);
+            return ResolvePredefinedType(type);
         }
 
-        public string ResolveGenericType(ITypeSymbol type)
+        private string ResolveGenericType(ITypeSymbol type)
         {
             if (!(type is INamedTypeSymbol { IsGenericType: true } genericTypeSymbol))
             {

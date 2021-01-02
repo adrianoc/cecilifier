@@ -38,7 +38,7 @@ namespace Cecilifier.Core.Misc
             var exps = new List<string>();
             if (returnTypeIsTypeParameter)
             {
-                exps.Add($"var {methodVar} = new MethodDefinition(\"{methodName}\", {methodModifiers}, {context.TypeResolver.ResolvePredefinedType("Void")});");
+                exps.Add($"var {methodVar} = new MethodDefinition(\"{methodName}\", {methodModifiers}, {context.TypeResolver.Resolve(context.GetSpecialType(SpecialType.System_Void))});");
                 ProcessGenericTypeParameters(methodVar, context, typeParameters, exps);
                 exps.Add($"{methodVar}.ReturnType = {context.TypeResolver.Resolve(returnType)};");
             }

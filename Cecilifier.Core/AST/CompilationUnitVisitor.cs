@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.Extensions;
@@ -99,8 +99,8 @@ namespace Cecilifier.Core.AST
                 // Delegate ctor
                 AddCecilExpression(CecilDefinitionsFactory.Constructor(Context, out var ctorLocalVar, node.Identifier.Text, "MethodAttributes.FamANDAssem | MethodAttributes.Family",
                     new[] {"System.Object", "System.IntPtr"}, "IsRuntime = true"));
-                AddCecilExpression($"{ctorLocalVar}.Parameters.Add(new ParameterDefinition({Context.TypeResolver.ResolvePredefinedType("Object")}));");
-                AddCecilExpression($"{ctorLocalVar}.Parameters.Add(new ParameterDefinition({Context.TypeResolver.ResolvePredefinedType("IntPtr")}));");
+                AddCecilExpression($"{ctorLocalVar}.Parameters.Add(new ParameterDefinition({Context.TypeResolver.Resolve(GetSpecialType(SpecialType.System_Object))}));");
+                AddCecilExpression($"{ctorLocalVar}.Parameters.Add(new ParameterDefinition({Context.TypeResolver.Resolve(GetSpecialType(SpecialType.System_IntPtr))}));");
                 AddCecilExpression($"{typeVar}.Methods.Add({ctorLocalVar});");
 
                 AddDelegateMethod(
@@ -127,7 +127,7 @@ namespace Cecilifier.Core.AST
                 }
 
                 AddCecilExpression($"{beginInvokeMethodVar}.Parameters.Add(new ParameterDefinition({Context.TypeResolver.Resolve("System.AsyncCallback")}));");
-                AddCecilExpression($"{beginInvokeMethodVar}.Parameters.Add(new ParameterDefinition({Context.TypeResolver.ResolvePredefinedType("Object")}));");
+                AddCecilExpression($"{beginInvokeMethodVar}.Parameters.Add(new ParameterDefinition({Context.TypeResolver.Resolve(Context.GetSpecialType(SpecialType.System_Object))}));");
                 AddCecilExpression($"{typeVar}.Methods.Add({beginInvokeMethodVar});");
 
                 // EndInvoke() method
