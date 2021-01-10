@@ -1,0 +1,14 @@
+﻿class ArrayLength<C>
+{
+    int M1(int []a) => a.Length;
+    int M2<T>(T []a) => a.Length;
+    int M3<C>(C []a, int i) => a.Length + i;
+    
+    long M4(int []a) => a.Length;
+    long M5<T>(T []a) => a.Length;
+    long M6<C>(C []a, int i) => a.Length + i;
+    
+    long M7(int []a) => a.LongLength;
+    long M8<T>(T []a) => a.LongLength;
+    long M9<C>(C []a, int i) => a.LongLength + i;
+}

@@ -132,6 +132,12 @@ namespace Cecilifier.Core.Tests.Integration
         }
 
         [Test]
+        public void TestArrayLength()
+        {
+            AssertResourceTest($@"Expressions/ArrayLength");
+        }
+
+        [Test]
         public void TestRangeExpression()
         {
             AssertResourceTest(@"Expressions/RangeExpression");
