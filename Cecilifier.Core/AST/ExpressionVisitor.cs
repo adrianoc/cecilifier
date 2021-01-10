@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Cecilifier.Core.Extensions;
-using Cecilifier.Core.Misc;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -236,6 +235,8 @@ namespace Cecilifier.Core.AST
                 ilVar,
                 Context.SemanticModel.GetTypeInfo(node.Left).Type,
                 Context.SemanticModel.GetTypeInfo(node.Right).Type);
+            
+            InjectRequiredConversions(node);            
         }
 
         public override void VisitLiteralExpression(LiteralExpressionSyntax node)
@@ -525,6 +526,13 @@ namespace Cecilifier.Core.AST
             base.VisitThisExpression(node);
         }
 
+        public override void VisitMemberAccessExpression(MemberAccessExpressionSyntax node)
+        {
+            base.VisitMemberAccessExpression(node);
+            if (!node.Parent.IsKind(SyntaxKind.SimpleMemberAccessExpression))
+                InjectRequiredConversions(node);
+        }
+
         public override void VisitRangeExpression(RangeExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitSimpleLambdaExpression(SimpleLambdaExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitAwaitExpression(AwaitExpressionSyntax node) => LogUnsupportedSyntax(node);
@@ -675,7 +683,18 @@ namespace Cecilifier.Core.AST
             }
             else
             {
-                AddMethodCall(ilVar, propertySymbol.GetMethod, isAccessOnThisOrObjectCreation);
+                if (propertySymbol.ContainingType.SpecialType == SpecialType.System_Array && propertySymbol.Name == "Length")
+                {
+                    AddCilInstruction(ilVar, OpCodes.Ldlen);
+                    AddCilInstruction(ilVar, OpCodes.Conv_I4);
+                }
+                else if (propertySymbol.ContainingType.SpecialType == SpecialType.System_Array && propertySymbol.Name == "LongLength")
+                {
+                    AddCilInstruction(ilVar, OpCodes.Ldlen);
+                    AddCilInstruction(ilVar, OpCodes.Conv_I8);
+                }
+                else
+                    AddMethodCall(ilVar, propertySymbol.GetMethod, isAccessOnThisOrObjectCreation);
             }
         }
 
@@ -815,6 +834,9 @@ namespace Cecilifier.Core.AST
         private void InjectRequiredConversions(ExpressionSyntax expression, Action loadArrayIntoStack = null)
         {
             var typeInfo = Context.SemanticModel.GetTypeInfo(expression);
+            if (typeInfo.Type == null)
+                return;
+            
             var conversion = Context.SemanticModel.GetConversion(expression);
             if (conversion.IsImplicit && conversion.IsNumeric)
             {
