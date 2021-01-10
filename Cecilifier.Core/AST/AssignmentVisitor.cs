@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using Cecilifier.Core.Extensions;
+using Cecilifier.Core.Misc;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -49,7 +51,7 @@ namespace Cecilifier.Core.AST
             int instCount = 0;
             while (c != last)
             {
-                c = c.Next;
+                c = c!.Next;
                 instCount++;
             }
 
@@ -58,7 +60,7 @@ namespace Cecilifier.Core.AST
             c = InstructionPrecedingValueToLoad.Next;
             while (instCount-- > 0)
             {
-                var next = c.Next;
+                var next = c!.Next;
                 Context.MoveLineAfter(c, Context.CurrentLine);
                 c = next;
             }
@@ -72,7 +74,6 @@ namespace Cecilifier.Core.AST
             {
                 AddCilInstruction(ilVar, OpCodes.Stelem_Ref);
             }
-            
         }
 
         public override void VisitIdentifierName(IdentifierNameSyntax node)
@@ -85,27 +86,29 @@ namespace Cecilifier.Core.AST
             }
 
             var member = Context.SemanticModel.GetSymbolInfo(node);
-            if (member.Symbol.ContainingType.IsValueType && node.Parent.Kind() == SyntaxKind.ObjectCreationExpression && ((ObjectCreationExpressionSyntax) node.Parent).ArgumentList.Arguments.Count == 0)
+            Utils.EnsureNotNull(member.Symbol == null, $"Failed to resolve symbol for node: {node.SourceDetails()}.");
+
+            if (member.Symbol.ContainingType.IsValueType && node.Parent is ObjectCreationExpressionSyntax objectCreation && objectCreation.ArgumentList?.Arguments.Count == 0)
             {
                 return;
             }
 
-            switch (member.Symbol.Kind)
+            switch (member.Symbol)
             {
-                case SymbolKind.Parameter:
-                    ParameterAssignment((IParameterSymbol) member.Symbol);
+                case IParameterSymbol parameter:
+                    ParameterAssignment(parameter);
                     break;
 
-                case SymbolKind.Local:
-                    LocalVariableAssignment(member.Symbol as ILocalSymbol);
+                case ILocalSymbol local:
+                    LocalVariableAssignment(local);
                     break;
 
-                case SymbolKind.Field:
-                    FieldAssignment(member.Symbol as IFieldSymbol);
+                case IFieldSymbol field:
+                    FieldAssignment(field);
                     break;
                 
-                case SymbolKind.Property:
-                    PropertyAssignment(member.Symbol as IPropertySymbol);
+                case IPropertySymbol property:
+                    PropertyAssignment(property);
                     break;
             }
         }
@@ -160,32 +163,19 @@ namespace Cecilifier.Core.AST
             }
             else
             {
-                var opCode = OpCodes.Stind_Ref;
-                switch (parameter.Type.SpecialType)
+                var opCode = parameter.Type.SpecialType switch
                 {
-                    case SpecialType.None:
-                    case SpecialType.System_Char:
-                    case SpecialType.System_Int16:
-                        opCode = OpCodes.Stind_I2;
-                        break;
+                    SpecialType.None => OpCodes.Stind_I2,
+                    SpecialType.System_Char => OpCodes.Stind_I2,
+                    SpecialType.System_Int16 => OpCodes.Stind_I2,
 
-                    case SpecialType.System_Int32:
-                        opCode = OpCodes.Stind_I4;
-                        break;
-
-                    case SpecialType.System_Single:
-                        opCode = OpCodes.Stind_R4;
-                        break;
-
-                    default:
-                        if (!parameter.Type.IsReferenceType)
-                        {
-                            throw new NotSupportedException(string.Format("Assinment to ref/out parameters of type {0} not supported yet.", parameter.Type));
-                        }
-
-                        break;
-                }
-
+                    SpecialType.System_Int32 => OpCodes.Stind_I4,
+                    SpecialType.System_Single => OpCodes.Stind_R4,
+                    _ => parameter.Type.IsReferenceType
+                        ? OpCodes.Stind_Ref
+                        : throw new NotSupportedException($"Assignment to ref/out parameters of type {parameter.Type} not supported yet.")
+                };
+                
                 AddCilInstruction(ilVar, opCode);
             }
         }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Cecilifier.Core.Extensions;
+using Cecilifier.Core.Misc;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -49,7 +50,7 @@ namespace Cecilifier.Core.AST
                 }
                 else
                 {
-                    WriteCecilExpression(ctx, @"{0}.Append({0}.Create({1}));", ilVar, OpCodes.Add.ConstantName());
+                    WriteCecilExpression(ctx, "{0}.Append({0}.Create({1}));", ilVar, OpCodes.Add.ConstantName());
                 }
             };
 
