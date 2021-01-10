@@ -12,7 +12,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
     internal class AssemblyComparer
     {
         private static readonly Dictionary<Code, Func<Instruction, Instruction, (bool, int)>> _instructionValidator =
-            new Dictionary<Code, Func<Instruction, Instruction, (bool, int)>>
+            new()
             {
                 {Code.Ret, OperandObliviousValidator},
                 {Code.Nop, OperandObliviousValidator},

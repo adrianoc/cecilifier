@@ -153,7 +153,7 @@ namespace Cecilifier.Core.Misc
             return exps;
         }
 
-        public static string Parameter(string name, RefKind byRef, bool isParams, string resolvedType)
+        public static string Parameter(string name, RefKind byRef, string resolvedType)
         {
             if (RefKind.None != byRef)
             {
@@ -167,7 +167,7 @@ namespace Cecilifier.Core.Misc
         {
             var exps = new List<string>();
 
-            exps.Add($"var {paramVar} = {Parameter(name, byRef, isParams, resolvedType)};");
+            exps.Add($"var {paramVar} = {Parameter(name, byRef, resolvedType)};");
             AddExtraAttributes(exps, paramVar, byRef);
 
             if (isParams)
@@ -196,8 +196,7 @@ namespace Cecilifier.Core.Misc
         {
             return Parameter(
                 paramSymbol.Name, 
-                paramSymbol.RefKind, 
-                isParams: paramSymbol.IsParams,
+                paramSymbol.RefKind,
                 resolvedType);
         }
 
@@ -371,10 +370,9 @@ namespace Cecilifier.Core.Misc
 
         private static string FunctionPointerTypeBasedCecilType(ITypeResolver resolver, IFunctionPointerTypeSymbol functionPointer, Func<string, string, string, string> factory)
         {
-            var hasThis = $"HasThis = false";
-            var parameters = $"Parameters={{ {string.Join(',', functionPointer.Signature.Parameters.Select(p => CecilDefinitionsFactory.Parameter(p, resolver.Resolve(p.Type))))} }}";
+            var parameters = $"Parameters={{ {string.Join(',', functionPointer.Signature.Parameters.Select(p => Parameter(p, resolver.Resolve(p.Type))))} }}";
             var returnType = resolver.Resolve(functionPointer.Signature.ReturnType);
-            return factory(hasThis, parameters, returnType);
+            return factory("HasThis = false", parameters, returnType);
         }
     }
 }

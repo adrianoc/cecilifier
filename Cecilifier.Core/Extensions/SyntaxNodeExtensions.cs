@@ -57,5 +57,7 @@ namespace Cecilifier.Core.Extensions
 
             return s.ToString();
         }
+        
+        public static string SourceDetails(this SyntaxNode node) => $"{node} ({node.SyntaxTree.GetMappedLineSpan(node.Span).Span})";
     }
 }

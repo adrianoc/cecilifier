@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Cecilifier.Core.AST;
+using Cecilifier.Core.Misc;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -65,7 +66,7 @@ namespace Cecilifier.Core.Extensions
             {
                 var paramTypes = method.ConstructedFrom.Parameters.AsStringNewArrayExpression();
                 var typeArguments = method.TypeArguments.AsStringNewArrayExpression();
-                return $"assembly.MainModule.Import(TypeHelpers.ResolveGenericMethod(\"{method.ContainingAssembly.Name}\", \"{declaringTypeName}\", \"{method.Name}\",{method.Modifiers()}, {typeArguments}, {paramTypes}))";
+                return Utils.ImportFromMainModule($"TypeHelpers.ResolveGenericMethod(\"{method.ContainingAssembly.Name}\", \"{declaringTypeName}\", \"{method.Name}\",{method.Modifiers()}, {typeArguments}, {paramTypes})");
             }
 
             if (!method.ContainingType.IsValueType && !method.ContainingType.IsGenericType)

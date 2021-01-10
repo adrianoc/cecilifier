@@ -27,15 +27,18 @@ namespace Cecilifier.Core.AST
         {
             try
             {
-                var namespaceHierarchy = node.AncestorsAndSelf().OfType<NamespaceDeclarationSyntax>().Reverse();
-                var @namespace = namespaceHierarchy.Aggregate("", (acc, curr) => acc + "." + curr.Name.WithoutTrivia().ToString());
-
-                Context.Namespace = @namespace.StartsWith(".") ? @namespace.Substring(1) : @namespace;
+                Context.Namespace = NamespaceOf(node);
                 base.VisitNamespaceDeclaration(node);
             }
             finally
             {
                 Context.Namespace = string.Empty;
+            }
+
+            string NamespaceOf(NamespaceDeclarationSyntax namespaceDeclarationSyntax)
+            {
+                var namespaceHierarchy = namespaceDeclarationSyntax.AncestorsAndSelf().OfType<NamespaceDeclarationSyntax>().Reverse();
+                return string.Join('.', namespaceHierarchy.Select(curr => curr.Name.WithoutTrivia()));
             }
         }
      
@@ -187,18 +190,18 @@ namespace Cecilifier.Core.AST
             if (mainType == null)
                 mainType = node;
 
-            var typeSymbol = ModelExtensions.GetDeclaredSymbol(Context.SemanticModel, node) as ITypeSymbol;
+            var typeSymbol = Context.SemanticModel.GetDeclaredSymbol(node) as ITypeSymbol;
             if (typeSymbol == null)
                 return;
 
             if (MainMethodDefinitionVariable == null)
             {
-                var mainMethod = (IMethodSymbol) typeSymbol.GetMembers().SingleOrDefault(m => m is IMethodSymbol method && method.IsStatic && method.Name == "Main" && method.ReturnsVoid);
+                var mainMethod = (IMethodSymbol) typeSymbol.GetMembers().SingleOrDefault(m => m is IMethodSymbol {IsStatic: true, Name: "Main", ReturnsVoid: true});
                 if (mainMethod != null)
                     MainMethodDefinitionVariable = Context.DefinitionVariables.GetMethodVariable(mainMethod.AsMethodDefinitionVariable());
             }
 
-            var mainTypeSymbol = (ITypeSymbol) ModelExtensions.GetDeclaredSymbol(Context.SemanticModel, mainType);
+            var mainTypeSymbol = (ITypeSymbol) Context.SemanticModel.GetDeclaredSymbol(mainType);
             if (typeSymbol.GetMembers().Length > mainTypeSymbol?.GetMembers().Length)
             {
                 mainType = node;
