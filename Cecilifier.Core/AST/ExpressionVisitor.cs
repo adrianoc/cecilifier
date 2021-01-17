@@ -558,19 +558,16 @@ namespace Cecilifier.Core.AST
         private void StoreTopOfStackInLocalVariableAndLoadItsAddressIfNeeded(ExpressionSyntax node)
         {
             var invocation = (InvocationExpressionSyntax) node.Ancestors().FirstOrDefault(a => a.IsKind(SyntaxKind.InvocationExpression));
-            if (invocation == null || invocation.ArgumentList.Arguments.Any(argumentExp => argumentExp.Expression == node))
+            if (invocation == null || invocation.ArgumentList.Arguments.Any(argumentExp => argumentExp.Expression.DescendantNodesAndSelf().Any( exp => exp == node)))
                 return;
 
             var targetOfInvocationType = Context.SemanticModel.GetTypeInfo(node);
-            if (targetOfInvocationType.Type == null)
-                return;
-
-            if (!targetOfInvocationType.Type.IsValueType)
+            if (targetOfInvocationType.Type?.IsValueType == false)
                 return;
 
             StoreTopOfStackInLocalVariableAndLoadItsAddress(targetOfInvocationType.Type);
         }
-        
+
         private void StoreTopOfStackInLocalVariableAndLoadItsAddress(ITypeSymbol type)
         {
             var tempLocalName = MethodExtensions.LocalVariableNameFor("tmp_", "tmp_".UniqueId().ToString());
@@ -671,12 +668,13 @@ namespace Cecilifier.Core.AST
                 isAccessOnThisOrObjectCreation = parentMae.Expression.IsKind(SyntaxKind.ObjectCreationExpression);
             }
 
-            var parentExp = node.Parent;
-            if (!parentExp.IsKind(SyntaxKind.SimpleMemberAccessExpression)) // if this is an *unqualified* access we need to load *this*
+            // if this is an *unqualified* access we need to load *this*
+            if (parentMae == null || parentMae.Expression == node)
             {
                 AddCilInstruction(ilVar, OpCodes.Ldarg_0);
             }
 
+            var parentExp = node.Parent;
             if (parentExp.Kind() == SyntaxKind.SimpleAssignmentExpression || parentMae != null && parentMae.Name.Identifier == node.Identifier && parentMae.Parent.IsKind(SyntaxKind.SimpleAssignmentExpression))
             {
                 AddMethodCall(ilVar, propertySymbol.SetMethod, isAccessOnThisOrObjectCreation);
@@ -694,7 +692,10 @@ namespace Cecilifier.Core.AST
                     AddCilInstruction(ilVar, OpCodes.Conv_I8);
                 }
                 else
+                {
                     AddMethodCall(ilVar, propertySymbol.GetMethod, isAccessOnThisOrObjectCreation);
+                    StoreTopOfStackInLocalVariableAndLoadItsAddressIfNeeded(node);
+                }
             }
         }
 
