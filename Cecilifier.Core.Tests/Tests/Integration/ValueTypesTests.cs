@@ -5,7 +5,7 @@ namespace Cecilifier.Core.Tests.Integration
     [TestFixture]
     public class ValueTypesTests : IntegrationResourceBasedTest
     {
-        //[TestCase("ValueTypeReturnAsTargetOfCall")]
+        [TestCase("ValueTypeReturnAsTargetOfCall")]
         [TestCase("MultipleLiteralAsTargetOfCall")]
         [TestCase("SingleLiteralAsTargetOfCall")]
         [TestCase("ValueTypeReturnAsTargetOfCallInsideBaseConstructorInvocation")]

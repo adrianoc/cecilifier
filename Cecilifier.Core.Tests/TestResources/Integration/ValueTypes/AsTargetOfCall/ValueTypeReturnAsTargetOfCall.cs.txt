@@ -1,5 +1,14 @@
 ﻿class ValueTypeReturnAsTargetOfCall
 {
+    int field = 42;
+
+	int PropertyValue
+	{
+		get { return 10; }
+	}
+	
+	string OnProperty() => PropertyValue.ToString();
+
 	void OnConst()
 	{
 		42.ToString();
@@ -10,56 +19,41 @@
 		MethodValue().ToString();
 	}
 
-	void OnProperty()
-	{
-    	PropertyValue.ToString();
-	}
-
-	void OnField()
-	{
-    	field.ToString();
-	}
-
 	void OnParameter(int param)
 	{
     	param.ToString();
 	}
-
-	void OnDelegate(System.Func<int> del)
-	{
-        del().ToString();
-	}
-
-	void OnCast(object o)
-	{
-        ((int) o).ToString();
-	}
-
-    void OnChainedInvocations()
-    {
-    	var s = 42.GetHashCode().ToString();
-    }
 
 	void OnLocalVariable()
 	{
         int local = 42;
         local.ToString();
 	}
-
-	int PropertyValue
+   
+	void OnDelegate(System.Func<int> del)
 	{
-		get { return 10; }
+        del().ToString();
 	}
 
+	void OnField()
+	{
+    	field.ToString();
+	}
+		
 	int MethodValue() 
 	{
 		return 42;
 	}
 
-	public ValueTypeReturnAsTargetOfCall()
+    string OnChainedInvocations() 
+    {
+       return 42.Equals(null).ToString();
+    }
+    
+/*
+	void OnCast(object o)
 	{
-		field = 42;
+        ((int) o).ToString();
 	}
-
-    private int field = 42;
+*/
 }
