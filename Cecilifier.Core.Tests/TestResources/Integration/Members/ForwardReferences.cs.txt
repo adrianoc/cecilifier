@@ -1,12 +1,14 @@
-﻿class NoParameters
+﻿class ForwardReferences
 {
-	public void Foo() 
-	{
-		Bar();
-	}
-
-	private void Bar()
-	{
-		Foo();
-	}
+	void Foo() => Bar();
+	void Bar() => Foo();
+	
+	int FieldRef1() => field; 
+	int FieldRef2() => field;
+	
+	int PropertyRef1() => Property;
+	int PropertyRef2() => Property;
+	
+	int field = 32;
+	int Property { get => 10; }
 }

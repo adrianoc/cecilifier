@@ -8,7 +8,6 @@ using Cecilifier.Core.Misc;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using CSharpExtensions = Microsoft.CodeAnalysis.CSharp.CSharpExtensions;
 
 namespace Cecilifier.Core.AST
 {
@@ -48,6 +47,11 @@ namespace Cecilifier.Core.AST
 
             foreach (var field in variableDeclarationSyntax.Variables)
             {
+                // skip field already processed due to forward references.
+                var fieldDeclarationVariable = Context.DefinitionVariables.GetVariable(field.Identifier.Text, MemberKind.Field, declaringType.Identifier.Text);
+                if (fieldDeclarationVariable.IsValid)
+                    continue;
+
                 var fieldVar = MethodExtensions.LocalVariableNameFor("fld", declaringType.Identifier.ValueText, field.Identifier.ValueText.CamelCase());
                 fieldDefVars.Add(fieldVar);
                 

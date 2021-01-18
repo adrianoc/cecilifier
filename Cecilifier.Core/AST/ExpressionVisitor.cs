@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Runtime.Serialization.Json;
 using Cecilifier.Core.Extensions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -661,6 +663,8 @@ namespace Cecilifier.Core.AST
 
         private void ProcessProperty(SimpleNameSyntax node, IPropertySymbol propertySymbol)
         {
+            EnsurePropertyExists(node, propertySymbol);
+            
             var parentMae = node.Parent as MemberAccessExpressionSyntax;
             var isAccessOnThisOrObjectCreation = true;
             if (parentMae != null)
@@ -698,6 +702,20 @@ namespace Cecilifier.Core.AST
                 }
             }
         }
+        
+        private void EnsurePropertyExists(SimpleNameSyntax node, [NotNull] IPropertySymbol propertySymbol)
+        {
+            var declaringReference = propertySymbol.DeclaringSyntaxReferences.SingleOrDefault();
+            if (declaringReference == null)
+                return;
+            
+            var fieldDeclaration = (PropertyDeclarationSyntax) declaringReference.GetSyntax();
+            if (fieldDeclaration.Span.Start > node.Span.End)
+            {
+                // this is a forward reference, process it...
+                fieldDeclaration.Accept(new PropertyDeclarationVisitor(Context));
+            }
+        }
 
         private void ProcessField(SimpleNameSyntax node, IFieldSymbol fieldSymbol)
         {
@@ -716,12 +734,28 @@ namespace Cecilifier.Core.AST
             if (fieldSymbol.IsVolatile)
                 AddCilInstruction(ilVar, OpCodes.Volatile);
 
-            var fieldDeclarationVariable = Context.DefinitionVariables.GetVariable(fieldSymbol.Name, MemberKind.Field, fieldSymbol.ContainingType.Name).VariableName;
-            AddCilInstruction(ilVar, OpCodes.Ldfld, fieldDeclarationVariable);
+            var fieldDeclarationVariable = EnsureFieldExists(node, fieldSymbol);
+            AddCilInstruction(ilVar, OpCodes.Ldfld, fieldDeclarationVariable.VariableName);
             
             HandlePotentialDelegateInvocationOn(node, fieldSymbol.Type, ilVar);
         }
 
+        private DefinitionVariable EnsureFieldExists(SimpleNameSyntax node, [NotNull] IFieldSymbol fieldSymbol)
+        {
+            var fieldDeclaration = (FieldDeclarationSyntax) fieldSymbol.DeclaringSyntaxReferences.Single().GetSyntax().Parent.Parent;
+            if (fieldDeclaration.Span.Start > node.Span.End)
+            {
+                // this is a forward reference, process it...
+                fieldDeclaration.Accept(new FieldDeclarationVisitor(Context));
+            }
+            
+            var fieldDeclarationVariable = Context.DefinitionVariables.GetVariable(fieldSymbol.Name, MemberKind.Field, fieldSymbol.ContainingType.Name);
+            if (!fieldDeclarationVariable.IsValid)
+                throw new Exception($"Could not resolve reference to field: {fieldSymbol.Name}");
+            
+            return fieldDeclarationVariable;
+        }
+        
         private void ProcessLocalVariable(SimpleNameSyntax localVarSyntax, SymbolInfo varInfo)
         {
             var symbol = (ILocalSymbol) varInfo.Symbol;
