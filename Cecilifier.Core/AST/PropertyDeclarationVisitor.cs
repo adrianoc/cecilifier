@@ -55,6 +55,9 @@ namespace Cecilifier.Core.AST
 
         public override void VisitPropertyDeclaration(PropertyDeclarationSyntax node)
         {
+            if (PropertyAlreadyProcessed(node))
+                return;
+            
             Context.WriteNewLine();
             Context.WriteComment($"** Property: {node.Identifier} **");
             var propertyType = ResolveType(node.Type);
@@ -68,6 +71,18 @@ namespace Cecilifier.Core.AST
             
             HandleAttributesInMemberDeclaration(node.AttributeLists, TargetDoesNotMatch, SyntaxKind.FieldKeyword, propDefVar); // Normal property attrs
             HandleAttributesInMemberDeclaration(node.AttributeLists, TargetMatches,      SyntaxKind.FieldKeyword, backingFieldVar); // [field: attr], i.e, attr belongs to the backing field.
+        }
+
+        private bool PropertyAlreadyProcessed(PropertyDeclarationSyntax node)
+        {
+            var propInfo = (IPropertySymbol) Context.SemanticModel.GetDeclaredSymbol(node);
+            if (propInfo == null)
+                return false;
+            
+            // check the methods of the property because we do not register the property itself, only its methods. 
+            var methodToCheck = propInfo?.GetMethod?.Name ?? propInfo?.SetMethod?.Name;
+            var d = Context.DefinitionVariables.GetVariable(methodToCheck, MemberKind.Method, propInfo.ContainingType.Name);
+            return d.IsValid;
         }
 
         private void AddDefaultMemberAttribute(string definitionVar, string value)
