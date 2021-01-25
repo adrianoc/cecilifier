@@ -43,9 +43,10 @@ namespace Cecilifier.Core.AST
 
                 var exps = CecilDefinitionsFactory.Parameter(parameter, Context.SemanticModel, propDefVar, paramVar, ResolveType(parameter.Type));
                 AddCecilExpressions(exps);
+                Context.DefinitionVariables.RegisterNonMethod(string.Empty, parameter.Identifier.ValueText, MemberKind.Parameter, paramVar);
             }
 
-            ProcessPropertyAccessors(node, propertyDeclaringTypeVar, propName, propertyType, propDefVar, paramsVar);
+            ProcessPropertyAccessors(node, propertyDeclaringTypeVar, propName, propertyType, propDefVar, paramsVar, node.ExpressionBody);
 
             AddCecilExpression($"{propertyDeclaringTypeVar}.Properties.Add({propDefVar});");
             
@@ -65,7 +66,7 @@ namespace Cecilifier.Core.AST
             var propName = node.Identifier.ValueText;
 
             var propDefVar = AddPropertyDefinition(propName, propertyType);
-            ProcessPropertyAccessors(node, propertyDeclaringTypeVar, propName, propertyType, propDefVar, NoParameters);
+            ProcessPropertyAccessors(node, propertyDeclaringTypeVar, propName, propertyType, propDefVar, NoParameters, node.ExpressionBody);
 
             AddCecilExpression($"{propertyDeclaringTypeVar}.Properties.Add({propDefVar});");
             
@@ -100,52 +101,25 @@ namespace Cecilifier.Core.AST
             AddCecilExpressions(exps);
         }
         
-        private void ProcessPropertyAccessors(BasePropertyDeclarationSyntax node, string propertyDeclaringTypeVar, string propName, string propertyType, string propDefVar, List<ParamData> parameters)
+        private void ProcessPropertyAccessors(BasePropertyDeclarationSyntax node, string propertyDeclaringTypeVar, string propName, string propertyType, string propDefVar, List<ParamData> parameters, ArrowExpressionClauseSyntax? arrowExpression)
         {
             var propInfo = (IPropertySymbol) Context.SemanticModel.GetDeclaredSymbol(node);
+            var accessorModifiers = node.Modifiers.MethodModifiersToCecil(ModifiersToCecil, "MethodAttributes.SpecialName", propInfo.GetMethod ?? propInfo.SetMethod);
+
             var declaringType = node.ResolveDeclaringType<TypeDeclarationSyntax>();
+            if (arrowExpression != null)
+            {
+                AddExpressionBodiedGetterMethod(accessorModifiers, arrowExpression);
+                return;
+            }
+            
             foreach (var accessor in node.AccessorList!.Accessors)
             {
                 Context.WriteNewLine();
-                var accessorModifiers = node.Modifiers.MethodModifiersToCecil(ModifiersToCecil, "MethodAttributes.SpecialName", propInfo.GetMethod ?? propInfo.SetMethod);
                 switch (accessor.Keyword.Kind())
                 {
                     case SyntaxKind.GetKeyword:
-                        Context.WriteComment(" Getter");
-                        var getMethodVar = TempLocalVar(propertyDeclaringTypeVar + "_get_");
-                        Context.DefinitionVariables.RegisterMethod(declaringType.Identifier.Text, $"get_{propName}", parameters.Select(p => p.Type).ToArray(), getMethodVar);
-
-                        AddCecilExpression($"var {getMethodVar} = new MethodDefinition(\"get_{propName}\", {accessorModifiers}, {propertyType});");
-                        parameters.ForEach(p => AddCecilExpression($"{getMethodVar}.Parameters.Add({p.VariableName});"));
-                        AddCecilExpression($"{propertyDeclaringTypeVar}.Methods.Add({getMethodVar});");
-
-                        AddCecilExpression($"{getMethodVar}.Body = new MethodBody({getMethodVar});");
-                        AddCecilExpression($"{propDefVar}.GetMethod = {getMethodVar};");
-
-                        if (propInfo.ContainingType.TypeKind == TypeKind.Interface)
-                            break;
-                        
-                        var ilVar = TempLocalVar("ilVar_get_");
-                        AddCecilExpression($"var {ilVar} = {getMethodVar}.Body.GetILProcessor();");
-                        if (accessor.Body == null && accessor.ExpressionBody == null) //is this an auto property ?
-                        {
-                            AddBackingFieldIfNeeded(accessor, node.AccessorList.Accessors.Any(acc => acc.IsKind(SyntaxKind.InitAccessorDeclaration)));
-
-                            AddCilInstruction(ilVar, OpCodes.Ldarg_0); // TODO: This assumes instance properties...
-                            AddCilInstruction(ilVar, OpCodes.Ldfld, Utils.MakeGenericTypeIfAppropriate(Context, propInfo, backingFieldVar, propertyDeclaringTypeVar));
-                            
-                            AddCilInstruction(ilVar, OpCodes.Ret);
-                        }
-                        else if (accessor.Body != null)
-                        {
-                            StatementVisitor.Visit(Context, ilVar, accessor.Body);
-                        }
-                        else
-                        {
-                            var expressionVisitor = new ExpressionVisitor(Context, ilVar);
-                            accessor.ExpressionBody.Accept(expressionVisitor);
-                            AddCilInstruction(ilVar, OpCodes.Ret);
-                        }
+                        AddGetterMethod(accessorModifiers, accessor);
                         break;
 
                     case SyntaxKind.InitKeyword:
@@ -225,6 +199,65 @@ namespace Cecilifier.Core.AST
                 }
 
                 AddCilInstruction(ilSetVar, OpCodes.Ret);
+            }
+
+            string AddGetterMethodGuts(string accessorModifiers)
+            {
+                Context.WriteComment(" Getter");
+                var getMethodVar = TempLocalVar(propertyDeclaringTypeVar + "_get_");
+                Context.DefinitionVariables.RegisterMethod(declaringType.Identifier.Text, $"get_{propName}", parameters.Select(p => p.Type).ToArray(), getMethodVar);
+
+                AddCecilExpression($"var {getMethodVar} = new MethodDefinition(\"get_{propName}\", {accessorModifiers}, {propertyType});");
+                parameters.ForEach(p => AddCecilExpression($"{getMethodVar}.Parameters.Add({p.VariableName});"));
+                AddCecilExpression($"{propertyDeclaringTypeVar}.Methods.Add({getMethodVar});");
+
+                AddCecilExpression($"{getMethodVar}.Body = new MethodBody({getMethodVar});");
+                AddCecilExpression($"{propDefVar}.GetMethod = {getMethodVar};");
+
+                if (propInfo.ContainingType.TypeKind == TypeKind.Interface)
+                    return null;
+
+                var ilVar = TempLocalVar("ilVar_get_");
+                AddCecilExpression($"var {ilVar} = {getMethodVar}.Body.GetILProcessor();");
+                return ilVar;
+            }
+            
+            void AddExpressionBodiedGetterMethod(string accessorModifiers, ArrowExpressionClauseSyntax arrowExpression)
+            {
+                var ilVar = AddGetterMethodGuts(accessorModifiers);
+                ProcessExpressionBodiedGetter(ilVar, arrowExpression);
+            }
+            
+            void AddGetterMethod(string accessorModifiers, AccessorDeclarationSyntax accessor)
+            {
+                var ilVar = AddGetterMethodGuts(accessorModifiers);
+                if (ilVar == null)
+                    return;
+                
+                if (accessor.Body == null && accessor.ExpressionBody == null) //is this an auto property ?
+                {
+                    AddBackingFieldIfNeeded(accessor, node.AccessorList.Accessors.Any(acc => acc.IsKind(SyntaxKind.InitAccessorDeclaration)));
+
+                    AddCilInstruction(ilVar, OpCodes.Ldarg_0); // TODO: This assumes instance properties...
+                    AddCilInstruction(ilVar, OpCodes.Ldfld, Utils.MakeGenericTypeIfAppropriate(Context, propInfo, backingFieldVar, propertyDeclaringTypeVar));
+
+                    AddCilInstruction(ilVar, OpCodes.Ret);
+                }
+                else if (accessor.Body != null)
+                {
+                    StatementVisitor.Visit(Context, ilVar, accessor.Body);
+                }
+                else
+                {
+                    ProcessExpressionBodiedGetter(ilVar, accessor.ExpressionBody);
+                }
+            }
+
+            void ProcessExpressionBodiedGetter(string ilVar, ArrowExpressionClauseSyntax arrowExpression)
+            {
+                var expressionVisitor = new ExpressionVisitor(Context, ilVar);
+                arrowExpression.Accept(expressionVisitor);
+                AddCilInstruction(ilVar, OpCodes.Ret);
             }
         }
 
