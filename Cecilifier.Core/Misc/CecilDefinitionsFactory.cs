@@ -153,7 +153,7 @@ namespace Cecilifier.Core.Misc
             return exps;
         }
 
-        public static string Parameter(string name, RefKind byRef, string resolvedType)
+        private static string Parameter(string name, RefKind byRef, string resolvedType)
         {
             if (RefKind.None != byRef)
             {

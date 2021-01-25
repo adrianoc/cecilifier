@@ -19,16 +19,11 @@ class ExpressionBodiedMembers
 	
 	T Generic<T>(T p) => p; 
 	
-	/*
-	not supported
 	public int Prop2 => 42;
-	*/
 	
-	/*
 	public string this[int i]
 	{
 	    get => i.ToString();
-	    set => Console.WriteLine(i.ToString() + ":" + value);
+	    set => Console.WriteLine(i);
 	}
-	*/
 } 
