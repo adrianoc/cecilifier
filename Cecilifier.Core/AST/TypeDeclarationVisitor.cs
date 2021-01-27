@@ -115,6 +115,8 @@ namespace Cecilifier.Core.AST
 
         private string HandleTypeDeclaration(TypeDeclarationSyntax node, string baseType)
         {
+            Context.WriteComment($"{node.Kind()} : {node.Identifier}");
+            
             var varName = LocalVariableNameForId(NextLocalVariableTypeId());
             var isStructWithNoFields = node.Kind() == SyntaxKind.StructDeclaration && node.Members.Count == 0;
             var typeDefinitionExp = CecilDefinitionsFactory.Type(

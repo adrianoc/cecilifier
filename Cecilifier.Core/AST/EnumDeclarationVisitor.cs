@@ -19,6 +19,7 @@ namespace Cecilifier.Core.AST
 
         public override void VisitEnumDeclaration(EnumDeclarationSyntax node)
         {
+            Context.WriteComment($"Enum: {node.Identifier}");
             _memberCollector = new EnumMemberValueCollector();
             node.Accept(_memberCollector);
 
