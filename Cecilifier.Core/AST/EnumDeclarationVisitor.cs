@@ -28,14 +28,14 @@ namespace Cecilifier.Core.AST
             var typeDef = CecilDefinitionsFactory.Type(Context, enumType, node.Identifier.ValueText, attrs + " | TypeAttributes.Sealed", Context.TypeResolver.Resolve("System.Enum"), false, Array.Empty<string>());
             AddCecilExpressions(typeDef);
 
-            using (Context.DefinitionVariables.WithCurrent(node.Parent.IsKind(SyntaxKind.CompilationUnit) ? "" : node.Parent.ResolveDeclaringType<TypeDeclarationSyntax>().Identifier.ValueText, node.Identifier.ValueText, MemberKind.Type,
-                enumType))
+            var parentName = node.Parent.IsKind(SyntaxKind.CompilationUnit) ? "" : node.Parent.ResolveDeclaringType<TypeDeclarationSyntax>().Identifier.ValueText;
+            using (Context.DefinitionVariables.WithCurrent(parentName, node.Identifier.ValueText, MemberKind.Type,enumType))
             {
                 //.class private auto ansi MyEnum
                 //TODO: introduce TypeSystem.CoreLib.Enum/Action/etc...
 
                 var fieldVar = MethodExtensions.LocalVariableNameFor("valueField", node.Identifier.ValueText);
-                var valueFieldExp = CecilDefinitionsFactory.Field(enumType, fieldVar, "value__", "assembly.MainModule.TypeSystem.Int32",
+                var valueFieldExp = CecilDefinitionsFactory.Field(enumType, fieldVar, "value__", Context.TypeResolver.ResolvePredefinedType(GetSpecialType(SpecialType.System_Int32)),
                     "FieldAttributes.SpecialName | FieldAttributes.RTSpecialName | FieldAttributes.Public");
                 AddCecilExpressions(valueFieldExp);
 

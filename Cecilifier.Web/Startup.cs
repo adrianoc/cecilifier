@@ -240,8 +240,7 @@ namespace Cecilifier.Web
             ]
         }}";
             
-            SendJsonMessageToChat(toSend);
-            
+            SendJsonMessageToChat(toSend);            
         }
 
         private void SendSyntaxErrorToChat(SyntaxErrorException syntaxErrorException, byte[] code, int length)
@@ -266,6 +265,11 @@ namespace Cecilifier.Web
         private void SendJsonMessageToChat(string jsonMessage)
         {
             var discordChannelUrl = Configuration["DiscordChannelUrl"];
+            if (string.IsNullOrWhiteSpace(discordChannelUrl))
+            {
+                Console.WriteLine("DiscordChannelUrl not specified in configuration file.");
+                return;
+            }            
             
             var discordPostRequest = WebRequest.Create(discordChannelUrl);
             discordPostRequest.ContentType = "application/json";
