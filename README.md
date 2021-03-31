@@ -113,7 +113,8 @@ There's also a discord server (created on April/2020); feel free to join at http
 
 Build Status
 ---
-[![Build Status](https://travis-ci.com/adrianoc/cecilifier.svg?branch=master)](https://travis-ci.com/adrianoc/cecilifier)
+[![Build Status](https://travis-ci.com/adrianoc/cecilifier.svg?branch=main)](https://travis-ci.com/adrianoc/cecilifier)
+[![codecov](https://codecov.io/gh/adrianoc/cecilifier/branch/main/graph/badge.svg?token=XJFIRCUES3)](https://codecov.io/gh/adrianoc/cecilifier)
 
 Potential improvements
 ---
