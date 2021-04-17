@@ -8,7 +8,6 @@ script:
 - dotnet test --collect:"XPlat Code Coverage"
 after_success:
 - bash <(curl -s https://codecov.io/bash)
-
 env:
   global:
     secure: Yx0IvclwXvA2zP7nisvBMGiJ6kt8ipZAgo/xckZ8ZEQ5PO0yghYXb5PGWOmNVtj8JZJX0uK7jFutFjA23/k7J9saG1c9WMnsFtp2KXWgcH0IK7S0xVHlw/sLlX6XrrzIbGh3iE4mMVm+BOvfpF0s1hrYS6XWg/3CiIxvCP086WqGN+HVQSKl6V7zl+Iir9o6wrCnS5tXkyvRfAj/enoIesauVMLLFvDYdkMd7dVsuXhlIGt1HeX1a8zTINBOArotYxbwI8v7N0pTqlN8CY4QRqLKAdYpfaKBDFTbvW/kg1Hx/yE4/SRwwGk6mkskjsPK0zrv4TFZ4oRMXGTKszXxHr+7NsY7+xb0OsgWxo5PxJi9XWTxaenIG7QPeFQjDdQlgYq04ymsWdU13l/sOU12Av4mIQDNI5jTWuoIb1cMCk8r4lKYBiKp8op6S+VE9bf93MRaYqb2G9rVBLbkopE3GZ9UOa1Os1yTHI/EwmmyqfYvwG9+f/xTq+EnVj9lNpFRtnYgpt2JbX16v/OuCOYTaQMyzJaKTR0j/7dE50TQhyvQVg2HzlgaBjB22AeWpydyY8Zx2zl+3iUtJOtPHwfPEhaOr8HsxAtVwWSfgosjhyXNPNOGchLYTe4CowY8glKM36v/9w/HwQG7r+2+Jro++lYm7dTLI5S9RxV+AQdNVCA=
