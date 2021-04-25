@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Runtime.Serialization.Json;
 using Cecilifier.Core.Extensions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -285,6 +284,26 @@ namespace Cecilifier.Core.AST
             }
         }
 
+        public override void VisitDeclarationExpression(DeclarationExpressionSyntax node)
+        {
+            if (node.Parent is ArgumentSyntax argument && argument.RefKindKeyword.Kind() == SyntaxKind.OutKeyword)
+            {
+                var localSymbol = (ILocalSymbol) Context.SemanticModel.GetSymbolInfo(node).Symbol;
+                var designation = ((SingleVariableDesignationSyntax) node.Designation);
+                var resolvedOutArgType = Context.TypeResolver.Resolve(localSymbol.Type);
+
+                var outLocalName = AddLocalVariableWithResolvedType(
+                    designation.Identifier.Text,
+                    Context.DefinitionVariables.GetLastOf(MemberKind.Method),
+                    resolvedOutArgType
+                );
+
+                AddCilInstruction(ilVar, OpCodes.Ldloca_S, outLocalName);
+            }
+            
+            base.VisitDeclarationExpression(node);
+        }
+
         public override void VisitInvocationExpression(InvocationExpressionSyntax node)
         {
             HandleMethodInvocation(node.Expression, node.ArgumentList);
@@ -315,7 +334,7 @@ namespace Cecilifier.Core.AST
 
             AddCecilExpression("{0}.Append({1});", ilVar, conditionEnd);
         }
-
+        
         public override void VisitIdentifierName(IdentifierNameSyntax node)
         {
             HandleIdentifier(node);
@@ -347,7 +366,6 @@ namespace Cecilifier.Core.AST
             {
                 AddCecilExpression(last.Value);
             });
-            
         }
 
         public override void VisitPrefixUnaryExpression(PrefixUnaryExpressionSyntax node)

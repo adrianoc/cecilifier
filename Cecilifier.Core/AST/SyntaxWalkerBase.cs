@@ -110,6 +110,18 @@ namespace Cecilifier.Core.AST
             return Context.DefinitionVariables.LastInstructionVar = instVar;
         }
 
+        protected string AddLocalVariableWithResolvedType(string localVarName, DefinitionVariable methodVar, string resolvedVarType)
+        {
+            var cecilVarDeclName = TempLocalVar($"lv_{localVarName}");
+
+            AddCecilExpression("var {0} = new VariableDefinition({1});", cecilVarDeclName, resolvedVarType);
+            AddCecilExpression("{0}.Body.Variables.Add({1});", methodVar.VariableName, cecilVarDeclName);
+
+            Context.DefinitionVariables.RegisterNonMethod(string.Empty, localVarName, MemberKind.LocalVariable, cecilVarDeclName);
+
+            return cecilVarDeclName;
+        }
+
         protected IMethodSymbol DeclaredSymbolFor<T>(T node) where T : BaseMethodDeclarationSyntax
         {
             return Context.GetDeclaredSymbol(node);

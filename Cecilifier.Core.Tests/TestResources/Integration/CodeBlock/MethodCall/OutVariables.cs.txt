@@ -1,0 +1,18 @@
+﻿class OutVariables
+{
+	void InferredType()
+	{
+		Bar(out var x);
+	}
+
+	void ExplicitlyTyped()
+	{
+		Bar(out int x);
+	}
+
+	void Bar(out int i) 
+	{
+	    Bar(out i);
+	    i = 42;
+	}
+}

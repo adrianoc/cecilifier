@@ -284,7 +284,7 @@ namespace Cecilifier.Core.AST
             AddCilInstruction(_ilVar, OpCodes.Endfinally);
         }
 
-        private void AddLocalVariable(TypeSyntax type, VariableDeclaratorSyntax localVar, string methodVar)
+        private void AddLocalVariable(TypeSyntax type, VariableDeclaratorSyntax localVar, DefinitionVariable methodVar)
         {
             var isFixedStatement = Context.HasFlag("fixed");
             if (isFixedStatement)
@@ -295,21 +295,15 @@ namespace Cecilifier.Core.AST
             var resolvedVarType = type.IsVar
                 ? ResolveExpressionType(localVar.Initializer.Value)
                 : ResolveType(type);
-
-
+            
             if (isFixedStatement)
             {
                 resolvedVarType = $"{resolvedVarType}.MakeByReferenceType()";
             }
             
-            var cecilVarDeclName = TempLocalVar($"lv_{localVar.Identifier.ValueText}");
-
-            AddCecilExpression("var {0} = new VariableDefinition({1});", cecilVarDeclName, resolvedVarType);
-            AddCecilExpression("{0}.Body.Variables.Add({1});", methodVar, cecilVarDeclName);
-
-            Context.DefinitionVariables.RegisterNonMethod(string.Empty, localVar.Identifier.ValueText, MemberKind.LocalVariable, cecilVarDeclName);
+            AddLocalVariableWithResolvedType(localVar.Identifier.Text, methodVar, resolvedVarType);
         }
-        
+
         private void AddLocalVariable(string varType, string variableName)
         {
             var currentMethod = Context.DefinitionVariables.GetLastOf(MemberKind.Method);
@@ -360,7 +354,7 @@ namespace Cecilifier.Core.AST
 
         private void HandleVariableDeclaration(VariableDeclarationSyntax declaration)
         {
-            var methodVar = Context.DefinitionVariables.GetLastOf(MemberKind.Method).VariableName;
+            var methodVar = Context.DefinitionVariables.GetLastOf(MemberKind.Method);
             foreach (var localVar in declaration.Variables)
             {
                 AddLocalVariable(declaration.Type, localVar, methodVar);
