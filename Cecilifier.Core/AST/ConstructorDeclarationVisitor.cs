@@ -32,7 +32,7 @@ namespace Cecilifier.Core.AST
         private void HandleStaticConstructor(ConstructorDeclarationSyntax node)
         {
             var returnType = GetSpecialType(SpecialType.System_Void);
-            ProcessMethodDeclaration(node, "cctor", ".cctor", returnType, ctorVar => { node.Body.Accept(this); });
+            ProcessMethodDeclaration(node, "cctor", ".cctor", returnType, false, ctorVar => { node.Body.Accept(this); });
         }
 
         private void HandleInstanceConstructor(ConstructorDeclarationSyntax node)
@@ -42,7 +42,7 @@ namespace Cecilifier.Core.AST
             Action<ConstructorDeclarationSyntax> callBaseMethod = base.VisitConstructorDeclaration;
 
             var returnType = GetSpecialType(SpecialType.System_Void);
-            ProcessMethodDeclaration(node, "ctor", ".ctor", returnType, ctorVar =>
+            ProcessMethodDeclaration(node, "ctor", ".ctor", returnType, false, ctorVar =>
             {
                 if (node.Initializer == null || node.Initializer.IsKind(SyntaxKind.BaseConstructorInitializer)) 
                     ProcessFieldInitialization(declaringType, ilVar);

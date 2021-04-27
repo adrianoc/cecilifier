@@ -1,0 +1,10 @@
+﻿class RefReturn
+{
+	public ref int RefParamBodied(ref int i) => ref i; 
+	public ref int RefParam(ref int i)  { return ref i; }	
+	public ref int ArrayParam(int []i)  { return ref i[0]; }
+	
+	public ref int ParamIndexer(RefReturn i)  { return ref i[0]; }	
+	public ref int this[int i] => ref array[i];	
+	private int[] array; 
+}

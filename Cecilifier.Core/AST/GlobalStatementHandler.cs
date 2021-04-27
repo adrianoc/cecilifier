@@ -34,7 +34,8 @@ namespace Cecilifier.Core.AST
                 methodVar, 
                 "<Main>$", 
                 "MethodAttributes.Private | MethodAttributes.HideBySig | MethodAttributes.Static", 
-                context.GetSpecialType(hasReturnStatement ? SpecialType.System_Int32 : SpecialType.System_Void), 
+                context.GetSpecialType(hasReturnStatement ? SpecialType.System_Int32 : SpecialType.System_Void),
+                false,
                 Array.Empty<TypeParameterSyntax>());
 
             var paramVar = MethodExtensions.LocalVariableNameFor("args", context.NextLocalVariableTypeId() + "");

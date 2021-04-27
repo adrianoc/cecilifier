@@ -142,6 +142,12 @@ namespace Cecilifier.Core.Tests.Integration
                 "//int l = i / 2; ");
         }
 
+        [Test]
+        public void TestRefReturn()
+        {
+            AssertResourceTest("Members/Methods/RefReturn");
+        }
+
         private void AssertCecilifiedCodeContainsSnippet(string code, string expectedSnippet)
         {
             var cecilifier = Cecilifier.Process(new MemoryStream(Encoding.UTF8.GetBytes(code)), Utils.GetTrustedAssembliesPath().ToArray());

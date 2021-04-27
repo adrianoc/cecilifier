@@ -27,27 +27,15 @@ namespace Cecilifier.Core.Misc
                 (hasThis, parameters, returnType) => $"new FunctionPointerType() {{ {hasThis}, ReturnType = {returnType}, {parameters} }}");
         }
         
-        public static IEnumerable<string> Method(IVisitorContext context, string methodVar, string methodName, string methodModifiers, ITypeSymbol returnType, IList<TypeParameterSyntax> typeParameters)
-        {
-            var returnTypeIsTypeParameter = returnType is ITypeParameterSymbol;
-            return Method(context, methodVar, methodName, methodModifiers, returnType,  returnTypeIsTypeParameter, typeParameters);
-        }
-
-        private static IEnumerable<string> Method(IVisitorContext context, string methodVar, string methodName, string methodModifiers, ITypeSymbol returnType, bool returnTypeIsTypeParameter, IList<TypeParameterSyntax> typeParameters)
+        public static IEnumerable<string> Method(IVisitorContext context, string methodVar, string methodName, string methodModifiers, ITypeSymbol returnType, bool refReturn, IList<TypeParameterSyntax> typeParameters)
         {
             var exps = new List<string>();
-            if (returnTypeIsTypeParameter)
-            {
-                exps.Add($"var {methodVar} = new MethodDefinition(\"{methodName}\", {methodModifiers}, {context.TypeResolver.Resolve(context.GetSpecialType(SpecialType.System_Void))});");
-                ProcessGenericTypeParameters(methodVar, context, typeParameters, exps);
-                exps.Add($"{methodVar}.ReturnType = {context.TypeResolver.Resolve(returnType)};");
-            }
-            else
-            {
-                exps.Add($"var {methodVar} = new MethodDefinition(\"{methodName}\", {methodModifiers}, {context.TypeResolver.Resolve(returnType)});");
-                ProcessGenericTypeParameters(methodVar, context, typeParameters, exps);
-            }
-
+            
+            exps.Add($"var {methodVar} = new MethodDefinition(\"{methodName}\", {methodModifiers}, {context.TypeResolver.Resolve(context.GetSpecialType(SpecialType.System_Void))});");
+            ProcessGenericTypeParameters(methodVar, context, typeParameters, exps);
+            var resolvedReturnType = context.TypeResolver.Resolve(returnType);
+            exps.Add($"{methodVar}.ReturnType = {(refReturn ? resolvedReturnType.MakeByReferenceType() : resolvedReturnType)};");
+            
             return exps;
         }
         
@@ -157,7 +145,7 @@ namespace Cecilifier.Core.Misc
         {
             if (RefKind.None != byRef)
             {
-                resolvedType = "new ByReferenceType(" + resolvedType + ")";
+                resolvedType = $"{resolvedType}.MakeByReferenceType()";
             }
 
             return  $"new ParameterDefinition(\"{name}\", ParameterAttributes.None, {resolvedType})";
