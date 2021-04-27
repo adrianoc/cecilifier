@@ -258,8 +258,9 @@ namespace Cecilifier.Core.AST
         {
             var typeToCheck = type is RefTypeSyntax refType ? refType.Type : type;
             var typeInfo = Context.GetTypeInfo(typeToCheck);
-            
-            return Context.TypeResolver.Resolve(typeInfo.Type);
+
+            var resolvedType = Context.TypeResolver.Resolve(typeInfo.Type);
+            return type is RefTypeSyntax ? resolvedType.MakeByReferenceType() : resolvedType;
         }
 
         protected INamedTypeSymbol GetSpecialType(SpecialType specialType)
