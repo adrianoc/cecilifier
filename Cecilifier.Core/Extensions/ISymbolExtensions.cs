@@ -6,11 +6,22 @@ using Microsoft.CodeAnalysis;
 
 namespace Cecilifier.Core.Extensions
 {
-    internal static class ISymboExtensions
+    internal static class ISymbolExtensions
     {
         public static bool IsDefinedInCurrentType<T>(this T method, IVisitorContext ctx) where T : ISymbol
         {
             return method.ContainingAssembly == ctx.SemanticModel.Compilation.Assembly;
+        }
+
+        public static bool IsByRef(this ISymbol symbol)
+        {
+            if (symbol is IParameterSymbol parameterSymbol && parameterSymbol.RefKind != RefKind.None)
+                return true;
+
+            if (symbol is ILocalSymbol { IsRef: true})
+                return true;
+            
+            return false;
         }
 
         public static string AsStringNewArrayExpression(this IEnumerable<IParameterSymbol> self)

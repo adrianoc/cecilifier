@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Resources;
 using Cecilifier.Core.Extensions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -630,7 +631,29 @@ namespace Cecilifier.Core.AST
                     return OpCodes.Ldc_I4;
             }
 
-            throw new ArgumentException(string.Format("Literal type {0} not supported.", info.Type), "node");
+            throw new ArgumentException($"Literal type {info.Type} not supported.", nameof(node));
+        }
+        
+        private OpCode LoadIndirectOpCodeFor(SpecialType type)
+        {
+            return type switch
+            {
+                SpecialType.System_Single => OpCodes.Ldind_R4,
+                SpecialType.System_Double => OpCodes.Ldind_R8,
+                SpecialType.System_SByte => OpCodes.Ldind_I1,
+                SpecialType.System_Byte => OpCodes.Ldind_U1,
+                SpecialType.System_Int16 => OpCodes.Ldind_I2,
+                SpecialType.System_UInt16 => OpCodes.Ldind_U2,
+                SpecialType.System_Int32 => OpCodes.Ldind_I4,
+                SpecialType.System_UInt32 => OpCodes.Ldind_U4,
+                SpecialType.System_Int64 => OpCodes.Ldind_I8,
+                SpecialType.System_UInt64 => OpCodes.Ldind_I8,
+                SpecialType.System_Char => OpCodes.Ldind_U2,
+                SpecialType.System_Boolean => OpCodes.Ldind_U1,
+                SpecialType.System_Object => OpCodes.Ldind_Ref,
+                
+                _ => throw new ArgumentException($"Literal type {type} not supported.", nameof(type))
+            };
         }
 
         private OpCode StelemOpCodeFor(ITypeSymbol type)
@@ -792,10 +815,56 @@ namespace Cecilifier.Core.AST
 
             AddCilInstruction(ilVar, OpCodes.Ldloc, Context.DefinitionVariables.GetVariable(symbol.Name, MemberKind.LocalVariable).VariableName);
             HandlePotentialDelegateInvocationOn(localVarSyntax, symbol.Type, ilVar);
-            HandlePotentialFixedLoad(localVarSyntax, symbol);
+            HandlePotentialFixedLoad(symbol);
+            HandlePotentialRefLoad(localVarSyntax, symbol);
         }
 
-        private void HandlePotentialFixedLoad(SyntaxNode localVar, ILocalSymbol symbol)
+        private void HandlePotentialRefLoad(SimpleNameSyntax localVariableNameSyntax, ILocalSymbol symbol)
+        {
+            var needsLoadIndirect = false;
+            
+            var sourceSymbol = Context.SemanticModel.GetSymbolInfo(localVariableNameSyntax).Symbol;
+            var sourceIsByRef = sourceSymbol.IsByRef();
+
+            var returnStatement = localVariableNameSyntax.Ancestors().OfType<ReturnStatementSyntax>().SingleOrDefault();
+            var argument = localVariableNameSyntax.Ancestors().OfType<ArgumentSyntax>().SingleOrDefault();
+            var assigment = localVariableNameSyntax.Ancestors().OfType<BinaryExpressionSyntax>().SingleOrDefault(candidate => candidate.IsKind(SyntaxKind.SimpleAssignmentExpression));
+
+            if (assigment != null && assigment.Left != localVariableNameSyntax)
+            {
+                var targetIsByRef = Context.SemanticModel.GetSymbolInfo(assigment.Left).Symbol.IsByRef();
+                needsLoadIndirect = (assigment.Right == localVariableNameSyntax && sourceIsByRef && !targetIsByRef) // simple assignment like: nonRef = ref;
+                                    || sourceIsByRef; // complex assignment like: nonRef = ref + 10;
+            }
+            else if (argument != null)
+            {
+                var parameterSymbol = ParameterSymbolFromArgumentSyntax();
+                var targetIsByRef = parameterSymbol.IsByRef();
+
+                needsLoadIndirect = (parameterSymbol == sourceSymbol && sourceIsByRef && !targetIsByRef) // simple argument like Foo(ref) where the parameter is not a reference. 
+                                    || sourceIsByRef; // complex argument like Foo(ref + 1)
+            }
+            else if (returnStatement != null)
+            {
+                var method = returnStatement.Ancestors().OfType<MethodDeclarationSyntax>().Single();
+                var methodIsByRef = Context.SemanticModel.GetSymbolInfo(method.ReturnType).Symbol.IsByRef();
+                
+                needsLoadIndirect = (returnStatement.Expression == localVariableNameSyntax && !methodIsByRef && sourceIsByRef) // simple return like: return ref_var; (method is not by ref)
+                                    || sourceIsByRef; // more complex return like: return ref_var + 1; // in this case we can only be accessing the value whence we need to deference the reference.
+            }
+            
+            if (needsLoadIndirect)
+                AddCilInstruction(ilVar, LoadIndirectOpCodeFor(symbol.Type.SpecialType));
+
+            IParameterSymbol ParameterSymbolFromArgumentSyntax()
+            {
+                var invocation = argument.Ancestors().OfType<InvocationExpressionSyntax>().Single();
+                var argumentIndex = argument.Ancestors().OfType<ArgumentListSyntax>().Single().Arguments.IndexOf(argument);
+                return ((IMethodSymbol) Context.SemanticModel.GetSymbolInfo(invocation.Expression).Symbol).Parameters.ElementAt(argumentIndex);
+            }
+        }
+
+        private void HandlePotentialFixedLoad(ILocalSymbol symbol)
         {
             if (!symbol.IsFixed)
                 return;
@@ -917,7 +986,9 @@ namespace Cecilifier.Core.AST
                         AddCilInstruction(ilVar, OpCodes.Conv_I2);
                         return;
                     case SpecialType.System_Int32:
-                        AddCilInstruction(ilVar, OpCodes.Conv_I4);
+                        // bytes are pushed as Int32 by the runtime 
+                        if (typeInfo.Type.SpecialType != SpecialType.System_Byte)
+                            AddCilInstruction(ilVar, OpCodes.Conv_I4);
                         return;
                     case SpecialType.System_Int64:
                         AddCilInstruction(ilVar, OpCodes.Conv_I8);

@@ -297,19 +297,41 @@ namespace Cecilifier.Core.AST
 
         protected bool HandleLoadAddress(string ilVar, ITypeSymbol symbol, CSharpSyntaxNode parentNode, OpCode opCode, string symbolName, MemberKind memberKind, string parentName = null)
         {
-            // in this case we need to call System.Index.GetOffset(int32) on a value type (System.Index)
-            // which requires the address of the value type.
-            var isSystemIndexUsedAsIndex = IsSystemIndexUsedAsIndex(symbol, parentNode);
-            if (isSystemIndexUsedAsIndex || parentNode.IsKind(SyntaxKind.AddressOfExpression) || (symbol.IsValueType && parentNode.Accept(new UsageVisitor()) == UsageKind.CallTarget))
-            {
-                AddCilInstruction(ilVar, opCode, Context.DefinitionVariables.GetVariable(symbolName, memberKind, parentName).VariableName);
-                if (!Context.HasFlag("fixed") && parentNode.IsKind(SyntaxKind.AddressOfExpression))
-                    AddCilInstruction(ilVar, OpCodes.Conv_U);
+            return HandleSystemIndexUsage() || HandleLocalRefAssignment();
 
+            bool HandleSystemIndexUsage()
+            {
+                // in this case we need to call System.Index.GetOffset(int32) on a value type (System.Index)
+                // which requires the address of the value type.
+                var isSystemIndexUsedAsIndex = IsSystemIndexUsedAsIndex(symbol, parentNode);
+                if (isSystemIndexUsedAsIndex || parentNode.IsKind(SyntaxKind.AddressOfExpression) || (symbol.IsValueType && parentNode.Accept(new UsageVisitor()) == UsageKind.CallTarget))
+                {
+                    AddCilInstruction(ilVar, opCode, Context.DefinitionVariables.GetVariable(symbolName, memberKind, parentName).VariableName);
+                    if (!Context.HasFlag("fixed") && parentNode.IsKind(SyntaxKind.AddressOfExpression))
+                        AddCilInstruction(ilVar, OpCodes.Conv_U);
+
+                    return true;
+                }
+
+                return false;
+            }
+            
+            bool HandleLocalRefAssignment()
+            {
+                if (!(parentNode is RefExpressionSyntax refExpression))
+                    return false;
+                
+                var assignedValueSymbol = Context.SemanticModel.GetSymbolInfo(refExpression.Expression);
+                if (assignedValueSymbol.Symbol.IsByRef())
+                    return false;
+
+                var variableDeclaration = parentNode.Ancestors().OfType<VariableDeclarationSyntax>().SingleOrDefault();
+                if (variableDeclaration == null || !variableDeclaration.Type.IsKind(SyntaxKind.RefType))
+                    return false;
+                
+                AddCilInstruction(ilVar, opCode, Context.DefinitionVariables.GetVariable(symbolName, memberKind, parentName).VariableName);
                 return true;
             }
-
-            return false;
         }
 
         private static bool IsSystemIndexUsedAsIndex(ITypeSymbol symbol, CSharpSyntaxNode parentNode)
