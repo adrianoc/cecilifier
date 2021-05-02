@@ -37,8 +37,11 @@ function showReleaseNotes() {
         setCookie("lastVersion", itemsToShow[0].published_at, 1000);
         
         var latest = itemsToShow[0];
-        var html = `New version <a href='${latest.html_url}' target="_blank">${latest.tag_name} ${latest.name}</a> has been released on ${new Date(latest.published_at).toLocaleString()}.`;
-        setAlert("cecilifier_new_release", html);
+        var html = `New version <a href='${latest.html_url}' target="_blank">${latest.tag_name} ${latest.name}</a> has been released on ${new Date(latest.published_at).toLocaleString()}.<br /><br />${latest.body.replace(/\r\n/g, "<br/>")}`;
+
+       document.getElementById("releaseNotesText").innerHTML = html;
+       document.getElementById("releaseNotesDiv").style.width = "100%";
+       document.getElementById("mainContent").style.visibility = "hidden";
     });
 }
 
@@ -51,4 +54,9 @@ function getReleaseNotes(callback) {
     };
     xhttp.open("GET", "https://api.github.com/repos/adrianoc/cecilifier/releases", true);
     xhttp.send();
+}
+  
+function hideReleaseNotes() {
+    document.getElementById("releaseNotesDiv").style.width = "0";
+    document.getElementById("mainContent").style.visibility = "unset";
 }
