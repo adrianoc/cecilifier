@@ -84,6 +84,12 @@ namespace Cecilifier.Core.Tests.Integration
         {
             AssertResourceTest(@"Members/Methods/ParameterModifiers");
         }
+        
+        [Test]
+        public void TestRefParameters()
+        {
+            AssertResourceTest(@"Members/Methods/RefParameters");
+        }
 
         [Test]
         public void TestReturnValue()

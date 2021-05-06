@@ -8,8 +8,9 @@
 	void ExplicitlyTyped()
 	{
 		Bar(out int x);
+		x = 10;
 	}
-
+ 
 	void Bar(out int i) 
 	{
 	    Bar(out i);

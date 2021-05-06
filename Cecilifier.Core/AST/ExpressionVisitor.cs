@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Resources;
 using Cecilifier.Core.Extensions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -634,28 +633,6 @@ namespace Cecilifier.Core.AST
             throw new ArgumentException($"Literal type {info.Type} not supported.", nameof(node));
         }
         
-        private OpCode LoadIndirectOpCodeFor(SpecialType type)
-        {
-            return type switch
-            {
-                SpecialType.System_Single => OpCodes.Ldind_R4,
-                SpecialType.System_Double => OpCodes.Ldind_R8,
-                SpecialType.System_SByte => OpCodes.Ldind_I1,
-                SpecialType.System_Byte => OpCodes.Ldind_U1,
-                SpecialType.System_Int16 => OpCodes.Ldind_I2,
-                SpecialType.System_UInt16 => OpCodes.Ldind_U2,
-                SpecialType.System_Int32 => OpCodes.Ldind_I4,
-                SpecialType.System_UInt32 => OpCodes.Ldind_U4,
-                SpecialType.System_Int64 => OpCodes.Ldind_I8,
-                SpecialType.System_UInt64 => OpCodes.Ldind_I8,
-                SpecialType.System_Char => OpCodes.Ldind_U2,
-                SpecialType.System_Boolean => OpCodes.Ldind_U1,
-                SpecialType.System_Object => OpCodes.Ldind_Ref,
-                
-                _ => throw new ArgumentException($"Literal type {type} not supported.", nameof(type))
-            };
-        }
-
         private OpCode StelemOpCodeFor(ITypeSymbol type)
         {
             switch (type.SpecialType)
@@ -838,7 +815,7 @@ namespace Cecilifier.Core.AST
             }
             else if (argument != null)
             {
-                var parameterSymbol = ParameterSymbolFromArgumentSyntax();
+                var parameterSymbol = ParameterSymbolFromArgumentSyntax(argument);
                 var targetIsByRef = parameterSymbol.IsByRef();
 
                 needsLoadIndirect = (parameterSymbol == sourceSymbol && sourceIsByRef && !targetIsByRef) // simple argument like Foo(ref) where the parameter is not a reference. 
@@ -855,13 +832,6 @@ namespace Cecilifier.Core.AST
             
             if (needsLoadIndirect)
                 AddCilInstruction(ilVar, LoadIndirectOpCodeFor(symbol.Type.SpecialType));
-
-            IParameterSymbol ParameterSymbolFromArgumentSyntax()
-            {
-                var invocation = argument.Ancestors().OfType<InvocationExpressionSyntax>().Single();
-                var argumentIndex = argument.Ancestors().OfType<ArgumentListSyntax>().Single().Arguments.IndexOf(argument);
-                return ((IMethodSymbol) Context.SemanticModel.GetSymbolInfo(invocation.Expression).Symbol).Parameters.ElementAt(argumentIndex);
-            }
         }
 
         private void HandlePotentialFixedLoad(ILocalSymbol symbol)
