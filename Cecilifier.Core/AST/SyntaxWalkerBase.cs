@@ -390,7 +390,7 @@ namespace Cecilifier.Core.AST
                 }
             }
 
-            throw new Exception($"Expression not supported in argument reference: {argument.Parent} ({argument.ToString()})");
+            return null;
         }
         
         protected OpCode LoadIndirectOpCodeFor(SpecialType type)
