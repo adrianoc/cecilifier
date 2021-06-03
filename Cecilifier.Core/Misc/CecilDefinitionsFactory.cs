@@ -38,12 +38,6 @@ namespace Cecilifier.Core.Misc
             
             return exps;
         }
-        
-        public static string Constructor(IVisitorContext context, out string ctorLocalVar, string typeName, string methodAccessibility, string[] paramTypes, string methodDefinitionPropertyValues = null)
-        {
-            ctorLocalVar = MethodExtensions.LocalVariableNameFor(typeName, "ctor", "");
-            return Constructor(context, ctorLocalVar, typeName, methodAccessibility, paramTypes, methodDefinitionPropertyValues);
-        }
 
         internal static string Constructor(IVisitorContext context, string ctorLocalVar, string typeName, string methodAccessibility, string[] paramTypes, string methodDefinitionPropertyValues = null)
         {
@@ -193,7 +187,7 @@ namespace Cecilifier.Core.Misc
             var exps = new List<string>();
             var attrType = context.GetTypeInfo(attribute.Name);
 
-            var customAttrVar = $"ca_{context.NextLocalVariableTypeId()}";
+            var customAttrVar = context.Naming.CustomAttribute(attribute.Name.ToString());
 
             var attributeArguments = attribute.ArgumentList == null
                 ? new AttributeArgumentSyntax[0]
@@ -244,7 +238,7 @@ namespace Cecilifier.Core.Misc
                 var symbol = context.SemanticModel.GetDeclaredSymbol(typeParameter);
                 var genericParamName = typeParameter.Identifier.Text;
                 
-                var genParamDefVar = $"{memberDefVar}_{genericParamName}";
+                var genParamDefVar = context.Naming.GenericParameterDeclaration(typeParameter);
 
                 context.DefinitionVariables.RegisterNonMethod(string.Empty, genericParamName, MemberKind.TypeParameter, genParamDefVar);
                 exps.Add(GenericParameter(context, memberDefVar, genericParamName, genParamDefVar, symbol));

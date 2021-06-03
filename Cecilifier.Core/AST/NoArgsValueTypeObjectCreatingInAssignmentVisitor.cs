@@ -26,7 +26,6 @@ namespace Cecilifier.Core.AST
                 case SymbolKind.Field:
                     var fs = (IFieldSymbol) info.Symbol;
                     var fieldResolverExpression = fs.FieldResolverExpression(Context);
-
                     if (info.Symbol.IsStatic)
                     {
                         AddCilInstruction(ilVar, OpCodes.Ldsflda, fieldResolverExpression);

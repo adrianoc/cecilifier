@@ -1,12 +1,14 @@
 let websocket;
 var cecilifiedCode;
+var settings;
 var csharpCode;
 
 class CecilifierRequest
 {
-    constructor(code, options) {
+    constructor(code, options, settings) {
         this.code = code;
         this.options = options;
+        this.settings = settings;
     }
 }
 
@@ -185,7 +187,24 @@ function setSendToDiscordTooltip()
         msg = "Publish Off: " + msgBody +  " only in case of errors.";
     }    
     
-    msg = msg + "\r\nClick on the link at the bottom of this page to join the general discussion discord channel.";
+    settings.addConditionalFormat(
+        NamingOptions.SuffixVariableNamesWithUniqueId, 
+        "Suffix variable names with unique Id", 
+        2, 
+        "Use this option to avoid variable names clashes. If the cecilified code is simple enought you may disable this.", 
+        (function(setting) { var id = 1; return function() { id++; return id; } } )(), 
+        (enabled) => { });
+
+    settings.addBooleanOption(
+        NamingOptions.PrefixInstructionsWithILOpCodeName, 
+        "Append IL opcode to instruction variables", 
+        "Use this option to make it easier to reason about the cecilified code.", 
+        (enabled, sampleEditor) => { 
+            var token = sampleEditor.getTokenAt({line: 33, ch: 9}, true);
+            var newValue = enabled ? "Call" : "inst";
+            var sep = token.string.indexOf("_");
+            sampleEditor.replaceRange(newValue, {line: 35, ch: token.start}, {line: 35, ch: token.start + sep });
+        });
 
     tippy('#postToDiscordLabel', {
         content: msg,
@@ -206,10 +225,35 @@ function onSendToDiscordCheckBoxChanged()
     instance.show();
 }
 
+// function onSendToDiscordCheckBoxChanged()
+// {
+//     setSendToDiscordTooltip();
+// }
+
+// function setSendToDiscordTooltip()
+// {
+//     let msgBody = "the source from the top textbox will be sent to an internal discord channel (accessible only to Cecilifier's author)";
+//     let msg = null;
+//     if (getSendToDiscordValue())
+//     {
+//         msg = "Publish On: " + msgBody +  ". Preferable if the contents of the code is not sensitive. This helps Cecilifier developer to better understand usage pattern.";
+//     }
+//     else
+//     {
+//         msg = "Publish Off: " + msgBody +  " only in case of errors.";
+//     }
+    
+//     msg = msg + "\r\nClick on the link at the bottom of this page to join the general discussion discord channel.";
+
+//     let label = document.getElementById("postToDiscordLabel");
+//     label.setAttribute("data-tooltip", msg);
+// }
+
 function getSendToDiscordValue()
 {
-    let checkbox = document.getElementById("postToDiscord");
-    return checkbox.checked;
+    //let checkbox = document.getElementById("postToDiscord");
+    //return checkbox.checked;
+    return true;
 }
 
 function setAlert(div_id, msg) {
@@ -293,7 +337,11 @@ function send(websocket, format, sendToDiscordOption) {
     }
     clearError();
 
-    var request = new CecilifierRequest(csharpCode.getValue(), new WebOptions(format, sendToDiscordOption ? 'A' : 'E'));
+    var request = new CecilifierRequest(
+                        csharpCode.getValue(), 
+                        new WebOptions(format, sendToDiscordOption ? 'A' : 'E'),
+                        settings.toTransportObject());
+
     websocket.send(JSON.stringify(request));
 }
 

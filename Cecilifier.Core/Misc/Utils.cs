@@ -15,7 +15,7 @@ namespace Cecilifier.Core.Misc
                 return backingFieldVar;
 
             //TODO: Register the following variable?
-            var genTypeVar = $"gt_{memberSymbol.Name}_{context.NextLocalVariableTypeId()}";
+            var genTypeVar = context.Naming.GenericInstanceMethod(null); //TODO this is wrong. We are instantiating a generic type.. not a method.
             context.WriteCecilExpression($"var {genTypeVar} = {memberDeclaringTypeVar}.MakeGenericInstanceType({memberDeclaringTypeVar}.GenericParameters.ToArray());");
             context.WriteNewLine();
             context.WriteCecilExpression($"var {genTypeVar}_ = new FieldReference({backingFieldVar}.Name, {backingFieldVar}.FieldType, {genTypeVar});");

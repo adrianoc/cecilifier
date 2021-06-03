@@ -1,4 +1,5 @@
 ﻿using Cecilifier.Core.Extensions;
+using Cecilifier.Core.Naming;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Mono.Cecil.Cil;
@@ -50,9 +51,8 @@ namespace Cecilifier.Core.AST
         private void DeclareAndInitializeValueTypeLocalVariable()
         {
             var resolvedVarType = Context.TypeResolver.Resolve(ctorInfo.Symbol.ContainingType);
-            var tempLocalName = MethodExtensions.LocalVariableNameFor("tmp_", "tmp_".UniqueId().ToString());
+            var tempLocalName = Context.Naming.SyntheticVariable("vt", ElementKind.LocalVariable);
             AddCecilExpression("var {0} = new VariableDefinition({1});", tempLocalName, resolvedVarType);
-
             AddCecilExpression("{0}.Body.Variables.Add({1});", Context.DefinitionVariables.GetLastOf(MemberKind.Method).VariableName, tempLocalName);
 
             switch (ctorInfo.Symbol.ContainingType.SpecialType)

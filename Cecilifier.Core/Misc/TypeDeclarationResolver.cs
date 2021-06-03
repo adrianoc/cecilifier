@@ -2,7 +2,6 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using CSharpExtensions = Microsoft.CodeAnalysis.CSharpExtensions;
 
 namespace Cecilifier.Core.Misc
 {
@@ -65,7 +64,7 @@ namespace Cecilifier.Core.Misc
         {
             Visit(node.Parent);
         }
-        
+
         private static BaseTypeDeclarationSyntax ParentTypeDeclarationFor(SyntaxNode node)
         {
             return (BaseTypeDeclarationSyntax) node.Ancestors().First(a => a.IsKind(SyntaxKind.ClassDeclaration) || a.IsKind(SyntaxKind.StructDeclaration) || a.IsKind(SyntaxKind.InterfaceDeclaration));

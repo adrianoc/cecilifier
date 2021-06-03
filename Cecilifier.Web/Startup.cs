@@ -13,6 +13,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Web;
 using Cecilifier.Core;
+using Cecilifier.Core.Naming;
 using Cecilifier.Web.Pages;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -113,7 +114,11 @@ namespace Cecilifier.Web
                             var deployKind = toBeCecilified.WebOptions.DeployKind;
                             var publishSourcePolicy = toBeCecilified.WebOptions.PublishSourcePolicy;
                             
-                            var cecilifiedCode = Core.Cecilifier.Process(code, GetTrustedAssembliesPath());
+                            var cecilifiedCode = Core.Cecilifier.Process(code, new CecilifierOptions
+                            {
+                                References = GetTrustedAssembliesPath(), 
+                                Naming = new DefaultNameStrategy((NamingOptions) toBeCecilified.Settings.NamingOptions, toBeCecilified.Settings.ElementKindPrefixes.ToDictionary(entry => entry.ElementKind, entry => entry.Prefix))
+                            });
                             if (deployKind == 'Z')
                             {
                                 if (publishSourcePolicy == 'A')
@@ -211,7 +216,7 @@ namespace Cecilifier.Web
                 }
             }
             
-            IList<string> GetTrustedAssembliesPath()
+            IReadOnlyList<string> GetTrustedAssembliesPath()
             {
                 return ((string) AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")).Split(Path.PathSeparator).ToList();
             }

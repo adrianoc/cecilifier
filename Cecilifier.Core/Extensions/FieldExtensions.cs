@@ -1,4 +1,5 @@
-﻿using Cecilifier.Core.AST;
+﻿using System;
+using Cecilifier.Core.AST;
 using Microsoft.CodeAnalysis;
 using static Cecilifier.Core.Misc.Utils;
 
@@ -10,7 +11,13 @@ namespace Cecilifier.Core.Extensions
         {
             if (field.IsDefinedInCurrentType(context))
             {
-                return "fld_" + field.ContainingType.Name.CamelCase() + "_" + field.Name.CamelCase();
+                var found = context.DefinitionVariables.GetVariable(field.Name, MemberKind.Field, field.ContainingType.Name);
+                if (!found.IsValid)
+                {
+                    throw new Exception($"Failed to resolve variable with field definition for `{field}`");
+                }
+                
+                return found.VariableName;
             }
 
             var declaringTypeName = field.ContainingType.FullyQualifiedName();

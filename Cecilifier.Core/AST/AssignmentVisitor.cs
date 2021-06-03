@@ -120,7 +120,7 @@ namespace Cecilifier.Core.AST
                 InsertCilInstructionAfter<string>(InstructionPrecedingValueToLoad, ilVar, OpCodes.Ldarg_0);
             }
 
-            AddMethodCall(ilVar, property.SetMethod, isAccessOnThisOrObjectCreation:false);
+            AddMethodCall(ilVar, property.SetMethod, isAccessOnThisOrObjectCreation: false);
         }
 
         private void FieldAssignment(IFieldSymbol field)

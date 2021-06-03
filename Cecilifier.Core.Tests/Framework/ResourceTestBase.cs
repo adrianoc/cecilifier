@@ -2,10 +2,12 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Cecilifier.Core.Naming;
 using Cecilifier.Core.Tests.Framework.AssemblyDiff;
 using Cecilifier.Runtime;
 using Mono.Cecil;
 using Mono.Cecil.Rocks;
+using Newtonsoft.Json.Serialization;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Framework
@@ -190,7 +192,7 @@ namespace Cecilifier.Core.Tests.Framework
         private string Cecilfy(Stream stream)
         {
             stream.Position = 0;
-            return Cecilifier.Process(stream, Utils.GetTrustedAssembliesPath()).GeneratedCode.ReadToEnd();
+            return Cecilifier.Process(stream, new CecilifierOptions { References = Utils.GetTrustedAssembliesPath(), Naming = new DefaultNameStrategy() }).GeneratedCode.ReadToEnd();
         }
     }
 }

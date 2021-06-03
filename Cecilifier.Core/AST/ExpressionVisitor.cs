@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Cecilifier.Core.Extensions;
+using Cecilifier.Core.Naming;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -291,7 +292,7 @@ namespace Cecilifier.Core.AST
                 var localSymbol = (ILocalSymbol) Context.SemanticModel.GetSymbolInfo(node).Symbol;
                 var designation = ((SingleVariableDesignationSyntax) node.Designation);
                 var resolvedOutArgType = Context.TypeResolver.Resolve(localSymbol.Type);
-
+                
                 var outLocalName = AddLocalVariableWithResolvedType(
                     designation.Identifier.Text,
                     Context.DefinitionVariables.GetLastOf(MemberKind.Method),
@@ -314,9 +315,9 @@ namespace Cecilifier.Core.AST
         {
             string Emit(OpCode op)
             {
-                var instVarName = op.Name + op.Name.UniqueId();
+                var instVarName = Context.Naming.Label(op.Name);
                 AddCecilExpression(@"var {0} = {1}.Create({2});", instVarName, ilVar, op.ConstantName());
-
+                
                 return instVarName;
             }
 
@@ -432,7 +433,7 @@ namespace Cecilifier.Core.AST
             var localVarParent = (CSharpSyntaxNode) node.Parent;
             if (localVarParent.Accept(new UsageVisitor()) == UsageKind.CallTarget)
             {
-                var tempLocalName = MethodExtensions.LocalVariableNameFor("tmp_", "tmp_".UniqueId().ToString());
+                var tempLocalName = Context.Naming.SyntheticVariable("tmp", ElementKind.LocalVariable);
                 AddCecilExpression("var {0} = new VariableDefinition(assembly.MainModule.TypeSystem.Int32);", tempLocalName);
                 AddCecilExpression("{0}.Body.Variables.Add({1});", Context.DefinitionVariables.GetLastOf(MemberKind.Method).VariableName, tempLocalName);
 
@@ -446,15 +447,15 @@ namespace Cecilifier.Core.AST
             //TODO: Refactor to reuse code from VisitIdentifierName....
             var ctorInfo = Context.SemanticModel.GetSymbolInfo(node);
 
-            var method = (IMethodSymbol) ctorInfo.Symbol;
-            if (TryProcessNoArgsCtorInvocationOnValueType(node, method, ctorInfo))
+            var ctor = (IMethodSymbol) ctorInfo.Symbol;
+            if (TryProcessNoArgsCtorInvocationOnValueType(node, ctor, ctorInfo))
             {
                 return;
             }
 
-            EnsureMethodAvailable(method, Array.Empty<TypeParameterSyntax>());
+            EnsureMethodAvailable(Context.Naming.SyntheticVariable(node.Type.ToString(), ElementKind.LocalVariable), ctor, Array.Empty<TypeParameterSyntax>());
 
-            AddCilInstruction(ilVar, OpCodes.Newobj, method.MethodResolverExpression(Context));
+            AddCilInstruction(ilVar, OpCodes.Newobj, ctor.MethodResolverExpression(Context));
             PushCall();
 
             Visit(node.ArgumentList);
@@ -492,7 +493,7 @@ namespace Cecilifier.Core.AST
                 return;
             }
 
-            var tempLocalName = MethodExtensions.LocalVariableNameFor("tmp_", "tmp_".UniqueId().ToString());
+            var tempLocalName = Context.Naming.SyntheticVariable("tmp", ElementKind.LocalVariable);
 
             AddCecilExpression($"var {tempLocalName} = new VariableDefinition({Context.TypeResolver.Resolve(Context.SemanticModel.GetTypeInfo(operand).Type)});");
             AddCecilExpression($"{Context.DefinitionVariables.GetLastOf(MemberKind.Method).VariableName}.Body.Variables.Add({tempLocalName});");
@@ -597,7 +598,7 @@ namespace Cecilifier.Core.AST
 
         private void StoreTopOfStackInLocalVariableAndLoadItsAddress(ITypeSymbol type)
         {
-            var tempLocalName = MethodExtensions.LocalVariableNameFor("tmp_", "tmp_".UniqueId().ToString());
+            var tempLocalName = Context.Naming.SyntheticVariable("tmp", ElementKind.LocalVariable);
             AddCecilExpression($"var {tempLocalName} = new VariableDefinition({Context.TypeResolver.Resolve(type)});");
             AddCecilExpression($"{Context.DefinitionVariables.GetLastOf(MemberKind.Method).VariableName}.Body.Variables.Add({tempLocalName});");
 
@@ -663,15 +664,16 @@ namespace Cecilifier.Core.AST
          *
          * In this case when the first reference to Bar() is found (in method Foo()) the method itself has not been defined yet.
          */
-        private void EnsureMethodAvailable(IMethodSymbol method, TypeParameterSyntax[] typeParameters)
+        private void EnsureMethodAvailable(string varName, IMethodSymbol method, TypeParameterSyntax[] typeParameters)
         {
             if (!method.IsDefinedInCurrentType(Context))
                 return;
 
-            var varName = method.LocalVariableName();
-            if (Context.Contains(varName))
+            var found = Context.DefinitionVariables.GetMethodVariable(method.AsMethodDefinitionVariable());
+            if (found.IsValid)
                 return;
 
+            //var varName = method.MethodKind == MethodKind.Constructor ? Context.Naming.Constructor() : Context.Naming.MethodDeclaration(method.Name, null);
             MethodDeclarationVisitor.AddMethodDefinition(Context, varName, method.Name, "MethodAttributes.Private", method.ReturnType, method.ReturnsByRef, typeParameters);
             Context.DefinitionVariables.RegisterMethod(method.ContainingType.Name, method.Name, method.Parameters.Select(p => p.Type.Name).ToArray(), varName);
         }
@@ -918,7 +920,7 @@ namespace Cecilifier.Core.AST
             }
 
             //TODO: We need to find the InvocationSyntax that node represents...
-            EnsureMethodAvailable(method.OverriddenMethod ?? method.OriginalDefinition, Array.Empty<TypeParameterSyntax>());
+            EnsureMethodAvailable(Context.Naming.SyntheticVariable(node.Identifier.Text, ElementKind.Method), method.OverriddenMethod ?? method.OriginalDefinition, Array.Empty<TypeParameterSyntax>());
             var isAccessOnThis = !node.Parent.IsKind(SyntaxKind.SimpleMemberAccessExpression);
 
             var mae = node.Parent as MemberAccessExpressionSyntax;
@@ -1055,7 +1057,7 @@ namespace Cecilifier.Core.AST
                     break;
 
                 case SymbolKind.Parameter:
-                    ProcessParameter(ilVar, node, member.Symbol as IParameterSymbol);
+                    ProcessParameter(ilVar, node, (IParameterSymbol) member.Symbol);
                     break;
 
                 case SymbolKind.Local:

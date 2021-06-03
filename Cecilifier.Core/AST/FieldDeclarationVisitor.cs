@@ -42,7 +42,7 @@ namespace Cecilifier.Core.AST
             var fieldDefVars = new List<string>(variableDeclarationSyntax.Variables.Count);
             
             var type = ResolveType(variableDeclarationSyntax.Type);
-            var fieldType = ProcessRequiredModifiers(modifiers, type) ?? type;
+            var fieldType = ProcessRequiredModifiers(node, modifiers, type) ?? type;
             var fieldAttributes = MapAttributes(modifiers);
 
             foreach (var field in variableDeclarationSyntax.Variables)
@@ -52,7 +52,7 @@ namespace Cecilifier.Core.AST
                 if (fieldDeclarationVariable.IsValid)
                     continue;
 
-                var fieldVar = MethodExtensions.LocalVariableNameFor("fld", declaringType.Identifier.ValueText, field.Identifier.ValueText.CamelCase());
+                var fieldVar = Context.Naming.FieldDeclaration(node);
                 fieldDefVars.Add(fieldVar);
                 
                 var exps = CecilDefinitionsFactory.Field(declaringTypeVar, fieldVar, field.Identifier.ValueText, fieldType, fieldAttributes);
@@ -66,12 +66,12 @@ namespace Cecilifier.Core.AST
             return fieldDefVars;
         }
 
-        private string ProcessRequiredModifiers(SyntaxTokenList modifiers, string originalType)
+        private string ProcessRequiredModifiers(MemberDeclarationSyntax member, SyntaxTokenList modifiers, string originalType)
         {
             if (modifiers.All(m => m.Kind() != SyntaxKind.VolatileKeyword))
                 return null;
 
-            var id = $"mod_req{NextLocalVariableId()}";
+            var id = Context.Naming.RequiredModifier(member);
             var mod_req = $"var {id} = new RequiredModifierType({ImportExpressionForType(typeof(IsVolatile))}, {originalType});";
             AddCecilExpression(mod_req);
             

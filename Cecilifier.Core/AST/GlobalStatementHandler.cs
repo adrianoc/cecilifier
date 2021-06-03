@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
+using Cecilifier.Core.Naming;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -18,7 +19,7 @@ namespace Cecilifier.Core.AST
             hasReturnStatement = firstGlobalStatement.Parent.DescendantNodes().Any(node => node.IsKind(SyntaxKind.ReturnStatement));
 
             var typeModifiers = CecilDefinitionsFactory.DefaultTypeAttributeFor(SyntaxKind.ClassDeclaration, false).AppendModifier("TypeAttributes.NotPublic | TypeAttributes.Abstract | TypeAttributes.Sealed");
-            var typeVar = MethodExtensions.LocalVariableNameFor("topLevelStatements", context.NextLocalVariableTypeId() + "");
+            var typeVar = context.Naming.Type("topLevelStatements", ElementKind.Class);
             var typeExps = CecilDefinitionsFactory.Type(
                 context, 
                 typeVar, 
@@ -28,7 +29,7 @@ namespace Cecilifier.Core.AST
                 false, 
                 Array.Empty<string>());
                 
-            methodVar = MethodExtensions.LocalVariableNameFor("topLevelStatements", context.NextLocalVariableTypeId() + "");
+            methodVar = context.Naming.SyntheticVariable("topLevelStatements", ElementKind.Method);
             var methodExps = CecilDefinitionsFactory.Method(
                 context, 
                 methodVar, 
@@ -37,8 +38,8 @@ namespace Cecilifier.Core.AST
                 context.GetSpecialType(hasReturnStatement ? SpecialType.System_Int32 : SpecialType.System_Void),
                 false,
                 Array.Empty<TypeParameterSyntax>());
-
-            var paramVar = MethodExtensions.LocalVariableNameFor("args", context.NextLocalVariableTypeId() + "");
+            
+            var paramVar = context.Naming.Parameter("args", "Main");
             var mainParametersExps = CecilDefinitionsFactory.Parameter(
                 "args", 
                 RefKind.None, 
@@ -47,7 +48,7 @@ namespace Cecilifier.Core.AST
                 paramVar, 
                 context.TypeResolver.ResolvePredefinedType(context.GetSpecialType(SpecialType.System_String)) + ".MakeArrayType()");
 
-            ilVar = "topLevelMainIl";
+            ilVar = context.Naming.ILProcessor("topLevelMain", "Main");
             var mainBodyExps = CecilDefinitionsFactory.MethodBody(methodVar, ilVar, Array.Empty<InstructionRepresentation>());
                 
             WriteCecilExpressions(typeExps);

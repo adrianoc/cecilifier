@@ -7,11 +7,6 @@ namespace Cecilifier.Core.Extensions
 {
     public static class SyntaxNodeExtensions
     {
-        public static T WithNewLine<T>(this T node) where T : SyntaxNode
-        {
-            return node.WithTrailingTrivia(SyntaxFactory.CarriageReturnLineFeed);
-        }
-
         /// <summary>
         /// Returns a human readable summary of the <paramref name="node"/> containing nodes/tokens until (including) first one with a new line trivia.
         /// </summary>
@@ -59,5 +54,17 @@ namespace Cecilifier.Core.Extensions
         }
         
         public static string SourceDetails(this SyntaxNode node) => $"{node} ({node.SyntaxTree.GetMappedLineSpan(node.Span).Span})";
+        
+        // public static SourceLocation StartSourceLocation(this SyntaxNode node)
+        // {
+        //     var nodeSpan = node.SyntaxTree.GetMappedLineSpan(node.Span).Span;
+        //     return new() {Line = nodeSpan.Start.Line, Column = nodeSpan.Start.Character};
+        // }
+        
+        public static SourceLocation EndSourceLocation(this SyntaxNode node)
+        {
+            var nodeSpan = node.SyntaxTree.GetMappedLineSpan(node.Span).Span;
+            return new() {Line = nodeSpan.End.Line, Column = nodeSpan.End.Character};
+        }
     }
 }

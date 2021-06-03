@@ -9,18 +9,11 @@ namespace Cecilifier.Core.Extensions
 {
     public static class CecilifierExtensions
     {
-        private static readonly IdGenerator idGenerator = new IdGenerator();
-
         public static string CamelCase(this string str)
         {
             return str.Length > 1
                 ? char.ToUpper(str[0]) + str.Substring(1)
                 : str;
-        }
-
-        public static int UniqueId(this string key)
-        {
-            return idGenerator.IdFor(key);
         }
 
         public static string MapModifier(this SyntaxToken modifier, string targetEnum)

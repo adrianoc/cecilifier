@@ -23,7 +23,7 @@ namespace Cecilifier.Core.AST
             _memberCollector = new EnumMemberValueCollector();
             node.Accept(_memberCollector);
 
-            var enumType = TempLocalVar(node.Identifier.ValueText);
+            var enumType = Context.Naming.Type(node);
             var attrs = ModifiersToCecil("TypeAttributes", node.Modifiers, "Private");
             var typeDef = CecilDefinitionsFactory.Type(Context, enumType, node.Identifier.ValueText, attrs + " | TypeAttributes.Sealed", Context.TypeResolver.Resolve("System.Enum"), false, Array.Empty<string>());
             AddCecilExpressions(typeDef);
@@ -34,7 +34,7 @@ namespace Cecilifier.Core.AST
                 //.class private auto ansi MyEnum
                 //TODO: introduce TypeSystem.CoreLib.Enum/Action/etc...
 
-                var fieldVar = MethodExtensions.LocalVariableNameFor("valueField", node.Identifier.ValueText);
+                var fieldVar = Context.Naming.LocalVariable(node, "valueField");
                 var valueFieldExp = CecilDefinitionsFactory.Field(enumType, fieldVar, "value__", Context.TypeResolver.ResolvePredefinedType(GetSpecialType(SpecialType.System_Int32)),
                     "FieldAttributes.SpecialName | FieldAttributes.RTSpecialName | FieldAttributes.Public");
                 AddCecilExpressions(valueFieldExp);
@@ -52,7 +52,7 @@ namespace Cecilifier.Core.AST
             var enumMemberValue = _memberCollector[node];
             var enumVarDef = Context.DefinitionVariables.GetLastOf(MemberKind.Type);
 
-            var fieldVar = MethodExtensions.LocalVariableNameFor($"em_{enumVarDef.MemberName}_{NextLocalVariableId()}", node.Identifier.ValueText);
+            var fieldVar = Context.Naming.LocalVariable(node, $"em_{enumVarDef.MemberName}");
             var exp = CecilDefinitionsFactory.Field(enumVarDef.VariableName, fieldVar, node.Identifier.ValueText, enumVarDef.VariableName,
                 "FieldAttributes.Static | FieldAttributes.Literal | FieldAttributes.Public | FieldAttributes.HasDefault", $"Constant = {enumMemberValue}");
             AddCecilExpressions(exp);

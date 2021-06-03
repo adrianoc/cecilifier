@@ -6,34 +6,12 @@ using Cecilifier.Core.AST;
 using Cecilifier.Core.Misc;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using static Cecilifier.Core.Misc.Utils;
 
 namespace Cecilifier.Core.Extensions
 {
     internal static class MethodExtensions
     {
-        public static string MangleName(this BaseMethodDeclarationSyntax method, SemanticModel sm)
-        {
-            var methodSymbol = (IMethodSymbol) ModelExtensions.GetDeclaredSymbol(sm, method);
-            if (methodSymbol == null)
-            {
-                throw new Exception("Failed to retrieve method symbol for " + method);
-            }
-
-            return methodSymbol.MangleName();
-        }
-
-        public static string MangleName(this IMethodSymbol method)
-        {
-            return method.Parameters.Aggregate("", (acc, curr) => acc + curr.Type.Name.ToLower());
-        }
-
-        public static int ParameterIndex(this IMethodSymbol method, IParameterSymbol param)
-        {
-            return param.Ordinal + (method.IsStatic ? 0 : 1);
-        }
-
         public static string Modifiers(this IMethodSymbol method)
         {
             var bindingFlags = method.IsStatic ? BindingFlags.Static : BindingFlags.Instance;
@@ -86,16 +64,6 @@ namespace Cecilifier.Core.Extensions
                 method.ContainingType.Name,
                 method.Name,
                 method.Parameters.Select(p => p.Type.Name).ToArray());
-        }
-
-        public static string LocalVariableName(this IMethodSymbol method)
-        {
-            return LocalVariableNameFor(method.ContainingType.Name, method.Name.Replace(".", ""), method.MangleName());
-        }
-
-        public static string LocalVariableNameFor(string prefix, params string[] parts)
-        {
-            return parts.Aggregate(prefix, (acc, curr) => acc + "_" + curr);
         }
 
         public static string MethodModifiersToCecil(this SyntaxTokenList modifiers, Func<string, IList<SyntaxToken>, string, string> modifiersToCecil, string specificModifiers = null, IMethodSymbol methodSymbol = null)

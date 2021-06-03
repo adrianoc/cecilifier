@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
+using Cecilifier.Core.Naming;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -43,7 +44,7 @@ namespace Cecilifier.Core.AST
                 init.Accept(expressionVisitor);
             }
 
-            var forEndLabel = TempLocalVar("fel");
+            var forEndLabel = Context.Naming.Label("fel");
             WriteCecilExpression(Context, $"var {forEndLabel} = {_ilVar}.Create(OpCodes.Nop);");
 
             var forConditionLabel = AddCilInstruction(_ilVar, OpCodes.Nop);
@@ -68,8 +69,7 @@ namespace Cecilifier.Core.AST
         public override void VisitSwitchStatement(SwitchStatementSyntax node)
         {
             var switchExpressionType = ResolveExpressionType(node.Expression);
-            var evaluatedExpressionVariable = $"switch_{node.GetLocation().GetLineSpan().Span.Start.Line}";
-            AddLocalVariable(switchExpressionType, evaluatedExpressionVariable);
+            var evaluatedExpressionVariable = AddLocalVariable(switchExpressionType);
 
             var expressionVisitor = new ExpressionVisitor(Context, _ilVar);
             node.Expression.Accept(expressionVisitor);
@@ -304,18 +304,20 @@ namespace Cecilifier.Core.AST
             AddLocalVariableWithResolvedType(localVar.Identifier.Text, methodVar, resolvedVarType);
         }
 
-        private void AddLocalVariable(string varType, string variableName)
+        private string AddLocalVariable(string varType)
         {
             var currentMethod = Context.DefinitionVariables.GetLastOf(MemberKind.Method);
             if (!currentMethod.IsValid)
                 throw new InvalidOperationException("Could not resolve current method declaration variable.");
-            
-            var cecilVarDeclName = variableName;
+
+            var cecilVarDeclName = Context.Naming.SyntheticVariable("switch", ElementKind.LocalVariable);
 
             AddCecilExpression("var {0} = new VariableDefinition({1});", cecilVarDeclName, varType);
             AddCecilExpression("{0}.Body.Variables.Add({1});", currentMethod.VariableName, cecilVarDeclName);
 
-            Context.DefinitionVariables.RegisterNonMethod(string.Empty, variableName, MemberKind.LocalVariable, cecilVarDeclName);
+            Context.DefinitionVariables.RegisterNonMethod(string.Empty, cecilVarDeclName, MemberKind.LocalVariable, cecilVarDeclName);
+
+            return cecilVarDeclName;
         }
 
         private void ProcessVariableInitialization(VariableDeclaratorSyntax localVar)
