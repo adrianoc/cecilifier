@@ -1,20 +1,18 @@
 ﻿<!DOCTYPE html>
 <html>
 <head>
-    <script src="~/lib/node_modules/codemirror/lib/codemirror.js"></script>
-
     <script src="~/js/cecilifier.js"></script>
     <script src="~/js/release_notes.js"></script>
     
+    <!-- Tippy.js -->
+    <script src="https://unpkg.com/@@popperjs/core@2"></script>
+    <script src="https://unpkg.com/tippy.js@6"></script>
+
     <link rel="stylesheet" href="~/css/release_notes.css">
     <link rel="stylesheet" href="~/css/button.css">
     
-    <link rel="stylesheet" href="~/lib/node_modules/codemirror/lib/codemirror.css">
-    <link rel="stylesheet" href="~/lib/node_modules/codemirror/theme/darcula.css">
-    <link rel="stylesheet" href="~/lib/node_modules/codemirror/theme/blackboard.css">
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.0/css/all.css" integrity="sha384-lZN37f5QGtY3VHgisS14W3ExzMWZxybE1SJSEsQp9S+oqd12jhcu+A56Ebc1zFSJ" crossorigin="anonymous">
     <link href="https://fonts.googleapis.com/css?family=Big+Shoulders+Text|Roboto&display=swap" rel="stylesheet">  
-    <script src="~/lib/node_modules/codemirror/mode/clike/clike.js"></script>
 
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -54,12 +52,6 @@
         a:link { color: black; text-decoration:none; }
         a:visited { color: black; text-decoration:none; }
 
-        .back_social
-        {
-            background: rgb(206, 208, 209);
-            width: 100%;
-        }
-
         #inner {
             display: table;
             margin: 0 auto;
@@ -86,7 +78,7 @@
         .alert.success { background-color: #4CAF50;}
         .alert.info { background-color: #2196F3;}
         .alert.warning { background-color: #ff9800;}
-        .alert.error { background-color: #620b05; color: #eae6c1; text-align: left; position: absolute; opacity: 0}
+        .alert.error { background-color: #620b05; color: #eae6c1; text-align: left; position: absolute; opacity: 0; font-size:22px}
 
         .closebtn {
             margin-left: 15px;
@@ -102,55 +94,12 @@
         .closebtn:hover {
             color: black;
         }
-    </style>
-    
-    <script>
-        setTimeout(
-            function fadeOut(){
-                var close = document.getElementsByClassName("closebtn");
-                var div = close[0].parentElement;
-        
-                var opacity = Number(div.style.opacity);
-                opacity = opacity - 0.1;
-        
-                if (opacity > 0.4) {
-                    div.style.opacity = opacity.toString();
-                    setTimeout(fadeOut, 400);
-                }
-                else {
-                    div.style.display = "none"; 
-                }
-        
-            }, 2000);
-    </script>
+    </style> 
 </head>
 <body onload="showReleaseNotes()">
-<nav class="navbar navbar-inverse navbar-fixed-top">
-    <div class="container">
-        <div class="navbar-header">
-            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
-                <span class="sr-only">Toggle navigation</span>
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-            </button>
-            <a asp-page="/Index" class="navbar-brand">Cecilifier Version @this.GetType().Assembly.GetName().Version</a>
-        </div>
-        <div class="navbar-collapse collapse">
-            <ul class="nav navbar-nav">
-                <li><a asp-page="/Index">Home</a></li>
-                <li><a asp-page="/About">About</a></li>
-                <li><a asp-page="/Contact">Contact</a></li>
-            </ul>
-        </div>
-    </div>
-</nav>
 
-<partial name="_CookieConsentPartial"/>
-
-<div class="container body-content" style="width: 70%">
+<div class="container body-content" style="width: 100%">
     @RenderBody()
-    <hr/>
     <footer>
         <div class="back_social">
             <div id="inner">
@@ -166,7 +115,6 @@
         </div>
     </footer>
 </div>
-
 
 <environment include="Development">
     <script src="~/lib/jquery/dist/jquery.js"></script>

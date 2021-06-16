@@ -1,16 +1,23 @@
 /* Please see documentation at https://docs.microsoft.com/aspnet/core/client-side/bundling-and-minification 
 for details on configuring this project to bundle and minify static web assets. */
+
+html {
+    height: 100%;
+}
+
 body {
-    padding-top: 50px;
-    padding-bottom: 20px;
+    padding-top: 0px;
+    padding-bottom: 0px;
+    height: 100%;
+    overflow: hidden;
 }
 
 /* Wrapping element */
 /* Set some basic padding to keep content from hitting the edges */
 .body-content {
-    padding-left: 15px;
-    padding-right: 15px;
-    width: 70%;
+    padding-left: 0px;
+    padding-right: 0px;
+    width: 100%;
 }
 
 /* Carousel */
@@ -24,6 +31,14 @@ body {
     width: 100%;
 }
 
+.back_social
+{
+    background: rgb(209, 206, 206);
+    width: 100%;
+    border-left: 10px solid white;
+    border-right: 10px solid white;
+}
+
 /* QR code generator */
 #qrCode {
     margin: 15px;
@@ -35,4 +50,20 @@ body {
     .carousel-caption {
         display: none;
     }
+}
+
+.toggle label
+{
+    vertical-align: middle;
+    margin-bottom: 0px;
+}
+
+#postToDiscordLabel
+{
+    vertical-align: middle;
+    margin-bottom: 0;
+}
+
+.tippy-box[data-theme~='cecilifier-tooltip'] {
+    font-weight: bold;
 }
