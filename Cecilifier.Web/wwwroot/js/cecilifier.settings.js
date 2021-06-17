@@ -349,7 +349,7 @@ class Setting {
 
 function hideSettings() {
     document.getElementById("settingsDiv").style.width = "0";
-    document.getElementById("mainContent").style.visibility = "unset";
+    //document.getElementById("mainContent").style.visibility = "unset";
 
     if (settings.isEnabled(NamingOptions.StoreSettingsLocally)) {
         setCookie("cecilifier-settings", JSON.stringify(settings.toTransportObject()), 1000);
@@ -361,5 +361,5 @@ function hideSettings() {
 
 function changeCecilifierSettings() {
     document.getElementById("settingsDiv").style.width = "100%";
-    document.getElementById("mainContent").style.visibility = "hidden";
+    //document.getElementById("mainContent").style.visibility = "hidden";
 }
