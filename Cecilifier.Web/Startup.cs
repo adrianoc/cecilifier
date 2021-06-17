@@ -8,7 +8,6 @@ using System.Linq;
 using System.Net;
 using System.Net.WebSockets;
 using System.Resources;
-using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -18,8 +17,6 @@ using Cecilifier.Web.Pages;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -54,7 +51,7 @@ namespace Cecilifier.Web
                 options.CheckConsentNeeded = context => true;
                 options.MinimumSameSitePolicy = SameSiteMode.None;
             });
-
+            
             services.AddRazorPages();
         }
 
@@ -120,14 +117,14 @@ namespace Cecilifier.Web
                                 if (publishSourcePolicy == 'A')
                                     SendMessageWithCodeToChat("One more happy user (project)", $"Total so far: {CecilifierApplication.Count}", "4437377", buffer, result.Count);
                                 
-                                var responeData = ZipProject(
+                                var responseData = ZipProject(
                                     ("Program.cs", cecilifiedCode.GeneratedCode.ReadToEnd()),
                                     ("Cecilified.csproj", ProjectContents),
                                     NameAndContentFromResource("Cecilifier.Web.Runtime")
                                 );
 
                                 var output = new Span<byte>(buffer);
-                                var ret = Base64.EncodeToUtf8(responeData.Span, output, out var bytesConsumed, out var bytesWritten);
+                                var ret = Base64.EncodeToUtf8(responseData.Span, output, out var bytesConsumed, out var bytesWritten);
                                 if (ret == OperationStatus.Done)
                                 {
                                     output = output.Slice(0, bytesWritten);
@@ -242,7 +239,7 @@ namespace Cecilifier.Web
             
             SendJsonMessageToChat(toSend);            
         }
-
+ 
         private void SendSyntaxErrorToChat(SyntaxErrorException syntaxErrorException, byte[] code, int length)
         {
             SendMessageWithCodeToChat("Syntax Error",  syntaxErrorException.Message, "15746887", code, length);

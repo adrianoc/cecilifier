@@ -42,14 +42,6 @@ function showReleaseNotes() {
     });
 }
 
-function openNav() {
-    document.getElementById("myNav").style.width = "100%";
-}
-
-function closeNav() {
-    document.getElementById("myNav").style.width = "0%";
-}
-
 function getReleaseNotes(callback) {
     var xhttp = new XMLHttpRequest();
     xhttp.onreadystatechange = function() {

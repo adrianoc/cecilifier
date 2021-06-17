@@ -39,7 +39,7 @@ namespace Cecilifier.Web.Pages
             }
 
             string Encode(string msg)
-            {
+            {                
                 return msg.Replace("\n", @"\n").Replace("\t", @"\t");
             }
             

@@ -1,52 +1,159 @@
-var websocket;
+let websocket;
 var cecilifiedCode;
 var csharpCode;
 
-function initializeSite() {
-    csharpCode = CodeMirror.fromTextArea(
-        document.getElementById("_csharpcode"),
-        {
-            lineNumbers: true,
-            matchBrackets: true,
-            mode: "text/x-csharp",
-            theme: "blackboard"
+function initializeSite(errorAccessingGist, gist, version) {
+    require.config({ paths: { vs: 'lib/node_modules/monaco-editor/min/vs' } });
+
+    require(['vs/editor/editor.main'], function () {
+        csharpCode = monaco.editor.create(document.getElementById('csharpcode'), {
+            theme: "vs-dark",
+            value: ['using System;', 'class Foo', '{', '\tvoid Bar() => Console.WriteLine("Hello World!");', '}'].join('\n'),
+            language: 'csharp',
+            minimap: { enabled: false },
+            fontSize: 16,
+            glyphMargin: true,
+        });
+        
+        cecilifiedCode = monaco.editor.create(document.getElementById('cecilifiedcode'), {
+            theme: "vs-dark",
+            value: "",
+            language: 'csharp',
+            readOnly: true,
+            minimap: { enabled: false },
+            fontSize: 16,
+            glyphMargin: true,
+         });
+         
+        // Configure keyboard shortcuts
+        csharpCode.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KEY_D, function() {
+            simulateClick("downloadProject");
         });
 
-    csharpCode.setOption("extraKeys", {
-        "Ctrl-G": function(cm) {
-            simulateClick("downloadProject");            
-        },
-        
-        "Shift-Ctrl-C": function(cm) {
+        csharpCode.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KEY_C, function() {
             simulateClick("sendbutton");
+        });
+
+        csharpCode.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.US_OPEN_SQUARE_BRACKET , function() {
+            var options = csharpCode.getRawOptions();
+            var newFontSize = Math.ceil(options.fontSize - options.fontSize * 0.05);
+            
+            csharpCode.updateOptions({ fontSize: newFontSize });
+        });
+
+        csharpCode.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.US_CLOSE_SQUARE_BRACKET , function() {
+            var options = csharpCode.getRawOptions();
+
+            var newFontSize = Math.ceil(options.fontSize * 1.05);
+            csharpCode.updateOptions({ fontSize: newFontSize });
+        });
+
+        // Handle gist
+        if (errorAccessingGist.length === 0) {            
+            setValueFromGist(gist);
+        } else {
+            setError(errorAccessingGist);
         }
 
-    });
-    csharpCode.setSize(null, window.innerHeight * 0.2);
-    
-    cecilifiedCode = CodeMirror.fromTextArea(
-        document.getElementById("_cecilifiedcode"),
-        {
-            lineNumbers: true,
-            matchBrackets: true,
-            mode: "text/x-csharp",
-            theme: "darcula"
-        });
-    cecilifiedCode.setSize(null, window.innerHeight * 0.55);
+        window.onresize = function(ev) {
+            updateEditorsSize();
+        }
 
-    setSendToDiscordTooltip();
+        updateEditorsSize();        
+    });
+    
+    setTooltips(version);
+
+    setSendToDiscordTooltip();   
     
     initializeWebSocket();
-
-    window.onresize = function(ev) {
-        csharpCode.setSize(null, window.innerHeight * 0.2);
-        cecilifiedCode.setSize(null, window.innerHeight * 0.55);
-    }
+    disableScroll();
 }
 
-function onSendToDiscordCheckBoxChanged()
-{
-    setSendToDiscordTooltip();
+function disableScroll() {
+    // Get the current page scroll position
+    scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+    scrollLeft = window.pageXOffset || document.documentElement.scrollLeft,
+  
+        // if any scroll is attempted, set this to the previous value
+        window.onscroll = function() {
+            window.scrollTo(scrollLeft, scrollTop);
+        };
+}
+  
+function enableScroll() {
+    window.onscroll = function() {};
+}
+
+function updateEditorsSize() {
+    var csharpCodeDiv = document.getElementById("csharpcode");
+    let h = window.innerHeight * 0.35;
+    csharpCodeDiv.style.height = `${h}px`;
+
+    var cecilifiedCodeDiv = document.getElementById("cecilifiedcode");
+    cecilifiedCodeDiv.style.height = `${window.innerHeight - h - 80}px`;
+
+    csharpCode.layout();
+    cecilifiedCode.layout();
+}
+
+function setTooltips(version) {
+    let msg = `Cecilifier version ${version}<br/><br/>Cecilifier is meant to make it easier to learn how to use <a href="https://github.com/jbevain/cecil" target="_blank">Mono.Cecil</a>. You can read more details about it in its <a href="https://programing-fun.blogspot.com/2019/02/making-it-easier-to-getting-started.html" target="_blank">blog announcement</a>.`;
+    
+    let defaultDelay =  [500, null];
+    tippy('#aboutSpan2', {
+        content: msg,
+        placement: 'top',
+        interactive: true,
+        allowHTML: true,
+        theme: 'cecilifier-tooltip',
+        delay: defaultDelay
+    });
+    
+    tippy('#csharpcode-container', {
+        content: "Type any valid C# code to generate the equivalent Cecil api calls.",
+        placement: 'bottom',
+        interactive: true,
+        allowHTML: true,
+        theme: 'cecilifier-tooltip',
+        delay: defaultDelay
+    });
+
+    tippy('#cecilifiedcode-container', {
+        content: "After pressing <i>Cecilify your code!</i> button, the generate code will be show here.",
+        placement: 'top',
+        interactive: true,
+        allowHTML: true,
+        theme: 'cecilifier-tooltip',
+        delay: defaultDelay
+    });
+
+    tippy('#sendbutton', {
+        content: "After entering the code you want to process, press this button. (Ctrl-Shift-C)",
+        placement: 'top',
+        interactive: true,
+        allowHTML: true,
+        theme: 'cecilifier-tooltip',
+        delay: defaultDelay
+    });
+
+    tippy('#downloadProject', {
+        content: "Use this option if you want to download a .Net Core 3.0 project, ready for you to play with! (Ctrl-Shift-D)",
+        placement: 'top',
+        interactive: true,
+        allowHTML: true,
+        theme: 'cecilifier-tooltip',
+        delay: defaultDelay
+    });
+
+    tippy('#copyToClipboard', {
+        content: "Copy cecilified code to clipboard.",
+        placement: 'top',
+        interactive: true,
+        allowHTML: true,
+        theme: 'cecilifier-tooltip',
+        delay: defaultDelay
+    });    
 }
 
 function setSendToDiscordTooltip()
@@ -60,12 +167,27 @@ function setSendToDiscordTooltip()
     else
     {
         msg = "Publish Off: " + msgBody +  " only in case of errors.";
-    }
+    }    
     
     msg = msg + "\r\nClick on the link at the bottom of this page to join the general discussion discord channel.";
 
-    let label = document.getElementById("postToDiscordLabel");
-    label.setAttribute("data-tooltip", msg);
+    tippy('#postToDiscordLabel', {
+        content: msg,
+        placement: 'top',
+        interactive: true,
+        allowHTML: true,
+        theme: 'cecilifier-tooltip'
+    });    
+}
+
+function onSendToDiscordCheckBoxChanged()
+{
+    let instance = document.querySelector('#postToDiscordLabel')._tippy;
+    instance.destroy();
+    setSendToDiscordTooltip();
+    
+    instance = document.querySelector('#postToDiscordLabel')._tippy;
+    instance.show();
 }
 
 function getSendToDiscordValue()
@@ -157,6 +279,7 @@ function send(websocket, format, sendToDiscordOption) {
 
     websocket.send(format + (sendToDiscordOption ? 'A' : 'E') + csharpCode.getValue());
 }
+
 function createProjectZip(text, name, type) {
     var buttonId = "dlbtn";
     var dlbtn = document.getElementById(buttonId);
@@ -213,7 +336,8 @@ function setValueFromGist(snipet) {
             .replace(/&lt;/g, '<')
             .replace(/&#x27;/g, "'")
             .replace(/&#x2B;/g, '+')
-            .replace(/&#x38;/g, '&'));
+            .replace(/&#x38;/g, '&')
+            .replace(/&amp;/g, '&'));
 
     cecilifyFromGist(1);
 }
