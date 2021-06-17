@@ -48,7 +48,7 @@ class SettingsManager {
         this.namingOptions = new Map();
         this.sampleEditor = sampleEditor;
         
-        for(var i = 0; i < this.settings.length; i++) {
+        for(let i = 0; i < this.settings.length; i++) {
             this.settings[i].setInfo(this, i);
         }
     }
@@ -60,9 +60,9 @@ class SettingsManager {
     toogleGutter() {
         this.settings[pos].updateExample(newValue);
     }
-
+    
     updateConditionalFormat(groupIndex, replace, valueExtractor) {
-        for(var si = 0; si < this.settings.length; si++) {
+        for(let si = 0; si < this.settings.length; si++) {
             this.settings[si].updateConditionalFormat(groupIndex, replace, this.optionalFormats, valueExtractor);
         }
     }
@@ -72,15 +72,15 @@ class SettingsManager {
             return false;
 
         this.settingsTable = settingsTable;
-        for(var i = 0; i < this.settings.length; i++) {
-            var configRow = settingsTable.insertRow(i+1);
+        for(let i = 0; i < this.settings.length; i++) {
+            const configRow = settingsTable.insertRow(i + 1);
             configRow.addEventListener('mouseover', this.settings[i].toogleGutter.bind(this.settings[i]));
             this.settings[i].setDOMOwner(configRow);
 
-            var configLabelCell = configRow.insertCell(0);
+            const configLabelCell = configRow.insertCell(0);
             configLabelCell.innerText = this.settings[i].name;
 
-            var configInputCell = configRow.insertCell(1);
+            const configInputCell = configRow.insertCell(1);
             configInputCell.innerHTML = `<td><input class="cecilifier-input" type="text" placeholder="${this.settings[i].placeholder}" value="${this.settings[i].prefix}" onchange="settings.updateExample(${i}, this.value);"></input></td>`;
         }
 
@@ -104,20 +104,20 @@ class SettingsManager {
 
         configCell.innerHTML = `<input type="checkbox"> ${description}</input>`;
 
-        var optionalInput = configCell.firstChild;
+        const optionalInput = configCell.firstChild;
         optionalInput.checked = true;
 
-        var optionalMemberNameFormat = new OptionalMemberNameFormat(this, groupIndex, optionalInput, valueExtractor);
+        const optionalMemberNameFormat = new OptionalMemberNameFormat(this, groupIndex, optionalInput, valueExtractor);
 
         optionalInput.onchange = () => {
             callback(optionalInput.checked);
 
-            var validationMessage = this.validateOptionalFormat();
+            const validationMessage = this.validateOptionalFormat();
             if (validationMessage != null) {
-                var textElement = document.getElementById("cecilifier-validation-msg");
+                const textElement = document.getElementById("cecilifier-validation-msg");
                 textElement.innerText = validationMessage;
 
-                var navNode = document.querySelector("#cecilifier-validation");
+                const navNode = document.querySelector("#cecilifier-validation");
                 navNode.classList.remove("hidden");
 
                 optionalInput.checked = true;
@@ -133,15 +133,15 @@ class SettingsManager {
         return optionalMemberNameFormat;
     }
 
-    addBooleanOption(namingOption, description, tooltip, callback){ 
-        var configRow = this.settingsTable.insertRow(-1);
-        var configCell = configRow.insertCell(0);
+    addBooleanOption(namingOption, description, tooltip, callback){
+        const configRow = this.settingsTable.insertRow(-1);
+        const configCell = configRow.insertCell(0);
         configCell.setAttribute("colspan", 2);
         configCell.setAttribute("data-tooltip", tooltip);
         configCell.setAttribute("data-tooltip-location", top);
         configCell.innerHTML = `<input type="checkbox"> ${description}</input>`;
 
-        var optionalInput = configCell.firstChild;
+        const optionalInput = configCell.firstChild;
         optionalInput.checked = true;
         optionalInput.onchange = (e) => callback(e.target.checked, this.sampleEditor);
         
@@ -149,13 +149,13 @@ class SettingsManager {
     }
 
     setEnabled(state) {
-        for(var s in this.settings)
+        for(const s in this.settings)
             this.settings[s].configRowDOM.cells[1].firstChild.disabled = !state;
     }
 
     optionalFormatState() {
-        var state = 0;
-        for(var i = 0; i < this.optionalFormats.length; i++) {
+        let state = 0;
+        for(let i = 0; i < this.optionalFormats.length; i++) {
             if (this.optionalFormats[i].checked)
                 state = state | (1 << i);
         }
@@ -167,20 +167,19 @@ class SettingsManager {
         let namingOptionsValue = 0;        
         this.namingOptions.forEach((extractor, key) => { if (extractor()) namingOptionsValue = namingOptionsValue | key; });
 
-        var s =
-        {
-            elementKindPrefixes: this.settings.map((e) => { return { elementKind: e.elementKind, prefix: e.prefix } }),
+        return {
+            elementKindPrefixes: this.settings.map((e) => {
+                return {elementKind: e.elementKind, prefix: e.prefix}
+            }),
             namingOptions: namingOptionsValue
         };
-
-        return s;
     }
 
     loadFromJSON(json) {
-        var settingsData = JSON.parse(json);
+        const settingsData = JSON.parse(json);
         //this.namingOptions.forEach((extractor, key) => { if (extractor()) namingOptionsValue = namingOptionsValue | key; });
         settingsData.elementKindPrefixes.forEach( (entry, index) => { 
-            for(var i in this.settings) {
+            for(const i in this.settings) {
                 if (this.settings[i].elementKind == entry.elementKind) {
                     this.settings[i].updateValue(entry.prefix); 
                 }
@@ -232,8 +231,8 @@ class OptionalMemberNameFormat {
 
 class OptionalMemberNameModifier {
     constructor(settingsTable, description, checked) {
-        var x =  settingsTable.insertRow(-1);
-        var modifierCell = x.insertCell(0);
+        const x = settingsTable.insertRow(-1);
+        const modifierCell = x.insertCell(0);
         modifierCell.setAttribute("colspan", "2");
 
         modifierCell.innerHTML = `<input type="checkbox" ${checked ? 'checked' : ''}>${description}</input>`;
@@ -264,9 +263,9 @@ class Setting {
 
     updateExample(newValue) {
         if (this.enabled) {
-            var t = this.manager.sampleEditor.getTokenAt({line: this.start.line, ch: this.start.ch + 1}, true);
-            var pos = t.string.indexOf("_");
-            if (pos != -1) {
+            const t = this.manager.sampleEditor.getTokenAt({line: this.start.line, ch: this.start.ch + 1}, true);
+            const pos = t.string.indexOf("_");
+            if (pos !== -1) {
                 this.manager.sampleEditor.replaceRange(newValue, {line: this.start.line, ch: t.start}, {line: this.start.line, ch: this.start.ch + pos - 1});
             }
         }
@@ -279,16 +278,16 @@ class Setting {
     }
 
     updateConditionalFormat(groupIndex, replace, optionalFormats, valueExtractor) {
-        var t = this.manager.sampleEditor.getTokenAt({line: this.start.line, ch: this.start.ch}, true);
-        
-        var start = -1;
-        var firstEnabled = -1;
-        var lastEnabled = -1;
-        for(var i = 0; i < optionalFormats.length; i++)
+        const t = this.manager.sampleEditor.getTokenAt({line: this.start.line, ch: this.start.ch}, true);
+
+        let start = -1;
+        let firstEnabled = -1;
+        let lastEnabled = -1;
+        for(let i = 0; i < optionalFormats.length; i++)
         {
-            if (optionalFormats[i].checked && i != groupIndex) {
+            if (optionalFormats[i].checked && i !== groupIndex) {
                 lastEnabled = i;
-                if (firstEnabled == -1)
+                if (firstEnabled === -1)
                     firstEnabled = i;
 
                 if (i < groupIndex)
@@ -296,8 +295,8 @@ class Setting {
             }
         }
 
-        var newValue = "";
-        var end = 0;
+        let newValue = "";
+        let end = 0;
 
         if (optionalFormats[groupIndex].checked) {
             newValue = valueExtractor(this);
@@ -325,24 +324,26 @@ class Setting {
         }
         else {
             end = this.calculateEnd(t, start);
-            if (start != -1)
+            if (start !== -1)
                start = start - 1;
         }
 
-        this.manager.sampleEditor.replaceRange(newValue, {line: this.start.line, ch: t.start + start + 1}, {line: this.start.line, ch: t.start + start + 1 + end });       
+        //TODO: Replace with Monaco API
+        //this.manager.sampleEditor.replaceRange(newValue, {line: this.start.line, ch: t.start + start + 1}, {line: this.start.line, ch: t.start + start + 1 + end });       
     }
 
     calculateEnd(t, start) {
-        var end = t.string.indexOf("_", start + 1); // assumes there are at least one optional formating following the one specified by *pos* that is enabled.
-        if (end == -1) // if theres none use the length of the string.
+        let end = t.string.indexOf("_", start + 1); // assumes there are at least one optional formating following the one specified by *pos* that is enabled.
+        if (end === -1) // if theres none use the length of the string.
             end = t.string.length;
         
         return (end - start);            
     }
 
     toogleGutter() {
-        var mark = this.manager.sampleEditor.markText({line: this.start.line - 1, char:1}, {line: this.start.line, char:30}, { css: "background-color : #eeffcc" });  // Why the line looks to be offseted by 1?
-        this.configRowDOM.onmouseout = () => mark.clear();
+        //TODO: Replace with monaco API
+        //var mark = this.manager.sampleEditor.markText({line: this.start.line - 1, char:1}, {line: this.start.line, char:30}, { css: "background-color : #eeffcc" });  // Why the line looks to be offseted by 1?
+        //this.configRowDOM.onmouseout = () => mark.clear();
     }
 }
 

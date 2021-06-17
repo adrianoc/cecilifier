@@ -77,7 +77,9 @@ function initializeSite(errorAccessingGist, gist, version) {
             updateEditorsSize();
         }
 
-        updateEditorsSize();        
+        updateEditorsSize();
+
+        initializeFormattingSettings();
     });
     
     setTooltips(version);
@@ -85,7 +87,69 @@ function initializeSite(errorAccessingGist, gist, version) {
     setSendToDiscordTooltip();   
     
     initializeWebSocket();
+
     disableScroll();
+}
+
+function initializeFormattingSettings() {
+    const formatSettingsExampleCode = `/*[Obsolete] class AClass<T>
+        {
+            public int field;
+            public event Action AnEvent;
+            public string Property { get { return "P"; } }
+            public void Method() {}
+        }
+
+        struct AStruct { }
+        enum AnEnum { }
+        interface Interface {}
+        delegate void ADelegate(int i);
+        */
+        //ClassDeclaration : AClass
+        var cls_AClass_0 = new TypeDefinition("", "AClass\`1", TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit | TypeAttributes.NotPublic, assembly.MainModule.TypeSystem.Object);
+
+        var gp_T_1 = new Mono.Cecil.GenericParameter("T", cls_AClass_0) ;
+
+        var attr_Obsolete_2 = new CustomAttribute(assembly.MainModule.ImportReference(typeof(System.ObsoleteAttribute).GetConstructor(new Type[0] {  })));
+
+        var fld_field_3 = new FieldDefinition("field", FieldAttributes.Public, assembly.MainModule.TypeSystem.Int32);
+
+        var git_AClass_8 = cls_0.MakeGenericInstanceType(cls_AClass_0.GenericParameters.ToArray());
+
+        var evt_AnEvent_13 = new EventDefinition("AnEvent", EventAttributes.None, assembly.MainModule.ImportReference(typeof(Action)));
+        
+        var prop_Property_14 = new PropertyDefinition("Property", PropertyAttributes.None, assembly.MainModule.TypeSystem.String);
+
+        var md_Method_19 = new MethodDefinition("Method", MethodAttributes.Public | MethodAttributes.HideBySig, assembly.MainModule.TypeSystem.Void);
+
+        var p_value_21 = new ParameterDefinition("value", ParameterAttributes.None, assembly.MainModule.TypeSystem.Int32);
+
+        var il_addAnEvent_7 = md_Method_19.Body.GetILProcessor();
+
+        var ctor_AClass_22 = new MethodDefinition(".ctor", MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.RTSpecialName | MethodAttributes.SpecialName, assembly.MainModule.TypeSystem.Void);
+
+        var Call_25 = il_23.Create(OpCodes.Call, assembly.MainModule.ImportReference(TypeHelpers.DefaultCtorFor(cls_0.BaseType)));
+
+        var s_AStruct_27 = new TypeDefinition("", "AStruct", TypeAttributes.SequentialLayout | TypeAttributes.Sealed |TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit | TypeAttributes.NotPublic, assembly.MainModule.TypeSystem.Object);
+
+        var e_AnEnum_28 = new TypeDefinition("", "AnEnum", TypeAttributes.Private | TypeAttributes.Sealed, assembly.MainModule.ImportReference(typeof(System.Enum)));
+
+        var itf_Interface_27 = new TypeDefinition("", "Interface", TypeAttributes.Interface | TypeAttributes.Abstract | TypeAttributes.NotPublic);
+
+        var del_ADelegate_30 = new TypeDefinition("", "ADelegate", TypeAttributes.Sealed | TypeAttributes.Private, assembly.MainModule.ImportReference(typeof(System.MulticastDelegate))) { IsAnsiClass = true };
+    `;
+    
+    let formattingSettingsSample = monaco.editor.create(document.getElementById('_formattingSettingsSample'), {
+        theme: "vs-dark",
+        value: formatSettingsExampleCode,
+        language: 'csharp',
+        readOnly: true,
+        minimap: { enabled: false },
+        fontSize: 16,
+        glyphMargin: true,
+    });
+
+    initializeSettings(formattingSettingsSample);
 }
 
 function disableScroll() {
@@ -98,13 +162,9 @@ function disableScroll() {
             window.scrollTo(scrollLeft, scrollTop);
         };
 }
-  
-function enableScroll() {
-    window.onscroll = function() {};
-}
 
 function updateEditorsSize() {
-    var csharpCodeDiv = document.getElementById("csharpcode");
+    let csharpCodeDiv = document.getElementById("csharpcode");
     let h = window.innerHeight * 0.35;
     csharpCodeDiv.style.height = `${h}px`;
 
@@ -176,17 +236,86 @@ function setTooltips(version) {
 
 function setSendToDiscordTooltip()
 {
-    let msgBody = "the source from the top textbox will be sent to an internal discord channel (accessible only to Cecilifier's author)";
+    /*let msgBody = "the source from the top textbox will be sent to an internal discord channel (accessible only to Cecilifier's author)";
     let msg = null;
     if (getSendToDiscordValue())
     {
-        msg = "Publish On: " + msgBody +  ". Preferable if the contents of the code is not sensitive. This helps Cecilifier developer to better understand usage pattern.";
+        msg = `Publish On: ${msgBody}. Preferable if the contents of the code is not sensitive. This helps Cecilifier developer to better understand usage pattern.`;
     }
     else
     {
         msg = "Publish Off: " + msgBody +  " only in case of errors.";
-    }    
+    }  
     
+    tippy('#postToDiscordLabel', {
+        content: msg,
+        placement: 'top',
+        interactive: true,
+        allowHTML: true,
+        theme: 'cecilifier-tooltip'
+    });*/    
+}
+
+function initializeSettings(formattingSettingsSample) {
+    
+    const startLine = 13;
+    
+    settings = new SettingsManager(formattingSettingsSample, [
+        new Setting(ElementKind.Class, {line: startLine, ch: 9}, "Class", "prefix to be used for classes", "AClass", "cls"),
+        new Setting(ElementKind.GenericParameter, {line: startLine + 2, ch: 9}, "Generic Parameter", "generic parameters prefix","T", "gp"),
+        new Setting(ElementKind.Attribute, {line: startLine + 4, ch: 9}, "Attribute", "attribute prefix","Obsolete", "attr"),       
+        new Setting(ElementKind.Field, {line: startLine + 6, ch: 9}, "Field", "field prefix","field", "fld"),
+        new Setting(ElementKind.GenericInstance, {line: startLine + 8, ch: 9}, "Generic Instance", "generic instance prefix","AClass", "gi"),
+        new Setting(ElementKind.Event, {line: startLine + 10, ch: 9}, "Event", "event declaration prefix","AnEvent", "evt"),    
+        new Setting(ElementKind.Property, {line: startLine + 12, ch: 9}, "Property", "property prefix","Property", "prop"),
+        new Setting(ElementKind.Method, {line: startLine + 14, ch: 9}, "Method", "method prefix","Method", "m"),
+        new Setting(ElementKind.Parameter, {line: startLine + 16, ch: 9}, "Parameter", "parameter prefix","value", "p"),
+        new Setting(ElementKind.IL, {line: startLine + 18, ch: 9}, "IL", "il variable prefix","addAnEvent", "il"),
+        new Setting(ElementKind.Constructor, {line: startLine + 20, ch: 9}, "Constructor", "constructor prefix","AClass", "ctor"),
+        new Setting(ElementKind.Struct, {line: startLine + 24, ch: 9}, "Struct", "struct prefix","AStruct", "st"),
+        new Setting(ElementKind.Enum, {line: startLine + 26, ch: 9}, "Enum", "enum prefix","AnEnum", "e"),
+        new Setting(ElementKind.Interface, {line: startLine + 28, ch: 9}, "Interface", "interface prefix","Interface", "itf"),
+        new Setting(ElementKind.Delegate, {line: startLine + 30, ch: 9}, "Delegate", "delegate prefix","ADelegate", "del")
+    ]);
+
+    settings.validateOptionalFormat = () => {
+        const sel = settings.optionalFormatState();
+
+        if ((sel & 0x7) === 0x4) {
+            return "Unique id cannot be the only format.";
+        }
+    
+        if  (sel === 0) {
+            return "At least one format need to be included in variable names.";
+        }
+    
+        return null;
+    };
+     
+    settings.initialize(document.getElementById("cecilifierSettings"));
+    settings.addConditionalFormat(
+        NamingOptions.PrefixVariableNamesWithElementKind, 
+        "Prefix variable name with element kind",
+        0, 
+        "Variable names will have the related element kind (class, struct, enum, etc) appended.", 
+        (setting) => setting.prefix, 
+        (enabled) => settings.setEnabled(enabled));
+
+    const conditionalMemberName = settings.addConditionalFormat(
+        NamingOptions.AppendElementNameToVariables,
+        "Append member name to variable",
+        1,
+        "Use this option to append the related element name (the name of the class, struct, property, etc) to variable names.",
+        (setting) => setting.memberName,
+        (enabled) => {
+        });
+
+    conditionalMemberName.addConditionalModifier(
+        NamingOptions.CamelCaseElementNames, 
+        "Camel case variable names", 
+        false, 
+        (component, enabled) => enabled ? component[0].toLowerCase() + component.substring(1) : component);
+         
     settings.addConditionalFormat(
         NamingOptions.SuffixVariableNamesWithUniqueId, 
         "Suffix variable names with unique Id", 
@@ -205,59 +334,55 @@ function setSendToDiscordTooltip()
             var sep = token.string.indexOf("_");
             sampleEditor.replaceRange(newValue, {line: 35, ch: token.start}, {line: 35, ch: token.start + sep });
         });
+     
+    settings.addBooleanOption(
+        NamingOptions.AddCommentsToMemberDeclarations, 
+        "Add comments before type/member declarations", 
+        "Such comments may help in correlating the cecilified to the original source.", 
+        (enabled, sampleEditor) => { 
+            var newValue = enabled ? "//ClassDeclaration : AClass" : "";
+            sampleEditor.replaceRange(newValue, {line: 12, ch: 4}, {line: 12, ch: 64 });
+        });
 
-    tippy('#postToDiscordLabel', {
-        content: msg,
-        placement: 'top',
-        interactive: true,
-        allowHTML: true,
-        theme: 'cecilifier-tooltip'
-    });    
-}
-
-function onSendToDiscordCheckBoxChanged()
-{
-    let instance = document.querySelector('#postToDiscordLabel')._tippy;
-    instance.destroy();
-    setSendToDiscordTooltip();
+    settings.addBooleanOption(
+        NamingOptions.StoreSettingsLocally, 
+        "Store settings locally (cookies)", 
+        "Enabling this option so Cecilifier will remember your settings.", 
+        (setting, sampleEditor) => { });
     
-    instance = document.querySelector('#postToDiscordLabel')._tippy;
-    instance.show();
-}
+    settings.addBooleanOption(
+        NamingOptions.IncludeSourceInErrorReports, 
+        "Include source when reporting failures to developer discord channel", 
+        "Enable this to send the code being cecilified to developer (private) discord channel (if disabled only the error message is sent). Note that no matter the state of this option messages are sent anonymously.", 
+        (setting, sampleEditor) => { });
 
-// function onSendToDiscordCheckBoxChanged()
-// {
-//     setSendToDiscordTooltip();
-// }
+    settings.addConditionalFormat(
+        NamingOptions.SuffixVariableNamesWithUniqueId,
+        "Suffix variable names with unique Id",
+        2,
+        "Use this option to avoid variable names clashes. If the cecilified code is simple enought you may disable this.",
+        (function(setting) { var id = 1; return function() { id++; return id; } } )(),
+        (enabled) => { });
 
-// function setSendToDiscordTooltip()
-// {
-//     let msgBody = "the source from the top textbox will be sent to an internal discord channel (accessible only to Cecilifier's author)";
-//     let msg = null;
-//     if (getSendToDiscordValue())
-//     {
-//         msg = "Publish On: " + msgBody +  ". Preferable if the contents of the code is not sensitive. This helps Cecilifier developer to better understand usage pattern.";
-//     }
-//     else
-//     {
-//         msg = "Publish Off: " + msgBody +  " only in case of errors.";
-//     }
-    
-//     msg = msg + "\r\nClick on the link at the bottom of this page to join the general discussion discord channel.";
+    settings.addBooleanOption(
+        NamingOptions.PrefixInstructionsWithILOpCodeName,
+        "Append IL opcode to instruction variables",
+        "Use this option to make it easier to reason about the cecilified code.",
+        (enabled, sampleEditor) => {
+            var token = sampleEditor.getTokenAt({line: 33, ch: 9}, true);
+            var newValue = enabled ? "Call" : "inst";
+            var sep = token.string.indexOf("_");
+            sampleEditor.replaceRange(newValue, {line: 35, ch: token.start}, {line: 35, ch: token.start + sep });
+        });
 
-//     let label = document.getElementById("postToDiscordLabel");
-//     label.setAttribute("data-tooltip", msg);
-// }
-
-function getSendToDiscordValue()
-{
-    //let checkbox = document.getElementById("postToDiscord");
-    //return checkbox.checked;
-    return true;
+    const storedSettings = getCookie("cecilifier-settings");
+    if (storedSettings.length > 0) {
+        settings.loadFromJSON(storedSettings);
+    }
 }
 
 function setAlert(div_id, msg) {
-    var div = document.getElementById(div_id);
+    const div = document.getElementById(div_id);
 
     if (msg == null) {
         div.style.opacity = "0";
@@ -330,6 +455,9 @@ function initializeWebSocket() {
     };
 }
 
+// TODO: Fix
+function getSendToDiscordValue() { return false; }
+
 function send(websocket, format, sendToDiscordOption) {
     if (!websocket || websocket.readyState !== WebSocket.OPEN) {
         alert("socket not connected");
@@ -337,10 +465,10 @@ function send(websocket, format, sendToDiscordOption) {
     }
     clearError();
 
-    var request = new CecilifierRequest(
-                        csharpCode.getValue(), 
-                        new WebOptions(format, sendToDiscordOption ? 'A' : 'E'),
-                        settings.toTransportObject());
+    const request = new CecilifierRequest(
+        csharpCode.getValue(),
+        new WebOptions(format, sendToDiscordOption ? 'A' : 'E'),
+        settings.toTransportObject());
 
     websocket.send(JSON.stringify(request));
 }
