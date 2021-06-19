@@ -78,7 +78,7 @@ namespace Cecilifier.Core.Misc
 
         public void WriteComment(string comment)
         {
-            if (Options.Formatting.AddOriginalLineNumberAsComment)
+            if ((Options.Naming.Options & NamingOptions.AddCommentsToMemberDeclarations) == NamingOptions.AddCommentsToMemberDeclarations)
             {
                 output.AddLast($"{identation}//{comment}");
                 output.AddLast($"{Environment.NewLine}");

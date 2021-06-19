@@ -47,6 +47,7 @@ class SettingsManager {
         this.optionalFormats = [];
         this.namingOptions = new Map();
         this.sampleEditor = sampleEditor;
+        this.id = 0;
         
         for(let i = 0; i < this.settings.length; i++) {
             this.settings[i].setInfo(this, i);
@@ -56,15 +57,15 @@ class SettingsManager {
     updateExample(pos, newValue) {
         this.settings[pos].updateExample(newValue);
     }
-
-    toogleGutter() {
-        this.settings[pos].updateExample(newValue);
-    }
     
     updateConditionalFormat(groupIndex, replace, valueExtractor) {
         for(let si = 0; si < this.settings.length; si++) {
             this.settings[si].updateConditionalFormat(groupIndex, replace, this.optionalFormats, valueExtractor);
         }
+    }
+
+    uniqueId() {
+        return 'sm-' + this.id++
     }
 
     initialize(settingsTable) {        
@@ -74,7 +75,7 @@ class SettingsManager {
         this.settingsTable = settingsTable;
         for(let i = 0; i < this.settings.length; i++) {
             const configRow = settingsTable.insertRow(i + 1);
-            configRow.addEventListener('mouseover', this.settings[i].toogleGutter.bind(this.settings[i]));
+            configRow.addEventListener('mouseover', this.settings[i].toggleGutter.bind(this.settings[i]));
             this.settings[i].setDOMOwner(configRow);
 
             const configLabelCell = configRow.insertCell(0);
@@ -86,6 +87,26 @@ class SettingsManager {
 
         return true;
     }
+    
+    onShowHandlerFor(configRow) {
+        return (instance) => {
+            let mouseMoved = false;
+            let timeoutHandler = null;
+
+            timeoutHandler = () => {
+                if (mouseMoved) {
+                    instance.hide();
+                    configRow.onmousemove = null;
+                }
+                else {
+                    setTimeout(timeoutHandler, 500);
+                }
+            };
+
+            configRow.onmousemove = () => { mouseMoved = true; };
+            setTimeout(timeoutHandler, 500);
+        }
+    }
 
     /*
      * adds a checkbox that enables/disables a specific group in the variable name
@@ -96,12 +117,22 @@ class SettingsManager {
      * @callback callback - function .
      */
     addConditionalFormat(namingOption, description, groupIndex, tooltip, valueExtractor, callback) {
-        var configRow = this.settingsTable.insertRow(-1);
-        var configCell = configRow.insertCell(0);
-        configCell.setAttribute("colspan", 2);
-        configCell.setAttribute("data-tooltip", tooltip);
-        configCell.setAttribute("data-tooltip-location", "top");
+        const configRow = this.settingsTable.insertRow(-1);
 
+        configRow.id = this.uniqueId();
+        tippy(`#${configRow.id}`, {
+            content: tooltip,
+            placement: 'top',
+            interactive: true,
+            allowHTML: false,
+            theme: 'cecilifier-tooltip',
+            delay: 200,
+            onShow : this.onShowHandlerFor(configRow)
+        });
+        
+        const configCell = configRow.insertCell(0);
+        configCell.setAttribute("colspan", 2);
+        
         configCell.innerHTML = `<input type="checkbox"> ${description}</input>`;
 
         const optionalInput = configCell.firstChild;
@@ -128,24 +159,40 @@ class SettingsManager {
         };
 
         this.optionalFormats.push(optionalInput);
-        this.namingOptions.set(namingOption, () => { return optionalInput.checked; });
+        this.namingOptions.set(namingOption, {
+            getter : () => { return optionalInput.checked; },
+            setter : (value) => { optionalInput.checked = value ; },
+        });
 
         return optionalMemberNameFormat;
     }
 
     addBooleanOption(namingOption, description, tooltip, callback){
         const configRow = this.settingsTable.insertRow(-1);
+
+        configRow.id = this.uniqueId();
+        tippy(`#${configRow.id}`, {
+            content: tooltip,
+            placement: 'top',
+            interactive: true,
+            allowHTML: false,
+            theme: 'cecilifier-tooltip',
+            delay: 200,
+            onShow : this.onShowHandlerFor(configRow)
+        });
+        
         const configCell = configRow.insertCell(0);
         configCell.setAttribute("colspan", 2);
-        configCell.setAttribute("data-tooltip", tooltip);
-        configCell.setAttribute("data-tooltip-location", top);
         configCell.innerHTML = `<input type="checkbox"> ${description}</input>`;
 
         const optionalInput = configCell.firstChild;
         optionalInput.checked = true;
         optionalInput.onchange = (e) => callback(e.target.checked, this.sampleEditor);
         
-        this.namingOptions.set(namingOption, () => { return optionalInput.checked; });
+        this.namingOptions.set(namingOption, {
+            getter : () => { return optionalInput.checked; },
+            setter : (value) => { optionalInput.checked = value ; },
+        });
     }
 
     setEnabled(state) {
@@ -165,7 +212,7 @@ class SettingsManager {
 
     toTransportObject() {
         let namingOptionsValue = 0;        
-        this.namingOptions.forEach((extractor, key) => { if (extractor()) namingOptionsValue = namingOptionsValue | key; });
+        this.namingOptions.forEach((prop, key) => { if (prop.getter()) namingOptionsValue = namingOptionsValue | key; });
 
         return {
             elementKindPrefixes: this.settings.map((e) => {
@@ -177,10 +224,13 @@ class SettingsManager {
 
     loadFromJSON(json) {
         const settingsData = JSON.parse(json);
-        //this.namingOptions.forEach((extractor, key) => { if (extractor()) namingOptionsValue = namingOptionsValue | key; });
+        this.namingOptions.forEach((prop, key) => {
+            prop.setter((settingsData.namingOptions & key) === key);
+        });
+        
         settingsData.elementKindPrefixes.forEach( (entry, index) => { 
             for(const i in this.settings) {
-                if (this.settings[i].elementKind == entry.elementKind) {
+                if (this.settings[i].elementKind === entry.elementKind) {
                     this.settings[i].updateValue(entry.prefix); 
                 }
             }
@@ -188,7 +238,7 @@ class SettingsManager {
     }
 
     isEnabled(option) {
-        return this.namingOptions.get(option)();
+        return this.namingOptions.get(option).getter();
     }
 }
 
@@ -202,7 +252,7 @@ class OptionalMemberNameFormat {
     }
 
     addConditionalModifier(namingOptions, description, checked, callback) {
-        var optionalModifier = new OptionalMemberNameModifier(this.settingsManager.settingsTable, description, checked);
+        const optionalModifier = new OptionalMemberNameModifier(this.settingsManager.settingsTable, description, checked);
         this.modifiers.push(optionalModifier);
 
         this.checkbox.addEventListener('change', function(e) {
@@ -213,13 +263,17 @@ class OptionalMemberNameFormat {
             this.settingsManager.updateConditionalFormat(this.groupIndex, true, this.extractValue.bind(this));
         };
 
-        var temp = this.valueExtractor;
+        const temp = this.valueExtractor;
         this.valueExtractor = (setting) => {
-            var value = temp(setting);
+            const value = temp(setting);
             return callback(value, optionalModifier.checkbox.checked);
         };
 
-        this.settingsManager.namingOptions.set(namingOptions, () => { return optionalModifier.checkbox.checked; });
+        this.settingsManager.namingOptions.set(namingOptions, 
+            { 
+                getter : () => { return optionalModifier.checkbox.checked; },
+                setter : (value) => { optionalModifier.checkbox.checked = value ; },
+            });
 
         return optionalModifier;
     }
@@ -235,7 +289,7 @@ class OptionalMemberNameModifier {
         const modifierCell = x.insertCell(0);
         modifierCell.setAttribute("colspan", "2");
 
-        modifierCell.innerHTML = `<input type="checkbox" ${checked ? 'checked' : ''}>${description}</input>`;
+        modifierCell.innerHTML = `<input type="checkbox" ${checked ? 'checked' : ''}> ${description}</input>`;
         this.checkbox = modifierCell.firstChild;
     }
 }
@@ -263,10 +317,10 @@ class Setting {
 
     updateExample(newValue) {
         if (this.enabled) {
-            const t = this.manager.sampleEditor.getTokenAt({line: this.start.line, ch: this.start.ch + 1}, true);
-            const pos = t.string.indexOf("_");
-            if (pos !== -1) {
-                this.manager.sampleEditor.replaceRange(newValue, {line: this.start.line, ch: t.start}, {line: this.start.line, ch: this.start.ch + pos - 1});
+            const t = this.manager.sampleEditor.getModel().getWordAtPosition({lineNumber: this.start.line, column: this.start.ch + 1});
+            const separatorPos = t.word.indexOf("_");
+            if (separatorPos !== -1) {
+                this.manager.sampleEditor.executeEdits("update-sample", [{forceMoveMarkers : false, range: new monaco.Range(this.start.line, t.startColumn, this.start.line, t.startColumn + separatorPos), text:newValue }]);
             }
         }
         this.prefix = newValue;
@@ -278,8 +332,8 @@ class Setting {
     }
 
     updateConditionalFormat(groupIndex, replace, optionalFormats, valueExtractor) {
-        const t = this.manager.sampleEditor.getTokenAt({line: this.start.line, ch: this.start.ch}, true);
-
+        const t = this.manager.sampleEditor.getModel().getWordAtPosition({lineNumber: this.start.line, column: this.start.ch});
+        
         let start = -1;
         let firstEnabled = -1;
         let lastEnabled = -1;
@@ -291,7 +345,7 @@ class Setting {
                     firstEnabled = i;
 
                 if (i < groupIndex)
-                    start = t.string.indexOf("_", start + 1);
+                    start = t.word.indexOf("_", start + 1);
             }
         }
 
@@ -304,11 +358,11 @@ class Setting {
             if (groupIndex > lastEnabled) {
                 newValue = "_" + newValue;
                 if (replace){
-                    end = t.string.length - start;
+                    end = t.word.length - start;
                     start = start - 1;
                 }
                 else {
-                    start = t.string.length - 1;
+                    start = t.word.length - 1;
                 }
             }
             else {
@@ -328,38 +382,49 @@ class Setting {
                start = start - 1;
         }
 
-        //TODO: Replace with Monaco API
-        //this.manager.sampleEditor.replaceRange(newValue, {line: this.start.line, ch: t.start + start + 1}, {line: this.start.line, ch: t.start + start + 1 + end });       
+        this.manager.sampleEditor.executeEdits("update-conditional-option", [{forceMoveMarkers : false, range: new monaco.Range(this.start.line, t.startColumn + start + 1, this.start.line, t.startColumn + start + 1 + end), text:newValue }]);        
     }
 
     calculateEnd(t, start) {
-        let end = t.string.indexOf("_", start + 1); // assumes there are at least one optional formating following the one specified by *pos* that is enabled.
+        let end = t.word.indexOf("_", start + 1); // assumes there are at least one optional formating following the one specified by *pos* that is enabled.
         if (end === -1) // if theres none use the length of the string.
-            end = t.string.length;
+            end = t.word.length;
         
         return (end - start);            
     }
 
-    toogleGutter() {
-        //TODO: Replace with monaco API
-        //var mark = this.manager.sampleEditor.markText({line: this.start.line - 1, char:1}, {line: this.start.line, char:30}, { css: "background-color : #eeffcc" });  // Why the line looks to be offseted by 1?
-        //this.configRowDOM.onmouseout = () => mark.clear();
+    toggleGutter() {
+        let decorations;
+
+        decorations = this.manager.sampleEditor.deltaDecorations([], [
+        {
+            range: new monaco.Range(this.start.line, 1, this.start.line, 1),
+                options: {
+                    isWholeLine: true,
+                    className: 'current_settings_class',
+                    glyphMarginClassName: 'line_arrow'
+                }
+        }]);
+            
+        this.configRowDOM.onmouseout = () => {
+            if (decorations) {
+                this.manager.sampleEditor.deltaDecorations(decorations, []);
+                decorations = null;
+            }
+        };
     }
 }
 
 function hideSettings() {
     document.getElementById("settingsDiv").style.width = "0";
-    //document.getElementById("mainContent").style.visibility = "unset";
 
     if (settings.isEnabled(NamingOptions.StoreSettingsLocally)) {
         setCookie("cecilifier-settings", JSON.stringify(settings.toTransportObject()), 1000);
     } else {
         deleteCookie("cecilifier-settings");
-    }
-
+    }    
 }
 
 function changeCecilifierSettings() {
     document.getElementById("settingsDiv").style.width = "100%";
-    //document.getElementById("mainContent").style.visibility = "hidden";
 }

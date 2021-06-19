@@ -1,7 +1,7 @@
 let websocket;
-var cecilifiedCode;
-var settings;
-var csharpCode;
+let cecilifiedCode;
+let settings;
+let csharpCode;
 
 class CecilifierRequest
 {
@@ -53,16 +53,16 @@ function initializeSite(errorAccessingGist, gist, version) {
         });
 
         csharpCode.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.US_OPEN_SQUARE_BRACKET , function() {
-            var options = csharpCode.getRawOptions();
-            var newFontSize = Math.ceil(options.fontSize - options.fontSize * 0.05);
-            
+            const options = csharpCode.getRawOptions();
+            const newFontSize = Math.ceil(options.fontSize - options.fontSize * 0.05);
+
             csharpCode.updateOptions({ fontSize: newFontSize });
         });
 
         csharpCode.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.US_CLOSE_SQUARE_BRACKET , function() {
-            var options = csharpCode.getRawOptions();
+            const options = csharpCode.getRawOptions();
 
-            var newFontSize = Math.ceil(options.fontSize * 1.05);
+            const newFontSize = Math.ceil(options.fontSize * 1.05);
             csharpCode.updateOptions({ fontSize: newFontSize });
         });
 
@@ -142,7 +142,7 @@ var del_ADelegate_30 = new TypeDefinition("", "ADelegate", TypeAttributes.Sealed
         theme: "vs-dark",
         value: formatSettingsExampleCode,
         language: 'csharp',
-        readOnly: true,
+        readOnly: false,
         minimap: { enabled: false },
         fontSize: 16,
         glyphMargin: true,
@@ -164,13 +164,13 @@ var del_ADelegate_30 = new TypeDefinition("", "ADelegate", TypeAttributes.Sealed
 
 function disableScroll() {
     // Get the current page scroll position
-    scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-    scrollLeft = window.pageXOffset || document.documentElement.scrollLeft,
+    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+    const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
   
-        // if any scroll is attempted, set this to the previous value
-        window.onscroll = function() {
-            window.scrollTo(scrollLeft, scrollTop);
-        };
+    // if any scroll is attempted, set this to the previous value
+    window.onscroll = function() {
+        window.scrollTo(scrollLeft, scrollTop);
+    };
 }
 
 function updateEditorsSize() {
@@ -268,24 +268,24 @@ function setSendToDiscordTooltip()
 
 function initializeSettings(formattingSettingsSample) {
     
-    const startLine = 13;
+    const startLine = 15;
     
     settings = new SettingsManager(formattingSettingsSample, [
-        new Setting(ElementKind.Class, {line: startLine, ch: 9}, "Class", "prefix to be used for classes", "AClass", "cls"),
-        new Setting(ElementKind.GenericParameter, {line: startLine + 2, ch: 9}, "Generic Parameter", "generic parameters prefix","T", "gp"),
-        new Setting(ElementKind.Attribute, {line: startLine + 4, ch: 9}, "Attribute", "attribute prefix","Obsolete", "attr"),       
-        new Setting(ElementKind.Field, {line: startLine + 6, ch: 9}, "Field", "field prefix","field", "fld"),
-        new Setting(ElementKind.GenericInstance, {line: startLine + 8, ch: 9}, "Generic Instance", "generic instance prefix","AClass", "gi"),
-        new Setting(ElementKind.Event, {line: startLine + 10, ch: 9}, "Event", "event declaration prefix","AnEvent", "evt"),    
-        new Setting(ElementKind.Property, {line: startLine + 12, ch: 9}, "Property", "property prefix","Property", "prop"),
-        new Setting(ElementKind.Method, {line: startLine + 14, ch: 9}, "Method", "method prefix","Method", "m"),
-        new Setting(ElementKind.Parameter, {line: startLine + 16, ch: 9}, "Parameter", "parameter prefix","value", "p"),
-        new Setting(ElementKind.IL, {line: startLine + 18, ch: 9}, "IL", "il variable prefix","addAnEvent", "il"),
-        new Setting(ElementKind.Constructor, {line: startLine + 20, ch: 9}, "Constructor", "constructor prefix","AClass", "ctor"),
-        new Setting(ElementKind.Struct, {line: startLine + 24, ch: 9}, "Struct", "struct prefix","AStruct", "st"),
-        new Setting(ElementKind.Enum, {line: startLine + 26, ch: 9}, "Enum", "enum prefix","AnEnum", "e"),
-        new Setting(ElementKind.Interface, {line: startLine + 28, ch: 9}, "Interface", "interface prefix","Interface", "itf"),
-        new Setting(ElementKind.Delegate, {line: startLine + 30, ch: 9}, "Delegate", "delegate prefix","ADelegate", "del")
+        new Setting(ElementKind.Class, {line: startLine, ch: 5}, "Class", "prefix to be used for classes", "AClass", "cls"),
+        new Setting(ElementKind.GenericParameter, {line: startLine + 2, ch: 5}, "Generic Parameter", "generic parameters prefix","T", "gp"),
+        new Setting(ElementKind.Attribute, {line: startLine + 4, ch: 5}, "Attribute", "attribute prefix","Obsolete", "attr"),       
+        new Setting(ElementKind.Field, {line: startLine + 6, ch: 5}, "Field", "field prefix","field", "fld"),
+        new Setting(ElementKind.GenericInstance, {line: startLine + 8, ch: 5}, "Generic Instance", "generic instance prefix","AClass", "gi"),
+        new Setting(ElementKind.Event, {line: startLine + 10, ch: 5}, "Event", "event declaration prefix","AnEvent", "evt"),    
+        new Setting(ElementKind.Property, {line: startLine + 12, ch: 5}, "Property", "property prefix","Property", "prop"),
+        new Setting(ElementKind.Method, {line: startLine + 14, ch: 5}, "Method", "method prefix","Method", "m"),
+        new Setting(ElementKind.Parameter, {line: startLine + 16, ch: 5}, "Parameter", "parameter prefix","value", "p"),
+        new Setting(ElementKind.IL, {line: startLine + 18, ch: 5}, "IL", "il variable prefix","addAnEvent", "il"),
+        new Setting(ElementKind.Constructor, {line: startLine + 20, ch: 5}, "Constructor", "constructor prefix","AClass", "ctor"),
+        new Setting(ElementKind.Struct, {line: startLine + 24, ch: 5}, "Struct", "struct prefix","AStruct", "st"),
+        new Setting(ElementKind.Enum, {line: startLine + 26, ch: 5}, "Enum", "enum prefix","AnEnum", "e"),
+        new Setting(ElementKind.Interface, {line: startLine + 28, ch: 5}, "Interface", "interface prefix","Interface", "itf"),
+        new Setting(ElementKind.Delegate, {line: startLine + 30, ch: 5}, "Delegate", "delegate prefix","ADelegate", "del")
     ]);
 
     settings.validateOptionalFormat = () => {
@@ -330,7 +330,7 @@ function initializeSettings(formattingSettingsSample) {
         NamingOptions.SuffixVariableNamesWithUniqueId, 
         "Suffix variable names with unique Id", 
         2, 
-        "Use this option to avoid variable names clashes. If the cecilified code is simple enought you may disable this.", 
+        "Use this option to avoid variable names clashes. If the cecilified code is simple enough you may disable this.", 
         (function(setting) { var id = 1; return function() { id++; return id; } } )(), 
         (enabled) => { });
 
@@ -338,20 +338,21 @@ function initializeSettings(formattingSettingsSample) {
         NamingOptions.PrefixInstructionsWithILOpCodeName, 
         "Append IL opcode to instruction variables", 
         "Use this option to make it easier to reason about the cecilified code.", 
-        (enabled, sampleEditor) => { 
-            var token = sampleEditor.getTokenAt({line: 33, ch: 9}, true);
-            var newValue = enabled ? "Call" : "inst";
-            var sep = token.string.indexOf("_");
-            sampleEditor.replaceRange(newValue, {line: 35, ch: token.start}, {line: 35, ch: token.start + sep });
+        (enabled, sampleEditor) => {
+            const lineNumber = 37;
+            const wap = sampleEditor.getModel().getWordAtPosition({lineNumber: lineNumber, column: 5});
+            const newValue = enabled ? "Call" : "inst";
+            const separatorPos = wap.word.indexOf("_");
+            sampleEditor.executeEdits("toggle-il", [{forceMoveMarkers : false, range: new monaco.Range(lineNumber, wap.startColumn, lineNumber, wap.startColumn + separatorPos), text:newValue }])
         });
      
     settings.addBooleanOption(
         NamingOptions.AddCommentsToMemberDeclarations, 
         "Add comments before type/member declarations", 
         "Such comments may help in correlating the cecilified to the original source.", 
-        (enabled, sampleEditor) => { 
-            var newValue = enabled ? "//ClassDeclaration : AClass" : "";
-            sampleEditor.replaceRange(newValue, {line: 12, ch: 4}, {line: 12, ch: 64 });
+        (enabled, sampleEditor) => {
+            const newValue = enabled ? "//ClassDeclaration : AClass" : "";
+            sampleEditor.executeEdits("", [{forceMoveMarkers : false, range: new monaco.Range(startLine - 1, 1, startLine - 1, 64), text:newValue }]);
         });
 
     settings.addBooleanOption(
@@ -365,25 +366,6 @@ function initializeSettings(formattingSettingsSample) {
         "Include source when reporting failures to developer discord channel", 
         "Enable this to send the code being cecilified to developer (private) discord channel (if disabled only the error message is sent). Note that no matter the state of this option messages are sent anonymously.", 
         (setting, sampleEditor) => { });
-
-    settings.addConditionalFormat(
-        NamingOptions.SuffixVariableNamesWithUniqueId,
-        "Suffix variable names with unique Id",
-        2,
-        "Use this option to avoid variable names clashes. If the cecilified code is simple enought you may disable this.",
-        (function(setting) { var id = 1; return function() { id++; return id; } } )(),
-        (enabled) => { });
-
-    settings.addBooleanOption(
-        NamingOptions.PrefixInstructionsWithILOpCodeName,
-        "Append IL opcode to instruction variables",
-        "Use this option to make it easier to reason about the cecilified code.",
-        (enabled, sampleEditor) => {
-            var token = sampleEditor.getTokenAt({line: 33, ch: 9}, true);
-            var newValue = enabled ? "Call" : "inst";
-            var sep = token.string.indexOf("_");
-            sampleEditor.replaceRange(newValue, {line: 35, ch: token.start}, {line: 35, ch: token.start + sep });
-        });
 
     const storedSettings = getCookie("cecilifier-settings");
     if (storedSettings.length > 0) {
@@ -484,9 +466,9 @@ function send(websocket, format, sendToDiscordOption) {
 }
 
 function createProjectZip(text, name, type) {
-    var buttonId = "dlbtn";
-    var dlbtn = document.getElementById(buttonId);
-    var file = new Blob([text], {type: type});
+    const buttonId = "dlbtn";
+    const dlbtn = document.getElementById(buttonId);
+    const file = new Blob([text], {type: type});
     dlbtn.href = URL.createObjectURL(file);
     dlbtn.download = name;
     
@@ -494,23 +476,23 @@ function createProjectZip(text, name, type) {
 }
 
 function base64ToArrayBuffer(base64) {
-    var binary_string =  window.atob(base64);
-    var len = binary_string.length;
-    var bytes = new Uint8Array( len );
-    for (var i = 0; i < len; i++)        {
+    const binary_string = window.atob(base64);
+    const len = binary_string.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++)        {
         bytes[i] = binary_string.charCodeAt(i);
     }
     return bytes.buffer;
 }
 
 function simulateClick(elementId) {
-    var event = new MouseEvent('click', {
+    const event = new MouseEvent('click', {
         view: window,
         bubbles: true,
         cancelable: true
     });
-    var cb = document.getElementById(elementId);
-    var cancelled = !cb.dispatchEvent(event);
+    const cb = document.getElementById(elementId);
+    const cancelled = !cb.dispatchEvent(event);
 }
 
 function copyToClipboard(elementId) {

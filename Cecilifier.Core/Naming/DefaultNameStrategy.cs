@@ -48,7 +48,7 @@ namespace Cecilifier.Core.Naming
         public string Parameter(ParameterSyntax parameterSyntax) => $"{PrefixFor(ElementKind.Parameter)}{NameFor(parameterSyntax.Identifier.Text)}{UniqueIdString()}";
         public string Parameter(string parameterName, string relatedMember) => $"{PrefixFor(ElementKind.Parameter)}{NameFor(parameterName)}{UniqueIdString()}";
         public string MethodReference(string baseName, string declaringTypeName) => $"{baseName}{PrefixFor(ElementKind.MemberReference)}{UniqueIdString()}";
-        public string MethodDeclaration(BaseMethodDeclarationSyntax node) => $"{PrefixFor(ElementKind.MemberDeclaration)}{NameFor(node)}{UniqueIdString()}";
+        public string MethodDeclaration(BaseMethodDeclarationSyntax node) => $"{PrefixFor(ElementKind.Method)}{NameFor(node)}{UniqueIdString()}";
         public string GenericParameterDeclaration(TypeParameterSyntax typeParameter) => $"{PrefixFor(ElementKind.Parameter)}{typeParameter.Identifier.Text}{UniqueIdString()}";
         public string ILProcessor(string memberName, string declaringTypeName) => $"il{NameFor(memberName)}{UniqueIdString()}";
         public string EventDeclaration(MemberDeclarationSyntax eventDeclaration) => $"{PrefixFor(ElementKind.Event)}{NameFor(eventDeclaration)}{UniqueIdString()}";

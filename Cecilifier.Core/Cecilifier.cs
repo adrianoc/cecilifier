@@ -71,14 +71,7 @@ namespace Cecilifier.Core
     {
         public INameStrategy Naming { get; init; } = new DefaultNameStrategy();
 
-        public FormattingOptions Formatting { get; } = new();
-        
         public IReadOnlyList<string> References { get; init; }
-    }
-
-    public class FormattingOptions
-    {
-        public bool AddOriginalLineNumberAsComment { get; internal set; } = true;
     }
     
     public struct CecilifierResult

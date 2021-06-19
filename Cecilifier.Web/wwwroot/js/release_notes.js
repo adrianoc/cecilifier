@@ -16,10 +16,10 @@ function getCookie(cname) {
     var ca = decodedCookie.split(';');
     for(var i = 0; i < ca.length; i++) {
         var c = ca[i];
-        while (c.charAt(0) == ' ') {
+        while (c.charAt(0) === ' ') {
             c = c.substring(1);
         }
-        if (c.indexOf(name) == 0) {
+        if (c.indexOf(name) === 0) {
             return c.substring(name.length, c.length);
         }
     }
@@ -28,25 +28,25 @@ function getCookie(cname) {
 
 function showReleaseNotes() {
     getReleaseNotes(function(text) {
-        var c = getCookie("lastVersion");
-        var firstTime = c ? new Date(c) : new Date(0);
+        const c = getCookie("lastVersion");
+        const firstTime = c ? new Date(c) : new Date(0);
 
-        var json = JSON.parse(text);
-        var itemsToShow = json.filter(function(item, index, array) {
+        const json = JSON.parse(text);
+        const itemsToShow = json.filter(function (item, index, array) {
             return new Date(item.published_at) > firstTime;
         });
-        
+
         if (itemsToShow.length === 0)
             return;
 
         setCookie("lastVersion", itemsToShow[0].published_at, 1000);
-        
-        var latest = itemsToShow[0];
-        var html = `New version <a href='${latest.html_url}' target="_blank">${latest.tag_name} ${latest.name}</a> has been released on ${new Date(latest.published_at).toLocaleString()}.<br /><br />${latest.body.replace(/\r\n/g, "<br/>")}`;
 
-       document.getElementById("releaseNotesText").innerHTML = html;
-       document.getElementById("releaseNotesDiv").style.width = "100%";
-       document.getElementById("mainContent").style.visibility = "hidden";
+        const latest = itemsToShow[0];
+        const html = `New version <a href='${latest.html_url}' target="_blank">${latest.tag_name} ${latest.name}</a> has been released on ${new Date(latest.published_at).toLocaleString()}.<br /><br />${latest.body.replace(/\r\n/g, "<br/>")}`;
+        
+        document.getElementById("releaseNotesText").innerHTML = html;
+        document.getElementById("releaseNotesDiv").style.width = "100%";
+        document.getElementById("mainContent").style.visibility = "hidden";
     });
 }
 
