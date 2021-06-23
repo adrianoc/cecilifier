@@ -10,6 +10,7 @@
 
 ## Added
 
+- Page to configure some formating options.
 - support for *out variables*
 - support for *ref return*
 - support for *local ref*

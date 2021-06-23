@@ -55,20 +55,22 @@ Supported Features
      
 Unsupported Features
 ---
+
 - Events (wip, support most common cases)
 - default expression
 - Enumerator methods
 - Delegate (generic)
 - async/await
-- Newer C# syntax (expression bodied members, elvis operator, static import, to name some)
+- Newer C# syntax (elvis operator, static import, to name some)
 - Much more :(
 
 How to use it
 ---
+
 - The easiest way is to [browse to its site](https://cecilifier.me/).
 - Another alternative is to build and run it  locally (see bellow)
 
-Orthogonal to these options, after you Cecilifier some code you can create a project and debug the generated code to get more insight about how Mono.Cecil works.
+Orthogonal to these options, after you Cecilify some code you can create a project and debug the generated code to get more insight about how Mono.Cecil works.
 
 How To build
 ---
@@ -84,11 +86,11 @@ You can run the website locally by typing:
 
 > `dotnet run`
 
-Then you can open a browser at `http://localhost:8081`
-
+Then you can open a browser at `https://localhost:5001`
 
 How to add tests
 ---
+
 First, and most importantly, tests should be self contained, clearly describing what they are testing and run quickly (unfortunately it is very likely that some of the existing tests does not meet this criteria, but nevertheless, we should strive to ;)
 
 Existing tests work basically taking a [snippet of code](https://github.com/adrianoc/cecilifier/blob/dev/Cecilifier.Core.Tests/TestResources/Integration/CodeBlock/Conditional/IfStatement.cs.txt), _Cecilifying_ it (generating the Mono.Cecil API calls to produce an assembly equivalent to the compiled snippet), compiling it,  and finally either comparing the two assemblies or comparing the generated IL for some method with the expected output [as in this example](https://github.com/adrianoc/cecilifier/blob/dev/Cecilifier.Core.Tests/TestResources/Integration/CodeBlock/Conditional/IfStatement.cs.il.txt). 
@@ -97,22 +99,26 @@ Ideally all tests should use the assembly comparison approach (as opposed to for
 
 How to report issues
 ---
+
 If you hit a problem and you think it is an issue/bug in the code please follow the steps to report it:
+
 - Search in the open / resolved issues to make sure it is not already known 
 - If you cannot find anything open a new issue and do your best to:
-	- add a failing test (see [`How to add tests`](#how-to-add-tests))
-	- Make the title/description as clear / detailed as possible (do not assume anything; add as much details as possible)
+  - add a failing test (see [`How to add tests`](#how-to-add-tests))
+  - Make the title/description as clear / detailed as possible (do not assume anything; add as much details as possible)
 
 Including a failing test is the best way to ensure the processing of the issue will happen as quick as possible and avoid any unnecessary delays.
 
 Community
 ---
+
 You can use Cecilifier [google group](https://groups.google.com/forum/#!forum/cecilifier) to ask for help, make suggestions, start discussions about potential improvements, etc. You can also reach me through twitter [@adrianoverona](https://twitter.com/adrianoverona)
 
 There's also a discord server (created on April/2020); feel free to join at https://discord.gg/7P2sCk9 (I cannot guarantee that I'll be responsive but I'll do my best).
 
 Build Status
 ---
+
 [![Build Status](https://travis-ci.com/adrianoc/cecilifier.svg?branch=main)](https://travis-ci.com/adrianoc/cecilifier)
 [![codecov](https://codecov.io/gh/adrianoc/cecilifier/branch/main/graph/badge.svg?token=XJFIRCUES3)](https://codecov.io/gh/adrianoc/cecilifier)
 
@@ -122,6 +128,7 @@ Potential improvements
 
 Disclaimer(s)
 ---
+
 - TL;DR; Use at your own :)
 - I am not a web designer/developer, so keep your expectations low (regarding the web site)
 - I do not claim to be an expert in Mono.Cecil; the code certainly does not handle a lot of cases
@@ -131,4 +138,4 @@ Disclaimer(s)
 Thanks
 ---
 
-I'd like to thank JetBrains for donating me a [Rider](https://www.jetbrains.com/rider/) license.   
+I'd like to thank JetBrains for donating me a [Rider](https://www.jetbrains.com/rider/) license.

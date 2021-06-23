@@ -9,7 +9,6 @@ namespace Cecilifier.Web
     public class WebOptions
     {
         [JsonPropertyName("deployKind")] public char DeployKind { get; set; }
-        [JsonPropertyName("publishSourcePolicy")] public char PublishSourcePolicy { get; set; }
     }
 
     public class ElementKindPrefix

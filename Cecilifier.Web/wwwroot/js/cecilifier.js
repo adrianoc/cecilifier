@@ -14,9 +14,8 @@ class CecilifierRequest
 
 class WebOptions
 {
-    constructor(deployKind, publishSourcePolicy) {
+    constructor(deployKind) {
         this.deployKind = deployKind;
-        this.publishSourcePolicy = publishSourcePolicy;
     }
 }
 
@@ -80,14 +79,11 @@ function initializeSite(errorAccessingGist, gist, version) {
         updateEditorsSize();
 
         initializeFormattingSettings();
+        setSendToDiscordTooltip();
     });
     
     setTooltips(version);
-
-    setSendToDiscordTooltip();   
-    
     initializeWebSocket();
-
     disableScroll();
 }
 
@@ -241,29 +237,16 @@ function setTooltips(version) {
         allowHTML: true,
         theme: 'cecilifier-tooltip',
         delay: defaultDelay
-    });    
-}
+    });
 
-function setSendToDiscordTooltip()
-{
-    /*let msgBody = "the source from the top textbox will be sent to an internal discord channel (accessible only to Cecilifier's author)";
-    let msg = null;
-    if (getSendToDiscordValue())
-    {
-        msg = `Publish On: ${msgBody}. Preferable if the contents of the code is not sensitive. This helps Cecilifier developer to better understand usage pattern.`;
-    }
-    else
-    {
-        msg = "Publish Off: " + msgBody +  " only in case of errors.";
-    }  
-    
-    tippy('#postToDiscordLabel', {
-        content: msg,
+    tippy('#changeSettings', {
+        content: "Change various Cecilifier options.<br/><br/>Use this to configure how variables are named in the cecilified code.",
         placement: 'top',
         interactive: true,
         allowHTML: true,
-        theme: 'cecilifier-tooltip'
-    });*/    
+        theme: 'cecilifier-tooltip',
+        delay: defaultDelay
+    });
 }
 
 function initializeSettings(formattingSettingsSample) {
@@ -363,13 +346,27 @@ function initializeSettings(formattingSettingsSample) {
     
     settings.addBooleanOption(
         NamingOptions.IncludeSourceInErrorReports, 
-        "Include source when reporting failures to developer discord channel", 
-        "Enable this to send the code being cecilified to developer (private) discord channel (if disabled only the error message is sent). Note that no matter the state of this option messages are sent anonymously.", 
+        "Include source code when reporting failures to developer discord channel", 
+        "Enable this to send the code being cecilified to developer (private) discord channel (if disabled only the error message is sent).\nNote that no matter the state of this option messages are sent anonymously.", 
         (setting, sampleEditor) => { });
 
     const storedSettings = getCookie("cecilifier-settings");
     if (storedSettings.length > 0) {
         settings.loadFromJSON(storedSettings);
+    }
+}
+
+function setSendToDiscordTooltip()
+{
+    let msgBody = "the source from the top textbox will be sent to an internal discord channel (accessible only to Cecilifier's author)";
+    let msg = null;
+    if (getSendToDiscordValue())
+    {
+        msg = `Publish On: ${msgBody}. Preferable if the contents of the code is not sensitive. This helps Cecilifier developer to better understand usage pattern.`;
+    }
+    else
+    {
+        msg = "Publish Off: " + msgBody +  " only in case of errors.";
     }
 }
 
@@ -397,20 +394,20 @@ function setError(str) {
 }
 
 function initializeWebSocket() {
-    var scheme = document.location.protocol === "https:" ? "wss" : "ws";
-    var port = document.location.port ? (":" + document.location.port) : "";
-    var connectionURL = scheme + "://" + document.location.hostname + port + "/ws" ;
+    const scheme = document.location.protocol === "https:" ? "wss" : "ws";
+    const port = document.location.port ? (":" + document.location.port) : "";
+    const connectionURL = scheme + "://" + document.location.hostname + port + "/ws";
 
     websocket = new WebSocket(connectionURL);
 
-    var sendButton = document.getElementById("sendbutton");
+    const sendButton = document.getElementById("sendbutton");
     sendButton.onclick = function() {
-        send(websocket, 'C', getSendToDiscordValue());
+        send(websocket, 'C');
     };
-    
-    var downloadProjectButton = document.getElementById("downloadProject");
+
+    const downloadProjectButton = document.getElementById("downloadProject");
     downloadProjectButton.onclick = function() {
-        send(websocket, 'Z', getSendToDiscordValue());
+        send(websocket, 'Z');
     };
 
     websocket.onopen = function (event) {
@@ -447,10 +444,9 @@ function initializeWebSocket() {
     };
 }
 
-// TODO: Fix
-function getSendToDiscordValue() { return false; }
+function getSendToDiscordValue() { return settings.isEnabled(NamingOptions.IncludeSourceInErrorReports); }
 
-function send(websocket, format, sendToDiscordOption) {
+function send(websocket, format) {
     if (!websocket || websocket.readyState !== WebSocket.OPEN) {
         alert("socket not connected");
         return;
@@ -459,7 +455,7 @@ function send(websocket, format, sendToDiscordOption) {
 
     const request = new CecilifierRequest(
         csharpCode.getValue(),
-        new WebOptions(format, sendToDiscordOption ? 'A' : 'E'),
+        new WebOptions(format),
         settings.toTransportObject());
 
     websocket.send(JSON.stringify(request));
