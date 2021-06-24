@@ -43,12 +43,16 @@ function initializeSite(errorAccessingGist, gist, version) {
          });
          
         // Configure keyboard shortcuts
-        csharpCode.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KEY_D, function() {
+        csharpCode.addCommand(monaco.KeyMod.CtrlCmd  | monaco.KeyMod.Alt | monaco.KeyCode.KEY_D, function() {
             simulateClick("downloadProject");
         });
 
-        csharpCode.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KEY_C, function() {
+        csharpCode.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Alt | monaco.KeyCode.KEY_C, function() {
             simulateClick("sendbutton");
+        });
+
+        csharpCode.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Alt | monaco.KeyCode.KEY_S, function() {
+            changeCecilifierSettings();
         });
 
         csharpCode.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.US_OPEN_SQUARE_BRACKET , function() {
@@ -213,7 +217,7 @@ function setTooltips(version) {
     });
 
     tippy('#sendbutton', {
-        content: "After entering the code you want to process, press this button. (Ctrl-Shift-C)",
+        content: "After entering the code you want to process, press this button. (Ctrl-Alt-C)",
         placement: 'top',
         interactive: true,
         allowHTML: true,
@@ -222,7 +226,7 @@ function setTooltips(version) {
     });
 
     tippy('#downloadProject', {
-        content: "Use this option if you want to download a .Net Core 3.0 project, ready for you to play with! (Ctrl-Shift-D)",
+        content: "Use this option if you want to download a .Net Core 3.0 project, ready for you to play with! (Ctrl-Alt-D)",
         placement: 'top',
         interactive: true,
         allowHTML: true,
@@ -240,13 +244,28 @@ function setTooltips(version) {
     });
 
     tippy('#changeSettings', {
-        content: "Change various Cecilifier options.<br/><br/>Use this to configure how variables are named in the cecilified code.",
+        content: "Change various Cecilifier options.<br/><br/>Use this to configure how variables are named in the cecilified code. (Ctrl-Alt-S)",
         placement: 'top',
         interactive: true,
         allowHTML: true,
         theme: 'cecilifier-tooltip',
         delay: defaultDelay
     });
+
+    tippy('#keyboard-shortcuts', {
+        content: "<div style='text-align:left'>\
+                  <p><kbd class=\"kbc-button\">Ctrl</kbd> + <kbd class=\"kbc-button\">Alt</kbd> + <kbd class=\"kbc-button\">C</kbd> Cecilify the code.</p>\
+                  <p><kbd class=\"kbc-button\">Ctrl</kbd> + <kbd class=\"kbc-button\">Alt</kbd> + <kbd class=\"kbc-button\">D</kbd> Downloads project with cecilified code.</p>\
+                  <p><kbd class=\"kbc-button\">Ctrl</kbd> + <kbd class=\"kbc-button\">Alt</kbd> + <kbd class=\"kbc-button\">S</kbd> Opens settings page.</p>\
+                  <p><kbd class=\"kbc-button\">Ctrl</kbd> + <kbd class=\"kbc-button\">]</kbd> Increases font size.</p>\
+                  <p><kbd class=\"kbc-button\">Ctrl</kbd> + <kbd class=\"kbc-button\">[</kbd> Decreases font size.</p>\
+                  </div>",
+        placement: 'top',
+        interactive: false,
+        allowHTML: true,
+        theme: 'cecilifier-tooltip',
+        delay: defaultDelay
+    });    
 }
 
 function initializeSettings(formattingSettingsSample) {
