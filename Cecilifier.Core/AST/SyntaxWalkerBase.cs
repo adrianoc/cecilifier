@@ -299,7 +299,7 @@ namespace Cecilifier.Core.AST
 
         protected bool HandleLoadAddress(string ilVar, ITypeSymbol symbol, CSharpSyntaxNode parentNode, OpCode opCode, string symbolName, MemberKind memberKind, string parentName = null)
         {
-            return HandleSystemIndexUsage() || HandleLocalRefAssignment() || HandleParameter();
+            return HandleSystemIndexUsage() || HandleRefAssignment() || HandleParameter();
             
             bool HandleSystemIndexUsage()
             {
@@ -318,7 +318,7 @@ namespace Cecilifier.Core.AST
                 return false;
             }
             
-            bool HandleLocalRefAssignment()
+            bool HandleRefAssignment()
             {
                 if (!(parentNode is RefExpressionSyntax refExpression))
                     return false;
