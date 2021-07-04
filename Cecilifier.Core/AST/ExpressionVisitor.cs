@@ -750,6 +750,8 @@ namespace Cecilifier.Core.AST
             }
 
             AddCilInstruction(ilVar, OpCodes.Ldarg_0);
+            
+            var fieldDeclarationVariable = EnsureFieldExists(node, fieldSymbol);
 
             if (HandleLoadAddress(ilVar, fieldSymbol.Type, (CSharpSyntaxNode) node.Parent, OpCodes.Ldflda, fieldSymbol.Name, MemberKind.Field, fieldSymbol.ContainingType.Name))
             {
@@ -759,9 +761,7 @@ namespace Cecilifier.Core.AST
             if (fieldSymbol.IsVolatile)
                 AddCilInstruction(ilVar, OpCodes.Volatile);
 
-            var fieldDeclarationVariable = EnsureFieldExists(node, fieldSymbol);
             AddCilInstruction(ilVar, OpCodes.Ldfld, fieldDeclarationVariable.VariableName);
-            
             HandlePotentialDelegateInvocationOn(node, fieldSymbol.Type, ilVar);
         }
 
