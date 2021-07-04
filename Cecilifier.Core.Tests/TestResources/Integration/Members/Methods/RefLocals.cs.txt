@@ -18,8 +18,7 @@
 	    ref var localRefAssignment = ref localExplicit;
 	    
 	    return localRefAssignment + 1;
-	}
-	
+	}	
 	
 	public int TestByte(byte b) 
 	{
