@@ -326,10 +326,6 @@ namespace Cecilifier.Core.AST
                 var assignedValueSymbol = Context.SemanticModel.GetSymbolInfo(refExpression.Expression);
                 if (assignedValueSymbol.Symbol.IsByRef())
                     return false;
-
-                var variableDeclaration = parentNode.Ancestors().OfType<VariableDeclarationSyntax>().SingleOrDefault();
-                if (variableDeclaration == null || !variableDeclaration.Type.IsKind(SyntaxKind.RefType))
-                    return false;
                 
                 AddCilInstruction(ilVar, opCode, Context.DefinitionVariables.GetVariable(symbolName, memberKind, parentName).VariableName);
                 return true;

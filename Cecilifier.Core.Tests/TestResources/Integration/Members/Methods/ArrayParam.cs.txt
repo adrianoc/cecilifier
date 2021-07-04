@@ -1,0 +1,4 @@
+﻿class RefReturnArrayParam
+{
+	public ref int ArrayParam(int []i)  { return ref i[0]; }
+}

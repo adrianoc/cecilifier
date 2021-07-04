@@ -1,0 +1,4 @@
+﻿class RefReturnParam
+{
+	public ref int RefParam(ref int i)  { return ref i; }	
+}

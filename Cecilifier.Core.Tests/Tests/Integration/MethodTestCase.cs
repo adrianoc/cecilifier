@@ -148,10 +148,14 @@ namespace Cecilifier.Core.Tests.Integration
                 "//int l = i / 2; ");
         }
 
-        [Test]
-        public void TestRefReturn()
+        [TestCase("RefParamBodied")]
+        [TestCase("RefParam")]
+        [TestCase("ArrayParam")]
+        [TestCase("ParamIndexer")]
+        [TestCase("RefReturnField")]
+        public void TestRefReturn(string test)
         {
-            AssertResourceTest("Members/Methods/RefReturn");
+            AssertResourceTest($"Members/Methods/{test}");
         }
         
         [Test]
