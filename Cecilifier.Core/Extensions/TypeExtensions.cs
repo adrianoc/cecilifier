@@ -17,11 +17,6 @@ namespace Cecilifier.Core.Extensions
             return type.ToDisplayString(format);
         }
 
-        public static string FrameworkSimpleName(this ITypeSymbol type)
-        {
-            return type.ToDisplayString(new SymbolDisplayFormat());
-        }
-
         public static string ReflectionTypeName(this ITypeSymbol type, out IList<string> typeParameters)
         {
             if (type is INamedTypeSymbol namedType && namedType.IsGenericType) //TODO: namedType.IsUnboundGenericType ? Open 
@@ -32,6 +27,11 @@ namespace Cecilifier.Core.Extensions
 
             typeParameters = Array.Empty<string>();
             return type.FullyQualifiedName();
+        }
+
+        public static string MakeByReferenceType(this string type)
+        {
+            return $"{type}.MakeByReferenceType()";
         }
     }
 

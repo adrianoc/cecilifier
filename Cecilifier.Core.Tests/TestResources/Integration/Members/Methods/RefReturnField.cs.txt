@@ -1,0 +1,5 @@
+﻿class RefReturnField
+{
+	public ref int RefField() => ref field;
+	private int field; 
+}

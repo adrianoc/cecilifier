@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Runtime.Serialization.Json;
 using Cecilifier.Core.Extensions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -173,25 +172,25 @@ namespace Cecilifier.Core.AST
             node.ArgumentList.Accept(this);
 
             var targetType = expressionInfo.Symbol.Accept(new ElementTypeSymbolResolver());
-            if (_opCodesForLdElem.TryGetValue(targetType.SpecialType, out var opCode))
+            if (!node.Parent.IsKind(SyntaxKind.RefExpression) && _opCodesForLdElem.TryGetValue(targetType.SpecialType, out var opCode))
             {
                 AddCilInstruction(ilVar, opCode);
             }
-            else if (targetType.IsReferenceType)
+            else
             {
                 var indexer = targetType.GetMembers().OfType<IPropertySymbol>().FirstOrDefault(p => p.IsIndexer && p.Parameters.Length == node.ArgumentList.Arguments.Count);
                 if (indexer != null)
                 {
+                    EnsurePropertyExists(node, indexer);
                     AddMethodCall(ilVar, indexer.GetMethod);
                 }
                 else
                 {
-                    AddCilInstruction(ilVar, OpCodes.Ldelem_Ref);
+                    if (node.Parent.IsKind(SyntaxKind.RefExpression))
+                        AddCilInstruction(ilVar,  OpCodes.Ldelema, targetType);
+                    else
+                        AddCilInstruction(ilVar, OpCodes.Ldelem_Ref);
                 }
-            }
-            else
-            {
-                Context.WriteComment($"Element Access not supported for type '{targetType.ToDisplayString()}' in node : {node}");
             }
         }
         
@@ -285,6 +284,26 @@ namespace Cecilifier.Core.AST
             }
         }
 
+        public override void VisitDeclarationExpression(DeclarationExpressionSyntax node)
+        {
+            if (node.Parent is ArgumentSyntax argument && argument.RefKindKeyword.Kind() == SyntaxKind.OutKeyword)
+            {
+                var localSymbol = (ILocalSymbol) Context.SemanticModel.GetSymbolInfo(node).Symbol;
+                var designation = ((SingleVariableDesignationSyntax) node.Designation);
+                var resolvedOutArgType = Context.TypeResolver.Resolve(localSymbol.Type);
+
+                var outLocalName = AddLocalVariableWithResolvedType(
+                    designation.Identifier.Text,
+                    Context.DefinitionVariables.GetLastOf(MemberKind.Method),
+                    resolvedOutArgType
+                );
+
+                AddCilInstruction(ilVar, OpCodes.Ldloca_S, outLocalName);
+            }
+            
+            base.VisitDeclarationExpression(node);
+        }
+
         public override void VisitInvocationExpression(InvocationExpressionSyntax node)
         {
             HandleMethodInvocation(node.Expression, node.ArgumentList);
@@ -315,7 +334,7 @@ namespace Cecilifier.Core.AST
 
             AddCecilExpression("{0}.Append({1});", ilVar, conditionEnd);
         }
-
+        
         public override void VisitIdentifierName(IdentifierNameSyntax node)
         {
             HandleIdentifier(node);
@@ -347,7 +366,6 @@ namespace Cecilifier.Core.AST
             {
                 AddCecilExpression(last.Value);
             });
-            
         }
 
         public override void VisitPrefixUnaryExpression(PrefixUnaryExpressionSyntax node)
@@ -535,13 +553,20 @@ namespace Cecilifier.Core.AST
                 InjectRequiredConversions(node);
         }
 
+        public override void VisitRefExpression(RefExpressionSyntax node)
+        {
+            using (Context.WithFlag("ref-return"))
+            {
+                node.Expression.Accept(this);
+            }
+        }
+
         public override void VisitRangeExpression(RangeExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitSimpleLambdaExpression(SimpleLambdaExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitAwaitExpression(AwaitExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitTupleExpression(TupleExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitInterpolatedStringExpression(InterpolatedStringExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitIsPatternExpression(IsPatternExpressionSyntax node) => LogUnsupportedSyntax(node);
-        public override void VisitRefExpression(RefExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitThrowExpression(ThrowExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitSwitchExpression(SwitchExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitAnonymousObjectCreationExpression(AnonymousObjectCreationExpressionSyntax node) => LogUnsupportedSyntax(node);
@@ -605,9 +630,9 @@ namespace Cecilifier.Core.AST
                     return OpCodes.Ldc_I4;
             }
 
-            throw new ArgumentException(string.Format("Literal type {0} not supported.", info.Type), "node");
+            throw new ArgumentException($"Literal type {info.Type} not supported.", nameof(node));
         }
-
+        
         private OpCode StelemOpCodeFor(ITypeSymbol type)
         {
             switch (type.SpecialType)
@@ -647,7 +672,7 @@ namespace Cecilifier.Core.AST
             if (Context.Contains(varName))
                 return;
 
-            MethodDeclarationVisitor.AddMethodDefinition(Context, varName, method.Name, "MethodAttributes.Private", method.ReturnType, typeParameters);
+            MethodDeclarationVisitor.AddMethodDefinition(Context, varName, method.Name, "MethodAttributes.Private", method.ReturnType, method.ReturnsByRef, typeParameters);
             Context.DefinitionVariables.RegisterMethod(method.ContainingType.Name, method.Name, method.Parameters.Select(p => p.Type.Name).ToArray(), varName);
         }
 
@@ -703,17 +728,17 @@ namespace Cecilifier.Core.AST
             }
         }
         
-        private void EnsurePropertyExists(SimpleNameSyntax node, [NotNull] IPropertySymbol propertySymbol)
+        private void EnsurePropertyExists(SyntaxNode node, [NotNull] IPropertySymbol propertySymbol)
         {
             var declaringReference = propertySymbol.DeclaringSyntaxReferences.SingleOrDefault();
             if (declaringReference == null)
                 return;
             
-            var fieldDeclaration = (PropertyDeclarationSyntax) declaringReference.GetSyntax();
-            if (fieldDeclaration.Span.Start > node.Span.End)
+            var propertyDeclaration = (BasePropertyDeclarationSyntax) declaringReference.GetSyntax();
+            if (propertyDeclaration.Span.Start > node.Span.End)
             {
                 // this is a forward reference, process it...
-                fieldDeclaration.Accept(new PropertyDeclarationVisitor(Context));
+                propertyDeclaration.Accept(new PropertyDeclarationVisitor(Context));
             }
         }
 
@@ -725,6 +750,8 @@ namespace Cecilifier.Core.AST
             }
 
             AddCilInstruction(ilVar, OpCodes.Ldarg_0);
+            
+            var fieldDeclarationVariable = EnsureFieldExists(node, fieldSymbol);
 
             if (HandleLoadAddress(ilVar, fieldSymbol.Type, (CSharpSyntaxNode) node.Parent, OpCodes.Ldflda, fieldSymbol.Name, MemberKind.Field, fieldSymbol.ContainingType.Name))
             {
@@ -734,9 +761,7 @@ namespace Cecilifier.Core.AST
             if (fieldSymbol.IsVolatile)
                 AddCilInstruction(ilVar, OpCodes.Volatile);
 
-            var fieldDeclarationVariable = EnsureFieldExists(node, fieldSymbol);
             AddCilInstruction(ilVar, OpCodes.Ldfld, fieldDeclarationVariable.VariableName);
-            
             HandlePotentialDelegateInvocationOn(node, fieldSymbol.Type, ilVar);
         }
 
@@ -767,10 +792,49 @@ namespace Cecilifier.Core.AST
 
             AddCilInstruction(ilVar, OpCodes.Ldloc, Context.DefinitionVariables.GetVariable(symbol.Name, MemberKind.LocalVariable).VariableName);
             HandlePotentialDelegateInvocationOn(localVarSyntax, symbol.Type, ilVar);
-            HandlePotentialFixedLoad(localVarSyntax, symbol);
+            HandlePotentialFixedLoad(symbol);
+            HandlePotentialRefLoad(localVarSyntax, symbol);
         }
 
-        private void HandlePotentialFixedLoad(SyntaxNode localVar, ILocalSymbol symbol)
+        private void HandlePotentialRefLoad(SimpleNameSyntax localVariableNameSyntax, ILocalSymbol symbol)
+        {
+            var needsLoadIndirect = false;
+            
+            var sourceSymbol = Context.SemanticModel.GetSymbolInfo(localVariableNameSyntax).Symbol;
+            var sourceIsByRef = sourceSymbol.IsByRef();
+
+            var returnStatement = localVariableNameSyntax.Ancestors().OfType<ReturnStatementSyntax>().SingleOrDefault();
+            var argument = localVariableNameSyntax.Ancestors().OfType<ArgumentSyntax>().SingleOrDefault();
+            var assigment = localVariableNameSyntax.Ancestors().OfType<BinaryExpressionSyntax>().SingleOrDefault(candidate => candidate.IsKind(SyntaxKind.SimpleAssignmentExpression));
+
+            if (assigment != null && assigment.Left != localVariableNameSyntax)
+            {
+                var targetIsByRef = Context.SemanticModel.GetSymbolInfo(assigment.Left).Symbol.IsByRef();
+                needsLoadIndirect = (assigment.Right == localVariableNameSyntax && sourceIsByRef && !targetIsByRef) // simple assignment like: nonRef = ref;
+                                    || sourceIsByRef; // complex assignment like: nonRef = ref + 10;
+            }
+            else if (argument != null)
+            {
+                var parameterSymbol = ParameterSymbolFromArgumentSyntax(argument);
+                var targetIsByRef = parameterSymbol.IsByRef();
+
+                needsLoadIndirect = (parameterSymbol == sourceSymbol && sourceIsByRef && !targetIsByRef) // simple argument like Foo(ref) where the parameter is not a reference. 
+                                    || sourceIsByRef; // complex argument like Foo(ref + 1)
+            }
+            else if (returnStatement != null)
+            {
+                var method = returnStatement.Ancestors().OfType<MethodDeclarationSyntax>().Single();
+                var methodIsByRef = Context.SemanticModel.GetSymbolInfo(method.ReturnType).Symbol.IsByRef();
+                
+                needsLoadIndirect = (returnStatement.Expression == localVariableNameSyntax && !methodIsByRef && sourceIsByRef) // simple return like: return ref_var; (method is not by ref)
+                                    || sourceIsByRef; // more complex return like: return ref_var + 1; // in this case we can only be accessing the value whence we need to deference the reference.
+            }
+            
+            if (needsLoadIndirect)
+                AddCilInstruction(ilVar, LoadIndirectOpCodeFor(symbol.Type.SpecialType));
+        }
+
+        private void HandlePotentialFixedLoad(ILocalSymbol symbol)
         {
             if (!symbol.IsFixed)
                 return;
@@ -892,7 +956,9 @@ namespace Cecilifier.Core.AST
                         AddCilInstruction(ilVar, OpCodes.Conv_I2);
                         return;
                     case SpecialType.System_Int32:
-                        AddCilInstruction(ilVar, OpCodes.Conv_I4);
+                        // bytes are pushed as Int32 by the runtime 
+                        if (typeInfo.Type.SpecialType != SpecialType.System_Byte)
+                            AddCilInstruction(ilVar, OpCodes.Conv_I4);
                         return;
                     case SpecialType.System_Int64:
                         AddCilInstruction(ilVar, OpCodes.Conv_I8);

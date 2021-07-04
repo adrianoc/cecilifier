@@ -1,0 +1,6 @@
+﻿class RefReturnParamIndexer
+{
+	public ref int ParamIndexer(RefReturnParamIndexer i)  { return ref i[0]; }	
+	public ref int this[int i] => ref array[i];	
+	private int[] array; 
+}

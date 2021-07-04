@@ -2,6 +2,22 @@ let websocket;
 var cecilifiedCode;
 var csharpCode;
 
+class CecilifierRequest
+{
+    constructor(code, options) {
+        this.code = code;
+        this.options = options;
+    }
+}
+
+class WebOptions
+{
+    constructor(deployKind, publishSourcePolicy) {
+        this.deployKind = deployKind;
+        this.publishSourcePolicy = publishSourcePolicy;
+    }
+}
+
 function initializeSite(errorAccessingGist, gist, version) {
     require.config({ paths: { vs: 'lib/node_modules/monaco-editor/min/vs' } });
 
@@ -277,7 +293,8 @@ function send(websocket, format, sendToDiscordOption) {
     }
     clearError();
 
-    websocket.send(format + (sendToDiscordOption ? 'A' : 'E') + csharpCode.getValue());
+    var request = new CecilifierRequest(csharpCode.getValue(), new WebOptions(format, sendToDiscordOption ? 'A' : 'E'));
+    websocket.send(JSON.stringify(request));
 }
 
 function createProjectZip(text, name, type) {

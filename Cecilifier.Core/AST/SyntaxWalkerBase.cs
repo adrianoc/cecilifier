@@ -110,6 +110,18 @@ namespace Cecilifier.Core.AST
             return Context.DefinitionVariables.LastInstructionVar = instVar;
         }
 
+        protected string AddLocalVariableWithResolvedType(string localVarName, DefinitionVariable methodVar, string resolvedVarType)
+        {
+            var cecilVarDeclName = TempLocalVar($"lv_{localVarName}");
+
+            AddCecilExpression("var {0} = new VariableDefinition({1});", cecilVarDeclName, resolvedVarType);
+            AddCecilExpression("{0}.Body.Variables.Add({1});", methodVar.VariableName, cecilVarDeclName);
+
+            Context.DefinitionVariables.RegisterNonMethod(string.Empty, localVarName, MemberKind.LocalVariable, cecilVarDeclName);
+
+            return cecilVarDeclName;
+        }
+
         protected IMethodSymbol DeclaredSymbolFor<T>(T node) where T : BaseMethodDeclarationSyntax
         {
             return Context.GetDeclaredSymbol(node);
@@ -246,8 +258,9 @@ namespace Cecilifier.Core.AST
         {
             var typeToCheck = type is RefTypeSyntax refType ? refType.Type : type;
             var typeInfo = Context.GetTypeInfo(typeToCheck);
-            
-            return Context.TypeResolver.Resolve(typeInfo.Type);
+
+            var resolvedType = Context.TypeResolver.Resolve(typeInfo.Type);
+            return type is RefTypeSyntax ? resolvedType.MakeByReferenceType() : resolvedType;
         }
 
         protected INamedTypeSymbol GetSpecialType(SpecialType specialType)
@@ -271,6 +284,7 @@ namespace Cecilifier.Core.AST
             {
                 AddCilInstruction(ilVar, OpCodes.Ldarg, paramSymbol.Ordinal.ToCecilIndex());
                 HandlePotentialDelegateInvocationOn(node, paramSymbol.Type, ilVar);
+                HandlePotentialRefLoad(ilVar, node, paramSymbol.Type);
             }
             else
             {
@@ -279,24 +293,122 @@ namespace Cecilifier.Core.AST
                 var loadOpCode = optimizedLdArgs[paramSymbol.Ordinal + (method.IsStatic ? 0 : 1)];
                 AddCilInstruction(ilVar, loadOpCode);
                 HandlePotentialDelegateInvocationOn(node, paramSymbol.Type, ilVar);
+                HandlePotentialRefLoad(ilVar, node, paramSymbol.Type);
             }
         }
 
         protected bool HandleLoadAddress(string ilVar, ITypeSymbol symbol, CSharpSyntaxNode parentNode, OpCode opCode, string symbolName, MemberKind memberKind, string parentName = null)
         {
-            // in this case we need to call System.Index.GetOffset(int32) on a value type (System.Index)
-            // which requires the address of the value type.
-            var isSystemIndexUsedAsIndex = IsSystemIndexUsedAsIndex(symbol, parentNode);
-            if (isSystemIndexUsedAsIndex || parentNode.IsKind(SyntaxKind.AddressOfExpression) || (symbol.IsValueType && parentNode.Accept(new UsageVisitor()) == UsageKind.CallTarget))
+            return HandleSystemIndexUsage() || HandleRefAssignment() || HandleParameter();
+            
+            bool HandleSystemIndexUsage()
             {
-                AddCilInstruction(ilVar, opCode, Context.DefinitionVariables.GetVariable(symbolName, memberKind, parentName).VariableName);
-                if (!Context.HasFlag("fixed") && parentNode.IsKind(SyntaxKind.AddressOfExpression))
-                    AddCilInstruction(ilVar, OpCodes.Conv_U);
+                // in this case we need to call System.Index.GetOffset(int32) on a value type (System.Index)
+                // which requires the address of the value type.
+                var isSystemIndexUsedAsIndex = IsSystemIndexUsedAsIndex(symbol, parentNode);
+                if (isSystemIndexUsedAsIndex || parentNode.IsKind(SyntaxKind.AddressOfExpression) || (symbol.IsValueType && parentNode.Accept(new UsageVisitor()) == UsageKind.CallTarget))
+                {
+                    AddCilInstruction(ilVar, opCode, Context.DefinitionVariables.GetVariable(symbolName, memberKind, parentName).VariableName);
+                    if (!Context.HasFlag("fixed") && parentNode.IsKind(SyntaxKind.AddressOfExpression))
+                        AddCilInstruction(ilVar, OpCodes.Conv_U);
 
+                    return true;
+                }
+
+                return false;
+            }
+            
+            bool HandleRefAssignment()
+            {
+                if (!(parentNode is RefExpressionSyntax refExpression))
+                    return false;
+                
+                var assignedValueSymbol = Context.SemanticModel.GetSymbolInfo(refExpression.Expression);
+                if (assignedValueSymbol.Symbol.IsByRef())
+                    return false;
+                
+                AddCilInstruction(ilVar, opCode, Context.DefinitionVariables.GetVariable(symbolName, memberKind, parentName).VariableName);
                 return true;
             }
 
-            return false;
+            bool HandleParameter()
+            {
+                if (!(parentNode is ArgumentSyntax argument) || !argument.RefOrOutKeyword.IsKind(SyntaxKind.RefKeyword))
+                    return false;
+
+                if (Context.SemanticModel.GetSymbolInfo(argument.Expression).Symbol is IParameterSymbol parameterSymbol && parameterSymbol.RefKind != RefKind.Ref && parameterSymbol.RefKind != RefKind.RefReadOnly)
+                {
+                    AddCilInstruction(ilVar, opCode, Context.DefinitionVariables.GetVariable(symbolName, memberKind, parentName).VariableName);
+                    return true;
+                }
+                return false;
+            }
+        }
+        
+        private void HandlePotentialRefLoad(string ilVar, SimpleNameSyntax argumentSimpleNameSyntax, ITypeSymbol typeSymbol)
+        {
+            var needsLoadIndirect = false;
+            
+            var argumentSymbol = Context.SemanticModel.GetSymbolInfo(argumentSimpleNameSyntax).Symbol;
+            var argumentIsByRef = argumentSymbol.IsByRef();
+
+            var argument = argumentSimpleNameSyntax.Ancestors().OfType<ArgumentSyntax>().FirstOrDefault();
+
+            if (argument != null)
+            {
+                var parameterSymbol = ParameterSymbolFromArgumentSyntax(argument);
+                var parameterIsByRef = parameterSymbol.IsByRef();
+
+                needsLoadIndirect = argumentIsByRef && !parameterIsByRef;
+            }
+            
+            if (needsLoadIndirect)
+                AddCilInstruction(ilVar, LoadIndirectOpCodeFor(typeSymbol.SpecialType));
+        }
+        
+        protected IParameterSymbol ParameterSymbolFromArgumentSyntax(ArgumentSyntax argument)
+        {
+            var invocation = argument.Ancestors().OfType<InvocationExpressionSyntax>().SingleOrDefault();
+            if (invocation != null)
+            {
+                var argumentIndex = argument.Ancestors().OfType<ArgumentListSyntax>().First().Arguments.IndexOf(argument);
+                return ((IMethodSymbol) Context.SemanticModel.GetSymbolInfo(invocation.Expression).Symbol).Parameters.ElementAt(argumentIndex);
+            }
+
+            var elementAccess = argument.Ancestors().OfType<ElementAccessExpressionSyntax>().SingleOrDefault();
+            if (elementAccess != null)
+            {
+                var indexerSymbol= Context.SemanticModel.GetIndexerGroup(elementAccess.Expression).FirstOrDefault();
+                if (indexerSymbol != null)
+                {
+                    var argumentIndex = argument.Ancestors().OfType<BracketedArgumentListSyntax>().Single().Arguments.IndexOf(argument);
+                    return indexerSymbol.Parameters.ElementAt(argumentIndex);
+                }
+            }
+
+            return null;
+        }
+        
+        protected OpCode LoadIndirectOpCodeFor(SpecialType type)
+        {
+            return type switch
+            {
+                SpecialType.System_Single => OpCodes.Ldind_R4,
+                SpecialType.System_Double => OpCodes.Ldind_R8,
+                SpecialType.System_SByte => OpCodes.Ldind_I1,
+                SpecialType.System_Byte => OpCodes.Ldind_U1,
+                SpecialType.System_Int16 => OpCodes.Ldind_I2,
+                SpecialType.System_UInt16 => OpCodes.Ldind_U2,
+                SpecialType.System_Int32 => OpCodes.Ldind_I4,
+                SpecialType.System_UInt32 => OpCodes.Ldind_U4,
+                SpecialType.System_Int64 => OpCodes.Ldind_I8,
+                SpecialType.System_UInt64 => OpCodes.Ldind_I8,
+                SpecialType.System_Char => OpCodes.Ldind_U2,
+                SpecialType.System_Boolean => OpCodes.Ldind_U1,
+                SpecialType.System_Object => OpCodes.Ldind_Ref,
+                
+                _ => throw new ArgumentException($"Literal type {type} not supported.", nameof(type))
+            };
         }
 
         private static bool IsSystemIndexUsedAsIndex(ITypeSymbol symbol, CSharpSyntaxNode parentNode)

@@ -84,6 +84,12 @@ namespace Cecilifier.Core.Tests.Integration
         {
             AssertResourceTest(@"Members/Methods/ParameterModifiers");
         }
+        
+        [Test]
+        public void TestRefParameters()
+        {
+            AssertResourceTest(@"Members/Methods/RefParameters");
+        }
 
         [Test]
         public void TestReturnValue()
@@ -140,6 +146,22 @@ namespace Cecilifier.Core.Tests.Integration
             AssertCecilifiedCodeContainsSnippet(
                 "class C { int S(int i, int j) { int l = i / 2; return l + j; } }",
                 "//int l = i / 2; ");
+        }
+
+        [TestCase("RefParamBodied")]
+        [TestCase("RefParam")]
+        [TestCase("ArrayParam")]
+        [TestCase("ParamIndexer")]
+        [TestCase("RefReturnField")]
+        public void TestRefReturn(string test)
+        {
+            AssertResourceTest($"Members/Methods/{test}");
+        }
+        
+        [Test]
+        public void TestRefLocals()
+        {
+            AssertResourceTest("Members/Methods/RefLocals");
         }
 
         private void AssertCecilifiedCodeContainsSnippet(string code, string expectedSnippet)

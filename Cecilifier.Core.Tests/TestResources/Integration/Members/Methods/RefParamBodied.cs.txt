@@ -1,0 +1,4 @@
+﻿class RefReturnParamBodied
+{
+	public ref int RefParamBodied(ref int i) => ref i; 
+}

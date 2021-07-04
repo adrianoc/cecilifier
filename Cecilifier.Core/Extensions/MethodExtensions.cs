@@ -39,7 +39,6 @@ namespace Cecilifier.Core.Extensions
             var bindingFlags = method.IsStatic ? BindingFlags.Static : BindingFlags.Instance;
             bindingFlags |= method.DeclaredAccessibility == Accessibility.Public ? BindingFlags.Public : BindingFlags.NonPublic;
 
-
             var res = "";
             var enumType = typeof(BindingFlags);
             foreach (BindingFlags flag in Enum.GetValues(enumType))

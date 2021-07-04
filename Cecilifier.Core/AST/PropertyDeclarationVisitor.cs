@@ -21,6 +21,9 @@ namespace Cecilifier.Core.AST
 
         public override void VisitIndexerDeclaration(IndexerDeclarationSyntax node)
         {
+            if (PropertyAlreadyProcessed(node))
+                return;
+            
             Context.WriteNewLine();
             Context.WriteComment($"** Property indexer **");
             
@@ -74,16 +77,16 @@ namespace Cecilifier.Core.AST
             HandleAttributesInMemberDeclaration(node.AttributeLists, TargetMatches,      SyntaxKind.FieldKeyword, backingFieldVar); // [field: attr], i.e, attr belongs to the backing field.
         }
 
-        private bool PropertyAlreadyProcessed(PropertyDeclarationSyntax node)
+        private bool PropertyAlreadyProcessed(BasePropertyDeclarationSyntax node)
         {
             var propInfo = (IPropertySymbol) Context.SemanticModel.GetDeclaredSymbol(node);
             if (propInfo == null)
                 return false;
             
             // check the methods of the property because we do not register the property itself, only its methods. 
-            var methodToCheck = propInfo?.GetMethod?.Name ?? propInfo?.SetMethod?.Name;
-            var d = Context.DefinitionVariables.GetVariable(methodToCheck, MemberKind.Method, propInfo.ContainingType.Name);
-            return d.IsValid;
+            var methodToCheck = propInfo?.GetMethod ?? propInfo?.SetMethod;
+            var found = Context.DefinitionVariables.GetMethodVariable(methodToCheck.AsMethodDefinitionVariable());
+            return found.IsValid;
         }
 
         private void AddDefaultMemberAttribute(string definitionVar, string value)

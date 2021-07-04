@@ -23,7 +23,7 @@ namespace Cecilifier.Web.Pages
                 var gistHttp = new HttpClient();
                 gistHttp.DefaultRequestHeaders.Add("User-Agent", "Cecilifier");
                 var task = gistHttp.GetAsync($"https://api.github.com/gists/{gistid}");
-                Task.WaitAll(task);
+                await task;
                 
                 if (task.Result.StatusCode == HttpStatusCode.OK)
                 {
@@ -42,7 +42,6 @@ namespace Cecilifier.Web.Pages
             {                
                 return msg.Replace("\n", @"\n").Replace("\t", @"\t");
             }
-            
         }
     }
 }

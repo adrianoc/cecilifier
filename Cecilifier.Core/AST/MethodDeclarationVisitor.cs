@@ -42,7 +42,8 @@ namespace Cecilifier.Core.AST
                 node, 
                 node.Identifier.ValueText, 
                 MethodNameOf(node), 
-                Context.GetTypeInfo(returnType).Type, 
+                Context.GetTypeInfo(returnType).Type,
+                node.ReturnType is RefTypeSyntax,
                 _ => base.VisitMethodDeclaration(node), 
                 node.TypeParameterList?.Parameters.ToArray());
         }
@@ -89,7 +90,7 @@ namespace Cecilifier.Core.AST
             base.VisitParameter(node);
         }
 
-        protected void ProcessMethodDeclaration<T>(T node, string simpleName, string fqName, ITypeSymbol returnType, Action<string> runWithCurrent, IList<TypeParameterSyntax> typeParameters = null) where T : BaseMethodDeclarationSyntax
+        protected void ProcessMethodDeclaration<T>(T node, string simpleName, string fqName, ITypeSymbol returnType, bool refReturn, Action<string> runWithCurrent, IList<TypeParameterSyntax> typeParameters = null) where T : BaseMethodDeclarationSyntax
         {
             var declaringTypeName = DeclaringTypeNameFor(node);
             var methodVar = MethodExtensions.LocalVariableNameFor(declaringTypeName, simpleName, node.MangleName(Context.SemanticModel));
@@ -98,7 +99,7 @@ namespace Cecilifier.Core.AST
             {
                 typeParameters = typeParameters ?? Array.Empty<TypeParameterSyntax>();
 
-                AddOrUpdateMethodDefinition(methodVar, fqName, node.Modifiers.MethodModifiersToCecil(ModifiersToCecil, GetSpecificModifiers(), DeclaredSymbolFor(node)), returnType, typeParameters);
+                AddOrUpdateMethodDefinition(methodVar, fqName, node.Modifiers.MethodModifiersToCecil(ModifiersToCecil, GetSpecificModifiers(), DeclaredSymbolFor(node)), returnType, refReturn, typeParameters);
                 AddCecilExpression("{0}.Methods.Add({1});", Context.DefinitionVariables.GetLastOf(MemberKind.Type).VariableName, methodVar);
 
                 HandleAttributesInMemberDeclaration(node.AttributeLists, TargetDoesNotMatch, SyntaxKind.ReturnKeyword, methodVar); // Normal method attrs.
@@ -127,7 +128,7 @@ namespace Cecilifier.Core.AST
             return declaringType.Identifier.ValueText;
         }
 
-        private void AddOrUpdateMethodDefinition(string methodVar, string fqName, string methodModifiers, ITypeSymbol returnType, IList<TypeParameterSyntax> typeParameters)
+        private void AddOrUpdateMethodDefinition(string methodVar, string fqName, string methodModifiers, ITypeSymbol returnType, bool refReturn, IList<TypeParameterSyntax> typeParameters)
         {
             if (Context.Contains(methodVar))
             {
@@ -136,17 +137,17 @@ namespace Cecilifier.Core.AST
             }
             else
             {
-                AddMethodDefinition(Context, methodVar, fqName, methodModifiers, returnType, typeParameters);
+                AddMethodDefinition(Context, methodVar, fqName, methodModifiers, returnType, refReturn, typeParameters);
             }
         }
 
-        public static void AddMethodDefinition(IVisitorContext context, string methodVar, string fqName, string methodModifiers, ITypeSymbol returnType, IList<TypeParameterSyntax> typeParameters)
+        public static void AddMethodDefinition(IVisitorContext context, string methodVar, string fqName, string methodModifiers, ITypeSymbol returnType, bool refReturn, IList<TypeParameterSyntax> typeParameters)
         {
             context.WriteNewLine();
             context.WriteComment($"Method : {fqName}");
 
             context[methodVar] = "";
-            var exps = CecilDefinitionsFactory.Method(context, methodVar, fqName, methodModifiers, returnType, typeParameters);
+            var exps = CecilDefinitionsFactory.Method(context, methodVar, fqName, methodModifiers, returnType, refReturn, typeParameters);
             foreach(var exp in exps)
                 context.WriteCecilExpression($"{exp}{NewLine}");
         }

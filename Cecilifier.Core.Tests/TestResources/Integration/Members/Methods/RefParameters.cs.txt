@@ -1,0 +1,27 @@
+﻿class RefParameters
+{
+	private void Foo(ref int ri, int i, ref int ri2)
+	{
+	    Foo(ref i, ri, ref ri);
+	}
+	
+	int Indexer(RefParameters o, ref int i) => o[i];  
+    
+    int Array(int []a, ref int i) 
+    {
+      return a[i];
+    }
+    
+    /*
+    Multi-dimensional arrays are not supported: https://github.com/adrianoc/cecilifier/issues/75
+    int MultiDimensionalArray(int [,] a, ref int i) 
+    {
+      return a[i, i];
+    }
+    */
+	
+	public int this[int i]
+	{
+	    get => i;
+	}
+}

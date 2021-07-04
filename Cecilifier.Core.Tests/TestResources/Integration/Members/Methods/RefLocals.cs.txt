@@ -1,0 +1,34 @@
+﻿class RefLocals
+{
+	public int TestLocalExplicit(ref int i) 
+	{
+	    ref int localExplicit = ref i;
+	    return localExplicit + 1;
+	} 
+
+	public int TestLocalInferred(int j) 
+	{
+	    ref var localInferred = ref j;	    
+	    return localInferred + 1;
+	}
+	 
+	public int TestLocalRefAssignment(ref int i) 
+	{
+	    ref int localExplicit = ref i;
+	    ref var localRefAssignment = ref localExplicit;
+	    
+	    return localRefAssignment + 1;
+	}	
+	
+	public int TestByte(byte b) 
+	{
+	    ref byte rb = ref b;
+	    return rb + 1;
+	}
+	
+	public int TestParam(int i) 
+	{
+	    ref int ri = ref i;
+	    return TestParam(ri) + TestParam(ri + 1);
+	}
+}

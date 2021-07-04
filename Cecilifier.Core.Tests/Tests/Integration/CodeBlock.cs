@@ -28,6 +28,12 @@ namespace Cecilifier.Core.Tests.Integration
         {
             AssertResourceTest(@"CodeBlock/MethodCall/NonVirtualMethodCall");
         }
+        
+        [Test]
+        public void OutVariablesTest()
+        {
+            AssertResourceTest(@"CodeBlock/MethodCall/OutVariables");
+        }
 
         [Test]
         [Ignore("Not Implemented yet")]

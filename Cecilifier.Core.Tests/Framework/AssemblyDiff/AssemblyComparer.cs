@@ -593,6 +593,9 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 
         private static (bool, int) ValidateField(Instruction lhs, Instruction rhs)
         {
+            if (lhs.OpCode != rhs.OpCode)
+                return (false, 0);
+            
             var fieldLhs = (FieldReference) lhs.Operand;
             var fieldRhs = (FieldReference) rhs.Operand;
 

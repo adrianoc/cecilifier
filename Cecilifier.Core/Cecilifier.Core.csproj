@@ -3,12 +3,12 @@
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
     <LangVersion>9</LangVersion>
-    <AssemblyVersion>1.12.0</AssemblyVersion>
+    <AssemblyVersion>1.13.0</AssemblyVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="3.9.0-2.final" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="3.10.0-3.final" />
     <PackageReference Include="Mono.Cecil" Version="0.11.3" />
   </ItemGroup>
 
