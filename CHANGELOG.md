@@ -2,6 +2,12 @@
 
 ## Changed
 
+## Added
+
+## 04/July/2021
+## Changed
+
+- bump cecilifier version to 1.13.0
 - fixed a couple of ref parameter issues
 - updated Microsoft.CodeAnalysis.CSharp to version 3.10.0-3.final
 - updated Mono.Cecil to version 0.11.3
@@ -15,7 +21,7 @@
 - support for *local ref*
 - code coverage
 
-## 13/July/2021
+## 13/June/2021
 
 ## Changed
 
