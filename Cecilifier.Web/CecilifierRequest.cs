@@ -6,5 +6,6 @@ namespace Cecilifier.Web
     {
         [JsonPropertyName("options")] public WebOptions WebOptions { get; set; }
         [JsonPropertyName("code")] public string Code { get; set; }
+        [JsonPropertyName("settings")] public CecilifierSettings Settings { get; set; }
     }
 }
