@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -291,7 +291,7 @@ namespace Cecilifier.Core.AST
                 var localSymbol = (ILocalSymbol) Context.SemanticModel.GetSymbolInfo(node).Symbol;
                 var designation = ((SingleVariableDesignationSyntax) node.Designation);
                 var resolvedOutArgType = Context.TypeResolver.Resolve(localSymbol.Type);
-
+                
                 var outLocalName = AddLocalVariableWithResolvedType(
                     designation.Identifier.Text,
                     Context.DefinitionVariables.GetLastOf(MemberKind.Method),
