@@ -7,11 +7,6 @@ namespace Cecilifier.Core.Extensions
 {
     public static class SyntaxNodeExtensions
     {
-        public static T WithNewLine<T>(this T node) where T : SyntaxNode
-        {
-            return node.WithTrailingTrivia(SyntaxFactory.CarriageReturnLineFeed);
-        }
-
         /// <summary>
         /// Returns a human readable summary of the <paramref name="node"/> containing nodes/tokens until (including) first one with a new line trivia.
         /// </summary>

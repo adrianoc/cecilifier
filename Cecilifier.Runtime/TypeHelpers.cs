@@ -254,7 +254,6 @@ namespace Cecilifier.Runtime
         private static void FixTypeReferences(MethodReference method, ModuleDefinition mainModule)
         {
             FixTypeReferences(method.ReturnType.GetElementType(), mainModule);
-            //FixTypeReference(method.MethodReturnType., mainModule);
             FixParameters(method.Parameters, mainModule);
             
             TryFixTypeReferencesInGenericInstance(method, mainModule);
