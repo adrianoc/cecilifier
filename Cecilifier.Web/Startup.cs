@@ -13,6 +13,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Web;
 using Cecilifier.Core;
+using Cecilifier.Core.Naming;
 using Cecilifier.Web.Pages;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -111,14 +112,16 @@ namespace Cecilifier.Web
                         try
                         {
                             var deployKind = toBeCecilified.WebOptions.DeployKind;
-                            var publishSourcePolicy = toBeCecilified.WebOptions.PublishSourcePolicy;
+                            var cecilifiedCode = Core.Cecilifier.Process(code, new CecilifierOptions
+                            {
+                                References = GetTrustedAssembliesPath(), 
+                                Naming = new DefaultNameStrategy((NamingOptions) toBeCecilified.Settings.NamingOptions, toBeCecilified.Settings.ElementKindPrefixes.ToDictionary(entry => entry.ElementKind, entry => entry.Prefix))
+                            });
                             
-                            var cecilifiedCode = Core.Cecilifier.Process(code, GetTrustedAssembliesPath());
+                            SendTextMessageToChat("One more happy user (project)",  $"Total so far: {CecilifierApplication.Count}\n\n***********\n\n```{toBeCecilified.Code}```", "4437377");
+                            
                             if (deployKind == 'Z')
                             {
-                                if (publishSourcePolicy == 'A')
-                                    SendTextMessageToChat("One more happy user (project)",  $"Total so far: {CecilifierApplication.Count}\n\n***********\n\n```{toBeCecilified.Code}```", "4437377");
-                                
                                 var responseData = ZipProject(
                                     ("Program.cs", cecilifiedCode.GeneratedCode.ReadToEnd()),
                                     ("Cecilified.csproj", ProjectContents),
@@ -138,9 +141,6 @@ namespace Cecilifier.Web
                             }
                             else
                             {
-                                if (publishSourcePolicy == 'A')
-                                    SendMessageWithCodeToChat("One more happy user", $"Total so far: {CecilifierApplication.Count}", "4437377", toBeCecilified.Code);
-                                
                                 var cecilifiedStr = HttpUtility.JavaScriptStringEncode(cecilifiedCode.GeneratedCode.ReadToEnd());
                                 var r = $"{{ \"status\" : 0, \"counter\": {CecilifierApplication.Count}, \"kind\": \"C\", \"cecilifiedCode\" : \"{cecilifiedStr}\" }}";
                                 var dataToReturn = Encoding.UTF8.GetBytes(r).AsMemory();
@@ -149,7 +149,8 @@ namespace Cecilifier.Web
                         }
                         catch (SyntaxErrorException ex)
                         {
-                            SendMessageWithCodeToChat("Syntax Error", ex.Message, "15746887", toBeCecilified.Code);
+                            var source = ((toBeCecilified.Settings.NamingOptions & NamingOptions.IncludeSourceInErrorReports) == NamingOptions.IncludeSourceInErrorReports) ? toBeCecilified.Code : string.Empty;  
+                            SendMessageWithCodeToChat("Syntax Error", ex.Message, "15746887", source);
 
                             var dataToReturn = Encoding.UTF8.GetBytes($"{{ \"status\" : 1,  \"syntaxError\": \"{HttpUtility.JavaScriptStringEncode(ex.Message)}\"  }}").AsMemory();
                             webSocket.SendAsync(dataToReturn, result.MessageType, result.EndOfMessage, CancellationToken.None);
@@ -211,7 +212,7 @@ namespace Cecilifier.Web
                 }
             }
             
-            IList<string> GetTrustedAssembliesPath()
+            IReadOnlyList<string> GetTrustedAssembliesPath()
             {
                 return ((string) AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")).Split(Path.PathSeparator).ToList();
             }

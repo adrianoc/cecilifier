@@ -1,4 +1,6 @@
 ﻿@page
+@using Microsoft.JSInterop
+@using System.Security.Cryptography.X509Certificates
 @model CecilifierApplication
 @addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
 
@@ -12,6 +14,45 @@
 }
 
 <div xmlns="http://www.w3.org/1999/html">
+    <div id="settingsDiv" class="sidenav">
+        <table style="width: 100%">
+            <tr>
+                <td>
+                    <a href="#" onclick="hideSettings()">Close</a>
+                    <table id="cecilifierSettings">
+                        <tr>
+                            <th>Element</th>
+                            <th>Prefix</th>
+                        </tr>
+                    </table>
+                </td>
+                <td style='min-width:10px;'></td>
+                <td style='width:70%; text-align: left'>
+                     <div id="formattingSettingsSample-container" style="margin-bottom: 5px;"><div id="_formattingSettingsSample" style="width: 1000px; height: 1000px; border-left: 10px solid white; border-right: 10px solid white"></div></div>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <nav id="cecilifier-validation" class="navbar navbar-default navbar-fixed-top hidden" role="alert"> 
+        <div class="container"> 
+            <div class="navbar-header"> 
+                <span class="navbar-brand"> 
+                    <span class="glyphicon glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span> 
+                </span>
+            </div>
+            
+            <div class="collapse navbar-collapse"> 
+                <p class="navbar-text" id="cecilifier-validation-msg"></p> 
+                <div class="navbar-right"> 
+                    <button type="button" class="btn btn-default navbar-btn" data-cookie-string="" onclick="document.querySelector('#cecilifier-validation').classList.add('hidden')">
+                        <span class="glyphicon glyphicon-remove"></span>
+                    </button> 
+                </div>  
+            </div> 
+        </div> 
+    </nav> 
+    
     <div id="csharpcode-container" style="margin-bottom: 5px;">
         <div id="csharpcode" style="width: 100%; height: 400px; border-left: 10px solid white; border-right: 10px solid white"></div>        
     </div>
@@ -20,10 +61,10 @@
         <button type="submit" id="sendbutton" class="button">Cecilify your code!</button>
         <button type="submit" id="downloadProject" class="button">Generate Project <i class="fa fa-box"></i></button>
         <button class="button" id="copyToClipboard" onclick="copyToClipboard('copyPastHelper');"><i class="fa fa-copy"></i></button>
-        <label id="postToDiscordLabel" class="toggle">
-            <input id="postToDiscord" type="checkbox" onclick="onSendToDiscordCheckBoxChanged();"/>
-            <span class="slider"></span>
-        </label>
+        <button class="button" onclick="changeCecilifierSettings();" id="changeSettings"><i class="fas fa-sliders-h"></i></button>
+        <span id="keyboard-shortcuts">
+            <i class="fas fa-keyboard" style="font-size:28px; vertical-align: middle;"></i>
+        </span>
         <span id="aboutSpan2">
             <i class="fas fa-question-circle" style="font-size:28px; vertical-align: middle;"></i>
         </span>
