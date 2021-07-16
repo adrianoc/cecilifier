@@ -12,14 +12,14 @@ namespace Cecilifier.Core.Extensions
         public static string CamelCase(this string str)
         {
             return str.Length > 1
-                ? char.ToUpper(str[0]) + str.Substring(1)
+                ? char.ToLower(str[0]) + str.Substring(1)
                 : str;
         }
         
         public static string PascalCase(this string str)
         {
             return str.Length > 1
-                ? char.ToLower(str[0]) + str.Substring(1)
+                ? char.ToUpper(str[0]) + str.Substring(1)
                 : str;
         }
 
@@ -32,7 +32,7 @@ namespace Cecilifier.Core.Extensions
                 case SyntaxKind.StaticKeyword: return targetEnum + "." + "Static";
             }
 
-            return targetEnum + "." + modifier.ValueText.CamelCase();
+            return targetEnum + "." + modifier.ValueText.PascalCase();
         }
 
         public static string AppendModifier(this string to, string modifier)
