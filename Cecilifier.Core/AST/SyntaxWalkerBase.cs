@@ -157,7 +157,7 @@ namespace Cecilifier.Core.AST
             var typeAttributes = CecilDefinitionsFactory.DefaultTypeAttributeFor(node.Kind(), hasStaticCtor);
             if (IsNestedTypeDeclaration(node))
             {
-                return typeAttributes.AppendModifier(ModifiersToCecil(node.Modifiers, m => "TypeAttributes.Nested" + m.ValueText.CamelCase()));
+                return typeAttributes.AppendModifier(ModifiersToCecil(node.Modifiers, m => "TypeAttributes.Nested" + m.ValueText.PascalCase()));
             }
 
             var convertedModifiers = ModifiersToCecil("TypeAttributes", node.Modifiers, "NotPublic", ExcludeHasNoCILRepresentationInTypes);

@@ -59,8 +59,6 @@ namespace Cecilifier.Core.Naming
 
         public string Instruction(string opCodeName) => $"{ILOpcodeFor(opCodeName)}{UniqueIdString()}";
 
-        private string ILOpcodeFor(string opCodeName) => (Options & NamingOptions.PrefixInstructionsWithILOpCodeName) == NamingOptions.PrefixInstructionsWithILOpCodeName ? opCodeName.PascalCase() : "inst";
-
         public string CustomAttribute(string typeName) => $"{PrefixFor(ElementKind.Attribute)}{NameFor(typeName)}{UniqueIdString()}";
         public string RequiredModifier(MemberDeclarationSyntax member) => $"modReq{UniqueIdString()}";
         public string Delegate(DelegateDeclarationSyntax node) => $"{PrefixFor(ElementKind.Delegate)}{NameFor(node)}{UniqueId()}";
@@ -71,7 +69,22 @@ namespace Cecilifier.Core.Naming
         private string UniqueIdString() => (Options & NamingOptions.SuffixVariableNamesWithUniqueId) == NamingOptions.SuffixVariableNamesWithUniqueId ? $"{PartsSeparator}{UniqueId()}": string.Empty;
         private string NameFor(ISymbol member) => NameFor(member.Name);
         private string NameFor(MemberDeclarationSyntax node) => NameFor(node.Name());
-        private string NameFor(string name) => (Options & NamingOptions.AppendElementNameToVariables) == NamingOptions.AppendElementNameToVariables ? $"{PartsSeparator}{name}": string.Empty;
+        private string NameFor(string name)
+        {
+            if ((Options & NamingOptions.AppendElementNameToVariables) != NamingOptions.AppendElementNameToVariables)
+                return string.Empty;
+            
+            var casingAdjustedName = (Options & NamingOptions.CamelCaseElementNames) == NamingOptions.CamelCaseElementNames ? name.CamelCase() : name;
+            return $"{PartsSeparator}{casingAdjustedName}";
+        }
+        
+        private string ILOpcodeFor(string opCodeName)
+        {
+            if ((Options & NamingOptions.PrefixInstructionsWithILOpCodeName) != NamingOptions.PrefixInstructionsWithILOpCodeName)
+                return "inst";
+             
+            return (Options & NamingOptions.CamelCaseElementNames) == NamingOptions.CamelCaseElementNames ? opCodeName.CamelCase() : opCodeName;
+        }
 
         private ElementKind ElementKindFrom(MemberDeclarationSyntax node) => node.Kind() switch
         {
