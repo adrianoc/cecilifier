@@ -150,10 +150,10 @@ namespace Cecilifier.Core.AST
             return accessorModifiers;
         }
 
-        private IEnumerable<string> CreateLocalVarsForAddMethod(string addMethodVar, string backingFieldVar)
+        private IEnumerable<string> CreateLocalVarsForAddMethod(string methodVar, string backingFieldVar)
         {
             for (int i = 0; i < 3; i++)
-                yield return $"{addMethodVar}.Body.Variables.Add(new VariableDefinition({backingFieldVar}.FieldType));";
+                yield return $"{methodVar}.Body.Variables.Add(new VariableDefinition({backingFieldVar}.FieldType));";
         }
         
         private IEnumerable<string> RemoveMethodBody(EventFieldDeclarationSyntax context, IEventSymbol eventSymbol, string backingFieldVar, string removeMethodVar)

@@ -442,15 +442,10 @@ namespace Cecilifier.Core.AST
             base.VisitParenthesizedExpression(node);
 
             var localVarParent = (CSharpSyntaxNode) node.Parent;
-            if (localVarParent.Accept(new UsageVisitor()) == UsageKind.CallTarget)
-            {
-                var tempLocalName = Context.Naming.SyntheticVariable("tmp", ElementKind.LocalVariable);
-                AddCecilExpression("var {0} = new VariableDefinition(assembly.MainModule.TypeSystem.Int32);", tempLocalName);
-                AddCecilExpression("{0}.Body.Variables.Add({1});", Context.DefinitionVariables.GetLastOf(MemberKind.Method).VariableName, tempLocalName);
+            if (localVarParent.Accept(new UsageVisitor()) != UsageKind.CallTarget)
+                return;
 
-                AddCilInstruction(ilVar, OpCodes.Stloc, tempLocalName);
-                AddCilInstruction(ilVar, OpCodes.Ldloca_S, tempLocalName);
-            }
+            StoreTopOfStackInLocalVariableAndLoadItsAddress(GetSpecialType(SpecialType.System_Int32));
         }
 
         public override void VisitObjectCreationExpression(ObjectCreationExpressionSyntax node)
@@ -504,17 +499,13 @@ namespace Cecilifier.Core.AST
                 return;
             }
 
-            var tempLocalName = Context.Naming.SyntheticVariable("tmp", ElementKind.LocalVariable);
-
-            AddCecilExpression($"var {tempLocalName} = new VariableDefinition({Context.TypeResolver.Resolve(Context.SemanticModel.GetTypeInfo(operand).Type)});");
-            AddCecilExpression($"{Context.DefinitionVariables.GetLastOf(MemberKind.Method).VariableName}.Body.Variables.Add({tempLocalName});");
-
             if (isPrefix)
             {
                 AddCilInstruction(ilVar, OpCodes.Ldc_I4_1);
                 AddCilInstruction(ilVar, opCode);
             }
 
+            var tempLocalName = AddLocalVariableWithResolvedType("tmp", Context.DefinitionVariables.GetLastOf(MemberKind.Method), Context.TypeResolver.Resolve(Context.SemanticModel.GetTypeInfo(operand).Type));
             AddCilInstruction(ilVar, OpCodes.Stloc, tempLocalName);
             AddCilInstruction(ilVar, OpCodes.Ldloc, tempLocalName);
             assignmentVisitor.InstructionPrecedingValueToLoad = Context.CurrentLine;
@@ -609,10 +600,7 @@ namespace Cecilifier.Core.AST
 
         private void StoreTopOfStackInLocalVariableAndLoadItsAddress(ITypeSymbol type)
         {
-            var tempLocalName = Context.Naming.SyntheticVariable("tmp", ElementKind.LocalVariable);
-            AddCecilExpression($"var {tempLocalName} = new VariableDefinition({Context.TypeResolver.Resolve(type)});");
-            AddCecilExpression($"{Context.DefinitionVariables.GetLastOf(MemberKind.Method).VariableName}.Body.Variables.Add({tempLocalName});");
-
+            var tempLocalName = AddLocalVariableWithResolvedType("tmp", Context.DefinitionVariables.GetLastOf(MemberKind.Method), Context.TypeResolver.Resolve(type));
             AddCilInstruction(ilVar, OpCodes.Stloc, tempLocalName);
             AddCilInstruction(ilVar, OpCodes.Ldloca_S, tempLocalName);
         }
