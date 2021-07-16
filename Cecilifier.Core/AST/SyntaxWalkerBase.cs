@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
+using Cecilifier.Core.Naming;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -54,10 +55,10 @@ namespace Cecilifier.Core.AST
             if (method.IsGenericMethod && method.IsDefinedInCurrentType(Context))
             {
                 // if the method in question is a generic method and it is defined in the same assembly create a generic instance
-                var resolvedMethodVar = TempLocalVar($"resolved_{method.Name}");
+                var resolvedMethodVar = Context.Naming.MemberReference(method.Name, method.ContainingType.Name);
                 var m1 = $"var {resolvedMethodVar} = {method.MethodResolverExpression(Context)};";
                 
-                var genInstVar = TempLocalVar($"genInst_{method.Arity}_{method.Name}");
+                var genInstVar = Context.Naming.GenericInstance(method);
                 var m = $"var {genInstVar} = new GenericInstanceMethod({resolvedMethodVar});";
                 AddCecilExpression(m1);
                 AddCecilExpression(m);
@@ -102,7 +103,7 @@ namespace Cecilifier.Core.AST
         protected string CreateCilInstruction(string ilVar, OpCode opCode, object operand = null)
         {
             var operandStr = operand == null ? string.Empty : $", {operand}";
-            var instVar = TempLocalVar(opCode.Code.ToString());
+            var instVar = Context.Naming.Instruction(opCode.Code.ToString());
             AddCecilExpression($"var {instVar} = {ilVar}.Create({opCode.ConstantName()}{operandStr});");
 
             Context.TriggerInstructionAdded(instVar);
@@ -112,8 +113,8 @@ namespace Cecilifier.Core.AST
 
         protected string AddLocalVariableWithResolvedType(string localVarName, DefinitionVariable methodVar, string resolvedVarType)
         {
-            var cecilVarDeclName = TempLocalVar($"lv_{localVarName}");
-
+            var cecilVarDeclName = Context.Naming.SyntheticVariable(localVarName, ElementKind.LocalVariable);
+            
             AddCecilExpression("var {0} = new VariableDefinition({1});", cecilVarDeclName, resolvedVarType);
             AddCecilExpression("{0}.Body.Variables.Add({1});", methodVar.VariableName, cecilVarDeclName);
 
@@ -138,26 +139,6 @@ namespace Cecilifier.Core.AST
             {
                 action(methodName);
             }
-        }
-
-        protected string TempLocalVar(string prefix)
-        {
-            return prefix + NextLocalVariableId();
-        }
-
-        protected static string LocalVariableNameForId(int localVarId)
-        {
-            return "t" + localVarId;
-        }
-
-        protected int NextLocalVariableId()
-        {
-            return Context.NextFieldId();
-        }
-
-        protected int NextLocalVariableTypeId()
-        {
-            return Context.NextLocalVariableTypeId();
         }
 
         protected string ImportExpressionForType(Type type)
@@ -423,7 +404,7 @@ namespace Cecilifier.Core.AST
             {
                 return;
             }
-            
+
             if (typeSymbol is IFunctionPointerTypeSymbol functionPointer)
             {
                 AddCilInstruction(ilVar, OpCodes.Calli, CecilDefinitionsFactory.CallSite(Context.TypeResolver, functionPointer));
@@ -475,9 +456,11 @@ namespace Cecilifier.Core.AST
 
                     // Attribute is defined in the same assembly. We need to find the variable that holds its "ctor declaration"
                     var attrCtor = attrType.GetMembers().OfType<IMethodSymbol>().SingleOrDefault(m => m.MethodKind == MethodKind.Constructor && m.Parameters.Length == attrArgs.Length);
-                    var attrCtorVar = MethodExtensions.LocalVariableNameFor(attrType.Name, "ctor", attrCtor.MangleName());
+                    var attrCtorVar = Context.DefinitionVariables.GetMethodVariable(attrCtor.AsMethodDefinitionVariable());
+                    if (!attrCtorVar.IsValid)
+                        throw new Exception($"Could not find variable for {attrCtor.ContainingType.Name} ctor.");
 
-                    return attrCtorVar;
+                    return attrCtorVar.VariableName;
                 });
 
                 AddCecilExpressions(attrsExp);

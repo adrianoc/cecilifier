@@ -15,13 +15,15 @@ namespace Cecilifier.Core.Misc
                 return backingFieldVar;
 
             //TODO: Register the following variable?
-            var genTypeVar = $"gt_{memberSymbol.Name}_{context.NextLocalVariableTypeId()}";
+            var genTypeVar = context.Naming.GenericInstance(memberSymbol);
             context.WriteCecilExpression($"var {genTypeVar} = {memberDeclaringTypeVar}.MakeGenericInstanceType({memberDeclaringTypeVar}.GenericParameters.ToArray());");
             context.WriteNewLine();
-            context.WriteCecilExpression($"var {genTypeVar}_ = new FieldReference({backingFieldVar}.Name, {backingFieldVar}.FieldType, {genTypeVar});");
+
+            var fieldRefVar = context.Naming.MemberReference("fld_", memberSymbol.ContainingType.Name);
+            context.WriteCecilExpression($"var {fieldRefVar} = new FieldReference({backingFieldVar}.Name, {backingFieldVar}.FieldType, {genTypeVar});");
             context.WriteNewLine();
 
-            return $"{genTypeVar}_";
+            return fieldRefVar;
         }
         
         public static void EnsureNotNull([DoesNotReturnIf(true)] bool isNull, string msg)

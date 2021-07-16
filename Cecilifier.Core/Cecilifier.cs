@@ -4,6 +4,7 @@ using System.Linq;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
+using Cecilifier.Core.Naming;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 
@@ -11,17 +12,17 @@ namespace Cecilifier.Core
 {
     public sealed class Cecilifier
     {
-        public static CecilifierResult Process(Stream content, IList<string> references)
+        public static CecilifierResult Process(Stream content, CecilifierOptions options)
         {
             var cecilifier = new Cecilifier();
-            return cecilifier.Run(content, references);
+            return cecilifier.Run(content, options);
         }
 
-        private CecilifierResult Run(Stream content, IList<string> references)
+        private CecilifierResult Run(Stream content, CecilifierOptions options)
         {
             using var stream = new StreamReader(content);
             var syntaxTree = CSharpSyntaxTree.ParseText(stream.ReadToEnd(), new CSharpParseOptions(LanguageVersion.CSharp9));
-            var metadataReferences = references.Select(refPath => MetadataReference.CreateFromFile(refPath)).ToArray();
+            var metadataReferences = options.References.Select(refPath => MetadataReference.CreateFromFile(refPath)).ToArray();
 
             var comp = CSharpCompilation.Create(
                 "CecilifiedAssembly",
@@ -37,7 +38,7 @@ namespace Cecilifier.Core
 
             var semanticModel = comp.GetSemanticModel(syntaxTree);
 
-            var ctx = new CecilifierContext(semanticModel);
+            var ctx = new CecilifierContext(semanticModel, options);
             var visitor = new CompilationUnitVisitor(ctx);
 
             syntaxTree.TryGetRoot(out var root);
@@ -59,6 +60,19 @@ namespace Cecilifier.Core
         }
     }
 
+    public readonly struct SourceLocation
+    {
+        public int Line { get; init; } 
+        public int Column { get; init; } 
+    }
+
+    public class CecilifierOptions
+    {
+        public INameStrategy Naming { get; init; } = new DefaultNameStrategy();
+
+        public IReadOnlyList<string> References { get; init; }
+    }
+    
     public struct CecilifierResult
     {
         public CecilifierResult(StringReader generatedCode, string mainTypeName)

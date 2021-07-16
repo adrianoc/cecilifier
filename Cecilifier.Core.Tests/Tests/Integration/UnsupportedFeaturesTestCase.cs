@@ -16,7 +16,7 @@ namespace Cecilifier.Core.Tests.Integration
         public void EnumeratorBlocks(string statement)
         {
             var code = new MemoryStream(Encoding.ASCII.GetBytes($"class Test {{ System.Collections.IEnumerable Do() {{ {statement}; }} }} "));
-            using (var stream = Cecilifier.Process(code, Utils.GetTrustedAssembliesPath()).GeneratedCode)
+            using (var stream = Cecilifier.Process(code, new CecilifierOptions { References = Utils.GetTrustedAssembliesPath() }).GeneratedCode)
             {
                 var cecilifiedCode = stream.ReadToEnd();
                 Assert.That(cecilifiedCode, Does.Match("Syntax 'Yield(Return|Break)Statement' is not supported"));
@@ -56,7 +56,7 @@ namespace Cecilifier.Core.Tests.Integration
         private static void AssertUnsupportedFeature(string codeString, string expectedMessage)
         {
             var code = new MemoryStream(Encoding.ASCII.GetBytes(codeString));
-            using(var stream = Cecilifier.Process(code, Utils.GetTrustedAssembliesPath()).GeneratedCode)
+            using(var stream = Cecilifier.Process(code, new CecilifierOptions {References = Utils.GetTrustedAssembliesPath()}).GeneratedCode)
             {
                 var cecilifiedCode = stream.ReadToEnd();
                 Assert.That(cecilifiedCode, Contains.Substring(expectedMessage));

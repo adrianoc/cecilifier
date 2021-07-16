@@ -32,7 +32,8 @@ namespace Cecilifier.Core.AST
         private void HandleStaticConstructor(ConstructorDeclarationSyntax node)
         {
             var returnType = GetSpecialType(SpecialType.System_Void);
-            ProcessMethodDeclaration(node, "cctor", ".cctor", returnType, false, ctorVar => { node.Body.Accept(this); });
+            var variableName = Context.Naming.Constructor(node.ResolveDeclaringType<BaseTypeDeclarationSyntax>());
+            ProcessMethodDeclaration(node, variableName, "cctor", ".cctor", returnType, false, ctorVar => { node.Body.Accept(this); });
         }
 
         private void HandleInstanceConstructor(ConstructorDeclarationSyntax node)
@@ -42,7 +43,8 @@ namespace Cecilifier.Core.AST
             Action<ConstructorDeclarationSyntax> callBaseMethod = base.VisitConstructorDeclaration;
 
             var returnType = GetSpecialType(SpecialType.System_Void);
-            ProcessMethodDeclaration(node, "ctor", ".ctor", returnType, false, ctorVar =>
+            var ctorVariable = Context.Naming.Constructor(declaringType);
+            ProcessMethodDeclaration(node, ctorVariable, "ctor", ".ctor", returnType, false, ctorVar =>
             {
                 if (node.Initializer == null || node.Initializer.IsKind(SyntaxKind.BaseConstructorInitializer)) 
                     ProcessFieldInitialization(declaringType, ilVar);
@@ -76,14 +78,13 @@ namespace Cecilifier.Core.AST
 
         internal void DefaultCtorInjector(string typeDefVar, ClassDeclarationSyntax declaringClass)
         {
-            
             Context.WriteNewLine();
             Context.WriteComment($"** Constructor: {declaringClass.Identifier}() **");
-            var ctorLocalVar = AddOrUpdateCtorDefinition(declaringClass);
+            var ctorLocalVar = AddOrUpdateParameterlessCtorDefinition(declaringClass);
 
             AddCecilExpression($"{typeDefVar}.Methods.Add({ctorLocalVar});");
 
-            var ctorBodyIL = TempLocalVar("il");
+            var ctorBodyIL = Context.Naming.ILProcessor("ctor", declaringClass.Identifier.Text);
             AddCecilExpression($@"var {ctorBodyIL} = {ctorLocalVar}.Body.GetILProcessor();");
             
             ProcessFieldInitialization(declaringClass, ctorBodyIL);
@@ -91,19 +92,21 @@ namespace Cecilifier.Core.AST
             AddCilInstruction(ctorBodyIL, OpCodes.Call, ResolveDefaultCtorFor(typeDefVar, declaringClass));
             
             AddCilInstruction(ctorBodyIL, OpCodes.Ret);
-            Context[ctorLocalVar] = "";
         }
 
-        private string AddOrUpdateCtorDefinition(ClassDeclarationSyntax declaringClass)
+        private string AddOrUpdateParameterlessCtorDefinition(ClassDeclarationSyntax declaringClass)
         {
-            var ctorLocalVar = MethodExtensions.LocalVariableNameFor(declaringClass.Identifier.Text, "ctor", "");
-            if (Context.Contains(ctorLocalVar))
+            var found = Context.DefinitionVariables.GetMethodVariable(new MethodDefinitionVariable(declaringClass.Identifier.Text, ".ctor", Array.Empty<string>()));
+            if (found.IsValid)
             {
-                AddCecilExpression($"{ctorLocalVar}.Attributes = {DefaultCtorAccessibilityFor(declaringClass)} | MethodAttributes.HideBySig | {CtorFlags};");
-                AddCecilExpression($"{ctorLocalVar}.HasThis = !{ctorLocalVar}.IsStatic;", ctorLocalVar);
-                return ctorLocalVar;
+                var ctorLocalVar1 = found.VariableName;
+                
+                AddCecilExpression($"{ctorLocalVar1}.Attributes = {DefaultCtorAccessibilityFor(declaringClass)} | MethodAttributes.HideBySig | {CtorFlags};");
+                AddCecilExpression($"{ctorLocalVar1}.HasThis = !{ctorLocalVar1}.IsStatic;", ctorLocalVar1);
+                return ctorLocalVar1;
             }
 
+            var ctorLocalVar = Context.Naming.Constructor(declaringClass);
             var ctorMethodDefinitionExp = CecilDefinitionsFactory.Constructor(Context, ctorLocalVar, declaringClass.Identifier.ValueText, DefaultCtorAccessibilityFor(declaringClass), Array.Empty<string>());
             AddCecilExpression(ctorMethodDefinitionExp);
             return ctorLocalVar;
