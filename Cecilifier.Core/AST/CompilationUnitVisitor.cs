@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
+using Cecilifier.Core.Naming;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
@@ -81,7 +82,9 @@ namespace Cecilifier.Core.AST
 
         public override void VisitDelegateDeclaration(DelegateDeclarationSyntax node)
         {
-            var typeVar = LocalVariableNameForId(NextLocalVariableTypeId());
+            Context.WriteNewLine();
+            Context.WriteComment($"Delegate: {node.Identifier.Text}");
+            var typeVar = Context.Naming.Delegate(node);
             var accessibility = ModifiersToCecil("TypeAttributes", node.Modifiers, "Private");
             var typeDef = CecilDefinitionsFactory.Type(
                 Context, 
@@ -99,8 +102,10 @@ namespace Cecilifier.Core.AST
 
             using (Context.DefinitionVariables.WithCurrent("", node.Identifier.ValueText, MemberKind.Type, typeVar))
             {
+                var ctorLocalVar = Context.Naming.Delegate(node);
+                
                 // Delegate ctor
-                AddCecilExpression(CecilDefinitionsFactory.Constructor(Context, out var ctorLocalVar, node.Identifier.Text, "MethodAttributes.FamANDAssem | MethodAttributes.Family",
+                AddCecilExpression(CecilDefinitionsFactory.Constructor(Context, ctorLocalVar, node.Identifier.Text, "MethodAttributes.FamANDAssem | MethodAttributes.Family",
                     new[] {"System.Object", "System.IntPtr"}, "IsRuntime = true"));
                 AddCecilExpression($"{ctorLocalVar}.Parameters.Add(new ParameterDefinition({Context.TypeResolver.Resolve(GetSpecialType(SpecialType.System_Object))}));");
                 AddCecilExpression($"{ctorLocalVar}.Parameters.Add(new ParameterDefinition({Context.TypeResolver.Resolve(GetSpecialType(SpecialType.System_IntPtr))}));");
@@ -111,11 +116,11 @@ namespace Cecilifier.Core.AST
                     "Invoke", 
                     ResolveType(node.ReturnType), 
                     node.ParameterList.Parameters,
-                    (methodVar, param) => CecilDefinitionsFactory.Parameter(param, Context.SemanticModel, methodVar, TempLocalVar($"{param.Identifier.ValueText}"), ResolveType(param.Type)));
+                    (methodVar, param) => CecilDefinitionsFactory.Parameter(param, Context.SemanticModel, methodVar, Context.Naming.Parameter(param) , ResolveType(param.Type)));
 
                 // BeginInvoke() method
                 var methodName = "BeginInvoke";
-                var beginInvokeMethodVar = TempLocalVar("beginInvoke");
+                var beginInvokeMethodVar = Context.Naming.SyntheticVariable(methodName, ElementKind.Method);
                 AddCecilExpression(
                     $@"var {beginInvokeMethodVar} = new MethodDefinition(""{methodName}"", MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.NewSlot | MethodAttributes.Virtual, {Context.TypeResolver.Resolve("System.IAsyncResult")})
 					{{
@@ -125,7 +130,7 @@ namespace Cecilifier.Core.AST
 
                 foreach (var param in node.ParameterList.Parameters)
                 {
-                    var paramExps = CecilDefinitionsFactory.Parameter(param, Context.SemanticModel, beginInvokeMethodVar, TempLocalVar($"{param.Identifier.ValueText}"), ResolveType(param.Type));
+                    var paramExps = CecilDefinitionsFactory.Parameter(param, Context.SemanticModel, beginInvokeMethodVar, Context.Naming.Parameter(param), ResolveType(param.Type));
                     AddCecilExpressions(paramExps);
                 }
 
@@ -134,7 +139,7 @@ namespace Cecilifier.Core.AST
                 AddCecilExpression($"{typeVar}.Methods.Add({beginInvokeMethodVar});");
 
                 // EndInvoke() method
-                var endInvokeMethodVar = TempLocalVar("endInvoke");
+                var endInvokeMethodVar =  Context.Naming.SyntheticVariable("EndInvoke", ElementKind.Method);
 
                 var endInvokeExps = CecilDefinitionsFactory.Method(
                     Context,
@@ -145,6 +150,7 @@ namespace Cecilifier.Core.AST
                     false,
                     Array.Empty<TypeParameterSyntax>()
                 );
+
                 endInvokeExps = endInvokeExps.Concat(new[]
                 {
                     $"{endInvokeMethodVar}.HasThis = true;",
@@ -156,7 +162,7 @@ namespace Cecilifier.Core.AST
                     RefKind.None,
                     false,
                     endInvokeMethodVar,
-                    TempLocalVar("ar"),
+                    Context.Naming.Parameter("ar", node.Identifier.Text),
                     Context.TypeResolver.Resolve("System.IAsyncResult"));
 
                 AddCecilExpressions(endInvokeExps);
@@ -168,8 +174,7 @@ namespace Cecilifier.Core.AST
 
             void AddDelegateMethod(string typeLocalVar, string methodName, string returnTypeName, in SeparatedSyntaxList<ParameterSyntax> parameters, Func<string, ParameterSyntax, IEnumerable<string>> parameterHandler)
             {
-                var methodLocalVar = TempLocalVar(methodName.ToLower());
-
+                var methodLocalVar = Context.Naming.SyntheticVariable(methodName, ElementKind.Method);
                 AddCecilExpression(
                     $@"var {methodLocalVar} = new MethodDefinition(""{methodName}"", MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.NewSlot | MethodAttributes.Virtual, {returnTypeName})
 				{{

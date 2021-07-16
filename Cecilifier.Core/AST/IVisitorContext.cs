@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Cecilifier.Core.Naming;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
@@ -275,6 +276,8 @@ namespace Cecilifier.Core.AST
 
     internal interface IVisitorContext
     {
+        INameStrategy Naming { get; }
+        
         string Namespace { get; set; }
 
         SemanticModel SemanticModel { get; }
@@ -282,8 +285,7 @@ namespace Cecilifier.Core.AST
         DefinitionVariableManager DefinitionVariables { get; }
 
         LinkedListNode<string> CurrentLine { get; }
-        string this[string name] { get; set; }
-
+        
         IMethodSymbol GetDeclaredSymbol(BaseMethodDeclarationSyntax methodDeclaration);
         ITypeSymbol GetDeclaredSymbol(BaseTypeDeclarationSyntax classDeclaration);
         TypeInfo GetTypeInfo(TypeSyntax node);
@@ -294,9 +296,6 @@ namespace Cecilifier.Core.AST
         void WriteComment(string comment);
         void WriteNewLine();
 
-        int NextFieldId();
-        int NextLocalVariableTypeId();
-        bool Contains(string name);
         void MoveLineAfter(LinkedListNode<string> instruction, LinkedListNode<string> after);
 
         event Action<string> InstructionAdded;

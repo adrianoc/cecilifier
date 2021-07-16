@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
+using Cecilifier.Core.Naming;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -43,7 +44,7 @@ namespace Cecilifier.Core.AST
                 init.Accept(expressionVisitor);
             }
 
-            var forEndLabel = TempLocalVar("fel");
+            var forEndLabel = Context.Naming.Label("fel");
             WriteCecilExpression(Context, $"var {forEndLabel} = {_ilVar}.Create(OpCodes.Nop);");
 
             var forConditionLabel = AddCilInstruction(_ilVar, OpCodes.Nop);

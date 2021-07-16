@@ -21,18 +21,18 @@ namespace Cecilifier.Core.AST
         {
             ExpressionVisitor.Visit(Context, _ilVar, node.Condition);
 
-            var elsePrologVarName = TempLocalVar("esp");
+            var elsePrologVarName = Context.Naming.Label("elseEntryPoint");
             WriteCecilExpression(Context, $"var {elsePrologVarName} = {_ilVar}.Create(OpCodes.Nop);");
             AddCilInstruction(_ilVar, OpCodes.Brfalse, elsePrologVarName);
 
             Context.WriteComment("if body");
             StatementVisitor.Visit(Context, _ilVar, node.Statement);
 
-            var elseEndTargetVarName = TempLocalVar("ese");
+            var elseEndTargetVarName = Context.Naming.Label("elseEnd");
             WriteCecilExpression(Context, $"var {elseEndTargetVarName} = {_ilVar}.Create(OpCodes.Nop);");
             if (node.Else != null)
             {
-                var branchToEndOfIfStatementVarName = LocalVariableNameForId(NextLocalVariableTypeId());
+                var branchToEndOfIfStatementVarName = Context.Naming.Label("endOfIf");
                 WriteCecilExpression(Context, $"var {branchToEndOfIfStatementVarName} = {_ilVar}.Create(OpCodes.Br, {elseEndTargetVarName});");
                 WriteCecilExpression(Context, $"{_ilVar}.Append({branchToEndOfIfStatementVarName});");
 

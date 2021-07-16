@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.Misc;
@@ -114,9 +114,10 @@ namespace Cecilifier.Core.AST
 
         private string HandleTypeDeclaration(TypeDeclarationSyntax node, string baseType)
         {
+            Context.WriteNewLine();
             Context.WriteComment($"{node.Kind()} : {node.Identifier}");
             
-            var varName = LocalVariableNameForId(NextLocalVariableTypeId());
+            var varName = Context.Naming.Type(node);
             var isStructWithNoFields = node.Kind() == SyntaxKind.StructDeclaration && node.Members.Count == 0;
             var typeDefinitionExp = CecilDefinitionsFactory.Type(
                                             Context, 

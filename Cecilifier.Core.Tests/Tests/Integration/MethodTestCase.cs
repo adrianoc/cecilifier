@@ -166,7 +166,7 @@ namespace Cecilifier.Core.Tests.Integration
 
         private void AssertCecilifiedCodeContainsSnippet(string code, string expectedSnippet)
         {
-            var cecilifier = Cecilifier.Process(new MemoryStream(Encoding.UTF8.GetBytes(code)), Utils.GetTrustedAssembliesPath().ToArray());
+            var cecilifier = Cecilifier.Process(new MemoryStream(Encoding.UTF8.GetBytes(code)), new CecilifierOptions {References = Utils.GetTrustedAssembliesPath() });
             var generated = cecilifier.GeneratedCode.ReadToEnd();
 
             Assert.That(generated, Does.Contain(expectedSnippet), "Expected snippet not found");

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.AST;
+using Cecilifier.Core.Naming;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
@@ -16,12 +17,12 @@ namespace Cecilifier.Core.Misc
 
         private int currentTypeId;
 
-        private readonly Dictionary<string, string> vars = new Dictionary<string, string>();
         private string identation;
 
-        public CecilifierContext(SemanticModel semanticModel, byte identation = 3)
+        public CecilifierContext(SemanticModel semanticModel, CecilifierOptions options,  byte identation = 3)
         {
             SemanticModel = semanticModel;
+            Options = options;
             DefinitionVariables = new DefinitionVariableManager();
             TypeResolver = new TypeResolverImpl(this);
 
@@ -36,6 +37,8 @@ namespace Cecilifier.Core.Misc
         public ITypeResolver TypeResolver { get; }
 
         public SemanticModel SemanticModel { get; }
+        public CecilifierOptions Options { get; }
+        public INameStrategy Naming => Options.Naming;
 
         public DefinitionVariableManager DefinitionVariables { get; } = new DefinitionVariableManager();
 
@@ -75,34 +78,16 @@ namespace Cecilifier.Core.Misc
 
         public void WriteComment(string comment)
         {
-            output.AddLast($"{identation}//{comment}");
-            output.AddLast($"{Environment.NewLine}");
+            if ((Options.Naming.Options & NamingOptions.AddCommentsToMemberDeclarations) == NamingOptions.AddCommentsToMemberDeclarations)
+            {
+                output.AddLast($"{identation}//{comment}");
+                output.AddLast($"{Environment.NewLine}");
+            }
         }
         
         public void WriteNewLine()
         {
             output.AddLast($"{Environment.NewLine}");
-        }
-
-        public int NextFieldId()
-        {
-            return ++currentFieldId;
-        }
-
-        public int NextLocalVariableTypeId()
-        {
-            return ++currentTypeId;
-        }
-
-        public string this[string name]
-        {
-            get => vars[name];
-            set => vars[name] = value;
-        }
-
-        public bool Contains(string name)
-        {
-            return vars.ContainsKey(name);
         }
 
         public void MoveLineAfter(LinkedListNode<string> instruction, LinkedListNode<string> after)

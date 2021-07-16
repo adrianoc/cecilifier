@@ -4,6 +4,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
+using Cecilifier.Core.Naming;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -32,12 +33,12 @@ namespace Cecilifier.Core.AST
             var propName = "Item";
 
             AddDefaultMemberAttribute(propertyDeclaringTypeVar, propName);
-            var propDefVar = AddPropertyDefinition(propName, propertyType);
+            var propDefVar = AddPropertyDefinition(node, propName, propertyType);
 
             var paramsVar = new List<ParamData>();
             foreach (var parameter in node.ParameterList.Parameters)
             {
-                var paramVar = TempLocalVar(parameter.Identifier.ValueText);
+                var paramVar = Context.Naming.Parameter(parameter);
                 paramsVar.Add(new ParamData
                 {
                     VariableName = paramVar,
@@ -68,7 +69,7 @@ namespace Cecilifier.Core.AST
             var propertyDeclaringTypeVar = Context.DefinitionVariables.GetLastOf(MemberKind.Type).VariableName;
             var propName = node.Identifier.ValueText;
 
-            var propDefVar = AddPropertyDefinition(propName, propertyType);
+            var propDefVar = AddPropertyDefinition(node, propName, propertyType);
             ProcessPropertyAccessors(node, propertyDeclaringTypeVar, propName, propertyType, propDefVar, NoParameters, node.ExpressionBody);
 
             AddCecilExpression($"{propertyDeclaringTypeVar}.Properties.Add({propDefVar});");
@@ -91,8 +92,9 @@ namespace Cecilifier.Core.AST
 
         private void AddDefaultMemberAttribute(string definitionVar, string value)
         {
-            var ctorVar = TempLocalVar("ctor");
-            var customAttrVar = TempLocalVar("customAttr");
+            var ctorVar = Context.Naming.MemberReference("ctor", Context.DefinitionVariables.GetLastOf(MemberKind.Type).VariableName);
+            var customAttrVar = Context.Naming.CustomAttribute("DefaultMember"); 
+            
             var exps = new[]
             {
                 $"var {ctorVar} = {ImportFromMainModule("typeof(System.Reflection.DefaultMemberAttribute).GetConstructor(new Type[] { typeof(string) })")};",
@@ -112,7 +114,7 @@ namespace Cecilifier.Core.AST
             var declaringType = node.ResolveDeclaringType<TypeDeclarationSyntax>();
             if (arrowExpression != null)
             {
-                AddExpressionBodiedGetterMethod(accessorModifiers, arrowExpression);
+                AddExpressionBodiedGetterMethod();
                 return;
             }
             
@@ -122,18 +124,18 @@ namespace Cecilifier.Core.AST
                 switch (accessor.Keyword.Kind())
                 {
                     case SyntaxKind.GetKeyword:
-                        AddGetterMethod(accessorModifiers, accessor);
+                        AddGetterMethod(accessor);
                         break;
 
                     case SyntaxKind.InitKeyword:
                         Context.WriteComment(" Init");
                         var setterReturnType = $"new RequiredModifierType({ImportExpressionForType(typeof(IsExternalInit))}, {Context.TypeResolver.Resolve(GetSpecialType(SpecialType.System_Void))})";
-                        AddSetterMethod(accessorModifiers, setterReturnType, accessor);
+                        AddSetterMethod(setterReturnType, accessor);
                         break;
                     
                     case SyntaxKind.SetKeyword:
                         Context.WriteComment(" Setter");
-                        AddSetterMethod(accessorModifiers, Context.TypeResolver.Resolve(GetSpecialType(SpecialType.System_Void)), accessor);
+                        AddSetterMethod(Context.TypeResolver.Resolve(GetSpecialType(SpecialType.System_Void)), accessor);
                         break; 
                     default:
                         throw new NotImplementedException($"Accessor: {accessor.Keyword}");
@@ -145,7 +147,7 @@ namespace Cecilifier.Core.AST
                 if (backingFieldVar != null)
                     return;
 
-                backingFieldVar = TempLocalVar("bf");
+                backingFieldVar = Context.Naming.FieldDeclaration(node, "bf");
                 var backingFieldName = $"<{propName}>k__BackingField";
                 var modifiers = ModifiersToCecil("FieldAttributes", accessor.Modifiers, "Private");
                 if (hasInitProperty)
@@ -155,6 +157,7 @@ namespace Cecilifier.Core.AST
                 
                 var backingFieldExps = new[]
                 {
+                    //TODO: NOW: CecilDefinitionsFactory.Field()
                     $"var {backingFieldVar} = new FieldDefinition(\"{backingFieldName}\", {modifiers}, {propertyType});",
                     $"{propertyDeclaringTypeVar}.Fields.Add({backingFieldVar});"
                 };
@@ -162,14 +165,16 @@ namespace Cecilifier.Core.AST
                 AddCecilExpressions(backingFieldExps);
             }
 
-            void AddSetterMethod(string accessorModifiers, string setterReturnType, AccessorDeclarationSyntax accessor)
+            void AddSetterMethod(string setterReturnType, AccessorDeclarationSyntax accessor)
             {
-                var setMethodVar = TempLocalVar(propertyDeclaringTypeVar + "_set_");
+                var setMethodVar = Context.Naming.SyntheticVariable("set", ElementKind.LocalVariable);
+                
                 var localParams = new List<string>(parameters.Select(p => p.Type));
                 localParams.Add(Context.GetTypeInfo(node.Type).Type.Name); // Setters always have at least one `value` parameter.
                 Context.DefinitionVariables.RegisterMethod(declaringType.Identifier.Text, $"set_{propName}", localParams.ToArray(), setMethodVar);
-                var ilSetVar = TempLocalVar("ilVar_set_");
+                var ilSetVar = Context.Naming.ILProcessor("set", declaringType.Identifier.Text);
 
+                //TODO : NEXT : try to use CecilDefinitionsFactory.Method()
                 AddCecilExpression($"var {setMethodVar} = new MethodDefinition(\"set_{propName}\", {accessorModifiers}, {setterReturnType});");
                 parameters.ForEach(p => AddCecilExpression($"{setMethodVar}.Parameters.Add({p.VariableName});"));
                 AddCecilExpression($"{propertyDeclaringTypeVar}.Methods.Add({setMethodVar});");
@@ -204,10 +209,10 @@ namespace Cecilifier.Core.AST
                 AddCilInstruction(ilSetVar, OpCodes.Ret);
             }
 
-            string AddGetterMethodGuts(string accessorModifiers)
+            string AddGetterMethodGuts(CSharpSyntaxNode accessor)
             {
                 Context.WriteComment(" Getter");
-                var getMethodVar = TempLocalVar(propertyDeclaringTypeVar + "_get_");
+                var getMethodVar = Context.Naming.SyntheticVariable("get", ElementKind.Method);
                 Context.DefinitionVariables.RegisterMethod(declaringType.Identifier.Text, $"get_{propName}", parameters.Select(p => p.Type).ToArray(), getMethodVar);
 
                 AddCecilExpression($"var {getMethodVar} = new MethodDefinition(\"get_{propName}\", {accessorModifiers}, {propertyType});");
@@ -220,20 +225,20 @@ namespace Cecilifier.Core.AST
                 if (propInfo.ContainingType.TypeKind == TypeKind.Interface)
                     return null;
 
-                var ilVar = TempLocalVar("ilVar_get_");
+                var ilVar = Context.Naming.ILProcessor("get", declaringType.Identifier.Text);
                 AddCecilExpression($"var {ilVar} = {getMethodVar}.Body.GetILProcessor();");
                 return ilVar;
             }
             
-            void AddExpressionBodiedGetterMethod(string accessorModifiers, ArrowExpressionClauseSyntax arrowExpression)
+            void AddExpressionBodiedGetterMethod()
             {
-                var ilVar = AddGetterMethodGuts(accessorModifiers);
+                var ilVar = AddGetterMethodGuts(arrowExpression);
                 ProcessExpressionBodiedGetter(ilVar, arrowExpression);
             }
             
-            void AddGetterMethod(string accessorModifiers, AccessorDeclarationSyntax accessor)
+            void AddGetterMethod(AccessorDeclarationSyntax accessor)
             {
-                var ilVar = AddGetterMethodGuts(accessorModifiers);
+                var ilVar = AddGetterMethodGuts(accessor);
                 if (ilVar == null)
                     return;
                 
@@ -264,9 +269,9 @@ namespace Cecilifier.Core.AST
             }
         }
 
-        private string AddPropertyDefinition(string propName, string propertyType)
+        private string AddPropertyDefinition(BasePropertyDeclarationSyntax propertyDeclarationSyntax, string propName, string propertyType)
         {
-            var propDefVar = TempLocalVar($"{propName}DefVar");
+            var propDefVar = Context.Naming.PropertyDeclaration(propertyDeclarationSyntax);
             var propDefExp = $"var {propDefVar} = new PropertyDefinition(\"{propName}\", PropertyAttributes.None, {propertyType});";
             AddCecilExpression(propDefExp);
 
