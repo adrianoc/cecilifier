@@ -136,7 +136,9 @@ var e_AnEnum_28 = new TypeDefinition("", "AnEnum", TypeAttributes.Private | Type
 
 var itf_Interface_27 = new TypeDefinition("", "Interface", TypeAttributes.Interface | TypeAttributes.Abstract | TypeAttributes.NotPublic);
 
-var del_ADelegate_30 = new TypeDefinition("", "ADelegate", TypeAttributes.Sealed | TypeAttributes.Private, assembly.MainModule.ImportReference(typeof(System.MulticastDelegate))) { IsAnsiClass = true };`;
+var del_ADelegate_30 = new TypeDefinition("", "ADelegate", TypeAttributes.Sealed | TypeAttributes.Private, assembly.MainModule.ImportReference(typeof(System.MulticastDelegate))) { IsAnsiClass = true };
+
+var lv_i_4 = new VariableDefinition(assembly.MainModule.TypeSystem.Int32);`;
     
     let formattingSettingsSample = monaco.editor.create(document.getElementById('_formattingSettingsSample'), {
         theme: "vs-dark",
@@ -287,7 +289,8 @@ function initializeSettings(formattingSettingsSample) {
         new Setting(ElementKind.Struct, {line: startLine + 24, ch: 5}, "Struct", "struct prefix","AStruct", "st"),
         new Setting(ElementKind.Enum, {line: startLine + 26, ch: 5}, "Enum", "enum prefix","AnEnum", "e"),
         new Setting(ElementKind.Interface, {line: startLine + 28, ch: 5}, "Interface", "interface prefix","Interface", "itf"),
-        new Setting(ElementKind.Delegate, {line: startLine + 30, ch: 5}, "Delegate", "delegate prefix","ADelegate", "del")
+        new Setting(ElementKind.Delegate, {line: startLine + 30, ch: 5}, "Delegate", "delegate prefix","ADelegate", "del"),
+        new Setting(ElementKind.LocalVariable, {line: startLine + 32, ch: 5}, "Local Variable", "local variable prefix","i", "lv")
     ]);
 
     settings.validateOptionalFormat = () => {
