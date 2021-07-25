@@ -1,0 +1,5 @@
+﻿class C
+{
+    public static int staticField;
+    void Set() => C.staticField = 42;
+}

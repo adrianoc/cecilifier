@@ -88,7 +88,9 @@ namespace Cecilifier.Core.AST
             var member = Context.SemanticModel.GetSymbolInfo(node);
             Utils.EnsureNotNull(member.Symbol == null, $"Failed to resolve symbol for node: {node.SourceDetails()}.");
 
-            if (member.Symbol.ContainingType.IsValueType && node.Parent is ObjectCreationExpressionSyntax objectCreation && objectCreation.ArgumentList?.Arguments.Count == 0)
+            if (member.Symbol.Kind != SymbolKind.NamedType 
+                && member.Symbol.ContainingType.IsValueType 
+                && node.Parent is ObjectCreationExpressionSyntax { ArgumentList: { Arguments: { Count: 0 } } })
             {
                 return;
             }

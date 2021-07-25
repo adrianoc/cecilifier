@@ -6,6 +6,12 @@ namespace Cecilifier.Core.Tests.Integration
     public class FieldsTestCase : IntegrationResourceBasedTest
     {
         [Test]
+        public void TestStatic()
+        {
+            AssertResourceTest(@"Members/Fields/StaticField");
+        }
+        
+        [Test]
         public void TestAssignment()
         {
             AssertResourceTest(@"Members/Fields/Assignment");
