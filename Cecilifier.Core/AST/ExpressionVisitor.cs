@@ -744,11 +744,6 @@ namespace Cecilifier.Core.AST
 
         private void ProcessField(SimpleNameSyntax node, IFieldSymbol fieldSymbol)
         {
-            if (fieldSymbol.IsStatic && fieldSymbol.IsDefinedInCurrentType(Context))
-            {
-                throw new Exception("Static field handling not implemented yet");
-            }
-
             AddCilInstruction(ilVar, OpCodes.Ldarg_0);
             
             var fieldDeclarationVariable = EnsureFieldExists(node, fieldSymbol);

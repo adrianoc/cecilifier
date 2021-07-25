@@ -8,7 +8,5 @@ internal class InternalClass
 	private int privateField;
 	protected internal int protectedInternalField;
 
-	private static void PrivateStaticMethod()
-	{
-	}
+	private static void PrivateStaticMethod() {}
 }

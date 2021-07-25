@@ -1,5 +1,5 @@
 ﻿class C
 {
-    public static int staticField;
-    void Set() => C.staticField = 42;
+    static int privateStaticField;
+    void Set() => C.privateStaticField = 42;
 }
