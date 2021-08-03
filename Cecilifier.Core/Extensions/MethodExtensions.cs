@@ -66,7 +66,7 @@ namespace Cecilifier.Core.Extensions
                 method.Parameters.Select(p => p.Type.Name).ToArray());
         }
 
-        public static string MethodModifiersToCecil(this SyntaxTokenList modifiers, Func<string, IList<SyntaxToken>, string, string> modifiersToCecil, string specificModifiers = null, IMethodSymbol methodSymbol = null)
+        public static string MethodModifiersToCecil(this SyntaxTokenList modifiers, Func<string, IReadOnlyList<SyntaxToken>, string, string> modifiersToCecil, string specificModifiers = null, IMethodSymbol methodSymbol = null)
         {
             var modifiersStr = MapExplicitModifiers(modifiers);
 

@@ -85,7 +85,7 @@ namespace Cecilifier.Core.AST
             Context.WriteNewLine();
             Context.WriteComment($"Delegate: {node.Identifier.Text}");
             var typeVar = Context.Naming.Delegate(node);
-            var accessibility = ModifiersToCecil("TypeAttributes", node.Modifiers, "Private");
+            var accessibility = ModifiersToCecil(node.Modifiers, "TypeAttributes", "Private");
             var typeDef = CecilDefinitionsFactory.Type(
                 Context, 
                 typeVar, 

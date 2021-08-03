@@ -109,7 +109,7 @@ namespace Cecilifier.Core.AST
         private void ProcessPropertyAccessors(BasePropertyDeclarationSyntax node, string propertyDeclaringTypeVar, string propName, string propertyType, string propDefVar, List<ParamData> parameters, ArrowExpressionClauseSyntax? arrowExpression)
         {
             var propInfo = (IPropertySymbol) Context.SemanticModel.GetDeclaredSymbol(node);
-            var accessorModifiers = node.Modifiers.MethodModifiersToCecil(ModifiersToCecil, "MethodAttributes.SpecialName", propInfo.GetMethod ?? propInfo.SetMethod);
+            var accessorModifiers = node.Modifiers.MethodModifiersToCecil((targetEnum, modifiers, defaultAccessibility) => ModifiersToCecil(modifiers, targetEnum, defaultAccessibility), "MethodAttributes.SpecialName", propInfo.GetMethod ?? propInfo.SetMethod);
 
             var declaringType = node.ResolveDeclaringType<TypeDeclarationSyntax>();
             if (arrowExpression != null)
@@ -149,7 +149,7 @@ namespace Cecilifier.Core.AST
 
                 backingFieldVar = Context.Naming.FieldDeclaration(node, "bf");
                 var backingFieldName = $"<{propName}>k__BackingField";
-                var modifiers = ModifiersToCecil("FieldAttributes", accessor.Modifiers, "Private");
+                var modifiers = ModifiersToCecil(accessor.Modifiers, "FieldAttributes", "Private");
                 if (hasInitProperty)
                 {
                     modifiers = modifiers + " | FieldAttributes.InitOnly";

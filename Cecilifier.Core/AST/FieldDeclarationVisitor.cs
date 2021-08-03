@@ -29,13 +29,13 @@ namespace Cecilifier.Core.AST
         }
 
         internal static IEnumerable<string> HandleFieldDeclaration(IVisitorContext context, MemberDeclarationSyntax node, VariableDeclarationSyntax variableDeclarationSyntax,
-            SyntaxTokenList modifiers, BaseTypeDeclarationSyntax declaringType)
+            IReadOnlyList<SyntaxToken> modifiers, BaseTypeDeclarationSyntax declaringType)
         {
             var visitor = new FieldDeclarationVisitor(context);
             return visitor.HandleFieldDeclaration(node, variableDeclarationSyntax, modifiers, declaringType);
         }
 
-        private IEnumerable<string> HandleFieldDeclaration(MemberDeclarationSyntax node, VariableDeclarationSyntax variableDeclarationSyntax, SyntaxTokenList modifiers, BaseTypeDeclarationSyntax declaringType)
+        private IEnumerable<string> HandleFieldDeclaration(MemberDeclarationSyntax node, VariableDeclarationSyntax variableDeclarationSyntax, IReadOnlyList<SyntaxToken> modifiers, BaseTypeDeclarationSyntax declaringType)
         {
             var declaringTypeVar = Context.DefinitionVariables.GetLastOf(MemberKind.Type).VariableName;
 
@@ -43,7 +43,7 @@ namespace Cecilifier.Core.AST
             
             var type = ResolveType(variableDeclarationSyntax.Type);
             var fieldType = ProcessRequiredModifiers(node, modifiers, type) ?? type;
-            var fieldAttributes = MapAttributes(modifiers);
+            var fieldAttributes = ModifiersToCecil(modifiers, "FieldAttributes", "Private");
 
             foreach (var field in variableDeclarationSyntax.Variables)
             {
@@ -66,7 +66,7 @@ namespace Cecilifier.Core.AST
             return fieldDefVars;
         }
 
-        private string ProcessRequiredModifiers(MemberDeclarationSyntax member, SyntaxTokenList modifiers, string originalType)
+        private string ProcessRequiredModifiers(MemberDeclarationSyntax member, IReadOnlyList<SyntaxToken> modifiers, string originalType)
         {
             if (modifiers.All(m => m.Kind() != SyntaxKind.VolatileKeyword))
                 return null;
@@ -76,33 +76,6 @@ namespace Cecilifier.Core.AST
             AddCecilExpression(mod_req);
             
             return id;
-        }
-
-        private string MapAttributes(IEnumerable<SyntaxToken> modifiers)
-        {
-            var noInternalOrProtected = modifiers.Where(t => t.Kind() != SyntaxKind.InternalKeyword && t.Kind() != SyntaxKind.ProtectedKeyword);
-            var str = noInternalOrProtected.Where(ExcludeHasNoCILRepresentation).Aggregate("", (acc, curr) => (acc.Length > 0 ? acc + " | " : "") + curr.MapModifier("FieldAttributes"));
-
-            if (!modifiers.Any())
-            {
-                return "FieldAttributes.Private";
-            }
-
-            Func<SyntaxToken, bool> predicate = t => t.Kind() == SyntaxKind.InternalKeyword || t.Kind() == SyntaxKind.ProtectedKeyword;
-            return modifiers.Count(predicate) == 2
-                ? "FieldAttributes.FamORAssem" + str
-                : modifiers.Where(predicate).Select(MapAttribute).Aggregate("", (acc, curr) => "FieldAttributes." + curr) + str;
-        }
-
-        private static FieldAttributes MapAttribute(SyntaxToken token)
-        {
-            switch (token.Kind())
-            {
-                case SyntaxKind.InternalKeyword: return FieldAttributes.Assembly;
-                case SyntaxKind.ProtectedKeyword: return FieldAttributes.Family;
-            }
-
-            throw new ArgumentException();
         }
     }
 }
