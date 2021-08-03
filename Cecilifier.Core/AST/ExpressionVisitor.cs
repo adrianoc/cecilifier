@@ -744,10 +744,11 @@ namespace Cecilifier.Core.AST
 
         private void ProcessField(SimpleNameSyntax node, IFieldSymbol fieldSymbol)
         {
-            AddCilInstruction(ilVar, OpCodes.Ldarg_0);
-            
             var fieldDeclarationVariable = EnsureFieldExists(node, fieldSymbol);
-
+            
+            if (!fieldSymbol.IsStatic)
+                AddCilInstruction(ilVar, OpCodes.Ldarg_0);
+            
             if (HandleLoadAddress(ilVar, fieldSymbol.Type, (CSharpSyntaxNode) node.Parent, OpCodes.Ldflda, fieldSymbol.Name, MemberKind.Field, fieldSymbol.ContainingType.Name))
             {
                 return;
@@ -756,9 +757,11 @@ namespace Cecilifier.Core.AST
             if (fieldSymbol.IsVolatile)
                 AddCilInstruction(ilVar, OpCodes.Volatile);
 
-            AddCilInstruction(ilVar, OpCodes.Ldfld, fieldDeclarationVariable.VariableName);
+            AddCilInstruction(ilVar, LoadOpCodeForFieldAccess(fieldSymbol), fieldDeclarationVariable.VariableName);
             HandlePotentialDelegateInvocationOn(node, fieldSymbol.Type, ilVar);
         }
+
+        private OpCode LoadOpCodeForFieldAccess(IFieldSymbol fieldSymbol) => fieldSymbol.IsStatic ? OpCodes.Ldsfld : OpCodes.Ldfld;
 
         private DefinitionVariable EnsureFieldExists(SimpleNameSyntax node, [NotNull] IFieldSymbol fieldSymbol)
         {

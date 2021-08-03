@@ -336,7 +336,7 @@ namespace Cecilifier.Core.Misc
                 SyntaxKind.ClassDeclaration => basicClassAttrs,
                 SyntaxKind.InterfaceDeclaration => "TypeAttributes.Interface | TypeAttributes.Abstract",
                 SyntaxKind.DelegateDeclaration => "TypeAttributes.Sealed",
-                SyntaxKind.EnumDeclaration => throw new NotImplementedException(),
+                SyntaxKind.EnumDeclaration => string.Empty,
                 _ => throw new Exception("Not supported type declaration: " + syntaxKind)
             };
         }

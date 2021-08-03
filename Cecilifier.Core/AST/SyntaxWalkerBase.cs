@@ -526,7 +526,10 @@ namespace Cecilifier.Core.AST
     {
         public override UsageKind VisitMemberAccessExpression(MemberAccessExpressionSyntax node)
         {
-            return UsageKind.CallTarget;
+            if (node?.Parent.IsKind(SyntaxKind.InvocationExpression) == true)
+                return UsageKind.CallTarget;
+
+            return UsageKind.None;
         }
     }
 
