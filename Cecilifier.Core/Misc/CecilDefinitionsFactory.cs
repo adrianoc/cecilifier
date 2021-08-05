@@ -52,9 +52,19 @@ namespace Cecilifier.Core.Misc
             return exp + ";";
         }
 
-        public static IEnumerable<string> Type(IVisitorContext context, string typeVar, string typeName, string attrs, string baseTypeName, bool isStructWithNoFields, IEnumerable<string> interfaces, TypeParameterListSyntax typeParameters = null, params string[] properties)
+        /*
+         * Crates the snippet for a TypeDeclaration.
+         * 
+         * Note that:
+         * 1. At IL level, type parameters from *outer* types are considered to be part of a inner type whence these type parameters need to be added to the list of type parameters even
+         *    if the type being declared is not a generic type.
+         * 
+         * 2. Only the own type parameters of the type being declared are considered when computing the arity of the type (whence the number following the backtick reflects only the
+         *    # of the type parameters declared by the type being declared). 
+         */
+        public static IEnumerable<string> Type(IVisitorContext context, string typeVar, string typeName, string attrs, string baseTypeName, bool isStructWithNoFields, IEnumerable<string> interfaces, IEnumerable<TypeParameterSyntax> ownTypeParameters, IEnumerable<TypeParameterSyntax> outerTypeParameters, params string[] properties)
         {
-            var typeParamList = typeParameters?.Parameters.ToArray() ?? Array.Empty<TypeParameterSyntax>();
+            var typeParamList = ownTypeParameters?.ToArray() ?? Array.Empty<TypeParameterSyntax>();
             if (typeParamList.Length > 0)
             {
                 typeName = typeName + "`" + typeParamList.Length;
@@ -78,23 +88,35 @@ namespace Cecilifier.Core.Misc
 
             var currentType = context.DefinitionVariables.GetLastOf(MemberKind.Type);
             if (currentType.IsValid)
-            {
-                // type is a inner type of *context.CurrentType* 
-                exps.Add($"{currentType.VariableName}.NestedTypes.Add({typeVar});");
-            }
+                exps.Add($"{currentType.VariableName}.NestedTypes.Add({typeVar});"); // type is a inner type of *context.CurrentType* 
             else
-            {
                 exps.Add($"assembly.MainModule.Types.Add({typeVar});");
-            }
 
             if (isStructWithNoFields)
             {
                 exps.Add($"{typeVar}.ClassSize = 1;");
                 exps.Add($"{typeVar}.PackingSize = 0;");
             }
-
-            ProcessGenericTypeParameters(typeVar, context, typeParamList, exps);
+            
+            // add type parameters from outer types. 
+            var outerTypeParametersArray =  outerTypeParameters?.ToArray() ?? Array.Empty<TypeParameterSyntax>(); 
+            ProcessGenericTypeParameters(typeVar, context, outerTypeParametersArray.Concat(typeParamList).ToArray(), exps);
             return exps;
+        }
+        
+        public static IEnumerable<string> Type(IVisitorContext context, string typeVar, string typeName, string attrs, string baseTypeName, bool isStructWithNoFields, IEnumerable<string> interfaces, TypeParameterListSyntax typeParameters = null, params string[] properties)
+        {
+            return Type(
+                context,
+                typeVar,
+                typeName,
+                attrs,
+                baseTypeName,
+                isStructWithNoFields,
+                interfaces,
+                typeParameters?.Parameters,
+                Array.Empty<TypeParameterSyntax>(),
+                properties);
         }
 
         private static string GenericParameter(IVisitorContext context, string typeVar, string genericParamName, string genParamDefVar, ITypeParameterSymbol typeParameterSymbol)

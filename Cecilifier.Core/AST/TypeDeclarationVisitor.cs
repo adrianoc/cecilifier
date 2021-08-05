@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -116,7 +117,7 @@ namespace Cecilifier.Core.AST
         {
             Context.WriteNewLine();
             Context.WriteComment($"{node.Kind()} : {node.Identifier}");
-            
+
             var varName = Context.Naming.Type(node);
             var isStructWithNoFields = node.Kind() == SyntaxKind.StructDeclaration && node.Members.Count == 0;
             var typeDefinitionExp = CecilDefinitionsFactory.Type(
@@ -127,7 +128,8 @@ namespace Cecilifier.Core.AST
                                             baseType, 
                                             isStructWithNoFields, 
                                             ImplementedInterfacesFor(node.BaseList).Select(i => Context.TypeResolver.Resolve(i)),
-                                            node.TypeParameterList);
+                                            node.TypeParameterList?.Parameters,
+                                            node.CollectOuterTypeArguments());
             
             AddCecilExpressions(typeDefinitionExp);
 

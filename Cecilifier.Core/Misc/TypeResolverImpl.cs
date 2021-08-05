@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.AST;
 using Microsoft.CodeAnalysis;
@@ -77,10 +78,21 @@ namespace Cecilifier.Core.Misc
             return found;
         }
 
+        private IList<string> CollectTypeArguments(INamedTypeSymbol typeArgumentProvider, List<string> collectTo)
+        {
+            if (typeArgumentProvider.ContainingType != null)
+            {
+                CollectTypeArguments(typeArgumentProvider.ContainingType, collectTo);
+            }
+            collectTo.AddRange(typeArgumentProvider.TypeArguments.Select(Resolve));
+
+            return collectTo;
+        }
+        
         private string MakeGenericInstanceType(string found, INamedTypeSymbol genericTypeSymbol)
         {
-            var args = string.Join(",", genericTypeSymbol.TypeArguments.Select(Resolve));
-            return $"{found}.MakeGenericInstanceType({args})";
+            var typeArgs = CollectTypeArguments(genericTypeSymbol, new List<string>());
+            return $"{found}.MakeGenericInstanceType({string.Join(",", typeArgs)})";
         }
 
         private string OpenGenericTypeName(ITypeSymbol type)

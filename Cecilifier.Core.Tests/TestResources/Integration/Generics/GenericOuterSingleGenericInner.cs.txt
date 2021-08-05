@@ -1,0 +1,28 @@
+class Outer<O>
+{
+	public class Inner<S> {}
+}
+
+class Test<T>
+{
+    Outer<int>.Inner<string> fInt_String;
+    Outer<int>.Inner<T> fInt_T;
+    Outer<T>.Inner<string> fT_String;
+    Outer<T>.Inner<T> fT_T;
+    
+    Outer<int>.Inner<string> Prop_Int_String { get; set; }
+    Outer<int>.Inner<T> Prop_Int_T { get; set; }
+    Outer<T>.Inner<string> Prop_T_String { get; set; }
+    Outer<T>.Inner<T> Prop_T_T { get; set; }
+    
+    Outer<int>.Inner<string> Method_Int_String(Outer<int>.Inner<string> p) => p;
+    Outer<int>.Inner<T> Method_Int_T(Outer<int>.Inner<T> p) => p;
+    Outer<T>.Inner<string> Method_T_String(Outer<T>.Inner<string> p) => p;
+    Outer<T>.Inner<T> Method_T_T(Outer<T>.Inner<T> p) => p;
+    
+    /*
+     * Cast/typeof is not supported yet.
+     * object TypeOf(object o) => (Outer<T>.Inner<T>) o;
+     * object Cast() => typeof(Outer<T>.Inner<T>);
+     */
+}

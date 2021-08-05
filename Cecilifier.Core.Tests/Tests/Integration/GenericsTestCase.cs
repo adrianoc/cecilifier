@@ -4,6 +4,14 @@ namespace Cecilifier.Core.Tests.Integration
 {
     public class GenericsTestCase : IntegrationResourceBasedTest
     {
+        [TestCase("GenericOuterNonGenericInner")]
+        [TestCase("GenericOuterSingleGenericInner")]
+        [TestCase("GenericOuterDeepGenericInner")]
+        public void TestGenericOuterAndInnerPermutations(string testName)
+        {
+            AssertResourceTest($"Generics/{testName}");
+        }
+        
         [Test]
         public void TestInstanceNonGenericMethodsOnGenericTypes()
         {

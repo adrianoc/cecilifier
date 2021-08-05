@@ -1,7 +1,9 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Cecilifier.Core.Extensions
 {
@@ -54,5 +56,22 @@ namespace Cecilifier.Core.Extensions
         }
         
         public static string SourceDetails(this SyntaxNode node) => $"{node} ({node.SyntaxTree.GetMappedLineSpan(node.Span).Span})";
+        
+        public static IList<TypeParameterSyntax> CollectOuterTypeArguments(this TypeDeclarationSyntax typeArgumentProvider)
+        {
+            var typeArgs = new List<TypeParameterSyntax>();
+            CollectOuterTypeArguments(typeArgumentProvider, typeArgs);
+            return typeArgs;
+        }
+
+        private static void CollectOuterTypeArguments(TypeDeclarationSyntax typeArgumentProvider, List<TypeParameterSyntax> collectTo)
+        {
+            if (typeArgumentProvider?.Parent is TypeDeclarationSyntax outer)
+            {
+                if (outer.TypeParameterList != null)
+                    collectTo.AddRange(outer.TypeParameterList.Parameters);
+                CollectOuterTypeArguments(outer, collectTo);
+            }
+        }
     }
 }
