@@ -14,5 +14,11 @@ namespace Cecilifier.Core.Tests.Integration
         {
             AssertResourceTest($@"ValueTypes/AsTargetOfCall/{testResourceBaseName}");
         }
+
+        [Test]
+        public void TestValueTypeInstantiation()
+        {
+            AssertResourceTest("ValueTypes/ValueTypeInstantiation");
+        }
     }
 }

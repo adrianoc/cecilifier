@@ -147,7 +147,7 @@ namespace Cecilifier.Core.AST
 
         public override void VisitReturnStatement(ReturnStatementSyntax node)
         {
-            ExpressionVisitor.Visit(Context, _ilVar, node.Expression);
+            ExpressionVisitor.Visit(Context, _ilVar, node);
             AddCilInstruction(_ilVar, OpCodes.Ret);
         }
 
