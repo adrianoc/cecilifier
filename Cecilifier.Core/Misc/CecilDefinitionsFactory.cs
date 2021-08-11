@@ -53,7 +53,7 @@ namespace Cecilifier.Core.Misc
         }
 
         /*
-         * Crates the snippet for a TypeDeclaration.
+         * Creates the snippet for a TypeDefinition.
          * 
          * Note that:
          * 1. At IL level, type parameters from *outer* types are considered to be part of a inner type whence these type parameters need to be added to the list of type parameters even
