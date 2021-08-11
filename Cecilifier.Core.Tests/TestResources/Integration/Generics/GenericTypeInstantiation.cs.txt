@@ -1,0 +1,19 @@
+class GenericClass<T>
+{
+    public GenericClass(T t) {}
+    public GenericClass() {}
+}
+
+public struct GenericStruct<T> 
+{
+    public GenericStruct(T t) {}
+}
+
+class GenericTypeInstantiation
+{
+    object ParameterlessClassCtor() => new GenericClass<int>();
+    object ClassCtorWithParameters() => new GenericClass<int>(42);
+    
+    object StructCtorWithParameters() => new GenericStruct<int>(42);
+    //object ParameterlessStructCtor() => new GenericStruct<int>();
+}

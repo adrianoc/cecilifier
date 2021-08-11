@@ -35,9 +35,24 @@ namespace Cecilifier.Core.Extensions
             if (method.IsDefinedInCurrentType(ctx))
             {
                 var tbf = (method.OverriddenMethod ?? method).AsMethodDefinitionVariable();
-                return ctx.DefinitionVariables.GetMethodVariable(tbf).VariableName;
+                var found = ctx.DefinitionVariables.GetMethodVariable(tbf);
+                if (!found.IsValid)
+                    throw new ArgumentException($"Could not find variable declaration for method {method.Name}.");
+                
+                if (!method.ContainingType.IsGenericType)
+                    return found.VariableName;
+                
+                var declaringTypeResolveExp = ctx.TypeResolver.Resolve(method.ContainingType);
+                var exps = found.VariableName.CloneMethodReferenceOverriding(ctx, new() { ["DeclaringType"] =  declaringTypeResolveExp }, method.Parameters.Length > 0, out var variable);
+                foreach (var expression in exps)
+                {
+                    ctx.WriteCecilExpression(expression);
+                    ctx.WriteNewLine();
+                }
+                
+                return variable;
             }
-
+            
             var declaringTypeName = method.ContainingType.ReflectionTypeName(out var typeParameters);
             if (method.IsGenericMethod)
             {
@@ -61,9 +76,9 @@ namespace Cecilifier.Core.Extensions
         public static MethodDefinitionVariable AsMethodDefinitionVariable(this IMethodSymbol method)
         {
             return new MethodDefinitionVariable(
-                method.ContainingType.Name,
-                method.Name,
-                method.Parameters.Select(p => p.Type.Name).ToArray());
+                method.OriginalDefinition.ContainingType.Name,
+                method.OriginalDefinition.Name,
+                method.OriginalDefinition.Parameters.Select(p => p.Type.Name).ToArray());
         }
 
         public static string MethodModifiersToCecil(this SyntaxTokenList modifiers, Func<string, IReadOnlyList<SyntaxToken>, string, string> modifiersToCecil, string specificModifiers = null, IMethodSymbol methodSymbol = null)

@@ -8,10 +8,9 @@ class Test<T>
     Outer<int>.Inner fInt;
     Outer<T>.Inner fT;
 
-    //void M1(Outer<T>.Inner p1) {}    
-    //void M2(Outer<int>.Inner p2) {}
-    
-    // Not sure about these ones
-    //void M3() => M2(new Outer<int>.Inner());    
-    //void M4() => M1(new Outer<T>.Inner());
+    void M1(Outer<T>.Inner p1) {}    
+    void M2(Outer<int>.Inner p2) {}
+
+    void Instantiate_Int() => M2(new Outer<int>.Inner());    
+    void Instantiate_T() => M1(new Outer<T>.Inner());
 }

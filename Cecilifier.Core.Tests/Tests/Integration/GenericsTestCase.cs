@@ -41,6 +41,13 @@ namespace Cecilifier.Core.Tests.Integration
         {
             AssertResourceTest(@"Generics/SimplestGenericTypeDefinition");
         }
+        
+        [TestCase("ExternalGenericTypeInstantiation")]
+        [TestCase("GenericTypeInstantiation")]
+        public void TestGenericTypeInstantiation(string testName)
+        {
+            AssertResourceTest($"Generics/{testName}");
+        }
 
         [Test]
         public void TestGenericTypeDefinitionWithMembers()
