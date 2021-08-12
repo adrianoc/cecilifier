@@ -2,11 +2,27 @@
 
 ## Changed
 
+- bump cecilifier version to 1.2.0
+- improved assembly comparison to check name of type parameters (testing)
+- improved access modifier handling
+- removed some code duplication
+
 ## Added
 
 - support for bitwise (|, &, ^) / logical operators (&&, ||)
+  
+## Fixed
+
+- fixed gist not working due to use of async
+- fixed multiple issues with generic/inner type instantiation (issues #84 and #85)
+- fixed missing box instruction on some ValueType instantiation  (#86)
+- improved handling of inner types of generic outer types (issue #76)
+- fixed code to emmit ldsfld opcode when accessing static fields (issue #83)
+- fixed implicit private static field declaration
+- fixed crash upon static field assignment (issue #82)
 
 ## 04/July/2021
+
 ## Changed
 
 - bump cecilifier version to 1.13.0
