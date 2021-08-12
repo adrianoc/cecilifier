@@ -6,6 +6,8 @@
 - improved assembly comparison to check name of type parameters (testing)
 - improved access modifier handling
 - removed some code duplication
+- updated Microsoft.CodeAnalysis.CSharp from version 3.10.0-3.final to 4.0.0-2.final
+- updated Mono.Cecil from version 0.11.3 to 0.11.4
 
 ## Added
 

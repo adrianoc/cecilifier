@@ -8,11 +8,11 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="3.10.0-3.final" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.10.0" />
-    <PackageReference Include="Mono.Cecil" Version="0.11.3" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.0.0-2.final" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.11.0-release-20210626-04" />
+    <PackageReference Include="Mono.Cecil" Version="0.11.4" />
     <PackageReference Include="NUnit" Version="3.13.2" />
-    <PackageReference Include="NUnit3TestAdapter" Version="4.0.0-beta.2" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.0.0" />
     <PackageReference Include="ReportGenerator" Version="4.8.9" />
   </ItemGroup>
   <ItemGroup>
