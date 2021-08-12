@@ -69,13 +69,6 @@ function initializeSite(errorAccessingGist, gist, version) {
             csharpCode.updateOptions({ fontSize: newFontSize });
         });
 
-        // Handle gist
-        if (errorAccessingGist.length === 0) {            
-            setValueFromGist(gist);
-        } else {
-            setError(errorAccessingGist);
-        }
-
         window.onresize = function(ev) {
             updateEditorsSize();
         }
@@ -84,6 +77,8 @@ function initializeSite(errorAccessingGist, gist, version) {
 
         initializeFormattingSettings();
         setSendToDiscordTooltip();
+        
+        handleGist(gist, errorAccessingGist);
     });
     
     setTooltips(version);
@@ -497,7 +492,7 @@ function base64ToArrayBuffer(base64) {
     const binary_string = window.atob(base64);
     const len = binary_string.length;
     const bytes = new Uint8Array(len);
-    for (let i = 0; i < len; i++)        {
+    for (let i = 0; i < len; i++) {
         bytes[i] = binary_string.charCodeAt(i);
     }
     return bytes.buffer;
@@ -525,6 +520,14 @@ function cecilifyFromGist(counter) {
     }
     else {
         simulateClick("sendbutton");
+    }
+}
+
+function handleGist(gist, errorAccessingGist) {
+    if (errorAccessingGist.length === 0) {
+        setValueFromGist(gist);
+    } else {
+        setError(errorAccessingGist);
     }
 }
 

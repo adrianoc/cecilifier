@@ -2,6 +2,7 @@
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Newtonsoft.Json.Linq;
 
@@ -10,11 +11,10 @@ namespace Cecilifier.Web.Pages
     public class CecilifierApplication : PageModel
     {
         public static int Count;
-        
-        public string FromGist { get; set; } = string.Empty;
+        public string FromGist { get; private set; } = string.Empty;
         public string ErrorAccessingGist { get; private set; } = string.Empty;
-        
-        public async void OnGet()
+       
+        public async Task<IActionResult> OnGet()
         {
             ErrorAccessingGist = null;
             if (Request.Query.TryGetValue("gistid", out var gistid))
@@ -22,21 +22,22 @@ namespace Cecilifier.Web.Pages
                 Count++;
                 var gistHttp = new HttpClient();
                 gistHttp.DefaultRequestHeaders.Add("User-Agent", "Cecilifier");
-                var task = gistHttp.GetAsync($"https://api.github.com/gists/{gistid}");
-                await task;
-                
-                if (task.Result.StatusCode == HttpStatusCode.OK)
+                var result = await gistHttp.GetAsync($"https://api.github.com/gists/{gistid}");
+
+                if (result.StatusCode == HttpStatusCode.OK)
                 {
-                    var root = JObject.Parse(await task.Result.Content.ReadAsStringAsync());
+                    var root = JObject.Parse(await result.Content.ReadAsStringAsync());
                     var source = root["files"].First().Children()["content"].FirstOrDefault().ToString();
 
                     FromGist = Encode(source);
                 }
                 else
                 {
-                    ErrorAccessingGist = Encode($"Error accessing GistId = {gistid}: {task.Result.StatusCode}\\n{task.Result.RequestMessage}");
+                    ErrorAccessingGist = Encode($"Error accessing GistId = {gistid}: {result.StatusCode}\\n{result.RequestMessage}");
                 }
             }
+
+            return Page();
 
             string Encode(string msg)
             {                
