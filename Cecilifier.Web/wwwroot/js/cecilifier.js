@@ -534,12 +534,12 @@ function handleGist(gist, errorAccessingGist) {
     }
 }
 
-function setValueFromGist(snipet) {
-    if (snipet === null || snipet.length === 0)
+function setValueFromGist(snippet) {
+    if (snippet === null || snippet.length === 0)
         return;
 
     csharpCode.setValue(
-            snipet
+            snippet
             .replace(/&quot;/g, '"')
             .replace(/&gt;/g, '>')
             .replace(/&lt;/g, '<')
