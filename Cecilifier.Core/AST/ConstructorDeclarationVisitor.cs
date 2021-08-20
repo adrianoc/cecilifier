@@ -32,7 +32,7 @@ namespace Cecilifier.Core.AST
         private void HandleStaticConstructor(ConstructorDeclarationSyntax node)
         {
             var returnType = GetSpecialType(SpecialType.System_Void);
-            var variableName = Context.Naming.Constructor(node.ResolveDeclaringType<BaseTypeDeclarationSyntax>());
+            var variableName = Context.Naming.Constructor(node.ResolveDeclaringType<BaseTypeDeclarationSyntax>(), true);
             ProcessMethodDeclaration(node, variableName, "cctor", ".cctor", returnType, false, ctorVar => { node.Body.Accept(this); });
         }
 
@@ -43,7 +43,7 @@ namespace Cecilifier.Core.AST
             Action<ConstructorDeclarationSyntax> callBaseMethod = base.VisitConstructorDeclaration;
 
             var returnType = GetSpecialType(SpecialType.System_Void);
-            var ctorVariable = Context.Naming.Constructor(declaringType);
+            var ctorVariable = Context.Naming.Constructor(declaringType, false);
             ProcessMethodDeclaration(node, ctorVariable, "ctor", ".ctor", returnType, false, ctorVar =>
             {
                 if (node.Initializer == null || node.Initializer.IsKind(SyntaxKind.BaseConstructorInitializer)) 
@@ -106,7 +106,7 @@ namespace Cecilifier.Core.AST
                 return ctorLocalVar1;
             }
 
-            var ctorLocalVar = Context.Naming.Constructor(declaringClass);
+            var ctorLocalVar = Context.Naming.Constructor(declaringClass, false);
             var ctorMethodDefinitionExp = CecilDefinitionsFactory.Constructor(Context, ctorLocalVar, declaringClass.Identifier.ValueText, DefaultCtorAccessibilityFor(declaringClass), Array.Empty<string>());
             AddCecilExpression(ctorMethodDefinitionExp);
             return ctorLocalVar;
