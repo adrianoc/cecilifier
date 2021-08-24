@@ -142,10 +142,10 @@ namespace Cecilifier.Core.AST
             if (typeSymbol == null)
                 return Utils.ImportFromMainModule($"TypeHelpers.DefaultCtorFor({typeDefVar}.BaseType)");
             
-            var baseTypeVarDef = Context.TypeResolver.ResolveTypeLocalVariable(typeSymbol.BaseType);
+            var baseTypeVarDef = Context.TypeResolver.ResolveLocalVariableType(typeSymbol.BaseType);
             if (baseTypeVarDef != null)
             {
-                return $"new MethodReference(\".ctor\", {Context.TypeResolver.Resolve(GetSpecialType(SpecialType.System_Void))} ,{baseTypeVarDef}) {{ HasThis = true }}";
+                return $"new MethodReference(\".ctor\", {Context.TypeResolver.Bcl.System.Void} ,{baseTypeVarDef}) {{ HasThis = true }}";
             }
 
             return Utils.ImportFromMainModule($"TypeHelpers.DefaultCtorFor({typeDefVar}.BaseType)");

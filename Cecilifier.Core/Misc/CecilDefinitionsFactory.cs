@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
+using Cecilifier.Core.TypeSystem;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -31,7 +32,7 @@ namespace Cecilifier.Core.Misc
         {
             var exps = new List<string>();
             
-            exps.Add($"var {methodVar} = new MethodDefinition(\"{methodName}\", {methodModifiers}, {context.TypeResolver.Resolve(context.GetSpecialType(SpecialType.System_Void))});");
+            exps.Add($"var {methodVar} = new MethodDefinition(\"{methodName}\", {methodModifiers}, {context.TypeResolver.Bcl.System.Void});");
             ProcessGenericTypeParameters(methodVar, context, typeParameters, exps);
             var resolvedReturnType = context.TypeResolver.Resolve(returnType);
             exps.Add($"{methodVar}.ReturnType = {(refReturn ? resolvedReturnType.MakeByReferenceType() : resolvedReturnType)};");

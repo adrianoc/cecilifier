@@ -11,8 +11,9 @@
 
 ## Added
 
-- support for bitwise (|, &, ^) / logical operators (&&, ||)
-  
+- support for bitwise (|, &, ^) / logical operators (&&, ||)  
+- introduced ITypeResolver.Bcl property to represent the code to resolve common BCL types.
+
 ## Fixed
 
 - fixed gist not working due to use of async
@@ -22,6 +23,7 @@
 - fixed code to emmit ldsfld opcode when accessing static fields (issue #83)
 - fixed implicit private static field declaration
 - fixed crash upon static field assignment (issue #82)
+- fixed name formating not taking prefix/casing into account for some element kinds (#90)
 
 ## 04/July/2021
 

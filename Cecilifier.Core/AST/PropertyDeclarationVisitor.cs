@@ -99,7 +99,7 @@ namespace Cecilifier.Core.AST
             {
                 $"var {ctorVar} = {ImportFromMainModule("typeof(System.Reflection.DefaultMemberAttribute).GetConstructor(new Type[] { typeof(string) })")};",
                 $"var {customAttrVar} = new CustomAttribute({ctorVar});",
-                $"{customAttrVar}.ConstructorArguments.Add(new CustomAttributeArgument({Context.TypeResolver.Resolve(GetSpecialType(SpecialType.System_String))}, \"{value}\"));",
+                $"{customAttrVar}.ConstructorArguments.Add(new CustomAttributeArgument({Context.TypeResolver.Bcl.System.String}, \"{value}\"));",
                 $"{definitionVar}.CustomAttributes.Add({customAttrVar});"
             };
 
@@ -129,13 +129,13 @@ namespace Cecilifier.Core.AST
 
                     case SyntaxKind.InitKeyword:
                         Context.WriteComment(" Init");
-                        var setterReturnType = $"new RequiredModifierType({ImportExpressionForType(typeof(IsExternalInit))}, {Context.TypeResolver.Resolve(GetSpecialType(SpecialType.System_Void))})";
+                        var setterReturnType = $"new RequiredModifierType({ImportExpressionForType(typeof(IsExternalInit))}, {Context.TypeResolver.Bcl.System.Void})";
                         AddSetterMethod(setterReturnType, accessor);
                         break;
                     
                     case SyntaxKind.SetKeyword:
                         Context.WriteComment(" Setter");
-                        AddSetterMethod(Context.TypeResolver.Resolve(GetSpecialType(SpecialType.System_Void)), accessor);
+                        AddSetterMethod(Context.TypeResolver.Bcl.System.Void, accessor);
                         break; 
                     default:
                         throw new NotImplementedException($"Accessor: {accessor.Keyword}");

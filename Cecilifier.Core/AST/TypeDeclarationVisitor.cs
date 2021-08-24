@@ -110,7 +110,7 @@ namespace Cecilifier.Core.AST
 
         private string HandleTypeDeclaration(TypeDeclarationSyntax node)
         {
-            return HandleTypeDeclaration(node, Context.TypeResolver.ResolvePredefinedType(GetSpecialType(SpecialType.System_Object)));
+            return HandleTypeDeclaration(node, Context.TypeResolver.Bcl.System.Object);
         }
 
         private string HandleTypeDeclaration(TypeDeclarationSyntax node, string baseType)

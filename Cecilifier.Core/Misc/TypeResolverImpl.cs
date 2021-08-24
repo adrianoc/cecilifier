@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.AST;
+using Cecilifier.Core.TypeSystem;
 using Microsoft.CodeAnalysis;
 
 namespace Cecilifier.Core.Misc
@@ -12,11 +13,14 @@ namespace Cecilifier.Core.Misc
         public TypeResolverImpl(CecilifierContext context)
         {
             _context = context;
+            Bcl = new Bcl(this, _context);
         }
+
+        public Bcl Bcl { get; }
 
         public string Resolve(ITypeSymbol type)
         {
-            return ResolveTypeLocalVariable(type)
+            return ResolveLocalVariableType(type)
                    ?? ResolvePredefinedAndComposedTypes(type)
                    ?? ResolveGenericType(type)
                    ?? Resolve(type.Name);
@@ -67,7 +71,7 @@ namespace Cecilifier.Core.Misc
             return MakeGenericInstanceType(genericType, genericTypeSymbol);
         }
 
-        public string ResolveTypeLocalVariable(ITypeSymbol type)
+        public string ResolveLocalVariableType(ITypeSymbol type)
         {
             var found = _context.DefinitionVariables.GetVariable(type.Name, MemberKind.Type).VariableName ?? _context.DefinitionVariables.GetVariable(type.Name, MemberKind.TypeParameter).VariableName;
             if (found != null && type is INamedTypeSymbol {IsGenericType: true} genericTypeSymbol)

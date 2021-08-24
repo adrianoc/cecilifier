@@ -459,7 +459,7 @@ namespace Cecilifier.Core.AST
                 return;
             }
 
-            var localDelegateDeclaration = Context.TypeResolver.ResolveTypeLocalVariable(typeSymbol);
+            var localDelegateDeclaration = Context.TypeResolver.ResolveLocalVariableType(typeSymbol);
             if (localDelegateDeclaration != null)
             {
                 AddCilInstruction(ilVar, OpCodes.Callvirt, $"{localDelegateDeclaration}.Methods.Single(m => m.Name == \"Invoke\")");
@@ -493,7 +493,7 @@ namespace Cecilifier.Core.AST
             {
                 var attrsExp = CecilDefinitionsFactory.Attribute(varName, Context, attribute, (attrType, attrArgs) =>
                 {
-                    var typeVar = Context.TypeResolver.ResolveTypeLocalVariable(attrType);
+                    var typeVar = Context.TypeResolver.ResolveLocalVariableType(attrType);
                     if (typeVar == null)
                     {
                         //attribute is not declared in the same assembly....
