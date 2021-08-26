@@ -4,6 +4,8 @@
 
 ## Added
 
+- support for bitwise (|, &, ^) / logical operators (&&, ||)
+
 ## 04/July/2021
 ## Changed
 
