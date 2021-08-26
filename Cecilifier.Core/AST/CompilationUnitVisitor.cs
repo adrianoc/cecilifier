@@ -85,13 +85,14 @@ namespace Cecilifier.Core.AST
             Context.WriteNewLine();
             Context.WriteComment($"Delegate: {node.Identifier.Text}");
             var typeVar = Context.Naming.Delegate(node);
-            var accessibility = ModifiersToCecil("TypeAttributes", node.Modifiers, "Private");
+            var accessibility = ModifiersToCecil(node.Modifiers, "TypeAttributes", "Private");
+
             var typeDef = CecilDefinitionsFactory.Type(
                 Context, 
                 typeVar, 
                 node.Identifier.ValueText, 
                  CecilDefinitionsFactory.DefaultTypeAttributeFor(node.Kind(), false).AppendModifier(accessibility), 
-                Context.TypeResolver.Resolve("System.MulticastDelegate"), 
+                Context.TypeResolver.Bcl.System.MulticastDelegate, 
                 false,
                 Array.Empty<string>(),
                 node.TypeParameterList, 
@@ -107,8 +108,8 @@ namespace Cecilifier.Core.AST
                 // Delegate ctor
                 AddCecilExpression(CecilDefinitionsFactory.Constructor(Context, ctorLocalVar, node.Identifier.Text, "MethodAttributes.FamANDAssem | MethodAttributes.Family",
                     new[] {"System.Object", "System.IntPtr"}, "IsRuntime = true"));
-                AddCecilExpression($"{ctorLocalVar}.Parameters.Add(new ParameterDefinition({Context.TypeResolver.Resolve(GetSpecialType(SpecialType.System_Object))}));");
-                AddCecilExpression($"{ctorLocalVar}.Parameters.Add(new ParameterDefinition({Context.TypeResolver.Resolve(GetSpecialType(SpecialType.System_IntPtr))}));");
+                AddCecilExpression($"{ctorLocalVar}.Parameters.Add(new ParameterDefinition({Context.TypeResolver.Bcl.System.Object}));");
+                AddCecilExpression($"{ctorLocalVar}.Parameters.Add(new ParameterDefinition({Context.TypeResolver.Bcl.System.IntPtr}));");
                 AddCecilExpression($"{typeVar}.Methods.Add({ctorLocalVar});");
 
                 AddDelegateMethod(
@@ -122,7 +123,7 @@ namespace Cecilifier.Core.AST
                 var methodName = "BeginInvoke";
                 var beginInvokeMethodVar = Context.Naming.SyntheticVariable(methodName, ElementKind.Method);
                 AddCecilExpression(
-                    $@"var {beginInvokeMethodVar} = new MethodDefinition(""{methodName}"", MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.NewSlot | MethodAttributes.Virtual, {Context.TypeResolver.Resolve("System.IAsyncResult")})
+                    $@"var {beginInvokeMethodVar} = new MethodDefinition(""{methodName}"", MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.NewSlot | MethodAttributes.Virtual, {Context.TypeResolver.Bcl.System.IAsyncResult})
 					{{
 						HasThis = true,
 						IsRuntime = true,
@@ -134,8 +135,8 @@ namespace Cecilifier.Core.AST
                     AddCecilExpressions(paramExps);
                 }
 
-                AddCecilExpression($"{beginInvokeMethodVar}.Parameters.Add(new ParameterDefinition({Context.TypeResolver.Resolve("System.AsyncCallback")}));");
-                AddCecilExpression($"{beginInvokeMethodVar}.Parameters.Add(new ParameterDefinition({Context.TypeResolver.Resolve(Context.GetSpecialType(SpecialType.System_Object))}));");
+                AddCecilExpression($"{beginInvokeMethodVar}.Parameters.Add(new ParameterDefinition({Context.TypeResolver.Bcl.System.AsyncCallback}));");
+                AddCecilExpression($"{beginInvokeMethodVar}.Parameters.Add(new ParameterDefinition({Context.TypeResolver.Bcl.System.Object}));");
                 AddCecilExpression($"{typeVar}.Methods.Add({beginInvokeMethodVar});");
 
                 // EndInvoke() method
@@ -163,7 +164,7 @@ namespace Cecilifier.Core.AST
                     false,
                     endInvokeMethodVar,
                     Context.Naming.Parameter("ar", node.Identifier.Text),
-                    Context.TypeResolver.Resolve("System.IAsyncResult"));
+                    Context.TypeResolver.Bcl.System.IAsyncResult);
 
                 AddCecilExpressions(endInvokeExps);
                 AddCecilExpressions(endInvokeParamExps);

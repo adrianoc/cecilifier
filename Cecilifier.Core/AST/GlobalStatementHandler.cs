@@ -46,7 +46,7 @@ namespace Cecilifier.Core.AST
                 false, 
                 methodVar, 
                 paramVar, 
-                context.TypeResolver.ResolvePredefinedType(context.GetSpecialType(SpecialType.System_String)) + ".MakeArrayType()");
+                $"{context.TypeResolver.Bcl.System.String}.MakeArrayType()");
 
             ilVar = context.Naming.ILProcessor("topLevelMain", "Main");
             var mainBodyExps = CecilDefinitionsFactory.MethodBody(methodVar, ilVar, Array.Empty<InstructionRepresentation>());

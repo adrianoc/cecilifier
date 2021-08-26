@@ -7,8 +7,13 @@ internal class InternalClass
 {
 	private int privateField;
 	protected internal int protectedInternalField;
+	private protected int privateProtectedField;
 
-	private static void PrivateStaticMethod()
-	{
-	}
+	private static void PrivateStaticMethod() {}
+	private protected void PrivateProtectedMethod() {}
+	private protected int PrivateProtectedExplicitProperty { get => 0; }
+	private protected int PrivateProtectedAutoProperty { get; set; }
+	private protected event System.Action PrivateProtectedEvent;
+	internal protected event System.Action InternalProtectedEvent;
+	public event System.Action PublicEvent;
 }

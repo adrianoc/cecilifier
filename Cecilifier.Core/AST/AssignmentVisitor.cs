@@ -79,7 +79,7 @@ namespace Cecilifier.Core.AST
         public override void VisitIdentifierName(IdentifierNameSyntax node)
         {
             //TODO: tuple declaration with an initializer is represented as an assignment
-            //      revisit the following if when we handle tuples
+            //      revisit the following if/when we handle tuples
             if (node.IsVar)
             {
                 return;
@@ -88,7 +88,9 @@ namespace Cecilifier.Core.AST
             var member = Context.SemanticModel.GetSymbolInfo(node);
             Utils.EnsureNotNull(member.Symbol == null, $"Failed to resolve symbol for node: {node.SourceDetails()}.");
 
-            if (member.Symbol.ContainingType.IsValueType && node.Parent is ObjectCreationExpressionSyntax objectCreation && objectCreation.ArgumentList?.Arguments.Count == 0)
+            if (member.Symbol.Kind != SymbolKind.NamedType 
+                && member.Symbol.ContainingType.IsValueType 
+                && node.Parent is ObjectCreationExpressionSyntax { ArgumentList: { Arguments: { Count: 0 } } })
             {
                 return;
             }

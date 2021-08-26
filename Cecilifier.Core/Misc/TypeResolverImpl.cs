@@ -1,5 +1,7 @@
+using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.AST;
+using Cecilifier.Core.TypeSystem;
 using Microsoft.CodeAnalysis;
 
 namespace Cecilifier.Core.Misc
@@ -11,11 +13,14 @@ namespace Cecilifier.Core.Misc
         public TypeResolverImpl(CecilifierContext context)
         {
             _context = context;
+            Bcl = new Bcl(this, _context);
         }
+
+        public Bcl Bcl { get; }
 
         public string Resolve(ITypeSymbol type)
         {
-            return ResolveTypeLocalVariable(type)
+            return ResolveLocalVariableType(type)
                    ?? ResolvePredefinedAndComposedTypes(type)
                    ?? ResolveGenericType(type)
                    ?? Resolve(type.Name);
@@ -66,7 +71,7 @@ namespace Cecilifier.Core.Misc
             return MakeGenericInstanceType(genericType, genericTypeSymbol);
         }
 
-        public string ResolveTypeLocalVariable(ITypeSymbol type)
+        public string ResolveLocalVariableType(ITypeSymbol type)
         {
             var found = _context.DefinitionVariables.GetVariable(type.Name, MemberKind.Type).VariableName ?? _context.DefinitionVariables.GetVariable(type.Name, MemberKind.TypeParameter).VariableName;
             if (found != null && type is INamedTypeSymbol {IsGenericType: true} genericTypeSymbol)
@@ -77,10 +82,21 @@ namespace Cecilifier.Core.Misc
             return found;
         }
 
+        private IList<string> CollectTypeArguments(INamedTypeSymbol typeArgumentProvider, List<string> collectTo)
+        {
+            if (typeArgumentProvider.ContainingType != null)
+            {
+                CollectTypeArguments(typeArgumentProvider.ContainingType, collectTo);
+            }
+            collectTo.AddRange(typeArgumentProvider.TypeArguments.Select(Resolve));
+
+            return collectTo;
+        }
+        
         private string MakeGenericInstanceType(string found, INamedTypeSymbol genericTypeSymbol)
         {
-            var args = string.Join(",", genericTypeSymbol.TypeArguments.Select(Resolve));
-            return $"{found}.MakeGenericInstanceType({args})";
+            var typeArgs = CollectTypeArguments(genericTypeSymbol, new List<string>());
+            return $"{found}.MakeGenericInstanceType({string.Join(",", typeArgs)})";
         }
 
         private string OpenGenericTypeName(ITypeSymbol type)

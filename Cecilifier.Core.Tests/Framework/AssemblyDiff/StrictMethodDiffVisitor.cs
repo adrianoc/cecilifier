@@ -71,7 +71,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 
         public bool VisitGenerics(MethodDefinition source, MethodDefinition target)
         {
-            return ValidateGenericParameters(source.GenericParameters, target.GenericParameters, source.Module.FileName, target.Module.FileName);
+            return ValidateGenericParameters(source, target, source.GenericParameters, target.GenericParameters, source.Module.FileName, target.Module.FileName);
         }
 
         private string FormatLocalVariables(Collection<VariableDefinition> variables)

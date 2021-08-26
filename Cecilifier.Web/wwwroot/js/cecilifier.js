@@ -69,13 +69,6 @@ function initializeSite(errorAccessingGist, gist, version) {
             csharpCode.updateOptions({ fontSize: newFontSize });
         });
 
-        // Handle gist
-        if (errorAccessingGist.length === 0) {            
-            setValueFromGist(gist);
-        } else {
-            setError(errorAccessingGist);
-        }
-
         window.onresize = function(ev) {
             updateEditorsSize();
         }
@@ -84,6 +77,8 @@ function initializeSite(errorAccessingGist, gist, version) {
 
         initializeFormattingSettings();
         setSendToDiscordTooltip();
+        
+        handleGist(gist, errorAccessingGist);
     });
     
     setTooltips(version);
@@ -138,7 +133,9 @@ var itf_Interface_27 = new TypeDefinition("", "Interface", TypeAttributes.Interf
 
 var del_ADelegate_30 = new TypeDefinition("", "ADelegate", TypeAttributes.Sealed | TypeAttributes.Private, assembly.MainModule.ImportReference(typeof(System.MulticastDelegate))) { IsAnsiClass = true };
 
-var lv_i_4 = new VariableDefinition(assembly.MainModule.TypeSystem.Int32);`;
+var lv_i_4 = new VariableDefinition(assembly.MainModule.TypeSystem.Int32);
+
+var mr_Foo_5 = new MethodReference("Foo");`;
     
     let formattingSettingsSample = monaco.editor.create(document.getElementById('_formattingSettingsSample'), {
         theme: "vs-dark",
@@ -290,7 +287,8 @@ function initializeSettings(formattingSettingsSample) {
         new Setting(ElementKind.Enum, {line: startLine + 26, ch: 5}, "Enum", "enum prefix","AnEnum", "e"),
         new Setting(ElementKind.Interface, {line: startLine + 28, ch: 5}, "Interface", "interface prefix","Interface", "itf"),
         new Setting(ElementKind.Delegate, {line: startLine + 30, ch: 5}, "Delegate", "delegate prefix","ADelegate", "del"),
-        new Setting(ElementKind.LocalVariable, {line: startLine + 32, ch: 5}, "Local Variable", "local variable prefix","i", "lv")
+        new Setting(ElementKind.LocalVariable, {line: startLine + 32, ch: 5}, "Local Variable", "local variable prefix","i", "lv"),
+        new Setting(ElementKind.MemberReference, {line: startLine + 34, ch: 5}, "Member Reference", "Member reference prefix","i", "mr"),
     ]);
 
     settings.validateOptionalFormat = () => {
@@ -497,7 +495,7 @@ function base64ToArrayBuffer(base64) {
     const binary_string = window.atob(base64);
     const len = binary_string.length;
     const bytes = new Uint8Array(len);
-    for (let i = 0; i < len; i++)        {
+    for (let i = 0; i < len; i++) {
         bytes[i] = binary_string.charCodeAt(i);
     }
     return bytes.buffer;
@@ -528,12 +526,20 @@ function cecilifyFromGist(counter) {
     }
 }
 
-function setValueFromGist(snipet) {
-    if (snipet === null || snipet.length === 0)
+function handleGist(gist, errorAccessingGist) {
+    if (errorAccessingGist.length === 0) {
+        setValueFromGist(gist);
+    } else {
+        setError(errorAccessingGist);
+    }
+}
+
+function setValueFromGist(snippet) {
+    if (snippet === null || snippet.length === 0)
         return;
 
     csharpCode.setValue(
-            snipet
+            snippet
             .replace(/&quot;/g, '"')
             .replace(/&gt;/g, '>')
             .replace(/&lt;/g, '<')

@@ -1,0 +1,12 @@
+public struct SomeValueType
+{
+    public SomeValueType(int i) {}
+}
+
+public class ValueTypeInstantiation
+{
+    object ExpressionBodied() => new SomeValueType(42);
+    object Return() { return new SomeValueType(42); }
+    object Assignment() { object o = new SomeValueType(42); return o;}
+}
+

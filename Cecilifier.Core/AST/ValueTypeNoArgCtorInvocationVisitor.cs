@@ -1,5 +1,3 @@
-﻿using Cecilifier.Core.Extensions;
-using Cecilifier.Core.Naming;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Mono.Cecil.Cil;
@@ -51,9 +49,7 @@ namespace Cecilifier.Core.AST
         private void DeclareAndInitializeValueTypeLocalVariable()
         {
             var resolvedVarType = Context.TypeResolver.Resolve(ctorInfo.Symbol.ContainingType);
-            var tempLocalName = Context.Naming.SyntheticVariable("vt", ElementKind.LocalVariable);
-            AddCecilExpression("var {0} = new VariableDefinition({1});", tempLocalName, resolvedVarType);
-            AddCecilExpression("{0}.Body.Variables.Add({1});", Context.DefinitionVariables.GetLastOf(MemberKind.Method).VariableName, tempLocalName);
+            var tempLocalName = AddLocalVariableWithResolvedType("vt", Context.DefinitionVariables.GetLastOf(MemberKind.Method), resolvedVarType);
 
             switch (ctorInfo.Symbol.ContainingType.SpecialType)
             {
@@ -70,12 +66,7 @@ namespace Cecilifier.Core.AST
                     break;
                     
                 case SpecialType.None:
-                    AddCilInstruction(ilVar, OpCodes.Ldloca_S, tempLocalName);
-                    AddCilInstruction(ilVar, OpCodes.Initobj, Context.TypeResolver.Resolve(ctorInfo.Symbol.ContainingType));
-                    
-                    //TODO: Loading the value is likely wrong; it may be necessary
-                    //      to load the address of the value type if the parent
-                    //      is a method invocation.
+                    InitValueTypeLocalVariable(tempLocalName, ctorInfo.Symbol.ContainingType);
                     AddCilInstruction(ilVar, OpCodes.Ldloc, tempLocalName);
                     break;
                 
@@ -83,6 +74,12 @@ namespace Cecilifier.Core.AST
                     Context.WriteComment($"Instantiating {ctorInfo.Symbol.Name} is not supported.");
                     break;
             }
+        }
+        
+        private void InitValueTypeLocalVariable(string localVariable, INamedTypeSymbol variableType)
+        {
+            AddCilInstruction(ilVar, OpCodes.Ldloca_S, localVariable);
+            AddCilInstruction(ilVar, OpCodes.Initobj, Context.TypeResolver.Resolve(variableType));
         }
     }
 }

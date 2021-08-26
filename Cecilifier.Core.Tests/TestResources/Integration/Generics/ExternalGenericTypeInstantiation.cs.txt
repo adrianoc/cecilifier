@@ -1,0 +1,7 @@
+class ExternalGenericTypeInstantiation
+{
+    void M()
+    {
+        var gc = new System.Collections.Generic.List<int>();
+    }
+}

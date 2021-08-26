@@ -144,16 +144,16 @@ namespace Cecilifier.Core.AST
             }
             else
             {
-                accessorModifiers = node.Modifiers.MethodModifiersToCecil(ModifiersToCecil, "MethodAttributes.SpecialName");
+                accessorModifiers = node.Modifiers.MethodModifiersToCecil((targetEnum, modifiers, defaultAccessibility) => ModifiersToCecil(modifiers, targetEnum, defaultAccessibility), "MethodAttributes.SpecialName");
             }
 
             return accessorModifiers;
         }
 
-        private IEnumerable<string> CreateLocalVarsForAddMethod(string addMethodVar, string backingFieldVar)
+        private IEnumerable<string> CreateLocalVarsForAddMethod(string methodVar, string backingFieldVar)
         {
             for (int i = 0; i < 3; i++)
-                yield return $"{addMethodVar}.Body.Variables.Add(new VariableDefinition({backingFieldVar}.FieldType));";
+                yield return $"{methodVar}.Body.Variables.Add(new VariableDefinition({backingFieldVar}.FieldType));";
         }
         
         private IEnumerable<string> RemoveMethodBody(EventFieldDeclarationSyntax context, IEventSymbol eventSymbol, string backingFieldVar, string removeMethodVar)
@@ -258,12 +258,12 @@ namespace Cecilifier.Core.AST
         private string AddBackingField(EventFieldDeclarationSyntax node)
         {
             var privateModifier = SyntaxFactory.Token(SyntaxKind.PrivateKeyword); // always private no matter the accessibility of the event
-            var accessibilityModifier = node.Modifiers.FirstOrDefault(m => m.IsKind(SyntaxKind.PublicKeyword) || m.IsKind(SyntaxKind.InternalKeyword));
-            var backingFieldModifiers = accessibilityModifier == default 
-                ? node.Modifiers.Add(privateModifier) 
-                : node.Modifiers.Replace(accessibilityModifier, privateModifier);
-
-            var fields = FieldDeclarationVisitor.HandleFieldDeclaration(Context, node, node.Declaration, backingFieldModifiers, node.ResolveDeclaringType<TypeDeclarationSyntax>());
+            var noAccessibilityModifier = node.Modifiers.Where(m => !m.IsKind(SyntaxKind.PublicKeyword) 
+                                                                    && !m.IsKind(SyntaxKind.PrivateKeyword)
+                                                                    && !m.IsKind(SyntaxKind.InternalKeyword)
+                                                                    && !m.IsKind(SyntaxKind.ProtectedKeyword));
+            
+            var fields = FieldDeclarationVisitor.HandleFieldDeclaration(Context, node, node.Declaration, noAccessibilityModifier.Append(privateModifier).ToList(), node.ResolveDeclaringType<TypeDeclarationSyntax>());
             return fields.First();
         }
 

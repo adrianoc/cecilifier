@@ -16,7 +16,7 @@ namespace Cecilifier.Core.Extensions
             var format = new SymbolDisplayFormat(typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces);
             return type.ToDisplayString(format);
         }
-
+  
         public static string ReflectionTypeName(this ITypeSymbol type, out IList<string> typeParameters)
         {
             if (type is INamedTypeSymbol namedType && namedType.IsGenericType) //TODO: namedType.IsUnboundGenericType ? Open 

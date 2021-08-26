@@ -99,7 +99,7 @@ namespace Cecilifier.Core.AST
             {
                 $"var {ctorVar} = {ImportFromMainModule("typeof(System.Reflection.DefaultMemberAttribute).GetConstructor(new Type[] { typeof(string) })")};",
                 $"var {customAttrVar} = new CustomAttribute({ctorVar});",
-                $"{customAttrVar}.ConstructorArguments.Add(new CustomAttributeArgument({Context.TypeResolver.Resolve(GetSpecialType(SpecialType.System_String))}, \"{value}\"));",
+                $"{customAttrVar}.ConstructorArguments.Add(new CustomAttributeArgument({Context.TypeResolver.Bcl.System.String}, \"{value}\"));",
                 $"{definitionVar}.CustomAttributes.Add({customAttrVar});"
             };
 
@@ -109,7 +109,7 @@ namespace Cecilifier.Core.AST
         private void ProcessPropertyAccessors(BasePropertyDeclarationSyntax node, string propertyDeclaringTypeVar, string propName, string propertyType, string propDefVar, List<ParamData> parameters, ArrowExpressionClauseSyntax? arrowExpression)
         {
             var propInfo = (IPropertySymbol) Context.SemanticModel.GetDeclaredSymbol(node);
-            var accessorModifiers = node.Modifiers.MethodModifiersToCecil(ModifiersToCecil, "MethodAttributes.SpecialName", propInfo.GetMethod ?? propInfo.SetMethod);
+            var accessorModifiers = node.Modifiers.MethodModifiersToCecil((targetEnum, modifiers, defaultAccessibility) => ModifiersToCecil(modifiers, targetEnum, defaultAccessibility), "MethodAttributes.SpecialName", propInfo.GetMethod ?? propInfo.SetMethod);
 
             var declaringType = node.ResolveDeclaringType<TypeDeclarationSyntax>();
             if (arrowExpression != null)
@@ -129,13 +129,13 @@ namespace Cecilifier.Core.AST
 
                     case SyntaxKind.InitKeyword:
                         Context.WriteComment(" Init");
-                        var setterReturnType = $"new RequiredModifierType({ImportExpressionForType(typeof(IsExternalInit))}, {Context.TypeResolver.Resolve(GetSpecialType(SpecialType.System_Void))})";
+                        var setterReturnType = $"new RequiredModifierType({ImportExpressionForType(typeof(IsExternalInit))}, {Context.TypeResolver.Bcl.System.Void})";
                         AddSetterMethod(setterReturnType, accessor);
                         break;
                     
                     case SyntaxKind.SetKeyword:
                         Context.WriteComment(" Setter");
-                        AddSetterMethod(Context.TypeResolver.Resolve(GetSpecialType(SpecialType.System_Void)), accessor);
+                        AddSetterMethod(Context.TypeResolver.Bcl.System.Void, accessor);
                         break; 
                     default:
                         throw new NotImplementedException($"Accessor: {accessor.Keyword}");
@@ -149,7 +149,7 @@ namespace Cecilifier.Core.AST
 
                 backingFieldVar = Context.Naming.FieldDeclaration(node, "bf");
                 var backingFieldName = $"<{propName}>k__BackingField";
-                var modifiers = ModifiersToCecil("FieldAttributes", accessor.Modifiers, "Private");
+                var modifiers = ModifiersToCecil(accessor.Modifiers, "FieldAttributes", "Private");
                 if (hasInitProperty)
                 {
                     modifiers = modifiers + " | FieldAttributes.InitOnly";

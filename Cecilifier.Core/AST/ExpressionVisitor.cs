@@ -110,6 +110,18 @@ namespace Cecilifier.Core.AST
             return ev.valueTypeNoArgObjCreation;
         }
 
+        public override void VisitReturnStatement(ReturnStatementSyntax node)
+        {
+            node.Expression.Accept(this);
+            InjectRequiredConversions(node.Expression);
+        }
+
+        public override void VisitArrowExpressionClause(ArrowExpressionClauseSyntax node)
+        {
+            node.Expression.Accept(this);
+            InjectRequiredConversions(node.Expression);
+        }
+
         public override void VisitStackAllocArrayCreationExpression(StackAllocArrayCreationExpressionSyntax node)
         {
             /*
@@ -248,8 +260,6 @@ namespace Cecilifier.Core.AST
                 ilVar,
                 Context.SemanticModel.GetTypeInfo(node.Left).Type,
                 Context.SemanticModel.GetTypeInfo(node.Right).Type);
-            
-            InjectRequiredConversions(node);            
         }
 
         public override void VisitLiteralExpression(LiteralExpressionSyntax node)
@@ -442,15 +452,10 @@ namespace Cecilifier.Core.AST
             base.VisitParenthesizedExpression(node);
 
             var localVarParent = (CSharpSyntaxNode) node.Parent;
-            if (localVarParent.Accept(new UsageVisitor()) == UsageKind.CallTarget)
-            {
-                var tempLocalName = Context.Naming.SyntheticVariable("tmp", ElementKind.LocalVariable);
-                AddCecilExpression("var {0} = new VariableDefinition(assembly.MainModule.TypeSystem.Int32);", tempLocalName);
-                AddCecilExpression("{0}.Body.Variables.Add({1});", Context.DefinitionVariables.GetLastOf(MemberKind.Method).VariableName, tempLocalName);
+            if (localVarParent.Accept(new UsageVisitor()) != UsageKind.CallTarget)
+                return;
 
-                AddCilInstruction(ilVar, OpCodes.Stloc, tempLocalName);
-                AddCilInstruction(ilVar, OpCodes.Ldloca_S, tempLocalName);
-            }
+            StoreTopOfStackInLocalVariableAndLoadItsAddress(GetSpecialType(SpecialType.System_Int32));
         }
 
         public override void VisitObjectCreationExpression(ObjectCreationExpressionSyntax node)
@@ -504,17 +509,13 @@ namespace Cecilifier.Core.AST
                 return;
             }
 
-            var tempLocalName = Context.Naming.SyntheticVariable("tmp", ElementKind.LocalVariable);
-
-            AddCecilExpression($"var {tempLocalName} = new VariableDefinition({Context.TypeResolver.Resolve(Context.SemanticModel.GetTypeInfo(operand).Type)});");
-            AddCecilExpression($"{Context.DefinitionVariables.GetLastOf(MemberKind.Method).VariableName}.Body.Variables.Add({tempLocalName});");
-
             if (isPrefix)
             {
                 AddCilInstruction(ilVar, OpCodes.Ldc_I4_1);
                 AddCilInstruction(ilVar, opCode);
             }
 
+            var tempLocalName = AddLocalVariableWithResolvedType("tmp", Context.DefinitionVariables.GetLastOf(MemberKind.Method), Context.TypeResolver.Resolve(Context.SemanticModel.GetTypeInfo(operand).Type));
             AddCilInstruction(ilVar, OpCodes.Stloc, tempLocalName);
             AddCilInstruction(ilVar, OpCodes.Ldloc, tempLocalName);
             assignmentVisitor.InstructionPrecedingValueToLoad = Context.CurrentLine;
@@ -556,13 +557,6 @@ namespace Cecilifier.Core.AST
         {
             AddCilInstruction(ilVar, OpCodes.Ldarg_0);
             base.VisitThisExpression(node);
-        }
-
-        public override void VisitMemberAccessExpression(MemberAccessExpressionSyntax node)
-        {
-            base.VisitMemberAccessExpression(node);
-            if (!node.Parent.IsKind(SyntaxKind.SimpleMemberAccessExpression))
-                InjectRequiredConversions(node);
         }
 
         public override void VisitRefExpression(RefExpressionSyntax node)
@@ -609,10 +603,7 @@ namespace Cecilifier.Core.AST
 
         private void StoreTopOfStackInLocalVariableAndLoadItsAddress(ITypeSymbol type)
         {
-            var tempLocalName = Context.Naming.SyntheticVariable("tmp", ElementKind.LocalVariable);
-            AddCecilExpression($"var {tempLocalName} = new VariableDefinition({Context.TypeResolver.Resolve(type)});");
-            AddCecilExpression($"{Context.DefinitionVariables.GetLastOf(MemberKind.Method).VariableName}.Body.Variables.Add({tempLocalName});");
-
+            var tempLocalName = AddLocalVariableWithResolvedType("tmp", Context.DefinitionVariables.GetLastOf(MemberKind.Method), Context.TypeResolver.Resolve(type));
             AddCilInstruction(ilVar, OpCodes.Stloc, tempLocalName);
             AddCilInstruction(ilVar, OpCodes.Ldloca_S, tempLocalName);
         }
@@ -756,15 +747,11 @@ namespace Cecilifier.Core.AST
 
         private void ProcessField(SimpleNameSyntax node, IFieldSymbol fieldSymbol)
         {
-            if (fieldSymbol.IsStatic && fieldSymbol.IsDefinedInCurrentType(Context))
-            {
-                throw new Exception("Static field handling not implemented yet");
-            }
-
-            AddCilInstruction(ilVar, OpCodes.Ldarg_0);
-            
             var fieldDeclarationVariable = EnsureFieldExists(node, fieldSymbol);
-
+            
+            if (!fieldSymbol.IsStatic)
+                AddCilInstruction(ilVar, OpCodes.Ldarg_0);
+            
             if (HandleLoadAddress(ilVar, fieldSymbol.Type, (CSharpSyntaxNode) node.Parent, OpCodes.Ldflda, fieldSymbol.Name, MemberKind.Field, fieldSymbol.ContainingType.Name))
             {
                 return;
@@ -773,9 +760,11 @@ namespace Cecilifier.Core.AST
             if (fieldSymbol.IsVolatile)
                 AddCilInstruction(ilVar, OpCodes.Volatile);
 
-            AddCilInstruction(ilVar, OpCodes.Ldfld, fieldDeclarationVariable.VariableName);
+            AddCilInstruction(ilVar, LoadOpCodeForFieldAccess(fieldSymbol), fieldDeclarationVariable.VariableName);
             HandlePotentialDelegateInvocationOn(node, fieldSymbol.Type, ilVar);
         }
+
+        private OpCode LoadOpCodeForFieldAccess(IFieldSymbol fieldSymbol) => fieldSymbol.IsStatic ? OpCodes.Ldsfld : OpCodes.Ldfld;
 
         private DefinitionVariable EnsureFieldExists(SimpleNameSyntax node, [NotNull] IFieldSymbol fieldSymbol)
         {

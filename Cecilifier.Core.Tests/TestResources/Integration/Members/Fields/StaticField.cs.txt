@@ -1,0 +1,9 @@
+﻿class C
+{
+    //public static int staticFieldInitialization = 42;
+    static int privateStaticField;
+    static C self;
+    void Set() => C.privateStaticField = 42;
+    int Get() => C.privateStaticField;
+    int RetSelf() => C.self.Get();
+}

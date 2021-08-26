@@ -1,0 +1,16 @@
+class Outer<O>
+{
+	public class Inner<I1> 
+	{
+	    public class Deep<D> {}
+	}
+}
+
+class Test<T>
+{
+    Outer<int>.Inner<string>.Deep<bool> fInt_String_bool;
+    Outer<int>.Inner<T>.Deep<bool> fInt_T_bool;
+    Outer<T>.Inner<string>.Deep<bool> fT_String_bool;
+    Outer<T>.Inner<T>.Deep<bool> fT_T_bool;    
+    Outer<T>.Inner<T>.Deep<T> fT_T_T;
+}

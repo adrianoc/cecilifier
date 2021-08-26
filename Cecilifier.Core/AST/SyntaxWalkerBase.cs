@@ -151,7 +151,7 @@ namespace Cecilifier.Core.AST
             return ImportFromMainModule($"typeof({typeName})");
         }
 
-        protected string TypeModifiersToCecil(TypeDeclarationSyntax node)
+        protected string TypeModifiersToCecil(BaseTypeDeclarationSyntax node)
         {
             var hasStaticCtor = node.DescendantNodes().OfType<ConstructorDeclarationSyntax>().Any(d => d.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword)));
             var typeAttributes = CecilDefinitionsFactory.DefaultTypeAttributeFor(node.Kind(), hasStaticCtor);
@@ -160,35 +160,85 @@ namespace Cecilifier.Core.AST
                 return typeAttributes.AppendModifier(ModifiersToCecil(node.Modifiers, m => "TypeAttributes.Nested" + m.ValueText.PascalCase()));
             }
 
-            var convertedModifiers = ModifiersToCecil("TypeAttributes", node.Modifiers, "NotPublic", ExcludeHasNoCILRepresentationInTypes);
+            var convertedModifiers = ModifiersToCecil(node.Modifiers, "TypeAttributes", "NotPublic", MapAttribute);
             return typeAttributes.AppendModifier(convertedModifiers);
+            
+            string MapAttribute(SyntaxToken token)
+            {
+                switch (token.Kind())
+                {
+                    case SyntaxKind.InternalKeyword: return "NotPublic";
+                    case SyntaxKind.ProtectedKeyword: return "Family";
+                    case SyntaxKind.PrivateKeyword: return "Private";
+                    case SyntaxKind.PublicKeyword: return "Public";
+                    case SyntaxKind.StaticKeyword: return "Static";
+                    case SyntaxKind.AbstractKeyword: return "Abstract";
+                    case SyntaxKind.SealedKeyword: return "Sealed";
+                }
+
+                throw new ArgumentException();
+            }
         }
 
         private static bool IsNestedTypeDeclaration(SyntaxNode node)
         {
             return node.Parent.Kind() != SyntaxKind.NamespaceDeclaration && node.Parent.Kind() != SyntaxKind.CompilationUnit;
         }
-
-        protected static string ModifiersToCecil(string targetEnum, IEnumerable<SyntaxToken> modifiers, string @default)
+        
+        protected static string ModifiersToCecil(IReadOnlyList<SyntaxToken> modifiers, string targetEnum, string defaultAccessibility, Func<SyntaxToken, string> mapAttribute = null)
         {
-            return ModifiersToCecil(targetEnum, modifiers, @default, ExcludeHasNoCILRepresentation);
-        }
+            var finalModifierList = new List<SyntaxToken>(modifiers);
 
-        private static string ModifiersToCecil(string targetEnum, IEnumerable<SyntaxToken> modifiers, string @default, Func<SyntaxToken, bool> meaninglessModifiersFilter)
-        {
-            var validModifiers = modifiers.Where(meaninglessModifiersFilter).ToList();
+            var m = string.Empty;
+            IsInternalProtected(finalModifierList, ref m);
+            IsPrivateProtected(finalModifierList, ref m);
 
-            var hasAccessibilityModifier = validModifiers.Any(m =>
-                m.IsKind(SyntaxKind.PublicKeyword) || m.IsKind(SyntaxKind.PrivateKeyword) ||
-                m.IsKind(SyntaxKind.ProtectedKeyword) || m.IsKind(SyntaxKind.InternalKeyword));
+            mapAttribute ??= MapAttributeForMembers;
+            
+            var modifierStr = finalModifierList.Where(ExcludeHasNoCILRepresentation).Select(mapAttribute).Aggregate("", (acc, curr) => (acc.Length > 0 ? $"{acc} | " : "") + $"{targetEnum}." + curr) + m;
+            if(!modifiers.Any(m => m.IsKind(SyntaxKind.PrivateKeyword) || m.IsKind(SyntaxKind.InternalKeyword) || m.IsKind(SyntaxKind.PrivateKeyword) || m.IsKind(SyntaxKind.PublicKeyword) || m.IsKind(SyntaxKind.ProtectedKeyword)))
+                return modifierStr.AppendModifier($"{targetEnum}.{defaultAccessibility}");
 
-            var modifiersStr = ModifiersToCecil(validModifiers, m => m.MapModifier(targetEnum));
-            if (!validModifiers.Any() || !hasAccessibilityModifier)
+            return modifierStr;
+            
+            void IsInternalProtected(List<SyntaxToken> tokens, ref string s)
             {
-                modifiersStr = modifiersStr.AppendModifier(targetEnum + "." + @default);
+                if (HandleModifiers(tokens, SyntaxFactory.Token(SyntaxKind.InternalKeyword), SyntaxFactory.Token(SyntaxKind.ProtectedKeyword))) 
+                    s = $"{targetEnum}.FamORAssem";
             }
 
-            return modifiersStr;
+            void IsPrivateProtected(List<SyntaxToken> tokens, ref string s)
+            {
+                if (HandleModifiers(tokens, SyntaxFactory.Token(SyntaxKind.PrivateKeyword), SyntaxFactory.Token(SyntaxKind.ProtectedKeyword))) 
+                    s = $"{targetEnum}.FamANDAssem";
+            }
+
+            bool HandleModifiers(List<SyntaxToken> tokens, SyntaxToken first, SyntaxToken second)
+            {
+                if (tokens.Any(c => c.IsKind(first.Kind())) && tokens.Any(c => c.IsKind(second.Kind())))
+                {
+                    tokens.RemoveAll(c => c.IsKind(first.Kind()) || c.IsKind(second.Kind()));
+                    return true;
+                }
+
+                return false;
+            }
+            
+            string MapAttributeForMembers(SyntaxToken token)
+            {
+                switch (token.Kind())
+                {
+                    case SyntaxKind.InternalKeyword: return "Assembly";
+                    case SyntaxKind.ProtectedKeyword: return "Family";
+                    case SyntaxKind.PrivateKeyword: return "Private";
+                    case SyntaxKind.PublicKeyword: return "Public";
+                    case SyntaxKind.StaticKeyword: return "Static";
+                    case SyntaxKind.AbstractKeyword: return "Abstract";
+                    //case SyntaxKind.ReadOnlyKeyword: return FieldAttributes.InitOnly;
+                }
+
+                throw new ArgumentException(token.Kind().ToString());
+            }
         }
 
         private static string ModifiersToCecil(IEnumerable<SyntaxToken> modifiers, Func<SyntaxToken, string> map)
@@ -204,11 +254,6 @@ namespace Cecilifier.Core.AST
             return cecilModifierStr;
         }
 
-        private static bool ExcludeHasNoCILRepresentationInTypes(SyntaxToken token)
-        {
-            return ExcludeHasNoCILRepresentation(token) && token.Kind() != SyntaxKind.PrivateKeyword;
-        }
-
         protected static void WriteCecilExpression(IVisitorContext context, string format, params object[] args)
         {
             context.WriteCecilExpression($"{string.Format(format, args)}\r\n");
@@ -219,9 +264,12 @@ namespace Cecilifier.Core.AST
             context.WriteCecilExpression($"{value}\r\n");
         }
 
-        protected static bool ExcludeHasNoCILRepresentation(SyntaxToken token)
+        private static bool ExcludeHasNoCILRepresentation(SyntaxToken token)
         {
-            return !token.IsKind(SyntaxKind.PartialKeyword) && !token.IsKind(SyntaxKind.VolatileKeyword) && !token.IsKind(SyntaxKind.UnsafeKeyword);
+            return !token.IsKind(SyntaxKind.PartialKeyword) 
+                   && !token.IsKind(SyntaxKind.VolatileKeyword) 
+                   && !token.IsKind(SyntaxKind.UnsafeKeyword)
+                   && !token.IsKind(SyntaxKind.AsyncKeyword);
         }
 
         protected string ResolveExpressionType(ExpressionSyntax expression)
@@ -411,7 +459,7 @@ namespace Cecilifier.Core.AST
                 return;
             }
 
-            var localDelegateDeclaration = Context.TypeResolver.ResolveTypeLocalVariable(typeSymbol);
+            var localDelegateDeclaration = Context.TypeResolver.ResolveLocalVariableType(typeSymbol);
             if (localDelegateDeclaration != null)
             {
                 AddCilInstruction(ilVar, OpCodes.Callvirt, $"{localDelegateDeclaration}.Methods.Single(m => m.Name == \"Invoke\")");
@@ -445,7 +493,7 @@ namespace Cecilifier.Core.AST
             {
                 var attrsExp = CecilDefinitionsFactory.Attribute(varName, Context, attribute, (attrType, attrArgs) =>
                 {
-                    var typeVar = Context.TypeResolver.ResolveTypeLocalVariable(attrType);
+                    var typeVar = Context.TypeResolver.ResolveLocalVariableType(attrType);
                     if (typeVar == null)
                     {
                         //attribute is not declared in the same assembly....
@@ -478,7 +526,10 @@ namespace Cecilifier.Core.AST
     {
         public override UsageKind VisitMemberAccessExpression(MemberAccessExpressionSyntax node)
         {
-            return UsageKind.CallTarget;
+            if (node?.Parent.IsKind(SyntaxKind.InvocationExpression) == true)
+                return UsageKind.CallTarget;
+
+            return UsageKind.None;
         }
     }
 

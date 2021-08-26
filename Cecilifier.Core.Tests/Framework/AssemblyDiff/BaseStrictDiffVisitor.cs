@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
+using Mono.Cecil.Rocks;
 using Mono.Collections.Generic;
 
 namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
@@ -16,7 +17,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
             this.output = output;
         }
 
-        internal bool ValidateGenericParameters(Collection<GenericParameter> source, Collection<GenericParameter> target, string sourceFileName, string targetFileName)
+        internal bool ValidateGenericParameters(IMemberDefinition sourceMember, IMemberDefinition targetMember, Collection<GenericParameter> source, Collection<GenericParameter> target, string sourceFileName, string targetFileName)
         {
             if (source.Count != target.Count)
             {
@@ -29,6 +30,12 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
             foreach (var sourceParam in source)
             {
                 var targetParam = target[i++];
+                if (sourceParam.Name != targetParam.Name)
+                {
+                    output.WriteLine($"TypeParameter names differs {sourceParam.Name} / {targetParam.Name} in {sourceMember} / {targetMember}");
+                    ret = false;
+                }
+
                 if (sourceParam.IsContravariant != targetParam.IsContravariant)
                 {
                     output.WriteLine($"Difference in contra-variance for '{sourceParam.Name}' :\n\tSource ({sourceFileName}): {sourceParam.IsContravariant}\n\tTarget ({targetFileName}): {targetParam.IsContravariant}");

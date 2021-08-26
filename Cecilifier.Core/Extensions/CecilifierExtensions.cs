@@ -2,7 +2,6 @@ using System.Collections.Immutable;
 using System.Linq;
 using Cecilifier.Core.Misc;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Cecilifier.Core.Extensions
@@ -21,18 +20,6 @@ namespace Cecilifier.Core.Extensions
             return str.Length > 1
                 ? char.ToUpper(str[0]) + str.Substring(1)
                 : str;
-        }
-
-        public static string MapModifier(this SyntaxToken modifier, string targetEnum)
-        {
-            switch (modifier.Kind())
-            {
-                case SyntaxKind.ProtectedKeyword: return targetEnum + ".Family";
-                case SyntaxKind.InternalKeyword: return targetEnum + "." + (modifier.Parent.Kind() == SyntaxKind.ClassDeclaration ? "NotPublic" : "Assembly");
-                case SyntaxKind.StaticKeyword: return targetEnum + "." + "Static";
-            }
-
-            return targetEnum + "." + modifier.ValueText.PascalCase();
         }
 
         public static string AppendModifier(this string to, string modifier)

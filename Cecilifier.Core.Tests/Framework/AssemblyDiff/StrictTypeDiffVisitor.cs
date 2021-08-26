@@ -37,7 +37,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 
         public bool VisitGenerics(TypeDefinition source, TypeDefinition target)
         {
-            return ValidateGenericParameters(source.GenericParameters, target.GenericParameters, source.Module.FileName, target.Module.FileName);
+            return ValidateGenericParameters(source, target, source.GenericParameters, target.GenericParameters, source.Module.FileName, target.Module.FileName);
         }
 
         public IFieldDiffVisitor VisitMember(FieldDefinition field)

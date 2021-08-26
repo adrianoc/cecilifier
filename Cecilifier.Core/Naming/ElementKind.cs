@@ -16,7 +16,6 @@ namespace Cecilifier.Core.Naming
         StaticConstructor,
         LocalVariable,
         Parameter,
-        MemberDeclaration, // Type/Member
         MemberReference, // Type/Member
         Label,
         Attribute,

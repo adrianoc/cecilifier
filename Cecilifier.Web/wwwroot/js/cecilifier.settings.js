@@ -16,13 +16,12 @@ const ElementKind =
     StaticConstructor: 10,
     LocalVariable: 11,
     Parameter: 12,
-    MemberDeclaration: 13,
-    MemberReference: 14,
-    Label: 15,
-    Attribute: 16,
-    IL: 17,
-    GenericParameter: 18,
-    GenericInstance: 19
+    MemberReference: 13,
+    Label: 14,
+    Attribute: 15,
+    IL: 16,
+    GenericParameter: 17,
+    GenericInstance: 18
 };
 
 // Keep it in sync with NameOptions.cs

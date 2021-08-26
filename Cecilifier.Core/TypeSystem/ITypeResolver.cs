@@ -1,6 +1,6 @@
 using Microsoft.CodeAnalysis;
 
-namespace Cecilifier.Core.AST
+namespace Cecilifier.Core.TypeSystem
 {
     internal interface ITypeResolver
     {
@@ -8,6 +8,8 @@ namespace Cecilifier.Core.AST
         string Resolve(string typeName);
 
         string ResolvePredefinedType(ITypeSymbol type);
-        string ResolveTypeLocalVariable(ITypeSymbol type);
+        string ResolveLocalVariableType(ITypeSymbol type);
+
+        Bcl Bcl { get; }
     }
 }

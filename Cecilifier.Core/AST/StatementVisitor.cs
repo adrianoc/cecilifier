@@ -2,8 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.Extensions;
-using Cecilifier.Core.Misc;
-using Cecilifier.Core.Naming;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -147,7 +145,7 @@ namespace Cecilifier.Core.AST
 
         public override void VisitReturnStatement(ReturnStatementSyntax node)
         {
-            ExpressionVisitor.Visit(Context, _ilVar, node.Expression);
+            ExpressionVisitor.Visit(Context, _ilVar, node);
             AddCilInstruction(_ilVar, OpCodes.Ret);
         }
 
