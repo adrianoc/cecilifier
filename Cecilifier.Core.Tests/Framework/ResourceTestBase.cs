@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.Tests.Framework.AssemblyDiff;
 using Cecilifier.Runtime;
@@ -57,27 +58,40 @@ namespace Cecilifier.Core.Tests.Framework
         {
             AssertResourceTest(resourceName,  TestKind.Integration, new StrictAssemblyDiffVisitor(), buildAsExe);
         }
-
+      
         private void AssertResourceTest(string resourceName, TestKind kind, IAssemblyDiffVisitor visitor)
         {
             AssertResourceTest(resourceName, kind, visitor, false);
         }
 
+        protected void AssertResourceTestWithParameters(string resourceName, params string[] parameters)
+        {
+            using var tbc = ReadResource(resourceName, "cs", TestKind.Integration);
+            var readToEnd = ReadToEnd(tbc);
+            
+            var testContents = string.Format(readToEnd, parameters);
+            
+            AssertResourceTest($"{resourceName}_{string.Join('_', parameters)}", new StrictAssemblyDiffVisitor(), false, new MemoryStream(Encoding.ASCII.GetBytes(testContents)));
+        }
+        
         private void AssertResourceTest(string resourceName, TestKind kind, IAssemblyDiffVisitor visitor, bool buildAsExe)
         {
-            using (var tbc = ReadResource(resourceName, "cs", kind))
-            {
-                var cecilifierTestsFolder = Path.Combine(Path.GetTempPath(), "CecilifierTests");
+            using var tbc = ReadResource(resourceName, "cs", kind);
+            AssertResourceTest(resourceName, visitor, buildAsExe, tbc);
+        }
 
-                var cecilifiedAssemblyPath = Path.Combine(cecilifierTestsFolder, resourceName + ".dll");
-                var resourceCompiledAssemblyPath = CompileExpectedTestAssembly(cecilifiedAssemblyPath, buildAsExe, ReadToEnd(tbc));
+        private void AssertResourceTest(string resourceName, IAssemblyDiffVisitor visitor, bool buildAsExe, Stream tbc)
+        {
+            var cecilifierTestsFolder = Path.Combine(Path.GetTempPath(), "CecilifierTests");
 
-                Console.WriteLine();
-                Console.WriteLine("Compiled from res        : {0}", resourceCompiledAssemblyPath);
-                Console.WriteLine("Generated from Cecilifier: {0}", cecilifiedAssemblyPath);
+            var cecilifiedAssemblyPath = Path.Combine(cecilifierTestsFolder, resourceName + ".dll");
+            var resourceCompiledAssemblyPath = CompileExpectedTestAssembly(cecilifiedAssemblyPath, buildAsExe, ReadToEnd(tbc));
 
-                AssertResourceTest(cecilifiedAssemblyPath, resourceCompiledAssemblyPath, tbc, visitor);
-            }
+            Console.WriteLine();
+            Console.WriteLine("Compiled from res        : {0}", resourceCompiledAssemblyPath);
+            Console.WriteLine("Generated from Cecilifier: {0}", cecilifiedAssemblyPath);
+
+            AssertResourceTest(cecilifiedAssemblyPath, resourceCompiledAssemblyPath, tbc, visitor);
         }
 
         private static string CompileExpectedTestAssembly(string cecilifiedAssemblyPath, bool compileAsExe, string tbc)
