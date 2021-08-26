@@ -957,6 +957,7 @@ namespace Cecilifier.Core.AST
                     case SpecialType.System_Single:
                         AddCilInstruction(ilVar, OpCodes.Conv_R4);
                         return;
+                    
                     case SpecialType.System_Double:
                         AddCilInstruction(ilVar, OpCodes.Conv_R8);
                         return;
@@ -964,16 +965,20 @@ namespace Cecilifier.Core.AST
                     case SpecialType.System_Byte:
                         AddCilInstruction(ilVar, OpCodes.Conv_I1);
                         return;
+                    
                     case SpecialType.System_Int16:
                         AddCilInstruction(ilVar, OpCodes.Conv_I2);
                         return;
+                    
                     case SpecialType.System_Int32:
-                        // bytes are pushed as Int32 by the runtime 
-                        if (typeInfo.Type.SpecialType != SpecialType.System_Byte)
+                        // byte/char are pushed as Int32 by the runtime 
+                        if (typeInfo.Type.SpecialType != SpecialType.System_SByte && typeInfo.Type.SpecialType != SpecialType.System_Byte && typeInfo.Type.SpecialType != SpecialType.System_Char)
                             AddCilInstruction(ilVar, OpCodes.Conv_I4);
                         return;
+                    
                     case SpecialType.System_Int64:
-                        AddCilInstruction(ilVar, OpCodes.Conv_I8);
+                        var convOpCode = typeInfo.Type.SpecialType == SpecialType.System_Char || typeInfo.Type.SpecialType == SpecialType.System_Byte ? OpCodes.Conv_U8 : OpCodes.Conv_I8;
+                        AddCilInstruction(ilVar, convOpCode);
                         return;
 
                     default:

@@ -1,0 +1,4 @@
+﻿class And
+{{
+    void Run({0} p1, {1} p2) {{ System.Console.WriteLine(p1 & p2); }} 
+}}
