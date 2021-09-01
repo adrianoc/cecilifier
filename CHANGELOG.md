@@ -1,5 +1,13 @@
 ## unreleased 
 
+- fixed release notes mechanism
+- bumped cecilifier version to 1.20.0 (I had messed up with versioning last time setting it to 1.2.0 instead of 1.20.0)
+- cleanup previously messed up merge conflicts markers in this file :)
+- added PR template
+- added CODEOWNERS file
+
+## 29/Aug/2021
+
 ## Changed
 
 - bump cecilifier version to 1.2.0
@@ -20,10 +28,10 @@
 - fixed multiple issues with generic/inner type instantiation (issues #84 and #85)
 - fixed missing box instruction on some ValueType instantiation  (#86)
 - improved handling of inner types of generic outer types (issue #76)
-- fixed code to emmit ldsfld opcode when accessing static fields (issue #83)
+- fixed code to emit ldsfld opcode when accessing static fields (issue #83)
 - fixed implicit private static field declaration
 - fixed crash upon static field assignment (issue #82)
-- fixed name formating not taking prefix/casing into account for some element kinds (#90)
+- fixed name formatting not taking prefix/casing into account for some element kinds (#90)
 
 ## 04/July/2021
 
@@ -76,11 +84,7 @@
 ## Added
 
 - a lot of other stuff that has not been reported since March/2019 :(
-<<<<<<< HEAD
 - Support for for statements
-=======
-- Support for for statements	
->>>>>>> 70ebeb1 (updates Cecil & Microsoft.CodeAnalysis.CSharp versions)
 
 ## 24/March/2019
 
@@ -103,8 +107,4 @@
 
 ### Added
 
-<<<<<<< HEAD
 - Support access of generic static/instance methods.
-=======
-- Support access of generic static/instance methods.
->>>>>>> 70ebeb1 (updates Cecil & Microsoft.CodeAnalysis.CSharp versions)
