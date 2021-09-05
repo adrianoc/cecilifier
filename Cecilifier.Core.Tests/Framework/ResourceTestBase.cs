@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -136,7 +136,8 @@ namespace Cecilifier.Core.Tests.Framework
 
             references = references.Concat(refsToCopy).ToList();
 
-            var cecilifierRunnerPath = CompilationServices.CompileExe(cecilifiedCode, references.ToArray());
+            var actualAssemblyGeneratorPath = Path.Combine(Path.GetTempPath(), $"CecilifierTests/{TestContext.CurrentContext.Test.MethodName}/{cecilifiedCode.GetHashCode()}/{TestContext.CurrentContext.Test.MethodName}");
+            var cecilifierRunnerPath = CompilationServices.CompileExe(actualAssemblyGeneratorPath, cecilifiedCode, references.ToArray());
 
             Console.WriteLine("------- Cecilified Code -------");
             Console.WriteLine(cecilifiedCode);

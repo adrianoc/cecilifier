@@ -1,7 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.CodeAnalysis;
@@ -20,11 +19,6 @@ namespace Cecilifier.Core.Tests.Framework
         public static string CompileExe(string targetPath, string source, params string[] references)
         {
             return InternalCompile(targetPath, source, true, references);
-        }
-        
-        public static string CompileExe(string source, params string[] references)
-        {
-            return InternalCompile(source, true, references);
         }
 
         private static string InternalCompile(string targetPath, string source, bool exe, params string[] references)
@@ -67,32 +61,6 @@ namespace Cecilifier.Core.Tests.Framework
             }
 
             return outputFilePath;
-        }
-
-        private static string InternalCompile(string source, bool exe, params string[] references)
-        {
-            var tempFolder = Path.Combine(Path.GetTempPath(), "CecilifierTests_" + source.GetHashCode());
-            if (!Directory.Exists(tempFolder))
-            {
-                Directory.CreateDirectory(tempFolder);
-            }
-
-            return InternalCompile(Path.Combine(tempFolder, Path.GetRandomFileName()), source, exe, references);
-        }
-
-        private static string[] CopyReferencedAssembliesTo(string targetFolder, Assembly[] references)
-        {
-            var referencedAssemblies = new string[references.Length];
-
-            var curr = 0;
-            Array.ForEach(references, @ref =>
-            {
-                var assemblyPath = Path.Combine(targetFolder, Path.GetFileName(@ref.Location));
-                File.Copy(@ref.Location, assemblyPath, true);
-                referencedAssemblies[curr++] = assemblyPath;
-            });
-
-            return referencedAssemblies;
         }
     }
 }
