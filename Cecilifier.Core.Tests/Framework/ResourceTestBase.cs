@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -161,7 +161,7 @@ namespace Cecilifier.Core.Tests.Framework
             var sourceRuntimeConfigJson = Path.ChangeExtension(GetType().Assembly.Location, ".runtimeconfig.json");
             var targetRuntimeConfigJson = Path.ChangeExtension(cecilifierRunnerPath, ".runtimeconfig.json");
 
-            File.Copy(sourceRuntimeConfigJson, targetRuntimeConfigJson);
+            File.Copy(sourceRuntimeConfigJson, targetRuntimeConfigJson, true);
         }
 
         private string GetILFrom(string actualAssemblyPath, string methodSignature)
