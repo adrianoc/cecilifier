@@ -1,0 +1,7 @@
+﻿class Base {{ }}
+class Derived : Base {{ }}
+
+class ReferenceCasts
+{{
+    {1} Cast({0} d) => ({1}) d;
+}}
