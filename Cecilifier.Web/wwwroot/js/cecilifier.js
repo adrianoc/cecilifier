@@ -135,7 +135,9 @@ var del_ADelegate_30 = new TypeDefinition("", "ADelegate", TypeAttributes.Sealed
 
 var lv_i_4 = new VariableDefinition(assembly.MainModule.TypeSystem.Int32);
 
-var mr_Foo_5 = new MethodReference("Foo");`;
+var mr_Foo_5 = new MethodReference("Foo");
+
+var lbl_jump_3 = il_get_11.Create(OpCodes.Nop);`;
     
     let formattingSettingsSample = monaco.editor.create(document.getElementById('_formattingSettingsSample'), {
         theme: "vs-dark",
