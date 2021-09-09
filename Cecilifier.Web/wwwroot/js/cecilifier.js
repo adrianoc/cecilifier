@@ -289,6 +289,7 @@ function initializeSettings(formattingSettingsSample) {
         new Setting(ElementKind.Delegate, {line: startLine + 30, ch: 5}, "Delegate", "delegate prefix","ADelegate", "del"),
         new Setting(ElementKind.LocalVariable, {line: startLine + 32, ch: 5}, "Local Variable", "local variable prefix","i", "lv"),
         new Setting(ElementKind.MemberReference, {line: startLine + 34, ch: 5}, "Member Reference", "Member reference prefix","i", "mr"),
+        new Setting(ElementKind.Label, {line: startLine + 36, ch: 5}, "Jump Label", "Jump Label Prefix","jump", "lbl"),
     ]);
 
     settings.validateOptionalFormat = () => {
