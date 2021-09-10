@@ -135,7 +135,9 @@ var del_ADelegate_30 = new TypeDefinition("", "ADelegate", TypeAttributes.Sealed
 
 var lv_i_4 = new VariableDefinition(assembly.MainModule.TypeSystem.Int32);
 
-var mr_Foo_5 = new MethodReference("Foo");`;
+var mr_Foo_5 = new MethodReference("Foo");
+
+var lbl_jump_3 = il_get_11.Create(OpCodes.Nop);`;
     
     let formattingSettingsSample = monaco.editor.create(document.getElementById('_formattingSettingsSample'), {
         theme: "vs-dark",
@@ -289,6 +291,7 @@ function initializeSettings(formattingSettingsSample) {
         new Setting(ElementKind.Delegate, {line: startLine + 30, ch: 5}, "Delegate", "delegate prefix","ADelegate", "del"),
         new Setting(ElementKind.LocalVariable, {line: startLine + 32, ch: 5}, "Local Variable", "local variable prefix","i", "lv"),
         new Setting(ElementKind.MemberReference, {line: startLine + 34, ch: 5}, "Member Reference", "Member reference prefix","i", "mr"),
+        new Setting(ElementKind.Label, {line: startLine + 36, ch: 5}, "Jump Label", "Jump Label Prefix","jump", "lbl"),
     ]);
 
     settings.validateOptionalFormat = () => {
