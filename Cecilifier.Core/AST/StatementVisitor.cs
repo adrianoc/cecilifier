@@ -339,7 +339,7 @@ namespace Cecilifier.Core.AST
                 source,
                 destination);
 
-            if (!conversion.IsIdentity && conversion.IsImplicit && !conversion.IsBoxing)
+            if (!conversion.IsIdentity && conversion.IsImplicit && !conversion.IsBoxing && conversion.MethodSymbol != null)
             {
                 AddMethodCall(_ilVar, conversion.MethodSymbol);
             }

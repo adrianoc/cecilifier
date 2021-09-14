@@ -1,0 +1,15 @@
+﻿class DoubleLocalVariableInitializationComplex
+{
+	/*
+	Even though Cecilifier generates correct code for this it is not optimized (basically it fails to realize
+	it could ldc.r8 41 and instead, it generates ldc.i4 41 followed by a conv.r8 so for now, we test against 
+	an equivalent IL directly; a better approach would be to optimize the code generation or teach the 
+	validation code to handle these constructs as equivalent.   
+	 */
+	private static double Complex(int i, double d)
+	{
+		double d1 = 41;
+		double d2 = 2 + i;
+		return d1 + d2 + Complex(i, d + i);
+	}
+}

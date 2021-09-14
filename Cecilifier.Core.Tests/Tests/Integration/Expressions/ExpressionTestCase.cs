@@ -30,6 +30,18 @@ namespace Cecilifier.Core.Tests.Integration
         }
 
         [Test]
+        public void TestDoubleLocalVariableInitialization()
+        {
+            AssertResourceTest(@"Expressions/DoubleLocalVariableInitialization");
+        }
+
+        [Test]
+        public void TestDoubleLocalVariableInitializationComplex()
+        {
+            AssertResourceTestWithExplicitExpectation(@"Expressions/DoubleLocalVariableInitializationComplex", "System.Double DoubleLocalVariableInitializationComplex::Complex(System.Int32,System.Double)");
+        }
+
+        [Test]
         public void TestBox()
         {
             AssertResourceTest(@"Expressions/Box");
