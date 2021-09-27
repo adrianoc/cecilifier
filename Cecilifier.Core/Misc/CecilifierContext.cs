@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.AST;
+using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.TypeSystem;
 using Microsoft.CodeAnalysis;
@@ -12,7 +13,7 @@ namespace Cecilifier.Core.Misc
     internal class CecilifierContext : IVisitorContext
     {
         private readonly ISet<string> flags = new HashSet<string>();
-        private readonly LinkedList<string> output = new LinkedList<string>();
+        private readonly LinkedList<string> output = new();
 
         private int currentFieldId;
 
@@ -20,14 +21,15 @@ namespace Cecilifier.Core.Misc
 
         private string identation;
 
-        public CecilifierContext(SemanticModel semanticModel, CecilifierOptions options,  byte identation = 3)
+        public CecilifierContext(SemanticModel semanticModel, CecilifierOptions options,  byte indentation = 3)
         {
             SemanticModel = semanticModel;
             Options = options;
             DefinitionVariables = new DefinitionVariableManager();
             TypeResolver = new TypeResolverImpl(this);
+            Mappings = new List<Mapping>();
 
-            this.identation = new String('\t', identation);
+            this.identation = new String('\t', indentation);
         }
 
         public string Output
@@ -41,11 +43,15 @@ namespace Cecilifier.Core.Misc
         public CecilifierOptions Options { get; }
         public INameStrategy Naming => Options.Naming;
 
-        public DefinitionVariableManager DefinitionVariables { get; } = new DefinitionVariableManager();
+        public DefinitionVariableManager DefinitionVariables { get; }
 
         public string Namespace { get; set; }
 
         public LinkedListNode<string> CurrentLine => output.Last;
+
+        public int LineNumber { get; private set; }
+        
+        public IList<Mapping> Mappings { get; }
 
         public IMethodSymbol GetDeclaredSymbol(BaseMethodDeclarationSyntax methodDeclaration)
         {
@@ -82,13 +88,21 @@ namespace Cecilifier.Core.Misc
             if ((Options.Naming.Options & NamingOptions.AddCommentsToMemberDeclarations) == NamingOptions.AddCommentsToMemberDeclarations)
             {
                 output.AddLast($"{identation}//{comment}");
-                output.AddLast($"{Environment.NewLine}");
+                WriteNewLine();
             }
         }
         
         public void WriteNewLine()
         {
-            output.AddLast($"{Environment.NewLine}");
+            if (output.Last == null)
+            {
+                output.AddLast(Environment.NewLine);
+            }
+            else
+            {
+                output.Last.Value = output.Last.Value + Environment.NewLine;    
+            }
+            LineNumber++;
         }
 
         public void MoveLineAfter(LinkedListNode<string> instruction, LinkedListNode<string> after)

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.TypeSystem;
 using Microsoft.CodeAnalysis;
@@ -284,6 +285,7 @@ namespace Cecilifier.Core.AST
         DefinitionVariableManager DefinitionVariables { get; }
 
         LinkedListNode<string> CurrentLine { get; }
+        int LineNumber { get; }
         
         IMethodSymbol GetDeclaredSymbol(BaseMethodDeclarationSyntax methodDeclaration);
         ITypeSymbol GetDeclaredSymbol(BaseTypeDeclarationSyntax classDeclaration);
@@ -298,6 +300,7 @@ namespace Cecilifier.Core.AST
         void MoveLineAfter(LinkedListNode<string> instruction, LinkedListNode<string> after);
         
         ITypeResolver TypeResolver { get; }
+        IList<Mapping> Mappings { get; }
 
         #region Flags Handling
         IDisposable WithFlag(string name);
