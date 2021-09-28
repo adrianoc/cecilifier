@@ -259,12 +259,14 @@ namespace Cecilifier.Core.AST
 
         protected static void WriteCecilExpression(IVisitorContext context, string format, params object[] args)
         {
-            context.WriteCecilExpression($"{string.Format(format, args)}\r\n");
+            context.WriteCecilExpression(string.Format(format, args));
+            context.WriteNewLine();
         }
 
         protected static void WriteCecilExpression(IVisitorContext context, string value)
         {
-            context.WriteCecilExpression($"{value}\r\n");
+            context.WriteCecilExpression(value);
+            context.WriteNewLine();
         }
 
         private static bool ExcludeHasNoCILRepresentation(SyntaxToken token)

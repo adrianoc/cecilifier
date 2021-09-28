@@ -35,13 +35,11 @@ namespace Cecilifier.Core.AST
 
         public override void VisitForStatement(ForStatementSyntax node)
         {
-            var expressionVisitor = new ExpressionVisitor(Context, _ilVar);
-
             // Initialization
             HandleVariableDeclaration(node.Declaration);
             foreach (var init in node.Initializers)
             {
-                init.Accept(expressionVisitor);
+                ExpressionVisitor.Visit(Context, _ilVar, init);
             }
 
             var forEndLabel = Context.Naming.Label("fel");
@@ -50,16 +48,16 @@ namespace Cecilifier.Core.AST
             var forConditionLabel = AddCilInstructionWithLocalVariable(_ilVar, OpCodes.Nop);
             
             // Condition
-            node.Condition.Accept(expressionVisitor);
+            ExpressionVisitor.Visit(Context, _ilVar, node.Condition);
             AddCilInstruction(_ilVar, OpCodes.Brfalse, forEndLabel);
             
             // Body
             node.Statement.Accept(this);
 
             // Increment
-            foreach (var inc in node.Incrementors)
+            foreach (var incrementExpression in node.Incrementors)
             {
-                inc.Accept(expressionVisitor);
+                ExpressionVisitor.Visit(Context, _ilVar, incrementExpression);
             }
             
             AddCilInstruction(_ilVar, OpCodes.Br, forConditionLabel);
@@ -71,8 +69,7 @@ namespace Cecilifier.Core.AST
             var switchExpressionType = ResolveExpressionType(node.Expression);
             var evaluatedExpressionVariable = AddLocalVariable(switchExpressionType);
 
-            var expressionVisitor = new ExpressionVisitor(Context, _ilVar);
-            node.Expression.Accept(expressionVisitor);
+            ExpressionVisitor.Visit(Context, _ilVar, node.Expression);
             AddCilInstruction(_ilVar, OpCodes.Stloc, evaluatedExpressionVariable); // stores evaluated expression in local var
             
             // Add label to end of switch
@@ -94,7 +91,7 @@ namespace Cecilifier.Core.AST
                 {
                     Context.WriteComment($"{sectionLabel.ToString()} (condition)");
                     AddCilInstruction(_ilVar, OpCodes.Ldloc, evaluatedExpressionVariable);
-                    sectionLabel.Accept(expressionVisitor);
+                    ExpressionVisitor.Visit(Context, _ilVar, sectionLabel);
                     AddCilInstruction(_ilVar, OpCodes.Beq_S, nextTestLabels[currentLabelIndex]);
                     Context.WriteNewLine();
                 }

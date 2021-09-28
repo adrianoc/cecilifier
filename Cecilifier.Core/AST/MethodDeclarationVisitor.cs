@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -22,8 +22,7 @@ namespace Cecilifier.Core.AST
 
         public override void VisitArrowExpressionClause(ArrowExpressionClauseSyntax node)
         {
-            var expressionVisitor = new ExpressionVisitor(Context, ilVar);
-            node.Accept(expressionVisitor);
+            ExpressionVisitor.Visit(Context, ilVar, node);
         }
 
         public override void VisitBlock(BlockSyntax node)
@@ -152,8 +151,11 @@ namespace Cecilifier.Core.AST
             context.WriteComment($"Method : {fqName}");
 
             var exps = CecilDefinitionsFactory.Method(context, methodVar, fqName, methodModifiers, returnType, refReturn, typeParameters);
-            foreach(var exp in exps)
-                context.WriteCecilExpression($"{exp}{NewLine}");
+            foreach (var exp in exps)
+            {
+                context.WriteCecilExpression(exp);
+                context.WriteNewLine();
+            }
         }
 
         protected virtual string GetSpecificModifiers()
