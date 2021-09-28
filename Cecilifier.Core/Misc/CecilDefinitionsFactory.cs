@@ -378,5 +378,14 @@ namespace Cecilifier.Core.Misc
             var returnType = resolver.Resolve(functionPointer.Signature.ReturnType);
             return factory("HasThis = false", parameters, returnType);
         }
+
+        public static IEnumerable<string> InstantiateDelegate(IVisitorContext context, string ilVar, ITypeSymbol delegateType, string variableName)
+        {
+            var ldfnt = $"{ilVar}.Emit(OpCodes.Ldftn, {variableName});";
+            var delegateCtor = delegateType.GetMembers().OfType<IMethodSymbol>().FirstOrDefault(m => m.Name == ".ctor"); 
+            var delegateCtorInvocation = $"{ilVar}.Emit(OpCodes.Newobj, {delegateCtor.MethodResolverExpression(context)});";
+
+            return new[] { ldfnt, delegateCtorInvocation };
+        }
     }
 }

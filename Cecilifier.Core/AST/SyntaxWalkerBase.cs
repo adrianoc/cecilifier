@@ -317,7 +317,7 @@ namespace Cecilifier.Core.AST
             }
             else
             {
-                var method = paramSymbol.ContainingSymbol as IMethodSymbol;
+                var method = (IMethodSymbol) paramSymbol.ContainingSymbol;
                 OpCode[] optimizedLdArgs = {OpCodes.Ldarg_0, OpCodes.Ldarg_1, OpCodes.Ldarg_2, OpCodes.Ldarg_3};
                 var loadOpCode = optimizedLdArgs[paramSymbol.Ordinal + (method.IsStatic ? 0 : 1)];
                 AddCilInstruction(ilVar, loadOpCode);
@@ -382,7 +382,6 @@ namespace Cecilifier.Core.AST
             var argumentIsByRef = argumentSymbol.IsByRef();
 
             var argument = argumentSimpleNameSyntax.Ancestors().OfType<ArgumentSyntax>().FirstOrDefault();
-
             if (argument != null)
             {
                 var parameterSymbol = ParameterSymbolFromArgumentSyntax(argument);
@@ -397,7 +396,7 @@ namespace Cecilifier.Core.AST
         
         protected IParameterSymbol ParameterSymbolFromArgumentSyntax(ArgumentSyntax argument)
         {
-            var invocation = argument.Ancestors().OfType<InvocationExpressionSyntax>().SingleOrDefault();
+            var invocation = argument.Ancestors().OfType<InvocationExpressionSyntax>().FirstOrDefault();
             if (invocation != null)
             {
                 var argumentIndex = argument.Ancestors().OfType<ArgumentListSyntax>().First().Arguments.IndexOf(argument);

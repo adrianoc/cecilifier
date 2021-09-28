@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Cecilifier.Core.Extensions;
+using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -626,9 +627,11 @@ namespace Cecilifier.Core.AST
                 AddCilInstruction(ilVar, OpCodes.Box, Context.TypeResolver.Resolve(castSource.Type));
             }
         }
+
+        public override void VisitSimpleLambdaExpression(SimpleLambdaExpressionSyntax node) => HandleLambdaExpression(node);
+        public override void VisitParenthesizedLambdaExpression(ParenthesizedLambdaExpressionSyntax node) => HandleLambdaExpression(node);
         
         public override void VisitRangeExpression(RangeExpressionSyntax node) => LogUnsupportedSyntax(node);
-        public override void VisitSimpleLambdaExpression(SimpleLambdaExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitAwaitExpression(AwaitExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitTupleExpression(TupleExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitInterpolatedStringExpression(InterpolatedStringExpressionSyntax node) => LogUnsupportedSyntax(node);
@@ -647,6 +650,23 @@ namespace Cecilifier.Core.AST
         public override void VisitSizeOfExpression(SizeOfExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitInitializerExpression(InitializerExpressionSyntax node) => LogUnsupportedSyntax(node);
 
+        private void HandleLambdaExpression(LambdaExpressionSyntax node)
+        {
+            //TODO: Handle static lambdas.
+            // use the lambda string representation to lookup the variable with the synthetic method definition 
+            var syntheticMethodVariable = Context.DefinitionVariables.GetVariable(node.ToString(), MemberKind.Method);
+            if (!syntheticMethodVariable.IsValid)
+            {
+                // if we fail to resolve the variable it means this is un unsupported scenario (like a lambda that captures context)
+                LogUnsupportedSyntax(node);
+                return;
+            }
+
+            AddCilInstruction(ilVar, OpCodes.Ldarg_0);
+            var exps = CecilDefinitionsFactory.InstantiateDelegate(Context, ilVar, Context.GetTypeInfo(node).ConvertedType, syntheticMethodVariable.VariableName);
+            AddCecilExpressions(exps);
+        }
+        
         private void StoreTopOfStackInLocalVariableAndLoadItsAddressIfNeeded(ExpressionSyntax node)
         {
             var invocation = (InvocationExpressionSyntax) node.Ancestors().FirstOrDefault(a => a.IsKind(SyntaxKind.InvocationExpression));
@@ -964,10 +984,8 @@ namespace Cecilifier.Core.AST
                 AddCilInstruction(ilVar, OpCodes.Ldarg_0);
             }
 
-            AddCilInstruction(ilVar, OpCodes.Ldftn, method.MethodResolverExpression(Context));
-
-            var delegateCtor = delegateType.GetMembers().OfType<IMethodSymbol>().FirstOrDefault(m => m.Name == ".ctor"); 
-            AddCilInstruction(ilVar, OpCodes.Newobj, delegateCtor.MethodResolverExpression(Context));
+            var exps = CecilDefinitionsFactory.InstantiateDelegate(Context, ilVar, delegateType, method.MethodResolverExpression(Context));
+            AddCecilExpressions(exps);
         }
         
         private void ProcessMethodCall(SimpleNameSyntax node, IMethodSymbol method)

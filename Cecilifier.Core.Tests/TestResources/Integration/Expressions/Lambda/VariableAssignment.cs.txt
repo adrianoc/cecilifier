@@ -1,0 +1,9 @@
+﻿using System;
+public class C 
+{
+    public void VariableAssignment()
+    {
+        Func<int, int> fi;
+        fi = (i) => i + 1;
+    }
+}

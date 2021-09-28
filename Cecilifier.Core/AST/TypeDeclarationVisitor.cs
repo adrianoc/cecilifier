@@ -141,6 +141,8 @@ namespace Cecilifier.Core.AST
             }
 
             HandleAttributesInMemberDeclaration(node.AttributeLists, varName);
+
+            NonCapturingLambdaProcessor.InjectSyntheticMethodsForNonCapturingLambdas(Context, node, varName);
             
             Context.WriteCecilExpression(Environment.NewLine);
 

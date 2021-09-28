@@ -23,13 +23,6 @@ namespace Cecilifier.Core.Tests.Integration
             }
         }
 
-        [TestCase("void F() { Func<int, string> f; f = i => i.ToString(); }", TestName = "Simple Lambda")]
-        [TestCase("void F(Func<int, string> f) {{ F(i => i.ToString()); }}", TestName = "Lambda as param")]
-        public void LambdaExpression(string lambda)
-        {
-            AssertUnsupportedFeature($"using System; class Test {{ {lambda} }} ", "Syntax 'SimpleLambdaExpression' is not supported");
-        }
-
         [TestCase("var (a,b)")]
         [TestCase("(int a, bool b)")]
         public void TupleExpression(string tuple)
