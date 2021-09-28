@@ -1,10 +1,19 @@
 ## unreleased 
 
-- fixed release notes mechanism
 - bumped cecilifier version to 1.20.0 (I had messed up with versioning last time setting it to 1.2.0 instead of 1.20.0)
 - cleanup previously messed up merge conflicts markers in this file :)
+
+## Added
+
+- support for non-capturing lambdas converted to Func<>/Action<> (issue #101)
+- support for cast operator (issue #88)
 - added PR template
 - added CODEOWNERS file
+
+## Fixed
+
+- fixed release notes mechanism
+- initialization of doubles crashing (issue #97)
 
 ## 29/Aug/2021
 
