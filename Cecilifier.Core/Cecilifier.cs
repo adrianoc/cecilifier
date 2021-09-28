@@ -65,12 +65,6 @@ namespace Cecilifier.Core
         }
     }
 
-    public readonly struct SourceLocation
-    {
-        public int Line { get; init; } 
-        public int Column { get; init; } 
-    }
-
     public class CecilifierOptions
     {
         public INameStrategy Naming { get; init; } = new DefaultNameStrategy();
