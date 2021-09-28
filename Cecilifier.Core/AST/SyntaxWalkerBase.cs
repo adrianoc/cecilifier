@@ -108,7 +108,7 @@ namespace Cecilifier.Core.AST
 
             Context.TriggerInstructionAdded(instVar);
 
-            return Context.DefinitionVariables.LastInstructionVar = instVar;
+            return instVar;
         }
 
         protected string AddLocalVariableWithResolvedType(string localVarName, DefinitionVariable methodVar, string resolvedVarType)

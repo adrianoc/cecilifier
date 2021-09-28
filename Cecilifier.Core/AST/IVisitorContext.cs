@@ -199,8 +199,6 @@ namespace Cecilifier.Core.AST
 
         private readonly List<DefinitionVariable> _definitionVariables = new List<DefinitionVariable>();
 
-        public string LastInstructionVar { get; set; }
-
         public MethodDefinitionVariable RegisterMethod(string parentName, string methodName, string[] parameterTypes, string definitionVariableName)
         {
             var definitionVariable = new MethodDefinitionVariable(parentName, methodName, parameterTypes, definitionVariableName);
