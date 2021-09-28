@@ -30,21 +30,17 @@ namespace Cecilifier.Core.Mappings
         {
             var sourceStart = _node.GetLocation().GetLineSpan();
             
-            _current.Source.Begin.Line = sourceStart.StartLinePosition.Line;
-            _current.Source.Begin.Column = sourceStart.StartLinePosition.Character;
+            _current.Source.Begin.Line = sourceStart.StartLinePosition.Line + 1;
+            _current.Source.Begin.Column = sourceStart.StartLinePosition.Character + 1;
+            _current.Source.End.Line = sourceStart.EndLinePosition.Line + 1;
+            _current.Source.End.Column = sourceStart.EndLinePosition.Character + 1;
 
-            _current.Cecilified.Begin.Line = _context.LineNumber;
+            _current.Cecilified.Begin.Line = _context.CecilifiedLineNumber;
         }
         
         private void EndSourceElement()
         {
-            var sourceStart = _node.GetLocation().GetLineSpan();
-            
-            _current.Source.End.Line = sourceStart.EndLinePosition.Line;
-            _current.Source.End.Column = sourceStart.EndLinePosition.Character;
-
-            _current.Cecilified.End.Line = _context.LineNumber;
-            
+            _current.Cecilified.End.Line = _context.CecilifiedLineNumber;
             _context.Mappings.Add(_current);
         }
     }

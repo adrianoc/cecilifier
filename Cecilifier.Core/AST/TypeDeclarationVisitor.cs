@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.Extensions;
+using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Misc;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -17,6 +18,7 @@ namespace Cecilifier.Core.AST
 
         public override void VisitInterfaceDeclaration(InterfaceDeclarationSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             var definitionVar = HandleInterfaceDeclaration(node);
             using (Context.DefinitionVariables.WithCurrent("", node.Identifier.ValueText, MemberKind.Type, definitionVar))
             {
@@ -26,6 +28,7 @@ namespace Cecilifier.Core.AST
 
         public override void VisitClassDeclaration(ClassDeclarationSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             var definitionVar = HandleTypeDeclaration(node);
             using (Context.DefinitionVariables.WithCurrent("", node.Identifier.ValueText, MemberKind.Type, definitionVar))
             {
@@ -36,6 +39,7 @@ namespace Cecilifier.Core.AST
 
         public override void VisitStructDeclaration(StructDeclarationSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             var definitionVar = HandleTypeDeclaration(node);
             using (Context.DefinitionVariables.WithCurrent("", node.Identifier.ValueText, MemberKind.Type, definitionVar))
             {

@@ -285,7 +285,7 @@ namespace Cecilifier.Core.AST
         DefinitionVariableManager DefinitionVariables { get; }
 
         LinkedListNode<string> CurrentLine { get; }
-        int LineNumber { get; }
+        int CecilifiedLineNumber { get; }
         
         IMethodSymbol GetDeclaredSymbol(BaseMethodDeclarationSyntax methodDeclaration);
         ITypeSymbol GetDeclaredSymbol(BaseTypeDeclarationSyntax classDeclaration);

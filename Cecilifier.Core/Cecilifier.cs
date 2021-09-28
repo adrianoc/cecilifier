@@ -4,6 +4,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
+using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using Microsoft.CodeAnalysis;
@@ -41,7 +42,8 @@ namespace Cecilifier.Core
 
             var semanticModel = comp.GetSemanticModel(syntaxTree);
 
-            var ctx = new CecilifierContext(semanticModel, options);
+            const int cecilifierProgramPreambleLength = 16; // The # of lines before the 1st cecilified line of code (see CecilifierExtensions.AsCecilApplication())
+            var ctx = new CecilifierContext(semanticModel, options, cecilifierProgramPreambleLength);
             var visitor = new CompilationUnitVisitor(ctx);
 
             syntaxTree.TryGetRoot(out var root);
@@ -50,7 +52,7 @@ namespace Cecilifier.Core
             //new SyntaxTreeDump("TREE: ", root);
 
             var mainTypeName = visitor.MainType != null ? visitor.MainType.Identifier.Text : "Cecilified";
-            return new CecilifierResult(new StringReader(ctx.Output.AsCecilApplication(mainTypeName, visitor.MainMethodDefinitionVariable)), mainTypeName);
+            return new CecilifierResult(new StringReader(ctx.Output.AsCecilApplication(mainTypeName, visitor.MainMethodDefinitionVariable)), mainTypeName, ctx.Mappings);
         }
 
         private static OutputKind OutputKindFor(SyntaxTree syntaxTree)
@@ -78,13 +80,15 @@ namespace Cecilifier.Core
     
     public struct CecilifierResult
     {
-        public CecilifierResult(StringReader generatedCode, string mainTypeName)
+        public CecilifierResult(StringReader generatedCode, string mainTypeName, IList<Mapping> mappings)
         {
             GeneratedCode = generatedCode;
             MainTypeName = mainTypeName;
+            Mappings = mappings;
         }
 
-        public StringReader GeneratedCode { get; set; }
-        public string MainTypeName { get; set; }
+        public StringReader GeneratedCode { get; }
+        public string MainTypeName { get; }
+        public IList<Mapping> Mappings { get; }
     }
 }

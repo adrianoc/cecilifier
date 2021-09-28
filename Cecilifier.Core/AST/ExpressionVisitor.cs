@@ -1,10 +1,11 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
+using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Naming;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -93,7 +94,7 @@ namespace Cecilifier.Core.AST
             }
         }
 
-        internal ExpressionVisitor(IVisitorContext ctx, string ilVar) : base(ctx)
+        private ExpressionVisitor(IVisitorContext ctx, string ilVar) : base(ctx)
         {
             this.ilVar = ilVar;
         }
@@ -105,6 +106,7 @@ namespace Cecilifier.Core.AST
                 return true;
             }
 
+            using var _ = LineInformationTracker.Track(ctx, node);
             var ev = new ExpressionVisitor(ctx, ilVar);
             ev.Visit(node);
 
@@ -125,6 +127,7 @@ namespace Cecilifier.Core.AST
 
         public override void VisitStackAllocArrayCreationExpression(StackAllocArrayCreationExpressionSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             /*
                 // S *s = stackalloc S[n];
                 IL_0007: ldarg.1
@@ -160,6 +163,7 @@ namespace Cecilifier.Core.AST
 
         public override void VisitArrayCreationExpression(ArrayCreationExpressionSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             if (node.Initializer == null)
             {
                 node.Type.RankSpecifiers[0].Accept(this);
@@ -175,6 +179,7 @@ namespace Cecilifier.Core.AST
 
         public override void VisitImplicitArrayCreationExpression(ImplicitArrayCreationExpressionSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             var arrayType = Context.GetTypeInfo(node);
             if (arrayType.Type == null)
             {
@@ -189,6 +194,7 @@ namespace Cecilifier.Core.AST
 
         public override void VisitElementAccessExpression(ElementAccessExpressionSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             var expressionInfo = Context.SemanticModel.GetSymbolInfo(node.Expression);
             if (expressionInfo.Symbol == null)
                 return;
@@ -249,6 +255,7 @@ namespace Cecilifier.Core.AST
 
         public override void VisitBinaryExpression(BinaryExpressionSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             Visit(node.Left);
             InjectRequiredConversions(node.Left);
 
@@ -393,6 +400,7 @@ namespace Cecilifier.Core.AST
 
         public override void VisitPrefixUnaryExpression(PrefixUnaryExpressionSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             if (node.OperatorToken.Kind() == SyntaxKind.AmpersandToken)
             {
                 Visit(node.Operand);
@@ -461,6 +469,7 @@ namespace Cecilifier.Core.AST
 
         public override void VisitObjectCreationExpression(ObjectCreationExpressionSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             //TODO: Refactor to reuse code from VisitIdentifierName....
             var ctorInfo = Context.SemanticModel.GetSymbolInfo(node);
 
@@ -483,6 +492,7 @@ namespace Cecilifier.Core.AST
 
         private void ProcessPrefixPostfixOperators(ExpressionSyntax operand, OpCode opCode, bool isPrefix)
         {
+            using var _ = LineInformationTracker.Track(Context, operand);
             Visit(operand);
             InjectRequiredConversions(operand);
 

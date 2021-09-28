@@ -1,14 +1,14 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Cecilifier.Core.Extensions;
+using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Misc;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Mono.Cecil.Cil;
-using static System.Environment; 
 
 namespace Cecilifier.Core.AST
 {
@@ -94,6 +94,7 @@ namespace Cecilifier.Core.AST
 
         protected void ProcessMethodDeclaration<T>(T node, string variableName, string simpleName, string fqName, ITypeSymbol returnType, bool refReturn, Action<string> runWithCurrent, IList<TypeParameterSyntax> typeParameters = null) where T : BaseMethodDeclarationSyntax
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             var declaringTypeName = DeclaringTypeFrom(node);
             using (Context.DefinitionVariables.EnterScope())
             {

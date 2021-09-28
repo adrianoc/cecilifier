@@ -2,6 +2,7 @@ let websocket;
 let cecilifiedCode;
 let settings;
 let csharpCode;
+let blockMappings = null;
 
 class CecilifierRequest
 {
@@ -30,6 +31,7 @@ function initializeSite(errorAccessingGist, gist, version) {
             minimap: { enabled: false },
             fontSize: 16,
             glyphMargin: true,
+            renderWhitespace: false,
         });
         
         cecilifiedCode = monaco.editor.create(document.getElementById('cecilifiedcode'), {
@@ -40,6 +42,7 @@ function initializeSite(errorAccessingGist, gist, version) {
             minimap: { enabled: false },
             fontSize: 16,
             glyphMargin: true,
+            renderWhitespace: false,
          });
          
         // Configure keyboard shortcuts
@@ -68,6 +71,8 @@ function initializeSite(errorAccessingGist, gist, version) {
             const newFontSize = Math.ceil(options.fontSize * 1.05);
             csharpCode.updateOptions({ fontSize: newFontSize });
         });
+
+        setupCursorTracking();
 
         window.onresize = function(ev) {
             updateEditorsSize();
@@ -142,6 +147,7 @@ var lbl_jump_3 = il_get_11.Create(OpCodes.Nop);`;
     let formattingSettingsSample = monaco.editor.create(document.getElementById('_formattingSettingsSample'), {
         theme: "vs-dark",
         value: formatSettingsExampleCode,
+        renderWhitespace: false,
         language: 'csharp',
         readOnly: false,
         minimap: { enabled: false },
@@ -446,7 +452,7 @@ function initializeWebSocket() {
     websocket.onmessage = function (event) {
         hideSpinner();
         // this is where we get the cecilified code back...
-        var response = JSON.parse(event.data);
+        let response = JSON.parse(event.data);
         if (response.status === 0) {
             var cecilifiedCounter = document.getElementById('cecilified_counter');
             cecilifiedCounter.innerText = response.counter;
@@ -459,6 +465,9 @@ function initializeWebSocket() {
             }
             else {
                 cecilifiedCode.setValue(response.cecilifiedCode);
+                
+                // save the returned mappings used to map between code snippet <-> Cecilified Code.
+                blockMappings = response.mappings;
             }
         } else if (response.status === 1) {
             setError(response.syntaxError.replace(/\n/g, "<br/>"));
@@ -564,4 +573,46 @@ function showSpinner() {
 function hideSpinner() {
     let spinnerDiv = document.getElementById("spinnerDiv");
     spinnerDiv.style.visibility = "hidden";
+}
+
+function setupCursorTracking() {
+    cecilifiedCode.onMouseDown(function(e) {
+        for(let i = 0; i < blockMappings.length; i++)
+        {
+            if (e.target.position.lineNumber < blockMappings[i].Cecilified.Begin.Line || e.target.position.lineNumber > blockMappings[i].Cecilified.End.Line)
+                continue;
+            
+            csharpCode.setSelection( { startColumn: blockMappings[i].Source.Begin.Column, endColumn: blockMappings[i].Source.End.Column, startLineNumber: blockMappings[i].Source.Begin.Line, endLineNumber: blockMappings[i].Source.End.Line });
+            csharpCode.revealLineNearTop(blockMappings[i].Source.Begin.Line);
+            return;            
+        }
+    });
+
+    csharpCode.onMouseDown(function(e) {
+        if (blockMappings === null)
+            return;
+        
+        let matchIndex = -1;
+        for(let i = 0; i < blockMappings.length && matchIndex === -1; i++)
+        {
+            if (blockMappings[i].Source.Begin.Line === blockMappings[i].Source.End.Line && blockMappings[i].Source.Begin.Line === e.target.position.lineNumber)
+            {
+                // Single line block... selected position must be in the bounds
+                if (e.target.position.column < (blockMappings[i].Source.Begin.Column) || e.target.position.column > (blockMappings[i].Source.End.Column))
+                    continue;
+
+                matchIndex = i;                
+            }
+            else if (e.target.position.lineNumber >= (blockMappings[i].Source.Begin.Line) && e.target.position.lineNumber <= (blockMappings[i].Source.End.Line))
+            {
+                matchIndex = i;
+            }
+        }
+
+        if (matchIndex !== -1)
+        {
+            cecilifiedCode.setSelection({startColumn: blockMappings[matchIndex].Cecilified.Begin.Column, endColumn: blockMappings[matchIndex].Cecilified.End.Column, startLineNumber: blockMappings[matchIndex].Cecilified.Begin.Line, endLineNumber: blockMappings[matchIndex].Cecilified.End.Line});
+            cecilifiedCode.revealLineNearTop(blockMappings[matchIndex].Cecilified.Begin.Line);
+        }
+    });    
 }

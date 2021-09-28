@@ -21,14 +21,15 @@ namespace Cecilifier.Core.Misc
 
         private string identation;
 
-        public CecilifierContext(SemanticModel semanticModel, CecilifierOptions options,  byte indentation = 3)
+        public CecilifierContext(SemanticModel semanticModel, CecilifierOptions options,  int startingLine, byte indentation = 3)
         {
             SemanticModel = semanticModel;
             Options = options;
             DefinitionVariables = new DefinitionVariableManager();
             TypeResolver = new TypeResolverImpl(this);
             Mappings = new List<Mapping>();
-
+            CecilifiedLineNumber = startingLine + 1; // always report as 1 based.
+            
             this.identation = new String('\t', indentation);
         }
 
@@ -49,7 +50,7 @@ namespace Cecilifier.Core.Misc
 
         public LinkedListNode<string> CurrentLine => output.Last;
 
-        public int LineNumber { get; private set; }
+        public int CecilifiedLineNumber { get; private set; }
         
         public IList<Mapping> Mappings { get; }
 
@@ -102,7 +103,7 @@ namespace Cecilifier.Core.Misc
             {
                 output.Last.Value = output.Last.Value + Environment.NewLine;    
             }
-            LineNumber++;
+            CecilifiedLineNumber++;
         }
 
         public void MoveLineAfter(LinkedListNode<string> instruction, LinkedListNode<string> after)
