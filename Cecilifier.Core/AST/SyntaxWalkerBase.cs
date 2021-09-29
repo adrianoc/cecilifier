@@ -86,17 +86,22 @@ namespace Cecilifier.Core.AST
             Context.MoveLineAfter(Context.CurrentLine, instruction.Next);
         }
 
-        protected void AddCilInstruction<T>(string ilVar, OpCode opCode, T arg)
+        protected void AddCilInstruction<T>(string ilVar, OpCode opCode, T operand)
         {
-            var instVar = CreateCilInstruction(ilVar, opCode, arg);
-            AddCecilExpression($"{ilVar}.Append({instVar});");
+            var operandStr = operand == null ? string.Empty : $", {operand}";
+            AddCecilExpression($"{ilVar}.Emit({opCode.ConstantName()}{operandStr});");
         }
 
-        protected string AddCilInstruction(string ilVar, OpCode opCode)
+        protected void AddCilInstruction(string ilVar, OpCode opCode)
+        {
+            AddCecilExpression($"{ilVar}.Emit({opCode.ConstantName()});");
+        }
+        
+        protected string AddCilInstructionWithLocalVariable(string ilVar, OpCode opCode)
         {
             var instVar = CreateCilInstruction(ilVar, opCode);
             AddCecilExpression($"{ilVar}.Append({instVar});");
-
+            
             return instVar;
         }
 
@@ -105,8 +110,6 @@ namespace Cecilifier.Core.AST
             var operandStr = operand == null ? string.Empty : $", {operand}";
             var instVar = Context.Naming.Instruction(opCode.Code.ToString());
             AddCecilExpression($"var {instVar} = {ilVar}.Create({opCode.ConstantName()}{operandStr});");
-
-            Context.TriggerInstructionAdded(instVar);
 
             return instVar;
         }
