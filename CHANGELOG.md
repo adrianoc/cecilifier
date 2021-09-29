@@ -3,6 +3,11 @@
 - bumped cecilifier version to 1.20.0 (I had messed up with versioning last time setting it to 1.2.0 instead of 1.20.0)
 - cleanup previously messed up merge conflicts markers in this file :)
 
+## Changed
+
+- Replaced most ILProcessor.Create()/Append() calls with ILProcessor.Emit() to 
+  reduce noise and make cecilified code easier to read.
+  
 ## Added
 
 - support for non-capturing lambdas converted to Func<>/Action<> (issue #101)
