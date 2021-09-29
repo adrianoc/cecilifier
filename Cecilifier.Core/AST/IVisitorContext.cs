@@ -296,9 +296,6 @@ namespace Cecilifier.Core.AST
         void WriteNewLine();
 
         void MoveLineAfter(LinkedListNode<string> instruction, LinkedListNode<string> after);
-
-        event Action<string> InstructionAdded;
-        void TriggerInstructionAdded(string instVar);
         
         ITypeResolver TypeResolver { get; }
 

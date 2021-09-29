@@ -48,31 +48,31 @@ namespace Cecilifier.Core.AST
                 if (left.SpecialType == SpecialType.System_String)
                 {
                     var concatArgType = right.SpecialType == SpecialType.System_String ? "string" : "object";
-                    WriteCecilExpression(ctx,$"{ilVar}.Append({ilVar}.Create({OpCodes.Call.ConstantName()}, assembly.MainModule.Import(typeof(string).GetMethod(\"Concat\", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public, null, new[] {{ typeof({concatArgType}), typeof({concatArgType}) }}, null))));");
+                    WriteCecilExpression(ctx,$"{ilVar}.Emit({OpCodes.Call.ConstantName()}, assembly.MainModule.Import(typeof(string).GetMethod(\"Concat\", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public, null, new[] {{ typeof({concatArgType}), typeof({concatArgType}) }}, null)));");
                 }
                 else
                 {
-                    WriteCecilExpression(ctx, "{0}.Append({0}.Create({1}));", ilVar, OpCodes.Add.ConstantName());
+                    WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Add.ConstantName()});");
                 }
             };
 
-            operatorHandlers[SyntaxKind.SlashToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Append({ilVar}.Create({OpCodes.Div.ConstantName()}));");
-            operatorHandlers[SyntaxKind.GreaterThanToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Append({ilVar}.Create({CompareOperatorFor(ctx, left, right).ConstantName()}));");
-            operatorHandlers[SyntaxKind.EqualsEqualsToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Append({ilVar}.Create({OpCodes.Ceq.ConstantName()}));");
-            operatorHandlers[SyntaxKind.LessThanToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Append({ilVar}.Create({OpCodes.Clt.ConstantName()}));");
-            operatorHandlers[SyntaxKind.MinusToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Append({ilVar}.Create({OpCodes.Sub.ConstantName()}));");
-            operatorHandlers[SyntaxKind.AsteriskToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Append({ilVar}.Create({OpCodes.Mul.ConstantName()}));");
+            operatorHandlers[SyntaxKind.SlashToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Div.ConstantName()});");
+            operatorHandlers[SyntaxKind.GreaterThanToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Emit({CompareOperatorFor(ctx, left, right).ConstantName()});");
+            operatorHandlers[SyntaxKind.EqualsEqualsToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Ceq.ConstantName()});");
+            operatorHandlers[SyntaxKind.LessThanToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Clt.ConstantName()});");
+            operatorHandlers[SyntaxKind.MinusToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Sub.ConstantName()});");
+            operatorHandlers[SyntaxKind.AsteriskToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Mul.ConstantName()});");
 
             // Bitwise Operators
-            operatorHandlers[SyntaxKind.AmpersandToken] = (ctx, ilVar, _, _) => WriteCecilExpression(ctx, $"{ilVar}.Append({ilVar}.Create({OpCodes.And.ConstantName()}));");
-            operatorHandlers[SyntaxKind.BarToken] = (ctx, ilVar, _, _) => WriteCecilExpression(ctx, $"{ilVar}.Append({ilVar}.Create({OpCodes.Or.ConstantName()}));");
-            operatorHandlers[SyntaxKind.CaretToken] = (ctx, ilVar, _, _) => WriteCecilExpression(ctx, $"{ilVar}.Append({ilVar}.Create({OpCodes.Xor.ConstantName()}));");
-            operatorHandlers[SyntaxKind.LessThanLessThanToken] = (ctx, ilVar, _, _) => WriteCecilExpression(ctx, $"{ilVar}.Append({ilVar}.Create({OpCodes.Shl.ConstantName()}));");
-            operatorHandlers[SyntaxKind.GreaterThanGreaterThanToken] = (ctx, ilVar, _, _) => WriteCecilExpression(ctx, $"{ilVar}.Append({ilVar}.Create({OpCodes.Shr.ConstantName()}));");
+            operatorHandlers[SyntaxKind.AmpersandToken] = (ctx, ilVar, _, _) => WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.And.ConstantName()});");
+            operatorHandlers[SyntaxKind.BarToken] = (ctx, ilVar, _, _) => WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Or.ConstantName()});");
+            operatorHandlers[SyntaxKind.CaretToken] = (ctx, ilVar, _, _) => WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Xor.ConstantName()});");
+            operatorHandlers[SyntaxKind.LessThanLessThanToken] = (ctx, ilVar, _, _) => WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Shl.ConstantName()});");
+            operatorHandlers[SyntaxKind.GreaterThanGreaterThanToken] = (ctx, ilVar, _, _) => WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Shr.ConstantName()});");
 
             // Logical Operators
-            operatorHandlers[SyntaxKind.AmpersandAmpersandToken] = (ctx, ilVar, _, _) => WriteCecilExpression(ctx, $"{ilVar}.Append({ilVar}.Create({OpCodes.And.ConstantName()}));");
-            operatorHandlers[SyntaxKind.BarBarToken] = (ctx, ilVar, _, _) => WriteCecilExpression(ctx, $"{ilVar}.Append({ilVar}.Create({OpCodes.Or.ConstantName()}));");
+            operatorHandlers[SyntaxKind.AmpersandAmpersandToken] = (ctx, ilVar, _, _) => WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.And.ConstantName()});");
+            operatorHandlers[SyntaxKind.BarBarToken] = (ctx, ilVar, _, _) => WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Or.ConstantName()});");
         }
 
         private static OpCode CompareOperatorFor(IVisitorContext ctx, ITypeSymbol left, ITypeSymbol right)
