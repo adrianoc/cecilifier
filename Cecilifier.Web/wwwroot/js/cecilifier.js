@@ -444,6 +444,7 @@ function initializeWebSocket() {
     };
     
     websocket.onmessage = function (event) {
+        hideSpinner();
         // this is where we get the cecilified code back...
         var response = JSON.parse(event.data);
         if (response.status === 0) {
@@ -476,6 +477,7 @@ function send(websocket, format) {
     }
     clearError();
 
+    showSpinner();
     const request = new CecilifierRequest(
         csharpCode.getValue(),
         new WebOptions(format),
@@ -552,4 +554,14 @@ function setValueFromGist(snippet) {
             .replace(/&amp;/g, '&'));
 
     cecilifyFromGist(1);
+}
+
+function showSpinner() {
+    let spinnerDiv = document.getElementById("spinnerDiv");
+    spinnerDiv.style.visibility = "inherit";
+}
+
+function hideSpinner() {
+    let spinnerDiv = document.getElementById("spinnerDiv");
+    spinnerDiv.style.visibility = "hidden";
 }
