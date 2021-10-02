@@ -12,7 +12,7 @@ using Mono.Cecil.Cil;
 
 namespace Cecilifier.Core.AST
 {
-    internal class MethodDeclarationVisitor : SyntaxWalkerBase
+    class MethodDeclarationVisitor : SyntaxWalkerBase
     {
         protected string ilVar;
 
@@ -32,10 +32,10 @@ namespace Cecilifier.Core.AST
         
         public override void VisitMethodDeclaration(MethodDeclarationSyntax node)
         {
-            var returnType = node.ReturnType switch
+            var (returnType, refReturn) = node.ReturnType switch
             {
-                RefTypeSyntax refType => refType.Type,
-                _ => node.ReturnType
+                RefTypeSyntax refType => (refType.Type, true),
+                _ => (node.ReturnType, false)
             };
                 
             ProcessMethodDeclaration(
@@ -44,7 +44,7 @@ namespace Cecilifier.Core.AST
                 node.Identifier.ValueText, 
                 MethodNameOf(node), 
                 Context.GetTypeInfo(returnType).Type,
-                node.ReturnType is RefTypeSyntax,
+                refReturn,
                 _ => base.VisitMethodDeclaration(node), 
                 node.TypeParameterList?.Parameters.ToArray());
         }
@@ -61,27 +61,14 @@ namespace Cecilifier.Core.AST
 
         public override void VisitParameter(ParameterSyntax node)
         {
-            var declaringMethodName = ".ctor";
-
-            var declaringMethodOrCtor = (BaseMethodDeclarationSyntax) node.Parent.Parent;
-
-            var declaringType = declaringMethodOrCtor.ResolveDeclaringType<TypeDeclarationSyntax>();
-
-            if (node.Parent.Parent.IsKind(SyntaxKind.MethodDeclaration))
-            {
-                var declaringMethod = (MethodDeclarationSyntax) declaringMethodOrCtor;
-                declaringMethodName = declaringMethod.Identifier.ValueText;
-            }
-
             var paramVar = Context.Naming.Parameter(node);
             Context.DefinitionVariables.RegisterNonMethod(string.Empty, node.Identifier.ValueText, MemberKind.Parameter, paramVar);
 
-            var tbf = new MethodDefinitionVariable(
-                declaringType.Identifier.Text,
-                declaringMethodName,
-                declaringMethodOrCtor.ParameterList.Parameters.Select(p => Context.GetTypeInfo(p.Type).Type.Name).ToArray());
-
-            var declaringMethodVariable = Context.DefinitionVariables.GetMethodVariable(tbf).VariableName;
+            var methodVar = Context.DefinitionVariables.GetLastOf(MemberKind.Method);
+            if (!methodVar.IsValid)
+                throw new InvalidOperationException($"Failed to retrieve current method.");
+            
+            var declaringMethodVariable = methodVar.VariableName;
 
             var exps = CecilDefinitionsFactory.Parameter(node, Context.SemanticModel, declaringMethodVariable, paramVar, ResolveType(node.Type));
             AddCecilExpressions(exps);
@@ -97,7 +84,7 @@ namespace Cecilifier.Core.AST
             var declaringTypeName = DeclaringTypeFrom(node);
             using (Context.DefinitionVariables.EnterScope())
             {
-                typeParameters = typeParameters ?? Array.Empty<TypeParameterSyntax>();
+                typeParameters ??= Array.Empty<TypeParameterSyntax>();
 
                 var methodVar = AddOrUpdateMethodDefinition(node, variableName, fqName, node.Modifiers.MethodModifiersToCecil((targetEnum, modifiers, defaultAccessibility) => ModifiersToCecil(modifiers, targetEnum, defaultAccessibility), GetSpecificModifiers(), DeclaredSymbolFor(node)), returnType, refReturn, typeParameters);
                 AddCecilExpression("{0}.Methods.Add({1});", Context.DefinitionVariables.GetLastOf(MemberKind.Type).VariableName, methodVar);
