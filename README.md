@@ -48,10 +48,12 @@ Supported Features
     - Type / Method definition
     - Generic events
     - Constraints
-    - Co/Contra variance     
+    - Co/Contra variance
 - Pointer types (int*, void*, etc)
 - Fixed statement
 - for statment
+- Cast operator
+- Non-capturing lambdas(converting to Func<>/Action<>)
      
 Unsupported Features
 ---
@@ -65,6 +67,7 @@ Unsupported Features
 
 How to use it
 ---
+
 - The easiest way is to [browse to its site](https://cecilifier.me/).
 - Another alternative is to build and run it  locally (see bellow)
 

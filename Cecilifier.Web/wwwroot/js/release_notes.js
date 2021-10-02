@@ -43,10 +43,7 @@ function showReleaseNotes() {
 
         const latest = itemsToShow[0];
         const html = `New version <a href='${latest.html_url}' target="_blank">${latest.tag_name} ${latest.name}</a> has been released on ${new Date(latest.published_at).toLocaleString()}.<br /><br />${latest.body.replace(/\r\n/g, "<br/>")}`;
-        
-        document.getElementById("releaseNotesText").innerHTML = html;
-        document.getElementById("releaseNotesDiv").style.width = "100%";
-        document.getElementById("mainContent").style.visibility = "hidden";
+        setAlert("cecilifier_new_release", html);
     });
 }
 

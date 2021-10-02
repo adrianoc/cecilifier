@@ -1,0 +1,8 @@
+﻿using System;
+public class C 
+{
+    public void MappedToAction(Action<int, int> a)
+    {
+        MappedToAction ((p1, p2) => Console.WriteLine(p1 + p2));
+    }
+}

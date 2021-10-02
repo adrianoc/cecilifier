@@ -86,17 +86,22 @@ namespace Cecilifier.Core.AST
             Context.MoveLineAfter(Context.CurrentLine, instruction.Next);
         }
 
-        protected void AddCilInstruction<T>(string ilVar, OpCode opCode, T arg)
+        protected void AddCilInstruction<T>(string ilVar, OpCode opCode, T operand)
         {
-            var instVar = CreateCilInstruction(ilVar, opCode, arg);
-            AddCecilExpression($"{ilVar}.Append({instVar});");
+            var operandStr = operand == null ? string.Empty : $", {operand}";
+            AddCecilExpression($"{ilVar}.Emit({opCode.ConstantName()}{operandStr});");
         }
 
-        protected string AddCilInstruction(string ilVar, OpCode opCode)
+        protected void AddCilInstruction(string ilVar, OpCode opCode)
+        {
+            AddCecilExpression($"{ilVar}.Emit({opCode.ConstantName()});");
+        }
+        
+        protected string AddCilInstructionWithLocalVariable(string ilVar, OpCode opCode)
         {
             var instVar = CreateCilInstruction(ilVar, opCode);
             AddCecilExpression($"{ilVar}.Append({instVar});");
-
+            
             return instVar;
         }
 
@@ -106,9 +111,7 @@ namespace Cecilifier.Core.AST
             var instVar = Context.Naming.Instruction(opCode.Code.ToString());
             AddCecilExpression($"var {instVar} = {ilVar}.Create({opCode.ConstantName()}{operandStr});");
 
-            Context.TriggerInstructionAdded(instVar);
-
-            return Context.DefinitionVariables.LastInstructionVar = instVar;
+            return instVar;
         }
 
         protected string AddLocalVariableWithResolvedType(string localVarName, DefinitionVariable methodVar, string resolvedVarType)
@@ -317,7 +320,7 @@ namespace Cecilifier.Core.AST
             }
             else
             {
-                var method = paramSymbol.ContainingSymbol as IMethodSymbol;
+                var method = (IMethodSymbol) paramSymbol.ContainingSymbol;
                 OpCode[] optimizedLdArgs = {OpCodes.Ldarg_0, OpCodes.Ldarg_1, OpCodes.Ldarg_2, OpCodes.Ldarg_3};
                 var loadOpCode = optimizedLdArgs[paramSymbol.Ordinal + (method.IsStatic ? 0 : 1)];
                 AddCilInstruction(ilVar, loadOpCode);
@@ -382,7 +385,6 @@ namespace Cecilifier.Core.AST
             var argumentIsByRef = argumentSymbol.IsByRef();
 
             var argument = argumentSimpleNameSyntax.Ancestors().OfType<ArgumentSyntax>().FirstOrDefault();
-
             if (argument != null)
             {
                 var parameterSymbol = ParameterSymbolFromArgumentSyntax(argument);
@@ -397,7 +399,7 @@ namespace Cecilifier.Core.AST
         
         protected IParameterSymbol ParameterSymbolFromArgumentSyntax(ArgumentSyntax argument)
         {
-            var invocation = argument.Ancestors().OfType<InvocationExpressionSyntax>().SingleOrDefault();
+            var invocation = argument.Ancestors().OfType<InvocationExpressionSyntax>().FirstOrDefault();
             if (invocation != null)
             {
                 var argumentIndex = argument.Ancestors().OfType<ArgumentListSyntax>().First().Arguments.IndexOf(argument);

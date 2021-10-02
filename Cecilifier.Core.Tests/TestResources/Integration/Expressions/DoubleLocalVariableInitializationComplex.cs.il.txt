@@ -1,0 +1,20 @@
+﻿.locals init (System.Double V_0, System.Double V_1)
+IL_0000: ldc.i4 41
+IL_0005: conv.r8
+IL_0006: stloc V_0
+IL_000a: ldc.i4 2
+IL_000f: ldarg.0
+IL_0010: add
+IL_0011: conv.r8
+IL_0012: stloc V_1
+IL_0016: ldloc V_0
+IL_001a: ldloc V_1
+IL_001e: add
+IL_001f: ldarg.0
+IL_0020: ldarg.1
+IL_0021: ldarg.0
+IL_0022: conv.r8
+IL_0023: add
+IL_0024: call System.Double DoubleLocalVariableInitializationComplex::Complex(System.Int32,System.Double)
+IL_0029: add
+IL_002a: ret

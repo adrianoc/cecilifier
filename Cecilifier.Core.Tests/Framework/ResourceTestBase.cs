@@ -136,7 +136,8 @@ namespace Cecilifier.Core.Tests.Framework
 
             references = references.Concat(refsToCopy).ToList();
 
-            var cecilifierRunnerPath = CompilationServices.CompileExe(cecilifiedCode, references.ToArray());
+            var actualAssemblyGeneratorPath = Path.Combine(Path.GetTempPath(), $"CecilifierTests/{TestContext.CurrentContext.Test.MethodName}/{cecilifiedCode.GetHashCode()}/{TestContext.CurrentContext.Test.MethodName}");
+            var cecilifierRunnerPath = CompilationServices.CompileExe(actualAssemblyGeneratorPath, cecilifiedCode, references.ToArray());
 
             Console.WriteLine("------- Cecilified Code -------");
             Console.WriteLine(cecilifiedCode);
@@ -160,7 +161,7 @@ namespace Cecilifier.Core.Tests.Framework
             var sourceRuntimeConfigJson = Path.ChangeExtension(GetType().Assembly.Location, ".runtimeconfig.json");
             var targetRuntimeConfigJson = Path.ChangeExtension(cecilifierRunnerPath, ".runtimeconfig.json");
 
-            File.Copy(sourceRuntimeConfigJson, targetRuntimeConfigJson);
+            File.Copy(sourceRuntimeConfigJson, targetRuntimeConfigJson, true);
         }
 
         private string GetILFrom(string actualAssemblyPath, string methodSignature)

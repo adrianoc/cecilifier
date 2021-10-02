@@ -421,7 +421,13 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 
         private static bool AreEquivalentLoads(Instruction current, Code convInstruction, ref int skipCount)
         {
-            var areEquivalentLoads = current.OpCode.Code == Code.Ldc_I4 && (current.Next?.OpCode.Code == convInstruction);
+            /* This code is here to workaround Cecilify not optimizing numeric constant loads to its final types. For instance, 'double d = 1' will generate:
+             *      ldc.i4 1
+             *      conv.r8
+             * instead of
+             *      ldc.r8 1
+             */ 
+            var areEquivalentLoads = (current.OpCode.Code == Code.Ldc_I4 || current.OpCode.Code == Code.Ldc_I8 || current.OpCode.Code == Code.Ldc_R4) && (current.Next?.OpCode.Code == convInstruction);
             if (areEquivalentLoads)
                 skipCount = 1;
             

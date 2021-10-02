@@ -1,0 +1,26 @@
+﻿class DoubleLocalVariableInitialization
+{
+	private static double Simple()
+	{
+		double d1 = 41;
+		return d1;
+	}
+	
+	private static double FromDouble()
+	{
+		double d1 = 41d;
+		return d1;
+	}
+	
+	private static double FromFloat()
+	{
+		double d1 = 41f;
+		return d1;
+	}
+
+	private static double FromLong()
+	{
+		double d1 = 10l;
+		return d1;
+	}
+}

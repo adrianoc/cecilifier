@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Cecilifier.Core.Extensions;
+using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -47,31 +48,31 @@ namespace Cecilifier.Core.AST
                 if (left.SpecialType == SpecialType.System_String)
                 {
                     var concatArgType = right.SpecialType == SpecialType.System_String ? "string" : "object";
-                    WriteCecilExpression(ctx,$"{ilVar}.Append({ilVar}.Create({OpCodes.Call.ConstantName()}, assembly.MainModule.Import(typeof(string).GetMethod(\"Concat\", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public, null, new[] {{ typeof({concatArgType}), typeof({concatArgType}) }}, null))));");
+                    WriteCecilExpression(ctx,$"{ilVar}.Emit({OpCodes.Call.ConstantName()}, assembly.MainModule.Import(typeof(string).GetMethod(\"Concat\", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public, null, new[] {{ typeof({concatArgType}), typeof({concatArgType}) }}, null)));");
                 }
                 else
                 {
-                    WriteCecilExpression(ctx, "{0}.Append({0}.Create({1}));", ilVar, OpCodes.Add.ConstantName());
+                    WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Add.ConstantName()});");
                 }
             };
 
-            operatorHandlers[SyntaxKind.SlashToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Append({ilVar}.Create({OpCodes.Div.ConstantName()}));");
-            operatorHandlers[SyntaxKind.GreaterThanToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Append({ilVar}.Create({CompareOperatorFor(ctx, left, right).ConstantName()}));");
-            operatorHandlers[SyntaxKind.EqualsEqualsToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Append({ilVar}.Create({OpCodes.Ceq.ConstantName()}));");
-            operatorHandlers[SyntaxKind.LessThanToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Append({ilVar}.Create({OpCodes.Clt.ConstantName()}));");
-            operatorHandlers[SyntaxKind.MinusToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Append({ilVar}.Create({OpCodes.Sub.ConstantName()}));");
-            operatorHandlers[SyntaxKind.AsteriskToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Append({ilVar}.Create({OpCodes.Mul.ConstantName()}));");
+            operatorHandlers[SyntaxKind.SlashToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Div.ConstantName()});");
+            operatorHandlers[SyntaxKind.GreaterThanToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Emit({CompareOperatorFor(ctx, left, right).ConstantName()});");
+            operatorHandlers[SyntaxKind.EqualsEqualsToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Ceq.ConstantName()});");
+            operatorHandlers[SyntaxKind.LessThanToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Clt.ConstantName()});");
+            operatorHandlers[SyntaxKind.MinusToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Sub.ConstantName()});");
+            operatorHandlers[SyntaxKind.AsteriskToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Mul.ConstantName()});");
 
             // Bitwise Operators
-            operatorHandlers[SyntaxKind.AmpersandToken] = (ctx, ilVar, _, _) => WriteCecilExpression(ctx, $"{ilVar}.Append({ilVar}.Create({OpCodes.And.ConstantName()}));");
-            operatorHandlers[SyntaxKind.BarToken] = (ctx, ilVar, _, _) => WriteCecilExpression(ctx, $"{ilVar}.Append({ilVar}.Create({OpCodes.Or.ConstantName()}));");
-            operatorHandlers[SyntaxKind.CaretToken] = (ctx, ilVar, _, _) => WriteCecilExpression(ctx, $"{ilVar}.Append({ilVar}.Create({OpCodes.Xor.ConstantName()}));");
-            operatorHandlers[SyntaxKind.LessThanLessThanToken] = (ctx, ilVar, _, _) => WriteCecilExpression(ctx, $"{ilVar}.Append({ilVar}.Create({OpCodes.Shl.ConstantName()}));");
-            operatorHandlers[SyntaxKind.GreaterThanGreaterThanToken] = (ctx, ilVar, _, _) => WriteCecilExpression(ctx, $"{ilVar}.Append({ilVar}.Create({OpCodes.Shr.ConstantName()}));");
+            operatorHandlers[SyntaxKind.AmpersandToken] = (ctx, ilVar, _, _) => WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.And.ConstantName()});");
+            operatorHandlers[SyntaxKind.BarToken] = (ctx, ilVar, _, _) => WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Or.ConstantName()});");
+            operatorHandlers[SyntaxKind.CaretToken] = (ctx, ilVar, _, _) => WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Xor.ConstantName()});");
+            operatorHandlers[SyntaxKind.LessThanLessThanToken] = (ctx, ilVar, _, _) => WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Shl.ConstantName()});");
+            operatorHandlers[SyntaxKind.GreaterThanGreaterThanToken] = (ctx, ilVar, _, _) => WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Shr.ConstantName()});");
 
             // Logical Operators
-            operatorHandlers[SyntaxKind.AmpersandAmpersandToken] = (ctx, ilVar, _, _) => WriteCecilExpression(ctx, $"{ilVar}.Append({ilVar}.Create({OpCodes.And.ConstantName()}));");
-            operatorHandlers[SyntaxKind.BarBarToken] = (ctx, ilVar, _, _) => WriteCecilExpression(ctx, $"{ilVar}.Append({ilVar}.Create({OpCodes.Or.ConstantName()}));");
+            operatorHandlers[SyntaxKind.AmpersandAmpersandToken] = (ctx, ilVar, _, _) => WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.And.ConstantName()});");
+            operatorHandlers[SyntaxKind.BarBarToken] = (ctx, ilVar, _, _) => WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Or.ConstantName()});");
         }
 
         private static OpCode CompareOperatorFor(IVisitorContext ctx, ITypeSymbol left, ITypeSymbol right)
@@ -567,8 +568,70 @@ namespace Cecilifier.Core.AST
             }
         }
 
+        public override void VisitCastExpression(CastExpressionSyntax node)
+        {
+            node.Expression.Accept(this);
+            var castSource = Context.GetTypeInfo(node.Expression);
+            var castTarget = Context.GetTypeInfo(node.Type);
+            
+            if (castSource.Type == null)
+                throw new InvalidOperationException($"Failed to get type information for expression: {node.Expression}");
+            
+            if (castTarget.Type == null)
+                throw new InvalidOperationException($"Failed to get type information for: {node.Type}");
+
+            if (castSource.Type.SpecialType == castTarget.Type.SpecialType && castSource.Type.SpecialType == SpecialType.System_Double)
+            {
+                /*
+                 * Even though a cast from double => double can be view as an identity conversion (from the pov of the developer who wrote it)
+                 * we still need to emit a *conv.r8* opcode. * (Fo more details see https://github.com/dotnet/roslyn/discussions/56198)
+                 */
+                AddCilInstruction(ilVar, OpCodes.Conv_R8);
+                return;
+            }
+            
+            if (castSource.Type.SpecialType == castTarget.Type.SpecialType && castSource.Type.SpecialType != SpecialType.None ||
+                castSource.Type.SpecialType == SpecialType.System_Byte && castTarget.Type.SpecialType == SpecialType.System_Char ||
+                castSource.Type.SpecialType == SpecialType.System_Byte && castTarget.Type.SpecialType == SpecialType.System_Int16 ||
+                castSource.Type.SpecialType == SpecialType.System_Byte && castTarget.Type.SpecialType == SpecialType.System_Int32 ||
+                castSource.Type.SpecialType == SpecialType.System_Char && castTarget.Type.SpecialType == SpecialType.System_Int32 ||
+                castSource.Type.SpecialType == SpecialType.System_Int16 && castTarget.Type.SpecialType == SpecialType.System_Int32)
+                return;
+            
+            var conversion = Context.SemanticModel.ClassifyConversion(node.Expression, castTarget.Type, true);
+            if (castTarget.Type.SpecialType != SpecialType.None && conversion.IsNumeric)
+            {
+                var opcode = castTarget.Type.SpecialType switch
+                {
+                    SpecialType.System_Int16 => OpCodes.Conv_I2,
+                    SpecialType.System_Int32 => OpCodes.Conv_I4,
+                    SpecialType.System_Int64 => castSource.Type.SpecialType == SpecialType.System_Byte || castSource.Type.SpecialType == SpecialType.System_Char ? OpCodes.Conv_U8 : OpCodes.Conv_I8,
+            
+                    SpecialType.System_Single => OpCodes.Conv_R4,
+                    SpecialType.System_Double => OpCodes.Conv_R8,
+                    SpecialType.System_Char => OpCodes.Conv_U2,
+                    SpecialType.System_Byte => OpCodes.Conv_U1,
+            
+                    _ => throw new Exception($"Cast from {node.Expression} ({castSource.Type}) to {castTarget.Type} is not supported.")
+                };
+            
+                AddCilInstruction(ilVar, opcode);
+            }
+            else if (conversion.IsExplicit && conversion.IsReference)
+            {
+                var opcode = castTarget.Type.TypeKind == TypeKind.TypeParameter ? OpCodes.Unbox_Any : OpCodes.Castclass;
+                AddCilInstruction(ilVar, opcode, castTarget.Type);
+            }
+            else if (conversion.IsImplicit && conversion.IsReference && castSource.Type.TypeKind == TypeKind.TypeParameter)
+            {
+                AddCilInstruction(ilVar, OpCodes.Box, Context.TypeResolver.Resolve(castSource.Type));
+            }
+        }
+
+        public override void VisitSimpleLambdaExpression(SimpleLambdaExpressionSyntax node) => HandleLambdaExpression(node);
+        public override void VisitParenthesizedLambdaExpression(ParenthesizedLambdaExpressionSyntax node) => HandleLambdaExpression(node);
+        
         public override void VisitRangeExpression(RangeExpressionSyntax node) => LogUnsupportedSyntax(node);
-        public override void VisitSimpleLambdaExpression(SimpleLambdaExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitAwaitExpression(AwaitExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitTupleExpression(TupleExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitInterpolatedStringExpression(InterpolatedStringExpressionSyntax node) => LogUnsupportedSyntax(node);
@@ -585,9 +648,25 @@ namespace Cecilifier.Core.AST
         public override void VisitDefaultExpression(DefaultExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitTypeOfExpression(TypeOfExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitSizeOfExpression(SizeOfExpressionSyntax node) => LogUnsupportedSyntax(node);
-        public override void VisitCastExpression(CastExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitInitializerExpression(InitializerExpressionSyntax node) => LogUnsupportedSyntax(node);
 
+        private void HandleLambdaExpression(LambdaExpressionSyntax node)
+        {
+            //TODO: Handle static lambdas.
+            // use the lambda string representation to lookup the variable with the synthetic method definition 
+            var syntheticMethodVariable = Context.DefinitionVariables.GetVariable(node.ToString(), MemberKind.Method);
+            if (!syntheticMethodVariable.IsValid)
+            {
+                // if we fail to resolve the variable it means this is un unsupported scenario (like a lambda that captures context)
+                LogUnsupportedSyntax(node);
+                return;
+            }
+
+            AddCilInstruction(ilVar, OpCodes.Ldarg_0);
+            var exps = CecilDefinitionsFactory.InstantiateDelegate(Context, ilVar, Context.GetTypeInfo(node).ConvertedType, syntheticMethodVariable.VariableName);
+            AddCecilExpressions(exps);
+        }
+        
         private void StoreTopOfStackInLocalVariableAndLoadItsAddressIfNeeded(ExpressionSyntax node)
         {
             var invocation = (InvocationExpressionSyntax) node.Ancestors().FirstOrDefault(a => a.IsKind(SyntaxKind.InvocationExpression));
@@ -905,10 +984,8 @@ namespace Cecilifier.Core.AST
                 AddCilInstruction(ilVar, OpCodes.Ldarg_0);
             }
 
-            AddCilInstruction(ilVar, OpCodes.Ldftn, method.MethodResolverExpression(Context));
-
-            var delegateCtor = delegateType.GetMembers().OfType<IMethodSymbol>().FirstOrDefault(m => m.Name == ".ctor"); 
-            AddCilInstruction(ilVar, OpCodes.Newobj, delegateCtor.MethodResolverExpression(Context));
+            var exps = CecilDefinitionsFactory.InstantiateDelegate(Context, ilVar, delegateType, method.MethodResolverExpression(Context));
+            AddCecilExpressions(exps);
         }
         
         private void ProcessMethodCall(SimpleNameSyntax node, IMethodSymbol method)

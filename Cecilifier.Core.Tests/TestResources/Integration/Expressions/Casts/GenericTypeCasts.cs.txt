@@ -1,0 +1,7 @@
+﻿class Base<T> {{ }}
+class Derived : Base<int> {{ }}
+
+class GenericTypeCasts<T> where T : class
+{{
+    {1} Cast({0} d) => ({1}) d;
+}}

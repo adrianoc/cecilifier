@@ -45,7 +45,7 @@ namespace Cecilifier.Core.AST
             var forEndLabel = Context.Naming.Label("fel");
             WriteCecilExpression(Context, $"var {forEndLabel} = {_ilVar}.Create(OpCodes.Nop);");
 
-            var forConditionLabel = AddCilInstruction(_ilVar, OpCodes.Nop);
+            var forConditionLabel = AddCilInstructionWithLocalVariable(_ilVar, OpCodes.Nop);
             
             // Condition
             node.Condition.Accept(expressionVisitor);
@@ -168,14 +168,9 @@ namespace Cecilifier.Core.AST
         {
             var exceptionHandlerTable = new ExceptionHandlerEntry[node.Catches.Count + (node.Finally != null ? 1 : 0)];
 
-            void SetTryStart(string instVar)
-            {
-                Context.InstructionAdded -= SetTryStart;
-                exceptionHandlerTable[0].TryStart = instVar;
-            }
-
-            Context.InstructionAdded += SetTryStart;
-
+            var tryStartVar = AddCilInstructionWithLocalVariable(_ilVar, OpCodes.Nop);
+            exceptionHandlerTable[0].TryStart = tryStartVar;
+            
             node.Block.Accept(this);
 
             var firstInstructionAfterTryCatchBlock = CreateCilInstruction(_ilVar, OpCodes.Nop);
@@ -230,7 +225,7 @@ namespace Cecilifier.Core.AST
         private void HandleCatchClause(CatchClauseSyntax node, ExceptionHandlerEntry[] exceptionHandlerTable, int currentIndex, string firstInstructionAfterTryCatchBlock)
         {
             exceptionHandlerTable[currentIndex].Kind = ExceptionHandlerType.Catch;
-            exceptionHandlerTable[currentIndex].HandlerStart = AddCilInstruction(_ilVar, OpCodes.Pop); // pops the exception object from stack...
+            exceptionHandlerTable[currentIndex].HandlerStart = AddCilInstructionWithLocalVariable(_ilVar, OpCodes.Pop); // pops the exception object from stack...
 
             if (currentIndex == 0)
             {
@@ -263,20 +258,15 @@ namespace Cecilifier.Core.AST
             exceptionHandlerTable[finallyEntryIndex].TryEnd = exceptionHandlerTable[0].TryEnd;
             exceptionHandlerTable[finallyEntryIndex].Kind = ExceptionHandlerType.Finally;
 
-            void SetFinallyStart(string instVar)
+            var finallyStartVar = AddCilInstructionWithLocalVariable(_ilVar, OpCodes.Nop);
+            exceptionHandlerTable[finallyEntryIndex].HandlerStart = finallyStartVar;
+            exceptionHandlerTable[finallyEntryIndex].TryEnd = finallyStartVar;
+            
+            if (finallyEntryIndex != 0)
             {
-                Context.InstructionAdded -= SetFinallyStart;
-                exceptionHandlerTable[finallyEntryIndex].HandlerStart = instVar;
-                exceptionHandlerTable[finallyEntryIndex].TryEnd = instVar;
-
-                if (finallyEntryIndex != 0)
-                {
-                    // We have one or more catch blocks... set the end of the last catch block as the first instruction of the *finally*
-                    exceptionHandlerTable[finallyEntryIndex - 1].HandlerEnd = instVar;
-                }
+                // We have one or more catch blocks... set the end of the last catch block as the first instruction of the *finally*
+                exceptionHandlerTable[finallyEntryIndex - 1].HandlerEnd = finallyStartVar;
             }
-
-            Context.InstructionAdded += SetFinallyStart;
 
             base.VisitFinallyClause(node);
             AddCilInstruction(_ilVar, OpCodes.Endfinally);
@@ -339,7 +329,7 @@ namespace Cecilifier.Core.AST
                 source,
                 destination);
 
-            if (!conversion.IsIdentity && conversion.IsImplicit && !conversion.IsBoxing)
+            if (!conversion.IsIdentity && conversion.IsImplicit && !conversion.IsBoxing && conversion.MethodSymbol != null)
             {
                 AddMethodCall(_ilVar, conversion.MethodSymbol);
             }

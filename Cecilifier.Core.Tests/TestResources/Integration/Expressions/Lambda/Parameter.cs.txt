@@ -1,0 +1,8 @@
+﻿using System;
+public class C 
+{
+    public void Parameter(Func<int, int> fi)
+    {
+        Parameter ((i) => i + 1);
+    }
+}
