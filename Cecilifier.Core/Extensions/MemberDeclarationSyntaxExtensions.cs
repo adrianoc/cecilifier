@@ -1,4 +1,6 @@
 using System;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Cecilifier.Core.Extensions
@@ -17,6 +19,7 @@ namespace Cecilifier.Core.Extensions
                 MethodDeclarationSyntax method => method.Identifier.Text,
                 EventDeclarationSyntax @event => @event.Identifier.Text,
                 EnumMemberDeclarationSyntax enumMember => enumMember.Identifier.Text,
+                ConversionOperatorDeclarationSyntax conversionOperator => conversionOperator.ImplicitOrExplicitKeyword.IsKind(SyntaxKind.ExplicitKeyword) ? "op_Explicit" : "op_Implicit",
                 _ => throw new Exception($"{node.GetType().Name} ({node}) is not supported")
             };
         }
