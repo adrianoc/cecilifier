@@ -89,5 +89,11 @@ namespace Cecilifier.Core.Tests.Integration
         {
             AssertResourceTest(@"Members/Fields/VolatileField");
         }
+
+        [Test]
+        public void TestQualifiedFieldAccess()
+        {
+            AssertResourceTest(@"Members/Fields/QualifiedFieldAccess");
+        }
     }
 }

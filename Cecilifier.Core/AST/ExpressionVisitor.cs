@@ -827,8 +827,9 @@ namespace Cecilifier.Core.AST
         private void ProcessField(SimpleNameSyntax node, IFieldSymbol fieldSymbol)
         {
             var fieldDeclarationVariable = EnsureFieldExists(node, fieldSymbol);
-            
-            if (!fieldSymbol.IsStatic)
+
+            var isTargetOfQualifiedAccess = (node.Parent is MemberAccessExpressionSyntax mae) && mae.Name == node;
+            if (!fieldSymbol.IsStatic && !isTargetOfQualifiedAccess)
                 AddCilInstruction(ilVar, OpCodes.Ldarg_0);
             
             if (HandleLoadAddress(ilVar, fieldSymbol.Type, (CSharpSyntaxNode) node.Parent, OpCodes.Ldflda, fieldSymbol.Name, MemberKind.Field, fieldSymbol.ContainingType.Name))
