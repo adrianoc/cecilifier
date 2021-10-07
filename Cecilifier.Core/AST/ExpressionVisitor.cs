@@ -255,21 +255,16 @@ namespace Cecilifier.Core.AST
 
         public override void VisitBinaryExpression(BinaryExpressionSyntax node)
         {
-            using var _ = LineInformationTracker.Track(Context, node);
-            Visit(node.Left);
-            InjectRequiredConversions(node.Left);
-
-            Visit(node.Right);
-            InjectRequiredConversions(node.Right);
-
-            var handler = OperatorHandlerFor(node.OperatorToken);
-            handler(
-                Context,
-                ilVar,
-                Context.SemanticModel.GetTypeInfo(node.Left).Type,
-                Context.SemanticModel.GetTypeInfo(node.Right).Type);
+            if (node.IsOperatorOnCustomUserType(Context.SemanticModel, out var method))
+            {
+                ProcessOverloadedBinaryOperatorInvocation(node, method);
+            }
+            else
+            {
+                ProcessBinaryExpression(node);
+            }
         }
-
+        
         public override void VisitLiteralExpression(LiteralExpressionSyntax node)
         {
             switch (node.Kind())
@@ -400,6 +395,13 @@ namespace Cecilifier.Core.AST
 
         public override void VisitPrefixUnaryExpression(PrefixUnaryExpressionSyntax node)
         {
+            if (node.IsOperatorOnCustomUserType(Context.SemanticModel, out var method))
+            {
+                Visit(node.Operand);
+                AddMethodCall(ilVar, method);
+                return;
+            }
+            
             using var _ = LineInformationTracker.Track(Context, node);
             if (node.OperatorToken.Kind() == SyntaxKind.AmpersandToken)
             {
@@ -442,6 +444,13 @@ namespace Cecilifier.Core.AST
 
         public override void VisitPostfixUnaryExpression(PostfixUnaryExpressionSyntax node)
         {
+            if (node.IsOperatorOnCustomUserType(Context.SemanticModel, out var method))
+            {
+                Visit(node.Operand);
+                AddMethodCall(ilVar, method);
+                return;
+            }
+            
             if (node.IsKind(SyntaxKind.PostDecrementExpression))
             {
                 ProcessPrefixPostfixOperators(node.Operand, OpCodes.Sub, false);
@@ -580,6 +589,8 @@ namespace Cecilifier.Core.AST
 
         public override void VisitCastExpression(CastExpressionSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
+            
             node.Expression.Accept(this);
             var castSource = Context.GetTypeInfo(node.Expression);
             var castTarget = Context.GetTypeInfo(node.Type);
@@ -644,7 +655,6 @@ namespace Cecilifier.Core.AST
 
         public override void VisitSimpleLambdaExpression(SimpleLambdaExpressionSyntax node) => HandleLambdaExpression(node);
         public override void VisitParenthesizedLambdaExpression(ParenthesizedLambdaExpressionSyntax node) => HandleLambdaExpression(node);
-        
         public override void VisitRangeExpression(RangeExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitAwaitExpression(AwaitExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitTupleExpression(TupleExpressionSyntax node) => LogUnsupportedSyntax(node);
@@ -664,6 +674,31 @@ namespace Cecilifier.Core.AST
         public override void VisitSizeOfExpression(SizeOfExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitInitializerExpression(InitializerExpressionSyntax node) => LogUnsupportedSyntax(node);
 
+        private void ProcessOverloadedBinaryOperatorInvocation(BinaryExpressionSyntax node, IMethodSymbol method)
+        {
+            using var _ = LineInformationTracker.Track(Context, node);
+            Visit(node.Left);
+            Visit(node.Right);
+            AddMethodCall(ilVar, method, false);
+        }
+
+        private void ProcessBinaryExpression(BinaryExpressionSyntax node)
+        {
+            using var _ = LineInformationTracker.Track(Context, node);
+            Visit(node.Left);
+            InjectRequiredConversions(node.Left);
+
+            Visit(node.Right);
+            InjectRequiredConversions(node.Right);
+
+            var handler = OperatorHandlerFor(node.OperatorToken);
+            handler(
+                Context,
+                ilVar,
+                Context.SemanticModel.GetTypeInfo(node.Left).Type,
+                Context.SemanticModel.GetTypeInfo(node.Right).Type);
+        }
+        
         private void HandleLambdaExpression(LambdaExpressionSyntax node)
         {
             //TODO: Handle static lambdas.

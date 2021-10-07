@@ -52,6 +52,8 @@ namespace Cecilifier.Core.Misc
 
         public override void VisitConversionOperatorDeclaration(ConversionOperatorDeclarationSyntax node) => Visit(node.Parent);
 
+        public override void VisitOperatorDeclaration(OperatorDeclarationSyntax node) => Visit(node.Parent);
+
         public override void VisitPropertyDeclaration(PropertyDeclarationSyntax node)
         {
             Visit(node.Parent);
