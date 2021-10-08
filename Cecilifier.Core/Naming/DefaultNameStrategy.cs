@@ -9,7 +9,7 @@ namespace Cecilifier.Core.Naming
 {
     public class DefaultNameStrategy : INameStrategy
     {
-        private static IReadOnlyDictionary<ElementKind, string> _format = new Dictionary<ElementKind, string>
+        private static IReadOnlyDictionary<ElementKind, string> _defaultFormat = new Dictionary<ElementKind, string>
         {
             [ElementKind.Attribute] = "attr",
             [ElementKind.Class] = "cls",
@@ -32,11 +32,17 @@ namespace Cecilifier.Core.Naming
             [ElementKind.IL] = "il",
         };
 
-        public DefaultNameStrategy() => Options = NamingOptions.All;
-        
+        private IReadOnlyDictionary<ElementKind, string> _format;
+
+        public DefaultNameStrategy()
+        {
+            Options = NamingOptions.All;
+            _format = _defaultFormat;
+        }
+
         public DefaultNameStrategy(NamingOptions namingOptions, IReadOnlyDictionary<ElementKind, string> format)
         {
-            _format = format;
+            _format = format ?? _defaultFormat;
             Options = namingOptions;
         }
         
