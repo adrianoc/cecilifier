@@ -1,0 +1,7 @@
+﻿class QualifiedFieldAccess
+{
+    private int field;
+    
+    public int WithParameterAsTarget(QualifiedFieldAccess o) => o.field;
+    public int WithThisAsTarget() => this.field;
+}

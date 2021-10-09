@@ -202,8 +202,7 @@ namespace Cecilifier.Core.AST
                 }
                 else
                 {
-                    var expressionVisitor = new ExpressionVisitor(Context, ilSetVar);
-                    accessor.ExpressionBody.Accept(expressionVisitor);
+                    ExpressionVisitor.Visit(Context, ilSetVar, accessor.ExpressionBody);
                 }
 
                 AddCilInstruction(ilSetVar, OpCodes.Ret);
@@ -263,8 +262,7 @@ namespace Cecilifier.Core.AST
 
             void ProcessExpressionBodiedGetter(string ilVar, ArrowExpressionClauseSyntax arrowExpression)
             {
-                var expressionVisitor = new ExpressionVisitor(Context, ilVar);
-                arrowExpression.Accept(expressionVisitor);
+                ExpressionVisitor.Visit(Context, ilVar, arrowExpression);
                 AddCilInstruction(ilVar, OpCodes.Ret);
             }
         }

@@ -60,7 +60,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             if (errors.Any())
                 throw new Exception(errors.Aggregate("", (acc, curr) => acc + curr.GetMessage() + Environment.NewLine));
             
-            var context = new CecilifierContext(comp.GetSemanticModel(syntaxTree), new CecilifierOptions());
+            var context = new CecilifierContext(comp.GetSemanticModel(syntaxTree), new CecilifierOptions(), -1);
 
             context.DefinitionVariables.RegisterNonMethod("Foo", "field", MemberKind.Field, "fieldVar"); // Required for Field tests
             NonCapturingLambdaProcessor.InjectSyntheticMethodsForNonCapturingLambdas(

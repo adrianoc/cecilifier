@@ -1,10 +1,30 @@
 ## unreleased 
 
-- bumped cecilifier version to 1.20.0 (I had messed up with versioning last time setting it to 1.2.0 instead of 1.20.0)
-- cleanup previously messed up merge conflicts markers in this file :)
+## Changed
+## Added
+## Fixed
+
+## 09/Oct/2021
 
 ## Changed
 
+- bumped cecilifier version to 1.21.0
+
+## Added
+
+- Mapping from `snippet` <-> `cecilified code` allowing users to more easily correlate which parts of the `snippet` code corresponds to which
+  parts of the `cecilified code` and vice-versa.
+
+## Fixed
+
+- d4c7cea do not pretend all field references are accessing 'this' (issue #104)
+
+## 02/Oct/2021
+
+## Changed
+
+- bumped cecilifier version to 1.20.0 (I had messed up with versioning last time setting it to 1.2.0 instead of 1.20.0)
+- cleanup previously messed up merge conflicts markers in this file :)
 - Replaced most ILProcessor.Create()/Append() calls with ILProcessor.Emit() to 
   reduce noise and make cecilified code easier to read.
   
