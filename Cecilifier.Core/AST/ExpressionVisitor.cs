@@ -331,6 +331,13 @@ namespace Cecilifier.Core.AST
 
         public override void VisitInvocationExpression(InvocationExpressionSyntax node)
         {
+            var constantValue = Context.SemanticModel.GetConstantValue(node);
+            if (constantValue.HasValue && node.Expression is IdentifierNameSyntax { Identifier: { Text: "nameof" }} nameofExpression)
+            {
+                AddCilInstruction(ilVar, OpCodes.Ldstr, $"\"{node.ArgumentList.Arguments[0].ToFullString()}\"");
+                return;
+            }
+            
             HandleMethodInvocation(node.Expression, node.ArgumentList);
             StoreTopOfStackInLocalVariableAndLoadItsAddressIfNeeded(node);
         }
