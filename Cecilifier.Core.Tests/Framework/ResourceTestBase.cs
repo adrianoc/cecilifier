@@ -122,7 +122,7 @@ namespace Cecilifier.Core.Tests.Framework
             Assert.That(actualIL, Is.EqualTo(expectedIL), $"Actual IL differs from expected.\r\nActual Assembly Path = {actualAssemblyPath}\r\nActual IL:{actualIL}");
         }
 
-        private void CecilifyAndExecute(Stream tbc, string outputAssembyPath)
+        private void CecilifyAndExecute(Stream tbc, string outputAssemblyPath)
         {
             cecilifiedCode = Cecilfy(tbc);
 
@@ -143,11 +143,11 @@ namespace Cecilifier.Core.Tests.Framework
             Console.WriteLine(cecilifiedCode);
             Console.WriteLine("^^^^^^^ Cecilified Code ^^^^^^^");
 
-            Directory.CreateDirectory(Path.GetDirectoryName(outputAssembyPath));
+            Directory.CreateDirectory(Path.GetDirectoryName(outputAssemblyPath));
             CopyFilesNextToGeneratedExecutable(cecilifierRunnerPath, refsToCopy);
             Console.WriteLine("Cecil runner path: {0}", cecilifierRunnerPath);
 
-            TestFramework.Execute("dotnet", cecilifierRunnerPath + " " + outputAssembyPath);
+            TestFramework.Execute("dotnet", cecilifierRunnerPath + " " + outputAssemblyPath);
         }
 
         private void CopyFilesNextToGeneratedExecutable(string cecilifierRunnerPath, List<string> refsToCopy)
