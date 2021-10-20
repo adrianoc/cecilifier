@@ -3,12 +3,12 @@
 	private static void Method()
 	{
 		object i = 10;
-		System.Console.WriteLine(i);
+		System.Console.WriteLine(i);		
+		
+		System.Console.WriteLine("i = {0}", 42);
 
-		Foo(42);
+		Foo(42);		
 	}
 
-	private static void Foo(object o)
-	{
-	}
+	private static void Foo(object o) { }
 }
