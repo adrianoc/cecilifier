@@ -3,6 +3,7 @@ using System.Linq;
 using System.Text;
 using Cecilifier.Core.AST;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Cecilifier.Core.Extensions
 {
@@ -51,5 +52,7 @@ namespace Cecilifier.Core.Extensions
         {
             return $"new[] {{ {self.Aggregate("", (acc, curr) => acc + ",\"" + curr.FullyQualifiedName() + "\"", final => final.Substring(1))} }} ";
         }
+
+        public static bool IsDllImportCtor(this ISymbol self) => self != null && self.ContainingType.Name == "DllImportAttribute";
     }
 }

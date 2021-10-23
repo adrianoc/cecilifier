@@ -92,19 +92,25 @@ namespace Cecilifier.Core.AST
                 HandleAttributesInMemberDeclaration(node.AttributeLists, TargetDoesNotMatch, SyntaxKind.ReturnKeyword, methodVar); // Normal method attrs.
                 HandleAttributesInMemberDeclaration(node.AttributeLists, TargetMatches, SyntaxKind.ReturnKeyword, $"{methodVar}.MethodReturnType"); // [return:Attr]
 
-                var isAbstract = DeclaredSymbolFor(node).IsAbstract;
-                if (!isAbstract)
+                if (node.Modifiers.IndexOf(SyntaxKind.ExternKeyword) == -1)
                 {
-                    ilVar = Context.Naming.ILProcessor(simpleName, declaringTypeName);
-                    AddCecilExpression($"{methodVar}.Body.InitLocals = true;");
-                    AddCecilExpression($"var {ilVar} = {methodVar}.Body.GetILProcessor();");
+                    var isAbstract = DeclaredSymbolFor(node).IsAbstract;
+                    if (!isAbstract)
+                    {
+                        ilVar = Context.Naming.ILProcessor(simpleName, declaringTypeName);
+                        AddCecilExpression($"{methodVar}.Body.InitLocals = true;");
+                        AddCecilExpression($"var {ilVar} = {methodVar}.Body.GetILProcessor();");
+                    }
+
+                    WithCurrentMethod(declaringTypeName, methodVar, fqName, node.ParameterList.Parameters.Select(p => Context.GetTypeInfo(p.Type).Type.Name).ToArray(), runWithCurrent);
+                    if (!isAbstract && !node.DescendantNodes().Any(n => n.IsKind(SyntaxKind.ReturnStatement)))
+                    {
+                        AddCilInstruction(ilVar, OpCodes.Ret);
+                    }
                 }
-
-                WithCurrentMethod(declaringTypeName, methodVar, fqName, node.ParameterList.Parameters.Select(p => Context.GetTypeInfo(p.Type).Type.Name).ToArray(), runWithCurrent);
-
-                if (!isAbstract && !node.DescendantNodes().Any(n => n.IsKind(SyntaxKind.ReturnStatement)))
+                else
                 {
-                    AddCilInstruction(ilVar, OpCodes.Ret);
+                    Context.DefinitionVariables.RegisterMethod(declaringTypeName, fqName, node.ParameterList.Parameters.Select(p => Context.GetTypeInfo(p.Type).Type.Name).ToArray(), methodVar);
                 }
             }
         }
