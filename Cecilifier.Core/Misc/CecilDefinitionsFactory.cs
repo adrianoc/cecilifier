@@ -141,21 +141,14 @@ namespace Cecilifier.Core.Misc
             return string.Empty;
         }
 
-        public static IEnumerable<string> Field(string declaringTypeVar, string fieldVar, string name, string fieldType, string fieldAttributes, params string[] properties)
+        public static IEnumerable<string> Field(string declaringTypeVar, string fieldVar, string name, string fieldType, string fieldAttributes, object constantValue = null)
         {
-            var exps = new List<string>();
             var fieldExp = $"var {fieldVar} = new FieldDefinition(\"{name}\", {fieldAttributes}, {fieldType})";
-            if (properties.Length > 0)
+            return new []
             {
-                exps.Add($"{fieldExp} {{ {string.Join(',', properties)} }};");
-            }
-            else
-            {
-                exps.Add($"{fieldExp};");
-            }
-
-            exps.Add($"{declaringTypeVar}.Fields.Add({fieldVar});");
-            return exps;
+                constantValue != null ? $"{fieldExp} {{ Constant = {constantValue} }} ;" : $"{fieldExp};", 
+                $"{declaringTypeVar}.Fields.Add({fieldVar});"
+            };
         }
 
         private static string Parameter(string name, RefKind byRef, string resolvedType)

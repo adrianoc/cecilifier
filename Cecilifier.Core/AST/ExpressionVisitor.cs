@@ -286,27 +286,27 @@ namespace Cecilifier.Core.AST
 
                 case SyntaxKind.CharacterLiteralExpression:
                 case SyntaxKind.NumericLiteralExpression:
-                    AddLocalVariableAndHandleCallOnValueTypeLiterals(node, GetSpecialType(SpecialType.System_Int32), node.ToString());
+                    AddLocalVariableAndHandleCallOnValueTypeLiterals(node,  Context.GetTypeInfo(node).Type, GetSpecialType(SpecialType.System_Int32), node.ToString());
                     break;
 
                 case SyntaxKind.TrueLiteralExpression:
                 case SyntaxKind.FalseLiteralExpression:
-                    AddLocalVariableAndHandleCallOnValueTypeLiterals(node, GetSpecialType(SpecialType.System_Boolean), bool.Parse(node.ToString()) ? 1 : 0);
+                    AddLocalVariableAndHandleCallOnValueTypeLiterals(node, Context.GetTypeInfo(node).Type, GetSpecialType(SpecialType.System_Boolean), bool.Parse(node.ToString()) ? 1 : 0);
                     break;
 
                 default:
                     throw new ArgumentException($"Literal ( {node}) of type {node.Kind()} not supported yet.");
             }
+        }
 
-            void AddLocalVariableAndHandleCallOnValueTypeLiterals(LiteralExpressionSyntax literalNode, ITypeSymbol expressionType, object literalValue)
-            {
-                AddCilInstruction(ilVar, LoadOpCodeFor(literalNode), literalValue);
-                var localVarParent = (CSharpSyntaxNode) literalNode.Parent;
-                Debug.Assert(localVarParent != null);
+        void AddLocalVariableAndHandleCallOnValueTypeLiterals(CSharpSyntaxNode node, ITypeSymbol literalType, ITypeSymbol expressionType, object literalValue)
+        {
+            AddCilInstruction(ilVar, LoadOpCodeFor(literalType), literalValue);
+            var localVarParent = (CSharpSyntaxNode) node.Parent;
+            Debug.Assert(localVarParent != null);
                 
-                if (localVarParent.Accept(new UsageVisitor()) == UsageKind.CallTarget) 
-                    StoreTopOfStackInLocalVariableAndLoadItsAddress(expressionType);
-            }
+            if (localVarParent.Accept(new UsageVisitor()) == UsageKind.CallTarget) 
+                StoreTopOfStackInLocalVariableAndLoadItsAddress(expressionType);
         }
 
         public override void VisitDeclarationExpression(DeclarationExpressionSyntax node)
@@ -747,11 +747,16 @@ namespace Cecilifier.Core.AST
             AddCilInstruction(ilVar, OpCodes.Stloc, tempLocalName);
             AddCilInstruction(ilVar, OpCodes.Ldloca_S, tempLocalName);
         }
-        
+
         private OpCode LoadOpCodeFor(LiteralExpressionSyntax node)
         {
             var info = Context.SemanticModel.GetTypeInfo(node);
-            switch (info.Type.SpecialType)
+            return LoadOpCodeFor(info.Type);
+        }
+        
+        private OpCode LoadOpCodeFor(ITypeSymbol type)
+        {
+            switch (type.SpecialType)
             {
                 case SpecialType.System_Single:
                     return OpCodes.Ldc_R4;
@@ -759,10 +764,15 @@ namespace Cecilifier.Core.AST
                 case SpecialType.System_Double:
                     return OpCodes.Ldc_R8;
 
+                case SpecialType.System_Byte:
+                case SpecialType.System_SByte:
                 case SpecialType.System_Int16:
                 case SpecialType.System_Int32:
+                case SpecialType.System_UInt16:
+                case SpecialType.System_UInt32:
                     return OpCodes.Ldc_I4;
 
+                case SpecialType.System_UInt64:
                 case SpecialType.System_Int64:
                     return OpCodes.Ldc_I8;
 
@@ -771,9 +781,15 @@ namespace Cecilifier.Core.AST
 
                 case SpecialType.System_Boolean:
                     return OpCodes.Ldc_I4;
+                
+                case SpecialType.System_String:
+                    return OpCodes.Ldstr;
+                
+                case SpecialType.None:
+                    return OpCodes.Ldnull;
             }
 
-            throw new ArgumentException($"Literal type {info.Type} not supported.", nameof(node));
+            throw new ArgumentException($"Literal type {type} not supported.", nameof(type));
         }
         
         private OpCode StelemOpCodeFor(ITypeSymbol type)
@@ -887,6 +903,21 @@ namespace Cecilifier.Core.AST
 
         private void ProcessField(SimpleNameSyntax node, IFieldSymbol fieldSymbol)
         {
+            if (fieldSymbol.HasConstantValue && fieldSymbol.IsConst)
+            {
+                AddLocalVariableAndHandleCallOnValueTypeLiterals(
+                    node, 
+                    fieldSymbol.Type, 
+                    fieldSymbol.Type, 
+                    fieldSymbol.Type.SpecialType switch
+                    {
+                        SpecialType.System_String => $"\"{fieldSymbol.ConstantValue}\"",
+                        SpecialType.System_Boolean => (bool) fieldSymbol.ConstantValue == true ? 1 : 0,
+                        _ => fieldSymbol.ConstantValue 
+                    }); 
+                return;
+            }
+            
             var fieldDeclarationVariable = EnsureFieldExists(node, fieldSymbol);
 
             var isTargetOfQualifiedAccess = (node.Parent is MemberAccessExpressionSyntax mae) && mae.Name == node;

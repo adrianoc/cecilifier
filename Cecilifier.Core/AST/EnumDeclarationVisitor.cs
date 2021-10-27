@@ -52,7 +52,7 @@ namespace Cecilifier.Core.AST
 
             var fieldVar = Context.Naming.LocalVariable(node, $"em_{enumVarDef.MemberName}");
             var exp = CecilDefinitionsFactory.Field(enumVarDef.VariableName, fieldVar, node.Identifier.ValueText, enumVarDef.VariableName,
-                "FieldAttributes.Static | FieldAttributes.Literal | FieldAttributes.Public | FieldAttributes.HasDefault", $"Constant = {enumMemberValue}");
+                "FieldAttributes.Static | FieldAttributes.Literal | FieldAttributes.Public | FieldAttributes.HasDefault", enumMemberValue);
             AddCecilExpressions(exp);
             
             HandleAttributesInMemberDeclaration(node.AttributeLists, fieldVar);

@@ -114,7 +114,7 @@ namespace Cecilifier.Core.AST
 
         private void ProcessFieldInitialization(TypeDeclarationSyntax declaringClass, string ctorBodyIL)
         {
-            foreach (var fieldDeclaration in declaringClass.Members.OfType<FieldDeclarationSyntax>())
+            foreach (var fieldDeclaration in declaringClass.Members.OfType<FieldDeclarationSyntax>().Where(f => !f.Modifiers.Any(m => m.IsKind(SyntaxKind.ConstKeyword))))
             {
                 var dec = fieldDeclaration.Declaration.Variables[0];
                 if (dec.Initializer != null && !fieldDeclaration.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword)))

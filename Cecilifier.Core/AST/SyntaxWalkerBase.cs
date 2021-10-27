@@ -167,21 +167,22 @@ namespace Cecilifier.Core.AST
 
             var convertedModifiers = ModifiersToCecil(node.Modifiers, "TypeAttributes", "NotPublic", MapAttribute);
             return typeAttributes.AppendModifier(convertedModifiers);
-            
-            string MapAttribute(SyntaxToken token)
-            {
-                switch (token.Kind())
-                {
-                    case SyntaxKind.InternalKeyword: return "NotPublic";
-                    case SyntaxKind.ProtectedKeyword: return "Family";
-                    case SyntaxKind.PrivateKeyword: return "Private";
-                    case SyntaxKind.PublicKeyword: return "Public";
-                    case SyntaxKind.StaticKeyword: return "Static";
-                    case SyntaxKind.AbstractKeyword: return "Abstract";
-                    case SyntaxKind.SealedKeyword: return "Sealed";
-                }
 
-                throw new ArgumentException();
+            IEnumerable<string> MapAttribute(SyntaxToken token)
+            {
+                var mapped = token.Kind() switch
+                {
+                    SyntaxKind.InternalKeyword => "NotPublic",
+                    SyntaxKind.ProtectedKeyword => "Family",
+                    SyntaxKind.PrivateKeyword => "Private",
+                    SyntaxKind.PublicKeyword => "Public",
+                    SyntaxKind.StaticKeyword => "Static",
+                    SyntaxKind.AbstractKeyword => "Abstract",
+                    SyntaxKind.SealedKeyword => "Sealed",
+                    _ => throw new ArgumentException()
+                };
+                
+                return new[] { mapped };
             }
         }
 
@@ -190,7 +191,7 @@ namespace Cecilifier.Core.AST
             return node.Parent.Kind() != SyntaxKind.NamespaceDeclaration && node.Parent.Kind() != SyntaxKind.CompilationUnit;
         }
         
-        protected static string ModifiersToCecil(IReadOnlyList<SyntaxToken> modifiers, string targetEnum, string defaultAccessibility, Func<SyntaxToken, string> mapAttribute = null)
+        protected static string ModifiersToCecil(IReadOnlyList<SyntaxToken> modifiers, string targetEnum, string defaultAccessibility, Func<SyntaxToken, IEnumerable<string>> mapAttribute = null)
         {
             var finalModifierList = new List<SyntaxToken>(modifiers);
 
@@ -200,7 +201,7 @@ namespace Cecilifier.Core.AST
 
             mapAttribute ??= MapAttributeForMembers;
             
-            var modifierStr = finalModifierList.Where(ExcludeHasNoCILRepresentation).Select(mapAttribute).Aggregate("", (acc, curr) => (acc.Length > 0 ? $"{acc} | " : "") + $"{targetEnum}." + curr) + m;
+            var modifierStr = finalModifierList.Where(ExcludeHasNoCILRepresentation).SelectMany(mapAttribute).Aggregate("", (acc, curr) => (acc.Length > 0 ? $"{acc} | " : "") + $"{targetEnum}." + curr) + m;
             
             if(!modifiers.Any(m => m.IsKind(SyntaxKind.PrivateKeyword) || m.IsKind(SyntaxKind.InternalKeyword) || m.IsKind(SyntaxKind.PrivateKeyword) || m.IsKind(SyntaxKind.PublicKeyword) || m.IsKind(SyntaxKind.ProtectedKeyword)))
                 return modifierStr.AppendModifier($"{targetEnum}.{defaultAccessibility}");
@@ -230,16 +231,17 @@ namespace Cecilifier.Core.AST
                 return false;
             }
             
-            string MapAttributeForMembers(SyntaxToken token)
+            IEnumerable<string> MapAttributeForMembers(SyntaxToken token)
             {
                 switch (token.Kind())
                 {
-                    case SyntaxKind.InternalKeyword: return "Assembly";
-                    case SyntaxKind.ProtectedKeyword: return "Family";
-                    case SyntaxKind.PrivateKeyword: return "Private";
-                    case SyntaxKind.PublicKeyword: return "Public";
-                    case SyntaxKind.StaticKeyword: return "Static";
-                    case SyntaxKind.AbstractKeyword: return "Abstract";
+                    case SyntaxKind.InternalKeyword: return new[] { "Assembly" };
+                    case SyntaxKind.ProtectedKeyword: return new[] { "Family" };
+                    case SyntaxKind.PrivateKeyword: return new[] { "Private" };
+                    case SyntaxKind.PublicKeyword: return new[] { "Public" };
+                    case SyntaxKind.StaticKeyword: return new[] { "Static" };
+                    case SyntaxKind.AbstractKeyword: return new[] { "Abstract" };
+                    case SyntaxKind.ConstKeyword: return new[] { "Literal", "Static" };
                     //case SyntaxKind.ReadOnlyKeyword: return FieldAttributes.InitOnly;
                 }
 
