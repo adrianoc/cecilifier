@@ -977,7 +977,7 @@ namespace Cecilifier.Core.AST
             var sourceIsByRef = sourceSymbol.IsByRef();
 
             var returnStatement = localVariableNameSyntax.Ancestors().OfType<ReturnStatementSyntax>().SingleOrDefault();
-            var argument = localVariableNameSyntax.Ancestors().OfType<ArgumentSyntax>().SingleOrDefault();
+            var argument = localVariableNameSyntax.Ancestors().OfType<ArgumentSyntax>().FirstOrDefault();
             var assigment = localVariableNameSyntax.Ancestors().OfType<BinaryExpressionSyntax>().SingleOrDefault(candidate => candidate.IsKind(SyntaxKind.SimpleAssignmentExpression));
 
             if (assigment != null && assigment.Left != localVariableNameSyntax)
