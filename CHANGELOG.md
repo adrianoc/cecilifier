@@ -1,9 +1,24 @@
 ## unreleased 
 
 ## Changed
+
 ## Added
+
+- added support for const fields
+- added support for DllImportAttribute / extern methods
+- added support for simple string interpolation
+- added support for nameof expression (issue #95)
+- added support for operator overloading
+- added support for user conversion operators
+- added coverage for a couple of box scenarios
+
 ## Fixed
 
+- fixed issue of setting static state by constructor when overriding formatting options
+- skip balanced stloc0/ldloc0 when comparing assemblies (test infrastructure)
+- fixed exception being thrown upon local variable being passed as an argument to a method call that is, itself, 
+  used as an argument to another method call (issue #110)
+  
 ## 09/Oct/2021
 
 ## Changed
