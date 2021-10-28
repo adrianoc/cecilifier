@@ -2,6 +2,20 @@
 
 ## Changed
 
+- bumped cecilifier version to 1.23.0
+
+## Added
+
+- Script to make it easier to update version information in Cecilifier projects.
+  
+## Fixed
+
+## 28/Oct/2021
+
+## Changed
+
+- bumped cecilifier version to 1.22.0
+
 ## Added
 
 - added support for const fields
