@@ -65,6 +65,12 @@ namespace Cecilifier.Core.Tests.Integration
         {
             AssertResourceTest($@"Misc/Attributes/AttributeWithArrayInitializer");
         }
+
+        [Test]
+        public void TestDllImport()
+        {
+            AssertResourceTest($@"Misc/Attributes/DllImportAttribute");
+        }
         
         [TestCase("TopLevelStatementsExplicitReturn")]
         [TestCase("TopLevelStatements")]

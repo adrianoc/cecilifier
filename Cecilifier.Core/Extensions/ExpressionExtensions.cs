@@ -30,6 +30,16 @@ namespace Cecilifier.Core.Extensions
             return _context.TypeResolver.Resolve(typeSymbol.Type);
         }
 
+        public override string? VisitInvocationExpression(InvocationExpressionSyntax node)
+        {
+            if (node.Expression is IdentifierNameSyntax { Identifier: { Text: "nameof" } } nameOf)
+            {
+                return $"\"{node.ArgumentList.Arguments[0].Expression}\"";
+            }
+            
+            return string.Empty;
+        }
+
         public override string VisitMemberAccessExpression(MemberAccessExpressionSyntax node)
         {
             var type = _context.SemanticModel.GetTypeInfo(node.Expression);

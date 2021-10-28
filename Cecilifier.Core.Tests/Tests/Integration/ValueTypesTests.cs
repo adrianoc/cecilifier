@@ -8,6 +8,8 @@ namespace Cecilifier.Core.Tests.Integration
         [TestCase("ValueTypeReturnAsTargetOfCall")]
         [TestCase("MultipleLiteralAsTargetOfCall")]
         [TestCase("SingleLiteralAsTargetOfCall")]
+        [TestCase("SingleDoubleLiteralAsTargetOfCall")]
+        [TestCase("SingleBoolLiteralAsTargetOfCall")]
         [TestCase("ValueTypeReturnAsTargetOfCallInsideBaseConstructorInvocation")]
         [TestCase("ValueTypeReturnAsTargetOfCallInsideConstructor")]
         public void ValueTypeAsTargetOfCall(string testResourceBaseName)

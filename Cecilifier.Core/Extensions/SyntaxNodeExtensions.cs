@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -57,6 +57,18 @@ namespace Cecilifier.Core.Extensions
         }
         
         public static string SourceDetails(this SyntaxNode node) => $"{node} ({node.SyntaxTree.GetMappedLineSpan(node.Span).Span})";
+
+        public static bool IsOperatorOnCustomUserType(this SyntaxNode self, SemanticModel semanticModel, out IMethodSymbol method)
+        {
+            var symbolInfo = semanticModel.GetSymbolInfo(self);
+            method = symbolInfo.Symbol as IMethodSymbol;
+
+            // Unmanaged types https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/unmanaged-types operators are handled by the VM 
+            // (as opposed to their own operator overloads) whence the check for IsUnmanagedType; the extra check (SpecialType) is meant to filter out
+            // custom structs (non primitives) which may be deemed as unmanaged (see the link above for more details) 
+            return method is { Parameters: { Length: > 0 } } 
+                   && ((!method.Parameters[0].Type.IsUnmanagedType && method.Parameters[0].Type.SpecialType != SpecialType.System_String)|| (method.Parameters[0].Type.SpecialType == SpecialType.None && method.Parameters[0].Type.Kind != SymbolKind.PointerType));
+        }
 
         public static IList<ParameterSyntax> ParameterList(this LambdaExpressionSyntax lambdaExpressionSyntax) => lambdaExpressionSyntax switch
         {

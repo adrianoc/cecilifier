@@ -1,0 +1,9 @@
+using System.Runtime.InteropServices; 
+
+public class C 
+{
+    [DllImport("Foo", EntryPoint = "NativeMethod")] 
+    public static extern int M(); 
+    
+    int Call() => M(); 
+ }

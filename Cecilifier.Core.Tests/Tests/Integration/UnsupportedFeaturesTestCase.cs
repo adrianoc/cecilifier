@@ -31,7 +31,6 @@ namespace Cecilifier.Core.Tests.Integration
         }
 
         [TestCase("class C { string F(object o) { return o is string s ? s : null; } }", "IsPatternExpression", TestName = "IsPattern")]
-        [TestCase("class C { string F(int i) { return $\"{i}\"; } }", "InterpolatedStringExpression", TestName = "StringInterpolation")]
         public void TestVariousExpressions(string code, string expectedComment)
         {
             AssertUnsupportedFeature(code, $"Syntax '{expectedComment}' is not supported");

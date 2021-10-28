@@ -632,7 +632,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                 return false;
             }
 
-            if (inst.OpCode != OpCodes.Stloc || inst.Next == null)
+            if ((inst.OpCode != OpCodes.Stloc && inst.OpCode != OpCodes.Stloc_0)|| inst.Next == null)
             {
                 return true;
             }
@@ -641,7 +641,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
             while (current != null && current.OpCode == OpCodes.Nop)
                 current = current.Next;
                 
-            if (current != null && current.OpCode == OpCodes.Ldloc && current.Operand == inst.Operand)
+            if ((current?.OpCode == OpCodes.Ldloc || current?.OpCode == OpCodes.Ldloc_0) && current.Operand == inst.Operand)
             {
                 toBeIgnored.Add(current);
                 return false;

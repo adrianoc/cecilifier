@@ -16,7 +16,8 @@ namespace Cecilifier.Core.AST
         Field,
         Method,
         Parameter,
-        LocalVariable
+        LocalVariable,
+        ModuleReference
     }
 
     public class DefinitionVariable : IEquatable<DefinitionVariable>

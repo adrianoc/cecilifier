@@ -1,0 +1,18 @@
+﻿using System;
+public class C 
+{ 
+    string StringInterpolation() => $"Name={nameof(StringInterpolation)}";
+    
+    string StringInterpolation2(int i) => $"Name={i}";
+    string StringInterpolation3(int i, int j, string s) => $"{s.Length} Name={i} I+J={i+j} I-J={i-j} Post";
+    
+     void AssingToFormattableString(int i)
+     {
+        System.FormattableString s = $"Teste = {i}";
+     }
+    
+    void InConsoleWriteLine(int i)
+    {
+        Console.WriteLine($"i={i}");
+    }
+}

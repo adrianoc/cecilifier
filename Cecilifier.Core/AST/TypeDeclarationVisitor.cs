@@ -73,6 +73,16 @@ namespace Cecilifier.Core.AST
             new MethodDeclarationVisitor(Context).Visit(node);
         }
 
+        public override void VisitConversionOperatorDeclaration(ConversionOperatorDeclarationSyntax node)
+        {
+            new ConversionOperatorDeclarationVisitor(Context).Visit(node);
+        }
+
+        public override void VisitOperatorDeclaration(OperatorDeclarationSyntax node)
+        {
+            new ConversionOperatorDeclarationVisitor(Context).Visit(node);
+        }
+
         public override void VisitEventDeclaration(EventDeclarationSyntax node)
         {
             new EventDeclarationVisitor(Context).Visit(node);

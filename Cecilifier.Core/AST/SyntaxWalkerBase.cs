@@ -1,12 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Mono.Cecil;
 using Mono.Cecil.Cil;
 using static Cecilifier.Core.Misc.Utils;
 
@@ -165,21 +167,22 @@ namespace Cecilifier.Core.AST
 
             var convertedModifiers = ModifiersToCecil(node.Modifiers, "TypeAttributes", "NotPublic", MapAttribute);
             return typeAttributes.AppendModifier(convertedModifiers);
-            
-            string MapAttribute(SyntaxToken token)
-            {
-                switch (token.Kind())
-                {
-                    case SyntaxKind.InternalKeyword: return "NotPublic";
-                    case SyntaxKind.ProtectedKeyword: return "Family";
-                    case SyntaxKind.PrivateKeyword: return "Private";
-                    case SyntaxKind.PublicKeyword: return "Public";
-                    case SyntaxKind.StaticKeyword: return "Static";
-                    case SyntaxKind.AbstractKeyword: return "Abstract";
-                    case SyntaxKind.SealedKeyword: return "Sealed";
-                }
 
-                throw new ArgumentException();
+            IEnumerable<string> MapAttribute(SyntaxToken token)
+            {
+                var mapped = token.Kind() switch
+                {
+                    SyntaxKind.InternalKeyword => "NotPublic",
+                    SyntaxKind.ProtectedKeyword => "Family",
+                    SyntaxKind.PrivateKeyword => "Private",
+                    SyntaxKind.PublicKeyword => "Public",
+                    SyntaxKind.StaticKeyword => "Static",
+                    SyntaxKind.AbstractKeyword => "Abstract",
+                    SyntaxKind.SealedKeyword => "Sealed",
+                    _ => throw new ArgumentException()
+                };
+                
+                return new[] { mapped };
             }
         }
 
@@ -188,7 +191,7 @@ namespace Cecilifier.Core.AST
             return node.Parent.Kind() != SyntaxKind.NamespaceDeclaration && node.Parent.Kind() != SyntaxKind.CompilationUnit;
         }
         
-        protected static string ModifiersToCecil(IReadOnlyList<SyntaxToken> modifiers, string targetEnum, string defaultAccessibility, Func<SyntaxToken, string> mapAttribute = null)
+        protected static string ModifiersToCecil(IReadOnlyList<SyntaxToken> modifiers, string targetEnum, string defaultAccessibility, Func<SyntaxToken, IEnumerable<string>> mapAttribute = null)
         {
             var finalModifierList = new List<SyntaxToken>(modifiers);
 
@@ -198,7 +201,8 @@ namespace Cecilifier.Core.AST
 
             mapAttribute ??= MapAttributeForMembers;
             
-            var modifierStr = finalModifierList.Where(ExcludeHasNoCILRepresentation).Select(mapAttribute).Aggregate("", (acc, curr) => (acc.Length > 0 ? $"{acc} | " : "") + $"{targetEnum}." + curr) + m;
+            var modifierStr = finalModifierList.Where(ExcludeHasNoCILRepresentation).SelectMany(mapAttribute).Aggregate("", (acc, curr) => (acc.Length > 0 ? $"{acc} | " : "") + $"{targetEnum}." + curr) + m;
+            
             if(!modifiers.Any(m => m.IsKind(SyntaxKind.PrivateKeyword) || m.IsKind(SyntaxKind.InternalKeyword) || m.IsKind(SyntaxKind.PrivateKeyword) || m.IsKind(SyntaxKind.PublicKeyword) || m.IsKind(SyntaxKind.ProtectedKeyword)))
                 return modifierStr.AppendModifier($"{targetEnum}.{defaultAccessibility}");
 
@@ -227,20 +231,21 @@ namespace Cecilifier.Core.AST
                 return false;
             }
             
-            string MapAttributeForMembers(SyntaxToken token)
+            IEnumerable<string> MapAttributeForMembers(SyntaxToken token)
             {
                 switch (token.Kind())
                 {
-                    case SyntaxKind.InternalKeyword: return "Assembly";
-                    case SyntaxKind.ProtectedKeyword: return "Family";
-                    case SyntaxKind.PrivateKeyword: return "Private";
-                    case SyntaxKind.PublicKeyword: return "Public";
-                    case SyntaxKind.StaticKeyword: return "Static";
-                    case SyntaxKind.AbstractKeyword: return "Abstract";
+                    case SyntaxKind.InternalKeyword: return new[] { "Assembly" };
+                    case SyntaxKind.ProtectedKeyword: return new[] { "Family" };
+                    case SyntaxKind.PrivateKeyword: return new[] { "Private" };
+                    case SyntaxKind.PublicKeyword: return new[] { "Public" };
+                    case SyntaxKind.StaticKeyword: return new[] { "Static" };
+                    case SyntaxKind.AbstractKeyword: return new[] { "Abstract" };
+                    case SyntaxKind.ConstKeyword: return new[] { "Literal", "Static" };
                     //case SyntaxKind.ReadOnlyKeyword: return FieldAttributes.InitOnly;
                 }
 
-                throw new ArgumentException(token.Kind().ToString());
+                throw new ArgumentException($"Unsupported attribute name: {token.Kind().ToString()}");
             }
         }
 
@@ -274,7 +279,8 @@ namespace Cecilifier.Core.AST
             return !token.IsKind(SyntaxKind.PartialKeyword) 
                    && !token.IsKind(SyntaxKind.VolatileKeyword) 
                    && !token.IsKind(SyntaxKind.UnsafeKeyword)
-                   && !token.IsKind(SyntaxKind.AsyncKeyword);
+                   && !token.IsKind(SyntaxKind.AsyncKeyword)
+                   && !token.IsKind(SyntaxKind.ExternKeyword);
         }
 
         protected string ResolveExpressionType(ExpressionSyntax expression)
@@ -478,45 +484,172 @@ namespace Cecilifier.Core.AST
 
         protected void HandleAttributesInMemberDeclaration(in SyntaxList<AttributeListSyntax> nodeAttributeLists, Func<AttributeTargetSpecifierSyntax, SyntaxKind, bool> predicate, SyntaxKind toMatch, string whereToAdd)
         {
-            var tattributeLists = nodeAttributeLists.Where(c => predicate(c.Target, toMatch));
-            HandleAttributesInMemberDeclaration(tattributeLists, whereToAdd);
+            var attributeLists = nodeAttributeLists.Where(c => predicate(c.Target, toMatch));
+            HandleAttributesInMemberDeclaration(attributeLists, whereToAdd);
         }
 
         protected static bool TargetDoesNotMatch(AttributeTargetSpecifierSyntax target, SyntaxKind operand) => target == null || !target.Identifier.IsKind(operand);
         protected static bool TargetMatches(AttributeTargetSpecifierSyntax target, SyntaxKind operand) => target != null && target.Identifier.IsKind(operand);
         
-
         protected void HandleAttributesInMemberDeclaration(IEnumerable<AttributeListSyntax> attributeLists, string varName)
         {
             if (!attributeLists.Any())
-            {
                 return;
-            }
 
             foreach (var attribute in attributeLists.SelectMany(al => al.Attributes))
             {
-                var attrsExp = CecilDefinitionsFactory.Attribute(varName, Context, attribute, (attrType, attrArgs) =>
-                {
-                    var typeVar = Context.TypeResolver.ResolveLocalVariableType(attrType);
-                    if (typeVar == null)
-                    {
-                        //attribute is not declared in the same assembly....
-                        var ctorArgumentTypes = $"new Type[{attrArgs.Length}] {{ {string.Join(",", attrArgs.Select(arg => $"typeof({Context.GetTypeInfo(arg.Expression).Type.Name})"))} }}";
-
-                        return ImportFromMainModule($"typeof({attrType.FullyQualifiedName()}).GetConstructor({ctorArgumentTypes})");
-                    }
-
-                    // Attribute is defined in the same assembly. We need to find the variable that holds its "ctor declaration"
-                    var attrCtor = attrType.GetMembers().OfType<IMethodSymbol>().SingleOrDefault(m => m.MethodKind == MethodKind.Constructor && m.Parameters.Length == attrArgs.Length);
-                    var attrCtorVar = Context.DefinitionVariables.GetMethodVariable(attrCtor.AsMethodDefinitionVariable());
-                    if (!attrCtorVar.IsValid)
-                        throw new Exception($"Could not find variable for {attrCtor.ContainingType.Name} ctor.");
-
-                    return attrCtorVar.VariableName;
-                });
-
+                var attrsExp = Context.SemanticModel.GetSymbolInfo(attribute.Name).Symbol.IsDllImportCtor()
+                    ? ProcessDllImportAttribute(attribute, varName)
+                    : ProcessNormalMethodAttribute(attribute, varName);
+                
                 AddCecilExpressions(attrsExp);
             }
+        }
+
+        private IEnumerable<string> ProcessDllImportAttribute(AttributeSyntax attribute, string methodVar)
+        {
+            var moduleName = attribute.ArgumentList?.Arguments.First().ToFullString();
+            var existingModuleVar = Context.DefinitionVariables.GetVariable(moduleName, MemberKind.ModuleReference);
+            
+            var moduleVar = existingModuleVar.IsValid 
+                ?  existingModuleVar.VariableName
+                :  Context.Naming.SyntheticVariable("dllImportModule", ElementKind.LocalVariable); 
+
+            var exps = new List<string>
+            {
+                $"{methodVar}.PInvokeInfo = new PInvokeInfo({ PInvokeAttributesFrom(attribute) }, { EntryPoint() }, {moduleVar});",
+                $"{methodVar}.Body = null;",
+                $"{methodVar}.ImplAttributes = {MethodImplAttributes()};",
+            };
+
+            if (!existingModuleVar.IsValid)
+            {
+                exps.InsertRange(0, new []
+                {
+                    $"var {moduleVar} = new ModuleReference({moduleName});",
+                    $"assembly.MainModule.ModuleReferences.Add({moduleVar});",
+                });
+            }
+
+            Context.DefinitionVariables.RegisterNonMethod("", moduleName, MemberKind.ModuleReference, moduleVar);
+            
+            return exps;
+            
+            string EntryPoint() => attribute?.ArgumentList?.Arguments.FirstOrDefault(arg => arg.NameEquals?.Name.Identifier.Text == "EntryPoint")?.Expression.ToString() ?? "\"\"";
+
+            string MethodImplAttributes()
+            {
+                var preserveSig = Boolean.Parse(AttributePropertyOrDefaultValue(attribute, "PreserveSig", "true"));
+                return preserveSig 
+                    ? "MethodImplAttributes.PreserveSig | MethodImplAttributes.Managed" 
+                    : "MethodImplAttributes.Managed";
+            }
+
+            string CallingConventionFrom(AttributeSyntax attr)
+            {
+                var callingConventionStr = attr.ArgumentList?.Arguments.FirstOrDefault(arg => arg.NameEquals?.Name.Identifier.Text == "CallingConvention")?.Expression.ToFullString() 
+                                           ?? "Winapi";
+
+                // ensures we use the enum member simple name; Parse() fails if we pass a qualified enum member
+                var index = callingConventionStr.LastIndexOf('.');
+                callingConventionStr = callingConventionStr.Substring(index + 1);
+                
+                return CallingConventionToCecil(Enum.Parse<CallingConvention>(callingConventionStr));
+            }
+
+            string CharSetFrom(AttributeSyntax attr)
+            {
+                var enumMemberName = AttributePropertyOrDefaultValue(attr, "CharSet", "None");
+
+                // Only use the actual enum member name Parse() fails if we pass a qualified enum member
+                var index = enumMemberName.LastIndexOf('.');
+                enumMemberName = enumMemberName.Substring(index + 1);
+
+                var charSet = Enum.Parse<CharSet>(enumMemberName);
+                return charSet == CharSet.None ? string.Empty : $"PInvokeAttributes.CharSet{charSet}";
+            }
+
+            string SetLastErrorFrom(AttributeSyntax attr)
+            {
+                var setLastError = bool.Parse(AttributePropertyOrDefaultValue(attr, "SetLastError", "false"));
+                return setLastError ? "PInvokeAttributes.SupportsLastError" : string.Empty;
+            }
+
+            string ExactSpellingFrom(AttributeSyntax attr)
+            {
+                var exactSpelling = bool.Parse(AttributePropertyOrDefaultValue(attr, "ExactSpelling", "false"));
+                return exactSpelling ? "PInvokeAttributes.NoMangle" : string.Empty;
+            }
+
+            string BestFitMappingFrom(AttributeSyntax attr)
+            {
+                var bestFitMapping = bool.Parse(AttributePropertyOrDefaultValue(attr, "BestFitMapping", "true"));
+                return bestFitMapping ? "PInvokeAttributes.BestFitEnabled" : "PInvokeAttributes.BestFitDisabled";
+            }
+
+            string ThrowOnUnmappableCharFrom(AttributeSyntax attr)
+            {
+                var bestFitMapping = bool.Parse(AttributePropertyOrDefaultValue(attr, "ThrowOnUnmappableChar", "false"));
+                return bestFitMapping ? "PInvokeAttributes.ThrowOnUnmappableCharEnabled" : "PInvokeAttributes.ThrowOnUnmappableCharDisabled";
+            }
+
+            // For more information and default values see
+            // https://docs.microsoft.com/en-us/dotnet/api/system.runtime.interopservices.dllimportattribute
+            string PInvokeAttributesFrom(AttributeSyntax attr)
+            {
+                return CallingConventionFrom(attr)
+                    .AppendModifier(CharSetFrom(attr))
+                    .AppendModifier(SetLastErrorFrom(attr))
+                    .AppendModifier(ExactSpellingFrom(attr))
+                    .AppendModifier(BestFitMappingFrom(attr))
+                    .AppendModifier(ThrowOnUnmappableCharFrom(attr));
+            }
+
+            string AttributePropertyOrDefaultValue(AttributeSyntax attr, string propertyName, string defaultValue)
+            {
+                return attr.ArgumentList?.Arguments.FirstOrDefault(arg => arg.NameEquals?.Name.Identifier.Text == propertyName)?.Expression.ToFullString() ?? defaultValue;
+            }
+        }
+
+        private string CallingConventionToCecil(CallingConvention callingConvention)
+        {
+            var enumMemberName = callingConvention switch
+            {
+                CallingConvention.Cdecl => PInvokeAttributes.CallConvCdecl.ToString(),
+                CallingConvention.Winapi => PInvokeAttributes.CallConvWinapi.ToString(),
+                CallingConvention.FastCall => PInvokeAttributes.CallConvFastcall.ToString(),
+                CallingConvention.StdCall => PInvokeAttributes.CallConvStdCall.ToString(),
+                CallingConvention.ThisCall => PInvokeAttributes.CallConvThiscall.ToString(),
+
+                _ => PInvokeAttributes.CallConvWinapi.ToString() // Default
+            };
+
+            return $"PInvokeAttributes.{enumMemberName}";
+        }
+
+        private IEnumerable<string> ProcessNormalMethodAttribute(AttributeSyntax attribute, string varName)
+        {
+            var attrsExp = CecilDefinitionsFactory.Attribute(varName, Context, attribute, (attrType, attrArgs) =>
+            {
+                var typeVar = Context.TypeResolver.ResolveLocalVariableType(attrType);
+                if (typeVar == null)
+                {
+                    //attribute is not declared in the same assembly....
+                    var ctorArgumentTypes = $"new Type[{attrArgs.Length}] {{ {string.Join(",", attrArgs.Select(arg => $"typeof({Context.GetTypeInfo(arg.Expression).Type.Name})"))} }}";
+            
+                    return ImportFromMainModule($"typeof({attrType.FullyQualifiedName()}).GetConstructor({ctorArgumentTypes})");
+                }
+            
+                // Attribute is defined in the same assembly. We need to find the variable that holds its "ctor declaration"
+                var attrCtor = attrType.GetMembers().OfType<IMethodSymbol>().SingleOrDefault(m => m.MethodKind == MethodKind.Constructor && m.Parameters.Length == attrArgs.Length);
+                var attrCtorVar = Context.DefinitionVariables.GetMethodVariable(attrCtor.AsMethodDefinitionVariable());
+                if (!attrCtorVar.IsValid)
+                    throw new Exception($"Could not find variable for {attrCtor.ContainingType.Name} ctor.");
+            
+                return attrCtorVar.VariableName;
+            });
+
+            return attrsExp;
         }
 
         protected void LogUnsupportedSyntax(SyntaxNode node)

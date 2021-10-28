@@ -307,8 +307,6 @@ namespace Cecilifier.Core.AST
                 return;
             }
 
-            InjectConversionAfterLoadIfRequired(localVar);
-            
             var localVarDef = Context.DefinitionVariables.GetVariable(localVar.Identifier.ValueText, MemberKind.LocalVariable);
             AddCilInstruction(_ilVar, OpCodes.Stloc, localVarDef.VariableName);
         }
