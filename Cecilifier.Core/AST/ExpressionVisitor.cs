@@ -286,12 +286,12 @@ namespace Cecilifier.Core.AST
 
                 case SyntaxKind.CharacterLiteralExpression:
                 case SyntaxKind.NumericLiteralExpression:
-                    AddLocalVariableAndHandleCallOnValueTypeLiterals(node,  Context.GetTypeInfo(node).Type, GetSpecialType(SpecialType.System_Int32), node.ToString());
+                    AddLocalVariableAndHandleCallOnValueTypeLiterals(node,  Context.GetTypeInfo(node).Type, node.ToString());
                     break;
 
                 case SyntaxKind.TrueLiteralExpression:
                 case SyntaxKind.FalseLiteralExpression:
-                    AddLocalVariableAndHandleCallOnValueTypeLiterals(node, Context.GetTypeInfo(node).Type, GetSpecialType(SpecialType.System_Boolean), bool.Parse(node.ToString()) ? 1 : 0);
+                    AddLocalVariableAndHandleCallOnValueTypeLiterals(node, Context.GetTypeInfo(node).Type, bool.Parse(node.ToString()) ? 1 : 0);
                     break;
 
                 default:
@@ -299,14 +299,14 @@ namespace Cecilifier.Core.AST
             }
         }
 
-        void AddLocalVariableAndHandleCallOnValueTypeLiterals(CSharpSyntaxNode node, ITypeSymbol literalType, ITypeSymbol expressionType, object literalValue)
+        void AddLocalVariableAndHandleCallOnValueTypeLiterals(CSharpSyntaxNode node, ITypeSymbol literalType, object literalValue)
         {
             AddCilInstruction(ilVar, LoadOpCodeFor(literalType), literalValue);
             var localVarParent = (CSharpSyntaxNode) node.Parent;
             Debug.Assert(localVarParent != null);
                 
             if (localVarParent.Accept(new UsageVisitor()) == UsageKind.CallTarget) 
-                StoreTopOfStackInLocalVariableAndLoadItsAddress(expressionType);
+                StoreTopOfStackInLocalVariableAndLoadItsAddress(literalType);
         }
 
         public override void VisitDeclarationExpression(DeclarationExpressionSyntax node)
@@ -907,7 +907,6 @@ namespace Cecilifier.Core.AST
             {
                 AddLocalVariableAndHandleCallOnValueTypeLiterals(
                     node, 
-                    fieldSymbol.Type, 
                     fieldSymbol.Type, 
                     fieldSymbol.Type.SpecialType switch
                     {

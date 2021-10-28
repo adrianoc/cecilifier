@@ -1,0 +1,4 @@
+﻿class SingleLiteralAsTargetOfCall
+{
+	string Method() => true.ToString() ;
+}

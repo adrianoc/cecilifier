@@ -51,6 +51,7 @@
     }
     
 /*
+    // the cast is semantically equivalent to an unbox.
 	void OnCast(object o)
 	{
         ((int) o).ToString();

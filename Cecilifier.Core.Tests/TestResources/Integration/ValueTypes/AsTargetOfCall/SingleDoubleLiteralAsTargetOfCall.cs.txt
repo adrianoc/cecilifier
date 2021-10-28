@@ -1,0 +1,4 @@
+﻿class SingleDoubleLiteralAsTargetOfCall
+{
+	string Method() => 42.42.ToString() ;
+}
