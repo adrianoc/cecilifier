@@ -186,7 +186,7 @@ function updateEditorsSize() {
     csharpCodeDiv.style.height = `${h}px`;
 
     var cecilifiedCodeDiv = document.getElementById("cecilifiedcode");
-    cecilifiedCodeDiv.style.height = `${window.innerHeight - h - 80}px`;
+    cecilifiedCodeDiv.style.height = `${window.innerHeight - h - 60}px`;
 
     csharpCode.layout();
     cecilifiedCode.layout();
@@ -272,11 +272,38 @@ function setTooltips(version) {
         allowHTML: true,
         theme: 'cecilifier-tooltip',
         delay: defaultDelay
-    });    
+    });
+
+    tippy('#report_internal_error_button', {
+        content: "By clicking on 'Report' you'll be redirected to github to authenticate/authorize Cecilifier<br/>" +
+            "to file an issue on your behalf.<br/><br/>" +
+            "Cecilifier will neither store nor use this authorization for any purpose other than reporting the issue on <a href='https://github.com/adrianoc/cecilifier/issues' style='color:#8cbc13; text-decoration: underline'>Cecilifier Repository</a>.",
+
+        placement: 'top',
+        appendTo: document.body,
+        interactive: true,
+        allowHTML: true,
+        theme: 'light',
+        maxWidth: "none",
+        delay: defaultDelay
+    });
+    
+    tippy('#include-snippet', {
+        content: "Selecting this checkbox will include the code to be cecilified in the reported issue.<br/>" +
+                 "If it does not contain sensitive information please, select the checkbox.<br/>" +
+                 "The source code is extremely useful to investigate the issue.",
+        
+        appendTo: document.body,
+        interactive: true,
+        allowHTML: true,
+        maxWidth: "none",
+        theme: 'cecilifier-tooltip',
+        delay: defaultDelay
+    });
 }
 
 function initializeSettings(formattingSettingsSample) {
-    
+
     const startLine = 15;
     
     settings = new SettingsManager(formattingSettingsSample, [
@@ -397,6 +424,8 @@ function setSendToDiscordTooltip()
     {
         msg = "Publish Off: " + msgBody +  " only in case of errors.";
     }
+    
+    //TODO: Set the tooltip, i.e, use MSG
 }
 
 function setAlert(div_id, msg) {
@@ -412,14 +441,6 @@ function setAlert(div_id, msg) {
         div.children[1].innerHTML = msg;
         div.style.display = "block";
     }
-}
-
-function clearError() {
-    setAlert("cecilifier_error", null);
-}
-
-function setError(str) {
-    setAlert("cecilifier_error", str);
 }
 
 function initializeWebSocket() {
@@ -470,9 +491,9 @@ function initializeWebSocket() {
                 blockMappings = response.mappings;
             }
         } else if (response.status === 1) {
-            setError(response.syntaxError.replace(/\n/g, "<br/>"));
+            setError(response.error + "<br/><br/>"+ response.syntaxError.replaceAll("\n", "<br/>"));
         } else if (response.status === 2) {
-            setError("Something went wrong. Please report the following error in the google group or in the git repository:\n" + response.error);
+            ShowErrorDialog("", response.error);
         }
     };
 }
@@ -577,6 +598,9 @@ function hideSpinner() {
 
 function setupCursorTracking() {
     cecilifiedCode.onMouseDown(function(e) {
+        if (blockMappings === null)
+            return;
+        
         for(let i = 0; i < blockMappings.length; i++)
         {
             if (e.target.position.lineNumber < blockMappings[i].Cecilified.Begin.Line || e.target.position.lineNumber > blockMappings[i].Cecilified.End.Line)
@@ -615,4 +639,122 @@ function setupCursorTracking() {
             cecilifiedCode.revealLineNearTop(blockMappings[matchIndex].Cecilified.Begin.Line);
         }
     });    
+}
+
+/************************************************
+ *         Internal Error Handling              *
+ ************************************************/
+function ShowErrorDialog(title, body) {
+    window.onresize = (e) => {
+        ResizeErrorDialog();
+    };
+    
+    let titleElement =  getErrorTitleElement();
+    
+    titleElement.value = title;
+    getErrorBodyElement().value = body;
+    
+    document.getElementsByClassName("modal")[0].classList.add("opened");
+    document.getElementsByClassName("modal")[0].style.display="block";
+    ResizeErrorDialog();
+    titleElement.focus();
+}
+
+function CloseErrorDialog() {
+    document.getElementsByClassName("modal")[0].classList.remove("opened");
+    document.getElementsByClassName("modal")[0].style.display="none";
+}
+
+function ResizeErrorDialog(){
+    let footerOffset = document.getElementById("internal_error_dialog_footer").offsetHeight;
+    let h = (document.getElementById("internal_error_dialog").offsetHeight - footerOffset);
+
+    getErrorTitleElement().style.height = `${h * 0.05}px`;
+    getErrorBodyElement().style.height = `${h * 0.70}px`;
+}
+
+function clearError() {
+    setAlert("cecilifier_error", null);
+}
+
+function setError(str) {
+    setAlert("cecilifier_error", str);
+}
+
+function updateReportErrorButton(element) {
+    if (element.value !== "") {
+        getReportErrorButton().classList.remove("btn-disabled");
+        getReportErrorButton().classList.add("btn");
+    } else {
+        getReportErrorButton().classList.remove("btn");
+        getReportErrorButton().classList.add("btn-disabled");
+    }
+}
+
+function fileIssueInGitHub() {
+    clearError();
+    showSpinner();
+    
+    try {
+        let title = getErrorTitleElement().value;
+        if (title === '') {
+            getErrorTitleElement().focus();
+            return;
+        }
+
+        let body = escapeString(getErrorBodyElement().value);
+        if (shouldIncludeSnippet()) {
+            let code = "```CSharp\\n" + escapeString(csharpCode.getValue()) + "\\n```";
+            body = `Error\\n---\\n${body}\\n\\nAssociated snippet:\\n----\\n${code}`;
+        }
+
+        window.addEventListener("message", (event) => {
+            if (event.origin !== window.origin) {
+                console.log(`"Unexpected message from: ${event.origin}`);
+                return;
+            }
+                
+            let fileIssueResult = JSON.parse(event.data);
+            if (fileIssueResult.status === "success")
+            {
+                CloseErrorDialog();                
+                SnackBar({
+                    message: `Issue created: ${fileIssueResult.issueUrl}`,
+                    dismissible: true,
+                    status: "Info",
+                    timeout: 6000,
+                    icon: "exclamation"
+                });
+            }
+        }, false);       
+        
+        let w = window.open(`${window.origin}/fileissue?title=${title}&body=${body}`, '_oauth2', 'width=*,height=*');
+    }
+    finally {
+        hideSpinner();
+    }
+}
+
+function getErrorTitleElement() {
+    return document.getElementById("error_title");
+}
+
+function getErrorBodyElement() {
+    return document.getElementById("error_description");
+}
+
+function getReportErrorButton() {
+    return document.getElementById("report_internal_error_button");
+}
+
+function shouldIncludeSnippet() {
+    return document.getElementById("include-snippet").checked;
+}
+
+function escapeString(str) {
+    return str.replaceAll('"', '\\"')
+        .replaceAll('\n', '\\n')
+        .replaceAll('\r', '\\r')
+        .replaceAll('\f', '\\f')
+        .replaceAll('\t', '\\t');
 }

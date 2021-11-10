@@ -17,6 +17,7 @@ using Cecilifier.Core;
 using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Naming;
 using Cecilifier.Web.Pages;
+using Cecilifier.Web.wwwroot;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -86,7 +87,12 @@ namespace Cecilifier.Web
             app.UseStaticFiles();
 
             app.UseRouting();
-            app.UseEndpoints(endpoints => { endpoints.MapRazorPages(); });
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapRazorPages();
+                endpoints.MapGet("/fileissue", InternalErrorHandler.FileIssueEndPointAsync);
+                endpoints.MapGet("/authorization_callback", InternalErrorHandler.ReportIssueEndPointAsync);
+            });
             
             app.Use(async (context, next) =>
             {
@@ -161,7 +167,7 @@ namespace Cecilifier.Web
                             var source = ((toBeCecilified.Settings.NamingOptions & NamingOptions.IncludeSourceInErrorReports) == NamingOptions.IncludeSourceInErrorReports) ? toBeCecilified.Code : string.Empty;  
                             SendMessageWithCodeToChat("Syntax Error", ex.Message, "15746887", source);
 
-                            var dataToReturn = Encoding.UTF8.GetBytes($"{{ \"status\" : 1,  \"syntaxError\": \"{HttpUtility.JavaScriptStringEncode(ex.Message)}\"  }}").AsMemory();
+                            var dataToReturn = Encoding.UTF8.GetBytes($"{{ \"status\" : 1, \"error\": \"Code contains syntax errors\", \"syntaxError\": \"{HttpUtility.JavaScriptStringEncode(ex.Message)}\"  }}").AsMemory();
                             webSocket.SendAsync(dataToReturn, received.MessageType, received.EndOfMessage, CancellationToken.None);
                         }
                         catch (Exception ex)
