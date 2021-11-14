@@ -3,12 +3,16 @@
 ## Changed
 
 - bumped cecilifier version to 1.23.0
+- new releases notification mechanism
 
 ## Added
 
+- Bug reporter
 - Script to make it easier to update version information in Cecilifier projects.
   
 ## Fixed
+
+- Generic methods references uses wrong type parameter (#91)
 
 ## 28/Oct/2021
 
