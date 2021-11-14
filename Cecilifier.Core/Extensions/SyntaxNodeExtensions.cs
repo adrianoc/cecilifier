@@ -66,8 +66,10 @@ namespace Cecilifier.Core.Extensions
             // Unmanaged types https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/unmanaged-types operators are handled by the VM 
             // (as opposed to their own operator overloads) whence the check for IsUnmanagedType; the extra check (SpecialType) is meant to filter out
             // custom structs (non primitives) which may be deemed as unmanaged (see the link above for more details) 
-            return method is { Parameters: { Length: > 0 } } 
-                   && ((!method.Parameters[0].Type.IsUnmanagedType && method.Parameters[0].Type.SpecialType != SpecialType.System_String)|| (method.Parameters[0].Type.SpecialType == SpecialType.None && method.Parameters[0].Type.Kind != SymbolKind.PointerType));
+            return method is { Parameters: { Length: > 0 } }
+                   && method.Parameters[0].Type?.BaseType?.SpecialType != SpecialType.System_MulticastDelegate
+                   && ((!method.Parameters[0].Type.IsUnmanagedType && method.Parameters[0].Type.SpecialType != SpecialType.System_String) 
+                       || (method.Parameters[0].Type.SpecialType == SpecialType.None && method.Parameters[0].Type.Kind != SymbolKind.PointerType));
         }
 
         public static IList<ParameterSyntax> ParameterList(this LambdaExpressionSyntax lambdaExpressionSyntax) => lambdaExpressionSyntax switch
