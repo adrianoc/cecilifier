@@ -64,8 +64,9 @@ namespace Cecilifier.Core.AST
                 var m = $"var {genInstVar} = new GenericInstanceMethod({resolvedMethodVar});";
                 AddCecilExpression(m1);
                 AddCecilExpression(m);
-                for(int i = 0; i < method.TypeArguments.Length; i++)
-                    AddCecilExpression($"{genInstVar}.GenericArguments.Add({resolvedMethodVar}.GenericParameters[{i}]);");
+                foreach (var t in method.TypeArguments)
+                    AddCecilExpression($"{genInstVar}.GenericArguments.Add({Context.TypeResolver.Resolve(t)});");
+
                 AddCilInstruction(ilVar, opCode, genInstVar);
             }
             else
