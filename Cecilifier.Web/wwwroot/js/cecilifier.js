@@ -86,9 +86,49 @@ function initializeSite(errorAccessingGist, gist, version) {
         handleGist(gist, errorAccessingGist);
     });
     
+    /*
+     * Retrieves all open issues with a label 'fixed-in-staging' that were not shown so far   
+     * and shows a notification with those.
+     * 
+     * After retrieving the issues, store the highest issue number returned to be used
+     * to filter out issues next time it is invoked.
+     * */
+    showListOfFixedIssuesInStagingServer(function (issues) {
+        if (issues.length === 0)
+            return;
+        
+        let lastShownIssueNumber = Number.parseInt(window.localStorage.getItem("last_shown_issue_number")  ?? "0");
+        let sortedIssues =issues.sort( (rhs, lhs) => Date.parse(lhs.updated_at) - Date.parse(rhs.updated_at) ).filter(issue => Date.parse(issue.updated_at) > lastShownIssueNumber);        
+        let issuesHtml = sortedIssues.reduce( (previous, issue) => `${previous}<br /><a style='color:#3c763d' href='${issue.url}'>${issue.title}</a>`, "List of resolved issues/improvements in <a style='color:#3c763d' href='http://cecilifier.me:5000'>staging server</a><br/>");
+        
+        if (sortedIssues.length  === 0)
+            return;
+        
+        window.localStorage.setItem("last_shown_issue_number", Date.parse(sortedIssues[0].updated_at) + "");        
+        SnackBar({
+            message: issuesHtml,
+            dismissible: true,
+            status: "Info",
+            timeout: 120000,
+            icon: "exclamation"
+        });
+    });
+    
     setTooltips(version);
     initializeWebSocket();
     disableScroll();
+}
+
+function showListOfFixedIssuesInStagingServer(callback) {
+    const xhttp = new XMLHttpRequest();
+    xhttp.onreadystatechange = function() {
+        if (this.readyState === 4 && this.status === 200) {
+            let issues = JSON.parse(this.responseText);
+            callback(issues);
+        }
+    };
+    xhttp.open("GET", "https://api.github.com/repos/adrianoc/cecilifier/issues?state=open&labels=fixed-in-staging", true);
+    xhttp.send();
 }
 
 function initializeFormattingSettings() {
