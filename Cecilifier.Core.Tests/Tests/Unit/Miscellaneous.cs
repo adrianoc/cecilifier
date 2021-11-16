@@ -41,6 +41,19 @@ public static class ObjectMaker
             var cecilifiedCode = result.GeneratedCode.ReadToEnd();
             Assert.That(cecilifiedCode, Does.Match(expectedCecilifiedCode), cecilifiedCode);
         }
-        
+
+        [Test]
+        public void Nested_Enum()
+        {
+            var code = @"
+public static class Outer
+{
+	public enum Nested { First = 42 }
+}";
+            var result = RunCecilifier(code);
+            var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+            Assert.That(cecilifiedCode, Contains.Substring("var enum_nested_1 = new TypeDefinition(\"\", \"Nested\", TypeAttributes.NestedPublic | TypeAttributes.Sealed, assembly.MainModule.ImportReference(typeof(System.Enum)));"), cecilifiedCode);
+            Assert.That(cecilifiedCode, Contains.Substring("var l_first_3 = new FieldDefinition(\"First\", FieldAttributes.Static | FieldAttributes.Literal | FieldAttributes.Public | FieldAttributes.HasDefault, enum_nested_1) { Constant = 42 } ;"), cecilifiedCode);
+        }
     }
 }

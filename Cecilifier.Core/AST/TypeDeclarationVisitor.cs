@@ -48,6 +48,11 @@ namespace Cecilifier.Core.AST
             }
         }
 
+        public override void VisitEnumDeclaration(EnumDeclarationSyntax node)
+        {
+            node.Accept(new EnumDeclarationVisitor(Context));
+        }
+        
         public override void VisitFieldDeclaration(FieldDeclarationSyntax node)
         {
             new FieldDeclarationVisitor(Context).Visit(node);
