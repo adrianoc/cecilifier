@@ -1,5 +1,3 @@
-using System;
-using System.ComponentModel.DataAnnotations;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Tests.Unit
@@ -54,6 +52,29 @@ public static class Outer
             var cecilifiedCode = result.GeneratedCode.ReadToEnd();
             Assert.That(cecilifiedCode, Contains.Substring("var enum_nested_1 = new TypeDefinition(\"\", \"Nested\", TypeAttributes.NestedPublic | TypeAttributes.Sealed, assembly.MainModule.ImportReference(typeof(System.Enum)));"), cecilifiedCode);
             Assert.That(cecilifiedCode, Contains.Substring("var l_first_3 = new FieldDefinition(\"First\", FieldAttributes.Static | FieldAttributes.Literal | FieldAttributes.Public | FieldAttributes.HasDefault, enum_nested_1) { Constant = 42 } ;"), cecilifiedCode);
+        }
+
+        [Test]
+        public void CompoundStatement_WithBraceInSameLine_GeneratesValidComments()
+        {
+            var code = @"
+using static System.Console;
+public class Foo
+{
+	void Bar(int i) { WriteLine(i); }
+
+	void BarBaz(int i) 
+    {
+        if (i > 42) {
+            WriteLine(i);
+        }
+    }
+}";
+            var result = RunCecilifier(code);
+            var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+            
+            Assert.That(cecilifiedCode, Contains.Substring("//Parameters of 'void Bar(int i) '"));
+            Assert.That(cecilifiedCode, Contains.Substring("//if (i > 42) "));
         }
     }
 }

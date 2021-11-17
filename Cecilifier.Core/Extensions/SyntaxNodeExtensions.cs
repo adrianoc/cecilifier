@@ -32,6 +32,11 @@ namespace Cecilifier.Core.Extensions
 
             var s = new StringBuilder();
             
+            // if the last node is a block it means `node` does not contain a newline 
+            // so the block should not be added to the output
+            if (nodesAndTokens[^1].IsKind(SyntaxKind.Block))
+                nodesAndTokens = nodesAndTokens[0..^1];
+            
             // remove leading trivias of first node/token...
             if (nodesAndTokens[0].IsNode)
             {
