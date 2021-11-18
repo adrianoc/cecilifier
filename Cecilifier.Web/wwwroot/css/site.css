@@ -77,7 +77,7 @@ body {
 
 #cecilifierSettings td, #cecilifierSettings th {
   border: 1px solid #ddd;
-  padding: 8px;
+  padding: 7px;
 }
 
 #cecilifierSettings tr:nth-child(even){background-color: #f2f2f2;}

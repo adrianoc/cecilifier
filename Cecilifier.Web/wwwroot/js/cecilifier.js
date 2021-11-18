@@ -200,7 +200,7 @@ var lbl_jump_3 = il_get_11.Create(OpCodes.Nop);`;
 
     let sampleDiv = document.getElementById("_formattingSettingsSample");
     let h =  window.innerHeight * 0.90;
-    let w =  window.innerWidth * 0.7;
+    let w =  window.innerWidth * 0.75;
     sampleDiv.style.height = `${h}px`;
     sampleDiv.style.width = `${w}px`;
 
