@@ -168,7 +168,7 @@ var il_addAnEvent_7 = md_Method_19.Body.GetILProcessor();
 
 var ctor_AClass_22 = new MethodDefinition(".ctor", MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.RTSpecialName | MethodAttributes.SpecialName, assembly.MainModule.TypeSystem.Void);
 
-var Call_25 = il_23.Create(OpCodes.Call, assembly.MainModule.ImportReference(TypeHelpers.DefaultCtorFor(cls_0.BaseType)));
+var cctor_AClass_42 = new MethodDefinition(".cctor", MethodAttributes.Static | MethodAttributes.Private| MethodAttributes.RTSpecialName | MethodAttributes.SpecialName | MethodAttributes.HideBySig, assembly.MainModule.TypeSystem.Void);
 
 var s_AStruct_27 = new TypeDefinition("", "AStruct", TypeAttributes.SequentialLayout | TypeAttributes.Sealed |TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit | TypeAttributes.NotPublic, assembly.MainModule.TypeSystem.Object);
 
@@ -358,6 +358,7 @@ function initializeSettings(formattingSettingsSample) {
         new Setting(ElementKind.Parameter, {line: startLine + 16, ch: 5}, "Parameter", "parameter prefix","value", "p"),
         new Setting(ElementKind.IL, {line: startLine + 18, ch: 5}, "IL", "il variable prefix","addAnEvent", "il"),
         new Setting(ElementKind.Constructor, {line: startLine + 20, ch: 5}, "Constructor", "constructor prefix","AClass", "ctor"),
+        new Setting(ElementKind.StaticConstructor, {line: startLine + 22, ch: 5}, "Static Constructor", "static constructor prefix","AClass", "cctor"),
         new Setting(ElementKind.Struct, {line: startLine + 24, ch: 5}, "Struct", "struct prefix","AStruct", "st"),
         new Setting(ElementKind.Enum, {line: startLine + 26, ch: 5}, "Enum", "enum prefix","AnEnum", "e"),
         new Setting(ElementKind.Interface, {line: startLine + 28, ch: 5}, "Interface", "interface prefix","Interface", "itf"),
