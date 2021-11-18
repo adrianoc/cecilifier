@@ -501,13 +501,15 @@ function initializeWebSocket() {
     };
 
     websocket.onopen = function (event) {
+        console.log(`Cecilifier websocket opened: ${event.type}`);
     };
 
     websocket.onclose = function (event) {
+        console.log(`Cecilifier websocket closed: ${event.reason} (${event.code})`);
     };
 
     websocket.onerror = function(event) {
-        console.error("WebSocket error observed:", event);
+        console.error(`"Cecilifier websocket error: ${event.type} (${event})`);
     };
     
     websocket.onmessage = function (event) {
@@ -542,7 +544,7 @@ function getSendToDiscordValue() { return settings.isEnabled(NamingOptions.Inclu
 
 function send(websocket, format) {
     if (!websocket || websocket.readyState !== WebSocket.OPEN) {
-        alert("socket not connected");
+        alert("Cecilifier WebSocket is not connected.");
         return;
     }
     clearError();
@@ -755,17 +757,24 @@ function fileIssueInGitHub() {
             }
                 
             let fileIssueResult = JSON.parse(event.data);
-            if (fileIssueResult.status === "success")
-            {
-                CloseErrorDialog();                
-                SnackBar({
+            let snackbarValue = fileIssueResult.status === "success" ?
+                {
                     message: `Issue created: ${fileIssueResult.issueUrl}`,
                     dismissible: true,
                     status: "Info",
                     timeout: 6000,
                     icon: "exclamation"
-                });
-            }
+                }
+                :
+                {
+                    message: `Error reporting issue: ${fileIssueResult.message}`,
+                    dismissible: true,
+                    status: "Error",
+                    timeout: 6000,
+                    icon: "exclamation"
+                };
+            CloseErrorDialog();
+            SnackBar(snackbarValue);
         }, false);       
         
         let w = window.open(`${window.origin}/fileissue?title=${title}&body=${body}`, '_oauth2', 'width=*,height=*');
