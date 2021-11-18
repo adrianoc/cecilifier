@@ -25,7 +25,7 @@ namespace Cecilifier.Core
         private CecilifierResult Run(Stream content, CecilifierOptions options)
         {
             using var stream = new StreamReader(content);
-            var syntaxTree = CSharpSyntaxTree.ParseText(stream.ReadToEnd(), new CSharpParseOptions(LanguageVersion.CSharp9));
+            var syntaxTree = CSharpSyntaxTree.ParseText(stream.ReadToEnd(), new CSharpParseOptions(LanguageVersion.CSharp10));
             var metadataReferences = options.References.Select(refPath => MetadataReference.CreateFromFile(refPath)).ToArray();
 
             var comp = CSharpCompilation.Create(
