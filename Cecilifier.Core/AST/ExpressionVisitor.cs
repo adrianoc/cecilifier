@@ -63,6 +63,13 @@ namespace Cecilifier.Core.AST
             operatorHandlers[SyntaxKind.LessThanToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Clt.ConstantName()});");
             operatorHandlers[SyntaxKind.MinusToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Sub.ConstantName()});");
             operatorHandlers[SyntaxKind.AsteriskToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Mul.ConstantName()});");
+            operatorHandlers[SyntaxKind.ExclamationEqualsToken] = (ctx, ilVar, left, right) =>
+            {
+                // This is not the most optimized way to handle != operator but it is generic and correct.
+                WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Ceq.ConstantName()});");
+                WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Ldc_I4_0.ConstantName()});");
+                WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Ceq.ConstantName()});");
+            };
 
             // Bitwise Operators
             operatorHandlers[SyntaxKind.AmpersandToken] = (ctx, ilVar, _, _) => WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.And.ConstantName()});");
@@ -285,6 +292,9 @@ namespace Cecilifier.Core.AST
                     break;
 
                 case SyntaxKind.CharacterLiteralExpression:
+                    AddLocalVariableAndHandleCallOnValueTypeLiterals(node,  Context.GetTypeInfo(node).Type, (int) ((char) node.Token.Value));
+                    break;
+                
                 case SyntaxKind.NumericLiteralExpression:
                     AddLocalVariableAndHandleCallOnValueTypeLiterals(node,  Context.GetTypeInfo(node).Type, node.ToString());
                     break;
@@ -748,12 +758,6 @@ namespace Cecilifier.Core.AST
             AddCilInstruction(ilVar, OpCodes.Ldloca_S, tempLocalName);
         }
 
-        private OpCode LoadOpCodeFor(LiteralExpressionSyntax node)
-        {
-            var info = Context.SemanticModel.GetTypeInfo(node);
-            return LoadOpCodeFor(info.Type);
-        }
-        
         private OpCode LoadOpCodeFor(ITypeSymbol type)
         {
             switch (type.SpecialType)
