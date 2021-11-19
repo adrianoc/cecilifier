@@ -2,6 +2,7 @@
 using System.Linq;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
+using Cecilifier.Core.Naming;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -80,8 +81,12 @@ namespace Cecilifier.Core.AST
         {
             Context.WriteNewLine();
             Context.WriteComment($"** Constructor: {declaringClass.Identifier}() **");
-            var ctorLocalVar = AddOrUpdateParameterlessCtorDefinition(declaringClass);
-
+            
+            var ctorLocalVar = AddOrUpdateParameterlessCtorDefinition(
+                                    declaringClass.Identifier.Text,
+                                    DefaultCtorAccessibilityFor(declaringClass),
+                                    Context.Naming.Constructor(declaringClass, false));
+                                    
             AddCecilExpression($"{typeDefVar}.Methods.Add({ctorLocalVar});");
 
             var ctorBodyIL = Context.Naming.ILProcessor("ctor", declaringClass.Identifier.Text);
@@ -93,21 +98,39 @@ namespace Cecilifier.Core.AST
             
             AddCilInstruction(ctorBodyIL, OpCodes.Ret);
         }
-
-        private string AddOrUpdateParameterlessCtorDefinition(ClassDeclarationSyntax declaringClass)
+        
+        internal void DefaultCtorInjector2(string typeDefVar, string typeName)
         {
-            var found = Context.DefinitionVariables.GetMethodVariable(new MethodDefinitionVariable(declaringClass.Identifier.Text, ".ctor", Array.Empty<string>()));
+            Context.WriteNewLine();
+            Context.WriteComment($"** Constructor: {typeName}() **");
+            var ctorLocalVar = AddOrUpdateParameterlessCtorDefinition(
+                                            typeName,
+                                            "MethodAttributes.Public",
+                                            Context.Naming.SyntheticVariable(typeName, ElementKind.StaticConstructor));
+
+            AddCecilExpression($"{typeDefVar}.Methods.Add({ctorLocalVar});");
+
+            var ctorBodyIL = Context.Naming.ILProcessor("ctor", typeName);
+            AddCecilExpression($@"var {ctorBodyIL} = {ctorLocalVar}.Body.GetILProcessor();");
+            
+            AddCilInstruction(ctorBodyIL, OpCodes.Ldarg_0);
+            AddCilInstruction(ctorBodyIL, OpCodes.Call, Utils.ImportFromMainModule($"TypeHelpers.DefaultCtorFor({typeDefVar}.BaseType)"));
+            AddCilInstruction(ctorBodyIL, OpCodes.Ret);
+        }
+
+        private string AddOrUpdateParameterlessCtorDefinition(string typeName, string ctorAccessibility, string ctorLocalVar)
+        {
+            var found = Context.DefinitionVariables.GetMethodVariable(new MethodDefinitionVariable(typeName, ".ctor", Array.Empty<string>()));
             if (found.IsValid)
             {
-                var ctorLocalVar1 = found.VariableName;
+                ctorLocalVar = found.VariableName;
                 
-                AddCecilExpression($"{ctorLocalVar1}.Attributes = {DefaultCtorAccessibilityFor(declaringClass)} | MethodAttributes.HideBySig | {CtorFlags};");
-                AddCecilExpression($"{ctorLocalVar1}.HasThis = !{ctorLocalVar1}.IsStatic;", ctorLocalVar1);
-                return ctorLocalVar1;
+                AddCecilExpression($"{ctorLocalVar}.Attributes = {ctorAccessibility} | MethodAttributes.HideBySig | {CtorFlags};");
+                AddCecilExpression($"{ctorLocalVar}.HasThis = !{ctorLocalVar}.IsStatic;", ctorLocalVar);
+                return ctorLocalVar;
             }
 
-            var ctorLocalVar = Context.Naming.Constructor(declaringClass, false);
-            var ctorMethodDefinitionExp = CecilDefinitionsFactory.Constructor(Context, ctorLocalVar, declaringClass.Identifier.ValueText, DefaultCtorAccessibilityFor(declaringClass), Array.Empty<string>());
+            var ctorMethodDefinitionExp = CecilDefinitionsFactory.Constructor(Context, ctorLocalVar, typeName, ctorAccessibility, Array.Empty<string>());
             AddCecilExpression(ctorMethodDefinitionExp);
             return ctorLocalVar;
         }

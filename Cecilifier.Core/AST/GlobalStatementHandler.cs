@@ -18,12 +18,12 @@ namespace Cecilifier.Core.AST
 
             hasReturnStatement = firstGlobalStatement.Parent.DescendantNodes().Any(node => node.IsKind(SyntaxKind.ReturnStatement));
 
-            var typeModifiers = CecilDefinitionsFactory.DefaultTypeAttributeFor(SyntaxKind.ClassDeclaration, false).AppendModifier("TypeAttributes.NotPublic | TypeAttributes.Abstract | TypeAttributes.Sealed");
+            var typeModifiers = CecilDefinitionsFactory.DefaultTypeAttributeFor(SyntaxKind.ClassDeclaration, false).AppendModifier("TypeAttributes.NotPublic | TypeAttributes.AutoLayout");
             var typeVar = context.Naming.Type("topLevelStatements", ElementKind.Class);
             var typeExps = CecilDefinitionsFactory.Type(
                 context, 
                 typeVar, 
-                "<Program>$", 
+                "Program", 
                 typeModifiers, 
                 context.TypeResolver.Resolve(context.GetSpecialType(SpecialType.System_Object)), 
                 false, 
@@ -57,11 +57,13 @@ namespace Cecilifier.Core.AST
             WriteCecilExpressions(mainBodyExps);
                 
             WriteCecilExpression($"{typeVar}.Methods.Add({methodVar});");
+            
+            new ConstructorDeclarationVisitor(context).DefaultCtorInjector2(typeVar, "Program");
         }
 
         public bool HandleGlobalStatement(GlobalStatementSyntax node)
         {
-            using (context.DefinitionVariables.WithCurrentMethod("<Program>$", "<Main>$", Array.Empty<string>(), methodVar))
+            using (context.DefinitionVariables.WithCurrentMethod("Program", "<Main>$", Array.Empty<string>(), methodVar))
             {
                 StatementVisitor.Visit(context, ilVar, node.Statement);
             }

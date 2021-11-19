@@ -317,21 +317,24 @@ namespace Cecilifier.Core.AST
                 return;
             }
 
+            var method = (IMethodSymbol) paramSymbol.ContainingSymbol;
+            
+            //TODO: Add a test for parameter index for static/instance members.
+            var adjustedParameterIndex = paramSymbol.Ordinal + (method.IsStatic ? 0 : 1);
             if (node.Parent.Kind() == SyntaxKind.SimpleMemberAccessExpression && paramSymbol.ContainingType.IsValueType)
             {
                 AddCilInstruction(ilVar, OpCodes.Ldarga, Context.DefinitionVariables.GetVariable(paramSymbol.Name, MemberKind.Parameter).VariableName);
             }
-            else if (paramSymbol.Ordinal > 3)
+            else if (adjustedParameterIndex > 3)
             {
-                AddCilInstruction(ilVar, OpCodes.Ldarg, paramSymbol.Ordinal.ToCecilIndex());
+                AddCilInstruction(ilVar, OpCodes.Ldarg, adjustedParameterIndex);
                 HandlePotentialDelegateInvocationOn(node, paramSymbol.Type, ilVar);
                 HandlePotentialRefLoad(ilVar, node, paramSymbol.Type);
             }
             else
             {
-                var method = (IMethodSymbol) paramSymbol.ContainingSymbol;
                 OpCode[] optimizedLdArgs = {OpCodes.Ldarg_0, OpCodes.Ldarg_1, OpCodes.Ldarg_2, OpCodes.Ldarg_3};
-                var loadOpCode = optimizedLdArgs[paramSymbol.Ordinal + (method.IsStatic ? 0 : 1)];
+                var loadOpCode = optimizedLdArgs[adjustedParameterIndex];
                 AddCilInstruction(ilVar, loadOpCode);
                 HandlePotentialDelegateInvocationOn(node, paramSymbol.Type, ilVar);
                 HandlePotentialRefLoad(ilVar, node, paramSymbol.Type);
