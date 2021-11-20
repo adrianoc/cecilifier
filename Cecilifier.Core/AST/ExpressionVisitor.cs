@@ -59,6 +59,18 @@ namespace Cecilifier.Core.AST
 
             operatorHandlers[SyntaxKind.SlashToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Div.ConstantName()});");
             operatorHandlers[SyntaxKind.GreaterThanToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Emit({CompareOperatorFor(ctx, left, right).ConstantName()});");
+            operatorHandlers[SyntaxKind.GreaterThanEqualsToken] = (ctx, ilVar, left, right) =>
+            {
+                WriteCecilExpression(ctx, $"{ilVar}.Emit(OpCodes.Clt);");
+                WriteCecilExpression(ctx, $"{ilVar}.Emit(OpCodes.Ldc_I4_0);");
+                WriteCecilExpression(ctx, $"{ilVar}.Emit(OpCodes.Ceq);");
+            };
+            operatorHandlers[SyntaxKind.LessThanEqualsToken] = (ctx, ilVar, left, right) =>
+            {
+                WriteCecilExpression(ctx, $"{ilVar}.Emit(OpCodes.Cgt);");
+                WriteCecilExpression(ctx, $"{ilVar}.Emit(OpCodes.Ldc_I4_0);");
+                WriteCecilExpression(ctx, $"{ilVar}.Emit(OpCodes.Ceq);");
+            };
             operatorHandlers[SyntaxKind.EqualsEqualsToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Ceq.ConstantName()});");
             operatorHandlers[SyntaxKind.LessThanToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Clt.ConstantName()});");
             operatorHandlers[SyntaxKind.MinusToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Sub.ConstantName()});");

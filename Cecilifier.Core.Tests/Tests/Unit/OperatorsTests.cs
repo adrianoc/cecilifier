@@ -18,6 +18,43 @@ public class OperatorsTests : CecilifierUnitTestBase
         RunTests(comparison, expectedCecilifiedExpressions);
     }
 
+    [TestCase("byte")]
+    [TestCase("char")]
+    [TestCase("int")]
+    [TestCase("long")]
+    [TestCase("short")]
+    [TestCase("float")]
+    [TestCase("double")]
+    public void GreaterThanOrEqual(string type)
+    {
+        var result = RunCecilifier($"class C {{ bool G({type} lhs, {type} rhs) => lhs >= rhs; }}");
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+        
+        Assert.That(cecilifiedCode, Contains.Substring("il_G_2.Emit(OpCodes.Ldarg_1);"), cecilifiedCode);
+        Assert.That(cecilifiedCode, Contains.Substring("il_G_2.Emit(OpCodes.Ldarg_2);"), cecilifiedCode);
+        Assert.That(cecilifiedCode, Contains.Substring("il_G_2.Emit(OpCodes.Clt);"), cecilifiedCode);
+        Assert.That(cecilifiedCode, Contains.Substring("il_G_2.Emit(OpCodes.Ldc_I4_0);"), cecilifiedCode);
+        Assert.That(cecilifiedCode, Contains.Substring("il_G_2.Emit(OpCodes.Ceq);"), cecilifiedCode);
+    }
+    
+    [TestCase("byte")]
+    [TestCase("char")]
+    [TestCase("int")]
+    [TestCase("long")]
+    [TestCase("short")]
+    [TestCase("float")]
+    [TestCase("double")]
+    public void LessThanOrEqual(string type)
+    {
+        var result = RunCecilifier($"class C {{ bool G({type} lhs, {type} rhs) => lhs <= rhs; }}");
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+        
+        Assert.That(cecilifiedCode, Contains.Substring("il_G_2.Emit(OpCodes.Ldarg_1);"), cecilifiedCode);
+        Assert.That(cecilifiedCode, Contains.Substring("il_G_2.Emit(OpCodes.Ldarg_2);"), cecilifiedCode);
+        Assert.That(cecilifiedCode, Contains.Substring("il_G_2.Emit(OpCodes.Cgt);"), cecilifiedCode);
+        Assert.That(cecilifiedCode, Contains.Substring("il_G_2.Emit(OpCodes.Ldc_I4_0);"), cecilifiedCode);
+        Assert.That(cecilifiedCode, Contains.Substring("il_G_2.Emit(OpCodes.Ceq);"), cecilifiedCode);
+    }
     private static void RunTests(string comparison, string[] expectedCecilifiedExpressions)
     {
         var result = RunCecilifier(
