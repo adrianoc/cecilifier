@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Reflection.Metadata;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Mappings;
@@ -847,7 +848,14 @@ namespace Cecilifier.Core.AST
             if (found.IsValid)
                 return;
 
-            MethodDeclarationVisitor.AddMethodDefinition(Context, varName, method.Name, "MethodAttributes.Private", method.ReturnType, method.ReturnsByRef, typeParameters);
+            if (method.MethodKind == MethodKind.LocalFunction)
+            {
+                MethodDeclarationVisitor.AddMethodDefinition(Context, varName, $"<{method.ContainingSymbol.Name}>g__{method.Name}|0_0", "MethodAttributes.Assembly | MethodAttributes.Static | MethodAttributes.HideBySig", method.ReturnType, method.ReturnsByRef, typeParameters);
+            }
+            else
+            {
+                MethodDeclarationVisitor.AddMethodDefinition(Context, varName, method.Name, "MethodAttributes.Private", method.ReturnType, method.ReturnsByRef, typeParameters);
+            }
             Context.DefinitionVariables.RegisterMethod(method.ContainingType.Name, method.Name, method.Parameters.Select(p => p.Type.Name).ToArray(), varName);
         }
 
@@ -1098,7 +1106,8 @@ namespace Cecilifier.Core.AST
         
         private void ProcessMethodCall(SimpleNameSyntax node, IMethodSymbol method)
         {
-            if (!method.IsStatic && method.IsDefinedInCurrentType(Context) && node.Parent.Kind() == SyntaxKind.InvocationExpression)
+            // Local methods are always static.
+            if (method.MethodKind != MethodKind.LocalFunction && !method.IsStatic && method.IsDefinedInCurrentType(Context) && node.Parent.Kind() == SyntaxKind.InvocationExpression)
             {
                 AddCilInstruction(ilVar, OpCodes.Ldarg_0);
             }

@@ -19,7 +19,7 @@ namespace Cecilifier.Core.AST
             hasReturnStatement = firstGlobalStatement.Parent.DescendantNodes().Any(node => node.IsKind(SyntaxKind.ReturnStatement));
 
             var typeModifiers = CecilDefinitionsFactory.DefaultTypeAttributeFor(SyntaxKind.ClassDeclaration, false).AppendModifier("TypeAttributes.NotPublic | TypeAttributes.AutoLayout");
-            var typeVar = context.Naming.Type("topLevelStatements", ElementKind.Class);
+            typeVar = context.Naming.Type("topLevelStatements", ElementKind.Class);
             var typeExps = CecilDefinitionsFactory.Type(
                 context, 
                 typeVar, 
@@ -63,9 +63,18 @@ namespace Cecilifier.Core.AST
 
         public bool HandleGlobalStatement(GlobalStatementSyntax node)
         {
+            using (context.DefinitionVariables.WithCurrent(string.Empty, "Program", MemberKind.Type, typeVar))
             using (context.DefinitionVariables.WithCurrentMethod("Program", "<Main>$", Array.Empty<string>(), methodVar))
             {
-                StatementVisitor.Visit(context, ilVar, node.Statement);
+                if (node.Statement.IsKind(SyntaxKind.LocalFunctionStatement))
+                {
+                    context.WriteComment($"Local function: {node.HumanReadableSummary()}");
+                    StatementVisitor.Visit(context, ilVar, node.Statement);
+                    context.WriteComment("End of local function.");
+                    context.WriteNewLine();
+                }
+                else
+                    StatementVisitor.Visit(context, ilVar, node.Statement);
             }
             
             var root = (CompilationUnitSyntax) node.SyntaxTree.GetRoot();
@@ -103,6 +112,7 @@ namespace Cecilifier.Core.AST
         
         private readonly string ilVar;
         private readonly string methodVar;
+        private readonly string typeVar;
         private readonly IVisitorContext context;
         private bool hasReturnStatement;
     }

@@ -320,6 +320,9 @@ namespace Cecilifier.Core.Misc
             exps.Add($"{methodVar}.Body = new MethodBody({methodVar});");
 
             exps.Add($"var {ilVar} = {methodVar}.Body.GetILProcessor();");
+            if (instructions.Length == 0)
+                return exps;
+            
             var methodInstVar = $"{methodVar}_inst";
             exps.Add($"var {methodInstVar} = {methodVar}.Body.Instructions;");
 
