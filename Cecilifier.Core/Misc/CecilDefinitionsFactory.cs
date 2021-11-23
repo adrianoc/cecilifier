@@ -31,11 +31,20 @@ namespace Cecilifier.Core.Misc
         public static IEnumerable<string> Method(IVisitorContext context, string methodVar, string methodName, string methodModifiers, ITypeSymbol returnType, bool refReturn, IList<TypeParameterSyntax> typeParameters)
         {
             var exps = new List<string>();
-            
-            exps.Add($"var {methodVar} = new MethodDefinition(\"{methodName}\", {methodModifiers}, {context.TypeResolver.Bcl.System.Void});");
-            ProcessGenericTypeParameters(methodVar, context, typeParameters, exps);
+
             var resolvedReturnType = context.TypeResolver.Resolve(returnType);
-            exps.Add($"{methodVar}.ReturnType = {(refReturn ? resolvedReturnType.MakeByReferenceType() : resolvedReturnType)};");
+            if (refReturn)
+                resolvedReturnType = resolvedReturnType.MakeByReferenceType();
+            
+            // for type parameters we may need to postpone setting the return type (using void as a placeholder, since we need to pass something) until the generic parameters has been
+            // handled. This is required because the type parameter may be defined by the method being processed.
+            exps.Add($"var {methodVar} = new MethodDefinition(\"{methodName}\", {methodModifiers}, {(returnType.TypeKind == TypeKind.TypeParameter ? context.TypeResolver.Bcl.System.Void : resolvedReturnType)});");
+            ProcessGenericTypeParameters(methodVar, context, typeParameters, exps);
+            if (returnType.TypeKind == TypeKind.TypeParameter)
+            {
+                resolvedReturnType = context.TypeResolver.Resolve(returnType);
+                exps.Add($"{methodVar}.ReturnType = {(refReturn ? resolvedReturnType.MakeByReferenceType() : resolvedReturnType)};");
+            }
             
             return exps;
         }
@@ -120,10 +129,10 @@ namespace Cecilifier.Core.Misc
                 properties);
         }
 
-        private static string GenericParameter(IVisitorContext context, string typeVar, string genericParamName, string genParamDefVar, ITypeParameterSymbol typeParameterSymbol)
+        private static string GenericParameter(IVisitorContext context, string typeParameterOwnerVar, string genericParamName, string genParamDefVar, ITypeParameterSymbol typeParameterSymbol)
         {
             context.DefinitionVariables.RegisterNonMethod(string.Empty, genericParamName, MemberKind.TypeParameter, genParamDefVar);
-            return $"var {genParamDefVar} = new Mono.Cecil.GenericParameter(\"{genericParamName}\", {typeVar}) {Variance(typeParameterSymbol)};";
+            return $"var {genParamDefVar} = new Mono.Cecil.GenericParameter(\"{genericParamName}\", {typeParameterOwnerVar}) {Variance(typeParameterSymbol)};";
         }
 
         private static string Variance(ITypeParameterSymbol typeParameterSymbol)
