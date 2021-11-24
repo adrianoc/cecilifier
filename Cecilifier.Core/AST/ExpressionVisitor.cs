@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Reflection.Metadata;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Mappings;
@@ -688,6 +687,14 @@ namespace Cecilifier.Core.AST
             var visitor = InterpolatedStringVisitor.For(node, Context, ilVar, this);
             node.Accept(visitor);
         }
+        
+        public override void VisitTypeOfExpression(TypeOfExpressionSyntax node)
+        {
+            var getTypeFromHandleSymbol = (IMethodSymbol) Context.SemanticModel.Compilation.GetTypeByMetadataName(typeof(Type).FullName).GetMembers("GetTypeFromHandle").First();
+            
+            AddCilInstruction(ilVar, OpCodes.Ldtoken, Context.TypeResolver.Resolve(Context.GetTypeInfo(node.Type).Type));
+            AddCilInstruction(ilVar, OpCodes.Call, getTypeFromHandleSymbol.MethodResolverExpression(Context));
+        }
 
         public override void VisitSimpleLambdaExpression(SimpleLambdaExpressionSyntax node) => HandleLambdaExpression(node);
         public override void VisitParenthesizedLambdaExpression(ParenthesizedLambdaExpressionSyntax node) => HandleLambdaExpression(node);
@@ -705,7 +712,6 @@ namespace Cecilifier.Core.AST
         public override void VisitRefValueExpression(RefValueExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitCheckedExpression(CheckedExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitDefaultExpression(DefaultExpressionSyntax node) => LogUnsupportedSyntax(node);
-        public override void VisitTypeOfExpression(TypeOfExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitSizeOfExpression(SizeOfExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitInitializerExpression(InitializerExpressionSyntax node) => LogUnsupportedSyntax(node);
 

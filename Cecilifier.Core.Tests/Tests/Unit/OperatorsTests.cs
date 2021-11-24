@@ -55,6 +55,27 @@ public class OperatorsTests : CecilifierUnitTestBase
         Assert.That(cecilifiedCode, Contains.Substring("il_G_2.Emit(OpCodes.Ldc_I4_0);"), cecilifiedCode);
         Assert.That(cecilifiedCode, Contains.Substring("il_G_2.Emit(OpCodes.Ceq);"), cecilifiedCode);
     }
+
+    [TestCase("string", "assembly.MainModule.TypeSystem.String")]
+    [TestCase("C", "cls_C_\\d+")]
+    [TestCase("System.Action<int>", $"assembly.MainModule.ImportReference\\(typeof\\(System.Action<>\\)\\).MakeGenericInstanceType\\(assembly.MainModule.TypeSystem.Int32\\)")]
+    [TestCase("System.Action<>", "assembly.MainModule.ImportReference\\(typeof\\(System.Action<>\\)\\)")]
+    [TestCase("G<>", "cls_G_0")]
+    [TestCase("G<int>", "cls_G_\\d+.MakeGenericInstanceType\\(assembly.MainModule.TypeSystem.Int32\\)")]
+    public void TestTypeOf(string typeName, string expectedLdtokenArgument)
+    {
+        var result = RunCecilifier($"class G<T> {{ }} class C {{ System.Type G() => typeof({typeName}); }}");
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+        
+        Assert.That(
+            cecilifiedCode, 
+            Does.Match($"Emit\\(OpCodes.Ldtoken, {expectedLdtokenArgument}\\)"));
+        
+        Assert.That(
+            cecilifiedCode, 
+            Contains.Substring("Emit(OpCodes.Call, assembly.MainModule.ImportReference(TypeHelpers.ResolveMethod(\"System.Private.CoreLib\", \"System.Type\", \"GetTypeFromHandle\",System.Reflection.BindingFlags.Default|System.Reflection.BindingFlags.Static|System.Reflection.BindingFlags.Public,\"\", \"System.RuntimeTypeHandle\")));"));
+    }
+    
     private static void RunTests(string comparison, string[] expectedCecilifiedExpressions)
     {
         var result = RunCecilifier(

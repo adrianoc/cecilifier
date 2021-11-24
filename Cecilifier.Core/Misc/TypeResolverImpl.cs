@@ -88,15 +88,17 @@ namespace Cecilifier.Core.Misc
             {
                 CollectTypeArguments(typeArgumentProvider.ContainingType, collectTo);
             }
-            collectTo.AddRange(typeArgumentProvider.TypeArguments.Select(Resolve));
+            collectTo.AddRange(typeArgumentProvider.TypeArguments.Where(t => t.Kind != SymbolKind.ErrorType).Select(Resolve));
 
             return collectTo;
         }
         
-        private string MakeGenericInstanceType(string found, INamedTypeSymbol genericTypeSymbol)
+        private string MakeGenericInstanceType(string typeReference, INamedTypeSymbol genericTypeSymbol)
         {
             var typeArgs = CollectTypeArguments(genericTypeSymbol, new List<string>());
-            return $"{found}.MakeGenericInstanceType({string.Join(",", typeArgs)})";
+            return typeArgs.Count > 0
+                ? $"{typeReference}.MakeGenericInstanceType({string.Join(",", typeArgs)})"
+                : typeReference;
         }
 
         private string OpenGenericTypeName(ITypeSymbol type)
