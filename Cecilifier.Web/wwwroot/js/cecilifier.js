@@ -87,20 +87,22 @@ function initializeSite(errorAccessingGist, gist, version) {
     });
     
     /*
-     * Retrieves all open issues with a label 'fixed-in-staging' that were not shown so far   
-     * and shows a notification with those.
+     * Retrieves all open issues with a label 'fixed-in-staging' and, if there are any issues with a reported date
+     * newer than the last reported date stored locally, shows a notification with those issues.
      * 
-     * After retrieving the issues, store the highest issue number returned to be used
-     * to filter out issues next time it is invoked.
+     * After retrieving store reported data for the issue reported most recently. This date will be used
+     * to decided whether user should be presented the issues next time he visits the site. 
      * */
     showListOfFixedIssuesInStagingServer(function (issues) {
         if (issues.length === 0)
             return;
         
         let lastShownIssueNumber = Number.parseInt(window.localStorage.getItem("last_shown_issue_number")  ?? "0");
-        let sortedIssues =issues.sort( (rhs, lhs) => Date.parse(lhs.updated_at) - Date.parse(rhs.updated_at) ).filter(issue => Date.parse(issue.updated_at) > lastShownIssueNumber);        
+        let sortedIssues =issues.sort( (rhs, lhs) => Date.parse(lhs.updated_at) - Date.parse(rhs.updated_at) );
+        if (Date.parse(sortedIssues[0].updated_at) <= lastShownIssueNumber)
+            return;
+            
         let issuesHtml = sortedIssues.reduce( (previous, issue) => `${previous}<br /><a style='color:#3c763d' href='${issue.url}'>${issue.title}</a>`, "List of resolved issues/improvements in <a style='color:#3c763d' href='http://cecilifier.me:5000'>staging server</a><br/>");
-        
         if (sortedIssues.length  === 0)
             return;
         
