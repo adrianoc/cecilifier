@@ -83,7 +83,12 @@ namespace Cecilifier.Web
                 app.UseHsts();
             }
 
-            app.UseWebSockets();
+            var webSocketOptions = new WebSocketOptions() 
+            {
+                KeepAliveInterval = TimeSpan.FromSeconds(45),
+            };
+            app.UseWebSockets(webSocketOptions);
+
             app.UseCookiePolicy();
             app.UseStaticFiles();
 
