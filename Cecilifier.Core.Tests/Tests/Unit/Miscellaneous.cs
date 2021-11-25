@@ -1,4 +1,9 @@
+using System;
+using System.Diagnostics;
+using System.IO;
+using Mono.Cecil;
 using NUnit.Framework;
+using NUnit.Framework.Constraints;
 
 namespace Cecilifier.Core.Tests.Tests.Unit
 {
@@ -75,6 +80,51 @@ public class Foo
             
             Assert.That(cecilifiedCode, Contains.Substring("//Parameters of 'void Bar(int i) '"));
             Assert.That(cecilifiedCode, Contains.Substring("//if (i > 42) "));
+        }
+
+        [Test]
+        public void Test_Issue_126_Types()
+        {
+            var result = RunCecilifier(@"
+                    using System.IO;
+                    namespace NS { public struct FileStream { } }
+
+                    class Foo 
+                    {
+                         public FileStream file; // System.IO.FileStream since NS.FileStream is not in scope here. 
+                         public NS.FileStream definedInFooBar; 
+                    }");
+
+            var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+            Assert.False(cecilifiedCode.Contains("FieldDefinition(\"file\", FieldAttributes.Public, st_fileStream_0);"), cecilifiedCode);
+            Assert.True(cecilifiedCode.Contains("FieldDefinition(\"definedInFooBar\", FieldAttributes.Public, st_fileStream_0);"), cecilifiedCode);
+            Assert.True(cecilifiedCode.Contains("FieldDefinition(\"file\", FieldAttributes.Public, assembly.MainModule.ImportReference(typeof(FileStream)));"), cecilifiedCode);
+        }
+        
+        [Test]
+        public void Test_Issue_126_Members()
+        {
+            var result = RunCecilifier(@"
+                    using System;
+                    using System.Diagnostics;
+                    namespace NS 
+                    {
+                        public struct Process { public void Kill() { } public string ProcessName => """"; public event EventHandler Exited;}
+                    }
+
+                    class Foo 
+                    {
+                        public Process proc;
+                        private void Handler(object sender, EventArgs args) { } 
+
+                        void Method() => proc.Kill();
+                        string Property() => proc.ProcessName;
+                        // void Event() => proc.Exited += Handler; // Depends on issue # 127
+                    }");
+            
+            var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+            Assert.That(cecilifiedCode, Does.Match("il_method_21.Emit\\(OpCodes.Callvirt, .*\"System.Diagnostics.Process\", \"System.Diagnostics.Process\", \"Kill\".+"), cecilifiedCode);
+            Assert.That(cecilifiedCode, Does.Match("il_property_24.Emit\\(OpCodes.Callvirt, .+\"System.Diagnostics.Process\", \"System.Diagnostics.Process\", \"get_ProcessName\".+"), cecilifiedCode);
         }
     }
 }

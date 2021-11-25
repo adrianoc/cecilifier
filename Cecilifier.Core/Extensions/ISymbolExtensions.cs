@@ -9,6 +9,12 @@ namespace Cecilifier.Core.Extensions
 {
     internal static class ISymbolExtensions
     {
+        public static string FullyQualifiedName(this ISymbol type)
+        {
+            var format = new SymbolDisplayFormat(typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces);
+            return type.ToDisplayString(format);
+        }
+
         public static bool IsDefinedInCurrentType<T>(this T method, IVisitorContext ctx) where T : ISymbol
         {
             return method.ContainingAssembly == ctx.SemanticModel.Compilation.Assembly;

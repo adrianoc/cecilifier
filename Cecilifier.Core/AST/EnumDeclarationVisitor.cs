@@ -28,7 +28,11 @@ namespace Cecilifier.Core.AST
             var typeDef = CecilDefinitionsFactory.Type(Context, enumType, node.Identifier.ValueText, attrs + " | TypeAttributes.Sealed", Context.TypeResolver.Bcl.System.Enum, false, Array.Empty<string>());
             AddCecilExpressions(typeDef);
 
-            var parentName = node.Parent.IsKind(SyntaxKind.CompilationUnit) ? "" : node.Parent.ResolveDeclaringType<TypeDeclarationSyntax>().Identifier.ValueText;
+            var enumSymbol = Context.SemanticModel.GetDeclaredSymbol(node);
+            if (enumSymbol == null)
+                throw new NullReferenceException($"Something really bad happened. Roslyn failed to resolve the symbol for the enum {node.Identifier.Text}");
+            
+            var parentName = enumSymbol.ContainingSymbol.FullyQualifiedName();
             using (Context.DefinitionVariables.WithCurrent(parentName, node.Identifier.ValueText, MemberKind.Type,enumType))
             {
                 //.class private auto ansi MyEnum

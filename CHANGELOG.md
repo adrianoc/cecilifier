@@ -14,12 +14,12 @@
 
 ## Fixed
 
-- Added support for operators !=, >= and <= (#79)
 - Generic methods references uses wrong type parameter (#91)
 - Fixed issue with async method calls relying on .Result
 - Fixed handling of statement contents used in comments
 - Fixed nested enum declaration being ignored (issue #116)
 - Fixed handling of delegate equality comparison (issue #113)
+- Fixed bug causing open generic types to be handled as closed types in some scenarios
 
 ## 28/Oct/2021
 

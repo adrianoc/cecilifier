@@ -20,7 +20,8 @@ namespace Cecilifier.Core.AST
         {
             using var _ = LineInformationTracker.Track(Context, node);
             var definitionVar = HandleInterfaceDeclaration(node);
-            using (Context.DefinitionVariables.WithCurrent("", node.Identifier.ValueText, MemberKind.Type, definitionVar))
+            var interfaceSymbol = Context.SemanticModel.GetDeclaredSymbol(node);
+            using (Context.DefinitionVariables.WithCurrent(interfaceSymbol.ContainingSymbol.FullyQualifiedName(), node.Identifier.ValueText, MemberKind.Type, definitionVar))
             {
                 base.VisitInterfaceDeclaration(node);
             }
@@ -30,7 +31,8 @@ namespace Cecilifier.Core.AST
         {
             using var _ = LineInformationTracker.Track(Context, node);
             var definitionVar = HandleTypeDeclaration(node);
-            using (Context.DefinitionVariables.WithCurrent("", node.Identifier.ValueText, MemberKind.Type, definitionVar))
+            var classSymbol = Context.SemanticModel.GetDeclaredSymbol(node);
+            using (Context.DefinitionVariables.WithCurrent(classSymbol.ContainingSymbol.FullyQualifiedName(), node.Identifier.ValueText, MemberKind.Type, definitionVar))
             {
                 base.VisitClassDeclaration(node);
                 EnsureCurrentTypeHasADefaultCtor(node, definitionVar);
@@ -41,7 +43,8 @@ namespace Cecilifier.Core.AST
         {
             using var _ = LineInformationTracker.Track(Context, node);
             var definitionVar = HandleTypeDeclaration(node);
-            using (Context.DefinitionVariables.WithCurrent("", node.Identifier.ValueText, MemberKind.Type, definitionVar))
+            var structSymbol = Context.SemanticModel.GetDeclaredSymbol(node);
+            using (Context.DefinitionVariables.WithCurrent(structSymbol.ContainingSymbol.FullyQualifiedName(), node.Identifier.ValueText, MemberKind.Type, definitionVar))
             {
                 base.VisitStructDeclaration(node);
                 EnsureCurrentTypeHasADefaultCtor(node, definitionVar);

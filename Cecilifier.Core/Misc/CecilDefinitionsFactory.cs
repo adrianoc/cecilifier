@@ -69,7 +69,7 @@ namespace Cecilifier.Core.Misc
          * 1. At IL level, type parameters from *outer* types are considered to be part of a inner type whence these type parameters need to be added to the list of type parameters even
          *    if the type being declared is not a generic type.
          * 
-         * 2. Only the own type parameters of the type being declared are considered when computing the arity of the type (whence the number following the backtick reflects only the
+         * 2. Only type parameters owned by the type being declared are considered when computing the arity of the type (whence the number following the backtick reflects only the
          *    # of the type parameters declared by the type being declared). 
          */
         public static IEnumerable<string> Type(IVisitorContext context, string typeVar, string typeName, string attrs, string baseTypeName, bool isStructWithNoFields, IEnumerable<string> interfaces, IEnumerable<TypeParameterSyntax> ownTypeParameters, IEnumerable<TypeParameterSyntax> outerTypeParameters, params string[] properties)
@@ -264,7 +264,7 @@ namespace Cecilifier.Core.Misc
                 
                 var genParamDefVar = context.Naming.GenericParameterDeclaration(typeParameter);
 
-                context.DefinitionVariables.RegisterNonMethod(string.Empty, genericParamName, MemberKind.TypeParameter, genParamDefVar);
+                context.DefinitionVariables.RegisterNonMethod(symbol.ContainingSymbol.FullyQualifiedName(), genericParamName, MemberKind.TypeParameter, genParamDefVar);
                 exps.Add(GenericParameter(context, memberDefVar, genericParamName, genParamDefVar, symbol));
                 
                 tba.Add((genParamDefVar, symbol));
