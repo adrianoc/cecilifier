@@ -72,6 +72,10 @@ function initializeSite(errorAccessingGist, gist, version) {
             csharpCode.updateOptions({ fontSize: newFontSize });
         });
 
+        csharpCode.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.US_DOT , function() {
+            ShowErrorDialog("Report a new issue", "Please be kind, check the existing ones before filing a new issue..", "Report an error.");
+        });
+        
         setupCursorTracking();
 
         window.onresize = function(ev) {
@@ -84,6 +88,8 @@ function initializeSite(errorAccessingGist, gist, version) {
         setSendToDiscordTooltip();
         
         handleGist(gist, errorAccessingGist);
+        
+        csharpCode.focus();
     });
     
     /*
@@ -538,7 +544,7 @@ function initializeWebSocket() {
         } else if (response.status === 1) {
             setError(response.error + "<br/><br/>"+ response.syntaxError.replaceAll("\n", "<br/>"));
         } else if (response.status === 2) {
-            ShowErrorDialog("", response.error);
+            ShowErrorDialog("", response.error, "We've got an internal error.");
         }
     };
 }
@@ -689,7 +695,7 @@ function setupCursorTracking() {
 /************************************************
  *         Internal Error Handling              *
  ************************************************/
-function ShowErrorDialog(title, body) {
+function ShowErrorDialog(title, body, header) {
     window.onresize = (e) => {
         ResizeErrorDialog();
     };
@@ -698,9 +704,11 @@ function ShowErrorDialog(title, body) {
     
     titleElement.value = title;
     getErrorBodyElement().value = body;
-    
+
+    document.getElementById("bug_reporter_header_id").innerText = header;
     document.getElementsByClassName("modal")[0].classList.add("opened");
     document.getElementsByClassName("modal")[0].style.display="block";
+    
     ResizeErrorDialog();
     titleElement.focus();
 }
@@ -711,8 +719,8 @@ function CloseErrorDialog() {
 }
 
 function ResizeErrorDialog(){
-    let footerOffset = document.getElementById("internal_error_dialog_footer").offsetHeight;
-    let h = (document.getElementById("internal_error_dialog").offsetHeight - footerOffset);
+    let footerOffset = document.getElementById("bug_reporter_dialog_footer").offsetHeight;
+    let h = (document.getElementById("bug_reporter_dialog_id").offsetHeight - footerOffset);
 
     getErrorTitleElement().style.height = `${h * 0.05}px`;
     getErrorBodyElement().style.height = `${h * 0.70}px`;

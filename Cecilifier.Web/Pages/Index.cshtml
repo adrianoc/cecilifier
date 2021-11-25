@@ -76,9 +76,9 @@
     </div>
     
     <div class="modal" aria-hidden="true">
-      <div class="modal-dialog" id="internal_error_dialog">
+      <div class="modal-dialog" id="bug_reporter_dialog_id">
         <div class="modal-header">
-          <h2><img src="images/oops.png" width="64" height="64"  alt="oops" style="margin-right: 10px"/>We've got an internal error.</h2>
+          <h2 id="bug_reporter_header_id"><img src="images/oops.png" width="64" height="64"  alt="oops" style="margin-right: 10px"/>We've got an internal error.</h2>
           <a href="#" class="btn-close closemodal" aria-hidden="true" onclick="CloseErrorDialog()">&times;</a>
         </div>
           <div class="modal-body">
@@ -91,7 +91,7 @@
               <input type="checkbox" checked="true" id="include-snippet" />Include original code.
           </div>
           
-          <div class="modal-footer" id="internal_error_dialog_footer">
+          <div class="modal-footer" id="bug_reporter_dialog_footer">
               <a href="#" class="btn-disabled" onclick="fileIssueInGitHub();" id="report_internal_error_button">Report error</a> <a href="#" class="btn" onclick="CloseErrorDialog()">Close</a>
           </div>
       </div>
