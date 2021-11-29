@@ -6,6 +6,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Net.WebSockets;
 using System.Resources;
 using System.Text;
@@ -18,7 +19,6 @@ using Cecilifier.Core;
 using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Naming;
 using Cecilifier.Web.Pages;
-using Cecilifier.Web.wwwroot;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -292,27 +292,18 @@ namespace Cecilifier.Web
             {
                 Console.WriteLine("DiscordChannelUrl not specified in configuration file.");
                 return;
-            }            
-            
-            var discordPostRequest = WebRequest.Create(discordChannelUrl);
-            discordPostRequest.ContentType = "application/json";
-            discordPostRequest.Method = WebRequestMethods.Http.Post;
+            }
 
-            var buffer = Encoding.ASCII.GetBytes(jsonMessage);
-            
-            discordPostRequest.ContentLength = buffer.Length;
-            var stream = discordPostRequest.GetRequestStream();
-            stream.Write(buffer, 0, buffer.Length);
-            stream.Close();
-
+            var discordPostRequest = new HttpRequestMessage(HttpMethod.Post, discordChannelUrl);
+            discordPostRequest.Content = new StringContent(jsonMessage, Encoding.UTF8, "application/json");
             try
             {
-                var response = (HttpWebResponse) discordPostRequest.GetResponse();
+                var discordConnection = new HttpClient();
+                var response = discordConnection.Send(discordPostRequest);
                 if (response.StatusCode != HttpStatusCode.NoContent)
                 {
                     Console.WriteLine($"Discord returned status: {response.StatusCode}");
                 }
-                
             }
             catch (Exception e)
             {

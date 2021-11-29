@@ -10,7 +10,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 
-namespace Cecilifier.Web.wwwroot
+namespace Cecilifier.Web
 {
     /* 
      * This class implements the following github integration:
@@ -36,7 +36,7 @@ namespace Cecilifier.Web.wwwroot
             var stateString = BitConverter.ToString(stateBytes).Replace("-", "");
             
             await File.WriteAllTextAsync(Path.Combine("/tmp", stateString), issueJson);
-            context.Response.Redirect($"https://github.com/login/oauth/authorize?client_id={CecilifierClientId}&scope=public_repo&state={stateString}&redirect_uri={Uri.EscapeUriString($"{context.Request.Headers[HttpRequestHeader.Referer.ToString()]}authorization_callback?id={stateString}")}");
+            context.Response.Redirect($"https://github.com/login/oauth/authorize?client_id={CecilifierClientId}&scope=public_repo&state={stateString}&redirect_uri={Uri.EscapeDataString($"{context.Request.Headers[HttpRequestHeader.Referer.ToString()]}authorization_callback?id={stateString}")}");
         }
         
         internal static async Task ReportIssueEndPointAsync(HttpContext context)

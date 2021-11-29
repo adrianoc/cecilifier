@@ -8,7 +8,6 @@
 
   <ItemGroup>
     <Compile Remove="Resources\TypeHelpers.cs" />
-    <Compile Include="wwwroot\InternalErrorHandler.cs" />
   </ItemGroup>
 
   <ItemGroup>
