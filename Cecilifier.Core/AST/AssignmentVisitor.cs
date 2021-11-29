@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
+using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -141,19 +142,19 @@ namespace Cecilifier.Core.AST
             if (field.IsVolatile)
                 AddCilInstruction(ilVar, OpCodes.Volatile);
             
-            AddCilInstruction(ilVar, storeOpCode, Context.DefinitionVariables.GetVariable(field.Name, MemberKind.Field, field.ContainingType.Name).VariableName);
+            AddCilInstruction(ilVar, storeOpCode, Context.DefinitionVariables.GetVariable(field.Name, VariableMemberKind.Field, field.ContainingType.Name).VariableName);
         }
 
         private void LocalVariableAssignment(ILocalSymbol localVariable)
         {
-            AddCilInstruction(ilVar, OpCodes.Stloc, Context.DefinitionVariables.GetVariable(localVariable.Name, MemberKind.LocalVariable).VariableName);
+            AddCilInstruction(ilVar, OpCodes.Stloc, Context.DefinitionVariables.GetVariable(localVariable.Name, VariableMemberKind.LocalVariable).VariableName);
         }
 
         private void ParameterAssignment(IParameterSymbol parameter)
         {
             if (parameter.RefKind == RefKind.None)
             {
-                var paramVariable = Context.DefinitionVariables.GetVariable(parameter.Name, MemberKind.Parameter).VariableName;
+                var paramVariable = Context.DefinitionVariables.GetVariable(parameter.Name, VariableMemberKind.Parameter).VariableName;
                 if (parameter.Type.TypeKind == TypeKind.Array)
                 {
                     AddCilInstruction(ilVar, OpCodes.Stelem_Ref);

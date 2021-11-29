@@ -4,6 +4,7 @@ using System.Linq;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
+using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -63,7 +64,7 @@ namespace Cecilifier.Core.AST
 
         public bool HandleGlobalStatement(GlobalStatementSyntax node)
         {
-            using (context.DefinitionVariables.WithCurrent(string.Empty, "Program", MemberKind.Type, typeVar))
+            using (context.DefinitionVariables.WithCurrent(string.Empty, "Program", VariableMemberKind.Type, typeVar))
             using (context.DefinitionVariables.WithCurrentMethod("Program", "<Main>$", Array.Empty<string>(), methodVar))
             {
                 if (node.Statement.IsKind(SyntaxKind.LocalFunctionStatement))

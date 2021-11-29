@@ -5,6 +5,7 @@ using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
+using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -88,9 +89,9 @@ namespace Cecilifier.Core.AST
         public override void VisitParameter(ParameterSyntax node)
         {
             var paramVar = Context.Naming.Parameter(node);
-            Context.DefinitionVariables.RegisterNonMethod(string.Empty, node.Identifier.ValueText, MemberKind.Parameter, paramVar);
+            Context.DefinitionVariables.RegisterNonMethod(string.Empty, node.Identifier.ValueText, VariableMemberKind.Parameter, paramVar);
 
-            var methodVar = Context.DefinitionVariables.GetLastOf(MemberKind.Method);
+            var methodVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
             if (!methodVar.IsValid)
                 throw new InvalidOperationException($"Failed to retrieve current method.");
             
@@ -134,7 +135,7 @@ namespace Cecilifier.Core.AST
                                             parameters,
                                             typeParameters);
                 
-                AddCecilExpression("{0}.Methods.Add({1});", Context.DefinitionVariables.GetLastOf(MemberKind.Type).VariableName, methodVar);
+                AddCecilExpression("{0}.Methods.Add({1});", Context.DefinitionVariables.GetLastOf(VariableMemberKind.Type).VariableName, methodVar);
         
                 HandleAttributesInMemberDeclaration(attributes, TargetDoesNotMatch, SyntaxKind.ReturnKeyword, methodVar); // Normal method attrs.
                 HandleAttributesInMemberDeclaration(attributes, TargetMatches, SyntaxKind.ReturnKeyword, $"{methodVar}.MethodReturnType"); // [return:Attr]

@@ -1,10 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
+using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -37,7 +36,7 @@ namespace Cecilifier.Core.AST
 
         private IEnumerable<string> HandleFieldDeclaration(MemberDeclarationSyntax node, VariableDeclarationSyntax variableDeclarationSyntax, IReadOnlyList<SyntaxToken> modifiers, BaseTypeDeclarationSyntax declaringType)
         {
-            var declaringTypeVar = Context.DefinitionVariables.GetLastOf(MemberKind.Type).VariableName;
+            var declaringTypeVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Type).VariableName;
 
             var fieldDefVars = new List<string>(variableDeclarationSyntax.Variables.Count);
             
@@ -48,7 +47,7 @@ namespace Cecilifier.Core.AST
             foreach (var field in variableDeclarationSyntax.Variables)
             {
                 // skip field already processed due to forward references.
-                var fieldDeclarationVariable = Context.DefinitionVariables.GetVariable(field.Identifier.Text, MemberKind.Field, declaringType.Identifier.Text);
+                var fieldDeclarationVariable = Context.DefinitionVariables.GetVariable(field.Identifier.Text, VariableMemberKind.Field, declaringType.Identifier.Text);
                 if (fieldDeclarationVariable.IsValid)
                     continue;
 
@@ -60,7 +59,7 @@ namespace Cecilifier.Core.AST
                 
                 HandleAttributesInMemberDeclaration(node.AttributeLists, fieldVar);
 
-                Context.DefinitionVariables.RegisterNonMethod(declaringType.Identifier.Text, field.Identifier.ValueText, MemberKind.Field, fieldVar);
+                Context.DefinitionVariables.RegisterNonMethod(declaringType.Identifier.Text, field.Identifier.ValueText, VariableMemberKind.Field, fieldVar);
             }
 
             return fieldDefVars;

@@ -4,6 +4,7 @@ using System.Linq;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.TypeSystem;
+using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -96,7 +97,7 @@ namespace Cecilifier.Core.Misc
                 exps.Add($"{typeVar}.Interfaces.Add(new InterfaceImplementation({itfName}));");
             }
 
-            var currentType = context.DefinitionVariables.GetLastOf(MemberKind.Type);
+            var currentType = context.DefinitionVariables.GetLastOf(VariableMemberKind.Type);
             if (currentType.IsValid)
                 exps.Add($"{currentType.VariableName}.NestedTypes.Add({typeVar});"); // type is a inner type of *context.CurrentType* 
             else
@@ -131,7 +132,7 @@ namespace Cecilifier.Core.Misc
 
         private static string GenericParameter(IVisitorContext context, string typeParameterOwnerVar, string genericParamName, string genParamDefVar, ITypeParameterSymbol typeParameterSymbol)
         {
-            context.DefinitionVariables.RegisterNonMethod(string.Empty, genericParamName, MemberKind.TypeParameter, genParamDefVar);
+            context.DefinitionVariables.RegisterNonMethod(string.Empty, genericParamName, VariableMemberKind.TypeParameter, genParamDefVar);
             return $"var {genParamDefVar} = new Mono.Cecil.GenericParameter(\"{genericParamName}\", {typeParameterOwnerVar}) {Variance(typeParameterSymbol)};";
         }
 
@@ -264,7 +265,7 @@ namespace Cecilifier.Core.Misc
                 
                 var genParamDefVar = context.Naming.GenericParameterDeclaration(typeParameter);
 
-                context.DefinitionVariables.RegisterNonMethod(symbol.ContainingSymbol.FullyQualifiedName(), genericParamName, MemberKind.TypeParameter, genParamDefVar);
+                context.DefinitionVariables.RegisterNonMethod(symbol.ContainingSymbol.FullyQualifiedName(), genericParamName, VariableMemberKind.TypeParameter, genParamDefVar);
                 exps.Add(GenericParameter(context, memberDefVar, genericParamName, genParamDefVar, symbol));
                 
                 tba.Add((genParamDefVar, symbol));

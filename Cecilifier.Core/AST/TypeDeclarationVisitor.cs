@@ -4,6 +4,7 @@ using System.Linq;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Misc;
+using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -21,7 +22,7 @@ namespace Cecilifier.Core.AST
             using var _ = LineInformationTracker.Track(Context, node);
             var definitionVar = HandleInterfaceDeclaration(node);
             var interfaceSymbol = Context.SemanticModel.GetDeclaredSymbol(node);
-            using (Context.DefinitionVariables.WithCurrent(interfaceSymbol.ContainingSymbol.FullyQualifiedName(), node.Identifier.ValueText, MemberKind.Type, definitionVar))
+            using (Context.DefinitionVariables.WithCurrent(interfaceSymbol.ContainingSymbol.FullyQualifiedName(), node.Identifier.ValueText, VariableMemberKind.Type, definitionVar))
             {
                 base.VisitInterfaceDeclaration(node);
             }
@@ -32,7 +33,7 @@ namespace Cecilifier.Core.AST
             using var _ = LineInformationTracker.Track(Context, node);
             var definitionVar = HandleTypeDeclaration(node);
             var classSymbol = Context.SemanticModel.GetDeclaredSymbol(node);
-            using (Context.DefinitionVariables.WithCurrent(classSymbol.ContainingSymbol.FullyQualifiedName(), node.Identifier.ValueText, MemberKind.Type, definitionVar))
+            using (Context.DefinitionVariables.WithCurrent(classSymbol.ContainingSymbol.FullyQualifiedName(), node.Identifier.ValueText, VariableMemberKind.Type, definitionVar))
             {
                 base.VisitClassDeclaration(node);
                 EnsureCurrentTypeHasADefaultCtor(node, definitionVar);
@@ -44,7 +45,7 @@ namespace Cecilifier.Core.AST
             using var _ = LineInformationTracker.Track(Context, node);
             var definitionVar = HandleTypeDeclaration(node);
             var structSymbol = Context.SemanticModel.GetDeclaredSymbol(node);
-            using (Context.DefinitionVariables.WithCurrent(structSymbol.ContainingSymbol.FullyQualifiedName(), node.Identifier.ValueText, MemberKind.Type, definitionVar))
+            using (Context.DefinitionVariables.WithCurrent(structSymbol.ContainingSymbol.FullyQualifiedName(), node.Identifier.ValueText, VariableMemberKind.Type, definitionVar))
             {
                 base.VisitStructDeclaration(node);
                 EnsureCurrentTypeHasADefaultCtor(node, definitionVar);

@@ -1,8 +1,8 @@
 using System.Collections.Generic;
 using System.Linq;
-using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.TypeSystem;
+using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 
 namespace Cecilifier.Core.Misc
@@ -78,8 +78,8 @@ namespace Cecilifier.Core.Misc
                 ? type.ContainingSymbol.FullyQualifiedName() 
                 : string.Empty;
             
-            var found = _context.DefinitionVariables.GetVariable(type.Name, MemberKind.Type, containingSymbolName).VariableName 
-                        ?? _context.DefinitionVariables.GetVariable(type.Name, MemberKind.TypeParameter, containingSymbolName).VariableName;
+            var found = _context.DefinitionVariables.GetVariable(type.Name, VariableMemberKind.Type, containingSymbolName).VariableName 
+                        ?? _context.DefinitionVariables.GetVariable(type.Name, VariableMemberKind.TypeParameter, containingSymbolName).VariableName;
             
             if (found != null && type is INamedTypeSymbol {IsGenericType: true} genericTypeSymbol)
             {

@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Misc;
+using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -62,7 +63,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             
             var context = new CecilifierContext(comp.GetSemanticModel(syntaxTree), new CecilifierOptions(), -1);
 
-            context.DefinitionVariables.RegisterNonMethod("Foo", "field", MemberKind.Field, "fieldVar"); // Required for Field tests
+            context.DefinitionVariables.RegisterNonMethod("Foo", "field", VariableMemberKind.Field, "fieldVar"); // Required for Field tests
             NonCapturingLambdaProcessor.InjectSyntheticMethodsForNonCapturingLambdas(
                 context,
                 syntaxTree.GetRoot().DescendantNodes().OfType<ClassDeclarationSyntax>().SingleOrDefault(),

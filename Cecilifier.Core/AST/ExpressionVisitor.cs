@@ -7,6 +7,7 @@ using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Naming;
+using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -341,7 +342,7 @@ namespace Cecilifier.Core.AST
                 
                 var outLocalName = AddLocalVariableWithResolvedType(
                     designation.Identifier.Text,
-                    Context.DefinitionVariables.GetLastOf(MemberKind.Method),
+                    Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method),
                     resolvedOutArgType
                 );
 
@@ -564,7 +565,7 @@ namespace Cecilifier.Core.AST
                 AddCilInstruction(ilVar, opCode);
             }
 
-            var tempLocalName = AddLocalVariableWithResolvedType("tmp", Context.DefinitionVariables.GetLastOf(MemberKind.Method), Context.TypeResolver.Resolve(Context.SemanticModel.GetTypeInfo(operand).Type));
+            var tempLocalName = AddLocalVariableWithResolvedType("tmp", Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method), Context.TypeResolver.Resolve(Context.SemanticModel.GetTypeInfo(operand).Type));
             AddCilInstruction(ilVar, OpCodes.Stloc, tempLocalName);
             AddCilInstruction(ilVar, OpCodes.Ldloc, tempLocalName);
             assignmentVisitor.InstructionPrecedingValueToLoad = Context.CurrentLine;
@@ -744,7 +745,7 @@ namespace Cecilifier.Core.AST
         {
             //TODO: Handle static lambdas.
             // use the lambda string representation to lookup the variable with the synthetic method definition 
-            var syntheticMethodVariable = Context.DefinitionVariables.GetVariable(node.ToString(), MemberKind.Method);
+            var syntheticMethodVariable = Context.DefinitionVariables.GetVariable(node.ToString(), VariableMemberKind.Method);
             if (!syntheticMethodVariable.IsValid)
             {
                 // if we fail to resolve the variable it means this is un unsupported scenario (like a lambda that captures context)
@@ -772,7 +773,7 @@ namespace Cecilifier.Core.AST
 
         private void StoreTopOfStackInLocalVariableAndLoadItsAddress(ITypeSymbol type)
         {
-            var tempLocalName = AddLocalVariableWithResolvedType("tmp", Context.DefinitionVariables.GetLastOf(MemberKind.Method), Context.TypeResolver.Resolve(type));
+            var tempLocalName = AddLocalVariableWithResolvedType("tmp", Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method), Context.TypeResolver.Resolve(type));
             AddCilInstruction(ilVar, OpCodes.Stloc, tempLocalName);
             AddCilInstruction(ilVar, OpCodes.Ldloca_S, tempLocalName);
         }
@@ -953,7 +954,7 @@ namespace Cecilifier.Core.AST
             if (!fieldSymbol.IsStatic && !isTargetOfQualifiedAccess)
                 AddCilInstruction(ilVar, OpCodes.Ldarg_0);
             
-            if (HandleLoadAddress(ilVar, fieldSymbol.Type, (CSharpSyntaxNode) node.Parent, OpCodes.Ldflda, fieldSymbol.Name, MemberKind.Field, fieldSymbol.ContainingType.Name))
+            if (HandleLoadAddress(ilVar, fieldSymbol.Type, (CSharpSyntaxNode) node.Parent, OpCodes.Ldflda, fieldSymbol.Name, VariableMemberKind.Field, fieldSymbol.ContainingType.Name))
             {
                 return;
             }
@@ -984,7 +985,7 @@ namespace Cecilifier.Core.AST
                 fieldDeclaration.Accept(new FieldDeclarationVisitor(Context));
             }
             
-            var fieldDeclarationVariable = Context.DefinitionVariables.GetVariable(fieldSymbol.Name, MemberKind.Field, fieldSymbol.ContainingType.Name);
+            var fieldDeclarationVariable = Context.DefinitionVariables.GetVariable(fieldSymbol.Name, VariableMemberKind.Field, fieldSymbol.ContainingType.Name);
             if (!fieldDeclarationVariable.IsValid)
                 throw new Exception($"Could not resolve reference to field: {fieldSymbol.Name}");
             
@@ -995,12 +996,12 @@ namespace Cecilifier.Core.AST
         {
             var symbol = (ILocalSymbol) varInfo.Symbol;
             var localVar = (CSharpSyntaxNode) localVarSyntax.Parent;
-            if (HandleLoadAddress(ilVar, symbol.Type, localVar, OpCodes.Ldloca, symbol.Name, MemberKind.LocalVariable))
+            if (HandleLoadAddress(ilVar, symbol.Type, localVar, OpCodes.Ldloca, symbol.Name, VariableMemberKind.LocalVariable))
             {
                 return;
             }
 
-            AddCilInstruction(ilVar, OpCodes.Ldloc, Context.DefinitionVariables.GetVariable(symbol.Name, MemberKind.LocalVariable).VariableName);
+            AddCilInstruction(ilVar, OpCodes.Ldloc, Context.DefinitionVariables.GetVariable(symbol.Name, VariableMemberKind.LocalVariable).VariableName);
             HandlePotentialDelegateInvocationOn(localVarSyntax, symbol.Type, ilVar);
             HandlePotentialFixedLoad(symbol);
             HandlePotentialRefLoad(localVarSyntax, symbol);

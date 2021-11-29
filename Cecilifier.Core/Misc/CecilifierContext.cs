@@ -5,6 +5,7 @@ using Cecilifier.Core.AST;
 using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.TypeSystem;
+using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 

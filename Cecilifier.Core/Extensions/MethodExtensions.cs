@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Misc;
+using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using static Cecilifier.Core.Misc.Utils;

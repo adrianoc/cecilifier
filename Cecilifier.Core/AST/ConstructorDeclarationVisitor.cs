@@ -3,6 +3,7 @@ using System.Linq;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
+using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -57,7 +58,7 @@ namespace Cecilifier.Core.AST
                 // otherwise we need to call it here.
                 if (node.Initializer == null && declaringType.Kind() != SyntaxKind.StructDeclaration)
                 {
-                    var declaringTypeLocalVar = Context.DefinitionVariables.GetLastOf(MemberKind.Type).VariableName;
+                    var declaringTypeLocalVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Type).VariableName;
                     AddCilInstruction(ilVar, OpCodes.Call, Utils.ImportFromMainModule($"TypeHelpers.DefaultCtorFor({declaringTypeLocalVar}.BaseType)"));
                 }
 
@@ -148,7 +149,7 @@ namespace Cecilifier.Core.AST
                 if (ExpressionVisitor.Visit(Context, ctorBodyIL, dec.Initializer))
                     continue;
 
-                var fieldVarDef = Context.DefinitionVariables.GetVariable(dec.Identifier.ValueText, MemberKind.Field, declaringClass.Identifier.Text);
+                var fieldVarDef = Context.DefinitionVariables.GetVariable(dec.Identifier.ValueText, VariableMemberKind.Field, declaringClass.Identifier.Text);
                 var fieldStoreOpCode = fieldDeclaration.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword))
                     ? OpCodes.Stsfld
                     : OpCodes.Stfld;

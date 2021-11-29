@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
+using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -203,7 +204,7 @@ namespace Cecilifier.Core.AST
         
         private void WriteExceptionHandlers(ExceptionHandlerEntry[] exceptionHandlerTable)
         {
-            string methodVar = Context.DefinitionVariables.GetLastOf(MemberKind.Method);
+            string methodVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
             foreach (var handlerEntry in exceptionHandlerTable)
             {
                 AddCecilExpression($"{methodVar}.Body.ExceptionHandlers.Add(new ExceptionHandler(ExceptionHandlerType.{handlerEntry.Kind})");
@@ -293,7 +294,7 @@ namespace Cecilifier.Core.AST
 
         private string AddLocalVariable(string varType)
         {
-            var currentMethod = Context.DefinitionVariables.GetLastOf(MemberKind.Method);
+            var currentMethod = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
             if (!currentMethod.IsValid)
                 throw new InvalidOperationException("Could not resolve current method declaration variable.");
 
@@ -307,7 +308,7 @@ namespace Cecilifier.Core.AST
                 return;
             }
 
-            var localVarDef = Context.DefinitionVariables.GetVariable(localVar.Identifier.ValueText, MemberKind.LocalVariable);
+            var localVarDef = Context.DefinitionVariables.GetVariable(localVar.Identifier.ValueText, VariableMemberKind.LocalVariable);
             AddCilInstruction(_ilVar, OpCodes.Stloc, localVarDef.VariableName);
         }
 
@@ -334,7 +335,7 @@ namespace Cecilifier.Core.AST
 
         private void HandleVariableDeclaration(VariableDeclarationSyntax declaration)
         {
-            var methodVar = Context.DefinitionVariables.GetLastOf(MemberKind.Method);
+            var methodVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
             foreach (var localVar in declaration.Variables)
             {
                 AddLocalVariable(declaration.Type, localVar, methodVar);

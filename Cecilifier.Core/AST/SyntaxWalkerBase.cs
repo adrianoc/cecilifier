@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
+using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -124,7 +125,7 @@ namespace Cecilifier.Core.AST
             AddCecilExpression("var {0} = new VariableDefinition({1});", cecilVarDeclName, resolvedVarType);
             AddCecilExpression("{0}.Body.Variables.Add({1});", methodVar.VariableName, cecilVarDeclName);
 
-            Context.DefinitionVariables.RegisterNonMethod(string.Empty, localVarName, MemberKind.LocalVariable, cecilVarDeclName);
+            Context.DefinitionVariables.RegisterNonMethod(string.Empty, localVarName, VariableMemberKind.LocalVariable, cecilVarDeclName);
 
             return cecilVarDeclName;
         }
@@ -312,7 +313,7 @@ namespace Cecilifier.Core.AST
         protected void ProcessParameter(string ilVar, SimpleNameSyntax node, IParameterSymbol paramSymbol)
         {
             var parent = (CSharpSyntaxNode) node.Parent;
-            if (HandleLoadAddress(ilVar, paramSymbol.Type, parent, OpCodes.Ldarga, paramSymbol.Name, MemberKind.Parameter))
+            if (HandleLoadAddress(ilVar, paramSymbol.Type, parent, OpCodes.Ldarga, paramSymbol.Name, VariableMemberKind.Parameter))
             {
                 return;
             }
@@ -323,7 +324,7 @@ namespace Cecilifier.Core.AST
             var adjustedParameterIndex = paramSymbol.Ordinal + (method.IsStatic ? 0 : 1);
             if (node.Parent.Kind() == SyntaxKind.SimpleMemberAccessExpression && paramSymbol.ContainingType.IsValueType)
             {
-                AddCilInstruction(ilVar, OpCodes.Ldarga, Context.DefinitionVariables.GetVariable(paramSymbol.Name, MemberKind.Parameter).VariableName);
+                AddCilInstruction(ilVar, OpCodes.Ldarga, Context.DefinitionVariables.GetVariable(paramSymbol.Name, VariableMemberKind.Parameter).VariableName);
             }
             else if (adjustedParameterIndex > 3)
             {
@@ -341,7 +342,7 @@ namespace Cecilifier.Core.AST
             }
         }
 
-        protected bool HandleLoadAddress(string ilVar, ITypeSymbol symbol, CSharpSyntaxNode parentNode, OpCode opCode, string symbolName, MemberKind memberKind, string parentName = null)
+        protected bool HandleLoadAddress(string ilVar, ITypeSymbol symbol, CSharpSyntaxNode parentNode, OpCode opCode, string symbolName, VariableMemberKind variableMemberKind, string parentName = null)
         {
             return HandleSystemIndexUsage() || HandleRefAssignment() || HandleParameter();
             
@@ -352,7 +353,7 @@ namespace Cecilifier.Core.AST
                 var isSystemIndexUsedAsIndex = IsSystemIndexUsedAsIndex(symbol, parentNode);
                 if (isSystemIndexUsedAsIndex || parentNode.IsKind(SyntaxKind.AddressOfExpression) || (symbol.IsValueType && parentNode.Accept(new UsageVisitor()) == UsageKind.CallTarget))
                 {
-                    AddCilInstruction(ilVar, opCode, Context.DefinitionVariables.GetVariable(symbolName, memberKind, parentName).VariableName);
+                    AddCilInstruction(ilVar, opCode, Context.DefinitionVariables.GetVariable(symbolName, variableMemberKind, parentName).VariableName);
                     if (!Context.HasFlag("fixed") && parentNode.IsKind(SyntaxKind.AddressOfExpression))
                         AddCilInstruction(ilVar, OpCodes.Conv_U);
 
@@ -371,7 +372,7 @@ namespace Cecilifier.Core.AST
                 if (assignedValueSymbol.Symbol.IsByRef())
                     return false;
                 
-                AddCilInstruction(ilVar, opCode, Context.DefinitionVariables.GetVariable(symbolName, memberKind, parentName).VariableName);
+                AddCilInstruction(ilVar, opCode, Context.DefinitionVariables.GetVariable(symbolName, variableMemberKind, parentName).VariableName);
                 return true;
             }
 
@@ -382,7 +383,7 @@ namespace Cecilifier.Core.AST
 
                 if (Context.SemanticModel.GetSymbolInfo(argument.Expression).Symbol is IParameterSymbol parameterSymbol && parameterSymbol.RefKind != RefKind.Ref && parameterSymbol.RefKind != RefKind.RefReadOnly)
                 {
-                    AddCilInstruction(ilVar, opCode, Context.DefinitionVariables.GetVariable(symbolName, memberKind, parentName).VariableName);
+                    AddCilInstruction(ilVar, opCode, Context.DefinitionVariables.GetVariable(symbolName, variableMemberKind, parentName).VariableName);
                     return true;
                 }
                 return false;
@@ -513,7 +514,7 @@ namespace Cecilifier.Core.AST
         private IEnumerable<string> ProcessDllImportAttribute(AttributeSyntax attribute, string methodVar)
         {
             var moduleName = attribute.ArgumentList?.Arguments.First().ToFullString();
-            var existingModuleVar = Context.DefinitionVariables.GetVariable(moduleName, MemberKind.ModuleReference);
+            var existingModuleVar = Context.DefinitionVariables.GetVariable(moduleName, VariableMemberKind.ModuleReference);
             
             var moduleVar = existingModuleVar.IsValid 
                 ?  existingModuleVar.VariableName
@@ -535,7 +536,7 @@ namespace Cecilifier.Core.AST
                 });
             }
 
-            Context.DefinitionVariables.RegisterNonMethod("", moduleName, MemberKind.ModuleReference, moduleVar);
+            Context.DefinitionVariables.RegisterNonMethod("", moduleName, VariableMemberKind.ModuleReference, moduleVar);
             
             return exps;
             

@@ -1,5 +1,6 @@
 ﻿using Cecilifier.Core.Extensions;
 using Microsoft.CodeAnalysis;
+using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Mono.Cecil.Cil;
 
@@ -20,7 +21,7 @@ namespace Cecilifier.Core.AST
             switch (info.Symbol.Kind)
             {
                 case SymbolKind.Local:
-                    AddCilInstruction(ilVar, OpCodes.Ldloca_S, Context.DefinitionVariables.GetVariable(node.Identifier.ValueText, MemberKind.LocalVariable).VariableName);
+                    AddCilInstruction(ilVar, OpCodes.Ldloca_S, Context.DefinitionVariables.GetVariable(node.Identifier.ValueText, VariableMemberKind.LocalVariable).VariableName);
                     break;
 
                 case SymbolKind.Field:
@@ -47,7 +48,7 @@ namespace Cecilifier.Core.AST
 
         public override void VisitLocalDeclarationStatement(LocalDeclarationStatementSyntax node)
         {
-            AddCilInstruction(ilVar, OpCodes.Ldloca_S, Context.DefinitionVariables.GetVariable(node.Declaration.Variables[0].Identifier.ValueText, MemberKind.LocalVariable).VariableName);
+            AddCilInstruction(ilVar, OpCodes.Ldloca_S, Context.DefinitionVariables.GetVariable(node.Declaration.Variables[0].Identifier.ValueText, VariableMemberKind.LocalVariable).VariableName);
         }
     }
 }
