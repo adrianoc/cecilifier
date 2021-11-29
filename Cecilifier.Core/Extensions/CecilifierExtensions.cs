@@ -46,19 +46,20 @@ namespace Cecilifier.Core.Extensions
 using Mono.Cecil.Cil;
 using Mono.Cecil.Rocks;
 using System; 
+using System.IO;
 using System.Linq;
 using BindingFlags = System.Reflection.BindingFlags;
-
 using Cecilifier.Runtime;
                
 public class SnippetRunner
 {{
 	public static void Main(string[] args)
 	{{
-		using(var assembly = AssemblyDefinition.CreateAssembly(new AssemblyNameDefinition(""{assemblyName}"", Version.Parse(""1.0.0.0"")), ""moduleName"", {moduleKind}))
+        // setup a `reflection importer` to ensure references to System.Private.CoreLib are replaced with references to `netstandard`. 
+        var mp = new ModuleParameters {{ Architecture = TargetArchitecture.AMD64, Kind =  {moduleKind}, ReflectionImporterProvider = new SystemPrivateCoreLibFixerReflectionProvider() }};
+		using(var assembly = AssemblyDefinition.CreateAssembly(new AssemblyNameDefinition(""{assemblyName}"", Version.Parse(""1.0.0.0"")), Path.GetFileName(args[0]), mp))
         {{
 {cecilSnippet}{entryPointStatement}
-            PrivateCoreLibFixer.FixReferences(assembly.MainModule);
 		    assembly.Write(args[0]);
         }}
 	}}
