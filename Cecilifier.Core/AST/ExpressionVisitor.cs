@@ -961,7 +961,11 @@ namespace Cecilifier.Core.AST
             if (fieldSymbol.IsVolatile)
                 AddCilInstruction(ilVar, OpCodes.Volatile);
 
-            AddCilInstruction(ilVar, LoadOpCodeForFieldAccess(fieldSymbol), fieldDeclarationVariable.VariableName);
+            var resolvedField = fieldDeclarationVariable.IsValid
+                ? fieldDeclarationVariable.VariableName
+                : fieldSymbol.FieldResolverExpression(Context);
+
+            AddCilInstruction(ilVar, LoadOpCodeForFieldAccess(fieldSymbol), resolvedField);
             HandlePotentialDelegateInvocationOn(node, fieldSymbol.Type, ilVar);
         }
 
@@ -969,7 +973,11 @@ namespace Cecilifier.Core.AST
 
         private DefinitionVariable EnsureFieldExists(SimpleNameSyntax node, [NotNull] IFieldSymbol fieldSymbol)
         {
-            var fieldDeclaration = (FieldDeclarationSyntax) fieldSymbol.DeclaringSyntaxReferences.Single().GetSyntax().Parent.Parent;
+            var declaringSyntaxReference = fieldSymbol.DeclaringSyntaxReferences.SingleOrDefault();
+            if (declaringSyntaxReference == null)
+                return DefinitionVariable.NotFound;
+            
+            var fieldDeclaration = (FieldDeclarationSyntax) declaringSyntaxReference.GetSyntax().Parent.Parent;
             if (fieldDeclaration.Span.Start > node.Span.End)
             {
                 // this is a forward reference, process it...

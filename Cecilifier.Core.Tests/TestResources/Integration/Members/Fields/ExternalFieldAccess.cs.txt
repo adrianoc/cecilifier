@@ -1,0 +1,4 @@
+﻿class ExternalFieldAccess 
+{
+	public string StaticField() => string.Empty;
+}

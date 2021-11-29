@@ -95,5 +95,11 @@ namespace Cecilifier.Core.Tests.Integration
         {
             AssertResourceTest(@"Members/Fields/QualifiedFieldAccess");
         }
+ 
+        [Test]
+        public void TestExternalFieldAccess()
+        {
+            AssertResourceTest(@"Members/Fields/ExternalFieldAccess");
+        }
     }
 }
