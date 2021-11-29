@@ -5,12 +5,19 @@
 - bumped cecilifier version to 1.23.0
 - new releases notification mechanism
 - Updated projects to compile to C# 10 targeting .Net 6.0
+- Initialize MethodDefinition instances with final return type whenever possible
+  to minimize noise.
+- Changed approach to avoid generate code referencing 'System.Private.CoreLib.dll'
+- Improved assembly comparison by checking field references in instruction operands.  
 
 ## Added
 
 - Bug reporter
 - Script to make it easier to update version information in Cecilifier projects.
-- Add support for showing latest issues fixed on staging
+- Added support for showing latest issues fixed on staging
+- Added support for local functions (#124)
+- Added support for operators !=, >= and <= (#79)
+- Added support for typeof operator (#89)
 
 ## Fixed
 
@@ -19,7 +26,10 @@
 - Fixed handling of statement contents used in comments
 - Fixed nested enum declaration being ignored (issue #116)
 - Fixed handling of delegate equality comparison (issue #113)
+- Fixed potential name clash due to usage of simple names instead of fully qualified names in variable registration (#126)
+- Fixed exception being thrown if code have access to fields defined in referenced assemblies (#128)
 - Fixed bug causing open generic types to be handled as closed types in some scenarios
+- Fixed WebSocket connection closing prematurely by lowering ping interval to meet timings in nginx.
 
 ## 28/Oct/2021
 
