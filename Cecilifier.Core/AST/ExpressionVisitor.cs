@@ -1029,7 +1029,7 @@ namespace Cecilifier.Core.AST
                 var parameterSymbol = ParameterSymbolFromArgumentSyntax(argument);
                 var targetIsByRef = parameterSymbol.IsByRef();
 
-                needsLoadIndirect = (parameterSymbol == sourceSymbol && sourceIsByRef && !targetIsByRef) // simple argument like Foo(ref) where the parameter is not a reference. 
+                needsLoadIndirect = (ReferenceEquals(parameterSymbol, sourceSymbol) && sourceIsByRef && !targetIsByRef) // simple argument like Foo(ref) where the parameter is not a reference. 
                                     || sourceIsByRef; // complex argument like Foo(ref + 1)
             }
             else if (returnStatement != null)

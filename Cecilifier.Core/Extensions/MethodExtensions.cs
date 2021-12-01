@@ -99,8 +99,8 @@ namespace Cecilifier.Core.Extensions
                     if (lastDeclaredIn.ContainingType.TypeKind == TypeKind.Interface)
                     {
                         modifiersStr = "MethodAttributes.Virtual | MethodAttributes.NewSlot | " +
-                                       (lastDeclaredIn.ContainingType == methodSymbol.ContainingType ? "MethodAttributes.Abstract" : "MethodAttributes.Final");
-                        defaultAccessibility = lastDeclaredIn.ContainingType == methodSymbol.ContainingType ? "Public" : "Private";
+                                       (ReferenceEquals(lastDeclaredIn.ContainingType, methodSymbol.ContainingType) ? "MethodAttributes.Abstract" : "MethodAttributes.Final");
+                        defaultAccessibility = ReferenceEquals(lastDeclaredIn.ContainingType, methodSymbol.ContainingType) ? "Public" : "Private";
                     }
                 }
             }

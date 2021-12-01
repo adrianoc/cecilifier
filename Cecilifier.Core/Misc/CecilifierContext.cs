@@ -16,10 +16,6 @@ namespace Cecilifier.Core.Misc
         private readonly ISet<string> flags = new HashSet<string>();
         private readonly LinkedList<string> output = new();
 
-        private int currentFieldId;
-
-        private int currentTypeId;
-
         private string identation;
 
         public CecilifierContext(SemanticModel semanticModel, CecilifierOptions options,  int startingLine, byte indentation = 3)
