@@ -59,6 +59,15 @@ namespace Cecilifier.Core.AST
             }
         }
 
+        public override void VisitMemberAccessExpression(MemberAccessExpressionSyntax node)
+        {
+            var last = Context.CurrentLine;
+            ExpressionVisitor.Visit(Context, ilVar, node.Expression);
+            Context.MoveLinesToEnd(InstructionPrecedingValueToLoad, last);
+
+            node.Name.Accept(this);
+        }
+
         public override void VisitIdentifierName(IdentifierNameSyntax node)
         {
             //TODO: tuple declaration with an initializer is represented as an assignment
@@ -77,7 +86,18 @@ namespace Cecilifier.Core.AST
             {
                 return;
             }
+            
+            // push `implicit this` (target of the assignment) to the stack if needed.
+            if (!member.Symbol.IsStatic 
 
+                && member.Symbol.Kind != SymbolKind.Parameter // Parameters/Locals are never leafs in a MemberReferenceExpression
+                && member.Symbol.Kind != SymbolKind.Local
+                
+                && !node.Parent.IsKind(SyntaxKind.SimpleMemberAccessExpression))
+            { 
+                InsertCilInstructionAfter<string>(InstructionPrecedingValueToLoad, ilVar, OpCodes.Ldarg_0);
+            }
+            
             switch (member.Symbol)
             {
                 case IParameterSymbol parameter:
@@ -100,27 +120,12 @@ namespace Cecilifier.Core.AST
 
         private void PropertyAssignment(IPropertySymbol property)
         {
-            if (!property.IsStatic)
-            {
-                InsertCilInstructionAfter<string>(InstructionPrecedingValueToLoad, ilVar, OpCodes.Ldarg_0);
-            }
-
             AddMethodCall(ilVar, property.SetMethod, isAccessOnThisOrObjectCreation:false);
         }
 
         private void FieldAssignment(IFieldSymbol field)
         {
-            OpCode storeOpCode;
-            if (field.IsStatic)
-            {
-                storeOpCode = OpCodes.Stsfld;
-            }
-            else
-            {
-                storeOpCode = OpCodes.Stfld;
-                InsertCilInstructionAfter<string>(InstructionPrecedingValueToLoad, ilVar, OpCodes.Ldarg_0);
-            }
-
+            var storeOpCode = field.IsStatic ? OpCodes.Stsfld : OpCodes.Stfld;
             if (field.IsVolatile)
                 AddCilInstruction(ilVar, OpCodes.Volatile);
             

@@ -321,7 +321,7 @@ namespace Cecilifier.Core.AST
                     throw new ArgumentException($"Literal ( {node}) of type {node.Kind()} not supported yet.");
             }
         }
-
+        
         void AddLocalVariableAndHandleCallOnValueTypeLiterals(CSharpSyntaxNode node, ITypeSymbol literalType, object literalValue)
         {
             AddCilInstruction(ilVar, LoadOpCodeFor(literalType), literalValue);
