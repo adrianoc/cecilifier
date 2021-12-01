@@ -109,6 +109,27 @@ namespace Cecilifier.Core.Misc
             output.Remove(instruction);
         }
 
+        public void MoveLinesToEnd(LinkedListNode<string> start, LinkedListNode<string> end)
+        {
+            // Counts the # of instructions to be moved...
+            var c = start;
+            int instCount = 0;
+            while (c != end)
+            {
+                c = c!.Next;
+                instCount++;
+            }
+            
+            // move each line after the last one
+            c = start.Next;
+            while (instCount-- > 0)
+            {
+                var next = c!.Next;
+                MoveLineAfter(c, CurrentLine);
+                c = next;
+            }
+        }
+
         public event Action<string> InstructionAdded;
 
         public void TriggerInstructionAdded(string instVar)

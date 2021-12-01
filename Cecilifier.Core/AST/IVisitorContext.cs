@@ -33,6 +33,7 @@ namespace Cecilifier.Core.AST
         void WriteNewLine();
 
         void MoveLineAfter(LinkedListNode<string> instruction, LinkedListNode<string> after);
+        void MoveLinesToEnd(LinkedListNode<string> start, LinkedListNode<string> end);
         
         ITypeResolver TypeResolver { get; }
         IList<Mapping> Mappings { get; }

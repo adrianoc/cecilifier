@@ -46,26 +46,8 @@ namespace Cecilifier.Core.AST
             {
                 ExpressionVisitor.Visit(Context, ilVar, arg);
             }
-
-            // Counts the # of instructions used to load the value to be stored
-            var c = InstructionPrecedingValueToLoad;
-            int instCount = 0;
-            while (c != last)
-            {
-                c = c!.Next;
-                instCount++;
-            }
-
-            // move the instruction after the instructions that loads the array reference
-            // and index.
-            c = InstructionPrecedingValueToLoad.Next;
-            while (instCount-- > 0)
-            {
-                var next = c!.Next;
-                Context.MoveLineAfter(c, Context.CurrentLine);
-                c = next;
-            }
-
+            Context.MoveLinesToEnd(InstructionPrecedingValueToLoad, last);
+            
             var expSymbol = Context.SemanticModel.GetSymbolInfo(node).Symbol;
             if (expSymbol is IPropertySymbol propertySymbol)
             {
