@@ -462,10 +462,6 @@ namespace Cecilifier.Core.AST
                 node.Operand.Accept(this);
                 AddCilInstruction(ilVar, OpCodes.Not);
             }
-            else if (node.IsKind(SyntaxKind.IndexExpression))
-            {
-                Console.WriteLine();
-            }
             else
             {
                 LogUnsupportedSyntax(node);
