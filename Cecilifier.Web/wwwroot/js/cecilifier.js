@@ -72,6 +72,10 @@ function initializeSite(errorAccessingGist, gist, version) {
             csharpCode.updateOptions({ fontSize: newFontSize });
         });
 
+        csharpCode.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.US_DOT , function() {
+            ShowErrorDialog("Report a new issue", "Please be kind, check the existing ones before filing a new issue..", "Report an error.");
+        });
+        
         setupCursorTracking();
 
         window.onresize = function(ev) {
@@ -84,11 +88,55 @@ function initializeSite(errorAccessingGist, gist, version) {
         setSendToDiscordTooltip();
         
         handleGist(gist, errorAccessingGist);
+        
+        csharpCode.focus();
+    });
+    
+    /*
+     * Retrieves all open issues with a label 'fixed-in-staging' and, if there are any issues with a reported date
+     * newer than the last reported date stored locally, shows a notification with those issues.
+     * 
+     * After retrieving store reported data for the issue reported most recently. This date will be used
+     * to decided whether user should be presented the issues next time he visits the site. 
+     * */
+    showListOfFixedIssuesInStagingServer(function (issues) {
+        if (issues.length === 0)
+            return;
+        
+        let lastShownIssueNumber = Number.parseInt(window.localStorage.getItem("last_shown_issue_number")  ?? "0");
+        let sortedIssues =issues.sort( (rhs, lhs) => Date.parse(lhs.updated_at) - Date.parse(rhs.updated_at) );
+        if (Date.parse(sortedIssues[0].updated_at) <= lastShownIssueNumber)
+            return;
+            
+        let issuesHtml = sortedIssues.reduce( (previous, issue) => `${previous}<br /><a style='color:#3c763d' href='${issue.url}'>${issue.title}</a>`, "List of resolved issues/improvements in <a style='color:#3c763d' href='http://cecilifier.me:5000'>staging server</a><br/>");
+        if (sortedIssues.length  === 0)
+            return;
+        
+        window.localStorage.setItem("last_shown_issue_number", Date.parse(sortedIssues[0].updated_at) + "");        
+        SnackBar({
+            message: issuesHtml,
+            dismissible: true,
+            status: "Info",
+            timeout: 120000,
+            icon: "exclamation"
+        });
     });
     
     setTooltips(version);
     initializeWebSocket();
     disableScroll();
+}
+
+function showListOfFixedIssuesInStagingServer(callback) {
+    const xhttp = new XMLHttpRequest();
+    xhttp.onreadystatechange = function() {
+        if (this.readyState === 4 && this.status === 200) {
+            let issues = JSON.parse(this.responseText);
+            callback(issues);
+        }
+    };
+    xhttp.open("GET", "https://api.github.com/repos/adrianoc/cecilifier/issues?state=open&labels=fixed-in-staging", true);
+    xhttp.send();
 }
 
 function initializeFormattingSettings() {
@@ -128,7 +176,7 @@ var il_addAnEvent_7 = md_Method_19.Body.GetILProcessor();
 
 var ctor_AClass_22 = new MethodDefinition(".ctor", MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.RTSpecialName | MethodAttributes.SpecialName, assembly.MainModule.TypeSystem.Void);
 
-var Call_25 = il_23.Create(OpCodes.Call, assembly.MainModule.ImportReference(TypeHelpers.DefaultCtorFor(cls_0.BaseType)));
+var cctor_AClass_42 = new MethodDefinition(".cctor", MethodAttributes.Static | MethodAttributes.Private| MethodAttributes.RTSpecialName | MethodAttributes.SpecialName | MethodAttributes.HideBySig, assembly.MainModule.TypeSystem.Void);
 
 var s_AStruct_27 = new TypeDefinition("", "AStruct", TypeAttributes.SequentialLayout | TypeAttributes.Sealed |TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit | TypeAttributes.NotPublic, assembly.MainModule.TypeSystem.Object);
 
@@ -160,7 +208,7 @@ var lbl_jump_3 = il_get_11.Create(OpCodes.Nop);`;
 
     let sampleDiv = document.getElementById("_formattingSettingsSample");
     let h =  window.innerHeight * 0.90;
-    let w =  window.innerWidth * 0.7;
+    let w =  window.innerWidth * 0.75;
     sampleDiv.style.height = `${h}px`;
     sampleDiv.style.width = `${w}px`;
 
@@ -186,7 +234,7 @@ function updateEditorsSize() {
     csharpCodeDiv.style.height = `${h}px`;
 
     var cecilifiedCodeDiv = document.getElementById("cecilifiedcode");
-    cecilifiedCodeDiv.style.height = `${window.innerHeight - h - 80}px`;
+    cecilifiedCodeDiv.style.height = `${window.innerHeight - h - 60}px`;
 
     csharpCode.layout();
     cecilifiedCode.layout();
@@ -272,11 +320,38 @@ function setTooltips(version) {
         allowHTML: true,
         theme: 'cecilifier-tooltip',
         delay: defaultDelay
-    });    
+    });
+
+    tippy('#report_internal_error_button', {
+        content: "By clicking on 'Report' you'll be redirected to github to authenticate/authorize Cecilifier<br/>" +
+            "to file an issue on your behalf.<br/><br/>" +
+            "Cecilifier will neither store nor use this authorization for any purpose other than reporting the issue on <a href='https://github.com/adrianoc/cecilifier/issues' style='color:#8cbc13; text-decoration: underline'>Cecilifier Repository</a>.",
+
+        placement: 'top',
+        appendTo: document.body,
+        interactive: true,
+        allowHTML: true,
+        theme: 'light',
+        maxWidth: "none",
+        delay: defaultDelay
+    });
+    
+    tippy('#include-snippet', {
+        content: "Selecting this checkbox will include the code to be cecilified in the reported issue.<br/>" +
+                 "If it does not contain sensitive information please, select the checkbox.<br/>" +
+                 "The source code is extremely useful to investigate the issue.",
+        
+        appendTo: document.body,
+        interactive: true,
+        allowHTML: true,
+        maxWidth: "none",
+        theme: 'cecilifier-tooltip',
+        delay: defaultDelay
+    });
 }
 
 function initializeSettings(formattingSettingsSample) {
-    
+
     const startLine = 15;
     
     settings = new SettingsManager(formattingSettingsSample, [
@@ -291,6 +366,7 @@ function initializeSettings(formattingSettingsSample) {
         new Setting(ElementKind.Parameter, {line: startLine + 16, ch: 5}, "Parameter", "parameter prefix","value", "p"),
         new Setting(ElementKind.IL, {line: startLine + 18, ch: 5}, "IL", "il variable prefix","addAnEvent", "il"),
         new Setting(ElementKind.Constructor, {line: startLine + 20, ch: 5}, "Constructor", "constructor prefix","AClass", "ctor"),
+        new Setting(ElementKind.StaticConstructor, {line: startLine + 22, ch: 5}, "Static Constructor", "static constructor prefix","AClass", "cctor"),
         new Setting(ElementKind.Struct, {line: startLine + 24, ch: 5}, "Struct", "struct prefix","AStruct", "st"),
         new Setting(ElementKind.Enum, {line: startLine + 26, ch: 5}, "Enum", "enum prefix","AnEnum", "e"),
         new Setting(ElementKind.Interface, {line: startLine + 28, ch: 5}, "Interface", "interface prefix","Interface", "itf"),
@@ -397,6 +473,8 @@ function setSendToDiscordTooltip()
     {
         msg = "Publish Off: " + msgBody +  " only in case of errors.";
     }
+    
+    //TODO: Set the tooltip, i.e, use MSG
 }
 
 function setAlert(div_id, msg) {
@@ -412,14 +490,6 @@ function setAlert(div_id, msg) {
         div.children[1].innerHTML = msg;
         div.style.display = "block";
     }
-}
-
-function clearError() {
-    setAlert("cecilifier_error", null);
-}
-
-function setError(str) {
-    setAlert("cecilifier_error", str);
 }
 
 function initializeWebSocket() {
@@ -440,13 +510,15 @@ function initializeWebSocket() {
     };
 
     websocket.onopen = function (event) {
+        console.log(`Cecilifier websocket opened: ${event.type}`);
     };
 
     websocket.onclose = function (event) {
+        console.log(`Cecilifier websocket closed: ${event.reason} (${event.code})`);
     };
 
     websocket.onerror = function(event) {
-        console.error("WebSocket error observed:", event);
+        console.error(`"Cecilifier websocket error: ${event.type} (${event})`);
     };
     
     websocket.onmessage = function (event) {
@@ -470,9 +542,9 @@ function initializeWebSocket() {
                 blockMappings = response.mappings;
             }
         } else if (response.status === 1) {
-            setError(response.syntaxError.replace(/\n/g, "<br/>"));
+            setError(response.error + "<br/><br/>"+ response.syntaxError.replaceAll("\n", "<br/>"));
         } else if (response.status === 2) {
-            setError("Something went wrong. Please report the following error in the google group or in the git repository:\n" + response.error);
+            ShowErrorDialog("", response.error, "We've got an internal error.");
         }
     };
 }
@@ -481,7 +553,7 @@ function getSendToDiscordValue() { return settings.isEnabled(NamingOptions.Inclu
 
 function send(websocket, format) {
     if (!websocket || websocket.readyState !== WebSocket.OPEN) {
-        alert("socket not connected");
+        alert("Cecilifier WebSocket is not connected.");
         return;
     }
     clearError();
@@ -577,6 +649,9 @@ function hideSpinner() {
 
 function setupCursorTracking() {
     cecilifiedCode.onMouseDown(function(e) {
+        if (blockMappings === null)
+            return;
+        
         for(let i = 0; i < blockMappings.length; i++)
         {
             if (e.target.position.lineNumber < blockMappings[i].Cecilified.Begin.Line || e.target.position.lineNumber > blockMappings[i].Cecilified.End.Line)
@@ -615,4 +690,131 @@ function setupCursorTracking() {
             cecilifiedCode.revealLineNearTop(blockMappings[matchIndex].Cecilified.Begin.Line);
         }
     });    
+}
+
+/************************************************
+ *         Internal Error Handling              *
+ ************************************************/
+function ShowErrorDialog(title, body, header) {
+    window.onresize = (e) => {
+        ResizeErrorDialog();
+    };
+    
+    let titleElement =  getErrorTitleElement();
+    
+    titleElement.value = title;
+    getErrorBodyElement().value = body;
+
+    document.getElementById("bug_reporter_header_id").innerText = header;
+    document.getElementsByClassName("modal")[0].classList.add("opened");
+    document.getElementsByClassName("modal")[0].style.display="block";
+    
+    ResizeErrorDialog();
+    titleElement.focus();
+}
+
+function CloseErrorDialog() {
+    document.getElementsByClassName("modal")[0].classList.remove("opened");
+    document.getElementsByClassName("modal")[0].style.display="none";
+}
+
+function ResizeErrorDialog(){
+    let footerOffset = document.getElementById("bug_reporter_dialog_footer").offsetHeight;
+    let h = (document.getElementById("bug_reporter_dialog_id").offsetHeight - footerOffset);
+
+    getErrorTitleElement().style.height = `${h * 0.05}px`;
+    getErrorBodyElement().style.height = `${h * 0.70}px`;
+}
+
+function clearError() {
+    setAlert("cecilifier_error", null);
+}
+
+function setError(str) {
+    setAlert("cecilifier_error", str);
+}
+
+function updateReportErrorButton(element) {
+    if (element.value !== "") {
+        getReportErrorButton().classList.remove("btn-disabled");
+        getReportErrorButton().classList.add("btn");
+    } else {
+        getReportErrorButton().classList.remove("btn");
+        getReportErrorButton().classList.add("btn-disabled");
+    }
+}
+
+function fileIssueInGitHub() {
+    clearError();
+    showSpinner();
+    
+    try {
+        let title = getErrorTitleElement().value;
+        if (title === '') {
+            getErrorTitleElement().focus();
+            return;
+        }
+
+        let body = escapeString(getErrorBodyElement().value);
+        if (shouldIncludeSnippet()) {
+            let code = "```CSharp\\n" + escapeString(csharpCode.getValue()) + "\\n```";
+            body = `Error\\n---\\n${body}\\n\\nAssociated snippet:\\n----\\n${code}`;
+        }
+
+        window.addEventListener("message", (event) => {
+            if (event.origin !== window.origin) {
+                console.log(`"Unexpected message from: ${event.origin}`);
+                return;
+            }
+                
+            let fileIssueResult = JSON.parse(event.data);
+            let snackbarValue = fileIssueResult.status === "success" ?
+                {
+                    message: `Issue created: ${fileIssueResult.issueUrl}`,
+                    dismissible: true,
+                    status: "Info",
+                    timeout: 6000,
+                    icon: "exclamation"
+                }
+                :
+                {
+                    message: `Error reporting issue: ${fileIssueResult.message}`,
+                    dismissible: true,
+                    status: "Error",
+                    timeout: 6000,
+                    icon: "exclamation"
+                };
+            CloseErrorDialog();
+            SnackBar(snackbarValue);
+        }, false);       
+        
+        let w = window.open(`${window.origin}/fileissue?title=${title}&body=${body}`, '_oauth2', 'width=*,height=*');
+    }
+    finally {
+        hideSpinner();
+    }
+}
+
+function getErrorTitleElement() {
+    return document.getElementById("error_title");
+}
+
+function getErrorBodyElement() {
+    return document.getElementById("error_description");
+}
+
+function getReportErrorButton() {
+    return document.getElementById("report_internal_error_button");
+}
+
+function shouldIncludeSnippet() {
+    return document.getElementById("include-snippet").checked;
+}
+
+function escapeString(str) {
+    return str.replaceAll('"', '\\"')
+        .replaceAll('\n', '\\n')
+        .replaceAll('\r', '\\r')
+        .replaceAll('\f', '\\f')
+        .replaceAll('\t', '\\t');
 }

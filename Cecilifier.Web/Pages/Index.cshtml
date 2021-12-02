@@ -1,4 +1,4 @@
-﻿@page
+@page
 @model CecilifierApplication
 @addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
 
@@ -25,8 +25,8 @@
                     </table>
                 </td>
                 <td style='min-width:10px;'></td>
-                <td style='width:70%; text-align: left'>
-                     <div id="formattingSettingsSample-container" style="margin-bottom: 5px;"><div id="_formattingSettingsSample" style="width: 1000px; height: 1000px; border-left: 10px solid white; border-right: 10px solid white"></div></div>
+                <td style='width:75%; text-align: left'>
+                    <div id="formattingSettingsSample-container" style="margin-bottom: 5px;"><div id="_formattingSettingsSample" style="width: 1000px; height: 1000px; border-left: 10px solid white; border-right: 10px solid white"></div></div>
                 </td>
             </tr>
         </table>
@@ -62,6 +62,7 @@
         <button type="submit" id="downloadProject" class="button">Generate Project <i class="fa fa-box"></i></button>
         <button class="button" id="copyToClipboard" onclick="copyToClipboard('copyPastHelper');"><i class="fa fa-copy"></i></button>
         <button class="button" onclick="changeCecilifierSettings();" id="changeSettings"><i class="fas fa-sliders-h"></i></button>
+        
         <span id="keyboard-shortcuts">
             <i class="fas fa-keyboard" style="font-size:28px; vertical-align: middle;"></i>
         </span>
@@ -73,12 +74,30 @@
     <div id="cecilifiedcode-container" style="margin-bottom: 0;">
         <div id="cecilifiedcode" style="width: 100%; height: 600px; border-left: 10px solid white; border-right: 10px solid white"></div>
     </div>
+    
+    <div class="modal" aria-hidden="true">
+      <div class="modal-dialog" id="bug_reporter_dialog_id">
+        <div class="modal-header">
+          <h2 id="bug_reporter_header_id"><img src="images/oops.png" width="64" height="64"  alt="oops" style="margin-right: 10px"/>We've got an internal error.</h2>
+          <a href="#" class="btn-close closemodal" aria-hidden="true" onclick="CloseErrorDialog()">&times;</a>
+        </div>
+          <div class="modal-body">
+              Title<br/>
+              <textarea id="error_title" style="width: 100%; resize: none" placeholder="enter a descriptive title" oninput="updateReportErrorButton(this)"></textarea><br/>
+              
+              Description<br/>
+              <textarea id="error_description" style="width: 100%; resize: none"></textarea><br/>
+              
+              <input type="checkbox" checked="true" id="include-snippet" />Include original code.
+          </div>
+          
+          <div class="modal-footer" id="bug_reporter_dialog_footer">
+              <a href="#" class="btn-disabled" onclick="fileIssueInGitHub();" id="report_internal_error_button">Report error</a> <a href="#" class="btn" onclick="CloseErrorDialog()">Close</a>
+          </div>
+      </div>
+    </div>
 
     <a href="javascript:void(0)" id="dlbtn" style="display: none"><button></button></a>
-    <div class="alert info2" id="cecilifier_new_release" style="display: none">
-        <span class="closebtn" onclick="this.parentElement.style.display='none';">&times;</span>
-        <div></div>
-    </div>
 </div>
 
 <script
@@ -89,4 +108,7 @@
 
 <script>
     initializeSite("@Model.ErrorAccessingGist", "@fromGist", "@this.GetType().Assembly.GetName().Version");
+</script>
+
+<script>
 </script>

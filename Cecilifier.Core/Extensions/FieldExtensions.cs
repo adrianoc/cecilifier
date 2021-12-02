@@ -1,5 +1,6 @@
 ﻿using System;
 using Cecilifier.Core.AST;
+using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using static Cecilifier.Core.Misc.Utils;
 
@@ -11,7 +12,7 @@ namespace Cecilifier.Core.Extensions
         {
             if (field.IsDefinedInCurrentType(context))
             {
-                var found = context.DefinitionVariables.GetVariable(field.Name, MemberKind.Field, field.ContainingType.Name);
+                var found = context.DefinitionVariables.GetVariable(field.Name, VariableMemberKind.Field, field.ContainingType.Name);
                 if (!found.IsValid)
                 {
                     throw new Exception($"Failed to resolve variable with field definition for `{field}`");

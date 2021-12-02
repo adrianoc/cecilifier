@@ -25,7 +25,7 @@ namespace Cecilifier.Core
         private CecilifierResult Run(Stream content, CecilifierOptions options)
         {
             using var stream = new StreamReader(content);
-            var syntaxTree = CSharpSyntaxTree.ParseText(stream.ReadToEnd(), new CSharpParseOptions(LanguageVersion.CSharp9));
+            var syntaxTree = CSharpSyntaxTree.ParseText(stream.ReadToEnd(), new CSharpParseOptions(LanguageVersion.CSharp10));
             var metadataReferences = options.References.Select(refPath => MetadataReference.CreateFromFile(refPath)).ToArray();
 
             var comp = CSharpCompilation.Create(
@@ -37,7 +37,7 @@ namespace Cecilifier.Core
             var errors = comp.GetDiagnostics().Where(d => d.Severity == DiagnosticSeverity.Error).Select(s => s.ToString()).ToArray();
             if (errors.Length > 0)
             {
-                throw new SyntaxErrorException($"Code contains compiler errors:\n\n{string.Join("\n", errors)}");
+                throw new SyntaxErrorException(string.Join("\n", errors));
             }
 
             var semanticModel = comp.GetSemanticModel(syntaxTree);

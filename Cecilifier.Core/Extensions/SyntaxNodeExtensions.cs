@@ -32,6 +32,11 @@ namespace Cecilifier.Core.Extensions
 
             var s = new StringBuilder();
             
+            // if the last node is a block it means `node` does not contain a newline 
+            // so the block should not be added to the output
+            if (nodesAndTokens[^1].IsKind(SyntaxKind.Block))
+                nodesAndTokens = nodesAndTokens[0..^1];
+            
             // remove leading trivias of first node/token...
             if (nodesAndTokens[0].IsNode)
             {
@@ -63,11 +68,20 @@ namespace Cecilifier.Core.Extensions
             var symbolInfo = semanticModel.GetSymbolInfo(self);
             method = symbolInfo.Symbol as IMethodSymbol;
 
+            if (method?.ContainingType?.SpecialType == SpecialType.System_String)
+            {
+                // for strings, == & != are handled by its respective operators.
+                // other operators, like +, are mapped to a specific method call 
+                return method.Name == "op_Equality" || method.Name == "op_Inequality";
+            }
+            
             // Unmanaged types https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/unmanaged-types operators are handled by the VM 
             // (as opposed to their own operator overloads) whence the check for IsUnmanagedType; the extra check (SpecialType) is meant to filter out
-            // custom structs (non primitives) which may be deemed as unmanaged (see the link above for more details) 
-            return method is { Parameters: { Length: > 0 } } 
-                   && ((!method.Parameters[0].Type.IsUnmanagedType && method.Parameters[0].Type.SpecialType != SpecialType.System_String)|| (method.Parameters[0].Type.SpecialType == SpecialType.None && method.Parameters[0].Type.Kind != SymbolKind.PointerType));
+            // custom structs (non primitives) which may be deemed as unmanaged (see the link above for more details)
+            return method is { Parameters: { Length: > 0 } }
+                   && method.Parameters[0].Type?.BaseType?.SpecialType != SpecialType.System_MulticastDelegate
+                   && ((!method.Parameters[0].Type.IsUnmanagedType && method.Parameters[0].Type.SpecialType != SpecialType.System_String) 
+                       || (method.Parameters[0].Type.SpecialType == SpecialType.None && method.Parameters[0].Type.Kind != SymbolKind.PointerType));
         }
 
         public static IList<ParameterSyntax> ParameterList(this LambdaExpressionSyntax lambdaExpressionSyntax) => lambdaExpressionSyntax switch

@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
+using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -29,7 +30,7 @@ namespace Cecilifier.Core.AST
             Context.WriteComment($"** Property indexer **");
             
             var propertyType = ResolveType(node.Type);
-            var propertyDeclaringTypeVar = Context.DefinitionVariables.GetLastOf(MemberKind.Type).VariableName;
+            var propertyDeclaringTypeVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Type).VariableName;
             var propName = "Item";
 
             AddDefaultMemberAttribute(propertyDeclaringTypeVar, propName);
@@ -47,7 +48,7 @@ namespace Cecilifier.Core.AST
 
                 var exps = CecilDefinitionsFactory.Parameter(parameter, Context.SemanticModel, propDefVar, paramVar, ResolveType(parameter.Type));
                 AddCecilExpressions(exps);
-                Context.DefinitionVariables.RegisterNonMethod(string.Empty, parameter.Identifier.ValueText, MemberKind.Parameter, paramVar);
+                Context.DefinitionVariables.RegisterNonMethod(string.Empty, parameter.Identifier.ValueText, VariableMemberKind.Parameter, paramVar);
             }
 
             ProcessPropertyAccessors(node, propertyDeclaringTypeVar, propName, propertyType, propDefVar, paramsVar, node.ExpressionBody);
@@ -66,7 +67,7 @@ namespace Cecilifier.Core.AST
             Context.WriteNewLine();
             Context.WriteComment($"** Property: {node.Identifier} **");
             var propertyType = ResolveType(node.Type);
-            var propertyDeclaringTypeVar = Context.DefinitionVariables.GetLastOf(MemberKind.Type).VariableName;
+            var propertyDeclaringTypeVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Type).VariableName;
             var propName = node.Identifier.ValueText;
 
             var propDefVar = AddPropertyDefinition(node, propName, propertyType);
@@ -92,7 +93,7 @@ namespace Cecilifier.Core.AST
 
         private void AddDefaultMemberAttribute(string definitionVar, string value)
         {
-            var ctorVar = Context.Naming.MemberReference("ctor", Context.DefinitionVariables.GetLastOf(MemberKind.Type).VariableName);
+            var ctorVar = Context.Naming.MemberReference("ctor", Context.DefinitionVariables.GetLastOf(VariableMemberKind.Type).VariableName);
             var customAttrVar = Context.Naming.CustomAttribute("DefaultMember"); 
             
             var exps = new[]

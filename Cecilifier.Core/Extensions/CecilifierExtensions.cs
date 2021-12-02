@@ -46,19 +46,20 @@ namespace Cecilifier.Core.Extensions
 using Mono.Cecil.Cil;
 using Mono.Cecil.Rocks;
 using System; 
+using System.IO;
 using System.Linq;
 using BindingFlags = System.Reflection.BindingFlags;
-
 using Cecilifier.Runtime;
                
 public class SnippetRunner
 {{
 	public static void Main(string[] args)
 	{{
-		using(var assembly = AssemblyDefinition.CreateAssembly(new AssemblyNameDefinition(""{assemblyName}"", Version.Parse(""1.0.0.0"")), ""moduleName"", {moduleKind}))
+        // setup a `reflection importer` to ensure references to System.Private.CoreLib are replaced with references to `netstandard`. 
+        var mp = new ModuleParameters {{ Architecture = TargetArchitecture.AMD64, Kind =  {moduleKind}, ReflectionImporterProvider = new SystemPrivateCoreLibFixerReflectionProvider() }};
+		using(var assembly = AssemblyDefinition.CreateAssembly(new AssemblyNameDefinition(""{assemblyName}"", Version.Parse(""1.0.0.0"")), Path.GetFileName(args[0]), mp))
         {{
 {cecilSnippet}{entryPointStatement}
-            PrivateCoreLibFixer.FixReferences(assembly.MainModule);
 		    assembly.Write(args[0]);
         }}
 	}}
@@ -88,7 +89,7 @@ public class SnippetRunner
             }
 
             var found = toBeChecked.GetMembers().OfType<IMethodSymbol>().Where(candidate => CompareMethods(candidate, method)).SingleOrDefault();
-            if (found == method || found == null)
+            if (ReferenceEquals(found, method) || found == null)
             {
                 found = FindLastDefinition(method, toBeChecked.Interfaces);
                 found = found ?? FindLastDefinition(method, toBeChecked.BaseType);
@@ -114,26 +115,18 @@ public class SnippetRunner
         private static bool CompareMethods(IMethodSymbol lhs, IMethodSymbol rhs)
         {
             if (lhs.Name != rhs.Name)
-            {
                 return false;
-            }
 
-            if (lhs.ReturnType != rhs.ReturnType)
-            {
+            if (!ReferenceEquals(lhs.ReturnType, rhs.ReturnType))
                 return false;
-            }
 
             if (lhs.Parameters.Count() != rhs.Parameters.Count())
-            {
                 return false;
-            }
 
             for (var i = 0; i < lhs.Parameters.Count(); i++)
             {
-                if (lhs.Parameters[i].Type != rhs.Parameters[i].Type)
-                {
+                if (!ReferenceEquals(lhs.Parameters[i].Type, rhs.Parameters[i].Type))
                     return false;
-                }
             }
 
             return true;

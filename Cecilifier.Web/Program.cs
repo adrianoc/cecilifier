@@ -1,7 +1,7 @@
 ﻿using System.IO;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Hosting;        
+using Microsoft.Extensions.Hosting;
 
 namespace Cecilifier.Web
 {
@@ -10,7 +10,7 @@ namespace Cecilifier.Web
         public static void Main(string[] args)
         {
             var configurationBuilder = new ConfigurationBuilder();
-            var config = configurationBuilder.AddJsonFile($"appsettings.Production.json", optional: true).Build();
+            var config = configurationBuilder.AddJsonFile($"appsettings.Production.json", optional: false).Build();
 
             var host = new HostBuilder()
                 .UseContentRoot(Directory.GetCurrentDirectory())
@@ -21,9 +21,10 @@ namespace Cecilifier.Web
                         .UseUrls(config["ApplicationUrl"])
                         .UseConfiguration(config)
                         .UseStartup<Startup>();
+
                 })
                 .Build();
-            
+
             host.Run();
         }
     }

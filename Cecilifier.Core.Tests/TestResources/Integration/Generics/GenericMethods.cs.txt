@@ -2,7 +2,11 @@ using System;
 
 class GenericMethods
 {
-    void A<T>() {}    
+    void A<T>() { }
+        
     T B<T>(T t) { return B(t); }    
     void C<S, T>(S s, T t) { C(s, t); }
+    
+    void InferredCall() { B(10); }
+    void Explicit() { A<string>(); B<bool>(false); }
 }

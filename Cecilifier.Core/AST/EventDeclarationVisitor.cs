@@ -4,6 +4,7 @@ using System.Linq;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
+using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -35,7 +36,7 @@ namespace Cecilifier.Core.AST
             Context.WriteComment($"Event: {node.Identifier.Text}");
             
             var eventType = ResolveType(node.Type);
-            var eventDeclaringTypeVar = Context.DefinitionVariables.GetLastOf(MemberKind.Type).VariableName;
+            var eventDeclaringTypeVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Type).VariableName;
             var eventName = node.Identifier.ValueText;
 
             var eventDefVar = AddEventDefinition(node, eventName, eventType);
@@ -59,7 +60,7 @@ namespace Cecilifier.Core.AST
 
             var eventSymbol = (IEventSymbol) Context.SemanticModel.GetDeclaredSymbol(node.Declaration.Variables[0]);
             
-            eventDeclaringTypeVar = Context.DefinitionVariables.GetLastOf(MemberKind.Type).VariableName;
+            eventDeclaringTypeVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Type).VariableName;
 
             var backingFieldVar = string.Empty;
 

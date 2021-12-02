@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Misc;
+using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using static Cecilifier.Core.Misc.Utils;
@@ -98,8 +99,8 @@ namespace Cecilifier.Core.Extensions
                     if (lastDeclaredIn.ContainingType.TypeKind == TypeKind.Interface)
                     {
                         modifiersStr = "MethodAttributes.Virtual | MethodAttributes.NewSlot | " +
-                                       (lastDeclaredIn.ContainingType == methodSymbol.ContainingType ? "MethodAttributes.Abstract" : "MethodAttributes.Final");
-                        defaultAccessibility = lastDeclaredIn.ContainingType == methodSymbol.ContainingType ? "Public" : "Private";
+                                       (ReferenceEquals(lastDeclaredIn.ContainingType, methodSymbol.ContainingType) ? "MethodAttributes.Abstract" : "MethodAttributes.Final");
+                        defaultAccessibility = ReferenceEquals(lastDeclaredIn.ContainingType, methodSymbol.ContainingType) ? "Public" : "Private";
                     }
                 }
             }

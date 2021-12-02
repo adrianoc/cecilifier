@@ -4,6 +4,7 @@ using System.Linq;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
+using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
@@ -101,7 +102,7 @@ namespace Cecilifier.Core.AST
             AddCecilExpressions(typeDef);
             HandleAttributesInMemberDeclaration(node.AttributeLists, typeVar);
 
-            using (Context.DefinitionVariables.WithCurrent("", node.Identifier.ValueText, MemberKind.Type, typeVar))
+            using (Context.DefinitionVariables.WithCurrent("", node.Identifier.ValueText, VariableMemberKind.Type, typeVar))
             {
                 var ctorLocalVar = Context.Naming.Delegate(node);
                 

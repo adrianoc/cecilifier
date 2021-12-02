@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
-using Microsoft.CodeAnalysis;
+using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
@@ -28,8 +28,12 @@ namespace Cecilifier.Core.AST
             var typeDef = CecilDefinitionsFactory.Type(Context, enumType, node.Identifier.ValueText, attrs + " | TypeAttributes.Sealed", Context.TypeResolver.Bcl.System.Enum, false, Array.Empty<string>());
             AddCecilExpressions(typeDef);
 
-            var parentName = node.Parent.IsKind(SyntaxKind.CompilationUnit) ? "" : node.Parent.ResolveDeclaringType<TypeDeclarationSyntax>().Identifier.ValueText;
-            using (Context.DefinitionVariables.WithCurrent(parentName, node.Identifier.ValueText, MemberKind.Type,enumType))
+            var enumSymbol = Context.SemanticModel.GetDeclaredSymbol(node);
+            if (enumSymbol == null)
+                throw new NullReferenceException($"Something really bad happened. Roslyn failed to resolve the symbol for the enum {node.Identifier.Text}");
+            
+            var parentName = enumSymbol.ContainingSymbol.FullyQualifiedName();
+            using (Context.DefinitionVariables.WithCurrent(parentName, node.Identifier.ValueText, VariableMemberKind.Type,enumType))
             {
                 //.class private auto ansi MyEnum
                 var fieldVar = Context.Naming.LocalVariable(node, "valueField");
@@ -48,7 +52,7 @@ namespace Cecilifier.Core.AST
             // Adds a field like:
             // .field public static literal valuetype xxx.MyEnum Second = int32(1)
             var enumMemberValue = _memberCollector[node];
-            var enumVarDef = Context.DefinitionVariables.GetLastOf(MemberKind.Type);
+            var enumVarDef = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Type);
 
             var fieldVar = Context.Naming.LocalVariable(node, $"em_{enumVarDef.MemberName}");
             var exp = CecilDefinitionsFactory.Field(enumVarDef.VariableName, fieldVar, node.Identifier.ValueText, enumVarDef.VariableName,

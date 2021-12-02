@@ -1,10 +1,14 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html>
 <head>
     <script src="~/js/cecilifier.js"></script>
     <script src="~/js/cecilifier.settings.js"></script>
     <script src="~/js/release_notes.js"></script>
-    
+
+    <!-- Snackbar -->
+    <link rel="stylesheet" href="~/lib/js-snackbar-1.5/dist/js-snackbar.min.css">
+    <script src="~/lib/js-snackbar-1.5/dist/js-snackbar.min.js"></script>
+        
     <!-- Tippy.js -->
     <script src="https://unpkg.com/@@popperjs/core@2"></script>
     <script src="https://unpkg.com/tippy.js@6"></script>
@@ -15,7 +19,7 @@
 
     <link rel="stylesheet" href="https://unpkg.com/keyboard-css@1.2.4/dist/css/main.min.css" />
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.0/css/all.css" integrity="sha384-lZN37f5QGtY3VHgisS14W3ExzMWZxybE1SJSEsQp9S+oqd12jhcu+A56Ebc1zFSJ" crossorigin="anonymous">
-    <link href="https://fonts.googleapis.com/css?family=Big+Shoulders+Text|Roboto&display=swap" rel="stylesheet">  
+    <link href="https://fonts.googleapis.com/css?family=Big+Shoulders+Text|Roboto&display=swap" rel="stylesheet">
 
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -61,6 +65,8 @@
         }
     </style>
     
+    <link rel="stylesheet" href="~/css/dialog.css">
+    
     <!-- ALERT -->
     <style>
         .alert {
@@ -105,7 +111,7 @@
     @RenderBody()
     <footer>
         <div class="back_social">
-            <div id="inner">
+            <div id="inner" style="font-family: 'Nunito+Sans', cursive; font-size: 16px;">
                 <a class="fab fa-linkedin" href="https://www.linkedin.com/in/adrianoc/" target="_li_cecilifier"></a>
                 <a class="fab fa-github" href="https://github.com/adrianoc/cecilifier"target="_gh_cecilifier"></a>
                 <a class="fab fa-twitter" href="https://twitter.com/adrianoverona"target="_tw_cecilifier"></a>
@@ -113,8 +119,8 @@
                 <a class="fab fa-stack-overflow" href="https://stackoverflow.com/users/157321/vagaus"target="_so_cecilifier"></a>
                 <a class="fab fa-patreon" href="https://www.patreon.com/cecilifier"target="_pa_cecilifier"></a>
                 <a class="fab fa-discord" href="https://discord.gg/dhF5BCW"target="_pa_cecilifier"></a>
-            </div>
-            <p id="inner" style="font-family: 'Nunito+Sans', cursive; font-size: 12px;">&copy; 2021 - Adriano Carlos Verona (<span id="cecilified_counter">@CecilifierApplication.Count</span>)</p>
+                | &copy; 2021 - Adriano Carlos Verona (<span id="cecilified_counter">@CecilifierApplication.Count</span>)
+            </div>            
         </div>
     </footer>
 </div>

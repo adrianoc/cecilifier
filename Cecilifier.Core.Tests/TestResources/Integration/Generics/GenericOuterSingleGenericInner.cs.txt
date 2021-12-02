@@ -20,12 +20,9 @@ class Test<T>
     Outer<T>.Inner<string> Method_T_String(Outer<T>.Inner<string> p) => p;
     Outer<T>.Inner<T> Method_T_T(Outer<T>.Inner<T> p) => p;
     
-    /*
-     * Cast/typeof is not supported yet.
-     * object TypeOf(object o) => (Outer<T>.Inner<T>) o;
-     * object Cast() => typeof(Outer<T>.Inner<T>);
-     */
+    object Cast(object o) => (Outer<T>.Inner<T>) o;
+    object TypeOf() => typeof(Outer<T>.Inner<T>);
      
-     void Instantiate_Int_String() { Method_Int_String(new Outer<int>.Inner<string>()); }    
-     void Instantiate_T_T() { Method_T_T(new Outer<T>.Inner<T>()); }
+    void Instantiate_Int_String() { Method_Int_String(new Outer<int>.Inner<string>()); }    
+    void Instantiate_T_T() { Method_T_T(new Outer<T>.Inner<T>()); }
 }

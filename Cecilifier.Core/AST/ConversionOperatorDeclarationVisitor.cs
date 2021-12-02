@@ -21,8 +21,7 @@ namespace Cecilifier.Core.AST
                 node, 
                 Context.Naming.MethodDeclaration(node),
                 "operator", 
-                operatorMethodName, 
-                Context.GetTypeInfo(node.Type).Type,
+                operatorMethodName,
                 false,
                 _ => base.VisitConversionOperatorDeclaration(node));
         }
@@ -37,8 +36,7 @@ namespace Cecilifier.Core.AST
                 node, 
                 Context.Naming.MethodDeclaration(node),
                 "operator", 
-                declaredSymbol.Name, 
-                Context.GetTypeInfo(node.ReturnType).Type,
+                declaredSymbol.Name,
                 false,
                 _ => base.VisitOperatorDeclaration(node));
         }

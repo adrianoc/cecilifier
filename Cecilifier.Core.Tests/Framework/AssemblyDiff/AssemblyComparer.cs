@@ -289,6 +289,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                 return false;
             }
 
+            var modulesToIgnore = new HashSet<IMetadataScope> { source.DeclaringType.Scope, target.DeclaringType.Scope };
             var targetInstructions = SkipIrrelevantInstructions(target.Body.Instructions).GetEnumerator();
             int skipCount = 0;
             foreach (var instruction in SkipIrrelevantInstructions(source.Body.Instructions))
@@ -302,7 +303,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                     return visitor.VisitBody(source, target, instruction);
                 }
 
-                if (!EqualOrEquivalent(instruction, targetInstructions.Current, source.IsStatic, out skipCount))
+                if (!EqualOrEquivalent(instruction, targetInstructions.Current, source.IsStatic, modulesToIgnore, out skipCount))
                 {
                     return visitor.VisitBody(source, target, instruction);
                 }
@@ -324,7 +325,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                 .Where(instructionFilter.IgnoreNonRequiredLocalVariableAssignments);
         }
 
-        private static bool EqualOrEquivalent(Instruction instruction, Instruction current, bool isStatic, out int skipCount)
+        private static bool EqualOrEquivalent(Instruction instruction, Instruction current, bool isStatic, HashSet<IMetadataScope> scopesToIgnore, out int skipCount)
         {
             skipCount = 0;
             while (instruction != null && instruction.OpCode == OpCodes.Nop)
@@ -346,7 +347,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
             }
 
             if (instruction?.OpCode == current?.OpCode)
-                return true;
+                return ValidateOperands(instruction, current, scopesToIgnore);
 
             Debug.Assert(current != null);
             
@@ -398,7 +399,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                 case Code.Brfalse:
                 case Code.Brfalse_S:
                 case Code.Brtrue:
-                case Code.Brtrue_S: return current.OpCode.FlowControl == FlowControl.Branch && EqualOrEquivalent((Instruction) instruction.Operand, (Instruction) current.Operand, isStatic, out skipCount);
+                case Code.Brtrue_S: return current.OpCode.FlowControl == FlowControl.Branch && EqualOrEquivalent((Instruction) instruction.Operand, (Instruction) current.Operand, isStatic, scopesToIgnore, out skipCount);
 
                 case Code.Pop:
                     if (current.Previous == null || instruction.Previous == null)
@@ -414,6 +415,29 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
             {
                 Console.WriteLine($"No specific validation for {instruction.OpCode} operands!");
                 return false;
+            }
+
+            return true;
+        }
+
+        private static bool ValidateOperands(Instruction instruction, Instruction current, HashSet<IMetadataScope> scopesToIgnore)
+        {
+            // TODO: For now we are starting enforcing field references are the same in the two instructions..
+            // in the future we want to validate more. For example:
+            // - Method references matches
+            // - Event references matches
+            // - Constants
+            // - etc.
+            if (instruction.Operand is FieldReference frInstruction && current.Operand is FieldReference frCurrent)
+            {
+                if (frInstruction.Name != frCurrent.Name || frInstruction.DeclaringType.FullName != frCurrent.DeclaringType.FullName)
+                    return false;
+
+                if (scopesToIgnore.Contains(frInstruction.DeclaringType.Scope) || scopesToIgnore.Contains(frInstruction.DeclaringType.Scope))
+                    return true;
+                    
+                return  (frInstruction.DeclaringType.Scope.Name == frCurrent.DeclaringType.Scope.Name ||
+                         frInstruction.DeclaringType.Scope.Name == "System.Private.CoreLib" && frCurrent.DeclaringType.Scope.Name == "netstandard");
             }
 
             return true;

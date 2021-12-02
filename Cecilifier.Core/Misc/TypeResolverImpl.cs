@@ -1,7 +1,8 @@
 using System.Collections.Generic;
 using System.Linq;
-using Cecilifier.Core.AST;
+using Cecilifier.Core.Extensions;
 using Cecilifier.Core.TypeSystem;
+using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 
 namespace Cecilifier.Core.Misc
@@ -73,7 +74,13 @@ namespace Cecilifier.Core.Misc
 
         public string ResolveLocalVariableType(ITypeSymbol type)
         {
-            var found = _context.DefinitionVariables.GetVariable(type.Name, MemberKind.Type).VariableName ?? _context.DefinitionVariables.GetVariable(type.Name, MemberKind.TypeParameter).VariableName;
+            var containingSymbolName = type.ContainingSymbol != null 
+                ? type.ContainingSymbol.FullyQualifiedName() 
+                : string.Empty;
+            
+            var found = _context.DefinitionVariables.GetVariable(type.Name, VariableMemberKind.Type, containingSymbolName).VariableName 
+                        ?? _context.DefinitionVariables.GetVariable(type.Name, VariableMemberKind.TypeParameter, containingSymbolName).VariableName;
+            
             if (found != null && type is INamedTypeSymbol {IsGenericType: true} genericTypeSymbol)
             {
                 return MakeGenericInstanceType(found, genericTypeSymbol);
@@ -88,15 +95,17 @@ namespace Cecilifier.Core.Misc
             {
                 CollectTypeArguments(typeArgumentProvider.ContainingType, collectTo);
             }
-            collectTo.AddRange(typeArgumentProvider.TypeArguments.Select(Resolve));
+            collectTo.AddRange(typeArgumentProvider.TypeArguments.Where(t => t.Kind != SymbolKind.ErrorType).Select(Resolve));
 
             return collectTo;
         }
         
-        private string MakeGenericInstanceType(string found, INamedTypeSymbol genericTypeSymbol)
+        private string MakeGenericInstanceType(string typeReference, INamedTypeSymbol genericTypeSymbol)
         {
             var typeArgs = CollectTypeArguments(genericTypeSymbol, new List<string>());
-            return $"{found}.MakeGenericInstanceType({string.Join(",", typeArgs)})";
+            return typeArgs.Count > 0
+                ? $"{typeReference}.MakeGenericInstanceType({string.Join(",", typeArgs)})"
+                : typeReference;
         }
 
         private string OpenGenericTypeName(ITypeSymbol type)

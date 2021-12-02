@@ -62,7 +62,7 @@ Unsupported Features
 - Enumerator methods
 - Delegate (generic)
 - async/await
-- Newer C# syntax (expression bodied members, elvis operator, static import, to name some)
+- Newer C# syntax (elvis operator, static import, to name some)
 - Much more :(
 
 How to use it

@@ -4,6 +4,7 @@ using System.Linq;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
+using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -18,12 +19,12 @@ namespace Cecilifier.Core.AST
 
             hasReturnStatement = firstGlobalStatement.Parent.DescendantNodes().Any(node => node.IsKind(SyntaxKind.ReturnStatement));
 
-            var typeModifiers = CecilDefinitionsFactory.DefaultTypeAttributeFor(SyntaxKind.ClassDeclaration, false).AppendModifier("TypeAttributes.NotPublic | TypeAttributes.Abstract | TypeAttributes.Sealed");
-            var typeVar = context.Naming.Type("topLevelStatements", ElementKind.Class);
+            var typeModifiers = CecilDefinitionsFactory.DefaultTypeAttributeFor(SyntaxKind.ClassDeclaration, false).AppendModifier("TypeAttributes.NotPublic | TypeAttributes.AutoLayout");
+            typeVar = context.Naming.Type("topLevelStatements", ElementKind.Class);
             var typeExps = CecilDefinitionsFactory.Type(
                 context, 
                 typeVar, 
-                "<Program>$", 
+                "Program", 
                 typeModifiers, 
                 context.TypeResolver.Resolve(context.GetSpecialType(SpecialType.System_Object)), 
                 false, 
@@ -57,13 +58,24 @@ namespace Cecilifier.Core.AST
             WriteCecilExpressions(mainBodyExps);
                 
             WriteCecilExpression($"{typeVar}.Methods.Add({methodVar});");
+            
+            new ConstructorDeclarationVisitor(context).DefaultCtorInjector2(typeVar, "Program");
         }
 
         public bool HandleGlobalStatement(GlobalStatementSyntax node)
         {
-            using (context.DefinitionVariables.WithCurrentMethod("<Program>$", "<Main>$", Array.Empty<string>(), methodVar))
+            using (context.DefinitionVariables.WithCurrent(string.Empty, "Program", VariableMemberKind.Type, typeVar))
+            using (context.DefinitionVariables.WithCurrentMethod("Program", "<Main>$", Array.Empty<string>(), methodVar))
             {
-                StatementVisitor.Visit(context, ilVar, node.Statement);
+                if (node.Statement.IsKind(SyntaxKind.LocalFunctionStatement))
+                {
+                    context.WriteComment($"Local function: {node.HumanReadableSummary()}");
+                    StatementVisitor.Visit(context, ilVar, node.Statement);
+                    context.WriteComment("End of local function.");
+                    context.WriteNewLine();
+                }
+                else
+                    StatementVisitor.Visit(context, ilVar, node.Statement);
             }
             
             var root = (CompilationUnitSyntax) node.SyntaxTree.GetRoot();
@@ -101,6 +113,7 @@ namespace Cecilifier.Core.AST
         
         private readonly string ilVar;
         private readonly string methodVar;
+        private readonly string typeVar;
         private readonly IVisitorContext context;
         private bool hasReturnStatement;
     }

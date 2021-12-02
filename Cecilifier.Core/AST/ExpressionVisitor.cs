@@ -7,6 +7,7 @@ using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Naming;
+using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -59,10 +60,29 @@ namespace Cecilifier.Core.AST
 
             operatorHandlers[SyntaxKind.SlashToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Div.ConstantName()});");
             operatorHandlers[SyntaxKind.GreaterThanToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Emit({CompareOperatorFor(ctx, left, right).ConstantName()});");
+            operatorHandlers[SyntaxKind.GreaterThanEqualsToken] = (ctx, ilVar, left, right) =>
+            {
+                WriteCecilExpression(ctx, $"{ilVar}.Emit(OpCodes.Clt);");
+                WriteCecilExpression(ctx, $"{ilVar}.Emit(OpCodes.Ldc_I4_0);");
+                WriteCecilExpression(ctx, $"{ilVar}.Emit(OpCodes.Ceq);");
+            };
+            operatorHandlers[SyntaxKind.LessThanEqualsToken] = (ctx, ilVar, left, right) =>
+            {
+                WriteCecilExpression(ctx, $"{ilVar}.Emit(OpCodes.Cgt);");
+                WriteCecilExpression(ctx, $"{ilVar}.Emit(OpCodes.Ldc_I4_0);");
+                WriteCecilExpression(ctx, $"{ilVar}.Emit(OpCodes.Ceq);");
+            };
             operatorHandlers[SyntaxKind.EqualsEqualsToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Ceq.ConstantName()});");
             operatorHandlers[SyntaxKind.LessThanToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Clt.ConstantName()});");
             operatorHandlers[SyntaxKind.MinusToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Sub.ConstantName()});");
             operatorHandlers[SyntaxKind.AsteriskToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Mul.ConstantName()});");
+            operatorHandlers[SyntaxKind.ExclamationEqualsToken] = (ctx, ilVar, left, right) =>
+            {
+                // This is not the most optimized way to handle != operator but it is generic and correct.
+                WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Ceq.ConstantName()});");
+                WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Ldc_I4_0.ConstantName()});");
+                WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Ceq.ConstantName()});");
+            };
 
             // Bitwise Operators
             operatorHandlers[SyntaxKind.AmpersandToken] = (ctx, ilVar, _, _) => WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.And.ConstantName()});");
@@ -285,6 +305,9 @@ namespace Cecilifier.Core.AST
                     break;
 
                 case SyntaxKind.CharacterLiteralExpression:
+                    AddLocalVariableAndHandleCallOnValueTypeLiterals(node,  Context.GetTypeInfo(node).Type, (int) ((char) node.Token.Value));
+                    break;
+                
                 case SyntaxKind.NumericLiteralExpression:
                     AddLocalVariableAndHandleCallOnValueTypeLiterals(node,  Context.GetTypeInfo(node).Type, node.ToString());
                     break;
@@ -319,7 +342,7 @@ namespace Cecilifier.Core.AST
                 
                 var outLocalName = AddLocalVariableWithResolvedType(
                     designation.Identifier.Text,
-                    Context.DefinitionVariables.GetLastOf(MemberKind.Method),
+                    Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method),
                     resolvedOutArgType
                 );
 
@@ -542,7 +565,7 @@ namespace Cecilifier.Core.AST
                 AddCilInstruction(ilVar, opCode);
             }
 
-            var tempLocalName = AddLocalVariableWithResolvedType("tmp", Context.DefinitionVariables.GetLastOf(MemberKind.Method), Context.TypeResolver.Resolve(Context.SemanticModel.GetTypeInfo(operand).Type));
+            var tempLocalName = AddLocalVariableWithResolvedType("tmp", Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method), Context.TypeResolver.Resolve(Context.SemanticModel.GetTypeInfo(operand).Type));
             AddCilInstruction(ilVar, OpCodes.Stloc, tempLocalName);
             AddCilInstruction(ilVar, OpCodes.Ldloc, tempLocalName);
             assignmentVisitor.InstructionPrecedingValueToLoad = Context.CurrentLine;
@@ -665,6 +688,14 @@ namespace Cecilifier.Core.AST
             var visitor = InterpolatedStringVisitor.For(node, Context, ilVar, this);
             node.Accept(visitor);
         }
+        
+        public override void VisitTypeOfExpression(TypeOfExpressionSyntax node)
+        {
+            var getTypeFromHandleSymbol = (IMethodSymbol) Context.SemanticModel.Compilation.GetTypeByMetadataName(typeof(Type).FullName).GetMembers("GetTypeFromHandle").First();
+            
+            AddCilInstruction(ilVar, OpCodes.Ldtoken, Context.TypeResolver.Resolve(Context.GetTypeInfo(node.Type).Type));
+            AddCilInstruction(ilVar, OpCodes.Call, getTypeFromHandleSymbol.MethodResolverExpression(Context));
+        }
 
         public override void VisitSimpleLambdaExpression(SimpleLambdaExpressionSyntax node) => HandleLambdaExpression(node);
         public override void VisitParenthesizedLambdaExpression(ParenthesizedLambdaExpressionSyntax node) => HandleLambdaExpression(node);
@@ -682,7 +713,6 @@ namespace Cecilifier.Core.AST
         public override void VisitRefValueExpression(RefValueExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitCheckedExpression(CheckedExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitDefaultExpression(DefaultExpressionSyntax node) => LogUnsupportedSyntax(node);
-        public override void VisitTypeOfExpression(TypeOfExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitSizeOfExpression(SizeOfExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitInitializerExpression(InitializerExpressionSyntax node) => LogUnsupportedSyntax(node);
 
@@ -715,7 +745,7 @@ namespace Cecilifier.Core.AST
         {
             //TODO: Handle static lambdas.
             // use the lambda string representation to lookup the variable with the synthetic method definition 
-            var syntheticMethodVariable = Context.DefinitionVariables.GetVariable(node.ToString(), MemberKind.Method);
+            var syntheticMethodVariable = Context.DefinitionVariables.GetVariable(node.ToString(), VariableMemberKind.Method);
             if (!syntheticMethodVariable.IsValid)
             {
                 // if we fail to resolve the variable it means this is un unsupported scenario (like a lambda that captures context)
@@ -743,17 +773,11 @@ namespace Cecilifier.Core.AST
 
         private void StoreTopOfStackInLocalVariableAndLoadItsAddress(ITypeSymbol type)
         {
-            var tempLocalName = AddLocalVariableWithResolvedType("tmp", Context.DefinitionVariables.GetLastOf(MemberKind.Method), Context.TypeResolver.Resolve(type));
+            var tempLocalName = AddLocalVariableWithResolvedType("tmp", Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method), Context.TypeResolver.Resolve(type));
             AddCilInstruction(ilVar, OpCodes.Stloc, tempLocalName);
             AddCilInstruction(ilVar, OpCodes.Ldloca_S, tempLocalName);
         }
 
-        private OpCode LoadOpCodeFor(LiteralExpressionSyntax node)
-        {
-            var info = Context.SemanticModel.GetTypeInfo(node);
-            return LoadOpCodeFor(info.Type);
-        }
-        
         private OpCode LoadOpCodeFor(ITypeSymbol type)
         {
             switch (type.SpecialType)
@@ -831,7 +855,14 @@ namespace Cecilifier.Core.AST
             if (found.IsValid)
                 return;
 
-            MethodDeclarationVisitor.AddMethodDefinition(Context, varName, method.Name, "MethodAttributes.Private", method.ReturnType, method.ReturnsByRef, typeParameters);
+            if (method.MethodKind == MethodKind.LocalFunction)
+            {
+                MethodDeclarationVisitor.AddMethodDefinition(Context, varName, $"<{method.ContainingSymbol.Name}>g__{method.Name}|0_0", "MethodAttributes.Assembly | MethodAttributes.Static | MethodAttributes.HideBySig", method.ReturnType, method.ReturnsByRef, typeParameters);
+            }
+            else
+            {
+                MethodDeclarationVisitor.AddMethodDefinition(Context, varName, method.Name, "MethodAttributes.Private", method.ReturnType, method.ReturnsByRef, typeParameters);
+            }
             Context.DefinitionVariables.RegisterMethod(method.ContainingType.Name, method.Name, method.Parameters.Select(p => p.Type.Name).ToArray(), varName);
         }
 
@@ -923,7 +954,7 @@ namespace Cecilifier.Core.AST
             if (!fieldSymbol.IsStatic && !isTargetOfQualifiedAccess)
                 AddCilInstruction(ilVar, OpCodes.Ldarg_0);
             
-            if (HandleLoadAddress(ilVar, fieldSymbol.Type, (CSharpSyntaxNode) node.Parent, OpCodes.Ldflda, fieldSymbol.Name, MemberKind.Field, fieldSymbol.ContainingType.Name))
+            if (HandleLoadAddress(ilVar, fieldSymbol.Type, (CSharpSyntaxNode) node.Parent, OpCodes.Ldflda, fieldSymbol.Name, VariableMemberKind.Field, fieldSymbol.ContainingType.Name))
             {
                 return;
             }
@@ -931,7 +962,11 @@ namespace Cecilifier.Core.AST
             if (fieldSymbol.IsVolatile)
                 AddCilInstruction(ilVar, OpCodes.Volatile);
 
-            AddCilInstruction(ilVar, LoadOpCodeForFieldAccess(fieldSymbol), fieldDeclarationVariable.VariableName);
+            var resolvedField = fieldDeclarationVariable.IsValid
+                ? fieldDeclarationVariable.VariableName
+                : fieldSymbol.FieldResolverExpression(Context);
+
+            AddCilInstruction(ilVar, LoadOpCodeForFieldAccess(fieldSymbol), resolvedField);
             HandlePotentialDelegateInvocationOn(node, fieldSymbol.Type, ilVar);
         }
 
@@ -939,14 +974,18 @@ namespace Cecilifier.Core.AST
 
         private DefinitionVariable EnsureFieldExists(SimpleNameSyntax node, [NotNull] IFieldSymbol fieldSymbol)
         {
-            var fieldDeclaration = (FieldDeclarationSyntax) fieldSymbol.DeclaringSyntaxReferences.Single().GetSyntax().Parent.Parent;
+            var declaringSyntaxReference = fieldSymbol.DeclaringSyntaxReferences.SingleOrDefault();
+            if (declaringSyntaxReference == null)
+                return DefinitionVariable.NotFound;
+            
+            var fieldDeclaration = (FieldDeclarationSyntax) declaringSyntaxReference.GetSyntax().Parent.Parent;
             if (fieldDeclaration.Span.Start > node.Span.End)
             {
                 // this is a forward reference, process it...
                 fieldDeclaration.Accept(new FieldDeclarationVisitor(Context));
             }
             
-            var fieldDeclarationVariable = Context.DefinitionVariables.GetVariable(fieldSymbol.Name, MemberKind.Field, fieldSymbol.ContainingType.Name);
+            var fieldDeclarationVariable = Context.DefinitionVariables.GetVariable(fieldSymbol.Name, VariableMemberKind.Field, fieldSymbol.ContainingType.Name);
             if (!fieldDeclarationVariable.IsValid)
                 throw new Exception($"Could not resolve reference to field: {fieldSymbol.Name}");
             
@@ -957,12 +996,12 @@ namespace Cecilifier.Core.AST
         {
             var symbol = (ILocalSymbol) varInfo.Symbol;
             var localVar = (CSharpSyntaxNode) localVarSyntax.Parent;
-            if (HandleLoadAddress(ilVar, symbol.Type, localVar, OpCodes.Ldloca, symbol.Name, MemberKind.LocalVariable))
+            if (HandleLoadAddress(ilVar, symbol.Type, localVar, OpCodes.Ldloca, symbol.Name, VariableMemberKind.LocalVariable))
             {
                 return;
             }
 
-            AddCilInstruction(ilVar, OpCodes.Ldloc, Context.DefinitionVariables.GetVariable(symbol.Name, MemberKind.LocalVariable).VariableName);
+            AddCilInstruction(ilVar, OpCodes.Ldloc, Context.DefinitionVariables.GetVariable(symbol.Name, VariableMemberKind.LocalVariable).VariableName);
             HandlePotentialDelegateInvocationOn(localVarSyntax, symbol.Type, ilVar);
             HandlePotentialFixedLoad(symbol);
             HandlePotentialRefLoad(localVarSyntax, symbol);
@@ -990,7 +1029,7 @@ namespace Cecilifier.Core.AST
                 var parameterSymbol = ParameterSymbolFromArgumentSyntax(argument);
                 var targetIsByRef = parameterSymbol.IsByRef();
 
-                needsLoadIndirect = (parameterSymbol == sourceSymbol && sourceIsByRef && !targetIsByRef) // simple argument like Foo(ref) where the parameter is not a reference. 
+                needsLoadIndirect = (ReferenceEquals(parameterSymbol, sourceSymbol) && sourceIsByRef && !targetIsByRef) // simple argument like Foo(ref) where the parameter is not a reference. 
                                     || sourceIsByRef; // complex argument like Foo(ref + 1)
             }
             else if (returnStatement != null)
@@ -1082,7 +1121,8 @@ namespace Cecilifier.Core.AST
         
         private void ProcessMethodCall(SimpleNameSyntax node, IMethodSymbol method)
         {
-            if (!method.IsStatic && method.IsDefinedInCurrentType(Context) && node.Parent.Kind() == SyntaxKind.InvocationExpression)
+            // Local methods are always static.
+            if (method.MethodKind != MethodKind.LocalFunction && !method.IsStatic && method.IsDefinedInCurrentType(Context) && node.Parent.Kind() == SyntaxKind.InvocationExpression)
             {
                 AddCilInstruction(ilVar, OpCodes.Ldarg_0);
             }

@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Misc;
+using Cecilifier.Core.Naming;
+using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -18,6 +19,33 @@ namespace Cecilifier.Core.AST
 
         public MethodDeclarationVisitor(IVisitorContext context) : base(context)
         {
+        }
+        
+        public override void VisitLocalFunctionStatement(LocalFunctionStatementSyntax node)
+        {
+            var methodSymbol = (IMethodSymbol) Context.SemanticModel.GetDeclaredSymbol(node);
+            if (methodSymbol == null)
+                throw new InvalidOperationException();
+
+            // Local functions have a well defined list of modifiers.
+            var modifiers = SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.InternalKeyword), SyntaxFactory.Token(SyntaxKind.StaticKeyword));
+            
+            // local functions are not first class citizens wrt variable naming... handle them as methods for now.
+            var localFunctionVar = Context.Naming.SyntheticVariable(node.Identifier.Text, ElementKind.Method);
+            
+            ProcessMethodDeclarationInternal(
+                node, 
+                methodSymbol.ContainingType.Name, 
+                localFunctionVar,
+                methodSymbol,
+                modifiers,
+                node.Identifier.Text,
+                $"<{methodSymbol.ContainingSymbol.Name}>g__{node.Identifier.Text}|0_0",
+                false,
+                s => { base.VisitLocalFunctionStatement(node); },
+                node.AttributeLists,
+                node.ParameterList.Parameters);
+            
         }
 
         public override void VisitArrowExpressionClause(ArrowExpressionClauseSyntax node)
@@ -42,8 +70,7 @@ namespace Cecilifier.Core.AST
                 node, 
                 Context.Naming.MethodDeclaration(node),
                 node.Identifier.ValueText, 
-                MethodNameOf(node), 
-                Context.GetTypeInfo(returnType).Type,
+                MethodNameOf(node),
                 refReturn,
                 _ => base.VisitMethodDeclaration(node), 
                 node.TypeParameterList?.Parameters.ToArray());
@@ -62,9 +89,9 @@ namespace Cecilifier.Core.AST
         public override void VisitParameter(ParameterSyntax node)
         {
             var paramVar = Context.Naming.Parameter(node);
-            Context.DefinitionVariables.RegisterNonMethod(string.Empty, node.Identifier.ValueText, MemberKind.Parameter, paramVar);
+            Context.DefinitionVariables.RegisterNonMethod(string.Empty, node.Identifier.ValueText, VariableMemberKind.Parameter, paramVar);
 
-            var methodVar = Context.DefinitionVariables.GetLastOf(MemberKind.Method);
+            var methodVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
             if (!methodVar.IsValid)
                 throw new InvalidOperationException($"Failed to retrieve current method.");
             
@@ -78,23 +105,44 @@ namespace Cecilifier.Core.AST
             base.VisitParameter(node);
         }
 
-        protected void ProcessMethodDeclaration<T>(T node, string variableName, string simpleName, string fqName, ITypeSymbol returnType, bool refReturn, Action<string> runWithCurrent, IList<TypeParameterSyntax> typeParameters = null) where T : BaseMethodDeclarationSyntax
+        private void ProcessMethodDeclarationInternal(
+            SyntaxNode node, 
+            string declaringTypeName, 
+            string variableName,
+            IMethodSymbol methodSymbol,
+            SyntaxTokenList modifiers, 
+            string simpleName, 
+            string methodName, 
+            bool refReturn, 
+            Action<string> runWithCurrent, 
+            SyntaxList<AttributeListSyntax> attributes, 
+            SeparatedSyntaxList<ParameterSyntax> parameters,
+            IList<TypeParameterSyntax> typeParameters = null)
         {
             using var _ = LineInformationTracker.Track(Context, node);
-            var declaringTypeName = DeclaringTypeFrom(node);
             using (Context.DefinitionVariables.EnterScope())
             {
                 typeParameters ??= Array.Empty<TypeParameterSyntax>();
-
-                var methodVar = AddOrUpdateMethodDefinition(node, variableName, fqName, node.Modifiers.MethodModifiersToCecil((targetEnum, modifiers, defaultAccessibility) => ModifiersToCecil(modifiers, targetEnum, defaultAccessibility), GetSpecificModifiers(), DeclaredSymbolFor(node)), returnType, refReturn, typeParameters);
-                AddCecilExpression("{0}.Methods.Add({1});", Context.DefinitionVariables.GetLastOf(MemberKind.Type).VariableName, methodVar);
-
-                HandleAttributesInMemberDeclaration(node.AttributeLists, TargetDoesNotMatch, SyntaxKind.ReturnKeyword, methodVar); // Normal method attrs.
-                HandleAttributesInMemberDeclaration(node.AttributeLists, TargetMatches, SyntaxKind.ReturnKeyword, $"{methodVar}.MethodReturnType"); // [return:Attr]
-
-                if (node.Modifiers.IndexOf(SyntaxKind.ExternKeyword) == -1)
+                var methodVar = AddOrUpdateMethodDefinition(
+                                            declaringTypeName,
+                                            variableName,
+                                            // for ctors we want to use the `methodName` (== .ctor) instead of the `simpleName` (== ctor) otherwise we may fail to find existing variables.
+                                            methodSymbol.MethodKind == MethodKind.Constructor ? methodName : simpleName,
+                                            methodName, 
+                                            modifiers.MethodModifiersToCecil((targetEnum, modifiers, defaultAccessibility) => ModifiersToCecil(modifiers, targetEnum, defaultAccessibility), GetSpecificModifiers(), methodSymbol), 
+                                            methodSymbol.ReturnType, 
+                                            refReturn, 
+                                            parameters,
+                                            typeParameters);
+                
+                AddCecilExpression("{0}.Methods.Add({1});", Context.DefinitionVariables.GetLastOf(VariableMemberKind.Type).VariableName, methodVar);
+        
+                HandleAttributesInMemberDeclaration(attributes, TargetDoesNotMatch, SyntaxKind.ReturnKeyword, methodVar); // Normal method attrs.
+                HandleAttributesInMemberDeclaration(attributes, TargetMatches, SyntaxKind.ReturnKeyword, $"{methodVar}.MethodReturnType"); // [return:Attr]
+        
+                if (modifiers.IndexOf(SyntaxKind.ExternKeyword) == -1)
                 {
-                    var isAbstract = DeclaredSymbolFor(node).IsAbstract;
+                    var isAbstract = methodSymbol.IsAbstract;
                     if (!isAbstract)
                     {
                         ilVar = Context.Naming.ILProcessor(simpleName, declaringTypeName);
@@ -102,7 +150,11 @@ namespace Cecilifier.Core.AST
                         AddCecilExpression($"var {ilVar} = {methodVar}.Body.GetILProcessor();");
                     }
 
-                    WithCurrentMethod(declaringTypeName, methodVar, fqName, node.ParameterList.Parameters.Select(p => Context.GetTypeInfo(p.Type).Type.Name).ToArray(), runWithCurrent);
+                    // if the method is a local function use `simpleName` as the method name (instead of `methodName`) since, in this context,
+                    // the later is a `mangled name` and any reference to the method will use its `unmangled name` for lookups which would fail
+                    // should we use `methodName` as the registered name.
+                    var nameUsedInRegisteredVariable = methodSymbol.MethodKind == MethodKind.LocalFunction ? simpleName : methodName;
+                    WithCurrentMethod(declaringTypeName, methodVar, nameUsedInRegisteredVariable, parameters.Select(p => Context.GetTypeInfo(p.Type).Type.Name).ToArray(), runWithCurrent);
                     if (!isAbstract && !node.DescendantNodes().Any(n => n.IsKind(SyntaxKind.ReturnStatement)))
                     {
                         AddCilInstruction(ilVar, OpCodes.Ret);
@@ -110,23 +162,14 @@ namespace Cecilifier.Core.AST
                 }
                 else
                 {
-                    Context.DefinitionVariables.RegisterMethod(declaringTypeName, fqName, node.ParameterList.Parameters.Select(p => Context.GetTypeInfo(p.Type).Type.Name).ToArray(), methodVar);
+                    Context.DefinitionVariables.RegisterMethod(declaringTypeName, methodName, parameters.Select(p => Context.GetTypeInfo(p.Type).Type.Name).ToArray(), methodVar);
                 }
             }
         }
 
-        private static string DeclaringTypeFrom<T>(T node) where T : BaseMethodDeclarationSyntax
+        private string AddOrUpdateMethodDefinition(string declaringTypeName, string variableName, string simpleName, string methodName, string methodModifiers, ITypeSymbol returnType, bool refReturn, SeparatedSyntaxList<ParameterSyntax> parameters, IList<TypeParameterSyntax> typeParameters)
         {
-            var declaringType = (TypeDeclarationSyntax) node.Parent;
-            Debug.Assert(declaringType != null);
-            
-            return declaringType.Identifier.Text;
-        }
-
-        private string AddOrUpdateMethodDefinition(BaseMethodDeclarationSyntax node, string variableName, string fqName, string methodModifiers, ITypeSymbol returnType, bool refReturn, IList<TypeParameterSyntax> typeParameters)
-        {
-            var declaringTypeName = node.ResolveDeclaringType<BaseTypeDeclarationSyntax>().Identifier.Text;
-            var found = Context.DefinitionVariables.GetMethodVariable(new MethodDefinitionVariable(declaringTypeName, fqName, node.ParameterList.Parameters.Select(paramSyntax => Context.GetTypeInfo(paramSyntax.Type).Type.Name).ToArray()));
+            var found = Context.DefinitionVariables.GetMethodVariable(new MethodDefinitionVariable(declaringTypeName, simpleName, parameters.Select(paramSyntax => Context.GetTypeInfo(paramSyntax.Type).Type.Name).ToArray()));
             if (found.IsValid)
             {
                 AddCecilExpression("{0}.Attributes = {1};", found.VariableName , methodModifiers);
@@ -134,16 +177,34 @@ namespace Cecilifier.Core.AST
                 return found.VariableName;
             }
 
-            AddMethodDefinition(Context, variableName, fqName, methodModifiers, returnType, refReturn, typeParameters);
+            AddMethodDefinition(Context, variableName, methodName, methodModifiers, returnType, refReturn, typeParameters);
             return variableName;
         }
+   
+        protected void ProcessMethodDeclaration<T>(T node, string variableName, string simpleName, string fqName, bool refReturn, Action<string> runWithCurrent, IList<TypeParameterSyntax> typeParameters = null) where T : BaseMethodDeclarationSyntax
+        {
+            var methodSymbol = Context.GetDeclaredSymbol(node);
+            ProcessMethodDeclarationInternal(
+                            node,
+                            methodSymbol.ContainingSymbol.Name,
+                            variableName,
+                            methodSymbol,
+                            node.Modifiers,
+                            simpleName,
+                            fqName,
+                            refReturn,
+                            runWithCurrent,
+                            node.AttributeLists,
+                            node.ParameterList.Parameters,
+                            typeParameters);
+        }
 
-        public static void AddMethodDefinition(IVisitorContext context, string methodVar, string fqName, string methodModifiers, ITypeSymbol returnType, bool refReturn, IList<TypeParameterSyntax> typeParameters)
+        public static void AddMethodDefinition(IVisitorContext context, string methodVar, string methodName, string methodModifiers, ITypeSymbol returnType, bool refReturn, IList<TypeParameterSyntax> typeParameters)
         {
             context.WriteNewLine();
-            context.WriteComment($"Method : {fqName}");
+            context.WriteComment($"Method : {methodName}");
 
-            var exps = CecilDefinitionsFactory.Method(context, methodVar, fqName, methodModifiers, returnType, refReturn, typeParameters);
+            var exps = CecilDefinitionsFactory.Method(context, methodVar, methodName, methodModifiers, returnType, refReturn, typeParameters);
             foreach (var exp in exps)
             {
                 context.WriteCecilExpression(exp);

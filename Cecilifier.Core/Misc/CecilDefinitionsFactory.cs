@@ -4,6 +4,7 @@ using System.Linq;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.TypeSystem;
+using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -31,11 +32,20 @@ namespace Cecilifier.Core.Misc
         public static IEnumerable<string> Method(IVisitorContext context, string methodVar, string methodName, string methodModifiers, ITypeSymbol returnType, bool refReturn, IList<TypeParameterSyntax> typeParameters)
         {
             var exps = new List<string>();
-            
-            exps.Add($"var {methodVar} = new MethodDefinition(\"{methodName}\", {methodModifiers}, {context.TypeResolver.Bcl.System.Void});");
-            ProcessGenericTypeParameters(methodVar, context, typeParameters, exps);
+
             var resolvedReturnType = context.TypeResolver.Resolve(returnType);
-            exps.Add($"{methodVar}.ReturnType = {(refReturn ? resolvedReturnType.MakeByReferenceType() : resolvedReturnType)};");
+            if (refReturn)
+                resolvedReturnType = resolvedReturnType.MakeByReferenceType();
+            
+            // for type parameters we may need to postpone setting the return type (using void as a placeholder, since we need to pass something) until the generic parameters has been
+            // handled. This is required because the type parameter may be defined by the method being processed.
+            exps.Add($"var {methodVar} = new MethodDefinition(\"{methodName}\", {methodModifiers}, {(returnType.TypeKind == TypeKind.TypeParameter ? context.TypeResolver.Bcl.System.Void : resolvedReturnType)});");
+            ProcessGenericTypeParameters(methodVar, context, typeParameters, exps);
+            if (returnType.TypeKind == TypeKind.TypeParameter)
+            {
+                resolvedReturnType = context.TypeResolver.Resolve(returnType);
+                exps.Add($"{methodVar}.ReturnType = {(refReturn ? resolvedReturnType.MakeByReferenceType() : resolvedReturnType)};");
+            }
             
             return exps;
         }
@@ -60,7 +70,7 @@ namespace Cecilifier.Core.Misc
          * 1. At IL level, type parameters from *outer* types are considered to be part of a inner type whence these type parameters need to be added to the list of type parameters even
          *    if the type being declared is not a generic type.
          * 
-         * 2. Only the own type parameters of the type being declared are considered when computing the arity of the type (whence the number following the backtick reflects only the
+         * 2. Only type parameters owned by the type being declared are considered when computing the arity of the type (whence the number following the backtick reflects only the
          *    # of the type parameters declared by the type being declared). 
          */
         public static IEnumerable<string> Type(IVisitorContext context, string typeVar, string typeName, string attrs, string baseTypeName, bool isStructWithNoFields, IEnumerable<string> interfaces, IEnumerable<TypeParameterSyntax> ownTypeParameters, IEnumerable<TypeParameterSyntax> outerTypeParameters, params string[] properties)
@@ -87,7 +97,7 @@ namespace Cecilifier.Core.Misc
                 exps.Add($"{typeVar}.Interfaces.Add(new InterfaceImplementation({itfName}));");
             }
 
-            var currentType = context.DefinitionVariables.GetLastOf(MemberKind.Type);
+            var currentType = context.DefinitionVariables.GetLastOf(VariableMemberKind.Type);
             if (currentType.IsValid)
                 exps.Add($"{currentType.VariableName}.NestedTypes.Add({typeVar});"); // type is a inner type of *context.CurrentType* 
             else
@@ -120,10 +130,10 @@ namespace Cecilifier.Core.Misc
                 properties);
         }
 
-        private static string GenericParameter(IVisitorContext context, string typeVar, string genericParamName, string genParamDefVar, ITypeParameterSymbol typeParameterSymbol)
+        private static string GenericParameter(IVisitorContext context, string typeParameterOwnerVar, string genericParamName, string genParamDefVar, ITypeParameterSymbol typeParameterSymbol)
         {
-            context.DefinitionVariables.RegisterNonMethod(string.Empty, genericParamName, MemberKind.TypeParameter, genParamDefVar);
-            return $"var {genParamDefVar} = new Mono.Cecil.GenericParameter(\"{genericParamName}\", {typeVar}) {Variance(typeParameterSymbol)};";
+            context.DefinitionVariables.RegisterNonMethod(string.Empty, genericParamName, VariableMemberKind.TypeParameter, genParamDefVar);
+            return $"var {genParamDefVar} = new Mono.Cecil.GenericParameter(\"{genericParamName}\", {typeParameterOwnerVar}) {Variance(typeParameterSymbol)};";
         }
 
         private static string Variance(ITypeParameterSymbol typeParameterSymbol)
@@ -255,7 +265,7 @@ namespace Cecilifier.Core.Misc
                 
                 var genParamDefVar = context.Naming.GenericParameterDeclaration(typeParameter);
 
-                context.DefinitionVariables.RegisterNonMethod(string.Empty, genericParamName, MemberKind.TypeParameter, genParamDefVar);
+                context.DefinitionVariables.RegisterNonMethod(symbol.ContainingSymbol.FullyQualifiedName(), genericParamName, VariableMemberKind.TypeParameter, genParamDefVar);
                 exps.Add(GenericParameter(context, memberDefVar, genericParamName, genParamDefVar, symbol));
                 
                 tba.Add((genParamDefVar, symbol));
@@ -320,6 +330,9 @@ namespace Cecilifier.Core.Misc
             exps.Add($"{methodVar}.Body = new MethodBody({methodVar});");
 
             exps.Add($"var {ilVar} = {methodVar}.Body.GetILProcessor();");
+            if (instructions.Length == 0)
+                return exps;
+            
             var methodInstVar = $"{methodVar}_inst";
             exps.Add($"var {methodInstVar} = {methodVar}.Body.Instructions;");
 

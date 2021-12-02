@@ -1,5 +1,6 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Cecilifier.Core.Variables;
 using Mono.Cecil.Cil;
 
 namespace Cecilifier.Core.AST
@@ -21,7 +22,7 @@ namespace Cecilifier.Core.AST
             var firstAncestorOrSelf = node.FirstAncestorOrSelf<LocalDeclarationStatementSyntax>();
             var varName = firstAncestorOrSelf.Declaration.Variables[0].Identifier.ValueText;
 
-            AddCilInstruction(ilVar, OpCodes.Ldloca_S, Context.DefinitionVariables.GetVariable(varName, MemberKind.LocalVariable).VariableName);
+            AddCilInstruction(ilVar, OpCodes.Ldloca_S, Context.DefinitionVariables.GetVariable(varName, VariableMemberKind.LocalVariable).VariableName);
             AddCilInstruction(ilVar, OpCodes.Initobj, Context.TypeResolver.Resolve(ctorInfo.Symbol.ContainingType));
         }
 
@@ -49,7 +50,7 @@ namespace Cecilifier.Core.AST
         private void DeclareAndInitializeValueTypeLocalVariable()
         {
             var resolvedVarType = Context.TypeResolver.Resolve(ctorInfo.Symbol.ContainingType);
-            var tempLocalName = AddLocalVariableWithResolvedType("vt", Context.DefinitionVariables.GetLastOf(MemberKind.Method), resolvedVarType);
+            var tempLocalName = AddLocalVariableWithResolvedType("vt", Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method), resolvedVarType);
 
             switch (ctorInfo.Symbol.ContainingType.SpecialType)
             {

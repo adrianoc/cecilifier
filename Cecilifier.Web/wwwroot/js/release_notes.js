@@ -42,8 +42,15 @@ function showReleaseNotes() {
         setCookie("lastVersion", itemsToShow[0].published_at, 1000);
 
         const latest = itemsToShow[0];
-        const html = `New version <a href='${latest.html_url}' target="_blank">${latest.tag_name} ${latest.name}</a> has been released on ${new Date(latest.published_at).toLocaleString()}.<br /><br />${latest.body.replace(/\r\n/g, "<br/>")}`;
-        setAlert("cecilifier_new_release", html);
+        const html = `New version <a  style='color:#8cbc13; text-decoration: underline' href='${latest.html_url}' target="releaseNotes">${latest.tag_name} ${latest.name}</a> has been released on ${new Date(latest.published_at).toLocaleString()}.<br /><br />${latest.body.replace(/\r\n/g, "<br/>")}`;
+
+        SnackBar({
+            message: html,
+            dismissible: true,
+            status: "Info",
+            timeout: 120000,
+            icon: "exclamation"
+        });
     });
 }
 
