@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.AST;
@@ -128,13 +128,6 @@ namespace Cecilifier.Core.Misc
                 MoveLineAfter(c, CurrentLine);
                 c = next;
             }
-        }
-
-        public event Action<string> InstructionAdded;
-
-        public void TriggerInstructionAdded(string instVar)
-        {
-            InstructionAdded?.Invoke(instVar);
         }
 
         public IDisposable WithFlag(string name)

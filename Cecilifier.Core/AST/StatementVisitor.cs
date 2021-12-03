@@ -174,7 +174,7 @@ namespace Cecilifier.Core.AST
             node.Block.Accept(this);
 
             var firstInstructionAfterTryCatchBlock = CreateCilInstruction(_ilVar, OpCodes.Nop);
-            exceptionHandlerTable[exceptionHandlerTable.Length - 1].HandlerEnd = firstInstructionAfterTryCatchBlock; // sets up last handler end instruction
+            exceptionHandlerTable[^1].HandlerEnd = firstInstructionAfterTryCatchBlock; // sets up last handler end instruction
 
             AddCilInstruction(_ilVar, OpCodes.Leave, firstInstructionAfterTryCatchBlock);
 
