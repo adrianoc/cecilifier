@@ -78,7 +78,7 @@ namespace Cecilifier.Core.AST
             }
 
             var member = Context.SemanticModel.GetSymbolInfo(node);
-            Utils.EnsureNotNull(member.Symbol == null, $"Failed to resolve symbol for node: {node.SourceDetails()}.");
+            Utils.EnsureNotNull(member.Symbol, $"Failed to resolve symbol for node: {node.SourceDetails()}.");
 
             if (member.Symbol.Kind != SymbolKind.NamedType 
                 && member.Symbol.ContainingType.IsValueType 

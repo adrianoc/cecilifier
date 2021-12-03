@@ -135,6 +135,7 @@ namespace Cecilifier.Core.AST
 
         public override void VisitReturnStatement(ReturnStatementSyntax node)
         {
+            Utils.EnsureNotNull(node.Expression, nameof(node));
             node.Expression.Accept(this);
             InjectRequiredConversions(node.Expression);
         }
@@ -201,11 +202,8 @@ namespace Cecilifier.Core.AST
         {
             using var _ = LineInformationTracker.Track(Context, node);
             var arrayType = Context.GetTypeInfo(node);
-            if (arrayType.Type == null)
-            {
-                throw new Exception($"Unable to infer array type: {node}");
-            }
-
+            Utils.EnsureNotNull(arrayType.Type, $"Unable to infer array type: {node}");
+            
             AddCilInstruction(ilVar, OpCodes.Ldc_I4, node.Initializer.Expressions.Count);
 
             var arrayTypeSymbol = (IArrayTypeSymbol) arrayType.Type;
@@ -621,11 +619,8 @@ namespace Cecilifier.Core.AST
             var castSource = Context.GetTypeInfo(node.Expression);
             var castTarget = Context.GetTypeInfo(node.Type);
             
-            if (castSource.Type == null)
-                throw new InvalidOperationException($"Failed to get type information for expression: {node.Expression}");
-            
-            if (castTarget.Type == null)
-                throw new InvalidOperationException($"Failed to get type information for: {node.Type}");
+            Utils.EnsureNotNull(castSource.Type,$"Failed to get type information for expression: {node.Expression}");
+            Utils.EnsureNotNull(castTarget.Type, $"Failed to get type information for: {node.Type}");
 
             if (castSource.Type.SpecialType == castTarget.Type.SpecialType && castSource.Type.SpecialType == SpecialType.System_Double)
             {

@@ -312,27 +312,6 @@ namespace Cecilifier.Core.AST
             AddCilInstruction(_ilVar, OpCodes.Stloc, localVarDef.VariableName);
         }
 
-        private void InjectConversionAfterLoadIfRequired(VariableDeclaratorSyntax localVar)
-        {
-            // null is assignable to anything, i.e, no conversion is needed.
-            if (localVar.Initializer.Value.IsKind(SyntaxKind.NullLiteralExpression))
-                return;
-
-            var source = Context.SemanticModel.GetTypeInfo(localVar.Initializer.Value).Type;
-            if (source == null)
-                return; // if we fail to resolve the type of the value used in the initialization we do not try to perform any conversions.
-            
-            var destination = Context.SemanticModel.GetTypeInfo(((VariableDeclarationSyntax) localVar.Parent).Type).Type;
-            var conversion = Context.SemanticModel.Compilation.ClassifyConversion(
-                source,
-                destination);
-
-            if (!conversion.IsIdentity && conversion.IsImplicit && !conversion.IsBoxing && conversion.MethodSymbol != null)
-            {
-                AddMethodCall(_ilVar, conversion.MethodSymbol);
-            }
-        }
-
         private void HandleVariableDeclaration(VariableDeclarationSyntax declaration)
         {
             var methodVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);

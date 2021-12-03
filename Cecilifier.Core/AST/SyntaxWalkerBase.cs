@@ -287,11 +287,7 @@ namespace Cecilifier.Core.AST
 
         protected string ResolveExpressionType(ExpressionSyntax expression)
         {
-            if (expression == null)
-            {
-                throw new ArgumentNullException(nameof(expression));
-            }
-
+            Utils.EnsureNotNull(expression, nameof(expression));
             var info = Context.GetTypeInfo(expression);
             return Context.TypeResolver.Resolve(info.Type);
         }

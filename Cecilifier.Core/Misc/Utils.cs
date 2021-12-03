@@ -1,8 +1,10 @@
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
 using Microsoft.CodeAnalysis;
 
+#nullable enable
 namespace Cecilifier.Core.Misc
 {
     internal struct Utils
@@ -25,10 +27,17 @@ namespace Cecilifier.Core.Misc
 
             return fieldRefVar;
         }
-        
-        public static void EnsureNotNull([DoesNotReturnIf(true)] bool isNull, string msg)
+
+        public static void EnsureNotNull([NotNull] ISymbol? symbol, string msg)
         {
-            if (isNull)
+            if (symbol == null)
+                throw new System.NotSupportedException(msg);
+        }
+        
+        [Conditional("DEBUG")]
+        public static void EnsureNotNull([NotNull] SyntaxNode? node, string msg)
+        {
+            if (node == null)
                 throw new System.NotSupportedException(msg);
         }
     }
