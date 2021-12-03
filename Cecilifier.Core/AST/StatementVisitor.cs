@@ -135,7 +135,7 @@ namespace Cecilifier.Core.AST
 
         public override void VisitFixedStatement(FixedStatementSyntax node)
         {
-            using (Context.WithFlag("fixed"))
+            using (Context.WithFlag(Constants.ContextFlags.Fixed))
             {
                 HandleVariableDeclaration(node.Declaration);
             }
@@ -274,7 +274,7 @@ namespace Cecilifier.Core.AST
 
         private void AddLocalVariable(TypeSyntax type, VariableDeclaratorSyntax localVar, DefinitionVariable methodVar)
         {
-            var isFixedStatement = Context.HasFlag("fixed");
+            var isFixedStatement = Context.HasFlag(Constants.ContextFlags.Fixed);
             if (isFixedStatement)
             {
                 type = ((PointerTypeSyntax) type).ElementType;

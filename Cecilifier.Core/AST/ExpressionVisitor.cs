@@ -605,7 +605,7 @@ namespace Cecilifier.Core.AST
 
         public override void VisitRefExpression(RefExpressionSyntax node)
         {
-            using (Context.WithFlag("ref-return"))
+            using (Context.WithFlag(Constants.ContextFlags.RefReturn))
             {
                 node.Expression.Accept(this);
             }
