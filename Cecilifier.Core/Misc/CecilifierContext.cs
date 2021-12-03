@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.AST;
@@ -43,7 +43,7 @@ namespace Cecilifier.Core.Misc
 
         public DefinitionVariableManager DefinitionVariables { get; }
 
-        public string Namespace { get; set; }
+        public string CurrentNamespace { get; set; }
 
         public LinkedListNode<string> CurrentLine => output.Last;
 

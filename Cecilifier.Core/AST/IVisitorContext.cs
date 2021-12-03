@@ -13,7 +13,7 @@ namespace Cecilifier.Core.AST
     {
         INameStrategy Naming { get; }
         
-        string Namespace { get; set; }
+        string CurrentNamespace { get; set; }
 
         SemanticModel SemanticModel { get; }
 

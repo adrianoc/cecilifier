@@ -82,7 +82,7 @@ namespace Cecilifier.Core.Misc
             }
             
             var exps = new List<string>();
-            var typeDefExp = $"var {typeVar} = new TypeDefinition(\"{context.Namespace}\", \"{typeName}\", {attrs}{(!string.IsNullOrWhiteSpace(baseTypeName) ? ", " + baseTypeName : "")})";
+            var typeDefExp = $"var {typeVar} = new TypeDefinition(\"{context.CurrentNamespace}\", \"{typeName}\", {attrs}{(!string.IsNullOrWhiteSpace(baseTypeName) ? ", " + baseTypeName : "")})";
             if (properties.Length > 0)
             {
                 exps.Add($"{typeDefExp} {{ {string.Join(',', properties)} }};");
