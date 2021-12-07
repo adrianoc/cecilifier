@@ -1,9 +1,11 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Text.RegularExpressions;
 using Mono.Cecil;
 using NUnit.Framework;
 using NUnit.Framework.Constraints;
+using NUnit.Framework.Internal;
 
 namespace Cecilifier.Core.Tests.Tests.Unit
 {
@@ -126,5 +128,64 @@ public class Foo
             Assert.That(cecilifiedCode, Does.Match("il_method_21.Emit\\(OpCodes.Callvirt, .*\"System.Diagnostics.Process\", \"System.Diagnostics.Process\", \"Kill\".+"), cecilifiedCode);
             Assert.That(cecilifiedCode, Does.Match("il_property_24.Emit\\(OpCodes.Callvirt, .+\"System.Diagnostics.Process\", \"System.Diagnostics.Process\", \"get_ProcessName\".+"), cecilifiedCode);
         }
+
+        [Test]
+        public void Test_Issue_134_Stackalloc_ArrayInitialization_Character()
+        {
+            var code = @"using System; class Foo { unsafe void Bar() { char* ch = stackalloc char[] { 'A', 'V' }; } }";
+            var result = RunCecilifier(code);
+
+            var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+
+            Assert.That(cecilifiedCode, Contains.Substring("Stind_I2"));
+            Assert.That(cecilifiedCode, Contains.Substring("Sizeof, assembly.MainModule.TypeSystem.Char"));
+        }
+        
+        [Test]
+        public void Test_Issue_134_Stackalloc_ArrayInitialization_Boolean()
+        {
+            var code = @"using System; class Foo { unsafe void Bar() { bool* bp = stackalloc bool[] { true, false }; } }";
+            var result = RunCecilifier(code);
+
+            var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+
+            Assert.That(cecilifiedCode, Contains.Substring("Stind_I1"));
+            Assert.That(cecilifiedCode, Contains.Substring("Sizeof, assembly.MainModule.TypeSystem.Boolean"));
+        }
+        
+        [TestCase("byte", nameof(Byte), sizeof(byte), "Stind_I1", TestName = "byte")]
+        [TestCase("sbyte", nameof(SByte), sizeof(sbyte), "Stind_I1", TestName = "sbyte")]
+        [TestCase("int", nameof(Int32), sizeof(int), "Stind_I4", TestName = "int")]
+        [TestCase("uint", nameof(UInt32), sizeof(uint), "Stind_I4", TestName = "uint")]
+        [TestCase("short", nameof(Int16), sizeof(short), "Stind_I2", TestName = "short")]
+        [TestCase("ushort", nameof(UInt16), sizeof(ushort), "Stind_I2", TestName = "ushort")]
+        [TestCase("long", nameof(Int64), sizeof(long), "Stind_I8", TestName = "long")]
+        [TestCase("ulong", nameof(UInt64), sizeof(ulong), "Stind_I8", TestName = "ulong")]
+        public void Test_Issue_134_Stackalloc_ArrayInitialization_Numeric(string type, string flcTypeName, int sizeofElement, string expectedStindOpCode)
+        {
+            var code = @$"using System; class Foo {{ unsafe void Bar() {{ {type}* b = stackalloc {type}[] {{ 1, 2 }}; }} }}";
+            var result = RunCecilifier(code);
+
+            var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+
+            Assert.That(cecilifiedCode, Does.Match(@$"var l_b_3 = new VariableDefinition\(assembly.MainModule.TypeSystem.{flcTypeName}.MakePointerType\(\)\);\s+"
+			                                + @"m_bar_1.Body.Variables.Add\(l_b_3\);\s+"
+                                            + @"(.+\.Emit\(OpCodes\.)Ldc_I4, 2\);\s+"
+			                                + @"\1Conv_U\);\s+"
+                                            + @$"\1Sizeof, assembly.MainModule.TypeSystem.{flcTypeName}\);\s+"
+			                                + @"\1Mul_Ovf_Un\);\s+"
+                                            + @"\1Localloc\);\s+"
+			                                + @"\1Dup\);\s+"
+                                            + @"\1Ldc_I4, 1\);\s+"
+			                                + @$"\1{expectedStindOpCode}\);\s+"
+                                            + @"\1Dup\);\s+"
+			                                + @$"\1Ldc_I4, {sizeofElement}\);\s+"
+                                            + @"\1Add\);\s+"
+			                                + @"\1Ldc_I4, 2\);\s+"
+                                            + @$"\1{expectedStindOpCode}\);\s+"
+			                                + @"\1Stloc, l_b_3\);\s+"
+                                            + @"\1Ret\);\s+"));
+        }
+        
     }
 }

@@ -146,6 +146,29 @@ namespace Cecilifier.Core.AST
             InjectRequiredConversions(node.Expression);
         }
 
+        public override void VisitInitializerExpression(InitializerExpressionSyntax node)
+        {
+            using var _ = LineInformationTracker.Track(Context, node);
+
+            var typeInfo = Context.SemanticModel.GetTypeInfo(node.Parent);
+            uint elementTypeSize = typeInfo.Type.SizeofPointedType();
+            uint offset = 0;
+            
+            foreach (var exp in node.Expressions)
+            {
+                AddCilInstruction(ilVar, OpCodes.Dup);
+                if (offset != 0)
+                {
+                    AddCilInstruction(ilVar, OpCodes.Ldc_I4, offset);    
+                    AddCilInstruction(ilVar, OpCodes.Add);    
+                }
+
+                exp.Accept(this);
+                AddCilInstruction(ilVar, typeInfo.Type.Stind());
+                offset += elementTypeSize;
+            }
+        }
+
         public override void VisitStackAllocArrayCreationExpression(StackAllocArrayCreationExpressionSyntax node)
         {
             using var _ = LineInformationTracker.Track(Context, node);
@@ -163,25 +186,34 @@ namespace Cecilifier.Core.AST
                 IL_0004: localloc
              */
             var arrayType = (ArrayTypeSyntax) node.Type;
-            var countNode = arrayType.RankSpecifiers[0].Sizes[0];
+            var rankNode = arrayType.RankSpecifiers[0].Sizes[0];
             var arrayElementType = Context.SemanticModel.GetTypeInfo(arrayType.ElementType);
             
-            if (arrayType.RankSpecifiers.Count == 1 && countNode.IsKind(SyntaxKind.NumericLiteralExpression) && arrayElementType.Type.IsPrimitiveType() )
+            Debug.Assert(arrayType.RankSpecifiers.Count == 1);
+            if (rankNode.IsKind(SyntaxKind.OmittedArraySizeExpression))
             {
-                var sizeLiteral = Int32.Parse(countNode.GetFirstToken().Text) * predefinedTypeSize[arrayType.ElementType.GetText().ToString()];
-                
+                Utils.EnsureNotNull(node.Initializer, "Initializer will never be null");
+                AddCilInstruction(ilVar, OpCodes.Ldc_I4, node.Initializer.Expressions.Count);
+            }
+            
+            if (rankNode.IsKind(SyntaxKind.NumericLiteralExpression) && arrayElementType.Type.IsPrimitiveType())
+            {
+                var sizeLiteral = Int32.Parse(rankNode.GetFirstToken().Text) * arrayElementType.Type.Sizeof();
                 AddCilInstruction(ilVar, OpCodes.Ldc_I4, sizeLiteral);
                 AddCilInstruction(ilVar, OpCodes.Conv_U);
                 AddCilInstruction(ilVar, OpCodes.Localloc);
             }
             else
             {
-                countNode.Accept(this);
+                rankNode.Accept(this);
                 AddCilInstruction(ilVar, OpCodes.Conv_U);
                 AddCilInstruction(ilVar, OpCodes.Sizeof, ResolveType(arrayType.ElementType));
                 AddCilInstruction(ilVar, OpCodes.Mul_Ovf_Un);
                 AddCilInstruction(ilVar, OpCodes.Localloc);
             }
+
+            if (node.Initializer != null)
+                node.Initializer.Accept(this);
         }
 
         public override void VisitArrayCreationExpression(ArrayCreationExpressionSyntax node)
@@ -699,7 +731,6 @@ namespace Cecilifier.Core.AST
         public override void VisitThrowExpression(ThrowExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitSwitchExpression(SwitchExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitAnonymousObjectCreationExpression(AnonymousObjectCreationExpressionSyntax node) => LogUnsupportedSyntax(node);
-        public override void VisitOmittedArraySizeExpression(OmittedArraySizeExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitImplicitStackAllocArrayCreationExpression(ImplicitStackAllocArrayCreationExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitMakeRefExpression(MakeRefExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitRefTypeExpression(RefTypeExpressionSyntax node) => LogUnsupportedSyntax(node);
@@ -707,7 +738,6 @@ namespace Cecilifier.Core.AST
         public override void VisitCheckedExpression(CheckedExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitDefaultExpression(DefaultExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitSizeOfExpression(SizeOfExpressionSyntax node) => LogUnsupportedSyntax(node);
-        public override void VisitInitializerExpression(InitializerExpressionSyntax node) => LogUnsupportedSyntax(node);
 
         private void ProcessOverloadedBinaryOperatorInvocation(BinaryExpressionSyntax node, IMethodSymbol method)
         {

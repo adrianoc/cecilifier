@@ -46,12 +46,6 @@ namespace Cecilifier.Core.Tests.Integration
         {
             AssertResourceTest(@"Expressions/Box");
         }
-
-        [Test]
-        public void TestStackalloc()
-        {
-            AssertResourceTest(@"Expressions/Operators/stackalloc");
-        }
         
         [Test]
         public void TestAdd()

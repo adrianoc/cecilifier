@@ -43,6 +43,40 @@ namespace Cecilifier.Core.Extensions
             SpecialType.System_UInt64 => true,
             _ => false
         };
+        
+        public static uint SizeofPointedType(this ITypeSymbol type) => Sizeof(((IPointerTypeSymbol) type).PointedAtType);
+        
+        public static uint Sizeof(this ITypeSymbol type) => type.SpecialType switch {
+            SpecialType.System_Boolean => sizeof(bool),
+            SpecialType.System_Byte => sizeof(byte),
+            SpecialType.System_SByte => sizeof(sbyte),
+            SpecialType.System_Char => sizeof(char),
+            SpecialType.System_Double => sizeof(double),
+            SpecialType.System_Single => sizeof(float),
+            SpecialType.System_Int16 => sizeof(short),
+            SpecialType.System_UInt16 => sizeof(ushort),
+            SpecialType.System_Int32 => sizeof(int),
+            SpecialType.System_UInt32 => sizeof(uint),
+            SpecialType.System_Int64 => sizeof(long),
+            SpecialType.System_UInt64 => sizeof(ulong),
+            _ => throw new NotImplementedException()
+        };
+        
+        public static OpCode Stind(this ITypeSymbol type) => ((IPointerTypeSymbol) type).PointedAtType.SpecialType switch {
+            SpecialType.System_Boolean => OpCodes.Stind_I1,
+            SpecialType.System_Byte => OpCodes.Stind_I1,
+            SpecialType.System_SByte => OpCodes.Stind_I1,
+            SpecialType.System_Char => OpCodes.Stind_I2,
+            SpecialType.System_Double => throw new NotImplementedException("stind for double"),
+            SpecialType.System_Single => throw new NotImplementedException("stind for float"),
+            SpecialType.System_Int16 => OpCodes.Stind_I2,
+            SpecialType.System_UInt16 => OpCodes.Stind_I2,
+            SpecialType.System_Int32 => OpCodes.Stind_I4,
+            SpecialType.System_UInt32 => OpCodes.Stind_I4,
+            SpecialType.System_Int64 => OpCodes.Stind_I8,
+            SpecialType.System_UInt64 => OpCodes.Stind_I8,
+            _ => throw new NotImplementedException($"Type = {type.Name}")
+        };
     }
 
     public sealed class VariableDefinitionComparer : IEqualityComparer<VariableDefinition>
