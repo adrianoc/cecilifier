@@ -162,11 +162,13 @@ namespace Cecilifier.Core.AST
                 IL_0003: conv.u
                 IL_0004: localloc
              */
-            var type = (ArrayTypeSyntax) node.Type;
-            var countNode = type.RankSpecifiers[0].Sizes[0];
-            if (type.RankSpecifiers.Count == 1 && countNode.IsKind(SyntaxKind.NumericLiteralExpression))
+            var arrayType = (ArrayTypeSyntax) node.Type;
+            var countNode = arrayType.RankSpecifiers[0].Sizes[0];
+            var arrayElementType = Context.SemanticModel.GetTypeInfo(arrayType.ElementType);
+            
+            if (arrayType.RankSpecifiers.Count == 1 && countNode.IsKind(SyntaxKind.NumericLiteralExpression) && arrayElementType.Type.IsPrimitiveType() )
             {
-                var sizeLiteral = Int32.Parse(countNode.GetFirstToken().Text) * predefinedTypeSize[type.ElementType.GetText().ToString()];
+                var sizeLiteral = Int32.Parse(countNode.GetFirstToken().Text) * predefinedTypeSize[arrayType.ElementType.GetText().ToString()];
                 
                 AddCilInstruction(ilVar, OpCodes.Ldc_I4, sizeLiteral);
                 AddCilInstruction(ilVar, OpCodes.Conv_U);
@@ -176,7 +178,7 @@ namespace Cecilifier.Core.AST
             {
                 countNode.Accept(this);
                 AddCilInstruction(ilVar, OpCodes.Conv_U);
-                AddCilInstruction(ilVar, OpCodes.Sizeof, ResolveType(type.ElementType));
+                AddCilInstruction(ilVar, OpCodes.Sizeof, ResolveType(arrayType.ElementType));
                 AddCilInstruction(ilVar, OpCodes.Mul_Ovf_Un);
                 AddCilInstruction(ilVar, OpCodes.Localloc);
             }
