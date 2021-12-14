@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.AST;
@@ -25,7 +25,7 @@ namespace Cecilifier.Core.Misc
             DefinitionVariables = new DefinitionVariableManager();
             TypeResolver = new TypeResolverImpl(this);
             Mappings = new List<Mapping>();
-            CecilifiedLineNumber = startingLine + 1; // always report as 1 based.
+            CecilifiedLineNumber = startingLine;
             
             this.identation = new String('\t', indentation);
         }

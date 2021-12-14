@@ -16,7 +16,10 @@ namespace Cecilifier.Core.Tests.Tests.Unit
         public void Test_CecilifierPreamble_Has17Lines()
         {
             var cecilifiedResult = RunCecilifier("class Foo {}");
-            Assert.That(cecilifiedResult.Mappings[0].Cecilified.Begin.Line, Is.EqualTo(17), $"If this test ever fail check {nameof(CecilifierExtensions.AsCecilApplication)}(). Most likely the preamble appended to the cecilified code has changed.");
+            Assert.That(
+                cecilifiedResult.Mappings[0].Cecilified.Begin.Line, 
+                Is.EqualTo(Cecilifier.CecilifierProgramPreambleLength), 
+                $"If this test ever fail check {nameof(CecilifierExtensions.AsCecilApplication)}(). Most likely the preamble appended to the cecilified code has changed.");
         }
 
         [Test]
