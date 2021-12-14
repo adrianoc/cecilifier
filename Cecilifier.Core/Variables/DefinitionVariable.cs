@@ -25,7 +25,7 @@ public class DefinitionVariable : IEquatable<DefinitionVariable>
     {
         return string.Equals(MemberName, other.MemberName)
                && string.Equals(ParentName, other.ParentName)
-               && Kind == other.Kind;
+               && (Kind & other.Kind) != 0;
     }
 
     public override int GetHashCode()
