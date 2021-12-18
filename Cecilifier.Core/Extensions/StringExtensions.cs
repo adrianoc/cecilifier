@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Naming;
@@ -40,6 +42,8 @@ namespace Cecilifier.Core.Extensions
             
             return exps.ToArray();
         }
+
+        public static int CountNewLines(this string value) => value.Count(ch => ch == '\n');
 
         private static List<string> methodReferencePropertiesToClone = new()
         {

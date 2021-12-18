@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.AST;
+using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.TypeSystem;
@@ -16,7 +17,8 @@ namespace Cecilifier.Core.Misc
         private readonly ISet<string> flags = new HashSet<string>();
         private readonly LinkedList<string> output = new();
 
-        private string identation;
+        private readonly string identation;
+        private int startLineNumber;
 
         public CecilifierContext(SemanticModel semanticModel, CecilifierOptions options,  int startingLine, byte indentation = 3)
         {
@@ -26,8 +28,9 @@ namespace Cecilifier.Core.Misc
             TypeResolver = new TypeResolverImpl(this);
             Mappings = new List<Mapping>();
             CecilifiedLineNumber = startingLine;
+            startLineNumber = startingLine;
             
-            this.identation = new String('\t', indentation);
+            identation = new String('\t', indentation);
         }
 
         public string Output
@@ -78,6 +81,7 @@ namespace Cecilifier.Core.Misc
 
         public void WriteCecilExpression(string expression)
         {
+            CecilifiedLineNumber += expression.CountNewLines();
             output.AddLast($"{identation}{expression}");
         }
 
@@ -86,6 +90,7 @@ namespace Cecilifier.Core.Misc
             if ((Options.Naming.Options & NamingOptions.AddCommentsToMemberDeclarations) == NamingOptions.AddCommentsToMemberDeclarations)
             {
                 output.AddLast($"{identation}//{comment}");
+                CecilifiedLineNumber += comment.CountNewLines();
                 WriteNewLine();
             }
         }
@@ -105,8 +110,43 @@ namespace Cecilifier.Core.Misc
 
         public void MoveLineAfter(LinkedListNode<string> instruction, LinkedListNode<string> after)
         {
-            output.AddAfter(after, instruction.Value);
+            if (instruction == after)
+                return;
+            
+            var lineToBeMoved = LineOf(instruction) + 1;
+            var lineToMoveAfter = LineOf(after.Next);
+
+            output.AddAfter(after, instruction.ValueRef);
             output.Remove(instruction);
+
+            var numberOfLinesBeingMoved = instruction.Value.CountNewLines();
+
+            foreach (var b in Mappings)
+            {
+                if (b.Cecilified.Begin.Line >= lineToBeMoved)
+                {
+                    b.Cecilified.Begin.Line -= numberOfLinesBeingMoved;
+                    if (b.Cecilified.End.Line <= lineToMoveAfter)
+                        b.Cecilified.End.Line -= numberOfLinesBeingMoved;
+                }
+                else if (b.Cecilified.End.Line >= lineToBeMoved)
+                {
+                    b.Cecilified.End.Line -= numberOfLinesBeingMoved;
+                }
+            }
+            
+            int LineOf(LinkedListNode<string> linkedListNode)
+            {
+                var lineUntilPassedNode = 0;
+                var f = output.First;
+                while (f != linkedListNode && f != null)
+                {
+                    lineUntilPassedNode += f.Value.CountNewLines();
+                    f = f.Next;
+                }
+
+                return lineUntilPassedNode + startLineNumber;
+            }
         }
 
         public void MoveLinesToEnd(LinkedListNode<string> start, LinkedListNode<string> end)

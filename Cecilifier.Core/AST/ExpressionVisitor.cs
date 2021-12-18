@@ -126,7 +126,6 @@ namespace Cecilifier.Core.AST
                 return true;
             }
 
-            using var _ = LineInformationTracker.Track(ctx, node);
             var ev = new ExpressionVisitor(ctx, ilVar);
             ev.Visit(node);
 
@@ -135,6 +134,7 @@ namespace Cecilifier.Core.AST
         
         public override void VisitReturnStatement(ReturnStatementSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             Utils.EnsureNotNull(node.Expression, nameof(node));
             node.Expression.Accept(this);
             InjectRequiredConversions(node.Expression);
@@ -142,6 +142,7 @@ namespace Cecilifier.Core.AST
 
         public override void VisitArrowExpressionClause(ArrowExpressionClauseSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             node.Expression.Accept(this);
             InjectRequiredConversions(node.Expression);
         }
@@ -232,12 +233,14 @@ namespace Cecilifier.Core.AST
         
         public override void VisitEqualsValueClause(EqualsValueClauseSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             base.VisitEqualsValueClause(node);
             InjectRequiredConversions(node.Value);
         }
 
         public override void VisitAssignmentExpression(AssignmentExpressionSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             var leftNodeMae = node.Left as MemberAccessExpressionSyntax;
             CSharpSyntaxNode exp = leftNodeMae?.Name ?? node.Left;
             // check if the left hand side of the assignment is a property (but not indexers) and handle that as a method (set) call.
@@ -260,6 +263,7 @@ namespace Cecilifier.Core.AST
 
         public override void VisitBinaryExpression(BinaryExpressionSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             if (node.IsOperatorOnCustomUserType(Context.SemanticModel, out var method))
             {
                 ProcessOverloadedBinaryOperatorInvocation(node, method);
@@ -272,6 +276,7 @@ namespace Cecilifier.Core.AST
         
         public override void VisitLiteralExpression(LiteralExpressionSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             switch (node.Kind())
             {
                 case SyntaxKind.NullLiteralExpression:
@@ -319,6 +324,7 @@ namespace Cecilifier.Core.AST
 
         public override void VisitDeclarationExpression(DeclarationExpressionSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             if (node.Parent is ArgumentSyntax argument && argument.RefKindKeyword.Kind() == SyntaxKind.OutKeyword)
             {
                 var localSymbol = (ILocalSymbol) Context.SemanticModel.GetSymbolInfo(node).Symbol;
@@ -339,6 +345,7 @@ namespace Cecilifier.Core.AST
 
         public override void VisitInvocationExpression(InvocationExpressionSyntax node)
         {
+            using var __ = LineInformationTracker.Track(Context, node);
             using var _ = StackallocAsArgumentFixer.TrackPassingStackAllocToSpanArgument(Context, node, ilVar);
             var constantValue = Context.SemanticModel.GetConstantValue(node);
             if (constantValue.HasValue && node.Expression is IdentifierNameSyntax { Identifier: { Text: "nameof" }} nameofExpression)
@@ -352,6 +359,7 @@ namespace Cecilifier.Core.AST
         
         public override void VisitConditionalExpression(ConditionalExpressionSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             string Emit(OpCode op)
             {
                 var instVarName = Context.Naming.Label(op.Name);
@@ -377,16 +385,19 @@ namespace Cecilifier.Core.AST
         
         public override void VisitIdentifierName(IdentifierNameSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             HandleIdentifier(node);
         }
 
         public override void VisitGenericName(GenericNameSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             HandleIdentifier(node);
         }
 
         public override void VisitArgument(ArgumentSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             // in the case the parent of the argument syntax is an array access
             // *CurrentLine* will represent the instruction that loaded the array
             // reference into the stack.
@@ -412,6 +423,7 @@ namespace Cecilifier.Core.AST
 
         public override void VisitPrefixUnaryExpression(PrefixUnaryExpressionSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             if (node.IsOperatorOnCustomUserType(Context.SemanticModel, out var method))
             {
                 Visit(node.Operand);
@@ -419,7 +431,6 @@ namespace Cecilifier.Core.AST
                 return;
             }
             
-            using var _ = LineInformationTracker.Track(Context, node);
             if (node.OperatorToken.Kind() == SyntaxKind.AmpersandToken)
             {
                 Visit(node.Operand);
@@ -457,6 +468,7 @@ namespace Cecilifier.Core.AST
 
         public override void VisitPostfixUnaryExpression(PostfixUnaryExpressionSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             if (node.IsOperatorOnCustomUserType(Context.SemanticModel, out var method))
             {
                 Visit(node.Operand);
@@ -480,6 +492,7 @@ namespace Cecilifier.Core.AST
 
         public override void VisitParenthesizedExpression(ParenthesizedExpressionSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             base.VisitParenthesizedExpression(node);
 
             var localVarParent = (CSharpSyntaxNode) node.Parent;
@@ -588,12 +601,14 @@ namespace Cecilifier.Core.AST
 
         public override void VisitThisExpression(ThisExpressionSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             AddCilInstruction(ilVar, OpCodes.Ldarg_0);
             base.VisitThisExpression(node);
         }
 
         public override void VisitRefExpression(RefExpressionSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             using (Context.WithFlag(Constants.ContextFlags.RefReturn))
             {
                 node.Expression.Accept(this);
@@ -665,12 +680,14 @@ namespace Cecilifier.Core.AST
 
         public override void VisitInterpolatedStringExpression(InterpolatedStringExpressionSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             var visitor = InterpolatedStringVisitor.For(node, Context, ilVar, this);
             node.Accept(visitor);
         }
         
         public override void VisitTypeOfExpression(TypeOfExpressionSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             var getTypeFromHandleSymbol = (IMethodSymbol) Context.SemanticModel.Compilation.GetTypeByMetadataName(typeof(Type).FullName).GetMembers("GetTypeFromHandle").First();
             
             AddCilInstruction(ilVar, OpCodes.Ldtoken, Context.TypeResolver.Resolve(Context.GetTypeInfo(node.Type).Type));
