@@ -16,7 +16,8 @@ namespace Cecilifier.Core.Misc
 
         public void Dispose()
         {
-            _context.ClearFlag(_flagName);
+            if (_context != null)
+                _context.ClearFlag(_flagName);
         }
     }
 }

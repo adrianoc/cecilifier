@@ -15,7 +15,7 @@ using Mono.Cecil.Cil;
 
 namespace Cecilifier.Core.AST
 {
-    internal class ExpressionVisitor : SyntaxWalkerBase
+    internal partial class ExpressionVisitor : SyntaxWalkerBase
     {
         private static readonly IDictionary<SyntaxKind, Action<IVisitorContext, string, ITypeSymbol, ITypeSymbol>> operatorHandlers =
             new Dictionary<SyntaxKind, Action<IVisitorContext, string, ITypeSymbol, ITypeSymbol>>();
@@ -132,7 +132,7 @@ namespace Cecilifier.Core.AST
 
             return ev.valueTypeNoArgObjCreation;
         }
-
+        
         public override void VisitReturnStatement(ReturnStatementSyntax node)
         {
             Utils.EnsureNotNull(node.Expression, nameof(node));
@@ -151,7 +151,7 @@ namespace Cecilifier.Core.AST
             using var _ = LineInformationTracker.Track(Context, node);
 
             var typeInfo = Context.SemanticModel.GetTypeInfo(node.Parent);
-            uint elementTypeSize = typeInfo.Type.SizeofPointedType();
+            uint elementTypeSize = typeInfo.Type.SizeofArrayLikeItemElement();
             uint offset = 0;
             
             foreach (var exp in node.Expressions)
@@ -167,53 +167,6 @@ namespace Cecilifier.Core.AST
                 AddCilInstruction(ilVar, typeInfo.Type.Stind());
                 offset += elementTypeSize;
             }
-        }
-
-        public override void VisitStackAllocArrayCreationExpression(StackAllocArrayCreationExpressionSyntax node)
-        {
-            using var _ = LineInformationTracker.Track(Context, node);
-            /*
-                // S *s = stackalloc S[n];
-                IL_0007: ldarg.1
-                IL_0008: conv.u
-                IL_0009: sizeof MyStruct
-                IL_000f: mul.ovf.un
-                IL_0010: localloc
-                
-                // int *i = stackalloc int[10];
-                IL_0001: ldc.i4.s 40
-                IL_0003: conv.u
-                IL_0004: localloc
-             */
-            var arrayType = (ArrayTypeSyntax) node.Type;
-            var rankNode = arrayType.RankSpecifiers[0].Sizes[0];
-            var arrayElementType = Context.SemanticModel.GetTypeInfo(arrayType.ElementType);
-            
-            Debug.Assert(arrayType.RankSpecifiers.Count == 1);
-            if (rankNode.IsKind(SyntaxKind.OmittedArraySizeExpression))
-            {
-                Utils.EnsureNotNull(node.Initializer, "Initializer will never be null");
-                AddCilInstruction(ilVar, OpCodes.Ldc_I4, node.Initializer.Expressions.Count);
-            }
-            
-            if (rankNode.IsKind(SyntaxKind.NumericLiteralExpression) && arrayElementType.Type.IsPrimitiveType())
-            {
-                var sizeLiteral = Int32.Parse(rankNode.GetFirstToken().Text) * arrayElementType.Type.Sizeof();
-                AddCilInstruction(ilVar, OpCodes.Ldc_I4, sizeLiteral);
-                AddCilInstruction(ilVar, OpCodes.Conv_U);
-                AddCilInstruction(ilVar, OpCodes.Localloc);
-            }
-            else
-            {
-                rankNode.Accept(this);
-                AddCilInstruction(ilVar, OpCodes.Conv_U);
-                AddCilInstruction(ilVar, OpCodes.Sizeof, ResolveType(arrayType.ElementType));
-                AddCilInstruction(ilVar, OpCodes.Mul_Ovf_Un);
-                AddCilInstruction(ilVar, OpCodes.Localloc);
-            }
-
-            if (node.Initializer != null)
-                node.Initializer.Accept(this);
         }
 
         public override void VisitArrayCreationExpression(ArrayCreationExpressionSyntax node)
@@ -386,13 +339,13 @@ namespace Cecilifier.Core.AST
 
         public override void VisitInvocationExpression(InvocationExpressionSyntax node)
         {
+            using var _ = StackallocAsArgumentFixer.TrackPassingStackAllocToSpanArgument(Context, node, ilVar);
             var constantValue = Context.SemanticModel.GetConstantValue(node);
             if (constantValue.HasValue && node.Expression is IdentifierNameSyntax { Identifier: { Text: "nameof" }} nameofExpression)
             {
                 AddCilInstruction(ilVar, OpCodes.Ldstr, $"\"{node.ArgumentList.Arguments[0].ToFullString()}\"");
                 return;
             }
-            
             HandleMethodInvocation(node.Expression, node.ArgumentList);
             StoreTopOfStackInLocalVariableAndLoadItsAddressIfNeeded(node);
         }
@@ -453,6 +406,8 @@ namespace Cecilifier.Core.AST
             {
                 AddCecilExpression(last.Value);
             });
+            
+            StackallocAsArgumentFixer.Current?.StoreTopOfStackToLocalVariable(Context.SemanticModel.GetTypeInfo(node.Expression).Type);
         }
 
         public override void VisitPrefixUnaryExpression(PrefixUnaryExpressionSyntax node)
@@ -1284,6 +1239,7 @@ namespace Cecilifier.Core.AST
             {
                 Visit(target);
                 PushCall();
+                StackallocAsArgumentFixer.Current?.MarkEndOfComputedCallTargetBlock();
 
                 Visit(args);
                 FixCallSite();

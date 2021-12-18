@@ -7,6 +7,7 @@ public struct Constants
 
 public struct ContextFlags
 {
+    public readonly string HasStackallocArguments = "has-stackalloc-argument";
     public readonly string RefReturn = "ref-return";
     public readonly string Fixed = "fixed";
 }

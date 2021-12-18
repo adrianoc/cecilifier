@@ -185,7 +185,104 @@ public class Foo
                                             + @$"\1{expectedStindOpCode}\);\s+"
 			                                + @"\1Stloc, l_b_3\);\s+"
                                             + @"\1Ret\);\s+"));
+
+        [Test]
+        public void Test_Issue_133_Assign_StackallocToSpan()
+        {
+            var result = RunCecilifier(@"using System; class Foo { void Bar() { Span<byte> s = stackalloc byte[1000]; } }");
+
+            var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+            Assert.That(cecilifiedCode, Does.Match(@".+//Span<byte> s = stackalloc byte\[1000\];\s+" +
+                                                   @"var l_s_3 = new VariableDefinition\(assembly.MainModule.ImportReference\(typeof\(System.Span<>\)\).MakeGenericInstanceType\(assembly.MainModule.TypeSystem.Byte\)\);\s+" +
+                                                   @"m_bar_1.Body.Variables.Add\(l_s_3\);\s+" +
+                                                   @"il_bar_2.Emit\(OpCodes.Ldc_I4, 1000\);\s+" +
+                                                   @"il_bar_2.Emit\(OpCodes.Conv_U\);\s+" +
+                                                   @"il_bar_2.Emit\(OpCodes.Localloc\);\s+" +
+                                                   @"il_bar_2.Emit\(OpCodes.Ldc_I4, 1000\);\s+"));
+            Assert.That(cecilifiedCode, Does.Match(
+                @"il_bar_2.Emit\(OpCodes.Newobj, assembly.MainModule.ImportReference\(l_spanCtor_4\)\);\s+" +
+                @"il_bar_2.Emit\(OpCodes.Stloc, l_s_3\);\s+"));
         }
-        
+
+        [Test]
+        public void Test_Issue_133_Span_InitializedByStackallocWithSizeFromParameter_PassedAsParameter()
+        {
+            var result = RunCecilifier(@"using System; class Foo { static void Bar(Span<int> span) {  Bar(stackalloc int[1000]); } }");
+            var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+
+            var expectedLines = new[]
+            {
+                "il_bar_2.Emit(OpCodes.Ldc_I4, 4000);", "il_bar_2.Emit(OpCodes.Conv_U);", "il_bar_2.Emit(OpCodes.Localloc);", "il_bar_2.Emit(OpCodes.Ldc_I4, 4000);",
+                "var l_spanCtor_5 = new MethodReference(\".ctor\", assembly.MainModule.TypeSystem.Void, assembly.MainModule.ImportReference(typeof(Span<>)).MakeGenericInstanceType(assembly.MainModule.TypeSystem.Int32)) { HasThis = true };",
+                "l_spanCtor_5.Parameters.Add(new ParameterDefinition(\"ptr\", ParameterAttributes.None, assembly.MainModule.ImportReference(typeof(void*))));",
+                "l_spanCtor_5.Parameters.Add(new ParameterDefinition(\"length\", ParameterAttributes.None, assembly.MainModule.TypeSystem.Int32));",
+                "il_bar_2.Emit(OpCodes.Newobj, assembly.MainModule.ImportReference(l_spanCtor_5));", "il_bar_2.Emit(OpCodes.Call, m_bar_1);", "il_bar_2.Emit(OpCodes.Ret);",
+            };
+
+            foreach (var expectedLine in expectedLines)
+            {
+                Assert.That(cecilifiedCode, Contains.Substring(expectedLine));
+            }
+        }
+
+        [Test]
+        public void Test_Issue_133_Span_InitializedByStackallocWithSizeFromField_PassedAsParameter()
+        {
+            var result = RunCecilifier(@"using System; class Foo { public static int countField; static void Bar(Span<int> span) {  Bar(stackalloc int[countField]); } }");
+            var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+
+            var expectedLines = new[]
+            {
+                "il_bar_3.Emit(OpCodes.Ldsfld, fld_countField_1);", "il_bar_3.Emit(OpCodes.Conv_U);", "il_bar_3.Emit(OpCodes.Sizeof, assembly.MainModule.TypeSystem.Int32);", "il_bar_3.Emit(OpCodes.Mul_Ovf_Un);",
+                "il_bar_3.Emit(OpCodes.Localloc);", "il_bar_3.Emit(OpCodes.Ldfld, fld_countField_1);",
+                "var l_spanCtor_6 = new MethodReference(\".ctor\", assembly.MainModule.TypeSystem.Void, assembly.MainModule.ImportReference(typeof(Span<>)).MakeGenericInstanceType(assembly.MainModule.TypeSystem.Int32)) { HasThis = true };",
+                "l_spanCtor_6.Parameters.Add(new ParameterDefinition(\"ptr\", ParameterAttributes.None, assembly.MainModule.ImportReference(typeof(void*))));",
+                "l_spanCtor_6.Parameters.Add(new ParameterDefinition(\"length\", ParameterAttributes.None, assembly.MainModule.TypeSystem.Int32));",
+                "il_bar_3.Emit(OpCodes.Newobj, assembly.MainModule.ImportReference(l_spanCtor_6));", "il_bar_3.Emit(OpCodes.Call, m_bar_2);", "il_bar_3.Emit(OpCodes.Ret);",
+            };
+
+            foreach (var expectedLine in expectedLines)
+            {
+                Assert.That(cecilifiedCode, Contains.Substring(expectedLine));
+            }
+        }
+
+        [Test]
+        public void Test_Issue_133_Assign_StackallocToSpan_WithInitializer()
+        {
+            const string code = @"using System; class Foo { void Bar() { Span<char> s = stackalloc char[] { 'A', 'G', 'C', 'G' } ; } }";
+            var result = RunCecilifier(code);
+
+            var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+            Assert.That(cecilifiedCode, Does.Match(
+                @".+(il_bar_2\.Emit\(OpCodes\.)Ldc_I4, 4\);\s+" +
+                @"var l_spanSizeInBytes_4 = new VariableDefinition\(assembly.MainModule.TypeSystem.Int32\);\s+" +
+                @"m_bar_1.Body.Variables.Add\(l_spanSizeInBytes_4\);\s+" +
+                @"\1Stloc, l_spanSizeInBytes_4\);\s+" +
+                @"\1Ldloc, l_spanSizeInBytes_4\);\s+" +
+                @"\1Conv_U\);\s+" +
+                @"\1Sizeof, assembly.MainModule.TypeSystem.Char\);\s+" +
+                @"\1Mul_Ovf_Un\);\s+" +
+                @"\1Localloc\);\s+" +
+                @"\1Dup\);\s+" +
+                @"\1Ldc_I4, 65\);\s+" +
+                @"\1Stind_I2\);\s+" +
+                @"\1Dup\);\s+" +
+                @"\1Ldc_I4, 2\);\s+" +
+                @"\1Add\);\s+" +
+                @"\1Ldc_I4, 71\);\s+" +
+                @"\1Stind_I2\);\s+" +
+                @"\1Dup\);\s+" +
+                @"\1Ldc_I4, 4\);\s+" +
+                @"\1Add\);\s+" +
+                @"\1Ldc_I4, 67\);\s+" +
+                @"\1Stind_I2\);\s+" +
+                @"\1Dup\);\s+" +
+                @"\1Ldc_I4, 6\);\s+" +
+                @"\1Add\);\s+" +
+                @"\1Ldc_I4, 71\);\s+" +
+                @"\1Stind_I2\);\s+" +
+                @"\1Ldloc, l_spanSizeInBytes_4\);\s+"));
+        }
     }
 }

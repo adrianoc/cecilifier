@@ -281,7 +281,7 @@ namespace Cecilifier.Core.AST
             }
             
             var resolvedVarType = type.IsVar
-                ? ResolveExpressionType(localVar.Initializer.Value)
+                ? ResolveExpressionType(localVar.Initializer?.Value)
                 : ResolveType(type);
             
             if (isFixedStatement)
@@ -301,7 +301,7 @@ namespace Cecilifier.Core.AST
             return AddLocalVariableWithResolvedType("switchCondition", currentMethod, varType);
         }
 
-        private void ProcessVariableInitialization(VariableDeclaratorSyntax localVar)
+        private void ProcessVariableInitialization(VariableDeclaratorSyntax localVar, ITypeSymbol variableType)
         {
             if (ExpressionVisitor.Visit(Context, _ilVar, localVar.Initializer))
             {
@@ -314,11 +314,12 @@ namespace Cecilifier.Core.AST
 
         private void HandleVariableDeclaration(VariableDeclarationSyntax declaration)
         {
+            var variableType = Context.SemanticModel.GetTypeInfo(declaration.Type);
             var methodVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
             foreach (var localVar in declaration.Variables)
             {
                 AddLocalVariable(declaration.Type, localVar, methodVar);
-                ProcessVariableInitialization(localVar);
+                ProcessVariableInitialization(localVar, variableType.Type);
             }
         }
 

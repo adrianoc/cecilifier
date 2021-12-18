@@ -6,15 +6,16 @@ namespace Cecilifier.Core.Tests.Integration;
 public class StackallocTests : IntegrationResourceBasedTest
 {
     
-    [Test]
-    public void TestStackalloc()
+    [TestCase("simplest", TestName = "Simplest")]
+    [TestCase("WithSpan", TestName = "WithSpan")]
+    [TestCase("WithSpanAsParameter", true, TestName = "WithSpanAsParameter")]
+    [TestCase("WithInitializer", true, TestName = "WithInitializer")]
+    [TestCase("CustomValueType", TestName = "CustomValueType")]
+    public void TestStackalloc(string testFile, bool hasExplicitExpectations = false)
     {
-        AssertResourceTest(@"Expressions/Stackalloc/simplest");
-    }
-    
-    [Test]
-    public void TestStackallocWithSpan()
-    {
-        AssertResourceTest(@"Expressions/Stackalloc/WithSpan");
+        if (hasExplicitExpectations)
+            AssertResourceTestWithExplicitExpectation($"Expressions/Stackalloc/{testFile}", $"System.Void {testFile}::M()");
+        else
+            AssertResourceTest($"Expressions/Stackalloc/{testFile}");
     }
 }

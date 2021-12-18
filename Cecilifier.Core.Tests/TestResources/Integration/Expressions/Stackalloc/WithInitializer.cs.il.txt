@@ -1,0 +1,23 @@
+﻿.locals init (System.Span`1<System.Int32> V_0, System.Int32 V_1)
+IL_0000: ldc.i4 2
+IL_0005: stloc V_1
+IL_0009: ldloc V_1
+IL_000d: conv.u
+IL_000e: sizeof System.Int32
+IL_0014: mul.ovf.un
+IL_0015: localloc
+IL_0017: dup
+IL_0018: ldc.i4 42
+IL_001d: stind.i4
+IL_001e: dup
+IL_001f: ldc.i4 4
+IL_0024: add
+IL_0025: ldc.i4 43
+IL_002a: stind.i4
+IL_002b: ldloc V_1
+IL_002f: newobj System.Void System.Span`1<System.Int32>::.ctor(System.Void*,System.Int32)
+IL_0034: stloc V_0
+IL_0038: ldarg.0
+IL_0039: ldloc V_0
+IL_003d: call System.Void WithInitializer::Dummy(System.Span`1<System.Int32>)
+IL_0042: ret

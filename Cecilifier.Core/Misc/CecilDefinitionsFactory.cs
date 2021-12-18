@@ -161,7 +161,7 @@ namespace Cecilifier.Core.Misc
             };
         }
 
-        private static string Parameter(string name, RefKind byRef, string resolvedType)
+        public static string Parameter(string name, RefKind byRef, string resolvedType)
         {
             if (RefKind.None != byRef)
             {

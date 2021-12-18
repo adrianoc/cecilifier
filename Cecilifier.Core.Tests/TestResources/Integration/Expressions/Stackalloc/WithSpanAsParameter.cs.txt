@@ -1,0 +1,13 @@
+﻿using System;
+class WithSpanAsParameter
+{
+    public WithSpanAsParameter o;
+    
+    private void M()
+	{
+	    o.Dummy(1, stackalloc byte[Size()], "some string");
+	}
+
+	private void Dummy(int i, Span<byte> span, string s) {}
+	private int Size() => 42;
+}
