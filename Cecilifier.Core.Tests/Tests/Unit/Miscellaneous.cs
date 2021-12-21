@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Tests.Unit
@@ -288,6 +287,17 @@ public class Foo
                 @"\1Ldc_I4, 71\);\s+" +
                 @"\1Stind_I2\);\s+" +
                 @"\1Ldloc, l_spanSizeInBytes_4\);\s+"));
+        }
+        
+        [TestCase("class StaticFieldAddress { static int field; static void M1(ref int i) { } static void M() => M1(ref field); }", "Ldsflda", TestName="StaticPassingByRef"), Category("Issues,#142")]
+        [TestCase("class FieldAddress { int field; void M1(ref int i) { } void M() => M1(ref field); }", "Ldflda", TestName="PassingByRef"), Category("Issues,#142")]
+        [TestCase("class FieldAddress { int field; unsafe void Fixed() { fixed(int *p = &field) { } } }", "Ldflda", TestName="Fixed"), Category("Issues,#142")]
+        [TestCase("class StaticFieldAddress { static int field; static unsafe void Fixed() { fixed(int *p = &field) { } } }", "Ldsflda", TestName="StaticFixed"), Category("Issues,#142")]
+        public void Field_Address(string code, string expectedLoadOpCode)
+        {
+            var result = RunCecilifier(code);
+            var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+            Assert.That(cecilifiedCode, Contains.Substring(expectedLoadOpCode));
         }
     }
 }

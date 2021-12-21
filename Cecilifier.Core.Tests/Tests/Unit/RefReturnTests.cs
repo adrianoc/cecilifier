@@ -1,4 +1,3 @@
-using System;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Tests.Unit;
@@ -23,22 +22,26 @@ public class RefReturnTests : CecilifierUnitTestBase
         Assert.That(cecilifiedCode, Does.Match(expectedIlSnippet), cecilifiedCode);
     }
 
-    [TestCase("r", TestName = "Local", IgnoreReason = "Issue #141")]
-    [TestCase("s[3]", TestName = "Indexer", IgnoreReason = "Issue #141")]
+    [TestCase("r", TestName = "Local")]
+    [TestCase("s[3]", TestName = "Indexer"), Category("Issues,#141")]
+    [TestCase("Prop", TestName = "Property"), Category("Issues,#141")]
     public void Passing_Ref_AsArgument(string refToUse)
     {
         var code = $@"using System;
 class SpanIndexer
 {{
-    Span<int> field; 
+    int _value;
+    ref int Prop => ref _value;
+
 	void M(Span<int> s, int i)
 	{{
-        field = s;
         ref int r = ref s[4];
         M(s, {refToUse});
-	}}
+	}}   
 }}";
         var result = RunCecilifier(code);
-        Console.WriteLine(result.GeneratedCode.ReadToEnd());
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+        
+        Assert.That(cecilifiedCode, Contains.Substring("OpCodes.Ldind_I4"));
     }
 }
