@@ -146,11 +146,12 @@ public class SnippetRunner
         public static string DumpAsString(this IList<Mapping> self)
         {
             var sb = new StringBuilder();
+#if DEBUG            
             foreach (var mapping in self)
             {
                 sb.AppendLine($"{mapping.Node.HumanReadableSummary() ,60} {mapping.Source} <- -> {mapping.Cecilified}");
             }
-
+#endif
             return sb.ToString();
         }
     }
