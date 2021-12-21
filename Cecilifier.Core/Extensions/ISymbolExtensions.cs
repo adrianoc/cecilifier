@@ -3,7 +3,6 @@ using System.Linq;
 using System.Text;
 using Cecilifier.Core.AST;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Cecilifier.Core.Extensions
 {

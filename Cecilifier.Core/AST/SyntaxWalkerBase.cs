@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -11,7 +11,6 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
-using static Cecilifier.Core.Misc.Utils;
 
 namespace Cecilifier.Core.AST
 {
@@ -155,7 +154,7 @@ namespace Cecilifier.Core.AST
 
         private static string ImportExpressionForType(string typeName)
         {
-            return ImportFromMainModule($"typeof({typeName})");
+            return Utils.ImportFromMainModule($"typeof({typeName})");
         }
 
         protected string TypeModifiersToCecil(BaseTypeDeclarationSyntax node)
@@ -310,32 +309,31 @@ namespace Cecilifier.Core.AST
         {
             var parent = (CSharpSyntaxNode) node.Parent;
             if (HandleLoadAddress(ilVar, paramSymbol.Type, parent, OpCodes.Ldarga, paramSymbol.Name, VariableMemberKind.Parameter))
-            {
                 return;
-            }
 
             var method = (IMethodSymbol) paramSymbol.ContainingSymbol;
             
+            Utils.EnsureNotNull(node.Parent, "Parent cannot be null");
             //TODO: Add a test for parameter index for static/instance members.
             var adjustedParameterIndex = paramSymbol.Ordinal + (method.IsStatic ? 0 : 1);
             if (node.Parent.Kind() == SyntaxKind.SimpleMemberAccessExpression && paramSymbol.ContainingType.IsValueType)
             {
                 AddCilInstruction(ilVar, OpCodes.Ldarga, Context.DefinitionVariables.GetVariable(paramSymbol.Name, VariableMemberKind.Parameter).VariableName);
+                return;
             }
-            else if (adjustedParameterIndex > 3)
+
+            if (adjustedParameterIndex > 3)
             {
                 AddCilInstruction(ilVar, OpCodes.Ldarg, adjustedParameterIndex);
-                HandlePotentialDelegateInvocationOn(node, paramSymbol.Type, ilVar);
-                HandlePotentialRefLoad(ilVar, node, paramSymbol.Type);
             }
             else
             {
                 OpCode[] optimizedLdArgs = {OpCodes.Ldarg_0, OpCodes.Ldarg_1, OpCodes.Ldarg_2, OpCodes.Ldarg_3};
                 var loadOpCode = optimizedLdArgs[adjustedParameterIndex];
                 AddCilInstruction(ilVar, loadOpCode);
-                HandlePotentialDelegateInvocationOn(node, paramSymbol.Type, ilVar);
-                HandlePotentialRefLoad(ilVar, node, paramSymbol.Type);
             }
+            HandlePotentialDelegateInvocationOn(node, paramSymbol.Type, ilVar);
+            HandlePotentialRefLoad(ilVar, node, paramSymbol.Type);
         }
 
         protected bool HandleLoadAddress(string ilVar, ITypeSymbol symbol, CSharpSyntaxNode parentNode, OpCode opCode, string symbolName, VariableMemberKind variableMemberKind, string parentName = null)
@@ -464,8 +462,8 @@ namespace Cecilifier.Core.AST
 
             return null;
         }
-        
-        protected OpCode LoadIndirectOpCodeFor(SpecialType type)
+
+        private OpCode LoadIndirectOpCodeFor(SpecialType type)
         {
             return type switch
             {
@@ -487,9 +485,12 @@ namespace Cecilifier.Core.AST
             };
         }
 
-        private static bool IsSystemIndexUsedAsIndex(ITypeSymbol symbol, CSharpSyntaxNode parentNode)
+        private static bool IsSystemIndexUsedAsIndex(ITypeSymbol symbol, CSharpSyntaxNode node)
         {
-            return parentNode.Parent.IsKind(SyntaxKind.BracketedArgumentList) && symbol.FullyQualifiedName() == "System.Index";
+            if (symbol.FullyQualifiedName() != "System.Index")
+                return false;
+            
+            return node.Parent.IsKind(SyntaxKind.BracketedArgumentList);
         }
 
         protected void HandlePotentialDelegateInvocationOn(SimpleNameSyntax node, ITypeSymbol typeSymbol, string ilVar)
@@ -674,7 +675,7 @@ namespace Cecilifier.Core.AST
                     //attribute is not declared in the same assembly....
                     var ctorArgumentTypes = $"new Type[{attrArgs.Length}] {{ {string.Join(",", attrArgs.Select(arg => $"typeof({Context.GetTypeInfo(arg.Expression).Type.Name})"))} }}";
             
-                    return ImportFromMainModule($"typeof({attrType.FullyQualifiedName()}).GetConstructor({ctorArgumentTypes})");
+                    return Utils.ImportFromMainModule($"typeof({attrType.FullyQualifiedName()}).GetConstructor({ctorArgumentTypes})");
                 }
             
                 // Attribute is defined in the same assembly. We need to find the variable that holds its "ctor declaration"

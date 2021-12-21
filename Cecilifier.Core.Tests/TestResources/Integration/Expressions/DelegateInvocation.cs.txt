@@ -7,12 +7,12 @@ class Test
   
   	void Foo(Test t, Func<int, string> param)
     {
-        Func<int, string> conv;
-        conv = t.M;
-        conv(42);
+        Func<int, string> local;
+        local = t.M;
+        local(42);
         
-        conv = M;
-        conv(43);
+        local = M;
+        local(43);
         
         field = M;
         field(44);
