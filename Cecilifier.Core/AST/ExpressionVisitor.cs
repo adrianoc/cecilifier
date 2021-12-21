@@ -318,7 +318,7 @@ namespace Cecilifier.Core.AST
             var localVarParent = (CSharpSyntaxNode) node.Parent;
             Debug.Assert(localVarParent != null);
                 
-            if (localVarParent.Accept(new UsageVisitor()) == UsageKind.CallTarget) 
+            if (localVarParent.Accept(new UsageVisitor(Context)) == UsageKind.CallTarget) 
                 StoreTopOfStackInLocalVariableAndLoadItsAddress(literalType);
         }
 
@@ -496,7 +496,7 @@ namespace Cecilifier.Core.AST
             base.VisitParenthesizedExpression(node);
 
             var localVarParent = (CSharpSyntaxNode) node.Parent;
-            if (localVarParent.Accept(new UsageVisitor()) != UsageKind.CallTarget)
+            if (localVarParent.Accept(new UsageVisitor(Context)) != UsageKind.CallTarget)
                 return;
 
             StoreTopOfStackInLocalVariableAndLoadItsAddress(GetSpecialType(SpecialType.System_Int32));
