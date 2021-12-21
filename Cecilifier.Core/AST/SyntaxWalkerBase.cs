@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -340,14 +340,17 @@ namespace Cecilifier.Core.AST
 
         protected bool HandleLoadAddress(string ilVar, ITypeSymbol symbol, CSharpSyntaxNode parentNode, OpCode opCode, string symbolName, VariableMemberKind variableMemberKind, string parentName = null)
         {
-            return HandleSystemIndexUsage() || HandleRefAssignment() || HandleParameter();
+            return HandleCallOnValueType() || HandleRefAssignment() || HandleParameter();
             
-            bool HandleSystemIndexUsage()
+            bool HandleCallOnValueType()
             {
+                if (!symbol.IsValueType)
+                    return false;
+                
                 // in this case we need to call System.Index.GetOffset(int32) on a value type (System.Index)
                 // which requires the address of the value type.
                 var isSystemIndexUsedAsIndex = IsSystemIndexUsedAsIndex(symbol, parentNode);
-                if (isSystemIndexUsedAsIndex || parentNode.IsKind(SyntaxKind.AddressOfExpression) || (symbol.IsValueType && parentNode.Accept(new UsageVisitor()) == UsageKind.CallTarget))
+                if (isSystemIndexUsedAsIndex || parentNode.IsKind(SyntaxKind.AddressOfExpression) || (symbol.IsValueType && parentNode.Accept(new UsageVisitor(Context)) == UsageKind.CallTarget))
                 {
                     AddCilInstruction(ilVar, opCode, Context.DefinitionVariables.GetVariable(symbolName, variableMemberKind, parentName).VariableName);
                     if (!Context.HasFlag(Constants.ContextFlags.Fixed) && parentNode.IsKind(SyntaxKind.AddressOfExpression))

@@ -97,7 +97,9 @@ namespace Cecilifier.Core.AST
             { 
                 InsertCilInstructionAfter<string>(InstructionPrecedingValueToLoad, ilVar, OpCodes.Ldarg_0);
             }
-            
+
+            AddCallToOpImplicitIfRequired(node);
+
             switch (member.Symbol)
             {
                 case IParameterSymbol parameter:
@@ -115,6 +117,19 @@ namespace Cecilifier.Core.AST
                 case IPropertySymbol property:
                     PropertyAssignment(property);
                     break;
+            }
+        }
+
+        private void AddCallToOpImplicitIfRequired(IdentifierNameSyntax node)
+        {
+            if (node.Parent is not AssignmentExpressionSyntax assignmentExpression || assignmentExpression.Left != node)
+                return;
+
+            var conversion = Context.SemanticModel.ClassifyConversion(assignmentExpression.Right, Context.SemanticModel.GetTypeInfo(node).Type);
+            if (conversion.IsImplicit && conversion.MethodSymbol != null 
+                                      && !conversion.IsMethodGroup) // method group to delegate conversions should not call the method being converted...
+            {
+                AddMethodCall(ilVar, conversion.MethodSymbol);
             }
         }
 
