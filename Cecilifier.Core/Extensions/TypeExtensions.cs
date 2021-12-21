@@ -86,15 +86,17 @@ namespace Cecilifier.Core.Extensions
                 SpecialType.System_Byte => OpCodes.Stind_I1,
                 SpecialType.System_SByte => OpCodes.Stind_I1,
                 SpecialType.System_Char => OpCodes.Stind_I2,
-                SpecialType.System_Double => throw new NotImplementedException("stind for double"),
-                SpecialType.System_Single => throw new NotImplementedException("stind for float"),
+                SpecialType.System_Double => OpCodes.Stind_R8,
+                SpecialType.System_Single => OpCodes.Stind_R4,
                 SpecialType.System_Int16 => OpCodes.Stind_I2,
                 SpecialType.System_UInt16 => OpCodes.Stind_I2,
                 SpecialType.System_Int32 => OpCodes.Stind_I4,
                 SpecialType.System_UInt32 => OpCodes.Stind_I4,
                 SpecialType.System_Int64 => OpCodes.Stind_I8,
                 SpecialType.System_UInt64 => OpCodes.Stind_I8,
-                _ => throw new NotImplementedException($"Type = {type.Name}")
+                _ => type.IsReferenceType 
+                    ? OpCodes.Stind_Ref 
+                    : throw new NotImplementedException($"Type = {type.Name}")
             };
         }
     }

@@ -388,34 +388,67 @@ namespace Cecilifier.Core.AST
                 return false;
             }
         }
-        
-        private void HandlePotentialRefLoad(string ilVar, SimpleNameSyntax argumentSimpleNameSyntax, ITypeSymbol typeSymbol)
+
+        protected void HandlePotentialRefLoad(string ilVar, SyntaxNode expression, ITypeSymbol type)
         {
             var needsLoadIndirect = false;
             
-            var argumentSymbol = Context.SemanticModel.GetSymbolInfo(argumentSimpleNameSyntax).Symbol;
-            var argumentIsByRef = argumentSymbol.IsByRef();
-
-            var argument = argumentSimpleNameSyntax.Ancestors().OfType<ArgumentSyntax>().FirstOrDefault();
-            if (argument != null)
+            var sourceSymbol = Context.SemanticModel.GetSymbolInfo(expression).Symbol;
+            var sourceIsByRef = sourceSymbol.IsByRef();
+        
+            var returnStatement = expression.Ancestors().OfType<ReturnStatementSyntax>().SingleOrDefault();
+            var argument = expression.Ancestors().OfType<ArgumentSyntax>().FirstOrDefault();
+            var assigment = expression.Ancestors().OfType<BinaryExpressionSyntax>().SingleOrDefault(candidate => candidate.IsKind(SyntaxKind.SimpleAssignmentExpression));
+        
+            if (assigment != null && assigment.Left != expression)
+            {
+                var targetIsByRef = Context.SemanticModel.GetSymbolInfo(assigment.Left).Symbol.IsByRef();
+                needsLoadIndirect = (assigment.Right == expression && sourceIsByRef && !targetIsByRef) // simple assignment like: nonRef = ref;
+                                    || sourceIsByRef; // complex assignment like: nonRef = ref + 10;
+            }
+            else if (argument != null)
             {
                 var parameterSymbol = ParameterSymbolFromArgumentSyntax(argument);
-                var parameterIsByRef = parameterSymbol.IsByRef();
-
-                needsLoadIndirect = argumentIsByRef && !parameterIsByRef;
+                var targetIsByRef = parameterSymbol.IsByRef();
+        
+                needsLoadIndirect = sourceIsByRef && !targetIsByRef;
+            }
+            else if (returnStatement != null)
+            {
+                var method = returnStatement.Ancestors().OfType<MethodDeclarationSyntax>().SingleOrDefault();
+                bool returnTypeIsByRef = method != null
+                    ? Context.SemanticModel.GetDeclaredSymbol(method).RefKind != RefKind.None
+                    : Context.SemanticModel.GetSymbolInfo(returnStatement.Ancestors().OfType<BasePropertyDeclarationSyntax>().Single().Type).Symbol.IsByRef();
+                
+                needsLoadIndirect = sourceIsByRef && !returnTypeIsByRef;
             }
             
             if (needsLoadIndirect)
-                AddCilInstruction(ilVar, LoadIndirectOpCodeFor(typeSymbol.SpecialType));
+                AddCilInstruction(ilVar, LoadIndirectOpCodeFor(type.SpecialType));
         }
-        
-        protected IParameterSymbol ParameterSymbolFromArgumentSyntax(ArgumentSyntax argument)
+
+        private IParameterSymbol ParameterSymbolFromArgumentSyntax(ArgumentSyntax argument)
         {
             var invocation = argument.Ancestors().OfType<InvocationExpressionSyntax>().FirstOrDefault();
-            if (invocation != null)
+            if (invocation != null && invocation.ArgumentList.Arguments.Contains(argument))
             {
                 var argumentIndex = argument.Ancestors().OfType<ArgumentListSyntax>().First().Arguments.IndexOf(argument);
-                return ((IMethodSymbol) Context.SemanticModel.GetSymbolInfo(invocation.Expression).Symbol).Parameters.ElementAt(argumentIndex);
+                var symbol = Context.SemanticModel.GetSymbolInfo(invocation.Expression).Symbol;
+                var method = symbol switch
+                {
+                    ILocalSymbol { Type: IFunctionPointerTypeSymbol } local => ((IFunctionPointerTypeSymbol)local.Type).Signature,
+                    ILocalSymbol { Type: INamedTypeSymbol } local => ((INamedTypeSymbol)local.Type).DelegateInvokeMethod,
+                    IParameterSymbol { Type: INamedTypeSymbol } param => ((INamedTypeSymbol)param.Type).DelegateInvokeMethod,
+                    IParameterSymbol { Type: IFunctionPointerTypeSymbol } param => ((IFunctionPointerTypeSymbol)param.Type).Signature,
+                    IFieldSymbol { Type: INamedTypeSymbol } field => ((INamedTypeSymbol)field.Type).DelegateInvokeMethod,
+                    IFieldSymbol { Type: IFunctionPointerTypeSymbol } field => ((IFunctionPointerTypeSymbol)field.Type).Signature,
+                    IPropertySymbol { Type: INamedTypeSymbol } field => ((INamedTypeSymbol)field.Type).DelegateInvokeMethod,
+                    IPropertySymbol { Type: IFunctionPointerTypeSymbol } field => ((IFunctionPointerTypeSymbol)field.Type).Signature,
+                    IMethodSymbol m => m,
+                    _ => throw new NotImplementedException($"Found not supported symbol {symbol.ToDisplayString()} ({symbol.GetType().Name}) when trying to find index of argument ({argument})")
+                };
+
+                return method.Parameters[argumentIndex];
             }
 
             var elementAccess = argument.Ancestors().OfType<ElementAccessExpressionSyntax>().SingleOrDefault();

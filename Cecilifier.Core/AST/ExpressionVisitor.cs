@@ -413,9 +413,10 @@ namespace Cecilifier.Core.AST
             var last = Context.CurrentLine;
             
             base.VisitArgument(node);
+            
             InjectRequiredConversions(node.Expression, () =>
             {
-                AddCecilExpression(last.Value);
+                AddCecilExpression(last.Value.Replace("\t", string.Empty).Replace("\n", String.Empty));
             });
             
             StackallocAsArgumentFixer.Current?.StoreTopOfStackToLocalVariable(Context.SemanticModel.GetTypeInfo(node.Expression).Type);
@@ -999,45 +1000,7 @@ namespace Cecilifier.Core.AST
             AddCilInstruction(ilVar, OpCodes.Ldloc, Context.DefinitionVariables.GetVariable(symbol.Name, VariableMemberKind.LocalVariable).VariableName);
             HandlePotentialDelegateInvocationOn(localVarSyntax, symbol.Type, ilVar);
             HandlePotentialFixedLoad(symbol);
-            HandlePotentialRefLoad(localVarSyntax, symbol);
-        }
-
-        private void HandlePotentialRefLoad(SimpleNameSyntax localVariableNameSyntax, ILocalSymbol symbol)
-        {
-            var needsLoadIndirect = false;
-            
-            var sourceSymbol = Context.SemanticModel.GetSymbolInfo(localVariableNameSyntax).Symbol;
-            var sourceIsByRef = sourceSymbol.IsByRef();
-
-            var returnStatement = localVariableNameSyntax.Ancestors().OfType<ReturnStatementSyntax>().SingleOrDefault();
-            var argument = localVariableNameSyntax.Ancestors().OfType<ArgumentSyntax>().FirstOrDefault();
-            var assigment = localVariableNameSyntax.Ancestors().OfType<BinaryExpressionSyntax>().SingleOrDefault(candidate => candidate.IsKind(SyntaxKind.SimpleAssignmentExpression));
-
-            if (assigment != null && assigment.Left != localVariableNameSyntax)
-            {
-                var targetIsByRef = Context.SemanticModel.GetSymbolInfo(assigment.Left).Symbol.IsByRef();
-                needsLoadIndirect = (assigment.Right == localVariableNameSyntax && sourceIsByRef && !targetIsByRef) // simple assignment like: nonRef = ref;
-                                    || sourceIsByRef; // complex assignment like: nonRef = ref + 10;
-            }
-            else if (argument != null)
-            {
-                var parameterSymbol = ParameterSymbolFromArgumentSyntax(argument);
-                var targetIsByRef = parameterSymbol.IsByRef();
-
-                needsLoadIndirect = (ReferenceEquals(parameterSymbol, sourceSymbol) && sourceIsByRef && !targetIsByRef) // simple argument like Foo(ref) where the parameter is not a reference. 
-                                    || sourceIsByRef; // complex argument like Foo(ref + 1)
-            }
-            else if (returnStatement != null)
-            {
-                var method = returnStatement.Ancestors().OfType<MethodDeclarationSyntax>().Single();
-                var methodIsByRef = Context.SemanticModel.GetSymbolInfo(method.ReturnType).Symbol.IsByRef();
-                
-                needsLoadIndirect = (returnStatement.Expression == localVariableNameSyntax && !methodIsByRef && sourceIsByRef) // simple return like: return ref_var; (method is not by ref)
-                                    || sourceIsByRef; // more complex return like: return ref_var + 1; // in this case we can only be accessing the value whence we need to deference the reference.
-            }
-            
-            if (needsLoadIndirect)
-                AddCilInstruction(ilVar, LoadIndirectOpCodeFor(symbol.Type.SpecialType));
+            HandlePotentialRefLoad(ilVar, localVarSyntax, symbol.Type);
         }
 
         private void HandlePotentialFixedLoad(ILocalSymbol symbol)
@@ -1180,7 +1143,8 @@ namespace Cecilifier.Core.AST
                             throw new Exception($"Conversion from {typeInfo.Type} to {typeInfo.ConvertedType}  not implemented.");
                     }
                 }
-                else if (conversion.MethodSymbol != null)
+
+                if (conversion.MethodSymbol != null)
                 {
                     AddMethodCall(ilVar, conversion.MethodSymbol, false);
                 }

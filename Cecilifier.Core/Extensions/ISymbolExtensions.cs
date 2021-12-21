@@ -20,16 +20,16 @@ namespace Cecilifier.Core.Extensions
             return SymbolEqualityComparer.Default.Equals(method.ContainingAssembly, ctx.SemanticModel.Compilation.Assembly);
         }
 
-        public static bool IsByRef(this ISymbol symbol)
-        {
-            if (symbol is IParameterSymbol parameterSymbol && parameterSymbol.RefKind != RefKind.None)
-                return true;
-
-            if (symbol is ILocalSymbol { IsRef: true})
-                return true;
-            
-            return false;
-        }
+        public static bool IsByRef(this ISymbol symbol) =>
+            symbol switch
+            {
+                IParameterSymbol parameterSymbol when parameterSymbol.RefKind != RefKind.None => true,
+                IPropertySymbol { ReturnsByRef: true } => true,
+                IMethodSymbol { ReturnsByRef: true } => true,
+                ILocalSymbol { IsRef: true } => true,
+                
+                _ => false
+            };
 
         public static string AsStringNewArrayExpression(this IEnumerable<IParameterSymbol> self)
         {

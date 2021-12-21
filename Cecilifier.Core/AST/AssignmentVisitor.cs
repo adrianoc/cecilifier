@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
@@ -40,25 +39,21 @@ namespace Cecilifier.Core.AST
          */
         public override void VisitElementAccessExpression(ElementAccessExpressionSyntax node)
         {
-            var last = Context.CurrentLine;
+            var lastInstructionLoadingRhs = Context.CurrentLine;
+            
             ExpressionVisitor.Visit(Context, ilVar, node.Expression);
             foreach (var arg in node.ArgumentList.Arguments)
             {
                 ExpressionVisitor.Visit(Context, ilVar, arg);
             }
-            Context.MoveLinesToEnd(InstructionPrecedingValueToLoad, last);
             
-            var expSymbol = Context.SemanticModel.GetSymbolInfo(node).Symbol;
-            if (expSymbol is IPropertySymbol propertySymbol)
+            if (!HandleIndexer(node, lastInstructionLoadingRhs))
             {
-                AddMethodCall(ilVar, propertySymbol.SetMethod);
-            }
-            else
-            {
+                Context.MoveLinesToEnd(InstructionPrecedingValueToLoad, lastInstructionLoadingRhs);
                 AddCilInstruction(ilVar, OpCodes.Stelem_Ref);
             }
         }
-
+     
         public override void VisitMemberAccessExpression(MemberAccessExpressionSyntax node)
         {
             var last = Context.CurrentLine;
@@ -133,6 +128,37 @@ namespace Cecilifier.Core.AST
             }
         }
 
+        bool HandleIndexer(ElementAccessExpressionSyntax node, LinkedListNode<string> lastInstructionLoadingRhs)
+        {
+            var expSymbol = Context.SemanticModel.GetSymbolInfo(node).Symbol;
+            if (expSymbol is not IPropertySymbol propertySymbol)
+            {
+                return false;
+            }
+
+            if (propertySymbol.RefKind == RefKind.Ref)
+            {
+                // in this case we have something like `span[1] = CalculateValue()` and we need
+                // to generate the code like:
+                //
+                // 1) load `ref` to be assigned to, i.e span.get_Item()
+                // 2) load value to assign, i.e CalculateValue()
+                //
+                // so we emit the call to get_item() and then move the instructions generated for `CalculateValue()`
+                // bellow it.
+                AddMethodCall(ilVar, propertySymbol.GetMethod);
+                Context.MoveLinesToEnd(InstructionPrecedingValueToLoad, lastInstructionLoadingRhs);
+                AddCilInstruction(ilVar, propertySymbol.Type.Stind());
+            }
+            else
+            {
+                Context.MoveLinesToEnd(InstructionPrecedingValueToLoad, lastInstructionLoadingRhs);
+                AddMethodCall(ilVar, propertySymbol.SetMethod);
+            }
+
+            return true;
+        }
+        
         private void PropertyAssignment(IPropertySymbol property)
         {
             AddMethodCall(ilVar, property.SetMethod, isAccessOnThisOrObjectCreation:false);
@@ -168,20 +194,7 @@ namespace Cecilifier.Core.AST
             }
             else
             {
-                var opCode = parameter.Type.SpecialType switch
-                {
-                    SpecialType.None => OpCodes.Stind_I2,
-                    SpecialType.System_Char => OpCodes.Stind_I2,
-                    SpecialType.System_Int16 => OpCodes.Stind_I2,
-
-                    SpecialType.System_Int32 => OpCodes.Stind_I4,
-                    SpecialType.System_Single => OpCodes.Stind_R4,
-                    _ => parameter.Type.IsReferenceType
-                        ? OpCodes.Stind_Ref
-                        : throw new NotSupportedException($"Assignment to ref/out parameters of type {parameter.Type} not supported yet.")
-                };
-                
-                AddCilInstruction(ilVar, opCode);
+                AddCilInstruction(ilVar, parameter.Type.Stind());
             }
         }
 
