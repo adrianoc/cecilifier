@@ -23,8 +23,8 @@ public class RefReturnTests : CecilifierUnitTestBase
     }
 
     [TestCase("r", TestName = "Local")]
-    [TestCase("s[3]", TestName = "Indexer"), Category("Issues,#141")]
-    [TestCase("Prop", TestName = "Property"), Category("Issues,#141")]
+    [TestCase("s[3]", TestName = "Indexer")]
+    [TestCase("Prop", TestName = "Property")]
     public void Passing_Ref_AsArgument(string refToUse)
     {
         var code = $@"using System;

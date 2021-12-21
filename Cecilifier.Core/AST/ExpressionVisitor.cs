@@ -220,6 +220,7 @@ namespace Cecilifier.Core.AST
                 {
                     EnsurePropertyExists(node, indexer);
                     AddMethodCall(ilVar, indexer.GetMethod);
+                    HandlePotentialRefLoad(ilVar, node, indexer.Type);
                 }
                 else
                 {
@@ -910,6 +911,7 @@ namespace Cecilifier.Core.AST
                 {
                     AddMethodCall(ilVar, propertySymbol.GetMethod, isAccessOnThisOrObjectCreation);
                     StoreTopOfStackInLocalVariableAndLoadItsAddressIfNeeded(node);
+                    HandlePotentialRefLoad(ilVar, node, propertySymbol.Type);
                 }
             }
         }
