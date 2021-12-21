@@ -950,7 +950,7 @@ namespace Cecilifier.Core.AST
             if (!fieldSymbol.IsStatic && !isTargetOfQualifiedAccess)
                 AddCilInstruction(ilVar, OpCodes.Ldarg_0);
             
-            if (HandleLoadAddress(ilVar, fieldSymbol.Type, (CSharpSyntaxNode) node.Parent, OpCodes.Ldflda, fieldSymbol.Name, VariableMemberKind.Field, fieldSymbol.ContainingType.Name))
+            if (HandleLoadAddress(ilVar, fieldSymbol.Type, (CSharpSyntaxNode) node.Parent, fieldSymbol.IsStatic ? OpCodes.Ldsflda : OpCodes.Ldflda, fieldSymbol.Name, VariableMemberKind.Field, fieldSymbol.ContainingType.Name))
             {
                 return;
             }

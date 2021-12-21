@@ -289,10 +289,10 @@ public class Foo
                 @"\1Ldloc, l_spanSizeInBytes_4\);\s+"));
         }
         
-        [TestCase("class StaticFieldAddress { static int field; static void M1(ref int i) { } static void M() => M1(ref field); }", "Ldsflda", TestName="StaticPassingByRef"), Category("Issues,#142")]
-        [TestCase("class FieldAddress { int field; void M1(ref int i) { } void M() => M1(ref field); }", "Ldflda", TestName="PassingByRef"), Category("Issues,#142")]
-        [TestCase("class FieldAddress { int field; unsafe void Fixed() { fixed(int *p = &field) { } } }", "Ldflda", TestName="Fixed"), Category("Issues,#142")]
-        [TestCase("class StaticFieldAddress { static int field; static unsafe void Fixed() { fixed(int *p = &field) { } } }", "Ldsflda", TestName="StaticFixed"), Category("Issues,#142")]
+        [TestCase("class StaticFieldAddress { static int field; static void M1(ref int i) { } static void M() => M1(ref field); }", "Ldsflda", TestName="StaticPassingByRef")]
+        [TestCase("class FieldAddress { int field; void M1(ref int i) { } void M() => M1(ref field); }", "Ldflda", TestName="PassingByRef")]
+        [TestCase("class FieldAddress { int field; unsafe void Fixed() { fixed(int *p = &field) { } } }", "Ldflda", TestName="Fixed")]
+        [TestCase("class StaticFieldAddress { static int field; static unsafe void Fixed() { fixed(int *p = &field) { } } }", "Ldsflda", TestName="StaticFixed")]
         public void Field_Address(string code, string expectedLoadOpCode)
         {
             var result = RunCecilifier(code);

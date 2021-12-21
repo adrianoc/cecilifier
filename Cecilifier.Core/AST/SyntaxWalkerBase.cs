@@ -378,7 +378,7 @@ namespace Cecilifier.Core.AST
                 if (!(parentNode is ArgumentSyntax argument) || !argument.RefOrOutKeyword.IsKind(SyntaxKind.RefKeyword))
                     return false;
 
-                if (Context.SemanticModel.GetSymbolInfo(argument.Expression).Symbol is IParameterSymbol parameterSymbol && parameterSymbol.RefKind != RefKind.Ref && parameterSymbol.RefKind != RefKind.RefReadOnly)
+                if (Context.SemanticModel.GetSymbolInfo(argument.Expression).Symbol?.IsByRef() == false)
                 {
                     AddCilInstruction(ilVar, opCode, Context.DefinitionVariables.GetVariable(symbolName, variableMemberKind, parentName).VariableName);
                     return true;

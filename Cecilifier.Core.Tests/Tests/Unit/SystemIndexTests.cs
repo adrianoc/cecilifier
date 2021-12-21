@@ -28,7 +28,7 @@ public class SystemIndexTests : CecilifierUnitTestBase
 
         Assert.That(cecilifiedCode, Does.Match(
             @"il_M_\d.Emit\(OpCodes.Ldarg_1\);\s+" +
-            @"il_M_\d.Emit\(OpCodes.(Ldloca|Ldarga|Ldflda), (p|l|fld)_index_\d\);\s+" +
+            @"il_M_\d.Emit\(OpCodes.(Ldloca|Ldarga|Ldflda|Ldsflda), (p|l|fld)_index_\d\);\s+" +
             @"il_M_\d.Emit\(OpCodes.Ldarg_1\);\s+" +
             @"il_M_\d.Emit\(OpCodes.Ldlen\);\s+" +
             @"il_M_\d.Emit\(OpCodes.Conv_I4\);\s+" +
