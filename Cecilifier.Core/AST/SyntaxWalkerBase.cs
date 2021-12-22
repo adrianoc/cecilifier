@@ -394,9 +394,11 @@ namespace Cecilifier.Core.AST
             var sourceSymbol = Context.SemanticModel.GetSymbolInfo(expression).Symbol;
             var sourceIsByRef = sourceSymbol.IsByRef();
         
-            var returnStatement = expression.Ancestors().OfType<ReturnStatementSyntax>().SingleOrDefault();
+            var returnLikeNode = (SyntaxNode) expression.Ancestors().OfType<ArrowExpressionClauseSyntax>().SingleOrDefault() 
+                                 ?? expression.Ancestors().OfType<ReturnStatementSyntax>().SingleOrDefault();
+            
             var argument = expression.Ancestors().OfType<ArgumentSyntax>().FirstOrDefault();
-            var assigment = expression.Ancestors().OfType<BinaryExpressionSyntax>().SingleOrDefault(candidate => candidate.IsKind(SyntaxKind.SimpleAssignmentExpression));
+            var assigment = expression.Ancestors().OfType<AssignmentExpressionSyntax>().SingleOrDefault();
         
             if (assigment != null && assigment.Left != expression)
             {
@@ -411,12 +413,10 @@ namespace Cecilifier.Core.AST
         
                 needsLoadIndirect = sourceIsByRef && !targetIsByRef;
             }
-            else if (returnStatement != null)
+            else if (returnLikeNode != null)
             {
-                var method = returnStatement.Ancestors().OfType<MethodDeclarationSyntax>().SingleOrDefault();
-                bool returnTypeIsByRef = method != null
-                    ? Context.SemanticModel.GetDeclaredSymbol(method).RefKind != RefKind.None
-                    : Context.SemanticModel.GetSymbolInfo(returnStatement.Ancestors().OfType<BasePropertyDeclarationSyntax>().Single().Type).Symbol.IsByRef();
+                var method = returnLikeNode.Ancestors().OfType<MemberDeclarationSyntax>().First();
+                bool returnTypeIsByRef = Context.SemanticModel.GetDeclaredSymbol(method).IsByRef();
                 
                 needsLoadIndirect = sourceIsByRef && !returnTypeIsByRef;
             }
@@ -463,7 +463,7 @@ namespace Cecilifier.Core.AST
             return null;
         }
 
-        private OpCode LoadIndirectOpCodeFor(SpecialType type)
+        protected OpCode LoadIndirectOpCodeFor(SpecialType type)
         {
             return type switch
             {

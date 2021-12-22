@@ -308,6 +308,12 @@ namespace Cecilifier.Core.AST
                 return;
             }
 
+            var valueBeingAssignedIsByRef = Context.SemanticModel.GetSymbolInfo(localVar.Initializer.Value).Symbol.IsByRef();
+            if (!variableType.IsByRef() && valueBeingAssignedIsByRef)
+            {
+                AddCilInstruction(_ilVar, LoadIndirectOpCodeFor(variableType.SpecialType));
+            }
+            
             var localVarDef = Context.DefinitionVariables.GetVariable(localVar.Identifier.ValueText, VariableMemberKind.LocalVariable);
             AddCilInstruction(_ilVar, OpCodes.Stloc, localVarDef.VariableName);
         }
