@@ -1162,7 +1162,14 @@ namespace Cecilifier.Core.AST
                 // we need to convert from System.Index to *int* which is done through
                 // the method System.Index::GetOffset(int32)
                 loadArrayIntoStack();
-                AddCilInstruction(ilVar, OpCodes.Ldlen);
+
+                var indexed = Context.SemanticModel.GetTypeInfo(expression.Ancestors().OfType<ElementAccessExpressionSyntax>().Single().Expression);
+                Utils.EnsureNotNull(indexed.Type, "Cannot be null.");
+                if (indexed.Type.Name == "Span")
+                    AddMethodCall(ilVar, ((IPropertySymbol)indexed.Type.GetMembers("Length").Single()).GetMethod);
+                else
+                    AddCilInstruction(ilVar, OpCodes.Ldlen);
+                
                 AddCilInstruction(ilVar, OpCodes.Conv_I4);
                 AddMethodCall(ilVar, (IMethodSymbol) typeInfo.Type.GetMembers().Single(m => m.Name == "GetOffset"));
             }
