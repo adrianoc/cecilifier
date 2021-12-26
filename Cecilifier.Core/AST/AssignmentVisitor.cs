@@ -182,13 +182,13 @@ namespace Cecilifier.Core.AST
         {
             if (parameter.RefKind == RefKind.None)
             {
-                var paramVariable = Context.DefinitionVariables.GetVariable(parameter.Name, VariableMemberKind.Parameter).VariableName;
                 if (parameter.Type.TypeKind == TypeKind.Array)
                 {
                     AddCilInstruction(ilVar, OpCodes.Stelem_Ref);
                 }
                 else
                 {
+                    var paramVariable = Context.DefinitionVariables.GetVariable(parameter.Name, VariableMemberKind.Parameter).VariableName;
                     AddCilInstruction(ilVar, OpCodes.Starg_S, paramVariable);
                 }
             }

@@ -59,11 +59,7 @@ namespace Cecilifier.Core.AST
         
         public override void VisitMethodDeclaration(MethodDeclarationSyntax node)
         {
-            var (returnType, refReturn) = node.ReturnType switch
-            {
-                RefTypeSyntax refType => (refType.Type, true),
-                _ => (node.ReturnType, false)
-            };
+            var refReturn = node.ReturnType is RefTypeSyntax;
                 
             ProcessMethodDeclaration(
                 node, 

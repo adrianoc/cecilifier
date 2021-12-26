@@ -36,7 +36,10 @@ namespace Cecilifier.Core.AST
         private readonly string ilVar;
         private readonly Stack<LinkedListNode<string>> callFixList = new Stack<LinkedListNode<string>>();
 
-        private bool valueTypeNoArgObjCreation;
+        // if true, while visiting an AssignmentExpression its left side must not be visited.
+        // this is used, for example, in value type ctor invocation in which case there's
+        // no value in the stack to be stored after the ctor is run
+        private bool skipLeftSideVisitingInAssignment; 
 
         static ExpressionVisitor()
         {
@@ -129,7 +132,7 @@ namespace Cecilifier.Core.AST
             var ev = new ExpressionVisitor(ctx, ilVar);
             ev.Visit(node);
 
-            return ev.valueTypeNoArgObjCreation;
+            return ev.skipLeftSideVisitingInAssignment;
         }
         
         public override void VisitReturnStatement(ReturnStatementSyntax node)
@@ -260,7 +263,7 @@ namespace Cecilifier.Core.AST
             
             visitor.InstructionPrecedingValueToLoad = Context.CurrentLine;
             Visit(node.Right);
-            if (!valueTypeNoArgObjCreation)
+            if (!skipLeftSideVisitingInAssignment)
             {
                 visitor.Visit(node.Left);
             }
@@ -506,7 +509,7 @@ namespace Cecilifier.Core.AST
                     AddMethodCall(ilVar, ctor);
 
                 // if it is an index assignment through a MRE we do need to visit lhs of the expression
-                valueTypeNoArgObjCreation = !isAssignmentToMemberReference;
+                skipLeftSideVisitingInAssignment = !isAssignmentToMemberReference;
             }
             else
             {
@@ -623,17 +626,6 @@ namespace Cecilifier.Core.AST
             
             // assign (top of stack to the operand)
             operand.Accept(assignmentVisitor);
-        }
-
-        private bool TryProcessNoArgsCtorInvocationOnValueType(ObjectCreationExpressionSyntax node, IMethodSymbol methodSymbol, SymbolInfo ctorInfo)
-        {
-            if (ctorInfo.Symbol.ContainingType.IsReferenceType || methodSymbol.Parameters.Length > 0)
-            {
-                return false;
-            }
-
-            new ValueTypeNoArgCtorInvocationVisitor(Context, ilVar, ctorInfo).Visit(node.Parent);
-            return valueTypeNoArgObjCreation = true;
         }
 
         public override void VisitExpressionStatement(ExpressionStatementSyntax node)
@@ -759,6 +751,17 @@ namespace Cecilifier.Core.AST
         public override void VisitDefaultExpression(DefaultExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitSizeOfExpression(SizeOfExpressionSyntax node) => LogUnsupportedSyntax(node);
 
+        private bool TryProcessNoArgsCtorInvocationOnValueType(ObjectCreationExpressionSyntax node, IMethodSymbol methodSymbol, SymbolInfo ctorInfo)
+        {
+            if (ctorInfo.Symbol.ContainingType.IsReferenceType || methodSymbol.Parameters.Length > 0)
+            {
+                return false;
+            }
+
+            new ValueTypeNoArgCtorInvocationVisitor(Context, ilVar, ctorInfo).Visit(node.Parent);
+            return skipLeftSideVisitingInAssignment = true;
+        }
+        
         private void ProcessOverloadedBinaryOperatorInvocation(BinaryExpressionSyntax node, IMethodSymbol method)
         {
             using var _ = LineInformationTracker.Track(Context, node);
