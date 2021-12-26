@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -336,7 +336,7 @@ namespace Cecilifier.Core.AST
             HandlePotentialRefLoad(ilVar, node, paramSymbol.Type);
         }
 
-        protected bool HandleLoadAddress(string ilVar, ITypeSymbol symbol, CSharpSyntaxNode parentNode, OpCode opCode, string symbolName, VariableMemberKind variableMemberKind, string parentName = null)
+        protected bool HandleLoadAddress(string ilVar, ITypeSymbol symbol, CSharpSyntaxNode node, OpCode opCode, string symbolName, VariableMemberKind variableMemberKind, string parentName = null)
         {
             return HandleCallOnValueType() || HandleRefAssignment() || HandleParameter();
             
@@ -347,11 +347,11 @@ namespace Cecilifier.Core.AST
                 
                 // in this case we need to call System.Index.GetOffset(int32) on a value type (System.Index)
                 // which requires the address of the value type.
-                var isSystemIndexUsedAsIndex = IsSystemIndexUsedAsIndex(symbol, parentNode);
-                if (isSystemIndexUsedAsIndex || parentNode.IsKind(SyntaxKind.AddressOfExpression) || (symbol.IsValueType && parentNode.Accept(new UsageVisitor(Context)) == UsageKind.CallTarget))
+                var isSystemIndexUsedAsIndex = IsSystemIndexUsedAsIndex(symbol, node);
+                if (isSystemIndexUsedAsIndex || node.IsKind(SyntaxKind.AddressOfExpression) || IsPseudoAssignmentToValueType() || node.Accept(new UsageVisitor(Context)) == UsageKind.CallTarget)
                 {
                     AddCilInstruction(ilVar, opCode, Context.DefinitionVariables.GetVariable(symbolName, variableMemberKind, parentName).VariableName);
-                    if (!Context.HasFlag(Constants.ContextFlags.Fixed) && parentNode.IsKind(SyntaxKind.AddressOfExpression))
+                    if (!Context.HasFlag(Constants.ContextFlags.Fixed) && node.IsKind(SyntaxKind.AddressOfExpression))
                         AddCilInstruction(ilVar, OpCodes.Conv_U);
 
                     return true;
@@ -362,7 +362,7 @@ namespace Cecilifier.Core.AST
             
             bool HandleRefAssignment()
             {
-                if (!(parentNode is RefExpressionSyntax refExpression))
+                if (!(node is RefExpressionSyntax refExpression))
                     return false;
                 
                 var assignedValueSymbol = Context.SemanticModel.GetSymbolInfo(refExpression.Expression);
@@ -375,7 +375,7 @@ namespace Cecilifier.Core.AST
 
             bool HandleParameter()
             {
-                if (!(parentNode is ArgumentSyntax argument) || !argument.RefOrOutKeyword.IsKind(SyntaxKind.RefKeyword))
+                if (!(node is ArgumentSyntax argument) || !argument.RefOrOutKeyword.IsKind(SyntaxKind.RefKeyword))
                     return false;
 
                 if (Context.SemanticModel.GetSymbolInfo(argument.Expression).Symbol?.IsByRef() == false)
@@ -385,8 +385,10 @@ namespace Cecilifier.Core.AST
                 }
                 return false;
             }
+            
+            bool IsPseudoAssignmentToValueType() => Context.HasFlag(Constants.ContextFlags.PseudoAssignmentToIndex);
         }
-
+        
         protected void HandlePotentialRefLoad(string ilVar, SyntaxNode expression, ITypeSymbol type)
         {
             var needsLoadIndirect = false;

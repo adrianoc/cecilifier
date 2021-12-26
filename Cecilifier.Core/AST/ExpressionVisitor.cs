@@ -242,6 +242,10 @@ namespace Cecilifier.Core.AST
         public override void VisitAssignmentExpression(AssignmentExpressionSyntax node)
         {
             using var _ = LineInformationTracker.Track(Context, node);
+
+            if (HandlePseudoAssignment(node))
+                return;
+            
             var leftNodeMae = node.Left as MemberAccessExpressionSyntax;
             CSharpSyntaxNode exp = leftNodeMae?.Name ?? node.Left;
             // check if the left hand side of the assignment is a property (but not indexers) and handle that as a method (set) call.
@@ -260,6 +264,20 @@ namespace Cecilifier.Core.AST
             {
                 visitor.Visit(node.Left);
             }
+        }
+
+        private bool HandlePseudoAssignment(AssignmentExpressionSyntax node)
+        {
+            var lhsType = Context.SemanticModel.GetTypeInfo(node.Left);
+            if (lhsType.Type.FullyQualifiedName() != "System.Index" || !node.Right.IsKind(SyntaxKind.IndexExpression) || node.Left.IsKind(SyntaxKind.SimpleMemberAccessExpression))
+                return false;
+
+            using (Context.WithFlag(Constants.ContextFlags.PseudoAssignmentToIndex))
+                node.Left.Accept(this);
+                
+            node.Right.Accept(this);
+            return true;
+
         }
 
         public override void VisitBinaryExpression(BinaryExpressionSyntax node)
@@ -461,6 +479,34 @@ namespace Cecilifier.Core.AST
             {
                 node.Operand.Accept(this);
                 AddCilInstruction(ilVar, OpCodes.Not);
+            }
+            else if (node.IsKind(SyntaxKind.IndexExpression))
+            {
+                /*
+                 * node is something like '^3'
+                 * in this scenario we either need to 1) initialize some storage (that should be typed as System.Index) if such storage
+                 * already exists (for instance, we have an assignment to a parameter, a local variable or to a field) or 2)
+                 * instantiate a new System.Index (for example if we are returning this expression).
+                 *
+                 * Note that when assigning to fields through member reference expression (for instance, a.b = ^2;), even though assignments
+                 * would normally be handled as *1* we need to handle it as *2* and instantiate a new System.Index.
+                 */
+                var ctor= Context.SemanticModel.Compilation.GetTypeByMetadataName(typeof(Index).FullName)
+                    .GetMembers(".ctor")
+                    .OfType<IMethodSymbol>()
+                    .Single(m => m.Parameters.Length == 2 && m.Parameters[0].Type.SpecialType == SpecialType.System_Int32 && m.Parameters[1].Type.SpecialType == SpecialType.System_Boolean);
+
+                node.Operand.Accept(this);
+                AddCilInstruction(ilVar, OpCodes.Ldc_I4_1); // From end.
+
+                var isAssignmentToMemberReference = node.Parent is AssignmentExpressionSyntax { Left.RawKind: (int) SyntaxKind.SimpleMemberAccessExpression};
+                if (node.Parent.IsKind(SyntaxKind.ArrowExpressionClause) || node.Parent.IsKind(SyntaxKind.ReturnStatement) || isAssignmentToMemberReference)
+                    AddCilInstruction(ilVar, OpCodes.Newobj, ctor.MethodResolverExpression(Context));
+                else
+                    AddMethodCall(ilVar, ctor);
+
+                // if it is an index assignment through a MRE we do need to visit lhs of the expression
+                valueTypeNoArgObjCreation = !isAssignmentToMemberReference;
             }
             else
             {

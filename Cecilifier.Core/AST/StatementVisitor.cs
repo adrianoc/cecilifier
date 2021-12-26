@@ -303,6 +303,18 @@ namespace Cecilifier.Core.AST
 
         private void ProcessVariableInitialization(VariableDeclaratorSyntax localVar, ITypeSymbol variableType)
         {
+            if (localVar.Initializer == null)
+                return;
+            
+            var localVarDef = Context.DefinitionVariables.GetVariable(localVar.Identifier.ValueText, VariableMemberKind.LocalVariable);
+            if (localVar.Initializer.Value.IsKind(SyntaxKind.IndexExpression))
+            {
+                // code is something like `Index field = ^5`; 
+                // in this case we need to load the address of the field since the expression ^5 (IndexerExpression) will result in a call to System.Index ctor (which is a value type and expects
+                // the address of the value type to be in the top of the stack
+                AddCilInstruction(_ilVar, OpCodes.Ldloca, localVarDef.VariableName);
+            }
+
             if (ExpressionVisitor.Visit(Context, _ilVar, localVar.Initializer))
             {
                 return;
@@ -314,7 +326,6 @@ namespace Cecilifier.Core.AST
                 AddCilInstruction(_ilVar, LoadIndirectOpCodeFor(variableType.SpecialType));
             }
             
-            var localVarDef = Context.DefinitionVariables.GetVariable(localVar.Identifier.ValueText, VariableMemberKind.LocalVariable);
             AddCilInstruction(_ilVar, OpCodes.Stloc, localVarDef.VariableName);
         }
 

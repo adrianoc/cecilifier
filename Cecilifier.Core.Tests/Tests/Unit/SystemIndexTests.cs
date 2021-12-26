@@ -1,3 +1,7 @@
+using System;
+using Cecilifier.Core.Extensions;
+using Microsoft.CodeAnalysis;
+using Mono.Cecil.Cil;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Tests.Unit;
@@ -36,7 +40,73 @@ public class SystemIndexTests : CecilifierUnitTestBase
             @"il_M_\d.Emit\(OpCodes.Ldelem_I4\);\s+" +
             @"il_M_\d.Emit\(OpCodes.Ret\);"));
     }
-    
+
+    [TestCase("Index field = ^1;", SymbolKind.Field, TestName = "Field Initialization")]
+    [TestCase("Index field; void SetField() => field = ^11;", SymbolKind.Field, TestName = "Field Assignment")]
+    [TestCase("void M() { Index local = ^2; }", SymbolKind.Local, TestName = "Local Variable Initialization")]
+    [TestCase("void M() { Index local; local = ^2; }",  SymbolKind.Local, TestName = "Local Variable Assignment")]
+    [TestCase("void M() { var local = ^3; }",  SymbolKind.Local, TestName = "Inferred Local Variable Initialization")]
+    [TestCase("void Parameter(Index index) => index = ^11;",  SymbolKind.Parameter, TestName = "Parameter 2")]
+    public void IndexFromEnd_ExplicitCtorIsInvoked(string indexSnippet, SymbolKind kind)
+    {
+        var result = RunCecilifier($"using System; class Foo {{ {indexSnippet} }}");
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+
+        Assert.That(cecilifiedCode, Contains.Substring (kind.LoadAddressOpCode().ToString().PascalCase()), cecilifiedCode);
+        Assert.That(cecilifiedCode, Does.Not.Contains(kind.StoreOpCode().ToString().PascalCase()), cecilifiedCode);
+        Assert.That(cecilifiedCode, Does.Match(@".+OpCodes.Call, .+TypeHelpers.ResolveMethod\(""System.Private.CoreLib"", ""System.Index"", "".ctor"",.+,"""", ""System.Int32"", ""System.Boolean""\)\)\);"), cecilifiedCode);
+    }
+
+    [Test]
+    public void IndexFromEnd_OnMemberReference_ExplicitCtorIsInvoked_WithNewObject()
+    {
+        var result = RunCecilifier("using System; class Foo { Index field; void SetField(Foo other) => other.field = ^11; }");
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+     
+        var expectedSnippet =
+            @"(il_setField_\d\.Emit\(OpCodes\.)Ldarg_1\);\s+" +
+            @"\1Ldc_I4, 11.+\s+" +
+            @"\1Ldc_I4_1.+\s+" +
+            @".+OpCodes.Newobj, .+TypeHelpers.ResolveMethod\(""System.Private.CoreLib"", ""System.Index"", "".ctor"",.+,"""", ""System.Int32"", ""System.Boolean""\)\)\);\s+" +
+            @"\1Stfld, fld_field_\d";
+        
+        Assert.That(cecilifiedCode, Does.Match(expectedSnippet), cecilifiedCode);
+    }
+
+    [TestCase("Index Index => ^1;",  SymbolKind.Local, TestName = "Property")]
+    [TestCase("Index Index2 { get => ^1; }",  SymbolKind.Local, TestName = "Property 2")]
+    [TestCase("Index M3() { return ^3; }",  SymbolKind.Local, TestName = "Method")]
+    [TestCase("Index M4() => ^4;",  SymbolKind.Local, TestName = "Method Bodied")]
+    public void AsReturnValue(string indexSnippet, SymbolKind kind)
+    {
+        var result = RunCecilifier($"using System; class Foo {{ {indexSnippet} }}");
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+
+        Assert.That(cecilifiedCode, Does.Not.Contains(kind.LoadAddressOpCode().ToString().PascalCase()), cecilifiedCode);
+        Assert.That(cecilifiedCode, Does.Match(@".+OpCodes.Newobj, .+TypeHelpers.ResolveMethod\(""System.Private.CoreLib"", ""System.Index"", "".ctor"",.+,"""", ""System.Int32"", ""System.Boolean""\)\)\);"), cecilifiedCode);
+
+        Console.WriteLine(cecilifiedCode);
+    }
 
     private const string ResolvedSystemIndexOpImplicit = @"assembly\.MainModule\.ImportReference\(TypeHelpers\.ResolveMethod\(""System\.Private\.CoreLib"", ""System\.Index"", ""op_Implicit"",System\.Reflection\.BindingFlags\.Default\|System\.Reflection.BindingFlags.Static\|System.Reflection.BindingFlags.Public,"""", ""System.Int32""\)\)";
 }
+
+internal static class SymbolKindExtensions
+{
+    public static OpCode LoadAddressOpCode(this SymbolKind self) => self switch
+    {
+        SymbolKind.Local => OpCodes.Ldloca,
+        SymbolKind.Parameter => OpCodes.Ldarga,
+        SymbolKind.Field => OpCodes.Ldflda,
+        _ => throw new NotSupportedException($"I don't think we can get the address of '{self}'")
+    };
+    
+    public static OpCode StoreOpCode(this SymbolKind self) => self switch
+    {
+        SymbolKind.Local => OpCodes.Stloc,
+        SymbolKind.Parameter => OpCodes.Starg,
+        SymbolKind.Field => OpCodes.Stfld,
+        _ => throw new NotSupportedException($"I don't think we store data in '{self}'")
+    };
+}
+

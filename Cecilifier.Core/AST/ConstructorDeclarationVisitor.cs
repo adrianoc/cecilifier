@@ -136,13 +136,27 @@ namespace Cecilifier.Core.AST
 
         private void ProcessFieldInitialization(TypeDeclarationSyntax declaringClass, string ctorBodyIL)
         {
+            // Handles non const field initialization...
             foreach (var fieldDeclaration in declaringClass.Members.OfType<FieldDeclarationSyntax>().Where(f => !f.Modifiers.Any(m => m.IsKind(SyntaxKind.ConstKeyword))))
             {
                 var dec = fieldDeclaration.Declaration.Variables[0];
-                if (dec.Initializer != null && !fieldDeclaration.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword)))
+                if (dec.Initializer == null)
+                    continue;
+                
+                if (!fieldDeclaration.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword)))
                 {
                     Context.WriteNewLine();
                     Context.WriteComment(fieldDeclaration.ToString());
+                    if (dec.Initializer.Value.IsKind(SyntaxKind.IndexExpression))
+                    {
+                        // code is something like `Index field = ^5`; 
+                        // in this case we need to load the address of the field since the expression ^5 (IndexerExpression) will result in a call to System.Index ctor (which is a value type and expects
+                        // the address of the value type to be in the top of the stack
+                        AddCilInstruction(ctorBodyIL, OpCodes.Ldflda, Context.DefinitionVariables.GetVariable(dec.Identifier.Text, VariableMemberKind.Field, declaringClass.Identifier.Text).VariableName);
+                        ExpressionVisitor.Visit(Context, ctorBodyIL, dec.Initializer);
+                        return;
+                    }
+
                     AddCilInstruction(ctorBodyIL, OpCodes.Ldarg_0);
                 }
 
