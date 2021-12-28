@@ -128,6 +128,15 @@ namespace Cecilifier.Core.AST
 
             return cecilVarDeclName;
         }
+        
+        protected string AddLocalVariableToCurrentMethod(string localVarName, string varType)
+        {
+            var currentMethod = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
+            if (!currentMethod.IsValid)
+                throw new InvalidOperationException("Could not resolve current method declaration variable.");
+
+            return AddLocalVariableWithResolvedType(localVarName, currentMethod, varType);
+        }
 
         protected IMethodSymbol DeclaredSymbolFor<T>(T node) where T : BaseMethodDeclarationSyntax
         {

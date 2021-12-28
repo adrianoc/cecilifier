@@ -50,7 +50,7 @@ namespace Cecilifier.Core.AST
         private void DeclareAndInitializeValueTypeLocalVariable()
         {
             var resolvedVarType = Context.TypeResolver.Resolve(ctorInfo.Symbol.ContainingType);
-            var tempLocalName = AddLocalVariableWithResolvedType("vt", Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method), resolvedVarType);
+            var tempLocalName = AddLocalVariableToCurrentMethod("vt", resolvedVarType);
 
             switch (ctorInfo.Symbol.ContainingType.SpecialType)
             {

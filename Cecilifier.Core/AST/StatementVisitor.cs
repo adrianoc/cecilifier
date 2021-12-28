@@ -68,7 +68,7 @@ namespace Cecilifier.Core.AST
         public override void VisitSwitchStatement(SwitchStatementSyntax node)
         {
             var switchExpressionType = ResolveExpressionType(node.Expression);
-            var evaluatedExpressionVariable = AddLocalVariable(switchExpressionType);
+            var evaluatedExpressionVariable = AddLocalVariableToCurrentMethod("switchCondition", switchExpressionType);
 
             ExpressionVisitor.Visit(Context, _ilVar, node.Expression);
             AddCilInstruction(_ilVar, OpCodes.Stloc, evaluatedExpressionVariable); // stores evaluated expression in local var
@@ -290,15 +290,6 @@ namespace Cecilifier.Core.AST
             }
             
             AddLocalVariableWithResolvedType(localVar.Identifier.Text, methodVar, resolvedVarType);
-        }
-
-        private string AddLocalVariable(string varType)
-        {
-            var currentMethod = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
-            if (!currentMethod.IsValid)
-                throw new InvalidOperationException("Could not resolve current method declaration variable.");
-
-            return AddLocalVariableWithResolvedType("switchCondition", currentMethod, varType);
         }
 
         private void ProcessVariableInitialization(VariableDeclaratorSyntax localVar, ITypeSymbol variableType)

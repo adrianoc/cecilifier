@@ -755,7 +755,7 @@ namespace Cecilifier.Core.AST
             var parentElementAccessExpression = node.Ancestors().OfType<ElementAccessExpressionSyntax>().FirstOrDefault(candidate => candidate.ArgumentList.Contains(node));
             if (parentElementAccessExpression != null)
             {
-                var tempLocal = AddLocalVariable(Context.TypeResolver.Resolve(Context.SemanticModel.GetTypeInfo(node).Type));
+                var tempLocal = AddLocalVariableToCurrentMethod("tmpIndex", Context.TypeResolver.Resolve(Context.SemanticModel.GetTypeInfo(node).Type));
                 AddCilInstruction(ilVar, OpCodes.Stloc, tempLocal);
                 AddCilInstruction(ilVar, OpCodes.Ldloca, tempLocal);
             }
