@@ -138,7 +138,7 @@ namespace Cecilifier.Core.AST
         public override void VisitReturnStatement(ReturnStatementSyntax node)
         {
             using var _ = LineInformationTracker.Track(Context, node);
-            Utils.EnsureNotNull(node.Expression, nameof(node));
+            Utils.EnsureNotNull(node.Expression);
             node.Expression.Accept(this);
             InjectRequiredConversions(node.Expression);
         }

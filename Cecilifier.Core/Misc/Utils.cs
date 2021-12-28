@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
 using Microsoft.CodeAnalysis;
@@ -35,7 +36,7 @@ namespace Cecilifier.Core.Misc
         }
         
         [Conditional("DEBUG")]
-        public static void EnsureNotNull([NotNull] SyntaxNode? node, string msg)
+        public static void EnsureNotNull([NotNull] SyntaxNode? node, [CallerArgumentExpression("node")] string? msg = null)
         {
             if (node == null)
                 throw new System.NotSupportedException(msg);

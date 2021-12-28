@@ -39,7 +39,7 @@ partial class ExpressionVisitor
         Debug.Assert(arrayType.RankSpecifiers.Count == 1);
         if (rankNode.IsKind(SyntaxKind.OmittedArraySizeExpression))
         {
-            Utils.EnsureNotNull(node.Initializer, "Initializer will never be null");
+            Utils.EnsureNotNull(node.Initializer);
             AddCilInstruction(ilVar, OpCodes.Ldc_I4, node.Initializer.Expressions.Count);
         }
 

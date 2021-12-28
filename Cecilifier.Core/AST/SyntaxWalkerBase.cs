@@ -198,6 +198,7 @@ namespace Cecilifier.Core.AST
 
         private static bool IsNestedTypeDeclaration(SyntaxNode node)
         {
+            Utils.EnsureNotNull(node.Parent);
             return node.Parent.Kind() != SyntaxKind.NamespaceDeclaration && node.Parent.Kind() != SyntaxKind.CompilationUnit;
         }
         
@@ -295,7 +296,7 @@ namespace Cecilifier.Core.AST
 
         protected string ResolveExpressionType(ExpressionSyntax expression)
         {
-            Utils.EnsureNotNull(expression, nameof(expression));
+            Utils.EnsureNotNull(expression);
             var info = Context.GetTypeInfo(expression);
             return Context.TypeResolver.Resolve(info.Type);
         }
@@ -322,7 +323,7 @@ namespace Cecilifier.Core.AST
 
             var method = (IMethodSymbol) paramSymbol.ContainingSymbol;
             
-            Utils.EnsureNotNull(node.Parent, "Parent cannot be null");
+            Utils.EnsureNotNull(node.Parent);
             //TODO: Add a test for parameter index for static/instance members.
             var adjustedParameterIndex = paramSymbol.Ordinal + (method.IsStatic ? 0 : 1);
             if (node.Parent.Kind() == SyntaxKind.SimpleMemberAccessExpression && paramSymbol.ContainingType.IsValueType)
