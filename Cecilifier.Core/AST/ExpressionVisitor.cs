@@ -485,31 +485,7 @@ namespace Cecilifier.Core.AST
             }
             else if (node.IsKind(SyntaxKind.IndexExpression))
             {
-                /*
-                 * node is something like '^3'
-                 * in this scenario we either need to 1) initialize some storage (that should be typed as System.Index) if such storage
-                 * already exists (for instance, we have an assignment to a parameter, a local variable or to a field) or 2)
-                 * instantiate a new System.Index (for example if we are returning this expression).
-                 *
-                 * Note that when assigning to fields through member reference expression (for instance, a.b = ^2;), even though assignments
-                 * would normally be handled as *1* we need to handle it as *2* and instantiate a new System.Index.
-                 */
-                var ctor= Context.SemanticModel.Compilation.GetTypeByMetadataName(typeof(Index).FullName)
-                    .GetMembers(".ctor")
-                    .OfType<IMethodSymbol>()
-                    .Single(m => m.Parameters.Length == 2 && m.Parameters[0].Type.SpecialType == SpecialType.System_Int32 && m.Parameters[1].Type.SpecialType == SpecialType.System_Boolean);
-
-                node.Operand.Accept(this);
-                AddCilInstruction(ilVar, OpCodes.Ldc_I4_1); // From end.
-
-                var isAssignmentToMemberReference = node.Parent is AssignmentExpressionSyntax { Left.RawKind: (int) SyntaxKind.SimpleMemberAccessExpression};
-                if (node.Parent.IsKind(SyntaxKind.ArrowExpressionClause) || node.Parent.IsKind(SyntaxKind.ReturnStatement) || isAssignmentToMemberReference)
-                    AddCilInstruction(ilVar, OpCodes.Newobj, ctor.MethodResolverExpression(Context));
-                else
-                    AddMethodCall(ilVar, ctor);
-
-                // if it is an index assignment through a MRE we do need to visit lhs of the expression
-                skipLeftSideVisitingInAssignment = !isAssignmentToMemberReference;
+                ProcessIndexerExpression(node);
             }
             else
             {
@@ -751,6 +727,43 @@ namespace Cecilifier.Core.AST
         public override void VisitDefaultExpression(DefaultExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitSizeOfExpression(SizeOfExpressionSyntax node) => LogUnsupportedSyntax(node);
 
+        private void ProcessIndexerExpression(PrefixUnaryExpressionSyntax node)
+        {
+            /*
+             * node is something like '^3'
+             * in this scenario we either need to 1) initialize some storage (that should be typed as System.Index) if such storage
+             * already exists (for instance, we have an assignment to a parameter, a local variable or to a field) or 2)
+             * instantiate a new System.Index (for example if we are returning this expression).
+             * 
+             * Note that when assigning to fields through member reference expression (for instance, a.b = ^2;), even though assignments
+             * would normally be handled as *1* we need to handle it as *2* and instantiate a new System.Index.
+             */
+            var ctor = Context.SemanticModel.Compilation.GetTypeByMetadataName(typeof(Index).FullName)
+                .GetMembers(".ctor")
+                .OfType<IMethodSymbol>()
+                .Single(m => m.Parameters.Length == 2 && m.Parameters[0].Type.SpecialType == SpecialType.System_Int32 && m.Parameters[1].Type.SpecialType == SpecialType.System_Boolean);
+
+            node.Operand.Accept(this);
+            AddCilInstruction(ilVar, OpCodes.Ldc_I4_1); // From end.
+
+            var isAssignmentToMemberReference = node.Parent is AssignmentExpressionSyntax { Left.RawKind: (int)SyntaxKind.SimpleMemberAccessExpression };
+            if ((node.Parent.IsKind(SyntaxKind.SimpleAssignmentExpression) || node.Parent.IsKind(SyntaxKind.EqualsValueClause)) && !isAssignmentToMemberReference)
+                AddMethodCall(ilVar, ctor);
+            else
+                AddCilInstruction(ilVar, OpCodes.Newobj, ctor.MethodResolverExpression(Context));
+
+            var parentElementAccessExpression = node.Ancestors().OfType<ElementAccessExpressionSyntax>().FirstOrDefault(candidate => candidate.ArgumentList.Contains(node));
+            if (parentElementAccessExpression != null)
+            {
+                var tempLocal = AddLocalVariable(Context.TypeResolver.Resolve(Context.SemanticModel.GetTypeInfo(node).Type));
+                AddCilInstruction(ilVar, OpCodes.Stloc, tempLocal);
+                AddCilInstruction(ilVar, OpCodes.Ldloca, tempLocal);
+            }
+
+            // if it is an index assignment through a MRE we do need to visit lhs of the expression
+            skipLeftSideVisitingInAssignment = !isAssignmentToMemberReference;
+        }
+        
         private bool TryProcessNoArgsCtorInvocationOnValueType(ObjectCreationExpressionSyntax node, IMethodSymbol methodSymbol, SymbolInfo ctorInfo)
         {
             if (ctorInfo.Symbol.ContainingType.IsReferenceType || methodSymbol.Parameters.Length > 0)

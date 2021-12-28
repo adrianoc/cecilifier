@@ -22,6 +22,29 @@ public class SystemIndexTests : CecilifierUnitTestBase
         Assert.That(cecilifiedCode, Does.Match($@"il_M_\d+.Emit\(OpCodes\.{expectedStoreOpCode}\s?,.+\);"));
     }
 
+    [Test]
+    public void InlineUsedToIndexArray_GetOffset_IsCalled()
+    {
+        var result = RunCecilifier(@"class C { int M(int []a) => a[^5]; }");
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+
+        Assert.That(cecilifiedCode, Does.Match(
+            @"(il_M_\d\.Emit\(OpCodes\.)Ldarg_1\);\s+" +
+            @"\1Ldc_I4, 5.+\s+" +
+			@"\1Ldc_I4_1.+\s+" +
+            @"\1Newobj, assembly.MainModule.ImportReference\(TypeHelpers.ResolveMethod\(""System.Private.CoreLib"", ""System.Index"", "".ctor"",.+,"""", ""System.Int32"", ""System.Boolean""\)\)\);\s+" +
+			@"var (l_tmpIndex_\d) = new VariableDefinition\(assembly.MainModule.ImportReference\(typeof\(Index\)\)\).+\s+" +
+            @"m_M_1.Body.Variables.Add\(\2\);\s+" +
+			@"\1Stloc, \2\);\s+" +
+            @"\1Ldloca, \2\);\s+" +
+			@"\1Ldarg_1\);\s+" +
+            @"\1Ldlen\);\s+" +
+			@"\1Conv_I4\);\s+" +
+            @"\1Call, assembly.MainModule.ImportReference\(TypeHelpers.ResolveMethod\(""System.Private.CoreLib"", ""System.Index"", ""GetOffset"",.+,"""", ""System.Int32""\)\)\);\s+" +
+			@"\1Ldelem_I4\);\s+" +
+            @"\1Ret.+"));
+    }
+    
     [TestCase("using System; class C { int M(int []a, Index index) => a[index]; }", TestName = "Parameter")]
     [TestCase("using System; class C { static Index index; int M(int []a) => a[index]; }", TestName = "Field")]
     [TestCase("using System; class C { int M(int []a) { Index index; index = 1; return a[index]; } }", TestName = "Local")]
