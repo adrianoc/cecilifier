@@ -77,10 +77,10 @@ namespace Cecilifier.Core.AST
             }
         }
         
-        private void InitValueTypeLocalVariable(string localVariable, INamedTypeSymbol variableType)
+        private void InitValueTypeLocalVariable(string localVariable, ITypeSymbol variableType)
         {
             AddCilInstruction(ilVar, OpCodes.Ldloca_S, localVariable);
-            AddCilInstruction(ilVar, OpCodes.Initobj, Context.TypeResolver.Resolve(variableType));
+            AddCilInstruction(ilVar, OpCodes.Initobj, variableType);
         }
     }
 }

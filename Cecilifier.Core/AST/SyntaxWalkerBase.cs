@@ -75,11 +75,6 @@ namespace Cecilifier.Core.AST
             }
         }
 
-        protected void AddCilInstruction(string ilVar, OpCode opCode, ITypeSymbol type)
-        {
-            AddCilInstruction(ilVar, opCode, Context.TypeResolver.Resolve(type));
-        }
-
         protected void InsertCilInstructionAfter<T>(LinkedListNode<string> instruction, string ilVar, OpCode opCode, T arg = default)
         {
             var instVar = CreateCilInstruction(ilVar, opCode, arg);
@@ -89,7 +84,12 @@ namespace Cecilifier.Core.AST
             Context.MoveLineAfter(Context.CurrentLine, instruction.Next);
         }
 
-        protected void AddCilInstruction<T>(string ilVar, OpCode opCode, T operand)
+        protected void AddCilInstruction(string ilVar, OpCode opCode, ITypeSymbol type)
+        {
+            AddCilInstruction(ilVar, opCode, Context.TypeResolver.Resolve(type));
+        }
+        
+        protected void AddCilInstruction<T>(string ilVar, OpCode opCode, T operand = default)
         {
             var operandStr = operand == null ? string.Empty : $", {operand}";
             AddCecilExpression($"{ilVar}.Emit({opCode.ConstantName()}{operandStr});");
@@ -97,7 +97,7 @@ namespace Cecilifier.Core.AST
 
         protected void AddCilInstruction(string ilVar, OpCode opCode)
         {
-            AddCecilExpression($"{ilVar}.Emit({opCode.ConstantName()});");
+            AddCilInstruction<string>(ilVar, opCode);
         }
         
         protected string AddCilInstructionWithLocalVariable(string ilVar, OpCode opCode)
@@ -158,12 +158,7 @@ namespace Cecilifier.Core.AST
 
         protected string ImportExpressionForType(Type type)
         {
-            return ImportExpressionForType(type.FullName);
-        }
-
-        private static string ImportExpressionForType(string typeName)
-        {
-            return Utils.ImportFromMainModule($"typeof({typeName})");
+            return Utils.ImportFromMainModule($"typeof({type.FullName})");
         }
 
         protected string TypeModifiersToCecil(BaseTypeDeclarationSyntax node)

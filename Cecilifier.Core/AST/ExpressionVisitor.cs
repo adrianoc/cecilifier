@@ -686,7 +686,7 @@ namespace Cecilifier.Core.AST
             }
             else if (conversion.IsImplicit && conversion.IsReference && castSource.Type.TypeKind == TypeKind.TypeParameter)
             {
-                AddCilInstruction(ilVar, OpCodes.Box, Context.TypeResolver.Resolve(castSource.Type));
+                AddCilInstruction(ilVar, OpCodes.Box, castSource.Type);
             }
             else if (conversion.IsExplicit)
             {
@@ -706,7 +706,7 @@ namespace Cecilifier.Core.AST
             using var _ = LineInformationTracker.Track(Context, node);
             var getTypeFromHandleSymbol = (IMethodSymbol) Context.SemanticModel.Compilation.GetTypeByMetadataName(typeof(Type).FullName).GetMembers("GetTypeFromHandle").First();
             
-            AddCilInstruction(ilVar, OpCodes.Ldtoken, Context.TypeResolver.Resolve(Context.GetTypeInfo(node.Type).Type));
+            AddCilInstruction(ilVar, OpCodes.Ldtoken, Context.GetTypeInfo(node.Type).Type);
             AddCilInstruction(ilVar, OpCodes.Call, getTypeFromHandleSymbol.MethodResolverExpression(Context));
         }
 
@@ -1327,7 +1327,7 @@ namespace Cecilifier.Core.AST
 
         private void ProcessArrayCreation(ITypeSymbol elementType, InitializerExpressionSyntax initializer)
         {
-            AddCilInstruction(ilVar, OpCodes.Newarr, Context.TypeResolver.Resolve(elementType));
+            AddCilInstruction(ilVar, OpCodes.Newarr, elementType);
 
             var stelemOpCode = StelemOpCodeFor(elementType);
             for (var i = 0; i < initializer?.Expressions.Count; i++)
@@ -1339,7 +1339,7 @@ namespace Cecilifier.Core.AST
                 var itemType = Context.GetTypeInfo(initializer.Expressions[i]);
                 if (elementType.IsReferenceType && itemType.Type != null && itemType.Type.IsValueType)
                 {
-                    AddCilInstruction(ilVar, OpCodes.Box, Context.TypeResolver.Resolve(itemType.Type));
+                    AddCilInstruction(ilVar, OpCodes.Box, itemType.Type);
                 }
 
                 AddCilInstruction(ilVar, stelemOpCode);
