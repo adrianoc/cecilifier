@@ -9,6 +9,7 @@ using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Mono.Cecil.Cil;
 
 namespace Cecilifier.Core.Misc
 {
@@ -178,6 +179,18 @@ namespace Cecilifier.Core.Misc
         public bool HasFlag(string name)
         {
             return flags.Contains(name);
+        }
+
+        public void EmitCilInstruction<T>(string ilVar, OpCode opCode, T operand = default)
+        {
+            var operandStr = operand == null ? string.Empty : $", {operand}";
+            WriteCecilExpression($"{ilVar}.Emit({opCode.ConstantName()}{operandStr});");
+            WriteNewLine();
+        }
+        
+        public void EmitCilInstruction(string ilVar, OpCode opCode)
+        {
+            EmitCilInstruction<string>(ilVar, opCode, null);
         }
 
         internal void SetFlag(string name)

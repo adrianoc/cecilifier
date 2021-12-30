@@ -21,7 +21,8 @@ namespace Cecilifier.Core.AST
             switch (info.Symbol.Kind)
             {
                 case SymbolKind.Local:
-                    AddCilInstruction(ilVar, OpCodes.Ldloca_S, Context.DefinitionVariables.GetVariable(node.Identifier.ValueText, VariableMemberKind.LocalVariable).VariableName);
+                    string operand = Context.DefinitionVariables.GetVariable(node.Identifier.ValueText, VariableMemberKind.LocalVariable).VariableName;
+                    Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, operand);
                     break;
 
                 case SymbolKind.Field:
@@ -29,26 +30,28 @@ namespace Cecilifier.Core.AST
                     var fieldResolverExpression = fs.FieldResolverExpression(Context);
                     if (info.Symbol.IsStatic)
                     {
-                        AddCilInstruction(ilVar, OpCodes.Ldsflda, fieldResolverExpression);
+                        Context.EmitCilInstruction(ilVar, OpCodes.Ldsflda, fieldResolverExpression);
                     }
                     else
                     {
-                        AddCilInstruction(ilVar, OpCodes.Ldarg_0);
-                        AddCilInstruction(ilVar, OpCodes.Ldflda, fieldResolverExpression);
+                        Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
+                        Context.EmitCilInstruction(ilVar, OpCodes.Ldflda, fieldResolverExpression);
                     }
 
                     break;
 
                 case SymbolKind.Parameter:
                     var parameterSymbol = (IParameterSymbol) info.Symbol;
-                    AddCilInstruction(ilVar, parameterSymbol.RefKind == RefKind.None ? OpCodes.Ldarga : OpCodes.Ldarg, parameterSymbol.Ordinal);
+                    OpCode opCode = parameterSymbol.RefKind == RefKind.None ? OpCodes.Ldarga : OpCodes.Ldarg;
+                    Context.EmitCilInstruction(ilVar, opCode, parameterSymbol.Ordinal);
                     break;
             }
         }
 
         public override void VisitLocalDeclarationStatement(LocalDeclarationStatementSyntax node)
         {
-            AddCilInstruction(ilVar, OpCodes.Ldloca_S, Context.DefinitionVariables.GetVariable(node.Declaration.Variables[0].Identifier.ValueText, VariableMemberKind.LocalVariable).VariableName);
+            string operand = Context.DefinitionVariables.GetVariable(node.Declaration.Variables[0].Identifier.ValueText, VariableMemberKind.LocalVariable).VariableName;
+            Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, operand);
         }
     }
 }

@@ -25,7 +25,7 @@ namespace Cecilifier.Core.AST
 
             var elsePrologVarName = Context.Naming.Label("elseEntryPoint");
             WriteCecilExpression(Context, $"var {elsePrologVarName} = {_ilVar}.Create(OpCodes.Nop);");
-            AddCilInstruction(_ilVar, OpCodes.Brfalse, elsePrologVarName);
+            Context.EmitCilInstruction(_ilVar, OpCodes.Brfalse, elsePrologVarName);
 
             Context.WriteComment("if body");
             StatementVisitor.Visit(Context, _ilVar, node.Statement);

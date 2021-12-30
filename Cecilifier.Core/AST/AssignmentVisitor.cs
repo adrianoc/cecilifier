@@ -50,7 +50,7 @@ namespace Cecilifier.Core.AST
             if (!HandleIndexer(node, lastInstructionLoadingRhs))
             {
                 Context.MoveLinesToEnd(InstructionPrecedingValueToLoad, lastInstructionLoadingRhs);
-                AddCilInstruction(ilVar, OpCodes.Stelem_Ref);
+                Context.EmitCilInstruction(ilVar, OpCodes.Stelem_Ref);
             }
         }
      
@@ -148,7 +148,8 @@ namespace Cecilifier.Core.AST
                 // bellow it.
                 AddMethodCall(ilVar, propertySymbol.GetMethod);
                 Context.MoveLinesToEnd(InstructionPrecedingValueToLoad, lastInstructionLoadingRhs);
-                AddCilInstruction(ilVar, propertySymbol.Type.Stind());
+                OpCode opCode = propertySymbol.Type.Stind();
+                Context.EmitCilInstruction(ilVar, opCode);
             }
             else
             {
@@ -168,14 +169,16 @@ namespace Cecilifier.Core.AST
         {
             var storeOpCode = field.IsStatic ? OpCodes.Stsfld : OpCodes.Stfld;
             if (field.IsVolatile)
-                AddCilInstruction(ilVar, OpCodes.Volatile);
-            
-            AddCilInstruction(ilVar, storeOpCode, Context.DefinitionVariables.GetVariable(field.Name, VariableMemberKind.Field, field.ContainingType.Name).VariableName);
+                Context.EmitCilInstruction(ilVar, OpCodes.Volatile);
+
+            string operand = Context.DefinitionVariables.GetVariable(field.Name, VariableMemberKind.Field, field.ContainingType.Name).VariableName;
+            Context.EmitCilInstruction(ilVar, storeOpCode, operand);
         }
 
         private void LocalVariableAssignment(ILocalSymbol localVariable)
         {
-            AddCilInstruction(ilVar, OpCodes.Stloc, Context.DefinitionVariables.GetVariable(localVariable.Name, VariableMemberKind.LocalVariable).VariableName);
+            string operand = Context.DefinitionVariables.GetVariable(localVariable.Name, VariableMemberKind.LocalVariable).VariableName;
+            Context.EmitCilInstruction(ilVar, OpCodes.Stloc, operand);
         }
 
         private void ParameterAssignment(IParameterSymbol parameter)
@@ -184,17 +187,18 @@ namespace Cecilifier.Core.AST
             {
                 if (parameter.Type.TypeKind == TypeKind.Array)
                 {
-                    AddCilInstruction(ilVar, OpCodes.Stelem_Ref);
+                    Context.EmitCilInstruction(ilVar, OpCodes.Stelem_Ref);
                 }
                 else
                 {
                     var paramVariable = Context.DefinitionVariables.GetVariable(parameter.Name, VariableMemberKind.Parameter).VariableName;
-                    AddCilInstruction(ilVar, OpCodes.Starg_S, paramVariable);
+                    Context.EmitCilInstruction(ilVar, OpCodes.Starg_S, paramVariable);
                 }
             }
             else
             {
-                AddCilInstruction(ilVar, parameter.Type.Stind());
+                OpCode opCode = parameter.Type.Stind();
+                Context.EmitCilInstruction(ilVar, opCode);
             }
         }
 

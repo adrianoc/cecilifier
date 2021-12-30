@@ -40,7 +40,7 @@ partial class ExpressionVisitor
         if (rankNode.IsKind(SyntaxKind.OmittedArraySizeExpression))
         {
             Utils.EnsureNotNull(node.Initializer);
-            AddCilInstruction(ilVar, OpCodes.Ldc_I4, node.Initializer.Expressions.Count);
+            Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, node.Initializer.Expressions.Count);
         }
 
         var stackallocSpanAssignmentTracker = new StackallocSpanAssignmentTracker(node, Context);
@@ -54,9 +54,9 @@ partial class ExpressionVisitor
         {
             sizeInBytes = (uint) Int32.Parse(rankNode.GetFirstToken().Text) * arrayElementTypeSize;
             stackallocSpanAssignmentTracker.RememberConstantAllocationLength(sizeInBytes);
-            AddCilInstruction(ilVar, OpCodes.Ldc_I4, sizeInBytes);
-            AddCilInstruction(ilVar, OpCodes.Conv_U);
-            AddCilInstruction(ilVar, OpCodes.Localloc);
+            Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, sizeInBytes);
+            Context.EmitCilInstruction(ilVar, OpCodes.Conv_U);
+            Context.EmitCilInstruction(ilVar, OpCodes.Localloc);
         }
         else
         {
@@ -65,17 +65,18 @@ partial class ExpressionVisitor
             {
                 // result of the stackalloc is being assigned to a Span<T>. We need to initialize it later.. for that we need
                 // the length (in bytes) of the allocated memory. So we store in a new local variable.
-                AddCilInstruction(ilVar, OpCodes.Stloc, stackallocSpanAssignmentTracker.SpanLengthVariable);
-                AddCilInstruction(ilVar, OpCodes.Ldloc, stackallocSpanAssignmentTracker.SpanLengthVariable);
+                Context.EmitCilInstruction(ilVar, OpCodes.Stloc, stackallocSpanAssignmentTracker.SpanLengthVariable);
+                Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, stackallocSpanAssignmentTracker.SpanLengthVariable);
             }
             
-            AddCilInstruction(ilVar, OpCodes.Conv_U);
+            Context.EmitCilInstruction(ilVar, OpCodes.Conv_U);
             if (arrayElementTypeSize > 1) // Optimization
             {
-                AddCilInstruction(ilVar, OpCodes.Sizeof, ResolveType(arrayType.ElementType));
-                AddCilInstruction(ilVar, OpCodes.Mul_Ovf_Un);
+                string operand = ResolveType(arrayType.ElementType);
+                Context.EmitCilInstruction(ilVar, OpCodes.Sizeof, operand);
+                Context.EmitCilInstruction(ilVar, OpCodes.Mul_Ovf_Un);
             }
-            AddCilInstruction(ilVar, OpCodes.Localloc);
+            Context.EmitCilInstruction(ilVar, OpCodes.Localloc);
         }
 
         if (node.Initializer != null)
@@ -84,17 +85,18 @@ partial class ExpressionVisitor
         if (stackallocSpanAssignmentTracker)
         {
             if (stackallocSpanAssignmentTracker.IsConstantAllocationLength)
-                AddCilInstruction(ilVar, OpCodes.Ldc_I4, stackallocSpanAssignmentTracker.ConstantAllocationSizeInBytes);
+                Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, stackallocSpanAssignmentTracker.ConstantAllocationSizeInBytes);
             else
-                AddCilInstruction(ilVar, stackallocSpanAssignmentTracker.LoadOpCode, stackallocSpanAssignmentTracker.SpanLengthVariable);
+                Context.EmitCilInstruction(ilVar, stackallocSpanAssignmentTracker.LoadOpCode, stackallocSpanAssignmentTracker.SpanLengthVariable);
 
             var spanInstanceType = $"{Utils.ImportFromMainModule("typeof(Span<>)")}.MakeGenericInstanceType({ResolveType(arrayType.ElementType)})";
             var spanCtorVar = Context.Naming.SyntheticVariable("spanCtor", ElementKind.LocalVariable);
             AddCecilExpression($"var {spanCtorVar} = new MethodReference(\".ctor\", {Context.TypeResolver.Bcl.System.Void}, {spanInstanceType}) {{ HasThis = true }};");
             AddCecilExpression($"{spanCtorVar}.Parameters.Add({CecilDefinitionsFactory.Parameter("ptr", RefKind.None, Context.TypeResolver.Resolve("void*"))});");
             AddCecilExpression($"{spanCtorVar}.Parameters.Add({CecilDefinitionsFactory.Parameter("length", RefKind.None, Context.TypeResolver.Bcl.System.Int32)});");
-            
-            AddCilInstruction(ilVar, OpCodes.Newobj, Utils.ImportFromMainModule($"{spanCtorVar}"));
+
+            string operand = Utils.ImportFromMainModule($"{spanCtorVar}");
+            Context.EmitCilInstruction(ilVar, OpCodes.Newobj, operand);
         }
     }
 }

@@ -152,7 +152,7 @@ namespace Cecilifier.Core.AST
                     WithCurrentMethod(declaringTypeName, methodVar, nameUsedInRegisteredVariable, parameters.Select(p => Context.GetTypeInfo(p.Type).Type.Name).ToArray(), runWithCurrent);
                     if (!isAbstract && !node.DescendantNodes().Any(n => n.IsKind(SyntaxKind.ReturnStatement)))
                     {
-                        AddCilInstruction(ilVar, OpCodes.Ret);
+                        Context.EmitCilInstruction(ilVar, OpCodes.Ret);
                     }
                 }
                 else

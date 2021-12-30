@@ -67,11 +67,12 @@ namespace Cecilifier.Core.AST
                 foreach (var t in method.TypeArguments)
                     AddCecilExpression($"{genInstVar}.GenericArguments.Add({Context.TypeResolver.Resolve(t)});");
 
-                AddCilInstruction(ilVar, opCode, genInstVar);
+                Context.EmitCilInstruction(ilVar, opCode, genInstVar);
             }
             else
             {
-                AddCilInstruction(ilVar, opCode, method.MethodResolverExpression(Context));
+                string operand = method.MethodResolverExpression(Context);
+                Context.EmitCilInstruction(ilVar, opCode, operand);
             }
         }
 
@@ -86,20 +87,10 @@ namespace Cecilifier.Core.AST
 
         protected void AddCilInstruction(string ilVar, OpCode opCode, ITypeSymbol type)
         {
-            AddCilInstruction(ilVar, opCode, Context.TypeResolver.Resolve(type));
-        }
-        
-        protected void AddCilInstruction<T>(string ilVar, OpCode opCode, T operand = default)
-        {
-            var operandStr = operand == null ? string.Empty : $", {operand}";
-            AddCecilExpression($"{ilVar}.Emit({opCode.ConstantName()}{operandStr});");
+            string operand = Context.TypeResolver.Resolve(type);
+            Context.EmitCilInstruction(ilVar, opCode, operand);
         }
 
-        protected void AddCilInstruction(string ilVar, OpCode opCode)
-        {
-            AddCilInstruction<string>(ilVar, opCode);
-        }
-        
         protected string AddCilInstructionWithLocalVariable(string ilVar, OpCode opCode)
         {
             var instVar = CreateCilInstruction(ilVar, opCode);
@@ -323,19 +314,20 @@ namespace Cecilifier.Core.AST
             var adjustedParameterIndex = paramSymbol.Ordinal + (method.IsStatic ? 0 : 1);
             if (node.Parent.Kind() == SyntaxKind.SimpleMemberAccessExpression && paramSymbol.ContainingType.IsValueType)
             {
-                AddCilInstruction(ilVar, OpCodes.Ldarga, Context.DefinitionVariables.GetVariable(paramSymbol.Name, VariableMemberKind.Parameter).VariableName);
+                string operand = Context.DefinitionVariables.GetVariable(paramSymbol.Name, VariableMemberKind.Parameter).VariableName;
+                Context.EmitCilInstruction(ilVar, OpCodes.Ldarga, operand);
                 return;
             }
 
             if (adjustedParameterIndex > 3)
             {
-                AddCilInstruction(ilVar, OpCodes.Ldarg, adjustedParameterIndex);
+                Context.EmitCilInstruction(ilVar, OpCodes.Ldarg, adjustedParameterIndex);
             }
             else
             {
                 OpCode[] optimizedLdArgs = {OpCodes.Ldarg_0, OpCodes.Ldarg_1, OpCodes.Ldarg_2, OpCodes.Ldarg_3};
                 var loadOpCode = optimizedLdArgs[adjustedParameterIndex];
-                AddCilInstruction(ilVar, loadOpCode);
+                Context.EmitCilInstruction(ilVar, loadOpCode);
             }
             HandlePotentialDelegateInvocationOn(node, paramSymbol.Type, ilVar);
             HandlePotentialRefLoad(ilVar, node, paramSymbol.Type);
@@ -355,9 +347,10 @@ namespace Cecilifier.Core.AST
                 var isSystemIndexUsedAsIndex = IsSystemIndexUsedAsIndex(symbol, node);
                 if (isSystemIndexUsedAsIndex || node.IsKind(SyntaxKind.AddressOfExpression) || IsPseudoAssignmentToValueType() || node.Accept(new UsageVisitor(Context)) == UsageKind.CallTarget)
                 {
-                    AddCilInstruction(ilVar, opCode, Context.DefinitionVariables.GetVariable(symbolName, variableMemberKind, parentName).VariableName);
+                    string operand = Context.DefinitionVariables.GetVariable(symbolName, variableMemberKind, parentName).VariableName;
+                    Context.EmitCilInstruction(ilVar, opCode, operand);
                     if (!Context.HasFlag(Constants.ContextFlags.Fixed) && node.IsKind(SyntaxKind.AddressOfExpression))
-                        AddCilInstruction(ilVar, OpCodes.Conv_U);
+                        Context.EmitCilInstruction(ilVar, OpCodes.Conv_U);
 
                     return true;
                 }
@@ -373,8 +366,9 @@ namespace Cecilifier.Core.AST
                 var assignedValueSymbol = Context.SemanticModel.GetSymbolInfo(refExpression.Expression);
                 if (assignedValueSymbol.Symbol.IsByRef())
                     return false;
-                
-                AddCilInstruction(ilVar, opCode, Context.DefinitionVariables.GetVariable(symbolName, variableMemberKind, parentName).VariableName);
+
+                string operand = Context.DefinitionVariables.GetVariable(symbolName, variableMemberKind, parentName).VariableName;
+                Context.EmitCilInstruction(ilVar, opCode, operand);
                 return true;
             }
 
@@ -385,7 +379,8 @@ namespace Cecilifier.Core.AST
 
                 if (Context.SemanticModel.GetSymbolInfo(argument.Expression).Symbol?.IsByRef() == false)
                 {
-                    AddCilInstruction(ilVar, opCode, Context.DefinitionVariables.GetVariable(symbolName, variableMemberKind, parentName).VariableName);
+                    string operand = Context.DefinitionVariables.GetVariable(symbolName, variableMemberKind, parentName).VariableName;
+                    Context.EmitCilInstruction(ilVar, opCode, operand);
                     return true;
                 }
                 return false;
@@ -429,7 +424,10 @@ namespace Cecilifier.Core.AST
             }
             
             if (needsLoadIndirect)
-                AddCilInstruction(ilVar, LoadIndirectOpCodeFor(type.SpecialType));
+            {
+                OpCode opCode = LoadIndirectOpCodeFor(type.SpecialType);
+                Context.EmitCilInstruction(ilVar, opCode);
+            }
         }
 
         private IParameterSymbol ParameterSymbolFromArgumentSyntax(ArgumentSyntax argument)
@@ -510,20 +508,22 @@ namespace Cecilifier.Core.AST
 
             if (typeSymbol is IFunctionPointerTypeSymbol functionPointer)
             {
-                AddCilInstruction(ilVar, OpCodes.Calli, CecilDefinitionsFactory.CallSite(Context.TypeResolver, functionPointer));
+                string operand = CecilDefinitionsFactory.CallSite(Context.TypeResolver, functionPointer);
+                Context.EmitCilInstruction(ilVar, OpCodes.Calli, operand);
                 return;
             }
 
             var localDelegateDeclaration = Context.TypeResolver.ResolveLocalVariableType(typeSymbol);
             if (localDelegateDeclaration != null)
             {
-                AddCilInstruction(ilVar, OpCodes.Callvirt, $"{localDelegateDeclaration}.Methods.Single(m => m.Name == \"Invoke\")");
+                string operand = $"{localDelegateDeclaration}.Methods.Single(m => m.Name == \"Invoke\")";
+                Context.EmitCilInstruction(ilVar, OpCodes.Callvirt, operand);
             }
             else
             {
                 var invokeMethod = (IMethodSymbol) typeSymbol.GetMembers("Invoke").SingleOrDefault();
                 var resolvedMethod = invokeMethod.MethodResolverExpression(Context);
-                AddCilInstruction(ilVar, OpCodes.Callvirt, resolvedMethod);
+                Context.EmitCilInstruction(ilVar, OpCodes.Callvirt, resolvedMethod);
             }
         }
 

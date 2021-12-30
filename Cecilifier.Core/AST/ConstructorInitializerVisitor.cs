@@ -45,7 +45,8 @@ namespace Cecilifier.Core.AST
             var info = Context.SemanticModel.GetSymbolInfo(node);
             var targetCtor = (IMethodSymbol) info.Symbol;
 
-            AddCilInstruction(ilVar, OpCodes.Call, targetCtor.MethodResolverExpression(Context));
+            string operand = targetCtor.MethodResolverExpression(Context);
+            Context.EmitCilInstruction(ilVar, OpCodes.Call, operand);
 
             var declaringType = (BaseTypeDeclarationSyntax) node.Parent.Parent;
 

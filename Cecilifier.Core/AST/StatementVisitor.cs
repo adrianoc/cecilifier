@@ -50,7 +50,7 @@ namespace Cecilifier.Core.AST
             
             // Condition
             ExpressionVisitor.Visit(Context, _ilVar, node.Condition);
-            AddCilInstruction(_ilVar, OpCodes.Brfalse, forEndLabel);
+            Context.EmitCilInstruction(_ilVar, OpCodes.Brfalse, forEndLabel);
             
             // Body
             node.Statement.Accept(this);
@@ -61,7 +61,7 @@ namespace Cecilifier.Core.AST
                 ExpressionVisitor.Visit(Context, _ilVar, incrementExpression);
             }
             
-            AddCilInstruction(_ilVar, OpCodes.Br, forConditionLabel);
+            Context.EmitCilInstruction(_ilVar, OpCodes.Br, forConditionLabel);
             WriteCecilExpression(Context, $"{_ilVar}.Append({forEndLabel});");
         }
     
@@ -71,7 +71,7 @@ namespace Cecilifier.Core.AST
             var evaluatedExpressionVariable = AddLocalVariableToCurrentMethod("switchCondition", switchExpressionType);
 
             ExpressionVisitor.Visit(Context, _ilVar, node.Expression);
-            AddCilInstruction(_ilVar, OpCodes.Stloc, evaluatedExpressionVariable); // stores evaluated expression in local var
+            Context.EmitCilInstruction(_ilVar, OpCodes.Stloc, evaluatedExpressionVariable); // stores evaluated expression in local var
             
             // Add label to end of switch
             var endOfSwitchLabel = CreateCilInstruction(_ilVar, OpCodes.Nop);
@@ -84,16 +84,18 @@ namespace Cecilifier.Core.AST
             {
                 if (switchSection.Labels.First().Kind() == SyntaxKind.DefaultSwitchLabel)
                 {
-                    AddCilInstruction(_ilVar, OpCodes.Br, nextTestLabels[currentLabelIndex]);   
+                    string operand = nextTestLabels[currentLabelIndex];
+                    Context.EmitCilInstruction(_ilVar, OpCodes.Br, operand);   
                     continue;
                 }
                 
                 foreach (var sectionLabel in switchSection.Labels)
                 {
                     Context.WriteComment($"{sectionLabel.ToString()} (condition)");
-                    AddCilInstruction(_ilVar, OpCodes.Ldloc, evaluatedExpressionVariable);
+                    Context.EmitCilInstruction(_ilVar, OpCodes.Ldloc, evaluatedExpressionVariable);
                     ExpressionVisitor.Visit(Context, _ilVar, sectionLabel);
-                    AddCilInstruction(_ilVar, OpCodes.Beq_S, nextTestLabels[currentLabelIndex]);
+                    string operand = nextTestLabels[currentLabelIndex];
+                    Context.EmitCilInstruction(_ilVar, OpCodes.Beq_S, operand);
                     Context.WriteNewLine();
                 }
                 currentLabelIndex++;
@@ -101,7 +103,7 @@ namespace Cecilifier.Core.AST
 
             // if at runtime the code hits this point it means none of the labels matched.
             // so, just jump to the end of the switch.
-            AddCilInstruction(_ilVar, OpCodes.Br, endOfSwitchLabel);
+            Context.EmitCilInstruction(_ilVar, OpCodes.Br, endOfSwitchLabel);
             
             // Write the statements for each switch section...
             currentLabelIndex = 0;
@@ -130,7 +132,7 @@ namespace Cecilifier.Core.AST
                 throw new InvalidOperationException("Invalid break.");
             }
 
-            AddCilInstruction(_ilVar, OpCodes.Br, breakToInstructionVars.Peek());
+            Context.EmitCilInstruction(_ilVar, OpCodes.Br, breakToInstructionVars.Peek());
         }
 
         public override void VisitFixedStatement(FixedStatementSyntax node)
@@ -146,7 +148,7 @@ namespace Cecilifier.Core.AST
         public override void VisitReturnStatement(ReturnStatementSyntax node)
         {
             ExpressionVisitor.Visit(Context, _ilVar, node);
-            AddCilInstruction(_ilVar, OpCodes.Ret);
+            Context.EmitCilInstruction(_ilVar, OpCodes.Ret);
         }
 
         public override void VisitExpressionStatement(ExpressionStatementSyntax node)
@@ -176,7 +178,7 @@ namespace Cecilifier.Core.AST
             var firstInstructionAfterTryCatchBlock = CreateCilInstruction(_ilVar, OpCodes.Nop);
             exceptionHandlerTable[^1].HandlerEnd = firstInstructionAfterTryCatchBlock; // sets up last handler end instruction
 
-            AddCilInstruction(_ilVar, OpCodes.Leave, firstInstructionAfterTryCatchBlock);
+            Context.EmitCilInstruction(_ilVar, OpCodes.Leave, firstInstructionAfterTryCatchBlock);
 
             for (var i = 0; i < node.Catches.Count; i++)
             {
@@ -242,7 +244,7 @@ namespace Cecilifier.Core.AST
             exceptionHandlerTable[currentIndex].CatchType = ResolveType(node.Declaration.Type);
 
             VisitCatchClause(node);
-            AddCilInstruction(_ilVar, OpCodes.Leave, firstInstructionAfterTryCatchBlock);
+            Context.EmitCilInstruction(_ilVar, OpCodes.Leave, firstInstructionAfterTryCatchBlock);
         }
 
         private void HandleFinallyClause(FinallyClauseSyntax node, ExceptionHandlerEntry[] exceptionHandlerTable)
@@ -269,7 +271,7 @@ namespace Cecilifier.Core.AST
             }
 
             base.VisitFinallyClause(node);
-            AddCilInstruction(_ilVar, OpCodes.Endfinally);
+            Context.EmitCilInstruction(_ilVar, OpCodes.Endfinally);
         }
 
         private void AddLocalVariable(TypeSyntax type, VariableDeclaratorSyntax localVar, DefinitionVariable methodVar)
@@ -303,7 +305,7 @@ namespace Cecilifier.Core.AST
                 // code is something like `Index field = ^5`; 
                 // in this case we need to load the address of the field since the expression ^5 (IndexerExpression) will result in a call to System.Index ctor (which is a value type and expects
                 // the address of the value type to be in the top of the stack
-                AddCilInstruction(_ilVar, OpCodes.Ldloca, localVarDef.VariableName);
+                Context.EmitCilInstruction(_ilVar, OpCodes.Ldloca, localVarDef.VariableName);
             }
 
             if (ExpressionVisitor.Visit(Context, _ilVar, localVar.Initializer))
@@ -314,10 +316,11 @@ namespace Cecilifier.Core.AST
             var valueBeingAssignedIsByRef = Context.SemanticModel.GetSymbolInfo(localVar.Initializer.Value).Symbol.IsByRef();
             if (!variableType.IsByRef() && valueBeingAssignedIsByRef)
             {
-                AddCilInstruction(_ilVar, LoadIndirectOpCodeFor(variableType.SpecialType));
+                OpCode opCode = LoadIndirectOpCodeFor(variableType.SpecialType);
+                Context.EmitCilInstruction(_ilVar, opCode);
             }
             
-            AddCilInstruction(_ilVar, OpCodes.Stloc, localVarDef.VariableName);
+            Context.EmitCilInstruction(_ilVar, OpCodes.Stloc, localVarDef.VariableName);
         }
 
         private void HandleVariableDeclaration(VariableDeclarationSyntax declaration)
