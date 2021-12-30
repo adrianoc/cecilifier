@@ -197,8 +197,7 @@ namespace Cecilifier.Core.AST
             }
             else
             {
-                OpCode opCode = parameter.Type.Stind();
-                Context.EmitCilInstruction(ilVar, opCode);
+                Context.EmitCilInstruction(ilVar, parameter.Type.Stind());
             }
         }
 

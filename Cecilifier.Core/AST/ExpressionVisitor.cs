@@ -212,7 +212,7 @@ namespace Cecilifier.Core.AST
             node.Expression.Accept(this);
             node.ArgumentList.Accept(this);
 
-            var targetType = expressionInfo.Symbol.Accept(new ElementTypeSymbolResolver());
+            var targetType = expressionInfo.Symbol.Accept(ElementTypeSymbolResolver.Instance);
             if (!node.Parent.IsKind(SyntaxKind.RefExpression) && _opCodesForLdElem.TryGetValue(targetType.SpecialType, out var opCode))
             {
                 Context.EmitCilInstruction(ilVar, opCode);
@@ -1113,15 +1113,8 @@ namespace Cecilifier.Core.AST
             var delegateType = firstParentNotPartOfName switch
             {
                 ArgumentSyntax arg => ((IMethodSymbol) Context.SemanticModel.GetSymbolInfo(arg.Parent.Parent).Symbol).Parameters[arg.FirstAncestorOrSelf<ArgumentListSyntax>().Arguments.IndexOf(arg)].Type,
-                    
-                AssignmentExpressionSyntax assignment => Context.SemanticModel.GetSymbolInfo(assignment.Left).Symbol switch
-                {
-                    ILocalSymbol local => local.Type,
-                    IParameterSymbol param => param.Type,
-                    IFieldSymbol field => field.Type,
-                    IPropertySymbol prop => prop.Type,
-                    _ => throw new NotSupportedException($"Assignment to {assignment.Left} ({assignment.Kind()}) is not supported.")
-                },
+                
+                AssignmentExpressionSyntax assignment => Context.SemanticModel.GetSymbolInfo(assignment.Left).Symbol.Accept(ElementTypeSymbolResolver.Instance),
                     
                 VariableDeclarationSyntax variableDeclaration => Context.SemanticModel.GetTypeInfo(variableDeclaration.Type).Type,
                     
@@ -1361,6 +1354,8 @@ namespace Cecilifier.Core.AST
 
     internal class ElementTypeSymbolResolver : SymbolVisitor<ITypeSymbol>
     {
+        public static ElementTypeSymbolResolver Instance = new ElementTypeSymbolResolver();
+        
         public override ITypeSymbol VisitEvent(IEventSymbol symbol)
         {
             return symbol.Type.Accept(this);
