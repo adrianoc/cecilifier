@@ -125,7 +125,8 @@ public class SystemIndexTests : CecilifierUnitTestBase
         Console.WriteLine(cecilifiedCode);
     }
 
-    private const string ResolvedSystemIndexOpImplicit = @"assembly\.MainModule\.ImportReference\(TypeHelpers\.ResolveMethod\(""System\.Private\.CoreLib"", ""System\.Index"", ""op_Implicit"",System\.Reflection\.BindingFlags\.Default\|System\.Reflection.BindingFlags.Static\|System.Reflection.BindingFlags.Public,"""", ""System.Int32""\)\)";
+    public const string ResolvedSystemIndexOpImplicit = @"assembly\.MainModule\.ImportReference\(TypeHelpers\.ResolveMethod\(""System\.Private\.CoreLib"", ""System\.Index"", ""op_Implicit"",System\.Reflection\.BindingFlags\.Default\|System\.Reflection.BindingFlags.Static\|System.Reflection.BindingFlags.Public,"""", ""System.Int32""\)\)";
+    public const string ResolvedSystemIndexCtor = @"assembly\.MainModule\.ImportReference\(TypeHelpers\.ResolveMethod\(""System\.Private\.CoreLib"", ""System\.Index"", "".ctor"",System\.Reflection\.BindingFlags\.Default\|System\.Reflection.BindingFlags.Instance\|System.Reflection.BindingFlags.Public,"""", ""System.Int32"", ""System.Boolean""\)\)";
 }
 
 internal static class SymbolKindExtensions

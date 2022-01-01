@@ -715,10 +715,40 @@ namespace Cecilifier.Core.AST
             string operand = getTypeFromHandleSymbol.MethodResolverExpression(Context);
             Context.EmitCilInstruction(ilVar, OpCodes.Call, operand);
         }
+        
+        public override void VisitRangeExpression(RangeExpressionSyntax node)
+        {
+            using var _ = LineInformationTracker.Track(Context, node);
+
+            VisitIndex(node.LeftOperand);
+            VisitIndex(node.RightOperand);
+
+            var indexType = Context.SemanticModel.Compilation.GetTypeByMetadataName(typeof(Index).FullName);
+            var rangeCtor = Context.SemanticModel.Compilation.GetTypeByMetadataName(typeof(Range).FullName)
+                ?.GetMembers(".ctor")
+                .OfType<IMethodSymbol>()
+                .Single(ctor => ctor.Parameters.Length == 2 && ctor.Parameters[0].Type == indexType && ctor.Parameters[1].Type == indexType);
+            
+            Context.EmitCilInstruction(ilVar, OpCodes.Newobj, rangeCtor.MethodResolverExpression(Context));
+
+            void VisitIndex(ExpressionSyntax index)
+            {
+                using var _ = LineInformationTracker.Track(Context, index);
+                index.Accept(this);
+                switch (index.Kind())
+                {
+                    case SyntaxKind.NumericLiteralExpression:
+                        InjectRequiredConversions(index);
+                        break;
+                    
+                    case SyntaxKind.IndexExpression:
+                    case SyntaxKind.IdentifierName: break; // A variable typed as System.Index, it has already been loaded when visiting the index...
+                }
+            }
+        }
 
         public override void VisitSimpleLambdaExpression(SimpleLambdaExpressionSyntax node) => HandleLambdaExpression(node);
         public override void VisitParenthesizedLambdaExpression(ParenthesizedLambdaExpressionSyntax node) => HandleLambdaExpression(node);
-        public override void VisitRangeExpression(RangeExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitAwaitExpression(AwaitExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitTupleExpression(TupleExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitIsPatternExpression(IsPatternExpressionSyntax node) => LogUnsupportedSyntax(node);
@@ -778,7 +808,7 @@ namespace Cecilifier.Core.AST
             }
 
             // if it is an index assignment through a MRE we do need to visit lhs of the expression
-            skipLeftSideVisitingInAssignment = !isAssignmentToMemberReference;
+            skipLeftSideVisitingInAssignment = !isAssignmentToMemberReference && !node.Parent.IsKind(SyntaxKind.RangeExpression);
         }
 
         private void ProcessIndexerExpressionInElementAccessExpression(PrefixUnaryExpressionSyntax indexerExpression, ElementAccessExpressionSyntax? elementAccessExpressionSyntax)
