@@ -735,7 +735,15 @@ namespace Cecilifier.Core.AST
 
         private void ProcessIndexerExpression(PrefixUnaryExpressionSyntax node)
         {
-            /*
+            var elementAccessExpression = node.Ancestors().OfType<ElementAccessExpressionSyntax>().FirstOrDefault();
+            if (elementAccessExpression != null)
+            {
+                ProcessIndexerExpressionInElementAccessExpression(node, elementAccessExpression);
+                return;
+            }
+            
+            /* TODO: this comment is at least not complete.. maybe misleading or wrong...
+             * 
              * node is something like '^3'
              * in this scenario we either need to 1) initialize some storage (that should be typed as System.Index) if such storage
              * already exists (for instance, we have an assignment to a parameter, a local variable or to a field) or 2)
@@ -771,6 +779,29 @@ namespace Cecilifier.Core.AST
 
             // if it is an index assignment through a MRE we do need to visit lhs of the expression
             skipLeftSideVisitingInAssignment = !isAssignmentToMemberReference;
+        }
+
+        private void ProcessIndexerExpressionInElementAccessExpression(PrefixUnaryExpressionSyntax indexerExpression, ElementAccessExpressionSyntax? elementAccessExpressionSyntax)
+        {
+            Utils.EnsureNotNull(elementAccessExpressionSyntax);
+
+            // We have an indexer expression (^x) used in as an argument in a element access expression (EAE) s[^x]
+            Context.EmitCilInstruction(ilVar, OpCodes.Dup); // Duplicate the target of the EAE
+            
+            var indexed = Context.SemanticModel.GetTypeInfo(elementAccessExpressionSyntax.Expression);
+            Utils.EnsureNotNull(indexed.Type, "Cannot be null.");
+            if (indexed.Type.Name == "Span")
+            {
+                AddMethodCall(ilVar, ((IPropertySymbol)indexed.Type.GetMembers("Length").Single()).GetMethod);
+            }
+            else
+            {
+                Context.EmitCilInstruction(ilVar, OpCodes.Ldlen);
+            }
+
+            Context.EmitCilInstruction(ilVar, OpCodes.Conv_I4);
+            indexerExpression.Operand.Accept(this);
+            Context.EmitCilInstruction(ilVar, OpCodes.Sub);
         }
         
         private bool TryProcessNoArgsCtorInvocationOnValueType(ObjectCreationExpressionSyntax node, IMethodSymbol methodSymbol, SymbolInfo ctorInfo)
@@ -1223,13 +1254,13 @@ namespace Cecilifier.Core.AST
             {
                 AddCilInstruction(ilVar, OpCodes.Box, typeInfo.Type);
             }
-            else if (conversion.IsIdentity && typeInfo.Type.Name == "Index" && loadArrayIntoStack != null)
+            else if (conversion.IsIdentity && typeInfo.Type.Name == "Index" && !expression.IsKind(SyntaxKind.IndexExpression) && loadArrayIntoStack != null)
             {
-                // We are indexing an array/indexer using System.Index; In this case
+                // We are indexing an array/indexer (this[]) using a System.Index variable; In this case
                 // we need to convert from System.Index to *int* which is done through
                 // the method System.Index::GetOffset(int32)
                 loadArrayIntoStack();
-
+            
                 var indexed = Context.SemanticModel.GetTypeInfo(expression.Ancestors().OfType<ElementAccessExpressionSyntax>().Single().Expression);
                 Utils.EnsureNotNull(indexed.Type, "Cannot be null.");
                 if (indexed.Type.Name == "Span")

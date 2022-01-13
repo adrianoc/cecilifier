@@ -23,32 +23,44 @@ public class SystemIndexTests : CecilifierUnitTestBase
     }
 
     [Test]
-    public void InlineUsedToIndexArray_GetOffset_IsCalled()
+    public void IndexExpression_UsedToIndexArray()
     {
         var result = RunCecilifier(@"class C { int M(int []a) => a[^5]; }");
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
 
         Assert.That(cecilifiedCode, Does.Match(
             @"(il_M_\d\.Emit\(OpCodes\.)Ldarg_1\);\s+" +
-            @"\1Ldc_I4, 5.+\s+" +
-			@"\1Ldc_I4_1.+\s+" +
-            @"\1Newobj, assembly.MainModule.ImportReference\(TypeHelpers.ResolveMethod\(""System.Private.CoreLib"", ""System.Index"", "".ctor"",.+,"""", ""System.Int32"", ""System.Boolean""\)\)\);\s+" +
-			@"var (l_tmpIndex_\d) = new VariableDefinition\(assembly.MainModule.ImportReference\(typeof\(Index\)\)\).+\s+" +
-            @"m_M_1.Body.Variables.Add\(\2\);\s+" +
-			@"\1Stloc, \2\);\s+" +
-            @"\1Ldloca, \2\);\s+" +
-			@"\1Ldarg_1\);\s+" +
-            @"\1Ldlen\);\s+" +
+            @"\1Dup.+\s+" +
+			@"\1Ldlen.+\s+" +
 			@"\1Conv_I4\);\s+" +
-            @"\1Call, assembly.MainModule.ImportReference\(TypeHelpers.ResolveMethod\(""System.Private.CoreLib"", ""System.Index"", ""GetOffset"",.+,"""", ""System.Int32""\)\)\);\s+" +
+            @"\1Ldc_I4, 5\);\s+" +
+            @"\1Sub.+\s+" +
 			@"\1Ldelem_I4\);\s+" +
+            @"\1Ret.+"));
+    }
+    
+    [Test]
+    public void IndexExpression_UsedToIndexSpan()
+    {
+        var result = RunCecilifier(@"class C { int M(System.Span<int> a) => a[^5]; }");
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+
+        Assert.That(cecilifiedCode, Does.Match(
+            @"(il_M_\d\.Emit\(OpCodes\.)Ldarga,.+\);\s+" +
+            @"\1Dup.+\s+" +
+            @"\1Call, .+""System.Span`1"", ""get_Length"".+\);\s+" +
+			@"\1Conv_I4\);\s+" +
+            @"\1Ldc_I4, 5\);\s+" +
+            @"\1Sub.+\s+" +
+            @"\1Call,.+""System.Span`1"", ""get_Item"",.+\);\s+" +
+            @"\1Ldind_I4\);\s+" +
             @"\1Ret.+"));
     }
     
     [TestCase("using System; class C { int M(int []a, Index index) => a[index]; }", TestName = "Parameter")]
     [TestCase("using System; class C { static Index index; int M(int []a) => a[index]; }", TestName = "Field")]
     [TestCase("using System; class C { int M(int []a) { Index index; index = 1; return a[index]; } }", TestName = "Local")]
-    public void UsedToIndexArray_GetOffset_IsCalled(string code)
+    public void IndexVariable_UsedToIndexArray_GetOffset_IsCalled(string code)
     {
         var result = RunCecilifier(code);
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
@@ -72,6 +84,8 @@ public class SystemIndexTests : CecilifierUnitTestBase
     [TestCase("void Parameter(Index index) => index = ^11;",  SymbolKind.Parameter, TestName = "Parameter 2")]
     public void IndexFromEnd_ExplicitCtorIsInvoked(string indexSnippet, SymbolKind kind)
     {
+        // Note that the compiler only call the ctor (instead of newobj) if the `location` being assigned is not being used
+        // so cecilifier is not generating exactly the same code but but it is still valid.
         var result = RunCecilifier($"using System; class Foo {{ {indexSnippet} }}");
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
 
