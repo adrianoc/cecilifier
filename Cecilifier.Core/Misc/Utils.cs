@@ -34,7 +34,7 @@ namespace Cecilifier.Core.Misc
             if (symbol == null)
                 throw new System.NotSupportedException(msg);
         }
-        
+      
         [Conditional("DEBUG")]
         public static void EnsureNotNull([NotNull] SyntaxNode? node, [CallerArgumentExpression("node")] string? msg = null)
         {

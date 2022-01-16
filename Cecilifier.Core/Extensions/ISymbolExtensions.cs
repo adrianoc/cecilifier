@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
 using Cecilifier.Core.AST;
@@ -56,6 +57,14 @@ namespace Cecilifier.Core.Extensions
         public static string AsStringNewArrayExpression(this IEnumerable<ITypeSymbol> self)
         {
             return $"new[] {{ {self.Aggregate("", (acc, curr) => acc + ",\"" + curr.FullyQualifiedName() + "\"", final => final.Substring(1))} }} ";
+        }
+        
+        public static T EnsureNotNull<T>([NotNull][NotNullIfNotNull("symbol")] this T symbol) where T: ISymbol
+        {
+            if (symbol == null)
+                throw new System.NotSupportedException("");
+
+            return symbol;
         }
 
         public static bool IsDllImportCtor(this ISymbol self) => self != null && self.ContainingType.Name == "DllImportAttribute";

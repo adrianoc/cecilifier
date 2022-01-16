@@ -288,7 +288,7 @@ namespace Cecilifier.Core.AST
             
             if (isFixedStatement)
             {
-                resolvedVarType = $"{resolvedVarType}.MakeByReferenceType()";
+                resolvedVarType = resolvedVarType.MakeByReferenceType();
             }
             
             AddLocalVariableWithResolvedType(localVar.Identifier.Text, methodVar, resolvedVarType);

@@ -209,10 +209,17 @@ namespace Cecilifier.Core.AST
             if (expressionInfo.Symbol == null)
                 return;
 
+            var targetType = expressionInfo.Symbol.Accept(ElementTypeSymbolResolver.Instance);
+            if (targetType.FullyQualifiedName().Equals("System.Span") && node.ArgumentList.Arguments.Count == 1 &&
+                Context.GetTypeInfo(node.ArgumentList.Arguments[0].Expression).Type.FullyQualifiedName().Equals("System.Range"))
+            {
+                node.Accept(new ElementAccessExpressionWithRangeArgumentVisitor(Context, ilVar, this));
+                return;
+            }
+
             node.Expression.Accept(this);
             node.ArgumentList.Accept(this);
 
-            var targetType = expressionInfo.Symbol.Accept(ElementTypeSymbolResolver.Instance);
             if (!node.Parent.IsKind(SyntaxKind.RefExpression) && _opCodesForLdElem.TryGetValue(targetType.SpecialType, out var opCode))
             {
                 Context.EmitCilInstruction(ilVar, opCode);
@@ -226,13 +233,10 @@ namespace Cecilifier.Core.AST
                     AddMethodCall(ilVar, indexer.GetMethod);
                     HandlePotentialRefLoad(ilVar, node, indexer.Type);
                 }
+                else if (node.Parent.IsKind(SyntaxKind.RefExpression))
+                    AddCilInstruction(ilVar, OpCodes.Ldelema, targetType);
                 else
-                {
-                    if (node.Parent.IsKind(SyntaxKind.RefExpression))
-                        AddCilInstruction(ilVar,  OpCodes.Ldelema, targetType);
-                    else
-                        Context.EmitCilInstruction(ilVar, OpCodes.Ldelem_Ref);
-                }
+                    Context.EmitCilInstruction(ilVar, OpCodes.Ldelem_Ref);
             }
         }
         
@@ -782,6 +786,12 @@ namespace Cecilifier.Core.AST
              * Note that when assigning to fields through member reference expression (for instance, a.b = ^2;), even though assignments
              * would normally be handled as *1* we need to handle it as *2* and instantiate a new System.Index.
              */
+            if (Context.HasFlag(Constants.ContextFlags.InRangeExpression))
+            {
+                node.Operand.Accept(this);
+                return;
+            }
+            
             var ctor = Context.SemanticModel.Compilation.GetTypeByMetadataName(typeof(Index).FullName)
                 .GetMembers(".ctor")
                 .OfType<IMethodSymbol>()
@@ -795,7 +805,7 @@ namespace Cecilifier.Core.AST
                 AddMethodCall(ilVar, ctor);
             else
             {
-                string operand = ctor.MethodResolverExpression(Context);
+                var operand = ctor.MethodResolverExpression(Context);
                 Context.EmitCilInstruction(ilVar, OpCodes.Newobj, operand);
             }
 
@@ -811,13 +821,12 @@ namespace Cecilifier.Core.AST
             skipLeftSideVisitingInAssignment = !isAssignmentToMemberReference && !node.Parent.IsKind(SyntaxKind.RangeExpression);
         }
 
-        private void ProcessIndexerExpressionInElementAccessExpression(PrefixUnaryExpressionSyntax indexerExpression, ElementAccessExpressionSyntax? elementAccessExpressionSyntax)
+        private void ProcessIndexerExpressionInElementAccessExpression(PrefixUnaryExpressionSyntax indexerExpression, ElementAccessExpressionSyntax elementAccessExpressionSyntax)
         {
             Utils.EnsureNotNull(elementAccessExpressionSyntax);
 
-            // We have an indexer expression (^x) used in as an argument in a element access expression (EAE) s[^x]
             Context.EmitCilInstruction(ilVar, OpCodes.Dup); // Duplicate the target of the EAE
-            
+
             var indexed = Context.SemanticModel.GetTypeInfo(elementAccessExpressionSyntax.Expression);
             Utils.EnsureNotNull(indexed.Type, "Cannot be null.");
             if (indexed.Type.Name == "Span")
