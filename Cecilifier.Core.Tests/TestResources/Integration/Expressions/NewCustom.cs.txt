@@ -2,6 +2,7 @@
 {
 	private struct MyStruct
 	{
+	    public int value;
 	}
 	
 	private MyStruct msf;
@@ -41,6 +42,12 @@
 		ms = new MyStruct();
 		
 		return ms;		
+	}
+
+	private static void NewStructAssigned(MyStruct p)
+	{
+		p = new MyStruct();
+		System.Console.WriteLine(p.value);
 	}
 
 	/*
