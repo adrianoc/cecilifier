@@ -115,7 +115,7 @@ namespace Cecilifier.Core.AST
             IList<TypeParameterSyntax> typeParameters = null)
         {
             using var _ = LineInformationTracker.Track(Context, node);
-            using (Context.DefinitionVariables.EnterScope())
+            using (Context.DefinitionVariables.EnterLocalScope())
             {
                 typeParameters ??= Array.Empty<TypeParameterSyntax>();
                 var methodVar = AddOrUpdateMethodDefinition(

@@ -77,7 +77,36 @@ public class DefinitionVariableManager
         return new ScopedDefinitionVariable(_definitionStack, _definitionStack.Count - 1);
     }
 
-    public ScopedDefinitionVariable EnterScope()
+    /// <summary>
+    /// Ensures that any scope specific variable definition registered after its creation will be removed at disposal.
+    /// </summary>
+    /// <remarks>
+    /// Entering in such scope is useful to avoid cluttering the available variable definitions which could lead
+    /// to potential false positives during lookups in scenarios with two or more local variables in different
+    /// methods symbols with the same name. For example, failure to remove registered variables for the following
+    /// source snippet would cause runtime errors due to the code  generated for `Baz()` referencing `local` from `Bar()` 
+    /// <example>
+    /// class Foo
+    /// {
+    ///     void Bar()
+    ///     {
+    ///        int local = 10;
+    ///     }
+    /// 
+    ///     void Baz()
+    ///     {
+    ///         int local_i;
+    ///         string local = "local"; // without cleaning registered variables after visiting `Bar()` this
+    ///                                 // would either introduce a duplicated key exception or a run time
+    ///                                 // exception.  
+    ///     }
+    /// }
+    /// </example>
+    /// </remarks>
+    /// <returns>
+    /// a new ScopedDefinitionVariable that, when disposed, will remove all local variables (parameters, type parameters and local variables)
+    /// from the list of defined variables.</returns>
+    public ScopedDefinitionVariable EnterLocalScope()
     {
         return new ScopedDefinitionVariable(_definitionVariables, _definitionVariables.Count, true);
     }
