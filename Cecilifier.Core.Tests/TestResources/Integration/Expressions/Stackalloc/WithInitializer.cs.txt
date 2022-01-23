@@ -1,0 +1,11 @@
+﻿using System;
+class WithInitializer
+{
+    private void M()
+	{
+	    Span<int> span = stackalloc int[] { 42, 43 };
+	    Dummy(span);
+	}
+
+	private void Dummy(Span<int> span) {}
+}

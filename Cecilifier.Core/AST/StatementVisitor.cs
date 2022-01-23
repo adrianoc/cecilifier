@@ -50,7 +50,7 @@ namespace Cecilifier.Core.AST
             
             // Condition
             ExpressionVisitor.Visit(Context, _ilVar, node.Condition);
-            AddCilInstruction(_ilVar, OpCodes.Brfalse, forEndLabel);
+            Context.EmitCilInstruction(_ilVar, OpCodes.Brfalse, forEndLabel);
             
             // Body
             node.Statement.Accept(this);
@@ -61,17 +61,17 @@ namespace Cecilifier.Core.AST
                 ExpressionVisitor.Visit(Context, _ilVar, incrementExpression);
             }
             
-            AddCilInstruction(_ilVar, OpCodes.Br, forConditionLabel);
+            Context.EmitCilInstruction(_ilVar, OpCodes.Br, forConditionLabel);
             WriteCecilExpression(Context, $"{_ilVar}.Append({forEndLabel});");
         }
     
         public override void VisitSwitchStatement(SwitchStatementSyntax node)
         {
             var switchExpressionType = ResolveExpressionType(node.Expression);
-            var evaluatedExpressionVariable = AddLocalVariable(switchExpressionType);
+            var evaluatedExpressionVariable = AddLocalVariableToCurrentMethod("switchCondition", switchExpressionType);
 
             ExpressionVisitor.Visit(Context, _ilVar, node.Expression);
-            AddCilInstruction(_ilVar, OpCodes.Stloc, evaluatedExpressionVariable); // stores evaluated expression in local var
+            Context.EmitCilInstruction(_ilVar, OpCodes.Stloc, evaluatedExpressionVariable); // stores evaluated expression in local var
             
             // Add label to end of switch
             var endOfSwitchLabel = CreateCilInstruction(_ilVar, OpCodes.Nop);
@@ -84,16 +84,18 @@ namespace Cecilifier.Core.AST
             {
                 if (switchSection.Labels.First().Kind() == SyntaxKind.DefaultSwitchLabel)
                 {
-                    AddCilInstruction(_ilVar, OpCodes.Br, nextTestLabels[currentLabelIndex]);   
+                    string operand = nextTestLabels[currentLabelIndex];
+                    Context.EmitCilInstruction(_ilVar, OpCodes.Br, operand);   
                     continue;
                 }
                 
                 foreach (var sectionLabel in switchSection.Labels)
                 {
                     Context.WriteComment($"{sectionLabel.ToString()} (condition)");
-                    AddCilInstruction(_ilVar, OpCodes.Ldloc, evaluatedExpressionVariable);
+                    Context.EmitCilInstruction(_ilVar, OpCodes.Ldloc, evaluatedExpressionVariable);
                     ExpressionVisitor.Visit(Context, _ilVar, sectionLabel);
-                    AddCilInstruction(_ilVar, OpCodes.Beq_S, nextTestLabels[currentLabelIndex]);
+                    string operand = nextTestLabels[currentLabelIndex];
+                    Context.EmitCilInstruction(_ilVar, OpCodes.Beq_S, operand);
                     Context.WriteNewLine();
                 }
                 currentLabelIndex++;
@@ -101,7 +103,7 @@ namespace Cecilifier.Core.AST
 
             // if at runtime the code hits this point it means none of the labels matched.
             // so, just jump to the end of the switch.
-            AddCilInstruction(_ilVar, OpCodes.Br, endOfSwitchLabel);
+            Context.EmitCilInstruction(_ilVar, OpCodes.Br, endOfSwitchLabel);
             
             // Write the statements for each switch section...
             currentLabelIndex = 0;
@@ -130,12 +132,12 @@ namespace Cecilifier.Core.AST
                 throw new InvalidOperationException("Invalid break.");
             }
 
-            AddCilInstruction(_ilVar, OpCodes.Br, breakToInstructionVars.Peek());
+            Context.EmitCilInstruction(_ilVar, OpCodes.Br, breakToInstructionVars.Peek());
         }
 
         public override void VisitFixedStatement(FixedStatementSyntax node)
         {
-            using (Context.WithFlag("fixed"))
+            using (Context.WithFlag(Constants.ContextFlags.Fixed))
             {
                 HandleVariableDeclaration(node.Declaration);
             }
@@ -146,7 +148,7 @@ namespace Cecilifier.Core.AST
         public override void VisitReturnStatement(ReturnStatementSyntax node)
         {
             ExpressionVisitor.Visit(Context, _ilVar, node);
-            AddCilInstruction(_ilVar, OpCodes.Ret);
+            Context.EmitCilInstruction(_ilVar, OpCodes.Ret);
         }
 
         public override void VisitExpressionStatement(ExpressionStatementSyntax node)
@@ -174,9 +176,9 @@ namespace Cecilifier.Core.AST
             node.Block.Accept(this);
 
             var firstInstructionAfterTryCatchBlock = CreateCilInstruction(_ilVar, OpCodes.Nop);
-            exceptionHandlerTable[exceptionHandlerTable.Length - 1].HandlerEnd = firstInstructionAfterTryCatchBlock; // sets up last handler end instruction
+            exceptionHandlerTable[^1].HandlerEnd = firstInstructionAfterTryCatchBlock; // sets up last handler end instruction
 
-            AddCilInstruction(_ilVar, OpCodes.Leave, firstInstructionAfterTryCatchBlock);
+            Context.EmitCilInstruction(_ilVar, OpCodes.Leave, firstInstructionAfterTryCatchBlock);
 
             for (var i = 0; i < node.Catches.Count; i++)
             {
@@ -242,7 +244,7 @@ namespace Cecilifier.Core.AST
             exceptionHandlerTable[currentIndex].CatchType = ResolveType(node.Declaration.Type);
 
             VisitCatchClause(node);
-            AddCilInstruction(_ilVar, OpCodes.Leave, firstInstructionAfterTryCatchBlock);
+            Context.EmitCilInstruction(_ilVar, OpCodes.Leave, firstInstructionAfterTryCatchBlock);
         }
 
         private void HandleFinallyClause(FinallyClauseSyntax node, ExceptionHandlerEntry[] exceptionHandlerTable)
@@ -269,77 +271,66 @@ namespace Cecilifier.Core.AST
             }
 
             base.VisitFinallyClause(node);
-            AddCilInstruction(_ilVar, OpCodes.Endfinally);
+            Context.EmitCilInstruction(_ilVar, OpCodes.Endfinally);
         }
 
         private void AddLocalVariable(TypeSyntax type, VariableDeclaratorSyntax localVar, DefinitionVariable methodVar)
         {
-            var isFixedStatement = Context.HasFlag("fixed");
+            var isFixedStatement = Context.HasFlag(Constants.ContextFlags.Fixed);
             if (isFixedStatement)
             {
                 type = ((PointerTypeSyntax) type).ElementType;
             }
             
             var resolvedVarType = type.IsVar
-                ? ResolveExpressionType(localVar.Initializer.Value)
+                ? ResolveExpressionType(localVar.Initializer?.Value)
                 : ResolveType(type);
             
             if (isFixedStatement)
             {
-                resolvedVarType = $"{resolvedVarType}.MakeByReferenceType()";
+                resolvedVarType = resolvedVarType.MakeByReferenceType();
             }
             
             AddLocalVariableWithResolvedType(localVar.Identifier.Text, methodVar, resolvedVarType);
         }
 
-        private string AddLocalVariable(string varType)
+        private void ProcessVariableInitialization(VariableDeclaratorSyntax localVar, ITypeSymbol variableType)
         {
-            var currentMethod = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
-            if (!currentMethod.IsValid)
-                throw new InvalidOperationException("Could not resolve current method declaration variable.");
+            if (localVar.Initializer == null)
+                return;
+            
+            var localVarDef = Context.DefinitionVariables.GetVariable(localVar.Identifier.ValueText, VariableMemberKind.LocalVariable);
+            if (localVar.Initializer.Value.IsKind(SyntaxKind.IndexExpression))
+            {
+                // code is something like `Index field = ^5`; 
+                // in this case we need to load the address of the field since the expression ^5 (IndexerExpression) will result in a call to System.Index ctor (which is a value type and expects
+                // the address of the value type to be in the top of the stack
+                Context.EmitCilInstruction(_ilVar, OpCodes.Ldloca, localVarDef.VariableName);
+            }
 
-            return AddLocalVariableWithResolvedType("switchCondition", currentMethod, varType);
-        }
-
-        private void ProcessVariableInitialization(VariableDeclaratorSyntax localVar)
-        {
             if (ExpressionVisitor.Visit(Context, _ilVar, localVar.Initializer))
             {
                 return;
             }
 
-            var localVarDef = Context.DefinitionVariables.GetVariable(localVar.Identifier.ValueText, VariableMemberKind.LocalVariable);
-            AddCilInstruction(_ilVar, OpCodes.Stloc, localVarDef.VariableName);
-        }
-
-        private void InjectConversionAfterLoadIfRequired(VariableDeclaratorSyntax localVar)
-        {
-            // null is assignable to anything, i.e, no conversion is needed.
-            if (localVar.Initializer.Value.IsKind(SyntaxKind.NullLiteralExpression))
-                return;
-
-            var source = Context.SemanticModel.GetTypeInfo(localVar.Initializer.Value).Type;
-            if (source == null)
-                return; // if we fail to resolve the type of the value used in the initialization we do not try to perform any conversions.
-            
-            var destination = Context.SemanticModel.GetTypeInfo(((VariableDeclarationSyntax) localVar.Parent).Type).Type;
-            var conversion = Context.SemanticModel.Compilation.ClassifyConversion(
-                source,
-                destination);
-
-            if (!conversion.IsIdentity && conversion.IsImplicit && !conversion.IsBoxing && conversion.MethodSymbol != null)
+            var valueBeingAssignedIsByRef = Context.SemanticModel.GetSymbolInfo(localVar.Initializer.Value).Symbol.IsByRef();
+            if (!variableType.IsByRef() && valueBeingAssignedIsByRef)
             {
-                AddMethodCall(_ilVar, conversion.MethodSymbol);
+                OpCode opCode = LoadIndirectOpCodeFor(variableType.SpecialType);
+                Context.EmitCilInstruction(_ilVar, opCode);
             }
+            
+            Context.EmitCilInstruction(_ilVar, OpCodes.Stloc, localVarDef.VariableName);
         }
 
         private void HandleVariableDeclaration(VariableDeclarationSyntax declaration)
         {
+            var variableType = Context.SemanticModel.GetTypeInfo(declaration.Type);
             var methodVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
             foreach (var localVar in declaration.Variables)
             {
                 AddLocalVariable(declaration.Type, localVar, methodVar);
-                ProcessVariableInitialization(localVar);
+                ProcessVariableInitialization(localVar, variableType.Type);
             }
         }
 

@@ -1,13 +1,15 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.AST;
+using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Mono.Cecil.Cil;
 
 namespace Cecilifier.Core.Misc
 {
@@ -16,7 +18,8 @@ namespace Cecilifier.Core.Misc
         private readonly ISet<string> flags = new HashSet<string>();
         private readonly LinkedList<string> output = new();
 
-        private string identation;
+        private readonly string identation;
+        private int startLineNumber;
 
         public CecilifierContext(SemanticModel semanticModel, CecilifierOptions options,  int startingLine, byte indentation = 3)
         {
@@ -25,9 +28,10 @@ namespace Cecilifier.Core.Misc
             DefinitionVariables = new DefinitionVariableManager();
             TypeResolver = new TypeResolverImpl(this);
             Mappings = new List<Mapping>();
-            CecilifiedLineNumber = startingLine + 1; // always report as 1 based.
+            CecilifiedLineNumber = startingLine;
+            startLineNumber = startingLine;
             
-            this.identation = new String('\t', indentation);
+            identation = new String('\t', indentation);
         }
 
         public string Output
@@ -43,7 +47,7 @@ namespace Cecilifier.Core.Misc
 
         public DefinitionVariableManager DefinitionVariables { get; }
 
-        public string Namespace { get; set; }
+        public string CurrentNamespace { get; set; }
 
         public LinkedListNode<string> CurrentLine => output.Last;
 
@@ -78,6 +82,7 @@ namespace Cecilifier.Core.Misc
 
         public void WriteCecilExpression(string expression)
         {
+            CecilifiedLineNumber += expression.CountNewLines();
             output.AddLast($"{identation}{expression}");
         }
 
@@ -86,6 +91,7 @@ namespace Cecilifier.Core.Misc
             if ((Options.Naming.Options & NamingOptions.AddCommentsToMemberDeclarations) == NamingOptions.AddCommentsToMemberDeclarations)
             {
                 output.AddLast($"{identation}//{comment}");
+                CecilifiedLineNumber += comment.CountNewLines();
                 WriteNewLine();
             }
         }
@@ -105,15 +111,64 @@ namespace Cecilifier.Core.Misc
 
         public void MoveLineAfter(LinkedListNode<string> instruction, LinkedListNode<string> after)
         {
-            output.AddAfter(after, instruction.Value);
+            if (instruction == after)
+                return;
+            
+            var lineToBeMoved = LineOf(instruction) + 1;
+            var lineToMoveAfter = LineOf(after.Next);
+
+            output.AddAfter(after, instruction.ValueRef);
             output.Remove(instruction);
+
+            var numberOfLinesBeingMoved = instruction.Value.CountNewLines();
+
+            foreach (var b in Mappings)
+            {
+                if (b.Cecilified.Begin.Line >= lineToBeMoved)
+                {
+                    b.Cecilified.Begin.Line -= numberOfLinesBeingMoved;
+                    if (b.Cecilified.End.Line <= lineToMoveAfter)
+                        b.Cecilified.End.Line -= numberOfLinesBeingMoved;
+                }
+                else if (b.Cecilified.End.Line >= lineToBeMoved)
+                {
+                    b.Cecilified.End.Line -= numberOfLinesBeingMoved;
+                }
+            }
+            
+            int LineOf(LinkedListNode<string> linkedListNode)
+            {
+                var lineUntilPassedNode = 0;
+                var f = output.First;
+                while (f != linkedListNode && f != null)
+                {
+                    lineUntilPassedNode += f.Value.CountNewLines();
+                    f = f.Next;
+                }
+
+                return lineUntilPassedNode + startLineNumber;
+            }
         }
 
-        public event Action<string> InstructionAdded;
-
-        public void TriggerInstructionAdded(string instVar)
+        public void MoveLinesToEnd(LinkedListNode<string> start, LinkedListNode<string> end)
         {
-            InstructionAdded?.Invoke(instVar);
+            // Counts the # of instructions to be moved...
+            var c = start;
+            int instCount = 0;
+            while (c != end)
+            {
+                c = c!.Next;
+                instCount++;
+            }
+            
+            // move each line after the last one
+            c = start.Next;
+            while (instCount-- > 0)
+            {
+                var next = c!.Next;
+                MoveLineAfter(c, CurrentLine);
+                c = next;
+            }
         }
 
         public IDisposable WithFlag(string name)
@@ -124,6 +179,18 @@ namespace Cecilifier.Core.Misc
         public bool HasFlag(string name)
         {
             return flags.Contains(name);
+        }
+
+        public void EmitCilInstruction<T>(string ilVar, OpCode opCode, T operand = default)
+        {
+            var operandStr = operand == null ? string.Empty : $", {operand}";
+            WriteCecilExpression($"{ilVar}.Emit({opCode.ConstantName()}{operandStr});");
+            WriteNewLine();
+        }
+        
+        public void EmitCilInstruction(string ilVar, OpCode opCode)
+        {
+            EmitCilInstruction<string>(ilVar, opCode, null);
         }
 
         internal void SetFlag(string name)

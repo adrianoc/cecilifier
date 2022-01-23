@@ -15,7 +15,7 @@ using Mono.Cecil.Cil;
 
 namespace Cecilifier.Core.AST
 {
-    internal class ExpressionVisitor : SyntaxWalkerBase
+    internal partial class ExpressionVisitor : SyntaxWalkerBase
     {
         private static readonly IDictionary<SyntaxKind, Action<IVisitorContext, string, ITypeSymbol, ITypeSymbol>> operatorHandlers =
             new Dictionary<SyntaxKind, Action<IVisitorContext, string, ITypeSymbol, ITypeSymbol>>();
@@ -36,7 +36,10 @@ namespace Cecilifier.Core.AST
         private readonly string ilVar;
         private readonly Stack<LinkedListNode<string>> callFixList = new Stack<LinkedListNode<string>>();
 
-        private bool valueTypeNoArgObjCreation;
+        // if true, while visiting an AssignmentExpression its left side must not be visited.
+        // this is used, for example, in value type ctor invocation in which case there's
+        // no value in the stack to be stored after the ctor is run
+        private bool skipLeftSideVisitingInAssignment; 
 
         static ExpressionVisitor()
         {
@@ -126,58 +129,48 @@ namespace Cecilifier.Core.AST
                 return true;
             }
 
-            using var _ = LineInformationTracker.Track(ctx, node);
             var ev = new ExpressionVisitor(ctx, ilVar);
             ev.Visit(node);
 
-            return ev.valueTypeNoArgObjCreation;
+            return ev.skipLeftSideVisitingInAssignment;
         }
-
+        
         public override void VisitReturnStatement(ReturnStatementSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
+            Utils.EnsureNotNull(node.Expression);
             node.Expression.Accept(this);
             InjectRequiredConversions(node.Expression);
         }
 
         public override void VisitArrowExpressionClause(ArrowExpressionClauseSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             node.Expression.Accept(this);
             InjectRequiredConversions(node.Expression);
         }
 
-        public override void VisitStackAllocArrayCreationExpression(StackAllocArrayCreationExpressionSyntax node)
+        public override void VisitInitializerExpression(InitializerExpressionSyntax node)
         {
             using var _ = LineInformationTracker.Track(Context, node);
-            /*
-                // S *s = stackalloc S[n];
-                IL_0007: ldarg.1
-                IL_0008: conv.u
-                IL_0009: sizeof MyStruct
-                IL_000f: mul.ovf.un
-                IL_0010: localloc
-                
-                // int *i = stackalloc int[10];
-                IL_0001: ldc.i4.s 40
-                IL_0003: conv.u
-                IL_0004: localloc
-             */
-            var type = (ArrayTypeSyntax) node.Type;
-            var countNode = type.RankSpecifiers[0].Sizes[0];
-            if (type.RankSpecifiers.Count == 1 && countNode.IsKind(SyntaxKind.NumericLiteralExpression))
+
+            var typeInfo = Context.SemanticModel.GetTypeInfo(node.Parent);
+            uint elementTypeSize = typeInfo.Type.SizeofArrayLikeItemElement();
+            uint offset = 0;
+            
+            foreach (var exp in node.Expressions)
             {
-                var sizeLiteral = Int32.Parse(countNode.GetFirstToken().Text) * predefinedTypeSize[type.ElementType.GetText().ToString()];
-                
-                AddCilInstruction(ilVar, OpCodes.Ldc_I4, sizeLiteral);
-                AddCilInstruction(ilVar, OpCodes.Conv_U);
-                AddCilInstruction(ilVar, OpCodes.Localloc);
-            }
-            else
-            {
-                countNode.Accept(this);
-                AddCilInstruction(ilVar, OpCodes.Conv_U);
-                AddCilInstruction(ilVar, OpCodes.Sizeof, ResolveType(type.ElementType));
-                AddCilInstruction(ilVar, OpCodes.Mul_Ovf_Un);
-                AddCilInstruction(ilVar, OpCodes.Localloc);
+                Context.EmitCilInstruction(ilVar, OpCodes.Dup);
+                if (offset != 0)
+                {
+                    Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, offset);    
+                    Context.EmitCilInstruction(ilVar, OpCodes.Add);    
+                }
+
+                exp.Accept(this);
+                OpCode opCode = typeInfo.Type.Stind();
+                Context.EmitCilInstruction(ilVar, opCode);
+                offset += elementTypeSize;
             }
         }
 
@@ -190,7 +183,7 @@ namespace Cecilifier.Core.AST
             }
             else
             {
-                AddCilInstruction(ilVar, OpCodes.Ldc_I4, node.Initializer.Expressions.Count);
+                Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, node.Initializer.Expressions.Count);
             }
 
             var elementTypeInfo = Context.GetTypeInfo(node.Type.ElementType);
@@ -201,12 +194,9 @@ namespace Cecilifier.Core.AST
         {
             using var _ = LineInformationTracker.Track(Context, node);
             var arrayType = Context.GetTypeInfo(node);
-            if (arrayType.Type == null)
-            {
-                throw new Exception($"Unable to infer array type: {node}");
-            }
-
-            AddCilInstruction(ilVar, OpCodes.Ldc_I4, node.Initializer.Expressions.Count);
+            Utils.EnsureNotNull(arrayType.Type, $"Unable to infer array type: {node}");
+            
+            Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, node.Initializer.Expressions.Count);
 
             var arrayTypeSymbol = (IArrayTypeSymbol) arrayType.Type;
             ProcessArrayCreation(arrayTypeSymbol.ElementType, node.Initializer);
@@ -219,13 +209,20 @@ namespace Cecilifier.Core.AST
             if (expressionInfo.Symbol == null)
                 return;
 
+            var targetType = expressionInfo.Symbol.Accept(ElementTypeSymbolResolver.Instance);
+            if (targetType.FullyQualifiedName().Equals("System.Span") && node.ArgumentList.Arguments.Count == 1 &&
+                Context.GetTypeInfo(node.ArgumentList.Arguments[0].Expression).Type.FullyQualifiedName().Equals("System.Range"))
+            {
+                node.Accept(new ElementAccessExpressionWithRangeArgumentVisitor(Context, ilVar, this));
+                return;
+            }
+
             node.Expression.Accept(this);
             node.ArgumentList.Accept(this);
 
-            var targetType = expressionInfo.Symbol.Accept(new ElementTypeSymbolResolver());
             if (!node.Parent.IsKind(SyntaxKind.RefExpression) && _opCodesForLdElem.TryGetValue(targetType.SpecialType, out var opCode))
             {
-                AddCilInstruction(ilVar, opCode);
+                Context.EmitCilInstruction(ilVar, opCode);
             }
             else
             {
@@ -234,25 +231,29 @@ namespace Cecilifier.Core.AST
                 {
                     EnsurePropertyExists(node, indexer);
                     AddMethodCall(ilVar, indexer.GetMethod);
+                    HandlePotentialRefLoad(ilVar, node, indexer.Type);
                 }
+                else if (node.Parent.IsKind(SyntaxKind.RefExpression))
+                    AddCilInstruction(ilVar, OpCodes.Ldelema, targetType);
                 else
-                {
-                    if (node.Parent.IsKind(SyntaxKind.RefExpression))
-                        AddCilInstruction(ilVar,  OpCodes.Ldelema, targetType);
-                    else
-                        AddCilInstruction(ilVar, OpCodes.Ldelem_Ref);
-                }
+                    Context.EmitCilInstruction(ilVar, OpCodes.Ldelem_Ref);
             }
         }
         
         public override void VisitEqualsValueClause(EqualsValueClauseSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             base.VisitEqualsValueClause(node);
             InjectRequiredConversions(node.Value);
         }
 
         public override void VisitAssignmentExpression(AssignmentExpressionSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
+
+            if (HandlePseudoAssignment(node))
+                return;
+            
             var leftNodeMae = node.Left as MemberAccessExpressionSyntax;
             CSharpSyntaxNode exp = leftNodeMae?.Name ?? node.Left;
             // check if the left hand side of the assignment is a property (but not indexers) and handle that as a method (set) call.
@@ -267,14 +268,29 @@ namespace Cecilifier.Core.AST
             
             visitor.InstructionPrecedingValueToLoad = Context.CurrentLine;
             Visit(node.Right);
-            if (!valueTypeNoArgObjCreation)
+            if (!skipLeftSideVisitingInAssignment)
             {
                 visitor.Visit(node.Left);
             }
         }
 
+        private bool HandlePseudoAssignment(AssignmentExpressionSyntax node)
+        {
+            var lhsType = Context.SemanticModel.GetTypeInfo(node.Left);
+            if (lhsType.Type.FullyQualifiedName() != "System.Index" || !node.Right.IsKind(SyntaxKind.IndexExpression) || node.Left.IsKind(SyntaxKind.SimpleMemberAccessExpression))
+                return false;
+
+            using (Context.WithFlag(Constants.ContextFlags.PseudoAssignmentToIndex))
+                node.Left.Accept(this);
+                
+            node.Right.Accept(this);
+            return true;
+
+        }
+
         public override void VisitBinaryExpression(BinaryExpressionSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             if (node.IsOperatorOnCustomUserType(Context.SemanticModel, out var method))
             {
                 ProcessOverloadedBinaryOperatorInvocation(node, method);
@@ -287,21 +303,23 @@ namespace Cecilifier.Core.AST
         
         public override void VisitLiteralExpression(LiteralExpressionSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             switch (node.Kind())
             {
                 case SyntaxKind.NullLiteralExpression:
                     var nodeType = Context.SemanticModel.GetTypeInfo(node);
                     if (nodeType.ConvertedType?.TypeKind == TypeKind.Pointer)
                     {
-                        AddCilInstruction(ilVar, OpCodes.Ldc_I4_0);
-                        AddCilInstruction(ilVar, OpCodes.Conv_U);
+                        Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4_0);
+                        Context.EmitCilInstruction(ilVar, OpCodes.Conv_U);
                     }
                     else
-                        AddCilInstruction(ilVar, OpCodes.Ldnull);
+                        Context.EmitCilInstruction(ilVar, OpCodes.Ldnull);
                     break;
 
                 case SyntaxKind.StringLiteralExpression:
-                    AddCilInstruction(ilVar, OpCodes.Ldstr, node.ToFullString());
+                    string operand = node.ToFullString();
+                    Context.EmitCilInstruction(ilVar, OpCodes.Ldstr, operand);
                     break;
 
                 case SyntaxKind.CharacterLiteralExpression:
@@ -321,19 +339,21 @@ namespace Cecilifier.Core.AST
                     throw new ArgumentException($"Literal ( {node}) of type {node.Kind()} not supported yet.");
             }
         }
-
+        
         void AddLocalVariableAndHandleCallOnValueTypeLiterals(CSharpSyntaxNode node, ITypeSymbol literalType, object literalValue)
         {
-            AddCilInstruction(ilVar, LoadOpCodeFor(literalType), literalValue);
+            OpCode opCode = LoadOpCodeFor(literalType);
+            Context.EmitCilInstruction(ilVar, opCode, literalValue);
             var localVarParent = (CSharpSyntaxNode) node.Parent;
             Debug.Assert(localVarParent != null);
                 
-            if (localVarParent.Accept(new UsageVisitor()) == UsageKind.CallTarget) 
+            if (localVarParent.Accept(new UsageVisitor(Context)) == UsageKind.CallTarget) 
                 StoreTopOfStackInLocalVariableAndLoadItsAddress(literalType);
         }
 
         public override void VisitDeclarationExpression(DeclarationExpressionSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             if (node.Parent is ArgumentSyntax argument && argument.RefKindKeyword.Kind() == SyntaxKind.OutKeyword)
             {
                 var localSymbol = (ILocalSymbol) Context.SemanticModel.GetSymbolInfo(node).Symbol;
@@ -346,7 +366,7 @@ namespace Cecilifier.Core.AST
                     resolvedOutArgType
                 );
 
-                AddCilInstruction(ilVar, OpCodes.Ldloca_S, outLocalName);
+                Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, outLocalName);
             }
             
             base.VisitDeclarationExpression(node);
@@ -354,19 +374,22 @@ namespace Cecilifier.Core.AST
 
         public override void VisitInvocationExpression(InvocationExpressionSyntax node)
         {
+            using var __ = LineInformationTracker.Track(Context, node);
+            using var _ = StackallocAsArgumentFixer.TrackPassingStackAllocToSpanArgument(Context, node, ilVar);
             var constantValue = Context.SemanticModel.GetConstantValue(node);
             if (constantValue.HasValue && node.Expression is IdentifierNameSyntax { Identifier: { Text: "nameof" }} nameofExpression)
             {
-                AddCilInstruction(ilVar, OpCodes.Ldstr, $"\"{node.ArgumentList.Arguments[0].ToFullString()}\"");
+                string operand = $"\"{node.ArgumentList.Arguments[0].ToFullString()}\"";
+                Context.EmitCilInstruction(ilVar, OpCodes.Ldstr, operand);
                 return;
             }
-            
             HandleMethodInvocation(node.Expression, node.ArgumentList);
             StoreTopOfStackInLocalVariableAndLoadItsAddressIfNeeded(node);
         }
         
         public override void VisitConditionalExpression(ConditionalExpressionSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             string Emit(OpCode op)
             {
                 var instVarName = Context.Naming.Label(op.Name);
@@ -379,10 +402,10 @@ namespace Cecilifier.Core.AST
             var whenFalse = Emit(OpCodes.Nop);
 
             Visit(node.Condition);
-            AddCilInstruction(ilVar, OpCodes.Brfalse_S, whenFalse);
+            Context.EmitCilInstruction(ilVar, OpCodes.Brfalse_S, whenFalse);
 
             Visit(node.WhenTrue);
-            AddCilInstruction(ilVar, OpCodes.Br_S, conditionEnd);
+            Context.EmitCilInstruction(ilVar, OpCodes.Br_S, conditionEnd);
 
             AddCecilExpression("{0}.Append({1});", ilVar, whenFalse);
             Visit(node.WhenFalse);
@@ -392,16 +415,19 @@ namespace Cecilifier.Core.AST
         
         public override void VisitIdentifierName(IdentifierNameSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             HandleIdentifier(node);
         }
 
         public override void VisitGenericName(GenericNameSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             HandleIdentifier(node);
         }
 
         public override void VisitArgument(ArgumentSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             // in the case the parent of the argument syntax is an array access
             // *CurrentLine* will represent the instruction that loaded the array
             // reference into the stack.
@@ -417,14 +443,18 @@ namespace Cecilifier.Core.AST
             var last = Context.CurrentLine;
             
             base.VisitArgument(node);
+            
             InjectRequiredConversions(node.Expression, () =>
             {
-                AddCecilExpression(last.Value);
+                AddCecilExpression(last.Value.Replace("\t", string.Empty).Replace("\n", String.Empty));
             });
+            
+            StackallocAsArgumentFixer.Current?.StoreTopOfStackToLocalVariable(Context.SemanticModel.GetTypeInfo(node.Expression).Type);
         }
 
         public override void VisitPrefixUnaryExpression(PrefixUnaryExpressionSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             if (node.IsOperatorOnCustomUserType(Context.SemanticModel, out var method))
             {
                 Visit(node.Operand);
@@ -432,7 +462,6 @@ namespace Cecilifier.Core.AST
                 return;
             }
             
-            using var _ = LineInformationTracker.Track(Context, node);
             if (node.OperatorToken.Kind() == SyntaxKind.AmpersandToken)
             {
                 Visit(node.Operand);
@@ -441,7 +470,7 @@ namespace Cecilifier.Core.AST
             {
                 Visit(node.Operand);
                 InjectRequiredConversions(node.Operand);
-                AddCilInstruction(ilVar, OpCodes.Neg);
+                Context.EmitCilInstruction(ilVar, OpCodes.Neg);
             }
             else if (node.IsKind(SyntaxKind.PreDecrementExpression))
             {
@@ -454,17 +483,17 @@ namespace Cecilifier.Core.AST
             else if (node.IsKind(SyntaxKind.LogicalNotExpression))
             {
                 node.Operand.Accept(this);
-                AddCilInstruction(ilVar, OpCodes.Ldc_I4_0);
-                AddCilInstruction(ilVar, OpCodes.Ceq);
+                Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4_0);
+                Context.EmitCilInstruction(ilVar, OpCodes.Ceq);
             }
             else if (node.IsKind(SyntaxKind.BitwiseNotExpression))
             {
                 node.Operand.Accept(this);
-                AddCilInstruction(ilVar, OpCodes.Not);
+                Context.EmitCilInstruction(ilVar, OpCodes.Not);
             }
             else if (node.IsKind(SyntaxKind.IndexExpression))
             {
-                Console.WriteLine();
+                ProcessIndexerExpression(node);
             }
             else
             {
@@ -474,6 +503,7 @@ namespace Cecilifier.Core.AST
 
         public override void VisitPostfixUnaryExpression(PostfixUnaryExpressionSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             if (node.IsOperatorOnCustomUserType(Context.SemanticModel, out var method))
             {
                 Visit(node.Operand);
@@ -497,10 +527,11 @@ namespace Cecilifier.Core.AST
 
         public override void VisitParenthesizedExpression(ParenthesizedExpressionSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             base.VisitParenthesizedExpression(node);
 
             var localVarParent = (CSharpSyntaxNode) node.Parent;
-            if (localVarParent.Accept(new UsageVisitor()) != UsageKind.CallTarget)
+            if (localVarParent.Accept(new UsageVisitor(Context)) != UsageKind.CallTarget)
                 return;
 
             StoreTopOfStackInLocalVariableAndLoadItsAddress(GetSpecialType(SpecialType.System_Int32));
@@ -520,7 +551,8 @@ namespace Cecilifier.Core.AST
 
             EnsureMethodAvailable(Context.Naming.SyntheticVariable(node.Type.ToString(), ElementKind.LocalVariable), ctor, Array.Empty<TypeParameterSyntax>());
 
-            AddCilInstruction(ilVar, OpCodes.Newobj, ctor.MethodResolverExpression(Context));
+            string operand = ctor.MethodResolverExpression(Context);
+            Context.EmitCilInstruction(ilVar, OpCodes.Newobj, operand);
             PushCall();
 
             Visit(node.ArgumentList);
@@ -542,15 +574,15 @@ namespace Cecilifier.Core.AST
             {
                 if (!isPrefix) // For *postfix* operators we duplicate the value *before* applying the operator...
                 {
-                    AddCilInstruction(ilVar, OpCodes.Dup);
+                    Context.EmitCilInstruction(ilVar, OpCodes.Dup);
                 }
 
-                AddCilInstruction(ilVar, OpCodes.Ldc_I4_1);
-                AddCilInstruction(ilVar, opCode);
+                Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4_1);
+                Context.EmitCilInstruction(ilVar, opCode);
 
                 if (isPrefix) // For prefix operators we duplicate the value *after* applying the operator...
                 {
-                    AddCilInstruction(ilVar, OpCodes.Dup);
+                    Context.EmitCilInstruction(ilVar, OpCodes.Dup);
                 }
                 
                 //assign (top of stack to the operand)
@@ -561,35 +593,24 @@ namespace Cecilifier.Core.AST
 
             if (isPrefix)
             {
-                AddCilInstruction(ilVar, OpCodes.Ldc_I4_1);
-                AddCilInstruction(ilVar, opCode);
+                Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4_1);
+                Context.EmitCilInstruction(ilVar, opCode);
             }
 
             var tempLocalName = AddLocalVariableWithResolvedType("tmp", Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method), Context.TypeResolver.Resolve(Context.SemanticModel.GetTypeInfo(operand).Type));
-            AddCilInstruction(ilVar, OpCodes.Stloc, tempLocalName);
-            AddCilInstruction(ilVar, OpCodes.Ldloc, tempLocalName);
+            Context.EmitCilInstruction(ilVar, OpCodes.Stloc, tempLocalName);
+            Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, tempLocalName);
             assignmentVisitor.InstructionPrecedingValueToLoad = Context.CurrentLine;
-            AddCilInstruction(ilVar, OpCodes.Ldloc, tempLocalName);
+            Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, tempLocalName);
             
             if (!isPrefix)
             {
-                AddCilInstruction(ilVar, OpCodes.Ldc_I4_1);
-                AddCilInstruction(ilVar, opCode);
+                Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4_1);
+                Context.EmitCilInstruction(ilVar, opCode);
             }
             
             // assign (top of stack to the operand)
             operand.Accept(assignmentVisitor);
-        }
-
-        private bool TryProcessNoArgsCtorInvocationOnValueType(ObjectCreationExpressionSyntax node, IMethodSymbol methodSymbol, SymbolInfo ctorInfo)
-        {
-            if (ctorInfo.Symbol.ContainingType.IsReferenceType || methodSymbol.Parameters.Length > 0)
-            {
-                return false;
-            }
-
-            new ValueTypeNoArgCtorInvocationVisitor(Context, ilVar, ctorInfo).Visit(node.Parent);
-            return valueTypeNoArgObjCreation = true;
         }
 
         public override void VisitExpressionStatement(ExpressionStatementSyntax node)
@@ -599,19 +620,21 @@ namespace Cecilifier.Core.AST
             var info = Context.GetTypeInfo(node.Expression);
             if (node.Expression.Kind() != SyntaxKind.SimpleAssignmentExpression && info.Type.SpecialType != SpecialType.System_Void)
             {
-                AddCilInstruction(ilVar, OpCodes.Pop);
+                Context.EmitCilInstruction(ilVar, OpCodes.Pop);
             }
         }
 
         public override void VisitThisExpression(ThisExpressionSyntax node)
         {
-            AddCilInstruction(ilVar, OpCodes.Ldarg_0);
+            using var _ = LineInformationTracker.Track(Context, node);
+            Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
             base.VisitThisExpression(node);
         }
 
         public override void VisitRefExpression(RefExpressionSyntax node)
         {
-            using (Context.WithFlag("ref-return"))
+            using var _ = LineInformationTracker.Track(Context, node);
+            using (Context.WithFlag(Constants.ContextFlags.RefReturn))
             {
                 node.Expression.Accept(this);
             }
@@ -625,11 +648,8 @@ namespace Cecilifier.Core.AST
             var castSource = Context.GetTypeInfo(node.Expression);
             var castTarget = Context.GetTypeInfo(node.Type);
             
-            if (castSource.Type == null)
-                throw new InvalidOperationException($"Failed to get type information for expression: {node.Expression}");
-            
-            if (castTarget.Type == null)
-                throw new InvalidOperationException($"Failed to get type information for: {node.Type}");
+            Utils.EnsureNotNull(castSource.Type,$"Failed to get type information for expression: {node.Expression}");
+            Utils.EnsureNotNull(castTarget.Type, $"Failed to get type information for: {node.Type}");
 
             if (castSource.Type.SpecialType == castTarget.Type.SpecialType && castSource.Type.SpecialType == SpecialType.System_Double)
             {
@@ -637,7 +657,7 @@ namespace Cecilifier.Core.AST
                  * Even though a cast from double => double can be view as an identity conversion (from the pov of the developer who wrote it)
                  * we still need to emit a *conv.r8* opcode. * (Fo more details see https://github.com/dotnet/roslyn/discussions/56198)
                  */
-                AddCilInstruction(ilVar, OpCodes.Conv_R8);
+                Context.EmitCilInstruction(ilVar, OpCodes.Conv_R8);
                 return;
             }
             
@@ -666,7 +686,7 @@ namespace Cecilifier.Core.AST
                     _ => throw new Exception($"Cast from {node.Expression} ({castSource.Type}) to {castTarget.Type} is not supported.")
                 };
             
-                AddCilInstruction(ilVar, opcode);
+                Context.EmitCilInstruction(ilVar, opcode);
             }
             else if (conversion.IsExplicit && conversion.IsReference)
             {
@@ -675,7 +695,7 @@ namespace Cecilifier.Core.AST
             }
             else if (conversion.IsImplicit && conversion.IsReference && castSource.Type.TypeKind == TypeKind.TypeParameter)
             {
-                AddCilInstruction(ilVar, OpCodes.Box, Context.TypeResolver.Resolve(castSource.Type));
+                AddCilInstruction(ilVar, OpCodes.Box, castSource.Type);
             }
             else if (conversion.IsExplicit)
             {
@@ -685,28 +705,60 @@ namespace Cecilifier.Core.AST
 
         public override void VisitInterpolatedStringExpression(InterpolatedStringExpressionSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             var visitor = InterpolatedStringVisitor.For(node, Context, ilVar, this);
             node.Accept(visitor);
         }
         
         public override void VisitTypeOfExpression(TypeOfExpressionSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             var getTypeFromHandleSymbol = (IMethodSymbol) Context.SemanticModel.Compilation.GetTypeByMetadataName(typeof(Type).FullName).GetMembers("GetTypeFromHandle").First();
             
-            AddCilInstruction(ilVar, OpCodes.Ldtoken, Context.TypeResolver.Resolve(Context.GetTypeInfo(node.Type).Type));
-            AddCilInstruction(ilVar, OpCodes.Call, getTypeFromHandleSymbol.MethodResolverExpression(Context));
+            AddCilInstruction(ilVar, OpCodes.Ldtoken, Context.GetTypeInfo(node.Type).Type);
+            string operand = getTypeFromHandleSymbol.MethodResolverExpression(Context);
+            Context.EmitCilInstruction(ilVar, OpCodes.Call, operand);
+        }
+        
+        public override void VisitRangeExpression(RangeExpressionSyntax node)
+        {
+            using var _ = LineInformationTracker.Track(Context, node);
+
+            VisitIndex(node.LeftOperand);
+            VisitIndex(node.RightOperand);
+
+            var indexType = Context.SemanticModel.Compilation.GetTypeByMetadataName(typeof(Index).FullName);
+            var rangeCtor = Context.SemanticModel.Compilation.GetTypeByMetadataName(typeof(Range).FullName)
+                ?.GetMembers(".ctor")
+                .OfType<IMethodSymbol>()
+                .Single(ctor => ctor.Parameters.Length == 2 && ctor.Parameters[0].Type == indexType && ctor.Parameters[1].Type == indexType);
+            
+            Context.EmitCilInstruction(ilVar, OpCodes.Newobj, rangeCtor.MethodResolverExpression(Context));
+
+            void VisitIndex(ExpressionSyntax index)
+            {
+                using var _ = LineInformationTracker.Track(Context, index);
+                index.Accept(this);
+                switch (index.Kind())
+                {
+                    case SyntaxKind.NumericLiteralExpression:
+                        InjectRequiredConversions(index);
+                        break;
+                    
+                    case SyntaxKind.IndexExpression:
+                    case SyntaxKind.IdentifierName: break; // A variable typed as System.Index, it has already been loaded when visiting the index...
+                }
+            }
         }
 
         public override void VisitSimpleLambdaExpression(SimpleLambdaExpressionSyntax node) => HandleLambdaExpression(node);
         public override void VisitParenthesizedLambdaExpression(ParenthesizedLambdaExpressionSyntax node) => HandleLambdaExpression(node);
-        public override void VisitRangeExpression(RangeExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitAwaitExpression(AwaitExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitTupleExpression(TupleExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitIsPatternExpression(IsPatternExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitThrowExpression(ThrowExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitSwitchExpression(SwitchExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitAnonymousObjectCreationExpression(AnonymousObjectCreationExpressionSyntax node) => LogUnsupportedSyntax(node);
-        public override void VisitOmittedArraySizeExpression(OmittedArraySizeExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitImplicitStackAllocArrayCreationExpression(ImplicitStackAllocArrayCreationExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitMakeRefExpression(MakeRefExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitRefTypeExpression(RefTypeExpressionSyntax node) => LogUnsupportedSyntax(node);
@@ -714,8 +766,94 @@ namespace Cecilifier.Core.AST
         public override void VisitCheckedExpression(CheckedExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitDefaultExpression(DefaultExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitSizeOfExpression(SizeOfExpressionSyntax node) => LogUnsupportedSyntax(node);
-        public override void VisitInitializerExpression(InitializerExpressionSyntax node) => LogUnsupportedSyntax(node);
 
+        private void ProcessIndexerExpression(PrefixUnaryExpressionSyntax node)
+        {
+            var elementAccessExpression = node.Ancestors().OfType<ElementAccessExpressionSyntax>().FirstOrDefault();
+            if (elementAccessExpression != null)
+            {
+                ProcessIndexerExpressionInElementAccessExpression(node, elementAccessExpression);
+                return;
+            }
+            
+            /* TODO: this comment is at least not complete.. maybe misleading or wrong...
+             * 
+             * node is something like '^3'
+             * in this scenario we either need to 1) initialize some storage (that should be typed as System.Index) if such storage
+             * already exists (for instance, we have an assignment to a parameter, a local variable or to a field) or 2)
+             * instantiate a new System.Index (for example if we are returning this expression).
+             * 
+             * Note that when assigning to fields through member reference expression (for instance, a.b = ^2;), even though assignments
+             * would normally be handled as *1* we need to handle it as *2* and instantiate a new System.Index.
+             */
+            if (Context.HasFlag(Constants.ContextFlags.InRangeExpression))
+            {
+                node.Operand.Accept(this);
+                return;
+            }
+            
+            var ctor = Context.SemanticModel.Compilation.GetTypeByMetadataName(typeof(Index).FullName)
+                .GetMembers(".ctor")
+                .OfType<IMethodSymbol>()
+                .Single(m => m.Parameters.Length == 2 && m.Parameters[0].Type.SpecialType == SpecialType.System_Int32 && m.Parameters[1].Type.SpecialType == SpecialType.System_Boolean);
+
+            node.Operand.Accept(this);
+            Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4_1); // From end.
+
+            var isAssignmentToMemberReference = node.Parent is AssignmentExpressionSyntax { Left.RawKind: (int)SyntaxKind.SimpleMemberAccessExpression };
+            if ((node.Parent.IsKind(SyntaxKind.SimpleAssignmentExpression) || node.Parent.IsKind(SyntaxKind.EqualsValueClause)) && !isAssignmentToMemberReference)
+                AddMethodCall(ilVar, ctor);
+            else
+            {
+                var operand = ctor.MethodResolverExpression(Context);
+                Context.EmitCilInstruction(ilVar, OpCodes.Newobj, operand);
+            }
+
+            var parentElementAccessExpression = node.Ancestors().OfType<ElementAccessExpressionSyntax>().FirstOrDefault(candidate => candidate.ArgumentList.Contains(node));
+            if (parentElementAccessExpression != null)
+            {
+                var tempLocal = AddLocalVariableToCurrentMethod("tmpIndex", Context.TypeResolver.Resolve(Context.SemanticModel.GetTypeInfo(node).Type));
+                Context.EmitCilInstruction(ilVar, OpCodes.Stloc, tempLocal);
+                Context.EmitCilInstruction(ilVar, OpCodes.Ldloca, tempLocal);
+            }
+
+            // if it is an index assignment through a MRE we do need to visit lhs of the expression
+            skipLeftSideVisitingInAssignment = !isAssignmentToMemberReference && !node.Parent.IsKind(SyntaxKind.RangeExpression);
+        }
+
+        private void ProcessIndexerExpressionInElementAccessExpression(PrefixUnaryExpressionSyntax indexerExpression, ElementAccessExpressionSyntax elementAccessExpressionSyntax)
+        {
+            Utils.EnsureNotNull(elementAccessExpressionSyntax);
+
+            Context.EmitCilInstruction(ilVar, OpCodes.Dup); // Duplicate the target of the EAE
+
+            var indexed = Context.SemanticModel.GetTypeInfo(elementAccessExpressionSyntax.Expression);
+            Utils.EnsureNotNull(indexed.Type, "Cannot be null.");
+            if (indexed.Type.Name == "Span")
+            {
+                AddMethodCall(ilVar, ((IPropertySymbol)indexed.Type.GetMembers("Length").Single()).GetMethod);
+            }
+            else
+            {
+                Context.EmitCilInstruction(ilVar, OpCodes.Ldlen);
+            }
+
+            Context.EmitCilInstruction(ilVar, OpCodes.Conv_I4);
+            indexerExpression.Operand.Accept(this);
+            Context.EmitCilInstruction(ilVar, OpCodes.Sub);
+        }
+        
+        private bool TryProcessNoArgsCtorInvocationOnValueType(ObjectCreationExpressionSyntax node, IMethodSymbol methodSymbol, SymbolInfo ctorInfo)
+        {
+            if (ctorInfo.Symbol.ContainingType.IsReferenceType || methodSymbol.Parameters.Length > 0)
+            {
+                return false;
+            }
+
+            new ValueTypeNoArgCtorInvocationVisitor(Context, ilVar, ctorInfo).Visit(node.Parent);
+            return skipLeftSideVisitingInAssignment = true;
+        }
+        
         private void ProcessOverloadedBinaryOperatorInvocation(BinaryExpressionSyntax node, IMethodSymbol method)
         {
             using var _ = LineInformationTracker.Track(Context, node);
@@ -753,7 +891,7 @@ namespace Cecilifier.Core.AST
                 return;
             }
 
-            AddCilInstruction(ilVar, OpCodes.Ldarg_0);
+            Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
             var exps = CecilDefinitionsFactory.InstantiateDelegate(Context, ilVar, Context.GetTypeInfo(node).ConvertedType, syntheticMethodVariable.VariableName);
             AddCecilExpressions(exps);
         }
@@ -774,8 +912,8 @@ namespace Cecilifier.Core.AST
         private void StoreTopOfStackInLocalVariableAndLoadItsAddress(ITypeSymbol type)
         {
             var tempLocalName = AddLocalVariableWithResolvedType("tmp", Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method), Context.TypeResolver.Resolve(type));
-            AddCilInstruction(ilVar, OpCodes.Stloc, tempLocalName);
-            AddCilInstruction(ilVar, OpCodes.Ldloca_S, tempLocalName);
+            Context.EmitCilInstruction(ilVar, OpCodes.Stloc, tempLocalName);
+            Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, tempLocalName);
         }
 
         private OpCode LoadOpCodeFor(ITypeSymbol type)
@@ -890,7 +1028,7 @@ namespace Cecilifier.Core.AST
             // if this is an *unqualified* access we need to load *this*
             if (parentMae == null || parentMae.Expression == node)
             {
-                AddCilInstruction(ilVar, OpCodes.Ldarg_0);
+                Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
             }
 
             var parentExp = node.Parent;
@@ -902,18 +1040,19 @@ namespace Cecilifier.Core.AST
             {
                 if (propertySymbol.ContainingType.SpecialType == SpecialType.System_Array && propertySymbol.Name == "Length")
                 {
-                    AddCilInstruction(ilVar, OpCodes.Ldlen);
-                    AddCilInstruction(ilVar, OpCodes.Conv_I4);
+                    Context.EmitCilInstruction(ilVar, OpCodes.Ldlen);
+                    Context.EmitCilInstruction(ilVar, OpCodes.Conv_I4);
                 }
                 else if (propertySymbol.ContainingType.SpecialType == SpecialType.System_Array && propertySymbol.Name == "LongLength")
                 {
-                    AddCilInstruction(ilVar, OpCodes.Ldlen);
-                    AddCilInstruction(ilVar, OpCodes.Conv_I8);
+                    Context.EmitCilInstruction(ilVar, OpCodes.Ldlen);
+                    Context.EmitCilInstruction(ilVar, OpCodes.Conv_I8);
                 }
                 else
                 {
                     AddMethodCall(ilVar, propertySymbol.GetMethod, isAccessOnThisOrObjectCreation);
                     StoreTopOfStackInLocalVariableAndLoadItsAddressIfNeeded(node);
+                    HandlePotentialRefLoad(ilVar, node, propertySymbol.Type);
                 }
             }
         }
@@ -952,21 +1091,22 @@ namespace Cecilifier.Core.AST
 
             var isTargetOfQualifiedAccess = (node.Parent is MemberAccessExpressionSyntax mae) && mae.Name == node;
             if (!fieldSymbol.IsStatic && !isTargetOfQualifiedAccess)
-                AddCilInstruction(ilVar, OpCodes.Ldarg_0);
+                Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
             
-            if (HandleLoadAddress(ilVar, fieldSymbol.Type, (CSharpSyntaxNode) node.Parent, OpCodes.Ldflda, fieldSymbol.Name, VariableMemberKind.Field, fieldSymbol.ContainingType.Name))
+            if (HandleLoadAddress(ilVar, fieldSymbol.Type, (CSharpSyntaxNode) node.Parent, fieldSymbol.IsStatic ? OpCodes.Ldsflda : OpCodes.Ldflda, fieldSymbol.Name, VariableMemberKind.Field, fieldSymbol.ContainingType.Name))
             {
                 return;
             }
 
             if (fieldSymbol.IsVolatile)
-                AddCilInstruction(ilVar, OpCodes.Volatile);
+                Context.EmitCilInstruction(ilVar, OpCodes.Volatile);
 
             var resolvedField = fieldDeclarationVariable.IsValid
                 ? fieldDeclarationVariable.VariableName
                 : fieldSymbol.FieldResolverExpression(Context);
 
-            AddCilInstruction(ilVar, LoadOpCodeForFieldAccess(fieldSymbol), resolvedField);
+            OpCode opCode = LoadOpCodeForFieldAccess(fieldSymbol);
+            Context.EmitCilInstruction(ilVar, opCode, resolvedField);
             HandlePotentialDelegateInvocationOn(node, fieldSymbol.Type, ilVar);
         }
 
@@ -1001,48 +1141,11 @@ namespace Cecilifier.Core.AST
                 return;
             }
 
-            AddCilInstruction(ilVar, OpCodes.Ldloc, Context.DefinitionVariables.GetVariable(symbol.Name, VariableMemberKind.LocalVariable).VariableName);
+            string operand = Context.DefinitionVariables.GetVariable(symbol.Name, VariableMemberKind.LocalVariable).VariableName;
+            Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, operand);
             HandlePotentialDelegateInvocationOn(localVarSyntax, symbol.Type, ilVar);
             HandlePotentialFixedLoad(symbol);
-            HandlePotentialRefLoad(localVarSyntax, symbol);
-        }
-
-        private void HandlePotentialRefLoad(SimpleNameSyntax localVariableNameSyntax, ILocalSymbol symbol)
-        {
-            var needsLoadIndirect = false;
-            
-            var sourceSymbol = Context.SemanticModel.GetSymbolInfo(localVariableNameSyntax).Symbol;
-            var sourceIsByRef = sourceSymbol.IsByRef();
-
-            var returnStatement = localVariableNameSyntax.Ancestors().OfType<ReturnStatementSyntax>().SingleOrDefault();
-            var argument = localVariableNameSyntax.Ancestors().OfType<ArgumentSyntax>().FirstOrDefault();
-            var assigment = localVariableNameSyntax.Ancestors().OfType<BinaryExpressionSyntax>().SingleOrDefault(candidate => candidate.IsKind(SyntaxKind.SimpleAssignmentExpression));
-
-            if (assigment != null && assigment.Left != localVariableNameSyntax)
-            {
-                var targetIsByRef = Context.SemanticModel.GetSymbolInfo(assigment.Left).Symbol.IsByRef();
-                needsLoadIndirect = (assigment.Right == localVariableNameSyntax && sourceIsByRef && !targetIsByRef) // simple assignment like: nonRef = ref;
-                                    || sourceIsByRef; // complex assignment like: nonRef = ref + 10;
-            }
-            else if (argument != null)
-            {
-                var parameterSymbol = ParameterSymbolFromArgumentSyntax(argument);
-                var targetIsByRef = parameterSymbol.IsByRef();
-
-                needsLoadIndirect = (ReferenceEquals(parameterSymbol, sourceSymbol) && sourceIsByRef && !targetIsByRef) // simple argument like Foo(ref) where the parameter is not a reference. 
-                                    || sourceIsByRef; // complex argument like Foo(ref + 1)
-            }
-            else if (returnStatement != null)
-            {
-                var method = returnStatement.Ancestors().OfType<MethodDeclarationSyntax>().Single();
-                var methodIsByRef = Context.SemanticModel.GetSymbolInfo(method.ReturnType).Symbol.IsByRef();
-                
-                needsLoadIndirect = (returnStatement.Expression == localVariableNameSyntax && !methodIsByRef && sourceIsByRef) // simple return like: return ref_var; (method is not by ref)
-                                    || sourceIsByRef; // more complex return like: return ref_var + 1; // in this case we can only be accessing the value whence we need to deference the reference.
-            }
-            
-            if (needsLoadIndirect)
-                AddCilInstruction(ilVar, LoadIndirectOpCodeFor(symbol.Type.SpecialType));
+            HandlePotentialRefLoad(ilVar, localVarSyntax, symbol.Type);
         }
 
         private void HandlePotentialFixedLoad(ILocalSymbol symbol)
@@ -1050,7 +1153,7 @@ namespace Cecilifier.Core.AST
             if (!symbol.IsFixed)
                 return;
 
-            AddCilInstruction(ilVar, OpCodes.Conv_U);
+            Context.EmitCilInstruction(ilVar, OpCodes.Conv_U);
         }
 
         private void ProcessMethodReference(SimpleNameSyntax node, IMethodSymbol method)
@@ -1072,22 +1175,16 @@ namespace Cecilifier.Core.AST
 
             if (firstParentNotPartOfName is PrefixUnaryExpressionSyntax unaryPrefix && unaryPrefix.IsKind(SyntaxKind.AddressOfExpression))
             {
-                AddCilInstruction(ilVar, OpCodes.Ldftn, method.MethodResolverExpression(Context));
+                string operand = method.MethodResolverExpression(Context);
+                Context.EmitCilInstruction(ilVar, OpCodes.Ldftn, operand);
                 return;
             }
                 
             var delegateType = firstParentNotPartOfName switch
             {
                 ArgumentSyntax arg => ((IMethodSymbol) Context.SemanticModel.GetSymbolInfo(arg.Parent.Parent).Symbol).Parameters[arg.FirstAncestorOrSelf<ArgumentListSyntax>().Arguments.IndexOf(arg)].Type,
-                    
-                AssignmentExpressionSyntax assignment => Context.SemanticModel.GetSymbolInfo(assignment.Left).Symbol switch
-                {
-                    ILocalSymbol local => local.Type,
-                    IParameterSymbol param => param.Type,
-                    IFieldSymbol field => field.Type,
-                    IPropertySymbol prop => prop.Type,
-                    _ => throw new NotSupportedException($"Assignment to {assignment.Left} ({assignment.Kind()}) is not supported.")
-                },
+                
+                AssignmentExpressionSyntax assignment => Context.SemanticModel.GetSymbolInfo(assignment.Left).Symbol.Accept(ElementTypeSymbolResolver.Instance),
                     
                 VariableDeclarationSyntax variableDeclaration => Context.SemanticModel.GetTypeInfo(variableDeclaration.Type).Type,
                     
@@ -1108,11 +1205,11 @@ namespace Cecilifier.Core.AST
 
             if (method.IsStatic)
             {
-                AddCilInstruction(ilVar, OpCodes.Ldnull);
+                Context.EmitCilInstruction(ilVar, OpCodes.Ldnull);
             }
             else if (!node.Parent.IsKind(SyntaxKind.ThisExpression) && node.Parent == firstParentNotPartOfName)
             {
-                AddCilInstruction(ilVar, OpCodes.Ldarg_0);
+                Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
             }
 
             var exps = CecilDefinitionsFactory.InstantiateDelegate(Context, ilVar, delegateType, method.MethodResolverExpression(Context));
@@ -1124,7 +1221,7 @@ namespace Cecilifier.Core.AST
             // Local methods are always static.
             if (method.MethodKind != MethodKind.LocalFunction && !method.IsStatic && method.IsDefinedInCurrentType(Context) && node.Parent.Kind() == SyntaxKind.InvocationExpression)
             {
-                AddCilInstruction(ilVar, OpCodes.Ldarg_0);
+                Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
             }
 
             //TODO: We need to find the InvocationSyntax that node represents...
@@ -1155,37 +1252,38 @@ namespace Cecilifier.Core.AST
                     switch (typeInfo.ConvertedType.SpecialType)
                     {
                         case SpecialType.System_Single:
-                            AddCilInstruction(ilVar, OpCodes.Conv_R4);
+                            Context.EmitCilInstruction(ilVar, OpCodes.Conv_R4);
                             return;
 
                         case SpecialType.System_Double:
-                            AddCilInstruction(ilVar, OpCodes.Conv_R8);
+                            Context.EmitCilInstruction(ilVar, OpCodes.Conv_R8);
                             return;
 
                         case SpecialType.System_Byte:
-                            AddCilInstruction(ilVar, OpCodes.Conv_I1);
+                            Context.EmitCilInstruction(ilVar, OpCodes.Conv_I1);
                             return;
 
                         case SpecialType.System_Int16:
-                            AddCilInstruction(ilVar, OpCodes.Conv_I2);
+                            Context.EmitCilInstruction(ilVar, OpCodes.Conv_I2);
                             return;
 
                         case SpecialType.System_Int32:
                             // byte/char are pushed as Int32 by the runtime 
                             if (typeInfo.Type.SpecialType != SpecialType.System_SByte && typeInfo.Type.SpecialType != SpecialType.System_Byte && typeInfo.Type.SpecialType != SpecialType.System_Char)
-                                AddCilInstruction(ilVar, OpCodes.Conv_I4);
+                                Context.EmitCilInstruction(ilVar, OpCodes.Conv_I4);
                             return;
 
                         case SpecialType.System_Int64:
                             var convOpCode = typeInfo.Type.SpecialType == SpecialType.System_Char || typeInfo.Type.SpecialType == SpecialType.System_Byte ? OpCodes.Conv_U8 : OpCodes.Conv_I8;
-                            AddCilInstruction(ilVar, convOpCode);
+                            Context.EmitCilInstruction(ilVar, convOpCode);
                             return;
 
                         default:
                             throw new Exception($"Conversion from {typeInfo.Type} to {typeInfo.ConvertedType}  not implemented.");
                     }
                 }
-                else if (conversion.MethodSymbol != null)
+
+                if (conversion.MethodSymbol != null)
                 {
                     AddMethodCall(ilVar, conversion.MethodSymbol, false);
                 }
@@ -1195,14 +1293,21 @@ namespace Cecilifier.Core.AST
             {
                 AddCilInstruction(ilVar, OpCodes.Box, typeInfo.Type);
             }
-            else if (conversion.IsIdentity && typeInfo.Type.Name == "Index" && loadArrayIntoStack != null)
+            else if (conversion.IsIdentity && typeInfo.Type.Name == "Index" && !expression.IsKind(SyntaxKind.IndexExpression) && loadArrayIntoStack != null)
             {
-                // We are indexing an array/indexer using System.Index; In this case
+                // We are indexing an array/indexer (this[]) using a System.Index variable; In this case
                 // we need to convert from System.Index to *int* which is done through
                 // the method System.Index::GetOffset(int32)
                 loadArrayIntoStack();
-                AddCilInstruction(ilVar, OpCodes.Ldlen);
-                AddCilInstruction(ilVar, OpCodes.Conv_I4);
+            
+                var indexed = Context.SemanticModel.GetTypeInfo(expression.Ancestors().OfType<ElementAccessExpressionSyntax>().Single().Expression);
+                Utils.EnsureNotNull(indexed.Type, "Cannot be null.");
+                if (indexed.Type.Name == "Span")
+                    AddMethodCall(ilVar, ((IPropertySymbol)indexed.Type.GetMembers("Length").Single()).GetMethod);
+                else
+                    Context.EmitCilInstruction(ilVar, OpCodes.Ldlen);
+                
+                Context.EmitCilInstruction(ilVar, OpCodes.Conv_I4);
                 AddMethodCall(ilVar, (IMethodSymbol) typeInfo.Type.GetMembers().Single(m => m.Name == "GetOffset"));
             }
         }
@@ -1261,6 +1366,7 @@ namespace Cecilifier.Core.AST
             {
                 Visit(target);
                 PushCall();
+                StackallocAsArgumentFixer.Current?.MarkEndOfComputedCallTargetBlock();
 
                 Visit(args);
                 FixCallSite();
@@ -1296,28 +1402,30 @@ namespace Cecilifier.Core.AST
 
         private void ProcessArrayCreation(ITypeSymbol elementType, InitializerExpressionSyntax initializer)
         {
-            AddCilInstruction(ilVar, OpCodes.Newarr, Context.TypeResolver.Resolve(elementType));
+            AddCilInstruction(ilVar, OpCodes.Newarr, elementType);
 
             var stelemOpCode = StelemOpCodeFor(elementType);
             for (var i = 0; i < initializer?.Expressions.Count; i++)
             {
-                AddCilInstruction(ilVar, OpCodes.Dup);
-                AddCilInstruction(ilVar, OpCodes.Ldc_I4, i);
+                Context.EmitCilInstruction(ilVar, OpCodes.Dup);
+                Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, i);
                 initializer.Expressions[i].Accept(this);
 
                 var itemType = Context.GetTypeInfo(initializer.Expressions[i]);
                 if (elementType.IsReferenceType && itemType.Type != null && itemType.Type.IsValueType)
                 {
-                    AddCilInstruction(ilVar, OpCodes.Box, Context.TypeResolver.Resolve(itemType.Type));
+                    AddCilInstruction(ilVar, OpCodes.Box, itemType.Type);
                 }
 
-                AddCilInstruction(ilVar, stelemOpCode);
+                Context.EmitCilInstruction(ilVar, stelemOpCode);
             }
         }
     }
 
     internal class ElementTypeSymbolResolver : SymbolVisitor<ITypeSymbol>
     {
+        public static ElementTypeSymbolResolver Instance = new ElementTypeSymbolResolver();
+        
         public override ITypeSymbol VisitEvent(IEventSymbol symbol)
         {
             return symbol.Type.Accept(this);

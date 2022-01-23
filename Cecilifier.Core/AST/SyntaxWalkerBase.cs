@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -11,7 +11,6 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
-using static Cecilifier.Core.Misc.Utils;
 
 namespace Cecilifier.Core.AST
 {
@@ -68,17 +67,13 @@ namespace Cecilifier.Core.AST
                 foreach (var t in method.TypeArguments)
                     AddCecilExpression($"{genInstVar}.GenericArguments.Add({Context.TypeResolver.Resolve(t)});");
 
-                AddCilInstruction(ilVar, opCode, genInstVar);
+                Context.EmitCilInstruction(ilVar, opCode, genInstVar);
             }
             else
             {
-                AddCilInstruction(ilVar, opCode, method.MethodResolverExpression(Context));
+                string operand = method.MethodResolverExpression(Context);
+                Context.EmitCilInstruction(ilVar, opCode, operand);
             }
-        }
-
-        protected void AddCilInstruction(string ilVar, OpCode opCode, ITypeSymbol type)
-        {
-            AddCilInstruction(ilVar, opCode, Context.TypeResolver.Resolve(type));
         }
 
         protected void InsertCilInstructionAfter<T>(LinkedListNode<string> instruction, string ilVar, OpCode opCode, T arg = default)
@@ -90,17 +85,12 @@ namespace Cecilifier.Core.AST
             Context.MoveLineAfter(Context.CurrentLine, instruction.Next);
         }
 
-        protected void AddCilInstruction<T>(string ilVar, OpCode opCode, T operand)
+        protected void AddCilInstruction(string ilVar, OpCode opCode, ITypeSymbol type)
         {
-            var operandStr = operand == null ? string.Empty : $", {operand}";
-            AddCecilExpression($"{ilVar}.Emit({opCode.ConstantName()}{operandStr});");
+            string operand = Context.TypeResolver.Resolve(type);
+            Context.EmitCilInstruction(ilVar, opCode, operand);
         }
 
-        protected void AddCilInstruction(string ilVar, OpCode opCode)
-        {
-            AddCecilExpression($"{ilVar}.Emit({opCode.ConstantName()});");
-        }
-        
         protected string AddCilInstructionWithLocalVariable(string ilVar, OpCode opCode)
         {
             var instVar = CreateCilInstruction(ilVar, opCode);
@@ -129,6 +119,15 @@ namespace Cecilifier.Core.AST
 
             return cecilVarDeclName;
         }
+        
+        protected string AddLocalVariableToCurrentMethod(string localVarName, string varType)
+        {
+            var currentMethod = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
+            if (!currentMethod.IsValid)
+                throw new InvalidOperationException("Could not resolve current method declaration variable.");
+
+            return AddLocalVariableWithResolvedType(localVarName, currentMethod, varType);
+        }
 
         protected IMethodSymbol DeclaredSymbolFor<T>(T node) where T : BaseMethodDeclarationSyntax
         {
@@ -150,12 +149,7 @@ namespace Cecilifier.Core.AST
 
         protected string ImportExpressionForType(Type type)
         {
-            return ImportExpressionForType(type.FullName);
-        }
-
-        private static string ImportExpressionForType(string typeName)
-        {
-            return ImportFromMainModule($"typeof({typeName})");
+            return Utils.ImportFromMainModule($"typeof({type.FullName})");
         }
 
         protected string TypeModifiersToCecil(BaseTypeDeclarationSyntax node)
@@ -190,6 +184,7 @@ namespace Cecilifier.Core.AST
 
         private static bool IsNestedTypeDeclaration(SyntaxNode node)
         {
+            Utils.EnsureNotNull(node.Parent);
             return node.Parent.Kind() != SyntaxKind.NamespaceDeclaration && node.Parent.Kind() != SyntaxKind.CompilationUnit;
         }
         
@@ -287,11 +282,7 @@ namespace Cecilifier.Core.AST
 
         protected string ResolveExpressionType(ExpressionSyntax expression)
         {
-            if (expression == null)
-            {
-                throw new ArgumentNullException(nameof(expression));
-            }
-
+            Utils.EnsureNotNull(expression);
             var info = Context.GetTypeInfo(expression);
             return Context.TypeResolver.Resolve(info.Type);
         }
@@ -314,48 +305,52 @@ namespace Cecilifier.Core.AST
         {
             var parent = (CSharpSyntaxNode) node.Parent;
             if (HandleLoadAddress(ilVar, paramSymbol.Type, parent, OpCodes.Ldarga, paramSymbol.Name, VariableMemberKind.Parameter))
-            {
                 return;
-            }
 
             var method = (IMethodSymbol) paramSymbol.ContainingSymbol;
             
+            Utils.EnsureNotNull(node.Parent);
             //TODO: Add a test for parameter index for static/instance members.
             var adjustedParameterIndex = paramSymbol.Ordinal + (method.IsStatic ? 0 : 1);
             if (node.Parent.Kind() == SyntaxKind.SimpleMemberAccessExpression && paramSymbol.ContainingType.IsValueType)
             {
-                AddCilInstruction(ilVar, OpCodes.Ldarga, Context.DefinitionVariables.GetVariable(paramSymbol.Name, VariableMemberKind.Parameter).VariableName);
+                string operand = Context.DefinitionVariables.GetVariable(paramSymbol.Name, VariableMemberKind.Parameter).VariableName;
+                Context.EmitCilInstruction(ilVar, OpCodes.Ldarga, operand);
+                return;
             }
-            else if (adjustedParameterIndex > 3)
+
+            if (adjustedParameterIndex > 3)
             {
-                AddCilInstruction(ilVar, OpCodes.Ldarg, adjustedParameterIndex);
-                HandlePotentialDelegateInvocationOn(node, paramSymbol.Type, ilVar);
-                HandlePotentialRefLoad(ilVar, node, paramSymbol.Type);
+                Context.EmitCilInstruction(ilVar, OpCodes.Ldarg, adjustedParameterIndex);
             }
             else
             {
                 OpCode[] optimizedLdArgs = {OpCodes.Ldarg_0, OpCodes.Ldarg_1, OpCodes.Ldarg_2, OpCodes.Ldarg_3};
                 var loadOpCode = optimizedLdArgs[adjustedParameterIndex];
-                AddCilInstruction(ilVar, loadOpCode);
-                HandlePotentialDelegateInvocationOn(node, paramSymbol.Type, ilVar);
-                HandlePotentialRefLoad(ilVar, node, paramSymbol.Type);
+                Context.EmitCilInstruction(ilVar, loadOpCode);
             }
+            HandlePotentialDelegateInvocationOn(node, paramSymbol.Type, ilVar);
+            HandlePotentialRefLoad(ilVar, node, paramSymbol.Type);
         }
 
-        protected bool HandleLoadAddress(string ilVar, ITypeSymbol symbol, CSharpSyntaxNode parentNode, OpCode opCode, string symbolName, VariableMemberKind variableMemberKind, string parentName = null)
+        protected bool HandleLoadAddress(string ilVar, ITypeSymbol symbol, CSharpSyntaxNode node, OpCode opCode, string symbolName, VariableMemberKind variableMemberKind, string parentName = null)
         {
-            return HandleSystemIndexUsage() || HandleRefAssignment() || HandleParameter();
+            return HandleCallOnValueType() || HandleRefAssignment() || HandleParameter();
             
-            bool HandleSystemIndexUsage()
+            bool HandleCallOnValueType()
             {
+                if (!symbol.IsValueType)
+                    return false;
+                
                 // in this case we need to call System.Index.GetOffset(int32) on a value type (System.Index)
                 // which requires the address of the value type.
-                var isSystemIndexUsedAsIndex = IsSystemIndexUsedAsIndex(symbol, parentNode);
-                if (isSystemIndexUsedAsIndex || parentNode.IsKind(SyntaxKind.AddressOfExpression) || (symbol.IsValueType && parentNode.Accept(new UsageVisitor()) == UsageKind.CallTarget))
+                var isSystemIndexUsedAsIndex = IsSystemIndexUsedAsIndex(symbol, node);
+                if (isSystemIndexUsedAsIndex || node.IsKind(SyntaxKind.AddressOfExpression) || IsPseudoAssignmentToValueType() || node.Accept(new UsageVisitor(Context)) == UsageKind.CallTarget)
                 {
-                    AddCilInstruction(ilVar, opCode, Context.DefinitionVariables.GetVariable(symbolName, variableMemberKind, parentName).VariableName);
-                    if (!Context.HasFlag("fixed") && parentNode.IsKind(SyntaxKind.AddressOfExpression))
-                        AddCilInstruction(ilVar, OpCodes.Conv_U);
+                    string operand = Context.DefinitionVariables.GetVariable(symbolName, variableMemberKind, parentName).VariableName;
+                    Context.EmitCilInstruction(ilVar, opCode, operand);
+                    if (!Context.HasFlag(Constants.ContextFlags.Fixed) && node.IsKind(SyntaxKind.AddressOfExpression))
+                        Context.EmitCilInstruction(ilVar, OpCodes.Conv_U);
 
                     return true;
                 }
@@ -365,58 +360,98 @@ namespace Cecilifier.Core.AST
             
             bool HandleRefAssignment()
             {
-                if (!(parentNode is RefExpressionSyntax refExpression))
+                if (!(node is RefExpressionSyntax refExpression))
                     return false;
                 
                 var assignedValueSymbol = Context.SemanticModel.GetSymbolInfo(refExpression.Expression);
                 if (assignedValueSymbol.Symbol.IsByRef())
                     return false;
-                
-                AddCilInstruction(ilVar, opCode, Context.DefinitionVariables.GetVariable(symbolName, variableMemberKind, parentName).VariableName);
+
+                string operand = Context.DefinitionVariables.GetVariable(symbolName, variableMemberKind, parentName).VariableName;
+                Context.EmitCilInstruction(ilVar, opCode, operand);
                 return true;
             }
 
             bool HandleParameter()
             {
-                if (!(parentNode is ArgumentSyntax argument) || !argument.RefOrOutKeyword.IsKind(SyntaxKind.RefKeyword))
+                if (!(node is ArgumentSyntax argument) || !argument.RefOrOutKeyword.IsKind(SyntaxKind.RefKeyword))
                     return false;
 
-                if (Context.SemanticModel.GetSymbolInfo(argument.Expression).Symbol is IParameterSymbol parameterSymbol && parameterSymbol.RefKind != RefKind.Ref && parameterSymbol.RefKind != RefKind.RefReadOnly)
+                if (Context.SemanticModel.GetSymbolInfo(argument.Expression).Symbol?.IsByRef() == false)
                 {
-                    AddCilInstruction(ilVar, opCode, Context.DefinitionVariables.GetVariable(symbolName, variableMemberKind, parentName).VariableName);
+                    string operand = Context.DefinitionVariables.GetVariable(symbolName, variableMemberKind, parentName).VariableName;
+                    Context.EmitCilInstruction(ilVar, opCode, operand);
                     return true;
                 }
                 return false;
             }
+            
+            bool IsPseudoAssignmentToValueType() => Context.HasFlag(Constants.ContextFlags.PseudoAssignmentToIndex);
         }
         
-        private void HandlePotentialRefLoad(string ilVar, SimpleNameSyntax argumentSimpleNameSyntax, ITypeSymbol typeSymbol)
+        protected void HandlePotentialRefLoad(string ilVar, SyntaxNode expression, ITypeSymbol type)
         {
             var needsLoadIndirect = false;
             
-            var argumentSymbol = Context.SemanticModel.GetSymbolInfo(argumentSimpleNameSyntax).Symbol;
-            var argumentIsByRef = argumentSymbol.IsByRef();
-
-            var argument = argumentSimpleNameSyntax.Ancestors().OfType<ArgumentSyntax>().FirstOrDefault();
-            if (argument != null)
+            var sourceSymbol = Context.SemanticModel.GetSymbolInfo(expression).Symbol;
+            var sourceIsByRef = sourceSymbol.IsByRef();
+        
+            var returnLikeNode = (SyntaxNode) expression.Ancestors().OfType<ArrowExpressionClauseSyntax>().SingleOrDefault() 
+                                 ?? expression.Ancestors().OfType<ReturnStatementSyntax>().SingleOrDefault();
+            
+            var argument = expression.Ancestors().OfType<ArgumentSyntax>().FirstOrDefault();
+            var assigment = expression.Ancestors().OfType<AssignmentExpressionSyntax>().SingleOrDefault();
+        
+            if (assigment != null && assigment.Left != expression)
+            {
+                var targetIsByRef = Context.SemanticModel.GetSymbolInfo(assigment.Left).Symbol.IsByRef();
+                needsLoadIndirect = (assigment.Right == expression && sourceIsByRef && !targetIsByRef) // simple assignment like: nonRef = ref;
+                                    || sourceIsByRef; // complex assignment like: nonRef = ref + 10;
+            }
+            else if (argument != null)
             {
                 var parameterSymbol = ParameterSymbolFromArgumentSyntax(argument);
-                var parameterIsByRef = parameterSymbol.IsByRef();
-
-                needsLoadIndirect = argumentIsByRef && !parameterIsByRef;
+                var targetIsByRef = parameterSymbol.IsByRef();
+        
+                needsLoadIndirect = sourceIsByRef && !targetIsByRef;
+            }
+            else if (returnLikeNode != null)
+            {
+                var method = returnLikeNode.Ancestors().OfType<MemberDeclarationSyntax>().First();
+                bool returnTypeIsByRef = Context.SemanticModel.GetDeclaredSymbol(method).IsByRef();
+                
+                needsLoadIndirect = sourceIsByRef && !returnTypeIsByRef;
             }
             
             if (needsLoadIndirect)
-                AddCilInstruction(ilVar, LoadIndirectOpCodeFor(typeSymbol.SpecialType));
+            {
+                OpCode opCode = LoadIndirectOpCodeFor(type.SpecialType);
+                Context.EmitCilInstruction(ilVar, opCode);
+            }
         }
-        
-        protected IParameterSymbol ParameterSymbolFromArgumentSyntax(ArgumentSyntax argument)
+
+        private IParameterSymbol ParameterSymbolFromArgumentSyntax(ArgumentSyntax argument)
         {
             var invocation = argument.Ancestors().OfType<InvocationExpressionSyntax>().FirstOrDefault();
-            if (invocation != null)
+            if (invocation != null && invocation.ArgumentList.Arguments.Contains(argument))
             {
                 var argumentIndex = argument.Ancestors().OfType<ArgumentListSyntax>().First().Arguments.IndexOf(argument);
-                return ((IMethodSymbol) Context.SemanticModel.GetSymbolInfo(invocation.Expression).Symbol).Parameters.ElementAt(argumentIndex);
+                var symbol = Context.SemanticModel.GetSymbolInfo(invocation.Expression).Symbol;
+                var method = symbol switch
+                {
+                    ILocalSymbol { Type: IFunctionPointerTypeSymbol } local => ((IFunctionPointerTypeSymbol)local.Type).Signature,
+                    ILocalSymbol { Type: INamedTypeSymbol } local => ((INamedTypeSymbol)local.Type).DelegateInvokeMethod,
+                    IParameterSymbol { Type: INamedTypeSymbol } param => ((INamedTypeSymbol)param.Type).DelegateInvokeMethod,
+                    IParameterSymbol { Type: IFunctionPointerTypeSymbol } param => ((IFunctionPointerTypeSymbol)param.Type).Signature,
+                    IFieldSymbol { Type: INamedTypeSymbol } field => ((INamedTypeSymbol)field.Type).DelegateInvokeMethod,
+                    IFieldSymbol { Type: IFunctionPointerTypeSymbol } field => ((IFunctionPointerTypeSymbol)field.Type).Signature,
+                    IPropertySymbol { Type: INamedTypeSymbol } field => ((INamedTypeSymbol)field.Type).DelegateInvokeMethod,
+                    IPropertySymbol { Type: IFunctionPointerTypeSymbol } field => ((IFunctionPointerTypeSymbol)field.Type).Signature,
+                    IMethodSymbol m => m,
+                    _ => throw new NotImplementedException($"Found not supported symbol {symbol.ToDisplayString()} ({symbol.GetType().Name}) when trying to find index of argument ({argument})")
+                };
+
+                return method.Parameters[argumentIndex];
             }
 
             var elementAccess = argument.Ancestors().OfType<ElementAccessExpressionSyntax>().SingleOrDefault();
@@ -432,7 +467,7 @@ namespace Cecilifier.Core.AST
 
             return null;
         }
-        
+
         protected OpCode LoadIndirectOpCodeFor(SpecialType type)
         {
             return type switch
@@ -455,9 +490,12 @@ namespace Cecilifier.Core.AST
             };
         }
 
-        private static bool IsSystemIndexUsedAsIndex(ITypeSymbol symbol, CSharpSyntaxNode parentNode)
+        private static bool IsSystemIndexUsedAsIndex(ITypeSymbol symbol, CSharpSyntaxNode node)
         {
-            return parentNode.Parent.IsKind(SyntaxKind.BracketedArgumentList) && symbol.FullyQualifiedName() == "System.Index";
+            if (symbol.FullyQualifiedName() != "System.Index")
+                return false;
+            
+            return node.Parent.IsKind(SyntaxKind.BracketedArgumentList);
         }
 
         protected void HandlePotentialDelegateInvocationOn(SimpleNameSyntax node, ITypeSymbol typeSymbol, string ilVar)
@@ -470,20 +508,22 @@ namespace Cecilifier.Core.AST
 
             if (typeSymbol is IFunctionPointerTypeSymbol functionPointer)
             {
-                AddCilInstruction(ilVar, OpCodes.Calli, CecilDefinitionsFactory.CallSite(Context.TypeResolver, functionPointer));
+                string operand = CecilDefinitionsFactory.CallSite(Context.TypeResolver, functionPointer);
+                Context.EmitCilInstruction(ilVar, OpCodes.Calli, operand);
                 return;
             }
 
             var localDelegateDeclaration = Context.TypeResolver.ResolveLocalVariableType(typeSymbol);
             if (localDelegateDeclaration != null)
             {
-                AddCilInstruction(ilVar, OpCodes.Callvirt, $"{localDelegateDeclaration}.Methods.Single(m => m.Name == \"Invoke\")");
+                string operand = $"{localDelegateDeclaration}.Methods.Single(m => m.Name == \"Invoke\")";
+                Context.EmitCilInstruction(ilVar, OpCodes.Callvirt, operand);
             }
             else
             {
                 var invokeMethod = (IMethodSymbol) typeSymbol.GetMembers("Invoke").SingleOrDefault();
                 var resolvedMethod = invokeMethod.MethodResolverExpression(Context);
-                AddCilInstruction(ilVar, OpCodes.Callvirt, resolvedMethod);
+                Context.EmitCilInstruction(ilVar, OpCodes.Callvirt, resolvedMethod);
             }
         }
 
@@ -642,7 +682,7 @@ namespace Cecilifier.Core.AST
                     //attribute is not declared in the same assembly....
                     var ctorArgumentTypes = $"new Type[{attrArgs.Length}] {{ {string.Join(",", attrArgs.Select(arg => $"typeof({Context.GetTypeInfo(arg.Expression).Type.Name})"))} }}";
             
-                    return ImportFromMainModule($"typeof({attrType.FullyQualifiedName()}).GetConstructor({ctorArgumentTypes})");
+                    return Utils.ImportFromMainModule($"typeof({attrType.FullyQualifiedName()}).GetConstructor({ctorArgumentTypes})");
                 }
             
                 // Attribute is defined in the same assembly. We need to find the variable that holds its "ctor declaration"
@@ -666,12 +706,25 @@ namespace Cecilifier.Core.AST
 
     internal class UsageVisitor : CSharpSyntaxVisitor<UsageKind>
     {
+        private readonly IVisitorContext context;
+
+        public UsageVisitor(IVisitorContext context)
+        {
+            this.context = context;
+        }
+
         public override UsageKind VisitMemberAccessExpression(MemberAccessExpressionSyntax node)
         {
             if (node?.Parent.IsKind(SyntaxKind.InvocationExpression) == true)
                 return UsageKind.CallTarget;
 
             return UsageKind.None;
+        }
+
+        public override UsageKind VisitElementAccessExpression(ElementAccessExpressionSyntax node)
+        {
+            var symbol = context.SemanticModel.GetSymbolInfo(node).Symbol as IPropertySymbol;
+            return symbol?.IsIndexer == true ? UsageKind.CallTarget : UsageKind.None;
         }
     }
 

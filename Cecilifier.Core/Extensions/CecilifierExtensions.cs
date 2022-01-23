@@ -1,5 +1,10 @@
+using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Text;
+using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Misc;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -130,6 +135,24 @@ public class SnippetRunner
             }
 
             return true;
+        }
+
+        [Conditional("DEBUG")]
+        public static void DumpTo(this IList<Mapping> self, TextWriter textWriter)
+        {
+            textWriter.WriteLine(self.DumpAsString());
+        }
+        
+        public static string DumpAsString(this IList<Mapping> self)
+        {
+            var sb = new StringBuilder();
+#if DEBUG            
+            foreach (var mapping in self)
+            {
+                sb.AppendLine($"{mapping.Node.HumanReadableSummary() ,60} {mapping.Source} <- -> {mapping.Cecilified}");
+            }
+#endif
+            return sb.ToString();
         }
     }
 }

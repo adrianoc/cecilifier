@@ -29,12 +29,12 @@ namespace Cecilifier.Core.AST
         {
             try
             {
-                Context.Namespace = NamespaceOf(node);
+                Context.CurrentNamespace = NamespaceOf(node);
                 base.VisitNamespaceDeclaration(node);
             }
             finally
             {
-                Context.Namespace = string.Empty;
+                Context.CurrentNamespace = string.Empty;
             }
 
             string NamespaceOf(NamespaceDeclarationSyntax namespaceDeclarationSyntax)

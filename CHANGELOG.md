@@ -2,13 +2,16 @@
 
 ## Changed
 
-- bumped cecilifier version to 1.23.0
+- bumped cecilifier version to 1.30.0
 - new releases notification mechanism
 - Updated projects to compile to C# 10 targeting .Net 6.0
 - Initialize MethodDefinition instances with final return type whenever possible
   to minimize noise.
 - Changed approach to avoid generate code referencing 'System.Private.CoreLib.dll'
 - Improved assembly comparison by checking field references in instruction operands.  
+- Improved support for System.Range (#140)
+- Improved handling of System.Indexer variables and IndexExpressions used with arrays/Spans<T> (related to #143, #136)
+- Improved stackalloc handling (#134, #135)
 
 ## Added
 
@@ -30,6 +33,14 @@
 - Fixed exception being thrown if code have access to fields defined in referenced assemblies (#128)
 - Fixed bug causing open generic types to be handled as closed types in some scenarios
 - Fixed WebSocket connection closing prematurely by lowering ping interval to meet timings in nginx.
+- Fixed incorrect Ldlen instruction when retrieving the length of a Span<T> (instead calls Span<>.get_Length) (#143)
+- Fixed exception if stackalloc for non primitives is used with non constant dimension (#135)
+- Fixed exception upon assignment to method/property returning by ref (#136)
+- Fixed field assignment in member access expressions (#130)
+- Fixed Span<T>.Slice() not being called when indexer is passed a System.Range.(#140)
+- Fixed assignment to System.Index missing op_Implicit(Int32) call (#139)
+- Fixed field value being passed instead of its address (#142)
+- Fixed missing Ldind and Ldflda/Ldsflda in some scenarios (#141 & #142)
 
 ## 28/Oct/2021
 

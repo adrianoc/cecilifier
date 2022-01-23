@@ -51,7 +51,7 @@ namespace Cecilifier.Core.AST
 
                 if (declaringType.Kind() != SyntaxKind.StructDeclaration)
                 {
-                    AddCilInstruction(ilVar, OpCodes.Ldarg_0);
+                    Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
                 }
                
                 // If this ctor has an initializer the call to the base ctor will happen when we visit call base.VisitConstructorDeclaration()
@@ -59,7 +59,8 @@ namespace Cecilifier.Core.AST
                 if (node.Initializer == null && declaringType.Kind() != SyntaxKind.StructDeclaration)
                 {
                     var declaringTypeLocalVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Type).VariableName;
-                    AddCilInstruction(ilVar, OpCodes.Call, Utils.ImportFromMainModule($"TypeHelpers.DefaultCtorFor({declaringTypeLocalVar}.BaseType)"));
+                    string operand = Utils.ImportFromMainModule($"TypeHelpers.DefaultCtorFor({declaringTypeLocalVar}.BaseType)");
+                    Context.EmitCilInstruction(ilVar, OpCodes.Call, operand);
                 }
 
                 callBaseMethod(node);
@@ -92,10 +93,11 @@ namespace Cecilifier.Core.AST
             AddCecilExpression($@"var {ctorBodyIL} = {ctorLocalVar}.Body.GetILProcessor();");
             
             ProcessFieldInitialization(declaringClass, ctorBodyIL);
-            AddCilInstruction(ctorBodyIL, OpCodes.Ldarg_0);
-            AddCilInstruction(ctorBodyIL, OpCodes.Call, ResolveDefaultCtorFor(typeDefVar, declaringClass));
+            Context.EmitCilInstruction(ctorBodyIL, OpCodes.Ldarg_0);
+            string operand = ResolveDefaultCtorFor(typeDefVar, declaringClass);
+            Context.EmitCilInstruction(ctorBodyIL, OpCodes.Call, operand);
             
-            AddCilInstruction(ctorBodyIL, OpCodes.Ret);
+            Context.EmitCilInstruction(ctorBodyIL, OpCodes.Ret);
         }
         
         internal void DefaultCtorInjector2(string typeDefVar, string typeName)
@@ -112,9 +114,10 @@ namespace Cecilifier.Core.AST
             var ctorBodyIL = Context.Naming.ILProcessor("ctor", typeName);
             AddCecilExpression($@"var {ctorBodyIL} = {ctorLocalVar}.Body.GetILProcessor();");
             
-            AddCilInstruction(ctorBodyIL, OpCodes.Ldarg_0);
-            AddCilInstruction(ctorBodyIL, OpCodes.Call, Utils.ImportFromMainModule($"TypeHelpers.DefaultCtorFor({typeDefVar}.BaseType)"));
-            AddCilInstruction(ctorBodyIL, OpCodes.Ret);
+            Context.EmitCilInstruction(ctorBodyIL, OpCodes.Ldarg_0);
+            string operand = Utils.ImportFromMainModule($"TypeHelpers.DefaultCtorFor({typeDefVar}.BaseType)");
+            Context.EmitCilInstruction(ctorBodyIL, OpCodes.Call, operand);
+            Context.EmitCilInstruction(ctorBodyIL, OpCodes.Ret);
         }
 
         private string AddOrUpdateParameterlessCtorDefinition(string typeName, string ctorAccessibility, string ctorLocalVar)
@@ -136,14 +139,29 @@ namespace Cecilifier.Core.AST
 
         private void ProcessFieldInitialization(TypeDeclarationSyntax declaringClass, string ctorBodyIL)
         {
+            // Handles non const field initialization...
             foreach (var fieldDeclaration in declaringClass.Members.OfType<FieldDeclarationSyntax>().Where(f => !f.Modifiers.Any(m => m.IsKind(SyntaxKind.ConstKeyword))))
             {
                 var dec = fieldDeclaration.Declaration.Variables[0];
-                if (dec.Initializer != null && !fieldDeclaration.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword)))
+                if (dec.Initializer == null)
+                    continue;
+                
+                if (!fieldDeclaration.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword)))
                 {
                     Context.WriteNewLine();
                     Context.WriteComment(fieldDeclaration.ToString());
-                    AddCilInstruction(ctorBodyIL, OpCodes.Ldarg_0);
+                    if (dec.Initializer.Value.IsKind(SyntaxKind.IndexExpression))
+                    {
+                        // code is something like `Index field = ^5`; 
+                        // in this case we need to load the address of the field since the expression ^5 (IndexerExpression) will result in a call to System.Index ctor (which is a value type and expects
+                        // the address of the value type to be in the top of the stack
+                        string operand = Context.DefinitionVariables.GetVariable(dec.Identifier.Text, VariableMemberKind.Field, declaringClass.Identifier.Text).VariableName;
+                        Context.EmitCilInstruction(ctorBodyIL, OpCodes.Ldflda, operand);
+                        ExpressionVisitor.Visit(Context, ctorBodyIL, dec.Initializer);
+                        return;
+                    }
+
+                    Context.EmitCilInstruction(ctorBodyIL, OpCodes.Ldarg_0);
                 }
 
                 if (ExpressionVisitor.Visit(Context, ctorBodyIL, dec.Initializer))
@@ -154,7 +172,7 @@ namespace Cecilifier.Core.AST
                     ? OpCodes.Stsfld
                     : OpCodes.Stfld;
 
-                AddCilInstruction(ctorBodyIL, fieldStoreOpCode, fieldVarDef.VariableName);
+                Context.EmitCilInstruction(ctorBodyIL, fieldStoreOpCode, fieldVarDef.VariableName);
             }
         }
 

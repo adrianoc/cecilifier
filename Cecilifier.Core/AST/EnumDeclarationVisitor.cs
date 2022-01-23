@@ -29,8 +29,7 @@ namespace Cecilifier.Core.AST
             AddCecilExpressions(typeDef);
 
             var enumSymbol = Context.SemanticModel.GetDeclaredSymbol(node);
-            if (enumSymbol == null)
-                throw new NullReferenceException($"Something really bad happened. Roslyn failed to resolve the symbol for the enum {node.Identifier.Text}");
+            Utils.EnsureNotNull(enumSymbol, $"Something really bad happened. Roslyn failed to resolve the symbol for the enum {node.Identifier.Text}");
             
             var parentName = enumSymbol.ContainingSymbol.FullyQualifiedName();
             using (Context.DefinitionVariables.WithCurrent(parentName, node.Identifier.ValueText, VariableMemberKind.Type,enumType))

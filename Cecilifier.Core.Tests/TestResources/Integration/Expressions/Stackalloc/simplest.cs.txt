@@ -1,0 +1,10 @@
+﻿class SimplestStackAlloc
+{
+    private unsafe void M(int n)
+	{
+	    int *i = stackalloc int[10];
+	    Dummy(i);
+	}
+	
+	private unsafe void Dummy(int* i) {}
+}

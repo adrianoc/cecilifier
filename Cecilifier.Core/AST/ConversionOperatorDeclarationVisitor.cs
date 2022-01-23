@@ -1,4 +1,3 @@
-using System;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -29,9 +28,8 @@ namespace Cecilifier.Core.AST
         public override void VisitOperatorDeclaration(OperatorDeclarationSyntax node)
         {
             var declaredSymbol = Context.SemanticModel.GetDeclaredSymbol(node);
-            if (declaredSymbol == null)
-                throw new Exception($"Failed to get declared symbol for {node}");
-            
+            Misc.Utils.EnsureNotNull(declaredSymbol, $"Failed to get declared symbol for {node}");
+
             ProcessMethodDeclaration(
                 node, 
                 Context.Naming.MethodDeclaration(node),

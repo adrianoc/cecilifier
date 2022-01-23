@@ -24,8 +24,7 @@ namespace Cecilifier.Core.AST
         public override void VisitLocalFunctionStatement(LocalFunctionStatementSyntax node)
         {
             var methodSymbol = (IMethodSymbol) Context.SemanticModel.GetDeclaredSymbol(node);
-            if (methodSymbol == null)
-                throw new InvalidOperationException();
+            Utils.EnsureNotNull(methodSymbol, $"Method symbol for {node.Identifier} could not be resolved.");
 
             // Local functions have a well defined list of modifiers.
             var modifiers = SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.InternalKeyword), SyntaxFactory.Token(SyntaxKind.StaticKeyword));
@@ -60,11 +59,7 @@ namespace Cecilifier.Core.AST
         
         public override void VisitMethodDeclaration(MethodDeclarationSyntax node)
         {
-            var (returnType, refReturn) = node.ReturnType switch
-            {
-                RefTypeSyntax refType => (refType.Type, true),
-                _ => (node.ReturnType, false)
-            };
+            var refReturn = node.ReturnType is RefTypeSyntax;
                 
             ProcessMethodDeclaration(
                 node, 
@@ -120,7 +115,7 @@ namespace Cecilifier.Core.AST
             IList<TypeParameterSyntax> typeParameters = null)
         {
             using var _ = LineInformationTracker.Track(Context, node);
-            using (Context.DefinitionVariables.EnterScope())
+            using (Context.DefinitionVariables.EnterLocalScope())
             {
                 typeParameters ??= Array.Empty<TypeParameterSyntax>();
                 var methodVar = AddOrUpdateMethodDefinition(
@@ -157,7 +152,7 @@ namespace Cecilifier.Core.AST
                     WithCurrentMethod(declaringTypeName, methodVar, nameUsedInRegisteredVariable, parameters.Select(p => Context.GetTypeInfo(p.Type).Type.Name).ToArray(), runWithCurrent);
                     if (!isAbstract && !node.DescendantNodes().Any(n => n.IsKind(SyntaxKind.ReturnStatement)))
                     {
-                        AddCilInstruction(ilVar, OpCodes.Ret);
+                        Context.EmitCilInstruction(ilVar, OpCodes.Ret);
                     }
                 }
                 else

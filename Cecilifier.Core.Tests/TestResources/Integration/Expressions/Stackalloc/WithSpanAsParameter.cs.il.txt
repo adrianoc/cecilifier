@@ -1,0 +1,21 @@
+﻿.locals init (System.Int32 V_0, System.Int32 V_1, System.Span`1<System.Byte> V_2, System.String V_3)
+IL_0000: ldc.i4 1
+IL_0005: stloc V_0
+IL_0009: ldarg.0
+IL_000a: call System.Int32 WithSpanAsParameter::Size()
+IL_000f: stloc V_1
+IL_0013: ldloc V_1
+IL_0017: conv.u
+IL_0018: localloc
+IL_001a: ldloc V_1
+IL_001e: newobj System.Void System.Span`1<System.Byte>::.ctor(System.Void*,System.Int32)
+IL_0023: stloc V_2
+IL_0027: ldstr "some string"
+IL_002c: stloc V_3
+IL_0030: ldarg.0
+IL_0031: ldfld WithSpanAsParameter WithSpanAsParameter::o
+IL_0036: ldloc V_0
+IL_003a: ldloc V_2
+IL_003e: ldloc V_3
+IL_0042: callvirt System.Void WithSpanAsParameter::Dummy(System.Int32,System.Span`1<System.Byte>,System.String)
+IL_0047: ret

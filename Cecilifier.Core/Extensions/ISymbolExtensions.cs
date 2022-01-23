@@ -1,9 +1,9 @@
 ﻿using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
 using Cecilifier.Core.AST;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Cecilifier.Core.Extensions
 {
@@ -20,16 +20,16 @@ namespace Cecilifier.Core.Extensions
             return SymbolEqualityComparer.Default.Equals(method.ContainingAssembly, ctx.SemanticModel.Compilation.Assembly);
         }
 
-        public static bool IsByRef(this ISymbol symbol)
-        {
-            if (symbol is IParameterSymbol parameterSymbol && parameterSymbol.RefKind != RefKind.None)
-                return true;
-
-            if (symbol is ILocalSymbol { IsRef: true})
-                return true;
-            
-            return false;
-        }
+        public static bool IsByRef(this ISymbol symbol) =>
+            symbol switch
+            {
+                IParameterSymbol parameterSymbol when parameterSymbol.RefKind != RefKind.None => true,
+                IPropertySymbol { ReturnsByRef: true } => true,
+                IMethodSymbol { ReturnsByRef: true } => true,
+                ILocalSymbol { IsRef: true } => true,
+                
+                _ => false
+            };
 
         public static string AsStringNewArrayExpression(this IEnumerable<IParameterSymbol> self)
         {
@@ -57,6 +57,14 @@ namespace Cecilifier.Core.Extensions
         public static string AsStringNewArrayExpression(this IEnumerable<ITypeSymbol> self)
         {
             return $"new[] {{ {self.Aggregate("", (acc, curr) => acc + ",\"" + curr.FullyQualifiedName() + "\"", final => final.Substring(1))} }} ";
+        }
+        
+        public static T EnsureNotNull<T>([NotNull][NotNullIfNotNull("symbol")] this T symbol) where T: ISymbol
+        {
+            if (symbol == null)
+                throw new System.NotSupportedException("");
+
+            return symbol;
         }
 
         public static bool IsDllImportCtor(this ISymbol self) => self != null && self.ContainingType.Name == "DllImportAttribute";

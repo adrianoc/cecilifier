@@ -16,6 +16,8 @@ namespace Cecilifier.Core
 {
     public sealed class Cecilifier
     {
+        internal const int CecilifierProgramPreambleLength = 19; // The # of lines before the 1st cecilified line of code (see CecilifierExtensions.AsCecilApplication())
+        
         public static CecilifierResult Process(Stream content, CecilifierOptions options)
         {
             var cecilifier = new Cecilifier();
@@ -42,8 +44,7 @@ namespace Cecilifier.Core
 
             var semanticModel = comp.GetSemanticModel(syntaxTree);
 
-            const int cecilifierProgramPreambleLength = 16; // The # of lines before the 1st cecilified line of code (see CecilifierExtensions.AsCecilApplication())
-            var ctx = new CecilifierContext(semanticModel, options, cecilifierProgramPreambleLength);
+            var ctx = new CecilifierContext(semanticModel, options, CecilifierProgramPreambleLength);
             var visitor = new CompilationUnitVisitor(ctx);
 
             syntaxTree.TryGetRoot(out var root);

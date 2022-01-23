@@ -1,0 +1,18 @@
+﻿struct S
+{
+    int i;
+    byte b;
+}
+
+class StackAllocCustomValueType
+{
+    private unsafe void M(int n)
+	{
+	    S *s = stackalloc S[n];
+	    S *s2 = stackalloc S[42];
+	    
+	    Dummy(s, s2);
+	}
+	
+	private unsafe void Dummy(S* s, S* s2) {}
+}

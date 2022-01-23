@@ -6,6 +6,7 @@ using Cecilifier.Core.Variables;
 using Cecilifier.Core.TypeSystem;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Mono.Cecil.Cil;
 
 namespace Cecilifier.Core.AST
 {
@@ -13,7 +14,7 @@ namespace Cecilifier.Core.AST
     {
         INameStrategy Naming { get; }
         
-        string Namespace { get; set; }
+        string CurrentNamespace { get; set; }
 
         SemanticModel SemanticModel { get; }
 
@@ -28,11 +29,14 @@ namespace Cecilifier.Core.AST
         TypeInfo GetTypeInfo(ExpressionSyntax expressionSyntax);
         INamedTypeSymbol GetSpecialType(SpecialType specialType);
 
+        void EmitCilInstruction(string ilVar, OpCode opCode);
+        void EmitCilInstruction<T>(string ilVar, OpCode opCode, T operand);
         void WriteCecilExpression(string msg);
         void WriteComment(string comment);
         void WriteNewLine();
 
         void MoveLineAfter(LinkedListNode<string> instruction, LinkedListNode<string> after);
+        void MoveLinesToEnd(LinkedListNode<string> start, LinkedListNode<string> end);
         
         ITypeResolver TypeResolver { get; }
         IList<Mapping> Mappings { get; }
@@ -42,6 +46,7 @@ namespace Cecilifier.Core.AST
         bool HasFlag(string name);
 
         #endregion
+
     }
 }
 

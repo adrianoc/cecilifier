@@ -41,17 +41,18 @@ namespace Cecilifier.Core.AST
 
         protected override void BeforeVisitInterpolatedStringExpression()
         {
-            AddCilInstruction(_ilVar, OpCodes.Ldc_I4, _numberOfArguments);
-            AddCilInstruction(_ilVar, OpCodes.Newarr, Context.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Object));
+            Context.EmitCilInstruction(_ilVar, OpCodes.Ldc_I4, _numberOfArguments);
+            INamedTypeSymbol operand = Context.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Object);
+            Context.EmitCilInstruction(_ilVar, OpCodes.Newarr, operand);
         }
  
         public override void VisitInterpolation(InterpolationSyntax node)
         {
-            AddCilInstruction(_ilVar, OpCodes.Dup);
-            AddCilInstruction(_ilVar, OpCodes.Ldc_I4, _currentParameterIndex);
+            Context.EmitCilInstruction(_ilVar, OpCodes.Dup);
+            Context.EmitCilInstruction(_ilVar, OpCodes.Ldc_I4, _currentParameterIndex);
             
             base.VisitInterpolation(node);
-            AddCilInstruction(_ilVar, OpCodes.Stelem_Ref);
+            Context.EmitCilInstruction(_ilVar, OpCodes.Stelem_Ref);
         }
 
         private readonly int _numberOfArguments;
@@ -86,8 +87,9 @@ namespace Cecilifier.Core.AST
             BeforeVisitInterpolatedStringExpression();
             
             base.VisitInterpolatedStringExpression(node);
-            
-            AddCilInstruction(_ilVar, OpCodes.Ldstr, $"\"{_computedFormat}\"");
+
+            string operand = $"\"{_computedFormat}\"";
+            Context.EmitCilInstruction(_ilVar, OpCodes.Ldstr, operand);
             Context.MoveLineAfter(Context.CurrentLine, lastInstructionBeforeInterpolatedString);
             
             AddMethodCall(_ilVar, GetStringFormatOverloadToCall(), false);

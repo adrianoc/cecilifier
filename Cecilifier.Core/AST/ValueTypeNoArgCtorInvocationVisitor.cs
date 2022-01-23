@@ -22,8 +22,10 @@ namespace Cecilifier.Core.AST
             var firstAncestorOrSelf = node.FirstAncestorOrSelf<LocalDeclarationStatementSyntax>();
             var varName = firstAncestorOrSelf.Declaration.Variables[0].Identifier.ValueText;
 
-            AddCilInstruction(ilVar, OpCodes.Ldloca_S, Context.DefinitionVariables.GetVariable(varName, VariableMemberKind.LocalVariable).VariableName);
-            AddCilInstruction(ilVar, OpCodes.Initobj, Context.TypeResolver.Resolve(ctorInfo.Symbol.ContainingType));
+            string operand = Context.DefinitionVariables.GetVariable(varName, VariableMemberKind.LocalVariable).VariableName;
+            Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, operand);
+            string operand1 = Context.TypeResolver.Resolve(ctorInfo.Symbol.ContainingType);
+            Context.EmitCilInstruction(ilVar, OpCodes.Initobj, operand1);
         }
 
         public override void VisitReturnStatement(ReturnStatementSyntax node)
@@ -39,7 +41,8 @@ namespace Cecilifier.Core.AST
         public override void VisitAssignmentExpression(AssignmentExpressionSyntax node)
         {
             new NoArgsValueTypeObjectCreatingInAssignmentVisitor(Context, ilVar).Visit(node.Left);
-            AddCilInstruction(ilVar, OpCodes.Initobj, Context.TypeResolver.Resolve(ctorInfo.Symbol.ContainingType));
+            string operand = Context.TypeResolver.Resolve(ctorInfo.Symbol.ContainingType);
+            Context.EmitCilInstruction(ilVar, OpCodes.Initobj, operand);
         }
 
         public override void VisitArgument(ArgumentSyntax node)
@@ -50,7 +53,7 @@ namespace Cecilifier.Core.AST
         private void DeclareAndInitializeValueTypeLocalVariable()
         {
             var resolvedVarType = Context.TypeResolver.Resolve(ctorInfo.Symbol.ContainingType);
-            var tempLocalName = AddLocalVariableWithResolvedType("vt", Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method), resolvedVarType);
+            var tempLocalName = AddLocalVariableToCurrentMethod("vt", resolvedVarType);
 
             switch (ctorInfo.Symbol.ContainingType.SpecialType)
             {
@@ -59,16 +62,16 @@ namespace Cecilifier.Core.AST
                 case SpecialType.System_Int16:
                 case SpecialType.System_Int32:
                 case SpecialType.System_Int64:
-                    AddCilInstruction(ilVar, OpCodes.Ldc_I4_0);
+                    Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4_0);
                     if (ctorInfo.Symbol.ContainingType.SpecialType == SpecialType.System_Int64)
-                        AddCilInstruction(ilVar, OpCodes.Conv_I8);
-                    AddCilInstruction(ilVar, OpCodes.Stloc, tempLocalName);
-                    AddCilInstruction(ilVar, OpCodes.Ldloca_S, tempLocalName);
+                        Context.EmitCilInstruction(ilVar, OpCodes.Conv_I8);
+                    Context.EmitCilInstruction(ilVar, OpCodes.Stloc, tempLocalName);
+                    Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, tempLocalName);
                     break;
                     
                 case SpecialType.None:
                     InitValueTypeLocalVariable(tempLocalName, ctorInfo.Symbol.ContainingType);
-                    AddCilInstruction(ilVar, OpCodes.Ldloc, tempLocalName);
+                    Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, tempLocalName);
                     break;
                 
                 default:
@@ -77,10 +80,10 @@ namespace Cecilifier.Core.AST
             }
         }
         
-        private void InitValueTypeLocalVariable(string localVariable, INamedTypeSymbol variableType)
+        private void InitValueTypeLocalVariable(string localVariable, ITypeSymbol variableType)
         {
-            AddCilInstruction(ilVar, OpCodes.Ldloca_S, localVariable);
-            AddCilInstruction(ilVar, OpCodes.Initobj, Context.TypeResolver.Resolve(variableType));
+            Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, localVariable);
+            AddCilInstruction(ilVar, OpCodes.Initobj, variableType);
         }
     }
 }

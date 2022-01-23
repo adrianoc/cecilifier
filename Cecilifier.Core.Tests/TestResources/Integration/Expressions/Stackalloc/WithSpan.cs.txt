@@ -1,0 +1,35 @@
+﻿using System;
+class StackAllocWithSpan
+{
+    private void LocalVariableWithConstantSize()
+	{
+	    Span<byte> s = stackalloc byte[42];
+	    Dummy(s);
+	}
+	
+    private void LocalVariable()
+	{
+	    Span<byte> s = stackalloc byte[Size()];
+	    Dummy(s);
+	}
+	
+    private void PassingAsParameterToStaticMethodSizeFromLocal(int n)
+	{
+	    int length = 42 * n;
+	    StaticDummy(stackalloc byte[length]);
+	}
+
+    /* Unfortunately the C# compiler introduces a local variable to store *n*
+       and pass it around and Cecilifier simply uses the parameter
+       This scenario (i.e, stackalloc with size from parameter and passing the
+       result to a static method) is covered in the Unit tests 
+    private void PassingAsParameterToStaticMethodSizeFromParameter(int n)
+	{
+	    StaticDummy(stackalloc byte[n]);
+	}	
+	*/
+
+	private void Dummy(Span<byte> span) {}
+	private static void StaticDummy(Span<byte> span) {}
+	private int Size() => 42;
+}

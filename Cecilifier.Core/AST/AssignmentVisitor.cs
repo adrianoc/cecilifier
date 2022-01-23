@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
@@ -40,41 +39,28 @@ namespace Cecilifier.Core.AST
          */
         public override void VisitElementAccessExpression(ElementAccessExpressionSyntax node)
         {
-            var last = Context.CurrentLine;
+            var lastInstructionLoadingRhs = Context.CurrentLine;
+            
             ExpressionVisitor.Visit(Context, ilVar, node.Expression);
             foreach (var arg in node.ArgumentList.Arguments)
             {
                 ExpressionVisitor.Visit(Context, ilVar, arg);
             }
+            
+            if (!HandleIndexer(node, lastInstructionLoadingRhs))
+            {
+                Context.MoveLinesToEnd(InstructionPrecedingValueToLoad, lastInstructionLoadingRhs);
+                Context.EmitCilInstruction(ilVar, OpCodes.Stelem_Ref);
+            }
+        }
+     
+        public override void VisitMemberAccessExpression(MemberAccessExpressionSyntax node)
+        {
+            var last = Context.CurrentLine;
+            ExpressionVisitor.Visit(Context, ilVar, node.Expression);
+            Context.MoveLinesToEnd(InstructionPrecedingValueToLoad, last);
 
-            // Counts the # of instructions used to load the value to be stored
-            var c = InstructionPrecedingValueToLoad;
-            int instCount = 0;
-            while (c != last)
-            {
-                c = c!.Next;
-                instCount++;
-            }
-
-            // move the instruction after the instructions that loads the array reference
-            // and index.
-            c = InstructionPrecedingValueToLoad.Next;
-            while (instCount-- > 0)
-            {
-                var next = c!.Next;
-                Context.MoveLineAfter(c, Context.CurrentLine);
-                c = next;
-            }
-
-            var expSymbol = Context.SemanticModel.GetSymbolInfo(node).Symbol;
-            if (expSymbol is IPropertySymbol propertySymbol)
-            {
-                AddMethodCall(ilVar, propertySymbol.SetMethod);
-            }
-            else
-            {
-                AddCilInstruction(ilVar, OpCodes.Stelem_Ref);
-            }
+            node.Name.Accept(this);
         }
 
         public override void VisitIdentifierName(IdentifierNameSyntax node)
@@ -87,7 +73,7 @@ namespace Cecilifier.Core.AST
             }
 
             var member = Context.SemanticModel.GetSymbolInfo(node);
-            Utils.EnsureNotNull(member.Symbol == null, $"Failed to resolve symbol for node: {node.SourceDetails()}.");
+            Utils.EnsureNotNull(member.Symbol, $"Failed to resolve symbol for node: {node.SourceDetails()}.");
 
             if (member.Symbol.Kind != SymbolKind.NamedType 
                 && member.Symbol.ContainingType.IsValueType 
@@ -95,6 +81,19 @@ namespace Cecilifier.Core.AST
             {
                 return;
             }
+            
+            // push `implicit this` (target of the assignment) to the stack if needed.
+            if (!member.Symbol.IsStatic 
+
+                && member.Symbol.Kind != SymbolKind.Parameter // Parameters/Locals are never leafs in a MemberReferenceExpression
+                && member.Symbol.Kind != SymbolKind.Local
+                
+                && !node.Parent.IsKind(SyntaxKind.SimpleMemberAccessExpression))
+            { 
+                InsertCilInstructionAfter<string>(InstructionPrecedingValueToLoad, ilVar, OpCodes.Ldarg_0);
+            }
+
+            AddCallToOpImplicitIfRequired(node);
 
             switch (member.Symbol)
             {
@@ -116,70 +115,89 @@ namespace Cecilifier.Core.AST
             }
         }
 
-        private void PropertyAssignment(IPropertySymbol property)
+        private void AddCallToOpImplicitIfRequired(IdentifierNameSyntax node)
         {
-            if (!property.IsStatic)
+            if (node.Parent is not AssignmentExpressionSyntax assignmentExpression || assignmentExpression.Left != node)
+                return;
+
+            var conversion = Context.SemanticModel.ClassifyConversion(assignmentExpression.Right, Context.SemanticModel.GetTypeInfo(node).Type);
+            if (conversion.IsImplicit && conversion.MethodSymbol != null 
+                                      && !conversion.IsMethodGroup) // method group to delegate conversions should not call the method being converted...
             {
-                InsertCilInstructionAfter<string>(InstructionPrecedingValueToLoad, ilVar, OpCodes.Ldarg_0);
+                AddMethodCall(ilVar, conversion.MethodSymbol);
+            }
+        }
+
+        bool HandleIndexer(ElementAccessExpressionSyntax node, LinkedListNode<string> lastInstructionLoadingRhs)
+        {
+            var expSymbol = Context.SemanticModel.GetSymbolInfo(node).Symbol;
+            if (expSymbol is not IPropertySymbol propertySymbol)
+            {
+                return false;
             }
 
+            if (propertySymbol.RefKind == RefKind.Ref)
+            {
+                // in this case we have something like `span[1] = CalculateValue()` and we need
+                // to generate the code like:
+                //
+                // 1) load `ref` to be assigned to, i.e span.get_Item()
+                // 2) load value to assign, i.e CalculateValue()
+                //
+                // so we emit the call to get_item() and then move the instructions generated for `CalculateValue()`
+                // bellow it.
+                AddMethodCall(ilVar, propertySymbol.GetMethod);
+                Context.MoveLinesToEnd(InstructionPrecedingValueToLoad, lastInstructionLoadingRhs);
+                OpCode opCode = propertySymbol.Type.Stind();
+                Context.EmitCilInstruction(ilVar, opCode);
+            }
+            else
+            {
+                Context.MoveLinesToEnd(InstructionPrecedingValueToLoad, lastInstructionLoadingRhs);
+                AddMethodCall(ilVar, propertySymbol.SetMethod);
+            }
+
+            return true;
+        }
+        
+        private void PropertyAssignment(IPropertySymbol property)
+        {
             AddMethodCall(ilVar, property.SetMethod, isAccessOnThisOrObjectCreation:false);
         }
 
         private void FieldAssignment(IFieldSymbol field)
         {
-            OpCode storeOpCode;
-            if (field.IsStatic)
-            {
-                storeOpCode = OpCodes.Stsfld;
-            }
-            else
-            {
-                storeOpCode = OpCodes.Stfld;
-                InsertCilInstructionAfter<string>(InstructionPrecedingValueToLoad, ilVar, OpCodes.Ldarg_0);
-            }
-
+            var storeOpCode = field.IsStatic ? OpCodes.Stsfld : OpCodes.Stfld;
             if (field.IsVolatile)
-                AddCilInstruction(ilVar, OpCodes.Volatile);
-            
-            AddCilInstruction(ilVar, storeOpCode, Context.DefinitionVariables.GetVariable(field.Name, VariableMemberKind.Field, field.ContainingType.Name).VariableName);
+                Context.EmitCilInstruction(ilVar, OpCodes.Volatile);
+
+            string operand = Context.DefinitionVariables.GetVariable(field.Name, VariableMemberKind.Field, field.ContainingType.Name).VariableName;
+            Context.EmitCilInstruction(ilVar, storeOpCode, operand);
         }
 
         private void LocalVariableAssignment(ILocalSymbol localVariable)
         {
-            AddCilInstruction(ilVar, OpCodes.Stloc, Context.DefinitionVariables.GetVariable(localVariable.Name, VariableMemberKind.LocalVariable).VariableName);
+            string operand = Context.DefinitionVariables.GetVariable(localVariable.Name, VariableMemberKind.LocalVariable).VariableName;
+            Context.EmitCilInstruction(ilVar, OpCodes.Stloc, operand);
         }
 
         private void ParameterAssignment(IParameterSymbol parameter)
         {
             if (parameter.RefKind == RefKind.None)
             {
-                var paramVariable = Context.DefinitionVariables.GetVariable(parameter.Name, VariableMemberKind.Parameter).VariableName;
                 if (parameter.Type.TypeKind == TypeKind.Array)
                 {
-                    AddCilInstruction(ilVar, OpCodes.Stelem_Ref);
+                    Context.EmitCilInstruction(ilVar, OpCodes.Stelem_Ref);
                 }
                 else
                 {
-                    AddCilInstruction(ilVar, OpCodes.Starg_S, paramVariable);
+                    var paramVariable = Context.DefinitionVariables.GetVariable(parameter.Name, VariableMemberKind.Parameter).VariableName;
+                    Context.EmitCilInstruction(ilVar, OpCodes.Starg_S, paramVariable);
                 }
             }
             else
             {
-                var opCode = parameter.Type.SpecialType switch
-                {
-                    SpecialType.None => OpCodes.Stind_I2,
-                    SpecialType.System_Char => OpCodes.Stind_I2,
-                    SpecialType.System_Int16 => OpCodes.Stind_I2,
-
-                    SpecialType.System_Int32 => OpCodes.Stind_I4,
-                    SpecialType.System_Single => OpCodes.Stind_R4,
-                    _ => parameter.Type.IsReferenceType
-                        ? OpCodes.Stind_Ref
-                        : throw new NotSupportedException($"Assignment to ref/out parameters of type {parameter.Type} not supported yet.")
-                };
-                
-                AddCilInstruction(ilVar, opCode);
+                Context.EmitCilInstruction(ilVar, parameter.Type.Stind());
             }
         }
 

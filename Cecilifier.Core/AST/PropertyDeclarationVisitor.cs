@@ -193,9 +193,10 @@ namespace Cecilifier.Core.AST
                 {
                     AddBackingFieldIfNeeded(accessor, node.AccessorList.Accessors.Any(acc => acc.IsKind(SyntaxKind.InitAccessorDeclaration)));
 
-                    AddCilInstruction(ilSetVar, OpCodes.Ldarg_0); // TODO: This assumes instance properties...
-                    AddCilInstruction(ilSetVar, OpCodes.Ldarg_1);
-                    AddCilInstruction(ilSetVar, OpCodes.Stfld, Utils.MakeGenericTypeIfAppropriate(Context, propInfo, backingFieldVar, propertyDeclaringTypeVar));
+                    Context.EmitCilInstruction(ilSetVar, OpCodes.Ldarg_0); // TODO: This assumes instance properties...
+                    Context.EmitCilInstruction(ilSetVar, OpCodes.Ldarg_1);
+                    string operand = Utils.MakeGenericTypeIfAppropriate(Context, propInfo, backingFieldVar, propertyDeclaringTypeVar);
+                    Context.EmitCilInstruction(ilSetVar, OpCodes.Stfld, operand);
                 }
                 else if (accessor.Body != null)
                 {
@@ -206,7 +207,7 @@ namespace Cecilifier.Core.AST
                     ExpressionVisitor.Visit(Context, ilSetVar, accessor.ExpressionBody);
                 }
 
-                AddCilInstruction(ilSetVar, OpCodes.Ret);
+                Context.EmitCilInstruction(ilSetVar, OpCodes.Ret);
             }
 
             string AddGetterMethodGuts(CSharpSyntaxNode accessor)
@@ -246,10 +247,11 @@ namespace Cecilifier.Core.AST
                 {
                     AddBackingFieldIfNeeded(accessor, node.AccessorList.Accessors.Any(acc => acc.IsKind(SyntaxKind.InitAccessorDeclaration)));
 
-                    AddCilInstruction(ilVar, OpCodes.Ldarg_0); // TODO: This assumes instance properties...
-                    AddCilInstruction(ilVar, OpCodes.Ldfld, Utils.MakeGenericTypeIfAppropriate(Context, propInfo, backingFieldVar, propertyDeclaringTypeVar));
+                    Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0); // TODO: This assumes instance properties...
+                    string operand = Utils.MakeGenericTypeIfAppropriate(Context, propInfo, backingFieldVar, propertyDeclaringTypeVar);
+                    Context.EmitCilInstruction(ilVar, OpCodes.Ldfld, operand);
 
-                    AddCilInstruction(ilVar, OpCodes.Ret);
+                    Context.EmitCilInstruction(ilVar, OpCodes.Ret);
                 }
                 else if (accessor.Body != null)
                 {
@@ -264,7 +266,7 @@ namespace Cecilifier.Core.AST
             void ProcessExpressionBodiedGetter(string ilVar, ArrowExpressionClauseSyntax arrowExpression)
             {
                 ExpressionVisitor.Visit(Context, ilVar, arrowExpression);
-                AddCilInstruction(ilVar, OpCodes.Ret);
+                Context.EmitCilInstruction(ilVar, OpCodes.Ret);
             }
         }
 

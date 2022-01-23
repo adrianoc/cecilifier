@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -656,7 +656,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                 return false;
             }
 
-            if ((inst.OpCode != OpCodes.Stloc && inst.OpCode != OpCodes.Stloc_0)|| inst.Next == null)
+            if (!IsStLoc(inst.OpCode) || inst.Next == null)
             {
                 return true;
             }
@@ -665,7 +665,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
             while (current != null && current.OpCode == OpCodes.Nop)
                 current = current.Next;
                 
-            if ((current?.OpCode == OpCodes.Ldloc || current?.OpCode == OpCodes.Ldloc_0) && current.Operand == inst.Operand)
+            if (IsLdLoc(current.OpCode) && current.Operand == inst.Operand)
             {
                 toBeIgnored.Add(current);
                 return false;
@@ -674,6 +674,26 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
             toBeIgnored.Clear();
 
             return true;
+        }
+
+        private static bool IsLdLoc(OpCode opCode)
+        {
+            return opCode == OpCodes.Ldloc ||
+                   opCode == OpCodes.Ldloc_0 ||
+                   opCode == OpCodes.Ldloc_1 ||
+                   opCode == OpCodes.Ldloc_2 ||
+                   opCode == OpCodes.Ldloc_3 ||
+                   opCode == OpCodes.Ldloc_S;
+        }
+
+        private static bool IsStLoc(OpCode opCode)
+        {
+            return opCode == OpCodes.Stloc ||
+                   opCode == OpCodes.Stloc_0 ||
+                   opCode == OpCodes.Stloc_1 ||
+                   opCode == OpCodes.Stloc_2 ||
+                   opCode == OpCodes.Stloc_3 ||
+                   opCode == OpCodes.Stloc_S;
         }
 
         public static bool HasNoLocalVariableLoads(Instruction instruction, object operand)
