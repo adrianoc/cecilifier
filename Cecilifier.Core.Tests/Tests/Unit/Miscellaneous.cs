@@ -299,5 +299,39 @@ public class Foo
             var cecilifiedCode = result.GeneratedCode.ReadToEnd();
             Assert.That(cecilifiedCode, Contains.Substring(expectedLoadOpCode));
         }
+        
+        [TestCase("fieldDelegate")]
+        [TestCase("PropertyDelegate")]
+        [TestCase("localDelegate")]
+        [TestCase("paramDelegate")]
+        [TestCase("fieldFunction")]
+        [TestCase("PropertyFunction")]
+        [TestCase("localFunction")]
+        [TestCase("paramFunction")]
+        public void LdindTests(string varToUse)
+        {
+            var code = 
+                $@"
+            using System;
+            unsafe class Foo 
+            {{ 
+                delegate*<bool, int, void> fieldFunction;                
+                Action<bool, int> fieldDelegate;
+
+                delegate*<bool, int, void> PropertyFunction {{ get; set; }}
+                Action<bool, int> PropertyDelegate {{ get; set; }}
+
+                void Bar(Action<bool, int> paramDelegate, delegate*<bool, int, void> paramFunction, int v)
+                {{
+                    Action<bool, int> localDelegate = paramDelegate;
+                    delegate*<bool, int, void> localFunction = paramFunction; 
+                    {varToUse}(true, v);
+                }}
+            }}";
+        
+            var result = RunCecilifier(code);
+            var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+            Assert.That(cecilifiedCode, Does.Not.Contains("Ldind"));
+        }        
     }
 }
