@@ -1,5 +1,17 @@
 ﻿class RefParameters
 {
+	private void TopLevelFunction(ref int ri, int i, ref int ri2)
+	{
+	    LocalFunction(ref ri, ri);
+	
+	    // non static local functions are not being handled correctly
+	    static void LocalFunction(ref int lri, int li)
+	    {
+	        LocalFunction(ref lri, li);
+	        LocalFunction(ref li, lri);
+	    }
+	}
+	
 	private void Foo(ref int ri, int i, ref int ri2)
 	{
 	    Foo(ref i, ri, ref ri);
