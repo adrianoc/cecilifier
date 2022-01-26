@@ -312,13 +312,6 @@ namespace Cecilifier.Core.AST
             Utils.EnsureNotNull(node.Parent);
             //TODO: Add a test for parameter index for static/instance members.
             var adjustedParameterIndex = paramSymbol.Ordinal + (method.IsStatic ? 0 : 1);
-            if (node.Parent.Kind() == SyntaxKind.SimpleMemberAccessExpression && paramSymbol.ContainingType.IsValueType)
-            {
-                string operand = Context.DefinitionVariables.GetVariable(paramSymbol.Name, VariableMemberKind.Parameter).VariableName;
-                Context.EmitCilInstruction(ilVar, OpCodes.Ldarga, operand);
-                return;
-            }
-
             if (adjustedParameterIndex > 3)
             {
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldarg, adjustedParameterIndex);
@@ -666,7 +659,7 @@ namespace Cecilifier.Core.AST
                 CallingConvention.StdCall => PInvokeAttributes.CallConvStdCall.ToString(),
                 CallingConvention.ThisCall => PInvokeAttributes.CallConvThiscall.ToString(),
 
-                _ => PInvokeAttributes.CallConvWinapi.ToString() // Default
+                _ => throw new Exception($"Unexpected calling convention: {callingConvention}")
             };
 
             return $"PInvokeAttributes.{enumMemberName}";

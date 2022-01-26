@@ -846,9 +846,7 @@ namespace Cecilifier.Core.AST
         private bool TryProcessNoArgsCtorInvocationOnValueType(ObjectCreationExpressionSyntax node, IMethodSymbol methodSymbol, SymbolInfo ctorInfo)
         {
             if (ctorInfo.Symbol.ContainingType.IsReferenceType || methodSymbol.Parameters.Length > 0)
-            {
                 return false;
-            }
 
             new ValueTypeNoArgCtorInvocationVisitor(Context, ilVar, ctorInfo).Visit(node.Parent);
             return skipLeftSideVisitingInAssignment = true;

@@ -1,4 +1,4 @@
-﻿using Cecilifier.Core.Extensions;
+using Cecilifier.Core.Extensions;
 using Microsoft.CodeAnalysis;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -46,12 +46,6 @@ namespace Cecilifier.Core.AST
                     Context.EmitCilInstruction(ilVar, opCode, parameterSymbol.Ordinal);
                     break;
             }
-        }
-
-        public override void VisitLocalDeclarationStatement(LocalDeclarationStatementSyntax node)
-        {
-            string operand = Context.DefinitionVariables.GetVariable(node.Declaration.Variables[0].Identifier.ValueText, VariableMemberKind.LocalVariable).VariableName;
-            Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, operand);
         }
     }
 }

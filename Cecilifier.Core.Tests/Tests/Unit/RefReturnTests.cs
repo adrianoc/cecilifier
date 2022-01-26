@@ -86,8 +86,6 @@ class SpanIndexer
         var result = RunCecilifier(code);
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
         Assert.That(cecilifiedCode, Contains.Substring("OpCodes.Ldind_I4"));
-
-        Console.WriteLine(cecilifiedCode);
     }
     
     [TestCase("ref int R(System.Span<int> s) { return ref s[8]; }", TestName = "Method 1")]
@@ -108,7 +106,5 @@ class SpanIndexer
         var result = RunCecilifier(code);
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
         Assert.That(cecilifiedCode, Does.Not.Contains("Ldind"));
-
-        Console.WriteLine(cecilifiedCode);
     }
 }
