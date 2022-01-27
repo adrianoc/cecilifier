@@ -478,6 +478,7 @@ namespace Cecilifier.Core.AST
                 SpecialType.System_Char => OpCodes.Ldind_U2,
                 SpecialType.System_Boolean => OpCodes.Ldind_U1,
                 SpecialType.System_Object => OpCodes.Ldind_Ref,
+                SpecialType.None => OpCodes.Ldind_Ref,
                 
                 _ => throw new ArgumentException($"Literal type {type} not supported.", nameof(type))
             };
