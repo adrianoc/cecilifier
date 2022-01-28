@@ -393,9 +393,14 @@ namespace Cecilifier.Core.AST
                                  ?? expression.Ancestors().OfType<ReturnStatementSyntax>().SingleOrDefault();
             
             var argument = expression.Ancestors().OfType<ArgumentSyntax>().FirstOrDefault();
-            var assigment = expression.Ancestors().OfType<AssignmentExpressionSyntax>().SingleOrDefault();
-        
-            if (assigment != null && assigment.Left != expression)
+            var assigment = expression.Ancestors().OfType<AssignmentExpressionSyntax>().SingleOrDefault(c => c.Left != expression);
+            var mae = expression.Ancestors().OfType<MemberAccessExpressionSyntax>().SingleOrDefault(c => c.Expression == expression);
+
+            if (mae != null)
+            {
+                needsLoadIndirect = sourceIsByRef && !type.IsValueType;
+            }
+            else if (assigment != null)
             {
                 var targetIsByRef = Context.SemanticModel.GetSymbolInfo(assigment.Left).Symbol.IsByRef();
                 needsLoadIndirect = (assigment.Right == expression && sourceIsByRef && !targetIsByRef) // simple assignment like: nonRef = ref;
