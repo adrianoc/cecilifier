@@ -40,8 +40,8 @@ namespace Cecilifier.Core.AST
 
         public override void VisitAssignmentExpression(AssignmentExpressionSyntax node)
         {
-            new NoArgsValueTypeObjectCreatingInAssignmentVisitor(Context, ilVar).Visit(node.Left);
-            string operand = Context.TypeResolver.Resolve(ctorInfo.Symbol.ContainingType);
+            node.Left.Accept(new NoArgsValueTypeObjectCreatingInAssignmentVisitor(Context, ilVar));
+            var operand = Context.TypeResolver.Resolve(ctorInfo.Symbol.ContainingType);
             Context.EmitCilInstruction(ilVar, OpCodes.Initobj, operand);
         }
 
