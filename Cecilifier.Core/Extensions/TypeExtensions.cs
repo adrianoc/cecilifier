@@ -96,7 +96,7 @@ namespace Cecilifier.Core.Extensions
                 SpecialType.System_UInt64 => OpCodes.Stind_I8,
                 _ => type.IsReferenceType 
                     ? OpCodes.Stind_Ref 
-                    : throw new NotImplementedException($"Type = {type.Name}")
+                    : OpCodes.Stobj
             };
         }
     }
