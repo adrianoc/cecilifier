@@ -46,7 +46,7 @@ internal class ElementAccessExpressionWithRangeArgumentVisitor : SyntaxWalkerBas
                 
         // Compute range start index
         node.LeftOperand.Accept(_expressionVisitor);
-        var startIndexVar = AddLocalVariableWithResolvedType("startIndex", Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method), Context.TypeResolver.Resolve(Context.GetSpecialType(SpecialType.System_Int32)));
+        var startIndexVar = AddLocalVariableWithResolvedType("startIndex", Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method), Context.TypeResolver.Bcl.System.Int32);
         Context.EmitCilInstruction(_ilVar, OpCodes.Stloc, startIndexVar);
         
         // Compute number of elements to slice
@@ -56,7 +56,7 @@ internal class ElementAccessExpressionWithRangeArgumentVisitor : SyntaxWalkerBas
                 
         Context.EmitCilInstruction(_ilVar, OpCodes.Ldloc, startIndexVar);
         Context.EmitCilInstruction(_ilVar, OpCodes.Sub);
-        var elementCountVar = AddLocalVariableWithResolvedType("elementCount", Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method), Context.TypeResolver.Resolve(Context.GetSpecialType(SpecialType.System_Int32)));
+        var elementCountVar = AddLocalVariableWithResolvedType("elementCount", Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method), Context.TypeResolver.Bcl.System.Int32);
         Context.EmitCilInstruction(_ilVar, OpCodes.Stloc, elementCountVar);
                 
         Context.EmitCilInstruction(_ilVar, OpCodes.Ldloc, startIndexVar);
@@ -79,13 +79,13 @@ internal class ElementAccessExpressionWithRangeArgumentVisitor : SyntaxWalkerBas
     {
         using var _ = LineInformationTracker.Track(Context, node);
         AddMethodCall(_ilVar, _targetSpanType.GetMembers().OfType<IPropertySymbol>().Single(p => p.Name == "Length").GetMethod);
-        var spanLengthVar = AddLocalVariableWithResolvedType("spanLengthVar", Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method), Context.TypeResolver.Resolve(Context.GetSpecialType(SpecialType.System_Int32)));
+        var spanLengthVar = AddLocalVariableWithResolvedType("spanLengthVar", Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method), Context.TypeResolver.Bcl.System.Int32);
         Context.EmitCilInstruction(_ilVar, OpCodes.Stloc, spanLengthVar);
 
         node.Accept(_expressionVisitor);
 
-        var systemIndex = Context.SemanticModel.Compilation.GetTypeByMetadataName(typeof(Index).FullName);
-        var systemRange = Context.SemanticModel.Compilation.GetTypeByMetadataName(typeof(Range).FullName);
+        var systemIndex = Context.RoslynTypeSystem.SystemIndex;
+        var systemRange = Context.RoslynTypeSystem.SystemRange;
         var rangeVar = AddLocalVariableWithResolvedType("rangeVar", Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method), Context.TypeResolver.Resolve(systemRange));
         Context.EmitCilInstruction(_ilVar, OpCodes.Stloc, rangeVar);
         
@@ -98,7 +98,7 @@ internal class ElementAccessExpressionWithRangeArgumentVisitor : SyntaxWalkerBas
         Context.EmitCilInstruction(_ilVar, OpCodes.Ldloc, spanLengthVar);
         AddMethodCall(_ilVar, systemIndex.GetMembers().OfType<IMethodSymbol>().Single(p => p.Name == "GetOffset"));
 
-        var startIndexVar = AddLocalVariableWithResolvedType("startIndex", Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method), Context.TypeResolver.Resolve(Context.GetSpecialType(SpecialType.System_Int32)));
+        var startIndexVar = AddLocalVariableWithResolvedType("startIndex", Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method), Context.TypeResolver.Bcl.System.Int32);
         Context.EmitCilInstruction(_ilVar, OpCodes.Stloc, startIndexVar);
         
         // Calculate number of elements to slice.
@@ -111,7 +111,7 @@ internal class ElementAccessExpressionWithRangeArgumentVisitor : SyntaxWalkerBas
         AddMethodCall(_ilVar, systemIndex.GetMembers().OfType<IMethodSymbol>().Single(p => p.Name == "GetOffset"));
         Context.EmitCilInstruction(_ilVar, OpCodes.Ldloc, startIndexVar);
         Context.EmitCilInstruction(_ilVar, OpCodes.Sub);
-        var elementCountVar = AddLocalVariableWithResolvedType("elementCount", Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method), Context.TypeResolver.Resolve(Context.GetSpecialType(SpecialType.System_Int32)));
+        var elementCountVar = AddLocalVariableWithResolvedType("elementCount", Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method), Context.TypeResolver.Bcl.System.Int32);
         Context.EmitCilInstruction(_ilVar, OpCodes.Stloc, elementCountVar);
 
         Context.EmitCilInstruction(_ilVar, OpCodes.Ldloca, _spanCopyVariable);

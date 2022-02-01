@@ -77,7 +77,7 @@ namespace Cecilifier.Core.AST
                 }
                 else if (returnType.AssemblyQualifiedName().Contains("System.Action"))
                 {
-                    returnType = context.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Void);
+                    returnType = context.RoslynTypeSystem.SystemVoid;
                 }
             }
             else

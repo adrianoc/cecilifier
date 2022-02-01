@@ -26,7 +26,7 @@ namespace Cecilifier.Core.AST
                 typeVar, 
                 "Program", 
                 typeModifiers, 
-                context.TypeResolver.Resolve(context.GetSpecialType(SpecialType.System_Object)), 
+                context.TypeResolver.Bcl.System.Object, 
                 false, 
                 Array.Empty<string>());
                 
@@ -36,7 +36,7 @@ namespace Cecilifier.Core.AST
                 methodVar, 
                 "<Main>$", 
                 "MethodAttributes.Private | MethodAttributes.HideBySig | MethodAttributes.Static", 
-                context.GetSpecialType(hasReturnStatement ? SpecialType.System_Int32 : SpecialType.System_Void),
+                hasReturnStatement ? context.RoslynTypeSystem.SystemInt32 : context.RoslynTypeSystem.SystemVoid,
                 false,
                 Array.Empty<TypeParameterSyntax>());
             

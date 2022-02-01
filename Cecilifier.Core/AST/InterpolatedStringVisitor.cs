@@ -42,8 +42,7 @@ namespace Cecilifier.Core.AST
         protected override void BeforeVisitInterpolatedStringExpression()
         {
             Context.EmitCilInstruction(_ilVar, OpCodes.Ldc_I4, _numberOfArguments);
-            INamedTypeSymbol operand = Context.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Object);
-            Context.EmitCilInstruction(_ilVar, OpCodes.Newarr, operand);
+            Context.EmitCilInstruction(_ilVar, OpCodes.Newarr, Context.RoslynTypeSystem.SystemObject);
         }
  
         public override void VisitInterpolation(InterpolationSyntax node)
@@ -70,7 +69,7 @@ namespace Cecilifier.Core.AST
         
         protected abstract IMethodSymbol GetStringFormatOverloadToCall();
         
-        protected IEnumerable<IMethodSymbol>  StringFormatOverloads => Context.SemanticModel.Compilation.GetSpecialType(SpecialType.System_String)
+        protected IEnumerable<IMethodSymbol>  StringFormatOverloads => Context.RoslynTypeSystem.SystemString
                                                                                 .GetMembers("Format")
                                                                                 .OfType<IMethodSymbol>();
         
@@ -104,7 +103,7 @@ namespace Cecilifier.Core.AST
             
             // Expressions used in interpolated strings always report identity conversions but since
             // we are assigning then to objects, we need to check whether we need boxing.
-            var conv = Context.SemanticModel.ClassifyConversion(node.Expression, Context.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Object));
+            var conv = Context.SemanticModel.ClassifyConversion(node.Expression, Context.RoslynTypeSystem.SystemObject);
             if (conv.IsBoxing)
             {
                 AddCilInstruction(_ilVar, OpCodes.Box, Context.GetTypeInfo(node.Expression).Type);               

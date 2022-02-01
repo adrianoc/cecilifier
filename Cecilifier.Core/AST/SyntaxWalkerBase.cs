@@ -17,14 +17,10 @@ namespace Cecilifier.Core.AST
     internal class SyntaxWalkerBase : CSharpSyntaxWalker
     {
         private const string ModifiersSeparator = " | ";
-        private static ITypeSymbol SystemIndex { get; set; }
             
         internal SyntaxWalkerBase(IVisitorContext ctx)
         {
             Context = ctx;
-
-            if (SystemIndex == null)
-                SystemIndex = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(Index).FullName);
         }
 
         protected IVisitorContext Context { get; }
@@ -300,11 +296,6 @@ namespace Cecilifier.Core.AST
             return type is RefTypeSyntax ? resolvedType.MakeByReferenceType() : resolvedType;
         }
 
-        protected INamedTypeSymbol GetSpecialType(SpecialType specialType)
-        {
-            return Context.GetSpecialType(specialType);
-        }
-
         protected void ProcessParameter(string ilVar, SimpleNameSyntax node, IParameterSymbol paramSymbol)
         {
             var parent = (CSharpSyntaxNode) node.Parent;
@@ -493,9 +484,9 @@ namespace Cecilifier.Core.AST
             };
         }
 
-        private static bool IsSystemIndexUsedAsIndex(ITypeSymbol symbol, CSharpSyntaxNode node)
+        private bool IsSystemIndexUsedAsIndex(ITypeSymbol symbol, CSharpSyntaxNode node)
         {
-            if (symbol.MetadataToken != SystemIndex.MetadataToken)
+            if (symbol.MetadataToken != Context.RoslynTypeSystem.SystemIndex.MetadataToken)
                 return false;
  
             return node.Parent.IsKind(SyntaxKind.BracketedArgumentList);

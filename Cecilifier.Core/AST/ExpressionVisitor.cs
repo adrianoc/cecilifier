@@ -539,7 +539,7 @@ namespace Cecilifier.Core.AST
             if (localVarParent.Accept(new UsageVisitor(Context)) != UsageKind.CallTarget)
                 return;
 
-            StoreTopOfStackInLocalVariableAndLoadItsAddress(GetSpecialType(SpecialType.System_Int32));
+            StoreTopOfStackInLocalVariableAndLoadItsAddress(Context.RoslynTypeSystem.SystemInt32);
         }
 
         public override void VisitObjectCreationExpression(ObjectCreationExpressionSyntax node)
@@ -718,7 +718,7 @@ namespace Cecilifier.Core.AST
         public override void VisitTypeOfExpression(TypeOfExpressionSyntax node)
         {
             using var _ = LineInformationTracker.Track(Context, node);
-            var getTypeFromHandleSymbol = (IMethodSymbol) Context.SemanticModel.Compilation.GetTypeByMetadataName(typeof(Type).FullName).GetMembers("GetTypeFromHandle").First();
+            var getTypeFromHandleSymbol = (IMethodSymbol) Context.RoslynTypeSystem.SystemType.GetMembers("GetTypeFromHandle").First();
             
             AddCilInstruction(ilVar, OpCodes.Ldtoken, Context.GetTypeInfo(node.Type).Type);
             string operand = getTypeFromHandleSymbol.MethodResolverExpression(Context);
@@ -732,8 +732,8 @@ namespace Cecilifier.Core.AST
             VisitIndex(node.LeftOperand);
             VisitIndex(node.RightOperand);
 
-            var indexType = Context.SemanticModel.Compilation.GetTypeByMetadataName(typeof(Index).FullName);
-            var rangeCtor = Context.SemanticModel.Compilation.GetTypeByMetadataName(typeof(Range).FullName)
+            var indexType = Context.RoslynTypeSystem.SystemIndex;
+            var rangeCtor = Context.RoslynTypeSystem.SystemRange
                 ?.GetMembers(".ctor")
                 .OfType<IMethodSymbol>()
                 .Single(ctor => ctor.Parameters.Length == 2 && ctor.Parameters[0].Type == indexType && ctor.Parameters[1].Type == indexType);
@@ -797,7 +797,7 @@ namespace Cecilifier.Core.AST
                 return;
             }
             
-            var ctor = Context.SemanticModel.Compilation.GetTypeByMetadataName(typeof(Index).FullName)
+            var ctor = Context.RoslynTypeSystem.SystemIndex
                 .GetMembers(".ctor")
                 .OfType<IMethodSymbol>()
                 .Single(m => m.Parameters.Length == 2 && m.Parameters[0].Type.SpecialType == SpecialType.System_Int32 && m.Parameters[1].Type.SpecialType == SpecialType.System_Boolean);

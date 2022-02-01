@@ -90,7 +90,7 @@ namespace Cecilifier.Core.AST
             var isInterfaceDef = eventSymbol.ContainingType.TypeKind == TypeKind.Interface;
             var accessorModifiers = AccessModifiersForEventAccessors(node, isInterfaceDef);
 
-            var removeMethodExps = CecilDefinitionsFactory.Method(Context, removeMethodVar, $"remove_{eventSymbol.Name}", accessorModifiers, GetSpecialType(SpecialType.System_Void), false,Array.Empty<TypeParameterSyntax>());
+            var removeMethodExps = CecilDefinitionsFactory.Method(Context, removeMethodVar, $"remove_{eventSymbol.Name}", accessorModifiers, Context.RoslynTypeSystem.SystemVoid, false,Array.Empty<TypeParameterSyntax>());
             var paramsExps = AddParameterTo(removeMethodVar, eventType);
 
             removeMethodExps = removeMethodExps.Concat(paramsExps);
@@ -115,7 +115,7 @@ namespace Cecilifier.Core.AST
             var isInterfaceDef = eventSymbol.ContainingType.TypeKind == TypeKind.Interface;
             
             var accessorModifiers = AccessModifiersForEventAccessors(node, isInterfaceDef);
-            var addMethodExps = CecilDefinitionsFactory.Method(Context, addMethodVar, $"add_{eventSymbol.Name}", accessorModifiers, GetSpecialType(SpecialType.System_Void), false, Array.Empty<TypeParameterSyntax>());
+            var addMethodExps = CecilDefinitionsFactory.Method(Context, addMethodVar, $"add_{eventSymbol.Name}", accessorModifiers, Context.RoslynTypeSystem.SystemVoid, false, Array.Empty<TypeParameterSyntax>());
 
             var paramsExps = AddParameterTo(addMethodVar, eventType);
             addMethodExps = addMethodExps.Concat(paramsExps);

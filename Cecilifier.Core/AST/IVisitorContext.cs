@@ -27,8 +27,7 @@ namespace Cecilifier.Core.AST
         ITypeSymbol GetDeclaredSymbol(BaseTypeDeclarationSyntax classDeclaration);
         TypeInfo GetTypeInfo(TypeSyntax node);
         TypeInfo GetTypeInfo(ExpressionSyntax expressionSyntax);
-        INamedTypeSymbol GetSpecialType(SpecialType specialType);
-
+        
         void EmitCilInstruction(string ilVar, OpCode opCode);
         void EmitCilInstruction<T>(string ilVar, OpCode opCode, T operand);
         void WriteCecilExpression(string msg);
@@ -40,6 +39,8 @@ namespace Cecilifier.Core.AST
         
         ITypeResolver TypeResolver { get; }
         IList<Mapping> Mappings { get; }
+        
+        ref readonly RoslynTypeSystem RoslynTypeSystem { get; }
 
         #region Flags Handling
         IDisposable WithFlag(string name);
