@@ -272,6 +272,11 @@ namespace Cecilifier.Core.AST
             {
                 visitor.Visit(node.Left);
             }
+
+            if (expSymbol is IEventSymbol @event)
+            {
+                AddMethodCall(ilVar, @event.AddMethod);
+            }
         }
 
         private bool HandlePseudoAssignment(AssignmentExpressionSyntax node)

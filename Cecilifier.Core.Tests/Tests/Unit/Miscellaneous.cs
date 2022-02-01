@@ -332,6 +332,36 @@ public class Foo
             var result = RunCecilifier(code);
             var cecilifiedCode = result.GeneratedCode.ReadToEnd();
             Assert.That(cecilifiedCode, Does.Not.Contains("Ldind"));
-        }        
+        }
+
+        [Test]
+        public void TestEvents()
+        {
+            var source = @"class Foo {
+                    private void Handler(object sender, System.EventArgs args) { }
+                    void SetEvent(System.Diagnostics.Process proc) => proc.Exited += Handler;
+                }";
+
+            var result = RunCecilifier(source);
+            
+            Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(
+                @"il_setEvent_6.Emit\(OpCodes.Ldarg_1\);
+			il_setEvent_6.Emit\(OpCodes.Ldarg_0\);
+			il_setEvent_6.Emit\(OpCodes.Ldftn, m_handler_1\);
+			il_setEvent_6.Emit\(OpCodes.Newobj,.+System.EventHandler.+,.+System.Object.+,.+System.IntPtr.+\);
+			il_setEvent_6.Emit\(OpCodes.Callvirt,.+add_Exited.+\);"));
+        }  
+        
+        [Test]
+        public void TypesNotInSystemCorelib_AreResolved()
+        {
+            var source = @"class Foo {
+                    private void Handler(object sender, System.ConsoleCancelEventArgs args) { }
+                    void SetEvent() => System.Console.CancelKeyPress += Handler;
+                }";
+
+            var result = RunCecilifier(source);
+            Assert.That(result.GeneratedCode.ReadToEnd(), Contains.Substring("\"System.Console, System.Console\", \"add_CancelKeyPress\","));
+        }
     }
 }
