@@ -17,10 +17,14 @@ namespace Cecilifier.Core.AST
     internal class SyntaxWalkerBase : CSharpSyntaxWalker
     {
         private const string ModifiersSeparator = " | ";
-
+        private static ITypeSymbol SystemIndex { get; set; }
+            
         internal SyntaxWalkerBase(IVisitorContext ctx)
         {
             Context = ctx;
+
+            if (SystemIndex == null)
+                SystemIndex = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(Index).FullName);
         }
 
         protected IVisitorContext Context { get; }
@@ -491,9 +495,9 @@ namespace Cecilifier.Core.AST
 
         private static bool IsSystemIndexUsedAsIndex(ITypeSymbol symbol, CSharpSyntaxNode node)
         {
-            if (symbol.FullyQualifiedName() != "System.Index")
+            if (symbol.MetadataToken != SystemIndex.MetadataToken)
                 return false;
-            
+ 
             return node.Parent.IsKind(SyntaxKind.BracketedArgumentList);
         }
 
