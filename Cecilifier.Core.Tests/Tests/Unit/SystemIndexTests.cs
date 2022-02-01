@@ -91,7 +91,7 @@ public class SystemIndexTests : CecilifierUnitTestBase
 
         Assert.That(cecilifiedCode, Contains.Substring (kind.LoadAddressOpCode().ToString().PascalCase()), cecilifiedCode);
         Assert.That(cecilifiedCode, Does.Not.Contains(kind.StoreOpCode().ToString().PascalCase()), cecilifiedCode);
-        Assert.That(cecilifiedCode, Does.Match(@".+OpCodes.Call, .+TypeHelpers.ResolveMethod\(""System.Private.CoreLib"", ""System.Index"", "".ctor"",.+,"""", ""System.Int32"", ""System.Boolean""\)\)\);"), cecilifiedCode);
+        Assert.That(cecilifiedCode, Does.Match(@".+OpCodes.Call, .+TypeHelpers.ResolveMethod\(""System.Index"", "".ctor"",.+,"""", ""System.Int32"", ""System.Boolean""\)\)\);"), cecilifiedCode);
     }
 
     [Test]
@@ -104,7 +104,7 @@ public class SystemIndexTests : CecilifierUnitTestBase
             @"(il_setField_\d\.Emit\(OpCodes\.)Ldarg_1\);\s+" +
             @"\1Ldc_I4, 11.+\s+" +
             @"\1Ldc_I4_1.+\s+" +
-            @".+OpCodes.Newobj, .+TypeHelpers.ResolveMethod\(""System.Private.CoreLib"", ""System.Index"", "".ctor"",.+,"""", ""System.Int32"", ""System.Boolean""\)\)\);\s+" +
+            @".+OpCodes.Newobj, .+TypeHelpers.ResolveMethod\(""System.Index"", "".ctor"",.+,"""", ""System.Int32"", ""System.Boolean""\)\)\);\s+" +
             @"\1Stfld, fld_field_\d";
         
         Assert.That(cecilifiedCode, Does.Match(expectedSnippet), cecilifiedCode);
@@ -120,13 +120,13 @@ public class SystemIndexTests : CecilifierUnitTestBase
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
 
         Assert.That(cecilifiedCode, Does.Not.Contains(kind.LoadAddressOpCode().ToString().PascalCase()), cecilifiedCode);
-        Assert.That(cecilifiedCode, Does.Match(@".+OpCodes.Newobj, .+TypeHelpers.ResolveMethod\(""System.Private.CoreLib"", ""System.Index"", "".ctor"",.+,"""", ""System.Int32"", ""System.Boolean""\)\)\);"), cecilifiedCode);
+        Assert.That(cecilifiedCode, Does.Match(@".+OpCodes.Newobj, .+TypeHelpers.ResolveMethod\(""System.Index"", "".ctor"",.+,"""", ""System.Int32"", ""System.Boolean""\)\)\);"), cecilifiedCode);
 
         Console.WriteLine(cecilifiedCode);
     }
 
-    public const string ResolvedSystemIndexOpImplicit = @"assembly\.MainModule\.ImportReference\(TypeHelpers\.ResolveMethod\(""System\.Private\.CoreLib"", ""System\.Index"", ""op_Implicit"",System\.Reflection\.BindingFlags\.Default\|System\.Reflection.BindingFlags.Static\|System.Reflection.BindingFlags.Public,"""", ""System.Int32""\)\)";
-    public const string ResolvedSystemIndexCtor = @"assembly\.MainModule\.ImportReference\(TypeHelpers\.ResolveMethod\(""System\.Private\.CoreLib"", ""System\.Index"", "".ctor"",System\.Reflection\.BindingFlags\.Default\|System\.Reflection.BindingFlags.Instance\|System.Reflection.BindingFlags.Public,"""", ""System.Int32"", ""System.Boolean""\)\)";
+    public const string ResolvedSystemIndexOpImplicit = @"assembly\.MainModule\.ImportReference\(TypeHelpers\.ResolveMethod\(""System\.Index"", ""op_Implicit"",System\.Reflection\.BindingFlags\.Default\|System\.Reflection.BindingFlags.Static\|System.Reflection.BindingFlags.Public,"""", ""System.Int32""\)\)";
+    public const string ResolvedSystemIndexCtor = @"assembly\.MainModule\.ImportReference\(TypeHelpers\.ResolveMethod\(""System\.Index"", "".ctor"",System\.Reflection\.BindingFlags\.Default\|System\.Reflection.BindingFlags.Instance\|System.Reflection.BindingFlags.Public,"""", ""System.Int32"", ""System.Boolean""\)\)";
 }
 
 internal static class SymbolKindExtensions

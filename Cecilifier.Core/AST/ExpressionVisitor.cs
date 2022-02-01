@@ -210,8 +210,8 @@ namespace Cecilifier.Core.AST
                 return;
 
             var targetType = expressionInfo.Symbol.Accept(ElementTypeSymbolResolver.Instance);
-            if (targetType.FullyQualifiedName().Equals("System.Span") && node.ArgumentList.Arguments.Count == 1 &&
-                Context.GetTypeInfo(node.ArgumentList.Arguments[0].Expression).Type.FullyQualifiedName().Equals("System.Range"))
+            if (targetType.AssemblyQualifiedName().Equals("System.Span") && node.ArgumentList.Arguments.Count == 1 &&
+                Context.GetTypeInfo(node.ArgumentList.Arguments[0].Expression).Type.AssemblyQualifiedName().Equals("System.Range"))
             {
                 node.Accept(new ElementAccessExpressionWithRangeArgumentVisitor(Context, ilVar, this));
                 return;
@@ -277,7 +277,7 @@ namespace Cecilifier.Core.AST
         private bool HandlePseudoAssignment(AssignmentExpressionSyntax node)
         {
             var lhsType = Context.SemanticModel.GetTypeInfo(node.Left);
-            if (lhsType.Type.FullyQualifiedName() != "System.Index" || !node.Right.IsKind(SyntaxKind.IndexExpression) || node.Left.IsKind(SyntaxKind.SimpleMemberAccessExpression))
+            if (lhsType.Type.AssemblyQualifiedName() != "System.Index" || !node.Right.IsKind(SyntaxKind.IndexExpression) || node.Left.IsKind(SyntaxKind.SimpleMemberAccessExpression))
                 return false;
 
             using (Context.WithFlag(Constants.ContextFlags.PseudoAssignmentToIndex))

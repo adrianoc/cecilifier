@@ -73,7 +73,7 @@ public class OperatorsTests : CecilifierUnitTestBase
         
         Assert.That(
             cecilifiedCode, 
-            Contains.Substring("Emit(OpCodes.Call, assembly.MainModule.ImportReference(TypeHelpers.ResolveMethod(\"System.Private.CoreLib\", \"System.Type\", \"GetTypeFromHandle\",System.Reflection.BindingFlags.Default|System.Reflection.BindingFlags.Static|System.Reflection.BindingFlags.Public,\"\", \"System.RuntimeTypeHandle\")));"));
+            Contains.Substring("Emit(OpCodes.Call, assembly.MainModule.ImportReference(TypeHelpers.ResolveMethod(\"System.Type\", \"GetTypeFromHandle\",System.Reflection.BindingFlags.Default|System.Reflection.BindingFlags.Static|System.Reflection.BindingFlags.Public,\"\", \"System.RuntimeTypeHandle\")));"));
     }
     
     private static void RunTests(string comparison, string[] expectedCecilifiedExpressions)
@@ -168,7 +168,7 @@ public class OperatorsTests : CecilifierUnitTestBase
             { 
                 "il_B_10.Emit(OpCodes.Ldarg, 7);",
                 "il_B_10.Emit(OpCodes.Ldstr, \"A\");",
-                "il_B_10.Emit(OpCodes.Call, assembly.MainModule.ImportReference(TypeHelpers.ResolveMethod(\"System.Private.CoreLib\", \"System.String\", \"op_Inequality\",System.Reflection.BindingFlags.Default|System.Reflection.BindingFlags.Static|System.Reflection.BindingFlags.Public,\"\", \"System.String\", \"System.String\")));",
+                "il_B_10.Emit(OpCodes.Call, assembly.MainModule.ImportReference(TypeHelpers.ResolveMethod(\"System.String\", \"op_Inequality\",System.Reflection.BindingFlags.Default|System.Reflection.BindingFlags.Static|System.Reflection.BindingFlags.Public,\"\", \"System.String\", \"System.String\")));",
                 "il_B_10.Emit(OpCodes.Ret);"   
             }).SetName("String");
         
@@ -245,7 +245,7 @@ public class OperatorsTests : CecilifierUnitTestBase
             { 
                 "il_B_10.Emit(OpCodes.Ldarg, 7);",
                 "il_B_10.Emit(OpCodes.Ldstr, \"A\");",
-                "il_B_10.Emit(OpCodes.Call, assembly.MainModule.ImportReference(TypeHelpers.ResolveMethod(\"System.Private.CoreLib\", \"System.String\", \"op_Equality\",System.Reflection.BindingFlags.Default|System.Reflection.BindingFlags.Static|System.Reflection.BindingFlags.Public,\"\", \"System.String\", \"System.String\")));",
+                "il_B_10.Emit(OpCodes.Call, assembly.MainModule.ImportReference(TypeHelpers.ResolveMethod(\"System.String\", \"op_Equality\",System.Reflection.BindingFlags.Default|System.Reflection.BindingFlags.Static|System.Reflection.BindingFlags.Public,\"\", \"System.String\", \"System.String\")));",
                 "il_B_10.Emit(OpCodes.Ret);"   
             }).SetName("String");
         

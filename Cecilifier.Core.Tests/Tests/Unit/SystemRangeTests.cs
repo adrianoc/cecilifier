@@ -111,7 +111,7 @@ public class SystemRangeTests : CecilifierUnitTestBase
             @"\k<body_var>.Variables.Add\(\k<start_index>\);\s+" +
             @"\1Stloc, \k<start_index>\);\s+" +
             @"\1Dup\);\s+" +
-            @"\1Call, assembly.MainModule.ImportReference\(.+ResolveMethod\(.+, ""System.Span`1"", ""get_Length"",.+,""System.Int32""\)\)\);\s+".IfTrue(indexedFromEnd) +
+            @"\1Call, assembly.MainModule.ImportReference\(.+ResolveMethod\(""System.Span`1"", ""get_Length"",.+,""System.Int32""\)\)\);\s+".IfTrue(indexedFromEnd) +
             @"\1Conv_I4\);\s+" + 
             @"\1(Ldc_I4, \d+|Ldarg_1|Call, m_idx_\d)\);\s+"+
             @"\1Sub\);\s+".IfTrue(indexedFromEnd) +
@@ -177,7 +177,7 @@ public class SystemRangeTests : CecilifierUnitTestBase
             @"\1Stloc, \k<span_copy>\);\s+" +
             @"\1Ldloca, \k<span_copy>\);\s+" +
             @"\1Dup\);\s+" +
-            @"\1Call, assembly.MainModule.ImportReference\(.+ResolveMethod\(.+, ""System.Span`1"", ""get_Length"",.+,""System.Int32""\)\)\);\s+" +
+            @"\1Call, assembly.MainModule.ImportReference\(.+ResolveMethod\(""System.Span`1"", ""get_Length"",.+,""System.Int32""\)\)\);\s+" +
             @"\1Conv_I4\);\s+" + 
             @"\1(Ldc_I4, \d+|Ldarg_1|Call, m_idx_\d)\);\s+"+
             @"\1Sub\);\s+" +
@@ -212,7 +212,7 @@ public class SystemRangeTests : CecilifierUnitTestBase
             @"\1Stloc, \k<span_copy>\);\s+" +
             @"\1Ldloca, \k<span_copy>\);\s+".IfTrue(indexedFromEnd) +
             @"\1Dup.+\s+" +
-            @"\1Call, assembly.MainModule.ImportReference\(.+ResolveMethod\(.+, ""System.Span`1"", ""get_Length"",.+,""System.Int32""\)\)\);\s+" +
+            @"\1Call, assembly.MainModule.ImportReference\(.+ResolveMethod\(""System.Span`1"", ""get_Length"",.+,""System.Int32""\)\)\);\s+" +
             @"\1Conv_I4\);\s+" + 
             @"\1(Ldc_I4, \d+|Call, m_idx_\d)\);\s+"+
             @"\1Sub\);\s+" +
@@ -220,7 +220,7 @@ public class SystemRangeTests : CecilifierUnitTestBase
             @"\k<body_var>.Variables.Add\(\k<start_index>\);\s+" +
             @"\1Stloc, \k<start_index>\);\s+" +
             @"\1Dup.+\s+" +
-            @"\1Call, assembly.MainModule.ImportReference\(.+ResolveMethod\(.+, ""System.Span`1"", ""get_Length"",.+,""System.Int32""\)\)\);\s+" +
+            @"\1Call, assembly.MainModule.ImportReference\(.+ResolveMethod\(""System.Span`1"", ""get_Length"",.+,""System.Int32""\)\)\);\s+" +
             @"\1Conv_I4\);\s+" + 
             @"\1(Ldc_I4, \d+|Call, m_idx_\d)\);\s+"+
             @"\1Sub\);\s+" +
@@ -251,7 +251,7 @@ public class SystemRangeTests : CecilifierUnitTestBase
             @"(?<body_var>.+)\.Variables.Add\(\k<span_copy>\);\s+" +
             @"\1Stloc, \k<span_copy>\);\s+" +
             @"\1Ldloca, \k<span_copy>\);\s+" +
-            @"\1Call, assembly.MainModule.ImportReference\(.+ResolveMethod\(.+, ""System.Span`1"", ""get_Length"",.+,""System.Int32""\)\)\);\s+" +
+            @"\1Call, assembly.MainModule.ImportReference\(.+ResolveMethod\(""System.Span`1"", ""get_Length"",.+,""System.Int32""\)\)\);\s+" +
             @"var (?<span_length>.+spanLength.+\d+) = new VariableDefinition\(assembly.MainModule.TypeSystem.Int32\);\s+" +
             @"(?<body_var>.+)\.Variables.Add\(\k<span_length>\);\s+" +
             @"\1Stloc, \k<span_length>\);\s+" +
@@ -262,7 +262,7 @@ public class SystemRangeTests : CecilifierUnitTestBase
             @"(?<body_var>.+)\.Variables.Add\(\k<range_var>\);\s+" +
             @"\1Stloc, \k<range_var>\);\s+" +
             @"\1Ldloca, \k<range_var>\);\s+" +
-            @"\1Call, assembly.MainModule.ImportReference\(.+ResolveMethod\(.+, ""System.Range"", ""get_Start"",.+\)\)\);\s+" +
+            @"\1Call, assembly.MainModule.ImportReference\(.+ResolveMethod\(""System.Range"", ""get_Start"",.+\)\)\);\s+" +
             @"var (?<index_var>.+index_\d+) = new VariableDefinition\(assembly.MainModule.ImportReference\(typeof\(Index\)\)\);\s+" +
             @"(?<body_var>.+)\.Variables.Add\(\k<index_var>\);\s+" +
             @"\1Stloc, \k<index_var>\);\s+" +
@@ -273,7 +273,7 @@ public class SystemRangeTests : CecilifierUnitTestBase
             @"(?<body_var>.+)\.Variables.Add\(\k<start_index>\);\s+" +
             @"\1Stloc, \k<start_index>\);\s+" +
             @"\1Ldloca, \k<range_var>\);\s+" +
-            @"\1Call, assembly.MainModule.ImportReference\(.+ResolveMethod\(.+, ""System.Range"", ""get_End"",.+\)\)\);\s+" +
+            @"\1Call, assembly.MainModule.ImportReference\(.+ResolveMethod\(""System.Range"", ""get_End"",.+\)\)\);\s+" +
             @"\1Stloc, \k<index_var>\);\s+" +
             @"\1Ldloca, \k<index_var>\);\s+" +
             @"\1Ldloc, \k<span_length>\);\s+" +
@@ -292,7 +292,7 @@ public class SystemRangeTests : CecilifierUnitTestBase
         Assert.That(cecilifiedCode, Does.Match(expected));
     }
 
-    private const string ResolvedSystemRangeCtor = @"assembly.MainModule.ImportReference\(TypeHelpers.ResolveMethod\(""System.Private.CoreLib"", ""System.Range"", "".ctor"",.+,"""", ""System.Index"", ""System.Index""\)\)";
+    private const string ResolvedSystemRangeCtor = @"assembly.MainModule.ImportReference\(TypeHelpers.ResolveMethod\(""System.Range"", "".ctor"",.+,"""", ""System.Index"", ""System.Index""\)\)";
 }
 
 static class Conditional

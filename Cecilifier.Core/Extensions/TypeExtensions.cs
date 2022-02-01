@@ -2,10 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Cecilifier.Core.AST;
 using Microsoft.CodeAnalysis;
 using Mono.Cecil.Cil;
-using static Cecilifier.Core.Misc.Utils;
 
 namespace Cecilifier.Core.Extensions
 {
@@ -15,12 +13,12 @@ namespace Cecilifier.Core.Extensions
         {
             if (type is INamedTypeSymbol namedType && namedType.IsGenericType) //TODO: namedType.IsUnboundGenericType ? Open 
             {
-                typeParameters = namedType.TypeArguments.Select(typeArg => typeArg.FullyQualifiedName()).ToArray();
+                typeParameters = namedType.TypeArguments.Select(typeArg => (string)typeArg.AssemblyQualifiedName()).ToArray();
                 return Regex.Replace(namedType.ConstructedFrom.ToString(), "<.*>", "`" + namedType.TypeArguments.Length );
             }
 
             typeParameters = Array.Empty<string>();
-            return type.FullyQualifiedName();
+            return type.AssemblyQualifiedName();
         }
         
         public static string MakeByReferenceType(this string type)

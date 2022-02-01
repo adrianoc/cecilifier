@@ -26,12 +26,10 @@ namespace Cecilifier.Runtime
         }
        
 
-        public static MethodInfo ResolveGenericMethod(string assemblyName, string declaringTypeName, string methodName, BindingFlags bindingFlags, IEnumerable<string> typeArguments,
-            IEnumerable<ParamData> paramTypes)
+        public static MethodInfo ResolveGenericMethod(string declaringTypeName, string methodName, BindingFlags bindingFlags, IEnumerable<string> typeArguments, IEnumerable<ParamData> paramTypes)
         {
-            var containingAssembly = Assembly.Load(assemblyName);
-            var declaringType = containingAssembly.GetType(declaringTypeName);
-
+            var declaringType = Type.GetType(declaringTypeName);
+            
             var typeArgumentsCount = typeArguments.Count();
             var methods = declaringType.GetMethods(bindingFlags)
                 .Where(c => c.Name == methodName
@@ -68,11 +66,9 @@ namespace Cecilifier.Runtime
             return null;
         }
 
-        public static MethodBase ResolveMethod(string assemblyName, string declaringTypeName, string methodName, BindingFlags bindingFlags, string typeArgumentList, params string[] paramTypes)
+        public static MethodBase ResolveMethod(string declaringTypeName, string methodName, BindingFlags bindingFlags, string typeArgumentList, params string[] paramTypes)
         {
-            var containingAssembly = Assembly.Load(new AssemblyName(assemblyName));
-            var declaringType = containingAssembly.GetType(declaringTypeName);
-
+            var declaringType = Type.GetType(declaringTypeName);
             if (declaringType.IsGenericType)
             {
                 var typeArguments = typeArgumentList.Split(',');
@@ -89,7 +85,7 @@ namespace Cecilifier.Runtime
 
                 if (resolvedCtor == null)
                 {
-                    throw new InvalidOperationException($"Failed to resolve ctor [{assemblyName}] {declaringType}({string.Join(',', paramTypes)})");
+                    throw new InvalidOperationException($"Failed to resolve ctor [{declaringType}({string.Join(',', paramTypes)})");
                 }
                 
                 return resolvedCtor;
@@ -103,7 +99,7 @@ namespace Cecilifier.Runtime
 
             if (resolvedMethod == null)
             {
-                throw new InvalidOperationException($"Failed to resolve method [{assemblyName}] {declaringType}.{methodName}({string.Join(',', paramTypes)})");
+                throw new InvalidOperationException($"Failed to resolve method {declaringType}.{methodName}({string.Join(',', paramTypes)})");
             }
             
             return resolvedMethod;

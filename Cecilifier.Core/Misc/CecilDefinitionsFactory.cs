@@ -265,7 +265,7 @@ namespace Cecilifier.Core.Misc
                 
                 var genParamDefVar = context.Naming.GenericParameterDeclaration(typeParameter);
 
-                context.DefinitionVariables.RegisterNonMethod(symbol.ContainingSymbol.FullyQualifiedName(), genericParamName, VariableMemberKind.TypeParameter, genParamDefVar);
+                context.DefinitionVariables.RegisterNonMethod(symbol.ContainingSymbol.AssemblyQualifiedName(), genericParamName, VariableMemberKind.TypeParameter, genParamDefVar);
                 exps.Add(GenericParameter(context, memberDefVar, genericParamName, genParamDefVar, symbol));
                 
                 tba.Add((genParamDefVar, symbol));
