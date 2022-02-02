@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using System.Text;
 using Cecilifier.Core.AST;
@@ -12,6 +13,28 @@ namespace Cecilifier.Core.Extensions
         internal static string EvaluateAsCustomAttributeArgument(this ExpressionSyntax expression, IVisitorContext context)
         {
             return expression.Accept(new CustomAttributeArgumentEvaluator(context));
+        }
+        
+        internal static string ValueText(this LiteralExpressionSyntax node)
+        {
+            switch (node.Kind())
+            {
+                case SyntaxKind.StringLiteralExpression:
+                    return $"\"{node.Token.ValueText}\"";
+
+                case SyntaxKind.NullLiteralExpression:
+                    return "null";
+                
+                case SyntaxKind.DefaultLiteralExpression:
+                    return "default";
+                
+                case SyntaxKind.NumericLiteralExpression:
+                case SyntaxKind.TrueLiteralExpression:
+                case SyntaxKind.FalseLiteralExpression:
+                    return node.Token.ValueText;
+            }
+
+            throw new ArgumentException($"{node.Kind()} is not supported.");
         }
     }
 
@@ -53,21 +76,7 @@ namespace Cecilifier.Core.Extensions
             return $"{node.Expression.ToString()}.{node.Name.Identifier.ValueText}";
         }
 
-        public override string VisitLiteralExpression(LiteralExpressionSyntax node)
-        {
-            switch (node.Kind())
-            {
-                case SyntaxKind.StringLiteralExpression:
-                    return $"\"{node.Token.ValueText}\"";
-
-                case SyntaxKind.NumericLiteralExpression:
-                case SyntaxKind.TrueLiteralExpression:
-                case SyntaxKind.FalseLiteralExpression:
-                    return node.Token.ValueText;
-            }
-
-            return base.VisitLiteralExpression(node);
-        }
+        public override string VisitLiteralExpression(LiteralExpressionSyntax node) => node.ValueText();
 
         public override string VisitArrayCreationExpression(ArrayCreationExpressionSyntax node)
         {

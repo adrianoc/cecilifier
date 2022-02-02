@@ -3,6 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
 using Cecilifier.Core.AST;
+using Cecilifier.Core.Misc;
 using Microsoft.CodeAnalysis;
 
 namespace Cecilifier.Core.Extensions
@@ -89,5 +90,15 @@ namespace Cecilifier.Core.Extensions
         }
 
         public static bool IsDllImportCtor(this ISymbol self) => self != null && self.ContainingType.Name == "DllImportAttribute";
+
+        public static string AsParameterAttribute(this IParameterSymbol symbol)
+        {
+            var refRelatedAttr = symbol.RefKind.AsParameterAttribute();
+            var optionalAttribute = symbol.HasExplicitDefaultValue ? Constants.ParameterAttributes.Optional : string.Empty;
+            if (string.IsNullOrWhiteSpace(refRelatedAttr) && string.IsNullOrWhiteSpace(optionalAttribute))
+                return Constants.ParameterAttributes.None;
+            
+            return refRelatedAttr.AppendModifier(optionalAttribute);
+        }
     }
 }

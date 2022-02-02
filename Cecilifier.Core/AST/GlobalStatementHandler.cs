@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection.Metadata;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
@@ -47,7 +48,9 @@ namespace Cecilifier.Core.AST
                 false, 
                 methodVar, 
                 paramVar, 
-                $"{context.TypeResolver.Bcl.System.String}.MakeArrayType()");
+                $"{context.TypeResolver.Bcl.System.String}.MakeArrayType()",
+                Constants.ParameterAttributes.None,
+                defaultParameterValue: null);
 
             ilVar = context.Naming.ILProcessor("topLevelMain", "Main");
             var mainBodyExps = CecilDefinitionsFactory.MethodBody(methodVar, ilVar, Array.Empty<InstructionRepresentation>());

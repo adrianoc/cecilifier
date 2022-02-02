@@ -161,43 +161,47 @@ namespace Cecilifier.Core.Misc
             };
         }
 
-        public static string Parameter(string name, RefKind byRef, string resolvedType)
+        public static string Parameter(string name, RefKind byRef, string resolvedType, string paramAttributes = null)
         {
+            paramAttributes ??= Constants.ParameterAttributes.None;
             if (RefKind.None != byRef)
             {
-                resolvedType = $"{resolvedType}.MakeByReferenceType()";
+                resolvedType = resolvedType.MakeByReferenceType();
             }
 
-            return  $"new ParameterDefinition(\"{name}\", ParameterAttributes.None, {resolvedType})";
+            return  $"new ParameterDefinition(\"{name}\", {paramAttributes}, {resolvedType})";
         }
         
-        public static IEnumerable<string> Parameter(string name, RefKind byRef, bool isParams, string methodVar, string paramVar, string resolvedType)
+        public static IEnumerable<string> Parameter(string name, RefKind byRef, bool isParams, string methodVar, string paramVar, string resolvedType, string paramAttributes, string defaultParameterValue)
         {
             var exps = new List<string>();
 
-            exps.Add($"var {paramVar} = {Parameter(name, byRef, resolvedType)};");
-            AddExtraAttributes(exps, paramVar, byRef);
-
+            exps.Add($"var {paramVar} = {Parameter(name, byRef, resolvedType, paramAttributes)};");
             if (isParams)
             {
                 exps.Add($"{paramVar}.CustomAttributes.Add(new CustomAttribute(assembly.MainModule.Import(typeof(ParamArrayAttribute).GetConstructor(BindingFlags.Public | BindingFlags.Instance, null, new Type[0], null))));");
             }
+
+            if (defaultParameterValue != null)
+                exps.Add($"{paramVar}.Constant = {defaultParameterValue};");
 
             exps.Add($"{methodVar}.Parameters.Add({paramVar});");
 
             return exps;
         }
         
-        public static IEnumerable<string> Parameter(ParameterSyntax node, SemanticModel semanticModel, string methodVar, string paramVar, string resolvedType)
+        public static IEnumerable<string> Parameter(ParameterSyntax node, SemanticModel semanticModel, string methodVar, string paramVar, string resolvedType, string defaultParameterValue)
         {
             var paramSymbol = semanticModel.GetDeclaredSymbol(node);
             return Parameter(
                 node.Identifier.Text, 
-                paramSymbol.RefKind, 
+                paramSymbol!.RefKind, 
                 isParams: node.GetFirstToken().Kind() == SyntaxKind.ParamsKeyword,
                 methodVar,
                 paramVar,
-                resolvedType);
+                resolvedType,
+                paramSymbol!.AsParameterAttribute(),
+                defaultParameterValue);
         }
         
         public static string Parameter(IParameterSymbol paramSymbol, string resolvedType)
@@ -205,7 +209,8 @@ namespace Cecilifier.Core.Misc
             return Parameter(
                 paramSymbol.Name, 
                 paramSymbol.RefKind,
-                resolvedType);
+                resolvedType,
+                paramSymbol.AsParameterAttribute());
         }
 
         public static IEnumerable<string> Attribute(string attrTargetVar, IVisitorContext context, AttributeSyntax attribute, Func<ITypeSymbol, AttributeArgumentSyntax[], string> ctorResolver)
@@ -368,14 +373,6 @@ namespace Cecilifier.Core.Misc
                 SyntaxKind.EnumDeclaration => string.Empty,
                 _ => throw new Exception("Not supported type declaration: " + syntaxKind)
             };
-        }
-        
-        private static void AddExtraAttributes(IList<string> exps, string paramVar, RefKind byRef)
-        {
-            if (byRef == RefKind.Out)
-            {
-                exps.Add($"{paramVar}.Attributes = ParameterAttributes.Out;");
-            }
         }
 
         private static string FunctionPointerTypeBasedCecilType(ITypeResolver resolver, IFunctionPointerTypeSymbol functionPointer, Func<string, string, string, string> factory)

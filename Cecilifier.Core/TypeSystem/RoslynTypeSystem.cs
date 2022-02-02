@@ -20,6 +20,7 @@ internal struct RoslynTypeSystem
         SystemInt32 = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Int32);
         SystemInt64 = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Int64);
         SystemIntPtr = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_IntPtr);
+        SystemSingle = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Single);
         SystemString = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_String);
         SystemVoid = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Void);
         SystemObject = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Object);
@@ -32,6 +33,7 @@ internal struct RoslynTypeSystem
     public ITypeSymbol SystemInt32 { get; }
     public ITypeSymbol SystemInt64 { get; }
     public ITypeSymbol SystemIntPtr { get; }
+    public ITypeSymbol SystemSingle { get; }
     public ITypeSymbol SystemString { get; }
     public ITypeSymbol SystemVoid { get; }
     public ITypeSymbol SystemObject { get; }

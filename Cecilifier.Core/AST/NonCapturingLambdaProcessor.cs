@@ -111,7 +111,10 @@ namespace Cecilifier.Core.AST
                     isParams: false, 
                     methodVar, 
                     context.Naming.SyntheticVariable(parameter.Identifier.Text, ElementKind.Parameter),
-                    resolvedParamType);
+                    resolvedParamType,
+                    parameter.Default != null ? Constants.ParameterAttributes.Optional : Constants.ParameterAttributes.None,
+                    parameter.Accept(DefaultParameterExtractorVisitor.Instance));
+                
                 foreach (var paramExp in paramExps)
                 {
                     context.WriteCecilExpression(paramExp);

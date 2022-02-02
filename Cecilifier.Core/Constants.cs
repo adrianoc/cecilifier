@@ -3,6 +3,16 @@ namespace Cecilifier.Core;
 public struct Constants
 {
     public static ContextFlags ContextFlags = new();
+
+    public static ParameterAttributes2 ParameterAttributes = new();
+}
+
+public struct ParameterAttributes2
+{
+    public readonly string None = "ParameterAttributes.None";
+    public readonly string In = "ParameterAttributes.In";
+    public readonly string Out = "ParameterAttributes.Out";
+    public readonly string Optional = "ParameterAttributes.Optional";
 }
 
 public struct ContextFlags

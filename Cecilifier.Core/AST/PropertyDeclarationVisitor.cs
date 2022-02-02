@@ -46,7 +46,7 @@ namespace Cecilifier.Core.AST
                     Type = Context.GetTypeInfo(parameter.Type).Type.Name
                 });
 
-                var exps = CecilDefinitionsFactory.Parameter(parameter, Context.SemanticModel, propDefVar, paramVar, ResolveType(parameter.Type));
+                var exps = CecilDefinitionsFactory.Parameter(parameter, Context.SemanticModel, propDefVar, paramVar, ResolveType(parameter.Type), parameter.Accept(DefaultParameterExtractorVisitor.Instance));
                 AddCecilExpressions(exps);
                 Context.DefinitionVariables.RegisterNonMethod(string.Empty, parameter.Identifier.ValueText, VariableMemberKind.Parameter, paramVar);
             }

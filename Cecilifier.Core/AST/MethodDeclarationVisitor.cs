@@ -92,7 +92,7 @@ namespace Cecilifier.Core.AST
             
             var declaringMethodVariable = methodVar.VariableName;
 
-            var exps = CecilDefinitionsFactory.Parameter(node, Context.SemanticModel, declaringMethodVariable, paramVar, ResolveType(node.Type));
+            var exps = CecilDefinitionsFactory.Parameter(node, Context.SemanticModel, declaringMethodVariable, paramVar, ResolveType(node.Type), node.Accept(DefaultParameterExtractorVisitor.Instance));
             AddCecilExpressions(exps);
             
             HandleAttributesInMemberDeclaration(node.AttributeLists, paramVar);

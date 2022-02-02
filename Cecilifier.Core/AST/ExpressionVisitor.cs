@@ -323,8 +323,7 @@ namespace Cecilifier.Core.AST
                     break;
 
                 case SyntaxKind.StringLiteralExpression:
-                    string operand = node.ToFullString();
-                    Context.EmitCilInstruction(ilVar, OpCodes.Ldstr, operand);
+                    Context.EmitCilInstruction(ilVar, OpCodes.Ldstr, node.Token.Text);
                     break;
 
                 case SyntaxKind.CharacterLiteralExpression:
@@ -332,12 +331,12 @@ namespace Cecilifier.Core.AST
                     break;
                 
                 case SyntaxKind.NumericLiteralExpression:
-                    AddLocalVariableAndHandleCallOnValueTypeLiterals(node,  Context.GetTypeInfo(node).Type, node.ToString());
+                    AddLocalVariableAndHandleCallOnValueTypeLiterals(node,  Context.GetTypeInfo(node).Type, node.Token.Text);
                     break;
 
                 case SyntaxKind.TrueLiteralExpression:
                 case SyntaxKind.FalseLiteralExpression:
-                    AddLocalVariableAndHandleCallOnValueTypeLiterals(node, Context.GetTypeInfo(node).Type, bool.Parse(node.ToString()) ? 1 : 0);
+                    AddLocalVariableAndHandleCallOnValueTypeLiterals(node, Context.GetTypeInfo(node).Type, bool.Parse(node.Token.Text) ? 1 : 0);
                     break;
 
                 default:
