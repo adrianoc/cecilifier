@@ -100,5 +100,16 @@ namespace Cecilifier.Core.Extensions
             
             return refRelatedAttr.AppendModifier(optionalAttribute);
         }
+
+        public static string ExplicitDefaultValue(this IParameterSymbol symbol)
+        {
+            var value = symbol.ExplicitDefaultValue?.ToString();
+            return symbol.Type.SpecialType switch
+            {
+                SpecialType.System_String => $"\"{value}\"",
+                SpecialType.System_Single => $"{value}f",
+                _ => value
+            };
+        }
     }
 }

@@ -309,50 +309,12 @@ namespace Cecilifier.Core.AST
         public override void VisitLiteralExpression(LiteralExpressionSyntax node)
         {
             using var _ = LineInformationTracker.Track(Context, node);
-            switch (node.Kind())
-            {
-                case SyntaxKind.NullLiteralExpression:
-                    var nodeType = Context.SemanticModel.GetTypeInfo(node);
-                    if (nodeType.ConvertedType?.TypeKind == TypeKind.Pointer)
-                    {
-                        Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4_0);
-                        Context.EmitCilInstruction(ilVar, OpCodes.Conv_U);
-                    }
-                    else
-                        Context.EmitCilInstruction(ilVar, OpCodes.Ldnull);
-                    break;
-
-                case SyntaxKind.StringLiteralExpression:
-                    Context.EmitCilInstruction(ilVar, OpCodes.Ldstr, node.Token.Text);
-                    break;
-
-                case SyntaxKind.CharacterLiteralExpression:
-                    AddLocalVariableAndHandleCallOnValueTypeLiterals(node,  Context.GetTypeInfo(node).Type, (int) ((char) node.Token.Value));
-                    break;
-                
-                case SyntaxKind.NumericLiteralExpression:
-                    AddLocalVariableAndHandleCallOnValueTypeLiterals(node,  Context.GetTypeInfo(node).Type, node.Token.Text);
-                    break;
-
-                case SyntaxKind.TrueLiteralExpression:
-                case SyntaxKind.FalseLiteralExpression:
-                    AddLocalVariableAndHandleCallOnValueTypeLiterals(node, Context.GetTypeInfo(node).Type, bool.Parse(node.Token.Text) ? 1 : 0);
-                    break;
-
-                default:
-                    throw new ArgumentException($"Literal ( {node}) of type {node.Kind()} not supported yet.");
-            }
-        }
-        
-        void AddLocalVariableAndHandleCallOnValueTypeLiterals(CSharpSyntaxNode node, ITypeSymbol literalType, object literalValue)
-        {
-            OpCode opCode = LoadOpCodeFor(literalType);
-            Context.EmitCilInstruction(ilVar, opCode, literalValue);
+            
             var localVarParent = (CSharpSyntaxNode) node.Parent;
             Debug.Assert(localVarParent != null);
                 
-            if (localVarParent.Accept(new UsageVisitor(Context)) == UsageKind.CallTarget) 
-                StoreTopOfStackInLocalVariableAndLoadItsAddress(literalType);
+            var nodeType = Context.SemanticModel.GetTypeInfo(node);
+            LoadLiteralValue(ilVar, nodeType.Type ?? nodeType.ConvertedType, node.Token.Text, localVarParent.Accept(new UsageVisitor(Context)) == UsageKind.CallTarget);
         }
 
         public override void VisitDeclarationExpression(DeclarationExpressionSyntax node)
@@ -387,7 +349,8 @@ namespace Cecilifier.Core.AST
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldstr, operand);
                 return;
             }
-            HandleMethodInvocation(node.Expression, node.ArgumentList);
+
+            HandleMethodInvocation(node.Expression, node.ArgumentList, Context.SemanticModel.GetSymbolInfo(node.Expression).Symbol);
             StoreTopOfStackInLocalVariableAndLoadItsAddressIfNeeded(node);
         }
         
@@ -918,44 +881,6 @@ namespace Cecilifier.Core.AST
             Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, tempLocalName);
         }
 
-        private OpCode LoadOpCodeFor(ITypeSymbol type)
-        {
-            switch (type.SpecialType)
-            {
-                case SpecialType.System_Single:
-                    return OpCodes.Ldc_R4;
-
-                case SpecialType.System_Double:
-                    return OpCodes.Ldc_R8;
-
-                case SpecialType.System_Byte:
-                case SpecialType.System_SByte:
-                case SpecialType.System_Int16:
-                case SpecialType.System_Int32:
-                case SpecialType.System_UInt16:
-                case SpecialType.System_UInt32:
-                    return OpCodes.Ldc_I4;
-
-                case SpecialType.System_UInt64:
-                case SpecialType.System_Int64:
-                    return OpCodes.Ldc_I8;
-
-                case SpecialType.System_Char:
-                    return OpCodes.Ldc_I4;
-
-                case SpecialType.System_Boolean:
-                    return OpCodes.Ldc_I4;
-                
-                case SpecialType.System_String:
-                    return OpCodes.Ldstr;
-                
-                case SpecialType.None:
-                    return OpCodes.Ldnull;
-            }
-
-            throw new ArgumentException($"Literal type {type} not supported.", nameof(type));
-        }
-        
         private OpCode StelemOpCodeFor(ITypeSymbol type)
         {
             switch (type.SpecialType)
@@ -1077,15 +1002,19 @@ namespace Cecilifier.Core.AST
         {
             if (fieldSymbol.HasConstantValue && fieldSymbol.IsConst)
             {
-                AddLocalVariableAndHandleCallOnValueTypeLiterals(
-                    node, 
-                    fieldSymbol.Type, 
+                var nodeParent = (CSharpSyntaxNode) node.Parent;
+                Debug.Assert(nodeParent != null);
+                         
+                LoadLiteralToStackHandlingCallOnValueTypeLiterals(
+                    ilVar,
+                    fieldSymbol.Type,
                     fieldSymbol.Type.SpecialType switch
                     {
                         SpecialType.System_String => $"\"{fieldSymbol.ConstantValue}\"",
                         SpecialType.System_Boolean => (bool) fieldSymbol.ConstantValue == true ? 1 : 0,
                         _ => fieldSymbol.ConstantValue 
-                    }); 
+                    },
+                    nodeParent.Accept(new UsageVisitor(Context)) == UsageKind.CallTarget);
                 return;
             }
             
@@ -1354,7 +1283,7 @@ namespace Cecilifier.Core.AST
 		 * 
 		 * To fix this we visit in the order [exp, args] and move the call operation after visiting the arguments
 		 */
-        private void HandleMethodInvocation(SyntaxNode target, SyntaxNode args)
+        private void HandleMethodInvocation(SyntaxNode target, SyntaxNode args, ISymbol? method = null)
         {
             var targetTypeInfo = Context.SemanticModel.GetTypeInfo(target).Type;
             if (targetTypeInfo?.TypeKind == TypeKind.FunctionPointer)
@@ -1370,8 +1299,20 @@ namespace Cecilifier.Core.AST
                 PushCall();
                 StackallocAsArgumentFixer.Current?.MarkEndOfComputedCallTargetBlock();
 
-                Visit(args);
+                ProcessArgumentsTakingDefaultParametersIntoAccount(method, args);
                 FixCallSite();
+            }
+        }
+
+        private void ProcessArgumentsTakingDefaultParametersIntoAccount(ISymbol? method, SyntaxNode args)
+        {
+            Visit(args);
+            if (method is not IMethodSymbol methodSymbol || args is not ArgumentListSyntax arguments || methodSymbol.Parameters.Length <= arguments.Arguments.Count)
+                return;
+
+            foreach (var arg in methodSymbol.Parameters.Skip(arguments.Arguments.Count))
+            {
+                LoadLiteralValue(ilVar, arg.Type, arg.ExplicitDefaultValue(), false);
             }
         }
 

@@ -18,13 +18,29 @@ public class ParameterTests : CecilifierUnitTestBase
     [TestCase("String", "\"Foo\"", TestName = "String")]
     [TestCase("Object", "null", TestName = "Object Null")]
     [TestCase("Object", "default", TestName = "Object Default")]
-    public void TestDefaultParameterDefinition(string paramType, string paramValue, string expectedParamValue = null)
+    public void TestDefaultParameterInDefinition(string paramType, string paramValue, string expectedParamValue = null)
     {
         var result = RunCecilifier($"using System; class Foo {{ void Bar(string s, {paramType} p = {paramValue}) {{ }} }}");
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
         Assert.That(cecilifiedCode, Contains.Substring("ParameterDefinition(\"s\", ParameterAttributes.None, assembly.MainModule.TypeSystem.String)"));
         Assert.That(cecilifiedCode, Does.Match($@"var (?<param_def>.*) = new ParameterDefinition\(""p"", ParameterAttributes.Optional, assembly.MainModule.TypeSystem.{paramType}\);\s+" +
                                                $@"\k<param_def>.Constant = {Regex.Escape(expectedParamValue ?? paramValue)};"));
+    }
+
+    [TestCase("Int32" ,"Ldc_I4", "42")]
+    [TestCase("String","Ldstr", "\"Foo\"")]
+    [TestCase("Boolean","Ldc_I4", "true", "1")]
+    [TestCase("Boolean","Ldc_I4", "false", "0")]
+    [TestCase("Double","Ldc_R8", "4.2")]
+    [TestCase("Single","Ldc_R4", "4.2f")]
+    [TestCase("Object","Ldnull", "null", "")]
+    public void TestDefaultParameterInInvocations(string paramType, string ilOpCode, string paramValue, string expectedParamValue = null)
+    {
+        var result = RunCecilifier($"using System; class Foo {{ void WithDefault(bool b, {paramType} p = {paramValue}) {{ }} void Execute() => WithDefault(true); }}");
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+
+        expectedParamValue = expectedParamValue == null || expectedParamValue.Length > 0 ?  $", {expectedParamValue ?? paramValue}" : "";
+        Assert.That(cecilifiedCode, Does.Match($@"Ldc_I4, 1.+\s+.+{ilOpCode}{expectedParamValue}.+\s+.+Call, m_withDefault_1"));
     }
     
     [Test]

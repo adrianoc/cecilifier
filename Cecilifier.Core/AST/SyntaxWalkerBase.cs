@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using Cecilifier.Core.Extensions;
@@ -129,6 +130,99 @@ namespace Cecilifier.Core.AST
 
             return AddLocalVariableWithResolvedType(localVarName, currentMethod, varType);
         }
+        
+        protected void LoadLiteralValue(string ilVar, ITypeSymbol type, string value, bool isTargetOfCall)
+        {
+            switch (type.SpecialType)
+            {
+                case SpecialType.System_Object:
+                case SpecialType.None:
+                    if (type.TypeKind == TypeKind.Pointer)
+                    {
+                        Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4_0);
+                        Context.EmitCilInstruction(ilVar, OpCodes.Conv_U);
+                    }
+                    else
+                        Context.EmitCilInstruction(ilVar, OpCodes.Ldnull);
+                    break;
+
+                case SpecialType.System_String:
+                    Context.EmitCilInstruction(ilVar, OpCodes.Ldstr, value);
+                    break;
+
+                case SpecialType.System_Char:
+                    LoadLiteralToStackHandlingCallOnValueTypeLiterals(ilVar, type, (int) value[1], isTargetOfCall);
+                    break;
+                
+                case SpecialType.System_Int16:
+                case SpecialType.System_Int32:
+                case SpecialType.System_Int64:
+                case SpecialType.System_Double:
+                case SpecialType.System_Single:
+                    LoadLiteralToStackHandlingCallOnValueTypeLiterals(ilVar, type, value, isTargetOfCall);
+                    break;
+
+                case SpecialType.System_Boolean:
+                    LoadLiteralToStackHandlingCallOnValueTypeLiterals(ilVar, type, Boolean.Parse(value) ? 1 : 0, isTargetOfCall);
+                    break;
+
+                default:
+                    throw new ArgumentException($"Literal {value} of type {type.SpecialType} not supported yet.");
+            }
+        }
+        
+        protected void LoadLiteralToStackHandlingCallOnValueTypeLiterals(string ilVar, ITypeSymbol literalType, object literalValue, bool isTargetOfCall)
+        {
+            var opCode = LoadOpCodeFor(literalType);
+            Context.EmitCilInstruction(ilVar, opCode, literalValue);
+            if (isTargetOfCall) 
+                StoreTopOfStackInLocalVariableAndLoadItsAddress(ilVar, literalType);
+        }
+
+        private OpCode LoadOpCodeFor(ITypeSymbol type)
+        {
+            switch (type.SpecialType)
+            {
+                case SpecialType.System_Single:
+                    return OpCodes.Ldc_R4;
+
+                case SpecialType.System_Double:
+                    return OpCodes.Ldc_R8;
+
+                case SpecialType.System_Byte:
+                case SpecialType.System_SByte:
+                case SpecialType.System_Int16:
+                case SpecialType.System_Int32:
+                case SpecialType.System_UInt16:
+                case SpecialType.System_UInt32:
+                    return OpCodes.Ldc_I4;
+
+                case SpecialType.System_UInt64:
+                case SpecialType.System_Int64:
+                    return OpCodes.Ldc_I8;
+
+                case SpecialType.System_Char:
+                    return OpCodes.Ldc_I4;
+
+                case SpecialType.System_Boolean:
+                    return OpCodes.Ldc_I4;
+
+                case SpecialType.System_String:
+                    return OpCodes.Ldstr;
+
+                case SpecialType.None:
+                    return OpCodes.Ldnull;
+            }
+            
+            throw new ArgumentException($"Literal type {type} not supported.", nameof(type));
+        }
+
+        protected void StoreTopOfStackInLocalVariableAndLoadItsAddress(string ilVar, ITypeSymbol type)
+        {
+            var tempLocalName = AddLocalVariableWithResolvedType("tmp", Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method), Context.TypeResolver.Resolve(type));
+            Context.EmitCilInstruction(ilVar, OpCodes.Stloc, tempLocalName);
+            Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, tempLocalName);
+        }        
 
         protected IMethodSymbol DeclaredSymbolFor<T>(T node) where T : BaseMethodDeclarationSyntax
         {
