@@ -22,10 +22,10 @@ namespace Cecilifier.Core.AST
             var firstAncestorOrSelf = node.FirstAncestorOrSelf<LocalDeclarationStatementSyntax>();
             var varName = firstAncestorOrSelf.Declaration.Variables[0].Identifier.ValueText;
 
-            string operand = Context.DefinitionVariables.GetVariable(varName, VariableMemberKind.LocalVariable).VariableName;
+            var operand = Context.DefinitionVariables.GetVariable(varName, VariableMemberKind.LocalVariable).VariableName;
             Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, operand);
-            string operand1 = Context.TypeResolver.Resolve(ctorInfo.Symbol.ContainingType);
-            Context.EmitCilInstruction(ilVar, OpCodes.Initobj, operand1);
+            var type = Context.TypeResolver.Resolve(ctorInfo.Symbol.ContainingType);
+            Context.EmitCilInstruction(ilVar, OpCodes.Initobj, type);
         }
 
         public override void VisitReturnStatement(ReturnStatementSyntax node)

@@ -6,7 +6,7 @@ namespace Cecilifier.Core.TypeSystem
     {
         public Bcl(ITypeResolver typeResolver, CecilifierContext cecilifierContext)
         {
-            System = new(typeResolver, cecilifierContext);
+            System = new SystemTypeSystem(typeResolver, cecilifierContext);
         }
 
         public SystemTypeSystem System { get; }

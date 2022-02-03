@@ -20,12 +20,6 @@ namespace Cecilifier.Core
         
         public static CecilifierResult Process(Stream content, CecilifierOptions options)
         {
-            var cecilifier = new Cecilifier();
-            return cecilifier.Run(content, options);
-        }
-
-        private CecilifierResult Run(Stream content, CecilifierOptions options)
-        {
             using var stream = new StreamReader(content);
             var syntaxTree = CSharpSyntaxTree.ParseText(stream.ReadToEnd(), new CSharpParseOptions(LanguageVersion.CSharp10));
             var metadataReferences = options.References.Select(refPath => MetadataReference.CreateFromFile(refPath)).ToArray();

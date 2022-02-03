@@ -34,6 +34,6 @@ namespace Cecilifier.Core.TypeSystem
         public string AsyncCallback => _resolvedTypes[SpecialType.System_AsyncCallback];
         public string IAsyncResult => _resolvedTypes[SpecialType.System_IAsyncResult];
         
-        private IReadOnlyDictionary<SpecialType, string> _resolvedTypes;
+        private readonly IReadOnlyDictionary<SpecialType, string> _resolvedTypes;
     }
 }

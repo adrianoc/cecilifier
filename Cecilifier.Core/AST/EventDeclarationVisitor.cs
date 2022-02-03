@@ -238,10 +238,10 @@ namespace Cecilifier.Core.AST
 
         private IEnumerable<string> CompareExchangeMethodResolvingExps(CSharpSyntaxNode context, string backingFieldVar, out string compExcVar)
         {
-            var openCompExcVar = Context.Naming.MemberReference("openCompExc",null);
+            var openCompExcVar = Context.Naming.MemberReference("openCompExc");
             var exp1 = $"var {openCompExcVar} = {Utils.ImportFromMainModule("typeof(System.Threading.Interlocked).GetMethods().Single(m => m.Name == \"CompareExchange\" && m.IsGenericMethodDefinition)")};";
 
-            compExcVar = Context.Naming.MemberReference("compExc", null);
+            compExcVar = Context.Naming.MemberReference("compExc");
             var exp2 = $"var {compExcVar} = new GenericInstanceMethod({openCompExcVar});";
             var exp3 = $"{compExcVar}.GenericArguments.Add({backingFieldVar}.FieldType);";
             

@@ -164,7 +164,7 @@ namespace Cecilifier.Core.AST
                     RefKind.None,
                     false,
                     endInvokeMethodVar,
-                    Context.Naming.Parameter("ar", node.Identifier.Text),
+                    Context.Naming.Parameter("ar"),
                     Context.TypeResolver.Bcl.System.IAsyncResult,
                     Constants.ParameterAttributes.None,
                     defaultParameterValue: null);

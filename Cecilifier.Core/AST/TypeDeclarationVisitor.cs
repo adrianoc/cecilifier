@@ -118,9 +118,9 @@ namespace Cecilifier.Core.AST
             foreach (var @base in bases.Types)
             {
                 var info = Context.GetTypeInfo(@base.Type);
-                if (info.Type.TypeKind == TypeKind.Interface)
+                if (info.Type?.TypeKind == TypeKind.Interface)
                 {
-                    var itfFQName = @base.DescendantTokens().OfType<SyntaxToken>().Aggregate("", (acc, curr) => acc + curr.ValueText);
+                    var itfFQName = @base.DescendantTokens().Aggregate("", (acc, curr) => acc + curr.ValueText);
                     yield return itfFQName;
                 }
             }

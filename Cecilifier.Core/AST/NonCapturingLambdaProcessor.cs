@@ -122,7 +122,7 @@ namespace Cecilifier.Core.AST
                 }
             }
 
-            var syntheticIlVar = context.Naming.ILProcessor(syntheticMethodName, declaringType.Name());
+            var syntheticIlVar = context.Naming.ILProcessor(syntheticMethodName);
             context.WriteCecilExpression($"var {syntheticIlVar} = {methodVar}.Body.GetILProcessor();");
             context.WriteNewLine();
 

@@ -22,7 +22,7 @@ namespace Cecilifier.Core.Misc
             context.WriteCecilExpression($"var {genTypeVar} = {memberDeclaringTypeVar}.MakeGenericInstanceType({memberDeclaringTypeVar}.GenericParameters.ToArray());");
             context.WriteNewLine();
 
-            var fieldRefVar = context.Naming.MemberReference("fld_", memberSymbol.ContainingType.Name);
+            var fieldRefVar = context.Naming.MemberReference("fld_");
             context.WriteCecilExpression($"var {fieldRefVar} = new FieldReference({backingFieldVar}.Name, {backingFieldVar}.FieldType, {genTypeVar});");
             context.WriteNewLine();
 

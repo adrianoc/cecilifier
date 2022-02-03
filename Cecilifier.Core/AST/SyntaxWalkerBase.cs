@@ -59,7 +59,7 @@ namespace Cecilifier.Core.AST
             if (method.IsGenericMethod && method.IsDefinedInCurrentType(Context))
             {
                 // if the method in question is a generic method and it is defined in the same assembly create a generic instance
-                var resolvedMethodVar = Context.Naming.MemberReference(method.Name, method.ContainingType.Name);
+                var resolvedMethodVar = Context.Naming.MemberReference(method.Name);
                 var m1 = $"var {resolvedMethodVar} = {method.MethodResolverExpression(Context)};";
                 
                 var genInstVar = Context.Naming.GenericInstance(method);
@@ -73,7 +73,7 @@ namespace Cecilifier.Core.AST
             }
             else
             {
-                string operand = method.MethodResolverExpression(Context);
+                var operand = method.MethodResolverExpression(Context);
                 Context.EmitCilInstruction(ilVar, opCode, operand);
             }
         }
@@ -287,13 +287,13 @@ namespace Cecilifier.Core.AST
         {
             var finalModifierList = new List<SyntaxToken>(modifiers);
 
-            var m = string.Empty;
-            IsInternalProtected(finalModifierList, ref m);
-            IsPrivateProtected(finalModifierList, ref m);
+            var accessibilityModifiers = string.Empty;
+            IsInternalProtected(finalModifierList, ref accessibilityModifiers);
+            IsPrivateProtected(finalModifierList, ref accessibilityModifiers);
 
             mapAttribute ??= MapAttributeForMembers;
             
-            var modifierStr = finalModifierList.Where(ExcludeHasNoCILRepresentation).SelectMany(mapAttribute).Aggregate("", (acc, curr) => (acc.Length > 0 ? $"{acc} | " : "") + $"{targetEnum}." + curr) + m;
+            var modifierStr = finalModifierList.Where(ExcludeHasNoCILRepresentation).SelectMany(mapAttribute).Aggregate("", (acc, curr) => (acc.Length > 0 ? $"{acc} | " : "") + $"{targetEnum}." + curr) + accessibilityModifiers;
             
             if(!modifiers.Any(m => m.IsKind(SyntaxKind.PrivateKeyword) || m.IsKind(SyntaxKind.InternalKeyword) || m.IsKind(SyntaxKind.PrivateKeyword) || m.IsKind(SyntaxKind.PublicKeyword) || m.IsKind(SyntaxKind.ProtectedKeyword)))
                 return modifierStr.AppendModifier($"{targetEnum}.{defaultAccessibility}");
@@ -597,7 +597,7 @@ namespace Cecilifier.Core.AST
 
             if (typeSymbol is IFunctionPointerTypeSymbol functionPointer)
             {
-                string operand = CecilDefinitionsFactory.CallSite(Context.TypeResolver, functionPointer);
+                var operand = CecilDefinitionsFactory.CallSite(Context.TypeResolver, functionPointer);
                 Context.EmitCilInstruction(ilVar, OpCodes.Calli, operand);
                 return;
             }
@@ -605,7 +605,7 @@ namespace Cecilifier.Core.AST
             var localDelegateDeclaration = Context.TypeResolver.ResolveLocalVariableType(typeSymbol);
             if (localDelegateDeclaration != null)
             {
-                string operand = $"{localDelegateDeclaration}.Methods.Single(m => m.Name == \"Invoke\")";
+                var operand = $"{localDelegateDeclaration}.Methods.Single(m => m.Name == \"Invoke\")";
                 Context.EmitCilInstruction(ilVar, OpCodes.Callvirt, operand);
             }
             else
@@ -769,8 +769,7 @@ namespace Cecilifier.Core.AST
                 if (typeVar == null)
                 {
                     //attribute is not declared in the same assembly....
-                    var ctorArgumentTypes = $"new Type[{attrArgs.Length}] {{ {string.Join(",", attrArgs.Select(arg => $"typeof({Context.GetTypeInfo(arg.Expression).Type.Name})"))} }}";
-            
+                    var ctorArgumentTypes = $"new Type[{attrArgs.Length}] {{ {string.Join(",", attrArgs.Select(arg => $"typeof({Context.GetTypeInfo(arg.Expression).Type?.Name})"))} }}";
                     return Utils.ImportFromMainModule($"typeof({attrType.AssemblyQualifiedName()}).GetConstructor({ctorArgumentTypes})");
                 }
             

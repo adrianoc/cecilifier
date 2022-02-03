@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection.Metadata;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
@@ -18,7 +17,7 @@ namespace Cecilifier.Core.AST
         {
             this.context = context;
 
-            hasReturnStatement = firstGlobalStatement.Parent.DescendantNodes().Any(node => node.IsKind(SyntaxKind.ReturnStatement));
+            var hasReturnStatement = firstGlobalStatement.Parent!.DescendantNodes().Any(node => node.IsKind(SyntaxKind.ReturnStatement));
 
             var typeModifiers = CecilDefinitionsFactory.DefaultTypeAttributeFor(SyntaxKind.ClassDeclaration, false).AppendModifier("TypeAttributes.NotPublic | TypeAttributes.AutoLayout");
             typeVar = context.Naming.Type("topLevelStatements", ElementKind.Class);
@@ -41,7 +40,7 @@ namespace Cecilifier.Core.AST
                 false,
                 Array.Empty<TypeParameterSyntax>());
             
-            var paramVar = context.Naming.Parameter("args", "Main");
+            var paramVar = context.Naming.Parameter("args");
             var mainParametersExps = CecilDefinitionsFactory.Parameter(
                 "args", 
                 RefKind.None, 
@@ -52,7 +51,7 @@ namespace Cecilifier.Core.AST
                 Constants.ParameterAttributes.None,
                 defaultParameterValue: null);
 
-            ilVar = context.Naming.ILProcessor("topLevelMain", "Main");
+            ilVar = context.Naming.ILProcessor("topLevelMain");
             var mainBodyExps = CecilDefinitionsFactory.MethodBody(methodVar, ilVar, Array.Empty<InstructionRepresentation>());
                 
             WriteCecilExpressions(typeExps);
@@ -94,9 +93,9 @@ namespace Cecilifier.Core.AST
             
             return true;
 
-            bool IsLastGlobalStatement(CompilationUnitSyntax compilation, int globalStatementIndex)
+            bool IsLastGlobalStatement(CompilationUnitSyntax compilation, int index)
             {
-                return compilation.Members.Count == (globalStatementIndex + 1) || !root.Members[globalStatementIndex + 1].IsKind(SyntaxKind.GlobalStatement);
+                return compilation.Members.Count == (index + 1) || !root.Members[index + 1].IsKind(SyntaxKind.GlobalStatement);
             }
         }
 
@@ -118,6 +117,5 @@ namespace Cecilifier.Core.AST
         private readonly string methodVar;
         private readonly string typeVar;
         private readonly IVisitorContext context;
-        private bool hasReturnStatement;
     }
 }

@@ -35,7 +35,7 @@ namespace Cecilifier.Core.AST
             using (Context.DefinitionVariables.WithCurrent(parentName, node.Identifier.ValueText, VariableMemberKind.Type,enumType))
             {
                 //.class private auto ansi MyEnum
-                var fieldVar = Context.Naming.LocalVariable(node, "valueField");
+                var fieldVar = Context.Naming.LocalVariable(node);
                 var valueFieldExp = CecilDefinitionsFactory.Field(enumType, fieldVar, "value__", Context.TypeResolver.Bcl.System.Int32,
                     "FieldAttributes.SpecialName | FieldAttributes.RTSpecialName | FieldAttributes.Public");
                 AddCecilExpressions(valueFieldExp);
@@ -53,7 +53,7 @@ namespace Cecilifier.Core.AST
             var enumMemberValue = _memberCollector[node];
             var enumVarDef = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Type);
 
-            var fieldVar = Context.Naming.LocalVariable(node, $"em_{enumVarDef.MemberName}");
+            var fieldVar = Context.Naming.LocalVariable(node);
             var exp = CecilDefinitionsFactory.Field(enumVarDef.VariableName, fieldVar, node.Identifier.ValueText, enumVarDef.VariableName,
                 "FieldAttributes.Static | FieldAttributes.Literal | FieldAttributes.Public | FieldAttributes.HasDefault", enumMemberValue);
             AddCecilExpressions(exp);

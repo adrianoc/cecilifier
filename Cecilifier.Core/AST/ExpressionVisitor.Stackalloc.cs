@@ -72,7 +72,7 @@ partial class ExpressionVisitor
             Context.EmitCilInstruction(ilVar, OpCodes.Conv_U);
             if (arrayElementTypeSize > 1) // Optimization
             {
-                string operand = ResolveType(arrayType.ElementType);
+                var operand = ResolveType(arrayType.ElementType);
                 Context.EmitCilInstruction(ilVar, OpCodes.Sizeof, operand);
                 Context.EmitCilInstruction(ilVar, OpCodes.Mul_Ovf_Un);
             }
@@ -95,7 +95,7 @@ partial class ExpressionVisitor
             AddCecilExpression($"{spanCtorVar}.Parameters.Add({CecilDefinitionsFactory.Parameter("ptr", RefKind.None, Context.TypeResolver.Resolve("void*") )});");
             AddCecilExpression($"{spanCtorVar}.Parameters.Add({CecilDefinitionsFactory.Parameter("length", RefKind.None, Context.TypeResolver.Bcl.System.Int32)});");
 
-            string operand = Utils.ImportFromMainModule($"{spanCtorVar}");
+            var operand = Utils.ImportFromMainModule($"{spanCtorVar}");
             Context.EmitCilInstruction(ilVar, OpCodes.Newobj, operand);
         }
     }
@@ -133,8 +133,7 @@ internal interface IStackallocAsArgumentFixer
     void StoreTopOfStackToLocalVariable(ITypeSymbol type);
     void MarkEndOfComputedCallTargetBlock();
     void RestoreCallStackIfRequired();
-    
-    IVisitorContext Context { get; }
+
     IDisposable FlagAsHavingStackallocArguments();
 }
 
@@ -153,10 +152,10 @@ class NoOpStackallocAsArgumentHandler : IStackallocAsArgumentFixer
 
 internal class StackallocAsArgumentFixer : IStackallocAsArgumentFixer
 {
-    private static Stack<IStackallocAsArgumentFixer> handlers = new();
-    private Queue<string> localVariablesStoringOriginalArguments = new();
+    private static readonly Stack<IStackallocAsArgumentFixer> handlers = new();
+    private readonly Queue<string> localVariablesStoringOriginalArguments = new();
     
-    private IVisitorContext context;
+    private readonly IVisitorContext context;
     private readonly string ilVar;
     private LinkedListNode<string> lastLoadTargetOfCallInstruction;
     private LinkedListNode<string> firstLoadTargetOfCallInstruction;
@@ -168,7 +167,6 @@ internal class StackallocAsArgumentFixer : IStackallocAsArgumentFixer
         this.ilVar = ilVar;
     }
 
-    IVisitorContext IStackallocAsArgumentFixer.Context => context;
     IDisposable IStackallocAsArgumentFixer.FlagAsHavingStackallocArguments() => context.WithFlag(Constants.ContextFlags.HasStackallocArguments);
 
     void IStackallocAsArgumentFixer.StoreTopOfStackToLocalVariable(ITypeSymbol type)
@@ -345,7 +343,7 @@ internal class StackallocSpanAssignmentTracker
 
         LoadOpCode = OpCodes.Ldloc;
 
-        return true;;
+        return true;
     }
 
     public bool IsConstantAllocationLength => _sizeInBytes != UInt32.MaxValue;

@@ -41,7 +41,7 @@ namespace Cecilifier.Core.AST
             var fieldDefVars = new List<string>(variableDeclarationSyntax.Variables.Count);
             
             var type = ResolveType(variableDeclarationSyntax.Type);
-            var fieldType = ProcessRequiredModifiers(node, modifiers, type) ?? type;
+            var fieldType = ProcessRequiredModifiers(modifiers, type) ?? type;
             var fieldAttributes = ModifiersToCecil(modifiers, "FieldAttributes", "Private");
 
             foreach (var field in variableDeclarationSyntax.Variables)
@@ -65,12 +65,12 @@ namespace Cecilifier.Core.AST
             return fieldDefVars;
         }
 
-        private string ProcessRequiredModifiers(MemberDeclarationSyntax member, IReadOnlyList<SyntaxToken> modifiers, string originalType)
+        private string ProcessRequiredModifiers(IReadOnlyList<SyntaxToken> modifiers, string originalType)
         {
             if (modifiers.All(m => m.Kind() != SyntaxKind.VolatileKeyword))
                 return null;
 
-            var id = Context.Naming.RequiredModifier(member);
+            var id = Context.Naming.RequiredModifier();
             var mod_req = $"var {id} = new RequiredModifierType({ImportExpressionForType(typeof(IsVolatile))}, {originalType});";
             AddCecilExpression(mod_req);
             

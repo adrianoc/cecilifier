@@ -141,11 +141,11 @@ namespace Cecilifier.Core.Extensions
         private static IEnumerable<SyntaxToken> RemoveSourceModifiersWithNoILEquivalent(SyntaxTokenList modifiers)
         {
             return modifiers.Where(
-                mod => mod.Kind() != SyntaxKind.OverrideKeyword
-                       && mod.Kind() != SyntaxKind.AbstractKeyword
-                       && mod.Kind() != SyntaxKind.VirtualKeyword
-                       && mod.Kind() != SyntaxKind.SealedKeyword
-                       && mod.Kind() != SyntaxKind.UnsafeKeyword);
+                mod => !mod.IsKind(SyntaxKind.OverrideKeyword) 
+                       && !mod.IsKind(SyntaxKind.AbstractKeyword)
+                       && !mod.IsKind(SyntaxKind.VirtualKeyword)
+                       && !mod.IsKind(SyntaxKind.SealedKeyword)
+                       && !mod.IsKind(SyntaxKind.UnsafeKeyword));
         }
     }
 }
