@@ -107,5 +107,16 @@ namespace Cecilifier.Core.Extensions
                 CollectOuterTypeArguments(outer, collectTo);
             }
         }
+        
+        public static bool IsAccessOnThisOrObjectCreation(this CSharpSyntaxNode node)
+        {
+            var parentMae = node.Parent as MemberAccessExpressionSyntax;
+            if (parentMae == null)
+            {
+                return true;
+            }
+
+            return parentMae.Expression.IsKind(SyntaxKind.ObjectCreationExpression);
+        }
     }
 }

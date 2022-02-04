@@ -258,13 +258,6 @@ namespace Cecilifier.Core.AST
             var leftNodeMae = node.Left as MemberAccessExpressionSyntax;
             CSharpSyntaxNode exp = leftNodeMae?.Name ?? node.Left;
             // check if the left hand side of the assignment is a property (but not indexers) and handle that as a method (set) call.
-            var expSymbol = Context.SemanticModel.GetSymbolInfo(exp).Symbol;
-            if (expSymbol is IPropertySymbol propertySymbol && !propertySymbol.IsIndexer)
-            {
-                HandleMethodInvocation(node.Left, node.Right);
-                return;
-            }
-
             var visitor = new AssignmentVisitor(Context, ilVar, node);
             
             visitor.InstructionPrecedingValueToLoad = Context.CurrentLine;
@@ -274,9 +267,10 @@ namespace Cecilifier.Core.AST
                 visitor.Visit(node.Left);
             }
 
+            var expSymbol = Context.SemanticModel.GetSymbolInfo(exp).Symbol;
             if (expSymbol is IEventSymbol @event)
             {
-                AddMethodCall(ilVar, @event.AddMethod);
+                AddMethodCall(ilVar, @event.AddMethod, node.IsAccessOnThisOrObjectCreation());
             }
         }
 

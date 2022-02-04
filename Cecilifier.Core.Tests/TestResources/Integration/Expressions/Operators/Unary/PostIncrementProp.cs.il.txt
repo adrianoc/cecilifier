@@ -10,5 +10,5 @@ IL_0015: ldarg.0
 IL_0016: ldloc V_0
 IL_001a: ldc.i4.1
 IL_001b: add
-IL_001c: callvirt System.Void PostIncrementProp::set_Prop(System.Int32)
+IL_001c: call System.Void PostIncrementProp::set_Prop(System.Int32)
 IL_0021: ret

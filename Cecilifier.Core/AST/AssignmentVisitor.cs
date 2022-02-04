@@ -110,7 +110,7 @@ namespace Cecilifier.Core.AST
                     break;
                 
                 case IPropertySymbol property:
-                    PropertyAssignment(property);
+                    PropertyAssignment(node, property);
                     break;
             }
         }
@@ -160,9 +160,9 @@ namespace Cecilifier.Core.AST
             return true;
         }
         
-        private void PropertyAssignment(IPropertySymbol property)
+        private void PropertyAssignment(IdentifierNameSyntax node, IPropertySymbol property)
         {
-            AddMethodCall(ilVar, property.SetMethod, isAccessOnThisOrObjectCreation:false);
+            AddMethodCall(ilVar, property.SetMethod, isAccessOnThisOrObjectCreation:node.IsAccessOnThisOrObjectCreation());
         }
 
         private void FieldAssignment(IFieldSymbol field)
