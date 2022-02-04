@@ -149,20 +149,13 @@ namespace Cecilifier.Core.AST
                     return;
 
                 backingFieldVar = Context.Naming.FieldDeclaration(node);
-                var backingFieldName = $"<{propName}>k__BackingField";
                 var modifiers = ModifiersToCecil(accessor.Modifiers, "FieldAttributes", "Private");
                 if (hasInitProperty)
                 {
-                    modifiers = modifiers + " | FieldAttributes.InitOnly";
+                    modifiers = modifiers.AppendModifier("FieldAttributes.InitOnly");
                 }
                 
-                var backingFieldExps = new[]
-                {
-                    //TODO: NOW: CecilDefinitionsFactory.Field()
-                    $"var {backingFieldVar} = new FieldDefinition(\"{backingFieldName}\", {modifiers}, {propertyType});",
-                    $"{propertyDeclaringTypeVar}.Fields.Add({backingFieldVar});"
-                };
-
+                var backingFieldExps = CecilDefinitionsFactory.Field(Context, declaringType.Identifier.Text, propertyDeclaringTypeVar, backingFieldVar, Utils.BackingFieldNameForAutoProperty(propName), propertyType, modifiers);
                 AddCecilExpressions(backingFieldExps);
             }
 

@@ -118,5 +118,7 @@ namespace Cecilifier.Core.Extensions
 
             return parentMae.Expression.IsKind(SyntaxKind.ObjectCreationExpression);
         }
+
+        public static bool IsImplicitThisAccess(this CSharpSyntaxNode node) => node.Parent is not MemberAccessExpressionSyntax mae || mae.Expression != node;
     }
 }

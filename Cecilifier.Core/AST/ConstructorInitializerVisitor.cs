@@ -7,7 +7,7 @@ namespace Cecilifier.Core.AST
 {
     //TODO: Introduce CilEmitterSyntaxWalker
     // class ConstructorInitializerVisitor : CilEmiterSyntaxWalker, IMemoryLocationResolver
-    internal class ConstructorInitializerVisitor : SyntaxWalkerBase, IMemoryLocationResolver
+    internal class ConstructorInitializerVisitor : SyntaxWalkerBase
     {
         //private string MethodResolverExpression(IMethodSymbol method)
         //{

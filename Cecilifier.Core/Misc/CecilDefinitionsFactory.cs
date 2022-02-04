@@ -151,8 +151,9 @@ namespace Cecilifier.Core.Misc
             return string.Empty;
         }
 
-        public static IEnumerable<string> Field(string declaringTypeVar, string fieldVar, string name, string fieldType, string fieldAttributes, object constantValue = null)
+        public static IEnumerable<string> Field(IVisitorContext context, string declaringTypeName, string declaringTypeVar, string fieldVar, string name, string fieldType, string fieldAttributes, object constantValue = null)
         {
+            context.DefinitionVariables.RegisterNonMethod(declaringTypeName, name, VariableMemberKind.Field, fieldVar);
             var fieldExp = $"var {fieldVar} = new FieldDefinition(\"{name}\", {fieldAttributes}, {fieldType})";
             return new []
             {

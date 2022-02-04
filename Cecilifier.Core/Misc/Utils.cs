@@ -41,5 +41,6 @@ namespace Cecilifier.Core.Misc
             if (node == null)
                 throw new System.NotSupportedException(msg);
         }
+        public static string BackingFieldNameForAutoProperty(string propertyName) => $"<{propertyName}>k__BackingField";
     }
 }

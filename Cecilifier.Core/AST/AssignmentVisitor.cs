@@ -162,7 +162,16 @@ namespace Cecilifier.Core.AST
         
         private void PropertyAssignment(IdentifierNameSyntax node, IPropertySymbol property)
         {
-            AddMethodCall(ilVar, property.SetMethod, isAccessOnThisOrObjectCreation:node.IsAccessOnThisOrObjectCreation());
+            // If there's no setter it means we have a getter only auto property and it is being
+            // initialized in the ctor in which case we need to assign directly to the backing field.
+            if (property.SetMethod == null)
+            {
+                var propertyBackingFieldName = Utils.BackingFieldNameForAutoProperty(property.Name);
+                var found = Context.DefinitionVariables.GetVariable(propertyBackingFieldName, VariableMemberKind.Field, property.ContainingType.Name);
+                Context.EmitCilInstruction(ilVar, OpCodes.Stfld, found.VariableName);
+            }
+            else
+                AddMethodCall(ilVar, property.SetMethod, isAccessOnThisOrObjectCreation:node.IsAccessOnThisOrObjectCreation());
         }
 
         private void FieldAssignment(IFieldSymbol field)
@@ -171,7 +180,7 @@ namespace Cecilifier.Core.AST
             if (field.IsVolatile)
                 Context.EmitCilInstruction(ilVar, OpCodes.Volatile);
 
-            string operand = Context.DefinitionVariables.GetVariable(field.Name, VariableMemberKind.Field, field.ContainingType.Name).VariableName;
+            var operand = Context.DefinitionVariables.GetVariable(field.Name, VariableMemberKind.Field, field.ContainingType.Name).VariableName;
             Context.EmitCilInstruction(ilVar, storeOpCode, operand);
         }
 
