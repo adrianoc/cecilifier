@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -1312,8 +1313,21 @@ namespace Cecilifier.Core.AST
 
             foreach (var arg in methodSymbol.Parameters.Skip(arguments.Arguments.Count))
             {
-                LoadLiteralValue(ilVar, arg.Type, arg.ExplicitDefaultValue(), false);
+                LoadLiteralValue(ilVar, arg.Type, ArgumentValueToUseForDefaultParameter(arg, methodSymbol.Parameters, arguments.Arguments), false);
             }
+        }
+
+        private string ArgumentValueToUseForDefaultParameter(IParameterSymbol arg, ImmutableArray<IParameterSymbol> parameters, SeparatedSyntaxList<ArgumentSyntax> arguments)
+        {
+            var callerArgumentExpressionAttribute = arg.GetAttributes().SingleOrDefault(attr => attr.AttributeClass!.MetadataToken == Context.RoslynTypeSystem.CallerArgumentExpressionAttibute.MetadataToken);
+            if (callerArgumentExpressionAttribute != null)
+            {
+                var expressionParameter = parameters.SingleOrDefault(p => p.Name == (string)callerArgumentExpressionAttribute.ConstructorArguments[0].Value);
+                if (expressionParameter != null)
+                    return $"\"{arguments[expressionParameter.Ordinal].Expression.ToFullString()}\"";
+            }
+            
+            return arg.ExplicitDefaultValue();
         }
 
         private void HandleIdentifier(SimpleNameSyntax node)

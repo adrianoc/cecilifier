@@ -106,7 +106,7 @@ namespace Cecilifier.Core.Extensions
             var value = symbol.ExplicitDefaultValue?.ToString();
             return symbol.Type.SpecialType switch
             {
-                SpecialType.System_String => $"\"{value}\"",
+                SpecialType.System_String => value != null ? $"\"{value}\"" : null,
                 SpecialType.System_Single => $"{value}f",
                 _ => value
             };

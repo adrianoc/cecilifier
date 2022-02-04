@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 using Cecilifier.Core.AST;
 using Microsoft.CodeAnalysis;
 
@@ -16,6 +17,7 @@ internal struct RoslynTypeSystem
         SystemRange = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(Range).FullName);
         SystemType = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(Type).FullName);
         SystemSpan = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(Span<>).FullName);
+        CallerArgumentExpressionAttibute = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(CallerArgumentExpressionAttribute).FullName); 
 
         SystemInt32 = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Int32);
         SystemInt64 = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Int64);
@@ -37,4 +39,5 @@ internal struct RoslynTypeSystem
     public ITypeSymbol SystemString { get; }
     public ITypeSymbol SystemVoid { get; }
     public ITypeSymbol SystemObject { get; }
+    public ITypeSymbol CallerArgumentExpressionAttibute { get; }
 }

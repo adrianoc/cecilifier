@@ -363,5 +363,30 @@ public class Foo
             var result = RunCecilifier(source);
             Assert.That(result.GeneratedCode.ReadToEnd(), Contains.Substring("\"System.Console, System.Console\", \"add_CancelKeyPress\","));
         }
+        
+        [TestCase("j")]
+        [TestCase("j + 2")]
+        [TestCase("j > 1 ? 0 : 1")]
+        public void TestCallerArgumentExpressionAttribute(string expression)
+        {
+            var source = $@"class Foo {{ void M(int i, [System.Runtime.CompilerServices.CallerArgumentExpression(""i"")] string s = null) {{ }} void Call(int j) => M({expression}); }}";
+
+            var result = RunCecilifier(source);
+            Assert.That(result.GeneratedCode.ReadToEnd(), Contains.Substring($"Ldstr, \"{expression}\""));
+        }
+        
+        [TestCase("\"foo\"")]
+        [TestCase("null")]
+        public void TestCallerArgumentExpressionAttribute_InvalidParameterName(string defaultParameterValue)
+        {
+            var source = $@"class Foo {{ void M(int i, [System.Runtime.CompilerServices.CallerArgumentExpression(""DoNotExist"")] string s = {defaultParameterValue}) {{ }} void Call(int j) => M(j); }}";
+
+            var result = RunCecilifier(source);
+            
+            if (defaultParameterValue == "null")
+                Assert.That(result.GeneratedCode.ReadToEnd(), Contains.Substring("Ldnull"));
+            else
+                Assert.That(result.GeneratedCode.ReadToEnd(), Contains.Substring($"Ldstr, {defaultParameterValue}"));
+        }
     }
 }

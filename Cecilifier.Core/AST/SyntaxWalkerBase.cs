@@ -147,7 +147,10 @@ namespace Cecilifier.Core.AST
                     break;
 
                 case SpecialType.System_String:
-                    Context.EmitCilInstruction(ilVar, OpCodes.Ldstr, value);
+                    if (value == null)
+                        Context.EmitCilInstruction(ilVar, OpCodes.Ldnull);
+                    else
+                        Context.EmitCilInstruction(ilVar, OpCodes.Ldstr, value);
                     break;
 
                 case SpecialType.System_Char:
