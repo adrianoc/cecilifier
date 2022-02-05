@@ -506,7 +506,7 @@ namespace Cecilifier.Core.AST
             var ctorInfo = Context.SemanticModel.GetSymbolInfo(node);
 
             var ctor = (IMethodSymbol) ctorInfo.Symbol;
-            if (TryProcessNoArgsCtorInvocationOnValueType(node, ctor, ctorInfo))
+            if (TryProcessInvocationOnParameterlessImplicitCtorOnValueType(node, ctorInfo))
             {
                 return;
             }
@@ -805,9 +805,9 @@ namespace Cecilifier.Core.AST
             Context.EmitCilInstruction(ilVar, OpCodes.Sub);
         }
         
-        private bool TryProcessNoArgsCtorInvocationOnValueType(ObjectCreationExpressionSyntax node, IMethodSymbol methodSymbol, SymbolInfo ctorInfo)
+        private bool TryProcessInvocationOnParameterlessImplicitCtorOnValueType(ObjectCreationExpressionSyntax node, SymbolInfo ctorInfo)
         {
-            if (ctorInfo.Symbol.ContainingType.IsReferenceType || methodSymbol.Parameters.Length > 0)
+            if (ctorInfo.Symbol?.IsImplicitlyDeclared == false || ctorInfo.Symbol.ContainingType.IsReferenceType)
                 return false;
 
             new ValueTypeNoArgCtorInvocationVisitor(Context, ilVar, ctorInfo).Visit(node.Parent);

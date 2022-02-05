@@ -65,4 +65,13 @@ public class CustomValueTypesInstantiationTests : CecilifierUnitTestBase
 			il_M_4.Emit\(OpCodes.Ldelema\);
 			il_M_4.Emit\(OpCodes.Initobj, st_myStruct_0\);"));
     }
+    
+    [Test]
+    public void TestParameterlessStructInstantiation()
+    {
+        var result = RunCecilifier("struct Foo { static Foo Create() => new Foo(); public Foo() { } }");
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+
+        Assert.That(cecilifiedCode, Does.Match(@"il_create_2\.Emit\(OpCodes.Newobj, l_foo_3\);"));
+    }    
 }
