@@ -63,7 +63,7 @@ namespace Cecilifier.Core.AST
             };
 
             operatorHandlers[SyntaxKind.SlashToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Div.ConstantName()});");
-            operatorHandlers[SyntaxKind.GreaterThanToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Emit({CompareOperatorFor(ctx, left, right).ConstantName()});");
+            operatorHandlers[SyntaxKind.GreaterThanToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Emit({CompareOpCodeFor(left).ConstantName()});");
             operatorHandlers[SyntaxKind.GreaterThanEqualsToken] = (ctx, ilVar, left, right) =>
             {
                 WriteCecilExpression(ctx, $"{ilVar}.Emit(OpCodes.Clt);");
@@ -100,7 +100,7 @@ namespace Cecilifier.Core.AST
             operatorHandlers[SyntaxKind.BarBarToken] = (ctx, ilVar, _, _) => WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Or.ConstantName()});");
         }
 
-        private static OpCode CompareOperatorFor(IVisitorContext ctx, ITypeSymbol left, ITypeSymbol right)
+        private static OpCode CompareOpCodeFor(ITypeSymbol left)
         {
             switch (left.SpecialType)
             {
@@ -272,20 +272,6 @@ namespace Cecilifier.Core.AST
             {
                 AddMethodCall(ilVar, @event.AddMethod, node.IsAccessOnThisOrObjectCreation());
             }
-        }
-
-        private bool HandlePseudoAssignment(AssignmentExpressionSyntax node)
-        {
-            var lhsType = Context.SemanticModel.GetTypeInfo(node.Left);
-            if (lhsType.Type.AssemblyQualifiedName() != "System.Index" || !node.Right.IsKind(SyntaxKind.IndexExpression) || node.Left.IsKind(SyntaxKind.SimpleMemberAccessExpression))
-                return false;
-
-            using (Context.WithFlag(Constants.ContextFlags.PseudoAssignmentToIndex))
-                node.Left.Accept(this);
-                
-            node.Right.Accept(this);
-            return true;
-
         }
 
         public override void VisitBinaryExpression(BinaryExpressionSyntax node)
@@ -522,59 +508,7 @@ namespace Cecilifier.Core.AST
             
             StoreTopOfStackInLocalVariableAndLoadItsAddressIfNeeded(node);
         }
-
-        private void ProcessPrefixPostfixOperators(ExpressionSyntax operand, OpCode opCode, bool isPrefix)
-        {
-            using var _ = LineInformationTracker.Track(Context, operand);
-            Visit(operand);
-            InjectRequiredConversions(operand);
-
-            var assignmentVisitor = new AssignmentVisitor(Context, ilVar);
-
-            var operandInfo = Context.SemanticModel.GetSymbolInfo(operand);
-            if (operandInfo.Symbol != null && operandInfo.Symbol.Kind != SymbolKind.Field && operandInfo.Symbol.Kind != SymbolKind.Property) // Fields / Properties requires more complex handling to load the owning reference.
-            {
-                if (!isPrefix) // For *postfix* operators we duplicate the value *before* applying the operator...
-                {
-                    Context.EmitCilInstruction(ilVar, OpCodes.Dup);
-                }
-
-                Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4_1);
-                Context.EmitCilInstruction(ilVar, opCode);
-
-                if (isPrefix) // For prefix operators we duplicate the value *after* applying the operator...
-                {
-                    Context.EmitCilInstruction(ilVar, OpCodes.Dup);
-                }
-                
-                //assign (top of stack to the operand)
-                assignmentVisitor.InstructionPrecedingValueToLoad = Context.CurrentLine;
-                operand.Accept(assignmentVisitor);
-                return;
-            }
-
-            if (isPrefix)
-            {
-                Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4_1);
-                Context.EmitCilInstruction(ilVar, opCode);
-            }
-
-            var tempLocalName = AddLocalVariableWithResolvedType("tmp", Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method), Context.TypeResolver.Resolve(Context.SemanticModel.GetTypeInfo(operand).Type));
-            Context.EmitCilInstruction(ilVar, OpCodes.Stloc, tempLocalName);
-            Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, tempLocalName);
-            assignmentVisitor.InstructionPrecedingValueToLoad = Context.CurrentLine;
-            Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, tempLocalName);
-            
-            if (!isPrefix)
-            {
-                Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4_1);
-                Context.EmitCilInstruction(ilVar, opCode);
-            }
-            
-            // assign (top of stack to the operand)
-            operand.Accept(assignmentVisitor);
-        }
-
+        
         public override void VisitExpressionStatement(ExpressionStatementSyntax node)
         {
             base.Visit(node.Expression);
@@ -729,6 +663,72 @@ namespace Cecilifier.Core.AST
         public override void VisitDefaultExpression(DefaultExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitSizeOfExpression(SizeOfExpressionSyntax node) => LogUnsupportedSyntax(node);
 
+        private void ProcessPrefixPostfixOperators(ExpressionSyntax operand, OpCode opCode, bool isPrefix)
+        {
+            using var _ = LineInformationTracker.Track(Context, operand);
+            Visit(operand);
+            InjectRequiredConversions(operand);
+
+            var assignmentVisitor = new AssignmentVisitor(Context, ilVar);
+
+            var operandInfo = Context.SemanticModel.GetSymbolInfo(operand);
+            if (operandInfo.Symbol != null && operandInfo.Symbol.Kind != SymbolKind.Field && operandInfo.Symbol.Kind != SymbolKind.Property) // Fields / Properties requires more complex handling to load the owning reference.
+            {
+                if (!isPrefix) // For *postfix* operators we duplicate the value *before* applying the operator...
+                {
+                    Context.EmitCilInstruction(ilVar, OpCodes.Dup);
+                }
+
+                Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4_1);
+                Context.EmitCilInstruction(ilVar, opCode);
+
+                if (isPrefix) // For prefix operators we duplicate the value *after* applying the operator...
+                {
+                    Context.EmitCilInstruction(ilVar, OpCodes.Dup);
+                }
+                
+                //assign (top of stack to the operand)
+                assignmentVisitor.InstructionPrecedingValueToLoad = Context.CurrentLine;
+                operand.Accept(assignmentVisitor);
+                return;
+            }
+
+            if (isPrefix)
+            {
+                Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4_1);
+                Context.EmitCilInstruction(ilVar, opCode);
+            }
+
+            var tempLocalName = AddLocalVariableWithResolvedType("tmp", Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method), Context.TypeResolver.Resolve(Context.SemanticModel.GetTypeInfo(operand).Type));
+            Context.EmitCilInstruction(ilVar, OpCodes.Stloc, tempLocalName);
+            Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, tempLocalName);
+            assignmentVisitor.InstructionPrecedingValueToLoad = Context.CurrentLine;
+            Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, tempLocalName);
+            
+            if (!isPrefix)
+            {
+                Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4_1);
+                Context.EmitCilInstruction(ilVar, opCode);
+            }
+            
+            // assign (top of stack to the operand)
+            operand.Accept(assignmentVisitor);
+        }
+
+        private bool HandlePseudoAssignment(AssignmentExpressionSyntax node)
+        {
+            var lhsType = Context.SemanticModel.GetTypeInfo(node.Left);
+            if (lhsType.Type.AssemblyQualifiedName() != "System.Index" || !node.Right.IsKind(SyntaxKind.IndexExpression) || node.Left.IsKind(SyntaxKind.SimpleMemberAccessExpression))
+                return false;
+
+            using (Context.WithFlag(Constants.ContextFlags.PseudoAssignmentToIndex))
+                node.Left.Accept(this);
+                
+            node.Right.Accept(this);
+            return true;
+
+        }
+        
         private void ProcessIndexerExpression(PrefixUnaryExpressionSyntax node)
         {
             var elementAccessExpression = node.Ancestors().OfType<ElementAccessExpressionSyntax>().FirstOrDefault();
