@@ -404,13 +404,11 @@ namespace Cecilifier.Core.AST
         
         public override void VisitIdentifierName(IdentifierNameSyntax node)
         {
-            using var _ = LineInformationTracker.Track(Context, node);
             HandleIdentifier(node);
         }
 
         public override void VisitGenericName(GenericNameSyntax node)
         {
-            using var _ = LineInformationTracker.Track(Context, node);
             HandleIdentifier(node);
         }
 
@@ -1367,6 +1365,7 @@ namespace Cecilifier.Core.AST
 
         private void HandleIdentifier(SimpleNameSyntax node)
         {
+            using var trackIfNotPartOfTypeName = LineInformationTracker.Track(Context, node);
             var member = Context.SemanticModel.GetSymbolInfo(node);
             switch (member.Symbol.Kind)
             {
@@ -1388,6 +1387,10 @@ namespace Cecilifier.Core.AST
 
                 case SymbolKind.Property:
                     ProcessProperty(node, member.Symbol as IPropertySymbol);
+                    break;
+                
+                default:
+                    trackIfNotPartOfTypeName.Discard();
                     break;
             }
         }

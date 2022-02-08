@@ -16,7 +16,7 @@ namespace Cecilifier.Core
 {
     public sealed class Cecilifier
     {
-        internal const int CecilifierProgramPreambleLength = 19; // The # of lines before the 1st cecilified line of code (see CecilifierExtensions.AsCecilApplication())
+        internal const int CecilifierProgramPreambleLength = 18; // The # of lines before the 1st cecilified line of code (see CecilifierExtensions.AsCecilApplication())
         
         public static CecilifierResult Process(Stream content, CecilifierOptions options)
         {

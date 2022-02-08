@@ -103,7 +103,7 @@ namespace Cecilifier.Core.Misc
             }
             else
             {
-                output.Last.Value = output.Last.Value + Environment.NewLine;    
+                output.Last.Value = output.Last.Value + Environment.NewLine;
             }
             CecilifiedLineNumber++;
         }
