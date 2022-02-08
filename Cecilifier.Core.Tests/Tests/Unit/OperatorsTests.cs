@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Mono.Cecil.Cil;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Tests.Unit;
@@ -74,6 +75,63 @@ public class OperatorsTests : CecilifierUnitTestBase
         Assert.That(
             cecilifiedCode, 
             Contains.Substring("Emit(OpCodes.Call, assembly.MainModule.ImportReference(TypeHelpers.ResolveMethod(\"System.Type\", \"GetTypeFromHandle\",System.Reflection.BindingFlags.Default|System.Reflection.BindingFlags.Static|System.Reflection.BindingFlags.Public,\"\", \"System.RuntimeTypeHandle\")));"));
+    }
+    
+    [TestCase("s", Code.Ldarg_1, TestName = "On Parameter")]
+    [TestCase("f", Code.Ldfld, TestName = "On Field")]
+    [TestCase("l", Code.Ldloc, TestName = "On Local")]
+    public void TestNullConditionalOperatorOnStorageTargets(string target, Code expectedCode)
+    {
+        var result = RunCecilifier($"class C {{ string f; int? M(string s) {{ var l = s; return {target}?.Length; }} }}");
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+        
+        Assert.That(
+            cecilifiedCode, 
+            Does.Match(
+                $@"var lbl_whenTrue_6 = (il_M_3\.Create\(OpCodes\.)Nop\);\s+" +
+			            @"var lbl_conditionEnd_7 = \1Nop.+;\s+" +
+                        @"il_M_3\.Emit\(OpCodes\.Ldarg_0\);\s+".IfTrue(expectedCode == Code.Ldfld) +
+			            $@"(il_M_3\.Emit\(OpCodes\.){expectedCode}.+;\s+" +
+                        @"\2Brtrue_S, lbl_whenTrue_6.+;\s+" +
+                        @"var l_nullable_8 = new VariableDefinition\(assembly\.MainModule.ImportReference\(typeof\(System.Nullable<>\)\).MakeGenericInstanceType\(assembly.MainModule.TypeSystem.Int32\)\);\s+" +
+                        @".+Body\.Variables.Add\(l_nullable_8\);\s+" +
+                        @"\2Ldloca_S, l_nullable_8.+;\s+" +
+                        @"\2Initobj, assembly.MainModule.ImportReference\(typeof\(System.Nullable<>\)\).MakeGenericInstanceType\(assembly.MainModule.TypeSystem.Int32\)\);\s+" +
+                        @"\2Ldloc, l_nullable_8.+;\s+" +
+                        @"\2Br, lbl_conditionEnd_7.+;\s+" +
+                        @"il_M_3.Append\(lbl_whenTrue_6\);\s+" +
+                        @"il_M_3\.Emit\(OpCodes\.Ldarg_0\);\s+".IfTrue(expectedCode == Code.Ldfld) +
+                        $@"\2{expectedCode}.+;\s+" +
+                        @"\2Callvirt,.+""System.String"", ""get_Length"".+;\s+" +
+                        @"\2Newobj,.+""System.Nullable`1"", "".ctor"".+,""System.Int32"", ""System.Int32"".+;\s+" +
+                        @"il_M_3.Append\(lbl_conditionEnd_7\);"));
+    }
+    
+    [TestCaseSource(nameof(NullConditionalOperatorOnComplexTargetsScenarios))]
+    public void TestNullConditionalOperatorOnComplexTargets(string target, string expectedIlRegexForLoadingTarget)
+    {
+        var result = RunCecilifier($"class C {{ string Property => default; string G() => default; C M() => this; string f; int? M(string s) {{ var l = s; return {target}?.Length; }} }}");
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+        
+        Assert.That(
+            cecilifiedCode, 
+            Does.Match(
+                $@"var lbl_whenTrue_13 = (il_M_10\.Create\(OpCodes\.)Nop\);\s+" +
+			            @"var lbl_conditionEnd_14 = \1Nop.+;\s+" +
+                        expectedIlRegexForLoadingTarget +
+                        @"\2Dup.+;\s+" +
+                        @"\2Brtrue_S, lbl_whenTrue_13.+;\s+" +
+                        @"\2Pop.+;\s+" +
+                        @"var (l_nullable_\d+) = new VariableDefinition\(assembly\.MainModule.ImportReference\(typeof\(System.Nullable<>\)\).MakeGenericInstanceType\(assembly.MainModule.TypeSystem.Int32\)\);\s+" +
+                        @".+Body\.Variables.Add\(\3\);\s+" +
+                        @"\2Ldloca_S, \3.+;\s+" +
+                        @"\2Initobj, assembly.MainModule.ImportReference\(typeof\(System.Nullable<>\)\).MakeGenericInstanceType\(assembly.MainModule.TypeSystem.Int32\)\);\s+" +
+                        @"\2Ldloc, \3.+;\s+" +
+                        @"\2Br, lbl_conditionEnd_14.+;\s+" +
+                        @"il_M_10.Append\(lbl_whenTrue_13\);\s+" +
+                        @"\2Callvirt,.+""System.String"", ""get_Length"".+;\s+" +
+                        @"\2Newobj,.+""System.Nullable`1"", "".ctor"".+,""System.Int32"", ""System.Int32"".+;\s+" +
+                        @"il_M_10.Append\(lbl_conditionEnd_14\);"));
     }
     
     private static void RunTests(string comparison, string[] expectedCecilifiedExpressions)
@@ -258,5 +316,30 @@ public class OperatorsTests : CecilifierUnitTestBase
                 "il_B_10.Emit(OpCodes.Call, m_op_Equality_5);",
                 "il_B_10.Emit(OpCodes.Ret);"   
             }).SetName("Custom");
+    }
+
+    static IEnumerable<TestCaseData> NullConditionalOperatorOnComplexTargetsScenarios()
+    {
+        yield return new TestCaseData(
+            "G()", 
+            @"(il_M_10\.Emit\(OpCodes\.)Ldarg_0.+;\s+" +
+            @"\2Call, m_G_4.+;\s+").SetName("On Method (this)");
+        
+        yield return new TestCaseData(
+            "M().G()", 
+            @"(il_M_10\.Emit\(OpCodes\.)Ldarg_0.+;\s+" +
+            @"\2Call, m_M_6.+;\s+" +
+            @"\2Callvirt, m_G_4.+;\s+" ).SetName("On Method through member reference");
+        
+        yield return new TestCaseData(
+            "Property", 
+            @"(il_M_10\.Emit\(OpCodes\.)Ldarg_0.+;\s+" +
+            @"\2Call, m_get_2.+;\s+").SetName("On Property (this)");
+        
+        yield return new TestCaseData(
+            "M().Property",
+            @"(il_M_10\.Emit\(OpCodes\.)Ldarg_0.+;\s+" +
+            @"\2Call, m_M_6.+;\s+" +
+            @"\2Callvirt, m_get_2.+;\s+").SetName("On Property  through member reference");
     }
 }

@@ -334,20 +334,61 @@ namespace Cecilifier.Core.AST
             HandleMethodInvocation(node.Expression, node.ArgumentList, Context.SemanticModel.GetSymbolInfo(node.Expression).Symbol);
             StoreTopOfStackInLocalVariableAndLoadItsAddressIfNeeded(node);
         }
-        
+
+        public override void VisitConditionalAccessExpression(ConditionalAccessExpressionSyntax node)
+        {
+            using var _ = LineInformationTracker.Track(Context, node);
+
+            var whenTrueLabel = EmitTargetLabel("whenTrue");
+            var conditionalEnd = EmitTargetLabel("conditionEnd");
+
+            // load expression and check if it is null...
+            node.Expression.Accept(this);
+            
+            var targetEvaluationDoNotHaveSideEffects = Context.SemanticModel.GetSymbolInfo(node.Expression).Symbol?.Kind is SymbolKind.Local or SymbolKind.Parameter or SymbolKind.Field;
+            if (!targetEvaluationDoNotHaveSideEffects)
+                Context.EmitCilInstruction(ilVar, OpCodes.Dup);
+            
+            Context.EmitCilInstruction(ilVar, OpCodes.Brtrue_S, whenTrueLabel);
+         
+            if (!targetEvaluationDoNotHaveSideEffects)
+                Context.EmitCilInstruction(ilVar, OpCodes.Pop);
+            
+            // code to handle null case 
+            var currentMethodVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
+            var expressionTypeInfo = Context.SemanticModel.GetTypeInfo(node);
+            var resolvedConcreteNullableType = Context.TypeResolver.Resolve(expressionTypeInfo.Type);
+            var tempNullableVar = AddLocalVariableWithResolvedType("nullable", currentMethodVar, resolvedConcreteNullableType);
+
+            Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, tempNullableVar);   
+            Context.EmitCilInstruction(ilVar, OpCodes.Initobj, resolvedConcreteNullableType);
+            Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, tempNullableVar);
+            Context.EmitCilInstruction(ilVar, OpCodes.Br, conditionalEnd);
+            
+            // handle not null case...
+            AddCecilExpression("{0}.Append({1});", ilVar, whenTrueLabel);
+            if (targetEvaluationDoNotHaveSideEffects)
+                node.Expression.Accept(this);
+            
+            node.WhenNotNull.Accept(this);
+            
+            var nullableCtor = expressionTypeInfo.Type?.GetMembers(".ctor")
+                .OfType<IMethodSymbol>()
+                .Single(method => method.Parameters.Length == 1 && method.Parameters[0].Type.MetadataToken == ((INamedTypeSymbol) expressionTypeInfo.Type).TypeArguments[0].MetadataToken);
+            
+            Context.EmitCilInstruction(ilVar, 
+                OpCodes.Newobj,
+                nullableCtor.MethodResolverExpression(Context));
+
+            AddCecilExpression("{0}.Append({1});", ilVar, conditionalEnd);
+        }
+
         public override void VisitConditionalExpression(ConditionalExpressionSyntax node)
         {
             using var _ = LineInformationTracker.Track(Context, node);
-            string Emit(OpCode op)
-            {
-                var instVarName = Context.Naming.Label(op.Name);
-                AddCecilExpression(@"var {0} = {1}.Create({2});", instVarName, ilVar, op.ConstantName());
-                
-                return instVarName;
-            }
 
-            var conditionEnd = Emit(OpCodes.Nop);
-            var whenFalse = Emit(OpCodes.Nop);
+            var conditionEnd = EmitTargetLabel("conditionEnd");
+            var whenFalse = EmitTargetLabel("whenFalse");
 
             Visit(node.Condition);
             Context.EmitCilInstruction(ilVar, OpCodes.Brfalse_S, whenFalse);
@@ -948,7 +989,7 @@ namespace Cecilifier.Core.AST
             }
 
             // if this is an *unqualified* access we need to load *this*
-            if (parentMae == null || parentMae.Expression == node)
+            if ((parentMae == null || parentMae.Expression == node) && !node.Parent.IsKind(SyntaxKind.MemberBindingExpression))
             {
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
             }
@@ -1370,6 +1411,14 @@ namespace Cecilifier.Core.AST
 
                 Context.EmitCilInstruction(ilVar, stelemOpCode);
             }
+        }
+        
+        string EmitTargetLabel(string relatedToName)
+        {
+            var instVarName = Context.Naming.Label(relatedToName);
+            AddCecilExpression(@"var {0} = {1}.Create({2});", instVarName, ilVar, OpCodes.Nop.ConstantName());
+                
+            return instVarName;
         }
     }
 
