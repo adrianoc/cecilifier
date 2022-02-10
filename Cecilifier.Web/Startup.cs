@@ -140,7 +140,7 @@ namespace Cecilifier.Web
                             Naming = new DefaultNameStrategy(toBeCecilified.Settings.NamingOptions, toBeCecilified.Settings.ElementKindPrefixes.ToDictionary(entry => entry.ElementKind, entry => entry.Prefix))
                         });
                             
-                        SendTextMessageToChat("One more happy user (project)",  $"Total so far: {CecilifierApplication.Count}\n\n***********\n\n```{toBeCecilified.Code}```", "4437377");
+                        SendTextMessageToChat($"One more happy user {(deployKind == 'Z' ? "(project)" : "")}",  $"Total so far: {CecilifierApplication.Count}\n\n***********\n\n```{toBeCecilified.Code}```", "4437377");
                             
                         if (deployKind == 'Z')
                         {
