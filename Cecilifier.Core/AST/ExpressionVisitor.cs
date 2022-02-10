@@ -32,6 +32,8 @@ namespace Cecilifier.Core.AST
             [SpecialType.System_Single] = OpCodes.Ldelem_R4,
             [SpecialType.System_Double] = OpCodes.Ldelem_R8,
             [SpecialType.System_Object] = OpCodes.Ldelem_Ref,
+            [SpecialType.System_String] = OpCodes.Ldelem_Ref,
+            [SpecialType.None] = OpCodes.Ldelem_Ref,
         };
         
         private readonly string ilVar;
@@ -221,23 +223,20 @@ namespace Cecilifier.Core.AST
             node.Expression.Accept(this);
             node.ArgumentList.Accept(this);
 
-            if (!node.Parent.IsKind(SyntaxKind.RefExpression) && _opCodesForLdElem.TryGetValue(targetType.SpecialType, out var opCode))
+            var indexer = targetType.GetMembers().OfType<IPropertySymbol>().FirstOrDefault(p => p.IsIndexer && p.Parameters.Length == node.ArgumentList.Arguments.Count);
+            if (expressionInfo.Symbol.GetMemberType().Kind != SymbolKind.ArrayType && indexer != null)
+            {
+                EnsurePropertyExists(node, indexer);
+                AddMethodCall(ilVar, indexer.GetMethod);
+                HandlePotentialRefLoad(ilVar, node, indexer.Type);
+            }
+            else if (!node.Parent.IsKind(SyntaxKind.RefExpression) && _opCodesForLdElem.TryGetValue(targetType.SpecialType, out var opCode))
             {
                 Context.EmitCilInstruction(ilVar, opCode);
             }
-            else
+            else if (node.Parent.IsKind(SyntaxKind.RefExpression))
             {
-                var indexer = targetType.GetMembers().OfType<IPropertySymbol>().FirstOrDefault(p => p.IsIndexer && p.Parameters.Length == node.ArgumentList.Arguments.Count);
-                if (indexer != null)
-                {
-                    EnsurePropertyExists(node, indexer);
-                    AddMethodCall(ilVar, indexer.GetMethod);
-                    HandlePotentialRefLoad(ilVar, node, indexer.Type);
-                }
-                else if (node.Parent.IsKind(SyntaxKind.RefExpression))
-                    AddCilInstruction(ilVar, OpCodes.Ldelema, targetType);
-                else
-                    Context.EmitCilInstruction(ilVar, OpCodes.Ldelem_Ref);
+                AddCilInstruction(ilVar, OpCodes.Ldelema, targetType);
             }
         }
         

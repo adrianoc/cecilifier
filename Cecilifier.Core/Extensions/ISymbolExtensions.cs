@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
@@ -27,6 +28,16 @@ namespace Cecilifier.Core.Extensions
             return elementType.ContainingAssembly.Name.Contains("CoreLib") ? namespaceQualifiedName : $"{namespaceQualifiedName}, {type.ContainingAssembly.Name}";
         }
 
+        public static ITypeSymbol GetMemberType(this ISymbol symbol) => symbol switch
+        {
+            IParameterSymbol param => param.Type,
+            IMethodSymbol method => method.ReturnType,
+            IPropertySymbol property => property.Type,
+            IEventSymbol @event => @event.Type,
+            IFieldSymbol field => field.Type,
+            _ => throw new NotSupportedException($"symbol {symbol.ToDisplayString()} is not supported.")
+        };
+        
         private static ITypeSymbol GetElementType(this ISymbol symbol) => symbol switch
         {
             IPointerTypeSymbol pointer => pointer.PointedAtType.GetElementType(),
