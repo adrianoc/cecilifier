@@ -54,7 +54,7 @@ namespace Cecilifier.Core.AST
                 var fieldVar = Context.Naming.FieldDeclaration(node);
                 fieldDefVars.Add(fieldVar);
                 var constant = modifiers.Any( m => m.IsKind(SyntaxKind.ConstKeyword)) && field.Initializer != null ? Context.SemanticModel.GetConstantValue(field.Initializer.Value) : null;
-                var exps = CecilDefinitionsFactory.Field(Context, declaringTypeVar.MemberName, declaringTypeVar.VariableName, fieldVar, field.Identifier.ValueText, fieldType, fieldAttributes, constant.Value);
+                var exps = CecilDefinitionsFactory.Field(Context, declaringTypeVar.MemberName, declaringTypeVar.VariableName, fieldVar, field.Identifier.ValueText, fieldType, fieldAttributes, constant.Value.ValueText());
                 AddCecilExpressions(exps);
                 
                 HandleAttributesInMemberDeclaration(node.AttributeLists, fieldVar);

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Cecilifier.Core.Extensions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -87,8 +88,7 @@ namespace Cecilifier.Core.AST
             
             base.VisitInterpolatedStringExpression(node);
 
-            string operand = $"\"{_computedFormat}\"";
-            Context.EmitCilInstruction(_ilVar, OpCodes.Ldstr, operand);
+            Context.EmitCilInstruction(_ilVar, OpCodes.Ldstr, _computedFormat.ValueText());
             Context.MoveLineAfter(Context.CurrentLine, lastInstructionBeforeInterpolatedString);
             
             AddMethodCall(_ilVar, GetStringFormatOverloadToCall(), false);
