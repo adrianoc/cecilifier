@@ -104,27 +104,7 @@ namespace Cecilifier.Runtime
             
             return resolvedMethod;
         }
-        
-        public static MethodBase ResolveCtor(string assemblyName, string declaringTypeName, BindingFlags bindingFlags, string typeArgumentList, params string[] paramTypes)
-        {
-            var containingAssembly = Assembly.Load(new AssemblyName(assemblyName));
-            var declaringType = containingAssembly.GetType(declaringTypeName);
 
-            if (declaringType.IsGenericType)
-            {
-                var typeArguments = typeArgumentList.Split(',');
-                declaringType = declaringType.MakeGenericType(typeArguments.Select(Type.GetType).ToArray());
-            }
-
-            var foundCtor = declaringType.GetConstructor(
-                bindingFlags,
-                null,
-                paramTypes.Select(Type.GetType).ToArray(),
-                null);
-
-            return foundCtor;
-        }
-       
         public static MethodInfo ResolveMethod(string assemblyName, string declaringTypeName, string methodName)
         {
             var containingAssembly = Assembly.Load(new AssemblyName(assemblyName));
@@ -141,18 +121,6 @@ namespace Cecilifier.Runtime
             }
             
             return resolvedMethod;
-        }
-
-        public static Type ResolveType(string assemblyName, string typeName)
-        {
-            var containingAssembly = Assembly.Load(new AssemblyName(assemblyName));
-            return containingAssembly.GetType(typeName);
-        }
-
-        public static Type ResolveParameter(string assemblyName, string typeName)
-        {
-            var containingAssembly = Assembly.Load(new AssemblyName(assemblyName));
-            return containingAssembly.GetType(typeName);
         }
 
         public static FieldInfo ResolveField(string declaringType, string fieldName)
