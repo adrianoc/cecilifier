@@ -91,28 +91,40 @@ function initializeSite(errorAccessingGist, gist, version) {
         
         csharpCode.focus();
     });
+
+    showListOfFixedIssuesInStagingServer(false);
     
-    /*
-     * Retrieves all open issues with a label 'fixed-in-staging' and, if there are any issues with a reported date
-     * newer than the last reported date stored locally, shows a notification with those issues.
-     * 
-     * After retrieving store reported data for the issue reported most recently. This date will be used
-     * to decided whether user should be presented the issues next time he visits the site. 
-     * */
-    showListOfFixedIssuesInStagingServer(function (issues) {
+    setTooltips(version);
+    initializeWebSocket();
+    disableScroll();
+}
+
+/*
+ * Retrieves all open issues with a label 'fixed-in-staging' and, if there are any issues with a reported date
+ * newer than the last reported date stored locally, shows a notification with those issues.
+ * 
+ * After retrieving store reported data for the issue reported most recently. This date will be used
+ * to decided whether user should be presented the issues next time he visits the site. 
+ **/
+function showListOfFixedIssuesInStagingServer(force) {
+    if (force) {
+        window.localStorage.setItem("last_shown_issue_number", "0");
+    }
+        
+    retrieveListOfFixedIssuesInStagingServer(function (issues) {
         if (issues.length === 0)
             return;
-        
+
         let lastShownIssueNumber = Number.parseInt(window.localStorage.getItem("last_shown_issue_number")  ?? "0");
         let sortedIssues =issues.sort( (rhs, lhs) => Date.parse(lhs.updated_at) - Date.parse(rhs.updated_at) );
         if (Date.parse(sortedIssues[0].updated_at) <= lastShownIssueNumber)
             return;
-            
+
         let issuesHtml = sortedIssues.reduce( (previous, issue) => `${previous}<br /><a style='color:#3c763d' href='${issue.url}'>${issue.title}</a>`, "List of resolved issues/improvements in <a style='color:#3c763d' href='http://cecilifier.me:5000'>staging server</a><br/>");
         if (sortedIssues.length  === 0)
             return;
-        
-        window.localStorage.setItem("last_shown_issue_number", Date.parse(sortedIssues[0].updated_at) + "");        
+
+        window.localStorage.setItem("last_shown_issue_number", Date.parse(sortedIssues[0].updated_at) + "");
         SnackBar({
             message: issuesHtml,
             dismissible: true,
@@ -121,13 +133,9 @@ function initializeSite(errorAccessingGist, gist, version) {
             icon: "exclamation"
         });
     });
-    
-    setTooltips(version);
-    initializeWebSocket();
-    disableScroll();
 }
 
-function showListOfFixedIssuesInStagingServer(callback) {
+function retrieveListOfFixedIssuesInStagingServer(callback) {
     const xhttp = new XMLHttpRequest();
     xhttp.onreadystatechange = function() {
         if (this.readyState === 4 && this.status === 200) {
@@ -348,6 +356,17 @@ function setTooltips(version) {
         theme: 'cecilifier-tooltip',
         delay: defaultDelay
     });
+
+    tippy('#showFixedBugsInStaging', {
+        content: "Shows the list of bugs fixed in Staging but not in production yet.<br/>" +
+                 "In other words, bugs fixed in http://cecilifier.me:5000 but not in https://cecilifier.me",
+        
+        placement: 'top',
+        interactive: false,
+        allowHTML: true,
+        theme: 'cecilifier-tooltip',
+        delay: defaultDelay
+    });    
 }
 
 function initializeSettings(formattingSettingsSample) {
