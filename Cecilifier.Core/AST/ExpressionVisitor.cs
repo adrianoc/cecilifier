@@ -25,6 +25,7 @@ namespace Cecilifier.Core.AST
         private static readonly IDictionary<SpecialType, OpCode> _opCodesForLdElem = new Dictionary<SpecialType, OpCode>()
         {
             [SpecialType.System_Byte] = OpCodes.Ldelem_I1,
+            [SpecialType.System_Char] = OpCodes.Ldelem_I2,
             [SpecialType.System_Boolean] = OpCodes.Ldelem_U1,
             [SpecialType.System_Int16] = OpCodes.Ldelem_I2,
             [SpecialType.System_Int32] = OpCodes.Ldelem_I4,
@@ -230,13 +231,17 @@ namespace Cecilifier.Core.AST
                 AddMethodCall(ilVar, indexer.GetMethod);
                 HandlePotentialRefLoad(ilVar, node, indexer.Type);
             }
-            else if (!node.Parent.IsKind(SyntaxKind.RefExpression) && _opCodesForLdElem.TryGetValue(targetType.SpecialType, out var opCode))
+            else if (targetType.IsValueType && !targetType.IsPrimitiveType())
             {
-                Context.EmitCilInstruction(ilVar, opCode);
+                AddCilInstruction(ilVar, OpCodes.Ldelem_Any, targetType);
             }
             else if (node.Parent.IsKind(SyntaxKind.RefExpression))
             {
                 AddCilInstruction(ilVar, OpCodes.Ldelema, targetType);
+            }
+            else if (_opCodesForLdElem.TryGetValue(targetType.SpecialType, out var opCode))
+            {
+                Context.EmitCilInstruction(ilVar, opCode);
             }
         }
         
@@ -920,21 +925,20 @@ namespace Cecilifier.Core.AST
 
         private OpCode StelemOpCodeFor(ITypeSymbol type)
         {
-            switch (type.SpecialType)
+            return type.SpecialType switch
             {
-                case SpecialType.System_Byte: return OpCodes.Stelem_I1;
-                case SpecialType.System_Int16: return OpCodes.Stelem_I2;
-                case SpecialType.System_Int32: return OpCodes.Stelem_I4;
-                case SpecialType.System_Int64: return OpCodes.Stelem_I8;
-                case SpecialType.System_Single: return OpCodes.Stelem_R4;
-                case SpecialType.System_Double: return OpCodes.Stelem_R8;
-
-                case SpecialType.None: // custom types.
-                case SpecialType.System_String:
-                case SpecialType.System_Object: return OpCodes.Stelem_Ref;
-            }
-
-            throw new Exception($"Element type {type.Name} not supported.");
+                SpecialType.System_Byte => OpCodes.Stelem_I1,
+                SpecialType.System_Char => OpCodes.Stelem_I2,
+                SpecialType.System_Int16 => OpCodes.Stelem_I2,
+                SpecialType.System_Int32 => OpCodes.Stelem_I4,
+                SpecialType.System_Int64 => OpCodes.Stelem_I8,
+                SpecialType.System_Single => OpCodes.Stelem_R4,
+                SpecialType.System_Double => OpCodes.Stelem_R8,
+                SpecialType.None => type.IsValueType ? OpCodes.Stelem_Any : OpCodes.Stelem_Ref, // Any => Custom structs, Ref => class.
+                SpecialType.System_String => OpCodes.Stelem_Ref,
+                SpecialType.System_Object => OpCodes.Stelem_Ref,
+                _ =>   type.IsValueType ? OpCodes.Stelem_Any : throw new Exception($"Element type {type.Name} not supported.")
+            };
         }
 
         /*
@@ -1415,7 +1419,7 @@ namespace Cecilifier.Core.AST
                     AddCilInstruction(ilVar, OpCodes.Box, itemType.Type);
                 }
 
-                Context.EmitCilInstruction(ilVar, stelemOpCode);
+                Context.EmitCilInstruction(ilVar, stelemOpCode, stelemOpCode == OpCodes.Stelem_Any ? Context.TypeResolver.Resolve(elementType) : null);
             }
         }
         
