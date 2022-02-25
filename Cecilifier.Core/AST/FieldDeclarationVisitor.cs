@@ -36,12 +36,12 @@ namespace Cecilifier.Core.AST
 
         private IEnumerable<string> HandleFieldDeclaration(MemberDeclarationSyntax node, VariableDeclarationSyntax variableDeclarationSyntax, IReadOnlyList<SyntaxToken> modifiers, BaseTypeDeclarationSyntax declaringType)
         {
-            var declaringTypeVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Type).VariableName;
+            var declaringTypeVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Type);
 
             var fieldDefVars = new List<string>(variableDeclarationSyntax.Variables.Count);
             
             var type = ResolveType(variableDeclarationSyntax.Type);
-            var fieldType = ProcessRequiredModifiers(node, modifiers, type) ?? type;
+            var fieldType = ProcessRequiredModifiers(modifiers, type) ?? type;
             var fieldAttributes = ModifiersToCecil(modifiers, "FieldAttributes", "Private");
 
             foreach (var field in variableDeclarationSyntax.Variables)
@@ -54,23 +54,21 @@ namespace Cecilifier.Core.AST
                 var fieldVar = Context.Naming.FieldDeclaration(node);
                 fieldDefVars.Add(fieldVar);
                 var constant = modifiers.Any( m => m.IsKind(SyntaxKind.ConstKeyword)) && field.Initializer != null ? Context.SemanticModel.GetConstantValue(field.Initializer.Value) : null;
-                var exps = CecilDefinitionsFactory.Field(declaringTypeVar, fieldVar, field.Identifier.ValueText, fieldType, fieldAttributes, constant.Value);
+                var exps = CecilDefinitionsFactory.Field(Context, declaringTypeVar.MemberName, declaringTypeVar.VariableName, fieldVar, field.Identifier.ValueText, fieldType, fieldAttributes, constant.Value.ValueText());
                 AddCecilExpressions(exps);
                 
                 HandleAttributesInMemberDeclaration(node.AttributeLists, fieldVar);
-
-                Context.DefinitionVariables.RegisterNonMethod(declaringType.Identifier.Text, field.Identifier.ValueText, VariableMemberKind.Field, fieldVar);
             }
 
             return fieldDefVars;
         }
 
-        private string ProcessRequiredModifiers(MemberDeclarationSyntax member, IReadOnlyList<SyntaxToken> modifiers, string originalType)
+        private string ProcessRequiredModifiers(IReadOnlyList<SyntaxToken> modifiers, string originalType)
         {
             if (modifiers.All(m => m.Kind() != SyntaxKind.VolatileKeyword))
                 return null;
 
-            var id = Context.Naming.RequiredModifier(member);
+            var id = Context.Naming.RequiredModifier();
             var mod_req = $"var {id} = new RequiredModifierType({ImportExpressionForType(typeof(IsVolatile))}, {originalType});";
             AddCecilExpression(mod_req);
             

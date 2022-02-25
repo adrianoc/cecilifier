@@ -35,23 +35,23 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             Assert.That(cecilifiedResult.Mappings[0].Source.Begin.Column, Is.EqualTo(1), message);
             Assert.That(cecilifiedResult.Mappings[0].Source.End.Column, Is.EqualTo(46), message);
             
-            Assert.That(cecilifiedResult.Mappings[0].Cecilified.Begin.Line, Is.EqualTo(19), message);
-            Assert.That(cecilifiedResult.Mappings[0].Cecilified.End.Line, Is.EqualTo(49), message);
+            Assert.That(cecilifiedResult.Mappings[0].Cecilified.Begin.Line, Is.EqualTo(18), message);
+            Assert.That(cecilifiedResult.Mappings[0].Cecilified.End.Line, Is.EqualTo(48), message);
 
             // => int Sum(int i, int j) => i + j;
             Assert.That(cecilifiedResult.Mappings[1].Source.Begin.Line, Is.EqualTo(1), message);
             Assert.That(cecilifiedResult.Mappings[1].Source.Begin.Column, Is.EqualTo(13), message);
             Assert.That(cecilifiedResult.Mappings[1].Source.End.Column, Is.EqualTo(44), message);
 
-            Assert.That(cecilifiedResult.Mappings[1].Cecilified.Begin.Line, Is.EqualTo(25), message);
-            Assert.That(cecilifiedResult.Mappings[1].Cecilified.End.Line, Is.EqualTo(41), message);
+            Assert.That(cecilifiedResult.Mappings[1].Cecilified.Begin.Line, Is.EqualTo(24), message);
+            Assert.That(cecilifiedResult.Mappings[1].Cecilified.End.Line, Is.EqualTo(40), message);
 
             // => i + j;
             Assert.That(cecilifiedResult.Mappings[2].Source.Begin.Line, Is.EqualTo(1), message);
             Assert.That(cecilifiedResult.Mappings[2].Source.Begin.Column, Is.EqualTo(35), message);
 
-            Assert.That(cecilifiedResult.Mappings[2].Cecilified.Begin.Line, Is.EqualTo(37), message);
-            Assert.That(cecilifiedResult.Mappings[2].Cecilified.End.Line, Is.EqualTo(40), message);
+            Assert.That(cecilifiedResult.Mappings[2].Cecilified.Begin.Line, Is.EqualTo(36), message);
+            Assert.That(cecilifiedResult.Mappings[2].Cecilified.End.Line, Is.EqualTo(39), message);
         }
 
         private static CecilifierResult RunCecilifier(string code)

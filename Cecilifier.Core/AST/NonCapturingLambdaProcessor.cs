@@ -71,13 +71,13 @@ namespace Cecilifier.Core.AST
             var returnType = context.SemanticModel.GetTypeInfo(lambda).ConvertedType;
             if (returnType is INamedTypeSymbol { IsGenericType: true } namedTypeSymbol)
             {
-                if (namedTypeSymbol.FullyQualifiedName().Contains("System.Func"))
+                if (namedTypeSymbol.AssemblyQualifiedName().Contains("System.Func"))
                 {
                     returnType = namedTypeSymbol.TypeArguments[^1];
                 }
-                else if (returnType.FullyQualifiedName().Contains("System.Action"))
+                else if (returnType.AssemblyQualifiedName().Contains("System.Action"))
                 {
-                    returnType = context.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Void);
+                    returnType = context.RoslynTypeSystem.SystemVoid;
                 }
             }
             else
@@ -111,7 +111,10 @@ namespace Cecilifier.Core.AST
                     isParams: false, 
                     methodVar, 
                     context.Naming.SyntheticVariable(parameter.Identifier.Text, ElementKind.Parameter),
-                    resolvedParamType);
+                    resolvedParamType,
+                    parameter.Default != null ? Constants.ParameterAttributes.Optional : Constants.ParameterAttributes.None,
+                    parameter.Accept(DefaultParameterExtractorVisitor.Instance));
+                
                 foreach (var paramExp in paramExps)
                 {
                     context.WriteCecilExpression(paramExp);
@@ -119,7 +122,7 @@ namespace Cecilifier.Core.AST
                 }
             }
 
-            var syntheticIlVar = context.Naming.ILProcessor(syntheticMethodName, declaringType.Name());
+            var syntheticIlVar = context.Naming.ILProcessor(syntheticMethodName);
             context.WriteCecilExpression($"var {syntheticIlVar} = {methodVar}.Body.GetILProcessor();");
             context.WriteNewLine();
 

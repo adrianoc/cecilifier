@@ -11,16 +11,26 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 {
     internal class AssemblyComparer
     {
-        private static readonly Dictionary<Code, Func<Instruction, Instruction, (bool, int)>> _instructionValidator =
+        private static readonly Dictionary<Code, Func<Instruction, Instruction, bool, (bool, int)>> _instructionValidator =
             new()
             {
                 {Code.Ret, OperandObliviousValidator},
                 {Code.Nop, OperandObliviousValidator},
-                {Code.Pop, OperandObliviousValidator},
-                {Code.Ldarg_0, OperandObliviousValidator},
-                {Code.Ldarg_1, OperandObliviousValidator},
-                {Code.Ldarg_2, OperandObliviousValidator},
-                {Code.Ldarg_3, OperandObliviousValidator},
+                
+                {Code.Ldarg_0, LoadArgumentShortCutValidator},
+                {Code.Ldarg_1, LoadArgumentShortCutValidator},
+                {Code.Ldarg_2, LoadArgumentShortCutValidator},
+                {Code.Ldarg_3, LoadArgumentShortCutValidator},
+                
+                {Code.Ldloc_0, LoadLocalShortCutValidator},
+                {Code.Ldloc_1, LoadLocalShortCutValidator},
+                {Code.Ldloc_2, LoadLocalShortCutValidator},
+                {Code.Ldloc_3, LoadLocalShortCutValidator},
+                
+                {Code.Stloc_0, StoreLocalShortCutValidator},
+                {Code.Stloc_1, StoreLocalShortCutValidator},
+                {Code.Stloc_2, StoreLocalShortCutValidator},
+                {Code.Stloc_3, StoreLocalShortCutValidator},
                 
                 {Code.Call, ValidateCalls},
                 {Code.Calli, ValidateCallSite},
@@ -338,43 +348,34 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                 current = current.Next;
             }
 
+            if (instruction?.OpCode == current?.OpCode)
+                return ValidateOperands(instruction, current, scopesToIgnore);
+
             if (_instructionValidator.TryGetValue(instruction.OpCode.Code, out var validator))
             {
-                var (ret , c) = validator(instruction, current);
+                var (ret , c) = validator(instruction, current, isStatic);
                 skipCount = c;
                 
                 return ret;
             }
 
-            if (instruction?.OpCode == current?.OpCode)
-                return ValidateOperands(instruction, current, scopesToIgnore);
-
             Debug.Assert(current != null);
             
-            var paramIndexOffset = isStatic ? 0 : 1;
             switch (instruction.OpCode.Code)
             {
-                case Code.Ldarg_0: return current.OpCode.Code == Code.Ldarg && (((ParameterDefinition) current.Operand).Index + paramIndexOffset) == 0;
-                case Code.Ldarg_1: return current.OpCode.Code == Code.Ldarg && (((ParameterDefinition) current.Operand).Index + paramIndexOffset) == 1;
-                case Code.Ldarg_2: return current.OpCode.Code == Code.Ldarg && (((ParameterDefinition) current.Operand).Index + paramIndexOffset) == 2;
-                case Code.Ldarg_3: return current.OpCode.Code == Code.Ldarg && (((ParameterDefinition) current.Operand).Index + paramIndexOffset) == 3;
-
-                case Code.Ldloc_0: return current.OpCode.Code == Code.Ldloc && VarIndex(current.Operand) == 0;
-                case Code.Ldloc_1: return current.OpCode.Code == Code.Ldloc && VarIndex(current.Operand) == 1;
-                case Code.Ldloc_2: return current.OpCode.Code == Code.Ldloc && VarIndex(current.Operand) == 2;
-                case Code.Ldloc_3: return current.OpCode.Code == Code.Ldloc && VarIndex(current.Operand) == 3;
-
-                case Code.Stloc_0: return current.OpCode.Code == Code.Stloc && VarIndex(current.Operand) == 0;
-                case Code.Stloc_1: return current.OpCode.Code == Code.Stloc && VarIndex(current.Operand) == 1;
-                case Code.Stloc_2: return current.OpCode.Code == Code.Stloc && VarIndex(current.Operand) == 2;
-                case Code.Stloc_3: return current.OpCode.Code == Code.Stloc && VarIndex(current.Operand) == 3;
+                case Code.Stloc_0:
+                case Code.Stloc_1:
+                case Code.Stloc_2:
+                case Code.Stloc_3:
+                    throw new Exception();
                
                 case Code.Ldarga_S: return current.OpCode.Code == Code.Ldarga;
                 case Code.Ldarg_S: return current.OpCode.Code == Code.Ldarg;
                 
                 case Code.Ldloca_S: return current.OpCode.Code == Code.Ldloca;
 
-                case Code.Ldc_I4_S:
+                case Code.Ldc_I4_S: return current.OpCode.Code == Code.Ldc_I4 && Convert.ToInt32(instruction.Operand) == Convert.ToInt32(current.Operand);
+                    
                 case Code.Ldc_I4_0:
                 case Code.Ldc_I4_1:
                 case Code.Ldc_I4_2:
@@ -383,7 +384,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                 case Code.Ldc_I4_5:
                 case Code.Ldc_I4_6:
                 case Code.Ldc_I4_7:
-                case Code.Ldc_I4_8: return current.OpCode.Code == Code.Ldc_I4;
+                case Code.Ldc_I4_8: return current.OpCode.Code == Code.Ldc_I4 && (instruction.OpCode.Code - Code.Ldc_I4_0)  == Convert.ToInt32(current.Operand);
                 
                 case Code.Ldc_I4_M1: return current.OpCode.Code == Code.Ldc_I4 && (int) current.Operand == -1 && current.Next.OpCode == OpCodes.Neg;
 
@@ -407,7 +408,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                         return false;
                     }
 
-                    return current.OpCode.Code == Code.Stloc && current.Previous.OpCode.IsCall() && instruction.Previous.OpCode.IsCall() &&
+                    return current.OpCode.Code == Code.Stloc && current.Previous.OpCode.IsCallOrNewObj() && instruction.Previous.OpCode.IsCallOrNewObj() &&
                            LenientInstructionComparer.HasNoLocalVariableLoads(instruction.Next, instruction.Operand);
             }
             
@@ -550,13 +551,72 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
             return source.Attributes == target.Attributes || typeVisitor.VisitAttributes(source, target);
         }
 
-
-        private static (bool, int) OperandObliviousValidator(Instruction lhs, Instruction rhs)
+        private static (bool, int) OperandObliviousValidator(Instruction lhs, Instruction rhs, bool isDefiningMethodStatic)
         {
-            return (true, 0);
+            return (lhs.OpCode == rhs.OpCode, 0);
+        }
+        
+        private static (bool, int) LoadArgumentShortCutValidator(Instruction lhs, Instruction rhs, bool isDefiningMethodStatic)
+        {
+            if (lhs.OpCode == rhs.OpCode)
+                return (true, 0);
+            
+            var paramIndexOffset = isDefiningMethodStatic ? 0 : 1;
+            var ret = lhs.OpCode.Code switch 
+            {
+                Code.Ldarg_0 => rhs.OpCode.Code == Code.Ldarg && (((ParameterDefinition) rhs.Operand).Index + paramIndexOffset) == 0,
+                Code.Ldarg_1 => rhs.OpCode.Code == Code.Ldarg && (((ParameterDefinition) rhs.Operand).Index + paramIndexOffset) == 1,
+                Code.Ldarg_2 => rhs.OpCode.Code == Code.Ldarg && (((ParameterDefinition) rhs.Operand).Index + paramIndexOffset) == 2,
+                Code.Ldarg_3 => rhs.OpCode.Code == Code.Ldarg && (((ParameterDefinition) rhs.Operand).Index + paramIndexOffset) == 3,
+                _ => throw new NotSupportedException()
+            };
+            
+            return (ret, 0);
         }
 
-        private static (bool, int) ValidateCalls(Instruction lhs, Instruction rhs)
+        private static (bool, int) LoadLocalShortCutValidator(Instruction lhs, Instruction rhs, bool isDefiningMethodStatic)
+        {
+            if (lhs.OpCode == rhs.OpCode)
+                return (true, 0);
+
+            if (rhs.OpCode.Code != Code.Ldloc)
+                return (false, 0);
+            
+            var ret = lhs.OpCode.Code switch 
+            {
+                Code.Ldloc_0 => VarIndex(rhs.Operand) == 0,
+                Code.Ldloc_1 => VarIndex(rhs.Operand) == 1,
+                Code.Ldloc_2 => VarIndex(rhs.Operand) == 2,
+                Code.Ldloc_3 => VarIndex(rhs.Operand) == 3,
+                
+                _ => throw new NotSupportedException()
+            };
+            
+            return (ret, 0);
+        }
+        
+        private static (bool, int) StoreLocalShortCutValidator(Instruction lhs, Instruction rhs, bool isDefiningMethodStatic)
+        {
+            if (lhs.OpCode == rhs.OpCode)
+                return (true, 0);
+
+            if (rhs.OpCode.Code != Code.Stloc)
+                return (false, 0);
+            
+            var ret = lhs.OpCode.Code switch 
+            {
+                Code.Stloc_0 => VarIndex(rhs.Operand) == 0,
+                Code.Stloc_1 => VarIndex(rhs.Operand) == 1,
+                Code.Stloc_2 => VarIndex(rhs.Operand) == 2,
+                Code.Stloc_3 => VarIndex(rhs.Operand) == 3,
+                
+                _ => throw new NotSupportedException()
+            };
+            
+            return (ret, 0);
+        }
+
+        private static (bool, int) ValidateCalls(Instruction lhs, Instruction rhs, bool isDefiningMethodStatic)
         {
             var m1 = (MethodReference) lhs.Operand;
             var m2 = (MethodReference) rhs.Operand;
@@ -565,7 +625,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
             return (ret, 0);
         }
         
-        private static (bool, int) ValidateCallSite(Instruction lhs, Instruction rhs)
+        private static (bool, int) ValidateCallSite(Instruction lhs, Instruction rhs, bool isDefiningMethodStatic)
         {
             var leftCallSite = (CallSite) lhs.Operand;
             var rightCallSite = (CallSite) rhs.Operand;
@@ -574,7 +634,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
             return (ret, 0);
         }
 
-        private static (bool, int) ValidateLocalVariableIndex(Instruction lhs, Instruction rhs)
+        private static (bool, int) ValidateLocalVariableIndex(Instruction lhs, Instruction rhs, bool isDefiningMethodStatic)
         {
             var varDefLhs = (VariableDefinition) lhs.Operand;
             var varDefRhs = (VariableDefinition) rhs.Operand;
@@ -585,7 +645,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
             return (ret, 0);
         }
         
-        private static (bool, int) ValidateLoadMinusOne(Instruction lhs, Instruction rhs)
+        private static (bool, int) ValidateLoadMinusOne(Instruction lhs, Instruction rhs, bool isDefiningMethodStatic)
         {
             var ret = rhs.OpCode == OpCodes.Ldc_I4 && (int) rhs.Operand == 1 && rhs?.Next?.OpCode == OpCodes.Neg;
             return (ret, 1);
@@ -613,7 +673,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
             return true;
         }
 
-        private static (bool, int) ValidateTypeReference(Instruction lhs, Instruction rhs)
+        private static (bool, int) ValidateTypeReference(Instruction lhs, Instruction rhs, bool isDefiningMethodStatic)
         {
             var typeLhs = (TypeReference) lhs.Operand;
             var typeRhs = (TypeReference) rhs.Operand;
@@ -621,7 +681,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
             return (ValidateTypeReference(typeLhs, typeRhs), 0);
         }
 
-        private static (bool, int) ValidateField(Instruction lhs, Instruction rhs)
+        private static (bool, int) ValidateField(Instruction lhs, Instruction rhs, bool isDefiningMethodStatic)
         {
             if (lhs.OpCode != rhs.OpCode)
                 return (false, 0);

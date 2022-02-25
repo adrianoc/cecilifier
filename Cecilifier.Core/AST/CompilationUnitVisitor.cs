@@ -118,7 +118,7 @@ namespace Cecilifier.Core.AST
                     "Invoke", 
                     ResolveType(node.ReturnType), 
                     node.ParameterList.Parameters,
-                    (methodVar, param) => CecilDefinitionsFactory.Parameter(param, Context.SemanticModel, methodVar, Context.Naming.Parameter(param) , ResolveType(param.Type)));
+                    (methodVar, param) => CecilDefinitionsFactory.Parameter(param, Context.SemanticModel, methodVar, Context.Naming.Parameter(param) , ResolveType(param.Type), param.Accept(DefaultParameterExtractorVisitor.Instance)));
 
                 // BeginInvoke() method
                 var methodName = "BeginInvoke";
@@ -132,7 +132,7 @@ namespace Cecilifier.Core.AST
 
                 foreach (var param in node.ParameterList.Parameters)
                 {
-                    var paramExps = CecilDefinitionsFactory.Parameter(param, Context.SemanticModel, beginInvokeMethodVar, Context.Naming.Parameter(param), ResolveType(param.Type));
+                    var paramExps = CecilDefinitionsFactory.Parameter(param, Context.SemanticModel, beginInvokeMethodVar, Context.Naming.Parameter(param), ResolveType(param.Type), param.Accept(DefaultParameterExtractorVisitor.Instance));
                     AddCecilExpressions(paramExps);
                 }
 
@@ -164,8 +164,10 @@ namespace Cecilifier.Core.AST
                     RefKind.None,
                     false,
                     endInvokeMethodVar,
-                    Context.Naming.Parameter("ar", node.Identifier.Text),
-                    Context.TypeResolver.Bcl.System.IAsyncResult);
+                    Context.Naming.Parameter("ar"),
+                    Context.TypeResolver.Bcl.System.IAsyncResult,
+                    Constants.ParameterAttributes.None,
+                    defaultParameterValue: null);
 
                 AddCecilExpressions(endInvokeExps);
                 AddCecilExpressions(endInvokeParamExps);

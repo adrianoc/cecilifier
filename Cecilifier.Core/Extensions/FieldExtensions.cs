@@ -21,7 +21,7 @@ namespace Cecilifier.Core.Extensions
                 return found.VariableName;
             }
 
-            var declaringTypeName = field.ContainingType.FullyQualifiedName();
+            var declaringTypeName = (string)field.ContainingType.AssemblyQualifiedName();
 
             return ImportFromMainModule($"TypeHelpers.ResolveField(\"{declaringTypeName}\",\"{field.Name}\")");
         }

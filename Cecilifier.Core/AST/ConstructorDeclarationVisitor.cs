@@ -89,7 +89,7 @@ namespace Cecilifier.Core.AST
                                     
             AddCecilExpression($"{typeDefVar}.Methods.Add({ctorLocalVar});");
 
-            var ctorBodyIL = Context.Naming.ILProcessor("ctor", declaringClass.Identifier.Text);
+            var ctorBodyIL = Context.Naming.ILProcessor("ctor");
             AddCecilExpression($@"var {ctorBodyIL} = {ctorLocalVar}.Body.GetILProcessor();");
             
             ProcessFieldInitialization(declaringClass, ctorBodyIL);
@@ -111,7 +111,7 @@ namespace Cecilifier.Core.AST
 
             AddCecilExpression($"{typeDefVar}.Methods.Add({ctorLocalVar});");
 
-            var ctorBodyIL = Context.Naming.ILProcessor("ctor", typeName);
+            var ctorBodyIL = Context.Naming.ILProcessor("ctor");
             AddCecilExpression($@"var {ctorBodyIL} = {ctorLocalVar}.Body.GetILProcessor();");
             
             Context.EmitCilInstruction(ctorBodyIL, OpCodes.Ldarg_0);

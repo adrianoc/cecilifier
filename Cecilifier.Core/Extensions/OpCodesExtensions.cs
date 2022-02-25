@@ -9,9 +9,9 @@ namespace Cecilifier.Core.Extensions
             return "OpCodes." + opCode.Code;
         }
 
-        public static bool IsCall(this OpCode opCode)
+        public static bool IsCallOrNewObj(this OpCode opCode)
         {
-            return opCode.Code == Code.Call || opCode.Code == Code.Calli || opCode.Code == Code.Callvirt;
+            return opCode.Code == Code.Call || opCode.Code == Code.Calli || opCode.Code == Code.Callvirt || opCode.Code == Code.Newobj;
         }
     }
 }

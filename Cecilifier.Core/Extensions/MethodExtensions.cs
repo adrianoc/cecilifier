@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -59,19 +59,18 @@ namespace Cecilifier.Core.Extensions
             {
                 var paramTypes = method.ConstructedFrom.Parameters.AsStringNewArrayExpression();
                 var typeArguments = method.TypeArguments.AsStringNewArrayExpression();
-                return Utils.ImportFromMainModule($"TypeHelpers.ResolveGenericMethod(\"{method.ContainingAssembly.Name}\", \"{declaringTypeName}\", \"{method.Name}\",{method.Modifiers()}, {typeArguments}, {paramTypes})");
+                return Utils.ImportFromMainModule($"TypeHelpers.ResolveGenericMethod(\"{declaringTypeName}\", \"{method.Name}\",{method.Modifiers()}, {typeArguments}, {paramTypes})");
             }
 
             if (!method.ContainingType.IsValueType && !method.ContainingType.IsGenericType)
-                declaringTypeName = (method.OverriddenMethod ?? method).ContainingType.FullyQualifiedName();
+                declaringTypeName = (method.OverriddenMethod ?? method).ContainingType.AssemblyQualifiedName();
 
-            return ImportFromMainModule(string.Format("TypeHelpers.ResolveMethod(\"{0}\", \"{1}\", \"{2}\",{3},\"{4}\"{5})",
-                method.ContainingAssembly.Name,
+            return ImportFromMainModule(string.Format("TypeHelpers.ResolveMethod(\"{0}\", \"{1}\",{2},\"{3}\"{4})",
                 declaringTypeName,
                 method.Name,
                 method.Modifiers(),
                 string.Join(',', typeParameters),
-                method.Parameters.Aggregate("", (acc, curr) => acc + ", \"" + curr.Type.FullyQualifiedName() + "\"")));
+                method.Parameters.Aggregate("", (acc, curr) => acc + ", \"" + curr.Type.AssemblyQualifiedName() + "\"")));
         }
 
         public static MethodDefinitionVariable AsMethodDefinitionVariable(this IMethodSymbol method)
@@ -142,11 +141,11 @@ namespace Cecilifier.Core.Extensions
         private static IEnumerable<SyntaxToken> RemoveSourceModifiersWithNoILEquivalent(SyntaxTokenList modifiers)
         {
             return modifiers.Where(
-                mod => mod.Kind() != SyntaxKind.OverrideKeyword
-                       && mod.Kind() != SyntaxKind.AbstractKeyword
-                       && mod.Kind() != SyntaxKind.VirtualKeyword
-                       && mod.Kind() != SyntaxKind.SealedKeyword
-                       && mod.Kind() != SyntaxKind.UnsafeKeyword);
+                mod => !mod.IsKind(SyntaxKind.OverrideKeyword) 
+                       && !mod.IsKind(SyntaxKind.AbstractKeyword)
+                       && !mod.IsKind(SyntaxKind.VirtualKeyword)
+                       && !mod.IsKind(SyntaxKind.SealedKeyword)
+                       && !mod.IsKind(SyntaxKind.UnsafeKeyword));
         }
     }
 }

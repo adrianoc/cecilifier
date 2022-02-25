@@ -124,8 +124,8 @@ public class Foo
                     }");
 
             var cecilifiedCode = result.GeneratedCode.ReadToEnd();
-            Assert.That(cecilifiedCode, Does.Match("il_method_21.Emit\\(OpCodes.Callvirt, .*\"System.Diagnostics.Process\", \"System.Diagnostics.Process\", \"Kill\".+"), cecilifiedCode);
-            Assert.That(cecilifiedCode, Does.Match("il_property_24.Emit\\(OpCodes.Callvirt, .+\"System.Diagnostics.Process\", \"System.Diagnostics.Process\", \"get_ProcessName\".+"), cecilifiedCode);
+            Assert.That(cecilifiedCode, Does.Match("il_method_21.Emit\\(OpCodes.Callvirt, .*\"System.Diagnostics.Process, System.Diagnostics.Process\", \"Kill\".+"), cecilifiedCode);
+            Assert.That(cecilifiedCode, Does.Match("il_property_24.Emit\\(OpCodes.Callvirt, .+\"System.Diagnostics.Process, System.Diagnostics.Process\", \"get_ProcessName\".+"), cecilifiedCode);
         }
 
         [Test]
@@ -298,6 +298,95 @@ public class Foo
             var result = RunCecilifier(code);
             var cecilifiedCode = result.GeneratedCode.ReadToEnd();
             Assert.That(cecilifiedCode, Contains.Substring(expectedLoadOpCode));
+        }
+        
+        [TestCase("fieldDelegate")]
+        [TestCase("PropertyDelegate")]
+        [TestCase("localDelegate")]
+        [TestCase("paramDelegate")]
+        [TestCase("fieldFunction")]
+        [TestCase("PropertyFunction")]
+        [TestCase("localFunction")]
+        [TestCase("paramFunction")]
+        public void LdindTests(string varToUse)
+        {
+            var code = 
+                $@"
+            using System;
+            unsafe class Foo 
+            {{ 
+                delegate*<bool, int, void> fieldFunction;                
+                Action<bool, int> fieldDelegate;
+
+                delegate*<bool, int, void> PropertyFunction {{ get; set; }}
+                Action<bool, int> PropertyDelegate {{ get; set; }}
+
+                void Bar(Action<bool, int> paramDelegate, delegate*<bool, int, void> paramFunction, int v)
+                {{
+                    Action<bool, int> localDelegate = paramDelegate;
+                    delegate*<bool, int, void> localFunction = paramFunction; 
+                    {varToUse}(true, v);
+                }}
+            }}";
+        
+            var result = RunCecilifier(code);
+            var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+            Assert.That(cecilifiedCode, Does.Not.Contains("Ldind"));
+        }
+
+        [Test]
+        public void TestEvents()
+        {
+            var source = @"class Foo {
+                    private void Handler(object sender, System.EventArgs args) { }
+                    void SetEvent(System.Diagnostics.Process proc) => proc.Exited += Handler;
+                }";
+
+            var result = RunCecilifier(source);
+            
+            Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(
+                @"il_setEvent_6.Emit\(OpCodes.Ldarg_1\);
+			il_setEvent_6.Emit\(OpCodes.Ldarg_0\);
+			il_setEvent_6.Emit\(OpCodes.Ldftn, m_handler_1\);
+			il_setEvent_6.Emit\(OpCodes.Newobj,.+System.EventHandler.+,.+System.Object.+,.+System.IntPtr.+\);
+			il_setEvent_6.Emit\(OpCodes.Callvirt,.+add_Exited.+\);"));
+        }  
+        
+        [Test]
+        public void TypesNotInSystemCorelib_AreResolved()
+        {
+            var source = @"class Foo {
+                    private void Handler(object sender, System.ConsoleCancelEventArgs args) { }
+                    void SetEvent() => System.Console.CancelKeyPress += Handler;
+                }";
+
+            var result = RunCecilifier(source);
+            Assert.That(result.GeneratedCode.ReadToEnd(), Contains.Substring("\"System.Console, System.Console\", \"add_CancelKeyPress\","));
+        }
+        
+        [TestCase("j")]
+        [TestCase("j + 2")]
+        [TestCase("j > 1 ? 0 : 1")]
+        public void TestCallerArgumentExpressionAttribute(string expression)
+        {
+            var source = $@"class Foo {{ void M(int i, [System.Runtime.CompilerServices.CallerArgumentExpression(""i"")] string s = null) {{ }} void Call(int j) => M({expression}); }}";
+
+            var result = RunCecilifier(source);
+            Assert.That(result.GeneratedCode.ReadToEnd(), Contains.Substring($"Ldstr, \"{expression}\""));
+        }
+        
+        [TestCase("\"foo\"")]
+        [TestCase("null")]
+        public void TestCallerArgumentExpressionAttribute_InvalidParameterName(string defaultParameterValue)
+        {
+            var source = $@"class Foo {{ void M(int i, [System.Runtime.CompilerServices.CallerArgumentExpression(""DoNotExist"")] string s = {defaultParameterValue}) {{ }} void Call(int j) => M(j); }}";
+
+            var result = RunCecilifier(source);
+            
+            if (defaultParameterValue == "null")
+                Assert.That(result.GeneratedCode.ReadToEnd(), Contains.Substring("Ldnull"));
+            else
+                Assert.That(result.GeneratedCode.ReadToEnd(), Contains.Substring($"Ldstr, {defaultParameterValue}"));
         }
     }
 }

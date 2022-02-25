@@ -26,12 +26,10 @@ namespace Cecilifier.Runtime
         }
        
 
-        public static MethodInfo ResolveGenericMethod(string assemblyName, string declaringTypeName, string methodName, BindingFlags bindingFlags, IEnumerable<string> typeArguments,
-            IEnumerable<ParamData> paramTypes)
+        public static MethodInfo ResolveGenericMethod(string declaringTypeName, string methodName, BindingFlags bindingFlags, IEnumerable<string> typeArguments, IEnumerable<ParamData> paramTypes)
         {
-            var containingAssembly = Assembly.Load(assemblyName);
-            var declaringType = containingAssembly.GetType(declaringTypeName);
-
+            var declaringType = Type.GetType(declaringTypeName);
+            
             var typeArgumentsCount = typeArguments.Count();
             var methods = declaringType.GetMethods(bindingFlags)
                 .Where(c => c.Name == methodName
@@ -68,11 +66,9 @@ namespace Cecilifier.Runtime
             return null;
         }
 
-        public static MethodBase ResolveMethod(string assemblyName, string declaringTypeName, string methodName, BindingFlags bindingFlags, string typeArgumentList, params string[] paramTypes)
+        public static MethodBase ResolveMethod(string declaringTypeName, string methodName, BindingFlags bindingFlags, string typeArgumentList, params string[] paramTypes)
         {
-            var containingAssembly = Assembly.Load(new AssemblyName(assemblyName));
-            var declaringType = containingAssembly.GetType(declaringTypeName);
-
+            var declaringType = Type.GetType(declaringTypeName);
             if (declaringType.IsGenericType)
             {
                 var typeArguments = typeArgumentList.Split(',');
@@ -89,7 +85,7 @@ namespace Cecilifier.Runtime
 
                 if (resolvedCtor == null)
                 {
-                    throw new InvalidOperationException($"Failed to resolve ctor [{assemblyName}] {declaringType}({string.Join(',', paramTypes)})");
+                    throw new InvalidOperationException($"Failed to resolve ctor [{declaringType}({string.Join(',', paramTypes)})");
                 }
                 
                 return resolvedCtor;
@@ -103,32 +99,12 @@ namespace Cecilifier.Runtime
 
             if (resolvedMethod == null)
             {
-                throw new InvalidOperationException($"Failed to resolve method [{assemblyName}] {declaringType}.{methodName}({string.Join(',', paramTypes)})");
+                throw new InvalidOperationException($"Failed to resolve method {declaringType}.{methodName}({string.Join(',', paramTypes)})");
             }
             
             return resolvedMethod;
         }
-        
-        public static MethodBase ResolveCtor(string assemblyName, string declaringTypeName, BindingFlags bindingFlags, string typeArgumentList, params string[] paramTypes)
-        {
-            var containingAssembly = Assembly.Load(new AssemblyName(assemblyName));
-            var declaringType = containingAssembly.GetType(declaringTypeName);
 
-            if (declaringType.IsGenericType)
-            {
-                var typeArguments = typeArgumentList.Split(',');
-                declaringType = declaringType.MakeGenericType(typeArguments.Select(Type.GetType).ToArray());
-            }
-
-            var foundCtor = declaringType.GetConstructor(
-                bindingFlags,
-                null,
-                paramTypes.Select(Type.GetType).ToArray(),
-                null);
-
-            return foundCtor;
-        }
-       
         public static MethodInfo ResolveMethod(string assemblyName, string declaringTypeName, string methodName)
         {
             var containingAssembly = Assembly.Load(new AssemblyName(assemblyName));
@@ -145,18 +121,6 @@ namespace Cecilifier.Runtime
             }
             
             return resolvedMethod;
-        }
-
-        public static Type ResolveType(string assemblyName, string typeName)
-        {
-            var containingAssembly = Assembly.Load(new AssemblyName(assemblyName));
-            return containingAssembly.GetType(typeName);
-        }
-
-        public static Type ResolveParameter(string assemblyName, string typeName)
-        {
-            var containingAssembly = Assembly.Load(new AssemblyName(assemblyName));
-            return containingAssembly.GetType(typeName);
         }
 
         public static FieldInfo ResolveField(string declaringType, string fieldName)

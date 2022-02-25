@@ -17,7 +17,7 @@ namespace Cecilifier.Core.AST
         {
             this.context = context;
 
-            hasReturnStatement = firstGlobalStatement.Parent.DescendantNodes().Any(node => node.IsKind(SyntaxKind.ReturnStatement));
+            var hasReturnStatement = firstGlobalStatement.Parent!.DescendantNodes().Any(node => node.IsKind(SyntaxKind.ReturnStatement));
 
             var typeModifiers = CecilDefinitionsFactory.DefaultTypeAttributeFor(SyntaxKind.ClassDeclaration, false).AppendModifier("TypeAttributes.NotPublic | TypeAttributes.AutoLayout");
             typeVar = context.Naming.Type("topLevelStatements", ElementKind.Class);
@@ -26,7 +26,7 @@ namespace Cecilifier.Core.AST
                 typeVar, 
                 "Program", 
                 typeModifiers, 
-                context.TypeResolver.Resolve(context.GetSpecialType(SpecialType.System_Object)), 
+                context.TypeResolver.Bcl.System.Object, 
                 false, 
                 Array.Empty<string>());
                 
@@ -36,20 +36,22 @@ namespace Cecilifier.Core.AST
                 methodVar, 
                 "<Main>$", 
                 "MethodAttributes.Private | MethodAttributes.HideBySig | MethodAttributes.Static", 
-                context.GetSpecialType(hasReturnStatement ? SpecialType.System_Int32 : SpecialType.System_Void),
+                hasReturnStatement ? context.RoslynTypeSystem.SystemInt32 : context.RoslynTypeSystem.SystemVoid,
                 false,
                 Array.Empty<TypeParameterSyntax>());
             
-            var paramVar = context.Naming.Parameter("args", "Main");
+            var paramVar = context.Naming.Parameter("args");
             var mainParametersExps = CecilDefinitionsFactory.Parameter(
                 "args", 
                 RefKind.None, 
                 false, 
                 methodVar, 
                 paramVar, 
-                $"{context.TypeResolver.Bcl.System.String}.MakeArrayType()");
+                $"{context.TypeResolver.Bcl.System.String}.MakeArrayType()",
+                Constants.ParameterAttributes.None,
+                defaultParameterValue: null);
 
-            ilVar = context.Naming.ILProcessor("topLevelMain", "Main");
+            ilVar = context.Naming.ILProcessor("topLevelMain");
             var mainBodyExps = CecilDefinitionsFactory.MethodBody(methodVar, ilVar, Array.Empty<InstructionRepresentation>());
                 
             WriteCecilExpressions(typeExps);
@@ -91,9 +93,9 @@ namespace Cecilifier.Core.AST
             
             return true;
 
-            bool IsLastGlobalStatement(CompilationUnitSyntax compilation, int globalStatementIndex)
+            bool IsLastGlobalStatement(CompilationUnitSyntax compilation, int index)
             {
-                return compilation.Members.Count == (globalStatementIndex + 1) || !root.Members[globalStatementIndex + 1].IsKind(SyntaxKind.GlobalStatement);
+                return compilation.Members.Count == (index + 1) || !root.Members[index + 1].IsKind(SyntaxKind.GlobalStatement);
             }
         }
 
@@ -115,6 +117,5 @@ namespace Cecilifier.Core.AST
         private readonly string methodVar;
         private readonly string typeVar;
         private readonly IVisitorContext context;
-        private bool hasReturnStatement;
     }
 }

@@ -9,7 +9,7 @@ namespace Cecilifier.Core.Naming
 {
     public class DefaultNameStrategy : INameStrategy
     {
-        private static IReadOnlyDictionary<ElementKind, string> _defaultFormat = new Dictionary<ElementKind, string>
+        private static readonly IReadOnlyDictionary<ElementKind, string> _defaultFormat = new Dictionary<ElementKind, string>
         {
             [ElementKind.Attribute] = "attr",
             [ElementKind.Class] = "cls",
@@ -32,7 +32,7 @@ namespace Cecilifier.Core.Naming
             [ElementKind.IL] = "il",
         };
 
-        private IReadOnlyDictionary<ElementKind, string> _format;
+        private readonly IReadOnlyDictionary<ElementKind, string> _format;
 
         public DefaultNameStrategy()
         {
@@ -45,22 +45,22 @@ namespace Cecilifier.Core.Naming
             _format = format ?? _defaultFormat;
             Options = namingOptions;
         }
-        
-        public string PartsSeparator { get; } = "_";
+
+        private string PartsSeparator => "_";
 
         public string SyntheticVariable(string name, ElementKind kind) => $"{PrefixFor(kind)}{NameFor(name)}{UniqueIdString()}";
-        public string LocalVariable(MemberDeclarationSyntax node, string prefix = "") => $"{PrefixFor(ElementKind.LocalVariable)}{NameFor(node)}{UniqueIdString()}";
+        public string LocalVariable(MemberDeclarationSyntax node) => $"{PrefixFor(ElementKind.LocalVariable)}{NameFor(node)}{UniqueIdString()}";
         public string Constructor(BaseTypeDeclarationSyntax declaringType, bool isStatic) => $"{PrefixFor(isStatic ? ElementKind.StaticConstructor : ElementKind.Constructor)}{NameFor(declaringType)}{UniqueIdString()}";
         public string Type(MemberDeclarationSyntax node) => $"{PrefixFor(ElementKindFrom(node))}{NameFor(node)}{UniqueIdString()}";
         public string Type(string baseName, ElementKind elementKind) => $"{PrefixFor(elementKind)}{NameFor(baseName)}{UniqueIdString()}";
         public string Parameter(ParameterSyntax parameterSyntax) => $"{PrefixFor(ElementKind.Parameter)}{NameFor(parameterSyntax.Identifier.Text)}{UniqueIdString()}";
-        public string Parameter(string parameterName, string relatedMember) => $"{PrefixFor(ElementKind.Parameter)}{NameFor(parameterName)}{UniqueIdString()}";
-        public string MemberReference(string baseName, string declaringTypeName) => $"{PrefixFor(ElementKind.MemberReference)}{NameFor(baseName)}{UniqueIdString()}";
+        public string Parameter(string parameterName) => $"{PrefixFor(ElementKind.Parameter)}{NameFor(parameterName)}{UniqueIdString()}";
+        public string MemberReference(string baseName) => $"{PrefixFor(ElementKind.MemberReference)}{NameFor(baseName)}{UniqueIdString()}";
         public string MethodDeclaration(BaseMethodDeclarationSyntax node) => $"{PrefixFor(ElementKind.Method)}{NameFor(node)}{UniqueIdString()}";
         public string GenericParameterDeclaration(TypeParameterSyntax typeParameter) => $"{PrefixFor(ElementKind.GenericParameter)}{NameFor(typeParameter.Identifier.Text)}{UniqueIdString()}";
-        public string ILProcessor(string memberName, string declaringTypeName) => $"{PrefixFor(ElementKind.IL)}{NameFor(memberName)}{UniqueIdString()}";
+        public string ILProcessor(string memberName) => $"{PrefixFor(ElementKind.IL)}{NameFor(memberName)}{UniqueIdString()}";
         public string EventDeclaration(MemberDeclarationSyntax eventDeclaration) => $"{PrefixFor(ElementKind.Event)}{NameFor(eventDeclaration)}{UniqueIdString()}";
-        public string FieldDeclaration(MemberDeclarationSyntax node, string prefix = "") => $"{PrefixFor(ElementKind.Field)}{NameFor(node)}{UniqueIdString()}";
+        public string FieldDeclaration(MemberDeclarationSyntax node) => $"{PrefixFor(ElementKind.Field)}{NameFor(node)}{UniqueIdString()}";
         public string Label(string name) => $"{PrefixFor(ElementKind.Label)}{NameFor(name)}{UniqueIdString()}";
         public string PropertyDeclaration(BasePropertyDeclarationSyntax propertyDeclarationSyntax) => $"{PrefixFor(ElementKind.Property)}{NameFor(propertyDeclarationSyntax)}{UniqueIdString()}";
         public string GenericInstance(ISymbol member) => $"{PrefixFor(ElementKind.GenericInstance)}{NameFor(member)}{UniqueIdString()}";
@@ -68,7 +68,7 @@ namespace Cecilifier.Core.Naming
         public string Instruction(string opCodeName) => $"{ILOpcodeFor(opCodeName)}{UniqueIdString()}";
 
         public string CustomAttribute(string typeName) => $"{PrefixFor(ElementKind.Attribute)}{NameFor(typeName)}{UniqueIdString()}";
-        public string RequiredModifier(MemberDeclarationSyntax member) => $"modReq{UniqueIdString()}";
+        public string RequiredModifier() => $"modReq{UniqueIdString()}";
         public string Delegate(DelegateDeclarationSyntax node) => $"{PrefixFor(ElementKind.Delegate)}{NameFor(node)}{UniqueId()}";
 
         public NamingOptions Options { get; set; } = NamingOptions.All;

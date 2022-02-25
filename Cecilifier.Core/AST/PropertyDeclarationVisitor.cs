@@ -46,7 +46,7 @@ namespace Cecilifier.Core.AST
                     Type = Context.GetTypeInfo(parameter.Type).Type.Name
                 });
 
-                var exps = CecilDefinitionsFactory.Parameter(parameter, Context.SemanticModel, propDefVar, paramVar, ResolveType(parameter.Type));
+                var exps = CecilDefinitionsFactory.Parameter(parameter, Context.SemanticModel, propDefVar, paramVar, ResolveType(parameter.Type), parameter.Accept(DefaultParameterExtractorVisitor.Instance));
                 AddCecilExpressions(exps);
                 Context.DefinitionVariables.RegisterNonMethod(string.Empty, parameter.Identifier.ValueText, VariableMemberKind.Parameter, paramVar);
             }
@@ -93,7 +93,7 @@ namespace Cecilifier.Core.AST
 
         private void AddDefaultMemberAttribute(string definitionVar, string value)
         {
-            var ctorVar = Context.Naming.MemberReference("ctor", Context.DefinitionVariables.GetLastOf(VariableMemberKind.Type).VariableName);
+            var ctorVar = Context.Naming.MemberReference("ctor");
             var customAttrVar = Context.Naming.CustomAttribute("DefaultMember"); 
             
             var exps = new[]
@@ -148,21 +148,14 @@ namespace Cecilifier.Core.AST
                 if (backingFieldVar != null)
                     return;
 
-                backingFieldVar = Context.Naming.FieldDeclaration(node, "bf");
-                var backingFieldName = $"<{propName}>k__BackingField";
+                backingFieldVar = Context.Naming.FieldDeclaration(node);
                 var modifiers = ModifiersToCecil(accessor.Modifiers, "FieldAttributes", "Private");
                 if (hasInitProperty)
                 {
-                    modifiers = modifiers + " | FieldAttributes.InitOnly";
+                    modifiers = modifiers.AppendModifier("FieldAttributes.InitOnly");
                 }
                 
-                var backingFieldExps = new[]
-                {
-                    //TODO: NOW: CecilDefinitionsFactory.Field()
-                    $"var {backingFieldVar} = new FieldDefinition(\"{backingFieldName}\", {modifiers}, {propertyType});",
-                    $"{propertyDeclaringTypeVar}.Fields.Add({backingFieldVar});"
-                };
-
+                var backingFieldExps = CecilDefinitionsFactory.Field(Context, declaringType.Identifier.Text, propertyDeclaringTypeVar, backingFieldVar, Utils.BackingFieldNameForAutoProperty(propName), propertyType, modifiers);
                 AddCecilExpressions(backingFieldExps);
             }
 
@@ -173,7 +166,7 @@ namespace Cecilifier.Core.AST
                 var localParams = new List<string>(parameters.Select(p => p.Type));
                 localParams.Add(Context.GetTypeInfo(node.Type).Type.Name); // Setters always have at least one `value` parameter.
                 Context.DefinitionVariables.RegisterMethod(declaringType.Identifier.Text, $"set_{propName}", localParams.ToArray(), setMethodVar);
-                var ilSetVar = Context.Naming.ILProcessor("set", declaringType.Identifier.Text);
+                var ilSetVar = Context.Naming.ILProcessor("set");
 
                 //TODO : NEXT : try to use CecilDefinitionsFactory.Method()
                 AddCecilExpression($"var {setMethodVar} = new MethodDefinition(\"set_{propName}\", {accessorModifiers}, {setterReturnType});");
@@ -226,7 +219,7 @@ namespace Cecilifier.Core.AST
                 if (propInfo.ContainingType.TypeKind == TypeKind.Interface)
                     return null;
 
-                var ilVar = Context.Naming.ILProcessor("get", declaringType.Identifier.Text);
+                var ilVar = Context.Naming.ILProcessor("get");
                 AddCecilExpression($"var {ilVar} = {getMethodVar}.Body.GetILProcessor();");
                 return ilVar;
             }

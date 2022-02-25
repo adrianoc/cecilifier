@@ -92,7 +92,7 @@ namespace Cecilifier.Core.AST
             
             var declaringMethodVariable = methodVar.VariableName;
 
-            var exps = CecilDefinitionsFactory.Parameter(node, Context.SemanticModel, declaringMethodVariable, paramVar, ResolveType(node.Type));
+            var exps = CecilDefinitionsFactory.Parameter(node, Context.SemanticModel, declaringMethodVariable, paramVar, ResolveType(node.Type), node.Accept(DefaultParameterExtractorVisitor.Instance));
             AddCecilExpressions(exps);
             
             HandleAttributesInMemberDeclaration(node.AttributeLists, paramVar);
@@ -105,7 +105,7 @@ namespace Cecilifier.Core.AST
             string declaringTypeName, 
             string variableName,
             IMethodSymbol methodSymbol,
-            SyntaxTokenList modifiers, 
+            SyntaxTokenList modifiersTokens, 
             string simpleName, 
             string methodName, 
             bool refReturn, 
@@ -124,7 +124,7 @@ namespace Cecilifier.Core.AST
                                             // for ctors we want to use the `methodName` (== .ctor) instead of the `simpleName` (== ctor) otherwise we may fail to find existing variables.
                                             methodSymbol.MethodKind == MethodKind.Constructor ? methodName : simpleName,
                                             methodName, 
-                                            modifiers.MethodModifiersToCecil((targetEnum, modifiers, defaultAccessibility) => ModifiersToCecil(modifiers, targetEnum, defaultAccessibility), GetSpecificModifiers(), methodSymbol), 
+                                            modifiersTokens.MethodModifiersToCecil((targetEnum, modifiers, defaultAccessibility) => ModifiersToCecil(modifiers, targetEnum, defaultAccessibility), GetSpecificModifiers(), methodSymbol), 
                                             methodSymbol.ReturnType, 
                                             refReturn, 
                                             parameters,
@@ -135,12 +135,12 @@ namespace Cecilifier.Core.AST
                 HandleAttributesInMemberDeclaration(attributes, TargetDoesNotMatch, SyntaxKind.ReturnKeyword, methodVar); // Normal method attrs.
                 HandleAttributesInMemberDeclaration(attributes, TargetMatches, SyntaxKind.ReturnKeyword, $"{methodVar}.MethodReturnType"); // [return:Attr]
         
-                if (modifiers.IndexOf(SyntaxKind.ExternKeyword) == -1)
+                if (modifiersTokens.IndexOf(SyntaxKind.ExternKeyword) == -1)
                 {
                     var isAbstract = methodSymbol.IsAbstract;
                     if (!isAbstract)
                     {
-                        ilVar = Context.Naming.ILProcessor(simpleName, declaringTypeName);
+                        ilVar = Context.Naming.ILProcessor(simpleName);
                         AddCecilExpression($"{methodVar}.Body.InitLocals = true;");
                         AddCecilExpression($"var {ilVar} = {methodVar}.Body.GetILProcessor();");
                     }

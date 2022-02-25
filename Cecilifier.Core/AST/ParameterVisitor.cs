@@ -7,7 +7,7 @@ namespace Cecilifier.Core.AST
     {
         private IParameterSymbol symbol;
 
-        internal ParameterVisitor(IVisitorContext ctx) : base(ctx)
+        private ParameterVisitor(IVisitorContext ctx) : base(ctx)
         {
         }
 

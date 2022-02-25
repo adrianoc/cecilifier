@@ -16,15 +16,9 @@ namespace Cecilifier.Core
 {
     public sealed class Cecilifier
     {
-        internal const int CecilifierProgramPreambleLength = 19; // The # of lines before the 1st cecilified line of code (see CecilifierExtensions.AsCecilApplication())
+        internal const int CecilifierProgramPreambleLength = 18; // The # of lines before the 1st cecilified line of code (see CecilifierExtensions.AsCecilApplication())
         
         public static CecilifierResult Process(Stream content, CecilifierOptions options)
-        {
-            var cecilifier = new Cecilifier();
-            return cecilifier.Run(content, options);
-        }
-
-        private CecilifierResult Run(Stream content, CecilifierOptions options)
         {
             using var stream = new StreamReader(content);
             var syntaxTree = CSharpSyntaxTree.ParseText(stream.ReadToEnd(), new CSharpParseOptions(LanguageVersion.CSharp10));

@@ -51,5 +51,17 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             
             Assert.That(cecilifiedCode, Contains.Substring(expectedLoad.ToString()));
         }
+        
+        [TestCase("using System; class C { public const ConsoleColor EnumConst = ConsoleColor.Blue; }", Code.Ldc_I4, "9")]
+        [TestCase("class C { public const int IntValue = 42; public const int IntValue2 = IntValue + 42; }", Code.Ldc_I4, "84")]
+        [TestCase("class C { public const string StringValue = \"foo\"; }", Code.Ldstr, "\"foo\"")]
+        public void ConstValueValue(string code, Code expectedLoad, string expectedLoadedValue)
+        {
+            var result = RunCecilifier(code);
+            using var reader = result.GeneratedCode;
+            var cecilifiedCode = reader.ReadToEnd();
+            
+            Assert.That(cecilifiedCode, Contains.Substring($"Constant = {expectedLoadedValue}"));
+        }
     }
 }

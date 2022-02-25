@@ -90,7 +90,7 @@ namespace Cecilifier.Core.AST
             var isInterfaceDef = eventSymbol.ContainingType.TypeKind == TypeKind.Interface;
             var accessorModifiers = AccessModifiersForEventAccessors(node, isInterfaceDef);
 
-            var removeMethodExps = CecilDefinitionsFactory.Method(Context, removeMethodVar, $"remove_{eventSymbol.Name}", accessorModifiers, GetSpecialType(SpecialType.System_Void), false,Array.Empty<TypeParameterSyntax>());
+            var removeMethodExps = CecilDefinitionsFactory.Method(Context, removeMethodVar, $"remove_{eventSymbol.Name}", accessorModifiers, Context.RoslynTypeSystem.SystemVoid, false,Array.Empty<TypeParameterSyntax>());
             var paramsExps = AddParameterTo(removeMethodVar, eventType);
 
             removeMethodExps = removeMethodExps.Concat(paramsExps);
@@ -115,7 +115,7 @@ namespace Cecilifier.Core.AST
             var isInterfaceDef = eventSymbol.ContainingType.TypeKind == TypeKind.Interface;
             
             var accessorModifiers = AccessModifiersForEventAccessors(node, isInterfaceDef);
-            var addMethodExps = CecilDefinitionsFactory.Method(Context, addMethodVar, $"add_{eventSymbol.Name}", accessorModifiers, GetSpecialType(SpecialType.System_Void), false, Array.Empty<TypeParameterSyntax>());
+            var addMethodExps = CecilDefinitionsFactory.Method(Context, addMethodVar, $"add_{eventSymbol.Name}", accessorModifiers, Context.RoslynTypeSystem.SystemVoid, false, Array.Empty<TypeParameterSyntax>());
 
             var paramsExps = AddParameterTo(addMethodVar, eventType);
             addMethodExps = addMethodExps.Concat(paramsExps);
@@ -238,10 +238,10 @@ namespace Cecilifier.Core.AST
 
         private IEnumerable<string> CompareExchangeMethodResolvingExps(CSharpSyntaxNode context, string backingFieldVar, out string compExcVar)
         {
-            var openCompExcVar = Context.Naming.MemberReference("openCompExc",null);
+            var openCompExcVar = Context.Naming.MemberReference("openCompExc");
             var exp1 = $"var {openCompExcVar} = {Utils.ImportFromMainModule("typeof(System.Threading.Interlocked).GetMethods().Single(m => m.Name == \"CompareExchange\" && m.IsGenericMethodDefinition)")};";
 
-            compExcVar = Context.Naming.MemberReference("compExc", null);
+            compExcVar = Context.Naming.MemberReference("compExc");
             var exp2 = $"var {compExcVar} = new GenericInstanceMethod({openCompExcVar});";
             var exp3 = $"{compExcVar}.GenericArguments.Add({backingFieldVar}.FieldType);";
             

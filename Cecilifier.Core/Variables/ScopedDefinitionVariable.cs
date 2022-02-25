@@ -3,11 +3,11 @@ using System.Collections.Generic;
 
 namespace Cecilifier.Core.Variables;
 
-public unsafe struct ScopedDefinitionVariable : IDisposable
+public unsafe readonly struct ScopedDefinitionVariable : IDisposable
 {
     private readonly List<DefinitionVariable> _definitionVariables;
     private readonly int _currentSize;
-    private delegate*<IList<DefinitionVariable>, int, void> _unregister;
+    private readonly delegate*<IList<DefinitionVariable>, int, void> _unregister;
 
     public ScopedDefinitionVariable(List<DefinitionVariable> definitionVariables, int currentSize, bool dontUnregisterTypesAndMembers = false)
     {
@@ -18,7 +18,7 @@ public unsafe struct ScopedDefinitionVariable : IDisposable
 
     public void Dispose()
     {
-        for (int i = _definitionVariables.Count - 1; i >=  _currentSize; i--)
+        for (var i = _definitionVariables.Count - 1; i >=  _currentSize; i--)
         {
             _unregister(_definitionVariables, i);
         }
@@ -27,9 +27,9 @@ public unsafe struct ScopedDefinitionVariable : IDisposable
     static void ConditionalUnregister(IList<DefinitionVariable> variables, int index)
     {
         var v = variables[index];
-        if (v.Kind == VariableMemberKind.LocalVariable || v.Kind == VariableMemberKind.Parameter || v.Kind == VariableMemberKind.TypeParameter) 
+        if (v.Kind is VariableMemberKind.LocalVariable or VariableMemberKind.Parameter or VariableMemberKind.TypeParameter) 
             variables.RemoveAt(index);
     }
             
-    static void UnconditionalUnregister(IList<DefinitionVariable> variables, int index) => variables.RemoveAt(index);
+    private static void UnconditionalUnregister(IList<DefinitionVariable> variables, int index) => variables.RemoveAt(index);
 }

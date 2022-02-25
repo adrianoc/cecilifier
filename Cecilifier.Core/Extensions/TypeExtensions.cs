@@ -2,10 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Cecilifier.Core.AST;
 using Microsoft.CodeAnalysis;
 using Mono.Cecil.Cil;
-using static Cecilifier.Core.Misc.Utils;
 
 namespace Cecilifier.Core.Extensions
 {
@@ -15,17 +13,21 @@ namespace Cecilifier.Core.Extensions
         {
             if (type is INamedTypeSymbol namedType && namedType.IsGenericType) //TODO: namedType.IsUnboundGenericType ? Open 
             {
-                typeParameters = namedType.TypeArguments.Select(typeArg => typeArg.FullyQualifiedName()).ToArray();
+                typeParameters = namedType.TypeArguments.Select(typeArg => (string)typeArg.AssemblyQualifiedName()).ToArray();
                 return Regex.Replace(namedType.ConstructedFrom.ToString(), "<.*>", "`" + namedType.TypeArguments.Length );
             }
 
             typeParameters = Array.Empty<string>();
-            return type.FullyQualifiedName();
+            return type.AssemblyQualifiedName();
         }
         
         public static string MakeByReferenceType(this string type)
         {
             return $"{type}.MakeByReferenceType()";
+        }
+        public static string MakeGenericInstanceType(this string type, string genericType)
+        {
+            return $"{type}.MakeGenericInstanceType<{genericType}>()";
         }
 
         public static bool IsPrimitiveType(this ITypeSymbol type) => type.SpecialType switch {
@@ -96,7 +98,7 @@ namespace Cecilifier.Core.Extensions
                 SpecialType.System_UInt64 => OpCodes.Stind_I8,
                 _ => type.IsReferenceType 
                     ? OpCodes.Stind_Ref 
-                    : throw new NotImplementedException($"Type = {type.Name}")
+                    : OpCodes.Stobj
             };
         }
     }

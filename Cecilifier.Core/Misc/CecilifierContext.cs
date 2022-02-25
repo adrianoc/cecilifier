@@ -20,12 +20,14 @@ namespace Cecilifier.Core.Misc
 
         private readonly string identation;
         private int startLineNumber;
+        private RoslynTypeSystem roslynTypeSystem;
 
         public CecilifierContext(SemanticModel semanticModel, CecilifierOptions options,  int startingLine, byte indentation = 3)
         {
             SemanticModel = semanticModel;
             Options = options;
             DefinitionVariables = new DefinitionVariableManager();
+            roslynTypeSystem = new RoslynTypeSystem(this);
             TypeResolver = new TypeResolverImpl(this);
             Mappings = new List<Mapping>();
             CecilifiedLineNumber = startingLine;
@@ -40,6 +42,8 @@ namespace Cecilifier.Core.Misc
         }
 
         public ITypeResolver TypeResolver { get; }
+
+        public ref readonly RoslynTypeSystem RoslynTypeSystem => ref roslynTypeSystem;
 
         public SemanticModel SemanticModel { get; }
         public CecilifierOptions Options { get; }
@@ -75,11 +79,6 @@ namespace Cecilifier.Core.Misc
             return SemanticModel.GetTypeInfo(expressionSyntax);
         }
 
-        public INamedTypeSymbol GetSpecialType(SpecialType specialType)
-        {
-            return SemanticModel.Compilation.GetSpecialType(specialType);
-        }
-
         public void WriteCecilExpression(string expression)
         {
             CecilifiedLineNumber += expression.CountNewLines();
@@ -104,7 +103,7 @@ namespace Cecilifier.Core.Misc
             }
             else
             {
-                output.Last.Value = output.Last.Value + Environment.NewLine;    
+                output.Last.Value = output.Last.Value + Environment.NewLine;
             }
             CecilifiedLineNumber++;
         }

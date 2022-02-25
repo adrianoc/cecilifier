@@ -41,12 +41,9 @@ public class DefinitionVariable : IEquatable<DefinitionVariable>
 
     public override string ToString()
     {
-        if (ParentName == null)
-        {
-            return $"(Kind = {Kind}) {MemberName}";
-        }
-
-        return $"(Kind = {Kind}) {ParentName}.{MemberName}";
+        return ParentName == null 
+            ? $"(Kind = {Kind}) {MemberName}" 
+            : $"(Kind = {Kind}) {ParentName}.{MemberName}";
     }
 
     public override bool Equals(object obj)

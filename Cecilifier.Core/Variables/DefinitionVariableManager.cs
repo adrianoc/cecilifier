@@ -5,9 +5,9 @@ namespace Cecilifier.Core.Variables;
 
 public class DefinitionVariableManager
 {
-    private readonly List<DefinitionVariable> _definitionStack = new List<DefinitionVariable>();
+    private readonly List<DefinitionVariable> _definitionStack = new();
 
-    private readonly List<DefinitionVariable> _definitionVariables = new List<DefinitionVariable>();
+    private readonly List<DefinitionVariable> _definitionVariables = new();
 
     public MethodDefinitionVariable RegisterMethod(string parentName, string methodName, string[] parameterTypes, string definitionVariableName)
     {

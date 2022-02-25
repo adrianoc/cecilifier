@@ -10,5 +10,5 @@ IL_000f: stloc V_0
 IL_0013: ldloc V_0
 IL_0017: ldarg.0
 IL_0018: ldloc V_0
-IL_001c: callvirt System.Void PreIncrementProp::set_Prop(System.Int32)
+IL_001c: call System.Void PreIncrementProp::set_Prop(System.Int32)
 IL_0021: ret

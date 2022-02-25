@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.Extensions;
@@ -31,12 +31,12 @@ namespace Cecilifier.Core.AST
             var enumSymbol = Context.SemanticModel.GetDeclaredSymbol(node);
             Utils.EnsureNotNull(enumSymbol, $"Something really bad happened. Roslyn failed to resolve the symbol for the enum {node.Identifier.Text}");
             
-            var parentName = enumSymbol.ContainingSymbol.FullyQualifiedName();
+            var parentName = (string)enumSymbol.ContainingSymbol.AssemblyQualifiedName();
             using (Context.DefinitionVariables.WithCurrent(parentName, node.Identifier.ValueText, VariableMemberKind.Type,enumType))
             {
                 //.class private auto ansi MyEnum
-                var fieldVar = Context.Naming.LocalVariable(node, "valueField");
-                var valueFieldExp = CecilDefinitionsFactory.Field(enumType, fieldVar, "value__", Context.TypeResolver.Bcl.System.Int32,
+                var fieldVar = Context.Naming.LocalVariable(node);
+                var valueFieldExp = CecilDefinitionsFactory.Field(Context, node.Identifier.Text, enumType, fieldVar, "value__", Context.TypeResolver.Bcl.System.Int32,
                     "FieldAttributes.SpecialName | FieldAttributes.RTSpecialName | FieldAttributes.Public");
                 AddCecilExpressions(valueFieldExp);
 
@@ -53,8 +53,8 @@ namespace Cecilifier.Core.AST
             var enumMemberValue = _memberCollector[node];
             var enumVarDef = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Type);
 
-            var fieldVar = Context.Naming.LocalVariable(node, $"em_{enumVarDef.MemberName}");
-            var exp = CecilDefinitionsFactory.Field(enumVarDef.VariableName, fieldVar, node.Identifier.ValueText, enumVarDef.VariableName,
+            var fieldVar = Context.Naming.LocalVariable(node);
+            var exp = CecilDefinitionsFactory.Field(Context, enumVarDef.MemberName, enumVarDef.VariableName, fieldVar, node.Identifier.ValueText, enumVarDef.VariableName,
                 "FieldAttributes.Static | FieldAttributes.Literal | FieldAttributes.Public | FieldAttributes.HasDefault", enumMemberValue);
             AddCecilExpressions(exp);
             

@@ -23,6 +23,12 @@ namespace Cecilifier.Core.Mappings
         {
             EndSourceElement();
         }
+
+        public void Discard()
+        {
+            _context.Mappings.Remove(_current);
+            _current = null;
+        }
             
         internal static LineInformationTracker Track(IVisitorContext context, SyntaxNode node) => new LineInformationTracker(context, node);
             
@@ -44,7 +50,8 @@ namespace Cecilifier.Core.Mappings
         
         private void EndSourceElement()
         {
-            _current.Cecilified.End.Line = _context.CecilifiedLineNumber;
+            if (_current != null)
+                _current.Cecilified.End.Line = _context.CecilifiedLineNumber;
         }
     }
 }

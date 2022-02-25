@@ -191,13 +191,17 @@ namespace Cecilifier.Core.AST
 
             WriteExceptionHandlers(exceptionHandlerTable);
         }
-        public override void VisitLocalFunctionStatement(LocalFunctionStatementSyntax node) => node.Accept(new MethodDeclarationVisitor(Context));
 
+        public override void VisitThrowStatement(ThrowStatementSyntax node)
+        {
+            CecilExpressionFactory.EmitThrow(Context, _ilVar, node.Expression);
+        }
+
+        public override void VisitLocalFunctionStatement(LocalFunctionStatementSyntax node) => node.Accept(new MethodDeclarationVisitor(Context));
         public override void VisitForEachStatement(ForEachStatementSyntax node) { LogUnsupportedSyntax(node); }
         public override void VisitWhileStatement(WhileStatementSyntax node) { LogUnsupportedSyntax(node); }
         public override void VisitLockStatement(LockStatementSyntax node) { LogUnsupportedSyntax(node); }
         public override void VisitUnsafeStatement(UnsafeStatementSyntax node) { LogUnsupportedSyntax(node); }
-        public override void VisitThrowStatement(ThrowStatementSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitCheckedStatement(CheckedStatementSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitContinueStatement(ContinueStatementSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitDoStatement(DoStatementSyntax node) => LogUnsupportedSyntax(node);
