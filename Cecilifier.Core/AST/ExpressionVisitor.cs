@@ -190,8 +190,8 @@ namespace Cecilifier.Core.AST
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, node.Initializer.Expressions.Count);
             }
 
-            var elementTypeInfo = Context.GetTypeInfo(node.Type.ElementType);
-            ProcessArrayCreation(elementTypeInfo.Type, node.Initializer);
+            var arrayTypeSymbol = (IArrayTypeSymbol) Context.GetTypeInfo(node.Type).Type;
+            ProcessArrayCreation(arrayTypeSymbol.ElementType, node.Initializer);
         }
 
         public override void VisitImplicitArrayCreationExpression(ImplicitArrayCreationExpressionSyntax node)

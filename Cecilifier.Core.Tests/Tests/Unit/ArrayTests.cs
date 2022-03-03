@@ -11,6 +11,7 @@ public class ArrayTests : CecilifierUnitTestBase
     [TestCase("S", Code.Ldelem_Any, ", st_S_\\d+")]
     [TestCase("byte", Code.Ldelem_I1)]
     [TestCase("char", Code.Ldelem_I2)]
+    [TestCase("short", Code.Ldelem_I2)]
     [TestCase("int", Code.Ldelem_I4)]
     [TestCase("long", Code.Ldelem_I8)]
     [TestCase("float", Code.Ldelem_R4)]
@@ -33,6 +34,7 @@ public class ArrayTests : CecilifierUnitTestBase
     [TestCase("C", Code.Stelem_Ref)]
     [TestCase("byte", Code.Stelem_I1)]
     [TestCase("char", Code.Stelem_I2)]
+    [TestCase("short", Code.Stelem_I2)]
     [TestCase("int", Code.Stelem_I4)]
     [TestCase("long", Code.Stelem_I8)]
     [TestCase("float", Code.Stelem_R4)]
@@ -51,5 +53,32 @@ public class ArrayTests : CecilifierUnitTestBase
                 @"\1Ldc_I4, 0\);\s+" +
                 @"\1Ldarg_1.+\s+" +
                 $@"\1{code}{operand}\);\s+"));
+    }
+
+    [TestCase("System.String")]
+    [TestCase("C", @"cls_C_\d+")]
+    [TestCase("System.Byte")]
+    [TestCase("System.Char")]
+    [TestCase("System.Int16")]
+    [TestCase("System.Int32")]
+    [TestCase("System.Int64")]
+    [TestCase("System.Single")]
+    [TestCase("System.Double")]
+    [TestCase("System.DateTime")]
+    [TestCase("S", @"st_S_\d+")]
+    public void TestJaggedArrayCreation(string elementType, string operand=null)
+    {
+        var result = RunCecilifier($@"struct S {{}} class C {{ void M({elementType} value) {{ var data = new {elementType}[42][]; }} }}");
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+
+        var operandTypeMatch = operand ?? $"assembly.MainModule.Type{elementType}";
+
+        Assert.That(cecilifiedCode, Does.Match($@"new VariableDefinition\({operandTypeMatch}.MakeArrayType\(\).MakeArrayType\(\)\);\s+"));
+        
+        Assert.That(
+            cecilifiedCode, 
+            Does.Match(
+                @"(.+\.Emit\(OpCodes\.)Ldc_I4, 42\);\s+" +
+                $@"\1Newarr, {operandTypeMatch}.MakeArrayType\(\)\);\s+"));
     }
 }

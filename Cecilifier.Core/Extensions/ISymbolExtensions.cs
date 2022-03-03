@@ -35,7 +35,8 @@ namespace Cecilifier.Core.Extensions
             IPropertySymbol property => property.Type,
             IEventSymbol @event => @event.Type,
             IFieldSymbol field => field.Type,
-            _ => throw new NotSupportedException($"symbol {symbol.ToDisplayString()} is not supported.")
+            ILocalSymbol local => local.Type,
+            _ => throw new NotSupportedException($"({symbol.Kind}) symbol {symbol.ToDisplayString()} is not supported.")
         };
         
         private static ITypeSymbol GetElementType(this ISymbol symbol) => symbol switch
