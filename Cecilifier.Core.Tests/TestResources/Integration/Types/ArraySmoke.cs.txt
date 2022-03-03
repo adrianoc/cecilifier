@@ -7,5 +7,7 @@
         var intArrayLocal = new int[2];
         System.Console.WriteLine(intArrayLocal[0]);
         M(new [] { 3 }, new char [4][]); 
+        
+        charJaggedArrayParameter[42][24] = 'B';
     }
 }

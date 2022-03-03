@@ -50,7 +50,10 @@ namespace Cecilifier.Core.AST
             if (!HandleIndexer(node, lastInstructionLoadingRhs))
             {
                 Context.MoveLinesToEnd(InstructionPrecedingValueToLoad, lastInstructionLoadingRhs);
-                Context.EmitCilInstruction(ilVar, OpCodes.Stelem_Ref);
+                var arrayElementType = Context.SemanticModel.GetTypeInfo(node).Type.EnsureNotNull();
+                var stelemOpCode = arrayElementType.StelemOpCode();
+                var operand = stelemOpCode == OpCodes.Stelem_Any ? Context.TypeResolver.Resolve(arrayElementType) : null ;
+                Context.EmitCilInstruction(ilVar, stelemOpCode, operand);
             }
         }
      

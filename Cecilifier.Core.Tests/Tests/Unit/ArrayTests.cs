@@ -81,4 +81,32 @@ public class ArrayTests : CecilifierUnitTestBase
                 @"(.+\.Emit\(OpCodes\.)Ldc_I4, 42\);\s+" +
                 $@"\1Newarr, {operandTypeMatch}.MakeArrayType\(\)\);\s+"));
     }
+    
+    [TestCase("string", Code.Stelem_Ref)]
+    [TestCase("C", Code.Stelem_Ref)]
+    [TestCase("byte", Code.Stelem_I1)]
+    [TestCase("char", Code.Stelem_I2)]
+    [TestCase("short", Code.Stelem_I2)]
+    [TestCase("int", Code.Stelem_I4)]
+    [TestCase("long", Code.Stelem_I8)]
+    [TestCase("float", Code.Stelem_R4)]
+    [TestCase("double", Code.Stelem_R8)]
+    [TestCase("System.DateTime", Code.Stelem_Any, ", assembly.MainModule.TypeSystem.DateTime")]
+    [TestCase("S", Code.Stelem_Any, @", st_S_\d+")]
+    public void TestJaggedArrayAssignment(string elementType, Code code, string operand="")
+    {
+        var result = RunCecilifier($@"struct S {{}} class C {{ void M({elementType} [][]array, {elementType} value) {{ array[0][1] = value; }} }}");
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+        
+        Assert.That(
+            cecilifiedCode, 
+            Does.Match(
+                @"//array\[0\]\[1\] = value;\s+" + 
+                @"(.+Emit\(OpCodes\.)Ldarg_1\);\s+" + 
+                @"\1Ldc_I4, 0.+\s+" + 
+                @"\1Ldelem_Ref.+\s+" + 
+                @"\1Ldc_I4, 1.+\s+" + 
+                @"\1Ldarg_2.+\s+" + 
+                $@"\1{code}{operand}.+;"));
+    }
 }

@@ -25,7 +25,7 @@ namespace Cecilifier.Core.Extensions
             if (elementType == null)
                 return namespaceQualifiedName;
             
-            return elementType.ContainingAssembly.Name.Contains("CoreLib") ? namespaceQualifiedName : $"{namespaceQualifiedName}, {type.ContainingAssembly.Name}";
+            return elementType.ContainingAssembly.Name.Contains("CoreLib") ? namespaceQualifiedName : $"{namespaceQualifiedName}, {type.GetElementType().ContainingAssembly.Name}";
         }
 
         public static ITypeSymbol GetMemberType(this ISymbol symbol) => symbol switch

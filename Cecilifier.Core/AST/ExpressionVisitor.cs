@@ -923,24 +923,6 @@ namespace Cecilifier.Core.AST
             Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, tempLocalName);
         }
 
-        private OpCode StelemOpCodeFor(ITypeSymbol type)
-        {
-            return type.SpecialType switch
-            {
-                SpecialType.System_Byte => OpCodes.Stelem_I1,
-                SpecialType.System_Char => OpCodes.Stelem_I2,
-                SpecialType.System_Int16 => OpCodes.Stelem_I2,
-                SpecialType.System_Int32 => OpCodes.Stelem_I4,
-                SpecialType.System_Int64 => OpCodes.Stelem_I8,
-                SpecialType.System_Single => OpCodes.Stelem_R4,
-                SpecialType.System_Double => OpCodes.Stelem_R8,
-                SpecialType.None => type.IsValueType ? OpCodes.Stelem_Any : OpCodes.Stelem_Ref, // Any => Custom structs, Ref => class.
-                SpecialType.System_String => OpCodes.Stelem_Ref,
-                SpecialType.System_Object => OpCodes.Stelem_Ref,
-                _ =>   type.IsValueType ? OpCodes.Stelem_Any : throw new Exception($"Element type {type.Name} not supported.")
-            };
-        }
-
         /*
          * Support for scenario in which a method is being referenced before it has been declared. This can happen for instance in code like:
          *
@@ -1406,7 +1388,7 @@ namespace Cecilifier.Core.AST
         {
             AddCilInstruction(ilVar, OpCodes.Newarr, elementType);
 
-            var stelemOpCode = StelemOpCodeFor(elementType);
+            var stelemOpCode = elementType.StelemOpCode();
             for (var i = 0; i < initializer?.Expressions.Count; i++)
             {
                 Context.EmitCilInstruction(ilVar, OpCodes.Dup);
