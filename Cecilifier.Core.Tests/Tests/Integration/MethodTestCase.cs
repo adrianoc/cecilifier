@@ -163,6 +163,12 @@ namespace Cecilifier.Core.Tests.Integration
         {
             AssertResourceTest("Members/Methods/RefLocals");
         }
+        
+        [Test]
+        public void TestRefProperties()
+        {
+            AssertResourceTest("Members/Methods/RefProperties");
+        }
 
         private void AssertCecilifiedCodeContainsSnippet(string code, string expectedSnippet)
         {
