@@ -336,7 +336,7 @@ namespace Cecilifier.Core.AST
                     case SyntaxKind.StaticKeyword: return new[] { "Static" };
                     case SyntaxKind.AbstractKeyword: return new[] { "Abstract" };
                     case SyntaxKind.ConstKeyword: return new[] { "Literal", "Static" };
-                    //case SyntaxKind.ReadOnlyKeyword: return FieldAttributes.InitOnly;
+                    case SyntaxKind.ReadOnlyKeyword: return new[] { "InitOnly" };
                 }
 
                 throw new ArgumentException($"Unsupported attribute name: {token.Kind().ToString()}");
@@ -636,7 +636,7 @@ namespace Cecilifier.Core.AST
             {
                 var attrsExp = Context.SemanticModel.GetSymbolInfo(attribute.Name).Symbol.IsDllImportCtor()
                     ? ProcessDllImportAttribute(attribute, varName)
-                    : ProcessNormalMethodAttribute(attribute, varName);
+                    : ProcessNormalMemberAttribute(attribute, varName);
                 
                 AddCecilExpressions(attrsExp);
             }
@@ -763,7 +763,7 @@ namespace Cecilifier.Core.AST
             return $"PInvokeAttributes.{enumMemberName}";
         }
 
-        private IEnumerable<string> ProcessNormalMethodAttribute(AttributeSyntax attribute, string varName)
+        private IEnumerable<string> ProcessNormalMemberAttribute(AttributeSyntax attribute, string varName)
         {
             var attrsExp = CecilDefinitionsFactory.Attribute(varName, Context, attribute, (attrType, attrArgs) =>
             {
