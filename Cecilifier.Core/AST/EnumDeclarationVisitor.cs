@@ -32,7 +32,7 @@ namespace Cecilifier.Core.AST
             var enumSymbol = Context.SemanticModel.GetDeclaredSymbol(node);
             Utils.EnsureNotNull(enumSymbol, $"Something really bad happened. Roslyn failed to resolve the symbol for the enum {node.Identifier.Text}");
             
-            var parentName = (string)enumSymbol.ContainingSymbol.AssemblyQualifiedName();
+            var parentName = enumSymbol.ContainingSymbol.AssemblyQualifiedName();
             using (Context.DefinitionVariables.WithCurrent(parentName, node.Identifier.ValueText, VariableMemberKind.Type,enumType))
             {
                 //.class private auto ansi MyEnum

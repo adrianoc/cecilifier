@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Cecilifier.Core.Extensions;
@@ -71,9 +71,7 @@ namespace Cecilifier.Core.AST
                 return null;
 
             var id = Context.Naming.RequiredModifier();
-            var mod_req = $"var {id} = new RequiredModifierType({ImportExpressionForType(typeof(IsVolatile))}, {originalType});";
-            AddCecilExpression(mod_req);
-            
+            AddCecilExpression($"var {id} = new RequiredModifierType({ImportExpressionForType(typeof(IsVolatile))}, {originalType});");
             return id;
         }
     }
