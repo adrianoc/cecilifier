@@ -54,26 +54,31 @@ namespace Cecilifier.Core.AST
 
         public override void VisitEnumDeclaration(EnumDeclarationSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             node.Accept(new EnumDeclarationVisitor(Context));
         }
         
         public override void VisitFieldDeclaration(FieldDeclarationSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             new FieldDeclarationVisitor(Context).Visit(node);
         }
 
         public override void VisitIndexerDeclaration(IndexerDeclarationSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             new PropertyDeclarationVisitor(Context).Visit(node);
         }
 
         public override void VisitPropertyDeclaration(PropertyDeclarationSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             new PropertyDeclarationVisitor(Context).Visit(node);
         }
 
         public override void VisitConstructorDeclaration(ConstructorDeclarationSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             new ConstructorDeclarationVisitor(Context).Visit(node);
         }
 
@@ -99,6 +104,7 @@ namespace Cecilifier.Core.AST
 
         public override void VisitEventFieldDeclaration(EventFieldDeclarationSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             new EventDeclarationVisitor(Context).Visit(node);
         }
 

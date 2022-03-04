@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.Extensions;
+using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis.CSharp;
@@ -48,6 +49,7 @@ namespace Cecilifier.Core.AST
 
         public override void VisitEnumMemberDeclaration(EnumMemberDeclarationSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             // Adds a field like:
             // .field public static literal valuetype xxx.MyEnum Second = int32(1)
             var enumMemberValue = _memberCollector[node];

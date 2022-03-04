@@ -1,3 +1,4 @@
+using Cecilifier.Core.Mappings;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -12,6 +13,7 @@ namespace Cecilifier.Core.AST
         
         public override void VisitConversionOperatorDeclaration(ConversionOperatorDeclarationSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             var operatorMethodName = node.ImplicitOrExplicitKeyword.IsKind(SyntaxKind.ExplicitKeyword)
                 ? "op_Explicit"
                 : "op_Implicit";
@@ -27,6 +29,7 @@ namespace Cecilifier.Core.AST
 
         public override void VisitOperatorDeclaration(OperatorDeclarationSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             var declaredSymbol = Context.SemanticModel.GetDeclaredSymbol(node);
             Misc.Utils.EnsureNotNull(declaredSymbol, $"Failed to get declared symbol for {node}");
 

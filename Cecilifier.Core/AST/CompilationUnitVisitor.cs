@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.Extensions;
+using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.Variables;
@@ -78,11 +79,12 @@ namespace Cecilifier.Core.AST
 
         public override void VisitEnumDeclaration(EnumDeclarationSyntax node)
         {
-            new EnumDeclarationVisitor(Context).Visit(node);
+            new TypeDeclarationVisitor(Context).Visit(node);
         }
 
         public override void VisitDelegateDeclaration(DelegateDeclarationSyntax node)
         {
+            using var __ = LineInformationTracker.Track(Context, node);            
             Context.WriteNewLine();
             Context.WriteComment($"Delegate: {node.Identifier.Text}");
             var typeVar = Context.Naming.Delegate(node);

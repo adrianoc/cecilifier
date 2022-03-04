@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using Cecilifier.Core.Extensions;
+using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.Variables;
@@ -148,8 +149,9 @@ namespace Cecilifier.Core.AST
                 
                 if (!fieldDeclaration.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword)))
                 {
+                    using var _ = LineInformationTracker.Track(Context, fieldDeclaration);
                     Context.WriteNewLine();
-                    Context.WriteComment(fieldDeclaration.ToString());
+                    Context.WriteComment(fieldDeclaration.HumanReadableSummary() );
                     if (dec.Initializer.Value.IsKind(SyntaxKind.IndexExpression))
                     {
                         // code is something like `Index field = ^5`; 

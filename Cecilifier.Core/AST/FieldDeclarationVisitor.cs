@@ -1,7 +1,8 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Cecilifier.Core.Extensions;
+using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
@@ -46,6 +47,7 @@ namespace Cecilifier.Core.AST
 
             foreach (var field in variableDeclarationSyntax.Variables)
             {
+                using var _ = LineInformationTracker.Track(Context, field);
                 // skip field already processed due to forward references.
                 var fieldDeclarationVariable = Context.DefinitionVariables.GetVariable(field.Identifier.Text, VariableMemberKind.Field, declaringType.Identifier.Text);
                 if (fieldDeclarationVariable.IsValid)

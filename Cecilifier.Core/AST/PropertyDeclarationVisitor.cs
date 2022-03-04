@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Cecilifier.Core.Extensions;
+using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.Variables;
@@ -26,6 +27,7 @@ namespace Cecilifier.Core.AST
             if (PropertyAlreadyProcessed(node))
                 return;
             
+            using var _ = LineInformationTracker.Track(Context, node);
             Context.WriteNewLine();
             Context.WriteComment($"** Property indexer **");
             
@@ -64,6 +66,7 @@ namespace Cecilifier.Core.AST
             if (PropertyAlreadyProcessed(node))
                 return;
             
+            using var _ = LineInformationTracker.Track(Context, node);
             Context.WriteNewLine();
             Context.WriteComment($"** Property: {node.Identifier} **");
             var propertyType = ResolveType(node.Type);
@@ -109,6 +112,7 @@ namespace Cecilifier.Core.AST
         
         private void ProcessPropertyAccessors(BasePropertyDeclarationSyntax node, string propertyDeclaringTypeVar, string propName, string propertyType, string propDefVar, List<ParamData> parameters, ArrowExpressionClauseSyntax? arrowExpression)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             var propInfo = (IPropertySymbol) Context.SemanticModel.GetDeclaredSymbol(node);
             var accessorModifiers = node.Modifiers.MethodModifiersToCecil((targetEnum, modifiers, defaultAccessibility) => ModifiersToCecil(modifiers, targetEnum, defaultAccessibility), "MethodAttributes.SpecialName", propInfo.GetMethod ?? propInfo.SetMethod);
 
