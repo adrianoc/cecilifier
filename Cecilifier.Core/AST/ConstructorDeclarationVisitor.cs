@@ -80,44 +80,31 @@ namespace Cecilifier.Core.AST
 
         internal void DefaultCtorInjector(string typeDefVar, ClassDeclarationSyntax declaringClass)
         {
+            DefaultCtorInjector(typeDefVar, declaringClass.Identifier.Text, DefaultCtorAccessibilityFor(declaringClass), ResolveDefaultCtorFor(typeDefVar, declaringClass), ctorBodyIL =>
+            {
+                ProcessFieldInitialization(declaringClass, ctorBodyIL);
+            });
+        }
+
+        internal void DefaultCtorInjector(string typeDefVar, string typeName, string ctorAccessibility, string baseCtor, Action<string> processInitializers)
+        {
             Context.WriteNewLine();
-            Context.WriteComment($"** Constructor: {declaringClass.Identifier}() **");
+            Context.WriteComment($"** Constructor: {typeName}() **");
             
             var ctorLocalVar = AddOrUpdateParameterlessCtorDefinition(
-                                    declaringClass.Identifier.Text,
-                                    DefaultCtorAccessibilityFor(declaringClass),
-                                    Context.Naming.Constructor(declaringClass, false));
+                typeName,
+                ctorAccessibility,
+                Context.Naming.SyntheticVariable("ctor", ElementKind.Constructor));
                                     
             AddCecilExpression($"{typeDefVar}.Methods.Add({ctorLocalVar});");
 
             var ctorBodyIL = Context.Naming.ILProcessor("ctor");
             AddCecilExpression($@"var {ctorBodyIL} = {ctorLocalVar}.Body.GetILProcessor();");
             
-            ProcessFieldInitialization(declaringClass, ctorBodyIL);
+            processInitializers?.Invoke(ctorBodyIL);
             Context.EmitCilInstruction(ctorBodyIL, OpCodes.Ldarg_0);
-            string operand = ResolveDefaultCtorFor(typeDefVar, declaringClass);
-            Context.EmitCilInstruction(ctorBodyIL, OpCodes.Call, operand);
+            Context.EmitCilInstruction(ctorBodyIL, OpCodes.Call, baseCtor);
             
-            Context.EmitCilInstruction(ctorBodyIL, OpCodes.Ret);
-        }
-        
-        internal void DefaultCtorInjector2(string typeDefVar, string typeName)
-        {
-            Context.WriteNewLine();
-            Context.WriteComment($"** Constructor: {typeName}() **");
-            var ctorLocalVar = AddOrUpdateParameterlessCtorDefinition(
-                                            typeName,
-                                            "MethodAttributes.Public",
-                                            Context.Naming.SyntheticVariable(typeName, ElementKind.StaticConstructor));
-
-            AddCecilExpression($"{typeDefVar}.Methods.Add({ctorLocalVar});");
-
-            var ctorBodyIL = Context.Naming.ILProcessor("ctor");
-            AddCecilExpression($@"var {ctorBodyIL} = {ctorLocalVar}.Body.GetILProcessor();");
-            
-            Context.EmitCilInstruction(ctorBodyIL, OpCodes.Ldarg_0);
-            string operand = Utils.ImportFromMainModule($"TypeHelpers.DefaultCtorFor({typeDefVar}.BaseType)");
-            Context.EmitCilInstruction(ctorBodyIL, OpCodes.Call, operand);
             Context.EmitCilInstruction(ctorBodyIL, OpCodes.Ret);
         }
 
