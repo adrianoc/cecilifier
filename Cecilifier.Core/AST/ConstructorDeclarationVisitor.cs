@@ -154,6 +154,30 @@ namespace Cecilifier.Core.AST
 
                 Context.EmitCilInstruction(ctorBodyIL, fieldStoreOpCode, fieldVarDef.VariableName);
             }
+            
+            // Handles property initialization...
+            foreach (var dec in declaringClass.Members.OfType<PropertyDeclarationSyntax>())
+            {
+                if (dec.Initializer == null)
+                    continue;
+                
+                using var _ = LineInformationTracker.Track(Context, dec);
+                Context.WriteNewLine();
+                Context.WriteComment(dec.HumanReadableSummary());
+             
+                if (!dec.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword))) 
+                    Context.EmitCilInstruction(ctorBodyIL, OpCodes.Ldarg_0);
+
+                if (ExpressionVisitor.Visit(Context, ctorBodyIL, dec.Initializer))
+                    continue;
+
+                var backingFieldVar = Context.DefinitionVariables.GetVariable(Utils.BackingFieldNameForAutoProperty(dec.Identifier.ValueText), VariableMemberKind.Field, declaringClass.Identifier.Text);
+                var fieldStoreOpCode = dec.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword))
+                    ? OpCodes.Stsfld
+                    : OpCodes.Stfld;
+
+                Context.EmitCilInstruction(ctorBodyIL, fieldStoreOpCode, backingFieldVar.VariableName);
+            }
         }
 
         private bool HandleSystemIndexInitialization(VariableDeclaratorSyntax dec, TypeDeclarationSyntax declaringType, string ctorBodyIL)
