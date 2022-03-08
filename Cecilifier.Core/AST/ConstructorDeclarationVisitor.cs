@@ -134,24 +134,15 @@ namespace Cecilifier.Core.AST
                 if (dec.Initializer == null)
                     continue;
                 
-                if (!fieldDeclaration.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword)))
-                {
-                    using var _ = LineInformationTracker.Track(Context, fieldDeclaration);
-                    Context.WriteNewLine();
-                    Context.WriteComment(fieldDeclaration.HumanReadableSummary() );
-                    if (dec.Initializer.Value.IsKind(SyntaxKind.IndexExpression))
-                    {
-                        // code is something like `Index field = ^5`; 
-                        // in this case we need to load the address of the field since the expression ^5 (IndexerExpression) will result in a call to System.Index ctor (which is a value type and expects
-                        // the address of the value type to be in the top of the stack
-                        string operand = Context.DefinitionVariables.GetVariable(dec.Identifier.Text, VariableMemberKind.Field, declaringClass.Identifier.Text).VariableName;
-                        Context.EmitCilInstruction(ctorBodyIL, OpCodes.Ldflda, operand);
-                        ExpressionVisitor.Visit(Context, ctorBodyIL, dec.Initializer);
-                        return;
-                    }
+                using var _ = LineInformationTracker.Track(Context, fieldDeclaration);
+                Context.WriteNewLine();
+                Context.WriteComment(fieldDeclaration.HumanReadableSummary());
 
+                if (HandleSystemIndexInitialization(dec, declaringClass, ctorBodyIL))
+                    continue;
+                
+                if (!fieldDeclaration.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword))) 
                     Context.EmitCilInstruction(ctorBodyIL, OpCodes.Ldarg_0);
-                }
 
                 if (ExpressionVisitor.Visit(Context, ctorBodyIL, dec.Initializer))
                     continue;
@@ -163,6 +154,20 @@ namespace Cecilifier.Core.AST
 
                 Context.EmitCilInstruction(ctorBodyIL, fieldStoreOpCode, fieldVarDef.VariableName);
             }
+        }
+
+        private bool HandleSystemIndexInitialization(VariableDeclaratorSyntax dec, TypeDeclarationSyntax declaringType, string ctorBodyIL)
+        {
+            if (dec.Initializer == null || !dec.Initializer.Value.IsKind(SyntaxKind.IndexExpression))
+                return false;
+
+            // code is something like `Index field = ^5`; 
+            // in this case we need to load the address of the field since the expression ^5 (IndexerExpression) will result in a call to System.Index ctor (which is a value type and expects
+            // the address of the value type to be in the top of the stack
+            var operand = Context.DefinitionVariables.GetVariable(dec.Identifier.Text, VariableMemberKind.Field, declaringType.Identifier.Text).VariableName;
+            Context.EmitCilInstruction(ctorBodyIL, OpCodes.Ldflda, operand);
+            ExpressionVisitor.Visit(Context, ctorBodyIL, dec.Initializer);
+            return true;
         }
 
         private string ResolveDefaultCtorFor(string typeDefVar, BaseTypeDeclarationSyntax type)
