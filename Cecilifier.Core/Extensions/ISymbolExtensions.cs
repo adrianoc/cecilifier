@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Misc;
@@ -99,6 +100,14 @@ namespace Cecilifier.Core.Extensions
                 throw new System.NotSupportedException("");
 
             return symbol;
+        }
+        
+        public static TTarget EnsureNotNull<TSource, TTarget>([NotNull][NotNullIfNotNull("symbol")] this TSource symbol, [CallerArgumentExpression("symbol")] string exp = null) where TSource: ISymbol where TTarget : TSource
+        {
+            if (symbol == null)
+                throw new NullReferenceException(exp);
+
+            return (TTarget) symbol;
         }
 
         public static bool IsDllImportCtor(this ISymbol self) => self != null && self.ContainingType.Name == "DllImportAttribute";

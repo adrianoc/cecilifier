@@ -104,7 +104,6 @@ namespace Cecilifier.Core.AST
 
         public override void VisitEventFieldDeclaration(EventFieldDeclarationSyntax node)
         {
-            using var _ = LineInformationTracker.Track(Context, node);
             new EventDeclarationVisitor(Context).Visit(node);
         }
 

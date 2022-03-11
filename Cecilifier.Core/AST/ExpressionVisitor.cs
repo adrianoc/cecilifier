@@ -274,7 +274,7 @@ namespace Cecilifier.Core.AST
             var expSymbol = Context.SemanticModel.GetSymbolInfo(exp).Symbol;
             if (expSymbol is IEventSymbol @event)
             {
-                AddMethodCall(ilVar, @event.AddMethod, node.IsAccessOnThisOrObjectCreation());
+                AddMethodCall(ilVar, node.OperatorToken.IsKind(SyntaxKind.PlusEqualsToken) ? @event.AddMethod : @event.RemoveMethod, node.IsAccessOnThisOrObjectCreation());
             }
         }
 
@@ -1164,6 +1164,7 @@ namespace Cecilifier.Core.AST
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
             }
 
+            EnsureMethodAvailable(Context.Naming.SyntheticVariable(node.Identifier.Text, ElementKind.Method), method.OverriddenMethod ?? method.OriginalDefinition, Array.Empty<TypeParameterSyntax>());
             var exps = CecilDefinitionsFactory.InstantiateDelegate(Context, ilVar, delegateType, method.MethodResolverExpression(Context));
             AddCecilExpressions(exps);
         }

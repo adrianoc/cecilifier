@@ -4,6 +4,14 @@ public struct Constants
 {
     public static ContextFlagsValues ContextFlags = new();
     public static ParameterAttributesValues ParameterAttributes = new();
+    public static CecilCommonConstants CommonCecilConstants = new();
+
+    public struct CecilCommonConstants
+    {
+        public readonly string InterfaceMethodAttributes = "MethodAttributes.SpecialName | MethodAttributes.Public | MethodAttributes.NewSlot | MethodAttributes.Virtual | MethodAttributes.Abstract | MethodAttributes.HideBySig";
+
+        public CecilCommonConstants() { }
+    }
     
     public struct ParameterAttributesValues
     {
