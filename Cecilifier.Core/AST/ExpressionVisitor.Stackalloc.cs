@@ -52,8 +52,9 @@ partial class ExpressionVisitor
         
         if (rankNode.IsKind(SyntaxKind.NumericLiteralExpression) && arrayElementType.Type.IsPrimitiveType())
         {
-            sizeInBytes = (uint) Int32.Parse(rankNode.GetFirstToken().Text) * arrayElementTypeSize;
-            stackallocSpanAssignmentTracker.RememberConstantAllocationLength(sizeInBytes);
+            var elementCount = Int32.Parse(rankNode.GetFirstToken().Text);
+            sizeInBytes = (uint) elementCount * arrayElementTypeSize;
+            stackallocSpanAssignmentTracker.RememberConstantElementCount(elementCount);
             Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, sizeInBytes);
             Context.EmitCilInstruction(ilVar, OpCodes.Conv_U);
             Context.EmitCilInstruction(ilVar, OpCodes.Localloc);
@@ -61,10 +62,10 @@ partial class ExpressionVisitor
         else
         {
             rankNode.Accept(this);
-            if (stackallocSpanAssignmentTracker.AddVariableToStoreAllocatedBytesLengthIfRequired(Context, rankNode))
+            if (stackallocSpanAssignmentTracker.AddVariableToStoreElementCountIfRequired(Context, rankNode))
             {
                 // result of the stackalloc is being assigned to a Span<T>. We need to initialize it later.. for that we need
-                // the length (in bytes) of the allocated memory. So we store in a new local variable.
+                // element count so we store in a new local variable.
                 Context.EmitCilInstruction(ilVar, OpCodes.Stloc, stackallocSpanAssignmentTracker.SpanLengthVariable);
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, stackallocSpanAssignmentTracker.SpanLengthVariable);
             }
@@ -84,8 +85,8 @@ partial class ExpressionVisitor
         
         if (stackallocSpanAssignmentTracker)
         {
-            if (stackallocSpanAssignmentTracker.IsConstantAllocationLength)
-                Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, stackallocSpanAssignmentTracker.ConstantAllocationSizeInBytes);
+            if (stackallocSpanAssignmentTracker.HasConstantElementCount)
+                Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, stackallocSpanAssignmentTracker.ConstantElementCount);
             else
                 Context.EmitCilInstruction(ilVar, stackallocSpanAssignmentTracker.LoadOpCode, stackallocSpanAssignmentTracker.SpanLengthVariable);
 
@@ -289,7 +290,7 @@ internal class StackallocAsArgumentFixer : IStackallocAsArgumentFixer
 internal class StackallocSpanAssignmentTracker
 {
     private readonly bool isAssignedToSpan;
-    private uint _sizeInBytes = UInt32.MaxValue;
+    private int _constElementCount = 0;
     
     public StackallocSpanAssignmentTracker(StackAllocArrayCreationExpressionSyntax node, IVisitorContext context)
     {
@@ -297,12 +298,12 @@ internal class StackallocSpanAssignmentTracker
                            || node.Ancestors().OfType<ArgumentSyntax>().FirstOrDefault(vd => context.GetTypeInfo(vd.Expression).Type?.Name.Contains("Span") == true) != null;
     }
     
-    public void RememberConstantAllocationLength(uint sizeInBytes)
+    public void RememberConstantElementCount(int elementCount)
     {
-        _sizeInBytes = sizeInBytes;
+        _constElementCount = elementCount;
     }
 
-    public bool AddVariableToStoreAllocatedBytesLengthIfRequired(IVisitorContext context, ExpressionSyntax rankNode)
+    public bool AddVariableToStoreElementCountIfRequired(IVisitorContext context, ExpressionSyntax rankNode)
     {
         if (!this)
             return false;
@@ -346,8 +347,8 @@ internal class StackallocSpanAssignmentTracker
         return true;
     }
 
-    public bool IsConstantAllocationLength => _sizeInBytes != UInt32.MaxValue;
-    public uint ConstantAllocationSizeInBytes => _sizeInBytes;
+    public bool HasConstantElementCount => _constElementCount != 0;
+    public int ConstantElementCount => _constElementCount;
     public string SpanLengthVariable { get; private set; }
     public OpCode LoadOpCode { get; private set; }
 
