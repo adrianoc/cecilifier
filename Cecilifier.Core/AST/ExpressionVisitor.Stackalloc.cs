@@ -332,7 +332,7 @@ internal class StackallocSpanAssignmentTracker
             return false;
         }
         
-        SpanLengthVariable = context.Naming.SyntheticVariable("spanSizeInBytes", ElementKind.LocalVariable);
+        SpanLengthVariable = context.Naming.SyntheticVariable("spanElementCount", ElementKind.LocalVariable);
 
         var currentMethodVar = context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
         Debug.Assert(currentMethodVar.IsValid);

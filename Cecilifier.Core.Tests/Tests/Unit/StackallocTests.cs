@@ -138,10 +138,10 @@ public class StackallocTests : CecilifierUnitTestBase
             var cecilifiedCode = result.GeneratedCode.ReadToEnd();
             Assert.That(cecilifiedCode, Does.Match(
                 @".+(il_bar_2\.Emit\(OpCodes\.)Ldc_I4, 4\);\s+" +
-                @"var l_spanSizeInBytes_4 = new VariableDefinition\(assembly.MainModule.TypeSystem.Int32\);\s+" +
-                @"m_bar_1.Body.Variables.Add\(l_spanSizeInBytes_4\);\s+" +
-                @"\1Stloc, l_spanSizeInBytes_4\);\s+" +
-                @"\1Ldloc, l_spanSizeInBytes_4\);\s+" +
+                @"var l_spanElementCount_4 = new VariableDefinition\(assembly.MainModule.TypeSystem.Int32\);\s+" +
+                @"m_bar_1.Body.Variables.Add\(l_spanElementCount_4\);\s+" +
+                @"\1Stloc, l_spanElementCount_4\);\s+" +
+                @"\1Ldloc, l_spanElementCount_4\);\s+" +
                 @"\1Conv_U\);\s+" +
                 @"\1Sizeof, assembly.MainModule.TypeSystem.Char\);\s+" +
                 @"\1Mul_Ovf_Un\);\s+" +
@@ -164,6 +164,6 @@ public class StackallocTests : CecilifierUnitTestBase
                 @"\1Add\);\s+" +
                 @"\1Ldc_I4, 71\);\s+" +
                 @"\1Stind_I2\);\s+" +
-                @"\1Ldloc, l_spanSizeInBytes_4\);\s+"));
+                @"\1Ldloc, l_spanElementCount_4\);\s+"));
         }
 }
