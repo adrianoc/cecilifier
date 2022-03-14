@@ -139,6 +139,13 @@ namespace Cecilifier.Core.AST
             return ev.skipLeftSideVisitingInAssignment;
         }
         
+        internal static bool VisitAndPopIfNotConsumed(IVisitorContext ctx, string ilVar, ExpressionSyntax node)
+        {
+            var ret = Visit(ctx, ilVar, node);
+            PopIfNotConsumed(ctx, ilVar, node);
+
+            return ret;
+        }
         public override void VisitReturnStatement(ReturnStatementSyntax node)
         {
             using var _ = LineInformationTracker.Track(Context, node);
@@ -555,12 +562,7 @@ namespace Cecilifier.Core.AST
         public override void VisitExpressionStatement(ExpressionStatementSyntax node)
         {
             base.Visit(node.Expression);
-
-            var info = Context.GetTypeInfo(node.Expression);
-            if (node.Expression.Kind() != SyntaxKind.SimpleAssignmentExpression && info.Type.SpecialType != SpecialType.System_Void)
-            {
-                Context.EmitCilInstruction(ilVar, OpCodes.Pop);
-            }
+            PopIfNotConsumed(Context, ilVar, node.Expression);
         }
 
         public override void VisitThisExpression(ThisExpressionSyntax node)
@@ -736,6 +738,7 @@ namespace Cecilifier.Core.AST
                 //assign (top of stack to the operand)
                 assignmentVisitor.InstructionPrecedingValueToLoad = Context.CurrentLine;
                 operand.Accept(assignmentVisitor);
+
                 return;
             }
 
@@ -1409,6 +1412,15 @@ namespace Cecilifier.Core.AST
             AddCecilExpression(@"var {0} = {1}.Create({2});", instVarName, ilVar, OpCodes.Nop.ConstantName());
                 
             return instVarName;
+        }
+        
+        private static void PopIfNotConsumed(IVisitorContext ctx, string ilVar, ExpressionSyntax node)
+        {
+            var nodeType = ctx.GetTypeInfo(node).Type.EnsureNotNull();
+            if (node.Kind() != SyntaxKind.SimpleAssignmentExpression && nodeType.SpecialType != SpecialType.System_Void)
+            {
+                ctx.EmitCilInstruction(ilVar, OpCodes.Pop);
+            }
         }
     }
 
