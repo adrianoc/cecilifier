@@ -73,12 +73,13 @@ namespace Cecilifier.Core.Extensions
                 method.Parameters.Aggregate("", (acc, curr) => acc + ", \"" + curr.Type.AssemblyQualifiedName() + "\"")));
         }
 
-        public static MethodDefinitionVariable AsMethodDefinitionVariable(this IMethodSymbol method)
+        public static MethodDefinitionVariable AsMethodDefinitionVariable(this IMethodSymbol method, string variableName = null)
         {
             return new MethodDefinitionVariable(
                 method.OriginalDefinition.ContainingType.Name,
                 method.OriginalDefinition.Name,
-                method.OriginalDefinition.Parameters.Select(p => p.Type.Name).ToArray());
+                method.OriginalDefinition.Parameters.Select(p => p.Type.ToDisplayString()).ToArray(),
+                variableName);
         }
 
         public static string MethodModifiersToCecil(this SyntaxTokenList modifiers, Func<string, IReadOnlyList<SyntaxToken>, string, string> modifiersToCecil, string specificModifiers = null, IMethodSymbol methodSymbol = null)

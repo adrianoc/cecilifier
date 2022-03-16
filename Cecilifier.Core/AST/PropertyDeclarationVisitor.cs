@@ -45,7 +45,7 @@ namespace Cecilifier.Core.AST
                 paramsVar.Add(new ParamData
                 {
                     VariableName = paramVar,
-                    Type = Context.GetTypeInfo(parameter.Type).Type.Name
+                    Type = Context.GetTypeInfo(parameter.Type).Type.ToDisplayString()
                 });
 
                 var exps = CecilDefinitionsFactory.Parameter(parameter, Context.SemanticModel, propDefVar, paramVar, ResolveType(parameter.Type), parameter.Accept(DefaultParameterExtractorVisitor.Instance));
@@ -168,7 +168,7 @@ namespace Cecilifier.Core.AST
                 var setMethodVar = Context.Naming.SyntheticVariable("set", ElementKind.LocalVariable);
                 
                 var localParams = new List<string>(parameters.Select(p => p.Type));
-                localParams.Add(Context.GetTypeInfo(node.Type).Type.Name); // Setters always have at least one `value` parameter.
+                localParams.Add(Context.GetTypeInfo(node.Type).Type.ToDisplayString()); // Setters always have at least one `value` parameter.
                 Context.DefinitionVariables.RegisterMethod(declaringType.Identifier.Text, $"set_{propName}", localParams.ToArray(), setMethodVar);
                 var ilSetVar = Context.Naming.ILProcessor("set");
 

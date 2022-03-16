@@ -121,7 +121,7 @@ namespace Cecilifier.Core.AST
 
             AddCecilExpressions(methodExps.Concat(paramsExps).Concat(methodBodyExpressions));
             AddCecilExpression($"{eventDeclaringTypeVar}.Methods.Add({methodVar});");
-            Context.DefinitionVariables.RegisterMethod(eventSymbol.ContainingType.Name, methodName, new[] { eventSymbol.Type.Name }, methodVar);
+            Context.DefinitionVariables.RegisterMethod(eventSymbol.ContainingType.Name, methodName, new[] { eventSymbol.Type.ToDisplayString() }, methodVar);
             return methodVar;            
         }
         

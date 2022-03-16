@@ -547,7 +547,7 @@ namespace Cecilifier.Core.AST
                 return;
             }
 
-            EnsureMethodAvailable(Context.Naming.SyntheticVariable(node.Type.ToString(), ElementKind.LocalVariable), ctor, Array.Empty<TypeParameterSyntax>());
+            EnsureMethodAvailable(Context.Naming.SyntheticVariable(ctor.ContainingType.Name, ElementKind.LocalVariable), ctor, Array.Empty<TypeParameterSyntax>());
 
             string operand = ctor.MethodResolverExpression(Context);
             Context.EmitCilInstruction(ilVar, OpCodes.Newobj, operand);
@@ -951,7 +951,7 @@ namespace Cecilifier.Core.AST
             {
                 MethodDeclarationVisitor.AddMethodDefinition(Context, varName, method.Name, "MethodAttributes.Private", method.ReturnType, method.ReturnsByRef, typeParameters);
             }
-            Context.DefinitionVariables.RegisterMethod(method.ContainingType.Name, method.Name, method.Parameters.Select(p => p.Type.Name).ToArray(), varName);
+            Context.DefinitionVariables.RegisterMethod(method.AsMethodDefinitionVariable(varName));
         }
 
         private void FixCallSite()

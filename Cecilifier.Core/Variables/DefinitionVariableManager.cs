@@ -9,6 +9,12 @@ public class DefinitionVariableManager
 
     private readonly List<DefinitionVariable> _definitionVariables = new();
 
+    public MethodDefinitionVariable RegisterMethod(MethodDefinitionVariable variable)
+    {
+        _definitionVariables.Add(variable);
+        return variable;
+    }
+    
     public MethodDefinitionVariable RegisterMethod(string parentName, string methodName, string[] parameterTypes, string definitionVariableName)
     {
         var definitionVariable = new MethodDefinitionVariable(parentName, methodName, parameterTypes, definitionVariableName);

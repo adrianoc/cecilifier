@@ -1,0 +1,20 @@
+﻿class C<T>
+{
+    public void M(string name, C<int> ci) {}
+    public void M(string name, C<string> cs) {}
+
+    public void Call()
+    {
+        M("int", new C<int>());
+        M("string", new C<string>());
+    }
+}
+
+class Overloads
+{
+    static void Main() 
+    {
+        var c = new C<int>(); 
+        c.Call(); 
+    } 
+}
