@@ -1,16 +1,17 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Naming;
+using Microsoft.CodeAnalysis;
 
 namespace Cecilifier.Core.Extensions
 {
     public static class StringExtensions
     {
-        internal static string[] CloneMethodReferenceOverriding(this string methodRef, IVisitorContext context, Dictionary<string, string> overridenProperties, bool hasParameters, out string resolvedVariable)
+        internal static string[] CloneMethodReferenceOverriding(this string methodRef, IVisitorContext context, Dictionary<string, string> overridenProperties, IMethodSymbol method, out string resolvedVariable)
         {
-            var exps = new List<string>();
             var cloned = new StringBuilder($"new MethodReference({methodRef}.Name, {methodRef}.ReturnType) {{ ");
             foreach (var propName in methodReferencePropertiesToClone)
             {
@@ -23,22 +24,33 @@ namespace Cecilifier.Core.Extensions
             }
 
             cloned.Append("}");
-            
-            if (hasParameters)
+
+            if (method.Parameters.Length == 0 && !method.IsGenericMethod)
             {
-                resolvedVariable = context.Naming.SyntheticVariable("m", ElementKind.Method);
-                
-                exps.Add($"var {resolvedVariable} = {cloned};");
+                resolvedVariable = cloned.ToString();
+                return Array.Empty<string>();
+            }
+
+            var exps = new List<string>();
+            resolvedVariable = context.Naming.SyntheticVariable(method.SafeIdentifier(), ElementKind.MemberReference);
+            
+            exps.Add($"var {resolvedVariable} = {cloned};");
+            if (method.Parameters.Length > 0)
+            {
                 exps.Add($"foreach(var p in {methodRef}.Parameters)");
                 exps.Add("{");
                 exps.Add($"\t{resolvedVariable}.Parameters.Add(new ParameterDefinition(p.Name, p.Attributes, p.ParameterType));");
                 exps.Add("}");
             }
-            else
+
+            if (method.IsGenericMethod)
             {
-                resolvedVariable = cloned.ToString();
+                exps.Add($"foreach(var gp in {methodRef}.GenericParameters)");
+                exps.Add("{");
+                exps.Add($"\t{resolvedVariable}.GenericParameters.Add(new Mono.Cecil.GenericParameter(gp.Name, {resolvedVariable}));");
+                exps.Add("}");
             }
-            
+
             return exps.ToArray();
         }
 

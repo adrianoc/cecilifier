@@ -17,6 +17,13 @@ namespace Cecilifier.Core.Extensions
             var format = new SymbolDisplayFormat(typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces);
             return type.ToDisplayString(format);
         }
+        
+        public static string SafeIdentifier(this IMethodSymbol method)
+        {
+            return method.MethodKind == MethodKind.Constructor 
+                ? "ctor" 
+                : method.Name;
+        }
 
         public static string AssemblyQualifiedName(this ISymbol type)
         {

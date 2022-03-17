@@ -44,7 +44,7 @@ namespace Cecilifier.Core.Extensions
                     return found.VariableName;
                 
                 var declaringTypeResolveExp = ctx.TypeResolver.Resolve(method.ContainingType);
-                var exps = found.VariableName.CloneMethodReferenceOverriding(ctx, new() { ["DeclaringType"] =  declaringTypeResolveExp }, method.Parameters.Length > 0, out var variable);
+                var exps = found.VariableName.CloneMethodReferenceOverriding(ctx, new() { ["DeclaringType"] =  declaringTypeResolveExp }, method, out var variable);
                 foreach (var expression in exps)
                 {
                     ctx.WriteCecilExpression(expression);
