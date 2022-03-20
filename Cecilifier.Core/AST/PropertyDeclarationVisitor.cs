@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Cecilifier.Core.Extensions;
+using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.Variables;
@@ -26,6 +27,7 @@ namespace Cecilifier.Core.AST
             if (PropertyAlreadyProcessed(node))
                 return;
             
+            using var _ = LineInformationTracker.Track(Context, node);
             Context.WriteNewLine();
             Context.WriteComment($"** Property indexer **");
             
@@ -36,6 +38,7 @@ namespace Cecilifier.Core.AST
             AddDefaultMemberAttribute(propertyDeclaringTypeVar, propName);
             var propDefVar = AddPropertyDefinition(node, propName, propertyType);
 
+            var indexerSymbol = Context.SemanticModel.GetDeclaredSymbol(node).EnsureNotNull();
             var paramsVar = new List<ParamData>();
             foreach (var parameter in node.ParameterList.Parameters)
             {
@@ -43,12 +46,12 @@ namespace Cecilifier.Core.AST
                 paramsVar.Add(new ParamData
                 {
                     VariableName = paramVar,
-                    Type = Context.GetTypeInfo(parameter.Type).Type.Name
+                    Type = Context.GetTypeInfo(parameter.Type).Type.ToDisplayString()
                 });
 
                 var exps = CecilDefinitionsFactory.Parameter(parameter, Context.SemanticModel, propDefVar, paramVar, ResolveType(parameter.Type), parameter.Accept(DefaultParameterExtractorVisitor.Instance));
                 AddCecilExpressions(exps);
-                Context.DefinitionVariables.RegisterNonMethod(string.Empty, parameter.Identifier.ValueText, VariableMemberKind.Parameter, paramVar);
+                Context.DefinitionVariables.RegisterNonMethod(indexerSymbol.ToDisplayString(), parameter.Identifier.ValueText, VariableMemberKind.Parameter, paramVar);
             }
 
             ProcessPropertyAccessors(node, propertyDeclaringTypeVar, propName, propertyType, propDefVar, paramsVar, node.ExpressionBody);
@@ -64,6 +67,7 @@ namespace Cecilifier.Core.AST
             if (PropertyAlreadyProcessed(node))
                 return;
             
+            using var _ = LineInformationTracker.Track(Context, node);
             Context.WriteNewLine();
             Context.WriteComment($"** Property: {node.Identifier} **");
             var propertyType = ResolveType(node.Type);
@@ -109,6 +113,7 @@ namespace Cecilifier.Core.AST
         
         private void ProcessPropertyAccessors(BasePropertyDeclarationSyntax node, string propertyDeclaringTypeVar, string propName, string propertyType, string propDefVar, List<ParamData> parameters, ArrowExpressionClauseSyntax? arrowExpression)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             var propInfo = (IPropertySymbol) Context.SemanticModel.GetDeclaredSymbol(node);
             var accessorModifiers = node.Modifiers.MethodModifiersToCecil((targetEnum, modifiers, defaultAccessibility) => ModifiersToCecil(modifiers, targetEnum, defaultAccessibility), "MethodAttributes.SpecialName", propInfo.GetMethod ?? propInfo.SetMethod);
 
@@ -155,7 +160,7 @@ namespace Cecilifier.Core.AST
                     modifiers = modifiers.AppendModifier("FieldAttributes.InitOnly");
                 }
                 
-                var backingFieldExps = CecilDefinitionsFactory.Field(Context, declaringType.Identifier.Text, propertyDeclaringTypeVar, backingFieldVar, Utils.BackingFieldNameForAutoProperty(propName), propertyType, modifiers);
+                var backingFieldExps = CecilDefinitionsFactory.Field(Context, propInfo.ContainingSymbol.ToDisplayString() , propertyDeclaringTypeVar, backingFieldVar, Utils.BackingFieldNameForAutoProperty(propName), propertyType, modifiers);
                 AddCecilExpressions(backingFieldExps);
             }
 
@@ -164,7 +169,7 @@ namespace Cecilifier.Core.AST
                 var setMethodVar = Context.Naming.SyntheticVariable("set", ElementKind.LocalVariable);
                 
                 var localParams = new List<string>(parameters.Select(p => p.Type));
-                localParams.Add(Context.GetTypeInfo(node.Type).Type.Name); // Setters always have at least one `value` parameter.
+                localParams.Add(Context.GetTypeInfo(node.Type).Type.ToDisplayString()); // Setters always have at least one `value` parameter.
                 Context.DefinitionVariables.RegisterMethod(declaringType.Identifier.Text, $"set_{propName}", localParams.ToArray(), setMethodVar);
                 var ilSetVar = Context.Naming.ILProcessor("set");
 

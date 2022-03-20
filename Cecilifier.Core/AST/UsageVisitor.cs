@@ -18,7 +18,10 @@ internal class UsageVisitor : CSharpSyntaxVisitor<UsageKind>
         if (node?.Parent.IsKind(SyntaxKind.InvocationExpression) == true)
             return UsageKind.CallTarget;
 
-        return UsageKind.None;
+        var t = context.SemanticModel.GetSymbolInfo(node);
+        return t.Symbol?.Kind is SymbolKind.Property or SymbolKind.Event or SymbolKind.Method 
+            ? UsageKind.CallTarget 
+            : UsageKind.None;
     }
 
     public override UsageKind VisitElementAccessExpression(ElementAccessExpressionSyntax node)

@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.Extensions;
+using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Variables;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
@@ -28,15 +30,14 @@ namespace Cecilifier.Core.AST
             var typeDef = CecilDefinitionsFactory.Type(Context, enumType, node.Identifier.ValueText, attrs + " | TypeAttributes.Sealed", Context.TypeResolver.Bcl.System.Enum, false, Array.Empty<string>());
             AddCecilExpressions(typeDef);
 
-            var enumSymbol = Context.SemanticModel.GetDeclaredSymbol(node);
-            Utils.EnsureNotNull(enumSymbol, $"Something really bad happened. Roslyn failed to resolve the symbol for the enum {node.Identifier.Text}");
+            var enumSymbol = Context.SemanticModel.GetDeclaredSymbol(node).EnsureNotNull<ISymbol, ISymbol>($"Something really bad happened. Roslyn failed to resolve the symbol for the enum {node.Identifier.Text}");
             
-            var parentName = (string)enumSymbol.ContainingSymbol.AssemblyQualifiedName();
-            using (Context.DefinitionVariables.WithCurrent(parentName, node.Identifier.ValueText, VariableMemberKind.Type,enumType))
+            var parentName = enumSymbol.ContainingSymbol.FullyQualifiedName();
+            using (Context.DefinitionVariables.WithCurrent(parentName, enumSymbol.FullyQualifiedName(), VariableMemberKind.Type,enumType))
             {
                 //.class private auto ansi MyEnum
                 var fieldVar = Context.Naming.LocalVariable(node);
-                var valueFieldExp = CecilDefinitionsFactory.Field(Context, node.Identifier.Text, enumType, fieldVar, "value__", Context.TypeResolver.Bcl.System.Int32,
+                var valueFieldExp = CecilDefinitionsFactory.Field(Context, enumSymbol.ToDisplayString(), enumType, fieldVar, "value__", Context.TypeResolver.Bcl.System.Int32,
                     "FieldAttributes.SpecialName | FieldAttributes.RTSpecialName | FieldAttributes.Public");
                 AddCecilExpressions(valueFieldExp);
 
@@ -48,13 +49,15 @@ namespace Cecilifier.Core.AST
 
         public override void VisitEnumMemberDeclaration(EnumMemberDeclarationSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             // Adds a field like:
             // .field public static literal valuetype xxx.MyEnum Second = int32(1)
             var enumMemberValue = _memberCollector[node];
             var enumVarDef = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Type);
 
+            var enumMemberSymbol = Context.SemanticModel.GetDeclaredSymbol(node).EnsureNotNull();
             var fieldVar = Context.Naming.LocalVariable(node);
-            var exp = CecilDefinitionsFactory.Field(Context, enumVarDef.MemberName, enumVarDef.VariableName, fieldVar, node.Identifier.ValueText, enumVarDef.VariableName,
+            var exp = CecilDefinitionsFactory.Field(Context, enumMemberSymbol.ContainingSymbol.ToDisplayString() , enumVarDef.VariableName, fieldVar, node.Identifier.ValueText, enumVarDef.VariableName,
                 "FieldAttributes.Static | FieldAttributes.Literal | FieldAttributes.Public | FieldAttributes.HasDefault", enumMemberValue);
             AddCecilExpressions(exp);
             

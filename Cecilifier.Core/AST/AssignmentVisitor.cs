@@ -50,7 +50,10 @@ namespace Cecilifier.Core.AST
             if (!HandleIndexer(node, lastInstructionLoadingRhs))
             {
                 Context.MoveLinesToEnd(InstructionPrecedingValueToLoad, lastInstructionLoadingRhs);
-                Context.EmitCilInstruction(ilVar, OpCodes.Stelem_Ref);
+                var arrayElementType = Context.SemanticModel.GetTypeInfo(node).Type.EnsureNotNull();
+                var stelemOpCode = arrayElementType.StelemOpCode();
+                var operand = stelemOpCode == OpCodes.Stelem_Any ? Context.TypeResolver.Resolve(arrayElementType) : null ;
+                Context.EmitCilInstruction(ilVar, stelemOpCode, operand);
             }
         }
      
@@ -167,7 +170,7 @@ namespace Cecilifier.Core.AST
             if (property.SetMethod == null)
             {
                 var propertyBackingFieldName = Utils.BackingFieldNameForAutoProperty(property.Name);
-                var found = Context.DefinitionVariables.GetVariable(propertyBackingFieldName, VariableMemberKind.Field, property.ContainingType.Name);
+                var found = Context.DefinitionVariables.GetVariable(propertyBackingFieldName, VariableMemberKind.Field, property.ContainingType.ToDisplayString());
                 Context.EmitCilInstruction(ilVar, OpCodes.Stfld, found.VariableName);
             }
             else
@@ -180,7 +183,7 @@ namespace Cecilifier.Core.AST
             if (field.IsVolatile)
                 Context.EmitCilInstruction(ilVar, OpCodes.Volatile);
 
-            var operand = Context.DefinitionVariables.GetVariable(field.Name, VariableMemberKind.Field, field.ContainingType.Name).VariableName;
+            var operand = Context.DefinitionVariables.GetVariable(field.Name, VariableMemberKind.Field, field.ContainingType.ToDisplayString()).VariableName;
             Context.EmitCilInstruction(ilVar, storeOpCode, operand);
         }
 
@@ -200,7 +203,7 @@ namespace Cecilifier.Core.AST
                 }
                 else
                 {
-                    var paramVariable = Context.DefinitionVariables.GetVariable(parameter.Name, VariableMemberKind.Parameter).VariableName;
+                    var paramVariable = Context.DefinitionVariables.GetVariable(parameter.Name, VariableMemberKind.Parameter, parameter.ContainingSymbol.ToDisplayString()).VariableName;
                     Context.EmitCilInstruction(ilVar, OpCodes.Starg_S, paramVariable);
                 }
             }

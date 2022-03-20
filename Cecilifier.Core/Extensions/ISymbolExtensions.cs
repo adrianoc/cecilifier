@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Misc;
@@ -16,6 +17,13 @@ namespace Cecilifier.Core.Extensions
             var format = new SymbolDisplayFormat(typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces);
             return type.ToDisplayString(format);
         }
+        
+        public static string SafeIdentifier(this IMethodSymbol method)
+        {
+            return method.MethodKind == MethodKind.Constructor 
+                ? "ctor" 
+                : method.Name;
+        }
 
         public static string AssemblyQualifiedName(this ISymbol type)
         {
@@ -25,7 +33,7 @@ namespace Cecilifier.Core.Extensions
             if (elementType == null)
                 return namespaceQualifiedName;
             
-            return elementType.ContainingAssembly.Name.Contains("CoreLib") ? namespaceQualifiedName : $"{namespaceQualifiedName}, {type.ContainingAssembly.Name}";
+            return elementType.ContainingAssembly.Name.Contains("CoreLib") ? namespaceQualifiedName : $"{namespaceQualifiedName}, {type.GetElementType().ContainingAssembly.Name}";
         }
 
         public static ITypeSymbol GetMemberType(this ISymbol symbol) => symbol switch
@@ -35,7 +43,8 @@ namespace Cecilifier.Core.Extensions
             IPropertySymbol property => property.Type,
             IEventSymbol @event => @event.Type,
             IFieldSymbol field => field.Type,
-            _ => throw new NotSupportedException($"symbol {symbol.ToDisplayString()} is not supported.")
+            ILocalSymbol local => local.Type,
+            _ => throw new NotSupportedException($"({symbol.Kind}) symbol {symbol.ToDisplayString()} is not supported.")
         };
         
         private static ITypeSymbol GetElementType(this ISymbol symbol) => symbol switch
@@ -98,6 +107,14 @@ namespace Cecilifier.Core.Extensions
                 throw new System.NotSupportedException("");
 
             return symbol;
+        }
+        
+        public static TTarget EnsureNotNull<TSource, TTarget>([NotNull][NotNullIfNotNull("symbol")] this TSource symbol, [CallerArgumentExpression("symbol")] string exp = null) where TSource: ISymbol where TTarget : TSource
+        {
+            if (symbol == null)
+                throw new NullReferenceException(exp);
+
+            return (TTarget) symbol;
         }
 
         public static bool IsDllImportCtor(this ISymbol self) => self != null && self.ContainingType.Name == "DllImportAttribute";

@@ -19,7 +19,7 @@ namespace Cecilifier.Core.TypeSystem
                 [SpecialType.System_Enum] = typeResolver.Resolve("System.Enum"), 
                 [SpecialType.System_MulticastDelegate] = typeResolver.Resolve("System.MulticastDelegate"), 
                 [SpecialType.System_AsyncCallback] = typeResolver.Resolve("System.AsyncCallback"), 
-                [SpecialType.System_IAsyncResult] = typeResolver.Resolve("System.IAsyncResult"), 
+                [SpecialType.System_IAsyncResult] = typeResolver.Resolve("System.IAsyncResult"),
             };
         }
 

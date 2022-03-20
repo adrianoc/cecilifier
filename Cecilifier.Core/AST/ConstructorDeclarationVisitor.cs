@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using Cecilifier.Core.Extensions;
+using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.Variables;
@@ -79,44 +80,31 @@ namespace Cecilifier.Core.AST
 
         internal void DefaultCtorInjector(string typeDefVar, ClassDeclarationSyntax declaringClass)
         {
+            DefaultCtorInjector(typeDefVar, declaringClass.Identifier.Text, DefaultCtorAccessibilityFor(declaringClass), ResolveDefaultCtorFor(typeDefVar, declaringClass), ctorBodyIL =>
+            {
+                ProcessFieldInitialization(declaringClass, ctorBodyIL);
+            });
+        }
+
+        internal void DefaultCtorInjector(string typeDefVar, string typeName, string ctorAccessibility, string baseCtor, Action<string> processInitializers)
+        {
             Context.WriteNewLine();
-            Context.WriteComment($"** Constructor: {declaringClass.Identifier}() **");
+            Context.WriteComment($"** Constructor: {typeName}() **");
             
             var ctorLocalVar = AddOrUpdateParameterlessCtorDefinition(
-                                    declaringClass.Identifier.Text,
-                                    DefaultCtorAccessibilityFor(declaringClass),
-                                    Context.Naming.Constructor(declaringClass, false));
+                typeName,
+                ctorAccessibility,
+                Context.Naming.SyntheticVariable("ctor", ElementKind.Constructor));
                                     
             AddCecilExpression($"{typeDefVar}.Methods.Add({ctorLocalVar});");
 
             var ctorBodyIL = Context.Naming.ILProcessor("ctor");
             AddCecilExpression($@"var {ctorBodyIL} = {ctorLocalVar}.Body.GetILProcessor();");
             
-            ProcessFieldInitialization(declaringClass, ctorBodyIL);
+            processInitializers?.Invoke(ctorBodyIL);
             Context.EmitCilInstruction(ctorBodyIL, OpCodes.Ldarg_0);
-            string operand = ResolveDefaultCtorFor(typeDefVar, declaringClass);
-            Context.EmitCilInstruction(ctorBodyIL, OpCodes.Call, operand);
+            Context.EmitCilInstruction(ctorBodyIL, OpCodes.Call, baseCtor);
             
-            Context.EmitCilInstruction(ctorBodyIL, OpCodes.Ret);
-        }
-        
-        internal void DefaultCtorInjector2(string typeDefVar, string typeName)
-        {
-            Context.WriteNewLine();
-            Context.WriteComment($"** Constructor: {typeName}() **");
-            var ctorLocalVar = AddOrUpdateParameterlessCtorDefinition(
-                                            typeName,
-                                            "MethodAttributes.Public",
-                                            Context.Naming.SyntheticVariable(typeName, ElementKind.StaticConstructor));
-
-            AddCecilExpression($"{typeDefVar}.Methods.Add({ctorLocalVar});");
-
-            var ctorBodyIL = Context.Naming.ILProcessor("ctor");
-            AddCecilExpression($@"var {ctorBodyIL} = {ctorLocalVar}.Body.GetILProcessor();");
-            
-            Context.EmitCilInstruction(ctorBodyIL, OpCodes.Ldarg_0);
-            string operand = Utils.ImportFromMainModule($"TypeHelpers.DefaultCtorFor({typeDefVar}.BaseType)");
-            Context.EmitCilInstruction(ctorBodyIL, OpCodes.Call, operand);
             Context.EmitCilInstruction(ctorBodyIL, OpCodes.Ret);
         }
 
@@ -139,6 +127,7 @@ namespace Cecilifier.Core.AST
 
         private void ProcessFieldInitialization(TypeDeclarationSyntax declaringClass, string ctorBodyIL)
         {
+            var declaringTypeSymbol = Context.SemanticModel.GetDeclaredSymbol(declaringClass).EnsureNotNull();
             // Handles non const field initialization...
             foreach (var fieldDeclaration in declaringClass.Members.OfType<FieldDeclarationSyntax>().Where(f => !f.Modifiers.Any(m => m.IsKind(SyntaxKind.ConstKeyword))))
             {
@@ -146,34 +135,64 @@ namespace Cecilifier.Core.AST
                 if (dec.Initializer == null)
                     continue;
                 
-                if (!fieldDeclaration.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword)))
-                {
-                    Context.WriteNewLine();
-                    Context.WriteComment(fieldDeclaration.ToString());
-                    if (dec.Initializer.Value.IsKind(SyntaxKind.IndexExpression))
-                    {
-                        // code is something like `Index field = ^5`; 
-                        // in this case we need to load the address of the field since the expression ^5 (IndexerExpression) will result in a call to System.Index ctor (which is a value type and expects
-                        // the address of the value type to be in the top of the stack
-                        string operand = Context.DefinitionVariables.GetVariable(dec.Identifier.Text, VariableMemberKind.Field, declaringClass.Identifier.Text).VariableName;
-                        Context.EmitCilInstruction(ctorBodyIL, OpCodes.Ldflda, operand);
-                        ExpressionVisitor.Visit(Context, ctorBodyIL, dec.Initializer);
-                        return;
-                    }
+                using var _ = LineInformationTracker.Track(Context, fieldDeclaration);
+                Context.WriteNewLine();
+                Context.WriteComment(fieldDeclaration.HumanReadableSummary());
 
+                if (HandleSystemIndexInitialization(dec, declaringTypeSymbol, ctorBodyIL))
+                    continue;
+                
+                if (!fieldDeclaration.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword))) 
                     Context.EmitCilInstruction(ctorBodyIL, OpCodes.Ldarg_0);
-                }
 
                 if (ExpressionVisitor.Visit(Context, ctorBodyIL, dec.Initializer))
                     continue;
 
-                var fieldVarDef = Context.DefinitionVariables.GetVariable(dec.Identifier.ValueText, VariableMemberKind.Field, declaringClass.Identifier.Text);
+                var fieldVarDef = Context.DefinitionVariables.GetVariable(dec.Identifier.ValueText, VariableMemberKind.Field, declaringTypeSymbol.ToDisplayString());
                 var fieldStoreOpCode = fieldDeclaration.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword))
                     ? OpCodes.Stsfld
                     : OpCodes.Stfld;
 
                 Context.EmitCilInstruction(ctorBodyIL, fieldStoreOpCode, fieldVarDef.VariableName);
             }
+            
+            // Handles property initialization...
+            foreach (var dec in declaringClass.Members.OfType<PropertyDeclarationSyntax>())
+            {
+                if (dec.Initializer == null)
+                    continue;
+                
+                using var _ = LineInformationTracker.Track(Context, dec);
+                Context.WriteNewLine();
+                Context.WriteComment(dec.HumanReadableSummary());
+             
+                if (!dec.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword))) 
+                    Context.EmitCilInstruction(ctorBodyIL, OpCodes.Ldarg_0);
+
+                if (ExpressionVisitor.Visit(Context, ctorBodyIL, dec.Initializer))
+                    continue;
+
+                var backingFieldVar = Context.DefinitionVariables.GetVariable(Utils.BackingFieldNameForAutoProperty(dec.Identifier.ValueText), VariableMemberKind.Field, declaringTypeSymbol.ToDisplayString());
+                var fieldStoreOpCode = dec.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword))
+                    ? OpCodes.Stsfld
+                    : OpCodes.Stfld;
+
+                Context.EmitCilInstruction(ctorBodyIL, fieldStoreOpCode, backingFieldVar.VariableName);
+            }
+        }
+
+        private bool HandleSystemIndexInitialization(VariableDeclaratorSyntax dec, ISymbol declaringTypeSymbol, string ctorBodyIL)
+        {
+            if (dec.Initializer == null || !dec.Initializer.Value.IsKind(SyntaxKind.IndexExpression))
+                return false;
+
+            // code is something like `Index field = ^5`; 
+            // in this case we need to load the address of the field since the expression ^5 (IndexerExpression) will result in a call to System.Index ctor (which is a value type and expects
+            // the address of the value type to be in the top of the stack
+            var operand = Context.DefinitionVariables.GetVariable(dec.Identifier.Text, VariableMemberKind.Field, declaringTypeSymbol.ToDisplayString()).VariableName;
+            Context.EmitCilInstruction(ctorBodyIL, OpCodes.Ldflda, operand);
+            ExpressionVisitor.Visit(Context, ctorBodyIL, dec.Initializer);
+            return true;
         }
 
         private string ResolveDefaultCtorFor(string typeDefVar, BaseTypeDeclarationSyntax type)

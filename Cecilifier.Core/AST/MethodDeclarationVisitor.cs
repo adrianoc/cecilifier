@@ -84,17 +84,25 @@ namespace Cecilifier.Core.AST
         public override void VisitParameter(ParameterSyntax node)
         {
             var paramVar = Context.Naming.Parameter(node);
-            Context.DefinitionVariables.RegisterNonMethod(string.Empty, node.Identifier.ValueText, VariableMemberKind.Parameter, paramVar);
 
             var methodVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
             if (!methodVar.IsValid)
                 throw new InvalidOperationException($"Failed to retrieve current method.");
-            
-            var declaringMethodVariable = methodVar.VariableName;
 
-            var exps = CecilDefinitionsFactory.Parameter(node, Context.SemanticModel, declaringMethodVariable, paramVar, ResolveType(node.Type), node.Accept(DefaultParameterExtractorVisitor.Instance));
-            AddCecilExpressions(exps);
-            
+            var containingSymbol = Context.SemanticModel.GetDeclaredSymbol(node).EnsureNotNull().ContainingSymbol;
+            var declaringMethodVariable = methodVar.VariableName;
+            var forwardedParamVar = Context.DefinitionVariables.GetVariable(node.Identifier.ValueText, VariableMemberKind.Parameter, containingSymbol.ToDisplayString());
+            if (forwardedParamVar.IsValid)
+            {
+                paramVar = forwardedParamVar.VariableName;
+            }
+            else
+            {
+                Context.DefinitionVariables.RegisterNonMethod(containingSymbol.ToDisplayString(), node.Identifier.ValueText, VariableMemberKind.Parameter, paramVar);
+                var exps = CecilDefinitionsFactory.Parameter(node, Context.SemanticModel, declaringMethodVariable, paramVar, ResolveType(node.Type), node.Accept(DefaultParameterExtractorVisitor.Instance));
+                AddCecilExpressions(exps);
+            }
+
             HandleAttributesInMemberDeclaration(node.AttributeLists, paramVar);
 
             base.VisitParameter(node);
@@ -149,7 +157,7 @@ namespace Cecilifier.Core.AST
                     // the later is a `mangled name` and any reference to the method will use its `unmangled name` for lookups which would fail
                     // should we use `methodName` as the registered name.
                     var nameUsedInRegisteredVariable = methodSymbol.MethodKind == MethodKind.LocalFunction ? simpleName : methodName;
-                    WithCurrentMethod(declaringTypeName, methodVar, nameUsedInRegisteredVariable, parameters.Select(p => Context.GetTypeInfo(p.Type).Type.Name).ToArray(), runWithCurrent);
+                    WithCurrentMethod(declaringTypeName, methodVar, nameUsedInRegisteredVariable, parameters.Select(p => Context.GetTypeInfo(p.Type).Type.ToDisplayString()).ToArray(), runWithCurrent);
                     if (!isAbstract && !node.DescendantNodes().Any(n => n.IsKind(SyntaxKind.ReturnStatement)))
                     {
                         Context.EmitCilInstruction(ilVar, OpCodes.Ret);
@@ -157,14 +165,14 @@ namespace Cecilifier.Core.AST
                 }
                 else
                 {
-                    Context.DefinitionVariables.RegisterMethod(declaringTypeName, methodName, parameters.Select(p => Context.GetTypeInfo(p.Type).Type.Name).ToArray(), methodVar);
+                    Context.DefinitionVariables.RegisterMethod(declaringTypeName, methodName, parameters.Select(p => Context.GetTypeInfo(p.Type).Type.ToDisplayString()).ToArray(), methodVar);
                 }
             }
         }
 
         private string AddOrUpdateMethodDefinition(string declaringTypeName, string variableName, string simpleName, string methodName, string methodModifiers, ITypeSymbol returnType, bool refReturn, SeparatedSyntaxList<ParameterSyntax> parameters, IList<TypeParameterSyntax> typeParameters)
         {
-            var found = Context.DefinitionVariables.GetMethodVariable(new MethodDefinitionVariable(declaringTypeName, simpleName, parameters.Select(paramSyntax => Context.GetTypeInfo(paramSyntax.Type).Type.Name).ToArray()));
+            var found = Context.DefinitionVariables.GetMethodVariable(new MethodDefinitionVariable(declaringTypeName, simpleName, parameters.Select(paramSyntax => Context.GetTypeInfo(paramSyntax.Type).Type.ToDisplayString()).ToArray()));
             if (found.IsValid)
             {
                 AddCecilExpression("{0}.Attributes = {1};", found.VariableName , methodModifiers);

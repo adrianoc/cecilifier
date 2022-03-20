@@ -54,13 +54,16 @@ public class FieldsTests : CecilifierUnitTestBase
         Assert.That(cecilifiedCode, Does.Match(expectedSnippet));
     }
 
-    // [Test]
-    // public void TestExternalInstanceFields()
-    // {
-    //     const string code = "class ExternalInstanceFields { int Instance(System.ValueTuple<int> t) => t.Item1; }";
-    //     var result = RunCecilifier(code);
-    //     var cecilifiedCode = result.GeneratedCode.ReadToEnd();
-    //     
-    //     Assert.That(cecilifiedCode, Contains.Substring("XX FORCE IT TO FAIL XX;"));
-    // }
+    [Test]
+    public void TestReadOnlyField()
+    {
+        var result = RunCecilifier("class Foo { readonly int ro = 42; }");
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+
+        Assert.That(
+            cecilifiedCode, 
+            Does.Match(
+                @"var fld_ro_1 = new FieldDefinition\(""ro"", .+InitOnly.+Int32\);\s+" +
+                        @"cls_foo_0.Fields.Add\(fld_ro_1\);"));
+    }
 }

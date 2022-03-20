@@ -9,6 +9,12 @@ public class DefinitionVariableManager
 
     private readonly List<DefinitionVariable> _definitionVariables = new();
 
+    public MethodDefinitionVariable RegisterMethod(MethodDefinitionVariable variable)
+    {
+        _definitionVariables.Add(variable);
+        return variable;
+    }
+    
     public MethodDefinitionVariable RegisterMethod(string parentName, string methodName, string[] parameterTypes, string definitionVariableName)
     {
         var definitionVariable = new MethodDefinitionVariable(parentName, methodName, parameterTypes, definitionVariableName);
@@ -104,7 +110,7 @@ public class DefinitionVariableManager
     /// </example>
     /// </remarks>
     /// <returns>
-    /// a new ScopedDefinitionVariable that, when disposed, will remove all local variables (parameters, type parameters and local variables)
+    /// a new ScopedDefinitionVariable that, when disposed, will remove all local variables
     /// from the list of defined variables.</returns>
     public ScopedDefinitionVariable EnterLocalScope()
     {

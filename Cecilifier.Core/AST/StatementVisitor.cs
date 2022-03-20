@@ -58,7 +58,7 @@ namespace Cecilifier.Core.AST
             // Increment
             foreach (var incrementExpression in node.Incrementors)
             {
-                ExpressionVisitor.Visit(Context, _ilVar, incrementExpression);
+                ExpressionVisitor.VisitAndPopIfNotConsumed(Context, _ilVar, incrementExpression);
             }
             
             Context.EmitCilInstruction(_ilVar, OpCodes.Br, forConditionLabel);

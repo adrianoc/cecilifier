@@ -13,6 +13,12 @@ class StackAllocWithSpan
 	    Dummy(s);
 	}
 	
+    private void SpanOfIntWithConstantRank()
+	{
+	    Span<int> s = stackalloc int[3];
+	    DummyInt(s);
+	}
+	
     private void PassingAsParameterToStaticMethodSizeFromLocal(int n)
 	{
 	    int length = 42 * n;
@@ -30,6 +36,7 @@ class StackAllocWithSpan
 	*/
 
 	private void Dummy(Span<byte> span) {}
+	private void DummyInt(Span<int> span) {}
 	private static void StaticDummy(Span<byte> span) {}
 	private int Size() => 42;
 }

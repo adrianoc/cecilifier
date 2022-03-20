@@ -1,0 +1,10 @@
+﻿class RefProperties
+{
+    private int field;
+	ref int Property
+	{
+		get => ref field;
+	}
+	
+	public ref int UseRefProperty() => ref Property;
+}

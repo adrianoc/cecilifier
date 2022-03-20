@@ -22,7 +22,7 @@ namespace Cecilifier.Core.AST
             using var _ = LineInformationTracker.Track(Context, node);
             var definitionVar = HandleInterfaceDeclaration(node);
             var interfaceSymbol = Context.SemanticModel.GetDeclaredSymbol(node);
-            using (Context.DefinitionVariables.WithCurrent(interfaceSymbol.ContainingSymbol.AssemblyQualifiedName(), node.Identifier.ValueText, VariableMemberKind.Type, definitionVar))
+            using (Context.DefinitionVariables.WithCurrent(interfaceSymbol.ContainingSymbol.FullyQualifiedName(), node.Identifier.ValueText, VariableMemberKind.Type, definitionVar))
             {
                 base.VisitInterfaceDeclaration(node);
             }
@@ -33,7 +33,7 @@ namespace Cecilifier.Core.AST
             using var _ = LineInformationTracker.Track(Context, node);
             var definitionVar = HandleTypeDeclaration(node);
             var classSymbol = Context.SemanticModel.GetDeclaredSymbol(node);
-            using (Context.DefinitionVariables.WithCurrent(classSymbol.ContainingSymbol.AssemblyQualifiedName(), node.Identifier.ValueText, VariableMemberKind.Type, definitionVar))
+            using (Context.DefinitionVariables.WithCurrent(classSymbol.ContainingSymbol.FullyQualifiedName(), node.Identifier.ValueText, VariableMemberKind.Type, definitionVar))
             {
                 base.VisitClassDeclaration(node);
                 EnsureCurrentTypeHasADefaultCtor(node, definitionVar);
@@ -45,7 +45,7 @@ namespace Cecilifier.Core.AST
             using var _ = LineInformationTracker.Track(Context, node);
             var definitionVar = HandleTypeDeclaration(node);
             var structSymbol = Context.SemanticModel.GetDeclaredSymbol(node);
-            using (Context.DefinitionVariables.WithCurrent(structSymbol.ContainingSymbol.AssemblyQualifiedName(), node.Identifier.ValueText, VariableMemberKind.Type, definitionVar))
+            using (Context.DefinitionVariables.WithCurrent(structSymbol.ContainingSymbol.FullyQualifiedName(), node.Identifier.ValueText, VariableMemberKind.Type, definitionVar))
             {
                 base.VisitStructDeclaration(node);
                 EnsureCurrentTypeHasADefaultCtor(node, definitionVar);
@@ -54,26 +54,31 @@ namespace Cecilifier.Core.AST
 
         public override void VisitEnumDeclaration(EnumDeclarationSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             node.Accept(new EnumDeclarationVisitor(Context));
         }
         
         public override void VisitFieldDeclaration(FieldDeclarationSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             new FieldDeclarationVisitor(Context).Visit(node);
         }
 
         public override void VisitIndexerDeclaration(IndexerDeclarationSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             new PropertyDeclarationVisitor(Context).Visit(node);
         }
 
         public override void VisitPropertyDeclaration(PropertyDeclarationSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             new PropertyDeclarationVisitor(Context).Visit(node);
         }
 
         public override void VisitConstructorDeclaration(ConstructorDeclarationSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             new ConstructorDeclarationVisitor(Context).Visit(node);
         }
 

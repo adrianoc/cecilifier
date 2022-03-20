@@ -12,7 +12,7 @@ namespace Cecilifier.Core.Extensions
         {
             if (field.IsDefinedInCurrentType(context))
             {
-                var found = context.DefinitionVariables.GetVariable(field.Name, VariableMemberKind.Field, field.ContainingType.Name);
+                var found = context.DefinitionVariables.GetVariable(field.Name, VariableMemberKind.Field, field.ContainingType.ToDisplayString());
                 if (!found.IsValid)
                 {
                     throw new Exception($"Failed to resolve variable with field definition for `{field}`");

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.Extensions;
+using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.Variables;
@@ -32,15 +33,34 @@ namespace Cecilifier.Core.AST
          */
         public override void VisitEventDeclaration(EventDeclarationSyntax node)
         {
+            using var __ = LineInformationTracker.Track(Context, node);
+            var eventSymbol = Context.SemanticModel.GetDeclaredSymbol(node).EnsureNotNull<ISymbol, IEventSymbol>();
+            
+            eventDeclaringTypeVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Type).VariableName;
+
+            var eventType = Context.TypeResolver.Resolve(eventSymbol.Type);
+            var eventAccessorsDefVarMapping = new Dictionary<string, string>();
+            foreach (var acc in node.AccessorList.Accessors)
+            {
+                using var _ = LineInformationTracker.Track(Context, acc);
+                Context.WriteNewLine();
+                Context.WriteComment($"{node.Identifier.ValueText} {acc.Keyword} method.");
+                    
+                var methodVar = Context.Naming.SyntheticVariable(acc.Keyword.ValueText, ElementKind.Method);
+                var methodILVar = Context.Naming.ILProcessor(acc.Keyword.ValueText);
+                var body = CecilDefinitionsFactory.MethodBody(methodVar, methodILVar, Array.Empty<InstructionRepresentation>());
+                AddAccessor(node, eventSymbol, methodVar, acc.Keyword.ValueText, eventType, body);
+                
+                StatementVisitor.Visit(Context, methodILVar, acc.Body);
+                Context.EmitCilInstruction(methodILVar, OpCodes.Ret);
+
+                eventAccessorsDefVarMapping[acc.Keyword.ValueText] = methodVar;
+            }
+
             Context.WriteNewLine();
             Context.WriteComment($"Event: {node.Identifier.Text}");
-            
-            var eventType = ResolveType(node.Type);
-            var eventDeclaringTypeVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Type).VariableName;
-            var eventName = node.Identifier.ValueText;
-
-            var eventDefVar = AddEventDefinition(node, eventName, eventType);
-            AddCecilExpression($"{eventDeclaringTypeVar}.Properties.Add({eventDefVar});");
+            var evtDefVar = AddEventDefinition(node, eventDeclaringTypeVar, node.Identifier.Text, eventType, eventAccessorsDefVarMapping["add"], eventAccessorsDefVarMapping["remove"]);
+            HandleAttributesInMemberDeclaration(node.AttributeLists, evtDefVar);            
         }
 
         // Handles field like events (i.e, no add/remove accessors)
@@ -55,6 +75,7 @@ namespace Cecilifier.Core.AST
             }
             */
 
+            using var _ = LineInformationTracker.Track(Context, node);
             Context.WriteNewLine();
             Context.WriteComment($"Event: {node.Declaration.Variables.First().Identifier.Text}");
 
@@ -62,91 +83,53 @@ namespace Cecilifier.Core.AST
             
             eventDeclaringTypeVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Type).VariableName;
 
-            var backingFieldVar = string.Empty;
-
             var declaringType = node.ResolveDeclaringType<TypeDeclarationSyntax>();
-            if (!declaringType.IsKind(SyntaxKind.InterfaceDeclaration))
-            {
-                backingFieldVar = AddBackingField(node); // backing field will have same name as the event
-            }
+            var backingFieldVar = declaringType.IsKind(SyntaxKind.InterfaceDeclaration) 
+                ? string.Empty
+                : AddBackingField(node); // backing field will have same name as the event
             
             var eventType = ResolveType(node.Declaration.Type);
+            var addAccessorVar = AddAccessor(node, eventSymbol, "add", backingFieldVar, eventType, AddMethodBody);
+            var removeAccessorVar = AddAccessor(node, eventSymbol, "remove", backingFieldVar, eventType, RemoveMethodBody);
 
-            var addAccessorVar = AddAddAccessor(node, eventSymbol, backingFieldVar, eventType);
-            var removeAccessorVar = AddRemoveAccessor(node, eventSymbol, backingFieldVar, eventType);
-
-            AddCecilExpression($"{eventDeclaringTypeVar}.Methods.Add({addAccessorVar});");
-            AddCecilExpression($"{eventDeclaringTypeVar}.Methods.Add({removeAccessorVar});");
-            
-            var eventName = node.Declaration.Variables[0].Identifier.Text;
-            
-            var evtDefVar = AddEventDefinition(node, eventDeclaringTypeVar, eventName, eventType, addAccessorVar, removeAccessorVar);
+            var evtDefVar = AddEventDefinition(node, eventDeclaringTypeVar, eventSymbol.Name, eventType, addAccessorVar, removeAccessorVar);
             HandleAttributesInMemberDeclaration(node.AttributeLists, evtDefVar);
         }
 
-        private string AddRemoveAccessor(EventFieldDeclarationSyntax node, IEventSymbol eventSymbol, string backingFieldVar, string eventType)
+        private string AddAccessor(EventFieldDeclarationSyntax node, IEventSymbol eventSymbol, string accessorName, string backingFieldVar, string eventType, Func<EventFieldDeclarationSyntax, IEventSymbol, string, string, IEnumerable<string>> methodBodyFactory)
         {
-            var removeMethodVar = Context.Naming.SyntheticVariable("remove", ElementKind.Method);
+            var methodVar = Context.Naming.SyntheticVariable(accessorName, ElementKind.Method);
             var isInterfaceDef = eventSymbol.ContainingType.TypeKind == TypeKind.Interface;
-            var accessorModifiers = AccessModifiersForEventAccessors(node, isInterfaceDef);
-
-            var removeMethodExps = CecilDefinitionsFactory.Method(Context, removeMethodVar, $"remove_{eventSymbol.Name}", accessorModifiers, Context.RoslynTypeSystem.SystemVoid, false,Array.Empty<TypeParameterSyntax>());
-            var paramsExps = AddParameterTo(removeMethodVar, eventType);
-
-            removeMethodExps = removeMethodExps.Concat(paramsExps);
+            IEnumerable<string> methodBodyExpressions = Array.Empty<string>();
             if (!isInterfaceDef)
             {
-                var localVarsExps = CreateLocalVarsForAddMethod(removeMethodVar, backingFieldVar);
-                var bodyExps = RemoveMethodBody(node, eventSymbol, backingFieldVar, removeMethodVar);
-                removeMethodExps  = removeMethodExps.Concat(bodyExps).Concat(localVarsExps);
+                var localVarsExps = CreateLocalVarsForAddMethod(methodVar, backingFieldVar);
+                var bodyExps = methodBodyFactory(node, eventSymbol, backingFieldVar, methodVar);
+                methodBodyExpressions  = methodBodyExpressions.Concat(bodyExps).Concat(localVarsExps);
             }
             
-            foreach (var exp in removeMethodExps)
-            {
-                WriteCecilExpression(Context, exp);
-            }
-            
-            return removeMethodVar;            
+            return AddAccessor(node, eventSymbol, methodVar, accessorName, eventType, methodBodyExpressions);
         }
-
-        private string AddAddAccessor(EventFieldDeclarationSyntax node, IEventSymbol eventSymbol, string backingFieldVar, string eventType)
+        
+        private string AddAccessor(MemberDeclarationSyntax node, IEventSymbol eventSymbol, string methodVar, string accessorName, string eventType, IEnumerable<string> methodBodyExpressions)
         {
-            var addMethodVar = Context.Naming.SyntheticVariable("add", ElementKind.Method);
-            var isInterfaceDef = eventSymbol.ContainingType.TypeKind == TypeKind.Interface;
-            
-            var accessorModifiers = AccessModifiersForEventAccessors(node, isInterfaceDef);
-            var addMethodExps = CecilDefinitionsFactory.Method(Context, addMethodVar, $"add_{eventSymbol.Name}", accessorModifiers, Context.RoslynTypeSystem.SystemVoid, false, Array.Empty<TypeParameterSyntax>());
+            var accessorModifiers = AccessModifiersForEventAccessors(node, eventSymbol.ContainingType.TypeKind == TypeKind.Interface);
 
-            var paramsExps = AddParameterTo(addMethodVar, eventType);
-            addMethodExps = addMethodExps.Concat(paramsExps);
-            
-            if (!isInterfaceDef)
-            {
-                var localVarsExps = CreateLocalVarsForAddMethod(addMethodVar, backingFieldVar);
-                var bodyExps = AddMethodBody(node, eventSymbol, backingFieldVar, addMethodVar);
+            var methodName = $"{accessorName}_{eventSymbol.Name}";
+            var methodExps = CecilDefinitionsFactory.Method(Context, methodVar, methodName, accessorModifiers, Context.RoslynTypeSystem.SystemVoid, false,Array.Empty<TypeParameterSyntax>());
+            var paramsExps = AddParameterTo(methodVar, eventType);
 
-                addMethodExps = addMethodExps.Concat(bodyExps).Concat(localVarsExps);
-            }
-
-            foreach (var exp in addMethodExps)
-            {
-                WriteCecilExpression(Context, exp);
-            }
-
-            return addMethodVar;
+            AddCecilExpressions(methodExps.Concat(paramsExps).Concat(methodBodyExpressions));
+            AddCecilExpression($"{eventDeclaringTypeVar}.Methods.Add({methodVar});");
+            Context.DefinitionVariables.RegisterMethod(eventSymbol.ContainingType.Name, methodName, new[] { eventSymbol.Type.ToDisplayString() }, methodVar);
+            return methodVar;            
         }
-
-        private static string AccessModifiersForEventAccessors(EventFieldDeclarationSyntax node, bool isInterfaceDef)
+        
+        private static string AccessModifiersForEventAccessors(MemberDeclarationSyntax node, bool isInterfaceDef)
         {
-            string accessorModifiers;
-            if (isInterfaceDef)
-            {
-                accessorModifiers = "MethodAttributes.SpecialName | MethodAttributes.Public | MethodAttributes.NewSlot | MethodAttributes.Virtual | MethodAttributes.Abstract | MethodAttributes.HideBySig";
-            }
-            else
-            {
-                accessorModifiers = node.Modifiers.MethodModifiersToCecil((targetEnum, modifiers, defaultAccessibility) => ModifiersToCecil(modifiers, targetEnum, defaultAccessibility), "MethodAttributes.SpecialName");
-            }
+            var accessorModifiers = isInterfaceDef 
+                ? Constants.CommonCecilConstants.InterfaceMethodAttributes 
+                : node.Modifiers.MethodModifiersToCecil((targetEnum, modifiers, defaultAccessibility) => ModifiersToCecil(modifiers, targetEnum, defaultAccessibility), "MethodAttributes.SpecialName");
 
             return accessorModifiers;
         }
@@ -268,7 +251,7 @@ namespace Cecilifier.Core.AST
             return fields.First();
         }
 
-        private string AddEventDefinition(EventFieldDeclarationSyntax eventFieldDeclaration, string eventDeclaringTypeVar, string eventName, string eventType, string addAccessor, string removeAccessor)
+        private string AddEventDefinition(MemberDeclarationSyntax eventFieldDeclaration, string eventDeclaringTypeVar, string eventName, string eventType, string addAccessor, string removeAccessor)
         {
             var evtDefVar = Context.Naming.EventDeclaration(eventFieldDeclaration);
             WriteCecilExpression(Context,$"var {evtDefVar} = new EventDefinition(\"{eventName}\", EventAttributes.None, {eventType});");
@@ -284,6 +267,7 @@ namespace Cecilifier.Core.AST
             var eventDefVar = Context.Naming.EventDeclaration(eventDeclarationSyntax);
             var eventDefExp = $"var {eventDefVar} = new EventDefinition(\"{eventName}\", EventAttributes.None, {eventType});";
             AddCecilExpression(eventDefExp);
+            WriteCecilExpression(Context,$"{eventDeclaringTypeVar}.Events.Add({eventDefVar});");
 
             return eventDefVar;
         }

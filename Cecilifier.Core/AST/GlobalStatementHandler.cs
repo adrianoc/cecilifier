@@ -61,7 +61,7 @@ namespace Cecilifier.Core.AST
                 
             WriteCecilExpression($"{typeVar}.Methods.Add({methodVar});");
             
-            new ConstructorDeclarationVisitor(context).DefaultCtorInjector2(typeVar, "Program");
+            new ConstructorDeclarationVisitor(context).DefaultCtorInjector(typeVar, "Program", "MethodAttributes.Public", $"TypeHelpers.DefaultCtorFor({typeVar}.BaseType)", null);
         }
 
         public bool HandleGlobalStatement(GlobalStatementSyntax node)

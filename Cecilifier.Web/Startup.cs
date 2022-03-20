@@ -145,7 +145,7 @@ namespace Cecilifier.Web
                         if (deployKind == 'Z')
                         {
                             var responseData = ZipProject(
-                                ("Program.cs", cecilifiedResult.GeneratedCode.ReadToEnd()),
+                                ("Program.cs", await cecilifiedResult.GeneratedCode.ReadToEndAsync()),
                                 ("Cecilified.csproj", ProjectContents),
                                 NameAndContentFromResource("Cecilifier.Web.Runtime")
                             );
