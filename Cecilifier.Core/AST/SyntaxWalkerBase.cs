@@ -396,11 +396,11 @@ namespace Cecilifier.Core.AST
         protected void ProcessParameter(string ilVar, SimpleNameSyntax node, IParameterSymbol paramSymbol)
         {
             var parent = (CSharpSyntaxNode) node.Parent;
-            if (HandleLoadAddress(ilVar, paramSymbol.Type, parent, OpCodes.Ldarga, paramSymbol.Name, VariableMemberKind.Parameter))
-                return;
-
             var method = (IMethodSymbol) paramSymbol.ContainingSymbol;
             
+            if (HandleLoadAddress(ilVar, paramSymbol.Type, parent, OpCodes.Ldarga, paramSymbol.Name, VariableMemberKind.Parameter, (method.AssociatedSymbol ?? method).ToDisplayString()))
+                return;
+
             Utils.EnsureNotNull(node.Parent);
             //TODO: Add a test for parameter index for static/instance members.
             var adjustedParameterIndex = paramSymbol.Ordinal + (method.IsStatic ? 0 : 1);

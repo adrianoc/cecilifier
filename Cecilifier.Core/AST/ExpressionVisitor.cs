@@ -951,6 +951,19 @@ namespace Cecilifier.Core.AST
             {
                 MethodDeclarationVisitor.AddMethodDefinition(Context, varName, method.Name, "MethodAttributes.Private", method.ReturnType, method.ReturnsByRef, typeParameters);
             }
+
+            foreach (var parameter in method.Parameters)
+            {
+                var parameterExp = CecilDefinitionsFactory.Parameter(parameter, Context.TypeResolver.Resolve(parameter.Type));
+                var paramVar = Context.Naming.Parameter(parameter.Name);
+                Context.WriteCecilExpression($"var {paramVar} = {parameterExp};");
+                Context.WriteNewLine();
+                Context.WriteCecilExpression($"{varName}.Parameters.Add({paramVar});");
+                Context.WriteNewLine();
+
+                Context.DefinitionVariables.RegisterNonMethod(method.ToDisplayString(), parameter.Name, VariableMemberKind.Parameter, paramVar);
+            }
+            
             Context.DefinitionVariables.RegisterMethod(method.AsMethodDefinitionVariable(varName));
         }
 
@@ -1047,7 +1060,7 @@ namespace Cecilifier.Core.AST
             if (!fieldSymbol.IsStatic && !isTargetOfQualifiedAccess)
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
             
-            if (HandleLoadAddress(ilVar, fieldSymbol.Type, (CSharpSyntaxNode) node.Parent, fieldSymbol.IsStatic ? OpCodes.Ldsflda : OpCodes.Ldflda, fieldSymbol.Name, VariableMemberKind.Field, fieldSymbol.ContainingType.Name))
+            if (HandleLoadAddress(ilVar, fieldSymbol.Type, (CSharpSyntaxNode) node.Parent, fieldSymbol.IsStatic ? OpCodes.Ldsflda : OpCodes.Ldflda, fieldSymbol.Name, VariableMemberKind.Field, fieldSymbol.ContainingType.ToDisplayString()))
             {
                 return;
             }
@@ -1079,7 +1092,7 @@ namespace Cecilifier.Core.AST
                 fieldDeclaration.Accept(new FieldDeclarationVisitor(Context));
             }
             
-            var fieldDeclarationVariable = Context.DefinitionVariables.GetVariable(fieldSymbol.Name, VariableMemberKind.Field, fieldSymbol.ContainingType.Name);
+            var fieldDeclarationVariable = Context.DefinitionVariables.GetVariable(fieldSymbol.Name, VariableMemberKind.Field, fieldSymbol.ContainingType.ToDisplayString());
             if (!fieldDeclarationVariable.IsValid)
                 throw new Exception($"Could not resolve reference to field: {fieldSymbol.Name}");
             

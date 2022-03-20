@@ -38,6 +38,7 @@ namespace Cecilifier.Core.AST
             AddDefaultMemberAttribute(propertyDeclaringTypeVar, propName);
             var propDefVar = AddPropertyDefinition(node, propName, propertyType);
 
+            var indexerSymbol = Context.SemanticModel.GetDeclaredSymbol(node).EnsureNotNull();
             var paramsVar = new List<ParamData>();
             foreach (var parameter in node.ParameterList.Parameters)
             {
@@ -50,7 +51,7 @@ namespace Cecilifier.Core.AST
 
                 var exps = CecilDefinitionsFactory.Parameter(parameter, Context.SemanticModel, propDefVar, paramVar, ResolveType(parameter.Type), parameter.Accept(DefaultParameterExtractorVisitor.Instance));
                 AddCecilExpressions(exps);
-                Context.DefinitionVariables.RegisterNonMethod(string.Empty, parameter.Identifier.ValueText, VariableMemberKind.Parameter, paramVar);
+                Context.DefinitionVariables.RegisterNonMethod(indexerSymbol.ToDisplayString(), parameter.Identifier.ValueText, VariableMemberKind.Parameter, paramVar);
             }
 
             ProcessPropertyAccessors(node, propertyDeclaringTypeVar, propName, propertyType, propDefVar, paramsVar, node.ExpressionBody);
@@ -159,7 +160,7 @@ namespace Cecilifier.Core.AST
                     modifiers = modifiers.AppendModifier("FieldAttributes.InitOnly");
                 }
                 
-                var backingFieldExps = CecilDefinitionsFactory.Field(Context, declaringType.Identifier.Text, propertyDeclaringTypeVar, backingFieldVar, Utils.BackingFieldNameForAutoProperty(propName), propertyType, modifiers);
+                var backingFieldExps = CecilDefinitionsFactory.Field(Context, propInfo.ContainingSymbol.ToDisplayString() , propertyDeclaringTypeVar, backingFieldVar, Utils.BackingFieldNameForAutoProperty(propName), propertyType, modifiers);
                 AddCecilExpressions(backingFieldExps);
             }
 

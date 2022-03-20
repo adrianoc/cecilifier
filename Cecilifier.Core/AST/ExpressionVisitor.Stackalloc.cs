@@ -314,7 +314,7 @@ internal class StackallocSpanAssignmentTracker
             Utils.EnsureNotNull(rankSymbolInfo.Symbol, "Failed to resolve symbol");
 
             var parentTypeName = rankSymbolInfo.Symbol.Kind == SymbolKind.Field // TODO: What about properties and/or methods? 
-                ? rankSymbolInfo.Symbol.ContainingType.FullyQualifiedName()
+                ? rankSymbolInfo.Symbol.ContainingType.ToDisplayString()
                 : string.Empty;
             
             var spanSizeStorageVariable = context.DefinitionVariables.GetVariable(rankNode.ToFullString(), VariableMemberKind.LocalVariable | VariableMemberKind.Field | VariableMemberKind.Parameter, parentTypeName);

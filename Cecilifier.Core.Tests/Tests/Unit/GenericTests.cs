@@ -82,5 +82,26 @@ namespace Cecilifier.Core.Tests.Tests.Unit
                     @"var gi_bar_10 = new GenericInstanceMethod\(r_bar_8\);\s+" +
                     @"gi_bar_10.GenericArguments.Add\(assembly.MainModule.TypeSystem.Single\);"));
         }
+
+        [Test]
+        public void Issue_169_ReferenceToForwardedMethodContainingGenericParameters()
+        {
+            var code = @"class Foo<T> { void Bar(T t) { M(t); } T M(T t) { T tl = t; t = tl; return t; } }";
+            var result = RunCecilifier(code);
+
+            var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+            
+            Assert.That(
+                cecilifiedCode, 
+                Does.Match(
+                    @"var m_M_5 = new MethodDefinition\(""M"", MethodAttributes.Private, assembly.MainModule.TypeSystem.Void\);\s+" +
+                    @"m_M_5.ReturnType = gp_T_1;\s+" +
+                    @"var p_t_6 = new ParameterDefinition\(""t"", ParameterAttributes.None, gp_T_1\);\s+" +
+                    @"m_M_5.Parameters.Add\(p_t_6\);\s+" +
+                    @"var r_M_7 = new MethodReference\(m_M_5.Name, m_M_5.ReturnType\).+;"));
+
+            Assert.That(cecilifiedCode, Contains.Substring("il_M_9.Emit(OpCodes.Starg_S, p_t_6);")); // t = tl; ensures that the forwarded parameters has been used in M()'s implementation
+        }
+        
     }
 }

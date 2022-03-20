@@ -9,6 +9,7 @@ public struct Constants
     public struct CecilCommonConstants
     {
         public readonly string InterfaceMethodAttributes = "MethodAttributes.SpecialName | MethodAttributes.Public | MethodAttributes.NewSlot | MethodAttributes.Virtual | MethodAttributes.Abstract | MethodAttributes.HideBySig";
+        public readonly string MethodAttributesSpecialName = "MethodAttributes.SpecialName";
 
         public CecilCommonConstants() { }
     }

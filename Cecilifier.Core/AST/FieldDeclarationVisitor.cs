@@ -38,6 +38,7 @@ namespace Cecilifier.Core.AST
         private IEnumerable<string> HandleFieldDeclaration(MemberDeclarationSyntax node, VariableDeclarationSyntax variableDeclarationSyntax, IReadOnlyList<SyntaxToken> modifiers, BaseTypeDeclarationSyntax declaringType)
         {
             var declaringTypeVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Type);
+            var declaringTypeSymbol = Context.SemanticModel.GetDeclaredSymbol(declaringType).EnsureNotNull();
 
             var fieldDefVars = new List<string>(variableDeclarationSyntax.Variables.Count);
             
@@ -49,14 +50,14 @@ namespace Cecilifier.Core.AST
             {
                 using var _ = LineInformationTracker.Track(Context, field);
                 // skip field already processed due to forward references.
-                var fieldDeclarationVariable = Context.DefinitionVariables.GetVariable(field.Identifier.Text, VariableMemberKind.Field, declaringType.Identifier.Text);
+                var fieldDeclarationVariable = Context.DefinitionVariables.GetVariable(field.Identifier.Text, VariableMemberKind.Field, declaringTypeSymbol.ToDisplayString());
                 if (fieldDeclarationVariable.IsValid)
                     continue;
 
                 var fieldVar = Context.Naming.FieldDeclaration(node);
                 fieldDefVars.Add(fieldVar);
                 var constant = modifiers.Any( m => m.IsKind(SyntaxKind.ConstKeyword)) && field.Initializer != null ? Context.SemanticModel.GetConstantValue(field.Initializer.Value) : null;
-                var exps = CecilDefinitionsFactory.Field(Context, declaringTypeVar.MemberName, declaringTypeVar.VariableName, fieldVar, field.Identifier.ValueText, fieldType, fieldAttributes, constant.Value.ValueText());
+                var exps = CecilDefinitionsFactory.Field(Context, declaringTypeSymbol.ToDisplayString(), declaringTypeVar.VariableName, fieldVar, field.Identifier.ValueText, fieldType, fieldAttributes, constant.Value.ValueText());
                 AddCecilExpressions(exps);
                 
                 HandleAttributesInMemberDeclaration(node.AttributeLists, fieldVar);

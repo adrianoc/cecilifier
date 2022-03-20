@@ -84,17 +84,25 @@ namespace Cecilifier.Core.AST
         public override void VisitParameter(ParameterSyntax node)
         {
             var paramVar = Context.Naming.Parameter(node);
-            Context.DefinitionVariables.RegisterNonMethod(string.Empty, node.Identifier.ValueText, VariableMemberKind.Parameter, paramVar);
 
             var methodVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
             if (!methodVar.IsValid)
                 throw new InvalidOperationException($"Failed to retrieve current method.");
-            
-            var declaringMethodVariable = methodVar.VariableName;
 
-            var exps = CecilDefinitionsFactory.Parameter(node, Context.SemanticModel, declaringMethodVariable, paramVar, ResolveType(node.Type), node.Accept(DefaultParameterExtractorVisitor.Instance));
-            AddCecilExpressions(exps);
-            
+            var containingSymbol = Context.SemanticModel.GetDeclaredSymbol(node).EnsureNotNull().ContainingSymbol;
+            var declaringMethodVariable = methodVar.VariableName;
+            var forwardedParamVar = Context.DefinitionVariables.GetVariable(node.Identifier.ValueText, VariableMemberKind.Parameter, containingSymbol.ToDisplayString());
+            if (forwardedParamVar.IsValid)
+            {
+                paramVar = forwardedParamVar.VariableName;
+            }
+            else
+            {
+                Context.DefinitionVariables.RegisterNonMethod(containingSymbol.ToDisplayString(), node.Identifier.ValueText, VariableMemberKind.Parameter, paramVar);
+                var exps = CecilDefinitionsFactory.Parameter(node, Context.SemanticModel, declaringMethodVariable, paramVar, ResolveType(node.Type), node.Accept(DefaultParameterExtractorVisitor.Instance));
+                AddCecilExpressions(exps);
+            }
+
             HandleAttributesInMemberDeclaration(node.AttributeLists, paramVar);
 
             base.VisitParameter(node);

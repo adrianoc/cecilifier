@@ -27,7 +27,7 @@ public unsafe readonly struct ScopedDefinitionVariable : IDisposable
     static void ConditionalUnregister(IList<DefinitionVariable> variables, int index)
     {
         var v = variables[index];
-        if (v.Kind is VariableMemberKind.LocalVariable or VariableMemberKind.Parameter or VariableMemberKind.TypeParameter) 
+        if (v.Kind is VariableMemberKind.LocalVariable) 
             variables.RemoveAt(index);
     }
             

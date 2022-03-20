@@ -127,6 +127,7 @@ namespace Cecilifier.Core.AST
 
         private void ProcessFieldInitialization(TypeDeclarationSyntax declaringClass, string ctorBodyIL)
         {
+            var declaringTypeSymbol = Context.SemanticModel.GetDeclaredSymbol(declaringClass).EnsureNotNull();
             // Handles non const field initialization...
             foreach (var fieldDeclaration in declaringClass.Members.OfType<FieldDeclarationSyntax>().Where(f => !f.Modifiers.Any(m => m.IsKind(SyntaxKind.ConstKeyword))))
             {
@@ -138,7 +139,7 @@ namespace Cecilifier.Core.AST
                 Context.WriteNewLine();
                 Context.WriteComment(fieldDeclaration.HumanReadableSummary());
 
-                if (HandleSystemIndexInitialization(dec, declaringClass, ctorBodyIL))
+                if (HandleSystemIndexInitialization(dec, declaringTypeSymbol, ctorBodyIL))
                     continue;
                 
                 if (!fieldDeclaration.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword))) 
@@ -147,7 +148,7 @@ namespace Cecilifier.Core.AST
                 if (ExpressionVisitor.Visit(Context, ctorBodyIL, dec.Initializer))
                     continue;
 
-                var fieldVarDef = Context.DefinitionVariables.GetVariable(dec.Identifier.ValueText, VariableMemberKind.Field, declaringClass.Identifier.Text);
+                var fieldVarDef = Context.DefinitionVariables.GetVariable(dec.Identifier.ValueText, VariableMemberKind.Field, declaringTypeSymbol.ToDisplayString());
                 var fieldStoreOpCode = fieldDeclaration.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword))
                     ? OpCodes.Stsfld
                     : OpCodes.Stfld;
@@ -171,7 +172,7 @@ namespace Cecilifier.Core.AST
                 if (ExpressionVisitor.Visit(Context, ctorBodyIL, dec.Initializer))
                     continue;
 
-                var backingFieldVar = Context.DefinitionVariables.GetVariable(Utils.BackingFieldNameForAutoProperty(dec.Identifier.ValueText), VariableMemberKind.Field, declaringClass.Identifier.Text);
+                var backingFieldVar = Context.DefinitionVariables.GetVariable(Utils.BackingFieldNameForAutoProperty(dec.Identifier.ValueText), VariableMemberKind.Field, declaringTypeSymbol.ToDisplayString());
                 var fieldStoreOpCode = dec.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword))
                     ? OpCodes.Stsfld
                     : OpCodes.Stfld;
@@ -180,7 +181,7 @@ namespace Cecilifier.Core.AST
             }
         }
 
-        private bool HandleSystemIndexInitialization(VariableDeclaratorSyntax dec, TypeDeclarationSyntax declaringType, string ctorBodyIL)
+        private bool HandleSystemIndexInitialization(VariableDeclaratorSyntax dec, ISymbol declaringTypeSymbol, string ctorBodyIL)
         {
             if (dec.Initializer == null || !dec.Initializer.Value.IsKind(SyntaxKind.IndexExpression))
                 return false;
@@ -188,7 +189,7 @@ namespace Cecilifier.Core.AST
             // code is something like `Index field = ^5`; 
             // in this case we need to load the address of the field since the expression ^5 (IndexerExpression) will result in a call to System.Index ctor (which is a value type and expects
             // the address of the value type to be in the top of the stack
-            var operand = Context.DefinitionVariables.GetVariable(dec.Identifier.Text, VariableMemberKind.Field, declaringType.Identifier.Text).VariableName;
+            var operand = Context.DefinitionVariables.GetVariable(dec.Identifier.Text, VariableMemberKind.Field, declaringTypeSymbol.ToDisplayString()).VariableName;
             Context.EmitCilInstruction(ctorBodyIL, OpCodes.Ldflda, operand);
             ExpressionVisitor.Visit(Context, ctorBodyIL, dec.Initializer);
             return true;

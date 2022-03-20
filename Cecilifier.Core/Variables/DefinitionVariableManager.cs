@@ -110,7 +110,7 @@ public class DefinitionVariableManager
     /// </example>
     /// </remarks>
     /// <returns>
-    /// a new ScopedDefinitionVariable that, when disposed, will remove all local variables (parameters, type parameters and local variables)
+    /// a new ScopedDefinitionVariable that, when disposed, will remove all local variables
     /// from the list of defined variables.</returns>
     public ScopedDefinitionVariable EnterLocalScope()
     {

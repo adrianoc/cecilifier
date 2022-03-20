@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.AST;
@@ -132,7 +133,7 @@ namespace Cecilifier.Core.Misc
 
         private static string GenericParameter(IVisitorContext context, string typeParameterOwnerVar, string genericParamName, string genParamDefVar, ITypeParameterSymbol typeParameterSymbol)
         {
-            context.DefinitionVariables.RegisterNonMethod(string.Empty, genericParamName, VariableMemberKind.TypeParameter, genParamDefVar);
+            context.DefinitionVariables.RegisterNonMethod(typeParameterSymbol.ContainingSymbol.FullyQualifiedName(), genericParamName, VariableMemberKind.TypeParameter, genParamDefVar);
             return $"var {genParamDefVar} = new Mono.Cecil.GenericParameter(\"{genericParamName}\", {typeParameterOwnerVar}) {Variance(typeParameterSymbol)};";
         }
 
@@ -263,26 +264,25 @@ namespace Cecilifier.Core.Misc
         {
             // forward declare all generic type parameters to allow one type parameter to reference any of the others; this is useful in constraints for example:
             // class Foo<T,S> where T: S  { }
-            var tba = new List<(string genParamDefVar, ITypeParameterSymbol typeParameterSymbol)>();
-            foreach (var typeParameter in typeParamList)
+            var genericTypeParamEntries = ArrayPool<(string genParamDefVar, ITypeParameterSymbol typeParameterSymbol)>.Shared.Rent(typeParamList.Count);
+            for(int i = 0; i < typeParamList.Count; i++)
             {
-                var symbol = context.SemanticModel.GetDeclaredSymbol(typeParameter);
-                var genericParamName = typeParameter.Identifier.Text;
+                var symbol = context.SemanticModel.GetDeclaredSymbol(typeParamList[i]);
+                var genericParamName = typeParamList[i].Identifier.Text;
                 
-                var genParamDefVar = context.Naming.GenericParameterDeclaration(typeParameter);
-
-                context.DefinitionVariables.RegisterNonMethod(symbol.ContainingSymbol.AssemblyQualifiedName(), genericParamName, VariableMemberKind.TypeParameter, genParamDefVar);
+                var genParamDefVar = context.Naming.GenericParameterDeclaration(typeParamList[i]);
                 exps.Add(GenericParameter(context, memberDefVar, genericParamName, genParamDefVar, symbol));
-                
-                tba.Add((genParamDefVar, symbol));
+                genericTypeParamEntries[i] = (genParamDefVar, symbol);
             }
             
-            foreach (var entry in tba)
+            for(int i = 0; i < typeParamList.Count; i++)
             {
-                AddConstraints(entry.genParamDefVar, entry.typeParameterSymbol);
-                exps.Add($"{memberDefVar}.GenericParameters.Add({entry.genParamDefVar});");
+                AddConstraints(genericTypeParamEntries[i].genParamDefVar, genericTypeParamEntries[i].typeParameterSymbol);
+                exps.Add($"{memberDefVar}.GenericParameters.Add({genericTypeParamEntries[i].genParamDefVar});");
             }
             
+            ArrayPool<(string genParamDefVar, ITypeParameterSymbol typeParameterSymbol)>.Shared.Return(genericTypeParamEntries);
+
             void AddConstraints(string genParamDefVar, ITypeParameterSymbol typeParam)
             {
                 if (typeParam.HasConstructorConstraint || typeParam.HasValueTypeConstraint) // struct constraint implies new()
