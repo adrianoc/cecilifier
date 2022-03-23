@@ -16,6 +16,28 @@ namespace Cecilifier.Core.AST;
 
 partial class ExpressionVisitor
 {
+    public override void VisitImplicitStackAllocArrayCreationExpression(ImplicitStackAllocArrayCreationExpressionSyntax node)
+    {
+        using var _ = LineInformationTracker.Track(Context, node);
+        var spanType = Context.SemanticModel.GetTypeInfo(node).Type.EnsureNotNull<ITypeSymbol, INamedTypeSymbol>();
+        var arrayElementType = spanType.TypeArguments[0];
+
+        Utils.EnsureNotNull(node.Initializer);
+        Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, node.Initializer.Expressions.Count);
+
+        var stackallocSpanAssignmentTracker = new StackallocSpanAssignmentTracker(node, Context);
+        var resolvedArrayElementType = Context.TypeResolver.Resolve(arrayElementType);
+        CalculateLengthInBytesAndEmitLocalloc(stackallocSpanAssignmentTracker, null, resolvedArrayElementType, false);
+
+        node.Initializer.Accept(this);
+        
+        if (!stackallocSpanAssignmentTracker)
+            return;
+        
+        Context.EmitCilInstruction(ilVar, stackallocSpanAssignmentTracker.LoadOpCode, stackallocSpanAssignmentTracker.SpanLengthVariable);
+        EmitNewobjForSpanOfType(resolvedArrayElementType);
+    }
+
     public override void VisitStackAllocArrayCreationExpression(StackAllocArrayCreationExpressionSyntax node)
     {
         using var _ = LineInformationTracker.Track(Context, node);
@@ -50,6 +72,7 @@ partial class ExpressionVisitor
             ? arrayElementType.Type.SizeofArrayLikeItemElement()
             : uint.MaxValue; // this means the size of the elements need to be calculated at runtime... 
         
+        var resolvedElementType = ResolveType(arrayType.ElementType);
         if (rankNode.IsKind(SyntaxKind.NumericLiteralExpression) && arrayElementType.Type.IsPrimitiveType())
         {
             var elementCount = Int32.Parse(rankNode.GetFirstToken().Text);
@@ -62,22 +85,7 @@ partial class ExpressionVisitor
         else
         {
             rankNode.Accept(this);
-            if (stackallocSpanAssignmentTracker.AddVariableToStoreElementCountIfRequired(Context, rankNode))
-            {
-                // result of the stackalloc is being assigned to a Span<T>. We need to initialize it later.. for that we need
-                // element count so we store in a new local variable.
-                Context.EmitCilInstruction(ilVar, OpCodes.Stloc, stackallocSpanAssignmentTracker.SpanLengthVariable);
-                Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, stackallocSpanAssignmentTracker.SpanLengthVariable);
-            }
-            
-            Context.EmitCilInstruction(ilVar, OpCodes.Conv_U);
-            if (arrayElementTypeSize > 1) // Optimization
-            {
-                var operand = ResolveType(arrayType.ElementType);
-                Context.EmitCilInstruction(ilVar, OpCodes.Sizeof, operand);
-                Context.EmitCilInstruction(ilVar, OpCodes.Mul_Ovf_Un);
-            }
-            Context.EmitCilInstruction(ilVar, OpCodes.Localloc);
+            CalculateLengthInBytesAndEmitLocalloc(stackallocSpanAssignmentTracker, rankNode, resolvedElementType, arrayElementTypeSize > 1);
         }
 
         if (node.Initializer != null)
@@ -89,16 +97,39 @@ partial class ExpressionVisitor
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, stackallocSpanAssignmentTracker.ConstantElementCount);
             else
                 Context.EmitCilInstruction(ilVar, stackallocSpanAssignmentTracker.LoadOpCode, stackallocSpanAssignmentTracker.SpanLengthVariable);
-
-            var spanInstanceType = $"{Utils.ImportFromMainModule("typeof(Span<>)")}.MakeGenericInstanceType({ResolveType(arrayType.ElementType)})";
-            var spanCtorVar = Context.Naming.SyntheticVariable("spanCtor", ElementKind.LocalVariable);
-            AddCecilExpression($"var {spanCtorVar} = new MethodReference(\".ctor\", {Context.TypeResolver.Bcl.System.Void}, {spanInstanceType}) {{ HasThis = true }};");
-            AddCecilExpression($"{spanCtorVar}.Parameters.Add({CecilDefinitionsFactory.Parameter("ptr", RefKind.None, Context.TypeResolver.Resolve("void*") )});");
-            AddCecilExpression($"{spanCtorVar}.Parameters.Add({CecilDefinitionsFactory.Parameter("length", RefKind.None, Context.TypeResolver.Bcl.System.Int32)});");
-
-            var operand = Utils.ImportFromMainModule($"{spanCtorVar}");
-            Context.EmitCilInstruction(ilVar, OpCodes.Newobj, operand);
+            EmitNewobjForSpanOfType(resolvedElementType);
         }
+    }
+
+    private void CalculateLengthInBytesAndEmitLocalloc(StackallocSpanAssignmentTracker stackallocSpanAssignmentTracker, ExpressionSyntax rankNode, string resolvedElementType, bool elementSizeTakesMoreThanOneByte)
+    {
+        if (stackallocSpanAssignmentTracker.AddVariableToStoreElementCountIfRequired(Context, rankNode))
+        {
+            // result of the stackalloc is being assigned to a Span<T>. We need to initialize it later.. for that we need
+            // element count so we store in a new local variable.
+            Context.EmitCilInstruction(ilVar, OpCodes.Stloc, stackallocSpanAssignmentTracker.SpanLengthVariable);
+            Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, stackallocSpanAssignmentTracker.SpanLengthVariable);
+        }
+
+        Context.EmitCilInstruction(ilVar, OpCodes.Conv_U);
+        if (elementSizeTakesMoreThanOneByte) // if element type takes one byte them 'number of elements' == 'size in bytes' and we don't need to multiply
+        {
+            Context.EmitCilInstruction(ilVar, OpCodes.Sizeof, resolvedElementType);
+            Context.EmitCilInstruction(ilVar, OpCodes.Mul_Ovf_Un);
+        }
+
+        Context.EmitCilInstruction(ilVar, OpCodes.Localloc);
+    }
+
+    private void EmitNewobjForSpanOfType(string resolvedSpanType)
+    {
+        var spanInstanceType = $"{Utils.ImportFromMainModule("typeof(Span<>)")}.MakeGenericInstanceType({resolvedSpanType})";
+        var spanCtorVar = Context.Naming.SyntheticVariable("spanCtor", ElementKind.LocalVariable);
+        AddCecilExpression($"var {spanCtorVar} = new MethodReference(\".ctor\", {Context.TypeResolver.Bcl.System.Void}, {spanInstanceType}) {{ HasThis = true }};");
+        AddCecilExpression($"{spanCtorVar}.Parameters.Add({CecilDefinitionsFactory.Parameter("ptr", RefKind.None, Context.TypeResolver.Resolve("void*"))});");
+        AddCecilExpression($"{spanCtorVar}.Parameters.Add({CecilDefinitionsFactory.Parameter("length", RefKind.None, Context.TypeResolver.Bcl.System.Int32)});");
+
+        Context.EmitCilInstruction(ilVar, OpCodes.Newobj, Utils.ImportFromMainModule($"{spanCtorVar}"));
     }
 }
 
@@ -292,7 +323,7 @@ internal class StackallocSpanAssignmentTracker
     private readonly bool isAssignedToSpan;
     private int _constElementCount = 0;
     
-    public StackallocSpanAssignmentTracker(StackAllocArrayCreationExpressionSyntax node, IVisitorContext context)
+    public StackallocSpanAssignmentTracker(SyntaxNode node, IVisitorContext context)
     {
         isAssignedToSpan = node.Ancestors().OfType<VariableDeclarationSyntax>().FirstOrDefault(vd => vd.Type.ToFullString().Contains("Span")) != null
                            || node.Ancestors().OfType<ArgumentSyntax>().FirstOrDefault(vd => context.GetTypeInfo(vd.Expression).Type?.Name.Contains("Span") == true) != null;
@@ -305,10 +336,10 @@ internal class StackallocSpanAssignmentTracker
 
     public bool AddVariableToStoreElementCountIfRequired(IVisitorContext context, ExpressionSyntax rankNode)
     {
-        if (!this)
+        if (!isAssignedToSpan)
             return false;
         
-        if (rankNode.IsKind(SyntaxKind.IdentifierName))
+        if (rankNode != null && rankNode.IsKind(SyntaxKind.IdentifierName))
         {
             var rankSymbolInfo = context.SemanticModel.GetSymbolInfo(rankNode);
             Utils.EnsureNotNull(rankSymbolInfo.Symbol, "Failed to resolve symbol");
