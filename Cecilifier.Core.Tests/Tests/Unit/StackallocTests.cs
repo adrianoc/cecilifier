@@ -77,7 +77,7 @@ public class StackallocTests : CecilifierUnitTestBase
             Assert.That(cecilifiedCode, Does.Match(@".+//Span<byte> s = stackalloc byte\[1000\];\s+" +
                                                    @"var l_s_3 = new VariableDefinition\(assembly.MainModule.ImportReference\(typeof\(System.Span<>\)\).MakeGenericInstanceType\(assembly.MainModule.TypeSystem.Byte\)\);\s+" +
                                                    @"m_bar_1.Body.Variables.Add\(l_s_3\);\s+" +
-                                                   @"il_bar_2.Emit\(OpCodes.Ldc_I4, 1000\);\s+" +
+                                                   @"il_bar_2.Emit\(OpCodes.Ldc_I4, 1000\); // 1000 \(elements\) \* 1 \(bytes per element\)\s+" +
                                                    @"il_bar_2.Emit\(OpCodes.Conv_U\);\s+" +
                                                    @"il_bar_2.Emit\(OpCodes.Localloc\);\s+" +
                                                    @"il_bar_2.Emit\(OpCodes.Ldc_I4, 1000\);\s+"));

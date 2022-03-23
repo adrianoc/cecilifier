@@ -78,7 +78,7 @@ partial class ExpressionVisitor
             var elementCount = Int32.Parse(rankNode.GetFirstToken().Text);
             sizeInBytes = (uint) elementCount * arrayElementTypeSize;
             stackallocSpanAssignmentTracker.RememberConstantElementCount(elementCount);
-            Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, sizeInBytes);
+            Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, sizeInBytes, $"{elementCount} (elements) * {arrayElementTypeSize} (bytes per element)");
             Context.EmitCilInstruction(ilVar, OpCodes.Conv_U);
             Context.EmitCilInstruction(ilVar, OpCodes.Localloc);
         }
