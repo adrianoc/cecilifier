@@ -397,7 +397,7 @@ namespace Cecilifier.Core.AST
         {
             var parent = (CSharpSyntaxNode) node.Parent;
             var method = (IMethodSymbol) paramSymbol.ContainingSymbol;
-            
+
             if (HandleLoadAddress(ilVar, paramSymbol.Type, parent, OpCodes.Ldarga, paramSymbol.Name, VariableMemberKind.Parameter, (method.AssociatedSymbol ?? method).ToDisplayString()))
                 return;
 
@@ -414,13 +414,22 @@ namespace Cecilifier.Core.AST
                 var loadOpCode = optimizedLdArgs[adjustedParameterIndex];
                 Context.EmitCilInstruction(ilVar, loadOpCode);
             }
+            
+            EmitBoxOpCodeIfCallOnTypeParameter(ilVar, paramSymbol, parent);
+
             HandlePotentialDelegateInvocationOn(node, paramSymbol.Type, ilVar);
             HandlePotentialRefLoad(ilVar, node, paramSymbol.Type);
         }
 
+        private void EmitBoxOpCodeIfCallOnTypeParameter(string ilVar, IParameterSymbol paramSymbol, CSharpSyntaxNode parent)
+        {
+            if (paramSymbol.Type.TypeKind == TypeKind.TypeParameter && parent.Accept(new UsageVisitor(Context)) == UsageKind.CallTarget)
+                Context.EmitCilInstruction(ilVar, OpCodes.Box, Context.TypeResolver.Resolve(paramSymbol.Type));
+        }
+
         protected bool HandleLoadAddress(string ilVar, ITypeSymbol symbol, CSharpSyntaxNode node, OpCode opCode, string symbolName, VariableMemberKind variableMemberKind, string parentName = null)
         {
-            return HandleCallOnValueType() || HandleRefAssignment() || HandleParameter();
+            return HandleCallOnTypeParameter() || HandleCallOnValueType() || HandleRefAssignment() || HandleParameter();
             
             bool HandleCallOnValueType()
             {
@@ -441,6 +450,23 @@ namespace Cecilifier.Core.AST
                 }
 
                 return false;
+            }
+            
+            bool HandleCallOnTypeParameter()
+            {
+                if (symbol is not ITypeParameterSymbol typeParameter)
+                    return false;
+
+                if (typeParameter.HasReferenceTypeConstraint || typeParameter.IsReferenceType)
+                    return false;
+
+                if (node.Accept(new UsageVisitor(Context)) != UsageKind.CallTarget)
+                    return false;
+                
+                var operand = Context.DefinitionVariables.GetVariable(symbolName, variableMemberKind, parentName).VariableName;
+                Context.EmitCilInstruction(ilVar, opCode, operand);
+                Context.EmitCilInstruction(ilVar, OpCodes.Constrained, Context.TypeResolver.Resolve(symbol));
+                return true;
             }
             
             bool HandleRefAssignment()

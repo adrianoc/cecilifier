@@ -1036,11 +1036,11 @@ namespace Cecilifier.Core.AST
 
         private void ProcessField(SimpleNameSyntax node, IFieldSymbol fieldSymbol)
         {
+            var nodeParent = (CSharpSyntaxNode) node.Parent;
+            Debug.Assert(nodeParent != null);
+                         
             if (fieldSymbol.HasConstantValue && fieldSymbol.IsConst)
             {
-                var nodeParent = (CSharpSyntaxNode) node.Parent;
-                Debug.Assert(nodeParent != null);
-                         
                 LoadLiteralToStackHandlingCallOnValueTypeLiterals(
                     ilVar,
                     fieldSymbol.Type,
@@ -1072,8 +1072,10 @@ namespace Cecilifier.Core.AST
                 ? fieldDeclarationVariable.VariableName
                 : fieldSymbol.FieldResolverExpression(Context);
 
-            OpCode opCode = LoadOpCodeForFieldAccess(fieldSymbol);
+            var opCode = LoadOpCodeForFieldAccess(fieldSymbol);
             Context.EmitCilInstruction(ilVar, opCode, resolvedField);
+
+            EmitBoxOpCodeIfCallOnTypeParameter(fieldSymbol.Type, nodeParent);
             HandlePotentialDelegateInvocationOn(node, fieldSymbol.Type, ilVar);
         }
 
@@ -1101,18 +1103,24 @@ namespace Cecilifier.Core.AST
         
         private void ProcessLocalVariable(SimpleNameSyntax localVarSyntax, SymbolInfo varInfo)
         {
-            var symbol = (ILocalSymbol) varInfo.Symbol;
+            var symbol = varInfo.Symbol.EnsureNotNull<ISymbol, ILocalSymbol>();
             var localVar = (CSharpSyntaxNode) localVarSyntax.Parent;
             if (HandleLoadAddress(ilVar, symbol.Type, localVar, OpCodes.Ldloca, symbol.Name, VariableMemberKind.LocalVariable))
-            {
                 return;
-            }
 
-            string operand = Context.DefinitionVariables.GetVariable(symbol.Name, VariableMemberKind.LocalVariable).VariableName;
+            var operand = Context.DefinitionVariables.GetVariable(symbol.Name, VariableMemberKind.LocalVariable).VariableName;
             Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, operand);
+            
+            EmitBoxOpCodeIfCallOnTypeParameter(symbol.Type, localVar);
             HandlePotentialDelegateInvocationOn(localVarSyntax, symbol.Type, ilVar);
             HandlePotentialFixedLoad(symbol);
             HandlePotentialRefLoad(ilVar, localVarSyntax, symbol.Type);
+        }
+
+        private void EmitBoxOpCodeIfCallOnTypeParameter(ITypeSymbol type, CSharpSyntaxNode localVar)
+        {
+            if (type.TypeKind == TypeKind.TypeParameter && localVar.Accept(new UsageVisitor(Context)) == UsageKind.CallTarget)
+                Context.EmitCilInstruction(ilVar, OpCodes.Box, Context.TypeResolver.Resolve(type));
         }
 
         private void HandlePotentialFixedLoad(ILocalSymbol symbol)
