@@ -423,7 +423,7 @@ namespace Cecilifier.Core.AST
 
         private void EmitBoxOpCodeIfCallOnTypeParameter(string ilVar, IParameterSymbol paramSymbol, CSharpSyntaxNode parent)
         {
-            if (paramSymbol.Type.TypeKind == TypeKind.TypeParameter && parent.Accept(new UsageVisitor(Context)) == UsageKind.CallTarget)
+            if (paramSymbol.Type.TypeKind == TypeKind.TypeParameter && parent.Accept(UsageVisitor.GetInstance(Context)) == UsageKind.CallTarget)
                 Context.EmitCilInstruction(ilVar, OpCodes.Box, Context.TypeResolver.Resolve(paramSymbol.Type));
         }
 
@@ -439,7 +439,7 @@ namespace Cecilifier.Core.AST
                 // in this case we need to call System.Index.GetOffset(int32) on a value type (System.Index)
                 // which requires the address of the value type.
                 var isSystemIndexUsedAsIndex = IsSystemIndexUsedAsIndex(symbol, node);
-                if (isSystemIndexUsedAsIndex || node.IsKind(SyntaxKind.AddressOfExpression) || IsPseudoAssignmentToValueType() || node.Accept(new UsageVisitor(Context)) == UsageKind.CallTarget)
+                if (isSystemIndexUsedAsIndex || node.IsKind(SyntaxKind.AddressOfExpression) || IsPseudoAssignmentToValueType() || node.Accept(UsageVisitor.GetInstance(Context)) == UsageKind.CallTarget)
                 {
                     string operand = Context.DefinitionVariables.GetVariable(symbolName, variableMemberKind, parentName).VariableName;
                     Context.EmitCilInstruction(ilVar, opCode, operand);
@@ -460,7 +460,7 @@ namespace Cecilifier.Core.AST
                 if (typeParameter.HasReferenceTypeConstraint || typeParameter.IsReferenceType)
                     return false;
 
-                if (node.Accept(new UsageVisitor(Context)) != UsageKind.CallTarget)
+                if (node.Accept(UsageVisitor.GetInstance(Context)) != UsageKind.CallTarget)
                     return false;
                 
                 var operand = Context.DefinitionVariables.GetVariable(symbolName, variableMemberKind, parentName).VariableName;

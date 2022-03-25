@@ -306,7 +306,7 @@ namespace Cecilifier.Core.AST
             Debug.Assert(localVarParent != null);
                 
             var nodeType = Context.SemanticModel.GetTypeInfo(node);
-            LoadLiteralValue(ilVar, nodeType.Type ?? nodeType.ConvertedType, node.Token.Text, localVarParent.Accept(new UsageVisitor(Context)) == UsageKind.CallTarget);
+            LoadLiteralValue(ilVar, nodeType.Type ?? nodeType.ConvertedType, node.Token.Text, localVarParent.Accept(UsageVisitor.GetInstance(Context)) == UsageKind.CallTarget);
         }
 
         public override void VisitDeclarationExpression(DeclarationExpressionSyntax node)
@@ -529,7 +529,7 @@ namespace Cecilifier.Core.AST
             base.VisitParenthesizedExpression(node);
 
             var localVarParent = (CSharpSyntaxNode) node.Parent;
-            if (localVarParent.Accept(new UsageVisitor(Context)) != UsageKind.CallTarget)
+            if (localVarParent.Accept(UsageVisitor.GetInstance(Context)) != UsageKind.CallTarget)
                 return;
 
             StoreTopOfStackInLocalVariableAndLoadItsAddress(Context.RoslynTypeSystem.SystemInt32);
@@ -1050,7 +1050,7 @@ namespace Cecilifier.Core.AST
                         SpecialType.System_Boolean => (bool) fieldSymbol.ConstantValue == true ? 1 : 0,
                         _ => fieldSymbol.ConstantValue 
                     },
-                    nodeParent.Accept(new UsageVisitor(Context)) == UsageKind.CallTarget);
+                    nodeParent.Accept(UsageVisitor.GetInstance(Context)) == UsageKind.CallTarget);
                 return;
             }
             
@@ -1119,7 +1119,7 @@ namespace Cecilifier.Core.AST
 
         private void EmitBoxOpCodeIfCallOnTypeParameter(ITypeSymbol type, CSharpSyntaxNode localVar)
         {
-            if (type.TypeKind == TypeKind.TypeParameter && localVar.Accept(new UsageVisitor(Context)) == UsageKind.CallTarget)
+            if (type.TypeKind == TypeKind.TypeParameter && localVar.Accept(UsageVisitor.GetInstance(Context)) == UsageKind.CallTarget)
                 Context.EmitCilInstruction(ilVar, OpCodes.Box, Context.TypeResolver.Resolve(type));
         }
 
