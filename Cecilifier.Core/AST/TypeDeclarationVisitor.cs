@@ -11,7 +11,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Cecilifier.Core.AST
 {
-    internal class TypeDeclarationVisitor : SyntaxWalkerBase
+    internal partial class TypeDeclarationVisitor : SyntaxWalkerBase
     {
         public TypeDeclarationVisitor(IVisitorContext context) : base(context)
         {
@@ -106,7 +106,7 @@ namespace Cecilifier.Core.AST
         {
             new EventDeclarationVisitor(Context).Visit(node);
         }
-
+        
         private string ProcessBase(TypeDeclarationSyntax classDeclaration)
         {
             var classSymbol = DeclaredSymbolFor(classDeclaration);
