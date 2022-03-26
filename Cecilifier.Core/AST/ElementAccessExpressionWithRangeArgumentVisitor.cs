@@ -23,7 +23,7 @@ internal class ElementAccessExpressionWithRangeArgumentVisitor : SyntaxWalkerBas
         using var _ = LineInformationTracker.Track(Context, node);
         node.Expression.Accept(_expressionVisitor);
         
-        var elementAccessExpressionType = ModelExtensions.GetTypeInfo(Context.SemanticModel, node.Expression).Type.EnsureNotNull();
+        var elementAccessExpressionType = Context.SemanticModel.GetTypeInfo(node.Expression).Type.EnsureNotNull();
         _targetSpanType = elementAccessExpressionType; 
         _spanCopyVariable = AddLocalVariableWithResolvedType("localSpanCopy", Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method), Context.TypeResolver.Resolve(elementAccessExpressionType));
         Context.EmitCilInstruction(_ilVar, OpCodes.Stloc, _spanCopyVariable);

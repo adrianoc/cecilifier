@@ -46,7 +46,7 @@ namespace Cecilifier.Core.AST
                 paramsVar.Add(new ParamData
                 {
                     VariableName = paramVar,
-                    Type = Context.GetTypeInfo(parameter.Type).Type.ToDisplayString()
+                    Type = Context.GetTypeInfo(parameter.Type).Type.EnsureNotNull().ToDisplayString()
                 });
 
                 var exps = CecilDefinitionsFactory.Parameter(parameter, Context.SemanticModel, propDefVar, paramVar, ResolveType(parameter.Type), parameter.Accept(DefaultParameterExtractorVisitor.Instance));

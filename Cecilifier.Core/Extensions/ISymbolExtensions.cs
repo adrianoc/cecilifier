@@ -101,7 +101,7 @@ namespace Cecilifier.Core.Extensions
             return $"new[] {{ {self.Aggregate("", (acc, curr) => acc + ",\"" + curr.AssemblyQualifiedName() + "\"", final => final.Substring(1))} }} ";
         }
         
-        public static T EnsureNotNull<T>([NotNull][NotNullIfNotNull("symbol")] this T symbol) where T: ISymbol
+        [return:NotNull] public static T EnsureNotNull<T>([NotNullIfNotNull("symbol")] this T symbol) where T: ISymbol
         {
             if (symbol == null)
                 throw new System.NotSupportedException("");
@@ -109,7 +109,7 @@ namespace Cecilifier.Core.Extensions
             return symbol;
         }
         
-        public static TTarget EnsureNotNull<TSource, TTarget>([NotNull][NotNullIfNotNull("symbol")] this TSource symbol, [CallerArgumentExpression("symbol")] string exp = null) where TSource: ISymbol where TTarget : TSource
+        [return:NotNull] public static TTarget EnsureNotNull<TSource, TTarget>([NotNull][NotNullIfNotNull("symbol")] this TSource symbol, [CallerArgumentExpression("symbol")] string exp = null) where TSource: ISymbol where TTarget : TSource
         {
             if (symbol == null)
                 throw new NullReferenceException(exp);

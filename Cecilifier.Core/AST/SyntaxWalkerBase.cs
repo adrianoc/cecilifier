@@ -631,17 +631,11 @@ namespace Cecilifier.Core.AST
             }
 
             var localDelegateDeclaration = Context.TypeResolver.ResolveLocalVariableType(typeSymbol);
-            if (localDelegateDeclaration != null)
-            {
-                var operand = $"{localDelegateDeclaration}.Methods.Single(m => m.Name == \"Invoke\")";
-                Context.EmitCilInstruction(ilVar, OpCodes.Callvirt, operand);
-            }
-            else
-            {
-                var invokeMethod = (IMethodSymbol) typeSymbol.GetMembers("Invoke").SingleOrDefault();
-                var resolvedMethod = invokeMethod.MethodResolverExpression(Context);
-                Context.EmitCilInstruction(ilVar, OpCodes.Callvirt, resolvedMethod);
-            }
+            var resolvedMethod = localDelegateDeclaration != null
+                ? $"{localDelegateDeclaration}.Methods.Single(m => m.Name == \"Invoke\")"
+                : ((IMethodSymbol) typeSymbol.GetMembers("Invoke").SingleOrDefault()).MethodResolverExpression(Context);
+            
+            Context.EmitCilInstruction(ilVar, OpCodes.Callvirt, resolvedMethod);
         }
 
         protected void HandleAttributesInMemberDeclaration(in SyntaxList<AttributeListSyntax> nodeAttributeLists, Func<AttributeTargetSpecifierSyntax, SyntaxKind, bool> predicate, SyntaxKind toMatch, string whereToAdd)
