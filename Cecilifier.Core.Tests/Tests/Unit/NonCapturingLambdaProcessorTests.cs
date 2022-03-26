@@ -53,6 +53,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
         
         private static CecilifierContext RunProcessorOn(string source)
         {
+            
             var syntaxTree = CSharpSyntaxTree.ParseText(source);
             var comp = CSharpCompilation.Create(null, new[] { syntaxTree }, new[] { MetadataReference.CreateFromFile(typeof(Func<>).Assembly.Location) }, new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
             var diagnostics = comp.GetDiagnostics();
@@ -62,7 +63,9 @@ namespace Cecilifier.Core.Tests.Tests.Unit
                 throw new Exception(errors.Aggregate("", (acc, curr) => acc + curr.GetMessage() + Environment.NewLine));
             
             var context = new CecilifierContext(comp.GetSemanticModel(syntaxTree), new CecilifierOptions(), -1);
-
+            DefaultParameterExtractorVisitor.Initialize(context);
+            UsageVisitor.ResetInstance();
+            
             context.DefinitionVariables.RegisterNonMethod("Foo", "field", VariableMemberKind.Field, "fieldVar"); // Required for Field tests
             NonCapturingLambdaProcessor.InjectSyntheticMethodsForNonCapturingLambdas(
                 context,
