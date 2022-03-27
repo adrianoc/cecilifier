@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Text;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
@@ -345,15 +346,15 @@ namespace Cecilifier.Core.AST
 
         private static string ModifiersToCecil(IEnumerable<SyntaxToken> modifiers, Func<SyntaxToken, string> map)
         {
-            var cecilModifierStr = modifiers.Aggregate("", (acc, token) =>
-                acc + ModifiersSeparator + map(token));
-
-            if (cecilModifierStr.Length > 0)
+            var cecilModifierStr = modifiers.Aggregate(new StringBuilder(), (acc, token) =>
             {
-                cecilModifierStr = cecilModifierStr.Substring(ModifiersSeparator.Length);
-            }
+                acc.Append($"{ModifiersSeparator}{map(token)}");
+                return acc;
+            });
 
-            return cecilModifierStr;
+            return cecilModifierStr.Length > 0 
+                ? cecilModifierStr.Remove(0, ModifiersSeparator.Length).ToString() 
+                : cecilModifierStr.ToString();
         }
 
         protected static void WriteCecilExpression(IVisitorContext context, string format, params object[] args)
@@ -703,23 +704,23 @@ namespace Cecilifier.Core.AST
 
             string CallingConventionFrom(AttributeSyntax attr)
             {
-                var callingConventionStr = attr.ArgumentList?.Arguments.FirstOrDefault(arg => arg.NameEquals?.Name.Identifier.Text == "CallingConvention")?.Expression.ToFullString() 
-                                           ?? "Winapi";
+                var callConventionSpan = (attr.ArgumentList?.Arguments.FirstOrDefault(arg => arg.NameEquals?.Name.Identifier.Text == "CallingConvention")?.Expression.ToFullString() 
+                                           ?? "Winapi").AsSpan();
 
                 // ensures we use the enum member simple name; Parse() fails if we pass a qualified enum member
-                var index = callingConventionStr.LastIndexOf('.');
-                callingConventionStr = callingConventionStr.Substring(index + 1);
+                var index = callConventionSpan.LastIndexOf('.');
+                callConventionSpan = callConventionSpan.Slice(index + 1);
                 
-                return CallingConventionToCecil(Enum.Parse<CallingConvention>(callingConventionStr));
+                return CallingConventionToCecil(Enum.Parse<CallingConvention>(callConventionSpan));
             }
 
             string CharSetFrom(AttributeSyntax attr)
             {
-                var enumMemberName = AttributePropertyOrDefaultValue(attr, "CharSet", "None");
+                var enumMemberName = AttributePropertyOrDefaultValue(attr, "CharSet", "None").AsSpan();
 
                 // Only use the actual enum member name Parse() fails if we pass a qualified enum member
                 var index = enumMemberName.LastIndexOf('.');
-                enumMemberName = enumMemberName.Substring(index + 1);
+                enumMemberName = enumMemberName.Slice(index + 1);
 
                 var charSet = Enum.Parse<CharSet>(enumMemberName);
                 return charSet == CharSet.None ? string.Empty : $"PInvokeAttributes.CharSet{charSet}";

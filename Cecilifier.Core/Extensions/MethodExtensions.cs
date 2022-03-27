@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Variables;
@@ -13,22 +14,22 @@ namespace Cecilifier.Core.Extensions
 {
     internal static class MethodExtensions
     {
-        public static string Modifiers(this IMethodSymbol method)
+        private static string Modifiers(this IMethodSymbol method)
         {
             var bindingFlags = method.IsStatic ? BindingFlags.Static : BindingFlags.Instance;
             bindingFlags |= method.DeclaredAccessibility == Accessibility.Public ? BindingFlags.Public : BindingFlags.NonPublic;
 
-            var res = "";
+            var res = new StringBuilder();
             var enumType = typeof(BindingFlags);
             foreach (BindingFlags flag in Enum.GetValues(enumType))
             {
                 if (bindingFlags.HasFlag(flag))
                 {
-                    res = res + "|" + enumType.FullName + "." + flag;
+                    res.Append($"|{enumType.FullName}.{flag}");
                 }
             }
 
-            return res.Length > 0 ? res.Substring(1) : string.Empty;
+            return res.Length > 0 ? res.Remove(0, 1).ToString() : string.Empty;
         }
 
         public static string MethodResolverExpression(this IMethodSymbol method, IVisitorContext ctx)
