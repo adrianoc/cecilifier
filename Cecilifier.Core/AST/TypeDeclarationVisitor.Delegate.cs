@@ -47,6 +47,7 @@ internal partial class TypeDeclarationVisitor
             AddCecilExpression($"{ctorLocalVar}.Parameters.Add(new ParameterDefinition({Context.TypeResolver.Bcl.System.IntPtr}));");
             AddCecilExpression($"{typeVar}.Methods.Add({ctorLocalVar});");
             
+            // Invoke() method
             AddDelegateMethod(
                 typeVar,
                 "Invoke",
@@ -56,25 +57,16 @@ internal partial class TypeDeclarationVisitor
                     param.Accept(DefaultParameterExtractorVisitor.Instance)));
 
             // BeginInvoke() method
-            var methodName = "BeginInvoke";
-            var beginInvokeMethodVar = Context.Naming.SyntheticVariable(methodName, ElementKind.Method);
-            AddCecilExpression(
-                $@"var {beginInvokeMethodVar} = new MethodDefinition(""{methodName}"", MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.NewSlot | MethodAttributes.Virtual, {Context.TypeResolver.Bcl.System.IAsyncResult})
-					{{
-						HasThis = true,
-						IsRuntime = true,
-					}};");
-
-            foreach (var param in node.ParameterList.Parameters)
-            {
-                var paramExps = CecilDefinitionsFactory.Parameter(param, Context.SemanticModel, beginInvokeMethodVar, Context.Naming.Parameter(param), ResolveType(param.Type),
-                    param.Accept(DefaultParameterExtractorVisitor.Instance));
-                AddCecilExpressions(paramExps);
-            }
+            var beginInvokeMethodVar = AddDelegateMethod(
+                 typeVar,
+                 "BeginInvoke",
+                 Context.TypeResolver.Bcl.System.IAsyncResult,
+                 node.ParameterList.Parameters,
+                 (methodVar, param) => CecilDefinitionsFactory.Parameter(param, Context.SemanticModel, methodVar, Context.Naming.Parameter(param), ResolveType(param.Type),
+                     param.Accept(DefaultParameterExtractorVisitor.Instance)));
 
             AddCecilExpression($"{beginInvokeMethodVar}.Parameters.Add(new ParameterDefinition({Context.TypeResolver.Bcl.System.AsyncCallback}));");
             AddCecilExpression($"{beginInvokeMethodVar}.Parameters.Add(new ParameterDefinition({Context.TypeResolver.Bcl.System.Object}));");
-            AddCecilExpression($"{typeVar}.Methods.Add({beginInvokeMethodVar});");
 
             // EndInvoke() method
             var endInvokeMethodVar = Context.Naming.SyntheticVariable("EndInvoke", ElementKind.Method);
@@ -108,7 +100,7 @@ internal partial class TypeDeclarationVisitor
             base.VisitDelegateDeclaration(node);
         }
 
-        void AddDelegateMethod(string typeLocalVar, string methodName, string returnTypeName, in SeparatedSyntaxList<ParameterSyntax> parameters, Func<string, ParameterSyntax, IEnumerable<string>> parameterHandler)
+        string AddDelegateMethod(string typeLocalVar, string methodName, string resolvedReturnType, in SeparatedSyntaxList<ParameterSyntax> parameters, Func<string, ParameterSyntax, IEnumerable<string>> parameterHandler)
         {
             var methodLocalVar = Context.Naming.SyntheticVariable(methodName, ElementKind.Method);
             AddCecilExpression(
@@ -124,6 +116,7 @@ internal partial class TypeDeclarationVisitor
             }
     
             AddCecilExpression($"{typeLocalVar}.Methods.Add({methodLocalVar});");
+            return methodLocalVar;
         }
     }
 }
