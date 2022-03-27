@@ -75,7 +75,7 @@ internal partial class TypeDeclarationVisitor
                 Context,
                 endInvokeMethodVar,
                 "EndInvoke",
-                "MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.NewSlot | MethodAttributes.Virtual",
+                Constants.CommonCecilConstants.DelegateMethodAttributes,
                 Context.GetTypeInfo(node.ReturnType).Type,
                 false,
                 Array.Empty<TypeParameterSyntax>()
@@ -104,7 +104,7 @@ internal partial class TypeDeclarationVisitor
         {
             var methodLocalVar = Context.Naming.SyntheticVariable(methodName, ElementKind.Method);
             AddCecilExpression(
-                $@"var {methodLocalVar} = new MethodDefinition(""{methodName}"", MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.NewSlot | MethodAttributes.Virtual, {returnTypeName})
+                $@"var {methodLocalVar} = new MethodDefinition(""{methodName}"", {Constants.CommonCecilConstants.DelegateMethodAttributes}, {resolvedReturnType})
 				{{
 					HasThis = true,
 					IsRuntime = true,
