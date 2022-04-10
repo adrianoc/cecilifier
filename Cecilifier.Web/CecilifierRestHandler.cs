@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
@@ -8,7 +9,9 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Cecilifier.Core;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 
 namespace Cecilifier.Web
 {
@@ -17,9 +20,10 @@ namespace Cecilifier.Web
      * 1. OAuth authorization/authentication as described in https://docs.github.com/en/developers/apps/building-oauth-apps/authorizing-oauth-apps
      * 2. GitHub issue creation (https://docs.github.com/en/rest/reference/issues#create-an-issue)
      */
-    internal class InternalErrorHandler
+    internal class CecilifierRestHandler
     {
         private const string CecilifierClientId = "5462d562b527fa4e7807";
+        internal static ILogger _logger;
 
         internal static async Task FileIssueEndPointAsync(HttpContext context)
         {
@@ -107,6 +111,61 @@ namespace Cecilifier.Web
             {
                 await context.Response.WriteAsync($"<script>window.close();</script>");
                 await context.Response.WriteAsync("</body></html>");
+            }
+        }
+
+        internal static async Task ReferencedAssembliesEndPointAsync(HttpContext context)
+        {
+            if (!AssemblyReferenceCacheHandler.HashEnoughStorageSpace(Constants.AssemblyReferenceCacheBasePath))
+            {
+                context.Response.StatusCode = 500;
+                await context.Response.WriteAsync($"Not enough space to store assembly references at server. Please, remove one or more from the list assembly references.");
+                return;
+            }
+            
+            string currentAssemblyName = null;
+            var assemblyBytes = ArrayPool<byte>.Shared.Rent(1024 * 1024 * 8);
+            try
+            {
+                _logger.LogInformation($"{context.Connection.RemoteIpAddress} wants to upload assemblies.");
+                var totalBytesRead = 0;
+                int readCount;
+                do
+                {
+                    readCount = await context.Request.Body.ReadAsync(assemblyBytes, totalBytesRead, assemblyBytes.Length - totalBytesRead);
+                    totalBytesRead += readCount;
+
+                } while (readCount != 0);
+
+                var assembliesToStore = JsonSerializer.Deserialize<AssemblyReferenceList>(assemblyBytes.AsSpan().Slice(0, totalBytesRead));
+                foreach (var assemblyReference in assembliesToStore!.AssemblyReferences)
+                {
+                    currentAssemblyName = assemblyReference.AssemblyName;
+                    
+                    var assemblyPath = Path.Combine(Constants.AssemblyReferenceCacheBasePath, assemblyReference.AssemblyHash, assemblyReference.AssemblyName);
+                    if (Convert.TryFromBase64String(assemblyReference.Base64Contents, assemblyBytes, out var bytesWritten))
+                    {
+                        await AssemblyReferenceCacheHandler.StoreAssemblyBytesAsync(assemblyPath, assemblyBytes, bytesWritten);
+                    }
+                    else
+                    {
+                        context.Response.StatusCode = 500;
+                        await context.Response.WriteAsync($"Cecilifier was Unable to store referenced assembly(ies). Assembly name: { currentAssemblyName ?? "N/A"}");
+                        
+                        break;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to store reference assemblies.");
+                
+                context.Response.StatusCode = 500;
+                await context.Response.WriteAsync($"Cecilifier was Unable to store referenced assembly(ies). Assembly name: { currentAssemblyName ?? "N/A"}");
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(assemblyBytes);
             }
         }
     }

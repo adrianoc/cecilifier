@@ -6,10 +6,11 @@ let blockMappings = null;
 
 class CecilifierRequest
 {
-    constructor(code, options, settings) {
+    constructor(code, options, settings, assemblyReferences) {
         this.code = code;
         this.options = options;
         this.settings = settings;
+        this.assemblyReferences = assemblyReferences;
     }
 }
 
@@ -18,6 +19,89 @@ class WebOptions
     constructor(deployKind) {
         this.deployKind = deployKind;
     }
+}
+
+let db;
+
+const dbOpenRequest = window.indexedDB.open("assembly-references", 1);
+                
+dbOpenRequest.onupgradeneeded = function(event) {
+    db = event.target.result;
+    let objectStore = db.createObjectStore("assembly-references", { keyPath: "assemblyHash" });
+    objectStore.createIndex("assemblyName", "assemblyName");
+    objectStore.createIndex("assemblyHash", "assemblyHash");
+
+    let assemblyReferenceContentStore = db.createObjectStore("assembly-reference-content", { keyPath: "assemblyHash" });
+    assemblyReferenceContentStore.createIndex("assemblyName", "assemblyName");
+    assemblyReferenceContentStore.createIndex("assemblyHash", "assemblyHash");
+    assemblyReferenceContentStore.createIndex("base64Contents", "base64Contents");
+}
+
+dbOpenRequest.onsuccess = function onsuccess (event) {
+    db = event.target.result;            
+}
+
+function getAssemblyReferencesContents(missingAssemblyHashes, callback) {
+    let objectStore = db.transaction(['assembly-reference-content'], "readonly").objectStore('assembly-reference-content');
+    let request = objectStore.getAll();
+
+    request.onsuccess = function (event) {
+        const missingAssemblies = event.target.result.filter(ar => missingAssemblyHashes.find(candidate => candidate === ar.assemblyHash));
+        callback(missingAssemblies);
+    };
+}
+
+function getAssemblyReferencesMetadata(callback) {
+    let objectStore = db.transaction(['assembly-references'], "readonly").objectStore('assembly-references');
+    let request = objectStore.getAll();
+
+    request.onsuccess = function (event) {
+        callback(event.target.result);
+    };   
+}
+        
+function loadAssemblyReferenceMetadata(callback) {
+    let objectStore = db.transaction(['assembly-references'], "readonly").objectStore('assembly-references');
+    let cursor = objectStore.openCursor();
+                
+    cursor.onsuccess = function(event) {
+        let cursor = event.target.result;
+        if (!cursor)
+            return;
+
+        callback(cursor.value);
+        cursor.continue();
+    };
+}
+
+function storeReferenceAssembliesLocally() {
+    const assembly_references = document.getElementById("assembly_references_list");
+    for (let i = 0; i < assembly_references.options.length; i++) {
+        const toStore = { 
+            assemblyName : assembly_references.options[i].text,
+            assemblyHash: assembly_references.options[i].getAttribute("data-assembly-hash"),
+        };
+        
+        let transaction = db.transaction(["assembly-references", "assembly-reference-content"], "readwrite");
+        let assemblyReferencesStore = transaction.objectStore("assembly-references");
+        assemblyReferencesStore.add(toStore);
+                
+        let assemblyReferenceContentStore = db.transaction(["assembly-reference-content"], "readwrite").objectStore("assembly-reference-content");
+        assemblyReferenceContentStore.add({ assemblyName: toStore.assemblyName, assemblyHash: toStore.assemblyHash, base64Contents: assembly_references.options[i].value});
+    }
+}
+        
+function removeSelectedAssemblyReference() {
+    const assemblyReferenceList = document.getElementById("assembly_references_list");
+    if (assemblyReferenceList.selectedIndex === -1)
+        return;
+
+    let assemblyHash = assemblyReferenceList.options[assemblyReferenceList.selectedIndex].getAttribute("data-assembly-hash");
+    let transaction = db.transaction(["assembly-references", "assembly-reference-content"], "readwrite");
+    transaction.objectStore("assembly-references").delete(assemblyHash);
+    db.transaction(["assembly-reference-content"], "readwrite").objectStore("assembly-reference-content").delete(assemblyHash);
+
+    assemblyReferenceList.remove(assemblyReferenceList.selectedIndex);
 }
 
 function initializeSite(errorAccessingGist, gist, version) {
@@ -241,7 +325,7 @@ function updateEditorsSize() {
     let h = window.innerHeight * 0.35;
     csharpCodeDiv.style.height = `${h}px`;
 
-    var cecilifiedCodeDiv = document.getElementById("cecilifiedcode");
+    const cecilifiedCodeDiv = document.getElementById("cecilifiedcode");
     cecilifiedCodeDiv.style.height = `${window.innerHeight - h - 60}px`;
 
     csharpCode.layout();
@@ -366,7 +450,31 @@ function setTooltips(version) {
         allowHTML: true,
         theme: 'cecilifier-tooltip',
         delay: defaultDelay
-    });    
+    });
+
+    tippy('#assembly_references_button', {
+        content: "Opens the Assembly References dialog.<br/>" +
+            "In this dialog you can specify assemblies that your code snippet will reference types from.",
+
+        placement: 'top',
+        interactive: false,
+        allowHTML: true,
+        theme: 'cecilifier-tooltip',
+        delay: defaultDelay
+    });
+
+    tippy('#assembly_references_list', {
+        content:    "To add assemblies simply drag & drop them over the list.<br />" +
+                    "Any valid .NET assembly can be used but you should preferablly use a <a href='https://docs.microsoft.com/en-us/dotnet/standard/assembly/reference-assemblies'>reference assembly</a>.<br />" +
+                    "Once added to this list you can reference types from those assemblies in your code snippets.<br /><br />" +
+                    "Note that those assemblies will be sent to and stored at cecilifier server during the next request to cecilify some code.<br />",                    
+        placement: 'bottom',
+        interactive: true,
+        allowHTML: true,
+        theme: 'assembly_references_tip',
+        maxWidth: 'none',
+        delay: [1000, null]
+    });
 }
 
 function initializeSettings(formattingSettingsSample) {
@@ -542,15 +650,16 @@ function initializeWebSocket() {
     
     websocket.onmessage = function (event) {
         hideSpinner();
+        
         // this is where we get the cecilified code back...
         let response = JSON.parse(event.data);
         if (response.status === 0) {
-            var cecilifiedCounter = document.getElementById('cecilified_counter');
+            const cecilifiedCounter = document.getElementById('cecilified_counter');
             cecilifiedCounter.innerText = response.counter;
 
             if (response.kind === 'Z') {
                 setTimeout(function() {
-                    var buttonId = createProjectZip(base64ToArrayBuffer(response.cecilifiedCode), response.mainTypeName + ".zip", 'application/zip');
+                    const buttonId = createProjectZip(base64ToArrayBuffer(response.cecilifiedCode), response.mainTypeName + ".zip", 'application/zip');
                     simulateClick(buttonId);
                 });
             }
@@ -564,26 +673,69 @@ function initializeWebSocket() {
             setError(response.error + "<br/><br/>"+ response.syntaxError.replaceAll("\n", "<br/>"));
         } else if (response.status === 2) {
             ShowErrorDialog("", response.error, "We've got an internal error.");
+        } else if (response.status === 3) {
+            console.log(`Cecilifier server asked for missing assemblies => ${response.missingAssemblies}`);            
+            sendMissingAssemblyReferences(response.missingAssemblies, function () {
+                send(websocket, response.originalFormat);
+            });
         }
     };
 }
 
+function sendMissingAssemblyReferences(missingAssemblyHashes, continuation) {
+    getAssemblyReferencesContents(missingAssemblyHashes, function (missingAssemblies) {
+        const xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+            if (this.readyState === 4 && this.status === 200) {
+                continuation();
+            }
+            else {
+                if (this.readyState === 4 && this.status === 500) {
+                    SnackBar({
+                        message: this.responseText,
+                        dismissible: true,
+                        status: "Error",
+                        timeout: 30000,
+                        icon: "exclamation"
+                    });
+                }
+            }
+        };
+
+        xhttp.open("POST", "/referenced_assemblies", true);
+        xhttp.setRequestHeader('Content-Type', 'application/octet-stream');
+        xhttp.send(JSON.stringify({ assemblyReferences:  missingAssemblies }));
+    });
+}
+
 function getSendToDiscordValue() { return settings.isEnabled(NamingOptions.IncludeSourceInErrorReports); }
 
-function send(websocket, format) {
+function send(websocket, format, assemblyReferenceFilter) {
     if (!websocket || websocket.readyState !== WebSocket.OPEN) {
-        alert("Cecilifier WebSocket is not connected.");
+        SnackBar({
+            message: "Cecilifier WebSocket is not connected.",
+            dismissible: true,
+            status: "Error",
+            timeout: 8000,
+            icon: "exclamation"
+        });
+
         return;
     }
     clearError();
 
     showSpinner();
-    const request = new CecilifierRequest(
-        csharpCode.getValue(),
-        new WebOptions(format),
-        settings.toTransportObject());
 
-    websocket.send(JSON.stringify(request));
+    getAssemblyReferencesMetadata(assemblyReferences =>
+    {   
+        const request = new CecilifierRequest(
+                csharpCode.getValue(),
+                new WebOptions(format),
+                settings.toTransportObject(),
+                assemblyReferences);
+
+        websocket.send(JSON.stringify(request));}
+    );
 }
 
 function createProjectZip(text, name, type) {
@@ -720,7 +872,6 @@ function ShowErrorDialog(title, body, header) {
     };
     
     let titleElement =  getErrorTitleElement();
-    
     titleElement.value = title;
     getErrorBodyElement().value = body;
 
@@ -754,12 +905,16 @@ function setError(str) {
 }
 
 function updateReportErrorButton(element) {
-    if (element.value !== "") {
-        getReportErrorButton().classList.remove("btn-disabled");
-        getReportErrorButton().classList.add("btn");
+    UpdateButtonState(getReportErrorButton(), element.value !== "");
+}
+
+function UpdateButtonState(element, enable) {
+    if (enable) {
+        element.classList.remove("btn-disabled");
+        element.classList.add("btn");
     } else {
-        getReportErrorButton().classList.remove("btn");
-        getReportErrorButton().classList.add("btn-disabled");
+        element.classList.remove("btn");
+        element.classList.add("btn-disabled");
     }
 }
 
@@ -828,6 +983,104 @@ function getReportErrorButton() {
 
 function shouldIncludeSnippet() {
     return document.getElementById("include-snippet").checked;
+}
+
+/************************************************
+ *         Assembly References Handling         *
+ ************************************************/
+function ShowAssemblyReferencesDialog(title, header) {
+    window.onresize = (e) => {
+        ResizeDialog("assembly_references_dialog_id");
+    };
+
+    document.getElementById("assembly_references_list").innerHTML = "";
+
+    const assembliesReferenceDialogNode = document.getElementById("assembly_references_dialog_id");
+
+    assembliesReferenceDialogNode.parentElement.classList.add("opened");
+    assembliesReferenceDialogNode.parentElement.style.display="block";
+
+    loadAssemblyReferenceMetadata(function(item) {
+        AddAssemblyReferenceToList2(item.assemblyName, item.assemblyHash);
+    });
+
+    ResizeDialog("assembly_references_dialog_id");
+}
+
+function ResizeDialog(dialogId){
+    const dialog = document.getElementById(dialogId);
+    let footerOffset = dialog.parentNode.lastChild.offsetHeight;
+    let h = (dialog.offsetHeight - footerOffset);
+
+    document.getElementById("assembly_references_header_id").style.height = `${h * 0.02}px`;
+}
+
+function CloseDialog() {
+    const assembliesReferenceDialogNode = document.getElementById("assembly_references_dialog_id");
+
+    assembliesReferenceDialogNode.parentElement.classList.remove("opened");
+    assembliesReferenceDialogNode.parentElement.style.display="none";
+}
+
+function DropAssemblyReference(ev) {
+    ev.preventDefault();
+    const files = ev.dataTransfer.files;
+    
+    let foundDll = false;
+    for(let index = 0; index < files.length; index++)
+    {
+        if (!foundDll && !files[index].name.endsWith(".dll"))
+            continue;
+        
+        foundDll = true;
+
+        let reader = new FileReader();
+        reader.addEventListener("load", function ()
+        {
+            // returned data has an extra prefix that needs to be removed
+            // https://developer.mozilla.org/en-US/docs/Web/API/FileReader/readAsDataURL
+            const prefixIndex = this.result.indexOf("base64,");
+            AddAssemblyReferenceToList(files[index].name, this.result.substring(prefixIndex + 7));
+        });
+        reader.readAsDataURL(files[index]);
+    }
+    
+    if (!foundDll)
+        return false;
+    
+    UpdateButtonState(document.getElementById("close_assembly_references_dialog"), true);
+}
+
+function AddAssemblyReferenceToList2(assemblyName, assemblyHash) {
+    let newAssemblyReference = document.createElement("option");
+    newAssemblyReference.text = assemblyName;
+    newAssemblyReference.setAttribute("data-assembly-hash", assemblyHash);
+    newAssemblyReference.addEventListener("click", ev => {
+       console.log(`${ev.target.text} : ${ev.target.getAttribute("data-assembly-hash")}`);
+    });
+        
+    document.getElementById("assembly_references_list").appendChild(newAssemblyReference);
+
+    UpdateButtonState(document.getElementById("close_assembly_references_dialog"), true);
+    return newAssemblyReference;
+}
+
+function AddAssemblyReferenceToList(assemblyName, base64Contents) {
+    let newAssemblyReference = AddAssemblyReferenceToList2(assemblyName, computeSHA256(base64Contents));
+    newAssemblyReference.value = base64Contents;
+}
+
+function computeSHA256(base64Contents) {
+    return sha256(base64Contents);
+}
+
+function StoreReferenceAssembliesLocallyAndClose() {
+    storeReferenceAssembliesLocally();    
+    CloseDialog();
+}
+
+function AllowDrop(ev) {
+    ev.preventDefault();
 }
 
 function escapeString(str) {

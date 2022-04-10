@@ -5,6 +5,7 @@ public struct Constants
     public static ContextFlagsValues ContextFlags = new();
     public static ParameterAttributesValues ParameterAttributes = new();
     public static CecilCommonConstants CommonCecilConstants = new();
+    public const string AssemblyReferenceCacheBasePath = "/tmp/CecilifierUserAssemblyReferenceCache";
 
     public struct CecilCommonConstants
     {

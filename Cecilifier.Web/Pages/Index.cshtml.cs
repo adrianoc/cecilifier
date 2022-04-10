@@ -4,6 +4,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 
 namespace Cecilifier.Web.Pages
@@ -13,7 +14,14 @@ namespace Cecilifier.Web.Pages
         public static int Count;
         public string FromGist { get; private set; } = string.Empty;
         public string ErrorAccessingGist { get; private set; } = string.Empty;
-       
+
+        public CecilifierApplication(ILogger<CecilifierApplication> logger)
+        {
+            // Gambi. I have no idea how to get access inside the rest handler.
+            //        Most likely there's a way to ask DI go give us one. 
+            CecilifierRestHandler._logger = logger;
+        }
+        
         public async Task<IActionResult> OnGet()
         {
             ErrorAccessingGist = null;

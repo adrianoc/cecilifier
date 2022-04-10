@@ -63,6 +63,7 @@
         <button class="button" id="copyToClipboard" onclick="copyToClipboard('copyPastHelper');"><i class="fa fa-copy"></i></button>
         <button class="button" onclick="changeCecilifierSettings();" id="changeSettings"><i class="fas fa-sliders-h"></i></button>
         <button class="button" id="showFixedBugsInStaging" onclick="showListOfFixedIssuesInStagingServer(true);"><i class="fa fa-bug fa-lg"></i></button>
+        <button class="button" onclick="ShowAssemblyReferencesDialog('Assembly References', 'ssss');" id="assembly_references_button"><i class="fas fa-database"></i></button>
         
         <span id="keyboard-shortcuts">
             <i class="fas fa-keyboard" style="font-size:28px; vertical-align: middle;"></i>
@@ -98,6 +99,27 @@
       </div>
     </div>
 
+    <!-- Assembly References Dialog --> 
+    <div class="modal" aria-hidden="true">
+        <div class="modal-dialog" id="assembly_references_dialog_id">
+            <div class="modal-header" id="assembly_references_header_id" style="background-color: #2b669a; padding-left: 10px;color: white"><h2 style="margin-top:0; margin-bottom: 0">Assembly References</h2><a href="#" class="btn-close closemodal" style="padding-top: 0;padding-bottom: 0" aria-hidden="true" onclick="CloseDialog()">&times;</a>
+            </div>
+            <div class="modal-body" style="align-content: center">
+                <select id="assembly_references_list" size="12" style="width: 100%" ondrop="DropAssemblyReference(event)" ondragover="AllowDrop(event)"></select>
+                
+                <br />
+            </div>
+          
+            <div align="left" style="vertical-align: middle; margin-bottom: 5px; margin-left: 20px">
+                <button class="button" id="remove_selected_assembly" onclick="removeSelectedAssemblyReference()"><i class="fas fa-eraser"></i></button>
+            </div>
+            
+            <div class="modal-footer" style="top:90%;left:94%">
+                <a href="#" class="btn-disabled" onclick="StoreReferenceAssembliesLocallyAndClose();" id="close_assembly_references_dialog">Close</a>
+            </div>
+        </div>
+    </div>
+    
     <a href="javascript:void(0)" id="dlbtn" style="display: none"><button></button></a>
 </div>
 

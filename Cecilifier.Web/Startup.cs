@@ -96,8 +96,9 @@ namespace Cecilifier.Web
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapRazorPages();
-                endpoints.MapGet("/fileissue", InternalErrorHandler.FileIssueEndPointAsync);
-                endpoints.MapGet("/authorization_callback", InternalErrorHandler.ReportIssueEndPointAsync);
+                endpoints.MapPost("/referenced_assemblies", CecilifierRestHandler.ReferencedAssembliesEndPointAsync);
+                endpoints.MapGet("/fileissue", CecilifierRestHandler.FileIssueEndPointAsync);
+                endpoints.MapGet("/authorization_callback", CecilifierRestHandler.ReportIssueEndPointAsync);
             });
             
             app.Use(async (context, next) =>
@@ -122,117 +123,150 @@ namespace Cecilifier.Web
 
             async Task CecilifyCodeAsync(WebSocket webSocket)
             {
-                var buffer = ArrayPool<byte>.Shared.Rent(64 * 1024);
-                var memory = new Memory<byte>(buffer);
-                var received = await webSocket.ReceiveAsync(memory, CancellationToken.None);
-                while (received.MessageType != WebSocketMessageType.Close)
+                var buffer = ArrayPool<byte>.Shared.Rent(1024 * 128);
+                try
                 {
-                    CecilifierApplication.Count++;
-                    var toBeCecilified = JsonSerializer.Deserialize<CecilifierRequest>(memory.Span[0..received.Count]);
-                    var bytes = Encoding.UTF8.GetBytes(toBeCecilified.Code);
-                    await using var code = new MemoryStream(bytes, 0, bytes.Length);
-                    try
-                    {
-                        var deployKind = toBeCecilified.WebOptions.DeployKind;
-                        var cecilifiedResult = Core.Cecilifier.Process(code, new CecilifierOptions
-                        {
-                            References = GetTrustedAssembliesPath(), 
-                            Naming = new DefaultNameStrategy(toBeCecilified.Settings.NamingOptions, toBeCecilified.Settings.ElementKindPrefixes.ToDictionary(entry => entry.ElementKind, entry => entry.Prefix))
-                        });
-                            
-                        SendTextMessageToChat($"One more happy user {(deployKind == 'Z' ? "(project)" : "")}",  $"Total so far: {CecilifierApplication.Count}\n\n***********\n\n```{toBeCecilified.Code}```", "4437377");
-                            
-                        if (deployKind == 'Z')
-                        {
-                            var responseData = ZipProject(
-                                ("Program.cs", await cecilifiedResult.GeneratedCode.ReadToEndAsync()),
-                                ("Cecilified.csproj", ProjectContents),
-                                NameAndContentFromResource("Cecilifier.Web.Runtime")
-                            );
-
-                            var output = new Memory<byte>(buffer);
-                            var ret = Base64.EncodeToUtf8(responseData.Span, output.Span, out var bytesConsumed, out var bytesWritten);
-                            if (ret == OperationStatus.Done)
-                            {
-                                output = output[0..bytesWritten];
-                            }
-                            
-                            var dataToReturn = JsonSerializedBytes(Encoding.UTF8.GetString(output.Span), 'Z', cecilifiedResult);
-                            await webSocket.SendAsync(dataToReturn, received.MessageType, received.EndOfMessage, CancellationToken.None);
-                        }
-                        else
-                        {
-                            var dataToReturn = JsonSerializedBytes(cecilifiedResult.GeneratedCode.ReadToEnd(), 'C', cecilifiedResult);
-                            await webSocket.SendAsync(dataToReturn, received.MessageType, received.EndOfMessage, CancellationToken.None);
-                        }
-                    }
-                    catch (SyntaxErrorException ex)
-                    {
-                        var source = ((toBeCecilified.Settings.NamingOptions & NamingOptions.IncludeSourceInErrorReports) == NamingOptions.IncludeSourceInErrorReports) ? toBeCecilified.Code : string.Empty;  
-                        SendMessageWithCodeToChat("Syntax Error", ex.Message, "15746887", source);
-
-                        var dataToReturn = Encoding.UTF8.GetBytes($"{{ \"status\" : 1, \"error\": \"Code contains syntax errors\", \"syntaxError\": \"{HttpUtility.JavaScriptStringEncode(ex.Message)}\"  }}").AsMemory();
-                        await webSocket.SendAsync(dataToReturn, received.MessageType, received.EndOfMessage, CancellationToken.None);
-                    }
-                    catch (Exception ex)
-                    {
-                        SendExceptionToChat(ex, buffer, received.Count);
-
-                        var dataToReturn = Encoding.UTF8.GetBytes($"{{ \"status\" : 2,  \"error\": \"{HttpUtility.JavaScriptStringEncode(ex.ToString())}\"  }}").AsMemory();
-                        await webSocket.SendAsync(dataToReturn, received.MessageType, received.EndOfMessage, CancellationToken.None);
-                    }
-                    finally
-                    {
-                        ArrayPool<byte>.Shared.Return(buffer);
-                    }
-
-                    received = await webSocket.ReceiveAsync(memory, CancellationToken.None);
+                    await ProcessWebSocketAsync(webSocket, buffer);
+                }
+                finally
+                {
+                    ArrayPool<byte>.Shared.Return(buffer);
                 }
                 await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "", CancellationToken.None);
+            }
+        }
 
-                Memory<byte> ZipProject(params (string fileName, string contents)[] sources)
+        private async Task ProcessWebSocketAsync(WebSocket webSocket, byte[] buffer)
+        {
+            var memory = new Memory<byte>(buffer);
+            var received = await webSocket.ReceiveAsync(memory, CancellationToken.None);
+            while (received.MessageType != WebSocketMessageType.Close)
+            {
+                CecilifierApplication.Count++;
+                var codeSnippet = string.Empty;
+                bool includeSourceInErrorReports = false;
+
+                try
                 {
-                    /*
-                    //TODO: For some reason this code produces an invalid stream. Need to investigate.
-                    using var zipStream = new MemoryStream();
-                    using var zipFile = new ZipArchive(zipStream, ZipArchiveMode.Create);
-                    foreach (var source in sources)
+                    var toBeCecilified = JsonSerializer.Deserialize<CecilifierRequest>(memory.Span[0..received.Count]);
+                    var userAssemblyReferences = AssemblyReferenceCacheHandler.RetrieveAssemblyReferences(Constants.AssemblyReferenceCacheBasePath, toBeCecilified.AssemblyReferences);
+
+                    if (userAssemblyReferences.NotFound.Count > 0)
                     {
-                        var entry = zipFile.CreateEntry(source.fileName, CompressionLevel.Fastest);
-                        using var entryWriter = new StreamWriter(entry.Open());
-                        entryWriter.Write(source.contents);
+                        var dataToReturn = Encoding.UTF8
+                            .GetBytes(
+                                $"{{ \"status\" : 3,  \"originalFormat\": \"{toBeCecilified.WebOptions.DeployKind}\", \"missingAssemblies\": [ {string.Join(',', userAssemblyReferences.NotFound.Select(ma => $"\"{ma}\""))} ] }}")
+                            .AsMemory();
+                        //TODO: Review all SendAsync wrt MessageType and EndOfMessage!
+                        await webSocket.SendAsync(dataToReturn, WebSocketMessageType.Text, true, CancellationToken.None);
+                        received = await webSocket.ReceiveAsync(memory, CancellationToken.None);
+
+                        continue;
                     }
 
-                    zipStream.Position = 0;
-                    Memory<byte> s = zipStream.GetBuffer();
-                    Console.WriteLine($"Stream Size = {zipStream.Length}");
-                    return s.Slice(0, (int)zipStream.Length);
-                    */
-                    
-                    var tempPath = Path.GetTempPath();
-                    var assetsPath = Path.Combine(tempPath, "output");
-                    if (Directory.Exists(assetsPath))
-                        Directory.Delete(assetsPath, true);
-                    
-                    Directory.CreateDirectory(assetsPath);
-                    
-                    foreach (var source in sources)
-                    {
-                        File.WriteAllText(Path.Combine(assetsPath, $"{source.fileName}"), source.contents);
-                    }
-                    
-                    var outputZipPath = Path.Combine(tempPath, "Cecilified.zip");
-                    if (File.Exists(outputZipPath))
-                        File.Delete(outputZipPath);
+                    codeSnippet = toBeCecilified.Code;
+                    includeSourceInErrorReports = (toBeCecilified.Settings.NamingOptions & NamingOptions.IncludeSourceInErrorReports) == NamingOptions.IncludeSourceInErrorReports;
 
-                    ZipFile.CreateFromDirectory(assetsPath, outputZipPath, CompressionLevel.Fastest, false);
-                    return File.ReadAllBytes(outputZipPath);
+                    var bytes = Encoding.UTF8.GetBytes(toBeCecilified.Code);
+                    await using var code = new MemoryStream(bytes, 0, bytes.Length);
+
+                    var deployKind = toBeCecilified.WebOptions.DeployKind;
+                    var cecilifiedResult = Core.Cecilifier.Process(code,
+                        new CecilifierOptions
+                        {
+                            References = GetTrustedAssembliesPath().Concat(userAssemblyReferences.Success).ToList(),
+                            Naming = new DefaultNameStrategy(toBeCecilified.Settings.NamingOptions, toBeCecilified.Settings.ElementKindPrefixes.ToDictionary(entry => entry.ElementKind, entry => entry.Prefix))
+                        });
+
+                    SendTextMessageToChat($"One more happy user {(deployKind == 'Z' ? "(project)" : "")}", $"Total so far: {CecilifierApplication.Count}\n\n***********\n\n```{toBeCecilified.Code}```", "4437377");
+
+                    if (deployKind == 'Z')
+                    {
+                        var responseData = ZipProject(
+                            ("Program.cs", await cecilifiedResult.GeneratedCode.ReadToEndAsync()),
+                            ("Cecilified.csproj", ProjectContents),
+                            NameAndContentFromResource("Cecilifier.Web.Runtime")
+                        );
+
+                        var output = new Memory<byte>(buffer);
+                        var ret = Base64.EncodeToUtf8(responseData.Span, output.Span, out var bytesConsumed, out var bytesWritten);
+                        if (ret == OperationStatus.Done)
+                        {
+                            output = output[0..bytesWritten];
+                        }
+
+                        var dataToReturn = JsonSerializedBytes(Encoding.UTF8.GetString(output.Span), 'Z', cecilifiedResult);
+                        await webSocket.SendAsync(dataToReturn, received.MessageType, received.EndOfMessage, CancellationToken.None);
+                    }
+                    else
+                    {
+                        var dataToReturn = JsonSerializedBytes(cecilifiedResult.GeneratedCode.ReadToEnd(), 'C', cecilifiedResult);
+                        await webSocket.SendAsync(dataToReturn, received.MessageType, received.EndOfMessage, CancellationToken.None);
+                    }
                 }
+                catch (SyntaxErrorException ex)
+                {
+                    //TODO: Log errors!
+                    
+                    var source = includeSourceInErrorReports ? codeSnippet : string.Empty;
+                    SendMessageWithCodeToChat("Syntax Error", ex.Message, "15746887", source);
+
+                    var dataToReturn = Encoding.UTF8.GetBytes($"{{ \"status\" : 1, \"error\": \"Code contains syntax errors\", \"syntaxError\": \"{HttpUtility.JavaScriptStringEncode(ex.Message)}\"  }}").AsMemory();
+                    await webSocket.SendAsync(dataToReturn, received.MessageType, received.EndOfMessage, CancellationToken.None);
+                }
+                catch (Exception ex)
+                {
+                    SendExceptionToChat(ex, buffer, received.Count);
+
+                    var dataToReturn = Encoding.UTF8.GetBytes($"{{ \"status\" : 2,  \"error\": \"{HttpUtility.JavaScriptStringEncode(ex.ToString())}\"  }}").AsMemory();
+                    await webSocket.SendAsync(dataToReturn, received.MessageType, received.EndOfMessage, CancellationToken.None);
+                }
+                
+                received = await webSocket.ReceiveAsync(memory, CancellationToken.None);
             }
             
-            IReadOnlyList<string> GetTrustedAssembliesPath()
+            IEnumerable<string> GetTrustedAssembliesPath()
             {
                 return ((string) AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")).Split(Path.PathSeparator).ToList();
+            }
+            
+            Memory<byte> ZipProject(params (string fileName, string contents)[] sources)
+            {
+                /*
+                //TODO: For some reason this code produces an invalid stream. Need to investigate.
+                using var zipStream = new MemoryStream();
+                using var zipFile = new ZipArchive(zipStream, ZipArchiveMode.Create);
+                foreach (var source in sources)
+                {
+                    var entry = zipFile.CreateEntry(source.fileName, CompressionLevel.Fastest);
+                    using var entryWriter = new StreamWriter(entry.Open());
+                    entryWriter.Write(source.contents);
+                }
+
+                zipStream.Position = 0;
+                Memory<byte> s = zipStream.GetBuffer();
+                Console.WriteLine($"Stream Size = {zipStream.Length}");
+                return s.Slice(0, (int)zipStream.Length);
+                */
+                    
+                var tempPath = Path.GetTempPath();
+                var assetsPath = Path.Combine(tempPath, "output");
+                if (Directory.Exists(assetsPath))
+                    Directory.Delete(assetsPath, true);
+                    
+                Directory.CreateDirectory(assetsPath);
+                    
+                foreach (var source in sources)
+                {
+                    File.WriteAllText(Path.Combine(assetsPath, $"{source.fileName}"), source.contents);
+                }
+                    
+                var outputZipPath = Path.Combine(tempPath, "Cecilified.zip");
+                if (File.Exists(outputZipPath))
+                    File.Delete(outputZipPath);
+
+                ZipFile.CreateFromDirectory(assetsPath, outputZipPath, CompressionLevel.Fastest, false);
+                return File.ReadAllBytes(outputZipPath);
             }
         }
 
@@ -245,7 +279,7 @@ namespace Cecilifier.Web
                 Counter = CecilifierApplication.Count,
                 Kind = kind,
                 MainTypeName = cecilifierResult.MainTypeName,
-                Mappings = cecilifierResult.Mappings.OrderBy(x => x.Cecilified.Length).ToArray()
+                Mappings = cecilifierResult.Mappings.OrderBy(x => x.Cecilified.Length).ToArray(),
             };
 
             return JsonSerializer.SerializeToUtf8Bytes(cecilifiedWebResult);
