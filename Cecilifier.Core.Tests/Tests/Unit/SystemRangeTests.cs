@@ -258,12 +258,12 @@ public class SystemRangeTests : CecilifierUnitTestBase
             
             @"(?:\1Ldarg_3\);\s+" + @"|\1Ldarg_2\);\s+\1Ldfld,.+\);\s+" + @"|\1Ldarg_0\);\s+\1Call,.+\);\s+" + @"|\1Ldarg_2\);\s+\1Callvirt,.+\);\s+)" + 
             
-            @"var (?<range_var>.+rangeVar_\d+) = new VariableDefinition\(assembly.MainModule.ImportReference\(typeof\(Range\)\)\);\s+" +
+            @"var (?<range_var>.+rangeVar_\d+) = new VariableDefinition\(assembly.MainModule.ImportReference\(typeof\(System.Range\)\)\);\s+" +
             @"(?<body_var>.+)\.Variables.Add\(\k<range_var>\);\s+" +
             @"\1Stloc, \k<range_var>\);\s+" +
             @"\1Ldloca, \k<range_var>\);\s+" +
             @"\1Call, assembly.MainModule.ImportReference\(.+ResolveMethod\(""System.Range"", ""get_Start"",.+\)\)\);\s+" +
-            @"var (?<index_var>.+index_\d+) = new VariableDefinition\(assembly.MainModule.ImportReference\(typeof\(Index\)\)\);\s+" +
+            @"var (?<index_var>.+index_\d+) = new VariableDefinition\(assembly.MainModule.ImportReference\(typeof\(System.Index\)\)\);\s+" +
             @"(?<body_var>.+)\.Variables.Add\(\k<index_var>\);\s+" +
             @"\1Stloc, \k<index_var>\);\s+" +
             @"\1Ldloca, \k<index_var>\);\s+" +

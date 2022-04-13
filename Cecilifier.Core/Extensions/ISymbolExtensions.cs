@@ -12,10 +12,11 @@ namespace Cecilifier.Core.Extensions
 {
     internal static class ISymbolExtensions
     {
+        private static readonly SymbolDisplayFormat FullyQualifiedDisplayFormat = new(typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces);
+
         public static string FullyQualifiedName(this ISymbol type)
         {
-            var format = new SymbolDisplayFormat(typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces);
-            return type.ToDisplayString(format);
+            return type.ToDisplayString(FullyQualifiedDisplayFormat);
         }
         
         public static string SafeIdentifier(this IMethodSymbol method)

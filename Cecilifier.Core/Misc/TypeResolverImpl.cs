@@ -24,7 +24,7 @@ namespace Cecilifier.Core.Misc
             return ResolveLocalVariableType(type)
                    ?? ResolvePredefinedAndComposedTypes(type)
                    ?? ResolveGenericType(type)
-                   ?? Resolve(type.Name);
+                   ?? Resolve(type.FullyQualifiedName());
         }
 
         public string Resolve(string typeName) => Utils.ImportFromMainModule($"typeof({typeName})");
