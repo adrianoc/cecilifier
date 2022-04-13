@@ -75,4 +75,15 @@ public class EventsTests : CecilifierUnitTestBase
         
         Assert.That(cecilified, Does.Match(@"Call, m_add_\d+"));
     }
+    
+    [TestCase("add { int l = 1; } remove { }", "m_add_1", TestName = "Add")]
+    [TestCase("add { } remove { int l = 1; }", "m_remove_3", TestName = "Remove")]
+    public void TestEventAccessorWithLocalVariables(string accessorDeclaration, string targetMethod)
+    {
+        var result = RunCecilifier($"using System; class C {{ event Action E {{ {accessorDeclaration } }} }}");
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+        Assert.That(cecilifiedCode, Does.Match(
+            @"var (l_l_\d+) = new VariableDefinition\(assembly\.MainModule\.TypeSystem\.Int32\);\s+" +
+            $@"{targetMethod}\.Body\.Variables\.Add\(\1\);"));
+    }
 }

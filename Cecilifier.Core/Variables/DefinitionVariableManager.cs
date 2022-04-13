@@ -72,7 +72,12 @@ public class DefinitionVariableManager
     public ScopedDefinitionVariable WithCurrentMethod(string parentName, string memberName, string[] paramTypes, string definitionVariableName)
     {
         var registered = RegisterMethod(parentName, memberName, paramTypes, definitionVariableName);
-        _definitionStack.Add(registered);
+        return WithVariable(registered);
+    }
+    
+    public ScopedDefinitionVariable WithVariable(DefinitionVariable variable)
+    {
+        _definitionStack.Add(variable);
         return new ScopedDefinitionVariable(_definitionStack, _definitionStack.Count - 1);
     }
 

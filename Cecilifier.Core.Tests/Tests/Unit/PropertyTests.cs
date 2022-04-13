@@ -68,5 +68,17 @@ public class PropertyTests : CecilifierUnitTestBase
             @"il_ctor_6.Emit\(OpCodes.Ldc_I4_1\);\s+" + 
             @"il_ctor_6.Emit\(OpCodes.Newobj,.+""System.Index"", ""\.ctor"",.+""System.Int32"", ""System.Boolean"".+\);\s+" +
             @"il_ctor_6.Emit\(OpCodes.Stfld, fld_value1_4\);"));
+    }   
+    
+    [TestCase("get { int l = 42; return l; }", "m_get_2", TestName = "Getter")]
+    [TestCase("set { int l = value; }", "l_set_2", TestName = "Setter")]
+    [TestCase("init { int l = value; }", "l_set_2", TestName = "Init")]
+    public void TestPropertyAccessorWithLocalVariables(string accessorDeclaration, string targetMethod)
+    {
+        var result = RunCecilifier($"class C {{ int Value {{ {accessorDeclaration } }} }}");
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+        Assert.That(cecilifiedCode, Does.Match(
+            @"var l_l_4 = new VariableDefinition\(assembly\.MainModule\.TypeSystem\.Int32\);\s+" +
+			$@"{targetMethod}\.Body\.Variables\.Add\(l_l_4\);"));
     }
 }

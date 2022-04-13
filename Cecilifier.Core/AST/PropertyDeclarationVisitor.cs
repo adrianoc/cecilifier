@@ -170,50 +170,52 @@ namespace Cecilifier.Core.AST
                 
                 var localParams = new List<string>(parameters.Select(p => p.Type));
                 localParams.Add(Context.GetTypeInfo(node.Type).Type.ToDisplayString()); // Setters always have at least one `value` parameter.
-                Context.DefinitionVariables.RegisterMethod(declaringType.Identifier.Text, $"set_{propName}", localParams.ToArray(), setMethodVar);
-                var ilSetVar = Context.Naming.ILProcessor("set");
-
-                //TODO : NEXT : try to use CecilDefinitionsFactory.Method()
-                AddCecilExpression($"var {setMethodVar} = new MethodDefinition(\"set_{propName}\", {accessorModifiers}, {setterReturnType});");
-                parameters.ForEach(p => AddCecilExpression($"{setMethodVar}.Parameters.Add({p.VariableName});"));
-                AddCecilExpression($"{propertyDeclaringTypeVar}.Methods.Add({setMethodVar});");
-
-                AddCecilExpression($"{setMethodVar}.Body = new MethodBody({setMethodVar});");
-                AddCecilExpression($"{propDefVar}.SetMethod = {setMethodVar};");
-
-                AddCecilExpression($"{setMethodVar}.Parameters.Add(new ParameterDefinition(\"value\", ParameterAttributes.None, {propertyType}));");
-                AddCecilExpression($"var {ilSetVar} = {setMethodVar}.Body.GetILProcessor();");
-
-                if (propInfo.ContainingType.TypeKind == TypeKind.Interface)
-                    return;
-
-                if (accessor.Body == null && accessor.ExpressionBody == null) //is this an auto property ?
+                using (Context.DefinitionVariables.WithCurrentMethod(declaringType.Identifier.Text, $"set_{propName}", localParams.ToArray(), setMethodVar))
                 {
-                    AddBackingFieldIfNeeded(accessor, node.AccessorList.Accessors.Any(acc => acc.IsKind(SyntaxKind.InitAccessorDeclaration)));
+                    var ilSetVar = Context.Naming.ILProcessor("set");
 
-                    Context.EmitCilInstruction(ilSetVar, OpCodes.Ldarg_0); // TODO: This assumes instance properties...
-                    Context.EmitCilInstruction(ilSetVar, OpCodes.Ldarg_1);
-                    string operand = Utils.MakeGenericTypeIfAppropriate(Context, propInfo, backingFieldVar, propertyDeclaringTypeVar);
-                    Context.EmitCilInstruction(ilSetVar, OpCodes.Stfld, operand);
-                }
-                else if (accessor.Body != null)
-                {
-                    StatementVisitor.Visit(Context, ilSetVar, accessor.Body);
-                }
-                else
-                {
-                    ExpressionVisitor.Visit(Context, ilSetVar, accessor.ExpressionBody);
-                }
+                    //TODO : NEXT : try to use CecilDefinitionsFactory.Method()
+                    AddCecilExpression($"var {setMethodVar} = new MethodDefinition(\"set_{propName}\", {accessorModifiers}, {setterReturnType});");
+                    parameters.ForEach(p => AddCecilExpression($"{setMethodVar}.Parameters.Add({p.VariableName});"));
+                    AddCecilExpression($"{propertyDeclaringTypeVar}.Methods.Add({setMethodVar});");
 
-                Context.EmitCilInstruction(ilSetVar, OpCodes.Ret);
+                    AddCecilExpression($"{setMethodVar}.Body = new MethodBody({setMethodVar});");
+                    AddCecilExpression($"{propDefVar}.SetMethod = {setMethodVar};");
+
+                    AddCecilExpression($"{setMethodVar}.Parameters.Add(new ParameterDefinition(\"value\", ParameterAttributes.None, {propertyType}));");
+                    AddCecilExpression($"var {ilSetVar} = {setMethodVar}.Body.GetILProcessor();");
+
+                    if (propInfo.ContainingType.TypeKind == TypeKind.Interface)
+                        return;
+
+                    if (accessor.Body == null && accessor.ExpressionBody == null) //is this an auto property ?
+                    {
+                        AddBackingFieldIfNeeded(accessor, node.AccessorList.Accessors.Any(acc => acc.IsKind(SyntaxKind.InitAccessorDeclaration)));
+
+                        Context.EmitCilInstruction(ilSetVar, OpCodes.Ldarg_0); // TODO: This assumes instance properties...
+                        Context.EmitCilInstruction(ilSetVar, OpCodes.Ldarg_1);
+                        string operand = Utils.MakeGenericTypeIfAppropriate(Context, propInfo, backingFieldVar, propertyDeclaringTypeVar);
+                        Context.EmitCilInstruction(ilSetVar, OpCodes.Stfld, operand);
+                    }
+                    else if (accessor.Body != null)
+                    {
+                        StatementVisitor.Visit(Context, ilSetVar, accessor.Body);
+                    }
+                    else
+                    {
+                        ExpressionVisitor.Visit(Context, ilSetVar, accessor.ExpressionBody);
+                    }
+
+                    Context.EmitCilInstruction(ilSetVar, OpCodes.Ret);
+                }
             }
 
-            string AddGetterMethodGuts(CSharpSyntaxNode accessor)
+            ScopedDefinitionVariable AddGetterMethodGuts(out string ilVar)
             {
                 Context.WriteComment(" Getter");
                 var getMethodVar = Context.Naming.SyntheticVariable("get", ElementKind.Method);
-                Context.DefinitionVariables.RegisterMethod(declaringType.Identifier.Text, $"get_{propName}", parameters.Select(p => p.Type).ToArray(), getMethodVar);
-
+                var definitionVariable = Context.DefinitionVariables.WithCurrentMethod(declaringType.Identifier.Text, $"get_{propName}", parameters.Select(p => p.Type).ToArray(), getMethodVar);
+                
                 AddCecilExpression($"var {getMethodVar} = new MethodDefinition(\"get_{propName}\", {accessorModifiers}, {propertyType});");
                 parameters.ForEach(p => AddCecilExpression($"{getMethodVar}.Parameters.Add({p.VariableName});"));
                 AddCecilExpression($"{propertyDeclaringTypeVar}.Methods.Add({getMethodVar});");
@@ -222,22 +224,25 @@ namespace Cecilifier.Core.AST
                 AddCecilExpression($"{propDefVar}.GetMethod = {getMethodVar};");
 
                 if (propInfo.ContainingType.TypeKind == TypeKind.Interface)
-                    return null;
+                {
+                    ilVar = null;
+                    return definitionVariable;
+                }
 
-                var ilVar = Context.Naming.ILProcessor("get");
+                ilVar = Context.Naming.ILProcessor("get");
                 AddCecilExpression($"var {ilVar} = {getMethodVar}.Body.GetILProcessor();");
-                return ilVar;
+                return definitionVariable;
             }
             
             void AddExpressionBodiedGetterMethod()
             {
-                var ilVar = AddGetterMethodGuts(arrowExpression);
+                using var _ = AddGetterMethodGuts(out var ilVar);
                 ProcessExpressionBodiedGetter(ilVar, arrowExpression);
             }
             
             void AddGetterMethod(AccessorDeclarationSyntax accessor)
             {
-                var ilVar = AddGetterMethodGuts(accessor);
+                using var _ = AddGetterMethodGuts(out var ilVar);
                 if (ilVar == null)
                     return;
                 
@@ -261,9 +266,9 @@ namespace Cecilifier.Core.AST
                 }
             }
 
-            void ProcessExpressionBodiedGetter(string ilVar, ArrowExpressionClauseSyntax arrowExpression)
+            void ProcessExpressionBodiedGetter(string ilVar, ArrowExpressionClauseSyntax expression)
             {
-                ExpressionVisitor.Visit(Context, ilVar, arrowExpression);
+                ExpressionVisitor.Visit(Context, ilVar, expression);
                 Context.EmitCilInstruction(ilVar, OpCodes.Ret);
             }
         }

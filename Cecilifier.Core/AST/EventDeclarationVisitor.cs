@@ -49,11 +49,13 @@ namespace Cecilifier.Core.AST
                 var methodVar = Context.Naming.SyntheticVariable(acc.Keyword.ValueText, ElementKind.Method);
                 var methodILVar = Context.Naming.ILProcessor(acc.Keyword.ValueText);
                 var body = CecilDefinitionsFactory.MethodBody(methodVar, methodILVar, Array.Empty<InstructionRepresentation>());
-                AddAccessor(node, eventSymbol, methodVar, acc.Keyword.ValueText, eventType, body);
+                var accessorMethodVar = AddAccessor(node, eventSymbol, methodVar, acc.Keyword.ValueText, eventType, body);
+                using (Context.DefinitionVariables.WithVariable(accessorMethodVar))
+                {
+                    StatementVisitor.Visit(Context, methodILVar, acc.Body);
+                    Context.EmitCilInstruction(methodILVar, OpCodes.Ret);
+                }
                 
-                StatementVisitor.Visit(Context, methodILVar, acc.Body);
-                Context.EmitCilInstruction(methodILVar, OpCodes.Ret);
-
                 eventAccessorsDefVarMapping[acc.Keyword.ValueText] = methodVar;
             }
 
@@ -108,10 +110,11 @@ namespace Cecilifier.Core.AST
                 methodBodyExpressions  = methodBodyExpressions.Concat(bodyExps).Concat(localVarsExps);
             }
             
-            return AddAccessor(node, eventSymbol, methodVar, accessorName, eventType, methodBodyExpressions);
+            AddAccessor(node, eventSymbol, methodVar, accessorName, eventType, methodBodyExpressions);
+            return methodVar;
         }
         
-        private string AddAccessor(MemberDeclarationSyntax node, IEventSymbol eventSymbol, string methodVar, string accessorName, string eventType, IEnumerable<string> methodBodyExpressions)
+        private MethodDefinitionVariable AddAccessor(MemberDeclarationSyntax node, IEventSymbol eventSymbol, string methodVar, string accessorName, string eventType, IEnumerable<string> methodBodyExpressions)
         {
             var accessorModifiers = AccessModifiersForEventAccessors(node, eventSymbol.ContainingType.TypeKind == TypeKind.Interface);
 
@@ -121,8 +124,7 @@ namespace Cecilifier.Core.AST
 
             AddCecilExpressions(methodExps.Concat(paramsExps).Concat(methodBodyExpressions));
             AddCecilExpression($"{eventDeclaringTypeVar}.Methods.Add({methodVar});");
-            Context.DefinitionVariables.RegisterMethod(eventSymbol.ContainingType.Name, methodName, new[] { eventSymbol.Type.ToDisplayString() }, methodVar);
-            return methodVar;            
+            return Context.DefinitionVariables.RegisterMethod(eventSymbol.ContainingType.Name, methodName, new[] { eventSymbol.Type.ToDisplayString() }, methodVar);
         }
         
         private static string AccessModifiersForEventAccessors(MemberDeclarationSyntax node, bool isInterfaceDef)
