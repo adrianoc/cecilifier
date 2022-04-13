@@ -19,7 +19,7 @@ namespace Cecilifier.Core.AST
         {
         }
 
-        internal static void Visit(IVisitorContext context, string ilVar, StatementSyntax node)
+        internal static void Visit(IVisitorContext context, string ilVar, CSharpSyntaxNode node)
         {
             _ilVar = ilVar;
             node.Accept(new StatementVisitor(context));

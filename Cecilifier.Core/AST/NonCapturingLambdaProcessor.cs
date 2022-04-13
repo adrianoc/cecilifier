@@ -52,7 +52,7 @@ namespace Cecilifier.Core.AST
             var captured = new List<string>();
             foreach (var identifier in lambda.DescendantNodes().OfType<IdentifierNameSyntax>())
             {
-                var symbolInfo = context.SemanticModel.GetSymbolInfo(identifier);
+                var symbolInfo = ModelExtensions.GetSymbolInfo(context.SemanticModel, identifier);
                 if ((symbolInfo.Symbol?.Kind == SymbolKind.Parameter || symbolInfo.Symbol?.Kind == SymbolKind.Local) && symbolInfo.Symbol?.ContainingSymbol is IMethodSymbol method && method.MethodKind != MethodKind.AnonymousFunction)
                 {
                     captured.Add(identifier.Identifier.Text);
@@ -68,7 +68,7 @@ namespace Cecilifier.Core.AST
 
         private static void InjectSyntheticMethodsFor(IVisitorContext context, string declaringTypeVarName, LambdaExpressionSyntax lambda, TypeDeclarationSyntax declaringType)
         {
-            var returnType = context.SemanticModel.GetTypeInfo(lambda).ConvertedType;
+            var returnType = ModelExtensions.GetTypeInfo(context.SemanticModel, lambda).ConvertedType;
             if (returnType is INamedTypeSymbol { IsGenericType: true } namedTypeSymbol)
             {
                 if (namedTypeSymbol.AssemblyQualifiedName().Contains("System.Func"))
@@ -126,15 +126,20 @@ namespace Cecilifier.Core.AST
             context.WriteCecilExpression($"var {syntheticIlVar} = {methodVar}.Body.GetILProcessor();");
             context.WriteNewLine();
 
-            ExpressionVisitor.Visit(context, syntheticIlVar, lambda.Body);
-            context.WriteCecilExpression($"{syntheticIlVar}.Emit(OpCodes.Ret);");
+            // Register the newly introduced method so we can replace the lambda with the method later.
+            // Use the lambda string representation as the name of the method in order to allow us to lookup it.
+            using(context.DefinitionVariables.WithCurrentMethod(string.Empty, lambda.ToString(), Array.Empty<string>(), methodVar))
+                StatementVisitor.Visit(context, syntheticIlVar, lambda.Body);
+
+            if (lambda.Body.ChildNodes().Any(c => c is StatementSyntax))
+            {
+                var controlFlow = context.SemanticModel.AnalyzeControlFlow(lambda.Body.ChildNodes().First(), lambda.Body.ChildNodes().Last());
+                if (!controlFlow.ReturnStatements.Any())
+                    context.WriteCecilExpression($"{syntheticIlVar}.Emit(OpCodes.Ret);");
+            }
             context.WriteNewLine();
         
             context.WriteCecilExpression($"{declaringTypeVarName}.Methods.Add({methodVar});");
-        
-            // Register the newly introduced method so we can replace the lambda with the method later.
-            // Use the lambda string representation as the name of the method in order to allow us to lookup it.
-            context.DefinitionVariables.RegisterMethod(string.Empty, lambda.ToString(), Array.Empty<string>(), methodVar);
         }
     }
 }
