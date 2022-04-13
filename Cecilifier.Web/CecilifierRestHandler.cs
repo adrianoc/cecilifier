@@ -122,9 +122,17 @@ namespace Cecilifier.Web
                 await context.Response.WriteAsync($"Not enough space to store assembly references at server. Please, remove one or more from the list assembly references.");
                 return;
             }
+
+            const int bufferMaxLengthInBytes = 1024 * 1024 * 8;
+            if (context.Request.Headers.ContentLength > bufferMaxLengthInBytes)
+            {
+                context.Response.StatusCode = 500;
+                await context.Response.WriteAsync($"Request to process reference assemblies is to large (request = {context.Request.Headers.ContentLength} bytes, maximum={bufferMaxLengthInBytes} bytes).<br/> Try removing assemblies from the 'Assembly References' list or cecilifying your code after adding each assembly.");
+                return;
+            }
             
             string currentAssemblyName = null;
-            var assemblyBytes = ArrayPool<byte>.Shared.Rent(1024 * 1024 * 8);
+            var assemblyBytes = ArrayPool<byte>.Shared.Rent(bufferMaxLengthInBytes);
             try
             {
                 _logger.LogInformation($"{context.Connection.RemoteIpAddress} wants to upload assemblies.");
