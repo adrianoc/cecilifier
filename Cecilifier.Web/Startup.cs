@@ -153,12 +153,12 @@ namespace Cecilifier.Web
 
                     if (userAssemblyReferences.NotFound.Count > 0)
                     {
-                        var dataToReturn = Encoding.UTF8
+                        var dataWritten = Encoding.UTF8
                             .GetBytes(
-                                $"{{ \"status\" : 3,  \"originalFormat\": \"{toBeCecilified.WebOptions.DeployKind}\", \"missingAssemblies\": [ {string.Join(',', userAssemblyReferences.NotFound.Select(ma => $"\"{ma}\""))} ] }}")
-                            .AsMemory();
+                                $"{{ \"status\" : 3,  \"originalFormat\": \"{toBeCecilified.WebOptions.DeployKind}\", \"missingAssemblies\": [ {string.Join(',', userAssemblyReferences.NotFound.Select(ma => $"\"{ma}\""))} ] }}",
+                                memory.Span);
 
-                        await webSocket.SendAsync(dataToReturn, WebSocketMessageType.Text, true, CancellationToken.None);
+                        await webSocket.SendAsync(memory.Slice(0, dataWritten), WebSocketMessageType.Text, true, CancellationToken.None);
                         received = await webSocket.ReceiveAsync(memory, CancellationToken.None);
 
                         continue;
