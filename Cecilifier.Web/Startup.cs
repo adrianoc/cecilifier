@@ -157,7 +157,7 @@ namespace Cecilifier.Web
                             .GetBytes(
                                 $"{{ \"status\" : 3,  \"originalFormat\": \"{toBeCecilified.WebOptions.DeployKind}\", \"missingAssemblies\": [ {string.Join(',', userAssemblyReferences.NotFound.Select(ma => $"\"{ma}\""))} ] }}")
                             .AsMemory();
-                        //TODO: Review all SendAsync wrt MessageType and EndOfMessage!
+
                         await webSocket.SendAsync(dataToReturn, WebSocketMessageType.Text, true, CancellationToken.None);
                         received = await webSocket.ReceiveAsync(memory, CancellationToken.None);
 
@@ -196,12 +196,12 @@ namespace Cecilifier.Web
                         }
 
                         var dataToReturn = JsonSerializedBytes(Encoding.UTF8.GetString(output.Span), 'Z', cecilifiedResult);
-                        await webSocket.SendAsync(dataToReturn, received.MessageType, received.EndOfMessage, CancellationToken.None);
+                        await webSocket.SendAsync(dataToReturn, WebSocketMessageType.Text, true, CancellationToken.None);
                     }
                     else
                     {
                         var dataToReturn = JsonSerializedBytes(cecilifiedResult.GeneratedCode.ReadToEnd(), 'C', cecilifiedResult);
-                        await webSocket.SendAsync(dataToReturn, received.MessageType, received.EndOfMessage, CancellationToken.None);
+                        await webSocket.SendAsync(dataToReturn, WebSocketMessageType.Text, true, CancellationToken.None);
                     }
                 }
                 catch (SyntaxErrorException ex)
@@ -212,14 +212,14 @@ namespace Cecilifier.Web
                     SendMessageWithCodeToChat("Syntax Error", ex.Message, "15746887", source);
 
                     var dataToReturn = Encoding.UTF8.GetBytes($"{{ \"status\" : 1, \"error\": \"Code contains syntax errors\", \"syntaxError\": \"{HttpUtility.JavaScriptStringEncode(ex.Message)}\"  }}").AsMemory();
-                    await webSocket.SendAsync(dataToReturn, received.MessageType, received.EndOfMessage, CancellationToken.None);
+                    await webSocket.SendAsync(dataToReturn, WebSocketMessageType.Text, true, CancellationToken.None);
                 }
                 catch (Exception ex)
                 {
                     SendExceptionToChat(ex, buffer, received.Count);
 
                     var dataToReturn = Encoding.UTF8.GetBytes($"{{ \"status\" : 2,  \"error\": \"{HttpUtility.JavaScriptStringEncode(ex.ToString())}\"  }}").AsMemory();
-                    await webSocket.SendAsync(dataToReturn, received.MessageType, received.EndOfMessage, CancellationToken.None);
+                    await webSocket.SendAsync(dataToReturn, WebSocketMessageType.Text, true, CancellationToken.None);
                 }
                 
                 received = await webSocket.ReceiveAsync(memory, CancellationToken.None);
