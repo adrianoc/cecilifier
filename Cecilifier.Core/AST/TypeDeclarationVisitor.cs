@@ -133,19 +133,16 @@ namespace Cecilifier.Core.AST
 
         private string HandleInterfaceDeclaration(TypeDeclarationSyntax node)
         {
-            return HandleTypeDeclaration(node, null);
+            return HandleTypeDeclaration(node);
         }
 
         private string HandleTypeDeclaration(TypeDeclarationSyntax node)
         {
-            return HandleTypeDeclaration(node, Context.TypeResolver.Bcl.System.Object);
-        }
-
-        private string HandleTypeDeclaration(TypeDeclarationSyntax node, string baseType)
-        {
             Context.WriteNewLine();
             Context.WriteComment($"{node.Kind()} : {node.Identifier}");
 
+            var typeSymbol = DeclaredSymbolFor(node);
+            var baseType = (typeSymbol.BaseType == null || typeSymbol.BaseType.IsGenericType) ? null : Context.TypeResolver.Resolve(typeSymbol.BaseType);
             var varName = Context.Naming.Type(node);
             var isStructWithNoFields = node.Kind() == SyntaxKind.StructDeclaration && node.Members.Count == 0;
             var typeDefinitionExp = CecilDefinitionsFactory.Type(
@@ -153,7 +150,7 @@ namespace Cecilifier.Core.AST
                                             varName,
                                             node.Identifier.ValueText, 
                                             TypeModifiersToCecil(node), 
-                                            baseType, 
+                                            baseType,
                                             isStructWithNoFields, 
                                             ImplementedInterfacesFor(node.BaseList).Select(i => Context.TypeResolver.Resolve(i)),
                                             node.TypeParameterList?.Parameters,
@@ -161,7 +158,7 @@ namespace Cecilifier.Core.AST
             
             AddCecilExpressions(typeDefinitionExp);
 
-            if (baseType != null)
+            if (typeSymbol.BaseType?.IsGenericType == true)
             {
                 // we postpone setting the base type because it may depend on generic parameters defined in the class itself (for instance 'class C<T> : Base<T> {}')
                 // and these are introduced by the code in CecilDefinitionsFactory.Type().
