@@ -41,7 +41,7 @@ internal partial class TypeDeclarationVisitor
             var ctorLocalVar = Context.Naming.Delegate(node);
 
             // Delegate ctor
-            AddCecilExpression(CecilDefinitionsFactory.Constructor(Context, ctorLocalVar, node.Identifier.Text, "MethodAttributes.FamANDAssem | MethodAttributes.Family",
+            AddCecilExpression(CecilDefinitionsFactory.Constructor(Context, ctorLocalVar, node.Identifier.Text, false,"MethodAttributes.FamANDAssem | MethodAttributes.Family",
                 new[] { "System.Object", "System.IntPtr" }, "IsRuntime = true"));
             AddCecilExpression($"{ctorLocalVar}.Parameters.Add(new ParameterDefinition({Context.TypeResolver.Bcl.System.Object}));");
             AddCecilExpression($"{ctorLocalVar}.Parameters.Add(new ParameterDefinition({Context.TypeResolver.Bcl.System.IntPtr}));");

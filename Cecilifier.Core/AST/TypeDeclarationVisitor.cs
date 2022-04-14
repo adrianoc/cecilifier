@@ -185,17 +185,25 @@ namespace Cecilifier.Core.AST
 
     internal class DefaultCtorVisitor : CSharpSyntaxWalker
     {
+        [Flags]
+        enum ConstructorKind
+        {
+            Static = 0x1,
+            Instance = 0x2
+        }
+        
         private readonly IVisitorContext context;
 
-        private bool defaultCtorFound;
         private readonly string localVarName;
+        private ConstructorKind foundConstructors;
+        private bool hasStaticInitialization;
 
         public DefaultCtorVisitor(IVisitorContext context, string localVarName)
         {
             this.localVarName = localVarName;
             this.context = context;
         }
-
+        
         public override void VisitStructDeclaration(StructDeclarationSyntax node)
         {
             foreach (var member in NonTypeMembersOf(node))
@@ -211,26 +219,41 @@ namespace Cecilifier.Core.AST
                 member.Accept(this);
             }
 
-            if (!defaultCtorFound)
+            if ((foundConstructors & ConstructorKind.Instance) != ConstructorKind.Instance)
             {
-                new ConstructorDeclarationVisitor(context).DefaultCtorInjector(localVarName, node);
+                new ConstructorDeclarationVisitor(context).DefaultCtorInjector(localVarName, node, false);
+            }
+            
+            if ((foundConstructors & ConstructorKind.Static) != ConstructorKind.Static && hasStaticInitialization)
+            {
+                new ConstructorDeclarationVisitor(context).DefaultCtorInjector(localVarName, node, true);
             }
         }
 
         private static IEnumerable<MemberDeclarationSyntax> NonTypeMembersOf(TypeDeclarationSyntax node)
         {
-            return node.Members.Where(m => m.Kind() != SyntaxKind.ClassDeclaration && m.Kind() != SyntaxKind.StructDeclaration && m.Kind() != SyntaxKind.EnumDeclaration);
+            return node.Members.Where(m => m.Kind() != SyntaxKind.ClassDeclaration && m.Kind() != SyntaxKind.StructDeclaration && m.Kind() != SyntaxKind.EnumDeclaration && m.Kind() != SyntaxKind.InterfaceDeclaration);
         }
 
         public override void VisitConstructorDeclaration(ConstructorDeclarationSyntax ctorNode)
         {
-            // bailout in case the ctor has parameters or is static (a cctor)
-            if (ctorNode.ParameterList.Parameters.Count > 0 || ctorNode.Modifiers.Any(t => t.IsKind(SyntaxKind.StaticKeyword)))
-            {
+            // bailout in case the ctor has parameters
+            if (ctorNode.ParameterList.Parameters.Count > 0)
                 return;
-            }
 
-            defaultCtorFound = true;
+            foundConstructors |= ctorNode.Modifiers.Any(t => t.IsKind(SyntaxKind.StaticKeyword)) ? ConstructorKind.Static : ConstructorKind.Instance;
+        }
+
+        public override void VisitFieldDeclaration(FieldDeclarationSyntax node)
+        {
+            if (node.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword)) && node.Declaration.Variables.Any(v => v.Initializer != null))
+                hasStaticInitialization = true;
+        }
+
+        public override void VisitPropertyDeclaration(PropertyDeclarationSyntax node)
+        {
+            if (node.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword)) && node.Initializer != null)
+                hasStaticInitialization = true;
         }
     }
 }

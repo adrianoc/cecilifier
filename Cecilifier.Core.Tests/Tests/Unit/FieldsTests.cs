@@ -66,4 +66,28 @@ public class FieldsTests : CecilifierUnitTestBase
                 @"var fld_ro_1 = new FieldDefinition\(""ro"", .+InitOnly.+Int32\);\s+" +
                         @"cls_foo_0.Fields.Add\(fld_ro_1\);"));
     }
+    
+    [TestCase("class Foo { static int f = 42; }")]
+    [TestCase("class Foo { static int f = 42; static Foo() { } }")]
+    [TestCase("class Foo { static int P { get; } = 42; }")]
+    [TestCase("class Foo { static int P { get; } = 42; static Foo() { } }")]
+    public void StaticFields(string code)
+    {
+        var result = RunCecilifier(code);
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+
+        Assert.That(
+            cecilifiedCode,
+            Does.Match(
+                @"var (cctor_foo_\d+) = new MethodDefinition\("".cctor"",.+MethodAttributes.Static.+\);\s+" +
+                @"cls_foo_0.Methods.Add\(\1\);\s+"));
+       
+        Assert.That(
+            cecilifiedCode,
+            Does.Match(
+                @"var (il_.+_\d+) = .+.Body.GetILProcessor\(\);\s+" + 
+                @"//static int .+ = 42;\s+" + 
+                @"\1.Emit\(OpCodes.Ldc_I4, 42\);\s+" + 
+                @"\1.Emit\(OpCodes.Stsfld, fld_.+\);"));
+    }
 }
