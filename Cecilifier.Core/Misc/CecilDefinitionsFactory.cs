@@ -9,6 +9,7 @@ using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Mono.Cecil.Cil;
 
 namespace Cecilifier.Core.Misc
 {
@@ -384,13 +385,11 @@ namespace Cecilifier.Core.Misc
             return factory("HasThis = false", parameters, returnType);
         }
 
-        public static IEnumerable<string> InstantiateDelegate(IVisitorContext context, string ilVar, ITypeSymbol delegateType, string variableName)
+        public static void InstantiateDelegate(IVisitorContext context, string ilVar, ITypeSymbol delegateType, string variableName)
         {
-            var ldfnt = $"{ilVar}.Emit(OpCodes.Ldftn, {variableName});";
+            context.EmitCilInstruction(ilVar, OpCodes.Ldftn, variableName);
             var delegateCtor = delegateType.GetMembers().OfType<IMethodSymbol>().FirstOrDefault(m => m.Name == ".ctor"); 
-            var delegateCtorInvocation = $"{ilVar}.Emit(OpCodes.Newobj, {delegateCtor.MethodResolverExpression(context)});";
-
-            return new[] { ldfnt, delegateCtorInvocation };
+            context.EmitCilInstruction(ilVar, OpCodes.Newobj, delegateCtor.MethodResolverExpression(context));
         }
     }
 }

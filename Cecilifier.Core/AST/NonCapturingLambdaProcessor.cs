@@ -6,6 +6,7 @@ using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Mono.Cecil.Cil;
 
 namespace Cecilifier.Core.AST
 {
@@ -135,7 +136,7 @@ namespace Cecilifier.Core.AST
             {
                 var controlFlow = context.SemanticModel.AnalyzeControlFlow(lambda.Body.ChildNodes().First(), lambda.Body.ChildNodes().Last());
                 if (!controlFlow.ReturnStatements.Any())
-                    context.WriteCecilExpression($"{syntheticIlVar}.Emit(OpCodes.Ret);");
+                    context.EmitCilInstruction(syntheticIlVar, OpCodes.Ret);
             }
             context.WriteNewLine();
         

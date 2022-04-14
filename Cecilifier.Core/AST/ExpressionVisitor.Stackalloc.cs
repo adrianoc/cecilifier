@@ -220,7 +220,7 @@ internal class StackallocAsArgumentFixer : IStackallocAsArgumentFixer
 
         context.DefinitionVariables.RegisterNonMethod(string.Empty, localVarName, VariableMemberKind.LocalVariable, cecilVarDeclName);
     
-        context.WriteCecilExpression($"{ilVar}.Emit(OpCodes.Stloc, {cecilVarDeclName});");
+        context.EmitCilInstruction(ilVar, OpCodes.Stloc, cecilVarDeclName);
         context.WriteNewLine();
     
         localVariablesStoringOriginalArguments.Enqueue(cecilVarDeclName);
@@ -256,7 +256,7 @@ internal class StackallocAsArgumentFixer : IStackallocAsArgumentFixer
         // emit instruction to push original arguments to stack
         foreach (var localVariable in localVariablesStoringOriginalArguments)
         {
-            context.WriteCecilExpression($"{ilVar}.Emit(OpCodes.Ldloc, {localVariable});");
+            context.EmitCilInstruction(ilVar, OpCodes.Ldloc, localVariable);
             context.WriteNewLine();
         }
         
