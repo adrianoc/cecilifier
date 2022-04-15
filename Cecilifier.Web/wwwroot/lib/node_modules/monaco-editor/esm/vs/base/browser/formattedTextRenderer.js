@@ -10,7 +10,7 @@ export function renderText(text, options = {}) {
 }
 export function renderFormattedText(formattedText, options = {}) {
     const element = createElement(options);
-    _renderFormattedText(element, parseFormattedText(formattedText, !!options.renderCodeSegements), options.actionHandler, options.renderCodeSegements);
+    _renderFormattedText(element, parseFormattedText(formattedText, !!options.renderCodeSegments), options.actionHandler, options.renderCodeSegments);
     return element;
 }
 export function createElement(options) {
@@ -41,7 +41,7 @@ class StringStream {
         this.index++;
     }
 }
-function _renderFormattedText(element, treeNode, actionHandler, renderCodeSegements) {
+function _renderFormattedText(element, treeNode, actionHandler, renderCodeSegments) {
     let child;
     if (treeNode.type === 2 /* Text */) {
         child = document.createTextNode(treeNode.content || '');
@@ -52,13 +52,12 @@ function _renderFormattedText(element, treeNode, actionHandler, renderCodeSegeme
     else if (treeNode.type === 4 /* Italics */) {
         child = document.createElement('i');
     }
-    else if (treeNode.type === 7 /* Code */ && renderCodeSegements) {
+    else if (treeNode.type === 7 /* Code */ && renderCodeSegments) {
         child = document.createElement('code');
     }
     else if (treeNode.type === 5 /* Action */ && actionHandler) {
         const a = document.createElement('a');
-        a.href = '#';
-        actionHandler.disposeables.add(DOM.addStandardDisposableListener(a, 'click', (event) => {
+        actionHandler.disposables.add(DOM.addStandardDisposableListener(a, 'click', (event) => {
             actionHandler.callback(String(treeNode.index), event);
         }));
         child = a;
@@ -74,7 +73,7 @@ function _renderFormattedText(element, treeNode, actionHandler, renderCodeSegeme
     }
     if (child && Array.isArray(treeNode.children)) {
         treeNode.children.forEach((nodeChild) => {
-            _renderFormattedText(child, nodeChild, actionHandler, renderCodeSegements);
+            _renderFormattedText(child, nodeChild, actionHandler, renderCodeSegments);
         });
     }
 }

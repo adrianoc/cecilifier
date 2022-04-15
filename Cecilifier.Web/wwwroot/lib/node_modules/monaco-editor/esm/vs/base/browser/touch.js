@@ -8,10 +8,10 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
-import * as arrays from '../common/arrays.js';
-import { Disposable } from '../common/lifecycle.js';
 import * as DomUtils from './dom.js';
+import * as arrays from '../common/arrays.js';
 import { memoize } from '../common/decorators.js';
+import { Disposable } from '../common/lifecycle.js';
 export var EventType;
 (function (EventType) {
     EventType.Tap = '-monaco-gesturetap';
@@ -64,7 +64,7 @@ export class Gesture extends Disposable {
     static isTouchDevice() {
         // `'ontouchstart' in window` always evaluates to true with typescript's modern typings. This causes `window` to be
         // `never` later in `window.navigator`. That's why we need the explicit `window as Window` cast
-        return 'ontouchstart' in window || navigator.maxTouchPoints > 0 || window.navigator.msMaxTouchPoints > 0;
+        return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     }
     dispose() {
         if (this.handle) {

@@ -2,12 +2,12 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import './contextview.css';
-import * as DOM from '../../dom.js';
-import * as platform from '../../../common/platform.js';
-import { toDisposable, Disposable, DisposableStore } from '../../../common/lifecycle.js';
-import { Range } from '../../../common/range.js';
 import { BrowserFeatures } from '../../canIUse.js';
+import * as DOM from '../../dom.js';
+import { Disposable, DisposableStore, toDisposable } from '../../../common/lifecycle.js';
+import * as platform from '../../../common/platform.js';
+import { Range } from '../../../common/range.js';
+import './contextview.css';
 export var LayoutAnchorMode;
 (function (LayoutAnchorMode) {
     LayoutAnchorMode[LayoutAnchorMode["AVOID"] = 0] = "AVOID";
@@ -240,6 +240,7 @@ let SHADOW_ROOT_CSS = /* css */ `
 
 	@font-face {
 		font-family: "codicon";
+		font-display: block;
 		src: url("./codicon.ttf?5d4d76ab2ce5108968ad644d591a16a6") format("truetype");
 	}
 

@@ -7,6 +7,7 @@ import { matchesFuzzy } from './filters.js';
 import { ltrim } from './strings.js';
 export const iconStartMarker = '$(';
 const iconsRegex = new RegExp(`\\$\\(${CSSIcon.iconNameExpression}(?:${CSSIcon.iconModifierExpression})?\\)`, 'g'); // no capturing groups
+const iconNameCharacterRegexp = new RegExp(CSSIcon.iconNameCharacter);
 const escapeIconsRegex = new RegExp(`(\\\\)?${iconsRegex.source}`, 'g');
 export function escapeIcons(text) {
     return text.replace(escapeIconsRegex, (match, escaped) => escaped ? match : `\\${match}`);
@@ -74,7 +75,7 @@ function doParseLabelWithIcons(text, firstIconIndex) {
         // within icon
         else if (currentIconStart !== -1) {
             // Make sure this is a real icon name
-            if (/^[a-z0-9\-]$/i.test(char)) {
+            if (iconNameCharacterRegexp.test(char)) {
                 currentIconValue += char;
             }
             else {

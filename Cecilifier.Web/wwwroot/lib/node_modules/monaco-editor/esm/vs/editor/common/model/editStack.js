@@ -6,7 +6,7 @@ import * as nls from '../../../nls.js';
 import { onUnexpectedError } from '../../../base/common/errors.js';
 import { Selection } from '../core/selection.js';
 import { URI } from '../../../base/common/uri.js';
-import { TextChange, compressConsecutiveTextChanges } from './textChange.js';
+import { TextChange, compressConsecutiveTextChanges } from '../core/textChange.js';
 import * as buffer from '../../../base/common/buffer.js';
 import { basename } from '../../../base/common/resources.js';
 function uriGetComparisonKey(resource) {

@@ -2,11 +2,11 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import './dropdown.css';
-import { append, $ } from '../../dom.js';
-import { Emitter } from '../../../common/event.js';
+import { $, append } from '../../dom.js';
 import { BaseActionViewItem } from '../actionbar/actionViewItems.js';
 import { DropdownMenu } from './dropdown.js';
+import { Emitter } from '../../../common/event.js';
+import './dropdown.css';
 export class DropdownMenuActionViewItem extends BaseActionViewItem {
     constructor(action, menuActionsOrProvider, contextMenuProvider, options = Object.create(null)) {
         super(null, action, options);

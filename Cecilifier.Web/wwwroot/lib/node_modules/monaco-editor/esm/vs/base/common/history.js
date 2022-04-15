@@ -9,6 +9,9 @@ export class HistoryNavigator {
         this._limit = limit;
         this._onChange();
     }
+    getHistory() {
+        return this._elements;
+    }
     add(t) {
         this._history.delete(t);
         this._history.add(t);

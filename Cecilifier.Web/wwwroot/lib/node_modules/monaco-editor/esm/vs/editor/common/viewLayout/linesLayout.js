@@ -180,7 +180,7 @@ export class LinesLayout {
             toChange.set(change.id, change);
         }
         const applyRemoveAndChange = (whitespaces) => {
-            let result = [];
+            const result = [];
             for (const whitespace of whitespaces) {
                 if (toRemove.has(whitespace.id)) {
                     continue;
@@ -687,7 +687,7 @@ export class LinesLayout {
         if (startIndex < 0) {
             return [];
         }
-        let result = [];
+        const result = [];
         for (let i = startIndex; i <= endIndex; i++) {
             const top = this.getVerticalOffsetForWhitespaceIndex(i);
             const height = this.getHeightForWhitespaceIndex(i);

@@ -2,11 +2,11 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import './countBadge.css';
 import { $, append } from '../../dom.js';
-import { format } from '../../../common/strings.js';
 import { Color } from '../../../common/color.js';
 import { mixin } from '../../../common/objects.js';
+import { format } from '../../../common/strings.js';
+import './countBadge.css';
 const defaultOpts = {
     badgeBackground: Color.fromHex('#4D4D4D'),
     badgeForeground: Color.fromHex('#FFFFFF')

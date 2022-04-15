@@ -13,9 +13,9 @@ export class ReplaceCommand {
         builder.addTrackedEditOperation(this._range, this._text);
     }
     computeCursorState(model, helper) {
-        let inverseEditOperations = helper.getInverseEditOperations();
-        let srcRange = inverseEditOperations[0].range;
-        return new Selection(srcRange.endLineNumber, srcRange.endColumn, srcRange.endLineNumber, srcRange.endColumn);
+        const inverseEditOperations = helper.getInverseEditOperations();
+        const srcRange = inverseEditOperations[0].range;
+        return Selection.fromPositions(srcRange.getEndPosition());
     }
 }
 export class ReplaceCommandThatSelectsText {
@@ -29,7 +29,7 @@ export class ReplaceCommandThatSelectsText {
     computeCursorState(model, helper) {
         const inverseEditOperations = helper.getInverseEditOperations();
         const srcRange = inverseEditOperations[0].range;
-        return new Selection(srcRange.startLineNumber, srcRange.startColumn, srcRange.endLineNumber, srcRange.endColumn);
+        return Selection.fromRange(srcRange, 0 /* LTR */);
     }
 }
 export class ReplaceCommandWithoutChangingPosition {
@@ -42,9 +42,9 @@ export class ReplaceCommandWithoutChangingPosition {
         builder.addTrackedEditOperation(this._range, this._text);
     }
     computeCursorState(model, helper) {
-        let inverseEditOperations = helper.getInverseEditOperations();
-        let srcRange = inverseEditOperations[0].range;
-        return new Selection(srcRange.startLineNumber, srcRange.startColumn, srcRange.startLineNumber, srcRange.startColumn);
+        const inverseEditOperations = helper.getInverseEditOperations();
+        const srcRange = inverseEditOperations[0].range;
+        return Selection.fromPositions(srcRange.getStartPosition());
     }
 }
 export class ReplaceCommandWithOffsetCursorState {
@@ -59,9 +59,9 @@ export class ReplaceCommandWithOffsetCursorState {
         builder.addTrackedEditOperation(this._range, this._text);
     }
     computeCursorState(model, helper) {
-        let inverseEditOperations = helper.getInverseEditOperations();
-        let srcRange = inverseEditOperations[0].range;
-        return new Selection(srcRange.endLineNumber + this._lineNumberDeltaOffset, srcRange.endColumn + this._columnDeltaOffset, srcRange.endLineNumber + this._lineNumberDeltaOffset, srcRange.endColumn + this._columnDeltaOffset);
+        const inverseEditOperations = helper.getInverseEditOperations();
+        const srcRange = inverseEditOperations[0].range;
+        return Selection.fromPositions(srcRange.getEndPosition().delta(this._lineNumberDeltaOffset, this._columnDeltaOffset));
     }
 }
 export class ReplaceCommandThatPreservesSelection {

@@ -1,16 +1,12 @@
-/*---------------------------------------------------------------------------------------------
- *  Copyright (c) Microsoft Corporation. All rights reserved.
- *  Licensed under the MIT License. See License.txt in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-import './button.css';
+import { addDisposableListener, EventHelper, EventType, reset, trackFocus } from '../../dom.js';
 import { StandardKeyboardEvent } from '../../keyboardEvent.js';
+import { EventType as TouchEventType, Gesture } from '../../touch.js';
+import { renderLabelWithIcons } from '../iconLabel/iconLabels.js';
 import { Color } from '../../../common/color.js';
-import { mixin } from '../../../common/objects.js';
 import { Emitter } from '../../../common/event.js';
 import { Disposable } from '../../../common/lifecycle.js';
-import { Gesture, EventType as TouchEventType } from '../../touch.js';
-import { renderLabelWithIcons } from '../iconLabel/iconLabels.js';
-import { addDisposableListener, EventType, EventHelper, trackFocus, reset } from '../../dom.js';
+import { mixin } from '../../../common/objects.js';
+import './button.css';
 const defaultOptions = {
     buttonBackground: Color.fromHex('#0E639C'),
     buttonHoverBackground: Color.fromHex('#006BB3'),

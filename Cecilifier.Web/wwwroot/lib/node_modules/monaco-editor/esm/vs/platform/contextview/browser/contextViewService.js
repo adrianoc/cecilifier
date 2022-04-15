@@ -19,7 +19,7 @@ let ContextViewService = class ContextViewService extends Disposable {
         super();
         this.layoutService = layoutService;
         this.currentViewDisposable = Disposable.None;
-        this.container = layoutService.container;
+        this.container = layoutService.hasContainer ? layoutService.container : null;
         this.contextView = this._register(new ContextView(this.container, 1 /* ABSOLUTE */));
         this.layout();
         this._register(layoutService.onDidLayout(() => this.layout()));
@@ -36,7 +36,7 @@ let ContextViewService = class ContextViewService extends Disposable {
             }
         }
         else {
-            if (this.container !== this.layoutService.container) {
+            if (this.layoutService.hasContainer && this.container !== this.layoutService.container) {
                 this.container = this.layoutService.container;
                 this.setContainer(this.container, 1 /* ABSOLUTE */);
             }

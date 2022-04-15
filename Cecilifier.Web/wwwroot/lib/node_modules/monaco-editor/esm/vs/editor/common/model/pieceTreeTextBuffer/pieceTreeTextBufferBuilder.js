@@ -33,14 +33,14 @@ export class PieceTreeTextBufferFactory {
     }
     create(defaultEOL) {
         const eol = this._getEOL(defaultEOL);
-        let chunks = this._chunks;
+        const chunks = this._chunks;
         if (this._normalizeEOL &&
             ((eol === '\r\n' && (this._cr > 0 || this._lf > 0))
                 || (eol === '\n' && (this._cr > 0 || this._crlf > 0)))) {
             // Normalize pieces
             for (let i = 0, len = chunks.length; i < len; i++) {
-                let str = chunks[i].buffer.replace(/\r\n|\r|\n/g, eol);
-                let newLineStart = createLineStartsFast(str);
+                const str = chunks[i].buffer.replace(/\r\n|\r|\n/g, eol);
+                const newLineStart = createLineStartsFast(str);
                 chunks[i] = new StringBuffer(str, newLineStart);
             }
         }
@@ -126,9 +126,9 @@ export class PieceTreeTextBufferBuilder {
         if (this._hasPreviousChar) {
             this._hasPreviousChar = false;
             // recreate last chunk
-            let lastChunk = this.chunks[this.chunks.length - 1];
+            const lastChunk = this.chunks[this.chunks.length - 1];
             lastChunk.buffer += String.fromCharCode(this._previousChar);
-            let newLineStarts = createLineStartsFast(lastChunk.buffer);
+            const newLineStarts = createLineStartsFast(lastChunk.buffer);
             lastChunk.lineStarts = newLineStarts;
             if (this._previousChar === 13 /* CarriageReturn */) {
                 this.cr++;

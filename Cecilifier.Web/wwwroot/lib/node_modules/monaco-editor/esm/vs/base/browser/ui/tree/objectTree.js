@@ -8,14 +8,15 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
-import { Iterable } from '../../../common/iterator.js';
 import { AbstractTree } from './abstractTree.js';
-import { ObjectTreeModel } from './objectTreeModel.js';
 import { CompressibleObjectTreeModel } from './compressedObjectTreeModel.js';
+import { ObjectTreeModel } from './objectTreeModel.js';
 import { memoize } from '../../../common/decorators.js';
+import { Iterable } from '../../../common/iterator.js';
 export class ObjectTree extends AbstractTree {
     constructor(user, container, delegate, renderers, options = {}) {
         super(user, container, delegate, renderers, options);
+        this.user = user;
     }
     get onDidChangeCollapseState() { return this.model.onDidChangeCollapseState; }
     setChildren(element, children = Iterable.empty(), options) {

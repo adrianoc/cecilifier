@@ -13,21 +13,32 @@ export class ScrollbarVisibilityController extends Disposable {
         this._domNode = null;
         this._isVisible = false;
         this._isNeeded = false;
+        this._rawShouldBeVisible = false;
         this._shouldBeVisible = false;
         this._revealTimer = this._register(new TimeoutTimer());
     }
+    setVisibility(visibility) {
+        if (this._visibility !== visibility) {
+            this._visibility = visibility;
+            this._updateShouldBeVisible();
+        }
+    }
     // ----------------- Hide / Reveal
-    applyVisibilitySetting(shouldBeVisible) {
+    setShouldBeVisible(rawShouldBeVisible) {
+        this._rawShouldBeVisible = rawShouldBeVisible;
+        this._updateShouldBeVisible();
+    }
+    _applyVisibilitySetting() {
         if (this._visibility === 2 /* Hidden */) {
             return false;
         }
         if (this._visibility === 3 /* Visible */) {
             return true;
         }
-        return shouldBeVisible;
+        return this._rawShouldBeVisible;
     }
-    setShouldBeVisible(rawShouldBeVisible) {
-        const shouldBeVisible = this.applyVisibilitySetting(rawShouldBeVisible);
+    _updateShouldBeVisible() {
+        const shouldBeVisible = this._applyVisibilitySetting();
         if (this._shouldBeVisible !== shouldBeVisible) {
             this._shouldBeVisible = shouldBeVisible;
             this.ensureVisibility();

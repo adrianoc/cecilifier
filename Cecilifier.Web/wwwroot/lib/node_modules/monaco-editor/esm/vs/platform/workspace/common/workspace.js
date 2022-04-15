@@ -1,13 +1,10 @@
-/*---------------------------------------------------------------------------------------------
- *  Copyright (c) Microsoft Corporation. All rights reserved.
- *  Licensed under the MIT License. See License.txt in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-import { createDecorator } from '../../instantiation/common/instantiation.js';
 import { TernarySearchTree } from '../../../base/common/map.js';
+import { createDecorator } from '../../instantiation/common/instantiation.js';
 export const IWorkspaceContextService = createDecorator('contextService');
 export class Workspace {
-    constructor(_id, folders, _configuration, _ignorePathCasing) {
+    constructor(_id, folders, _transient, _configuration, _ignorePathCasing) {
         this._id = _id;
+        this._transient = _transient;
         this._configuration = _configuration;
         this._ignorePathCasing = _ignorePathCasing;
         this._foldersMap = TernarySearchTree.forUris(this._ignorePathCasing);
@@ -22,6 +19,9 @@ export class Workspace {
     }
     get id() {
         return this._id;
+    }
+    get transient() {
+        return this._transient;
     }
     get configuration() {
         return this._configuration;
@@ -46,7 +46,7 @@ export class Workspace {
         }
     }
     toJSON() {
-        return { id: this.id, folders: this.folders, configuration: this.configuration };
+        return { id: this.id, folders: this.folders, transient: this.transient, configuration: this.configuration };
     }
 }
 export class WorkspaceFolder {

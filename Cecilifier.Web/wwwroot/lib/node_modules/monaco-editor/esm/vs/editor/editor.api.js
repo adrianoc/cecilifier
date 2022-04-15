@@ -4,11 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 var _a;
 import { EditorOptions } from './common/config/editorOptions.js';
-import { createMonacoBaseAPI } from './common/standalone/standaloneBase.js';
+import { createMonacoBaseAPI } from './common/services/editorBaseApi.js';
 import { createMonacoEditorAPI } from './standalone/browser/standaloneEditor.js';
 import { createMonacoLanguagesAPI } from './standalone/browser/standaloneLanguages.js';
 import { globals } from '../base/common/platform.js';
-import { FormattingConflicts } from './contrib/format/format.js';
+import { FormattingConflicts } from './contrib/format/browser/format.js';
 // Set defaults for standalone editor
 EditorOptions.wrappingIndent.defaultValue = 0 /* None */;
 EditorOptions.glyphMargin.defaultValue = false;

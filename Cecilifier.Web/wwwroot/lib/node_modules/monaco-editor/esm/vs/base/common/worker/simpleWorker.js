@@ -3,9 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import { transformErrorForSerialization } from '../errors.js';
+import { Emitter } from '../event.js';
 import { Disposable } from '../lifecycle.js';
-import { isWeb } from '../platform.js';
+import { globals, isWeb } from '../platform.js';
 import * as types from '../types.js';
+import * as strings from '../strings.js';
 const INITIALIZE = '$initialize';
 let webWorkerWarningLogged = false;
 export function logOnceWebWorkerWarning(err) {
@@ -19,30 +21,85 @@ export function logOnceWebWorkerWarning(err) {
     }
     console.warn(err.message);
 }
+class RequestMessage {
+    constructor(vsWorker, req, method, args) {
+        this.vsWorker = vsWorker;
+        this.req = req;
+        this.method = method;
+        this.args = args;
+        this.type = 0 /* Request */;
+    }
+}
+class ReplyMessage {
+    constructor(vsWorker, seq, res, err) {
+        this.vsWorker = vsWorker;
+        this.seq = seq;
+        this.res = res;
+        this.err = err;
+        this.type = 1 /* Reply */;
+    }
+}
+class SubscribeEventMessage {
+    constructor(vsWorker, req, eventName, arg) {
+        this.vsWorker = vsWorker;
+        this.req = req;
+        this.eventName = eventName;
+        this.arg = arg;
+        this.type = 2 /* SubscribeEvent */;
+    }
+}
+class EventMessage {
+    constructor(vsWorker, req, event) {
+        this.vsWorker = vsWorker;
+        this.req = req;
+        this.event = event;
+        this.type = 3 /* Event */;
+    }
+}
+class UnsubscribeEventMessage {
+    constructor(vsWorker, req) {
+        this.vsWorker = vsWorker;
+        this.req = req;
+        this.type = 4 /* UnsubscribeEvent */;
+    }
+}
 class SimpleWorkerProtocol {
     constructor(handler) {
         this._workerId = -1;
         this._handler = handler;
         this._lastSentReq = 0;
         this._pendingReplies = Object.create(null);
+        this._pendingEmitters = new Map();
+        this._pendingEvents = new Map();
     }
     setWorkerId(workerId) {
         this._workerId = workerId;
     }
     sendMessage(method, args) {
-        let req = String(++this._lastSentReq);
+        const req = String(++this._lastSentReq);
         return new Promise((resolve, reject) => {
             this._pendingReplies[req] = {
                 resolve: resolve,
                 reject: reject
             };
-            this._send({
-                vsWorker: this._workerId,
-                req: req,
-                method: method,
-                args: args
-            });
+            this._send(new RequestMessage(this._workerId, req, method, args));
         });
+    }
+    listen(eventName, arg) {
+        let req = null;
+        const emitter = new Emitter({
+            onFirstListenerAdd: () => {
+                req = String(++this._lastSentReq);
+                this._pendingEmitters.set(req, emitter);
+                this._send(new SubscribeEventMessage(this._workerId, req, eventName, arg));
+            },
+            onLastListenerRemove: () => {
+                this._pendingEmitters.delete(req);
+                this._send(new UnsubscribeEventMessage(this._workerId, req));
+                req = null;
+            }
+        });
+        return emitter.event;
     }
     handleMessage(message) {
         if (!message || !message.vsWorker) {
@@ -54,65 +111,86 @@ class SimpleWorkerProtocol {
         this._handleMessage(message);
     }
     _handleMessage(msg) {
-        if (msg.seq) {
-            let replyMessage = msg;
-            if (!this._pendingReplies[replyMessage.seq]) {
-                console.warn('Got reply to unknown seq');
-                return;
-            }
-            let reply = this._pendingReplies[replyMessage.seq];
-            delete this._pendingReplies[replyMessage.seq];
-            if (replyMessage.err) {
-                let err = replyMessage.err;
-                if (replyMessage.err.$isError) {
-                    err = new Error();
-                    err.name = replyMessage.err.name;
-                    err.message = replyMessage.err.message;
-                    err.stack = replyMessage.err.stack;
-                }
-                reply.reject(err);
-                return;
-            }
-            reply.resolve(replyMessage.res);
+        switch (msg.type) {
+            case 1 /* Reply */:
+                return this._handleReplyMessage(msg);
+            case 0 /* Request */:
+                return this._handleRequestMessage(msg);
+            case 2 /* SubscribeEvent */:
+                return this._handleSubscribeEventMessage(msg);
+            case 3 /* Event */:
+                return this._handleEventMessage(msg);
+            case 4 /* UnsubscribeEvent */:
+                return this._handleUnsubscribeEventMessage(msg);
+        }
+    }
+    _handleReplyMessage(replyMessage) {
+        if (!this._pendingReplies[replyMessage.seq]) {
+            console.warn('Got reply to unknown seq');
             return;
         }
-        let requestMessage = msg;
+        let reply = this._pendingReplies[replyMessage.seq];
+        delete this._pendingReplies[replyMessage.seq];
+        if (replyMessage.err) {
+            let err = replyMessage.err;
+            if (replyMessage.err.$isError) {
+                err = new Error();
+                err.name = replyMessage.err.name;
+                err.message = replyMessage.err.message;
+                err.stack = replyMessage.err.stack;
+            }
+            reply.reject(err);
+            return;
+        }
+        reply.resolve(replyMessage.res);
+    }
+    _handleRequestMessage(requestMessage) {
         let req = requestMessage.req;
         let result = this._handler.handleMessage(requestMessage.method, requestMessage.args);
         result.then((r) => {
-            this._send({
-                vsWorker: this._workerId,
-                seq: req,
-                res: r,
-                err: undefined
-            });
+            this._send(new ReplyMessage(this._workerId, req, r, undefined));
         }, (e) => {
             if (e.detail instanceof Error) {
                 // Loading errors have a detail property that points to the actual error
                 e.detail = transformErrorForSerialization(e.detail);
             }
-            this._send({
-                vsWorker: this._workerId,
-                seq: req,
-                res: undefined,
-                err: transformErrorForSerialization(e)
-            });
+            this._send(new ReplyMessage(this._workerId, req, undefined, transformErrorForSerialization(e)));
         });
+    }
+    _handleSubscribeEventMessage(msg) {
+        const req = msg.req;
+        const disposable = this._handler.handleEvent(msg.eventName, msg.arg)((event) => {
+            this._send(new EventMessage(this._workerId, req, event));
+        });
+        this._pendingEvents.set(req, disposable);
+    }
+    _handleEventMessage(msg) {
+        if (!this._pendingEmitters.has(msg.req)) {
+            console.warn('Got event for unknown req');
+            return;
+        }
+        this._pendingEmitters.get(msg.req).fire(msg.event);
+    }
+    _handleUnsubscribeEventMessage(msg) {
+        if (!this._pendingEvents.has(msg.req)) {
+            console.warn('Got unsubscribe for unknown req');
+            return;
+        }
+        this._pendingEvents.get(msg.req).dispose();
+        this._pendingEvents.delete(msg.req);
     }
     _send(msg) {
         let transfer = [];
-        if (msg.req) {
-            const m = msg;
-            for (let i = 0; i < m.args.length; i++) {
-                if (m.args[i] instanceof ArrayBuffer) {
-                    transfer.push(m.args[i]);
+        if (msg.type === 0 /* Request */) {
+            for (let i = 0; i < msg.args.length; i++) {
+                if (msg.args[i] instanceof ArrayBuffer) {
+                    transfer.push(msg.args[i]);
                 }
             }
         }
-        else {
-            const m = msg;
-            if (m.res instanceof ArrayBuffer) {
-                transfer.push(m.res);
+        else if (msg.type === 1 /* Reply */) {
+            if (msg.res instanceof ArrayBuffer) {
+                transfer.push(msg.res);
             }
         }
         this._handler.sendMessage(msg, transfer);
@@ -148,18 +226,35 @@ export class SimpleWorkerClient extends Disposable {
                 catch (e) {
                     return Promise.reject(e);
                 }
+            },
+            handleEvent: (eventName, arg) => {
+                if (propertyIsDynamicEvent(eventName)) {
+                    const event = host[eventName].call(host, arg);
+                    if (typeof event !== 'function') {
+                        throw new Error(`Missing dynamic event ${eventName} on main thread host.`);
+                    }
+                    return event;
+                }
+                if (propertyIsEvent(eventName)) {
+                    const event = host[eventName];
+                    if (typeof event !== 'function') {
+                        throw new Error(`Missing event ${eventName} on main thread host.`);
+                    }
+                    return event;
+                }
+                throw new Error(`Malformed event name ${eventName}`);
             }
         });
         this._protocol.setWorkerId(this._worker.getId());
         // Gather loader configuration
         let loaderConfiguration = null;
-        if (typeof self.require !== 'undefined' && typeof self.require.getConfig === 'function') {
+        if (typeof globals.require !== 'undefined' && typeof globals.require.getConfig === 'function') {
             // Get the configuration from the Monaco AMD Loader
-            loaderConfiguration = self.require.getConfig();
+            loaderConfiguration = globals.require.getConfig();
         }
-        else if (typeof self.requirejs !== 'undefined') {
+        else if (typeof globals.requirejs !== 'undefined') {
             // Get the configuration from requirejs
-            loaderConfiguration = self.requirejs.s.contexts._.config;
+            loaderConfiguration = globals.requirejs.s.contexts._.config;
         }
         const hostMethods = types.getAllMethodNames(host);
         // Send initialize message
@@ -173,10 +268,13 @@ export class SimpleWorkerClient extends Disposable {
         const proxyMethodRequest = (method, args) => {
             return this._request(method, args);
         };
+        const proxyListen = (eventName, arg) => {
+            return this._protocol.listen(eventName, arg);
+        };
         this._lazyProxy = new Promise((resolve, reject) => {
             lazyProxyReject = reject;
             this._onModuleLoaded.then((availableMethods) => {
-                resolve(types.createProxyObject(availableMethods, proxyMethodRequest));
+                resolve(createProxyObject(availableMethods, proxyMethodRequest, proxyListen));
             }, (e) => {
                 reject(e);
                 this._onError('Worker failed to load ' + moduleId, e);
@@ -198,6 +296,40 @@ export class SimpleWorkerClient extends Disposable {
         console.info(error);
     }
 }
+function propertyIsEvent(name) {
+    // Assume a property is an event if it has a form of "onSomething"
+    return name[0] === 'o' && name[1] === 'n' && strings.isUpperAsciiLetter(name.charCodeAt(2));
+}
+function propertyIsDynamicEvent(name) {
+    // Assume a property is a dynamic event (a method that returns an event) if it has a form of "onDynamicSomething"
+    return /^onDynamic/.test(name) && strings.isUpperAsciiLetter(name.charCodeAt(9));
+}
+function createProxyObject(methodNames, invoke, proxyListen) {
+    const createProxyMethod = (method) => {
+        return function () {
+            const args = Array.prototype.slice.call(arguments, 0);
+            return invoke(method, args);
+        };
+    };
+    const createProxyDynamicEvent = (eventName) => {
+        return function (arg) {
+            return proxyListen(eventName, arg);
+        };
+    };
+    let result = {};
+    for (const methodName of methodNames) {
+        if (propertyIsDynamicEvent(methodName)) {
+            result[methodName] = createProxyDynamicEvent(methodName);
+            continue;
+        }
+        if (propertyIsEvent(methodName)) {
+            result[methodName] = proxyListen(methodName, undefined);
+            continue;
+        }
+        result[methodName] = createProxyMethod(methodName);
+    }
+    return result;
+}
 /**
  * Worker side
  */
@@ -209,7 +341,8 @@ export class SimpleWorkerServer {
             sendMessage: (msg, transfer) => {
                 postMessage(msg, transfer);
             },
-            handleMessage: (method, args) => this._handleMessage(method, args)
+            handleMessage: (method, args) => this._handleMessage(method, args),
+            handleEvent: (eventName, arg) => this._handleEvent(eventName, arg)
         });
     }
     onmessage(msg) {
@@ -229,12 +362,35 @@ export class SimpleWorkerServer {
             return Promise.reject(e);
         }
     }
+    _handleEvent(eventName, arg) {
+        if (!this._requestHandler) {
+            throw new Error(`Missing requestHandler`);
+        }
+        if (propertyIsDynamicEvent(eventName)) {
+            const event = this._requestHandler[eventName].call(this._requestHandler, arg);
+            if (typeof event !== 'function') {
+                throw new Error(`Missing dynamic event ${eventName} on request handler.`);
+            }
+            return event;
+        }
+        if (propertyIsEvent(eventName)) {
+            const event = this._requestHandler[eventName];
+            if (typeof event !== 'function') {
+                throw new Error(`Missing event ${eventName} on request handler.`);
+            }
+            return event;
+        }
+        throw new Error(`Malformed event name ${eventName}`);
+    }
     initialize(workerId, loaderConfig, moduleId, hostMethods) {
         this._protocol.setWorkerId(workerId);
         const proxyMethodRequest = (method, args) => {
             return this._protocol.sendMessage(method, args);
         };
-        const hostProxy = types.createProxyObject(hostMethods, proxyMethodRequest);
+        const proxyListen = (eventName, arg) => {
+            return this._protocol.listen(eventName, arg);
+        };
+        const hostProxy = createProxyObject(hostMethods, proxyMethodRequest, proxyListen);
         if (this._requestHandlerFactory) {
             // static request handler
             this._requestHandler = this._requestHandlerFactory(hostProxy);
@@ -256,11 +412,17 @@ export class SimpleWorkerServer {
             }
             // Since this is in a web worker, enable catching errors
             loaderConfig.catchError = true;
-            self.require.config(loaderConfig);
+            globals.require.config(loaderConfig);
         }
         return new Promise((resolve, reject) => {
             // Use the global require to be sure to get the global config
-            self.require([moduleId], (module) => {
+            // ESM-comment-begin
+            // 			const req = (globals.require || require);
+            // ESM-comment-end
+            // ESM-uncomment-begin
+            const req = globals.require;
+            // ESM-uncomment-end
+            req([moduleId], (module) => {
                 this._requestHandler = module.create(hostProxy);
                 if (!this._requestHandler) {
                     reject(new Error(`No RequestHandler!`));

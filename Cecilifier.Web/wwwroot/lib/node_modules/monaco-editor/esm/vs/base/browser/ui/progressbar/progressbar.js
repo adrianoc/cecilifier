@@ -2,15 +2,16 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import './progressbar.css';
-import { Disposable } from '../../../common/lifecycle.js';
-import { Color } from '../../../common/color.js';
-import { mixin } from '../../../common/objects.js';
 import { show } from '../../dom.js';
 import { RunOnceScheduler } from '../../../common/async.js';
+import { Color } from '../../../common/color.js';
+import { Disposable } from '../../../common/lifecycle.js';
+import { mixin } from '../../../common/objects.js';
+import './progressbar.css';
 const CSS_DONE = 'done';
 const CSS_ACTIVE = 'active';
 const CSS_INFINITE = 'infinite';
+const CSS_INFINITE_LONG_RUNNING = 'infinite-long-running';
 const CSS_DISCRETE = 'discrete';
 const defaultOpts = {
     progressBarBackground: Color.fromHex('#0E70C0')
@@ -25,7 +26,8 @@ export class ProgressBar extends Disposable {
         mixin(this.options, defaultOpts, false);
         this.workedVal = 0;
         this.progressBarBackground = this.options.progressBarBackground;
-        this._register(this.showDelayedScheduler = new RunOnceScheduler(() => show(this.element), 0));
+        this.showDelayedScheduler = this._register(new RunOnceScheduler(() => show(this.element), 0));
+        this.longRunningScheduler = this._register(new RunOnceScheduler(() => this.infiniteLongRunning(), ProgressBar.LONG_RUNNING_INFINITE_THRESHOLD));
         this.create(container);
     }
     create(container) {
@@ -42,9 +44,10 @@ export class ProgressBar extends Disposable {
     off() {
         this.bit.style.width = 'inherit';
         this.bit.style.opacity = '1';
-        this.element.classList.remove(CSS_ACTIVE, CSS_INFINITE, CSS_DISCRETE);
+        this.element.classList.remove(CSS_ACTIVE, CSS_INFINITE, CSS_INFINITE_LONG_RUNNING, CSS_DISCRETE);
         this.workedVal = 0;
         this.totalWork = undefined;
+        this.longRunningScheduler.cancel();
     }
     /**
      * Stops the progressbar from showing any progress instantly without fading out.
@@ -54,7 +57,7 @@ export class ProgressBar extends Disposable {
     }
     doDone(delayed) {
         this.element.classList.add(CSS_DONE);
-        // let it grow to 100% width and hide afterwards
+        // discrete: let it grow to 100% width and hide afterwards
         if (!this.element.classList.contains(CSS_INFINITE)) {
             this.bit.style.width = 'inherit';
             if (delayed) {
@@ -64,7 +67,7 @@ export class ProgressBar extends Disposable {
                 this.off();
             }
         }
-        // let it fade out and hide afterwards
+        // infinite: let it fade out and hide afterwards
         else {
             this.bit.style.opacity = '0';
             if (delayed) {
@@ -82,9 +85,13 @@ export class ProgressBar extends Disposable {
     infinite() {
         this.bit.style.width = '2%';
         this.bit.style.opacity = '1';
-        this.element.classList.remove(CSS_DISCRETE, CSS_DONE);
+        this.element.classList.remove(CSS_DISCRETE, CSS_DONE, CSS_INFINITE_LONG_RUNNING);
         this.element.classList.add(CSS_ACTIVE, CSS_INFINITE);
+        this.longRunningScheduler.schedule();
         return this;
+    }
+    infiniteLongRunning() {
+        this.element.classList.add(CSS_INFINITE_LONG_RUNNING);
     }
     getContainer() {
         return this.element;
@@ -100,3 +107,12 @@ export class ProgressBar extends Disposable {
         }
     }
 }
+/**
+ * After a certain time of showing the progress bar, switch
+ * to long-running mode and throttle animations to reduce
+ * the pressure on the GPU process.
+ *
+ * https://github.com/microsoft/vscode/issues/97900
+ * https://github.com/microsoft/vscode/issues/138396
+ */
+ProgressBar.LONG_RUNNING_INFINITE_THRESHOLD = 10000;

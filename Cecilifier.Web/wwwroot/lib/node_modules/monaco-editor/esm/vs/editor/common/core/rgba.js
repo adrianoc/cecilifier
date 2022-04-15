@@ -8,6 +8,7 @@
  */
 export class RGBA8 {
     constructor(r, g, b, a) {
+        this._rgba8Brand = undefined;
         this.r = RGBA8._clamp(r);
         this.g = RGBA8._clamp(g);
         this.b = RGBA8._clamp(b);

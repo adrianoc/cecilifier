@@ -11,7 +11,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-import { IMarkerDecorationsService } from '../../common/services/markersDecorationService.js';
+import { IMarkerDecorationsService } from '../../common/services/markerDecorations.js';
 import { registerEditorContribution } from '../editorExtensions.js';
 let MarkerDecorationsContribution = class MarkerDecorationsContribution {
     constructor(_editor, _markerDecorationsService) {

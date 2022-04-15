@@ -2,7 +2,6 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { MouseTarget } from '../controller/mouseTarget.js';
 export class ViewUserInputEvents {
     constructor(coordinatesConverter) {
         this.onKeyDown = null;
@@ -86,19 +85,13 @@ export class ViewUserInputEvents {
         return ViewUserInputEvents.convertViewToModelMouseTarget(target, this._coordinatesConverter);
     }
     static convertViewToModelMouseTarget(target, coordinatesConverter) {
-        return new ExternalMouseTarget(target.element, target.type, target.mouseColumn, target.position ? coordinatesConverter.convertViewPositionToModelPosition(target.position) : null, target.range ? coordinatesConverter.convertViewRangeToModelRange(target.range) : null, target.detail);
-    }
-}
-class ExternalMouseTarget {
-    constructor(element, type, mouseColumn, position, range, detail) {
-        this.element = element;
-        this.type = type;
-        this.mouseColumn = mouseColumn;
-        this.position = position;
-        this.range = range;
-        this.detail = detail;
-    }
-    toString() {
-        return MouseTarget.toString(this);
+        const result = Object.assign({}, target);
+        if (result.position) {
+            result.position = coordinatesConverter.convertViewPositionToModelPosition(result.position);
+        }
+        if (result.range) {
+            result.range = coordinatesConverter.convertViewRangeToModelRange(result.range);
+        }
+        return result;
     }
 }

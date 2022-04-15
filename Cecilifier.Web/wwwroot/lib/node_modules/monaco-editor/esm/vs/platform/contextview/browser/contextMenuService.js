@@ -11,17 +11,20 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+import { ModifierKeyEmitter } from '../../../base/browser/dom.js';
+import { Emitter } from '../../../base/common/event.js';
+import { Disposable } from '../../../base/common/lifecycle.js';
+import { IKeybindingService } from '../../keybinding/common/keybinding.js';
+import { INotificationService } from '../../notification/common/notification.js';
+import { ITelemetryService } from '../../telemetry/common/telemetry.js';
+import { IThemeService } from '../../theme/common/themeService.js';
 import { ContextMenuHandler } from './contextMenuHandler.js';
 import { IContextViewService } from './contextView.js';
-import { ITelemetryService } from '../../telemetry/common/telemetry.js';
-import { INotificationService } from '../../notification/common/notification.js';
-import { IThemeService } from '../../theme/common/themeService.js';
-import { IKeybindingService } from '../../keybinding/common/keybinding.js';
-import { Disposable } from '../../../base/common/lifecycle.js';
-import { ModifierKeyEmitter } from '../../../base/browser/dom.js';
 let ContextMenuService = class ContextMenuService extends Disposable {
     constructor(telemetryService, notificationService, contextViewService, keybindingService, themeService) {
         super();
+        this._onDidShowContextMenu = new Emitter();
+        this._onDidHideContextMenu = new Emitter();
         this.contextMenuHandler = new ContextMenuHandler(contextViewService, telemetryService, notificationService, keybindingService, themeService);
     }
     configure(options) {
@@ -29,8 +32,14 @@ let ContextMenuService = class ContextMenuService extends Disposable {
     }
     // ContextMenu
     showContextMenu(delegate) {
-        this.contextMenuHandler.showContextMenu(delegate);
+        this.contextMenuHandler.showContextMenu(Object.assign(Object.assign({}, delegate), { onHide: (didCancel) => {
+                if (delegate.onHide) {
+                    delegate.onHide(didCancel);
+                }
+                this._onDidHideContextMenu.fire();
+            } }));
         ModifierKeyEmitter.getInstance().resetKeyStatus();
+        this._onDidShowContextMenu.fire();
     }
 };
 ContextMenuService = __decorate([

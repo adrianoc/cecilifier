@@ -31,7 +31,7 @@ export function doHash(obj, hashVal) {
             return numberHash(617, hashVal);
     }
 }
-function numberHash(val, initialHashVal) {
+export function numberHash(val, initialHashVal) {
     return (((initialHashVal << 5) - initialHashVal) + val) | 0; // hashVal * 31 + ch, keep as int32
 }
 function booleanHash(b, initialHashVal) {

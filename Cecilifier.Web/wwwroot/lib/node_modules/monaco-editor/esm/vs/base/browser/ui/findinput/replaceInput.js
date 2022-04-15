@@ -2,14 +2,14 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import './findInput.css';
-import * as nls from '../../../../nls.js';
 import * as dom from '../../dom.js';
+import { Checkbox } from '../checkbox/checkbox.js';
 import { HistoryInputBox } from '../inputbox/inputBox.js';
 import { Widget } from '../widget.js';
-import { Emitter } from '../../../common/event.js';
-import { Checkbox } from '../checkbox/checkbox.js';
 import { Codicon } from '../../../common/codicons.js';
+import { Emitter } from '../../../common/event.js';
+import './findInput.css';
+import * as nls from '../../../../nls.js';
 const NLS_DEFAULT_LABEL = nls.localize('defaultLabel', "input");
 const NLS_PRESERVE_CASE_LABEL = nls.localize('label.preserveCaseCheckbox', "Preserve Case");
 export class PreserveCaseCheckbox extends Checkbox {
@@ -85,6 +85,7 @@ export class ReplaceInput extends Widget {
             inputValidationErrorForeground: this.inputValidationErrorForeground,
             inputValidationErrorBorder: this.inputValidationErrorBorder,
             history,
+            showHistoryHint: options.showHistoryHint,
             flexibleHeight,
             flexibleWidth,
             flexibleMaxHeight

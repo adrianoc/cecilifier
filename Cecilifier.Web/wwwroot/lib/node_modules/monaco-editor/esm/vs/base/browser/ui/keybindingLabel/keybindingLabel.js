@@ -2,10 +2,10 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import './keybindingLabel.css';
-import { equals } from '../../../common/objects.js';
-import { UILabelProvider } from '../../../common/keybindingLabels.js';
 import * as dom from '../../dom.js';
+import { UILabelProvider } from '../../../common/keybindingLabels.js';
+import { equals } from '../../../common/objects.js';
+import './keybindingLabel.css';
 import { localize } from '../../../../nls.js';
 const $ = dom.$;
 export class KeybindingLabel {

@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 export class ResolvedKeybindingItem {
     constructor(resolvedKeybinding, command, commandArgs, when, isDefault, extensionId, isBuiltinExtension) {
+        this._resolvedKeybindingItemBrand = undefined;
         this.resolvedKeybinding = resolvedKeybinding;
         this.keypressParts = resolvedKeybinding ? removeElementsAfterNulls(resolvedKeybinding.getDispatchParts()) : [];
         if (resolvedKeybinding && this.keypressParts.length === 0) {

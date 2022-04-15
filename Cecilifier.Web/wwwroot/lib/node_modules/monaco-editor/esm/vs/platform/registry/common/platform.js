@@ -2,8 +2,8 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import * as Types from '../../../base/common/types.js';
 import * as Assert from '../../../base/common/assert.js';
+import * as Types from '../../../base/common/types.js';
 class RegistryImpl {
     constructor() {
         this.data = new Map();
