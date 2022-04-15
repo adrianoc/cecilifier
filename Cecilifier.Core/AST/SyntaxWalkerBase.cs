@@ -42,7 +42,8 @@ namespace Cecilifier.Core.AST
 
         protected void AddCecilExpression(string format, params object[] args)
         {
-            WriteCecilExpression(Context, format, args);
+            Context.WriteCecilExpression(string.Format(format, args));
+            Context.WriteNewLine();
         }
 
         protected void AddMethodCall(string ilVar, IMethodSymbol method, bool isAccessOnThisOrObjectCreation = false)
@@ -355,12 +356,6 @@ namespace Cecilifier.Core.AST
             return cecilModifierStr.Length > 0 
                 ? cecilModifierStr.Remove(0, ModifiersSeparator.Length).ToString() 
                 : cecilModifierStr.ToString();
-        }
-
-        protected static void WriteCecilExpression(IVisitorContext context, string format, params object[] args)
-        {
-            context.WriteCecilExpression(string.Format(format, args));
-            context.WriteNewLine();
         }
 
         protected static void WriteCecilExpression(IVisitorContext context, string value)

@@ -1045,7 +1045,7 @@ namespace Cecilifier.Core.AST
                     fieldSymbol.Type.SpecialType switch
                     {
                         SpecialType.System_String => $"\"{fieldSymbol.ConstantValue}\"",
-                        SpecialType.System_Boolean => (bool) fieldSymbol.ConstantValue == true ? 1 : 0,
+                        SpecialType.System_Boolean => (bool) fieldSymbol.ConstantValue ? 1 : 0,
                         _ => fieldSymbol.ConstantValue 
                     },
                     nodeParent.Accept(UsageVisitor.GetInstance(Context)) == UsageKind.CallTarget);
@@ -1427,7 +1427,7 @@ namespace Cecilifier.Core.AST
         string EmitTargetLabel(string relatedToName)
         {
             var instVarName = Context.Naming.Label(relatedToName);
-            AddCecilExpression(@"var {0} = {1}.Create({2});", instVarName, ilVar, OpCodes.Nop.ConstantName());
+            AddCecilExpression($"var {instVarName} = {ilVar}.Create({OpCodes.Nop.ConstantName()});");
                 
             return instVarName;
         }

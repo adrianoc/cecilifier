@@ -66,12 +66,7 @@ namespace Cecilifier.Core.Extensions
             if (!method.ContainingType.IsValueType && !method.ContainingType.IsGenericType)
                 declaringTypeName = (method.OverriddenMethod ?? method).ContainingType.AssemblyQualifiedName();
 
-            return ImportFromMainModule(string.Format("TypeHelpers.ResolveMethod(\"{0}\", \"{1}\",{2},\"{3}\"{4})",
-                declaringTypeName,
-                method.Name,
-                method.Modifiers(),
-                string.Join(',', typeParameters),
-                method.Parameters.Aggregate("", (acc, curr) => acc + ", \"" + curr.Type.AssemblyQualifiedName() + "\"")));
+            return ImportFromMainModule($"TypeHelpers.ResolveMethod(\"{declaringTypeName}\", \"{method.Name}\",{method.Modifiers()},\"{string.Join(',', typeParameters)}\"{method.Parameters.Aggregate("", (acc, curr) => acc + ", \"" + curr.Type.AssemblyQualifiedName() + "\"")})");
         }
 
         public static MethodDefinitionVariable AsMethodDefinitionVariable(this IMethodSymbol method, string variableName = null)
