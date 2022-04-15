@@ -66,6 +66,12 @@ namespace Cecilifier.Core.Tests.Integration
         }
         
         [Test]
+        public void TestModulus()
+        {
+            AssertResourceTest(@"Expressions/Operators/Arithmetic/Modulus");
+        }
+        
+        [Test]
         public void TestEquals()
         {
             AssertResourceTest(@"Expressions/Operators/Equals");

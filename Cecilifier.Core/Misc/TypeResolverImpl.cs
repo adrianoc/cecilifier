@@ -48,7 +48,7 @@ namespace Cecilifier.Core.Misc
                 return CecilDefinitionsFactory.FunctionPointerType(this, functionPointer);
             }
 
-            if (type.SpecialType == SpecialType.None || type.TypeKind == TypeKind.Interface || type.SpecialType == SpecialType.System_Enum || type.SpecialType == SpecialType.System_ValueType)
+            if (type.SpecialType == SpecialType.None || type.SpecialType == SpecialType.System_Enum || type.SpecialType == SpecialType.System_ValueType || type.SpecialType == SpecialType.System_Decimal || type.TypeKind == TypeKind.Interface )
             {
                 return null;
             }

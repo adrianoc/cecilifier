@@ -51,6 +51,7 @@ namespace Cecilifier.Core.AST
             predefinedTypeSize["byte"] = sizeof(byte);
             predefinedTypeSize["long"] = sizeof(long);
             
+            // Arithmetic operators
             operatorHandlers[SyntaxKind.PlusToken] = (ctx, ilVar, left, right) =>
             {
                 if (left.SpecialType == SpecialType.System_String)
@@ -63,8 +64,11 @@ namespace Cecilifier.Core.AST
                     ctx.EmitCilInstruction(ilVar, OpCodes.Add);
                 }
             };
-
+            operatorHandlers[SyntaxKind.MinusToken] = (ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, OpCodes.Sub);
+            operatorHandlers[SyntaxKind.AsteriskToken] = (ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, OpCodes.Mul);
             operatorHandlers[SyntaxKind.SlashToken] = (ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, OpCodes.Div);
+            operatorHandlers[SyntaxKind.PercentToken] = HandleModulusExpression;
+            
             operatorHandlers[SyntaxKind.GreaterThanToken] = (ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, CompareOpCodeFor(left));
             operatorHandlers[SyntaxKind.GreaterThanEqualsToken] = (ctx, ilVar, left, right) =>
             {
@@ -80,8 +84,6 @@ namespace Cecilifier.Core.AST
             };
             operatorHandlers[SyntaxKind.EqualsEqualsToken] = (ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, OpCodes.Ceq);
             operatorHandlers[SyntaxKind.LessThanToken] = (ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, OpCodes.Clt);
-            operatorHandlers[SyntaxKind.MinusToken] = (ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, OpCodes.Sub);
-            operatorHandlers[SyntaxKind.AsteriskToken] = (ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, OpCodes.Mul);
             operatorHandlers[SyntaxKind.ExclamationEqualsToken] = (ctx, ilVar, left, right) =>
             {
                 // This is not the most optimized way to handle != operator but it is generic and correct.
@@ -1251,6 +1253,11 @@ namespace Cecilifier.Core.AST
                             Context.EmitCilInstruction(ilVar, convOpCode);
                             return;
 
+                        case SpecialType.System_Decimal:
+                            var operand = typeInfo.ConvertedType.GetMembers().OfType<IMethodSymbol>().Single(m => m.MethodKind == MethodKind.Constructor && m.Parameters.Length == 1 && m.Parameters[0].Type.SpecialType == typeInfo.Type.SpecialType);
+                            Context.EmitCilInstruction(ilVar, OpCodes.Newobj, operand.MethodResolverExpression(Context));
+                            return;
+                        
                         default:
                             throw new Exception($"Conversion from {typeInfo.Type} to {typeInfo.ConvertedType}  not implemented.");
                     }
@@ -1292,7 +1299,7 @@ namespace Cecilifier.Core.AST
                 return operatorHandlers[operatorToken.Kind()];
             }
 
-            throw new Exception(string.Format("Operator {0} not supported yet (expression: {1})", operatorToken.ValueText, operatorToken.Parent));
+            throw new Exception($"Operator {operatorToken.ValueText} not supported yet (expression: {operatorToken.Parent})");
         }
 
         /*
@@ -1438,6 +1445,22 @@ namespace Cecilifier.Core.AST
             if (node.Kind() != SyntaxKind.SimpleAssignmentExpression && nodeType.SpecialType != SpecialType.System_Void)
             {
                 ctx.EmitCilInstruction(ilVar, OpCodes.Pop);
+            }
+        }
+        
+        private static void HandleModulusExpression(IVisitorContext context, string ilVar, ITypeSymbol lhs, ITypeSymbol rhs)
+        {
+            var l = lhs.GetMembers("op_Modulus").OfType<IMethodSymbol>().SingleOrDefault();
+            var r = rhs.GetMembers("op_Modulus").OfType<IMethodSymbol>().SingleOrDefault();
+
+            var operatorMethod = r ?? l;
+            if (operatorMethod != null)
+            {
+                context.EmitCilInstruction(ilVar, OpCodes.Call, operatorMethod.MethodResolverExpression(context));
+            }
+            else
+            {
+                context.EmitCilInstruction(ilVar, OpCodes.Rem);
             }
         }
     }
