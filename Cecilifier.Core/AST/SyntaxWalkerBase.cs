@@ -110,6 +110,12 @@ namespace Cecilifier.Core.AST
 
             return instVar;
         }
+        
+        protected void CreateCilInstruction(string ilVar, string instVar, OpCode opCode, object operand = null)
+        {
+            var operandStr = operand == null ? string.Empty : $", {operand}";
+            AddCecilExpression($"var {instVar} = {ilVar}.Create({opCode.ConstantName()}{operandStr});");
+        }
 
         protected string AddLocalVariableWithResolvedType(string localVarName, DefinitionVariable methodVar, string resolvedVarType)
         {

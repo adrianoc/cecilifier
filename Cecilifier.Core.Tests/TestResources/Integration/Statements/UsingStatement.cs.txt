@@ -1,0 +1,15 @@
+class DisposableClass : System.IDisposable { public void Dispose() {} }
+struct DisposableStruct : System.IDisposable { public void Dispose() {} }
+
+class UsingStatementTest
+{
+    void WithClassDeclaration() { using(var d = new DisposableClass()) { } }
+    void WithClassExpression() { using(new DisposableClass()) { } }
+    void WithClassParameter(System.IDisposable d) { using(d) { } }
+    
+    void WithStructDeclaration() { using(var s = new DisposableStruct()) { } }    
+
+    // void WithStructExpression() { using(new DisposableStruct()) { } } // See UsingStatement.StructExpression.cs
+        
+    void WithStructParameter(DisposableStruct d) { using(d) { } }    
+}
