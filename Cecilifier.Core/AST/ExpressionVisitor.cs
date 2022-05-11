@@ -1367,7 +1367,7 @@ namespace Cecilifier.Core.AST
 
         private string ArgumentValueToUseForDefaultParameter(IParameterSymbol arg, ImmutableArray<IParameterSymbol> parameters, SeparatedSyntaxList<ArgumentSyntax> arguments)
         {
-            var callerArgumentExpressionAttribute = arg.GetAttributes().SingleOrDefault(attr => attr.AttributeClass!.MetadataToken == Context.RoslynTypeSystem.CallerArgumentExpressionAttibute.MetadataToken);
+            var callerArgumentExpressionAttribute = arg.GetAttributes().SingleOrDefault(attr => attr.AttributeClass!.MetadataToken == Context.RoslynTypeSystem.CallerArgumentExpressionAttribute.MetadataToken);
             if (callerArgumentExpressionAttribute != null)
             {
                 var expressionParameter = parameters.SingleOrDefault(p => p.Name == (string)callerArgumentExpressionAttribute.ConstructorArguments[0].Value);
