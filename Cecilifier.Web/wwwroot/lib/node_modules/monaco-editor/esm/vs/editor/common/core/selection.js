@@ -62,6 +62,12 @@ export class Selection extends Range {
         return new Position(this.positionLineNumber, this.positionColumn);
     }
     /**
+     * Get the position at the start of the selection.
+    */
+    getSelectionStart() {
+        return new Position(this.selectionStartLineNumber, this.selectionStartColumn);
+    }
+    /**
      * Create a new selection with a different `selectionStartLineNumber` and `selectionStartColumn`.
      */
     setStartPosition(startLineNumber, startColumn) {
@@ -76,6 +82,17 @@ export class Selection extends Range {
      */
     static fromPositions(start, end = start) {
         return new Selection(start.lineNumber, start.column, end.lineNumber, end.column);
+    }
+    /**
+     * Creates a `Selection` from a range, given a direction.
+     */
+    static fromRange(range, direction) {
+        if (direction === 0 /* LTR */) {
+            return new Selection(range.startLineNumber, range.startColumn, range.endLineNumber, range.endColumn);
+        }
+        else {
+            return new Selection(range.endLineNumber, range.endColumn, range.startLineNumber, range.startColumn);
+        }
     }
     /**
      * Create a `Selection` from an `ISelection`.

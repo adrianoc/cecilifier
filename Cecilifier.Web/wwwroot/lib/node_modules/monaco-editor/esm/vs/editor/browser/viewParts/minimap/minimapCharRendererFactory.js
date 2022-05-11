@@ -62,7 +62,7 @@ export class MinimapCharRendererFactory {
         if (source.length !== expectedLength) {
             throw new Error('Unexpected source in MinimapCharRenderer');
         }
-        let charData = MinimapCharRendererFactory._downsample(source, scale);
+        const charData = MinimapCharRendererFactory._downsample(source, scale);
         return new MinimapCharRenderer(charData, scale);
     }
     static _downsampleChar(source, sourceOffset, dest, destOffset, scale) {

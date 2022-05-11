@@ -28,6 +28,9 @@ class LineSequence {
         }
         return elements;
     }
+    getStrictElement(index) {
+        return this.lines[index];
+    }
     getStartLineNumber(i) {
         return i + 1;
     }

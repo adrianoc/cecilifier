@@ -2,12 +2,12 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { toDisposable } from '../../../base/common/lifecycle.js';
+import { Emitter } from '../../../base/common/event.js';
+import { Iterable } from '../../../base/common/iterator.js';
+import { Disposable, toDisposable } from '../../../base/common/lifecycle.js';
+import { LinkedList } from '../../../base/common/linkedList.js';
 import { validateConstraints } from '../../../base/common/types.js';
 import { createDecorator } from '../../instantiation/common/instantiation.js';
-import { Emitter } from '../../../base/common/event.js';
-import { LinkedList } from '../../../base/common/linkedList.js';
-import { Iterable } from '../../../base/common/iterator.js';
 export const ICommandService = createDecorator('commandService');
 export const CommandsRegistry = new class {
     constructor() {
@@ -75,6 +75,14 @@ export const CommandsRegistry = new class {
             }
         }
         return result;
+    }
+};
+export const NullCommandService = {
+    _serviceBrand: undefined,
+    onWillExecuteCommand: () => Disposable.None,
+    onDidExecuteCommand: () => Disposable.None,
+    executeCommand() {
+        return Promise.resolve(undefined);
     }
 };
 CommandsRegistry.registerCommand('noop', () => { });

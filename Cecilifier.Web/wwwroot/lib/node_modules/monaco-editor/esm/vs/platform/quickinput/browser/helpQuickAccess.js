@@ -11,11 +11,11 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-import { IQuickInputService } from '../common/quickInput.js';
-import { Extensions } from '../common/quickAccess.js';
-import { Registry } from '../../registry/common/platform.js';
-import { localize } from '../../../nls.js';
 import { DisposableStore } from '../../../base/common/lifecycle.js';
+import { localize } from '../../../nls.js';
+import { Extensions } from '../common/quickAccess.js';
+import { IQuickInputService } from '../common/quickInput.js';
+import { Registry } from '../../registry/common/platform.js';
 let HelpQuickAccessProvider = class HelpQuickAccessProvider {
     constructor(quickInputService) {
         this.quickInputService = quickInputService;

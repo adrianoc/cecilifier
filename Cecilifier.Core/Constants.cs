@@ -5,11 +5,19 @@ public struct Constants
     public static ContextFlagsValues ContextFlags = new();
     public static ParameterAttributesValues ParameterAttributes = new();
     public static CecilCommonConstants CommonCecilConstants = new();
+    
+    public const string AssemblyReferenceCacheBasePath = "/tmp/CecilifierUserAssemblyReferenceCache";
 
     public struct CecilCommonConstants
     {
         public readonly string InterfaceMethodAttributes = "MethodAttributes.SpecialName | MethodAttributes.Public | MethodAttributes.NewSlot | MethodAttributes.Virtual | MethodAttributes.Abstract | MethodAttributes.HideBySig";
         public readonly string MethodAttributesSpecialName = "MethodAttributes.SpecialName";
+        public readonly string DelegateMethodAttributes = "MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.NewSlot | MethodAttributes.Virtual";
+        public readonly string CtorAttributes = "MethodAttributes.RTSpecialName | MethodAttributes.SpecialName";
+        
+        public readonly string InstanceConstructorName = "ctor";
+        public readonly string StaticConstructorName = "cctor";
+
 
         public CecilCommonConstants() { }
     }

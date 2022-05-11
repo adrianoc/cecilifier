@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Text;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
@@ -41,7 +42,8 @@ namespace Cecilifier.Core.AST
 
         protected void AddCecilExpression(string format, params object[] args)
         {
-            WriteCecilExpression(Context, format, args);
+            Context.WriteCecilExpression(string.Format(format, args));
+            Context.WriteNewLine();
         }
 
         protected void AddMethodCall(string ilVar, IMethodSymbol method, bool isAccessOnThisOrObjectCreation = false)
@@ -345,21 +347,15 @@ namespace Cecilifier.Core.AST
 
         private static string ModifiersToCecil(IEnumerable<SyntaxToken> modifiers, Func<SyntaxToken, string> map)
         {
-            var cecilModifierStr = modifiers.Aggregate("", (acc, token) =>
-                acc + ModifiersSeparator + map(token));
-
-            if (cecilModifierStr.Length > 0)
+            var cecilModifierStr = modifiers.Aggregate(new StringBuilder(), (acc, token) =>
             {
-                cecilModifierStr = cecilModifierStr.Substring(ModifiersSeparator.Length);
-            }
+                acc.Append($"{ModifiersSeparator}{map(token)}");
+                return acc;
+            });
 
-            return cecilModifierStr;
-        }
-
-        protected static void WriteCecilExpression(IVisitorContext context, string format, params object[] args)
-        {
-            context.WriteCecilExpression(string.Format(format, args));
-            context.WriteNewLine();
+            return cecilModifierStr.Length > 0 
+                ? cecilModifierStr.Remove(0, ModifiersSeparator.Length).ToString() 
+                : cecilModifierStr.ToString();
         }
 
         protected static void WriteCecilExpression(IVisitorContext context, string value)
@@ -397,7 +393,7 @@ namespace Cecilifier.Core.AST
         {
             var parent = (CSharpSyntaxNode) node.Parent;
             var method = (IMethodSymbol) paramSymbol.ContainingSymbol;
-            
+
             if (HandleLoadAddress(ilVar, paramSymbol.Type, parent, OpCodes.Ldarga, paramSymbol.Name, VariableMemberKind.Parameter, (method.AssociatedSymbol ?? method).ToDisplayString()))
                 return;
 
@@ -414,13 +410,22 @@ namespace Cecilifier.Core.AST
                 var loadOpCode = optimizedLdArgs[adjustedParameterIndex];
                 Context.EmitCilInstruction(ilVar, loadOpCode);
             }
+            
+            EmitBoxOpCodeIfCallOnTypeParameter(ilVar, paramSymbol, parent);
+
             HandlePotentialDelegateInvocationOn(node, paramSymbol.Type, ilVar);
             HandlePotentialRefLoad(ilVar, node, paramSymbol.Type);
         }
 
+        private void EmitBoxOpCodeIfCallOnTypeParameter(string ilVar, IParameterSymbol paramSymbol, CSharpSyntaxNode parent)
+        {
+            if (paramSymbol.Type.TypeKind == TypeKind.TypeParameter && parent.Accept(UsageVisitor.GetInstance(Context)) == UsageKind.CallTarget)
+                Context.EmitCilInstruction(ilVar, OpCodes.Box, Context.TypeResolver.Resolve(paramSymbol.Type));
+        }
+
         protected bool HandleLoadAddress(string ilVar, ITypeSymbol symbol, CSharpSyntaxNode node, OpCode opCode, string symbolName, VariableMemberKind variableMemberKind, string parentName = null)
         {
-            return HandleCallOnValueType() || HandleRefAssignment() || HandleParameter();
+            return HandleCallOnTypeParameter() || HandleCallOnValueType() || HandleRefAssignment() || HandleParameter();
             
             bool HandleCallOnValueType()
             {
@@ -430,7 +435,7 @@ namespace Cecilifier.Core.AST
                 // in this case we need to call System.Index.GetOffset(int32) on a value type (System.Index)
                 // which requires the address of the value type.
                 var isSystemIndexUsedAsIndex = IsSystemIndexUsedAsIndex(symbol, node);
-                if (isSystemIndexUsedAsIndex || node.IsKind(SyntaxKind.AddressOfExpression) || IsPseudoAssignmentToValueType() || node.Accept(new UsageVisitor(Context)) == UsageKind.CallTarget)
+                if (isSystemIndexUsedAsIndex || node.IsKind(SyntaxKind.AddressOfExpression) || IsPseudoAssignmentToValueType() || node.Accept(UsageVisitor.GetInstance(Context)) == UsageKind.CallTarget)
                 {
                     string operand = Context.DefinitionVariables.GetVariable(symbolName, variableMemberKind, parentName).VariableName;
                     Context.EmitCilInstruction(ilVar, opCode, operand);
@@ -441,6 +446,23 @@ namespace Cecilifier.Core.AST
                 }
 
                 return false;
+            }
+            
+            bool HandleCallOnTypeParameter()
+            {
+                if (symbol is not ITypeParameterSymbol typeParameter)
+                    return false;
+
+                if (typeParameter.HasReferenceTypeConstraint || typeParameter.IsReferenceType)
+                    return false;
+
+                if (node.Accept(UsageVisitor.GetInstance(Context)) != UsageKind.CallTarget)
+                    return false;
+                
+                var operand = Context.DefinitionVariables.GetVariable(symbolName, variableMemberKind, parentName).VariableName;
+                Context.EmitCilInstruction(ilVar, opCode, operand);
+                Context.EmitCilInstruction(ilVar, OpCodes.Constrained, Context.TypeResolver.Resolve(symbol));
+                return true;
             }
             
             bool HandleRefAssignment()
@@ -605,17 +627,11 @@ namespace Cecilifier.Core.AST
             }
 
             var localDelegateDeclaration = Context.TypeResolver.ResolveLocalVariableType(typeSymbol);
-            if (localDelegateDeclaration != null)
-            {
-                var operand = $"{localDelegateDeclaration}.Methods.Single(m => m.Name == \"Invoke\")";
-                Context.EmitCilInstruction(ilVar, OpCodes.Callvirt, operand);
-            }
-            else
-            {
-                var invokeMethod = (IMethodSymbol) typeSymbol.GetMembers("Invoke").SingleOrDefault();
-                var resolvedMethod = invokeMethod.MethodResolverExpression(Context);
-                Context.EmitCilInstruction(ilVar, OpCodes.Callvirt, resolvedMethod);
-            }
+            var resolvedMethod = localDelegateDeclaration != null
+                ? $"{localDelegateDeclaration}.Methods.Single(m => m.Name == \"Invoke\")"
+                : ((IMethodSymbol) typeSymbol.GetMembers("Invoke").SingleOrDefault()).MethodResolverExpression(Context);
+            
+            Context.EmitCilInstruction(ilVar, OpCodes.Callvirt, resolvedMethod);
         }
 
         protected void HandleAttributesInMemberDeclaration(in SyntaxList<AttributeListSyntax> nodeAttributeLists, Func<AttributeTargetSpecifierSyntax, SyntaxKind, bool> predicate, SyntaxKind toMatch, string whereToAdd)
@@ -683,23 +699,23 @@ namespace Cecilifier.Core.AST
 
             string CallingConventionFrom(AttributeSyntax attr)
             {
-                var callingConventionStr = attr.ArgumentList?.Arguments.FirstOrDefault(arg => arg.NameEquals?.Name.Identifier.Text == "CallingConvention")?.Expression.ToFullString() 
-                                           ?? "Winapi";
+                var callConventionSpan = (attr.ArgumentList?.Arguments.FirstOrDefault(arg => arg.NameEquals?.Name.Identifier.Text == "CallingConvention")?.Expression.ToFullString() 
+                                           ?? "Winapi").AsSpan();
 
                 // ensures we use the enum member simple name; Parse() fails if we pass a qualified enum member
-                var index = callingConventionStr.LastIndexOf('.');
-                callingConventionStr = callingConventionStr.Substring(index + 1);
+                var index = callConventionSpan.LastIndexOf('.');
+                callConventionSpan = callConventionSpan.Slice(index + 1);
                 
-                return CallingConventionToCecil(Enum.Parse<CallingConvention>(callingConventionStr));
+                return CallingConventionToCecil(Enum.Parse<CallingConvention>(callConventionSpan));
             }
 
             string CharSetFrom(AttributeSyntax attr)
             {
-                var enumMemberName = AttributePropertyOrDefaultValue(attr, "CharSet", "None");
+                var enumMemberName = AttributePropertyOrDefaultValue(attr, "CharSet", "None").AsSpan();
 
                 // Only use the actual enum member name Parse() fails if we pass a qualified enum member
                 var index = enumMemberName.LastIndexOf('.');
-                enumMemberName = enumMemberName.Substring(index + 1);
+                enumMemberName = enumMemberName.Slice(index + 1);
 
                 var charSet = Enum.Parse<CharSet>(enumMemberName);
                 return charSet == CharSet.None ? string.Empty : $"PInvokeAttributes.CharSet{charSet}";

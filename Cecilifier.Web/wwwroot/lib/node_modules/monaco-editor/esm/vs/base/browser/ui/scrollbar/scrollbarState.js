@@ -52,7 +52,10 @@ export class ScrollbarState {
         return false;
     }
     setScrollbarSize(scrollbarSize) {
-        this._scrollbarSize = scrollbarSize;
+        this._scrollbarSize = Math.round(scrollbarSize);
+    }
+    setOppositeScrollbarSize(oppositeScrollbarSize) {
+        this._oppositeScrollbarSize = Math.round(oppositeScrollbarSize);
     }
     static _computeValues(oppositeScrollbarSize, arrowSize, visibleSize, scrollSize, scrollPosition) {
         const computedAvailableSize = Math.max(0, visibleSize - oppositeScrollbarSize);

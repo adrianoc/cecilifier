@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Linq;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Misc;
@@ -51,6 +52,91 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             Assert.That(context.Output, Contains.Substring("//Lambda to delegates conversion is only supported for Func<> and Action<>"));
         }
         
+        [TestCaseSource(nameof(Issue_176_TestScenarios))]
+        public void Issue_176(string lambdaDeclaration, string expectedSnippet)
+        {
+            var context = RunProcessorOn($@"using System; class Foo {{ void Bar() {{ {lambdaDeclaration } }} }}");
+            Assert.That(context.Output, Contains.Substring(expectedSnippet));
+        }
+
+        static IEnumerable Issue_176_TestScenarios()
+        {
+            return new[]
+            {
+                new TestCaseData(
+                    @"Action<int> a = i => { int l = 42; };",
+                    
+                    @"var l_l_3 = new VariableDefinition(assembly.MainModule.TypeSystem.Int32);
+			m_lambda_0_55_0.Body.Variables.Add(l_l_3);
+			il_lambda_0_55_2.Emit(OpCodes.Ldc_I4, 42);
+			il_lambda_0_55_2.Emit(OpCodes.Stloc, l_l_3);
+			il_lambda_0_55_2.Emit(OpCodes.Ret);").SetName("Lambda Without Explicit Return"),
+                
+                new TestCaseData(
+                    @"Func<int, int> f = i => { int l = i; return l; };",
+                    
+                    @"//int l = i; 
+			var l_l_3 = new VariableDefinition(assembly.MainModule.TypeSystem.Int32);
+			m_lambda_0_58_0.Body.Variables.Add(l_l_3);
+			il_lambda_0_58_2.Emit(OpCodes.Ldarg_1);
+			il_lambda_0_58_2.Emit(OpCodes.Stloc, l_l_3);
+
+			//return l; 
+			il_lambda_0_58_2.Emit(OpCodes.Ldloc, l_l_3);
+			il_lambda_0_58_2.Emit(OpCodes.Ret);").SetName("Local Variable Initialization"),
+                
+                new TestCaseData(
+                    @"Func<int, int> f = i => { int l; l = i; return l; };",
+                    
+                    @"//int l; 
+			var l_l_3 = new VariableDefinition(assembly.MainModule.TypeSystem.Int32);
+			m_lambda_0_58_0.Body.Variables.Add(l_l_3);
+
+			//l = i; 
+			il_lambda_0_58_2.Emit(OpCodes.Ldarg_1);
+			il_lambda_0_58_2.Emit(OpCodes.Stloc, l_l_3);
+
+			//return l; 
+			il_lambda_0_58_2.Emit(OpCodes.Ldloc, l_l_3);
+			il_lambda_0_58_2.Emit(OpCodes.Ret);").SetName("Local Variable Assignment"),
+                
+                new TestCaseData(
+                    @"Func<int, int> f = i => { int l = i + 1; return l; };",
+                    
+                    @"//int l = i + 1; 
+			var l_l_3 = new VariableDefinition(assembly.MainModule.TypeSystem.Int32);
+			m_lambda_0_58_0.Body.Variables.Add(l_l_3);
+			il_lambda_0_58_2.Emit(OpCodes.Ldarg_1);
+			il_lambda_0_58_2.Emit(OpCodes.Ldc_I4, 1);
+			il_lambda_0_58_2.Emit(OpCodes.Add);
+			il_lambda_0_58_2.Emit(OpCodes.Stloc, l_l_3);
+
+			//return l; 
+			il_lambda_0_58_2.Emit(OpCodes.Ldloc, l_l_3);
+			il_lambda_0_58_2.Emit(OpCodes.Ret);").SetName("Local Variable Initialization With Expression"),
+                
+                new TestCaseData(
+                    @"Func<int, int> f = i => { int l = i; l = l + 1; return l; };",
+                    
+                    @"//int l = i; 
+			var l_l_3 = new VariableDefinition(assembly.MainModule.TypeSystem.Int32);
+			m_lambda_0_58_0.Body.Variables.Add(l_l_3);
+			il_lambda_0_58_2.Emit(OpCodes.Ldarg_1);
+			il_lambda_0_58_2.Emit(OpCodes.Stloc, l_l_3);
+
+			//l = l + 1; 
+			il_lambda_0_58_2.Emit(OpCodes.Ldloc, l_l_3);
+			il_lambda_0_58_2.Emit(OpCodes.Ldc_I4, 1);
+			il_lambda_0_58_2.Emit(OpCodes.Add);
+			il_lambda_0_58_2.Emit(OpCodes.Stloc, l_l_3);
+
+			//return l; 
+			il_lambda_0_58_2.Emit(OpCodes.Ldloc, l_l_3);
+			il_lambda_0_58_2.Emit(OpCodes.Ret);").SetName("Local Variable In Expression"),
+            };
+        }
+        
+        
         private static CecilifierContext RunProcessorOn(string source)
         {
             var syntaxTree = CSharpSyntaxTree.ParseText(source);
@@ -62,7 +148,9 @@ namespace Cecilifier.Core.Tests.Tests.Unit
                 throw new Exception(errors.Aggregate("", (acc, curr) => acc + curr.GetMessage() + Environment.NewLine));
             
             var context = new CecilifierContext(comp.GetSemanticModel(syntaxTree), new CecilifierOptions(), -1);
-
+            DefaultParameterExtractorVisitor.Initialize(context);
+            UsageVisitor.ResetInstance();
+            
             context.DefinitionVariables.RegisterNonMethod("Foo", "field", VariableMemberKind.Field, "fieldVar"); // Required for Field tests
             NonCapturingLambdaProcessor.InjectSyntheticMethodsForNonCapturingLambdas(
                 context,

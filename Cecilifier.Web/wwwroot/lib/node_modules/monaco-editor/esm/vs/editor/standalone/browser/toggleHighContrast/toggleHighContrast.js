@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import { EditorAction, registerEditorAction } from '../../../browser/editorExtensions.js';
-import { IStandaloneThemeService } from '../../common/standaloneThemeService.js';
+import { IStandaloneThemeService } from '../../common/standaloneTheme.js';
 import { ToggleHighContrastNLS } from '../../../common/standaloneStrings.js';
 class ToggleHighContrast extends EditorAction {
     constructor() {

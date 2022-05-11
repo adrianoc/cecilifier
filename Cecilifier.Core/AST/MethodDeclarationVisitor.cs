@@ -145,8 +145,7 @@ namespace Cecilifier.Core.AST
         
                 if (modifiersTokens.IndexOf(SyntaxKind.ExternKeyword) == -1)
                 {
-                    var isAbstract = methodSymbol.IsAbstract;
-                    if (!isAbstract)
+                    if (!methodSymbol.IsAbstract)
                     {
                         ilVar = Context.Naming.ILProcessor(simpleName);
                         AddCecilExpression($"{methodVar}.Body.InitLocals = true;");
@@ -158,7 +157,7 @@ namespace Cecilifier.Core.AST
                     // should we use `methodName` as the registered name.
                     var nameUsedInRegisteredVariable = methodSymbol.MethodKind == MethodKind.LocalFunction ? simpleName : methodName;
                     WithCurrentMethod(declaringTypeName, methodVar, nameUsedInRegisteredVariable, parameters.Select(p => Context.GetTypeInfo(p.Type).Type.ToDisplayString()).ToArray(), runWithCurrent);
-                    if (!isAbstract && !node.DescendantNodes().Any(n => n.IsKind(SyntaxKind.ReturnStatement)))
+                    if (!methodSymbol.IsAbstract && !node.DescendantNodes().Any(n => n.IsKind(SyntaxKind.ReturnStatement)))
                     {
                         Context.EmitCilInstruction(ilVar, OpCodes.Ret);
                     }

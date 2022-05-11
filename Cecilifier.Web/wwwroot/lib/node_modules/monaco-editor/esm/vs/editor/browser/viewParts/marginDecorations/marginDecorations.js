@@ -44,7 +44,8 @@ export class MarginViewLineDecorationsOverlay extends DedupOverlay {
     // --- end event handlers
     _getDecorations(ctx) {
         const decorations = ctx.getDecorationsInViewport();
-        let r = [], rLen = 0;
+        const r = [];
+        let rLen = 0;
         for (let i = 0, len = decorations.length; i < len; i++) {
             const d = decorations[i];
             const marginClassName = d.options.marginClassName;

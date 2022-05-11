@@ -2,11 +2,11 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import './checkbox.css';
 import { Widget } from '../widget.js';
+import { CSSIcon } from '../../../common/codicons.js';
 import { Color } from '../../../common/color.js';
 import { Emitter } from '../../../common/event.js';
-import { CSSIcon } from '../../../common/codicons.js';
+import './checkbox.css';
 const defaultOpts = {
     inputActiveOptionBorder: Color.fromHex('#007ACC00'),
     inputActiveOptionForeground: Color.fromHex('#FFFFFF'),
@@ -42,9 +42,11 @@ export class Checkbox extends Widget {
         this.domNode.setAttribute('aria-label', this._opts.title);
         this.applyStyles();
         this.onclick(this.domNode, (ev) => {
-            this.checked = !this._checked;
-            this._onChange.fire(false);
-            ev.preventDefault();
+            if (this.enabled) {
+                this.checked = !this._checked;
+                this._onChange.fire(false);
+                ev.preventDefault();
+            }
         });
         this.ignoreGesture(this.domNode);
         this.onkeydown(this.domNode, (keyboardEvent) => {
@@ -73,7 +75,7 @@ export class Checkbox extends Widget {
         this.applyStyles();
     }
     width() {
-        return 2 /*marginleft*/ + 2 /*border*/ + 2 /*padding*/ + 16 /* icon width */;
+        return 2 /*margin left*/ + 2 /*border*/ + 2 /*padding*/ + 16 /* icon width */;
     }
     style(styles) {
         if (styles.inputActiveOptionBorder) {
@@ -89,9 +91,9 @@ export class Checkbox extends Widget {
     }
     applyStyles() {
         if (this.domNode) {
-            this.domNode.style.borderColor = this._checked && this._opts.inputActiveOptionBorder ? this._opts.inputActiveOptionBorder.toString() : 'transparent';
+            this.domNode.style.borderColor = this._checked && this._opts.inputActiveOptionBorder ? this._opts.inputActiveOptionBorder.toString() : '';
             this.domNode.style.color = this._checked && this._opts.inputActiveOptionForeground ? this._opts.inputActiveOptionForeground.toString() : 'inherit';
-            this.domNode.style.backgroundColor = this._checked && this._opts.inputActiveOptionBackground ? this._opts.inputActiveOptionBackground.toString() : 'transparent';
+            this.domNode.style.backgroundColor = this._checked && this._opts.inputActiveOptionBackground ? this._opts.inputActiveOptionBackground.toString() : '';
         }
     }
     enable() {

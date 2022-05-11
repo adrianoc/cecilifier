@@ -49,7 +49,7 @@ function standardDecodeUTF16LE(source, offset, len) {
     return getUTF16LE_TextDecoder().decode(view);
 }
 function compatDecodeUTF16LE(source, offset, len) {
-    let result = [];
+    const result = [];
     let resultLen = 0;
     for (let i = 0; i < len; i++) {
         const charCode = buffer.readUInt16LE(source, offset);

@@ -8,20 +8,20 @@ import { toUint8 } from '../../../base/common/uint.js';
  */
 export class CharacterClassifier {
     constructor(_defaultValue) {
-        let defaultValue = toUint8(_defaultValue);
+        const defaultValue = toUint8(_defaultValue);
         this._defaultValue = defaultValue;
         this._asciiMap = CharacterClassifier._createAsciiMap(defaultValue);
         this._map = new Map();
     }
     static _createAsciiMap(defaultValue) {
-        let asciiMap = new Uint8Array(256);
+        const asciiMap = new Uint8Array(256);
         for (let i = 0; i < 256; i++) {
             asciiMap[i] = defaultValue;
         }
         return asciiMap;
     }
     set(charCode, _value) {
-        let value = toUint8(_value);
+        const value = toUint8(_value);
         if (charCode >= 0 && charCode < 256) {
             this._asciiMap[charCode] = value;
         }

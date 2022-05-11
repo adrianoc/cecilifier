@@ -6,6 +6,7 @@ import * as dom from './dom.js';
 import { IframeUtils } from './iframe.js';
 import { StandardMouseEvent } from './mouseEvent.js';
 import { DisposableStore } from '../common/lifecycle.js';
+import { isIOS } from '../common/platform.js';
 export function standardMouseMoveMerger(lastEvent, currentEvent) {
     let ev = new StandardMouseEvent(currentEvent);
     ev.preventDefault();
@@ -54,7 +55,7 @@ export class GlobalMouseMoveMonitor {
         this._mouseMoveCallback = mouseMoveCallback;
         this._onStopCallback = onStopCallback;
         const windowChain = IframeUtils.getSameOriginWindowChain();
-        const mouseMove = 'mousemove';
+        const mouseMove = isIOS ? 'pointermove' : 'mousemove'; // Safari sends wrong event, workaround for #122653
         const mouseUp = 'mouseup';
         const listenTo = windowChain.map(element => element.window.document);
         const shadowRoot = dom.getShadowRoot(initialElement);

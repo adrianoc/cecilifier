@@ -31,7 +31,7 @@ export class ModifierLabelProvider {
  * A label provider that prints modifiers in a suitable format for displaying in the UI.
  */
 export const UILabelProvider = new ModifierLabelProvider({
-    ctrlKey: '⌃',
+    ctrlKey: '\u2303',
     shiftKey: '⇧',
     altKey: '⌥',
     metaKey: '⌘',
@@ -55,7 +55,7 @@ export const UILabelProvider = new ModifierLabelProvider({
 export const AriaLabelProvider = new ModifierLabelProvider({
     ctrlKey: nls.localize({ key: 'ctrlKey.long', comment: ['This is the long form for the Control key on the keyboard'] }, "Control"),
     shiftKey: nls.localize({ key: 'shiftKey.long', comment: ['This is the long form for the Shift key on the keyboard'] }, "Shift"),
-    altKey: nls.localize({ key: 'altKey.long', comment: ['This is the long form for the Alt key on the keyboard'] }, "Alt"),
+    altKey: nls.localize({ key: 'optKey.long', comment: ['This is the long form for the Alt/Option key on the keyboard'] }, "Option"),
     metaKey: nls.localize({ key: 'cmdKey.long', comment: ['This is the long form for the Command key on the keyboard'] }, "Command"),
     separator: '+',
 }, {
@@ -69,6 +69,45 @@ export const AriaLabelProvider = new ModifierLabelProvider({
     shiftKey: nls.localize({ key: 'shiftKey.long', comment: ['This is the long form for the Shift key on the keyboard'] }, "Shift"),
     altKey: nls.localize({ key: 'altKey.long', comment: ['This is the long form for the Alt key on the keyboard'] }, "Alt"),
     metaKey: nls.localize({ key: 'superKey.long', comment: ['This is the long form for the Super key on the keyboard'] }, "Super"),
+    separator: '+',
+});
+/**
+ * A label provider that prints modifiers in a suitable format for Electron Accelerators.
+ * See https://github.com/electron/electron/blob/master/docs/api/accelerator.md
+ */
+export const ElectronAcceleratorLabelProvider = new ModifierLabelProvider({
+    ctrlKey: 'Ctrl',
+    shiftKey: 'Shift',
+    altKey: 'Alt',
+    metaKey: 'Cmd',
+    separator: '+',
+}, {
+    ctrlKey: 'Ctrl',
+    shiftKey: 'Shift',
+    altKey: 'Alt',
+    metaKey: 'Super',
+    separator: '+',
+});
+/**
+ * A label provider that prints modifiers in a suitable format for user settings.
+ */
+export const UserSettingsLabelProvider = new ModifierLabelProvider({
+    ctrlKey: 'ctrl',
+    shiftKey: 'shift',
+    altKey: 'alt',
+    metaKey: 'cmd',
+    separator: '+',
+}, {
+    ctrlKey: 'ctrl',
+    shiftKey: 'shift',
+    altKey: 'alt',
+    metaKey: 'win',
+    separator: '+',
+}, {
+    ctrlKey: 'ctrl',
+    shiftKey: 'shift',
+    altKey: 'alt',
+    metaKey: 'meta',
     separator: '+',
 });
 function _simpleAsString(modifiers, key, labels) {

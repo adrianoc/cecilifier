@@ -12,10 +12,11 @@ namespace Cecilifier.Core.Extensions
 {
     internal static class ISymbolExtensions
     {
+        private static readonly SymbolDisplayFormat FullyQualifiedDisplayFormat = new(typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces);
+
         public static string FullyQualifiedName(this ISymbol type)
         {
-            var format = new SymbolDisplayFormat(typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces);
-            return type.ToDisplayString(format);
+            return type.ToDisplayString(FullyQualifiedDisplayFormat);
         }
         
         public static string SafeIdentifier(this IMethodSymbol method)
@@ -101,7 +102,7 @@ namespace Cecilifier.Core.Extensions
             return $"new[] {{ {self.Aggregate("", (acc, curr) => acc + ",\"" + curr.AssemblyQualifiedName() + "\"", final => final.Substring(1))} }} ";
         }
         
-        public static T EnsureNotNull<T>([NotNull][NotNullIfNotNull("symbol")] this T symbol) where T: ISymbol
+        [return:NotNull] public static T EnsureNotNull<T>([NotNullIfNotNull("symbol")] this T symbol) where T: ISymbol
         {
             if (symbol == null)
                 throw new System.NotSupportedException("");
@@ -109,7 +110,7 @@ namespace Cecilifier.Core.Extensions
             return symbol;
         }
         
-        public static TTarget EnsureNotNull<TSource, TTarget>([NotNull][NotNullIfNotNull("symbol")] this TSource symbol, [CallerArgumentExpression("symbol")] string exp = null) where TSource: ISymbol where TTarget : TSource
+        [return:NotNull] public static TTarget EnsureNotNull<TSource, TTarget>([NotNull][NotNullIfNotNull("symbol")] this TSource symbol, [CallerArgumentExpression("symbol")] string exp = null) where TSource: ISymbol where TTarget : TSource
         {
             if (symbol == null)
                 throw new NullReferenceException(exp);

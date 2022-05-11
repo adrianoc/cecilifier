@@ -2,13 +2,13 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import './media/quickInput.css';
 import * as dom from '../../../browser/dom.js';
+import { StandardKeyboardEvent } from '../../../browser/keyboardEvent.js';
+import { StandardMouseEvent } from '../../../browser/mouseEvent.js';
 import { InputBox } from '../../../browser/ui/inputbox/inputBox.js';
 import { Disposable } from '../../../common/lifecycle.js';
-import { StandardKeyboardEvent } from '../../../browser/keyboardEvent.js';
 import Severity from '../../../common/severity.js';
-import { StandardMouseEvent } from '../../../browser/mouseEvent.js';
+import './media/quickInput.css';
 const $ = dom.$;
 export class QuickInputBox extends Disposable {
     constructor(parent) {

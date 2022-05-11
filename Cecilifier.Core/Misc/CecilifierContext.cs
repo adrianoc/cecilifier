@@ -180,10 +180,10 @@ namespace Cecilifier.Core.Misc
             return flags.Contains(name);
         }
 
-        public void EmitCilInstruction<T>(string ilVar, OpCode opCode, T operand = default)
+        public void EmitCilInstruction<T>(string ilVar, OpCode opCode, T operand, string comment = null)
         {
             var operandStr = operand == null ? string.Empty : $", {operand}";
-            WriteCecilExpression($"{ilVar}.Emit({opCode.ConstantName()}{operandStr});");
+            WriteCecilExpression($"{ilVar}.Emit({opCode.ConstantName()}{operandStr});{(comment != null ? $" // {comment}" : string.Empty)}");
             WriteNewLine();
         }
         

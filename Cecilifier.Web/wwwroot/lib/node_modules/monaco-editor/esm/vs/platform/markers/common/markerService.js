@@ -3,12 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import { isFalsyOrEmpty } from '../../../base/common/arrays.js';
+import { DebounceEmitter } from '../../../base/common/event.js';
+import { Iterable } from '../../../base/common/iterator.js';
+import { ResourceMap } from '../../../base/common/map.js';
 import { Schemas } from '../../../base/common/network.js';
 import { URI } from '../../../base/common/uri.js';
-import { Event, Emitter } from '../../../base/common/event.js';
 import { MarkerSeverity } from './markers.js';
-import { ResourceMap } from '../../../base/common/map.js';
-import { Iterable } from '../../../base/common/iterator.js';
 class DoubleResourceMap {
     constructor() {
         this._byResource = new ResourceMap();
@@ -120,8 +120,11 @@ class MarkerStats {
 }
 export class MarkerService {
     constructor() {
-        this._onMarkerChanged = new Emitter();
-        this.onMarkerChanged = Event.debounce(this._onMarkerChanged.event, MarkerService._debouncer, 0);
+        this._onMarkerChanged = new DebounceEmitter({
+            delay: 0,
+            merge: MarkerService._merge
+        });
+        this.onMarkerChanged = this._onMarkerChanged.event;
         this._data = new DoubleResourceMap();
         this._stats = new MarkerStats(this);
     }
@@ -239,17 +242,14 @@ export class MarkerService {
     static _accept(marker, severities) {
         return severities === undefined || (severities & marker.severity) === marker.severity;
     }
-    static _debouncer(last, event) {
-        if (!last) {
-            MarkerService._dedupeMap = new ResourceMap();
-            last = [];
-        }
-        for (const uri of event) {
-            if (!MarkerService._dedupeMap.has(uri)) {
-                MarkerService._dedupeMap.set(uri, true);
-                last.push(uri);
+    // --- event debounce logic
+    static _merge(all) {
+        const set = new ResourceMap();
+        for (let array of all) {
+            for (let item of array) {
+                set.set(item, true);
             }
         }
-        return last;
+        return Array.from(set.keys());
     }
 }

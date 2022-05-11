@@ -12,9 +12,9 @@ export class TrimTrailingWhitespaceCommand {
         this._selectionId = null;
     }
     getEditOperations(model, builder) {
-        let ops = trimTrailingWhitespace(model, this._cursors);
+        const ops = trimTrailingWhitespace(model, this._cursors);
         for (let i = 0, len = ops.length; i < len; i++) {
-            let op = ops[i];
+            const op = ops[i];
             builder.addEditOperation(op.range, op.text);
         }
         this._selectionId = builder.trackSelection(this._selection);
@@ -41,13 +41,13 @@ export function trimTrailingWhitespace(model, cursors) {
             cursors.splice(i, 1);
         }
     }
-    let r = [];
+    const r = [];
     let rLen = 0;
     let cursorIndex = 0;
-    let cursorLen = cursors.length;
+    const cursorLen = cursors.length;
     for (let lineNumber = 1, lineCount = model.getLineCount(); lineNumber <= lineCount; lineNumber++) {
-        let lineContent = model.getLineContent(lineNumber);
-        let maxLineColumn = lineContent.length + 1;
+        const lineContent = model.getLineContent(lineNumber);
+        const maxLineColumn = lineContent.length + 1;
         let minEditColumn = 0;
         if (cursorIndex < cursorLen && cursors[cursorIndex].lineNumber === lineNumber) {
             minEditColumn = cursors[cursorIndex].column;
@@ -60,7 +60,7 @@ export function trimTrailingWhitespace(model, cursors) {
         if (lineContent.length === 0) {
             continue;
         }
-        let lastNonWhitespaceIndex = strings.lastNonWhitespaceIndex(lineContent);
+        const lastNonWhitespaceIndex = strings.lastNonWhitespaceIndex(lineContent);
         let fromColumn = 0;
         if (lastNonWhitespaceIndex === -1) {
             // Entire line is whitespace

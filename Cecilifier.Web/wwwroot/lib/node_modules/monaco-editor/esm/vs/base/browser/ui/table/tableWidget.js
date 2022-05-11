@@ -2,11 +2,12 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import './table.css';
-import { List } from '../list/listWidget.js';
 import { $, append, clearNode, createStyleSheet } from '../../dom.js';
+import { List } from '../list/listWidget.js';
 import { SplitView } from '../splitview/splitview.js';
 import { Emitter, Event } from '../../../common/event.js';
+import { DisposableStore } from '../../../common/lifecycle.js';
+import './table.css';
 class TableListRenderer {
     constructor(columns, renderers, getColumnSize) {
         this.columns = columns;
@@ -96,6 +97,8 @@ export class Table {
     constructor(user, container, virtualDelegate, columns, renderers, _options) {
         this.virtualDelegate = virtualDelegate;
         this.domId = `table_id_${++Table.InstanceCount}`;
+        this.disposables = new DisposableStore();
+        this.cachedWidth = 0;
         this.cachedHeight = 0;
         this.domNode = append(container, $(`.monaco-table.${this.domId}`));
         const headers = columns.map((c, i) => new ColumnHeader(c, i));
@@ -103,17 +106,22 @@ export class Table {
             size: headers.reduce((a, b) => a + b.column.weight, 0),
             views: headers.map(view => ({ size: view.column.weight, view }))
         };
-        this.splitview = new SplitView(this.domNode, {
+        this.splitview = this.disposables.add(new SplitView(this.domNode, {
             orientation: 1 /* HORIZONTAL */,
             scrollbarVisibility: 2 /* Hidden */,
             getSashOrthogonalSize: () => this.cachedHeight,
             descriptor
-        });
+        }));
         this.splitview.el.style.height = `${virtualDelegate.headerRowHeight}px`;
         this.splitview.el.style.lineHeight = `${virtualDelegate.headerRowHeight}px`;
         const renderer = new TableListRenderer(columns, renderers, i => this.splitview.getViewSize(i));
-        this.list = new List(user, this.domNode, asListVirtualDelegate(virtualDelegate), [renderer], _options);
-        this.columnLayoutDisposable = Event.any(...headers.map(h => h.onDidLayout))(([index, size]) => renderer.layoutColumn(index, size));
+        this.list = this.disposables.add(new List(user, this.domNode, asListVirtualDelegate(virtualDelegate), [renderer], _options));
+        Event.any(...headers.map(h => h.onDidLayout))(([index, size]) => renderer.layoutColumn(index, size), null, this.disposables);
+        this.splitview.onDidSashReset(index => {
+            const totalWeight = columns.reduce((r, c) => r + c.weight, 0);
+            const size = columns[index].weight / totalWeight * this.cachedWidth;
+            this.splitview.resizeView(index, size);
+        }, null, this.disposables);
         this.styleElement = createStyleSheet(this.domNode);
         this.style({});
     }
@@ -151,9 +159,7 @@ export class Table {
         return this.list.getFocus();
     }
     dispose() {
-        this.splitview.dispose();
-        this.list.dispose();
-        this.columnLayoutDisposable.dispose();
+        this.disposables.dispose();
     }
 }
 Table.InstanceCount = 0;

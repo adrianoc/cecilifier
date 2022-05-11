@@ -77,7 +77,7 @@ public class StackallocTests : CecilifierUnitTestBase
             Assert.That(cecilifiedCode, Does.Match(@".+//Span<byte> s = stackalloc byte\[1000\];\s+" +
                                                    @"var l_s_3 = new VariableDefinition\(assembly.MainModule.ImportReference\(typeof\(System.Span<>\)\).MakeGenericInstanceType\(assembly.MainModule.TypeSystem.Byte\)\);\s+" +
                                                    @"m_bar_1.Body.Variables.Add\(l_s_3\);\s+" +
-                                                   @"il_bar_2.Emit\(OpCodes.Ldc_I4, 1000\);\s+" +
+                                                   @"il_bar_2.Emit\(OpCodes.Ldc_I4, 1000\); // 1000 \(elements\) \* 1 \(bytes per element\)\s+" +
                                                    @"il_bar_2.Emit\(OpCodes.Conv_U\);\s+" +
                                                    @"il_bar_2.Emit\(OpCodes.Localloc\);\s+" +
                                                    @"il_bar_2.Emit\(OpCodes.Ldc_I4, 1000\);\s+"));
@@ -165,5 +165,33 @@ public class StackallocTests : CecilifierUnitTestBase
                 @"\1Ldc_I4, 71\);\s+" +
                 @"\1Stind_I2\);\s+" +
                 @"\1Ldloc, l_spanElementCount_4\);\s+"));
+        }
+        
+        [Test]
+        public void ImplicitStackAllocInNestedExpressions()
+        {
+            var code = @"using System; class C { void M() => M2(stackalloc [] { 1, 2, 3}); void M2(Span<int> span) {} }";
+            var result = RunCecilifier(code);
+            var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+
+            Assert.That(cecilifiedCode, Does.Match(
+                @"var (l_spanCtor_\d+) = new MethodReference\("".ctor"", assembly.MainModule.TypeSystem.Void, assembly.MainModule.ImportReference\(typeof\(Span<>\)\).MakeGenericInstanceType\(.+TypeSystem.Int32\)\) { HasThis = true };\s+" +
+                @"\1.Parameters.Add\(.+""ptr"".+void\*.+\);\s+" +
+                @"\1.Parameters.Add\(.+""length"".+TypeSystem.Int32.+\);\s+" +
+                @"il_M_\d+.Emit\(OpCodes.Newobj, assembly.MainModule.ImportReference\(\1\)\);"));
+        }
+        
+        [Test]
+        public void ExplicitStackAllocInNestedExpressions()
+        {
+            var code = @"using System; class C { void M() => M2(stackalloc int[42]); void M2(Span<int> span) {} }";
+            var result = RunCecilifier(code);
+            var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+
+            Assert.That(cecilifiedCode, Does.Match(
+                @"var (l_spanCtor_\d+) = new MethodReference\("".ctor"", assembly.MainModule.TypeSystem.Void, assembly.MainModule.ImportReference\(typeof\(Span<>\)\).MakeGenericInstanceType\(.+TypeSystem.Int32\)\) { HasThis = true };\s+" +
+                @"\1.Parameters.Add\(.+""ptr"".+void\*.+\);\s+" +
+                @"\1.Parameters.Add\(.+""length"".+TypeSystem.Int32.+\);\s+" +
+                @"il_M_\d+.Emit\(OpCodes.Newobj, assembly.MainModule.ImportReference\(\1\)\);"));
         }
 }

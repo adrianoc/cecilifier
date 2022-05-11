@@ -51,56 +51,55 @@ namespace Cecilifier.Core.AST
             predefinedTypeSize["byte"] = sizeof(byte);
             predefinedTypeSize["long"] = sizeof(long);
             
-            //TODO: Use AddCilInstruction instead.
             operatorHandlers[SyntaxKind.PlusToken] = (ctx, ilVar, left, right) =>
             {
                 if (left.SpecialType == SpecialType.System_String)
                 {
                     var concatArgType = right.SpecialType == SpecialType.System_String ? "string" : "object";
-                    WriteCecilExpression(ctx,$"{ilVar}.Emit({OpCodes.Call.ConstantName()}, assembly.MainModule.Import(typeof(string).GetMethod(\"Concat\", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public, null, new[] {{ typeof({concatArgType}), typeof({concatArgType}) }}, null)));");
+                    ctx.EmitCilInstruction(ilVar, OpCodes.Call, $"assembly.MainModule.Import(typeof(string).GetMethod(\"Concat\", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public, null, new[] {{ typeof({concatArgType}), typeof({concatArgType}) }}, null))");
                 }
                 else
                 {
-                    WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Add.ConstantName()});");
+                    ctx.EmitCilInstruction(ilVar, OpCodes.Add);
                 }
             };
 
-            operatorHandlers[SyntaxKind.SlashToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Div.ConstantName()});");
-            operatorHandlers[SyntaxKind.GreaterThanToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Emit({CompareOpCodeFor(left).ConstantName()});");
+            operatorHandlers[SyntaxKind.SlashToken] = (ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, OpCodes.Div);
+            operatorHandlers[SyntaxKind.GreaterThanToken] = (ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, CompareOpCodeFor(left));
             operatorHandlers[SyntaxKind.GreaterThanEqualsToken] = (ctx, ilVar, left, right) =>
             {
-                WriteCecilExpression(ctx, $"{ilVar}.Emit(OpCodes.Clt);");
-                WriteCecilExpression(ctx, $"{ilVar}.Emit(OpCodes.Ldc_I4_0);");
-                WriteCecilExpression(ctx, $"{ilVar}.Emit(OpCodes.Ceq);");
+                ctx.EmitCilInstruction(ilVar, OpCodes.Clt);
+                ctx.EmitCilInstruction(ilVar, OpCodes.Ldc_I4_0);
+                ctx.EmitCilInstruction(ilVar, OpCodes.Ceq);
             };
             operatorHandlers[SyntaxKind.LessThanEqualsToken] = (ctx, ilVar, left, right) =>
             {
-                WriteCecilExpression(ctx, $"{ilVar}.Emit(OpCodes.Cgt);");
-                WriteCecilExpression(ctx, $"{ilVar}.Emit(OpCodes.Ldc_I4_0);");
-                WriteCecilExpression(ctx, $"{ilVar}.Emit(OpCodes.Ceq);");
+                ctx.EmitCilInstruction(ilVar, OpCodes.Cgt);
+                ctx.EmitCilInstruction(ilVar, OpCodes.Ldc_I4_0);
+                ctx.EmitCilInstruction(ilVar, OpCodes.Ceq);
             };
-            operatorHandlers[SyntaxKind.EqualsEqualsToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Ceq.ConstantName()});");
-            operatorHandlers[SyntaxKind.LessThanToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Clt.ConstantName()});");
-            operatorHandlers[SyntaxKind.MinusToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Sub.ConstantName()});");
-            operatorHandlers[SyntaxKind.AsteriskToken] = (ctx, ilVar, left, right) => WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Mul.ConstantName()});");
+            operatorHandlers[SyntaxKind.EqualsEqualsToken] = (ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, OpCodes.Ceq);
+            operatorHandlers[SyntaxKind.LessThanToken] = (ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, OpCodes.Clt);
+            operatorHandlers[SyntaxKind.MinusToken] = (ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, OpCodes.Sub);
+            operatorHandlers[SyntaxKind.AsteriskToken] = (ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, OpCodes.Mul);
             operatorHandlers[SyntaxKind.ExclamationEqualsToken] = (ctx, ilVar, left, right) =>
             {
                 // This is not the most optimized way to handle != operator but it is generic and correct.
-                WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Ceq.ConstantName()});");
-                WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Ldc_I4_0.ConstantName()});");
-                WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Ceq.ConstantName()});");
+                ctx.EmitCilInstruction(ilVar, OpCodes.Ceq);
+                ctx.EmitCilInstruction(ilVar, OpCodes.Ldc_I4_0);
+                ctx.EmitCilInstruction(ilVar, OpCodes.Ceq);
             };
 
             // Bitwise Operators
-            operatorHandlers[SyntaxKind.AmpersandToken] = (ctx, ilVar, _, _) => WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.And.ConstantName()});");
-            operatorHandlers[SyntaxKind.BarToken] = (ctx, ilVar, _, _) => WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Or.ConstantName()});");
-            operatorHandlers[SyntaxKind.CaretToken] = (ctx, ilVar, _, _) => WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Xor.ConstantName()});");
-            operatorHandlers[SyntaxKind.LessThanLessThanToken] = (ctx, ilVar, _, _) => WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Shl.ConstantName()});");
-            operatorHandlers[SyntaxKind.GreaterThanGreaterThanToken] = (ctx, ilVar, _, _) => WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Shr.ConstantName()});");
+            operatorHandlers[SyntaxKind.AmpersandToken] = (ctx, ilVar, _, _) => ctx.EmitCilInstruction(ilVar, OpCodes.And);
+            operatorHandlers[SyntaxKind.BarToken] = (ctx, ilVar, _, _) => ctx.EmitCilInstruction(ilVar, OpCodes.Or);
+            operatorHandlers[SyntaxKind.CaretToken] = (ctx, ilVar, _, _) => ctx.EmitCilInstruction(ilVar, OpCodes.Xor);
+            operatorHandlers[SyntaxKind.LessThanLessThanToken] = (ctx, ilVar, _, _) => ctx.EmitCilInstruction(ilVar, OpCodes.Shl);
+            operatorHandlers[SyntaxKind.GreaterThanGreaterThanToken] = (ctx, ilVar, _, _) => ctx.EmitCilInstruction(ilVar, OpCodes.Shr);
 
             // Logical Operators
-            operatorHandlers[SyntaxKind.AmpersandAmpersandToken] = (ctx, ilVar, _, _) => WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.And.ConstantName()});");
-            operatorHandlers[SyntaxKind.BarBarToken] = (ctx, ilVar, _, _) => WriteCecilExpression(ctx, $"{ilVar}.Emit({OpCodes.Or.ConstantName()});");
+            operatorHandlers[SyntaxKind.AmpersandAmpersandToken] = (ctx, ilVar, _, _) => ctx.EmitCilInstruction(ilVar, OpCodes.And);
+            operatorHandlers[SyntaxKind.BarBarToken] = (ctx, ilVar, _, _) => ctx.EmitCilInstruction(ilVar, OpCodes.Or);
         }
 
         private static OpCode CompareOpCodeFor(ITypeSymbol left)
@@ -306,7 +305,7 @@ namespace Cecilifier.Core.AST
             Debug.Assert(localVarParent != null);
                 
             var nodeType = Context.SemanticModel.GetTypeInfo(node);
-            LoadLiteralValue(ilVar, nodeType.Type ?? nodeType.ConvertedType, node.Token.Text, localVarParent.Accept(new UsageVisitor(Context)) == UsageKind.CallTarget);
+            LoadLiteralValue(ilVar, nodeType.Type ?? nodeType.ConvertedType, node.Token.Text, localVarParent.Accept(UsageVisitor.GetInstance(Context)) == UsageKind.CallTarget);
         }
 
         public override void VisitDeclarationExpression(DeclarationExpressionSyntax node)
@@ -529,7 +528,7 @@ namespace Cecilifier.Core.AST
             base.VisitParenthesizedExpression(node);
 
             var localVarParent = (CSharpSyntaxNode) node.Parent;
-            if (localVarParent.Accept(new UsageVisitor(Context)) != UsageKind.CallTarget)
+            if (localVarParent.Accept(UsageVisitor.GetInstance(Context)) != UsageKind.CallTarget)
                 return;
 
             StoreTopOfStackInLocalVariableAndLoadItsAddress(Context.RoslynTypeSystem.SystemInt32);
@@ -899,8 +898,7 @@ namespace Cecilifier.Core.AST
             }
 
             Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
-            var exps = CecilDefinitionsFactory.InstantiateDelegate(Context, ilVar, Context.GetTypeInfo(node).ConvertedType, syntheticMethodVariable.VariableName);
-            AddCecilExpressions(exps);
+            CecilDefinitionsFactory.InstantiateDelegate(Context, ilVar, Context.GetTypeInfo(node).ConvertedType, syntheticMethodVariable.VariableName);
         }
         
         private void StoreTopOfStackInLocalVariableAndLoadItsAddressIfNeeded(ExpressionSyntax node)
@@ -1036,21 +1034,21 @@ namespace Cecilifier.Core.AST
 
         private void ProcessField(SimpleNameSyntax node, IFieldSymbol fieldSymbol)
         {
+            var nodeParent = (CSharpSyntaxNode) node.Parent;
+            Debug.Assert(nodeParent != null);
+                         
             if (fieldSymbol.HasConstantValue && fieldSymbol.IsConst)
             {
-                var nodeParent = (CSharpSyntaxNode) node.Parent;
-                Debug.Assert(nodeParent != null);
-                         
                 LoadLiteralToStackHandlingCallOnValueTypeLiterals(
                     ilVar,
                     fieldSymbol.Type,
                     fieldSymbol.Type.SpecialType switch
                     {
                         SpecialType.System_String => $"\"{fieldSymbol.ConstantValue}\"",
-                        SpecialType.System_Boolean => (bool) fieldSymbol.ConstantValue == true ? 1 : 0,
+                        SpecialType.System_Boolean => (bool) fieldSymbol.ConstantValue ? 1 : 0,
                         _ => fieldSymbol.ConstantValue 
                     },
-                    nodeParent.Accept(new UsageVisitor(Context)) == UsageKind.CallTarget);
+                    nodeParent.Accept(UsageVisitor.GetInstance(Context)) == UsageKind.CallTarget);
                 return;
             }
             
@@ -1072,8 +1070,10 @@ namespace Cecilifier.Core.AST
                 ? fieldDeclarationVariable.VariableName
                 : fieldSymbol.FieldResolverExpression(Context);
 
-            OpCode opCode = LoadOpCodeForFieldAccess(fieldSymbol);
+            var opCode = LoadOpCodeForFieldAccess(fieldSymbol);
             Context.EmitCilInstruction(ilVar, opCode, resolvedField);
+
+            EmitBoxOpCodeIfCallOnTypeParameter(fieldSymbol.Type, nodeParent);
             HandlePotentialDelegateInvocationOn(node, fieldSymbol.Type, ilVar);
         }
 
@@ -1101,18 +1101,24 @@ namespace Cecilifier.Core.AST
         
         private void ProcessLocalVariable(SimpleNameSyntax localVarSyntax, SymbolInfo varInfo)
         {
-            var symbol = (ILocalSymbol) varInfo.Symbol;
+            var symbol = varInfo.Symbol.EnsureNotNull<ISymbol, ILocalSymbol>();
             var localVar = (CSharpSyntaxNode) localVarSyntax.Parent;
             if (HandleLoadAddress(ilVar, symbol.Type, localVar, OpCodes.Ldloca, symbol.Name, VariableMemberKind.LocalVariable))
-            {
                 return;
-            }
 
-            string operand = Context.DefinitionVariables.GetVariable(symbol.Name, VariableMemberKind.LocalVariable).VariableName;
+            var operand = Context.DefinitionVariables.GetVariable(symbol.Name, VariableMemberKind.LocalVariable).VariableName;
             Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, operand);
+            
+            EmitBoxOpCodeIfCallOnTypeParameter(symbol.Type, localVar);
             HandlePotentialDelegateInvocationOn(localVarSyntax, symbol.Type, ilVar);
             HandlePotentialFixedLoad(symbol);
             HandlePotentialRefLoad(ilVar, localVarSyntax, symbol.Type);
+        }
+
+        private void EmitBoxOpCodeIfCallOnTypeParameter(ITypeSymbol type, CSharpSyntaxNode localVar)
+        {
+            if (type.TypeKind == TypeKind.TypeParameter && localVar.Accept(UsageVisitor.GetInstance(Context)) == UsageKind.CallTarget)
+                Context.EmitCilInstruction(ilVar, OpCodes.Box, Context.TypeResolver.Resolve(type));
         }
 
         private void HandlePotentialFixedLoad(ILocalSymbol symbol)
@@ -1180,8 +1186,7 @@ namespace Cecilifier.Core.AST
             }
 
             EnsureMethodAvailable(Context.Naming.SyntheticVariable(node.Identifier.Text, ElementKind.Method), method.OverriddenMethod ?? method.OriginalDefinition, Array.Empty<TypeParameterSyntax>());
-            var exps = CecilDefinitionsFactory.InstantiateDelegate(Context, ilVar, delegateType, method.MethodResolverExpression(Context));
-            AddCecilExpressions(exps);
+            CecilDefinitionsFactory.InstantiateDelegate(Context, ilVar, delegateType, method.MethodResolverExpression(Context));
         }
         
         private void ProcessMethodCall(SimpleNameSyntax node, IMethodSymbol method)
@@ -1422,7 +1427,7 @@ namespace Cecilifier.Core.AST
         string EmitTargetLabel(string relatedToName)
         {
             var instVarName = Context.Naming.Label(relatedToName);
-            AddCecilExpression(@"var {0} = {1}.Create({2});", instVarName, ilVar, OpCodes.Nop.ConstantName());
+            AddCecilExpression($"var {instVarName} = {ilVar}.Create({OpCodes.Nop.ConstantName()});");
                 
             return instVarName;
         }

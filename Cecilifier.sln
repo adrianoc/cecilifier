@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cecilifier.Runtime", "Cecil
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cecilifier.Web", "Cecilifier.Web\Cecilifier.Web.csproj", "{FF8ACAA1-17CA-4085-8B40-79E32E0CAC0A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cecilifier.Benchmarks", "Cecilifier.Benchmarks\Cecilifier.Benchmarks.csproj", "{A4854B14-99ED-4A43-B558-EDE747D0D175}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -63,6 +65,18 @@ Global
 		{FF8ACAA1-17CA-4085-8B40-79E32E0CAC0A}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{FF8ACAA1-17CA-4085-8B40-79E32E0CAC0A}.Release|x86.ActiveCfg = Release|Any CPU
 		{FF8ACAA1-17CA-4085-8B40-79E32E0CAC0A}.Release|x86.Build.0 = Release|Any CPU
+		{A4854B14-99ED-4A43-B558-EDE747D0D175}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A4854B14-99ED-4A43-B558-EDE747D0D175}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A4854B14-99ED-4A43-B558-EDE747D0D175}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{A4854B14-99ED-4A43-B558-EDE747D0D175}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{A4854B14-99ED-4A43-B558-EDE747D0D175}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{A4854B14-99ED-4A43-B558-EDE747D0D175}.Debug|x86.Build.0 = Debug|Any CPU
+		{A4854B14-99ED-4A43-B558-EDE747D0D175}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A4854B14-99ED-4A43-B558-EDE747D0D175}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A4854B14-99ED-4A43-B558-EDE747D0D175}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{A4854B14-99ED-4A43-B558-EDE747D0D175}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{A4854B14-99ED-4A43-B558-EDE747D0D175}.Release|x86.ActiveCfg = Release|Any CPU
+		{A4854B14-99ED-4A43-B558-EDE747D0D175}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

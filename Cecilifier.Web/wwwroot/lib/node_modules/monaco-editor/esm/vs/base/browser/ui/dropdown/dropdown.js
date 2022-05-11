@@ -2,16 +2,16 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import './dropdown.css';
-import { Gesture, EventType as GestureEventType } from '../../touch.js';
-import { ActionRunner } from '../../../common/actions.js';
-import { EventHelper, EventType, append, $, addDisposableListener } from '../../dom.js';
+import { $, addDisposableListener, append, EventHelper, EventType } from '../../dom.js';
 import { StandardKeyboardEvent } from '../../keyboardEvent.js';
+import { EventType as GestureEventType, Gesture } from '../../touch.js';
+import { ActionRunner } from '../../../common/actions.js';
 import { Emitter } from '../../../common/event.js';
+import './dropdown.css';
 export class BaseDropdown extends ActionRunner {
     constructor(container, options) {
         super();
-        this._onDidChangeVisibility = new Emitter();
+        this._onDidChangeVisibility = this._register(new Emitter());
         this.onDidChangeVisibility = this._onDidChangeVisibility.event;
         this._element = append(container, $('.monaco-dropdown'));
         this._label = append(this._element, $('.dropdown-label'));

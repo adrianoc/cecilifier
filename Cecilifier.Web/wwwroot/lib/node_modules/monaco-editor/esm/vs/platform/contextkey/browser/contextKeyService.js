@@ -18,8 +18,7 @@ import { TernarySearchTree } from '../../../base/common/map.js';
 import { localize } from '../../../nls.js';
 import { CommandsRegistry } from '../../commands/common/commands.js';
 import { IConfigurationService } from '../../configuration/common/configuration.js';
-import { IContextKeyService, SET_CONTEXT_COMMAND_ID, RawContextKey } from '../common/contextkey.js';
-import { KeybindingResolver } from '../../keybinding/common/keybindingResolver.js';
+import { IContextKeyService, RawContextKey, SET_CONTEXT_COMMAND_ID } from '../common/contextkey.js';
 const KEYBINDING_CONTEXT_ATTR = 'data-keybinding-context';
 export class Context {
     constructor(id, parent) {
@@ -224,7 +223,7 @@ export class AbstractContextKeyService {
             throw new Error(`AbstractContextKeyService has been disposed`);
         }
         const context = this.getContextValuesContainer(this._myContextId);
-        const result = KeybindingResolver.contextMatchesRules(context, rules);
+        const result = (rules ? rules.evaluate(context) : true);
         // console.group(rules.serialize() + ' -> ' + result);
         // rules.keys().forEach(key => { console.log(key, ctx[key]); });
         // console.groupEnd();

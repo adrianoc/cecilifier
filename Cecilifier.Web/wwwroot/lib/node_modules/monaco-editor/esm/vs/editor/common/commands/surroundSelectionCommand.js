@@ -15,9 +15,9 @@ export class SurroundSelectionCommand {
         builder.addTrackedEditOperation(new Range(this._range.endLineNumber, this._range.endColumn, this._range.endLineNumber, this._range.endColumn), this._charAfterSelection);
     }
     computeCursorState(model, helper) {
-        let inverseEditOperations = helper.getInverseEditOperations();
-        let firstOperationRange = inverseEditOperations[0].range;
-        let secondOperationRange = inverseEditOperations[1].range;
+        const inverseEditOperations = helper.getInverseEditOperations();
+        const firstOperationRange = inverseEditOperations[0].range;
+        const secondOperationRange = inverseEditOperations[1].range;
         return new Selection(firstOperationRange.endLineNumber, firstOperationRange.endColumn, secondOperationRange.endLineNumber, secondOperationRange.endColumn - this._charAfterSelection.length);
     }
 }

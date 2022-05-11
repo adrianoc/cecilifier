@@ -1,12 +1,8 @@
-/*---------------------------------------------------------------------------------------------
- *  Copyright (c) Microsoft Corporation. All rights reserved.
- *  Licensed under the MIT License. See License.txt in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-import { createDecorator } from '../../instantiation/common/instantiation.js';
 import { Emitter, PauseableEmitter } from '../../../base/common/event.js';
 import { Disposable } from '../../../base/common/lifecycle.js';
 import { isUndefinedOrNull } from '../../../base/common/types.js';
 import { InMemoryStorageDatabase, Storage } from '../../../base/parts/storage/common/storage.js';
+import { createDecorator } from '../../instantiation/common/instantiation.js';
 const TARGET_KEY = '__$__targetStorageMarker';
 export const IStorageService = createDecorator('storageService');
 export var WillSaveStateReason;
@@ -149,8 +145,8 @@ AbstractStorageService.DEFAULT_FLUSH_INTERVAL = 60 * 1000; // every minute
 export class InMemoryStorageService extends AbstractStorageService {
     constructor() {
         super();
-        this.globalStorage = new Storage(new InMemoryStorageDatabase());
-        this.workspaceStorage = new Storage(new InMemoryStorageDatabase());
+        this.globalStorage = this._register(new Storage(new InMemoryStorageDatabase()));
+        this.workspaceStorage = this._register(new Storage(new InMemoryStorageDatabase()));
         this._register(this.workspaceStorage.onDidChangeStorage(key => this.emitDidChangeValue(1 /* WORKSPACE */, key)));
         this._register(this.globalStorage.onDidChangeStorage(key => this.emitDidChangeValue(0 /* GLOBAL */, key)));
     }

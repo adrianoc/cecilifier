@@ -2,7 +2,7 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { createKeybinding } from '../../../base/common/keyCodes.js';
+import { createKeybinding } from '../../../base/common/keybindings.js';
 import { OS } from '../../../base/common/platform.js';
 import { CommandsRegistry } from '../../commands/common/commands.js';
 import { Registry } from '../../registry/common/platform.js';
@@ -56,27 +56,27 @@ class KeybindingsRegistryImpl {
         CommandsRegistry.registerCommand(desc);
     }
     static _mightProduceChar(keyCode) {
-        if (keyCode >= 21 /* KEY_0 */ && keyCode <= 30 /* KEY_9 */) {
+        if (keyCode >= 21 /* Digit0 */ && keyCode <= 30 /* Digit9 */) {
             return true;
         }
-        if (keyCode >= 31 /* KEY_A */ && keyCode <= 56 /* KEY_Z */) {
+        if (keyCode >= 31 /* KeyA */ && keyCode <= 56 /* KeyZ */) {
             return true;
         }
-        return (keyCode === 80 /* US_SEMICOLON */
-            || keyCode === 81 /* US_EQUAL */
-            || keyCode === 82 /* US_COMMA */
-            || keyCode === 83 /* US_MINUS */
-            || keyCode === 84 /* US_DOT */
-            || keyCode === 85 /* US_SLASH */
-            || keyCode === 86 /* US_BACKTICK */
+        return (keyCode === 80 /* Semicolon */
+            || keyCode === 81 /* Equal */
+            || keyCode === 82 /* Comma */
+            || keyCode === 83 /* Minus */
+            || keyCode === 84 /* Period */
+            || keyCode === 85 /* Slash */
+            || keyCode === 86 /* Backquote */
             || keyCode === 110 /* ABNT_C1 */
             || keyCode === 111 /* ABNT_C2 */
-            || keyCode === 87 /* US_OPEN_SQUARE_BRACKET */
-            || keyCode === 88 /* US_BACKSLASH */
-            || keyCode === 89 /* US_CLOSE_SQUARE_BRACKET */
-            || keyCode === 90 /* US_QUOTE */
+            || keyCode === 87 /* BracketLeft */
+            || keyCode === 88 /* Backslash */
+            || keyCode === 89 /* BracketRight */
+            || keyCode === 90 /* Quote */
             || keyCode === 91 /* OEM_8 */
-            || keyCode === 92 /* OEM_102 */);
+            || keyCode === 92 /* IntlBackslash */);
     }
     _assertNoCtrlAlt(keybinding, commandId) {
         if (keybinding.ctrlKey && keybinding.altKey && !keybinding.metaKey) {
@@ -90,7 +90,7 @@ class KeybindingsRegistryImpl {
             this._assertNoCtrlAlt(keybinding.parts[0], commandId);
         }
         this._coreKeybindings.push({
-            keybinding: keybinding,
+            keybinding: keybinding.parts,
             command: commandId,
             commandArgs: commandArgs,
             when: when,

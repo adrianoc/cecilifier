@@ -11,7 +11,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-import { AbstractGotoLineQuickAccessProvider } from '../../../contrib/quickAccess/gotoLineQuickAccess.js';
+import { AbstractGotoLineQuickAccessProvider } from '../../../contrib/quickAccess/browser/gotoLineQuickAccess.js';
 import { Registry } from '../../../../platform/registry/common/platform.js';
 import { Extensions } from '../../../../platform/quickinput/common/quickAccess.js';
 import { ICodeEditorService } from '../../../browser/services/codeEditorService.js';
@@ -49,8 +49,8 @@ export class GotoLineAction extends EditorAction {
             precondition: undefined,
             kbOpts: {
                 kbExpr: EditorContextKeys.focus,
-                primary: 2048 /* CtrlCmd */ | 37 /* KEY_G */,
-                mac: { primary: 256 /* WinCtrl */ | 37 /* KEY_G */ },
+                primary: 2048 /* CtrlCmd */ | 37 /* KeyG */,
+                mac: { primary: 256 /* WinCtrl */ | 37 /* KeyG */ },
                 weight: 100 /* EditorContrib */
             }
         });

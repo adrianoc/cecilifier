@@ -56,8 +56,9 @@ export var Iterable;
     }
     Iterable.filter = filter;
     function* map(iterable, fn) {
+        let index = 0;
         for (const element of iterable) {
-            yield fn(element);
+            yield fn(element, index++);
         }
     }
     Iterable.map = map;

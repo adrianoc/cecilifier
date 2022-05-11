@@ -5,8 +5,8 @@
 import * as dom from '../dom.js';
 import { StandardKeyboardEvent } from '../keyboardEvent.js';
 import { StandardMouseEvent } from '../mouseEvent.js';
-import { Disposable } from '../../common/lifecycle.js';
 import { Gesture } from '../touch.js';
+import { Disposable } from '../../common/lifecycle.js';
 export class Widget extends Disposable {
     onclick(domNode, listener) {
         this._register(dom.addDisposableListener(domNode, dom.EventType.CLICK, (e) => listener(new StandardMouseEvent(e))));

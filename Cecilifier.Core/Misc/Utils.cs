@@ -10,6 +10,8 @@ namespace Cecilifier.Core.Misc
 {
     internal struct Utils
     {
+        public static string ConstructorMethodName(bool isStatic) => $".{ (isStatic ? Constants.CommonCecilConstants.StaticConstructorName : Constants.CommonCecilConstants.InstanceConstructorName)}";
+
         public static string ImportFromMainModule(string expression) => $"assembly.MainModule.ImportReference({expression})";
 
         public static string MakeGenericTypeIfAppropriate(IVisitorContext context, ISymbol memberSymbol, string backingFieldVar, string memberDeclaringTypeVar)

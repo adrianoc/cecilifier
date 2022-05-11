@@ -2,9 +2,9 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import * as nls from '../../nls.js';
-import * as types from './types.js';
 import * as arrays from './arrays.js';
+import * as types from './types.js';
+import * as nls from '../../nls.js';
 function exceptionToErrorMessage(exception, verbose) {
     if (verbose && (exception.stack || exception.stacktrace)) {
         return nls.localize('stackTrace.format', "{0}: {1}", detectSystemErrorMessage(exception), stackToString(exception.stack) || stackToString(exception.stacktrace));

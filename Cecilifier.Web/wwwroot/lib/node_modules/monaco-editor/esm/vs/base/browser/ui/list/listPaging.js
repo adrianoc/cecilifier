@@ -2,12 +2,12 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import './list.css';
-import { Disposable } from '../../../common/lifecycle.js';
 import { range } from '../../../common/arrays.js';
-import { List } from './listWidget.js';
-import { Event } from '../../../common/event.js';
 import { CancellationTokenSource } from '../../../common/cancellation.js';
+import { Event } from '../../../common/event.js';
+import { Disposable } from '../../../common/lifecycle.js';
+import './list.css';
+import { List } from './listWidget.js';
 class PagedRenderer {
     constructor(renderer, modelProvider) {
         this.renderer = renderer;

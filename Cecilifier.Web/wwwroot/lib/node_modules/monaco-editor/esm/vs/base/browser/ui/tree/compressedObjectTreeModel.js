@@ -2,10 +2,10 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { Iterable } from '../../../common/iterator.js';
-import { Event } from '../../../common/event.js';
-import { TreeError, WeakMapper } from './tree.js';
 import { ObjectTreeModel } from './objectTreeModel.js';
+import { TreeError, WeakMapper } from './tree.js';
+import { Event } from '../../../common/event.js';
+import { Iterable } from '../../../common/iterator.js';
 function noCompress(element) {
     const elements = [element.element];
     const incompressible = element.incompressible || false;
@@ -186,6 +186,10 @@ export class CompressedObjectTreeModel {
         }
         return parentNode.elements[parentNode.elements.length - 1];
     }
+    getFirstElementChild(location) {
+        const compressedNode = this.getCompressedNode(location);
+        return this.model.getFirstElementChild(compressedNode);
+    }
     isCollapsible(location) {
         const compressedNode = this.getCompressedNode(location);
         return this.model.isCollapsible(compressedNode);
@@ -311,6 +315,13 @@ export class CompressibleObjectTreeModel {
     }
     getParentNodeLocation(location) {
         return this.model.getParentNodeLocation(location);
+    }
+    getFirstElementChild(location) {
+        const result = this.model.getFirstElementChild(location);
+        if (result === null || typeof result === 'undefined') {
+            return result;
+        }
+        return this.elementMapper(result.elements);
     }
     isCollapsible(location) {
         return this.model.isCollapsible(location);

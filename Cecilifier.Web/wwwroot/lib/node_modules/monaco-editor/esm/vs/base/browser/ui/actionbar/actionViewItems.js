@@ -2,16 +2,16 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import './actionbar.css';
-import * as platform from '../../../common/platform.js';
-import * as nls from '../../../../nls.js';
-import { Disposable } from '../../../common/lifecycle.js';
-import { Action, ActionRunner, Separator } from '../../../common/actions.js';
-import * as types from '../../../common/types.js';
-import { EventType as TouchEventType, Gesture } from '../../touch.js';
-import { DataTransfers } from '../../dnd.js';
 import { isFirefox } from '../../browser.js';
+import { DataTransfers } from '../../dnd.js';
 import { $, addDisposableListener, append, EventHelper, EventType } from '../../dom.js';
+import { EventType as TouchEventType, Gesture } from '../../touch.js';
+import { Action, ActionRunner, Separator } from '../../../common/actions.js';
+import { Disposable } from '../../../common/lifecycle.js';
+import * as platform from '../../../common/platform.js';
+import * as types from '../../../common/types.js';
+import './actionbar.css';
+import * as nls from '../../../../nls.js';
 export class BaseActionViewItem extends Disposable {
     constructor(context, action, options = {}) {
         super();
@@ -76,7 +76,7 @@ export class BaseActionViewItem extends Disposable {
                 this._register(addDisposableListener(container, EventType.DRAG_START, e => { var _a; return (_a = e.dataTransfer) === null || _a === void 0 ? void 0 : _a.setData(DataTransfers.TEXT, this._action.label); }));
             }
         }
-        this._register(addDisposableListener(element, TouchEventType.Tap, e => this.onClick(e)));
+        this._register(addDisposableListener(element, TouchEventType.Tap, e => this.onClick(e, true))); // Preserve focus on tap #125470
         this._register(addDisposableListener(element, EventType.MOUSE_DOWN, e => {
             if (!enableDragging) {
                 EventHelper.stop(e, true); // do not run when dragging is on because that would disable it
@@ -100,7 +100,7 @@ export class BaseActionViewItem extends Disposable {
             EventHelper.stop(e, true);
             // menus do not use the click event
             if (!(this.options && this.options.isMenu)) {
-                platform.setImmediate(() => this.onClick(e));
+                this.onClick(e);
             }
         }));
         this._register(addDisposableListener(element, EventType.DBLCLICK, e => {
@@ -113,10 +113,10 @@ export class BaseActionViewItem extends Disposable {
             }));
         });
     }
-    onClick(event) {
+    onClick(event, preserveFocus = false) {
         var _a;
         EventHelper.stop(event, true);
-        const context = types.isUndefinedOrNull(this._context) ? ((_a = this.options) === null || _a === void 0 ? void 0 : _a.useEventAsContext) ? event : undefined : this._context;
+        const context = types.isUndefinedOrNull(this._context) ? ((_a = this.options) === null || _a === void 0 ? void 0 : _a.useEventAsContext) ? event : { preserveFocus } : this._context;
         this.actionRunner.run(this._action, context);
     }
     // Only set the tabIndex on the element once it is about to get focused

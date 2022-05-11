@@ -29,7 +29,7 @@ namespace Cecilifier.Core.AST
         TypeInfo GetTypeInfo(ExpressionSyntax expressionSyntax);
         
         void EmitCilInstruction(string ilVar, OpCode opCode);
-        void EmitCilInstruction<T>(string ilVar, OpCode opCode, T operand);
+        void EmitCilInstruction<T>(string ilVar, OpCode opCode, T operand, string comment = null);
         void WriteCecilExpression(string msg);
         void WriteComment(string comment);
         void WriteNewLine();

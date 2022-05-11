@@ -1,4 +1,4 @@
-import { fuzzyScore, createMatches as createFuzzyMatches } from './filters.js';
+import { createMatches as createFuzzyMatches, fuzzyScore } from './filters.js';
 import { sep } from './path.js';
 import { isWindows } from './platform.js';
 import { stripWildcards } from './strings.js';
@@ -36,6 +36,7 @@ function doScoreFuzzy2Single(target, query, patternStart, wordStart) {
     }
     return [score[0], createFuzzyMatches(score)];
 }
+const NO_ITEM_SCORE = Object.freeze({ score: 0 });
 function normalizeMatches(matches) {
     // sort matches by start to be able to normalize
     const sortedMatches = matches.sort((matchA, matchB) => {
@@ -69,6 +70,13 @@ function matchOverlaps(matchA, matchB) {
     }
     return true;
 }
+/*
+ * If a query is wrapped in quotes, the user does not want to
+ * use fuzzy search for this query.
+ */
+function queryExpectsExactMatch(query) {
+    return query.startsWith('"') && query.endsWith('"');
+}
 /**
  * Helper function to prepare a search value for scoring by removing unwanted characters
  * and allowing to score on multiple pieces separated by whitespace character.
@@ -81,10 +89,12 @@ export function prepareQuery(original) {
     const originalLowercase = original.toLowerCase();
     const { pathNormalized, normalized, normalizedLowercase } = normalizeQuery(original);
     const containsPathSeparator = pathNormalized.indexOf(sep) >= 0;
+    const expectExactMatch = queryExpectsExactMatch(original);
     let values = undefined;
     const originalSplit = original.split(MULTIPLE_QUERY_VALUES_SEPARATOR);
     if (originalSplit.length > 1) {
         for (const originalPiece of originalSplit) {
+            const expectExactMatchPiece = queryExpectsExactMatch(originalPiece);
             const { pathNormalized: pathNormalizedPiece, normalized: normalizedPiece, normalizedLowercase: normalizedLowercasePiece } = normalizeQuery(originalPiece);
             if (normalizedPiece) {
                 if (!values) {
@@ -95,12 +105,13 @@ export function prepareQuery(original) {
                     originalLowercase: originalPiece.toLowerCase(),
                     pathNormalized: pathNormalizedPiece,
                     normalized: normalizedPiece,
-                    normalizedLowercase: normalizedLowercasePiece
+                    normalizedLowercase: normalizedLowercasePiece,
+                    expectContiguousMatch: expectExactMatchPiece
                 });
             }
         }
     }
-    return { original, originalLowercase, pathNormalized, normalized, normalizedLowercase, values, containsPathSeparator };
+    return { original, originalLowercase, pathNormalized, normalized, normalizedLowercase, values, containsPathSeparator, expectContiguousMatch: expectExactMatch };
 }
 function normalizeQuery(original) {
     let pathNormalized;
@@ -110,7 +121,8 @@ function normalizeQuery(original) {
     else {
         pathNormalized = original.replace(/\\/g, sep); // Help macOS/Linux users to search for paths when using backslash
     }
-    const normalized = stripWildcards(pathNormalized).replace(/\s/g, '');
+    // we remove quotes here because quotes are used for exact match search
+    const normalized = stripWildcards(pathNormalized).replace(/\s|"/g, '');
     return {
         pathNormalized,
         normalized,
