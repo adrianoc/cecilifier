@@ -36,7 +36,7 @@ namespace Cecilifier.Core.Extensions
         {
             if (method.IsDefinedInCurrentType(ctx))
             {
-                var tbf = (method.OverriddenMethod ?? method).AsMethodDefinitionVariable();
+                var tbf = method.AsMethodDefinitionVariable();
                 var found = ctx.DefinitionVariables.GetMethodVariable(tbf);
                 if (!found.IsValid)
                     throw new ArgumentException($"Could not find variable declaration for method {method.Name}.");
