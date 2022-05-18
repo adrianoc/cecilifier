@@ -111,8 +111,14 @@ namespace Cecilifier.Core.Extensions
             }
 
             cecilModifiersStr = cecilModifiersStr.AppendModifier("MethodAttributes.HideBySig").AppendModifier(modifiersStr);
+            if (methodSymbol.HasCovariantReturnType())
+            {
+                cecilModifiersStr = cecilModifiersStr.AppendModifier("MethodAttributes.NewSlot");
+            }
             return cecilModifiersStr;
         }
+
+        public static bool HasCovariantReturnType(this IMethodSymbol method) => method != null && method.IsOverride && !method.ReturnType.Equals(method.OverriddenMethod.ReturnType);
 
         private static bool IsExplicitMethodImplementation(IMethodSymbol methodSymbol)
         {

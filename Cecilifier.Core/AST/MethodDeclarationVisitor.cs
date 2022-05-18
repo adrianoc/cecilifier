@@ -145,6 +145,11 @@ namespace Cecilifier.Core.AST
         
                 if (modifiersTokens.IndexOf(SyntaxKind.ExternKeyword) == -1)
                 {
+                    if (methodSymbol.HasCovariantReturnType())
+                    {
+                        AddCecilExpression($"{methodVar}.CustomAttributes.Add(new CustomAttribute(assembly.MainModule.Import(typeof(System.Runtime.CompilerServices.PreserveBaseOverridesAttribute).GetConstructor(BindingFlags.Public | BindingFlags.Instance, null, new Type[0], null))));");
+                    }
+                    
                     if (!methodSymbol.IsAbstract)
                     {
                         ilVar = Context.Naming.ILProcessor(simpleName);
