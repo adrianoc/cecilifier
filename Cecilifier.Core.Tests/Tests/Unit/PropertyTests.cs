@@ -81,4 +81,15 @@ public class PropertyTests : CecilifierUnitTestBase
             @"var l_l_4 = new VariableDefinition\(assembly\.MainModule\.TypeSystem\.Int32\);\s+" +
 			$@"{targetMethod}\.Body\.Variables\.Add\(l_l_4\);"));
     }
+ 
+    [Test]
+    public void Covariant()
+    {
+        var result = RunCecilifier("class B { public virtual B Prop => null; } class D : B { public override D Prop => new D(); D CallIt() => Prop; }");
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+        
+        Assert.That(cecilifiedCode, Contains.Substring("var m_get_8 = new MethodDefinition(\"get_Prop\", MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.HideBySig | MethodAttributes.Virtual | MethodAttributes.NewSlot, cls_D_6);"));
+        Assert.That(cecilifiedCode, Does.Match(@"m_get_8\.CustomAttributes\.Add\(.+typeof\(.+PreserveBaseOverridesAttribute\).+\);"));
+        Assert.That(cecilifiedCode, Contains.Substring("il_callIt_12.Emit(OpCodes.Callvirt, m_get_8);"));
+    }
 }

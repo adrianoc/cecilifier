@@ -6,7 +6,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit;
 public class MethodTests : CecilifierUnitTestBase
 {
     [Test]
-    public void ContravariantReturns()
+    public void Covariant()
     {
         var result = RunCecilifier("class B { public virtual B Get() => null; } class D : B { public override D Get() => new D(); D CallIt() => Get(); }");
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
