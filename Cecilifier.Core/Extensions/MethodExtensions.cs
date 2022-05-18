@@ -107,10 +107,11 @@ namespace Cecilifier.Core.Extensions
 
             if (specificModifiers != null)
             {
-                cecilModifiersStr += $"| {specificModifiers}";
+                cecilModifiersStr = cecilModifiersStr.AppendModifier(specificModifiers);
             }
 
-            return cecilModifiersStr + " | MethodAttributes.HideBySig".AppendModifier(modifiersStr);
+            cecilModifiersStr = cecilModifiersStr.AppendModifier("MethodAttributes.HideBySig").AppendModifier(modifiersStr);
+            return cecilModifiersStr;
         }
 
         private static bool IsExplicitMethodImplementation(IMethodSymbol methodSymbol)

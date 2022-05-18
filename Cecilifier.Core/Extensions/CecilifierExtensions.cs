@@ -44,7 +44,7 @@ namespace Cecilifier.Core.Extensions
                 return modifier;
             }
 
-            return to + " | " + modifier;
+            return $"{to} | {modifier}";
         }
 
         public static string AsCecilApplication(this string cecilSnippet, string assemblyName, string entryPointVar = null)
