@@ -26,6 +26,7 @@ internal partial class TypeDeclarationVisitor
             Context,
             typeVar,
             node.Identifier.ValueText,
+            delegateSymbol.ContainingType?.Name,
             CecilDefinitionsFactory.DefaultTypeAttributeFor(node.Kind(), false).AppendModifier(accessibility),
             Context.TypeResolver.Bcl.System.MulticastDelegate,
             false,

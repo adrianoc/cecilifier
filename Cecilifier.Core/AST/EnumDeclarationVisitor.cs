@@ -27,10 +27,10 @@ namespace Cecilifier.Core.AST
 
             var enumType = Context.Naming.Type(node);
             var attrs = TypeModifiersToCecil(node);
-            var typeDef = CecilDefinitionsFactory.Type(Context, enumType, node.Identifier.ValueText, attrs + " | TypeAttributes.Sealed", Context.TypeResolver.Bcl.System.Enum, false, Array.Empty<string>());
+            var enumSymbol = Context.SemanticModel.GetDeclaredSymbol(node).EnsureNotNull<ISymbol, ISymbol>($"Something really bad happened. Roslyn failed to resolve the symbol for the enum {node.Identifier.Text}");
+            var typeDef = CecilDefinitionsFactory.Type(Context, enumType, node.Identifier.ValueText, enumSymbol.ContainingType?.Name, attrs + " | TypeAttributes.Sealed", Context.TypeResolver.Bcl.System.Enum, false, Array.Empty<string>());
             AddCecilExpressions(typeDef);
 
-            var enumSymbol = Context.SemanticModel.GetDeclaredSymbol(node).EnsureNotNull<ISymbol, ISymbol>($"Something really bad happened. Roslyn failed to resolve the symbol for the enum {node.Identifier.Text}");
             
             var parentName = enumSymbol.ContainingSymbol.FullyQualifiedName();
             using (Context.DefinitionVariables.WithCurrent(parentName, enumSymbol.FullyQualifiedName(), VariableMemberKind.Type,enumType))
