@@ -50,7 +50,7 @@ namespace Cecilifier.Core.Naming
 
         public string SyntheticVariable(string name, ElementKind kind) => $"{PrefixFor(kind)}{NameFor(name)}{UniqueIdString()}";
         public string LocalVariable(MemberDeclarationSyntax node) => $"{PrefixFor(ElementKind.LocalVariable)}{NameFor(node)}{UniqueIdString()}";
-        public string Constructor(BaseTypeDeclarationSyntax declaringType, bool isStatic) => $"{PrefixFor(isStatic ? ElementKind.StaticConstructor : ElementKind.Constructor)}{NameFor(declaringType)}{UniqueIdString()}";
+        public string Constructor(BaseTypeDeclarationSyntax type, bool isStatic) => $"{PrefixFor(isStatic ? ElementKind.StaticConstructor : ElementKind.Constructor)}{NameFor(type)}{UniqueIdString()}";
         public string Type(MemberDeclarationSyntax node) => $"{PrefixFor(ElementKindFrom(node))}{NameFor(node)}{UniqueIdString()}";
         public string Type(string baseName, ElementKind elementKind) => $"{PrefixFor(elementKind)}{NameFor(baseName)}{UniqueIdString()}";
         public string Parameter(ParameterSyntax parameterSyntax) => $"{PrefixFor(ElementKind.Parameter)}{NameFor(parameterSyntax.Identifier.Text)}{UniqueIdString()}";

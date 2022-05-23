@@ -7,7 +7,7 @@ namespace Cecilifier.Core.Naming
     {
         string SyntheticVariable(string name, ElementKind kind);
         string LocalVariable(MemberDeclarationSyntax node);
-        string Constructor(BaseTypeDeclarationSyntax declaringType, bool isStatic);
+        string Constructor(BaseTypeDeclarationSyntax type, bool isStatic);
         string Type(MemberDeclarationSyntax node);
         string Type(string baseName, ElementKind elementKind);
         string Parameter(ParameterSyntax parameterSyntax);
