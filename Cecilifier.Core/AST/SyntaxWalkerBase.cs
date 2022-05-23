@@ -808,6 +808,52 @@ namespace Cecilifier.Core.AST
 
             return attrsExp;
         }
+        
+        /*
+         * Ensure forward member references are correcly handled, i.e, support for scenario in which a method is being referenced
+         * before it has been declared. This can happen for instance in code like:
+         *
+         * class C
+         * {
+         *     void Foo() { Bar(); }
+         *     void Bar() {}
+         * }
+         *
+         * In this case when the first reference to Bar() is found (in method Foo()) the method itself has not been defined yet
+         * so we add a MethodDefinition for it but *no body*. Method body will be processed later, when the method is visited.
+         */
+        protected static void EnsureForwardedMethod(IVisitorContext context, string methodDeclarationVar, IMethodSymbol method, TypeParameterSyntax[] typeParameters)
+        {
+            if (!method.IsDefinedInCurrentType(context))
+                return;
+
+            var found = context.DefinitionVariables.GetMethodVariable(method.AsMethodDefinitionVariable());
+            if (found.IsValid)
+                return;
+
+            if (method.MethodKind == MethodKind.LocalFunction)
+            {
+                MethodDeclarationVisitor.AddMethodDefinition(context, methodDeclarationVar, $"<{method.ContainingSymbol.Name}>g__{method.Name}|0_0", "MethodAttributes.Assembly | MethodAttributes.Static | MethodAttributes.HideBySig", method.ReturnType, method.ReturnsByRef, typeParameters);
+            }
+            else
+            {
+                MethodDeclarationVisitor.AddMethodDefinition(context, methodDeclarationVar, method.Name, "MethodAttributes.Private", method.ReturnType, method.ReturnsByRef, typeParameters);
+            }
+
+            foreach (var parameter in method.Parameters)
+            {
+                var parameterExp = CecilDefinitionsFactory.Parameter(parameter, context.TypeResolver.Resolve(parameter.Type));
+                var paramVar = context.Naming.Parameter(parameter.Name);
+                context.WriteCecilExpression($"var {paramVar} = {parameterExp};");
+                context.WriteNewLine();
+                context.WriteCecilExpression($"{methodDeclarationVar}.Parameters.Add({paramVar});");
+                context.WriteNewLine();
+
+                context.DefinitionVariables.RegisterNonMethod(method.ToDisplayString(), parameter.Name, VariableMemberKind.Parameter, paramVar);
+            }
+            
+            context.DefinitionVariables.RegisterMethod(method.AsMethodDefinitionVariable(methodDeclarationVar));
+        }
 
         protected void LogUnsupportedSyntax(SyntaxNode node)
         {

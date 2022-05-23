@@ -548,7 +548,8 @@ namespace Cecilifier.Core.AST
                 return;
             }
 
-            EnsureMethodAvailable(Context.Naming.SyntheticVariable(ctor.ContainingType.Name, ElementKind.LocalVariable), ctor, Array.Empty<TypeParameterSyntax>());
+            var varName = Context.Naming.SyntheticVariable(ctor.ContainingType.Name, ElementKind.LocalVariable);
+            EnsureForwardedMethod(Context, varName, ctor, Array.Empty<TypeParameterSyntax>());
 
             string operand = ctor.MethodResolverExpression(Context);
             Context.EmitCilInstruction(ilVar, OpCodes.Newobj, operand);
@@ -923,50 +924,6 @@ namespace Cecilifier.Core.AST
             Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, tempLocalName);
         }
 
-        /*
-         * Support for scenario in which a method is being referenced before it has been declared. This can happen for instance in code like:
-         *
-         * class C
-         * {
-         *     void Foo() { Bar(); }
-         *     void Bar() {}
-         * }
-         *
-         * In this case when the first reference to Bar() is found (in method Foo()) the method itself has not been defined yet.
-         */
-        private void EnsureMethodAvailable(string varName, IMethodSymbol method, TypeParameterSyntax[] typeParameters)
-        {
-            if (!method.IsDefinedInCurrentType(Context))
-                return;
-
-            var found = Context.DefinitionVariables.GetMethodVariable(method.AsMethodDefinitionVariable());
-            if (found.IsValid)
-                return;
-
-            if (method.MethodKind == MethodKind.LocalFunction)
-            {
-                MethodDeclarationVisitor.AddMethodDefinition(Context, varName, $"<{method.ContainingSymbol.Name}>g__{method.Name}|0_0", "MethodAttributes.Assembly | MethodAttributes.Static | MethodAttributes.HideBySig", method.ReturnType, method.ReturnsByRef, typeParameters);
-            }
-            else
-            {
-                MethodDeclarationVisitor.AddMethodDefinition(Context, varName, method.Name, "MethodAttributes.Private", method.ReturnType, method.ReturnsByRef, typeParameters);
-            }
-
-            foreach (var parameter in method.Parameters)
-            {
-                var parameterExp = CecilDefinitionsFactory.Parameter(parameter, Context.TypeResolver.Resolve(parameter.Type));
-                var paramVar = Context.Naming.Parameter(parameter.Name);
-                Context.WriteCecilExpression($"var {paramVar} = {parameterExp};");
-                Context.WriteNewLine();
-                Context.WriteCecilExpression($"{varName}.Parameters.Add({paramVar});");
-                Context.WriteNewLine();
-
-                Context.DefinitionVariables.RegisterNonMethod(method.ToDisplayString(), parameter.Name, VariableMemberKind.Parameter, paramVar);
-            }
-            
-            Context.DefinitionVariables.RegisterMethod(method.AsMethodDefinitionVariable(varName));
-        }
-
         private void FixCallSite()
         {
             Context.MoveLineAfter(callFixList.Pop(), Context.CurrentLine);
@@ -1187,7 +1144,7 @@ namespace Cecilifier.Core.AST
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
             }
 
-            EnsureMethodAvailable(Context.Naming.SyntheticVariable(node.Identifier.Text, ElementKind.Method), method.OverriddenMethod ?? method.OriginalDefinition, Array.Empty<TypeParameterSyntax>());
+            EnsureForwardedMethod(Context, Context.Naming.SyntheticVariable(node.Identifier.Text, ElementKind.Method), method.OverriddenMethod ?? method.OriginalDefinition, Array.Empty<TypeParameterSyntax>());
             CecilDefinitionsFactory.InstantiateDelegate(Context, ilVar, delegateType, method.MethodResolverExpression(Context));
         }
         
@@ -1200,7 +1157,7 @@ namespace Cecilifier.Core.AST
             }
 
             //TODO: We need to find the InvocationSyntax that node represents...
-            EnsureMethodAvailable(Context.Naming.SyntheticVariable(node.Identifier.Text, ElementKind.Method), method.OverriddenMethod ?? method.OriginalDefinition, Array.Empty<TypeParameterSyntax>());
+            EnsureForwardedMethod(Context, Context.Naming.SyntheticVariable(node.Identifier.Text, ElementKind.Method), method.OverriddenMethod ?? method.OriginalDefinition, Array.Empty<TypeParameterSyntax>());
             var isAccessOnThis = !node.Parent.IsKind(SyntaxKind.SimpleMemberAccessExpression);
 
             var mae = node.Parent as MemberAccessExpressionSyntax;
