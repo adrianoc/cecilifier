@@ -20,10 +20,11 @@ namespace Cecilifier.Core.AST
         public override void VisitInterfaceDeclaration(InterfaceDeclarationSyntax node)
         {
             using var _ = LineInformationTracker.Track(Context, node);
-            var definitionVar = HandleInterfaceDeclaration(node);
+            var definitionVar = Context.Naming.Type(node);
             var interfaceSymbol = Context.SemanticModel.GetDeclaredSymbol(node);
             using (Context.DefinitionVariables.WithCurrent(interfaceSymbol.ContainingSymbol.FullyQualifiedName(), node.Identifier.ValueText, VariableMemberKind.Type, definitionVar))
             {
+                HandleTypeDeclaration(node, definitionVar);
                 base.VisitInterfaceDeclaration(node);
             }
         }
@@ -31,10 +32,11 @@ namespace Cecilifier.Core.AST
         public override void VisitClassDeclaration(ClassDeclarationSyntax node)
         {
             using var _ = LineInformationTracker.Track(Context, node);
-            var definitionVar = HandleTypeDeclaration(node);
+            var definitionVar = Context.Naming.Type(node);
             var classSymbol = Context.SemanticModel.GetDeclaredSymbol(node);
             using (Context.DefinitionVariables.WithCurrent(classSymbol.ContainingSymbol.FullyQualifiedName(), node.Identifier.ValueText, VariableMemberKind.Type, definitionVar))
             {
+                HandleTypeDeclaration(node, definitionVar);
                 base.VisitClassDeclaration(node);
                 EnsureCurrentTypeHasADefaultCtor(node, definitionVar);
             }
@@ -43,10 +45,11 @@ namespace Cecilifier.Core.AST
         public override void VisitStructDeclaration(StructDeclarationSyntax node)
         {
             using var _ = LineInformationTracker.Track(Context, node);
-            var definitionVar = HandleTypeDeclaration(node);
+            var definitionVar = Context.Naming.Type(node);
             var structSymbol = Context.SemanticModel.GetDeclaredSymbol(node);
             using (Context.DefinitionVariables.WithCurrent(structSymbol.ContainingSymbol.FullyQualifiedName(), node.Identifier.ValueText, VariableMemberKind.Type, definitionVar))
             {
+                HandleTypeDeclaration(node, definitionVar);
                 base.VisitStructDeclaration(node);
                 EnsureCurrentTypeHasADefaultCtor(node, definitionVar);
             }
@@ -131,26 +134,21 @@ namespace Cecilifier.Core.AST
             }
         }
 
-        private string HandleInterfaceDeclaration(TypeDeclarationSyntax node)
-        {
-            return HandleTypeDeclaration(node);
-        }
-
-        private string HandleTypeDeclaration(TypeDeclarationSyntax node)
+        private string HandleTypeDeclaration(TypeDeclarationSyntax node, string varName)
         {
             Context.WriteNewLine();
             Context.WriteComment($"{node.Kind()} : {node.Identifier}");
 
             var typeSymbol = DeclaredSymbolFor(node);
             var baseType = (typeSymbol.BaseType == null || typeSymbol.BaseType.IsGenericType) ? null : Context.TypeResolver.Resolve(typeSymbol.BaseType);
-            var varName = Context.Naming.Type(node);
             var isStructWithNoFields = node.Kind() == SyntaxKind.StructDeclaration && node.Members.Count == 0;
             var typeDefinitionExp = CecilDefinitionsFactory.Type(
                                             Context, 
                                             varName,
                                             node.Identifier.ValueText, 
-                                            TypeModifiersToCecil(node), 
+                                            TypeModifiersToCecil(node),
                                             baseType,
+                                            typeSymbol.ContainingType?.Name,
                                             isStructWithNoFields, 
                                             ImplementedInterfacesFor(node.BaseList).Select(i => Context.TypeResolver.Resolve(i)),
                                             node.TypeParameterList?.Parameters,
