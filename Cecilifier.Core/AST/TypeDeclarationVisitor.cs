@@ -134,27 +134,15 @@ namespace Cecilifier.Core.AST
             }
         }
 
-        private string HandleTypeDeclaration(TypeDeclarationSyntax node, string varName)
+        private void HandleTypeDeclaration(TypeDeclarationSyntax node, string varName)
         {
-            Context.WriteNewLine();
-            Context.WriteComment($"{node.Kind()} : {node.Identifier}");
-
             var typeSymbol = DeclaredSymbolFor(node);
-            var baseType = (typeSymbol.BaseType == null || typeSymbol.BaseType.IsGenericType) ? null : Context.TypeResolver.Resolve(typeSymbol.BaseType);
-            var isStructWithNoFields = node.Kind() == SyntaxKind.StructDeclaration && node.Members.Count == 0;
-            var typeDefinitionExp = CecilDefinitionsFactory.Type(
-                                            Context, 
-                                            varName,
-                                            node.Identifier.ValueText, 
-                                            TypeModifiersToCecil(node),
-                                            baseType,
-                                            typeSymbol.ContainingType?.Name,
-                                            isStructWithNoFields, 
-                                            ImplementedInterfacesFor(node.BaseList).Select(i => Context.TypeResolver.Resolve(i)),
-                                            node.TypeParameterList?.Parameters,
-                                            node.CollectOuterTypeArguments());
-            
-            AddCecilExpressions(typeDefinitionExp);
+
+            var found = Context.DefinitionVariables.GetVariable(typeSymbol.Name, VariableMemberKind.Type, typeSymbol.ContainingType?.Name);
+            if (!found.IsValid || !found.IsForwarded)
+            {
+                AddTypeDefinition(Context, varName, typeSymbol, TypeModifiersToCecil(node), node.TypeParameterList?.Parameters, node.CollectOuterTypeArguments());
+            }
 
             if (typeSymbol.BaseType?.IsGenericType == true)
             {
@@ -166,12 +154,45 @@ namespace Cecilifier.Core.AST
             HandleAttributesInMemberDeclaration(node.AttributeLists, varName);
 
             NonCapturingLambdaProcessor.InjectSyntheticMethodsForNonCapturingLambdas(Context, node, varName);
-            
-            Context.WriteCecilExpression(Environment.NewLine);
 
-            return varName;
+            Context.WriteNewLine();
         }
 
+        internal static void EnsureForwardedTypeDefinition(IVisitorContext context, string typeDeclarationVar, ITypeSymbol typeSymbol, IEnumerable<TypeParameterSyntax> typeParameters)
+        {
+            var found = context.DefinitionVariables.GetVariable(typeSymbol.Name, VariableMemberKind.Type, typeSymbol.ContainingType?.Name);
+            if (found.IsValid)
+                return;
+            
+            var typeDeclaration =  (BaseTypeDeclarationSyntax) typeSymbol.DeclaringSyntaxReferences.First().GetSyntax();
+            AddTypeDefinition(context, typeDeclarationVar, typeSymbol, TypeModifiersToCecil(typeDeclaration), typeParameters, Array.Empty<TypeParameterSyntax>());
+            
+            var v = context.DefinitionVariables.RegisterNonMethod(typeSymbol.ContainingSymbol?.FullyQualifiedName(), typeSymbol.Name, VariableMemberKind.Type, typeDeclarationVar);
+            v.IsForwarded = true;
+        }
+
+        private static void AddTypeDefinition(IVisitorContext context, string typeDeclarationVar, ITypeSymbol typeSymbol, string typeModifiers, IEnumerable<TypeParameterSyntax> typeParameters, IEnumerable<TypeParameterSyntax> outerTypeParameters)
+        {
+            context.WriteNewLine();
+            context.WriteComment($"{typeSymbol.TypeKind} : {typeSymbol.Name}");
+
+            var baseType = (typeSymbol.BaseType == null || typeSymbol.BaseType.IsGenericType) ? null : context.TypeResolver.Resolve(typeSymbol.BaseType);
+            var isStructWithNoFields = typeSymbol.TypeKind == TypeKind.Struct && typeSymbol.GetMembers().Length == 0 ;
+            var typeDefinitionExp = CecilDefinitionsFactory.Type(
+                context, 
+                typeDeclarationVar,
+                typeSymbol.Name, 
+                typeModifiers,
+                baseType,
+                typeSymbol.ContainingType?.Name,
+                isStructWithNoFields,
+                typeSymbol.Interfaces.Select(itf => context.TypeResolver.Resolve(itf)),
+                typeParameters,
+                outerTypeParameters); 
+            
+            AddCecilExpressions(context, typeDefinitionExp);
+        }
+        
         private void EnsureCurrentTypeHasADefaultCtor(TypeDeclarationSyntax node, string typeLocalVar)
         {
             node.Accept(new DefaultCtorVisitor(Context, typeLocalVar));
@@ -232,10 +253,6 @@ namespace Cecilifier.Core.AST
 
         public override void VisitConstructorDeclaration(ConstructorDeclarationSyntax ctorNode)
         {
-            // bailout in case the ctor has parameters
-            if (ctorNode.ParameterList.Parameters.Count > 0)
-                return;
-
             foundConstructors |= ctorNode.Modifiers.Any(t => t.IsKind(SyntaxKind.StaticKeyword)) ? ConstructorKind.Static : ConstructorKind.Instance;
         }
 

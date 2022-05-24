@@ -83,7 +83,11 @@ public class DefinitionVariableManager
 
     public ScopedDefinitionVariable WithCurrent(string parentName, string memberName, VariableMemberKind variableMemberKind, string definitionVariableName)
     {
-        var registered = RegisterNonMethod(parentName, memberName, variableMemberKind, definitionVariableName);
+        var found = GetVariable(memberName, variableMemberKind, parentName);
+        var registered = found.IsValid 
+            ? found 
+            : RegisterNonMethod(parentName, memberName, variableMemberKind, definitionVariableName);
+        
         _definitionStack.Add(registered);
         return new ScopedDefinitionVariable(_definitionStack, _definitionStack.Count - 1);
     }

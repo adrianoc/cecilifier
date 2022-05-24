@@ -257,7 +257,7 @@ namespace Cecilifier.Core.AST
             return Utils.ImportFromMainModule($"typeof({type.FullName})");
         }
 
-        protected string TypeModifiersToCecil(BaseTypeDeclarationSyntax node)
+        protected static string TypeModifiersToCecil(BaseTypeDeclarationSyntax node)
         {
             var hasStaticCtor = node.DescendantNodes().OfType<ConstructorDeclarationSyntax>().Any(d => d.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword)));
             var typeAttributes = CecilDefinitionsFactory.DefaultTypeAttributeFor(node.Kind(), hasStaticCtor);
@@ -656,11 +656,17 @@ namespace Cecilifier.Core.AST
 
             foreach (var attribute in attributeLists.SelectMany(al => al.Attributes))
             {
+                EnsureForwardedType(
+                    Context, 
+                    Context.Naming.Type(attribute.Name.ValueText().AttributeName(), ElementKind.Class),
+                    Context.SemanticModel.GetSymbolInfo(attribute).Symbol.EnsureNotNull<ISymbol, IMethodSymbol>().ContainingType, 
+                    Array.Empty<TypeParameterSyntax>()); //TODO: Pass the correct list of type parameters when C# supports generic attributes.
+                
                 var attrsExp = Context.SemanticModel.GetSymbolInfo(attribute.Name).Symbol.IsDllImportCtor()
                     ? ProcessDllImportAttribute(attribute, varName)
                     : ProcessNormalMemberAttribute(attribute, varName);
                 
-                AddCecilExpressions(attrsExp);
+                AddCecilExpressions(Context, attrsExp);
             }
         }
 
@@ -799,6 +805,7 @@ namespace Cecilifier.Core.AST
             
                 // Attribute is defined in the same assembly. We need to find the variable that holds its "ctor declaration"
                 var attrCtor = attrType.GetMembers().OfType<IMethodSymbol>().SingleOrDefault(m => m.MethodKind == MethodKind.Constructor && m.Parameters.Length == attrArgs.Length);
+                EnsureForwardedMethod(Context, Context.Naming.SyntheticVariable(attribute.Name.ValueText().AttributeName(), ElementKind.Constructor), attrCtor, Array.Empty<TypeParameterSyntax>());
                 var attrCtorVar = Context.DefinitionVariables.GetMethodVariable(attrCtor.AsMethodDefinitionVariable());
                 if (!attrCtorVar.IsValid)
                     throw new Exception($"Could not find variable for {attrCtor.ContainingType.Name} ctor.");
@@ -853,6 +860,14 @@ namespace Cecilifier.Core.AST
             }
             
             context.DefinitionVariables.RegisterMethod(method.AsMethodDefinitionVariable(methodDeclarationVar));
+        }
+        
+        private static void EnsureForwardedType(IVisitorContext context, string typeDeclarationVar, ITypeSymbol type, TypeParameterSyntax[] typeParameters)
+        {
+            if (!type.IsDefinedInCurrentType(context))
+                return;
+
+            TypeDeclarationVisitor.EnsureForwardedTypeDefinition(context, typeDeclarationVar, type, typeParameters);
         }
 
         protected void LogUnsupportedSyntax(SyntaxNode node)
