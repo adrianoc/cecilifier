@@ -1,11 +1,37 @@
 ## [Unreleased]
 
+- bumped cecilifier version to 1.50.0
+
+## 15/May/2022
+
 ## Changed
 
 - bumped cecilifier version to 1.40.0
+- updated Monaco editor to 0.32.1
+- avoids redundant assignment to type's base type property when not necessary
+- fully qualifies type names when resolving external types (#174)
+- specifies correct type (text) when sending back json contents through the websocket.
+- optimizes CecilifierExtensions.PascalCase() method to minimize gc allocations
+- moves delegate method attributes constants to Constants.CommonCecilConstants
+- removes some code duplication by reusing AddDelegateMethod() instead of more low-level ones
+- gets rid of some allocations by resorting to ReadOnlySpan and StringBuilder
+- gets rid of some allocations by moving UsageVisitor to a singleton
 
 ## Added
+
+- comment to instruction that loads pre-computed span size
+- basic support for adding inline comments when emitting CIL instructions
+- support for stackalloc in nested expressions
+- support for specifying assemblies to be referenced when cecilifying code snippets.
+
+
 ## Fixed
+
+- generated code for property/method access on type parameter (#170)
+- inner delegate declaration being ignored (#156)
+- static fields/properties not being initialized if class do not have a static constructor (#167)
+- locals declared in lambda expressions (#176)
+- locals declared in property/event accessors (#175)
 
 ## 20/March/2022
 
