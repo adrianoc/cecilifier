@@ -175,6 +175,8 @@ namespace Cecilifier.Core.AST
         {
             context.WriteNewLine();
             context.WriteComment($"{typeSymbol.TypeKind} : {typeSymbol.Name}");
+            
+            typeParameters ??= Array.Empty<TypeParameterSyntax>();
 
             var baseType = (typeSymbol.BaseType == null || typeSymbol.BaseType.IsGenericType) ? null : context.TypeResolver.Resolve(typeSymbol.BaseType);
             var isStructWithNoFields = typeSymbol.TypeKind == TypeKind.Struct && typeSymbol.GetMembers().Length == 0 ;
@@ -191,6 +193,8 @@ namespace Cecilifier.Core.AST
                 outerTypeParameters); 
             
             AddCecilExpressions(context, typeDefinitionExp);
+
+            HandleAttributesInTypeParameter(context, typeParameters);
         }
         
         private void EnsureCurrentTypeHasADefaultCtor(TypeDeclarationSyntax node, string typeLocalVar)

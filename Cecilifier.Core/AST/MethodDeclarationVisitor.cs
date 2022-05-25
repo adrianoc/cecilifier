@@ -212,11 +212,14 @@ namespace Cecilifier.Core.AST
             context.WriteComment($"Method : {methodName}");
 
             var exps = CecilDefinitionsFactory.Method(context, methodVar, methodName, methodModifiers, returnType, refReturn, typeParameters);
+            
             foreach (var exp in exps)
             {
                 context.WriteCecilExpression(exp);
                 context.WriteNewLine();
             }
+
+            HandleAttributesInTypeParameter(context, typeParameters);
         }
 
         protected virtual string GetSpecificModifiers()

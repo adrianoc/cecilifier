@@ -651,33 +651,49 @@ namespace Cecilifier.Core.AST
         
         protected void HandleAttributesInMemberDeclaration(IEnumerable<AttributeListSyntax> attributeLists, string varName)
         {
+            HandleAttributesInMemberDeclaration(Context, attributeLists, varName);
+        }
+        
+        protected static void HandleAttributesInTypeParameter(IVisitorContext context, IEnumerable<TypeParameterSyntax> typeParameters)
+        {
+            foreach (var typeParameter in typeParameters)
+            {
+                var symbol = context.SemanticModel.GetDeclaredSymbol(typeParameter).EnsureNotNull();
+                var parentName = symbol.TypeParameterKind == TypeParameterKind.Method ? symbol.DeclaringMethod?.Name : symbol.DeclaringType?.Name;
+                var found = context.DefinitionVariables.GetVariable(typeParameter.Identifier.Text, VariableMemberKind.TypeParameter, parentName);
+                HandleAttributesInMemberDeclaration(context, typeParameter.AttributeLists, found.VariableName);
+            }
+        }
+        
+        protected static void HandleAttributesInMemberDeclaration(IVisitorContext context, IEnumerable<AttributeListSyntax> attributeLists, string targetDeclarationVar)
+        {
             if (!attributeLists.Any())
                 return;
 
             foreach (var attribute in attributeLists.SelectMany(al => al.Attributes))
             {
                 EnsureForwardedType(
-                    Context, 
-                    Context.Naming.Type(attribute.Name.ValueText().AttributeName(), ElementKind.Class),
-                    Context.SemanticModel.GetSymbolInfo(attribute).Symbol.EnsureNotNull<ISymbol, IMethodSymbol>().ContainingType, 
+                    context, 
+                    context.Naming.Type(attribute.Name.ValueText().AttributeName(), ElementKind.Class),
+                    context.SemanticModel.GetSymbolInfo(attribute).Symbol.EnsureNotNull<ISymbol, IMethodSymbol>().ContainingType, 
                     Array.Empty<TypeParameterSyntax>()); //TODO: Pass the correct list of type parameters when C# supports generic attributes.
                 
-                var attrsExp = Context.SemanticModel.GetSymbolInfo(attribute.Name).Symbol.IsDllImportCtor()
-                    ? ProcessDllImportAttribute(attribute, varName)
-                    : ProcessNormalMemberAttribute(attribute, varName);
+                var attrsExp = context.SemanticModel.GetSymbolInfo(attribute.Name).Symbol.IsDllImportCtor()
+                    ? ProcessDllImportAttribute(context, attribute, targetDeclarationVar)
+                    : ProcessNormalMemberAttribute(context, attribute, targetDeclarationVar);
                 
-                AddCecilExpressions(Context, attrsExp);
+                AddCecilExpressions(context, attrsExp);
             }
         }
 
-        private IEnumerable<string> ProcessDllImportAttribute(AttributeSyntax attribute, string methodVar)
+        private static IEnumerable<string> ProcessDllImportAttribute(IVisitorContext context, AttributeSyntax attribute, string methodVar)
         {
             var moduleName = attribute.ArgumentList?.Arguments.First().ToFullString();
-            var existingModuleVar = Context.DefinitionVariables.GetVariable(moduleName, VariableMemberKind.ModuleReference);
+            var existingModuleVar = context.DefinitionVariables.GetVariable(moduleName, VariableMemberKind.ModuleReference);
             
             var moduleVar = existingModuleVar.IsValid 
                 ?  existingModuleVar.VariableName
-                :  Context.Naming.SyntheticVariable("dllImportModule", ElementKind.LocalVariable); 
+                :  context.Naming.SyntheticVariable("dllImportModule", ElementKind.LocalVariable); 
 
             var exps = new List<string>
             {
@@ -695,7 +711,7 @@ namespace Cecilifier.Core.AST
                 });
             }
 
-            Context.DefinitionVariables.RegisterNonMethod("", moduleName, VariableMemberKind.ModuleReference, moduleVar);
+            context.DefinitionVariables.RegisterNonMethod("", moduleName, VariableMemberKind.ModuleReference, moduleVar);
             
             return exps;
             
@@ -775,7 +791,7 @@ namespace Cecilifier.Core.AST
             }
         }
 
-        private string CallingConventionToCecil(CallingConvention callingConvention)
+        private static string CallingConventionToCecil(CallingConvention callingConvention)
         {
             var enumMemberName = callingConvention switch
             {
@@ -791,22 +807,22 @@ namespace Cecilifier.Core.AST
             return $"PInvokeAttributes.{enumMemberName}";
         }
 
-        private IEnumerable<string> ProcessNormalMemberAttribute(AttributeSyntax attribute, string varName)
+        private static IEnumerable<string> ProcessNormalMemberAttribute(IVisitorContext context, AttributeSyntax attribute, string targetDeclarationVar)
         {
-            var attrsExp = CecilDefinitionsFactory.Attribute(varName, Context, attribute, (attrType, attrArgs) =>
+            var attrsExp = CecilDefinitionsFactory.Attribute(targetDeclarationVar, context, attribute, (attrType, attrArgs) =>
             {
-                var typeVar = Context.TypeResolver.ResolveLocalVariableType(attrType);
+                var typeVar = context.TypeResolver.ResolveLocalVariableType(attrType);
                 if (typeVar == null)
                 {
                     //attribute is not declared in the same assembly....
-                    var ctorArgumentTypes = $"new Type[{attrArgs.Length}] {{ {string.Join(",", attrArgs.Select(arg => $"typeof({Context.GetTypeInfo(arg.Expression).Type?.Name})"))} }}";
+                    var ctorArgumentTypes = $"new Type[{attrArgs.Length}] {{ {string.Join(",", attrArgs.Select(arg => $"typeof({context.GetTypeInfo(arg.Expression).Type?.Name})"))} }}";
                     return Utils.ImportFromMainModule($"typeof({attrType.AssemblyQualifiedName()}).GetConstructor({ctorArgumentTypes})");
                 }
             
                 // Attribute is defined in the same assembly. We need to find the variable that holds its "ctor declaration"
                 var attrCtor = attrType.GetMembers().OfType<IMethodSymbol>().SingleOrDefault(m => m.MethodKind == MethodKind.Constructor && m.Parameters.Length == attrArgs.Length);
-                EnsureForwardedMethod(Context, Context.Naming.SyntheticVariable(attribute.Name.ValueText().AttributeName(), ElementKind.Constructor), attrCtor, Array.Empty<TypeParameterSyntax>());
-                var attrCtorVar = Context.DefinitionVariables.GetMethodVariable(attrCtor.AsMethodDefinitionVariable());
+                EnsureForwardedMethod(context, context.Naming.SyntheticVariable(attribute.Name.ValueText().AttributeName(), ElementKind.Constructor), attrCtor, Array.Empty<TypeParameterSyntax>());
+                var attrCtorVar = context.DefinitionVariables.GetMethodVariable(attrCtor.AsMethodDefinitionVariable());
                 if (!attrCtorVar.IsValid)
                     throw new Exception($"Could not find variable for {attrCtor.ContainingType.Name} ctor.");
             
