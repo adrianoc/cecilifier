@@ -50,7 +50,7 @@ namespace Cecilifier.Core.AST
                 });
 
                 var exps = CecilDefinitionsFactory.Parameter(parameter, Context.SemanticModel, propDefVar, paramVar, ResolveType(parameter.Type), parameter.Accept(DefaultParameterExtractorVisitor.Instance));
-                AddCecilExpressions(exps);
+                AddCecilExpressions(Context, exps);
                 Context.DefinitionVariables.RegisterNonMethod(indexerSymbol.ToDisplayString(), parameter.Identifier.ValueText, VariableMemberKind.Parameter, paramVar);
             }
 
@@ -108,7 +108,7 @@ namespace Cecilifier.Core.AST
                 $"{definitionVar}.CustomAttributes.Add({customAttrVar});"
             };
 
-            AddCecilExpressions(exps);
+            AddCecilExpressions(Context, exps);
         }
         
         private void ProcessPropertyAccessors(BasePropertyDeclarationSyntax node, string propertyDeclaringTypeVar, string propName, string propertyType, string propDefVar, List<ParamData> parameters, ArrowExpressionClauseSyntax? arrowExpression)
@@ -161,7 +161,7 @@ namespace Cecilifier.Core.AST
                 }
                 
                 var backingFieldExps = CecilDefinitionsFactory.Field(Context, propertySymbol.ContainingSymbol.ToDisplayString() , propertyDeclaringTypeVar, backingFieldVar, Utils.BackingFieldNameForAutoProperty(propName), propertyType, modifiers);
-                AddCecilExpressions(backingFieldExps);
+                AddCecilExpressions(Context, backingFieldExps);
             }
 
             void AddSetterMethod(string setterReturnType, AccessorDeclarationSyntax accessor)

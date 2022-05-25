@@ -29,7 +29,7 @@ namespace Cecilifier.Core.AST
             var attrs = TypeModifiersToCecil(node);
             var enumSymbol = Context.SemanticModel.GetDeclaredSymbol(node).EnsureNotNull<ISymbol, ISymbol>($"Something really bad happened. Roslyn failed to resolve the symbol for the enum {node.Identifier.Text}");
             var typeDef = CecilDefinitionsFactory.Type(Context, enumType, node.Identifier.ValueText, enumSymbol.ContainingType?.Name, attrs + " | TypeAttributes.Sealed", Context.TypeResolver.Bcl.System.Enum, false, Array.Empty<string>());
-            AddCecilExpressions(typeDef);
+            AddCecilExpressions(Context, typeDef);
 
             
             var parentName = enumSymbol.ContainingSymbol.FullyQualifiedName();
@@ -39,7 +39,7 @@ namespace Cecilifier.Core.AST
                 var fieldVar = Context.Naming.LocalVariable(node);
                 var valueFieldExp = CecilDefinitionsFactory.Field(Context, enumSymbol.ToDisplayString(), enumType, fieldVar, "value__", Context.TypeResolver.Bcl.System.Int32,
                     "FieldAttributes.SpecialName | FieldAttributes.RTSpecialName | FieldAttributes.Public");
-                AddCecilExpressions(valueFieldExp);
+                AddCecilExpressions(Context, valueFieldExp);
 
                 HandleAttributesInMemberDeclaration(node.AttributeLists, enumType);
 
@@ -59,7 +59,7 @@ namespace Cecilifier.Core.AST
             var fieldVar = Context.Naming.LocalVariable(node);
             var exp = CecilDefinitionsFactory.Field(Context, enumMemberSymbol.ContainingSymbol.ToDisplayString() , enumVarDef.VariableName, fieldVar, node.Identifier.ValueText, enumVarDef.VariableName,
                 "FieldAttributes.Static | FieldAttributes.Literal | FieldAttributes.Public | FieldAttributes.HasDefault", enumMemberValue);
-            AddCecilExpressions(exp);
+            AddCecilExpressions(Context, exp);
             
             HandleAttributesInMemberDeclaration(node.AttributeLists, fieldVar);
 

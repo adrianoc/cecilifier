@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.Extensions;
@@ -100,7 +100,7 @@ namespace Cecilifier.Core.AST
             {
                 Context.DefinitionVariables.RegisterNonMethod(containingSymbol.ToDisplayString(), node.Identifier.ValueText, VariableMemberKind.Parameter, paramVar);
                 var exps = CecilDefinitionsFactory.Parameter(node, Context.SemanticModel, declaringMethodVariable, paramVar, ResolveType(node.Type), node.Accept(DefaultParameterExtractorVisitor.Instance));
-                AddCecilExpressions(exps);
+                AddCecilExpressions(Context, exps);
             }
 
             HandleAttributesInMemberDeclaration(node.AttributeLists, paramVar);

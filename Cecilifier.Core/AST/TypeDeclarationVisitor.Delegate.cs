@@ -34,7 +34,7 @@ internal partial class TypeDeclarationVisitor
             node.TypeParameterList,
             "IsAnsiClass = true");
 
-        AddCecilExpressions(typeDef);
+        AddCecilExpressions(Context, typeDef);
         HandleAttributesInMemberDeclaration(node.AttributeLists, typeVar);
 
         using (Context.DefinitionVariables.WithCurrent(delegateSymbol.ContainingType?.Name ?? string.Empty, node.Identifier.ValueText, VariableMemberKind.Type, typeVar))
@@ -94,8 +94,8 @@ internal partial class TypeDeclarationVisitor
                 Constants.ParameterAttributes.None,
                 defaultParameterValue: null);
 
-            AddCecilExpressions(endInvokeExps);
-            AddCecilExpressions(endInvokeParamExps);
+            AddCecilExpressions(Context, endInvokeExps);
+            AddCecilExpressions(Context, endInvokeParamExps);
             AddCecilExpression($"{typeVar}.Methods.Add({endInvokeMethodVar});");
 
             base.VisitDelegateDeclaration(node);
@@ -113,7 +113,7 @@ internal partial class TypeDeclarationVisitor
     
             foreach (var param in parameters)
             {
-                AddCecilExpressions(parameterHandler(methodLocalVar, param));
+                AddCecilExpressions(Context, parameterHandler(methodLocalVar, param));
             }
     
             AddCecilExpression($"{typeLocalVar}.Methods.Add({methodLocalVar});");

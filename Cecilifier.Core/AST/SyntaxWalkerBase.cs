@@ -27,11 +27,11 @@ namespace Cecilifier.Core.AST
 
         protected IVisitorContext Context { get; }
 
-        protected void AddCecilExpressions(IEnumerable<string> exps)
+        protected static void AddCecilExpressions(IVisitorContext context, IEnumerable<string> exps)
         {
             foreach (var exp in exps)
             {
-                AddCecilExpression(exp);
+                WriteCecilExpression(context, exp);
             }
         }
 
