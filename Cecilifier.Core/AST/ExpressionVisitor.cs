@@ -1014,7 +1014,7 @@ namespace Cecilifier.Core.AST
                 ? fieldDeclarationVariable.VariableName
                 : fieldSymbol.FieldResolverExpression(Context);
 
-            var opCode = LoadOpCodeForFieldAccess(fieldSymbol);
+            var opCode = fieldSymbol.LoadOpCodeForFieldAccess();
             Context.EmitCilInstruction(ilVar, opCode, resolvedField);
 
             EmitBoxOpCodeIfCallOnTypeParameter(fieldSymbol.Type, nodeParent);

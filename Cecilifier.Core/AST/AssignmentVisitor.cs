@@ -183,12 +183,11 @@ namespace Cecilifier.Core.AST
 
         private void FieldAssignment(IFieldSymbol field, IdentifierNameSyntax name)
         {
-            var storeOpCode = field.IsStatic ? OpCodes.Stsfld : OpCodes.Stfld;
             if (field.IsVolatile)
                 Context.EmitCilInstruction(ilVar, OpCodes.Volatile);
 
             var definitionVariable = field.EnsureFieldExists(Context, name);
-            Context.EmitCilInstruction(ilVar, storeOpCode, definitionVariable.VariableName);
+            Context.EmitCilInstruction(ilVar, field.StoreOpCodeForFieldAccess(), definitionVariable.VariableName);
         }
 
         private void LocalVariableAssignment(ILocalSymbol localVariable)

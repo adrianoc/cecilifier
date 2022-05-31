@@ -130,7 +130,7 @@ namespace Cecilifier.Core.AST
                 switch (accessor.Keyword.Kind())
                 {
                     case SyntaxKind.GetKeyword:
-                        AddGetterMethod(accessor, propertySymbol.HasCovariantGetter());
+                        AddGetterMethod(accessor, propertySymbol);
                         break;
 
                     case SyntaxKind.InitKeyword:
@@ -155,10 +155,11 @@ namespace Cecilifier.Core.AST
 
                 backingFieldVar = Context.Naming.FieldDeclaration(node);
                 var modifiers = ModifiersToCecil(accessor.Modifiers, "FieldAttributes", "Private");
-                if (hasInitProperty)
-                {
+                if (hasInitProperty) 
                     modifiers = modifiers.AppendModifier("FieldAttributes.InitOnly");
-                }
+
+                if (propertySymbol.IsStatic)
+                    modifiers = modifiers.AppendModifier("FieldAttributes.Static");
                 
                 var backingFieldExps = CecilDefinitionsFactory.Field(Context, propertySymbol.ContainingSymbol.ToDisplayString() , propertyDeclaringTypeVar, backingFieldVar, Utils.BackingFieldNameForAutoProperty(propName), propertyType, modifiers);
                 AddCecilExpressions(Context, backingFieldExps);
@@ -192,10 +193,12 @@ namespace Cecilifier.Core.AST
                     {
                         AddBackingFieldIfNeeded(accessor, node.AccessorList.Accessors.Any(acc => acc.IsKind(SyntaxKind.InitAccessorDeclaration)));
 
-                        Context.EmitCilInstruction(ilSetVar, OpCodes.Ldarg_0); // TODO: This assumes instance properties...
-                        Context.EmitCilInstruction(ilSetVar, OpCodes.Ldarg_1);
-                        string operand = Utils.MakeGenericTypeIfAppropriate(Context, propertySymbol, backingFieldVar, propertyDeclaringTypeVar);
-                        Context.EmitCilInstruction(ilSetVar, OpCodes.Stfld, operand);
+                        Context.EmitCilInstruction(ilSetVar, OpCodes.Ldarg_0);
+                        if (!propertySymbol.IsStatic)
+                            Context.EmitCilInstruction(ilSetVar, OpCodes.Ldarg_1);
+                        
+                        var operand = MakeGenericTypeIfAppropriate(Context, propertySymbol, backingFieldVar, propertyDeclaringTypeVar);
+                        Context.EmitCilInstruction(ilSetVar, propertySymbol.StoreOpCodeForFieldAccess(), operand);
                     }
                     else if (accessor.Body != null)
                     {
@@ -245,9 +248,9 @@ namespace Cecilifier.Core.AST
                 ProcessExpressionBodiedGetter(ilVar, arrowExpression);
             }
             
-            void AddGetterMethod(AccessorDeclarationSyntax accessor, bool isCovariant)
+            void AddGetterMethod(AccessorDeclarationSyntax accessor, IPropertySymbol propertySymbol)
             {
-                using var _ = AddGetterMethodGuts(isCovariant, out var ilVar);
+                using var _ = AddGetterMethodGuts(propertySymbol.HasCovariantGetter(), out var ilVar);
                 if (ilVar == null)
                     return;
              
@@ -255,9 +258,10 @@ namespace Cecilifier.Core.AST
                 {
                     AddBackingFieldIfNeeded(accessor, node.AccessorList.Accessors.Any(acc => acc.IsKind(SyntaxKind.InitAccessorDeclaration)));
 
-                    Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0); // TODO: This assumes instance properties...
-                    string operand = Utils.MakeGenericTypeIfAppropriate(Context, propertySymbol, backingFieldVar, propertyDeclaringTypeVar);
-                    Context.EmitCilInstruction(ilVar, OpCodes.Ldfld, operand);
+                    if (!propertySymbol.IsStatic)
+                        Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
+                    var operand = Utils.MakeGenericTypeIfAppropriate(Context, propertySymbol, backingFieldVar, propertyDeclaringTypeVar);
+                    Context.EmitCilInstruction(ilVar, propertySymbol.LoadOpCodeForFieldAccess(), operand);
 
                     Context.EmitCilInstruction(ilVar, OpCodes.Ret);
                 }
