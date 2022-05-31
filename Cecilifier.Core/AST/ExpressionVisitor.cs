@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
@@ -235,7 +234,7 @@ namespace Cecilifier.Core.AST
             var indexer = targetType.GetMembers().OfType<IPropertySymbol>().FirstOrDefault(p => p.IsIndexer && p.Parameters.Length == node.ArgumentList.Arguments.Count);
             if (expressionInfo.Symbol.GetMemberType().Kind != SymbolKind.ArrayType && indexer != null)
             {
-                EnsurePropertyExists(node, indexer);
+                indexer.EnsurePropertyExists(Context, node);
                 AddMethodCall(ilVar, indexer.GetMethod);
                 HandlePotentialRefLoad(ilVar, node, indexer.Type);
             }
@@ -936,7 +935,7 @@ namespace Cecilifier.Core.AST
 
         private void ProcessProperty(SimpleNameSyntax node, IPropertySymbol propertySymbol)
         {
-            EnsurePropertyExists(node, propertySymbol);
+            propertySymbol.EnsurePropertyExists(Context, node);
             
             var parentMae = node.Parent as MemberAccessExpressionSyntax;
             var isAccessOnThisOrObjectCreation = true;
@@ -976,20 +975,6 @@ namespace Cecilifier.Core.AST
                 }
             }
         }
-        
-        private void EnsurePropertyExists(SyntaxNode node, [NotNull] IPropertySymbol propertySymbol)
-        {
-            var declaringReference = propertySymbol.DeclaringSyntaxReferences.SingleOrDefault();
-            if (declaringReference == null)
-                return;
-            
-            var propertyDeclaration = (BasePropertyDeclarationSyntax) declaringReference.GetSyntax();
-            if (propertyDeclaration.Span.Start > node.Span.End)
-            {
-                // this is a forward reference, process it...
-                propertyDeclaration.Accept(new PropertyDeclarationVisitor(Context));
-            }
-        }
 
         private void ProcessField(SimpleNameSyntax node, IFieldSymbol fieldSymbol)
         {
@@ -1011,7 +996,7 @@ namespace Cecilifier.Core.AST
                 return;
             }
             
-            var fieldDeclarationVariable = EnsureFieldExists(node, fieldSymbol);
+            var fieldDeclarationVariable = fieldSymbol.EnsureFieldExists(Context, node);
 
             var isTargetOfQualifiedAccess = (node.Parent is MemberAccessExpressionSyntax mae) && mae.Name == node;
             if (!fieldSymbol.IsStatic && !isTargetOfQualifiedAccess)
@@ -1034,28 +1019,6 @@ namespace Cecilifier.Core.AST
 
             EmitBoxOpCodeIfCallOnTypeParameter(fieldSymbol.Type, nodeParent);
             HandlePotentialDelegateInvocationOn(node, fieldSymbol.Type, ilVar);
-        }
-
-        private OpCode LoadOpCodeForFieldAccess(IFieldSymbol fieldSymbol) => fieldSymbol.IsStatic ? OpCodes.Ldsfld : OpCodes.Ldfld;
-
-        private DefinitionVariable EnsureFieldExists(SimpleNameSyntax node, [NotNull] IFieldSymbol fieldSymbol)
-        {
-            var declaringSyntaxReference = fieldSymbol.DeclaringSyntaxReferences.SingleOrDefault();
-            if (declaringSyntaxReference == null)
-                return DefinitionVariable.NotFound;
-            
-            var fieldDeclaration = (FieldDeclarationSyntax) declaringSyntaxReference.GetSyntax().Parent.Parent;
-            if (fieldDeclaration.Span.Start > node.Span.End)
-            {
-                // this is a forward reference, process it...
-                fieldDeclaration.Accept(new FieldDeclarationVisitor(Context));
-            }
-            
-            var fieldDeclarationVariable = Context.DefinitionVariables.GetVariable(fieldSymbol.Name, VariableMemberKind.Field, fieldSymbol.ContainingType.ToDisplayString());
-            if (!fieldDeclarationVariable.IsValid)
-                throw new Exception($"Could not resolve reference to field: {fieldSymbol.Name}");
-            
-            return fieldDeclarationVariable;
         }
         
         private void ProcessLocalVariable(SimpleNameSyntax localVarSyntax, SymbolInfo varInfo)

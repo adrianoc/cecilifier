@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -6,7 +6,10 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Misc;
+using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Mono.Cecil.Cil;
 
 namespace Cecilifier.Core.Extensions
 {
@@ -139,6 +142,40 @@ namespace Cecilifier.Core.Extensions
                 SpecialType.System_Single => $"{value}f",
                 _ => value
             };
+        }
+        
+        public static DefinitionVariable EnsureFieldExists(this IFieldSymbol fieldSymbol, [NotNull] IVisitorContext context, [NotNull] SimpleNameSyntax node)
+        {
+            var declaringSyntaxReference = fieldSymbol.DeclaringSyntaxReferences.SingleOrDefault();
+            if (declaringSyntaxReference == null)
+                return DefinitionVariable.NotFound;
+            
+            var fieldDeclaration = (FieldDeclarationSyntax) declaringSyntaxReference.GetSyntax().Parent.Parent;
+            if (fieldDeclaration.Span.Start > node.Span.End)
+            {
+                // this is a forward reference, process it...
+                fieldDeclaration.Accept(new FieldDeclarationVisitor(context));
+            }
+            
+            var fieldDeclarationVariable = context.DefinitionVariables.GetVariable(fieldSymbol.Name, VariableMemberKind.Field, fieldSymbol.ContainingType.ToDisplayString());
+            if (!fieldDeclarationVariable.IsValid)
+                throw new Exception($"Could not resolve reference to field: {fieldSymbol.Name}");
+            
+            return fieldDeclarationVariable;
+        }
+        
+        public static void EnsurePropertyExists(this IPropertySymbol propertySymbol, IVisitorContext context, [NotNull] SyntaxNode node)
+        {
+            var declaringReference = propertySymbol.DeclaringSyntaxReferences.SingleOrDefault();
+            if (declaringReference == null)
+                return;
+            
+            var propertyDeclaration = (BasePropertyDeclarationSyntax) declaringReference.GetSyntax();
+            if (propertyDeclaration.Span.Start > node.Span.End)
+            {
+                // this is a forward reference, process it...
+                propertyDeclaration.Accept(new PropertyDeclarationVisitor(context));
+            }
         }
     }
 }
