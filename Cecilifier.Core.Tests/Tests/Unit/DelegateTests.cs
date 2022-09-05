@@ -1,3 +1,5 @@
+using System.Linq;
+using System.Text.RegularExpressions;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Tests.Unit;
@@ -32,5 +34,49 @@ public class DelegateTests : CecilifierUnitTestBase
         
         Assert.That(cecilifiedCode, Does.Match(@"var m_M_\d+ = new MethodDefinition\(""M"",.+, del_D1\);"), "Return type");
         Assert.That(cecilifiedCode, Does.Match(@"var p_p_\d+ = new ParameterDefinition\(""p"",.+del_D1\);"), "Parameter");
+    }
+
+    [Test]
+    public void FirstStaticMethodToDelegateConversion_IsCached()
+    {
+        var result = RunCecilifier("class C { System.Action<int> Instantiate() { return M; } static void M(int i) { } }");
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+        
+        Assert.That(
+            cecilifiedCode, 
+            Does.Match(@"var (fld_cachedDelegate_\d+) = new FieldDefinition\(""<0>__M"", FieldAttributes.Public \| FieldAttributes.Static, assembly.MainModule.ImportReference\(typeof\(System.Action<>\)\).+;"));
+
+        Assert.That(cecilifiedCode, Does.Match(@"il_instantiate_\d+.Emit\(OpCodes.Ldsfld, fld_cachedDelegate_\d+\);"));
+        Assert.That(cecilifiedCode, Does.Match(@"il_instantiate_\d+.Emit\(OpCodes.Dup\);"));
+        Assert.That(cecilifiedCode, Does.Match(@"il_instantiate_\d+.Emit\(OpCodes.Brtrue, lbl_cacheHit_\d+\);"));  // Check if already instantiated...
+        Assert.That(cecilifiedCode, Does.Match(@"il_instantiate_\d+.Emit\(OpCodes.Stsfld, fld_cachedDelegate_\d+\);")); // Set the cache.
+    }
+    
+    [Test]
+    public void SecondStaticMethodToDelegateConversion_OfSameMethod_IsCached()
+    {
+        var result = RunCecilifier("class C { System.Action<int> I1() { return M; } System.Action<int> I2() { return M; } static void M(int i) { } }");
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+
+        var matches = Regex.Matches(cecilifiedCode, @".+FieldDefinition\(""<\d+>__M\d?"".+\);");
+        Assert.That(matches.Count, Is.EqualTo(1), matches.Aggregate("Only one backing field was expected.\n", (acc, curr) => $"{acc}\n{curr.Value}") + $"\n\nCode:\n{cecilifiedCode}");
+    }    
+    
+    [Test]
+    public void SecondStaticMethodToDelegateConversion_OfDifferentMethod_IsCached()
+    {
+        var result = RunCecilifier("class C { void I2() { System.Action<int> d1 = M; d1 = M2; } static void M(int i) { } static void M2(int i) { } }");
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+
+        var matches = Regex.Matches(cecilifiedCode, @".+FieldDefinition\(""<\d+>__M\d?"".+\);");
+        Assert.That(matches.Count, Is.EqualTo(2), matches.Aggregate("Expecting 2 backing field.\n", (acc, curr) => $"{acc}\n{curr.Value}") + $"\n\nCode:\n{cecilifiedCode}");
+    }
+    
+    [Test]
+    public void StaticMethodToDelegateConversion_FromOtherMethod_GeneratesWarning()
+    {
+        var result = RunCecilifier("class Foo { public static void M(int i) { } } class Bar { System.Action<int> Instantiate() { return Foo.M; } }");
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+        Assert.That(cecilifiedCode, Contains.Substring("WARNING: Converting static method (M) to delegate in a type other than the one defining it may generate incorrect code. Access type: Bar, Method type: Foo"));
     }
 }

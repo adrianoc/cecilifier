@@ -900,7 +900,10 @@ namespace Cecilifier.Core.AST
             }
 
             Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
-            CecilDefinitionsFactory.InstantiateDelegate(Context, ilVar, Context.GetTypeInfo(node).ConvertedType, syntheticMethodVariable.VariableName);
+            CecilDefinitionsFactory.InstantiateDelegate(Context, ilVar, Context.GetTypeInfo(node).ConvertedType, syntheticMethodVariable.VariableName, new StaticDelegateCacheContext()
+            {
+                IsStaticDelegate = false
+            });
         }
         
         private void StoreTopOfStackInLocalVariableAndLoadItsAddressIfNeeded(ExpressionSyntax node)
@@ -1092,23 +1095,25 @@ namespace Cecilifier.Core.AST
                 _ => throw new NotSupportedException($"Referencing method {method} in expression {firstParentNotPartOfName} ({firstParentNotPartOfName.GetType().FullName}) is not supported.")
             };
                 
+            // If we have a non-static method being referenced though an implicit "this" reference, load "this" onto stack 
+            if (!method.IsStatic && !node.Parent.IsKind(SyntaxKind.ThisExpression) && node.Parent == firstParentNotPartOfName)
+            {
+                Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
+            }
+
             // we have a reference to a method used to initialize a delegate
             // and need to load the referenced method token and instantiate the delegate. For instance:
             //IL_0002: ldarg.0
             //IL_0002: ldftn string Test::M(int32)
             //IL_0008: newobj instance void class [System.Private.CoreLib]System.Func`2<int32, string>::.ctor(object, native int)
-
-            if (method.IsStatic)
-            {
-                Context.EmitCilInstruction(ilVar, OpCodes.Ldnull);
-            }
-            else if (!node.Parent.IsKind(SyntaxKind.ThisExpression) && node.Parent == firstParentNotPartOfName)
-            {
-                Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
-            }
-
             EnsureForwardedMethod(Context, Context.Naming.SyntheticVariable(node.Identifier.Text, ElementKind.Method), method.OverriddenMethod ?? method.OriginalDefinition, Array.Empty<TypeParameterSyntax>());
-            CecilDefinitionsFactory.InstantiateDelegate(Context, ilVar, delegateType, method.MethodResolverExpression(Context));
+            CecilDefinitionsFactory.InstantiateDelegate(Context, ilVar, delegateType, method.MethodResolverExpression(Context), new StaticDelegateCacheContext()
+            {
+                IsStaticDelegate = method.IsStatic,
+                Method = method,
+                CacheBackingField = null,
+                context = Context
+            });
         }
         
         private void ProcessMethodCall(SimpleNameSyntax node, IMethodSymbol method)
