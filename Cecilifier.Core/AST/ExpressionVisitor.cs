@@ -697,7 +697,8 @@ namespace Cecilifier.Core.AST
         {
             CecilExpressionFactory.EmitThrow(Context, ilVar, node.Expression);
         }
-
+        
+        
         public override void VisitSimpleLambdaExpression(SimpleLambdaExpressionSyntax node) => HandleLambdaExpression(node);
         public override void VisitParenthesizedLambdaExpression(ParenthesizedLambdaExpressionSyntax node) => HandleLambdaExpression(node);
         public override void VisitAwaitExpression(AwaitExpressionSyntax node) => LogUnsupportedSyntax(node);

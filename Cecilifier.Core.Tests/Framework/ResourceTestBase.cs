@@ -119,7 +119,7 @@ namespace Cecilifier.Core.Tests.Framework
             CecilifyAndExecute(tbc, actualAssemblyPath);
 
             var actualIL = GetILFrom(actualAssemblyPath, methodSignature);
-            Assert.That(actualIL, Is.EqualTo(expectedIL), $"Actual IL differs from expected.\r\nActual Assembly Path = {actualAssemblyPath}\r\nActual IL:{actualIL}");
+            Assert.That(actualIL, Is.EqualTo(expectedIL), $"Actual IL differs from expected.\nActual Assembly Path = {actualAssemblyPath}\nExpected IL:\n{expectedIL}\nActual IL:{actualIL}");
         }
 
         private void CecilifyAndExecute(Stream tbc, string outputAssemblyPath)

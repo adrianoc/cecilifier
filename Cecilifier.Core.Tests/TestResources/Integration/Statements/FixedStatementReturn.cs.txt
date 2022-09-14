@@ -1,0 +1,11 @@
+class FixedStatementTest
+{
+    public int i;
+    unsafe int* Test()
+    {
+        fixed (int* p = &i) 
+        {
+            return p;
+        }
+    }
+}

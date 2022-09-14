@@ -227,10 +227,16 @@ namespace Cecilifier.Core.AST
             throw new ArgumentException($"Literal type {type} not supported.", nameof(type));
         }
 
-        protected void StoreTopOfStackInLocalVariableAndLoadItsAddress(string ilVar, ITypeSymbol type)
+        protected string StoreTopOfStackInLocalVariable(string ilVar, ITypeSymbol type)
         {
             var tempLocalName = AddLocalVariableWithResolvedType("tmp", Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method), Context.TypeResolver.Resolve(type));
             Context.EmitCilInstruction(ilVar, OpCodes.Stloc, tempLocalName);
+            return tempLocalName;
+        }
+        
+        protected void StoreTopOfStackInLocalVariableAndLoadItsAddress(string ilVar, ITypeSymbol type)
+        {
+            var tempLocalName = StoreTopOfStackInLocalVariable(ilVar,  type);
             Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, tempLocalName);
         }        
 

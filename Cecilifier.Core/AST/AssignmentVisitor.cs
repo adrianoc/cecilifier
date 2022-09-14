@@ -1,7 +1,4 @@
-using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Variables;
@@ -108,7 +105,7 @@ namespace Cecilifier.Core.AST
                     break;
 
                 case ILocalSymbol local:
-                    LocalVariableAssignment(local);
+                    LocalVariableAssignment(local, node);
                     break;
 
                 case IFieldSymbol field:
@@ -119,6 +116,18 @@ namespace Cecilifier.Core.AST
                     PropertyAssignment(node, property);
                     break;
             }
+        }
+
+        public override void VisitPrefixUnaryExpression(PrefixUnaryExpressionSyntax node)
+        {
+            if (node.IsKind(SyntaxKind.PointerIndirectionExpression))
+            {
+                var last = Context.CurrentLine;
+                ExpressionVisitor.Visit(Context, ilVar, node.Operand);
+                Context.MoveLinesToEnd(InstructionPrecedingValueToLoad, last);
+            }
+            
+            base.VisitPrefixUnaryExpression(node);
         }
 
         private void AddCallToOpImplicitIfRequired(IdentifierNameSyntax node)
@@ -190,15 +199,22 @@ namespace Cecilifier.Core.AST
             Context.EmitCilInstruction(ilVar, field.StoreOpCodeForFieldAccess(), definitionVariable.VariableName);
         }
 
-        private void LocalVariableAssignment(ILocalSymbol localVariable)
+        private void LocalVariableAssignment(ILocalSymbol localVariable, IdentifierNameSyntax assignmentTarget)
         {
-            string operand = Context.DefinitionVariables.GetVariable(localVariable.Name, VariableMemberKind.LocalVariable).VariableName;
-            Context.EmitCilInstruction(ilVar, OpCodes.Stloc, operand);
+            var localVariableVar = Context.DefinitionVariables.GetVariable(localVariable.Name, VariableMemberKind.LocalVariable);
+            if (localVariable.Type is IPointerTypeSymbol symbol && assignmentTarget.Parent.IsKind(SyntaxKind.PointerIndirectionExpression))
+            {
+                Context.EmitCilInstruction(ilVar, symbol.Stind()); 
+            }
+            else
+            {
+                Context.EmitCilInstruction(ilVar, OpCodes.Stloc, localVariableVar.VariableName);
+            }
         }
 
         private void ParameterAssignment(IParameterSymbol parameter)
         {
-            if (parameter.RefKind == RefKind.None)
+            if (parameter.RefKind == RefKind.None &&  (parameter.Type as IPointerTypeSymbol) is null)
             {
                 if (parameter.Type.TypeKind == TypeKind.Array)
                 {
