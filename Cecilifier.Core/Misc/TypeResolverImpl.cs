@@ -48,7 +48,7 @@ namespace Cecilifier.Core.Misc
                 return CecilDefinitionsFactory.FunctionPointerType(this, functionPointer);
             }
 
-            if (type.SpecialType == SpecialType.None || type.TypeKind == TypeKind.Interface || type.SpecialType == SpecialType.System_Enum || type.SpecialType == SpecialType.System_ValueType)
+            if (type.SpecialType == SpecialType.None || type.SpecialType == SpecialType.System_Enum || type.SpecialType == SpecialType.System_ValueType || type.SpecialType == SpecialType.System_Decimal || type.TypeKind == TypeKind.Interface )
             {
                 return null;
             }
@@ -74,7 +74,7 @@ namespace Cecilifier.Core.Misc
 
         public string ResolveLocalVariableType(ITypeSymbol type)
         {
-            var containingSymbolName = type.ContainingSymbol?.FullyQualifiedName() ?? string.Empty;
+            var containingSymbolName = type.ContainingSymbol?.FullyQualifiedName();
             var found = _context.DefinitionVariables.GetVariable(type.Name, VariableMemberKind.Type, containingSymbolName).VariableName 
                         ?? _context.DefinitionVariables.GetVariable(type.Name, VariableMemberKind.TypeParameter, containingSymbolName).VariableName;
             

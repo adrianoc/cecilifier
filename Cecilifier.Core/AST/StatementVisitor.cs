@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.Contracts;
 using System.Linq;
+using System.Net.Http;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
+using Cecilifier.Core.Naming;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -168,33 +171,66 @@ namespace Cecilifier.Core.AST
 
         public override void VisitTryStatement(TryStatementSyntax node)
         {
-            var exceptionHandlerTable = new ExceptionHandlerEntry[node.Catches.Count + (node.Finally != null ? 1 : 0)];
 
-            var tryStartVar = AddCilInstructionWithLocalVariable(_ilVar, OpCodes.Nop);
-            exceptionHandlerTable[0].TryStart = tryStartVar;
+            var finallyBlockHandler = node.Finally == null ? 
+                                (Action<string>) null :
+                                (inst) => node.Finally.Accept(this);
             
-            node.Block.Accept(this);
-
-            var firstInstructionAfterTryCatchBlock = CreateCilInstruction(_ilVar, OpCodes.Nop);
-            exceptionHandlerTable[^1].HandlerEnd = firstInstructionAfterTryCatchBlock; // sets up last handler end instruction
-
-            Context.EmitCilInstruction(_ilVar, OpCodes.Leave, firstInstructionAfterTryCatchBlock);
-
-            for (var i = 0; i < node.Catches.Count; i++)
-            {
-                HandleCatchClause(node.Catches[i], exceptionHandlerTable, i, firstInstructionAfterTryCatchBlock);
-            }
-
-            HandleFinallyClause(node.Finally, exceptionHandlerTable);
-
-            AddCecilExpression($"{_ilVar}.Append({firstInstructionAfterTryCatchBlock});");
-
-            WriteExceptionHandlers(exceptionHandlerTable);
+            ProcessTryCatchFinallyBlock(node.Block, node.Catches.ToArray(), finallyBlockHandler);
         }
 
         public override void VisitThrowStatement(ThrowStatementSyntax node)
         {
             CecilExpressionFactory.EmitThrow(Context, _ilVar, node.Expression);
+        }
+
+        public override void VisitUsingStatement(UsingStatementSyntax node)
+        {
+            //https://github.com/dotnet/csharpstandard/blob/draft-v7/standard/statements.md#1214-the-using-statement
+            
+            ExpressionVisitor.Visit(Context, _ilVar, node.Expression);
+            var localVarDef = string.Empty;
+
+            ITypeSymbol usingType; 
+            if (node.Declaration != null)
+            {
+                usingType = (ITypeSymbol) Context.SemanticModel.GetSymbolInfo(node.Declaration.Type).Symbol;
+                HandleVariableDeclaration(node.Declaration);
+                localVarDef = Context.DefinitionVariables.GetVariable(node.Declaration.Variables[0].Identifier.ValueText, VariableMemberKind.LocalVariable);
+            }
+            else
+            {
+                usingType = Context.SemanticModel.GetTypeInfo(node.Expression).Type;
+                var resolvedVarType = Context.TypeResolver.Resolve(usingType);
+                var methodVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
+                localVarDef = AddLocalVariableWithResolvedType("tempDisp", methodVar, resolvedVarType);
+                Context.EmitCilInstruction(_ilVar, OpCodes.Stloc, localVarDef);
+            }
+            
+            void FinallyBlockHandler(string finallyEndVar)
+            {
+                string? lastFinallyInstructionLabel = null;
+                if (usingType.TypeKind == TypeKind.TypeParameter || usingType.IsValueType)
+                {
+                    Context.EmitCilInstruction(_ilVar, OpCodes.Ldloca, localVarDef);
+                    Context.EmitCilInstruction(_ilVar, OpCodes.Constrained, $"{localVarDef}.VariableType");
+                }
+                else
+                {
+                    lastFinallyInstructionLabel = Context.Naming.SyntheticVariable("endFinally", ElementKind.Label);
+                    
+                    Context.EmitCilInstruction(_ilVar, OpCodes.Ldloc, localVarDef);
+                    CreateCilInstruction(_ilVar, lastFinallyInstructionLabel, OpCodes.Nop);
+                    Context.EmitCilInstruction(_ilVar, OpCodes.Brfalse, lastFinallyInstructionLabel, "check if the disposable is not null");
+                    Context.EmitCilInstruction(_ilVar, OpCodes.Ldloc, localVarDef);
+                }
+
+                Context.EmitCilInstruction(_ilVar, OpCodes.Callvirt, Context.RoslynTypeSystem.SystemIDisposable.GetMembers("Dispose").OfType<IMethodSymbol>().Single().MethodResolverExpression(Context));
+                if (lastFinallyInstructionLabel != null)
+                    AddCecilExpression($"{_ilVar}.Append({lastFinallyInstructionLabel});");
+            }
+
+            ProcessTryCatchFinallyBlock(node.Statement, Array.Empty<CatchClauseSyntax>(), FinallyBlockHandler);
         }
 
         public override void VisitLocalFunctionStatement(LocalFunctionStatementSyntax node) => node.Accept(new MethodDeclarationVisitor(Context));
@@ -207,6 +243,32 @@ namespace Cecilifier.Core.AST
         public override void VisitDoStatement(DoStatementSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitGotoStatement(GotoStatementSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitYieldStatement(YieldStatementSyntax node) { LogUnsupportedSyntax(node); }
+        
+        private void ProcessTryCatchFinallyBlock(CSharpSyntaxNode tryStatement, CatchClauseSyntax[] catches, Action<string> finallyBlockHandler)
+        {
+            var exceptionHandlerTable = new ExceptionHandlerEntry[catches.Length + (finallyBlockHandler != null ? 1 : 0)];
+
+            var tryStartVar = AddCilInstructionWithLocalVariable(_ilVar, OpCodes.Nop);
+            exceptionHandlerTable[0].TryStart = tryStartVar;
+
+            tryStatement.Accept(this);
+
+            var firstInstructionAfterTryCatchBlock = CreateCilInstruction(_ilVar, OpCodes.Nop);
+            exceptionHandlerTable[^1].HandlerEnd = firstInstructionAfterTryCatchBlock; // sets up last handler end instruction
+
+            Context.EmitCilInstruction(_ilVar, OpCodes.Leave, firstInstructionAfterTryCatchBlock);
+
+            for (var i = 0; i < catches.Length; i++)
+            {
+                HandleCatchClause(catches[i], exceptionHandlerTable, i, firstInstructionAfterTryCatchBlock);
+            }
+            
+            HandleFinallyClause(finallyBlockHandler, exceptionHandlerTable);
+
+            AddCecilExpression($"{_ilVar}.Append({firstInstructionAfterTryCatchBlock});");
+
+            WriteExceptionHandlers(exceptionHandlerTable);
+        }
         
         private void WriteExceptionHandlers(ExceptionHandlerEntry[] exceptionHandlerTable)
         {
@@ -251,9 +313,9 @@ namespace Cecilifier.Core.AST
             Context.EmitCilInstruction(_ilVar, OpCodes.Leave, firstInstructionAfterTryCatchBlock);
         }
 
-        private void HandleFinallyClause(FinallyClauseSyntax node, ExceptionHandlerEntry[] exceptionHandlerTable)
+        private void HandleFinallyClause(Action<string> finallyBlockHandler,ExceptionHandlerEntry[] exceptionHandlerTable)
         {
-            if (node == null)
+            if (finallyBlockHandler == null)
             {
                 return;
             }
@@ -274,7 +336,7 @@ namespace Cecilifier.Core.AST
                 exceptionHandlerTable[finallyEntryIndex - 1].HandlerEnd = finallyStartVar;
             }
 
-            base.VisitFinallyClause(node);
+            finallyBlockHandler(exceptionHandlerTable[finallyEntryIndex].HandlerEnd);
             Context.EmitCilInstruction(_ilVar, OpCodes.Endfinally);
         }
 

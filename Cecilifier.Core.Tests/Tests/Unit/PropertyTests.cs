@@ -81,4 +81,28 @@ public class PropertyTests : CecilifierUnitTestBase
             @"var l_l_4 = new VariableDefinition\(assembly\.MainModule\.TypeSystem\.Int32\);\s+" +
 			$@"{targetMethod}\.Body\.Variables\.Add\(l_l_4\);"));
     }
+ 
+    [Test]
+    public void Covariant()
+    {
+        var result = RunCecilifier("class B { public virtual B Prop => null; } class D : B { public override D Prop => new D(); D CallIt() => Prop; }");
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+        
+        Assert.That(cecilifiedCode, Contains.Substring("var m_get_8 = new MethodDefinition(\"get_Prop\", MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.HideBySig | MethodAttributes.Virtual | MethodAttributes.NewSlot, cls_D_6);"));
+        Assert.That(cecilifiedCode, Does.Match(@"m_get_8\.CustomAttributes\.Add\(.+typeof\(.+PreserveBaseOverridesAttribute\).+\);"));
+        Assert.That(cecilifiedCode, Contains.Substring("il_callIt_12.Emit(OpCodes.Callvirt, m_get_8);"));
+    }
+    
+    [Test]
+    public void StaticAutomaticProperties()
+    {
+        var result = RunCecilifier("class C { public static int Prop { get; set; } } class Driver { int M() => C.Prop; }");
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+        
+        Assert.That(cecilifiedCode, Does.Match(@"var fld_prop_\d+ = new FieldDefinition\(""<Prop>k__BackingField"", .+FieldAttributes\.Static.+\);"), "Backing field should be static");
+        Assert.That(cecilifiedCode, Does.Match(@"var l_set_\d+ = new MethodDefinition\(""set_Prop"", .+MethodAttributes\.Static.+\);"), "Setter should be static");
+        Assert.That(cecilifiedCode, Does.Match(@"var m_get_\d+ = new MethodDefinition\(""get_Prop"", .+MethodAttributes\.Static.+\);"), "Getter should be static");
+        Assert.That(cecilifiedCode, Does.Match(@"il_set_\d+.Emit\(OpCodes.Stsfld, fld_prop_\d+\);"), "Setter field access should be static");
+        Assert.That(cecilifiedCode, Does.Match(@"il_get_\d+.Emit\(OpCodes.Ldsfld, fld_prop_\d+\);"), "Getter field access should be static");
+    }
 }

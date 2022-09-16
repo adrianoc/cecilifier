@@ -25,6 +25,7 @@ namespace Cecilifier.Core.AST
                 context, 
                 typeVar, 
                 "Program", 
+                null, // Top level type has no outer type.
                 typeModifiers, 
                 context.TypeResolver.Bcl.System.Object, 
                 false, 

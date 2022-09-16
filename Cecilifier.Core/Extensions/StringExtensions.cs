@@ -10,6 +10,8 @@ namespace Cecilifier.Core.Extensions
 {
     public static class StringExtensions
     {
+        internal static string AttributeName(this string name) => name.EndsWith("Attribute") ? name : $"{name}Attribute";
+        
         internal static string[] CloneMethodReferenceOverriding(this string methodRef, IVisitorContext context, Dictionary<string, string> overridenProperties, IMethodSymbol method, out string resolvedVariable)
         {
             var cloned = new StringBuilder($"new MethodReference({methodRef}.Name, {methodRef}.ReturnType) {{ ");

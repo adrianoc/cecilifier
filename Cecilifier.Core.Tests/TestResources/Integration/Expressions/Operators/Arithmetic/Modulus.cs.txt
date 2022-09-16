@@ -1,0 +1,12 @@
+﻿class ModulusOperations
+{
+	private static void Integers(int a)
+	{
+		System.Console.WriteLine(a % 5);
+	}
+	
+	private static void Decimal(decimal a)
+	{
+		System.Console.WriteLine(a % 5);
+	}
+}

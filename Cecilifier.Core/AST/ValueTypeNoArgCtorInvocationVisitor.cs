@@ -16,11 +16,18 @@ namespace Cecilifier.Core.AST
             this.ilVar = ilVar;
         }
 
+        public override void VisitUsingStatement(UsingStatementSyntax node)
+        {
+            // our direct parent is a using statement, which means we have something like:
+            // using(new Value()) {}
+            DeclareAndInitializeValueTypeLocalVariable();
+        }
+
         public override void VisitEqualsValueClause(EqualsValueClauseSyntax node)
         {
             //local variable assignment
-            var firstAncestorOrSelf = node.FirstAncestorOrSelf<LocalDeclarationStatementSyntax>();
-            var varName = firstAncestorOrSelf.Declaration.Variables[0].Identifier.ValueText;
+            var firstAncestorOrSelf = node.FirstAncestorOrSelf<VariableDeclarationSyntax>();
+            var varName = firstAncestorOrSelf?.Variables[0].Identifier.ValueText;
 
             var operand = Context.DefinitionVariables.GetVariable(varName, VariableMemberKind.LocalVariable).VariableName;
             Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, operand);

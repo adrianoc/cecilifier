@@ -15,7 +15,7 @@ How to help
 - Using it
 - Finding issues
 - [Fixing issues](https://github.com/adrianoc/cecilifier/issues)
-- [Improving tests](https://github.com/adrianoc/cecilifier/tree/master/Cecilifier.Core.Tests)
+- [Improving tests](#how-to-add-tests)
 - Improving documentation
 - Adding features
 - Sending feedback
@@ -92,12 +92,39 @@ Then you can open a browser at `http://localhost:5000`
 
 
 How to add tests
----
+===
 First, and most importantly, tests should be self contained, clearly describing what they are testing and run quickly (unfortunately it is very likely that some of the existing tests does not meet this criteria, but nevertheless, we should strive to ;)
 
-Existing tests work basically taking a [snippet of code](https://github.com/adrianoc/cecilifier/blob/dev/Cecilifier.Core.Tests/TestResources/Integration/CodeBlock/Conditional/IfStatement.cs.txt), _Cecilifying_ it (generating the Mono.Cecil API calls to produce an assembly equivalent to the compiled snippet), compiling it,  and finally either comparing the two assemblies or comparing the generated IL for some method with the expected output [as in this example](https://github.com/adrianoc/cecilifier/blob/dev/Cecilifier.Core.Tests/TestResources/Integration/CodeBlock/Conditional/IfStatement.cs.il.txt). 
+There are basically 2 types of tests ...
 
-Ideally all tests should use the assembly comparison approach (as opposed to forcing developers to store the expected IL) but in some cases the comparison code would became too complex and in such cases I think it is ok to store the expected IL (anyway, I try to minimize the number of such tests).
+Unit Tests
+---
+
+These resembles tradicional Unit tests, at least from performance characteristics. They can be found [in this folder](Cecilifier.Core.Tests/Tests/Unit) and work by cecilifying some code and asserting the cecilified code for expected patterns.
+
+- Pros
+	- Performance: since there's no compilation involved these tests are much faster than the [Integration](#integration-tests) ones.
+	- More easily debuggable
+- Cons
+	- Sensitive to changes in the way code is generated leading to false positives when naming rules, formating, etc. changes.
+	- Sensitive to false positives due to, in general, not verifying all the generated code (which would be impratical)	- 
+
+Integration Tests
+---
+
+These tests work basically taking a [snippet of code](https://github.com/adrianoc/cecilifier/blob/dev/Cecilifier.Core.Tests/TestResources/Integration/CodeBlock/Conditional/IfStatement.cs.txt), _Cecilifying_ it (generating the Mono.Cecil API calls to produce an assembly equivalent to the compiled snippet), compiling it,  and finally either comparing the two assemblies or comparing the generated IL for some method with the expected output [as in this example](https://github.com/adrianoc/cecilifier/blob/dev/Cecilifier.Core.Tests/TestResources/Integration/CodeBlock/Conditional/IfStatement.cs.il.txt). 
+
+Ideally all tests in this category should use the assembly comparison approach (as opposed to forcing 
+developers to store the expected IL) but in some cases the comparison code would became too complex and in such cases I think it is ok to store the expected IL (anyway, I try to minimize the number of such tests).
+
+- Pros
+	- In general, less prone to false positives
+	- Easier to write (just write the C# snipet you want to cecilify and the framework will do the rest)
+- Cons
+	- Slower than Unit Tests above: verification requires cecilified code to be compiled and executed which has a big performance impact.
+	- Verification depends on custom code that compares assemblies; this code is not straighforward and is prone to bugs
+	- Harder to reason about failures.
+	- Prone to false negatives due to differences in the compiler generated IL and cecilifier generated IL.
 
 How to report issues
 ---

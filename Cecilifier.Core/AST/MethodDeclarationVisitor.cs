@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.Extensions;
@@ -100,7 +100,7 @@ namespace Cecilifier.Core.AST
             {
                 Context.DefinitionVariables.RegisterNonMethod(containingSymbol.ToDisplayString(), node.Identifier.ValueText, VariableMemberKind.Parameter, paramVar);
                 var exps = CecilDefinitionsFactory.Parameter(node, Context.SemanticModel, declaringMethodVariable, paramVar, ResolveType(node.Type), node.Accept(DefaultParameterExtractorVisitor.Instance));
-                AddCecilExpressions(exps);
+                AddCecilExpressions(Context, exps);
             }
 
             HandleAttributesInMemberDeclaration(node.AttributeLists, paramVar);
@@ -145,6 +145,11 @@ namespace Cecilifier.Core.AST
         
                 if (modifiersTokens.IndexOf(SyntaxKind.ExternKeyword) == -1)
                 {
+                    if (methodSymbol.HasCovariantReturnType())
+                    {
+                        AddCecilExpression($"{methodVar}.CustomAttributes.Add(new CustomAttribute(assembly.MainModule.Import(typeof(System.Runtime.CompilerServices.PreserveBaseOverridesAttribute).GetConstructor(BindingFlags.Public | BindingFlags.Instance, null, new Type[0], null))));");
+                    }
+                    
                     if (!methodSymbol.IsAbstract)
                     {
                         ilVar = Context.Naming.ILProcessor(simpleName);
@@ -207,11 +212,14 @@ namespace Cecilifier.Core.AST
             context.WriteComment($"Method : {methodName}");
 
             var exps = CecilDefinitionsFactory.Method(context, methodVar, methodName, methodModifiers, returnType, refReturn, typeParameters);
+            
             foreach (var exp in exps)
             {
                 context.WriteCecilExpression(exp);
                 context.WriteNewLine();
             }
+
+            HandleAttributesInTypeParameter(context, typeParameters);
         }
 
         protected virtual string GetSpecificModifiers()

@@ -36,7 +36,7 @@ namespace Cecilifier.Core.Extensions
         {
             if (method.IsDefinedInCurrentType(ctx))
             {
-                var tbf = (method.OverriddenMethod ?? method).AsMethodDefinitionVariable();
+                var tbf = method.AsMethodDefinitionVariable();
                 var found = ctx.DefinitionVariables.GetMethodVariable(tbf);
                 if (!found.IsValid)
                     throw new ArgumentException($"Could not find variable declaration for method {method.Name}.");
@@ -107,11 +107,18 @@ namespace Cecilifier.Core.Extensions
 
             if (specificModifiers != null)
             {
-                cecilModifiersStr += $"| {specificModifiers}";
+                cecilModifiersStr = cecilModifiersStr.AppendModifier(specificModifiers);
             }
 
-            return cecilModifiersStr + " | MethodAttributes.HideBySig".AppendModifier(modifiersStr);
+            cecilModifiersStr = cecilModifiersStr.AppendModifier("MethodAttributes.HideBySig").AppendModifier(modifiersStr);
+            if (methodSymbol.HasCovariantReturnType())
+            {
+                cecilModifiersStr = cecilModifiersStr.AppendModifier("MethodAttributes.NewSlot");
+            }
+            return cecilModifiersStr;
         }
+
+        public static bool HasCovariantReturnType(this IMethodSymbol method) => method != null && method.IsOverride && !method.ReturnType.Equals(method.OverriddenMethod.ReturnType);
 
         private static bool IsExplicitMethodImplementation(IMethodSymbol methodSymbol)
         {

@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace Cecilifier.Web
 {
@@ -20,7 +21,8 @@ namespace Cecilifier.Web
                         .UseIISIntegration()
                         .UseUrls(config["ApplicationUrl"])
                         .UseConfiguration(config)
-                        .UseStartup<Startup>();
+                        .UseStartup<Startup>()
+                        .ConfigureLogging(logBuilder => logBuilder.AddConsole());
 
                 })
                 .Build();

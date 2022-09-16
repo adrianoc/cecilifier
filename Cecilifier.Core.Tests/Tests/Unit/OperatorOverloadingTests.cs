@@ -17,7 +17,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             var result = RunCecilifier(source);
             var cecilifiedCode = result.GeneratedCode.ReadToEnd();
             
-            var expectedOperatorMethod = $"new MethodDefinition\\(\"{expectedMethodOperator}\", MethodAttributes.Public \\| MethodAttributes.Static\\| MethodAttributes.SpecialName \\| MethodAttributes.HideBySig,.*\\);";
+            var expectedOperatorMethod = $"new MethodDefinition\\(\"{expectedMethodOperator}\", MethodAttributes.Public \\| MethodAttributes.Static\\ | MethodAttributes.SpecialName \\| MethodAttributes.HideBySig,.*\\);";
             Assert.That(cecilifiedCode, Does.Match(expectedOperatorMethod), $"Operator method not defined. Cecilified code:{NewLine}{NewLine}{cecilifiedCode}");
             
             Assert.That(cecilifiedCode, Contains.Substring($"OpCodes.Call, m_{expectedMethodOperator}_1"), $"call to operator method not found. Cecilified code:{NewLine}{NewLine}{cecilifiedCode}");
@@ -50,7 +50,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             var result = RunCecilifier(toBeCecilified);
             var cecilifiedCode = result.GeneratedCode.ReadToEnd();
             
-            var expectedOperatorMethod = $"new MethodDefinition\\(\"{expectedMethodOperator}\", MethodAttributes.Public \\| MethodAttributes.Static\\| MethodAttributes.SpecialName \\| MethodAttributes.HideBySig, .*\\);";
+            var expectedOperatorMethod = $"new MethodDefinition\\(\"{expectedMethodOperator}\", MethodAttributes.Public \\| MethodAttributes.Static\\ | MethodAttributes.SpecialName \\| MethodAttributes.HideBySig, .*\\);";
             Assert.That(cecilifiedCode, Does.Match(expectedOperatorMethod), $"Operator method not defined. Cecilified code:{NewLine}{NewLine}{cecilifiedCode}");
             
             Assert.That(cecilifiedCode, Contains.Substring($"Emit(OpCodes.Call, m_{expectedMethodOperator}_1"), $"call to operator method not found. Cecilified code:{NewLine}{NewLine}{cecilifiedCode}");
@@ -83,7 +83,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             var result = RunCecilifier(toBeCecilified);
             var cecilifiedCode = result.GeneratedCode.ReadToEnd();
             
-            var expectedOperatorMethod = $"new MethodDefinition(\"op_Addition\", MethodAttributes.Public | MethodAttributes.Static| MethodAttributes.SpecialName | MethodAttributes.HideBySig, assembly.MainModule.TypeSystem.Int32);";
+            var expectedOperatorMethod = $"new MethodDefinition(\"op_Addition\", MethodAttributes.Public | MethodAttributes.Static | MethodAttributes.SpecialName | MethodAttributes.HideBySig, assembly.MainModule.TypeSystem.Int32);";
             Assert.That(cecilifiedCode, Contains.Substring(expectedOperatorMethod), $"Operator method not defined. Cecilified code:{NewLine}{NewLine}{cecilifiedCode}");
             
             Assert.That(cecilifiedCode, Contains.Substring($"Emit(OpCodes.Call, m_op_Addition_1"), $"call to operator method not found. Cecilified code:{NewLine}{NewLine}{cecilifiedCode}");

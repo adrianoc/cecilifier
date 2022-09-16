@@ -1,4 +1,7 @@
+using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Variables;
@@ -109,7 +112,7 @@ namespace Cecilifier.Core.AST
                     break;
 
                 case IFieldSymbol field:
-                    FieldAssignment(field);
+                    FieldAssignment(field, node);
                     break;
                 
                 case IPropertySymbol property:
@@ -165,6 +168,7 @@ namespace Cecilifier.Core.AST
         
         private void PropertyAssignment(IdentifierNameSyntax node, IPropertySymbol property)
         {
+            property.EnsurePropertyExists(Context, node);
             // If there's no setter it means we have a getter only auto property and it is being
             // initialized in the ctor in which case we need to assign directly to the backing field.
             if (property.SetMethod == null)
@@ -177,14 +181,13 @@ namespace Cecilifier.Core.AST
                 AddMethodCall(ilVar, property.SetMethod, isAccessOnThisOrObjectCreation:node.IsAccessOnThisOrObjectCreation());
         }
 
-        private void FieldAssignment(IFieldSymbol field)
+        private void FieldAssignment(IFieldSymbol field, IdentifierNameSyntax name)
         {
-            var storeOpCode = field.IsStatic ? OpCodes.Stsfld : OpCodes.Stfld;
             if (field.IsVolatile)
                 Context.EmitCilInstruction(ilVar, OpCodes.Volatile);
 
-            var operand = Context.DefinitionVariables.GetVariable(field.Name, VariableMemberKind.Field, field.ContainingType.ToDisplayString()).VariableName;
-            Context.EmitCilInstruction(ilVar, storeOpCode, operand);
+            var definitionVariable = field.EnsureFieldExists(Context, name);
+            Context.EmitCilInstruction(ilVar, field.StoreOpCodeForFieldAccess(), definitionVariable.VariableName);
         }
 
         private void LocalVariableAssignment(ILocalSymbol localVariable)

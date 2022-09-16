@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
@@ -51,6 +50,7 @@ namespace Cecilifier.Core.AST
             predefinedTypeSize["byte"] = sizeof(byte);
             predefinedTypeSize["long"] = sizeof(long);
             
+            // Arithmetic operators
             operatorHandlers[SyntaxKind.PlusToken] = (ctx, ilVar, left, right) =>
             {
                 if (left.SpecialType == SpecialType.System_String)
@@ -63,8 +63,11 @@ namespace Cecilifier.Core.AST
                     ctx.EmitCilInstruction(ilVar, OpCodes.Add);
                 }
             };
-
+            operatorHandlers[SyntaxKind.MinusToken] = (ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, OpCodes.Sub);
+            operatorHandlers[SyntaxKind.AsteriskToken] = (ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, OpCodes.Mul);
             operatorHandlers[SyntaxKind.SlashToken] = (ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, OpCodes.Div);
+            operatorHandlers[SyntaxKind.PercentToken] = HandleModulusExpression;
+            
             operatorHandlers[SyntaxKind.GreaterThanToken] = (ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, CompareOpCodeFor(left));
             operatorHandlers[SyntaxKind.GreaterThanEqualsToken] = (ctx, ilVar, left, right) =>
             {
@@ -80,8 +83,6 @@ namespace Cecilifier.Core.AST
             };
             operatorHandlers[SyntaxKind.EqualsEqualsToken] = (ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, OpCodes.Ceq);
             operatorHandlers[SyntaxKind.LessThanToken] = (ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, OpCodes.Clt);
-            operatorHandlers[SyntaxKind.MinusToken] = (ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, OpCodes.Sub);
-            operatorHandlers[SyntaxKind.AsteriskToken] = (ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, OpCodes.Mul);
             operatorHandlers[SyntaxKind.ExclamationEqualsToken] = (ctx, ilVar, left, right) =>
             {
                 // This is not the most optimized way to handle != operator but it is generic and correct.
@@ -233,7 +234,7 @@ namespace Cecilifier.Core.AST
             var indexer = targetType.GetMembers().OfType<IPropertySymbol>().FirstOrDefault(p => p.IsIndexer && p.Parameters.Length == node.ArgumentList.Arguments.Count);
             if (expressionInfo.Symbol.GetMemberType().Kind != SymbolKind.ArrayType && indexer != null)
             {
-                EnsurePropertyExists(node, indexer);
+                indexer.EnsurePropertyExists(Context, node);
                 AddMethodCall(ilVar, indexer.GetMethod);
                 HandlePotentialRefLoad(ilVar, node, indexer.Type);
             }
@@ -546,7 +547,8 @@ namespace Cecilifier.Core.AST
                 return;
             }
 
-            EnsureMethodAvailable(Context.Naming.SyntheticVariable(ctor.ContainingType.Name, ElementKind.LocalVariable), ctor, Array.Empty<TypeParameterSyntax>());
+            var varName = Context.Naming.SyntheticVariable(ctor.ContainingType.Name, ElementKind.LocalVariable);
+            EnsureForwardedMethod(Context, varName, ctor, Array.Empty<TypeParameterSyntax>());
 
             string operand = ctor.MethodResolverExpression(Context);
             Context.EmitCilInstruction(ilVar, OpCodes.Newobj, operand);
@@ -921,50 +923,6 @@ namespace Cecilifier.Core.AST
             Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, tempLocalName);
         }
 
-        /*
-         * Support for scenario in which a method is being referenced before it has been declared. This can happen for instance in code like:
-         *
-         * class C
-         * {
-         *     void Foo() { Bar(); }
-         *     void Bar() {}
-         * }
-         *
-         * In this case when the first reference to Bar() is found (in method Foo()) the method itself has not been defined yet.
-         */
-        private void EnsureMethodAvailable(string varName, IMethodSymbol method, TypeParameterSyntax[] typeParameters)
-        {
-            if (!method.IsDefinedInCurrentType(Context))
-                return;
-
-            var found = Context.DefinitionVariables.GetMethodVariable(method.AsMethodDefinitionVariable());
-            if (found.IsValid)
-                return;
-
-            if (method.MethodKind == MethodKind.LocalFunction)
-            {
-                MethodDeclarationVisitor.AddMethodDefinition(Context, varName, $"<{method.ContainingSymbol.Name}>g__{method.Name}|0_0", "MethodAttributes.Assembly | MethodAttributes.Static | MethodAttributes.HideBySig", method.ReturnType, method.ReturnsByRef, typeParameters);
-            }
-            else
-            {
-                MethodDeclarationVisitor.AddMethodDefinition(Context, varName, method.Name, "MethodAttributes.Private", method.ReturnType, method.ReturnsByRef, typeParameters);
-            }
-
-            foreach (var parameter in method.Parameters)
-            {
-                var parameterExp = CecilDefinitionsFactory.Parameter(parameter, Context.TypeResolver.Resolve(parameter.Type));
-                var paramVar = Context.Naming.Parameter(parameter.Name);
-                Context.WriteCecilExpression($"var {paramVar} = {parameterExp};");
-                Context.WriteNewLine();
-                Context.WriteCecilExpression($"{varName}.Parameters.Add({paramVar});");
-                Context.WriteNewLine();
-
-                Context.DefinitionVariables.RegisterNonMethod(method.ToDisplayString(), parameter.Name, VariableMemberKind.Parameter, paramVar);
-            }
-            
-            Context.DefinitionVariables.RegisterMethod(method.AsMethodDefinitionVariable(varName));
-        }
-
         private void FixCallSite()
         {
             Context.MoveLineAfter(callFixList.Pop(), Context.CurrentLine);
@@ -977,7 +935,7 @@ namespace Cecilifier.Core.AST
 
         private void ProcessProperty(SimpleNameSyntax node, IPropertySymbol propertySymbol)
         {
-            EnsurePropertyExists(node, propertySymbol);
+            propertySymbol.EnsurePropertyExists(Context, node);
             
             var parentMae = node.Parent as MemberAccessExpressionSyntax;
             var isAccessOnThisOrObjectCreation = true;
@@ -1017,20 +975,6 @@ namespace Cecilifier.Core.AST
                 }
             }
         }
-        
-        private void EnsurePropertyExists(SyntaxNode node, [NotNull] IPropertySymbol propertySymbol)
-        {
-            var declaringReference = propertySymbol.DeclaringSyntaxReferences.SingleOrDefault();
-            if (declaringReference == null)
-                return;
-            
-            var propertyDeclaration = (BasePropertyDeclarationSyntax) declaringReference.GetSyntax();
-            if (propertyDeclaration.Span.Start > node.Span.End)
-            {
-                // this is a forward reference, process it...
-                propertyDeclaration.Accept(new PropertyDeclarationVisitor(Context));
-            }
-        }
 
         private void ProcessField(SimpleNameSyntax node, IFieldSymbol fieldSymbol)
         {
@@ -1052,7 +996,7 @@ namespace Cecilifier.Core.AST
                 return;
             }
             
-            var fieldDeclarationVariable = EnsureFieldExists(node, fieldSymbol);
+            var fieldDeclarationVariable = fieldSymbol.EnsureFieldExists(Context, node);
 
             var isTargetOfQualifiedAccess = (node.Parent is MemberAccessExpressionSyntax mae) && mae.Name == node;
             if (!fieldSymbol.IsStatic && !isTargetOfQualifiedAccess)
@@ -1070,33 +1014,11 @@ namespace Cecilifier.Core.AST
                 ? fieldDeclarationVariable.VariableName
                 : fieldSymbol.FieldResolverExpression(Context);
 
-            var opCode = LoadOpCodeForFieldAccess(fieldSymbol);
+            var opCode = fieldSymbol.LoadOpCodeForFieldAccess();
             Context.EmitCilInstruction(ilVar, opCode, resolvedField);
 
             EmitBoxOpCodeIfCallOnTypeParameter(fieldSymbol.Type, nodeParent);
             HandlePotentialDelegateInvocationOn(node, fieldSymbol.Type, ilVar);
-        }
-
-        private OpCode LoadOpCodeForFieldAccess(IFieldSymbol fieldSymbol) => fieldSymbol.IsStatic ? OpCodes.Ldsfld : OpCodes.Ldfld;
-
-        private DefinitionVariable EnsureFieldExists(SimpleNameSyntax node, [NotNull] IFieldSymbol fieldSymbol)
-        {
-            var declaringSyntaxReference = fieldSymbol.DeclaringSyntaxReferences.SingleOrDefault();
-            if (declaringSyntaxReference == null)
-                return DefinitionVariable.NotFound;
-            
-            var fieldDeclaration = (FieldDeclarationSyntax) declaringSyntaxReference.GetSyntax().Parent.Parent;
-            if (fieldDeclaration.Span.Start > node.Span.End)
-            {
-                // this is a forward reference, process it...
-                fieldDeclaration.Accept(new FieldDeclarationVisitor(Context));
-            }
-            
-            var fieldDeclarationVariable = Context.DefinitionVariables.GetVariable(fieldSymbol.Name, VariableMemberKind.Field, fieldSymbol.ContainingType.ToDisplayString());
-            if (!fieldDeclarationVariable.IsValid)
-                throw new Exception($"Could not resolve reference to field: {fieldSymbol.Name}");
-            
-            return fieldDeclarationVariable;
         }
         
         private void ProcessLocalVariable(SimpleNameSyntax localVarSyntax, SymbolInfo varInfo)
@@ -1185,7 +1107,7 @@ namespace Cecilifier.Core.AST
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
             }
 
-            EnsureMethodAvailable(Context.Naming.SyntheticVariable(node.Identifier.Text, ElementKind.Method), method.OverriddenMethod ?? method.OriginalDefinition, Array.Empty<TypeParameterSyntax>());
+            EnsureForwardedMethod(Context, Context.Naming.SyntheticVariable(node.Identifier.Text, ElementKind.Method), method.OverriddenMethod ?? method.OriginalDefinition, Array.Empty<TypeParameterSyntax>());
             CecilDefinitionsFactory.InstantiateDelegate(Context, ilVar, delegateType, method.MethodResolverExpression(Context));
         }
         
@@ -1198,7 +1120,7 @@ namespace Cecilifier.Core.AST
             }
 
             //TODO: We need to find the InvocationSyntax that node represents...
-            EnsureMethodAvailable(Context.Naming.SyntheticVariable(node.Identifier.Text, ElementKind.Method), method.OverriddenMethod ?? method.OriginalDefinition, Array.Empty<TypeParameterSyntax>());
+            EnsureForwardedMethod(Context, Context.Naming.SyntheticVariable(node.Identifier.Text, ElementKind.Method), method.OverriddenMethod ?? method.OriginalDefinition, Array.Empty<TypeParameterSyntax>());
             var isAccessOnThis = !node.Parent.IsKind(SyntaxKind.SimpleMemberAccessExpression);
 
             var mae = node.Parent as MemberAccessExpressionSyntax;
@@ -1251,6 +1173,11 @@ namespace Cecilifier.Core.AST
                             Context.EmitCilInstruction(ilVar, convOpCode);
                             return;
 
+                        case SpecialType.System_Decimal:
+                            var operand = typeInfo.ConvertedType.GetMembers().OfType<IMethodSymbol>().Single(m => m.MethodKind == MethodKind.Constructor && m.Parameters.Length == 1 && m.Parameters[0].Type.SpecialType == typeInfo.Type.SpecialType);
+                            Context.EmitCilInstruction(ilVar, OpCodes.Newobj, operand.MethodResolverExpression(Context));
+                            return;
+                        
                         default:
                             throw new Exception($"Conversion from {typeInfo.Type} to {typeInfo.ConvertedType}  not implemented.");
                     }
@@ -1292,7 +1219,7 @@ namespace Cecilifier.Core.AST
                 return operatorHandlers[operatorToken.Kind()];
             }
 
-            throw new Exception(string.Format("Operator {0} not supported yet (expression: {1})", operatorToken.ValueText, operatorToken.Parent));
+            throw new Exception($"Operator {operatorToken.ValueText} not supported yet (expression: {operatorToken.Parent})");
         }
 
         /*
@@ -1360,7 +1287,7 @@ namespace Cecilifier.Core.AST
 
         private string ArgumentValueToUseForDefaultParameter(IParameterSymbol arg, ImmutableArray<IParameterSymbol> parameters, SeparatedSyntaxList<ArgumentSyntax> arguments)
         {
-            var callerArgumentExpressionAttribute = arg.GetAttributes().SingleOrDefault(attr => attr.AttributeClass!.MetadataToken == Context.RoslynTypeSystem.CallerArgumentExpressionAttibute.MetadataToken);
+            var callerArgumentExpressionAttribute = arg.GetAttributes().SingleOrDefault(attr => attr.AttributeClass!.MetadataToken == Context.RoslynTypeSystem.CallerArgumentExpressionAttribute.MetadataToken);
             if (callerArgumentExpressionAttribute != null)
             {
                 var expressionParameter = parameters.SingleOrDefault(p => p.Name == (string)callerArgumentExpressionAttribute.ConstructorArguments[0].Value);
@@ -1438,6 +1365,22 @@ namespace Cecilifier.Core.AST
             if (node.Kind() != SyntaxKind.SimpleAssignmentExpression && nodeType.SpecialType != SpecialType.System_Void)
             {
                 ctx.EmitCilInstruction(ilVar, OpCodes.Pop);
+            }
+        }
+        
+        private static void HandleModulusExpression(IVisitorContext context, string ilVar, ITypeSymbol lhs, ITypeSymbol rhs)
+        {
+            var l = lhs.GetMembers("op_Modulus").OfType<IMethodSymbol>().SingleOrDefault();
+            var r = rhs.GetMembers("op_Modulus").OfType<IMethodSymbol>().SingleOrDefault();
+
+            var operatorMethod = r ?? l;
+            if (operatorMethod != null)
+            {
+                context.EmitCilInstruction(ilVar, OpCodes.Call, operatorMethod.MethodResolverExpression(context));
+            }
+            else
+            {
+                context.EmitCilInstruction(ilVar, OpCodes.Rem);
             }
         }
     }

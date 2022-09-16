@@ -400,7 +400,8 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                 case Code.Brfalse:
                 case Code.Brfalse_S:
                 case Code.Brtrue:
-                case Code.Brtrue_S: return current.OpCode.FlowControl == FlowControl.Branch && EqualOrEquivalent((Instruction) instruction.Operand, (Instruction) current.Operand, isStatic, scopesToIgnore, out skipCount);
+                case Code.Brtrue_S: 
+                    return (current.OpCode.FlowControl == FlowControl.Branch || current.OpCode.FlowControl == FlowControl.Cond_Branch) && EqualOrEquivalent((Instruction) instruction.Operand, (Instruction) current.Operand, isStatic, scopesToIgnore, out skipCount);
 
                 case Code.Pop:
                     if (current.Previous == null || instruction.Previous == null)

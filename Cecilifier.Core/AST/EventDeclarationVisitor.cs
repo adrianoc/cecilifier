@@ -122,7 +122,7 @@ namespace Cecilifier.Core.AST
             var methodExps = CecilDefinitionsFactory.Method(Context, methodVar, methodName, accessorModifiers, Context.RoslynTypeSystem.SystemVoid, false,Array.Empty<TypeParameterSyntax>());
             var paramsExps = AddParameterTo(methodVar, eventType);
 
-            AddCecilExpressions(methodExps.Concat(paramsExps).Concat(methodBodyExpressions));
+            AddCecilExpressions(Context, methodExps.Concat(paramsExps).Concat(methodBodyExpressions));
             AddCecilExpression($"{eventDeclaringTypeVar}.Methods.Add({methodVar});");
             return Context.DefinitionVariables.RegisterMethod(eventSymbol.ContainingType.Name, methodName, new[] { eventSymbol.Type.ToDisplayString() }, methodVar);
         }

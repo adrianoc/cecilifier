@@ -76,7 +76,18 @@ namespace Cecilifier.Core.Misc
          * 2. Only type parameters owned by the type being declared are considered when computing the arity of the type (whence the number following the backtick reflects only the
          *    # of the type parameters declared by the type being declared). 
          */
-        public static IEnumerable<string> Type(IVisitorContext context, string typeVar, string typeName, string attrs, string baseTypeName, bool isStructWithNoFields, IEnumerable<string> interfaces, IEnumerable<TypeParameterSyntax> ownTypeParameters, IEnumerable<TypeParameterSyntax> outerTypeParameters, params string[] properties)
+        public static IEnumerable<string> Type(
+            IVisitorContext context, 
+            string typeVar, 
+            string typeName, 
+            string attrs, 
+            string baseTypeName, 
+            string outerTypeName, 
+            bool isStructWithNoFields, 
+            IEnumerable<string> interfaces, 
+            IEnumerable<TypeParameterSyntax> ownTypeParameters, 
+            IEnumerable<TypeParameterSyntax> outerTypeParameters, 
+            params string[] properties)
         {
             var typeParamList = ownTypeParameters?.ToArray() ?? Array.Empty<TypeParameterSyntax>();
             if (typeParamList.Length > 0)
@@ -100,9 +111,9 @@ namespace Cecilifier.Core.Misc
                 exps.Add($"{typeVar}.Interfaces.Add(new InterfaceImplementation({itfName}));");
             }
 
-            var currentType = context.DefinitionVariables.GetLastOf(VariableMemberKind.Type);
-            if (currentType.IsValid)
-                exps.Add($"{currentType.VariableName}.NestedTypes.Add({typeVar});"); // type is a inner type of *context.CurrentType* 
+            var outerTypeVariable = context.DefinitionVariables.GetVariable(outerTypeName, VariableMemberKind.Type);
+            if (!string.IsNullOrEmpty(outerTypeName) && outerTypeVariable.IsValid && outerTypeVariable.VariableName != typeVar)
+                exps.Add($"{outerTypeVariable.VariableName}.NestedTypes.Add({typeVar});"); // type is a inner type of *context.CurrentType* 
             else
                 exps.Add($"assembly.MainModule.Types.Add({typeVar});");
 
@@ -118,7 +129,7 @@ namespace Cecilifier.Core.Misc
             return exps;
         }
         
-        public static IEnumerable<string> Type(IVisitorContext context, string typeVar, string typeName, string attrs, string baseTypeName, bool isStructWithNoFields, IEnumerable<string> interfaces, TypeParameterListSyntax typeParameters = null, params string[] properties)
+        public static IEnumerable<string> Type(IVisitorContext context, string typeVar, string typeName, string outerTypeName,string attrs, string baseTypeName, bool isStructWithNoFields, IEnumerable<string> interfaces, TypeParameterListSyntax typeParameters = null, params string[] properties)
         {
             return Type(
                 context,
@@ -126,6 +137,7 @@ namespace Cecilifier.Core.Misc
                 typeName,
                 attrs,
                 baseTypeName,
+                outerTypeName,
                 isStructWithNoFields,
                 interfaces,
                 typeParameters?.Parameters,
@@ -136,19 +148,19 @@ namespace Cecilifier.Core.Misc
         private static string GenericParameter(IVisitorContext context, string typeParameterOwnerVar, string genericParamName, string genParamDefVar, ITypeParameterSymbol typeParameterSymbol)
         {
             context.DefinitionVariables.RegisterNonMethod(typeParameterSymbol.ContainingSymbol.FullyQualifiedName(), genericParamName, VariableMemberKind.TypeParameter, genParamDefVar);
-            return $"var {genParamDefVar} = new Mono.Cecil.GenericParameter(\"{genericParamName}\", {typeParameterOwnerVar}) {Variance(typeParameterSymbol)};";
+            return $"var {genParamDefVar} = new Mono.Cecil.GenericParameter(\"{genericParamName}\", {typeParameterOwnerVar}){Variance(typeParameterSymbol)};";
         }
 
         private static string Variance(ITypeParameterSymbol typeParameterSymbol)
         {
             if (typeParameterSymbol.Variance == VarianceKind.In)
             {
-                return "{ IsContravariant = true }";
+                return " { IsContravariant = true }";
             }
             
             if (typeParameterSymbol.Variance == VarianceKind.Out)
             {
-                return "{ IsCovariant = true }";
+                return " { IsCovariant = true }";
             }
 
             return string.Empty;

@@ -1,0 +1,10 @@
+struct DisposableStruct : System.IDisposable { public void Dispose() {} }
+
+class UsingStatementTest
+{
+    void WithStructExpression() 
+    { 
+        // this will generate not ideal but valid code nonetheless.
+        using(new DisposableStruct()) { } 
+    }    
+}

@@ -19,6 +19,8 @@ public class DefinitionVariable : IEquatable<DefinitionVariable>
     public VariableMemberKind Kind { get; }
     public string VariableName { get; }
     public bool IsValid { get; private set; }
+    public bool IsForwarded { get; internal set; }
+    
     private string ParentName { get; }
 
     public bool Equals(DefinitionVariable other)
