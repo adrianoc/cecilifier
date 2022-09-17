@@ -1,6 +1,27 @@
 ## [Unreleased]
 
+- bumped cecilifier version to 1.60.0
+
+## 15/Sept/2022
+
+## Changed
+
 - bumped cecilifier version to 1.50.0
+- updated testing section of README.md
+
+## Added
+
+- support for covariant properties (#179)
+- support for covariant return methods (#179)
+- support for using statement (#177)
+- support for modulus operator (%)
+
+## Fixed
+
+- static automatic properties being handled as instance ones (#183)
+- forwarded field references generating invalid code (#182)
+- forwarded attribute usage (#180)
+- handling of attributes in type parameters (#181)
 
 ## 15/May/2022
 
