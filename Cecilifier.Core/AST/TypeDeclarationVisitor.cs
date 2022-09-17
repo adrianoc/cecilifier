@@ -116,24 +116,6 @@ namespace Cecilifier.Core.AST
             return Context.TypeResolver.Resolve(classSymbol.BaseType);
         }
 
-        private IEnumerable<string> ImplementedInterfacesFor(BaseListSyntax bases)
-        {
-            if (bases == null)
-            {
-                yield break;
-            }
-
-            foreach (var @base in bases.Types)
-            {
-                var info = Context.GetTypeInfo(@base.Type);
-                if (info.Type?.TypeKind == TypeKind.Interface)
-                {
-                    var itfFQName = @base.DescendantTokens().Aggregate("", (acc, curr) => acc + curr.ValueText);
-                    yield return itfFQName;
-                }
-            }
-        }
-
         private void HandleTypeDeclaration(TypeDeclarationSyntax node, string varName)
         {
             var typeSymbol = DeclaredSymbolFor(node);
