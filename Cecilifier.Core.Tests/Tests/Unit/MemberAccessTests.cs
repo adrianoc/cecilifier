@@ -94,4 +94,17 @@ class Bar {{ public void M() {{ }} }}
         foreach(var expectedExpression in expectedExpressions)
             Assert.That(cecilifiedCode, Contains.Substring(expectedExpression));
     }
+
+    // Issue #187
+    [TestCase("class Foo { static int X { get; } static int M() => X; }", "m_get_2", TestName = "Property")]
+    [TestCase("class Foo { static event System.Action E; static void M() => E += M; }", "m_add_2", TestName = "Event")]
+    public void StaticMembers(string source, string expectedMethodCall)
+    {
+        var result = RunCecilifier(source);
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+        Assert.That(cecilifiedCode, Does.Not.Match(
+            @"(il_M_\d+\.Emit\(OpCodes\.)Ldarg_0\);\s+" +
+			$@"\1Call, {expectedMethodCall}\);\s+"), 
+            "ldarg.0 is not expected");
+    }
 }

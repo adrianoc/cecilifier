@@ -949,7 +949,7 @@ namespace Cecilifier.Core.AST
             }
 
             // if this is an *unqualified* access we need to load *this*
-            if ((parentMae == null || parentMae.Expression == node) && !node.Parent.IsKind(SyntaxKind.MemberBindingExpression))
+            if ((parentMae == null || parentMae.Expression == node) && !node.Parent.IsKind(SyntaxKind.MemberBindingExpression) && !propertySymbol.IsStatic)
             {
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
             }
