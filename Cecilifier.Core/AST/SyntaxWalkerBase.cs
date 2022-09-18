@@ -269,7 +269,11 @@ namespace Cecilifier.Core.AST
             var typeAttributes = CecilDefinitionsFactory.DefaultTypeAttributeFor(node.Kind(), hasStaticCtor);
             if (IsNestedTypeDeclaration(node))
             {
-                return typeAttributes.AppendModifier(ModifiersToCecil(node.Modifiers, m => "TypeAttributes.Nested" + m.ValueText.PascalCase()));
+                if (node.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword)))
+                {
+                    typeAttributes = typeAttributes.AppendModifier("TypeAttributes.Abstract | TypeAttributes.Sealed");
+                }
+                return typeAttributes.AppendModifier(ModifiersToCecil(node.Modifiers.Where(m => !m.IsKind(SyntaxKind.StaticKeyword)), m => "TypeAttributes.Nested" + m.ValueText.PascalCase()));
             }
 
             var convertedModifiers = ModifiersToCecil(node.Modifiers, "TypeAttributes", "NotPublic", MapAttribute);
@@ -283,7 +287,7 @@ namespace Cecilifier.Core.AST
                     SyntaxKind.ProtectedKeyword => "Family",
                     SyntaxKind.PrivateKeyword => "Private",
                     SyntaxKind.PublicKeyword => "Public",
-                    SyntaxKind.StaticKeyword => "Static",
+                    SyntaxKind.StaticKeyword => "Abstract | TypeAttributes.Sealed",
                     SyntaxKind.AbstractKeyword => "Abstract",
                     SyntaxKind.SealedKeyword => "Sealed",
                     _ => throw new ArgumentException()
@@ -299,7 +303,7 @@ namespace Cecilifier.Core.AST
             return node.Parent.Kind() != SyntaxKind.NamespaceDeclaration && node.Parent.Kind() != SyntaxKind.CompilationUnit;
         }
         
-        protected static string ModifiersToCecil(IReadOnlyList<SyntaxToken> modifiers, string targetEnum, string defaultAccessibility, Func<SyntaxToken, IEnumerable<string>> mapAttribute = null)
+        protected static string ModifiersToCecil(IEnumerable<SyntaxToken> modifiers, string targetEnum, string defaultAccessibility, Func<SyntaxToken, IEnumerable<string>> mapAttribute = null)
         {
             var finalModifierList = new List<SyntaxToken>(modifiers);
 
