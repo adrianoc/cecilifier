@@ -130,7 +130,7 @@ namespace Cecilifier.Core.AST
         private static string AccessModifiersForEventAccessors(MemberDeclarationSyntax node, bool isInterfaceDef)
         {
             var accessorModifiers = isInterfaceDef 
-                ? Constants.CommonCecilConstants.InterfaceMethodAttributes 
+                ? Constants.Cecil.InterfaceMethodAttributes 
                 : node.Modifiers.MethodModifiersToCecil((targetEnum, modifiers, defaultAccessibility) => ModifiersToCecil(modifiers, targetEnum, defaultAccessibility), "MethodAttributes.SpecialName");
 
             return accessorModifiers;

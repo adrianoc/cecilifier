@@ -271,7 +271,7 @@ namespace Cecilifier.Core.AST
             {
                 if (node.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword)))
                 {
-                    typeAttributes = typeAttributes.AppendModifier("TypeAttributes.Abstract | TypeAttributes.Sealed");
+                    typeAttributes = typeAttributes.AppendModifier(Constants.Cecil.StaticTypeAttributes);
                 }
                 return typeAttributes.AppendModifier(ModifiersToCecil(node.Modifiers.Where(m => !m.IsKind(SyntaxKind.StaticKeyword)), m => "TypeAttributes.Nested" + m.ValueText.PascalCase()));
             }

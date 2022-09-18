@@ -66,7 +66,7 @@ public struct StaticDelegateCacheContext
         cacheTypeVar.Properties[counterName] = ++staticMethodToDelegateConversionCount;
 
         CacheBackingField = context.Naming.SyntheticVariable("cachedDelegate", ElementKind.Field);
-        var fieldExps = CecilDefinitionsFactory.Field(context, cacheInnerTypeName, cacheTypeVar, CacheBackingField, backingFieldName, delegateType, Constants.CommonCecilConstants.StaticFieldAttributes);
+        var fieldExps = CecilDefinitionsFactory.Field(context, cacheInnerTypeName, cacheTypeVar, CacheBackingField, backingFieldName, delegateType, Constants.Cecil.StaticFieldAttributes);
         foreach (var exp in fieldExps)
         {
             context.WriteCecilExpression(exp);
@@ -84,7 +84,7 @@ public struct StaticDelegateCacheContext
             cachedTypeVar,
             cacheTypeName,
             DeclaringTypeName,
-            Constants.CommonCecilConstants.StaticClassAttributes.AppendModifier("TypeAttributes.NestedPrivate"),
+            Constants.Cecil.StaticClassAttributes.AppendModifier("TypeAttributes.NestedPrivate"),
             context.TypeResolver.Bcl.System.Object,
             isStructWithNoFields: false,
             Array.Empty<string>());

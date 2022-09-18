@@ -34,7 +34,7 @@ namespace Cecilifier.Core.AST
         private void HandleStaticConstructor(ConstructorDeclarationSyntax node)
         {
             var variableName = Context.Naming.Constructor(node.ResolveDeclaringType<BaseTypeDeclarationSyntax>(), true);
-            ProcessMethodDeclaration(node, variableName, Constants.CommonCecilConstants.StaticConstructorName, $".{Constants.CommonCecilConstants.StaticConstructorName}", false, ctorVar =>
+            ProcessMethodDeclaration(node, variableName, Constants.Cecil.StaticConstructorName, $".{Constants.Cecil.StaticConstructorName}", false, ctorVar =>
             {
                 var declaringType = node.Parent.ResolveDeclaringType<TypeDeclarationSyntax>();
                 ProcessFieldInitialization(declaringType, ilVar, true);
@@ -79,7 +79,7 @@ namespace Cecilifier.Core.AST
 
         protected override string GetSpecificModifiers()
         {
-            return string.Empty.AppendModifier(Constants.CommonCecilConstants.CtorAttributes);
+            return string.Empty.AppendModifier(Constants.Cecil.CtorAttributes);
         }
 
         internal void DefaultCtorInjector(string typeDefVar, ClassDeclarationSyntax declaringClass, bool isStatic)
@@ -123,7 +123,7 @@ namespace Cecilifier.Core.AST
             {
                 ctorLocalVar = found.VariableName;
                 
-                AddCecilExpression($"{ctorLocalVar}.Attributes = {ctorAccessibility} | MethodAttributes.HideBySig | {Constants.CommonCecilConstants.CtorAttributes};");
+                AddCecilExpression($"{ctorLocalVar}.Attributes = {ctorAccessibility} | MethodAttributes.HideBySig | {Constants.Cecil.CtorAttributes};");
                 AddCecilExpression($"{ctorLocalVar}.HasThis = !{ctorLocalVar}.IsStatic;", ctorLocalVar);
                 return ctorLocalVar;
             }
