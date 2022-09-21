@@ -79,4 +79,16 @@ public class DelegateTests : CecilifierUnitTestBase
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
         Assert.That(cecilifiedCode, Contains.Substring("WARNING: Converting static method (M) to delegate in a type other than the one defining it may generate incorrect code. Access type: Bar, Method type: Foo"));
     }
+
+    [TestCase(@"class C { float F() => 42.0F; void M() { var r = new System.Func<float>(F); } }", TestName = "Explicit")]
+    [TestCase(@"class C { float F() => 42.0F; void M(System.Func<float> r) { M(F); } }", TestName = "Through method group conversion")]
+    public void DelegateInstantiation(string source)
+    {
+        var result = RunCecilifier(source);
+        Assert.That(
+            result.GeneratedCode.ReadToEnd(), 
+            Does.Match(@"(il_M_4\.Emit\(OpCodes\.)Ldarg_0\);\s+" +
+                       @"\1Ldftn, m_F_1\);\s+" +
+                       @"\1Newobj, .+System.Func`1.+System\.Single.+System\.Object.+System\.IntPtr.+\);\s+"));
+    }    
 }
