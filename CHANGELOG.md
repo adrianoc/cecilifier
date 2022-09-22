@@ -1,5 +1,7 @@
 ## [Unreleased]
+- bumped cecilifier version to 1.70.0
 
+## [Unreleased]
 - bumped cecilifier version to 1.60.0
 - fixed NRE when handling explicit delegate instantiation (#190)
 - fixed TypeAttributes for static top level/inner types (#191)
