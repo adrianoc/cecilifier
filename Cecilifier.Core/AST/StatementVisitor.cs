@@ -142,7 +142,13 @@ namespace Cecilifier.Core.AST
         {
             using (Context.WithFlag(Constants.ContextFlags.Fixed))
             {
-                HandleVariableDeclaration(node.Declaration);
+                var declaredType = Context.GetTypeInfo((PointerTypeSyntax)node.Declaration.Type).Type;
+                var pointerType = (IPointerTypeSymbol) declaredType.EnsureNotNull();
+
+                var currentMethodVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
+                var localVar = node.Declaration.Variables[0];
+                AddLocalVariableWithResolvedType(localVar.Identifier.Text, currentMethodVar, Context.TypeResolver.Resolve(pointerType.PointedAtType).MakeByReferenceType());
+                ProcessVariableInitialization(localVar, declaredType);
             }
             
             Visit(node.Statement);
@@ -342,20 +348,9 @@ namespace Cecilifier.Core.AST
 
         private void AddLocalVariable(TypeSyntax type, VariableDeclaratorSyntax localVar, DefinitionVariable methodVar)
         {
-            var isFixedStatement = Context.HasFlag(Constants.ContextFlags.Fixed);
-            if (isFixedStatement)
-            {
-                type = ((PointerTypeSyntax) type).ElementType;
-            }
-            
             var resolvedVarType = type.IsVar
                 ? ResolveExpressionType(localVar.Initializer?.Value)
                 : ResolveType(type);
-            
-            if (isFixedStatement)
-            {
-                resolvedVarType = resolvedVarType.MakeByReferenceType();
-            }
             
             AddLocalVariableWithResolvedType(localVar.Identifier.Text, methodVar, resolvedVarType);
         }

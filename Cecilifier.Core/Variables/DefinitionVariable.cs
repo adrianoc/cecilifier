@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace Cecilifier.Core.Variables;
 
@@ -20,7 +21,9 @@ public class DefinitionVariable : IEquatable<DefinitionVariable>
     public string VariableName { get; }
     public bool IsValid { get; private set; }
     public bool IsForwarded { get; internal set; }
-    
+
+    public IDictionary<string, object> Properties { get; } = new Dictionary<string, object>();
+
     private string ParentName { get; }
 
     public bool Equals(DefinitionVariable other)

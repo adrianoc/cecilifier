@@ -338,16 +338,9 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
         private static bool EqualOrEquivalent(Instruction instruction, Instruction current, bool isStatic, HashSet<IMetadataScope> scopesToIgnore, out int skipCount)
         {
             skipCount = 0;
-            while (instruction != null && instruction.OpCode == OpCodes.Nop)
-            {
-                instruction = instruction.Next;
-            }
-
-            while (current != null && current.OpCode == OpCodes.Nop)
-            {
-                current = current.Next;
-            }
-
+            instruction = LenientInstructionComparer.SkipNonRelevantInstructions(instruction);
+            current = LenientInstructionComparer.SkipNonRelevantInstructions(current);
+            
             if (instruction?.OpCode == current?.OpCode)
                 return ValidateOperands(instruction, current, scopesToIgnore);
 
@@ -722,10 +715,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                 return true;
             }
 
-            var current = inst.Next;
-            while (current != null && current.OpCode == OpCodes.Nop)
-                current = current.Next;
-                
+            var current = SkipNops(inst.Next);
             if (IsLdLoc(current.OpCode) && current.Operand == inst.Operand)
             {
                 toBeIgnored.Add(current);
@@ -767,6 +757,31 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
             return instruction == null;
         }
 
+        public static Instruction SkipNonRelevantInstructions(Instruction instruction)
+        {
+            instruction = SkipNops(instruction);
+            if (!IsStLoc(instruction.OpCode) || instruction.Next == null)
+            {
+                return instruction;
+            }
+            
+            var nextInstruction = SkipNops(instruction.Next);
+            if (IsLdLoc(nextInstruction.OpCode) && nextInstruction.Operand == instruction.Operand)
+            {
+                return SkipNops(nextInstruction.Next);
+            }
+            
+            return instruction;
+        }
+
+        private static Instruction SkipNops(Instruction instruction)
+        {
+            while (instruction != null && instruction.OpCode == OpCodes.Nop)
+                instruction = instruction.Next;
+
+            return instruction;
+        }
+        
         private HashSet<Instruction> toBeIgnored;
     }
 }

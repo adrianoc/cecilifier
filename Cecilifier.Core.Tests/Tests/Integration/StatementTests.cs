@@ -5,10 +5,11 @@ namespace Cecilifier.Core.Tests.Integration
     [TestFixture]
     public class StatementTests : IntegrationResourceBasedTest
     {
-        [Test]
-        public void TestFixedStatement()
+        [TestCase("System.Int32* FixedStatementTest::Test()", TestName = "Return")]
+        [TestCase("System.Void FixedStatementTest::Test()", TestName = "Local")]
+        public void TestFixedStatement(string methodToVerify)
         {    
-            AssertResourceTestWithExplicitExpectation(@"Statements/FixedStatement", "System.Int32* FixedStatementTest::FixedStatement()");
+            AssertResourceTestWithExplicitExpectation(@$"Statements/FixedStatement{TestContext.CurrentContext.Test.Name}", methodToVerify);
         }
         
         [Test]

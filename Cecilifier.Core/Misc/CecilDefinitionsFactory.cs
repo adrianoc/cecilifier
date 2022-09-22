@@ -397,11 +397,48 @@ namespace Cecilifier.Core.Misc
             return factory("HasThis = false", parameters, returnType);
         }
 
-        public static void InstantiateDelegate(IVisitorContext context, string ilVar, ITypeSymbol delegateType, string variableName)
+        public static void InstantiateDelegate(IVisitorContext context, string ilVar, ITypeSymbol delegateType, string targetMethodExp, StaticDelegateCacheContext staticDelegateCacheContext)
         {
-            context.EmitCilInstruction(ilVar, OpCodes.Ldftn, variableName);
-            var delegateCtor = delegateType.GetMembers().OfType<IMethodSymbol>().FirstOrDefault(m => m.Name == ".ctor"); 
-            context.EmitCilInstruction(ilVar, OpCodes.Newobj, delegateCtor.MethodResolverExpression(context));
+            // To match Roslyn implementation we need to cache static method do delegate conversions.
+            if (staticDelegateCacheContext.IsStaticDelegate)
+            {
+                staticDelegateCacheContext.EnsureCacheBackingFieldIsEmitted(context.TypeResolver.Resolve(delegateType));
+                LogWarningIfStaticMethodIsDeclaredInOtherType(context, staticDelegateCacheContext);
+                
+                context.EmitCilInstruction(ilVar, OpCodes.Ldsfld, staticDelegateCacheContext.CacheBackingField);
+                context.EmitCilInstruction(ilVar, OpCodes.Dup);
+
+                var cacheAlreadyInitializedTargetVarName = context.Naming.Label("cacheHit");
+                context.WriteCecilExpression($"var {cacheAlreadyInitializedTargetVarName} = {ilVar}.Create(OpCodes.Nop);");
+                context.WriteNewLine();
+                context.EmitCilInstruction(ilVar, OpCodes.Brtrue, cacheAlreadyInitializedTargetVarName);
+                context.EmitCilInstruction(ilVar, OpCodes.Pop);
+                context.EmitCilInstruction(ilVar, OpCodes.Ldnull);
+                context.EmitCilInstruction(ilVar, OpCodes.Ldftn, targetMethodExp);
+                var delegateCtor = delegateType.GetMembers().OfType<IMethodSymbol>().FirstOrDefault(m => m.Name == ".ctor");
+                context.EmitCilInstruction(ilVar, OpCodes.Newobj, delegateCtor.MethodResolverExpression(context));
+                context.EmitCilInstruction(ilVar, OpCodes.Dup);
+                context.EmitCilInstruction(ilVar, OpCodes.Stsfld, staticDelegateCacheContext.CacheBackingField);
+                context.WriteCecilExpression($"{ilVar}.Append({cacheAlreadyInitializedTargetVarName});");
+                context.WriteNewLine();
+            }
+            else
+            {
+                context.EmitCilInstruction(ilVar, OpCodes.Ldftn, targetMethodExp);
+                var delegateCtor = delegateType.GetMembers().OfType<IMethodSymbol>().FirstOrDefault(m => m.Name == ".ctor"); 
+                context.EmitCilInstruction(ilVar, OpCodes.Newobj, delegateCtor.MethodResolverExpression(context));
+            }
+        }
+
+        private static void LogWarningIfStaticMethodIsDeclaredInOtherType(IVisitorContext context, StaticDelegateCacheContext staticDelegateCacheContext)
+        {
+            var currentType = context.DefinitionVariables.GetLastOf(VariableMemberKind.Type);
+            if (currentType.IsValid && currentType.MemberName != staticDelegateCacheContext.Method.ContainingType.Name)
+            {
+                context.WriteComment($"*****************************************************************");
+                context.WriteComment($"WARNING: Converting static method ({staticDelegateCacheContext.Method.FullyQualifiedName()}) to delegate in a type other than the one defining it may generate incorrect code. Access type: {currentType.MemberName}, Method type: {staticDelegateCacheContext.Method.ContainingType.Name}");
+                context.WriteComment($"*****************************************************************");
+            }
         }
     }
 }
