@@ -130,33 +130,33 @@ function initializeSite(errorAccessingGist, gist, version) {
          });
          
         // Configure keyboard shortcuts
-        csharpCode.addCommand(monaco.KeyMod.CtrlCmd  | monaco.KeyMod.Alt | monaco.KeyCode.KEY_D, function() {
+        csharpCode.addCommand(monaco.KeyMod.CtrlCmd + monaco.KeyMod.Alt + monaco.KeyCode.KeyD, function() {
             simulateClick("downloadProject");
         });
 
-        csharpCode.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Alt | monaco.KeyCode.KEY_C, function() {
+        csharpCode.addCommand(monaco.KeyMod.CtrlCmd + monaco.KeyMod.Alt + monaco.KeyCode.KeyC, function() {
             simulateClick("sendbutton");
         });
 
-        csharpCode.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Alt | monaco.KeyCode.KEY_S, function() {
+        csharpCode.addCommand(monaco.KeyMod.CtrlCmd + monaco.KeyMod.Alt + monaco.KeyCode.KeyS, function() {
             changeCecilifierSettings();
         });
 
-        csharpCode.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.US_OPEN_SQUARE_BRACKET , function() {
+        csharpCode.addCommand(monaco.KeyMod.CtrlCmd + monaco.KeyCode.BracketLeft , function() {
             const options = csharpCode.getRawOptions();
             const newFontSize = Math.ceil(options.fontSize - options.fontSize * 0.05);
 
             csharpCode.updateOptions({ fontSize: newFontSize });
         });
 
-        csharpCode.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.US_CLOSE_SQUARE_BRACKET , function() {
+        csharpCode.addCommand(monaco.KeyMod.CtrlCmd + monaco.KeyCode.BracketRight , function() {
             const options = csharpCode.getRawOptions();
 
             const newFontSize = Math.ceil(options.fontSize * 1.05);
             csharpCode.updateOptions({ fontSize: newFontSize });
         });
 
-        csharpCode.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.US_DOT , function() {
+        csharpCode.addCommand(monaco.KeyMod.CtrlCmd + monaco.KeyCode.Period, function() {
             ShowErrorDialog("Report a new issue", "Please be kind, check the existing ones before filing a new issue..", "Report an error.");
         });
         
