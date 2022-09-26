@@ -50,7 +50,7 @@ namespace Cecilifier.Core.Extensions
             ILocalSymbol local => local.Type,
             _ => throw new NotSupportedException($"({symbol.Kind}) symbol {symbol.ToDisplayString()} is not supported.")
         };
-        
+
         private static ITypeSymbol GetElementType(this ISymbol symbol) => symbol switch
         {
             IPointerTypeSymbol pointer => pointer.PointedAtType.GetElementType(),

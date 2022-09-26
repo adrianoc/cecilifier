@@ -165,6 +165,7 @@ namespace Cecilifier.Core.AST
             var typeDefinitionExp = CecilDefinitionsFactory.Type(
                 context, 
                 typeDeclarationVar,
+                typeSymbol.ContainingNamespace?.FullyQualifiedName() ?? string.Empty,
                 typeSymbol.Name, 
                 typeModifiers,
                 baseType,

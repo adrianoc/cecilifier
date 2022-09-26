@@ -1,6 +1,7 @@
 using System.Linq;
 using Cecilifier.Core.Extensions;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Cecilifier.Core.AST
@@ -18,25 +19,7 @@ namespace Cecilifier.Core.AST
         {
             HandleAttributesInMemberDeclaration(node.AttributeLists, "assembly");
             base.VisitCompilationUnit(node);
-        }
-
-        public override void VisitNamespaceDeclaration(NamespaceDeclarationSyntax node)
-        {
-            try
-            {
-                Context.CurrentNamespace = NamespaceOf(node);
-                base.VisitNamespaceDeclaration(node);
-            }
-            finally
-            {
-                Context.CurrentNamespace = string.Empty;
-            }
-
-            string NamespaceOf(NamespaceDeclarationSyntax namespaceDeclarationSyntax)
-            {
-                var namespaceHierarchy = namespaceDeclarationSyntax.AncestorsAndSelf().OfType<NamespaceDeclarationSyntax>().Reverse();
-                return string.Join('.', namespaceHierarchy.Select(curr => curr.Name.WithoutTrivia()));
-            }
+            NewMethod();
         }
      
         public override void VisitGlobalStatement(GlobalStatementSyntax node)
@@ -54,39 +37,31 @@ namespace Cecilifier.Core.AST
                 _globalStatementHandler = null;
             }
         }
-
-        public override void VisitClassDeclaration(ClassDeclarationSyntax node)
-        {
-            new TypeDeclarationVisitor(Context).Visit(node);
-            UpdateTypeInformation(node);
-        }
-
-        public override void VisitStructDeclaration(StructDeclarationSyntax node)
-        {
-            new TypeDeclarationVisitor(Context).Visit(node);
-        }
-
-        public override void VisitInterfaceDeclaration(InterfaceDeclarationSyntax node)
-        {
-            new TypeDeclarationVisitor(Context).Visit(node);
-        }
-
-        public override void VisitEnumDeclaration(EnumDeclarationSyntax node)
-        {
-            new TypeDeclarationVisitor(Context).Visit(node);
-        }
-
+        
         public override void VisitDelegateDeclaration(DelegateDeclarationSyntax node)
         {
             new TypeDeclarationVisitor(Context).Visit(node);
         }
 
+        private void NewMethod()
+        {
+            var collectedTypes = new TypeDependency.TypeDependencyCollector((CSharpCompilation)Context.SemanticModel.Compilation);
+            foreach (var typeDeclaration in collectedTypes.Ordered.Dependencies)
+            {
+                if (Context.SemanticModel.GetDeclaredSymbol(typeDeclaration).ContainingType != null)
+                    continue;
+                
+                new TypeDeclarationVisitor(Context).Visit(typeDeclaration);
+                UpdateTypeInformation(typeDeclaration);
+            }
+        }
+        
         private void UpdateTypeInformation(BaseTypeDeclarationSyntax node)
         {
             if (mainType == null)
                 mainType = node;
 
-            var typeSymbol = Context.SemanticModel.GetDeclaredSymbol(node) as ITypeSymbol;
+            var typeSymbol = ModelExtensions.GetDeclaredSymbol(Context.SemanticModel, node) as ITypeSymbol;
             if (typeSymbol == null)
                 return;
 
@@ -97,7 +72,7 @@ namespace Cecilifier.Core.AST
                     MainMethodDefinitionVariable = Context.DefinitionVariables.GetMethodVariable(mainMethod.AsMethodDefinitionVariable());
             }
 
-            var mainTypeSymbol = (ITypeSymbol) Context.SemanticModel.GetDeclaredSymbol(mainType);
+            var mainTypeSymbol = (ITypeSymbol) ModelExtensions.GetDeclaredSymbol(Context.SemanticModel, mainType);
             if (typeSymbol.GetMembers().Length > mainTypeSymbol?.GetMembers().Length)
             {
                 mainType = node;

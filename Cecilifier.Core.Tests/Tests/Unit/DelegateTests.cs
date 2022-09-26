@@ -32,8 +32,8 @@ public class DelegateTests : CecilifierUnitTestBase
         var result = RunCecilifier("class C { public delegate int D(); D M(D p) => p; }");
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
         
-        Assert.That(cecilifiedCode, Does.Match(@"var m_M_\d+ = new MethodDefinition\(""M"",.+, del_D1\);"), "Return type");
-        Assert.That(cecilifiedCode, Does.Match(@"var p_p_\d+ = new ParameterDefinition\(""p"",.+del_D1\);"), "Parameter");
+        Assert.That(cecilifiedCode, Does.Match(@"var m_M_\d+ = new MethodDefinition\(""M"",.+, del_D\d+\);"), "Return type");
+        Assert.That(cecilifiedCode, Does.Match(@"var p_p_\d+ = new ParameterDefinition\(""p"",.+del_D\d+\);"), "Parameter");
     }
 
     [Test]

@@ -76,8 +76,8 @@ class Foo
     [TestCase("where T : IFoo", "string ConstrainedToInterfaceCallToString() => field.ToString();", "Ldflda, fld_field_6", "Constrained, gp_T_3")]
     [TestCase("", "string Unconstrained() => field.ToString();", "Ldflda, fld_field_6", "Constrained, gp_T_3")]
     [TestCase("where T : class", "string ConstrainedToReferenceType() => field.ToString();", "Ldfld, fld_field_6", "Box, gp_T_3")]
-    [TestCase("where T: Bar", "string ConstrainedToClassCallToString() => field.ToString();", "Ldfld, fld_field_6", "Box, gp_T_3")]
-    [TestCase("where T: Bar", "void ConstrainedToClassCallClassMethod() => field.M();", "Ldfld, fld_field_6", "Box, gp_T_3")]
+    [TestCase("where T: Bar", "string ConstrainedToClassCallToString() => field.ToString();", "Ldfld, fld_field_11", "Box, gp_T_8")]
+    [TestCase("where T: Bar", "void ConstrainedToClassCallClassMethod() => field.M();", "Ldfld, fld_field_11", "Box, gp_T_8")]
     public void TestCallOn_TypeParameter_CallOnField(string constraint, string snippet, params string[] expectedExpressions)
     {
         var code =$@"interface IFoo {{ string Get(); }}

@@ -25,6 +25,7 @@ internal partial class TypeDeclarationVisitor
         var typeDef = CecilDefinitionsFactory.Type(
             Context,
             typeVar,
+            delegateSymbol.ContainingNamespace?.FullyQualifiedName() ?? string.Empty,
             node.Identifier.ValueText,
             delegateSymbol.ContainingType?.Name,
             CecilDefinitionsFactory.DefaultTypeAttributeFor(node.Kind(), false).AppendModifier(accessibility),
