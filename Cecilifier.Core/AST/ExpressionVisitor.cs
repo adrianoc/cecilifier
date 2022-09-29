@@ -703,6 +703,7 @@ namespace Cecilifier.Core.AST
         
         public override void VisitThrowExpression(ThrowExpressionSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             CecilExpressionFactory.EmitThrow(Context, ilVar, node.Expression);
         }
         

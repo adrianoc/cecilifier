@@ -35,9 +35,10 @@ namespace Cecilifier.Runtime
                 .Where(c => c.Name == methodName
                             && c.IsGenericMethodDefinition
                             && c.GetParameters().Length == paramTypes.Count()
-                            && typeArgumentsCount == c.GetGenericArguments().Length);
+                            && typeArgumentsCount == c.GetGenericArguments().Length)
+                .ToArray();
 
-            if (methods == null)
+            if (methods.Length == 0)
             {
                 throw new MissingMethodException(declaringTypeName, methodName);
             }
@@ -100,24 +101,6 @@ namespace Cecilifier.Runtime
             if (resolvedMethod == null)
             {
                 throw new InvalidOperationException($"Failed to resolve method {declaringType}.{methodName}({string.Join(',', paramTypes)})");
-            }
-            
-            return resolvedMethod;
-        }
-
-        public static MethodInfo ResolveMethod(string assemblyName, string declaringTypeName, string methodName)
-        {
-            var containingAssembly = Assembly.Load(new AssemblyName(assemblyName));
-            var declaringType = containingAssembly.GetType(declaringTypeName);
-            if (declaringType == null)
-            {
-                throw new InvalidOperationException($"Failed to resolve type [{assemblyName}] {declaringTypeName}");
-            }
-
-            var resolvedMethod = declaringType.GetMethod(methodName);
-            if (resolvedMethod == null)
-            {
-                throw new InvalidOperationException($"Failed to resolve method [{assemblyName}] {declaringTypeName}.{methodName}(?)");
             }
             
             return resolvedMethod;
