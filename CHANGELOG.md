@@ -1,15 +1,12 @@
 ## [Unreleased]
 - bumped cecilifier version to 1.70.0
-
-## [Unreleased]
-- bumped cecilifier version to 1.60.0
 - fixed NRE when handling explicit delegate instantiation (#190)
 - fixed TypeAttributes for static top level/inner types (#191)
 - change code to copy .runtimeconfig.json file when running the cecilified code (#189)
 - do not load implicit 'this' for static property access (#187)
+- sorts type declaration to avoid intermixed code by processing types before its dependants.
 
 ## 15/Sept/2022
-
 ## Changed
 
 - bumped cecilifier version to 1.50.0
