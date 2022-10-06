@@ -42,6 +42,6 @@ namespace Cecilifier.Core.AST
                 _ => base.VisitOperatorDeclaration(node));
         }
 
-        protected override string GetSpecificModifiers() => Constants.CommonCecilConstants.MethodAttributesSpecialName;
+        protected override string GetSpecificModifiers() => Constants.Cecil.MethodAttributesSpecialName;
     }
 }

@@ -542,6 +542,14 @@ namespace Cecilifier.Core.AST
             var ctorInfo = Context.SemanticModel.GetSymbolInfo(node);
 
             var ctor = (IMethodSymbol) ctorInfo.Symbol;
+            if (ctor == null)
+            {
+                if (!TryProcessMethodReferenceInObjectCreationExpression(node))
+                    throw new InvalidOperationException($"Failed to resolve called constructor symbol in {node}");
+                
+                return;
+            }
+            
             if (TryProcessInvocationOnParameterlessImplicitCtorOnValueType(node, ctorInfo))
             {
                 return;
@@ -550,7 +558,7 @@ namespace Cecilifier.Core.AST
             var varName = Context.Naming.SyntheticVariable(ctor.ContainingType.Name, ElementKind.LocalVariable);
             EnsureForwardedMethod(Context, varName, ctor, Array.Empty<TypeParameterSyntax>());
 
-            string operand = ctor.MethodResolverExpression(Context);
+            var operand = ctor.MethodResolverExpression(Context);
             Context.EmitCilInstruction(ilVar, OpCodes.Newobj, operand);
             PushCall();
 
@@ -559,7 +567,7 @@ namespace Cecilifier.Core.AST
             
             StoreTopOfStackInLocalVariableAndLoadItsAddressIfNeeded(node);
         }
-        
+
         public override void VisitExpressionStatement(ExpressionStatementSyntax node)
         {
             base.Visit(node.Expression);
@@ -713,6 +721,18 @@ namespace Cecilifier.Core.AST
         public override void VisitDefaultExpression(DefaultExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitSizeOfExpression(SizeOfExpressionSyntax node) => LogUnsupportedSyntax(node);
 
+        private bool TryProcessMethodReferenceInObjectCreationExpression(ObjectCreationExpressionSyntax node)
+        {
+            var arg = node.ArgumentList?.Arguments.SingleOrDefault();
+            if (arg != null && Context.SemanticModel.GetSymbolInfo(arg.Expression).Symbol is { Kind: SymbolKind.Method })
+            {
+                VisitIdentifierName((IdentifierNameSyntax)arg.Expression);
+                return true;
+            }
+
+            return false;
+        }
+        
         private void ProcessPrefixPostfixOperators(ExpressionSyntax operand, OpCode opCode, bool isPrefix)
         {
             using var _ = LineInformationTracker.Track(Context, operand);
@@ -856,7 +876,7 @@ namespace Cecilifier.Core.AST
         
         private bool TryProcessInvocationOnParameterlessImplicitCtorOnValueType(ObjectCreationExpressionSyntax node, SymbolInfo ctorInfo)
         {
-            if (ctorInfo.Symbol?.IsImplicitlyDeclared == false || ctorInfo.Symbol.ContainingType.IsReferenceType)
+            if (ctorInfo.Symbol == null || ctorInfo.Symbol.IsImplicitlyDeclared == false || ctorInfo.Symbol.ContainingType.IsReferenceType)
                 return false;
 
             new ValueTypeNoArgCtorInvocationVisitor(Context, ilVar, ctorInfo).Visit(node.Parent);
@@ -949,7 +969,7 @@ namespace Cecilifier.Core.AST
             }
 
             // if this is an *unqualified* access we need to load *this*
-            if ((parentMae == null || parentMae.Expression == node) && !node.Parent.IsKind(SyntaxKind.MemberBindingExpression))
+            if ((parentMae == null || parentMae.Expression == node) && !node.Parent.IsKind(SyntaxKind.MemberBindingExpression) && !propertySymbol.IsStatic)
             {
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
             }
@@ -1081,7 +1101,11 @@ namespace Cecilifier.Core.AST
                 
             var delegateType = firstParentNotPartOfName switch
             {
-                ArgumentSyntax arg => ((IMethodSymbol) Context.SemanticModel.GetSymbolInfo(arg.Parent.Parent).Symbol).Parameters[arg.FirstAncestorOrSelf<ArgumentListSyntax>().Arguments.IndexOf(arg)].Type,
+                // assumes that a method reference in a object creation expression can only be a delegate instantiation.
+                ArgumentSyntax { Parent.Parent.RawKind: (int) SyntaxKind.ObjectCreationExpression } arg => Context.SemanticModel.GetTypeInfo(arg.Parent.Parent).Type, 
+                
+                // assumes that a method reference in an invocation expression is method group -> delegate conversion. 
+                ArgumentSyntax { Parent.Parent.RawKind: (int) SyntaxKind.InvocationExpression } arg => ((IMethodSymbol) Context.SemanticModel.GetSymbolInfo(arg.Parent.Parent).Symbol).Parameters[arg.FirstAncestorOrSelf<ArgumentListSyntax>().Arguments.IndexOf(arg)].Type,
                 
                 AssignmentExpressionSyntax assignment => Context.SemanticModel.GetSymbolInfo(assignment.Left).Symbol.Accept(ElementTypeSymbolResolver.Instance),
                     

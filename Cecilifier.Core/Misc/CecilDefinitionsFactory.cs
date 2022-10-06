@@ -57,7 +57,7 @@ namespace Cecilifier.Core.Misc
             var ctorName = Utils.ConstructorMethodName(isStatic);
             context.DefinitionVariables.RegisterMethod(typeName, ctorName, paramTypes, ctorLocalVar);
 
-            var exp = $@"var {ctorLocalVar} = new MethodDefinition(""{ctorName}"", {methodAccessibility} | MethodAttributes.HideBySig | {Constants.CommonCecilConstants.CtorAttributes}, assembly.MainModule.TypeSystem.Void)";
+            var exp = $@"var {ctorLocalVar} = new MethodDefinition(""{ctorName}"", {methodAccessibility} | MethodAttributes.HideBySig | {Constants.Cecil.CtorAttributes}, assembly.MainModule.TypeSystem.Void)";
             if (methodDefinitionPropertyValues != null)
             {
                 exp = exp + $"{{ {methodDefinitionPropertyValues} }}";
