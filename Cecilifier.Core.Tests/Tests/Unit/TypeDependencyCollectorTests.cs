@@ -45,6 +45,7 @@ public class TypeDependencyCollectorTests
     [TestCase("class A<T> where T: B { } class B {}", "B,A", TestName = "As type constraint")]
     [TestCase("class A { object M() => new B(); } class B {}", "B,A", TestName = "In object creation")]
     [TestCase("class A { object M() => new B[0]; } class B {}", "B,A", TestName = "In Array")]
+    [TestCase("class A { object M() => B.M(); } class B { public static M() {} }", "B,A", TestName = "In static member reference")]
     public void In_Various_Nodes(string code, string expected)
     {
         var comp = CompilationFor(code);
@@ -86,6 +87,39 @@ public class TypeDependencyCollectorTests
         var collector = new TypeDependencyCollector(comp);
         
         Assert.That(collector.Ordered.ToString(), Is.EqualTo(expected));
+    }
+
+    [TestCase("class A : B {} class B : C {} class C {}", "C,B,A")]
+    [TestCase("class A : B {} class B {} class C : B {}", "B,A,C")]
+    [TestCase("class A : C {} class B : A {} class C {}", "C,A,B")]
+    public void MultipleDependencyLevels(string code, string expectedOrder)
+    {
+        var comp = CompilationFor(code);
+        var collector = new TypeDependencyCollector(comp);
+        
+        Assert.That(collector.Ordered.ToString(), Is.EqualTo(expectedOrder));
+    }
+    
+    [TestCase("class A { public void M(B b) => b.M(); } class B { public void M(A a) => a.M(); }", "A,B")]
+    [TestCase("class A : B { } class B : C { } class C { A a; }", "C,B,A")]
+    public void CircularDependency(string code, string expectedOrder)
+    {
+        var comp = CompilationFor(code);
+        var collector = new TypeDependencyCollector(comp);
+        
+        Assert.That(collector.Ordered.ToString(), Is.EqualTo(expectedOrder));
+    }
+    
+    [TestCase("class A : B,C {} class B : C {} class C {}", "C,B,A")]
+    [TestCase("class A : B,C {} class B {} class C {}", "B,C,A")]
+    [TestCase("class A : C,B {} class B {} class C {}", "B,C,A")]
+    [TestCase("class A : C,B {} class B : C {} class C {}", "C,B,A")]
+    public void MultipleDependencies(string code, string expectedOrder)
+    {
+        var comp = CompilationFor(code);
+        var collector = new TypeDependencyCollector(comp);
+        
+        Assert.That(collector.Ordered.ToString(), Is.EqualTo(expectedOrder));
     }
     
     static CSharpCompilation CompilationFor(params string[] code)

@@ -22,12 +22,14 @@ internal class DependencyComparer : IComparer<BaseTypeDeclarationSyntax>
     /// i.e, referencing a type before its definition has been processed. 
     /// </summary>
     /// <returns>
-    /// 0 if the types do not depend on each other if there's a cyclic dependency
+    /// 0 if the types do not depend on each other or if there's a cyclic dependency
     /// 1 if A depends on B, i.e, A >  B
     /// -1 if B depends on A, i.e, B > A  
     /// </returns>
     public int Compare(BaseTypeDeclarationSyntax x, BaseTypeDeclarationSyntax y)
     {
+        // TODO: take the number of `dependencies` into account when sorting; i.e, more dependencies => >
+        //       this may break tests; that may be ok.
         var xDependsOnY = dependencies[x].Any(t => t.NameFrom() == y.NameFrom() || namespacesInScope.Any(ns => $"{ns}.{t.NameFrom()}" == y.NameFrom()));
         var yDependsOnX = dependencies[y].Any(t => t.NameFrom() == x.NameFrom()|| namespacesInScope.Any(ns => $"{ns}.{t.NameFrom()}" == x.NameFrom()));
         

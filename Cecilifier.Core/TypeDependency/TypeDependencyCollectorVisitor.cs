@@ -53,98 +53,14 @@ public class TypeDependencyCollectorVisitor : CSharpSyntaxWalker
             base.VisitStructDeclaration(node);
     }
 
-    public override void VisitFieldDeclaration(FieldDeclarationSyntax node)
+    public override void VisitQualifiedName(QualifiedNameSyntax node)
     {
-        AddCurrentTypeDependencyIfNotTheSame(node.Declaration.Type);
-        base.VisitFieldDeclaration(node);
+        AddCurrentTypeDependencyIfNotTheSame(node);
     }
 
-    public override void VisitPropertyDeclaration(PropertyDeclarationSyntax node)
+    public override void VisitIdentifierName(IdentifierNameSyntax node)
     {
-        AddCurrentTypeDependencyIfNotTheSame(node.Type);
-        base.VisitPropertyDeclaration(node);
-    }
-
-    public override void VisitMethodDeclaration(MethodDeclarationSyntax node)
-    {
-        AddCurrentTypeDependencyIfNotTheSame(node.ReturnType);
-        base.VisitMethodDeclaration(node);
-    }
-
-    public override void VisitEventDeclaration(EventDeclarationSyntax node)
-    {
-        AddCurrentTypeDependencyIfNotTheSame(node.Type);
-        base.VisitEventDeclaration(node);
-    }
-
-    public override void VisitEventFieldDeclaration(EventFieldDeclarationSyntax node)
-    {
-        AddCurrentTypeDependencyIfNotTheSame(node.Declaration.Type);
-        base.VisitEventFieldDeclaration(node);
-    }
-
-    public override void VisitObjectCreationExpression(ObjectCreationExpressionSyntax node)
-    {
-        AddCurrentTypeDependencyIfNotTheSame(node.Type);
-        base.VisitObjectCreationExpression(node);
-    }
-    
-    public override void VisitLocalDeclarationStatement(LocalDeclarationStatementSyntax node)
-    {
-        AddCurrentTypeDependencyIfNotTheSame(node.Declaration.Type);
-        base.VisitLocalDeclarationStatement(node);
-    }
-
-    public override void VisitParameter(ParameterSyntax node)
-    {
-        AddCurrentTypeDependencyIfNotTheSame(node.Type);
-        base.VisitParameter(node);
-    }
-
-    public override void VisitCastExpression(CastExpressionSyntax node)
-    {
-        AddCurrentTypeDependencyIfNotTheSame(node.Type);
-    }
-
-    public override void VisitBinaryExpression(BinaryExpressionSyntax node)
-    {
-        if (!node.OperatorToken.IsKind(SyntaxKind.AsKeyword) && !node.OperatorToken.IsKind(SyntaxKind.IsKeyword))
-            return;
-        
-        if (node.Right is TypeSyntax type)
-            AddCurrentTypeDependencyIfNotTheSame(type);
-        
-        base.VisitBinaryExpression(node);
-    }
-
-    public override void VisitTypeConstraint(TypeConstraintSyntax node)
-    {
-        AddCurrentTypeDependencyIfNotTheSame(node.Type);
-    }
-
-    public override void VisitTypeArgumentList(TypeArgumentListSyntax node)
-    {
-        foreach (var type in node.Arguments)
-        {
-            AddCurrentTypeDependencyIfNotTheSame(type);
-        }
-    }
-
-    public override void VisitArrayCreationExpression(ArrayCreationExpressionSyntax node)
-    {
-        AddCurrentTypeDependencyIfNotTheSame(node.Type.ElementType);
-        base.VisitArrayCreationExpression(node);
-    }
-
-    public override void VisitArgument(ArgumentSyntax node)
-    {
-        if(node.Expression is TypeSyntax type)
-            AddCurrentTypeDependencyIfNotTheSame(type);
-    }
-
-    public override void VisitTypeOfExpression(TypeOfExpressionSyntax node)
-    {
-        AddCurrentTypeDependencyIfNotTheSame(node.Type);
+        AddCurrentTypeDependencyIfNotTheSame(node);
     }
 
     private void AddCurrentTypeDependencyIfNotTheSame(TypeSyntax type)
@@ -174,7 +90,7 @@ public class TypeDependencyCollectorVisitor : CSharpSyntaxWalker
         return new DeclaredTypeTracker(declaredTypes);
     }
 
-    internal struct DeclaredTypeTracker : IDisposable
+    private struct DeclaredTypeTracker : IDisposable
     {
         private Stack<BaseTypeDeclarationSyntax> toPop;
 
