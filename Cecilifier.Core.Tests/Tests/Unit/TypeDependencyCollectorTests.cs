@@ -121,6 +121,17 @@ public class TypeDependencyCollectorTests
         
         Assert.That(collector.Ordered.ToString(), Is.EqualTo(expectedOrder));
     }
+
+    [TestCase("class A:B { B b1; B b2; } class B { A a; }", "B,A")]
+    [TestCase("class A:B { B b1; void M(B b) { } } class B { A a; }", "B,A", TestName =  "In Parameters")]
+    [TestCase("class A:B { B b1; B M() => this; } class B { A a; }", "B,A", TestName =  "In Return")]
+    public void NumberOfMemberReference_IsTakenIntoAccount_UponDependencyCycles(string code, string expectedOrder)
+    {
+        var comp = CompilationFor(code);
+        var collector = new TypeDependencyCollector(comp);
+        
+        Assert.That(collector.Ordered.ToString(), Is.EqualTo(expectedOrder));
+    }
     
     static CSharpCompilation CompilationFor(params string[] code)
     {

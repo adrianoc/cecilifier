@@ -7,10 +7,10 @@ namespace Cecilifier.Core.TypeDependency;
 
 internal class DependencyComparer : IComparer<BaseTypeDeclarationSyntax>
 {
-    private readonly IDictionary<BaseTypeDeclarationSyntax, ISet<TypeSyntax>> dependencies;
+    private readonly IDictionary<BaseTypeDeclarationSyntax, IDictionary<string, int>> dependencies;
     private readonly IReadOnlyList<string> namespacesInScope;
 
-    public DependencyComparer(IDictionary<BaseTypeDeclarationSyntax, ISet<TypeSyntax>> dependencies, IReadOnlyList<string> namespacesInScope)
+    public DependencyComparer(IDictionary<BaseTypeDeclarationSyntax, IDictionary<string, int>> dependencies, IReadOnlyList<string> namespacesInScope)
     {
         this.dependencies = dependencies;
         this.namespacesInScope = namespacesInScope;
@@ -22,26 +22,19 @@ internal class DependencyComparer : IComparer<BaseTypeDeclarationSyntax>
     /// i.e, referencing a type before its definition has been processed. 
     /// </summary>
     /// <returns>
-    /// 0 if the types do not depend on each other or if there's a cyclic dependency
-    /// 1 if A depends on B, i.e, A >  B
-    /// -1 if B depends on A, i.e, B > A  
+    /// 0 if the types do not depend on each other
+    /// 1 if A depends more on B than B on A, i.e, A >  B
+    /// -1 if B depends more on A than A on B, i.e, B > A 
     /// </returns>
+    /// <remarks>
+    /// In case of cyclic references the comparison takes into account the number of references from A -> B and B -> A deeming
+    /// `A` > `B` if number of # from A -> B > number of # from B -> A  
+    /// </remarks>
     public int Compare(BaseTypeDeclarationSyntax x, BaseTypeDeclarationSyntax y)
     {
-        // TODO: take the number of `dependencies` into account when sorting; i.e, more dependencies => >
-        //       this may break tests; that may be ok.
-        var xDependsOnY = dependencies[x].Any(t => t.NameFrom() == y.NameFrom() || namespacesInScope.Any(ns => $"{ns}.{t.NameFrom()}" == y.NameFrom()));
-        var yDependsOnX = dependencies[y].Any(t => t.NameFrom() == x.NameFrom()|| namespacesInScope.Any(ns => $"{ns}.{t.NameFrom()}" == x.NameFrom()));
+        var numberOfReferencesFromXToY = dependencies[x].Where(t => t.Key == y.NameFrom() || namespacesInScope.Any(ns => $"{ns}.{t.Key}" == y.NameFrom())).Select(p => p.Value).SingleOrDefault();
+        var numberOfReferencesFromYToX = dependencies[y].Where(t => t.Key == x.NameFrom()|| namespacesInScope.Any(ns => $"{ns}.{t.Key}" == x.NameFrom())).Select(p => p.Value).SingleOrDefault();
         
-        if (xDependsOnY && !yDependsOnX)
-            return 1; // x depends on y so y needs to appear first, i.e, x > y
-        
-        if (yDependsOnX && !xDependsOnY)
-            return -1; // y depends on x so x needs to appear first, i.e, x < y
-
-        if (xDependsOnY && yDependsOnX)
-            return 0;
-        
-        return 0;
+        return numberOfReferencesFromXToY - numberOfReferencesFromYToX;
     }
 }

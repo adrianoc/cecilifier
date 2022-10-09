@@ -11,7 +11,7 @@ namespace Cecilifier.Core.TypeDependency;
 public class TypeDependencyCollectorVisitor : CSharpSyntaxWalker
 {
     private readonly CSharpCompilation compilation;
-    private IDictionary<BaseTypeDeclarationSyntax, ISet<TypeSyntax>> dependencies = new Dictionary<BaseTypeDeclarationSyntax, ISet<TypeSyntax>>();
+    private IDictionary<BaseTypeDeclarationSyntax, IDictionary<string, int>> dependencies = new Dictionary<BaseTypeDeclarationSyntax, IDictionary<string, int>>();
     private Stack<BaseTypeDeclarationSyntax> declaredTypes = new();
     private List<string> usings = new();
     
@@ -20,7 +20,7 @@ public class TypeDependencyCollectorVisitor : CSharpSyntaxWalker
         this.compilation = compilation;
     }
 
-    public IDictionary<BaseTypeDeclarationSyntax, ISet<TypeSyntax>> Dependencies => dependencies;
+    public IDictionary<BaseTypeDeclarationSyntax, IDictionary<string, int>> Dependencies => dependencies;
     public IReadOnlyList<string> Usings => usings;
 
     public override void VisitUsingDirective(UsingDirectiveSyntax node)
@@ -71,20 +71,18 @@ public class TypeDependencyCollectorVisitor : CSharpSyntaxWalker
         var semanticModel = compilation.GetSemanticModel(type.SyntaxTree);
         if (String.Compare(declaredTypes.Peek().Identifier.Text, type.NameFrom(), StringComparison.Ordinal) != 0 && semanticModel.GetSymbolInfo(type).Symbol is ITypeSymbol { IsDefinition: true })
         {
-            dependencies[declaredTypes.Peek()].Add(type);
+            var foundDependencies = dependencies[declaredTypes.Peek()];
+            if (!foundDependencies.TryGetValue(type.ToString(), out var referenceCounter))
+            {
+                referenceCounter = 0; // this is the first reference found from `current type` -> type, set to 0, will increment below.
+            }
+            foundDependencies[type.NameFrom()] = ++referenceCounter;
         }
     }
     private DeclaredTypeTracker ProcessTypeDeclaration(BaseTypeDeclarationSyntax node)
     {
-        var semanticModel = compilation.GetSemanticModel(node.SyntaxTree);
-
-        var currentTypeDependencies = new HashSet<TypeSyntax>();
+        var currentTypeDependencies = new Dictionary<string, int>();
         dependencies.Add(node, currentTypeDependencies);
-
-        var basesInSameCompilation = node.BaseList?.Types.Where(t => semanticModel.GetTypeInfo(t.Type).Type?.IsDefinition == true) ?? Array.Empty<BaseTypeSyntax>();
-        foreach (var b in basesInSameCompilation)
-            currentTypeDependencies.Add(b.Type);
-
         declaredTypes.Push(node);
 
         return new DeclaredTypeTracker(declaredTypes);

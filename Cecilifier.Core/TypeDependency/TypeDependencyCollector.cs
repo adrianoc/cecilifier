@@ -16,7 +16,7 @@ public class TypeDependencyCollector
         Ordered = SortByDependency(visitor.Dependencies, visitor.Usings);
     }
 
-    private DependencyOrder SortByDependency(IDictionary<BaseTypeDeclarationSyntax, ISet<TypeSyntax>> dependencies, IReadOnlyList<string> usings)
+    private DependencyOrder SortByDependency(IDictionary<BaseTypeDeclarationSyntax, IDictionary<string, int>> dependencies, IReadOnlyList<string> usings)
     {
         var sortedDependency = new List<BaseTypeDeclarationSyntax>(dependencies.Keys);
         sortedDependency.Sort(new DependencyComparer(dependencies, usings));
