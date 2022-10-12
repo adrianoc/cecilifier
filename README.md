@@ -104,7 +104,7 @@ These resembles tradicional Unit tests, at least from performance characteristic
 
 - Pros
 	- Performance: since there's no compilation involved these tests are much faster than the [Integration](#integration-tests) ones.
-	- More easily debuggable
+	- Easier to debug/investigate issues.
 - Cons
 	- Sensitive to changes in the way code is generated leading to false positives when naming rules, formating, etc. changes.
 	- Sensitive to false positives due to, in general, not verifying all the generated code (which would be impratical)	- 
@@ -113,6 +113,18 @@ Integration Tests
 ---
 
 These tests work basically taking a [snippet of code](https://github.com/adrianoc/cecilifier/blob/dev/Cecilifier.Core.Tests/TestResources/Integration/CodeBlock/Conditional/IfStatement.cs.txt), _Cecilifying_ it (generating the Mono.Cecil API calls to produce an assembly equivalent to the compiled snippet), compiling it,  and finally either comparing the two assemblies or comparing the generated IL for some method with the expected output [as in this example](https://github.com/adrianoc/cecilifier/blob/dev/Cecilifier.Core.Tests/TestResources/Integration/CodeBlock/Conditional/IfStatement.cs.il.txt). 
+
+```mermaid
+	graph TD;
+		Snippet-->Compile;
+		Snippet-->Cecilify([Cecilify]);
+		Compile-->Assembly;
+		Assembly-->CompAssemblies;
+		Cecilify-->CompCecilified[Compile Cecilified];
+		CompCecilified-->RunCecilified[Run Cecilified];
+		RunCecilified-->|outputs|CecilifiedAssembly[Cecilified Assembly]
+		CecilifiedAssembly-->CompAssemblies[Compare Assemblies]
+```
 
 Ideally all tests in this category should use the assembly comparison approach (as opposed to forcing 
 developers to store the expected IL) but in some cases the comparison code would became too complex and in such cases I think it is ok to store the expected IL (anyway, I try to minimize the number of such tests).
