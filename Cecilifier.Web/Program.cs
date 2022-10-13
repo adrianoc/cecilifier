@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
@@ -11,7 +11,12 @@ namespace Cecilifier.Web
         public static void Main(string[] args)
         {
             var configurationBuilder = new ConfigurationBuilder();
-            var config = configurationBuilder.AddJsonFile($"appsettings.Production.json", optional: false).Build();
+            var appsettingsJsonFileName = "appsettings.json";
+            if (File.Exists("appsettings.Production.json"))
+            {
+                appsettingsJsonFileName = "appsettings.Production.json";
+            }
+            var config = configurationBuilder.AddJsonFile(appsettingsJsonFileName, optional: false).Build();
 
             var host = new HostBuilder()
                 .UseContentRoot(Directory.GetCurrentDirectory())
