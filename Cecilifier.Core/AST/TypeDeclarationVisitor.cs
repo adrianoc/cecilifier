@@ -50,6 +50,7 @@ namespace Cecilifier.Core.AST
             using (Context.DefinitionVariables.WithCurrent(structSymbol.ContainingSymbol.FullyQualifiedName(), node.Identifier.ValueText, VariableMemberKind.Type, definitionVar))
             {
                 HandleTypeDeclaration(node, definitionVar);
+                ProcessStructPseudoAttributes(node, definitionVar, structSymbol);
                 base.VisitStructDeclaration(node);
                 EnsureCurrentTypeHasADefaultCtor(node, definitionVar);
             }
@@ -208,6 +209,16 @@ processGenerics:
         private void EnsureCurrentTypeHasADefaultCtor(TypeDeclarationSyntax node, string typeLocalVar)
         {
             node.Accept(new DefaultCtorVisitor(Context, typeLocalVar));
+        }
+        
+        private void ProcessStructPseudoAttributes(StructDeclarationSyntax node, string structDefinitionVar, INamedTypeSymbol structSymbol)
+        {
+            var isReadOnlyAttributeCtor = Context.RoslynTypeSystem.SystemRuntimeCompilerServices
+                ?.GetMembers(".ctor")
+                .OfType<IMethodSymbol>()
+                .Single(ctor => ctor.Parameters.Length == 0);
+
+            Context.WriteCecilExpression($"{structDefinitionVar}.CustomAttributes.Add(new CustomAttribute({isReadOnlyAttributeCtor.MethodResolverExpression(Context)}));");
         }
     }
 

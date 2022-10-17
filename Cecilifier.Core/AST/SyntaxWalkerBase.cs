@@ -313,7 +313,7 @@ namespace Cecilifier.Core.AST
 
             mapAttribute ??= MapAttributeForMembers;
             
-            var modifierStr = finalModifierList.Where(ExcludeHasNoCILRepresentation).SelectMany(mapAttribute).Aggregate("", (acc, curr) => (acc.Length > 0 ? $"{acc} | " : "") + $"{targetEnum}." + curr) + accessibilityModifiers;
+            var modifierStr = finalModifierList.Where(ExcludeModifiersWithNoCILRepresentation).SelectMany(mapAttribute).Aggregate("", (acc, curr) => (acc.Length > 0 ? $"{acc} | " : "") + $"{targetEnum}." + curr) + accessibilityModifiers;
             
             if(!modifiers.Any(m => m.IsKind(SyntaxKind.PrivateKeyword) || m.IsKind(SyntaxKind.InternalKeyword) || m.IsKind(SyntaxKind.PrivateKeyword) || m.IsKind(SyntaxKind.PublicKeyword) || m.IsKind(SyntaxKind.ProtectedKeyword)))
                 return modifierStr.AppendModifier($"{targetEnum}.{defaultAccessibility}");
@@ -380,13 +380,14 @@ namespace Cecilifier.Core.AST
             context.WriteNewLine();
         }
 
-        private static bool ExcludeHasNoCILRepresentation(SyntaxToken token)
+        private static bool ExcludeModifiersWithNoCILRepresentation(SyntaxToken token)
         {
             return !token.IsKind(SyntaxKind.PartialKeyword) 
                    && !token.IsKind(SyntaxKind.VolatileKeyword) 
                    && !token.IsKind(SyntaxKind.UnsafeKeyword)
                    && !token.IsKind(SyntaxKind.AsyncKeyword)
-                   && !token.IsKind(SyntaxKind.ExternKeyword);
+                   && !token.IsKind(SyntaxKind.ExternKeyword)
+                   && !token.IsKind(SyntaxKind.ReadOnlyKeyword);
         }
 
         protected string ResolveExpressionType(ExpressionSyntax expression)
