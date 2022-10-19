@@ -31,7 +31,6 @@ namespace Cecilifier.Core.AST
             
             // local functions are not first class citizens wrt variable naming... handle them as methods for now.
             var localFunctionVar = Context.Naming.SyntheticVariable(node.Identifier.Text, ElementKind.Method);
-            
             ProcessMethodDeclarationInternal(
                 node, 
                 methodSymbol.ContainingType.Name, 

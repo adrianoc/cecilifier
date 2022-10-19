@@ -17,7 +17,7 @@ namespace Cecilifier.Core.AST
 {
     internal class PropertyDeclarationVisitor : SyntaxWalkerBase
     {
-        private static readonly List<ParamData> NoParameters = new List<ParamData>();
+        private static readonly List<ParamData> NoParameters = new();
         private string backingFieldVar;
 
         public PropertyDeclarationVisitor(IVisitorContext context) : base(context) { }
