@@ -34,7 +34,7 @@ namespace Cecilifier.Core.Extensions
 
         public static string MethodResolverExpression(this IMethodSymbol method, IVisitorContext ctx)
         {
-            if (method.IsDefinedInCurrentType(ctx))
+            if (method.IsDefinedInCurrentAssembly(ctx))
             {
                 var tbf = method.AsMethodDefinitionVariable();
                 var found = ctx.DefinitionVariables.GetMethodVariable(tbf);

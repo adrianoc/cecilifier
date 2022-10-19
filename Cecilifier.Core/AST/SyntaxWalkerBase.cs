@@ -48,7 +48,7 @@ namespace Cecilifier.Core.AST
 
         protected void AddMethodCall(string ilVar, IMethodSymbol method, bool isAccessOnThisOrObjectCreation = false)
         {
-            var opCode = (method.IsStatic || method.IsDefinedInCurrentType(Context) && isAccessOnThisOrObjectCreation || method.ContainingType.IsValueType) && !(method.IsVirtual || method.IsAbstract || method.IsOverride)
+            var opCode = (method.IsStatic || method.IsDefinedInCurrentAssembly(Context) && isAccessOnThisOrObjectCreation || method.ContainingType.IsValueType) && !(method.IsVirtual || method.IsAbstract || method.IsOverride)
                 ? OpCodes.Call
                 : OpCodes.Callvirt;
             
@@ -57,7 +57,7 @@ namespace Cecilifier.Core.AST
                 opCode = OpCodes.Call;
             }
             
-            if (method.IsGenericMethod && method.IsDefinedInCurrentType(Context))
+            if (method.IsGenericMethod && method.IsDefinedInCurrentAssembly(Context))
             {
                 // if the method in question is a generic method and it is defined in the same assembly create a generic instance
                 var resolvedMethodVar = Context.Naming.MemberReference(method.Name);
@@ -857,7 +857,7 @@ namespace Cecilifier.Core.AST
          */
         protected static void EnsureForwardedMethod(IVisitorContext context, string methodDeclarationVar, IMethodSymbol method, TypeParameterSyntax[] typeParameters)
         {
-            if (!method.IsDefinedInCurrentType(context))
+            if (!method.IsDefinedInCurrentAssembly(context))
                 return;
 
             var found = context.DefinitionVariables.GetMethodVariable(method.AsMethodDefinitionVariable());

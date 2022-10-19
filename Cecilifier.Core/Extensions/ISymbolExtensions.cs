@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -61,7 +61,7 @@ namespace Cecilifier.Core.Extensions
             _ => (ITypeSymbol) symbol
         };
 
-        public static bool IsDefinedInCurrentType<T>(this T method, IVisitorContext ctx) where T : ISymbol
+        public static bool IsDefinedInCurrentAssembly<T>(this T method, IVisitorContext ctx) where T : ISymbol
         {
             return SymbolEqualityComparer.Default.Equals(method.ContainingAssembly, ctx.SemanticModel.Compilation.Assembly);
         }

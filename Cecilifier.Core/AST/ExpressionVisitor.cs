@@ -1145,7 +1145,7 @@ namespace Cecilifier.Core.AST
         private void ProcessMethodCall(SimpleNameSyntax node, IMethodSymbol method)
         {
             // Local methods are always static.
-            if (method.MethodKind != MethodKind.LocalFunction && !method.IsStatic && method.IsDefinedInCurrentType(Context) && node.Parent.Kind() == SyntaxKind.InvocationExpression)
+            if (method.MethodKind != MethodKind.LocalFunction && !method.IsStatic && method.IsDefinedInCurrentAssembly(Context) && node.Parent.Kind() == SyntaxKind.InvocationExpression)
             {
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
             }
