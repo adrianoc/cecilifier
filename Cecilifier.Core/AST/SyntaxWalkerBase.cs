@@ -401,6 +401,8 @@ namespace Cecilifier.Core.AST
             var typeToCheck = type is RefTypeSyntax refType ? refType.Type : type;
             var typeInfo = Context.GetTypeInfo(typeToCheck);
 
+            TypeDeclarationVisitor.EnsureForwardedTypeDefinition(Context, typeInfo.Type, Array.Empty<TypeParameterSyntax>());
+            
             var resolvedType = Context.TypeResolver.Resolve(typeInfo.Type);
             return type is RefTypeSyntax ? resolvedType.MakeByReferenceType() : resolvedType;
         }
@@ -674,19 +676,18 @@ namespace Cecilifier.Core.AST
                 HandleAttributesInMemberDeclaration(context, typeParameter.AttributeLists, found.VariableName);
             }
         }
-        
-        protected static void HandleAttributesInMemberDeclaration(IVisitorContext context, IEnumerable<AttributeListSyntax> attributeLists, string targetDeclarationVar)
+
+        private static void HandleAttributesInMemberDeclaration(IVisitorContext context, IEnumerable<AttributeListSyntax> attributeLists, string targetDeclarationVar)
         {
             if (!attributeLists.Any())
                 return;
 
             foreach (var attribute in attributeLists.SelectMany(al => al.Attributes))
             {
-                EnsureForwardedType(
-                    context, 
-                    context.Naming.Type(attribute.Name.ValueText().AttributeName(), ElementKind.Class),
-                    context.SemanticModel.GetSymbolInfo(attribute).Symbol.EnsureNotNull<ISymbol, IMethodSymbol>().ContainingType, 
-                    Array.Empty<TypeParameterSyntax>()); //TODO: Pass the correct list of type parameters when C# supports generic attributes.
+                var type = context.SemanticModel.GetSymbolInfo(attribute).Symbol.EnsureNotNull<ISymbol, IMethodSymbol>().ContainingType;
+                
+                //TODO: Pass the correct list of type parameters when C# supports generic attributes.
+                TypeDeclarationVisitor.EnsureForwardedTypeDefinition(context, type, Array.Empty<TypeParameterSyntax>());
                 
                 var attrsExp = context.SemanticModel.GetSymbolInfo(attribute.Name).Symbol.IsDllImportCtor()
                     ? ProcessDllImportAttribute(context, attribute, targetDeclarationVar)
@@ -886,14 +887,6 @@ namespace Cecilifier.Core.AST
             }
             
             context.DefinitionVariables.RegisterMethod(method.AsMethodDefinitionVariable(methodDeclarationVar));
-        }
-        
-        private static void EnsureForwardedType(IVisitorContext context, string typeDeclarationVar, ITypeSymbol type, TypeParameterSyntax[] typeParameters)
-        {
-            if (!type.IsDefinedInCurrentType(context))
-                return;
-
-            TypeDeclarationVisitor.EnsureForwardedTypeDefinition(context, typeDeclarationVar, type, typeParameters);
         }
 
         protected void LogUnsupportedSyntax(SyntaxNode node)

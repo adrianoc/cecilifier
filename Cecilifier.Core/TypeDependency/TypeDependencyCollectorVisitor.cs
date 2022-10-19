@@ -56,6 +56,8 @@ public class TypeDependencyCollectorVisitor : CSharpSyntaxWalker
     public override void VisitQualifiedName(QualifiedNameSyntax node)
     {
         AddCurrentTypeDependencyIfNotTheSame(node);
+        if (node.Right.IsKind(SyntaxKind.GenericName))
+            node.Right.Accept(this);
     }
 
     public override void VisitIdentifierName(IdentifierNameSyntax node)
@@ -63,9 +65,17 @@ public class TypeDependencyCollectorVisitor : CSharpSyntaxWalker
         AddCurrentTypeDependencyIfNotTheSame(node);
     }
 
+    public override void VisitTypeArgumentList(TypeArgumentListSyntax node)
+    {
+        foreach (var typeArgument in node.Arguments)
+        {
+            AddCurrentTypeDependencyIfNotTheSame(typeArgument);
+        }
+    }
+
     private void AddCurrentTypeDependencyIfNotTheSame(TypeSyntax type)
     {
-        if (declaredTypes.Count == 0 || type == null) // type can be null for lambda parameters, for instance.
+        if (declaredTypes.Count == 0 || type == null || type.IsKind(SyntaxKind.OmittedTypeArgument)) // type can be null for lambda parameters, for instance.
             return;
         
         var semanticModel = compilation.GetSemanticModel(type.SyntaxTree);

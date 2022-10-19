@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Misc;
+using Cecilifier.Core.Naming;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -17,6 +18,19 @@ namespace Cecilifier.Core.Extensions
     {
         private static readonly SymbolDisplayFormat FullyQualifiedDisplayFormat = new(typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces);
 
+        public static ElementKind ToElementKind(this TypeKind self) => self switch
+        {
+            TypeKind.Class => ElementKind.Class,
+            TypeKind.Enum => ElementKind.Enum,
+            TypeKind.Struct => ElementKind.Struct,
+            TypeKind.Interface => ElementKind.Interface,
+            TypeKind.Delegate => ElementKind.Delegate,
+            TypeKind.Array => ElementKind.None,
+            TypeKind.TypeParameter => ElementKind.None,
+            
+            _ => throw new NotImplementedException($"TypeKind `{self}` is not supported.") 
+        };
+        
         public static string FullyQualifiedName(this ISymbol type)
         {
             return type.ToDisplayString(FullyQualifiedDisplayFormat);

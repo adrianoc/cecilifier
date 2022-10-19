@@ -210,8 +210,8 @@ namespace Cecilifier.Core.AST
             context.WriteNewLine();
             context.WriteComment($"Method : {methodName}");
 
+            TypeDeclarationVisitor.EnsureForwardedTypeDefinition(context, returnType, Array.Empty<TypeParameterSyntax>());
             var exps = CecilDefinitionsFactory.Method(context, methodVar, methodName, methodModifiers, returnType, refReturn, typeParameters);
-            
             foreach (var exp in exps)
             {
                 context.WriteCecilExpression(exp);

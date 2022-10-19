@@ -21,6 +21,7 @@ namespace Cecilifier.Core.Naming
         Attribute,
         IL,
         GenericParameter,
-        GenericInstance
+        GenericInstance,
+        None
     }
 }

@@ -43,6 +43,7 @@ public class TypeDependencyCollectorTests
     [TestCase("class A { bool M(object o) => is B; } class B {}", "B,A", TestName = "As *is* operator")]
     [TestCase("class A<T> { A<B> a; } class B {}", "B,A", TestName = "As type argument")]
     [TestCase("class A<T> where T: B { } class B {}", "B,A", TestName = "As type constraint")]
+    [TestCase("class A : System.Collections.Generic.List<B> { } class B {}", "B,A", TestName = "As type argument")]
     [TestCase("class A { object M() => new B(); } class B {}", "B,A", TestName = "In object creation")]
     [TestCase("class A { object M() => new B[0]; } class B {}", "B,A", TestName = "In Array")]
     [TestCase("class A { object M() => B.M(); } class B { public static M() {} }", "B,A", TestName = "In static member reference")]

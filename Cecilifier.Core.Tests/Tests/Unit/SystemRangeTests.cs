@@ -102,12 +102,12 @@ public class SystemRangeTests : CecilifierUnitTestBase
         var indexedFromEnd = endIndex[0] == '^';
         var expected =
             @".+(il_M_\d+\.Emit\(OpCodes\.)Ldarg_2\);\s+" +
-            @"var (?<span_copy>.+SpanCopy_\d) = new VariableDefinition\(assembly.MainModule.ImportReference\(typeof\(System.Span<>\)\).MakeGenericInstanceType\(assembly.MainModule.TypeSystem.Int32\)\);\s+" +
+            @"var (?<span_copy>.+SpanCopy_\d+) = new VariableDefinition\(assembly.MainModule.ImportReference\(typeof\(System.Span<>\)\).MakeGenericInstanceType\(assembly.MainModule.TypeSystem.Int32\)\);\s+" +
             @"(?<body_var>.+)\.Variables.Add\(\k<span_copy>\);\s+" +
             @"\1Stloc, \k<span_copy>\);\s+" +
             @"\1Ldloca, \k<span_copy>\);\s+".IfTrue(indexedFromEnd) +
             @"\1(?:Ldc_I4, 2|Ldarg_1|Call, m_idx_\d)\);\s+" +
-            @"var (?<start_index>l_startIndex_\d) = new VariableDefinition\(assembly.MainModule.TypeSystem.Int32\);\s+" +
+            @"var (?<start_index>l_startIndex_\d+) = new VariableDefinition\(assembly.MainModule.TypeSystem.Int32\);\s+" +
             @"\k<body_var>.Variables.Add\(\k<start_index>\);\s+" +
             @"\1Stloc, \k<start_index>\);\s+" +
             @"\1Dup\);\s+" +
