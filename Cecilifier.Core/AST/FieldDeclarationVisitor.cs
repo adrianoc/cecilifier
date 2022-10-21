@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
@@ -44,7 +46,7 @@ namespace Cecilifier.Core.AST
             
             var type = ResolveType(variableDeclarationSyntax.Type);
             var fieldType = ProcessRequiredModifiers(modifiers, type) ?? type;
-            var fieldAttributes = ModifiersToCecil(modifiers, "FieldAttributes", "Private");
+            var fieldAttributes = ModifiersToCecil<FieldAttributes>(modifiers, "Private", MapFieldAttributesFor);
 
             foreach (var field in variableDeclarationSyntax.Variables)
             {
@@ -66,13 +68,29 @@ namespace Cecilifier.Core.AST
             return fieldDefVars;
         }
 
+        internal static IEnumerable<string> MapFieldAttributesFor(SyntaxToken token) =>
+            token.Kind() switch
+            {
+                SyntaxKind.InternalKeyword => new[] { "Assembly" },
+                SyntaxKind.ProtectedKeyword => new[] { "Family" },
+                SyntaxKind.PrivateKeyword => new[] { "Private" },
+                SyntaxKind.PublicKeyword => new[] { "Public" },
+                SyntaxKind.StaticKeyword => new[] { "Static" },
+                SyntaxKind.AbstractKeyword => new[] { "Abstract" },
+                SyntaxKind.ConstKeyword => new[] { "Literal", "Static" },
+                SyntaxKind.ReadOnlyKeyword => new[] { "InitOnly" },
+                SyntaxKind.VolatileKeyword => Array.Empty<string>(),
+                    
+                _ => throw new ArgumentException($"Unsupported attribute name: {token.Kind().ToString()}")
+            };
+        
         private string ProcessRequiredModifiers(IReadOnlyList<SyntaxToken> modifiers, string originalType)
         {
             if (modifiers.All(m => m.Kind() != SyntaxKind.VolatileKeyword))
                 return null;
 
             var id = Context.Naming.RequiredModifier();
-            AddCecilExpression($"var {id} = new RequiredModifierType({ImportExpressionForType(typeof(IsVolatile))}, {originalType});");
+            AddCecilExpression($"var {id} = new RequiredModifierType({Context.TypeResolver.Resolve(typeof(IsVolatile).FullName)}, {originalType});");
             return id;
         }
     }

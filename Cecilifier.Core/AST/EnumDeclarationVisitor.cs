@@ -26,7 +26,7 @@ namespace Cecilifier.Core.AST
             node.Accept(_memberCollector);
 
             var enumType = Context.Naming.Type(node);
-            var attrs = TypeModifiersToCecil(node);
+            var attrs = TypeModifiersToCecil(node, node.Modifiers);
             var enumSymbol = Context.SemanticModel.GetDeclaredSymbol(node).EnsureNotNull<ISymbol, ISymbol>($"Something really bad happened. Roslyn failed to resolve the symbol for the enum {node.Identifier.Text}");
             var typeDef = CecilDefinitionsFactory.Type(Context, enumType, enumSymbol.ContainingNamespace?.FullyQualifiedName(), enumSymbol.Name, enumSymbol.ContainingType?.Name, attrs + " | TypeAttributes.Sealed", Context.TypeResolver.Bcl.System.Enum, false, Array.Empty<string>());
             AddCecilExpressions(Context, typeDef);

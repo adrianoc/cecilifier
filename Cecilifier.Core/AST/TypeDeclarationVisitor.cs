@@ -50,7 +50,7 @@ namespace Cecilifier.Core.AST
             using (Context.DefinitionVariables.WithCurrent(structSymbol.ContainingSymbol.FullyQualifiedName(), node.Identifier.ValueText, VariableMemberKind.Type, definitionVar))
             {
                 HandleTypeDeclaration(node, definitionVar);
-                ProcessStructPseudoAttributes(node, definitionVar, structSymbol);
+                ProcessStructPseudoAttributes(definitionVar, structSymbol);
                 base.VisitStructDeclaration(node);
                 EnsureCurrentTypeHasADefaultCtor(node, definitionVar);
             }
@@ -124,7 +124,7 @@ namespace Cecilifier.Core.AST
             var found = Context.DefinitionVariables.GetVariable(typeSymbol.Name, VariableMemberKind.Type, typeSymbol.ContainingType?.Name);
             if (!found.IsValid || !found.IsForwarded)
             {
-                AddTypeDefinition(Context, varName, typeSymbol, TypeModifiersToCecil(node), node.TypeParameterList?.Parameters, node.CollectOuterTypeArguments());
+                AddTypeDefinition(Context, varName, typeSymbol, TypeModifiersToCecil(node, node.Modifiers), node.TypeParameterList?.Parameters, node.CollectOuterTypeArguments());
             }
 
             if (typeSymbol.BaseType?.IsGenericType == true)
@@ -155,7 +155,7 @@ namespace Cecilifier.Core.AST
             
             var typeDeclaration =  (BaseTypeDeclarationSyntax) typeSymbol.DeclaringSyntaxReferences.First().GetSyntax();
             var typeDeclarationVar = context.Naming.Type(typeSymbol.Name, typeSymbol.TypeKind.ToElementKind());
-            AddTypeDefinition(context, typeDeclarationVar, typeSymbol, TypeModifiersToCecil(typeDeclaration), typeParameters, Array.Empty<TypeParameterSyntax>());
+            AddTypeDefinition(context, typeDeclarationVar, typeSymbol, TypeModifiersToCecil(typeDeclaration, typeDeclaration.Modifiers), typeParameters, Array.Empty<TypeParameterSyntax>());
             
             var v = context.DefinitionVariables.RegisterNonMethod(typeSymbol.ContainingSymbol?.FullyQualifiedName(), typeSymbol.Name, VariableMemberKind.Type, typeDeclarationVar);
             v.IsForwarded = true;
@@ -211,8 +211,11 @@ processGenerics:
             node.Accept(new DefaultCtorVisitor(Context, typeLocalVar));
         }
         
-        private void ProcessStructPseudoAttributes(StructDeclarationSyntax node, string structDefinitionVar, INamedTypeSymbol structSymbol)
+        private void ProcessStructPseudoAttributes(string structDefinitionVar, INamedTypeSymbol structSymbol)
         {
+            if (!structSymbol.IsReadOnly)
+                return;
+            
             var isReadOnlyAttributeCtor = Context.RoslynTypeSystem.SystemRuntimeCompilerServices
                 ?.GetMembers(".ctor")
                 .OfType<IMethodSymbol>()

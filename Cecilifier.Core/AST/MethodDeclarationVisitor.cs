@@ -131,7 +131,7 @@ namespace Cecilifier.Core.AST
                                             // for ctors we want to use the `methodName` (== .ctor) instead of the `simpleName` (== ctor) otherwise we may fail to find existing variables.
                                             methodSymbol.MethodKind == MethodKind.Constructor ? methodName : simpleName,
                                             methodName, 
-                                            modifiersTokens.MethodModifiersToCecil((targetEnum, modifiers, defaultAccessibility) => ModifiersToCecil(modifiers, targetEnum, defaultAccessibility), GetSpecificModifiers(), methodSymbol), 
+                                            modifiersTokens.MethodModifiersToCecil(GetSpecificModifiers(), methodSymbol), 
                                             methodSymbol.ReturnType, 
                                             refReturn, 
                                             parameters,

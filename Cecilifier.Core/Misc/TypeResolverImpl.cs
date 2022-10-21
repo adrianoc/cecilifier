@@ -100,6 +100,7 @@ namespace Cecilifier.Core.Misc
         private string MakeGenericInstanceType(string typeReference, INamedTypeSymbol genericTypeSymbol)
         {
             var typeArgs = CollectTypeArguments(genericTypeSymbol, new List<string>());
+            //TODO: REFACTOR : Call TypeExtensions.MakeGenericInstanceType() instead.
             return typeArgs.Count > 0
                 ? $"{typeReference}.MakeGenericInstanceType({string.Join(",", typeArgs)})"
                 : typeReference;

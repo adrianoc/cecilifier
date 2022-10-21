@@ -46,6 +46,22 @@ namespace Cecilifier.Core.Extensions
 
             return $"{to} | {modifier}";
         }
+        
+        public static StringBuilder AppendModifier(this StringBuilder to, string modifier)
+        {
+            if (string.IsNullOrWhiteSpace(modifier))
+            {
+                return to;
+            }
+
+            if (to.Length != 0)
+            {
+                to.Append(" | ");
+            }
+
+            to.Append(modifier);
+            return to;
+        }
 
         public static string AsCecilApplication(this string cecilSnippet, string assemblyName, string entryPointVar = null)
         {

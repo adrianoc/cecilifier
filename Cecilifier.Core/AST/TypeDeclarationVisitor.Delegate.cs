@@ -19,7 +19,7 @@ internal partial class TypeDeclarationVisitor
         Context.WriteNewLine();
         Context.WriteComment($"Delegate: {node.Identifier.Text}");
         var typeVar = Context.Naming.Delegate(node);
-        var accessibility = ModifiersToCecil(node.Modifiers, "TypeAttributes", "Private");
+        var accessibility = TypeModifiersToCecil(node, node.Modifiers);
 
         var delegateSymbol = Context.SemanticModel.GetDeclaredSymbol(node).EnsureNotNull();
         var typeDef = CecilDefinitionsFactory.Type(

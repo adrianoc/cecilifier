@@ -104,5 +104,11 @@ namespace Cecilifier.Core.Tests.Integration.Types
         {
             AssertResourceTest(@"Types/TypeInitializer");
         }
+        
+        [Test]
+        public void ReadOnlyStructTest()
+        {
+            AssertResourceTest(@"Types/ReadOnlyStruct");
+        }
     }
 }
