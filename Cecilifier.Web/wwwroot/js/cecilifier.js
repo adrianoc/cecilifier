@@ -110,7 +110,13 @@ function initializeSite(errorAccessingGist, gist, version) {
     require(['vs/editor/editor.main'], function () {
         csharpCode = monaco.editor.create(document.getElementById('csharpcode'), {
             theme: "vs-dark",
-            value: ['using System;', 'class Foo', '{', '\tvoid Bar() => Console.WriteLine("Hello World!");', '}'].join('\n'),
+            value: [
+                `// Supported CSharp language version: ${document.getElementById('supportedCSharpVersion').innerText} https://learn.microsoft.com/en-us/dotnet/csharp/whats-new/csharp-${document.getElementById('supportedCSharpVersion').innerText}`,
+                'using System;', 
+                'class Foo', 
+                '{', 
+                '\tvoid Bar() => Console.WriteLine("Hello World!");', 
+                '}'].join('\n'),
             language: 'csharp',
             minimap: { enabled: false },
             fontSize: 16,
