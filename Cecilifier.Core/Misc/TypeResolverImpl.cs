@@ -52,7 +52,7 @@ namespace Cecilifier.Core.Misc
             {
                 return null;
             }
-
+            
             return ResolvePredefinedType(type);
         }
 
@@ -69,7 +69,9 @@ namespace Cecilifier.Core.Misc
             }
             
             var genericType = Resolve(OpenGenericTypeName(genericTypeSymbol.ConstructedFrom));
-            return MakeGenericInstanceType(genericType, genericTypeSymbol);
+            return genericTypeSymbol.IsDefinition 
+                ? genericType 
+                : MakeGenericInstanceType(genericType, genericTypeSymbol);
         }
 
         public string ResolveLocalVariableType(ITypeSymbol type)
@@ -100,9 +102,8 @@ namespace Cecilifier.Core.Misc
         private string MakeGenericInstanceType(string typeReference, INamedTypeSymbol genericTypeSymbol)
         {
             var typeArgs = CollectTypeArguments(genericTypeSymbol, new List<string>());
-            //TODO: REFACTOR : Call TypeExtensions.MakeGenericInstanceType() instead.
             return typeArgs.Count > 0
-                ? $"{typeReference}.MakeGenericInstanceType({string.Join(",", typeArgs)})"
+                ? typeReference.MakeGenericInstanceType(typeArgs)
                 : typeReference;
         }
 

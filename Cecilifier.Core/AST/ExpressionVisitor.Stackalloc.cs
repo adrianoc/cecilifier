@@ -123,7 +123,7 @@ partial class ExpressionVisitor
 
     private void EmitNewobjForSpanOfType(string resolvedSpanType)
     {
-        var spanInstanceType = $"{Utils.ImportFromMainModule("typeof(Span<>)")}.MakeGenericInstanceType({resolvedSpanType})";
+        var spanInstanceType = Context.TypeResolver.Resolve(Context.RoslynTypeSystem.SystemSpan).MakeGenericInstanceType(resolvedSpanType);
         var spanCtorVar = Context.Naming.SyntheticVariable("spanCtor", ElementKind.LocalVariable);
         AddCecilExpression($"var {spanCtorVar} = new MethodReference(\".ctor\", {Context.TypeResolver.Bcl.System.Void}, {spanInstanceType}) {{ HasThis = true }};");
         AddCecilExpression($"{spanCtorVar}.Parameters.Add({CecilDefinitionsFactory.Parameter("ptr", RefKind.None, Context.TypeResolver.Resolve("void*"))});");

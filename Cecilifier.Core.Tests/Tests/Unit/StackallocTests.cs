@@ -95,7 +95,7 @@ public class StackallocTests : CecilifierUnitTestBase
             var expectedLines = new[]
             {
                 "il_bar_2.Emit(OpCodes.Ldc_I4, 4000);", "il_bar_2.Emit(OpCodes.Conv_U);", "il_bar_2.Emit(OpCodes.Localloc);", "il_bar_2.Emit(OpCodes.Ldc_I4, 4000);",
-                "var l_spanCtor_5 = new MethodReference(\".ctor\", assembly.MainModule.TypeSystem.Void, assembly.MainModule.ImportReference(typeof(Span<>)).MakeGenericInstanceType(assembly.MainModule.TypeSystem.Int32)) { HasThis = true };",
+                "var l_spanCtor_5 = new MethodReference(\".ctor\", assembly.MainModule.TypeSystem.Void, assembly.MainModule.ImportReference(typeof(System.Span<>)).MakeGenericInstanceType(assembly.MainModule.TypeSystem.Int32)) { HasThis = true };",
                 "l_spanCtor_5.Parameters.Add(new ParameterDefinition(\"ptr\", ParameterAttributes.None, assembly.MainModule.ImportReference(typeof(void*))));",
                 "l_spanCtor_5.Parameters.Add(new ParameterDefinition(\"length\", ParameterAttributes.None, assembly.MainModule.TypeSystem.Int32));",
                 "il_bar_2.Emit(OpCodes.Newobj, assembly.MainModule.ImportReference(l_spanCtor_5));", "il_bar_2.Emit(OpCodes.Call, m_bar_1);", "il_bar_2.Emit(OpCodes.Ret);",
@@ -117,7 +117,7 @@ public class StackallocTests : CecilifierUnitTestBase
             {
                 "il_bar_3.Emit(OpCodes.Ldsfld, fld_countField_1);", "il_bar_3.Emit(OpCodes.Conv_U);", "il_bar_3.Emit(OpCodes.Sizeof, assembly.MainModule.TypeSystem.Int32);", "il_bar_3.Emit(OpCodes.Mul_Ovf_Un);",
                 "il_bar_3.Emit(OpCodes.Localloc);", "il_bar_3.Emit(OpCodes.Ldfld, fld_countField_1);",
-                "var l_spanCtor_6 = new MethodReference(\".ctor\", assembly.MainModule.TypeSystem.Void, assembly.MainModule.ImportReference(typeof(Span<>)).MakeGenericInstanceType(assembly.MainModule.TypeSystem.Int32)) { HasThis = true };",
+                "var l_spanCtor_6 = new MethodReference(\".ctor\", assembly.MainModule.TypeSystem.Void, assembly.MainModule.ImportReference(typeof(System.Span<>)).MakeGenericInstanceType(assembly.MainModule.TypeSystem.Int32)) { HasThis = true };",
                 "l_spanCtor_6.Parameters.Add(new ParameterDefinition(\"ptr\", ParameterAttributes.None, assembly.MainModule.ImportReference(typeof(void*))));",
                 "l_spanCtor_6.Parameters.Add(new ParameterDefinition(\"length\", ParameterAttributes.None, assembly.MainModule.TypeSystem.Int32));",
                 "il_bar_3.Emit(OpCodes.Newobj, assembly.MainModule.ImportReference(l_spanCtor_6));", "il_bar_3.Emit(OpCodes.Call, m_bar_2);", "il_bar_3.Emit(OpCodes.Ret);",
@@ -175,7 +175,7 @@ public class StackallocTests : CecilifierUnitTestBase
             var cecilifiedCode = result.GeneratedCode.ReadToEnd();
 
             Assert.That(cecilifiedCode, Does.Match(
-                @"var (l_spanCtor_\d+) = new MethodReference\("".ctor"", assembly.MainModule.TypeSystem.Void, assembly.MainModule.ImportReference\(typeof\(Span<>\)\).MakeGenericInstanceType\(.+TypeSystem.Int32\)\) { HasThis = true };\s+" +
+                @"var (l_spanCtor_\d+) = new MethodReference\("".ctor"", assembly.MainModule.TypeSystem.Void, assembly.MainModule.ImportReference\(typeof\(System\.Span<>\)\).MakeGenericInstanceType\(.+TypeSystem.Int32\)\) { HasThis = true };\s+" +
                 @"\1.Parameters.Add\(.+""ptr"".+void\*.+\);\s+" +
                 @"\1.Parameters.Add\(.+""length"".+TypeSystem.Int32.+\);\s+" +
                 @"il_M_\d+.Emit\(OpCodes.Newobj, assembly.MainModule.ImportReference\(\1\)\);"));
@@ -189,7 +189,7 @@ public class StackallocTests : CecilifierUnitTestBase
             var cecilifiedCode = result.GeneratedCode.ReadToEnd();
 
             Assert.That(cecilifiedCode, Does.Match(
-                @"var (l_spanCtor_\d+) = new MethodReference\("".ctor"", assembly.MainModule.TypeSystem.Void, assembly.MainModule.ImportReference\(typeof\(Span<>\)\).MakeGenericInstanceType\(.+TypeSystem.Int32\)\) { HasThis = true };\s+" +
+                @"var (l_spanCtor_\d+) = new MethodReference\("".ctor"", assembly.MainModule.TypeSystem.Void, assembly.MainModule.ImportReference\(typeof\(System\.Span<>\)\).MakeGenericInstanceType\(.+TypeSystem.Int32\)\) { HasThis = true };\s+" +
                 @"\1.Parameters.Add\(.+""ptr"".+void\*.+\);\s+" +
                 @"\1.Parameters.Add\(.+""length"".+TypeSystem.Int32.+\);\s+" +
                 @"il_M_\d+.Emit\(OpCodes.Newobj, assembly.MainModule.ImportReference\(\1\)\);"));
