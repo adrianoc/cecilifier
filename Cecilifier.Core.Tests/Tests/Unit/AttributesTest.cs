@@ -38,5 +38,25 @@ public class AttributesTest : CecilifierUnitTestBase
         Assert.That(cecilifiedCode, Does.Match(@"gp_T_\d+.CustomAttributes.Add\(attr_my_\d+\);"));
     }
 
+    [Test]
+    public void TestGenericAttributeDefinition()
+    {
+        var result = RunCecilifier(GenericAttributeDefinition);
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+
+        Assert.That(cecilifiedCode, Does.Match(
+            @"(?s)(cls_myGenericAttribute_\d+) = new TypeDefinition\(.+""MyGenericAttribute`1"".+,.+ImportReference\(typeof\(System.Attribute\)\)\);" +
+            @"\s+.+(gp_T_\d+) = new Mono.Cecil.GenericParameter\(""T"", \1\);" +
+            @"\s+.+\1.GenericParameters.Add\(\2\);"));
+    }
+
     private const string AttributeDefinition = "class MyAttribute : System.Attribute { public MyAttribute(string message) {} } ";
+    private const string GenericAttributeDefinition = @"
+                                [System.AttributeUsage(System.AttributeTargets.All, AllowMultiple =true)]
+                                class MyGenericAttribute<T> : System.Attribute 
+                                { 
+                                    public MyGenericAttribute() {} 
+                                    public MyGenericAttribute(T value) {} 
+                                    public T Value {get; set; } 
+                                }";
 }

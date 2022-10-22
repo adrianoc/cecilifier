@@ -36,7 +36,7 @@ namespace Cecilifier.Core.Tests.Framework
                 return outputFilePath;
             }
 
-            var syntaxTree = SyntaxFactory.ParseSyntaxTree(SourceText.From(source), new CSharpParseOptions());
+            var syntaxTree = SyntaxFactory.ParseSyntaxTree(SourceText.From(source), new CSharpParseOptions(LanguageVersion.Preview));
 
             var compilationOptions = new CSharpCompilationOptions(
                 exe ? OutputKind.ConsoleApplication : OutputKind.DynamicallyLinkedLibrary,
