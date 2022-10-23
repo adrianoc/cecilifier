@@ -22,5 +22,10 @@ namespace Cecilifier.Core.Misc
         {
             return node.Identifier.Text;
         }
+
+        public override string VisitGenericName(GenericNameSyntax node)
+        {
+            return $"{node.Identifier.Text}_{node.Arity}";
+        }
     }
 }

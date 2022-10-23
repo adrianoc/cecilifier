@@ -49,6 +49,25 @@ public class AttributesTest : CecilifierUnitTestBase
             @"\s+.+(gp_T_\d+) = new Mono.Cecil.GenericParameter\(""T"", \1\);" +
             @"\s+.+\1.GenericParameters.Add\(\2\);"));
     }
+    
+    [TestCase("[MyGeneric<int>]", "Int32", TestName="Value Type")] 
+    [TestCase("[MyGeneric<string>]", "String", TestName = "Reference Type")]
+    [TestCase("[MyGeneric<Foo<int>>]", @"cls_foo_\d+.MakeGenericInstanceType\(.+Int32\)", TestName = "Generic Type")]
+    public void TestGenericAttributeUsage(string attribute, string expectedType)
+    {
+        var result = RunCecilifier($@"
+{GenericAttributeDefinition}
+
+{attribute}
+class Foo<TFoo> {{ }}");
+        
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+        Assert.That(
+            cecilifiedCode, 
+            Does.Match(
+                $@"(?s)var (attr_myGeneric_1_\d+) = new CustomAttribute\(new MethodReference\((ctor_myGenericAttribute_\d+)\.Name.+\2\.ReturnType\).+DeclaringType = cls_myGenericAttribute_\d+.MakeGenericInstanceType\(.*{expectedType}\).+\);\s+" + 
+                @"cls_foo_\d+\.CustomAttributes\.Add\(\1\);"));        
+    }
 
     private const string AttributeDefinition = "class MyAttribute : System.Attribute { public MyAttribute(string message) {} } ";
     private const string GenericAttributeDefinition = @"

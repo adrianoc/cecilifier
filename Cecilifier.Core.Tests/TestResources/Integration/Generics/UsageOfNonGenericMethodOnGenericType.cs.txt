@@ -1,0 +1,10 @@
+using System;
+class C<T>
+{
+    public void Method(T t) {}
+}
+
+class UsageOfNonGenericMethodOnGenericType
+{
+    void M(C<int> c) => c.Method(42);
+}

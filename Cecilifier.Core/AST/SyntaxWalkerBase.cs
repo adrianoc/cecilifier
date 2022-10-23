@@ -918,11 +918,8 @@ namespace Cecilifier.Core.AST
                 // Attribute is defined in the same assembly. We need to find the variable that holds its "ctor declaration"
                 var attrCtor = attrType.GetMembers().OfType<IMethodSymbol>().SingleOrDefault(m => m.MethodKind == MethodKind.Constructor && m.Parameters.Length == attrArgs.Length);
                 EnsureForwardedMethod(context, attrCtor, Array.Empty<TypeParameterSyntax>());
-                var attrCtorVar = context.DefinitionVariables.GetMethodVariable(attrCtor.AsMethodDefinitionVariable());
-                if (!attrCtorVar.IsValid)
-                    throw new Exception($"Could not find variable for {attrCtor.ContainingType.Name} ctor.");
 
-                return attrCtorVar.VariableName;
+                return attrCtor.MethodResolverExpression(context);
             });
 
             return attrsExp;
