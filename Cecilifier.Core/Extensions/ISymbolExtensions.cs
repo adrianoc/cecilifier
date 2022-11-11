@@ -45,6 +45,13 @@ namespace Cecilifier.Core.Extensions
 
         public static string AssemblyQualifiedName(this ISymbol type)
         {
+            // ISymbol.ToDisplayString() does not have the option to use the metadata name for IntPtr
+            // returning `nint` instead.
+            if (type is ITypeSymbol { SpecialType: SpecialType.System_IntPtr } ts)
+            {
+                return "System.IntPtr";
+            }
+            
             var format = new SymbolDisplayFormat(typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces);
             var namespaceQualifiedName = type.ToDisplayString(format);
             var elementType = type.GetElementType();
