@@ -297,16 +297,24 @@ namespace Cecilifier.Core.AST
                 ProcessBinaryExpression(node);
             }
         }
-        
+
         public override void VisitLiteralExpression(LiteralExpressionSyntax node)
         {
             using var _ = LineInformationTracker.Track(Context, node);
-            
-            var localVarParent = (CSharpSyntaxNode) node.Parent;
+
+            var localVarParent = (CSharpSyntaxNode)node.Parent;
             Debug.Assert(localVarParent != null);
-                
+
             var nodeType = Context.SemanticModel.GetTypeInfo(node);
-            LoadLiteralValue(ilVar, nodeType.Type ?? nodeType.ConvertedType, node.Token.Text, localVarParent.Accept(UsageVisitor.GetInstance(Context)) == UsageKind.CallTarget);
+            var s = node.Token.Kind() switch
+            {
+                SyntaxKind.SingleLineRawStringLiteralToken => node.Token.ValueText,
+                SyntaxKind.MultiLineRawStringLiteralToken => node.Token.ValueText, // ValueText does not includes quotes, so nothing to remove.
+                SyntaxKind.StringLiteralToken => node.Token.Text.Substring(1, node.Token.Text.Length - 2), // removes quotes because LoadLiteralValue() expects string to not be quoted.
+                _ => node.Token.Text
+            };
+
+            LoadLiteralValue(ilVar, nodeType.Type ?? nodeType.ConvertedType, s, localVarParent.Accept(UsageVisitor.GetInstance(Context)) == UsageKind.CallTarget);
         }
 
         public override void VisitDeclarationExpression(DeclarationExpressionSyntax node)
@@ -1323,7 +1331,7 @@ namespace Cecilifier.Core.AST
             {
                 var expressionParameter = parameters.SingleOrDefault(p => p.Name == (string)callerArgumentExpressionAttribute.ConstructorArguments[0].Value);
                 if (expressionParameter != null)
-                    return $"\"{arguments[expressionParameter.Ordinal].Expression.ToFullString()}\"";
+                    return arguments[expressionParameter.Ordinal].Expression.ToFullString();
             }
             
             return arg.ExplicitDefaultValue();

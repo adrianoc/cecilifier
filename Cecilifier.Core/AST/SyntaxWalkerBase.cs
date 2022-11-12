@@ -137,7 +137,7 @@ namespace Cecilifier.Core.AST
 
             return AddLocalVariableWithResolvedType(localVarName, currentMethod, varType);
         }
-        
+
         protected void LoadLiteralValue(string ilVar, ITypeSymbol type, string value, bool isTargetOfCall)
         {
             switch (type.SpecialType)
@@ -157,7 +157,7 @@ namespace Cecilifier.Core.AST
                     if (value == null)
                         Context.EmitCilInstruction(ilVar, OpCodes.Ldnull);
                     else
-                        Context.EmitCilInstruction(ilVar, OpCodes.Ldstr, value);
+                        Context.EmitCilInstruction(ilVar, OpCodes.Ldstr, SymbolDisplay.FormatLiteral(value, true));
                     break;
 
                 case SpecialType.System_Char:

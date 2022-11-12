@@ -24,7 +24,7 @@ namespace Cecilifier.Core
         {
             UsageVisitor.ResetInstance();
             using var stream = new StreamReader(content);
-            var syntaxTree = CSharpSyntaxTree.ParseText(stream.ReadToEnd(), new CSharpParseOptions(LanguageVersion.CSharp10));
+            var syntaxTree = CSharpSyntaxTree.ParseText(stream.ReadToEnd(), new CSharpParseOptions(LanguageVersion.CSharp11));
             var metadataReferences = options.References.Select(refPath => MetadataReference.CreateFromFile(refPath)).ToArray();
 
             var comp = CSharpCompilation.Create(
