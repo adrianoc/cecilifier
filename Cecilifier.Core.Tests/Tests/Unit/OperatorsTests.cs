@@ -141,8 +141,8 @@ public class OperatorsTests : CecilifierUnitTestBase
     [TestCase("long M(long a) => a % 3L;", @"(il_M_2\.Emit\(OpCodes\.)Ldarg_1\);\s+\1Ldc_I8, 3L\);\s+\1Rem\);\s+")]
     [TestCase("float M(float a) => a % 3;", @"(il_M_2\.Emit\(OpCodes\.)Ldarg_1\);\s+\1Ldc_I4, 3\);\s+\1Conv_R4\);\s+\1Rem\);\s+")]
     [TestCase("double M(double a) => a % 3;", @"(il_M_2\.Emit\(OpCodes\.)Ldarg_1\);\s+\1Ldc_I4, 3\);\s+\1Conv_R8\);\s+\1Rem\);\s+")]
-    //[TestCase("decimal M(decimal a) => a % 3;")] // This is covered by the integration test.
-    public void T(string methodWithModulus, string expected = @"(il_M_2\.Emit\(OpCodes\.)Ldarg_1\);\s+(?:\1Conv_I4\);\s+)?\1Ldc_I4, 3\);\s+\1Rem\);\s+")
+    [TestCase("decimal M(decimal a) => a % 3;", @"(il_M_2\.Emit\(OpCodes\.)Ldarg_1\);\s+\1Ldc_I4, 3\);\s+\1Newobj.+System\.Decimal.+\);\s+\1Call,.+op_Modulus.+\);")]
+    public void TestModulus(string methodWithModulus, string expected = @"(il_M_2\.Emit\(OpCodes\.)Ldarg_1\);\s+(?:\1Conv_I4\);\s+)?\1Ldc_I4, 3\);\s+\1Rem\);\s+")
     {
         var result = RunCecilifier($"class Foo {{ {methodWithModulus } }}");
         Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(expected));
