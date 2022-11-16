@@ -63,6 +63,7 @@ namespace Cecilifier.Core.AST
                     ctx.EmitCilInstruction(ilVar, OpCodes.Add);
                 }
             };
+
             operatorHandlers[SyntaxKind.MinusToken] = (ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, OpCodes.Sub);
             operatorHandlers[SyntaxKind.AsteriskToken] = (ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, OpCodes.Mul);
             operatorHandlers[SyntaxKind.SlashToken] = (ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, OpCodes.Div);
@@ -262,12 +263,9 @@ namespace Cecilifier.Core.AST
         public override void VisitAssignmentExpression(AssignmentExpressionSyntax node)
         {
             using var _ = LineInformationTracker.Track(Context, node);
-
             if (HandlePseudoAssignment(node))
                 return;
             
-            var leftNodeMae = node.Left as MemberAccessExpressionSyntax;
-            CSharpSyntaxNode exp = leftNodeMae?.Name ?? node.Left;
             // check if the left hand side of the assignment is a property (but not indexers) and handle that as a method (set) call.
             var visitor = new AssignmentVisitor(Context, ilVar, node);
             
@@ -275,14 +273,47 @@ namespace Cecilifier.Core.AST
             Visit(node.Right);
             if (!skipLeftSideVisitingInAssignment)
             {
+                ProcessCompoundAssignmentExpression(node, visitor);
                 visitor.Visit(node.Left);
             }
 
+            ProcessEventAssignment(node);
+        }
+
+        private void ProcessEventAssignment(AssignmentExpressionSyntax node)
+        {
+            var leftNodeMae = node.Left as MemberAccessExpressionSyntax;
+            CSharpSyntaxNode exp = leftNodeMae?.Name ?? node.Left;
             var expSymbol = Context.SemanticModel.GetSymbolInfo(exp).Symbol;
-            if (expSymbol is IEventSymbol @event)
+            if (expSymbol is not IEventSymbol @event)
+                return;
+
+            AddMethodCall(ilVar, node.OperatorToken.IsKind(SyntaxKind.PlusEqualsToken) ? @event.AddMethod : @event.RemoveMethod, node.IsAccessOnThisOrObjectCreation());
+        }
+
+        private void ProcessCompoundAssignmentExpression(AssignmentExpressionSyntax node, AssignmentVisitor visitor)
+        {
+            var equivalentTokenKind = node.Kind().MapCompoundAssignment();
+            if (equivalentTokenKind == SyntaxKind.None || Context.SemanticModel.GetSymbolInfo(node.Left).Symbol?.Kind == SymbolKind.Event)
+                return;
+
+            // x += y;
+            var lastInstructionLoadingRightExpression = Context.CurrentLine;
+            Visit(node.Left); // load `x`
+
+            // for some types (for example those with overloaded operator+), the loading order of x (left) and y (right) may be important.
+            // Since we visited right (y) then left (x), to preserve the logical order we need to move all lines related to loading right (y)
+            // after the last instruction (which is the last instruction in charge of loading left, i.e, x)
+            Context.MoveLinesToEnd(visitor.InstructionPrecedingValueToLoad, lastInstructionLoadingRightExpression);
+
+            if (node.IsOperatorOnCustomUserType(Context.SemanticModel, out var method))
             {
-                AddMethodCall(ilVar, node.OperatorToken.IsKind(SyntaxKind.PlusEqualsToken) ? @event.AddMethod : @event.RemoveMethod, node.IsAccessOnThisOrObjectCreation());
+                if(method.IsDefinedInCurrentAssembly(Context))
+                    EnsureForwardedMethod(Context, Context.Naming.MethodDeclaration((BaseMethodDeclarationSyntax)method.DeclaringSyntaxReferences[0].GetSyntax()), method, Array.Empty<TypeParameterSyntax>());
+                AddMethodCall(ilVar, method);
             }
+            else
+                operatorHandlers[equivalentTokenKind](Context, ilVar, Context.SemanticModel.GetTypeInfo(node.Left).Type, Context.SemanticModel.GetTypeInfo(node.Right).Type);
         }
 
         public override void VisitBinaryExpression(BinaryExpressionSyntax node)
@@ -1401,7 +1432,9 @@ namespace Cecilifier.Core.AST
         private static void PopIfNotConsumed(IVisitorContext ctx, string ilVar, ExpressionSyntax node)
         {
             var nodeType = ctx.GetTypeInfo(node).Type.EnsureNotNull();
-            if (node.Kind() != SyntaxKind.SimpleAssignmentExpression && nodeType.SpecialType != SpecialType.System_Void)
+            if (!node.IsKind(SyntaxKind.SimpleAssignmentExpression) 
+                && node.Kind().MapCompoundAssignment() == SyntaxKind.None
+                && nodeType.SpecialType != SpecialType.System_Void)
             {
                 ctx.EmitCilInstruction(ilVar, OpCodes.Pop);
             }

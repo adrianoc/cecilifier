@@ -90,7 +90,7 @@ namespace Cecilifier.Core.AST
 
         protected void AddCilInstruction(string ilVar, OpCode opCode, ITypeSymbol type)
         {
-            string operand = Context.TypeResolver.Resolve(type);
+            var operand = Context.TypeResolver.Resolve(type);
             Context.EmitCilInstruction(ilVar, opCode, operand);
         }
 
