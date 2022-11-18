@@ -75,35 +75,35 @@ namespace Cecilifier.Core.Tests.Tests.Unit
                 new TestCaseData(
                     @"Func<int, int> f = i => { int l = i; return l; };",
                     
-                    @"//int l = i; 
+                    @"//int l = i;
 			var l_l_3 = new VariableDefinition(assembly.MainModule.TypeSystem.Int32);
 			m_lambda_0_58_0.Body.Variables.Add(l_l_3);
 			il_lambda_0_58_2.Emit(OpCodes.Ldarg_1);
 			il_lambda_0_58_2.Emit(OpCodes.Stloc, l_l_3);
 
-			//return l; 
+			//return l;
 			il_lambda_0_58_2.Emit(OpCodes.Ldloc, l_l_3);
 			il_lambda_0_58_2.Emit(OpCodes.Ret);").SetName("Local Variable Initialization"),
                 
                 new TestCaseData(
                     @"Func<int, int> f = i => { int l; l = i; return l; };",
                     
-                    @"//int l; 
+                    @"//int l;
 			var l_l_3 = new VariableDefinition(assembly.MainModule.TypeSystem.Int32);
 			m_lambda_0_58_0.Body.Variables.Add(l_l_3);
 
-			//l = i; 
+			//l = i;
 			il_lambda_0_58_2.Emit(OpCodes.Ldarg_1);
 			il_lambda_0_58_2.Emit(OpCodes.Stloc, l_l_3);
 
-			//return l; 
+			//return l;
 			il_lambda_0_58_2.Emit(OpCodes.Ldloc, l_l_3);
 			il_lambda_0_58_2.Emit(OpCodes.Ret);").SetName("Local Variable Assignment"),
                 
                 new TestCaseData(
                     @"Func<int, int> f = i => { int l = i + 1; return l; };",
                     
-                    @"//int l = i + 1; 
+                    @"//int l = i + 1;
 			var l_l_3 = new VariableDefinition(assembly.MainModule.TypeSystem.Int32);
 			m_lambda_0_58_0.Body.Variables.Add(l_l_3);
 			il_lambda_0_58_2.Emit(OpCodes.Ldarg_1);
@@ -111,26 +111,26 @@ namespace Cecilifier.Core.Tests.Tests.Unit
 			il_lambda_0_58_2.Emit(OpCodes.Add);
 			il_lambda_0_58_2.Emit(OpCodes.Stloc, l_l_3);
 
-			//return l; 
+			//return l;
 			il_lambda_0_58_2.Emit(OpCodes.Ldloc, l_l_3);
 			il_lambda_0_58_2.Emit(OpCodes.Ret);").SetName("Local Variable Initialization With Expression"),
                 
                 new TestCaseData(
                     @"Func<int, int> f = i => { int l = i; l = l + 1; return l; };",
                     
-                    @"//int l = i; 
+                    @"//int l = i;
 			var l_l_3 = new VariableDefinition(assembly.MainModule.TypeSystem.Int32);
 			m_lambda_0_58_0.Body.Variables.Add(l_l_3);
 			il_lambda_0_58_2.Emit(OpCodes.Ldarg_1);
 			il_lambda_0_58_2.Emit(OpCodes.Stloc, l_l_3);
 
-			//l = l + 1; 
+			//l = l + 1;
 			il_lambda_0_58_2.Emit(OpCodes.Ldloc, l_l_3);
 			il_lambda_0_58_2.Emit(OpCodes.Ldc_I4, 1);
 			il_lambda_0_58_2.Emit(OpCodes.Add);
 			il_lambda_0_58_2.Emit(OpCodes.Stloc, l_l_3);
 
-			//return l; 
+			//return l;
 			il_lambda_0_58_2.Emit(OpCodes.Ldloc, l_l_3);
 			il_lambda_0_58_2.Emit(OpCodes.Ret);").SetName("Local Variable In Expression"),
             };

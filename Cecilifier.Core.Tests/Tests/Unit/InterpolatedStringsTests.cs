@@ -22,7 +22,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             var code = "class C { void M(int i, object o) { var s = $\"1={i+1}, 2={o}, 3={3}, 4={4}, 5={5}\"; System.Console.WriteLine(s); } }";
             var result = RunCecilifier(code);
             var cecilifiedCode = result.GeneratedCode.ReadToEnd();
-            var expected = @"//var s = $""1={i+1}, 2={o}, 3={3}, 4={4}, 5={5}""; 
+            var expected = @"//var s = $""1={i+1}, 2={o}, 3={3}, 4={4}, 5={5}"";
 			var l_s_5 = new VariableDefinition(assembly.MainModule.TypeSystem.String);
 			m_M_1.Body.Variables.Add(l_s_5);
 			il_M_2.Emit(OpCodes.Ldstr, ""1={0}, 2={1}, 3={2}, 4={3}, 5={4}"");

@@ -60,29 +60,6 @@ public static class Outer
         }
 
         [Test]
-        public void CompoundStatement_WithBraceInSameLine_GeneratesValidComments()
-        {
-            var code = @"
-using static System.Console;
-public class Foo
-{
-	void Bar(int i) { WriteLine(i); }
-
-	void BarBaz(int i) 
-    {
-        if (i > 42) {
-            WriteLine(i);
-        }
-    }
-}";
-            var result = RunCecilifier(code);
-            var cecilifiedCode = result.GeneratedCode.ReadToEnd();
-
-            Assert.That(cecilifiedCode, Contains.Substring("//Parameters of 'void Bar(int i) '"));
-            Assert.That(cecilifiedCode, Contains.Substring("//if (i > 42) "));
-        }
-
-        [Test]
         public void Test_Issue_126_Types()
         {
             var result = RunCecilifier(@"
