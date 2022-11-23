@@ -1,4 +1,8 @@
 ## [Unreleased]
+## Changed
+- bumped cecilifier version to 1.80.0
+
+## Fixed
 
 ## 22/Nov/2022
 
