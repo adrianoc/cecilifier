@@ -99,7 +99,7 @@ public class PropertyTests : CecilifierUnitTestBase
         var result = RunCecilifier("class C { public static int Prop { get; set; } } class Driver { int M() => C.Prop; }");
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
         
-        Assert.That(cecilifiedCode, Does.Match(@"var fld_prop_\d+ = new FieldDefinition\(""<Prop>k__BackingField"", .+FieldAttributes\.Static.+\);"), "Backing field should be static");
+        Assert.That(cecilifiedCode, Does.Match(@"var fld_prop_\d+ = new FieldDefinition\(""<Prop>k__BackingField"",.+FieldAttributes\.Static.+\);"), "Backing field should be static");
         Assert.That(cecilifiedCode, Does.Match(@"var l_set_\d+ = new MethodDefinition\(""set_Prop"", .+MethodAttributes\.Static.+\);"), "Setter should be static");
         Assert.That(cecilifiedCode, Does.Match(@"var m_get_\d+ = new MethodDefinition\(""get_Prop"", .+MethodAttributes\.Static.+\);"), "Getter should be static");
         Assert.That(cecilifiedCode, Does.Match(@"il_set_\d+.Emit\(OpCodes.Stsfld, fld_prop_\d+\);"), "Setter field access should be static");

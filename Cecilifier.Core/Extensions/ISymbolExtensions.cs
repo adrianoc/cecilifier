@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Misc;
+using Cecilifier.Core.Naming;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -17,6 +18,19 @@ namespace Cecilifier.Core.Extensions
     {
         private static readonly SymbolDisplayFormat FullyQualifiedDisplayFormat = new(typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces);
 
+        public static ElementKind ToElementKind(this TypeKind self) => self switch
+        {
+            TypeKind.Class => ElementKind.Class,
+            TypeKind.Enum => ElementKind.Enum,
+            TypeKind.Struct => ElementKind.Struct,
+            TypeKind.Interface => ElementKind.Interface,
+            TypeKind.Delegate => ElementKind.Delegate,
+            TypeKind.Array => ElementKind.None,
+            TypeKind.TypeParameter => ElementKind.None,
+            
+            _ => throw new NotImplementedException($"TypeKind `{self}` is not supported.") 
+        };
+        
         public static string FullyQualifiedName(this ISymbol type)
         {
             return type.ToDisplayString(FullyQualifiedDisplayFormat);
@@ -31,6 +45,13 @@ namespace Cecilifier.Core.Extensions
 
         public static string AssemblyQualifiedName(this ISymbol type)
         {
+            // ISymbol.ToDisplayString() does not have the option to use the metadata name for IntPtr
+            // returning `nint` instead.
+            if (type is ITypeSymbol { SpecialType: SpecialType.System_IntPtr } ts)
+            {
+                return "System.IntPtr";
+            }
+            
             var format = new SymbolDisplayFormat(typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces);
             var namespaceQualifiedName = type.ToDisplayString(format);
             var elementType = type.GetElementType();
@@ -50,7 +71,7 @@ namespace Cecilifier.Core.Extensions
             ILocalSymbol local => local.Type,
             _ => throw new NotSupportedException($"({symbol.Kind}) symbol {symbol.ToDisplayString()} is not supported.")
         };
-        
+
         private static ITypeSymbol GetElementType(this ISymbol symbol) => symbol switch
         {
             IPointerTypeSymbol pointer => pointer.PointedAtType.GetElementType(),
@@ -61,7 +82,7 @@ namespace Cecilifier.Core.Extensions
             _ => (ITypeSymbol) symbol
         };
 
-        public static bool IsDefinedInCurrentType<T>(this T method, IVisitorContext ctx) where T : ISymbol
+        public static bool IsDefinedInCurrentAssembly<T>(this T method, IVisitorContext ctx) where T : ISymbol
         {
             return SymbolEqualityComparer.Default.Equals(method.ContainingAssembly, ctx.SemanticModel.Compilation.Assembly);
         }
@@ -138,7 +159,6 @@ namespace Cecilifier.Core.Extensions
             var value = symbol.ExplicitDefaultValue?.ToString();
             return symbol.Type.SpecialType switch
             {
-                SpecialType.System_String => value != null ? $"\"{value}\"" : null,
                 SpecialType.System_Single => $"{value}f",
                 _ => value
             };

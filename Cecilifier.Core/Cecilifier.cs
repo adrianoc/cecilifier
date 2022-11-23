@@ -17,12 +17,14 @@ namespace Cecilifier.Core
     public sealed class Cecilifier
     {
         internal const int CecilifierProgramPreambleLength = 18; // The # of lines before the 1st cecilified line of code (see CecilifierExtensions.AsCecilApplication())
-        
+
+        public static readonly int SupportedCSharpVersion = int.Parse(LanguageVersion.CSharp10.ToString().Substring("CSharp".Length));
+            
         public static CecilifierResult Process(Stream content, CecilifierOptions options)
         {
             UsageVisitor.ResetInstance();
             using var stream = new StreamReader(content);
-            var syntaxTree = CSharpSyntaxTree.ParseText(stream.ReadToEnd(), new CSharpParseOptions(LanguageVersion.CSharp10));
+            var syntaxTree = CSharpSyntaxTree.ParseText(stream.ReadToEnd(), new CSharpParseOptions(LanguageVersion.CSharp11));
             var metadataReferences = options.References.Select(refPath => MetadataReference.CreateFromFile(refPath)).ToArray();
 
             var comp = CSharpCompilation.Create(

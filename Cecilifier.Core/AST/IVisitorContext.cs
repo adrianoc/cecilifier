@@ -14,8 +14,6 @@ namespace Cecilifier.Core.AST
     {
         INameStrategy Naming { get; }
         
-        string CurrentNamespace { get; set; }
-
         SemanticModel SemanticModel { get; }
 
         DefinitionVariableManager DefinitionVariables { get; }
@@ -50,4 +48,3 @@ namespace Cecilifier.Core.AST
 
     }
 }
-

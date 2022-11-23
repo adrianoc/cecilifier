@@ -79,7 +79,7 @@ namespace Cecilifier.Core.AST
 
         protected override string GetSpecificModifiers()
         {
-            return string.Empty.AppendModifier(Constants.Cecil.CtorAttributes);
+            return Constants.Cecil.CtorAttributes;
         }
 
         internal void DefaultCtorInjector(string typeDefVar, ClassDeclarationSyntax declaringClass, bool isStatic)

@@ -78,9 +78,10 @@ namespace Cecilifier.Core.Misc
          */
         public static IEnumerable<string> Type(
             IVisitorContext context, 
-            string typeVar, 
-            string typeName, 
-            string attrs, 
+            string typeVar,
+            string typeNamespace,
+            string typeName,
+            string attrs,
             string baseTypeName, 
             string outerTypeName, 
             bool isStructWithNoFields, 
@@ -96,7 +97,7 @@ namespace Cecilifier.Core.Misc
             }
             
             var exps = new List<string>();
-            var typeDefExp = $"var {typeVar} = new TypeDefinition(\"{context.CurrentNamespace}\", \"{typeName}\", {attrs}{(!string.IsNullOrWhiteSpace(baseTypeName) ? ", " + baseTypeName : "")})";
+            var typeDefExp = $"var {typeVar} = new TypeDefinition(\"{typeNamespace}\", \"{typeName}\", {attrs}{(!string.IsNullOrWhiteSpace(baseTypeName) ? ", " + baseTypeName : "")})";
             if (properties.Length > 0)
             {
                 exps.Add($"{typeDefExp} {{ {string.Join(',', properties)} }};");
@@ -129,11 +130,12 @@ namespace Cecilifier.Core.Misc
             return exps;
         }
         
-        public static IEnumerable<string> Type(IVisitorContext context, string typeVar, string typeName, string outerTypeName,string attrs, string baseTypeName, bool isStructWithNoFields, IEnumerable<string> interfaces, TypeParameterListSyntax typeParameters = null, params string[] properties)
+        public static IEnumerable<string> Type(IVisitorContext context, string typeVar, string typeNamespace, string typeName, string outerTypeName,string attrs, string baseTypeName, bool isStructWithNoFields, IEnumerable<string> interfaces, TypeParameterListSyntax typeParameters = null, params string[] properties)
         {
             return Type(
                 context,
                 typeVar,
+                typeNamespace,
                 typeName,
                 attrs,
                 baseTypeName,

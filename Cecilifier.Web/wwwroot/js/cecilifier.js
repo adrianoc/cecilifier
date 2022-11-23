@@ -110,7 +110,13 @@ function initializeSite(errorAccessingGist, gist, version) {
     require(['vs/editor/editor.main'], function () {
         csharpCode = monaco.editor.create(document.getElementById('csharpcode'), {
             theme: "vs-dark",
-            value: ['using System;', 'class Foo', '{', '\tvoid Bar() => Console.WriteLine("Hello World!");', '}'].join('\n'),
+            value: [
+                `// Supported CSharp language version: ${document.getElementById('supportedCSharpVersion').innerText} https://learn.microsoft.com/en-us/dotnet/csharp/whats-new/csharp-${document.getElementById('supportedCSharpVersion').innerText}`,
+                'using System;', 
+                'class Foo', 
+                '{', 
+                '\tvoid Bar() => Console.WriteLine("Hello World!");', 
+                '}'].join('\n'),
             language: 'csharp',
             minimap: { enabled: false },
             fontSize: 16,
@@ -130,33 +136,33 @@ function initializeSite(errorAccessingGist, gist, version) {
          });
          
         // Configure keyboard shortcuts
-        csharpCode.addCommand(monaco.KeyMod.CtrlCmd  | monaco.KeyMod.Alt | monaco.KeyCode.KEY_D, function() {
+        csharpCode.addCommand(monaco.KeyMod.CtrlCmd + monaco.KeyMod.Alt + monaco.KeyCode.KeyD, function() {
             simulateClick("downloadProject");
         });
 
-        csharpCode.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Alt | monaco.KeyCode.KEY_C, function() {
+        csharpCode.addCommand(monaco.KeyMod.CtrlCmd + monaco.KeyMod.Alt + monaco.KeyCode.KeyC, function() {
             simulateClick("sendbutton");
         });
 
-        csharpCode.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Alt | monaco.KeyCode.KEY_S, function() {
+        csharpCode.addCommand(monaco.KeyMod.CtrlCmd + monaco.KeyMod.Alt + monaco.KeyCode.KeyS, function() {
             changeCecilifierSettings();
         });
 
-        csharpCode.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.US_OPEN_SQUARE_BRACKET , function() {
+        csharpCode.addCommand(monaco.KeyMod.CtrlCmd + monaco.KeyCode.BracketLeft , function() {
             const options = csharpCode.getRawOptions();
             const newFontSize = Math.ceil(options.fontSize - options.fontSize * 0.05);
 
             csharpCode.updateOptions({ fontSize: newFontSize });
         });
 
-        csharpCode.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.US_CLOSE_SQUARE_BRACKET , function() {
+        csharpCode.addCommand(monaco.KeyMod.CtrlCmd + monaco.KeyCode.BracketRight , function() {
             const options = csharpCode.getRawOptions();
 
             const newFontSize = Math.ceil(options.fontSize * 1.05);
             csharpCode.updateOptions({ fontSize: newFontSize });
         });
 
-        csharpCode.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.US_DOT , function() {
+        csharpCode.addCommand(monaco.KeyMod.CtrlCmd + monaco.KeyCode.Period, function() {
             ShowErrorDialog("Report a new issue", "Please be kind, check the existing ones before filing a new issue..", "Report an error.");
         });
         
@@ -624,7 +630,11 @@ function initializeWebSocket() {
     const port = document.location.port ? (":" + document.location.port) : "";
     const connectionURL = scheme + "://" + document.location.hostname + port + "/ws";
 
-    websocket = new WebSocket(connectionURL);
+    let newSocket = new WebSocket(connectionURL);
+    newSocket.isRetryingToConnect = websocket === undefined ?  0 : websocket.isRetryingToConnect;
+    websocket = newSocket;
+    
+    console.log(`Is trying to reconnect? ${websocket.isRetryingToConnect}`)
 
     const sendButton = document.getElementById("sendbutton");
     sendButton.onclick = function() {
@@ -638,14 +648,34 @@ function initializeWebSocket() {
 
     websocket.onopen = function (event) {
         console.log(`Cecilifier websocket opened: ${event.type}`);
+        websocket.isRetryingToConnect = 0;
     };
 
     websocket.onclose = function (event) {
+        // https://www.rfc-editor.org/rfc/rfc6455.html#section-7.4
+        const WebSocketNormalClosure = 1000;
+        const WebSocketEndPointShutdown = 1001;
+        
         console.log(`Cecilifier websocket closed: ${event.reason} (${event.code})`);
+        if (event.code !== WebSocketNormalClosure && event.code !== WebSocketEndPointShutdown) {
+            if (websocket.isRetryingToConnect === 0) {
+                SnackBar({
+                    message: "Cecilifier WebSocket was disconnected; trying to reconnect...",
+                    dismissible: true,
+                    status: "Error",
+                    timeout: 5000,
+                    icon: "exclamation"
+                });
+
+                // avoid risking ending up in a endless recursive call.
+                websocket.isRetryingToConnect = 1;
+                initializeWebSocket();
+            }
+        }
     };
 
     websocket.onerror = function(event) {
-        console.error(`"Cecilifier websocket error: ${event.type} (${event})`);
+        console.error(`Cecilifier websocket error: ${event.type} (${event})`);
     };
     
     websocket.onmessage = function (event) {
@@ -710,16 +740,16 @@ function sendMissingAssemblyReferences(missingAssemblyHashes, continuation) {
 
 function getSendToDiscordValue() { return settings.isEnabled(NamingOptions.IncludeSourceInErrorReports); }
 
-function send(websocket, format, assemblyReferenceFilter) {
+function send(websocket, format) {
     if (!websocket || websocket.readyState !== WebSocket.OPEN) {
         SnackBar({
-            message: "Cecilifier WebSocket is not connected.",
+            message: "Lost WebSocket connection with Cecilifier site; please, refresh the page.",
             dismissible: true,
             status: "Error",
             timeout: 8000,
             icon: "exclamation"
         });
-
+        
         return;
     }
     clearError();
@@ -962,7 +992,7 @@ function fileIssueInGitHub() {
             SnackBar(snackbarValue);
         }, false);       
         
-        let w = window.open(`${window.origin}/fileissue?title=${title}&body=${body}`, '_oauth2', 'width=*,height=*');
+        window.open(`${window.origin}/fileissue?title=${title}&body=${body}`, '_oauth2', 'width=*,height=*');
     }
     finally {
         hideSpinner();

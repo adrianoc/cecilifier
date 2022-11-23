@@ -96,7 +96,8 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
             "System.Runtime.CompilerServices.IsUnmanagedAttribute",
             "System.Runtime.CompilerServices.NullableContextAttribute",
             "System.Runtime.CompilerServices.CompilerGeneratedAttribute",
-            "System.Runtime.CompilerServices.IsReadOnlyAttribute"
+            "System.Runtime.CompilerServices.IsReadOnlyAttribute",
+            "System.Runtime.CompilerServices.RefSafetyRulesAttribute"
         };
     }
 }

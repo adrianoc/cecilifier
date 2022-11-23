@@ -59,6 +59,9 @@ namespace Cecilifier.Core.Tests.Tests.Unit
         [Test, Combinatorial]
         public void Casing_Setting_Is_Respected([Values] ElementKind elementKind, [Values] bool camelCasing)
         {
+            if (elementKind == ElementKind.None)
+                return;
+            
             if (elementKind == ElementKind.Label && !camelCasing)
             {
                 Assert.Ignore("as of Aug/2021 all created labels are camelCase.");

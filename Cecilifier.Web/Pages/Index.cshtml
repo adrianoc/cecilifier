@@ -12,6 +12,8 @@
 }
 
 <div xmlns="http://www.w3.org/1999/html">
+    <span id="supportedCSharpVersion" hidden>@Core.Cecilifier.SupportedCSharpVersion</span>
+    
     <div id="settingsDiv" class="sidenav">
         <table style="width: 100%">
             <tr>
@@ -26,37 +28,42 @@
                 </td>
                 <td style='min-width:10px;'></td>
                 <td style='width:75%; text-align: left'>
-                    <div id="formattingSettingsSample-container" style="margin-bottom: 5px;"><div id="_formattingSettingsSample" style="width: 1000px; height: 1000px; border-left: 10px solid white; border-right: 10px solid white"></div></div>
+                    <div id="formattingSettingsSample-container" style="margin-bottom: 5px;">
+                        <div id="_formattingSettingsSample" style="width: 1000px; height: 1000px; border-left: 10px solid white; border-right: 10px solid white"></div></div>
                 </td>
             </tr>
         </table>
     </div>
 
-    <nav id="cecilifier-validation" class="navbar navbar-default navbar-fixed-top hidden" role="alert"> 
-        <div class="container"> 
-            <div class="navbar-header"> 
-                <span class="navbar-brand"> 
-                    <span class="glyphicon glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span> 
+    <nav id="cecilifier-validation" class="navbar navbar-default navbar-fixed-top hidden" role="alert">
+        <div class="container">
+            <div class="navbar-header">
+                <span class="navbar-brand">
+                    <span class="glyphicon glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
                 </span>
             </div>
-            
-            <div class="collapse navbar-collapse"> 
-                <p class="navbar-text" id="cecilifier-validation-msg"></p> 
-                <div class="navbar-right"> 
+
+            <div class="collapse navbar-collapse">
+                <p class="navbar-text" id="cecilifier-validation-msg"></p>
+                <div class="navbar-right">
                     <button type="button" class="btn btn-default navbar-btn" data-cookie-string="" onclick="document.querySelector('#cecilifier-validation').classList.add('hidden')">
                         <span class="glyphicon glyphicon-remove"></span>
-                    </button> 
-                </div>  
-            </div> 
-        </div> 
-    </nav> 
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
 
     <div id="csharpcode-container" style="margin-bottom: 5px;">
-        <div id="csharpcode" style="width: 100%; height: 400px; border-left: 10px solid white; border-right: 10px solid white"></div>        
+        <div id="csharpcode" style="width: 100%; height: 400px; border-left: 10px solid white; border-right: 10px solid white"></div>
     </div>
-    
-    <div class="lds-ring" style="visibility: hidden" id="spinnerDiv"><div></div><div></div><div></div><div></div></div>
-    
+
+    <div class="lds-ring" style="visibility: hidden" id="spinnerDiv">
+        <div></div>
+        <div></div>
+        <div></div>
+        <div></div></div>
+
     <div align="center" style="vertical-align: middle; margin-bottom: 5px;">
         <button type="submit" id="sendbutton" class="button">Cecilify your code!</button>
         <button type="submit" id="downloadProject" class="button">Generate Project <i class="fa fa-box"></i></button>
@@ -64,7 +71,7 @@
         <button class="button" onclick="changeCecilifierSettings();" id="changeSettings"><i class="fas fa-sliders-h"></i></button>
         <button class="button" id="showFixedBugsInStaging" onclick="showListOfFixedIssuesInStagingServer(true);"><i class="fa fa-bug fa-lg"></i></button>
         <button class="button" onclick="ShowAssemblyReferencesDialog('Assembly References', 'ssss');" id="assembly_references_button"><i class="fas fa-database"></i></button>
-        
+
         <span id="keyboard-shortcuts">
             <i class="fas fa-keyboard" style="font-size:28px; vertical-align: middle;"></i>
         </span>
@@ -76,50 +83,51 @@
     <div id="cecilifiedcode-container" style="margin-bottom: 0;">
         <div id="cecilifiedcode" style="width: 100%; height: 600px; border-left: 10px solid white; border-right: 10px solid white"></div>
     </div>
-    
+
     <div class="modal" aria-hidden="true">
-      <div class="modal-dialog" id="bug_reporter_dialog_id">
-        <div class="modal-header">
-          <h2 id="bug_reporter_header_id"><img src="images/oops.png" width="64" height="64"  alt="oops" style="margin-right: 10px"/>We've got an internal error.</h2>
-          <a href="#" class="btn-close closemodal" aria-hidden="true" onclick="CloseErrorDialog()">&times;</a>
+        <div class="modal-dialog" id="bug_reporter_dialog_id">
+            <div class="modal-header">
+                <h2 id="bug_reporter_header_id"><img src="images/oops.png" width="64" height="64" alt="oops" style="margin-right: 10px"/>We've got an internal error.</h2>
+                <a href="#" class="btn-close closemodal" aria-hidden="true" onclick="CloseErrorDialog()">&times;</a>
+            </div>
+            <div class="modal-body">
+                Title<br/>
+                <textarea id="error_title" style="width: 100%; resize: none" placeholder="enter a descriptive title" oninput="updateReportErrorButton(this)"></textarea><br/>
+
+                Description<br/>
+                <textarea id="error_description" style="width: 100%; resize: none"></textarea><br/>
+
+                <input type="checkbox" checked="true" id="include-snippet"/>Include original code.
+            </div>
+
+            <div class="modal-footer" id="bug_reporter_dialog_footer">
+                <a href="#" class="btn-disabled" onclick="fileIssueInGitHub();" id="report_internal_error_button">Report error</a> <a href="#" class="btn" onclick="CloseErrorDialog()">Close</a>
+            </div>
         </div>
-          <div class="modal-body">
-              Title<br/>
-              <textarea id="error_title" style="width: 100%; resize: none" placeholder="enter a descriptive title" oninput="updateReportErrorButton(this)"></textarea><br/>
-              
-              Description<br/>
-              <textarea id="error_description" style="width: 100%; resize: none"></textarea><br/>
-              
-              <input type="checkbox" checked="true" id="include-snippet" />Include original code.
-          </div>
-          
-          <div class="modal-footer" id="bug_reporter_dialog_footer">
-              <a href="#" class="btn-disabled" onclick="fileIssueInGitHub();" id="report_internal_error_button">Report error</a> <a href="#" class="btn" onclick="CloseErrorDialog()">Close</a>
-          </div>
-      </div>
     </div>
 
-    <!-- Assembly References Dialog --> 
+    <!-- Assembly References Dialog -->
     <div class="modal" aria-hidden="true">
         <div class="modal-dialog" id="assembly_references_dialog_id">
-            <div class="modal-header" id="assembly_references_header_id" style="background-color: #2b669a; padding-left: 10px;color: white"><h2 style="margin-top:0; margin-bottom: 0">Assembly References</h2><a href="#" class="btn-close closemodal" style="padding-top: 0;padding-bottom: 0" aria-hidden="true" onclick="CloseDialog()">&times;</a>
+            <div class="modal-header" id="assembly_references_header_id" style="background-color: #2b669a; padding-left: 10px;color: white">
+                <h2 style="margin-top:0; margin-bottom: 0">Assembly References</h2><a href="#" class="btn-close closemodal" style="padding-top: 0;padding-bottom: 0" aria-hidden="true" onclick="CloseDialog()">&times;</a>
             </div>
             <div class="modal-body" style="align-content: center">
                 <select id="assembly_references_list" size="12" style="width: 100%" ondrop="DropAssemblyReference(event)" ondragover="AllowDrop(event)"></select>
-                
-                <br />
+
+                <br/>
             </div>
-          
+
             <div align="left" style="vertical-align: middle; margin-bottom: 5px; margin-left: 20px">
                 <button class="button" id="remove_selected_assembly" onclick="removeSelectedAssemblyReference()"><i class="fas fa-eraser"></i></button>
             </div>
-            
+
             <div class="modal-footer" style="top:90%;left:94%">
                 <a href="#" class="btn-disabled" onclick="StoreReferenceAssembliesLocallyAndClose();" id="close_assembly_references_dialog">Close</a>
             </div>
         </div>
     </div>
-    
+
     <a href="javascript:void(0)" id="dlbtn" style="display: none"><button></button></a>
 </div>
 

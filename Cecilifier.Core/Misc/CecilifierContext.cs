@@ -51,8 +51,6 @@ namespace Cecilifier.Core.Misc
 
         public DefinitionVariableManager DefinitionVariables { get; }
 
-        public string CurrentNamespace { get; set; }
-
         public LinkedListNode<string> CurrentLine => output.Last;
 
         public int CecilifiedLineNumber { get; private set; }

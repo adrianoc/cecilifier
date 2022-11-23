@@ -106,6 +106,40 @@ public class OperatorsTests : CecilifierUnitTestBase
                         @"\2Newobj,.+""System.Nullable`1"", "".ctor"".+,""System.Int32"", ""System.Int32"".+;\s+" +
                         @"il_M_3.Append\(lbl_conditionEnd_7\);"));
     }
+
+    [TestCase(
+        "int i = 42; i -= 10;", 
+        @"(il_topLevelMain_\d\.Emit\(OpCodes\.)Ldc_I4, 42\);\s+\1Stloc, (l_i_\d+)\);\s+\1Ldloc, \2\);\s+\1Ldc_I4, 10\);\s+\1Sub\);\s+\1Stloc, \2\);\s+m_topLevelStatements_1\.Body\.Instructions\.Add\(.+OpCodes\.Ret\)\);", 
+        TestName = "Numeric Primitive Subtraction")]
+    [TestCase(
+        "int i = 10; i += 32;", 
+        @"(il_topLevelMain_\d\.Emit\(OpCodes\.)Ldc_I4, 10\);\s+\1Stloc, (l_i_\d+)\);\s+\1Ldloc, \2\);\s+\1Ldc_I4, 32\);\s+\1Add\);\s+\1Stloc, \2\);\s+m_topLevelStatements_1\.Body\.Instructions\.Add\(.+OpCodes\.Ret\)\);", 
+        TestName = "Numeric Primitive Addition")]
+    [TestCase(
+        "int []a = new[] { 10 }; a[0] += 32; System.Console.WriteLine(a[0]);",
+        @"(il_topLevelMain_\d+\.Emit\(OpCodes\.)Ldc_I4, 1\);\s+\1Newarr, .+Int32\);\s+\1Dup\);\s+\1Ldc_I4, 0\);\s+\1Ldc_I4, 10\);\s+\1Stelem_I4\);\s+\1Stloc, (l_a_\d+)\);\s+\1Ldloc, \2\);\s+\1Ldc_I4, 0\);\s+\1Ldloc, \2\);\s+\1Ldc_I4, 0\);\s+\1Ldelem_I4\);\s+\1Ldc_I4, 32\);\s+\1Add\);\s+\1Stelem_I4\);",
+        TestName = "Array Numeric Primitive")]
+    [TestCase(
+        "string s = \"10\"; s += \"32\";", 
+        @"(il_topLevelMain_\d\.Emit\(OpCodes\.)Ldstr, ""10""\);\s+\1Stloc, (l_s_\d+)\);\s+\1Ldloc, \2\);\s+\1Ldstr, ""32""\);\s+\1Call, .+Import\(typeof\(string\)\.GetMethod\(""Concat"".+\)\);\s+\1Stloc, \2\);\s+m_topLevelStatements_1\.Body\.Instructions\.Add\(.+OpCodes\.Ret\)\);", 
+        TestName = "String")]
+    [TestCase(
+        "C c = new C(); c += 42; class C { public static C operator+(C c, int i) => c; }", 
+        @"il_topLevelMain_\d+\.Emit\(OpCodes\.Call, m_op_Addition_\d+\);", 
+        TestName = "Overloaded + (forwarded)")]
+    [TestCase(
+        "class D { void M() { C c = new C(); c += 42; } } class C { public static C operator+(C c, int i) => c; }", 
+         @"(il_M_\d+\.Emit\(OpCodes\.)Ldloc, l_c_10\);\s+\1Ldc_I4, 42\);\s+\1Call, m_op_Addition_1\);\s+\1Stloc, l_c_10\);", 
+        TestName = "Overloaded +")]
+    [TestCase(
+        "var c = new C(); c.M(c); System.Console.WriteLine(c.Value); class C { public int Value {get; set;} public void M(C other) { Value += 1; other.Value += 2; } }", 
+        @"//Value \+= 1;\s+var (ldarg_0_\d+) = il_M_19.Create\(OpCodes.Ldarg_0\);\s+il_M_19.Append\(\1\);\s+(il_M_\d+\.Emit\(OpCodes\.)Ldarg_0\);\s+\2Call, m_get_12\);\s+\2Ldc_I4, 1\);\s+\2Add\);\s+\2Call, l_set_15\);\s+", 
+        TestName = "Properties (numeric)")]
+    public void TestCompoundAssignment(string code, string expected)
+    {
+        var result = RunCecilifier(code);
+        Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(expected));
+    }
     
     [TestCaseSource(nameof(NullConditionalOperatorOnComplexTargetsScenarios))]
     public void TestNullConditionalOperatorOnComplexTargets(string target, string expectedIlRegexForLoadingTarget)
@@ -141,8 +175,8 @@ public class OperatorsTests : CecilifierUnitTestBase
     [TestCase("long M(long a) => a % 3L;", @"(il_M_2\.Emit\(OpCodes\.)Ldarg_1\);\s+\1Ldc_I8, 3L\);\s+\1Rem\);\s+")]
     [TestCase("float M(float a) => a % 3;", @"(il_M_2\.Emit\(OpCodes\.)Ldarg_1\);\s+\1Ldc_I4, 3\);\s+\1Conv_R4\);\s+\1Rem\);\s+")]
     [TestCase("double M(double a) => a % 3;", @"(il_M_2\.Emit\(OpCodes\.)Ldarg_1\);\s+\1Ldc_I4, 3\);\s+\1Conv_R8\);\s+\1Rem\);\s+")]
-    //[TestCase("decimal M(decimal a) => a % 3;")] // This is covered by the integration test.
-    public void T(string methodWithModulus, string expected = @"(il_M_2\.Emit\(OpCodes\.)Ldarg_1\);\s+(?:\1Conv_I4\);\s+)?\1Ldc_I4, 3\);\s+\1Rem\);\s+")
+    [TestCase("decimal M(decimal a) => a % 3;", @"(il_M_2\.Emit\(OpCodes\.)Ldarg_1\);\s+\1Ldc_I4, 3\);\s+\1Newobj.+System\.Decimal.+\);\s+\1Call,.+op_Modulus.+\);")]
+    public void TestModulus(string methodWithModulus, string expected = @"(il_M_2\.Emit\(OpCodes\.)Ldarg_1\);\s+(?:\1Conv_I4\);\s+)?\1Ldc_I4, 3\);\s+\1Rem\);\s+")
     {
         var result = RunCecilifier($"class Foo {{ {methodWithModulus } }}");
         Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(expected));

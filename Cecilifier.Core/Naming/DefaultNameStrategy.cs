@@ -30,6 +30,7 @@ namespace Cecilifier.Core.Naming
             [ElementKind.GenericInstance] = "gi",
             [ElementKind.MemberReference] = "r",
             [ElementKind.IL] = "il",
+            [ElementKind.None] = string.Empty,
         };
 
         private readonly IReadOnlyDictionary<ElementKind, string> _format;

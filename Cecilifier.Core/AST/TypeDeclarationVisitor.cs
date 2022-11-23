@@ -50,6 +50,7 @@ namespace Cecilifier.Core.AST
             using (Context.DefinitionVariables.WithCurrent(structSymbol.ContainingSymbol.FullyQualifiedName(), node.Identifier.ValueText, VariableMemberKind.Type, definitionVar))
             {
                 HandleTypeDeclaration(node, definitionVar);
+                ProcessStructPseudoAttributes(definitionVar, structSymbol);
                 base.VisitStructDeclaration(node);
                 EnsureCurrentTypeHasADefaultCtor(node, definitionVar);
             }
@@ -123,7 +124,7 @@ namespace Cecilifier.Core.AST
             var found = Context.DefinitionVariables.GetVariable(typeSymbol.Name, VariableMemberKind.Type, typeSymbol.ContainingType?.Name);
             if (!found.IsValid || !found.IsForwarded)
             {
-                AddTypeDefinition(Context, varName, typeSymbol, TypeModifiersToCecil(node), node.TypeParameterList?.Parameters, node.CollectOuterTypeArguments());
+                AddTypeDefinition(Context, varName, typeSymbol, TypeModifiersToCecil(node, node.Modifiers), node.TypeParameterList?.Parameters, node.CollectOuterTypeArguments());
             }
 
             if (typeSymbol.BaseType?.IsGenericType == true)
@@ -140,17 +141,33 @@ namespace Cecilifier.Core.AST
             Context.WriteNewLine();
         }
 
-        internal static void EnsureForwardedTypeDefinition(IVisitorContext context, string typeDeclarationVar, ITypeSymbol typeSymbol, IEnumerable<TypeParameterSyntax> typeParameters)
+        internal static void EnsureForwardedTypeDefinition(IVisitorContext context, ITypeSymbol typeSymbol, IEnumerable<TypeParameterSyntax> typeParameters)
         {
-            var found = context.DefinitionVariables.GetVariable(typeSymbol.Name, VariableMemberKind.Type, typeSymbol.ContainingType?.Name);
-            if (found.IsValid)
+            if (typeSymbol.TypeKind == TypeKind.TypeParameter)
                 return;
             
+            if (!typeSymbol.IsDefinedInCurrentAssembly(context))
+                goto processGenerics;
+
+            var found = context.DefinitionVariables.GetVariable(typeSymbol.Name, VariableMemberKind.Type, typeSymbol.ContainingType?.FullyQualifiedName());
+            if (found.IsValid)
+                goto processGenerics;
+            
             var typeDeclaration =  (BaseTypeDeclarationSyntax) typeSymbol.DeclaringSyntaxReferences.First().GetSyntax();
-            AddTypeDefinition(context, typeDeclarationVar, typeSymbol, TypeModifiersToCecil(typeDeclaration), typeParameters, Array.Empty<TypeParameterSyntax>());
+            var typeDeclarationVar = context.Naming.Type(typeSymbol.Name, typeSymbol.TypeKind.ToElementKind());
+            AddTypeDefinition(context, typeDeclarationVar, typeSymbol, TypeModifiersToCecil(typeDeclaration, typeDeclaration.Modifiers), typeParameters, Array.Empty<TypeParameterSyntax>());
             
             var v = context.DefinitionVariables.RegisterNonMethod(typeSymbol.ContainingSymbol?.FullyQualifiedName(), typeSymbol.Name, VariableMemberKind.Type, typeDeclarationVar);
             v.IsForwarded = true;
+            
+processGenerics:
+            if (typeSymbol is INamedTypeSymbol genericType)
+            {
+                foreach (var typeArgument in genericType.TypeArguments)
+                {
+                    EnsureForwardedTypeDefinition(context, typeArgument, Array.Empty<TypeParameterSyntax>());
+                }
+            }
         }
 
         private static void AddTypeDefinition(IVisitorContext context, string typeDeclarationVar, ITypeSymbol typeSymbol, string typeModifiers, IEnumerable<TypeParameterSyntax> typeParameters, IEnumerable<TypeParameterSyntax> outerTypeParameters)
@@ -160,14 +177,14 @@ namespace Cecilifier.Core.AST
             
             typeParameters ??= Array.Empty<TypeParameterSyntax>();
 
-            var baseType = (typeSymbol.BaseType == null || typeSymbol.BaseType.IsGenericType) ? null : context.TypeResolver.Resolve(typeSymbol.BaseType);
             var isStructWithNoFields = typeSymbol.TypeKind == TypeKind.Struct && typeSymbol.GetMembers().Length == 0 ;
             var typeDefinitionExp = CecilDefinitionsFactory.Type(
                 context, 
                 typeDeclarationVar,
+                typeSymbol.ContainingNamespace?.FullyQualifiedName() ?? string.Empty,
                 typeSymbol.Name, 
                 typeModifiers,
-                baseType,
+                BaseTypeFor(context, typeSymbol),
                 typeSymbol.ContainingType?.Name,
                 isStructWithNoFields,
                 typeSymbol.Interfaces.Select(itf => context.TypeResolver.Resolve(itf)),
@@ -178,10 +195,33 @@ namespace Cecilifier.Core.AST
 
             HandleAttributesInTypeParameter(context, typeParameters);
         }
-        
+
+        private static string BaseTypeFor(IVisitorContext context, ITypeSymbol typeSymbol)
+        {
+            if (typeSymbol.BaseType == null)
+                return null;
+            
+            EnsureForwardedTypeDefinition(context, typeSymbol.BaseType, Array.Empty<TypeParameterSyntax>());
+
+            return typeSymbol.BaseType.IsGenericType ? null : context.TypeResolver.Resolve(typeSymbol.BaseType);
+        }
+
         private void EnsureCurrentTypeHasADefaultCtor(TypeDeclarationSyntax node, string typeLocalVar)
         {
             node.Accept(new DefaultCtorVisitor(Context, typeLocalVar));
+        }
+        
+        private void ProcessStructPseudoAttributes(string structDefinitionVar, INamedTypeSymbol structSymbol)
+        {
+            if (!structSymbol.IsReadOnly)
+                return;
+            
+            var isReadOnlyAttributeCtor = Context.RoslynTypeSystem.SystemRuntimeCompilerServices
+                ?.GetMembers(".ctor")
+                .OfType<IMethodSymbol>()
+                .Single(ctor => ctor.Parameters.Length == 0);
+
+            Context.WriteCecilExpression($"{structDefinitionVar}.CustomAttributes.Add(new CustomAttribute({isReadOnlyAttributeCtor.MethodResolverExpression(Context)}));");
         }
     }
 

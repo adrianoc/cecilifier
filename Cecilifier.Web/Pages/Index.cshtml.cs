@@ -12,6 +12,8 @@ namespace Cecilifier.Web.Pages
     public class CecilifierApplication : PageModel
     {
         public static int Count;
+
+        public static int SupportedCSharpVersion => Core.Cecilifier.SupportedCSharpVersion;
         public string FromGist { get; private set; } = string.Empty;
         public string ErrorAccessingGist { get; private set; } = string.Empty;
 
@@ -24,6 +26,11 @@ namespace Cecilifier.Web.Pages
         
         public async Task<IActionResult> OnGet()
         {
+            if (Request.Host.Host.Contains("staging.cecilifier.me"))
+            {
+                return Redirect("http://cecilifier.me:5000");
+            }
+            
             ErrorAccessingGist = null;
             if (Request.Query.TryGetValue("gistid", out var gistid))
             {

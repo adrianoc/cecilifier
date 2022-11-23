@@ -10,6 +10,7 @@ using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Mono.Cecil;
 using Mono.Cecil.Cil;
 using static Cecilifier.Core.Misc.Utils;
 
@@ -17,7 +18,7 @@ namespace Cecilifier.Core.AST
 {
     internal class PropertyDeclarationVisitor : SyntaxWalkerBase
     {
-        private static readonly List<ParamData> NoParameters = new List<ParamData>();
+        private static readonly List<ParamData> NoParameters = new();
         private string backingFieldVar;
 
         public PropertyDeclarationVisitor(IVisitorContext context) : base(context) { }
@@ -114,8 +115,8 @@ namespace Cecilifier.Core.AST
         private void ProcessPropertyAccessors(BasePropertyDeclarationSyntax node, string propertyDeclaringTypeVar, string propName, string propertyType, string propDefVar, List<ParamData> parameters, ArrowExpressionClauseSyntax? arrowExpression)
         {
             using var _ = LineInformationTracker.Track(Context, node);
-            var propertySymbol = (IPropertySymbol) Context.SemanticModel.GetDeclaredSymbol(node);
-            var accessorModifiers = node.Modifiers.MethodModifiersToCecil((targetEnum, modifiers, defaultAccessibility) => ModifiersToCecil(modifiers, targetEnum, defaultAccessibility), "MethodAttributes.SpecialName", propertySymbol.GetMethod ?? propertySymbol.SetMethod);
+            var propertySymbol = Context.SemanticModel.GetDeclaredSymbol(node).EnsureNotNull<ISymbol, IPropertySymbol>();
+            var accessorModifiers = node.Modifiers.MethodModifiersToCecil("MethodAttributes.SpecialName", propertySymbol.GetMethod ?? propertySymbol.SetMethod);
 
             var declaringType = node.ResolveDeclaringType<TypeDeclarationSyntax>();
             if (arrowExpression != null)
@@ -135,7 +136,7 @@ namespace Cecilifier.Core.AST
 
                     case SyntaxKind.InitKeyword:
                         Context.WriteComment(" Init");
-                        var setterReturnType = $"new RequiredModifierType({ImportExpressionForType(typeof(IsExternalInit))}, {Context.TypeResolver.Bcl.System.Void})";
+                        var setterReturnType = $"new RequiredModifierType({Context.TypeResolver.Resolve(typeof(IsExternalInit).FullName)}, {Context.TypeResolver.Bcl.System.Void})";
                         AddSetterMethod(setterReturnType, accessor);
                         break;
                     
@@ -154,13 +155,14 @@ namespace Cecilifier.Core.AST
                     return;
 
                 backingFieldVar = Context.Naming.FieldDeclaration(node);
-                var modifiers = ModifiersToCecil(accessor.Modifiers, "FieldAttributes", "Private");
-                if (hasInitProperty) 
-                    modifiers = modifiers.AppendModifier("FieldAttributes.InitOnly");
+                var m = accessor.Modifiers;
+                if (hasInitProperty)
+                    m = m.Add(SyntaxFactory.Token(SyntaxKind.ReadOnlyKeyword));
 
                 if (propertySymbol.IsStatic)
-                    modifiers = modifiers.AppendModifier("FieldAttributes.Static");
+                    m = m.Add(SyntaxFactory.Token(SyntaxKind.StaticKeyword));
                 
+                var modifiers = ModifiersToCecil<FieldAttributes>(m, "Private", FieldDeclarationVisitor.MapFieldAttributesFor);
                 var backingFieldExps = CecilDefinitionsFactory.Field(Context, propertySymbol.ContainingSymbol.ToDisplayString() , propertyDeclaringTypeVar, backingFieldVar, Utils.BackingFieldNameForAutoProperty(propName), propertyType, modifiers);
                 AddCecilExpressions(Context, backingFieldExps);
             }

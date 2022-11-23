@@ -1,0 +1,9 @@
+readonly struct ReadOnlyStruct
+{
+    public readonly int field;
+}
+
+class Driver
+{
+    int Foo(ReadOnlyStruct ros) => ros.field + 1;
+}

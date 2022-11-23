@@ -9,6 +9,7 @@ using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using static Cecilifier.Core.Misc.Utils;
+using MethodAttributes = Mono.Cecil.MethodAttributes;
 
 namespace Cecilifier.Core.Extensions
 {
@@ -34,7 +35,7 @@ namespace Cecilifier.Core.Extensions
 
         public static string MethodResolverExpression(this IMethodSymbol method, IVisitorContext ctx)
         {
-            if (method.IsDefinedInCurrentType(ctx))
+            if (method.IsDefinedInCurrentAssembly(ctx))
             {
                 var tbf = method.AsMethodDefinitionVariable();
                 var found = ctx.DefinitionVariables.GetMethodVariable(tbf);
@@ -78,7 +79,7 @@ namespace Cecilifier.Core.Extensions
                 variableName);
         }
 
-        public static string MethodModifiersToCecil(this SyntaxTokenList modifiers, Func<string, IReadOnlyList<SyntaxToken>, string, string> modifiersToCecil, string specificModifiers = null, IMethodSymbol methodSymbol = null)
+        public static string MethodModifiersToCecil(this SyntaxTokenList modifiers, string specificModifiers = null, IMethodSymbol methodSymbol = null)
         {
             var modifiersStr = MapExplicitModifiers(modifiers);
 
@@ -103,19 +104,18 @@ namespace Cecilifier.Core.Extensions
 
             var validModifiers = RemoveSourceModifiersWithNoILEquivalent(modifiers);
 
-            var cecilModifiersStr = modifiersToCecil("MethodAttributes", validModifiers.ToList(), defaultAccessibility);
-
+            var cecilModifiersStr = new StringBuilder(SyntaxWalkerBase.ModifiersToCecil<MethodAttributes>(validModifiers.ToList(), defaultAccessibility, MapMethodAttributeFor));
             if (specificModifiers != null)
             {
-                cecilModifiersStr = cecilModifiersStr.AppendModifier(specificModifiers);
+                cecilModifiersStr.AppendModifier(specificModifiers);
             }
 
-            cecilModifiersStr = cecilModifiersStr.AppendModifier("MethodAttributes.HideBySig").AppendModifier(modifiersStr);
+            cecilModifiersStr.AppendModifier("MethodAttributes.HideBySig").AppendModifier(modifiersStr);
             if (methodSymbol.HasCovariantReturnType())
             {
-                cecilModifiersStr = cecilModifiersStr.AppendModifier("MethodAttributes.NewSlot");
+                cecilModifiersStr.AppendModifier("MethodAttributes.NewSlot");
             }
-            return cecilModifiersStr;
+            return cecilModifiersStr.ToString();
         }
 
         public static bool HasCovariantReturnType(this IMethodSymbol method) => method != null && method.IsOverride && !method.ReturnType.Equals(method.OverriddenMethod.ReturnType);
@@ -151,5 +151,25 @@ namespace Cecilifier.Core.Extensions
                        && !mod.IsKind(SyntaxKind.SealedKeyword)
                        && !mod.IsKind(SyntaxKind.UnsafeKeyword));
         }
+
+        private static IEnumerable<string> MapMethodAttributeFor(SyntaxToken token) =>
+            token.Kind() switch
+            {
+                SyntaxKind.InternalKeyword => new[] { "Assembly" },
+                SyntaxKind.ProtectedKeyword => new[] { "Family" },
+                SyntaxKind.PrivateKeyword => new[] { "Private" },
+                SyntaxKind.PublicKeyword => new[] { "Public" },
+                SyntaxKind.StaticKeyword => new[] { "Static" },
+                SyntaxKind.AbstractKeyword => new[] { "Abstract" },
+               
+                SyntaxKind.AsyncKeyword => Array.Empty<string>(),
+                SyntaxKind.UnsafeKeyword => Array.Empty<string>(),
+                SyntaxKind.PartialKeyword => Array.Empty<string>(),
+                SyntaxKind.VolatileKeyword => Array.Empty<string>(),
+                SyntaxKind.ExternKeyword => Array.Empty<string>(),
+                SyntaxKind.ConstKeyword => Array.Empty<string>(),
+                SyntaxKind.ReadOnlyKeyword => Array.Empty<string>(),
+                _ => throw new ArgumentException($"Unsupported attribute name: {token.Kind().ToString()}")
+            };
     }
 }

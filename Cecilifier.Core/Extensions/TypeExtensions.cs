@@ -25,9 +25,14 @@ namespace Cecilifier.Core.Extensions
         {
             return $"{type}.MakeByReferenceType()";
         }
+        public static string MakeGenericInstanceType(this string type, IEnumerable<string> genericTypes)
+        {
+            return $"{type}.MakeGenericInstanceType({string.Join(", ", genericTypes)})";
+        }
+        
         public static string MakeGenericInstanceType(this string type, string genericType)
         {
-            return $"{type}.MakeGenericInstanceType<{genericType}>()";
+            return $"{type}.MakeGenericInstanceType({genericType})";
         }
 
         public static bool IsPrimitiveType(this ITypeSymbol type) => type.SpecialType switch {

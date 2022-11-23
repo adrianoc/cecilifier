@@ -31,7 +31,6 @@ namespace Cecilifier.Core.AST
             
             // local functions are not first class citizens wrt variable naming... handle them as methods for now.
             var localFunctionVar = Context.Naming.SyntheticVariable(node.Identifier.Text, ElementKind.Method);
-            
             ProcessMethodDeclarationInternal(
                 node, 
                 methodSymbol.ContainingType.Name, 
@@ -132,7 +131,7 @@ namespace Cecilifier.Core.AST
                                             // for ctors we want to use the `methodName` (== .ctor) instead of the `simpleName` (== ctor) otherwise we may fail to find existing variables.
                                             methodSymbol.MethodKind == MethodKind.Constructor ? methodName : simpleName,
                                             methodName, 
-                                            modifiersTokens.MethodModifiersToCecil((targetEnum, modifiers, defaultAccessibility) => ModifiersToCecil(modifiers, targetEnum, defaultAccessibility), GetSpecificModifiers(), methodSymbol), 
+                                            modifiersTokens.MethodModifiersToCecil(GetSpecificModifiers(), methodSymbol), 
                                             methodSymbol.ReturnType, 
                                             refReturn, 
                                             parameters,
@@ -211,8 +210,8 @@ namespace Cecilifier.Core.AST
             context.WriteNewLine();
             context.WriteComment($"Method : {methodName}");
 
+            TypeDeclarationVisitor.EnsureForwardedTypeDefinition(context, returnType, Array.Empty<TypeParameterSyntax>());
             var exps = CecilDefinitionsFactory.Method(context, methodVar, methodName, methodModifiers, returnType, refReturn, typeParameters);
-            
             foreach (var exp in exps)
             {
                 context.WriteCecilExpression(exp);

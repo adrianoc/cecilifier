@@ -48,7 +48,7 @@ namespace Cecilifier.Core.AST
 
         protected void AddMethodCall(string ilVar, IMethodSymbol method, bool isAccessOnThisOrObjectCreation = false)
         {
-            var opCode = (method.IsStatic || method.IsDefinedInCurrentType(Context) && isAccessOnThisOrObjectCreation || method.ContainingType.IsValueType) && !(method.IsVirtual || method.IsAbstract || method.IsOverride)
+            var opCode = (method.IsStatic || method.IsDefinedInCurrentAssembly(Context) && isAccessOnThisOrObjectCreation || method.ContainingType.IsValueType) && !(method.IsVirtual || method.IsAbstract || method.IsOverride)
                 ? OpCodes.Call
                 : OpCodes.Callvirt;
             
@@ -57,7 +57,7 @@ namespace Cecilifier.Core.AST
                 opCode = OpCodes.Call;
             }
             
-            if (method.IsGenericMethod && method.IsDefinedInCurrentType(Context))
+            if (method.IsGenericMethod && method.IsDefinedInCurrentAssembly(Context))
             {
                 // if the method in question is a generic method and it is defined in the same assembly create a generic instance
                 var resolvedMethodVar = Context.Naming.MemberReference(method.Name);
@@ -90,7 +90,7 @@ namespace Cecilifier.Core.AST
 
         protected void AddCilInstruction(string ilVar, OpCode opCode, ITypeSymbol type)
         {
-            string operand = Context.TypeResolver.Resolve(type);
+            var operand = Context.TypeResolver.Resolve(type);
             Context.EmitCilInstruction(ilVar, opCode, operand);
         }
 
@@ -137,7 +137,7 @@ namespace Cecilifier.Core.AST
 
             return AddLocalVariableWithResolvedType(localVarName, currentMethod, varType);
         }
-        
+
         protected void LoadLiteralValue(string ilVar, ITypeSymbol type, string value, bool isTargetOfCall)
         {
             switch (type.SpecialType)
@@ -157,7 +157,7 @@ namespace Cecilifier.Core.AST
                     if (value == null)
                         Context.EmitCilInstruction(ilVar, OpCodes.Ldnull);
                     else
-                        Context.EmitCilInstruction(ilVar, OpCodes.Ldstr, value);
+                        Context.EmitCilInstruction(ilVar, OpCodes.Ldstr, SymbolDisplay.FormatLiteral(value, true));
                     break;
 
                 case SpecialType.System_Char:
@@ -227,14 +227,14 @@ namespace Cecilifier.Core.AST
             throw new ArgumentException($"Literal type {type} not supported.", nameof(type));
         }
 
-        protected string StoreTopOfStackInLocalVariable(string ilVar, ITypeSymbol type)
+        private string StoreTopOfStackInLocalVariable(string ilVar, ITypeSymbol type)
         {
             var tempLocalName = AddLocalVariableWithResolvedType("tmp", Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method), Context.TypeResolver.Resolve(type));
             Context.EmitCilInstruction(ilVar, OpCodes.Stloc, tempLocalName);
             return tempLocalName;
         }
-        
-        protected void StoreTopOfStackInLocalVariableAndLoadItsAddress(string ilVar, ITypeSymbol type)
+
+        private void StoreTopOfStackInLocalVariableAndLoadItsAddress(string ilVar, ITypeSymbol type)
         {
             var tempLocalName = StoreTopOfStackInLocalVariable(ilVar,  type);
             Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, tempLocalName);
@@ -258,29 +258,36 @@ namespace Cecilifier.Core.AST
             }
         }
 
-        protected string ImportExpressionForType(Type type)
-        {
-            return Utils.ImportFromMainModule($"typeof({type.FullName})");
-        }
-
-        protected static string TypeModifiersToCecil(BaseTypeDeclarationSyntax node)
+        protected static string TypeModifiersToCecil(SyntaxNode node, SyntaxTokenList modifiers)
         {
             var hasStaticCtor = node.DescendantNodes().OfType<ConstructorDeclarationSyntax>().Any(d => d.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword)));
-            var typeAttributes = CecilDefinitionsFactory.DefaultTypeAttributeFor(node.Kind(), hasStaticCtor);
+            var typeAttributes = new StringBuilder(CecilDefinitionsFactory.DefaultTypeAttributeFor(node.Kind(), hasStaticCtor));
             if (IsNestedTypeDeclaration(node))
             {
-                if (node.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword)))
+                if (modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword)))
                 {
                     typeAttributes = typeAttributes.AppendModifier(Constants.Cecil.StaticTypeAttributes);
+                    modifiers = modifiers.Remove(SyntaxFactory.Token(SyntaxKind.StaticKeyword));
                 }
-                return typeAttributes.AppendModifier(ModifiersToCecil(node.Modifiers.Where(m => !m.IsKind(SyntaxKind.StaticKeyword)), m => "TypeAttributes.Nested" + m.ValueText.PascalCase()));
+                return typeAttributes.AppendModifier(ModifiersToCecil(modifiers, m => "TypeAttributes.Nested" + m.ValueText.PascalCase())).ToString();
             }
 
-            var convertedModifiers = ModifiersToCecil(node.Modifiers, "TypeAttributes", "NotPublic", MapAttribute);
-            return typeAttributes.AppendModifier(convertedModifiers);
+            var convertedModifiers = ModifiersToCecil<TypeAttributes>(modifiers, "NotPublic", MapAttribute);
+            return typeAttributes.AppendModifier(convertedModifiers).ToString();
 
             IEnumerable<string> MapAttribute(SyntaxToken token)
             {
+                var isModifierWithNoILRepresentation =
+                    token.IsKind(SyntaxKind.PartialKeyword)
+                    || token.IsKind(SyntaxKind.VolatileKeyword)
+                    || token.IsKind(SyntaxKind.UnsafeKeyword)
+                    || token.IsKind(SyntaxKind.AsyncKeyword)
+                    || token.IsKind(SyntaxKind.ExternKeyword)
+                    || token.IsKind(SyntaxKind.ReadOnlyKeyword);
+                
+                if (isModifierWithNoILRepresentation)                
+                    return Array.Empty<string>();
+                                    
                 var mapped = token.Kind() switch
                 {
                     SyntaxKind.InternalKeyword => "NotPublic",
@@ -290,6 +297,7 @@ namespace Cecilifier.Core.AST
                     SyntaxKind.StaticKeyword => "Abstract | TypeAttributes.Sealed",
                     SyntaxKind.AbstractKeyword => "Abstract",
                     SyntaxKind.SealedKeyword => "Sealed",
+                    
                     _ => throw new ArgumentException()
                 };
                 
@@ -302,62 +310,53 @@ namespace Cecilifier.Core.AST
             Utils.EnsureNotNull(node.Parent);
             return node.Parent.Kind() != SyntaxKind.NamespaceDeclaration && node.Parent.Kind() != SyntaxKind.CompilationUnit;
         }
-        
-        protected static string ModifiersToCecil(IEnumerable<SyntaxToken> modifiers, string targetEnum, string defaultAccessibility, Func<SyntaxToken, IEnumerable<string>> mapAttribute = null)
+
+        internal static string ModifiersToCecil<TEnumAttr>(
+            IEnumerable<SyntaxToken> modifiers, 
+            string defaultAccessibility, 
+            Func<SyntaxToken, IEnumerable<string>> mapAttribute) where TEnumAttr : Enum
         {
+            var targetEnum = typeof(TEnumAttr).Name;
+            
             var finalModifierList = new List<SyntaxToken>(modifiers);
 
             var accessibilityModifiers = string.Empty;
             IsInternalProtected(finalModifierList, ref accessibilityModifiers);
             IsPrivateProtected(finalModifierList, ref accessibilityModifiers);
 
-            mapAttribute ??= MapAttributeForMembers;
-            
-            var modifierStr = finalModifierList.Where(ExcludeHasNoCILRepresentation).SelectMany(mapAttribute).Aggregate("", (acc, curr) => (acc.Length > 0 ? $"{acc} | " : "") + $"{targetEnum}." + curr) + accessibilityModifiers;
-            
-            if(!modifiers.Any(m => m.IsKind(SyntaxKind.PrivateKeyword) || m.IsKind(SyntaxKind.InternalKeyword) || m.IsKind(SyntaxKind.PrivateKeyword) || m.IsKind(SyntaxKind.PublicKeyword) || m.IsKind(SyntaxKind.ProtectedKeyword)))
-                return modifierStr.AppendModifier($"{targetEnum}.{defaultAccessibility}");
+            var modifierStr = finalModifierList
+                .SelectMany(mapAttribute)
+                .Where(attr => !string.IsNullOrEmpty(attr))
+                .Aggregate(new StringBuilder(), (acc, curr) => acc.AppendModifier($"{targetEnum}.{curr}"));
 
-            return modifierStr;
+            modifierStr.Append(accessibilityModifiers);
+
+            if(!modifiers.Any(m => m.IsKind(SyntaxKind.PrivateKeyword) || m.IsKind(SyntaxKind.InternalKeyword) || m.IsKind(SyntaxKind.PrivateKeyword) || m.IsKind(SyntaxKind.PublicKeyword) || m.IsKind(SyntaxKind.ProtectedKeyword)))
+                modifierStr.AppendModifier($"{targetEnum}.{defaultAccessibility}");
+
+            return modifierStr.ToString();
             
             void IsInternalProtected(List<SyntaxToken> tokens, ref string s)
             {
-                if (HandleModifiers(tokens, SyntaxFactory.Token(SyntaxKind.InternalKeyword), SyntaxFactory.Token(SyntaxKind.ProtectedKeyword))) 
+                if (HandleModifiers(tokens, SyntaxKind.InternalKeyword, SyntaxKind.ProtectedKeyword)) 
                     s = $"{targetEnum}.FamORAssem";
             }
 
             void IsPrivateProtected(List<SyntaxToken> tokens, ref string s)
             {
-                if (HandleModifiers(tokens, SyntaxFactory.Token(SyntaxKind.PrivateKeyword), SyntaxFactory.Token(SyntaxKind.ProtectedKeyword))) 
+                if (HandleModifiers(tokens, SyntaxKind.PrivateKeyword, SyntaxKind.ProtectedKeyword)) 
                     s = $"{targetEnum}.FamANDAssem";
             }
 
-            bool HandleModifiers(List<SyntaxToken> tokens, SyntaxToken first, SyntaxToken second)
+            bool HandleModifiers(List<SyntaxToken> tokens, SyntaxKind first, SyntaxKind second)
             {
-                if (tokens.Any(c => c.IsKind(first.Kind())) && tokens.Any(c => c.IsKind(second.Kind())))
+                if (tokens.Any(c => c.IsKind(first)) && tokens.Any(c => c.IsKind(second)))
                 {
-                    tokens.RemoveAll(c => c.IsKind(first.Kind()) || c.IsKind(second.Kind()));
+                    tokens.RemoveAll(c => c.IsKind(first) || c.IsKind(second));
                     return true;
                 }
 
                 return false;
-            }
-            
-            IEnumerable<string> MapAttributeForMembers(SyntaxToken token)
-            {
-                switch (token.Kind())
-                {
-                    case SyntaxKind.InternalKeyword: return new[] { "Assembly" };
-                    case SyntaxKind.ProtectedKeyword: return new[] { "Family" };
-                    case SyntaxKind.PrivateKeyword: return new[] { "Private" };
-                    case SyntaxKind.PublicKeyword: return new[] { "Public" };
-                    case SyntaxKind.StaticKeyword: return new[] { "Static" };
-                    case SyntaxKind.AbstractKeyword: return new[] { "Abstract" };
-                    case SyntaxKind.ConstKeyword: return new[] { "Literal", "Static" };
-                    case SyntaxKind.ReadOnlyKeyword: return new[] { "InitOnly" };
-                }
-
-                throw new ArgumentException($"Unsupported attribute name: {token.Kind().ToString()}");
             }
         }
 
@@ -365,28 +364,17 @@ namespace Cecilifier.Core.AST
         {
             var cecilModifierStr = modifiers.Aggregate(new StringBuilder(), (acc, token) =>
             {
-                acc.Append($"{ModifiersSeparator}{map(token)}");
+                acc.AppendModifier(map(token));
                 return acc;
             });
 
-            return cecilModifierStr.Length > 0 
-                ? cecilModifierStr.Remove(0, ModifiersSeparator.Length).ToString() 
-                : cecilModifierStr.ToString();
+            return cecilModifierStr.ToString();
         }
 
         protected static void WriteCecilExpression(IVisitorContext context, string value)
         {
             context.WriteCecilExpression(value);
             context.WriteNewLine();
-        }
-
-        private static bool ExcludeHasNoCILRepresentation(SyntaxToken token)
-        {
-            return !token.IsKind(SyntaxKind.PartialKeyword) 
-                   && !token.IsKind(SyntaxKind.VolatileKeyword) 
-                   && !token.IsKind(SyntaxKind.UnsafeKeyword)
-                   && !token.IsKind(SyntaxKind.AsyncKeyword)
-                   && !token.IsKind(SyntaxKind.ExternKeyword);
         }
 
         protected string ResolveExpressionType(ExpressionSyntax expression)
@@ -401,6 +389,8 @@ namespace Cecilifier.Core.AST
             var typeToCheck = type is RefTypeSyntax refType ? refType.Type : type;
             var typeInfo = Context.GetTypeInfo(typeToCheck);
 
+            TypeDeclarationVisitor.EnsureForwardedTypeDefinition(Context, typeInfo.Type, Array.Empty<TypeParameterSyntax>());
+            
             var resolvedType = Context.TypeResolver.Resolve(typeInfo.Type);
             return type is RefTypeSyntax ? resolvedType.MakeByReferenceType() : resolvedType;
         }
@@ -674,19 +664,18 @@ namespace Cecilifier.Core.AST
                 HandleAttributesInMemberDeclaration(context, typeParameter.AttributeLists, found.VariableName);
             }
         }
-        
-        protected static void HandleAttributesInMemberDeclaration(IVisitorContext context, IEnumerable<AttributeListSyntax> attributeLists, string targetDeclarationVar)
+
+        private static void HandleAttributesInMemberDeclaration(IVisitorContext context, IEnumerable<AttributeListSyntax> attributeLists, string targetDeclarationVar)
         {
             if (!attributeLists.Any())
                 return;
 
             foreach (var attribute in attributeLists.SelectMany(al => al.Attributes))
             {
-                EnsureForwardedType(
-                    context, 
-                    context.Naming.Type(attribute.Name.ValueText().AttributeName(), ElementKind.Class),
-                    context.SemanticModel.GetSymbolInfo(attribute).Symbol.EnsureNotNull<ISymbol, IMethodSymbol>().ContainingType, 
-                    Array.Empty<TypeParameterSyntax>()); //TODO: Pass the correct list of type parameters when C# supports generic attributes.
+                var type = context.SemanticModel.GetSymbolInfo(attribute).Symbol.EnsureNotNull<ISymbol, IMethodSymbol>().ContainingType;
+                
+                //TODO: Pass the correct list of type parameters when C# supports generic attributes.
+                TypeDeclarationVisitor.EnsureForwardedTypeDefinition(context, type, Array.Empty<TypeParameterSyntax>());
                 
                 var attrsExp = context.SemanticModel.GetSymbolInfo(attribute.Name).Symbol.IsDllImportCtor()
                     ? ProcessDllImportAttribute(context, attribute, targetDeclarationVar)
@@ -735,7 +724,7 @@ namespace Cecilifier.Core.AST
                     : "MethodImplAttributes.Managed";
             }
 
-            string CallingConventionFrom(AttributeSyntax attr)
+            StringBuilder CallingConventionFrom(AttributeSyntax attr)
             {
                 var callConventionSpan = (attr.ArgumentList?.Arguments.FirstOrDefault(arg => arg.NameEquals?.Name.Identifier.Text == "CallingConvention")?.Expression.ToFullString() 
                                            ?? "Winapi").AsSpan();
@@ -744,7 +733,7 @@ namespace Cecilifier.Core.AST
                 var index = callConventionSpan.LastIndexOf('.');
                 callConventionSpan = callConventionSpan.Slice(index + 1);
                 
-                return CallingConventionToCecil(Enum.Parse<CallingConvention>(callConventionSpan));
+                return new StringBuilder(CallingConventionToCecil(Enum.Parse<CallingConvention>(callConventionSpan)));
             }
 
             string CharSetFrom(AttributeSyntax attr)
@@ -792,7 +781,8 @@ namespace Cecilifier.Core.AST
                     .AppendModifier(SetLastErrorFrom(attr))
                     .AppendModifier(ExactSpellingFrom(attr))
                     .AppendModifier(BestFitMappingFrom(attr))
-                    .AppendModifier(ThrowOnUnmappableCharFrom(attr));
+                    .AppendModifier(ThrowOnUnmappableCharFrom(attr))
+                    .ToString();
             }
 
             string AttributePropertyOrDefaultValue(AttributeSyntax attr, string propertyName, string defaultValue)
@@ -857,7 +847,7 @@ namespace Cecilifier.Core.AST
          */
         protected static void EnsureForwardedMethod(IVisitorContext context, string methodDeclarationVar, IMethodSymbol method, TypeParameterSyntax[] typeParameters)
         {
-            if (!method.IsDefinedInCurrentType(context))
+            if (!method.IsDefinedInCurrentAssembly(context))
                 return;
 
             var found = context.DefinitionVariables.GetMethodVariable(method.AsMethodDefinitionVariable());
@@ -886,14 +876,6 @@ namespace Cecilifier.Core.AST
             }
             
             context.DefinitionVariables.RegisterMethod(method.AsMethodDefinitionVariable(methodDeclarationVar));
-        }
-        
-        private static void EnsureForwardedType(IVisitorContext context, string typeDeclarationVar, ITypeSymbol type, TypeParameterSyntax[] typeParameters)
-        {
-            if (!type.IsDefinedInCurrentType(context))
-                return;
-
-            TypeDeclarationVisitor.EnsureForwardedTypeDefinition(context, typeDeclarationVar, type, typeParameters);
         }
 
         protected void LogUnsupportedSyntax(SyntaxNode node)

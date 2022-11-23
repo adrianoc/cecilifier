@@ -10,7 +10,7 @@ namespace Cecilifier.Core.Extensions
     {
         public static string FieldResolverExpression(this IFieldSymbol field, IVisitorContext context)
         {
-            if (field.IsDefinedInCurrentType(context))
+            if (field.IsDefinedInCurrentAssembly(context))
             {
                 var found = context.DefinitionVariables.GetVariable(field.Name, VariableMemberKind.Field, field.ContainingType.ToDisplayString());
                 if (!found.IsValid)

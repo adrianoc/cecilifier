@@ -15,6 +15,7 @@ public struct StaticDelegateCacheContext
     public bool IsStaticDelegate { get; init; }
 
     private string DeclaringTypeName => Method.ContainingType.Name;
+    private string DeclaringTypeNamespace => Method.ContainingType.ContainingNamespace?.FullyQualifiedName() ?? Method.ContainingNamespace?.FullyQualifiedName() ?? string.Empty;  
         
     /// <summary>
     /// Ensures that there's a static field declared inside an inner type of the current type being processed
@@ -82,6 +83,7 @@ public struct StaticDelegateCacheContext
         var cacheTypeExps = CecilDefinitionsFactory.Type(
             context,
             cachedTypeVar,
+            DeclaringTypeNamespace,
             cacheTypeName,
             DeclaringTypeName,
             Constants.Cecil.StaticClassAttributes.AppendModifier("TypeAttributes.NestedPrivate"),
