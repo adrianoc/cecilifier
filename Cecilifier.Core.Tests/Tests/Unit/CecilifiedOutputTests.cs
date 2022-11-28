@@ -2,7 +2,6 @@ using System.IO;
 using System.Text;
 using Cecilifier.Core.Tests.Framework;
 using NUnit.Framework;
-using NUnit.Framework.Internal;
 
 namespace Cecilifier.Core.Tests.Tests.Unit;
 
@@ -26,6 +25,26 @@ public class CecilifiedOutputTests : CecilifierUnitTestBase
         "bool b = true &&...",
         TestName = "Bool Field")]
     public void TestMultilineMemberInitialization_IsProperlyCommented(string code, string expected)
+    {
+        var result = RunCecilifier(code);
+        Assert.That(result.GeneratedCode.ReadToEnd(), Contains.Substring(expected));
+    }
+
+    [TestCase(@"class Foo
+{
+void M(int value)
+{
+    value = value + 
+            value;
+}
+}", 
+        "value = value + ...", 
+        TestName = "Assignment")]
+    [TestCase(@"void Test<T>(int value)
+		where T : struct { }", 
+        "void Test<T>(int value)...", 
+        TestName = "Generic Method Constraint")]
+    public void MultilineExpressions(string code, string expected)
     {
         var result = RunCecilifier(code);
         Assert.That(result.GeneratedCode.ReadToEnd(), Contains.Substring(expected));
