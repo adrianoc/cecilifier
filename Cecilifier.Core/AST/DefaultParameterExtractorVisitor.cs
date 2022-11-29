@@ -36,12 +36,17 @@ internal class DefaultParameterExtractorVisitor : CSharpSyntaxVisitor<string>
 
     public override string VisitLiteralExpression(LiteralExpressionSyntax node)
     {
+        if (node.IsKind(SyntaxKind.DefaultLiteralExpression))
+            return context.GetTypeInfo(node).Type.ValueForDefaultLiteral() ?? "null";
+        
         var literalValue = node.ValueText();
         if (node.IsKind(SyntaxKind.NumericLiteralExpression) && literalValue.Contains('.') && context.GetTypeInfo(node).Type?.MetadataToken == context.RoslynTypeSystem.SystemSingle.MetadataToken)
             literalValue += "f";
         
         return literalValue;
     }
+
+    public override string VisitDefaultExpression(DefaultExpressionSyntax node) => context.GetTypeInfo(node.Type).Type.ValueForDefaultLiteral();
 
     public override string? VisitTypeOfExpression(TypeOfExpressionSyntax node)
     {

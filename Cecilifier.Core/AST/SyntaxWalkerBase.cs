@@ -4,6 +4,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using Cecilifier.Core.Extensions;
+using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.Variables;
@@ -140,6 +141,16 @@ namespace Cecilifier.Core.AST
 
         protected void LoadLiteralValue(string ilVar, ITypeSymbol type, string value, bool isTargetOfCall)
         {
+            if (type.TypeKind == TypeKind.TypeParameter)
+            {
+                var resolvedType = Context.TypeResolver.Resolve(type);
+                var tempVar = AddLocalVariableToCurrentMethod(type.Name, resolvedType);
+                
+                Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, tempVar);
+                Context.EmitCilInstruction(ilVar, OpCodes.Initobj, resolvedType);
+                return;
+            }
+            
             switch (type.SpecialType)
             {
                 case SpecialType.System_Object:
@@ -175,6 +186,11 @@ namespace Cecilifier.Core.AST
                 case SpecialType.System_Boolean:
                     LoadLiteralToStackHandlingCallOnValueTypeLiterals(ilVar, type, Boolean.Parse(value) ? 1 : 0, isTargetOfCall);
                     break;
+                
+                case SpecialType.System_IntPtr:
+                    LoadLiteralToStackHandlingCallOnValueTypeLiterals(ilVar, type, value, isTargetOfCall);
+                    Context.EmitCilInstruction(ilVar, OpCodes.Conv_I);
+                    break;
 
                 default:
                     throw new ArgumentException($"Literal {value} of type {type.SpecialType} not supported yet.");
@@ -193,6 +209,10 @@ namespace Cecilifier.Core.AST
         {
             switch (type.SpecialType)
             {
+                case SpecialType.System_IntPtr:
+                case SpecialType.System_UIntPtr:
+                    return OpCodes.Ldc_I4;
+                
                 case SpecialType.System_Single:
                     return OpCodes.Ldc_R4;
 

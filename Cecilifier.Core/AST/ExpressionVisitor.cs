@@ -333,21 +333,27 @@ namespace Cecilifier.Core.AST
         {
             using var _ = LineInformationTracker.Track(Context, node);
 
-            var localVarParent = (CSharpSyntaxNode)node.Parent;
-            Debug.Assert(localVarParent != null);
+            var literalParent = (CSharpSyntaxNode) node.Parent;
+            Debug.Assert(literalParent != null);
 
             var nodeType = Context.SemanticModel.GetTypeInfo(node);
-            var s = node.Token.Kind() switch
+            var literalType = nodeType.Type ?? nodeType.ConvertedType;
+            
+            var value = node.Token.Kind() switch
             {
                 SyntaxKind.SingleLineRawStringLiteralToken => node.Token.ValueText,
                 SyntaxKind.MultiLineRawStringLiteralToken => node.Token.ValueText, // ValueText does not includes quotes, so nothing to remove.
                 SyntaxKind.StringLiteralToken => node.Token.Text.Substring(1, node.Token.Text.Length - 2), // removes quotes because LoadLiteralValue() expects string to not be quoted.
+                SyntaxKind.DefaultKeyword => literalType.ValueForDefaultLiteral(),  
                 _ => node.Token.Text
             };
 
-            LoadLiteralValue(ilVar, nodeType.Type ?? nodeType.ConvertedType, s, localVarParent.Accept(UsageVisitor.GetInstance(Context)) == UsageKind.CallTarget);
+            LoadLiteralValue(ilVar, 
+                literalType, 
+                value, 
+                literalParent.Accept(UsageVisitor.GetInstance(Context)) == UsageKind.CallTarget);
         }
-
+        
         public override void VisitDeclarationExpression(DeclarationExpressionSyntax node)
         {
             using var _ = LineInformationTracker.Track(Context, node);
@@ -745,8 +751,17 @@ namespace Cecilifier.Core.AST
             using var _ = LineInformationTracker.Track(Context, node);
             CecilExpressionFactory.EmitThrow(Context, ilVar, node.Expression);
         }
-        
-        
+
+        public override void VisitDefaultExpression(DefaultExpressionSyntax node)
+        {
+            using var _ = LineInformationTracker.Track(Context, node);
+            var type = Context.GetTypeInfo(node.Type).Type;
+
+            var defaultParent = node.Parent.EnsureNotNull<SyntaxNode, CSharpSyntaxNode>();
+            var isTargetOfCall = defaultParent.Accept(UsageVisitor.GetInstance(Context)) == UsageKind.CallTarget;
+            LoadLiteralValue(ilVar, type, type.ValueForDefaultLiteral(), isTargetOfCall);
+        }
+
         public override void VisitSimpleLambdaExpression(SimpleLambdaExpressionSyntax node) => HandleLambdaExpression(node);
         public override void VisitParenthesizedLambdaExpression(ParenthesizedLambdaExpressionSyntax node) => HandleLambdaExpression(node);
         public override void VisitAwaitExpression(AwaitExpressionSyntax node) => LogUnsupportedSyntax(node);
@@ -758,7 +773,6 @@ namespace Cecilifier.Core.AST
         public override void VisitRefTypeExpression(RefTypeExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitRefValueExpression(RefValueExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitCheckedExpression(CheckedExpressionSyntax node) => LogUnsupportedSyntax(node);
-        public override void VisitDefaultExpression(DefaultExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitSizeOfExpression(SizeOfExpressionSyntax node) => LogUnsupportedSyntax(node);
 
         private bool TryProcessMethodReferenceInObjectCreationExpression(ObjectCreationExpressionSyntax node)
@@ -1322,7 +1336,7 @@ namespace Cecilifier.Core.AST
 		 * 
 		 * To fix this we visit in the order [exp, args] and move the call operation after visiting the arguments
 		 */
-        private void HandleMethodInvocation(SyntaxNode target, SyntaxNode args, ISymbol? method = null)
+        private void HandleMethodInvocation(SyntaxNode target, ArgumentListSyntax args, ISymbol? method = null)
         {
             var targetTypeInfo = Context.SemanticModel.GetTypeInfo(target).Type;
             if (targetTypeInfo?.TypeKind == TypeKind.FunctionPointer)
@@ -1343,7 +1357,7 @@ namespace Cecilifier.Core.AST
             }
         }
 
-        private void ProcessArgumentsTakingDefaultParametersIntoAccount(ISymbol? method, SyntaxNode args)
+        private void ProcessArgumentsTakingDefaultParametersIntoAccount(ISymbol? method, ArgumentListSyntax args)
         {
             Visit(args);
             if (method is not IMethodSymbol methodSymbol || args is not ArgumentListSyntax arguments || methodSymbol.Parameters.Length <= arguments.Arguments.Count)

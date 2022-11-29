@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -84,7 +86,13 @@ namespace Cecilifier.Core.Extensions
 
             return parentMae.Expression.IsKind(SyntaxKind.ObjectCreationExpression);
         }
+        
+        [return:NotNull] public static TTarget EnsureNotNull<TSource, TTarget>([NotNullIfNotNull("source")] this TSource source, [CallerArgumentExpression("source")] string exp = null) where TSource: SyntaxNode where TTarget : TSource
+        {
+            if (source == null)
+                throw new NullReferenceException(exp);
 
-        public static bool IsImplicitThisAccess(this CSharpSyntaxNode node) => node.Parent is not MemberAccessExpressionSyntax mae || mae.Expression != node;
+            return (TTarget) source;
+        }        
     }
 }

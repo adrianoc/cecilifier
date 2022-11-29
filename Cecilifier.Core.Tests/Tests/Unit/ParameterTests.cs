@@ -17,7 +17,7 @@ public class ParameterTests : CecilifierUnitTestBase
     [TestCase("Double", "4.2d", "4.2", TestName = "Double Explicit")] // float point literals without suffixes are double by default.
     [TestCase("String", "\"Foo\"", TestName = "String")]
     [TestCase("Object", "null", TestName = "Object Null")]
-    [TestCase("Object", "default", TestName = "Object Default")]
+    [TestCase("Object", "default", "null", TestName = "Object Default")]
     public void TestDefaultParameterInDefinition(string paramType, string paramValue, string expectedParamValue = null)
     {
         var result = RunCecilifier($"using System; class Foo {{ void Bar(string s, {paramType} p = {paramValue}) {{ }} }}");
