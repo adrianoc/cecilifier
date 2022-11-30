@@ -589,6 +589,9 @@ namespace Cecilifier.Core.AST
             var ctor = (IMethodSymbol) ctorInfo.Symbol;
             if (ctor == null)
             {
+                if (TryProcessTypeParameterInstantiation(node))
+                    return;
+                
                 if (!TryProcessMethodReferenceInObjectCreationExpression(node))
                     throw new InvalidOperationException($"Failed to resolve called constructor symbol in {node}");
                 
@@ -783,8 +786,23 @@ namespace Cecilifier.Core.AST
                 VisitIdentifierName((IdentifierNameSyntax)arg.Expression);
                 return true;
             }
-
+            
             return false;
+        }
+
+        private bool TryProcessTypeParameterInstantiation(ObjectCreationExpressionSyntax node)
+        {
+            var instantiatedType = Context.GetTypeInfo(node).Type;
+            if (instantiatedType?.TypeKind != TypeKind.TypeParameter)
+                return false;
+            
+            //call !!0 [System.Runtime]System.Activator::CreateInstance<!!T>()
+            Context.EmitCilInstruction(
+                ilVar, 
+                OpCodes.Call, 
+                Context.TypeResolver.Resolve(Context.RoslynTypeSystem.SystemActivator).MakeGenericInstanceType(Context.TypeResolver.Resolve(instantiatedType)));
+            
+            return true;
         }
         
         private void ProcessPrefixPostfixOperators(ExpressionSyntax operand, OpCode opCode, bool isPrefix)

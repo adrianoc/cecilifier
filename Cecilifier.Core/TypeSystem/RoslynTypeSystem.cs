@@ -28,6 +28,7 @@ internal struct RoslynTypeSystem
         SystemObject = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Object);
         SystemIDisposable = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(IDisposable).FullName);
         SystemRuntimeCompilerServices = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(IsReadOnlyAttribute).FullName); 
+        SystemActivator = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(System.Activator).FullName); 
     }
     
     public ITypeSymbol SystemIndex { get; }
@@ -43,6 +44,6 @@ internal struct RoslynTypeSystem
     public ITypeSymbol SystemObject { get; }
     public ITypeSymbol CallerArgumentExpressionAttribute { get; }
     public ITypeSymbol SystemIDisposable { get; }
-
     public ITypeSymbol SystemRuntimeCompilerServices { get; }
+    public ITypeSymbol SystemActivator { get; }
 }

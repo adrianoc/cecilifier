@@ -102,6 +102,16 @@ namespace Cecilifier.Core.Tests.Tests.Unit
 
             Assert.That(cecilifiedCode, Contains.Substring("il_M_9.Emit(OpCodes.Starg_S, p_t_6);")); // t = tl; ensures that the forwarded parameters has been used in M()'s implementation
         }
-        
+
+        [TestCase(@"class Foo<T> where T : new() { T M() => new T(); }")]
+        [TestCase(@"class Foo { T M<T>() where T : new() => new T(); }")]
+        public void TestInstantiatingGenericTypeParameter(string code)
+        {
+            var result = RunCecilifier(code);
+            var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+            
+            Assert.That(cecilifiedCode, Does.Match(@"il_M_\d+.Emit\(OpCodes.Call, .+ImportReference\(typeof\(System\.Activator\)\)\.MakeGenericInstanceType\(gp_T_\d+\)\);"));
+            Assert.That(cecilifiedCode, Does.Match(@"m_M_\d+\.ReturnType = gp_T_\d+;"));
+        }
     }
 }
