@@ -303,7 +303,8 @@ namespace Cecilifier.Core.AST
                     || token.IsKind(SyntaxKind.UnsafeKeyword)
                     || token.IsKind(SyntaxKind.AsyncKeyword)
                     || token.IsKind(SyntaxKind.ExternKeyword)
-                    || token.IsKind(SyntaxKind.ReadOnlyKeyword);
+                    || token.IsKind(SyntaxKind.ReadOnlyKeyword)
+                    || token.IsKind(SyntaxKind.RefKeyword);
                 
                 if (isModifierWithNoILRepresentation)                
                     return Array.Empty<string>();

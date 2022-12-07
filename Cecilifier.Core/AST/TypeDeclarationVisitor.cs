@@ -4,6 +4,7 @@ using System.Linq;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Misc;
+using Cecilifier.Core.Naming;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -213,15 +214,25 @@ processGenerics:
         
         private void ProcessStructPseudoAttributes(string structDefinitionVar, INamedTypeSymbol structSymbol)
         {
-            if (!structSymbol.IsReadOnly)
-                return;
-            
-            var isReadOnlyAttributeCtor = Context.RoslynTypeSystem.SystemRuntimeCompilerServices
-                ?.GetMembers(".ctor")
-                .OfType<IMethodSymbol>()
-                .Single(ctor => ctor.Parameters.Length == 0);
+            if (structSymbol.IsReadOnly)
+            {
+                var ctor = Context.RoslynTypeSystem.IsReadOnlyAttribute.ParameterlessCtor();
+                Context.WriteCecilExpression($"{structDefinitionVar}.CustomAttributes.Add(new CustomAttribute({ctor.MethodResolverExpression(Context)}));");
+            }
 
-            Context.WriteCecilExpression($"{structDefinitionVar}.CustomAttributes.Add(new CustomAttribute({isReadOnlyAttributeCtor.MethodResolverExpression(Context)}));");
+            if (structSymbol.IsRefLikeType)
+            {
+                var ctor = Context.RoslynTypeSystem.IsByRefLikeAttribute.ParameterlessCtor();
+                Context.WriteCecilExpression($"{structDefinitionVar}.CustomAttributes.Add(new CustomAttribute({ctor.MethodResolverExpression(Context)}));\n"); 
+                
+                var obsoleteAttrCtor = Context.RoslynTypeSystem.SystemObsoleteAttribute.Ctor(Context.RoslynTypeSystem.SystemString, Context.RoslynTypeSystem.SystemBoolean);
+                var obsoleteAttributeVar = Context.Naming.SyntheticVariable("obsolete", ElementKind.Attribute);
+                const string RefStructObsoleteMsg = "Types with embedded references are not supported in this version of your compiler.";
+                Context.WriteCecilExpression($"var {obsoleteAttributeVar} = new CustomAttribute({obsoleteAttrCtor.MethodResolverExpression(Context)});\n");
+                Context.WriteCecilExpression($"{obsoleteAttributeVar}.ConstructorArguments.Add(new CustomAttributeArgument({Context.TypeResolver.Bcl.System.String}, \"{RefStructObsoleteMsg}\"));\n");
+                Context.WriteCecilExpression($"{obsoleteAttributeVar}.ConstructorArguments.Add(new CustomAttributeArgument({Context.TypeResolver.Bcl.System.Boolean}, true));\n");
+                Context.WriteCecilExpression($"{structDefinitionVar}.CustomAttributes.Add({obsoleteAttributeVar});\n");
+            }
         }
     }
 
