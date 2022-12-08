@@ -19,16 +19,16 @@ internal partial class TypeDeclarationVisitor
         Context.WriteNewLine();
         Context.WriteComment($"Delegate: {node.Identifier.Text}");
         var typeVar = Context.Naming.Delegate(node);
-        var accessibility = TypeModifiersToCecil(node, node.Modifiers);
+        var delegateSymbol = Context.SemanticModel.GetDeclaredSymbol(node).EnsureNotNull<ISymbol, INamedTypeSymbol>();
+        var accessibility = TypeModifiersToCecil(delegateSymbol, node.Modifiers);
 
-        var delegateSymbol = Context.SemanticModel.GetDeclaredSymbol(node).EnsureNotNull();
         var typeDef = CecilDefinitionsFactory.Type(
             Context,
             typeVar,
             delegateSymbol.ContainingNamespace?.FullyQualifiedName() ?? string.Empty,
             node.Identifier.ValueText,
             delegateSymbol.ContainingType?.Name,
-            CecilDefinitionsFactory.DefaultTypeAttributeFor(node.Kind(), false).AppendModifier(accessibility),
+            CecilDefinitionsFactory.DefaultTypeAttributeFor(TypeKind.Delegate, false).AppendModifier(accessibility),
             Context.TypeResolver.Bcl.System.MulticastDelegate,
             false,
             Array.Empty<string>(),

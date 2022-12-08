@@ -265,9 +265,9 @@ namespace Cecilifier.Core.AST
             return Context.GetDeclaredSymbol(node);
         }
 
-        protected ITypeSymbol DeclaredSymbolFor(TypeDeclarationSyntax node)
+        protected INamedTypeSymbol DeclaredSymbolFor(TypeDeclarationSyntax node)
         {
-            return Context.GetDeclaredSymbol(node);
+            return Context.GetDeclaredSymbol(node).EnsureNotNull<ITypeSymbol, INamedTypeSymbol>();
         }
 
         protected void WithCurrentMethod(string declaringTypeName, string localVariable, string methodName, string[] paramTypes, Action<string> action)
@@ -278,11 +278,12 @@ namespace Cecilifier.Core.AST
             }
         }
 
-        protected static string TypeModifiersToCecil(SyntaxNode node, SyntaxTokenList modifiers)
+        protected static string TypeModifiersToCecil(INamedTypeSymbol typeSymbol, SyntaxTokenList modifiers)
         {
-            var hasStaticCtor = node.DescendantNodes().OfType<ConstructorDeclarationSyntax>().Any(d => d.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword)));
-            var typeAttributes = new StringBuilder(CecilDefinitionsFactory.DefaultTypeAttributeFor(node.Kind(), hasStaticCtor));
-            if (IsNestedTypeDeclaration(node))
+            var hasStaticCtor = typeSymbol.Constructors.Any(ctor => ctor.IsStatic && !ctor.IsImplicitlyDeclared);
+            var typeAttributes = new StringBuilder(CecilDefinitionsFactory.DefaultTypeAttributeFor(typeSymbol.TypeKind, hasStaticCtor));
+            AppendStructLayoutTo(typeSymbol, typeAttributes);
+            if (typeSymbol.ContainingType != null)
             {
                 if (modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword)))
                 {
@@ -323,6 +324,30 @@ namespace Cecilifier.Core.AST
                 };
                 
                 return new[] { mapped };
+            }
+        }
+
+        private static void AppendStructLayoutTo(ITypeSymbol typeSymbol, StringBuilder typeAttributes)
+        {
+            if (typeSymbol.TypeKind != TypeKind.Struct)
+                return;
+            
+            var structLayoutAttribute = typeSymbol.GetAttributes().FirstOrDefault(attrData => attrData.AttributeClass.FullyQualifiedName().Contains("System.Runtime.InteropServices.StructLayoutAttribute"));
+            if (structLayoutAttribute == null)
+            {
+                typeAttributes.AppendModifier("TypeAttributes.SequentialLayout");
+            }
+            else
+            {
+                var specifiedLayout = ((LayoutKind) structLayoutAttribute.ConstructorArguments.First().Value) switch
+                {
+                    LayoutKind.Auto => "TypeAttributes.AutoLayout",
+                    LayoutKind.Explicit => "TypeAttributes.ExplicitLayout",
+                    LayoutKind.Sequential => "TypeAttributes.SequentialLayout",
+                    _ => throw new ArgumentException($"Invalid StructLayout value for {typeSymbol.Name}")
+                };
+                
+                typeAttributes.AppendModifier($"TypeAttributes.{specifiedLayout}");
             }
         }
 

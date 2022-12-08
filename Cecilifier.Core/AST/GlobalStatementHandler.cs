@@ -19,7 +19,7 @@ namespace Cecilifier.Core.AST
 
             var hasReturnStatement = firstGlobalStatement.Parent!.DescendantNodes().Any(node => node.IsKind(SyntaxKind.ReturnStatement));
 
-            var typeModifiers = CecilDefinitionsFactory.DefaultTypeAttributeFor(SyntaxKind.ClassDeclaration, false).AppendModifier("TypeAttributes.NotPublic | TypeAttributes.AutoLayout");
+            var typeModifiers = CecilDefinitionsFactory.DefaultTypeAttributeFor(TypeKind.Class, false).AppendModifier("TypeAttributes.NotPublic | TypeAttributes.AutoLayout");
             typeVar = context.Naming.Type("topLevelStatements", ElementKind.Class);
             var typeExps = CecilDefinitionsFactory.Type(
                 context, 
