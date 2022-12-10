@@ -29,7 +29,7 @@ partial class ExpressionVisitor
         var resolvedArrayElementType = Context.TypeResolver.Resolve(arrayElementType);
         CalculateLengthInBytesAndEmitLocalloc(stackallocSpanAssignmentTracker, null, resolvedArrayElementType, false);
 
-        node.Initializer.Accept(this);
+        ProcessStackAllocInitializer(node.Initializer);
         
         if (!stackallocSpanAssignmentTracker)
             return;
@@ -88,8 +88,7 @@ partial class ExpressionVisitor
             CalculateLengthInBytesAndEmitLocalloc(stackallocSpanAssignmentTracker, rankNode, resolvedElementType, arrayElementTypeSize > 1);
         }
 
-        if (node.Initializer != null)
-            node.Initializer.Accept(this);
+        ProcessStackAllocInitializer(node.Initializer);
         
         if (stackallocSpanAssignmentTracker)
         {
@@ -98,6 +97,36 @@ partial class ExpressionVisitor
             else
                 Context.EmitCilInstruction(ilVar, stackallocSpanAssignmentTracker.LoadOpCode, stackallocSpanAssignmentTracker.SpanLengthVariable);
             EmitNewobjForSpanOfType(resolvedElementType);
+        }
+    }
+
+    void ProcessStackAllocInitializer(InitializerExpressionSyntax node)
+    {
+        if (node == null)
+            return;
+        
+        using var _ = LineInformationTracker.Track(Context, node);
+        
+        var typeInfo = Context.SemanticModel.GetTypeInfo(node.Parent!);
+        if (typeInfo.ConvertedType == null)
+            return;
+
+        var arrayType = typeInfo.Type ?? typeInfo.ConvertedType;
+        uint elementTypeSize = arrayType.SizeofArrayLikeItemElement();
+        uint offset = 0;
+
+        foreach (var exp in node.Expressions)
+        {
+            Context.EmitCilInstruction(ilVar, OpCodes.Dup);
+            if (offset != 0)
+            {
+                Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, offset);
+                Context.EmitCilInstruction(ilVar, OpCodes.Add);
+            }
+
+            exp.Accept(this);
+            Context.EmitCilInstruction(ilVar, arrayType.Stind());
+            offset += elementTypeSize;
         }
     }
 

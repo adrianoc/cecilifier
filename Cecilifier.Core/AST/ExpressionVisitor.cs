@@ -161,28 +161,29 @@ namespace Cecilifier.Core.AST
             node.Expression.Accept(this);
             InjectRequiredConversions(node.Expression);
         }
-
+        
         public override void VisitInitializerExpression(InitializerExpressionSyntax node)
         {
             using var _ = LineInformationTracker.Track(Context, node);
-
-            var typeInfo = Context.SemanticModel.GetTypeInfo(node.Parent);
-            uint elementTypeSize = typeInfo.Type.SizeofArrayLikeItemElement();
-            uint offset = 0;
-            
-            foreach (var exp in node.Expressions)
+            if (node.IsKind(SyntaxKind.ArrayInitializerExpression))
             {
-                Context.EmitCilInstruction(ilVar, OpCodes.Dup);
-                if (offset != 0)
-                {
-                    Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, offset);    
-                    Context.EmitCilInstruction(ilVar, OpCodes.Add);    
-                }
+                // handles array initialization in the form `int []x = {1, 2, 3};`
+                // Notice that even though the documentation call this a 'implicitly typed array'
+                // `ImplicitArrayCreationExpressionSyntax` is not a parent of the initializer expression, 
+                // which means, VisitImplicitArrayCreationExpression() will not be called
+                // https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/arrays/single-dimensional-arrays
+                ProcessImplicitArrayCreationExpression(node, Context.GetTypeInfo(node).ConvertedType);
 
-                exp.Accept(this);
-                OpCode opCode = typeInfo.Type.Stind();
-                Context.EmitCilInstruction(ilVar, opCode);
-                offset += elementTypeSize;
+                // C# compiler has a trick to optimize constant array initializers in which, for arrays with more than
+                // a certain number of elements (as of 10/Dez/2022, empirically, this numbers is 2) in which it emits a
+                // struct with static fields initialized from the metadata
+                // See Notes/ImplicitArrrayInitialization_Optimization.txt for an example of how to emit such optimization
+                // with Cecil.
+                if (node.Expressions.Count > 2)
+                {
+                    Context.WriteComment("Note that as of Cecilifier version 1.70.0 the generated code will differ from the");
+                    Context.WriteComment("C# compiler one since Cecilifier does not apply some optimizations.");
+                }
             }
         }
 
@@ -198,20 +199,14 @@ namespace Cecilifier.Core.AST
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, node.Initializer.Expressions.Count);
             }
 
-            var arrayTypeSymbol = (IArrayTypeSymbol) Context.GetTypeInfo(node.Type).Type;
+            var arrayTypeSymbol =  Context.GetTypeInfo(node.Type).Type.EnsureNotNull<ITypeSymbol, IArrayTypeSymbol>();
             ProcessArrayCreation(arrayTypeSymbol.ElementType, node.Initializer);
         }
 
         public override void VisitImplicitArrayCreationExpression(ImplicitArrayCreationExpressionSyntax node)
         {
             using var _ = LineInformationTracker.Track(Context, node);
-            var arrayType = Context.GetTypeInfo(node);
-            Utils.EnsureNotNull(arrayType.Type, $"Unable to infer array type: {node}");
-            
-            Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, node.Initializer.Expressions.Count);
-
-            var arrayTypeSymbol = (IArrayTypeSymbol) arrayType.Type;
-            ProcessArrayCreation(arrayTypeSymbol.ElementType, node.Initializer);
+            ProcessImplicitArrayCreationExpression(node.Initializer, Context.GetTypeInfo(node).Type);
         }
 
         public override void VisitElementAccessExpression(ElementAccessExpressionSyntax node)
@@ -1432,6 +1427,13 @@ namespace Cecilifier.Core.AST
             }
         }
 
+        private void ProcessImplicitArrayCreationExpression(InitializerExpressionSyntax initializer, ITypeSymbol typeSymbol)
+        {
+            var arrayType = typeSymbol.EnsureNotNull<ITypeSymbol, IArrayTypeSymbol>($"Unable to infer array type from {initializer.Parent}");
+            Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, initializer.Expressions.Count);
+            ProcessArrayCreation(arrayType.ElementType, initializer);
+        }
+        
         private void ProcessArrayCreation(ITypeSymbol elementType, InitializerExpressionSyntax initializer)
         {
             AddCilInstruction(ilVar, OpCodes.Newarr, elementType);

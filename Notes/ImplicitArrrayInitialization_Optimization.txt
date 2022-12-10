@@ -1,0 +1,152 @@
+/*
+.class private auto ansi sealed '<PrivateImplementationDetails>'
+    extends [System.Runtime]System.Object
+{
+    .custom instance void [System.Runtime]System.Runtime.CompilerServices.CompilerGeneratedAttribute::.ctor() = (
+        01 00 00 00
+    )
+    // Nested Types
+    .class nested private explicit ansi sealed '__StaticArrayInitTypeSize=12'
+        extends [System.Runtime]System.ValueType
+    {
+        .pack 1
+        .size 12
+
+    } // end of class __StaticArrayInitTypeSize=12
+
+
+    // Fields
+    .field assembly static initonly valuetype '<PrivateImplementationDetails>'/'__StaticArrayInitTypeSize=12' '4636993D3E1DA4E9D6B8F87B79E8F7C6D018580D52661950EABC3845C5897A4D' at I_00002BF0
+    .data cil I_00002BF0 = bytearray (
+        01 00 00 00 02 00 00 00 03 00 00 00
+    )
+    .field assembly static initonly valuetype '<PrivateImplementationDetails>'/'__StaticArrayInitTypeSize=12' '8CA6EE1043DEFCFD05AA29DEE581CBC519E783E414A687D7C26AC6070D3F6DEE' at I_00002C00
+    .data cil I_00002C00 = bytearray (
+        04 00 00 00 05 00 00 00 06 00 00 00
+    )
+
+} // end of class <PrivateImplementationDetails>
+*/
+using Mono.Cecil;
+using Mono.Cecil.Cil;
+using Mono.Cecil.Rocks;
+using System; 
+using System.IO;
+using System.Linq;
+using BindingFlags = System.Reflection.BindingFlags;
+using Cecilifier.Runtime;
+               
+public class SnippetRunner
+{
+	public static void Main(string[] args)
+	{
+        // setup a `reflection importer` to ensure references to System.Private.CoreLib are replaced with references to `netstandard`. 
+        var mp = new ModuleParameters { Architecture = TargetArchitecture.AMD64, Kind =  ModuleKind.Console, ReflectionImporterProvider = new SystemPrivateCoreLibFixerReflectionProvider() };
+		using(var assembly = AssemblyDefinition.CreateAssembly(new AssemblyNameDefinition("C", Version.Parse("1.0.0.0")), Path.GetFileName(args[0]), mp))
+        {
+			// EXTRA
+			//Class : PrivateImplementationDetails
+			var cls_PrivateImplementationDetails_0 = new TypeDefinition("", "PrivateImplementationDetails", TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit | TypeAttributes.Sealed | TypeAttributes.NotPublic, assembly.MainModule.TypeSystem.Object);
+			assembly.MainModule.Types.Add(cls_PrivateImplementationDetails_0);
+
+			//Structure : __StaticArrayInitTypeSize
+			var st___StaticArrayInitTypeSize_1 = new TypeDefinition("", "__StaticArrayInitTypeSize", TypeAttributes.SequentialLayout | TypeAttributes.Sealed |TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit | TypeAttributes.NestedPrivate, assembly.MainModule.ImportReference(typeof(System.ValueType)));
+			st___StaticArrayInitTypeSize_1.IsBeforeFieldInit = false;
+			st___StaticArrayInitTypeSize_1.ClassSize = 12;
+			st___StaticArrayInitTypeSize_1.PackingSize = 1;
+			cls_PrivateImplementationDetails_0.NestedTypes.Add(st___StaticArrayInitTypeSize_1);
+			
+			//TODO: we should not emit a StructLayout attribute, instead, we should set the values above...
+			// var attr_StructLayout_2 = new CustomAttribute(assembly.MainModule.ImportReference(typeof(System.Runtime.InteropServices.StructLayoutAttribute).GetConstructor(new Type[1] { typeof(System.Runtime.InteropServices.LayoutKind) })));
+			// attr_StructLayout_2.ConstructorArguments.Add(new CustomAttributeArgument(assembly.MainModule.ImportReference(typeof(System.Runtime.InteropServices.LayoutKind)), 200));
+			// attr_StructLayout_2.Fields.Add(new CustomAttributeNamedArgument("Pack", new CustomAttributeArgument(assembly.MainModule.TypeSystem.Int32, 1)));
+			// attr_StructLayout_2.Fields.Add(new CustomAttributeNamedArgument("Size", new CustomAttributeArgument(assembly.MainModule.TypeSystem.Int32, 12)));
+			// st___StaticArrayInitTypeSize_1.CustomAttributes.Add(attr_StructLayout_2);
+
+			var fld_f1_3 = new FieldDefinition("f1", FieldAttributes.HasFieldRVA | FieldAttributes.Assembly | FieldAttributes.Static | FieldAttributes.InitOnly, st___StaticArrayInitTypeSize_1);			
+			fld_f1_3.InitialValue = new byte[] {01, 00, 00, 00, 02, 00, 00, 00, 03, 00, 00, 00};
+			cls_PrivateImplementationDetails_0.Fields.Add(fld_f1_3);
+
+			//** Constructor: PrivateImplementationDetails() **
+			var ctor_PrivateImplementationDetails_4 = new MethodDefinition(".ctor", MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.RTSpecialName | MethodAttributes.SpecialName, assembly.MainModule.TypeSystem.Void);
+			cls_PrivateImplementationDetails_0.Methods.Add(ctor_PrivateImplementationDetails_4);
+			var il_ctor_PrivateImplementationDetails_5 = ctor_PrivateImplementationDetails_4.Body.GetILProcessor();
+			il_ctor_PrivateImplementationDetails_5.Emit(OpCodes.Ldarg_0);
+			il_ctor_PrivateImplementationDetails_5.Emit(OpCodes.Call, assembly.MainModule.ImportReference(TypeHelpers.DefaultCtorFor(cls_PrivateImplementationDetails_0.BaseType)));
+			il_ctor_PrivateImplementationDetails_5.Emit(OpCodes.Ret);
+			// ~EXTRA
+
+			//Class : C
+			var cls_C_0 = new TypeDefinition("", "C", TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit | TypeAttributes.NotPublic, assembly.MainModule.TypeSystem.Object);
+			assembly.MainModule.Types.Add(cls_C_0);
+
+			//Method : Main
+			var m_Main_1 = new MethodDefinition("Main", MethodAttributes.Static | MethodAttributes.Private | MethodAttributes.HideBySig, assembly.MainModule.TypeSystem.Void);
+			cls_C_0.Methods.Add(m_Main_1);
+			m_Main_1.Body.InitLocals = true;
+			var il_Main_2 = m_Main_1.Body.GetILProcessor();
+
+			//int []intArray = new int[3];
+			var lv_intArray_3 = new VariableDefinition(assembly.MainModule.TypeSystem.Int32.MakeArrayType());
+			m_Main_1.Body.Variables.Add(lv_intArray_3);
+			il_Main_2.Emit(OpCodes.Ldc_I4, 3);
+			il_Main_2.Emit(OpCodes.Newarr, assembly.MainModule.TypeSystem.Int32);
+
+			// EXTRA
+			il_Main_2.Emit(OpCodes.Dup);
+			il_Main_2.Emit(OpCodes.Ldtoken, fld_f1_3);
+			var runtimeHelpers = assembly.MainModule.ImportReference(typeof(System.Runtime.CompilerServices.RuntimeHelpers)).Resolve();
+			il_Main_2.Emit(OpCodes.Call, assembly.MainModule.ImportReference(runtimeHelpers.Methods.Single(m => m.Name == "InitializeArray")));
+
+        	//IL_003f: ldtoken field valuetype '<PrivateImplementationDetails>'/'__StaticArrayInitTypeSize=12' '<PrivateImplementationDetails>'::'4636993D3E1DA4E9D6B8F87B79E8F7C6D018580D52661950EABC3845C5897A4D'
+        	//IL_0044: call void [System.Runtime]System.Runtime.CompilerServices.RuntimeHelpers::InitializeArray(class [System.Runtime]System.Array, valuetype [System.Runtime]System.RuntimeFieldHandle)
+        	//IL_0049: stloc.2
+			// ~EXTRA
+
+			il_Main_2.Emit(OpCodes.Stloc, lv_intArray_3);
+
+			//for(int i = 0; i < 3; i++)
+			var lv_i_4 = new VariableDefinition(assembly.MainModule.TypeSystem.Int32);
+			m_Main_1.Body.Variables.Add(lv_i_4);
+			il_Main_2.Emit(OpCodes.Ldc_I4, 0);
+			il_Main_2.Emit(OpCodes.Stloc, lv_i_4);
+			var lbl_fel_5 = il_Main_2.Create(OpCodes.Nop);
+			var Nop_6 = il_Main_2.Create(OpCodes.Nop);
+			il_Main_2.Append(Nop_6);
+			il_Main_2.Emit(OpCodes.Ldloc, lv_i_4);
+			il_Main_2.Emit(OpCodes.Ldc_I4, 3);
+			il_Main_2.Emit(OpCodes.Clt);
+			il_Main_2.Emit(OpCodes.Brfalse, lbl_fel_5);
+			il_Main_2.Emit(OpCodes.Ldloc, lv_intArray_3);
+			il_Main_2.Emit(OpCodes.Ldloc, lv_i_4);
+			il_Main_2.Emit(OpCodes.Ldelem_I4);
+			il_Main_2.Emit(OpCodes.Call, assembly.MainModule.ImportReference(TypeHelpers.ResolveMethod("System.Console, System.Console", "WriteLine",System.Reflection.BindingFlags.Default|System.Reflection.BindingFlags.Static|System.Reflection.BindingFlags.Public,"", "System.Int32")));
+			il_Main_2.Emit(OpCodes.Ldloc, lv_i_4);
+			il_Main_2.Emit(OpCodes.Dup);
+			il_Main_2.Emit(OpCodes.Ldc_I4_1);
+			il_Main_2.Emit(OpCodes.Add);
+			il_Main_2.Emit(OpCodes.Stloc, lv_i_4);
+			il_Main_2.Emit(OpCodes.Pop);
+			il_Main_2.Emit(OpCodes.Br, Nop_6);
+			il_Main_2.Append(lbl_fel_5);
+			il_Main_2.Emit(OpCodes.Ret);
+
+			//** Constructor: C() **
+			var ctor_C_8 = new MethodDefinition(".ctor", MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.RTSpecialName | MethodAttributes.SpecialName, assembly.MainModule.TypeSystem.Void);
+			cls_C_0.Methods.Add(ctor_C_8);
+			var il_ctor_C_9 = ctor_C_8.Body.GetILProcessor();
+			il_ctor_C_9.Emit(OpCodes.Ldarg_0);
+			il_ctor_C_9.Emit(OpCodes.Call, assembly.MainModule.ImportReference(TypeHelpers.DefaultCtorFor(cls_C_0.BaseType)));
+			il_ctor_C_9.Emit(OpCodes.Ret);
+			assembly.EntryPoint = m_Main_1;
+
+		    assembly.Write(args[0]);
+
+            //Writes a .runtimeconfig.json file matching the output assembly name.
+			File.Copy(
+				Path.ChangeExtension(typeof(SnippetRunner).Assembly.Location, ".runtimeconfig.json"),
+                Path.ChangeExtension(args[0], ".runtimeconfig.json"),
+                true);
+        }
+	}
+}
