@@ -15,4 +15,12 @@ public class MethodTests : CecilifierUnitTestBase
         Assert.That(cecilifiedCode, Does.Match(@"m_get_6\.CustomAttributes\.Add\(.+typeof\(.+PreserveBaseOverridesAttribute\).+\);"));
         Assert.That(cecilifiedCode, Contains.Substring("il_callIt_10.Emit(OpCodes.Callvirt, m_get_6);"));
     }
+    
+    [Test]
+    public void InterfaceImplementation()
+    {
+        var result = RunCecilifier("using System.Collections; class B : IEnumerable { public IEnumerator GetEnumerator() => null; }");
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+        Assert.That(cecilifiedCode, Contains.Substring("\"GetEnumerator\", MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.Virtual | MethodAttributes.NewSlot | MethodAttributes.Final"));
+    }
 }
