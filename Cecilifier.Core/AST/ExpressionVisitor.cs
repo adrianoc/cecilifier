@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -6,7 +7,6 @@ using System.Linq;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Mappings;
-using Cecilifier.Core.Naming;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -177,7 +177,7 @@ namespace Cecilifier.Core.AST
                 // C# compiler has a trick to optimize constant array initializers in which, for arrays with more than
                 // a certain number of elements (as of 10/Dez/2022, empirically, this numbers is 2) in which it emits a
                 // struct with static fields initialized from the metadata
-                // See Notes/ImplicitArrrayInitialization_Optimization.txt for an example of how to emit such optimization
+                // See Notes/ImplicitArrayInitialization_Optimization.txt for an example of how to emit such optimization
                 // with Cecil.
                 if (node.Expressions.Count > 2)
                 {
@@ -185,8 +185,43 @@ namespace Cecilifier.Core.AST
                     Context.WriteComment("C# compiler one since Cecilifier does not apply some optimizations.");
                 }
             }
-        }
+            else if (node.IsKind(SyntaxKind.ComplexElementInitializerExpression))
+            {
+                // Collection initializers with this syntax depends on the type being 
+                // initialized to expose an `Add()` method (or an extension method to
+                // to be available) with a signature that matches the types passed
+                // in the list of expressions
+                Context.EmitCilInstruction(ilVar, OpCodes.Dup);
 
+                var expectedAddMethodParameterTypes = ArrayPool<ITypeSymbol>.Shared.Rent(node.Expressions.Count);
+                var parameterTypeIndex = 0;
+                foreach (var initializeExp in node.Expressions)
+                {
+                    initializeExp.Accept(this);
+                    var expectedParamType = Context.SemanticModel.GetTypeInfo(initializeExp);
+                    expectedAddMethodParameterTypes[parameterTypeIndex++] = expectedParamType.Type ?? expectedParamType.ConvertedType;
+                }
+                
+                // The code below assumes that the `Add()` method is declared in the type being instantiated...
+                // TODO: Fix the code to look for extensions method also.
+                
+                // the grand-parent of the initializer is the object being instantiated.
+                var typeBeingInstantiated = Context.SemanticModel.GetSymbolInfo(node.Parent.Parent).Symbol.EnsureNotNull<ISymbol, IMethodSymbol>();
+                var addMethod = typeBeingInstantiated.ContainingType.GetMembers("Add")
+                                                    .OfType<IMethodSymbol>()
+                                                    .SingleOrDefault(m => m.Parameters.All(p => SymbolEqualityComparer.Default.Equals(p.Type, expectedAddMethodParameterTypes[p.Ordinal])));
+
+                EnsureForwardedMethod(Context, addMethod, Array.Empty<TypeParameterSyntax>());
+                AddMethodCall(ilVar, addMethod);
+                ArrayPool<ITypeSymbol>.Shared.Return(expectedAddMethodParameterTypes);
+            }
+            else
+            {
+                foreach (var initializeExp in node.Expressions)
+                    initializeExp.Accept(this);
+            }
+        }
+        
         public override void VisitArrayCreationExpression(ArrayCreationExpressionSyntax node)
         {
             using var _ = LineInformationTracker.Track(Context, node);
@@ -304,7 +339,7 @@ namespace Cecilifier.Core.AST
             if (node.IsOperatorOnCustomUserType(Context.SemanticModel, out var method))
             {
                 if(method.IsDefinedInCurrentAssembly(Context))
-                    EnsureForwardedMethod(Context, Context.Naming.MethodDeclaration((BaseMethodDeclarationSyntax)method.DeclaringSyntaxReferences[0].GetSyntax()), method, Array.Empty<TypeParameterSyntax>());
+                    EnsureForwardedMethod(Context, method, Array.Empty<TypeParameterSyntax>());
                 AddMethodCall(ilVar, method);
             }
             else
@@ -594,12 +629,9 @@ namespace Cecilifier.Core.AST
             }
             
             if (TryProcessInvocationOnParameterlessImplicitCtorOnValueType(node, ctorInfo))
-            {
                 return;
-            }
 
-            var varName = Context.Naming.SyntheticVariable(ctor.ContainingType.Name, ElementKind.LocalVariable);
-            EnsureForwardedMethod(Context, varName, ctor, Array.Empty<TypeParameterSyntax>());
+            EnsureForwardedMethod(Context, ctor, Array.Empty<TypeParameterSyntax>());
 
             var operand = ctor.MethodResolverExpression(Context);
             Context.EmitCilInstruction(ilVar, OpCodes.Newobj, operand);
@@ -609,6 +641,8 @@ namespace Cecilifier.Core.AST
             FixCallSite();
             
             StoreTopOfStackInLocalVariableAndLoadItsAddressIfNeeded(node);
+
+            node.Initializer?.Accept(this);
         }
 
         public override void VisitExpressionStatement(ExpressionStatementSyntax node)
@@ -1198,7 +1232,8 @@ namespace Cecilifier.Core.AST
             //IL_0002: ldarg.0
             //IL_0002: ldftn string Test::M(int32)
             //IL_0008: newobj instance void class [System.Private.CoreLib]System.Func`2<int32, string>::.ctor(object, native int)
-            EnsureForwardedMethod(Context, Context.Naming.SyntheticVariable(node.Identifier.Text, ElementKind.Method), method.OverriddenMethod ?? method.OriginalDefinition, Array.Empty<TypeParameterSyntax>());
+            EnsureForwardedMethod(Context, method.OverriddenMethod ?? method.OriginalDefinition, Array.Empty<TypeParameterSyntax>());
+            //EnsureForwardedMethod(Context, Context.Naming.SyntheticVariable(node.Identifier.Text, ElementKind.Method), method.OverriddenMethod ?? method.OriginalDefinition, Array.Empty<TypeParameterSyntax>());
             CecilDefinitionsFactory.InstantiateDelegate(Context, ilVar, delegateType, method.MethodResolverExpression(Context), new StaticDelegateCacheContext()
             {
                 IsStaticDelegate = method.IsStatic,
@@ -1217,7 +1252,8 @@ namespace Cecilifier.Core.AST
             }
 
             //TODO: We need to find the InvocationSyntax that node represents...
-            EnsureForwardedMethod(Context, Context.Naming.SyntheticVariable(node.Identifier.Text, ElementKind.Method), method.OverriddenMethod ?? method.OriginalDefinition, Array.Empty<TypeParameterSyntax>());
+            //EnsureForwardedMethod(Context, Context.Naming.SyntheticVariable(node.Identifier.Text, ElementKind.Method), method.OverriddenMethod ?? method.OriginalDefinition, Array.Empty<TypeParameterSyntax>());
+            EnsureForwardedMethod(Context, method.OverriddenMethod ?? method.OriginalDefinition, Array.Empty<TypeParameterSyntax>());
             var isAccessOnThis = !node.Parent.IsKind(SyntaxKind.SimpleMemberAccessExpression);
 
             var mae = node.Parent as MemberAccessExpressionSyntax;
