@@ -101,7 +101,7 @@ public static class Outer
 
             var cecilifiedCode = result.GeneratedCode.ReadToEnd();
             Assert.That(cecilifiedCode, Does.Match("il_method_21.Emit\\(OpCodes.Callvirt, .*\"System.Diagnostics.Process, System.Diagnostics.Process\", \"Kill\".+"), cecilifiedCode);
-            Assert.That(cecilifiedCode, Does.Match("il_property_24.Emit\\(OpCodes.Callvirt, .+\"System.Diagnostics.Process, System.Diagnostics.Process\", \"get_ProcessName\".+"), cecilifiedCode);
+            Assert.That(cecilifiedCode, Does.Match(@"il_property_\d+.Emit\(OpCodes.Callvirt, .+""System.Diagnostics.Process, System.Diagnostics.Process"", ""get_ProcessName"".+"), cecilifiedCode);
         }
 
         [TestCase("class StaticFieldAddress { static int field; static void M1(ref int i) { } static void M() => M1(ref field); }", "Ldsflda", TestName="StaticPassingByRef")]

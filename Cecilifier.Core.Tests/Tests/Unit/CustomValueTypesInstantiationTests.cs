@@ -72,6 +72,6 @@ public class CustomValueTypesInstantiationTests : CecilifierUnitTestBase
         var result = RunCecilifier("struct Foo { static Foo Create() => new Foo(); public Foo() { } }");
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
 
-        Assert.That(cecilifiedCode, Does.Match(@"il_create_2\.Emit\(OpCodes.Newobj, l_foo_3\);"));
+        Assert.That(cecilifiedCode, Does.Match(@"il_create_2\.Emit\(OpCodes.Newobj, ctor_foo_3\);"));
     }    
 }

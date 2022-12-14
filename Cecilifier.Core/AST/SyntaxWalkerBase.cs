@@ -4,7 +4,6 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using Cecilifier.Core.Extensions;
-using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.Variables;
@@ -154,6 +153,10 @@ namespace Cecilifier.Core.AST
             switch (type.SpecialType)
             {
                 case SpecialType.System_Object:
+                case SpecialType.System_Collections_IEnumerator:
+                case SpecialType.System_Collections_Generic_IEnumerator_T:
+                case SpecialType.System_Collections_IEnumerable:
+                case SpecialType.System_Collections_Generic_IEnumerable_T:
                 case SpecialType.None:
                     if (type.TypeKind == TypeKind.Pointer)
                     {
@@ -867,7 +870,7 @@ namespace Cecilifier.Core.AST
             
                 // Attribute is defined in the same assembly. We need to find the variable that holds its "ctor declaration"
                 var attrCtor = attrType.GetMembers().OfType<IMethodSymbol>().SingleOrDefault(m => m.MethodKind == MethodKind.Constructor && m.Parameters.Length == attrArgs.Length);
-                EnsureForwardedMethod(context, context.Naming.SyntheticVariable(attribute.Name.ValueText().AttributeName(), ElementKind.Constructor), attrCtor, Array.Empty<TypeParameterSyntax>());
+                EnsureForwardedMethod(context, attrCtor, Array.Empty<TypeParameterSyntax>());
                 var attrCtorVar = context.DefinitionVariables.GetMethodVariable(attrCtor.AsMethodDefinitionVariable());
                 if (!attrCtorVar.IsValid)
                     throw new Exception($"Could not find variable for {attrCtor.ContainingType.Name} ctor.");
@@ -879,7 +882,7 @@ namespace Cecilifier.Core.AST
         }
         
         /*
-         * Ensure forward member references are correcly handled, i.e, support for scenario in which a method is being referenced
+         * Ensure forward member references are correctly handled, i.e, support for scenario in which a method is being referenced
          * before it has been declared. This can happen for instance in code like:
          *
          * class C
@@ -891,21 +894,27 @@ namespace Cecilifier.Core.AST
          * In this case when the first reference to Bar() is found (in method Foo()) the method itself has not been defined yet
          * so we add a MethodDefinition for it but *no body*. Method body will be processed later, when the method is visited.
          */
-        protected static void EnsureForwardedMethod(IVisitorContext context, string methodDeclarationVar, IMethodSymbol method, TypeParameterSyntax[] typeParameters)
+        protected static void EnsureForwardedMethod(IVisitorContext context, IMethodSymbol method, TypeParameterSyntax[] typeParameters)
         {
             if (!method.IsDefinedInCurrentAssembly(context))
                 return;
-
+            
             var found = context.DefinitionVariables.GetMethodVariable(method.AsMethodDefinitionVariable());
             if (found.IsValid)
                 return;
 
+            string methodDeclarationVar;
             if (method.MethodKind == MethodKind.LocalFunction)
             {
+                methodDeclarationVar = context.Naming.SyntheticVariable(method.Name, ElementKind.Method);
                 MethodDeclarationVisitor.AddMethodDefinition(context, methodDeclarationVar, $"<{method.ContainingSymbol.Name}>g__{method.Name}|0_0", "MethodAttributes.Assembly | MethodAttributes.Static | MethodAttributes.HideBySig", method.ReturnType, method.ReturnsByRef, typeParameters);
             }
             else
             {
+                methodDeclarationVar = method.MethodKind == MethodKind.Constructor
+                    ? context.Naming.Constructor((BaseTypeDeclarationSyntax) method.ContainingType.DeclaringSyntaxReferences.SingleOrDefault()?.GetSyntax(), method.IsStatic)
+                    : context.Naming.MethodDeclaration((BaseMethodDeclarationSyntax) method.DeclaringSyntaxReferences.SingleOrDefault()?.GetSyntax());
+                
                 MethodDeclarationVisitor.AddMethodDefinition(context, methodDeclarationVar, method.Name, "MethodAttributes.Private", method.ReturnType, method.ReturnsByRef, typeParameters);
             }
 

@@ -133,7 +133,7 @@ public class OperatorsTests : CecilifierUnitTestBase
         TestName = "Overloaded +")]
     [TestCase(
         "var c = new C(); c.M(c); System.Console.WriteLine(c.Value); class C { public int Value {get; set;} public void M(C other) { Value += 1; other.Value += 2; } }", 
-        @"//Value \+= 1;\s+var (ldarg_0_\d+) = il_M_19.Create\(OpCodes.Ldarg_0\);\s+il_M_19.Append\(\1\);\s+(il_M_\d+\.Emit\(OpCodes\.)Ldarg_0\);\s+\2Call, m_get_12\);\s+\2Ldc_I4, 1\);\s+\2Add\);\s+\2Call, l_set_15\);\s+", 
+        @"//Value \+= 1;\s+var (ldarg_0_\d+) = il_M_18.Create\(OpCodes.Ldarg_0\);\s+il_M_18.Append\(\1\);\s+(il_M_\d+\.Emit\(OpCodes\.)Ldarg_0\);\s+\2Call, m_get_11\);\s+\2Ldc_I4, 1\);\s+\2Add\);\s+\2Call, l_set_14\);\s+", 
         TestName = "Properties (numeric)")]
     public void TestCompoundAssignment(string code, string expected)
     {
@@ -283,7 +283,7 @@ public class OperatorsTests : CecilifierUnitTestBase
             new []
             { 
                 "il_B_10.Emit(OpCodes.Ldarg, 8);",
-                "il_B_10.Emit(OpCodes.Newobj, l_foo_19);",
+                "il_B_10.Emit(OpCodes.Newobj, ctor_foo_19);",
                 "il_B_10.Emit(OpCodes.Call, m_op_Inequality_1);",
                 "il_B_10.Emit(OpCodes.Ret);"   
             }).SetName("Custom");
@@ -360,7 +360,7 @@ public class OperatorsTests : CecilifierUnitTestBase
             new []
             { 
                 "il_B_10.Emit(OpCodes.Ldarg, 8);",
-                "il_B_10.Emit(OpCodes.Newobj, l_foo_19);",
+                "il_B_10.Emit(OpCodes.Newobj, ctor_foo_19);",
                 "il_B_10.Emit(OpCodes.Call, m_op_Equality_5);",
                 "il_B_10.Emit(OpCodes.Ret);"   
             }).SetName("Custom");
