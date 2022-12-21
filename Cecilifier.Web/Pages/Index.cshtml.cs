@@ -26,11 +26,6 @@ namespace Cecilifier.Web.Pages
         
         public async Task<IActionResult> OnGet()
         {
-            if (Request.Host.Host.Contains("staging.cecilifier.me"))
-            {
-                return Redirect("http://cecilifier.me:5000");
-            }
-            
             ErrorAccessingGist = null;
             if (Request.Query.TryGetValue("gistid", out var gistid))
             {
