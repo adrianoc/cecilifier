@@ -805,10 +805,36 @@ namespace Cecilifier.Core.AST
         
         public override void VisitSimpleLambdaExpression(SimpleLambdaExpressionSyntax node) => HandleLambdaExpression(node);
         public override void VisitParenthesizedLambdaExpression(ParenthesizedLambdaExpressionSyntax node) => HandleLambdaExpression(node);
-        
+
+        public override void VisitIsPatternExpression(IsPatternExpressionSyntax node)
+        {
+            node.Expression.Accept(this);
+            var t = Context.SemanticModel.GetTypeInfo(node.Expression).Type.EnsureNotNull();
+            if (t.TypeKind == TypeKind.TypeParameter)
+            {
+                Context.EmitCilInstruction(ilVar, OpCodes.Box, Context.TypeResolver.Resolve(t));
+            }
+            node.Pattern.Accept(this);
+        }
+
+        public override void VisitDeclarationPattern(DeclarationPatternSyntax node)
+        {
+            using var _ = LineInformationTracker.Track(Context, node);
+
+            var varType = Context.TypeResolver.Resolve(Context.SemanticModel.GetTypeInfo(node.Type).Type);
+            var localVar = AddLocalVariableToCurrentMethod(
+                                        ((SingleVariableDesignationSyntax) node.Designation).Identifier.ValueText, 
+                                        varType);
+            
+            Context.EmitCilInstruction(ilVar, OpCodes.Isinst, varType);
+            Context.EmitCilInstruction(ilVar, OpCodes.Stloc, localVar);
+            Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, localVar);
+            Context.EmitCilInstruction(ilVar, OpCodes.Ldnull);
+            Context.EmitCilInstruction(ilVar, OpCodes.Cgt);
+        }
+
         public override void VisitAwaitExpression(AwaitExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitTupleExpression(TupleExpressionSyntax node) => LogUnsupportedSyntax(node);
-        public override void VisitIsPatternExpression(IsPatternExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitSwitchExpression(SwitchExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitAnonymousObjectCreationExpression(AnonymousObjectCreationExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitMakeRefExpression(MakeRefExpressionSyntax node) => LogUnsupportedSyntax(node);
