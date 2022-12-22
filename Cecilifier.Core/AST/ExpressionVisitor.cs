@@ -17,8 +17,7 @@ namespace Cecilifier.Core.AST
 {
     internal partial class ExpressionVisitor : SyntaxWalkerBase
     {
-        private static readonly IDictionary<SyntaxKind, Action<IVisitorContext, string, ITypeSymbol, ITypeSymbol>> operatorHandlers =
-            new Dictionary<SyntaxKind, Action<IVisitorContext, string, ITypeSymbol, ITypeSymbol>>();
+        private static readonly Dictionary<SyntaxKind, BinaryOperatorHandler> operatorHandlers = new();
         
         private static readonly IDictionary<string, uint> predefinedTypeSize = new Dictionary<string, uint>();
         private static readonly IDictionary<SpecialType, OpCode> _opCodesForLdElem = new Dictionary<SpecialType, OpCode>()
@@ -51,7 +50,7 @@ namespace Cecilifier.Core.AST
             predefinedTypeSize["long"] = sizeof(long);
             
             // Arithmetic operators
-            operatorHandlers[SyntaxKind.PlusToken] = (ctx, ilVar, left, right) =>
+            operatorHandlers[SyntaxKind.PlusToken] = new BinaryOperatorHandler( (ctx, ilVar, left, right) =>
             {
                 if (left.SpecialType == SpecialType.System_String)
                 {
@@ -62,47 +61,57 @@ namespace Cecilifier.Core.AST
                 {
                     ctx.EmitCilInstruction(ilVar, OpCodes.Add);
                 }
-            };
+            });
 
-            operatorHandlers[SyntaxKind.MinusToken] = (ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, OpCodes.Sub);
-            operatorHandlers[SyntaxKind.AsteriskToken] = (ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, OpCodes.Mul);
-            operatorHandlers[SyntaxKind.SlashToken] = (ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, OpCodes.Div);
-            operatorHandlers[SyntaxKind.PercentToken] = HandleModulusExpression;
+            operatorHandlers[SyntaxKind.MinusToken] = new BinaryOperatorHandler((ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, OpCodes.Sub));
+            operatorHandlers[SyntaxKind.AsteriskToken] = new BinaryOperatorHandler((ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, OpCodes.Mul));
+            operatorHandlers[SyntaxKind.SlashToken] = new BinaryOperatorHandler((ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, OpCodes.Div));
+            operatorHandlers[SyntaxKind.PercentToken] = new BinaryOperatorHandler(HandleModulusExpression);
             
-            operatorHandlers[SyntaxKind.GreaterThanToken] = (ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, CompareOpCodeFor(left));
-            operatorHandlers[SyntaxKind.GreaterThanEqualsToken] = (ctx, ilVar, left, right) =>
+            operatorHandlers[SyntaxKind.GreaterThanToken] = new BinaryOperatorHandler((ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, CompareOpCodeFor(left)));
+            operatorHandlers[SyntaxKind.GreaterThanEqualsToken] = new BinaryOperatorHandler((ctx, ilVar, left, right) =>
             {
                 ctx.EmitCilInstruction(ilVar, OpCodes.Clt);
                 ctx.EmitCilInstruction(ilVar, OpCodes.Ldc_I4_0);
                 ctx.EmitCilInstruction(ilVar, OpCodes.Ceq);
-            };
-            operatorHandlers[SyntaxKind.LessThanEqualsToken] = (ctx, ilVar, left, right) =>
+            });
+            
+            operatorHandlers[SyntaxKind.LessThanEqualsToken] = new BinaryOperatorHandler((ctx, ilVar, left, right) =>
             {
                 ctx.EmitCilInstruction(ilVar, OpCodes.Cgt);
                 ctx.EmitCilInstruction(ilVar, OpCodes.Ldc_I4_0);
                 ctx.EmitCilInstruction(ilVar, OpCodes.Ceq);
-            };
-            operatorHandlers[SyntaxKind.EqualsEqualsToken] = (ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, OpCodes.Ceq);
-            operatorHandlers[SyntaxKind.LessThanToken] = (ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, OpCodes.Clt);
-            operatorHandlers[SyntaxKind.ExclamationEqualsToken] = (ctx, ilVar, left, right) =>
+            });
+
+            operatorHandlers[SyntaxKind.EqualsEqualsToken] = new BinaryOperatorHandler((ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, OpCodes.Ceq));
+            operatorHandlers[SyntaxKind.LessThanToken] = new BinaryOperatorHandler((ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, OpCodes.Clt));
+            operatorHandlers[SyntaxKind.ExclamationEqualsToken] = new BinaryOperatorHandler((ctx, ilVar, left, right) =>
             {
                 // This is not the most optimized way to handle != operator but it is generic and correct.
                 ctx.EmitCilInstruction(ilVar, OpCodes.Ceq);
                 ctx.EmitCilInstruction(ilVar, OpCodes.Ldc_I4_0);
                 ctx.EmitCilInstruction(ilVar, OpCodes.Ceq);
-            };
+            });
 
             // Bitwise Operators
-            operatorHandlers[SyntaxKind.AmpersandToken] = (ctx, ilVar, _, _) => ctx.EmitCilInstruction(ilVar, OpCodes.And);
-            operatorHandlers[SyntaxKind.BarToken] = (ctx, ilVar, _, _) => ctx.EmitCilInstruction(ilVar, OpCodes.Or);
-            operatorHandlers[SyntaxKind.CaretToken] = (ctx, ilVar, _, _) => ctx.EmitCilInstruction(ilVar, OpCodes.Xor);
-            operatorHandlers[SyntaxKind.LessThanLessThanToken] = (ctx, ilVar, _, _) => ctx.EmitCilInstruction(ilVar, OpCodes.Shl);
-            operatorHandlers[SyntaxKind.GreaterThanGreaterThanToken] = (ctx, ilVar, _, _) => ctx.EmitCilInstruction(ilVar, OpCodes.Shr);
+            operatorHandlers[SyntaxKind.AmpersandToken] = new BinaryOperatorHandler((ctx, ilVar, _, _) => ctx.EmitCilInstruction(ilVar, OpCodes.And));
+            operatorHandlers[SyntaxKind.BarToken] = new BinaryOperatorHandler((ctx, ilVar, _, _) => ctx.EmitCilInstruction(ilVar, OpCodes.Or));
+            operatorHandlers[SyntaxKind.CaretToken] = new BinaryOperatorHandler((ctx, ilVar, _, _) => ctx.EmitCilInstruction(ilVar, OpCodes.Xor));
+            operatorHandlers[SyntaxKind.LessThanLessThanToken] = new BinaryOperatorHandler((ctx, ilVar, _, _) => ctx.EmitCilInstruction(ilVar, OpCodes.Shl));
+            operatorHandlers[SyntaxKind.GreaterThanGreaterThanToken] = new BinaryOperatorHandler((ctx, ilVar, _, _) => ctx.EmitCilInstruction(ilVar, OpCodes.Shr));
 
             // Logical Operators
-            operatorHandlers[SyntaxKind.AmpersandAmpersandToken] = (ctx, ilVar, _, _) => ctx.EmitCilInstruction(ilVar, OpCodes.And);
-            operatorHandlers[SyntaxKind.BarBarToken] = (ctx, ilVar, _, _) => ctx.EmitCilInstruction(ilVar, OpCodes.Or);
-        }
+            operatorHandlers[SyntaxKind.AmpersandAmpersandToken] = new BinaryOperatorHandler((ctx, ilVar, _, _) => ctx.EmitCilInstruction(ilVar, OpCodes.And));
+            operatorHandlers[SyntaxKind.BarBarToken] = new BinaryOperatorHandler((ctx, ilVar, _, _) => ctx.EmitCilInstruction(ilVar, OpCodes.Or));
+            
+            operatorHandlers[SyntaxKind.IsKeyword] = new BinaryOperatorHandler((ctx, ilVar, _, rightType) =>
+            {
+                ctx.EmitCilInstruction(ilVar, OpCodes.Isinst, ctx.TypeResolver.Resolve(rightType));
+                ctx.EmitCilInstruction(ilVar, OpCodes.Ldnull);
+                ctx.EmitCilInstruction(ilVar, OpCodes.Cgt);
+            }, visitRightOperand: false); // Isinst opcode takes the type to check as a parameter (instead of taking it from the stack) so
+                                          // we must not visit the right hand side of the binary expression 
+        }            
 
         private static OpCode CompareOpCodeFor(ITypeSymbol left)
         {
@@ -343,7 +352,7 @@ namespace Cecilifier.Core.AST
                 AddMethodCall(ilVar, method);
             }
             else
-                operatorHandlers[equivalentTokenKind](Context, ilVar, Context.SemanticModel.GetTypeInfo(node.Left).Type, Context.SemanticModel.GetTypeInfo(node.Right).Type);
+                operatorHandlers[equivalentTokenKind].Process(Context, ilVar, Context.SemanticModel.GetTypeInfo(node.Left).Type, Context.SemanticModel.GetTypeInfo(node.Right).Type);
         }
 
         public override void VisitBinaryExpression(BinaryExpressionSyntax node)
@@ -793,9 +802,10 @@ namespace Cecilifier.Core.AST
             var isTargetOfCall = defaultParent.Accept(UsageVisitor.GetInstance(Context)) == UsageKind.CallTarget;
             LoadLiteralValue(ilVar, type, type.ValueForDefaultLiteral(), isTargetOfCall);
         }
-
+        
         public override void VisitSimpleLambdaExpression(SimpleLambdaExpressionSyntax node) => HandleLambdaExpression(node);
         public override void VisitParenthesizedLambdaExpression(ParenthesizedLambdaExpressionSyntax node) => HandleLambdaExpression(node);
+        
         public override void VisitAwaitExpression(AwaitExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitTupleExpression(TupleExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitIsPatternExpression(IsPatternExpressionSyntax node) => LogUnsupportedSyntax(node);
@@ -995,14 +1005,18 @@ namespace Cecilifier.Core.AST
         private void ProcessBinaryExpression(BinaryExpressionSyntax node)
         {
             using var _ = LineInformationTracker.Track(Context, node);
+            var handler = OperatorHandlerFor(node.OperatorToken);
+            
             Visit(node.Left);
             InjectRequiredConversions(node.Left);
 
-            Visit(node.Right);
-            InjectRequiredConversions(node.Right);
+            if (handler.VisitRightOperand)
+            {
+                Visit(node.Right);
+                InjectRequiredConversions(node.Right);
+            }
 
-            var handler = OperatorHandlerFor(node.OperatorToken);
-            handler(
+            handler.Process(
                 Context,
                 ilVar,
                 Context.SemanticModel.GetTypeInfo(node.Left).Type,
@@ -1345,14 +1359,14 @@ namespace Cecilifier.Core.AST
             }
         }
 
-        private Action<IVisitorContext, string, ITypeSymbol, ITypeSymbol> OperatorHandlerFor(SyntaxToken operatorToken)
+        private BinaryOperatorHandler OperatorHandlerFor(SyntaxToken operatorToken)
         {
             if (operatorHandlers.ContainsKey(operatorToken.Kind()))
             {
                 return operatorHandlers[operatorToken.Kind()];
             }
 
-            throw new Exception($"Operator {operatorToken.ValueText} not supported yet (expression: {operatorToken.Parent})");
+            throw new Exception($"Operator '{operatorToken.ValueText}' not supported yet (expression: {operatorToken.Parent})");
         }
 
         /*

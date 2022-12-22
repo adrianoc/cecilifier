@@ -181,6 +181,20 @@ public class OperatorsTests : CecilifierUnitTestBase
         var result = RunCecilifier($"class Foo {{ {methodWithModulus } }}");
         Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(expected));
     }
+    
+    [TestCase("bool M(object o) => o is System.IDisposable;", "System.IDisposable")]
+    [TestCase("bool M(object o) => o is object;", "Object")]
+    public void TestSimpleIsPatternExpression(string code, string expectedType)
+    {
+        var result = RunCecilifier(code);
+        Assert.That(
+            result.GeneratedCode.ReadToEnd(), 
+            Does.Match(
+                @"(il_M_\d+\.Emit\(OpCodes\.)Ldarg_1\);\s+" + 
+                $@"\1Isinst, .+{expectedType}.*\);\s+" + 
+                @"\1Ldnull\);\s+" + 
+                @"\1Cgt\);"));
+    }
 
     private static void RunTests(string comparison, string[] expectedCecilifiedExpressions)
     {
