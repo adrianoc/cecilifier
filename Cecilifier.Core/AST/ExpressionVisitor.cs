@@ -808,6 +808,8 @@ namespace Cecilifier.Core.AST
 
         public override void VisitIsPatternExpression(IsPatternExpressionSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
+            
             node.Expression.Accept(this);
             var t = Context.SemanticModel.GetTypeInfo(node.Expression).Type.EnsureNotNull();
             if (t.TypeKind == TypeKind.TypeParameter)
@@ -831,6 +833,54 @@ namespace Cecilifier.Core.AST
             Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, localVar);
             Context.EmitCilInstruction(ilVar, OpCodes.Ldnull);
             Context.EmitCilInstruction(ilVar, OpCodes.Cgt);
+        }
+
+        public override void VisitRecursivePattern(RecursivePatternSyntax node)
+        {
+            using var _ = LineInformationTracker.Track(Context, node);
+
+            var varType = Context.TypeResolver.Resolve(Context.SemanticModel.GetTypeInfo(node.Type).Type);
+            var localVar = AddLocalVariableToCurrentMethod(LocalVariableNameOrDefault(node, "tmp"), varType);
+
+            var typeDoesNotMatchVar = CreateCilInstruction(ilVar, OpCodes.Ldc_I4_0);
+            var typeMatchesVar = CreateCilInstruction(ilVar, OpCodes.Nop);
+            Context.EmitCilInstruction(ilVar, OpCodes.Isinst, varType);
+            Context.EmitCilInstruction(ilVar, OpCodes.Stloc, localVar);
+            Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, localVar);
+            Context.EmitCilInstruction(ilVar, OpCodes.Brfalse_S, typeDoesNotMatchVar);
+
+            // Compares each sub-pattern
+            foreach (var pattern in node.PropertyPatternClause.Subpatterns)
+            {
+                Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, localVar);
+                pattern.Accept(this);
+
+                var comparisonType = Context.SemanticModel.GetSymbolInfo(pattern.NameColon.Name).Symbol.GetMemberType();
+                var opEquality = comparisonType.GetMembers().FirstOrDefault(m => m.Kind == SymbolKind.Method && m.Name == "op_Equality");
+                if (opEquality != null)
+                {
+                    AddMethodCall(ilVar, opEquality.EnsureNotNull<ISymbol, IMethodSymbol>(), false);
+                    Context.EmitCilInstruction(ilVar, OpCodes.Brfalse_S, typeDoesNotMatchVar);
+                }
+                else
+                {
+                    Context.EmitCilInstruction(ilVar, OpCodes.Bne_Un, typeDoesNotMatchVar);
+                }
+            }
+            
+            Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4_1); // if the execution (at runtime) reaches this point it means the 
+                                                                        // pattern is a match
+            Context.EmitCilInstruction(ilVar, OpCodes.Br_S, typeMatchesVar);
+            AddCecilExpression($"{ilVar}.Append({typeDoesNotMatchVar});");
+            AddCecilExpression($"{ilVar}.Append({typeMatchesVar});");
+
+            string LocalVariableNameOrDefault(RecursivePatternSyntax toCheck, string defaultValue)
+            {
+                if (toCheck.Designation == null)
+                    return defaultValue;
+                
+                return ((SingleVariableDesignationSyntax)toCheck.Designation).Identifier.ValueText;
+            }
         }
 
         public override void VisitAwaitExpression(AwaitExpressionSyntax node) => LogUnsupportedSyntax(node);
@@ -1109,14 +1159,14 @@ namespace Cecilifier.Core.AST
                 isAccessOnThisOrObjectCreation = parentMae.Expression.IsKind(SyntaxKind.ObjectCreationExpression);
             }
 
-            // if this is an *unqualified* access we need to load *this*
-            if ((parentMae == null || parentMae.Expression == node) && !node.Parent.IsKind(SyntaxKind.MemberBindingExpression) && !propertySymbol.IsStatic)
+            if (IsUnqualifiedAccess(node, propertySymbol))
             {
+                // if this is an *unqualified* access we need to load *this*
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
             }
 
             var parentExp = node.Parent;
-            if (parentExp.Kind() == SyntaxKind.SimpleAssignmentExpression || parentMae != null && parentMae.Name.Identifier == node.Identifier && parentMae.Parent.IsKind(SyntaxKind.SimpleAssignmentExpression))
+            if (parentExp.IsKind(SyntaxKind.SimpleAssignmentExpression) || parentMae != null && parentMae.Name.Identifier == node.Identifier && parentMae.Parent.IsKind(SyntaxKind.SimpleAssignmentExpression))
             {
                 AddMethodCall(ilVar, propertySymbol.SetMethod, isAccessOnThisOrObjectCreation);
             }
@@ -1207,7 +1257,30 @@ namespace Cecilifier.Core.AST
             if (type.TypeKind == TypeKind.TypeParameter && localVar.Accept(UsageVisitor.GetInstance(Context)) == UsageKind.CallTarget)
                 Context.EmitCilInstruction(ilVar, OpCodes.Box, Context.TypeResolver.Resolve(type));
         }
-
+        
+        /// <summary>
+        /// Checks whether the given <paramref name="node"/> represents an unqualified reference (i.e, only a type name) or
+        /// a qualified one. For instance in `Foo f = new NS.Foo();`,
+        /// 1. Foo => Unqualified
+        /// 2. NS.Foo => Qualified
+        ///  
+        /// </summary>
+        /// <param name="node">Node with the name of the property being accessed.</param>
+        /// <param name="propertySymbol">Property symbol representing the property being accessed.</param>
+        /// <returns>true if <paramref name="node"/> represents an unqualified access to <paramref name="propertySymbol"/>, false otherwise</returns>
+        /// <remarks>
+        /// A NameColon syntax represents the `Length: 42` in an expression like `o as string { Length: 42 }`
+        /// A MemberBindExpression represents the null coalescing operator 
+        /// </remarks>
+        private static bool IsUnqualifiedAccess(SimpleNameSyntax node, IPropertySymbol propertySymbol)
+        {
+            var parentMae = node.Parent as MemberAccessExpressionSyntax;
+            return (parentMae == null || parentMae.Expression == node) 
+                   && !node.Parent.IsKind(SyntaxKind.NameColon) 
+                   && !node.Parent.IsKind(SyntaxKind.MemberBindingExpression) 
+                   && !propertySymbol.IsStatic;
+        }
+        
         private void HandlePotentialFixedLoad(ILocalSymbol symbol)
         {
             if (!symbol.IsFixed)
