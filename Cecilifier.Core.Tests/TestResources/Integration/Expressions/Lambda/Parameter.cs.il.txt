@@ -1,6 +1,6 @@
 ﻿.locals init ()
 IL_0000: ldarg.0
-IL_0001: ldarg.0
+IL_0001: ldnull
 IL_0002: ldftn System.Int32 C::Lambda_5_19(System.Int32)
 IL_0008: newobj System.Void System.Func`2<System.Int32,System.Int32>::.ctor(System.Object,System.IntPtr)
 IL_000d: call System.Void C::Parameter(System.Func`2<System.Int32,System.Int32>)

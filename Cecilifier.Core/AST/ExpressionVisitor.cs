@@ -1101,7 +1101,7 @@ namespace Cecilifier.Core.AST
         
         private void HandleLambdaExpression(LambdaExpressionSyntax node)
         {
-            //TODO: Handle static lambdas.
+            // We handle all lambdas as static, i.e, non-capturing.
             // use the lambda string representation to lookup the variable with the synthetic method definition 
             var syntheticMethodVariable = Context.DefinitionVariables.GetVariable(node.ToString(), VariableMemberKind.Method);
             if (!syntheticMethodVariable.IsValid)
@@ -1111,8 +1111,8 @@ namespace Cecilifier.Core.AST
                 return;
             }
 
-            Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
-            CecilDefinitionsFactory.InstantiateDelegate(Context, ilVar, Context.GetTypeInfo(node).ConvertedType, syntheticMethodVariable.VariableName, new StaticDelegateCacheContext()
+            Context.EmitCilInstruction(ilVar, OpCodes.Ldnull);
+            CecilDefinitionsFactory.InstantiateDelegate(Context, ilVar, Context.GetTypeInfo(node).ConvertedType, syntheticMethodVariable.VariableName, new StaticDelegateCacheContext
             {
                 IsStaticDelegate = false
             });
@@ -1346,7 +1346,6 @@ namespace Cecilifier.Core.AST
             //IL_0002: ldftn string Test::M(int32)
             //IL_0008: newobj instance void class [System.Private.CoreLib]System.Func`2<int32, string>::.ctor(object, native int)
             EnsureForwardedMethod(Context, method.OverriddenMethod ?? method.OriginalDefinition, Array.Empty<TypeParameterSyntax>());
-            //EnsureForwardedMethod(Context, Context.Naming.SyntheticVariable(node.Identifier.Text, ElementKind.Method), method.OverriddenMethod ?? method.OriginalDefinition, Array.Empty<TypeParameterSyntax>());
             CecilDefinitionsFactory.InstantiateDelegate(Context, ilVar, delegateType, method.MethodResolverExpression(Context), new StaticDelegateCacheContext()
             {
                 IsStaticDelegate = method.IsStatic,

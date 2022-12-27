@@ -52,6 +52,19 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             Assert.That(context.Output, Contains.Substring("//Lambda to delegates conversion is only supported for Func<> and Action<>"));
         }
         
+        [TestCase("using System; class Foo { void M(Func<int, int> a) { M(x => x + 1); } }", TestName = "Expression")]
+        [TestCase("using System; class Foo { void M(Func<int, int> a) { M(x => { return x + 1; } ); } }", TestName = "Statement")]
+        public void LambdaBodyIsProcessed(string source)
+        {
+            var context = RunProcessorOn(source);
+            Assert.That(
+                context.Output, 
+                Does.Match(@"(il_lambda_.+\.Emit\(OpCodes\.)Ldarg_0\);\s+" +
+                           @"\1Ldc_I4, 1\);\s+" +
+                           @"\1Add\);\s+" +
+                           @"\1Ret\);"));
+        }
+        
         [TestCaseSource(nameof(Issue_176_TestScenarios))]
         public void Issue_176(string lambdaDeclaration, string expectedSnippet)
         {
@@ -78,7 +91,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
                     @"//int l = i;
 			var l_l_3 = new VariableDefinition(assembly.MainModule.TypeSystem.Int32);
 			m_lambda_0_58_0.Body.Variables.Add(l_l_3);
-			il_lambda_0_58_2.Emit(OpCodes.Ldarg_1);
+			il_lambda_0_58_2.Emit(OpCodes.Ldarg_0);
 			il_lambda_0_58_2.Emit(OpCodes.Stloc, l_l_3);
 
 			//return l;
@@ -93,7 +106,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
 			m_lambda_0_58_0.Body.Variables.Add(l_l_3);
 
 			//l = i;
-			il_lambda_0_58_2.Emit(OpCodes.Ldarg_1);
+			il_lambda_0_58_2.Emit(OpCodes.Ldarg_0);
 			il_lambda_0_58_2.Emit(OpCodes.Stloc, l_l_3);
 
 			//return l;
@@ -106,7 +119,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
                     @"//int l = i + 1;
 			var l_l_3 = new VariableDefinition(assembly.MainModule.TypeSystem.Int32);
 			m_lambda_0_58_0.Body.Variables.Add(l_l_3);
-			il_lambda_0_58_2.Emit(OpCodes.Ldarg_1);
+			il_lambda_0_58_2.Emit(OpCodes.Ldarg_0);
 			il_lambda_0_58_2.Emit(OpCodes.Ldc_I4, 1);
 			il_lambda_0_58_2.Emit(OpCodes.Add);
 			il_lambda_0_58_2.Emit(OpCodes.Stloc, l_l_3);
@@ -121,7 +134,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
                     @"//int l = i;
 			var l_l_3 = new VariableDefinition(assembly.MainModule.TypeSystem.Int32);
 			m_lambda_0_58_0.Body.Variables.Add(l_l_3);
-			il_lambda_0_58_2.Emit(OpCodes.Ldarg_1);
+			il_lambda_0_58_2.Emit(OpCodes.Ldarg_0);
 			il_lambda_0_58_2.Emit(OpCodes.Stloc, l_l_3);
 
 			//l = l + 1;

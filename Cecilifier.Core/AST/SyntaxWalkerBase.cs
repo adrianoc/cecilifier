@@ -453,8 +453,9 @@ namespace Cecilifier.Core.AST
                 return;
 
             Utils.EnsureNotNull(node.Parent);
-            //TODO: Add a test for parameter index for static/instance members.
-            var adjustedParameterIndex = paramSymbol.Ordinal + (method.IsStatic ? 0 : 1);
+            // We only support non-capturing lambda expressions so we handle those as static (even if the code does not mark them explicitly as such)
+            // if/when we decide to support lambdas that captures variables/fields/params/etc we will probably need to revisit this.
+            var adjustedParameterIndex = paramSymbol.Ordinal + (method.IsStatic || method.MethodKind == MethodKind.AnonymousFunction ? 0 : 1);
             if (adjustedParameterIndex > 3)
             {
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldarg, adjustedParameterIndex);
@@ -462,8 +463,7 @@ namespace Cecilifier.Core.AST
             else
             {
                 OpCode[] optimizedLdArgs = {OpCodes.Ldarg_0, OpCodes.Ldarg_1, OpCodes.Ldarg_2, OpCodes.Ldarg_3};
-                var loadOpCode = optimizedLdArgs[adjustedParameterIndex];
-                Context.EmitCilInstruction(ilVar, loadOpCode);
+                Context.EmitCilInstruction(ilVar, optimizedLdArgs[adjustedParameterIndex]);
             }
             
             EmitBoxOpCodeIfCallOnTypeParameter(ilVar, paramSymbol, parent);
