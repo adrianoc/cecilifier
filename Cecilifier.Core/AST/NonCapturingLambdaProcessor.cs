@@ -13,7 +13,7 @@ namespace Cecilifier.Core.AST
 {
     internal static class NonCapturingLambdaProcessor
     {
-        public static void InjectSyntheticMethodsForNonCapturingLambdas(IVisitorContext context, TypeDeclarationSyntax node, string declaringTypeVarName)
+        public static void InjectSyntheticMethodsForNonCapturingLambdas(IVisitorContext context, SyntaxNode node, string declaringTypeVarName)
         {
             var lambdas = node.DescendantNodesAndSelf().OfType<LambdaExpressionSyntax>();
             foreach (var lambda in lambdas)
@@ -31,7 +31,7 @@ namespace Cecilifier.Core.AST
                     continue;
                 }
             
-                InjectSyntheticMethodsFor(context, declaringTypeVarName, lambda, node);
+                InjectSyntheticMethodsFor(context, declaringTypeVarName, lambda);
             }
         }
 
@@ -63,7 +63,7 @@ namespace Cecilifier.Core.AST
             return captured.ToArray();
         }
 
-        private static void InjectSyntheticMethodsFor(IVisitorContext context, string declaringTypeVarName, LambdaExpressionSyntax lambda, TypeDeclarationSyntax declaringType)
+        private static void InjectSyntheticMethodsFor(IVisitorContext context, string declaringTypeVarName, LambdaExpressionSyntax lambda)
         {
             using var _ = LineInformationTracker.Track(context, lambda);
             

@@ -60,8 +60,9 @@ namespace Cecilifier.Core.AST
             WriteCecilExpressions(methodExps);
             WriteCecilExpressions(mainParametersExps);
             WriteCecilExpressions(mainBodyExps);
-                
             WriteCecilExpression($"{typeVar}.Methods.Add({methodVar});");
+
+            NonCapturingLambdaProcessor.InjectSyntheticMethodsForNonCapturingLambdas(context, firstGlobalStatement, typeVar);
             
             new ConstructorDeclarationVisitor(context).DefaultCtorInjector(typeVar, "Program", "MethodAttributes.Public", $"TypeHelpers.DefaultCtorFor({typeVar}.BaseType)", false, null);
         }
