@@ -1,5 +1,5 @@
 ﻿.locals init (System.Func`2<System.Int32,System.Int32> V_0)
-IL_0000: ldarg.0
+IL_0000: ldnull
 IL_0001: ldftn System.Int32 C::Lambda_5_28(System.Int32)
 IL_0007: newobj System.Void System.Func`2<System.Int32,System.Int32>::.ctor(System.Object,System.IntPtr)
 IL_000c: stloc V_0

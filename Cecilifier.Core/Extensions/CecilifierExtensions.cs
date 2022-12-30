@@ -121,8 +121,8 @@ public class SnippetRunner
                 return null;
             }
 
-            var found = toBeChecked.GetMembers().OfType<IMethodSymbol>().Where(candidate => CompareMethods(candidate, method)).SingleOrDefault();
-            if (ReferenceEquals(found, method) || found == null)
+            var found = toBeChecked.GetMembers().OfType<IMethodSymbol>().SingleOrDefault(candidate => CompareMethods(candidate, method));
+            if (SymbolEqualityComparer.Default.Equals(found, method) || found == null)
             {
                 found = FindLastDefinition(method, toBeChecked.Interfaces);
                 found = found ?? FindLastDefinition(method, toBeChecked.BaseType);
@@ -150,7 +150,7 @@ public class SnippetRunner
             if (lhs.Name != rhs.Name)
                 return false;
 
-            if (!ReferenceEquals(lhs.ReturnType, rhs.ReturnType))
+            if (!SymbolEqualityComparer.Default.Equals(lhs.ReturnType, rhs.ReturnType))
                 return false;
 
             if (lhs.Parameters.Count() != rhs.Parameters.Count())
@@ -158,7 +158,7 @@ public class SnippetRunner
 
             for (var i = 0; i < lhs.Parameters.Count(); i++)
             {
-                if (!ReferenceEquals(lhs.Parameters[i].Type, rhs.Parameters[i].Type))
+                if (!SymbolEqualityComparer.Default.Equals(lhs.Parameters[i].Type, rhs.Parameters[i].Type))
                     return false;
             }
 

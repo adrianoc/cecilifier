@@ -2,6 +2,7 @@ using System;
 using System.Runtime.CompilerServices;
 using Cecilifier.Core.AST;
 using Microsoft.CodeAnalysis;
+using IsByRefLikeAttribute = System.Runtime.CompilerServices.IsByRefLikeAttribute;
 
 namespace Cecilifier.Core.TypeSystem;
 
@@ -26,8 +27,12 @@ internal struct RoslynTypeSystem
         SystemString = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_String);
         SystemVoid = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Void);
         SystemObject = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Object);
+        SystemBoolean = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Boolean);
         SystemIDisposable = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(IDisposable).FullName);
-        SystemRuntimeCompilerServices = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(IsReadOnlyAttribute).FullName); 
+        IsReadOnlyAttribute = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(IsReadOnlyAttribute).FullName); 
+        SystemActivator = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(Activator).FullName); 
+        IsByRefLikeAttribute = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(IsByRefLikeAttribute).FullName);
+        SystemObsoleteAttribute = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(ObsoleteAttribute).FullName);
     }
     
     public ITypeSymbol SystemIndex { get; }
@@ -41,8 +46,11 @@ internal struct RoslynTypeSystem
     public ITypeSymbol SystemString { get; }
     public ITypeSymbol SystemVoid { get; }
     public ITypeSymbol SystemObject { get; }
-    public ITypeSymbol CallerArgumentExpressionAttribute { get; }
+    public ITypeSymbol SystemBoolean { get; }
+    public ITypeSymbol SystemActivator { get; }
     public ITypeSymbol SystemIDisposable { get; }
-
-    public ITypeSymbol SystemRuntimeCompilerServices { get; }
+    public ITypeSymbol CallerArgumentExpressionAttribute { get; }
+    public ITypeSymbol IsReadOnlyAttribute { get; }
+    public ITypeSymbol IsByRefLikeAttribute { get; }
+    public ITypeSymbol SystemObsoleteAttribute { get; }
 }

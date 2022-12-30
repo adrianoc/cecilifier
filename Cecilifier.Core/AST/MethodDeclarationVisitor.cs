@@ -42,7 +42,8 @@ namespace Cecilifier.Core.AST
                 false,
                 s => { base.VisitLocalFunctionStatement(node); },
                 node.AttributeLists,
-                node.ParameterList.Parameters);
+                node.ParameterList.Parameters,
+                node.TypeParameterList?.Parameters.ToArray());
             
         }
 

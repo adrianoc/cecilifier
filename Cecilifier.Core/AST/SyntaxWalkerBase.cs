@@ -140,9 +140,23 @@ namespace Cecilifier.Core.AST
 
         protected void LoadLiteralValue(string ilVar, ITypeSymbol type, string value, bool isTargetOfCall)
         {
+            if (type.TypeKind == TypeKind.TypeParameter)
+            {
+                var resolvedType = Context.TypeResolver.Resolve(type);
+                var tempVar = AddLocalVariableToCurrentMethod(type.Name, resolvedType);
+                
+                Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, tempVar);
+                Context.EmitCilInstruction(ilVar, OpCodes.Initobj, resolvedType);
+                return;
+            }
+            
             switch (type.SpecialType)
             {
                 case SpecialType.System_Object:
+                case SpecialType.System_Collections_IEnumerator:
+                case SpecialType.System_Collections_Generic_IEnumerator_T:
+                case SpecialType.System_Collections_IEnumerable:
+                case SpecialType.System_Collections_Generic_IEnumerable_T:
                 case SpecialType.None:
                     if (type.TypeKind == TypeKind.Pointer)
                     {
@@ -175,6 +189,11 @@ namespace Cecilifier.Core.AST
                 case SpecialType.System_Boolean:
                     LoadLiteralToStackHandlingCallOnValueTypeLiterals(ilVar, type, Boolean.Parse(value) ? 1 : 0, isTargetOfCall);
                     break;
+                
+                case SpecialType.System_IntPtr:
+                    LoadLiteralToStackHandlingCallOnValueTypeLiterals(ilVar, type, value, isTargetOfCall);
+                    Context.EmitCilInstruction(ilVar, OpCodes.Conv_I);
+                    break;
 
                 default:
                     throw new ArgumentException($"Literal {value} of type {type.SpecialType} not supported yet.");
@@ -193,6 +212,10 @@ namespace Cecilifier.Core.AST
         {
             switch (type.SpecialType)
             {
+                case SpecialType.System_IntPtr:
+                case SpecialType.System_UIntPtr:
+                    return OpCodes.Ldc_I4;
+                
                 case SpecialType.System_Single:
                     return OpCodes.Ldc_R4;
 
@@ -245,9 +268,9 @@ namespace Cecilifier.Core.AST
             return Context.GetDeclaredSymbol(node);
         }
 
-        protected ITypeSymbol DeclaredSymbolFor(TypeDeclarationSyntax node)
+        protected INamedTypeSymbol DeclaredSymbolFor(TypeDeclarationSyntax node)
         {
-            return Context.GetDeclaredSymbol(node);
+            return Context.GetDeclaredSymbol(node).EnsureNotNull<ITypeSymbol, INamedTypeSymbol>();
         }
 
         protected void WithCurrentMethod(string declaringTypeName, string localVariable, string methodName, string[] paramTypes, Action<string> action)
@@ -258,11 +281,12 @@ namespace Cecilifier.Core.AST
             }
         }
 
-        protected static string TypeModifiersToCecil(SyntaxNode node, SyntaxTokenList modifiers)
+        protected static string TypeModifiersToCecil(INamedTypeSymbol typeSymbol, SyntaxTokenList modifiers)
         {
-            var hasStaticCtor = node.DescendantNodes().OfType<ConstructorDeclarationSyntax>().Any(d => d.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword)));
-            var typeAttributes = new StringBuilder(CecilDefinitionsFactory.DefaultTypeAttributeFor(node.Kind(), hasStaticCtor));
-            if (IsNestedTypeDeclaration(node))
+            var hasStaticCtor = typeSymbol.Constructors.Any(ctor => ctor.IsStatic && !ctor.IsImplicitlyDeclared);
+            var typeAttributes = new StringBuilder(CecilDefinitionsFactory.DefaultTypeAttributeFor(typeSymbol.TypeKind, hasStaticCtor));
+            AppendStructLayoutTo(typeSymbol, typeAttributes);
+            if (typeSymbol.ContainingType != null)
             {
                 if (modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword)))
                 {
@@ -283,7 +307,8 @@ namespace Cecilifier.Core.AST
                     || token.IsKind(SyntaxKind.UnsafeKeyword)
                     || token.IsKind(SyntaxKind.AsyncKeyword)
                     || token.IsKind(SyntaxKind.ExternKeyword)
-                    || token.IsKind(SyntaxKind.ReadOnlyKeyword);
+                    || token.IsKind(SyntaxKind.ReadOnlyKeyword)
+                    || token.IsKind(SyntaxKind.RefKeyword);
                 
                 if (isModifierWithNoILRepresentation)                
                     return Array.Empty<string>();
@@ -302,6 +327,30 @@ namespace Cecilifier.Core.AST
                 };
                 
                 return new[] { mapped };
+            }
+        }
+
+        private static void AppendStructLayoutTo(ITypeSymbol typeSymbol, StringBuilder typeAttributes)
+        {
+            if (typeSymbol.TypeKind != TypeKind.Struct)
+                return;
+            
+            var structLayoutAttribute = typeSymbol.GetAttributes().FirstOrDefault(attrData => attrData.AttributeClass.FullyQualifiedName().Contains("System.Runtime.InteropServices.StructLayoutAttribute"));
+            if (structLayoutAttribute == null)
+            {
+                typeAttributes.AppendModifier("TypeAttributes.SequentialLayout");
+            }
+            else
+            {
+                var specifiedLayout = ((LayoutKind) structLayoutAttribute.ConstructorArguments.First().Value) switch
+                {
+                    LayoutKind.Auto => "TypeAttributes.AutoLayout",
+                    LayoutKind.Explicit => "TypeAttributes.ExplicitLayout",
+                    LayoutKind.Sequential => "TypeAttributes.SequentialLayout",
+                    _ => throw new ArgumentException($"Invalid StructLayout value for {typeSymbol.Name}")
+                };
+                
+                typeAttributes.AppendModifier($"TypeAttributes.{specifiedLayout}");
             }
         }
 
@@ -404,8 +453,9 @@ namespace Cecilifier.Core.AST
                 return;
 
             Utils.EnsureNotNull(node.Parent);
-            //TODO: Add a test for parameter index for static/instance members.
-            var adjustedParameterIndex = paramSymbol.Ordinal + (method.IsStatic ? 0 : 1);
+            // We only support non-capturing lambda expressions so we handle those as static (even if the code does not mark them explicitly as such)
+            // if/when we decide to support lambdas that captures variables/fields/params/etc we will probably need to revisit this.
+            var adjustedParameterIndex = paramSymbol.Ordinal + (method.IsStatic || method.MethodKind == MethodKind.AnonymousFunction ? 0 : 1);
             if (adjustedParameterIndex > 3)
             {
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldarg, adjustedParameterIndex);
@@ -413,8 +463,7 @@ namespace Cecilifier.Core.AST
             else
             {
                 OpCode[] optimizedLdArgs = {OpCodes.Ldarg_0, OpCodes.Ldarg_1, OpCodes.Ldarg_2, OpCodes.Ldarg_3};
-                var loadOpCode = optimizedLdArgs[adjustedParameterIndex];
-                Context.EmitCilInstruction(ilVar, loadOpCode);
+                Context.EmitCilInstruction(ilVar, optimizedLdArgs[adjustedParameterIndex]);
             }
             
             EmitBoxOpCodeIfCallOnTypeParameter(ilVar, paramSymbol, parent);
@@ -821,7 +870,7 @@ namespace Cecilifier.Core.AST
             
                 // Attribute is defined in the same assembly. We need to find the variable that holds its "ctor declaration"
                 var attrCtor = attrType.GetMembers().OfType<IMethodSymbol>().SingleOrDefault(m => m.MethodKind == MethodKind.Constructor && m.Parameters.Length == attrArgs.Length);
-                EnsureForwardedMethod(context, context.Naming.SyntheticVariable(attribute.Name.ValueText().AttributeName(), ElementKind.Constructor), attrCtor, Array.Empty<TypeParameterSyntax>());
+                EnsureForwardedMethod(context, attrCtor, Array.Empty<TypeParameterSyntax>());
                 var attrCtorVar = context.DefinitionVariables.GetMethodVariable(attrCtor.AsMethodDefinitionVariable());
                 if (!attrCtorVar.IsValid)
                     throw new Exception($"Could not find variable for {attrCtor.ContainingType.Name} ctor.");
@@ -833,7 +882,7 @@ namespace Cecilifier.Core.AST
         }
         
         /*
-         * Ensure forward member references are correcly handled, i.e, support for scenario in which a method is being referenced
+         * Ensure forward member references are correctly handled, i.e, support for scenario in which a method is being referenced
          * before it has been declared. This can happen for instance in code like:
          *
          * class C
@@ -845,21 +894,27 @@ namespace Cecilifier.Core.AST
          * In this case when the first reference to Bar() is found (in method Foo()) the method itself has not been defined yet
          * so we add a MethodDefinition for it but *no body*. Method body will be processed later, when the method is visited.
          */
-        protected static void EnsureForwardedMethod(IVisitorContext context, string methodDeclarationVar, IMethodSymbol method, TypeParameterSyntax[] typeParameters)
+        protected static void EnsureForwardedMethod(IVisitorContext context, IMethodSymbol method, TypeParameterSyntax[] typeParameters)
         {
             if (!method.IsDefinedInCurrentAssembly(context))
                 return;
-
+            
             var found = context.DefinitionVariables.GetMethodVariable(method.AsMethodDefinitionVariable());
             if (found.IsValid)
                 return;
 
+            string methodDeclarationVar;
             if (method.MethodKind == MethodKind.LocalFunction)
             {
+                methodDeclarationVar = context.Naming.SyntheticVariable(method.Name, ElementKind.Method);
                 MethodDeclarationVisitor.AddMethodDefinition(context, methodDeclarationVar, $"<{method.ContainingSymbol.Name}>g__{method.Name}|0_0", "MethodAttributes.Assembly | MethodAttributes.Static | MethodAttributes.HideBySig", method.ReturnType, method.ReturnsByRef, typeParameters);
             }
             else
             {
+                methodDeclarationVar = method.MethodKind == MethodKind.Constructor
+                    ? context.Naming.Constructor((BaseTypeDeclarationSyntax) method.ContainingType.DeclaringSyntaxReferences.SingleOrDefault()?.GetSyntax(), method.IsStatic)
+                    : context.Naming.MethodDeclaration((BaseMethodDeclarationSyntax) method.DeclaringSyntaxReferences.SingleOrDefault()?.GetSyntax());
+                
                 MethodDeclarationVisitor.AddMethodDefinition(context, methodDeclarationVar, method.Name, "MethodAttributes.Private", method.ReturnType, method.ReturnsByRef, typeParameters);
             }
 

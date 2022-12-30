@@ -16,6 +16,7 @@ namespace Cecilifier.Core.TypeSystem
                 [SpecialType.System_String] = typeResolver.ResolvePredefinedType(context.RoslynTypeSystem.SystemString), 
                 [SpecialType.System_Void] = typeResolver.ResolvePredefinedType(context.RoslynTypeSystem.SystemVoid), 
                 [SpecialType.System_Object] = typeResolver.ResolvePredefinedType(context.RoslynTypeSystem.SystemObject), 
+                [SpecialType.System_Boolean] = typeResolver.ResolvePredefinedType(context.RoslynTypeSystem.SystemBoolean), 
                 [SpecialType.System_Enum] = typeResolver.Resolve("System.Enum"), 
                 [SpecialType.System_MulticastDelegate] = typeResolver.Resolve("System.MulticastDelegate"), 
                 [SpecialType.System_AsyncCallback] = typeResolver.Resolve("System.AsyncCallback"), 
@@ -27,6 +28,7 @@ namespace Cecilifier.Core.TypeSystem
         public string Int64 => _resolvedTypes[SpecialType.System_Int64];
         public string String => _resolvedTypes[SpecialType.System_String];
         public string Object => _resolvedTypes[SpecialType.System_Object];
+        public string Boolean => _resolvedTypes[SpecialType.System_Boolean];
         public string IntPtr => _resolvedTypes[SpecialType.System_IntPtr];
         public string Void => _resolvedTypes[SpecialType.System_Void];
         public string Enum => _resolvedTypes[SpecialType.System_Enum];

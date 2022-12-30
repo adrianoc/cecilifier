@@ -200,5 +200,36 @@ namespace Cecilifier.Core.Extensions
        
         public static OpCode LoadOpCodeForFieldAccess(this ISymbol symbol) => symbol.IsStatic ? OpCodes.Ldsfld : OpCodes.Ldfld;
         public static OpCode StoreOpCodeForFieldAccess(this ISymbol symbol) => symbol.IsStatic ? OpCodes.Stsfld : OpCodes.Stfld;
+        
+        public static string ValueForDefaultLiteral(this ITypeSymbol literalType) => literalType switch
+        {
+            { SpecialType: SpecialType.System_Char } => "0",
+            { SpecialType: SpecialType.System_SByte } => "0",
+            { SpecialType: SpecialType.System_Byte } => "0",
+            { SpecialType: SpecialType.System_Int16 } => "0",
+            { SpecialType: SpecialType.System_UInt16 } => "0",
+            { SpecialType: SpecialType.System_Int32 } => "0",
+            { SpecialType: SpecialType.System_UInt32 } => "0",
+            { SpecialType: SpecialType.System_Int64 } => "0L",
+            { SpecialType: SpecialType.System_UInt64 } => "0L",
+            { SpecialType: SpecialType.System_Single } => "0.0F",
+            { SpecialType: SpecialType.System_Double } => "0.0D",
+            { SpecialType: SpecialType.System_Boolean } => "false",
+            { SpecialType: SpecialType.System_IntPtr } => "0",
+            { SpecialType: SpecialType.System_UIntPtr } => "0",
+            { SpecialType: SpecialType.System_String } => null,
+            { TypeKind: TypeKind.TypeParameter } => null,
+            { TypeKind: TypeKind.Class } => null,
+            { TypeKind: TypeKind.Interface } => null,
+            { TypeKind: TypeKind.Struct } => null,
+            { TypeKind: TypeKind.Pointer } => null,
+            { TypeKind: TypeKind.Delegate } => null,
+            _ => throw new ArgumentOutOfRangeException(nameof(literalType), literalType, null)
+        };
+        
+        public static IMethodSymbol ParameterlessCtor(this ITypeSymbol self) => self?.GetMembers(".ctor").OfType<IMethodSymbol>().Single(ctor => ctor.Parameters.Length == 0);
+        public static IMethodSymbol Ctor(this ITypeSymbol self, params ITypeSymbol []parameters) => self?.GetMembers(".ctor")
+                                                                                                .OfType<IMethodSymbol>()
+                                                                                                .Single(ctor => ctor.Parameters.Select(p => p.Type).SequenceEqual(parameters, SymbolEqualityComparer.Default));
     }
 }

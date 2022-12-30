@@ -4,6 +4,7 @@ using System.Linq;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Misc;
+using Cecilifier.Core.Naming;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -124,7 +125,7 @@ namespace Cecilifier.Core.AST
             var found = Context.DefinitionVariables.GetVariable(typeSymbol.Name, VariableMemberKind.Type, typeSymbol.ContainingType?.Name);
             if (!found.IsValid || !found.IsForwarded)
             {
-                AddTypeDefinition(Context, varName, typeSymbol, TypeModifiersToCecil(node, node.Modifiers), node.TypeParameterList?.Parameters, node.CollectOuterTypeArguments());
+                AddTypeDefinition(Context, varName, typeSymbol, TypeModifiersToCecil(typeSymbol, node.Modifiers), node.TypeParameterList?.Parameters, node.CollectOuterTypeArguments());
             }
 
             if (typeSymbol.BaseType?.IsGenericType == true)
@@ -155,7 +156,7 @@ namespace Cecilifier.Core.AST
             
             var typeDeclaration =  (BaseTypeDeclarationSyntax) typeSymbol.DeclaringSyntaxReferences.First().GetSyntax();
             var typeDeclarationVar = context.Naming.Type(typeSymbol.Name, typeSymbol.TypeKind.ToElementKind());
-            AddTypeDefinition(context, typeDeclarationVar, typeSymbol, TypeModifiersToCecil(typeDeclaration, typeDeclaration.Modifiers), typeParameters, Array.Empty<TypeParameterSyntax>());
+            AddTypeDefinition(context, typeDeclarationVar, typeSymbol, TypeModifiersToCecil((INamedTypeSymbol) typeSymbol, typeDeclaration.Modifiers), typeParameters, Array.Empty<TypeParameterSyntax>());
             
             var v = context.DefinitionVariables.RegisterNonMethod(typeSymbol.ContainingSymbol?.FullyQualifiedName(), typeSymbol.Name, VariableMemberKind.Type, typeDeclarationVar);
             v.IsForwarded = true;
@@ -213,15 +214,25 @@ processGenerics:
         
         private void ProcessStructPseudoAttributes(string structDefinitionVar, INamedTypeSymbol structSymbol)
         {
-            if (!structSymbol.IsReadOnly)
-                return;
-            
-            var isReadOnlyAttributeCtor = Context.RoslynTypeSystem.SystemRuntimeCompilerServices
-                ?.GetMembers(".ctor")
-                .OfType<IMethodSymbol>()
-                .Single(ctor => ctor.Parameters.Length == 0);
+            if (structSymbol.IsReadOnly)
+            {
+                var ctor = Context.RoslynTypeSystem.IsReadOnlyAttribute.ParameterlessCtor();
+                Context.WriteCecilExpression($"{structDefinitionVar}.CustomAttributes.Add(new CustomAttribute({ctor.MethodResolverExpression(Context)}));");
+            }
 
-            Context.WriteCecilExpression($"{structDefinitionVar}.CustomAttributes.Add(new CustomAttribute({isReadOnlyAttributeCtor.MethodResolverExpression(Context)}));");
+            if (structSymbol.IsRefLikeType)
+            {
+                var ctor = Context.RoslynTypeSystem.IsByRefLikeAttribute.ParameterlessCtor();
+                Context.WriteCecilExpression($"{structDefinitionVar}.CustomAttributes.Add(new CustomAttribute({ctor.MethodResolverExpression(Context)}));\n"); 
+                
+                var obsoleteAttrCtor = Context.RoslynTypeSystem.SystemObsoleteAttribute.Ctor(Context.RoslynTypeSystem.SystemString, Context.RoslynTypeSystem.SystemBoolean);
+                var obsoleteAttributeVar = Context.Naming.SyntheticVariable("obsolete", ElementKind.Attribute);
+                const string RefStructObsoleteMsg = "Types with embedded references are not supported in this version of your compiler.";
+                Context.WriteCecilExpression($"var {obsoleteAttributeVar} = new CustomAttribute({obsoleteAttrCtor.MethodResolverExpression(Context)});\n");
+                Context.WriteCecilExpression($"{obsoleteAttributeVar}.ConstructorArguments.Add(new CustomAttributeArgument({Context.TypeResolver.Bcl.System.String}, \"{RefStructObsoleteMsg}\"));\n");
+                Context.WriteCecilExpression($"{obsoleteAttributeVar}.ConstructorArguments.Add(new CustomAttributeArgument({Context.TypeResolver.Bcl.System.Boolean}, true));\n");
+                Context.WriteCecilExpression($"{structDefinitionVar}.CustomAttributes.Add({obsoleteAttributeVar});\n");
+            }
         }
     }
 

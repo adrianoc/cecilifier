@@ -1,4 +1,10 @@
 ## [Unreleased]
+## Changed
+- bumped cecilifier version to 1.80.0
+- added support for default expression/literal
+- improved handling of (U)IntPtr/pointer literals
+
+## Fixed
 
 ## 22/Nov/2022
 

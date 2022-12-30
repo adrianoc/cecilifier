@@ -61,6 +61,24 @@ public class TypeResolutionTests : CecilifierUnitTestBase
             Assert.That(cecilifiedCode, Does.Match(current));
     }
 
+    [TestCase("static void Test<T>(T value) { }", @"var p_value_\d+ = new ParameterDefinition\(""value"", ParameterAttributes.None, gp_T_\d+\);", TestName = "Parameter")]
+    [TestCase("static T Test<T>(T t) => t;", "m_test_6.ReturnType = gp_T_7;", TestName = "Return")]
+    public void GenericTypeParameterInTopLevelMethod(string code, string testSpecificExpectation)
+    {
+        var result = RunCecilifier(code);
+
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+        Assert.That(
+            cecilifiedCode, 
+            Does.Match(
+                @"var (gp_T_\d+) = new Mono.Cecil.GenericParameter\(""T"", (m_test_\d+)\);\s+" + 
+                      @"\2.GenericParameters.Add\(\1\);\s+"));
+
+        Assert.That(
+            cecilifiedCode, 
+            Does.Match(testSpecificExpectation));
+    }
+
     private static IEnumerable ExternalTypeTestScenarios()
     {
         const string fieldTemplate = @"using System.Collections; class Foo {{ {0} field; }}";

@@ -378,17 +378,17 @@ namespace Cecilifier.Core.Misc
             return exps;
         }
         
-        public static string DefaultTypeAttributeFor(SyntaxKind syntaxKind, bool hasStaticCtor)
+        public static string DefaultTypeAttributeFor(TypeKind typeKind, bool hasStaticCtor)
         {
             var basicClassAttrs = "TypeAttributes.AnsiClass" + (hasStaticCtor ? "" : " | TypeAttributes.BeforeFieldInit");
-            return syntaxKind switch
+            return typeKind switch
             {
-                SyntaxKind.StructDeclaration => "TypeAttributes.SequentialLayout | TypeAttributes.Sealed |" + basicClassAttrs,
-                SyntaxKind.ClassDeclaration => basicClassAttrs,
-                SyntaxKind.InterfaceDeclaration => "TypeAttributes.Interface | TypeAttributes.Abstract",
-                SyntaxKind.DelegateDeclaration => "TypeAttributes.Sealed",
-                SyntaxKind.EnumDeclaration => string.Empty,
-                _ => throw new Exception("Not supported type declaration: " + syntaxKind)
+                TypeKind.Struct => "TypeAttributes.Sealed |" + basicClassAttrs,
+                TypeKind.Class => basicClassAttrs,
+                TypeKind.Interface => "TypeAttributes.Interface | TypeAttributes.Abstract",
+                TypeKind.Delegate => "TypeAttributes.Sealed",
+                TypeKind.Enum => string.Empty,
+                _ => throw new Exception("Not supported type declaration: " + typeKind)
             };
         }
 

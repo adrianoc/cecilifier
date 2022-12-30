@@ -19,7 +19,7 @@ namespace Cecilifier.Core.AST
         {
             HandleAttributesInMemberDeclaration(node.AttributeLists, "assembly");
             base.VisitCompilationUnit(node);
-            VisitDeclaredTypesSortedByDepenendecies();
+            VisitDeclaredTypesSortedByDependencies();
         }
      
         public override void VisitGlobalStatement(GlobalStatementSyntax node)
@@ -43,7 +43,7 @@ namespace Cecilifier.Core.AST
             new TypeDeclarationVisitor(Context).Visit(node);
         }
 
-        private void VisitDeclaredTypesSortedByDepenendecies()
+        private void VisitDeclaredTypesSortedByDependencies()
         {
             var collectedTypes = new TypeDependency.TypeDependencyCollector((CSharpCompilation)Context.SemanticModel.Compilation);
             foreach (var typeDeclaration in collectedTypes.Ordered.Dependencies)

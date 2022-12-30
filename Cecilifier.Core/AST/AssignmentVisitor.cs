@@ -85,19 +85,9 @@ namespace Cecilifier.Core.AST
                 return;
             }
             
-            // push `implicit this` (target of the assignment) to the stack if needed.
-            if (!member.Symbol.IsStatic 
-
-                && member.Symbol.Kind != SymbolKind.Parameter // Parameters/Locals are never leafs in a MemberReferenceExpression
-                && member.Symbol.Kind != SymbolKind.Local
-                
-                && !node.Parent.IsKind(SyntaxKind.SimpleMemberAccessExpression))
-            { 
-                InsertCilInstructionAfter<string>(InstructionPrecedingValueToLoad, ilVar, OpCodes.Ldarg_0);
-            }
-
+            LoadImplicitTargetForMemberReference(node, member.Symbol);
             AddCallToOpImplicitIfRequired(node);
-
+            
             switch (member.Symbol)
             {
                 case IParameterSymbol parameter:
@@ -130,6 +120,25 @@ namespace Cecilifier.Core.AST
             base.VisitPrefixUnaryExpression(node);
         }
 
+        // In code like var x = new Foo { ["someValue"] = 1 };
+        // '["someValue] = 1' is represented as an implicit element access.
+        // The object being instantiated ('Foo' in this case) must have a compatible
+        // indexer (in this case one taking a string and returning an integer).
+        public override void VisitImplicitElementAccess(ImplicitElementAccessSyntax node)
+        {
+            //using var _ = LineInformationTracker.Track(Context, node);
+            var lastInstructionLoadingRhs = Context.CurrentLine;
+            
+            Context.EmitCilInstruction(ilVar, OpCodes.Dup);
+            foreach (var arg in node.ArgumentList.Arguments) 
+            {
+                ExpressionVisitor.Visit(Context, ilVar, arg.Expression);
+                HandleIndexer(node, lastInstructionLoadingRhs);
+            }
+            
+            base.VisitImplicitElementAccess(node);
+        }
+
         private void AddCallToOpImplicitIfRequired(IdentifierNameSyntax node)
         {
             if (node.Parent is not AssignmentExpressionSyntax assignmentExpression || assignmentExpression.Left != node)
@@ -143,13 +152,32 @@ namespace Cecilifier.Core.AST
             }
         }
 
-        bool HandleIndexer(ElementAccessExpressionSyntax node, LinkedListNode<string> lastInstructionLoadingRhs)
+        void LoadImplicitTargetForMemberReference(IdentifierNameSyntax node, ISymbol memberSymbol)
+        {
+            // push `implicit this` (target of the assignment) to the stack if needed.
+            if (!memberSymbol.IsStatic 
+
+                && memberSymbol.Kind != SymbolKind.Parameter // Parameters/Locals are never leafs in a MemberReferenceExpression
+                && memberSymbol.Kind != SymbolKind.Local
+                
+                && !node.Parent.IsKind(SyntaxKind.SimpleMemberAccessExpression))
+            { 
+                // we have either 1) an assignment to member in object initializer. For instance, var x = new Foo { Value = 1 }
+                // i.e, `Value = 1`, in which case the stack top will contain the reference to the newly instantiate object;
+                // in this case we only need to duplicate the top of the stack, or 2) an implicit reference to `this`.
+                var loadOpCode = node.Parent != null && node.Parent.Parent.IsKind(SyntaxKind.ObjectInitializerExpression) 
+                                        ? OpCodes.Dup 
+                                        : OpCodes.Ldarg_0;
+
+                InsertCilInstructionAfter<string>(InstructionPrecedingValueToLoad, ilVar, loadOpCode);
+            }
+        }
+
+        bool HandleIndexer(SyntaxNode node, LinkedListNode<string> lastInstructionLoadingRhs)
         {
             var expSymbol = Context.SemanticModel.GetSymbolInfo(node).Symbol;
             if (expSymbol is not IPropertySymbol propertySymbol)
-            {
                 return false;
-            }
 
             if (propertySymbol.RefKind == RefKind.Ref)
             {

@@ -176,6 +176,8 @@ function initializeSite(errorAccessingGist, gist, version) {
 
         initializeFormattingSettings();
         setSendToDiscordTooltip();
+
+        initializeHoverProvider()
         
         handleGist(gist, errorAccessingGist);
         
@@ -855,7 +857,7 @@ function setupCursorTracking() {
         
         for(let i = 0; i < blockMappings.length; i++)
         {
-            if (e.target.position.lineNumber < blockMappings[i].Cecilified.Begin.Line || e.target.position.lineNumber > blockMappings[i].Cecilified.End.Line)
+            if (e.target.position === null || e.target.position.lineNumber < blockMappings[i].Cecilified.Begin.Line || e.target.position.lineNumber > blockMappings[i].Cecilified.End.Line)
                 continue;
             
             csharpCode.setSelection( { startColumn: blockMappings[i].Source.Begin.Column, endColumn: blockMappings[i].Source.End.Column, startLineNumber: blockMappings[i].Source.Begin.Line, endLineNumber: blockMappings[i].Source.End.Line });

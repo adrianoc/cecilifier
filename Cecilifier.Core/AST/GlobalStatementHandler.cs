@@ -19,7 +19,7 @@ namespace Cecilifier.Core.AST
 
             var hasReturnStatement = firstGlobalStatement.Parent!.DescendantNodes().Any(node => node.IsKind(SyntaxKind.ReturnStatement));
 
-            var typeModifiers = CecilDefinitionsFactory.DefaultTypeAttributeFor(SyntaxKind.ClassDeclaration, false).AppendModifier("TypeAttributes.NotPublic | TypeAttributes.AutoLayout");
+            var typeModifiers = CecilDefinitionsFactory.DefaultTypeAttributeFor(TypeKind.Class, false).AppendModifier("TypeAttributes.NotPublic | TypeAttributes.AutoLayout");
             typeVar = context.Naming.Type("topLevelStatements", ElementKind.Class);
             var typeExps = CecilDefinitionsFactory.Type(
                 context, 
@@ -60,8 +60,9 @@ namespace Cecilifier.Core.AST
             WriteCecilExpressions(methodExps);
             WriteCecilExpressions(mainParametersExps);
             WriteCecilExpressions(mainBodyExps);
-                
             WriteCecilExpression($"{typeVar}.Methods.Add({methodVar});");
+
+            NonCapturingLambdaProcessor.InjectSyntheticMethodsForNonCapturingLambdas(context, firstGlobalStatement, typeVar);
             
             new ConstructorDeclarationVisitor(context).DefaultCtorInjector(typeVar, "Program", "MethodAttributes.Public", $"TypeHelpers.DefaultCtorFor({typeVar}.BaseType)", false, null);
         }

@@ -9,8 +9,8 @@ namespace Cecilifier.Core.Tests.Tests.Unit
         public void ExplicitTypeArgument()
         {
             var code = "class Foo { void M<T>() {} void Explicit() { M<int>(); }  }";
-            var expectedSnippet = @"var gi_M_8 = new GenericInstanceMethod\(r_M_7\).+\s+" + 
-                                       @"gi_M_8.GenericArguments.Add\(assembly.MainModule.TypeSystem.Int32\);\s+";
+            var expectedSnippet = @"var (gi_M_\d+) = new GenericInstanceMethod\(r_M_\d+\).+\s+" + 
+                                       @"\1.GenericArguments.Add\(assembly.MainModule.TypeSystem.Int32\);\s+";
             
             var result = RunCecilifier(code);
             Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(expectedSnippet));
@@ -20,8 +20,8 @@ namespace Cecilifier.Core.Tests.Tests.Unit
         public void InferredTypeArgument()
         {
             var code = "class Foo { void M<T>(T t) {} void Inferred() { M(10); }  }";
-            var expectedSnippet = @"var gi_M_9 = new GenericInstanceMethod\(r_M_8\).+\s+" + 
-                                  @"gi_M_9.GenericArguments.Add\(assembly.MainModule.TypeSystem.Int32\);\s+";
+            var expectedSnippet = @"var (gi_M_\d+) = new GenericInstanceMethod\(r_M_\d+\).+\s+" + 
+                                  @"\1.GenericArguments.Add\(assembly.MainModule.TypeSystem.Int32\);\s+";
 
             var result = RunCecilifier(code);
             Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(expectedSnippet));
@@ -43,18 +43,18 @@ namespace Cecilifier.Core.Tests.Tests.Unit
                 Does.Match(
                     @"//Bar\(true\);\s+" +
                     @"il_callBar_7.Emit\(OpCodes.Ldarg_0\);\s+" +
-                    @"var r_bar_10 = new MethodReference\(m_bar_2.Name, m_bar_2.ReturnType\).+DeclaringType = cls_foo_0.MakeGenericInstanceType\(gp_T_1\).+;\s+" +
+                    @"var (r_bar_\d+) = new MethodReference\(m_bar_2.Name, m_bar_2.ReturnType\).+DeclaringType = cls_foo_0.MakeGenericInstanceType\(gp_T_1\).+;\s+" +
                     @"foreach\(.+m_bar_2.Parameters\)\s+" +
                     @".+{\s+" +
-                    @"r_bar_10.Parameters.Add\(new ParameterDefinition\(p.Name, p.Attributes, p.ParameterType\)\);\s+" +
+                    @"\1.Parameters.Add\(new ParameterDefinition\(p.Name, p.Attributes, p.ParameterType\)\);\s+" +
                     @".+}\s+" +
                     @"foreach\(.+m_bar_2.GenericParameters\)\s+" +
                     @".+{\s+" +
-                    @"r_bar_10.GenericParameters.Add\(.+\);\s+" +
+                    @"\1.GenericParameters.Add\(.+\);\s+" +
                     @".+}\s+" +
                     @".+\s+" +
-                    @"var gi_bar_11 = new GenericInstanceMethod\(r_bar_9\);\s+" +
-                    @"gi_bar_11.GenericArguments.Add\(assembly.MainModule.TypeSystem.Boolean\);"));
+                    @"var (gi_bar_\d+) = new GenericInstanceMethod\(r_bar_\d+\);\s+" +
+                    @"\2.GenericArguments.Add\(assembly.MainModule.TypeSystem.Boolean\);"));
         }
         
         [Test]
@@ -73,14 +73,14 @@ namespace Cecilifier.Core.Tests.Tests.Unit
                 Does.Match(
                     @"//Bar<float>\(\);\s+" +
                     @"il_callBar_6.Emit\(OpCodes.Ldarg_0\);\s+" +
-                    @"var r_bar_9 = new MethodReference\(m_bar_2.Name, m_bar_2.ReturnType\).+DeclaringType = cls_foo_0.MakeGenericInstanceType\(gp_T_1\).+;\s+" +
+                    @"var r_bar_8 = new MethodReference\(m_bar_2.Name, m_bar_2.ReturnType\).+DeclaringType = cls_foo_0.MakeGenericInstanceType\(gp_T_1\).+;\s+" +
                     @"foreach\(.+m_bar_2.GenericParameters\)\s+" +
                     @".+{\s+" +
-                    @"r_bar_9.GenericParameters.Add\(.+\);\s+" +
+                    @"r_bar_8.GenericParameters.Add\(.+\);\s+" +
                     @".+}\s+" +
                     @".+\s+" +
-                    @"var gi_bar_10 = new GenericInstanceMethod\(r_bar_8\);\s+" +
-                    @"gi_bar_10.GenericArguments.Add\(assembly.MainModule.TypeSystem.Single\);"));
+                    @"var gi_bar_9 = new GenericInstanceMethod\(r_bar_7\);\s+" +
+                    @"gi_bar_9.GenericArguments.Add\(assembly.MainModule.TypeSystem.Single\);"));
         }
 
         [Test]
@@ -102,6 +102,16 @@ namespace Cecilifier.Core.Tests.Tests.Unit
 
             Assert.That(cecilifiedCode, Contains.Substring("il_M_9.Emit(OpCodes.Starg_S, p_t_6);")); // t = tl; ensures that the forwarded parameters has been used in M()'s implementation
         }
-        
+
+        [TestCase(@"class Foo<T> where T : new() { T M() => new T(); }")]
+        [TestCase(@"class Foo { T M<T>() where T : new() => new T(); }")]
+        public void TestInstantiatingGenericTypeParameter(string code)
+        {
+            var result = RunCecilifier(code);
+            var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+            
+            Assert.That(cecilifiedCode, Does.Match(@"il_M_\d+.Emit\(OpCodes.Call, .+ImportReference\(typeof\(System\.Activator\)\)\.MakeGenericInstanceType\(gp_T_\d+\)\);"));
+            Assert.That(cecilifiedCode, Does.Match(@"m_M_\d+\.ReturnType = gp_T_\d+;"));
+        }
     }
 }

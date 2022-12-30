@@ -1,7 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Text;
+using System.Runtime.CompilerServices;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -20,45 +21,12 @@ namespace Cecilifier.Core.Extensions
         /// </remarks>
         public static string HumanReadableSummary(this SyntaxNode node)
         {
-            // ignores attribute lists since they are the parent of ParameterLists (this is odd. I'd expect the parent node of a ParameterList to be a method/property/event declaration)
-            var found = true;
-            var nodesAndTokens = node.ChildNodesAndTokens().ToArray().Where(t => !t.IsKind(SyntaxKind.AttributeList)).TakeWhile( c =>
-            {
-                var previous = found;
-                found = !c.HasTrailingTrivia || !c.GetTrailingTrivia().Any(t => t.IsKind(SyntaxKind.EndOfLineTrivia));
+            var nodeAsString = node.ToString();
+            var newLineIndex = nodeAsString.IndexOf('\n');
+            if (newLineIndex == -1)
+                return nodeAsString;
 
-                return previous;
-            }).ToArray();
-
-            var s = new StringBuilder();
-            
-            // if the last node is a block it means `node` does not contain a newline 
-            // so the block should not be added to the output
-            if (nodesAndTokens[^1].IsKind(SyntaxKind.Block))
-                nodesAndTokens = nodesAndTokens[0..^1];
-            
-            // remove leading trivias of first node/token...
-            if (nodesAndTokens[0].IsNode)
-            {
-                s.Append(nodesAndTokens[0].AsNode().WithoutLeadingTrivia().ToFullString());
-            }
-            else
-            {
-                s.Append(nodesAndTokens[0]);
-                foreach(var ld in nodesAndTokens[0].GetTrailingTrivia())
-                    s.Append(ld);
-            }
-
-            foreach (var item in nodesAndTokens.Skip(1))
-            {
-                var leading = item.GetLeadingTrivia().Where(t => !t.IsKind(SyntaxKind.EndOfLineTrivia)).ToSyntaxTriviaList();
-                s.Append(leading);
-                s.Append(item);
-                var trailing = item.GetTrailingTrivia().Where(t => !t.IsKind(SyntaxKind.EndOfLineTrivia)).ToSyntaxTriviaList();
-                s.Append(trailing);
-            }
-
-            return s.ToString();
+            return nodeAsString.Substring(0, newLineIndex) + "...";
         }
         
         public static string SourceDetails(this SyntaxNode node) => $"{node} ({node.SyntaxTree.GetMappedLineSpan(node.Span).Span})";
@@ -118,7 +86,13 @@ namespace Cecilifier.Core.Extensions
 
             return parentMae.Expression.IsKind(SyntaxKind.ObjectCreationExpression);
         }
+        
+        [return:NotNull] public static TTarget EnsureNotNull<TSource, TTarget>([NotNullIfNotNull("source")] this TSource source, [CallerArgumentExpression("source")] string exp = null) where TSource: SyntaxNode where TTarget : TSource
+        {
+            if (source == null)
+                throw new NullReferenceException(exp);
 
-        public static bool IsImplicitThisAccess(this CSharpSyntaxNode node) => node.Parent is not MemberAccessExpressionSyntax mae || mae.Expression != node;
+            return (TTarget) source;
+        }        
     }
 }

@@ -1,4 +1,5 @@
-﻿using Cecilifier.Core.Mappings;
+﻿using Cecilifier.Core.Extensions;
+using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Mono.Cecil.Cil;
@@ -49,7 +50,7 @@ namespace Cecilifier.Core.AST
 
             WriteCecilExpression(Context, $"{_ilVar}.Append({elseEndTargetVarName});");
             WriteCecilExpression(Context, $"{Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method).VariableName}.Body.OptimizeMacros();");
-            Context.WriteComment($" end if ({node.Condition})");
+            Context.WriteComment($" end if ({node.HumanReadableSummary()})");
         }
     }
 }

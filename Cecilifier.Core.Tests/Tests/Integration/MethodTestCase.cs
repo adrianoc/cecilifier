@@ -139,14 +139,6 @@ namespace Cecilifier.Core.Tests.Integration
         {
             AssertResourceTest($"Members/Methods/{implicitOrExplicit}Delegate_AsParameter");
         }
-        
-        [Test]
-        public void LocalVariableDeclarations_Are_CommentedOut()
-        {
-            AssertCecilifiedCodeContainsSnippet(
-                "class C { int S(int i, int j) { int l = i / 2; return l + j; } }",
-                "//int l = i / 2; ");
-        }
 
         [TestCase("RefParamBodied")]
         [TestCase("RefParam")]
@@ -174,14 +166,6 @@ namespace Cecilifier.Core.Tests.Integration
         public void TestOverloads()
         {
             AssertResourceTest("Members/Methods/Overloads");
-        }
-
-        private void AssertCecilifiedCodeContainsSnippet(string code, string expectedSnippet)
-        {
-            var cecilifier = Cecilifier.Process(new MemoryStream(Encoding.UTF8.GetBytes(code)), new CecilifierOptions {References = Utils.GetTrustedAssembliesPath() });
-            var generated = cecilifier.GeneratedCode.ReadToEnd();
-
-            Assert.That(generated, Does.Contain(expectedSnippet), "Expected snippet not found");
         }
     }
 }

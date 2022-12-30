@@ -33,7 +33,7 @@ public class LocalFunctionTests : CecilifierUnitTestBase
         
         Assert.That(
             cecilifiedCode,
-            Contains.Substring("var m_localFoo_7 = new MethodDefinition(\"<<Main>$>g__LocalFoo|0_0\", MethodAttributes.Assembly | MethodAttributes.Static | MethodAttributes.HideBySig, assembly.MainModule.TypeSystem.Int32);"),
+            Contains.Substring("var m_localFoo_6 = new MethodDefinition(\"<<Main>$>g__LocalFoo|0_0\", MethodAttributes.Assembly | MethodAttributes.Static | MethodAttributes.HideBySig, assembly.MainModule.TypeSystem.Int32);"),
             cecilifiedCode);
         
         // asserts that il_topLevelMain_3 is the variable holding the ILProcessor for the top level statement body.

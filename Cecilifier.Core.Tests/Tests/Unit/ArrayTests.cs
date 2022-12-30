@@ -1,3 +1,4 @@
+using System.Threading;
 using Mono.Cecil.Cil;
 using NUnit.Framework;
 
@@ -41,7 +42,7 @@ public class ArrayTests : CecilifierUnitTestBase
     [TestCase("double", Code.Stelem_R8)]
     [TestCase("System.DateTime", Code.Stelem_Any, ", assembly.MainModule.TypeSystem.DateTime")]
     [TestCase("S", Code.Stelem_Any, @", st_S_\d+")]
-    public void TestArrayCreation(string elementType, Code code, string operand="")
+    public void TestArrayInstantiation(string elementType, Code code, string operand="")
     {
         var result = RunCecilifier($@"struct S {{}} class C {{ void M({elementType} value) {{ var data = new[] {{ value }}; }} }}");
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
@@ -66,7 +67,7 @@ public class ArrayTests : CecilifierUnitTestBase
     [TestCase("System.Double")]
     [TestCase("System.DateTime")]
     [TestCase("S", @"st_S_\d+")]
-    public void TestJaggedArrayCreation(string elementType, string operand=null)
+    public void TestJaggedArrayInstantiation(string elementType, string operand=null)
     {
         var result = RunCecilifier($@"struct S {{}} class C {{ void M({elementType} value) {{ var data = new {elementType}[42][]; }} }}");
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
@@ -108,5 +109,36 @@ public class ArrayTests : CecilifierUnitTestBase
                 @"\1Ldc_I4, 1.+\s+" + 
                 @"\1Ldarg_2.+\s+" + 
                 $@"\1{code}{operand}.+;"));
+    }
+
+    [TestCase("class Foo { void M() { int []intArray = { 1 }; } }",TestName = "Local Variable")]
+    [TestCase("class Foo { int []intArray = { 1 }; }",TestName = "Field")]
+    public void TestImplicitArrayInitializationUnoptimized(string code)
+    {
+        // See comment in TestImplicitArrayInitializationOptimized 
+        var result = RunCecilifier(code);
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+        Assert.That(
+            cecilifiedCode, 
+            Does.Match(
+        @"((?:.+)\.Emit\(OpCodes\.)Ldc_I4, 1\);\s+" +
+                @"\1Newarr, assembly.MainModule.TypeSystem.Int32\);\s+" +
+			    @"\1Dup\);\s+" +
+                @"\1Ldc_I4, 0\);\s+" +
+                @"\1Ldc_I4, 1\);\s+" +
+                @"\1Stelem_I4\);\s+" +
+                @"\1(Stfld|Stloc), .+_intArray_\d+\);"));
+    }
+
+    [TestCase("class Foo { void M() { int []intArray = { 1, 2, 3 }; } }",TestName = "Local Variable")]
+    [TestCase("class Foo { int []intArray = { 1, 2, 3 }; }",TestName = "Field")]
+    public void TestImplicitArrayInitializationOptimized(string code)
+    {
+        var result = RunCecilifier(code);
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+        
+        // see comment in ExpressionVisitor.VisitInitializerExpression()
+        Assert.That(cecilifiedCode, Contains.Substring("Note that as of Cecilifier version 1.70.0 the generated code will differ from the"));
+        Assert.That(cecilifiedCode, Contains.Substring("C# compiler one since Cecilifier does not apply some optimizations."));
     }
 }
