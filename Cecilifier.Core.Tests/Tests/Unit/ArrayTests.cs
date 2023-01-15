@@ -1,4 +1,3 @@
-using System.Threading;
 using Mono.Cecil.Cil;
 using NUnit.Framework;
 
@@ -26,9 +25,11 @@ public class ArrayTests : CecilifierUnitTestBase
         Assert.That(
             cecilifiedCode, 
             Does.Match(
-                @"(.+\.Emit\(OpCodes\.)Ldarg_1\);\s+" +
-                @"\1Ldc_I4, 2\);\s+" +
-                $@"\1{code}{operand}\);"));
+                $"""
+                      (.+\.Emit\(OpCodes\.)Ldarg_1\);
+                      \1Ldc_I4, 2\);
+                      \1{code}{operand}\);
+                      """));
     }    
     
     [TestCase("string", Code.Stelem_Ref)]
@@ -50,10 +51,12 @@ public class ArrayTests : CecilifierUnitTestBase
         Assert.That(
             cecilifiedCode, 
             Does.Match(
-                @"(.+\.Emit\(OpCodes\.)Dup\);\s+" +
-                @"\1Ldc_I4, 0\);\s+" +
-                @"\1Ldarg_1.+\s+" +
-                $@"\1{code}{operand}\);\s+"));
+                $"""
+                      (.+\.Emit\(OpCodes\.)Dup\);
+                      \1Ldc_I4, 0\);
+                      \1Ldarg_1.+
+                      \1{code}{operand}\);\s+
+                      """));
     }
 
     [TestCase("System.String")]
@@ -79,8 +82,10 @@ public class ArrayTests : CecilifierUnitTestBase
         Assert.That(
             cecilifiedCode, 
             Does.Match(
-                @"(.+\.Emit\(OpCodes\.)Ldc_I4, 42\);\s+" +
-                $@"\1Newarr, {operandTypeMatch}.MakeArrayType\(\)\);\s+"));
+                $"""
+                (.+\.Emit\(OpCodes\.)Ldc_I4, 42\);
+                \1Newarr, {operandTypeMatch}.MakeArrayType\(\)\);\s+
+                """));
     }
     
     [TestCase("string", Code.Stelem_Ref)]
@@ -102,13 +107,15 @@ public class ArrayTests : CecilifierUnitTestBase
         Assert.That(
             cecilifiedCode, 
             Does.Match(
-                @"//array\[0\]\[1\] = value;\s+" + 
-                @"(.+Emit\(OpCodes\.)Ldarg_1\);\s+" + 
-                @"\1Ldc_I4, 0.+\s+" + 
-                @"\1Ldelem_Ref.+\s+" + 
-                @"\1Ldc_I4, 1.+\s+" + 
-                @"\1Ldarg_2.+\s+" + 
-                $@"\1{code}{operand}.+;"));
+                $"""
+                       //array\[0\]\[1\] = value;
+                       (.+Emit\(OpCodes\.)Ldarg_1\);
+                       \1Ldc_I4, 0.+
+                       \1Ldelem_Ref.+
+                       \1Ldc_I4, 1.+
+                       \1Ldarg_2.+
+                       \1{code}{operand}.+;
+                       """));
     }
 
     [TestCase("class Foo { void M() { int []intArray = { 1 }; } }",TestName = "Local Variable")]
@@ -121,13 +128,15 @@ public class ArrayTests : CecilifierUnitTestBase
         Assert.That(
             cecilifiedCode, 
             Does.Match(
-        @"((?:.+)\.Emit\(OpCodes\.)Ldc_I4, 1\);\s+" +
-                @"\1Newarr, assembly.MainModule.TypeSystem.Int32\);\s+" +
-			    @"\1Dup\);\s+" +
-                @"\1Ldc_I4, 0\);\s+" +
-                @"\1Ldc_I4, 1\);\s+" +
-                @"\1Stelem_I4\);\s+" +
-                @"\1(Stfld|Stloc), .+_intArray_\d+\);"));
+         """
+               ((?:.+)\.Emit\(OpCodes\.)Ldc_I4, 1\);
+               \1Newarr, assembly.MainModule.TypeSystem.Int32\);
+               \1Dup\);
+               \1Ldc_I4, 0\);
+               \1Ldc_I4, 1\);
+               \1Stelem_I4\);
+               \1(Stfld|Stloc), .+_intArray_\d+\);
+               """));
     }
 
     [TestCase("class Foo { void M() { int []intArray = { 1, 2, 3 }; } }",TestName = "Local Variable")]
