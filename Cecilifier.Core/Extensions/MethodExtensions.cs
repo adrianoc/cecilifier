@@ -81,24 +81,22 @@ namespace Cecilifier.Core.Extensions
 
         public static string MethodModifiersToCecil(this SyntaxTokenList modifiers, string specificModifiers = null, IMethodSymbol methodSymbol = null)
         {
-            var modifiersStr = MapExplicitModifiers(modifiers);
-
-            var defaultAccessibility = "Private";
+            var lastDeclaredIn = methodSymbol.FindLastDefinition();
+            var modifiersStr = MapExplicitModifiers(modifiers, lastDeclaredIn.ContainingType.TypeKind);
+            
+            var defaultAccessibility = lastDeclaredIn.ContainingType.TypeKind == TypeKind.Interface ? "Public" : "Private";
             if (modifiersStr == string.Empty && methodSymbol != null)
             {
                 if (IsExplicitMethodImplementation(methodSymbol))
                 {
-                    modifiersStr = "MethodAttributes.Virtual | MethodAttributes.NewSlot | MethodAttributes.Final";
+                    modifiersStr = Constants.Cecil.InterfaceMethodDefinitionAttributes.AppendModifier("MethodAttributes.Final");
                 }
-                else
+                else if (lastDeclaredIn.ContainingType.TypeKind == TypeKind.Interface)
                 {
-                    var lastDeclaredIn = methodSymbol.FindLastDefinition();
-                    if (lastDeclaredIn.ContainingType.TypeKind == TypeKind.Interface)
-                    {
-                        modifiersStr = "MethodAttributes.Virtual | MethodAttributes.NewSlot | " +
-                                       (SymbolEqualityComparer.Default.Equals(lastDeclaredIn.ContainingType, methodSymbol.ContainingType) ? "MethodAttributes.Abstract" : "MethodAttributes.Final");
-                        defaultAccessibility = SymbolEqualityComparer.Default.Equals(lastDeclaredIn.ContainingType, methodSymbol.ContainingType) ? "Public" : "Private";
-                    }
+                    modifiersStr = Constants.Cecil.InterfaceMethodDefinitionAttributes.AppendModifier(
+                                       SymbolEqualityComparer.Default.Equals(lastDeclaredIn.ContainingType, methodSymbol.ContainingType) 
+                                           ? "MethodAttributes.Abstract" 
+                                           : "MethodAttributes.Final");
                 }
             }
 
@@ -116,16 +114,35 @@ namespace Cecilifier.Core.Extensions
                 cecilModifiersStr.AppendModifier("MethodAttributes.NewSlot");
             }
             return cecilModifiersStr.ToString();
+        }        
+        
+        public static string ModifiersForSyntheticMethod(this SyntaxTokenList modifiers, string specificModifiers, ITypeSymbol declaringType)
+        {
+            var modifiersStr = MapExplicitModifiers(modifiers, declaringType.TypeKind);
+            var defaultAccessibility = declaringType.TypeKind == TypeKind.Interface ? "Public" : "Private";
+
+            var validModifiers = RemoveSourceModifiersWithNoILEquivalent(modifiers);
+
+            var cecilModifiersStr = new StringBuilder(SyntaxWalkerBase.ModifiersToCecil<MethodAttributes>(validModifiers.ToList(), defaultAccessibility, MapMethodAttributeFor));
+            cecilModifiersStr.AppendModifier(specificModifiers);
+            cecilModifiersStr.AppendModifier("MethodAttributes.HideBySig").AppendModifier(modifiersStr);
+
+            //TODO: This is not taking into account static abstract methods. We need to pass whether the method is static or not as a parameter
+            //      and in case it is static, do not add NewSlot (which is part of InterfaceMethodDefinitionAttributes)
+            if (declaringType.TypeKind == TypeKind.Interface)
+                cecilModifiersStr.AppendModifier(Constants.Cecil.InterfaceMethodDefinitionAttributes).AppendModifier("MethodAttributes.Abstract");
+            
+            return cecilModifiersStr.ToString();
         }
 
-        public static bool HasCovariantReturnType(this IMethodSymbol method) => method != null && method.IsOverride && !method.ReturnType.Equals(method.OverriddenMethod.ReturnType);
+        public static bool HasCovariantReturnType(this IMethodSymbol method) => method is { IsOverride: true } && !method.ReturnType.Equals(method.OverriddenMethod.ReturnType);
 
         private static bool IsExplicitMethodImplementation(IMethodSymbol methodSymbol)
         {
             return methodSymbol.ExplicitInterfaceImplementations.Any();
         }
 
-        private static string MapExplicitModifiers(SyntaxTokenList modifiers)
+        private static string MapExplicitModifiers(SyntaxTokenList modifiers, TypeKind typeKind)
         {
             foreach (var mod in modifiers)
             {
@@ -133,7 +150,7 @@ namespace Cecilifier.Core.Extensions
                 {
                     case SyntaxKind.VirtualKeyword: return "MethodAttributes.Virtual | MethodAttributes.NewSlot";
                     case SyntaxKind.OverrideKeyword: return "MethodAttributes.Virtual";
-                    case SyntaxKind.AbstractKeyword: return "MethodAttributes.Virtual | MethodAttributes.NewSlot | MethodAttributes.Abstract";
+                    case SyntaxKind.AbstractKeyword: return "MethodAttributes.Virtual | MethodAttributes.Abstract".AppendModifier(typeKind != TypeKind.Interface || !modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword)) ? "MethodAttributes.NewSlot" : string.Empty);
                     case SyntaxKind.SealedKeyword: return "MethodAttributes.Final";
                     case SyntaxKind.NewKeyword: return "??? new ??? dont know yet!";
                 }

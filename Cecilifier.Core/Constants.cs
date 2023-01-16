@@ -9,16 +9,13 @@ public struct Constants
         public const string StaticFieldAttributes = "FieldAttributes.Public | FieldAttributes.Static";
         public const string StaticTypeAttributes = "TypeAttributes.Abstract | TypeAttributes.Sealed";
         public const string StaticClassAttributes = $"TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit | {StaticTypeAttributes}";
-        public const string InterfaceMethodAttributes = "MethodAttributes.SpecialName | MethodAttributes.Public | MethodAttributes.NewSlot | MethodAttributes.Virtual | MethodAttributes.Abstract | MethodAttributes.HideBySig";
+        public const string InterfaceMethodDefinitionAttributes = "MethodAttributes.NewSlot | MethodAttributes.Virtual"; // Some common method attributes (like HideBySig) will be explicitly added.
         public const string MethodAttributesSpecialName = "MethodAttributes.SpecialName";
         public const string DelegateMethodAttributes = "MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.NewSlot | MethodAttributes.Virtual";
         
         public const string CtorAttributes = "MethodAttributes.RTSpecialName | MethodAttributes.SpecialName";
         public const string InstanceConstructorName = "ctor";
         public const string StaticConstructorName = "cctor";
-
-
-        public Cecil() { }
     }
     
     public struct ParameterAttributes

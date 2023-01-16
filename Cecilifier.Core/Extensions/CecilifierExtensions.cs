@@ -35,14 +35,10 @@ namespace Cecilifier.Core.Extensions
         public static string AppendModifier(this string to, string modifier)
         {
             if (string.IsNullOrWhiteSpace(modifier))
-            {
                 return to;
-            }
 
             if (string.IsNullOrEmpty(to))
-            {
                 return modifier;
-            }
 
             return $"{to} | {modifier}";
         }

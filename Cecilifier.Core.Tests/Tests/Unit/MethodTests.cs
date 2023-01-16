@@ -21,6 +21,6 @@ public class MethodTests : CecilifierUnitTestBase
     {
         var result = RunCecilifier("using System.Collections; class B : IEnumerable { public IEnumerator GetEnumerator() => null; }");
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
-        Assert.That(cecilifiedCode, Contains.Substring("\"GetEnumerator\", MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.Virtual | MethodAttributes.NewSlot | MethodAttributes.Final"));
+        Assert.That(cecilifiedCode, Contains.Substring("\"GetEnumerator\", MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.NewSlot | MethodAttributes.Virtual | MethodAttributes.Final"));
     }
 }
