@@ -357,7 +357,7 @@ namespace Cecilifier.Core.AST
         private static bool IsNestedTypeDeclaration(SyntaxNode node)
         {
             Utils.EnsureNotNull(node.Parent);
-            return node.Parent.Kind() != SyntaxKind.NamespaceDeclaration && node.Parent.Kind() != SyntaxKind.CompilationUnit;
+            return !node.Parent.IsKind(SyntaxKind.NamespaceDeclaration) && !node.Parent.IsKind(SyntaxKind.CompilationUnit);
         }
 
         internal static string ModifiersToCecil<TEnumAttr>(

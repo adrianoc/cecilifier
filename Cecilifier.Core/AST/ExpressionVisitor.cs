@@ -396,7 +396,7 @@ namespace Cecilifier.Core.AST
         public override void VisitDeclarationExpression(DeclarationExpressionSyntax node)
         {
             using var _ = LineInformationTracker.Track(Context, node);
-            if (node.Parent is ArgumentSyntax argument && argument.RefKindKeyword.Kind() == SyntaxKind.OutKeyword)
+            if (node.Parent is ArgumentSyntax argument && argument.RefKindKeyword.IsKind(SyntaxKind.OutKeyword))
             {
                 var localSymbol = (ILocalSymbol) Context.SemanticModel.GetSymbolInfo(node).Symbol;
                 var designation = ((SingleVariableDesignationSyntax) node.Designation);
@@ -544,7 +544,7 @@ namespace Cecilifier.Core.AST
                 return;
             }
             
-            if (node.OperatorToken.Kind() == SyntaxKind.AmpersandToken)
+            if (node.OperatorToken.IsKind(SyntaxKind.AmpersandToken))
             {
                 Visit(node.Operand);
             }
@@ -1301,10 +1301,10 @@ namespace Cecilifier.Core.AST
             }
 
             // this is not an invocation. We need to figure out whether this is an assignment, return, etc
-            var firstParentNotPartOfName = node.Ancestors().First(a => a.Kind() != SyntaxKind.QualifiedName 
-                                                                       && a.Kind() != SyntaxKind.SimpleMemberAccessExpression
-                                                                       && a.Kind() != SyntaxKind.EqualsValueClause
-                                                                       && a.Kind() != SyntaxKind.VariableDeclarator);
+            var firstParentNotPartOfName = node.Ancestors().First(a => !a.IsKind(SyntaxKind.QualifiedName) 
+                                                                       && !a.IsKind(SyntaxKind.SimpleMemberAccessExpression)
+                                                                       && !a.IsKind(SyntaxKind.EqualsValueClause)
+                                                                       && !a.IsKind(SyntaxKind.VariableDeclarator));
 
             if (firstParentNotPartOfName is PrefixUnaryExpressionSyntax unaryPrefix && unaryPrefix.IsKind(SyntaxKind.AddressOfExpression))
             {
@@ -1358,7 +1358,7 @@ namespace Cecilifier.Core.AST
         private void ProcessMethodCall(SimpleNameSyntax node, IMethodSymbol method)
         {
             // Local methods are always static.
-            if (method.MethodKind != MethodKind.LocalFunction && !method.IsStatic && method.IsDefinedInCurrentAssembly(Context) && node.Parent.Kind() == SyntaxKind.InvocationExpression)
+            if (method.MethodKind != MethodKind.LocalFunction && !method.IsStatic && method.IsDefinedInCurrentAssembly(Context) && node.Parent.IsKind(SyntaxKind.InvocationExpression))
             {
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
             }

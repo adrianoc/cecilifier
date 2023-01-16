@@ -214,7 +214,7 @@ namespace Cecilifier.Core.Misc
             return Parameter(
                 node.Identifier.Text, 
                 paramSymbol!.RefKind, 
-                isParams: node.GetFirstToken().Kind() == SyntaxKind.ParamsKeyword,
+                isParams: node.GetFirstToken().IsKind(SyntaxKind.ParamsKeyword),
                 methodVar,
                 paramVar,
                 resolvedType,
