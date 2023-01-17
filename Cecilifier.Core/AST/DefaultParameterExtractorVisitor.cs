@@ -47,11 +47,6 @@ internal class DefaultParameterExtractorVisitor : CSharpSyntaxVisitor<string>
     }
 
     public override string VisitDefaultExpression(DefaultExpressionSyntax node) => context.GetTypeInfo(node.Type).Type.ValueForDefaultLiteral();
-
-    public override string? VisitTypeOfExpression(TypeOfExpressionSyntax node)
-    {
-        throw new NotImplementedException();
-    }
     
     private readonly IVisitorContext context;
 }
