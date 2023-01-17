@@ -767,7 +767,7 @@ namespace Cecilifier.Core.AST
             var rangeCtor = Context.RoslynTypeSystem.SystemRange
                 ?.GetMembers(".ctor")
                 .OfType<IMethodSymbol>()
-                .Single(ctor => ctor.Parameters.Length == 2 && ctor.Parameters[0].Type == indexType && ctor.Parameters[1].Type == indexType);
+                .Single(ctor => ctor.Parameters.Length == 2 && SymbolEqualityComparer.Default.Equals(ctor.Parameters[0].Type, indexType) && SymbolEqualityComparer.Default.Equals(ctor.Parameters[1].Type, indexType));
             
             Context.EmitCilInstruction(ilVar, OpCodes.Newobj, rangeCtor.MethodResolverExpression(Context));
 

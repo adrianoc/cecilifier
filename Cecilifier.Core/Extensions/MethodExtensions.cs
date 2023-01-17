@@ -135,7 +135,7 @@ namespace Cecilifier.Core.Extensions
             return cecilModifiersStr.ToString();
         }
 
-        public static bool HasCovariantReturnType(this IMethodSymbol method) => method is { IsOverride: true } && !method.ReturnType.Equals(method.OverriddenMethod.ReturnType);
+        public static bool HasCovariantReturnType(this IMethodSymbol method) => method is { IsOverride: true } && !SymbolEqualityComparer.Default.Equals(method.ReturnType, method.OverriddenMethod?.ReturnType);
 
         private static bool IsExplicitMethodImplementation(IMethodSymbol methodSymbol)
         {
