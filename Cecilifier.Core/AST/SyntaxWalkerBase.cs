@@ -938,5 +938,14 @@ namespace Cecilifier.Core.AST
             var lineSpan = node.GetLocation().GetLineSpan();
             AddCecilExpression($"/* Syntax '{node.Kind()}' is not supported in {lineSpan.Path} ({lineSpan.Span.Start.Line + 1},{lineSpan.Span.Start.Character + 1}):\n------\n{node}\n----*/");
         }
+
+        protected void ProcessExplicitInterfaceImplementation(string methodVar, IMethodSymbol method)
+        {
+            var explicitImplement = method?.ExplicitInterfaceImplementations.FirstOrDefault();
+            if (explicitImplement == null)
+                return;
+
+            WriteCecilExpression(Context, $"{methodVar}.Overrides.Add({explicitImplement.MethodResolverExpression(Context)});");
+        }
     }
 }

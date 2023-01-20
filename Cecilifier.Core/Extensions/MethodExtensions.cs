@@ -87,7 +87,7 @@ namespace Cecilifier.Core.Extensions
             var defaultAccessibility = lastDeclaredIn.ContainingType.TypeKind == TypeKind.Interface ? "Public" : "Private";
             if (modifiersStr == string.Empty && methodSymbol != null)
             {
-                if (IsExplicitMethodImplementation(methodSymbol))
+                if (methodSymbol.IsExplicitMethodImplementation())
                 {
                     modifiersStr = Constants.Cecil.InterfaceMethodDefinitionAttributes.AppendModifier("MethodAttributes.Final");
                 }
@@ -137,7 +137,7 @@ namespace Cecilifier.Core.Extensions
 
         public static bool HasCovariantReturnType(this IMethodSymbol method) => method is { IsOverride: true } && !SymbolEqualityComparer.Default.Equals(method.ReturnType, method.OverriddenMethod?.ReturnType);
 
-        private static bool IsExplicitMethodImplementation(IMethodSymbol methodSymbol)
+        public static bool IsExplicitMethodImplementation(this IMethodSymbol methodSymbol)
         {
             return methodSymbol.ExplicitInterfaceImplementations.Any();
         }
