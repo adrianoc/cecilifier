@@ -91,12 +91,16 @@ namespace Cecilifier.Core.Extensions
                 {
                     modifiersStr = Constants.Cecil.InterfaceMethodDefinitionAttributes.AppendModifier("MethodAttributes.Final");
                 }
-                else if (lastDeclaredIn.ContainingType.TypeKind == TypeKind.Interface)
+                else if (lastDeclaredIn.ContainingType.TypeKind == TypeKind.Interface && !methodSymbol.IsStatic)
                 {
                     modifiersStr = Constants.Cecil.InterfaceMethodDefinitionAttributes.AppendModifier(
                                        SymbolEqualityComparer.Default.Equals(lastDeclaredIn.ContainingType, methodSymbol.ContainingType) 
                                            ? "MethodAttributes.Abstract" 
                                            : "MethodAttributes.Final");
+                }
+                else if (lastDeclaredIn.ContainingType.TypeKind == TypeKind.Interface && methodSymbol.IsStatic)
+                {
+                    modifiersStr = string.Empty;
                 }
             }
 

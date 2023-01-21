@@ -1569,6 +1569,10 @@ namespace Cecilifier.Core.AST
                     ProcessProperty(node, member.Symbol as IPropertySymbol);
                     break;
                 
+                case SymbolKind.TypeParameter:
+                    AddCilInstruction(ilVar, OpCodes.Constrained, (ITypeSymbol) member.Symbol);
+                    break;
+                
                 default:
                     trackIfNotPartOfTypeName.Discard();
                     break;

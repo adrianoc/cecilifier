@@ -127,15 +127,13 @@ public class SnippetRunner
             return found;
         }
 
-        private static IMethodSymbol FindLastDefinition(IMethodSymbol method, ImmutableArray<INamedTypeSymbol> implementedItfs)
+        public static IMethodSymbol FindLastDefinition(this IMethodSymbol method, ImmutableArray<INamedTypeSymbol> implementedItfs)
         {
             foreach (var itf in implementedItfs)
             {
                 var found = FindLastDefinition(method, itf);
                 if (found != null)
-                {
                     return found;
-                }
             }
 
             return null;

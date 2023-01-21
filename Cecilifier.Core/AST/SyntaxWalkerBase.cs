@@ -939,11 +939,19 @@ namespace Cecilifier.Core.AST
             AddCecilExpression($"/* Syntax '{node.Kind()}' is not supported in {lineSpan.Path} ({lineSpan.Span.Start.Line + 1},{lineSpan.Span.Start.Character + 1}):\n------\n{node}\n----*/");
         }
 
-        protected void ProcessExplicitInterfaceImplementation(string methodVar, IMethodSymbol method)
+        protected void ProcessExplicitInterfaceImplementationAndStaticAbstractMethods(string methodVar, IMethodSymbol method)
         {
+            // first check explicit interface implementation...
             var explicitImplement = method?.ExplicitInterfaceImplementations.FirstOrDefault();
             if (explicitImplement == null)
-                return;
+            {
+                // if it is not an explicit interface implementation check for abstract static method from interfaces
+                var lastDeclared = method.FindLastDefinition(method.ContainingType.Interfaces);
+                if (lastDeclared == null || SymbolEqualityComparer.Default.Equals(lastDeclared, method) || lastDeclared.ContainingType.TypeKind != TypeKind.Interface || method?.IsStatic == false)
+                    return;
+
+                explicitImplement = lastDeclared;
+            }
 
             WriteCecilExpression(Context, $"{methodVar}.Overrides.Add({explicitImplement.MethodResolverExpression(Context)});");
         }

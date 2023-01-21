@@ -91,7 +91,7 @@ namespace Cecilifier.Core.AST
                 return false;
             
             // check the methods of the property because we do not register the property itself, only its methods. 
-            var methodToCheck = propInfo?.GetMethod ?? propInfo?.SetMethod;
+            var methodToCheck = propInfo.GetMethod ?? propInfo.SetMethod;
             var found = Context.DefinitionVariables.GetMethodVariable(methodToCheck.AsMethodDefinitionVariable());
             return found.IsValid;
         }
@@ -180,7 +180,7 @@ namespace Cecilifier.Core.AST
                     //TODO : NEXT : try to use CecilDefinitionsFactory.Method()
                     AddCecilExpression($"var {setMethodVar} = new MethodDefinition(\"set_{propName}\", {accessorModifiers}, {setterReturnType});");
                     parameters.ForEach(p => AddCecilExpression($"{setMethodVar}.Parameters.Add({p.VariableName});"));
-                    ProcessExplicitInterfaceImplementation(setMethodVar, property.SetMethod);
+                    ProcessExplicitInterfaceImplementationAndStaticAbstractMethods(setMethodVar, property.SetMethod);
                     AddCecilExpression($"{propertyDeclaringTypeVar}.Methods.Add({setMethodVar});");
 
                     AddCecilExpression($"{setMethodVar}.Body = new MethodBody({setMethodVar});");
@@ -218,12 +218,13 @@ namespace Cecilifier.Core.AST
 
             ScopedDefinitionVariable AddGetterMethodGuts(IPropertySymbol property, out string ilVar)
             {
-                Context.WriteComment(" Getter");
+                Context.WriteComment("Getter");
+                
                 var getMethodVar = Context.Naming.SyntheticVariable("get", ElementKind.Method);
                 var definitionVariable = Context.DefinitionVariables.WithCurrentMethod(declaringType.Identifier.Text, $"get_{propName}", parameters.Select(p => p.Type).ToArray(), getMethodVar);
                 
                 AddCecilExpression($"var {getMethodVar} = new MethodDefinition(\"get_{propName}\", {accessorModifiers}, {propertyType});");
-                ProcessExplicitInterfaceImplementation(getMethodVar, property.GetMethod);
+                ProcessExplicitInterfaceImplementationAndStaticAbstractMethods(getMethodVar, property.GetMethod);
                 if (property.HasCovariantGetter())
                     AddCecilExpression($"{getMethodVar}.CustomAttributes.Add(new CustomAttribute(assembly.MainModule.Import(typeof(System.Runtime.CompilerServices.PreserveBaseOverridesAttribute).GetConstructor(BindingFlags.Public | BindingFlags.Instance, null, new Type[0], null))));");
 
