@@ -622,7 +622,11 @@ namespace Cecilifier.Core.AST
         public override void VisitObjectCreationExpression(ObjectCreationExpressionSyntax node)
         {
             using var _ = LineInformationTracker.Track(Context, node);
-            //TODO: Refactor to reuse code from VisitIdentifierName....
+            Do(node);
+        }
+
+        private void Do(BaseObjectCreationExpressionSyntax node)
+        {
             var ctorInfo = Context.SemanticModel.GetSymbolInfo(node);
 
             var ctor = (IMethodSymbol) ctorInfo.Symbol;
@@ -651,8 +655,14 @@ namespace Cecilifier.Core.AST
             
             StoreTopOfStackInLocalVariableAndLoadItsAddressIfNeeded(node);
 
-            node.Initializer?.Accept(this);
+            node.Initializer?.Accept(this);    
         }
+        
+        public override void VisitImplicitObjectCreationExpression(ImplicitObjectCreationExpressionSyntax node)
+        {
+            using var _ = LineInformationTracker.Track(Context, node);
+            Do(node);
+        }        
 
         public override void VisitExpressionStatement(ExpressionStatementSyntax node)
         {
@@ -893,7 +903,7 @@ namespace Cecilifier.Core.AST
         public override void VisitCheckedExpression(CheckedExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitSizeOfExpression(SizeOfExpressionSyntax node) => LogUnsupportedSyntax(node);
 
-        private bool TryProcessMethodReferenceInObjectCreationExpression(ObjectCreationExpressionSyntax node)
+        private bool TryProcessMethodReferenceInObjectCreationExpression(BaseObjectCreationExpressionSyntax node)
         {
             var arg = node.ArgumentList?.Arguments.SingleOrDefault();
             if (arg != null && Context.SemanticModel.GetSymbolInfo(arg.Expression).Symbol is { Kind: SymbolKind.Method })
@@ -905,7 +915,7 @@ namespace Cecilifier.Core.AST
             return false;
         }
 
-        private bool TryProcessTypeParameterInstantiation(ObjectCreationExpressionSyntax node)
+        private bool TryProcessTypeParameterInstantiation(BaseObjectCreationExpressionSyntax node)
         {
             var instantiatedType = Context.GetTypeInfo(node).Type;
             if (instantiatedType?.TypeKind != TypeKind.TypeParameter)
@@ -1061,7 +1071,7 @@ namespace Cecilifier.Core.AST
             Context.EmitCilInstruction(ilVar, OpCodes.Sub);
         }
         
-        private bool TryProcessInvocationOnParameterlessImplicitCtorOnValueType(ObjectCreationExpressionSyntax node, SymbolInfo ctorInfo)
+        private bool TryProcessInvocationOnParameterlessImplicitCtorOnValueType(BaseObjectCreationExpressionSyntax node, SymbolInfo ctorInfo)
         {
             if (ctorInfo.Symbol == null || ctorInfo.Symbol.IsImplicitlyDeclared == false || ctorInfo.Symbol.ContainingType.IsReferenceType)
                 return false;

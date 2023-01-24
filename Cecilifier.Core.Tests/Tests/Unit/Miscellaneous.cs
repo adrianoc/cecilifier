@@ -203,5 +203,43 @@ public static class Outer
             else
                 Assert.That(result.GeneratedCode.ReadToEnd(), Contains.Substring($"Ldstr, {defaultParameterValue}"));
         }
+
+        [TestCase(
+            "System.DateTime d = new();",
+            """
+            (il_topLevelMain_\d+).Emit\(OpCodes.Ldloca_S, l_d_\d+\);
+            \s+\1.Emit\(OpCodes.Initobj, assembly.MainModule.TypeSystem.DateTime\);
+            """, 
+            TestName = "Value Type")]
+        
+        [TestCase("object o = new();", """il_topLevelMain_\d+.Emit\(OpCodes.Newobj,.+"System.Object", ".ctor",.+\);""", TestName = "Simplest")]
+        [TestCase(
+            "C c = new(42); class C { public C(int i) {} }", 
+            """
+                    var (ctor_C_\d+) = new MethodDefinition\(".ctor", MethodAttributes.Private, assembly.MainModule.TypeSystem.Void\);
+                    \s+var (p_i_\d+) = new ParameterDefinition\("i", ParameterAttributes.None, assembly.MainModule.TypeSystem.Int32\);
+                    \s+\1.Parameters.Add\(\2\);
+                    \s+il_topLevelMain_3.Emit\(OpCodes.Ldc_I4, 42\);
+                    \s+il_topLevelMain_3.Emit\(OpCodes.Newobj, ctor_C_8\);
+                    """, 
+            TestName = "Constructor")]
+        [TestCase(
+            "C c = new() { Value = 42 }; class C { public int Value; }", 
+            """
+                    (il_topLevelMain_\d+).Emit\(OpCodes.Newobj, (?:ctor_C_\d+)\);
+                    \s+var (dup_\d+) = \1.Create\(OpCodes.Dup\);
+                    \s+\1.Append\(\2\);
+                    \s+\1.Emit\(OpCodes.Ldc_I4, 42\);
+                    \s+var (fld_value_\d+) = new FieldDefinition\("Value", FieldAttributes.Public, assembly.MainModule.TypeSystem.Int32\);
+                    \s+cls_topLevelStatements_0.Fields.Add\(\3\);
+                    \s+\1.Emit\(OpCodes.Stfld, \3\);
+                    \s+\1.Emit\(OpCodes.Stloc, l_c_7\);
+                    """, 
+            TestName = "Object Initializer")]
+        public void TestImplicitObjectCreation(string code, string expected)
+        {
+            var r = RunCecilifier(code);
+            Assert.That(r.GeneratedCode.ReadToEnd(), Does.Match(expected));
+        }
     }
 }
