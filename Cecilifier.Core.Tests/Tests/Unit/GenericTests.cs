@@ -113,5 +113,19 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             Assert.That(cecilifiedCode, Does.Match(@"il_M_\d+.Emit\(OpCodes.Call, .+ImportReference\(typeof\(System\.Activator\)\)\.MakeGenericInstanceType\(gp_T_\d+\)\);"));
             Assert.That(cecilifiedCode, Does.Match(@"m_M_\d+\.ReturnType = gp_T_\d+;"));
         }
+        
+        [TestCase("var x = typeof(System.Collections.Generic.Dictionary<int, int>.Enumerator);", 
+            """il_topLevelMain_3.Emit\(OpCodes.Ldtoken, assembly.MainModule.ImportReference\(typeof\(System.Collections.Generic.Dictionary<int, int>.Enumerator\)\)\);""")]
+        
+        [TestCase("class Foo { void Bar(System.Collections.Generic.Dictionary<int, int> dict) { var enu = dict.GetEnumerator(); } }", 
+            """
+                    (il_bar_\d+).Emit\(OpCodes.Callvirt,.+ImportReference\(.+"System.Collections.Generic.Dictionary`2", "GetEnumerator",.+\)\);
+                    \s+\1.Emit\(OpCodes.Stloc, l_enu_\d+\);
+                    """)]
+        public void TestReferenceToNonGenericInnerTypeOfGenericOuterType(string code, string expected)
+        {
+            var result = RunCecilifier(code);
+            Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(expected));
+        }        
     }
 }
