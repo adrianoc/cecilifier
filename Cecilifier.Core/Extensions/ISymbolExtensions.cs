@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
@@ -16,7 +14,11 @@ namespace Cecilifier.Core.Extensions
 {
     internal static class ISymbolExtensions
     {
-        private static readonly SymbolDisplayFormat FullyQualifiedDisplayFormat = new(typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces);
+        private static readonly SymbolDisplayFormat QualifiedNameWithoutTypeParametersFormat = new SymbolDisplayFormat(typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces)
+            .AddMiscellaneousOptions(SymbolDisplayMiscellaneousOptions.ExpandNullable)
+            .RemoveMiscellaneousOptions(SymbolDisplayMiscellaneousOptions.UseSpecialTypes);
+        
+        private static readonly SymbolDisplayFormat QualifiedNameIncludingTypeParametersFormat = QualifiedNameWithoutTypeParametersFormat.WithGenericsOptions(SymbolDisplayGenericsOptions.IncludeTypeParameters);
 
         public static ElementKind ToElementKind(this TypeKind self) => self switch
         {
@@ -30,12 +32,7 @@ namespace Cecilifier.Core.Extensions
             
             _ => throw new NotImplementedException($"TypeKind `{self}` is not supported.") 
         };
-        
-        public static string FullyQualifiedName(this ISymbol type)
-        {
-            return type.ToDisplayString(FullyQualifiedDisplayFormat);
-        }
-        
+
         public static string SafeIdentifier(this IMethodSymbol method)
         {
             return method.MethodKind == MethodKind.Constructor 
@@ -43,7 +40,7 @@ namespace Cecilifier.Core.Extensions
                 : method.Name;
         }
 
-        public static string AssemblyQualifiedName(this ISymbol type)
+        public static string FullyQualifiedName(this ISymbol type, bool includingTypeParameters = true)
         {
             // ISymbol.ToDisplayString() does not have the option to use the metadata name for IntPtr
             // returning `nint` instead.
@@ -51,14 +48,8 @@ namespace Cecilifier.Core.Extensions
             {
                 return "System.IntPtr";
             }
-            
-            var format = new SymbolDisplayFormat(typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces);
-            var namespaceQualifiedName = type.ToDisplayString(format);
-            var elementType = type.GetElementType();
-            if (elementType == null)
-                return namespaceQualifiedName;
-            
-            return elementType.ContainingAssembly.Name.Contains("CoreLib") ? namespaceQualifiedName : $"{namespaceQualifiedName}, {type.GetElementType().ContainingAssembly.Name}";
+
+            return type.ToDisplayString(includingTypeParameters ? QualifiedNameIncludingTypeParametersFormat : QualifiedNameWithoutTypeParametersFormat);
         }
 
         public static ITypeSymbol GetMemberType(this ISymbol symbol) => symbol switch
@@ -98,34 +89,6 @@ namespace Cecilifier.Core.Extensions
                 _ => false
             };
 
-        public static string AsStringNewArrayExpression(this IEnumerable<IParameterSymbol> self)
-        {
-            if (!self.Any())
-            {
-                return "new ParamData[0]";
-            }
-
-            var sb = new StringBuilder();
-            var arrayExp = self.Aggregate(sb,
-                (acc, curr) =>
-                {
-                    var elementType = (curr.Type as IArrayTypeSymbol)?.ElementType ?? curr.Type;
-                    var isArray = curr.Type is IArrayTypeSymbol ? "true" : "false";
-                    var isTypeParameter = elementType.Kind == SymbolKind.TypeParameter ? "true" : "false";
-
-                    acc.Append($",new ParamData {{ IsArray = {isArray}, FullName = \"{elementType.AssemblyQualifiedName()}\", IsTypeParameter = {isTypeParameter} }}");
-                    return acc;
-                },
-                final => final.Remove(0, 1)).Insert(0, "new [] {").Append('}');
-
-            return arrayExp.ToString();
-        }
-
-        public static string AsStringNewArrayExpression(this IEnumerable<ITypeSymbol> self)
-        {
-            return $"new[] {{ {self.Aggregate("", (acc, curr) => acc + ",\"" + curr.AssemblyQualifiedName() + "\"", final => final.Substring(1))} }} ";
-        }
-        
         [return:NotNull] public static T EnsureNotNull<T>([NotNullIfNotNull("symbol")] this T symbol) where T: ISymbol
         {
             if (symbol == null)

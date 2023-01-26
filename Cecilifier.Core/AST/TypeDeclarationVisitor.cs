@@ -23,7 +23,7 @@ namespace Cecilifier.Core.AST
             using var _ = LineInformationTracker.Track(Context, node);
             var definitionVar = Context.Naming.Type(node);
             var interfaceSymbol = Context.SemanticModel.GetDeclaredSymbol(node);
-            using (Context.DefinitionVariables.WithCurrent(interfaceSymbol.ContainingSymbol.FullyQualifiedName(), node.Identifier.ValueText, VariableMemberKind.Type, definitionVar))
+            using (Context.DefinitionVariables.WithCurrent(interfaceSymbol.ContainingSymbol.FullyQualifiedName(false), node.Identifier.ValueText, VariableMemberKind.Type, definitionVar))
             {
                 HandleTypeDeclaration(node, definitionVar);
                 base.VisitInterfaceDeclaration(node);
@@ -35,7 +35,7 @@ namespace Cecilifier.Core.AST
             using var _ = LineInformationTracker.Track(Context, node);
             var definitionVar = Context.Naming.Type(node);
             var classSymbol = Context.SemanticModel.GetDeclaredSymbol(node);
-            using (Context.DefinitionVariables.WithCurrent(classSymbol.ContainingSymbol.FullyQualifiedName(), node.Identifier.ValueText, VariableMemberKind.Type, definitionVar))
+            using (Context.DefinitionVariables.WithCurrent(classSymbol.ContainingSymbol.FullyQualifiedName(false), node.Identifier.ValueText, VariableMemberKind.Type, definitionVar))
             {
                 HandleTypeDeclaration(node, definitionVar);
                 base.VisitClassDeclaration(node);
@@ -48,7 +48,7 @@ namespace Cecilifier.Core.AST
             using var _ = LineInformationTracker.Track(Context, node);
             var definitionVar = Context.Naming.Type(node);
             var structSymbol = Context.SemanticModel.GetDeclaredSymbol(node);
-            using (Context.DefinitionVariables.WithCurrent(structSymbol.ContainingSymbol.FullyQualifiedName(), node.Identifier.ValueText, VariableMemberKind.Type, definitionVar))
+            using (Context.DefinitionVariables.WithCurrent(structSymbol.ContainingSymbol.FullyQualifiedName(false), node.Identifier.ValueText, VariableMemberKind.Type, definitionVar))
             {
                 HandleTypeDeclaration(node, definitionVar);
                 ProcessStructPseudoAttributes(definitionVar, structSymbol);
@@ -150,15 +150,20 @@ namespace Cecilifier.Core.AST
             if (!typeSymbol.IsDefinedInCurrentAssembly(context))
                 goto processGenerics;
 
-            var found = context.DefinitionVariables.GetVariable(typeSymbol.Name, VariableMemberKind.Type, typeSymbol.ContainingType?.FullyQualifiedName());
+            var found = context.DefinitionVariables.GetVariable(typeSymbol.Name, VariableMemberKind.Type, typeSymbol.ContainingType?.FullyQualifiedName(false));
             if (found.IsValid)
                 goto processGenerics;
             
             var typeDeclaration =  (BaseTypeDeclarationSyntax) typeSymbol.DeclaringSyntaxReferences.First().GetSyntax();
             var typeDeclarationVar = context.Naming.Type(typeSymbol.Name, typeSymbol.TypeKind.ToElementKind());
             AddTypeDefinition(context, typeDeclarationVar, typeSymbol, TypeModifiersToCecil((INamedTypeSymbol) typeSymbol, typeDeclaration.Modifiers), typeParameters, Array.Empty<TypeParameterSyntax>());
+
+            var v = context.DefinitionVariables.RegisterNonMethod(
+                typeSymbol.ContainingSymbol?.FullyQualifiedName(false), 
+                typeSymbol.Name, 
+                VariableMemberKind.Type, 
+                typeDeclarationVar);
             
-            var v = context.DefinitionVariables.RegisterNonMethod(typeSymbol.ContainingSymbol?.FullyQualifiedName(), typeSymbol.Name, VariableMemberKind.Type, typeDeclarationVar);
             v.IsForwarded = true;
             
 processGenerics:

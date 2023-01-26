@@ -66,7 +66,7 @@ public class PropertyTests : CecilifierUnitTestBase
 			@"il_ctor_C_6.Emit\(OpCodes.Ldarg_0\);\s+" + 
             @"il_ctor_C_6.Emit\(OpCodes.Ldc_I4, 42\);\s+" + 
             @"il_ctor_C_6.Emit\(OpCodes.Ldc_I4_1\);\s+" + 
-            @"il_ctor_C_6.Emit\(OpCodes.Newobj,.+""System.Index"", ""\.ctor"",.+""System.Int32"", ""System.Boolean"".+\);\s+" +
+            @"il_ctor_C_6.Emit\(OpCodes.Newobj,.+typeof\(System.Index\), ""\.ctor"",.+""System.Int32"", ""System.Boolean"".+\);\s+" +
             @"il_ctor_C_6.Emit\(OpCodes.Stfld, fld_value1_4\);"));
     }   
     

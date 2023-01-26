@@ -111,7 +111,7 @@ public class SystemRangeTests : CecilifierUnitTestBase
             @"\k<body_var>.Variables.Add\(\k<start_index>\);\s+" +
             @"\1Stloc, \k<start_index>\);\s+" +
             @"\1Dup\);\s+" +
-            @"\1Call, assembly.MainModule.ImportReference\(.+ResolveMethod\(""System.Span`1"", ""get_Length"",.+,""System.Int32""\)\)\);\s+".IfTrue(indexedFromEnd) +
+            @"\1Call, assembly.MainModule.ImportReference\(.+ResolveMethod\(typeof\(System.Span<System.Int32>\), ""get_Length"",.+\)\)\);\s+".IfTrue(indexedFromEnd) +
             @"\1Conv_I4\);\s+" + 
             @"\1(Ldc_I4, \d+|Ldarg_1|Call, m_idx_\d)\);\s+"+
             @"\1Sub\);\s+".IfTrue(indexedFromEnd) +
@@ -122,7 +122,7 @@ public class SystemRangeTests : CecilifierUnitTestBase
             @"\1Stloc, \k<ec>\);\s+" +
             @"\1Ldloc, \k<start_index>\);\s+" +
             @"\1Ldloc, \k<ec>\);\s+" +
-            @"\1Call,.+""System.Span`1"", ""Slice"",.+,""System.Int32"", ""System.Int32"", ""System.Int32"".+;";
+            @"\1Call,.+typeof\(System.Span<System.Int32>\), ""Slice"",.+""System.Int32"", ""System.Int32"".+;";
 
         Assert.That(cecilifiedCode, Does.Match(expected));
     }
@@ -157,7 +157,7 @@ public class SystemRangeTests : CecilifierUnitTestBase
             @"\1Stloc, \k<ec>\);\s+" +
             @"\1Ldloc, \k<start_index>\);\s+" +
             @"\1Ldloc, \k<ec>\);\s+" +
-            @"\1Call,.+""System.Span`1"", ""Slice"",.+,""System.Int32"", ""System.Int32"", ""System.Int32"".+;";
+            @"\1Call,.+typeof\(System.Span<System.Int32>\), ""Slice"",.+""System.Int32"", ""System.Int32"".+;";
 
         Assert.That(cecilifiedCode, Does.Match(expected));
     }
@@ -177,7 +177,7 @@ public class SystemRangeTests : CecilifierUnitTestBase
             @"\1Stloc, \k<span_copy>\);\s+" +
             @"\1Ldloca, \k<span_copy>\);\s+" +
             @"\1Dup\);\s+" +
-            @"\1Call, assembly.MainModule.ImportReference\(.+ResolveMethod\(""System.Span`1"", ""get_Length"",.+,""System.Int32""\)\)\);\s+" +
+            @"\1Call, assembly.MainModule.ImportReference\(.+ResolveMethod\(typeof\(System.Span<System.Int32>\), ""get_Length"",.+\)\)\);\s+" +
             @"\1Conv_I4\);\s+" + 
             @"\1(Ldc_I4, \d+|Ldarg_1|Call, m_idx_\d)\);\s+"+
             @"\1Sub\);\s+" +
@@ -192,7 +192,7 @@ public class SystemRangeTests : CecilifierUnitTestBase
             @"\1Stloc, \k<ec>\);\s+" +
             @"\1Ldloc, \k<start_index>\);\s+" +
             @"\1Ldloc, \k<ec>\);\s+" +
-            @"\1Call,.+""System.Span`1"", ""Slice"",.+,""System.Int32"", ""System.Int32"", ""System.Int32"".+;";
+            @"\1Call,.+typeof\(System.Span<System.Int32>\), ""Slice"",.+""System.Int32"", ""System.Int32"".+;";
 
         Assert.That(cecilifiedCode, Does.Match(expected));
     }
@@ -212,7 +212,7 @@ public class SystemRangeTests : CecilifierUnitTestBase
             @"\1Stloc, \k<span_copy>\);\s+" +
             @"\1Ldloca, \k<span_copy>\);\s+".IfTrue(indexedFromEnd) +
             @"\1Dup.+\s+" +
-            @"\1Call, assembly.MainModule.ImportReference\(.+ResolveMethod\(""System.Span`1"", ""get_Length"",.+,""System.Int32""\)\)\);\s+" +
+            @"\1Call, assembly.MainModule.ImportReference\(.+ResolveMethod\(typeof\(System.Span<System.Int32>\), ""get_Length"",.+\)\)\);\s+" +
             @"\1Conv_I4\);\s+" + 
             @"\1(Ldc_I4, \d+|Call, m_idx_\d)\);\s+"+
             @"\1Sub\);\s+" +
@@ -220,7 +220,7 @@ public class SystemRangeTests : CecilifierUnitTestBase
             @"\k<body_var>.Variables.Add\(\k<start_index>\);\s+" +
             @"\1Stloc, \k<start_index>\);\s+" +
             @"\1Dup.+\s+" +
-            @"\1Call, assembly.MainModule.ImportReference\(.+ResolveMethod\(""System.Span`1"", ""get_Length"",.+,""System.Int32""\)\)\);\s+" +
+            @"\1Call, assembly.MainModule.ImportReference\(.+ResolveMethod\(typeof\(System.Span<System.Int32>\), ""get_Length"",.+\)\)\);\s+" +
             @"\1Conv_I4\);\s+" + 
             @"\1(Ldc_I4, \d+|Call, m_idx_\d)\);\s+"+
             @"\1Sub\);\s+" +
@@ -231,7 +231,7 @@ public class SystemRangeTests : CecilifierUnitTestBase
             @"\1Stloc, \k<ec>\);\s+" +
             @"\1Ldloc, \k<start_index>\);\s+" +
             @"\1Ldloc, \k<ec>\);\s+" +
-            @"\1Call,.+""System.Span`1"", ""Slice"",.+,""System.Int32"", ""System.Int32"", ""System.Int32"".+;";
+            @"\1Call,.+typeof\(System.Span<System.Int32>\), ""Slice"",.+, ""System.Int32"", ""System.Int32"".+;";
 
         Assert.That(cecilifiedCode, Does.Match(expected));
     }
@@ -251,33 +251,33 @@ public class SystemRangeTests : CecilifierUnitTestBase
             @"(?<body_var>.+)\.Variables.Add\(\k<span_copy>\);\s+" +
             @"\1Stloc, \k<span_copy>\);\s+" +
             @"\1Ldloca, \k<span_copy>\);\s+" +
-            @"\1Call, assembly.MainModule.ImportReference\(.+ResolveMethod\(""System.Span`1"", ""get_Length"",.+,""System.Int32""\)\)\);\s+" +
+            @"\1Call, assembly.MainModule.ImportReference\(.+ResolveMethod\(typeof\(System.Span<System.Int32>\), ""get_Length"",.+\)\)\);\s+" +
             @"var (?<span_length>.+spanLength.+\d+) = new VariableDefinition\(assembly.MainModule.TypeSystem.Int32\);\s+" +
             @"(?<body_var>.+)\.Variables.Add\(\k<span_length>\);\s+" +
             @"\1Stloc, \k<span_length>\);\s+" +
-            
-            @"(?:\1Ldarg_3\);\s+" + @"|\1Ldarg_2\);\s+\1Ldfld,.+\);\s+" + @"|\1Ldarg_0\);\s+\1Call,.+\);\s+" + @"|\1Ldarg_2\);\s+\1Callvirt,.+\);\s+)" + 
-            
+
+            @"(?:\1Ldarg_3\);\s+" + @"|\1Ldarg_2\);\s+\1Ldfld,.+\);\s+" + @"|\1Ldarg_0\);\s+\1Call,.+\);\s+" + @"|\1Ldarg_2\);\s+\1Callvirt,.+\);\s+)" +
+
             @"var (?<range_var>.+rangeVar_\d+) = new VariableDefinition\(assembly.MainModule.ImportReference\(typeof\(System.Range\)\)\);\s+" +
             @"(?<body_var>.+)\.Variables.Add\(\k<range_var>\);\s+" +
             @"\1Stloc, \k<range_var>\);\s+" +
             @"\1Ldloca, \k<range_var>\);\s+" +
-            @"\1Call, assembly.MainModule.ImportReference\(.+ResolveMethod\(""System.Range"", ""get_Start"",.+\)\)\);\s+" +
+            @"\1Call, assembly.MainModule.ImportReference\(.+ResolveMethod\(typeof\(System.Range\), ""get_Start"",.+\)\)\);\s+" +
             @"var (?<index_var>.+index_\d+) = new VariableDefinition\(assembly.MainModule.ImportReference\(typeof\(System.Index\)\)\);\s+" +
             @"(?<body_var>.+)\.Variables.Add\(\k<index_var>\);\s+" +
             @"\1Stloc, \k<index_var>\);\s+" +
             @"\1Ldloca, \k<index_var>\);\s+" +
             @"\1Ldloc, \k<span_length>\);\s+" +
-            @"\1Call,.+""System.Index"", ""GetOffset"",.+, ""System.Int32"".+;\s+" +
+            @"\1Call,.+typeof\(System.Index\), ""GetOffset"",.+, ""System.Int32"".+;\s+" +
             @"var (?<start_index>.+startIndex.+\d+) = new VariableDefinition\(assembly.MainModule.TypeSystem.Int32\);\s+" +
             @"(?<body_var>.+)\.Variables.Add\(\k<start_index>\);\s+" +
             @"\1Stloc, \k<start_index>\);\s+" +
             @"\1Ldloca, \k<range_var>\);\s+" +
-            @"\1Call, assembly.MainModule.ImportReference\(.+ResolveMethod\(""System.Range"", ""get_End"",.+\)\)\);\s+" +
+            @"\1Call, assembly.MainModule.ImportReference\(.+ResolveMethod\(typeof\(System.Range\), ""get_End"",.+\)\)\);\s+" +
             @"\1Stloc, \k<index_var>\);\s+" +
             @"\1Ldloca, \k<index_var>\);\s+" +
             @"\1Ldloc, \k<span_length>\);\s+" +
-            @"\1Call,.+""System.Index"", ""GetOffset"",.+, ""System.Int32"".+;\s+" +
+            @"\1Call,.+typeof\(System.Index\), ""GetOffset"",.+, ""System.Int32"".+;\s+" +
             @"\1Ldloc, \k<start_index>\);\s+" +
             @"\1Sub\);\s+" +
             @"var (?<ec>l_elementCount_\d+) = new VariableDefinition\(assembly.MainModule.TypeSystem.Int32\);\s+" +
@@ -286,13 +286,13 @@ public class SystemRangeTests : CecilifierUnitTestBase
             @"\1Ldloca, \k<span_copy>\);\s+" +
             @"\1Ldloc, \k<start_index>\);\s+" +
             @"\1Ldloc, \k<ec>\);\s+" +
-            @"\1Call,.+""System.Span`1"", ""Slice"",.+,""System.Int32"", ""System.Int32"", ""System.Int32"".+;" +
+            @"\1Call,.+typeof\(System.Span<System.Int32>\), ""Slice"",.+""System.Int32"", ""System.Int32"".+;" +
             "";
        
         Assert.That(cecilifiedCode, Does.Match(expected));
     }
 
-    private const string ResolvedSystemRangeCtor = @"assembly.MainModule.ImportReference\(TypeHelpers.ResolveMethod\(""System.Range"", "".ctor"",.+,"""", ""System.Index"", ""System.Index""\)\)";
+    private const string ResolvedSystemRangeCtor = @"assembly.MainModule.ImportReference\(TypeHelpers.ResolveMethod\(typeof\(System.Range\), "".ctor"",.+, ""System.Index"", ""System.Index""\)\)";
 }
 
 static class Conditional

@@ -1,3 +1,4 @@
+using System;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Tests.Unit
@@ -100,8 +101,8 @@ public static class Outer
                     }");
 
             var cecilifiedCode = result.GeneratedCode.ReadToEnd();
-            Assert.That(cecilifiedCode, Does.Match("il_method_21.Emit\\(OpCodes.Callvirt, .*\"System.Diagnostics.Process, System.Diagnostics.Process\", \"Kill\".+"), cecilifiedCode);
-            Assert.That(cecilifiedCode, Does.Match(@"il_property_\d+.Emit\(OpCodes.Callvirt, .+""System.Diagnostics.Process, System.Diagnostics.Process"", ""get_ProcessName"".+"), cecilifiedCode);
+            Assert.That(cecilifiedCode, Does.Match("il_method_21.Emit\\(OpCodes.Callvirt, .*typeof\\(System.Diagnostics.Process\\), \"Kill\".+"), cecilifiedCode);
+            Assert.That(cecilifiedCode, Does.Match(@"il_property_\d+.Emit\(OpCodes.Callvirt, .+typeof\(System.Diagnostics.Process\), ""get_ProcessName"".+"), cecilifiedCode);
         }
 
         [TestCase("class StaticFieldAddress { static int field; static void M1(ref int i) { } static void M() => M1(ref field); }", "Ldsflda", TestName="StaticPassingByRef")]
@@ -176,7 +177,7 @@ public static class Outer
                 }";
 
             var result = RunCecilifier(source);
-            Assert.That(result.GeneratedCode.ReadToEnd(), Contains.Substring("\"System.Console, System.Console\", \"add_CancelKeyPress\","));
+            Assert.That(result.GeneratedCode.ReadToEnd(), Contains.Substring("typeof(System.Console), \"add_CancelKeyPress\","));
         }
         
         [TestCase("j")]
@@ -212,7 +213,7 @@ public static class Outer
             """, 
             TestName = "Value Type")]
         
-        [TestCase("object o = new();", """il_topLevelMain_\d+.Emit\(OpCodes.Newobj,.+"System.Object", ".ctor",.+\);""", TestName = "Simplest")]
+        [TestCase("object o = new();", """il_topLevelMain_\d+.Emit\(OpCodes.Newobj,.+typeof\(System.Object\), ".ctor",.+\);""", TestName = "Simplest")]
         [TestCase(
             "C c = new(42); class C { public C(int i) {} }", 
             """

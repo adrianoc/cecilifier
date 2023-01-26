@@ -76,7 +76,7 @@ namespace Cecilifier.Core.Misc
 
         public string ResolveLocalVariableType(ITypeSymbol type)
         {
-            var containingSymbolName = type.ContainingSymbol?.FullyQualifiedName();
+            var containingSymbolName = type.ContainingSymbol?.FullyQualifiedName(false);
             var found = _context.DefinitionVariables.GetVariable(type.Name, VariableMemberKind.Type, containingSymbolName).VariableName 
                         ?? _context.DefinitionVariables.GetVariable(type.Name, VariableMemberKind.TypeParameter, containingSymbolName).VariableName;
             

@@ -335,7 +335,7 @@ namespace Cecilifier.Core.AST
             if (typeSymbol.TypeKind != TypeKind.Struct)
                 return;
             
-            var structLayoutAttribute = typeSymbol.GetAttributes().FirstOrDefault(attrData => attrData.AttributeClass.FullyQualifiedName().Contains("System.Runtime.InteropServices.StructLayoutAttribute"));
+            var structLayoutAttribute = typeSymbol.GetAttributes().FirstOrDefault(attrData => attrData.AttributeClass.FullyQualifiedName().Equals("System.Runtime.InteropServices.StructLayoutAttribute"));
             if (structLayoutAttribute == null)
             {
                 typeAttributes.AppendModifier("TypeAttributes.SequentialLayout");
@@ -352,12 +352,6 @@ namespace Cecilifier.Core.AST
                 
                 typeAttributes.AppendModifier($"TypeAttributes.{specifiedLayout}");
             }
-        }
-
-        private static bool IsNestedTypeDeclaration(SyntaxNode node)
-        {
-            Utils.EnsureNotNull(node.Parent);
-            return !node.Parent.IsKind(SyntaxKind.NamespaceDeclaration) && !node.Parent.IsKind(SyntaxKind.CompilationUnit);
         }
 
         internal static string ModifiersToCecil<TEnumAttr>(
@@ -865,7 +859,7 @@ namespace Cecilifier.Core.AST
                 {
                     //attribute is not declared in the same assembly....
                     var ctorArgumentTypes = $"new Type[{attrArgs.Length}] {{ {string.Join(",", attrArgs.Select(arg => $"typeof({context.GetTypeInfo(arg.Expression).Type?.Name})"))} }}";
-                    return Utils.ImportFromMainModule($"typeof({attrType.AssemblyQualifiedName()}).GetConstructor({ctorArgumentTypes})");
+                    return Utils.ImportFromMainModule($"typeof({attrType.FullyQualifiedName()}).GetConstructor({ctorArgumentTypes})");
                 }
             
                 // Attribute is defined in the same assembly. We need to find the variable that holds its "ctor declaration"

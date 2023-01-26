@@ -261,8 +261,9 @@ namespace Cecilifier.Core.AST
                 return;
 
             var targetType = expressionInfo.Symbol.Accept(ElementTypeSymbolResolver.Instance);
-            if (targetType.AssemblyQualifiedName().Equals("System.Span") && node.ArgumentList.Arguments.Count == 1 &&
-                Context.GetTypeInfo(node.ArgumentList.Arguments[0].Expression).Type.AssemblyQualifiedName().Equals("System.Range"))
+            if (SymbolEqualityComparer.Default.Equals(targetType.OriginalDefinition, Context.RoslynTypeSystem.SystemSpan) 
+                && node.ArgumentList.Arguments.Count == 1 
+                && SymbolEqualityComparer.Default.Equals(Context.GetTypeInfo(node.ArgumentList.Arguments[0].Expression).Type, Context.RoslynTypeSystem.SystemRange))
             {
                 node.Accept(new ElementAccessExpressionWithRangeArgumentVisitor(Context, ilVar, this));
                 return;
@@ -986,7 +987,7 @@ namespace Cecilifier.Core.AST
         private bool HandlePseudoAssignment(AssignmentExpressionSyntax node)
         {
             var lhsType = Context.SemanticModel.GetTypeInfo(node.Left);
-            if (lhsType.Type.AssemblyQualifiedName() != "System.Index" || !node.Right.IsKind(SyntaxKind.IndexExpression) || node.Left.IsKind(SyntaxKind.SimpleMemberAccessExpression))
+            if (!SymbolEqualityComparer.Default.Equals(lhsType.Type?.OriginalDefinition, Context.RoslynTypeSystem.SystemIndex) || !node.Right.IsKind(SyntaxKind.IndexExpression) || node.Left.IsKind(SyntaxKind.SimpleMemberAccessExpression))
                 return false;
 
             using (Context.WithFlag(Constants.ContextFlags.PseudoAssignmentToIndex))

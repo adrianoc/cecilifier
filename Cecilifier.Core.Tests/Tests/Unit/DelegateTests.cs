@@ -89,6 +89,6 @@ public class DelegateTests : CecilifierUnitTestBase
             result.GeneratedCode.ReadToEnd(), 
             Does.Match(@"(il_M_4\.Emit\(OpCodes\.)Ldarg_0\);\s+" +
                        @"\1Ldftn, m_F_1\);\s+" +
-                       @"\1Newobj, .+System.Func`1.+System\.Single.+System\.Object.+System\.IntPtr.+\);\s+"));
+                       @"\1Newobj, .+typeof\(System.Func<System\.Single>\).+System\.Object.+System\.IntPtr.+\);\s+"));
     }    
 }

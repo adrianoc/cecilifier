@@ -119,7 +119,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
         
         [TestCase("class Foo { void Bar(System.Collections.Generic.Dictionary<int, int> dict) { var enu = dict.GetEnumerator(); } }", 
             """
-                    (il_bar_\d+).Emit\(OpCodes.Callvirt,.+ImportReference\(.+"System.Collections.Generic.Dictionary`2", "GetEnumerator",.+\)\);
+                    (il_bar_\d+).Emit\(OpCodes.Callvirt,.+ImportReference\(.+typeof\(System.Collections.Generic.Dictionary<System.Int32, System.Int32>\), "GetEnumerator",.+\)\);
                     \s+\1.Emit\(OpCodes.Stloc, l_enu_\d+\);
                     """)]
         public void TestReferenceToNonGenericInnerTypeOfGenericOuterType(string code, string expected)

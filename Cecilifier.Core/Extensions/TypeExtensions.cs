@@ -13,12 +13,12 @@ namespace Cecilifier.Core.Extensions
         {
             if (type is INamedTypeSymbol namedType && namedType.IsGenericType) //TODO: namedType.IsUnboundGenericType ? Open 
             {
-                typeParameters = namedType.TypeArguments.Select(typeArg => (string)typeArg.AssemblyQualifiedName()).ToArray();
+                typeParameters = namedType.TypeArguments.Select(typeArg => (string)typeArg.FullyQualifiedName()).ToArray();
                 return Regex.Replace(namedType.ConstructedFrom.ToString(), "<.*>", "`" + namedType.TypeArguments.Length );
             }
 
             typeParameters = Array.Empty<string>();
-            return type.AssemblyQualifiedName();
+            return type.FullyQualifiedName();
         }
         
         public static string MakeByReferenceType(this string type)

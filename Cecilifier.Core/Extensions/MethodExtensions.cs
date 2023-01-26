@@ -56,18 +56,8 @@ namespace Cecilifier.Core.Extensions
                 return variable;
             }
             
-            var declaringTypeName = method.ContainingType.ReflectionTypeName(out var typeParameters);
-            if (method.IsGenericMethod)
-            {
-                var paramTypes = method.ConstructedFrom.Parameters.AsStringNewArrayExpression();
-                var typeArguments = method.TypeArguments.AsStringNewArrayExpression();
-                return Utils.ImportFromMainModule($"TypeHelpers.ResolveGenericMethod(\"{declaringTypeName}\", \"{method.Name}\",{method.Modifiers()}, {typeArguments}, {paramTypes})");
-            }
-
-            if (!method.ContainingType.IsValueType && !method.ContainingType.IsGenericType)
-                declaringTypeName = (method.OverriddenMethod ?? method).ContainingType.AssemblyQualifiedName();
-
-            return ImportFromMainModule($"TypeHelpers.ResolveMethod(\"{declaringTypeName}\", \"{method.Name}\",{method.Modifiers()},\"{string.Join(',', typeParameters)}\"{method.Parameters.Aggregate("", (acc, curr) => acc + ", \"" + curr.Type.AssemblyQualifiedName() + "\"")})");
+            var declaringTypeName = method.ContainingType.FullyQualifiedName();
+            return ImportFromMainModule($"TypeHelpers.ResolveMethod(typeof({declaringTypeName}), \"{method.Name}\",{method.Modifiers()}{method.Parameters.Aggregate("", (acc, curr) => acc + ", \"" + curr.Type.FullyQualifiedName() + "\"")})");
         }
 
         public static MethodDefinitionVariable AsMethodDefinitionVariable(this IMethodSymbol method, string variableName = null)
