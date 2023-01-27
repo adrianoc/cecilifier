@@ -43,10 +43,10 @@ namespace Cecilifier.Web
         private const string ProjectContents = @"<Project Sdk=""Microsoft.NET.Sdk"">
     <PropertyGroup>
         <OutputType>Exe</OutputType>
-        <TargetFramework>net6.0</TargetFramework>
+        <TargetFramework>net7.0</TargetFramework>
     </PropertyGroup>
     <ItemGroup>
-        <PackageReference Include=""Mono.Cecil"" Version=""0.11.0"" />
+        <PackageReference Include=""Mono.Cecil"" Version=""0.11.4"" />
     </ItemGroup>
 </Project>";
         
