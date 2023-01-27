@@ -137,5 +137,20 @@ namespace Cecilifier.Core.Tests.Tests.Unit
                 r.GeneratedCode.ReadToEnd(), 
                 Does.Match("""var fld_e_1 = new FieldDefinition\("e", FieldAttributes.Private, assembly.MainModule.ImportReference\(typeof\(System.Collections.Generic.List<int>.Enumerator\)\)\);"""));
         }
+
+        [Test]
+        public void TestRecursiveTypeParameterConstraint()
+        {
+            //Test for issue #218
+            var r = RunCecilifier("interface I<T> where T : I<T> {}");
+            Assert.That(
+                r.GeneratedCode.ReadToEnd(), 
+                Does.Match(
+                      """
+                            var gp_T_1 = new Mono.Cecil.GenericParameter\("T", itf_I_0\);
+                            \s+itf_I_0.GenericParameters.Add\(gp_T_1\);
+                            \s+gp_T_1.Constraints.Add\(new GenericParameterConstraint\(itf_I_0.MakeGenericInstanceType\(gp_T_1\)\)\);
+                            """));
+        }
     }
 }
