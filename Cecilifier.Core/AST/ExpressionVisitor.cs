@@ -1132,14 +1132,37 @@ namespace Cecilifier.Core.AST
         private void StoreTopOfStackInLocalVariableAndLoadItsAddressIfNeeded(ExpressionSyntax node)
         {
             var invocation = (InvocationExpressionSyntax) node.Ancestors().FirstOrDefault(a => a.IsKind(SyntaxKind.InvocationExpression));
-            if (invocation == null || invocation.ArgumentList.Arguments.Any(argumentExp => argumentExp.Expression.DescendantNodesAndSelf().Any( exp => exp == node)))
-                return;
+            var nodeSymbol = Context.SemanticModel.GetSymbolInfo(node).Symbol.EnsureNotNull();
+            if (invocation == null || invocation.ArgumentList.Arguments.Any(argumentExp => argumentExp.Expression.DescendantNodesAndSelf().Any(exp => exp == node)))
+            {
+                if (!MemberAccessOnValueTypeProperty(node, nodeSymbol))
+                    return;
+            }
 
             var targetOfInvocationType = Context.SemanticModel.GetTypeInfo(node);
             if (targetOfInvocationType.Type?.IsValueType == false)
                 return;
 
             StoreTopOfStackInLocalVariableAndLoadItsAddress(targetOfInvocationType.Type);
+        }
+
+        private bool MemberAccessOnValueTypeProperty(ExpressionSyntax node, ISymbol nodeSymbol)
+        {
+            if (nodeSymbol.Kind != SymbolKind.Property)
+                return false; // *node* does not represent a property
+
+            if (!nodeSymbol.GetMemberType().IsValueType)
+                return false; // the property type is not a value type
+                
+            if (node.Parent is not MemberAccessExpressionSyntax mae)
+                return false; // *node* is not part of a member reference expression
+
+            if (mae.Expression != node && // *node* is not the left side of the mae. 
+                (mae.Parent is not MemberAccessExpressionSyntax parentMae || parentMae.Expression != mae) // neither the identifier (right side) of a bigger reference (e.g, a.b.c, when node == b)
+                )
+                return false;
+
+            return true;
         }
 
         private void StoreTopOfStackInLocalVariableAndLoadItsAddress(ITypeSymbol type)
@@ -1176,29 +1199,33 @@ namespace Cecilifier.Core.AST
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
             }
 
-            var parentExp = node.Parent;
-            if (parentExp.IsKind(SyntaxKind.SimpleAssignmentExpression) || parentMae != null && parentMae.Name.Identifier == node.Identifier && parentMae.Parent.IsKind(SyntaxKind.SimpleAssignmentExpression))
+            if (node.Parent.IsKind(SyntaxKind.SimpleAssignmentExpression) || parentMae != null && parentMae.Name.Identifier == node.Identifier && parentMae.Parent.IsKind(SyntaxKind.SimpleAssignmentExpression))
             {
                 AddMethodCall(ilVar, propertySymbol.SetMethod, isAccessOnThisOrObjectCreation);
             }
             else
             {
-                if (propertySymbol.ContainingType.SpecialType == SpecialType.System_Array && propertySymbol.Name == "Length")
-                {
-                    Context.EmitCilInstruction(ilVar, OpCodes.Ldlen);
-                    Context.EmitCilInstruction(ilVar, OpCodes.Conv_I4);
-                }
-                else if (propertySymbol.ContainingType.SpecialType == SpecialType.System_Array && propertySymbol.Name == "LongLength")
-                {
-                    Context.EmitCilInstruction(ilVar, OpCodes.Ldlen);
-                    Context.EmitCilInstruction(ilVar, OpCodes.Conv_I8);
-                }
-                else
-                {
-                    AddMethodCall(ilVar, propertySymbol.GetMethod, isAccessOnThisOrObjectCreation);
-                    StoreTopOfStackInLocalVariableAndLoadItsAddressIfNeeded(node);
-                    HandlePotentialRefLoad(ilVar, node, propertySymbol.Type);
-                }
+                HandlePropertyGetAccess(node, propertySymbol, isAccessOnThisOrObjectCreation);
+            }
+        }
+
+        private void HandlePropertyGetAccess(SimpleNameSyntax node, IPropertySymbol propertySymbol, bool isAccessOnThisOrObjectCreation)
+        {
+            if (propertySymbol.ContainingType.SpecialType == SpecialType.System_Array && propertySymbol.Name == "Length")
+            {
+                Context.EmitCilInstruction(ilVar, OpCodes.Ldlen);
+                Context.EmitCilInstruction(ilVar, OpCodes.Conv_I4);
+            }
+            else if (propertySymbol.ContainingType.SpecialType == SpecialType.System_Array && propertySymbol.Name == "LongLength")
+            {
+                Context.EmitCilInstruction(ilVar, OpCodes.Ldlen);
+                Context.EmitCilInstruction(ilVar, OpCodes.Conv_I8);
+            }
+            else
+            {
+                AddMethodCall(ilVar, propertySymbol.GetMethod, isAccessOnThisOrObjectCreation);
+                StoreTopOfStackInLocalVariableAndLoadItsAddressIfNeeded(node);
+                HandlePotentialRefLoad(ilVar, node, propertySymbol.Type);
             }
         }
 

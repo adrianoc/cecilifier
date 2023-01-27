@@ -1,3 +1,4 @@
+using Cecilifier.Core.Tests.Framework;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration
@@ -92,6 +93,12 @@ namespace Cecilifier.Core.Tests.Integration
         public void TestCoContraVariance()
         {
             AssertResourceTest(@"Generics/CoContraVariance");
+        }
+        
+        [Test]
+        public void TestInnerTypeFromExternalAssembly()
+        {
+            AssertResourceTestBinary(@"Generics/InnerTypeFromExternalAssembly", TestKind.Integration);
         }
     }
 }

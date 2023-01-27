@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using System;
 
 namespace Cecilifier.Core.Tests.Tests.Unit
 {
@@ -126,6 +127,15 @@ namespace Cecilifier.Core.Tests.Tests.Unit
         {
             var result = RunCecilifier(code);
             Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(expected));
-        }        
+        }
+
+        [Test]
+        public void TestInnerTypeOfOuterGenericType()
+        {
+            var r = RunCecilifier("class C { System.Collections.Generic.List<int>.Enumerator e; }");
+            Assert.That(
+                r.GeneratedCode.ReadToEnd(), 
+                Does.Match("""var fld_e_1 = new FieldDefinition\("e", FieldAttributes.Private, assembly.MainModule.ImportReference\(typeof\(System.Collections.Generic.List<int>.Enumerator\)\)\);"""));
+        }
     }
 }
