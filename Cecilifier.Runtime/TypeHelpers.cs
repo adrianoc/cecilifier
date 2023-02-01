@@ -62,27 +62,6 @@ namespace Cecilifier.Runtime
 
             return type.GetField(fieldName);
         }
-
-        private static bool CompareParameters(ParameterInfo candidate, ParamData original)
-        {
-            if (candidate.ParameterType.IsArray ^ original.IsArray)
-            {
-                return false;
-            }
-
-            var candidateElementType = candidate.ParameterType.HasElementType ? candidate.ParameterType.GetElementType() : candidate.ParameterType;
-            if (candidateElementType.IsGenericParameter ^ original.IsTypeParameter)
-            {
-                return false;
-            }
-
-            if (original.IsTypeParameter)
-            {
-                return candidateElementType.Name == original.FullName;
-            }
-
-            return candidateElementType.FullName == original.FullName;
-        }
     }
     
     public class SystemPrivateCoreLibFixerReflectionProvider : IReflectionImporterProvider
