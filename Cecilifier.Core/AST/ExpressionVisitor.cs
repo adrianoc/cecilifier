@@ -384,6 +384,7 @@ namespace Cecilifier.Core.AST
                 SyntaxKind.SingleLineRawStringLiteralToken => node.Token.ValueText,
                 SyntaxKind.MultiLineRawStringLiteralToken => node.Token.ValueText, // ValueText does not includes quotes, so nothing to remove.
                 SyntaxKind.StringLiteralToken => node.Token.Text.Substring(1, node.Token.Text.Length - 2), // removes quotes because LoadLiteralValue() expects string to not be quoted.
+                SyntaxKind.CharacterLiteralToken => node.Token.Text.Substring(1, node.Token.Text.Length - 2), // removes quotes because LoadLiteralValue() expects chars to not be quoted.
                 SyntaxKind.DefaultKeyword => literalType.ValueForDefaultLiteral(),  
                 _ => node.Token.Text
             };
@@ -392,6 +393,8 @@ namespace Cecilifier.Core.AST
                 literalType, 
                 value, 
                 literalParent.Accept(UsageVisitor.GetInstance(Context)) == UsageKind.CallTarget);
+
+            skipLeftSideVisitingInAssignment = literalType.IsValueType && !literalType.IsPrimitiveType();
         }
         
         public override void VisitDeclarationExpression(DeclarationExpressionSyntax node)
@@ -807,11 +810,13 @@ namespace Cecilifier.Core.AST
         public override void VisitDefaultExpression(DefaultExpressionSyntax node)
         {
             using var _ = LineInformationTracker.Track(Context, node);
-            var type = Context.GetTypeInfo(node.Type).Type;
+            var type = Context.GetTypeInfo(node.Type).Type.EnsureNotNull();
 
             var defaultParent = node.Parent.EnsureNotNull<SyntaxNode, CSharpSyntaxNode>();
             var isTargetOfCall = defaultParent.Accept(UsageVisitor.GetInstance(Context)) == UsageKind.CallTarget;
             LoadLiteralValue(ilVar, type, type.ValueForDefaultLiteral(), isTargetOfCall);
+            
+            skipLeftSideVisitingInAssignment = type.IsValueType && !type.IsPrimitiveType();
         }
         
         public override void VisitSimpleLambdaExpression(SimpleLambdaExpressionSyntax node) => HandleLambdaExpression(node);
@@ -986,10 +991,19 @@ namespace Cecilifier.Core.AST
 
         private bool HandlePseudoAssignment(AssignmentExpressionSyntax node)
         {
-            var lhsType = Context.SemanticModel.GetTypeInfo(node.Left);
-            if (!SymbolEqualityComparer.Default.Equals(lhsType.Type?.OriginalDefinition, Context.RoslynTypeSystem.SystemIndex) || !node.Right.IsKind(SyntaxKind.IndexExpression) || node.Left.IsKind(SyntaxKind.SimpleMemberAccessExpression))
+            var lhsType = Context.SemanticModel.GetTypeInfo(node.Left).Type.EnsureNotNull();
+            var isSimpleIndexAccess = SymbolEqualityComparer.Default.Equals(lhsType.OriginalDefinition, Context.RoslynTypeSystem.SystemIndex)
+                                && node.Right.IsKind(SyntaxKind.IndexExpression)
+                                && !node.Left.IsKind(SyntaxKind.SimpleMemberAccessExpression);
+
+            var isRhsStructDefaultLiteralExpression = node.Right.IsKind(SyntaxKind.DefaultLiteralExpression) && lhsType.IsValueType; 
+                
+            if (!isSimpleIndexAccess && !isRhsStructDefaultLiteralExpression)
                 return false;
 
+            if (Context.SemanticModel.GetSymbolInfo(node.Left).Symbol is IParameterSymbol { RefKind: RefKind.Out or RefKind.Ref or RefKind.RefReadOnly })
+                return false;
+           
             using (Context.WithFlag(Constants.ContextFlags.PseudoAssignmentToIndex))
                 node.Left.Accept(this);
                 

@@ -359,11 +359,16 @@ namespace Cecilifier.Core.AST
                 return;
             
             var localVarDef = Context.DefinitionVariables.GetVariable(localVar.Identifier.ValueText, VariableMemberKind.LocalVariable);
-            if (localVar.Initializer.Value.IsKind(SyntaxKind.IndexExpression))
+
+            // if code is something like `Index field = ^5`; 
+            // then we need to load the address of the field since the expression ^5 (IndexerExpression) will result in a call to System.Index ctor (which is a value type and expects
+            // the address of the value type to be in the top of the stack
+            var isIndexExpression = localVar.Initializer.Value.IsKind(SyntaxKind.IndexExpression);
+
+            // the same applies if...
+            var isDefaultLiteralExpressionOnNonPrimitiveValueType = localVar.Initializer.Value.IsKind(SyntaxKind.DefaultLiteralExpression) && variableType.IsValueType && !variableType.IsPrimitiveType();
+            if (isIndexExpression || isDefaultLiteralExpressionOnNonPrimitiveValueType)
             {
-                // code is something like `Index field = ^5`; 
-                // in this case we need to load the address of the field since the expression ^5 (IndexerExpression) will result in a call to System.Index ctor (which is a value type and expects
-                // the address of the value type to be in the top of the stack
                 Context.EmitCilInstruction(_ilVar, OpCodes.Ldloca, localVarDef.VariableName);
             }
 

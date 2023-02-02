@@ -63,16 +63,6 @@ namespace Cecilifier.Core.Extensions
             _ => throw new NotSupportedException($"({symbol.Kind}) symbol {symbol.ToDisplayString()} is not supported.")
         };
 
-        private static ITypeSymbol GetElementType(this ISymbol symbol) => symbol switch
-        {
-            IPointerTypeSymbol pointer => pointer.PointedAtType.GetElementType(),
-            IFunctionPointerTypeSymbol functionPointer => functionPointer.OriginalDefinition,
-            IMethodSymbol method => method.ReturnType,
-            IArrayTypeSymbol array => array.ElementType.GetElementType(),
-            INamespaceSymbol ns => null,
-            _ => (ITypeSymbol) symbol
-        };
-
         public static bool IsDefinedInCurrentAssembly<T>(this T method, IVisitorContext ctx) where T : ISymbol
         {
             return SymbolEqualityComparer.Default.Equals(method.ContainingAssembly, ctx.SemanticModel.Compilation.Assembly);
@@ -166,7 +156,7 @@ namespace Cecilifier.Core.Extensions
         
         public static string ValueForDefaultLiteral(this ITypeSymbol literalType) => literalType switch
         {
-            { SpecialType: SpecialType.System_Char } => "0",
+            { SpecialType: SpecialType.System_Char } => "\0",
             { SpecialType: SpecialType.System_SByte } => "0",
             { SpecialType: SpecialType.System_Byte } => "0",
             { SpecialType: SpecialType.System_Int16 } => "0",

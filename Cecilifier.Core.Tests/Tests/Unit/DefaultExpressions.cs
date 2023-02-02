@@ -45,4 +45,41 @@ public class DefaultExpressions : CecilifierUnitTestBase
         var result = RunCecilifier(code);
         Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(expected));
     }
+    
+    [TestCase("char", "Emit(OpCodes.Ldc_I4, 0)")]
+    [TestCase("byte", "Emit(OpCodes.Ldc_I4, 0)")]
+    [TestCase("sbyte", "Emit(OpCodes.Ldc_I4, 0)")]
+    [TestCase("int", "Emit(OpCodes.Ldc_I4, 0)")]
+    [TestCase("uint", "Emit(OpCodes.Ldc_I4, 0)")]
+    [TestCase("long", "Emit(OpCodes.Ldc_I8, 0L)")]
+    [TestCase("ulong", "Emit(OpCodes.Ldc_I8, 0L)")]
+    [TestCase("float", "Emit(OpCodes.Ldc_R4, 0.0F)")]
+    [TestCase("double", "Emit(OpCodes.Ldc_R8, 0.0D)")]
+    [TestCase("bool", "Emit(OpCodes.Ldc_I4, 0)")]
+    [TestCase("System.IntPtr", "Emit(OpCodes.Conv_I)")]
+    public void TestDefaultLiteralExpression(string type, string expected)
+    {
+        var result = RunCecilifier($"{type} v = default;");
+        Assert.That(result.GeneratedCode.ReadToEnd(), Contains.Substring(expected));
+    }
+    
+    [TestCase("System.DateTime v = default;")]
+    [TestCase("Foo v = default; struct Foo {}", TestName = "Custom struct (variable declaration)")]
+    [TestCase("Foo v; v = default; struct Foo {}", TestName = "Custom struct (simple assignment)")]
+    public void TestDefaultLiteralExpressionWithStructs(string code)
+    {
+        var expected = """
+                    var (l_v_\d+) = new VariableDefinition\((.+)\);
+                    \s+m_topLevelStatements_\d+.Body.Variables.Add\(\1\);
+                    \s+(il_topLevelMain_\d+\.Emit\(OpCodes\.)Ldloca, l_v_\d+\);
+                    \s+\3Initobj, \2\);
+                    """;
+        
+        var cecilifiedCode = RunCecilifier(code).GeneratedCode.ReadToEnd();
+        
+        Assert.That(cecilifiedCode, Does.Match(expected));
+        Assert.That(cecilifiedCode, Does.Not.Match(@"Stloc, l_v_\d+"));
+    }
+    
+    // default literal expressions in parameters are tested in Parameters tests.
 }

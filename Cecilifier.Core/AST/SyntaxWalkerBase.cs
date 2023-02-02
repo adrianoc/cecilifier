@@ -150,6 +150,12 @@ namespace Cecilifier.Core.AST
                 return;
             }
             
+            if (type.SpecialType == SpecialType.None && type.IsValueType && type.TypeKind != TypeKind.Pointer || type.SpecialType == SpecialType.System_DateTime)
+            {
+                Context.EmitCilInstruction(ilVar, OpCodes.Initobj,  Context.TypeResolver.Resolve(type));
+                return;
+            }
+            
             switch (type.SpecialType)
             {
                 case SpecialType.System_Object:
@@ -165,8 +171,8 @@ namespace Cecilifier.Core.AST
                     }
                     else
                         Context.EmitCilInstruction(ilVar, OpCodes.Ldnull);
-                    break;
-
+                    break; 
+                
                 case SpecialType.System_String:
                     if (value == null)
                         Context.EmitCilInstruction(ilVar, OpCodes.Ldnull);
@@ -175,12 +181,16 @@ namespace Cecilifier.Core.AST
                     break;
 
                 case SpecialType.System_Char:
-                    LoadLiteralToStackHandlingCallOnValueTypeLiterals(ilVar, type, (int) value[1], isTargetOfCall);
+                    LoadLiteralToStackHandlingCallOnValueTypeLiterals(ilVar, type, (int) value[0], isTargetOfCall);
                     break;
                 
+                case SpecialType.System_Byte:
+                case SpecialType.System_SByte:
                 case SpecialType.System_Int16:
                 case SpecialType.System_Int32:
+                case SpecialType.System_UInt32:
                 case SpecialType.System_Int64:
+                case SpecialType.System_UInt64:
                 case SpecialType.System_Double:
                 case SpecialType.System_Single:
                     LoadLiteralToStackHandlingCallOnValueTypeLiterals(ilVar, type, value, isTargetOfCall);
