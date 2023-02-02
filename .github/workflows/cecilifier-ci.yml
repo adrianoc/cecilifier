@@ -1,0 +1,15 @@
+name: Run Tests
+run-name: Verifying ${{ github.ref }} 🚀
+on: [push]
+jobs:
+ RunTests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '7.0.x'
+      - run: dotnet restore
+      - run: dotnet test --filter 'TestCategory !~ Issues' --collect:"XPlat Code Coverage"
+      - name: Upload coverage reports to Codecov with GitHub Action
+        uses: codecov/codecov-action@v3      
