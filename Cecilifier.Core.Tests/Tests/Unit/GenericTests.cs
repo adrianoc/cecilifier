@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using System;
 
 namespace Cecilifier.Core.Tests.Tests.Unit
 {
@@ -112,6 +113,44 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             
             Assert.That(cecilifiedCode, Does.Match(@"il_M_\d+.Emit\(OpCodes.Call, .+ImportReference\(typeof\(System\.Activator\)\)\.MakeGenericInstanceType\(gp_T_\d+\)\);"));
             Assert.That(cecilifiedCode, Does.Match(@"m_M_\d+\.ReturnType = gp_T_\d+;"));
+        }
+        
+        [TestCase("var x = typeof(System.Collections.Generic.Dictionary<int, int>.Enumerator);", 
+            """il_topLevelMain_3.Emit\(OpCodes.Ldtoken, assembly.MainModule.ImportReference\(typeof\(System.Collections.Generic.Dictionary<int, int>.Enumerator\)\)\);""")]
+        
+        [TestCase("class Foo { void Bar(System.Collections.Generic.Dictionary<int, int> dict) { var enu = dict.GetEnumerator(); } }", 
+            """
+                    (il_bar_\d+).Emit\(OpCodes.Callvirt,.+ImportReference\(.+typeof\(System.Collections.Generic.Dictionary<System.Int32, System.Int32>\), "GetEnumerator",.+\)\);
+                    \s+\1.Emit\(OpCodes.Stloc, l_enu_\d+\);
+                    """)]
+        public void TestReferenceToNonGenericInnerTypeOfGenericOuterType(string code, string expected)
+        {
+            var result = RunCecilifier(code);
+            Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(expected));
+        }
+
+        [Test]
+        public void TestInnerTypeOfOuterGenericType()
+        {
+            var r = RunCecilifier("class C { System.Collections.Generic.List<int>.Enumerator e; }");
+            Assert.That(
+                r.GeneratedCode.ReadToEnd(), 
+                Does.Match("""var fld_e_1 = new FieldDefinition\("e", FieldAttributes.Private, assembly.MainModule.ImportReference\(typeof\(System.Collections.Generic.List<int>.Enumerator\)\)\);"""));
+        }
+
+        [Test]
+        public void TestRecursiveTypeParameterConstraint()
+        {
+            //Test for issue #218
+            var r = RunCecilifier("interface I<T> where T : I<T> {}");
+            Assert.That(
+                r.GeneratedCode.ReadToEnd(), 
+                Does.Match(
+                      """
+                            var gp_T_1 = new Mono.Cecil.GenericParameter\("T", itf_I_0\);
+                            \s+itf_I_0.GenericParameters.Add\(gp_T_1\);
+                            \s+gp_T_1.Constraints.Add\(new GenericParameterConstraint\(itf_I_0.MakeGenericInstanceType\(gp_T_1\)\)\);
+                            """));
         }
     }
 }

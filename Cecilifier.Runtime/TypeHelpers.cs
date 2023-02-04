@@ -1,12 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Mono.Cecil;
-using Mono.Cecil.Rocks;
-using Mono.Collections.Generic;
-using CustomAttributeNamedArgument = Mono.Cecil.CustomAttributeNamedArgument;
-using ICustomAttributeProvider = Mono.Cecil.ICustomAttributeProvider;
 
 namespace Cecilifier.Runtime
 {
@@ -24,58 +19,9 @@ namespace Cecilifier.Runtime
 
             return new MethodReference(".ctor", type.Module.TypeSystem.Void, type) { HasThis = true };
         }
-       
 
-        public static MethodInfo ResolveGenericMethod(string declaringTypeName, string methodName, BindingFlags bindingFlags, IEnumerable<string> typeArguments, IEnumerable<ParamData> paramTypes)
+        public static MethodBase ResolveMethod(Type declaringType, string methodName, BindingFlags bindingFlags, params string[] paramTypes)
         {
-            var declaringType = Type.GetType(declaringTypeName);
-            
-            var typeArgumentsCount = typeArguments.Count();
-            var methods = declaringType.GetMethods(bindingFlags)
-                .Where(c => c.Name == methodName
-                            && c.IsGenericMethodDefinition
-                            && c.GetParameters().Length == paramTypes.Count()
-                            && typeArgumentsCount == c.GetGenericArguments().Length)
-                .ToArray();
-
-            if (methods.Length == 0)
-            {
-                throw new MissingMethodException(declaringTypeName, methodName);
-            }
-
-            var paramTypesArray = paramTypes.ToArray();
-            foreach (var mc in methods)
-            {
-                var parameters = mc.GetParameters();
-                var found = true;
-
-                for (var i = 0; i < parameters.Length; i++)
-                {
-                    if (!CompareParameters(parameters[i], paramTypesArray[i]))
-                    {
-                        found = false;
-                        break;
-                    }
-                }
-
-                if (found)
-                {
-                    return mc.MakeGenericMethod(typeArguments.Select(Type.GetType).ToArray());
-                }
-            }
-
-            return null;
-        }
-
-        public static MethodBase ResolveMethod(string declaringTypeName, string methodName, BindingFlags bindingFlags, string typeArgumentList, params string[] paramTypes)
-        {
-            var declaringType = Type.GetType(declaringTypeName);
-            if (declaringType.IsGenericType)
-            {
-                var typeArguments = typeArgumentList.Split(',');
-                declaringType = declaringType.MakeGenericType(typeArguments.Select(Type.GetType).ToArray());
-            }
-
             if (methodName == ".ctor")
             {
                 var resolvedCtor = declaringType.GetConstructor(
@@ -115,27 +61,6 @@ namespace Cecilifier.Runtime
             }
 
             return type.GetField(fieldName);
-        }
-
-        private static bool CompareParameters(ParameterInfo candidate, ParamData original)
-        {
-            if (candidate.ParameterType.IsArray ^ original.IsArray)
-            {
-                return false;
-            }
-
-            var candidateElementType = candidate.ParameterType.HasElementType ? candidate.ParameterType.GetElementType() : candidate.ParameterType;
-            if (candidateElementType.IsGenericParameter ^ original.IsTypeParameter)
-            {
-                return false;
-            }
-
-            if (original.IsTypeParameter)
-            {
-                return candidateElementType.Name == original.FullName;
-            }
-
-            return candidateElementType.FullName == original.FullName;
         }
     }
     

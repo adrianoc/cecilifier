@@ -71,7 +71,7 @@ public class IsPatternExpressionTests : CecilifierUnitTestBase
                                         @"\5Ldloc, \3\);\s+" +
                                         @"\5Brfalse_S, ldc_I4_0_\d+\);\s+" +
                                         @"\5Ldloc, \3\);\s+" +
-                                        @"\5Callvirt, .+""System.String"", ""get_Length"".+\);\s+" +
+                                        @"\5Callvirt, .+typeof\(System.String\), ""get_Length"".+\);\s+" +
                                         @"\5Ldc_I4, 10\);\s+" +
                                         @"\5Bne_Un, ldc_I4_0_\d+\);\s+" +
                                         @"\5Ldc_I4_1\);\s+" +

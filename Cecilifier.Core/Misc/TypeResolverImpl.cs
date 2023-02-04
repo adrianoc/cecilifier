@@ -24,7 +24,7 @@ namespace Cecilifier.Core.Misc
             return ResolveLocalVariableType(type)
                    ?? ResolvePredefinedAndComposedTypes(type)
                    ?? ResolveGenericType(type)
-                   ?? Resolve(type.FullyQualifiedName());
+                   ?? Resolve(type.ToDisplayString());
         }
 
         public string Resolve(string typeName) => Utils.ImportFromMainModule($"typeof({typeName})");
@@ -58,7 +58,7 @@ namespace Cecilifier.Core.Misc
 
         private string ResolveGenericType(ITypeSymbol type)
         {
-            if (!(type is INamedTypeSymbol { IsGenericType: true } genericTypeSymbol))
+            if (!(type is INamedTypeSymbol { IsGenericType: true, TypeArguments.Length: > 0 } genericTypeSymbol))
             {
                 return null;
             }
@@ -76,7 +76,7 @@ namespace Cecilifier.Core.Misc
 
         public string ResolveLocalVariableType(ITypeSymbol type)
         {
-            var containingSymbolName = type.ContainingSymbol?.FullyQualifiedName();
+            var containingSymbolName = type.ContainingSymbol?.FullyQualifiedName(false);
             var found = _context.DefinitionVariables.GetVariable(type.Name, VariableMemberKind.Type, containingSymbolName).VariableName 
                         ?? _context.DefinitionVariables.GetVariable(type.Name, VariableMemberKind.TypeParameter, containingSymbolName).VariableName;
             

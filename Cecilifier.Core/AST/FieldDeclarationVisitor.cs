@@ -86,7 +86,7 @@ namespace Cecilifier.Core.AST
         
         private string ProcessRequiredModifiers(IReadOnlyList<SyntaxToken> modifiers, string originalType)
         {
-            if (modifiers.All(m => m.Kind() != SyntaxKind.VolatileKeyword))
+            if (modifiers.All(m => !m.IsKind(SyntaxKind.VolatileKeyword)))
                 return null;
 
             var id = Context.Naming.RequiredModifier();

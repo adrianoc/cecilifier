@@ -142,7 +142,9 @@ namespace Cecilifier.Core.AST
         
                 HandleAttributesInMemberDeclaration(attributes, TargetDoesNotMatch, SyntaxKind.ReturnKeyword, methodVar); // Normal method attrs.
                 HandleAttributesInMemberDeclaration(attributes, TargetMatches, SyntaxKind.ReturnKeyword, $"{methodVar}.MethodReturnType"); // [return:Attr]
-        
+                
+                ProcessExplicitInterfaceImplementationAndStaticAbstractMethods(methodVar, methodSymbol);
+                
                 if (modifiersTokens.IndexOf(SyntaxKind.ExternKeyword) == -1)
                 {
                     if (methodSymbol.HasCovariantReturnType())

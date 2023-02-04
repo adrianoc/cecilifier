@@ -91,7 +91,7 @@ namespace Cecilifier.Core.AST
                 return false;
             
             // check the methods of the property because we do not register the property itself, only its methods. 
-            var methodToCheck = propInfo?.GetMethod ?? propInfo?.SetMethod;
+            var methodToCheck = propInfo.GetMethod ?? propInfo.SetMethod;
             var found = Context.DefinitionVariables.GetMethodVariable(methodToCheck.AsMethodDefinitionVariable());
             return found.IsValid;
         }
@@ -121,7 +121,7 @@ namespace Cecilifier.Core.AST
             var declaringType = node.ResolveDeclaringType<TypeDeclarationSyntax>();
             if (arrowExpression != null)
             {
-                AddExpressionBodiedGetterMethod(propertySymbol.HasCovariantGetter());
+                AddExpressionBodiedGetterMethod(propertySymbol);
                 return;
             }
             
@@ -137,12 +137,12 @@ namespace Cecilifier.Core.AST
                     case SyntaxKind.InitKeyword:
                         Context.WriteComment(" Init");
                         var setterReturnType = $"new RequiredModifierType({Context.TypeResolver.Resolve(typeof(IsExternalInit).FullName)}, {Context.TypeResolver.Bcl.System.Void})";
-                        AddSetterMethod(setterReturnType, accessor);
+                        AddSetterMethod(propertySymbol, setterReturnType, accessor);
                         break;
                     
                     case SyntaxKind.SetKeyword:
                         Context.WriteComment(" Setter");
-                        AddSetterMethod(Context.TypeResolver.Bcl.System.Void, accessor);
+                        AddSetterMethod(propertySymbol, Context.TypeResolver.Bcl.System.Void, accessor);
                         break; 
                     default:
                         throw new NotImplementedException($"Accessor: {accessor.Keyword}");
@@ -167,7 +167,7 @@ namespace Cecilifier.Core.AST
                 AddCecilExpressions(Context, backingFieldExps);
             }
 
-            void AddSetterMethod(string setterReturnType, AccessorDeclarationSyntax accessor)
+            void AddSetterMethod(IPropertySymbol property, string setterReturnType, AccessorDeclarationSyntax accessor)
             {
                 var setMethodVar = Context.Naming.SyntheticVariable("set", ElementKind.LocalVariable);
                 
@@ -180,6 +180,7 @@ namespace Cecilifier.Core.AST
                     //TODO : NEXT : try to use CecilDefinitionsFactory.Method()
                     AddCecilExpression($"var {setMethodVar} = new MethodDefinition(\"set_{propName}\", {accessorModifiers}, {setterReturnType});");
                     parameters.ForEach(p => AddCecilExpression($"{setMethodVar}.Parameters.Add({p.VariableName});"));
+                    ProcessExplicitInterfaceImplementationAndStaticAbstractMethods(setMethodVar, property.SetMethod);
                     AddCecilExpression($"{propertyDeclaringTypeVar}.Methods.Add({setMethodVar});");
 
                     AddCecilExpression($"{setMethodVar}.Body = new MethodBody({setMethodVar});");
@@ -215,14 +216,16 @@ namespace Cecilifier.Core.AST
                 }
             }
 
-            ScopedDefinitionVariable AddGetterMethodGuts(bool isCovariant, out string ilVar)
+            ScopedDefinitionVariable AddGetterMethodGuts(IPropertySymbol property, out string ilVar)
             {
-                Context.WriteComment(" Getter");
+                Context.WriteComment("Getter");
+                
                 var getMethodVar = Context.Naming.SyntheticVariable("get", ElementKind.Method);
                 var definitionVariable = Context.DefinitionVariables.WithCurrentMethod(declaringType.Identifier.Text, $"get_{propName}", parameters.Select(p => p.Type).ToArray(), getMethodVar);
                 
                 AddCecilExpression($"var {getMethodVar} = new MethodDefinition(\"get_{propName}\", {accessorModifiers}, {propertyType});");
-                if (isCovariant)
+                ProcessExplicitInterfaceImplementationAndStaticAbstractMethods(getMethodVar, property.GetMethod);
+                if (property.HasCovariantGetter())
                     AddCecilExpression($"{getMethodVar}.CustomAttributes.Add(new CustomAttribute(assembly.MainModule.Import(typeof(System.Runtime.CompilerServices.PreserveBaseOverridesAttribute).GetConstructor(BindingFlags.Public | BindingFlags.Instance, null, new Type[0], null))));");
 
                 parameters.ForEach(p => AddCecilExpression($"{getMethodVar}.Parameters.Add({p.VariableName});"));
@@ -244,15 +247,15 @@ namespace Cecilifier.Core.AST
                 return definitionVariable;
             }
             
-            void AddExpressionBodiedGetterMethod(bool isCovariant)
+            void AddExpressionBodiedGetterMethod(IPropertySymbol property)
             {
-                using var _ = AddGetterMethodGuts(isCovariant, out var ilVar);
+                using var _ = AddGetterMethodGuts(property, out var ilVar);
                 ProcessExpressionBodiedGetter(ilVar, arrowExpression);
             }
             
             void AddGetterMethod(AccessorDeclarationSyntax accessor, IPropertySymbol propertySymbol)
             {
-                using var _ = AddGetterMethodGuts(propertySymbol.HasCovariantGetter(), out var ilVar);
+                using var _ = AddGetterMethodGuts(propertySymbol, out var ilVar);
                 if (ilVar == null)
                     return;
              

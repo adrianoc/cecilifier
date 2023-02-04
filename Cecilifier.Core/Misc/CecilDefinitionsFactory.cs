@@ -149,7 +149,7 @@ namespace Cecilifier.Core.Misc
 
         private static string GenericParameter(IVisitorContext context, string typeParameterOwnerVar, string genericParamName, string genParamDefVar, ITypeParameterSymbol typeParameterSymbol)
         {
-            context.DefinitionVariables.RegisterNonMethod(typeParameterSymbol.ContainingSymbol.FullyQualifiedName(), genericParamName, VariableMemberKind.TypeParameter, genParamDefVar);
+            context.DefinitionVariables.RegisterNonMethod(typeParameterSymbol.ContainingSymbol.FullyQualifiedName(false), genericParamName, VariableMemberKind.TypeParameter, genParamDefVar);
             return $"var {genParamDefVar} = new Mono.Cecil.GenericParameter(\"{genericParamName}\", {typeParameterOwnerVar}){Variance(typeParameterSymbol)};";
         }
 
@@ -214,7 +214,7 @@ namespace Cecilifier.Core.Misc
             return Parameter(
                 node.Identifier.Text, 
                 paramSymbol!.RefKind, 
-                isParams: node.GetFirstToken().Kind() == SyntaxKind.ParamsKeyword,
+                isParams: node.GetFirstToken().IsKind(SyntaxKind.ParamsKeyword),
                 methodVar,
                 paramVar,
                 resolvedType,
@@ -293,8 +293,8 @@ namespace Cecilifier.Core.Misc
             
             for(int i = 0; i < typeParamList.Count; i++)
             {
-                AddConstraints(genericTypeParamEntries[i].genParamDefVar, genericTypeParamEntries[i].typeParameterSymbol);
                 exps.Add($"{memberDefVar}.GenericParameters.Add({genericTypeParamEntries[i].genParamDefVar});");
+                AddConstraints(genericTypeParamEntries[i].genParamDefVar, genericTypeParamEntries[i].typeParameterSymbol);
             }
             
             ArrayPool<(string genParamDefVar, ITypeParameterSymbol typeParameterSymbol)>.Shared.Return(genericTypeParamEntries);

@@ -13,7 +13,7 @@ public class ThrowStatementAndExpressionTests : CecilifierUnitTestBase
             result.GeneratedCode.ReadToEnd(), 
             Does.Match(
                 @"il_throwStatement_2.Emit\(OpCodes.Ldstr,.+""ex""\);\s+" +
-                @"il_throwStatement_2.Emit\(OpCodes.Newobj,.+""System.NotSupportedException"", "".ctor"",.+\);\s+" + 
+                @"il_throwStatement_2.Emit\(OpCodes.Newobj,.+typeof\(System.NotSupportedException\), "".ctor"",.+\);\s+" + 
                 @"il_throwStatement_2.Emit\(OpCodes.Throw\);\s+"));
     }
 
@@ -36,7 +36,7 @@ public class ThrowStatementAndExpressionTests : CecilifierUnitTestBase
                 @"\1Br_S, lbl_conditionEnd_\d\);\s+" + 
                 @"il_throwExpression_2.Append\(lbl_whenFalse_\d+\);\s+" + 
                 @"il_throwExpression_2.Emit\(OpCodes.Ldstr,.+""ex""\);\s+" +
-                @"\1Newobj,.+""System.Exception"", "".ctor"",.+;\s+" + 
+                @"\1Newobj,.+typeof\(System.Exception\), "".ctor"",.+;\s+" + 
                 @"\1Throw\);\s+" + 
                 @"il_throwExpression_2.Append\(lbl_conditionEnd_\d+\);"));
     }

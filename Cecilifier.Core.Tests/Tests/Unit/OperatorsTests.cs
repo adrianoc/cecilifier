@@ -74,7 +74,7 @@ public class OperatorsTests : CecilifierUnitTestBase
         
         Assert.That(
             cecilifiedCode, 
-            Contains.Substring("Emit(OpCodes.Call, assembly.MainModule.ImportReference(TypeHelpers.ResolveMethod(\"System.Type\", \"GetTypeFromHandle\",System.Reflection.BindingFlags.Default|System.Reflection.BindingFlags.Static|System.Reflection.BindingFlags.Public,\"\", \"System.RuntimeTypeHandle\")));"));
+            Contains.Substring("Emit(OpCodes.Call, assembly.MainModule.ImportReference(TypeHelpers.ResolveMethod(typeof(System.Type), \"GetTypeFromHandle\",System.Reflection.BindingFlags.Default|System.Reflection.BindingFlags.Static|System.Reflection.BindingFlags.Public, \"System.RuntimeTypeHandle\")));"));
     }
     
     [TestCase("s", Code.Ldarg_1, TestName = "On Parameter")]
@@ -102,8 +102,8 @@ public class OperatorsTests : CecilifierUnitTestBase
                         @"il_M_3.Append\(lbl_whenTrue_6\);\s+" +
                         @"il_M_3\.Emit\(OpCodes\.Ldarg_0\);\s+".IfTrue(expectedCode == Code.Ldfld) +
                         $@"\2{expectedCode}.+;\s+" +
-                        @"\2Callvirt,.+""System.String"", ""get_Length"".+;\s+" +
-                        @"\2Newobj,.+""System.Nullable`1"", "".ctor"".+,""System.Int32"", ""System.Int32"".+;\s+" +
+                        @"\2Callvirt,.+typeof\(System.String\), ""get_Length"".+;\s+" +
+                        @"\2Newobj,.+typeof\(System.Nullable<System.Int32>\), "".ctor"".+""System.Int32"".+;\s+" +
                         @"il_M_3.Append\(lbl_conditionEnd_7\);"));
     }
 
@@ -163,8 +163,8 @@ public class OperatorsTests : CecilifierUnitTestBase
                         @"\2Ldloc, \3.+;\s+" +
                         @"\2Br, lbl_conditionEnd_14.+;\s+" +
                         @"il_M_10.Append\(lbl_whenTrue_13\);\s+" +
-                        @"\2Callvirt,.+""System.String"", ""get_Length"".+;\s+" +
-                        @"\2Newobj,.+""System.Nullable`1"", "".ctor"".+,""System.Int32"", ""System.Int32"".+;\s+" +
+                        @"\2Callvirt,.+typeof\(System.String\), ""get_Length"".+;\s+" +
+                        @"\2Newobj,.+typeof\(System.Nullable<System.Int32>\), "".ctor"".+""System.Int32"".+;\s+" +
                         @"il_M_10.Append\(lbl_conditionEnd_14\);"));
     }
 
@@ -288,7 +288,7 @@ public class OperatorsTests : CecilifierUnitTestBase
             { 
                 "il_B_10.Emit(OpCodes.Ldarg, 7);",
                 "il_B_10.Emit(OpCodes.Ldstr, \"A\");",
-                "il_B_10.Emit(OpCodes.Call, assembly.MainModule.ImportReference(TypeHelpers.ResolveMethod(\"System.String\", \"op_Inequality\",System.Reflection.BindingFlags.Default|System.Reflection.BindingFlags.Static|System.Reflection.BindingFlags.Public,\"\", \"System.String\", \"System.String\")));",
+                "il_B_10.Emit(OpCodes.Call, assembly.MainModule.ImportReference(TypeHelpers.ResolveMethod(typeof(System.String), \"op_Inequality\",System.Reflection.BindingFlags.Default|System.Reflection.BindingFlags.Static|System.Reflection.BindingFlags.Public, \"System.String\", \"System.String\")));",
                 "il_B_10.Emit(OpCodes.Ret);"   
             }).SetName("String");
         
@@ -365,7 +365,7 @@ public class OperatorsTests : CecilifierUnitTestBase
             { 
                 "il_B_10.Emit(OpCodes.Ldarg, 7);",
                 "il_B_10.Emit(OpCodes.Ldstr, \"A\");",
-                "il_B_10.Emit(OpCodes.Call, assembly.MainModule.ImportReference(TypeHelpers.ResolveMethod(\"System.String\", \"op_Equality\",System.Reflection.BindingFlags.Default|System.Reflection.BindingFlags.Static|System.Reflection.BindingFlags.Public,\"\", \"System.String\", \"System.String\")));",
+                "il_B_10.Emit(OpCodes.Call, assembly.MainModule.ImportReference(TypeHelpers.ResolveMethod(typeof(System.String), \"op_Equality\",System.Reflection.BindingFlags.Default|System.Reflection.BindingFlags.Static|System.Reflection.BindingFlags.Public, \"System.String\", \"System.String\")));",
                 "il_B_10.Emit(OpCodes.Ret);"   
             }).SetName("String");
         

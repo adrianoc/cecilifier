@@ -70,11 +70,11 @@ namespace Cecilifier.Core.AST
             var returnType = ModelExtensions.GetTypeInfo(context.SemanticModel, lambda).ConvertedType;
             if (returnType is INamedTypeSymbol { IsGenericType: true } namedTypeSymbol)
             {
-                if (namedTypeSymbol.AssemblyQualifiedName().Contains("System.Func"))
+                if (namedTypeSymbol.FullyQualifiedName().Contains("System.Func"))
                 {
                     returnType = namedTypeSymbol.TypeArguments[^1];
                 }
-                else if (returnType.AssemblyQualifiedName().Contains("System.Action"))
+                else if (returnType.FullyQualifiedName().Contains("System.Action"))
                 {
                     returnType = context.RoslynTypeSystem.SystemVoid;
                 }

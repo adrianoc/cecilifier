@@ -27,7 +27,7 @@ public class LambdaExpressionTests : CecilifierUnitTestBase
             result.GeneratedCode.ReadToEnd(), 
             Does.Match(@"(il_M_\d+.Emit\(OpCodes\.)Ldnull\);\s+" +
                              @"\1Ldftn,.+m_lambda_.+\);\s+" +
-                             @"\1Newobj, .+Func`2.+\);\s+" +
+                             @"\1Newobj, .+typeof\(System.Func<System.Int32, System.Int32>\).+\);\s+" +
                              @"\1Stloc, (l_f_\d+)\);\s+" +
                              @"//Console.WriteLine\(f\(.+\)\);\s+" +
                              @"\1Ldloc, \2\);\s+" +
@@ -45,7 +45,7 @@ public class LambdaExpressionTests : CecilifierUnitTestBase
             result.GeneratedCode.ReadToEnd(), 
             Does.Match(@"(il_topLevelMain_\d+.Emit\(OpCodes\.)Ldnull\);\s+" +
                              @"\1Ldftn,.+m_lambda_.+\);\s+" +
-                             @"\1Newobj, .+Func`2.+\);\s+" +
+                             @"\1Newobj, .+typeof\(System.Func<System.Int32, System.Int32>\).+\);\s+" +
                              @"\1Stloc, (l_f_\d+)\);\s+" +
                              @"\1Ldloc, \2\);\s+" +
                              @"\1Ldc_I4, 10\);\s+" +

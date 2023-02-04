@@ -37,7 +37,7 @@ public class ObjectInitializerTests : CecilifierUnitTestBase
         var result = RunCecilifier(code);
         
         var expected = @"m_topLevelStatements_1.Body.Variables.Add\((l_x_\d+)\);\s+" +
-		                    @"(il_topLevelMain_\d+\.Emit\(OpCodes\.)Newobj,.+System\.Collections\.Generic\.Dictionary`2.+\)\);\s+" +
+		                    @"(il_topLevelMain_\d+\.Emit\(OpCodes\.)Newobj,.+typeof\(System\.Collections\.Generic\.Dictionary<System.Int32, System.Int32>\).+\)\);\s+" +
                             @"\2Dup\);\s+" +
                             @"\2Ldc_I4, 1\);\s+" +
                             @"\2Ldc_I4, 11\);\s+" +

@@ -150,6 +150,12 @@ namespace Cecilifier.Core.AST
                 return;
             }
             
+            if (type.SpecialType == SpecialType.None && type.IsValueType && type.TypeKind != TypeKind.Pointer || type.SpecialType == SpecialType.System_DateTime)
+            {
+                Context.EmitCilInstruction(ilVar, OpCodes.Initobj,  Context.TypeResolver.Resolve(type));
+                return;
+            }
+            
             switch (type.SpecialType)
             {
                 case SpecialType.System_Object:
@@ -165,8 +171,8 @@ namespace Cecilifier.Core.AST
                     }
                     else
                         Context.EmitCilInstruction(ilVar, OpCodes.Ldnull);
-                    break;
-
+                    break; 
+                
                 case SpecialType.System_String:
                     if (value == null)
                         Context.EmitCilInstruction(ilVar, OpCodes.Ldnull);
@@ -175,12 +181,16 @@ namespace Cecilifier.Core.AST
                     break;
 
                 case SpecialType.System_Char:
-                    LoadLiteralToStackHandlingCallOnValueTypeLiterals(ilVar, type, (int) value[1], isTargetOfCall);
+                    LoadLiteralToStackHandlingCallOnValueTypeLiterals(ilVar, type, (int) value[0], isTargetOfCall);
                     break;
                 
+                case SpecialType.System_Byte:
+                case SpecialType.System_SByte:
                 case SpecialType.System_Int16:
                 case SpecialType.System_Int32:
+                case SpecialType.System_UInt32:
                 case SpecialType.System_Int64:
+                case SpecialType.System_UInt64:
                 case SpecialType.System_Double:
                 case SpecialType.System_Single:
                     LoadLiteralToStackHandlingCallOnValueTypeLiterals(ilVar, type, value, isTargetOfCall);
@@ -335,7 +345,7 @@ namespace Cecilifier.Core.AST
             if (typeSymbol.TypeKind != TypeKind.Struct)
                 return;
             
-            var structLayoutAttribute = typeSymbol.GetAttributes().FirstOrDefault(attrData => attrData.AttributeClass.FullyQualifiedName().Contains("System.Runtime.InteropServices.StructLayoutAttribute"));
+            var structLayoutAttribute = typeSymbol.GetAttributes().FirstOrDefault(attrData => attrData.AttributeClass.FullyQualifiedName().Equals("System.Runtime.InteropServices.StructLayoutAttribute"));
             if (structLayoutAttribute == null)
             {
                 typeAttributes.AppendModifier("TypeAttributes.SequentialLayout");
@@ -352,12 +362,6 @@ namespace Cecilifier.Core.AST
                 
                 typeAttributes.AppendModifier($"TypeAttributes.{specifiedLayout}");
             }
-        }
-
-        private static bool IsNestedTypeDeclaration(SyntaxNode node)
-        {
-            Utils.EnsureNotNull(node.Parent);
-            return node.Parent.Kind() != SyntaxKind.NamespaceDeclaration && node.Parent.Kind() != SyntaxKind.CompilationUnit;
         }
 
         internal static string ModifiersToCecil<TEnumAttr>(
@@ -865,7 +869,7 @@ namespace Cecilifier.Core.AST
                 {
                     //attribute is not declared in the same assembly....
                     var ctorArgumentTypes = $"new Type[{attrArgs.Length}] {{ {string.Join(",", attrArgs.Select(arg => $"typeof({context.GetTypeInfo(arg.Expression).Type?.Name})"))} }}";
-                    return Utils.ImportFromMainModule($"typeof({attrType.AssemblyQualifiedName()}).GetConstructor({ctorArgumentTypes})");
+                    return Utils.ImportFromMainModule($"typeof({attrType.FullyQualifiedName()}).GetConstructor({ctorArgumentTypes})");
                 }
             
                 // Attribute is defined in the same assembly. We need to find the variable that holds its "ctor declaration"
@@ -937,6 +941,23 @@ namespace Cecilifier.Core.AST
         {
             var lineSpan = node.GetLocation().GetLineSpan();
             AddCecilExpression($"/* Syntax '{node.Kind()}' is not supported in {lineSpan.Path} ({lineSpan.Span.Start.Line + 1},{lineSpan.Span.Start.Character + 1}):\n------\n{node}\n----*/");
+        }
+
+        protected void ProcessExplicitInterfaceImplementationAndStaticAbstractMethods(string methodVar, IMethodSymbol method)
+        {
+            // first check explicit interface implementation...
+            var explicitImplement = method?.ExplicitInterfaceImplementations.FirstOrDefault();
+            if (explicitImplement == null)
+            {
+                // if it is not an explicit interface implementation check for abstract static method from interfaces
+                var lastDeclared = method.FindLastDefinition(method.ContainingType.Interfaces);
+                if (lastDeclared == null || SymbolEqualityComparer.Default.Equals(lastDeclared, method) || lastDeclared.ContainingType.TypeKind != TypeKind.Interface || method?.IsStatic == false)
+                    return;
+
+                explicitImplement = lastDeclared;
+            }
+
+            WriteCecilExpression(Context, $"{methodVar}.Overrides.Add({explicitImplement.MethodResolverExpression(Context)});");
         }
     }
 }

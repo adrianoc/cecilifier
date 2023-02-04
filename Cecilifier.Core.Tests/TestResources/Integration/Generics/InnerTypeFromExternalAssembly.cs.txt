@@ -1,0 +1,14 @@
+class InnerTypeFromExternalAssembly 
+{ 
+    static void Main() 
+    { 
+        System.Collections.Generic.Dictionary<int, string> dict = new()
+        {
+            [1] = "um",
+            [2] = "dois"
+        };
+
+        for(var enu = dict.GetEnumerator(); enu.MoveNext();)
+            System.Console.WriteLine($"{enu.Current.Key} = {enu.Current.Value}");
+    }
+}

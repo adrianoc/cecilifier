@@ -116,7 +116,7 @@ namespace Cecilifier.Core.AST
         
         private MethodDefinitionVariable AddAccessor(MemberDeclarationSyntax node, IEventSymbol eventSymbol, string methodVar, string accessorName, string eventType, IEnumerable<string> methodBodyExpressions)
         {
-            var accessorModifiers = AccessModifiersForEventAccessors(node, eventSymbol.ContainingType.TypeKind == TypeKind.Interface);
+            var accessorModifiers = AccessModifiersForEventAccessors(node, eventSymbol.ContainingType);
 
             var methodName = $"{accessorName}_{eventSymbol.Name}";
             var methodExps = CecilDefinitionsFactory.Method(Context, methodVar, methodName, accessorModifiers, Context.RoslynTypeSystem.SystemVoid, false,Array.Empty<TypeParameterSyntax>());
@@ -127,13 +127,9 @@ namespace Cecilifier.Core.AST
             return Context.DefinitionVariables.RegisterMethod(eventSymbol.ContainingType.Name, methodName, new[] { eventSymbol.Type.ToDisplayString() }, methodVar);
         }
         
-        private static string AccessModifiersForEventAccessors(MemberDeclarationSyntax node, bool isInterfaceDef)
+        private static string AccessModifiersForEventAccessors(MemberDeclarationSyntax node, ITypeSymbol typeSymbol)
         {
-            var accessorModifiers = isInterfaceDef 
-                ? Constants.Cecil.InterfaceMethodAttributes 
-                : node.Modifiers.MethodModifiersToCecil("MethodAttributes.SpecialName");
-
-            return accessorModifiers;
+            return node.Modifiers.ModifiersForSyntheticMethod("MethodAttributes.SpecialName", typeSymbol);
         }
 
         private IEnumerable<string> CreateLocalVarsForAddMethod(string methodVar, string backingFieldVar)
