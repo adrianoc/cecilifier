@@ -90,4 +90,17 @@ public class FieldsTests : CecilifierUnitTestBase
                 @"\1.Emit\(OpCodes.Ldc_I4, 42\);\s+" + 
                 @"\1.Emit\(OpCodes.Stsfld, fld_.+\);"));
     }
+
+    [Test]
+    public void TesRefFieldDeclaration()
+    {
+        var result = RunCecilifier("ref struct RefStruct { ref int refInt; ref object o; }");
+        Assert.That(
+            result.GeneratedCode.ReadToEnd(), Does.Match(
+            """
+            var (fld_refInt_\d+) = new FieldDefinition\("refInt", FieldAttributes.Private, assembly.MainModule.TypeSystem.Int32.MakeByReferenceType\(\)\);
+            \s+st_refStruct_0.Fields.Add\(\1\);
+            \s+var fld_o_\d+ = new FieldDefinition\("o", FieldAttributes.Private, assembly.MainModule.TypeSystem.Object.MakeByReferenceType\(\)\);
+            """));
+    }
 }

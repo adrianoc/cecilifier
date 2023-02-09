@@ -75,6 +75,7 @@ namespace Cecilifier.Core.Extensions
                 IPropertySymbol { ReturnsByRef: true } => true,
                 IMethodSymbol { ReturnsByRef: true } => true,
                 ILocalSymbol { IsRef: true } => true,
+                IFieldSymbol { RefKind: not RefKind.None } => true,
                 
                 _ => false
             };

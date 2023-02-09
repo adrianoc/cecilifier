@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -470,16 +471,83 @@ namespace Cecilifier.Core.AST
                 Context.EmitCilInstruction(ilVar, optimizedLdArgs[adjustedParameterIndex]);
             }
             
-            EmitBoxOpCodeIfCallOnTypeParameter(ilVar, paramSymbol, parent);
+            EmitBoxOpCodeIfCallOnTypeParameter(ilVar, paramSymbol.Type, parent);
 
             HandlePotentialDelegateInvocationOn(node, paramSymbol.Type, ilVar);
             HandlePotentialRefLoad(ilVar, node, paramSymbol.Type);
         }
-
-        private void EmitBoxOpCodeIfCallOnTypeParameter(string ilVar, IParameterSymbol paramSymbol, CSharpSyntaxNode parent)
+        
+        protected void ProcessField(string ilVar, SimpleNameSyntax node, IFieldSymbol fieldSymbol)
         {
-            if (paramSymbol.Type.TypeKind == TypeKind.TypeParameter && parent.Accept(UsageVisitor.GetInstance(Context)) == UsageKind.CallTarget)
-                Context.EmitCilInstruction(ilVar, OpCodes.Box, Context.TypeResolver.Resolve(paramSymbol.Type));
+            var nodeParent = (CSharpSyntaxNode) node.Parent;
+            Debug.Assert(nodeParent != null);
+                         
+            if (fieldSymbol.HasConstantValue && fieldSymbol.IsConst)
+            {
+                LoadLiteralToStackHandlingCallOnValueTypeLiterals(
+                    ilVar,
+                    fieldSymbol.Type,
+                    fieldSymbol.Type.SpecialType switch
+                    {
+                        SpecialType.System_String => $"\"{fieldSymbol.ConstantValue}\"",
+                        SpecialType.System_Boolean => (bool) fieldSymbol.ConstantValue ? 1 : 0,
+                        _ => fieldSymbol.ConstantValue 
+                    },
+                    nodeParent.Accept(UsageVisitor.GetInstance(Context)) == UsageKind.CallTarget);
+                return;
+            }
+            
+            var fieldDeclarationVariable = fieldSymbol.EnsureFieldExists(Context, node);
+
+            var isTargetOfQualifiedAccess = (node.Parent is MemberAccessExpressionSyntax mae) && mae.Name == node;
+            if (!fieldSymbol.IsStatic && !isTargetOfQualifiedAccess)
+                Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
+            
+            if (HandleLoadAddress(ilVar, fieldSymbol.Type, (CSharpSyntaxNode) node.Parent, fieldSymbol.IsStatic ? OpCodes.Ldsflda : OpCodes.Ldflda, fieldSymbol.Name, VariableMemberKind.Field, fieldSymbol.ContainingType.ToDisplayString()))
+            {
+                return;
+            }
+
+            if (fieldSymbol.IsVolatile)
+                Context.EmitCilInstruction(ilVar, OpCodes.Volatile);
+
+            var resolvedField = fieldDeclarationVariable.IsValid
+                ? fieldDeclarationVariable.VariableName
+                : fieldSymbol.FieldResolverExpression(Context);
+
+            var opCode = fieldSymbol.LoadOpCodeForFieldAccess();
+            Context.EmitCilInstruction(ilVar, opCode, resolvedField);
+
+            EmitBoxOpCodeIfCallOnTypeParameter(ilVar, fieldSymbol.Type, nodeParent);
+            HandlePotentialDelegateInvocationOn(node, fieldSymbol.Type, ilVar);
+        }
+       
+        protected void ProcessLocalVariable(string ilVar, SimpleNameSyntax localVarSyntax, ILocalSymbol symbol)
+        {
+            var localVar = (CSharpSyntaxNode) localVarSyntax.Parent;
+            if (HandleLoadAddress(ilVar, symbol.Type, localVar, OpCodes.Ldloca, symbol.Name, VariableMemberKind.LocalVariable))
+                return;
+
+            var operand = Context.DefinitionVariables.GetVariable(symbol.Name, VariableMemberKind.LocalVariable).VariableName;
+            Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, operand);
+            
+            EmitBoxOpCodeIfCallOnTypeParameter(ilVar, symbol.Type, localVar);
+            HandlePotentialDelegateInvocationOn(localVarSyntax, symbol.Type, ilVar);
+            HandlePotentialFixedLoad(ilVar, symbol);
+            HandlePotentialRefLoad(ilVar, localVarSyntax, symbol.Type);
+        }
+        private void HandlePotentialFixedLoad(string ilVar, ILocalSymbol symbol)
+        {
+            if (!symbol.IsFixed)
+                return;
+
+            Context.EmitCilInstruction(ilVar, OpCodes.Conv_U);
+        }
+
+        private void EmitBoxOpCodeIfCallOnTypeParameter(string ilVar, ITypeSymbol typeSymbol, CSharpSyntaxNode parent)
+        {
+            if (typeSymbol.TypeKind == TypeKind.TypeParameter && parent.Accept(UsageVisitor.GetInstance(Context)) == UsageKind.CallTarget)
+                Context.EmitCilInstruction(ilVar, OpCodes.Box, Context.TypeResolver.Resolve(typeSymbol));
         }
 
         protected bool HandleLoadAddress(string ilVar, ITypeSymbol symbol, CSharpSyntaxNode node, OpCode opCode, string symbolName, VariableMemberKind variableMemberKind, string parentName = null)
@@ -566,7 +634,7 @@ namespace Cecilifier.Core.AST
                                  ?? expression.Ancestors().OfType<ReturnStatementSyntax>().SingleOrDefault();
             
             var argument = expression.Ancestors().OfType<ArgumentSyntax>().FirstOrDefault();
-            var assigment = expression.Ancestors().OfType<AssignmentExpressionSyntax>().SingleOrDefault(c => c.Left != expression);
+            var assigment = expression.Ancestors().OfType<AssignmentExpressionSyntax>().SingleOrDefault();
             var mae = expression.Ancestors().OfType<MemberAccessExpressionSyntax>().SingleOrDefault(c => c.Expression == expression);
 
             if (mae != null)
@@ -576,8 +644,10 @@ namespace Cecilifier.Core.AST
             else if (assigment != null)
             {
                 var targetIsByRef = Context.SemanticModel.GetSymbolInfo(assigment.Left).Symbol.IsByRef();
-                needsLoadIndirect = (assigment.Right == expression && sourceIsByRef && !targetIsByRef) // simple assignment like: nonRef = ref;
-                                    || sourceIsByRef; // complex assignment like: nonRef = ref + 10;
+                needsLoadIndirect =
+                    assigment.Left != expression &&
+                    (assigment.Right == expression && sourceIsByRef && !targetIsByRef // simple assignment like: nonRef = ref;
+                    || sourceIsByRef && !assigment.Right.IsKind(SyntaxKind.RefExpression)) ; // complex assignment like: nonRef = ref + 10;
             }
             else if (argument != null)
             {

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
@@ -12,10 +13,13 @@ namespace Cecilifier.Core.AST
     internal class AssignmentVisitor : SyntaxWalkerBase
     {
         private readonly string ilVar;
+        private readonly AssignmentExpressionSyntax assignment;
 
         internal AssignmentVisitor(IVisitorContext ctx, string ilVar, AssignmentExpressionSyntax node) : base(ctx)
         {
             this.ilVar = ilVar;
+            assignment = node;
+            
             PreProcessRefOutAssignments(node.Left);
         }
         
@@ -95,7 +99,7 @@ namespace Cecilifier.Core.AST
                     break;
 
                 case ILocalSymbol local:
-                    LocalVariableAssignment(local, node);
+                    LocalVariableAssignment(local);
                     break;
 
                 case IFieldSymbol field:
@@ -152,9 +156,12 @@ namespace Cecilifier.Core.AST
             }
         }
 
+        // push `implicit this` (target of the assignment) to the stack if needed.
         void LoadImplicitTargetForMemberReference(IdentifierNameSyntax node, ISymbol memberSymbol)
         {
-            // push `implicit this` (target of the assignment) to the stack if needed.
+            if (memberSymbol is IFieldSymbol { RefKind: not RefKind.None } && !assignment.Right.IsKind(SyntaxKind.RefExpression))
+                return;
+            
             if (!memberSymbol.IsStatic 
 
                 && memberSymbol.Kind != SymbolKind.Parameter // Parameters/Locals are never leafs in a MemberReferenceExpression
@@ -223,49 +230,82 @@ namespace Cecilifier.Core.AST
             if (field.IsVolatile)
                 Context.EmitCilInstruction(ilVar, OpCodes.Volatile);
 
-            var definitionVariable = field.EnsureFieldExists(Context, name);
-            Context.EmitCilInstruction(ilVar, field.StoreOpCodeForFieldAccess(), definitionVariable.VariableName);
+            var fieldDefinitionVariable = field.EnsureFieldExists(Context, name);
+            MemberAssignment(field.Type, field.RefKind, fieldDefinitionVariable, field.StoreOpCodeForFieldAccess());     
         }
 
-        private void LocalVariableAssignment(ILocalSymbol localVariable, IdentifierNameSyntax assignmentTarget)
+        private void LocalVariableAssignment(ILocalSymbol localVariable)
         {
             var localVariableVar = Context.DefinitionVariables.GetVariable(localVariable.Name, VariableMemberKind.LocalVariable);
-            if (localVariable.Type is IPointerTypeSymbol symbol && assignmentTarget.Parent.IsKind(SyntaxKind.PointerIndirectionExpression))
-            {
-                Context.EmitCilInstruction(ilVar, symbol.Stind()); 
-            }
-            else
-            {
-                Context.EmitCilInstruction(ilVar, OpCodes.Stloc, localVariableVar.VariableName);
-            }
+            MemberAssignment(localVariable.Type, localVariable.RefKind, localVariableVar, OpCodes.Stloc);            
         }
 
         private void ParameterAssignment(IParameterSymbol parameter)
         {
-            if (parameter.RefKind == RefKind.None &&  (parameter.Type as IPointerTypeSymbol) is null)
+            var paramVariable = Context.DefinitionVariables.GetVariable(parameter.Name, VariableMemberKind.Parameter, parameter.ContainingSymbol.ToDisplayString());
+            MemberAssignment(parameter.Type, parameter.RefKind, paramVariable, OpCodes.Starg_S);            
+        }
+        
+        private void MemberAssignment(ITypeSymbol memberType, RefKind memberRefKind, DefinitionVariable memberDefinitionVariable, OpCode storeOpCode)
+        {
+            if (NeedsIndirectStore(memberType, memberRefKind))
             {
-                if (parameter.Type.TypeKind == TypeKind.Array)
-                {
-                    Context.EmitCilInstruction(ilVar, OpCodes.Stelem_Ref);
-                }
-                else
-                {
-                    var paramVariable = Context.DefinitionVariables.GetVariable(parameter.Name, VariableMemberKind.Parameter, parameter.ContainingSymbol.ToDisplayString()).VariableName;
-                    Context.EmitCilInstruction(ilVar, OpCodes.Starg_S, paramVariable);
-                }
+                Context.EmitCilInstruction(ilVar, memberType.Stind());
             }
             else
             {
-                Context.EmitCilInstruction(ilVar, parameter.Type.Stind());
+                if (!memberDefinitionVariable.IsValid)
+                {
+                    throw new InvalidOperationException("Invalid definition variable");
+                }
+                Context.EmitCilInstruction(ilVar, storeOpCode, memberDefinitionVariable.VariableName);
             }
         }
 
+        //TODO: the logic to decide whether an assignment should be an indirect store looks to be wrong
+        //      at least the pointer check looks to be missing a case like:
+        //      int *p, *p1 = null;
+        //      p = p1; // <-- *p* is a pointer and right (p1) is not an AddressOffExpression but still,
+        //              //     this is a simple store, not an indirect one.
+        private bool NeedsIndirectStore(ITypeSymbol assignmentTargetMemberType, RefKind assignmentTargetMemberRefKind) =>
+            (assignmentTargetMemberType is IPointerTypeSymbol && !assignment.Right.IsKind(SyntaxKind.AddressOfExpression))
+            || assignmentTargetMemberRefKind != RefKind.None && !assignment.Right.IsKind(SyntaxKind.RefExpression);
+
+        /// <summary>
+        /// When assigning a value to a *ref like* member, the generated IL needs to load
+        /// the address of the target storage before loading the value to be stored. For instance,
+        /// 
+        /// void Foo(ref int i) => i = 10;
+        ///
+        /// needs to generate something like:
+        /// ldarga i
+        /// ldc.i4, 10
+        /// stind.i4
+        ///
+        /// so in this case we visit the left side of the assignment twice; the 1st one
+        /// calls this method and is responsible to load the address to be indirectly
+        /// assigned (in the example above, the "ldarga i" instruction and the second
+        /// one generates the indirect assignment ("stind.i4" instruction in the example
+        /// above).
+        /// </summary>
+        /// <param name="node"></param>
         void PreProcessRefOutAssignments(ExpressionSyntax node)
         {
-            var paramSymbol = ParameterVisitor.Process(Context, node);
-            if (paramSymbol != null && paramSymbol.RefKind != RefKind.None)
+            if (assignment.Right.IsKind(SyntaxKind.RefExpression))
+                return;
+            
+            var symbol = Context.SemanticModel.GetSymbolInfo(node).Symbol;
+            if (symbol is IParameterSymbol { RefKind: not RefKind.None } parameterSymbol)
             {
-                ProcessParameter(ilVar, (IdentifierNameSyntax) node, paramSymbol);
+                ProcessParameter(ilVar, (IdentifierNameSyntax) node, parameterSymbol);
+            }
+            else if (symbol is IFieldSymbol { RefKind: not RefKind.None } fieldSymbol)
+            {
+                ProcessField(ilVar, (IdentifierNameSyntax) node, fieldSymbol);
+            }
+            else if (symbol is ILocalSymbol { RefKind: not RefKind.None } localSymbol)
+            {
+                ProcessLocalVariable(ilVar, (IdentifierNameSyntax) node, localSymbol);
             }
         }
     }

@@ -1243,73 +1243,6 @@ namespace Cecilifier.Core.AST
             }
         }
 
-        private void ProcessField(SimpleNameSyntax node, IFieldSymbol fieldSymbol)
-        {
-            var nodeParent = (CSharpSyntaxNode) node.Parent;
-            Debug.Assert(nodeParent != null);
-                         
-            if (fieldSymbol.HasConstantValue && fieldSymbol.IsConst)
-            {
-                LoadLiteralToStackHandlingCallOnValueTypeLiterals(
-                    ilVar,
-                    fieldSymbol.Type,
-                    fieldSymbol.Type.SpecialType switch
-                    {
-                        SpecialType.System_String => $"\"{fieldSymbol.ConstantValue}\"",
-                        SpecialType.System_Boolean => (bool) fieldSymbol.ConstantValue ? 1 : 0,
-                        _ => fieldSymbol.ConstantValue 
-                    },
-                    nodeParent.Accept(UsageVisitor.GetInstance(Context)) == UsageKind.CallTarget);
-                return;
-            }
-            
-            var fieldDeclarationVariable = fieldSymbol.EnsureFieldExists(Context, node);
-
-            var isTargetOfQualifiedAccess = (node.Parent is MemberAccessExpressionSyntax mae) && mae.Name == node;
-            if (!fieldSymbol.IsStatic && !isTargetOfQualifiedAccess)
-                Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
-            
-            if (HandleLoadAddress(ilVar, fieldSymbol.Type, (CSharpSyntaxNode) node.Parent, fieldSymbol.IsStatic ? OpCodes.Ldsflda : OpCodes.Ldflda, fieldSymbol.Name, VariableMemberKind.Field, fieldSymbol.ContainingType.ToDisplayString()))
-            {
-                return;
-            }
-
-            if (fieldSymbol.IsVolatile)
-                Context.EmitCilInstruction(ilVar, OpCodes.Volatile);
-
-            var resolvedField = fieldDeclarationVariable.IsValid
-                ? fieldDeclarationVariable.VariableName
-                : fieldSymbol.FieldResolverExpression(Context);
-
-            var opCode = fieldSymbol.LoadOpCodeForFieldAccess();
-            Context.EmitCilInstruction(ilVar, opCode, resolvedField);
-
-            EmitBoxOpCodeIfCallOnTypeParameter(fieldSymbol.Type, nodeParent);
-            HandlePotentialDelegateInvocationOn(node, fieldSymbol.Type, ilVar);
-        }
-        
-        private void ProcessLocalVariable(SimpleNameSyntax localVarSyntax, SymbolInfo varInfo)
-        {
-            var symbol = varInfo.Symbol.EnsureNotNull<ISymbol, ILocalSymbol>();
-            var localVar = (CSharpSyntaxNode) localVarSyntax.Parent;
-            if (HandleLoadAddress(ilVar, symbol.Type, localVar, OpCodes.Ldloca, symbol.Name, VariableMemberKind.LocalVariable))
-                return;
-
-            var operand = Context.DefinitionVariables.GetVariable(symbol.Name, VariableMemberKind.LocalVariable).VariableName;
-            Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, operand);
-            
-            EmitBoxOpCodeIfCallOnTypeParameter(symbol.Type, localVar);
-            HandlePotentialDelegateInvocationOn(localVarSyntax, symbol.Type, ilVar);
-            HandlePotentialFixedLoad(symbol);
-            HandlePotentialRefLoad(ilVar, localVarSyntax, symbol.Type);
-        }
-
-        private void EmitBoxOpCodeIfCallOnTypeParameter(ITypeSymbol type, CSharpSyntaxNode localVar)
-        {
-            if (type.TypeKind == TypeKind.TypeParameter && localVar.Accept(UsageVisitor.GetInstance(Context)) == UsageKind.CallTarget)
-                Context.EmitCilInstruction(ilVar, OpCodes.Box, Context.TypeResolver.Resolve(type));
-        }
-        
         /// <summary>
         /// Checks whether the given <paramref name="node"/> represents an unqualified reference (i.e, only a type name) or
         /// a qualified one. For instance in `Foo f = new NS.Foo();`,
@@ -1333,14 +1266,6 @@ namespace Cecilifier.Core.AST
                    && !propertySymbol.IsStatic;
         }
         
-        private void HandlePotentialFixedLoad(ILocalSymbol symbol)
-        {
-            if (!symbol.IsFixed)
-                return;
-
-            Context.EmitCilInstruction(ilVar, OpCodes.Conv_U);
-        }
-
         private void ProcessMethodReference(SimpleNameSyntax node, IMethodSymbol method)
         {
             var invocationParent = node.Ancestors().OfType<InvocationExpressionSyntax>()
@@ -1610,11 +1535,11 @@ namespace Cecilifier.Core.AST
                     break;
 
                 case SymbolKind.Local:
-                    ProcessLocalVariable(node, member);
+                    ProcessLocalVariable(ilVar, node, member.Symbol.EnsureNotNull<ISymbol, ILocalSymbol>());
                     break;
 
                 case SymbolKind.Field:
-                    ProcessField(node, member.Symbol as IFieldSymbol);
+                    ProcessField(ilVar, node, member.Symbol as IFieldSymbol);
                     break;
 
                 case SymbolKind.Property:
