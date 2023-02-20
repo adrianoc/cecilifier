@@ -11,5 +11,6 @@ jobs:
           dotnet-version: '7.0.x'
       - run: dotnet restore
       - run: dotnet test --filter 'TestCategory !~ Issues' --collect:"XPlat Code Coverage"
+      - run: dotnet format style --verify-no-changes
       - name: Upload coverage reports to Codecov with GitHub Action
-        uses: codecov/codecov-action@v3      
+        uses: codecov/codecov-action@v3
