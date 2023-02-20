@@ -5,11 +5,11 @@ namespace Cecilifier.Core.Tests.Tests.Unit;
 [TestFixture]
 public class ForStatementTests : CecilifierUnitTestBase
 {
-    [TestCase ("parameter++", true)]
+    [TestCase("parameter++", true)]
     [TestCase("local++", true)]
     [TestCase("field++", true)]
     [TestCase("F()", true)]
-    [TestCase ("localDummy = parameter++", false)]
+    [TestCase("localDummy = parameter++", false)]
     [TestCase("localDummy = local++", false)]
     [TestCase("localDummy = field++", false)]
     [TestCase("localDummy = F()", false)]
@@ -19,9 +19,9 @@ public class ForStatementTests : CecilifierUnitTestBase
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
 
         Assert.That(
-            cecilifiedCode, 
-            expectPop 
-                ? Does.Contain("Pop") 
+            cecilifiedCode,
+            expectPop
+                ? Does.Contain("Pop")
                 : Does.Not.Contains("Pop"));
     }
 }

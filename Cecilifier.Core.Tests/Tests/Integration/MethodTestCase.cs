@@ -84,7 +84,7 @@ namespace Cecilifier.Core.Tests.Integration
         {
             AssertResourceTest(@"Members/Methods/ParameterModifiers");
         }
-        
+
         [Test]
         public void TestRefParameters()
         {
@@ -126,13 +126,13 @@ namespace Cecilifier.Core.Tests.Integration
         {
             AssertResourceTest(@"Members/Methods/VirtualMethod");
         }
-        
+
         [Test]
         public void TestReturnDelegate()
         {
             AssertResourceTest("Members/Methods/ReturnDelegate");
         }
-        
+
         [TestCase("Implicit")]
         [TestCase("Explicit", Ignore = "Not supported")]
         public void TestDelegateAsParameter(string implicitOrExplicit)
@@ -149,19 +149,19 @@ namespace Cecilifier.Core.Tests.Integration
         {
             AssertResourceTest($"Members/Methods/{test}");
         }
-        
+
         [Test]
         public void TestRefLocals()
         {
             AssertResourceTest("Members/Methods/RefLocals");
         }
-        
+
         [Test]
         public void TestRefProperties()
         {
             AssertResourceTest("Members/Methods/RefProperties");
         }
-        
+
         [Test]
         public void TestOverloads()
         {

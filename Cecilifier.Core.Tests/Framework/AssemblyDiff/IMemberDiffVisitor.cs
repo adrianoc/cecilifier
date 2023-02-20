@@ -1,13 +1,13 @@
-﻿using Mono.Cecil;
+using Mono.Cecil;
 
 namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 {
     public interface IMemberDiffVisitor<T> where T : IMemberDefinition
     {
         bool VisitType(T source, T target);
-        
+
         bool VisitAttributes(T source, T target);
-        
+
         bool VisitAccessors(T source, T target);
 
         bool VisitCustomAttributes(T source, T target);

@@ -1,4 +1,4 @@
-﻿using Cecilifier.Core.Tests.Framework;
+using Cecilifier.Core.Tests.Framework;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration
@@ -32,18 +32,18 @@ namespace Cecilifier.Core.Tests.Integration
         [TestCase("AssignmentOfAddressOfLocalVariables", TestName = "Local Variable Assignment")]
         public void TestPointerTypes(string testName)
         {
-            AssertResourceTest($@"Misc/Pointers/{testName}");       
+            AssertResourceTest($@"Misc/Pointers/{testName}");
         }
-        
+
         [TestCase("FunctionPointers", TestName = "Basic Tests")]
         [TestCase("VoidFunctionPointers")]
         [TestCase("FunctionPointersAsParameters")]
         [TestCase("GenericFunctionPointers")]
         public void TestFunctionPointer(string testName)
         {
-            AssertResourceTest($@"Misc/Pointers/{testName}");       
+            AssertResourceTest($@"Misc/Pointers/{testName}");
         }
-        
+
         [TestCase("Delegate")]
         [TestCase("ClassAndMembers")]
         [TestCase("InterfaceAndMembers")]
@@ -71,7 +71,7 @@ namespace Cecilifier.Core.Tests.Integration
         {
             AssertResourceTest($@"Misc/Attributes/DllImportAttribute");
         }
-        
+
         [TestCase("TopLevelStatementsExplicitReturn")]
         [TestCase("TopLevelStatements")]
         public void TestTopLevelStatements(string testName)

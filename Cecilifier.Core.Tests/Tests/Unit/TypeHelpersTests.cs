@@ -14,13 +14,13 @@ public class TypeHelpersTests
     {
         Assert.Throws<InvalidOperationException>(() => TypeHelpers.ResolveMethod(typeof(Foo), methodName, BindingFlags.Instance | BindingFlags.Public, Array.Empty<string>()));
     }
-    
+
     [Test]
     public void ResolveField_Throws_IfTypeCannotBeFound()
     {
         Assert.Throws<Exception>(() => TypeHelpers.ResolveField("NonExistingType", "NotRelevant_TypeDoesNotExist"));
     }
-    
+
     public class Foo
     {
         public void M<T>(int i) { }

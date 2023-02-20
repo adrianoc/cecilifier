@@ -1,4 +1,4 @@
-﻿using NUnit.Framework;
+using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration.Types
 {
@@ -62,7 +62,7 @@ namespace Cecilifier.Core.Tests.Integration.Types
         {
             AssertResourceTest(@"Types/InterfaceWithProperties");
         }
-        
+
         [Test]
         public void InterfaceImplementationTest()
         {
@@ -104,7 +104,7 @@ namespace Cecilifier.Core.Tests.Integration.Types
         {
             AssertResourceTest(@"Types/TypeInitializer");
         }
-        
+
         [Test]
         public void ReadOnlyStructTest()
         {

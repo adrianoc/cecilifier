@@ -10,27 +10,27 @@ namespace Cecilifier.Core.Tests.Integration.Casts
         {
             AssertResourceTestWithParameters("Expressions/Casts/PrimitiveNumericCasts", source, target);
         }
-        
+
         [Test]
-        public void TestReferenceCasts([Values("object", "string" )] string source, [Values("object", "string")] string target)
+        public void TestReferenceCasts([Values("object", "string")] string source, [Values("object", "string")] string target)
         {
             AssertResourceTestWithParameters("Expressions/Casts/ReferenceCasts", source, target);
         }
-        
+
         [Test]
-        public void TestReferenceCastsWithTypesFromSameModule([Values("Base", "Derived", "object" )] string source, [Values("Base", "Derived", "object")] string target)
+        public void TestReferenceCastsWithTypesFromSameModule([Values("Base", "Derived", "object")] string source, [Values("Base", "Derived", "object")] string target)
         {
             AssertResourceTestWithParameters("Expressions/Casts/ReferenceCasts", source, target);
         }
-        
+
         [Test]
-        public void TestGenericTypeParameter([Values("object", "T" )] string source, [Values("object", "T")] string target)
+        public void TestGenericTypeParameter([Values("object", "T")] string source, [Values("object", "T")] string target)
         {
             AssertResourceTestWithParameters("Expressions/Casts/GenericTypeCasts", source, target);
         }
-        
+
         [Test]
-        public void TestGenerics([Values("Base<int>", "Derived" )] string source, [Values("Base<int>", "Derived")] string target)
+        public void TestGenerics([Values("Base<int>", "Derived")] string source, [Values("Base<int>", "Derived")] string target)
         {
             AssertResourceTestWithParameters("Expressions/Casts/GenericTypeCasts", source, target);
         }

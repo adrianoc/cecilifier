@@ -24,7 +24,7 @@ internal class DefaultParameterExtractorVisitor : CSharpSyntaxVisitor<string>
     {
         if (node.Default == null)
             return null;
-            
+
         return node.Default.Value.Accept(this);
     }
 
@@ -37,15 +37,15 @@ internal class DefaultParameterExtractorVisitor : CSharpSyntaxVisitor<string>
     {
         if (node.IsKind(SyntaxKind.DefaultLiteralExpression))
             return context.GetTypeInfo(node).Type.ValueForDefaultLiteral() ?? "null";
-        
+
         var literalValue = node.ValueText();
         if (node.IsKind(SyntaxKind.NumericLiteralExpression) && literalValue.Contains('.') && context.GetTypeInfo(node).Type?.MetadataToken == context.RoslynTypeSystem.SystemSingle.MetadataToken)
             literalValue += "f";
-        
+
         return literalValue;
     }
 
     public override string VisitDefaultExpression(DefaultExpressionSyntax node) => context.GetTypeInfo(node.Type).Type.ValueForDefaultLiteral();
-    
+
     private readonly IVisitorContext context;
 }

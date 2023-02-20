@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Reflection;
 using Mono.Cecil;
@@ -12,7 +12,7 @@ namespace Cecilifier.Runtime
             var resolved = type.Resolve();
             if (resolved == null)
                 return null;
-            
+
             var ctor = resolved.Methods.SingleOrDefault(m => m.IsConstructor && m.Parameters.Count == 0 && !m.IsStatic);
             if (ctor == null)
                 return DefaultCtorFor(resolved.BaseType);
@@ -34,10 +34,10 @@ namespace Cecilifier.Runtime
                 {
                     throw new InvalidOperationException($"Failed to resolve ctor [{declaringType}({string.Join(',', paramTypes)})");
                 }
-                
+
                 return resolvedCtor;
             }
-            
+
             var resolvedMethod = declaringType.GetMethod(methodName,
                 bindingFlags,
                 null,
@@ -48,7 +48,7 @@ namespace Cecilifier.Runtime
             {
                 throw new InvalidOperationException($"Failed to resolve method {declaringType}.{methodName}({string.Join(',', paramTypes)})");
             }
-            
+
             return resolvedMethod;
         }
 
@@ -63,7 +63,7 @@ namespace Cecilifier.Runtime
             return type.GetField(fieldName);
         }
     }
-    
+
     public class SystemPrivateCoreLibFixerReflectionProvider : IReflectionImporterProvider
     {
         public IReflectionImporter GetReflectionImporter(ModuleDefinition module)
@@ -71,7 +71,7 @@ namespace Cecilifier.Runtime
             return new SystemPrivateCoreLibFixerReflectionImporter(module);
         }
     }
-    
+
     internal class SystemPrivateCoreLibFixerReflectionImporter : DefaultReflectionImporter
     {
         private const string SystemPrivateCoreLib = "System.Private.CoreLib";

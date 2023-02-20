@@ -20,7 +20,7 @@ namespace Cecilifier.Core.Extensions
                 EventDeclarationSyntax @event => @event.Identifier.Text,
                 EnumMemberDeclarationSyntax enumMember => enumMember.Identifier.Text,
                 ConversionOperatorDeclarationSyntax conversionOperator => conversionOperator.ImplicitOrExplicitKeyword.IsKind(SyntaxKind.ExplicitKeyword) ? "op_Explicit" : "op_Implicit",
-                OperatorDeclarationSyntax @operator => @operator.ParameterList.Parameters.Count == 1 ?  UnaryOperatorNameFrom(@operator.OperatorToken.Kind()) : BinaryOperatorNameFrom(@operator.OperatorToken.Kind()),
+                OperatorDeclarationSyntax @operator => @operator.ParameterList.Parameters.Count == 1 ? UnaryOperatorNameFrom(@operator.OperatorToken.Kind()) : BinaryOperatorNameFrom(@operator.OperatorToken.Kind()),
                 _ => throw new Exception($"{node.GetType().Name} ({node}) is not supported")
             };
         }

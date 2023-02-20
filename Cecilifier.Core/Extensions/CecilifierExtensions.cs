@@ -20,13 +20,13 @@ namespace Cecilifier.Core.Extensions
                 ? char.ToLower(str[0]) + str.Substring(1)
                 : str;
         }
-        
+
         public static string PascalCase(this string str)
         {
             Span<char> copySpan = stackalloc char[str.Length];
             str.AsSpan().CopyTo(copySpan);
-            
-            if (copySpan.Length > 1) 
+
+            if (copySpan.Length > 1)
                 copySpan[0] = Char.ToUpper(copySpan[0]);
 
             return copySpan.ToString();
@@ -42,7 +42,7 @@ namespace Cecilifier.Core.Extensions
 
             return $"{to} | {modifier}";
         }
-        
+
         public static StringBuilder AppendModifier(this StringBuilder to, string modifier)
         {
             if (string.IsNullOrWhiteSpace(modifier))
@@ -164,14 +164,14 @@ public class SnippetRunner
         {
             textWriter.WriteLine(self.DumpAsString());
         }
-        
+
         public static string DumpAsString(this IList<Mapping> self)
         {
             var sb = new StringBuilder();
 #if DEBUG            
             foreach (var mapping in self)
             {
-                sb.AppendLine($"{mapping.Node.HumanReadableSummary() ,60} {mapping.Source} <- -> {mapping.Cecilified}");
+                sb.AppendLine($"{mapping.Node.HumanReadableSummary(),60} {mapping.Source} <- -> {mapping.Cecilified}");
             }
 #endif
             return sb.ToString();

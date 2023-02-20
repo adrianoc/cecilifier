@@ -37,7 +37,7 @@ namespace Cecilifier.Web
         [JsonPropertyName("mappings")] public IList<Mapping> Mappings { get; set; }
         [JsonPropertyName("mainTypeName")] public string MainTypeName { get; set; }
     }
-    
+
     public class Startup
     {
         private const string ProjectContents = @"<Project Sdk=""Microsoft.NET.Sdk"">
@@ -49,7 +49,7 @@ namespace Cecilifier.Web
         <PackageReference Include=""Mono.Cecil"" Version=""0.11.4"" />
     </ItemGroup>
 </Project>";
-        
+
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
@@ -66,7 +66,7 @@ namespace Cecilifier.Web
                 options.CheckConsentNeeded = context => true;
                 options.MinimumSameSitePolicy = SameSiteMode.None;
             });
-            
+
             services.AddRazorPages();
         }
 
@@ -83,7 +83,7 @@ namespace Cecilifier.Web
                 app.UseHsts();
             }
 
-            var webSocketOptions = new WebSocketOptions() 
+            var webSocketOptions = new WebSocketOptions()
             {
                 KeepAliveInterval = TimeSpan.FromSeconds(45),
             };
@@ -100,7 +100,7 @@ namespace Cecilifier.Web
                 endpoints.MapGet("/fileissue", CecilifierRestHandler.FileIssueEndPointAsync);
                 endpoints.MapGet("/authorization_callback", CecilifierRestHandler.ReportIssueEndPointAsync);
             });
-            
+
             app.Use(async (context, next) =>
             {
                 if (context.Request.Path == "/ws")
@@ -207,7 +207,7 @@ namespace Cecilifier.Web
                 catch (SyntaxErrorException ex)
                 {
                     //TODO: Log errors!
-                    
+
                     var source = includeSourceInErrorReports ? codeSnippet : string.Empty;
                     SendMessageWithCodeToChat("Syntax Error", ex.Message, "15746887", source);
 
@@ -221,15 +221,15 @@ namespace Cecilifier.Web
                     var dataToReturn = Encoding.UTF8.GetBytes($"{{ \"status\" : 2,  \"error\": \"{HttpUtility.JavaScriptStringEncode(ex.ToString())}\"  }}").AsMemory();
                     await webSocket.SendAsync(dataToReturn, WebSocketMessageType.Text, true, CancellationToken.None);
                 }
-                
+
                 received = await webSocket.ReceiveAsync(memory, CancellationToken.None);
             }
-            
+
             IEnumerable<string> GetTrustedAssembliesPath()
             {
                 return ((string) AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")).Split(Path.PathSeparator).ToList();
             }
-            
+
             Memory<byte> ZipProject(params (string fileName, string contents)[] sources)
             {
                 /*
@@ -248,19 +248,19 @@ namespace Cecilifier.Web
                 Console.WriteLine($"Stream Size = {zipStream.Length}");
                 return s.Slice(0, (int)zipStream.Length);
                 */
-                    
+
                 var tempPath = Path.GetTempPath();
                 var assetsPath = Path.Combine(tempPath, "output");
                 if (Directory.Exists(assetsPath))
                     Directory.Delete(assetsPath, true);
-                    
+
                 Directory.CreateDirectory(assetsPath);
-                    
+
                 foreach (var source in sources)
                 {
                     File.WriteAllText(Path.Combine(assetsPath, $"{source.fileName}"), source.contents);
                 }
-                    
+
                 var outputZipPath = Path.Combine(tempPath, "Cecilified.zip");
                 if (File.Exists(outputZipPath))
                     File.Delete(outputZipPath);
@@ -285,10 +285,10 @@ namespace Cecilifier.Web
             return JsonSerializer.SerializeToUtf8Bytes(cecilifiedWebResult);
         }
 
-        private void SendExceptionToChat(Exception exception, byte []code, int length)
+        private void SendExceptionToChat(Exception exception, byte[] code, int length)
         {
             var stasktrace = JsonEncodedText.Encode(exception.StackTrace);
-            
+
             var toSend = $@"{{
             ""content"":""Exception processing request : {JsonEncodedText.Encode(exception.Message)}"",
             ""embeds"": [
@@ -304,19 +304,19 @@ namespace Cecilifier.Web
             }}
             ]
         }}";
-            
-            SendJsonMessageToChat(toSend);            
+
+            SendJsonMessageToChat(toSend);
         }
         private string CodeInBytesToString(byte[] code, int length)
         {
-            var stream = new MemoryStream(code,2, length - 2); // skip byte with info whether user wants zipped project or not & publishing source (discord) or not.
+            var stream = new MemoryStream(code, 2, length - 2); // skip byte with info whether user wants zipped project or not & publishing source (discord) or not.
             using var reader = new StreamReader(stream);
             return reader.ReadToEnd();
         }
-        
+
         private void SendMessageWithCodeToChat(string title, string msg, string color, string code)
         {
-            SendTextMessageToChat(title,  $"{msg}\n\n***********\n\n```{code}```", color);
+            SendTextMessageToChat(title, $"{msg}\n\n***********\n\n```{code}```", color);
         }
 
         private void SendJsonMessageToChat(string jsonMessage)
@@ -344,7 +344,7 @@ namespace Cecilifier.Web
                 Console.WriteLine($"Unable to send message to discord channel. Exception caught:\n\n{e}");
             }
         }
-        
+
         private void SendTextMessageToChat(string title, string msg, string color)
         {
             var toSend = $@"{{
@@ -359,7 +359,7 @@ namespace Cecilifier.Web
 
             SendJsonMessageToChat(toSend);
         }
-        
+
 
         (string fileName, string contents) NameAndContentFromResource(string resourceName)
         {

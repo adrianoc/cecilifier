@@ -16,11 +16,11 @@ namespace Cecilifier.Core.Tests.Tests.Unit
 
             var cecilifiedCode = reader.ReadToEnd();
             Assert.That(cecilifiedCode, Does.Match("new FieldDefinition\\(\"IntValue\", .*FieldAttributes\\.Literal \\| FieldAttributes\\.Static.*\\) { Constant = 42 }"), "Expected constant initialization not found.");
-            
+
             var regex = new Regex("var (?<fieldVar>.+) = new FieldDefinition\\(.*\\).+\\s+.+\\.Emit\\(OpCodes\\.Stfld, \\1\\)", RegexOptions.Singleline);
             Assert.That(cecilifiedCode, Does.Not.Match(regex), "Store field not expected");
         }
-        
+
         [Test]
         public void ConstUsage()
         {
@@ -32,7 +32,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             Assert.That(cecilifiedCode, Does.Not.Match(regex), "Unexpected `ldfld` instruction. Value should be treated as a constant and be inlined.");
             Assert.That(cecilifiedCode, Contains.Substring(".Emit(OpCodes.Ldc_I4, 42)"));
         }
-        
+
         [TestCase("class C { public const int IntValue = -42; int Foo() => IntValue; }", Code.Ldc_I4)]
         [TestCase("class C { public const uint UIntValue = 42; uint Foo() => UIntValue; }", Code.Ldc_I4)]
         [TestCase("class C { public const bool BoolValue = true; bool Foo() => BoolValue; }", Code.Ldc_I4)]
@@ -48,10 +48,10 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             var result = RunCecilifier(code);
             using var reader = result.GeneratedCode;
             var cecilifiedCode = reader.ReadToEnd();
-            
+
             Assert.That(cecilifiedCode, Contains.Substring(expectedLoad.ToString()));
         }
-        
+
         [TestCase("using System; class C { public const ConsoleColor EnumConst = ConsoleColor.Blue; }", Code.Ldc_I4, "9")]
         [TestCase("class C { public const int IntValue = 42; public const int IntValue2 = IntValue + 42; }", Code.Ldc_I4, "84")]
         [TestCase("class C { public const string StringValue = \"foo\"; }", Code.Ldstr, "\"foo\"")]
@@ -60,7 +60,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             var result = RunCecilifier(code);
             using var reader = result.GeneratedCode;
             var cecilifiedCode = reader.ReadToEnd();
-            
+
             Assert.That(cecilifiedCode, Contains.Substring($"Constant = {expectedLoadedValue}"));
         }
     }

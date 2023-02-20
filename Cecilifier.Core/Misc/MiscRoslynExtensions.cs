@@ -16,8 +16,8 @@ public static class MiscRoslynExtensions
     {
         SyntaxKind.AddAssignmentExpression => SyntaxKind.PlusToken,
         SyntaxKind.SubtractAssignmentExpression => SyntaxKind.MinusToken,
-        SyntaxKind.MultiplyAssignmentExpression  => SyntaxKind.AsteriskToken,
-        SyntaxKind.DivideAssignmentExpression  => SyntaxKind.SlashToken,
+        SyntaxKind.MultiplyAssignmentExpression => SyntaxKind.AsteriskToken,
+        SyntaxKind.DivideAssignmentExpression => SyntaxKind.SlashToken,
         _ => SyntaxKind.None
     };
 }

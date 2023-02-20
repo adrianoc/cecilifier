@@ -42,7 +42,7 @@ namespace Cecilifier.Core.Tests.Integration
         private static void AssertUnsupportedFeature(string codeString, string expectedMessage)
         {
             var code = new MemoryStream(Encoding.ASCII.GetBytes(codeString));
-            using(var stream = Cecilifier.Process(code, new CecilifierOptions {References = Utils.GetTrustedAssembliesPath()}).GeneratedCode)
+            using (var stream = Cecilifier.Process(code, new CecilifierOptions { References = Utils.GetTrustedAssembliesPath() }).GeneratedCode)
             {
                 var cecilifiedCode = stream.ReadToEnd();
                 Assert.That(cecilifiedCode, Contains.Substring(expectedMessage));

@@ -12,36 +12,36 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             var code = $"struct S {{ }} unsafe class C {{ {type} field; void M({type} value) {{ fixed({type} *p = &field) *p = value; }} }}";
             var result = RunCecilifier(code);
             var cecilifiedCode = result.GeneratedCode.ReadToEnd();
-            
+
             Assert.That(cecilifiedCode, Does.Match(@"(il_M_\d+\.Emit\(OpCodes\.)Ldarg_0\);\s+" +
                                                    @"\1Ldflda, fld_field_\d+\);\s+" +
                                                    @"\1Stloc, l_p_\d+\);"));
-            
+
             Assert.That(cecilifiedCode, Does.Match(@"(il_M_\d+\.Emit\(OpCodes\.)Ldloc, l_p_\d+\);\s+" +
                                                    @"\1Conv_U\);\s+" +
                                                    @"\1Ldarg_1\);\s+" +
                                                    $@"\1{expectedOpCode}\);"));
         }
-        
+
         [TestCaseSource(nameof(PointerAssignmentTypesToTest))]
         public void TestAssignmentToLocalThroughPointerDeference(string type, string expectedStoreOpCode)
         {
             var code = $"struct S {{ }} unsafe class C {{ void M({type} *p, {type} value) {{ {type} *lp = p; *lp = value; }} }}";
             var result = RunCecilifier(code);
             var cecilifiedCode = result.GeneratedCode.ReadToEnd();
-            
-            Assert.That(cecilifiedCode, Does.Match(@"il_M_\d+\.Emit\(OpCodes\.Ldloc, l_lp_\d+\);\s+" + 
-                                                   @"\s+il_M_\d+\.Emit\(OpCodes\.Ldarg_2\);"));            
+
+            Assert.That(cecilifiedCode, Does.Match(@"il_M_\d+\.Emit\(OpCodes\.Ldloc, l_lp_\d+\);\s+" +
+                                                   @"\s+il_M_\d+\.Emit\(OpCodes\.Ldarg_2\);"));
             Assert.That(cecilifiedCode, Contains.Substring(expectedStoreOpCode));
         }
-        
+
         [TestCaseSource(nameof(PointerAssignmentTypesToTest))]
         public void TestAssignmentToParameterThroughPointerDeference(string type, string expectedStoreOpCode)
         {
             var code = $"struct S {{ }} unsafe class C {{ void M({type} *p, {type} value) {{ *p = value; }} }}";
             var result = RunCecilifier(code);
             var cecilifiedCode = result.GeneratedCode.ReadToEnd();
-            Assert.That(cecilifiedCode, Does.Match(@"il_M_\d+\.Emit\(OpCodes\.Ldarg_1\);\s+" + 
+            Assert.That(cecilifiedCode, Does.Match(@"il_M_\d+\.Emit\(OpCodes\.Ldarg_1\);\s+" +
                                                    @"\s+il_M_\d+\.Emit\(OpCodes\.Ldarg_2\);"));
             Assert.That(cecilifiedCode, Contains.Substring(expectedStoreOpCode));
         }

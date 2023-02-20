@@ -27,22 +27,22 @@ public class ParameterTests : CecilifierUnitTestBase
                                                $@"\k<param_def>.Constant = {Regex.Escape(expectedParamValue ?? paramValue)};"));
     }
 
-    [TestCase("Int32" ,"Ldc_I4", "42")]
-    [TestCase("String","Ldstr", "\"Foo\"")]
-    [TestCase("Boolean","Ldc_I4", "true", "1")]
-    [TestCase("Boolean","Ldc_I4", "false", "0")]
-    [TestCase("Double","Ldc_R8", "4.2")]
-    [TestCase("Single","Ldc_R4", "4.2f")]
-    [TestCase("Object","Ldnull", "null", "")]
+    [TestCase("Int32", "Ldc_I4", "42")]
+    [TestCase("String", "Ldstr", "\"Foo\"")]
+    [TestCase("Boolean", "Ldc_I4", "true", "1")]
+    [TestCase("Boolean", "Ldc_I4", "false", "0")]
+    [TestCase("Double", "Ldc_R8", "4.2")]
+    [TestCase("Single", "Ldc_R4", "4.2f")]
+    [TestCase("Object", "Ldnull", "null", "")]
     public void TestDefaultParameterInInvocations(string paramType, string ilOpCode, string paramValue, string expectedParamValue = null)
     {
         var result = RunCecilifier($"using System; class Foo {{ void WithDefault(bool b, {paramType} p = {paramValue}) {{ }} void Execute() => WithDefault(true); }}");
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
 
-        expectedParamValue = expectedParamValue == null || expectedParamValue.Length > 0 ?  $", {expectedParamValue ?? paramValue}" : "";
+        expectedParamValue = expectedParamValue == null || expectedParamValue.Length > 0 ? $", {expectedParamValue ?? paramValue}" : "";
         Assert.That(cecilifiedCode, Does.Match($@"Ldc_I4, 1.+\s+.+{ilOpCode}{expectedParamValue}.+\s+.+Call, m_withDefault_1"));
     }
-    
+
     [Test]
     public void TestInParameter()
     {
@@ -50,7 +50,7 @@ public class ParameterTests : CecilifierUnitTestBase
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
         Assert.That(cecilifiedCode, Contains.Substring("ParameterDefinition(\"f\", ParameterAttributes.In, st_foo_0.MakeByReferenceType()"));
     }
-    
+
     [Test]
     public void TestOutParameter()
     {

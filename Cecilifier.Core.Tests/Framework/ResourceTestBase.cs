@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -53,12 +53,12 @@ namespace Cecilifier.Core.Tests.Framework
         {
             AssertResourceTest(resourceName, kind, new StrictAssemblyDiffVisitor());
         }
-        
+
         protected void AssertResourceTest(string resourceName, bool buildAsExe)
         {
-            AssertResourceTest(resourceName,  TestKind.Integration, new StrictAssemblyDiffVisitor(), buildAsExe);
+            AssertResourceTest(resourceName, TestKind.Integration, new StrictAssemblyDiffVisitor(), buildAsExe);
         }
-      
+
         private void AssertResourceTest(string resourceName, TestKind kind, IAssemblyDiffVisitor visitor)
         {
             AssertResourceTest(resourceName, kind, visitor, false);
@@ -68,12 +68,12 @@ namespace Cecilifier.Core.Tests.Framework
         {
             using var tbc = ReadResource(resourceName, "cs", TestKind.Integration);
             var readToEnd = ReadToEnd(tbc);
-            
+
             var testContents = string.Format(readToEnd, parameters);
-            
+
             AssertResourceTest($"{resourceName}_{string.Join('_', parameters)}", new StrictAssemblyDiffVisitor(), false, new MemoryStream(Encoding.ASCII.GetBytes(testContents)));
         }
-        
+
         private void AssertResourceTest(string resourceName, TestKind kind, IAssemblyDiffVisitor visitor, bool buildAsExe)
         {
             using var tbc = ReadResource(resourceName, "cs", kind);
@@ -100,7 +100,7 @@ namespace Cecilifier.Core.Tests.Framework
 
             return compileAsExe
                 ? CompilationServices.CompileExe(targetPath, tbc, Utils.GetTrustedAssembliesPath().ToArray())
-                : CompilationServices.CompileDLL(targetPath, tbc, Utils.GetTrustedAssembliesPath().ToArray()); 
+                : CompilationServices.CompileDLL(targetPath, tbc, Utils.GetTrustedAssembliesPath().ToArray());
         }
 
         private void AssertResourceTest(string actualAssemblyPath, string expectedAssemblyPath, Stream tbc, IAssemblyDiffVisitor visitor)
@@ -108,7 +108,7 @@ namespace Cecilifier.Core.Tests.Framework
             CecilifyAndExecute(tbc, actualAssemblyPath);
             CompareAssemblies(expectedAssemblyPath, actualAssemblyPath, visitor);
         }
-        
+
         private void AssertResourceTest(string actualAssemblyPath, string expectedAssemblyPath, Stream tbc)
         {
             AssertResourceTest(actualAssemblyPath, expectedAssemblyPath, tbc, new StrictAssemblyDiffVisitor());
@@ -192,7 +192,7 @@ namespace Cecilifier.Core.Tests.Framework
                 Assert.Fail("Expected and generated assemblies differs:\r\n\tExpected:  {0}\r\n\tGenerated: {1}\r\n\r\n{2}\r\n\r\nCecilified Code:\r\n{3}", comparer.First, comparer.Second, visitor.Reason, cecilifiedCode);
             }
         }
-        
+
         private Stream ReadResource(string resourceName, string type, TestKind kind)
         {
             return ReadResource(resourceName.GetPathOfTextResource(type, kind));

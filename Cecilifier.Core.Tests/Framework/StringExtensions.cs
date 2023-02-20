@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 
 namespace Cecilifier.Core.Tests.Framework
 {

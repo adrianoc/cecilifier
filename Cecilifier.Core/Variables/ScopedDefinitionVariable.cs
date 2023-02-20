@@ -13,23 +13,23 @@ public unsafe readonly struct ScopedDefinitionVariable : IDisposable
     {
         _definitionVariables = definitionVariables;
         _currentSize = currentSize;
-        _unregister = dontUnregisterTypesAndMembers ? &ConditionalUnregister : &UnconditionalUnregister; 
+        _unregister = dontUnregisterTypesAndMembers ? &ConditionalUnregister : &UnconditionalUnregister;
     }
 
     public void Dispose()
     {
-        for (var i = _definitionVariables.Count - 1; i >=  _currentSize; i--)
+        for (var i = _definitionVariables.Count - 1; i >= _currentSize; i--)
         {
             _unregister(_definitionVariables, i);
         }
     }
-        
+
     static void ConditionalUnregister(IList<DefinitionVariable> variables, int index)
     {
         var v = variables[index];
-        if (v.Kind is VariableMemberKind.LocalVariable) 
+        if (v.Kind is VariableMemberKind.LocalVariable)
             variables.RemoveAt(index);
     }
-            
+
     private static void UnconditionalUnregister(IList<DefinitionVariable> variables, int index) => variables.RemoveAt(index);
 }

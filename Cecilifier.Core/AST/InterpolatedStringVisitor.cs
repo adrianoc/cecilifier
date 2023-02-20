@@ -26,7 +26,7 @@ namespace Cecilifier.Core.AST
                                                      && f.Parameters.Length == _numberOfArguments + 1);
         }
     }
-    
+
     internal class InterpolatedStringWithMoreThan3ArgumentsVisitor : InterpolatedStringVisitor
     {
         public InterpolatedStringWithMoreThan3ArgumentsVisitor(IVisitorContext context, string ilVar, ExpressionVisitor expressionVisitor, int numberOfArguments) : base(context, ilVar, expressionVisitor)
@@ -38,7 +38,7 @@ namespace Cecilifier.Core.AST
         {
             return StringFormatOverloads.Single(f => f.Parameters[0].Type.SpecialType == SpecialType.System_String
                                                      && f.Parameters[1].Type is IArrayTypeSymbol { ElementType: { SpecialType: SpecialType.System_Object } }
-                                                     && f.Parameters.Length == 2);                
+                                                     && f.Parameters.Length == 2);
         }
 
         protected override void BeforeVisitInterpolatedStringExpression()
@@ -46,12 +46,12 @@ namespace Cecilifier.Core.AST
             Context.EmitCilInstruction(_ilVar, OpCodes.Ldc_I4, _numberOfArguments);
             Context.EmitCilInstruction(_ilVar, OpCodes.Newarr, Context.RoslynTypeSystem.SystemObject);
         }
- 
+
         public override void VisitInterpolation(InterpolationSyntax node)
         {
             Context.EmitCilInstruction(_ilVar, OpCodes.Dup);
             Context.EmitCilInstruction(_ilVar, OpCodes.Ldc_I4, _currentParameterIndex);
-            
+
             base.VisitInterpolation(node);
             Context.EmitCilInstruction(_ilVar, OpCodes.Stelem_Ref);
         }
@@ -68,13 +68,13 @@ namespace Cecilifier.Core.AST
                 ? new InterpolatedStringUpTo3ArgumentsVisitor(context, ilVar, expressionVisitor, numberOfArguments)
                 : new InterpolatedStringWithMoreThan3ArgumentsVisitor(context, ilVar, expressionVisitor, numberOfArguments);
         }
-        
+
         protected abstract IMethodSymbol GetStringFormatOverloadToCall();
-        
-        protected IEnumerable<IMethodSymbol>  StringFormatOverloads => Context.RoslynTypeSystem.SystemString
+
+        protected IEnumerable<IMethodSymbol> StringFormatOverloads => Context.RoslynTypeSystem.SystemString
                                                                                 .GetMembers("Format")
                                                                                 .OfType<IMethodSymbol>();
-        
+
         protected InterpolatedStringVisitor(IVisitorContext context, string ilVar, ExpressionVisitor expressionVisitor) : base(context)
         {
             _ilVar = ilVar;
@@ -86,12 +86,12 @@ namespace Cecilifier.Core.AST
             var lastInstructionBeforeInterpolatedString = Context.CurrentLine;
 
             BeforeVisitInterpolatedStringExpression();
-            
+
             base.VisitInterpolatedStringExpression(node);
 
             Context.EmitCilInstruction(_ilVar, OpCodes.Ldstr, _computedFormat.ValueText());
             Context.MoveLineAfter(Context.CurrentLine, lastInstructionBeforeInterpolatedString);
-            
+
             AddMethodCall(_ilVar, GetStringFormatOverloadToCall(), false);
         }
 
@@ -99,28 +99,28 @@ namespace Cecilifier.Core.AST
 
         public override void VisitInterpolation(InterpolationSyntax node)
         {
-            using var __ = LineInformationTracker.Track(Context, node);            
+            using var __ = LineInformationTracker.Track(Context, node);
             _computedFormat.Append($"{{{_currentParameterIndex++}}}");
             node.Expression.Accept(_expressionVisitor);
-            
+
             // Expressions used in interpolated strings always report identity conversions but since
             // we are assigning then to objects, we need to check whether we need boxing.
             var conv = Context.SemanticModel.ClassifyConversion(node.Expression, Context.RoslynTypeSystem.SystemObject);
             if (conv.IsBoxing)
             {
-                AddCilInstruction(_ilVar, OpCodes.Box, Context.GetTypeInfo(node.Expression).Type);               
+                AddCilInstruction(_ilVar, OpCodes.Box, Context.GetTypeInfo(node.Expression).Type);
             }
         }
 
         public override void VisitInterpolatedStringText(InterpolatedStringTextSyntax node)
         {
-            using var __ = LineInformationTracker.Track(Context, node);            
+            using var __ = LineInformationTracker.Track(Context, node);
             _computedFormat.Append(node.TextToken.ToFullString());
         }
 
         protected readonly string _ilVar;
         protected byte _currentParameterIndex = 0;
-        
+
         private readonly StringBuilder _computedFormat = new();
         private readonly ExpressionVisitor _expressionVisitor;
     }

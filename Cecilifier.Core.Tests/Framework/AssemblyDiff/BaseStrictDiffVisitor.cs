@@ -41,7 +41,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                     output.WriteLine($"Difference in contra-variance for '{sourceParam.Name}' :\n\tSource ({sourceFileName}): {sourceParam.IsContravariant}\n\tTarget ({targetFileName}): {targetParam.IsContravariant}");
                     ret = false;
                 }
-                
+
                 if (sourceParam.IsCovariant != targetParam.IsCovariant)
                 {
                     output.WriteLine($"Difference in co-variance for '{sourceParam.Name}' :\n\tSource ({sourceFileName}): {sourceParam.IsCovariant}\n\tTarget ({targetFileName}): {targetParam.IsCovariant}");
@@ -53,7 +53,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                     output.WriteLine($"Difference in 'class' constraint for '{sourceParam.Name}' :\n\tSource ({sourceFileName}): {sourceParam.HasReferenceTypeConstraint}\n\tTarget ({targetFileName}): {targetParam.HasReferenceTypeConstraint}");
                     ret = false;
                 }
-                
+
                 if (sourceParam.HasDefaultConstructorConstraint != targetParam.HasDefaultConstructorConstraint)
                 {
                     output.WriteLine($"Difference in 'new()' constraint for '{sourceParam.Name}' :\n\tSource ({sourceFileName}): {sourceParam.HasDefaultConstructorConstraint}\n\tTarget ({targetFileName}): {targetParam.HasDefaultConstructorConstraint}");
@@ -65,8 +65,8 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                     output.WriteLine($"Difference in 'struct' constraint for '{sourceParam.Name}' :\n\tSource ({sourceFileName}): {sourceParam.HasReferenceTypeConstraint}\n\tTarget ({targetFileName}): {targetParam.HasNotNullableValueTypeConstraint}");
                     ret = false;
                 }
-                
-                
+
+
                 if (sourceParam.Constraints.Count != targetParam.Constraints.Count)
                 {
                     output.WriteLine($"# of constrains differs for type parameter '{sourceParam.Name}' :\n\tSource ({sourceFileName}): {sourceParam.Constraints.Count}\n\t{string.Join(',', sourceParam.Constraints.Select(c => c.ConstraintType))}\n\tTarget ({targetFileName}): {targetParam.Constraints.Count}\n\t{string.Join(',', targetParam.Constraints.Select(c => c.ConstraintType))}");
@@ -86,14 +86,14 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                     }
                 }
             }
-            
+
             return ret;
-        
+
             string ToString(IEnumerable<GenericParameter> genericParameters)
             {
                 if (!genericParameters.Any())
                     return "None";
-                
+
                 return string.Join(',', genericParameters.Select(gp => gp.Name));
             }
         }

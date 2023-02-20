@@ -32,7 +32,7 @@ namespace Cecilifier.Core.AST
             AddCecilExpressions(Context, typeDef);
 
             var parentName = enumSymbol.ContainingSymbol.FullyQualifiedName();
-            using (Context.DefinitionVariables.WithCurrent(parentName, enumSymbol.FullyQualifiedName(), VariableMemberKind.Type,enumType))
+            using (Context.DefinitionVariables.WithCurrent(parentName, enumSymbol.FullyQualifiedName(), VariableMemberKind.Type, enumType))
             {
                 //.class private auto ansi MyEnum
                 var fieldVar = Context.Naming.LocalVariable(node);
@@ -56,10 +56,10 @@ namespace Cecilifier.Core.AST
 
             var enumMemberSymbol = Context.SemanticModel.GetDeclaredSymbol(node).EnsureNotNull();
             var fieldVar = Context.Naming.LocalVariable(node);
-            var exp = CecilDefinitionsFactory.Field(Context, enumMemberSymbol.ContainingSymbol.ToDisplayString() , enumVarDef.VariableName, fieldVar, node.Identifier.ValueText, enumVarDef.VariableName,
+            var exp = CecilDefinitionsFactory.Field(Context, enumMemberSymbol.ContainingSymbol.ToDisplayString(), enumVarDef.VariableName, fieldVar, node.Identifier.ValueText, enumVarDef.VariableName,
                 "FieldAttributes.Static | FieldAttributes.Literal | FieldAttributes.Public | FieldAttributes.HasDefault", enumMemberValue);
             AddCecilExpressions(Context, exp);
-            
+
             HandleAttributesInMemberDeclaration(node.AttributeLists, fieldVar);
 
             base.VisitEnumMemberDeclaration(node);
@@ -132,9 +132,12 @@ namespace Cecilifier.Core.AST
 
                 switch (node.OperatorToken.Kind())
                 {
-                    case SyntaxKind.PlusToken: return leftValue + rightValue;
-                    case SyntaxKind.MinusToken: return leftValue - rightValue;
-                    case SyntaxKind.AsteriskToken: return leftValue * rightValue;
+                    case SyntaxKind.PlusToken:
+                        return leftValue + rightValue;
+                    case SyntaxKind.MinusToken:
+                        return leftValue - rightValue;
+                    case SyntaxKind.AsteriskToken:
+                        return leftValue * rightValue;
                 }
 
                 throw new InvalidOperationException($"Operator {node.OperatorToken} is not supported yet as enum member initializer");

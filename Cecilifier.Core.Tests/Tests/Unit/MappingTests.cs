@@ -15,8 +15,8 @@ namespace Cecilifier.Core.Tests.Tests.Unit
         {
             var cecilifiedResult = RunCecilifier("class Foo {}");
             Assert.That(
-                cecilifiedResult.Mappings[0].Cecilified.Begin.Line, 
-                Is.EqualTo(Cecilifier.CecilifierProgramPreambleLength), 
+                cecilifiedResult.Mappings[0].Cecilified.Begin.Line,
+                Is.EqualTo(Cecilifier.CecilifierProgramPreambleLength),
                 $"If this test ever fail check {nameof(CecilifierExtensions.AsCecilApplication)}(). Most likely the preamble appended to the cecilified code has changed.");
         }
 
@@ -26,15 +26,15 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             //                                                  1         2         3         4         5
             //                                         12345678901234567890123456789012345678901234567890
             var cecilifiedResult = RunCecilifier("class Foo { int Sum(int i, int j) => i + j; }");
-            var message = $"Actual Mapping:{Environment.NewLine}{cecilifiedResult.Mappings.DumpAsString()}\n\n{cecilifiedResult.GeneratedCode.ReadToEnd()}";                
+            var message = $"Actual Mapping:{Environment.NewLine}{cecilifiedResult.Mappings.DumpAsString()}\n\n{cecilifiedResult.GeneratedCode.ReadToEnd()}";
 
             Assert.That(cecilifiedResult.Mappings.Count, Is.EqualTo(7), message);
-            
+
             // Whole class
             Assert.That(cecilifiedResult.Mappings[0].Source.Begin.Line, Is.EqualTo(1), message);
             Assert.That(cecilifiedResult.Mappings[0].Source.Begin.Column, Is.EqualTo(1), message);
             Assert.That(cecilifiedResult.Mappings[0].Source.End.Column, Is.EqualTo(46), message);
-            
+
             Assert.That(cecilifiedResult.Mappings[0].Cecilified.Begin.Line, Is.EqualTo(18), message);
             Assert.That(cecilifiedResult.Mappings[0].Cecilified.End.Line, Is.EqualTo(47), message);
 

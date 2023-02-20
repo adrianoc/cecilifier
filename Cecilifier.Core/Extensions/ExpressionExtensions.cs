@@ -14,7 +14,7 @@ namespace Cecilifier.Core.Extensions
         {
             return expression.Accept(new CustomAttributeArgumentEvaluator(context));
         }
-        
+
         internal static string ValueText(this LiteralExpressionSyntax node)
         {
             switch (node.Kind())
@@ -24,10 +24,10 @@ namespace Cecilifier.Core.Extensions
 
                 case SyntaxKind.NullLiteralExpression:
                     return "null";
-                
+
                 case SyntaxKind.DefaultLiteralExpression:
                     return "default";
-                
+
                 case SyntaxKind.NumericLiteralExpression:
                 case SyntaxKind.TrueLiteralExpression:
                 case SyntaxKind.FalseLiteralExpression:
@@ -59,7 +59,7 @@ namespace Cecilifier.Core.Extensions
             {
                 return $"\"{node.ArgumentList.Arguments[0].Expression}\"";
             }
-            
+
             return string.Empty;
         }
 
@@ -84,7 +84,7 @@ namespace Cecilifier.Core.Extensions
             {
                 return $"new CustomAttributeArgument[{node.Type.RankSpecifiers[0].Sizes[0]}]";
             }
-            
+
             var elementType = _context.TypeResolver.Resolve(_context.SemanticModel.GetTypeInfo(node.Type.ElementType).Type);
             return CustomAttributeArgumentArray(node.Initializer, elementType);
         }

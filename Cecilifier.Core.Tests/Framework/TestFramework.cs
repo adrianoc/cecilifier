@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Text;
 
@@ -32,7 +32,7 @@ namespace Cecilifier.Core.Tests.Framework
             {
                 Console.WriteLine($"{Environment.NewLine}Output: {@out}");
             }
-            
+
             if (!string.IsNullOrWhiteSpace(err.ToString()))
             {
                 throw new ApplicationException("Error: " + err + $"{Environment.NewLine}Executable: {executable}");

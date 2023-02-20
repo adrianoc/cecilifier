@@ -87,9 +87,9 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 
             return true;
         }
-        
+
         // These attributes are ignored when checking whether 2 types/member attr list matches.
-        internal static HashSet<string> compilerEmmitedAttributesToIgnore = new HashSet<string> 
+        internal static HashSet<string> compilerEmmitedAttributesToIgnore = new HashSet<string>
         {
             "Microsoft.CodeAnalysis.EmbeddedAttribute",
             "System.Runtime.CompilerServices.NullableAttribute",

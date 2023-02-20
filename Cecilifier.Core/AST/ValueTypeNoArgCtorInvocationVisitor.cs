@@ -75,18 +75,18 @@ namespace Cecilifier.Core.AST
                     Context.EmitCilInstruction(ilVar, OpCodes.Stloc, tempLocalName);
                     Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, tempLocalName);
                     break;
-                    
+
                 case SpecialType.None:
                     InitValueTypeLocalVariable(tempLocalName, ctorInfo.Symbol.ContainingType);
                     Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, tempLocalName);
                     break;
-                
+
                 default:
                     Context.WriteComment($"Instantiating {ctorInfo.Symbol.Name} is not supported.");
                     break;
             }
         }
-        
+
         private void InitValueTypeLocalVariable(string localVariable, ITypeSymbol variableType)
         {
             Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, localVariable);

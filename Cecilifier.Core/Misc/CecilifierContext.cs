@@ -22,7 +22,7 @@ namespace Cecilifier.Core.Misc
         private int startLineNumber;
         private RoslynTypeSystem roslynTypeSystem;
 
-        public CecilifierContext(SemanticModel semanticModel, CecilifierOptions options,  int startingLine, byte indentation = 3)
+        public CecilifierContext(SemanticModel semanticModel, CecilifierOptions options, int startingLine, byte indentation = 3)
         {
             SemanticModel = semanticModel;
             Options = options;
@@ -32,7 +32,7 @@ namespace Cecilifier.Core.Misc
             Mappings = new List<Mapping>();
             CecilifiedLineNumber = startingLine;
             startLineNumber = startingLine;
-            
+
             identation = new String('\t', indentation);
         }
 
@@ -54,7 +54,7 @@ namespace Cecilifier.Core.Misc
         public LinkedListNode<string> CurrentLine => output.Last;
 
         public int CecilifiedLineNumber { get; private set; }
-        
+
         public IList<Mapping> Mappings { get; }
 
         public IMethodSymbol GetDeclaredSymbol(BaseMethodDeclarationSyntax methodDeclaration)
@@ -92,7 +92,7 @@ namespace Cecilifier.Core.Misc
                 WriteNewLine();
             }
         }
-        
+
         public void WriteNewLine()
         {
             if (output.Last == null)
@@ -110,7 +110,7 @@ namespace Cecilifier.Core.Misc
         {
             if (instruction == after)
                 return;
-            
+
             var lineToBeMoved = LineOf(instruction) + 1;
             var lineToMoveAfter = LineOf(after.Next);
 
@@ -132,7 +132,7 @@ namespace Cecilifier.Core.Misc
                     b.Cecilified.End.Line -= numberOfLinesBeingMoved;
                 }
             }
-            
+
             int LineOf(LinkedListNode<string> linkedListNode)
             {
                 var lineUntilPassedNode = 0;
@@ -157,7 +157,7 @@ namespace Cecilifier.Core.Misc
                 c = c!.Next;
                 instCount++;
             }
-            
+
             // move each line after the last one
             c = start.Next;
             while (instCount-- > 0)
@@ -184,7 +184,7 @@ namespace Cecilifier.Core.Misc
             WriteCecilExpression($"{ilVar}.Emit({opCode.ConstantName()}{operandStr});{(comment != null ? $" // {comment}" : string.Empty)}");
             WriteNewLine();
         }
-        
+
         public void EmitCilInstruction(string ilVar, OpCode opCode)
         {
             EmitCilInstruction<string>(ilVar, opCode, null);
@@ -194,7 +194,7 @@ namespace Cecilifier.Core.Misc
         {
             flags.Add(name);
         }
-        
+
         internal void ClearFlag(string name)
         {
             flags.Remove(name);

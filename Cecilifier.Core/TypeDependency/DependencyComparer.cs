@@ -34,7 +34,7 @@ internal class DependencyComparer : IComparer<BaseTypeDeclarationSyntax>
     {
         var numberOfReferencesFromXToY = dependencies[x].Where(t => t.Key == y.NameFrom() || namespacesInScope.Any(ns => $"{ns}.{t.Key}" == y.NameFrom())).Select(p => p.Value).SingleOrDefault();
         var numberOfReferencesFromYToX = dependencies[y].Where(t => t.Key == x.NameFrom() || namespacesInScope.Any(ns => $"{ns}.{t.Key}" == x.NameFrom())).Select(p => p.Value).SingleOrDefault();
-        
+
         return numberOfReferencesFromXToY - numberOfReferencesFromYToX;
     }
 }

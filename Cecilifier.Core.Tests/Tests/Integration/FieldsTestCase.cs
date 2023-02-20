@@ -1,4 +1,4 @@
-﻿using NUnit.Framework;
+using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration
 {
@@ -10,7 +10,7 @@ namespace Cecilifier.Core.Tests.Integration
         {
             AssertResourceTest(@"Members/Fields/StaticField");
         }
-        
+
         [Test]
         public void TestAssignment()
         {
@@ -95,7 +95,7 @@ namespace Cecilifier.Core.Tests.Integration
         {
             AssertResourceTest(@"Members/Fields/QualifiedFieldAccess");
         }
- 
+
         [Test]
         public void TestExternalFieldAccess()
         {

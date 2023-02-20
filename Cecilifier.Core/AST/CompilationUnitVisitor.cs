@@ -21,7 +21,7 @@ namespace Cecilifier.Core.AST
             base.VisitCompilationUnit(node);
             VisitDeclaredTypesSortedByDependencies();
         }
-     
+
         public override void VisitGlobalStatement(GlobalStatementSyntax node)
         {
             if (_globalStatementHandler == null)
@@ -37,7 +37,7 @@ namespace Cecilifier.Core.AST
                 _globalStatementHandler = null;
             }
         }
-        
+
         public override void VisitDelegateDeclaration(DelegateDeclarationSyntax node)
         {
             new TypeDeclarationVisitor(Context).Visit(node);
@@ -45,17 +45,17 @@ namespace Cecilifier.Core.AST
 
         private void VisitDeclaredTypesSortedByDependencies()
         {
-            var collectedTypes = new TypeDependency.TypeDependencyCollector((CSharpCompilation)Context.SemanticModel.Compilation);
+            var collectedTypes = new TypeDependency.TypeDependencyCollector((CSharpCompilation) Context.SemanticModel.Compilation);
             foreach (var typeDeclaration in collectedTypes.Ordered.Dependencies)
             {
                 if (Context.SemanticModel.GetDeclaredSymbol(typeDeclaration).ContainingType != null)
                     continue;
-                
+
                 new TypeDeclarationVisitor(Context).Visit(typeDeclaration);
                 UpdateTypeInformation(typeDeclaration);
             }
         }
-        
+
         private void UpdateTypeInformation(BaseTypeDeclarationSyntax node)
         {
             if (mainType == null)
@@ -67,7 +67,7 @@ namespace Cecilifier.Core.AST
 
             if (MainMethodDefinitionVariable == null)
             {
-                var mainMethod = (IMethodSymbol) typeSymbol.GetMembers().SingleOrDefault(m => m is IMethodSymbol {IsStatic: true, Name: "Main", ReturnsVoid: true});
+                var mainMethod = (IMethodSymbol) typeSymbol.GetMembers().SingleOrDefault(m => m is IMethodSymbol { IsStatic: true, Name: "Main", ReturnsVoid: true });
                 if (mainMethod != null)
                     MainMethodDefinitionVariable = Context.DefinitionVariables.GetMethodVariable(mainMethod.AsMethodDefinitionVariable());
             }

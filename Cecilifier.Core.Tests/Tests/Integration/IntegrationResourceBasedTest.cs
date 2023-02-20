@@ -1,4 +1,4 @@
-﻿using Cecilifier.Core.Tests.Framework;
+using Cecilifier.Core.Tests.Framework;
 
 namespace Cecilifier.Core.Tests.Integration
 {

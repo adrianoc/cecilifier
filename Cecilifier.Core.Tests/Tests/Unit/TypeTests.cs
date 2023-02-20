@@ -12,7 +12,7 @@ public class TypeTests : CecilifierUnitTestBase
     {
         var result = RunCecilifier(code);
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
-        
+
         Assert.That(cecilifiedCode, Does.Not.Contain("TypeAttributes.Static"));
         Assert.That(cecilifiedCode, Does.Contain("TypeAttributes.Abstract"));
         Assert.That(cecilifiedCode, Does.Contain("TypeAttributes.Sealed"));

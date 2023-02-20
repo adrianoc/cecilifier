@@ -6,7 +6,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
     public class MethodSignatureComparer : IComparer<IMethodSignature>
     {
         public static readonly IComparer<IMethodSignature> Instance = new MethodSignatureComparer();
-        
+
         public int Compare(IMethodSignature x, IMethodSignature y)
         {
             if (ReferenceEquals(x, y))
@@ -61,11 +61,11 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                     return -1;
                 }
             }
-            
+
             return 0;
         }
     }
-    
+
     public class MethodReferenceComparer : IComparer<MethodReference>
     {
         public static MethodReferenceComparer Instance = new MethodReferenceComparer();
@@ -74,10 +74,10 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
         {
             if (x == null && y != null)
                 return -1;
-            
+
             if (x != null && y == null)
                 return 1;
-            
+
             var nameComp = x.DeclaringType.FullName.CompareTo(y.DeclaringType.FullName);
             if (nameComp != 0)
             {

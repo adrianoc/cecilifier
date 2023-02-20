@@ -28,7 +28,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
             var ret = source.EventType.FullName == target.EventType.FullName;
             if (!ret)
                 _output.WriteLine($"Types of event '{source.Name}' differs. Expected '{source.EventType.FullName}' but got '{target.EventType.FullName}'");
-                
+
             return ret;
         }
 
@@ -42,7 +42,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
             var ret = source.Attributes == target.Attributes;
             if (!ret)
                 _output.WriteLine($"Attributes of event '{source.Name}' differs. Expected '{source.Attributes}' but got '{target.Attributes}'");
-            
+
             return ret;
         }
 

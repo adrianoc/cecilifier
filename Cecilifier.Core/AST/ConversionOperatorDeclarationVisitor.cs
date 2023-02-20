@@ -10,18 +10,18 @@ namespace Cecilifier.Core.AST
         public ConversionOperatorDeclarationVisitor(IVisitorContext context) : base(context)
         {
         }
-        
+
         public override void VisitConversionOperatorDeclaration(ConversionOperatorDeclarationSyntax node)
         {
             using var _ = LineInformationTracker.Track(Context, node);
             var operatorMethodName = node.ImplicitOrExplicitKeyword.IsKind(SyntaxKind.ExplicitKeyword)
                 ? "op_Explicit"
                 : "op_Implicit";
-                
+
             ProcessMethodDeclaration(
-                node, 
+                node,
                 Context.Naming.MethodDeclaration(node),
-                "operator", 
+                "operator",
                 operatorMethodName,
                 false,
                 _ => base.VisitConversionOperatorDeclaration(node));
@@ -34,9 +34,9 @@ namespace Cecilifier.Core.AST
             Misc.Utils.EnsureNotNull(declaredSymbol, $"Failed to get declared symbol for {node}");
 
             ProcessMethodDeclaration(
-                node, 
+                node,
                 Context.Naming.MethodDeclaration(node),
-                "operator", 
+                "operator",
                 declaredSymbol.Name,
                 false,
                 _ => base.VisitOperatorDeclaration(node));

@@ -10,7 +10,7 @@ namespace Cecilifier.Core.Misc
 {
     internal struct Utils
     {
-        public static string ConstructorMethodName(bool isStatic) => $".{ (isStatic ? Constants.Cecil.StaticConstructorName : Constants.Cecil.InstanceConstructorName)}";
+        public static string ConstructorMethodName(bool isStatic) => $".{(isStatic ? Constants.Cecil.StaticConstructorName : Constants.Cecil.InstanceConstructorName)}";
 
         public static string ImportFromMainModule(string expression) => $"assembly.MainModule.ImportReference({expression})";
 
@@ -36,7 +36,7 @@ namespace Cecilifier.Core.Misc
             if (symbol == null)
                 throw new System.NotSupportedException(msg);
         }
-      
+
         [Conditional("DEBUG")]
         public static void EnsureNotNull([NotNull] SyntaxNode? node, [CallerArgumentExpression("node")] string? msg = null)
         {

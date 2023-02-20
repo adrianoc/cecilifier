@@ -30,10 +30,10 @@ partial class ExpressionVisitor
         CalculateLengthInBytesAndEmitLocalloc(stackallocSpanAssignmentTracker, null, resolvedArrayElementType, false);
 
         ProcessStackAllocInitializer(node.Initializer);
-        
+
         if (!stackallocSpanAssignmentTracker)
             return;
-        
+
         Context.EmitCilInstruction(ilVar, stackallocSpanAssignmentTracker.LoadOpCode, stackallocSpanAssignmentTracker.SpanLengthVariable);
         EmitNewobjForSpanOfType(resolvedArrayElementType);
     }
@@ -57,7 +57,7 @@ partial class ExpressionVisitor
         var arrayType = (ArrayTypeSyntax) node.Type;
         var rankNode = arrayType.RankSpecifiers[0].Sizes[0];
         var arrayElementType = Context.SemanticModel.GetTypeInfo(arrayType.ElementType);
-        
+
         Debug.Assert(arrayType.RankSpecifiers.Count == 1);
         if (rankNode.IsKind(SyntaxKind.OmittedArraySizeExpression))
         {
@@ -71,7 +71,7 @@ partial class ExpressionVisitor
         var arrayElementTypeSize = arrayElementType.Type.IsPrimitiveType()
             ? arrayElementType.Type.SizeofArrayLikeItemElement()
             : uint.MaxValue; // this means the size of the elements need to be calculated at runtime... 
-        
+
         var resolvedElementType = ResolveType(arrayType.ElementType);
         if (rankNode.IsKind(SyntaxKind.NumericLiteralExpression) && arrayElementType.Type.IsPrimitiveType())
         {
@@ -89,7 +89,7 @@ partial class ExpressionVisitor
         }
 
         ProcessStackAllocInitializer(node.Initializer);
-        
+
         if (stackallocSpanAssignmentTracker)
         {
             if (stackallocSpanAssignmentTracker.HasConstantElementCount)
@@ -104,9 +104,9 @@ partial class ExpressionVisitor
     {
         if (node == null)
             return;
-        
+
         using var _ = LineInformationTracker.Track(Context, node);
-        
+
         var typeInfo = Context.SemanticModel.GetTypeInfo(node.Parent!);
         if (typeInfo.ConvertedType == null)
             return;
@@ -206,7 +206,7 @@ class NoOpStackallocAsArgumentHandler : IStackallocAsArgumentFixer
 
     void IStackallocAsArgumentFixer.MarkEndOfComputedCallTargetBlock() { }
 
-    void IStackallocAsArgumentFixer.RestoreCallStackIfRequired()  { }
+    void IStackallocAsArgumentFixer.RestoreCallStackIfRequired() { }
     public IVisitorContext Context { get; }
     public IDisposable FlagAsHavingStackallocArguments() => default;
 }
@@ -215,7 +215,7 @@ internal class StackallocAsArgumentFixer : IStackallocAsArgumentFixer
 {
     private static readonly Stack<IStackallocAsArgumentFixer> handlers = new();
     private readonly Queue<string> localVariablesStoringOriginalArguments = new();
-    
+
     private readonly IVisitorContext context;
     private readonly string ilVar;
     private LinkedListNode<string> lastLoadTargetOfCallInstruction;
@@ -234,24 +234,24 @@ internal class StackallocAsArgumentFixer : IStackallocAsArgumentFixer
     {
         if (!context.HasFlag(Constants.ContextFlags.HasStackallocArguments))
             return;
-    
+
         var methodVar = context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
         if (!methodVar.IsValid)
             throw new InvalidOperationException();
-    
+
         var localVarName = type.Name;
         var cecilVarDeclName = context.Naming.SyntheticVariable(localVarName, ElementKind.LocalVariable);
-    
+
         context.WriteCecilExpression($"var {cecilVarDeclName} = new VariableDefinition({context.TypeResolver.Resolve(type)});");
         context.WriteNewLine();
         context.WriteCecilExpression($"{methodVar.VariableName}.Body.Variables.Add({cecilVarDeclName});");
         context.WriteNewLine();
 
         context.DefinitionVariables.RegisterNonMethod(string.Empty, localVarName, VariableMemberKind.LocalVariable, cecilVarDeclName);
-    
+
         context.EmitCilInstruction(ilVar, OpCodes.Stloc, cecilVarDeclName);
         context.WriteNewLine();
-    
+
         localVariablesStoringOriginalArguments.Enqueue(cecilVarDeclName);
     }
 
@@ -259,7 +259,7 @@ internal class StackallocAsArgumentFixer : IStackallocAsArgumentFixer
     {
         lastLoadTargetOfCallInstruction = context.CurrentLine.Previous;
     }
-    
+
     /// <summary>
     /// Restore the stack to: [call target, arg1, ... arg n]
     /// </summary>
@@ -270,7 +270,7 @@ internal class StackallocAsArgumentFixer : IStackallocAsArgumentFixer
 
         // Current line at this point is the fixed call instruction  (see ExpressionVisitor.HandleMethodInvocation() to learn more about the `fixing` part)
         var callInstruction = context.CurrentLine;
-        
+
 
         // Move all instructions in charge of loading the target (object reference) of the call just after 
         // the `call` instruction which will be fixed later. 
@@ -281,24 +281,24 @@ internal class StackallocAsArgumentFixer : IStackallocAsArgumentFixer
             context.MoveLineAfter(c, callInstruction);
             c = previous;
         }
-        
+
         // emit instruction to push original arguments to stack
         foreach (var localVariable in localVariablesStoringOriginalArguments)
         {
             context.EmitCilInstruction(ilVar, OpCodes.Ldloc, localVariable);
             context.WriteNewLine();
         }
-        
+
         // now move the call instruction after the last argument
         context.MoveLineAfter(callInstruction, context.CurrentLine);
     }
-    
+
     internal static StackallocPassedAsSpanDisposal TrackPassingStackAllocToSpanArgument(IVisitorContext context, InvocationExpressionSyntax node, string ilVar)
     {
         // the expression may represent: i) a method invocation, ii) a delegate invocation or iii) nameof() expression.
         // for the last 2 cases, `method` will be `null` and code will early out. 
         var method = context.SemanticModel.GetSymbolInfo(node.Expression).Symbol as IMethodSymbol;
-      
+
         // in this scenario, when stackalloc in processed, the stack will be empty (because there are
         // neither other parameters nor the target of the call to be pushed).
         if (method == null || (method.IsStatic && method.Parameters.Length < 2))
@@ -311,9 +311,9 @@ internal class StackallocAsArgumentFixer : IStackallocAsArgumentFixer
 
         return new StackallocPassedAsSpanDisposal(isPassingStackAllocToSpanArg ? new StackallocAsArgumentFixer(context, ilVar) : new NoOpStackallocAsArgumentHandler(context));
     }
-    
+
     public static IStackallocAsArgumentFixer Current => handlers.Count > 0 ? handlers.Peek() : null;
-    
+
     internal struct StackallocPassedAsSpanDisposal : IDisposable
     {
         private readonly IStackallocAsArgumentFixer parent;
@@ -323,7 +323,7 @@ internal class StackallocAsArgumentFixer : IStackallocAsArgumentFixer
         {
             this.parent = parent;
             stackAllocFlagCleaner = null;
-            
+
             if (parent != null)
             {
                 stackAllocFlagCleaner = parent.FlagAsHavingStackallocArguments();
@@ -351,13 +351,13 @@ internal class StackallocSpanAssignmentTracker
 {
     private readonly bool isAssignedToSpan;
     private int _constElementCount = 0;
-    
+
     public StackallocSpanAssignmentTracker(SyntaxNode node, IVisitorContext context)
     {
         isAssignedToSpan = node.Ancestors().OfType<VariableDeclarationSyntax>().FirstOrDefault(vd => vd.Type.ToFullString().Contains("Span")) != null
                            || node.Ancestors().OfType<ArgumentSyntax>().FirstOrDefault(vd => context.GetTypeInfo(vd.Expression).Type?.Name.Contains("Span") == true) != null;
     }
-    
+
     public void RememberConstantElementCount(int elementCount)
     {
         _constElementCount = elementCount;
@@ -367,7 +367,7 @@ internal class StackallocSpanAssignmentTracker
     {
         if (!isAssignedToSpan)
             return false;
-        
+
         if (rankNode != null && rankNode.IsKind(SyntaxKind.IdentifierName))
         {
             var rankSymbolInfo = context.SemanticModel.GetSymbolInfo(rankNode);
@@ -376,7 +376,7 @@ internal class StackallocSpanAssignmentTracker
             var parentTypeName = rankSymbolInfo.Symbol.Kind == SymbolKind.Field // TODO: What about properties and/or methods? 
                 ? rankSymbolInfo.Symbol.ContainingType.ToDisplayString()
                 : string.Empty;
-            
+
             var spanSizeStorageVariable = context.DefinitionVariables.GetVariable(rankNode.ToFullString(), VariableMemberKind.LocalVariable | VariableMemberKind.Field | VariableMemberKind.Parameter, parentTypeName);
             Debug.Assert(spanSizeStorageVariable.IsValid);
             SpanLengthVariable = spanSizeStorageVariable.VariableName;
@@ -388,10 +388,10 @@ internal class StackallocSpanAssignmentTracker
                 VariableMemberKind.LocalVariable => OpCodes.Ldloc,
                 _ => throw new NotImplementedException($"stackalloc for {spanSizeStorageVariable.Kind} types are not supported."),
             };
-            
+
             return false;
         }
-        
+
         SpanLengthVariable = context.Naming.SyntheticVariable("spanElementCount", ElementKind.LocalVariable);
 
         var currentMethodVar = context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);

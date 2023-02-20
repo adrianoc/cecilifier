@@ -1,4 +1,4 @@
-﻿using Cecilifier.Core.Tests.Framework;
+using Cecilifier.Core.Tests.Framework;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration
@@ -46,7 +46,7 @@ namespace Cecilifier.Core.Tests.Integration
         {
             AssertResourceTest(@"Expressions/Box");
         }
-        
+
         [Test]
         public void TestAdd()
         {
@@ -64,13 +64,13 @@ namespace Cecilifier.Core.Tests.Integration
         {
             AssertResourceTest(@"Expressions/Operators/Times");
         }
-        
+
         [Test]
         public void TestModulus()
         {
             AssertResourceTest(@"Expressions/Operators/Arithmetic/Modulus");
         }
-        
+
         [Test]
         public void TestEquals()
         {
@@ -123,10 +123,10 @@ namespace Cecilifier.Core.Tests.Integration
         [TestCase("Not")]
         [TestCase("NotBinary")]
         public void TestUnaryExpressions(string testName)
-        {    
+        {
             AssertResourceTest($@"Expressions/Operators/Unary/{testName}");
         }
-        
+
         [Test]
         public void TestIncrementDecrementExpressions([Values("Pre", "Post")] string kind, [Values("Increment", "Decrement")] string expressionType, [Values("Param", "Field", "Local", "Prop")] string memberType)
         {
@@ -154,13 +154,13 @@ namespace Cecilifier.Core.Tests.Integration
         {
             AssertResourceTest(@"Expressions/RangeExpression");
         }
-        
+
         [Test]
         public void TestIndexExpression()
         {
             AssertResourceTestWithExplicitExpectation(@"Expressions/IndexExpression", "System.Int32 C::M(System.Int32,System.Int32[])");
         }
-        
+
         [TestCase("Parameters")]
         [TestCase("LocalVariables")]
         [TestCase("Instance_Method")]
@@ -170,13 +170,13 @@ namespace Cecilifier.Core.Tests.Integration
         {
             AssertResourceTest($"Expressions/DelegateAssignment_{memberType}");
         }
-        
+
         [Test]
         public void TestDelegateInvocation()
         {
             AssertResourceTest("Expressions/DelegateInvocation");
         }
-        
+
         [Test]
         public void TestExpressionBodiedMembers()
         {

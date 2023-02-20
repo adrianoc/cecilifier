@@ -16,7 +16,7 @@ namespace Cecilifier.Web
         [JsonPropertyName("prefix")] public string Prefix { get; set; }
         [JsonPropertyName("elementKind")] public ElementKind ElementKind { get; set; }
     }
-    
+
     public class CecilifierSettings
     {
         [JsonPropertyName("elementKindPrefixes")] public ElementKindPrefix[] ElementKindPrefixes { get; set; }

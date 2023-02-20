@@ -41,21 +41,21 @@ namespace Cecilifier.Core.Extensions
                 var found = ctx.DefinitionVariables.GetMethodVariable(tbf);
                 if (!found.IsValid)
                     throw new ArgumentException($"Could not find variable declaration for method {method.Name}.");
-                
+
                 if (!method.ContainingType.IsGenericType)
                     return found.VariableName;
-                
+
                 var declaringTypeResolveExp = ctx.TypeResolver.Resolve(method.ContainingType);
-                var exps = found.VariableName.CloneMethodReferenceOverriding(ctx, new() { ["DeclaringType"] =  declaringTypeResolveExp }, method, out var variable);
+                var exps = found.VariableName.CloneMethodReferenceOverriding(ctx, new() { ["DeclaringType"] = declaringTypeResolveExp }, method, out var variable);
                 foreach (var expression in exps)
                 {
                     ctx.WriteCecilExpression(expression);
                     ctx.WriteNewLine();
                 }
-                
+
                 return variable;
             }
-            
+
             var declaringTypeName = method.ContainingType.FullyQualifiedName();
             return ImportFromMainModule($"TypeHelpers.ResolveMethod(typeof({declaringTypeName}), \"{method.Name}\",{method.Modifiers()}{method.Parameters.Aggregate("", (acc, curr) => acc + ", \"" + curr.Type.FullyQualifiedName() + "\"")})");
         }
@@ -73,7 +73,7 @@ namespace Cecilifier.Core.Extensions
         {
             var lastDeclaredIn = methodSymbol.FindLastDefinition();
             var modifiersStr = MapExplicitModifiers(modifiers, lastDeclaredIn.ContainingType.TypeKind);
-            
+
             var defaultAccessibility = lastDeclaredIn.ContainingType.TypeKind == TypeKind.Interface ? "Public" : "Private";
             if (modifiersStr == string.Empty && methodSymbol != null)
             {
@@ -84,8 +84,8 @@ namespace Cecilifier.Core.Extensions
                 else if (lastDeclaredIn.ContainingType.TypeKind == TypeKind.Interface && !methodSymbol.IsStatic)
                 {
                     modifiersStr = Constants.Cecil.InterfaceMethodDefinitionAttributes.AppendModifier(
-                                       SymbolEqualityComparer.Default.Equals(lastDeclaredIn.ContainingType, methodSymbol.ContainingType) 
-                                           ? "MethodAttributes.Abstract" 
+                                       SymbolEqualityComparer.Default.Equals(lastDeclaredIn.ContainingType, methodSymbol.ContainingType)
+                                           ? "MethodAttributes.Abstract"
                                            : "MethodAttributes.Final");
                 }
                 else if (lastDeclaredIn.ContainingType.TypeKind == TypeKind.Interface && methodSymbol.IsStatic)
@@ -108,8 +108,8 @@ namespace Cecilifier.Core.Extensions
                 cecilModifiersStr.AppendModifier("MethodAttributes.NewSlot");
             }
             return cecilModifiersStr.ToString();
-        }        
-        
+        }
+
         public static string ModifiersForSyntheticMethod(this SyntaxTokenList modifiers, string specificModifiers, ITypeSymbol declaringType)
         {
             var modifiersStr = MapExplicitModifiers(modifiers, declaringType.TypeKind);
@@ -125,7 +125,7 @@ namespace Cecilifier.Core.Extensions
             //      and in case it is static, do not add NewSlot (which is part of InterfaceMethodDefinitionAttributes)
             if (declaringType.TypeKind == TypeKind.Interface)
                 cecilModifiersStr.AppendModifier(Constants.Cecil.InterfaceMethodDefinitionAttributes).AppendModifier("MethodAttributes.Abstract");
-            
+
             return cecilModifiersStr.ToString();
         }
 
@@ -142,11 +142,16 @@ namespace Cecilifier.Core.Extensions
             {
                 switch (mod.Kind())
                 {
-                    case SyntaxKind.VirtualKeyword: return "MethodAttributes.Virtual | MethodAttributes.NewSlot";
-                    case SyntaxKind.OverrideKeyword: return "MethodAttributes.Virtual";
-                    case SyntaxKind.AbstractKeyword: return "MethodAttributes.Virtual | MethodAttributes.Abstract".AppendModifier(typeKind != TypeKind.Interface || !modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword)) ? "MethodAttributes.NewSlot" : string.Empty);
-                    case SyntaxKind.SealedKeyword: return "MethodAttributes.Final";
-                    case SyntaxKind.NewKeyword: return "??? new ??? dont know yet!";
+                    case SyntaxKind.VirtualKeyword:
+                        return "MethodAttributes.Virtual | MethodAttributes.NewSlot";
+                    case SyntaxKind.OverrideKeyword:
+                        return "MethodAttributes.Virtual";
+                    case SyntaxKind.AbstractKeyword:
+                        return "MethodAttributes.Virtual | MethodAttributes.Abstract".AppendModifier(typeKind != TypeKind.Interface || !modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword)) ? "MethodAttributes.NewSlot" : string.Empty);
+                    case SyntaxKind.SealedKeyword:
+                        return "MethodAttributes.Final";
+                    case SyntaxKind.NewKeyword:
+                        return "??? new ??? dont know yet!";
                 }
             }
 
@@ -156,7 +161,7 @@ namespace Cecilifier.Core.Extensions
         private static IEnumerable<SyntaxToken> RemoveSourceModifiersWithNoILEquivalent(SyntaxTokenList modifiers)
         {
             return modifiers.Where(
-                mod => !mod.IsKind(SyntaxKind.OverrideKeyword) 
+                mod => !mod.IsKind(SyntaxKind.OverrideKeyword)
                        && !mod.IsKind(SyntaxKind.AbstractKeyword)
                        && !mod.IsKind(SyntaxKind.VirtualKeyword)
                        && !mod.IsKind(SyntaxKind.SealedKeyword)
@@ -172,7 +177,7 @@ namespace Cecilifier.Core.Extensions
                 SyntaxKind.PublicKeyword => new[] { "Public" },
                 SyntaxKind.StaticKeyword => new[] { "Static" },
                 SyntaxKind.AbstractKeyword => new[] { "Abstract" },
-               
+
                 SyntaxKind.AsyncKeyword => Array.Empty<string>(),
                 SyntaxKind.UnsafeKeyword => Array.Empty<string>(),
                 SyntaxKind.PartialKeyword => Array.Empty<string>(),

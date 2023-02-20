@@ -16,22 +16,22 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
             {
                 {Code.Ret, OperandObliviousValidator},
                 {Code.Nop, OperandObliviousValidator},
-                
+
                 {Code.Ldarg_0, LoadArgumentShortCutValidator},
                 {Code.Ldarg_1, LoadArgumentShortCutValidator},
                 {Code.Ldarg_2, LoadArgumentShortCutValidator},
                 {Code.Ldarg_3, LoadArgumentShortCutValidator},
-                
+
                 {Code.Ldloc_0, LoadLocalShortCutValidator},
                 {Code.Ldloc_1, LoadLocalShortCutValidator},
                 {Code.Ldloc_2, LoadLocalShortCutValidator},
                 {Code.Ldloc_3, LoadLocalShortCutValidator},
-                
+
                 {Code.Stloc_0, StoreLocalShortCutValidator},
                 {Code.Stloc_1, StoreLocalShortCutValidator},
                 {Code.Stloc_2, StoreLocalShortCutValidator},
                 {Code.Stloc_3, StoreLocalShortCutValidator},
-                
+
                 {Code.Call, ValidateCalls},
                 {Code.Calli, ValidateCallSite},
                 {Code.Callvirt, ValidateCalls},
@@ -44,7 +44,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                 {Code.Ldloc_S, ValidateLocalVariableIndex},
                 {Code.Stloc, ValidateLocalVariableIndex},
                 {Code.Stloc_S, ValidateLocalVariableIndex},
-                
+
                 {Code.Ldc_I4_M1, ValidateLoadMinusOne},
 
                 {Code.Castclass, ValidateTypeReference},
@@ -136,7 +136,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 
         private bool CheckTypeCustomAttributes(ITypeDiffVisitor typeVisitor, TypeDefinition sourceType, TypeDefinition targetType)
         {
-            return typeVisitor.VisitCustomAttributes( sourceType, targetType);
+            return typeVisitor.VisitCustomAttributes(sourceType, targetType);
         }
 
         private static bool CheckImplementedInterfaces(ITypeDiffVisitor typeVisitor, TypeDefinition sourceType, TypeDefinition targetType)
@@ -169,8 +169,8 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
         {
             return CheckFields(typeVisitor, source, target)
                    && CheckMethods(typeVisitor, source, target)
-                   && CheckEvents(typeVisitor, source, target) 
-                   && CheckProperties(typeVisitor, source, target); 
+                   && CheckEvents(typeVisitor, source, target)
+                   && CheckProperties(typeVisitor, source, target);
         }
 
         private static bool CheckProperties(ITypeDiffVisitor typeVisitor, TypeDefinition source, TypeDefinition target)
@@ -182,7 +182,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 
                 if (targetProperty == null)
                     return false;
-                
+
                 var ret = propertyVisitor.VisitType(sourceProperty, targetProperty)
                           && propertyVisitor.VisitAttributes(sourceProperty, targetProperty)
                           && propertyVisitor.VisitAccessors(sourceProperty, targetProperty)
@@ -204,7 +204,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 
                 if (targetEvent == null)
                     return false;
-                
+
                 var ret = eventVisitor.VisitType(sourceEvent, targetEvent)
                           && eventVisitor.VisitAttributes(sourceEvent, targetEvent)
                           && eventVisitor.VisitAccessors(sourceEvent, targetEvent)
@@ -307,7 +307,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                 while (skipCount-- > 0 && !targetInstructions.MoveNext())
                 {
                 }
-                
+
                 if (!targetInstructions.MoveNext())
                 {
                     return visitor.VisitBody(source, target, instruction);
@@ -340,20 +340,20 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
             skipCount = 0;
             instruction = LenientInstructionComparer.SkipNonRelevantInstructions(instruction);
             current = LenientInstructionComparer.SkipNonRelevantInstructions(current);
-            
+
             if (instruction?.OpCode == current?.OpCode)
                 return ValidateOperands(instruction, current, scopesToIgnore);
 
             if (_instructionValidator.TryGetValue(instruction.OpCode.Code, out var validator))
             {
-                var (ret , c) = validator(instruction, current, isStatic);
+                var (ret, c) = validator(instruction, current, isStatic);
                 skipCount = c;
-                
+
                 return ret;
             }
 
             Debug.Assert(current != null);
-            
+
             switch (instruction.OpCode.Code)
             {
                 case Code.Stloc_0:
@@ -361,14 +361,18 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                 case Code.Stloc_2:
                 case Code.Stloc_3:
                     throw new Exception();
-               
-                case Code.Ldarga_S: return current.OpCode.Code == Code.Ldarga;
-                case Code.Ldarg_S: return current.OpCode.Code == Code.Ldarg;
-                
-                case Code.Ldloca_S: return current.OpCode.Code == Code.Ldloca;
 
-                case Code.Ldc_I4_S: return current.OpCode.Code == Code.Ldc_I4 && Convert.ToInt32(instruction.Operand) == Convert.ToInt32(current.Operand);
-                    
+                case Code.Ldarga_S:
+                    return current.OpCode.Code == Code.Ldarga;
+                case Code.Ldarg_S:
+                    return current.OpCode.Code == Code.Ldarg;
+
+                case Code.Ldloca_S:
+                    return current.OpCode.Code == Code.Ldloca;
+
+                case Code.Ldc_I4_S:
+                    return current.OpCode.Code == Code.Ldc_I4 && Convert.ToInt32(instruction.Operand) == Convert.ToInt32(current.Operand);
+
                 case Code.Ldc_I4_0:
                 case Code.Ldc_I4_1:
                 case Code.Ldc_I4_2:
@@ -377,13 +381,15 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                 case Code.Ldc_I4_5:
                 case Code.Ldc_I4_6:
                 case Code.Ldc_I4_7:
-                case Code.Ldc_I4_8: return current.OpCode.Code == Code.Ldc_I4 && (instruction.OpCode.Code - Code.Ldc_I4_0)  == Convert.ToInt32(current.Operand);
-                
-                case Code.Ldc_I4_M1: return current.OpCode.Code == Code.Ldc_I4 && (int) current.Operand == -1 && current.Next.OpCode == OpCodes.Neg;
+                case Code.Ldc_I4_8:
+                    return current.OpCode.Code == Code.Ldc_I4 && (instruction.OpCode.Code - Code.Ldc_I4_0) == Convert.ToInt32(current.Operand);
+
+                case Code.Ldc_I4_M1:
+                    return current.OpCode.Code == Code.Ldc_I4 && (int) current.Operand == -1 && current.Next.OpCode == OpCodes.Neg;
 
                 case Code.Ldc_R8:
                     return AreEquivalentLoads(current, Code.Conv_R8, ref skipCount);
-                
+
                 case Code.Ldc_R4:
                     return AreEquivalentLoads(current, Code.Conv_R4, ref skipCount);
 
@@ -393,7 +399,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                 case Code.Brfalse:
                 case Code.Brfalse_S:
                 case Code.Brtrue:
-                case Code.Brtrue_S: 
+                case Code.Brtrue_S:
                     return (current.OpCode.FlowControl == FlowControl.Branch || current.OpCode.FlowControl == FlowControl.Cond_Branch) && EqualOrEquivalent((Instruction) instruction.Operand, (Instruction) current.Operand, isStatic, scopesToIgnore, out skipCount);
 
                 case Code.Pop:
@@ -405,7 +411,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                     return current.OpCode.Code == Code.Stloc && current.Previous.OpCode.IsCallOrNewObj() && instruction.Previous.OpCode.IsCallOrNewObj() &&
                            LenientInstructionComparer.HasNoLocalVariableLoads(instruction.Next, instruction.Operand);
             }
-            
+
             if (instruction?.OpCode != current?.OpCode)
             {
                 Console.WriteLine($"No specific validation for {instruction.OpCode} operands!");
@@ -430,8 +436,8 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 
                 if (scopesToIgnore.Contains(frInstruction.DeclaringType.Scope) || scopesToIgnore.Contains(frInstruction.DeclaringType.Scope))
                     return true;
-                    
-                return  (frInstruction.DeclaringType.Scope.Name == frCurrent.DeclaringType.Scope.Name ||
+
+                return (frInstruction.DeclaringType.Scope.Name == frCurrent.DeclaringType.Scope.Name ||
                          frInstruction.DeclaringType.Scope.Name == "System.Private.CoreLib" && frCurrent.DeclaringType.Scope.Name == "netstandard");
             }
 
@@ -445,11 +451,11 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
              *      conv.r8
              * instead of
              *      ldc.r8 1
-             */ 
+             */
             var areEquivalentLoads = (current.OpCode.Code == Code.Ldc_I4 || current.OpCode.Code == Code.Ldc_I8 || current.OpCode.Code == Code.Ldc_R4) && (current.Next?.OpCode.Code == convInstruction);
             if (areEquivalentLoads)
                 skipCount = 1;
-            
+
             return areEquivalentLoads;
         }
 
@@ -549,14 +555,14 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
         {
             return (lhs.OpCode == rhs.OpCode, 0);
         }
-        
+
         private static (bool, int) LoadArgumentShortCutValidator(Instruction lhs, Instruction rhs, bool isDefiningMethodStatic)
         {
             if (lhs.OpCode == rhs.OpCode)
                 return (true, 0);
-            
+
             var paramIndexOffset = isDefiningMethodStatic ? 0 : 1;
-            var ret = lhs.OpCode.Code switch 
+            var ret = lhs.OpCode.Code switch
             {
                 Code.Ldarg_0 => rhs.OpCode.Code == Code.Ldarg && (((ParameterDefinition) rhs.Operand).Index + paramIndexOffset) == 0,
                 Code.Ldarg_1 => rhs.OpCode.Code == Code.Ldarg && (((ParameterDefinition) rhs.Operand).Index + paramIndexOffset) == 1,
@@ -564,7 +570,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                 Code.Ldarg_3 => rhs.OpCode.Code == Code.Ldarg && (((ParameterDefinition) rhs.Operand).Index + paramIndexOffset) == 3,
                 _ => throw new NotSupportedException()
             };
-            
+
             return (ret, 0);
         }
 
@@ -575,20 +581,20 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 
             if (rhs.OpCode.Code != Code.Ldloc)
                 return (false, 0);
-            
-            var ret = lhs.OpCode.Code switch 
+
+            var ret = lhs.OpCode.Code switch
             {
                 Code.Ldloc_0 => VarIndex(rhs.Operand) == 0,
                 Code.Ldloc_1 => VarIndex(rhs.Operand) == 1,
                 Code.Ldloc_2 => VarIndex(rhs.Operand) == 2,
                 Code.Ldloc_3 => VarIndex(rhs.Operand) == 3,
-                
+
                 _ => throw new NotSupportedException()
             };
-            
+
             return (ret, 0);
         }
-        
+
         private static (bool, int) StoreLocalShortCutValidator(Instruction lhs, Instruction rhs, bool isDefiningMethodStatic)
         {
             if (lhs.OpCode == rhs.OpCode)
@@ -596,17 +602,17 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 
             if (rhs.OpCode.Code != Code.Stloc)
                 return (false, 0);
-            
-            var ret = lhs.OpCode.Code switch 
+
+            var ret = lhs.OpCode.Code switch
             {
                 Code.Stloc_0 => VarIndex(rhs.Operand) == 0,
                 Code.Stloc_1 => VarIndex(rhs.Operand) == 1,
                 Code.Stloc_2 => VarIndex(rhs.Operand) == 2,
                 Code.Stloc_3 => VarIndex(rhs.Operand) == 3,
-                
+
                 _ => throw new NotSupportedException()
             };
-            
+
             return (ret, 0);
         }
 
@@ -618,7 +624,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
             var ret = MethodReferenceComparer.Instance.Compare(m1, m2) == 0;
             return (ret, 0);
         }
-        
+
         private static (bool, int) ValidateCallSite(Instruction lhs, Instruction rhs, bool isDefiningMethodStatic)
         {
             var leftCallSite = (CallSite) lhs.Operand;
@@ -638,7 +644,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 
             return (ret, 0);
         }
-        
+
         private static (bool, int) ValidateLoadMinusOne(Instruction lhs, Instruction rhs, bool isDefiningMethodStatic)
         {
             var ret = rhs.OpCode == OpCodes.Ldc_I4 && (int) rhs.Operand == 1 && rhs?.Next?.OpCode == OpCodes.Neg;
@@ -679,7 +685,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
         {
             if (lhs.OpCode != rhs.OpCode)
                 return (false, 0);
-            
+
             var fieldLhs = (FieldReference) lhs.Operand;
             var fieldRhs = (FieldReference) rhs.Operand;
 
@@ -721,7 +727,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                 toBeIgnored.Add(current);
                 return false;
             }
-            
+
             toBeIgnored.Clear();
 
             return true;
@@ -764,13 +770,13 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
             {
                 return instruction;
             }
-            
+
             var nextInstruction = SkipNops(instruction.Next);
             if (IsLdLoc(nextInstruction.OpCode) && nextInstruction.Operand == instruction.Operand)
             {
                 return SkipNops(nextInstruction.Next);
             }
-            
+
             return instruction;
         }
 
@@ -781,7 +787,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 
             return instruction;
         }
-        
+
         private HashSet<Instruction> toBeIgnored;
     }
 }

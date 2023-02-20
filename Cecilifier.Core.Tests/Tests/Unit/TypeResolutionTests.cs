@@ -14,38 +14,38 @@ public class TypeResolutionTests : CecilifierUnitTestBase
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
         Assert.That(cecilifiedCode, Contains.Substring($"ImportReference(typeof({expectedFullyQualifiedName}))"));
     }
-    
+
     [TestCase(
-        "class Foo : System.Collections.Generic.List<Bar> {} class Bar { Foo foo; }", 
+        "class Foo : System.Collections.Generic.List<Bar> {} class Bar { Foo foo; }",
         @"cls_foo_\d+\.BaseType = .+ImportReference\(typeof\(.+Generic\.List\<\>\)\).MakeGenericInstanceType\(cls_bar_\d+\);",
         TestName = "Generic argument in base type")]
-    
+
     [TestCase(
-        "class Foo { System.Action<Bar> M() => null; } class Bar { Foo foo; }", 
+        "class Foo { System.Action<Bar> M() => null; } class Bar { Foo foo; }",
         @"m_M_\d+ = new MethodDefinition\(""M"",.+ImportReference\(typeof\(System.Action\<\>\)\)\.MakeGenericInstanceType\(cls_bar_\d+\)\);",
         TestName = "Generic argument in return type")]
-    
+
     [TestCase(
-        "class Foo { void M(System.Action<Bar> a) {} } class Bar { Foo foo; }", 
+        "class Foo { void M(System.Action<Bar> a) {} } class Bar { Foo foo; }",
         @"p_a_\d+ = new ParameterDefinition\(""a"", .+ImportReference\(typeof\(System\.Action\<\>\)\)\.MakeGenericInstanceType\(cls_bar_\d+\)\);",
         TestName = "Generic argument in parameter")]
 
     [TestCase(
-        "class Foo { System.Collections.Generic.List<Bar> _bars; } class Bar { Foo foo; }", 
+        "class Foo { System.Collections.Generic.List<Bar> _bars; } class Bar { Foo foo; }",
         @".+fld__bars_\d+ = new FieldDefinition\(""_bars"",.+ImportReference\(typeof\(.+Generic\.List\<\>\)\)\.MakeGenericInstanceType\(cls_bar_\d+\)\);",
         TestName = "Generic argument in field")]
-    
+
     [TestCase(
-        "class Foo { System.Collections.Generic.List<Bar> Bars => null; } class Bar { Foo foo; }", 
+        "class Foo { System.Collections.Generic.List<Bar> Bars => null; } class Bar { Foo foo; }",
         @".+prop_bars_\d+ = new PropertyDefinition\(""Bars"",.+ImportReference\(typeof\(.+Generic\.List\<\>\)\)\.MakeGenericInstanceType\(cls_bar_\d+\)\);",
         TestName = "Generic argument in property")]
-    
+
     [TestCase(
-        "using System; class Foo { event EventHandler<Bar> Bar; } class Bar : EventArgs { Foo foo; }", 
+        "using System; class Foo { event EventHandler<Bar> Bar; } class Bar : EventArgs { Foo foo; }",
         @".+fld_bar_\d+ = new FieldDefinition\(""Bar"",.+ImportReference\(typeof\(.+EventHandler\<\>\)\)\.MakeGenericInstanceType\(cls_bar_\d+\)\);\s+",
         @"m_add_\d+.Parameters.Add\(new ParameterDefinition\(""value"",.+ImportReference\(typeof\(.+EventHandler\<\>\)\)\.MakeGenericInstanceType\(cls_bar_\d+\)\)\);",
         TestName = "Generic argument in event")]
-    public void TypeForwardingCyclicTests(string code, params string []expected)
+    public void TypeForwardingCyclicTests(string code, params string[] expected)
     {
         // Test access to a forward type declaration is handled correctly by ensuring the value passed to MakeGenericInstanceType is a variable holding a
         // type definition (instead of resolving the type as if it was not declared in the compilation).
@@ -57,7 +57,7 @@ public class TypeResolutionTests : CecilifierUnitTestBase
         // processing them without requiring a forward reference.
         var result = RunCecilifier(code);
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
-        foreach(var current in expected)
+        foreach (var current in expected)
             Assert.That(cecilifiedCode, Does.Match(current));
     }
 
@@ -69,13 +69,13 @@ public class TypeResolutionTests : CecilifierUnitTestBase
 
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
         Assert.That(
-            cecilifiedCode, 
+            cecilifiedCode,
             Does.Match(
-                @"var (gp_T_\d+) = new Mono.Cecil.GenericParameter\(""T"", (m_test_\d+)\);\s+" + 
+                @"var (gp_T_\d+) = new Mono.Cecil.GenericParameter\(""T"", (m_test_\d+)\);\s+" +
                       @"\2.GenericParameters.Add\(\1\);\s+"));
 
         Assert.That(
-            cecilifiedCode, 
+            cecilifiedCode,
             Does.Match(testSpecificExpectation));
     }
 
@@ -86,7 +86,7 @@ public class TypeResolutionTests : CecilifierUnitTestBase
         const string methodTemplate = @"using System.Collections; class Foo {{ {0} Method() => default; }}";
         const string typeOfTemplate = @"using System.Collections; class Foo {{ object Method() => typeof({0}); }}";
         const string genericConstraintTemplate = @"using System.Collections; class Foo<T> where T : {0} {{ }}";
-        
+
         // Types in this list needs to be valid in generic constraints
         var typesToTest = new[]
         {
@@ -94,18 +94,18 @@ public class TypeResolutionTests : CecilifierUnitTestBase
             ("ArrayList", "System.Collections.ArrayList", "Simple Name"),
             ("System.Collections.Generic.IList<int>", "System.Collections.Generic.IList<>", "Generic Name"),
         };
-        
-        var valueTuples = new []
+
+        var valueTuples = new[]
         {
-            ("Field", fieldTemplate), 
+            ("Field", fieldTemplate),
             ("Property", propertyTemplate),
             ("Method", methodTemplate),
             ("typeof()", typeOfTemplate),
             ("Generic Constraint", genericConstraintTemplate),
         };
-        
-        foreach(var (declared, expected, nameKind) in typesToTest)
-        foreach (var (memberKind, template) in valueTuples)
-            yield return new TestCaseData(declared, expected, template).SetName($"{memberKind} - {nameKind}");
+
+        foreach (var (declared, expected, nameKind) in typesToTest)
+            foreach (var (memberKind, template) in valueTuples)
+                yield return new TestCaseData(declared, expected, template).SetName($"{memberKind} - {nameKind}");
     }
 }

@@ -12,7 +12,7 @@ namespace Cecilifier.Core.Tests.Integration
         {
             AssertResourceTest($"Generics/{testName}");
         }
-        
+
         [Test]
         public void TestInstanceNonGenericMethodsOnGenericTypes()
         {
@@ -36,13 +36,13 @@ namespace Cecilifier.Core.Tests.Integration
         {
             AssertResourceTest(@"Generics/GenericTypesAsMembers");
         }
-        
+
         [Test]
         public void TestSimplestGenericTypeDefinition()
         {
             AssertResourceTest(@"Generics/SimplestGenericTypeDefinition");
         }
-        
+
         [TestCase("ExternalGenericTypeInstantiation")]
         [TestCase("GenericTypeInstantiation")]
         public void TestGenericTypeInstantiation(string testName)
@@ -55,7 +55,7 @@ namespace Cecilifier.Core.Tests.Integration
         {
             AssertResourceTest(@"Generics/GenericTypeDefinitionWithMembers");
         }
-        
+
         [TestCase("GenericTypesInheritance", TestName = "GenericTypesInheritance")]
         [TestCase("SimpleGenericTypeInheritance", TestName = "SimpleGenericTypeInheritance")]
         [TestCase("ComplexGenericTypeInheritance", TestName = "ComplexGenericTypeInheritance")]
@@ -63,7 +63,7 @@ namespace Cecilifier.Core.Tests.Integration
         {
             AssertResourceTest($"Generics/{testScenario}");
         }
-        
+
         [TestCase("GenericMethods")]
         [TestCase("GenericMethodReturningGenericTypeParameter")]
         public void TestGenericMethods(string testName)
@@ -76,7 +76,7 @@ namespace Cecilifier.Core.Tests.Integration
         {
             AssertResourceTest(@"Generics/GenericMethodConstraints");
         }
-        
+
         [Test]
         public void TestGenericTypeConstraints()
         {
@@ -94,7 +94,7 @@ namespace Cecilifier.Core.Tests.Integration
         {
             AssertResourceTest(@"Generics/CoContraVariance");
         }
-        
+
         [Test]
         public void TestInnerTypeFromExternalAssembly()
         {

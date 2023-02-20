@@ -12,10 +12,10 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             var result = RunCecilifier(code);
             var cecilifiedCode = result.GeneratedCode.ReadToEnd();
             Assert.That(
-                cecilifiedCode, 
+                cecilifiedCode,
                 Does.Match("(.+\\.Emit\\(OpCodes\\.)Ldstr, \"i=\\{0\\}, o=\\{1\\}\"\\);\\s+\\1Ldloc, l_i_3\\);\\s+\\1Box, assembly.MainModule.TypeSystem.Int32\\);\\s+\\1Ldloc, l_o_4\\);"));
         }
-        
+
         [Test]
         public void WithMoreThan4Values()
         {
@@ -54,7 +54,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
 			il_M_2.Emit(OpCodes.Ldc_I4, 5);
 			il_M_2.Emit(OpCodes.Box, assembly.MainModule.TypeSystem.Int32);
 			il_M_2.Emit(OpCodes.Stelem_Ref);";
-            
+
             Assert.That(cecilifiedCode, Contains.Substring(expected), "With more than 3 parameters, String.Format() taking an array of objects should have been called.");
         }
     }

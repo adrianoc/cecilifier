@@ -12,7 +12,7 @@ public class DefinitionVariableTests
         var tbt = new DefinitionVariable("parent", "memberName", kind);
         Assert.That(tbt.Equals(tbt), Is.True);
     }
-    
+
     [Test]
     public void GetHashCodeTests([Values] VariableMemberKind kind)
     {
@@ -20,7 +20,7 @@ public class DefinitionVariableTests
         var shouldBeTheSame = new DefinitionVariable("parent", "memberName", kind);
         Assert.That(tbt.GetHashCode(), Is.EqualTo(shouldBeTheSame.GetHashCode()));
     }
-    
+
     [Test]
     public void ToStringTests([Values] VariableMemberKind kind, [Values("Parent", null)] string parentTypeName)
     {

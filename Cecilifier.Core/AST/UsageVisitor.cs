@@ -18,10 +18,10 @@ internal class UsageVisitor : CSharpSyntaxVisitor<UsageKind>
         return _instance;
     }
 
-    internal static void ResetInstance() => _instance = null; 
+    internal static void ResetInstance() => _instance = null;
 
     private static UsageVisitor _instance;
-    
+
     private readonly IVisitorContext context;
 
     private UsageVisitor(IVisitorContext context)
@@ -35,8 +35,8 @@ internal class UsageVisitor : CSharpSyntaxVisitor<UsageKind>
             return UsageKind.CallTarget;
 
         var t = context.SemanticModel.GetSymbolInfo(node);
-        return t.Symbol?.Kind is SymbolKind.Property or SymbolKind.Event or SymbolKind.Method 
-            ? UsageKind.CallTarget 
+        return t.Symbol?.Kind is SymbolKind.Property or SymbolKind.Event or SymbolKind.Method
+            ? UsageKind.CallTarget
             : UsageKind.None;
     }
 

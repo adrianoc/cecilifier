@@ -34,15 +34,15 @@ namespace Cecilifier.Web
             // We add them, just in case the user does have such permission (most likely this will hold 
             // only for the owner of the repo)
             var issueJson = $"{{ \"body\" : \"{body}\", \"title\" : \"{title}\", \"labels\" : [ \"bug_reporter\"] }}";
-            
+
             var stateBytes = new byte[64];
             RandomNumberGenerator.Create().GetBytes(stateBytes);
             var stateString = BitConverter.ToString(stateBytes).Replace("-", "");
-            
+
             await File.WriteAllTextAsync(Path.Combine("/tmp", stateString), issueJson);
             context.Response.Redirect($"https://github.com/login/oauth/authorize?client_id={CecilifierClientId}&scope=public_repo&state={stateString}&redirect_uri={Uri.EscapeDataString($"{context.Request.Headers[HttpRequestHeader.Referer.ToString()]}authorization_callback?id={stateString}")}");
         }
-        
+
         internal static async Task ReportIssueEndPointAsync(HttpContext context)
         {
             await context.Response.WriteAsync("<html><body>\n");
@@ -57,8 +57,8 @@ namespace Cecilifier.Web
                 var client = new HttpClient();
                 var content = new FormUrlEncodedContent(new Dictionary<string, string>
                 {
-                    ["client_id"] = CecilifierClientId, 
-                    ["client_secret"] = Environment.GetEnvironmentVariable("CECILIFIER_BUGREPORTER_SECRET"), 
+                    ["client_id"] = CecilifierClientId,
+                    ["client_secret"] = Environment.GetEnvironmentVariable("CECILIFIER_BUGREPORTER_SECRET"),
                     ["code"] = context.Request.Query["code"]
                 });
 
@@ -87,7 +87,7 @@ namespace Cecilifier.Web
                 var issueJsonFilePath = Path.Combine("/tmp", context.Request.Query["id"].ToString());
                 var issueJson = await File.ReadAllTextAsync(issueJsonFilePath);
                 File.Delete(issueJsonFilePath);
-                
+
                 msg.Content = new StringContent(issueJson, Encoding.UTF8, "application/json");
 
                 var response = await httpClient.SendAsync(msg);
@@ -96,7 +96,7 @@ namespace Cecilifier.Web
                 if (response.StatusCode == HttpStatusCode.Created)
                 {
                     // Parse response body and extract link to issue
-                    var issueURL = ((Newtonsoft.Json.Linq.JObject)Newtonsoft.Json.JsonConvert.DeserializeObject(responseStr))["url"].ToString();
+                    var issueURL = ((Newtonsoft.Json.Linq.JObject) Newtonsoft.Json.JsonConvert.DeserializeObject(responseStr))["url"].ToString();
 
                     // notify cecilifier main page  about the outcome of issue reporting
                     await context.Response.WriteAsync($"<script>window.opener.postMessage('{{ \"status\": \"success\", \"issueUrl\": \"{issueURL}\" }}','*');</script>");
@@ -130,7 +130,7 @@ namespace Cecilifier.Web
                 await context.Response.WriteAsync($"Request to process reference assemblies is to large (request = {context.Request.Headers.ContentLength} bytes, maximum={bufferMaxLengthInBytes} bytes).<br/> Try removing assemblies from the 'Assembly References' list or cecilifying your code after adding each assembly.");
                 return;
             }
-            
+
             string currentAssemblyName = null;
             var assemblyBytes = ArrayPool<byte>.Shared.Rent(bufferMaxLengthInBytes);
             try
@@ -149,7 +149,7 @@ namespace Cecilifier.Web
                 foreach (var assemblyReference in assembliesToStore!.AssemblyReferences)
                 {
                     currentAssemblyName = assemblyReference.AssemblyName;
-                    
+
                     var assemblyPath = Path.Combine(Constants.AssemblyReferenceCacheBasePath, assemblyReference.AssemblyHash, assemblyReference.AssemblyName);
                     if (Convert.TryFromBase64String(assemblyReference.Base64Contents, assemblyBytes, out var bytesWritten))
                     {
@@ -158,8 +158,8 @@ namespace Cecilifier.Web
                     else
                     {
                         context.Response.StatusCode = 500;
-                        await context.Response.WriteAsync($"Cecilifier was Unable to store referenced assembly(ies). Assembly name: { currentAssemblyName ?? "N/A"}");
-                        
+                        await context.Response.WriteAsync($"Cecilifier was Unable to store referenced assembly(ies). Assembly name: {currentAssemblyName ?? "N/A"}");
+
                         break;
                     }
                 }
@@ -167,9 +167,9 @@ namespace Cecilifier.Web
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to store reference assemblies.");
-                
+
                 context.Response.StatusCode = 500;
-                await context.Response.WriteAsync($"Cecilifier was Unable to store referenced assembly(ies). Assembly name: { currentAssemblyName ?? "N/A"}");
+                await context.Response.WriteAsync($"Cecilifier was Unable to store referenced assembly(ies). Assembly name: {currentAssemblyName ?? "N/A"}");
             }
             finally
             {

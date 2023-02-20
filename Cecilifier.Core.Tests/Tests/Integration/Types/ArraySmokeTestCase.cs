@@ -1,4 +1,4 @@
-﻿using NUnit.Framework;
+using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration.Types
 {

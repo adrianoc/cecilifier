@@ -1,4 +1,4 @@
-﻿using NUnit.Framework;
+using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration
 {
@@ -10,7 +10,7 @@ namespace Cecilifier.Core.Tests.Integration
         {
             AssertResourceTest(@"Members/ForwardReferences");
         }
-        
+
         [TestCase("SimpleEvent")]
         [TestCase("StaticEvent")]
         [TestCase("GenericEventHandler")]

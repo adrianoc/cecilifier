@@ -14,7 +14,7 @@ public class DefinitionVariableManager
         _definitionVariables.Add(variable);
         return variable;
     }
-    
+
     public MethodDefinitionVariable RegisterMethod(string parentName, string methodName, string[] parameterTypes, string definitionVariableName)
     {
         var definitionVariable = new MethodDefinitionVariable(parentName, methodName, parameterTypes, definitionVariableName);
@@ -74,7 +74,7 @@ public class DefinitionVariableManager
         var registered = RegisterMethod(parentName, memberName, paramTypes, definitionVariableName);
         return WithVariable(registered);
     }
-    
+
     public ScopedDefinitionVariable WithVariable(DefinitionVariable variable)
     {
         _definitionStack.Add(variable);
@@ -84,10 +84,10 @@ public class DefinitionVariableManager
     public ScopedDefinitionVariable WithCurrent(string parentName, string memberName, VariableMemberKind variableMemberKind, string definitionVariableName)
     {
         var found = GetVariable(memberName, variableMemberKind, parentName);
-        var registered = found.IsValid 
-            ? found 
+        var registered = found.IsValid
+            ? found
             : RegisterNonMethod(parentName, memberName, variableMemberKind, definitionVariableName);
-        
+
         _definitionStack.Add(registered);
         return new ScopedDefinitionVariable(_definitionStack, _definitionStack.Count - 1);
     }

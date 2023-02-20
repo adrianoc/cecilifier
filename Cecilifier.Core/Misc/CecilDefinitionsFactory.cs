@@ -18,19 +18,19 @@ namespace Cecilifier.Core.Misc
         public static string CallSite(ITypeResolver resolver, IFunctionPointerTypeSymbol functionPointer)
         {
             return FunctionPointerTypeBasedCecilType(
-                resolver, 
-                functionPointer, 
+                resolver,
+                functionPointer,
                 (hasThis, parameters, returnType) => $"new CallSite({returnType}) {{ {hasThis}, {parameters} }}");
         }
 
         public static string FunctionPointerType(ITypeResolver resolver, IFunctionPointerTypeSymbol functionPointer)
         {
             return FunctionPointerTypeBasedCecilType(
-                resolver, 
-                functionPointer, 
+                resolver,
+                functionPointer,
                 (hasThis, parameters, returnType) => $"new FunctionPointerType() {{ {hasThis}, ReturnType = {returnType}, {parameters} }}");
         }
-        
+
         public static IEnumerable<string> Method(IVisitorContext context, string methodVar, string methodName, string methodModifiers, ITypeSymbol returnType, bool refReturn, IList<TypeParameterSyntax> typeParameters)
         {
             var exps = new List<string>();
@@ -38,7 +38,7 @@ namespace Cecilifier.Core.Misc
             var resolvedReturnType = context.TypeResolver.Resolve(returnType);
             if (refReturn)
                 resolvedReturnType = resolvedReturnType.MakeByReferenceType();
-            
+
             // for type parameters we may need to postpone setting the return type (using void as a placeholder, since we need to pass something) until the generic parameters has been
             // handled. This is required because the type parameter may be defined by the method being processed.
             exps.Add($"var {methodVar} = new MethodDefinition(\"{methodName}\", {methodModifiers}, {(returnType.TypeKind == TypeKind.TypeParameter ? context.TypeResolver.Bcl.System.Void : resolvedReturnType)});");
@@ -48,11 +48,11 @@ namespace Cecilifier.Core.Misc
                 resolvedReturnType = context.TypeResolver.Resolve(returnType);
                 exps.Add($"{methodVar}.ReturnType = {(refReturn ? resolvedReturnType.MakeByReferenceType() : resolvedReturnType)};");
             }
-            
+
             return exps;
         }
-        
-        internal static string Constructor(IVisitorContext context, string ctorLocalVar, string typeName, bool isStatic,string methodAccessibility, string[] paramTypes, string methodDefinitionPropertyValues = null)
+
+        internal static string Constructor(IVisitorContext context, string ctorLocalVar, string typeName, bool isStatic, string methodAccessibility, string[] paramTypes, string methodDefinitionPropertyValues = null)
         {
             var ctorName = Utils.ConstructorMethodName(isStatic);
             context.DefinitionVariables.RegisterMethod(typeName, ctorName, paramTypes, ctorLocalVar);
@@ -77,17 +77,17 @@ namespace Cecilifier.Core.Misc
          *    # of the type parameters declared by the type being declared). 
          */
         public static IEnumerable<string> Type(
-            IVisitorContext context, 
+            IVisitorContext context,
             string typeVar,
             string typeNamespace,
             string typeName,
             string attrs,
-            string baseTypeName, 
-            string outerTypeName, 
-            bool isStructWithNoFields, 
-            IEnumerable<string> interfaces, 
-            IEnumerable<TypeParameterSyntax> ownTypeParameters, 
-            IEnumerable<TypeParameterSyntax> outerTypeParameters, 
+            string baseTypeName,
+            string outerTypeName,
+            bool isStructWithNoFields,
+            IEnumerable<string> interfaces,
+            IEnumerable<TypeParameterSyntax> ownTypeParameters,
+            IEnumerable<TypeParameterSyntax> outerTypeParameters,
             params string[] properties)
         {
             var typeParamList = ownTypeParameters?.ToArray() ?? Array.Empty<TypeParameterSyntax>();
@@ -95,7 +95,7 @@ namespace Cecilifier.Core.Misc
             {
                 typeName = typeName + "`" + typeParamList.Length;
             }
-            
+
             var exps = new List<string>();
             var typeDefExp = $"var {typeVar} = new TypeDefinition(\"{typeNamespace}\", \"{typeName}\", {attrs}{(!string.IsNullOrWhiteSpace(baseTypeName) ? ", " + baseTypeName : "")})";
             if (properties.Length > 0)
@@ -123,14 +123,14 @@ namespace Cecilifier.Core.Misc
                 exps.Add($"{typeVar}.ClassSize = 1;");
                 exps.Add($"{typeVar}.PackingSize = 0;");
             }
-            
+
             // add type parameters from outer types. 
-            var outerTypeParametersArray =  outerTypeParameters?.ToArray() ?? Array.Empty<TypeParameterSyntax>(); 
+            var outerTypeParametersArray = outerTypeParameters?.ToArray() ?? Array.Empty<TypeParameterSyntax>();
             ProcessGenericTypeParameters(typeVar, context, outerTypeParametersArray.Concat(typeParamList).ToArray(), exps);
             return exps;
         }
-        
-        public static IEnumerable<string> Type(IVisitorContext context, string typeVar, string typeNamespace, string typeName, string outerTypeName,string attrs, string baseTypeName, bool isStructWithNoFields, IEnumerable<string> interfaces, TypeParameterListSyntax typeParameters = null, params string[] properties)
+
+        public static IEnumerable<string> Type(IVisitorContext context, string typeVar, string typeNamespace, string typeName, string outerTypeName, string attrs, string baseTypeName, bool isStructWithNoFields, IEnumerable<string> interfaces, TypeParameterListSyntax typeParameters = null, params string[] properties)
         {
             return Type(
                 context,
@@ -159,7 +159,7 @@ namespace Cecilifier.Core.Misc
             {
                 return " { IsContravariant = true }";
             }
-            
+
             if (typeParameterSymbol.Variance == VarianceKind.Out)
             {
                 return " { IsCovariant = true }";
@@ -172,9 +172,9 @@ namespace Cecilifier.Core.Misc
         {
             context.DefinitionVariables.RegisterNonMethod(declaringTypeName, name, VariableMemberKind.Field, fieldVar);
             var fieldExp = $"var {fieldVar} = new FieldDefinition(\"{name}\", {fieldAttributes}, {fieldType})";
-            return new []
+            return new[]
             {
-                constantValue != null ? $"{fieldExp} {{ Constant = {constantValue} }} ;" : $"{fieldExp};", 
+                constantValue != null ? $"{fieldExp} {{ Constant = {constantValue} }} ;" : $"{fieldExp};",
                 $"{declaringTypeVar}.Fields.Add({fieldVar});"
             };
         }
@@ -187,9 +187,9 @@ namespace Cecilifier.Core.Misc
                 resolvedType = resolvedType.MakeByReferenceType();
             }
 
-            return  $"new ParameterDefinition(\"{name}\", {paramAttributes}, {resolvedType})";
+            return $"new ParameterDefinition(\"{name}\", {paramAttributes}, {resolvedType})";
         }
-        
+
         public static IEnumerable<string> Parameter(string name, RefKind byRef, bool isParams, string methodVar, string paramVar, string resolvedType, string paramAttributes, string defaultParameterValue)
         {
             var exps = new List<string>();
@@ -207,13 +207,13 @@ namespace Cecilifier.Core.Misc
 
             return exps;
         }
-        
+
         public static IEnumerable<string> Parameter(ParameterSyntax node, SemanticModel semanticModel, string methodVar, string paramVar, string resolvedType, string defaultParameterValue)
         {
             var paramSymbol = semanticModel.GetDeclaredSymbol(node);
             return Parameter(
-                node.Identifier.Text, 
-                paramSymbol!.RefKind, 
+                node.Identifier.Text,
+                paramSymbol!.RefKind,
                 isParams: node.GetFirstToken().IsKind(SyntaxKind.ParamsKeyword),
                 methodVar,
                 paramVar,
@@ -221,11 +221,11 @@ namespace Cecilifier.Core.Misc
                 paramSymbol!.AsParameterAttribute(),
                 defaultParameterValue);
         }
-        
+
         public static string Parameter(IParameterSymbol paramSymbol, string resolvedType)
         {
             return Parameter(
-                paramSymbol.Name, 
+                paramSymbol.Name,
                 paramSymbol.RefKind,
                 resolvedType,
                 paramSymbol.AsParameterAttribute());
@@ -281,22 +281,22 @@ namespace Cecilifier.Core.Misc
             // forward declare all generic type parameters to allow one type parameter to reference any of the others; this is useful in constraints for example:
             // class Foo<T,S> where T: S  { }
             var genericTypeParamEntries = ArrayPool<(string genParamDefVar, ITypeParameterSymbol typeParameterSymbol)>.Shared.Rent(typeParamList.Count);
-            for(int i = 0; i < typeParamList.Count; i++)
+            for (int i = 0; i < typeParamList.Count; i++)
             {
                 var symbol = context.SemanticModel.GetDeclaredSymbol(typeParamList[i]);
                 var genericParamName = typeParamList[i].Identifier.Text;
-                
+
                 var genParamDefVar = context.Naming.GenericParameterDeclaration(typeParamList[i]);
                 exps.Add(GenericParameter(context, memberDefVar, genericParamName, genParamDefVar, symbol));
                 genericTypeParamEntries[i] = (genParamDefVar, symbol);
             }
-            
-            for(int i = 0; i < typeParamList.Count; i++)
+
+            for (int i = 0; i < typeParamList.Count; i++)
             {
                 exps.Add($"{memberDefVar}.GenericParameters.Add({genericTypeParamEntries[i].genParamDefVar});");
                 AddConstraints(genericTypeParamEntries[i].genParamDefVar, genericTypeParamEntries[i].typeParameterSymbol);
             }
-            
+
             ArrayPool<(string genParamDefVar, ITypeParameterSymbol typeParameterSymbol)>.Shared.Return(genericTypeParamEntries);
 
             void AddConstraints(string genParamDefVar, ITypeParameterSymbol typeParam)
@@ -310,12 +310,12 @@ namespace Cecilifier.Core.Misc
                 {
                     exps.Add($"{genParamDefVar}.HasReferenceTypeConstraint = true;");
                 }
-                
+
                 if (typeParam.HasValueTypeConstraint)
                 {
                     var systemValueTypeRef = Utils.ImportFromMainModule("typeof(System.ValueType)");
                     var constraintType = typeParam.HasUnmanagedTypeConstraint
-                        ? $"{systemValueTypeRef}.MakeRequiredModifierType({context.TypeResolver.Resolve("System.Runtime.InteropServices.UnmanagedType")})" 
+                        ? $"{systemValueTypeRef}.MakeRequiredModifierType({context.TypeResolver.Resolve("System.Runtime.InteropServices.UnmanagedType")})"
                         : systemValueTypeRef;
 
                     exps.Add($"{genParamDefVar}.Constraints.Add(new GenericParameterConstraint({constraintType}));");
@@ -330,7 +330,7 @@ namespace Cecilifier.Core.Misc
                 {
                     exps.Add($"{genParamDefVar}.IsCovariant = true;");
                 }
- 
+
                 //TODO: symbol.HasNotNullConstraint causes no difference in the generated assembly?
                 foreach (var type in typeParam.ConstraintTypes)
                 {
@@ -338,7 +338,7 @@ namespace Cecilifier.Core.Misc
                 }
             }
         }
-        
+
         public static IEnumerable<string> MethodBody(string methodVar, InstructionRepresentation[] instructions)
         {
             var ilVar = $"{methodVar}_il";
@@ -354,7 +354,7 @@ namespace Cecilifier.Core.Misc
             exps.Add($"var {ilVar} = {methodVar}.Body.GetILProcessor();");
             if (instructions.Length == 0)
                 return exps;
-            
+
             var methodInstVar = $"{methodVar}_inst";
             exps.Add($"var {methodInstVar} = {methodVar}.Body.Instructions;");
 
@@ -377,7 +377,7 @@ namespace Cecilifier.Core.Misc
 
             return exps;
         }
-        
+
         public static string DefaultTypeAttributeFor(TypeKind typeKind, bool hasStaticCtor)
         {
             var basicClassAttrs = "TypeAttributes.AnsiClass" + (hasStaticCtor ? "" : " | TypeAttributes.BeforeFieldInit");
@@ -406,7 +406,7 @@ namespace Cecilifier.Core.Misc
             {
                 staticDelegateCacheContext.EnsureCacheBackingFieldIsEmitted(context.TypeResolver.Resolve(delegateType));
                 LogWarningIfStaticMethodIsDeclaredInOtherType(context, staticDelegateCacheContext);
-                
+
                 context.EmitCilInstruction(ilVar, OpCodes.Ldsfld, staticDelegateCacheContext.CacheBackingField);
                 context.EmitCilInstruction(ilVar, OpCodes.Dup);
 
@@ -427,7 +427,7 @@ namespace Cecilifier.Core.Misc
             else
             {
                 context.EmitCilInstruction(ilVar, OpCodes.Ldftn, targetMethodExp);
-                var delegateCtor = delegateType.GetMembers().OfType<IMethodSymbol>().FirstOrDefault(m => m.Name == ".ctor"); 
+                var delegateCtor = delegateType.GetMembers().OfType<IMethodSymbol>().FirstOrDefault(m => m.Name == ".ctor");
                 context.EmitCilInstruction(ilVar, OpCodes.Newobj, delegateCtor.MethodResolverExpression(context));
             }
         }

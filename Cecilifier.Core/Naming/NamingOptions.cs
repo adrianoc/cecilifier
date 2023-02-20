@@ -16,7 +16,7 @@ namespace Cecilifier.Core.Naming
         AddCommentsToMemberDeclarations = 0x80,
         IncludeSourceInErrorReports = 0x100,
 
-        All =  DifferentiateDeclarationsAndReferences
+        All = DifferentiateDeclarationsAndReferences
                | PrefixInstructionsWithILOpCodeName
                | AppendElementNameToVariables
                | PrefixVariableNamesWithElementKind

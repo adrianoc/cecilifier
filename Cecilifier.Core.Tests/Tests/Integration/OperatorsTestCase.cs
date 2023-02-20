@@ -1,4 +1,4 @@
-﻿using Cecilifier.Core.Tests.Framework;
+using Cecilifier.Core.Tests.Framework;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration
@@ -10,7 +10,7 @@ namespace Cecilifier.Core.Tests.Integration
         {
             AssertResourceTestWithParameters(@$"Expressions/Operators/Bitwise/Bitwise{@operator}", type1, type2);
         }
-        
+
         [Test]
         public void LogicalOperators([Values("Or", "And")] string @operator)
         {

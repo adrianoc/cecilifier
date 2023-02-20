@@ -5,7 +5,7 @@ namespace Cecilifier.Core.Tests.Integration;
 [TestFixture]
 public class StackallocTests : IntegrationResourceBasedTest
 {
-    
+
     [TestCase("simplest", TestName = "Simplest")]
     [TestCase("WithSpan", TestName = "WithSpan")]
     [TestCase("WithSpanAsParameter", true, TestName = "WithSpanAsParameter")]

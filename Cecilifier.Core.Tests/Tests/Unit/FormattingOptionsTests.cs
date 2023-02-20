@@ -11,7 +11,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
     public class FormattingOptionsTests
     {
         private Dictionary<ElementKind, string> prefixes;
-        
+
         [SetUp]
         public void SetupFixture()
         {
@@ -21,7 +21,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
                 prefixes[elementKind] = elementKind.ToString();
             }
         }
-        
+
         [TestCase(ElementKind.Attribute, "changed_obsolete", "Attribute_obsolete")]
         [TestCase(ElementKind.Class, "changed_foo", "Class_foo")]
         [TestCase(ElementKind.Constructor, "changed_foo", "Constructor_foo")]
@@ -44,14 +44,14 @@ namespace Cecilifier.Core.Tests.Tests.Unit
         {
             const string source = "using System; public delegate void Del(); class Foo { static Foo() {} public Foo() {} void Gen<GP>() {} [Obsolete] int Obsolete; event Action Evt; public void Bar(int param1) { int local1 = 0; if (param1 == local1) {} Gen<int>();} int field; int Prop1 {get;set;} } struct S {} enum E {} interface I {}";
             prefixes[elementKind] = "changed";
-            
+
             var nameStrategy = new DefaultNameStrategy(NamingOptions.All, prefixes);
             var memoryStream = new MemoryStream();
             memoryStream.Write(System.Text.Encoding.ASCII.GetBytes(source));
             memoryStream.Position = 0;
-            
+
             var cecilified = Cecilifier.Process(memoryStream, new CecilifierOptions { References = Utils.GetTrustedAssembliesPath(), Naming = nameStrategy }).GeneratedCode.ReadToEnd();
-            
+
             Assert.That(cecilified, Does.Match($"\\b{expected}"), $"{elementKind} prefix not applied.");
             Assert.That(cecilified, Does.Not.Match($"\\b{notExpected}"), $"{elementKind} prefix not applied.");
         }
@@ -61,13 +61,13 @@ namespace Cecilifier.Core.Tests.Tests.Unit
         {
             if (elementKind == ElementKind.None)
                 return;
-            
+
             if (elementKind == ElementKind.Label && !camelCasing)
             {
                 Assert.Ignore("as of Aug/2021 all created labels are camelCase.");
                 return;
             }
-            
+
             const string source = "using System; public delegate void TestDelegate(); class TestClass { static TestClass() {} public TestClass() {} void Gen<TestGenericParameter>() {} [Obsolete] int TestAttribute; event Action TestEvent; public void Bar(int TestParameter) { int local1 = 0; if (TestParameter == local1) {} Gen<int>(); } int TestField; int TestProperty {get;set;} } struct TestStruct {} enum TestEnum {} interface TestInterface {}";
             var namingOptions = NamingOptions.All;
             var casingValidation = "a-z";
@@ -77,12 +77,12 @@ namespace Cecilifier.Core.Tests.Tests.Unit
                 namingOptions &= ~NamingOptions.CamelCaseElementNames;
                 casingValidation = "A-Z";
             }
-            
+
             var nameStrategy = new DefaultNameStrategy(namingOptions, prefixes);
             var memoryStream = new MemoryStream();
             memoryStream.Write(System.Text.Encoding.ASCII.GetBytes(source));
             memoryStream.Position = 0;
-            
+
             var cecilified = Cecilifier.Process(memoryStream, new CecilifierOptions { References = Utils.GetTrustedAssembliesPath(), Naming = nameStrategy }).GeneratedCode.ReadToEnd();
 
             Assert.That(cecilified, Does.Match($"{elementKind}_[{casingValidation}][a-zA-Z]+"), "Casing");

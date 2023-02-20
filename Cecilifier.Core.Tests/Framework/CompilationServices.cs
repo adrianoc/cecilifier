@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -45,7 +45,7 @@ namespace Cecilifier.Core.Tests.Framework
 
             var compilation = CSharpCompilation.Create(
                 Path.GetFileNameWithoutExtension(outputFilePath),
-                new[] {syntaxTree},
+                new[] { syntaxTree },
                 references.Select(r => MetadataReference.CreateFromFile(r)).ToArray(),
                 compilationOptions);
 

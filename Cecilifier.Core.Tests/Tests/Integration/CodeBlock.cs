@@ -1,4 +1,4 @@
-﻿using NUnit.Framework;
+using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration
 {
@@ -28,7 +28,7 @@ namespace Cecilifier.Core.Tests.Integration
         {
             AssertResourceTest(@"CodeBlock/MethodCall/NonVirtualMethodCall");
         }
-        
+
         [Test]
         public void OutVariablesTest()
         {

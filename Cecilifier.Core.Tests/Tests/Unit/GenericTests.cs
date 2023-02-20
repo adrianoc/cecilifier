@@ -10,18 +10,18 @@ namespace Cecilifier.Core.Tests.Tests.Unit
         public void ExplicitTypeArgument()
         {
             var code = "class Foo { void M<T>() {} void Explicit() { M<int>(); }  }";
-            var expectedSnippet = @"var (gi_M_\d+) = new GenericInstanceMethod\(r_M_\d+\).+\s+" + 
+            var expectedSnippet = @"var (gi_M_\d+) = new GenericInstanceMethod\(r_M_\d+\).+\s+" +
                                        @"\1.GenericArguments.Add\(assembly.MainModule.TypeSystem.Int32\);\s+";
-            
+
             var result = RunCecilifier(code);
             Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(expectedSnippet));
         }
-        
+
         [Test]
         public void InferredTypeArgument()
         {
             var code = "class Foo { void M<T>(T t) {} void Inferred() { M(10); }  }";
-            var expectedSnippet = @"var (gi_M_\d+) = new GenericInstanceMethod\(r_M_\d+\).+\s+" + 
+            var expectedSnippet = @"var (gi_M_\d+) = new GenericInstanceMethod\(r_M_\d+\).+\s+" +
                                   @"\1.GenericArguments.Add\(assembly.MainModule.TypeSystem.Int32\);\s+";
 
             var result = RunCecilifier(code);
@@ -40,7 +40,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
 
             var result = RunCecilifier(code);
             Assert.That(
-                result.GeneratedCode.ReadToEnd(), 
+                result.GeneratedCode.ReadToEnd(),
                 Does.Match(
                     @"//Bar\(true\);\s+" +
                     @"il_callBar_7.Emit\(OpCodes.Ldarg_0\);\s+" +
@@ -57,7 +57,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
                     @"var (gi_bar_\d+) = new GenericInstanceMethod\(r_bar_\d+\);\s+" +
                     @"\2.GenericArguments.Add\(assembly.MainModule.TypeSystem.Boolean\);"));
         }
-        
+
         [Test]
         public void CallGenericMethodWithoutParameters_Issue_168()
         {
@@ -70,7 +70,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
 
             var result = RunCecilifier(code);
             Assert.That(
-                result.GeneratedCode.ReadToEnd(), 
+                result.GeneratedCode.ReadToEnd(),
                 Does.Match(
                     @"//Bar<float>\(\);\s+" +
                     @"il_callBar_6.Emit\(OpCodes.Ldarg_0\);\s+" +
@@ -91,9 +91,9 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             var result = RunCecilifier(code);
 
             var cecilifiedCode = result.GeneratedCode.ReadToEnd();
-            
+
             Assert.That(
-                cecilifiedCode, 
+                cecilifiedCode,
                 Does.Match(
                     @"var m_M_5 = new MethodDefinition\(""M"", MethodAttributes.Private, assembly.MainModule.TypeSystem.Void\);\s+" +
                     @"m_M_5.ReturnType = gp_T_1;\s+" +
@@ -110,15 +110,15 @@ namespace Cecilifier.Core.Tests.Tests.Unit
         {
             var result = RunCecilifier(code);
             var cecilifiedCode = result.GeneratedCode.ReadToEnd();
-            
+
             Assert.That(cecilifiedCode, Does.Match(@"il_M_\d+.Emit\(OpCodes.Call, .+ImportReference\(typeof\(System\.Activator\)\)\.MakeGenericInstanceType\(gp_T_\d+\)\);"));
             Assert.That(cecilifiedCode, Does.Match(@"m_M_\d+\.ReturnType = gp_T_\d+;"));
         }
-        
-        [TestCase("var x = typeof(System.Collections.Generic.Dictionary<int, int>.Enumerator);", 
+
+        [TestCase("var x = typeof(System.Collections.Generic.Dictionary<int, int>.Enumerator);",
             """il_topLevelMain_3.Emit\(OpCodes.Ldtoken, assembly.MainModule.ImportReference\(typeof\(System.Collections.Generic.Dictionary<int, int>.Enumerator\)\)\);""")]
-        
-        [TestCase("class Foo { void Bar(System.Collections.Generic.Dictionary<int, int> dict) { var enu = dict.GetEnumerator(); } }", 
+
+        [TestCase("class Foo { void Bar(System.Collections.Generic.Dictionary<int, int> dict) { var enu = dict.GetEnumerator(); } }",
             """
                     (il_bar_\d+).Emit\(OpCodes.Callvirt,.+ImportReference\(.+typeof\(System.Collections.Generic.Dictionary<System.Int32, System.Int32>\), "GetEnumerator",.+\)\);
                     \s+\1.Emit\(OpCodes.Stloc, l_enu_\d+\);
@@ -134,7 +134,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
         {
             var r = RunCecilifier("class C { System.Collections.Generic.List<int>.Enumerator e; }");
             Assert.That(
-                r.GeneratedCode.ReadToEnd(), 
+                r.GeneratedCode.ReadToEnd(),
                 Does.Match("""var fld_e_1 = new FieldDefinition\("e", FieldAttributes.Private, assembly.MainModule.ImportReference\(typeof\(System.Collections.Generic.List<int>.Enumerator\)\)\);"""));
         }
 
@@ -144,7 +144,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             //Test for issue #218
             var r = RunCecilifier("interface I<T> where T : I<T> {}");
             Assert.That(
-                r.GeneratedCode.ReadToEnd(), 
+                r.GeneratedCode.ReadToEnd(),
                 Does.Match(
                       """
                             var gp_T_1 = new Mono.Cecil.GenericParameter\("T", itf_I_0\);

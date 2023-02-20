@@ -48,11 +48,11 @@ namespace Cecilifier.Core.Misc
                 return CecilDefinitionsFactory.FunctionPointerType(this, functionPointer);
             }
 
-            if (type.SpecialType == SpecialType.None || type.SpecialType == SpecialType.System_Enum || type.SpecialType == SpecialType.System_ValueType || type.SpecialType == SpecialType.System_Decimal || type.TypeKind == TypeKind.Interface )
+            if (type.SpecialType == SpecialType.None || type.SpecialType == SpecialType.System_Enum || type.SpecialType == SpecialType.System_ValueType || type.SpecialType == SpecialType.System_Decimal || type.TypeKind == TypeKind.Interface)
             {
                 return null;
             }
-            
+
             return ResolvePredefinedType(type);
         }
 
@@ -67,24 +67,24 @@ namespace Cecilifier.Core.Misc
             {
                 return null;
             }
-            
+
             var genericType = Resolve(OpenGenericTypeName(genericTypeSymbol.ConstructedFrom));
-            return genericTypeSymbol.IsDefinition 
-                ? genericType 
+            return genericTypeSymbol.IsDefinition
+                ? genericType
                 : MakeGenericInstanceType(genericType, genericTypeSymbol);
         }
 
         public string ResolveLocalVariableType(ITypeSymbol type)
         {
             var containingSymbolName = type.ContainingSymbol?.FullyQualifiedName(false);
-            var found = _context.DefinitionVariables.GetVariable(type.Name, VariableMemberKind.Type, containingSymbolName).VariableName 
+            var found = _context.DefinitionVariables.GetVariable(type.Name, VariableMemberKind.Type, containingSymbolName).VariableName
                         ?? _context.DefinitionVariables.GetVariable(type.Name, VariableMemberKind.TypeParameter, containingSymbolName).VariableName;
-            
-            if (found != null && type is INamedTypeSymbol {IsGenericType: true} genericTypeSymbol)
+
+            if (found != null && type is INamedTypeSymbol { IsGenericType: true } genericTypeSymbol)
             {
                 return MakeGenericInstanceType(found, genericTypeSymbol);
             }
-            
+
             return found;
         }
 
@@ -98,7 +98,7 @@ namespace Cecilifier.Core.Misc
 
             return collectTo;
         }
-        
+
         private string MakeGenericInstanceType(string typeReference, INamedTypeSymbol genericTypeSymbol)
         {
             var typeArgs = CollectTypeArguments(genericTypeSymbol, new List<string>());

@@ -28,7 +28,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
             var ret = source.PropertyType.FullName == target.PropertyType.FullName;
             if (!ret)
                 _output.WriteLine($"Types of property '{source.Name}' differs. Expected '{source.PropertyType.FullName}' but got '{target.PropertyType.FullName}'");
-                
+
             return ret;
         }
 
@@ -37,7 +37,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
             var ret = source.Attributes == target.Attributes;
             if (!ret)
                 _output.WriteLine($"Attributes of event '{source.Name}' differs. Expected '{source.Attributes}' but got '{target.Attributes}'");
-            
+
             return ret;
         }
 
@@ -48,7 +48,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
             {
                 _output.WriteLine($"GetMethod differs: Expected '{source.GetMethod}' but got '{target.GetMethod}'");
             }
-            
+
             if (source.SetMethod?.FullName != target.SetMethod?.FullName)
             {
                 _output.WriteLine($"SetMethod differs: Expected '{source.SetMethod}' but got '{target.SetMethod}'");

@@ -11,7 +11,7 @@ public class StructSpecificTests : CecilifierUnitTestBase
         var result = RunCecilifier("readonly struct RO { }");
         Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(@$"st_rO_\d+\.CustomAttributes\.Add\(new CustomAttribute\(.+typeof\(System.Runtime.CompilerServices.IsReadOnlyAttribute\), "".ctor"".+\)\);"));
     }
-    
+
     [TestCase("using System.Runtime.InteropServices; [StructLayout(LayoutKind.Auto, Size = 4)] struct S {}", "AutoLayout", TestName = "AutoLayout")]
     [TestCase("using System.Runtime.InteropServices; [StructLayout(LayoutKind.Explicit, Size = 42)] struct S {}", "ExplicitLayout", TestName = "ExplicitLayout")]
     [TestCase("struct S {}", "SequentialLayout", TestName = "DefaultLayout")]
@@ -20,7 +20,7 @@ public class StructSpecificTests : CecilifierUnitTestBase
         var result = RunCecilifier(code);
         Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(@$"TypeAttributes\.{expected}"));
     }
-    
+
     [Test]
     public void RefStructDeclaration()
     {

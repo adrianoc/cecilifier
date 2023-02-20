@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -13,14 +13,14 @@ namespace Cecilifier.Core.Extensions
         {
             if (type is INamedTypeSymbol namedType && namedType.IsGenericType) //TODO: namedType.IsUnboundGenericType ? Open 
             {
-                typeParameters = namedType.TypeArguments.Select(typeArg => (string)typeArg.FullyQualifiedName()).ToArray();
-                return Regex.Replace(namedType.ConstructedFrom.ToString(), "<.*>", "`" + namedType.TypeArguments.Length );
+                typeParameters = namedType.TypeArguments.Select(typeArg => (string) typeArg.FullyQualifiedName()).ToArray();
+                return Regex.Replace(namedType.ConstructedFrom.ToString(), "<.*>", "`" + namedType.TypeArguments.Length);
             }
 
             typeParameters = Array.Empty<string>();
             return type.FullyQualifiedName();
         }
-        
+
         public static string MakeByReferenceType(this string type)
         {
             return $"{type}.MakeByReferenceType()";
@@ -29,13 +29,14 @@ namespace Cecilifier.Core.Extensions
         {
             return $"{type}.MakeGenericInstanceType({string.Join(", ", genericTypes)})";
         }
-        
+
         public static string MakeGenericInstanceType(this string type, string genericType)
         {
             return $"{type}.MakeGenericInstanceType({genericType})";
         }
 
-        public static bool IsPrimitiveType(this ITypeSymbol type) => type.SpecialType switch {
+        public static bool IsPrimitiveType(this ITypeSymbol type) => type.SpecialType switch
+        {
             SpecialType.System_Boolean => true,
             SpecialType.System_Byte => true,
             SpecialType.System_SByte => true,
@@ -50,16 +51,19 @@ namespace Cecilifier.Core.Extensions
             SpecialType.System_UInt64 => true,
             _ => false
         };
-        
+
         public static uint SizeofArrayLikeItemElement(this ITypeSymbol type)
         {
-            switch(type)
+            switch (type)
             {
-                case INamedTypeSymbol { IsGenericType: true } ns : return SizeofArrayLikeItemElement(ns.TypeArguments[0]);
-                case IPointerTypeSymbol ptr: return SizeofArrayLikeItemElement(ptr.PointedAtType);
-                case IArrayTypeSymbol array: return SizeofArrayLikeItemElement(array.ElementType);
+                case INamedTypeSymbol { IsGenericType: true } ns:
+                    return SizeofArrayLikeItemElement(ns.TypeArguments[0]);
+                case IPointerTypeSymbol ptr:
+                    return SizeofArrayLikeItemElement(ptr.PointedAtType);
+                case IArrayTypeSymbol array:
+                    return SizeofArrayLikeItemElement(array.ElementType);
             }
-            
+
             return type.SpecialType switch
             {
                 SpecialType.System_Boolean => sizeof(bool),
@@ -80,13 +84,16 @@ namespace Cecilifier.Core.Extensions
 
         public static OpCode Stind(this ITypeSymbol type)
         {
-            switch(type)
+            switch (type)
             {
-                case INamedTypeSymbol { IsGenericType: true } ns : return Stind(ns.TypeArguments[0]);
-                case IPointerTypeSymbol ptr: return Stind(ptr.PointedAtType);
-                case IArrayTypeSymbol array: return Stind(array.ElementType);
+                case INamedTypeSymbol { IsGenericType: true } ns:
+                    return Stind(ns.TypeArguments[0]);
+                case IPointerTypeSymbol ptr:
+                    return Stind(ptr.PointedAtType);
+                case IArrayTypeSymbol array:
+                    return Stind(array.ElementType);
             }
-            
+
             return type.SpecialType switch
             {
                 SpecialType.System_Boolean => OpCodes.Stind_I1,
@@ -101,8 +108,8 @@ namespace Cecilifier.Core.Extensions
                 SpecialType.System_UInt32 => OpCodes.Stind_I4,
                 SpecialType.System_Int64 => OpCodes.Stind_I8,
                 SpecialType.System_UInt64 => OpCodes.Stind_I8,
-                _ => type.IsReferenceType 
-                    ? OpCodes.Stind_Ref 
+                _ => type.IsReferenceType
+                    ? OpCodes.Stind_Ref
                     : OpCodes.Stobj
             };
         }

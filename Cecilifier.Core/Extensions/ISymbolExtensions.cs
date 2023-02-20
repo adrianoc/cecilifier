@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -17,7 +17,7 @@ namespace Cecilifier.Core.Extensions
         private static readonly SymbolDisplayFormat QualifiedNameWithoutTypeParametersFormat = new SymbolDisplayFormat(typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces)
             .AddMiscellaneousOptions(SymbolDisplayMiscellaneousOptions.ExpandNullable)
             .RemoveMiscellaneousOptions(SymbolDisplayMiscellaneousOptions.UseSpecialTypes);
-        
+
         private static readonly SymbolDisplayFormat QualifiedNameIncludingTypeParametersFormat = QualifiedNameWithoutTypeParametersFormat.WithGenericsOptions(SymbolDisplayGenericsOptions.IncludeTypeParameters);
 
         public static ElementKind ToElementKind(this TypeKind self) => self switch
@@ -29,14 +29,14 @@ namespace Cecilifier.Core.Extensions
             TypeKind.Delegate => ElementKind.Delegate,
             TypeKind.Array => ElementKind.None,
             TypeKind.TypeParameter => ElementKind.None,
-            
-            _ => throw new NotImplementedException($"TypeKind `{self}` is not supported.") 
+
+            _ => throw new NotImplementedException($"TypeKind `{self}` is not supported.")
         };
 
         public static string SafeIdentifier(this IMethodSymbol method)
         {
-            return method.MethodKind == MethodKind.Constructor 
-                ? "ctor" 
+            return method.MethodKind == MethodKind.Constructor
+                ? "ctor"
                 : method.Name;
         }
 
@@ -76,19 +76,21 @@ namespace Cecilifier.Core.Extensions
                 IMethodSymbol { ReturnsByRef: true } => true,
                 ILocalSymbol { IsRef: true } => true,
                 IFieldSymbol { RefKind: not RefKind.None } => true,
-                
+
                 _ => false
             };
 
-        [return:NotNull] public static T EnsureNotNull<T>([NotNullIfNotNull("symbol")] this T symbol) where T: ISymbol
+        [return: NotNull]
+        public static T EnsureNotNull<T>([NotNullIfNotNull("symbol")] this T symbol) where T : ISymbol
         {
             if (symbol == null)
                 throw new System.NotSupportedException("");
 
             return symbol;
         }
-        
-        [return:NotNull] public static TTarget EnsureNotNull<TSource, TTarget>([NotNull][NotNullIfNotNull("symbol")] this TSource symbol, [CallerArgumentExpression("symbol")] string exp = null) where TSource: ISymbol where TTarget : TSource
+
+        [return: NotNull]
+        public static TTarget EnsureNotNull<TSource, TTarget>([NotNull][NotNullIfNotNull("symbol")] this TSource symbol, [CallerArgumentExpression("symbol")] string exp = null) where TSource : ISymbol where TTarget : TSource
         {
             if (symbol == null)
                 throw new NullReferenceException(exp);
@@ -104,7 +106,7 @@ namespace Cecilifier.Core.Extensions
             var optionalAttribute = symbol.HasExplicitDefaultValue ? Constants.ParameterAttributes.Optional : string.Empty;
             if (string.IsNullOrWhiteSpace(refRelatedAttr) && string.IsNullOrWhiteSpace(optionalAttribute))
                 return Constants.ParameterAttributes.None;
-            
+
             return refRelatedAttr.AppendModifier(optionalAttribute);
         }
 
@@ -117,33 +119,33 @@ namespace Cecilifier.Core.Extensions
                 _ => value
             };
         }
-        
+
         public static DefinitionVariable EnsureFieldExists(this IFieldSymbol fieldSymbol, [NotNull] IVisitorContext context, [NotNull] SimpleNameSyntax node)
         {
             var declaringSyntaxReference = fieldSymbol.DeclaringSyntaxReferences.SingleOrDefault();
             if (declaringSyntaxReference == null)
                 return DefinitionVariable.NotFound;
-            
+
             var fieldDeclaration = (FieldDeclarationSyntax) declaringSyntaxReference.GetSyntax().Parent.Parent;
             if (fieldDeclaration.Span.Start > node.Span.End)
             {
                 // this is a forward reference, process it...
                 fieldDeclaration.Accept(new FieldDeclarationVisitor(context));
             }
-            
+
             var fieldDeclarationVariable = context.DefinitionVariables.GetVariable(fieldSymbol.Name, VariableMemberKind.Field, fieldSymbol.ContainingType.ToDisplayString());
             if (!fieldDeclarationVariable.IsValid)
                 throw new Exception($"Could not resolve reference to field: {fieldSymbol.Name}");
-            
+
             return fieldDeclarationVariable;
         }
-        
+
         public static void EnsurePropertyExists(this IPropertySymbol propertySymbol, IVisitorContext context, [NotNull] SyntaxNode node)
         {
             var declaringReference = propertySymbol.DeclaringSyntaxReferences.SingleOrDefault();
             if (declaringReference == null)
                 return;
-            
+
             var propertyDeclaration = (BasePropertyDeclarationSyntax) declaringReference.GetSyntax();
             if (propertyDeclaration.Span.Start > node.Span.End)
             {
@@ -151,10 +153,10 @@ namespace Cecilifier.Core.Extensions
                 propertyDeclaration.Accept(new PropertyDeclarationVisitor(context));
             }
         }
-       
+
         public static OpCode LoadOpCodeForFieldAccess(this ISymbol symbol) => symbol.IsStatic ? OpCodes.Ldsfld : OpCodes.Ldfld;
         public static OpCode StoreOpCodeForFieldAccess(this ISymbol symbol) => symbol.IsStatic ? OpCodes.Stsfld : OpCodes.Stfld;
-        
+
         public static string ValueForDefaultLiteral(this ITypeSymbol literalType) => literalType switch
         {
             { SpecialType: SpecialType.System_Char } => "\0",
@@ -180,9 +182,9 @@ namespace Cecilifier.Core.Extensions
             { TypeKind: TypeKind.Delegate } => null,
             _ => throw new ArgumentOutOfRangeException(nameof(literalType), literalType, null)
         };
-        
+
         public static IMethodSymbol ParameterlessCtor(this ITypeSymbol self) => self?.GetMembers(".ctor").OfType<IMethodSymbol>().Single(ctor => ctor.Parameters.Length == 0);
-        public static IMethodSymbol Ctor(this ITypeSymbol self, params ITypeSymbol []parameters) => self?.GetMembers(".ctor")
+        public static IMethodSymbol Ctor(this ITypeSymbol self, params ITypeSymbol[] parameters) => self?.GetMembers(".ctor")
                                                                                                 .OfType<IMethodSymbol>()
                                                                                                 .Single(ctor => ctor.Parameters.Select(p => p.Type).SequenceEqual(parameters, SymbolEqualityComparer.Default));
     }

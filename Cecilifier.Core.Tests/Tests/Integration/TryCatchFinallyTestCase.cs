@@ -1,4 +1,4 @@
-﻿using Cecilifier.Core.Tests.Integration;
+using Cecilifier.Core.Tests.Integration;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration
