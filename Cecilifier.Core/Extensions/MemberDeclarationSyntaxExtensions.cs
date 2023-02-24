@@ -44,10 +44,9 @@ namespace Cecilifier.Core.Extensions
                 SyntaxKind.GreaterThanToken => WellKnownMemberNames.GreaterThanOperatorName,
                 SyntaxKind.GreaterThanEqualsToken => WellKnownMemberNames.GreaterThanOrEqualOperatorName,
                 SyntaxKind.GreaterThanGreaterThanToken => WellKnownMemberNames.RightShiftOperatorName,
+                SyntaxKind.GreaterThanGreaterThanGreaterThanToken => WellKnownMemberNames.UnsignedRightShiftOperatorName,
                 SyntaxKind.ExclamationEqualsToken => WellKnownMemberNames.InequalityOperatorName,
 
-                SyntaxKind.ExclamationToken => WellKnownMemberNames.LogicalNotOperatorName,
-                SyntaxKind.TildeToken => WellKnownMemberNames.OnesComplementOperatorName,
                 _ => throw new Exception($"Cannot map {kind} to a well known member name.")
             };
         }
@@ -57,7 +56,6 @@ namespace Cecilifier.Core.Extensions
             {
                 SyntaxKind.PlusToken => WellKnownMemberNames.UnaryPlusOperatorName,
                 SyntaxKind.MinusToken => WellKnownMemberNames.UnaryNegationOperatorName,
-                SyntaxKind.BarToken => WellKnownMemberNames.BitwiseOrOperatorName,
                 SyntaxKind.ExclamationToken => WellKnownMemberNames.LogicalNotOperatorName,
                 SyntaxKind.TildeToken => WellKnownMemberNames.OnesComplementOperatorName,
                 SyntaxKind.PlusPlusToken => WellKnownMemberNames.IncrementOperatorName,

@@ -141,6 +141,40 @@ public class OperatorsTests : CecilifierUnitTestBase
         Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(expected));
     }
 
+    [TestCase(
+        "|",
+        @"il_M_\d+\.Emit\(OpCodes\.Call, m_op_BitwiseOr_\d+\);",
+        TestName = "Or (|)")]
+    [TestCase(
+        "&",
+        @"il_M_\d+\.Emit\(OpCodes\.Call, m_op_BitwiseAnd_\d+\);",
+        TestName = "And (&)")]
+    [TestCase(
+        "^",
+        @"il_M_\d+\.Emit\(OpCodes\.Call, m_op_ExclusiveOr_\d+\);",
+        TestName = "Xor (^)")]
+    [TestCase(
+        "%",
+        @"il_M_\d+\.Emit\(OpCodes\.Call, m_op_Modulus_\d+\);",
+        TestName = "Modulo (%)")]
+    [TestCase(
+        ">>>",
+        @"il_M_\d+\.Emit\(OpCodes\.Call, m_op_UnsignedRightShift_\d+\);",
+        TestName = "Unsigned Right Shift (>>>)")]
+    [TestCase(
+        ">>",
+        @"il_M_\d+\.Emit\(OpCodes\.Call, m_op_RightShift_\d+\);",
+        TestName = "Right Shift (>>)")]
+    [TestCase(
+        "<<",
+        @"il_M_\d+\.Emit\(OpCodes\.Call, m_op_LeftShift_\d+\);",
+        TestName = "Left Shift (<<)")]
+    public void TestOverloadedCompoundAssignment(string @operator, string expected)
+    {
+        var result = RunCecilifier($$"""class C { public static C operator{{@operator}}(C c, int i) => c; void M() { C c = new C(); c {{@operator}}= 42; } }""");
+        Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(expected));
+    }
+
     [TestCaseSource(nameof(NullConditionalOperatorOnComplexTargetsScenarios))]
     public void TestNullConditionalOperatorOnComplexTargets(string target, string expectedIlRegexForLoadingTarget)
     {
