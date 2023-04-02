@@ -18,7 +18,8 @@ namespace Cecilifier.Core.Tests.Integration
         [Test]
         public void TestCtorWithParameters()
         {
-            AssertResourceTest(@"Members/Methods/CtorWithParameters");
+            //issue: https://github.com/adrianoc/cecilifier/issues/225
+            AssertResourceTest(new ResourceTestOptions { ResourceName = "Members/Methods/CtorWithParameters", FailOnAssemblyVerificationErrors = false });
         }
 
         [Test]
@@ -48,7 +49,8 @@ namespace Cecilifier.Core.Tests.Integration
         [Test]
         public void TestMethodCallOnValueType()
         {
-            AssertResourceTest(@"Members/Methods/MethodCallOnValueType");
+            //issue: https://github.com/adrianoc/cecilifier/issues/225
+            AssertResourceTest(new ResourceTestOptions { ResourceName = $"Members/Methods/MethodCallOnValueType", FailOnAssemblyVerificationErrors = false });
         }
 
         [Test]
@@ -130,24 +132,27 @@ namespace Cecilifier.Core.Tests.Integration
         [Test]
         public void TestReturnDelegate()
         {
-            AssertResourceTest("Members/Methods/ReturnDelegate");
+            //issue: https://github.com/adrianoc/cecilifier/issues/225
+            AssertResourceTest(new ResourceTestOptions { ResourceName = $"Members/Methods/ReturnDelegate", FailOnAssemblyVerificationErrors = false });
         }
 
         [TestCase("Implicit")]
         [TestCase("Explicit", Ignore = "Not supported")]
         public void TestDelegateAsParameter(string implicitOrExplicit)
         {
-            AssertResourceTest($"Members/Methods/{implicitOrExplicit}Delegate_AsParameter");
+            //issue: https://github.com/adrianoc/cecilifier/issues/225
+            AssertResourceTest(new ResourceTestOptions { ResourceName = $"Members/Methods/{implicitOrExplicit}Delegate_AsParameter", FailOnAssemblyVerificationErrors = false });
         }
 
-        [TestCase("RefParamBodied")]
-        [TestCase("RefParam")]
+        [TestCase("RefParamBodied", "ReturnPtrToStack")] // https://github.com/adrianoc/cecilifier/issues/227
+        [TestCase("RefParam", "ReturnPtrToStack")] // https://github.com/adrianoc/cecilifier/issues/227
         [TestCase("ArrayParam")]
         [TestCase("ParamIndexer")]
         [TestCase("RefReturnField")]
-        public void TestRefReturn(string test)
+        public void TestRefReturn(string test, string ignoredErrors = null)
         {
-            AssertResourceTest($"Members/Methods/{test}");
+            var options = new ResourceTestOptions { ResourceName = $"Members/Methods/{test}", IgnoredILErrors = ignoredErrors };
+            AssertResourceTest(options);
         }
 
         [Test]

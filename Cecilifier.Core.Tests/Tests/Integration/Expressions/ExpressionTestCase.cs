@@ -98,13 +98,15 @@ namespace Cecilifier.Core.Tests.Integration
         [Test]
         public void TestValueTypeAddress()
         {
-            AssertResourceTest(@"Expressions/ValueTypeAddress");
+            //issue: https://github.com/adrianoc/cecilifier/issues/225
+            AssertResourceTest(new ResourceTestOptions { ResourceName = "Expressions/ValueTypeAddress", FailOnAssemblyVerificationErrors = false });
         }
 
         [Test]
         public void TestNewPrimitive()
         {
-            AssertResourceTest(@"Expressions/NewPrimitive");
+            //issue: https://github.com/adrianoc/cecilifier/issues/225
+            AssertResourceTest(new ResourceTestOptions { ResourceName = "Expressions/NewPrimitive", FailOnAssemblyVerificationErrors = false });
         }
 
         [Test]
@@ -168,19 +170,22 @@ namespace Cecilifier.Core.Tests.Integration
         [TestCase("LocalVariablesInitializer")]
         public void TestDelegateAssignment(string memberType)
         {
-            AssertResourceTest($"Expressions/DelegateAssignment_{memberType}");
+            //issue: https://github.com/adrianoc/cecilifier/issues/225
+            AssertResourceTest(new ResourceTestOptions { ResourceName = $"Expressions/DelegateAssignment_{memberType}", FailOnAssemblyVerificationErrors = false });
         }
 
         [Test]
         public void TestDelegateInvocation()
         {
-            AssertResourceTest("Expressions/DelegateInvocation");
+            //issue: https://github.com/adrianoc/cecilifier/issues/225
+            AssertResourceTest(new ResourceTestOptions { ResourceName = "Expressions/DelegateInvocation", FailOnAssemblyVerificationErrors = false });
         }
 
         [Test]
         public void TestExpressionBodiedMembers()
         {
-            AssertResourceTest("Expressions/ExpressionBodiedMembers");
+            //issue: https://github.com/adrianoc/cecilifier/issues/225
+            AssertResourceTest(new ResourceTestOptions { ResourceName = "Expressions/ExpressionBodiedMembers", FailOnAssemblyVerificationErrors = false });
         }
     }
 }

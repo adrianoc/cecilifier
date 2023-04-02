@@ -18,7 +18,11 @@ namespace Cecilifier.Core.Tests.Integration
         [Test]
         public void TestAccessibilityModifiers()
         {
-            AssertResourceTest(@"Misc/AccessibilityModifiers");
+            AssertResourceTest(new ResourceTestOptions
+            {
+                ResourceName = "Misc/AccessibilityModifiers", 
+                FailOnAssemblyVerificationErrors = false //https://github.com/adrianoc/cecilifier/issues/226
+            });
         }
 
         [Test]
@@ -32,7 +36,12 @@ namespace Cecilifier.Core.Tests.Integration
         [TestCase("AssignmentOfAddressOfLocalVariables", TestName = "Local Variable Assignment")]
         public void TestPointerTypes(string testName)
         {
-            AssertResourceTest($@"Misc/Pointers/{testName}");
+            //https://github.com/adrianoc/cecilifier/issues/227
+            AssertResourceTest(new ResourceTestOptions
+            {
+                ResourceName = $"Misc/Pointers/{testName}", 
+                IgnoredILErrors = "ExpectedNumericType"
+            });
         }
 
         [TestCase("FunctionPointers", TestName = "Basic Tests")]
@@ -41,7 +50,11 @@ namespace Cecilifier.Core.Tests.Integration
         [TestCase("GenericFunctionPointers")]
         public void TestFunctionPointer(string testName)
         {
-            AssertResourceTest($@"Misc/Pointers/{testName}");
+            AssertResourceTest(new ResourceTestOptions
+            {
+                ResourceName = $"Misc/Pointers/{testName}", 
+                FailOnAssemblyVerificationErrors = false // https://github.com/adrianoc/cecilifier/issues/227
+            });
         }
 
         [TestCase("Delegate")]
@@ -51,7 +64,11 @@ namespace Cecilifier.Core.Tests.Integration
         [TestCase("StructAndMembers")]
         public void AttributesOnMembers(string typeKind)
         {
-            AssertResourceTest($@"Misc/Attributes/AttributesOn{typeKind}");
+            AssertResourceTest(new ResourceTestOptions
+            {
+                ResourceName = $"Misc/Attributes/AttributesOn{typeKind}", 
+                FailOnAssemblyVerificationErrors = false //https://github.com/adrianoc/cecilifier/issues/226
+            });
         }
 
         [Test]
@@ -76,7 +93,7 @@ namespace Cecilifier.Core.Tests.Integration
         [TestCase("TopLevelStatements")]
         public void TestTopLevelStatements(string testName)
         {
-            AssertResourceTest(new ResourceTestOptions { ResourceName = $"Misc/{testName}", BuildType = BuildType.Exe });
+            AssertResourceTest(new ResourceTestOptions { ResourceName = $"Misc/{testName}", BuildType = BuildType.Exe, IgnoredILErrors = "InitLocals" });
         }
     }
 }

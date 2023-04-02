@@ -10,7 +10,13 @@ namespace Cecilifier.Core.Tests.Integration
         [TestCase("System.Void FixedStatementTest::Test()", TestName = "Local")]
         public void TestFixedStatement(string methodToVerify)
         {
-            AssertResourceTestWithExplicitExpectation(@$"Statements/FixedStatement{TestContext.CurrentContext.Test.Name}", methodToVerify);
+            var options = new ResourceTestOptions()
+            {
+                ResourceName = $"Statements/FixedStatement{TestContext.CurrentContext.Test.Name}",
+                IgnoredILErrors = "ExpectedNumericType" //https://github.com/adrianoc/cecilifier/issues/227
+            };
+
+            AssertResourceTestWithExplicitExpectation(options, methodToVerify);
         }
 
         [Test]

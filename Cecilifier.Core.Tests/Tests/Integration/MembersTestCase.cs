@@ -17,7 +17,11 @@ namespace Cecilifier.Core.Tests.Integration
         [TestCase("GenericEventHandler")]
         public void TestEvents(string testName)
         {
-            AssertResourceTest($@"Members/Events/{testName}");
+            AssertResourceTest(new ResourceTestOptions
+            {
+                ResourceName = $"Members/Events/{testName}",
+                FailOnAssemblyVerificationErrors = false //https://github.com/adrianoc/cecilifier/issues/226
+            });
         }
     }
 }
