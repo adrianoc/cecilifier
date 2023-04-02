@@ -1,9 +1,10 @@
+using Cecilifier.Core.Tests.Framework;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration
 {
     [TestFixture]
-    public class StatementTests : IntegrationResourceBasedTest
+    public class StatementTests : ResourceTestBase
     {
         [TestCase("System.Int32* FixedStatementTest::Test()", TestName = "Return")]
         [TestCase("System.Void FixedStatementTest::Test()", TestName = "Local")]

@@ -1,9 +1,10 @@
+using Cecilifier.Core.Tests.Framework;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration.Types
 {
     [TestFixture]
-    internal class TypesTestCase : IntegrationResourceBasedTest
+    internal class TypesTestCase : ResourceTestBase
     {
         [TestCase("SimpleTypeWithAttribute")]
         [TestCase("AttributeWithProperty")]

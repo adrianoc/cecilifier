@@ -3,7 +3,7 @@ using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration
 {
-    public class ExpressionTestCase : IntegrationResourceBasedTest
+    public class ExpressionTestCase : ResourceTestBase
     {
         [Test]
         public void TestParameterAssignment()
@@ -86,7 +86,7 @@ namespace Cecilifier.Core.Tests.Integration
         [Test]
         public void TestTernaryOperator()
         {
-            AssertResourceTestBinary(@"Expressions/Operators/Ternary", TestKind.Integration);
+            AssertResourceTestBinary(@"Expressions/Operators/Ternary");
         }
 
         [Test]

@@ -4,7 +4,7 @@ using NUnit.Framework;
 namespace Cecilifier.Core.Tests.Integration
 {
     [TestFixture]
-    public class MiscTestCase : IntegrationResourceBasedTest
+    public class MiscTestCase : ResourceTestBase
     {
         [TestCase("Parameters")]
         [TestCase("Parameters2")]
@@ -76,7 +76,7 @@ namespace Cecilifier.Core.Tests.Integration
         [TestCase("TopLevelStatements")]
         public void TestTopLevelStatements(string testName)
         {
-            AssertResourceTest($"Misc/{testName}", true);
+            AssertResourceTest(new ResourceTestOptions { ResourceName = $"Misc/{testName}", BuildType = BuildType.Exe });
         }
     }
 }

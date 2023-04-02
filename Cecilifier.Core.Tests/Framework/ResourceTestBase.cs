@@ -23,19 +23,20 @@ namespace Cecilifier.Core.Tests.Framework
             Directory.SetCurrentDirectory(TestContext.CurrentContext.TestDirectory);
         }
 
-        protected void AssertResourceTestBinary(string resourceBasePath, TestKind kind)
+        protected void AssertResourceTest(string resourceName)
         {
-            var expectedAssemblyPath = resourceBasePath.GetPathOfBinaryResource("Expected.dll", kind);
+            AssertResourceTest(resourceName, new ResourceTestOptions() { ResourceName = resourceName, ToBeCecilified = ReadResource(resourceName, "cs") });
+        }
 
-            var tbc = ReadResource(resourceBasePath, "cs", kind);
-            var actualAssemblyPath = Path.Combine(Path.GetTempPath(), "CecilifierTests/", resourceBasePath + ".dll");
-            AssertResourceTest(actualAssemblyPath, expectedAssemblyPath, tbc);
+        protected void AssertResourceTest(ResourceTestOptions options)
+        {
+            AssertResourceTest(options.ResourceName, options);
         }
 
         protected void AssertResourceTestWithExplicitExpectation(string resourceName, string methodSignature)
         {
-            using (var tbc = ReadResource(resourceName, "cs", TestKind.Integration))
-            using (var expectedILStream = ReadResource(resourceName, "cs.il", TestKind.Integration))
+            using (var tbc = ReadResource(resourceName, "cs"))
+            using (var expectedILStream = ReadResource(resourceName, "cs.il"))
             {
                 var expectedIL = ReadToEnd(expectedILStream);
 
@@ -49,69 +50,64 @@ namespace Cecilifier.Core.Tests.Framework
             }
         }
 
-        protected void AssertResourceTest(string resourceName, TestKind kind)
-        {
-            AssertResourceTest(resourceName, kind, new StrictAssemblyDiffVisitor());
-        }
-
-        protected void AssertResourceTest(string resourceName, bool buildAsExe)
-        {
-            AssertResourceTest(resourceName, TestKind.Integration, new StrictAssemblyDiffVisitor(), buildAsExe);
-        }
-
-        private void AssertResourceTest(string resourceName, TestKind kind, IAssemblyDiffVisitor visitor)
-        {
-            AssertResourceTest(resourceName, kind, visitor, false);
-        }
-
         protected void AssertResourceTestWithParameters(string resourceName, params string[] parameters)
         {
-            using var tbc = ReadResource(resourceName, "cs", TestKind.Integration);
+            using var tbc = ReadResource(resourceName, "cs");
             var readToEnd = ReadToEnd(tbc);
 
             var testContents = string.Format(readToEnd, parameters);
+            var options = new ResourceTestOptions()
+            {
+                ResourceName = $"{resourceName}_{string.Join('_', parameters)}",
+                AssemblyComparison = new StrictAssemblyDiffVisitor(),
+                BuildType = BuildType.Dll,
+                ToBeCecilified = new MemoryStream(Encoding.ASCII.GetBytes(testContents))
+            };
 
-            AssertResourceTest($"{resourceName}_{string.Join('_', parameters)}", new StrictAssemblyDiffVisitor(), false, new MemoryStream(Encoding.ASCII.GetBytes(testContents)));
+            AssertResourceTest(options);
         }
 
-        private void AssertResourceTest(string resourceName, TestKind kind, IAssemblyDiffVisitor visitor, bool buildAsExe)
+        protected void AssertResourceTestBinary(string resourceBasePath)
         {
-            using var tbc = ReadResource(resourceName, "cs", kind);
-            AssertResourceTest(resourceName, visitor, buildAsExe, tbc);
+            var expectedAssemblyPath = resourceBasePath.GetPathOfBinaryResource("Expected.dll");
+
+            var tbc = ReadResource(resourceBasePath, "cs");
+            var actualAssemblyPath = Path.Combine(Path.GetTempPath(), "CecilifierTests/", resourceBasePath + ".dll");
+            AssertResourceTest(actualAssemblyPath, expectedAssemblyPath, tbc);
         }
 
-        private void AssertResourceTest(string resourceName, IAssemblyDiffVisitor visitor, bool buildAsExe, Stream tbc)
+        private void AssertResourceTest(string resourceName, ResourceTestOptions options)
         {
             var cecilifierTestsFolder = Path.Combine(Path.GetTempPath(), "CecilifierTests");
 
             var cecilifiedAssemblyPath = Path.Combine(cecilifierTestsFolder, resourceName + ".dll");
-            var resourceCompiledAssemblyPath = CompileExpectedTestAssembly(cecilifiedAssemblyPath, buildAsExe, ReadToEnd(tbc));
+            var resourceCompiledAssemblyPath = CompileExpectedTestAssembly(cecilifiedAssemblyPath, options.BuildType, ReadToEnd(options.ToBeCecilified));
 
             Console.WriteLine();
             Console.WriteLine("Compiled from res        : {0}", resourceCompiledAssemblyPath);
             Console.WriteLine("Generated from Cecilifier: {0}", cecilifiedAssemblyPath);
 
-            AssertResourceTest(cecilifiedAssemblyPath, resourceCompiledAssemblyPath, tbc, visitor);
+            AssertResourceTest(cecilifiedAssemblyPath, resourceCompiledAssemblyPath, options);
         }
 
-        private static string CompileExpectedTestAssembly(string cecilifiedAssemblyPath, bool compileAsExe, string tbc)
+        private static string CompileExpectedTestAssembly(string cecilifiedAssemblyPath, BuildType buildType, string tbc)
         {
             var targetPath = Path.Combine(Path.GetDirectoryName(cecilifiedAssemblyPath), Path.GetFileNameWithoutExtension(cecilifiedAssemblyPath) + "_expected");
 
-            return compileAsExe
+            return buildType == BuildType.Exe
                 ? CompilationServices.CompileExe(targetPath, tbc, Utils.GetTrustedAssembliesPath().ToArray())
                 : CompilationServices.CompileDLL(targetPath, tbc, Utils.GetTrustedAssembliesPath().ToArray());
         }
 
-        private void AssertResourceTest(string actualAssemblyPath, string expectedAssemblyPath, Stream tbc, IAssemblyDiffVisitor visitor)
+        private void AssertResourceTest(string actualAssemblyPath, string expectedAssemblyPath, ResourceTestOptions options)
         {
-            CecilifyAndExecute(tbc, actualAssemblyPath);
-            CompareAssemblies(expectedAssemblyPath, actualAssemblyPath, visitor);
+            CecilifyAndExecute(options.ToBeCecilified, actualAssemblyPath);
+            CompareAssemblies(expectedAssemblyPath, actualAssemblyPath, options.AssemblyComparison);
         }
 
         private void AssertResourceTest(string actualAssemblyPath, string expectedAssemblyPath, Stream tbc)
         {
-            AssertResourceTest(actualAssemblyPath, expectedAssemblyPath, tbc, new StrictAssemblyDiffVisitor());
+            AssertResourceTest(actualAssemblyPath, expectedAssemblyPath, new ResourceTestOptions { ToBeCecilified = tbc, AssemblyComparison = new StrictAssemblyDiffVisitor() });
         }
 
         private void AssertResourceTestWithExplicitExpectedIL(string actualAssemblyPath, string expectedIL, string methodSignature, Stream tbc)
@@ -193,9 +189,9 @@ namespace Cecilifier.Core.Tests.Framework
             }
         }
 
-        private Stream ReadResource(string resourceName, string type, TestKind kind)
+        private Stream ReadResource(string resourceName, string type)
         {
-            return ReadResource(resourceName.GetPathOfTextResource(type, kind));
+            return ReadResource(resourceName.GetPathOfTextResource(type));
         }
 
         private Stream ReadResource(string path)

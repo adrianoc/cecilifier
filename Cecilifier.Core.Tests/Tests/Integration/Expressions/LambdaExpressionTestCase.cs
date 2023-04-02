@@ -1,9 +1,10 @@
+using Cecilifier.Core.Tests.Framework;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration
 {
     [TestFixture]
-    public class LambdaExpressionTestCase : IntegrationResourceBasedTest
+    public class LambdaExpressionTestCase : ResourceTestBase
     {
         [Test]
         public void NonCapturingLambda_VariableInitializer()

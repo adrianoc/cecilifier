@@ -1,9 +1,10 @@
+using Cecilifier.Core.Tests.Framework;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration.Casts
 {
     [TestFixture]
-    public class CastsTestCase : IntegrationResourceBasedTest
+    public class CastsTestCase : ResourceTestBase
     {
         [Test]
         public void TestPrimitiveNumericCasts([Values("int", "long", "double", "short", "byte", "char")] string source, [Values("int", "long", "double", "short", "byte", "char")] string target)

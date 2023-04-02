@@ -1,9 +1,10 @@
+using Cecilifier.Core.Tests.Framework;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration;
 
 [TestFixture]
-public class StackallocTests : IntegrationResourceBasedTest
+public class StackallocTests : ResourceTestBase
 {
 
     [TestCase("simplest", TestName = "Simplest")]

@@ -3,7 +3,7 @@ using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration
 {
-    public class GenericsTestCase : IntegrationResourceBasedTest
+    public class GenericsTestCase : ResourceTestBase
     {
         [TestCase("GenericOuterNonGenericInner")]
         [TestCase("GenericOuterSingleGenericInner")]
@@ -98,7 +98,7 @@ namespace Cecilifier.Core.Tests.Integration
         [Test]
         public void TestInnerTypeFromExternalAssembly()
         {
-            AssertResourceTestBinary(@"Generics/InnerTypeFromExternalAssembly", TestKind.Integration);
+            AssertResourceTestBinary(@"Generics/InnerTypeFromExternalAssembly");
         }
     }
 }

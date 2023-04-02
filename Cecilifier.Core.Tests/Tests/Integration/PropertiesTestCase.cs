@@ -1,9 +1,10 @@
+using Cecilifier.Core.Tests.Framework;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration
 {
     [TestFixture]
-    public class PropertiesTestCase : IntegrationResourceBasedTest
+    public class PropertiesTestCase : ResourceTestBase
     {
         [TestCase("SimpleProperty")]
         [TestCase("SimpleAutoProperty")]

@@ -7,7 +7,7 @@ using NUnit.Framework;
 namespace Cecilifier.Core.Tests.Integration
 {
     [TestFixture]
-    public class MethodTestCase : IntegrationResourceBasedTest
+    public class MethodTestCase : ResourceTestBase
     {
         [Test]
         public void TestAbstractMethod()

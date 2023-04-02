@@ -1,9 +1,10 @@
+using Cecilifier.Core.Tests.Framework;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration
 {
     [TestFixture]
-    public class MembersTestCase : IntegrationResourceBasedTest
+    public class MembersTestCase : ResourceTestBase
     {
         [Test]
         public void TestForwardReferences()

@@ -1,9 +1,10 @@
+using Cecilifier.Core.Tests.Framework;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration.Types
 {
     [TestFixture]
-    public class EnumsTestCase : IntegrationResourceBasedTest
+    public class EnumsTestCase : ResourceTestBase
     {
         [TestCase("SimpleEnum")]
         [TestCase("SimpleEnumWithNonDefaultValues")]
