@@ -9,10 +9,13 @@ public ref struct ResourceTestOptions
     {
         BuildType = BuildType.Dll;
         AssemblyComparison = new StrictAssemblyDiffVisitor();
+        FailOnAssemblyVerificationErrors = true;
     }
 
     internal string ResourceName { get; init; }
     internal IAssemblyDiffVisitor AssemblyComparison { get; init; }
-    internal Stream ToBeCecilified { get; init; }
+    internal Stream ToBeCecilified { get; set; }
     internal BuildType BuildType { get; init; }
+    internal bool FailOnAssemblyVerificationErrors { get; init; }
+    internal string IgnoredILErrors { get; set; }
 }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -30,24 +31,28 @@ namespace Cecilifier.Core.Tests.Framework
 
         protected void AssertResourceTest(ResourceTestOptions options)
         {
+            options.ToBeCecilified ??= ReadResource(options.ResourceName, "cs");
             AssertResourceTest(options.ResourceName, options);
         }
 
         protected void AssertResourceTestWithExplicitExpectation(string resourceName, string methodSignature)
         {
-            using (var tbc = ReadResource(resourceName, "cs"))
-            using (var expectedILStream = ReadResource(resourceName, "cs.il"))
-            {
-                var expectedIL = ReadToEnd(expectedILStream);
+            var options = new ResourceTestOptions() { ResourceName = resourceName, FailOnAssemblyVerificationErrors = true, BuildType = BuildType.Dll };
+            AssertResourceTestWithExplicitExpectation(options, methodSignature);
+        }
+        
+        protected void AssertResourceTestWithExplicitExpectation(ResourceTestOptions options, string methodSignature)
+        {
+            options.ToBeCecilified ??= ReadResource(options.ResourceName, "cs");
+            using var expectedILStream = ReadResource(options.ResourceName, "cs.il");
+            var expectedIL = ReadToEnd(expectedILStream);
 
-                var actualAssemblyPath = Path.Combine(Path.GetTempPath(), "CecilifierTests/", resourceName + ".dll");
+            var actualAssemblyPath = Path.Combine(Path.GetTempPath(), "CecilifierTests/", options.ResourceName + ".dll");
+            AssertResourceTestWithExplicitExpectedIL(actualAssemblyPath, expectedIL, methodSignature, options);
 
-                AssertResourceTestWithExplicitExpectedIL(actualAssemblyPath, expectedIL, methodSignature, tbc);
-
-                Console.WriteLine();
-                Console.WriteLine("Expected IL: {0}", expectedIL);
-                Console.WriteLine("Actual assembly path : {0}", actualAssemblyPath);
-            }
+            Console.WriteLine();
+            Console.WriteLine("Expected IL: {0}", expectedIL);
+            Console.WriteLine("Actual assembly path : {0}", actualAssemblyPath);
         }
 
         protected void AssertResourceTestWithParameters(string resourceName, params string[] parameters)
@@ -103,6 +108,7 @@ namespace Cecilifier.Core.Tests.Framework
         {
             CecilifyAndExecute(options.ToBeCecilified, actualAssemblyPath);
             CompareAssemblies(expectedAssemblyPath, actualAssemblyPath, options.AssemblyComparison);
+            VerifyAssembly(actualAssemblyPath, expectedAssemblyPath, options);
         }
 
         private void AssertResourceTest(string actualAssemblyPath, string expectedAssemblyPath, Stream tbc)
@@ -110,12 +116,64 @@ namespace Cecilifier.Core.Tests.Framework
             AssertResourceTest(actualAssemblyPath, expectedAssemblyPath, new ResourceTestOptions { ToBeCecilified = tbc, AssemblyComparison = new StrictAssemblyDiffVisitor() });
         }
 
-        private void AssertResourceTestWithExplicitExpectedIL(string actualAssemblyPath, string expectedIL, string methodSignature, Stream tbc)
+        private void AssertResourceTestWithExplicitExpectedIL(string actualAssemblyPath, string expectedIL, string methodSignature, ResourceTestOptions options)
         {
-            CecilifyAndExecute(tbc, actualAssemblyPath);
+            CecilifyAndExecute(options.ToBeCecilified, actualAssemblyPath);
+
+            VerifyAssembly(actualAssemblyPath, null, options);
 
             var actualIL = GetILFrom(actualAssemblyPath, methodSignature);
             Assert.That(actualIL, Is.EqualTo(expectedIL), $"Actual IL differs from expected.\nActual Assembly Path = {actualAssemblyPath}\nExpected IL:\n{expectedIL}\nActual IL:{actualIL}");
+        }
+
+        private void VerifyAssembly(string actualAssemblyPath, string expectedAssemblyPath, ResourceTestOptions options)
+        {
+            var dotnetRootPath = Environment.GetEnvironmentVariable("DOTNET_ROOT");
+            if (string.IsNullOrEmpty(dotnetRootPath))
+            {
+                Console.WriteLine($"Unable to resolve DOTNET_ROOT environment variable. Skping ilverify on {actualAssemblyPath}");
+                return;
+            }
+
+            var ignoreErrorsArg = options.IgnoredILErrors != null ? $" -g {options.IgnoredILErrors}" : string.Empty;
+            var ilVerifyStartInfo = new ProcessStartInfo
+            {
+                FileName = "ilverify",
+                Arguments = $"""{actualAssemblyPath} -r "{dotnetRootPath}/packs/Microsoft.NETCore.App.Ref/{Environment.Version}/ref/net{Environment.Version.Major}.{Environment.Version.Minor}/*.dll"{ignoreErrorsArg}""",
+                WindowStyle = ProcessWindowStyle.Normal,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false
+            };
+
+            var ilverifyProcess = new Process
+            {
+                StartInfo = ilVerifyStartInfo
+            };
+
+            var output = new List<string>();
+            ilverifyProcess.OutputDataReceived += (_, arg) => output.Add(arg.Data);
+            ilverifyProcess.ErrorDataReceived += (_, arg) => output.Add(arg.Data);
+
+            ilverifyProcess.Start();
+            ilverifyProcess.BeginOutputReadLine();
+            ilverifyProcess.BeginErrorReadLine();
+
+            if (!ilverifyProcess.WaitForExit(TimeSpan.FromSeconds(30)))
+            {
+                throw new TimeoutException($"ilverify ({ilverifyProcess.Id}) took more than 30 secs to process {actualAssemblyPath}");
+            }
+
+            if (ilverifyProcess.ExitCode != 0)
+            {
+                output.Add($"ilverify for {actualAssemblyPath} failed with exit code = {ilverifyProcess.ExitCode}.\n{(expectedAssemblyPath != null ? $"Expected path={expectedAssemblyPath}\n" : "")}");
+                if (options.FailOnAssemblyVerificationErrors)
+                {
+                    throw new Exception(string.Join('\n', output));
+                }
+
+                TestContext.WriteLine(string.Join('\n', output));
+            }
         }
 
         private void CecilifyAndExecute(Stream tbc, string outputAssemblyPath)
