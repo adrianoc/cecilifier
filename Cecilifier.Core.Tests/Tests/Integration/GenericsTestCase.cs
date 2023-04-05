@@ -13,7 +13,7 @@ namespace Cecilifier.Core.Tests.Integration
             AssertResourceTest(new ResourceTestOptions
             {
                 ResourceName = $"Generics/{testName}",
-                FailOnAssemblyVerificationErrors = false //https://github.com/adrianoc/cecilifier/issues/227
+                FailOnAssemblyVerificationErrors = IgnoredKnownIssue.MiscILVerifyVailuresNeedsInvestigation //https://github.com/adrianoc/cecilifier/issues/227
             });
         }
 

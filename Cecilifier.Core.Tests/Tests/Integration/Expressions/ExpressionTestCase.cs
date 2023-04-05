@@ -99,14 +99,14 @@ namespace Cecilifier.Core.Tests.Integration
         public void TestValueTypeAddress()
         {
             //issue: https://github.com/adrianoc/cecilifier/issues/225
-            AssertResourceTest(new ResourceTestOptions { ResourceName = "Expressions/ValueTypeAddress", FailOnAssemblyVerificationErrors = false });
+            AssertResourceTest(new ResourceTestOptions { ResourceName = "Expressions/ValueTypeAddress", FailOnAssemblyVerificationErrors = IgnoredKnownIssue.CallVirtOnValueTypes });
         }
 
         [Test]
         public void TestNewPrimitive()
         {
             //issue: https://github.com/adrianoc/cecilifier/issues/225
-            AssertResourceTest(new ResourceTestOptions { ResourceName = "Expressions/NewPrimitive", FailOnAssemblyVerificationErrors = false });
+            AssertResourceTest(new ResourceTestOptions { ResourceName = "Expressions/NewPrimitive", FailOnAssemblyVerificationErrors = IgnoredKnownIssue.CallVirtOnValueTypes });
         }
 
         [Test]
@@ -171,21 +171,21 @@ namespace Cecilifier.Core.Tests.Integration
         public void TestDelegateAssignment(string memberType)
         {
             //issue: https://github.com/adrianoc/cecilifier/issues/225
-            AssertResourceTest(new ResourceTestOptions { ResourceName = $"Expressions/DelegateAssignment_{memberType}", FailOnAssemblyVerificationErrors = false });
+            AssertResourceTest(new ResourceTestOptions { ResourceName = $"Expressions/DelegateAssignment_{memberType}", FailOnAssemblyVerificationErrors = IgnoredKnownIssue.CallVirtOnValueTypes });
         }
 
         [Test]
         public void TestDelegateInvocation()
         {
             //issue: https://github.com/adrianoc/cecilifier/issues/225
-            AssertResourceTest(new ResourceTestOptions { ResourceName = "Expressions/DelegateInvocation", FailOnAssemblyVerificationErrors = false });
+            AssertResourceTest(new ResourceTestOptions { ResourceName = "Expressions/DelegateInvocation", FailOnAssemblyVerificationErrors = IgnoredKnownIssue.CallVirtOnValueTypes });
         }
 
         [Test]
         public void TestExpressionBodiedMembers()
         {
             //issue: https://github.com/adrianoc/cecilifier/issues/225
-            AssertResourceTest(new ResourceTestOptions { ResourceName = "Expressions/ExpressionBodiedMembers", FailOnAssemblyVerificationErrors = false });
+            AssertResourceTest(new ResourceTestOptions { ResourceName = "Expressions/ExpressionBodiedMembers", FailOnAssemblyVerificationErrors = IgnoredKnownIssue.CallVirtOnValueTypes });
         }
     }
 }

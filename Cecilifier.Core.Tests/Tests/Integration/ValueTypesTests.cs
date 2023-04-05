@@ -16,7 +16,7 @@ namespace Cecilifier.Core.Tests.Integration
         public void ValueTypeAsTargetOfCall(string testResourceBaseName)
         {
             //issue: https://github.com/adrianoc/cecilifier/issues/225 https://github.com/adrianoc/cecilifier/issues/225
-            AssertResourceTest(new ResourceTestOptions { ResourceName = $"ValueTypes/AsTargetOfCall/{testResourceBaseName}", FailOnAssemblyVerificationErrors = false });
+            AssertResourceTest(new ResourceTestOptions { ResourceName = $"ValueTypes/AsTargetOfCall/{testResourceBaseName}", FailOnAssemblyVerificationErrors = IgnoredKnownIssue.CallVirtOnValueTypes });
         }
 
         [Test]

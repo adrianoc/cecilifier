@@ -21,7 +21,7 @@ namespace Cecilifier.Core.Tests.Integration
             AssertResourceTest(new ResourceTestOptions
             {
                 ResourceName = "Misc/AccessibilityModifiers", 
-                FailOnAssemblyVerificationErrors = false //https://github.com/adrianoc/cecilifier/issues/226
+                FailOnAssemblyVerificationErrors = IgnoredKnownIssue.MissingInitOnLocals //https://github.com/adrianoc/cecilifier/issues/226
             });
         }
 
@@ -53,7 +53,7 @@ namespace Cecilifier.Core.Tests.Integration
             AssertResourceTest(new ResourceTestOptions
             {
                 ResourceName = $"Misc/Pointers/{testName}", 
-                FailOnAssemblyVerificationErrors = false // https://github.com/adrianoc/cecilifier/issues/227
+                FailOnAssemblyVerificationErrors = IgnoredKnownIssue.MiscILVerifyVailuresNeedsInvestigation // https://github.com/adrianoc/cecilifier/issues/227
             });
         }
 
@@ -67,7 +67,7 @@ namespace Cecilifier.Core.Tests.Integration
             AssertResourceTest(new ResourceTestOptions
             {
                 ResourceName = $"Misc/Attributes/AttributesOn{typeKind}", 
-                FailOnAssemblyVerificationErrors = false //https://github.com/adrianoc/cecilifier/issues/226
+                FailOnAssemblyVerificationErrors = IgnoredKnownIssue.MissingInitOnLocals //https://github.com/adrianoc/cecilifier/issues/226
             });
         }
 

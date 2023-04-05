@@ -20,7 +20,7 @@ namespace Cecilifier.Core.Tests.Integration
             AssertResourceTest(new ResourceTestOptions
             {
                 ResourceName = $"Members/Events/{testName}",
-                FailOnAssemblyVerificationErrors = false //https://github.com/adrianoc/cecilifier/issues/226
+                FailOnAssemblyVerificationErrors = IgnoredKnownIssue.MissingInitOnLocals //https://github.com/adrianoc/cecilifier/issues/226
             });
         }
     }

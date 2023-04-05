@@ -19,7 +19,7 @@ namespace Cecilifier.Core.Tests.Integration
         public void TestCtorWithParameters()
         {
             //issue: https://github.com/adrianoc/cecilifier/issues/225
-            AssertResourceTest(new ResourceTestOptions { ResourceName = "Members/Methods/CtorWithParameters", FailOnAssemblyVerificationErrors = false });
+            AssertResourceTest(new ResourceTestOptions { ResourceName = "Members/Methods/CtorWithParameters", FailOnAssemblyVerificationErrors = IgnoredKnownIssue.CallVirtOnValueTypes });
         }
 
         [Test]
@@ -50,7 +50,7 @@ namespace Cecilifier.Core.Tests.Integration
         public void TestMethodCallOnValueType()
         {
             //issue: https://github.com/adrianoc/cecilifier/issues/225
-            AssertResourceTest(new ResourceTestOptions { ResourceName = $"Members/Methods/MethodCallOnValueType", FailOnAssemblyVerificationErrors = false });
+            AssertResourceTest(new ResourceTestOptions { ResourceName = $"Members/Methods/MethodCallOnValueType", FailOnAssemblyVerificationErrors = IgnoredKnownIssue.CallVirtOnValueTypes });
         }
 
         [Test]
@@ -141,7 +141,7 @@ namespace Cecilifier.Core.Tests.Integration
         public void TestDelegateAsParameter(string implicitOrExplicit)
         {
             //issue: https://github.com/adrianoc/cecilifier/issues/225
-            AssertResourceTest(new ResourceTestOptions { ResourceName = $"Members/Methods/{implicitOrExplicit}Delegate_AsParameter", FailOnAssemblyVerificationErrors = false });
+            AssertResourceTest(new ResourceTestOptions { ResourceName = $"Members/Methods/{implicitOrExplicit}Delegate_AsParameter", FailOnAssemblyVerificationErrors = IgnoredKnownIssue.CallVirtOnValueTypes });
         }
 
         [TestCase("RefParamBodied", "ReturnPtrToStack")] // https://github.com/adrianoc/cecilifier/issues/227
