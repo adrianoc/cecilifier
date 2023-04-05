@@ -10,10 +10,10 @@ public struct IgnoredKnownIssue
     public static IgnoredKnownIssue MissingInitOnLocals = new IgnoredKnownIssue("https://github.com/adrianoc/cecilifier/issues/226");
     public static IgnoredKnownIssue MiscILVerifyVailuresNeedsInvestigation = new IgnoredKnownIssue("https://github.com/adrianoc/cecilifier/issues/227");
 
-    private IgnoredKnownIssue(string issueURL, bool ignore = false) => _ignore = ignore;
-    private readonly bool _ignore;
+    private IgnoredKnownIssue(string issueURL, bool failTests = false) => _failTests = failTests;
+    private readonly bool _failTests;
 
-    public static implicit operator bool(IgnoredKnownIssue s) => s._ignore;
+    public static implicit operator bool(IgnoredKnownIssue s) => s._failTests;
 }
 public ref struct ResourceTestOptions
 {
