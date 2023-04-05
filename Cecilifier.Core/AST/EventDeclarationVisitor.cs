@@ -106,8 +106,9 @@ namespace Cecilifier.Core.AST
             if (!isInterfaceDef)
             {
                 var localVarsExps = CreateLocalVarsForAddMethod(methodVar, backingFieldVar);
-                var bodyExps = methodBodyFactory(node, eventSymbol, backingFieldVar, methodVar);
-                methodBodyExpressions = methodBodyExpressions.Concat(bodyExps).Concat(localVarsExps);
+                methodBodyExpressions = methodBodyFactory(node, eventSymbol, backingFieldVar, methodVar)
+                                                .Concat(localVarsExps)
+                                                .Append($"{methodVar}.Body.InitLocals = true;");
             }
 
             AddAccessor(node, eventSymbol, methodVar, accessorName, eventType, methodBodyExpressions);

@@ -7,7 +7,6 @@ namespace Cecilifier.Core.Tests.Framework;
 public struct IgnoredKnownIssue
 {
     public static IgnoredKnownIssue CallVirtOnValueTypes = new IgnoredKnownIssue("https://github.com/adrianoc/cecilifier/issues/225");
-    public static IgnoredKnownIssue MissingInitOnLocals = new IgnoredKnownIssue("https://github.com/adrianoc/cecilifier/issues/226");
     public static IgnoredKnownIssue MiscILVerifyVailuresNeedsInvestigation = new IgnoredKnownIssue("https://github.com/adrianoc/cecilifier/issues/227");
 
     private IgnoredKnownIssue(string issueURL, bool failTests = false) => _failTests = failTests;

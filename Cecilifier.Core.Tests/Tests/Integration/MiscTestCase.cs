@@ -18,11 +18,7 @@ namespace Cecilifier.Core.Tests.Integration
         [Test]
         public void TestAccessibilityModifiers()
         {
-            AssertResourceTest(new ResourceTestOptions
-            {
-                ResourceName = "Misc/AccessibilityModifiers", 
-                FailOnAssemblyVerificationErrors = IgnoredKnownIssue.MissingInitOnLocals //https://github.com/adrianoc/cecilifier/issues/226
-            });
+            AssertResourceTest("Misc/AccessibilityModifiers");
         }
 
         [Test]
@@ -64,11 +60,7 @@ namespace Cecilifier.Core.Tests.Integration
         [TestCase("StructAndMembers")]
         public void AttributesOnMembers(string typeKind)
         {
-            AssertResourceTest(new ResourceTestOptions
-            {
-                ResourceName = $"Misc/Attributes/AttributesOn{typeKind}", 
-                FailOnAssemblyVerificationErrors = IgnoredKnownIssue.MissingInitOnLocals //https://github.com/adrianoc/cecilifier/issues/226
-            });
+            AssertResourceTest($"Misc/Attributes/AttributesOn{typeKind}");
         }
 
         [Test]
