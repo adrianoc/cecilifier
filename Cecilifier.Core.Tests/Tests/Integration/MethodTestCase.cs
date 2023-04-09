@@ -18,8 +18,7 @@ namespace Cecilifier.Core.Tests.Integration
         [Test]
         public void TestCtorWithParameters()
         {
-            //issue: https://github.com/adrianoc/cecilifier/issues/225
-            AssertResourceTest(new ResourceTestOptions { ResourceName = "Members/Methods/CtorWithParameters", FailOnAssemblyVerificationErrors = IgnoredKnownIssue.CallVirtOnValueTypes });
+            AssertResourceTest(new ResourceTestOptions { ResourceName = "Members/Methods/CtorWithParameters" });
         }
 
         [Test]
@@ -49,8 +48,7 @@ namespace Cecilifier.Core.Tests.Integration
         [Test]
         public void TestMethodCallOnValueType()
         {
-            //issue: https://github.com/adrianoc/cecilifier/issues/225
-            AssertResourceTest(new ResourceTestOptions { ResourceName = $"Members/Methods/MethodCallOnValueType", FailOnAssemblyVerificationErrors = IgnoredKnownIssue.CallVirtOnValueTypes });
+            AssertResourceTest(new ResourceTestOptions { ResourceName = "Members/Methods/MethodCallOnValueType" });
         }
 
         [Test]
@@ -132,16 +130,14 @@ namespace Cecilifier.Core.Tests.Integration
         [Test]
         public void TestReturnDelegate()
         {
-            //issue: https://github.com/adrianoc/cecilifier/issues/225
-            AssertResourceTest(new ResourceTestOptions { ResourceName = $"Members/Methods/ReturnDelegate", FailOnAssemblyVerificationErrors = false });
+            AssertResourceTest(new ResourceTestOptions { ResourceName = $"Members/Methods/ReturnDelegate" });
         }
 
         [TestCase("Implicit")]
         [TestCase("Explicit", Ignore = "Not supported")]
         public void TestDelegateAsParameter(string implicitOrExplicit)
         {
-            //issue: https://github.com/adrianoc/cecilifier/issues/225
-            AssertResourceTest(new ResourceTestOptions { ResourceName = $"Members/Methods/{implicitOrExplicit}Delegate_AsParameter", FailOnAssemblyVerificationErrors = IgnoredKnownIssue.CallVirtOnValueTypes });
+            AssertResourceTest(new ResourceTestOptions { ResourceName = $"Members/Methods/{implicitOrExplicit}Delegate_AsParameter" });
         }
 
         [TestCase("RefParamBodied", "ReturnPtrToStack")] // https://github.com/adrianoc/cecilifier/issues/227

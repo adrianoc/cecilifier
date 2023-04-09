@@ -328,7 +328,7 @@ namespace Cecilifier.Core.AST
             if (expSymbol is not IEventSymbol @event)
                 return;
 
-            AddMethodCall(ilVar, node.OperatorToken.IsKind(SyntaxKind.PlusEqualsToken) ? @event.AddMethod : @event.RemoveMethod, node.IsAccessOnThisOrObjectCreation());
+            AddMethodCall(ilVar, node.OperatorToken.IsKind(SyntaxKind.PlusEqualsToken) ? @event.AddMethod : @event.RemoveMethod, node.Left.IsAccessOnThisOrObjectCreation());
         }
 
         private void ProcessCompoundAssignmentExpression(AssignmentExpressionSyntax node, AssignmentVisitor visitor)
@@ -1200,20 +1200,15 @@ namespace Cecilifier.Core.AST
         private void ProcessProperty(SimpleNameSyntax node, IPropertySymbol propertySymbol)
         {
             propertySymbol.EnsurePropertyExists(Context, node);
-
-            var parentMae = node.Parent as MemberAccessExpressionSyntax;
-            var isAccessOnThisOrObjectCreation = true;
-            if (parentMae != null)
-            {
-                isAccessOnThisOrObjectCreation = parentMae.Expression.IsKind(SyntaxKind.ObjectCreationExpression);
-            }
-
+            
+            var isAccessOnThisOrObjectCreation = node.Parent.IsAccessOnThisOrObjectCreation();
             if (IsUnqualifiedAccess(node, propertySymbol))
             {
                 // if this is an *unqualified* access we need to load *this*
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
             }
 
+            var parentMae = node.Parent as MemberAccessExpressionSyntax;
             if (node.Parent.IsKind(SyntaxKind.SimpleAssignmentExpression) || parentMae != null && parentMae.Name.Identifier == node.Identifier && parentMae.Parent.IsKind(SyntaxKind.SimpleAssignmentExpression))
             {
                 AddMethodCall(ilVar, propertySymbol.SetMethod, isAccessOnThisOrObjectCreation);

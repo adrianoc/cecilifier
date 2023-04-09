@@ -222,7 +222,7 @@ namespace Cecilifier.Core.AST
                 Context.EmitCilInstruction(ilVar, OpCodes.Stfld, found.VariableName);
             }
             else
-                AddMethodCall(ilVar, property.SetMethod, isAccessOnThisOrObjectCreation: node.IsAccessOnThisOrObjectCreation());
+                AddMethodCall(ilVar, property.SetMethod, isAccessOnThisOrObjectCreation: node.Parent.IsAccessOnThisOrObjectCreation());
         }
 
         private void FieldAssignment(IFieldSymbol field, IdentifierNameSyntax name)

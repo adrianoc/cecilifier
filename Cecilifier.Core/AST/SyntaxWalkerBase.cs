@@ -49,14 +49,12 @@ namespace Cecilifier.Core.AST
 
         protected void AddMethodCall(string ilVar, IMethodSymbol method, bool isAccessOnThisOrObjectCreation = false)
         {
-            var opCode = (method.IsStatic || method.IsDefinedInCurrentAssembly(Context) && isAccessOnThisOrObjectCreation || method.ContainingType.IsValueType) && !(method.IsVirtual || method.IsAbstract || method.IsOverride)
-                ? OpCodes.Call
-                : OpCodes.Callvirt;
-
-            if (method.IsStatic)
-            {
-                opCode = OpCodes.Call;
-            }
+            var needsVirtualDispatch = (method.IsVirtual || method.IsAbstract || method.IsOverride) && !method.ContainingType.IsPrimitiveType();
+            var opCode = !method.IsStatic && 
+                         (!isAccessOnThisOrObjectCreation || needsVirtualDispatch) && 
+                         (method.ContainingType.TypeKind == TypeKind.TypeParameter || !method.ContainingType.IsValueType || needsVirtualDispatch)
+                ? OpCodes.Callvirt
+                : OpCodes.Call;
 
             if (method.IsGenericMethod && method.IsDefinedInCurrentAssembly(Context))
             {
@@ -562,13 +560,18 @@ namespace Cecilifier.Core.AST
                 // in this case we need to call System.Index.GetOffset(int32) on a value type (System.Index)
                 // which requires the address of the value type.
                 var isSystemIndexUsedAsIndex = IsSystemIndexUsedAsIndex(symbol, node);
-                if (isSystemIndexUsedAsIndex || node.IsKind(SyntaxKind.AddressOfExpression) || IsPseudoAssignmentToValueType() || node.Accept(UsageVisitor.GetInstance(Context)) == UsageKind.CallTarget)
+                var usageResult = node.Accept(UsageVisitor.GetInstance(Context));
+                if (isSystemIndexUsedAsIndex || node.IsKind(SyntaxKind.AddressOfExpression) || IsPseudoAssignmentToValueType() || usageResult.Kind == UsageKind.CallTarget)
                 {
-                    string operand = Context.DefinitionVariables.GetVariable(symbolName, variableMemberKind, parentName).VariableName;
+                    var operand = Context.DefinitionVariables.GetVariable(symbolName, variableMemberKind, parentName).VariableName;
                     Context.EmitCilInstruction(ilVar, opCode, operand);
                     if (!Context.HasFlag(Constants.ContextFlags.Fixed) && node.IsKind(SyntaxKind.AddressOfExpression))
                         Context.EmitCilInstruction(ilVar, OpCodes.Conv_U);
 
+                    // calls to virtual methods on custom value types needs to be constrained (don't know why, but the generated IL for such scenarios does `constrains`).
+                    // the only methods that falls into this category are virtual methods on Object (ToString()/Equals()/GetHashCode())
+                    if (usageResult.Target is { IsOverride: true } && usageResult.Target.ContainingType.IsNonPrimitiveValueType(Context))
+                        Context.EmitCilInstruction(ilVar, OpCodes.Constrained, Context.TypeResolver.Resolve(symbol));
                     return true;
                 }
 

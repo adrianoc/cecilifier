@@ -1,12 +1,11 @@
 using System;
-using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Cecilifier.Core.AST;
 
-internal class UsageVisitor : CSharpSyntaxVisitor<UsageKind>
+internal class UsageVisitor : CSharpSyntaxVisitor<UsageResult>
 {
     public static UsageVisitor GetInstance(IVisitorContext context)
     {
@@ -29,20 +28,23 @@ internal class UsageVisitor : CSharpSyntaxVisitor<UsageKind>
         this.context = context;
     }
 
-    public override UsageKind VisitMemberAccessExpression(MemberAccessExpressionSyntax node)
+    public override UsageResult VisitMemberAccessExpression(MemberAccessExpressionSyntax node)
     {
-        if (node?.Parent.IsKind(SyntaxKind.InvocationExpression) == true)
-            return UsageKind.CallTarget;
-
         var t = context.SemanticModel.GetSymbolInfo(node);
-        return t.Symbol?.Kind is SymbolKind.Property or SymbolKind.Event or SymbolKind.Method
+        if (node?.Parent.IsKind(SyntaxKind.InvocationExpression) == true)
+            return new UsageResult(UsageKind.CallTarget, t.Symbol);
+
+        var kind = t.Symbol?.Kind is SymbolKind.Property or SymbolKind.Event or SymbolKind.Method
             ? UsageKind.CallTarget
             : UsageKind.None;
+
+        return new UsageResult(kind, t.Symbol);
     }
 
-    public override UsageKind VisitElementAccessExpression(ElementAccessExpressionSyntax node)
+    public override UsageResult VisitElementAccessExpression(ElementAccessExpressionSyntax node)
     {
         var symbol = context.SemanticModel.GetSymbolInfo(node).Symbol as IPropertySymbol;
-        return symbol?.IsIndexer == true ? UsageKind.CallTarget : UsageKind.None;
+        var kind = symbol?.IsIndexer == true ? UsageKind.CallTarget : UsageKind.None;
+        return new UsageResult(kind, symbol);
     }
 }

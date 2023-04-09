@@ -102,7 +102,7 @@ public class OperatorsTests : CecilifierUnitTestBase
                         @"il_M_3.Append\(lbl_whenTrue_6\);\s+" +
                         @"il_M_3\.Emit\(OpCodes\.Ldarg_0\);\s+".IfTrue(expectedCode == Code.Ldfld) +
                         $@"\2{expectedCode}.+;\s+" +
-                        @"\2Callvirt,.+typeof\(System.String\), ""get_Length"".+;\s+" +
+                        @"\2Call,.+typeof\(System.String\), ""get_Length"".+;\s+" +
                         @"\2Newobj,.+typeof\(System.Nullable<System.Int32>\), "".ctor"".+""System.Int32"".+;\s+" +
                         @"il_M_3.Append\(lbl_conditionEnd_7\);"));
     }
@@ -197,7 +197,7 @@ public class OperatorsTests : CecilifierUnitTestBase
                         @"\2Ldloc, \3.+;\s+" +
                         @"\2Br, lbl_conditionEnd_14.+;\s+" +
                         @"il_M_10.Append\(lbl_whenTrue_13\);\s+" +
-                        @"\2Callvirt,.+typeof\(System.String\), ""get_Length"".+;\s+" +
+                        @"\2Call,.+typeof\(System.String\), ""get_Length"".+;\s+" +
                         @"\2Newobj,.+typeof\(System.Nullable<System.Int32>\), "".ctor"".+""System.Int32"".+;\s+" +
                         @"il_M_10.Append\(lbl_conditionEnd_14\);"));
     }

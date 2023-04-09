@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text.RegularExpressions;
+using Cecilifier.Core.AST;
 using Microsoft.CodeAnalysis;
 using Mono.Cecil.Cil;
 
@@ -9,18 +8,9 @@ namespace Cecilifier.Core.Extensions
 {
     internal static class TypeExtensions
     {
-        public static string ReflectionTypeName(this ITypeSymbol type, out IList<string> typeParameters)
-        {
-            if (type is INamedTypeSymbol namedType && namedType.IsGenericType) //TODO: namedType.IsUnboundGenericType ? Open 
-            {
-                typeParameters = namedType.TypeArguments.Select(typeArg => (string) typeArg.FullyQualifiedName()).ToArray();
-                return Regex.Replace(namedType.ConstructedFrom.ToString(), "<.*>", "`" + namedType.TypeArguments.Length);
-            }
-
-            typeParameters = Array.Empty<string>();
-            return type.FullyQualifiedName();
-        }
-
+        public static bool IsNonPrimitiveValueType(this ITypeSymbol type, IVisitorContext context) => !type.IsPrimitiveType() 
+                                                                                                      && (type.IsValueType || SymbolEqualityComparer.Default.Equals(type, context.RoslynTypeSystem.SystemValueType));
+        
         public static string MakeByReferenceType(this string type)
         {
             return $"{type}.MakeByReferenceType()";

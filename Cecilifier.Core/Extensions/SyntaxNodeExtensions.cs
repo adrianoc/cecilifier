@@ -76,15 +76,17 @@ namespace Cecilifier.Core.Extensions
             }
         }
 
-        public static bool IsAccessOnThisOrObjectCreation(this CSharpSyntaxNode node)
+        public static bool IsAccessOnThisOrObjectCreation(this SyntaxNode nodeBeingAccessed)
         {
-            var parentMae = node.Parent as MemberAccessExpressionSyntax;
-            if (parentMae == null)
+            if (nodeBeingAccessed.IsKind(SyntaxKind.NameColon))
+                return false;
+            
+            if (nodeBeingAccessed is MemberAccessExpressionSyntax mae)
             {
-                return true;
+                return mae.Expression.IsKind(SyntaxKind.ObjectCreationExpression);
             }
 
-            return parentMae.Expression.IsKind(SyntaxKind.ObjectCreationExpression);
+            return true;
         }
 
         [return: NotNull]
