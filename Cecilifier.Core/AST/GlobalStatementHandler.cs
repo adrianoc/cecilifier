@@ -60,6 +60,7 @@ namespace Cecilifier.Core.AST
             WriteCecilExpressions(methodExps);
             WriteCecilExpressions(mainParametersExps);
             WriteCecilExpressions(mainBodyExps);
+            WriteCecilExpression($"{methodVar}.Body.InitLocals = true;");
             WriteCecilExpression($"{typeVar}.Methods.Add({methodVar});");
 
             NonCapturingLambdaProcessor.InjectSyntheticMethodsForNonCapturingLambdas(context, firstGlobalStatement, typeVar);

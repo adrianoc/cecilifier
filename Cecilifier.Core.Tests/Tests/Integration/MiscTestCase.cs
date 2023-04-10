@@ -85,7 +85,7 @@ namespace Cecilifier.Core.Tests.Integration
         [TestCase("TopLevelStatements")]
         public void TestTopLevelStatements(string testName)
         {
-            AssertResourceTest(new ResourceTestOptions { ResourceName = $"Misc/{testName}", BuildType = BuildType.Exe, IgnoredILErrors = "InitLocals" });
+            AssertResourceTest(new ResourceTestOptions { ResourceName = $"Misc/{testName}", BuildType = BuildType.Exe });
         }
     }
 }
