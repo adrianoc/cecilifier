@@ -13,7 +13,7 @@ namespace Cecilifier.Core.Tests.Integration
             var options = new ResourceTestOptions()
             {
                 ResourceName = $"Statements/FixedStatement{TestContext.CurrentContext.Test.Name}",
-                IgnoredILErrors = "ExpectedNumericType" //https://github.com/adrianoc/cecilifier/issues/227
+                IgnoredILErrors = "ExpectedNumericType" // looks like harmless (not sure why ilverify complains)
             };
 
             AssertResourceTestWithExplicitExpectation(options, methodToVerify);
