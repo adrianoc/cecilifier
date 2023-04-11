@@ -311,6 +311,7 @@ namespace Cecilifier.Core.AST
 
             visitor.InstructionPrecedingValueToLoad = Context.CurrentLine;
             Visit(node.Right);
+            InjectRequiredConversions(node.Right);
             if (!skipLeftSideVisitingInAssignment)
             {
                 ProcessCompoundAssignmentExpression(node, visitor);
