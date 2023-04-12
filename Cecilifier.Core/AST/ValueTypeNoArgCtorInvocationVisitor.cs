@@ -16,6 +16,8 @@ namespace Cecilifier.Core.AST
             this.ilVar = ilVar;
         }
 
+        public bool TargetOfAssignmentIsValueType { get; private set; } = true;
+
         public override void VisitUsingStatement(UsingStatementSyntax node)
         {
             // our direct parent is a using statement, which means we have something like:
@@ -40,6 +42,11 @@ namespace Cecilifier.Core.AST
             DeclareAndInitializeValueTypeLocalVariable();
         }
 
+        public override void VisitArrowExpressionClause(ArrowExpressionClauseSyntax node)
+        {
+            DeclareAndInitializeValueTypeLocalVariable();
+        }
+
         public override void VisitMemberAccessExpression(MemberAccessExpressionSyntax node)
         {
             DeclareAndInitializeValueTypeLocalVariable();
@@ -47,9 +54,10 @@ namespace Cecilifier.Core.AST
 
         public override void VisitAssignmentExpression(AssignmentExpressionSyntax node)
         {
-            node.Left.Accept(new NoArgsValueTypeObjectCreatingInAssignmentVisitor(Context, ilVar));
-            var operand = Context.TypeResolver.Resolve(ctorInfo.Symbol.ContainingType);
-            Context.EmitCilInstruction(ilVar, OpCodes.Initobj, operand);
+            var instantiatedType = Context.TypeResolver.Resolve(ctorInfo.Symbol.ContainingType);
+            var visitor = new NoArgsValueTypeObjectCreatingInAssignmentVisitor(Context, ilVar, instantiatedType, DeclareAndInitializeValueTypeLocalVariable);
+            node.Left.Accept(visitor);
+            TargetOfAssignmentIsValueType = visitor.TargetOfAssignmentIsValueType;
         }
 
         public override void VisitArgument(ArgumentSyntax node)
@@ -60,8 +68,10 @@ namespace Cecilifier.Core.AST
         private void DeclareAndInitializeValueTypeLocalVariable()
         {
             var resolvedVarType = Context.TypeResolver.Resolve(ctorInfo.Symbol.ContainingType);
-            var tempLocalName = AddLocalVariableToCurrentMethod("vt", resolvedVarType);
-
+            var tempLocal = AddLocalVariableToCurrentMethod("vt", resolvedVarType);
+            
+            using var _ = Context.DefinitionVariables.WithVariable(tempLocal);
+            
             switch (ctorInfo.Symbol.ContainingType.SpecialType)
             {
                 case SpecialType.System_Char:
@@ -72,13 +82,13 @@ namespace Cecilifier.Core.AST
                     Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4_0);
                     if (ctorInfo.Symbol.ContainingType.SpecialType == SpecialType.System_Int64)
                         Context.EmitCilInstruction(ilVar, OpCodes.Conv_I8);
-                    Context.EmitCilInstruction(ilVar, OpCodes.Stloc, tempLocalName);
-                    Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, tempLocalName);
+                    Context.EmitCilInstruction(ilVar, OpCodes.Stloc, tempLocal.VariableName);
+                    Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, tempLocal.VariableName);
                     break;
 
                 case SpecialType.None:
-                    InitValueTypeLocalVariable(tempLocalName, ctorInfo.Symbol.ContainingType);
-                    Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, tempLocalName);
+                    InitValueTypeLocalVariable(tempLocal.VariableName, ctorInfo.Symbol.ContainingType);
+                    Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, tempLocal.VariableName);
                     break;
 
                 default:

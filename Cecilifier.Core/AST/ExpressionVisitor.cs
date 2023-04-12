@@ -407,11 +407,8 @@ namespace Cecilifier.Core.AST
                 var designation = ((SingleVariableDesignationSyntax) node.Designation);
                 var resolvedOutArgType = Context.TypeResolver.Resolve(localSymbol.Type);
 
-                var outLocalName = AddLocalVariableWithResolvedType(
-                    designation.Identifier.Text,
-                    Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method),
-                    resolvedOutArgType
-                );
+                DefinitionVariable methodVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
+                var outLocalName = AddLocalVariableWithResolvedType(designation.Identifier.Text, methodVar, resolvedOutArgType).VariableName;
 
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, outLocalName);
             }
@@ -458,7 +455,7 @@ namespace Cecilifier.Core.AST
             var currentMethodVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
             var expressionTypeInfo = Context.SemanticModel.GetTypeInfo(node);
             var resolvedConcreteNullableType = Context.TypeResolver.Resolve(expressionTypeInfo.Type);
-            var tempNullableVar = AddLocalVariableWithResolvedType("nullable", currentMethodVar, resolvedConcreteNullableType);
+            var tempNullableVar = AddLocalVariableWithResolvedType("nullable", currentMethodVar, resolvedConcreteNullableType).VariableName;
 
             Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, tempNullableVar);
             Context.EmitCilInstruction(ilVar, OpCodes.Initobj, resolvedConcreteNullableType);
@@ -842,9 +839,7 @@ namespace Cecilifier.Core.AST
             using var _ = LineInformationTracker.Track(Context, node);
 
             var varType = Context.TypeResolver.Resolve(Context.SemanticModel.GetTypeInfo(node.Type).Type);
-            var localVar = AddLocalVariableToCurrentMethod(
-                                        ((SingleVariableDesignationSyntax) node.Designation).Identifier.ValueText,
-                                        varType);
+            var localVar = AddLocalVariableToCurrentMethod(((SingleVariableDesignationSyntax) node.Designation).Identifier.ValueText, varType).VariableName;
 
             Context.EmitCilInstruction(ilVar, OpCodes.Isinst, varType);
             Context.EmitCilInstruction(ilVar, OpCodes.Stloc, localVar);
@@ -858,7 +853,7 @@ namespace Cecilifier.Core.AST
             using var _ = LineInformationTracker.Track(Context, node);
 
             var varType = Context.TypeResolver.Resolve(Context.SemanticModel.GetTypeInfo(node.Type).Type);
-            var localVar = AddLocalVariableToCurrentMethod(LocalVariableNameOrDefault(node, "tmp"), varType);
+            var localVar = AddLocalVariableToCurrentMethod(LocalVariableNameOrDefault(node, "tmp"), varType).VariableName;
 
             var typeDoesNotMatchVar = CreateCilInstruction(ilVar, OpCodes.Ldc_I4_0);
             var typeMatchesVar = CreateCilInstruction(ilVar, OpCodes.Nop);
@@ -975,7 +970,9 @@ namespace Cecilifier.Core.AST
                 Context.EmitCilInstruction(ilVar, opCode);
             }
 
-            var tempLocalName = AddLocalVariableWithResolvedType("tmp", Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method), Context.TypeResolver.Resolve(Context.SemanticModel.GetTypeInfo(operand).Type));
+            DefinitionVariable methodVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
+            string resolvedVarType = Context.TypeResolver.Resolve(Context.SemanticModel.GetTypeInfo(operand).Type);
+            var tempLocalName = AddLocalVariableWithResolvedType("tmp", methodVar, resolvedVarType).VariableName;
             Context.EmitCilInstruction(ilVar, OpCodes.Stloc, tempLocalName);
             Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, tempLocalName);
             assignmentVisitor.InstructionPrecedingValueToLoad = Context.CurrentLine;
@@ -1060,7 +1057,8 @@ namespace Cecilifier.Core.AST
             var parentElementAccessExpression = node.Ancestors().OfType<ElementAccessExpressionSyntax>().FirstOrDefault(candidate => candidate.ArgumentList.Contains(node));
             if (parentElementAccessExpression != null)
             {
-                var tempLocal = AddLocalVariableToCurrentMethod("tmpIndex", Context.TypeResolver.Resolve(Context.SemanticModel.GetTypeInfo(node).Type));
+                string varType = Context.TypeResolver.Resolve(Context.SemanticModel.GetTypeInfo(node).Type);
+                var tempLocal = AddLocalVariableToCurrentMethod("tmpIndex", varType).VariableName;
                 Context.EmitCilInstruction(ilVar, OpCodes.Stloc, tempLocal);
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldloca, tempLocal);
             }
@@ -1093,8 +1091,11 @@ namespace Cecilifier.Core.AST
             if (ctorInfo.Symbol == null || ctorInfo.Symbol.IsImplicitlyDeclared == false || ctorInfo.Symbol.ContainingType.IsReferenceType)
                 return false;
 
-            new ValueTypeNoArgCtorInvocationVisitor(Context, ilVar, ctorInfo).Visit(node.Parent);
-            return skipLeftSideVisitingInAssignment = true;
+            var visitor = new ValueTypeNoArgCtorInvocationVisitor(Context, ilVar, ctorInfo);
+            visitor.Visit(node.Parent);
+
+            skipLeftSideVisitingInAssignment = visitor.TargetOfAssignmentIsValueType;
+            return true;
         }
 
         private void ProcessOverloadedBinaryOperatorInvocation(BinaryExpressionSyntax node, IMethodSymbol method)
@@ -1183,7 +1184,9 @@ namespace Cecilifier.Core.AST
 
         private void StoreTopOfStackInLocalVariableAndLoadItsAddress(ITypeSymbol type)
         {
-            var tempLocalName = AddLocalVariableWithResolvedType("tmp", Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method), Context.TypeResolver.Resolve(type));
+            DefinitionVariable methodVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
+            string resolvedVarType = Context.TypeResolver.Resolve(type);
+            var tempLocalName = AddLocalVariableWithResolvedType("tmp", methodVar, resolvedVarType).VariableName;
             Context.EmitCilInstruction(ilVar, OpCodes.Stloc, tempLocalName);
             Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, tempLocalName);
         }

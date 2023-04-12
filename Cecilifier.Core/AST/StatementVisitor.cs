@@ -69,7 +69,7 @@ namespace Cecilifier.Core.AST
         public override void VisitSwitchStatement(SwitchStatementSyntax node)
         {
             var switchExpressionType = ResolveExpressionType(node.Expression);
-            var evaluatedExpressionVariable = AddLocalVariableToCurrentMethod("switchCondition", switchExpressionType);
+            var evaluatedExpressionVariable = AddLocalVariableToCurrentMethod("switchCondition", switchExpressionType).VariableName;
 
             ExpressionVisitor.Visit(Context, _ilVar, node.Expression);
             Context.EmitCilInstruction(_ilVar, OpCodes.Stloc, evaluatedExpressionVariable); // stores evaluated expression in local var
@@ -145,7 +145,8 @@ namespace Cecilifier.Core.AST
 
                 var currentMethodVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
                 var localVar = node.Declaration.Variables[0];
-                AddLocalVariableWithResolvedType(localVar.Identifier.Text, currentMethodVar, Context.TypeResolver.Resolve(pointerType.PointedAtType).MakeByReferenceType());
+                string resolvedVarType = Context.TypeResolver.Resolve(pointerType.PointedAtType).MakeByReferenceType();
+                string temp = AddLocalVariableWithResolvedType(localVar.Identifier.Text, currentMethodVar, resolvedVarType).VariableName;
                 ProcessVariableInitialization(localVar, declaredType);
             }
 
@@ -207,7 +208,7 @@ namespace Cecilifier.Core.AST
                 usingType = Context.SemanticModel.GetTypeInfo(node.Expression).Type;
                 var resolvedVarType = Context.TypeResolver.Resolve(usingType);
                 var methodVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
-                localVarDef = AddLocalVariableWithResolvedType("tempDisp", methodVar, resolvedVarType);
+                localVarDef = AddLocalVariableWithResolvedType("tempDisp", methodVar, resolvedVarType).VariableName;
                 Context.EmitCilInstruction(_ilVar, OpCodes.Stloc, localVarDef);
             }
 
@@ -350,7 +351,7 @@ namespace Cecilifier.Core.AST
                 ? ResolveExpressionType(localVar.Initializer?.Value)
                 : ResolveType(type);
 
-            AddLocalVariableWithResolvedType(localVar.Identifier.Text, methodVar, resolvedVarType);
+            string temp = AddLocalVariableWithResolvedType(localVar.Identifier.Text, methodVar, resolvedVarType).VariableName;
         }
 
         private void ProcessVariableInitialization(VariableDeclaratorSyntax localVar, ITypeSymbol variableType)

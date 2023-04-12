@@ -116,33 +116,31 @@ namespace Cecilifier.Core.AST
             AddCecilExpression($"var {instVar} = {ilVar}.Create({opCode.ConstantName()}{operandStr});");
         }
 
-        protected string AddLocalVariableWithResolvedType(string localVarName, DefinitionVariable methodVar, string resolvedVarType)
+        protected DefinitionVariable AddLocalVariableWithResolvedType(string localVarName, DefinitionVariable methodVar, string resolvedVarType)
         {
             var cecilVarDeclName = Context.Naming.SyntheticVariable(localVarName, ElementKind.LocalVariable);
 
             AddCecilExpression("var {0} = new VariableDefinition({1});", cecilVarDeclName, resolvedVarType);
             AddCecilExpression("{0}.Body.Variables.Add({1});", methodVar.VariableName, cecilVarDeclName);
 
-            Context.DefinitionVariables.RegisterNonMethod(string.Empty, localVarName, VariableMemberKind.LocalVariable, cecilVarDeclName);
-
-            return cecilVarDeclName;
+            return Context.DefinitionVariables.RegisterNonMethod(string.Empty, localVarName, VariableMemberKind.LocalVariable, cecilVarDeclName);
         }
 
-        protected string AddLocalVariableToCurrentMethod(string localVarName, string varType)
+        protected DefinitionVariable AddLocalVariableToCurrentMethod(string localVarName, string varType)
         {
             var currentMethod = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
             if (!currentMethod.IsValid)
                 throw new InvalidOperationException("Could not resolve current method declaration variable.");
 
             return AddLocalVariableWithResolvedType(localVarName, currentMethod, varType);
-        }
+        }        
 
         protected void LoadLiteralValue(string ilVar, ITypeSymbol type, string value, bool isTargetOfCall)
         {
             if (type.TypeKind == TypeKind.TypeParameter)
             {
                 var resolvedType = Context.TypeResolver.Resolve(type);
-                var tempVar = AddLocalVariableToCurrentMethod(type.Name, resolvedType);
+                var tempVar = AddLocalVariableToCurrentMethod(type.Name, resolvedType).VariableName;
 
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, tempVar);
                 Context.EmitCilInstruction(ilVar, OpCodes.Initobj, resolvedType);
@@ -261,7 +259,9 @@ namespace Cecilifier.Core.AST
 
         private string StoreTopOfStackInLocalVariable(string ilVar, ITypeSymbol type)
         {
-            var tempLocalName = AddLocalVariableWithResolvedType("tmp", Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method), Context.TypeResolver.Resolve(type));
+            DefinitionVariable methodVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
+            string resolvedVarType = Context.TypeResolver.Resolve(type);
+            var tempLocalName = AddLocalVariableWithResolvedType("tmp", methodVar, resolvedVarType).VariableName;
             Context.EmitCilInstruction(ilVar, OpCodes.Stloc, tempLocalName);
             return tempLocalName;
         }
