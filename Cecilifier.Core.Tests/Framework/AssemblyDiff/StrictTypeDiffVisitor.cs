@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using Mono.Cecil;
 
 namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
@@ -19,7 +19,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
         {
             if (Utils.compilerEmmitedAttributesToIgnore.Contains(source.FullName))
                 return true;
-            
+
             output.WriteLine("[{0}] Type {1} could not be found.", target.FileName, source.FullName);
             return false;
         }

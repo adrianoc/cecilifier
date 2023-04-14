@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.Extensions;
@@ -62,7 +62,7 @@ namespace Cecilifier.Core.AST
             using var _ = LineInformationTracker.Track(Context, node);
             node.Accept(new EnumDeclarationVisitor(Context));
         }
-        
+
         public override void VisitFieldDeclaration(FieldDeclarationSyntax node)
         {
             using var _ = LineInformationTracker.Track(Context, node);
@@ -111,7 +111,7 @@ namespace Cecilifier.Core.AST
         {
             new EventDeclarationVisitor(Context).Visit(node);
         }
-        
+
         private string ProcessBase(TypeDeclarationSyntax classDeclaration)
         {
             var classSymbol = DeclaredSymbolFor(classDeclaration);
@@ -146,27 +146,27 @@ namespace Cecilifier.Core.AST
         {
             if (typeSymbol.TypeKind == TypeKind.TypeParameter)
                 return;
-            
+
             if (!typeSymbol.IsDefinedInCurrentAssembly(context))
                 goto processGenerics;
 
             var found = context.DefinitionVariables.GetVariable(typeSymbol.Name, VariableMemberKind.Type, typeSymbol.ContainingType?.FullyQualifiedName(false));
             if (found.IsValid)
                 goto processGenerics;
-            
-            var typeDeclaration =  (BaseTypeDeclarationSyntax) typeSymbol.DeclaringSyntaxReferences.First().GetSyntax();
+
+            var typeDeclaration = (BaseTypeDeclarationSyntax) typeSymbol.DeclaringSyntaxReferences.First().GetSyntax();
             var typeDeclarationVar = context.Naming.Type(typeSymbol.Name, typeSymbol.TypeKind.ToElementKind());
             AddTypeDefinition(context, typeDeclarationVar, typeSymbol, TypeModifiersToCecil((INamedTypeSymbol) typeSymbol, typeDeclaration.Modifiers), typeParameters, Array.Empty<TypeParameterSyntax>());
 
             var v = context.DefinitionVariables.RegisterNonMethod(
-                typeSymbol.ContainingSymbol?.FullyQualifiedName(false), 
-                typeSymbol.Name, 
-                VariableMemberKind.Type, 
+                typeSymbol.ContainingSymbol?.FullyQualifiedName(false),
+                typeSymbol.Name,
+                VariableMemberKind.Type,
                 typeDeclarationVar);
-            
+
             v.IsForwarded = true;
-            
-processGenerics:
+
+        processGenerics:
             if (typeSymbol is INamedTypeSymbol genericType)
             {
                 foreach (var typeArgument in genericType.TypeArguments)
@@ -180,23 +180,23 @@ processGenerics:
         {
             context.WriteNewLine();
             context.WriteComment($"{typeSymbol.TypeKind} : {typeSymbol.Name}");
-            
+
             typeParameters ??= Array.Empty<TypeParameterSyntax>();
 
-            var isStructWithNoFields = typeSymbol.TypeKind == TypeKind.Struct && typeSymbol.GetMembers().Length == 0 ;
+            var isStructWithNoFields = typeSymbol.TypeKind == TypeKind.Struct && typeSymbol.GetMembers().Length == 0;
             var typeDefinitionExp = CecilDefinitionsFactory.Type(
-                context, 
+                context,
                 typeDeclarationVar,
                 typeSymbol.ContainingNamespace?.FullyQualifiedName() ?? string.Empty,
-                typeSymbol.Name, 
+                typeSymbol.Name,
                 typeModifiers,
                 BaseTypeFor(context, typeSymbol),
                 typeSymbol.ContainingType?.Name,
                 isStructWithNoFields,
                 typeSymbol.Interfaces.Select(itf => context.TypeResolver.Resolve(itf)),
                 typeParameters,
-                outerTypeParameters); 
-            
+                outerTypeParameters);
+
             AddCecilExpressions(context, typeDefinitionExp);
 
             HandleAttributesInTypeParameter(context, typeParameters);
@@ -206,7 +206,7 @@ processGenerics:
         {
             if (typeSymbol.BaseType == null)
                 return null;
-            
+
             EnsureForwardedTypeDefinition(context, typeSymbol.BaseType, Array.Empty<TypeParameterSyntax>());
 
             return typeSymbol.BaseType.IsGenericType ? null : context.TypeResolver.Resolve(typeSymbol.BaseType);
@@ -216,7 +216,7 @@ processGenerics:
         {
             node.Accept(new DefaultCtorVisitor(Context, typeLocalVar));
         }
-        
+
         private void ProcessStructPseudoAttributes(string structDefinitionVar, INamedTypeSymbol structSymbol)
         {
             if (structSymbol.IsReadOnly)
@@ -228,8 +228,8 @@ processGenerics:
             if (structSymbol.IsRefLikeType)
             {
                 var ctor = Context.RoslynTypeSystem.IsByRefLikeAttribute.ParameterlessCtor();
-                Context.WriteCecilExpression($"{structDefinitionVar}.CustomAttributes.Add(new CustomAttribute({ctor.MethodResolverExpression(Context)}));\n"); 
-                
+                Context.WriteCecilExpression($"{structDefinitionVar}.CustomAttributes.Add(new CustomAttribute({ctor.MethodResolverExpression(Context)}));\n");
+
                 var obsoleteAttrCtor = Context.RoslynTypeSystem.SystemObsoleteAttribute.Ctor(Context.RoslynTypeSystem.SystemString, Context.RoslynTypeSystem.SystemBoolean);
                 var obsoleteAttributeVar = Context.Naming.SyntheticVariable("obsolete", ElementKind.Attribute);
                 const string RefStructObsoleteMsg = "Types with embedded references are not supported in this version of your compiler.";
@@ -249,7 +249,7 @@ processGenerics:
             Static = 0x1,
             Instance = 0x2
         }
-        
+
         private readonly IVisitorContext context;
 
         private readonly string localVarName;
@@ -261,7 +261,7 @@ processGenerics:
             this.localVarName = localVarName;
             this.context = context;
         }
-        
+
         public override void VisitStructDeclaration(StructDeclarationSyntax node)
         {
             foreach (var member in NonTypeMembersOf(node))
@@ -281,7 +281,7 @@ processGenerics:
             {
                 new ConstructorDeclarationVisitor(context).DefaultCtorInjector(localVarName, node, false);
             }
-            
+
             if ((foundConstructors & ConstructorKind.Static) != ConstructorKind.Static && hasStaticInitialization)
             {
                 new ConstructorDeclarationVisitor(context).DefaultCtorInjector(localVarName, node, true);

@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -23,7 +23,7 @@ namespace Cecilifier.Web.Pages
             //        Most likely there's a way to ask DI go give us one. 
             CecilifierRestHandler._logger = logger;
         }
-        
+
         public async Task<IActionResult> OnGet()
         {
             ErrorAccessingGist = null;
@@ -50,7 +50,7 @@ namespace Cecilifier.Web.Pages
             return Page();
 
             string Encode(string msg)
-            {                
+            {
                 return msg.Replace("\n", @"\n").Replace("\t", @"\t");
             }
         }

@@ -17,24 +17,24 @@ public class EventsTests : CecilifierUnitTestBase
                             remove { Console.WriteLine(""remove""); } 
                         }
                     }";
-        
+
         var result = RunCecilifier(code);
 
         var cecilified = result.GeneratedCode.ReadToEnd();
-        
+
         Assert.That(cecilified, Does.Match(@"cls_C_0.Events.Add\(evt_E_\d+\);"));
         Assert.That(cecilified, Does.Match(@"var m_add_\d+ = new MethodDefinition\(""add_E"", .+, assembly.MainModule.TypeSystem.Void\);"));
         Assert.That(cecilified, Does.Match(@"m_add_\d+.Parameters.Add\(.*Action.*\);"));
         Assert.That(cecilified, Does.Match(@"var il_add_\d+ = m_add_\d+.Body.GetILProcessor\(\);"));
-        
+
         Assert.That(cecilified, Does.Match(@"var m_remove_\d+ = new MethodDefinition\(""remove_E"", .+, assembly.MainModule.TypeSystem.Void\);"));
         Assert.That(cecilified, Does.Match(@"m_remove_\d+.Parameters.Add\(.*Action.*\);"));
         Assert.That(cecilified, Does.Match(@"var il_remove_\d+ = m_remove_\d+.Body.GetILProcessor\(\);"));
-        
+
         Assert.That(cecilified, Does.Match(@"cls_C_\d+.Methods.Add\(m_add_\d+\);"));
         Assert.That(cecilified, Does.Match(@"cls_C_\d+.Methods.Add\(m_remove_\d+\);"));
     }
-    
+
     [Test]
     public void EventSubscription()
     {
@@ -48,15 +48,15 @@ public class EventsTests : CecilifierUnitTestBase
                             E -= a; 
                         }
                     }";
-        
+
         var result = RunCecilifier(code);
 
         var cecilified = result.GeneratedCode.ReadToEnd();
-        
+
         Assert.That(cecilified, Does.Match(@"Call, m_add_\d+"));
         Assert.That(cecilified, Does.Match(@"Call, m_remove_\d+"));
     }
-    
+
     [Test]
     public void ForwardMethodReferenceTest()
     {
@@ -68,19 +68,19 @@ public class EventsTests : CecilifierUnitTestBase
 
                         void M() {}
                     }";
-        
+
         var result = RunCecilifier(code);
 
         var cecilified = result.GeneratedCode.ReadToEnd();
-        
+
         Assert.That(cecilified, Does.Match(@"Call, m_add_\d+"));
     }
-    
+
     [TestCase("add { int l = 1; } remove { }", "m_add_1", TestName = "Add")]
     [TestCase("add { } remove { int l = 1; }", "m_remove_3", TestName = "Remove")]
     public void TestEventAccessorWithLocalVariables(string accessorDeclaration, string targetMethod)
     {
-        var result = RunCecilifier($"using System; class C {{ event Action E {{ {accessorDeclaration } }} }}");
+        var result = RunCecilifier($"using System; class C {{ event Action E {{ {accessorDeclaration} }} }}");
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
         Assert.That(cecilifiedCode, Does.Match(
             @"var (l_l_\d+) = new VariableDefinition\(assembly\.MainModule\.TypeSystem\.Int32\);\s+" +

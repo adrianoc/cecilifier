@@ -15,14 +15,14 @@ public class StringTests : CecilifierUnitTestBase
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
         Assert.That(cecilifiedCode, Contains.Substring("Ldstr, \"This \\\"is a\\\" test"));
     }
-    
+
     [TestCase(RawStringConstants.NoIndentation, RawStringConstants.ResultingNoIndentation)]
     [TestCase(RawStringConstants.SimpleIndentation, RawStringConstants.ResultingSimpleIndentation)]
     public void TestMultiLineRawLiteralString(string value, string expected)
     {
         Run($"var s = \"\"\"{value}\"\"\"; System.Console.WriteLine(s);", expected);
     }
-    
+
     [TestCase(RawStringConstants.NoIndentation, RawStringConstants.ResultingNoIndentation)]
     [TestCase(RawStringConstants.SimpleIndentation, RawStringConstants.ResultingSimpleIndentation)]
     public void TestMultiLineRawLiteralStringAsDefaultParameterValue(string value, string expected)
@@ -43,7 +43,7 @@ struct RawStringConstants
 {
     public const string NoIndentation = "\nA\n              \nB\n";
     public const string ResultingNoIndentation = "A\\n              \\nB";
-    
+
     public const string SimpleIndentation = "\n  A\n  B\n  ";
     public const string ResultingSimpleIndentation = "A\\nB";
 }

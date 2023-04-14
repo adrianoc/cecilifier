@@ -23,7 +23,7 @@ internal static class TypesExtensions
             PredefinedTypeSyntax predefinedTypeSyntax => predefinedTypeSyntax.Keyword.Text,
             RefTypeSyntax refTypeSyntax => NameFrom(refTypeSyntax.Type),
             TupleTypeSyntax tupleTypeSyntax => tupleTypeSyntax.ToString(),
-            
+
             NameSyntax nameSyntax => throw new InvalidOperationException($"Unexpected name syntax: {nameSyntax}"),
         };
     }

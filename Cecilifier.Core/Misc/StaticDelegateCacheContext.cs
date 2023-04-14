@@ -15,8 +15,8 @@ public struct StaticDelegateCacheContext
     public bool IsStaticDelegate { get; init; }
 
     private string DeclaringTypeName => Method.ContainingType.Name;
-    private string DeclaringTypeNamespace => Method.ContainingType.ContainingNamespace?.FullyQualifiedName() ?? Method.ContainingNamespace?.FullyQualifiedName() ?? string.Empty; 
-        
+    private string DeclaringTypeNamespace => Method.ContainingType.ContainingNamespace?.FullyQualifiedName() ?? Method.ContainingNamespace?.FullyQualifiedName() ?? string.Empty;
+
     /// <summary>
     /// Ensures that there's a static field declared inside an inner type of the current type being processed
     /// used to cache 'static method -> delegate' conversion.
@@ -30,15 +30,15 @@ public struct StaticDelegateCacheContext
     /// </remarks>
     /// <param name="delegateType"></param>
     /// <returns>name of the declared variable that holds the static field definition.</returns>
-        
+
     public string EnsureCacheBackingFieldIsEmitted(string delegateType)
     {
         if (Method == null)
             throw new InvalidOperationException($"Unless 'IsStaticDelegate' is set to false {GetType().Name} needs to be fully initialized.");
-            
+
         if (CacheBackingField != null)
             return CacheBackingField;
-            
+
         var cacheTypeName = "<>O";
         var cacheInnerTypeName = $"{DeclaringTypeName}.{cacheTypeName}";
         var cacheTypeVar = context.DefinitionVariables.GetVariable(cacheTypeName, VariableMemberKind.Type, DeclaringTypeName);
@@ -48,7 +48,7 @@ public struct StaticDelegateCacheContext
         }
 
         const string counterName = "StaticMethodToDelegateConversionBackingFieldCount";
-        var staticMethodToDelegateConversionCount = cacheTypeVar.Properties.TryGetValue(counterName, out var boxedCounter) ? (int)boxedCounter : 0;
+        var staticMethodToDelegateConversionCount = cacheTypeVar.Properties.TryGetValue(counterName, out var boxedCounter) ? (int) boxedCounter : 0;
         var existingVarIndex = -1;
         string backingFieldName;
 
@@ -73,7 +73,7 @@ public struct StaticDelegateCacheContext
             context.WriteCecilExpression(exp);
             context.WriteNewLine();
         }
-            
+
         return CacheBackingField;
     }
 
@@ -96,7 +96,7 @@ public struct StaticDelegateCacheContext
             context.WriteCecilExpression(exp);
             context.WriteNewLine();
         }
-            
+
         return context.DefinitionVariables.RegisterNonMethod(DeclaringTypeName, cacheTypeName, VariableMemberKind.Type, cachedTypeVar);
     }
 }

@@ -17,7 +17,7 @@ namespace Cecilifier.Core.Naming
             [ElementKind.Interface] = "itf",
             [ElementKind.Enum] = "enum",
             [ElementKind.Delegate] = "del",
-            [ElementKind.Method] = "m", 
+            [ElementKind.Method] = "m",
             [ElementKind.Property] = "prop",
             [ElementKind.Field] = "fld",
             [ElementKind.Event] = "evt",
@@ -75,23 +75,23 @@ namespace Cecilifier.Core.Naming
         public NamingOptions Options { get; set; } = NamingOptions.All;
 
         private string PrefixFor(ElementKind kind) => (Options & NamingOptions.PrefixVariableNamesWithElementKind) == NamingOptions.PrefixVariableNamesWithElementKind ? $"{_format[kind]}" : string.Empty;
-        private string UniqueIdString() => (Options & NamingOptions.SuffixVariableNamesWithUniqueId) == NamingOptions.SuffixVariableNamesWithUniqueId ? $"{PartsSeparator}{UniqueId()}": string.Empty;
+        private string UniqueIdString() => (Options & NamingOptions.SuffixVariableNamesWithUniqueId) == NamingOptions.SuffixVariableNamesWithUniqueId ? $"{PartsSeparator}{UniqueId()}" : string.Empty;
         private string NameFor(ISymbol member) => NameFor(member.Name);
         private string NameFor(MemberDeclarationSyntax node) => NameFor(node.Name());
         private string NameFor(string name)
         {
             if ((Options & NamingOptions.AppendElementNameToVariables) != NamingOptions.AppendElementNameToVariables)
                 return string.Empty;
-            
+
             var casingAdjustedName = (Options & NamingOptions.CamelCaseElementNames) == NamingOptions.CamelCaseElementNames ? name.CamelCase() : name;
             return $"{PartsSeparator}{casingAdjustedName}";
         }
-        
+
         private string ILOpcodeFor(string opCodeName)
         {
             if ((Options & NamingOptions.PrefixInstructionsWithILOpCodeName) != NamingOptions.PrefixInstructionsWithILOpCodeName)
                 return "inst";
-             
+
             return (Options & NamingOptions.CamelCaseElementNames) == NamingOptions.CamelCaseElementNames ? opCodeName.CamelCase() : opCodeName;
         }
 

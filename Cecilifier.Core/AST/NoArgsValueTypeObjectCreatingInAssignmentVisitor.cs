@@ -1,3 +1,4 @@
+using System;
 using Cecilifier.Core.Extensions;
 using Microsoft.CodeAnalysis;
 using Cecilifier.Core.Variables;
@@ -9,29 +10,45 @@ namespace Cecilifier.Core.AST
     internal class NoArgsValueTypeObjectCreatingInAssignmentVisitor : SyntaxWalkerBase
     {
         private readonly string ilVar;
+        private readonly string resolvedInstantiatedType;
+        private readonly Action tempValueTypeDeclarer;
 
-        internal NoArgsValueTypeObjectCreatingInAssignmentVisitor(IVisitorContext ctx, string ilVar) : base(ctx)
+        internal NoArgsValueTypeObjectCreatingInAssignmentVisitor(IVisitorContext ctx, string ilVar, string resolvedInstantiatedType, Action tempValueTypeDeclarer) : base(ctx)
         {
             this.ilVar = ilVar;
+            this.resolvedInstantiatedType = resolvedInstantiatedType;
+            this.tempValueTypeDeclarer = tempValueTypeDeclarer;
         }
+
+        public bool TargetOfAssignmentIsValueType { get; private set; } = true;
 
         public override void VisitElementAccessExpression(ElementAccessExpressionSyntax node)
         {
             ExpressionVisitor.Visit(Context, ilVar, node);
-            
+
             //ExpressionVisitor assumes the visited expression is to be handled as a 'load'
-            //whence it will emit a Ldelem_ref as after visiting `node` but...
+            //whence it will emit a Ldelem_ref after visiting `node` but...
             var ldelemToReplace = Context.CurrentLine;
             ldelemToReplace.List.Remove(ldelemToReplace);
-            
+
             //...since we have an `assignment` to an array element which is of type
             //struct, we need to load the element address instead. 
             Context.EmitCilInstruction(ilVar, OpCodes.Ldelema);
+            Context.EmitCilInstruction(ilVar, OpCodes.Initobj, resolvedInstantiatedType);
         }
 
         public override void VisitIdentifierName(IdentifierNameSyntax node)
         {
             var info = Context.SemanticModel.GetSymbolInfo(node);
+            if (!info.Symbol.GetMemberType().IsValueType)
+            {
+                // if the target of the assignment is not a value type, it is either an interface or `System.Object`
+                // in both cases we need to introduce a local variable which will be boxed later.
+                tempValueTypeDeclarer();
+                TargetOfAssignmentIsValueType = false;
+                return;
+            }
+            
             switch (info.Symbol.Kind)
             {
                 case SymbolKind.Local:
@@ -63,11 +80,12 @@ namespace Cecilifier.Core.AST
                         // pushed the right value to the stack
                         break;
                     }
-                    
+
                     var opCode = parameterSymbol.RefKind == RefKind.None ? OpCodes.Ldarga : OpCodes.Ldarg;
                     Context.EmitCilInstruction(ilVar, opCode, parameterSymbol.Ordinal); // TODO: Static / Instance methods handling...
                     break;
             }
+            Context.EmitCilInstruction(ilVar, OpCodes.Initobj, resolvedInstantiatedType);
         }
     }
 }

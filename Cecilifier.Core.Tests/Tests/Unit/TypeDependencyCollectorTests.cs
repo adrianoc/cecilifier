@@ -13,21 +13,21 @@ public class TypeDependencyCollectorTests
     {
         var comp = CompilationFor("class Foo : Bar { } class Bar {}");
         var collector = new TypeDependencyCollector(comp);
-        
+
         Assert.That(collector.Unordered.ToString(), Is.EqualTo("Foo,Bar"));
         Assert.That(collector.Ordered.ToString(), Is.EqualTo("Bar,Foo"));
     }
-    
+
     [Test]
     public void Two_SyntaxTree()
     {
         var comp = CompilationFor("class Foo : Bar { }", "class Bar {}");
         var collector = new TypeDependencyCollector(comp);
-        
+
         Assert.That(collector.Unordered.ToString(), Is.EqualTo("Foo,Bar"));
         Assert.That(collector.Ordered.ToString(), Is.EqualTo("Bar,Foo"));
     }
-    
+
     [TestCase("class A : B {} class B {}", "B,A", TestName = "As base type")]
     [TestCase("class A { B b; } class B {}", "B,A", TestName = "As field")]
     [TestCase("class A { B b { get; set; } } class B {}", "B,A", TestName = "As property")]
@@ -53,31 +53,31 @@ public class TypeDependencyCollectorTests
         var collector = new TypeDependencyCollector(comp);
         Assert.That(collector.Ordered.ToString(), Is.EqualTo(expected));
     }
-    
+
     [TestCase("class A:B {} class B {}", "B,A", TestName = "Direct dependency")]
     [TestCase("class A:B {} class B:C {} class C {}", "C,B,A", TestName = "Three level direct dependency")]
     [TestCase("class A:B {} class B {} class C:B {}", "B,A,C", TestName = "Common dependency")]
     [TestCase("class A:B {} class B { A a; }", "A,B", TestName = "Cyclic dependency")]
-    [TestCase("class A:B {} class B:C {} class C:A {}", "C,B,A", TestName = "Three level cyclic dependency")] 
+    [TestCase("class A:B {} class B:C {} class C:A {}", "C,B,A", TestName = "Three level cyclic dependency")]
     [TestCase("class A { } class B {}", "A,B", TestName = "No dependency")]
     public void References_Levels(string code, string expected)
     {
         var comp = CompilationFor(code);
         var collector = new TypeDependencyCollector(comp);
-        
+
         Assert.That(collector.Ordered.ToString(), Is.EqualTo(expected));
     }
-    
+
     [TestCase("class A { NS.B b; } namespace NS { class B {} }", "B,A", TestName = "Qualified namespace")]
     [TestCase("using NS; class A { B b; } namespace NS { class B {} }", "B,A", TestName = "Unqualified namespace")]
     public void TypeSyntax_Types(string code, string expected)
     {
         var comp = CompilationFor(code);
         var collector = new TypeDependencyCollector(comp);
-        
+
         Assert.That(collector.Ordered.ToString(), Is.EqualTo(expected));
     }
-    
+
     [TestCase("class A : B  {} class B {}", "B,A", TestName = "Class")]
     [TestCase("class A { B b; } struct B {}", "B,A", TestName = "Struct")]
     [TestCase("class A { IFoo foo; } interface IFoo {}", "IFoo,A", TestName = "Interfaces")]
@@ -86,7 +86,7 @@ public class TypeDependencyCollectorTests
     {
         var comp = CompilationFor(code);
         var collector = new TypeDependencyCollector(comp);
-        
+
         Assert.That(collector.Ordered.ToString(), Is.EqualTo(expected));
     }
 
@@ -97,20 +97,20 @@ public class TypeDependencyCollectorTests
     {
         var comp = CompilationFor(code);
         var collector = new TypeDependencyCollector(comp);
-        
+
         Assert.That(collector.Ordered.ToString(), Is.EqualTo(expectedOrder));
     }
-    
+
     [TestCase("class A { public void M(B b) => b.M(); } class B { public void M(A a) => a.M(); }", "A,B")]
     [TestCase("class A : B { } class B : C { } class C { A a; }", "C,B,A")]
     public void CircularDependency(string code, string expectedOrder)
     {
         var comp = CompilationFor(code);
         var collector = new TypeDependencyCollector(comp);
-        
+
         Assert.That(collector.Ordered.ToString(), Is.EqualTo(expectedOrder));
     }
-    
+
     [TestCase("class A : B,C {} class B : C {} class C {}", "C,B,A")]
     [TestCase("class A : B,C {} class B {} class C {}", "B,C,A")]
     [TestCase("class A : C,B {} class B {} class C {}", "B,C,A")]
@@ -119,21 +119,21 @@ public class TypeDependencyCollectorTests
     {
         var comp = CompilationFor(code);
         var collector = new TypeDependencyCollector(comp);
-        
+
         Assert.That(collector.Ordered.ToString(), Is.EqualTo(expectedOrder));
     }
 
     [TestCase("class A:B { B b1; B b2; } class B { A a; }", "B,A")]
-    [TestCase("class A:B { B b1; void M(B b) { } } class B { A a; }", "B,A", TestName =  "In Parameters")]
-    [TestCase("class A:B { B b1; B M() => this; } class B { A a; }", "B,A", TestName =  "In Return")]
+    [TestCase("class A:B { B b1; void M(B b) { } } class B { A a; }", "B,A", TestName = "In Parameters")]
+    [TestCase("class A:B { B b1; B M() => this; } class B { A a; }", "B,A", TestName = "In Return")]
     public void NumberOfMemberReference_IsTakenIntoAccount_UponDependencyCycles(string code, string expectedOrder)
     {
         var comp = CompilationFor(code);
         var collector = new TypeDependencyCollector(comp);
-        
+
         Assert.That(collector.Ordered.ToString(), Is.EqualTo(expectedOrder));
     }
-    
+
     static CSharpCompilation CompilationFor(params string[] code)
     {
         var syntaxTrees = code.Select(source => CSharpSyntaxTree.ParseText(source));

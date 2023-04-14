@@ -11,25 +11,25 @@ public class MemberAccessTests : CecilifierUnitTestBase
     {
         var result = RunCecilifier($@"class Foo {{ int value; void Bar(ref Foo p)  {{ ref Foo lr = ref p; {target}.value = 42; }} }}");
         Assert.That(
-            result.GeneratedCode.ReadToEnd(), 
+            result.GeneratedCode.ReadToEnd(),
             Does.Match(
                 @"(?<il>il_bar_\d+\.Emit\(OpCodes.)(?:Ldarg_1|Ldloc,.+)\);\s+" +
-			        @"\k<il>Ldind_Ref\);\s+" +
+                    @"\k<il>Ldind_Ref\);\s+" +
                     @"\k<il>Ldc_I4, 42\);\s+" +
-		            @"\k<il>Stfld, fld_value_1\);"));
+                    @"\k<il>Stfld, fld_value_1\);"));
     }
-    
+
     [TestCase("p", TestName = "Parameter")]
     [TestCase("lr", TestName = "Local")]
     public void TestRefTarget_Struct(string target)
     {
         var result = RunCecilifier($@"struct Foo {{ int value; void Bar(ref Foo p)  {{ ref Foo lr = ref p; {target}.value = 42; }} }}");
         Assert.That(
-            result.GeneratedCode.ReadToEnd(), 
+            result.GeneratedCode.ReadToEnd(),
             Does.Match(
                 @"(?<il>il_bar_\d+\.Emit\(OpCodes.)(?:Ldarg_1|Ldloc,.+)\);\s+" +
                     @"\k<il>Ldc_I4, 42\);\s+" +
-		            @"\k<il>Stfld, fld_value_1\);"));
+                    @"\k<il>Stfld, fld_value_1\);"));
     }
 
     [TestCase("string C<T>(T t) where T : struct => t.ToString();", "Ldarga, p_t_8", "Constrained, gp_T_6", TestName = "ParameterConstrainedToStruct")]
@@ -39,7 +39,7 @@ public class MemberAccessTests : CecilifierUnitTestBase
     [TestCase("string C<T>(T t) where T : class => t.ToString();", "Ldarg_1", "Box, gp_T_6", TestName = "ParameterConstrainedToReferenceType")]
     [TestCase("string C<T>(T t) where T : Foo => t.ToString();", "Ldarg_1", "Box, gp_T_6", TestName = "ParameterConstrainedToClassCallToString")]
     [TestCase("void C<T>(T t) where T : Foo => t.M();", "Ldarg_1", "Box, gp_T_6", TestName = "ParameterConstrainedToClassCallClassMethod")]
-    
+
     [TestCase("string C<T>(T t) where T : struct { var l = t; return l.ToString(); }", "Ldloca, l_l_9", "Constrained, gp_T_6", TestName = "LocalConstrainedToStruct")]
     [TestCase("string C<T>(T t) where T : IFoo { var l = t; return l.Get(); }", "Ldloca, l_l_9", "Constrained, gp_T_6", TestName = "LocalConstrainedToInterfaceCallInterfaceMethod")]
     [TestCase("string C<T>(T t) where T : IFoo { var l = t; return l.ToString(); }", "Ldloca, l_l_9", "Constrained, gp_T_6", TestName = "LocalConstrainedToInterfaceCallToString")]
@@ -55,7 +55,7 @@ public class MemberAccessTests : CecilifierUnitTestBase
     [TestCase("int C<T>(T t) where T : Foo  { var l = t; return l.Property; }", "Ldloc, l_l_9", "Box, gp_T_6", TestName = "LocalConstrainedToClassProperty")]
     public void TestCallOn_TypeParameter_CallOnParametersAndLocals(string snippet, params string[] expectedExpressions)
     {
-        var code =$@"interface IFoo {{ string Get(); int Property {{ get; }} }}
+        var code = $@"interface IFoo {{ string Get(); int Property {{ get; }} }}
 class Foo
 {{
     {snippet}
@@ -67,11 +67,11 @@ class Foo
 ";
         var result = RunCecilifier(code);
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
-        foreach(var expectedExpression in expectedExpressions)
+        foreach (var expectedExpression in expectedExpressions)
             Assert.That(cecilifiedCode, Contains.Substring(expectedExpression));
     }
-    
-    [TestCase("where T : struct", "string ConstrainedToStruct() => field.ToString();",  "Ldflda, fld_field_6", "Constrained, gp_T_3")]
+
+    [TestCase("where T : struct", "string ConstrainedToStruct() => field.ToString();", "Ldflda, fld_field_6", "Constrained, gp_T_3")]
     [TestCase("where T : IFoo", "string ConstrainedToInterfaceCallInterfaceMethod() => field.Get();", "Ldflda, fld_field_6", "Constrained, gp_T_3")]
     [TestCase("where T : IFoo", "string ConstrainedToInterfaceCallToString() => field.ToString();", "Ldflda, fld_field_6", "Constrained, gp_T_3")]
     [TestCase("", "string Unconstrained() => field.ToString();", "Ldflda, fld_field_6", "Constrained, gp_T_3")]
@@ -80,7 +80,7 @@ class Foo
     [TestCase("where T: Bar", "void ConstrainedToClassCallClassMethod() => field.M();", "Ldfld, fld_field_11", "Box, gp_T_8")]
     public void TestCallOn_TypeParameter_CallOnField(string constraint, string snippet, params string[] expectedExpressions)
     {
-        var code =$@"interface IFoo {{ string Get(); }}
+        var code = $@"interface IFoo {{ string Get(); }}
 class Foo<T> {constraint}
 {{
     {snippet}
@@ -91,7 +91,7 @@ class Bar {{ public void M() {{ }} }}
 ";
         var result = RunCecilifier(code);
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
-        foreach(var expectedExpression in expectedExpressions)
+        foreach (var expectedExpression in expectedExpressions)
             Assert.That(cecilifiedCode, Contains.Substring(expectedExpression));
     }
 
@@ -104,7 +104,7 @@ class Bar {{ public void M() {{ }} }}
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
         Assert.That(cecilifiedCode, Does.Not.Match(
             @"(il_M_\d+\.Emit\(OpCodes\.)Ldarg_0\);\s+" +
-			$@"\1Call, {expectedMethodCall}\);\s+"), 
+            $@"\1Call, {expectedMethodCall}\);\s+"),
             "ldarg.0 is not expected");
     }
 }

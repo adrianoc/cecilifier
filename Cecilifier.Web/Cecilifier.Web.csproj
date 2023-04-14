@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net7.0</TargetFramework>
     <LangVersion>11</LangVersion>
-    <AssemblyVersion>1.90.0</AssemblyVersion>
+    <AssemblyVersion>2.00.0</AssemblyVersion>
   </PropertyGroup>
 
   <ItemGroup>

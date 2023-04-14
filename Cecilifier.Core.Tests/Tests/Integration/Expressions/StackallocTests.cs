@@ -1,11 +1,11 @@
+using Cecilifier.Core.Tests.Framework;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration;
 
 [TestFixture]
-public class StackallocTests : IntegrationResourceBasedTest
+public class StackallocTests : ResourceTestBase
 {
-    
     [TestCase("simplest", TestName = "Simplest")]
     [TestCase("WithSpan", TestName = "WithSpan")]
     [TestCase("WithSpanAsParameter", true, TestName = "WithSpanAsParameter")]
@@ -13,9 +13,15 @@ public class StackallocTests : IntegrationResourceBasedTest
     [TestCase("CustomValueType", TestName = "CustomValueType")]
     public void TestStackalloc(string testFile, bool hasExplicitExpectations = false)
     {
+        var options = new ResourceTestOptions()
+        {
+            ResourceName = $"Expressions/Stackalloc/{testFile}",
+            IgnoredILErrors = "Unverifiable|UnmanagedPointer|StackByRef" //https://github.com/adrianoc/cecilifier/issues/227
+        };
+        
         if (hasExplicitExpectations)
-            AssertResourceTestWithExplicitExpectation($"Expressions/Stackalloc/{testFile}", $"System.Void {testFile}::M()");
+            AssertResourceTestWithExplicitExpectation(options, $"System.Void {testFile}::M()");
         else
-            AssertResourceTest($"Expressions/Stackalloc/{testFile}");
+            AssertResourceTest(options);
     }
 }

@@ -31,7 +31,7 @@ namespace Cecilifier.Core.AST
             using var _ = LineInformationTracker.Track(Context, node);
             Context.WriteNewLine();
             Context.WriteComment(node.HumanReadableSummary());
-            
+
             base.Visit(node);
         }
 
@@ -48,11 +48,11 @@ namespace Cecilifier.Core.AST
             WriteCecilExpression(Context, $"var {forEndLabel} = {_ilVar}.Create(OpCodes.Nop);");
 
             var forConditionLabel = AddCilInstructionWithLocalVariable(_ilVar, OpCodes.Nop);
-            
+
             // Condition
             ExpressionVisitor.Visit(Context, _ilVar, node.Condition);
             Context.EmitCilInstruction(_ilVar, OpCodes.Brfalse, forEndLabel);
-            
+
             // Body
             node.Statement.Accept(this);
 
@@ -61,23 +61,23 @@ namespace Cecilifier.Core.AST
             {
                 ExpressionVisitor.VisitAndPopIfNotConsumed(Context, _ilVar, incrementExpression);
             }
-            
+
             Context.EmitCilInstruction(_ilVar, OpCodes.Br, forConditionLabel);
             WriteCecilExpression(Context, $"{_ilVar}.Append({forEndLabel});");
         }
-    
+
         public override void VisitSwitchStatement(SwitchStatementSyntax node)
         {
             var switchExpressionType = ResolveExpressionType(node.Expression);
-            var evaluatedExpressionVariable = AddLocalVariableToCurrentMethod("switchCondition", switchExpressionType);
+            var evaluatedExpressionVariable = AddLocalVariableToCurrentMethod("switchCondition", switchExpressionType).VariableName;
 
             ExpressionVisitor.Visit(Context, _ilVar, node.Expression);
             Context.EmitCilInstruction(_ilVar, OpCodes.Stloc, evaluatedExpressionVariable); // stores evaluated expression in local var
-            
+
             // Add label to end of switch
             var endOfSwitchLabel = CreateCilInstruction(_ilVar, OpCodes.Nop);
             breakToInstructionVars.Push(endOfSwitchLabel);
-            
+
             // Write the switch conditions.
             var nextTestLabels = node.Sections.Select(_ => CreateCilInstruction(_ilVar, OpCodes.Nop)).ToArray();
             var currentLabelIndex = 0;
@@ -86,10 +86,10 @@ namespace Cecilifier.Core.AST
                 if (switchSection.Labels.First().Kind() == SyntaxKind.DefaultSwitchLabel)
                 {
                     string operand = nextTestLabels[currentLabelIndex];
-                    Context.EmitCilInstruction(_ilVar, OpCodes.Br, operand);   
+                    Context.EmitCilInstruction(_ilVar, OpCodes.Br, operand);
                     continue;
                 }
-                
+
                 foreach (var sectionLabel in switchSection.Labels)
                 {
                     Context.WriteComment($"{sectionLabel.ToString()} (condition)");
@@ -105,7 +105,7 @@ namespace Cecilifier.Core.AST
             // if at runtime the code hits this point it means none of the labels matched.
             // so, just jump to the end of the switch.
             Context.EmitCilInstruction(_ilVar, OpCodes.Br, endOfSwitchLabel);
-            
+
             // Write the statements for each switch section...
             currentLabelIndex = 0;
             foreach (var switchSection in node.Sections)
@@ -119,7 +119,7 @@ namespace Cecilifier.Core.AST
                 Context.WriteNewLine();
                 currentLabelIndex++;
             }
-            
+
             Context.WriteComment("End of switch");
             AddCecilExpression($"{_ilVar}.Append({endOfSwitchLabel});");
 
@@ -140,15 +140,16 @@ namespace Cecilifier.Core.AST
         {
             using (Context.WithFlag(Constants.ContextFlags.Fixed))
             {
-                var declaredType = Context.GetTypeInfo((PointerTypeSyntax)node.Declaration.Type).Type;
+                var declaredType = Context.GetTypeInfo((PointerTypeSyntax) node.Declaration.Type).Type;
                 var pointerType = (IPointerTypeSymbol) declaredType.EnsureNotNull();
 
                 var currentMethodVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
                 var localVar = node.Declaration.Variables[0];
-                AddLocalVariableWithResolvedType(localVar.Identifier.Text, currentMethodVar, Context.TypeResolver.Resolve(pointerType.PointedAtType).MakeByReferenceType());
+                string resolvedVarType = Context.TypeResolver.Resolve(pointerType.PointedAtType).MakeByReferenceType();
+                string temp = AddLocalVariableWithResolvedType(localVar.Identifier.Text, currentMethodVar, resolvedVarType).VariableName;
                 ProcessVariableInitialization(localVar, declaredType);
             }
-            
+
             Visit(node.Statement);
         }
 
@@ -176,10 +177,10 @@ namespace Cecilifier.Core.AST
         public override void VisitTryStatement(TryStatementSyntax node)
         {
 
-            var finallyBlockHandler = node.Finally == null ? 
+            var finallyBlockHandler = node.Finally == null ?
                                 (Action<string>) null :
                                 (inst) => node.Finally.Accept(this);
-            
+
             ProcessTryCatchFinallyBlock(node.Block, node.Catches.ToArray(), finallyBlockHandler);
         }
 
@@ -191,11 +192,11 @@ namespace Cecilifier.Core.AST
         public override void VisitUsingStatement(UsingStatementSyntax node)
         {
             //https://github.com/dotnet/csharpstandard/blob/draft-v7/standard/statements.md#1214-the-using-statement
-            
+
             ExpressionVisitor.Visit(Context, _ilVar, node.Expression);
             var localVarDef = string.Empty;
 
-            ITypeSymbol usingType; 
+            ITypeSymbol usingType;
             if (node.Declaration != null)
             {
                 usingType = (ITypeSymbol) Context.SemanticModel.GetSymbolInfo(node.Declaration.Type).Symbol;
@@ -207,10 +208,10 @@ namespace Cecilifier.Core.AST
                 usingType = Context.SemanticModel.GetTypeInfo(node.Expression).Type;
                 var resolvedVarType = Context.TypeResolver.Resolve(usingType);
                 var methodVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
-                localVarDef = AddLocalVariableWithResolvedType("tempDisp", methodVar, resolvedVarType);
+                localVarDef = AddLocalVariableWithResolvedType("tempDisp", methodVar, resolvedVarType).VariableName;
                 Context.EmitCilInstruction(_ilVar, OpCodes.Stloc, localVarDef);
             }
-            
+
             void FinallyBlockHandler(string finallyEndVar)
             {
                 string? lastFinallyInstructionLabel = null;
@@ -222,7 +223,7 @@ namespace Cecilifier.Core.AST
                 else
                 {
                     lastFinallyInstructionLabel = Context.Naming.SyntheticVariable("endFinally", ElementKind.Label);
-                    
+
                     Context.EmitCilInstruction(_ilVar, OpCodes.Ldloc, localVarDef);
                     CreateCilInstruction(_ilVar, lastFinallyInstructionLabel, OpCodes.Nop);
                     Context.EmitCilInstruction(_ilVar, OpCodes.Brfalse, lastFinallyInstructionLabel, "check if the disposable is not null");
@@ -247,7 +248,7 @@ namespace Cecilifier.Core.AST
         public override void VisitDoStatement(DoStatementSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitGotoStatement(GotoStatementSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitYieldStatement(YieldStatementSyntax node) { LogUnsupportedSyntax(node); }
-        
+
         private void ProcessTryCatchFinallyBlock(CSharpSyntaxNode tryStatement, CatchClauseSyntax[] catches, Action<string> finallyBlockHandler)
         {
             var exceptionHandlerTable = new ExceptionHandlerEntry[catches.Length + (finallyBlockHandler != null ? 1 : 0)];
@@ -266,14 +267,14 @@ namespace Cecilifier.Core.AST
             {
                 HandleCatchClause(catches[i], exceptionHandlerTable, i, firstInstructionAfterTryCatchBlock);
             }
-            
+
             HandleFinallyClause(finallyBlockHandler, exceptionHandlerTable);
 
             AddCecilExpression($"{_ilVar}.Append({firstInstructionAfterTryCatchBlock});");
 
             WriteExceptionHandlers(exceptionHandlerTable);
         }
-        
+
         private void WriteExceptionHandlers(ExceptionHandlerEntry[] exceptionHandlerTable)
         {
             string methodVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
@@ -317,7 +318,7 @@ namespace Cecilifier.Core.AST
             Context.EmitCilInstruction(_ilVar, OpCodes.Leave, firstInstructionAfterTryCatchBlock);
         }
 
-        private void HandleFinallyClause(Action<string> finallyBlockHandler,ExceptionHandlerEntry[] exceptionHandlerTable)
+        private void HandleFinallyClause(Action<string> finallyBlockHandler, ExceptionHandlerEntry[] exceptionHandlerTable)
         {
             if (finallyBlockHandler == null)
             {
@@ -333,7 +334,7 @@ namespace Cecilifier.Core.AST
             var finallyStartVar = AddCilInstructionWithLocalVariable(_ilVar, OpCodes.Nop);
             exceptionHandlerTable[finallyEntryIndex].HandlerStart = finallyStartVar;
             exceptionHandlerTable[finallyEntryIndex].TryEnd = finallyStartVar;
-            
+
             if (finallyEntryIndex != 0)
             {
                 // We have one or more catch blocks... set the end of the last catch block as the first instruction of the *finally*
@@ -349,15 +350,15 @@ namespace Cecilifier.Core.AST
             var resolvedVarType = type.IsVar
                 ? ResolveExpressionType(localVar.Initializer?.Value)
                 : ResolveType(type);
-            
-            AddLocalVariableWithResolvedType(localVar.Identifier.Text, methodVar, resolvedVarType);
+
+            string temp = AddLocalVariableWithResolvedType(localVar.Identifier.Text, methodVar, resolvedVarType).VariableName;
         }
 
         private void ProcessVariableInitialization(VariableDeclaratorSyntax localVar, ITypeSymbol variableType)
         {
             if (localVar.Initializer == null)
                 return;
-            
+
             var localVarDef = Context.DefinitionVariables.GetVariable(localVar.Identifier.ValueText, VariableMemberKind.LocalVariable);
 
             // if code is something like `Index field = ^5`; 
@@ -383,7 +384,7 @@ namespace Cecilifier.Core.AST
                 OpCode opCode = LoadIndirectOpCodeFor(variableType.SpecialType);
                 Context.EmitCilInstruction(_ilVar, opCode);
             }
-            
+
             Context.EmitCilInstruction(_ilVar, OpCodes.Stloc, localVarDef.VariableName);
         }
 
@@ -407,7 +408,7 @@ namespace Cecilifier.Core.AST
             public string HandlerStart;
             public string HandlerEnd;
         }
-        
+
         // Stack with name of variables that holds instructions that a *break statement* 
         // will jump to. Each statement that supports *breaking* must push the instruction
         // target of the break and pop it back when it gets out of scope.

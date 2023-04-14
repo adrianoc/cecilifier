@@ -8,7 +8,7 @@ namespace Cecilifier.Web
         [JsonPropertyName("base64Contents")] public string Base64Contents { get; set; }
         [JsonPropertyName("assemblyHash")] public string AssemblyHash { get; set; }
     }
-    
+
     public class CecilifierRequest
     {
         [JsonPropertyName("options")] public WebOptions WebOptions { get; set; }

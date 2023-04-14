@@ -20,7 +20,7 @@ public class TypeDependencyCollector
     {
         var sortedDependency = new List<BaseTypeDeclarationSyntax>(dependencies.Keys);
         sortedDependency.Sort(new DependencyComparer(dependencies, usings));
-        
+
         return new DependencyOrder(sortedDependency);
     }
 

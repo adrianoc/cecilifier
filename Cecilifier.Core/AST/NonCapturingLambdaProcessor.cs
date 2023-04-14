@@ -18,7 +18,7 @@ namespace Cecilifier.Core.AST
             var lambdas = node.DescendantNodesAndSelf().OfType<LambdaExpressionSyntax>();
             foreach (var lambda in lambdas)
             {
-                var captures = CapturesFrom(context, lambda); 
+                var captures = CapturesFrom(context, lambda);
                 if (captures.Any())
                 {
                     context.WriteComment($"Lambdas that captures context are not supported. Lambda expression '{lambda}' captures {string.Join(",", captures)}");
@@ -30,7 +30,7 @@ namespace Cecilifier.Core.AST
                     context.WriteComment("Lambda to delegates conversion is only supported for Func<> and Action<>");
                     continue;
                 }
-            
+
                 InjectSyntheticMethodsFor(context, declaringTypeVarName, lambda);
             }
         }
@@ -38,7 +38,7 @@ namespace Cecilifier.Core.AST
         private static bool IsValidConversion(IVisitorContext context, LambdaExpressionSyntax lambda)
         {
             var typeInfo = context.GetTypeInfo(lambda);
-            if (typeInfo.ConvertedType is not INamedTypeSymbol {IsGenericType : true} namedType)
+            if (typeInfo.ConvertedType is not INamedTypeSymbol { IsGenericType: true } namedType)
                 return false;
 
             return namedType.Name.StartsWith("Func") || namedType.Name.StartsWith("Action");
@@ -66,7 +66,7 @@ namespace Cecilifier.Core.AST
         private static void InjectSyntheticMethodsFor(IVisitorContext context, string declaringTypeVarName, LambdaExpressionSyntax lambda)
         {
             using var _ = LineInformationTracker.Track(context, lambda);
-            
+
             var returnType = ModelExtensions.GetTypeInfo(context.SemanticModel, lambda).ConvertedType;
             if (returnType is INamedTypeSymbol { IsGenericType: true } namedTypeSymbol)
             {
@@ -91,7 +91,7 @@ namespace Cecilifier.Core.AST
             // We only support non-capturing lambda expressions so we handle those as static (even if the code does not mark them explicitly as such)
             // if/when we decide to support lambdas that captures variables/fields/params/etc we will probably need to revisit this.
             var methodExps = CecilDefinitionsFactory.Method(context, methodVar, syntheticMethodName, "MethodAttributes.Public | MethodAttributes.Static", returnType, false, Array.Empty<TypeParameterSyntax>());
-        
+
             context.WriteNewLine();
             context.WriteComment($"Synthetic method for lambda expression: {lambda.HumanReadableSummary()}  @ ({lambda.GetLocation().GetLineSpan().StartLinePosition.Line}, {lambda.GetLocation().GetLineSpan().StartLinePosition.Character})");
             foreach (var exp in methodExps)
@@ -108,15 +108,15 @@ namespace Cecilifier.Core.AST
                 context.WriteComment($"Parameter: {parameter}");
                 var resolvedParamType = context.TypeResolver.Resolve(namedTypeSymbol.TypeArguments[i++]);
                 var paramExps = CecilDefinitionsFactory.Parameter(
-                    parameter.Identifier.Text, 
-                    RefKind.None, 
-                    isParams: false, 
-                    methodVar, 
+                    parameter.Identifier.Text,
+                    RefKind.None,
+                    isParams: false,
+                    methodVar,
                     context.Naming.SyntheticVariable(parameter.Identifier.Text, ElementKind.Parameter),
                     resolvedParamType,
                     parameter.Default != null ? Constants.ParameterAttributes.Optional : Constants.ParameterAttributes.None,
                     parameter.Accept(DefaultParameterExtractorVisitor.Instance));
-                
+
                 foreach (var paramExp in paramExps)
                 {
                     context.WriteCecilExpression(paramExp);
@@ -143,9 +143,9 @@ namespace Cecilifier.Core.AST
                 {
                     ExpressionVisitor.Visit(context, syntheticIlVar, lambda.Body);
                     context.EmitCilInstruction(syntheticIlVar, OpCodes.Ret);
-                }    
+                }
             }
-            
+
             context.WriteNewLine();
             context.WriteCecilExpression($"{declaringTypeVarName}.Methods.Add({methodVar});");
         }

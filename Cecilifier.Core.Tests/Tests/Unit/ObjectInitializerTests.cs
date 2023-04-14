@@ -14,18 +14,18 @@ public class ObjectInitializerTests : CecilifierUnitTestBase
 
         var expected = @"(il_M_\d+\.Emit\(OpCodes\.)Newobj, ctor_foo_3\);\s+" +
             @"var (dup_\d+) = il_M_\d+.Create\(OpCodes.Dup\);\s+" +
-            @"il_M_\d+.Append\(\2\);\s+" + 
+            @"il_M_\d+.Append\(\2\);\s+" +
             @"\1Ldc_I4, 42\);\s+" +
             @"\1Stfld, fld_value_\d+\);\s+" +
             @"var (dup_\d+) = il_M_\d+.Create\(OpCodes.Dup\);\s+" +
-            @"il_M_\d+.Append\(\3\);\s+" + 
+            @"il_M_\d+.Append\(\3\);\s+" +
             @"\1Ldc_I4, 1\);\s+" +
             @"\1Stfld, fld_B_\d+\);\s+" +
             @"\1Stloc, l_x_\d+\);";
-        
+
         Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(expected));
     }
-    
+
     [Test]
     public void DictionaryInitializer()
     {
@@ -35,9 +35,9 @@ public class ObjectInitializerTests : CecilifierUnitTestBase
                     };";
 
         var result = RunCecilifier(code);
-        
+
         var expected = @"m_topLevelStatements_1.Body.Variables.Add\((l_x_\d+)\);\s+" +
-		                    @"(il_topLevelMain_\d+\.Emit\(OpCodes\.)Newobj,.+typeof\(System\.Collections\.Generic\.Dictionary<System.Int32, System.Int32>\).+\)\);\s+" +
+                            @"(il_topLevelMain_\d+\.Emit\(OpCodes\.)Newobj,.+typeof\(System\.Collections\.Generic\.Dictionary<System.Int32, System.Int32>\).+\)\);\s+" +
                             @"\2Dup\);\s+" +
                             @"\2Ldc_I4, 1\);\s+" +
                             @"\2Ldc_I4, 11\);\s+" +
@@ -46,11 +46,11 @@ public class ObjectInitializerTests : CecilifierUnitTestBase
                             @"\2Ldc_I4, 2\);\s+" +
                             @"\2Ldc_I4, 22\);\s+" +
                             @"\2Callvirt,.+set_Item.+\)\);\s+" +
-                            @"\2Stloc, \1\);\s+"; 
-        
+                            @"\2Stloc, \1\);\s+";
+
         Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(expected));
     }
-    
+
     [Test]
     public void CustomCollectionInitializer()
     {
@@ -77,7 +77,7 @@ public class ObjectInitializerTests : CecilifierUnitTestBase
                     }";
 
         var result = RunCecilifier(code);
-        
+
         var expected = @"(il_M_\d+.Emit\(OpCodes\.)Newobj, ctor_collectionFoo_\d+\);\s+" +
                        @"\1Dup\);\s+" +
                        @"\1Ldc_I4, 1\);\s+" +
@@ -85,8 +85,8 @@ public class ObjectInitializerTests : CecilifierUnitTestBase
                        @"\1Callvirt,.+m_add_\d+\);\s+" +
                        @"\1Dup\);\s+" +
                        @"\1Ldc_I4, 65\);\s+" +
-                       @"\1Callvirt,.+m_add_\d+\);\s+"; 
-        
+                       @"\1Callvirt,.+m_add_\d+\);\s+";
+
         Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(expected));
     }
 }

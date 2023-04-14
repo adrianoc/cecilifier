@@ -14,7 +14,7 @@ public class TypeDependencyCollectorVisitor : CSharpSyntaxWalker
     private IDictionary<BaseTypeDeclarationSyntax, IDictionary<string, int>> dependencies = new Dictionary<BaseTypeDeclarationSyntax, IDictionary<string, int>>();
     private Stack<BaseTypeDeclarationSyntax> declaredTypes = new();
     private List<string> usings = new();
-    
+
     public TypeDependencyCollectorVisitor(CSharpCompilation compilation)
     {
         this.compilation = compilation;
@@ -31,25 +31,25 @@ public class TypeDependencyCollectorVisitor : CSharpSyntaxWalker
 
     public override void VisitClassDeclaration(ClassDeclarationSyntax node)
     {
-        using (ProcessTypeDeclaration(node)) 
+        using (ProcessTypeDeclaration(node))
             base.VisitClassDeclaration(node);
     }
 
     public override void VisitInterfaceDeclaration(InterfaceDeclarationSyntax node)
     {
-        using(ProcessTypeDeclaration(node))
+        using (ProcessTypeDeclaration(node))
             base.VisitInterfaceDeclaration(node);
     }
 
     public override void VisitEnumDeclaration(EnumDeclarationSyntax node)
     {
-        using(ProcessTypeDeclaration(node))
+        using (ProcessTypeDeclaration(node))
             base.VisitEnumDeclaration(node);
     }
 
     public override void VisitStructDeclaration(StructDeclarationSyntax node)
     {
-        using(ProcessTypeDeclaration(node))
+        using (ProcessTypeDeclaration(node))
             base.VisitStructDeclaration(node);
     }
 
@@ -77,7 +77,7 @@ public class TypeDependencyCollectorVisitor : CSharpSyntaxWalker
     {
         if (declaredTypes.Count == 0 || type == null || type.IsKind(SyntaxKind.OmittedTypeArgument)) // type can be null for lambda parameters, for instance.
             return;
-        
+
         var semanticModel = compilation.GetSemanticModel(type.SyntaxTree);
         if (String.Compare(declaredTypes.Peek().Identifier.Text, type.NameFrom(), StringComparison.Ordinal) != 0 && semanticModel.GetSymbolInfo(type).Symbol is ITypeSymbol { IsDefinition: true })
         {

@@ -1,9 +1,10 @@
-﻿using NUnit.Framework;
+using Cecilifier.Core.Tests.Framework;
+using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration
 {
     [TestFixture]
-    public class BlockTestCase : IntegrationResourceBasedTest
+    public class BlockTestCase : ResourceTestBase
     {
         [Test]
         public void IfStatementTest()
@@ -28,7 +29,7 @@ namespace Cecilifier.Core.Tests.Integration
         {
             AssertResourceTest(@"CodeBlock/MethodCall/NonVirtualMethodCall");
         }
-        
+
         [Test]
         public void OutVariablesTest()
         {

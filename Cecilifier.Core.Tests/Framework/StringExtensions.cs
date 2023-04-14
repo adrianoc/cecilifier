@@ -1,23 +1,22 @@
-﻿using System.IO;
+using System.IO;
 
 namespace Cecilifier.Core.Tests.Framework
 {
     internal static class StringExtensions
     {
-        public static string GetPathOfTextResource(this string resourceName, string type, TestKind kind)
+        public static string GetPathOfTextResource(this string resourceName, string type)
         {
-            return GetPathOfResource(resourceName, "." + type + ".txt", kind);
+            return GetPathOfResource(resourceName, "." + type + ".txt");
         }
 
-        public static string GetPathOfBinaryResource(this string resourceName, string type, TestKind kind)
+        public static string GetPathOfBinaryResource(this string resourceName, string type)
         {
-            return GetPathOfResource(resourceName, type, kind);
+            return GetPathOfResource(resourceName, type);
         }
 
-        private static string GetPathOfResource(string resourceName, string type, TestKind kind)
+        private static string GetPathOfResource(string resourceName, string type)
         {
-            var basePath = Path.Combine("TestResources", kind.ToString());
-            return Path.Combine(basePath, resourceName + type);
+            return Path.Combine("TestResources/Integration", resourceName + type);
         }
     }
 }

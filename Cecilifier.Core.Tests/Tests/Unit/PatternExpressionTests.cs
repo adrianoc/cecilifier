@@ -11,7 +11,7 @@ public class IsPatternExpressionTests : CecilifierUnitTestBase
     {
         var result = RunCecilifier("void M(object o) { var r = o is string s; }");
         Assert.That(
-            result.GeneratedCode.ReadToEnd(), 
+            result.GeneratedCode.ReadToEnd(),
             Does.Match(
                 @"//var r = o is string s;\s+" +
                 @"var l_r_\d+ = new VariableDefinition\(assembly.MainModule.TypeSystem.Boolean\);\s+" +
@@ -26,13 +26,13 @@ public class IsPatternExpressionTests : CecilifierUnitTestBase
                 @"\1Cgt\);\s+" +
                 @"\1Stloc, l_r_\d+\);"));
     }
-    
+
     [Test]
     public void TestDeclarationPatternSyntaxWithGenerics()
     {
         var result = RunCecilifier("void M<T>(T o) { var r = o is string s; }");
         Assert.That(
-            result.GeneratedCode.ReadToEnd(), 
+            result.GeneratedCode.ReadToEnd(),
             Does.Match(
                 @"//var r = o is string s;\s+" +
                 @"var l_r_\d+ = new VariableDefinition\(assembly.MainModule.TypeSystem.Boolean\);\s+" +
@@ -48,7 +48,7 @@ public class IsPatternExpressionTests : CecilifierUnitTestBase
                 @"\1Cgt\);\s+" +
                 @"\1Stloc, l_r_\d+\);"));
     }
-    
+
     [TestCaseSource(nameof(RecursivePatternsTestScenarios))]
     public void TestRecursivePatternSyntax(string code, string expected)
     {
@@ -79,7 +79,7 @@ public class IsPatternExpressionTests : CecilifierUnitTestBase
                                         @"\2.Append\(ldc_I4_0_\d+\);\s+" +
                                         @"\2.Append\(\4\);\s+" +
                                         @"\5Stloc, \1\);";
-        
+
         yield return new TestCaseData("void M(object o) { var r = o is string { Length: 10 } s; }", singlePropertyExpectation) { TestName = "Single Property" };
 
         yield return new TestCaseData(
@@ -90,7 +90,7 @@ public class IsPatternExpressionTests : CecilifierUnitTestBase
         {
             TestName = "Single Property (do not capture)"
         };
-        
+
         yield return new TestCaseData(
             "void M(object o) { var r = o is System.Uri { IsDefaultPort: false, Host: \"bar\", Port: 42 }; }",
 
@@ -115,6 +115,7 @@ public class IsPatternExpressionTests : CecilifierUnitTestBase
             @"\1Br_S, nop_12\);\s+" +
             @"il_M_7.Append\(\3\);\s+" +
             @"il_M_7.Append\(nop_12\);\s+" +
-            @"\1Stloc, l_r_9\);") { TestName = "Multiple Properties" };
+            @"\1Stloc, l_r_9\);")
+        { TestName = "Multiple Properties" };
     }
 }

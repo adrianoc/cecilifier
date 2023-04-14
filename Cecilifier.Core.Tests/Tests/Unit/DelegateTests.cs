@@ -12,26 +12,26 @@ public class DelegateTests : CecilifierUnitTestBase
     {
         var result = RunCecilifier("class C { public delegate int D(); }");
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
-        
+
         Assert.That(cecilifiedCode, Does.Match(@"var (del_D\d+) = new TypeDefinition\("""", ""D"", .+ImportReference\(typeof\(System.MulticastDelegate\)\)\).+;"));
         Assert.That(cecilifiedCode, Does.Match(@"var m_invoke_\d+ = new MethodDefinition\(""Invoke"", .+assembly.MainModule.TypeSystem.Int32\)"));
 
         Assert.That(cecilifiedCode, Does.Match(@"var m_beginInvoke_\d+ = new MethodDefinition\(""BeginInvoke"",.+ImportReference\(typeof\(System\.IAsyncResult\)\)\).*"));
         Assert.That(cecilifiedCode, Does.Match(@"m_beginInvoke_\d+.Parameters.Add\(new ParameterDefinition\(assembly.MainModule.ImportReference\(typeof\(System.AsyncCallback\)\)\)\);\s+"));
         Assert.That(cecilifiedCode, Does.Match(@"m_beginInvoke_\d+.Parameters.Add\(new ParameterDefinition\(assembly.MainModule.TypeSystem.Object\)\);\s+"));
-        
+
         Assert.That(cecilifiedCode, Does.Match(@"var m_endInvoke_\d+ = new MethodDefinition\(""EndInvoke"",.+assembly.MainModule.TypeSystem.Int32\);\s+"));
         Assert.That(cecilifiedCode, Does.Match(@"var p_ar_\d+ = new ParameterDefinition\(""ar"",.+ImportReference\(typeof\(System.IAsyncResult\)\)\);"));
-        
+
         Assert.That(cecilifiedCode, Does.Match(@"cls_C_\d+.NestedTypes.Add\(del_D\d+\);"), "Inner delegate should be added as a nested type of C");
     }
-    
+
     [Test]
     public void InnerDelegate_AsParameter()
     {
         var result = RunCecilifier("class C { public delegate int D(); D M(D p) => p; }");
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
-        
+
         Assert.That(cecilifiedCode, Does.Match(@"var m_M_\d+ = new MethodDefinition\(""M"",.+, del_D\d+\);"), "Return type");
         Assert.That(cecilifiedCode, Does.Match(@"var p_p_\d+ = new ParameterDefinition\(""p"",.+del_D\d+\);"), "Parameter");
     }
@@ -41,9 +41,9 @@ public class DelegateTests : CecilifierUnitTestBase
     {
         var result = RunCecilifier("class C { System.Action<int> Instantiate() { return M; } static void M(int i) { } }");
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
-        
+
         Assert.That(
-            cecilifiedCode, 
+            cecilifiedCode,
             Does.Match(@"var (fld_cachedDelegate_\d+) = new FieldDefinition\(""<0>__M"", FieldAttributes.Public \| FieldAttributes.Static, assembly.MainModule.ImportReference\(typeof\(System.Action<>\)\).+;"));
 
         Assert.That(cecilifiedCode, Does.Match(@"il_instantiate_\d+.Emit\(OpCodes.Ldsfld, fld_cachedDelegate_\d+\);"));
@@ -51,7 +51,7 @@ public class DelegateTests : CecilifierUnitTestBase
         Assert.That(cecilifiedCode, Does.Match(@"il_instantiate_\d+.Emit\(OpCodes.Brtrue, lbl_cacheHit_\d+\);"));  // Check if already instantiated...
         Assert.That(cecilifiedCode, Does.Match(@"il_instantiate_\d+.Emit\(OpCodes.Stsfld, fld_cachedDelegate_\d+\);")); // Set the cache.
     }
-    
+
     [Test]
     public void SecondStaticMethodToDelegateConversion_OfSameMethod_IsCached()
     {
@@ -60,8 +60,8 @@ public class DelegateTests : CecilifierUnitTestBase
 
         var matches = Regex.Matches(cecilifiedCode, @".+FieldDefinition\(""<\d+>__M\d?"".+\);");
         Assert.That(matches.Count, Is.EqualTo(1), matches.Aggregate("Only one backing field was expected.\n", (acc, curr) => $"{acc}\n{curr.Value}") + $"\n\nCode:\n{cecilifiedCode}");
-    }    
-    
+    }
+
     [Test]
     public void SecondStaticMethodToDelegateConversion_OfDifferentMethod_IsCached()
     {
@@ -71,7 +71,7 @@ public class DelegateTests : CecilifierUnitTestBase
         var matches = Regex.Matches(cecilifiedCode, @".+FieldDefinition\(""<\d+>__M\d?"".+\);");
         Assert.That(matches.Count, Is.EqualTo(2), matches.Aggregate("Expecting 2 backing field.\n", (acc, curr) => $"{acc}\n{curr.Value}") + $"\n\nCode:\n{cecilifiedCode}");
     }
-    
+
     [Test]
     public void StaticMethodToDelegateConversion_FromOtherMethod_GeneratesWarning()
     {
@@ -86,9 +86,9 @@ public class DelegateTests : CecilifierUnitTestBase
     {
         var result = RunCecilifier(source);
         Assert.That(
-            result.GeneratedCode.ReadToEnd(), 
+            result.GeneratedCode.ReadToEnd(),
             Does.Match(@"(il_M_4\.Emit\(OpCodes\.)Ldarg_0\);\s+" +
                        @"\1Ldftn, m_F_1\);\s+" +
                        @"\1Newobj, .+typeof\(System.Func<System\.Single>\).+System\.Object.+System\.IntPtr.+\);\s+"));
-    }    
+    }
 }

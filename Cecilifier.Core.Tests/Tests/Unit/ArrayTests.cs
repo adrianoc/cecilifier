@@ -17,21 +17,21 @@ public class ArrayTests : CecilifierUnitTestBase
     [TestCase("float", Code.Ldelem_R4)]
     [TestCase("double", Code.Ldelem_R8)]
     [TestCase("System.DateTime", Code.Ldelem_Any, ", assembly.MainModule.TypeSystem.DateTime")]
-    public void TestAccessStringArray(string elementType, Code code, string operand="")
+    public void TestAccessStringArray(string elementType, Code code, string operand = "")
     {
         var result = RunCecilifier($@"struct S {{}} class C {{ {elementType} M({elementType} []a) => a[2]; }}");
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
-        
+
         Assert.That(
-            cecilifiedCode, 
+            cecilifiedCode,
             Does.Match(
                 $"""
                       (.+\.Emit\(OpCodes\.)Ldarg_1\);
                       \1Ldc_I4, 2\);
                       \1{code}{operand}\);
                       """));
-    }    
-    
+    }
+
     [TestCase("string", Code.Stelem_Ref)]
     [TestCase("C", Code.Stelem_Ref)]
     [TestCase("byte", Code.Stelem_I1)]
@@ -43,13 +43,13 @@ public class ArrayTests : CecilifierUnitTestBase
     [TestCase("double", Code.Stelem_R8)]
     [TestCase("System.DateTime", Code.Stelem_Any, ", assembly.MainModule.TypeSystem.DateTime")]
     [TestCase("S", Code.Stelem_Any, @", st_S_\d+")]
-    public void TestArrayInstantiation(string elementType, Code code, string operand="")
+    public void TestArrayInstantiation(string elementType, Code code, string operand = "")
     {
         var result = RunCecilifier($@"struct S {{}} class C {{ void M({elementType} value) {{ var data = new[] {{ value }}; }} }}");
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
-        
+
         Assert.That(
-            cecilifiedCode, 
+            cecilifiedCode,
             Does.Match(
                 $"""
                       (.+\.Emit\(OpCodes\.)Dup\);
@@ -70,7 +70,7 @@ public class ArrayTests : CecilifierUnitTestBase
     [TestCase("System.Double")]
     [TestCase("System.DateTime")]
     [TestCase("S", @"st_S_\d+")]
-    public void TestJaggedArrayInstantiation(string elementType, string operand=null)
+    public void TestJaggedArrayInstantiation(string elementType, string operand = null)
     {
         var result = RunCecilifier($@"struct S {{}} class C {{ void M({elementType} value) {{ var data = new {elementType}[42][]; }} }}");
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
@@ -78,16 +78,16 @@ public class ArrayTests : CecilifierUnitTestBase
         var operandTypeMatch = operand ?? $"assembly.MainModule.Type{elementType}";
 
         Assert.That(cecilifiedCode, Does.Match($@"new VariableDefinition\({operandTypeMatch}.MakeArrayType\(\).MakeArrayType\(\)\);\s+"));
-        
+
         Assert.That(
-            cecilifiedCode, 
+            cecilifiedCode,
             Does.Match(
                 $"""
                 (.+\.Emit\(OpCodes\.)Ldc_I4, 42\);
                 \1Newarr, {operandTypeMatch}.MakeArrayType\(\)\);\s+
                 """));
     }
-    
+
     [TestCase("string", Code.Stelem_Ref)]
     [TestCase("C", Code.Stelem_Ref)]
     [TestCase("byte", Code.Stelem_I1)]
@@ -99,13 +99,13 @@ public class ArrayTests : CecilifierUnitTestBase
     [TestCase("double", Code.Stelem_R8)]
     [TestCase("System.DateTime", Code.Stelem_Any, ", assembly.MainModule.TypeSystem.DateTime")]
     [TestCase("S", Code.Stelem_Any, @", st_S_\d+")]
-    public void TestJaggedArrayAssignment(string elementType, Code code, string operand="")
+    public void TestJaggedArrayAssignment(string elementType, Code code, string operand = "")
     {
         var result = RunCecilifier($@"struct S {{}} class C {{ void M({elementType} [][]array, {elementType} value) {{ array[0][1] = value; }} }}");
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
-        
+
         Assert.That(
-            cecilifiedCode, 
+            cecilifiedCode,
             Does.Match(
                 $"""
                        //array\[0\]\[1\] = value;
@@ -118,15 +118,15 @@ public class ArrayTests : CecilifierUnitTestBase
                        """));
     }
 
-    [TestCase("class Foo { void M() { int []intArray = { 1 }; } }",TestName = "Local Variable")]
-    [TestCase("class Foo { int []intArray = { 1 }; }",TestName = "Field")]
+    [TestCase("class Foo { void M() { int []intArray = { 1 }; } }", TestName = "Local Variable")]
+    [TestCase("class Foo { int []intArray = { 1 }; }", TestName = "Field")]
     public void TestImplicitArrayInitializationUnoptimized(string code)
     {
         // See comment in TestImplicitArrayInitializationOptimized 
         var result = RunCecilifier(code);
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
         Assert.That(
-            cecilifiedCode, 
+            cecilifiedCode,
             Does.Match(
          """
                ((?:.+)\.Emit\(OpCodes\.)Ldc_I4, 1\);
@@ -139,13 +139,13 @@ public class ArrayTests : CecilifierUnitTestBase
                """));
     }
 
-    [TestCase("class Foo { void M() { int []intArray = { 1, 2, 3 }; } }",TestName = "Local Variable")]
-    [TestCase("class Foo { int []intArray = { 1, 2, 3 }; }",TestName = "Field")]
+    [TestCase("class Foo { void M() { int []intArray = { 1, 2, 3 }; } }", TestName = "Local Variable")]
+    [TestCase("class Foo { int []intArray = { 1, 2, 3 }; }", TestName = "Field")]
     public void TestImplicitArrayInitializationOptimized(string code)
     {
         var result = RunCecilifier(code);
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
-        
+
         // see comment in ExpressionVisitor.VisitInitializerExpression()
         Assert.That(cecilifiedCode, Contains.Substring("Note that as of Cecilifier version 1.70.0 the generated code will differ from the"));
         Assert.That(cecilifiedCode, Contains.Substring("C# compiler one since Cecilifier does not apply some optimizations."));

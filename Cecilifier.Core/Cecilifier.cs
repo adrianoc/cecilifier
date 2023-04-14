@@ -19,7 +19,7 @@ namespace Cecilifier.Core
         internal const int CecilifierProgramPreambleLength = 18; // The # of lines before the 1st cecilified line of code (see CecilifierExtensions.AsCecilApplication())
 
         public static readonly int SupportedCSharpVersion = int.Parse(LanguageVersion.CSharp11.ToString().Substring("CSharp".Length));
-            
+
         public static CecilifierResult Process(Stream content, CecilifierOptions options)
         {
             UsageVisitor.ResetInstance();
@@ -29,7 +29,7 @@ namespace Cecilifier.Core
 
             var comp = CSharpCompilation.Create(
                 "CecilifiedAssembly",
-                new[] {syntaxTree},
+                new[] { syntaxTree },
                 metadataReferences,
                 new CSharpCompilationOptions(OutputKindFor(syntaxTree), allowUnsafe: true));
 
@@ -46,7 +46,7 @@ namespace Cecilifier.Core
 
             syntaxTree.TryGetRoot(out var root);
             visitor.Visit(root);
-            
+
             //new SyntaxTreeDump("TREE: ", root);
 
             var mainTypeName = visitor.MainType != null ? visitor.MainType.Identifier.Text : "Cecilified";
@@ -55,8 +55,8 @@ namespace Cecilifier.Core
 
         private static OutputKind OutputKindFor(SyntaxTree syntaxTree)
         {
-            var outputKind = syntaxTree.GetRoot().DescendantNodes().Any(node => node.IsKind(SyntaxKind.GlobalStatement)) 
-                ? OutputKind.ConsoleApplication 
+            var outputKind = syntaxTree.GetRoot().DescendantNodes().Any(node => node.IsKind(SyntaxKind.GlobalStatement))
+                ? OutputKind.ConsoleApplication
                 : OutputKind.DynamicallyLinkedLibrary;
 
             return outputKind;
@@ -69,7 +69,7 @@ namespace Cecilifier.Core
 
         public IReadOnlyList<string> References { get; init; }
     }
-    
+
     public struct CecilifierResult
     {
         public CecilifierResult(StringReader generatedCode, string mainTypeName, IList<Mapping> mappings)

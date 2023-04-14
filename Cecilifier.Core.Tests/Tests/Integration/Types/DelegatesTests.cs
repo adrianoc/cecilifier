@@ -1,8 +1,9 @@
+using Cecilifier.Core.Tests.Framework;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration.Types
 {
-    public class DelegatesTests : IntegrationResourceBasedTest
+    public class DelegatesTests : ResourceTestBase
     {
         [TestCase("CustomDelegateMultipleParameters")]
         [TestCase("ParameterlessDelegates")]

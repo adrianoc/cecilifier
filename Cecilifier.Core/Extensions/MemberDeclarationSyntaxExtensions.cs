@@ -20,7 +20,7 @@ namespace Cecilifier.Core.Extensions
                 EventDeclarationSyntax @event => @event.Identifier.Text,
                 EnumMemberDeclarationSyntax enumMember => enumMember.Identifier.Text,
                 ConversionOperatorDeclarationSyntax conversionOperator => conversionOperator.ImplicitOrExplicitKeyword.IsKind(SyntaxKind.ExplicitKeyword) ? "op_Explicit" : "op_Implicit",
-                OperatorDeclarationSyntax @operator => @operator.ParameterList.Parameters.Count == 1 ?  UnaryOperatorNameFrom(@operator.OperatorToken.Kind()) : BinaryOperatorNameFrom(@operator.OperatorToken.Kind()),
+                OperatorDeclarationSyntax @operator => @operator.ParameterList.Parameters.Count == 1 ? UnaryOperatorNameFrom(@operator.OperatorToken.Kind()) : BinaryOperatorNameFrom(@operator.OperatorToken.Kind()),
                 _ => throw new Exception($"{node.GetType().Name} ({node}) is not supported")
             };
         }
@@ -44,10 +44,9 @@ namespace Cecilifier.Core.Extensions
                 SyntaxKind.GreaterThanToken => WellKnownMemberNames.GreaterThanOperatorName,
                 SyntaxKind.GreaterThanEqualsToken => WellKnownMemberNames.GreaterThanOrEqualOperatorName,
                 SyntaxKind.GreaterThanGreaterThanToken => WellKnownMemberNames.RightShiftOperatorName,
+                SyntaxKind.GreaterThanGreaterThanGreaterThanToken => WellKnownMemberNames.UnsignedRightShiftOperatorName,
                 SyntaxKind.ExclamationEqualsToken => WellKnownMemberNames.InequalityOperatorName,
 
-                SyntaxKind.ExclamationToken => WellKnownMemberNames.LogicalNotOperatorName,
-                SyntaxKind.TildeToken => WellKnownMemberNames.OnesComplementOperatorName,
                 _ => throw new Exception($"Cannot map {kind} to a well known member name.")
             };
         }
@@ -57,7 +56,6 @@ namespace Cecilifier.Core.Extensions
             {
                 SyntaxKind.PlusToken => WellKnownMemberNames.UnaryPlusOperatorName,
                 SyntaxKind.MinusToken => WellKnownMemberNames.UnaryNegationOperatorName,
-                SyntaxKind.BarToken => WellKnownMemberNames.BitwiseOrOperatorName,
                 SyntaxKind.ExclamationToken => WellKnownMemberNames.LogicalNotOperatorName,
                 SyntaxKind.TildeToken => WellKnownMemberNames.OnesComplementOperatorName,
                 SyntaxKind.PlusPlusToken => WellKnownMemberNames.IncrementOperatorName,

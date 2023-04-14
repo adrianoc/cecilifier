@@ -6,7 +6,7 @@ namespace Cecilifier.Core.Naming
         Class,
         Struct,
         Interface,
-        Enum ,
+        Enum,
         Method,
         Delegate,
         Property,

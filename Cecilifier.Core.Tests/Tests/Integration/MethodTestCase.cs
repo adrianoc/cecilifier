@@ -7,7 +7,7 @@ using NUnit.Framework;
 namespace Cecilifier.Core.Tests.Integration
 {
     [TestFixture]
-    public class MethodTestCase : IntegrationResourceBasedTest
+    public class MethodTestCase : ResourceTestBase
     {
         [Test]
         public void TestAbstractMethod()
@@ -18,7 +18,7 @@ namespace Cecilifier.Core.Tests.Integration
         [Test]
         public void TestCtorWithParameters()
         {
-            AssertResourceTest(@"Members/Methods/CtorWithParameters");
+            AssertResourceTest(new ResourceTestOptions { ResourceName = "Members/Methods/CtorWithParameters" });
         }
 
         [Test]
@@ -48,7 +48,7 @@ namespace Cecilifier.Core.Tests.Integration
         [Test]
         public void TestMethodCallOnValueType()
         {
-            AssertResourceTest(@"Members/Methods/MethodCallOnValueType");
+            AssertResourceTest(new ResourceTestOptions { ResourceName = "Members/Methods/MethodCallOnValueType" });
         }
 
         [Test]
@@ -84,7 +84,7 @@ namespace Cecilifier.Core.Tests.Integration
         {
             AssertResourceTest(@"Members/Methods/ParameterModifiers");
         }
-        
+
         [Test]
         public void TestRefParameters()
         {
@@ -126,42 +126,43 @@ namespace Cecilifier.Core.Tests.Integration
         {
             AssertResourceTest(@"Members/Methods/VirtualMethod");
         }
-        
+
         [Test]
         public void TestReturnDelegate()
         {
-            AssertResourceTest("Members/Methods/ReturnDelegate");
+            AssertResourceTest(new ResourceTestOptions { ResourceName = $"Members/Methods/ReturnDelegate" });
         }
-        
+
         [TestCase("Implicit")]
         [TestCase("Explicit", Ignore = "Not supported")]
         public void TestDelegateAsParameter(string implicitOrExplicit)
         {
-            AssertResourceTest($"Members/Methods/{implicitOrExplicit}Delegate_AsParameter");
+            AssertResourceTest(new ResourceTestOptions { ResourceName = $"Members/Methods/{implicitOrExplicit}Delegate_AsParameter" });
         }
 
-        [TestCase("RefParamBodied")]
-        [TestCase("RefParam")]
+        [TestCase("RefParamBodied", "ReturnPtrToStack")] // https://github.com/adrianoc/cecilifier/issues/227
+        [TestCase("RefParam", "ReturnPtrToStack")] // https://github.com/adrianoc/cecilifier/issues/227
         [TestCase("ArrayParam")]
         [TestCase("ParamIndexer")]
         [TestCase("RefReturnField")]
-        public void TestRefReturn(string test)
+        public void TestRefReturn(string test, string ignoredErrors = null)
         {
-            AssertResourceTest($"Members/Methods/{test}");
+            var options = new ResourceTestOptions { ResourceName = $"Members/Methods/{test}", IgnoredILErrors = ignoredErrors };
+            AssertResourceTest(options);
         }
-        
+
         [Test]
         public void TestRefLocals()
         {
             AssertResourceTest("Members/Methods/RefLocals");
         }
-        
+
         [Test]
         public void TestRefProperties()
         {
             AssertResourceTest("Members/Methods/RefProperties");
         }
-        
+
         [Test]
         public void TestOverloads()
         {

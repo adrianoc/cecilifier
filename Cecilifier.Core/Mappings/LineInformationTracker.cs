@@ -15,7 +15,7 @@ namespace Cecilifier.Core.Mappings
             _context = context;
             _node = node;
             _current = new Mapping();
-                
+
             BeginSourceElement();
         }
 
@@ -29,16 +29,16 @@ namespace Cecilifier.Core.Mappings
             _context.Mappings.Remove(_current);
             _current = null;
         }
-            
+
         internal static LineInformationTracker Track(IVisitorContext context, SyntaxNode node) => new LineInformationTracker(context, node);
-            
+
         private void BeginSourceElement()
         {
             var sourceStart = _node.GetLocation().GetLineSpan();
-            #if DEBUG
+#if DEBUG
             _current.Node = _node;
-            #endif
-            
+#endif
+
             _current.Source.Begin.Line = sourceStart.StartLinePosition.Line + 1;
             _current.Source.Begin.Column = sourceStart.StartLinePosition.Character + 1;
             _current.Source.End.Line = sourceStart.EndLinePosition.Line + 1;
@@ -47,7 +47,7 @@ namespace Cecilifier.Core.Mappings
             _current.Cecilified.Begin.Line = _context.CecilifiedLineNumber;
             _context.Mappings.Add(_current);
         }
-        
+
         private void EndSourceElement()
         {
             if (_current != null)

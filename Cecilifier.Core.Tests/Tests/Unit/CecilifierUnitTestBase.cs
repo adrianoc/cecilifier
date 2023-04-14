@@ -12,7 +12,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             var memoryStream = new MemoryStream();
             memoryStream.Write(System.Text.Encoding.ASCII.GetBytes(code));
             memoryStream.Position = 0;
-        
+
             return Cecilifier.Process(memoryStream, new CecilifierOptions { References = Utils.GetTrustedAssembliesPath(), Naming = nameStrategy });
         }
     }

@@ -37,19 +37,19 @@ void M(int value)
     value = value + 
             value;
 }
-}", 
-        "value = value + ...", 
+}",
+        "value = value + ...",
         TestName = "Assignment")]
     [TestCase(@"void Test<T>(int value)
-		where T : struct { }", 
-        "void Test<T>(int value)...", 
+		where T : struct { }",
+        "void Test<T>(int value)...",
         TestName = "Generic Method Constraint")]
     public void MultilineExpressions(string code, string expected)
     {
         var result = RunCecilifier(code);
         Assert.That(result.GeneratedCode.ReadToEnd(), Contains.Substring(expected));
     }
-    
+
     [Test]
     public void CompoundStatement_WithBraceInSameLine_GeneratesValidComments()
     {
@@ -83,7 +83,7 @@ public class Foo
 
     private void AssertCecilifiedCodeContainsSnippet(string code, string expectedSnippet)
     {
-        var cecilifier = Cecilifier.Process(new MemoryStream(Encoding.UTF8.GetBytes(code)), new CecilifierOptions {References = Utils.GetTrustedAssembliesPath() });
+        var cecilifier = Cecilifier.Process(new MemoryStream(Encoding.UTF8.GetBytes(code)), new CecilifierOptions { References = Utils.GetTrustedAssembliesPath() });
         var generated = cecilifier.GeneratedCode.ReadToEnd();
 
         Assert.That(generated, Does.Contain(expectedSnippet), "Expected snippet not found");

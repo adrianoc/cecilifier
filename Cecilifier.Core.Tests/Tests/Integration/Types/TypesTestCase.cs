@@ -1,9 +1,10 @@
-﻿using NUnit.Framework;
+using Cecilifier.Core.Tests.Framework;
+using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration.Types
 {
     [TestFixture]
-    internal class TypesTestCase : IntegrationResourceBasedTest
+    internal class TypesTestCase : ResourceTestBase
     {
         [TestCase("SimpleTypeWithAttribute")]
         [TestCase("AttributeWithProperty")]
@@ -62,7 +63,7 @@ namespace Cecilifier.Core.Tests.Integration.Types
         {
             AssertResourceTest(@"Types/InterfaceWithProperties");
         }
-        
+
         [Test]
         public void InterfaceImplementationTest()
         {
@@ -104,7 +105,7 @@ namespace Cecilifier.Core.Tests.Integration.Types
         {
             AssertResourceTest(@"Types/TypeInitializer");
         }
-        
+
         [Test]
         public void ReadOnlyStructTest()
         {

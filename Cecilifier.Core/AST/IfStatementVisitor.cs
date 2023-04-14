@@ -1,4 +1,4 @@
-﻿using Cecilifier.Core.Extensions;
+using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis.CSharp.Syntax;

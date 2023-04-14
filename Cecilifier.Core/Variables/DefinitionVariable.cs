@@ -5,7 +5,7 @@ namespace Cecilifier.Core.Variables;
 
 public class DefinitionVariable : IEquatable<DefinitionVariable>
 {
-    public static readonly DefinitionVariable NotFound = new DefinitionVariable(string.Empty, string.Empty, default) {IsValid = false};
+    public static readonly DefinitionVariable NotFound = new(string.Empty, string.Empty, default) { IsValid = false };
 
     public DefinitionVariable(string parentTypeName, string memberName, VariableMemberKind kind, string variableName = null)
     {
@@ -46,8 +46,8 @@ public class DefinitionVariable : IEquatable<DefinitionVariable>
 
     public override string ToString()
     {
-        return ParentName == null 
-            ? $"(Kind = {Kind}) {MemberName}" 
+        return ParentName == null
+            ? $"(Kind = {Kind}) {MemberName}"
             : $"(Kind = {Kind}) {ParentName}.{MemberName}";
     }
 

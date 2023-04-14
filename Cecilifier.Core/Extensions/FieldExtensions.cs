@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
@@ -17,7 +17,7 @@ namespace Cecilifier.Core.Extensions
                 {
                     throw new Exception($"Failed to resolve variable with field definition for `{field}`");
                 }
-                
+
                 return found.VariableName;
             }
 

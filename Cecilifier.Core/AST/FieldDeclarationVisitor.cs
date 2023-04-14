@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -26,7 +26,7 @@ namespace Cecilifier.Core.AST
             var declaringType = node.ResolveDeclaringType<TypeDeclarationSyntax>();
 
             HandleFieldDeclaration(node, variableDeclarationSyntax, modifiers, declaringType);
-            
+
             base.VisitFieldDeclaration(node);
         }
 
@@ -43,7 +43,7 @@ namespace Cecilifier.Core.AST
             var declaringTypeSymbol = Context.SemanticModel.GetDeclaredSymbol(declaringType).EnsureNotNull();
 
             var fieldDefVars = new List<string>(variableDeclarationSyntax.Variables.Count);
-            
+
             var type = ResolveType(variableDeclarationSyntax.Type);
             var fieldType = ProcessRequiredModifiers(modifiers, type) ?? type;
             var fieldAttributes = ModifiersToCecil<FieldAttributes>(modifiers, "Private", MapFieldAttributesFor);
@@ -58,10 +58,10 @@ namespace Cecilifier.Core.AST
 
                 var fieldVar = Context.Naming.FieldDeclaration(node);
                 fieldDefVars.Add(fieldVar);
-                var constant = modifiers.Any( m => m.IsKind(SyntaxKind.ConstKeyword)) && field.Initializer != null ? Context.SemanticModel.GetConstantValue(field.Initializer.Value) : null;
+                var constant = modifiers.Any(m => m.IsKind(SyntaxKind.ConstKeyword)) && field.Initializer != null ? Context.SemanticModel.GetConstantValue(field.Initializer.Value) : null;
                 var exps = CecilDefinitionsFactory.Field(Context, declaringTypeSymbol.ToDisplayString(), declaringTypeVar.VariableName, fieldVar, field.Identifier.ValueText, fieldType, fieldAttributes, constant.Value.ValueText());
                 AddCecilExpressions(Context, exps);
-                
+
                 HandleAttributesInMemberDeclaration(node.AttributeLists, fieldVar);
             }
 
@@ -80,10 +80,10 @@ namespace Cecilifier.Core.AST
                 SyntaxKind.ConstKeyword => new[] { "Literal", "Static" },
                 SyntaxKind.ReadOnlyKeyword => new[] { "InitOnly" },
                 SyntaxKind.VolatileKeyword => Array.Empty<string>(),
-                    
+
                 _ => throw new ArgumentException($"Unsupported attribute name: {token.Kind().ToString()}")
             };
-        
+
         private string ProcessRequiredModifiers(IReadOnlyList<SyntaxToken> modifiers, string originalType)
         {
             if (modifiers.All(m => !m.IsKind(SyntaxKind.VolatileKeyword)))

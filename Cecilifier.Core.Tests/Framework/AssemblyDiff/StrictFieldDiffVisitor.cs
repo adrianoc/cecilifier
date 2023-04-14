@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using Mono.Cecil;
 
 namespace Cecilifier.Core.Tests.Framework.AssemblyDiff

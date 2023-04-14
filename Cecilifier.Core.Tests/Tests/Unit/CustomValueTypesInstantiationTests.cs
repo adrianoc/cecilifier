@@ -13,7 +13,7 @@ public class CustomValueTypesInstantiationTests : CecilifierUnitTestBase
             @"il_M_3.Emit(OpCodes.Ldarga, 0);
 			il_M_3.Emit(OpCodes.Initobj, st_myStruct_0);"));
     }
-    
+
     [TestCase("out")]
     [TestCase("ref")]
     public void OutRefParameterAssignment(string outRefModifier)
@@ -22,8 +22,8 @@ public class CustomValueTypesInstantiationTests : CecilifierUnitTestBase
         Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(
             @"il_M_3.Emit\(OpCodes.Ldarg_1\);\s+" +
                 @"il_M_3.Emit\(OpCodes.Initobj, st_myStruct_0\);"));
-    } 
-    
+    }
+
     [TestCase("p")]
     [TestCase("default(MyStruct)", IgnoreReason = "default() not supported")]
     public void SimpleStoreToOutStructParameter(string toStore)
@@ -34,7 +34,7 @@ public class CustomValueTypesInstantiationTests : CecilifierUnitTestBase
 			il_M_3.Emit(OpCodes.Ldarg_2);
 			il_M_3.Emit(OpCodes.Stobj);"));
     }
-    
+
     [Test]
     public void LocalAssignment()
     {
@@ -43,7 +43,7 @@ public class CustomValueTypesInstantiationTests : CecilifierUnitTestBase
             @"il_M_3.Emit(OpCodes.Ldloca_S, l_m_4);
 			il_M_3.Emit(OpCodes.Initobj, st_myStruct_0);"));
     }
-    
+
     [Test]
     public void RefLocalAssignment()
     {
@@ -65,7 +65,7 @@ public class CustomValueTypesInstantiationTests : CecilifierUnitTestBase
 			il_M_4.Emit\(OpCodes.Ldelema\);
 			il_M_4.Emit\(OpCodes.Initobj, st_myStruct_0\);"));
     }
-    
+
     [Test]
     public void TestParameterlessStructInstantiation()
     {
@@ -73,5 +73,5 @@ public class CustomValueTypesInstantiationTests : CecilifierUnitTestBase
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
 
         Assert.That(cecilifiedCode, Does.Match(@"il_create_2\.Emit\(OpCodes.Newobj, ctor_foo_3\);"));
-    }    
+    }
 }

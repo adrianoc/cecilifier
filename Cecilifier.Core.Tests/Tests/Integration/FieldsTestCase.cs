@@ -1,16 +1,17 @@
-﻿using NUnit.Framework;
+using Cecilifier.Core.Tests.Framework;
+using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration
 {
     [TestFixture]
-    public class FieldsTestCase : IntegrationResourceBasedTest
+    public class FieldsTestCase : ResourceTestBase
     {
         [Test]
         public void TestStatic()
         {
             AssertResourceTest(@"Members/Fields/StaticField");
         }
-        
+
         [Test]
         public void TestAssignment()
         {
@@ -95,7 +96,7 @@ namespace Cecilifier.Core.Tests.Integration
         {
             AssertResourceTest(@"Members/Fields/QualifiedFieldAccess");
         }
- 
+
         [Test]
         public void TestExternalFieldAccess()
         {

@@ -105,17 +105,17 @@ public static class Outer
             Assert.That(cecilifiedCode, Does.Match(@"il_property_\d+.Emit\(OpCodes.Callvirt, .+typeof\(System.Diagnostics.Process\), ""get_ProcessName"".+"), cecilifiedCode);
         }
 
-        [TestCase("class StaticFieldAddress { static int field; static void M1(ref int i) { } static void M() => M1(ref field); }", "Ldsflda", TestName="StaticPassingByRef")]
-        [TestCase("class FieldAddress { int field; void M1(ref int i) { } void M() => M1(ref field); }", "Ldflda", TestName="PassingByRef")]
-        [TestCase("class FieldAddress { int field; unsafe void Fixed() { fixed(int *p = &field) { } } }", "Ldflda", TestName="Fixed")]
-        [TestCase("class StaticFieldAddress { static int field; static unsafe void Fixed() { fixed(int *p = &field) { } } }", "Ldsflda", TestName="StaticFixed")]
+        [TestCase("class StaticFieldAddress { static int field; static void M1(ref int i) { } static void M() => M1(ref field); }", "Ldsflda", TestName = "StaticPassingByRef")]
+        [TestCase("class FieldAddress { int field; void M1(ref int i) { } void M() => M1(ref field); }", "Ldflda", TestName = "PassingByRef")]
+        [TestCase("class FieldAddress { int field; unsafe void Fixed() { fixed(int *p = &field) { } } }", "Ldflda", TestName = "Fixed")]
+        [TestCase("class StaticFieldAddress { static int field; static unsafe void Fixed() { fixed(int *p = &field) { } } }", "Ldsflda", TestName = "StaticFixed")]
         public void Field_Address(string code, string expectedLoadOpCode)
         {
             var result = RunCecilifier(code);
             var cecilifiedCode = result.GeneratedCode.ReadToEnd();
             Assert.That(cecilifiedCode, Contains.Substring(expectedLoadOpCode));
         }
-        
+
         [TestCase("fieldDelegate")]
         [TestCase("PropertyDelegate")]
         [TestCase("localDelegate")]
@@ -126,7 +126,7 @@ public static class Outer
         [TestCase("paramFunction")]
         public void LdindTests(string varToUse)
         {
-            var code = 
+            var code =
                 $@"
             using System;
             unsafe class Foo 
@@ -144,7 +144,7 @@ public static class Outer
                     {varToUse}(true, v);
                 }}
             }}";
-        
+
             var result = RunCecilifier(code);
             var cecilifiedCode = result.GeneratedCode.ReadToEnd();
             Assert.That(cecilifiedCode, Does.Not.Contains("Ldind"));
@@ -159,15 +159,15 @@ public static class Outer
                 }";
 
             var result = RunCecilifier(source);
-            
+
             Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(
                 @"il_setEvent_6.Emit\(OpCodes.Ldarg_1\);
 			il_setEvent_6.Emit\(OpCodes.Ldarg_0\);
 			il_setEvent_6.Emit\(OpCodes.Ldftn, m_handler_1\);
 			il_setEvent_6.Emit\(OpCodes.Newobj,.+System.EventHandler.+,.+System.Object.+,.+System.IntPtr.+\);
 			il_setEvent_6.Emit\(OpCodes.Callvirt,.+add_Exited.+\);"));
-        }  
-        
+        }
+
         [Test]
         public void TypesNotInSystemCorelib_AreResolved()
         {
@@ -179,7 +179,7 @@ public static class Outer
             var result = RunCecilifier(source);
             Assert.That(result.GeneratedCode.ReadToEnd(), Contains.Substring("typeof(System.Console), \"add_CancelKeyPress\","));
         }
-        
+
         [TestCase("j")]
         [TestCase("j + 2")]
         [TestCase("j > 1 ? 0 : 1")]
@@ -190,7 +190,7 @@ public static class Outer
             var result = RunCecilifier(source);
             Assert.That(result.GeneratedCode.ReadToEnd(), Contains.Substring($"Ldstr, \"{expression}\""));
         }
-        
+
         [TestCase("\"foo\"")]
         [TestCase("null")]
         public void TestCallerArgumentExpressionAttribute_InvalidParameterName(string defaultParameterValue)
@@ -198,7 +198,7 @@ public static class Outer
             var source = $@"class Foo {{ void M(int i, [System.Runtime.CompilerServices.CallerArgumentExpression(""DoNotExist"")] string s = {defaultParameterValue}) {{ }} void Call(int j) => M(j); }}";
 
             var result = RunCecilifier(source);
-            
+
             if (defaultParameterValue == "null")
                 Assert.That(result.GeneratedCode.ReadToEnd(), Contains.Substring("Ldnull"));
             else
@@ -210,22 +210,22 @@ public static class Outer
             """
             (il_topLevelMain_\d+).Emit\(OpCodes.Ldloca_S, l_d_\d+\);
             \s+\1.Emit\(OpCodes.Initobj, assembly.MainModule.TypeSystem.DateTime\);
-            """, 
+            """,
             TestName = "Value Type")]
-        
+
         [TestCase("object o = new();", """il_topLevelMain_\d+.Emit\(OpCodes.Newobj,.+typeof\(System.Object\), ".ctor",.+\);""", TestName = "Simplest")]
         [TestCase(
-            "C c = new(42); class C { public C(int i) {} }", 
+            "C c = new(42); class C { public C(int i) {} }",
             """
                     var (ctor_C_\d+) = new MethodDefinition\(".ctor", MethodAttributes.Private, assembly.MainModule.TypeSystem.Void\);
                     \s+var (p_i_\d+) = new ParameterDefinition\("i", ParameterAttributes.None, assembly.MainModule.TypeSystem.Int32\);
                     \s+\1.Parameters.Add\(\2\);
                     \s+il_topLevelMain_3.Emit\(OpCodes.Ldc_I4, 42\);
                     \s+il_topLevelMain_3.Emit\(OpCodes.Newobj, ctor_C_8\);
-                    """, 
+                    """,
             TestName = "Constructor")]
         [TestCase(
-            "C c = new() { Value = 42 }; class C { public int Value; }", 
+            "C c = new() { Value = 42 }; class C { public int Value; }",
             """
                     (il_topLevelMain_\d+).Emit\(OpCodes.Newobj, (?:ctor_C_\d+)\);
                     \s+var (dup_\d+) = \1.Create\(OpCodes.Dup\);
@@ -235,7 +235,7 @@ public static class Outer
                     \s+cls_topLevelStatements_0.Fields.Add\(\3\);
                     \s+\1.Emit\(OpCodes.Stfld, \3\);
                     \s+\1.Emit\(OpCodes.Stloc, l_c_7\);
-                    """, 
+                    """,
             TestName = "Object Initializer")]
         public void TestImplicitObjectCreation(string code, string expected)
         {

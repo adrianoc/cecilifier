@@ -11,7 +11,7 @@ namespace Cecilifier.Core.Misc
 
         public static implicit operator InstructionRepresentation(OpCode opCode)
         {
-            return new InstructionRepresentation {opCode = opCode, operand = null, tag = null};
+            return new InstructionRepresentation { opCode = opCode, operand = null, tag = null };
         }
     }
 }

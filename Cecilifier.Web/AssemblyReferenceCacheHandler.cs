@@ -49,8 +49,8 @@ public class AssemblyReferenceCacheHandler
         await using var assemblyFile = new FileStream(assemblyPath, FileMode.OpenOrCreate, FileAccess.Write);
         await assemblyFile.WriteAsync(new ReadOnlyMemory<byte>(bytes, 0, length));
     }
-    
-    public static  (List<string> Success, List<string> NotFound) RetrieveAssemblyReferences(string cachePath, AssemblyReference[] assemblyReferences)
+
+    public static (List<string> Success, List<string> NotFound) RetrieveAssemblyReferences(string cachePath, AssemblyReference[] assemblyReferences)
     {
         var ret = new List<string>();
         var notFound = new List<string>();
@@ -62,10 +62,10 @@ public class AssemblyReferenceCacheHandler
                 notFound.Add(assemblyReference.AssemblyHash);
                 continue;
             }
-                
+
             ret.Add(assemblyPath);
         }
 
         return (ret, notFound);
-    }    
+    }
 }

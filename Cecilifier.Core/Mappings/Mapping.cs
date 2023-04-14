@@ -6,7 +6,7 @@ namespace Cecilifier.Core.Mappings
     {
         public MappingBlock Source { get; } = new();
         public MappingBlock Cecilified { get; } = new();
-        
+
 #if DEBUG
         public Microsoft.CodeAnalysis.SyntaxNode Node;
 #endif

@@ -12,12 +12,12 @@ public struct Constants
         public const string InterfaceMethodDefinitionAttributes = "MethodAttributes.NewSlot | MethodAttributes.Virtual"; // Some common method attributes (like HideBySig) will be explicitly added.
         public const string MethodAttributesSpecialName = "MethodAttributes.SpecialName";
         public const string DelegateMethodAttributes = "MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.NewSlot | MethodAttributes.Virtual";
-        
+
         public const string CtorAttributes = "MethodAttributes.RTSpecialName | MethodAttributes.SpecialName";
         public const string InstanceConstructorName = "ctor";
         public const string StaticConstructorName = "cctor";
     }
-    
+
     public struct ParameterAttributes
     {
         public const string None = "ParameterAttributes.None";
@@ -25,7 +25,7 @@ public struct Constants
         public const string Out = "ParameterAttributes.Out";
         public const string Optional = "ParameterAttributes.Optional";
     }
-    
+
     public struct ContextFlags
     {
         /// <summary>

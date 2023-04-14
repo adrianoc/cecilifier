@@ -18,7 +18,7 @@ internal struct RoslynTypeSystem
         SystemRange = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(Range).FullName);
         SystemType = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(Type).FullName);
         SystemSpan = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(Span<>).FullName);
-        CallerArgumentExpressionAttribute = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(CallerArgumentExpressionAttribute).FullName); 
+        CallerArgumentExpressionAttribute = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(CallerArgumentExpressionAttribute).FullName);
 
         SystemInt32 = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Int32);
         SystemInt64 = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Int64);
@@ -29,12 +29,13 @@ internal struct RoslynTypeSystem
         SystemObject = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Object);
         SystemBoolean = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Boolean);
         SystemIDisposable = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(IDisposable).FullName);
-        IsReadOnlyAttribute = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(IsReadOnlyAttribute).FullName); 
-        SystemActivator = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(Activator).FullName); 
+        IsReadOnlyAttribute = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(IsReadOnlyAttribute).FullName);
+        SystemActivator = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(Activator).FullName);
         IsByRefLikeAttribute = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(IsByRefLikeAttribute).FullName);
         SystemObsoleteAttribute = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(ObsoleteAttribute).FullName);
+        SystemValueType = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(ValueType).FullName);
     }
-    
+
     public ITypeSymbol SystemIndex { get; }
     public ITypeSymbol SystemRange { get; }
     public ITypeSymbol SystemType { get; }
@@ -53,4 +54,6 @@ internal struct RoslynTypeSystem
     public ITypeSymbol IsReadOnlyAttribute { get; }
     public ITypeSymbol IsByRefLikeAttribute { get; }
     public ITypeSymbol SystemObsoleteAttribute { get; }
+    
+    public ITypeSymbol SystemValueType { get; }
 }
