@@ -1,10 +1,46 @@
 ## [Unreleased]
+
 ## Changed
-- bumped cecilifier version to 1.80.0
+## Fixed
+
+## 14/April/2023
+
+## Changed
+- bumped cecilifier version to 2.00.0
 - added support for default expression/literal
 - improved handling of (U)IntPtr/pointer literals
+- introduced type to represent tests ignored due to a known issue
+- added option to run ilverify on cecilified assemblies in integration tests (#36)
+- adds ref fields support
+- improved default literal expression handling
+- added support for implicit object creation
+- added support for abstract static interface methods (#120)
+- updated .Net to 7.0
+- added support for basic recursive patterns in IsPatternExpression (#115)
+- added support for 'IsPatternExpressionSyntax' (part of #115)
+- added support for 'is' operator
+- shows IL opcode summary when mouse hovers an opcode in cecilified code
+- added support for collection initializer (#203)
+- added support for declaring ref structs
+- added support for default expression/literal
 
 ## Fixed
+- improved handling of struct instantiation assigned to/returned as interface/object (#228)
+- Correctly set `initonly` for synthetic main method in top level statements (part of #227)
+- Logic that decides whether a method needs to be called virtually or non-virtually (#225)
+- Body of field like events not being marked as `InitOnly` (#226)
+- Added missing mappings for a bunch of compound assignment operators
+- Recursive generic type parameter constraint order (#218)
+- NRE when code contains references to inner types of outer generic ones (#216)
+- crash during resolution of non generic inner type of a generic outer type (#216)
+- non-capturing lambda handling in top-level code (#210)
+- lambda body not being processed in some scenarios (#209)
+- Implicitly typed arrays initialization (#204)
+- Exception when instantiating type parameters (#202)
+- Generic type parameters handling in top level methods (#200)
+
+- add explicit interface method implementation to 'Override' property (#217)
+- 4423a72 ensures that StructLayout attribute is respected
 
 ## 22/Nov/2022
 
