@@ -1,10 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
-
-  <PropertyGroup>
-    <TargetFramework>net7.0</TargetFramework>
-    <LangVersion>11</LangVersion>
-    <AssemblyVersion>2.00.0</AssemblyVersion>
-  </PropertyGroup>
+  <Import Project="../Cecilifier.Common.props" />
 
   <ItemGroup>
     <Compile Remove="Resources\TypeHelpers.cs" />
