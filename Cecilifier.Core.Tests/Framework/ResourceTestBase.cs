@@ -146,7 +146,7 @@ namespace Cecilifier.Core.Tests.Framework
                 UseShellExecute = false
             };
 
-            var ilverifyProcess = new Process
+            using var ilverifyProcess = new Process
             {
                 StartInfo = ilVerifyStartInfo
             };
