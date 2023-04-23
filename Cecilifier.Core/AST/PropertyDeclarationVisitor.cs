@@ -180,7 +180,7 @@ namespace Cecilifier.Core.AST
                     //TODO : NEXT : try to use CecilDefinitionsFactory.Method()
                     AddCecilExpression($"var {setMethodVar} = new MethodDefinition(\"set_{propName}\", {accessorModifiers}, {setterReturnType});");
                     parameters.ForEach(p => AddCecilExpression($"{setMethodVar}.Parameters.Add({p.VariableName});"));
-                    ProcessExplicitInterfaceImplementationAndStaticAbstractMethods(setMethodVar, property.SetMethod);
+                    AddToOverridenMethodsIfAppropriated(setMethodVar, property.SetMethod);
                     AddCecilExpression($"{propertyDeclaringTypeVar}.Methods.Add({setMethodVar});");
 
                     AddCecilExpression($"{setMethodVar}.Body = new MethodBody({setMethodVar});");
@@ -224,7 +224,7 @@ namespace Cecilifier.Core.AST
                 var definitionVariable = Context.DefinitionVariables.WithCurrentMethod(declaringType.Identifier.Text, $"get_{propName}", parameters.Select(p => p.Type).ToArray(), getMethodVar);
 
                 AddCecilExpression($"var {getMethodVar} = new MethodDefinition(\"get_{propName}\", {accessorModifiers}, {propertyType});");
-                ProcessExplicitInterfaceImplementationAndStaticAbstractMethods(getMethodVar, property.GetMethod);
+                AddToOverridenMethodsIfAppropriated(getMethodVar, property.GetMethod);
                 if (property.HasCovariantGetter())
                     AddCecilExpression($"{getMethodVar}.CustomAttributes.Add(new CustomAttribute(assembly.MainModule.Import(typeof(System.Runtime.CompilerServices.PreserveBaseOverridesAttribute).GetConstructor(BindingFlags.Public | BindingFlags.Instance, null, new Type[0], null))));");
 

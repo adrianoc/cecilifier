@@ -6,13 +6,35 @@ namespace Cecilifier.Core.Tests.Tests.Unit;
 public class MethodTests : CecilifierUnitTestBase
 {
     [Test]
-    public void Covariant()
+    public void CovariantReturnProperty()
+    {
+        var code =  """
+                    public class Base { public virtual Base P => this; }
+                    public class Derived : Base { public override Derived P => this; }
+                    """;
+
+        var result = RunCecilifier(code);
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+        
+        Assert.That(cecilifiedCode, Does.Match("""\s+var m_get_2 = new MethodDefinition\("get_P", .+cls_base_\d+\);"""), "Could not find MethodDefinition for Base.get_P");
+        
+        Assert.That(cecilifiedCode, Does.Match(
+            """
+                  \s+var (m_get_\d+) = new MethodDefinition\("get_P",.+(cls_derived_\d+)\);
+                  \s+\1.Overrides.Add\(m_get_2\);
+                  """));
+    }
+    
+    [Test]
+    public void CovariantReturnMethod()
     {
         var result = RunCecilifier("class B { public virtual B Get() => null; } class D : B { public override D Get() => new D(); D CallIt() => Get(); }");
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
 
-        Assert.That(cecilifiedCode, Contains.Substring("var m_get_6 = new MethodDefinition(\"Get\", MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.Virtual | MethodAttributes.NewSlot, cls_D_5);"));
+        Assert.That(cecilifiedCode, Does.Match("""var m_get_1 = new MethodDefinition\("Get",.+cls_B_\d+\);"""));
+        Assert.That(cecilifiedCode, Does.Match("""var m_get_6 = new MethodDefinition\("Get",.+cls_D_\d+\);"""));
         Assert.That(cecilifiedCode, Does.Match(@"m_get_6\.CustomAttributes\.Add\(.+typeof\(.+PreserveBaseOverridesAttribute\).+\);"));
+        Assert.That(cecilifiedCode, Contains.Substring("m_get_6.Overrides.Add(m_get_1);"));
         Assert.That(cecilifiedCode, Contains.Substring("il_callIt_10.Emit(OpCodes.Callvirt, m_get_6);"));
     }
 

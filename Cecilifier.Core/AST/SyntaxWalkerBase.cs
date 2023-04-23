@@ -1016,21 +1016,30 @@ namespace Cecilifier.Core.AST
             AddCecilExpression($"/* Syntax '{node.Kind()}' is not supported in {lineSpan.Path} ({lineSpan.Span.Start.Line + 1},{lineSpan.Span.Start.Character + 1}):\n------\n{node}\n----*/");
         }
 
-        protected void ProcessExplicitInterfaceImplementationAndStaticAbstractMethods(string methodVar, IMethodSymbol method)
+        // Methods implementing explicit interfaces, static abstract methods from interfaces and overriden methods with covariant return types
+        // needs to be explicitly specify which methods they override.
+        protected void AddToOverridenMethodsIfAppropriated(string methodVar, IMethodSymbol method)
         {
             // first check explicit interface implementation...
-            var explicitImplement = method?.ExplicitInterfaceImplementations.FirstOrDefault();
-            if (explicitImplement == null)
+            var overridenMethod = method?.ExplicitInterfaceImplementations.FirstOrDefault();
+            if (overridenMethod == null)
             {
-                // if it is not an explicit interface implementation check for abstract static method from interfaces
-                var lastDeclared = method.FindLastDefinition(method.ContainingType.Interfaces);
-                if (lastDeclared == null || SymbolEqualityComparer.Default.Equals(lastDeclared, method) || lastDeclared.ContainingType.TypeKind != TypeKind.Interface || method?.IsStatic == false)
-                    return;
+                if (method.HasCovariantReturnType())
+                {
+                    overridenMethod = method.OverriddenMethod;
+                }
+                else
+                {
+                    // if it is not an explicit interface implementation check for abstract static method from interfaces
+                    var lastDeclared = method.FindLastDefinition(method.ContainingType.Interfaces);
+                    if (lastDeclared == null || SymbolEqualityComparer.Default.Equals(lastDeclared, method) || lastDeclared.ContainingType.TypeKind != TypeKind.Interface || method?.IsStatic == false)
+                        return;
 
-                explicitImplement = lastDeclared;
+                    overridenMethod = lastDeclared;
+                }
             }
 
-            WriteCecilExpression(Context, $"{methodVar}.Overrides.Add({explicitImplement.MethodResolverExpression(Context)});");
+            WriteCecilExpression(Context, $"{methodVar}.Overrides.Add({overridenMethod.MethodResolverExpression(Context)});");
         }
     }
 }
