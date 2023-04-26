@@ -228,7 +228,7 @@ internal class StackallocAsArgumentFixer : IStackallocAsArgumentFixer
         this.ilVar = ilVar;
     }
 
-    IDisposable IStackallocAsArgumentFixer.FlagAsHavingStackallocArguments() => context.WithFlag(Constants.ContextFlags.HasStackallocArguments);
+    IDisposable IStackallocAsArgumentFixer.FlagAsHavingStackallocArguments() => context.WithFlag<ContextFlagReseter>(Constants.ContextFlags.HasStackallocArguments);
 
     void IStackallocAsArgumentFixer.StoreTopOfStackToLocalVariable(ITypeSymbol type)
     {

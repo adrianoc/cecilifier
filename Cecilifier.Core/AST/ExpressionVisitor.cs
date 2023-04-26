@@ -212,7 +212,7 @@ namespace Cecilifier.Core.AST
                 }
 
                 // The code below assumes that the `Add()` method is declared in the type being instantiated...
-                // TODO: Fix the code to look for extensions method also.
+                // TODO: Fix the code to look for extensions method also (see https://github.com/adrianoc/cecilifier/issues/231).
 
                 // the grand-parent of the initializer is the object being instantiated.
                 var typeBeingInstantiated = Context.SemanticModel.GetSymbolInfo(node.Parent.Parent).Symbol.EnsureNotNull<ISymbol, IMethodSymbol>();
@@ -624,10 +624,16 @@ namespace Cecilifier.Core.AST
         public override void VisitObjectCreationExpression(ObjectCreationExpressionSyntax node)
         {
             using var _ = LineInformationTracker.Track(Context, node);
-            Do(node);
+            ProcessImplicitAndExplicitObjectCreationExpression(node);
         }
-
-        private void Do(BaseObjectCreationExpressionSyntax node)
+        
+        public override void VisitImplicitObjectCreationExpression(ImplicitObjectCreationExpressionSyntax node)
+        {
+            using var _ = LineInformationTracker.Track(Context, node);
+            ProcessImplicitAndExplicitObjectCreationExpression(node);
+        }
+        
+        private void ProcessImplicitAndExplicitObjectCreationExpression(BaseObjectCreationExpressionSyntax node)
         {
             var ctorInfo = Context.SemanticModel.GetSymbolInfo(node);
 
@@ -660,12 +666,6 @@ namespace Cecilifier.Core.AST
             node.Initializer?.Accept(this);
         }
 
-        public override void VisitImplicitObjectCreationExpression(ImplicitObjectCreationExpressionSyntax node)
-        {
-            using var _ = LineInformationTracker.Track(Context, node);
-            Do(node);
-        }
-
         public override void VisitExpressionStatement(ExpressionStatementSyntax node)
         {
             base.Visit(node.Expression);
@@ -682,7 +682,7 @@ namespace Cecilifier.Core.AST
         public override void VisitRefExpression(RefExpressionSyntax node)
         {
             using var _ = LineInformationTracker.Track(Context, node);
-            using (Context.WithFlag(Constants.ContextFlags.RefReturn))
+            using (Context.WithFlag<ContextFlagReseter>(Constants.ContextFlags.RefReturn))
             {
                 node.Expression.Accept(this);
             }
@@ -970,10 +970,8 @@ namespace Cecilifier.Core.AST
                 Context.EmitCilInstruction(ilVar, opCode);
             }
 
-            DefinitionVariable methodVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
-            string resolvedVarType = Context.TypeResolver.Resolve(Context.SemanticModel.GetTypeInfo(operand).Type);
-            var tempLocalName = AddLocalVariableWithResolvedType("tmp", methodVar, resolvedVarType).VariableName;
-            Context.EmitCilInstruction(ilVar, OpCodes.Stloc, tempLocalName);
+            var tempLocalName = StoreTopOfStackInLocalVariable(ilVar, Context.SemanticModel.GetTypeInfo(operand).Type);
+            
             Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, tempLocalName);
             assignmentVisitor.InstructionPrecedingValueToLoad = Context.CurrentLine;
             Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, tempLocalName);
@@ -1003,7 +1001,7 @@ namespace Cecilifier.Core.AST
             if (Context.SemanticModel.GetSymbolInfo(node.Left).Symbol is IParameterSymbol { RefKind: RefKind.Out or RefKind.Ref or RefKind.RefReadOnly })
                 return false;
 
-            using (Context.WithFlag(Constants.ContextFlags.PseudoAssignmentToIndex))
+            using (Context.WithFlag<ContextFlagReseter>(Constants.ContextFlags.PseudoAssignmentToIndex))
                 node.Left.Accept(this);
 
             node.Right.Accept(this);
@@ -1057,7 +1055,7 @@ namespace Cecilifier.Core.AST
             var parentElementAccessExpression = node.Ancestors().OfType<ElementAccessExpressionSyntax>().FirstOrDefault(candidate => candidate.ArgumentList.Contains(node));
             if (parentElementAccessExpression != null)
             {
-                string varType = Context.TypeResolver.Resolve(Context.SemanticModel.GetTypeInfo(node).Type);
+                var varType = Context.TypeResolver.Resolve(Context.SemanticModel.GetTypeInfo(node).Type);
                 var tempLocal = AddLocalVariableToCurrentMethod("tmpIndex", varType).VariableName;
                 Context.EmitCilInstruction(ilVar, OpCodes.Stloc, tempLocal);
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldloca, tempLocal);

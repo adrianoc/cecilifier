@@ -2,7 +2,7 @@ using System;
 
 namespace Cecilifier.Core.Misc
 {
-    internal class ContextFlagReseter : IDisposable
+    internal struct ContextFlagReseter : IDisposable
     {
         private readonly CecilifierContext _context;
         private readonly string _flagName;

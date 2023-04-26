@@ -1,4 +1,3 @@
-using System;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Linq;
@@ -41,7 +40,7 @@ internal class ElementAccessExpressionWithRangeArgumentVisitor : SyntaxWalkerBas
     public override void VisitRangeExpression(RangeExpressionSyntax node)
     {
         using var __ = LineInformationTracker.Track(Context, node);
-        using var _ = Context.WithFlag(Constants.ContextFlags.InRangeExpression);
+        using var _ = Context.WithFlag<ContextFlagReseter>(Constants.ContextFlags.InRangeExpression);
 
         Utils.EnsureNotNull(node.LeftOperand);
         Utils.EnsureNotNull(node.RightOperand);

@@ -18,8 +18,6 @@ namespace Cecilifier.Core.AST
 {
     internal class SyntaxWalkerBase : CSharpSyntaxWalker
     {
-        private const string ModifiersSeparator = " | ";
-
         internal SyntaxWalkerBase(IVisitorContext ctx)
         {
             Context = ctx;
@@ -207,7 +205,7 @@ namespace Cecilifier.Core.AST
             }
         }
 
-        protected void LoadLiteralToStackHandlingCallOnValueTypeLiterals(string ilVar, ITypeSymbol literalType, object literalValue, bool isTargetOfCall)
+        private void LoadLiteralToStackHandlingCallOnValueTypeLiterals(string ilVar, ITypeSymbol literalType, object literalValue, bool isTargetOfCall)
         {
             var opCode = LoadOpCodeFor(literalType);
             Context.EmitCilInstruction(ilVar, opCode, literalValue);
@@ -257,10 +255,10 @@ namespace Cecilifier.Core.AST
             throw new ArgumentException($"Literal type {type} not supported.", nameof(type));
         }
 
-        private string StoreTopOfStackInLocalVariable(string ilVar, ITypeSymbol type)
+        protected string StoreTopOfStackInLocalVariable(string ilVar, ITypeSymbol type)
         {
-            DefinitionVariable methodVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
-            string resolvedVarType = Context.TypeResolver.Resolve(type);
+            var methodVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
+            var resolvedVarType = Context.TypeResolver.Resolve(type);
             var tempLocalName = AddLocalVariableWithResolvedType("tmp", methodVar, resolvedVarType).VariableName;
             Context.EmitCilInstruction(ilVar, OpCodes.Stloc, tempLocalName);
             return tempLocalName;
@@ -548,7 +546,7 @@ namespace Cecilifier.Core.AST
                 Context.EmitCilInstruction(ilVar, OpCodes.Box, Context.TypeResolver.Resolve(typeSymbol));
         }
 
-        protected bool HandleLoadAddress(string ilVar, ITypeSymbol symbol, CSharpSyntaxNode node, OpCode opCode, string symbolName, VariableMemberKind variableMemberKind, string parentName = null)
+        private bool HandleLoadAddress(string ilVar, ITypeSymbol symbol, CSharpSyntaxNode node, OpCode opCode, string symbolName, VariableMemberKind variableMemberKind, string parentName = null)
         {
             return HandleCallOnTypeParameter() || HandleCallOnValueType() || HandleRefAssignment() || HandleParameter();
 
@@ -743,7 +741,7 @@ namespace Cecilifier.Core.AST
             return node.Parent.IsKind(SyntaxKind.BracketedArgumentList);
         }
 
-        protected void HandlePotentialDelegateInvocationOn(SimpleNameSyntax node, ITypeSymbol typeSymbol, string ilVar)
+        private void HandlePotentialDelegateInvocationOn(SimpleNameSyntax node, ITypeSymbol typeSymbol, string ilVar)
         {
             var invocation = node.Parent as InvocationExpressionSyntax;
             if (invocation == null || invocation.Expression != node)

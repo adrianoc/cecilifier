@@ -41,7 +41,7 @@ namespace Cecilifier.Core.AST
         ref readonly RoslynTypeSystem RoslynTypeSystem { get; }
 
         #region Flags Handling
-        IDisposable WithFlag(string name);
+        T WithFlag<T>(string name) where T : struct, IDisposable;
         bool HasFlag(string name);
 
         #endregion

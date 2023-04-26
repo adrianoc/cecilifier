@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
+using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
@@ -138,7 +139,7 @@ namespace Cecilifier.Core.AST
 
         public override void VisitFixedStatement(FixedStatementSyntax node)
         {
-            using (Context.WithFlag(Constants.ContextFlags.Fixed))
+            using (Context.WithFlag<ContextFlagReseter>(Constants.ContextFlags.Fixed))
             {
                 var declaredType = Context.GetTypeInfo((PointerTypeSyntax) node.Declaration.Type).Type;
                 var pointerType = (IPointerTypeSymbol) declaredType.EnsureNotNull();
@@ -206,10 +207,7 @@ namespace Cecilifier.Core.AST
             else
             {
                 usingType = Context.SemanticModel.GetTypeInfo(node.Expression).Type;
-                var resolvedVarType = Context.TypeResolver.Resolve(usingType);
-                var methodVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
-                localVarDef = AddLocalVariableWithResolvedType("tempDisp", methodVar, resolvedVarType).VariableName;
-                Context.EmitCilInstruction(_ilVar, OpCodes.Stloc, localVarDef);
+                localVarDef = StoreTopOfStackInLocalVariable(_ilVar, usingType);
             }
 
             void FinallyBlockHandler(string finallyEndVar)
