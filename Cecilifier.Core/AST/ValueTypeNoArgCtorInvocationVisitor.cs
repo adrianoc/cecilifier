@@ -2,6 +2,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Cecilifier.Core.Variables;
 using Mono.Cecil.Cil;
+using static Cecilifier.Core.Misc.CodeGenerationHelpers;
 
 namespace Cecilifier.Core.AST
 {
@@ -68,7 +69,7 @@ namespace Cecilifier.Core.AST
         private void DeclareAndInitializeValueTypeLocalVariable()
         {
             var resolvedVarType = Context.TypeResolver.Resolve(ctorInfo.Symbol.ContainingType);
-            var tempLocal = AddLocalVariableToCurrentMethod("vt", resolvedVarType);
+            var tempLocal = AddLocalVariableToCurrentMethod(Context, "vt", resolvedVarType);
             
             using var _ = Context.DefinitionVariables.WithVariable(tempLocal);
             

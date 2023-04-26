@@ -10,6 +10,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Mono.Cecil.Cil;
+using static Cecilifier.Core.Misc.CodeGenerationHelpers;
 
 namespace Cecilifier.Core.AST
 {
@@ -70,7 +71,7 @@ namespace Cecilifier.Core.AST
         public override void VisitSwitchStatement(SwitchStatementSyntax node)
         {
             var switchExpressionType = ResolveExpressionType(node.Expression);
-            var evaluatedExpressionVariable = AddLocalVariableToCurrentMethod("switchCondition", switchExpressionType).VariableName;
+            var evaluatedExpressionVariable = AddLocalVariableToCurrentMethod(Context, "switchCondition", switchExpressionType).VariableName;
 
             ExpressionVisitor.Visit(Context, _ilVar, node.Expression);
             Context.EmitCilInstruction(_ilVar, OpCodes.Stloc, evaluatedExpressionVariable); // stores evaluated expression in local var
@@ -146,8 +147,8 @@ namespace Cecilifier.Core.AST
 
                 var currentMethodVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
                 var localVar = node.Declaration.Variables[0];
-                string resolvedVarType = Context.TypeResolver.Resolve(pointerType.PointedAtType).MakeByReferenceType();
-                string temp = AddLocalVariableWithResolvedType(localVar.Identifier.Text, currentMethodVar, resolvedVarType).VariableName;
+                var resolvedVarType = Context.TypeResolver.Resolve(pointerType.PointedAtType).MakeByReferenceType();
+                AddLocalVariableWithResolvedType(Context, localVar.Identifier.Text, currentMethodVar, resolvedVarType);
                 ProcessVariableInitialization(localVar, declaredType);
             }
 
@@ -207,7 +208,7 @@ namespace Cecilifier.Core.AST
             else
             {
                 usingType = Context.SemanticModel.GetTypeInfo(node.Expression).Type;
-                localVarDef = StoreTopOfStackInLocalVariable(_ilVar, usingType);
+                localVarDef = StoreTopOfStackInLocalVariable(Context, _ilVar, "tmp", usingType).VariableName;
             }
 
             void FinallyBlockHandler(string finallyEndVar)
@@ -349,7 +350,7 @@ namespace Cecilifier.Core.AST
                 ? ResolveExpressionType(localVar.Initializer?.Value)
                 : ResolveType(type);
 
-            string temp = AddLocalVariableWithResolvedType(localVar.Identifier.Text, methodVar, resolvedVarType).VariableName;
+            string temp = AddLocalVariableWithResolvedType(Context, localVar.Identifier.Text, methodVar, resolvedVarType).VariableName;
         }
 
         private void ProcessVariableInitialization(VariableDeclaratorSyntax localVar, ITypeSymbol variableType)

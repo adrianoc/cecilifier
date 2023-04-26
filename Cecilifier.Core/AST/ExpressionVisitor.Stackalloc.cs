@@ -11,6 +11,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Mono.Cecil.Cil;
+using static Cecilifier.Core.Misc.CodeGenerationHelpers;
 
 namespace Cecilifier.Core.AST;
 
@@ -239,17 +240,7 @@ internal class StackallocAsArgumentFixer : IStackallocAsArgumentFixer
         if (!methodVar.IsValid)
             throw new InvalidOperationException();
 
-        var localVarName = type.Name;
-        var cecilVarDeclName = context.Naming.SyntheticVariable(localVarName, ElementKind.LocalVariable);
-
-        context.WriteCecilExpression($"var {cecilVarDeclName} = new VariableDefinition({context.TypeResolver.Resolve(type)});");
-        context.WriteNewLine();
-        context.WriteCecilExpression($"{methodVar.VariableName}.Body.Variables.Add({cecilVarDeclName});");
-        context.WriteNewLine();
-
-        context.DefinitionVariables.RegisterNonMethod(string.Empty, localVarName, VariableMemberKind.LocalVariable, cecilVarDeclName);
-
-        context.EmitCilInstruction(ilVar, OpCodes.Stloc, cecilVarDeclName);
+        var cecilVarDeclName = StoreTopOfStackInLocalVariable(context, ilVar, type.Name, type).VariableName;
         context.WriteNewLine();
 
         localVariablesStoringOriginalArguments.Enqueue(cecilVarDeclName);
