@@ -215,19 +215,11 @@ namespace Cecilifier.Core.AST
 
             TypeDeclarationVisitor.EnsureForwardedTypeDefinition(context, returnType, Array.Empty<TypeParameterSyntax>());
             var exps = CecilDefinitionsFactory.Method(context, methodVar, methodName, methodModifiers, returnType, refReturn, typeParameters);
-            foreach (var exp in exps)
-            {
-                context.WriteCecilExpression(exp);
-                context.WriteNewLine();
-            }
-
+            AddCecilExpressions(context, exps);
             HandleAttributesInTypeParameter(context, typeParameters);
         }
 
-        protected virtual string GetSpecificModifiers()
-        {
-            return null;
-        }
+        protected virtual string GetSpecificModifiers() => null;
 
         private string MethodNameOf(MethodDeclarationSyntax method)
         {

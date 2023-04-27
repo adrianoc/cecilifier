@@ -77,10 +77,7 @@ namespace Cecilifier.Core.AST
             new ConstructorInitializerVisitor(Context, ilVar).Visit(node);
         }
 
-        protected override string GetSpecificModifiers()
-        {
-            return Constants.Cecil.CtorAttributes;
-        }
+        protected override string GetSpecificModifiers() => Constants.Cecil.CtorAttributes;
 
         internal void DefaultCtorInjector(string typeDefVar, ClassDeclarationSyntax declaringClass, bool isStatic)
         {

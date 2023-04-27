@@ -34,9 +34,7 @@ internal static class TypesExtensions
         var parent = typeDeclaration.Parent;
         while (parent != null && parent is NamespaceDeclarationSyntax namespaceDeclaration)
         {
-            sb.AppendFormat(namespaceDeclaration.Name.ToString());
-            sb.Append('.');
-
+            sb.Append($"{namespaceDeclaration.Name}.");
             parent = parent.Parent;
         }
 

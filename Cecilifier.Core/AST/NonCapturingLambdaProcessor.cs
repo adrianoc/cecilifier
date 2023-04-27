@@ -49,7 +49,7 @@ namespace Cecilifier.Core.AST
             var captured = new List<string>();
             foreach (var identifier in lambda.DescendantNodes().OfType<IdentifierNameSyntax>())
             {
-                var symbolInfo = ModelExtensions.GetSymbolInfo(context.SemanticModel, identifier);
+                var symbolInfo = context.SemanticModel.GetSymbolInfo(identifier);
                 if ((symbolInfo.Symbol?.Kind == SymbolKind.Parameter || symbolInfo.Symbol?.Kind == SymbolKind.Local) && symbolInfo.Symbol?.ContainingSymbol is IMethodSymbol method && method.MethodKind != MethodKind.AnonymousFunction)
                 {
                     captured.Add(identifier.Identifier.Text);
@@ -67,7 +67,7 @@ namespace Cecilifier.Core.AST
         {
             using var _ = LineInformationTracker.Track(context, lambda);
 
-            var returnType = ModelExtensions.GetTypeInfo(context.SemanticModel, lambda).ConvertedType;
+            var returnType = context.SemanticModel.GetTypeInfo(lambda).ConvertedType;
             if (returnType is INamedTypeSymbol { IsGenericType: true } namedTypeSymbol)
             {
                 if (namedTypeSymbol.FullyQualifiedName().Contains("System.Func"))
@@ -81,7 +81,7 @@ namespace Cecilifier.Core.AST
             }
             else
             {
-                throw new Exception($"Lambda not supported: {lambda.ToString()} ({lambda.GetLocation().GetLineSpan().StartLinePosition.Line}, {lambda.GetLocation().GetLineSpan().StartLinePosition.Character})");
+                throw new NotSupportedException($"Lambda not supported: {lambda.ToString()} ({lambda.GetLocation().GetLineSpan().StartLinePosition.Line}, {lambda.GetLocation().GetLineSpan().StartLinePosition.Character})");
             }
 
             var lambdaSourcePosition = lambda.GetLocation().GetLineSpan().StartLinePosition;

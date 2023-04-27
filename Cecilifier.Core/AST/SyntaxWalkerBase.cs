@@ -889,18 +889,18 @@ namespace Cecilifier.Core.AST
 
         private static string CallingConventionToCecil(CallingConvention callingConvention)
         {
-            var enumMemberName = callingConvention switch
+            var pinvokeAttribute = callingConvention switch
             {
-                CallingConvention.Cdecl => PInvokeAttributes.CallConvCdecl.ToString(),
-                CallingConvention.Winapi => PInvokeAttributes.CallConvWinapi.ToString(),
-                CallingConvention.FastCall => PInvokeAttributes.CallConvFastcall.ToString(),
-                CallingConvention.StdCall => PInvokeAttributes.CallConvStdCall.ToString(),
-                CallingConvention.ThisCall => PInvokeAttributes.CallConvThiscall.ToString(),
+                CallingConvention.Cdecl => PInvokeAttributes.CallConvCdecl,
+                CallingConvention.Winapi => PInvokeAttributes.CallConvWinapi,
+                CallingConvention.FastCall => PInvokeAttributes.CallConvFastcall,
+                CallingConvention.StdCall => PInvokeAttributes.CallConvStdCall,
+                CallingConvention.ThisCall => PInvokeAttributes.CallConvThiscall,
 
                 _ => throw new Exception($"Unexpected calling convention: {callingConvention}")
             };
 
-            return $"PInvokeAttributes.{enumMemberName}";
+            return $"PInvokeAttributes.{pinvokeAttribute.ToString()}";
         }
 
         private static IEnumerable<string> ProcessNormalMemberAttribute(IVisitorContext context, AttributeSyntax attribute, string targetDeclarationVar)

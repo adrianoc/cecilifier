@@ -4,7 +4,6 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using Cecilifier.Core.AST;
-using Cecilifier.Core.Misc;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -15,7 +14,7 @@ namespace Cecilifier.Core.Extensions
 {
     internal static class MethodExtensions
     {
-        private static string Modifiers(this IMethodSymbol method)
+        private static string ReflectionBindingsFlags(this IMethodSymbol method)
         {
             var bindingFlags = method.IsStatic ? BindingFlags.Static : BindingFlags.Instance;
             bindingFlags |= method.DeclaredAccessibility == Accessibility.Public ? BindingFlags.Public : BindingFlags.NonPublic;
@@ -57,7 +56,7 @@ namespace Cecilifier.Core.Extensions
             }
 
             var declaringTypeName = method.ContainingType.FullyQualifiedName();
-            return ImportFromMainModule($"TypeHelpers.ResolveMethod(typeof({declaringTypeName}), \"{method.Name}\",{method.Modifiers()}{method.Parameters.Aggregate("", (acc, curr) => acc + ", \"" + curr.Type.FullyQualifiedName() + "\"")})");
+            return ImportFromMainModule($"TypeHelpers.ResolveMethod(typeof({declaringTypeName}), \"{method.Name}\",{method.ReflectionBindingsFlags()}{method.Parameters.Aggregate("", (acc, curr) => acc + ", \"" + curr.Type.FullyQualifiedName() + "\"")})");
         }
 
         public static MethodDefinitionVariable AsMethodDefinitionVariable(this IMethodSymbol method, string variableName = null)

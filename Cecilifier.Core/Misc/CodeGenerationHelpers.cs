@@ -13,9 +13,9 @@ public struct CodeGenerationHelpers
     {
         var methodVar = context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
         var resolvedVarType = context.TypeResolver.Resolve(type);
-        var tempLocalName = AddLocalVariableWithResolvedType(context, variableName, methodVar, resolvedVarType);
-        context.EmitCilInstruction(ilVar, OpCodes.Stloc, tempLocalName.VariableName);
-        return tempLocalName;
+        var tempLocalDefinitionVariable = AddLocalVariableWithResolvedType(context, variableName, methodVar, resolvedVarType);
+        context.EmitCilInstruction(ilVar, OpCodes.Stloc, tempLocalDefinitionVariable.VariableName);
+        return tempLocalDefinitionVariable;
     }
         
     internal static DefinitionVariable AddLocalVariableWithResolvedType(IVisitorContext context, string localVarName, DefinitionVariable methodVar, string resolvedVarType)
