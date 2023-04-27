@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Misc;
@@ -307,7 +308,7 @@ internal class StackallocAsArgumentFixer : IStackallocAsArgumentFixer
 
     internal struct StackallocPassedAsSpanDisposal : IDisposable
     {
-        private readonly IStackallocAsArgumentFixer parent;
+        private IStackallocAsArgumentFixer parent;
         private IDisposable stackAllocFlagCleaner;
 
         public StackallocPassedAsSpanDisposal(IStackallocAsArgumentFixer parent = null)
@@ -324,10 +325,11 @@ internal class StackallocAsArgumentFixer : IStackallocAsArgumentFixer
 
         public void Dispose()
         {
-            if (parent == null)
+            var p = Interlocked.Exchange(ref parent, null);
+            if (p == null)
                 return;
 
-            parent.RestoreCallStackIfRequired();
+            p.RestoreCallStackIfRequired();
             handlers.Pop();
             stackAllocFlagCleaner?.Dispose();
         }
