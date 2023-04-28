@@ -195,35 +195,20 @@ namespace Cecilifier.Core.AST
                     Context.WriteComment("C# compiler one since Cecilifier does not apply some optimizations.");
                 }
             }
-            else if (node.IsKind(SyntaxKind.ComplexElementInitializerExpression))
+            else if (node.IsKind(SyntaxKind.CollectionInitializerExpression))
             {
-                // Collection initializers with this syntax depends on the type being 
-                // initialized to expose an `Add()` method (or an extension method to
-                // to be available) with a signature that matches the types passed
-                // in the list of expressions
-                Context.EmitCilInstruction(ilVar, OpCodes.Dup);
-
-                var expectedAddMethodParameterTypes = ArrayPool<ITypeSymbol>.Shared.Rent(node.Expressions.Count);
-                var parameterTypeIndex = 0;
                 foreach (var initializeExp in node.Expressions)
                 {
+                    // Collection initializers with this syntax depends on the type being initialized to expose an `Add()` method
+                    // (or an extension method to be available) with a signature that matches the types passed in the list of
+                    // expressions
+                    var addMethod = Context.SemanticModel.GetCollectionInitializerSymbolInfo(node.Expressions.First()).Symbol.EnsureNotNull<ISymbol, IMethodSymbol>();
+                    EnsureForwardedMethod(Context, addMethod, Array.Empty<TypeParameterSyntax>());
+                    
+                    Context.EmitCilInstruction(ilVar, OpCodes.Dup);
                     initializeExp.Accept(this);
-                    var expectedParamType = Context.SemanticModel.GetTypeInfo(initializeExp);
-                    expectedAddMethodParameterTypes[parameterTypeIndex++] = expectedParamType.Type ?? expectedParamType.ConvertedType;
+                    AddMethodCall(ilVar, addMethod);
                 }
-
-                // The code below assumes that the `Add()` method is declared in the type being instantiated...
-                // TODO: Fix the code to look for extensions method also (see https://github.com/adrianoc/cecilifier/issues/231).
-
-                // the grand-parent of the initializer is the object being instantiated.
-                var typeBeingInstantiated = Context.SemanticModel.GetSymbolInfo(node.Parent.Parent).Symbol.EnsureNotNull<ISymbol, IMethodSymbol>();
-                var addMethod = typeBeingInstantiated.ContainingType.GetMembers("Add")
-                                                    .OfType<IMethodSymbol>()
-                                                    .SingleOrDefault(m => m.Parameters.All(p => SymbolEqualityComparer.Default.Equals(p.Type, expectedAddMethodParameterTypes[p.Ordinal])));
-
-                EnsureForwardedMethod(Context, addMethod, Array.Empty<TypeParameterSyntax>());
-                AddMethodCall(ilVar, addMethod);
-                ArrayPool<ITypeSymbol>.Shared.Return(expectedAddMethodParameterTypes);
             }
             else
             {
