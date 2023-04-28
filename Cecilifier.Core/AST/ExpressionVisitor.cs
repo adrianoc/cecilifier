@@ -191,7 +191,7 @@ namespace Cecilifier.Core.AST
                 // with Cecil.
                 if (node.Expressions.Count > 2)
                 {
-                    Context.WriteComment("Note that as of Cecilifier version 1.70.0 the generated code will differ from the");
+                    Context.WriteComment($"Note that as of Cecilifier version {typeof(Cecilifier).Assembly.GetName().Version} the generated code will differ from the");
                     Context.WriteComment("C# compiler one since Cecilifier does not apply some optimizations.");
                 }
             }

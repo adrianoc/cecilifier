@@ -147,7 +147,7 @@ public class ArrayTests : CecilifierUnitTestBase
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
 
         // see comment in ExpressionVisitor.VisitInitializerExpression()
-        Assert.That(cecilifiedCode, Contains.Substring("Note that as of Cecilifier version 1.70.0 the generated code will differ from the"));
+        Assert.That(cecilifiedCode, Contains.Substring($"Note that as of Cecilifier version {typeof(Cecilifier).Assembly.GetName().Version} the generated code will differ from the"));
         Assert.That(cecilifiedCode, Contains.Substring("C# compiler one since Cecilifier does not apply some optimizations."));
     }
 }
