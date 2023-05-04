@@ -173,7 +173,7 @@ partial class ExpressionVisitor
  * If one (or more arguments) are stackalloc expressions then at the time
  * Cecilifier visits these expression it will already have visited (and
  * pushed the reference to the stack) of the target of the call and/or
- * any arguments that proceeds the stackaloc one. For instance, in the 
+ * any arguments that precedes the stackaloc one. For instance, in the 
  * following call:
  *
  *   o.M(42, stackalloc byte[3]);
@@ -186,7 +186,7 @@ partial class ExpressionVisitor
  * i.e, the target of the call and the first argument.
  *
  * In order generate valid code Cecilifier detects that the call contains a stackalloc being passed
- * as an argument and after computing each argument introduces a local variable to store the computed value.
+ * as an argument and after processing it it introduces a local variable to store the computed value.
  *
  * After visiting the whole expression it ensures that these local variables are pushed to the stack
  * to recreate the stack frame for the call.
