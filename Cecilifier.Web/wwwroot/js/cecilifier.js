@@ -234,8 +234,17 @@ function retrieveListOfFixedIssuesInStagingServer(callback) {
             let issues = JSON.parse(this.responseText);
             callback(issues);
         }
+        else if (this.readyState === 4 && this.status === 500) {
+            SnackBar({
+                message: this.responseText,
+                dismissible: true,
+                status: "Error",
+                timeout: 120000,
+                icon: "exclamation"
+            });
+        }
     };
-    xhttp.open("GET", "https://api.github.com/repos/adrianoc/cecilifier/issues?state=open&labels=fixed-in-staging", true);
+    xhttp.open("GET", `${window.origin}/issues_closed_in_staging`, true);
     xhttp.send();
 }
 

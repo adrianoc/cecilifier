@@ -61,7 +61,7 @@ function getReleaseNotes(callback) {
             callback( this.responseText);
         }
     };
-    xhttp.open("GET", "https://api.github.com/repos/adrianoc/cecilifier/releases", true);
+    xhttp.open("GET", `${window.origin}/get_release_notes`, true);
     xhttp.send();
 }
   
