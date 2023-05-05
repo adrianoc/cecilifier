@@ -855,13 +855,17 @@ function setupCursorTracking() {
         if (blockMappings === null)
             return;
         
-        for(let i = 0; i < blockMappings.length; i++)
-        {
-            if (e.target.position === null || e.target.position.lineNumber < blockMappings[i].Cecilified.Begin.Line || e.target.position.lineNumber > blockMappings[i].Cecilified.End.Line)
+        for(const blockMapping of blockMappings) {
+            if (e.target.position === null || e.target.position.lineNumber < blockMapping.Cecilified.Begin.Line || e.target.position.lineNumber > blockMapping.Cecilified.End.Line)
                 continue;
-            
-            csharpCode.setSelection( { startColumn: blockMappings[i].Source.Begin.Column, endColumn: blockMappings[i].Source.End.Column, startLineNumber: blockMappings[i].Source.Begin.Line, endLineNumber: blockMappings[i].Source.End.Line });
-            csharpCode.revealLineNearTop(blockMappings[i].Source.Begin.Line);
+
+            csharpCode.setSelection({
+                startColumn: blockMapping.Source.Begin.Column,
+                endColumn: blockMapping.Source.End.Column,
+                startLineNumber: blockMapping.Source.Begin.Line,
+                endLineNumber: blockMapping.Source.End.Line
+            });
+            csharpCode.revealLineNearTop(blockMapping.Source.Begin.Line);
             return;            
         }
     });
