@@ -96,10 +96,10 @@ namespace Cecilifier.Web
                 if (response.StatusCode == HttpStatusCode.Created)
                 {
                     // Parse response body and extract link to issue
-                    var issueURL = ((Newtonsoft.Json.Linq.JObject) Newtonsoft.Json.JsonConvert.DeserializeObject(responseStr))["url"].ToString();
+                    var issueUrl = ((Newtonsoft.Json.Linq.JObject) Newtonsoft.Json.JsonConvert.DeserializeObject(responseStr))["url"].ToString();
 
                     // notify cecilifier main page  about the outcome of issue reporting
-                    await context.Response.WriteAsync($"<script>window.opener.postMessage('{{ \"status\": \"success\", \"issueUrl\": \"{issueURL}\" }}','*');</script>");
+                    await context.Response.WriteAsync($"<script>window.opener.postMessage('{{ \"status\": \"success\", \"issueUrl\": \"{issueUrl}\" }}','*');</script>");
                 }
                 else
                 {
