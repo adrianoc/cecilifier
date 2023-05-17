@@ -1,9 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <Import Project="../Cecilifier.Common.props" />
   <Import Project="../Cecilifier.CommonPackages.props" />
-  <ItemGroup>
-    <PackageReference Update="Microsoft.CodeAnalysis.CSharp">
-      <Version>4.6.0-1.final</Version>
-    </PackageReference>
-  </ItemGroup>
 </Project>
