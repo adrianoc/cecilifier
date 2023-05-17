@@ -104,5 +104,11 @@ namespace Cecilifier.Core.Tests.Integration
         {
             AssertResourceTestBinary(@"Generics/InnerTypeFromExternalAssembly");
         }
+        
+        [Test]
+        public void TestUsageOfNonGenericMethodOnGenericType()
+        {
+            AssertResourceTest("Generics/UsageOfNonGenericMethodOnGenericType");
+        }
     }
 }

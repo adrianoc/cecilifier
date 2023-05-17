@@ -52,7 +52,7 @@ public class ObjectInitializerTests : CecilifierUnitTestBase
     }
 
     [Test]
-    public void CustomCollectionInitializer()
+    public void CustomCollectionAndComplexObjectInitializer()
     {
         var code = @"using System.Collections;
                     
@@ -86,6 +86,65 @@ public class ObjectInitializerTests : CecilifierUnitTestBase
                        @"\1Dup\);\s+" +
                        @"\1Ldc_I4, 65\);\s+" +
                        @"\1Callvirt,.+m_add_\d+\);\s+";
+
+        Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(expected));
+    }
+
+    [Test]
+    public void CustomCollectionInitializer()
+    {
+        var code = """
+                   using System.Collections;
+                   class CollectionFoo : IEnumerable 
+                   {
+                        public IEnumerator GetEnumerator() => null; 
+                        public void Add(char ch) {} 
+                   }
+
+                   class Driver { CollectionFoo M() => new CollectionFoo() { 'A', 'B', 'C' }; }
+                   """;
+
+        var result = RunCecilifier(code);
+
+        var expected = @"(il_M_\d+.Emit\(OpCodes\.)Newobj, ctor_collectionFoo_\d+\);\s+" +
+                       @"\1Dup\);\s+" +
+                       @"\1Ldc_I4, 65\);\s+" +
+                       @"\1Callvirt,.+m_add_\d+\);\s+" +
+                       @"\1Dup\);\s+" +
+                       @"\1Ldc_I4, 66\);\s+" +
+                       @"\1Callvirt,.+m_add_\d+\);\s+"+
+                       @"\1Dup\);\s+" +
+                       @"\1Ldc_I4, 67\);\s+" +
+                       @"\1Callvirt,.+m_add_\d+\);";
+
+        Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(expected));
+    }
+    
+    [Test]
+    public void CustomCollectionInitializerAddMethodBountToExtensionMethod()
+    {
+        var code = """
+                   static class Ext { public static void Add(this Foo self, string s) {} }
+
+                   class Foo : System.Collections.IEnumerable
+                   {
+                        public System.Collections.IEnumerator GetEnumerator() => null;
+                        
+                        static void Main() 
+                        {
+                            var f  = new Foo() { "W1",  "W2" };
+                        }
+                   }
+                   """;
+
+        var result = RunCecilifier(code);
+
+        var expected = @"(il_main_\d+\.Emit\(OpCodes\.)Dup\);\s+" +
+                       @"\1Ldstr, ""W1""\);\s+" +
+                       @"\1Call,.+m_add_\d+\);\s+"+
+                       @"\1Dup\);\s+" +
+                       @"\1Ldstr, ""W2""\);\s+" +
+                       @"\1Call,.+m_add_\d+\);";
 
         Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(expected));
     }

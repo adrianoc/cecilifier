@@ -1,0 +1,15 @@
+﻿[System.AttributeUsage(System.AttributeTargets.All, AllowMultiple = true)]
+class MyGenericAttribute<T> : System.Attribute 
+{ 
+    public MyGenericAttribute() {} 
+    public MyGenericAttribute(T value) {} 
+    public T Value {get; set; } 
+}
+
+[MyGeneric<int>]
+[MyGeneric<int>(42)]
+[MyGeneric<string>("gen-attr-value")]
+[MyGeneric<bool>(Value = true)]
+[MyGeneric<bool>(true)]
+[MyGeneric<string>("str", Value="Other str")]
+class Foo {}

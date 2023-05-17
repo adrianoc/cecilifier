@@ -123,7 +123,7 @@ namespace Cecilifier.Core.Extensions
 
     public sealed class VariableDefinitionComparer : IEqualityComparer<VariableDefinition>
     {
-        private static readonly Lazy<IEqualityComparer<VariableDefinition>> instance = new Lazy<IEqualityComparer<VariableDefinition>>(delegate { return new VariableDefinitionComparer(); });
+        private static readonly Lazy<IEqualityComparer<VariableDefinition>> instance = new(() => new VariableDefinitionComparer());
 
         public static IEqualityComparer<VariableDefinition> Instance => instance.Value;
 

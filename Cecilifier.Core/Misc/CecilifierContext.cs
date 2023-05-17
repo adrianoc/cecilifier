@@ -168,9 +168,9 @@ namespace Cecilifier.Core.Misc
             }
         }
 
-        public IDisposable WithFlag(string name)
+        public T WithFlag<T>(string name) where T : struct, IDisposable 
         {
-            return new ContextFlagReseter(this, name);
+            return (T)(IDisposable) new ContextFlagReseter(this, name);
         }
 
         public bool HasFlag(string name)

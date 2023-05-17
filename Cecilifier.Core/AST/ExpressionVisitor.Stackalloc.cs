@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Misc;
@@ -11,6 +12,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Mono.Cecil.Cil;
+using static Cecilifier.Core.Misc.CodeGenerationHelpers;
 
 namespace Cecilifier.Core.AST;
 
@@ -228,7 +230,7 @@ internal class StackallocAsArgumentFixer : IStackallocAsArgumentFixer
         this.ilVar = ilVar;
     }
 
-    IDisposable IStackallocAsArgumentFixer.FlagAsHavingStackallocArguments() => context.WithFlag(Constants.ContextFlags.HasStackallocArguments);
+    IDisposable IStackallocAsArgumentFixer.FlagAsHavingStackallocArguments() => context.WithFlag<ContextFlagReseter>(Constants.ContextFlags.HasStackallocArguments);
 
     void IStackallocAsArgumentFixer.StoreTopOfStackToLocalVariable(ITypeSymbol type)
     {
@@ -239,17 +241,7 @@ internal class StackallocAsArgumentFixer : IStackallocAsArgumentFixer
         if (!methodVar.IsValid)
             throw new InvalidOperationException();
 
-        var localVarName = type.Name;
-        var cecilVarDeclName = context.Naming.SyntheticVariable(localVarName, ElementKind.LocalVariable);
-
-        context.WriteCecilExpression($"var {cecilVarDeclName} = new VariableDefinition({context.TypeResolver.Resolve(type)});");
-        context.WriteNewLine();
-        context.WriteCecilExpression($"{methodVar.VariableName}.Body.Variables.Add({cecilVarDeclName});");
-        context.WriteNewLine();
-
-        context.DefinitionVariables.RegisterNonMethod(string.Empty, localVarName, VariableMemberKind.LocalVariable, cecilVarDeclName);
-
-        context.EmitCilInstruction(ilVar, OpCodes.Stloc, cecilVarDeclName);
+        var cecilVarDeclName = StoreTopOfStackInLocalVariable(context, ilVar, type.Name, type).VariableName;
         context.WriteNewLine();
 
         localVariablesStoringOriginalArguments.Enqueue(cecilVarDeclName);
@@ -316,7 +308,7 @@ internal class StackallocAsArgumentFixer : IStackallocAsArgumentFixer
 
     internal struct StackallocPassedAsSpanDisposal : IDisposable
     {
-        private readonly IStackallocAsArgumentFixer parent;
+        private IStackallocAsArgumentFixer parent;
         private IDisposable stackAllocFlagCleaner;
 
         public StackallocPassedAsSpanDisposal(IStackallocAsArgumentFixer parent = null)
@@ -333,10 +325,11 @@ internal class StackallocAsArgumentFixer : IStackallocAsArgumentFixer
 
         public void Dispose()
         {
-            if (parent == null)
+            var p = Interlocked.Exchange(ref parent, null);
+            if (p == null)
                 return;
 
-            parent.RestoreCallStackIfRequired();
+            p.RestoreCallStackIfRequired();
             handlers.Pop();
             stackAllocFlagCleaner?.Dispose();
         }

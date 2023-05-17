@@ -13,13 +13,12 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
+using static Cecilifier.Core.Misc.CodeGenerationHelpers;
 
 namespace Cecilifier.Core.AST
 {
     internal class SyntaxWalkerBase : CSharpSyntaxWalker
     {
-        private const string ModifiersSeparator = " | ";
-
         internal SyntaxWalkerBase(IVisitorContext ctx)
         {
             Context = ctx;
@@ -116,33 +115,13 @@ namespace Cecilifier.Core.AST
             AddCecilExpression($"var {instVar} = {ilVar}.Create({opCode.ConstantName()}{operandStr});");
         }
 
-        protected DefinitionVariable AddLocalVariableWithResolvedType(string localVarName, DefinitionVariable methodVar, string resolvedVarType)
-        {
-            var cecilVarDeclName = Context.Naming.SyntheticVariable(localVarName, ElementKind.LocalVariable);
-
-            AddCecilExpression("var {0} = new VariableDefinition({1});", cecilVarDeclName, resolvedVarType);
-            AddCecilExpression("{0}.Body.Variables.Add({1});", methodVar.VariableName, cecilVarDeclName);
-
-            return Context.DefinitionVariables.RegisterNonMethod(string.Empty, localVarName, VariableMemberKind.LocalVariable, cecilVarDeclName);
-        }
-
-        protected DefinitionVariable AddLocalVariableToCurrentMethod(string localVarName, string varType)
-        {
-            var currentMethod = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
-            if (!currentMethod.IsValid)
-                throw new InvalidOperationException("Could not resolve current method declaration variable.");
-
-            return AddLocalVariableWithResolvedType(localVarName, currentMethod, varType);
-        }        
-
         protected void LoadLiteralValue(string ilVar, ITypeSymbol type, string value, bool isTargetOfCall)
         {
             if (type.TypeKind == TypeKind.TypeParameter)
             {
                 var resolvedType = Context.TypeResolver.Resolve(type);
-                var tempVar = AddLocalVariableToCurrentMethod(type.Name, resolvedType).VariableName;
-
-                Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, tempVar);
+                
+                StoreTopOfStackInLocalVariableAndLoadItsAddress(ilVar, type, type.Name);
                 Context.EmitCilInstruction(ilVar, OpCodes.Initobj, resolvedType);
                 return;
             }
@@ -207,7 +186,7 @@ namespace Cecilifier.Core.AST
             }
         }
 
-        protected void LoadLiteralToStackHandlingCallOnValueTypeLiterals(string ilVar, ITypeSymbol literalType, object literalValue, bool isTargetOfCall)
+        private void LoadLiteralToStackHandlingCallOnValueTypeLiterals(string ilVar, ITypeSymbol literalType, object literalValue, bool isTargetOfCall)
         {
             var opCode = LoadOpCodeFor(literalType);
             Context.EmitCilInstruction(ilVar, opCode, literalValue);
@@ -257,18 +236,9 @@ namespace Cecilifier.Core.AST
             throw new ArgumentException($"Literal type {type} not supported.", nameof(type));
         }
 
-        private string StoreTopOfStackInLocalVariable(string ilVar, ITypeSymbol type)
+        private void StoreTopOfStackInLocalVariableAndLoadItsAddress(string ilVar, ITypeSymbol type, string variableName = "tmp")
         {
-            DefinitionVariable methodVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
-            string resolvedVarType = Context.TypeResolver.Resolve(type);
-            var tempLocalName = AddLocalVariableWithResolvedType("tmp", methodVar, resolvedVarType).VariableName;
-            Context.EmitCilInstruction(ilVar, OpCodes.Stloc, tempLocalName);
-            return tempLocalName;
-        }
-
-        private void StoreTopOfStackInLocalVariableAndLoadItsAddress(string ilVar, ITypeSymbol type)
-        {
-            var tempLocalName = StoreTopOfStackInLocalVariable(ilVar, type);
+            var tempLocalName = StoreTopOfStackInLocalVariable(Context, ilVar, variableName, type).VariableName;
             Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, tempLocalName);
         }
 
@@ -548,7 +518,7 @@ namespace Cecilifier.Core.AST
                 Context.EmitCilInstruction(ilVar, OpCodes.Box, Context.TypeResolver.Resolve(typeSymbol));
         }
 
-        protected bool HandleLoadAddress(string ilVar, ITypeSymbol symbol, CSharpSyntaxNode node, OpCode opCode, string symbolName, VariableMemberKind variableMemberKind, string parentName = null)
+        private bool HandleLoadAddress(string ilVar, ITypeSymbol symbol, CSharpSyntaxNode node, OpCode opCode, string symbolName, VariableMemberKind variableMemberKind, string parentName = null)
         {
             return HandleCallOnTypeParameter() || HandleCallOnValueType() || HandleRefAssignment() || HandleParameter();
 
@@ -743,7 +713,7 @@ namespace Cecilifier.Core.AST
             return node.Parent.IsKind(SyntaxKind.BracketedArgumentList);
         }
 
-        protected void HandlePotentialDelegateInvocationOn(SimpleNameSyntax node, ITypeSymbol typeSymbol, string ilVar)
+        private void HandlePotentialDelegateInvocationOn(SimpleNameSyntax node, ITypeSymbol typeSymbol, string ilVar)
         {
             var invocation = node.Parent as InvocationExpressionSyntax;
             if (invocation == null || invocation.Expression != node)
@@ -919,18 +889,18 @@ namespace Cecilifier.Core.AST
 
         private static string CallingConventionToCecil(CallingConvention callingConvention)
         {
-            var enumMemberName = callingConvention switch
+            var pinvokeAttribute = callingConvention switch
             {
-                CallingConvention.Cdecl => PInvokeAttributes.CallConvCdecl.ToString(),
-                CallingConvention.Winapi => PInvokeAttributes.CallConvWinapi.ToString(),
-                CallingConvention.FastCall => PInvokeAttributes.CallConvFastcall.ToString(),
-                CallingConvention.StdCall => PInvokeAttributes.CallConvStdCall.ToString(),
-                CallingConvention.ThisCall => PInvokeAttributes.CallConvThiscall.ToString(),
+                CallingConvention.Cdecl => PInvokeAttributes.CallConvCdecl,
+                CallingConvention.Winapi => PInvokeAttributes.CallConvWinapi,
+                CallingConvention.FastCall => PInvokeAttributes.CallConvFastcall,
+                CallingConvention.StdCall => PInvokeAttributes.CallConvStdCall,
+                CallingConvention.ThisCall => PInvokeAttributes.CallConvThiscall,
 
                 _ => throw new Exception($"Unexpected calling convention: {callingConvention}")
             };
 
-            return $"PInvokeAttributes.{enumMemberName}";
+            return $"PInvokeAttributes.{pinvokeAttribute.ToString()}";
         }
 
         private static IEnumerable<string> ProcessNormalMemberAttribute(IVisitorContext context, AttributeSyntax attribute, string targetDeclarationVar)
@@ -948,11 +918,8 @@ namespace Cecilifier.Core.AST
                 // Attribute is defined in the same assembly. We need to find the variable that holds its "ctor declaration"
                 var attrCtor = attrType.GetMembers().OfType<IMethodSymbol>().SingleOrDefault(m => m.MethodKind == MethodKind.Constructor && m.Parameters.Length == attrArgs.Length);
                 EnsureForwardedMethod(context, attrCtor, Array.Empty<TypeParameterSyntax>());
-                var attrCtorVar = context.DefinitionVariables.GetMethodVariable(attrCtor.AsMethodDefinitionVariable());
-                if (!attrCtorVar.IsValid)
-                    throw new Exception($"Could not find variable for {attrCtor.ContainingType.Name} ctor.");
 
-                return attrCtorVar.VariableName;
+                return attrCtor.MethodResolverExpression(context);
             });
 
             return attrsExp;
@@ -1016,21 +983,30 @@ namespace Cecilifier.Core.AST
             AddCecilExpression($"/* Syntax '{node.Kind()}' is not supported in {lineSpan.Path} ({lineSpan.Span.Start.Line + 1},{lineSpan.Span.Start.Character + 1}):\n------\n{node}\n----*/");
         }
 
-        protected void ProcessExplicitInterfaceImplementationAndStaticAbstractMethods(string methodVar, IMethodSymbol method)
+        // Methods implementing explicit interfaces, static abstract methods from interfaces and overriden methods with covariant return types
+        // needs to be explicitly specify which methods they override.
+        protected void AddToOverridenMethodsIfAppropriated(string methodVar, IMethodSymbol method)
         {
             // first check explicit interface implementation...
-            var explicitImplement = method?.ExplicitInterfaceImplementations.FirstOrDefault();
-            if (explicitImplement == null)
+            var overridenMethod = method?.ExplicitInterfaceImplementations.FirstOrDefault();
+            if (overridenMethod == null)
             {
-                // if it is not an explicit interface implementation check for abstract static method from interfaces
-                var lastDeclared = method.FindLastDefinition(method.ContainingType.Interfaces);
-                if (lastDeclared == null || SymbolEqualityComparer.Default.Equals(lastDeclared, method) || lastDeclared.ContainingType.TypeKind != TypeKind.Interface || method?.IsStatic == false)
-                    return;
+                if (method.HasCovariantReturnType())
+                {
+                    overridenMethod = method.OverriddenMethod;
+                }
+                else
+                {
+                    // if it is not an explicit interface implementation check for abstract static method from interfaces
+                    var lastDeclared = method.FindLastDefinition(method.ContainingType.Interfaces);
+                    if (lastDeclared == null || SymbolEqualityComparer.Default.Equals(lastDeclared, method) || lastDeclared.ContainingType.TypeKind != TypeKind.Interface || method?.IsStatic == false)
+                        return;
 
-                explicitImplement = lastDeclared;
+                    overridenMethod = lastDeclared;
+                }
             }
 
-            WriteCecilExpression(Context, $"{methodVar}.Overrides.Add({explicitImplement.MethodResolverExpression(Context)});");
+            WriteCecilExpression(Context, $"{methodVar}.Overrides.Add({overridenMethod.MethodResolverExpression(Context)});");
         }
     }
 }

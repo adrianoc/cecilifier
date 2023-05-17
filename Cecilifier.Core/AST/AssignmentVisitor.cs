@@ -130,7 +130,6 @@ namespace Cecilifier.Core.AST
         // indexer (in this case one taking a string and returning an integer).
         public override void VisitImplicitElementAccess(ImplicitElementAccessSyntax node)
         {
-            //using var _ = LineInformationTracker.Track(Context, node);
             var lastInstructionLoadingRhs = Context.CurrentLine;
 
             Context.EmitCilInstruction(ilVar, OpCodes.Dup);
@@ -284,7 +283,7 @@ namespace Cecilifier.Core.AST
         ///
         /// so in this case we visit the left side of the assignment twice; the 1st one
         /// calls this method and is responsible to load the address to be indirectly
-        /// assigned (in the example above, the "ldarga i" instruction and the second
+        /// assigned (in the example above, the "ldarga i" instruction) and the second
         /// one generates the indirect assignment ("stind.i4" instruction in the example
         /// above).
         /// </summary>

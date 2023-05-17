@@ -126,7 +126,7 @@ namespace Cecilifier.Core.Extensions
             if (declaringSyntaxReference == null)
                 return DefinitionVariable.NotFound;
 
-            var fieldDeclaration = (FieldDeclarationSyntax) declaringSyntaxReference.GetSyntax().Parent.Parent;
+            var fieldDeclaration = declaringSyntaxReference.GetSyntax().Parent.Parent.EnsureNotNull<SyntaxNode,FieldDeclarationSyntax>();
             if (fieldDeclaration.Span.Start > node.Span.End)
             {
                 // this is a forward reference, process it...
@@ -153,6 +153,8 @@ namespace Cecilifier.Core.Extensions
                 propertyDeclaration.Accept(new PropertyDeclarationVisitor(context));
             }
         }
+
+        public static bool HasCovariantGetter(this IPropertySymbol property) => property.IsOverride && !SymbolEqualityComparer.Default.Equals(property?.OverriddenProperty?.Type, property.Type);
 
         public static OpCode LoadOpCodeForFieldAccess(this ISymbol symbol) => symbol.IsStatic ? OpCodes.Ldsfld : OpCodes.Ldfld;
         public static OpCode StoreOpCodeForFieldAccess(this ISymbol symbol) => symbol.IsStatic ? OpCodes.Stsfld : OpCodes.Stfld;

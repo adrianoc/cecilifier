@@ -143,7 +143,7 @@ namespace Cecilifier.Core.AST
                 HandleAttributesInMemberDeclaration(attributes, TargetDoesNotMatch, SyntaxKind.ReturnKeyword, methodVar); // Normal method attrs.
                 HandleAttributesInMemberDeclaration(attributes, TargetMatches, SyntaxKind.ReturnKeyword, $"{methodVar}.MethodReturnType"); // [return:Attr]
 
-                ProcessExplicitInterfaceImplementationAndStaticAbstractMethods(methodVar, methodSymbol);
+                AddToOverridenMethodsIfAppropriated(methodVar, methodSymbol);
 
                 if (modifiersTokens.IndexOf(SyntaxKind.ExternKeyword) == -1)
                 {
@@ -215,19 +215,11 @@ namespace Cecilifier.Core.AST
 
             TypeDeclarationVisitor.EnsureForwardedTypeDefinition(context, returnType, Array.Empty<TypeParameterSyntax>());
             var exps = CecilDefinitionsFactory.Method(context, methodVar, methodName, methodModifiers, returnType, refReturn, typeParameters);
-            foreach (var exp in exps)
-            {
-                context.WriteCecilExpression(exp);
-                context.WriteNewLine();
-            }
-
+            AddCecilExpressions(context, exps);
             HandleAttributesInTypeParameter(context, typeParameters);
         }
 
-        protected virtual string GetSpecificModifiers()
-        {
-            return null;
-        }
+        protected virtual string GetSpecificModifiers() => null;
 
         private string MethodNameOf(MethodDeclarationSyntax method)
         {

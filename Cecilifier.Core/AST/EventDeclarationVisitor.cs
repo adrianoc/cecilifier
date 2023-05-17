@@ -261,16 +261,6 @@ namespace Cecilifier.Core.AST
             return evtDefVar;
         }
 
-        private string AddEventDefinition(EventDeclarationSyntax eventDeclarationSyntax, string eventName, string eventType)
-        {
-            var eventDefVar = Context.Naming.EventDeclaration(eventDeclarationSyntax);
-            var eventDefExp = $"var {eventDefVar} = new EventDefinition(\"{eventName}\", EventAttributes.None, {eventType});";
-            AddCecilExpression(eventDefExp);
-            WriteCecilExpression(Context, $"{eventDeclaringTypeVar}.Events.Add({eventDefVar});");
-
-            return eventDefVar;
-        }
-
         private string eventDeclaringTypeVar;
     }
 }
