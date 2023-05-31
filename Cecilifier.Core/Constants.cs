@@ -40,5 +40,22 @@ public struct Constants
         public const string Fixed = "fixed";
         public const string InRangeExpression = "in-range-expressions";
     }
+
+    public struct CompilerGeneratedTypes
+    {
+        public const string PrivateImplementationDetails = "<PrivateImplementationDetails>";
+        public const string PrivateImplementationDetailsModifiers = "TypeAttributes.NotPublic | TypeAttributes.Sealed | TypeAttributes.AnsiClass | TypeAttributes.AutoLayout";
+        
+        /// <summary>modifiers/name for compiler emitted type with field holding the data used to optimize array/stackalloc initialization</summary>
+        public static string StaticArrayInitTypeNameFor(long size) =>  $"__StaticArrayInitTypeSize={size}";
+        public const string StaticArrayRawDataHolderTypeModifiers = "TypeAttributes.NestedPrivate | TypeAttributes.Sealed | TypeAttributes.AnsiClass | TypeAttributes.ExplicitLayout";
+        /// <summary>modifiers for compiler emitted field holding the data used to optimize array/stackalloc initialization</summary>
+        public const string StaticArrayInitFieldModifiers = "FieldAttributes.Assembly | FieldAttributes.Static | FieldAttributes.InitOnly";
+    }
+
+    public struct Common
+    {
+        public const string RuntimeHelpersInitializeArrayMethodName = "InitializeArray";
+    }
 }
 

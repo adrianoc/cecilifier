@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Numerics;
 using System.Reflection;
 using Mono.Cecil;
 
@@ -61,6 +62,21 @@ namespace Cecilifier.Runtime
             }
 
             return type.GetField(fieldName);
+        }
+        
+        public static byte[] ToByteArray<T>(Span<T> data) where T : IBinaryInteger<T>
+        {
+            var size = System.Runtime.CompilerServices.Unsafe.SizeOf<T>();
+            var converted  = new byte[size * data.Length];
+            Span<byte> convertedSpan = converted;
+        
+            int pos = 0;
+            foreach(var v in data)
+            {
+                pos += v.WriteLittleEndian(convertedSpan.Slice(pos));
+            }
+
+            return converted;
         }
     }
 

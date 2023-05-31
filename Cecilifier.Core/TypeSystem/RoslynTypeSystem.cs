@@ -34,6 +34,7 @@ internal struct RoslynTypeSystem
         IsByRefLikeAttribute = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(IsByRefLikeAttribute).FullName);
         SystemObsoleteAttribute = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(ObsoleteAttribute).FullName);
         SystemValueType = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(ValueType).FullName);
+        SystemRuntimeCompilerServicesRuntimeHelpers =  ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(RuntimeHelpers).FullName);
     }
 
     public ITypeSymbol SystemIndex { get; }
@@ -56,4 +57,5 @@ internal struct RoslynTypeSystem
     public ITypeSymbol SystemObsoleteAttribute { get; }
     
     public ITypeSymbol SystemValueType { get; }
+    public ITypeSymbol SystemRuntimeCompilerServicesRuntimeHelpers { get; }
 }

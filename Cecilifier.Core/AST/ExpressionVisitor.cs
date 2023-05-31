@@ -1,9 +1,9 @@
 using System;
-using System.Buffers;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
+using Cecilifier.Core.CodeGeneration;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Mappings;
@@ -183,17 +183,6 @@ namespace Cecilifier.Core.AST
                 // which means, VisitImplicitArrayCreationExpression() will not be called
                 // https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/arrays/single-dimensional-arrays
                 ProcessImplicitArrayCreationExpression(node, Context.GetTypeInfo(node).ConvertedType);
-
-                // C# compiler has a trick to optimize constant array initializers in which, for arrays with more than
-                // a certain number of elements (as of 10/Dez/2022, empirically, this numbers is 2) in which it emits a
-                // struct with static fields initialized from the metadata
-                // See Notes/ImplicitArrayInitialization_Optimization.txt for an example of how to emit such optimization
-                // with Cecil.
-                if (node.Expressions.Count > 2)
-                {
-                    Context.WriteComment($"Note that as of Cecilifier version {typeof(Cecilifier).Assembly.GetName().Version} the generated code will differ from the");
-                    Context.WriteComment("C# compiler one since Cecilifier does not apply some optimizations.");
-                }
             }
             else if (node.IsKind(SyntaxKind.CollectionInitializerExpression))
             {
@@ -1549,7 +1538,14 @@ namespace Cecilifier.Core.AST
         private void ProcessArrayCreation(ITypeSymbol elementType, InitializerExpressionSyntax initializer)
         {
             AddCilInstruction(ilVar, OpCodes.Newarr, elementType);
+            if (PrivateImplementationDetailsGenerator.IsApplicableTo(initializer, Context))
+                InitializeArrayOptimized(elementType, initializer);
+            else
+                InitializeArrayUnoptimized(elementType, initializer);
+        }
 
+        private void InitializeArrayUnoptimized(ITypeSymbol elementType, InitializerExpressionSyntax initializer)
+        {
             var stelemOpCode = elementType.StelemOpCode();
             for (var i = 0; i < initializer?.Expressions.Count; i++)
             {
@@ -1565,6 +1561,29 @@ namespace Cecilifier.Core.AST
 
                 Context.EmitCilInstruction(ilVar, stelemOpCode, stelemOpCode == OpCodes.Stelem_Any ? Context.TypeResolver.Resolve(elementType) : null);
             }
+        }
+
+        private void InitializeArrayOptimized(ITypeSymbol elementType, InitializerExpressionSyntax initializer)
+        {
+            var initializeArrayHelper = Context.RoslynTypeSystem.SystemRuntimeCompilerServicesRuntimeHelpers
+                .GetMembers(Constants.Common.RuntimeHelpersInitializeArrayMethodName)
+                .Single()
+                .EnsureNotNull<ISymbol, IMethodSymbol>()
+                .MethodResolverExpression(Context);
+
+            //IL_0006: dup
+            //IL_0007: ldtoken field valuetype '<PrivateImplementationDetails>'/'__StaticArrayInitTypeSize=24' '<PrivateImplementationDetails>'::'5BC33F8E8CDE3A32E1CF1EE1B1771AC0400514A8675FC99966FCAE1E8184FDFE'
+            //IL_000c: call void [System.Runtime]System.Runtime.CompilerServices.RuntimeHelpers::InitializeArray(class [System.Runtime]System.Array, valuetype [System.Runtime]System.RuntimeFieldHandle)
+            //IL_0011: pop
+            var backingFieldVar = PrivateImplementationDetailsGenerator.GetOrCreateInitializationBackingFieldVariableName(
+                Context,
+                elementType.SizeofArrayLikeItemElement() * initializer.Expressions.Count,
+                elementType.Name,
+                $"new {elementType.Name}[] {initializer.ToFullString()}");
+
+            Context.EmitCilInstruction(ilVar, OpCodes.Dup);
+            Context.EmitCilInstruction(ilVar, OpCodes.Ldtoken, backingFieldVar);
+            Context.EmitCilInstruction(ilVar, OpCodes.Call, initializeArrayHelper);
         }
 
         string EmitTargetLabel(string relatedToName)
