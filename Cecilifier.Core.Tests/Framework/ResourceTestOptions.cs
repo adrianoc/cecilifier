@@ -1,5 +1,7 @@
+using System;
 using System.IO;
 using Cecilifier.Core.Tests.Framework.AssemblyDiff;
+using Mono.Cecil.Cil;
 
 namespace Cecilifier.Core.Tests.Framework;
 
@@ -24,6 +26,7 @@ public ref struct ResourceTestOptions
 
     internal string ResourceName { get; init; }
     internal IAssemblyDiffVisitor AssemblyComparison { get; init; }
+    internal Func<Instruction, Instruction, bool?> InstructionComparer { get; init; }
     internal Stream ToBeCecilified { get; set; }
     internal BuildType BuildType { get; init; }
     internal bool FailOnAssemblyVerificationErrors { get; init; }
