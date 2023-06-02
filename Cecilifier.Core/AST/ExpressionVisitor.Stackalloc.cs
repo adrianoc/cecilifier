@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using Cecilifier.Core.CodeGeneration;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Misc;
@@ -113,6 +114,30 @@ partial class ExpressionVisitor
         if (typeInfo.ConvertedType == null)
             return;
 
+        if (PrivateImplementationDetailsGenerator.IsApplicableTo(node, Context))
+            EmitOptimizedInitialization(node, typeInfo);
+        else
+            EmitSlowInitialization(node, typeInfo);
+    }
+
+    private void EmitOptimizedInitialization(InitializerExpressionSyntax node, TypeInfo typeInfo)
+    {
+        var arrayType = (typeInfo.Type ?? typeInfo.ConvertedType).ElementTypeSymbolOf();
+        var sizeInBytes = arrayType.SizeofArrayLikeItemElement() * node.Expressions.Count;
+        var fieldWithRawData = PrivateImplementationDetailsGenerator.GetOrCreateInitializationBackingFieldVariableName(Context, sizeInBytes, arrayType.Name, $"stackalloc {arrayType.Name}[] {node.ToFullString()}");
+        
+        Context.WriteNewLine();
+        Context.WriteComment($"duplicates the top of the stack (the newly `stackalloced` buffer) and initialize it from the raw buffer ({fieldWithRawData}).");
+        Context.EmitCilInstruction(ilVar, OpCodes.Dup);
+        Context.EmitCilInstruction(ilVar, OpCodes.Ldsflda, fieldWithRawData);
+        Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, sizeInBytes);
+        Context.EmitCilInstruction(ilVar, OpCodes.Cpblk);
+        Context.WriteComment("finished initializing `stackalloced` buffer.");
+        Context.WriteNewLine();
+    }
+
+    private void EmitSlowInitialization(InitializerExpressionSyntax node, TypeInfo typeInfo)
+    {
         var arrayType = typeInfo.Type ?? typeInfo.ConvertedType;
         uint elementTypeSize = arrayType.SizeofArrayLikeItemElement();
         uint offset = 0;

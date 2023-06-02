@@ -194,4 +194,29 @@ public class StackallocTests : CecilifierUnitTestBase
             @"\1.Parameters.Add\(.+""length"".+TypeSystem.Int32.+\);\s+" +
             @"il_M_\d+.Emit\(OpCodes.Newobj, assembly.MainModule.ImportReference\(\1\)\);"));
     }
+    
+    [TestCase("System.Span<byte>")]
+    [TestCase("var")]
+    public void InitializationOptimized(string storageType)
+    {
+        var result = RunCecilifier($$"""unsafe class Foo { void M() { {{storageType}} local = stackalloc byte[] { 1, 2, 3 }; } }""");
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+
+        Assert.That(cecilifiedCode, Does.Match("""
+        \s+//<PrivateImplementationDetails> class.
+        \s+//This type is emitted by the compiler.
+        \s+var (cls_privateImplementationDetails_\d+) = new TypeDefinition\("", "<PrivateImplementationDetails>", TypeAttributes.NotPublic \| TypeAttributes.Sealed \| TypeAttributes.AnsiClass \| TypeAttributes.AutoLayout, assembly.MainModule.TypeSystem.Object\);
+        \s+assembly.MainModule.Types.Add\(\1\);
+        \s+//__StaticArrayInitTypeSize=3 struct.
+        \s+//This struct is emitted by the compiler and is used to hold raw data used in arrays/span initialization optimizations
+        \s+var (st_rawDataTypeVar_\d+) = new TypeDefinition\("", "__StaticArrayInitTypeSize=3", TypeAttributes.NestedPrivate \| TypeAttributes.Sealed \| TypeAttributes.AnsiClass \| TypeAttributes.ExplicitLayout.+\) \{ ClassSize = 3,PackingSize = 1 \};
+        \s+\1.NestedTypes.Add\(\2\);
+        \s+var (fld_arrayInitializerData_\d+) = new FieldDefinition\("[A-Z0-9]+", FieldAttributes.Assembly \| FieldAttributes.Static \| FieldAttributes.InitOnly, \2\);
+        \s+\1.Fields.Add\(\3\);
+        \s+\3.InitialValue = Cecilifier.Runtime.TypeHelpers.ToByteArray<Byte>\(stackalloc Byte\[\] { 1, 2, 3 }\);
+        \s+//duplicates the top of the stack \(the newly `stackalloced` buffer\) and initialize it from the raw buffer \(\3\).
+        \s+(il_.+).Emit\(OpCodes.Dup\);
+        \s+\4.Emit\(OpCodes.Ldsflda, \3\);
+        """));
+    }
 }
