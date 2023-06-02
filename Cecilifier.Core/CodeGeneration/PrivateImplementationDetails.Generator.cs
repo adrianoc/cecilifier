@@ -37,7 +37,7 @@ namespace Cecilifier.Core.CodeGeneration;
  */
 internal class PrivateImplementationDetailsGenerator
 {
-    internal static string GetOrCreateInitializationBackingFieldVariableName(IVisitorContext context, long size, string arrayElementTypeName, string initializationExpression)
+    internal static string GetOrCreateInitializationBackingFieldVariableName(IVisitorContext context, long sizeInBytes, string arrayElementTypeName, string initializationExpression)
     {
         Span<byte> toBeHashed = stackalloc byte[System.Text.Encoding.UTF8.GetByteCount(initializationExpression)];
         System.Text.Encoding.UTF8.GetBytes(initializationExpression, toBeHashed);
@@ -51,7 +51,7 @@ internal class PrivateImplementationDetailsGenerator
             return found.VariableName;
         
         var privateImplementationDetailsVar = GetOrCreatePrivateImplementationDetailsTypeVariable(context);
-        var rawDataTypeVar = GetOrCreateRawDataType(context, size);
+        var rawDataTypeVar = GetOrCreateRawDataType(context, sizeInBytes);
         
         // Add a field to hold the static initialization data.
         //
@@ -80,15 +80,15 @@ internal class PrivateImplementationDetailsGenerator
         return context.DefinitionVariables.GetVariable(fieldName, VariableMemberKind.Field, Constants.CompilerGeneratedTypes.PrivateImplementationDetails);
     }
 
-    private static string GetOrCreateRawDataType(IVisitorContext context, long size)//string rawDataHolderStructName)
+    private static string GetOrCreateRawDataType(IVisitorContext context, long sizeInBytes)
     {
-        if (size == sizeof(int))
+        if (sizeInBytes == sizeof(int))
             return context.TypeResolver.Bcl.System.Int32;
         
-        if (size == sizeof(long))
+        if (sizeInBytes == sizeof(long))
             return context.TypeResolver.Bcl.System.Int64;
         
-        var rawDataHolderStructName = Constants.CompilerGeneratedTypes.StaticArrayInitTypeNameFor(size);
+        var rawDataHolderStructName = Constants.CompilerGeneratedTypes.StaticArrayInitTypeNameFor(sizeInBytes);
         var found = context.DefinitionVariables.GetVariable(rawDataHolderStructName, VariableMemberKind.Type, Constants.CompilerGeneratedTypes.PrivateImplementationDetails);
         if (found.IsValid)
             return found;
@@ -110,7 +110,7 @@ internal class PrivateImplementationDetailsGenerator
             Array.Empty<string>(), 
             Array.Empty<TypeParameterSyntax>(),
             Array.Empty<TypeParameterSyntax>(), 
-            $"ClassSize = {size}",
+            $"ClassSize = {sizeInBytes}",
             "PackingSize = 1");
 
         foreach (var exp in privateImplementationDetails)
