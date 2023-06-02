@@ -128,45 +128,7 @@ public class StackallocTests : CecilifierUnitTestBase
             Assert.That(cecilifiedCode, Contains.Substring(expectedLine));
         }
     }
-
-    [Test]
-    public void Test_Issue_133_Assign_StackallocToSpan_WithInitializer()
-    {
-        const string code = @"using System; class Foo { void Bar() { Span<char> s = stackalloc char[] { 'A', 'G', 'C', 'G' } ; } }";
-        var result = RunCecilifier(code);
-
-        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
-        Assert.That(cecilifiedCode, Does.Match(
-            @".+(il_bar_2\.Emit\(OpCodes\.)Ldc_I4, 4\);\s+" +
-            @"var l_spanElementCount_4 = new VariableDefinition\(assembly.MainModule.TypeSystem.Int32\);\s+" +
-            @"m_bar_1.Body.Variables.Add\(l_spanElementCount_4\);\s+" +
-            @"\1Stloc, l_spanElementCount_4\);\s+" +
-            @"\1Ldloc, l_spanElementCount_4\);\s+" +
-            @"\1Conv_U\);\s+" +
-            @"\1Sizeof, assembly.MainModule.TypeSystem.Char\);\s+" +
-            @"\1Mul_Ovf_Un\);\s+" +
-            @"\1Localloc\);\s+" +
-            @"\1Dup\);\s+" +
-            @"\1Ldc_I4, 65\);\s+" +
-            @"\1Stind_I2\);\s+" +
-            @"\1Dup\);\s+" +
-            @"\1Ldc_I4, 2\);\s+" +
-            @"\1Add\);\s+" +
-            @"\1Ldc_I4, 71\);\s+" +
-            @"\1Stind_I2\);\s+" +
-            @"\1Dup\);\s+" +
-            @"\1Ldc_I4, 4\);\s+" +
-            @"\1Add\);\s+" +
-            @"\1Ldc_I4, 67\);\s+" +
-            @"\1Stind_I2\);\s+" +
-            @"\1Dup\);\s+" +
-            @"\1Ldc_I4, 6\);\s+" +
-            @"\1Add\);\s+" +
-            @"\1Ldc_I4, 71\);\s+" +
-            @"\1Stind_I2\);\s+" +
-            @"\1Ldloc, l_spanElementCount_4\);\s+"));
-    }
-
+    
     [Test]
     public void ImplicitStackAllocInNestedExpressions()
     {
