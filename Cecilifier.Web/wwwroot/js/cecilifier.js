@@ -212,7 +212,7 @@ function showListOfFixedIssuesInStagingServer(force) {
         if (Date.parse(sortedIssues[0].updated_at) <= lastShownIssueNumber)
             return;
 
-        let issuesHtml = sortedIssues.reduce( (previous, issue) => `${previous}<br /><a style='color:#3c763d' href='${issue.url}'>${issue.title}</a>`, "List of resolved issues/improvements in <a style='color:#3c763d' href='http://staging.cecilifier.me'>staging server</a><br/>");
+        let issuesHtml = sortedIssues.reduce( (previous, issue) => `${previous}<br /><a style='color:#3c763d' href='${issue.html_url}'>${issue.title}</a>`, "List of resolved issues/improvements in <a style='color:#3c763d' href='http://staging.cecilifier.me'>staging server</a><br/>");
         if (sortedIssues.length  === 0)
             return;
 
