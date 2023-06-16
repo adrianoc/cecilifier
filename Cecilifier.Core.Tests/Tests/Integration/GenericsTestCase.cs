@@ -110,5 +110,11 @@ namespace Cecilifier.Core.Tests.Integration
         {
             AssertResourceTest("Generics/UsageOfNonGenericMethodOnGenericType");
         }
+
+        [Test]
+        public void UsageOfNonGenericMethodOnGenericTypeFromExternalAssembly()
+        {
+            AssertResourceTest("Generics/UsageOfNonGenericMethodOnGenericTypeFromExternalAssembly");
+        }
     }
 }

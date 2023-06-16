@@ -159,7 +159,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             var code = """
                        class C 
                        {
-                           bool Run() => M(1, 2);
+                           bool Run() => M(1, 2); // References method 'M<T>()' before its declaration. 
                            bool M<T>(T other, System.IEquatable<T> t) => false; 
                        }
                        """;
@@ -170,6 +170,19 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             Assert.That(cecilifiedCode, Does.Match("""var gp_T_\d+ = new Mono.Cecil.GenericParameter\("T", m_M_\d+\);"""), "Generic type parameter (T) not defined.");
             Assert.That(cecilifiedCode, Does.Match("""var p_other_\d+ = new ParameterDefinition\("other", ParameterAttributes.None, gp_T_\d+\);"""), "definition of parameter 'other' does not match.");
             Assert.That(cecilifiedCode, Does.Match("""var p_t_\d+ = new ParameterDefinition\("t", .+, assembly.MainModule.ImportReference\(typeof\(System.IEquatable<>\)\).MakeGenericInstanceType\(gp_T_\d+\)\);"""), "Generic parameter type does not match.");
+        }
+        
+        [Test]
+        public void TestParameterOfGenericType_DependingOnGenericTypeParameterOfMethod_Issue240()
+        {
+            var code = "class C { bool M<T>(T other, System.IEquatable<T> t) => t.Equals(other); }";
+            var result = RunCecilifier(code);
+
+            var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+            
+            Assert.That(cecilifiedCode, Does.Match("""var l_openEquals_\d+ = assembly.MainModule.ImportReference\(.+ImportReference\(typeof\(System.IEquatable<>\)\)\).Resolve\(\).Methods.First\(m => m.Name == "Equals"\);"""), "method from open generic type not match");
+            Assert.That(cecilifiedCode, Does.Match("""var r_equals_\d+ = new MethodReference\("Equals", l_openEquals_\d+.ReturnType\)"""), "MethodReference does not match");
+            Assert.That(cecilifiedCode, Does.Match("""il_M_3.Emit\(OpCodes.Callvirt, r_equals_\d+\);"""), "Call to the target method does not match");
         }
     }
 }
