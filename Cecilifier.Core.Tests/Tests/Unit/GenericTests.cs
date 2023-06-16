@@ -152,5 +152,24 @@ namespace Cecilifier.Core.Tests.Tests.Unit
                             \s+gp_T_1.Constraints.Add\(new GenericParameterConstraint\(itf_I_0.MakeGenericInstanceType\(gp_T_1\)\)\);
                             """));
         }
+
+        [Test]
+        public void TestForwardReferencedMethodGenericTypeParameter_Issue240()
+        {
+            var code = """
+                       class C 
+                       {
+                           bool Run() => M(1, 2);
+                           bool M<T>(T other, System.IEquatable<T> t) => false; 
+                       }
+                       """;
+
+            var result = RunCecilifier(code);
+
+            var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+            Assert.That(cecilifiedCode, Does.Match("""var gp_T_\d+ = new Mono.Cecil.GenericParameter\("T", m_M_\d+\);"""), "Generic type parameter (T) not defined.");
+            Assert.That(cecilifiedCode, Does.Match("""var p_other_\d+ = new ParameterDefinition\("other", ParameterAttributes.None, gp_T_\d+\);"""), "definition of parameter 'other' does not match.");
+            Assert.That(cecilifiedCode, Does.Match("""var p_t_\d+ = new ParameterDefinition\("t", .+, assembly.MainModule.ImportReference\(typeof\(System.IEquatable<>\)\).MakeGenericInstanceType\(gp_T_\d+\)\);"""), "Generic parameter type does not match.");
+        }
     }
 }

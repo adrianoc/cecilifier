@@ -1311,10 +1311,7 @@ namespace Cecilifier.Core.AST
             {
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
             }
-
-            //TODO: We need to find the InvocationSyntax that node represents...
-            //EnsureForwardedMethod(Context, Context.Naming.SyntheticVariable(node.Identifier.Text, ElementKind.Method), method.OverriddenMethod ?? method.OriginalDefinition, Array.Empty<TypeParameterSyntax>());
-            EnsureForwardedMethod(Context, method.OverriddenMethod ?? method.OriginalDefinition, Array.Empty<TypeParameterSyntax>());
+            EnsureForwardedMethod(Context, method.OverriddenMethod ?? method.OriginalDefinition, TypeParameterSyntaxFor(method));
             var isAccessOnThis = !node.Parent.IsKind(SyntaxKind.SimpleMemberAccessExpression);
 
             var mae = node.Parent as MemberAccessExpressionSyntax;
@@ -1326,6 +1323,22 @@ namespace Cecilifier.Core.AST
             AddMethodCall(ilVar, method, isAccessOnThis);
         }
 
+        TypeParameterSyntax[] TypeParameterSyntaxFor(IMethodSymbol method)
+        {
+            if (!method.IsGenericMethod)
+                return Array.Empty<TypeParameterSyntax>();
+            
+            var candidateDeclarationNode = method.DeclaringSyntaxReferences.SingleOrDefault();
+            if (candidateDeclarationNode == null)
+                return Array.Empty<TypeParameterSyntax>();
+
+            var declarationNode = candidateDeclarationNode.GetSyntax() as MethodDeclarationSyntax;
+            if (declarationNode == null)
+                return Array.Empty<TypeParameterSyntax>();
+
+            return declarationNode.TypeParameterList.Parameters.ToArray();
+        }
+        
         private void InjectRequiredConversions(ExpressionSyntax expression, Action loadArrayIntoStack = null)
         {
             var typeInfo = Context.SemanticModel.GetTypeInfo(expression);
