@@ -72,6 +72,7 @@ namespace Cecilifier.Core.AST
             }
             else
             {
+                EnsureForwardedMethod(Context, method, Array.Empty<TypeParameterSyntax>());
                 var operand = method.MethodResolverExpression(Context);
                 Context.EmitCilInstruction(ilVar, opCode, operand);
             }

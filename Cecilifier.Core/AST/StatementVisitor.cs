@@ -267,7 +267,6 @@ namespace Cecilifier.Core.AST
         }
 
         public override void VisitLocalFunctionStatement(LocalFunctionStatementSyntax node) => node.Accept(new MethodDeclarationVisitor(Context));
-        public override void VisitForEachStatement(ForEachStatementSyntax node) { LogUnsupportedSyntax(node); }
         public override void VisitWhileStatement(WhileStatementSyntax node) { LogUnsupportedSyntax(node); }
         public override void VisitLockStatement(LockStatementSyntax node) { LogUnsupportedSyntax(node); }
         public override void VisitUnsafeStatement(UnsafeStatementSyntax node) { LogUnsupportedSyntax(node); }
