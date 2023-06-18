@@ -19,11 +19,23 @@ namespace Cecilifier.Web
      * This class implements the following github integration:
      * 1. OAuth authorization/authentication as described in https://docs.github.com/en/developers/apps/building-oauth-apps/authorizing-oauth-apps
      * 2. GitHub issue creation (https://docs.github.com/en/rest/reference/issues#create-an-issue)
+     * 3. Retrieving github issues marked as `fixed-in-staging` and also latest releases notes
+     * 4. Adding / Removing list of extra assemblies to reference.
      */
-    internal class CecilifierRestHandler
+    internal static class CecilifierRestHandler
     {
         private const string CecilifierClientId = "5462d562b527fa4e7807";
         internal static ILogger _logger;
+        
+        // Security token used to access github public api on cecilifier repo.
+        // We use this, instead of unauthenticated access, to minimize the impact of rate limits (authenticated access have a much higher limit).
+        // Unfortunately AOT these tokens have a validity of no more than 1 year, after that it need to be replaced with a new token.
+        private static readonly string _cecilifierGitHubToken; 
+
+        static CecilifierRestHandler()
+        {
+            _cecilifierGitHubToken = Environment.GetEnvironmentVariable("CECILIFIER_GITHUB_TOKEN");
+        }
 
         internal static async Task FileIssueEndPointAsync(HttpContext context)
         {
@@ -96,10 +108,10 @@ namespace Cecilifier.Web
                 if (response.StatusCode == HttpStatusCode.Created)
                 {
                     // Parse response body and extract link to issue
-                    var issueURL = ((Newtonsoft.Json.Linq.JObject) Newtonsoft.Json.JsonConvert.DeserializeObject(responseStr))["url"].ToString();
+                    var issueUrl = ((Newtonsoft.Json.Linq.JObject) Newtonsoft.Json.JsonConvert.DeserializeObject(responseStr))["url"].ToString();
 
                     // notify cecilifier main page  about the outcome of issue reporting
-                    await context.Response.WriteAsync($"<script>window.opener.postMessage('{{ \"status\": \"success\", \"issueUrl\": \"{issueURL}\" }}','*');</script>");
+                    await context.Response.WriteAsync($"<script>window.opener.postMessage('{{ \"status\": \"success\", \"issueUrl\": \"{issueUrl}\" }}','*');</script>");
                 }
                 else
                 {
@@ -175,6 +187,39 @@ namespace Cecilifier.Web
             {
                 ArrayPool<byte>.Shared.Return(assemblyBytes);
             }
+        }
+        
+        internal static async Task RetrieveListOfFixedIssuesInStagingServerEndPointAsync(HttpContext context)
+        {
+            await ExecuteReadOnlyGitHubApiAuthenticated(context, "https://api.github.com/repos/adrianoc/cecilifier/issues?state=open&labels=fixed-in-staging");
+        }
+        
+        internal static async Task RetrieveReleaseNotes(HttpContext context)
+        {
+            await ExecuteReadOnlyGitHubApiAuthenticated(context, "https://api.github.com/repos/adrianoc/cecilifier/releases");
+        }
+
+        private static async Task ExecuteReadOnlyGitHubApiAuthenticated(HttpContext context, string uri)
+        {
+            if (string.IsNullOrWhiteSpace(_cecilifierGitHubToken))
+            {
+                _logger.LogWarning($"CECILIFIER_GITHUB_TOKEN not defined. Retrieval of list of bugs fixed in staging/latest release info will not be available.");
+                context.Response.WriteAsync("N/A");
+                return;
+            }
+            
+            using var httpClient = new HttpClient();
+            var msg = new HttpRequestMessage(HttpMethod.Get, uri);
+
+            msg.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _cecilifierGitHubToken);
+            msg.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github.v3+json"));
+            msg.Headers.UserAgent.Add(new ProductInfoHeaderValue("cecilifier", "1.0.0"));
+
+            var response = await httpClient.SendAsync(msg);
+            if (response.StatusCode != HttpStatusCode.OK)
+                context.Response.StatusCode = 500;
+
+            await context.Response.WriteAsync(await response.Content.ReadAsStringAsync());    
         }
     }
 }

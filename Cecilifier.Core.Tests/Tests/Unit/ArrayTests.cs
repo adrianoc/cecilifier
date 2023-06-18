@@ -120,7 +120,7 @@ public class ArrayTests : CecilifierUnitTestBase
 
     [TestCase("class Foo { void M() { int []intArray = { 1 }; } }", TestName = "Local Variable")]
     [TestCase("class Foo { int []intArray = { 1 }; }", TestName = "Field")]
-    public void TestImplicitArrayInitializationUnoptimized(string code)
+    public void ImplicitArrayInitializationUnoptimized(string code)
     {
         // See comment in TestImplicitArrayInitializationOptimized 
         var result = RunCecilifier(code);
@@ -139,15 +139,27 @@ public class ArrayTests : CecilifierUnitTestBase
                """));
     }
 
-    [TestCase("class Foo { void M() { int []intArray = { 1, 2, 3 }; } }", TestName = "Local Variable")]
-    [TestCase("class Foo { int []intArray = { 1, 2, 3 }; }", TestName = "Field")]
-    public void TestImplicitArrayInitializationOptimized(string code)
+    [TestCase("class Foo { void M() { int []intArray = new [] { 1, 2, 3 }; } }", TestName = "Local Variable")]
+    [TestCase("class Foo { int []intArray = new [] { 1, 2, 3 }; }", TestName = "Field")]
+    public void InitializationOptimized(string code)
     {
         var result = RunCecilifier(code);
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
 
-        // see comment in ExpressionVisitor.VisitInitializerExpression()
-        Assert.That(cecilifiedCode, Contains.Substring($"Note that as of Cecilifier version {typeof(Cecilifier).Assembly.GetName().Version} the generated code will differ from the"));
-        Assert.That(cecilifiedCode, Contains.Substring("C# compiler one since Cecilifier does not apply some optimizations."));
+        Assert.That(cecilifiedCode, Does.Match("""
+        \s+//<PrivateImplementationDetails> class.
+        \s+//This type is emitted by the compiler.
+        \s+var (cls_privateImplementationDetails_\d+) = new TypeDefinition\("", "<PrivateImplementationDetails>", TypeAttributes.NotPublic \| TypeAttributes.Sealed \| TypeAttributes.AnsiClass \| TypeAttributes.AutoLayout, assembly.MainModule.TypeSystem.Object\);
+        \s+assembly.MainModule.Types.Add\(\1\);
+        \s+//__StaticArrayInitTypeSize=12 struct.
+        \s+//This struct is emitted by the compiler and is used to hold raw data used in arrays/span initialization optimizations
+        \s+var (st_rawDataTypeVar_\d+) = new TypeDefinition\("", "__StaticArrayInitTypeSize=12", TypeAttributes.NestedPrivate \| TypeAttributes.Sealed \| TypeAttributes.AnsiClass \| TypeAttributes.ExplicitLayout.+\) \{ ClassSize = 12,PackingSize = 1 \};
+        \s+\1.NestedTypes.Add\(\2\);
+        \s+var (fld_arrayInitializerData_\d+) = new FieldDefinition\("[A-Z0-9]+", FieldAttributes.Assembly \| FieldAttributes.Static \| FieldAttributes.InitOnly, \2\);
+        \s+\1.Fields.Add\(\3\);
+        \s+\3.InitialValue = Cecilifier.Runtime.TypeHelpers.ToByteArray<Int32>\(new Int32\[\] { 1, 2, 3 }\);
+        \s+(il_.+).Emit\(OpCodes.Dup\);
+        \s+\4.Emit\(OpCodes.Ldtoken, \3\);
+        """));
     }
 }

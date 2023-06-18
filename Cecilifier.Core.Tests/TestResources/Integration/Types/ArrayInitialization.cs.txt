@@ -1,0 +1,10 @@
+﻿class ArrayInitializationTests
+{
+    int[] intArrayField = new [] { 1, 2, 3, 4, 5 };
+        
+    void M(int []intArrayParameter, char [][]charJaggedArrayParameter)
+    {
+        var localIntArray = new [] { 1, 2, 3, 4, 5 }; // Same as the field
+        var localCharArray = new [] { 'A', 'B', 'C', 'D', 'E' };
+    }
+}

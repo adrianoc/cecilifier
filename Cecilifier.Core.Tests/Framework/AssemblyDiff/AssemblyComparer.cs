@@ -75,7 +75,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 
         public string Second => second.MainModule.FileName;
 
-        public bool Compare(IAssemblyDiffVisitor visitor)
+        public bool Compare(IAssemblyDiffVisitor visitor, Func<Instruction, Instruction, bool?> instructionComparer)
         {
             if (first.Modules.Count != second.Modules.Count)
             {
@@ -120,7 +120,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                 ret = ret && CheckTypeCustomAttributes(typeVisitor, sourceType, targetType);
                 ret = ret && CheckTypeAttributes(typeVisitor, sourceType, targetType);
                 ret = ret && CheckTypeGenericInformation(typeVisitor, sourceType, targetType);
-                ret = ret && CheckTypeMembers(typeVisitor, sourceType, targetType);
+                ret = ret && CheckTypeMembers(typeVisitor, sourceType, targetType, instructionComparer);
                 ret = ret && CheckTypeInheritance(typeVisitor, sourceType, targetType);
                 ret = ret && CheckImplementedInterfaces(typeVisitor, sourceType, targetType);
             }
@@ -165,10 +165,10 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
         }
 
 
-        private static bool CheckTypeMembers(ITypeDiffVisitor typeVisitor, TypeDefinition source, TypeDefinition target)
+        private static bool CheckTypeMembers(ITypeDiffVisitor typeVisitor, TypeDefinition source, TypeDefinition target, Func<Instruction, Instruction, bool?> instructionComparer)
         {
             return CheckFields(typeVisitor, source, target)
-                   && CheckMethods(typeVisitor, source, target)
+                   && CheckMethods(typeVisitor, source, target, instructionComparer)
                    && CheckEvents(typeVisitor, source, target)
                    && CheckProperties(typeVisitor, source, target);
         }
@@ -217,7 +217,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
             return true;
         }
 
-        private static bool CheckMethods(ITypeDiffVisitor typeVisitor, TypeDefinition source, TypeDefinition target)
+        private static bool CheckMethods(ITypeDiffVisitor typeVisitor, TypeDefinition source, TypeDefinition target, Func<Instruction, Instruction, bool?> instructionComparer)
         {
             var list = target.Methods.GroupBy(m => m.FullName).ToList();
 
@@ -271,7 +271,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                     ret = false;
                 }
 
-                if (!CheckMethodBody(memberVisitor, sourceMethod, targetMethod))
+                if (!CheckMethodBody(memberVisitor, sourceMethod, targetMethod, instructionComparer))
                 {
                     ret = false;
                 }
@@ -281,7 +281,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
         }
 
 
-        private static bool CheckMethodBody(IMethodDiffVisitor visitor, MethodDefinition source, MethodDefinition target)
+        private static bool CheckMethodBody(IMethodDiffVisitor visitor, MethodDefinition source, MethodDefinition target, Func<Instruction, Instruction, bool?> instructionComparer)
         {
             if (source.HasBody != target.HasBody)
             {
@@ -313,7 +313,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                     return visitor.VisitBody(source, target, instruction);
                 }
 
-                if (!EqualOrEquivalent(instruction, targetInstructions.Current, source.IsStatic, modulesToIgnore, out skipCount))
+                if (!EqualOrEquivalent(instruction, targetInstructions.Current, instructionComparer, source.IsStatic, modulesToIgnore, out skipCount))
                 {
                     return visitor.VisitBody(source, target, instruction);
                 }
@@ -335,14 +335,15 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                 .Where(instructionFilter.IgnoreNonRequiredLocalVariableAssignments);
         }
 
-        private static bool EqualOrEquivalent(Instruction instruction, Instruction current, bool isStatic, HashSet<IMetadataScope> scopesToIgnore, out int skipCount)
+        private static bool EqualOrEquivalent(Instruction instruction, Instruction current, Func<Instruction, Instruction, bool?> instructionComparer, bool isStatic, HashSet<IMetadataScope> scopesToIgnore,
+            out int skipCount)
         {
             skipCount = 0;
             instruction = LenientInstructionComparer.SkipNonRelevantInstructions(instruction);
             current = LenientInstructionComparer.SkipNonRelevantInstructions(current);
 
             if (instruction?.OpCode == current?.OpCode)
-                return ValidateOperands(instruction, current, scopesToIgnore);
+                return ValidateOperands(instruction, current, instructionComparer, scopesToIgnore);
 
             if (_instructionValidator.TryGetValue(instruction.OpCode.Code, out var validator))
             {
@@ -400,7 +401,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                 case Code.Brfalse_S:
                 case Code.Brtrue:
                 case Code.Brtrue_S:
-                    return (current.OpCode.FlowControl == FlowControl.Branch || current.OpCode.FlowControl == FlowControl.Cond_Branch) && EqualOrEquivalent((Instruction) instruction.Operand, (Instruction) current.Operand, isStatic, scopesToIgnore, out skipCount);
+                    return (current.OpCode.FlowControl == FlowControl.Branch || current.OpCode.FlowControl == FlowControl.Cond_Branch) && EqualOrEquivalent((Instruction) instruction.Operand, (Instruction) current.Operand, instructionComparer, isStatic, scopesToIgnore, out skipCount);
 
                 case Code.Pop:
                     if (current.Previous == null || instruction.Previous == null)
@@ -421,8 +422,15 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
             return true;
         }
 
-        private static bool ValidateOperands(Instruction instruction, Instruction current, HashSet<IMetadataScope> scopesToIgnore)
+        private static bool ValidateOperands(Instruction instruction, Instruction current, Func<Instruction, Instruction, bool?> instructionComparer, HashSet<IMetadataScope> scopesToIgnore)
         {
+            if (instructionComparer != null)
+            {
+                var result = instructionComparer(instruction, current);
+                if (result.HasValue)
+                    return result.Value;
+            }
+            
             // TODO: For now we are starting enforcing field references are the same in the two instructions..
             // in the future we want to validate more. For example:
             // - Method references matches
@@ -440,7 +448,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                 return (frInstruction.DeclaringType.Scope.Name == frCurrent.DeclaringType.Scope.Name ||
                          frInstruction.DeclaringType.Scope.Name == "System.Private.CoreLib" && frCurrent.DeclaringType.Scope.Name == "netstandard");
             }
-
+            
             return true;
         }
 

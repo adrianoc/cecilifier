@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using Cecilifier.Core.CodeGeneration;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Misc;
@@ -113,6 +114,30 @@ partial class ExpressionVisitor
         if (typeInfo.ConvertedType == null)
             return;
 
+        if (PrivateImplementationDetailsGenerator.IsApplicableTo(node, Context))
+            EmitOptimizedInitialization(node, typeInfo);
+        else
+            EmitSlowInitialization(node, typeInfo);
+    }
+
+    private void EmitOptimizedInitialization(InitializerExpressionSyntax node, TypeInfo typeInfo)
+    {
+        var arrayType = (typeInfo.Type ?? typeInfo.ConvertedType).ElementTypeSymbolOf();
+        var sizeInBytes = arrayType.SizeofArrayLikeItemElement() * node.Expressions.Count;
+        var fieldWithRawData = PrivateImplementationDetailsGenerator.GetOrCreateInitializationBackingFieldVariableName(Context, sizeInBytes, arrayType.Name, $"stackalloc {arrayType.Name}[] {node.ToFullString()}");
+        
+        Context.WriteNewLine();
+        Context.WriteComment($"duplicates the top of the stack (the newly `stackalloced` buffer) and initialize it from the raw buffer ({fieldWithRawData}).");
+        Context.EmitCilInstruction(ilVar, OpCodes.Dup);
+        Context.EmitCilInstruction(ilVar, OpCodes.Ldsflda, fieldWithRawData);
+        Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, sizeInBytes);
+        Context.EmitCilInstruction(ilVar, OpCodes.Cpblk);
+        Context.WriteComment("finished initializing `stackalloced` buffer.");
+        Context.WriteNewLine();
+    }
+
+    private void EmitSlowInitialization(InitializerExpressionSyntax node, TypeInfo typeInfo)
+    {
         var arrayType = typeInfo.Type ?? typeInfo.ConvertedType;
         uint elementTypeSize = arrayType.SizeofArrayLikeItemElement();
         uint offset = 0;
@@ -173,7 +198,7 @@ partial class ExpressionVisitor
  * If one (or more arguments) are stackalloc expressions then at the time
  * Cecilifier visits these expression it will already have visited (and
  * pushed the reference to the stack) of the target of the call and/or
- * any arguments that proceeds the stackaloc one. For instance, in the 
+ * any arguments that precedes the stackaloc one. For instance, in the 
  * following call:
  *
  *   o.M(42, stackalloc byte[3]);
@@ -186,7 +211,7 @@ partial class ExpressionVisitor
  * i.e, the target of the call and the first argument.
  *
  * In order generate valid code Cecilifier detects that the call contains a stackalloc being passed
- * as an argument and after computing each argument introduces a local variable to store the computed value.
+ * as an argument and after processing it it introduces a local variable to store the computed value.
  *
  * After visiting the whole expression it ensures that these local variables are pushed to the stack
  * to recreate the stack frame for the call.

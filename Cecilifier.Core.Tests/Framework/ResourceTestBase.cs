@@ -8,6 +8,7 @@ using Cecilifier.Core.Naming;
 using Cecilifier.Core.Tests.Framework.AssemblyDiff;
 using Cecilifier.Runtime;
 using Mono.Cecil;
+using Mono.Cecil.Cil;
 using Mono.Cecil.Rocks;
 using NUnit.Framework;
 
@@ -81,7 +82,7 @@ namespace Cecilifier.Core.Tests.Framework
             AssertResourceTest(actualAssemblyPath, expectedAssemblyPath, tbc);
         }
 
-        private void AssertResourceTest(string resourceName, ResourceTestOptions options)
+        protected void AssertResourceTest(string resourceName, ResourceTestOptions options)
         {
             var cecilifierTestsFolder = Path.Combine(Path.GetTempPath(), "CecilifierTests");
 
@@ -107,7 +108,7 @@ namespace Cecilifier.Core.Tests.Framework
         private void AssertResourceTest(string actualAssemblyPath, string expectedAssemblyPath, ResourceTestOptions options)
         {
             CecilifyAndExecute(options.ToBeCecilified, actualAssemblyPath);
-            CompareAssemblies(expectedAssemblyPath, actualAssemblyPath, options.AssemblyComparison);
+            CompareAssemblies(expectedAssemblyPath, actualAssemblyPath, options.AssemblyComparison, options.InstructionComparer);
             VerifyAssembly(actualAssemblyPath, expectedAssemblyPath, options);
         }
 
@@ -238,16 +239,16 @@ namespace Cecilifier.Core.Tests.Framework
             return new StreamReader(tbc).ReadToEnd();
         }
 
-        private void CompareAssemblies(string expectedAssemblyPath, string actualAssemblyPath, IAssemblyDiffVisitor visitor)
+        private void CompareAssemblies(string expectedAssemblyPath, string actualAssemblyPath, IAssemblyDiffVisitor visitor, Func<Instruction, Instruction, bool?> instructionComparer)
         {
             var comparer = new AssemblyComparer(expectedAssemblyPath, actualAssemblyPath);
-            if (!comparer.Compare(visitor))
+            if (!comparer.Compare(visitor, instructionComparer))
             {
                 Assert.Fail("Expected and generated assemblies differs:\r\n\tExpected:  {0}\r\n\tGenerated: {1}\r\n\r\n{2}\r\n\r\nCecilified Code:\r\n{3}", comparer.First, comparer.Second, visitor.Reason, cecilifiedCode);
             }
         }
 
-        private Stream ReadResource(string resourceName, string type)
+        protected Stream ReadResource(string resourceName, string type)
         {
             return ReadResource(resourceName.GetPathOfTextResource(type));
         }

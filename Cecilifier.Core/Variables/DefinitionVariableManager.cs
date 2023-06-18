@@ -68,6 +68,7 @@ public class DefinitionVariableManager
             _ => _definitionStack[index]
         };
     }
+    public IEnumerable<DefinitionVariable> GetVariablesOf(VariableMemberKind kind) => _definitionVariables.Where(candidate => candidate.Kind == kind);
 
     public ScopedDefinitionVariable WithCurrentMethod(string parentName, string memberName, string[] paramTypes, string definitionVariableName)
     {

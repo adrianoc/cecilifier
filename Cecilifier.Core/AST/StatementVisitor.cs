@@ -48,6 +48,7 @@ namespace Cecilifier.Core.AST
 
             var forEndLabel = Context.Naming.Label("fel");
             WriteCecilExpression(Context, $"var {forEndLabel} = {_ilVar}.Create(OpCodes.Nop);");
+            breakToInstructionVars.Push(forEndLabel);
 
             var forConditionLabel = AddCilInstructionWithLocalVariable(_ilVar, OpCodes.Nop);
 
@@ -66,6 +67,7 @@ namespace Cecilifier.Core.AST
 
             Context.EmitCilInstruction(_ilVar, OpCodes.Br, forConditionLabel);
             WriteCecilExpression(Context, $"{_ilVar}.Append({forEndLabel});");
+            breakToInstructionVars.Pop();
         }
 
         public override void VisitSwitchStatement(SwitchStatementSyntax node)
@@ -87,8 +89,7 @@ namespace Cecilifier.Core.AST
             {
                 if (switchSection.Labels.First().Kind() == SyntaxKind.DefaultSwitchLabel)
                 {
-                    string operand = nextTestLabels[currentLabelIndex];
-                    Context.EmitCilInstruction(_ilVar, OpCodes.Br, operand);
+                    Context.EmitCilInstruction(_ilVar, OpCodes.Br, nextTestLabels[currentLabelIndex]);
                     continue;
                 }
 
@@ -168,7 +169,35 @@ namespace Cecilifier.Core.AST
 
         public override void VisitIfStatement(IfStatementSyntax node)
         {
-            IfStatementVisitor.Visit(Context, _ilVar, node);
+            ExpressionVisitor.Visit(Context, _ilVar, node.Condition);
+
+            var elsePrologVarName = Context.Naming.Label("elseEntryPoint");
+            WriteCecilExpression(Context, $"var {elsePrologVarName} = {_ilVar}.Create(OpCodes.Nop);");
+            Context.EmitCilInstruction(_ilVar, OpCodes.Brfalse, elsePrologVarName);
+
+            Context.WriteComment("if body");
+            node.Statement.Accept(this);
+
+            var elseEndTargetVarName = Context.Naming.Label("elseEnd");
+            WriteCecilExpression(Context, $"var {elseEndTargetVarName} = {_ilVar}.Create(OpCodes.Nop);");
+            if (node.Else != null)
+            {
+                using var _ = LineInformationTracker.Track(Context, node.Else);
+                var branchToEndOfIfStatementVarName = Context.Naming.Label("endOfIf");
+                WriteCecilExpression(Context, $"var {branchToEndOfIfStatementVarName} = {_ilVar}.Create(OpCodes.Br, {elseEndTargetVarName});");
+                WriteCecilExpression(Context, $"{_ilVar}.Append({branchToEndOfIfStatementVarName});");
+
+                WriteCecilExpression(Context, $"{_ilVar}.Append({elsePrologVarName});");
+                node.Else.Statement.Accept(this);
+            }
+            else
+            {
+                WriteCecilExpression(Context, $"{_ilVar}.Append({elsePrologVarName});");
+            }
+
+            WriteCecilExpression(Context, $"{_ilVar}.Append({elseEndTargetVarName});");
+            WriteCecilExpression(Context, $"{Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method).VariableName}.Body.OptimizeMacros();");
+            Context.WriteComment($" end if ({node.HumanReadableSummary()})");
         }
 
         public override void VisitLocalDeclarationStatement(LocalDeclarationStatementSyntax node)

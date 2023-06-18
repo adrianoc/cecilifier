@@ -96,6 +96,8 @@ namespace Cecilifier.Web
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapRazorPages();
+                endpoints.MapGet("/issues_closed_in_staging", CecilifierRestHandler.RetrieveListOfFixedIssuesInStagingServerEndPointAsync);
+                endpoints.MapGet("/get_release_notes", CecilifierRestHandler.RetrieveReleaseNotes);
                 endpoints.MapPost("/referenced_assemblies", CecilifierRestHandler.ReferencedAssembliesEndPointAsync);
                 endpoints.MapGet("/fileissue", CecilifierRestHandler.FileIssueEndPointAsync);
                 endpoints.MapGet("/authorization_callback", CecilifierRestHandler.ReportIssueEndPointAsync);

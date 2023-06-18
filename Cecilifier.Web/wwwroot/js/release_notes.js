@@ -14,8 +14,8 @@ function getCookie(cname) {
     const name = cname + "=";
     const decodedCookie = decodeURIComponent(document.cookie);
     const ca = decodedCookie.split(';');
-    for(let i = 0; i < ca.length; i++) {
-        let c = ca[i];
+    for(const element of ca) {
+        let c = element;
         while (c.charAt(0) === ' ') {
             c = c.substring(1);
         }
@@ -61,7 +61,7 @@ function getReleaseNotes(callback) {
             callback( this.responseText);
         }
     };
-    xhttp.open("GET", "https://api.github.com/repos/adrianoc/cecilifier/releases", true);
+    xhttp.open("GET", `${window.origin}/get_release_notes`, true);
     xhttp.send();
 }
   

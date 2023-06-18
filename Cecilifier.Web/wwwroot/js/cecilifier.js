@@ -212,7 +212,7 @@ function showListOfFixedIssuesInStagingServer(force) {
         if (Date.parse(sortedIssues[0].updated_at) <= lastShownIssueNumber)
             return;
 
-        let issuesHtml = sortedIssues.reduce( (previous, issue) => `${previous}<br /><a style='color:#3c763d' href='${issue.url}'>${issue.title}</a>`, "List of resolved issues/improvements in <a style='color:#3c763d' href='http://cecilifier.me:5000'>staging server</a><br/>");
+        let issuesHtml = sortedIssues.reduce( (previous, issue) => `${previous}<br /><a style='color:#3c763d' href='${issue.url}'>${issue.title}</a>`, "List of resolved issues/improvements in <a style='color:#3c763d' href='http://staging.cecilifier.me'>staging server</a><br/>");
         if (sortedIssues.length  === 0)
             return;
 
@@ -234,8 +234,17 @@ function retrieveListOfFixedIssuesInStagingServer(callback) {
             let issues = JSON.parse(this.responseText);
             callback(issues);
         }
+        else if (this.readyState === 4 && this.status === 500) {
+            SnackBar({
+                message: this.responseText,
+                dismissible: true,
+                status: "Error",
+                timeout: 120000,
+                icon: "exclamation"
+            });
+        }
     };
-    xhttp.open("GET", "https://api.github.com/repos/adrianoc/cecilifier/issues?state=open&labels=fixed-in-staging", true);
+    xhttp.open("GET", `${window.origin}/issues_closed_in_staging`, true);
     xhttp.send();
 }
 
@@ -855,13 +864,17 @@ function setupCursorTracking() {
         if (blockMappings === null)
             return;
         
-        for(let i = 0; i < blockMappings.length; i++)
-        {
-            if (e.target.position === null || e.target.position.lineNumber < blockMappings[i].Cecilified.Begin.Line || e.target.position.lineNumber > blockMappings[i].Cecilified.End.Line)
+        for(const blockMapping of blockMappings) {
+            if (e.target.position === null || e.target.position.lineNumber < blockMapping.Cecilified.Begin.Line || e.target.position.lineNumber > blockMapping.Cecilified.End.Line)
                 continue;
-            
-            csharpCode.setSelection( { startColumn: blockMappings[i].Source.Begin.Column, endColumn: blockMappings[i].Source.End.Column, startLineNumber: blockMappings[i].Source.Begin.Line, endLineNumber: blockMappings[i].Source.End.Line });
-            csharpCode.revealLineNearTop(blockMappings[i].Source.Begin.Line);
+
+            csharpCode.setSelection({
+                startColumn: blockMapping.Source.Begin.Column,
+                endColumn: blockMapping.Source.End.Column,
+                startLineNumber: blockMapping.Source.Begin.Line,
+                endLineNumber: blockMapping.Source.End.Line
+            });
+            csharpCode.revealLineNearTop(blockMapping.Source.Begin.Line);
             return;            
         }
     });
