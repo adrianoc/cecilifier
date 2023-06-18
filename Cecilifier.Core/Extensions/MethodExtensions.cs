@@ -56,7 +56,7 @@ namespace Cecilifier.Core.Extensions
                 return variable;
             }
 
-            if (method.ContainingType.IsGenericType && method.Parameters.Any(p => p.Type.TypeKind == TypeKind.TypeParameter))
+            if (method.Parameters.Any(p => p.Type.IsTypeParameterOrIsGenericTypeReferencingTypeParameter()) || method.ReturnType.IsTypeParameterOrIsGenericTypeReferencingTypeParameter())
             {
                 return ResolveMethodFromGenericType(method, ctx);
             }
@@ -76,14 +76,14 @@ namespace Cecilifier.Core.Extensions
             // find the original method.
             var originalMethodVar = ctx.Naming.SyntheticVariable($"open{method.Name}", ElementKind.LocalVariable);
             // TODO: handle overloads
-            ctx.WriteCecilExpression($"""var {originalMethodVar} = assembly.MainModule.ImportReference({ctx.TypeResolver.Resolve(method.ContainingType.OriginalDefinition)}).Resolve().Methods.First(m => m.Name == "{method.Name}");""");
+            ctx.WriteCecilExpression($"""var {originalMethodVar} = {ctx.TypeResolver.Resolve(method.ContainingType.OriginalDefinition)}.Resolve().Methods.First(m => m.Name == "{method.Name}");""");
             ctx.WriteNewLine();
 
             // Instantiates a MethodReference representing the called method.
             var targetMethodVar = ctx.Naming.SyntheticVariable($"{method.Name}", ElementKind.MemberReference);
             ctx.WriteCecilExpression(
                 $$"""
-                  var {{targetMethodVar}} = new MethodReference("{{method.Name}}", {{originalMethodVar}}.ReturnType)
+                  var {{targetMethodVar}} = new MethodReference("{{method.Name}}", assembly.MainModule.ImportReference({{originalMethodVar}}).ReturnType)
                               {
                                    DeclaringType = {{targetTypeVarName}},
                                    HasThis = {{originalMethodVar}}.HasThis,

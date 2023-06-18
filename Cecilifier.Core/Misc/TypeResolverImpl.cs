@@ -55,7 +55,7 @@ namespace Cecilifier.Core.Misc
 
             return ResolvePredefinedType(type);
         }
-
+        
         private string ResolveGenericType(ITypeSymbol type)
         {
             if (!(type is INamedTypeSymbol { IsGenericType: true, TypeArguments.Length: > 0 } genericTypeSymbol))

@@ -1,4 +1,5 @@
-class UsageOfNonGenericMethodOnGenericTypeFromExternalAssembly
+using System.Collections.Generic;
+class UsageOfNonGenericMethodOnGenericTypeFromExternalAssembly2
 {
-    bool M<T>(System.IEquatable<T> lhs, T rhs) => lhs.Equals(rhs);
+    IEnumerator<T> M<T>(IEnumerable<T> e) => e.GetEnumerator();
 }

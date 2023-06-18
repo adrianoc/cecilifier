@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Cecilifier.Core.AST;
 using Microsoft.CodeAnalysis;
 using Mono.Cecil.Cil;
@@ -128,6 +129,11 @@ namespace Cecilifier.Core.Extensions
                 SpecialType.System_Object => OpCodes.Stelem_Ref,
                 _ => type.IsValueType ? OpCodes.Stelem_Any : throw new Exception($"Element type {type.Name} not supported.")
             };
+        
+
+        public static bool IsTypeParameterOrIsGenericTypeReferencingTypeParameter(this ITypeSymbol returnType) => 
+            returnType.TypeKind == TypeKind.TypeParameter
+            || returnType is INamedTypeSymbol { IsGenericType: true } genType && genType.TypeArguments.Any(t => t.TypeKind == TypeKind.TypeParameter);
     }
 
     public sealed class VariableDefinitionComparer : IEqualityComparer<VariableDefinition>

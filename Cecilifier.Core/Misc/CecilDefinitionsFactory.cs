@@ -41,9 +41,9 @@ namespace Cecilifier.Core.Misc
 
             // for type parameters we may need to postpone setting the return type (using void as a placeholder, since we need to pass something) until the generic parameters has been
             // handled. This is required because the type parameter may be defined by the method being processed.
-            exps.Add($"var {methodVar} = new MethodDefinition(\"{methodName}\", {methodModifiers}, {(returnType.TypeKind == TypeKind.TypeParameter ? context.TypeResolver.Bcl.System.Void : resolvedReturnType)});");
+            exps.Add($"var {methodVar} = new MethodDefinition(\"{methodName}\", {methodModifiers}, {(returnType.IsTypeParameterOrIsGenericTypeReferencingTypeParameter() ? context.TypeResolver.Bcl.System.Void : resolvedReturnType)});");
             ProcessGenericTypeParameters(methodVar, context, typeParameters, exps);
-            if (returnType.TypeKind == TypeKind.TypeParameter)
+            if (returnType.IsTypeParameterOrIsGenericTypeReferencingTypeParameter())
             {
                 resolvedReturnType = context.TypeResolver.Resolve(returnType);
                 exps.Add($"{methodVar}.ReturnType = {(refReturn ? resolvedReturnType.MakeByReferenceType() : resolvedReturnType)};");

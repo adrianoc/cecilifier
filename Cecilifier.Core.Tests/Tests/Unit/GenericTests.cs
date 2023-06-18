@@ -180,9 +180,37 @@ namespace Cecilifier.Core.Tests.Tests.Unit
 
             var cecilifiedCode = result.GeneratedCode.ReadToEnd();
             
-            Assert.That(cecilifiedCode, Does.Match("""var l_openEquals_\d+ = assembly.MainModule.ImportReference\(.+ImportReference\(typeof\(System.IEquatable<>\)\)\).Resolve\(\).Methods.First\(m => m.Name == "Equals"\);"""), "method from open generic type not match");
-            Assert.That(cecilifiedCode, Does.Match("""var r_equals_\d+ = new MethodReference\("Equals", l_openEquals_\d+.ReturnType\)"""), "MethodReference does not match");
+            Assert.That(cecilifiedCode, Does.Match("""var l_openEquals_\d+ = .+ImportReference\(typeof\(System.IEquatable<>\)\).Resolve\(\).Methods.First\(m => m.Name == "Equals"\);"""), "method from open generic type not match");
+            Assert.That(cecilifiedCode, Does.Match("""var r_equals_\d+ = new MethodReference\("Equals", assembly.MainModule.ImportReference\(l_openEquals_\d+\).ReturnType\)"""), "MethodReference does not match");
             Assert.That(cecilifiedCode, Does.Match("""il_M_3.Emit\(OpCodes.Callvirt, r_equals_\d+\);"""), "Call to the target method does not match");
+        }
+        
+        [Test]
+        public void GenericParameter_IsUsed_InsteadOfTypeOf_Issue240()
+        {
+            /*
+             * This test ensures that
+             * 1. return type depending on generic method type parameter (`T` in IEnumerator<T> M<T>(...)) generates correct code, i.e, references the GenericParameter()
+             *    instantiated to represent `T`  instead of `typeof(T)`.
+             * 2. resolution of the target method, i.e, the call to `GetEnumerator()` is emitted using the same GenericParameter() as described above instead of `typeof(T)`
+             */
+            var code = "using System.Collections.Generic; class C { IEnumerator<T> M<T>(IEnumerable<T> e) => e.GetEnumerator(); }";
+            var result = RunCecilifier(code);
+
+            var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+            
+            Assert.That(cecilifiedCode, Does.Not.Match(@"typeof\(T\)"), "`T` should be referenced through a GenericParameter() instead.");
+            Assert.That(cecilifiedCode, Does.Match(@"m_M_\d+.ReturnType = .+ImportReference\(typeof\(.+IEnumerator<>\)\).MakeGenericInstanceType\(gp_T_\d+\);"), "Return type should reference the GenericParameter().");
+            Assert.That(cecilifiedCode, Does.Match("""
+                                                   \s+var r_getEnumerator_7 = new MethodReference\("GetEnumerator", assembly.MainModule.ImportReference\(l_openGetEnumerator_6\).ReturnType\)
+                                                   \s+{
+                                                   \s+DeclaringType = l_iEnumerable_5,
+                                                   \s+HasThis = l_openGetEnumerator_6.HasThis,
+                                                   \s+ExplicitThis = l_openGetEnumerator_6.ExplicitThis,
+                                                   \s+CallingConvention = l_openGetEnumerator_6.CallingConvention,
+                                                   \s+};
+                                                   \s+il_M_3.Emit\(OpCodes.Callvirt, r_getEnumerator_7\);
+                                                   """), "Target of call instruction validation.");
         }
     }
 }
