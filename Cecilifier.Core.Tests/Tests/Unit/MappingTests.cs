@@ -11,7 +11,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
     public class MappingTests
     {
         [Test]
-        public void Test_CecilifierPreamble_Has17Lines()
+        public void Test_CecilifierPreamble_LineCount()
         {
             var cecilifiedResult = RunCecilifier("class Foo {}");
             Assert.That(
@@ -52,6 +52,22 @@ namespace Cecilifier.Core.Tests.Tests.Unit
 
             Assert.That(cecilifiedResult.Mappings[2].Cecilified.Begin.Line, Is.EqualTo(35), message);
             Assert.That(cecilifiedResult.Mappings[2].Cecilified.End.Line, Is.EqualTo(38), message);
+        }
+
+        [Test]
+        public void Test_Content_Matches_ReportedCecilifiedMappings()
+        {
+            var cecilifiedResult = RunCecilifier("class Foo { int Sum(int i, int j) => i + j; }");
+            var cecilifiedCode = cecilifiedResult.GeneratedCode.ReadToEnd();
+            var message = $"Actual Mapping:{Environment.NewLine}{cecilifiedResult.Mappings.DumpAsString()}\n\n{cecilifiedCode}";
+
+            var cecilifiedLines = cecilifiedCode.Split(Environment.NewLine);
+            
+            // Whole class
+            Assert.That(cecilifiedLines[cecilifiedResult.Mappings[0].Cecilified.Begin.Line], Contains.Substring("//Class : Foo"), message);
+            
+            // Method Sum()...
+            Assert.That(cecilifiedLines[cecilifiedResult.Mappings[1].Cecilified.Begin.Line], Contains.Substring("//Method : Sum"), message);
         }
 
         private static CecilifierResult RunCecilifier(string code)
