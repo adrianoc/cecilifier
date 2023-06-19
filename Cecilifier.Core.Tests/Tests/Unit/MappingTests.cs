@@ -27,31 +27,31 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             //                                         12345678901234567890123456789012345678901234567890
             var cecilifiedResult = RunCecilifier("class Foo { int Sum(int i, int j) => i + j; }");
             var message = $"Actual Mapping:{Environment.NewLine}{cecilifiedResult.Mappings.DumpAsString()}\n\n{cecilifiedResult.GeneratedCode.ReadToEnd()}";
-
+            
             Assert.That(cecilifiedResult.Mappings.Count, Is.EqualTo(7), message);
-
+            
             // Whole class
             Assert.That(cecilifiedResult.Mappings[0].Source.Begin.Line, Is.EqualTo(1), message);
             Assert.That(cecilifiedResult.Mappings[0].Source.Begin.Column, Is.EqualTo(1), message);
             Assert.That(cecilifiedResult.Mappings[0].Source.End.Column, Is.EqualTo(46), message);
 
-            Assert.That(cecilifiedResult.Mappings[0].Cecilified.Begin.Line, Is.EqualTo(18), message);
-            Assert.That(cecilifiedResult.Mappings[0].Cecilified.End.Line, Is.EqualTo(47), message);
+            Assert.That(cecilifiedResult.Mappings[0].Cecilified.Begin.Line, Is.EqualTo(25), message);
+            Assert.That(cecilifiedResult.Mappings[0].Cecilified.End.Line, Is.EqualTo(54), message);
 
             // => int Sum(int i, int j) => i + j;
             Assert.That(cecilifiedResult.Mappings[1].Source.Begin.Line, Is.EqualTo(1), message);
             Assert.That(cecilifiedResult.Mappings[1].Source.Begin.Column, Is.EqualTo(13), message);
             Assert.That(cecilifiedResult.Mappings[1].Source.End.Column, Is.EqualTo(44), message);
 
-            Assert.That(cecilifiedResult.Mappings[1].Cecilified.Begin.Line, Is.EqualTo(23), message);
-            Assert.That(cecilifiedResult.Mappings[1].Cecilified.End.Line, Is.EqualTo(39), message);
-
+            Assert.That(cecilifiedResult.Mappings[1].Cecilified.Begin.Line, Is.EqualTo(30), message);
+            Assert.That(cecilifiedResult.Mappings[1].Cecilified.End.Line, Is.EqualTo(46), message);
+            
             // => i + j;
             Assert.That(cecilifiedResult.Mappings[2].Source.Begin.Line, Is.EqualTo(1), message);
             Assert.That(cecilifiedResult.Mappings[2].Source.Begin.Column, Is.EqualTo(35), message);
 
-            Assert.That(cecilifiedResult.Mappings[2].Cecilified.Begin.Line, Is.EqualTo(35), message);
-            Assert.That(cecilifiedResult.Mappings[2].Cecilified.End.Line, Is.EqualTo(38), message);
+            Assert.That(cecilifiedResult.Mappings[2].Cecilified.Begin.Line, Is.EqualTo(42), message);
+            Assert.That(cecilifiedResult.Mappings[2].Cecilified.End.Line, Is.EqualTo(45), message);
         }
 
         [Test]

@@ -16,7 +16,7 @@ namespace Cecilifier.Core
 {
     public sealed class Cecilifier
     {
-        internal const int CecilifierProgramPreambleLength = 18; // The # of lines before the 1st cecilified line of code (see CecilifierExtensions.AsCecilApplication())
+        internal const int CecilifierProgramPreambleLength = 25; // The # of lines before the 1st cecilified line of code (see CecilifierExtensions.AsCecilApplication())
 
         public static readonly int SupportedCSharpVersion = int.Parse(LanguageVersion.CSharp11.ToString().Substring("CSharp".Length));
 

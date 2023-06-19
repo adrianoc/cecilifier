@@ -78,8 +78,15 @@ public class SnippetRunner
 {{
 	public static void Main(string[] args)
 	{{
-        // setup a `reflection importer` to ensure references to System.Private.CoreLib are replaced with references to `netstandard`. 
-        var mp = new ModuleParameters {{ Architecture = TargetArchitecture.AMD64, Kind =  {moduleKind}, ReflectionImporterProvider = new SystemPrivateCoreLibFixerReflectionProvider() }};
+        // setup `reflection/metadata importers` to ensure references to System.Private.CoreLib are replaced with references to `netstandard`.
+        var mp = new ModuleParameters
+        {{
+            Architecture = TargetArchitecture.AMD64,
+            Kind =  {moduleKind},
+            MetadataImporterProvider = new SystemPrivateCoreLibFixerMetadataImporterProvider(),
+            ReflectionImporterProvider = new SystemPrivateCoreLibFixerReflectionProvider()
+        }};
+
 		using(var assembly = AssemblyDefinition.CreateAssembly(new AssemblyNameDefinition(""{assemblyName}"", Version.Parse(""1.0.0.0"")), Path.GetFileName(args[0]), mp))
         {{
 {cecilSnippet}{entryPointStatement}
