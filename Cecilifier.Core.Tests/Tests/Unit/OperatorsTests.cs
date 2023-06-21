@@ -133,7 +133,7 @@ public class OperatorsTests : CecilifierUnitTestBase
         TestName = "Overloaded +")]
     [TestCase(
         "var c = new C(); c.M(c); System.Console.WriteLine(c.Value); class C { public int Value {get; set;} public void M(C other) { Value += 1; other.Value += 2; } }",
-        @"//Value \+= 1;\s+var (ldarg_0_\d+) = il_M_18.Create\(OpCodes.Ldarg_0\);\s+il_M_18.Append\(\1\);\s+(il_M_\d+\.Emit\(OpCodes\.)Ldarg_0\);\s+\2Call, m_get_11\);\s+\2Ldc_I4, 1\);\s+\2Add\);\s+\2Call, l_set_14\);\s+",
+        @"//Value \+= 1;\s+var (ldarg_0_\d+) = (il_M_\d+).Create\(OpCodes.Ldarg_0\);\s+\2.Append\(\1\);\s+(il_M_\d+\.Emit\(OpCodes\.)Ldarg_0\);\s+\3Call, m_get_\d+\);\s+\3Ldc_I4, 1\);\s+\3Add\);\s+\3Call, l_set_\d+\);\s+",
         TestName = "Properties (numeric)")]
     public void TestCompoundAssignment(string code, string expected)
     {

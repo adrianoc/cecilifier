@@ -43,7 +43,7 @@ public class InvocationOnValueTypeTests : CecilifierUnitTestBase
               """, 
         """
                   (.+\.Emit\(OpCodes\.)Ldloca, .+\);
-                  \1Constrained, .+StructNotOverridingToString.+\);
+                  \1Constrained, st_structNotOverridingToString_\d+\);
                   \1Callvirt, .+ToString.+\);
                   """, 
         TestName = "CallToNonOverridenMethod")]
