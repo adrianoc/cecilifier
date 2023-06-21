@@ -79,6 +79,10 @@ namespace Cecilifier.Core.Misc
 
         public void WriteCecilExpression(string expression)
         {
+            if (expression.Contains("Ldloc"))
+            {
+                int x = 01;
+            }
             CecilifiedLineNumber += expression.CountNewLines();
             output.AddLast($"{identation}{expression}");
         }
