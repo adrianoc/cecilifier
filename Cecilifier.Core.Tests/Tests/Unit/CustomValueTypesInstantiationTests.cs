@@ -1,3 +1,4 @@
+using Mono.Cecil.Cil;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Tests.Unit;
@@ -74,4 +75,156 @@ public class CustomValueTypesInstantiationTests : CecilifierUnitTestBase
 
         Assert.That(cecilifiedCode, Does.Match(@"il_create_2\.Emit\(OpCodes.Newobj, ctor_foo_3\);"));
     }
+    
+    [TestCaseSource(nameof(InvocationOnObjectCreationExpressionTestScenarios))]
+    public void InvocationOnObjectCreationExpression(string invocationStatement, string expectedILSnippet)
+    {
+        var result = RunCecilifier($$"""
+                                   using System;
+                                   
+                                   {{invocationStatement}};
+                                   
+                                   struct Test : IDisposable 
+                                   { 
+                                        public Test(int i) {}
+                                        public void M() {}
+                                        public void Dispose() {} 
+                                   }
+                                   """);
+        
+        Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(expectedILSnippet));
+    }
+
+    static TestCaseData[] InvocationOnObjectCreationExpressionTestScenarios()
+    {
+        return new[]
+        {
+            new TestCaseData(
+                "new Test().M()", 
+                $"""
+                 (m_topLevelStatements_\d+).Body.Variables.Add\((l_vt_\d+)\);
+                 \s+(il_topLevelMain_\d+.Emit\(OpCodes\.)Ldloca_S, \2\);
+                 \s+\3Initobj, st_test_0\);
+                 \s+\3Ldloca, \2\);
+                 \s+\3Call, m_M_\d+\);
+                 \s+\1\.Body\.Instructions\.Add\(il_topLevelMain_\d+.Create\(OpCodes.Ret\)\);
+                 """).SetName("Implicit: direct call own method"),
+            
+            new TestCaseData(
+                "new Test().Dispose()",
+                """
+                (m_topLevelStatements_\d+).Body.Variables.Add\((l_vt_\d+)\);
+                \s+(il_topLevelMain_\d+.Emit\(OpCodes\.)Ldloca_S, \2\);
+                \s+\3Initobj, st_test_0\);
+                \s+\3Ldloca, \2\);
+                \s+\3Call, m_dispose_\d+\);
+                \s+\1\.Body\.Instructions\.Add\(il_topLevelMain_\d+.Create\(OpCodes.Ret\)\);
+                """).SetName("Implicit: direct interface method"),
+            
+            new TestCaseData(
+                "((IDisposable) new Test()).Dispose()", 
+                """
+                (m_topLevelStatements_\d+).Body.Variables.Add\((l_vt_\d+)\);
+                \s+(il_topLevelMain_\d+.Emit\(OpCodes\.)Ldloca_S, \2\);
+                \s+\3Initobj, st_test_0\);
+                \s+\3Ldloc, \2\);
+                \s+\3Box, st_test_0\);
+                \s+\3Callvirt, .+"Dispose".+\);
+                \s+\1\.Body\.Instructions\.Add\(il_topLevelMain_\d+.Create\(OpCodes.Ret\)\);
+                """).SetName("Implicit: call through interface cast"),
+            
+            new TestCaseData(
+                "new Test().GetHashCode()", 
+                """
+                (m_topLevelStatements_\d+).Body.Variables.Add\((l_vt_\d+)\);
+                \s+(il_topLevelMain_\d+.Emit\(OpCodes\.)Ldloca_S, \2\);
+                \s+\3Initobj, st_test_0\);
+                \s+\3Ldloca, \2\);
+                \s+\3Constrained, st_test_0\);
+                \s+\3Callvirt, .+GetHashCode.+\);
+                \s+\3Pop\);
+                \s+\1\.Body\.Instructions\.Add\(il_topLevelMain_\d+.Create\(OpCodes.Ret\)\);
+                """).SetName("Implicit: direct object method call"),
+            
+            new TestCaseData(
+                "((Object) new Test()).GetHashCode()", 
+                """
+                (m_topLevelStatements_\d+).Body.Variables.Add\((l_vt_\d+)\);
+                \s+(il_topLevelMain_\d+.Emit\(OpCodes\.)Ldloca_S, \2\);
+                \s+\3Initobj, st_test_0\);
+                \s+\3Ldloc, \2\);
+                \s+\3Box, st_test_0\);
+                \s+\3Callvirt, .+GetHashCode.+\);
+                \s+\3Pop\);
+                \s+\1\.Body\.Instructions\.Add\(il_topLevelMain_\d+.Create\(OpCodes.Ret\)\);
+                """).SetName("Implicit: call through object cast"),
+            
+            new TestCaseData(
+                "((IDisposable) new Test(1)).Dispose()", 
+                """
+                (il_topLevelMain_\d+\.Emit\(OpCodes\.)Ldc_I4, 1\);
+                \s+\1Newobj, ctor_test_\d+\);
+                \s+var (l_tmp_\d+) = new VariableDefinition\(st_test_\d+\);
+                \s+m_topLevelStatements_\d+.Body.Variables.Add\(\2\);
+                \s+\1Stloc, \2\);
+                \s+\1Ldloc, \2\);
+                \s+\1Box, st_test_\d+\);
+                \s+\1Callvirt, .+"Dispose".+\);
+                """).SetName("Explicit: call through interface cast"),
+            
+            new TestCaseData(
+                "new Test(1).GetHashCode()", 
+                """
+                (il_topLevelMain_\d+\.Emit\(OpCodes\.)Ldc_I4, 1\);
+                \s+\1Newobj, ctor_test_\d+\);
+                \s+var (l_tmp_\d+) = new VariableDefinition\(st_test_\d+\);
+                \s+m_topLevelStatements_\d+.Body.Variables.Add\(\2\);
+                \s+\1Stloc, \2\);
+                \s+\1Ldloca_S, \2\);
+                \s+\1Constrained, st_test_\d+\);
+                \s+\1Callvirt, .+"GetHashCode".+\);
+                \s+\1Pop\);
+                """).SetName("Explicit: direct object method call"), // Only missing constrained
+            
+            new TestCaseData(
+                "((object)new Test(1)).GetHashCode()", 
+                """
+                (il_topLevelMain_\d+\.Emit\(OpCodes\.)Ldc_I4, 1\);
+                \s+\1Newobj, ctor_test_\d+\);
+                \s+var (l_tmp_\d+) = new VariableDefinition\(st_test_\d+\);
+                \s+m_topLevelStatements_\d+.Body.Variables.Add\(\2\);
+                \s+\1Stloc, \2\);
+                \s+\1Ldloc, \2\);
+                \s+\1Box, st_test_\d+\);
+                \s+\1Callvirt, .+"GetHashCode".+\);
+                \s+\1Pop\);
+                """).SetName("Explicit: call through object cast"),
+            
+            new TestCaseData(
+                "new Test(1).M()", 
+                $"""
+                 (il_topLevelMain_\d+\.Emit\(OpCodes\.)Ldc_I4, 1\);
+                 \s+\1Newobj, ctor_test_\d+\);
+                 \s+var (l_tmp_\d+) = new VariableDefinition\(st_test_\d+\);
+                 \s+m_topLevelStatements_\d+.Body.Variables.Add\(\2\);
+                 \s+\1Stloc, \2\);
+                 \s+\1Ldloca_S, \2\);
+                 \s+\1Call, m_M_\d+\);
+                 \s+m_topLevelStatements_\d+\.Body\.Instructions\.Add\(il_topLevelMain_\d+.Create\(OpCodes.Ret\)\);
+                 """).SetName("Explicit: direct call own method"),
+            
+            new TestCaseData(
+                "new Test(1).Dispose()",
+                """
+                (il_topLevelMain_\d+\.Emit\(OpCodes\.)Ldc_I4, 1\);
+                \s+\1Newobj, ctor_test_\d+\);
+                \s+var (l_tmp_\d+) = new VariableDefinition\(st_test_\d+\);
+                \s+m_topLevelStatements_\d+.Body.Variables.Add\(\2\);
+                \s+\1Stloc, \2\);
+                \s+\1Ldloca_S, \2\);
+                \s+\1Call, m_dispose_\d+\);
+                \s+m_topLevelStatements_\d+\.Body\.Instructions\.Add\(il_topLevelMain_\d+.Create\(OpCodes.Ret\)\);
+                """).SetName("Explicit: direct interface method"),
+        };
+    }    
 }

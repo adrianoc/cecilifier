@@ -63,7 +63,7 @@ class CtorWithParameters : Base
 	private static string Process(int n, int j) 
 	{
 		new CtorWithParameters(10).Sum(1, 2);
-		return (n + j).ToString();
+		return "not important";
 	}
 
 	private int Sum(int i, int j)

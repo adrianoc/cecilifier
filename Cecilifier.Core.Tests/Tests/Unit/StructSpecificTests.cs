@@ -177,6 +177,5 @@ public class StructSpecificTests : CecilifierUnitTestBase
              \3Box, \2\);
              \3Ret\);
              """));
-        
     }
 }

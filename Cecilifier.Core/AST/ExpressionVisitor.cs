@@ -404,7 +404,7 @@ namespace Cecilifier.Core.AST
             }
 
             HandleMethodInvocation(node.Expression, node.ArgumentList, Context.SemanticModel.GetSymbolInfo(node.Expression).Symbol);
-            StoreTopOfStackInLocalVariableAndLoadItsAddressIfNeeded(node);
+            StoreTopOfStackInLocalVariableAndReloadItIfNeeded(node);
         }
 
         public override void VisitConditionalAccessExpression(ConditionalAccessExpressionSyntax node)
@@ -588,12 +588,6 @@ namespace Cecilifier.Core.AST
         {
             using var _ = LineInformationTracker.Track(Context, node);
             base.VisitParenthesizedExpression(node);
-
-            var localVarParent = (CSharpSyntaxNode) node.Parent;
-            if (localVarParent.Accept(UsageVisitor.GetInstance(Context)) != UsageKind.CallTarget)
-                return;
-
-            StoreTopOfStackInLocalVariableAndLoadItsAddress(Context.RoslynTypeSystem.SystemInt32);
         }
 
         public override void VisitObjectCreationExpression(ObjectCreationExpressionSyntax node)
@@ -636,7 +630,7 @@ namespace Cecilifier.Core.AST
             Visit(node.ArgumentList);
             FixCallSite();
 
-            StoreTopOfStackInLocalVariableAndLoadItsAddressIfNeeded(node);
+            StoreTopOfStackInLocalVariableAndReloadItIfNeeded(node);
 
             node.Initializer?.Accept(this);
         }
@@ -716,7 +710,7 @@ namespace Cecilifier.Core.AST
                 var opcode = castTarget.Type.TypeKind == TypeKind.TypeParameter ? OpCodes.Unbox_Any : OpCodes.Castclass;
                 AddCilInstruction(ilVar, opcode, castTarget.Type);
             }
-            else if (conversion.IsImplicit && conversion.IsReference && castSource.Type.TypeKind == TypeKind.TypeParameter)
+            else if (conversion.IsBoxing || conversion.IsImplicit && conversion.IsReference && castSource.Type.TypeKind == TypeKind.TypeParameter)
             {
                 AddCilInstruction(ilVar, OpCodes.Box, castSource.Type);
             }
@@ -1121,7 +1115,14 @@ namespace Cecilifier.Core.AST
             });
         }
 
-        private void StoreTopOfStackInLocalVariableAndLoadItsAddressIfNeeded(ExpressionSyntax node)
+        /*
+         * If node represents 1) a member reference on a value type or 2) a value type instantiation
+         * we may need to store the top of the stack (the value type) in a local variable
+         * and reload :
+         * a. Its address (in case of 1)
+         * b. The value itself (in case of 2)
+         */
+        private void StoreTopOfStackInLocalVariableAndReloadItIfNeeded(ExpressionSyntax node)
         {
             var invocation = (InvocationExpressionSyntax) node.Ancestors().FirstOrDefault(a => a.IsKind(SyntaxKind.InvocationExpression));
             var nodeSymbol = Context.SemanticModel.GetSymbolInfo(node).Symbol.EnsureNotNull();
@@ -1132,10 +1133,10 @@ namespace Cecilifier.Core.AST
             }
 
             var targetOfInvocationType = Context.SemanticModel.GetTypeInfo(node);
-            if (targetOfInvocationType.Type?.IsValueType == false)
-                return;
+            if (targetOfInvocationType.Type?.IsValueType == false) 
+                return; // it is not a value type...
 
-            StoreTopOfStackInLocalVariableAndLoadItsAddress(targetOfInvocationType.Type);
+            StoreTopOfStackInLocalVariableAndLoad(node, targetOfInvocationType.Type);
         }
 
         private bool MemberAccessOnValueTypeProperty(ExpressionSyntax node, ISymbol nodeSymbol)
@@ -1157,10 +1158,17 @@ namespace Cecilifier.Core.AST
             return true;
         }
 
-        private void StoreTopOfStackInLocalVariableAndLoadItsAddress(ITypeSymbol type)
+        private void StoreTopOfStackInLocalVariableAndLoad(ExpressionSyntax expressionSyntax, ITypeSymbol type)
         {
             var tempLocalName = StoreTopOfStackInLocalVariable(Context, ilVar, "tmp", type).VariableName;
-            Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, tempLocalName);
+            Context.EmitCilInstruction(ilVar, expressionSyntax.Parent.IsKind(SyntaxKind.SimpleMemberAccessExpression) ? OpCodes.Ldloca_S : OpCodes.Ldloc, tempLocalName);
+
+            var parentMae = expressionSyntax.FirstAncestorOrSelf<MemberAccessExpressionSyntax>(ancestor => ancestor.Kind() == SyntaxKind.SimpleMemberAccessExpression);
+            if (parentMae != null && SymbolEqualityComparer.Default.Equals(Context.SemanticModel.GetSymbolInfo(parentMae).Symbol.ContainingType, Context.RoslynTypeSystem.SystemValueType))
+            {
+                // it is a reference on a value type to a method defined in System.ValueType (GetHashCode(), ToString(), etc)
+                Context.EmitCilInstruction(ilVar, OpCodes.Constrained, Context.TypeResolver.Resolve(type));
+            }
         }
 
         private void FixCallSite()
@@ -1210,7 +1218,7 @@ namespace Cecilifier.Core.AST
             else
             {
                 AddMethodCall(ilVar, propertySymbol.GetMethod, isAccessOnThisOrObjectCreation);
-                StoreTopOfStackInLocalVariableAndLoadItsAddressIfNeeded(node);
+                StoreTopOfStackInLocalVariableAndReloadItIfNeeded(node);
                 HandlePotentialRefLoad(ilVar, node, propertySymbol.Type);
             }
         }

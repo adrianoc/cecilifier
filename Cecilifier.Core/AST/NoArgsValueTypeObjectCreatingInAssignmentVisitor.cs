@@ -11,9 +11,9 @@ namespace Cecilifier.Core.AST
     {
         private readonly string ilVar;
         private readonly string resolvedInstantiatedType;
-        private readonly Action tempValueTypeDeclarer;
+        private readonly Func<DefinitionVariable> tempValueTypeDeclarer;
 
-        internal NoArgsValueTypeObjectCreatingInAssignmentVisitor(IVisitorContext ctx, string ilVar, string resolvedInstantiatedType, Action tempValueTypeDeclarer) : base(ctx)
+        internal NoArgsValueTypeObjectCreatingInAssignmentVisitor(IVisitorContext ctx, string ilVar, string resolvedInstantiatedType, Func<DefinitionVariable> tempValueTypeDeclarer) : base(ctx)
         {
             this.ilVar = ilVar;
             this.resolvedInstantiatedType = resolvedInstantiatedType;
@@ -44,7 +44,9 @@ namespace Cecilifier.Core.AST
             {
                 // if the target of the assignment is not a value type, it is either an interface or `System.Object`
                 // in both cases we need to introduce a local variable which will be boxed later.
-                tempValueTypeDeclarer();
+                var valueTypeLocalTempVar = tempValueTypeDeclarer();
+                Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, valueTypeLocalTempVar.VariableName);
+                
                 TargetOfAssignmentIsValueType = false;
                 return;
             }
