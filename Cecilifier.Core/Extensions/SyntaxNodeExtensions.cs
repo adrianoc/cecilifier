@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using Cecilifier.Core.AST;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Operations;
 
 namespace Cecilifier.Core.Extensions
 {
@@ -96,6 +98,12 @@ namespace Cecilifier.Core.Extensions
                 throw new NullReferenceException(exp);
 
             return (TTarget) source;
+        }
+        
+        internal static bool IsObjectCreationExpressionUsedAsInParameter(this ArgumentSyntax toBeChecked, IVisitorContext context)
+        {
+            var argumentOperation = (IArgumentOperation) context.SemanticModel.GetOperation(toBeChecked);
+            return argumentOperation.Parameter.RefKind == RefKind.In;
         }
     }
 }

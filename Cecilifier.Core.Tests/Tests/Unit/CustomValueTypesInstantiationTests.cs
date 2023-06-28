@@ -1,4 +1,3 @@
-using Mono.Cecil.Cil;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Tests.Unit;
@@ -93,6 +92,60 @@ public class CustomValueTypesInstantiationTests : CecilifierUnitTestBase
                                    """);
         
         Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(expectedILSnippet));
+    }
+
+    [TestCaseSource(nameof(InvocationExpressionAsParametersTestScenarios))]
+    public void TestInvocationExpressionAsParameters(string testStatement, string expectedGeneratedSnippet)
+    {
+        var result = RunCecilifier($$"""
+                                     {{testStatement}};
+                                     
+                                     void ByValue(Test t) {}
+                                     void AsIn(in Test t) {} 
+                                     
+                                     struct Test 
+                                     {
+                                        public Test(int i) {} 
+                                     }
+                                     """);
+        
+        Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(expectedGeneratedSnippet));
+    }
+
+    static TestCaseData[] InvocationExpressionAsParametersTestScenarios()
+    {
+        return new[]
+        {
+            new TestCaseData(
+                "ByValue(new Test())", 
+                $"""
+                 (il_topLevelMain_\d+\.Emit\(OpCodes\.)Ldloca_S, (l_vt_\d+)\);
+                 \s+\1Initobj, st_test_0\);
+                 \s+\1Ldloc, \2\);
+                 \s+\1Call, .+\);
+                 """).SetName("by value"),
+            
+            new TestCaseData(
+                "AsIn(new Test())", 
+                $"""
+                 (il_topLevelMain_\d+\.Emit\(OpCodes\.)Ldloca_S, (l_vt_\d+)\);
+                 \s+\1Initobj, st_test_0\);
+                 \s+\1Ldloca, \2\);
+                 \s+\1Call, .+\);
+                 """).SetName("as in implicit ctor"),
+            
+            new TestCaseData(
+                "AsIn(new Test(42))", 
+                $"""
+                 (il_topLevelMain_\d+\.Emit\(OpCodes\.)Ldc_I4, 42\);
+                 \s+\1Newobj, ctor_test_\d+\);
+                 \s+var (l_tmp_\d+) = new VariableDefinition\(st_test_\d+\);
+                 \s+m_topLevelStatements_\d+.Body.Variables.Add\(\2\);
+                 \s+\1Stloc, \2\);
+                 \s+\1Ldloca_S, \2\);
+                 \s+\1Call, .+\);
+                 """).SetName("as in explicit ctor"),
+        };
     }
 
     static TestCaseData[] InvocationOnObjectCreationExpressionTestScenarios()

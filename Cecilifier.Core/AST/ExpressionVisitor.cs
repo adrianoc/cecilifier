@@ -11,6 +11,7 @@ using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Operations;
 using Mono.Cecil.Cil;
 using static Cecilifier.Core.Misc.CodeGenerationHelpers;
 
@@ -1115,53 +1116,42 @@ namespace Cecilifier.Core.AST
             });
         }
 
-        /*
-         * If node represents 1) a member reference on a value type or 2) a value type instantiation
-         * we may need to store the top of the stack (the value type) in a local variable
-         * and reload :
-         * a. Its address (in case of 1)
-         * b. The value itself (in case of 2)
-         */
         private void StoreTopOfStackInLocalVariableAndReloadItIfNeeded(ExpressionSyntax node)
         {
-            var invocation = (InvocationExpressionSyntax) node.Ancestors().FirstOrDefault(a => a.IsKind(SyntaxKind.InvocationExpression));
-            var nodeSymbol = Context.SemanticModel.GetSymbolInfo(node).Symbol.EnsureNotNull();
-            if (invocation == null || invocation.ArgumentList.Arguments.Any(argumentExp => argumentExp.Expression.DescendantNodesAndSelf().Any(exp => exp == node)))
-            {
-                if (!MemberAccessOnValueTypeProperty(node, nodeSymbol))
-                    return;
-            }
-
             var targetOfInvocationType = Context.SemanticModel.GetTypeInfo(node);
             if (targetOfInvocationType.Type?.IsValueType == false) 
                 return; // it is not a value type...
 
-            StoreTopOfStackInLocalVariableAndLoad(node, targetOfInvocationType.Type);
+            if( IsLeftHandSideOfMemberAccessExpression(node)
+                || IsObjectCreationExpressionUsedAsSourceOfCast(node)
+                || IsObjectCreationExpressionUsedAsInParameter(node)
+                || IsSimpleMethodInvocation(node))
+                StoreTopOfStackInLocalVariableAndLoad(node, targetOfInvocationType.Type);
         }
 
-        private bool MemberAccessOnValueTypeProperty(ExpressionSyntax node, ISymbol nodeSymbol)
+        private static bool IsLeftHandSideOfMemberAccessExpression(ExpressionSyntax toBeChecked)
         {
-            if (nodeSymbol.Kind != SymbolKind.Property)
-                return false; // *node* does not represent a property
+            var parentMae = toBeChecked.FirstAncestorOrSelf<MemberAccessExpressionSyntax>(ancestor => ancestor.Kind() == SyntaxKind.SimpleMemberAccessExpression);
+            return (parentMae != null && parentMae.Expression == toBeChecked) 
+                   || (parentMae != null && parentMae.Name == toBeChecked && parentMae.Parent.IsKind(SyntaxKind.SimpleMemberAccessExpression));
+        }
 
-            if (!nodeSymbol.GetMemberType().IsValueType)
-                return false; // the property type is not a value type
+        private static bool IsSimpleMethodInvocation(ExpressionSyntax toBeChecked) => toBeChecked.Parent.IsKind(SyntaxKind.InvocationExpression) && toBeChecked.IsKind(SyntaxKind.IdentifierName);
 
-            if (node.Parent is not MemberAccessExpressionSyntax mae)
-                return false; // *node* is not part of a member reference expression
+        private static bool IsObjectCreationExpressionUsedAsSourceOfCast(ExpressionSyntax node) => node.Parent.IsKind(SyntaxKind.CastExpression) && node.IsKind(SyntaxKind.ObjectCreationExpression);
 
-            if (mae.Expression != node && // *node* is not the left side of the mae. 
-                (mae.Parent is not MemberAccessExpressionSyntax parentMae || parentMae.Expression != mae) // neither the identifier (right side) of a bigger reference (e.g, a.b.c, when node == b)
-                )
+        bool IsObjectCreationExpressionUsedAsInParameter(ExpressionSyntax toBeChecked)
+        {
+            if (!toBeChecked.Parent.IsKind(SyntaxKind.Argument) || !toBeChecked.IsKind(SyntaxKind.ObjectCreationExpression))
                 return false;
 
-            return true;
+            return ((ArgumentSyntax) toBeChecked.Parent).IsObjectCreationExpressionUsedAsInParameter(Context);
         }
 
         private void StoreTopOfStackInLocalVariableAndLoad(ExpressionSyntax expressionSyntax, ITypeSymbol type)
         {
             var tempLocalName = StoreTopOfStackInLocalVariable(Context, ilVar, "tmp", type).VariableName;
-            Context.EmitCilInstruction(ilVar, expressionSyntax.Parent.IsKind(SyntaxKind.SimpleMemberAccessExpression) ? OpCodes.Ldloca_S : OpCodes.Ldloc, tempLocalName);
+            Context.EmitCilInstruction(ilVar, RequiresAddressOfValue() ? OpCodes.Ldloca_S : OpCodes.Ldloc, tempLocalName);
 
             var parentMae = expressionSyntax.FirstAncestorOrSelf<MemberAccessExpressionSyntax>(ancestor => ancestor.Kind() == SyntaxKind.SimpleMemberAccessExpression);
             if (parentMae != null && SymbolEqualityComparer.Default.Equals(Context.SemanticModel.GetSymbolInfo(parentMae).Symbol.ContainingType, Context.RoslynTypeSystem.SystemValueType))
@@ -1169,8 +1159,10 @@ namespace Cecilifier.Core.AST
                 // it is a reference on a value type to a method defined in System.ValueType (GetHashCode(), ToString(), etc)
                 Context.EmitCilInstruction(ilVar, OpCodes.Constrained, Context.TypeResolver.Resolve(type));
             }
-        }
 
+            bool RequiresAddressOfValue() => IsObjectCreationExpressionUsedAsInParameter(expressionSyntax) || expressionSyntax.Parent.IsKind(SyntaxKind.SimpleMemberAccessExpression);
+        }
+        
         private void FixCallSite()
         {
             Context.MoveLineAfter(callFixList.Pop(), Context.CurrentLine);
