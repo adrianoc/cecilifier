@@ -1095,6 +1095,8 @@ namespace Cecilifier.Core.AST
                 ilVar,
                 Context.SemanticModel.GetTypeInfo(node.Left).Type,
                 Context.SemanticModel.GetTypeInfo(node.Right).Type);
+            
+            StoreTopOfStackInLocalVariableAndReloadItIfNeeded(node);
         }
 
         private void HandleLambdaExpression(LambdaExpressionSyntax node)
@@ -1132,8 +1134,12 @@ namespace Cecilifier.Core.AST
         private static bool IsLeftHandSideOfMemberAccessExpression(ExpressionSyntax toBeChecked)
         {
             var parentMae = toBeChecked.FirstAncestorOrSelf<MemberAccessExpressionSyntax>(ancestor => ancestor.Kind() == SyntaxKind.SimpleMemberAccessExpression);
-            return (parentMae != null && parentMae.Expression == toBeChecked) 
-                   || (parentMae != null && parentMae.Name == toBeChecked && parentMae.Parent.IsKind(SyntaxKind.SimpleMemberAccessExpression));
+            if (parentMae == null)
+                return false;
+            
+            var parentMaeExpressionIgnoringParenthesizedExpression = parentMae.Expression.DescendantNodesAndSelf().First(candidate => !candidate.IsKind(SyntaxKind.ParenthesizedExpression));
+            return (parentMaeExpressionIgnoringParenthesizedExpression == toBeChecked) 
+                   || (parentMae.Name == toBeChecked && parentMae.Parent.IsKind(SyntaxKind.SimpleMemberAccessExpression));
         }
 
         private static bool IsSimpleMethodInvocation(ExpressionSyntax toBeChecked) => toBeChecked.Parent.IsKind(SyntaxKind.InvocationExpression) && toBeChecked.IsKind(SyntaxKind.IdentifierName);
@@ -1160,7 +1166,7 @@ namespace Cecilifier.Core.AST
                 Context.EmitCilInstruction(ilVar, OpCodes.Constrained, Context.TypeResolver.Resolve(type));
             }
 
-            bool RequiresAddressOfValue() => IsObjectCreationExpressionUsedAsInParameter(expressionSyntax) || expressionSyntax.Parent.IsKind(SyntaxKind.SimpleMemberAccessExpression);
+            bool RequiresAddressOfValue() => IsObjectCreationExpressionUsedAsInParameter(expressionSyntax) || expressionSyntax.Parent.FirstAncestorOrSelf<SyntaxNode>(c => !c.IsKind(SyntaxKind.ParenthesizedExpression)).IsKind(SyntaxKind.SimpleMemberAccessExpression);
         }
         
         private void FixCallSite()

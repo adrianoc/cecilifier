@@ -178,4 +178,33 @@ public class StructSpecificTests : CecilifierUnitTestBase
              \3Ret\);
              """));
     }
+
+    [TestCase("1 + 2")]
+    [TestCase("new Foo(1) + 2")]
+    public void TestX(string expression)
+    {
+        var result = RunCecilifier(
+            $$"""
+              using System;
+              Console.WriteLine( ({{expression}}).ToString() );
+
+              struct Foo
+              {
+                  public Foo(int i) {}
+                  public static implicit operator Foo(int i) => new Foo();
+                  public static implicit operator int(Foo f) => 0;
+              }
+              """);
+        
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+        
+        Assert.That(cecilifiedCode, Does.Match("""
+                                               (il_topLevelMain_\d+\.Emit\(OpCodes\.)Add\);
+                                               \s+var (l_tmp_\d+) = new VariableDefinition\(assembly.MainModule.TypeSystem.Int32\);
+                                               \s+m_topLevelStatements_\d+.Body.Variables.Add\(\2\);
+                                               \s+\1Stloc, \2\);
+                                               \s+\1Ldloca_S, \2\);
+                                               \s+\1Call, .+ImportReference\(.+ResolveMethod\(typeof\(System.Int32\), "ToString",.+\)\)\);
+                                               """));
+    }
 }
