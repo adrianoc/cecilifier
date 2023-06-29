@@ -68,7 +68,7 @@ public class ForEachStatementTests : CecilifierUnitTestBase
         Assert.That(cecilifiedCode, Does.Match("""
                                                \s+//variable to store the returned 'IEnumerator<T>'.
                                                \s+il_M_\d+.Emit\(OpCodes.Callvirt, .+ImportReference\(.+ResolveMethod\(.+System.Collections.Generic.IEnumerable<System.Int32>.+, "GetEnumerator",.+\)\)\);
-                                               """), "IEnumerable<int>.GetEnumerator() defined in the snippet should be used.");
+                                               """), "IEnumerable<int>.GetEnumerator() should be used.");
     }
     
     [Test]
@@ -124,39 +124,99 @@ public class ForEachStatementTests : CecilifierUnitTestBase
                                                il_run_\d+.Emit\(OpCodes.Callvirt, .+ImportReference\(.+ResolveMethod\(typeof\(System.Collections.IEnumerator\), "MoveNext",.+\)\)\);
                                                """));
         Assert.That(cecilifiedCode, Does.Match("""var l_openget_Current_\d+ = .+ImportReference\(typeof\(.+IEnumerator<>\)\).Resolve\(\).Methods.First\(m => m.Name == "get_Current"\);"""));
-        
-        /*
-        IL_0000: ldarg.0
-        IL_0001: callvirt instance class [System.Runtime]System.Collections.Generic.IEnumerator`1<!0> class [System.Runtime]System.Collections.Generic.IEnumerable`1<!!T>::GetEnumerator()
-        IL_0006: stloc.0
-        .try
-        {
-            // sequence point: hidden
-            IL_0007: br.s IL_0010
-            // loop start (head: IL_0010)
-                IL_0009: ldloc.0
-                IL_000a: callvirt instance !0 class [System.Runtime]System.Collections.Generic.IEnumerator`1<!!T>::get_Current()
-                IL_000f: pop
+    }
 
-                IL_0010: ldloc.0
-                IL_0011: callvirt instance bool [System.Runtime]System.Collections.IEnumerator::MoveNext()
-                IL_0016: brtrue.s IL_0009
-            // end loop
+    [Test]
+    public void IDisposableStructEnumerator()
+    {
+        var result = RunCecilifier("""
+                                   foreach(var v in new Enumerator()) 
+                                        System.Console.WriteLine(v);
 
-            IL_0018: leave.s IL_0024
-        } // end .try
-        finally
-        {
-            // sequence point: hidden
-            IL_001a: ldloc.0
-            IL_001b: brfalse.s IL_0023
+                                   struct Enumerator : System.IDisposable
+                                   {
+                                        public int Current => 1;
+                                        public bool MoveNext() => false;
+                                        public void Dispose() {}
+     
+                                        public Enumerator GetEnumerator() => default;
+                                   }
+                                   """);
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+        Assert.That(cecilifiedCode, Does.Match("""
+                                               //finally start
+                                               \s+var nop_\d+ = (?<il>il_topLevelMain_\d+\.)Create\(OpCodes.Nop\);
+                                               \s+\k<il>Append\(nop_\d+\);
+                                               (?<emit>\s+\k<il>Emit\(OpCodes\.)Ldloca, l_enumerator_18\);
+                                               \k<emit>Constrained, st_enumerator_0\);
+                                               \k<emit>Callvirt, .+ImportReference\(.+ResolveMethod\(typeof\(System.IDisposable\), "Dispose",.+\)\)\);
+                                               \k<emit>Endfinally\);
+                                               """), "no box, call to IDisposable.Dispose() is constrained");
+    }
+    
+    [Test]
+    public void IDisposableClassEnumerator()
+    {
+        var result = RunCecilifier("""
+                                   class Enumerator : System.IDisposable
+                                   {
+                                        public int Current => 1;
+                                        public bool MoveNext() => false;
+                                        public void Dispose() {}
 
-            IL_001d: ldloc.0
-            IL_001e: callvirt instance void [System.Runtime]System.IDisposable::Dispose()
+                                        public Enumerator GetEnumerator() => default;
+                                   }
 
-            // sequence point: hidden
-            IL_0023: endfinally
-        } // end handler         
-         */
+                                   class Driver
+                                   {
+                                        int Use(int t)
+                                        {
+                                            foreach(var v in new Enumerator())
+                                                t += v;
+                                            return t;
+                                        }
+                                   }
+                                   """);
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+        Assert.That(cecilifiedCode, Does.Match("""
+                                               //finally start
+                                               \s+var nop_22 = il_use_14.Create\(OpCodes.Nop\);
+                                               \s+(il_use_\d+)\.Append\(nop_22\);
+                                               \s+var (?<skip_disposable>nop_\d+) = \1.Create\(OpCodes.Nop\);
+                                               (?<e>\s+\1\.Emit\(OpCodes\.)Ldloc, (?<enum_var>l_enumerator_\d+)\);
+                                               \3Brfalse_S, \k<skip_disposable>\);
+                                               \3Ldloc, \k<enum_var>\);
+                                               \3Callvirt, .+ImportReference\(.+ResolveMethod\(typeof\(System.IDisposable\), "Dispose",.+\)\)\);
+                                               \s+\1\.Append\(\k<skip_disposable>\);
+                                               \3Endfinally\);
+                                               """));
+    }
+    
+    [Test]
+    public void Sealed_NonIDisposable_ClassEnumerator()
+    {
+        var result = RunCecilifier("""
+                                   sealed class Enumerator
+                                   {
+                                        public int Current => 1;
+                                        public bool MoveNext() => false;
+
+                                        public Enumerator GetEnumerator() => default;
+                                   }
+
+                                   class Driver
+                                   {
+                                        int Use(int t)
+                                        {
+                                            foreach(var v in new Enumerator())
+                                                t += v;
+                                            return t;
+                                        }
+                                   }
+                                   """);
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+        Assert.That(
+            cecilifiedCode, Does.Not.Match(@"OpCodes\.Endfinally|Body\.ExceptionHandlers\.Add"), 
+            "Ensures finally is not emitted (nothing to dispose)");
     }
 }

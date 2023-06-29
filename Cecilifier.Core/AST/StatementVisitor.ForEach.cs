@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
@@ -13,43 +14,86 @@ namespace Cecilifier.Core.AST
         {
             ExpressionVisitor.Visit(Context, _ilVar, node.Expression);
 
-            var  enumerableType = Context.GetTypeInfo(node.Expression).Type.EnsureNotNull();
+            var enumerableType = Context.GetTypeInfo(node.Expression).Type.EnsureNotNull();
             var getEnumeratorMethod = GetEnumeratorMethodFor(enumerableType);
             var enumeratorType = EnumeratorTypeFor(getEnumeratorMethod);
             
             var enumeratorMoveNextMethod = MoveNextMethodFor(enumeratorType);
             var enumeratorCurrentMethod = CurrentMethodFor(enumeratorType);
             
-            ProcessForEach(node, getEnumeratorMethod, enumeratorCurrentMethod, enumeratorMoveNextMethod);
+            var isDisposable = enumeratorType.Interfaces.FirstOrDefault(candidate => SymbolEqualityComparer.Default.Equals(candidate, Context.RoslynTypeSystem.SystemIDisposable)) != null;
+
+            var context = new ForEachHandlerContext(getEnumeratorMethod, enumeratorCurrentMethod, enumeratorMoveNextMethod);
+            
+            // Get the enumerator..
+            // we need to do this here (as opposed to in ProcessForEach() method) because we have a enumerable instance in the stack 
+            // and if this enumerable implements IDisposable we'll emit a try/finally but it is not valid to enter try/finally blocks
+            // with a non empty stack.
+            Context.WriteNewLine();
+            Context.WriteComment("variable to store the returned 'IEnumerator<T>'.");
+            AddMethodCall(_ilVar, context.GetEnumeratorMethod);
+            context.EnumeratorVariableName = CodeGenerationHelpers.StoreTopOfStackInLocalVariable(Context, _ilVar, "enumerator", context.GetEnumeratorMethod.ReturnType).VariableName;
+
+            if (isDisposable)
+            {
+                ProcessWithInTryCatchFinallyBlock(
+                    _ilVar,
+                    context =>
+                    {
+                        ProcessForEach((ForEachHandlerContext)context, node);
+                    },
+                    Array.Empty<CatchClauseSyntax>(),
+                    context =>
+                    {
+                        ProcessForEachFinally((ForEachHandlerContext)context);
+                    },
+                    context);
+            }
+            else
+            {
+                ProcessForEach(context, node);
+            }
         }
 
-        private void ProcessForEach(ForEachStatementSyntax node, IMethodSymbol getEnumeratorMethod, IMethodSymbol enumeratorCurrentMethod, IMethodSymbol enumeratorMoveNextMethod)
+        private void ProcessForEachFinally(ForEachHandlerContext forEachHandlerContext)
+        {
+            if (forEachHandlerContext.GetEnumeratorMethod.ReturnType.IsValueType || forEachHandlerContext.GetEnumeratorMethod.ReturnType.TypeKind == TypeKind.TypeParameter)
+            {
+                Context.EmitCilInstruction(_ilVar, OpCodes.Ldloca, forEachHandlerContext.EnumeratorVariableName);
+                Context.EmitCilInstruction(_ilVar, OpCodes.Constrained, Context.TypeResolver.Resolve(forEachHandlerContext.GetEnumeratorMethod.ReturnType));
+                Context.EmitCilInstruction(_ilVar, OpCodes.Callvirt, Context.RoslynTypeSystem.SystemIDisposable.GetMembers("Dispose").OfType<IMethodSymbol>().Single().MethodResolverExpression(Context));
+            }
+            else
+            {
+                var skipDisposeMethodCallNopVar = CreateCilInstruction(_ilVar, OpCodes.Nop);
+                Context.EmitCilInstruction(_ilVar, OpCodes.Ldloc, forEachHandlerContext.EnumeratorVariableName);
+                Context.EmitCilInstruction(_ilVar, OpCodes.Brfalse_S, skipDisposeMethodCallNopVar);
+                Context.EmitCilInstruction(_ilVar, OpCodes.Ldloc, forEachHandlerContext.EnumeratorVariableName);
+                Context.EmitCilInstruction(_ilVar, OpCodes.Callvirt, Context.RoslynTypeSystem.SystemIDisposable.GetMembers("Dispose").OfType<IMethodSymbol>().Single().MethodResolverExpression(Context));
+                AddCecilExpression($"{_ilVar}.Append({skipDisposeMethodCallNopVar});");
+            }
+        }
+
+        private void ProcessForEach(ForEachHandlerContext forEachHandlerContext, ForEachStatementSyntax node)
         {
             // Adds a variable to store current value in the foreach loop.
             Context.WriteNewLine();
             Context.WriteComment("variable to store current value in the foreach loop.");
-            var foreachCurrentValueVarName = CodeGenerationHelpers.AddLocalVariableToCurrentMethod(Context, node.Identifier.ValueText, Context.TypeResolver.Resolve(enumeratorCurrentMethod.GetMemberType())).VariableName;
-
-            // Get the enumerator..
-            Context.WriteNewLine();
-            Context.WriteComment("variable to store the returned 'IEnumerator<T>'.");
-            AddMethodCall(_ilVar, getEnumeratorMethod);
-            var enumeratorVariableName = CodeGenerationHelpers.StoreTopOfStackInLocalVariable(Context, _ilVar, "enumerator", getEnumeratorMethod.ReturnType).VariableName;
-
+            var foreachCurrentValueVarName = CodeGenerationHelpers.AddLocalVariableToCurrentMethod(Context, node.Identifier.ValueText, Context.TypeResolver.Resolve(forEachHandlerContext.EnumeratorCurrentMethod.GetMemberType())).VariableName;
+            
             var endOfLoopLabelVar = Context.Naming.Label("endForEach");
             CreateCilInstruction(_ilVar, endOfLoopLabelVar, OpCodes.Nop);
 
             // loop while enumerable.MoveNext() == true
             var forEachLoopBegin = AddCilInstructionWithLocalVariable(_ilVar, OpCodes.Nop);
 
-            var loadOpCode = getEnumeratorMethod.ReturnType.IsValueType || getEnumeratorMethod.ReturnType.TypeKind == TypeKind.TypeParameter ? OpCodes.Ldloca : OpCodes.Ldloc;
-            //var loadOpCode = OpCodes.Ldloc;
-            Context.EmitCilInstruction(_ilVar, loadOpCode, enumeratorVariableName);
-            AddMethodCall(_ilVar, enumeratorMoveNextMethod);
+            var loadOpCode = forEachHandlerContext.GetEnumeratorMethod.ReturnType.IsValueType || forEachHandlerContext.GetEnumeratorMethod.ReturnType.TypeKind == TypeKind.TypeParameter ? OpCodes.Ldloca : OpCodes.Ldloc;
+            Context.EmitCilInstruction(_ilVar, loadOpCode, forEachHandlerContext.EnumeratorVariableName);
+            AddMethodCall(_ilVar, forEachHandlerContext.EnumeratorMoveNextMethod);
             Context.EmitCilInstruction(_ilVar, OpCodes.Brfalse, endOfLoopLabelVar);
             
-            Context.EmitCilInstruction(_ilVar, loadOpCode, enumeratorVariableName);
-            AddMethodCall(_ilVar, enumeratorCurrentMethod);
+            Context.EmitCilInstruction(_ilVar, loadOpCode, forEachHandlerContext.EnumeratorVariableName);
+            AddMethodCall(_ilVar, forEachHandlerContext.EnumeratorCurrentMethod);
             Context.EmitCilInstruction(_ilVar, OpCodes.Stloc, foreachCurrentValueVarName);
 
             // process body of foreach
@@ -129,6 +173,11 @@ namespace Cecilifier.Core.AST
             
             var enumeratorType = getEnumeratorMethod.ReturnType.Interfaces.SingleOrDefault(itf => itf.Name == "IEnumerator");
             return enumeratorType ?? getEnumeratorMethod.ReturnType;
+        }
+
+        private record ForEachHandlerContext(IMethodSymbol GetEnumeratorMethod, IMethodSymbol EnumeratorCurrentMethod, IMethodSymbol EnumeratorMoveNextMethod)
+        {
+            public string EnumeratorVariableName { get; set; }
         }
     }
 }

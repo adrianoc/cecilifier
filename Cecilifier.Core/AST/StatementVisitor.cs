@@ -209,8 +209,8 @@ namespace Cecilifier.Core.AST
         {
 
             var finallyBlockHandler = node.Finally == null ?
-                                (Action<string>) null :
-                                (inst) => node.Finally.Accept(this);
+                                (Action<object>) null :
+                                _ => node.Finally.Accept(this);
 
             ProcessTryCatchFinallyBlock(_ilVar, node.Block, node.Catches.ToArray(), finallyBlockHandler);
         }
@@ -240,7 +240,7 @@ namespace Cecilifier.Core.AST
                 localVarDef = StoreTopOfStackInLocalVariable(Context, _ilVar, "tmp", usingType).VariableName;
             }
 
-            void FinallyBlockHandler(string finallyEndVar)
+            void FinallyBlockHandler(object _)
             {
                 string? lastFinallyInstructionLabel = null;
                 if (usingType.TypeKind == TypeKind.TypeParameter || usingType.IsValueType)

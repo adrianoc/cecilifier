@@ -30,7 +30,6 @@ namespace Cecilifier.Core.Tests.Integration
             AssertUnsupportedFeature($"class Foo {{ public (int, bool) F() {{ return (1, true); }} void M() {{ {tuple} = F(); }} }}", "Syntax 'TupleExpression' is not supported");
         }
 
-        [TestCase("foreach(var i in ints);", "ForEachStatement", TestName = "ForEachStatement")]
         [TestCase("while(true);", "WhileStatement", TestName = "WhileStatement")]
         [TestCase("lock(ints) {}", "LockStatement", TestName = "LockStatement")]
         [TestCase("unsafe {}", "UnsafeStatement", TestName = "UnsafeStatement")]

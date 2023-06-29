@@ -9,20 +9,25 @@ namespace Cecilifier.Core.AST
 {
     internal partial class StatementVisitor
     {
-        private void ProcessTryCatchFinallyBlock(string ilVar, CSharpSyntaxNode tryStatement, CatchClauseSyntax[] catches, Action<string> finallyBlockHandler)
+        private void ProcessTryCatchFinallyBlock(string ilVar, CSharpSyntaxNode tryStatement, CatchClauseSyntax[] catches, Action<object> finallyBlockHandler, object state = null)
         {
-            ProcessWithInTryCatchFinallyBlock(ilVar, () => tryStatement.Accept(this), catches, finallyBlockHandler);
+            ProcessWithInTryCatchFinallyBlock(ilVar, _ => tryStatement.Accept(this), catches, finallyBlockHandler, state);
         }
-        
-        protected void ProcessWithInTryCatchFinallyBlock(string ilVar, Action toProcess, CatchClauseSyntax[] catches, Action<string> finallyBlockHandler)
+
+        private void ProcessWithInTryCatchFinallyBlock(string ilVar, Action<object> toProcess, CatchClauseSyntax[] catches, Action<object> finallyBlockHandler, object state)
         {
             var exceptionHandlerTable = new ExceptionHandlerEntry[catches.Length + (finallyBlockHandler != null ? 1 : 0)];
 
+            Context.WriteNewLine();
+            Context.WriteComment("Try start");
             var tryStartVar = AddCilInstructionWithLocalVariable(ilVar, OpCodes.Nop);
             exceptionHandlerTable[0].TryStart = tryStartVar;
 
-            toProcess();
+            toProcess(state);
 
+            Context.WriteNewLine();
+            Context.WriteComment("Try end");
+            
             var firstInstructionAfterTryCatchBlock = CreateCilInstruction(ilVar, OpCodes.Nop);
             exceptionHandlerTable[^1].HandlerEnd = firstInstructionAfterTryCatchBlock; // sets up last handler end instruction
 
@@ -33,7 +38,7 @@ namespace Cecilifier.Core.AST
                 HandleCatchClause(ilVar, catches[i], exceptionHandlerTable, i, firstInstructionAfterTryCatchBlock);
             }
 
-            HandleFinallyClause(ilVar, finallyBlockHandler, exceptionHandlerTable);
+            HandleFinallyClause(ilVar, finallyBlockHandler, exceptionHandlerTable, state);
 
             AddCecilExpression($"{ilVar}.Append({firstInstructionAfterTryCatchBlock});");
 
@@ -83,7 +88,7 @@ namespace Cecilifier.Core.AST
             Context.EmitCilInstruction(ilVar, OpCodes.Leave, firstInstructionAfterTryCatchBlock);
         }
 
-        private void HandleFinallyClause(string ilVar, Action<string> finallyBlockHandler, ExceptionHandlerEntry[] exceptionHandlerTable)
+        private void HandleFinallyClause(string ilVar, Action<object> finallyBlockHandler, ExceptionHandlerEntry[] exceptionHandlerTable, object state)
         {
             if (finallyBlockHandler == null)
                 return;
@@ -94,6 +99,8 @@ namespace Cecilifier.Core.AST
             exceptionHandlerTable[finallyEntryIndex].TryEnd = exceptionHandlerTable[0].TryEnd;
             exceptionHandlerTable[finallyEntryIndex].Kind = ExceptionHandlerType.Finally;
 
+            Context.WriteNewLine();
+            Context.WriteComment("finally start");
             var finallyStartVar = AddCilInstructionWithLocalVariable(ilVar, OpCodes.Nop);
             exceptionHandlerTable[finallyEntryIndex].HandlerStart = finallyStartVar;
             exceptionHandlerTable[finallyEntryIndex].TryEnd = finallyStartVar;
@@ -104,8 +111,11 @@ namespace Cecilifier.Core.AST
                 exceptionHandlerTable[finallyEntryIndex - 1].HandlerEnd = finallyStartVar;
             }
 
-            finallyBlockHandler(exceptionHandlerTable[finallyEntryIndex].HandlerEnd);
+            finallyBlockHandler(state);
             Context.EmitCilInstruction(ilVar, OpCodes.Endfinally);
+            
+            Context.WriteNewLine();
+            Context.WriteComment("finally end");
         }
         
         private struct ExceptionHandlerEntry
@@ -116,6 +126,6 @@ namespace Cecilifier.Core.AST
             public string TryEnd;
             public string HandlerStart;
             public string HandlerEnd;
-        }        
+        }
     }
 }
