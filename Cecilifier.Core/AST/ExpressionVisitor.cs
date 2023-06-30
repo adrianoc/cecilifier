@@ -20,8 +20,6 @@ namespace Cecilifier.Core.AST
     {
         private static readonly Dictionary<SyntaxKind, BinaryOperatorHandler> operatorHandlers = new();
 
-        private static readonly IDictionary<string, uint> predefinedTypeSize = new Dictionary<string, uint>();
-
         private readonly string ilVar;
         private readonly Stack<LinkedListNode<string>> callFixList = new Stack<LinkedListNode<string>>();
 
@@ -32,10 +30,6 @@ namespace Cecilifier.Core.AST
 
         static ExpressionVisitor()
         {
-            predefinedTypeSize["int"] = sizeof(int);
-            predefinedTypeSize["byte"] = sizeof(byte);
-            predefinedTypeSize["long"] = sizeof(long);
-
             // Arithmetic operators
             operatorHandlers[SyntaxKind.PlusToken] = new BinaryOperatorHandler((ctx, ilVar, left, right) =>
             {
