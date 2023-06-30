@@ -11,7 +11,6 @@ using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Operations;
 using Mono.Cecil.Cil;
 using static Cecilifier.Core.Misc.CodeGenerationHelpers;
 
@@ -22,20 +21,6 @@ namespace Cecilifier.Core.AST
         private static readonly Dictionary<SyntaxKind, BinaryOperatorHandler> operatorHandlers = new();
 
         private static readonly IDictionary<string, uint> predefinedTypeSize = new Dictionary<string, uint>();
-        private static readonly IDictionary<SpecialType, OpCode> _opCodesForLdElem = new Dictionary<SpecialType, OpCode>()
-        {
-            [SpecialType.System_Byte] = OpCodes.Ldelem_I1,
-            [SpecialType.System_Char] = OpCodes.Ldelem_I2,
-            [SpecialType.System_Boolean] = OpCodes.Ldelem_U1,
-            [SpecialType.System_Int16] = OpCodes.Ldelem_I2,
-            [SpecialType.System_Int32] = OpCodes.Ldelem_I4,
-            [SpecialType.System_Int64] = OpCodes.Ldelem_I8,
-            [SpecialType.System_Single] = OpCodes.Ldelem_R4,
-            [SpecialType.System_Double] = OpCodes.Ldelem_R8,
-            [SpecialType.System_Object] = OpCodes.Ldelem_Ref,
-            [SpecialType.System_String] = OpCodes.Ldelem_Ref,
-            [SpecialType.None] = OpCodes.Ldelem_Ref,
-        };
 
         private readonly string ilVar;
         private readonly Stack<LinkedListNode<string>> callFixList = new Stack<LinkedListNode<string>>();
@@ -255,17 +240,14 @@ namespace Cecilifier.Core.AST
                 AddMethodCall(ilVar, indexer.GetMethod);
                 HandlePotentialRefLoad(ilVar, node, indexer.Type);
             }
-            else if (targetType.IsValueType && !targetType.IsPrimitiveType())
-            {
-                AddCilInstruction(ilVar, OpCodes.Ldelem_Any, targetType);
-            }
             else if (node.Parent.IsKind(SyntaxKind.RefExpression))
             {
                 AddCilInstruction(ilVar, OpCodes.Ldelema, targetType);
             }
-            else if (_opCodesForLdElem.TryGetValue(targetType.SpecialType, out var opCode))
+            else
             {
-                Context.EmitCilInstruction(ilVar, opCode);
+                var ldelemOpCodeToUse = targetType.LdelemOpCode();
+                Context.EmitCilInstruction(ilVar, ldelemOpCodeToUse, ldelemOpCodeToUse == OpCodes.Ldelem_Any ? Context.TypeResolver.Resolve(targetType) : null);
             }
         }
 
