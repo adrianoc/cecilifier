@@ -15,43 +15,78 @@ namespace Cecilifier.Core.AST
             ExpressionVisitor.Visit(Context, _ilVar, node.Expression);
 
             var enumerableType = Context.GetTypeInfo(node.Expression).Type.EnsureNotNull();
-            var getEnumeratorMethod = GetEnumeratorMethodFor(enumerableType);
-            var enumeratorType = EnumeratorTypeFor(getEnumeratorMethod);
-            
-            var enumeratorMoveNextMethod = MoveNextMethodFor(enumeratorType);
-            var enumeratorCurrentMethod = CurrentMethodFor(enumeratorType);
-            
-            var isDisposable = enumeratorType.Interfaces.FirstOrDefault(candidate => SymbolEqualityComparer.Default.Equals(candidate, Context.RoslynTypeSystem.SystemIDisposable)) != null;
-
-            var context = new ForEachHandlerContext(getEnumeratorMethod, enumeratorCurrentMethod, enumeratorMoveNextMethod);
-            
-            // Get the enumerator..
-            // we need to do this here (as opposed to in ProcessForEach() method) because we have a enumerable instance in the stack 
-            // and if this enumerable implements IDisposable we'll emit a try/finally but it is not valid to enter try/finally blocks
-            // with a non empty stack.
-            Context.WriteNewLine();
-            Context.WriteComment("variable to store the returned 'IEnumerator<T>'.");
-            AddMethodCall(_ilVar, context.GetEnumeratorMethod);
-            context.EnumeratorVariableName = CodeGenerationHelpers.StoreTopOfStackInLocalVariable(Context, _ilVar, "enumerator", context.GetEnumeratorMethod.ReturnType).VariableName;
-
-            if (isDisposable)
-            {
-                ProcessWithInTryCatchFinallyBlock(
-                    _ilVar,
-                    context =>
-                    {
-                        ProcessForEach((ForEachHandlerContext)context, node);
-                    },
-                    Array.Empty<CatchClauseSyntax>(),
-                    context =>
-                    {
-                        ProcessForEachFinally((ForEachHandlerContext)context);
-                    },
-                    context);
-            }
+            if (enumerableType.TypeKind == TypeKind.Array)
+                ProcessForEachOverArray();
             else
+                ProcessForEachOverEnumerable();
+
+            void ProcessForEachOverArray()
             {
-                ProcessForEach(context, node);
+                // save array in local variable...
+                var arrayVariable = CodeGenerationHelpers.StoreTopOfStackInLocalVariable(Context, _ilVar, "array", enumerableType);
+                
+                var loopVariable = CodeGenerationHelpers.AddLocalVariableToCurrentMethod(Context, node.Identifier.ValueText, Context.TypeResolver.Resolve(enumerableType.ElementTypeSymbolOf())).VariableName;
+                var loopIndexVar = CodeGenerationHelpers.AddLocalVariableToCurrentMethod(Context, "index", Context.TypeResolver.Resolve(Context.RoslynTypeSystem.SystemInt32)).VariableName;
+
+                var conditionCheckLabelVar = CreateCilInstruction(_ilVar, OpCodes.Nop);
+                Context.EmitCilInstruction(_ilVar, OpCodes.Br, conditionCheckLabelVar);
+                var firstLoopBodyInstructionVar = CreateCilInstruction(_ilVar, OpCodes.Ldloc, arrayVariable.VariableName);
+                WriteCecilExpression(Context, $"{_ilVar}.Append({firstLoopBodyInstructionVar});");
+                Context.EmitCilInstruction(_ilVar, OpCodes.Ldloc, loopIndexVar);
+                Context.EmitCilInstruction(_ilVar, enumerableType.ElementTypeSymbolOf().LdelemOpCode());
+                Context.EmitCilInstruction(_ilVar, OpCodes.Stloc, loopVariable);
+
+                // Loop body.
+                node.Statement.Accept(this);
+                
+                Context.EmitCilInstruction(_ilVar, OpCodes.Ldloc, loopIndexVar);
+                Context.EmitCilInstruction(_ilVar, OpCodes.Ldc_I4_1);
+                Context.EmitCilInstruction(_ilVar, OpCodes.Add);
+                Context.EmitCilInstruction(_ilVar, OpCodes.Stloc, loopIndexVar);
+                
+                // condition check...
+                WriteCecilExpression(Context, $"{_ilVar}.Append({conditionCheckLabelVar});");
+                Context.EmitCilInstruction(_ilVar, OpCodes.Ldloc, loopIndexVar);
+                Context.EmitCilInstruction(_ilVar, OpCodes.Ldloc, arrayVariable.VariableName);
+                Context.EmitCilInstruction(_ilVar, OpCodes.Ldlen);
+                Context.EmitCilInstruction(_ilVar, OpCodes.Conv_I4);
+                Context.EmitCilInstruction(_ilVar, OpCodes.Blt, firstLoopBodyInstructionVar);
+            }
+            
+            void ProcessForEachOverEnumerable()
+            {
+                var getEnumeratorMethod = GetEnumeratorMethodFor(enumerableType);
+                var enumeratorType = EnumeratorTypeFor(getEnumeratorMethod);
+
+                var enumeratorMoveNextMethod = MoveNextMethodFor(enumeratorType);
+                var enumeratorCurrentMethod = CurrentMethodFor(enumeratorType);
+
+                var isDisposable = enumeratorType.Interfaces.FirstOrDefault(candidate => SymbolEqualityComparer.Default.Equals(candidate, Context.RoslynTypeSystem.SystemIDisposable)) != null;
+
+                var context = new ForEachHandlerContext(getEnumeratorMethod, enumeratorCurrentMethod, enumeratorMoveNextMethod);
+
+                // Get the enumerator..
+                // we need to do this here (as opposed to in ProcessForEach() method) because we have a enumerable instance in the stack 
+                // and if this enumerable implements IDisposable we'll emit a try/finally but it is not valid to enter try/finally blocks
+                // with a non empty stack.
+                Context.WriteNewLine();
+                Context.WriteComment("variable to store the returned 'IEnumerator<T>'.");
+                AddMethodCall(_ilVar, context.GetEnumeratorMethod);
+                context.EnumeratorVariableName = CodeGenerationHelpers.StoreTopOfStackInLocalVariable(Context, _ilVar, "enumerator", context.GetEnumeratorMethod.ReturnType).VariableName;
+
+                if (isDisposable)
+                {
+                    ProcessWithInTryCatchFinallyBlock(
+                        _ilVar,
+                        context => ProcessForEach((ForEachHandlerContext) context, node),
+                        Array.Empty<CatchClauseSyntax>(),
+                        context => ProcessForEachFinally((ForEachHandlerContext) context),
+                        context);
+                }
+                else
+                {
+                    ProcessForEach(context, node);
+                }
             }
         }
 

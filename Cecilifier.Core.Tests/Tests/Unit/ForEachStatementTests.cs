@@ -125,7 +125,33 @@ public class ForEachStatementTests : CecilifierUnitTestBase
                                                """));
         Assert.That(cecilifiedCode, Does.Match("""var l_openget_Current_\d+ = .+ImportReference\(typeof\(.+IEnumerator<>\)\).Resolve\(\).Methods.First\(m => m.Name == "get_Current"\);"""));
     }
-
+ 
+    [Test]
+    public void Array()
+    {
+        var result = RunCecilifier("""
+                                   foreach(var v in new int[] {1, 2, 3, 4})
+                                        System.Console.WriteLine(v);
+                                   """);
+        
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+        
+        // this test assumes that if the IL to check the limit of the loop is present
+        // then the foreach was processed as an array access. 
+        Assert.That(
+            cecilifiedCode, 
+            Does.Match("""
+                       (il_topLevelMain_\d+\.)Append\(nop_12\);
+                       (\s+\1Emit\(OpCodes\.)Ldloc, l_index_11\);
+                       \2Ldloc, l_array_9\);
+                       \2Ldlen\);
+                       \2Conv_I4\);
+                       \2Blt, ldloc_13\);
+                       """), 
+            "Array loop index check code does not match");
+         
+    }
+    
     [Test]
     public void IDisposableStructEnumerator()
     {
