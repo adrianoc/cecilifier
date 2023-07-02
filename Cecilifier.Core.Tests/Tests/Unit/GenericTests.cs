@@ -1,5 +1,4 @@
 using NUnit.Framework;
-using System;
 
 namespace Cecilifier.Core.Tests.Tests.Unit
 {
@@ -211,6 +210,64 @@ namespace Cecilifier.Core.Tests.Tests.Unit
                                                    \s+};
                                                    \s+il_M_3.Emit\(OpCodes.Callvirt, r_getEnumerator_7\);
                                                    """), "Target of call instruction validation.");
+        }
+
+        [TestCase(
+            "object o; o = value", 
+            """
+            //o = value;
+            (\s+il_test_\d+\.Emit\(OpCodes\.)Ldarg_1\);
+            \1Box, gp_T_\d+\);
+            \1Stloc, l_o_\d+\);
+            """)]
+        
+        [TestCase(
+            "paramIDisp = value", 
+            """
+            //paramIDisp = value;
+            (\s+il_test_\d+\.Emit\(OpCodes\.)Ldarg_1\);
+            \1Box, gp_T_\d+\);
+            \1Starg_S, p_paramIDisp_\d+\);
+            """)]
+
+        [TestCase(
+            "localIDisp = value", 
+            """
+            //localIDisp = value;
+            (\s+il_test_\d+\.Emit\(OpCodes\.)Ldarg_1\);
+            \1Box, gp_T_\d+\);
+            \1Stloc, l_localIDisp_\d+\);
+            """)]
+        
+        [TestCase(
+            "fieldIDisp = value", 
+            """
+            //fieldIDisp = value;
+            \s+var ldarg_0_\d+ = (il_test_\d+\.)Create\(OpCodes.Ldarg_0\);
+            \s+\1Append\(ldarg_0_\d+\);
+            (\s+\1Emit\(OpCodes\.)Ldarg_1\);
+            \2Box, gp_T_\d+\);
+            \2Stfld, fld_fieldIDisp_\d+\);
+            """)]
+        public void GenericType_Boxing(string statementToUse, string expectedILSnippet)
+        {
+            var result = RunCecilifier($$"""
+                                         using System;
+                                         class Foo
+                                         {
+                                             private IDisposable fieldIDisp; 
+                                             
+                                             T M<T>(T t) => t;
+                                             
+                                             void Test<T>(T value, IDisposable paramIDisp, object paramObj) where T : class, IDisposable
+                                             {
+                                                IDisposable localIDisp = null;
+                                                {{statementToUse}};
+                                             }
+                                         }
+                                         """);
+                
+            Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(expectedILSnippet));
         }
     }
 }

@@ -140,6 +140,7 @@ namespace Cecilifier.Core.AST
                 case SpecialType.System_Collections_Generic_IEnumerator_T:
                 case SpecialType.System_Collections_IEnumerable:
                 case SpecialType.System_Collections_Generic_IEnumerable_T:
+                case SpecialType.System_IDisposable:
                 case SpecialType.None:
                     if (type.TypeKind == TypeKind.Pointer)
                     {
@@ -440,7 +441,7 @@ namespace Cecilifier.Core.AST
                 Context.EmitCilInstruction(ilVar, optimizedLdArgs[adjustedParameterIndex]);
             }
 
-            EmitBoxOpCodeIfCallOnTypeParameter(ilVar, paramSymbol.Type, parent);
+            EmitBoxOpCodeOnTypeParameterReference(ilVar, paramSymbol.Type, parent);
 
             HandlePotentialDelegateInvocationOn(node, paramSymbol.Type, ilVar);
             HandlePotentialRefLoad(ilVar, node, paramSymbol.Type);
@@ -487,7 +488,7 @@ namespace Cecilifier.Core.AST
             var opCode = fieldSymbol.LoadOpCodeForFieldAccess();
             Context.EmitCilInstruction(ilVar, opCode, resolvedField);
 
-            EmitBoxOpCodeIfCallOnTypeParameter(ilVar, fieldSymbol.Type, nodeParent);
+            EmitBoxOpCodeOnTypeParameterReference(ilVar, fieldSymbol.Type, nodeParent);
             HandlePotentialDelegateInvocationOn(node, fieldSymbol.Type, ilVar);
         }
 
@@ -500,7 +501,7 @@ namespace Cecilifier.Core.AST
             var operand = Context.DefinitionVariables.GetVariable(symbol.Name, VariableMemberKind.LocalVariable).VariableName;
             Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, operand);
 
-            EmitBoxOpCodeIfCallOnTypeParameter(ilVar, symbol.Type, localVar);
+            EmitBoxOpCodeOnTypeParameterReference(ilVar, symbol.Type, localVar);
             HandlePotentialDelegateInvocationOn(localVarSyntax, symbol.Type, ilVar);
             HandlePotentialFixedLoad(ilVar, symbol);
             HandlePotentialRefLoad(ilVar, localVarSyntax, symbol.Type);
@@ -513,9 +514,18 @@ namespace Cecilifier.Core.AST
             Context.EmitCilInstruction(ilVar, OpCodes.Conv_U);
         }
 
-        private void EmitBoxOpCodeIfCallOnTypeParameter(string ilVar, ITypeSymbol typeSymbol, CSharpSyntaxNode parent)
+        // Expressions of type parameter used as:
+        //   1. Target of a call
+        //   2. Source of assignment to a reference type
+        //
+        // requires boxing.
+        private void EmitBoxOpCodeOnTypeParameterReference(string ilVar, ITypeSymbol typeSymbol, CSharpSyntaxNode parent)
         {
-            if (typeSymbol.TypeKind == TypeKind.TypeParameter && parent.Accept(UsageVisitor.GetInstance(Context)) == UsageKind.CallTarget)
+            if (typeSymbol.TypeKind != TypeKind.TypeParameter)
+                return;
+            
+            if (parent.Accept(UsageVisitor.GetInstance(Context)) == UsageKind.CallTarget || 
+                (parent is AssignmentExpressionSyntax assignment && Context.SemanticModel.GetTypeInfo(assignment.Left).Type.IsReferenceType))
                 Context.EmitCilInstruction(ilVar, OpCodes.Box, Context.TypeResolver.Resolve(typeSymbol));
         }
 
