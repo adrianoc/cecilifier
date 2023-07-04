@@ -212,6 +212,27 @@ namespace Cecilifier.Core.Tests.Tests.Unit
                                                    """), "Target of call instruction validation.");
         }
 
+        [TestCase("bool bx = value != null", """
+                                      //bool bx = value != null;
+                                      \s+var l_bx_13 = new VariableDefinition\(assembly.MainModule.TypeSystem.Boolean\);
+                                      \s+m_test_6.Body.Variables.Add\(l_bx_13\);
+                                      (\s+il_test_\d+\.Emit\(OpCodes\.)Ldarg_1\);
+                                      \1Box, gp_T_\d+\);
+                                      \1Ldnull\);
+                                      \1Cgt\);
+                                      \1Stloc, l_bx_13\);
+                                      """, IgnoreReason = "Issue #242")]
+        
+        [TestCase("bool bx; bx = value != null", """
+                                      //bx = value != null;
+                                      (\s+il_test_\d+\.Emit\(OpCodes\.)Ldarg_1\);
+                                      \1Box, gp_T_\d+\);
+                                      \1Ldnull\);
+                                      \1Cgt\);
+                                      \1Stloc, l_bx_13\);
+                                      \1Ret\);
+                                      """, IgnoreReason = "Issue #242")]
+        
         [TestCase(
             "bool b; b = value is string", 
             """
