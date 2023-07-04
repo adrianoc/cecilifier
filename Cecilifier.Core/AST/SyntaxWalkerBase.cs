@@ -441,8 +441,6 @@ namespace Cecilifier.Core.AST
                 Context.EmitCilInstruction(ilVar, optimizedLdArgs[adjustedParameterIndex]);
             }
 
-            EmitBoxOpCodeOnTypeParameterReference(ilVar, paramSymbol.Type, parent);
-
             HandlePotentialDelegateInvocationOn(node, paramSymbol.Type, ilVar);
             HandlePotentialRefLoad(ilVar, node, paramSymbol.Type);
         }
@@ -488,7 +486,6 @@ namespace Cecilifier.Core.AST
             var opCode = fieldSymbol.LoadOpCodeForFieldAccess();
             Context.EmitCilInstruction(ilVar, opCode, resolvedField);
 
-            EmitBoxOpCodeOnTypeParameterReference(ilVar, fieldSymbol.Type, nodeParent);
             HandlePotentialDelegateInvocationOn(node, fieldSymbol.Type, ilVar);
         }
 
@@ -501,7 +498,6 @@ namespace Cecilifier.Core.AST
             var operand = Context.DefinitionVariables.GetVariable(symbol.Name, VariableMemberKind.LocalVariable).VariableName;
             Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, operand);
 
-            EmitBoxOpCodeOnTypeParameterReference(ilVar, symbol.Type, localVar);
             HandlePotentialDelegateInvocationOn(localVarSyntax, symbol.Type, ilVar);
             HandlePotentialFixedLoad(ilVar, symbol);
             HandlePotentialRefLoad(ilVar, localVarSyntax, symbol.Type);
@@ -512,21 +508,6 @@ namespace Cecilifier.Core.AST
                 return;
 
             Context.EmitCilInstruction(ilVar, OpCodes.Conv_U);
-        }
-
-        // Expressions of type parameter used as:
-        //   1. Target of a call
-        //   2. Source of assignment to a reference type
-        //
-        // requires boxing.
-        private void EmitBoxOpCodeOnTypeParameterReference(string ilVar, ITypeSymbol typeSymbol, CSharpSyntaxNode parent)
-        {
-            if (typeSymbol.TypeKind != TypeKind.TypeParameter)
-                return;
-            
-            if (parent.Accept(UsageVisitor.GetInstance(Context)) == UsageKind.CallTarget || 
-                (parent is AssignmentExpressionSyntax assignment && Context.SemanticModel.GetTypeInfo(assignment.Left).Type.IsReferenceType))
-                Context.EmitCilInstruction(ilVar, OpCodes.Box, Context.TypeResolver.Resolve(typeSymbol));
         }
 
         private bool HandleLoadAddress(string ilVar, ITypeSymbol symbol, CSharpSyntaxNode node, OpCode opCode, string symbolName, VariableMemberKind variableMemberKind, string parentName = null)

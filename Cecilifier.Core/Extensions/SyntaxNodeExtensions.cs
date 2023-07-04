@@ -105,5 +105,17 @@ namespace Cecilifier.Core.Extensions
             var argumentOperation = (IArgumentOperation) context.SemanticModel.GetOperation(toBeChecked);
             return argumentOperation.Parameter.RefKind == RefKind.In;
         }
+        
+        internal static bool IsArgumentPassedToReferenceTypeParameter(this SyntaxNode toBeChecked, IVisitorContext context, ITypeSymbol typeToNotMatch = null)
+        {
+            if (!toBeChecked.IsKind(SyntaxKind.Argument))
+                return false;
+                        
+            var argumentOperation = context.SemanticModel.GetOperation(toBeChecked).EnsureNotNull<IOperation, IArgumentOperation>();
+            if (argumentOperation.Parameter == null || !argumentOperation.Parameter.Type.IsReferenceType)
+                return false;
+            
+            return typeToNotMatch == null || !SymbolEqualityComparer.Default.Equals(argumentOperation.Parameter.Type, typeToNotMatch);
+        }
     }
 }

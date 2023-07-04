@@ -844,6 +844,13 @@ namespace Cecilifier.Core.AST
             }
         }
 
+        public override void VisitMemberAccessExpression(MemberAccessExpressionSyntax node)
+        {
+            node.Expression.Accept(this);
+            InjectRequiredConversions(node.Expression);
+            node.Name.Accept(this);
+        }
+
         public override void VisitAwaitExpression(AwaitExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitTupleExpression(TupleExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitSwitchExpression(SwitchExpressionSyntax node) => LogUnsupportedSyntax(node);
@@ -1378,7 +1385,20 @@ namespace Cecilifier.Core.AST
                 }
             }
 
-            if (conversion.IsImplicit && conversion.IsBoxing)
+            // Empirically (verified in generated IL), expressions of type parameter used as:
+            //    1. Target of a call
+            //    2. Source of assignment to a reference type
+            //    3. Argument for a reference type parameter
+            //    4. operand of `is` expression
+            // requires boxing, but for some reason, the conversion returned by GetConversion() does not reflects that. 
+            var needsBoxing = typeInfo.Type.TypeKind == TypeKind.TypeParameter &&
+                              ((((CSharpSyntaxNode) expression.Parent).Accept(UsageVisitor.GetInstance(Context)) == UsageKind.CallTarget && Context.SemanticModel.GetSymbolInfo(expression).Symbol.Kind != SymbolKind.TypeParameter)
+                                 || (expression.Parent is AssignmentExpressionSyntax assignment && Context.SemanticModel.GetTypeInfo(assignment.Left).Type.IsReferenceType)
+                                 || expression.Parent.IsArgumentPassedToReferenceTypeParameter(Context, typeInfo.Type)
+                                 || expression.Parent is BinaryExpressionSyntax binaryExpressionSyntax && binaryExpressionSyntax.OperatorToken.IsKind(SyntaxKind.IsKeyword)
+                                 );
+
+            if (conversion.IsImplicit && (conversion.IsBoxing || needsBoxing))
             {
                 AddCilInstruction(ilVar, OpCodes.Box, typeInfo.Type);
             }

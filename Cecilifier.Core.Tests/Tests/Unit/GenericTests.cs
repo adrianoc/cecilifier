@@ -213,6 +213,20 @@ namespace Cecilifier.Core.Tests.Tests.Unit
         }
 
         [TestCase(
+            "bool b; b = value is string", 
+            """
+            //b = value is string;
+            (\s+il_test_\d+\.Emit\(OpCodes\.)Ldarg_1\);
+            \1Box, gp_T_\d+\);
+            \1Isinst, assembly.MainModule.TypeSystem.String\);
+            \1Ldnull\);
+            \1Cgt\);
+            \1Stloc, l_b_13\);
+            \1Ret\);
+            """
+            )]
+        
+        [TestCase(
             "object o; o = value", 
             """
             //o = value;
@@ -248,6 +262,35 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             (\s+\1Emit\(OpCodes\.)Ldarg_1\);
             \2Box, gp_T_\d+\);
             \2Stfld, fld_fieldIDisp_\d+\);
+            """)]
+        
+        [TestCase(
+            "object o; o = M<T>(value)", 
+            """
+            //o = M<T>\(value\);
+            (\s+il_test_\d+\.Emit\(OpCodes\.)Ldarg_0\);
+            \s+var r_M_14 = m_M_2;
+            \s+var (gi_M_\d+) = new GenericInstanceMethod\(r_M_14\);
+            \s+gi_M_15.GenericArguments.Add\((gp_T_\d+)\);
+            \1Ldarg_1\);
+            \1Call, \2\);
+            \1Box, \3\);
+            \1Stloc, l_o_13\);
+            """)]
+        
+        [TestCase(
+            "Test(value, paramIDisp, value);", 
+            """
+            //Test\(value, paramIDisp, value\);
+            \s+il_test_8.Emit\(OpCodes.Ldarg_0\);
+            \s+var r_test_13 = m_test_6;
+            \s+var gi_test_14 = new GenericInstanceMethod\(r_test_13\);
+            \s+gi_test_14.GenericArguments.Add\(gp_T_7\);
+            (\s+il_test_\d+\.Emit\(OpCodes\.)Ldarg_1\);
+            \1Ldarg_2\);
+            \1Ldarg_1\);
+            \1Box, gp_T_7\);
+            \1Call, gi_test_14\);
             """)]
         public void GenericType_Boxing(string statementToUse, string expectedILSnippet)
         {
