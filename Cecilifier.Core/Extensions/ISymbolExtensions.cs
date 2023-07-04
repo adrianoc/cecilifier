@@ -89,15 +89,6 @@ namespace Cecilifier.Core.Extensions
             return symbol;
         }
 
-        [return: NotNull]
-        public static TTarget EnsureNotNull<TSource, TTarget>([NotNull][NotNullIfNotNull("symbol")] this TSource symbol, [CallerArgumentExpression("symbol")] string exp = null) where TSource : ISymbol where TTarget : TSource
-        {
-            if (symbol == null)
-                throw new NullReferenceException(exp);
-
-            return (TTarget) symbol;
-        }
-
         public static bool IsDllImportCtor(this ISymbol self) => self != null && self.ContainingType.Name == "DllImportAttribute";
 
         public static string AsParameterAttribute(this IParameterSymbol symbol)

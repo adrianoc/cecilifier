@@ -92,15 +92,15 @@ namespace Cecilifier.Core.Extensions
         }
 
         [return: NotNull]
-        public static TTarget EnsureNotNull<TSource, TTarget>([NotNullIfNotNull("source")] this TSource source, [CallerArgumentExpression("source")] string exp = null) where TSource : SyntaxNode where TTarget : TSource
+        public static TTarget EnsureNotNull<TSource, TTarget>([NotNullIfNotNull("source")] this TSource source, [CallerArgumentExpression("source")] string exp = null) where TTarget : TSource
         {
             if (source == null)
-                throw new NullReferenceException(exp);
+                throw new ArgumentNullException(exp);
 
             return (TTarget) source;
         }
         
-        internal static bool IsObjectCreationExpressionUsedAsInParameter(this ArgumentSyntax toBeChecked, IVisitorContext context)
+        internal static bool IsPassedAsInParameter(this ArgumentSyntax toBeChecked, IVisitorContext context)
         {
             var argumentOperation = (IArgumentOperation) context.SemanticModel.GetOperation(toBeChecked);
             return argumentOperation.Parameter.RefKind == RefKind.In;

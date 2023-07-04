@@ -1127,7 +1127,7 @@ namespace Cecilifier.Core.AST
             if (!toBeChecked.Parent.IsKind(SyntaxKind.Argument) || !toBeChecked.IsKind(SyntaxKind.ObjectCreationExpression))
                 return false;
 
-            return ((ArgumentSyntax) toBeChecked.Parent).IsObjectCreationExpressionUsedAsInParameter(Context);
+            return ((ArgumentSyntax) toBeChecked.Parent).IsPassedAsInParameter(Context);
         }
 
         private void StoreTopOfStackInLocalVariableAndLoad(ExpressionSyntax expressionSyntax, ITypeSymbol type)

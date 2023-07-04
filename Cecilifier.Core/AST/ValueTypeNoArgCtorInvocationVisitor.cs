@@ -80,7 +80,7 @@ namespace Cecilifier.Core.AST
         public override void VisitArgument(ArgumentSyntax node)
         {
             var valueTypeLocalVariable = DeclareAndInitializeValueTypeLocalVariable();
-            var loadOpCode = node.IsObjectCreationExpressionUsedAsInParameter(Context) ? OpCodes.Ldloca : OpCodes.Ldloc;
+            var loadOpCode = node.IsPassedAsInParameter(Context) ? OpCodes.Ldloca : OpCodes.Ldloc;
             Context.EmitCilInstruction(ilVar, loadOpCode, valueTypeLocalVariable.VariableName);
         }
 

@@ -146,20 +146,21 @@ public class ArrayTests : CecilifierUnitTestBase
         var result = RunCecilifier(code);
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
 
-        Assert.That(cecilifiedCode, Does.Match("""
-        \s+//<PrivateImplementationDetails> class.
-        \s+//This type is emitted by the compiler.
-        \s+var (cls_privateImplementationDetails_\d+) = new TypeDefinition\("", "<PrivateImplementationDetails>", TypeAttributes.NotPublic \| TypeAttributes.Sealed \| TypeAttributes.AnsiClass \| TypeAttributes.AutoLayout, assembly.MainModule.TypeSystem.Object\);
-        \s+assembly.MainModule.Types.Add\(\1\);
-        \s+//__StaticArrayInitTypeSize=12 struct.
-        \s+//This struct is emitted by the compiler and is used to hold raw data used in arrays/span initialization optimizations
-        \s+var (st_rawDataTypeVar_\d+) = new TypeDefinition\("", "__StaticArrayInitTypeSize=12", TypeAttributes.NestedPrivate \| TypeAttributes.Sealed \| TypeAttributes.AnsiClass \| TypeAttributes.ExplicitLayout.+\) \{ ClassSize = 12,PackingSize = 1 \};
-        \s+\1.NestedTypes.Add\(\2\);
-        \s+var (fld_arrayInitializerData_\d+) = new FieldDefinition\("[A-Z0-9]+", FieldAttributes.Assembly \| FieldAttributes.Static \| FieldAttributes.InitOnly, \2\);
-        \s+\1.Fields.Add\(\3\);
-        \s+\3.InitialValue = Cecilifier.Runtime.TypeHelpers.ToByteArray<Int32>\(new Int32\[\] { 1, 2, 3 }\);
-        \s+(il_.+).Emit\(OpCodes.Dup\);
-        \s+\4.Emit\(OpCodes.Ldtoken, \3\);
-        """));
+        Assert.That(
+            cecilifiedCode, Does.Match("""
+                  \s+//<PrivateImplementationDetails> class.
+                  \s+//This type is emitted by the compiler.
+                  \s+var (cls_privateImplementationDetails_\d+) = new TypeDefinition\("", "<PrivateImplementationDetails>", TypeAttributes.NotPublic \| TypeAttributes.Sealed \| TypeAttributes.AnsiClass \| TypeAttributes.AutoLayout, assembly.MainModule.TypeSystem.Object\);
+                  \s+assembly.MainModule.Types.Add\(\1\);
+                  \s+//__StaticArrayInitTypeSize=12 struct.
+                  \s+//This struct is emitted by the compiler and is used to hold raw data used in arrays/span initialization optimizations
+                  \s+var (st_rawDataTypeVar_\d+) = new TypeDefinition\("", "__StaticArrayInitTypeSize=12", TypeAttributes.NestedPrivate \| TypeAttributes.Sealed \| TypeAttributes.AnsiClass \| TypeAttributes.ExplicitLayout.+\) \{ ClassSize = 12,PackingSize = 1 \};
+                  \s+\1.NestedTypes.Add\(\2\);
+                  \s+var (fld_arrayInitializerData_\d+) = new FieldDefinition\("[A-Z0-9]+", FieldAttributes.Assembly \| FieldAttributes.Static \| FieldAttributes.InitOnly, \2\);
+                  \s+\1.Fields.Add\(\3\);
+                  \s+\3.InitialValue = Cecilifier.Runtime.TypeHelpers.ToByteArray<Int32>\(new Int32\[\] { 1, 2, 3 }\);
+                  \s+(il_.+).Emit\(OpCodes.Dup\);
+                  \s+\4.Emit\(OpCodes.Ldtoken, \3\);
+                  """));
     }
 }
