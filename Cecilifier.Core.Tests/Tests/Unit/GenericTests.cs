@@ -226,6 +226,16 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             """
             )]
         
+        [TestCase("object o = value", """
+                                      //object o = value;
+                                      \s+var (l_o_\d+) = new VariableDefinition\(assembly.MainModule.TypeSystem.Object\);
+                                      \s+m_test_6.Body.Variables.Add\(\1\);
+                                      (\s+il_test_\d+\.Emit\(OpCodes\.)Ldarg_1\);
+                                      \2Box, gp_T_7\);
+                                      \2Stloc, \1\);
+                                      \2Ret\);
+                                      """)]
+        
         [TestCase(
             "object o; o = value", 
             """
