@@ -345,7 +345,8 @@ namespace Cecilifier.Core.AST
             LoadLiteralValue(ilVar,
                 literalType,
                 value,
-                literalParent.Accept(UsageVisitor.GetInstance(Context)) == UsageKind.CallTarget);
+                literalParent.Accept(UsageVisitor.GetInstance(Context)) == UsageKind.CallTarget,
+                literalParent);
 
             skipLeftSideVisitingInAssignment = literalType.IsValueType && !literalType.IsPrimitiveType();
         }
@@ -759,9 +760,9 @@ namespace Cecilifier.Core.AST
 
             var defaultParent = node.Parent.EnsureNotNull<SyntaxNode, CSharpSyntaxNode>();
             var isTargetOfCall = defaultParent.Accept(UsageVisitor.GetInstance(Context)) == UsageKind.CallTarget;
-            LoadLiteralValue(ilVar, type, type.ValueForDefaultLiteral(), isTargetOfCall);
+            LoadLiteralValue(ilVar, type, type.ValueForDefaultLiteral(), isTargetOfCall, defaultParent);
 
-            skipLeftSideVisitingInAssignment = type.IsValueType && !type.IsPrimitiveType();
+            skipLeftSideVisitingInAssignment = (type.IsValueType || type.TypeKind == TypeKind.TypeParameter) && !type.IsPrimitiveType();
         }
 
         public override void VisitSimpleLambdaExpression(SimpleLambdaExpressionSyntax node) => HandleLambdaExpression(node);
@@ -1486,12 +1487,12 @@ namespace Cecilifier.Core.AST
         private void ProcessArgumentsTakingDefaultParametersIntoAccount(ISymbol? method, ArgumentListSyntax args)
         {
             Visit(args);
-            if (method is not IMethodSymbol methodSymbol || args is not ArgumentListSyntax arguments || methodSymbol.Parameters.Length <= arguments.Arguments.Count)
+            if (method is not IMethodSymbol methodSymbol || methodSymbol.Parameters.Length <= args.Arguments.Count)
                 return;
 
-            foreach (var arg in methodSymbol.Parameters.Skip(arguments.Arguments.Count))
+            foreach (var arg in methodSymbol.Parameters.Skip(args.Arguments.Count))
             {
-                LoadLiteralValue(ilVar, arg.Type, ArgumentValueToUseForDefaultParameter(arg, methodSymbol.Parameters, arguments.Arguments), false);
+                LoadLiteralValue(ilVar, arg.Type, ArgumentValueToUseForDefaultParameter(arg, methodSymbol.Parameters, args.Arguments), false, args);
             }
         }
 

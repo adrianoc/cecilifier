@@ -5,8 +5,34 @@ namespace Cecilifier.Core.Tests.Tests.Unit;
 [TestFixture]
 public class DefaultExpressions : CecilifierUnitTestBase
 {
-    private const string DefaultTypeParameterExpectation = @"il_M_\d+.Emit\(OpCodes.Ldloca_S, l_T_\d+\);\s+" +
-                                                           @"il_M_\d+.Emit\(OpCodes.Initobj, gp_T_\d+\);";
+    private const string DefaultTypeParameterInParameterAssignmentExpectation = """
+                                                           \s+il_M_\d+.Emit\(OpCodes.Ldarg_S, p_t_\d+\);
+                                                           \s+il_M_\d+.Emit\(OpCodes.Initobj, gp_T_\d+\);
+                                                           \s+il_M_\d+.Emit\(OpCodes.Ret\);
+                                                           """;
+    
+    private const string DefaultTypeParameterInLocalVariableInitializationExpectation = """
+                                                           \s+var (l_t_\d+) = new VariableDefinition\((gp_T_\d+)\);
+                                                           \s+m_M_\d+.Body.Variables.Add\(\1\);
+                                                           \s+il_M_\d+.Emit\(OpCodes.Ldloca_S, \1\);
+                                                           \s+il_M_\d+.Emit\(OpCodes.Initobj, \2\);
+                                                           \s+il_M_\d+.Emit\(OpCodes.Ret\);
+                                                           """;
+    
+    private const string DefaultTypeParameterInLocalVariableAssignmentExpectation = """
+                                                           //t = default\(T\);
+                                                           \s+il_M_\d+.Emit\(OpCodes.Ldloca_S, l_t_\d+\);
+                                                           \s+il_M_\d+.Emit\(OpCodes.Initobj, gp_T_\d+\);
+                                                           \s+il_M_\d+.Emit\(OpCodes.Ret\);
+                                                           """;
+    
+    private const string DefaultTypeParameterExpectation = """
+                                                           \s+m_M_\d+.Body.Variables.Add\((l_T_\d+)\);
+                                                           \s+il_M_\d+.Emit\(OpCodes.Ldloca_S, \1\);
+                                                           \s+il_M_\d+.Emit\(OpCodes.Initobj, gp_T_\d+\);
+                                                           \s+il_M_\d+.Emit\(OpCodes.Ldloc, \1\);
+                                                           \s+il_M_\d+.Emit\(OpCodes.Ret\);
+                                                           """;
 
     private const string PtrExpectation = @"il_M_\d+.Emit\(OpCodes.Ldc_I4_0\);\s+" +
                                           @"il_M_\d+.Emit\(OpCodes.Conv_U\);";
@@ -19,6 +45,9 @@ public class DefaultExpressions : CecilifierUnitTestBase
 
     [TestCase("class Foo<T> { T M() => default; }", DefaultTypeParameterExpectation, TestName = "Literal Unconstrained Type Parameter")]
     [TestCase("class Foo<T> { T M() => default(T); }", DefaultTypeParameterExpectation, TestName = "Type Unconstrained Parameter")]
+    [TestCase("void M<T>() { T t = default(T); }", DefaultTypeParameterInLocalVariableInitializationExpectation, TestName = "Type Parameter Local Variable initialization")]
+    [TestCase("void M<T>(T t) { t = default(T); }", DefaultTypeParameterInParameterAssignmentExpectation, TestName = "Type Parameter parameter assignment")]
+    [TestCase("void M<T>() { T t; t = default(T); }", DefaultTypeParameterInLocalVariableAssignmentExpectation, TestName = "Type Parameter Local Variable assignment")]
     [TestCase("class Foo<T> where T : class { T M() => default(T); }", DefaultTypeParameterExpectation, TestName = "Type Parameter (class)")]
     [TestCase("class Foo<T> where T : struct { T M() => default(T); }", DefaultTypeParameterExpectation, TestName = "Type Parameter (struct)")]
     [TestCase("T M<T>() => default;", DefaultTypeParameterExpectation, TestName = "Toplevel Literal Unconstrained Type Parameter")]
@@ -43,7 +72,8 @@ public class DefaultExpressions : CecilifierUnitTestBase
     public void Test(string code, string expected)
     {
         var result = RunCecilifier(code);
-        Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(expected));
+        var actual = result.GeneratedCode.ReadToEnd();
+        Assert.That(actual, Does.Match(expected));
     }
 
     [TestCase("char", "Emit(OpCodes.Ldc_I4, 0)")]

@@ -116,16 +116,10 @@ namespace Cecilifier.Core.AST
             AddCecilExpression($"var {instVar} = {ilVar}.Create({opCode.ConstantName()}{operandStr});");
         }
 
-        protected void LoadLiteralValue(string ilVar, ITypeSymbol type, string value, bool isTargetOfCall)
+        protected void LoadLiteralValue(string ilVar, ITypeSymbol type, string value, bool isTargetOfCall, SyntaxNode parent)
         {
-            if (type.TypeKind == TypeKind.TypeParameter)
-            {
-                var resolvedType = Context.TypeResolver.Resolve(type);
-                
-                StoreTopOfStackInLocalVariableAndLoadItsAddress(ilVar, type, type.Name);
-                Context.EmitCilInstruction(ilVar, OpCodes.Initobj, resolvedType);
+            if (LoadDefaultValueForTypeParameter(ilVar, type, parent))
                 return;
-            }
 
             if (type.SpecialType == SpecialType.None && type.IsValueType && type.TypeKind != TypeKind.Pointer || type.SpecialType == SpecialType.System_DateTime)
             {
@@ -186,6 +180,45 @@ namespace Cecilifier.Core.AST
                 default:
                     throw new ArgumentException($"Literal {value} of type {type.SpecialType} not supported yet.");
             }
+        }
+
+        private bool LoadDefaultValueForTypeParameter(string ilVar, ITypeSymbol type, SyntaxNode parent)
+        {
+            if (type.TypeKind != TypeKind.TypeParameter)
+                return false;
+
+            var resolvedType = Context.TypeResolver.Resolve(type);
+            
+            // in an assignment expression we already have memory allocated to hold the value
+            // in this case we don´t need to add a local variable.
+            if (parent is AssignmentExpressionSyntax assignment)
+            {
+                var targetOfAssignmentSymbol = Context.SemanticModel.GetSymbolInfo(assignment.Left).Symbol.EnsureNotNull();
+                var loadAddressOpcode = targetOfAssignmentSymbol.LoadAddressOpcodeForMember(); // target of assignment may be a local, field or parameter so we need to figure out the correct opcode to load its address
+                var storageVariable = Context.DefinitionVariables.GetVariable(targetOfAssignmentSymbol.Name, targetOfAssignmentSymbol.ToVariableMemberKind(), targetOfAssignmentSymbol.Kind == SymbolKind.Local ? string.Empty : targetOfAssignmentSymbol.ContainingSymbol.ToDisplayString());
+                
+                Context.EmitCilInstruction(ilVar, loadAddressOpcode, storageVariable.VariableName);
+                Context.EmitCilInstruction(ilVar, OpCodes.Initobj, resolvedType);
+            }
+            else if (parent.Parent is VariableDeclaratorSyntax equalsValueClauseSyntax)
+            {
+                // scenario: T t = default(T);
+                var targetOfAssignmentSymbol = Context.SemanticModel.GetDeclaredSymbol(equalsValueClauseSyntax).EnsureNotNull();
+                var storageVariable = Context.DefinitionVariables.GetVariable(targetOfAssignmentSymbol.Name, targetOfAssignmentSymbol.ToVariableMemberKind(), string.Empty);
+                
+                Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, storageVariable.VariableName);
+                Context.EmitCilInstruction(ilVar, OpCodes.Initobj, resolvedType);                
+            }
+            else
+            {
+                // no variable exists yet (for instance, passing `default(T)` as a parameter) so we add one.
+                var storageVariable = AddLocalVariableToCurrentMethod(Context, type.Name, resolvedType);
+                
+                Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, storageVariable.VariableName);
+                Context.EmitCilInstruction(ilVar, OpCodes.Initobj, resolvedType);
+                Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, storageVariable.VariableName);
+            }
+            return true;
         }
 
         private void LoadLiteralToStackHandlingCallOnValueTypeLiterals(string ilVar, ITypeSymbol literalType, object literalValue, bool isTargetOfCall)

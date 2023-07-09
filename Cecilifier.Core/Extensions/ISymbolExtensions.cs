@@ -150,6 +150,14 @@ namespace Cecilifier.Core.Extensions
         public static OpCode LoadOpCodeForFieldAccess(this ISymbol symbol) => symbol.IsStatic ? OpCodes.Ldsfld : OpCodes.Ldfld;
         public static OpCode StoreOpCodeForFieldAccess(this ISymbol symbol) => symbol.IsStatic ? OpCodes.Stsfld : OpCodes.Stfld;
 
+        public static OpCode LoadAddressOpcodeForMember(this ISymbol symbol) => symbol.Kind switch
+        {
+            SymbolKind.Field => symbol.IsStatic ? OpCodes.Ldsflda : OpCodes.Ldflda,
+            SymbolKind.Parameter => OpCodes.Ldarg_S,
+            SymbolKind.Local => OpCodes.Ldloca_S,
+            _ => throw new ArgumentException($"Invalid symbol type for {symbol} ({symbol.Kind})")
+        };
+
         public static string ValueForDefaultLiteral(this ITypeSymbol literalType) => literalType switch
         {
             { SpecialType: SpecialType.System_Char } => "\0",
@@ -180,5 +188,13 @@ namespace Cecilifier.Core.Extensions
         public static IMethodSymbol Ctor(this ITypeSymbol self, params ITypeSymbol[] parameters) => self?.GetMembers(".ctor")
                                                                                                 .OfType<IMethodSymbol>()
                                                                                                 .Single(ctor => ctor.Parameters.Select(p => p.Type).SequenceEqual(parameters, SymbolEqualityComparer.Default));
+
+        public static VariableMemberKind ToVariableMemberKind(this ISymbol self) => self.Kind switch
+        {
+            SymbolKind.Field => VariableMemberKind.Field,
+            SymbolKind.Local => VariableMemberKind.LocalVariable,
+            SymbolKind.Parameter => VariableMemberKind.Parameter,
+            _ => throw new ArgumentException($"Invalid symbol type for '{self}' ({self.Kind})")
+        };
     }
 }

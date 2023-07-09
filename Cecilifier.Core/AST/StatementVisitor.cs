@@ -276,13 +276,13 @@ namespace Cecilifier.Core.AST
         public override void VisitGotoStatement(GotoStatementSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitYieldStatement(YieldStatementSyntax node) { LogUnsupportedSyntax(node); }
 
-        private void AddLocalVariable(TypeSyntax type, VariableDeclaratorSyntax localVar, DefinitionVariable methodVar)
+        private DefinitionVariable AddLocalVariable(TypeSyntax type, VariableDeclaratorSyntax localVar, DefinitionVariable methodVar)
         {
             var resolvedVarType = type.IsVar
                 ? ResolveExpressionType(localVar.Initializer?.Value)
                 : ResolveType(type);
 
-            string temp = AddLocalVariableWithResolvedType(Context, localVar.Identifier.Text, methodVar, resolvedVarType).VariableName;
+            return AddLocalVariableWithResolvedType(Context, localVar.Identifier.Text, methodVar, resolvedVarType);
         }
 
         private void ProcessVariableInitialization(VariableDeclaratorSyntax localVar, ITypeSymbol variableType)
@@ -325,7 +325,8 @@ namespace Cecilifier.Core.AST
             var methodVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
             foreach (var localVar in declaration.Variables)
             {
-                AddLocalVariable(declaration.Type, localVar, methodVar);
+                var declaredVariable = AddLocalVariable(declaration.Type, localVar, methodVar);
+                using var _ = Context.DefinitionVariables.WithVariable(declaredVariable);
                 ProcessVariableInitialization(localVar, variableType.Type);
             }
         }
