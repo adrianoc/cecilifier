@@ -184,7 +184,7 @@ namespace Cecilifier.Core.AST
 
         private bool LoadDefaultValueForTypeParameter(string ilVar, ITypeSymbol type, SyntaxNode parent)
         {
-            if (type.TypeKind != TypeKind.TypeParameter)
+            if (type is not ITypeParameterSymbol typeParameterSymbol)
                 return false;
 
             var resolvedType = Context.TypeResolver.Resolve(type);
@@ -216,7 +216,16 @@ namespace Cecilifier.Core.AST
                 
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, storageVariable.VariableName);
                 Context.EmitCilInstruction(ilVar, OpCodes.Initobj, resolvedType);
-                Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, storageVariable.VariableName);
+                if (!typeParameterSymbol.IsTypeParameterConstrainedToReferenceType() && parent is MemberAccessExpressionSyntax mae && mae.Parent.IsKind(SyntaxKind.InvocationExpression))
+                {
+                    // scenario: default(T).ToString()
+                    Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, storageVariable.VariableName);
+                    Context.EmitCilInstruction(ilVar, OpCodes.Constrained, resolvedType);
+                }
+                else
+                {
+                    Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, storageVariable.VariableName);
+                }
             }
             return true;
         }

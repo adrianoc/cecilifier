@@ -56,6 +56,11 @@ namespace Cecilifier.Core.Extensions
                 return variable;
             }
 
+            // invocation on non value type virtual methods must be dispatched to the original method (i.e, the virtual method definition, not the overridden one)
+            // note that in Roslyn, IMethodSymbol.OriginalMethod is the method implementation and IMethodSymbol.OverridenMethod is the actual original virtual method.  
+            if (!method.ContainingType.IsValueType)
+                method = method.OverriddenMethod ?? method;
+            
             if (method.Parameters.Any(p => p.Type.IsTypeParameterOrIsGenericTypeReferencingTypeParameter()) || method.ReturnType.IsTypeParameterOrIsGenericTypeReferencingTypeParameter())
             {
                 return ResolveMethodFromGenericType(method, ctx);

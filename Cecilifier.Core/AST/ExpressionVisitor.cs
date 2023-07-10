@@ -1107,7 +1107,7 @@ namespace Cecilifier.Core.AST
             var targetOfInvocationType = Context.SemanticModel.GetTypeInfo(node);
             if (targetOfInvocationType.Type?.IsValueType == false) 
                 return; // it is not a value type...
-
+            
             if( IsLeftHandSideOfMemberAccessExpression(node)
                 || IsObjectCreationExpressionUsedAsSourceOfCast(node)
                 || IsObjectCreationExpressionUsedAsInParameter(node)
@@ -1385,22 +1385,8 @@ namespace Cecilifier.Core.AST
                     AddMethodCall(ilVar, conversion.MethodSymbol, false);
                 }
             }
-
-            // Empirically (verified in generated IL), expressions of type parameter used as:
-            //    1. Target of a call
-            //    2. Source of assignment (or variable initialization) to a reference type
-            //    3. Argument for a reference type parameter
-            //    4. operand of `is` expression
-            // requires boxing, but for some reason, the conversion returned by GetConversion() does not reflects that. 
-            var needsBoxing = typeInfo.Type.TypeKind == TypeKind.TypeParameter &&
-                              ((((CSharpSyntaxNode) expression.Parent).Accept(UsageVisitor.GetInstance(Context)) == UsageKind.CallTarget && Context.SemanticModel.GetSymbolInfo(expression).Symbol.Kind != SymbolKind.TypeParameter)
-                                 || (expression.Parent is AssignmentExpressionSyntax assignment && Context.SemanticModel.GetTypeInfo(assignment.Left).Type.IsReferenceType)
-                                 || (expression.Parent is EqualsValueClauseSyntax equalsValueClauseSyntax && Context.SemanticModel.GetTypeInfo(equalsValueClauseSyntax.Value).Type.IsReferenceType)
-                                 || expression.Parent.IsArgumentPassedToReferenceTypeParameter(Context, typeInfo.Type)
-                                 || expression.Parent is BinaryExpressionSyntax binaryExpressionSyntax && binaryExpressionSyntax.OperatorToken.IsKind(SyntaxKind.IsKeyword)
-                                 );
-
-            if (conversion.IsImplicit && (conversion.IsBoxing || needsBoxing))
+           
+            if (conversion.IsImplicit && (conversion.IsBoxing || NeedsBoxing(Context, expression, typeInfo.Type)))
             {
                 AddCilInstruction(ilVar, OpCodes.Box, typeInfo.Type);
             }
@@ -1420,6 +1406,58 @@ namespace Cecilifier.Core.AST
 
                 Context.EmitCilInstruction(ilVar, OpCodes.Conv_I4);
                 AddMethodCall(ilVar, (IMethodSymbol) typeInfo.Type.GetMembers().Single(m => m.Name == "GetOffset"));
+            }
+
+            // Empirically (verified in generated IL), expressions of type parameter used as:
+            //    1. Target of a call, unless the type parameter
+            //       - is unconstrained (i.e, method being invoked comes from System.Object) or
+            //       - is constrained to an interface, but not to a reference type or
+            //       - is constrained to 'struct'
+            //    2. Source of assignment (or variable initialization) to a reference type
+            //    3. Argument for a reference type parameter
+            // requires boxing, but for some reason, the conversion returned by GetConversion() does not reflects that. 
+            static bool NeedsBoxing(IVisitorContext context, ExpressionSyntax expression, ITypeSymbol type)
+            {
+                var needsBoxing = type.TypeKind == TypeKind.TypeParameter &&
+                                  (NeedsBoxingUsedAsTargetOfReference(context, expression)
+                                   || (expression.Parent is AssignmentExpressionSyntax assignment && context.SemanticModel.GetTypeInfo(assignment.Left).Type.IsReferenceType)
+                                   || (expression.Parent is EqualsValueClauseSyntax equalsValueClauseSyntax && context.SemanticModel.GetTypeInfo(equalsValueClauseSyntax.Value).Type.IsReferenceType)
+                                   || expression.Parent.IsArgumentPassedToReferenceTypeParameter(context, type)
+                                   || expression.Parent is BinaryExpressionSyntax binaryExpressionSyntax && binaryExpressionSyntax.OperatorToken.IsKind(SyntaxKind.IsKeyword)
+                                  );
+
+                return needsBoxing;
+            }
+            
+            static bool NeedsBoxingUsedAsTargetOfReference(IVisitorContext context, ExpressionSyntax expression)
+            {
+                if (((CSharpSyntaxNode) expression.Parent).Accept(UsageVisitor.GetInstance(context)) != UsageKind.CallTarget)
+                    return false;
+                
+                var symbol = context.SemanticModel.GetSymbolInfo(expression).Symbol;
+                // only triggers when expression `T` used in T.Method() (i.e, abstract static methods from an interface)
+                if (symbol is { Kind: SymbolKind.TypeParameter })
+                    return false;
+
+                ITypeParameterSymbol typeParameter = null;
+                if (symbol == null)
+                {
+                    typeParameter = context.GetTypeInfo(expression).Type as ITypeParameterSymbol;
+                }
+                else
+                {
+                    // 'expression' represents a local variable, parameters, etc.. so we get its element type 
+                    typeParameter = symbol.GetMemberType() as ITypeParameterSymbol;
+                }
+            
+                if (typeParameter == null)
+                    return false;
+
+                if (typeParameter.HasValueTypeConstraint)
+                    return false;
+
+                return typeParameter.HasReferenceTypeConstraint
+                       || (typeParameter.ConstraintTypes.Length > 0 && typeParameter.ConstraintTypes.Any(candidate => candidate.TypeKind != TypeKind.Interface));
             }
         }
 

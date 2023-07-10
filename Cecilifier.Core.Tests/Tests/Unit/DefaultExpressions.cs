@@ -5,6 +5,26 @@ namespace Cecilifier.Core.Tests.Tests.Unit;
 [TestFixture]
 public class DefaultExpressions : CecilifierUnitTestBase
 {
+    private const string DefaultTypeParameterMethodInvocationExpectation = """
+                                                                           var (l_T_\d+) = new VariableDefinition\((gp_T_\d+)\);
+                                                                           \s+m_M_6.Body.Variables.Add\(\1\);
+                                                                           (\s+il_M_8\.Emit\(OpCodes\.)Ldloca_S, \1\);
+                                                                           \3Initobj, \2\);
+                                                                           \3Ldloca_S, \1\);
+                                                                           \3Constrained, \2\);
+                                                                           \3Callvirt, .+ImportReference\(.+ResolveMethod\(typeof\(System.Object\), "GetHashCode",.+\)\);
+                                                                           """;    
+    
+    private const string DefaultTypeParameterMethodInvocationOnReferenceTypeExpectation = """
+                                                                           var (l_T_\d+) = new VariableDefinition\((gp_T_\d+)\);
+                                                                           \s+m_M_\d+.Body.Variables.Add\(\1\);
+                                                                           (\s+il_M_\d+\.Emit\(OpCodes\.)Ldloca_S, \1\);
+                                                                           \3Initobj, \2\);
+                                                                           \3Ldloc, \1\);
+                                                                           \3Box, \2\);
+                                                                           \3Callvirt, .+ImportReference\(.+ResolveMethod\(typeof\(System.Object\), "GetHashCode",.+\)\);
+                                                                           """;
+    
     private const string DefaultTypeParameterInParameterAssignmentExpectation = """
                                                            \s+il_M_\d+.Emit\(OpCodes.Ldarg_S, p_t_\d+\);
                                                            \s+il_M_\d+.Emit\(OpCodes.Initobj, gp_T_\d+\);
@@ -52,6 +72,9 @@ public class DefaultExpressions : CecilifierUnitTestBase
     [TestCase("class Foo<T> where T : struct { T M() => default(T); }", DefaultTypeParameterExpectation, TestName = "Type Parameter (struct)")]
     [TestCase("T M<T>() => default;", DefaultTypeParameterExpectation, TestName = "Toplevel Literal Unconstrained Type Parameter")]
     [TestCase("T M<T>() => default(T);", DefaultTypeParameterExpectation, TestName = "Toplevel Unconstrained Type Parameter")]
+    [TestCase("void M<T>() where T : class { var hc = default(T).GetHashCode(); }", DefaultTypeParameterMethodInvocationOnReferenceTypeExpectation, TestName = "Toplevel invocation on default(Class Constrained Type Parameter)")]
+    [TestCase("void M<T>() where T : Foo { var hc = default(T).GetHashCode(); } class Foo{} ", DefaultTypeParameterMethodInvocationOnReferenceTypeExpectation, TestName = "Toplevel invocation on default(Reference Type Constrained Type Parameter)")]
+    [TestCase("void M<T>() { var hc = default(T).GetHashCode(); }", DefaultTypeParameterMethodInvocationExpectation, TestName = "Toplevel invocation on default(Unconstrained Type Parameter)")]
     [TestCase("int M() => default;", NumericPrimitiveExpectation, TestName = "Toplevel Literal Primitive")]
     [TestCase("int M() => default(int);", NumericPrimitiveExpectation, TestName = "Toplevel Primitive")]
     [TestCase("System.IntPtr M() => default;", IntPtrExpectation, TestName = "Toplevel Literal IntPtr")]

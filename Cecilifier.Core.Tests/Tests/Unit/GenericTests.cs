@@ -310,6 +310,33 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             """)]
         
         [TestCase(
+            """object o; o = M<string>("Ola Mundo")""", 
+            """
+            //o = M<string>\("Ola Mundo"\);
+            (\s+il_test_\d+\.Emit\(OpCodes\.)Ldarg_0\);
+            \s+var r_M_14 = m_M_2;
+            \s+var (gi_M_\d+) = new GenericInstanceMethod\(r_M_14\);
+            \s+gi_M_15.GenericArguments.Add\(assembly.MainModule.TypeSystem.String\);
+            \1Ldstr, "Ola Mundo"\);
+            \1Call, \2\);
+            \1Stloc, l_o_13\);
+            """)]        
+        
+        [TestCase(
+            """Foo f = new Foo(); object o; o = f.M<T>(value)""", 
+            """
+            //o = f.M<T>\(value\);
+            (\s+il_test_\d+\.Emit\(OpCodes\.)Ldloc, l_f_13\);
+            \s+var (r_M_\d+) = m_M_2;
+            \s+var (gi_M_\d+) = new GenericInstanceMethod\(\2\);
+            \s+\3.GenericArguments.Add\((gp_T_\d+)\);
+            \1Ldarg_1\);
+            \1Callvirt, \3\);
+            \1Box, \4\);
+            \1Stloc, l_o_15\);
+            """)]
+        
+        [TestCase(
             "Test(value, paramIDisp, value);", 
             """
             //Test\(value, paramIDisp, value\);
