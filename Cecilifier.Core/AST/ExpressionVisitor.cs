@@ -1555,6 +1555,7 @@ namespace Cecilifier.Core.AST
             {
                 case SymbolKind.Method:
                     ProcessMethodReference(node, member.Symbol as IMethodSymbol);
+                    trackIfNotPartOfTypeName.Discard(); // for methods it is better to use the whole invocation expression.
                     break;
 
                 case SymbolKind.Parameter:
