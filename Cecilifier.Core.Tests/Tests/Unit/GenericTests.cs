@@ -242,7 +242,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             \1Isinst, assembly.MainModule.TypeSystem.String\);
             \1Ldnull\);
             \1Cgt\);
-            \1Stloc, l_b_13\);
+            \1Stloc, l_b_\d+\);
             \1Ret\);
             """
             )]
@@ -300,13 +300,13 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             """
             //o = M<T>\(value\);
             (\s+il_test_\d+\.Emit\(OpCodes\.)Ldarg_0\);
-            \s+var r_M_14 = m_M_2;
-            \s+var (gi_M_\d+) = new GenericInstanceMethod\(r_M_14\);
-            \s+gi_M_15.GenericArguments.Add\((gp_T_\d+)\);
+            \s+var r_M_\d+ = m_M_\d+;
+            \s+var (gi_M_\d+) = new GenericInstanceMethod\(r_M_\d+\);
+            \s+gi_M_\d+.GenericArguments.Add\((gp_T_\d+)\);
             \1Ldarg_1\);
             \1Call, \2\);
             \1Box, \3\);
-            \1Stloc, l_o_13\);
+            \1Stloc, l_o_\d+\);
             """)]
         
         [TestCase(
@@ -314,42 +314,70 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             """
             //o = M<string>\("Ola Mundo"\);
             (\s+il_test_\d+\.Emit\(OpCodes\.)Ldarg_0\);
-            \s+var r_M_14 = m_M_2;
-            \s+var (gi_M_\d+) = new GenericInstanceMethod\(r_M_14\);
-            \s+gi_M_15.GenericArguments.Add\(assembly.MainModule.TypeSystem.String\);
+            \s+var r_M_\d+ = m_M_\d+;
+            \s+var (gi_M_\d+) = new GenericInstanceMethod\(r_M_\d+\);
+            \s+gi_M_\d+.GenericArguments.Add\(assembly.MainModule.TypeSystem.String\);
             \1Ldstr, "Ola Mundo"\);
             \1Call, \2\);
-            \1Stloc, l_o_13\);
+            \1Stloc, l_o_\d+\);
             """)]        
         
         [TestCase(
             """Foo f = new Foo(); object o; o = f.M<T>(value)""", 
             """
             //o = f.M<T>\(value\);
-            (\s+il_test_\d+\.Emit\(OpCodes\.)Ldloc, l_f_13\);
+            (\s+il_test_\d+\.Emit\(OpCodes\.)Ldloc, l_f_\d+\);
             \s+var (r_M_\d+) = m_M_2;
             \s+var (gi_M_\d+) = new GenericInstanceMethod\(\2\);
             \s+\3.GenericArguments.Add\((gp_T_\d+)\);
             \1Ldarg_1\);
             \1Callvirt, \3\);
             \1Box, \4\);
-            \1Stloc, l_o_15\);
+            \1Stloc, l_o_\d+\);
             """)]
         
         [TestCase(
-            "Test(value, paramIDisp, value);", 
+            "Test(value, paramIDisp, value, 42);", 
             """
-            //Test\(value, paramIDisp, value\);
-            \s+il_test_8.Emit\(OpCodes.Ldarg_0\);
-            \s+var r_test_13 = m_test_6;
-            \s+var gi_test_14 = new GenericInstanceMethod\(r_test_13\);
-            \s+gi_test_14.GenericArguments.Add\(gp_T_7\);
-            (\s+il_test_\d+\.Emit\(OpCodes\.)Ldarg_1\);
+            //Test\(value, paramIDisp, value, 42\);
+            (\s+il_test_\d+.Emit\(OpCodes\.)Ldarg_0\);
+            \s+var r_test_\d+ = m_test_\d+;
+            \s+var gi_test_\d+ = new GenericInstanceMethod\(r_test_\d+\);
+            \s+gi_test_\d+.GenericArguments.Add\(gp_T_\d+\);
+            \s+gi_test_\d+.GenericArguments.Add\(assembly.MainModule.TypeSystem.Int32\);
+            \1Ldarg_1\);
             \1Ldarg_2\);
             \1Ldarg_1\);
-            \1Box, gp_T_7\);
-            \1Call, gi_test_14\);
+            \1Box, gp_T_\d+\);
+            \1Ldc_I4, 42\);
+            \1Call, gi_test_\d+\);
             """)]
+        
+        [TestCase(
+            "TU ltu; ltu = ptu;", 
+            """
+            //ltu = ptu;
+            (\s+il_test_\d+\.Emit\(OpCodes\.)Ldarg, 4\);
+            \1Stloc, l_ltu_\d+\);
+            """, TestName = "Unconstrained: Assignment to local do not box")]
+        
+        [TestCase(
+            "T lt; lt = value;", 
+            """
+            //lt = value;
+            (\s+il_test_\d+\.Emit\(OpCodes\.)Ldarg_1\);
+            \1Stloc, l_lt_\d+\);
+            """, TestName = "Constrained: Assignment to local do not box")]
+        
+        [TestCase(
+            "T lt = value;", 
+            """
+            //T lt = value;
+            \s+var (l_lt_\d+) = new VariableDefinition\(gp_T_\d+\);
+            \s+m_test_\d+.Body.Variables.Add\(\1\);
+            (\s+il_test_\d+\.Emit\(OpCodes\.)Ldarg_1\);
+            \2Stloc, l_lt_\d+\);
+            """, TestName = "Constrained: Local variable initializer does not box")]
         public void GenericType_Boxing(string statementToUse, string expectedILSnippet)
         {
             var result = RunCecilifier($$"""
@@ -360,7 +388,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
                                              
                                              T M<T>(T t) => t;
                                              
-                                             void Test<T>(T value, IDisposable paramIDisp, object paramObj) where T : class, IDisposable
+                                             void Test<T, TU>(T value, IDisposable paramIDisp, object paramObj, TU ptu) where T : class, IDisposable
                                              {
                                                 IDisposable localIDisp = null;
                                                 {{statementToUse}};
