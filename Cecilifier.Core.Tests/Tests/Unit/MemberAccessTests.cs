@@ -148,12 +148,11 @@ public class MemberAccessTests : CecilifierUnitTestBase
                                                                                     """, TestName = "LocalConstrainedToClassTypeCallToString")]
     
     [TestCase("void C<T>(T t) where T : Foo { var l = t; l.M(); }", """
-                                                                    //var l = t;
-                                                                    \s+var l_l_14 = new VariableDefinition\(gp_T_11\);
-                                                                    \s+m_C_10.Body.Variables.Add\(l_l_14\);
-                                                                    (\s+il_C_\d+\.Emit\(OpCodes\.)Ldarg_1\);
-                                                                    \1Box, gp_T_11\);
-                                                                    \1Stloc, l_l_14\);
+                                                                    //l.M\(\);
+                                                                    (\s+il_C_\d+\.Emit\(OpCodes\.)Ldloc, l_l_\d+\);
+                                                                    \1Box, gp_T_\d+\);
+                                                                    \1Callvirt, m_M_\d+\);
+                                                                    \1Ret\);
                                                                     """, TestName = "LocalConstrainedToTypeCallClassMethod")]
 
     [TestCase("int C<T>(T t) where T : IFoo => t.Property;", """
