@@ -181,7 +181,7 @@ public class StructSpecificTests : CecilifierUnitTestBase
 
     [TestCase("1 + 2")]
     [TestCase("new Foo(1) + 2")]
-    public void TestX(string expression)
+    public void TestInvocationOnParenthesizedExpression(string expression)
     {
         var result = RunCecilifier(
             $$"""
