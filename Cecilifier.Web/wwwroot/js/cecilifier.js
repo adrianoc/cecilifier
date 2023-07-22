@@ -212,7 +212,7 @@ function showListOfFixedIssuesInStagingServer(force) {
         if (Date.parse(sortedIssues[0].updated_at) <= lastShownIssueNumber)
             return;
 
-        let issuesHtml = sortedIssues.reduce( (previous, issue) => `${previous}<br /><a style='color:#3c763d' href='${issue.url}'>${issue.title}</a>`, "List of resolved issues/improvements in <a style='color:#3c763d' href='http://staging.cecilifier.me'>staging server</a><br/>");
+        let issuesHtml = sortedIssues.reduce( (previous, issue) => `${previous}<br /><a style='color:#3c763d' href='${issue.html_url}'>${issue.title}</a>`, "List of resolved issues/improvements in <a style='color:#3c763d' href='http://staging.cecilifier.me'>staging server</a><br/>");
         if (sortedIssues.length  === 0)
             return;
 
@@ -231,8 +231,21 @@ function retrieveListOfFixedIssuesInStagingServer(callback) {
     const xhttp = new XMLHttpRequest();
     xhttp.onreadystatechange = function() {
         if (this.readyState === 4 && this.status === 200) {
-            let issues = JSON.parse(this.responseText);
-            callback(issues);
+            try {
+                let issues = JSON.parse(this.responseText);
+                callback(issues);
+            }
+            catch (e) {
+                SnackBar({
+                    message: `Unable to retrieve list of fixed issues in staging server.`,
+                    dismissible: true,
+                    status: "Warning",
+                    timeout: 120000,
+                    icon: "exclamation"
+                });
+                
+                console.log(`Unable to retrieve list of fixed issues in staging server: ${e}\nJSON:\n${this.responseText}`);
+            }
         }
         else if (this.readyState === 4 && this.status === 500) {
             SnackBar({

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Cecilifier.Core.AST;
 using Microsoft.CodeAnalysis;
 using Mono.Cecil.Cil;
@@ -128,6 +129,31 @@ namespace Cecilifier.Core.Extensions
                 SpecialType.System_Object => OpCodes.Stelem_Ref,
                 _ => type.IsValueType ? OpCodes.Stelem_Any : throw new Exception($"Element type {type.Name} not supported.")
             };
+        
+        public static OpCode LdelemOpCode(this ITypeSymbol type) =>
+            type.SpecialType switch
+            {
+                SpecialType.System_Byte => OpCodes.Ldelem_I1,
+                SpecialType.System_Char => OpCodes.Ldelem_I2,
+                SpecialType.System_Int16 => OpCodes.Ldelem_I2,
+                SpecialType.System_Int32 => OpCodes.Ldelem_I4,
+                SpecialType.System_Int64 => OpCodes.Ldelem_I8,
+                SpecialType.System_Single => OpCodes.Ldelem_R4,
+                SpecialType.System_Double => OpCodes.Ldelem_R8,
+                SpecialType.None => type.IsValueType ? OpCodes.Ldelem_Any : OpCodes.Ldelem_Ref, // Any => Custom structs, Ref => class.
+                SpecialType.System_String => OpCodes.Ldelem_Ref,
+                SpecialType.System_Object => OpCodes.Ldelem_Ref,
+                _ => type.IsValueType ? OpCodes.Ldelem_Any : throw new Exception($"Element type {type.Name} not supported.")
+            };
+        
+
+        public static bool IsTypeParameterOrIsGenericTypeReferencingTypeParameter(this ITypeSymbol returnType) => 
+            returnType.TypeKind == TypeKind.TypeParameter
+            || returnType is INamedTypeSymbol { IsGenericType: true } genType && genType.TypeArguments.Any(t => t.TypeKind == TypeKind.TypeParameter);
+        
+        public static bool IsTypeParameterConstrainedToReferenceType(this ITypeSymbol typeSymbol) => 
+            typeSymbol is ITypeParameterSymbol typeParameterSymbol 
+            && (typeParameterSymbol.HasReferenceTypeConstraint || typeParameterSymbol.ConstraintTypes.Length > 0);
     }
 
     public sealed class VariableDefinitionComparer : IEqualityComparer<VariableDefinition>

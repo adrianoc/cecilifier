@@ -1,4 +1,6 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Cecilifier.Core.AST;
 using Microsoft.CodeAnalysis;
@@ -34,7 +36,11 @@ internal struct RoslynTypeSystem
         IsByRefLikeAttribute = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(IsByRefLikeAttribute).FullName);
         SystemObsoleteAttribute = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(ObsoleteAttribute).FullName);
         SystemValueType = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(ValueType).FullName);
-        SystemRuntimeCompilerServicesRuntimeHelpers =  ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(RuntimeHelpers).FullName);
+        SystemRuntimeCompilerServicesRuntimeHelpers = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(RuntimeHelpers).FullName);
+        SystemCollectionsIEnumerator = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Collections_IEnumerator);
+        SystemCollectionsGenericIEnumeratorOfT = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Collections_Generic_IEnumerator_T);
+        SystemCollectionsIEnumerable = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Collections_IEnumerable);
+        SystemCollectionsGenericIEnumerableOfT = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Collections_Generic_IEnumerable_T);
     }
 
     public ITypeSymbol SystemIndex { get; }
@@ -51,6 +57,10 @@ internal struct RoslynTypeSystem
     public ITypeSymbol SystemBoolean { get; }
     public ITypeSymbol SystemActivator { get; }
     public ITypeSymbol SystemIDisposable { get; }
+    public ITypeSymbol SystemCollectionsIEnumerator { get; }
+    public ITypeSymbol SystemCollectionsGenericIEnumeratorOfT { get; }
+    public ITypeSymbol SystemCollectionsIEnumerable { get; }
+    public ITypeSymbol SystemCollectionsGenericIEnumerableOfT { get; }
     public ITypeSymbol CallerArgumentExpressionAttribute { get; }
     public ITypeSymbol IsReadOnlyAttribute { get; }
     public ITypeSymbol IsByRefLikeAttribute { get; }

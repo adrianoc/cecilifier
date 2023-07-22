@@ -14,7 +14,7 @@ using static Cecilifier.Core.Misc.CodeGenerationHelpers;
 
 namespace Cecilifier.Core.AST
 {
-    internal class StatementVisitor : SyntaxWalkerBase
+    internal partial class StatementVisitor : SyntaxWalkerBase
     {
         private static string _ilVar;
 
@@ -209,10 +209,10 @@ namespace Cecilifier.Core.AST
         {
 
             var finallyBlockHandler = node.Finally == null ?
-                                (Action<string>) null :
-                                (inst) => node.Finally.Accept(this);
+                                (Action<object>) null :
+                                _ => node.Finally.Accept(this);
 
-            ProcessTryCatchFinallyBlock(node.Block, node.Catches.ToArray(), finallyBlockHandler);
+            ProcessTryCatchFinallyBlock(_ilVar, node.Block, node.Catches.ToArray(), finallyBlockHandler);
         }
 
         public override void VisitThrowStatement(ThrowStatementSyntax node)
@@ -240,7 +240,7 @@ namespace Cecilifier.Core.AST
                 localVarDef = StoreTopOfStackInLocalVariable(Context, _ilVar, "tmp", usingType).VariableName;
             }
 
-            void FinallyBlockHandler(string finallyEndVar)
+            void FinallyBlockHandler(object _)
             {
                 string? lastFinallyInstructionLabel = null;
                 if (usingType.TypeKind == TypeKind.TypeParameter || usingType.IsValueType)
@@ -263,11 +263,10 @@ namespace Cecilifier.Core.AST
                     AddCecilExpression($"{_ilVar}.Append({lastFinallyInstructionLabel});");
             }
 
-            ProcessTryCatchFinallyBlock(node.Statement, Array.Empty<CatchClauseSyntax>(), FinallyBlockHandler);
+            ProcessTryCatchFinallyBlock(_ilVar, node.Statement, Array.Empty<CatchClauseSyntax>(), FinallyBlockHandler);
         }
 
         public override void VisitLocalFunctionStatement(LocalFunctionStatementSyntax node) => node.Accept(new MethodDeclarationVisitor(Context));
-        public override void VisitForEachStatement(ForEachStatementSyntax node) { LogUnsupportedSyntax(node); }
         public override void VisitWhileStatement(WhileStatementSyntax node) { LogUnsupportedSyntax(node); }
         public override void VisitLockStatement(LockStatementSyntax node) { LogUnsupportedSyntax(node); }
         public override void VisitUnsafeStatement(UnsafeStatementSyntax node) { LogUnsupportedSyntax(node); }
@@ -277,109 +276,13 @@ namespace Cecilifier.Core.AST
         public override void VisitGotoStatement(GotoStatementSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitYieldStatement(YieldStatementSyntax node) { LogUnsupportedSyntax(node); }
 
-        private void ProcessTryCatchFinallyBlock(CSharpSyntaxNode tryStatement, CatchClauseSyntax[] catches, Action<string> finallyBlockHandler)
-        {
-            var exceptionHandlerTable = new ExceptionHandlerEntry[catches.Length + (finallyBlockHandler != null ? 1 : 0)];
-
-            var tryStartVar = AddCilInstructionWithLocalVariable(_ilVar, OpCodes.Nop);
-            exceptionHandlerTable[0].TryStart = tryStartVar;
-
-            tryStatement.Accept(this);
-
-            var firstInstructionAfterTryCatchBlock = CreateCilInstruction(_ilVar, OpCodes.Nop);
-            exceptionHandlerTable[^1].HandlerEnd = firstInstructionAfterTryCatchBlock; // sets up last handler end instruction
-
-            Context.EmitCilInstruction(_ilVar, OpCodes.Leave, firstInstructionAfterTryCatchBlock);
-
-            for (var i = 0; i < catches.Length; i++)
-            {
-                HandleCatchClause(catches[i], exceptionHandlerTable, i, firstInstructionAfterTryCatchBlock);
-            }
-
-            HandleFinallyClause(finallyBlockHandler, exceptionHandlerTable);
-
-            AddCecilExpression($"{_ilVar}.Append({firstInstructionAfterTryCatchBlock});");
-
-            WriteExceptionHandlers(exceptionHandlerTable);
-        }
-
-        private void WriteExceptionHandlers(ExceptionHandlerEntry[] exceptionHandlerTable)
-        {
-            string methodVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
-            foreach (var handlerEntry in exceptionHandlerTable)
-            {
-                AddCecilExpression($"{methodVar}.Body.ExceptionHandlers.Add(new ExceptionHandler(ExceptionHandlerType.{handlerEntry.Kind})");
-                AddCecilExpression("{");
-                if (handlerEntry.Kind == ExceptionHandlerType.Catch)
-                {
-                    AddCecilExpression($"    CatchType = {handlerEntry.CatchType},");
-                }
-
-                AddCecilExpression($"    TryStart = {handlerEntry.TryStart},");
-                AddCecilExpression($"    TryEnd = {handlerEntry.TryEnd},");
-                AddCecilExpression($"    HandlerStart = {handlerEntry.HandlerStart},");
-                AddCecilExpression($"    HandlerEnd = {handlerEntry.HandlerEnd}");
-                AddCecilExpression("});");
-            }
-        }
-
-        private void HandleCatchClause(CatchClauseSyntax node, ExceptionHandlerEntry[] exceptionHandlerTable, int currentIndex, string firstInstructionAfterTryCatchBlock)
-        {
-            exceptionHandlerTable[currentIndex].Kind = ExceptionHandlerType.Catch;
-            exceptionHandlerTable[currentIndex].HandlerStart = AddCilInstructionWithLocalVariable(_ilVar, OpCodes.Pop); // pops the exception object from stack...
-
-            if (currentIndex == 0)
-            {
-                // The last instruction of the try block is the first instruction of the first catch block
-                exceptionHandlerTable[0].TryEnd = exceptionHandlerTable[currentIndex].HandlerStart;
-            }
-            else
-            {
-                exceptionHandlerTable[currentIndex - 1].HandlerEnd = exceptionHandlerTable[currentIndex].HandlerStart;
-            }
-
-            exceptionHandlerTable[currentIndex].TryStart = exceptionHandlerTable[0].TryStart;
-            exceptionHandlerTable[currentIndex].TryEnd = exceptionHandlerTable[0].TryEnd;
-            exceptionHandlerTable[currentIndex].CatchType = ResolveType(node.Declaration.Type);
-
-            VisitCatchClause(node);
-            Context.EmitCilInstruction(_ilVar, OpCodes.Leave, firstInstructionAfterTryCatchBlock);
-        }
-
-        private void HandleFinallyClause(Action<string> finallyBlockHandler, ExceptionHandlerEntry[] exceptionHandlerTable)
-        {
-            if (finallyBlockHandler == null)
-            {
-                return;
-            }
-
-            var finallyEntryIndex = exceptionHandlerTable.Length - 1;
-
-            exceptionHandlerTable[finallyEntryIndex].TryStart = exceptionHandlerTable[0].TryStart;
-            exceptionHandlerTable[finallyEntryIndex].TryEnd = exceptionHandlerTable[0].TryEnd;
-            exceptionHandlerTable[finallyEntryIndex].Kind = ExceptionHandlerType.Finally;
-
-            var finallyStartVar = AddCilInstructionWithLocalVariable(_ilVar, OpCodes.Nop);
-            exceptionHandlerTable[finallyEntryIndex].HandlerStart = finallyStartVar;
-            exceptionHandlerTable[finallyEntryIndex].TryEnd = finallyStartVar;
-
-            if (finallyEntryIndex != 0)
-            {
-                // We have one or more catch blocks... set the end of the last catch block as the first instruction of the *finally*
-                exceptionHandlerTable[finallyEntryIndex - 1].HandlerEnd = finallyStartVar;
-            }
-
-            finallyBlockHandler(exceptionHandlerTable[finallyEntryIndex].HandlerEnd);
-            Context.EmitCilInstruction(_ilVar, OpCodes.Endfinally);
-        }
-
-        private void AddLocalVariable(TypeSyntax type, VariableDeclaratorSyntax localVar, DefinitionVariable methodVar)
+        private DefinitionVariable AddLocalVariable(TypeSyntax type, VariableDeclaratorSyntax localVar, DefinitionVariable methodVar)
         {
             var resolvedVarType = type.IsVar
                 ? ResolveExpressionType(localVar.Initializer?.Value)
                 : ResolveType(type);
 
-            string temp = AddLocalVariableWithResolvedType(Context, localVar.Identifier.Text, methodVar, resolvedVarType).VariableName;
+            return AddLocalVariableWithResolvedType(Context, localVar.Identifier.Text, methodVar, resolvedVarType);
         }
 
         private void ProcessVariableInitialization(VariableDeclaratorSyntax localVar, ITypeSymbol variableType)
@@ -422,19 +325,10 @@ namespace Cecilifier.Core.AST
             var methodVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
             foreach (var localVar in declaration.Variables)
             {
-                AddLocalVariable(declaration.Type, localVar, methodVar);
+                var declaredVariable = AddLocalVariable(declaration.Type, localVar, methodVar);
+                using var _ = Context.DefinitionVariables.WithVariable(declaredVariable);
                 ProcessVariableInitialization(localVar, variableType.Type);
             }
-        }
-
-        private struct ExceptionHandlerEntry
-        {
-            public ExceptionHandlerType Kind;
-            public string CatchType;
-            public string TryStart;
-            public string TryEnd;
-            public string HandlerStart;
-            public string HandlerEnd;
         }
 
         // Stack with name of variables that holds instructions that a *break statement* 

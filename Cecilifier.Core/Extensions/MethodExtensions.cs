@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using Cecilifier.Core.AST;
+using Cecilifier.Core.Naming;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -55,8 +56,57 @@ namespace Cecilifier.Core.Extensions
                 return variable;
             }
 
+            // invocation on non value type virtual methods must be dispatched to the original method (i.e, the virtual method definition, not the overridden one)
+            // note that in Roslyn, IMethodSymbol.OriginalMethod is the method implementation and IMethodSymbol.OverridenMethod is the actual original virtual method.  
+            if (!method.ContainingType.IsValueType)
+                method = method.OverriddenMethod ?? method;
+            
+            if (method.Parameters.Any(p => p.Type.IsTypeParameterOrIsGenericTypeReferencingTypeParameter()) || method.ReturnType.IsTypeParameterOrIsGenericTypeReferencingTypeParameter())
+            {
+                return ResolveMethodFromGenericType(method, ctx);
+            }
+
             var declaringTypeName = method.ContainingType.FullyQualifiedName();
             return ImportFromMainModule($"TypeHelpers.ResolveMethod(typeof({declaringTypeName}), \"{method.Name}\",{method.ReflectionBindingsFlags()}{method.Parameters.Aggregate("", (acc, curr) => acc + ", \"" + curr.Type.FullyQualifiedName() + "\"")})");
+        }
+
+        private static string ResolveMethodFromGenericType(IMethodSymbol method, IVisitorContext ctx)
+        {
+            // resolve declaring type of the method.
+            var targetTypeVarName = ctx.Naming.SyntheticVariable($"{method.ContainingType.Name}", ElementKind.LocalVariable);
+            var resolvedTargetTypeExp = ctx.TypeResolver.Resolve(method.ContainingType.OriginalDefinition).MakeGenericInstanceType(method.ContainingType.TypeArguments.Select(t => ctx.TypeResolver.Resolve(t)));
+            ctx.WriteCecilExpression($"var {targetTypeVarName} = {resolvedTargetTypeExp};");
+            ctx.WriteNewLine();
+
+            // find the original method.
+            var originalMethodVar = ctx.Naming.SyntheticVariable($"open{method.Name}", ElementKind.LocalVariable);
+            // TODO: handle overloads
+            ctx.WriteCecilExpression($"""var {originalMethodVar} = {ctx.TypeResolver.Resolve(method.ContainingType.OriginalDefinition)}.Resolve().Methods.First(m => m.Name == "{method.Name}");""");
+            ctx.WriteNewLine();
+
+            // Instantiates a MethodReference representing the called method.
+            var targetMethodVar = ctx.Naming.SyntheticVariable($"{method.Name}", ElementKind.MemberReference);
+            ctx.WriteCecilExpression(
+                $$"""
+                  var {{targetMethodVar}} = new MethodReference("{{method.Name}}", assembly.MainModule.ImportReference({{originalMethodVar}}).ReturnType)
+                              {
+                                   DeclaringType = {{targetTypeVarName}},
+                                   HasThis = {{originalMethodVar}}.HasThis,
+                                   ExplicitThis = {{originalMethodVar}}.ExplicitThis,
+                                   CallingConvention = {{originalMethodVar}}.CallingConvention,
+                              };
+                  """);
+            ctx.WriteNewLine();
+
+            // Add original parameters to the MethodReference
+            foreach (var parameter in method.Parameters)
+            {
+                //TODO: pass the correct ParameterAttributes.None
+                ctx.WriteCecilExpression($"""{targetMethodVar}.Parameters.Add(new ParameterDefinition("{parameter.Name}", ParameterAttributes.None, {originalMethodVar}.Parameters[{parameter.Ordinal}].ParameterType));""");
+                ctx.WriteNewLine();
+            }
+
+            return targetMethodVar;
         }
 
         public static MethodDefinitionVariable AsMethodDefinitionVariable(this IMethodSymbol method, string variableName = null)

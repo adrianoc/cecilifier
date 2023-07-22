@@ -1,0 +1,4 @@
+class UsageOfNonGenericMethodOnGenericTypeFromExternalAssembly
+{
+    bool M<T>(System.IEquatable<T> lhs, T rhs) => lhs.Equals(rhs);
+}

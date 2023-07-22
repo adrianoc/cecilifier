@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Numerics;
 using System.Reflection;
@@ -80,6 +81,52 @@ namespace Cecilifier.Runtime
         }
     }
 
+    struct PrivateCorlibFixerMixin
+    {
+        const string SystemPrivateCoreLib = "System.Private.CoreLib";
+        AssemblyNameReference _correctCorlib;
+
+        public PrivateCorlibFixerMixin(ModuleDefinition module)
+        {
+            _correctCorlib = AssemblyNameReference.Parse("netstandard, Version=2.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51");
+            if (!module.AssemblyReferences.Contains(_correctCorlib))
+                module.AssemblyReferences.Add(_correctCorlib);
+        }
+
+        internal bool TryMapAssemblyName(string candidateAssemblyName, [NotNullWhen(true)] out AssemblyNameReference correctCorlibReference)
+        {
+            correctCorlibReference = null;
+            if (_correctCorlib == null || candidateAssemblyName != SystemPrivateCoreLib)
+                return false;
+
+            correctCorlibReference = _correctCorlib;
+            return true;
+        }
+    }
+    
+    public class SystemPrivateCoreLibFixerMetadataImporterProvider : IMetadataImporterProvider
+    {
+        public IMetadataImporter GetMetadataImporter(ModuleDefinition module) => new SystemPrivateCoreLibFixerMetadataImporter(module);
+    }
+
+    internal class SystemPrivateCoreLibFixerMetadataImporter : DefaultMetadataImporter
+    {
+        private PrivateCorlibFixerMixin importerMixin;
+        
+        public SystemPrivateCoreLibFixerMetadataImporter(ModuleDefinition module) : base(module)
+        {
+            importerMixin = new PrivateCorlibFixerMixin(module);
+        }
+
+        public override AssemblyNameReference ImportReference (AssemblyNameReference name)
+        {
+            if (importerMixin.TryMapAssemblyName(name.Name, out var correctCorlibReference))
+                return correctCorlibReference;
+
+            return base.ImportReference(name);
+        }
+    }
+    
     public class SystemPrivateCoreLibFixerReflectionProvider : IReflectionImporterProvider
     {
         public IReflectionImporter GetReflectionImporter(ModuleDefinition module)
@@ -90,23 +137,17 @@ namespace Cecilifier.Runtime
 
     internal class SystemPrivateCoreLibFixerReflectionImporter : DefaultReflectionImporter
     {
-        private const string SystemPrivateCoreLib = "System.Private.CoreLib";
-        private AssemblyNameReference _correctCorlib;
-
+        private PrivateCorlibFixerMixin importerMixin;
+        
         public SystemPrivateCoreLibFixerReflectionImporter(ModuleDefinition module) : base(module)
         {
-            _correctCorlib = AssemblyNameReference.Parse("netstandard, Version=2.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51");
-            if (!module.AssemblyReferences.Contains(_correctCorlib))
-                module.AssemblyReferences.Add(_correctCorlib);
-
+            importerMixin = new PrivateCorlibFixerMixin(module);
         }
 
-        public override AssemblyNameReference ImportReference(System.Reflection.AssemblyName reference)
+        public override AssemblyNameReference ImportReference(AssemblyName reference)
         {
-            if (_correctCorlib != null && reference.Name == SystemPrivateCoreLib)
-            {
-                return _correctCorlib;
-            }
+            if (importerMixin.TryMapAssemblyName(reference.Name, out var correctCorlibReference))
+                return correctCorlibReference;
 
             return base.ImportReference(reference);
         }

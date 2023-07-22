@@ -1,0 +1,5 @@
+using System.Collections.Generic;
+class UsageOfNonGenericMethodOnGenericTypeFromExternalAssembly2
+{
+    IEnumerator<T> M<T>(IEnumerable<T> e) => e.GetEnumerator();
+}

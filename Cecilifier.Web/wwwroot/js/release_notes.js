@@ -31,26 +31,39 @@ function showReleaseNotes() {
         const c = getCookie("lastVersion");
         const firstTime = c ? new Date(c) : new Date(0);
 
-        const json = JSON.parse(text);
-        const itemsToShow = json.filter(function (item, index, array) {
-            return new Date(item.published_at) > firstTime;
-        });
+        try {
+            const json = JSON.parse(text);
+            const itemsToShow = json.filter(function (item, index, array) {
+                return new Date(item.published_at) > firstTime;
+            });
 
-        if (itemsToShow.length === 0)
-            return;
+            if (itemsToShow.length === 0)
+                return;
 
-        setCookie("lastVersion", itemsToShow[0].published_at, 1000);
+            setCookie("lastVersion", itemsToShow[0].published_at, 1000);
 
-        const latest = itemsToShow[0];
-        const html = `New version <a  style='color:#8cbc13; text-decoration: underline' href='${latest.html_url}' target="releaseNotes">${latest.tag_name} ${latest.name}</a> has been released on ${new Date(latest.published_at).toLocaleString()}.<br /><br />${latest.body.replace(/\r\n/g, "<br/>")}`;
+            const latest = itemsToShow[0];
+            const html = `New version <a  style='color:#8cbc13; text-decoration: underline' href='${latest.html_url}' target="releaseNotes">${latest.tag_name} ${latest.name}</a> has been released on ${new Date(latest.published_at).toLocaleString()}.<br /><br />${latest.body.replace(/\r\n/g, "<br/>")}`;
 
-        SnackBar({
-            message: html,
-            dismissible: true,
-            status: "Info",
-            timeout: 120000,
-            icon: "exclamation"
-        });
+            SnackBar({
+                message: html,
+                dismissible: true,
+                status: "Info",
+                timeout: 120000,
+                icon: "exclamation"
+            });
+        }
+        catch (e) {
+            SnackBar({
+                message: `Error retrieving release notes.`,
+                dismissible: true,
+                status: "Warning",
+                timeout: 120000,
+                icon: "exclamation"
+            });
+
+            console.log(`Unable to retrieve release notes: ${e}\nJSON:\n${text}`);
+        }
     });
 }
 

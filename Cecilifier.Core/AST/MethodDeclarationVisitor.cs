@@ -89,6 +89,8 @@ namespace Cecilifier.Core.AST
             if (!methodVar.IsValid)
                 throw new InvalidOperationException($"Failed to retrieve current method.");
 
+            using var _ = LineInformationTracker.Track(Context, node);
+            
             var containingSymbol = Context.SemanticModel.GetDeclaredSymbol(node).EnsureNotNull().ContainingSymbol;
             var declaringMethodVariable = methodVar.VariableName;
             var forwardedParamVar = Context.DefinitionVariables.GetVariable(node.Identifier.ValueText, VariableMemberKind.Parameter, containingSymbol.ToDisplayString());

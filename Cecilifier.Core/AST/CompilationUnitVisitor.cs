@@ -18,8 +18,10 @@ namespace Cecilifier.Core.AST
         public override void VisitCompilationUnit(CompilationUnitSyntax node)
         {
             HandleAttributesInMemberDeclaration(node.AttributeLists, "assembly");
-            base.VisitCompilationUnit(node);
+            VisitDelegates();
             VisitDeclaredTypesSortedByDependencies();
+            
+            base.VisitCompilationUnit(node);
         }
 
         public override void VisitGlobalStatement(GlobalStatementSyntax node)
@@ -38,9 +40,12 @@ namespace Cecilifier.Core.AST
             }
         }
 
-        public override void VisitDelegateDeclaration(DelegateDeclarationSyntax node)
+        private void VisitDelegates()
         {
-            new TypeDeclarationVisitor(Context).Visit(node);
+            var compilation = (CSharpCompilation) Context.SemanticModel.Compilation;
+            var ds = compilation.SyntaxTrees.SelectMany(st => st.GetRoot().DescendantNodes().OfType<DelegateDeclarationSyntax>());
+            foreach(var delegateDeclaration in ds)
+                new TypeDeclarationVisitor(Context).Visit(delegateDeclaration);
         }
 
         private void VisitDeclaredTypesSortedByDependencies()

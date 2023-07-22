@@ -72,6 +72,7 @@ namespace Cecilifier.Core.AST
             }
             else
             {
+                EnsureForwardedMethod(Context, method, Array.Empty<TypeParameterSyntax>());
                 var operand = method.MethodResolverExpression(Context);
                 Context.EmitCilInstruction(ilVar, opCode, operand);
             }
@@ -115,16 +116,10 @@ namespace Cecilifier.Core.AST
             AddCecilExpression($"var {instVar} = {ilVar}.Create({opCode.ConstantName()}{operandStr});");
         }
 
-        protected void LoadLiteralValue(string ilVar, ITypeSymbol type, string value, bool isTargetOfCall)
+        protected void LoadLiteralValue(string ilVar, ITypeSymbol type, string value, bool isTargetOfCall, SyntaxNode parent)
         {
-            if (type.TypeKind == TypeKind.TypeParameter)
-            {
-                var resolvedType = Context.TypeResolver.Resolve(type);
-                
-                StoreTopOfStackInLocalVariableAndLoadItsAddress(ilVar, type, type.Name);
-                Context.EmitCilInstruction(ilVar, OpCodes.Initobj, resolvedType);
+            if (LoadDefaultValueForTypeParameter(ilVar, type, parent))
                 return;
-            }
 
             if (type.SpecialType == SpecialType.None && type.IsValueType && type.TypeKind != TypeKind.Pointer || type.SpecialType == SpecialType.System_DateTime)
             {
@@ -139,6 +134,7 @@ namespace Cecilifier.Core.AST
                 case SpecialType.System_Collections_Generic_IEnumerator_T:
                 case SpecialType.System_Collections_IEnumerable:
                 case SpecialType.System_Collections_Generic_IEnumerable_T:
+                case SpecialType.System_IDisposable:
                 case SpecialType.None:
                     if (type.TypeKind == TypeKind.Pointer)
                     {
@@ -184,6 +180,54 @@ namespace Cecilifier.Core.AST
                 default:
                     throw new ArgumentException($"Literal {value} of type {type.SpecialType} not supported yet.");
             }
+        }
+
+        private bool LoadDefaultValueForTypeParameter(string ilVar, ITypeSymbol type, SyntaxNode parent)
+        {
+            if (type is not ITypeParameterSymbol typeParameterSymbol)
+                return false;
+
+            var resolvedType = Context.TypeResolver.Resolve(type);
+            
+            // in an assignment expression we already have memory allocated to hold the value
+            // in this case we don´t need to add a local variable.
+            if (parent is AssignmentExpressionSyntax assignment)
+            {
+                var targetOfAssignmentSymbol = Context.SemanticModel.GetSymbolInfo(assignment.Left).Symbol.EnsureNotNull();
+                var loadAddressOpcode = targetOfAssignmentSymbol.LoadAddressOpcodeForMember(); // target of assignment may be a local, field or parameter so we need to figure out the correct opcode to load its address
+                var storageVariable = Context.DefinitionVariables.GetVariable(targetOfAssignmentSymbol.Name, targetOfAssignmentSymbol.ToVariableMemberKind(), targetOfAssignmentSymbol.Kind == SymbolKind.Local ? string.Empty : targetOfAssignmentSymbol.ContainingSymbol.ToDisplayString());
+                
+                Context.EmitCilInstruction(ilVar, loadAddressOpcode, storageVariable.VariableName);
+                Context.EmitCilInstruction(ilVar, OpCodes.Initobj, resolvedType);
+            }
+            else if (parent.Parent is VariableDeclaratorSyntax equalsValueClauseSyntax)
+            {
+                // scenario: T t = default(T);
+                var targetOfAssignmentSymbol = Context.SemanticModel.GetDeclaredSymbol(equalsValueClauseSyntax).EnsureNotNull();
+                var storageVariable = Context.DefinitionVariables.GetVariable(targetOfAssignmentSymbol.Name, targetOfAssignmentSymbol.ToVariableMemberKind(), string.Empty);
+                
+                Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, storageVariable.VariableName);
+                Context.EmitCilInstruction(ilVar, OpCodes.Initobj, resolvedType);                
+            }
+            else
+            {
+                // no variable exists yet (for instance, passing `default(T)` as a parameter) so we add one.
+                var storageVariable = AddLocalVariableToCurrentMethod(Context, type.Name, resolvedType);
+                
+                Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, storageVariable.VariableName);
+                Context.EmitCilInstruction(ilVar, OpCodes.Initobj, resolvedType);
+                if (!typeParameterSymbol.IsTypeParameterConstrainedToReferenceType() && parent is MemberAccessExpressionSyntax mae && mae.Parent.IsKind(SyntaxKind.InvocationExpression))
+                {
+                    // scenario: default(T).ToString()
+                    Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, storageVariable.VariableName);
+                    Context.EmitCilInstruction(ilVar, OpCodes.Constrained, resolvedType);
+                }
+                else
+                {
+                    Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, storageVariable.VariableName);
+                }
+            }
+            return true;
         }
 
         private void LoadLiteralToStackHandlingCallOnValueTypeLiterals(string ilVar, ITypeSymbol literalType, object literalValue, bool isTargetOfCall)
@@ -439,8 +483,6 @@ namespace Cecilifier.Core.AST
                 Context.EmitCilInstruction(ilVar, optimizedLdArgs[adjustedParameterIndex]);
             }
 
-            EmitBoxOpCodeIfCallOnTypeParameter(ilVar, paramSymbol.Type, parent);
-
             HandlePotentialDelegateInvocationOn(node, paramSymbol.Type, ilVar);
             HandlePotentialRefLoad(ilVar, node, paramSymbol.Type);
         }
@@ -486,7 +528,6 @@ namespace Cecilifier.Core.AST
             var opCode = fieldSymbol.LoadOpCodeForFieldAccess();
             Context.EmitCilInstruction(ilVar, opCode, resolvedField);
 
-            EmitBoxOpCodeIfCallOnTypeParameter(ilVar, fieldSymbol.Type, nodeParent);
             HandlePotentialDelegateInvocationOn(node, fieldSymbol.Type, ilVar);
         }
 
@@ -499,7 +540,6 @@ namespace Cecilifier.Core.AST
             var operand = Context.DefinitionVariables.GetVariable(symbol.Name, VariableMemberKind.LocalVariable).VariableName;
             Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, operand);
 
-            EmitBoxOpCodeIfCallOnTypeParameter(ilVar, symbol.Type, localVar);
             HandlePotentialDelegateInvocationOn(localVarSyntax, symbol.Type, ilVar);
             HandlePotentialFixedLoad(ilVar, symbol);
             HandlePotentialRefLoad(ilVar, localVarSyntax, symbol.Type);
@@ -510,12 +550,6 @@ namespace Cecilifier.Core.AST
                 return;
 
             Context.EmitCilInstruction(ilVar, OpCodes.Conv_U);
-        }
-
-        private void EmitBoxOpCodeIfCallOnTypeParameter(string ilVar, ITypeSymbol typeSymbol, CSharpSyntaxNode parent)
-        {
-            if (typeSymbol.TypeKind == TypeKind.TypeParameter && parent.Accept(UsageVisitor.GetInstance(Context)) == UsageKind.CallTarget)
-                Context.EmitCilInstruction(ilVar, OpCodes.Box, Context.TypeResolver.Resolve(typeSymbol));
         }
 
         private bool HandleLoadAddress(string ilVar, ITypeSymbol symbol, CSharpSyntaxNode node, OpCode opCode, string symbolName, VariableMemberKind variableMemberKind, string parentName = null)

@@ -2,7 +2,7 @@
   <PropertyGroup>
     <TargetFramework>net7.0</TargetFramework>
     <LangVersion>11</LangVersion>
-    <AssemblyVersion>2.02.0</AssemblyVersion>
+    <AssemblyVersion>2.4.1</AssemblyVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 </Project>
