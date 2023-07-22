@@ -13,6 +13,12 @@ body {
     overflow: hidden;
 }
 
+footer {
+    position : absolute; 
+    bottom : 0; 
+    width: 100%;    
+}
+
 /* Wrapping element */
 /* Set some basic padding to keep content from hitting the edges */
 .body-content {
@@ -36,8 +42,8 @@ body {
 {
     background: rgb(209, 206, 206);
     width: 100%;
-    border-left: 10px solid white;
-    border-right: 10px solid white;
+    border-left: 0px solid white;
+    border-right: 0px solid white;
 }
 
 /* QR code generator */

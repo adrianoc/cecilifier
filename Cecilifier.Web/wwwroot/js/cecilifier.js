@@ -2,8 +2,9 @@ let websocket;
 let cecilifiedCode;
 let settings;
 let csharpCode;
+let focusedEditor; // either csharpCode or cecilifiedCode
 let blockMappings = null;
-
+let csharpCodeEditorWidthMultiplier = 0.3;
 class CecilifierRequest
 {
     constructor(code, options, settings, assemblyReferences) {
@@ -13,7 +14,6 @@ class CecilifierRequest
         this.assemblyReferences = assemblyReferences;
     }
 }
-
 class WebOptions
 {
     constructor(deployKind) {
@@ -59,7 +59,6 @@ function getAssemblyReferencesMetadata(callback) {
         callback(event.target.result);
     };   
 }
-        
 function loadAssemblyReferenceMetadata(callback) {
     let objectStore = db.transaction(['assembly-references'], "readonly").objectStore('assembly-references');
     let cursor = objectStore.openCursor();
@@ -73,7 +72,6 @@ function loadAssemblyReferenceMetadata(callback) {
         cursor.continue();
     };
 }
-
 function storeReferenceAssembliesLocally() {
     const assembly_references = document.getElementById("assembly_references_list");
     for (let i = 0; i < assembly_references.options.length; i++) {
@@ -104,6 +102,19 @@ function removeSelectedAssemblyReference() {
     assemblyReferenceList.remove(assemblyReferenceList.selectedIndex);
 }
 
+
+function increaseFocusedEditorFontSize() {
+    const options = focusedEditor.getRawOptions();
+
+    const newFontSize = options.fontSize +  1;
+    focusedEditor.updateOptions({ fontSize: newFontSize });    
+}
+function decreaseFocusedEditorFontSize() {
+    const options = focusedEditor.getRawOptions();
+
+    const newFontSize = options.fontSize -  1;
+    focusedEditor.updateOptions({ fontSize: newFontSize });
+}
 function initializeSite(errorAccessingGist, gist, version) {
     require.config({ paths: { vs: 'lib/node_modules/monaco-editor/min/vs' } });
 
@@ -111,7 +122,7 @@ function initializeSite(errorAccessingGist, gist, version) {
         csharpCode = monaco.editor.create(document.getElementById('csharpcode'), {
             theme: "vs-dark",
             value: [
-                `// Supported CSharp language version: ${document.getElementById('supportedCSharpVersion').innerText} https://learn.microsoft.com/en-us/dotnet/csharp/whats-new/csharp-${document.getElementById('supportedCSharpVersion').innerText}`,
+                `// Supported CSharp language version: ${document.getElementById('supportedCSharpVersion').innerText}\n// https://learn.microsoft.com/en-us/dotnet/csharp/whats-new/csharp-${document.getElementById('supportedCSharpVersion').innerText}`,
                 'using System;', 
                 'class Foo', 
                 '{', 
@@ -119,9 +130,11 @@ function initializeSite(errorAccessingGist, gist, version) {
                 '}'].join('\n'),
             language: 'csharp',
             minimap: { enabled: false },
-            fontSize: 16,
-            glyphMargin: true,
+            fontSize: 14,
+            glyphMargin: false,
             renderWhitespace: false,
+            lineNumbersMinChars: 3,
+            wordWrap: "on",
         });
         
         cecilifiedCode = monaco.editor.create(document.getElementById('cecilifiedcode'), {
@@ -130,9 +143,10 @@ function initializeSite(errorAccessingGist, gist, version) {
             language: 'csharp',
             readOnly: true,
             minimap: { enabled: false },
-            fontSize: 16,
-            glyphMargin: true,
+            fontSize: 14,
+            glyphMargin: false,
             renderWhitespace: false,
+            lineNumbersMinChars: 3,
          });
          
         // Configure keyboard shortcuts
@@ -148,30 +162,32 @@ function initializeSite(errorAccessingGist, gist, version) {
             changeCecilifierSettings();
         });
 
-        csharpCode.addCommand(monaco.KeyMod.CtrlCmd + monaco.KeyCode.BracketLeft , function() {
-            const options = csharpCode.getRawOptions();
-            const newFontSize = Math.ceil(options.fontSize - options.fontSize * 0.05);
-
-            csharpCode.updateOptions({ fontSize: newFontSize });
+        csharpCode.addCommand(monaco.KeyMod.Alt + monaco.KeyCode.LeftArrow, function() {
+            csharpCodeEditorWidthMultiplier -= 0.01;
+            updateEditorsSize();
         });
 
-        csharpCode.addCommand(monaco.KeyMod.CtrlCmd + monaco.KeyCode.BracketRight , function() {
-            const options = csharpCode.getRawOptions();
-
-            const newFontSize = Math.ceil(options.fontSize * 1.05);
-            csharpCode.updateOptions({ fontSize: newFontSize });
+        csharpCode.addCommand(monaco.KeyMod.Alt + monaco.KeyCode.RightArrow, function() {
+            csharpCodeEditorWidthMultiplier += 0.01;
+            updateEditorsSize();
         });
+
+        csharpCode.addCommand(monaco.KeyMod.CtrlCmd + monaco.KeyCode.BracketLeft , decreaseFocusedEditorFontSize);
+        csharpCode.addCommand(monaco.KeyMod.CtrlCmd + monaco.KeyCode.BracketRight , increaseFocusedEditorFontSize);
 
         csharpCode.addCommand(monaco.KeyMod.CtrlCmd + monaco.KeyCode.Period, function() {
             ShowErrorDialog("Report a new issue", "Please be kind, check the existing ones before filing a new issue..", "Report an error.");
         });
+
+        cecilifiedCode.addCommand(monaco.KeyMod.CtrlCmd + monaco.KeyCode.BracketLeft , decreaseFocusedEditorFontSize);
+        cecilifiedCode.addCommand(monaco.KeyMod.CtrlCmd + monaco.KeyCode.BracketRight , increaseFocusedEditorFontSize);
         
         setupCursorTracking();
 
         window.onresize = function(ev) {
             updateEditorsSize();
         }
-
+        
         updateEditorsSize();
 
         initializeFormattingSettings();
@@ -182,6 +198,7 @@ function initializeSite(errorAccessingGist, gist, version) {
         handleGist(gist, errorAccessingGist);
         
         csharpCode.focus();
+        focusedEditor = csharpCode;
     });
 
     showListOfFixedIssuesInStagingServer(false);
@@ -329,7 +346,7 @@ var lbl_jump_3 = il_get_11.Create(OpCodes.Nop);`;
     });
 
     let sampleDiv = document.getElementById("_formattingSettingsSample");
-    let h =  window.innerHeight * 0.90;
+    let h =  window.innerHeight;
     let w =  window.innerWidth * 0.75;
     sampleDiv.style.height = `${h}px`;
     sampleDiv.style.width = `${w}px`;
@@ -341,8 +358,8 @@ var lbl_jump_3 = il_get_11.Create(OpCodes.Nop);`;
 
 function disableScroll() {
     // Get the current page scroll position
-    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-    const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+    const scrollTop = window.scrollY || document.documentElement.scrollTop;
+    const scrollLeft = window.scrollX || document.documentElement.scrollLeft;
   
     // if any scroll is attempted, set this to the previous value
     window.onscroll = function() {
@@ -352,11 +369,14 @@ function disableScroll() {
 
 function updateEditorsSize() {
     let csharpCodeDiv = document.getElementById("csharpcode");
-    let h = window.innerHeight * 0.35;
+    let h = window.innerHeight * 0.94;
+    let w = window.innerWidth * csharpCodeEditorWidthMultiplier;
     csharpCodeDiv.style.height = `${h}px`;
+    csharpCodeDiv.style.width = `${w - 1}px`;
 
     const cecilifiedCodeDiv = document.getElementById("cecilifiedcode");
-    cecilifiedCodeDiv.style.height = `${window.innerHeight - h - 60}px`;
+    cecilifiedCodeDiv.style.height = `${h}px`;
+    cecilifiedCodeDiv.style.width = `${window.innerWidth - w}px`;
 
     csharpCode.layout();
     cecilifiedCode.layout();
@@ -430,10 +450,12 @@ function setTooltips(version) {
     });
 
     tippy('#keyboard-shortcuts', {
-        content: "<div style='text-align:left'>\
+        content: "<div style='text-align:left; width: 1000px'>\
                   <p><kbd class=\"kbc-button\">Ctrl</kbd> + <kbd class=\"kbc-button\">Alt</kbd> + <kbd class=\"kbc-button\">C</kbd> Cecilify the code.</p>\
                   <p><kbd class=\"kbc-button\">Ctrl</kbd> + <kbd class=\"kbc-button\">Alt</kbd> + <kbd class=\"kbc-button\">D</kbd> Downloads project with cecilified code.</p>\
                   <p><kbd class=\"kbc-button\">Ctrl</kbd> + <kbd class=\"kbc-button\">Alt</kbd> + <kbd class=\"kbc-button\">S</kbd> Opens settings page.</p>\
+                  <p><kbd class=\"kbc-button\">Alt</kbd> + <kbd class=\"kbc-button\">&larr;</kbd> Decreases CSharp editor width / increases Cecilified editor width.</p>\
+                  <p><kbd class=\"kbc-button\">Alt</kbd> + <kbd class=\"kbc-button\">&rarr;</kbd> Increases CSharp editor width / decreases Cecilified editor width.</p>\
                   <p><kbd class=\"kbc-button\">Ctrl</kbd> + <kbd class=\"kbc-button\">]</kbd> Increases font size.</p>\
                   <p><kbd class=\"kbc-button\">Ctrl</kbd> + <kbd class=\"kbc-button\">[</kbd> Decreases font size.</p>\
                   </div>",
@@ -638,10 +660,12 @@ function setAlert(div_id, msg) {
     const div = document.getElementById(div_id);
 
     if (msg == null) {
+        div.style.zIndex = "0";
         div.style.opacity = "0";
         div.style.position = "absolute";
         div.children[1].innerHTML = "";
     } else {
+        div.style.zIndex = "100";
         div.style.opacity = "1";
         div.style.position = "relative";
         div.children[1].innerHTML = msg;
@@ -888,6 +912,10 @@ function hideSpinner() {
 
 function setupCursorTracking() {
     cecilifiedCode.onMouseDown(function(e) {
+        if (focusedEditor !== cecilifiedCode) {
+            focusedEditor = cecilifiedCode;
+        }
+
         if (blockMappings === null)
             return;
         
@@ -902,11 +930,15 @@ function setupCursorTracking() {
                 endLineNumber: blockMapping.Source.End.Line
             });
             csharpCode.revealLineNearTop(blockMapping.Source.Begin.Line);
-            return;            
+            return;
         }
     });
 
     csharpCode.onMouseDown(function(e) {
+        if (focusedEditor !== csharpCode) {
+            focusedEditor = csharpCode;
+        }
+        
         if (blockMappings === null)
             return;
         
@@ -931,7 +963,7 @@ function setupCursorTracking() {
         {
             cecilifiedCode.setSelection({startColumn: blockMappings[matchIndex].Cecilified.Begin.Column, endColumn: blockMappings[matchIndex].Cecilified.End.Column, startLineNumber: blockMappings[matchIndex].Cecilified.Begin.Line, endLineNumber: blockMappings[matchIndex].Cecilified.End.Line});
             cecilifiedCode.revealLineNearTop(blockMappings[matchIndex].Cecilified.Begin.Line);
-        }
+        }        
     });    
 }
 
