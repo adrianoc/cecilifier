@@ -348,7 +348,7 @@ namespace Cecilifier.Core.AST
                 literalParent.Accept(UsageVisitor.GetInstance(Context)) == UsageKind.CallTarget,
                 literalParent);
 
-            skipLeftSideVisitingInAssignment = literalType.IsValueType && !literalType.IsPrimitiveType();
+            skipLeftSideVisitingInAssignment = (literalType.IsValueType || literalType.TypeKind == TypeKind.TypeParameter) && !literalType.IsPrimitiveType();
         }
 
         public override void VisitDeclarationExpression(DeclarationExpressionSyntax node)

@@ -39,13 +39,22 @@ public class DefaultExpressions : CecilifierUnitTestBase
                                                            \s+il_M_\d+.Emit\(OpCodes.Ret\);
                                                            """;
     
-    private const string DefaultTypeParameterInLocalVariableAssignmentExpectation = """
-                                                           //t = default\(T\);
+    private const string BaseDefaultTypeParameterInLocalVariableAssignmentExpectation = """
                                                            \s+il_M_\d+.Emit\(OpCodes.Ldloca_S, l_t_\d+\);
                                                            \s+il_M_\d+.Emit\(OpCodes.Initobj, gp_T_\d+\);
                                                            \s+il_M_\d+.Emit\(OpCodes.Ret\);
                                                            """;
     
+    private const string DefaultTypeParameterInLocalVariableAssignmentExpectation = $"""
+                                                           //t = default\(T\);
+                                                           {BaseDefaultTypeParameterInLocalVariableAssignmentExpectation}
+                                                           """;
+
+    private const string DefaultLiteralTypeParameterInLocalVariableAssignmentExpectation = $"""
+                                                           //t = default;
+                                                           {BaseDefaultTypeParameterInLocalVariableAssignmentExpectation}
+                                                           """;
+
     private const string DefaultTypeParameterExpectation = """
                                                            \s+m_M_\d+.Body.Variables.Add\((l_T_\d+)\);
                                                            \s+il_M_\d+.Emit\(OpCodes.Ldloca_S, \1\);
@@ -68,6 +77,7 @@ public class DefaultExpressions : CecilifierUnitTestBase
     [TestCase("void M<T>() { T t = default(T); }", DefaultTypeParameterInLocalVariableInitializationExpectation, TestName = "Type Parameter Local Variable initialization")]
     [TestCase("void M<T>(T t) { t = default(T); }", DefaultTypeParameterInParameterAssignmentExpectation, TestName = "Type Parameter parameter assignment")]
     [TestCase("void M<T>() { T t; t = default(T); }", DefaultTypeParameterInLocalVariableAssignmentExpectation, TestName = "Type Parameter Local Variable assignment")]
+    [TestCase("void M<T>() { T t; t = default; }", DefaultLiteralTypeParameterInLocalVariableAssignmentExpectation, TestName = "Type Parameter Local Variable assignment default literal")]
     [TestCase("class Foo<T> where T : class { T M() => default(T); }", DefaultTypeParameterExpectation, TestName = "Type Parameter (class)")]
     [TestCase("class Foo<T> where T : struct { T M() => default(T); }", DefaultTypeParameterExpectation, TestName = "Type Parameter (struct)")]
     [TestCase("T M<T>() => default;", DefaultTypeParameterExpectation, TestName = "Toplevel Literal Unconstrained Type Parameter")]
