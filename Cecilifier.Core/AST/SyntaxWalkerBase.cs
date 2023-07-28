@@ -110,10 +110,11 @@ namespace Cecilifier.Core.AST
             return instVar;
         }
 
-        protected void CreateCilInstruction(string ilVar, string instVar, OpCode opCode, object operand = null)
+        protected string CreateCilInstruction(string ilVar, string instVar, OpCode opCode, object operand = null)
         {
             var operandStr = operand == null ? string.Empty : $", {operand}";
             AddCecilExpression($"var {instVar} = {ilVar}.Create({opCode.ConstantName()}{operandStr});");
+            return instVar;
         }
 
         protected void LoadLiteralValue(string ilVar, ITypeSymbol type, string value, bool isTargetOfCall, SyntaxNode parent)

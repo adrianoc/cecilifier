@@ -79,47 +79,58 @@ namespace Cecilifier.Core.AST
             Context.EmitCilInstruction(_ilVar, OpCodes.Stloc, evaluatedExpressionVariable); // stores evaluated expression in local var
 
             // Add label to end of switch
-            var endOfSwitchLabel = CreateCilInstruction(_ilVar, OpCodes.Nop);
+            var endOfSwitchLabel = CreateCilInstruction(_ilVar, Context.Naming.Label("endOfSwitch"), OpCodes.Nop);
             breakToInstructionVars.Push(endOfSwitchLabel);
 
             // Write the switch conditions.
-            var nextTestLabels = node.Sections.Select(_ => CreateCilInstruction(_ilVar, OpCodes.Nop)).ToArray();
+            var nextTestLabels = node.Sections.Select( (_, index) =>
+            {
+                var labelName = Context.Naming.Label($"caseCode_{index}");
+                CreateCilInstruction(_ilVar, labelName, OpCodes.Nop);
+                return labelName;
+            }).ToArray();
+
+            var hasDefault = false;
             var currentLabelIndex = 0;
             foreach (var switchSection in node.Sections)
             {
                 if (switchSection.Labels.First().Kind() == SyntaxKind.DefaultSwitchLabel)
                 {
                     Context.EmitCilInstruction(_ilVar, OpCodes.Br, nextTestLabels[currentLabelIndex]);
+                    hasDefault = true;
                     continue;
                 }
 
                 foreach (var sectionLabel in switchSection.Labels)
                 {
+                    using var _ = LineInformationTracker.Track(Context, sectionLabel);
+                    
+                    Context.WriteNewLine();
                     Context.WriteComment($"{sectionLabel.ToString()} (condition)");
                     Context.EmitCilInstruction(_ilVar, OpCodes.Ldloc, evaluatedExpressionVariable);
                     ExpressionVisitor.Visit(Context, _ilVar, sectionLabel);
-                    string operand = nextTestLabels[currentLabelIndex];
-                    Context.EmitCilInstruction(_ilVar, OpCodes.Beq_S, operand);
-                    Context.WriteNewLine();
+                    Context.EmitCilInstruction(_ilVar, OpCodes.Beq_S, nextTestLabels[currentLabelIndex]);
                 }
                 currentLabelIndex++;
             }
-
-            // if at runtime the code hits this point it means none of the labels matched.
-            // so, just jump to the end of the switch.
-            Context.EmitCilInstruction(_ilVar, OpCodes.Br, endOfSwitchLabel);
+            
+            // if at runtime the code hits this point and the switch does not have a default section
+            // it means none of the labels matched so just jump to the end of the switch.
+            if (!hasDefault)
+                Context.EmitCilInstruction(_ilVar, OpCodes.Br, endOfSwitchLabel);
 
             // Write the statements for each switch section...
             currentLabelIndex = 0;
             foreach (var switchSection in node.Sections)
             {
+                using var _ = LineInformationTracker.Track(Context, switchSection);
+                Context.WriteNewLine();
                 Context.WriteComment($"{switchSection.Labels.First().ToString()} (code)");
                 AddCecilExpression($"{_ilVar}.Append({nextTestLabels[currentLabelIndex]});");
                 foreach (var statement in switchSection.Statements)
                 {
                     statement.Accept(this);
                 }
-                Context.WriteNewLine();
                 currentLabelIndex++;
             }
 
