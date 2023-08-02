@@ -134,6 +134,7 @@ namespace Cecilifier.Core.AST
                 currentLabelIndex++;
             }
 
+            Context.WriteNewLine();
             Context.WriteComment("End of switch");
             AddCecilExpression($"{_ilVar}.Append({endOfSwitchLabel});");
 

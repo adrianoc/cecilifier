@@ -119,9 +119,8 @@ public partial class MiscellaneousStatements : CecilifierUnitTestBase
             \s+il_M_7.Emit\(OpCodes.Ldloc, l_switchCondition_13\);
             \s+il_M_7.Emit\(OpCodes.Ldc_I4, 2\);
             \s+il_M_7.Emit\(OpCodes.Beq_S, lbl_caseCode_1_16\);
-            
             \s+il_M_7.Emit\(OpCodes.Br, lbl_caseCode_2_17\);
-            \s+il_M_7.Emit\(OpCodes.Br, lbl_endOfSwitch_14\);
+            
             \s+//case 1: \(code\)
             \s+il_M_7.Append\(lbl_caseCode_0_15\);
             \s+il_M_7.Emit\(OpCodes.Ldstr, "C1"\);
