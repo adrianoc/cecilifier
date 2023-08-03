@@ -18,8 +18,6 @@ namespace Cecilifier.Core.AST
             this.ilVar = ilVar;
         }
 
-        public bool TargetOfAssignmentIsValueType { get; private set; } = true;
-
         public override void VisitUsingStatement(UsingStatementSyntax node)
         {
             // our direct parent is a using statement, which means we have something like:
@@ -35,9 +33,7 @@ namespace Cecilifier.Core.AST
             var varName = firstAncestorOrSelf?.Variables[0].Identifier.ValueText;
 
             var operand = Context.DefinitionVariables.GetVariable(varName, VariableMemberKind.LocalVariable).VariableName;
-            Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, operand);
-            var type = Context.TypeResolver.Resolve(ctorInfo.Symbol.ContainingType);
-            Context.EmitCilInstruction(ilVar, OpCodes.Initobj, type);
+            InitValueTypeLocalVariable(operand);
         }
 
         public override void VisitReturnStatement(ReturnStatementSyntax node)
@@ -83,6 +79,8 @@ namespace Cecilifier.Core.AST
             var loadOpCode = node.IsPassedAsInParameter(Context) ? OpCodes.Ldloca : OpCodes.Ldloc;
             Context.EmitCilInstruction(ilVar, loadOpCode, valueTypeLocalVariable.VariableName);
         }
+
+        public bool TargetOfAssignmentIsValueType { get; private set; } = true;
 
         private DefinitionVariable DeclareAndInitializeValueTypeLocalVariable()
         {
