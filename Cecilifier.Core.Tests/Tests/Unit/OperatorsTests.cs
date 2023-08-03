@@ -216,6 +216,45 @@ public class OperatorsTests : CecilifierUnitTestBase
         Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(expected));
     }
 
+    [TestCase("bool Foo(object o) => o != null;", 
+        """
+        var (p_o_\d+) = new ParameterDefinition\("o", ParameterAttributes.None, assembly.MainModule.TypeSystem.Object\);
+        \s+m_foo_\d+.Parameters.Add\(\1\);
+        (\s+il_foo_\d+\.Emit\(OpCodes\.)Ldarg_1\);
+        \2Ldnull\);
+        \2Ceq\);
+        \2Ldc_I4_0\);
+        \2Ceq\);
+        \2Ret\);
+        """, 
+        TestName = "Object !=")]
+    
+    [TestCase("bool Foo(object o) => o == null;",         
+        """
+                var (p_o_\d+) = new ParameterDefinition\("o", ParameterAttributes.None, assembly.MainModule.TypeSystem.Object\);
+                \s+m_foo_\d+.Parameters.Add\(\1\);
+                (\s+il_foo_\d+\.Emit\(OpCodes\.)Ldarg_1\);
+                \2Ldnull\);
+                \2Ceq\);
+                \2Ret\);
+                """, TestName = "Object ==")]
+    
+    [TestCase("bool Foo<T>(T o) => o == null;", 
+        """
+                var (p_o_\d+) = new ParameterDefinition\("o", ParameterAttributes.None, gp_T_7\);
+                \s+m_foo_\d+.Parameters.Add\(\1\);
+                (\s+il_foo_\d+\.Emit\(OpCodes\.)Ldarg_1\);
+                \2Box, gp_T_7\);
+                \2Ldnull\);
+                \2Ceq\);
+                \2Ret\);
+                """, TestName = "Type Parameter ==")]
+    public void EqualityAndInequalityOperators_AgainstNull_DoesNotInvokeOverloadOnSystemObject(string code, string expected)
+    {
+        var result = RunCecilifier(code);
+        Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(expected));
+    }
+    
     [TestCase("bool M(object o) => o is System.IDisposable;", "System.IDisposable")]
     [TestCase("bool M(object o) => o is object;", "Object")]
     public void TestSimpleIsPatternExpression(string code, string expectedType)

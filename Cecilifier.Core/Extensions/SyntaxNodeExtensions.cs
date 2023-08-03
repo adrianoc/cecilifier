@@ -38,9 +38,16 @@ namespace Cecilifier.Core.Extensions
             var symbolInfo = semanticModel.GetSymbolInfo(self);
             method = symbolInfo.Symbol as IMethodSymbol;
 
+            if (method?.ContainingType?.SpecialType == SpecialType.System_Object)
+            {
+                // special case for object:  == & != are handled by its respective overloaded operators.
+                // observe below that `string` behaves exactly the opposite of this.
+                return method.Name != "op_Equality" && method.Name != "op_Inequality";
+            }
+            
             if (method?.ContainingType?.SpecialType == SpecialType.System_String)
             {
-                // for strings, == & != are handled by its respective operators.
+                // for strings, == & != are handled by its respective overloaded operators.
                 // other operators, like +, are mapped to a specific method call 
                 return method.Name == "op_Equality" || method.Name == "op_Inequality";
             }
