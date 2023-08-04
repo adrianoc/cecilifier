@@ -26,7 +26,7 @@ public class FieldsTests : CecilifierUnitTestBase
 
     [TestCase(
         "class Foo { int Value; void M() => Value = 42; }",
-        "Append(ldarg_0_4);", // Load this
+        "Emit(OpCodes.Ldarg_0);", // Load this
         "Emit(OpCodes.Ldc_I4, 42);",  // Load 42
         "Emit(OpCodes.Stfld, fld_value_1);", // Store in Value
         TestName = "Implicit This")]

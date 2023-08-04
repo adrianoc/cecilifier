@@ -78,15 +78,6 @@ namespace Cecilifier.Core.AST
             }
         }
 
-        protected void InsertCilInstructionAfter<T>(LinkedListNode<string> instruction, string ilVar, OpCode opCode, T arg = default)
-        {
-            var instVar = CreateCilInstruction(ilVar, opCode, arg);
-            Context.MoveLineAfter(Context.CurrentLine, instruction);
-
-            AddCecilExpression($"{ilVar}.Append({instVar});");
-            Context.MoveLineAfter(Context.CurrentLine, instruction.Next);
-        }
-
         protected void AddCilInstruction(string ilVar, OpCode opCode, ITypeSymbol type)
         {
             var operand = Context.TypeResolver.Resolve(type);

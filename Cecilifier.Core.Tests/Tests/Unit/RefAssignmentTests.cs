@@ -84,10 +84,9 @@ public class RefAssignmentTests : CecilifierUnitTestBase
             Does.Match(
                 """
             //refInt = ref r;
-            \s+var (ldarg_\d+_\d+) = (il_ctor_\d+).Create\(OpCodes.Ldarg_0\);
-            \s+\2.Append\(\1\);
-            \s+\2.Emit\(OpCodes.Ldarg_1\);
-            \s+\2.Emit\(OpCodes.Stfld, fld_refInt_\d+\);
+            (\s+il_ctor_\d+.Emit\(OpCodes\.)Ldarg_0\);
+            \1Ldarg_1\);
+            \1Stfld, fld_refInt_\d+\);
             """),
             "Ref Assignment");
 

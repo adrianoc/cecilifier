@@ -11,7 +11,7 @@ public class PropertyTests : CecilifierUnitTestBase
         var result = RunCecilifier("class C { public int Value { get; } public C() => Value = 42; }");
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
         Assert.That(cecilifiedCode, Contains.Substring(
-            @"il_ctor_6.Append(ldarg_0_7);
+            @"il_ctor_6.Emit(OpCodes.Ldarg_0);
 			il_ctor_6.Emit(OpCodes.Ldc_I4, 42);
 			il_ctor_6.Emit(OpCodes.Stfld, fld_value_4);"));
     }
@@ -22,7 +22,7 @@ public class PropertyTests : CecilifierUnitTestBase
         var result = RunCecilifier("class C { public int Value { get; } public C(int n) => Value = n * 2; }");
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
         Assert.That(cecilifiedCode, Contains.Substring(
-            @"il_ctor_6.Append(ldarg_0_8);
+            @"il_ctor_6.Emit(OpCodes.Ldarg_0);
 			il_ctor_6.Emit(OpCodes.Ldarg_1);
 			il_ctor_6.Emit(OpCodes.Ldc_I4, 2);
 			il_ctor_6.Emit(OpCodes.Mul);

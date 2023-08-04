@@ -288,11 +288,10 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             "fieldIDisp = value", 
             """
             //fieldIDisp = value;
-            \s+var ldarg_0_\d+ = (il_test_\d+\.)Create\(OpCodes.Ldarg_0\);
-            \s+\1Append\(ldarg_0_\d+\);
-            (\s+\1Emit\(OpCodes\.)Ldarg_1\);
-            \2Box, gp_T_\d+\);
-            \2Stfld, fld_fieldIDisp_\d+\);
+            (\s+il_test_\d+\.Emit\(OpCodes\.)Ldarg_0\);
+            \1Ldarg_1\);
+            \1Box, gp_T_\d+\);
+            \1Stfld, fld_fieldIDisp_\d+\);
             """)]
         
         [TestCase(
@@ -320,7 +319,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             \1Ldstr, "Ola Mundo"\);
             \1Call, \2\);
             \1Stloc, l_o_\d+\);
-            """)]        
+            """)]
         
         [TestCase(
             """Foo f = new Foo(); object o; o = f.M<T>(value)""", 

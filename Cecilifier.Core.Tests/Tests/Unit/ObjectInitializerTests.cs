@@ -12,16 +12,16 @@ public class ObjectInitializerTests : CecilifierUnitTestBase
         var code = @"class Foo { public int Value; public bool B; } class Bar { public void M() { var x = new Foo { Value = 42, B = true }; } }";
         var result = RunCecilifier(code);
 
-        var expected = @"(il_M_\d+\.Emit\(OpCodes\.)Newobj, ctor_foo_3\);\s+" +
-            @"var (dup_\d+) = il_M_\d+.Create\(OpCodes.Dup\);\s+" +
-            @"il_M_\d+.Append\(\2\);\s+" +
-            @"\1Ldc_I4, 42\);\s+" +
-            @"\1Stfld, fld_value_\d+\);\s+" +
-            @"var (dup_\d+) = il_M_\d+.Create\(OpCodes.Dup\);\s+" +
-            @"il_M_\d+.Append\(\3\);\s+" +
-            @"\1Ldc_I4, 1\);\s+" +
-            @"\1Stfld, fld_B_\d+\);\s+" +
-            @"\1Stloc, l_x_\d+\);";
+        var expected = """
+                       (il_M_\d+\.Emit\(OpCodes\.)Newobj, ctor_foo_3\);
+                       (\s+\1)Dup\);
+                       \2Ldc_I4, 42\);
+                       \2Stfld, fld_value_\d+\);
+                       \2Dup\);
+                       \2Ldc_I4, 1\);
+                       \2Stfld, fld_B_\d+\);
+                       \2Stloc, l_x_\d+\);
+                       """;
 
         Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(expected));
     }
@@ -156,8 +156,7 @@ public class ObjectInitializerTests : CecilifierUnitTestBase
             (\s+il_topLevelMain_\d+\.Emit\(OpCodes\.)Ldloca_S, (l_vt_\d+)\);
             \1Initobj, st_bar_0\);
             \1Ldloca_S, \2\);
-            \s+var dup_23 = il_topLevelMain_\d+.Create\(OpCodes.Dup\);
-            \s+il_topLevelMain_\d+.Append\(dup_23\);
+            \1Dup\);
             \1Ldc_I4, 1\);
             \1Call, l_set_11\);
             \1Pop\);
@@ -167,8 +166,7 @@ public class ObjectInitializerTests : CecilifierUnitTestBase
             \1Ldloca_S, \3\);
             \1Initobj, st_bar_0\);
             \1Ldloca_S, \3\);
-            \s+var dup_25 = il_topLevelMain_\d+.Create\(OpCodes.Dup\);
-            \s+il_topLevelMain_\d+.Append\(dup_25\);
+            \1Dup\);
             \1Ldc_I4, 2\);
             \1Call, l_set_11\);
             \1Pop\);
@@ -184,12 +182,10 @@ public class ObjectInitializerTests : CecilifierUnitTestBase
         (\s+il_topLevelMain_\d+\.Emit\(OpCodes\.)Ldloca_S, \1\);
         \2Initobj, st_bar_0\);
         \2Ldloca_S, \1\);
-        \s+var dup_20 = il_topLevelMain_16.Create\(OpCodes.Dup\);
-        \s+il_topLevelMain_16.Append\(dup_20\);
+        \2Dup\);
         \2Ldstr, "A"\);
         \2Call, l_set_5\);
-        \s+var dup_21 = il_topLevelMain_16.Create\(OpCodes.Dup\);
-        \s+il_topLevelMain_16.Append\(dup_21\);
+        \2Dup\);
         \2Ldc_I4, 3\);
         \2Call, l_set_11\);
         \2Pop\);
@@ -201,8 +197,7 @@ public class ObjectInitializerTests : CecilifierUnitTestBase
         (\s+il_topLevelMain_\d+\.Emit\(OpCodes\.)Ldloca_S, (l_b_\d+)\);
         \1Dup\);
         \1Initobj, st_bar_0\);
-        \s+var dup_20 = il_topLevelMain_16.Create\(OpCodes.Dup\);
-        \s+il_topLevelMain_16.Append\(dup_20\);
+        \1Dup\);
         \1Ldc_I4, 3\);
         \1Call, l_set_11\);
         \1Pop\);
@@ -216,12 +211,10 @@ public class ObjectInitializerTests : CecilifierUnitTestBase
                     (\s+il_topLevelMain_\d+.Emit\(OpCodes\.)Ldloca_S, \1\);
                     \4Initobj, \2\);
                     \4Ldloca_S, \1\);
-                    \s+var dup_\d+ = il_topLevelMain_\d+.Create\(OpCodes.Dup\);
-                    \s+il_topLevelMain_\d+.Append\(dup_\d+\);
+                    \4Dup\);
                     \4Ldstr, "123"\);
                     \4Call, l_set_5\);
-                    \s+var dup_\d+ = il_topLevelMain_\d+.Create\(OpCodes.Dup\);
-                    \s+il_topLevelMain_\d+.Append\(dup_\d+\);
+                    \4Dup\);
                     \4Ldc_I4, 6\);
                     \4Call, l_set_11\);
                     \4Pop\);
@@ -242,8 +235,7 @@ public class ObjectInitializerTests : CecilifierUnitTestBase
         \1Ldelema, st_bar_0\);
         \1Dup\);
         \1Initobj, st_bar_0\);
-        \s+var dup_20 = il_topLevelMain_16.Create\(OpCodes.Dup\);
-        \s+il_topLevelMain_16.Append\(dup_20\);
+        \1Dup\);
         \1Ldc_I4, 3\);
         \1Call, l_set_11\);
         \1Pop\);

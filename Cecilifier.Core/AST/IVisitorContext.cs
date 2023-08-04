@@ -31,7 +31,8 @@ namespace Cecilifier.Core.AST
         void WriteCecilExpression(string msg);
         void WriteComment(string comment);
         void WriteNewLine();
-
+        
+        void WriteCilInstructionAfter<T>(string ilVar, OpCode opCode, T operand, string comment, LinkedListNode<string> after);
         void MoveLineAfter(LinkedListNode<string> instruction, LinkedListNode<string> after);
         void MoveLinesToEnd(LinkedListNode<string> start, LinkedListNode<string> end);
 

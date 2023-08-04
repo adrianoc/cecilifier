@@ -175,7 +175,7 @@ namespace Cecilifier.Core.AST
                                         ? OpCodes.Dup
                                         : OpCodes.Ldarg_0;
 
-                InsertCilInstructionAfter<string>(InstructionPrecedingValueToLoad, ilVar, loadOpCode);
+                Context.WriteCilInstructionAfter<string>(ilVar, loadOpCode, null, null, InstructionPrecedingValueToLoad);
             }
         }
 
