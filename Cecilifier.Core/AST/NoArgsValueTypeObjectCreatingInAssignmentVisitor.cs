@@ -36,7 +36,7 @@ namespace Cecilifier.Core.AST
 
             //...since we have an `assignment` to an array element which is of type
             //struct, we need to load the element address instead. 
-            Context.EmitCilInstruction(ilVar, OpCodes.Ldelema);
+            Context.EmitCilInstruction(ilVar, OpCodes.Ldelema, resolvedInstantiatedType);
             Context.EmitCilInstruction(ilVar, OpCodes.Initobj, resolvedInstantiatedType);
         }
 

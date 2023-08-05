@@ -62,7 +62,7 @@ public class CustomValueTypesInstantiationTests : CecilifierUnitTestBase
             result.GeneratedCode.ReadToEnd(), Does.Match(
             @"il_M_4.Emit\(OpCodes.(?:Ldarg_1|Ldfld, fld_f_2)\);
 			il_M_4.Emit\(OpCodes.Ldc_I4, 1\);
-			il_M_4.Emit\(OpCodes.Ldelema\);
+			il_M_4.Emit\(OpCodes.Ldelema, st_myStruct_0\);
 			il_M_4.Emit\(OpCodes.Initobj, st_myStruct_0\);"));
     }
 
