@@ -229,6 +229,26 @@ public class ObjectInitializerTests : CecilifierUnitTestBase
                     \4Call, m_get_8\);
                     """,
         TestName = "in member access expression")]
+    
+    [TestCase("Bar []ba = new Bar[1]; ba[0] = new Bar { Value = 3 };", 
+        """
+        var l_ba_19 = new VariableDefinition\(st_bar_0.MakeArrayType\(\)\);
+        \s+m_topLevelStatements_14.Body.Variables.Add\(l_ba_19\);
+        (\s+il_topLevelMain_\d+\.Emit\(OpCodes\.)Ldc_I4, 1\);
+        \1Newarr, st_bar_0\);
+        \1Stloc, l_ba_19\);
+        \1Ldloc, l_ba_19\);
+        \1Ldc_I4, 0\);
+        \1Ldelema, st_bar_0\);
+        \1Dup\);
+        \1Initobj, st_bar_0\);
+        \s+var dup_20 = il_topLevelMain_16.Create\(OpCodes.Dup\);
+        \s+il_topLevelMain_16.Append\(dup_20\);
+        \1Ldc_I4, 3\);
+        \1Call, l_set_11\);
+        \1Pop\);
+        """,
+        TestName = "in assignment to array element")]    
     public void ObjectInitializers_AreHandled_InValueTypes(string statementToTest, string expectedRegex)
     {
         var result = RunCecilifier($$"""

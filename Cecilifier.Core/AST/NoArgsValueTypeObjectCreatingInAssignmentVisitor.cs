@@ -37,7 +37,7 @@ namespace Cecilifier.Core.AST
             //...since we have an `assignment` to an array element which is of type
             //struct, we need to load the element address instead. 
             Context.EmitCilInstruction(ilVar, OpCodes.Ldelema, resolvedInstantiatedType);
-            Context.EmitCilInstruction(ilVar, OpCodes.Initobj, resolvedInstantiatedType);
+            InitializeAndProcessObjectInitializerExpression();
         }
 
         public override void VisitIdentifierName(IdentifierNameSyntax node)
@@ -90,6 +90,11 @@ namespace Cecilifier.Core.AST
                     break;
             }
 
+            InitializeAndProcessObjectInitializerExpression();
+        }
+
+        private void InitializeAndProcessObjectInitializerExpression()
+        {
             if (objectCreationExpression.Initializer != null)
             {
                 // See comment in ValueTypeNoArgCtorInvocationVisitor.InitValueTypeLocalVariable() for an explanation on why we
@@ -98,7 +103,7 @@ namespace Cecilifier.Core.AST
             }
 
             Context.EmitCilInstruction(ilVar, OpCodes.Initobj, resolvedInstantiatedType);
-            ValueTypeNoArgCtorInvocationVisitor.ProcessInitializerIfNotNull(Context, ilVar, objectCreationExpression.Initializer);
+            ValueTypeNoArgCtorInvocationVisitor.ProcessInitializerIfNotNull(Context, ilVar,  objectCreationExpression.Initializer);
         }
     }
 }
