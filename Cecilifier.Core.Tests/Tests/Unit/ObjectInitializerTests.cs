@@ -121,7 +121,7 @@ public class ObjectInitializerTests : CecilifierUnitTestBase
     }
     
     [Test]
-    public void CustomCollectionInitializerAddMethodBountToExtensionMethod()
+    public void CustomCollectionInitializerAddMethodBoundToExtensionMethod()
     {
         var code = """
                    static class Ext { public static void Add(this Foo self, string s) {} }
@@ -148,4 +148,102 @@ public class ObjectInitializerTests : CecilifierUnitTestBase
 
         Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(expected));
     }
+
+    [TestCase(
+        "M(new Bar() { Value = 1 } , new Bar() { Value = 2 } );",
+        """
+            m_topLevelStatements_\d+.Body.Variables.Add\(l_vt_\d+\);
+            (\s+il_topLevelMain_\d+\.Emit\(OpCodes\.)Ldloca_S, (l_vt_\d+)\);
+            \1Initobj, st_bar_0\);
+            \1Ldloca_S, \2\);
+            \s+var dup_23 = il_topLevelMain_\d+.Create\(OpCodes.Dup\);
+            \s+il_topLevelMain_\d+.Append\(dup_23\);
+            \1Ldc_I4, 1\);
+            \1Call, l_set_11\);
+            \1Pop\);
+            \1Ldloc, \2\);
+            \s+var (l_vt_\d+) = new VariableDefinition\(st_bar_0\);
+            \s+m_topLevelStatements_\d+.Body.Variables.Add\(\3\);
+            \1Ldloca_S, \3\);
+            \1Initobj, st_bar_0\);
+            \1Ldloca_S, \3\);
+            \s+var dup_25 = il_topLevelMain_\d+.Create\(OpCodes.Dup\);
+            \s+il_topLevelMain_\d+.Append\(dup_25\);
+            \1Ldc_I4, 2\);
+            \1Call, l_set_11\);
+            \1Pop\);
+            \1Ldloca, \3\);
+            \1Call, m_M_19\);
+            """,
+        TestName = "As method argument")]
+    
+    [TestCase("""var x = new Bar { Name = "A", Value = 3 };""", 
+        """
+        var (l_x_\d+) = new VariableDefinition\(st_bar_0\);
+        \s+m_topLevelStatements_14.Body.Variables.Add\(\1\);
+        (\s+il_topLevelMain_\d+\.Emit\(OpCodes\.)Ldloca_S, \1\);
+        \2Initobj, st_bar_0\);
+        \2Ldloca_S, \1\);
+        \s+var dup_20 = il_topLevelMain_16.Create\(OpCodes.Dup\);
+        \s+il_topLevelMain_16.Append\(dup_20\);
+        \2Ldstr, "A"\);
+        \2Call, l_set_5\);
+        \s+var dup_21 = il_topLevelMain_16.Create\(OpCodes.Dup\);
+        \s+il_topLevelMain_16.Append\(dup_21\);
+        \2Ldc_I4, 3\);
+        \2Call, l_set_11\);
+        \2Pop\);
+        """,
+        TestName = "in variable initializer")]
+    
+    [TestCase("Bar b; b = new Bar { Value = 3 };", 
+        """
+        (\s+il_topLevelMain_\d+\.Emit\(OpCodes\.)Ldloca_S, (l_b_\d+)\);
+        \1Dup\);
+        \1Initobj, st_bar_0\);
+        \s+var dup_20 = il_topLevelMain_16.Create\(OpCodes.Dup\);
+        \s+il_topLevelMain_16.Append\(dup_20\);
+        \1Ldc_I4, 3\);
+        \1Call, l_set_11\);
+        \1Pop\);
+        """,
+        TestName = "in assignment")]
+    
+    [TestCase("""var z = new Bar() { Name = "123", Value = 6 }.Value;""", 
+        """
+                    var (l_vt_\d+) = new VariableDefinition\((st_bar_\d+)\);
+                    \s+(m_topLevelStatements_\d+).Body.Variables.Add\(\1\);
+                    (\s+il_topLevelMain_\d+.Emit\(OpCodes\.)Ldloca_S, \1\);
+                    \4Initobj, \2\);
+                    \4Ldloca_S, \1\);
+                    \s+var dup_\d+ = il_topLevelMain_\d+.Create\(OpCodes.Dup\);
+                    \s+il_topLevelMain_\d+.Append\(dup_\d+\);
+                    \4Ldstr, "123"\);
+                    \4Call, l_set_5\);
+                    \s+var dup_\d+ = il_topLevelMain_\d+.Create\(OpCodes.Dup\);
+                    \s+il_topLevelMain_\d+.Append\(dup_\d+\);
+                    \4Ldc_I4, 6\);
+                    \4Call, l_set_11\);
+                    \4Pop\);
+                    \4Ldloca, \1\);
+                    \4Call, m_get_8\);
+                    """,
+        TestName = "in member access expression")]
+    public void ObjectInitializers_AreHandled_InValueTypes(string statementToTest, string expectedRegex)
+    {
+        var result = RunCecilifier($$"""
+                                   {{statementToTest}}
+                                   
+                                   void M(Bar bar, in Bar ib) { }
+                                   
+                                   struct Bar 
+                                   {
+                                      public string Name {get; set; }
+                                      public int Value { get; set; }
+                                   }
+                                   """);
+        
+        Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(expectedRegex));
+    }
+    
 }

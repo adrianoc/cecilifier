@@ -11,11 +11,13 @@ namespace Cecilifier.Core.AST
     {
         private readonly SymbolInfo ctorInfo;
         private readonly string ilVar;
+        private readonly BaseObjectCreationExpressionSyntax objectCreationExpressionSyntax;
 
-        internal ValueTypeNoArgCtorInvocationVisitor(IVisitorContext ctx, string ilVar, SymbolInfo ctorInfo) : base(ctx)
+        internal ValueTypeNoArgCtorInvocationVisitor(IVisitorContext ctx, string ilVar, BaseObjectCreationExpressionSyntax objectCreationExpressionSyntax, SymbolInfo ctorInfo) : base(ctx)
         {
             this.ctorInfo = ctorInfo;
             this.ilVar = ilVar;
+            this.objectCreationExpressionSyntax = objectCreationExpressionSyntax;
         }
 
         public override void VisitUsingStatement(UsingStatementSyntax node)
@@ -68,7 +70,7 @@ namespace Cecilifier.Core.AST
         public override void VisitAssignmentExpression(AssignmentExpressionSyntax node)
         {
             var instantiatedType = ResolvedStructType();
-            var visitor = new NoArgsValueTypeObjectCreatingInAssignmentVisitor(Context, ilVar, instantiatedType, DeclareAndInitializeValueTypeLocalVariable);
+            var visitor = new NoArgsValueTypeObjectCreatingInAssignmentVisitor(Context, ilVar, instantiatedType, DeclareAndInitializeValueTypeLocalVariable, objectCreationExpressionSyntax);
             node.Left.Accept(visitor);
             TargetOfAssignmentIsValueType = visitor.TargetOfAssignmentIsValueType;
         }
@@ -118,8 +120,29 @@ namespace Cecilifier.Core.AST
         {
             Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, localVariable);
             Context.EmitCilInstruction(ilVar, OpCodes.Initobj, ResolvedStructType());
+
+            if (objectCreationExpressionSyntax.Initializer is not null)
+            {
+                // To process an InitializerExpressionSyntax, ExpressionVisitor expects the top of the stack to contain
+                // the reference of the object to be set.
+                // Since initialisation of value types through a parameterless ctor uses the `initobj` instruction
+                // at this point there's no object reference in the stack (it was consumed by the `Initobj` instruction)
+                // so we push the address of the variable that we just initialised again. Notice that after processing
+                // the initializer we need to pop this reference from the stack again.
+                Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, localVariable);
+                ProcessInitializerIfNotNull(Context, ilVar, objectCreationExpressionSyntax.Initializer);
+            }
         }
-        
+
+        internal static void ProcessInitializerIfNotNull(IVisitorContext context, string ilVar, InitializerExpressionSyntax initializer)
+        {
+            if (initializer == null)
+                return;
+            
+            ExpressionVisitor.Visit(context, ilVar, initializer);
+            context.EmitCilInstruction(ilVar, OpCodes.Pop);
+        }
+
         private string ResolvedStructType() =>  Context.TypeResolver.Resolve(ctorInfo.Symbol.ContainingType);
     }
 }

@@ -1045,7 +1045,7 @@ namespace Cecilifier.Core.AST
             if (ctorInfo.Symbol == null || ctorInfo.Symbol.IsImplicitlyDeclared == false || ctorInfo.Symbol.ContainingType.IsReferenceType)
                 return false;
 
-            var visitor = new ValueTypeNoArgCtorInvocationVisitor(Context, ilVar, ctorInfo);
+            var visitor = new ValueTypeNoArgCtorInvocationVisitor(Context, ilVar, node, ctorInfo);
             visitor.Visit(node.Parent);
 
             skipLeftSideVisitingInAssignment = visitor.TargetOfAssignmentIsValueType;

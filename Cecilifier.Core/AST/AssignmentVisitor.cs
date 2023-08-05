@@ -155,7 +155,7 @@ namespace Cecilifier.Core.AST
             }
         }
 
-        // push `implicit this` (target of the assignment) to the stack if needed.
+        // push `implicit this` (target of the assignment) or target reference in an object initializer expression to the stack if needed.
         void LoadImplicitTargetForMemberReference(IdentifierNameSyntax node, ISymbol memberSymbol)
         {
             if (memberSymbol is IFieldSymbol { RefKind: not RefKind.None } && !assignment.Right.IsKind(SyntaxKind.RefExpression))
