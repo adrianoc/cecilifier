@@ -124,5 +124,7 @@ namespace Cecilifier.Core.Extensions
             
             return typeToNotMatch == null || !SymbolEqualityComparer.Default.Equals(argumentOperation.Parameter.Type, typeToNotMatch);
         }
+
+        internal static bool IsMemberAccessOnElementAccess(this SyntaxNode self) => self.IsKind(SyntaxKind.ElementAccessExpression) && self.Parent is MemberAccessExpressionSyntax mae && mae.Expression == self;
     }
 }

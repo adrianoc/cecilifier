@@ -163,4 +163,34 @@ public class ArrayTests : CecilifierUnitTestBase
                   \s+\4.Emit\(OpCodes.Ldtoken, \3\);
                   """));
     }
+
+    [TestCase("Property", "Call, m_get_2", TestName = "Property")]
+    [TestCase("Method()", "Call, m_method_8", TestName = "Method")]
+    [TestCase("Field", "Ldfld, fld_field_7", TestName = "Field")]
+    public void MemberAccessOnElementAccessOnValueTypeArray_LoadsElementAddress(string member, string expectedILMemberRef)
+    {
+        var result = RunCecilifier($$"""int M(S[] sa) => sa[0].{{member}}; struct S { public int Property { get; set; } public int Field; public int Method() => 1; }""");
+        Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match($"""
+                                                                 (il_M_\d+\.Emit\(OpCodes\.)Ldarg_1\);
+                                                                 \s+\1Ldc_I4, 0\);
+                                                                 \s+\1Ldelema, st_S_0\);
+                                                                 \s+\1{expectedILMemberRef}\);
+                                                                 \s+\1Ret\);
+                                                                 """));
+    }
+    
+    [TestCase("Property", "Callvirt, m_get_2", TestName = "Property")]
+    [TestCase("Method()", "Callvirt, m_method_8", TestName = "Method")]
+    [TestCase("Field", "Ldfld, fld_field_7", TestName = "Field")]
+    public void MemberAccessOnElementAccessOnReferenceTypeArray_LoadsElementByReference(string member, string expectedILMemberRef)
+    {
+        var result = RunCecilifier($$"""int M(S[] sa) => sa[0].{{member}}; class S { public int Property { get; set; } public int Field; public int Method() => 1; }""");
+        Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match($"""
+                                                                 (il_M_\d+\.Emit\(OpCodes\.)Ldarg_1\);
+                                                                 \s+\1Ldc_I4, 0\);
+                                                                 \s+\1Ldelem_Ref\);
+                                                                 \s+\1{expectedILMemberRef}\);
+                                                                 \s+\1Ret\);
+                                                                 """));
+    }
 }

@@ -240,6 +240,9 @@ namespace Cecilifier.Core.AST
             }
             else
             {
+                if (HandleLoadAddress(ilVar, targetType, node, OpCodes.Ldelema, Context.TypeResolver.Resolve(targetType)))
+                    return;
+                
                 var ldelemOpCodeToUse = targetType.LdelemOpCode();
                 Context.EmitCilInstruction(ilVar, ldelemOpCodeToUse, ldelemOpCodeToUse == OpCodes.Ldelem_Any ? Context.TypeResolver.Resolve(targetType) : null);
             }
