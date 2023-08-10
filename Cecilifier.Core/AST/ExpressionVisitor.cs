@@ -695,6 +695,10 @@ namespace Cecilifier.Core.AST
             {
                 AddCilInstruction(ilVar, OpCodes.Box, castSource.Type);
             }
+            else if (conversion.IsUnboxing)
+            {
+                AddCilInstruction(ilVar, OpCodes.Unbox_Any, castTarget.Type);
+            }
             else if (conversion.IsExplicit)
             {
                 AddMethodCall(ilVar, conversion.MethodSymbol);
