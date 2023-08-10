@@ -207,4 +207,52 @@ public class StructSpecificTests : CecilifierUnitTestBase
                                                \s+\1Call, .+ImportReference\(.+ResolveMethod\(typeof\(System.Int32\), "ToString",.+\)\)\);
                                                """));
     }
+    [TestCaseSource(nameof(NonInstantiationValueTypeVariableInitializationTestScenarios))]
+    public void NonInstantiation_ValueTypeVariableInitialization_SetsAddedVariable(string expression, string expected)
+    {
+        var result = RunCecilifier(
+            $$"""
+            struct S { }
+            class Foo
+            {
+                S M(S s) => s;
+                void Bar(S p)
+                {
+                    var s = {{expression}};
+                }
+            }
+            """);
+        Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(expected));
+    }
+
+    static IEnumerable<TestCaseData> NonInstantiationValueTypeVariableInitializationTestScenarios()
+    {
+        yield return new TestCaseData(
+            "M(new S())",
+            """
+            //var s = M\(new S\(\)\);
+            \s+var (l_s_\d+) = new VariableDefinition\(st_S_0\);
+            \s+m_bar_5.Body.Variables.Add\(\1\);
+            (\s+il_bar_6.Emit\(OpCodes\.)Ldarg_0\);
+            \s+var l_vt_9 = new VariableDefinition\(st_S_0\);
+            \s+m_bar_5.Body.Variables.Add\(l_vt_9\);
+            \2Ldloca_S, l_vt_9\);
+            \2Initobj, st_S_0\);
+            \2Ldloc, l_vt_9\);
+            \2Call, m_M_2\);
+            \2Stloc, \1\);
+            \2Ret\);
+            """).SetName("From Method");
+        
+        yield return new TestCaseData(
+            "p",
+            """
+            //var s = p;
+            \s+var (l_s_\d+) = new VariableDefinition\(st_S_0\);
+            \s+m_bar_5.Body.Variables.Add\(\1\);
+            (\s+il_bar_6.Emit\(OpCodes\.)Ldarg_1\);
+            \2Stloc, \1\);
+            \2Ret\);
+            """).SetName("From Parameter");
+    }
 }

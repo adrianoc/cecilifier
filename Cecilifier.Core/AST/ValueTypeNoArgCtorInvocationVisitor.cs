@@ -36,6 +36,7 @@ namespace Cecilifier.Core.AST
 
             var operand = Context.DefinitionVariables.GetVariable(varName, VariableMemberKind.LocalVariable).VariableName;
             InitValueTypeLocalVariable(operand);
+            TargetOfAssignmentIsValueType = true;
         }
 
         public override void VisitReturnStatement(ReturnStatementSyntax node)
@@ -82,7 +83,7 @@ namespace Cecilifier.Core.AST
             Context.EmitCilInstruction(ilVar, loadOpCode, valueTypeLocalVariable.VariableName);
         }
 
-        public bool TargetOfAssignmentIsValueType { get; private set; } = true;
+        public bool TargetOfAssignmentIsValueType { get; private set; }
 
         private DefinitionVariable DeclareAndInitializeValueTypeLocalVariable()
         {
