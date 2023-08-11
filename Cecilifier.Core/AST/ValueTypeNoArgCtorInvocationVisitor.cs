@@ -2,11 +2,32 @@ using Cecilifier.Core.Extensions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Cecilifier.Core.Variables;
+using Microsoft.CodeAnalysis.CSharp;
 using Mono.Cecil.Cil;
 using static Cecilifier.Core.Misc.CodeGenerationHelpers;
 
 namespace Cecilifier.Core.AST
 {
+    // Visitor used to handle instantiation of value types when an implicit,  parameterless ctor is used,
+    // i.e, 'new MyValueType()'.
+    //
+    // It is used to abstract the fact that, in this scenario, the instructions emitted when newing a value type
+    // are very different from the ones used to newing a reference type.
+    //
+    // A good part of this visitor deals with the case in which we need to introduce a temporary variable; this is most
+    // the case when the result of the 'new T()' expression is not used as a) a direct assignment to a value type variable
+    // or b) as the initializer in the declaration of the value type variable.
+    //
+    // This visitor expects visit the parent of the ObjectCreationExpression, for instance, in 'M(new T())', this visitor
+    // should be called to visit the method invocation.
+    //
+    // Note that the generated code will hardly match the generated code by a C# compiler. Empirically we observed that
+    // the later may decide to emit either a 'newobj' or 'call ctor' depending on release/debug mode, whether there's
+    // already storage or not allocated to store the value type, etc.
+    //
+    // For simplicity the only differentiation we have is based on whether the invoked constructor is an implicit,
+    // parameterless one in which case this visitor is used; in all other cases the same code used to handle constructor
+    // invocations on reference types is used.
     internal class ValueTypeNoArgCtorInvocationVisitor : SyntaxWalkerBase
     {
         private readonly SymbolInfo ctorInfo;
@@ -30,7 +51,8 @@ namespace Cecilifier.Core.AST
 
         public override void VisitEqualsValueClause(EqualsValueClauseSyntax node)
         {
-            //local variable assignment
+            //local variable declaration initialized through a initializer.
+            //i.e, var x = new MyStruct();
             var firstAncestorOrSelf = node.FirstAncestorOrSelf<VariableDeclarationSyntax>();
             var varName = firstAncestorOrSelf?.Variables[0].Identifier.ValueText;
 
@@ -55,11 +77,39 @@ namespace Cecilifier.Core.AST
         {
             var valueTypeLocalVariable = DeclareAndInitializeValueTypeLocalVariable();
             Context.EmitCilInstruction(ilVar, OpCodes.Ldloca, valueTypeLocalVariable.VariableName);
-            var accessedMember = Context.SemanticModel.GetSymbolInfo(node).Symbol.EnsureNotNull();
+            var accessedMember = ModelExtensions.GetSymbolInfo(Context.SemanticModel, node).Symbol.EnsureNotNull();
             if (accessedMember.ContainingType.SpecialType == SpecialType.System_ValueType)
             {
                 Context.EmitCilInstruction(ilVar, OpCodes.Constrained, ResolvedStructType());
             }
+        }
+
+        public override void VisitConditionalExpression(ConditionalExpressionSyntax node)
+        {
+            if (node.Condition == objectCreationExpressionSyntax)
+            {
+                Context.WriteComment("");
+                Context.WriteComment($"Simple value type instantiation ('{objectCreationExpressionSyntax.ToFullString()}') is not supported as the condition of a ternary operator in the expression: {node.ToFullString()}");
+                Context.WriteComment("");
+                return;
+            }
+            
+            if (node.WhenTrue != objectCreationExpressionSyntax && node.WhenFalse != objectCreationExpressionSyntax)
+                return;
+
+            if (node.WhenFalse is ObjectCreationExpressionSyntax falseExpression && (falseExpression.ArgumentList == null || falseExpression.ArgumentList.Arguments.Count == 0) &&
+                node.WhenTrue is ObjectCreationExpressionSyntax trueExpression && (trueExpression.ArgumentList == null || trueExpression.ArgumentList?.Arguments.Count == 0))
+            {
+                // both branches are object creation expressions for parameterless value types; lets visit the base to decide whether there are already storage allocated 
+                // or not and take appropriate action.
+                ((CSharpSyntaxNode) node.Parent).Accept(this);
+                return;
+            }
+
+            // one of the branches are not an object creation expression so we need to add a variable (for that at least),
+            // initialize it and load it to the stack to be consumed, for instance as an argument of a method call.
+            var valueTypeLocalVariable = DeclareAndInitializeValueTypeLocalVariable();
+            Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, valueTypeLocalVariable.VariableName);
         }
 
         public override void VisitCastExpression(CastExpressionSyntax node)

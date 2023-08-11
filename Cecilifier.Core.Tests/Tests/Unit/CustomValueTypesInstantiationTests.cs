@@ -65,15 +65,6 @@ public class CustomValueTypesInstantiationTests : CecilifierUnitTestBase
 			il_M_4.Emit\(OpCodes.Ldelema, st_myStruct_0\);
 			il_M_4.Emit\(OpCodes.Initobj, st_myStruct_0\);"));
     }
-
-    [Test]
-    public void TestParameterlessStructInstantiation()
-    {
-        var result = RunCecilifier("struct Foo { static Foo Create() => new Foo(); public Foo() { } }");
-        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
-
-        Assert.That(cecilifiedCode, Does.Match(@"il_create_2\.Emit\(OpCodes.Newobj, ctor_foo_3\);"));
-    }
     
     [TestCaseSource(nameof(InvocationOnObjectCreationExpressionTestScenarios))]
     public void InvocationOnObjectCreationExpression(string invocationStatement, string expectedILSnippet)
@@ -110,6 +101,42 @@ public class CustomValueTypesInstantiationTests : CecilifierUnitTestBase
                                      """);
         
         Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(expectedGeneratedSnippet));
+    }
+
+
+    [TestCase("var x = new S(); struct S {}", 
+        """
+        il_topLevelMain_4.Emit\(OpCodes.Ldloca_S, l_x_7\);
+        \s+il_topLevelMain_4.Emit\(OpCodes.Initobj, st_S_0\);
+        """,
+        TestName = "Implicit parameterless ctor")]
+    
+    [TestCase("var x = new S(); struct S { public S() {} }", 
+        """
+        (il_topLevelMain_\d+.Emit\(OpCodes\.)Newobj, ctor_S_1\);
+        \s+\1Stloc, l_x_9\);
+        """,
+        TestName = "Explicit parameterless ctor")]
+    
+    [TestCase("var x = new S(42, true); struct S { public S(int i, bool b) {} }", 
+        """
+        (il_topLevelMain_\d+.Emit\(OpCodes\.)Ldc_I4, 42\);
+        (\s+\1)Ldc_I4, 1\);
+        \2Newobj, ctor_S_1\);
+        """,
+        TestName = "Ctor with parameters")]
+    
+    [TestCase("var x = new S(42, true); struct S { public S(int i, bool b) {} }", 
+        """
+        (il_topLevelMain_\d+.Emit\(OpCodes\.)Ldc_I4, 42\);
+        (\s+\1)Ldc_I4, 1\);
+        \2Newobj, ctor_S_1\);
+        """,
+        TestName = "Ctor with parameters")]
+    public void Instantiation_EmitsCorrectOpcode(string code, string expected)
+    {
+        var result = RunCecilifier(code);
+        Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(expected));
     }
 
     static TestCaseData[] InvocationExpressionAsParametersTestScenarios()
