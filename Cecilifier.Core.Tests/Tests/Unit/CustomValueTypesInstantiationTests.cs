@@ -32,7 +32,7 @@ public class CustomValueTypesInstantiationTests : CecilifierUnitTestBase
         Assert.That(result.GeneratedCode.ReadToEnd(), Contains.Substring(
             @"il_M_3.Emit(OpCodes.Ldarg_1);
 			il_M_3.Emit(OpCodes.Ldarg_2);
-			il_M_3.Emit(OpCodes.Stobj);"));
+			il_M_3.Emit(OpCodes.Stobj, st_myStruct_0);"));
     }
 
     [Test]

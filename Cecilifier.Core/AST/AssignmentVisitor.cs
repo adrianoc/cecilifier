@@ -197,8 +197,7 @@ namespace Cecilifier.Core.AST
                 // bellow it.
                 AddMethodCall(ilVar, propertySymbol.GetMethod);
                 Context.MoveLinesToEnd(InstructionPrecedingValueToLoad, lastInstructionLoadingRhs);
-                OpCode opCode = propertySymbol.Type.Stind();
-                Context.EmitCilInstruction(ilVar, opCode);
+                EmitIndirectStore(propertySymbol.Type);
             }
             else
             {
@@ -207,6 +206,12 @@ namespace Cecilifier.Core.AST
             }
 
             return true;
+        }
+
+        private void EmitIndirectStore(ITypeSymbol typeBeingStored)
+        {
+            var indirectStoreOpCode = typeBeingStored.Stind();
+            Context.EmitCilInstruction(ilVar, indirectStoreOpCode, indirectStoreOpCode == OpCodes.Stobj ? Context.TypeResolver.Resolve(typeBeingStored.ElementTypeSymbolOf()) : null);
         }
 
         private void PropertyAssignment(IdentifierNameSyntax node, IPropertySymbol property)
@@ -249,7 +254,7 @@ namespace Cecilifier.Core.AST
         {
             if (NeedsIndirectStore(memberType, memberRefKind))
             {
-                Context.EmitCilInstruction(ilVar, memberType.Stind());
+                EmitIndirectStore(memberType);
             }
             else
             {

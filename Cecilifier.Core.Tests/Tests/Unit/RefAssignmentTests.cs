@@ -57,7 +57,7 @@ public class RefAssignmentTests : CecilifierUnitTestBase
     }
 
     [Test]
-    public void TesRefParameterDeference()
+    public void TestRefParameterDeference()
     {
         var result = RunCecilifier("void M(ref int r) { int i; i = r + 42; }");
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
@@ -72,6 +72,50 @@ public class RefAssignmentTests : CecilifierUnitTestBase
             \s+\1Add\);
             \s+\1Stloc, l_i_9\);
             """));
+    }
+
+    [Test]
+    public void TestAssign_NewInstanceOfValueType_ToParameter()
+    {
+        var result = RunCecilifier("void M(ref S s) { s = new S(); } struct S { public S() {} }");
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+    
+        Assert.That(cecilifiedCode, Does.Match("""
+                                               //s = new S\(\);
+                                               (\s+il_M_\d+\.Emit\(OpCodes\.)Ldarg_1\);
+                                               \1Newobj, ctor_S_1\);
+                                               \1Stobj, st_S_0\);
+                                               """));
+    }
+    
+    [Test]
+    public void TestAssign_NewInstanceOfValueType_ByRefIndexer()
+    {
+        var result = RunCecilifier("""
+                                   struct S { public S() {} }
+                                   class Foo
+                                   {
+                                        S s;
+                                        ref S this[int i] => ref s;
+                                        
+                                        void DoIt(Foo other)
+                                        {
+                                            other[0] = new S(); 
+                                        }
+                                   }
+                                   """);
+        
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+    
+        Assert.That(cecilifiedCode, Does.Match("""
+                                               //other\[0\] = new S\(\);
+                                               (\s+il_doIt_\d+\.Emit\(OpCodes\.)Ldarg_1\);
+                                               \1Ldc_I4, 0\);
+                                               \1Callvirt, m_get_9\);
+                                               \1Newobj, ctor_S_1\);
+                                               \1Stobj, st_S_0\);
+                                               \1Ret\);
+                                               """));
     }
 
     [Test]
