@@ -1,6 +1,5 @@
 using System.Text.RegularExpressions;
 using NUnit.Framework;
-using NUnit.Framework.Internal;
 
 namespace Cecilifier.Core.Tests.Tests.Unit;
 
@@ -54,13 +53,53 @@ public class NullableTests : CecilifierUnitTestBase
             actual);
     }
 
-                (\s+il_test_\d+\.Emit\(OpCodes\.)Ldarg_0\);
-                \1Ldarg_1\);
-                \1NEWOBJ Nullable<int>
-                \1Call, m_bar_1\);
-                \1NEWOBJ Nullable<int>
-                \1Ret\);
-                """),
-            "");
+    [TestCase(
+        """
+        class Foo
+        {
+           int Bar(int? i) => i.Value;
+           int? Test(int i1) { return Bar(i1); } // i1 should be converted to Nullable<int> and Bar() return also.
+        }
+        """,
+        
+        """
+        //return Bar\(i1\);
+        (\s+il_test_\d+\.Emit\(OpCodes\.)Ldarg_0\);
+        \1Ldarg_1\);
+        (?<implicit_nullable_conversion>\1Newobj, .+ImportReference\(typeof\(System.Nullable<>\).MakeGenericType\(typeof\(System.Int32\)\).GetConstructors\(\).+;)
+        \1Call, m_bar_1\);
+        \k<implicit_nullable_conversion>
+        \1Ret\);
+        """,
+        TestName = "Method parameter and return value"
+        )]
+    
+    [TestCase(
+        """
+        class Foo
+        {
+           void Bar(int? p)
+           {
+              p = 41;
+              
+              int ?lp;
+              lp = 42;
+           }
+        }
+        """,
+        
+        """
+        //p = 41;
+        (\s+il_bar_\d+\.Emit\(OpCodes\.)Ldc_I4, 41\);
+        \1Newobj, .+ImportReference\(typeof\(System.Nullable<>\).MakeGenericType\(typeof\(System.Int32\)\).GetConstructors\(\).+;
+        \1Starg_S, p_p_3\);
+        """,
+        TestName = "Variable assignment"
+        )]
+    public void ImplicitNullableConversions_AreApplied(string code, string expectedSnippet)
+    {
+        //https://github.com/adrianoc/cecilifier/issues/251
+        var result = RunCecilifier(code);
+        Assert.That(result.GeneratedCode.ReadToEnd(),  Does.Match(expectedSnippet));
     }
 }

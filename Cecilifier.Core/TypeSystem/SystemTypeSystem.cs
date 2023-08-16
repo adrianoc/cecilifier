@@ -21,6 +21,7 @@ namespace Cecilifier.Core.TypeSystem
                 [SpecialType.System_MulticastDelegate] = typeResolver.Resolve("System.MulticastDelegate"),
                 [SpecialType.System_AsyncCallback] = typeResolver.Resolve("System.AsyncCallback"),
                 [SpecialType.System_IAsyncResult] = typeResolver.Resolve("System.IAsyncResult"),
+                [SpecialType.System_Nullable_T] = typeResolver.Resolve("System.Nullable<>"),
             };
         }
 
@@ -35,6 +36,7 @@ namespace Cecilifier.Core.TypeSystem
         public string MulticastDelegate => _resolvedTypes[SpecialType.System_MulticastDelegate];
         public string AsyncCallback => _resolvedTypes[SpecialType.System_AsyncCallback];
         public string IAsyncResult => _resolvedTypes[SpecialType.System_IAsyncResult];
+        public string NullableOfT => _resolvedTypes[SpecialType.System_Nullable_T];
 
         private readonly IReadOnlyDictionary<SpecialType, string> _resolvedTypes;
     }

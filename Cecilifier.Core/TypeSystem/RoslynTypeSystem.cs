@@ -41,6 +41,7 @@ internal struct RoslynTypeSystem
         SystemCollectionsGenericIEnumeratorOfT = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Collections_Generic_IEnumerator_T);
         SystemCollectionsIEnumerable = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Collections_IEnumerable);
         SystemCollectionsGenericIEnumerableOfT = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Collections_Generic_IEnumerable_T);
+        SystemNullableOfT = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Nullable_T);
     }
 
     public ITypeSymbol SystemIndex { get; }
@@ -68,4 +69,5 @@ internal struct RoslynTypeSystem
     
     public ITypeSymbol SystemValueType { get; }
     public ITypeSymbol SystemRuntimeCompilerServicesRuntimeHelpers { get; }
+    public ITypeSymbol SystemNullableOfT { get; }
 }
