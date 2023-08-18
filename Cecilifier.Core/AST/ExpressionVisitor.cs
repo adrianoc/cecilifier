@@ -1175,7 +1175,7 @@ namespace Cecilifier.Core.AST
             propertySymbol.EnsurePropertyExists(Context, node);
             
             var isAccessOnThisOrObjectCreation = node.Parent.IsAccessOnThisOrObjectCreation();
-            if (IsUnqualifiedAccess(node, propertySymbol))
+            if (!propertySymbol.IsStatic && !node.IsQualifiedAccessToTypeOrMember())
             {
                 // if this is an *unqualified* access we need to load *this*
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
@@ -1210,29 +1210,6 @@ namespace Cecilifier.Core.AST
                 StoreTopOfStackInLocalVariableAndReloadItIfNeeded(node);
                 HandlePotentialRefLoad(ilVar, node, propertySymbol.Type);
             }
-        }
-
-        /// <summary>
-        /// Checks whether the given <paramref name="node"/> represents an unqualified reference (i.e, only a type name) or
-        /// a qualified one. For instance in `Foo f = new NS.Foo();`,
-        /// 1. Foo => Unqualified
-        /// 2. NS.Foo => Qualified
-        ///  
-        /// </summary>
-        /// <param name="node">Node with the name of the property being accessed.</param>
-        /// <param name="propertySymbol">Property symbol representing the property being accessed.</param>
-        /// <returns>true if <paramref name="node"/> represents an unqualified access to <paramref name="propertySymbol"/>, false otherwise</returns>
-        /// <remarks>
-        /// A NameColon syntax represents the `Length: 42` in an expression like `o as string { Length: 42 }`
-        /// A MemberBindExpression represents the null coalescing operator 
-        /// </remarks>
-        private static bool IsUnqualifiedAccess(SimpleNameSyntax node, IPropertySymbol propertySymbol)
-        {
-            var parentMae = node.Parent as MemberAccessExpressionSyntax;
-            return (parentMae == null || parentMae.Expression == node)
-                   && !node.Parent.IsKind(SyntaxKind.NameColon)
-                   && !node.Parent.IsKind(SyntaxKind.MemberBindingExpression)
-                   && !propertySymbol.IsStatic;
         }
 
         private void ProcessMethodReference(SimpleNameSyntax node, IMethodSymbol method)

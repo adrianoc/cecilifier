@@ -499,8 +499,7 @@ namespace Cecilifier.Core.AST
 
             var fieldDeclarationVariable = fieldSymbol.EnsureFieldExists(Context, node);
 
-            var isTargetOfQualifiedAccess = (node.Parent is MemberAccessExpressionSyntax mae) && mae.Name == node;
-            if (!fieldSymbol.IsStatic && !isTargetOfQualifiedAccess)
+            if (!fieldSymbol.IsStatic && !node.IsQualifiedAccessToTypeOrMember())
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
 
             if (HandleLoadAddressOnStorage(ilVar, fieldSymbol.Type, node, fieldSymbol.IsStatic ? OpCodes.Ldsflda : OpCodes.Ldflda, fieldSymbol.Name, VariableMemberKind.Field, fieldSymbol.ContainingType.ToDisplayString()))

@@ -14,6 +14,24 @@ namespace Cecilifier.Core.Extensions
     public static class SyntaxNodeExtensions
     {
         /// <summary>
+        /// Checks whether the given <paramref name="node"/> is the name in a qualified reference.
+        /// </summary>
+        /// <param name="node">Node with the name of the type/member to be tested.</param>
+        /// <returns>true if <paramref name="node"/> is the name in a qualified access, false otherwise</returns>
+        /// <remarks>
+        /// Examples of qualified / unqualified access:
+        /// 1. in, `Foo f = new NS.Foo();`, `Foo` : Foo f => Unqualified, NS.Foo => Qualified
+        /// 2. `o.field ?? otherField`, otherField => Unqualified, `field` in `o.field` => Qualified
+        /// </remarks>
+        public static bool IsQualifiedAccessToTypeOrMember(this SimpleNameSyntax node) => node.Parent switch
+        {
+            MemberAccessExpressionSyntax mae => mae.Name == node,
+            MemberBindingExpressionSyntax mbe => mbe.Name == node, // A MemberBindExpression represents `?.` in the null conditional operator, for instance, `o?.member`
+            NameColonSyntax => true, // A NameColon syntax represents the `Length: 42` in an expression like `o as string { Length: 42 }`. In this case, `Length` is equivalent to `o.Length`
+            _ => false
+        };
+
+        /// <summary>
         /// Returns a human readable summary of the <paramref name="node"/> containing nodes/tokens until (including) first one with a new line trivia.
         /// </summary>
         /// <param name="node"></param>

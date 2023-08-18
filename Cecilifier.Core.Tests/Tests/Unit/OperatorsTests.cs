@@ -107,6 +107,25 @@ public class OperatorsTests : CecilifierUnitTestBase
                         @"il_M_3.Append\(lbl_conditionEnd_7\);"));
     }
 
+    [TestCase("f", "Ldfld, fld_f_6", TestName = "Field")]
+    [TestCase("P", "Call, m_get_2", TestName = "Property")]
+    [TestCase("M()", "Call, m_M_4", TestName = "Method")]
+    public void TestNullConditionalOperator_OnQualifiedMemberAccess_DoesNoLoadThis(string member, string expected)
+    {
+        var result = RunCecilifier($$"""class Foo { private int P => 0; private int M() => 0; private int f; object Bar(Foo p) => p?.{{member}}; }""");
+        Assert.That(
+            result.GeneratedCode.ReadToEnd(), 
+            Does.Match(
+                $"""
+                (il_bar_\d+\.Emit\(OpCodes\.)Ldarg_1\);
+                (\s+\1){expected}\);
+                \2Newobj, .+ImportReference\(.+ResolveMethod\(typeof\(System\.Nullable<System.Int32>\), ".ctor",.+, "System.Int32"\)\)\);
+                \s+il_bar_\d+.Append\(lbl_conditionEnd_\d+\);
+                \2Box,.+ImportReference\(typeof\(System.Nullable<>\)\)\.MakeGenericInstanceType\(assembly.MainModule.TypeSystem.Int32\)\);
+                \2Ret\);
+                """));
+    }
+
     [TestCase(
         "int i = 42; i -= 10;",
         @"(il_topLevelMain_\d\.Emit\(OpCodes\.)Ldc_I4, 42\);\s+\1Stloc, (l_i_\d+)\);\s+\1Ldloc, \2\);\s+\1Ldc_I4, 10\);\s+\1Sub\);\s+\1Stloc, \2\);\s+m_topLevelStatements_1\.Body\.Instructions\.Add\(.+OpCodes\.Ret\)\);",
