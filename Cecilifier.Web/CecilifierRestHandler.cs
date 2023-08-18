@@ -204,7 +204,7 @@ namespace Cecilifier.Web
             if (string.IsNullOrWhiteSpace(_cecilifierGitHubToken))
             {
                 _logger.LogWarning($"CECILIFIER_GITHUB_TOKEN not defined. Retrieval of list of bugs fixed in staging/latest release info will not be available.");
-                context.Response.WriteAsync("N/A");
+                await context.Response.WriteAsync("N/A");
                 return;
             }
             
