@@ -50,6 +50,8 @@ namespace Cecilifier.Web
     </ItemGroup>
 </Project>";
 
+        private static HttpClient discordConnection = new();
+
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
@@ -180,7 +182,7 @@ namespace Cecilifier.Web
                             Naming = new DefaultNameStrategy(toBeCecilified.Settings.NamingOptions, toBeCecilified.Settings.ElementKindPrefixes.ToDictionary(entry => entry.ElementKind, entry => entry.Prefix))
                         });
 
-                    SendTextMessageToChat($"One more happy user {(deployKind == 'Z' ? "(project)" : "")}", $"Total so far: {CecilifierApplication.Count}\n\n***********\n\n```{toBeCecilified.Code}```", "4437377");
+                    await SendTextMessageToChatAsync($"One more happy user {(deployKind == 'Z' ? "(project)" : "")}", $"Total so far: {CecilifierApplication.Count}\n\n***********\n\n```{toBeCecilified.Code}```", "4437377");
 
                     if (deployKind == 'Z')
                     {
@@ -211,14 +213,14 @@ namespace Cecilifier.Web
                     //TODO: Log errors!
 
                     var source = includeSourceInErrorReports ? codeSnippet : string.Empty;
-                    SendMessageWithCodeToChat("Syntax Error", ex.Message, "15746887", source);
+                    await SendMessageWithCodeToChatAsync("Syntax Error", ex.Message, "15746887", source);
 
                     var dataToReturn = Encoding.UTF8.GetBytes($"{{ \"status\" : 1, \"error\": \"Code contains syntax errors\", \"syntaxError\": \"{HttpUtility.JavaScriptStringEncode(ex.Message)}\"  }}").AsMemory();
                     await webSocket.SendAsync(dataToReturn, WebSocketMessageType.Text, true, CancellationToken.None);
                 }
                 catch (Exception ex)
                 {
-                    SendExceptionToChat(ex, buffer, received.Count);
+                    await SendExceptionToChatAsync(ex, buffer, received.Count);
 
                     var dataToReturn = Encoding.UTF8.GetBytes($"{{ \"status\" : 2,  \"error\": \"{HttpUtility.JavaScriptStringEncode(ex.ToString())}\"  }}").AsMemory();
                     await webSocket.SendAsync(dataToReturn, WebSocketMessageType.Text, true, CancellationToken.None);
@@ -287,7 +289,7 @@ namespace Cecilifier.Web
             return JsonSerializer.SerializeToUtf8Bytes(cecilifiedWebResult);
         }
 
-        private void SendExceptionToChat(Exception exception, byte[] code, int length)
+        private Task SendExceptionToChatAsync(Exception exception, byte[] code, int length)
         {
             var stasktrace = JsonEncodedText.Encode(exception.StackTrace);
 
@@ -307,8 +309,9 @@ namespace Cecilifier.Web
             ]
         }}";
 
-            SendJsonMessageToChat(toSend);
+            return SendJsonMessageToChatAsync(toSend);
         }
+        
         private string CodeInBytesToString(byte[] code, int length)
         {
             var stream = new MemoryStream(code, 2, length - 2); // skip byte with info whether user wants zipped project or not & publishing source (discord) or not.
@@ -316,12 +319,12 @@ namespace Cecilifier.Web
             return reader.ReadToEnd();
         }
 
-        private void SendMessageWithCodeToChat(string title, string msg, string color, string code)
+        private Task SendMessageWithCodeToChatAsync(string title, string msg, string color, string code)
         {
-            SendTextMessageToChat(title, $"{msg}\n\n***********\n\n```{code}```", color);
+            return SendTextMessageToChatAsync(title, $"{msg}\n\n***********\n\n```{code}```", color);
         }
 
-        private void SendJsonMessageToChat(string jsonMessage)
+        private async Task SendJsonMessageToChatAsync(string jsonMessage)
         {
             var discordChannelUrl = Configuration["DiscordChannelUrl"];
             if (string.IsNullOrWhiteSpace(discordChannelUrl))
@@ -330,12 +333,11 @@ namespace Cecilifier.Web
                 return;
             }
 
-            var discordPostRequest = new HttpRequestMessage(HttpMethod.Post, discordChannelUrl);
+            using var discordPostRequest = new HttpRequestMessage(HttpMethod.Post, discordChannelUrl);
             discordPostRequest.Content = new StringContent(jsonMessage, Encoding.UTF8, "application/json");
             try
             {
-                var discordConnection = new HttpClient();
-                var response = discordConnection.Send(discordPostRequest);
+                using var response =  await discordConnection.SendAsync(discordPostRequest);
                 if (response.StatusCode != HttpStatusCode.NoContent)
                 {
                     Console.WriteLine($"Discord returned status: {response.StatusCode}");
@@ -347,7 +349,7 @@ namespace Cecilifier.Web
             }
         }
 
-        private void SendTextMessageToChat(string title, string msg, string color)
+        private Task SendTextMessageToChatAsync(string title, string msg, string color)
         {
             var toSend = $@"{{
             ""embeds"": [
@@ -359,7 +361,7 @@ namespace Cecilifier.Web
             ]
         }}";
 
-            SendJsonMessageToChat(toSend);
+            return SendJsonMessageToChatAsync(toSend);
         }
 
 
