@@ -78,15 +78,6 @@ namespace Cecilifier.Core.AST
             }
         }
 
-        protected void InsertCilInstructionAfter<T>(LinkedListNode<string> instruction, string ilVar, OpCode opCode, T arg = default)
-        {
-            var instVar = CreateCilInstruction(ilVar, opCode, arg);
-            Context.MoveLineAfter(Context.CurrentLine, instruction);
-
-            AddCecilExpression($"{ilVar}.Append({instVar});");
-            Context.MoveLineAfter(Context.CurrentLine, instruction.Next);
-        }
-
         protected void AddCilInstruction(string ilVar, OpCode opCode, ITypeSymbol type)
         {
             var operand = Context.TypeResolver.Resolve(type);
@@ -110,10 +101,11 @@ namespace Cecilifier.Core.AST
             return instVar;
         }
 
-        protected void CreateCilInstruction(string ilVar, string instVar, OpCode opCode, object operand = null)
+        protected string CreateCilInstruction(string ilVar, string instVar, OpCode opCode, object operand = null)
         {
             var operandStr = operand == null ? string.Empty : $", {operand}";
             AddCecilExpression($"var {instVar} = {ilVar}.Create({opCode.ConstantName()}{operandStr});");
+            return instVar;
         }
 
         protected void LoadLiteralValue(string ilVar, ITypeSymbol type, string value, bool isTargetOfCall, SyntaxNode parent)
@@ -463,10 +455,8 @@ namespace Cecilifier.Core.AST
 
         protected void ProcessParameter(string ilVar, SimpleNameSyntax node, IParameterSymbol paramSymbol)
         {
-            var parent = (CSharpSyntaxNode) node.Parent;
             var method = (IMethodSymbol) paramSymbol.ContainingSymbol;
-
-            if (HandleLoadAddress(ilVar, paramSymbol.Type, parent, OpCodes.Ldarga, paramSymbol.Name, VariableMemberKind.Parameter, (method.AssociatedSymbol ?? method).ToDisplayString()))
+            if (HandleLoadAddressOnStorage(ilVar, paramSymbol.Type, node, OpCodes.Ldarga, paramSymbol.Name, VariableMemberKind.Parameter, (method.AssociatedSymbol ?? method).ToDisplayString()))
                 return;
 
             Utils.EnsureNotNull(node.Parent);
@@ -513,7 +503,7 @@ namespace Cecilifier.Core.AST
             if (!fieldSymbol.IsStatic && !isTargetOfQualifiedAccess)
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
 
-            if (HandleLoadAddress(ilVar, fieldSymbol.Type, (CSharpSyntaxNode) node.Parent, fieldSymbol.IsStatic ? OpCodes.Ldsflda : OpCodes.Ldflda, fieldSymbol.Name, VariableMemberKind.Field, fieldSymbol.ContainingType.ToDisplayString()))
+            if (HandleLoadAddressOnStorage(ilVar, fieldSymbol.Type, node, fieldSymbol.IsStatic ? OpCodes.Ldsflda : OpCodes.Ldflda, fieldSymbol.Name, VariableMemberKind.Field, fieldSymbol.ContainingType.ToDisplayString()))
             {
                 return;
             }
@@ -533,8 +523,7 @@ namespace Cecilifier.Core.AST
 
         protected void ProcessLocalVariable(string ilVar, SimpleNameSyntax localVarSyntax, ILocalSymbol symbol)
         {
-            var localVar = (CSharpSyntaxNode) localVarSyntax.Parent;
-            if (HandleLoadAddress(ilVar, symbol.Type, localVar, OpCodes.Ldloca, symbol.Name, VariableMemberKind.LocalVariable))
+            if (HandleLoadAddressOnStorage(ilVar, symbol.Type, localVarSyntax, OpCodes.Ldloca, symbol.Name, VariableMemberKind.LocalVariable))
                 return;
 
             var operand = Context.DefinitionVariables.GetVariable(symbol.Name, VariableMemberKind.LocalVariable).VariableName;
@@ -552,8 +541,15 @@ namespace Cecilifier.Core.AST
             Context.EmitCilInstruction(ilVar, OpCodes.Conv_U);
         }
 
-        private bool HandleLoadAddress(string ilVar, ITypeSymbol symbol, CSharpSyntaxNode node, OpCode opCode, string symbolName, VariableMemberKind variableMemberKind, string parentName = null)
+        private bool HandleLoadAddressOnStorage(string ilVar, ITypeSymbol symbol, CSharpSyntaxNode node, OpCode opCode, string symbolName, VariableMemberKind variableMemberKind, string parentName = null)
         {
+            var operand = Context.DefinitionVariables.GetVariable(symbolName, variableMemberKind, parentName).VariableName;
+            return HandleLoadAddress(ilVar, symbol, node, opCode, operand);
+        }
+
+        protected bool HandleLoadAddress(string ilVar, ITypeSymbol symbol, CSharpSyntaxNode node, OpCode opCode, string operand)
+        {
+            var parentNode = (CSharpSyntaxNode)node.Parent;
             return HandleCallOnTypeParameter() || HandleCallOnValueType() || HandleRefAssignment() || HandleParameter();
 
             bool HandleCallOnValueType()
@@ -563,13 +559,12 @@ namespace Cecilifier.Core.AST
 
                 // in this case we need to call System.Index.GetOffset(int32) on a value type (System.Index)
                 // which requires the address of the value type.
-                var isSystemIndexUsedAsIndex = IsSystemIndexUsedAsIndex(symbol, node);
-                var usageResult = node.Accept(UsageVisitor.GetInstance(Context));
-                if (isSystemIndexUsedAsIndex || node.IsKind(SyntaxKind.AddressOfExpression) || IsPseudoAssignmentToValueType() || usageResult.Kind == UsageKind.CallTarget)
+                var isSystemIndexUsedAsIndex = IsSystemIndexUsedAsIndex(symbol, parentNode);
+                var usageResult = parentNode.Accept(UsageVisitor.GetInstance(Context));
+                if (isSystemIndexUsedAsIndex || parentNode.IsKind(SyntaxKind.AddressOfExpression) || IsPseudoAssignmentToValueType() || node.IsMemberAccessOnElementAccess() || usageResult.Kind == UsageKind.CallTarget)
                 {
-                    var operand = Context.DefinitionVariables.GetVariable(symbolName, variableMemberKind, parentName).VariableName;
                     Context.EmitCilInstruction(ilVar, opCode, operand);
-                    if (!Context.HasFlag(Constants.ContextFlags.Fixed) && node.IsKind(SyntaxKind.AddressOfExpression))
+                    if (!Context.HasFlag(Constants.ContextFlags.Fixed) && parentNode.IsKind(SyntaxKind.AddressOfExpression))
                         Context.EmitCilInstruction(ilVar, OpCodes.Conv_U);
 
                     // calls to virtual methods on custom value types needs to be constrained (don't know why, but the generated IL for such scenarios does `constrains`).
@@ -590,10 +585,9 @@ namespace Cecilifier.Core.AST
                 if (typeParameter.HasReferenceTypeConstraint || typeParameter.IsReferenceType)
                     return false;
 
-                if (node.Accept(UsageVisitor.GetInstance(Context)) != UsageKind.CallTarget)
+                if (parentNode.Accept(UsageVisitor.GetInstance(Context)) != UsageKind.CallTarget)
                     return false;
 
-                var operand = Context.DefinitionVariables.GetVariable(symbolName, variableMemberKind, parentName).VariableName;
                 Context.EmitCilInstruction(ilVar, opCode, operand);
                 Context.EmitCilInstruction(ilVar, OpCodes.Constrained, Context.TypeResolver.Resolve(symbol));
                 return true;
@@ -601,26 +595,24 @@ namespace Cecilifier.Core.AST
 
             bool HandleRefAssignment()
             {
-                if (!(node is RefExpressionSyntax refExpression))
+                if (!(parentNode is RefExpressionSyntax refExpression))
                     return false;
 
                 var assignedValueSymbol = Context.SemanticModel.GetSymbolInfo(refExpression.Expression);
                 if (assignedValueSymbol.Symbol.IsByRef())
                     return false;
 
-                string operand = Context.DefinitionVariables.GetVariable(symbolName, variableMemberKind, parentName).VariableName;
                 Context.EmitCilInstruction(ilVar, opCode, operand);
                 return true;
             }
 
             bool HandleParameter()
             {
-                if (!(node is ArgumentSyntax argument) || !argument.RefOrOutKeyword.IsKind(SyntaxKind.RefKeyword))
+                if (!(parentNode is ArgumentSyntax argument) || !argument.RefOrOutKeyword.IsKind(SyntaxKind.RefKeyword))
                     return false;
 
                 if (Context.SemanticModel.GetSymbolInfo(argument.Expression).Symbol?.IsByRef() == false)
                 {
-                    string operand = Context.DefinitionVariables.GetVariable(symbolName, variableMemberKind, parentName).VariableName;
                     Context.EmitCilInstruction(ilVar, opCode, operand);
                     return true;
                 }
@@ -739,7 +731,7 @@ namespace Cecilifier.Core.AST
             };
         }
 
-        private bool IsSystemIndexUsedAsIndex(ITypeSymbol symbol, CSharpSyntaxNode node)
+        private bool IsSystemIndexUsedAsIndex(ITypeSymbol symbol, SyntaxNode node)
         {
             if (symbol.MetadataToken != Context.RoslynTypeSystem.SystemIndex.MetadataToken)
                 return false;

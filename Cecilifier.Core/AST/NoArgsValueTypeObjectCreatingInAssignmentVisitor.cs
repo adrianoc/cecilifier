@@ -12,12 +12,15 @@ namespace Cecilifier.Core.AST
         private readonly string ilVar;
         private readonly string resolvedInstantiatedType;
         private readonly Func<DefinitionVariable> tempValueTypeDeclarer;
+        private readonly BaseObjectCreationExpressionSyntax objectCreationExpression;
 
-        internal NoArgsValueTypeObjectCreatingInAssignmentVisitor(IVisitorContext ctx, string ilVar, string resolvedInstantiatedType, Func<DefinitionVariable> tempValueTypeDeclarer) : base(ctx)
+        internal NoArgsValueTypeObjectCreatingInAssignmentVisitor(IVisitorContext ctx, string ilVar, string resolvedInstantiatedType, Func<DefinitionVariable> tempValueTypeDeclarer,
+            BaseObjectCreationExpressionSyntax objectCreationExpression) : base(ctx)
         {
             this.ilVar = ilVar;
             this.resolvedInstantiatedType = resolvedInstantiatedType;
             this.tempValueTypeDeclarer = tempValueTypeDeclarer;
+            this.objectCreationExpression = objectCreationExpression;
         }
 
         public bool TargetOfAssignmentIsValueType { get; private set; } = true;
@@ -33,8 +36,8 @@ namespace Cecilifier.Core.AST
 
             //...since we have an `assignment` to an array element which is of type
             //struct, we need to load the element address instead. 
-            Context.EmitCilInstruction(ilVar, OpCodes.Ldelema);
-            Context.EmitCilInstruction(ilVar, OpCodes.Initobj, resolvedInstantiatedType);
+            Context.EmitCilInstruction(ilVar, OpCodes.Ldelema, resolvedInstantiatedType);
+            InitializeAndProcessObjectInitializerExpression();
         }
 
         public override void VisitIdentifierName(IdentifierNameSyntax node)
@@ -71,7 +74,6 @@ namespace Cecilifier.Core.AST
                         Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
                         Context.EmitCilInstruction(ilVar, OpCodes.Ldflda, fieldResolverExpression);
                     }
-
                     break;
 
                 case SymbolKind.Parameter:
@@ -87,7 +89,21 @@ namespace Cecilifier.Core.AST
                     Context.EmitCilInstruction(ilVar, opCode, parameterSymbol.Ordinal); // TODO: Static / Instance methods handling...
                     break;
             }
+
+            InitializeAndProcessObjectInitializerExpression();
+        }
+
+        private void InitializeAndProcessObjectInitializerExpression()
+        {
+            if (objectCreationExpression.Initializer != null)
+            {
+                // See comment in ValueTypeNoArgCtorInvocationVisitor.InitValueTypeLocalVariable() for an explanation on why we
+                // duplicate the top of the stack.
+                Context.EmitCilInstruction(ilVar, OpCodes.Dup);
+            }
+
             Context.EmitCilInstruction(ilVar, OpCodes.Initobj, resolvedInstantiatedType);
+            ValueTypeNoArgCtorInvocationVisitor.ProcessInitializerIfNotNull(Context, ilVar,  objectCreationExpression.Initializer);
         }
     }
 }

@@ -12,16 +12,16 @@ public class ObjectInitializerTests : CecilifierUnitTestBase
         var code = @"class Foo { public int Value; public bool B; } class Bar { public void M() { var x = new Foo { Value = 42, B = true }; } }";
         var result = RunCecilifier(code);
 
-        var expected = @"(il_M_\d+\.Emit\(OpCodes\.)Newobj, ctor_foo_3\);\s+" +
-            @"var (dup_\d+) = il_M_\d+.Create\(OpCodes.Dup\);\s+" +
-            @"il_M_\d+.Append\(\2\);\s+" +
-            @"\1Ldc_I4, 42\);\s+" +
-            @"\1Stfld, fld_value_\d+\);\s+" +
-            @"var (dup_\d+) = il_M_\d+.Create\(OpCodes.Dup\);\s+" +
-            @"il_M_\d+.Append\(\3\);\s+" +
-            @"\1Ldc_I4, 1\);\s+" +
-            @"\1Stfld, fld_B_\d+\);\s+" +
-            @"\1Stloc, l_x_\d+\);";
+        var expected = """
+                       (il_M_\d+\.Emit\(OpCodes\.)Newobj, ctor_foo_3\);
+                       (\s+\1)Dup\);
+                       \2Ldc_I4, 42\);
+                       \2Stfld, fld_value_\d+\);
+                       \2Dup\);
+                       \2Ldc_I4, 1\);
+                       \2Stfld, fld_B_\d+\);
+                       \2Stloc, l_x_\d+\);
+                       """;
 
         Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(expected));
     }
@@ -121,7 +121,7 @@ public class ObjectInitializerTests : CecilifierUnitTestBase
     }
     
     [Test]
-    public void CustomCollectionInitializerAddMethodBountToExtensionMethod()
+    public void CustomCollectionInitializerAddMethodBoundToExtensionMethod()
     {
         var code = """
                    static class Ext { public static void Add(this Foo self, string s) {} }
@@ -148,4 +148,114 @@ public class ObjectInitializerTests : CecilifierUnitTestBase
 
         Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(expected));
     }
+
+    [TestCase(
+        "M(new Bar() { Value = 1 } , new Bar() { Value = 2 } );",
+        """
+            m_topLevelStatements_\d+.Body.Variables.Add\(l_vt_\d+\);
+            (\s+il_topLevelMain_\d+\.Emit\(OpCodes\.)Ldloca_S, (l_vt_\d+)\);
+            \1Initobj, st_bar_0\);
+            \1Ldloca_S, \2\);
+            \1Dup\);
+            \1Ldc_I4, 1\);
+            \1Call, l_set_11\);
+            \1Pop\);
+            \1Ldloc, \2\);
+            \s+var (l_vt_\d+) = new VariableDefinition\(st_bar_0\);
+            \s+m_topLevelStatements_\d+.Body.Variables.Add\(\3\);
+            \1Ldloca_S, \3\);
+            \1Initobj, st_bar_0\);
+            \1Ldloca_S, \3\);
+            \1Dup\);
+            \1Ldc_I4, 2\);
+            \1Call, l_set_11\);
+            \1Pop\);
+            \1Ldloca, \3\);
+            \1Call, m_M_19\);
+            """,
+        TestName = "As method argument")]
+    
+    [TestCase("""var x = new Bar { Name = "A", Value = 3 };""", 
+        """
+        var (l_x_\d+) = new VariableDefinition\(st_bar_0\);
+        \s+m_topLevelStatements_14.Body.Variables.Add\(\1\);
+        (\s+il_topLevelMain_\d+\.Emit\(OpCodes\.)Ldloca_S, \1\);
+        \2Initobj, st_bar_0\);
+        \2Ldloca_S, \1\);
+        \2Dup\);
+        \2Ldstr, "A"\);
+        \2Call, l_set_5\);
+        \2Dup\);
+        \2Ldc_I4, 3\);
+        \2Call, l_set_11\);
+        \2Pop\);
+        """,
+        TestName = "in variable initializer")]
+    
+    [TestCase("Bar b; b = new Bar { Value = 3 };", 
+        """
+        (\s+il_topLevelMain_\d+\.Emit\(OpCodes\.)Ldloca_S, (l_b_\d+)\);
+        \1Dup\);
+        \1Initobj, st_bar_0\);
+        \1Dup\);
+        \1Ldc_I4, 3\);
+        \1Call, l_set_11\);
+        \1Pop\);
+        """,
+        TestName = "in assignment")]
+    
+    [TestCase("""var z = new Bar() { Name = "123", Value = 6 }.Value;""", 
+        """
+                    var (l_vt_\d+) = new VariableDefinition\((st_bar_\d+)\);
+                    \s+(m_topLevelStatements_\d+).Body.Variables.Add\(\1\);
+                    (\s+il_topLevelMain_\d+.Emit\(OpCodes\.)Ldloca_S, \1\);
+                    \4Initobj, \2\);
+                    \4Ldloca_S, \1\);
+                    \4Dup\);
+                    \4Ldstr, "123"\);
+                    \4Call, l_set_5\);
+                    \4Dup\);
+                    \4Ldc_I4, 6\);
+                    \4Call, l_set_11\);
+                    \4Pop\);
+                    \4Ldloca, \1\);
+                    \4Call, m_get_8\);
+                    """,
+        TestName = "in member access expression")]
+    
+    [TestCase("Bar []ba = new Bar[1]; ba[0] = new Bar { Value = 3 };", 
+        """
+        var l_ba_19 = new VariableDefinition\(st_bar_0.MakeArrayType\(\)\);
+        \s+m_topLevelStatements_14.Body.Variables.Add\(l_ba_19\);
+        (\s+il_topLevelMain_\d+\.Emit\(OpCodes\.)Ldc_I4, 1\);
+        \1Newarr, st_bar_0\);
+        \1Stloc, l_ba_19\);
+        \1Ldloc, l_ba_19\);
+        \1Ldc_I4, 0\);
+        \1Ldelema, st_bar_0\);
+        \1Dup\);
+        \1Initobj, st_bar_0\);
+        \1Dup\);
+        \1Ldc_I4, 3\);
+        \1Call, l_set_11\);
+        \1Pop\);
+        """,
+        TestName = "in assignment to array element")]    
+    public void ObjectInitializers_AreHandled_InValueTypes(string statementToTest, string expectedRegex)
+    {
+        var result = RunCecilifier($$"""
+                                   {{statementToTest}}
+                                   
+                                   void M(Bar bar, in Bar ib) { }
+                                   
+                                   struct Bar 
+                                   {
+                                      public string Name {get; set; }
+                                      public int Value { get; set; }
+                                   }
+                                   """);
+        
+        Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(expectedRegex));
+    }
+    
 }

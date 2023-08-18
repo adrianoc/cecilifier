@@ -57,7 +57,7 @@ public class RefAssignmentTests : CecilifierUnitTestBase
     }
 
     [Test]
-    public void TesRefParameterDeference()
+    public void TestRefParameterDeference()
     {
         var result = RunCecilifier("void M(ref int r) { int i; i = r + 42; }");
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
@@ -75,6 +75,50 @@ public class RefAssignmentTests : CecilifierUnitTestBase
     }
 
     [Test]
+    public void TestAssign_NewInstanceOfValueType_ToParameter()
+    {
+        var result = RunCecilifier("void M(ref S s) { s = new S(); } struct S { public S() {} }");
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+    
+        Assert.That(cecilifiedCode, Does.Match("""
+                                               //s = new S\(\);
+                                               (\s+il_M_\d+\.Emit\(OpCodes\.)Ldarg_1\);
+                                               \1Newobj, ctor_S_1\);
+                                               \1Stobj, st_S_0\);
+                                               """));
+    }
+    
+    [Test]
+    public void TestAssign_NewInstanceOfValueType_ByRefIndexer()
+    {
+        var result = RunCecilifier("""
+                                   struct S { public S() {} }
+                                   class Foo
+                                   {
+                                        S s;
+                                        ref S this[int i] => ref s;
+                                        
+                                        void DoIt(Foo other)
+                                        {
+                                            other[0] = new S(); 
+                                        }
+                                   }
+                                   """);
+        
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+    
+        Assert.That(cecilifiedCode, Does.Match("""
+                                               //other\[0\] = new S\(\);
+                                               (\s+il_doIt_\d+\.Emit\(OpCodes\.)Ldarg_1\);
+                                               \1Ldc_I4, 0\);
+                                               \1Callvirt, m_get_9\);
+                                               \1Newobj, ctor_S_1\);
+                                               \1Stobj, st_S_0\);
+                                               \1Ret\);
+                                               """));
+    }
+
+    [Test]
     public void TesRefFieldAssignment()
     {
         var result = RunCecilifier("ref struct RefStruct { ref int refInt; public RefStruct(ref int r) { refInt = ref r; refInt = 42; } }");
@@ -84,10 +128,9 @@ public class RefAssignmentTests : CecilifierUnitTestBase
             Does.Match(
                 """
             //refInt = ref r;
-            \s+var (ldarg_\d+_\d+) = (il_ctor_\d+).Create\(OpCodes.Ldarg_0\);
-            \s+\2.Append\(\1\);
-            \s+\2.Emit\(OpCodes.Ldarg_1\);
-            \s+\2.Emit\(OpCodes.Stfld, fld_refInt_\d+\);
+            (\s+il_ctor_\d+.Emit\(OpCodes\.)Ldarg_0\);
+            \1Ldarg_1\);
+            \1Stfld, fld_refInt_\d+\);
             """),
             "Ref Assignment");
 

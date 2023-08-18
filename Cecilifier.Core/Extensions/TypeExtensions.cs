@@ -48,8 +48,7 @@ namespace Cecilifier.Core.Extensions
             INamedTypeSymbol { IsGenericType: true, OriginalDefinition: { ContainingNamespace.Name: "System", Name: "Span" } } ns =>  ns.TypeArguments[0],
             IPointerTypeSymbol ptr => ptr.PointedAtType,
             IArrayTypeSymbol array =>  array.ElementType,
-            
-            _ => throw new ArgumentException($"{type.Name} not supported.", nameof(type))
+            _ => type
         };
 
         public static uint SizeofArrayLikeItemElement(this ITypeSymbol type)

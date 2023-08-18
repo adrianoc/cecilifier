@@ -56,7 +56,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             yield return new TestCaseData("ulong", "Stind_I8").SetName("ulong");
             yield return new TestCaseData("float", "Stind_R4").SetName("float");
             yield return new TestCaseData("double", "Stind_R8").SetName("double");
-            yield return new TestCaseData("S", "Stobj").SetName("custom-struct");
+            yield return new TestCaseData("S", "Stobj, st_S_0").SetName("custom-struct");
         }
     }
 }

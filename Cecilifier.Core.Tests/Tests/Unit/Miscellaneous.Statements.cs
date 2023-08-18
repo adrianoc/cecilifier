@@ -113,35 +113,34 @@ public partial class MiscellaneousStatements : CecilifierUnitTestBase
             \s+//case 1: \(condition\)
             \s+il_M_7.Emit\(OpCodes.Ldloc, l_switchCondition_13\);
             \s+il_M_7.Emit\(OpCodes.Ldc_I4, 1\);
-            \s+il_M_7.Emit\(OpCodes.Beq_S, nop_15\);
+            \s+il_M_7.Emit\(OpCodes.Beq_S, lbl_caseCode_0_15\);
             
             \s+//case 2: \(condition\)
             \s+il_M_7.Emit\(OpCodes.Ldloc, l_switchCondition_13\);
             \s+il_M_7.Emit\(OpCodes.Ldc_I4, 2\);
-            \s+il_M_7.Emit\(OpCodes.Beq_S, nop_16\);
+            \s+il_M_7.Emit\(OpCodes.Beq_S, lbl_caseCode_1_16\);
+            \s+il_M_7.Emit\(OpCodes.Br, lbl_caseCode_2_17\);
             
-            \s+il_M_7.Emit\(OpCodes.Br, nop_17\);
-            \s+il_M_7.Emit\(OpCodes.Br, nop_14\);
             \s+//case 1: \(code\)
-            \s+il_M_7.Append\(nop_15\);
+            \s+il_M_7.Append\(lbl_caseCode_0_15\);
             \s+il_M_7.Emit\(OpCodes.Ldstr, "C1"\);
             \s+il_M_7.Emit\(OpCodes.Call, .+System.Console.+WriteLine.+\);
-            \s+il_M_7.Emit\(OpCodes.Br, nop_14\);
+            \s+il_M_7.Emit\(OpCodes.Br, lbl_endOfSwitch_14\);
             
             \s+//case 2: \(code\)
-            \s+il_M_7.Append\(nop_16\);
+            \s+il_M_7.Append\(lbl_caseCode_1_16\);
             \s+il_M_7.Emit\(OpCodes.Ldstr, "C2"\);
             \s+il_M_7.Emit\(OpCodes.Call, .+System.Console.+WriteLine.+\);
-            \s+il_M_7.Emit\(OpCodes.Br, nop_14\);
+            \s+il_M_7.Emit\(OpCodes.Br, lbl_endOfSwitch_14\);
             
             \s+//default: \(code\)
-            \s+il_M_7.Append\(nop_17\);
+            \s+il_M_7.Append\(lbl_caseCode_2_17\);
             \s+il_M_7.Emit\(OpCodes.Ldstr, "CD"\);
             \s+il_M_7.Emit\(OpCodes.Call, .+System.Console.+WriteLine.+\);
-            \s+il_M_7.Emit\(OpCodes.Br, nop_14\);
+            \s+il_M_7.Emit\(OpCodes.Br, lbl_endOfSwitch_14\);
             
             \s+//End of switch
-            \s+il_M_7.Append\(nop_14\);
+            \s+il_M_7.Append\(lbl_endOfSwitch_14\);
             """));
     }
 

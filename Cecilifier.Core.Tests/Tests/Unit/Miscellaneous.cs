@@ -231,12 +231,11 @@ public static class Outer
         [TestCase(
             "C c = new() { Value = 42 }; class C { public int Value; }",
             """
-                    (il_topLevelMain_\d+).Emit\(OpCodes.Newobj, ctor_C_\d+\);
-                    \s+var (dup_\d+) = \1.Create\(OpCodes.Dup\);
-                    \s+\1.Append\(\2\);
-                    \s+\1.Emit\(OpCodes.Ldc_I4, 42\);
-                    \s+\1.Emit\(OpCodes.Stfld, fld_value_\d+\);
-                    \s+\1.Emit\(OpCodes.Stloc, l_c_\d+\);
+                    (il_topLevelMain_\d+.Emit\(OpCodes\.)Newobj, ctor_C_\d+\);
+                    \s+\1Dup\);
+                    \s+\1Ldc_I4, 42\);
+                    \s+\1Stfld, fld_value_\d+\);
+                    \s+\1Stloc, l_c_\d+\);
                     """,
             TestName = "Object Initializer")]
         public void TestImplicitObjectCreation(string code, params string[] expectations)
