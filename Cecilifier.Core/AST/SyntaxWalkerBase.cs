@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -17,7 +18,7 @@ using static Cecilifier.Core.Misc.CodeGenerationHelpers;
 
 namespace Cecilifier.Core.AST
 {
-    internal class SyntaxWalkerBase : CSharpSyntaxWalker
+    internal partial class SyntaxWalkerBase : CSharpSyntaxWalker
     {
         internal SyntaxWalkerBase(IVisitorContext ctx)
         {
@@ -365,7 +366,7 @@ namespace Cecilifier.Core.AST
                     _ => throw new ArgumentException($"Invalid StructLayout value for {typeSymbol.Name}")
                 };
 
-                typeAttributes.AppendModifier($"TypeAttributes.{specifiedLayout}");
+                typeAttributes.AppendModifier(specifiedLayout);
             }
         }
 
@@ -798,10 +799,13 @@ namespace Cecilifier.Core.AST
                 //TODO: Pass the correct list of type parameters when C# supports generic attributes.
                 TypeDeclarationVisitor.EnsureForwardedTypeDefinition(context, type, Array.Empty<TypeParameterSyntax>());
 
-                var attrsExp = context.SemanticModel.GetSymbolInfo(attribute.Name).Symbol.IsDllImportCtor()
-                    ? ProcessDllImportAttribute(context, attribute, targetDeclarationVar)
-                    : ProcessNormalMemberAttribute(context, attribute, targetDeclarationVar);
-
+                var attrsExp = type.AttributeKind() switch
+                    {
+                        AttributeKind.DllImport => ProcessDllImportAttribute(context, attribute, targetDeclarationVar),
+                        AttributeKind.StructLayout => ProcessStructLayoutAttribute(attribute, targetDeclarationVar),
+                        _ => ProcessNormalMemberAttribute(context, attribute, targetDeclarationVar)
+                    };
+                
                 AddCecilExpressions(context, attrsExp);
             }
         }
@@ -909,6 +913,26 @@ namespace Cecilifier.Core.AST
             string AttributePropertyOrDefaultValue(AttributeSyntax attr, string propertyName, string defaultValue)
             {
                 return attr.ArgumentList?.Arguments.FirstOrDefault(arg => arg.NameEquals?.Name.Identifier.Text == propertyName)?.Expression.ToFullString() ?? defaultValue;
+            }
+        }
+
+        private static IEnumerable<string> ProcessStructLayoutAttribute(AttributeSyntax attribute, string typeVar)
+        {
+            Debug.Assert(attribute.ArgumentList != null);
+            if (attribute.ArgumentList.Arguments.Count == 0 || attribute.ArgumentList.Arguments.All(a => a.NameEquals == null))
+                return Array.Empty<string>();
+
+            return new[]
+            {
+                $"{typeVar}.ClassSize = { AssignedValue(attribute, "Size") };",
+                $"{typeVar}.PackingSize = { AssignedValue(attribute, "Pack") };",
+            };
+
+            static int AssignedValue(AttributeSyntax attribute, string parameterName)
+            {
+                // whenever Size/Pack are omitted the corresponding property should be set to 0. See Ecma-335 II 22.8.
+                var parameterAssignmentExpression = attribute.ArgumentList?.Arguments.FirstOrDefault(a => a.NameEquals?.Name.Identifier.Text == parameterName)?.Expression;
+                return parameterAssignmentExpression != null ? Int32.Parse(((LiteralExpressionSyntax) parameterAssignmentExpression).Token.Text) : 0;
             }
         }
 

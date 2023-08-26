@@ -1,7 +1,6 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
@@ -88,8 +87,6 @@ namespace Cecilifier.Core.Extensions
 
             return symbol;
         }
-
-        public static bool IsDllImportCtor(this ISymbol self) => self != null && self.ContainingType.Name == "DllImportAttribute";
 
         public static string AsParameterAttribute(this IParameterSymbol symbol)
         {
