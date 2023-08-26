@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -225,52 +224,10 @@ namespace Cecilifier.Core.AST
 
         private void LoadLiteralToStackHandlingCallOnValueTypeLiterals(string ilVar, ITypeSymbol literalType, object literalValue, bool isTargetOfCall)
         {
-            var opCode = LoadOpCodeFor(literalType);
+            var opCode = literalType.LoadOpCodeFor();
             Context.EmitCilInstruction(ilVar, opCode, literalValue);
             if (isTargetOfCall)
                 StoreTopOfStackInLocalVariableAndLoadItsAddress(ilVar, literalType);
-        }
-
-        private OpCode LoadOpCodeFor(ITypeSymbol type)
-        {
-            switch (type.SpecialType)
-            {
-                case SpecialType.System_IntPtr:
-                case SpecialType.System_UIntPtr:
-                    return OpCodes.Ldc_I4;
-
-                case SpecialType.System_Single:
-                    return OpCodes.Ldc_R4;
-
-                case SpecialType.System_Double:
-                    return OpCodes.Ldc_R8;
-
-                case SpecialType.System_Byte:
-                case SpecialType.System_SByte:
-                case SpecialType.System_Int16:
-                case SpecialType.System_Int32:
-                case SpecialType.System_UInt16:
-                case SpecialType.System_UInt32:
-                    return OpCodes.Ldc_I4;
-
-                case SpecialType.System_UInt64:
-                case SpecialType.System_Int64:
-                    return OpCodes.Ldc_I8;
-
-                case SpecialType.System_Char:
-                    return OpCodes.Ldc_I4;
-
-                case SpecialType.System_Boolean:
-                    return OpCodes.Ldc_I4;
-
-                case SpecialType.System_String:
-                    return OpCodes.Ldstr;
-
-                case SpecialType.None:
-                    return OpCodes.Ldnull;
-            }
-
-            throw new ArgumentException($"Literal type {type} not supported.", nameof(type));
         }
 
         private void StoreTopOfStackInLocalVariableAndLoadItsAddress(string ilVar, ITypeSymbol type, string variableName = "tmp")
@@ -665,8 +622,7 @@ namespace Cecilifier.Core.AST
 
             if (needsLoadIndirect)
             {
-                OpCode opCode = LoadIndirectOpCodeFor(type.SpecialType);
-                Context.EmitCilInstruction(ilVar, opCode);
+                Context.EmitCilInstruction(ilVar, type.LoadIndirectOpCodeFor());
             }
         }
 
@@ -706,29 +662,6 @@ namespace Cecilifier.Core.AST
             }
 
             return null;
-        }
-
-        protected OpCode LoadIndirectOpCodeFor(SpecialType type)
-        {
-            return type switch
-            {
-                SpecialType.System_Single => OpCodes.Ldind_R4,
-                SpecialType.System_Double => OpCodes.Ldind_R8,
-                SpecialType.System_SByte => OpCodes.Ldind_I1,
-                SpecialType.System_Byte => OpCodes.Ldind_U1,
-                SpecialType.System_Int16 => OpCodes.Ldind_I2,
-                SpecialType.System_UInt16 => OpCodes.Ldind_U2,
-                SpecialType.System_Int32 => OpCodes.Ldind_I4,
-                SpecialType.System_UInt32 => OpCodes.Ldind_U4,
-                SpecialType.System_Int64 => OpCodes.Ldind_I8,
-                SpecialType.System_UInt64 => OpCodes.Ldind_I8,
-                SpecialType.System_Char => OpCodes.Ldind_U2,
-                SpecialType.System_Boolean => OpCodes.Ldind_U1,
-                SpecialType.System_Object => OpCodes.Ldind_Ref,
-                SpecialType.None => OpCodes.Ldind_Ref,
-
-                _ => throw new ArgumentException($"Literal type {type} not supported.", nameof(type))
-            };
         }
 
         private bool IsSystemIndexUsedAsIndex(ITypeSymbol symbol, SyntaxNode node)
@@ -789,9 +722,6 @@ namespace Cecilifier.Core.AST
 
         private static void HandleAttributesInMemberDeclaration(IVisitorContext context, IEnumerable<AttributeListSyntax> attributeLists, string targetDeclarationVar)
         {
-            if (!attributeLists.Any())
-                return;
-
             foreach (var attribute in attributeLists.SelectMany(al => al.Attributes))
             {
                 var type = context.SemanticModel.GetSymbolInfo(attribute).Symbol.EnsureNotNull<ISymbol, IMethodSymbol>().ContainingType;

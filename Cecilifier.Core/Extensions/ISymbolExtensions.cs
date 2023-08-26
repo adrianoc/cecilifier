@@ -155,6 +155,54 @@ namespace Cecilifier.Core.Extensions
             _ => throw new ArgumentException($"Invalid symbol type for {symbol} ({symbol.Kind})")
         };
 
+        public static OpCode LoadOpCodeFor(this ITypeSymbol type)
+        {
+            return type.SpecialType switch
+            {
+                SpecialType.System_IntPtr => OpCodes.Ldc_I4,
+                SpecialType.System_UIntPtr => OpCodes.Ldc_I4,
+                SpecialType.System_Single => OpCodes.Ldc_R4,
+                SpecialType.System_Double => OpCodes.Ldc_R8,
+                SpecialType.System_Byte => OpCodes.Ldc_I4,
+                SpecialType.System_SByte => OpCodes.Ldc_I4,
+                SpecialType.System_Int16 => OpCodes.Ldc_I4,
+                SpecialType.System_Int32 => OpCodes.Ldc_I4,
+                SpecialType.System_UInt16 => OpCodes.Ldc_I4,
+                SpecialType.System_UInt32 => OpCodes.Ldc_I4,
+                SpecialType.System_UInt64 => OpCodes.Ldc_I8,
+                SpecialType.System_Int64 => OpCodes.Ldc_I8,
+                SpecialType.System_Char => OpCodes.Ldc_I4,
+                SpecialType.System_Boolean => OpCodes.Ldc_I4,
+                SpecialType.System_String => OpCodes.Ldstr,
+                SpecialType.None => OpCodes.Ldnull,
+                
+                _ => throw new ArgumentException($"Literal type {type} not supported.", nameof(type))
+            };
+        }
+        
+        public static OpCode LoadIndirectOpCodeFor(this ITypeSymbol type)
+        {
+            return type.SpecialType switch
+            {
+                SpecialType.System_Single => OpCodes.Ldind_R4,
+                SpecialType.System_Double => OpCodes.Ldind_R8,
+                SpecialType.System_SByte => OpCodes.Ldind_I1,
+                SpecialType.System_Byte => OpCodes.Ldind_U1,
+                SpecialType.System_Int16 => OpCodes.Ldind_I2,
+                SpecialType.System_UInt16 => OpCodes.Ldind_U2,
+                SpecialType.System_Int32 => OpCodes.Ldind_I4,
+                SpecialType.System_UInt32 => OpCodes.Ldind_U4,
+                SpecialType.System_Int64 => OpCodes.Ldind_I8,
+                SpecialType.System_UInt64 => OpCodes.Ldind_I8,
+                SpecialType.System_Char => OpCodes.Ldind_U2,
+                SpecialType.System_Boolean => OpCodes.Ldind_U1,
+                SpecialType.System_Object => OpCodes.Ldind_Ref,
+                SpecialType.None => OpCodes.Ldind_Ref,
+
+                _ => throw new ArgumentException($"Literal type {type} not supported.", nameof(type))
+            };
+        }
+
         public static string ValueForDefaultLiteral(this ITypeSymbol literalType) => literalType switch
         {
             { SpecialType: SpecialType.System_Char } => "\0",
