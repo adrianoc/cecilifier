@@ -33,6 +33,8 @@ namespace Cecilifier.Web
         [JsonPropertyName("status")] public int Status { get; set; }
         [JsonPropertyName("cecilifiedCode")] public string CecilifiedCode { get; set; }
         [JsonPropertyName("counter")] public int Counter { get; set; }
+        [JsonPropertyName("clientsCounter")] public uint Clients { get; set; }
+        [JsonPropertyName("maximumUnique")] public uint MaximumUnique { get; set; }
         [JsonPropertyName("kind")] public char Kind { get; set; }
         [JsonPropertyName("mappings")] public IList<Mapping> Mappings { get; set; }
         [JsonPropertyName("mainTypeName")] public string MainTypeName { get; set; }
@@ -51,6 +53,7 @@ namespace Cecilifier.Web
 </Project>";
 
         private static HttpClient discordConnection = new();
+        private static IDictionary<long, uint> seemClientIPHashCodes = new Dictionary<long, uint>();
 
         public Startup(IConfiguration configuration)
         {
@@ -112,7 +115,7 @@ namespace Cecilifier.Web
                     if (context.WebSockets.IsWebSocketRequest)
                     {
                         var webSocket = await context.WebSockets.AcceptWebSocketAsync();
-                        await CecilifyCodeAsync(webSocket);
+                        await CecilifyCodeAsync(webSocket, context.Connection.RemoteIpAddress);
                     }
                     else
                     {
@@ -125,12 +128,12 @@ namespace Cecilifier.Web
                 }
             });
 
-            async Task CecilifyCodeAsync(WebSocket webSocket)
+            async Task CecilifyCodeAsync(WebSocket webSocket, IPAddress remoteIpAddress)
             {
                 var buffer = ArrayPool<byte>.Shared.Rent(1024 * 128);
                 try
                 {
-                    await ProcessWebSocketAsync(webSocket, buffer);
+                    await ProcessWebSocketAsync(webSocket, remoteIpAddress, buffer);
                 }
                 finally
                 {
@@ -140,13 +143,14 @@ namespace Cecilifier.Web
             }
         }
 
-        private async Task ProcessWebSocketAsync(WebSocket webSocket, byte[] buffer)
+        private async Task ProcessWebSocketAsync(WebSocket webSocket, IPAddress remoteIpAddress, byte[] buffer)
         {
             var memory = new Memory<byte>(buffer);
             var received = await webSocket.ReceiveAsync(memory, CancellationToken.None);
             while (received.MessageType != WebSocketMessageType.Close)
             {
-                CecilifierApplication.Count++;
+                UpdateStatistics(remoteIpAddress);
+                
                 var codeSnippet = string.Empty;
                 bool includeSourceInErrorReports = false;
 
@@ -229,6 +233,17 @@ namespace Cecilifier.Web
                 received = await webSocket.ReceiveAsync(memory, CancellationToken.None);
             }
 
+            static void UpdateStatistics(IPAddress remoteIpAddress)
+            {
+                Interlocked.Increment(ref CecilifierApplication.Count);
+                if (!seemClientIPHashCodes.TryGetValue(remoteIpAddress.GetHashCode(), out var visits))
+                {
+                    Interlocked.Increment(ref CecilifierApplication.UniqueClients);
+                }
+                seemClientIPHashCodes[remoteIpAddress.GetHashCode()] = visits + 1;
+                Interlocked.Exchange(ref CecilifierApplication.MaximumUnique, seemClientIPHashCodes.Values.Max());
+            }
+
             IEnumerable<string> GetTrustedAssembliesPath()
             {
                 return ((string) AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")).Split(Path.PathSeparator).ToList();
@@ -273,7 +288,7 @@ namespace Cecilifier.Web
                 return File.ReadAllBytes(outputZipPath);
             }
         }
-
+        
         private static byte[] JsonSerializedBytes(string cecilifiedCode, char kind, CecilifierResult cecilifierResult)
         {
             var cecilifiedWebResult = new CecilifiedWebResult
@@ -281,6 +296,8 @@ namespace Cecilifier.Web
                 Status = 0,
                 CecilifiedCode = cecilifiedCode,
                 Counter = CecilifierApplication.Count,
+                MaximumUnique = CecilifierApplication.MaximumUnique,
+                Clients = CecilifierApplication.UniqueClients,
                 Kind = kind,
                 MainTypeName = cecilifierResult.MainTypeName,
                 Mappings = cecilifierResult.Mappings.OrderBy(x => x.Cecilified.Length).ToArray(),

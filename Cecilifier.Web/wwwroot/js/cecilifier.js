@@ -374,7 +374,7 @@ function setTooltips(version) {
         theme: 'cecilifier-tooltip',
         delay: defaultDelay
     });
-    
+
     tippy('#csharpcode-container', {
         content: "Type any valid C# code to generate the equivalent Cecil api calls.",
         placement: 'bottom',
@@ -708,8 +708,22 @@ function initializeWebSocket() {
         // this is where we get the cecilified code back...
         let response = JSON.parse(event.data);
         if (response.status === 0) {
-            const cecilifiedCounter = document.getElementById('cecilified_counter');
-            cecilifiedCounter.innerText = response.counter;
+            if (document.getElementById("cecilifier-stats")._tippy === undefined) {
+                tippy('#cecilifier-stats', {
+                    content: "N/A",
+                    placement: 'top',
+                    interactive: true,
+                    allowHTML: true,
+                    theme: 'cecilifier-tooltip',
+                    delay: [500, null]
+                });
+            }
+            
+            document.getElementById("cecilifier-stats")._tippy.setContent(`
+                        Total: ${response.counter}<br/>
+                        Clients: ${response.clientsCounter}<br/>
+                        Maximum: ${response.maximumUnique}<br/>
+                        `);
 
             if (response.kind === 'Z') {
                 setTimeout(function() {

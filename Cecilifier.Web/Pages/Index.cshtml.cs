@@ -12,6 +12,8 @@ namespace Cecilifier.Web.Pages
     public class CecilifierApplication : PageModel
     {
         public static int Count;
+        public static uint UniqueClients; 
+        public static uint MaximumUnique; 
 
         public static int SupportedCSharpVersion => Core.Cecilifier.SupportedCSharpVersion;
         public string FromGist { get; private set; } = string.Empty;
