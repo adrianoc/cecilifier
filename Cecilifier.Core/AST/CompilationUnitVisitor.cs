@@ -30,6 +30,7 @@ namespace Cecilifier.Core.AST
             {
                 Context.WriteComment("Begin of global statements.");
                 _globalStatementHandler = new GlobalStatementHandler(Context, node);
+                MainMethodDefinitionVariable = _globalStatementHandler.MainMethodDefinitionVariable;
             }
 
             if (_globalStatementHandler.HandleGlobalStatement(node))
@@ -63,9 +64,6 @@ namespace Cecilifier.Core.AST
 
         private void UpdateTypeInformation(BaseTypeDeclarationSyntax node)
         {
-            if (mainType == null)
-                mainType = node;
-
             var typeSymbol = ModelExtensions.GetDeclaredSymbol(Context.SemanticModel, node) as ITypeSymbol;
             if (typeSymbol == null)
                 return;
@@ -77,8 +75,8 @@ namespace Cecilifier.Core.AST
                     MainMethodDefinitionVariable = Context.DefinitionVariables.GetMethodVariable(mainMethod.AsMethodDefinitionVariable());
             }
 
-            var mainTypeSymbol = (ITypeSymbol) ModelExtensions.GetDeclaredSymbol(Context.SemanticModel, mainType);
-            if (typeSymbol.GetMembers().Length > mainTypeSymbol?.GetMembers().Length)
+            var mainTypeSymbol = (ITypeSymbol) Context.SemanticModel.GetDeclaredSymbol(mainType ?? node);
+            if (mainType == null || typeSymbol.GetMembers().Length > mainTypeSymbol?.GetMembers().Length)
             {
                 mainType = node;
             }
