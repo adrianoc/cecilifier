@@ -28,7 +28,7 @@ namespace Cecilifier.Core.AST
 
         void EmitCilInstruction(string ilVar, OpCode opCode);
         void EmitCilInstruction<T>(string ilVar, OpCode opCode, T operand, string comment = null);
-        void WriteCecilExpression(string msg);
+        void WriteCecilExpression(string expression);
         void WriteComment(string comment);
         void WriteNewLine();
         

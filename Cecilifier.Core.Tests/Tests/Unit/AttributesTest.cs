@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Tests.Unit;
@@ -67,6 +68,39 @@ class Foo<TFoo> {{ }}");
             Does.Match(
                 $@"(?s)var (attr_myGeneric_1_\d+) = new CustomAttribute\(new MethodReference\((ctor_myGenericAttribute_\d+)\.Name.+\2\.ReturnType\).+DeclaringType = cls_myGenericAttribute_\d+.MakeGenericInstanceType\(.*{expectedType}\).+\);\s+" + 
                 @"cls_foo_\d+\.CustomAttributes\.Add\(\1\);"));        
+    }
+
+    [TestCase("LayoutKind.Auto, Pack=1, Size=12", 1, 12)]
+    [TestCase("LayoutKind.Auto, Pack=1", 1, 0)]
+    [TestCase("LayoutKind.Auto, Size=42", 0, 42)]
+    [TestCase("LayoutKind.Sequential")]
+    public void StructLayout_ItNotEmitted(string initializationData, int expectedPack = -1, int expectedSize = -1)
+    {
+        // StructLayout attribute should not be emitted to metadata as an attribute;
+        // instead, the respective properties in the type definition should be set. 
+        
+        var result = RunCecilifier($$"""
+                                   using System.Runtime.InteropServices;
+                                   [StructLayout({{initializationData}})]
+                                   struct Foo { }
+                                   """);
+
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+        
+        Assert.That(cecilifiedCode, Does.Not.Match(@"st_foo_\d+.CustomAttributes.Add\(attr_structLayout_\d+\);"));
+
+        if (expectedSize == -1 && expectedPack == -1)
+        {
+            Assert.That(cecilifiedCode, Does.Not.Match(@"st_foo_\d+.ClassSize = \d+;"));
+            Assert.That(cecilifiedCode, Does.Not.Match(@"st_foo_\d+.PackingSize = \d+;"));
+        }
+        else
+        {
+            Assert.That(cecilifiedCode, Does.Match(@$"st_foo_\d+.ClassSize = {expectedSize};"));
+            Assert.That(cecilifiedCode, Does.Match(@$"st_foo_\d+.PackingSize = {expectedPack};"));
+        }
+        
+        Assert.That(cecilifiedCode, Does.Match($@"\|\s+TypeAttributes.{Regex.Match(initializationData, @"LayoutKind\.([^,$]+)").Groups[1].Value}Layout"));
     }
 
     private const string AttributeDefinition = "class MyAttribute : System.Attribute { public MyAttribute(string message) {} } ";

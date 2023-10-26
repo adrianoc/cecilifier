@@ -7,6 +7,13 @@ namespace Cecilifier.Core.Tests.Tests.Unit;
 public partial class MiscellaneousStatements : CecilifierUnitTestBase
 {
     [Test]
+    public void EntryPointInTopLevelStatements()
+    {
+        var result = RunCecilifier("System.Console.WriteLine(42);");
+        Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(@"assembly\.EntryPoint = m_topLevelStatements_\d+"));
+    }
+    
+    [Test]
     public void BreakInForBody()
     {
         var cecilified = RunCecilifier(

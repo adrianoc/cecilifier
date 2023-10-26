@@ -103,6 +103,8 @@ namespace Cecilifier.Core.AST
             }
         }
 
+        public string MainMethodDefinitionVariable => methodVar;
+
         private void WriteCecilExpressions(IEnumerable<string> expressions)
         {
             foreach (var exp in expressions)

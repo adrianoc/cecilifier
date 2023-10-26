@@ -324,7 +324,7 @@ namespace Cecilifier.Core.AST
             var valueBeingAssignedIsByRef = Context.SemanticModel.GetSymbolInfo(localVar.Initializer.Value).Symbol.IsByRef();
             if (!variableType.IsByRef() && valueBeingAssignedIsByRef)
             {
-                OpCode opCode = LoadIndirectOpCodeFor(variableType.SpecialType);
+                OpCode opCode = variableType.LoadIndirectOpCodeFor();
                 Context.EmitCilInstruction(_ilVar, opCode);
             }
 

@@ -17,7 +17,7 @@ using static Cecilifier.Core.Misc.CodeGenerationHelpers;
 
 namespace Cecilifier.Core.AST
 {
-    internal class SyntaxWalkerBase : CSharpSyntaxWalker
+    internal partial class SyntaxWalkerBase : CSharpSyntaxWalker
     {
         internal SyntaxWalkerBase(IVisitorContext ctx)
         {
@@ -224,52 +224,10 @@ namespace Cecilifier.Core.AST
 
         private void LoadLiteralToStackHandlingCallOnValueTypeLiterals(string ilVar, ITypeSymbol literalType, object literalValue, bool isTargetOfCall)
         {
-            var opCode = LoadOpCodeFor(literalType);
+            var opCode = literalType.LoadOpCodeFor();
             Context.EmitCilInstruction(ilVar, opCode, literalValue);
             if (isTargetOfCall)
                 StoreTopOfStackInLocalVariableAndLoadItsAddress(ilVar, literalType);
-        }
-
-        private OpCode LoadOpCodeFor(ITypeSymbol type)
-        {
-            switch (type.SpecialType)
-            {
-                case SpecialType.System_IntPtr:
-                case SpecialType.System_UIntPtr:
-                    return OpCodes.Ldc_I4;
-
-                case SpecialType.System_Single:
-                    return OpCodes.Ldc_R4;
-
-                case SpecialType.System_Double:
-                    return OpCodes.Ldc_R8;
-
-                case SpecialType.System_Byte:
-                case SpecialType.System_SByte:
-                case SpecialType.System_Int16:
-                case SpecialType.System_Int32:
-                case SpecialType.System_UInt16:
-                case SpecialType.System_UInt32:
-                    return OpCodes.Ldc_I4;
-
-                case SpecialType.System_UInt64:
-                case SpecialType.System_Int64:
-                    return OpCodes.Ldc_I8;
-
-                case SpecialType.System_Char:
-                    return OpCodes.Ldc_I4;
-
-                case SpecialType.System_Boolean:
-                    return OpCodes.Ldc_I4;
-
-                case SpecialType.System_String:
-                    return OpCodes.Ldstr;
-
-                case SpecialType.None:
-                    return OpCodes.Ldnull;
-            }
-
-            throw new ArgumentException($"Literal type {type} not supported.", nameof(type));
         }
 
         private void StoreTopOfStackInLocalVariableAndLoadItsAddress(string ilVar, ITypeSymbol type, string variableName = "tmp")
@@ -365,7 +323,7 @@ namespace Cecilifier.Core.AST
                     _ => throw new ArgumentException($"Invalid StructLayout value for {typeSymbol.Name}")
                 };
 
-                typeAttributes.AppendModifier($"TypeAttributes.{specifiedLayout}");
+                typeAttributes.AppendModifier(specifiedLayout);
             }
         }
 
@@ -499,8 +457,7 @@ namespace Cecilifier.Core.AST
 
             var fieldDeclarationVariable = fieldSymbol.EnsureFieldExists(Context, node);
 
-            var isTargetOfQualifiedAccess = (node.Parent is MemberAccessExpressionSyntax mae) && mae.Name == node;
-            if (!fieldSymbol.IsStatic && !isTargetOfQualifiedAccess)
+            if (!fieldSymbol.IsStatic && !node.IsQualifiedAccessToTypeOrMember())
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
 
             if (HandleLoadAddressOnStorage(ilVar, fieldSymbol.Type, node, fieldSymbol.IsStatic ? OpCodes.Ldsflda : OpCodes.Ldflda, fieldSymbol.Name, VariableMemberKind.Field, fieldSymbol.ContainingType.ToDisplayString()))
@@ -665,8 +622,7 @@ namespace Cecilifier.Core.AST
 
             if (needsLoadIndirect)
             {
-                OpCode opCode = LoadIndirectOpCodeFor(type.SpecialType);
-                Context.EmitCilInstruction(ilVar, opCode);
+                Context.EmitCilInstruction(ilVar, type.LoadIndirectOpCodeFor());
             }
         }
 
@@ -706,29 +662,6 @@ namespace Cecilifier.Core.AST
             }
 
             return null;
-        }
-
-        protected OpCode LoadIndirectOpCodeFor(SpecialType type)
-        {
-            return type switch
-            {
-                SpecialType.System_Single => OpCodes.Ldind_R4,
-                SpecialType.System_Double => OpCodes.Ldind_R8,
-                SpecialType.System_SByte => OpCodes.Ldind_I1,
-                SpecialType.System_Byte => OpCodes.Ldind_U1,
-                SpecialType.System_Int16 => OpCodes.Ldind_I2,
-                SpecialType.System_UInt16 => OpCodes.Ldind_U2,
-                SpecialType.System_Int32 => OpCodes.Ldind_I4,
-                SpecialType.System_UInt32 => OpCodes.Ldind_U4,
-                SpecialType.System_Int64 => OpCodes.Ldind_I8,
-                SpecialType.System_UInt64 => OpCodes.Ldind_I8,
-                SpecialType.System_Char => OpCodes.Ldind_U2,
-                SpecialType.System_Boolean => OpCodes.Ldind_U1,
-                SpecialType.System_Object => OpCodes.Ldind_Ref,
-                SpecialType.None => OpCodes.Ldind_Ref,
-
-                _ => throw new ArgumentException($"Literal type {type} not supported.", nameof(type))
-            };
         }
 
         private bool IsSystemIndexUsedAsIndex(ITypeSymbol symbol, SyntaxNode node)
@@ -789,9 +722,6 @@ namespace Cecilifier.Core.AST
 
         private static void HandleAttributesInMemberDeclaration(IVisitorContext context, IEnumerable<AttributeListSyntax> attributeLists, string targetDeclarationVar)
         {
-            if (!attributeLists.Any())
-                return;
-
             foreach (var attribute in attributeLists.SelectMany(al => al.Attributes))
             {
                 var type = context.SemanticModel.GetSymbolInfo(attribute).Symbol.EnsureNotNull<ISymbol, IMethodSymbol>().ContainingType;
@@ -799,10 +729,13 @@ namespace Cecilifier.Core.AST
                 //TODO: Pass the correct list of type parameters when C# supports generic attributes.
                 TypeDeclarationVisitor.EnsureForwardedTypeDefinition(context, type, Array.Empty<TypeParameterSyntax>());
 
-                var attrsExp = context.SemanticModel.GetSymbolInfo(attribute.Name).Symbol.IsDllImportCtor()
-                    ? ProcessDllImportAttribute(context, attribute, targetDeclarationVar)
-                    : ProcessNormalMemberAttribute(context, attribute, targetDeclarationVar);
-
+                var attrsExp = type.AttributeKind() switch
+                    {
+                        AttributeKind.DllImport => ProcessDllImportAttribute(context, attribute, targetDeclarationVar),
+                        AttributeKind.StructLayout => ProcessStructLayoutAttribute(attribute, targetDeclarationVar),
+                        _ => ProcessNormalMemberAttribute(context, attribute, targetDeclarationVar)
+                    };
+                
                 AddCecilExpressions(context, attrsExp);
             }
         }
@@ -910,6 +843,26 @@ namespace Cecilifier.Core.AST
             string AttributePropertyOrDefaultValue(AttributeSyntax attr, string propertyName, string defaultValue)
             {
                 return attr.ArgumentList?.Arguments.FirstOrDefault(arg => arg.NameEquals?.Name.Identifier.Text == propertyName)?.Expression.ToFullString() ?? defaultValue;
+            }
+        }
+
+        private static IEnumerable<string> ProcessStructLayoutAttribute(AttributeSyntax attribute, string typeVar)
+        {
+            Debug.Assert(attribute.ArgumentList != null);
+            if (attribute.ArgumentList.Arguments.Count == 0 || attribute.ArgumentList.Arguments.All(a => a.NameEquals == null))
+                return Array.Empty<string>();
+
+            return new[]
+            {
+                $"{typeVar}.ClassSize = { AssignedValue(attribute, "Size") };",
+                $"{typeVar}.PackingSize = { AssignedValue(attribute, "Pack") };",
+            };
+
+            static int AssignedValue(AttributeSyntax attribute, string parameterName)
+            {
+                // whenever Size/Pack are omitted the corresponding property should be set to 0. See Ecma-335 II 22.8.
+                var parameterAssignmentExpression = attribute.ArgumentList?.Arguments.FirstOrDefault(a => a.NameEquals?.Name.Identifier.Text == parameterName)?.Expression;
+                return parameterAssignmentExpression != null ? Int32.Parse(((LiteralExpressionSyntax) parameterAssignmentExpression).Token.Text) : 0;
             }
         }
 
