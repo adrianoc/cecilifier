@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
@@ -10,21 +9,20 @@ using Cecilifier.Core.Naming;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 
-[assembly: InternalsVisibleTo("Cecilifier.Core.Tests")]
-
 namespace Cecilifier.Core
 {
     public sealed class Cecilifier
     {
         internal const int CecilifierProgramPreambleLength = 25; // The # of lines before the 1st cecilified line of code (see CecilifierExtensions.AsCecilApplication())
 
-        public static readonly int SupportedCSharpVersion = int.Parse(LanguageVersion.CSharp11.ToString().Substring("CSharp".Length));
+        private const LanguageVersion CurrentLanguageVersion = LanguageVersion .CSharp12;
+        public static readonly int SupportedCSharpVersion = int.Parse(CurrentLanguageVersion.ToString().Substring("CSharp".Length));
 
         public static CecilifierResult Process(Stream content, CecilifierOptions options)
         {
             UsageVisitor.ResetInstance();
             using var stream = new StreamReader(content);
-            var syntaxTree = CSharpSyntaxTree.ParseText(stream.ReadToEnd(), new CSharpParseOptions(LanguageVersion.CSharp11));
+            var syntaxTree = CSharpSyntaxTree.ParseText(stream.ReadToEnd(), new CSharpParseOptions(CurrentLanguageVersion));
             var metadataReferences = options.References.Select(refPath => MetadataReference.CreateFromFile(refPath)).ToArray();
 
             var comp = CSharpCompilation.Create(
