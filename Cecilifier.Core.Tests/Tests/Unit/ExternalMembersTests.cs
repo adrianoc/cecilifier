@@ -31,7 +31,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             var result = RunCecilifier($"using System.Runtime.InteropServices; public class C {{ [DllImport(\"Foo\", PreserveSig = {preserveSig.ToString().ToLower()})] public static extern int M(); int Call() => M(); }}");
             var cecilifiedCode = result.GeneratedCode.ReadToEnd();
 
-            Assert.AreEqual(preserveSig, cecilifiedCode.Contains("MethodImplAttributes.PreserveSig"));
+            Assert.That(cecilifiedCode.Contains("MethodImplAttributes.PreserveSig"), Is.EqualTo(preserveSig));
         }
 
         [Test]
@@ -40,7 +40,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             var result = RunCecilifier($"using System.Runtime.InteropServices; public class C {{ [DllImport(\"Foo\", CallingConvention = CallingConvention.{callingConvention})] public static extern int M(); int Call() => M(); }}");
             var cecilifiedCode = result.GeneratedCode.ReadToEnd();
 
-            Assert.IsTrue(cecilifiedCode.Contains($"PInvokeAttributes.CallConv{callingConvention.ToString().ToLower()}", StringComparison.OrdinalIgnoreCase), cecilifiedCode);
+            Assert.That(cecilifiedCode.Contains($"PInvokeAttributes.CallConv{callingConvention.ToString().ToLower()}", StringComparison.OrdinalIgnoreCase), Is.True,cecilifiedCode);
         }
 
         [Test]
@@ -59,7 +59,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             var result = RunCecilifier($"using System.Runtime.InteropServices; public class C {{ [DllImport(\"Foo\", CharSet = CharSet.{charSet})] public static extern int M(); }}");
             var cecilifiedCode = result.GeneratedCode.ReadToEnd();
 
-            Assert.IsTrue(cecilifiedCode.Contains($"PInvokeAttributes.CharSet{charSet}"), cecilifiedCode);
+            Assert.That(cecilifiedCode.Contains($"PInvokeAttributes.CharSet{charSet}"), Is.True,cecilifiedCode);
         }
 
         [Test]
@@ -68,7 +68,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             var result = RunCecilifier($"using System.Runtime.InteropServices; public class C {{ [DllImport(\"Foo\", SetLastError = {setLastError.ToString().ToLower()})] public static extern int M(); }}");
             var cecilifiedCode = result.GeneratedCode.ReadToEnd();
 
-            Assert.AreEqual(setLastError, cecilifiedCode.Contains($"PInvokeAttributes.SupportsLastError"), cecilifiedCode);
+            Assert.That(cecilifiedCode.Contains($"PInvokeAttributes.SupportsLastError"), Is.EqualTo(setLastError), cecilifiedCode);
         }
 
         [Test]
@@ -77,7 +77,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             var result = RunCecilifier($"using System.Runtime.InteropServices; public class C {{ [DllImport(\"Foo\", ExactSpelling = {exactSpelling.ToString().ToLower()})] public static extern int M(); }}");
             var cecilifiedCode = result.GeneratedCode.ReadToEnd();
 
-            Assert.AreEqual(exactSpelling, cecilifiedCode.Contains($"PInvokeAttributes.NoMangle"), cecilifiedCode);
+            Assert.That(cecilifiedCode.Contains($"PInvokeAttributes.NoMangle"), Is.EqualTo(exactSpelling), cecilifiedCode);
         }
 
         [Test]
@@ -86,8 +86,8 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             var result = RunCecilifier($"using System.Runtime.InteropServices; public class C {{ [DllImport(\"Foo\", BestFitMapping = {bestFitMapping.ToString().ToLower()})] public static extern int M(); }}");
             var cecilifiedCode = result.GeneratedCode.ReadToEnd();
 
-            Assert.AreEqual(bestFitMapping, cecilifiedCode.Contains("PInvokeAttributes.BestFitEnabled"), cecilifiedCode);
-            Assert.AreEqual(!bestFitMapping, cecilifiedCode.Contains("PInvokeAttributes.BestFitDisabled"), cecilifiedCode);
+            Assert.That(cecilifiedCode.Contains("PInvokeAttributes.BestFitEnabled"), Is.EqualTo(bestFitMapping), cecilifiedCode);
+            Assert.That(cecilifiedCode.Contains("PInvokeAttributes.BestFitDisabled"), Is.Not.EqualTo(bestFitMapping), cecilifiedCode);
         }
 
         [Test]
@@ -96,8 +96,8 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             var result = RunCecilifier($"using System.Runtime.InteropServices; public class C {{ [DllImport(\"Foo\", ThrowOnUnmappableChar = {throwOnUnmappableChar.ToString().ToLower()})] public static extern int M(); }}");
             var cecilifiedCode = result.GeneratedCode.ReadToEnd();
 
-            Assert.AreEqual(throwOnUnmappableChar, cecilifiedCode.Contains("PInvokeAttributes.ThrowOnUnmappableCharEnabled"), cecilifiedCode);
-            Assert.AreEqual(!throwOnUnmappableChar, cecilifiedCode.Contains("PInvokeAttributes.ThrowOnUnmappableCharDisable"), cecilifiedCode);
+            Assert.That(cecilifiedCode.Contains("PInvokeAttributes.ThrowOnUnmappableCharEnabled"), Is.EqualTo(throwOnUnmappableChar), cecilifiedCode);
+            Assert.That(cecilifiedCode.Contains("PInvokeAttributes.ThrowOnUnmappableCharDisable"), Is.Not.EqualTo(throwOnUnmappableChar), cecilifiedCode);
         }
 
         [Test]

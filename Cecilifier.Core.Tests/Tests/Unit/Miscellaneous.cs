@@ -1,4 +1,3 @@
-using System;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Tests.Unit
@@ -74,9 +73,9 @@ public static class Outer
                     }");
 
             var cecilifiedCode = result.GeneratedCode.ReadToEnd();
-            Assert.False(cecilifiedCode.Contains("FieldDefinition(\"file\", FieldAttributes.Public, st_fileStream_0);"), cecilifiedCode);
-            Assert.True(cecilifiedCode.Contains("FieldDefinition(\"definedInFooBar\", FieldAttributes.Public, st_fileStream_3);"), cecilifiedCode);
-            Assert.True(cecilifiedCode.Contains("FieldDefinition(\"file\", FieldAttributes.Public, assembly.MainModule.ImportReference(typeof(System.IO.FileStream)));"), cecilifiedCode);
+            Assert.That(cecilifiedCode.Contains("FieldDefinition(\"file\", FieldAttributes.Public, st_fileStream_0);"), Is.False, cecilifiedCode);
+            Assert.That(cecilifiedCode.Contains("FieldDefinition(\"definedInFooBar\", FieldAttributes.Public, st_fileStream_3);"), Is.True, cecilifiedCode);
+            Assert.That(cecilifiedCode.Contains("FieldDefinition(\"file\", FieldAttributes.Public, assembly.MainModule.ImportReference(typeof(System.IO.FileStream)));"), Is.True, cecilifiedCode);
         }
 
         [Test]
