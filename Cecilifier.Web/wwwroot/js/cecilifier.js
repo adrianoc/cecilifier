@@ -396,7 +396,7 @@ function setTooltips(version) {
     });
 
     tippy('#csharpcode-container', {
-        content: "Type any valid C# code to generate the equivalent Cecil api calls.",
+        content: "Type any valid C# code to generate the equivalent Cecil API calls.",
         placement: 'bottom',
         interactive: true,
         allowHTML: true,
@@ -414,7 +414,7 @@ function setTooltips(version) {
     });
 
     tippy('#sendbutton', {
-        content: "After entering the code you want to process, press this button. (Ctrl-Alt-C)",
+        content: "After entering the code you want to process, press this button.<br />(Ctrl-Alt-C)",
         placement: 'top',
         interactive: true,
         allowHTML: true,
@@ -423,7 +423,7 @@ function setTooltips(version) {
     });
 
     tippy('#downloadProject', {
-        content: "Use this option if you want to download a .Net Core 3.0 project, ready for you to play with! (Ctrl-Alt-D)",
+        content: "Use this option if you want to download a .Net project (.csproj) ready for you to play with!<br/>(Ctrl-Alt-D)",
         placement: 'top',
         interactive: true,
         allowHTML: true,
@@ -441,7 +441,7 @@ function setTooltips(version) {
     });
 
     tippy('#changeSettings', {
-        content: "Change various Cecilifier options.<br/><br/>Use this to configure how variables are named in the cecilified code. (Ctrl-Alt-S)",
+        content: "Change various Cecilifier options.<br/><br/>Use this to configure how variables are named in the cecilified code.<br/>(Ctrl-Alt-S)",
         placement: 'top',
         interactive: true,
         allowHTML: true,
@@ -462,8 +462,9 @@ function setTooltips(version) {
         placement: 'top',
         interactive: false,
         allowHTML: true,
-        theme: 'cecilifier-tooltip',
-        delay: defaultDelay
+        theme: 'cecilifier-tooltip',        
+        delay: defaultDelay,
+        maxWidth: 550
     });
 
     tippy('#report_internal_error_button', {
@@ -495,7 +496,7 @@ function setTooltips(version) {
 
     tippy('#showFixedBugsInStaging', {
         content: "Shows the list of bugs fixed in Staging but not in production yet.<br/>" +
-                 "In other words, bugs fixed in http://cecilifier.me:5000 but not in https://cecilifier.me",
+                 "In other words, bugs fixed in http://staging.cecilifier.me but not in https://cecilifier.me",
         
         placement: 'top',
         interactive: false,

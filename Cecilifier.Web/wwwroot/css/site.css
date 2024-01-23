@@ -73,6 +73,7 @@ footer {
 
 .tippy-box[data-theme~='cecilifier-tooltip'] {
     font-weight: bold;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 .tippy-box[data-theme~='assembly_references_tip'] {
