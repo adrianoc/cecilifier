@@ -129,7 +129,9 @@
 }
 
 .js-snackbar__icon {
-    display: block;
+    display: flex;
+    justify-content: center;
+    align-items: center;
     border: 2px solid white;
     font-weight: bold;
     border-radius: 20px;

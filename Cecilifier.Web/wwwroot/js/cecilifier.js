@@ -464,7 +464,7 @@ function setTooltips(version) {
         allowHTML: true,
         theme: 'cecilifier-tooltip',        
         delay: defaultDelay,
-        maxWidth: 550
+        maxWidth: 650
     });
 
     tippy('#report_internal_error_button', {

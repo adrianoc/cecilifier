@@ -70,7 +70,7 @@ function SnackBar(userOptions) {
     }
 
     function createNewContainer(target) {
-      container = document.createElement("div");
+      var container = document.createElement("div");
       container.classList.add("js-snackbar-container");
 
       if (_Options.fixed) {
@@ -82,7 +82,7 @@ function SnackBar(userOptions) {
     }
 
     function getOrFindContainer() {
-      return typeof _Options.container === "object" ? _Options.container : document.getElementById(_Options.container);
+      return typeof _Options.container === "string" ? document.querySelector(_Options.container) : _Options.container;
     }
   }
 
@@ -346,4 +346,8 @@ function SnackBar(userOptions) {
   _create();
 
   _This.Open();
+}
+
+if (typeof module !== "undefined") {
+  module.exports = SnackBar;
 }
