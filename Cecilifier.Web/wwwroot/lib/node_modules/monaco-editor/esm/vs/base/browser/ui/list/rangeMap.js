@@ -9,7 +9,7 @@ import { Range } from '../../../common/range.js';
  */
 export function groupIntersect(range, groups) {
     const result = [];
-    for (let r of groups) {
+    for (const r of groups) {
         if (range.start >= r.range.end) {
             continue;
         }
@@ -42,7 +42,7 @@ export function shift({ start, end }, much) {
 export function consolidate(groups) {
     const result = [];
     let previousGroup = null;
-    for (let group of groups) {
+    for (const group of groups) {
         const start = group.range.start;
         const end = group.range.end;
         const size = group.size;
@@ -63,9 +63,19 @@ function concat(...groups) {
     return consolidate(groups.reduce((r, g) => r.concat(g), []));
 }
 export class RangeMap {
-    constructor() {
+    get paddingTop() {
+        return this._paddingTop;
+    }
+    set paddingTop(paddingTop) {
+        this._size = this._size + paddingTop - this._paddingTop;
+        this._paddingTop = paddingTop;
+    }
+    constructor(topPadding) {
         this.groups = [];
         this._size = 0;
+        this._paddingTop = 0;
+        this._paddingTop = topPadding !== null && topPadding !== void 0 ? topPadding : 0;
+        this._size = this._paddingTop;
     }
     splice(index, deleteCount, items = []) {
         const diff = items.length - deleteCount;
@@ -77,7 +87,7 @@ export class RangeMap {
             size: item.size
         }));
         this.groups = concat(before, middle, after);
-        this._size = this.groups.reduce((t, g) => t + (g.size * (g.range.end - g.range.start)), 0);
+        this._size = this._paddingTop + this.groups.reduce((t, g) => t + (g.size * (g.range.end - g.range.start)), 0);
     }
     /**
      * Returns the number of items in the range map.
@@ -102,9 +112,12 @@ export class RangeMap {
         if (position < 0) {
             return -1;
         }
+        if (position < this._paddingTop) {
+            return 0;
+        }
         let index = 0;
-        let size = 0;
-        for (let group of this.groups) {
+        let size = this._paddingTop;
+        for (const group of this.groups) {
             const count = group.range.end - group.range.start;
             const newSize = size + (count * group.size);
             if (position < newSize) {
@@ -131,11 +144,11 @@ export class RangeMap {
         }
         let position = 0;
         let count = 0;
-        for (let group of this.groups) {
+        for (const group of this.groups) {
             const groupCount = group.range.end - group.range.start;
             const newCount = count + groupCount;
             if (index < newCount) {
-                return position + ((index - count) * group.size);
+                return this._paddingTop + position + ((index - count) * group.size);
             }
             position += groupCount * group.size;
             count = newCount;

@@ -13,9 +13,6 @@ class TabFocusImpl {
         return this._tabFocus;
     }
     setTabFocusMode(tabFocusMode) {
-        if (this._tabFocus === tabFocusMode) {
-            return;
-        }
         this._tabFocus = tabFocusMode;
         this._onDidChangeTabFocus.fire(this._tabFocus);
     }
