@@ -16,6 +16,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using Cecilifier.Core;
+using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Naming;
 using Cecilifier.Web.Pages;
@@ -114,8 +115,11 @@ namespace Cecilifier.Web
                 {
                     if (context.WebSockets.IsWebSocketRequest)
                     {
+                        // if cecilifier is deployed in an environment with a reverse proxy (for instance nginx) we will configure the proxy to forward the client IP and use that IP
+                        // instead `context.Connection.RemoteIpAddress` which will always be the proxy's IP.
+                        var forwardedClientIP = context.Request.Headers["X-Forwarded-For"];
                         var webSocket = await context.WebSockets.AcceptWebSocketAsync();
-                        await CecilifyCodeAsync(webSocket, context.Connection.RemoteIpAddress);
+                        await CecilifyCodeAsync(webSocket, string.IsNullOrWhiteSpace(forwardedClientIP) ? context.Connection.RemoteIpAddress.GetHashCode() : forwardedClientIP.GetHashCode());
                     }
                     else
                     {
@@ -128,12 +132,12 @@ namespace Cecilifier.Web
                 }
             });
 
-            async Task CecilifyCodeAsync(WebSocket webSocket, IPAddress remoteIpAddress)
+            async Task CecilifyCodeAsync(WebSocket webSocket, int remoteIpAddressHashCode)
             {
                 var buffer = ArrayPool<byte>.Shared.Rent(1024 * 128);
                 try
                 {
-                    await ProcessWebSocketAsync(webSocket, remoteIpAddress, buffer);
+                    await ProcessWebSocketAsync(webSocket, remoteIpAddressHashCode, buffer);
                 }
                 finally
                 {
@@ -143,13 +147,13 @@ namespace Cecilifier.Web
             }
         }
 
-        private async Task ProcessWebSocketAsync(WebSocket webSocket, IPAddress remoteIpAddress, byte[] buffer)
+        private async Task ProcessWebSocketAsync(WebSocket webSocket, int remoteIpAddressHashCode, byte[] buffer)
         {
             var memory = new Memory<byte>(buffer);
             var received = await webSocket.ReceiveAsync(memory, CancellationToken.None);
             while (received.MessageType != WebSocketMessageType.Close)
             {
-                UpdateStatistics(remoteIpAddress);
+                UpdateStatistics(remoteIpAddressHashCode);
                 
                 var codeSnippet = string.Empty;
                 bool includeSourceInErrorReports = false;
@@ -234,14 +238,14 @@ namespace Cecilifier.Web
                 received = await webSocket.ReceiveAsync(memory, CancellationToken.None);
             }
 
-            static void UpdateStatistics(IPAddress remoteIpAddress)
+            static void UpdateStatistics(int remoteIpAddressHashCode)
             {
                 Interlocked.Increment(ref CecilifierApplication.Count);
-                if (!seemClientIPHashCodes.TryGetValue(remoteIpAddress.GetHashCode(), out var visits))
+                if (!seemClientIPHashCodes.TryGetValue(remoteIpAddressHashCode, out var visits))
                 {
                     Interlocked.Increment(ref CecilifierApplication.UniqueClients);
                 }
-                seemClientIPHashCodes[remoteIpAddress.GetHashCode()] = visits + 1;
+                seemClientIPHashCodes[remoteIpAddressHashCode] = visits + 1;
                 Interlocked.Exchange(ref CecilifierApplication.MaximumUnique, seemClientIPHashCodes.Values.Max());
             }
 
