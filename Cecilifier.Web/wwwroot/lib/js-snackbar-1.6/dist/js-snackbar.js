@@ -346,6 +346,7 @@ function SnackBar(userOptions) {
   _create();
 
   _This.Open();
+  return _This;
 }
 
 if (typeof module !== "undefined") {
