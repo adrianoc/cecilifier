@@ -1,6 +1,8 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
@@ -31,10 +33,13 @@ namespace Cecilifier.Core
                 metadataReferences,
                 new CSharpCompilationOptions(OutputKindFor(syntaxTree), allowUnsafe: true));
 
-            var errors = comp.GetDiagnostics().Where(d => d.Severity == DiagnosticSeverity.Error).Select(s => s.ToString()).ToArray();
+            var errors = comp.GetDiagnostics()
+                                            .Where(d => d.Severity == DiagnosticSeverity.Error)
+                                            .Select(d => (CompilationError) d)
+                                            .ToArray();
             if (errors.Length > 0)
             {
-                throw new SyntaxErrorException(string.Join("\n", errors));
+                throw new SyntaxErrorException(errors);
             }
 
             var semanticModel = comp.GetSemanticModel(syntaxTree);

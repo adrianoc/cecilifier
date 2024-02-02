@@ -214,12 +214,13 @@ namespace Cecilifier.Web
                 }
                 catch (SyntaxErrorException ex)
                 {
-                    //TODO: Log errors!
-
                     var source = includeSourceInErrorReports ? codeSnippet : string.Empty;
-                    await SendMessageWithCodeToChatAsync("Syntax Error", ex.Message, "15746887", source);
+                    await SendMessageWithCodeToChatAsync("Syntax Error", string.Join('\n', ex.Errors.Select(err => err.Message)), "15746887", source);
 
-                    var dataToReturn = Encoding.UTF8.GetBytes($"{{ \"status\" : 1, \"error\": \"Code contains syntax errors\", \"syntaxError\": \"{HttpUtility.JavaScriptStringEncode(ex.Message)}\"  }}").AsMemory();
+                    var jsonOptions = new JsonSerializerOptions(JsonSerializerOptions.Default);
+                    jsonOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+                    var serializedErrors = JsonSerializer.Serialize(ex.Errors, jsonOptions);
+                    var dataToReturn = Encoding.UTF8.GetBytes($"{{ \"status\" : 1, \"error\": \"Code contains syntax errors\", \"errors\": {serializedErrors} }}").AsMemory();
                     await webSocket.SendAsync(dataToReturn, WebSocketMessageType.Text, true, CancellationToken.None);
                 }
                 catch (Exception ex)

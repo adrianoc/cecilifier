@@ -5,6 +5,8 @@ let csharpCode;
 let focusedEditor; // either csharpCode or cecilifiedCode
 let blockMappings = null;
 let csharpCodeEditorWidthMultiplier = 0.3;
+let compilationErrorToast = null; // toast informing user about compilation errors. This reference is used to close the toast before cecilifying code.
+
 class CecilifierRequest
 {
     constructor(code, options, settings, assemblyReferences) {
@@ -208,6 +210,15 @@ function initializeSite(errorAccessingGist, gist, version) {
     disableScroll();
 }
 
+function removeMarkersFromCSharpCode() {
+    const markers = []
+    monaco.editor.setModelMarkers(csharpCode.getModel(), "Errors", markers);
+
+    if (compilationErrorToast !== null) {
+        compilationErrorToast.Close();
+        compilationErrorToast = null;
+    }
+}
 /*
  * Retrieves all open issues with a label 'fixed-in-staging' and, if there are any issues with a reported date
  * newer than the last reported date stored locally, shows a notification with those issues.
@@ -763,7 +774,26 @@ function initializeWebSocket() {
                 blockMappings = response.mappings;
             }
         } else if (response.status === 1) {
-            setError(response.error + "<br/><br/>"+ response.syntaxError.replaceAll("\n", "<br/>"));
+            let compilerErrors = response.errors;
+            for(let i = 0; i < compilerErrors.length; i++) {
+                compilerErrors[i].severity = monaco.MarkerSeverity.Error;
+            }
+
+            monaco.editor.setModelMarkers(csharpCode.getModel(), "Errors", compilerErrors);
+            compilationErrorToast = SnackBar({
+                message: `Code contains ${compilerErrors.length} compilation errors.`,
+                dismissible: false,
+                status: "Error",
+                timeout: 120000,
+                actions: [
+                    {
+                        text: "Close this to remove the error markers",
+                        dismiss: false,
+                        function: removeMarkersFromCSharpCode
+                    }
+                ]
+            });         
+            
         } else if (response.status === 2) {
             ShowErrorDialog("", response.error, "We've got an internal error.");
         } else if (response.status === 3) {
@@ -815,6 +845,9 @@ function send(websocket, format) {
         
         return;
     }
+
+    removeMarkersFromCSharpCode();
+
     clearError();
 
     showSpinner();
