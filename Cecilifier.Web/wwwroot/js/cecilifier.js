@@ -744,22 +744,7 @@ function initializeWebSocket() {
         // this is where we get the cecilified code back...
         let response = JSON.parse(event.data);
         if (response.status === 0) {
-            if (document.getElementById("cecilifier-stats")._tippy === undefined) {
-                tippy('#cecilifier-stats', {
-                    content: "N/A",
-                    placement: 'top',
-                    interactive: true,
-                    allowHTML: true,
-                    theme: 'cecilifier-tooltip',
-                    delay: [500, null]
-                });
-            }
-            
-            document.getElementById("cecilifier-stats")._tippy.setContent(`
-                        Total: ${response.counter}<br/>
-                        Clients: ${response.clientsCounter}<br/>
-                        Maximum: ${response.maximumUnique}<br/>
-                        `);
+
 
             if (response.kind === 'Z') {
                 setTimeout(function() {
@@ -769,10 +754,15 @@ function initializeWebSocket() {
             }
             else {
                 cecilifiedCode.setValue(response.cecilifiedCode);
+                updateUsageStatisticsToolTip(response);
                 
                 // save the returned mappings used to map between code snippet <-> Cecilified Code.
                 blockMappings = response.mappings;
             }
+        } else if (response.status === 4) {
+            let response = JSON.parse(event.data);
+            updateUsageStatisticsToolTip(response);
+            
         } else if (response.status === 1) {
             let compilerErrors = response.errors;
             for(let i = 0; i < compilerErrors.length; i++) {
@@ -803,6 +793,25 @@ function initializeWebSocket() {
             });
         }
     };
+}
+
+function updateUsageStatisticsToolTip(response) {
+    if (document.getElementById("cecilifier-stats")._tippy === undefined) {
+        tippy('#cecilifier-stats', {
+            content: "N/A",
+            placement: 'top',
+            interactive: true,
+            allowHTML: true,
+            theme: 'cecilifier-tooltip',
+            delay: [500, null]
+        });
+    }
+    
+    document.getElementById("cecilifier-stats")._tippy.setContent(`
+        Total: ${response.counter}<br/>
+        Clients: ${response.clientsCounter}<br/>
+        Maximum: ${response.maximumUnique}<br/>
+    `);
 }
 
 function sendMissingAssemblyReferences(missingAssemblyHashes, continuation) {

@@ -16,7 +16,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using Cecilifier.Core;
-using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Naming;
 using Cecilifier.Web.Pages;
@@ -119,6 +118,8 @@ namespace Cecilifier.Web
                         // instead `context.Connection.RemoteIpAddress` which will always be the proxy's IP.
                         var forwardedClientIP = context.Request.Headers["X-Forwarded-For"];
                         var webSocket = await context.WebSockets.AcceptWebSocketAsync();
+                        
+                        await SendStatisticsAsync(webSocket);
                         await CecilifyCodeAsync(webSocket, string.IsNullOrWhiteSpace(forwardedClientIP) ? context.Connection.RemoteIpAddress.GetHashCode() : forwardedClientIP.GetHashCode());
                     }
                     else
@@ -131,6 +132,24 @@ namespace Cecilifier.Web
                     await next();
                 }
             });
+            
+            async Task SendStatisticsAsync(WebSocket webSocket)
+            {
+                var cecilifiedWebResult = new CecilifiedWebResult
+                {
+                    Status = 4,
+                    CecilifiedCode = String.Empty,
+                    Counter = CecilifierApplication.Count,
+                    MaximumUnique = CecilifierApplication.MaximumUnique,
+                    Clients = CecilifierApplication.UniqueClients,
+                    Kind = 'F',
+                    MainTypeName = String.Empty,
+                    Mappings = Array.Empty<Mapping>(),
+                };
+
+                var dataToReturn = JsonSerializer.SerializeToUtf8Bytes(cecilifiedWebResult);
+                await webSocket.SendAsync(dataToReturn, WebSocketMessageType.Text, true, CancellationToken.None);
+            }
 
             async Task CecilifyCodeAsync(WebSocket webSocket, int remoteIpAddressHashCode)
             {
