@@ -244,7 +244,7 @@ namespace Cecilifier.Core.Tests.Framework
             var comparer = new AssemblyComparer(expectedAssemblyPath, actualAssemblyPath);
             if (!comparer.Compare(visitor, instructionComparer))
             {
-                Assert.Fail("Expected and generated assemblies differs:\r\n\tExpected:  {0}\r\n\tGenerated: {1}\r\n\r\n{2}\r\n\r\nCecilified Code:\r\n{3}", comparer.First, comparer.Second, visitor.Reason, cecilifiedCode);
+                Assert.Fail($"Expected and generated assemblies differs:\r\n\tExpected:  {comparer.First}\r\n\tGenerated: {comparer.Second}\r\n\r\n{visitor.Reason}\r\n\r\nCecilified Code:\r\n{cecilifiedCode}");
             }
         }
 

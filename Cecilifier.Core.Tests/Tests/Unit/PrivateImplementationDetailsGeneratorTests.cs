@@ -18,7 +18,7 @@ public class PrivateImplementationDetailsGeneratorTests
         var context = new CecilifierContext(comp.GetSemanticModel(comp.SyntaxTrees[0]), new CecilifierOptions(), 1);
 
         var found = context.DefinitionVariables.GetVariablesOf(VariableMemberKind.Type);
-        Assert.False(found.Any());
+        Assert.That(found.Any(), Is.False);
         
         var _ = PrivateImplementationDetailsGenerator.GetOrCreateInitializationBackingFieldVariableName(context, 10, "int", "123");
         found = context.DefinitionVariables.GetVariablesOf(VariableMemberKind.Type);
@@ -37,7 +37,7 @@ public class PrivateImplementationDetailsGeneratorTests
         var context = new CecilifierContext(comp.GetSemanticModel(comp.SyntaxTrees[0]), new CecilifierOptions(), 1);
 
         var found = context.DefinitionVariables.GetVariablesOf(VariableMemberKind.Type);
-        Assert.False(found.Any());
+        Assert.That(found.Any(), Is.False);
         
         var _ = PrivateImplementationDetailsGenerator.GetOrCreateInitializationBackingFieldVariableName(context, 4, "int", "0123");
         found = context.DefinitionVariables.GetVariablesOf(VariableMemberKind.Type);
@@ -59,7 +59,7 @@ public class PrivateImplementationDetailsGeneratorTests
         var context = new CecilifierContext(comp.GetSemanticModel(comp.SyntaxTrees[0]), new CecilifierOptions(), 1);
 
         var found = context.DefinitionVariables.GetVariablesOf(VariableMemberKind.Field);
-        Assert.False(found.Any());
+        Assert.That(found.Any(), Is.False);
         
         var variableName = PrivateImplementationDetailsGenerator.GetOrCreateInitializationBackingFieldVariableName(context, 10, "int", "123");
         found = context.DefinitionVariables.GetVariablesOf(VariableMemberKind.Field);
@@ -76,11 +76,11 @@ public class PrivateImplementationDetailsGeneratorTests
     [Test]
     public void BackingField_IsUniquePerDataSize()
     {
-        var comp = CompilationFor("class Foo {}");        
+        var comp = CompilationFor("class Foo {}");
         var context = new CecilifierContext(comp.GetSemanticModel(comp.SyntaxTrees[0]), new CecilifierOptions(), 1);
 
         var found = context.DefinitionVariables.GetVariablesOf(VariableMemberKind.Field);
-        Assert.False(found.Any());
+        Assert.That(found.Any(), Is.False);
         
         var variableName = PrivateImplementationDetailsGenerator.GetOrCreateInitializationBackingFieldVariableName(context, 12, "int","{1, 2, 3, 4}");
         found = context.DefinitionVariables.GetVariablesOf(VariableMemberKind.Field);

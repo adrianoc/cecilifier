@@ -159,7 +159,7 @@ You can also reach me through twitter [@adrianoverona](https://twitter.com/adria
 
 Build Status
 ---
-[![Build Status](https://travis-ci.com/adrianoc/cecilifier.svg?branch=main)](https://travis-ci.com/adrianoc/cecilifier)
+![Build Status](https://github.com/adrianoc/cecilifier/actions/workflows/cecilifier-ci.yml/badge.svg)
 [![codecov](https://codecov.io/gh/adrianoc/cecilifier/branch/main/graph/badge.svg?token=XJFIRCUES3)](https://codecov.io/gh/adrianoc/cecilifier)
 
 Potential improvements

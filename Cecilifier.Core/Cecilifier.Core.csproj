@@ -1,4 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <Import Project="../Cecilifier.Common.props" />
   <Import Project="../Cecilifier.CommonPackages.props" />
+  
+  <ItemGroup>
+    <InternalsVisibleTo Include="$(AssemblyName).Tests"/>
+  </ItemGroup>
 </Project>

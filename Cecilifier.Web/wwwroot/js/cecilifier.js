@@ -5,6 +5,8 @@ let csharpCode;
 let focusedEditor; // either csharpCode or cecilifiedCode
 let blockMappings = null;
 let csharpCodeEditorWidthMultiplier = 0.3;
+let compilationErrorToast = null; // toast informing user about compilation errors. This reference is used to close the toast before cecilifying code.
+
 class CecilifierRequest
 {
     constructor(code, options, settings, assemblyReferences) {
@@ -208,6 +210,15 @@ function initializeSite(errorAccessingGist, gist, version) {
     disableScroll();
 }
 
+function removeMarkersFromCSharpCode() {
+    const markers = []
+    monaco.editor.setModelMarkers(csharpCode.getModel(), "Errors", markers);
+
+    if (compilationErrorToast !== null) {
+        compilationErrorToast.Close();
+        compilationErrorToast = null;
+    }
+}
 /*
  * Retrieves all open issues with a label 'fixed-in-staging' and, if there are any issues with a reported date
  * newer than the last reported date stored locally, shows a notification with those issues.
@@ -396,7 +407,7 @@ function setTooltips(version) {
     });
 
     tippy('#csharpcode-container', {
-        content: "Type any valid C# code to generate the equivalent Cecil api calls.",
+        content: "Type any valid C# code to generate the equivalent Cecil API calls.",
         placement: 'bottom',
         interactive: true,
         allowHTML: true,
@@ -414,7 +425,7 @@ function setTooltips(version) {
     });
 
     tippy('#sendbutton', {
-        content: "After entering the code you want to process, press this button. (Ctrl-Alt-C)",
+        content: "After entering the code you want to process, press this button.<br />(Ctrl-Alt-C)",
         placement: 'top',
         interactive: true,
         allowHTML: true,
@@ -423,7 +434,7 @@ function setTooltips(version) {
     });
 
     tippy('#downloadProject', {
-        content: "Use this option if you want to download a .Net Core 3.0 project, ready for you to play with! (Ctrl-Alt-D)",
+        content: "Use this option if you want to download a .Net project (.csproj) ready for you to play with!<br/>(Ctrl-Alt-D)",
         placement: 'top',
         interactive: true,
         allowHTML: true,
@@ -441,7 +452,7 @@ function setTooltips(version) {
     });
 
     tippy('#changeSettings', {
-        content: "Change various Cecilifier options.<br/><br/>Use this to configure how variables are named in the cecilified code. (Ctrl-Alt-S)",
+        content: "Change various Cecilifier options.<br/><br/>Use this to configure how variables are named in the cecilified code.<br/>(Ctrl-Alt-S)",
         placement: 'top',
         interactive: true,
         allowHTML: true,
@@ -462,8 +473,9 @@ function setTooltips(version) {
         placement: 'top',
         interactive: false,
         allowHTML: true,
-        theme: 'cecilifier-tooltip',
-        delay: defaultDelay
+        theme: 'cecilifier-tooltip',        
+        delay: defaultDelay,
+        maxWidth: 650
     });
 
     tippy('#report_internal_error_button', {
@@ -495,7 +507,7 @@ function setTooltips(version) {
 
     tippy('#showFixedBugsInStaging', {
         content: "Shows the list of bugs fixed in Staging but not in production yet.<br/>" +
-                 "In other words, bugs fixed in http://cecilifier.me:5000 but not in https://cecilifier.me",
+                 "In other words, bugs fixed in http://staging.cecilifier.me but not in https://cecilifier.me",
         
         placement: 'top',
         interactive: false,
@@ -762,7 +774,26 @@ function initializeWebSocket() {
                 blockMappings = response.mappings;
             }
         } else if (response.status === 1) {
-            setError(response.error + "<br/><br/>"+ response.syntaxError.replaceAll("\n", "<br/>"));
+            let compilerErrors = response.errors;
+            for(let i = 0; i < compilerErrors.length; i++) {
+                compilerErrors[i].severity = monaco.MarkerSeverity.Error;
+            }
+
+            monaco.editor.setModelMarkers(csharpCode.getModel(), "Errors", compilerErrors);
+            compilationErrorToast = SnackBar({
+                message: `Code contains ${compilerErrors.length} compilation errors.`,
+                dismissible: false,
+                status: "Error",
+                timeout: 120000,
+                actions: [
+                    {
+                        text: "Close this to remove the error markers",
+                        dismiss: false,
+                        function: removeMarkersFromCSharpCode
+                    }
+                ]
+            });         
+            
         } else if (response.status === 2) {
             ShowErrorDialog("", response.error, "We've got an internal error.");
         } else if (response.status === 3) {
@@ -814,6 +845,9 @@ function send(websocket, format) {
         
         return;
     }
+
+    removeMarkersFromCSharpCode();
+
     clearError();
 
     showSpinner();

@@ -33,4 +33,4 @@ StandaloneReferencesController = __decorate([
     __param(6, IConfigurationService)
 ], StandaloneReferencesController);
 export { StandaloneReferencesController };
-registerEditorContribution(ReferencesController.ID, StandaloneReferencesController);
+registerEditorContribution(ReferencesController.ID, StandaloneReferencesController, 4 /* EditorContributionInstantiation.Lazy */);

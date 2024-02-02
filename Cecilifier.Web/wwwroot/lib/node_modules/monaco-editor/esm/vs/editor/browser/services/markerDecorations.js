@@ -25,4 +25,4 @@ MarkerDecorationsContribution = __decorate([
     __param(1, IMarkerDecorationsService)
 ], MarkerDecorationsContribution);
 export { MarkerDecorationsContribution };
-registerEditorContribution(MarkerDecorationsContribution.ID, MarkerDecorationsContribution);
+registerEditorContribution(MarkerDecorationsContribution.ID, MarkerDecorationsContribution, 0 /* EditorContributionInstantiation.Eager */); // eager because it instantiates IMarkerDecorationsService which is responsible for rendering squiggles

@@ -79,9 +79,9 @@ public class ForEachStatementTests : CecilifierUnitTestBase
         var listOfTEnumerator = typeof(List<>.Enumerator);
 
         var expected= new[] { typeof(IEnumerator<>), typeof(IEnumerator), typeof(IDisposable) };
-        CollectionAssert.AreEquivalent(
-            expected,
-            listOfTEnumerator.GetInterfaces().Select(itf => itf.IsConstructedGenericType ? itf.GetGenericTypeDefinition() : itf));
+        Assert.That(
+            listOfTEnumerator.GetInterfaces().Select(itf => itf.IsConstructedGenericType ? itf.GetGenericTypeDefinition() : itf),
+            Is.EquivalentTo(expected));
         
         var result = RunCecilifier("""
                                    using System;
