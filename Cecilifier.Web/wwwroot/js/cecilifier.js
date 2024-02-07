@@ -151,39 +151,6 @@ function initializeSite(errorAccessingGist, gist, version) {
             lineNumbersMinChars: 3,
          });
          
-        // Configure keyboard shortcuts
-        csharpCode.addCommand(monaco.KeyMod.CtrlCmd + monaco.KeyMod.Alt + monaco.KeyCode.KeyD, function() {
-            simulateClick("downloadProject");
-        });
-
-        csharpCode.addCommand(monaco.KeyMod.CtrlCmd + monaco.KeyMod.Alt + monaco.KeyCode.KeyC, function() {
-            simulateClick("sendbutton");
-        });
-
-        csharpCode.addCommand(monaco.KeyMod.CtrlCmd + monaco.KeyMod.Alt + monaco.KeyCode.KeyS, function() {
-            changeCecilifierSettings();
-        });
-
-        csharpCode.addCommand(monaco.KeyMod.Alt + monaco.KeyCode.LeftArrow, function() {
-            csharpCodeEditorWidthMultiplier -= 0.01;
-            updateEditorsSize();
-        });
-
-        csharpCode.addCommand(monaco.KeyMod.Alt + monaco.KeyCode.RightArrow, function() {
-            csharpCodeEditorWidthMultiplier += 0.01;
-            updateEditorsSize();
-        });
-
-        csharpCode.addCommand(monaco.KeyMod.CtrlCmd + monaco.KeyCode.BracketLeft , decreaseFocusedEditorFontSize);
-        csharpCode.addCommand(monaco.KeyMod.CtrlCmd + monaco.KeyCode.BracketRight , increaseFocusedEditorFontSize);
-
-        csharpCode.addCommand(monaco.KeyMod.CtrlCmd + monaco.KeyCode.Period, function() {
-            ShowErrorDialog("Report a new issue", "Please be kind, check the existing ones before filing a new issue..", "Report an error.");
-        });
-
-        cecilifiedCode.addCommand(monaco.KeyMod.CtrlCmd + monaco.KeyCode.BracketLeft , decreaseFocusedEditorFontSize);
-        cecilifiedCode.addCommand(monaco.KeyMod.CtrlCmd + monaco.KeyCode.BracketRight , increaseFocusedEditorFontSize);
-        
         setupCursorTracking();
 
         window.onresize = function(ev) {
@@ -193,6 +160,9 @@ function initializeSite(errorAccessingGist, gist, version) {
         updateEditorsSize();
 
         initializeFormattingSettings();
+
+        configureKeyboardShortcuts();
+
         setSendToDiscordTooltip();
 
         initializeHoverProvider()
@@ -208,6 +178,69 @@ function initializeSite(errorAccessingGist, gist, version) {
     setTooltips(version);
     initializeWebSocket();
     disableScroll();
+}
+
+function configureKeyboardShortcuts() {
+    csharpCode.addCommand(monaco.KeyMod.CtrlCmd + monaco.KeyMod.Alt + monaco.KeyCode.KeyD, function() {
+        simulateClick("downloadProject");
+    });
+
+    csharpCode.addCommand(monaco.KeyMod.CtrlCmd + monaco.KeyMod.Alt + monaco.KeyCode.KeyC, function() {
+        simulateClick("sendbutton");
+    });
+
+    csharpCode.addCommand(monaco.KeyMod.CtrlCmd + monaco.KeyMod.Alt + monaco.KeyCode.KeyS, function() {
+        changeCecilifierSettings();
+    });
+
+    csharpCode.addCommand(monaco.KeyMod.Alt + monaco.KeyCode.LeftArrow, function() {
+        csharpCodeEditorWidthMultiplier -= 0.01;
+        updateEditorsSize();
+    });
+
+    csharpCode.addCommand(monaco.KeyMod.Alt + monaco.KeyCode.RightArrow, function() {
+        csharpCodeEditorWidthMultiplier += 0.01;
+        updateEditorsSize();
+    });
+
+    csharpCode.addCommand(monaco.KeyMod.CtrlCmd + monaco.KeyCode.BracketLeft , decreaseFocusedEditorFontSize);
+    csharpCode.addCommand(monaco.KeyMod.CtrlCmd + monaco.KeyCode.BracketRight , increaseFocusedEditorFontSize);
+
+    csharpCode.addCommand(monaco.KeyMod.CtrlCmd + monaco.KeyCode.Period, function() {
+        ShowErrorDialog("Report a new issue", "Please be kind, check the existing ones before filing a new issue..", "Report an error.");
+    });
+
+    configureCursorInformationVisibility(settings.isEnabled(NamingOptions.ShowCursorPosition));
+    csharpCode.addCommand(monaco.KeyMod.CtrlCmd + monaco.KeyMod.Alt + monaco.KeyCode.KeyP , () => {
+        configureCursorInformationVisibility(!settings.isEnabled(NamingOptions.ShowCursorPosition));
+    });
+
+    updateCursorInformation(csharpCode);
+    csharpCode.onDidChangeCursorSelection((e) => {
+        updateCursorInformation(csharpCode);
+    });
+    
+    // Cecilified code
+    cecilifiedCode.addCommand(monaco.KeyMod.CtrlCmd + monaco.KeyCode.BracketLeft , decreaseFocusedEditorFontSize);
+    cecilifiedCode.addCommand(monaco.KeyMod.CtrlCmd + monaco.KeyCode.BracketRight , increaseFocusedEditorFontSize);
+}
+
+function configureCursorInformationVisibility(show) {
+    let info = document.getElementById("doc_information");
+    info.style.display = show ? "flex" : "none";
+    settings.setEnabled(NamingOptions.ShowCursorPosition, show);
+}
+
+function updateCursorInformation(ed) {
+    let pos = ed.getPosition();
+    let sel = ed.getSelection();
+    
+    let selectedText = "";
+    if (sel.startColumn !== sel.endColumn && sel.startLineNumber === sel.endLineNumber)
+        selectedText = ` (${sel.endColumn - sel.startColumn} selected)`;
+    
+    let info = document.getElementById("doc_information");
+    info.innerText = `Ln ${pos.lineNumber}, Col ${pos.column}${selectedText}`;
 }
 
 function removeMarkersFromCSharpCode() {
@@ -469,6 +502,7 @@ function setTooltips(version) {
                   <p><kbd class=\"kbc-button\">Alt</kbd> + <kbd class=\"kbc-button\">&rarr;</kbd> Increases CSharp editor width / decreases Cecilified editor width.</p>\
                   <p><kbd class=\"kbc-button\">Ctrl</kbd> + <kbd class=\"kbc-button\">]</kbd> Increases font size.</p>\
                   <p><kbd class=\"kbc-button\">Ctrl</kbd> + <kbd class=\"kbc-button\">[</kbd> Decreases font size.</p>\
+                  <p><kbd class=\"kbc-button\">Ctrl</kbd> + <kbd class=\"kbc-button\">Alt</kbd> + <kbd class=\"kbc-button\">P</kbd> Toggles visibility of cursor information.</p>\
                   </div>",
         placement: 'top',
         interactive: false,
@@ -645,6 +679,14 @@ function initializeSettings(formattingSettingsSample) {
         "Include source code when reporting failures to developer discord channel", 
         "Enable this to send the code being cecilified to developer (private) discord channel (if disabled only the error message is sent).\nNote that no matter the state of this option messages are sent anonymously.", 
         (setting, sampleEditor) => { });
+
+    settings.addBooleanOption(
+        NamingOptions.ShowCursorPosition,
+        "Show cursor position",
+        "When enabled shows the cursor position for the snippet editor (left pane).",
+        (enabled, sampleEditor) => {
+            configureCursorInformationVisibility(enabled);
+        });
 
     const storedSettings = getCookie("cecilifier-settings");
     if (storedSettings.length > 0) {

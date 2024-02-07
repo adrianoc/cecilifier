@@ -36,7 +36,8 @@ const NamingOptions =
     CamelCaseElementNames: 0x40,
     AddCommentsToMemberDeclarations: 0x80,
     IncludeSourceInErrorReports : 0x100,
-    StoreSettingsLocally: 0x200
+    StoreSettingsLocally: 0x200,
+    ShowCursorPosition: 0x400
 };
 
 class SettingsManager {
@@ -238,6 +239,10 @@ class SettingsManager {
 
     isEnabled(option) {
         return this.namingOptions.get(option).getter();
+    }
+
+    setEnabled(optionName, value) {
+        this.namingOptions.get(optionName).setter(value);
     }
 }
 
