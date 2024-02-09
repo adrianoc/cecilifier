@@ -41,17 +41,17 @@ const NamingOptions =
 };
 
 class SettingsManager {
-    constructor(sampleEditor, settings) {
+    constructor(sampleEditor, settings, settingsTable) {
         this.settings = settings;
-        this.settingsTable = null;
         this.optionalFormats = [];
         this.namingOptions = new Map();
         this.sampleEditor = sampleEditor;
         this.id = 0;
+        this.settingsTable = settingsTable;
         
         for(let i = 0; i < this.settings.length; i++) {
             this.settings[i].setInfo(this, i);
-        }
+        }        
     }
 
     updateExample(pos, newValue) {
@@ -68,13 +68,30 @@ class SettingsManager {
         return 'sm-' + this.id++
     }
 
-    initialize(settingsTable) {        
-        if (this.settingsTable != null)
-            return false;
+    initialize() {
 
-        this.settingsTable = settingsTable;
+        tippy('#hideSettingsControl', {
+            content: "Close the settings dialog.",
+            placement: 'top',
+            interactive: true,
+            allowHTML: true,
+            theme: 'cecilifier-tooltip',
+            delay: [500, null]
+        });
+
         for(let i = 0; i < this.settings.length; i++) {
-            const configRow = settingsTable.insertRow(i + 1);
+            const configRow = this.settingsTable.insertRow(i + 3);
+            configRow.id = this.uniqueId();
+
+            tippy(`#${configRow.id}`, {
+                content: this.settings[i].placeholder,
+                placement: 'top',
+                interactive: false,
+                allowHTML: false,
+                theme: 'cecilifier-tooltip',
+                delay: 400
+            });
+
             configRow.addEventListener('mouseover', this.settings[i].toggleGutter.bind(this.settings[i]));
             this.settings[i].setDOMOwner(configRow);
 
@@ -85,27 +102,9 @@ class SettingsManager {
             configInputCell.innerHTML = `<td><input class="cecilifier-input" type="text" placeholder="${this.settings[i].placeholder}" value="${this.settings[i].prefix}" onchange="settings.updateExample(${i}, this.value);"></input></td>`;
         }
 
+        this.settingsTable.style.width = `${window.screen.width - this.settingsTable.parentElement.nextSibling.nextSibling.clientWidth}px`;
+
         return true;
-    }
-    
-    onShowHandlerFor(configRow) {
-        return (instance) => {
-            let mouseMoved = false;
-            let timeoutHandler = null;
-
-            timeoutHandler = () => {
-                if (mouseMoved) {
-                    instance.hide();
-                    configRow.onmousemove = null;
-                }
-                else {
-                    setTimeout(timeoutHandler, 500);
-                }
-            };
-
-            configRow.onmousemove = () => { mouseMoved = true; };
-            setTimeout(timeoutHandler, 500);
-        }
     }
 
     /*
@@ -126,8 +125,7 @@ class SettingsManager {
             interactive: true,
             allowHTML: false,
             theme: 'cecilifier-tooltip',
-            delay: 200,
-            onShow : this.onShowHandlerFor(configRow)
+            delay: 200
         });
         
         const configCell = configRow.insertCell(0);
@@ -177,8 +175,7 @@ class SettingsManager {
             interactive: true,
             allowHTML: false,
             theme: 'cecilifier-tooltip',
-            delay: 200,
-            onShow : this.onShowHandlerFor(configRow)
+            delay: 200
         });
         
         const configCell = configRow.insertCell(0);
@@ -193,6 +190,29 @@ class SettingsManager {
             getter : () => { return optionalInput.checked; },
             setter : (value) => { optionalInput.checked = value ; },
         });
+    }
+
+    addHeader(headerName) {
+        const headerRow = this.settingsTable.insertRow(-1);
+        headerRow.setAttribute("is-header", true);
+
+        const headerCell = headerRow.insertCell(0);
+        headerCell.setAttribute("colspan", 2);                
+        headerCell.style = "color:black;background-color:#e3ebbe;font-size: 14px";
+        headerCell.innerHTML = `${headerName} <i class='fas fa-angle-up' />`;
+
+        headerRow.onclick = (e) => {
+            headerCell.children[0].className = headerCell.children[0].className == "fas fa-angle-down" ? "fas fa-angle-up" : "fas fa-angle-down";
+
+            let element = headerRow;
+            while (element.nextSibling !== null) {
+                element = element.nextSibling;
+                if (element.getAttribute("is-header"))
+                    break;
+                
+                element.style.display = element.style.display === "none" ? "table-row" :  "none";
+            }
+        };
     }
 
     setEnabled(state) {

@@ -18,15 +18,18 @@
         <table style="width: 100%">
             <tr>
                 <td>
-                    <a href="#" onclick="hideSettings()">Close</a>
-                    <table id="cecilifierSettings">
+                    <table id="cecilifierSettings" style="position: absolute; top: 40px;">
+                        <tr>
+                            <td colspan="2" align="right" style="background-color: #111;  border: transparent">
+                                <i id="hideSettingsControl" class="glyphicon glyphicon-ok-circle" onclick="hideSettings()"></i>
+                            </td>
+                        </tr>
                         <tr>
                             <th>Element</th>
                             <th>Prefix</th>
                         </tr>
                     </table>
                 </td>
-                <td style='min-width:10px;'></td>
                 <td style='width:75%; text-align: left'>
                     <div id="formattingSettingsSample-container" style="margin-bottom: 5px;">
                         <div id="_formattingSettingsSample" style="width: 1000px; height: 1000px; border-left: 10px solid white; border-right: 10px solid white"></div></div>

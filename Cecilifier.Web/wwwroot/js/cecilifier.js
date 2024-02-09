@@ -359,6 +359,8 @@ var il_addAnEvent_7 = md_Method_19.Body.GetILProcessor();
 
 var ctor_AClass_22 = new MethodDefinition(".ctor", MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.RTSpecialName | MethodAttributes.SpecialName, assembly.MainModule.TypeSystem.Void);
 
+var call_AClass_1 = il_addAnEvent_7.NewInstruction(OpCodes.Call, ctor_AClass_22);
+
 var cctor_AClass_42 = new MethodDefinition(".cctor", MethodAttributes.Static | MethodAttributes.Private| MethodAttributes.RTSpecialName | MethodAttributes.SpecialName | MethodAttributes.HideBySig, assembly.MainModule.TypeSystem.Void);
 
 var st_AStruct_27 = new TypeDefinition("", "AStruct", TypeAttributes.SequentialLayout | TypeAttributes.Sealed |TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit | TypeAttributes.NotPublic, assembly.MainModule.TypeSystem.Object);
@@ -591,15 +593,16 @@ function initializeSettings(formattingSettingsSample) {
         new Setting(ElementKind.Parameter, {line: startLine + 16, ch: 5}, "Parameter", "parameter prefix","value", "p"),
         new Setting(ElementKind.IL, {line: startLine + 18, ch: 5}, "IL", "il variable prefix","addAnEvent", "il"),
         new Setting(ElementKind.Constructor, {line: startLine + 20, ch: 5}, "Constructor", "constructor prefix","AClass", "ctor"),
-        new Setting(ElementKind.StaticConstructor, {line: startLine + 22, ch: 5}, "Static Constructor", "static constructor prefix","AClass", "cctor"),
-        new Setting(ElementKind.Struct, {line: startLine + 24, ch: 5}, "Struct", "struct prefix","AStruct", "st"),
-        new Setting(ElementKind.Enum, {line: startLine + 26, ch: 5}, "Enum", "enum prefix","AnEnum", "e"),
-        new Setting(ElementKind.Interface, {line: startLine + 28, ch: 5}, "Interface", "interface prefix","Interface", "itf"),
-        new Setting(ElementKind.Delegate, {line: startLine + 30, ch: 5}, "Delegate", "delegate prefix","ADelegate", "del"),
-        new Setting(ElementKind.LocalVariable, {line: startLine + 32, ch: 5}, "Local Variable", "local variable prefix","i", "lv"),
-        new Setting(ElementKind.MemberReference, {line: startLine + 34, ch: 5}, "Member Reference", "Member reference prefix","i", "mr"),
-        new Setting(ElementKind.Label, {line: startLine + 36, ch: 5}, "Jump Label", "Jump Label Prefix","jump", "lbl"),
-    ]);
+        new Setting(ElementKind.StaticConstructor, {line: startLine + 24, ch: 5}, "Static Constructor", "static constructor prefix","AClass", "cctor"),
+        new Setting(ElementKind.Struct, {line: startLine + 26, ch: 5}, "Struct", "struct prefix","AStruct", "st"),
+        new Setting(ElementKind.Enum, {line: startLine + 28, ch: 5}, "Enum", "enum prefix","AnEnum", "e"),
+        new Setting(ElementKind.Interface, {line: startLine + 30, ch: 5}, "Interface", "interface prefix","Interface", "itf"),
+        new Setting(ElementKind.Delegate, {line: startLine + 32, ch: 5}, "Delegate", "delegate prefix","ADelegate", "del"),
+        new Setting(ElementKind.LocalVariable, {line: startLine + 34, ch: 5}, "Local Variable", "local variable prefix","i", "lv"),
+        new Setting(ElementKind.MemberReference, {line: startLine + 36, ch: 5}, "Member Reference", "Member reference prefix","i", "mr"),
+        new Setting(ElementKind.Label, {line: startLine + 38, ch: 5}, "Jump Label", "Jump Label Prefix","jump", "lbl"),
+        ],
+        document.getElementById("cecilifierSettings"));
 
     settings.validateOptionalFormat = () => {
         const sel = settings.optionalFormatState();
@@ -614,8 +617,10 @@ function initializeSettings(formattingSettingsSample) {
     
         return null;
     };
-     
-    settings.initialize(document.getElementById("cecilifierSettings"));
+    
+    settings.addHeader("Name prefixes");
+    settings.initialize();    
+    
     settings.addConditionalFormat(
         NamingOptions.PrefixVariableNamesWithElementKind, 
         "Prefix variable name with element kind",
@@ -658,7 +663,8 @@ function initializeSettings(formattingSettingsSample) {
             const separatorPos = wap.word.indexOf("_");
             sampleEditor.executeEdits("toggle-il", [{forceMoveMarkers : false, range: new monaco.Range(lineNumber, wap.startColumn, lineNumber, wap.startColumn + separatorPos), text:newValue }])
         });
-     
+    
+    settings.addHeader("Miscellaneous");
     settings.addBooleanOption(
         NamingOptions.AddCommentsToMemberDeclarations, 
         "Add comments before type/member declarations", 
