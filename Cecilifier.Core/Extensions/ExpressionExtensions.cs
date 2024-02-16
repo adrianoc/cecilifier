@@ -55,7 +55,7 @@ namespace Cecilifier.Core.Extensions
 
         public override string? VisitInvocationExpression(InvocationExpressionSyntax node)
         {
-            if (node.Expression is IdentifierNameSyntax { Identifier: { Text: "nameof" } } nameOf)
+            if (node.Expression is IdentifierNameSyntax { Identifier.Text: "nameof" } )
             {
                 return $"\"{node.ArgumentList.Arguments[0].Expression}\"";
             }

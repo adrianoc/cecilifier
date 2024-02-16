@@ -9,28 +9,6 @@ namespace Cecilifier.Core.AST
     // class ConstructorInitializerVisitor : CilEmiterSyntaxWalker, IMemoryLocationResolver
     internal class ConstructorInitializerVisitor : SyntaxWalkerBase
     {
-        //private string MethodResolverExpression(IMethodSymbol method)
-        //{
-        //    //FIXME: Handle forward declarations..
-        //    //       One option is to not generate cecil calls as we visit the AST; instead
-        //    //       we could "accumulate" and generate later
-        //    if (method.ContainingAssembly == Context.SemanticModel.Compilation.Assembly)
-        //    {
-        //        //FIXME: Keep the name of the variables used to construct types/members in a map
-        //        return LocalVariableNameFor(method.ContainingType.Name, method.Name.Replace(".", ""), method.MangleName());
-        //    }
-
-        //    var declaringTypeName =
-        //        method.ContainingType.ToDisplayString(
-        //                    new SymbolDisplayFormat(typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces));
-
-        //    return String.Format("assembly.MainModule.Import(ResolveMethod(\"{0}\", \"{1}\", \"{2}\"{3}))",
-        //                         method.ContainingAssembly.AssemblyName.FullName,
-        //                         declaringTypeName,
-        //                         method.Name,
-        //                         method.Parameters.Aggregate("", (acc, curr) => ", \"" + curr.Name + "\""));
-        //}
-
         private readonly string ilVar;
 
         internal ConstructorInitializerVisitor(IVisitorContext ctx, string ilVar) : base(ctx)

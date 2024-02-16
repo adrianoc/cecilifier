@@ -16,20 +16,26 @@ namespace Cecilifier.Core.Extensions
     {
         public static string CamelCase(this string str)
         {
-            return str.Length > 1
-                ? char.ToLower(str[0]) + str.Substring(1)
-                : str;
+            if (str.Length < 2)
+                return str;
+            
+            return string.Create(str.Length, str, (span, value) =>
+            {
+                str.AsSpan().CopyTo(span);
+                span[0] = char.ToLowerInvariant(span[0]);
+            });
         }
 
         public static string PascalCase(this string str)
         {
-            Span<char> copySpan = stackalloc char[str.Length];
-            str.AsSpan().CopyTo(copySpan);
-
-            if (copySpan.Length > 1)
-                copySpan[0] = Char.ToUpper(copySpan[0]);
-
-            return copySpan.ToString();
+            if (str.Length < 2)
+                return str;
+            
+            return string.Create(str.Length, str, (span, value) =>
+            {
+                str.AsSpan().CopyTo(span);
+                span[0] = char.ToUpperInvariant(span[0]);
+            });
         }
 
         public static string AppendModifier(this string to, string modifier)
