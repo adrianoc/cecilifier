@@ -106,6 +106,16 @@ public class MemberAccessTests : CecilifierUnitTestBase
                                                                                        \1Callvirt, .+ImportReference\(.+ResolveMethod\(typeof\(System.Object\), "ToString",.+\)\)\);
                                                                                        \1Ret\);
                                                                                        """, TestName = "LocalConstrainedToStruct")]
+    
+    [TestCase("bool C<T>(T t) where T : struct { var l = t; return l.Equals(l); }", """
+                                                                                       //return l.Equals\(l\);
+                                                                                       (\s+il_C_\d+\.Emit\(OpCodes\.)Ldloca, l_l_14\);
+                                                                                       \1Ldloc, l_l_14\);
+                                                                                       \1Box, gp_T_11\);
+                                                                                       \1Constrained, gp_T_11\);
+                                                                                       \1Callvirt, .+ImportReference\(.+ResolveMethod\(typeof\(System.Object\), "Equals",.+\)\)\);
+                                                                                       \1Ret\);
+                                                                                       """, TestName = "LocalConstrainedToStructCallEquals", IgnoreReason = "KnownIssue: #263")]
 
     [TestCase("string C<T>(T t) where T : IFoo { var l = t; return l.Get(); }", """
                                                                                 //return l.Get\(\);

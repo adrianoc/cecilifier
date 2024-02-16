@@ -83,7 +83,7 @@ namespace Cecilifier.Core.Naming
             if ((Options & NamingOptions.AppendElementNameToVariables) != NamingOptions.AppendElementNameToVariables)
                 return string.Empty;
 
-            var casingAdjustedName = (Options & NamingOptions.CamelCaseElementNames) == NamingOptions.CamelCaseElementNames ? name.CamelCase() : name;
+            var casingAdjustedName = (Options & NamingOptions.CamelCaseElementNames) == NamingOptions.CamelCaseElementNames ? name.CamelCase() : name.PascalCase();
             return $"{PartsSeparator}{casingAdjustedName}";
         }
 

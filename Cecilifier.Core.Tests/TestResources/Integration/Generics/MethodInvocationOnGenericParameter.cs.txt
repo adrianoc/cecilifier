@@ -1,0 +1,17 @@
+namespace Cecilifier.Core.Tests.TestResources.Integration.Generics;
+
+public class GenericMethodInvocation
+{
+    static bool CallM()
+    {
+        return M(new int[] {1, 2, 3} , 2); 
+    }
+    
+	static bool M<T>(T[] ts, T t)
+	{
+	    var r = t.Equals(t);
+	    r = ts[0].Equals(t);
+	    
+		return r;
+	}
+}

@@ -55,27 +55,24 @@ namespace Cecilifier.Core.AST
                 ? OpCodes.Callvirt
                 : OpCodes.Call;
 
-            if (method.IsGenericMethod && method.IsDefinedInCurrentAssembly(Context))
+            if (!method.IsDefinedInCurrentAssembly(Context))
+                EnsureForwardedMethod(Context, method, Array.Empty<TypeParameterSyntax>());
+            
+            var operand = method.MethodResolverExpression(Context);
+            if (method.IsGenericMethod && (method.IsDefinedInCurrentAssembly(Context) || method.TypeArguments.Any(t => t.TypeKind == TypeKind.TypeParameter)))
             {
-                // if the method in question is a generic method and it is defined in the same assembly create a generic instance
-                var resolvedMethodVar = Context.Naming.MemberReference(method.Name);
-                var m1 = $"var {resolvedMethodVar} = {method.MethodResolverExpression(Context)};";
-
+                // If the generic method is an open one or if it is defined in the same assembly then the call need to happen in the generic instance method (note that for 
+                // methods defined in the snippet being cecilified, even if 'method' represents a generic instance method, MethodResolverExpression() will return the open
+                // generic one instead.
                 var genInstVar = Context.Naming.GenericInstance(method);
-                var m = $"var {genInstVar} = new GenericInstanceMethod({resolvedMethodVar});";
-                AddCecilExpression(m1);
-                AddCecilExpression(m);
+                AddCecilExpression($"var {genInstVar} = new GenericInstanceMethod({operand});");
                 foreach (var t in method.TypeArguments)
                     AddCecilExpression($"{genInstVar}.GenericArguments.Add({Context.TypeResolver.Resolve(t)});");
 
-                Context.EmitCilInstruction(ilVar, opCode, genInstVar);
+                operand = genInstVar;
             }
-            else
-            {
-                EnsureForwardedMethod(Context, method, Array.Empty<TypeParameterSyntax>());
-                var operand = method.MethodResolverExpression(Context);
-                Context.EmitCilInstruction(ilVar, opCode, operand);
-            }
+
+            Context.EmitCilInstruction(ilVar, opCode, operand);
         }
 
         protected void AddCilInstruction(string ilVar, OpCode opCode, ITypeSymbol type)
@@ -963,7 +960,7 @@ namespace Cecilifier.Core.AST
         }
 
         // Methods implementing explicit interfaces, static abstract methods from interfaces and overriden methods with covariant return types
-        // needs to be explicitly specify which methods they override.
+        // needs to explicitly specify which methods they override.
         protected void AddToOverridenMethodsIfAppropriated(string methodVar, IMethodSymbol method)
         {
             // first check explicit interface implementation...

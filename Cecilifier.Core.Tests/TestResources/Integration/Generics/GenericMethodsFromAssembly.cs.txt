@@ -1,0 +1,13 @@
+using System;
+
+class MethodInvocationOnGenericParameter
+{
+    string[] M() => Array.Empty<string>();
+    
+    int Find(int[] data) => Array.BinarySearch(data, 42);
+    
+    int Find<T>(T[] data) => Array.BinarySearch(data, default(T));
+    
+    void CallPartialyClosedMethod<T>(T t) => M2(t, 42);    
+    void M2<S, R>(S s, R r) {}
+}

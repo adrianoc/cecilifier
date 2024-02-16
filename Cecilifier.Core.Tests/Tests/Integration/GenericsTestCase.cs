@@ -36,6 +36,18 @@ namespace Cecilifier.Core.Tests.Integration
         }
 
         [Test]
+        public void TestGenericMethodInstanceFromAssembly()
+        {
+            AssertResourceTest("Generics/GenericMethodsFromAssembly");
+        }
+        
+        [Test, Ignore(reason:"Known Issue: #263")]
+        public void TestMethodInvocationOnGenericParameter()
+        {
+            AssertResourceTest("Generics/MethodInvocationOnGenericParameter");
+        }
+        
+        [Test]
         public void TestGenericTypesAsMembers()
         {
             AssertResourceTest(@"Generics/GenericTypesAsMembers");

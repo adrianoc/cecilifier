@@ -9,7 +9,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
         public void ExplicitTypeArgument()
         {
             var code = "class Foo { void M<T>() {} void Explicit() { M<int>(); }  }";
-            var expectedSnippet = @"var (gi_M_\d+) = new GenericInstanceMethod\(r_M_\d+\).+\s+" +
+            var expectedSnippet = @"var (gi_M_\d+) = new GenericInstanceMethod\(m_M_\d+\).+\s+" +
                                        @"\1.GenericArguments.Add\(assembly.MainModule.TypeSystem.Int32\);\s+";
 
             var result = RunCecilifier(code);
@@ -20,7 +20,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
         public void InferredTypeArgument()
         {
             var code = "class Foo { void M<T>(T t) {} void Inferred() { M(10); }  }";
-            var expectedSnippet = @"var (gi_M_\d+) = new GenericInstanceMethod\(r_M_\d+\).+\s+" +
+            var expectedSnippet = @"var (gi_M_\d+) = new GenericInstanceMethod\(m_M_\d+\).+\s+" +
                                   @"\1.GenericArguments.Add\(assembly.MainModule.TypeSystem.Int32\);\s+";
 
             var result = RunCecilifier(code);
@@ -73,14 +73,14 @@ namespace Cecilifier.Core.Tests.Tests.Unit
                 Does.Match(
                     @"//Bar<float>\(\);\s+" +
                     @"il_callBar_6.Emit\(OpCodes.Ldarg_0\);\s+" +
-                    @"var r_bar_8 = new MethodReference\(m_bar_2.Name, m_bar_2.ReturnType\).+DeclaringType = cls_foo_0.MakeGenericInstanceType\(gp_T_1\).+;\s+" +
+                    @"var r_bar_7 = new MethodReference\(m_bar_2.Name, m_bar_2.ReturnType\).+DeclaringType = cls_foo_0.MakeGenericInstanceType\(gp_T_1\).+;\s+" +
                     @"foreach\(.+m_bar_2.GenericParameters\)\s+" +
                     @".+{\s+" +
-                    @"r_bar_8.GenericParameters.Add\(.+\);\s+" +
+                    @"r_bar_7.GenericParameters.Add\(.+\);\s+" +
                     @".+}\s+" +
                     @".+\s+" +
-                    @"var gi_bar_9 = new GenericInstanceMethod\(r_bar_7\);\s+" +
-                    @"gi_bar_9.GenericArguments.Add\(assembly.MainModule.TypeSystem.Single\);"));
+                    @"var gi_bar_8 = new GenericInstanceMethod\(r_bar_7\);\s+" +
+                    @"gi_bar_8.GenericArguments.Add\(assembly.MainModule.TypeSystem.Single\);"));
         }
 
         [Test]
@@ -299,8 +299,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             """
             //o = M<T>\(value\);
             (\s+il_test_\d+\.Emit\(OpCodes\.)Ldarg_0\);
-            \s+var r_M_\d+ = m_M_\d+;
-            \s+var (gi_M_\d+) = new GenericInstanceMethod\(r_M_\d+\);
+            \s+var (gi_M_\d+) = new GenericInstanceMethod\(m_M_\d+\);
             \s+gi_M_\d+.GenericArguments.Add\((gp_T_\d+)\);
             \1Ldarg_1\);
             \1Call, \2\);
@@ -313,8 +312,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             """
             //o = M<string>\("Ola Mundo"\);
             (\s+il_test_\d+\.Emit\(OpCodes\.)Ldarg_0\);
-            \s+var r_M_\d+ = m_M_\d+;
-            \s+var (gi_M_\d+) = new GenericInstanceMethod\(r_M_\d+\);
+            \s+var (gi_M_\d+) = new GenericInstanceMethod\(m_M_\d+\);
             \s+gi_M_\d+.GenericArguments.Add\(assembly.MainModule.TypeSystem.String\);
             \1Ldstr, "Ola Mundo"\);
             \1Call, \2\);
@@ -326,12 +324,11 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             """
             //o = f.M<T>\(value\);
             (\s+il_test_\d+\.Emit\(OpCodes\.)Ldloc, l_f_\d+\);
-            \s+var (r_M_\d+) = m_M_2;
-            \s+var (gi_M_\d+) = new GenericInstanceMethod\(\2\);
-            \s+\3.GenericArguments.Add\((gp_T_\d+)\);
+            \s+var (gi_M_\d+) = new GenericInstanceMethod\(m_M_\d+\);
+            \s+\2.GenericArguments.Add\((gp_T_\d+)\);
             \1Ldarg_1\);
-            \1Callvirt, \3\);
-            \1Box, \4\);
+            \1Callvirt, \2\);
+            \1Box, \3\);
             \1Stloc, l_o_\d+\);
             """)]
         
@@ -340,8 +337,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             """
             //Test\(value, paramIDisp, value, 42\);
             (\s+il_test_\d+.Emit\(OpCodes\.)Ldarg_0\);
-            \s+var r_test_\d+ = m_test_\d+;
-            \s+var gi_test_\d+ = new GenericInstanceMethod\(r_test_\d+\);
+            \s+var gi_test_\d+ = new GenericInstanceMethod\(m_test_\d+\);
             \s+gi_test_\d+.GenericArguments.Add\(gp_T_\d+\);
             \s+gi_test_\d+.GenericArguments.Add\(assembly.MainModule.TypeSystem.Int32\);
             \1Ldarg_1\);
