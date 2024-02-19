@@ -11,7 +11,6 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Mono.Cecil;
 using static Cecilifier.Core.Misc.Utils;
-using MethodAttributes = Mono.Cecil.MethodAttributes;
 
 namespace Cecilifier.Core.Extensions
 {
@@ -215,7 +214,17 @@ namespace Cecilifier.Core.Extensions
 
         public static bool HasCovariantReturnType(this IMethodSymbol method) => method is { IsOverride: true } && !SymbolEqualityComparer.Default.Equals(method.ReturnType, method.OverriddenMethod?.ReturnType);
 
-        public static bool IsExplicitMethodImplementation(this IMethodSymbol methodSymbol)
+        public static IEnumerable<string> MakeGenericInstanceMethod(this string methodReferenceVariable, string targetVarName, IEnumerable<string> resolvedTypeArguments)
+        {
+            var expressions = new List<string>();
+            expressions.Add($"var {targetVarName} = new GenericInstanceMethod({methodReferenceVariable});");
+            foreach (var t in resolvedTypeArguments)
+                expressions.Add($"{targetVarName}.GenericArguments.Add({t});");
+            
+            return expressions;
+        }
+
+        private static bool IsExplicitMethodImplementation(this IMethodSymbol methodSymbol)
         {
             return methodSymbol.ExplicitInterfaceImplementations.Any();
         }

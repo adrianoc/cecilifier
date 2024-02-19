@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using Cecilifier.Core.AST;
 using Microsoft.CodeAnalysis;
 using IsByRefLikeAttribute = System.Runtime.CompilerServices.IsByRefLikeAttribute;
@@ -42,6 +43,8 @@ internal struct RoslynTypeSystem
         SystemCollectionsIEnumerable = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Collections_IEnumerable);
         SystemCollectionsGenericIEnumerableOfT = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Collections_Generic_IEnumerable_T);
         SystemNullableOfT = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Nullable_T);
+        SystemRuntimeCompilerServicesUnsafe = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(Unsafe).FullName);
+        SystemRuntimeInteropServicesMemoryMarshal = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(MemoryMarshal).FullName);
     }
 
     public ITypeSymbol SystemIndex { get; }
@@ -66,8 +69,9 @@ internal struct RoslynTypeSystem
     public ITypeSymbol IsReadOnlyAttribute { get; }
     public ITypeSymbol IsByRefLikeAttribute { get; }
     public ITypeSymbol SystemObsoleteAttribute { get; }
-    
     public ITypeSymbol SystemValueType { get; }
     public ITypeSymbol SystemRuntimeCompilerServicesRuntimeHelpers { get; }
     public ITypeSymbol SystemNullableOfT { get; }
+    public ITypeSymbol SystemRuntimeCompilerServicesUnsafe { get;  }
+    public ITypeSymbol SystemRuntimeInteropServicesMemoryMarshal { get; }
 }

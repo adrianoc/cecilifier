@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
+using Cecilifier.Core.Naming;
 using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
@@ -49,6 +50,35 @@ namespace Cecilifier.Core.Misc
                 exps.Add($"{methodVar}.ReturnType = {(refReturn ? resolvedReturnType.MakeByReferenceType() : resolvedReturnType)};");
             }
 
+            return exps;
+        }
+
+        public record ParameterSpec(string Name, string ElementType, RefKind RefKind, Func<IVisitorContext, string, string> ElementTypeResolver = null);
+        public static IEnumerable<string> Method(
+            IVisitorContext context, 
+            string containingTypeName, 
+            string methodVar, 
+            string methodName, 
+            string methodModifiers,
+            IReadOnlyList<ParameterSpec> parameters,
+            IList<string> typeParameters,
+            Func<IVisitorContext, string> returnTypeResolver)
+        {
+            var exps = new List<string>();
+
+            // for type parameters we may need to postpone setting the return type (using void as a placeholder, since we need to pass something) until the generic parameters has been
+            // handled. This is required because the type parameter may be defined by the method being processed.
+            exps.Add($"var {methodVar} = new MethodDefinition(\"{methodName}\", {methodModifiers}, {context.TypeResolver.Bcl.System.Void});");
+            ProcessGenericTypeParameters(methodVar, context, $"{containingTypeName}.{methodName}", typeParameters, exps);
+            exps.Add($"{methodVar}.ReturnType = {returnTypeResolver(context)};");
+
+            foreach (var parameter in parameters)
+            {
+                var parameterExp = Parameter(parameter.Name, parameter.RefKind, parameter.ElementTypeResolver != null ? parameter.ElementTypeResolver(context, parameter.ElementType) : parameter.ElementType);
+                exps.Add($"{methodVar}.Parameters.Add({parameterExp});");
+            }
+
+            context.DefinitionVariables.RegisterMethod(containingTypeName, methodName, parameters.Select(p => p.ElementType).ToArray(), methodVar);
             return exps;
         }
 
@@ -151,6 +181,12 @@ namespace Cecilifier.Core.Misc
         {
             context.DefinitionVariables.RegisterNonMethod(typeParameterSymbol.ContainingSymbol.FullyQualifiedName(false), genericParamName, VariableMemberKind.TypeParameter, genParamDefVar);
             return $"var {genParamDefVar} = new Mono.Cecil.GenericParameter(\"{genericParamName}\", {typeParameterOwnerVar}){Variance(typeParameterSymbol)};";
+        }
+
+        private static string GenericParameter(IVisitorContext context, string ownerContainingTypeName, string typeParameterOwnerVar, string genericParamName, string genParamDefVar)
+        {
+            context.DefinitionVariables.RegisterNonMethod(ownerContainingTypeName, genericParamName, VariableMemberKind.TypeParameter, genParamDefVar);
+            return $"var {genParamDefVar} = new Mono.Cecil.GenericParameter(\"{genericParamName}\", {typeParameterOwnerVar});";
         }
 
         private static string Variance(ITypeParameterSymbol typeParameterSymbol)
@@ -336,6 +372,19 @@ namespace Cecilifier.Core.Misc
                 {
                     exps.Add($"{genParamDefVar}.Constraints.Add(new GenericParameterConstraint({context.TypeResolver.Resolve(type)}));");
                 }
+            }
+        }
+        
+        private static void ProcessGenericTypeParameters(string memberDefVar, IVisitorContext context, string ownerQualifiedTypeName, IList<string> typeParamList, IList<string> exps)
+        {
+            for (int i = 0; i < typeParamList.Count; i++)
+            {
+                var genericParamName = typeParamList[i];
+                var genParamDefVar = context.Naming.SyntheticVariable(typeParamList[i], ElementKind.GenericParameter);
+                //var genParamDefVar = context.Naming.GenericParameterDeclaration(typeParamList[i]);
+                exps.Add(GenericParameter(context, ownerQualifiedTypeName, memberDefVar, genericParamName, genParamDefVar));
+                
+                exps.Add($"{memberDefVar}.GenericParameters.Add({genParamDefVar});");
             }
         }
 
