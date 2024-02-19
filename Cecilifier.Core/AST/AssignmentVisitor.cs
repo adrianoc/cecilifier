@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Variables;
@@ -44,13 +45,20 @@ namespace Cecilifier.Core.AST
         public override void VisitElementAccessExpression(ElementAccessExpressionSyntax node)
         {
             var lastInstructionLoadingRhs = Context.CurrentLine;
-
+            if (InlineArrayProcessor.HandleInlineArrayElementAccess(Context, ilVar, node))
+            {
+                Context.MoveLinesToEnd(InstructionPrecedingValueToLoad, lastInstructionLoadingRhs);
+                var arrayElementType = Context.SemanticModel.GetTypeInfo(node).Type.EnsureNotNull();
+                Context.EmitCilInstruction(ilVar, arrayElementType.Stind());
+                return;
+            }
+            
             ExpressionVisitor.Visit(Context, ilVar, node.Expression);
             foreach (var arg in node.ArgumentList.Arguments)
             {
                 ExpressionVisitor.Visit(Context, ilVar, arg);
             }
-
+            
             if (!HandleIndexer(node, lastInstructionLoadingRhs))
             {
                 Context.MoveLinesToEnd(InstructionPrecedingValueToLoad, lastInstructionLoadingRhs);
@@ -207,7 +215,6 @@ namespace Cecilifier.Core.AST
 
             return true;
         }
-
         private void EmitIndirectStore(ITypeSymbol typeBeingStored)
         {
             var indirectStoreOpCode = typeBeingStored.Stind();

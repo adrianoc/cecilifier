@@ -77,23 +77,17 @@ namespace Cecilifier.Runtime
             {
                 var parameters = mc.GetParameters();
                 var found = true;
-                var x = false;
+                var hasOpenGenericTypes = false;
 
-                for (var i = 0; i < parameters.Length; i++)
+                for (var i = 0; i < parameters.Length && found; i++)
                 {
-                    if (paramTypesArray[i].IsTypeParameter)
-                        x = true;
-                    
-                    if (!CompareParameters(parameters[i], paramTypesArray[i]))
-                    {
-                        found = false;
-                        break;
-                    }
+                    found &= CompareParameters(parameters[i], paramTypesArray[i]); 
+                    hasOpenGenericTypes |= paramTypesArray[i].IsTypeParameter;
                 }
 
                 if (found)
                 {
-                    return x 
+                    return hasOpenGenericTypes 
                         ? mc 
                         : mc.MakeGenericMethod(genericParameters.Select(Type.GetType).ToArray());
                 }
