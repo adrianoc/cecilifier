@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
 using System.Linq;
 using System.Numerics;
 using System.Reflection;
@@ -151,26 +152,61 @@ namespace Cecilifier.Runtime
         }
     }
 
-    struct PrivateCorlibFixerMixin
+    /// <summary>
+    /// This class is used to fix the references to System.Private.Corlib.dll. Assemblies should never reference these types; instead, they should
+    /// reference types from the respective reference assembly (e.g. System.Runtime.dll, System.Runtime.Extensions.dll, etc).
+    /// 
+    /// The source generator (Cecilifier.TypeMapGenerator) generates a map of types to the respective reference assembly. This class uses this map to
+    /// fix the references to System.Private.Corlib.dll. We only observe references to such types because we are using reflection to resolve types and methods.
+    /// 
+    /// This approach was chosen to try to make the cecilified code simpler/more readable. It is theoretically possible to remove the need for reflection by:
+    /// 
+    ///     1. Changing Cecilifier to configure Roslyn to use the reference assemblies instead of the runtime ones (same set of assemblies the code
+    ///        generator uses).
+    ///     2. Constructing TypeReference/MethodReference instances (based on ISymbol from Roslyn) instead of using reflection.
+    /// </summary>
+    internal partial class PrivateCorlibFixerMixin
     {
-        const string SystemPrivateCoreLib = "System.Private.CoreLib";
-        AssemblyNameReference _correctCorlib;
+        // This method is implemented by the source generator (Cecilifier.TypeMapGenerator)
+        partial void InitializeTypeToAssemblyNameReferenceMap();
+        
+        // This is initialized in the generated code.
+        private static Dictionary<string, AssemblyNameReference> _typeToAssemblyNameReference = new();
+
+        private Func<AssemblyNameReference, AssemblyNameReference> _addReferenceIfNotPresent;
 
         public PrivateCorlibFixerMixin(ModuleDefinition module)
         {
-            _correctCorlib = AssemblyNameReference.Parse("netstandard, Version=2.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51");
-            if (!module.AssemblyReferences.Contains(_correctCorlib))
-                module.AssemblyReferences.Add(_correctCorlib);
+            if (_typeToAssemblyNameReference.Count == 0)
+            {
+                InitializeTypeToAssemblyNameReferenceMap();
+            }
+            
+            _addReferenceIfNotPresent = referenceToBeAdded =>
+            {
+                var found = module.AssemblyReferences.FirstOrDefault(ar => ar.FullName == referenceToBeAdded.FullName);
+                if (found == null)
+                {
+                    found = referenceToBeAdded;
+                    module.AssemblyReferences.Add(referenceToBeAdded);
+                }
+
+                return found;
+            };
         }
-
-        internal bool TryMapAssemblyName(string candidateAssemblyName, [NotNullWhen(true)] out AssemblyNameReference correctCorlibReference)
+        
+        public bool TryMapAssemblyFromType(string typeName, [NotNullWhen(true)] out AssemblyNameReference mappedAssemblyReference)
         {
-            correctCorlibReference = null;
-            if (_correctCorlib == null || candidateAssemblyName != SystemPrivateCoreLib)
-                return false;
+            mappedAssemblyReference = null;
 
-            correctCorlibReference = _correctCorlib;
-            return true;
+            if (_typeToAssemblyNameReference.TryGetValue(typeName, out var found))
+            {
+                mappedAssemblyReference =  _addReferenceIfNotPresent(found);
+                return true;
+            }
+
+            Console.WriteLine($"Fail to map '{typeName}' ({typeName.GetHashCode()})");
+            return false;
         }
     }
     
@@ -188,12 +224,24 @@ namespace Cecilifier.Runtime
             importerMixin = new PrivateCorlibFixerMixin(module);
         }
 
-        public override AssemblyNameReference ImportReference (AssemblyNameReference name)
+        protected override IMetadataScope ImportScope(TypeReference type)
         {
-            if (importerMixin.TryMapAssemblyName(name.Name, out var correctCorlibReference))
-                return correctCorlibReference;
+            if (importerMixin.TryMapAssemblyFromType(type.FullName, out var mappedAssemblyReference))
+                return mappedAssemblyReference;
+            
+            return base.ImportScope(type);
+        }
 
-            return base.ImportReference(name);
+        public override TypeReference ImportReference(TypeReference type, IGenericParameterProvider context)
+        {
+            //TODO: Investigate why importing primitive types is necessary
+            //      If it is necessary we should cover all primitive types
+            return type.FullName switch
+            {
+                "System.String" => module.TypeSystem.String,
+                "System.Int32" => module.TypeSystem.Int32,
+                _ => base.ImportReference(type, context)
+            };
         }
     }
     
@@ -214,12 +262,25 @@ namespace Cecilifier.Runtime
             importerMixin = new PrivateCorlibFixerMixin(module);
         }
 
-        public override AssemblyNameReference ImportReference(AssemblyName reference)
+        protected override IMetadataScope ImportScope(Type type)
         {
-            if (importerMixin.TryMapAssemblyName(reference.Name, out var correctCorlibReference))
-                return correctCorlibReference;
-
-            return base.ImportReference(reference);
+            if (importerMixin.TryMapAssemblyFromType(type.FullName, out var fixedn))
+                return fixedn;
+            
+            return base.ImportScope(type);
+        }
+        
+        public override TypeReference ImportReference(Type type, IGenericParameterProvider context)
+        {
+            //TODO: Investigate why importing primitive types is necessary
+            //      If it is necessary we should cover all primitive types
+            return type.FullName switch
+            {
+                "System.In32" => module.TypeSystem.Int32,
+                "System.String" => module.TypeSystem.String,
+                "System.Void" => module.TypeSystem.Void,
+                _ => base.ImportReference(type, context)
+            };
         }
     }
 

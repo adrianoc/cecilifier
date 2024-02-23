@@ -442,11 +442,11 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                 if (frInstruction.Name != frCurrent.Name || frInstruction.DeclaringType.FullName != frCurrent.DeclaringType.FullName)
                     return false;
 
-                if (scopesToIgnore.Contains(frInstruction.DeclaringType.Scope) || scopesToIgnore.Contains(frInstruction.DeclaringType.Scope))
+                if (scopesToIgnore.Contains(frInstruction.DeclaringType.Scope) || scopesToIgnore.Contains(frCurrent.DeclaringType.Scope))
                     return true;
 
                 return (frInstruction.DeclaringType.Scope.Name == frCurrent.DeclaringType.Scope.Name ||
-                         frInstruction.DeclaringType.Scope.Name == "System.Private.CoreLib" && frCurrent.DeclaringType.Scope.Name == "netstandard");
+                         frInstruction.DeclaringType.Scope.Name == "System.Private.CoreLib" && frCurrent.DeclaringType.Scope.Name == "System.Runtime");
             }
             
             return true;

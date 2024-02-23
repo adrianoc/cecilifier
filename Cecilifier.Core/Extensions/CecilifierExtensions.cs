@@ -84,7 +84,7 @@ public class SnippetRunner
 {{
 	public static void Main(string[] args)
 	{{
-        // setup `reflection/metadata importers` to ensure references to System.Private.CoreLib are replaced with references to `netstandard`.
+        // setup `reflection/metadata importers` to ensure references to System.Private.CoreLib are replaced with references to the correct reference assemblies`.
         var mp = new ModuleParameters
         {{
             Architecture = TargetArchitecture.AMD64,

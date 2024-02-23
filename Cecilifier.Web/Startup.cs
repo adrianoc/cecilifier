@@ -8,6 +8,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.WebSockets;
+using System.Reflection;
 using System.Resources;
 using System.Text;
 using System.Text.Json;
@@ -42,15 +43,26 @@ namespace Cecilifier.Web
 
     public class Startup
     {
-        private const string ProjectContents = @"<Project Sdk=""Microsoft.NET.Sdk"">
-    <PropertyGroup>
-        <OutputType>Exe</OutputType>
-        <TargetFramework>net8.0</TargetFramework>
-    </PropertyGroup>
-    <ItemGroup>
-        <PackageReference Include=""Mono.Cecil"" Version=""0.11.5"" />
-    </ItemGroup>
-</Project>";
+        private const string ProjectContents = """
+                                               <Project Sdk="Microsoft.NET.Sdk">
+                                                   <PropertyGroup>
+                                                       <OutputType>Exe</OutputType>
+                                                       <TargetFramework>net8.0</TargetFramework>
+                                                   </PropertyGroup>
+                                                   <ItemGroup>
+                                                       <PackageReference Include="Mono.Cecil" Version="0.11.5" />
+                                                       <PackageReference Include="Cecilifier.TypeMapGenerator" Version="1.0.0" />
+                                                   </ItemGroup>
+                                               </Project>
+                                               """;
+
+        private const string NugetConfigForCecilifiedProject = """
+                                                               <configuration>
+                                                                   <packageSources>
+                                                                       <add key="CecilifierCodeGenerators" value="./NugetLocalRepo/" />
+                                                                   </packageSources>
+                                                               </configuration>
+                                                               """;
 
         private static HttpClient discordConnection = new();
         private static IDictionary<long, uint> seemClientIPHashCodes = new Dictionary<long, uint>();
@@ -216,6 +228,8 @@ namespace Cecilifier.Web
                         var responseData = ZipProject(
                             ("Program.cs", await cecilifiedResult.GeneratedCode.ReadToEndAsync()),
                             ("Cecilified.csproj", ProjectContents),
+                            ("nuget.config", NugetConfigForCecilifiedProject),
+                            ("NugetLocalRepo/Cecilifier.TypeMapGenerator.1.0.0.nupkg", "file-relative-path://Cecilifier.TypeMapGenerator.1.0.0.nupkg"),
                             NameAndContentFromResource("Cecilifier.Web.Runtime")
                         );
 
@@ -273,7 +287,7 @@ namespace Cecilifier.Web
                 return ((string) AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")).Split(Path.PathSeparator).ToList();
             }
 
-            Memory<byte> ZipProject(params (string fileName, string contents)[] sources)
+            Memory<byte> ZipProject(params (string fileName, string contents)[] files)
             {
                 /*
                 //TODO: For some reason this code produces an invalid stream. Need to investigate.
@@ -297,11 +311,19 @@ namespace Cecilifier.Web
                 if (Directory.Exists(assetsPath))
                     Directory.Delete(assetsPath, true);
 
-                Directory.CreateDirectory(assetsPath);
-
-                foreach (var source in sources)
+                foreach (var file in files)
                 {
-                    File.WriteAllText(Path.Combine(assetsPath, $"{source.fileName}"), source.contents);
+                    var filePath = Path.Combine(assetsPath, $"{file.fileName}");
+                    Directory.CreateDirectory(Path.GetDirectoryName(filePath));
+                    if (file.contents.StartsWith("file-relative-path://"))
+                    {
+                        var basePath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+                        File.Copy(Path.Combine(basePath, file.contents.Substring("file-relative-path://".Length)), filePath, true);
+                    }
+                    else
+                    {
+                        File.WriteAllText(filePath, file.contents);    
+                    }
                 }
 
                 var outputZipPath = Path.Combine(tempPath, "Cecilified.zip");
@@ -404,7 +426,6 @@ namespace Cecilifier.Web
 
             return SendJsonMessageToChatAsync(toSend);
         }
-
 
         (string fileName, string contents) NameAndContentFromResource(string resourceName)
         {
