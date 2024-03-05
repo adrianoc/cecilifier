@@ -56,6 +56,7 @@ public struct Constants
     public struct Common
     {
         public const string RuntimeHelpersInitializeArrayMethodName = "InitializeArray";
+        public const string RuntimeConfigJsonExt = ".runtimeconfig.json";
     }
 }
 

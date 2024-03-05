@@ -53,7 +53,7 @@ namespace Cecilifier.Core.Tests.Framework
             AssertResourceTestWithExplicitExpectedIL(actualAssemblyPath, expectedIL, methodSignature, options);
 
             Console.WriteLine();
-            Console.WriteLine("Expected IL: {0}", expectedIL);
+            Console.WriteLine("Expected IL:\n{0}", expectedIL);
             Console.WriteLine("Actual assembly path : {0}", actualAssemblyPath);
         }
 
@@ -214,8 +214,8 @@ namespace Cecilifier.Core.Tests.Framework
                 File.Copy(fileToCopy, Path.Combine(targetPath, Path.GetFileName(fileToCopy)), true);
             }
 
-            var sourceRuntimeConfigJson = Path.ChangeExtension(GetType().Assembly.Location, ".runtimeconfig.json");
-            var targetRuntimeConfigJson = Path.ChangeExtension(cecilifierRunnerPath, ".runtimeconfig.json");
+            var sourceRuntimeConfigJson = Path.ChangeExtension(GetType().Assembly.Location, Constants.Common.RuntimeConfigJsonExt);
+            var targetRuntimeConfigJson = Path.ChangeExtension(cecilifierRunnerPath, Constants.Common.RuntimeConfigJsonExt);
 
             File.Copy(sourceRuntimeConfigJson, targetRuntimeConfigJson, true);
         }

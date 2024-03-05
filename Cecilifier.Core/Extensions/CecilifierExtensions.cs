@@ -70,7 +70,6 @@ namespace Cecilifier.Core.Extensions
             var moduleKind = entryPointVar == null ? "ModuleKind.Dll" : "ModuleKind.Console";
             var entryPointStatement = entryPointVar != null ? $"\t\t\tassembly.EntryPoint = {entryPointVar};\n" : string.Empty;
 
-            const string runtimeConfigJsonExt = ".runtimeconfig.json";
             return $@"using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Mono.Cecil.Rocks;
@@ -98,10 +97,10 @@ public class SnippetRunner
 {cecilSnippet}{entryPointStatement}
 		    assembly.Write(args[0]);
 
-            //Writes a {runtimeConfigJsonExt} file matching the output assembly name.
+            //Writes a {Constants.Common.RuntimeConfigJsonExt} file matching the output assembly name.
 			File.Copy(
-				Path.ChangeExtension(typeof(SnippetRunner).Assembly.Location, ""{runtimeConfigJsonExt}""),
-                Path.ChangeExtension(args[0], ""{runtimeConfigJsonExt}""),
+				Path.ChangeExtension(typeof(SnippetRunner).Assembly.Location, ""{Constants.Common.RuntimeConfigJsonExt}""),
+                Path.ChangeExtension(args[0], ""{Constants.Common.RuntimeConfigJsonExt}""),
                 true);
         }}
 	}}
