@@ -18,6 +18,7 @@ using System.Threading.Tasks;
 using System.Web;
 using Cecilifier.Core;
 using Cecilifier.Core.Mappings;
+using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using Cecilifier.Web.Pages;
 using Microsoft.AspNetCore.Builder;
@@ -217,7 +218,7 @@ namespace Cecilifier.Web
                     var cecilifiedResult = Core.Cecilifier.Process(code,
                         new CecilifierOptions
                         {
-                            References = GetTrustedAssembliesPath().Concat(userAssemblyReferences.Success).ToList(),
+                            References = ReferencedAssemblies.GetTrustedAssembliesPath().Concat(userAssemblyReferences.Success).ToList(),
                             Naming = new DefaultNameStrategy(toBeCecilified.Settings.NamingOptions, toBeCecilified.Settings.ElementKindPrefixes.ToDictionary(entry => entry.ElementKind, entry => entry.Prefix))
                         });
 
@@ -280,11 +281,6 @@ namespace Cecilifier.Web
                 }
                 seemClientIPHashCodes[remoteIpAddressHashCode] = visits + 1;
                 Interlocked.Exchange(ref CecilifierApplication.MaximumUnique, seemClientIPHashCodes.Values.Max());
-            }
-
-            IEnumerable<string> GetTrustedAssembliesPath()
-            {
-                return ((string) AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")).Split(Path.PathSeparator).ToList();
             }
 
             Memory<byte> ZipProject(params (string fileName, string contents)[] files)

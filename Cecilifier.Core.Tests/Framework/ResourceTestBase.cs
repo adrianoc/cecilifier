@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.Tests.Framework.AssemblyDiff;
 using Cecilifier.Runtime;
@@ -101,8 +102,8 @@ namespace Cecilifier.Core.Tests.Framework
             var targetPath = Path.Combine(Path.GetDirectoryName(cecilifiedAssemblyPath), Path.GetFileNameWithoutExtension(cecilifiedAssemblyPath) + "_expected");
 
             return buildType == BuildType.Exe
-                ? CompilationServices.CompileExe(targetPath, tbc, Utils.GetTrustedAssembliesPath().ToArray())
-                : CompilationServices.CompileDLL(targetPath, tbc, Utils.GetTrustedAssembliesPath().ToArray());
+                ? CompilationServices.CompileExe(targetPath, tbc, ReferencedAssemblies.GetTrustedAssembliesPath())
+                : CompilationServices.CompileDLL(targetPath, tbc, ReferencedAssemblies.GetTrustedAssembliesPath());
         }
 
         private void AssertResourceTest(string actualAssemblyPath, string expectedAssemblyPath, ResourceTestOptions options)
@@ -181,7 +182,7 @@ namespace Cecilifier.Core.Tests.Framework
         {
             cecilifiedCode = Cecilfy(tbc);
 
-            var references = Utils.GetTrustedAssembliesPath().Where(a => !a.Contains("mscorlib"));
+            var references = ReferencedAssemblies.GetTrustedAssembliesPath().Where(a => !a.Contains("mscorlib"));
             var refsToCopy = new List<string>
             {
                 typeof(ILParser).Assembly.Location,
@@ -261,7 +262,7 @@ namespace Cecilifier.Core.Tests.Framework
         private string Cecilfy(Stream stream)
         {
             stream.Position = 0;
-            return Cecilifier.Process(stream, new CecilifierOptions { References = Utils.GetTrustedAssembliesPath(), Naming = new DefaultNameStrategy() }).GeneratedCode.ReadToEnd();
+            return Cecilifier.Process(stream, new CecilifierOptions { References = ReferencedAssemblies.GetTrustedAssembliesPath(), Naming = new DefaultNameStrategy() }).GeneratedCode.ReadToEnd();
         }
     }
 }

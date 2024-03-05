@@ -1,5 +1,7 @@
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using Cecilifier.Core.Misc;
 using Cecilifier.Core.Tests.Framework;
 using NUnit.Framework;
 
@@ -83,7 +85,7 @@ public class Foo
 
     private void AssertCecilifiedCodeContainsSnippet(string code, string expectedSnippet)
     {
-        var cecilifier = Cecilifier.Process(new MemoryStream(Encoding.UTF8.GetBytes(code)), new CecilifierOptions { References = Utils.GetTrustedAssembliesPath() });
+        var cecilifier = Cecilifier.Process(new MemoryStream(Encoding.UTF8.GetBytes(code)), new CecilifierOptions { References = ReferencedAssemblies.GetTrustedAssembliesPath() });
         var generated = cecilifier.GeneratedCode.ReadToEnd();
 
         Assert.That(generated, Does.Contain(expectedSnippet), "Expected snippet not found");
