@@ -162,11 +162,22 @@ namespace Cecilifier.Core.Tests.Integration
         {
             AssertResourceTest("Members/Methods/RefProperties");
         }
+        
+        [Test]
+        public void OutVariablesTest()
+        {
+            AssertResourceTest("Members/Methods/OutVariables");
+        }
 
         [Test]
         public void TestOverloads()
         {
             AssertResourceTest("Members/Methods/Overloads");
+        }
+        [Test]
+        public void NonVirtualMethodCallTest()
+        {
+            AssertResourceTest("Members/Methods/Invocation/NonVirtualMethodCall");
         }
     }
 }
