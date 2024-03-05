@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.IO;
 using System.Linq;
 using System.Numerics;
 using System.Reflection;
@@ -231,18 +230,6 @@ namespace Cecilifier.Runtime
             
             return base.ImportScope(type);
         }
-
-        public override TypeReference ImportReference(TypeReference type, IGenericParameterProvider context)
-        {
-            //TODO: Investigate why importing primitive types is necessary
-            //      If it is necessary we should cover all primitive types
-            return type.FullName switch
-            {
-                "System.String" => module.TypeSystem.String,
-                "System.Int32" => module.TypeSystem.Int32,
-                _ => base.ImportReference(type, context)
-            };
-        }
     }
     
     public class SystemPrivateCoreLibFixerReflectionProvider : IReflectionImporterProvider
@@ -268,19 +255,6 @@ namespace Cecilifier.Runtime
                 return fixedn;
             
             return base.ImportScope(type);
-        }
-        
-        public override TypeReference ImportReference(Type type, IGenericParameterProvider context)
-        {
-            //TODO: Investigate why importing primitive types is necessary
-            //      If it is necessary we should cover all primitive types
-            return type.FullName switch
-            {
-                "System.In32" => module.TypeSystem.Int32,
-                "System.String" => module.TypeSystem.String,
-                "System.Void" => module.TypeSystem.Void,
-                _ => base.ImportReference(type, context)
-            };
         }
     }
 
