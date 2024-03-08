@@ -111,18 +111,9 @@ namespace Cecilifier.Core.AST
 
             public override int VisitLiteralExpression(LiteralExpressionSyntax node)
             {
-                if (node.Kind() != SyntaxKind.NumericLiteralExpression)
-                {
-                    throw new InvalidOperationException($"Invalid literal type: {node}");
-                }
-
-                var value = node.ToString();
-                if (value.StartsWith("0x"))
-                {
-                    return Convert.ToInt32(value.Substring(2), 16);
-                }
-
-                return int.Parse(value);
+                return node.TryGetLiteralValueFor<int>(out var value) 
+                    ? value 
+                    : throw new InvalidOperationException($"Invalid literal type: {node}");
             }
 
             public override int VisitBinaryExpression(BinaryExpressionSyntax node)

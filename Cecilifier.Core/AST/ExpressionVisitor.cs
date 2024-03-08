@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Cecilifier.Core.CodeGeneration;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
@@ -1388,8 +1389,7 @@ namespace Cecilifier.Core.AST
 
         private string ArgumentValueToUseForDefaultParameter(IParameterSymbol arg, ImmutableArray<IParameterSymbol> parameters, SeparatedSyntaxList<ArgumentSyntax> arguments)
         {
-            var callerArgumentExpressionAttribute = arg.GetAttributes().SingleOrDefault(attr => attr.AttributeClass!.MetadataToken == Context.RoslynTypeSystem.CallerArgumentExpressionAttribute.MetadataToken);
-            if (callerArgumentExpressionAttribute != null)
+            if (arg.TryGetAttribute<CallerArgumentExpressionAttribute>(out var callerArgumentExpressionAttribute))
             {
                 var expressionParameter = parameters.SingleOrDefault(p => p.Name == (string) callerArgumentExpressionAttribute.ConstructorArguments[0].Value);
                 if (expressionParameter != null)

@@ -240,5 +240,12 @@ namespace Cecilifier.Core.Extensions
             SymbolKind.Parameter => VariableMemberKind.Parameter,
             _ => throw new ArgumentException($"Invalid symbol type for '{self}' ({self.Kind})")
         };
+
+        public static bool TryGetAttribute<T>(this ISymbol symbol, [NotNullWhen(true)] out AttributeData attributeData) where T : Attribute
+        {
+            var typeOfT = typeof(T);
+            attributeData = symbol.GetAttributes().SingleOrDefault(attr => attr.AttributeClass?.Name == typeOfT.Name);
+            return attributeData != null;
+        }
     }
 }

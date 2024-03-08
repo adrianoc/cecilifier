@@ -305,8 +305,7 @@ namespace Cecilifier.Core.AST
             if (typeSymbol.TypeKind != TypeKind.Struct)
                 return;
 
-            var structLayoutAttribute = typeSymbol.GetAttributes().FirstOrDefault(attrData => attrData.AttributeClass.FullyQualifiedName().Equals("System.Runtime.InteropServices.StructLayoutAttribute"));
-            if (structLayoutAttribute == null)
+            if (!typeSymbol.TryGetAttribute<StructLayoutAttribute>(out var structLayoutAttribute))
             {
                 typeAttributes.AppendModifier("TypeAttributes.SequentialLayout");
             }
@@ -858,8 +857,8 @@ namespace Cecilifier.Core.AST
             static int AssignedValue(AttributeSyntax attribute, string parameterName)
             {
                 // whenever Size/Pack are omitted the corresponding property should be set to 0. See Ecma-335 II 22.8.
-                var parameterAssignmentExpression = attribute.ArgumentList?.Arguments.FirstOrDefault(a => a.NameEquals?.Name.Identifier.Text == parameterName)?.Expression;
-                return parameterAssignmentExpression != null ? Int32.Parse(((LiteralExpressionSyntax) parameterAssignmentExpression).Token.Text) : 0;
+                var parameterAssignmentExpression = (LiteralExpressionSyntax) attribute.ArgumentList?.Arguments.FirstOrDefault(a => a.NameEquals?.Name.Identifier.Text == parameterName)?.Expression;
+                return parameterAssignmentExpression?.TryGetLiteralValueFor<int>(out var ret) == true ? ret : 0;
             }
         }
 
