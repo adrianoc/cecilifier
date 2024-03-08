@@ -45,11 +45,10 @@ namespace Cecilifier.Core.AST
         public override void VisitElementAccessExpression(ElementAccessExpressionSyntax node)
         {
             var lastInstructionLoadingRhs = Context.CurrentLine;
-            if (InlineArrayProcessor.HandleInlineArrayElementAccess(Context, ilVar, node))
+            if (InlineArrayProcessor.TryHandleInlineArrayElementAccess(Context, ilVar, node, out var elementType))
             {
                 Context.MoveLinesToEnd(InstructionPrecedingValueToLoad, lastInstructionLoadingRhs);
-                var arrayElementType = Context.SemanticModel.GetTypeInfo(node).Type.EnsureNotNull();
-                Context.EmitCilInstruction(ilVar, arrayElementType.Stind());
+                Context.EmitCilInstruction(ilVar, elementType.StindOpCodeFor());
                 return;
             }
             
