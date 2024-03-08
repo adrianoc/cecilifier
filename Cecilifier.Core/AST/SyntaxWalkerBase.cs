@@ -648,7 +648,7 @@ namespace Cecilifier.Core.AST
 
             if (needsLoadIndirect)
             {
-                Context.EmitCilInstruction(ilVar, type.LoadIndirectOpCodeFor());
+                Context.EmitCilInstruction(ilVar, type.LdindOpCodeFor());
             }
         }
 

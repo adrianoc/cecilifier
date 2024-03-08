@@ -152,7 +152,7 @@ partial class ExpressionVisitor
             }
 
             exp.Accept(this);
-            Context.EmitCilInstruction(ilVar, arrayType.Stind());
+            Context.EmitCilInstruction(ilVar, arrayType.StindOpCodeFor());
             offset += elementTypeSize;
         }
     }
