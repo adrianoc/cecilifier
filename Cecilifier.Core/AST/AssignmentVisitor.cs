@@ -217,7 +217,7 @@ namespace Cecilifier.Core.AST
         }
         private void EmitIndirectStore(ITypeSymbol typeBeingStored)
         {
-            var indirectStoreOpCode = typeBeingStored.Stind();
+            var indirectStoreOpCode = typeBeingStored.StindOpCodeFor();
             Context.EmitCilInstruction(ilVar, indirectStoreOpCode, indirectStoreOpCode == OpCodes.Stobj ? Context.TypeResolver.Resolve(typeBeingStored.ElementTypeSymbolOf()) : null);
         }
 
