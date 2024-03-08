@@ -241,6 +241,12 @@ namespace Cecilifier.Core.AST
                 return;
             }
 
+            if (InlineArrayProcessor.TryHandleInlineArrayElementAccess(Context, ilVar, node, out var elementType))
+            {
+                Context.EmitCilInstruction(ilVar, elementType.LdindOpCodeFor());
+                return;
+            }
+
             node.Expression.Accept(this);
             node.ArgumentList.Accept(this);
 

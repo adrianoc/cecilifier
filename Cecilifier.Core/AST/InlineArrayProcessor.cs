@@ -77,13 +77,14 @@ public class InlineArrayProcessor
         }
     }
 
-    internal static bool HandleInlineArrayElementAccess(IVisitorContext context, string ilVar, ElementAccessExpressionSyntax elementAccess)
+    internal static bool TryHandleInlineArrayElementAccess(IVisitorContext context, string ilVar, ElementAccessExpressionSyntax elementAccess, out ITypeSymbol elementType)
     {
+        elementType = null;
         if (elementAccess.Expression.IsKind(SyntaxKind.ElementAccessExpression))
             return false;
         
-        var expSymbol = context.SemanticModel.GetSymbolInfo(elementAccess.Expression).Symbol.EnsureNotNull();
-        if (expSymbol.GetMemberType().TryGetAttribute<InlineArrayAttribute>(out _))
+        var inlineArrayType = context.SemanticModel.GetSymbolInfo(elementAccess.Expression).Symbol.EnsureNotNull().GetMemberType();
+        if (inlineArrayType.TryGetAttribute<InlineArrayAttribute>(out _))
         {
             ExpressionVisitor.Visit(context, ilVar, elementAccess.Expression);
             Debug.Assert(elementAccess.ArgumentList.Arguments.Count == 1);
@@ -91,15 +92,16 @@ public class InlineArrayProcessor
             var method = string.Empty;
             if (elementAccess.ArgumentList.Arguments[0].Expression.TryGetLiteralValueFor(out int index) && index == 0)
             {
-                method = InlineArrayFirstElementRefMethodFor(context, expSymbol.GetMemberType());
+                method = InlineArrayFirstElementRefMethodFor(context, inlineArrayType);
             }
             else
             {
                 context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, index);
-                method = InlineArrayElementRefMethodFor(context, expSymbol.GetMemberType());
+                method = InlineArrayElementRefMethodFor(context, inlineArrayType);
             }
             context.EmitCilInstruction(ilVar, OpCodes.Call, method);
 
+            elementType = InlineArrayElementTypeFrom(inlineArrayType);
             return true;
         }
 
@@ -132,7 +134,7 @@ public class InlineArrayProcessor
             varName,
             [
                 context.TypeResolver.Resolve(inlineArrayType), // TBuffer 
-                context.TypeResolver.Resolve(((IFieldSymbol) inlineArrayType.GetMembers().First()).Type) // TElement 
+                context.TypeResolver.Resolve(InlineArrayElementTypeFrom(inlineArrayType)) // TElement 
             ]);
 
         foreach (var exp in exps)
@@ -142,6 +144,11 @@ public class InlineArrayProcessor
         }
 
         return varName;
+    }
+
+    private static ITypeSymbol InlineArrayElementTypeFrom(ITypeSymbol inlineArrayType)
+    {
+        return ((IFieldSymbol) inlineArrayType.GetMembers().First()).Type;
     }
     
     private static int InlineArrayLengthFrom(ITypeSymbol rhsType)

@@ -53,7 +53,7 @@ public class InlineArrayTests : CecilifierUnitTestBase
     }
 
     [Test]
-    public void AccessToFirstElement_MapsTo_PrivateImplementationDetailsInlineArrayFirstElementRefMethod()
+    public void AssignmentToFirstElement_MapsTo_PrivateImplementationDetailsInlineArrayFirstElementRefMethod()
     {
         var result = RunCecilifier("""
                                    var buffer = new IntBuffer();
@@ -84,6 +84,29 @@ public class InlineArrayTests : CecilifierUnitTestBase
                                           """));
     }
     
+    [Test]
+    public void AccessToFirstElement_MapsTo_PrivateImplementationDetailsInlineArrayFirstElementRefMethod()
+    {
+        var result = RunCecilifier("""
+                                   var buffer = new IntBuffer();
+                                   buffer[0] = 42;
+                                   System.Console.WriteLine(buffer[0]);
+                                   
+                                   [System.Runtime.CompilerServices.InlineArray(10)]
+                                   public struct IntBuffer
+                                   {
+                                       private int _element0;
+                                   }
+                                   """);
+
+        var cecilified = result.GeneratedCode.ReadToEnd();
+        
+        Assert.That(cecilified, Does.Match("""
+                                          (il_topLevelMain_\d+\.Emit\(OpCodes\.)Call, gi_inlineArrayFirstElementRef_\d+\);
+                                          \s+\1Ldind_I4\);
+                                          \s+\1Call,.+ImportReference\(.+ResolveMethod\(typeof\(System.Console\), "WriteLine".+\);
+                                          """));
+    }
+    
     // Access to not first element
-    // 
 }
