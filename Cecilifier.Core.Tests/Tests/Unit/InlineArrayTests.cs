@@ -108,5 +108,36 @@ public class InlineArrayTests : CecilifierUnitTestBase
                                           """));
     }
     
+    [TestCase("field[0] = 42", @"Ldflda, fld_field_\d+", TestName = "Field")]
+    [TestCase("parameter[0] = 42", @"Ldarga, p_parameter_\d+", TestName = "Parameter")]
+    public void AccessToFirstElement_Of_StorageLocation(string statement, string expectedOpCode)
+    {
+        var result = RunCecilifier($$"""
+                                   class C
+                                   {
+                                       public IntBuffer field;
+                                       void M(IntBuffer parameter) { {{statement}}; }
+                                   }
+                                   
+                                   [System.Runtime.CompilerServices.InlineArray(10)]
+                                   public struct IntBuffer { private int _element0; }
+                                   """);
+
+        var cecilified = result.GeneratedCode.ReadToEnd();
+        
+        Assert.That(cecilified, Does.Match($"""
+                                          (il_M_\d+\.Emit\(OpCodes\.){expectedOpCode}\);
+                                          \s+//\<PrivateImplementationDetails\> class.
+                                          """));
+        
+        Assert.That(cecilified, Does.Match("""
+                                          (il_M_\d+\.Emit\(OpCodes\.)Call, gi_inlineArrayFirstElementRef_\d+\);
+                                          \s+\1Ldc_I4, 42\);
+                                          \s+\1Stind_I4\);
+                                          """));
+    }
+    
     // Access to not first element
+    // Element type: reference type, value type, custom value type
+    //ADD-ISSUE: 
 }
