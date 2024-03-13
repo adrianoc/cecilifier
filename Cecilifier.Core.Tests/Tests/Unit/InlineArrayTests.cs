@@ -137,7 +137,41 @@ public class InlineArrayTests : CecilifierUnitTestBase
                                           """));
     }
     
-    // Access to not first element
+    [TestCase("field[42] = 1", @"Ldflda, fld_field_\d+", TestName = "Field")]
+    [TestCase("parameter[42] = 1", @"Ldarga, p_parameter_\d+", TestName = "Parameter")]
+    [TestCase("local[42] = 1", @"Ldloca, l_local_\d+", TestName = "Local")]
+    public void AccessToNonFirstElement_Of_StorageLocation(string statement, string expectedOpCode)
+    {
+        var result = RunCecilifier($$"""
+                                   class C
+                                   {
+                                       public IntBuffer field;
+                                       void M(IntBuffer parameter) 
+                                       { 
+                                          var local = new IntBuffer();
+                                          {{statement}}; 
+                                       }
+                                   }
+                                   
+                                   [System.Runtime.CompilerServices.InlineArray(100)]
+                                   public struct IntBuffer { private int _element0; }
+                                   """);
+
+        var cecilified = result.GeneratedCode.ReadToEnd();
+        
+        Assert.That(cecilified, Does.Match($"""
+                                          (\s+il_M_\d+\.Emit\(OpCodes\.){expectedOpCode}\);
+                                          \1Ldc_I4, 42\);
+                                          \s+//\<PrivateImplementationDetails\> class.
+                                          """));
+        
+        Assert.That(cecilified, Does.Match("""
+                                          (\s+il_M_\d+\.Emit\(OpCodes\.)Call, gi_inlineArrayElementRef_\d+\);
+                                          \s+\1Ldc_I4, 1\);
+                                          \s+\1Stind_I4\);
+                                          """));
+    }
+    
+    
     // Element type: reference type, value type, custom value type
-    //ADD-ISSUE: 
 }
