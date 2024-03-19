@@ -3,6 +3,7 @@ Redesign code generation strategy
 In current implementation, whenever there's a need to generate synthetic types/members this is done `in line`, i.e, the code for the synthetic type/member is added in the middle of whatever were being processed. For instance:
 
 ```C#
+// TestData.cs
 using System;
 class Foo
 {
@@ -89,13 +90,13 @@ il_Bar_2.Emit(OpCodes.Ret);
 
 making it easier to understand the generated code for method `Bar` and the synthetic type and members.
 
-In order to achieve this we have 2 options:
-1. Split the code generation into multiple phases, and generate the synthetic types/members in a previous phase.
-2. Introduce a concept of `code block` representing types/members and move these `code blocks` to the `right` place.
+Below we present 2 possible alternatives to achieve this:
+1. Split the code generation into multiple phases, and generate synthetic types/members in an earlier phase, ensuring its code will have a higher chance of being declared before the first reference to it.
+2. Introduce a concept of `code block` representing blocks of code for types/members and inserting these `code blocks` into the `right` position (it may even be possible to move those blocks around).
 
 I'm inclined to go with option 2, as it seems to be simpler to implement and maintain.
 
-The idea is represent code blocks as a linked list of nodes, where each node stores references to the first/last line in the generated code.
+The idea is to represent code blocks as a linked list where each node stores references to the first/last line in the generated code.
 
 ```C#
 class CodeBlock
@@ -111,37 +112,44 @@ class CodeBlock
 enum BlockKind
 {
     Type,
-    Member
+    Member,
+    // Others ?
 
 }
 ```
 
-The code generation would keep a stack of such code blocks.
+The code generation would keep a stack of such code blocks, and whenever it is going to start emitting code for a new type/member:
 
-The algorithm to generate code for a type/member would be something like:
+1. Check the top of stack. 
+2. If it is empty or the top of stack is `insertion compatible` with the current type/member, simply add keep
+   adding new lines to the generated code, as normal.
+3. otherwise, follow the list of code blocks (starting with the top of the stack) until a compatible one is found.
+4. Take the `FirstLine` of the code block found in step 3 as the `InsertionPoint`.
+5. Instantiate and push a new code block for the current type/member setting the `InsertionPoint` to the value found in step 4.
 
-1. Check the top of stack. If it is empty or the top of stack is `compatible` with the current type/member...
-2. If the code block at the top of the stack is not compatible, follows the previous code block until a compatible one is found.
-3. Take the `FirstLine` of the code block found in step 2 as the `InsertionPoint` for the current type/member.
-4. Instantiate and push a new code block for the current type/member.
-
-So for the example above, the algorithm would generate go as:
-1. Visit the `compilation unit` 
-1. Visit the type `Foo` and push a code block for it (`InsertionPoint` would be the set to `null` since there's no previous code block)
-1. Various calls happens to generate code for type `Foo`. These calls would simply append the generated code to the existing list of instructions.
-1. Visit the method `Bar` and push a code block for it (`InsertionPoint` would be the set to the `null` also, since adding methods on existing types is a compatible operation)
-1. Various calls happens to generate code for method `Bar`. These calls would simply append the generated code to the existing list of instructions.
-1. While visiting `Span<byte> b = new byte[] {1, 2, 3, 4, 5, 6, 7, 8};` the need for a synthetic type/field appears (PrivateImplementationDetails).
-1. Check the top of the stack (method `Bar`) and find that it is not compatible with a `type` (methods cannot have types declared inside it) and would follow the previous code block (type `Foo`).
-1. Find that the type `Foo` is compatible with a `type` and would use its `FirstLine` as the `InsertionPoint` for the new code block.
+So given the code above (`TestData.cs`), the algorithm would go as:
+1. Visit the `compilation unit`
+1. Visit the type declaration `class Foo` and push a code block for it (`InsertionPoint` set to `null` as there's no previous code block)
+1. Various calls happens to generate code for type `Foo` appending the generated code to the existing list of instructions.
+1. Visit the method `Bar` and push a code block for it (`InsertionPoint` set to the `null` also, as adding members to a type is `insertion compatible` operation)
+1. Various calls happens to generate code for method `Bar` simply appending the generated code to the existing list of instructions.
+1. While visiting `Span<byte> b = new byte[] {1, 2, 3, 4, 5, 6, 7, 8};` the need for a synthetic type/field appears (`PrivateImplementationDetails`).
+1. Check the top of the stack (method `Bar`) and find that it is not `insertion compatible` with a `type` (methods cannot have types declared inside them) 
+1. Get the code block previous to the one for the `Bar` method, i.e, the one for the type `Foo`.
+1. Find that that block is `insertion compatible` with a `type` and would use its `FirstLine` as the `InsertionPoint` for the new code block.
 1. Instantiate and push a new code block for the synthetic type.
 1. When adding new generated code lines, these lines would be inserted before the `InsertionPoint` of the current code block, i.e, before the first line of `Foo`.
-1. After adding some generated code, there's a need to add a field to the class we are
-   emitting;
-1. Check the top of the stack (type `Foo`) and find that it is compatible with a `field`
-1. Instantiate and push a new code block for the synthetic field ('InsertionPoint' is the same as the `InsertionPoint` for the valid code block found in the previous step).
+1. After adding some generated code, there's a need to add a field to the class we are emitting;
+1. Check the top of the stack (type `PrivateImplementationDetails`) and find that it is compatible with a `field`
+1. Instantiate and push a new code block for the synthetic field (`InsertionPoint` is the same as the `InsertionPoint` for the valid code block found in the previous step).
+1. Code generation for the synthetic field finishes: pop the top of the stack. Now code block for `PrivateImplementationDetails` is the top of the stack
+1. Any new synthetic members added to this type would be added to the end of the previous added one.
+1. Code generation for `PrivateImplementationDetails` type finishes: pop the top of the stack. Now code block for `Bar` is the top of the stack
+1. Code generation for `Bar` resumes appending new generated lines to the end of list (`Bar.InsertionPoint = null`)
+1. Code generation for `Bar` finishes: pop the top of the stack. Now code block for `Foo` is the top of the stack
+1. Code generation for `Foo` resumes appending new generated lines to the end of list (`Foo.InsertionPoint = null`)
 
-This approach would make the code generation more predictable and easier to understand, as the generated code would be more linear and the synthetic types/members would be generated in a better context.
+This approach would make the generated code more predictable and easier to understand as it would be more linear.
 
 The downside of this approach is that the actual mapping from `original source` -> `cecilified code` is done when each new line is added and assumes the lines does not move after that. One possible fix for that could be:
 1.  Keep track of first/last entry in the mapping array for each code block
@@ -151,5 +159,57 @@ The downside of this approach is that the actual mapping from `original source` 
 1.  During the previous step, accumulate the # of lines added by that block and use it as the offset to start step 4 now with the `next` code block
 1.  repeat steps 4 ~ 6 until there is no more code blocks.
 
+```mermaid
+block-beta
+   columns 2
+   Mappings
+   block:mappings
+    block:B0
+        a[".a"] b
+    end
+    block:B1
+        c d
+    end
+    block
+        e f
+    end
+    block
+        g h
+    end
+    block
+        i j
+    end
+    block
+        k l
+    end
+   end
 
+   codeblocks["Code Blocks"]
+   block:code_blocks
+    block
+        a1 b1        
+    end
+    block
+        c1 d1
+    end
+    block
+        e1 f1
+    end
+    block
+        g1 h1
+    end
+   end   
+   
+   gencode["Generated code"]
+   block:lines
+    block        
+        a2 b2 c2 d2 e2 f2 g2 h2 i2 j2
+    end
+   end
+
+   a1-->B0
+   b1-->B1
+   a1-->a2
+   b1-->d2      
+```
 
