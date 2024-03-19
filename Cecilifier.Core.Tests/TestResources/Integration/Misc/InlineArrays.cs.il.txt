@@ -1,0 +1,47 @@
+﻿.locals init (ByteBuffer V_0, InterfaceBuffer V_1, StructBuffer V_2, SomeStruct V_3)
+IL_0000: ldloca.s V_0
+IL_0002: initobj ByteBuffer
+IL_0008: ldloca V_0
+IL_000c: call TElement& <PrivateImplementationDetails>::InlineArrayFirstElementRef<ByteBuffer,System.Byte>(TBuffer&)
+IL_0011: ldc.i4 1
+IL_0016: stind.i1
+IL_0017: ldloca V_0
+IL_001b: ldc.i4 1
+IL_0020: call TElement& <PrivateImplementationDetails>::InlineArrayElementRef<ByteBuffer,System.Byte>(TBuffer&,System.Int32)
+IL_0025: ldloca V_0
+IL_0029: call TElement& <PrivateImplementationDetails>::InlineArrayFirstElementRef<ByteBuffer,System.Byte>(TBuffer&)
+IL_002e: ldind.u1
+IL_002f: ldc.i4 1
+IL_0034: add
+IL_0035: conv.u1
+IL_0036: stind.i1
+IL_0037: ldloca V_0
+IL_003b: ldc.i4 1
+IL_0040: call TElement& <PrivateImplementationDetails>::InlineArrayElementRef<ByteBuffer,System.Byte>(TBuffer&,System.Int32)
+IL_0045: ldind.u1
+IL_0046: call System.Void System.Console::WriteLine(System.Int32)
+IL_004b: ldloca.s V_1
+IL_004d: initobj InterfaceBuffer
+IL_0053: ldloca V_1
+IL_0057: call TElement& <PrivateImplementationDetails>::InlineArrayFirstElementRef<InterfaceBuffer,System.IComparable>(TBuffer&)
+IL_005c: ldc.i4 1
+IL_0061: box System.Int32
+IL_0066: stind.ref
+IL_0067: ldloca.s V_2
+IL_0069: initobj StructBuffer
+IL_006f: ldloca V_2
+IL_0073: call TElement& <PrivateImplementationDetails>::InlineArrayFirstElementRef<StructBuffer,SomeStruct>(TBuffer&)
+IL_0078: ldloca.s V_3
+IL_007a: initobj SomeStruct
+IL_0080: ldloca.s V_3
+IL_0082: dup
+IL_0083: ldc.i4 42
+IL_0088: stfld System.Int32 SomeStruct::Value
+IL_008d: pop
+IL_008e: ldloc V_3
+IL_0092: stobj SomeStruct
+IL_0097: ldloca V_2
+IL_009b: call TElement& <PrivateImplementationDetails>::InlineArrayFirstElementRef<StructBuffer,SomeStruct>(TBuffer&)
+IL_00a0: ldfld System.Int32 SomeStruct::Value
+IL_00a5: call System.Void System.Console::WriteLine(System.Int32)
+IL_00aa: ret

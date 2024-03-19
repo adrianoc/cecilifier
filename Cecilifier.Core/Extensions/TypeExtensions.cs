@@ -131,7 +131,7 @@ namespace Cecilifier.Core.Extensions
                 SpecialType.System_Boolean => OpCodes.Ldind_U1,
                 SpecialType.System_Object => OpCodes.Ldind_Ref,
                 
-                _ => type.IsValueType ? OpCodes.Ldobj : OpCodes.Ldind_Ref
+                _ => type.IsValueType || type.IsTypeParameterOrIsGenericTypeReferencingTypeParameter() ? OpCodes.Ldobj : OpCodes.Ldind_Ref
             };
         }
 
