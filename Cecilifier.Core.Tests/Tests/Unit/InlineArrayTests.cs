@@ -172,6 +172,164 @@ public class InlineArrayTests : CecilifierUnitTestBase
                                           """));
     }
     
+    [TestCase("string", "\"Foo\"", """
+                                (\s+il_M_\d+\.Emit\(OpCodes\.)Call, gi_inlineArrayFirstElementRef_\d+\);
+                                \1Ldstr, "Foo"\);
+                                \1Stind_Ref\);
+                                """, TestName = "String constant")]
     
-    // Element type: reference type, value type, custom value type
+    [TestCase("object", "null", """
+                                (\s+il_M_\d+\.Emit\(OpCodes\.)Call, gi_inlineArrayFirstElementRef_\d+\);
+                                \1Ldnull\);
+                                \1Stind_Ref\);
+                                """, TestName = "Object (null)")]
+    
+    [TestCase("CustomStruct", "new CustomStruct(42)", """
+                                (\s+il_M_\d+\.Emit\(OpCodes\.)Call, gi_inlineArrayFirstElementRef_\d+\);
+                                \1Ldc_I4, 42\);
+                                \1Newobj, ctor_customStruct_\d+\);
+                                \1Stobj\);
+                                """, TestName = "Custom struct (new expression)")]
+    
+    [TestCase("CustomStruct", "new CustomStruct { name = \"Foo\" }", """
+                                (\s+il_M_\d+\.Emit\(OpCodes\.)Call, gi_inlineArrayFirstElementRef_\d+\);
+                                \s+var (l_vt_\d+) = new VariableDefinition\((?<struct_type>st_customStruct_\d+)\);
+                                \s+m_M_\d+\.Body\.Variables.Add\(\2\);
+                                (?<lsa>\1Ldloca_S, \2\);)
+                                \1Initobj, \k<struct_type>\);
+                                \k<lsa>
+                                \1Dup\);
+                                \1Ldstr, "Foo"\);
+                                \1Stfld, fld_name_\d+\);
+                                \1Pop\);
+                                \1Ldloc, \2\);
+                                \1Stobj, \k<struct_type>\);
+                                """, TestName = "Custom struct (object initializer)")]
+    public void InlineArray_ElementType(string elementType, string value, string expectedIL)
+    {
+        var result = RunCecilifier($$"""
+                                   class C
+                                   {
+                                       void M(Buffer b, {{elementType}} value) 
+                                       {
+                                           b[0] = {{value}};
+                                           b[1] = value;
+                                       }
+                                   }
+                                   
+                                   struct CustomStruct
+                                   {
+                                       public CustomStruct(int value) {}
+                                       public string name;
+                                   }
+                                   
+                                   [System.Runtime.CompilerServices.InlineArray(5)]
+                                   public struct Buffer { private {{elementType}} _element0; }
+                                   """);
+
+        var cecilified = result.GeneratedCode.ReadToEnd();
+        
+        Assert.That(cecilified, Does.Match(expectedIL));
+    }
+    
+    [Test]
+    public void InlineArray_MemberAccess_OnIndex()
+    {
+        var result = RunCecilifier($$"""
+                                   class C
+                                   {
+                                       int M(Buffer b) => b[0].Value; 
+                                   }
+                                   
+                                   struct CustomStruct
+                                   {
+                                      public int Value;
+                                   }
+                                   
+                                   [System.Runtime.CompilerServices.InlineArray(5)]
+                                   public struct Buffer { private CustomStruct _element0; }
+                                   """);
+
+        var cecilified = result.GeneratedCode.ReadToEnd();
+        
+        Assert.That(cecilified, Does.Match("""
+                                           (\s+il_M_\d+\.Emit\(OpCodes\.)Call, gi_inlineArrayFirstElementRef_\d+\);
+                                           \1Ldfld, fld_value_\d+\);
+                                           """));
+    }
+
+    [TestCase("T M<T>(Buffer<T> b) => b[0];",
+        """
+        (\s+il_M_\d+\.Emit\(OpCodes\.)Call, gi_inlineArrayFirstElementRef_\d+\);
+        \1Ldobj, gp_T_14\);
+        """, TestName = "Open generic method")]
+    
+    [TestCase("int M(Buffer<int> bi) => bi[0];", 
+        """
+        \s+il_M_14.Emit\(OpCodes.Call, gi_inlineArrayFirstElementRef_\d+\);
+        \s+il_M_14.Emit\(OpCodes.Ldind_I4\);
+        """, TestName = "Closed generic type (primitive type)")]
+    
+    [TestCase("CustomStruct M(Buffer<CustomStruct> b) => b[0];", 
+        """
+        (\s+il_M_\d+\.Emit\(OpCodes\.)Call, gi_inlineArrayFirstElementRef_\d+\);
+        \1Ldobj, st_customStruct_0\);
+        """, TestName = "Closed generic type (custom struct type)")]
+    
+    [TestCase("TC M(Buffer<TC> b) => b[0];", 
+        """
+        (\s+il_M_\d+\.Emit\(OpCodes\.)Call, gi_inlineArrayFirstElementRef_\d+\);
+        \1Ldobj, gp_tC_\d+\);
+        """, TestName = "Type Parameter from declaring type")]
+    
+    [TestCase("T M<T>(Buffer<T> b) where T : Itf => b[0];",
+        """
+        (gi_inlineArrayFirstElementRef_\d+).GenericArguments.Add\((gp_T_\d+)\);
+        (\s+il_M_\d+\.Emit\(OpCodes\.)Call, \1\);
+        \3Ldobj, \2\);
+        """, TestName = "Interface as Type Parameter")]
+    
+    //TODO: accessing a property/method/event from an interface on a generic type must be constrained
+    //      The code is handling 'non inline array' (see example https://cutt.ly/constrained_non_inlinearray)
+    [TestCase("int M<T>(Buffer<T> b) where T : Itf => b[0].Value;",
+        """
+        (gi_inlineArrayFirstElementRef_\d+).GenericArguments.Add\((gp_T_\d+)\);
+        (\s+il_M_\d+\.Emit\(OpCodes\.)Call, \1\);
+        \3Constrained, \2\);
+        \3Callvirt, m_get_\d+\);
+        """, IgnoreReason = "Accessing a property/method/event from an interface on a generic type must be constrained", TestName = "Member access on interface")]
+    public void InlineArray_ElementAccess_OnGenericType(string toBeTested, string expecetdIL)
+    {
+        var result = RunCecilifier($$"""
+                                     struct CustomStruct { public int Value; }
+                                     
+                                     public interface Itf { int Value { get; set; } }
+                                     
+                                     [System.Runtime.CompilerServices.InlineArray(5)]
+                                     public struct Buffer<T> { private T _element0; }
+                                     
+                                     class C<TC> { {{toBeTested}} }
+                                     """);
+
+        var cecilified = result.GeneratedCode.ReadToEnd();
+        Assert.That(cecilified, Does.Match(expecetdIL));
+    }
+
+    //TODO: InlineArray : Implement support for slicing through ranges
+    [Test]
+    public void Range()
+    {
+        var result = RunCecilifier("""
+                                     class C
+                                     {
+                                         System.Span<int> M(ref Buffer b) => b[1..3];
+                                     }
+
+                                     [System.Runtime.CompilerServices.InlineArray(5)]
+                                     public struct Buffer { private int _element0; }
+                                     """);
+
+        var cecilified = result.GeneratedCode.ReadToEnd();
+        Assert.Ignore($"Just for testing. Output:\n{cecilified}");
+    }
 }
