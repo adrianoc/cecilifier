@@ -168,9 +168,9 @@ namespace Cecilifier.Core.Extensions
             };
         
 
-        public static bool IsTypeParameterOrIsGenericTypeReferencingTypeParameter(this ITypeSymbol returnType) => 
-            returnType.TypeKind == TypeKind.TypeParameter
-            || returnType is INamedTypeSymbol { IsGenericType: true } genType && genType.TypeArguments.Any(t => t.TypeKind == TypeKind.TypeParameter);
+        public static bool IsTypeParameterOrIsGenericTypeReferencingTypeParameter(this ITypeSymbol type) => 
+            type.TypeKind == TypeKind.TypeParameter
+            || type is INamedTypeSymbol { IsGenericType: true } genType && genType.TypeArguments.Any(t => t.TypeKind == TypeKind.TypeParameter);
         
         public static bool IsTypeParameterConstrainedToReferenceType(this ITypeSymbol typeSymbol) => 
             typeSymbol is ITypeParameterSymbol typeParameterSymbol 
