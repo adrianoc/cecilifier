@@ -173,7 +173,7 @@ namespace Cecilifier.Core.AST
                     // (or an extension method to be available) with a signature that matches the types passed in the list of
                     // expressions
                     var addMethod = Context.SemanticModel.GetCollectionInitializerSymbolInfo(node.Expressions.First()).Symbol.EnsureNotNull<ISymbol, IMethodSymbol>();
-                    EnsureForwardedMethod(Context, addMethod, Array.Empty<TypeParameterSyntax>());
+                    EnsureForwardedMethod(Context, addMethod);
                     
                     Context.EmitCilInstruction(ilVar, OpCodes.Dup);
                     initializeExp.Accept(this);
@@ -306,7 +306,7 @@ namespace Cecilifier.Core.AST
             if (node.IsOperatorOnCustomUserType(Context.SemanticModel, out var method))
             {
                 if (method.IsDefinedInCurrentAssembly(Context))
-                    EnsureForwardedMethod(Context, method, Array.Empty<TypeParameterSyntax>());
+                    EnsureForwardedMethod(Context, method);
                 AddMethodCall(ilVar, method);
             }
             else
@@ -603,7 +603,7 @@ namespace Cecilifier.Core.AST
             if (TryProcessInvocationOnParameterlessImplicitCtorOnValueType(node, ctorInfo))
                 return;
 
-            EnsureForwardedMethod(Context, ctor, Array.Empty<TypeParameterSyntax>());
+            EnsureForwardedMethod(Context, ctor);
 
             var operand = ctor.MethodResolverExpression(Context);
             Context.EmitCilInstruction(ilVar, OpCodes.Newobj, operand);
@@ -1269,7 +1269,7 @@ namespace Cecilifier.Core.AST
             //IL_0002: ldarg.0
             //IL_0002: ldftn string Test::M(int32)
             //IL_0008: newobj instance void class [System.Private.CoreLib]System.Func`2<int32, string>::.ctor(object, native int)
-            EnsureForwardedMethod(Context, method.OverriddenMethod ?? method.OriginalDefinition, Array.Empty<TypeParameterSyntax>());
+            EnsureForwardedMethod(Context, method.OverriddenMethod ?? method.OriginalDefinition);
             CecilDefinitionsFactory.InstantiateDelegate(Context, ilVar, delegateType, method.MethodResolverExpression(Context), new StaticDelegateCacheContext()
             {
                 IsStaticDelegate = method.IsStatic,
@@ -1286,7 +1286,7 @@ namespace Cecilifier.Core.AST
             {
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
             }
-            EnsureForwardedMethod(Context, method.OverriddenMethod ?? method.OriginalDefinition, method.GetTypeParameterSyntax());
+            EnsureForwardedMethod(Context, method.OverriddenMethod ?? method.OriginalDefinition);
             var isAccessOnThis = !node.Parent.IsKind(SyntaxKind.SimpleMemberAccessExpression);
 
             var mae = node.Parent as MemberAccessExpressionSyntax;

@@ -56,7 +56,7 @@ namespace Cecilifier.Core.AST
                 : OpCodes.Call;
 
             if (!method.IsDefinedInCurrentAssembly(Context))
-                EnsureForwardedMethod(Context, method, method.GetTypeParameterSyntax());
+                EnsureForwardedMethod(Context, method);
             
             var operand = method.MethodResolverExpression(Context);
             if (method.IsGenericMethod && (method.IsDefinedInCurrentAssembly(Context) || method.TypeArguments.Any(t => t.TypeKind == TypeKind.TypeParameter)))
@@ -892,7 +892,7 @@ namespace Cecilifier.Core.AST
 
                 // Attribute is defined in the same assembly. We need to find the variable that holds its "ctor declaration"
                 var attrCtor = attrType.GetMembers().OfType<IMethodSymbol>().SingleOrDefault(m => m.MethodKind == MethodKind.Constructor && m.Parameters.Length == attrArgs.Length);
-                EnsureForwardedMethod(context, attrCtor, Array.Empty<TypeParameterSyntax>());
+                EnsureForwardedMethod(context, attrCtor);
 
                 return attrCtor.MethodResolverExpression(context);
             });
@@ -913,7 +913,7 @@ namespace Cecilifier.Core.AST
          * In this case when the first reference to Bar() is found (in method Foo()) the method itself has not been defined yet
          * so we add a MethodDefinition for it but *no body*. Method body will be processed later, when the method is visited.
          */
-        protected static void EnsureForwardedMethod(IVisitorContext context, IMethodSymbol method, TypeParameterSyntax[] typeParameters)
+        protected static void EnsureForwardedMethod(IVisitorContext context, IMethodSymbol method)
         {
             if (!method.IsDefinedInCurrentAssembly(context))
                 return;
@@ -935,8 +935,8 @@ namespace Cecilifier.Core.AST
                     ? context.Naming.Constructor((BaseTypeDeclarationSyntax) method.ContainingType.DeclaringSyntaxReferences.SingleOrDefault()?.GetSyntax(), method.IsStatic)
                     : context.Naming.MethodDeclaration((BaseMethodDeclarationSyntax) method.DeclaringSyntaxReferences.SingleOrDefault()?.GetSyntax());
             }
-            
-            var exps = CecilDefinitionsFactory.Method(context, methodDeclarationVar, methodName, "MethodAttributes.Private", method.ReturnType, method.ReturnsByRef, typeParameters);
+
+            var exps = CecilDefinitionsFactory.Method(context, methodDeclarationVar, methodName, "MethodAttributes.Private", method.ReturnType, method.ReturnsByRef, method.GetTypeParameterSyntax());
             context.WriteCecilExpressions(exps);
             
             foreach (var parameter in method.Parameters)
