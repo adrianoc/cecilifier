@@ -37,7 +37,7 @@ public class LocalFunctionTests : CecilifierUnitTestBase
             cecilifiedCode);
 
         // asserts that il_topLevelMain_3 is the variable holding the ILProcessor for the top level statement body.
-        Assert.That(cecilifiedCode, Contains.Substring("var il_topLevelMain_3 = m_topLevelStatements_1.Body.GetILProcessor();"), cecilifiedCode);
+        Assert.That(cecilifiedCode, Contains.Substring("var il_topLevelMain_3 = m_topLevelStatements_1.Body.GetILProcessor();"));
 
         Assert.That(
             cecilifiedCode,

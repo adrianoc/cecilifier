@@ -2,6 +2,10 @@ using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Tests.Unit
 {
+    /*
+     * Some generic types/methods related features are covered in other tests (for example,
+     * generic local functions are covered in LocalFunctionTests.cs
+     */
     [TestFixture]
     public class GenericTests : CecilifierUnitTestBase
     {

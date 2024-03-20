@@ -1239,7 +1239,7 @@ namespace Cecilifier.Core.AST
 
             var delegateType = firstParentNotPartOfName switch
             {
-                // assumes that a method reference in a object creation expression can only be a delegate instantiation.
+                // assumes that a method reference in an object creation expression can only be a delegate instantiation.
                 ArgumentSyntax { Parent.Parent.RawKind: (int) SyntaxKind.ObjectCreationExpression } arg => Context.SemanticModel.GetTypeInfo(arg.Parent.Parent).Type,
 
                 // assumes that a method reference in an invocation expression is method group -> delegate conversion. 
