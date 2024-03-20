@@ -94,11 +94,7 @@ namespace Cecilifier.Core.AST
 
             context.WriteNewLine();
             context.WriteComment($"Synthetic method for lambda expression: {lambda.HumanReadableSummary()}  @ ({lambda.GetLocation().GetLineSpan().StartLinePosition.Line}, {lambda.GetLocation().GetLineSpan().StartLinePosition.Character})");
-            foreach (var exp in methodExps)
-            {
-                context.WriteCecilExpression(exp);
-                context.WriteNewLine();
-            }
+            context.WriteCecilExpressions(methodExps);
 
             // Add parameters...
             var i = 0;
@@ -117,11 +113,7 @@ namespace Cecilifier.Core.AST
                     parameter.Default != null ? Constants.ParameterAttributes.Optional : Constants.ParameterAttributes.None,
                     parameter.Accept(DefaultParameterExtractorVisitor.Instance));
 
-                foreach (var paramExp in paramExps)
-                {
-                    context.WriteCecilExpression(paramExp);
-                    context.WriteNewLine();
-                }
+                context.WriteCecilExpressions(paramExps);
             }
 
             var syntheticIlVar = context.Naming.ILProcessor(syntheticMethodName);

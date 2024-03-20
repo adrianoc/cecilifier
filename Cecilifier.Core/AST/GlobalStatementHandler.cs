@@ -56,10 +56,10 @@ namespace Cecilifier.Core.AST
             ilVar = context.Naming.ILProcessor("topLevelMain");
             var mainBodyExps = CecilDefinitionsFactory.MethodBody(methodVar, ilVar, Array.Empty<InstructionRepresentation>());
 
-            WriteCecilExpressions(typeExps);
-            WriteCecilExpressions(methodExps);
-            WriteCecilExpressions(mainParametersExps);
-            WriteCecilExpressions(mainBodyExps);
+            context.WriteCecilExpressions(typeExps);
+            context.WriteCecilExpressions(methodExps);
+            context.WriteCecilExpressions(mainParametersExps);
+            context.WriteCecilExpressions(mainBodyExps);
             WriteCecilExpression($"{methodVar}.Body.InitLocals = true;");
             WriteCecilExpression($"{typeVar}.Methods.Add({methodVar});");
 
@@ -104,14 +104,6 @@ namespace Cecilifier.Core.AST
         }
 
         public string MainMethodDefinitionVariable => methodVar;
-
-        private void WriteCecilExpressions(IEnumerable<string> expressions)
-        {
-            foreach (var exp in expressions)
-            {
-                WriteCecilExpression(exp);
-            }
-        }
 
         private void WriteCecilExpression(string expression)
         {

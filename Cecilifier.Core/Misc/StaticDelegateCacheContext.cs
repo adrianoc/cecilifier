@@ -68,11 +68,7 @@ public struct StaticDelegateCacheContext
 
         CacheBackingField = context.Naming.SyntheticVariable("cachedDelegate", ElementKind.Field);
         var fieldExps = CecilDefinitionsFactory.Field(context, cacheInnerTypeName, cacheTypeVar, CacheBackingField, backingFieldName, delegateType, Constants.Cecil.StaticFieldAttributes);
-        foreach (var exp in fieldExps)
-        {
-            context.WriteCecilExpression(exp);
-            context.WriteNewLine();
-        }
+        context.WriteCecilExpressions(fieldExps);
 
         return CacheBackingField;
     }
@@ -91,11 +87,7 @@ public struct StaticDelegateCacheContext
             isStructWithNoFields: false,
             Array.Empty<string>());
 
-        foreach (var exp in cacheTypeExps)
-        {
-            context.WriteCecilExpression(exp);
-            context.WriteNewLine();
-        }
+        context.WriteCecilExpressions(cacheTypeExps);
 
         return context.DefinitionVariables.RegisterNonMethod(DeclaringTypeName, cacheTypeName, VariableMemberKind.Type, cachedTypeVar);
     }

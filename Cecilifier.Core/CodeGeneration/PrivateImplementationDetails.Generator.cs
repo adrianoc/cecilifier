@@ -68,12 +68,7 @@ internal class PrivateImplementationDetailsGenerator
                                                                 fieldName,
                                                                 rawDataTypeVar,
                                                                 Constants.CompilerGeneratedTypes.StaticArrayInitFieldModifiers);
-        foreach (var exp in fieldExpressions)
-        {
-            context.WriteCecilExpression(exp);
-            context.WriteNewLine();
-        }
-        
+        context.WriteCecilExpressions(fieldExpressions);
         context.WriteCecilExpression($"{fieldVar}.InitialValue = Cecilifier.Runtime.TypeHelpers.ToByteArray<{arrayElementTypeName}>({initializationExpression});");
         context.WriteNewLine();
 
@@ -113,11 +108,7 @@ internal class PrivateImplementationDetailsGenerator
             $"ClassSize = {sizeInBytes}",
             "PackingSize = 1");
 
-        foreach (var exp in privateImplementationDetails)
-        {
-            context.WriteCecilExpression(exp);
-            context.WriteNewLine();
-        }
+        context.WriteCecilExpressions(privateImplementationDetails);
 
         var rawDataTypeVar = context.DefinitionVariables.RegisterNonMethod(
                                                                 Constants.CompilerGeneratedTypes.PrivateImplementationDetails, 
@@ -151,11 +142,7 @@ internal class PrivateImplementationDetailsGenerator
                                                                                     Array.Empty<TypeParameterSyntax>(),
                                                                                     Array.Empty<TypeParameterSyntax>());
 
-        foreach (var exp in privateImplementationDetails)
-        {
-            context.WriteCecilExpression(exp);
-            context.WriteNewLine();
-        }
+        context.WriteCecilExpressions(privateImplementationDetails);
 
         return context.DefinitionVariables.RegisterNonMethod(string.Empty, Constants.CompilerGeneratedTypes.PrivateImplementationDetails, VariableMemberKind.Type, privateImplementationDetailsVar);
     }

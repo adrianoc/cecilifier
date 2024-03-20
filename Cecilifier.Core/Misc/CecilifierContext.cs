@@ -82,6 +82,15 @@ namespace Cecilifier.Core.Misc
             CecilifiedLineNumber += expression.CountNewLines();
             output.AddLast($"{identation}{expression}");
         }
+        
+        public void WriteCecilExpressions(IEnumerable<string> expressions)
+        {
+            foreach (var expression in expressions)
+            {
+                WriteCecilExpression(expression);
+                WriteNewLine();
+            }
+        }
 
         public void WriteComment(string comment)
         {

@@ -937,8 +937,7 @@ namespace Cecilifier.Core.AST
             }
             
             var exps = CecilDefinitionsFactory.Method(context, methodDeclarationVar, methodName, "MethodAttributes.Private", method.ReturnType, method.ReturnsByRef, typeParameters);
-            foreach(var exp in exps)
-                context.WriteCecilExpression($"{exp}\n");
+            context.WriteCecilExpressions(exps);
             
             foreach (var parameter in method.Parameters)
             {
