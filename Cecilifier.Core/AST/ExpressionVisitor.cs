@@ -1286,7 +1286,7 @@ namespace Cecilifier.Core.AST
             {
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
             }
-            EnsureForwardedMethod(Context, method.OverriddenMethod ?? method.OriginalDefinition, TypeParameterSyntaxFor(method));
+            EnsureForwardedMethod(Context, method.OverriddenMethod ?? method.OriginalDefinition, method.GetTypeParameterSyntax());
             var isAccessOnThis = !node.Parent.IsKind(SyntaxKind.SimpleMemberAccessExpression);
 
             var mae = node.Parent as MemberAccessExpressionSyntax;
@@ -1296,22 +1296,6 @@ namespace Cecilifier.Core.AST
             }
 
             AddMethodCall(ilVar, method, isAccessOnThis);
-        }
-
-        TypeParameterSyntax[] TypeParameterSyntaxFor(IMethodSymbol method)
-        {
-            if (!method.IsGenericMethod)
-                return Array.Empty<TypeParameterSyntax>();
-            
-            var candidateDeclarationNode = method.DeclaringSyntaxReferences.SingleOrDefault();
-            if (candidateDeclarationNode == null)
-                return Array.Empty<TypeParameterSyntax>();
-
-            var declarationNode = candidateDeclarationNode.GetSyntax() as MethodDeclarationSyntax;
-            if (declarationNode == null)
-                return Array.Empty<TypeParameterSyntax>();
-
-            return declarationNode.TypeParameterList.Parameters.ToArray();
         }
 
         private BinaryOperatorHandler OperatorHandlerFor(SyntaxToken operatorToken)

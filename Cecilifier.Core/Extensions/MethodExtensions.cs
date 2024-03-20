@@ -8,6 +8,7 @@ using Cecilifier.Core.Naming;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Mono.Cecil;
 using static Cecilifier.Core.Misc.Utils;
 using MethodAttributes = Mono.Cecil.MethodAttributes;
@@ -16,6 +17,25 @@ namespace Cecilifier.Core.Extensions
 {
     internal static class MethodExtensions
     {
+        public static TypeParameterSyntax[] GetTypeParameterSyntax(this IMethodSymbol method)
+        {
+            if (!method.IsGenericMethod)
+                return Array.Empty<TypeParameterSyntax>();
+            
+            var candidateDeclarationNode = method.DeclaringSyntaxReferences.SingleOrDefault();
+            if (candidateDeclarationNode == null)
+                return Array.Empty<TypeParameterSyntax>();
+
+            return candidateDeclarationNode.GetSyntax() switch
+            {
+                MethodDeclarationSyntax methodDeclaration => methodDeclaration.TypeParameterList?.Parameters.ToArray(),
+                LocalFunctionStatementSyntax localFunction => localFunction.TypeParameterList?.Parameters.ToArray(),
+                TypeDeclarationSyntax typeDeclaration => typeDeclaration.TypeParameterList?.Parameters.ToArray(),
+                
+                _ => throw new InvalidOperationException($"Unexpected node type {candidateDeclarationNode.GetType().Name}.")
+            };
+        }
+        
         private static string ReflectionBindingsFlags(this IMethodSymbol method)
         {
             var bindingFlags = method.IsStatic ? BindingFlags.Static : BindingFlags.Instance;

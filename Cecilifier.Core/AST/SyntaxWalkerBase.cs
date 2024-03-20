@@ -56,7 +56,7 @@ namespace Cecilifier.Core.AST
                 : OpCodes.Call;
 
             if (!method.IsDefinedInCurrentAssembly(Context))
-                EnsureForwardedMethod(Context, method, Array.Empty<TypeParameterSyntax>());
+                EnsureForwardedMethod(Context, method, method.GetTypeParameterSyntax());
             
             var operand = method.MethodResolverExpression(Context);
             if (method.IsGenericMethod && (method.IsDefinedInCurrentAssembly(Context) || method.TypeArguments.Any(t => t.TypeKind == TypeKind.TypeParameter)))
@@ -923,20 +923,23 @@ namespace Cecilifier.Core.AST
                 return;
 
             string methodDeclarationVar;
+            var methodName = method.Name;
             if (method.MethodKind == MethodKind.LocalFunction)
             {
                 methodDeclarationVar = context.Naming.SyntheticVariable(method.Name, ElementKind.Method);
-                MethodDeclarationVisitor.AddMethodDefinition(context, methodDeclarationVar, $"<{method.ContainingSymbol.Name}>g__{method.Name}|0_0", "MethodAttributes.Assembly | MethodAttributes.Static | MethodAttributes.HideBySig", method.ReturnType, method.ReturnsByRef, typeParameters);
+                methodName = $"<{method.ContainingSymbol.Name}>g__{method.Name}|0_0";
             }
             else
             {
                 methodDeclarationVar = method.MethodKind == MethodKind.Constructor
                     ? context.Naming.Constructor((BaseTypeDeclarationSyntax) method.ContainingType.DeclaringSyntaxReferences.SingleOrDefault()?.GetSyntax(), method.IsStatic)
                     : context.Naming.MethodDeclaration((BaseMethodDeclarationSyntax) method.DeclaringSyntaxReferences.SingleOrDefault()?.GetSyntax());
-
-                MethodDeclarationVisitor.AddMethodDefinition(context, methodDeclarationVar, method.Name, "MethodAttributes.Private", method.ReturnType, method.ReturnsByRef, typeParameters);
             }
-
+            
+            var exps = CecilDefinitionsFactory.Method(context, methodDeclarationVar, methodName, "MethodAttributes.Private", method.ReturnType, method.ReturnsByRef, typeParameters);
+            foreach(var exp in exps)
+                context.WriteCecilExpression($"{exp}\n");
+            
             foreach (var parameter in method.Parameters)
             {
                 var parameterExp = CecilDefinitionsFactory.Parameter(parameter, context.TypeResolver.Resolve(parameter.Type));
@@ -945,10 +948,10 @@ namespace Cecilifier.Core.AST
                 context.WriteNewLine();
                 context.WriteCecilExpression($"{methodDeclarationVar}.Parameters.Add({paramVar});");
                 context.WriteNewLine();
-
+            
                 context.DefinitionVariables.RegisterNonMethod(method.ToDisplayString(), parameter.Name, VariableMemberKind.Parameter, paramVar);
             }
-
+            
             context.DefinitionVariables.RegisterMethod(method.AsMethodDefinitionVariable(methodDeclarationVar));
         }
 
