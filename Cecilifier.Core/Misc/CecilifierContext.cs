@@ -132,8 +132,8 @@ namespace Cecilifier.Core.Misc
             var lineToBeMoved = LineOf(instruction) + 1;
             var lineToMoveAfter = LineOf(after.Next);
 
-            output.AddAfter(after, instruction.ValueRef);
             output.Remove(instruction);
+            output.AddAfter(after, instruction);
 
             var numberOfLinesBeingMoved = instruction.Value.CountNewLines();
 
