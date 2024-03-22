@@ -423,7 +423,7 @@ public class StructSpecificTests : CecilifierUnitTestBase
     [TestCase("lr", TestName = "Local")]
     public void TestRefTarget_Struct(string target)
     {
-        var result = RunCecilifier($@"struct Foo {{ int value; void Bar(ref Foo p)  {{ ref Foo lr = ref p; {target}.value = 42; }} }}");
+        var result = RunCecilifier($"struct Foo {{ int value; void Bar(ref Foo p)  {{ ref Foo lr = ref p; {target}.value = 42; }} }}");
         Assert.That(
             result.GeneratedCode.ReadToEnd(),
             Does.Match(

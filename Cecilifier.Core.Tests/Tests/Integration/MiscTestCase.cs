@@ -12,7 +12,7 @@ namespace Cecilifier.Core.Tests.Integration
         [TestCase("OnFields", Ignore = "Generates invalid code. See https://github.com/adrianoc/cecilifier/issues/61")]
         public void TestDelegateInvocation(string storageType)
         {
-            AssertResourceTest($@"Misc/DelegateInvocation_{storageType}");
+            AssertResourceTest($"Misc/DelegateInvocation_{storageType}");
         }
 
         [Test]
@@ -24,7 +24,7 @@ namespace Cecilifier.Core.Tests.Integration
         [Test]
         public void TestNamespaces()
         {
-            AssertResourceTest(@"Misc/Namespaces");
+            AssertResourceTest("Misc/Namespaces");
         }
 
         [TestCase("AddressOfParameters", TestName = "Parameters")]

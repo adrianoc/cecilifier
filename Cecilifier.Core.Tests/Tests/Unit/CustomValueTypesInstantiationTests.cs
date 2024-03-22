@@ -69,20 +69,20 @@ public class CustomValueTypesInstantiationTests : CecilifierUnitTestBase
     [TestCaseSource(nameof(InvocationOnObjectCreationExpressionTestScenarios))]
     public void InvocationOnObjectCreationExpression(string invocationStatement, string expectedILSnippet)
     {
-        var result = RunCecilifier($$"""
-                                   using System;
-                                   
-                                   {{invocationStatement}};
-                                   
-                                   struct Test : IDisposable 
-                                   { 
-                                        public Test(int i) {}
-                                        public void M() {}
-                                        public void Dispose() {} 
-                                   }
-                                   """);
-        
-        Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(expectedILSnippet));
+        var code = $$"""
+                     using System;
+
+                     {{invocationStatement}};
+
+                     struct Test : IDisposable
+                     {
+                          public Test(int i) {}
+                          public void M() {}
+                          public void Dispose() {}
+                     }
+                     """;
+        var result = RunCecilifier(code);
+        Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(expectedILSnippet), $"Snippet:\n{code}");
     }
 
     [TestCaseSource(nameof(InvocationExpressionAsParametersTestScenarios))]
@@ -264,7 +264,7 @@ public class CustomValueTypesInstantiationTests : CecilifierUnitTestBase
                 \s+\1Constrained, st_test_\d+\);
                 \s+\1Callvirt, .+"GetHashCode".+\);
                 \s+\1Pop\);
-                """).SetName("Explicit: direct object method call"), // Only missing constrained
+                """).SetName("Explicit: direct object method call"),
             
             new TestCaseData(
                 "((object)new Test(1)).GetHashCode()", 

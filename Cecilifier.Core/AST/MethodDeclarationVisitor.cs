@@ -217,6 +217,7 @@ namespace Cecilifier.Core.AST
             TypeDeclarationVisitor.EnsureForwardedTypeDefinition(context, returnType, Array.Empty<TypeParameterSyntax>());
             var exps = CecilDefinitionsFactory.Method(context, methodVar, methodName, methodModifiers, returnType, refReturn, typeParameters);
             AddCecilExpressions(context, exps);
+            
             HandleAttributesInTypeParameter(context, typeParameters);
         }
 
