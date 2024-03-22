@@ -47,6 +47,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
                 Does.Match(
                     @"//Bar\(true\);\s+" +
                     @"il_callBar_7.Emit\(OpCodes.Ldarg_0\);\s+" +
+                    @"il_callBar_7.Emit\(OpCodes.Ldc_I4, 1\);\s+" + 
                     @"var (r_bar_\d+) = new MethodReference\(m_bar_2.Name, m_bar_2.ReturnType\).+DeclaringType = cls_foo_0.MakeGenericInstanceType\(gp_T_1\).+;\s+" +
                     @"foreach\(.+m_bar_2.Parameters\)\s+" +
                     @".+{\s+" +
@@ -57,7 +58,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
                     @"\1.GenericParameters.Add\(.+\);\s+" +
                     @".+}\s+" +
                     @".+\s+" +
-                    @"var (gi_bar_\d+) = new GenericInstanceMethod\(r_bar_\d+\);\s+" +
+                    @"var (gi_bar_\d+) = new GenericInstanceMethod\(\1\);\s+" +
                     @"\2.GenericArguments.Add\(assembly.MainModule.TypeSystem.Boolean\);"));
         }
 
@@ -102,6 +103,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
                     @"m_M_5.ReturnType = gp_T_1;\s+" +
                     @"var p_t_6 = new ParameterDefinition\(""t"", ParameterAttributes.None, gp_T_1\);\s+" +
                     @"m_M_5.Parameters.Add\(p_t_6\);\s+" +
+                    @"il_bar_3.Emit\(OpCodes.Ldarg_1\);\s+" +
                     @"var r_M_7 = new MethodReference\(m_M_5.Name, m_M_5.ReturnType\).+;"));
 
             Assert.That(cecilifiedCode, Contains.Substring("il_M_9.Emit(OpCodes.Starg_S, p_t_6);")); // t = tl; ensures that the forwarded parameters has been used in M()'s implementation
@@ -303,9 +305,9 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             """
             //o = M<T>\(value\);
             (\s+il_test_\d+\.Emit\(OpCodes\.)Ldarg_0\);
+            \1Ldarg_1\);
             \s+var (gi_M_\d+) = new GenericInstanceMethod\(m_M_\d+\);
             \s+gi_M_\d+.GenericArguments.Add\((gp_T_\d+)\);
-            \1Ldarg_1\);
             \1Call, \2\);
             \1Box, \3\);
             \1Stloc, l_o_\d+\);
@@ -316,9 +318,9 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             """
             //o = M<string>\("Ola Mundo"\);
             (\s+il_test_\d+\.Emit\(OpCodes\.)Ldarg_0\);
+            \1Ldstr, "Ola Mundo"\);
             \s+var (gi_M_\d+) = new GenericInstanceMethod\(m_M_\d+\);
             \s+gi_M_\d+.GenericArguments.Add\(assembly.MainModule.TypeSystem.String\);
-            \1Ldstr, "Ola Mundo"\);
             \1Call, \2\);
             \1Stloc, l_o_\d+\);
             """)]
@@ -328,9 +330,9 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             """
             //o = f.M<T>\(value\);
             (\s+il_test_\d+\.Emit\(OpCodes\.)Ldloc, l_f_\d+\);
+            \1Ldarg_1\);
             \s+var (gi_M_\d+) = new GenericInstanceMethod\(m_M_\d+\);
             \s+\2.GenericArguments.Add\((gp_T_\d+)\);
-            \1Ldarg_1\);
             \1Callvirt, \2\);
             \1Box, \3\);
             \1Stloc, l_o_\d+\);
@@ -341,15 +343,15 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             """
             //Test\(value, paramIDisp, value, 42\);
             (\s+il_test_\d+.Emit\(OpCodes\.)Ldarg_0\);
-            \s+var gi_test_\d+ = new GenericInstanceMethod\(m_test_\d+\);
-            \s+gi_test_\d+.GenericArguments.Add\(gp_T_\d+\);
-            \s+gi_test_\d+.GenericArguments.Add\(assembly.MainModule.TypeSystem.Int32\);
             \1Ldarg_1\);
             \1Ldarg_2\);
             \1Ldarg_1\);
             \1Box, gp_T_\d+\);
             \1Ldc_I4, 42\);
-            \1Call, gi_test_\d+\);
+            \s+var (gi_test_\d+) = new GenericInstanceMethod\(m_test_\d+\);
+            \s+\2.GenericArguments.Add\(gp_T_\d+\);
+            \s+\2.GenericArguments.Add\(assembly.MainModule.TypeSystem.Int32\);
+            \1Call, \2\);
             """)]
         
         [TestCase(

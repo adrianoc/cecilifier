@@ -431,6 +431,26 @@ public class StructSpecificTests : CecilifierUnitTestBase
                 @"\k<il>Ldc_I4, 42\);\s+" +
                 @"\k<il>Stfld, fld_value_1\);"));
     }
+
+    [Test]
+    public void CallOnValueType_ThroughInterface_IsConstrained()
+    {
+        var result = RunCecilifier("""
+                                   int Call<T>(T t) where T : struct, Itf => t.M(42);
+                                   
+                                   interface Itf { int M(int i); } // The important part here is that M() has at least one parameter.
+                                   struct Foo : Itf { public int M(int i) => i; }
+                                   """);
+        
+        Assert.That(
+            result.GeneratedCode.ReadToEnd(),
+            Does.Match("""
+                       (\s+il_call_15.Emit\(OpCodes\.)Ldarga, p_t_\d+\);
+                       \1Ldc_I4, 42\);
+                       \1Constrained, gp_T_\d+\);
+                       \1Callvirt, m_M_\d+\);
+                       """));
+    }
     
     static IEnumerable<TestCaseData> NonInstantiationValueTypeVariableInitializationTestScenarios()
     {

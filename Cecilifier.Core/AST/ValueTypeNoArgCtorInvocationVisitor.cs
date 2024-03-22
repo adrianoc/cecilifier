@@ -80,7 +80,7 @@ namespace Cecilifier.Core.AST
             var accessedMember = ModelExtensions.GetSymbolInfo(Context.SemanticModel, node).Symbol.EnsureNotNull();
             if (accessedMember.ContainingType.SpecialType == SpecialType.System_ValueType)
             {
-                Context.EmitCilInstruction(ilVar, OpCodes.Constrained, ResolvedStructType());
+                Context.SetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, ResolvedStructType());
             }
         }
 

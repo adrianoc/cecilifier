@@ -198,7 +198,7 @@ partial class ExpressionVisitor
  * If one (or more arguments) are stackalloc expressions then at the time
  * Cecilifier visits these expression it will already have visited (and
  * pushed the reference to the stack) of the target of the call and/or
- * any arguments that precedes the stackaloc one. For instance, in the 
+ * any arguments that precedes the stackalloc one. For instance, in the 
  * following call:
  *
  *   o.M(42, stackalloc byte[3]);
@@ -219,7 +219,7 @@ partial class ExpressionVisitor
 internal interface IStackallocAsArgumentFixer
 {
     void StoreTopOfStackToLocalVariable(ITypeSymbol type);
-    void MarkEndOfComputedCallTargetBlock();
+    void MarkEndOfComputedCallTargetBlock(LinkedListNode<string> last);
     void RestoreCallStackIfRequired();
 
     IDisposable FlagAsHavingStackallocArguments();
@@ -231,7 +231,7 @@ class NoOpStackallocAsArgumentHandler : IStackallocAsArgumentFixer
 
     void IStackallocAsArgumentFixer.StoreTopOfStackToLocalVariable(ITypeSymbol type) { }
 
-    void IStackallocAsArgumentFixer.MarkEndOfComputedCallTargetBlock() { }
+    void IStackallocAsArgumentFixer.MarkEndOfComputedCallTargetBlock(LinkedListNode<string> last) { }
 
     void IStackallocAsArgumentFixer.RestoreCallStackIfRequired() { }
     public IVisitorContext Context { get; }
@@ -272,10 +272,7 @@ internal class StackallocAsArgumentFixer : IStackallocAsArgumentFixer
         localVariablesStoringOriginalArguments.Enqueue(cecilVarDeclName);
     }
 
-    void IStackallocAsArgumentFixer.MarkEndOfComputedCallTargetBlock()
-    {
-        lastLoadTargetOfCallInstruction = context.CurrentLine.Previous;
-    }
+    void IStackallocAsArgumentFixer.MarkEndOfComputedCallTargetBlock(LinkedListNode<string> last) => lastLoadTargetOfCallInstruction = last;
 
     /// <summary>
     /// Restore the stack to: [call target, arg1, ... arg n]

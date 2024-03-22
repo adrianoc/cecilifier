@@ -71,6 +71,11 @@ namespace Cecilifier.Core.AST
                 operand = genInstVar;
             }
 
+            if (Context.TryGetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, out var constrainedType))
+            {
+                Context.EmitCilInstruction(ilVar, OpCodes.Constrained, constrainedType);
+                Context.ClearFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint);
+            }
             Context.EmitCilInstruction(ilVar, opCode, operand);
         }
 
@@ -208,7 +213,7 @@ namespace Cecilifier.Core.AST
                 {
                     // scenario: default(T).ToString()
                     Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, storageVariable.VariableName);
-                    Context.EmitCilInstruction(ilVar, OpCodes.Constrained, resolvedType);
+                    Context.SetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, resolvedType);
                 }
                 else
                 {
@@ -522,7 +527,7 @@ namespace Cecilifier.Core.AST
                     // calls to virtual methods on custom value types needs to be constrained (don't know why, but the generated IL for such scenarios does `constrains`).
                     // the only methods that falls into this category are virtual methods on Object (ToString()/Equals()/GetHashCode())
                     if (usageResult.Target is { IsOverride: true } && usageResult.Target.ContainingType.IsNonPrimitiveValueType(Context))
-                        Context.EmitCilInstruction(ilVar, OpCodes.Constrained, Context.TypeResolver.Resolve(symbol));
+                        Context.SetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, Context.TypeResolver.Resolve(symbol));
                     return true;
                 }
 
@@ -541,7 +546,7 @@ namespace Cecilifier.Core.AST
                     return false;
 
                 Context.EmitCilInstruction(ilVar, opCode, operand);
-                Context.EmitCilInstruction(ilVar, OpCodes.Constrained, Context.TypeResolver.Resolve(symbol));
+                Context.SetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, Context.TypeResolver.Resolve(symbol));
                 return true;
             }
 
@@ -687,8 +692,17 @@ namespace Cecilifier.Core.AST
                 ? $"{localDelegateDeclaration}.Methods.Single(m => m.Name == \"Invoke\")"
                 : ((IMethodSymbol) typeSymbol.GetMembers("Invoke").SingleOrDefault()).MethodResolverExpression(Context);
 
+            //TODO: Find all call sites that adds a Call/Callvirt instruction and make sure
+            //      they call X().
+            OnLastInstructionLoadingTargetOfInvocation();
             Context.EmitCilInstruction(ilVar, OpCodes.Callvirt, resolvedMethod);
         }
+
+        /// <summary>
+        /// This method must be called when the target of a method invocation has been pushed to the stack
+        /// This mechanism is used primarily by <see cref="ExpressionVisitor"/> for fixing call sites (<see cref="ExpressionVisitor.HandleMethodInvocation"/>). 
+        /// </summary>
+        protected virtual void OnLastInstructionLoadingTargetOfInvocation() { }
 
         protected void HandleAttributesInMemberDeclaration(in SyntaxList<AttributeListSyntax> nodeAttributeLists, Func<AttributeTargetSpecifierSyntax, SyntaxKind, bool> predicate, SyntaxKind toMatch, string whereToAdd)
         {
