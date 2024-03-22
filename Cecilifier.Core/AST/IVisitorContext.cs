@@ -46,6 +46,10 @@ namespace Cecilifier.Core.AST
         T WithFlag<T>(string name) where T : struct, IDisposable;
         bool HasFlag(string name);
 
+        void SetFlag(string name, string value = null);
+        bool TryGetFlag(string name, out string value);
+        void ClearFlag(string name);
+
         #endregion
 
     }
