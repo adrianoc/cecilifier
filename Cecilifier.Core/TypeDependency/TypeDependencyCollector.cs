@@ -8,7 +8,7 @@ public class TypeDependencyCollector
 {
     public TypeDependencyCollector(CSharpCompilation comp)
     {
-        var visitor = new TypeDependencyCollectorVisitor(comp);
+        var visitor = new TypeDependencyCollectorVisitor();
         foreach (var st in comp.SyntaxTrees)
             visitor.Visit(st.GetRoot());
 

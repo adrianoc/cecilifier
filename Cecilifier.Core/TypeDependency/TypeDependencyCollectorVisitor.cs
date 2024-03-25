@@ -9,15 +9,9 @@ namespace Cecilifier.Core.TypeDependency;
 
 public class TypeDependencyCollectorVisitor : CSharpSyntaxWalker
 {
-    private readonly CSharpCompilation compilation;
     private IDictionary<BaseTypeDeclarationSyntax, IDictionary<string, int>> dependencies = new Dictionary<BaseTypeDeclarationSyntax, IDictionary<string, int>>();
     private Stack<BaseTypeDeclarationSyntax> declaredTypes = new();
     private List<string> usings = new();
-
-    public TypeDependencyCollectorVisitor(CSharpCompilation compilation)
-    {
-        this.compilation = compilation;
-    }
 
     public IDictionary<BaseTypeDeclarationSyntax, IDictionary<string, int>> Dependencies => dependencies;
     public IReadOnlyList<string> Usings => usings;
