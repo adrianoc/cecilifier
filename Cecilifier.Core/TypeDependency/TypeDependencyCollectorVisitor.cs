@@ -59,6 +59,12 @@ public class TypeDependencyCollectorVisitor : CSharpSyntaxWalker
             node.Right.Accept(this);
     }
 
+    public override void VisitGenericName(GenericNameSyntax node)
+    {
+        AddCurrentTypeDependencyIfNotTheSame(node);
+        base.VisitGenericName(node);
+    }
+
     public override void VisitIdentifierName(IdentifierNameSyntax node)
     {
         AddCurrentTypeDependencyIfNotTheSame(node);
@@ -77,8 +83,7 @@ public class TypeDependencyCollectorVisitor : CSharpSyntaxWalker
         if (declaredTypes.Count == 0 || type == null || type.IsKind(SyntaxKind.OmittedTypeArgument)) // type can be null for lambda parameters, for instance.
             return;
 
-        var semanticModel = compilation.GetSemanticModel(type.SyntaxTree);
-        if (String.Compare(declaredTypes.Peek().Identifier.Text, type.NameFrom(), StringComparison.Ordinal) != 0 && semanticModel.GetSymbolInfo(type).Symbol is ITypeSymbol { IsDefinition: true })
+        if (String.Compare(declaredTypes.Peek().Identifier.Text, type.NameFrom(), StringComparison.Ordinal) != 0)
         {
             var foundDependencies = dependencies[declaredTypes.Peek()];
             if (!foundDependencies.TryGetValue(type.ToString(), out var referenceCounter))

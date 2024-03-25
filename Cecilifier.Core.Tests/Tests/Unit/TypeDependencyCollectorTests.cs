@@ -47,6 +47,8 @@ public class TypeDependencyCollectorTests
     [TestCase("class A { object M() => new B(); } class B {}", "B,A", TestName = "In object creation")]
     [TestCase("class A { object M() => new B[0]; } class B {}", "B,A", TestName = "In Array")]
     [TestCase("class A { object M() => B.M(); } class B { public static M() {} }", "B,A", TestName = "In static member reference")]
+    [TestCase("class A { B<int> b; } class B<T> {}", "B,A", TestName = "Closed generic type")]
+    [TestCase("class A<TParent> { B<TParent> b; } class B<T> {}", "B,A", TestName = "Open generic type")]
     public void In_Various_Nodes(string code, string expected)
     {
         var comp = CompilationFor(code);
