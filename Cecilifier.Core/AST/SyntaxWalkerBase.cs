@@ -55,7 +55,8 @@ namespace Cecilifier.Core.AST
                 ? OpCodes.Callvirt
                 : OpCodes.Call;
 
-            EnsureForwardedMethod(Context, method.OverriddenMethod ?? method.OriginalDefinition);
+            if (!method.IsDefinedInCurrentAssembly(Context))
+                EnsureForwardedMethod(Context, method);
             
             var operand = method.MethodResolverExpression(Context);
             if (method.IsGenericMethod && (method.IsDefinedInCurrentAssembly(Context) || method.TypeArguments.Any(t => t.TypeKind == TypeKind.TypeParameter)))

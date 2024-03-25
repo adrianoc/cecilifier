@@ -1305,7 +1305,7 @@ namespace Cecilifier.Core.AST
             {
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
             }
-            
+            EnsureForwardedMethod(Context, method.OverriddenMethod ?? method.OriginalDefinition);
             var isAccessOnThis = !node.Parent.IsKind(SyntaxKind.SimpleMemberAccessExpression);
 
             var mae = node.Parent as MemberAccessExpressionSyntax;
