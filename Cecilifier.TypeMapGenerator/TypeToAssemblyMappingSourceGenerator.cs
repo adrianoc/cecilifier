@@ -22,6 +22,7 @@ public class SampleIncrementalSourceGenerator : ISourceGenerator
             c.AddSource(
                 "TypeToAssemblyNameReferenceMap.gen.cs",
                 $$"""
+                // Generated on {{DateTime.Now}}
                 namespace Cecilifier.Runtime;
                 using Mono.Cecil;
 

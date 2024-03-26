@@ -30,7 +30,7 @@ namespace Cecilifier.Core.AST
 
             using var _ = LineInformationTracker.Track(Context, node);
             Context.WriteNewLine();
-            Context.WriteComment($"** Property indexer **");
+            Context.WriteComment("** Property indexer **");
 
             var propertyType = ResolveType(node.Type);
             var propertyDeclaringTypeVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Type).VariableName;

@@ -171,7 +171,7 @@ public class StackallocTests : CecilifierUnitTestBase
         \s+assembly.MainModule.Types.Add\(\1\);
         \s+//__StaticArrayInitTypeSize=3 struct.
         \s+//This struct is emitted by the compiler and is used to hold raw data used in arrays/span initialization optimizations
-        \s+var (st_rawDataTypeVar_\d+) = new TypeDefinition\("", "__StaticArrayInitTypeSize=3", TypeAttributes.NestedPrivate \| TypeAttributes.Sealed \| TypeAttributes.AnsiClass \| TypeAttributes.ExplicitLayout.+\) \{ ClassSize = 3,PackingSize = 1 \};
+        \s+var (st_rawDataTypeVar_\d+) = new TypeDefinition\("", "__StaticArrayInitTypeSize=3", TypeAttributes.NestedAssembly \| TypeAttributes.Sealed \| TypeAttributes.AnsiClass \| TypeAttributes.ExplicitLayout.+\) \{ ClassSize = 3,PackingSize = 1 \};
         \s+\1.NestedTypes.Add\(\2\);
         \s+var (fld_arrayInitializerData_\d+) = new FieldDefinition\("[A-Z0-9]+", FieldAttributes.Assembly \| FieldAttributes.Static \| FieldAttributes.InitOnly, \2\);
         \s+\1.Fields.Add\(\3\);
