@@ -23,11 +23,12 @@ namespace Cecilifier.Core.AST
 
         public override void VisitLocalFunctionStatement(LocalFunctionStatementSyntax node)
         {
-            var methodSymbol = (IMethodSymbol) Context.SemanticModel.GetDeclaredSymbol(node);
-            Utils.EnsureNotNull(methodSymbol, $"Method symbol for {node.Identifier} could not be resolved.");
+            var methodSymbol = Context.SemanticModel.GetDeclaredSymbol(node).EnsureNotNull<ISymbol, IMethodSymbol>($"Method symbol for {node.Identifier} could not be resolved.");
 
             // Local functions have a well defined list of modifiers.
-            var modifiers = SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.InternalKeyword), SyntaxFactory.Token(SyntaxKind.StaticKeyword));
+            var modifiers = SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.InternalKeyword));
+            if (methodSymbol.IsStatic)
+                modifiers = modifiers.Add(SyntaxFactory.Token(SyntaxKind.StaticKeyword));
 
             // local functions are not first class citizens wrt variable naming... handle them as methods for now.
             var localFunctionVar = Context.Naming.SyntheticVariable(node.Identifier.Text, ElementKind.Method);

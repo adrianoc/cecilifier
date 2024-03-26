@@ -1,3 +1,4 @@
+using System;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Tests.Unit;
@@ -13,8 +14,7 @@ public class LocalFunctionTests : CecilifierUnitTestBase
 
         Assert.That(
             cecilifiedCode,
-            Contains.Substring("var m_localFoo_6 = new MethodDefinition(\"<<Main>$>g__LocalFoo|0_0\", MethodAttributes.Assembly | MethodAttributes.Static | MethodAttributes.HideBySig, assembly.MainModule.TypeSystem.Int32);"),
-            cecilifiedCode);
+            Does.Match(@"var m_localFoo_\d+ = new MethodDefinition\(""<<Main>\$>g__LocalFoo\|0_0\"", .+, assembly.MainModule.TypeSystem.Int32\);"));
 
         // asserts that il_topLevelMain_3 is the variable holding the ILProcessor for the top level statement body.
         Assert.That(cecilifiedCode, Contains.Substring("var il_topLevelMain_3 = m_topLevelStatements_1.Body.GetILProcessor();"), cecilifiedCode);
@@ -95,5 +95,26 @@ public class LocalFunctionTests : CecilifierUnitTestBase
 
             Assert.That(cecilifiedCode, Does.Match(@"il_M_\d+.Emit\(OpCodes.Box, gp_T_\d+\);"));
         });
+    }
+    
+    [Test]
+    public void Instanceness_IsRespected([Values] bool staticOrInstance)
+    {
+        var modifier = staticOrInstance ? "static" : string.Empty;
+        
+        var result = RunCecilifier($"{modifier} int LocalFoo(int i) => i; System.Console.WriteLine(LocalFoo(42));");
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+
+        var declarationModifier = staticOrInstance ? "MethodAttributes.Static | " : String.Empty;
+        Assert.That(
+            cecilifiedCode,
+            Contains.Substring($"var m_localFoo_6 = new MethodDefinition(\"<<Main>$>g__LocalFoo|0_0\", MethodAttributes.Assembly | {declarationModifier}MethodAttributes.HideBySig, assembly.MainModule.TypeSystem.Int32);"),
+            cecilifiedCode);
+
+        var loadArgOpCode = staticOrInstance ? "Ldarg_0" : "Ldarg_1";
+        Assert.That(
+            cecilifiedCode,
+            Does.Match(@$"il_localFoo_\d+.Emit\(OpCodes.{loadArgOpCode}\);"),
+            $"Expected {loadArgOpCode} not found (looks like local function static modifier is being mishandled).");
     }
 }
