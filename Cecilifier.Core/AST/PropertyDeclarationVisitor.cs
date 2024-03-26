@@ -96,8 +96,11 @@ namespace Cecilifier.Core.AST
             return found.IsValid;
         }
 
-        private void AddDefaultMemberAttribute(string definitionVar, string value)
+        private void AddDefaultMemberAttribute(string declaringTypeDefinitionVar, string value)
         {
+            if (AttributeAlreadyAddedForAnotherMember())
+                return;
+            
             var ctorVar = Context.Naming.MemberReference("ctor");
             var customAttrVar = Context.Naming.CustomAttribute("DefaultMember");
 
@@ -106,10 +109,19 @@ namespace Cecilifier.Core.AST
                 $"var {ctorVar} = {ImportFromMainModule("typeof(System.Reflection.DefaultMemberAttribute).GetConstructor(new Type[] { typeof(string) })")};",
                 $"var {customAttrVar} = new CustomAttribute({ctorVar});",
                 $"{customAttrVar}.ConstructorArguments.Add(new CustomAttributeArgument({Context.TypeResolver.Bcl.System.String}, \"{value}\"));",
-                $"{definitionVar}.CustomAttributes.Add({customAttrVar});"
+                $"{declaringTypeDefinitionVar}.CustomAttributes.Add({customAttrVar});"
             };
 
             AddCecilExpressions(Context, exps);
+            
+            bool AttributeAlreadyAddedForAnotherMember()
+            {
+                var defaultMemberTrackerFlagName = $"{declaringTypeDefinitionVar}-{Constants.ContextFlags.DefaultMemberTracker}";
+                var ret = Context.TryGetFlag(defaultMemberTrackerFlagName, out var _);
+                if (!ret)
+                    Context.SetFlag(defaultMemberTrackerFlagName);
+                return ret;
+            }
         }
 
         private void ProcessPropertyAccessors(BasePropertyDeclarationSyntax node, string propertyDeclaringTypeVar, string propName, string propertyType, string propDefVar, List<ParamData> parameters, ArrowExpressionClauseSyntax? arrowExpression)

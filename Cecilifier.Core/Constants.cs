@@ -40,6 +40,7 @@ public struct Constants
         public const string Fixed = "fixed";
         public const string InRangeExpression = "in-range-expressions";
         public const string MemberReferenceRequiresConstraint = "member-reference-requires-constraint";
+        public const string DefaultMemberTracker = "default-member-tracker"; // used to ensure only one DefaultMemberAttribute is added to a type even if it happens to have multiple indexers.
     }
 
     public struct CompilerGeneratedTypes

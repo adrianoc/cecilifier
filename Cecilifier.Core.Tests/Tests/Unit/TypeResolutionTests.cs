@@ -50,7 +50,7 @@ public class TypeResolutionTests : CecilifierUnitTestBase
         // Test access to a forward type declaration is handled correctly by ensuring the value passed to MakeGenericInstanceType is a variable holding a
         // type definition (instead of resolving the type as if it was not declared in the compilation).
         // This is validated by making sure that the related member definition (field, property, parameter, event, etc) references `cls_bar_x` (i.e, the
-        // variable holding the type definition for class bar instead trying to import it like ImportReference(typeof(Bar)))
+        // variable holding the type definition for class Bar instead trying to import it like ImportReference(typeof(Bar)))
         //
         // Important:
         // All snippets used in the tests need to have 2 types referencing each other Foo <-> Bar in a way that there's no better order of 
