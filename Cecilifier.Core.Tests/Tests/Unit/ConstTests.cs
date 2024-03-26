@@ -1,6 +1,5 @@
 using System.Text.RegularExpressions;
 using Mono.Cecil.Cil;
-using NuGet.Frameworks;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Tests.Unit
