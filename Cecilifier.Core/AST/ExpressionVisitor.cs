@@ -248,14 +248,22 @@ namespace Cecilifier.Core.AST
                 // the case of that target being an inline array element, that means that the address of
                 // the entry should be at the top of the stack which is exactly how
                 // TryHandleInlineArrayElementAccess() will leave the stack so in this case there's nothing.
-                // else to be done.
-                // Otherwise, we need to take the top of the stack (address of the element) and load the
-                // actual instance to the stack.
-                if (!node.Parent.IsKind(SyntaxKind.SimpleMemberAccessExpression))
+                // else to be done ...
+                if (node.Parent.IsKind(SyntaxKind.SimpleMemberAccessExpression))
                 {
-                    var loadOpCode = elementType.LdindOpCodeFor();
-                    Context.EmitCilInstruction(ilVar, loadOpCode, loadOpCode == OpCodes.Ldobj ? Context.TypeResolver.Resolve(elementType) : null);
+                    if (UsageVisitor.GetInstance(Context).Visit(node.Parent) == UsageKind.CallTarget)
+                    {
+                        Context.SetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, Context.TypeResolver.Resolve(elementType));
+                        return;
+                    }
+                    
+                    if (elementType.TypeKind != TypeKind.TypeParameter)
+                        return;
                 }
+                
+                // ... otherwise, we need to take the top of the stack (address of the element) and load the actual instance to the stack.
+                var loadOpCode = elementType.LdindOpCodeFor();
+                Context.EmitCilInstruction(ilVar, loadOpCode, loadOpCode == OpCodes.Ldobj ? Context.TypeResolver.Resolve(elementType) : null);
                 return;
             }
 

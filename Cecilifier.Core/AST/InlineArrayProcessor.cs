@@ -84,28 +84,26 @@ public class InlineArrayProcessor
             return false;
         
         var inlineArrayType = context.SemanticModel.GetSymbolInfo(elementAccess.Expression).Symbol.EnsureNotNull().GetMemberType();
-        if (inlineArrayType.TryGetAttribute<InlineArrayAttribute>(out _))
+        if (!inlineArrayType.TryGetAttribute<InlineArrayAttribute>(out _))
+            return false;
+        
+        ExpressionVisitor.Visit(context, ilVar, elementAccess.Expression);
+        Debug.Assert(elementAccess.ArgumentList.Arguments.Count == 1);
+
+        var method = string.Empty;
+        if (elementAccess.ArgumentList.Arguments[0].Expression.TryGetLiteralValueFor(out int index) && index == 0)
         {
-            ExpressionVisitor.Visit(context, ilVar, elementAccess.Expression);
-            Debug.Assert(elementAccess.ArgumentList.Arguments.Count == 1);
-
-            var method = string.Empty;
-            if (elementAccess.ArgumentList.Arguments[0].Expression.TryGetLiteralValueFor(out int index) && index == 0)
-            {
-                method = InlineArrayFirstElementRefMethodFor(context, inlineArrayType);
-            }
-            else
-            {
-                context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, index);
-                method = InlineArrayElementRefMethodFor(context, inlineArrayType);
-            }
-            context.EmitCilInstruction(ilVar, OpCodes.Call, method);
-
-            elementType = InlineArrayElementTypeFrom(inlineArrayType);
-            return true;
+            method = InlineArrayFirstElementRefMethodFor(context, inlineArrayType);
         }
+        else
+        {
+            context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, index);
+            method = InlineArrayElementRefMethodFor(context, inlineArrayType);
+        }
+        context.EmitCilInstruction(ilVar, OpCodes.Call, method);
 
-        return false;
+        elementType = InlineArrayElementTypeFrom(inlineArrayType);
+        return true;
         
         static string InlineArrayFirstElementRefMethodFor(IVisitorContext context, ITypeSymbol inlineArrayType)
         {
