@@ -9,7 +9,7 @@ using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Mono.Cecil;
+using MethodAttributes=Mono.Cecil.MethodAttributes;
 using static Cecilifier.Core.Misc.Utils;
 
 namespace Cecilifier.Core.Extensions

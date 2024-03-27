@@ -261,13 +261,13 @@ public class InlineArrayTests : CecilifierUnitTestBase
     [TestCase("T M<T>(Buffer<T> b) => b[0];",
         """
         (\s+il_M_\d+\.Emit\(OpCodes\.)Call, gi_inlineArrayFirstElementRef_\d+\);
-        \1Ldobj, gp_T_14\);
+        \1Ldobj, gp_T_\d+\);
         """, TestName = "Open generic method")]
     
     [TestCase("int M(Buffer<int> bi) => bi[0];", 
         """
-        \s+il_M_14.Emit\(OpCodes.Call, gi_inlineArrayFirstElementRef_\d+\);
-        \s+il_M_14.Emit\(OpCodes.Ldind_I4\);
+        (\s+il_M_\d+.Emit\(OpCodes\.)Call, gi_inlineArrayFirstElementRef_\d+\);
+        \1Ldind_I4\);
         """, TestName = "Closed generic type (primitive type)")]
     
     [TestCase("CustomStruct M(Buffer<CustomStruct> b) => b[0];", 
@@ -289,19 +289,26 @@ public class InlineArrayTests : CecilifierUnitTestBase
         \3Ldobj, \2\);
         """, TestName = "Interface as Type Parameter")]
     
-    //TODO: accessing a property/method/event from an interface on a generic type must be constrained
-    //      The code is handling 'non inline array' (see example https://cutt.ly/constrained_non_inlinearray)
     [TestCase("int M<T>(Buffer<T> b) where T : Itf => b[0].Value;",
         """
         (gi_inlineArrayFirstElementRef_\d+).GenericArguments.Add\((gp_T_\d+)\);
         (\s+il_M_\d+\.Emit\(OpCodes\.)Call, \1\);
         \3Constrained, \2\);
         \3Callvirt, m_get_\d+\);
-        """, IgnoreReason = "Accessing a property/method/event from an interface on a generic type must be constrained", TestName = "Member access on interface")]
+        """, TestName = "Member access on interface")]
+    
+    [TestCase("int M<T>(Buffer<T> b) where T : CustomClass => b[0].Value;",
+        """
+        (gi_inlineArrayFirstElementRef_\d+).GenericArguments.Add\((gp_T_\d+)\);
+        (\s+il_M_\d+\.Emit\(OpCodes\.)Call, \1\);
+        xxxx\3Constrained, \2\);
+        \3Callvirt, m_get_\d+\);
+        """, IgnoreReason = "https://github.com/adrianoc/cecilifier/issues/274", TestName = "Field access on class")]
     public void InlineArray_ElementAccess_OnGenericType(string toBeTested, string expecetdIL)
     {
         var result = RunCecilifier($$"""
                                      struct CustomStruct { public int Value; }
+                                     class CustomClass { public int Value; }
                                      
                                      public interface Itf { int Value { get; set; } }
                                      
