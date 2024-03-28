@@ -241,7 +241,7 @@ namespace Cecilifier.Core.AST
                 return;
             }
 
-            if (InlineArrayProcessor.TryHandleInlineArrayElementAccess(Context, ilVar, node, out var elementType))
+            if (InlineArrayProcessor.TryHandleIntIndexElementAccess(Context, ilVar, node, out var elementType))
             {
                 // if the parent of the element access expression is a member access expression the code 
                 // that handles that expects that the target instance is at the top of the stack so; in 

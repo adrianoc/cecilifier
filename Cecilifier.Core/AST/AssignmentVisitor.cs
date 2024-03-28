@@ -44,7 +44,7 @@ namespace Cecilifier.Core.AST
         public override void VisitElementAccessExpression(ElementAccessExpressionSyntax node)
         {
             var lastInstructionLoadingRhs = Context.CurrentLine;
-            if (InlineArrayProcessor.TryHandleInlineArrayElementAccess(Context, ilVar, node, out var elementType))
+            if (InlineArrayProcessor.TryHandleIntIndexElementAccess(Context, ilVar, node, out var elementType))
             {
                 Context.MoveLinesToEnd(InstructionPrecedingValueToLoad, lastInstructionLoadingRhs);
                 Context.EmitCilInstruction(ilVar, elementType.StindOpCodeFor());

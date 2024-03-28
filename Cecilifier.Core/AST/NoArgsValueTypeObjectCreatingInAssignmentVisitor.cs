@@ -27,7 +27,7 @@ namespace Cecilifier.Core.AST
 
         public override void VisitElementAccessExpression(ElementAccessExpressionSyntax node)
         {
-            if (InlineArrayProcessor.TryHandleInlineArrayElementAccess(Context, ilVar, node, out var elementType))
+            if (InlineArrayProcessor.TryHandleIntIndexElementAccess(Context, ilVar, node, out var elementType))
             {
                 var tempVar = tempValueTypeDeclarer();
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, tempVar.VariableName);

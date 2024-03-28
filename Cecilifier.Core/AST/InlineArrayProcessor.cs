@@ -76,8 +76,8 @@ public class InlineArrayProcessor
                 inlineArrayType);
         }
     }
-
-    internal static bool TryHandleInlineArrayElementAccess(IVisitorContext context, string ilVar, ElementAccessExpressionSyntax elementAccess, out ITypeSymbol elementType)
+    
+    internal static bool TryHandleIntIndexElementAccess(IVisitorContext context, string ilVar, ElementAccessExpressionSyntax elementAccess, out ITypeSymbol elementType)
     {
         elementType = null;
         if (elementAccess.Expression.IsKind(SyntaxKind.ElementAccessExpression))
