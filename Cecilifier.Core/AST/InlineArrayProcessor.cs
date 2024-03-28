@@ -20,6 +20,7 @@ public class InlineArrayProcessor
             return false;
         
         if (!IsNodeUsedToInitializeSpanLocalVariable(context, fromNode)
+            && !fromNode.IsUsedAsReturnValueOfType(context.SemanticModel)
             && !IsNodeAssignedToLocalVariable(context, fromNode)
             && !IsNodeUsedAsSpanArgument(context, fromNode))
             return false;
@@ -75,6 +76,39 @@ public class InlineArrayProcessor
                 "InlineArrayAsSpan",
                 inlineArrayType);
         }
+    }
+
+    /// <summary>
+    /// The expression 'InlineArray[range]' returns a sliced Span<T> where 'T' is the element type of the inline array.
+    /// All this method needs to do is to convert the inline array => Span<T> and use the same code that handles
+    /// 'indexing' a Span<T> with ranges.  
+    /// </summary>
+    internal static bool TryHandleRangeElementAccess(IVisitorContext context, ExpressionVisitor expressionVisitor, string ilVar, ElementAccessExpressionSyntax elementAccess, out ITypeSymbol elementType)
+    {
+        elementType = null;
+        if (elementAccess.Expression.IsKind(SyntaxKind.ElementAccessExpression))
+            return false;
+        
+        var storageSymbol = context.SemanticModel.GetSymbolInfo(elementAccess.Expression).Symbol.EnsureNotNull();
+        var inlineArrayType = storageSymbol.GetMemberType();
+        if (!inlineArrayType.TryGetAttribute<InlineArrayAttribute>(out _))
+            return false;
+        
+        if (elementAccess.ArgumentList.Arguments.Count == 1 && SymbolEqualityComparer.Default.Equals(context.GetTypeInfo(elementAccess.ArgumentList.Arguments[0].Expression).Type, context.RoslynTypeSystem.SystemRange))
+        {
+            var storageVariableMemberKind = storageSymbol.ToVariableMemberKind();
+            var memberParentName = storageVariableMemberKind == VariableMemberKind.LocalVariable ? string.Empty : storageSymbol.ContainingSymbol.ToDisplayString();
+            
+            // Takes the inline array and convert to a Span<T>
+            HandleInlineArrayConversionToSpan(context, ilVar, inlineArrayType, elementAccess, storageSymbol.LoadAddressOpcodeForMember(), elementAccess.Expression.ToString(), storageVariableMemberKind, memberParentName);
+            
+            // at this point we have a Span<T> (for the inline array)) at the top of the stack so just delegate to the visitor in charge of handling
+            // indexing Span<T> with a range.
+            elementAccess.Accept(new ElementAccessExpressionWithRangeArgumentVisitor(context, ilVar, expressionVisitor, targetAlreadyLoaded: true));
+            return true;
+        }
+
+        return false;
     }
     
     internal static bool TryHandleIntIndexElementAccess(IVisitorContext context, string ilVar, ElementAccessExpressionSyntax elementAccess, out ITypeSymbol elementType)

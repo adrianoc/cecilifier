@@ -241,6 +241,11 @@ namespace Cecilifier.Core.AST
                 return;
             }
 
+            if (InlineArrayProcessor.TryHandleRangeElementAccess(Context, this, ilVar, node, out var elementType1))
+            {
+                return;
+            }
+
             if (InlineArrayProcessor.TryHandleIntIndexElementAccess(Context, ilVar, node, out var elementType))
             {
                 // if the parent of the element access expression is a member access expression the code 

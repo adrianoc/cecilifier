@@ -154,5 +154,19 @@ namespace Cecilifier.Core.Extensions
             value = (T) literalExpression.Token.Value;
             return true;
         }
+
+        internal static bool IsUsedAsReturnValueOfType(this SyntaxNode self, SemanticModel semanticModel)
+        {
+            if (self.Parent == null)
+                return false;
+
+            if (self.Parent.IsKind(SyntaxKind.ReturnStatement) || self.Parent.IsKind(SyntaxKind.ArrowExpressionClause))
+            {
+                var type = semanticModel.GetTypeInfo(self.Parent).Type;
+                return true;
+            }
+
+            return false;
+        }
     }
 }
