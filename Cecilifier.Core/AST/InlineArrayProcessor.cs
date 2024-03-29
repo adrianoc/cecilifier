@@ -97,7 +97,7 @@ public class InlineArrayProcessor
         }
         else
         {
-            context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, index);
+            ExpressionVisitor.Visit(context, ilVar, elementAccess.ArgumentList.Arguments[0].Expression);
             method = InlineArrayElementRefMethodFor(context, inlineArrayType);
         }
         context.EmitCilInstruction(ilVar, OpCodes.Call, method);

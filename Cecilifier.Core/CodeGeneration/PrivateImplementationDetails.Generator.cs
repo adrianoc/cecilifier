@@ -10,6 +10,7 @@ using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Mono.Cecil;
 using Mono.Cecil.Cil;
 
 namespace Cecilifier.Core.CodeGeneration;
@@ -71,21 +72,37 @@ internal partial class PrivateImplementationDetailsGenerator
                                                             return context.TypeResolver.Resolve(context.RoslynTypeSystem.SystemSpan).MakeGenericInstanceType(spanTypeParameter);
                                                         });
 
+        var tBufferVar = ResolveOwnedGenericParameter(context, "TBuffer", methodTypeQualifiedName);
+        var tElementVar = ResolveOwnedGenericParameter(context, "TElement", methodTypeQualifiedName);
+
+        var unsafeAsVar = context.Naming.SyntheticVariable("unsafeAs", ElementKind.GenericInstance);
+        var unsafeAsExps = GetUnsafeAsMethod(context).MethodResolverExpression(context).MakeGenericInstanceMethod(unsafeAsVar, [tBufferVar, tElementVar]);
+        
+        var memoryMarshalCreateSpanVar = context.Naming.SyntheticVariable("createSpan", ElementKind.GenericInstance);
+        var memoryMarshalCreateSpanExps = GetMemoryMarshalCreateSpanMethod(context).MethodResolverExpression(context).MakeGenericInstanceMethod(memoryMarshalCreateSpanVar, [tElementVar]);
+        
         var methodBodyExpressions = CecilDefinitionsFactory.MethodBody(
             methodVar,
             [
                 OpCodes.Ldarg_0,
-                OpCodes.Call.WithOperand(GetUnsafeAsMethod(context).MethodResolverExpression(context)),
+                OpCodes.Call.WithOperand(unsafeAsVar),
                 OpCodes.Ldarg_1,
-                OpCodes.Call.WithOperand(GetMemoryMarshalCreateSpanMethod(context).MethodResolverExpression(context)),
+                OpCodes.Call.WithOperand(memoryMarshalCreateSpanVar),
                 OpCodes.Ret
             ]);
+
+        var finalExps = methodExpressions
+                                            .Append("")
+                                            .Append("// Unsafe.As() generic instance method")
+                                            .Concat(unsafeAsExps)
+                                            .Append("")
+                                            .Append("// MemoryMarshal.CreateSpan() generic instance method")
+                                            .Concat(memoryMarshalCreateSpanExps)
+                                            .Append("")
+                                            .Concat(methodBodyExpressions)
+                                            .Append($"{privateImplementationDetailsVar.VariableName}.Methods.Add({methodVar});");
         
-        foreach (var exp in methodExpressions.Concat(methodBodyExpressions))
-        {
-            context.WriteCecilExpression(exp);
-            context.WriteNewLine();
-        }
+        context.WriteCecilExpressions(finalExps);
         
         return methodVar;
         

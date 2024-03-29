@@ -50,6 +50,9 @@ public class InlineArrayTests : CecilifierUnitTestBase
 
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
         Assert.That(cecilifiedCode, Does.Match("""new TypeDefinition\("", "<PrivateImplementationDetails>", .+\)"""));
+        Assert.That(cecilifiedCode, Does.Match("""cls_privateImplementationDetails_\d+.Methods.Add\(m_inlineArrayAsSpan_\d+\);"""));
+        Assert.That(cecilifiedCode, Does.Match("""(m_inlineArrayAsSpan_\d+)_inst.Add\(_ = \1_il.Create\(OpCodes.Call, gi_unsafeAs_\d+\)\);"""));
+        Assert.That(cecilifiedCode, Does.Match("""(m_inlineArrayAsSpan_\d+)_inst.Add\(_ = \1_il.Create\(OpCodes.Call, gi_createSpan_\d+\)\);"""));
     }
 
     [Test]
@@ -230,6 +233,36 @@ public class InlineArrayTests : CecilifierUnitTestBase
         var cecilified = result.GeneratedCode.ReadToEnd();
         
         Assert.That(cecilified, Does.Match(expectedIL));
+    }
+
+    [Test]
+    public void AccessToIndex_ThroughNonLiteral_UsesElementRefMethodAndIndex()
+    {
+        var result = RunCecilifier("""
+                                     class C
+                                     {
+                                         int M(int i)
+                                         {
+                                            Buffer b = new Buffer();
+                                            return b[i];
+                                         }
+                                     }
+
+                                     [System.Runtime.CompilerServices.InlineArray(5)]
+                                     public struct Buffer { private int _element0; }
+                                     """);
+
+        var cecilified = result.GeneratedCode.ReadToEnd();
+        Assert.That(cecilified, Does.Match("""
+                                           \s+//return b\[i\];
+                                           (\s+il_M_5.Emit\(OpCodes\.)Ldloca, l_b_7\);
+                                           \1Ldarg_1\);
+                                           """));      
+        
+        Assert.That(cecilified, Does.Match("""
+                                           (\s+il_M_\d+\.Emit\(OpCodes\.)Call, gi_inlineArrayElementRef_\d+\);
+                                           \1Ldind_I4\);
+                                           """));
     }
     
     [Test]
