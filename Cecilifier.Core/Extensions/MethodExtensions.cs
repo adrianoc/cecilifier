@@ -8,6 +8,8 @@ using Cecilifier.Core.Naming;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Mono.Cecil;
 using static Cecilifier.Core.Misc.Utils;
 using MethodAttributes = Mono.Cecil.MethodAttributes;
 
@@ -15,6 +17,25 @@ namespace Cecilifier.Core.Extensions
 {
     internal static class MethodExtensions
     {
+        public static TypeParameterSyntax[] GetTypeParameterSyntax(this IMethodSymbol method)
+        {
+            if (!method.IsGenericMethod)
+                return Array.Empty<TypeParameterSyntax>();
+            
+            var candidateDeclarationNode = method.DeclaringSyntaxReferences.SingleOrDefault();
+            if (candidateDeclarationNode == null)
+                return Array.Empty<TypeParameterSyntax>();
+
+            return candidateDeclarationNode.GetSyntax() switch
+            {
+                MethodDeclarationSyntax methodDeclaration => methodDeclaration.TypeParameterList?.Parameters.ToArray(),
+                LocalFunctionStatementSyntax localFunction => localFunction.TypeParameterList?.Parameters.ToArray(),
+                TypeDeclarationSyntax typeDeclaration => typeDeclaration.TypeParameterList?.Parameters.ToArray(),
+                
+                _ => throw new InvalidOperationException($"Unexpected node type {candidateDeclarationNode.GetType().Name}.")
+            };
+        }
+        
         private static string ReflectionBindingsFlags(this IMethodSymbol method)
         {
             var bindingFlags = method.IsStatic ? BindingFlags.Static : BindingFlags.Instance;
@@ -47,27 +68,41 @@ namespace Cecilifier.Core.Extensions
 
                 var declaringTypeResolveExp = ctx.TypeResolver.Resolve(method.ContainingType);
                 var exps = found.VariableName.CloneMethodReferenceOverriding(ctx, new() { ["DeclaringType"] = declaringTypeResolveExp }, method, out var variable);
-                foreach (var expression in exps)
-                {
-                    ctx.WriteCecilExpression(expression);
-                    ctx.WriteNewLine();
-                }
-
+                ctx.WriteCecilExpressions(exps);
                 return variable;
             }
 
+            var declaringTypeName = method.ContainingType.FullyQualifiedName();
+            
             // invocation on non value type virtual methods must be dispatched to the original method (i.e, the virtual method definition, not the overridden one)
             // note that in Roslyn, IMethodSymbol.OriginalMethod is the method implementation and IMethodSymbol.OverridenMethod is the actual original virtual method.  
             if (!method.ContainingType.IsValueType)
+            {
                 method = method.OverriddenMethod ?? method;
+                declaringTypeName = method.ContainingType.FullyQualifiedName();
+            }
+
+            if (method.IsGenericMethod)
+            {
+                var parameters = $$"""new ParamData[] { {{ string.Join(',', method.Parameters.Select(p => $$"""new ParamData { FullName="{{p.Type.ElementTypeSymbolOf().FullyQualifiedName()}}", IsArray={{(p.Type.TypeKind == TypeKind.Array ? "true" : "false")}}, IsTypeParameter={{(p.Type.TypeKind == TypeKind.TypeParameter ? "true" : "false") }} } """)) }} }""";
+                var genericTypeParameters = $$"""new [] { {{ string.Join(',', method.TypeArguments.Select(TypeNameFrom)) }} }""";
+                
+                return ImportFromMainModule(
+                    $"""
+                      TypeHelpers.ResolveGenericMethodInstance(typeof({declaringTypeName}).AssemblyQualifiedName, "{method.Name}", {method.ReflectionBindingsFlags()}, {parameters}, {genericTypeParameters}) 
+                      """);
+            }
             
             if (method.Parameters.Any(p => p.Type.IsTypeParameterOrIsGenericTypeReferencingTypeParameter()) || method.ReturnType.IsTypeParameterOrIsGenericTypeReferencingTypeParameter())
             {
                 return ResolveMethodFromGenericType(method, ctx);
             }
 
-            var declaringTypeName = method.ContainingType.FullyQualifiedName();
             return ImportFromMainModule($"TypeHelpers.ResolveMethod(typeof({declaringTypeName}), \"{method.Name}\",{method.ReflectionBindingsFlags()}{method.Parameters.Aggregate("", (acc, curr) => acc + ", \"" + curr.Type.FullyQualifiedName() + "\"")})");
+            
+            static string TypeNameFrom(ITypeSymbol typeSymbol) => typeSymbol.TypeKind == TypeKind.TypeParameter 
+                ? $"\"{typeSymbol.Name}\"" 
+                : $"typeof({typeSymbol.ElementTypeSymbolOf().FullyQualifiedName()}).AssemblyQualifiedName";
         }
 
         private static string ResolveMethodFromGenericType(IMethodSymbol method, IVisitorContext ctx)
@@ -105,7 +140,7 @@ namespace Cecilifier.Core.Extensions
                 ctx.WriteCecilExpression($"""{targetMethodVar}.Parameters.Add(new ParameterDefinition("{parameter.Name}", ParameterAttributes.None, {originalMethodVar}.Parameters[{parameter.Ordinal}].ParameterType));""");
                 ctx.WriteNewLine();
             }
-
+            
             return targetMethodVar;
         }
 

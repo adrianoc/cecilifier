@@ -15,7 +15,7 @@ namespace Cecilifier.Core.Misc
 {
     internal class CecilifierContext : IVisitorContext
     {
-        private readonly ISet<string> flags = new HashSet<string>();
+        private readonly IDictionary<string, string> flags = new Dictionary<string, string>();
         private readonly LinkedList<string> output = new();
 
         private readonly string identation;
@@ -82,6 +82,15 @@ namespace Cecilifier.Core.Misc
             CecilifiedLineNumber += expression.CountNewLines();
             output.AddLast($"{identation}{expression}");
         }
+        
+        public void WriteCecilExpressions(IEnumerable<string> expressions)
+        {
+            foreach (var expression in expressions)
+            {
+                WriteCecilExpression(expression);
+                WriteNewLine();
+            }
+        }
 
         public void WriteComment(string comment)
         {
@@ -123,8 +132,8 @@ namespace Cecilifier.Core.Misc
             var lineToBeMoved = LineOf(instruction) + 1;
             var lineToMoveAfter = LineOf(after.Next);
 
-            output.AddAfter(after, instruction.ValueRef);
             output.Remove(instruction);
+            output.AddAfter(after, instruction);
 
             var numberOfLinesBeingMoved = instruction.Value.CountNewLines();
 
@@ -184,8 +193,23 @@ namespace Cecilifier.Core.Misc
 
         public bool HasFlag(string name)
         {
-            return flags.Contains(name);
+            return flags.ContainsKey(name);
         }
+        
+        public bool TryGetFlag(string name, out string value)
+        {
+            return flags.TryGetValue(name, out value);
+        }
+        
+        public void SetFlag(string name, string value = null)
+        {
+            flags[name] = value;
+        }
+
+        public void ClearFlag(string name)
+        {
+            flags.Remove(name);
+        }        
 
         public void EmitCilInstruction<T>(string ilVar, OpCode opCode, T operand, string comment = null)
         {
@@ -197,16 +221,6 @@ namespace Cecilifier.Core.Misc
         public void EmitCilInstruction(string ilVar, OpCode opCode)
         {
             EmitCilInstruction<string>(ilVar, opCode, null);
-        }
-
-        internal void SetFlag(string name)
-        {
-            flags.Add(name);
-        }
-
-        internal void ClearFlag(string name)
-        {
-            flags.Remove(name);
         }
     }
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Cecilifier.Core.CodeGeneration;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
@@ -27,6 +28,22 @@ namespace Cecilifier.Core.AST
         // this is used, for example, in value type ctor invocation in which case there's
         // no value in the stack to be stored after the ctor is run
         private bool skipLeftSideVisitingInAssignment;
+        
+        /// When processing method invocations keep track of the last instruction used to load the target of the
+        /// invocation. For example, in the invocation 'M1(i+1).M2(42)' this will be set twice: i) one for the target
+        /// of the call to M1() and ii) a second one for the target of the call to M2() generating the pseudo IL code:
+        ///
+        /// IL1: Ldarg_0 # loads the implicit 'this' reference used to call M1().
+        /// IL2: Ldarg_1 # loads parameter 'i'
+        /// IL3: Ldc_I4_1 # loads constant 1
+        /// IL4: Add      # i + 1
+        /// IL5: Call M1(int)
+        /// IL6: Ldc_I4, 42 # loads constant 42
+        /// IL7:  M2(int)
+        ///  
+        /// In this scenario, '_lastInstructionLoadingTargetOfInvocation' will point to IL1 when processing
+        /// the call to M1() and to IL5 when processing the call to M2()
+        private LinkedListNode<string> _lastInstructionLoadingTargetOfInvocation;
 
         static ExpressionVisitor()
         {
@@ -93,7 +110,7 @@ namespace Cecilifier.Core.AST
             }, visitRightOperand: false); // Isinst opcode takes the type to check as a parameter (instead of taking it from the stack) so
                                           // we must not visit the right hand side of the binary expression 
         }
-
+        
         private static OpCode CompareOpCodeFor(ITypeSymbol left)
         {
             switch (left.SpecialType)
@@ -172,7 +189,7 @@ namespace Cecilifier.Core.AST
                     // (or an extension method to be available) with a signature that matches the types passed in the list of
                     // expressions
                     var addMethod = Context.SemanticModel.GetCollectionInitializerSymbolInfo(node.Expressions.First()).Symbol.EnsureNotNull<ISymbol, IMethodSymbol>();
-                    EnsureForwardedMethod(Context, addMethod, Array.Empty<TypeParameterSyntax>());
+                    EnsureForwardedMethod(Context, addMethod);
                     
                     Context.EmitCilInstruction(ilVar, OpCodes.Dup);
                     initializeExp.Accept(this);
@@ -305,7 +322,7 @@ namespace Cecilifier.Core.AST
             if (node.IsOperatorOnCustomUserType(Context.SemanticModel, out var method))
             {
                 if (method.IsDefinedInCurrentAssembly(Context))
-                    EnsureForwardedMethod(Context, method, Array.Empty<TypeParameterSyntax>());
+                    EnsureForwardedMethod(Context, method);
                 AddMethodCall(ilVar, method);
             }
             else
@@ -602,7 +619,7 @@ namespace Cecilifier.Core.AST
             if (TryProcessInvocationOnParameterlessImplicitCtorOnValueType(node, ctorInfo))
                 return;
 
-            EnsureForwardedMethod(Context, ctor, Array.Empty<TypeParameterSyntax>());
+            EnsureForwardedMethod(Context, ctor);
 
             var operand = ctor.MethodResolverExpression(Context);
             Context.EmitCilInstruction(ilVar, OpCodes.Newobj, operand);
@@ -856,6 +873,9 @@ namespace Cecilifier.Core.AST
         {
             node.Expression.Accept(this);
             InjectRequiredConversions(node.Expression);
+            if (node.Parent.IsKind(SyntaxKind.InvocationExpression))
+                OnLastInstructionLoadingTargetOfInvocation();
+            
             node.Name.Accept(this);
         }
 
@@ -1154,7 +1174,7 @@ namespace Cecilifier.Core.AST
             if (parentMae != null && SymbolEqualityComparer.Default.Equals(Context.SemanticModel.GetSymbolInfo(parentMae).Symbol.ContainingType, Context.RoslynTypeSystem.SystemValueType))
             {
                 // it is a reference on a value type to a method defined in System.ValueType (GetHashCode(), ToString(), etc)
-                Context.EmitCilInstruction(ilVar, OpCodes.Constrained, Context.TypeResolver.Resolve(type));
+                Context.SetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, Context.TypeResolver.Resolve(type));
             }
 
             bool RequiresAddressOfValue() => IsObjectCreationExpressionUsedAsInParameter(expressionSyntax) || expressionSyntax.Parent.FirstAncestorOrSelf<SyntaxNode>(c => !c.IsKind(SyntaxKind.ParenthesizedExpression)).IsKind(SyntaxKind.SimpleMemberAccessExpression);
@@ -1238,7 +1258,7 @@ namespace Cecilifier.Core.AST
 
             var delegateType = firstParentNotPartOfName switch
             {
-                // assumes that a method reference in a object creation expression can only be a delegate instantiation.
+                // assumes that a method reference in an object creation expression can only be a delegate instantiation.
                 ArgumentSyntax { Parent.Parent.RawKind: (int) SyntaxKind.ObjectCreationExpression } arg => Context.SemanticModel.GetTypeInfo(arg.Parent.Parent).Type,
 
                 // assumes that a method reference in an invocation expression is method group -> delegate conversion. 
@@ -1268,7 +1288,7 @@ namespace Cecilifier.Core.AST
             //IL_0002: ldarg.0
             //IL_0002: ldftn string Test::M(int32)
             //IL_0008: newobj instance void class [System.Private.CoreLib]System.Func`2<int32, string>::.ctor(object, native int)
-            EnsureForwardedMethod(Context, method.OverriddenMethod ?? method.OriginalDefinition, Array.Empty<TypeParameterSyntax>());
+            EnsureForwardedMethod(Context, method.OverriddenMethod ?? method.OriginalDefinition);
             CecilDefinitionsFactory.InstantiateDelegate(Context, ilVar, delegateType, method.MethodResolverExpression(Context), new StaticDelegateCacheContext()
             {
                 IsStaticDelegate = method.IsStatic,
@@ -1285,7 +1305,7 @@ namespace Cecilifier.Core.AST
             {
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
             }
-            EnsureForwardedMethod(Context, method.OverriddenMethod ?? method.OriginalDefinition, TypeParameterSyntaxFor(method));
+            EnsureForwardedMethod(Context, method.OverriddenMethod ?? method.OriginalDefinition);
             var isAccessOnThis = !node.Parent.IsKind(SyntaxKind.SimpleMemberAccessExpression);
 
             var mae = node.Parent as MemberAccessExpressionSyntax;
@@ -1294,23 +1314,9 @@ namespace Cecilifier.Core.AST
                 isAccessOnThis = true;
             }
 
+            //_instructionBefore = Context.CurrentLine;
+            OnLastInstructionLoadingTargetOfInvocation();
             AddMethodCall(ilVar, method, isAccessOnThis);
-        }
-
-        TypeParameterSyntax[] TypeParameterSyntaxFor(IMethodSymbol method)
-        {
-            if (!method.IsGenericMethod)
-                return Array.Empty<TypeParameterSyntax>();
-            
-            var candidateDeclarationNode = method.DeclaringSyntaxReferences.SingleOrDefault();
-            if (candidateDeclarationNode == null)
-                return Array.Empty<TypeParameterSyntax>();
-
-            var declarationNode = candidateDeclarationNode.GetSyntax() as MethodDeclarationSyntax;
-            if (declarationNode == null)
-                return Array.Empty<TypeParameterSyntax>();
-
-            return declarationNode.TypeParameterList.Parameters.ToArray();
         }
 
         private BinaryOperatorHandler OperatorHandlerFor(SyntaxToken operatorToken)
@@ -1366,14 +1372,24 @@ namespace Cecilifier.Core.AST
             else
             {
                 Visit(target);
-                PushCall();
-                StackallocAsArgumentFixer.Current?.MarkEndOfComputedCallTargetBlock();
+                var callContext = (FirstInstruction: _lastInstructionLoadingTargetOfInvocation, LastInstruction: Context.CurrentLine);
 
+                StackallocAsArgumentFixer.Current?.MarkEndOfComputedCallTargetBlock(callContext.FirstInstruction);
                 ProcessArgumentsTakingDefaultParametersIntoAccount(method, args);
-                FixCallSite();
+                
+                if (callContext.FirstInstruction != null)
+                {
+                    Context.MoveLinesToEnd(callContext.FirstInstruction, callContext.LastInstruction);
+                    _lastInstructionLoadingTargetOfInvocation = null;
+                }
             }
         }
 
+        protected override void OnLastInstructionLoadingTargetOfInvocation()
+        {
+            _lastInstructionLoadingTargetOfInvocation = Context.CurrentLine;
+        }
+        
         private void ProcessArgumentsTakingDefaultParametersIntoAccount(ISymbol? method, ArgumentListSyntax args)
         {
             Visit(args);
@@ -1388,8 +1404,7 @@ namespace Cecilifier.Core.AST
 
         private string ArgumentValueToUseForDefaultParameter(IParameterSymbol arg, ImmutableArray<IParameterSymbol> parameters, SeparatedSyntaxList<ArgumentSyntax> arguments)
         {
-            var callerArgumentExpressionAttribute = arg.GetAttributes().SingleOrDefault(attr => attr.AttributeClass!.MetadataToken == Context.RoslynTypeSystem.CallerArgumentExpressionAttribute.MetadataToken);
-            if (callerArgumentExpressionAttribute != null)
+            if (arg.TryGetAttribute<CallerArgumentExpressionAttribute>(out var callerArgumentExpressionAttribute))
             {
                 var expressionParameter = parameters.SingleOrDefault(p => p.Name == (string) callerArgumentExpressionAttribute.ConstructorArguments[0].Value);
                 if (expressionParameter != null)
@@ -1427,7 +1442,7 @@ namespace Cecilifier.Core.AST
                     break;
 
                 case SymbolKind.TypeParameter:
-                    AddCilInstruction(ilVar, OpCodes.Constrained, (ITypeSymbol) member.Symbol);
+                    Context.SetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, Context.TypeResolver.Resolve((ITypeSymbol) member.Symbol));
                     break;
 
                 default:

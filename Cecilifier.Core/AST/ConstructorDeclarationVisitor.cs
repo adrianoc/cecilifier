@@ -101,7 +101,7 @@ namespace Cecilifier.Core.AST
             AddCecilExpression($"{typeDefVar}.Methods.Add({ctorLocalVar});");
 
             var ctorBodyIL = Context.Naming.ILProcessor($"ctor_{typeName}");
-            AddCecilExpression($@"var {ctorBodyIL} = {ctorLocalVar}.Body.GetILProcessor();");
+            AddCecilExpression($"var {ctorBodyIL} = {ctorLocalVar}.Body.GetILProcessor();");
 
             processInitializers?.Invoke(ctorBodyIL);
             if (!isStatic)

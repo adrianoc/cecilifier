@@ -418,7 +418,40 @@ public class StructSpecificTests : CecilifierUnitTestBase
             """);
         Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(expected));
     }
+    
+    [TestCase("p", TestName = "Parameter")]
+    [TestCase("lr", TestName = "Local")]
+    public void TestRefTarget_Struct(string target)
+    {
+        var result = RunCecilifier($"struct Foo {{ int value; void Bar(ref Foo p)  {{ ref Foo lr = ref p; {target}.value = 42; }} }}");
+        Assert.That(
+            result.GeneratedCode.ReadToEnd(),
+            Does.Match(
+                @"(?<il>il_bar_\d+\.Emit\(OpCodes.)(?:Ldarg_1|Ldloc,.+)\);\s+" +
+                @"\k<il>Ldc_I4, 42\);\s+" +
+                @"\k<il>Stfld, fld_value_1\);"));
+    }
 
+    [Test]
+    public void CallOnValueType_ThroughInterface_IsConstrained()
+    {
+        var result = RunCecilifier("""
+                                   int Call<T>(T t) where T : struct, Itf => t.M(42);
+                                   
+                                   interface Itf { int M(int i); } // The important part here is that M() has at least one parameter.
+                                   struct Foo : Itf { public int M(int i) => i; }
+                                   """);
+        
+        Assert.That(
+            result.GeneratedCode.ReadToEnd(),
+            Does.Match("""
+                       (\s+il_call_15.Emit\(OpCodes\.)Ldarga, p_t_\d+\);
+                       \1Ldc_I4, 42\);
+                       \1Constrained, gp_T_\d+\);
+                       \1Callvirt, m_M_\d+\);
+                       """));
+    }
+    
     static IEnumerable<TestCaseData> NonInstantiationValueTypeVariableInitializationTestScenarios()
     {
         yield return new TestCaseData(

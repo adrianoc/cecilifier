@@ -8,6 +8,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.WebSockets;
+using System.Reflection;
 using System.Resources;
 using System.Text;
 using System.Text.Json;
@@ -17,6 +18,7 @@ using System.Threading.Tasks;
 using System.Web;
 using Cecilifier.Core;
 using Cecilifier.Core.Mappings;
+using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using Cecilifier.Web.Pages;
 using Microsoft.AspNetCore.Builder;
@@ -42,15 +44,26 @@ namespace Cecilifier.Web
 
     public class Startup
     {
-        private const string ProjectContents = @"<Project Sdk=""Microsoft.NET.Sdk"">
-    <PropertyGroup>
-        <OutputType>Exe</OutputType>
-        <TargetFramework>net8.0</TargetFramework>
-    </PropertyGroup>
-    <ItemGroup>
-        <PackageReference Include=""Mono.Cecil"" Version=""0.11.5"" />
-    </ItemGroup>
-</Project>";
+        private const string ProjectContents = """
+                                               <Project Sdk="Microsoft.NET.Sdk">
+                                                   <PropertyGroup>
+                                                       <OutputType>Exe</OutputType>
+                                                       <TargetFramework>net8.0</TargetFramework>
+                                                   </PropertyGroup>
+                                                   <ItemGroup>
+                                                       <PackageReference Include="Mono.Cecil" Version="0.11.5" />
+                                                       <PackageReference Include="Cecilifier.TypeMapGenerator" Version="1.0.0" />
+                                                   </ItemGroup>
+                                               </Project>
+                                               """;
+
+        private const string NugetConfigForCecilifiedProject = """
+                                                               <configuration>
+                                                                   <packageSources>
+                                                                       <add key="CecilifierCodeGenerators" value="./NugetLocalRepo/" />
+                                                                   </packageSources>
+                                                               </configuration>
+                                                               """;
 
         private static HttpClient discordConnection = new();
         private static IDictionary<long, uint> seemClientIPHashCodes = new Dictionary<long, uint>();
@@ -114,8 +127,13 @@ namespace Cecilifier.Web
                 {
                     if (context.WebSockets.IsWebSocketRequest)
                     {
+                        // if cecilifier is deployed in an environment with a reverse proxy (for instance nginx) we will configure the proxy to forward the client IP and use that IP
+                        // instead `context.Connection.RemoteIpAddress` which will always be the proxy's IP.
+                        var forwardedClientIP = context.Request.Headers["X-Forwarded-For"];
                         var webSocket = await context.WebSockets.AcceptWebSocketAsync();
-                        await CecilifyCodeAsync(webSocket, context.Connection.RemoteIpAddress);
+                        
+                        await SendStatisticsAsync(webSocket);
+                        await CecilifyCodeAsync(webSocket, string.IsNullOrWhiteSpace(forwardedClientIP) ? context.Connection.RemoteIpAddress.GetHashCode() : forwardedClientIP.GetHashCode());
                     }
                     else
                     {
@@ -127,13 +145,31 @@ namespace Cecilifier.Web
                     await next();
                 }
             });
+            
+            async Task SendStatisticsAsync(WebSocket webSocket)
+            {
+                var cecilifiedWebResult = new CecilifiedWebResult
+                {
+                    Status = 4,
+                    CecilifiedCode = String.Empty,
+                    Counter = CecilifierApplication.Count,
+                    MaximumUnique = CecilifierApplication.MaximumUnique,
+                    Clients = CecilifierApplication.UniqueClients,
+                    Kind = 'F',
+                    MainTypeName = String.Empty,
+                    Mappings = Array.Empty<Mapping>(),
+                };
 
-            async Task CecilifyCodeAsync(WebSocket webSocket, IPAddress remoteIpAddress)
+                var dataToReturn = JsonSerializer.SerializeToUtf8Bytes(cecilifiedWebResult);
+                await webSocket.SendAsync(dataToReturn, WebSocketMessageType.Text, true, CancellationToken.None);
+            }
+
+            async Task CecilifyCodeAsync(WebSocket webSocket, int remoteIpAddressHashCode)
             {
                 var buffer = ArrayPool<byte>.Shared.Rent(1024 * 128);
                 try
                 {
-                    await ProcessWebSocketAsync(webSocket, remoteIpAddress, buffer);
+                    await ProcessWebSocketAsync(webSocket, remoteIpAddressHashCode, buffer);
                 }
                 finally
                 {
@@ -143,13 +179,13 @@ namespace Cecilifier.Web
             }
         }
 
-        private async Task ProcessWebSocketAsync(WebSocket webSocket, IPAddress remoteIpAddress, byte[] buffer)
+        private async Task ProcessWebSocketAsync(WebSocket webSocket, int remoteIpAddressHashCode, byte[] buffer)
         {
             var memory = new Memory<byte>(buffer);
             var received = await webSocket.ReceiveAsync(memory, CancellationToken.None);
             while (received.MessageType != WebSocketMessageType.Close)
             {
-                UpdateStatistics(remoteIpAddress);
+                UpdateStatistics(remoteIpAddressHashCode);
                 
                 var codeSnippet = string.Empty;
                 bool includeSourceInErrorReports = false;
@@ -182,7 +218,7 @@ namespace Cecilifier.Web
                     var cecilifiedResult = Core.Cecilifier.Process(code,
                         new CecilifierOptions
                         {
-                            References = GetTrustedAssembliesPath().Concat(userAssemblyReferences.Success).ToList(),
+                            References = ReferencedAssemblies.GetTrustedAssembliesPath().Concat(userAssemblyReferences.Success).ToList(),
                             Naming = new DefaultNameStrategy(toBeCecilified.Settings.NamingOptions, toBeCecilified.Settings.ElementKindPrefixes.ToDictionary(entry => entry.ElementKind, entry => entry.Prefix))
                         });
 
@@ -193,6 +229,8 @@ namespace Cecilifier.Web
                         var responseData = ZipProject(
                             ("Program.cs", await cecilifiedResult.GeneratedCode.ReadToEndAsync()),
                             ("Cecilified.csproj", ProjectContents),
+                            ("nuget.config", NugetConfigForCecilifiedProject),
+                            ("NugetLocalRepo/Cecilifier.TypeMapGenerator.1.0.0.nupkg", "file-relative-path://Cecilifier.TypeMapGenerator.1.0.0.nupkg"),
                             NameAndContentFromResource("Cecilifier.Web.Runtime")
                         );
 
@@ -234,23 +272,18 @@ namespace Cecilifier.Web
                 received = await webSocket.ReceiveAsync(memory, CancellationToken.None);
             }
 
-            static void UpdateStatistics(IPAddress remoteIpAddress)
+            static void UpdateStatistics(int remoteIpAddressHashCode)
             {
                 Interlocked.Increment(ref CecilifierApplication.Count);
-                if (!seemClientIPHashCodes.TryGetValue(remoteIpAddress.GetHashCode(), out var visits))
+                if (!seemClientIPHashCodes.TryGetValue(remoteIpAddressHashCode, out var visits))
                 {
                     Interlocked.Increment(ref CecilifierApplication.UniqueClients);
                 }
-                seemClientIPHashCodes[remoteIpAddress.GetHashCode()] = visits + 1;
+                seemClientIPHashCodes[remoteIpAddressHashCode] = visits + 1;
                 Interlocked.Exchange(ref CecilifierApplication.MaximumUnique, seemClientIPHashCodes.Values.Max());
             }
 
-            IEnumerable<string> GetTrustedAssembliesPath()
-            {
-                return ((string) AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")).Split(Path.PathSeparator).ToList();
-            }
-
-            Memory<byte> ZipProject(params (string fileName, string contents)[] sources)
+            Memory<byte> ZipProject(params (string fileName, string contents)[] files)
             {
                 /*
                 //TODO: For some reason this code produces an invalid stream. Need to investigate.
@@ -274,11 +307,19 @@ namespace Cecilifier.Web
                 if (Directory.Exists(assetsPath))
                     Directory.Delete(assetsPath, true);
 
-                Directory.CreateDirectory(assetsPath);
-
-                foreach (var source in sources)
+                foreach (var file in files)
                 {
-                    File.WriteAllText(Path.Combine(assetsPath, $"{source.fileName}"), source.contents);
+                    var filePath = Path.Combine(assetsPath, $"{file.fileName}");
+                    Directory.CreateDirectory(Path.GetDirectoryName(filePath));
+                    if (file.contents.StartsWith("file-relative-path://"))
+                    {
+                        var basePath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+                        File.Copy(Path.Combine(basePath, file.contents.Substring("file-relative-path://".Length)), filePath, true);
+                    }
+                    else
+                    {
+                        File.WriteAllText(filePath, file.contents);    
+                    }
                 }
 
                 var outputZipPath = Path.Combine(tempPath, "Cecilified.zip");
@@ -381,7 +422,6 @@ namespace Cecilifier.Web
 
             return SendJsonMessageToChatAsync(toSend);
         }
-
 
         (string fileName, string contents) NameAndContentFromResource(string resourceName)
         {

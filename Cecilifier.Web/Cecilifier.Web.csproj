@@ -1,5 +1,17 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
   <Import Project="../Cecilifier.Common.props" />
+  
+  <PropertyGroup>
+    <_DotNetPackTypeMapGeneratorCommand>dotnet pack $(MSBuildProjectDirectory)/../Cecilifier.TypeMapGenerator/Cecilifier.TypeMapGenerator.csproj</_DotNetPackTypeMapGeneratorCommand>  
+  </PropertyGroup>
+  
+  <Target Name="PackCodeGeneratorPublish" AfterTargets="Publish">
+    <Exec Command="$(_DotNetPackTypeMapGeneratorCommand) %2D%2Doutput '$(OutputPath)publish'" />
+  </Target>
+
+  <Target Name="PackCodeGeneratorBuildDebug" AfterTargets="Build" Condition=" '$(Configuration)' == 'Debug'">
+    <Exec Command="$(_DotNetPackTypeMapGeneratorCommand) %2D%2Doutput '$(OutputPath)'" />
+  </Target>
 
   <ItemGroup>
     <Compile Remove="Resources\TypeHelpers.cs" />

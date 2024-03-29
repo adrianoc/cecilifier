@@ -16,20 +16,26 @@ namespace Cecilifier.Core.Extensions
     {
         public static string CamelCase(this string str)
         {
-            return str.Length > 1
-                ? char.ToLower(str[0]) + str.Substring(1)
-                : str;
+            if (str.Length < 2)
+                return str;
+            
+            return string.Create(str.Length, str, (span, value) =>
+            {
+                str.AsSpan().CopyTo(span);
+                span[0] = char.ToLowerInvariant(span[0]);
+            });
         }
 
         public static string PascalCase(this string str)
         {
-            Span<char> copySpan = stackalloc char[str.Length];
-            str.AsSpan().CopyTo(copySpan);
-
-            if (copySpan.Length > 1)
-                copySpan[0] = Char.ToUpper(copySpan[0]);
-
-            return copySpan.ToString();
+            if (str.Length < 2)
+                return str;
+            
+            return string.Create(str.Length, str, (span, value) =>
+            {
+                str.AsSpan().CopyTo(span);
+                span[0] = char.ToUpperInvariant(span[0]);
+            });
         }
 
         public static string AppendModifier(this string to, string modifier)
@@ -64,7 +70,6 @@ namespace Cecilifier.Core.Extensions
             var moduleKind = entryPointVar == null ? "ModuleKind.Dll" : "ModuleKind.Console";
             var entryPointStatement = entryPointVar != null ? $"\t\t\tassembly.EntryPoint = {entryPointVar};\n" : string.Empty;
 
-            const string runtimeConfigJsonExt = ".runtimeconfig.json";
             return $@"using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Mono.Cecil.Rocks;
@@ -78,7 +83,7 @@ public class SnippetRunner
 {{
 	public static void Main(string[] args)
 	{{
-        // setup `reflection/metadata importers` to ensure references to System.Private.CoreLib are replaced with references to `netstandard`.
+        // setup `reflection/metadata importers` to ensure references to System.Private.CoreLib are replaced with references to the correct reference assemblies`.
         var mp = new ModuleParameters
         {{
             Architecture = TargetArchitecture.AMD64,
@@ -92,10 +97,10 @@ public class SnippetRunner
 {cecilSnippet}{entryPointStatement}
 		    assembly.Write(args[0]);
 
-            //Writes a {runtimeConfigJsonExt} file matching the output assembly name.
+            //Writes a {Constants.Common.RuntimeConfigJsonExt} file matching the output assembly name.
 			File.Copy(
-				Path.ChangeExtension(typeof(SnippetRunner).Assembly.Location, ""{runtimeConfigJsonExt}""),
-                Path.ChangeExtension(args[0], ""{runtimeConfigJsonExt}""),
+				Path.ChangeExtension(typeof(SnippetRunner).Assembly.Location, ""{Constants.Common.RuntimeConfigJsonExt}""),
+                Path.ChangeExtension(args[0], ""{Constants.Common.RuntimeConfigJsonExt}""),
                 true);
         }}
 	}}

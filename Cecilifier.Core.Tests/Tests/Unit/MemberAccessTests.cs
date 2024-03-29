@@ -19,19 +19,6 @@ public class MemberAccessTests : CecilifierUnitTestBase
                     @"\k<il>Stfld, fld_value_1\);"));
     }
 
-    [TestCase("p", TestName = "Parameter")]
-    [TestCase("lr", TestName = "Local")]
-    public void TestRefTarget_Struct(string target)
-    {
-        var result = RunCecilifier($@"struct Foo {{ int value; void Bar(ref Foo p)  {{ ref Foo lr = ref p; {target}.value = 42; }} }}");
-        Assert.That(
-            result.GeneratedCode.ReadToEnd(),
-            Does.Match(
-                @"(?<il>il_bar_\d+\.Emit\(OpCodes.)(?:Ldarg_1|Ldloc,.+)\);\s+" +
-                    @"\k<il>Ldc_I4, 42\);\s+" +
-                    @"\k<il>Stfld, fld_value_1\);"));
-    }
-
     [TestCase("string C<T>(T t) where T : struct => t.ToString();", """
                                                                     //Parameters of 'string C<T>\(T t\) where T : struct => t.ToString\(\);'
                                                                     \s+var (p_t_\d+) = new ParameterDefinition\("t", ParameterAttributes.None, (gp_T_\d+)\);
@@ -106,6 +93,16 @@ public class MemberAccessTests : CecilifierUnitTestBase
                                                                                        \1Callvirt, .+ImportReference\(.+ResolveMethod\(typeof\(System.Object\), "ToString",.+\)\)\);
                                                                                        \1Ret\);
                                                                                        """, TestName = "LocalConstrainedToStruct")]
+    
+    [TestCase("bool C<T>(T t) where T : struct { var l = t; return l.Equals(l); }", """
+                                                                                       //return l.Equals\(l\);
+                                                                                       (\s+il_C_\d+\.Emit\(OpCodes\.)Ldloca, l_l_14\);
+                                                                                       \1Ldloc, l_l_14\);
+                                                                                       \1Box, gp_T_11\);
+                                                                                       \1Constrained, gp_T_11\);
+                                                                                       \1Callvirt, .+ImportReference\(.+ResolveMethod\(typeof\(System.Object\), "Equals",.+\)\)\);
+                                                                                       \1Ret\);
+                                                                                       """, TestName = "LocalConstrainedToStructCallEquals", IgnoreReason = "KnownIssue: #263")]
 
     [TestCase("string C<T>(T t) where T : IFoo { var l = t; return l.Get(); }", """
                                                                                 //return l.Get\(\);

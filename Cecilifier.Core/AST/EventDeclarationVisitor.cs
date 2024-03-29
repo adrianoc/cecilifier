@@ -145,7 +145,7 @@ namespace Cecilifier.Core.AST
             var (ldfld, ldflda) = isStatic ? (OpCodes.Ldsfld, OpCodes.Ldsflda) : (OpCodes.Ldfld, OpCodes.Ldflda);
 
             var removeMethod = Utils.ImportFromMainModule("typeof(Delegate).GetMethod(\"Remove\")");
-            var compareExchangeExps = CompareExchangeMethodResolvingExps(context, backingFieldVar, out var compExcVar);
+            var compareExchangeExps = CompareExchangeMethodResolvingExps(backingFieldVar, out var compExcVar);
 
             var fieldVar = Utils.MakeGenericTypeIfAppropriate(Context, eventSymbol, backingFieldVar, eventDeclaringTypeVar);
 
@@ -184,7 +184,7 @@ namespace Cecilifier.Core.AST
             var (ldfld, ldflda) = isStatic ? (OpCodes.Ldsfld, OpCodes.Ldsflda) : (OpCodes.Ldfld, OpCodes.Ldflda);
 
             var combineMethod = Utils.ImportFromMainModule("typeof(Delegate).GetMethods().Single(m => m.Name == \"Combine\" && m.IsStatic && m.GetParameters().Length == 2)");
-            var compareExchangeExps = CompareExchangeMethodResolvingExps(context, backingFieldVar, out var compExcVar);
+            var compareExchangeExps = CompareExchangeMethodResolvingExps(backingFieldVar, out var compExcVar);
 
             var fieldVar = Utils.MakeGenericTypeIfAppropriate(Context, eventSymbol, backingFieldVar, eventDeclaringTypeVar);
 
@@ -218,7 +218,7 @@ namespace Cecilifier.Core.AST
             return compareExchangeExps.Concat(bodyExps);
         }
 
-        private IEnumerable<string> CompareExchangeMethodResolvingExps(CSharpSyntaxNode context, string backingFieldVar, out string compExcVar)
+        private IEnumerable<string> CompareExchangeMethodResolvingExps(string backingFieldVar, out string compExcVar)
         {
             var openCompExcVar = Context.Naming.MemberReference("openCompExc");
             var exp1 = $"var {openCompExcVar} = {Utils.ImportFromMainModule("typeof(System.Threading.Interlocked).GetMethods().Single(m => m.Name == \"CompareExchange\" && m.IsGenericMethodDefinition)")};";

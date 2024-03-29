@@ -54,7 +54,7 @@ namespace Cecilifier.Core.Extensions
             return exps.ToArray();
         }
 
-        public static int CountNewLines(this string value) => value.Count(ch => ch == '\n');
+        public static int CountNewLines(this string value) => value.AsSpan().Count('\n');
 
         private static List<string> methodReferencePropertiesToClone = new()
         {

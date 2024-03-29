@@ -140,6 +140,7 @@ namespace Cecilifier.Core.AST
             NonCapturingLambdaProcessor.InjectSyntheticMethodsForNonCapturingLambdas(Context, node, varName);
 
             Context.WriteNewLine();
+            Context.ClearFlag($"{varName}-{Constants.ContextFlags.DefaultMemberTracker}");
         }
 
         internal static void EnsureForwardedTypeDefinition(IVisitorContext context, ITypeSymbol typeSymbol, IEnumerable<TypeParameterSyntax> typeParameters)

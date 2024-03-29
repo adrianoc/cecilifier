@@ -55,27 +55,29 @@ namespace Cecilifier.Core.AST
                 ? OpCodes.Callvirt
                 : OpCodes.Call;
 
-            if (method.IsGenericMethod && method.IsDefinedInCurrentAssembly(Context))
+            if (!method.IsDefinedInCurrentAssembly(Context))
+                EnsureForwardedMethod(Context, method);
+            
+            var operand = method.MethodResolverExpression(Context);
+            if (method.IsGenericMethod && (method.IsDefinedInCurrentAssembly(Context) || method.TypeArguments.Any(t => t.TypeKind == TypeKind.TypeParameter)))
             {
-                // if the method in question is a generic method and it is defined in the same assembly create a generic instance
-                var resolvedMethodVar = Context.Naming.MemberReference(method.Name);
-                var m1 = $"var {resolvedMethodVar} = {method.MethodResolverExpression(Context)};";
-
+                // If the generic method is an open one or if it is defined in the same assembly then the call need to happen in the generic instance method (note that for 
+                // methods defined in the snippet being cecilified, even if 'method' represents a generic instance method, MethodResolverExpression() will return the open
+                // generic one instead.
                 var genInstVar = Context.Naming.GenericInstance(method);
-                var m = $"var {genInstVar} = new GenericInstanceMethod({resolvedMethodVar});";
-                AddCecilExpression(m1);
-                AddCecilExpression(m);
+                AddCecilExpression($"var {genInstVar} = new GenericInstanceMethod({operand});");
                 foreach (var t in method.TypeArguments)
                     AddCecilExpression($"{genInstVar}.GenericArguments.Add({Context.TypeResolver.Resolve(t)});");
 
-                Context.EmitCilInstruction(ilVar, opCode, genInstVar);
+                operand = genInstVar;
             }
-            else
+
+            if (Context.TryGetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, out var constrainedType))
             {
-                EnsureForwardedMethod(Context, method, Array.Empty<TypeParameterSyntax>());
-                var operand = method.MethodResolverExpression(Context);
-                Context.EmitCilInstruction(ilVar, opCode, operand);
+                Context.EmitCilInstruction(ilVar, OpCodes.Constrained, constrainedType);
+                Context.ClearFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint);
             }
+            Context.EmitCilInstruction(ilVar, opCode, operand);
         }
 
         protected void AddCilInstruction(string ilVar, OpCode opCode, ITypeSymbol type)
@@ -212,7 +214,7 @@ namespace Cecilifier.Core.AST
                 {
                     // scenario: default(T).ToString()
                     Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, storageVariable.VariableName);
-                    Context.EmitCilInstruction(ilVar, OpCodes.Constrained, resolvedType);
+                    Context.SetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, resolvedType);
                 }
                 else
                 {
@@ -308,8 +310,7 @@ namespace Cecilifier.Core.AST
             if (typeSymbol.TypeKind != TypeKind.Struct)
                 return;
 
-            var structLayoutAttribute = typeSymbol.GetAttributes().FirstOrDefault(attrData => attrData.AttributeClass.FullyQualifiedName().Equals("System.Runtime.InteropServices.StructLayoutAttribute"));
-            if (structLayoutAttribute == null)
+            if (!typeSymbol.TryGetAttribute<StructLayoutAttribute>(out var structLayoutAttribute))
             {
                 typeAttributes.AppendModifier("TypeAttributes.SequentialLayout");
             }
@@ -527,7 +528,7 @@ namespace Cecilifier.Core.AST
                     // calls to virtual methods on custom value types needs to be constrained (don't know why, but the generated IL for such scenarios does `constrains`).
                     // the only methods that falls into this category are virtual methods on Object (ToString()/Equals()/GetHashCode())
                     if (usageResult.Target is { IsOverride: true } && usageResult.Target.ContainingType.IsNonPrimitiveValueType(Context))
-                        Context.EmitCilInstruction(ilVar, OpCodes.Constrained, Context.TypeResolver.Resolve(symbol));
+                        Context.SetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, Context.TypeResolver.Resolve(symbol));
                     return true;
                 }
 
@@ -546,7 +547,7 @@ namespace Cecilifier.Core.AST
                     return false;
 
                 Context.EmitCilInstruction(ilVar, opCode, operand);
-                Context.EmitCilInstruction(ilVar, OpCodes.Constrained, Context.TypeResolver.Resolve(symbol));
+                Context.SetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, Context.TypeResolver.Resolve(symbol));
                 return true;
             }
 
@@ -692,8 +693,17 @@ namespace Cecilifier.Core.AST
                 ? $"{localDelegateDeclaration}.Methods.Single(m => m.Name == \"Invoke\")"
                 : ((IMethodSymbol) typeSymbol.GetMembers("Invoke").SingleOrDefault()).MethodResolverExpression(Context);
 
+            //TODO: Find all call sites that adds a Call/Callvirt instruction and make sure
+            //      they call X().
+            OnLastInstructionLoadingTargetOfInvocation();
             Context.EmitCilInstruction(ilVar, OpCodes.Callvirt, resolvedMethod);
         }
+
+        /// <summary>
+        /// This method must be called when the target of a method invocation has been pushed to the stack
+        /// This mechanism is used primarily by <see cref="ExpressionVisitor"/> for fixing call sites (<see cref="ExpressionVisitor.HandleMethodInvocation"/>). 
+        /// </summary>
+        protected virtual void OnLastInstructionLoadingTargetOfInvocation() { }
 
         protected void HandleAttributesInMemberDeclaration(in SyntaxList<AttributeListSyntax> nodeAttributeLists, Func<AttributeTargetSpecifierSyntax, SyntaxKind, bool> predicate, SyntaxKind toMatch, string whereToAdd)
         {
@@ -861,8 +871,8 @@ namespace Cecilifier.Core.AST
             static int AssignedValue(AttributeSyntax attribute, string parameterName)
             {
                 // whenever Size/Pack are omitted the corresponding property should be set to 0. See Ecma-335 II 22.8.
-                var parameterAssignmentExpression = attribute.ArgumentList?.Arguments.FirstOrDefault(a => a.NameEquals?.Name.Identifier.Text == parameterName)?.Expression;
-                return parameterAssignmentExpression != null ? Int32.Parse(((LiteralExpressionSyntax) parameterAssignmentExpression).Token.Text) : 0;
+                var parameterAssignmentExpression = (LiteralExpressionSyntax) attribute.ArgumentList?.Arguments.FirstOrDefault(a => a.NameEquals?.Name.Identifier.Text == parameterName)?.Expression;
+                return parameterAssignmentExpression?.TryGetLiteralValueFor<int>(out var ret) == true ? ret : 0;
             }
         }
 
@@ -896,7 +906,7 @@ namespace Cecilifier.Core.AST
 
                 // Attribute is defined in the same assembly. We need to find the variable that holds its "ctor declaration"
                 var attrCtor = attrType.GetMembers().OfType<IMethodSymbol>().SingleOrDefault(m => m.MethodKind == MethodKind.Constructor && m.Parameters.Length == attrArgs.Length);
-                EnsureForwardedMethod(context, attrCtor, Array.Empty<TypeParameterSyntax>());
+                EnsureForwardedMethod(context, attrCtor);
 
                 return attrCtor.MethodResolverExpression(context);
             });
@@ -917,7 +927,7 @@ namespace Cecilifier.Core.AST
          * In this case when the first reference to Bar() is found (in method Foo()) the method itself has not been defined yet
          * so we add a MethodDefinition for it but *no body*. Method body will be processed later, when the method is visited.
          */
-        protected static void EnsureForwardedMethod(IVisitorContext context, IMethodSymbol method, TypeParameterSyntax[] typeParameters)
+        protected static void EnsureForwardedMethod(IVisitorContext context, IMethodSymbol method)
         {
             if (!method.IsDefinedInCurrentAssembly(context))
                 return;
@@ -927,20 +937,22 @@ namespace Cecilifier.Core.AST
                 return;
 
             string methodDeclarationVar;
+            var methodName = method.Name;
             if (method.MethodKind == MethodKind.LocalFunction)
             {
                 methodDeclarationVar = context.Naming.SyntheticVariable(method.Name, ElementKind.Method);
-                MethodDeclarationVisitor.AddMethodDefinition(context, methodDeclarationVar, $"<{method.ContainingSymbol.Name}>g__{method.Name}|0_0", "MethodAttributes.Assembly | MethodAttributes.Static | MethodAttributes.HideBySig", method.ReturnType, method.ReturnsByRef, typeParameters);
+                methodName = $"<{method.ContainingSymbol.Name}>g__{method.Name}|0_0";
             }
             else
             {
                 methodDeclarationVar = method.MethodKind == MethodKind.Constructor
                     ? context.Naming.Constructor((BaseTypeDeclarationSyntax) method.ContainingType.DeclaringSyntaxReferences.SingleOrDefault()?.GetSyntax(), method.IsStatic)
                     : context.Naming.MethodDeclaration((BaseMethodDeclarationSyntax) method.DeclaringSyntaxReferences.SingleOrDefault()?.GetSyntax());
-
-                MethodDeclarationVisitor.AddMethodDefinition(context, methodDeclarationVar, method.Name, "MethodAttributes.Private", method.ReturnType, method.ReturnsByRef, typeParameters);
             }
 
+            var exps = CecilDefinitionsFactory.Method(context, methodDeclarationVar, methodName, "MethodAttributes.Private", method.ReturnType, method.ReturnsByRef, method.GetTypeParameterSyntax());
+            context.WriteCecilExpressions(exps);
+            
             foreach (var parameter in method.Parameters)
             {
                 var parameterExp = CecilDefinitionsFactory.Parameter(parameter, context.TypeResolver.Resolve(parameter.Type));
@@ -949,10 +961,10 @@ namespace Cecilifier.Core.AST
                 context.WriteNewLine();
                 context.WriteCecilExpression($"{methodDeclarationVar}.Parameters.Add({paramVar});");
                 context.WriteNewLine();
-
+            
                 context.DefinitionVariables.RegisterNonMethod(method.ToDisplayString(), parameter.Name, VariableMemberKind.Parameter, paramVar);
             }
-
+            
             context.DefinitionVariables.RegisterMethod(method.AsMethodDefinitionVariable(methodDeclarationVar));
         }
 
@@ -963,7 +975,7 @@ namespace Cecilifier.Core.AST
         }
 
         // Methods implementing explicit interfaces, static abstract methods from interfaces and overriden methods with covariant return types
-        // needs to be explicitly specify which methods they override.
+        // needs to explicitly specify which methods they override.
         protected void AddToOverridenMethodsIfAppropriated(string methodVar, IMethodSymbol method)
         {
             // first check explicit interface implementation...

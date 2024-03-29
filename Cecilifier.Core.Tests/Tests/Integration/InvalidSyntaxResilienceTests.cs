@@ -1,5 +1,7 @@
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using Cecilifier.Core.Misc;
 using Cecilifier.Core.Tests.Framework;
 using NUnit.Framework;
 
@@ -14,7 +16,7 @@ namespace Cecilifier.Core.Tests.Integration
             var codeString = "class C { void F(int i) { sitch(i) {} } }";
             using (var code = new MemoryStream(Encoding.ASCII.GetBytes(codeString)))
             {
-                Assert.Throws<SyntaxErrorException>(() => Cecilifier.Process(code, new CecilifierOptions { References = Utils.GetTrustedAssembliesPath() }).GeneratedCode.ReadToEnd());
+                Assert.Throws<SyntaxErrorException>(() => Cecilifier.Process(code, new CecilifierOptions { References = ReferencedAssemblies.GetTrustedAssembliesPath() }).GeneratedCode.ReadToEnd());
             }
         }
     }

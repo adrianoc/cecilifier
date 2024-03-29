@@ -25,18 +25,6 @@ namespace Cecilifier.Core.Tests.Integration
         }
 
         [Test]
-        public void NonVirtualMethodCallTest()
-        {
-            AssertResourceTest(@"CodeBlock/MethodCall/NonVirtualMethodCall");
-        }
-
-        [Test]
-        public void OutVariablesTest()
-        {
-            AssertResourceTest(@"CodeBlock/MethodCall/OutVariables");
-        }
-
-        [Test]
         [Ignore("Not Implemented yet")]
         public void NullCoalescingTest()
         {

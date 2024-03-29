@@ -39,6 +39,8 @@ public struct Constants
         public const string RefReturn = "ref-return";
         public const string Fixed = "fixed";
         public const string InRangeExpression = "in-range-expressions";
+        public const string MemberReferenceRequiresConstraint = "member-reference-requires-constraint";
+        public const string DefaultMemberTracker = "default-member-tracker"; // used to ensure only one DefaultMemberAttribute is added to a type even if it happens to have multiple indexers.
     }
 
     public struct CompilerGeneratedTypes
@@ -48,7 +50,7 @@ public struct Constants
         
         /// <summary>modifiers/name for compiler emitted type with field holding the data used to optimize array/stackalloc initialization</summary>
         public static string StaticArrayInitTypeNameFor(long size) =>  $"__StaticArrayInitTypeSize={size}";
-        public const string StaticArrayRawDataHolderTypeModifiers = "TypeAttributes.NestedPrivate | TypeAttributes.Sealed | TypeAttributes.AnsiClass | TypeAttributes.ExplicitLayout";
+        public const string StaticArrayRawDataHolderTypeModifiers = "TypeAttributes.NestedAssembly | TypeAttributes.Sealed | TypeAttributes.AnsiClass | TypeAttributes.ExplicitLayout";
         /// <summary>modifiers for compiler emitted field holding the data used to optimize array/stackalloc initialization</summary>
         public const string StaticArrayInitFieldModifiers = "FieldAttributes.Assembly | FieldAttributes.Static | FieldAttributes.InitOnly";
     }
@@ -56,6 +58,7 @@ public struct Constants
     public struct Common
     {
         public const string RuntimeHelpersInitializeArrayMethodName = "InitializeArray";
+        public const string RuntimeConfigJsonExt = ".runtimeconfig.json";
     }
 }
 

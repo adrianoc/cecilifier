@@ -8,7 +8,7 @@ Cecilifier is a tool meant to make it easier to learn how to use [Mono.Cecil](ht
 
 You can use it live in [this site](https://cecilifier.me/).
 
-Feel free to send comments, issues, MR, etc; I cannot promise I'll be responsive but I'll do my best.
+Feel free to send comments, issues, PR, etc; I cannot promise I'll be responsive but I'll do my best.
 
 How to help
 ---
@@ -144,18 +144,18 @@ How to report issues
 If you hit a problem and you think it is an issue/bug in the code please follow the steps to report it:
 
 - Search in the open/resolved issues to make sure it is not already known
-- If you cannot find anything open a new issue and do your best to:
-	- add a failing test (see [`How to add tests`](#how-to-add-tests))
+- If you cannot find anything, open a new issue and do your best to:
+	- add a failing test (see [`How to add tests`](#how-to-add-tests)) or a snippet that will trigger the error
 	- Make the title/description as clear / detailed as possible (do not assume anything; add as much details as possible)
 
-Including a failing test is the best way to ensure the processing of the issue will happen as quick as possible and avoid any unnecessary delays.
+Including a failing test/snippet is the best way to ensure the processing of the issue will happen as quick as possible and avoid any unnecessary delays.
 
 Community
 ---
 
 If you have any questions, suggestions or comments, feel free to join our discord channel at https://discord.gg/7P2sCk9 (I cannot guarantee that I'll be responsive but I'll do my best).
 
-You can also reach me through twitter [@adrianoverona](https://twitter.com/adrianoverona)
+You can also reach me through Mastodon [@adrianoverona](https://fosstodon.org/@adrianoverona)
 
 Build Status
 ---

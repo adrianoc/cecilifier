@@ -1,13 +1,18 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <LangVersion>11</LangVersion>
     <AssemblyVersion>2.00.0</AssemblyVersion>
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Mono.Cecil" Version="0.11.5" />
   </ItemGroup>
- 
+
+  <ItemGroup>
+    <ProjectReference Include="..\Cecilifier.TypeMapGenerator\Cecilifier.TypeMapGenerator.csproj" 
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+  </ItemGroup>
 </Project>

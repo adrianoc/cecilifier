@@ -1,8 +1,8 @@
 using System;
 using System.IO;
 using Cecilifier.Core.Extensions;
+using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
-using Cecilifier.Core.Tests.Framework;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Tests.Unit
@@ -93,7 +93,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             memoryStream.Write(System.Text.Encoding.ASCII.GetBytes(code));
             memoryStream.Position = 0;
 
-            return Cecilifier.Process(memoryStream, new CecilifierOptions { References = Utils.GetTrustedAssembliesPath(), Naming = nameStrategy });
+            return Cecilifier.Process(memoryStream, new CecilifierOptions { References = ReferencedAssemblies.GetTrustedAssembliesPath(), Naming = nameStrategy });
         }
     }
 }

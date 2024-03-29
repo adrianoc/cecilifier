@@ -29,6 +29,7 @@ namespace Cecilifier.Core.AST
         void EmitCilInstruction(string ilVar, OpCode opCode);
         void EmitCilInstruction<T>(string ilVar, OpCode opCode, T operand, string comment = null);
         void WriteCecilExpression(string expression);
+        void WriteCecilExpressions(IEnumerable<string> expressions);
         void WriteComment(string comment);
         void WriteNewLine();
         
@@ -44,6 +45,10 @@ namespace Cecilifier.Core.AST
         #region Flags Handling
         T WithFlag<T>(string name) where T : struct, IDisposable;
         bool HasFlag(string name);
+
+        void SetFlag(string name, string value = null);
+        bool TryGetFlag(string name, out string value);
+        void ClearFlag(string name);
 
         #endregion
 

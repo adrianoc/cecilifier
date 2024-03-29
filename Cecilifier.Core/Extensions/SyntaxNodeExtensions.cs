@@ -144,5 +144,15 @@ namespace Cecilifier.Core.Extensions
         }
 
         internal static bool IsMemberAccessOnElementAccess(this SyntaxNode self) => self.IsKind(SyntaxKind.ElementAccessExpression) && self.Parent is MemberAccessExpressionSyntax mae && mae.Expression == self;
+
+        internal static bool TryGetLiteralValueFor<T>(this ExpressionSyntax expressionSyntax, out T value)
+        {
+            value = default;
+            if (expressionSyntax is not LiteralExpressionSyntax literalExpression)
+                return false;
+
+            value = (T) literalExpression.Token.Value;
+            return true;
+        }
     }
 }

@@ -1,0 +1,9 @@
+﻿{
+  "$schema": "https://json.schemastore.org/launchsettings.json",
+  "profiles": {
+    "DebugRoslynSourceGenerator": {
+      "commandName": "DebugRoslynComponent",
+      "targetProject": "../Cecilifier.TypeMapGenerator.Sample/Cecilifier.TypeMapGenerator.Sample.csproj"
+    }
+  }
+}
