@@ -76,12 +76,12 @@ namespace Cecilifier.Core.AST
                 if (node.Statement.IsKind(SyntaxKind.LocalFunctionStatement))
                 {
                     context.WriteComment($"Local function: {node.HumanReadableSummary()}");
-                    StatementVisitor.Visit(context, ilVar, node.Statement);
+                    StatementVisitor.Visit(context, ilVar, node);
                     context.WriteComment("End of local function.");
                     context.WriteNewLine();
                 }
                 else
-                    StatementVisitor.Visit(context, ilVar, node.Statement);
+                    StatementVisitor.Visit(context, ilVar, node);
             }
 
             var root = (CompilationUnitSyntax) node.SyntaxTree.GetRoot();

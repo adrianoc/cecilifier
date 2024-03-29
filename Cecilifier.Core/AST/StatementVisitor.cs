@@ -52,13 +52,16 @@ namespace Cecilifier.Core.AST
 
             var forConditionLabel = AddCilInstructionWithLocalVariable(_ilVar, OpCodes.Nop);
 
+            Context.WriteComment("for condition");
             // Condition
             ExpressionVisitor.Visit(Context, _ilVar, node.Condition);
             Context.EmitCilInstruction(_ilVar, OpCodes.Brfalse, forEndLabel);
 
             // Body
+            Context.WriteComment("for body");
             node.Statement.Accept(this);
 
+            Context.WriteComment("for increment");
             // Increment
             foreach (var incrementExpression in node.Incrementors)
             {

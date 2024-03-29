@@ -128,19 +128,19 @@ public class OperatorsTests : CecilifierUnitTestBase
 
     [TestCase(
         "int i = 42; i -= 10;",
-        @"(il_topLevelMain_\d\.Emit\(OpCodes\.)Ldc_I4, 42\);\s+\1Stloc, (l_i_\d+)\);\s+\1Ldloc, \2\);\s+\1Ldc_I4, 10\);\s+\1Sub\);\s+\1Stloc, \2\);\s+m_topLevelStatements_1\.Body\.Instructions\.Add\(.+OpCodes\.Ret\)\);",
+        @"(il_topLevelMain_\d\.Emit\(OpCodes\.)Ldc_I4, 42\);\s+\1Stloc, (l_i_\d+)\);\s+//i -= 10;\s+\1Ldloc, \2\);\s+\1Ldc_I4, 10\);\s+\1Sub\);\s+\1Stloc, \2\);\s+m_topLevelStatements_1\.Body\.Instructions\.Add\(.+OpCodes\.Ret\)\);",
         TestName = "Numeric Primitive Subtraction")]
     [TestCase(
         "int i = 10; i += 32;",
-        @"(il_topLevelMain_\d\.Emit\(OpCodes\.)Ldc_I4, 10\);\s+\1Stloc, (l_i_\d+)\);\s+\1Ldloc, \2\);\s+\1Ldc_I4, 32\);\s+\1Add\);\s+\1Stloc, \2\);\s+m_topLevelStatements_1\.Body\.Instructions\.Add\(.+OpCodes\.Ret\)\);",
+        @"(il_topLevelMain_\d\.Emit\(OpCodes\.)Ldc_I4, 10\);\s+\1Stloc, (l_i_\d+)\);\s+//i \+= 32;\s+\1Ldloc, \2\);\s+\1Ldc_I4, 32\);\s+\1Add\);\s+\1Stloc, \2\);\s+m_topLevelStatements_1\.Body\.Instructions\.Add\(.+OpCodes\.Ret\)\);",
         TestName = "Numeric Primitive Addition")]
     [TestCase(
         "int []a = new[] { 10 }; a[0] += 32; System.Console.WriteLine(a[0]);",
-        @"(il_topLevelMain_\d+\.Emit\(OpCodes\.)Ldc_I4, 1\);\s+\1Newarr, .+Int32\);\s+\1Dup\);\s+\1Ldc_I4, 0\);\s+\1Ldc_I4, 10\);\s+\1Stelem_I4\);\s+\1Stloc, (l_a_\d+)\);\s+\1Ldloc, \2\);\s+\1Ldc_I4, 0\);\s+\1Ldloc, \2\);\s+\1Ldc_I4, 0\);\s+\1Ldelem_I4\);\s+\1Ldc_I4, 32\);\s+\1Add\);\s+\1Stelem_I4\);",
+        @"(il_topLevelMain_\d+\.Emit\(OpCodes\.)Ldc_I4, 1\);\s+\1Newarr, .+Int32\);\s+\1Dup\);\s+\1Ldc_I4, 0\);\s+\1Ldc_I4, 10\);\s+\1Stelem_I4\);\s+\1Stloc, (l_a_\d+)\);\s+//a\[0\] \+= 32;\s+\1Ldloc, \2\);\s+\1Ldc_I4, 0\);\s+\1Ldloc, \2\);\s+\1Ldc_I4, 0\);\s+\1Ldelem_I4\);\s+\1Ldc_I4, 32\);\s+\1Add\);\s+\1Stelem_I4\);",
         TestName = "Array Numeric Primitive")]
     [TestCase(
         "string s = \"10\"; s += \"32\";",
-        @"(il_topLevelMain_\d\.Emit\(OpCodes\.)Ldstr, ""10""\);\s+\1Stloc, (l_s_\d+)\);\s+\1Ldloc, \2\);\s+\1Ldstr, ""32""\);\s+\1Call, .+Import\(typeof\(string\)\.GetMethod\(""Concat"".+\)\);\s+\1Stloc, \2\);\s+m_topLevelStatements_1\.Body\.Instructions\.Add\(.+OpCodes\.Ret\)\);",
+        @"(il_topLevelMain_\d\.Emit\(OpCodes\.)Ldstr, ""10""\);\s+\1Stloc, (l_s_\d+)\);\s+//s \+= ""32"";\s+\1Ldloc, \2\);\s+\1Ldstr, ""32""\);\s+\1Call, .+Import\(typeof\(string\)\.GetMethod\(""Concat"".+\)\);\s+\1Stloc, \2\);\s+m_topLevelStatements_1\.Body\.Instructions\.Add\(.+OpCodes\.Ret\)\);",
         TestName = "String")]
     [TestCase(
         "C c = new C(); c += 42; class C { public static C operator+(C c, int i) => c; }",

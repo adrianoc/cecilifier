@@ -225,11 +225,13 @@ public class ObjectInitializerTests : CecilifierUnitTestBase
     
     [TestCase("Bar []ba = new Bar[1]; ba[0] = new Bar { Value = 3 };", 
         """
-        var l_ba_19 = new VariableDefinition\(st_bar_0.MakeArrayType\(\)\);
+        \s+//Bar \[\]ba = new Bar\[1\];
+        \s+var l_ba_19 = new VariableDefinition\(st_bar_0.MakeArrayType\(\)\);
         \s+m_topLevelStatements_14.Body.Variables.Add\(l_ba_19\);
         (\s+il_topLevelMain_\d+\.Emit\(OpCodes\.)Ldc_I4, 1\);
         \1Newarr, st_bar_0\);
         \1Stloc, l_ba_19\);
+        \s+//ba\[0\] = new Bar { Value = 3 };
         \1Ldloc, l_ba_19\);
         \1Ldc_I4, 0\);
         \1Ldelema, st_bar_0\);
