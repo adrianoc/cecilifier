@@ -224,10 +224,7 @@ namespace Cecilifier.Core.AST
             var exp1 = $"var {openCompExcVar} = {Utils.ImportFromMainModule("typeof(System.Threading.Interlocked).GetMethods().Single(m => m.Name == \"CompareExchange\" && m.IsGenericMethodDefinition)")};";
 
             compExcVar = Context.Naming.MemberReference("compExc");
-            var exp2 = $"var {compExcVar} = new GenericInstanceMethod({openCompExcVar});";
-            var exp3 = $"{compExcVar}.GenericArguments.Add({backingFieldVar}.FieldType);";
-
-            return new[] { exp1, exp2, exp3 };
+            return new[] { exp1 }.Concat(openCompExcVar.MakeGenericInstanceMethod(compExcVar, [$"{backingFieldVar}.FieldType"]));
         }
 
         private IEnumerable<string> AddParameterTo(string methodVar, string fieldType)

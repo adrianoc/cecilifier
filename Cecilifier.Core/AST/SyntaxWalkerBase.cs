@@ -5,7 +5,6 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
-using Cecilifier.Core.CodeGeneration;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
@@ -65,12 +64,9 @@ namespace Cecilifier.Core.AST
             {
                 // If the generic method is an open one or if it is defined in the same assembly then the call need to happen in the generic instance method (note that for 
                 // methods defined in the snippet being cecilified, even if 'method' represents a generic instance method, MethodResolverExpression() will return the open
-                // generic one instead.
+                // generic one instead).
                 var genInstVar = Context.Naming.GenericInstance(method);
-                AddCecilExpression($"var {genInstVar} = new GenericInstanceMethod({operand});");
-                foreach (var t in method.TypeArguments)
-                    AddCecilExpression($"{genInstVar}.GenericArguments.Add({Context.TypeResolver.Resolve(t)});");
-
+                Context.WriteCecilExpressions(operand.MakeGenericInstanceMethod(genInstVar, method.TypeArguments.Select(t => Context.TypeResolver.Resolve(t))));
                 operand = genInstVar;
             }
 
