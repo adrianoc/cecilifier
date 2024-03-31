@@ -105,7 +105,7 @@ namespace Cecilifier.Core.AST
             IEnumerable<string> methodBodyExpressions = Array.Empty<string>();
             if (!isInterfaceDef)
             {
-                var localVarsExps = CreateLocalVarsForAddMethod(methodVar, backingFieldVar);
+                var localVarsExps = CreateLocalVarsForEventRegistrationMethods(methodVar, backingFieldVar);
                 methodBodyExpressions = methodBodyFactory(node, eventSymbol, backingFieldVar, methodVar)
                                                 .Concat(localVarsExps)
                                                 .Append($"{methodVar}.Body.InitLocals = true;");
@@ -133,7 +133,7 @@ namespace Cecilifier.Core.AST
             return node.Modifiers.ModifiersForSyntheticMethod("MethodAttributes.SpecialName", typeSymbol);
         }
 
-        private IEnumerable<string> CreateLocalVarsForAddMethod(string methodVar, string backingFieldVar)
+        private IEnumerable<string> CreateLocalVarsForEventRegistrationMethods(string methodVar, string backingFieldVar)
         {
             for (int i = 0; i < 3; i++)
                 yield return $"{methodVar}.Body.Variables.Add(new VariableDefinition({backingFieldVar}.FieldType));";
@@ -223,8 +223,7 @@ namespace Cecilifier.Core.AST
             var openCompExcVar = Context.Naming.MemberReference("openCompExc");
             var exp1 = $"var {openCompExcVar} = {Utils.ImportFromMainModule("typeof(System.Threading.Interlocked).GetMethods().Single(m => m.Name == \"CompareExchange\" && m.IsGenericMethodDefinition)")};";
 
-            compExcVar = Context.Naming.MemberReference("compExc");
-            return new[] { exp1 }.Concat(openCompExcVar.MakeGenericInstanceMethod(compExcVar, [$"{backingFieldVar}.FieldType"]));
+            return new[] { exp1 }.Concat(openCompExcVar.MakeGenericInstanceMethod(Context, "compExp", [$"{backingFieldVar}.FieldType"], out compExcVar));
         }
 
         private IEnumerable<string> AddParameterTo(string methodVar, string fieldType)

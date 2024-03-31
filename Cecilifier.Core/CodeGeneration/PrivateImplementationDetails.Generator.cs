@@ -72,15 +72,17 @@ internal partial class PrivateImplementationDetailsGenerator
                                                             return context.TypeResolver.Resolve(context.RoslynTypeSystem.SystemSpan).MakeGenericInstanceType(spanTypeParameter);
                                                         });
 
+        context.WriteCecilExpressions(methodExpressions);
+        
         var tBufferVar = ResolveOwnedGenericParameter(context, "TBuffer", methodTypeQualifiedName);
         var tElementVar = ResolveOwnedGenericParameter(context, "TElement", methodTypeQualifiedName);
 
-        var unsafeAsVar = context.Naming.SyntheticVariable("unsafeAs", ElementKind.GenericInstance);
-        var unsafeAsExps = GetUnsafeAsMethod(context).MethodResolverExpression(context).MakeGenericInstanceMethod(unsafeAsVar, [tBufferVar, tElementVar]);
+        context.WriteComment("Unsafe.As() generic instance method");
+        var unsafeAsVar = GetUnsafeAsMethod(context).MethodResolverExpression(context).MakeGenericInstanceMethod(context, "unsafeAs", [tBufferVar, tElementVar]);
         
-        var memoryMarshalCreateSpanVar = context.Naming.SyntheticVariable("createSpan", ElementKind.GenericInstance);
-        var memoryMarshalCreateSpanExps = GetMemoryMarshalCreateSpanMethod(context).MethodResolverExpression(context).MakeGenericInstanceMethod(memoryMarshalCreateSpanVar, [tElementVar]);
-        
+        context.WriteComment("MemoryMarshal.CreateSpan() generic instance method");
+        var memoryMarshalCreateSpanVar = GetMemoryMarshalCreateSpanMethod(context).MethodResolverExpression(context).MakeGenericInstanceMethod(context, "createSpan", [tElementVar]);
+
         var methodBodyExpressions = CecilDefinitionsFactory.MethodBody(
             methodVar,
             [
@@ -91,17 +93,7 @@ internal partial class PrivateImplementationDetailsGenerator
                 OpCodes.Ret
             ]);
 
-        var finalExps = methodExpressions
-                                            .Append("")
-                                            .Append("// Unsafe.As() generic instance method")
-                                            .Concat(unsafeAsExps)
-                                            .Append("")
-                                            .Append("// MemoryMarshal.CreateSpan() generic instance method")
-                                            .Concat(memoryMarshalCreateSpanExps)
-                                            .Append("")
-                                            .Concat(methodBodyExpressions)
-                                            .Append($"{privateImplementationDetailsVar.VariableName}.Methods.Add({methodVar});");
-        
+        var finalExps = methodBodyExpressions.Append($"{privateImplementationDetailsVar.VariableName}.Methods.Add({methodVar});");
         context.WriteCecilExpressions(finalExps);
         
         return methodVar;
@@ -156,13 +148,14 @@ internal partial class PrivateImplementationDetailsGenerator
                                                             return spanTypeParameter.MakeByReferenceType();
                                                         });
 
-        var tbufferTypeParameter = ResolveOwnedGenericParameter(context, "TBuffer", methodTypeQualifiedName);
-        var telementTypeParameter = ResolveOwnedGenericParameter(context, "TElement", methodTypeQualifiedName);
+        context.WriteCecilExpressions(methodExpressions);
+        
+        var tBufferTypeParameter = ResolveOwnedGenericParameter(context, "TBuffer", methodTypeQualifiedName);
+        var tElementTypeParameter = ResolveOwnedGenericParameter(context, "TElement", methodTypeQualifiedName);
 
-        var unsafeAsVarName = context.Naming.SyntheticVariable("unsafeAs", ElementKind.GenericInstance);
-        var unsafeAsExps = GetUnsafeAsMethod(context)
+        var unsafeAsVarName = GetUnsafeAsMethod(context)
             .MethodResolverExpression(context)
-            .MakeGenericInstanceMethod(unsafeAsVarName, [tbufferTypeParameter, telementTypeParameter]);
+            .MakeGenericInstanceMethod(context, "unsafeAs", [tBufferTypeParameter, tElementTypeParameter]);
 
         var methodBodyExpressions = CecilDefinitionsFactory.MethodBody(
             methodVar,
@@ -172,11 +165,7 @@ internal partial class PrivateImplementationDetailsGenerator
                 OpCodes.Ret
             ]);
         
-        foreach (var exp in methodExpressions.Concat(unsafeAsExps).Concat(methodBodyExpressions))
-        {
-            context.WriteCecilExpression(exp);
-            context.WriteNewLine();
-        }
+        context.WriteCecilExpressions(methodBodyExpressions);
         
         context.WriteCecilExpression($"{privateImplementationDetailsVar.VariableName}.Methods.Add({methodVar});");
         context.WriteNewLine();
@@ -215,18 +204,18 @@ internal partial class PrivateImplementationDetailsGenerator
                                                             return spanTypeParameter.MakeByReferenceType();
                                                         });
 
+        context.WriteCecilExpressions(methodExpressions);
+        
         var tbufferTypeParameter = ResolveOwnedGenericParameter(context, "TBuffer", methodTypeQualifiedName);
         var telementTypeParameter = ResolveOwnedGenericParameter(context, "TElement", methodTypeQualifiedName);
 
-        var unsafeAsVarName = context.Naming.SyntheticVariable("unsafeAs", ElementKind.GenericInstance);
-        var unsafeAsExps = GetUnsafeAsMethod(context)
+        var unsafeAsVarName = GetUnsafeAsMethod(context)
                                         .MethodResolverExpression(context)
-                                        .MakeGenericInstanceMethod(unsafeAsVarName, [tbufferTypeParameter, telementTypeParameter]);
+                                        .MakeGenericInstanceMethod(context, "unsafeAs", [tbufferTypeParameter, telementTypeParameter]);
         
-        var unsafeAddVarName = context.Naming.SyntheticVariable("unsafeAdd", ElementKind.GenericInstance);
-        var unsafeAddExps = GetUnsafeAddMethod(context)
+        var unsafeAddVarName = GetUnsafeAddMethod(context)
                                         .MethodResolverExpression(context)
-                                        .MakeGenericInstanceMethod(unsafeAddVarName, [telementTypeParameter]);
+                                        .MakeGenericInstanceMethod(context, "unsafeAdd", [telementTypeParameter]);
         
         var methodBodyExpressions = CecilDefinitionsFactory.MethodBody(
             methodVar,
@@ -238,12 +227,7 @@ internal partial class PrivateImplementationDetailsGenerator
                 OpCodes.Ret
             ]);
         
-        foreach (var exp in methodExpressions.Concat(unsafeAsExps).Concat(unsafeAddExps).Concat(methodBodyExpressions))
-        {
-            context.WriteCecilExpression(exp);
-            context.WriteNewLine();
-        }
-        
+        context.WriteCecilExpressions(methodBodyExpressions);
         context.WriteCecilExpression($"{privateImplementationDetailsVar.VariableName}.Methods.Add({methodVar});");
         context.WriteNewLine();
         context.WriteComment("-------------------------------");

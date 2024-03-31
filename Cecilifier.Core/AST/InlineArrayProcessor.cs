@@ -160,21 +160,13 @@ public class InlineArrayProcessor
     
     private static string PrivateImplementationInlineArrayGenericInstanceMethodFor(IVisitorContext context, string openGenericTypeVar, string methodName, ITypeSymbol inlineArrayType)
     {
-        var varName = context.Naming.SyntheticVariable(methodName, ElementKind.GenericInstance);
-
-        var exps = openGenericTypeVar.MakeGenericInstanceMethod(
-            varName,
-            [
-                context.TypeResolver.Resolve(inlineArrayType), // TBuffer 
-                context.TypeResolver.Resolve(InlineArrayElementTypeFrom(inlineArrayType)) // TElement 
-            ]);
-
-        foreach (var exp in exps)
-        {
-            context.WriteCecilExpression(exp);
-            context.WriteNewLine();
-        }
-
+        var varName = openGenericTypeVar.MakeGenericInstanceMethod(
+                                context,
+                                methodName,
+                                [
+                                    context.TypeResolver.Resolve(inlineArrayType), // TBuffer
+                                    context.TypeResolver.Resolve(InlineArrayElementTypeFrom(inlineArrayType)) // TElement
+                                ]);
         return varName;
     }
 

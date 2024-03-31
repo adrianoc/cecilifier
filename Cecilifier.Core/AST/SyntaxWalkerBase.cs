@@ -65,9 +65,7 @@ namespace Cecilifier.Core.AST
                 // If the generic method is an open one or if it is defined in the same assembly then the call need to happen in the generic instance method (note that for 
                 // methods defined in the snippet being cecilified, even if 'method' represents a generic instance method, MethodResolverExpression() will return the open
                 // generic one instead).
-                var genInstVar = Context.Naming.GenericInstance(method);
-                Context.WriteCecilExpressions(operand.MakeGenericInstanceMethod(genInstVar, method.TypeArguments.Select(t => Context.TypeResolver.Resolve(t))));
-                operand = genInstVar;
+                operand = operand.MakeGenericInstanceMethod(Context, method.Name, method.TypeArguments.Select(t => Context.TypeResolver.Resolve(t)).ToArray());
             }
 
             if (Context.TryGetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, out var constrainedType))
