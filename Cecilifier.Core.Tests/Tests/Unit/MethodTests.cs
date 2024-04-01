@@ -90,4 +90,14 @@ public class MethodTests : CecilifierUnitTestBase
             \s+\2Ret\);
             """));
     }
+
+    [TestCase("void M() { return; }")]
+    [TestCase("void M(int i) { if(i > 10) return; }")]
+    [TestCase("class Foo { void M() { return; } }")]
+    public void VoidReturningMethod_WithExplicitReturn_DoesNotCrash(string code)
+    {
+        var result = RunCecilifier(code);
+        
+        Assert.Pass("Works");
+    }
 }
