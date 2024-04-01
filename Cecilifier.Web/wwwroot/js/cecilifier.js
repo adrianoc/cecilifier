@@ -7,6 +7,14 @@ let blockMappings = null;
 let csharpCodeEditorWidthMultiplier = 0.3;
 let compilationErrorToast = null; // toast informing user about compilation errors. This reference is used to close the toast before cecilifying code.
 
+const CecilifierResponseStatus = Object.freeze({
+    Success: 0,
+    SyntaxError: 1,
+    InternalError: 2,
+    MissingAssemblies: 3,
+    ConnectionEstablished: 4,
+});
+
 class CecilifierRequest
 {
     constructor(code, options, settings, assemblyReferences) {
@@ -16,6 +24,7 @@ class CecilifierRequest
         this.assemblyReferences = assemblyReferences;
     }
 }
+
 class WebOptions
 {
     constructor(deployKind) {
@@ -791,9 +800,9 @@ function initializeWebSocket() {
         
         // this is where we get the cecilified code back...
         let response = JSON.parse(event.data);
-        if (response.status === 0) {
-
-
+        if (response.status === CecilifierResponseStatus.Success) {
+            updateUsageStatisticsToolTip(response);
+            
             if (response.kind === 'Z') {
                 setTimeout(function() {
                     const buttonId = createProjectZip(base64ToArrayBuffer(response.cecilifiedCode), response.mainTypeName + ".zip", 'application/zip');
@@ -801,17 +810,14 @@ function initializeWebSocket() {
                 });
             }
             else {
-                cecilifiedCode.setValue(response.cecilifiedCode);
-                updateUsageStatisticsToolTip(response);
-                
+                cecilifiedCode.setValue(response.cecilifiedCode);                
                 // save the returned mappings used to map between code snippet <-> Cecilified Code.
                 blockMappings = response.mappings;
             }
-        } else if (response.status === 4) {
+        } else if (response.status === CecilifierResponseStatus.ConnectionEstablished) {
             let response = JSON.parse(event.data);
             updateUsageStatisticsToolTip(response);
-            
-        } else if (response.status === 1) {
+        } else if (response.status === CecilifierResponseStatus.SyntaxError) {
             let compilerErrors = response.errors;
             for(let i = 0; i < compilerErrors.length; i++) {
                 compilerErrors[i].severity = monaco.MarkerSeverity.Error;
@@ -832,9 +838,9 @@ function initializeWebSocket() {
                 ]
             });         
             
-        } else if (response.status === 2) {
+        } else if (response.status === CecilifierResponseStatus.InternalError) {
             ShowErrorDialog("", response.error, "We've got an internal error.");
-        } else if (response.status === 3) {
+        } else if (response.status === CecilifierResponseStatus.MissingAssemblies) {
             console.log(`Cecilifier server asked for missing assemblies => ${response.missingAssemblies}`);            
             sendMissingAssemblyReferences(response.missingAssemblies, function () {
                 send(websocket, response.originalFormat);
