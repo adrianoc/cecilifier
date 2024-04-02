@@ -58,7 +58,7 @@ function showReleaseNotes() {
                 message: `Error retrieving release notes.`,
                 dismissible: true,
                 status: "Warning",
-                timeout: 120000,
+                timeout: 45000,
                 icon: "exclamation"
             });
 

@@ -161,7 +161,7 @@
 </script>
 
 <script>
-    initializeSite("@Model.ErrorAccessingGist", "@fromGist", "@this.GetType().Assembly.GetName().Version");
+    initializeSite("@Model.ErrorAccessingGist", "@fromGist", "@Request.Path", "@Request.Query["remove"]", "@GetType().Assembly.GetName().Version");
 </script>
 
 <script>
