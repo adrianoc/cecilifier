@@ -127,7 +127,24 @@ function decreaseFocusedEditorFontSize() {
     const newFontSize = options.fontSize -  1;
     focusedEditor.updateOptions({ fontSize: newFontSize });
 }
-function initializeSite(errorAccessingGist, gist, requestPath, removeStoredSnippet, version) {
+function initializeSite(
+    errorAccessingGist, // error message if accessing the gist produced an error. 
+    gist, // contents of a gist; this is set when user navigates to https://cecilifier.me?gistid=[gistid] 
+    requestPath, // something like `/name` where `name` is the string used to store the snippet in the browser local store.
+    removeStoredSnippet, // user has requested to remove the contents of a snippet from the browser local store
+    pageNotFoundPath, // if user navigated to a non-existing page in cecilifier this will contain the path of the page.
+    version) {
+    
+    if (pageNotFoundPath != null && pageNotFoundPath.length > 0) {
+        SnackBar({
+            message: `Requested path ${pageNotFoundPath} is not valid.`,
+            dismissible: true,
+            status: "Warning",
+            timeout: 30000,
+            icon: "exclamation"
+        });
+    }
+        
     require.config({ paths: { vs: 'lib/node_modules/monaco-editor/min/vs' } });
 
     require(['vs/editor/editor.main'], function () {
