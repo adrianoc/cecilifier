@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
@@ -80,10 +81,10 @@ namespace Cecilifier.Core.Extensions
             };
 
         [return: NotNull]
-        public static T EnsureNotNull<T>([NotNullIfNotNull("symbol")] this T symbol) where T : ISymbol
+        public static T EnsureNotNull<T>([NotNullIfNotNull("symbol")] this T symbol, [CallerArgumentExpression(nameof(symbol))] string expression = null) where T : ISymbol
         {
             if (symbol == null)
-                throw new System.NotSupportedException("");
+                throw new NullReferenceException($"Expression '{expression}' is expected to not be null.");
 
             return symbol;
         }
