@@ -60,5 +60,10 @@ public struct Constants
         public const string RuntimeHelpersInitializeArrayMethodName = "InitializeArray";
         public const string RuntimeConfigJsonExt = ".runtimeconfig.json";
     }
+
+    public struct FrontEnd
+    {
+        public const string PathNotFoundRedirectQueryParameter = "redirectedFrom";
+    }
 }
 
