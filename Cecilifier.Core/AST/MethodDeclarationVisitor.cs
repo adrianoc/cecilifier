@@ -24,7 +24,11 @@ namespace Cecilifier.Core.AST
         public override void VisitLocalFunctionStatement(LocalFunctionStatementSyntax node)
         {
             var methodSymbol = Context.SemanticModel.GetDeclaredSymbol(node).EnsureNotNull<ISymbol, IMethodSymbol>($"Method symbol for {node.Identifier} could not be resolved.");
-
+            if (!NoCapturedVariableValidator.IsValid(Context, node))
+            {
+                Context.WriteComment("To make ensure local functions dont capture variables, declare them as static.");
+            }
+            
             // Local functions have a well defined list of modifiers.
             var modifiers = SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.InternalKeyword));
             if (methodSymbol.IsStatic)

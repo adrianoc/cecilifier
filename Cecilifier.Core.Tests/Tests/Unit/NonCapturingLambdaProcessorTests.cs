@@ -23,9 +23,9 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             Assert.That(context.Output, Contains.Substring("/Synthetic method for lambda expression"));
         }
 
-        [TestCase("class Foo { void Bar(int fromParentMethod) { System.Func<int, int> fi = i => i + fromParentMethod ; }  }", "//Lambdas that captures context are not supported. Lambda expression 'i => i + fromParentMethod' captures fromParentMethod", TestName = "Capture Parameter")]
-        [TestCase("class Foo { int field; System.Func<int, int> Bar() => i => i + field; }", "//Lambdas that captures context are not supported. Lambda expression 'i => i + field' captures field", TestName = "Capture Field")]
-        [TestCase("class Foo { void Bar() { int local = 10; System.Func<int, int> fi = i => i + local ; }  }", "//Lambdas that captures context are not supported. Lambda expression 'i => i + local' captures local", TestName = "Capture Local")]
+        [TestCase("class Foo { void Bar(int fromParentMethod) { System.Func<int, int> fi = i => i + fromParentMethod ; }  }", "//Anonymous method / lambda that captures context are not supported. Node 'i => i + fromParentMethod' captures fromParentMethod", TestName = "Capture Parameter")]
+        [TestCase("class Foo { int field; System.Func<int, int> Bar() => i => i + field; }", "//Anonymous method / lambda that captures context are not supported. Node 'i => i + field' captures field", TestName = "Capture Field")]
+        [TestCase("class Foo { void Bar() { int local = 10; System.Func<int, int> fi = i => i + local ; }  }", "//Anonymous method / lambda that captures context are not supported. Node 'i => i + local' captures local", TestName = "Capture Local")]
         public void Captured_Variables_AreDetected(string source, string expected)
         {
             var context = RunProcessorOn(source);
