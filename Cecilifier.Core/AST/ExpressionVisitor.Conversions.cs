@@ -91,7 +91,7 @@ partial class ExpressionVisitor
         }
 
         // Empirically (verified in generated IL), expressions of type parameter used as:
-        //    1. Target of a call, unless the type parameter
+        //    1. Target of a member reference, unless the type parameter
         //       - is unconstrained (i.e, method being invoked comes from System.Object) or
         //       - is constrained to an interface, but not to a reference type or
         //       - is constrained to 'struct'
@@ -125,7 +125,9 @@ partial class ExpressionVisitor
 
             static bool NeedsBoxingUsedAsTargetOfReference(IVisitorContext context, ExpressionSyntax expression)
             {
-                if (((CSharpSyntaxNode) expression.Parent).Accept(UsageVisitor.GetInstance(context)) != UsageKind.CallTarget) return false;
+                if (!expression.Parent.IsKind(SyntaxKind.SimpleMemberAccessExpression))
+                    return false;
+                
                 var symbol = ModelExtensions.GetSymbolInfo(context.SemanticModel, expression).Symbol;
                 // only triggers when expression `T` used in T.Method() (i.e, abstract static methods from an interface)
                 if (symbol is { Kind: SymbolKind.TypeParameter }) return false;

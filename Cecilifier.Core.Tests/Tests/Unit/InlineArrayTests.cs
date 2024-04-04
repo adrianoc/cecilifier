@@ -334,9 +334,10 @@ public class InlineArrayTests : CecilifierUnitTestBase
         """
         (gi_inlineArrayFirstElementRef_\d+).GenericArguments.Add\((gp_T_\d+)\);
         (\s+il_M_\d+\.Emit\(OpCodes\.)Call, \1\);
-        xxxx\3Constrained, \2\);
-        \3Callvirt, m_get_\d+\);
-        """, IgnoreReason = "https://github.com/adrianoc/cecilifier/issues/274", TestName = "Field access on class")]
+        \3Ldobj, \2\);
+        \3Box, \2\);
+        \3Ldfld, fld_value_\d+\);
+        """, TestName = "Field access on class")]
     public void InlineArray_ElementAccess_OnGenericType(string toBeTested, string expecetdIL)
     {
         var result = RunCecilifier($$"""
