@@ -115,7 +115,7 @@ namespace Cecilifier.Core.AST
 
         private string AddOrUpdateParameterlessCtorDefinition(string typeName, string ctorAccessibility, bool isStatic, string ctorLocalVar)
         {
-            var found = Context.DefinitionVariables.GetMethodVariable(new MethodDefinitionVariable(typeName, Utils.ConstructorMethodName(isStatic), Array.Empty<string>()));
+            var found = Context.DefinitionVariables.GetMethodVariable(new MethodDefinitionVariable(typeName, Utils.ConstructorMethodName(isStatic), [], 0));
             if (found.IsValid)
             {
                 ctorLocalVar = found.VariableName;

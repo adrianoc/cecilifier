@@ -4,12 +4,16 @@ namespace Cecilifier.Core.Variables;
 
 public class MethodDefinitionVariable : DefinitionVariable, IEquatable<MethodDefinitionVariable>
 {
-    public MethodDefinitionVariable(string parentTypeName, string methodName, string[] parameterTypeName, string variableName = null) : base(parentTypeName, methodName, VariableMemberKind.Method, variableName)
+    public MethodDefinitionVariable(string parentTypeName, string methodName, string[] parameterTypeName, int typeParameterCountCount, string variableName = null) 
+        : base(parentTypeName, methodName, VariableMemberKind.Method, variableName)
     {
         Parameters = parameterTypeName;
+        TypeParameterCount = typeParameterCountCount;
     }
 
     private string[] Parameters { get; }
+    
+    private int TypeParameterCount { get; }
 
     public bool Equals(MethodDefinitionVariable other)
     {
@@ -41,7 +45,7 @@ public class MethodDefinitionVariable : DefinitionVariable, IEquatable<MethodDef
             }
         }
 
-        return true;
+        return TypeParameterCount == other.TypeParameterCount;
     }
 
     public static bool operator ==(MethodDefinitionVariable lhs, MethodDefinitionVariable rhs)
@@ -78,7 +82,9 @@ public class MethodDefinitionVariable : DefinitionVariable, IEquatable<MethodDef
     {
         unchecked
         {
-            return (base.GetHashCode() * 397) ^ (Parameters != null ? Parameters.GetHashCode() : 0);
+            return (base.GetHashCode() * 397) 
+                   ^ (Parameters != null ? Parameters.GetHashCode() : 0)
+                   ^ TypeParameterCount.GetHashCode();
         }
     }
 }

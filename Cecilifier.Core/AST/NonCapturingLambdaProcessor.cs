@@ -98,7 +98,7 @@ namespace Cecilifier.Core.AST
 
             // Register the newly introduced method so we can replace the lambda with the method later.
             // Use the lambda string representation as the name of the method in order to allow us to look it up.
-            using (context.DefinitionVariables.WithCurrentMethod(string.Empty, lambda.ToString(), Array.Empty<string>(), methodVar))
+            using (context.DefinitionVariables.WithCurrentMethod(string.Empty, lambda.ToString(), [], 0, methodVar))
             {
                 if (lambda.Block != null)
                 {
