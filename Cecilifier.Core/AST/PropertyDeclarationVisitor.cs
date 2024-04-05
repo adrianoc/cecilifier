@@ -185,7 +185,7 @@ namespace Cecilifier.Core.AST
 
                 var localParams = new List<string>(parameters.Select(p => p.Type));
                 localParams.Add(Context.GetTypeInfo(node.Type).Type.ToDisplayString()); // Setters always have at least one `value` parameter.
-                using (Context.DefinitionVariables.WithCurrentMethod(declaringType.Identifier.Text, $"set_{propName}", localParams.ToArray(), setMethodVar))
+                using (Context.DefinitionVariables.WithCurrentMethod(declaringType.Identifier.Text, $"set_{propName}", localParams.ToArray(), 0, setMethodVar))
                 {
                     var ilSetVar = Context.Naming.ILProcessor("set");
 
@@ -233,7 +233,7 @@ namespace Cecilifier.Core.AST
                 Context.WriteComment("Getter");
 
                 var getMethodVar = Context.Naming.SyntheticVariable("get", ElementKind.Method);
-                var definitionVariable = Context.DefinitionVariables.WithCurrentMethod(declaringType.Identifier.Text, $"get_{propName}", parameters.Select(p => p.Type).ToArray(), getMethodVar);
+                var definitionVariable = Context.DefinitionVariables.WithCurrentMethod(declaringType.Identifier.Text, $"get_{propName}", parameters.Select(p => p.Type).ToArray(), 0, getMethodVar);
 
                 AddCecilExpression($"var {getMethodVar} = new MethodDefinition(\"get_{propName}\", {accessorModifiers}, {propertyType});");
                 AddToOverridenMethodsIfAppropriated(getMethodVar, property.GetMethod);

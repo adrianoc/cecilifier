@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -150,6 +151,7 @@ namespace Cecilifier.Core.Extensions
                 method.OriginalDefinition.ContainingType.Name,
                 method.OriginalDefinition.Name,
                 method.OriginalDefinition.Parameters.Select(p => p.Type.ToDisplayString()).ToArray(),
+                method.TypeParameters.Length,
                 variableName);
         }
 
@@ -305,5 +307,73 @@ namespace Cecilifier.Core.Extensions
                 SyntaxKind.ReadOnlyKeyword => Array.Empty<string>(),
                 _ => throw new ArgumentException($"Unsupported attribute name: {token.Kind().ToString()}")
             };
+        
+        public static IMethodSymbol FindLastDefinition(this IMethodSymbol self)
+        {
+            if (self == null)
+            {
+                return null;
+            }
+
+            return FindLastDefinition(self, self.ContainingType) ?? self;
+        }
+        
+        public static IMethodSymbol FindLastDefinition(this IMethodSymbol method, ImmutableArray<INamedTypeSymbol> implementedItfs)
+        {
+            foreach (var itf in implementedItfs)
+            {
+                var found = FindLastDefinition(method, itf);
+                if (found != null)
+                    return found;
+            }
+
+            return null;
+        }
+
+        private static IMethodSymbol FindLastDefinition(IMethodSymbol method, INamedTypeSymbol toBeChecked)
+        {
+            if (toBeChecked == null)
+            {
+                return null;
+            }
+
+            var found = toBeChecked.GetMembers().OfType<IMethodSymbol>().SingleOrDefault(candidate => CompareMethods(candidate, method));
+            if (SymbolEqualityComparer.Default.Equals(found, method) || found == null)
+            {
+                found = FindLastDefinition(method, toBeChecked.Interfaces);
+                found ??= FindLastDefinition(method, toBeChecked.BaseType);
+            }
+
+            return found;
+        }
+        
+        private static bool CompareMethods(IMethodSymbol lhs, IMethodSymbol rhs)
+        {
+            if (lhs.Name != rhs.Name)
+                return false;
+
+            if (!SymbolEqualityComparer.Default.Equals(lhs.ReturnType, rhs.ReturnType))
+                return false;
+
+            if (lhs.Parameters.Count() != rhs.Parameters.Count())
+                return false;
+
+            for (var i = 0; i < lhs.Parameters.Count(); i++)
+            {
+                if (!SymbolEqualityComparer.Default.Equals(lhs.Parameters[i].Type, rhs.Parameters[i].Type))
+                    return false;
+            }
+
+            if (lhs.TypeParameters.Count() != rhs.TypeParameters.Count())
+                return false;
+            
+            for (var i = 0; i < lhs.TypeParameters.Count(); i++)
+            {
+                if (!SymbolEqualityComparer.Default.Equals(lhs.TypeParameters[i], rhs.TypeParameters[i]))
+                    return false;
+            }
+
+            return true;
+        }
     }
 }

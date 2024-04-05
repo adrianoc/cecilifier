@@ -78,14 +78,14 @@ namespace Cecilifier.Core.Misc
                 exps.Add($"{methodVar}.Parameters.Add({parameterExp});");
             }
 
-            context.DefinitionVariables.RegisterMethod(containingTypeName, methodName, parameters.Select(p => p.ElementType).ToArray(), methodVar);
+            context.DefinitionVariables.RegisterMethod(containingTypeName, methodName, parameters.Select(p => p.ElementType).ToArray(), typeParameters.Count, methodVar);
             return exps;
         }
 
         internal static string Constructor(IVisitorContext context, string ctorLocalVar, string typeName, bool isStatic, string methodAccessibility, string[] paramTypes, string methodDefinitionPropertyValues = null)
         {
             var ctorName = Utils.ConstructorMethodName(isStatic);
-            context.DefinitionVariables.RegisterMethod(typeName, ctorName, paramTypes, ctorLocalVar);
+            context.DefinitionVariables.RegisterMethod(typeName, ctorName, paramTypes, 0, ctorLocalVar);
 
             var exp = $@"var {ctorLocalVar} = new MethodDefinition(""{ctorName}"", {methodAccessibility} | MethodAttributes.HideBySig | {Constants.Cecil.CtorAttributes}, assembly.MainModule.TypeSystem.Void)";
             if (methodDefinitionPropertyValues != null)

@@ -15,9 +15,9 @@ public class DefinitionVariableManager
         return variable;
     }
 
-    public MethodDefinitionVariable RegisterMethod(string parentName, string methodName, string[] parameterTypes, string definitionVariableName)
+    public MethodDefinitionVariable RegisterMethod(string parentName, string methodName, string[] parameterTypes, int typeParameterCount, string definitionVariableName)
     {
-        var definitionVariable = new MethodDefinitionVariable(parentName, methodName, parameterTypes, definitionVariableName);
+        var definitionVariable = new MethodDefinitionVariable(parentName, methodName, parameterTypes, typeParameterCount, definitionVariableName);
         _definitionVariables.Add(definitionVariable);
 
         return definitionVariable;
@@ -70,9 +70,9 @@ public class DefinitionVariableManager
     }
     public IEnumerable<DefinitionVariable> GetVariablesOf(VariableMemberKind kind) => _definitionVariables.Where(candidate => candidate.Kind == kind);
 
-    public ScopedDefinitionVariable WithCurrentMethod(string parentName, string memberName, string[] paramTypes, string definitionVariableName)
+    public ScopedDefinitionVariable WithCurrentMethod(string parentName, string memberName, string[] paramTypes, int typeParameterCount, string definitionVariableName)
     {
-        var registered = RegisterMethod(parentName, memberName, paramTypes, definitionVariableName);
+        var registered = RegisterMethod(parentName, memberName, paramTypes, typeParameterCount, definitionVariableName);
         return WithVariable(registered);
     }
 

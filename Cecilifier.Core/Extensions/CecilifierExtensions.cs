@@ -107,68 +107,9 @@ public class SnippetRunner
 }}";
         }
 
-        public static IMethodSymbol FindLastDefinition(this IMethodSymbol self)
-        {
-            if (self == null)
-            {
-                return null;
-            }
-
-            return FindLastDefinition(self, self.ContainingType) ?? self;
-        }
-
         public static T ResolveDeclaringType<T>(this SyntaxNode node) where T : BaseTypeDeclarationSyntax
         {
             return (T) new TypeDeclarationResolver().Resolve(node);
-        }
-
-        private static IMethodSymbol FindLastDefinition(IMethodSymbol method, INamedTypeSymbol toBeChecked)
-        {
-            if (toBeChecked == null)
-            {
-                return null;
-            }
-
-            var found = toBeChecked.GetMembers().OfType<IMethodSymbol>().SingleOrDefault(candidate => CompareMethods(candidate, method));
-            if (SymbolEqualityComparer.Default.Equals(found, method) || found == null)
-            {
-                found = FindLastDefinition(method, toBeChecked.Interfaces);
-                found = found ?? FindLastDefinition(method, toBeChecked.BaseType);
-            }
-
-            return found;
-        }
-
-        public static IMethodSymbol FindLastDefinition(this IMethodSymbol method, ImmutableArray<INamedTypeSymbol> implementedItfs)
-        {
-            foreach (var itf in implementedItfs)
-            {
-                var found = FindLastDefinition(method, itf);
-                if (found != null)
-                    return found;
-            }
-
-            return null;
-        }
-
-        private static bool CompareMethods(IMethodSymbol lhs, IMethodSymbol rhs)
-        {
-            if (lhs.Name != rhs.Name)
-                return false;
-
-            if (!SymbolEqualityComparer.Default.Equals(lhs.ReturnType, rhs.ReturnType))
-                return false;
-
-            if (lhs.Parameters.Count() != rhs.Parameters.Count())
-                return false;
-
-            for (var i = 0; i < lhs.Parameters.Count(); i++)
-            {
-                if (!SymbolEqualityComparer.Default.Equals(lhs.Parameters[i].Type, rhs.Parameters[i].Type))
-                    return false;
-            }
-
-            return true;
         }
 
         [Conditional("DEBUG")]
