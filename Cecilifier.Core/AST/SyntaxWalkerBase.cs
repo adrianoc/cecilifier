@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using Cecilifier.Core.Extensions;
@@ -63,13 +64,8 @@ namespace Cecilifier.Core.AST
             {
                 // If the generic method is an open one or if it is defined in the same assembly then the call need to happen in the generic instance method (note that for 
                 // methods defined in the snippet being cecilified, even if 'method' represents a generic instance method, MethodResolverExpression() will return the open
-                // generic one instead.
-                var genInstVar = Context.Naming.GenericInstance(method);
-                AddCecilExpression($"var {genInstVar} = new GenericInstanceMethod({operand});");
-                foreach (var t in method.TypeArguments)
-                    AddCecilExpression($"{genInstVar}.GenericArguments.Add({Context.TypeResolver.Resolve(t)});");
-
-                operand = genInstVar;
+                // generic one instead).
+                operand = operand.MakeGenericInstanceMethod(Context, method.Name, method.TypeArguments.Select(t => Context.TypeResolver.Resolve(t)).ToArray());
             }
 
             if (Context.TryGetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, out var constrainedType))
@@ -403,7 +399,14 @@ namespace Cecilifier.Core.AST
 
         protected string ResolveType(TypeSyntax type)
         {
-            var typeToCheck = type is RefTypeSyntax refType ? refType.Type : type;
+            // TODO: Ensure there are tests covering all the derived types from TypeSyntax (https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.typesyntax?view=roslyn-dotnet-4.7.0)
+            var typeToCheck = type switch
+            {
+                RefTypeSyntax refType  => refType.Type,
+                ScopedTypeSyntax scopedTypeSyntax => scopedTypeSyntax.Type,
+                _ => type
+            };
+        
             var typeInfo = Context.GetTypeInfo(typeToCheck);
 
             TypeDeclarationVisitor.EnsureForwardedTypeDefinition(Context, typeInfo.Type, Array.Empty<TypeParameterSyntax>());
@@ -415,9 +418,13 @@ namespace Cecilifier.Core.AST
         protected void ProcessParameter(string ilVar, SimpleNameSyntax node, IParameterSymbol paramSymbol)
         {
             var method = (IMethodSymbol) paramSymbol.ContainingSymbol;
-            if (HandleLoadAddressOnStorage(ilVar, paramSymbol.Type, node, OpCodes.Ldarga, paramSymbol.Name, VariableMemberKind.Parameter, (method.AssociatedSymbol ?? method).ToDisplayString()))
+            var declaringMethodName = (method.AssociatedSymbol ?? method).ToDisplayString();
+            if (HandleLoadAddressOnStorage(ilVar, paramSymbol.Type, node, OpCodes.Ldarga, paramSymbol.Name, VariableMemberKind.Parameter, declaringMethodName))
                 return;
 
+            if (InlineArrayProcessor.HandleInlineArrayConversionToSpan(Context, ilVar, paramSymbol.Type, node, OpCodes.Ldarga_S, paramSymbol.Name, VariableMemberKind.Parameter, declaringMethodName))
+                return;
+            
             Utils.EnsureNotNull(node.Parent);
             // We only support non-capturing lambda expressions so we handle those as static (even if the code does not mark them explicitly as such)
             // if/when we decide to support lambdas that captures variables/fields/params/etc we will probably need to revisit this.
@@ -484,6 +491,9 @@ namespace Cecilifier.Core.AST
             if (HandleLoadAddressOnStorage(ilVar, symbol.Type, localVarSyntax, OpCodes.Ldloca, symbol.Name, VariableMemberKind.LocalVariable))
                 return;
 
+            if (InlineArrayProcessor.HandleInlineArrayConversionToSpan(Context, ilVar, symbol.Type, localVarSyntax, OpCodes.Ldloca_S, symbol.Name, VariableMemberKind.LocalVariable))
+                return;
+            
             var operand = Context.DefinitionVariables.GetVariable(symbol.Name, VariableMemberKind.LocalVariable).VariableName;
             Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, operand);
 
@@ -508,7 +518,7 @@ namespace Cecilifier.Core.AST
         protected bool HandleLoadAddress(string ilVar, ITypeSymbol symbol, CSharpSyntaxNode node, OpCode opCode, string operand)
         {
             var parentNode = (CSharpSyntaxNode)node.Parent;
-            return HandleCallOnTypeParameter() || HandleCallOnValueType() || HandleRefAssignment() || HandleParameter();
+            return HandleCallOnTypeParameter() || HandleCallOnValueType() || HandleRefAssignment() || HandleParameter() || HandleInlineArrayElementAccess();
 
             bool HandleCallOnValueType()
             {
@@ -577,6 +587,15 @@ namespace Cecilifier.Core.AST
                 return false;
             }
 
+            bool HandleInlineArrayElementAccess()
+            {
+                if (!node.Parent.IsKind(SyntaxKind.ElementAccessExpression) || !symbol.TryGetAttribute<InlineArrayAttribute>(out var _))
+                    return false;
+                
+                Context.EmitCilInstruction(ilVar, opCode, operand);
+                return true;
+            }
+            
             bool IsPseudoAssignmentToValueType() => Context.HasFlag(Constants.ContextFlags.PseudoAssignmentToIndex);
         }
 
@@ -623,7 +642,7 @@ namespace Cecilifier.Core.AST
 
             if (needsLoadIndirect)
             {
-                Context.EmitCilInstruction(ilVar, type.LoadIndirectOpCodeFor());
+                Context.EmitCilInstruction(ilVar, type.LdindOpCodeFor());
             }
         }
 

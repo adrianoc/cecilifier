@@ -81,16 +81,16 @@ namespace Cecilifier.Core.Extensions
             };
         }
 
-        public static OpCode Stind(this ITypeSymbol type)
+        public static OpCode StindOpCodeFor(this ITypeSymbol type)
         {
             switch (type)
             {
                 case INamedTypeSymbol { IsGenericType: true } ns:
-                    return Stind(ns.TypeArguments[0]);
+                    return StindOpCodeFor(ns.TypeArguments[0]);
                 case IPointerTypeSymbol ptr:
-                    return Stind(ptr.PointedAtType);
+                    return StindOpCodeFor(ptr.PointedAtType);
                 case IArrayTypeSymbol array:
-                    return Stind(array.ElementType);
+                    return StindOpCodeFor(array.ElementType);
             }
 
             return type.SpecialType switch
@@ -110,6 +110,28 @@ namespace Cecilifier.Core.Extensions
                 _ => type.IsReferenceType
                     ? OpCodes.Stind_Ref
                     : OpCodes.Stobj
+            };
+        }
+
+        public static OpCode LdindOpCodeFor(this ITypeSymbol type)
+        {
+            return type.SpecialType switch
+            {
+                SpecialType.System_Single => OpCodes.Ldind_R4,
+                SpecialType.System_Double => OpCodes.Ldind_R8,
+                SpecialType.System_SByte => OpCodes.Ldind_I1,
+                SpecialType.System_Byte => OpCodes.Ldind_U1,
+                SpecialType.System_Int16 => OpCodes.Ldind_I2,
+                SpecialType.System_UInt16 => OpCodes.Ldind_U2,
+                SpecialType.System_Int32 => OpCodes.Ldind_I4,
+                SpecialType.System_UInt32 => OpCodes.Ldind_U4,
+                SpecialType.System_Int64 => OpCodes.Ldind_I8,
+                SpecialType.System_UInt64 => OpCodes.Ldind_I8,
+                SpecialType.System_Char => OpCodes.Ldind_U2,
+                SpecialType.System_Boolean => OpCodes.Ldind_U1,
+                SpecialType.System_Object => OpCodes.Ldind_Ref,
+                
+                _ => type.IsValueType || type.IsTypeParameterOrIsGenericTypeReferencingTypeParameter() ? OpCodes.Ldobj : OpCodes.Ldind_Ref
             };
         }
 
@@ -146,9 +168,9 @@ namespace Cecilifier.Core.Extensions
             };
         
 
-        public static bool IsTypeParameterOrIsGenericTypeReferencingTypeParameter(this ITypeSymbol returnType) => 
-            returnType.TypeKind == TypeKind.TypeParameter
-            || returnType is INamedTypeSymbol { IsGenericType: true } genType && genType.TypeArguments.Any(t => t.TypeKind == TypeKind.TypeParameter);
+        public static bool IsTypeParameterOrIsGenericTypeReferencingTypeParameter(this ITypeSymbol type) => 
+            type.TypeKind == TypeKind.TypeParameter
+            || type is INamedTypeSymbol { IsGenericType: true } genType && genType.TypeArguments.Any(t => t.TypeKind == TypeKind.TypeParameter);
         
         public static bool IsTypeParameterConstrainedToReferenceType(this ITypeSymbol typeSymbol) => 
             typeSymbol is ITypeParameterSymbol typeParameterSymbol 

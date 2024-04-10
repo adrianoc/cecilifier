@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Tests.Unit
@@ -398,6 +399,37 @@ namespace Cecilifier.Core.Tests.Tests.Unit
                                          """);
                 
             Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(expectedILSnippet));
+        }
+
+        [Test]
+        public void GenericInstanceMethods_AreCached()
+        {
+            var result = RunCecilifier("""
+                                       using System;
+                                       
+                                       var sa1 = M<string>();
+                                       var sa2 = M<string>();
+                                       var ia1 = M<int>();
+                                       
+                                       T M<T>() => default(T);
+                                       """);
+
+            var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+            
+            Assert.Multiple(() =>
+            {
+                var stringVersionCount = Regex.Matches(cecilifiedCode, """
+                                                                       \s+var gi_M_\d+ = new GenericInstanceMethod\(m_M_7\);
+                                                                       \s+gi_M_\d+.GenericArguments.Add\(assembly.MainModule.TypeSystem.String\);
+                                                                       """);
+                Assert.That(stringVersionCount.Count, Is.EqualTo(1), cecilifiedCode);
+
+                var intVersionCount = Regex.Matches(cecilifiedCode, """
+                                                                    \s+var gi_M_\d+ = new GenericInstanceMethod\(m_M_7\);
+                                                                    \s+gi_M_\d+.GenericArguments.Add\(assembly.MainModule.TypeSystem.Int32\);
+                                                                    """);
+                Assert.That(intVersionCount.Count, Is.EqualTo(1), cecilifiedCode);
+            });
         }
     }
 }

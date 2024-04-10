@@ -157,7 +157,8 @@ namespace Cecilifier.Core.AST
         public override void VisitReturnStatement(ReturnStatementSyntax node)
         {
             using var _ = LineInformationTracker.Track(Context, node);
-            Utils.EnsureNotNull(node.Expression);
+            if (node.Expression == null)
+                return;
             node.Expression.Accept(this);
             InjectRequiredConversions(node.Expression);
         }
@@ -238,6 +239,37 @@ namespace Cecilifier.Core.AST
                 && SymbolEqualityComparer.Default.Equals(Context.GetTypeInfo(node.ArgumentList.Arguments[0].Expression).Type, Context.RoslynTypeSystem.SystemRange))
             {
                 node.Accept(new ElementAccessExpressionWithRangeArgumentVisitor(Context, ilVar, this));
+                return;
+            }
+
+            if (InlineArrayProcessor.TryHandleRangeElementAccess(Context, this, ilVar, node, out var elementType1))
+            {
+                return;
+            }
+
+            if (InlineArrayProcessor.TryHandleIntIndexElementAccess(Context, ilVar, node, out var elementType))
+            {
+                // if the parent of the element access expression is a member access expression the code 
+                // that handles that expects that the target instance is at the top of the stack so; in 
+                // the case of that target being an inline array element, that means that the address of
+                // the entry should be at the top of the stack which is exactly how
+                // TryHandleInlineArrayElementAccess() will leave the stack so in this case there's nothing.
+                // else to be done ...
+                if (node.Parent.IsKind(SyntaxKind.SimpleMemberAccessExpression))
+                {
+                    if (UsageVisitor.GetInstance(Context).Visit(node.Parent) == UsageKind.CallTarget)
+                    {
+                        Context.SetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, Context.TypeResolver.Resolve(elementType));
+                        return;
+                    }
+                    
+                    if (elementType.TypeKind != TypeKind.TypeParameter)
+                        return;
+                }
+                
+                // ... otherwise, we need to take the top of the stack (address of the element) and load the actual instance to the stack.
+                var loadOpCode = elementType.LdindOpCodeFor();
+                Context.EmitCilInstruction(ilVar, loadOpCode, loadOpCode == OpCodes.Ldobj ? Context.TypeResolver.Resolve(elementType) : null);
                 return;
             }
 

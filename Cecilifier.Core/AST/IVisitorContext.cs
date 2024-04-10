@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Naming;
+using Cecilifier.Core.Services;
 using Cecilifier.Core.Variables;
 using Cecilifier.Core.TypeSystem;
 using Microsoft.CodeAnalysis;
@@ -12,6 +13,8 @@ namespace Cecilifier.Core.AST
 {
     internal interface IVisitorContext
     {
+        ServiceCollection Services { get; }
+        
         INameStrategy Naming { get; }
 
         SemanticModel SemanticModel { get; }

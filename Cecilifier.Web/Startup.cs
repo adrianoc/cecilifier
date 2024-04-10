@@ -85,7 +85,7 @@ namespace Cecilifier.Web
                 options.MinimumSameSitePolicy = SameSiteMode.None;
             });
 
-            services.AddRazorPages();
+            services.AddRazorPages(options => options.Conventions.AddPageRoute("/index", "/{snippet-name}"));
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -123,7 +123,7 @@ namespace Cecilifier.Web
 
             app.Use(async (context, next) =>
             {
-                if (context.Request.Path == "/ws")
+                if (context.Request.Path == "/connection/ws")
                 {
                     if (context.WebSockets.IsWebSocketRequest)
                     {

@@ -27,6 +27,14 @@ namespace Cecilifier.Core.AST
 
         public override void VisitElementAccessExpression(ElementAccessExpressionSyntax node)
         {
+            if (InlineArrayProcessor.TryHandleIntIndexElementAccess(Context, ilVar, node, out var elementType))
+            {
+                var tempVar = tempValueTypeDeclarer();
+                Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, tempVar.VariableName);
+                Context.EmitCilInstruction(ilVar, OpCodes.Stobj, Context.TypeResolver.Resolve(elementType));
+                return;
+            }
+            
             ExpressionVisitor.Visit(Context, ilVar, node);
 
             //ExpressionVisitor assumes the visited expression is to be handled as a 'load'

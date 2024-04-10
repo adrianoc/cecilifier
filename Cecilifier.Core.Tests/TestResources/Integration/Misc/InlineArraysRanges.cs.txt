@@ -1,0 +1,23 @@
+﻿using System;
+class InlineArrayRangeTests
+{
+   void Test(int i)
+   {
+        var buffer = new Buffer<string>();
+        buffer[0] = "zero";
+        buffer[1] = "um, une, one";
+        buffer[2] = "dois, deux, two";
+        buffer[i] = "i";
+        
+        var span = buffer[2..5]; 
+        Console.WriteLine(span[0]);
+        Console.WriteLine(span[1]);
+        Console.WriteLine(span[i]);
+   }
+}
+
+[System.Runtime.CompilerServices.InlineArray(10)]
+struct Buffer<T>
+{
+    private T _data;
+}

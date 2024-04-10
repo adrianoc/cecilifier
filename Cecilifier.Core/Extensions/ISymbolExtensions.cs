@@ -179,28 +179,6 @@ namespace Cecilifier.Core.Extensions
                 _ => throw new ArgumentException($"Literal type {type} not supported.", nameof(type))
             };
         }
-        
-        public static OpCode LoadIndirectOpCodeFor(this ITypeSymbol type)
-        {
-            return type.SpecialType switch
-            {
-                SpecialType.System_Single => OpCodes.Ldind_R4,
-                SpecialType.System_Double => OpCodes.Ldind_R8,
-                SpecialType.System_SByte => OpCodes.Ldind_I1,
-                SpecialType.System_Byte => OpCodes.Ldind_U1,
-                SpecialType.System_Int16 => OpCodes.Ldind_I2,
-                SpecialType.System_UInt16 => OpCodes.Ldind_U2,
-                SpecialType.System_Int32 => OpCodes.Ldind_I4,
-                SpecialType.System_UInt32 => OpCodes.Ldind_U4,
-                SpecialType.System_Int64 => OpCodes.Ldind_I8,
-                SpecialType.System_UInt64 => OpCodes.Ldind_I8,
-                SpecialType.System_Char => OpCodes.Ldind_U2,
-                SpecialType.System_Boolean => OpCodes.Ldind_U1,
-                SpecialType.System_Object => OpCodes.Ldind_Ref,
-                
-                _ => type.IsValueType ? OpCodes.Ldobj : OpCodes.Ldind_Ref
-            };
-        }
 
         public static string ValueForDefaultLiteral(this ITypeSymbol literalType) => literalType switch
         {

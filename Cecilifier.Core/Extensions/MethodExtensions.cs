@@ -5,13 +5,13 @@ using System.Reflection;
 using System.Text;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Naming;
+using Cecilifier.Core.Services;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Mono.Cecil;
+using MethodAttributes=Mono.Cecil.MethodAttributes;
 using static Cecilifier.Core.Misc.Utils;
-using MethodAttributes = Mono.Cecil.MethodAttributes;
 
 namespace Cecilifier.Core.Extensions
 {
@@ -215,7 +215,41 @@ namespace Cecilifier.Core.Extensions
 
         public static bool HasCovariantReturnType(this IMethodSymbol method) => method is { IsOverride: true } && !SymbolEqualityComparer.Default.Equals(method.ReturnType, method.OverriddenMethod?.ReturnType);
 
-        public static bool IsExplicitMethodImplementation(this IMethodSymbol methodSymbol)
+        public static IEnumerable<string> MakeGenericInstanceMethod(this string methodReferenceVariable, IVisitorContext context, string methodName, IReadOnlyList<string> resolvedTypeArguments, out string varName)
+        {
+            var hash = new HashCode();
+            hash.Add(methodReferenceVariable);
+            hash.Add(resolvedTypeArguments.Count);
+            foreach (var t in resolvedTypeArguments)
+                hash.Add(t);
+
+
+            List<string> exps = new();
+            varName = context.Services.Get<GenericInstanceMethodCacheService<int, string>>().GetOrCreate(hash.ToHashCode(), (context, methodName, resolvedTypeArguments, methodReferenceVariable, exps),
+                static (hashCode, state) =>
+                {
+                    var genericInstanceVarName = state.context.Naming.SyntheticVariable(state.methodName, ElementKind.GenericInstance);
+
+                    state.exps.Add($"var {genericInstanceVarName} = new GenericInstanceMethod({state.methodReferenceVariable});");
+                    foreach (var t in state.resolvedTypeArguments)
+                    {
+                        state.exps.Add($"{genericInstanceVarName}.GenericArguments.Add({t});");
+                    }
+                    return genericInstanceVarName;
+                });
+
+            return exps;
+        }
+        
+        public static string MakeGenericInstanceMethod(this string methodReferenceVariable, IVisitorContext context, string methodName, IReadOnlyList<string> resolvedTypeArguments)
+        {
+            var exps = methodReferenceVariable.MakeGenericInstanceMethod(context, methodName, resolvedTypeArguments, out var genericInstanceVarName);
+            context.WriteCecilExpressions(exps);
+
+            return genericInstanceVarName;
+        }
+
+        private static bool IsExplicitMethodImplementation(this IMethodSymbol methodSymbol)
         {
             return methodSymbol.ExplicitInterfaceImplementations.Any();
         }

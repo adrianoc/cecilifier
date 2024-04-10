@@ -44,13 +44,19 @@ namespace Cecilifier.Core.AST
         public override void VisitElementAccessExpression(ElementAccessExpressionSyntax node)
         {
             var lastInstructionLoadingRhs = Context.CurrentLine;
-
+            if (InlineArrayProcessor.TryHandleIntIndexElementAccess(Context, ilVar, node, out var elementType))
+            {
+                Context.MoveLinesToEnd(InstructionPrecedingValueToLoad, lastInstructionLoadingRhs);
+                Context.EmitCilInstruction(ilVar, elementType.StindOpCodeFor());
+                return;
+            }
+            
             ExpressionVisitor.Visit(Context, ilVar, node.Expression);
             foreach (var arg in node.ArgumentList.Arguments)
             {
                 ExpressionVisitor.Visit(Context, ilVar, arg);
             }
-
+            
             if (!HandleIndexer(node, lastInstructionLoadingRhs))
             {
                 Context.MoveLinesToEnd(InstructionPrecedingValueToLoad, lastInstructionLoadingRhs);
@@ -207,10 +213,9 @@ namespace Cecilifier.Core.AST
 
             return true;
         }
-
         private void EmitIndirectStore(ITypeSymbol typeBeingStored)
         {
-            var indirectStoreOpCode = typeBeingStored.Stind();
+            var indirectStoreOpCode = typeBeingStored.StindOpCodeFor();
             Context.EmitCilInstruction(ilVar, indirectStoreOpCode, indirectStoreOpCode == OpCodes.Stobj ? Context.TypeResolver.Resolve(typeBeingStored.ElementTypeSymbolOf()) : null);
         }
 

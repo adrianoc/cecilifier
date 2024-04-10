@@ -4,25 +4,26 @@ using System.Linq;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Misc;
-using Cecilifier.Core.Variables;
 using Mono.Cecil.Cil;
 
 namespace Cecilifier.Core.AST;
 
 internal class ElementAccessExpressionWithRangeArgumentVisitor : SyntaxWalkerBase
 {
-    internal ElementAccessExpressionWithRangeArgumentVisitor(IVisitorContext context, string ilVar, ExpressionVisitor expressionVisitor) : base(context)
+    internal ElementAccessExpressionWithRangeArgumentVisitor(IVisitorContext context, string ilVar, ExpressionVisitor expressionVisitor, bool targetAlreadyLoaded = false) : base(context)
     {
         _expressionVisitor = expressionVisitor;
+        _targetAlreadyLoaded = targetAlreadyLoaded;
         _ilVar = ilVar;
     }
 
     public override void VisitElementAccessExpression(ElementAccessExpressionSyntax node)
     {
         using var _ = LineInformationTracker.Track(Context, node);
-        node.Expression.Accept(_expressionVisitor);
+        if (!_targetAlreadyLoaded)
+            node.Expression.Accept(_expressionVisitor);
 
-        var elementAccessExpressionType = Context.SemanticModel.GetTypeInfo(node.Expression).Type.EnsureNotNull();
+        var elementAccessExpressionType = Context.SemanticModel.GetTypeInfo(node).Type.EnsureNotNull();
         _targetSpanType = elementAccessExpressionType;
         _spanCopyVariable = CodeGenerationHelpers.StoreTopOfStackInLocalVariable(Context, _ilVar, "localSpanCopy", elementAccessExpressionType).VariableName;
         Context.EmitCilInstruction(_ilVar, OpCodes.Ldloca, _spanCopyVariable);
@@ -113,6 +114,7 @@ internal class ElementAccessExpressionWithRangeArgumentVisitor : SyntaxWalkerBas
     }
 
     private readonly ExpressionVisitor _expressionVisitor;
+    private readonly bool _targetAlreadyLoaded;
     private string _spanCopyVariable;
     private readonly string _ilVar;
     private ITypeSymbol _targetSpanType; // Span<T> in which indexer is being invoked

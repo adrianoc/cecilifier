@@ -5,6 +5,7 @@ using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Naming;
+using Cecilifier.Core.Services;
 using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
@@ -34,7 +35,11 @@ namespace Cecilifier.Core.Misc
             startLineNumber = startingLine;
 
             identation = new String('\t', indentation);
+            
+            Services.Add(new GenericInstanceMethodCacheService<int, string>());
         }
+
+        public ServiceCollection Services { get; } = new();
 
         public string Output
         {

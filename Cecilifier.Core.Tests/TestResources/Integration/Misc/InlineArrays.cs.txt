@@ -1,0 +1,42 @@
+﻿using System;
+using System.Runtime.CompilerServices;
+
+class InlineArrayTests
+{
+   void Test()
+   {
+        var byteBuffer = new ByteBuffer();
+        byteBuffer[0] = 1;
+        byteBuffer[1] = (byte) (byteBuffer[0] + 1);
+        Console.WriteLine(byteBuffer[1]);
+        
+        var interfaceBuffer = new InterfaceBuffer();
+        interfaceBuffer[0] = 1; 
+        
+        var StructBuffer = new StructBuffer();
+        StructBuffer[0] = new SomeStruct { Value = 42 };
+        Console.WriteLine(StructBuffer[0].Value);
+   }
+}
+[InlineArray(2)]
+struct ByteBuffer
+{
+    private byte _data;
+}
+
+[InlineArray(2)]
+struct InterfaceBuffer
+{
+    private IComparable _data;
+}
+
+struct SomeStruct
+{
+    public int Value;
+}
+
+[InlineArray(2)]
+struct StructBuffer
+{
+    private SomeStruct _data;
+}

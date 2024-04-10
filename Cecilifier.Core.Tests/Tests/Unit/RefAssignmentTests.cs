@@ -19,10 +19,11 @@ public class RefAssignmentTests : CecilifierUnitTestBase
         // we expect the instruction sequence Ldloca, l_i_n / Stloc, l_rl_n twice: one for `rl` variable initialization
         // (common to all ref local assignment tests) and the second one for the variable assignment itself.
         """
-        (il_topLevelMain_\d+\.Emit\(OpCodes\.)Ldloca, l_i_\d+\);
-        \s+\1Stloc, l_rl_\d+\);
-        \s+\1Ldloca, l_i_\d+\);
-        \s+\1Stloc, l_rl_\d+\);
+        (\s+il_topLevelMain_\d+\.Emit\(OpCodes\.)Ldloca, l_i_\d+\);
+        \1Stloc, l_rl_\d+\);
+        \s+//rl = ref i;
+        \1Ldloca, l_i_\d+\);
+        \1Stloc, l_rl_\d+\);
         """,
         TestName = "RefAssignmentLocal")]
     public void TestRefLocalAssignment(string assignmentExpression, string expected)

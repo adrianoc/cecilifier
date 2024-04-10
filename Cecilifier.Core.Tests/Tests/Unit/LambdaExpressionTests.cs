@@ -43,13 +43,14 @@ public class LambdaExpressionTests : CecilifierUnitTestBase
         var result = RunCecilifier("using System; Func<int, int> f = x => x + 1; Console.WriteLine(f(10));");
         Assert.That(
             result.GeneratedCode.ReadToEnd(),
-            Does.Match(@"(il_topLevelMain_\d+.Emit\(OpCodes\.)Ldnull\);\s+" +
-                             @"\1Ldftn,.+m_lambda_.+\);\s+" +
-                             @"\1Newobj, .+typeof\(System.Func<System.Int32, System.Int32>\).+\);\s+" +
-                             @"\1Stloc, (l_f_\d+)\);\s+" +
-                             @"\1Ldloc, \2\);\s+" +
-                             @"\1Ldc_I4, 10\);\s+" +
-                             @"\1Callvirt, .+Invoke.+\);\s+" +
-                             @"\1Call, .+WriteLine.+\);\s+"));
+            Does.Match(@"(\s+il_topLevelMain_\d+.Emit\(OpCodes\.)Ldnull\);" +
+                             @"\1Ldftn,.+m_lambda_.+\);" +
+                             @"\1Newobj, .+typeof\(System.Func<System.Int32, System.Int32>\).+\);" +
+                             @"\1Stloc, (l_f_\d+)\);" +
+                             @"\s+//Console.WriteLine\(f\(10\)\);" +
+                             @"\1Ldloc, \2\);" +
+                             @"\1Ldc_I4, 10\);" +
+                             @"\1Callvirt, .+Invoke.+\);" +
+                             @"\1Call, .+WriteLine.+\);"));
     }
 }

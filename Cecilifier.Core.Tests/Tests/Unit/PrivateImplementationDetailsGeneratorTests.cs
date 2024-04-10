@@ -14,7 +14,7 @@ public class PrivateImplementationDetailsGeneratorTests
     [Test]
     public void PrivateImplementationType_IsCached()
     {
-        var comp = CompilationFor("class Foo {}");        
+        var comp = CompilationFor("class Foo {}");
         var context = new CecilifierContext(comp.GetSemanticModel(comp.SyntaxTrees[0]), new CecilifierOptions(), 1);
 
         var found = context.DefinitionVariables.GetVariablesOf(VariableMemberKind.Type);
@@ -33,7 +33,7 @@ public class PrivateImplementationDetailsGeneratorTests
     [Test]
     public void Int32AndInt64_AreUsedAsFieldBackingType_OfArraysOf4And8Bytes()
     {
-        var comp = CompilationFor("class Foo {}");        
+        var comp = CompilationFor("class Foo {}");
         var context = new CecilifierContext(comp.GetSemanticModel(comp.SyntaxTrees[0]), new CecilifierOptions(), 1);
 
         var found = context.DefinitionVariables.GetVariablesOf(VariableMemberKind.Type);
@@ -92,6 +92,26 @@ public class PrivateImplementationDetailsGeneratorTests
         
         Assert.That(found.Count(), Is.EqualTo(2), context.Output);
         Assert.That(secondVariableName, Is.Not.EqualTo(variableName), context.Output);
+    }
+
+    [Test]
+    public void InlineArrayAsSpan_HelperMethod_Properties()
+    {
+        var comp = CompilationFor("class Foo {}");
+        var context = new CecilifierContext(comp.GetSemanticModel(comp.SyntaxTrees[0]), new CecilifierOptions(), 1);
+
+        var found = context.DefinitionVariables.GetVariablesOf(VariableMemberKind.Method).ToArray();
+        Assert.That(found.Length, Is.EqualTo(0));
+        
+        // internal static Span<TElement> InlineArrayAsSpan<TBuffer, TElement>(ref TBuffer buffer, int length)
+        var methodVariableName = PrivateImplementationDetailsGenerator.GetOrEmmitInlineArrayAsSpanMethod(context);
+        found = context.DefinitionVariables.GetVariablesOf(VariableMemberKind.Method).ToArray();
+        Assert.That(found.Length, Is.EqualTo(1));
+        Assert.That(found[0].MemberName, Is.EqualTo("InlineArrayAsSpan"));
+        
+        Assert.That(context.Output, Does.Match("""var m_inlineArrayAsSpan_\d+ = new MethodDefinition\("InlineArrayAsSpan", MethodAttributes.Assembly | MethodAttributes.Static | MethodAttributes.HideBySig, assembly.MainModule.TypeSystem.Void\);"""));
+        Assert.That(context.Output, Does.Match("""m_inlineArrayAsSpan_\d+.Parameters.Add\(new ParameterDefinition\("buffer", ParameterAttributes.None, gp_tBuffer_\d+.MakeByReferenceType\(\)\)\);"""));
+        Assert.That(context.Output, Does.Match("""m_inlineArrayAsSpan_\d+.Parameters.Add\(new ParameterDefinition\("length", ParameterAttributes.None, assembly.MainModule.TypeSystem.Int32\)\);"""));
     }
     
     static CSharpCompilation CompilationFor(string code)

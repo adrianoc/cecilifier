@@ -18,7 +18,7 @@ namespace Cecilifier.Core.AST
     // the case when the result of the 'new T()' expression is not used as a) a direct assignment to a value type variable
     // or b) as the initializer in the declaration of the value type variable.
     //
-    // This visitor expects visit the parent of the ObjectCreationExpression, for instance, in 'M(new T())', this visitor
+    // This visitor expects to visit the parent of the ObjectCreationExpression, for instance, in 'M(new T())', this visitor
     // should be called to visit the method invocation.
     //
     // Note that the generated code will hardly match the generated code by a C# compiler. Empirically we observed that

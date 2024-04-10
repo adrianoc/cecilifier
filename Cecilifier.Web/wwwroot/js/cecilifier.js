@@ -6,6 +6,15 @@ let focusedEditor; // either csharpCode or cecilifiedCode
 let blockMappings = null;
 let csharpCodeEditorWidthMultiplier = 0.3;
 let compilationErrorToast = null; // toast informing user about compilation errors. This reference is used to close the toast before cecilifying code.
+let onCecilifiySuccessCallbacks = [];
+
+const CecilifierResponseStatus = Object.freeze({
+    Success: 0,
+    SyntaxError: 1,
+    InternalError: 2,
+    MissingAssemblies: 3,
+    ConnectionEstablished: 4,
+});
 
 class CecilifierRequest
 {
@@ -16,6 +25,7 @@ class CecilifierRequest
         this.assemblyReferences = assemblyReferences;
     }
 }
+
 class WebOptions
 {
     constructor(deployKind) {
@@ -117,19 +127,13 @@ function decreaseFocusedEditorFontSize() {
     const newFontSize = options.fontSize -  1;
     focusedEditor.updateOptions({ fontSize: newFontSize });
 }
-function initializeSite(errorAccessingGist, gist, version) {
+function initializeSite(errorAccessingGist, gist, requestPath, removeStoredSnippet, version) {
     require.config({ paths: { vs: 'lib/node_modules/monaco-editor/min/vs' } });
 
     require(['vs/editor/editor.main'], function () {
         csharpCode = monaco.editor.create(document.getElementById('csharpcode'), {
             theme: "vs-dark",
-            value: [
-                `// Supported CSharp language version: ${document.getElementById('supportedCSharpVersion').innerText}\n// https://learn.microsoft.com/en-us/dotnet/csharp/whats-new/csharp-${document.getElementById('supportedCSharpVersion').innerText}`,
-                'using System;', 
-                'class Foo', 
-                '{', 
-                '\tvoid Bar() => Console.WriteLine("Hello World!");', 
-                '}'].join('\n'),
+            value:"",
             language: 'csharp',
             minimap: { enabled: false },
             fontSize: 14,
@@ -167,7 +171,13 @@ function initializeSite(errorAccessingGist, gist, version) {
 
         initializeHoverProvider()
         
-        handleGist(gist, errorAccessingGist);
+        handleInitialSnippet(gist, errorAccessingGist, requestPath, removeStoredSnippet, 
+            `// Supported CSharp language version: ${document.getElementById('supportedCSharpVersion').innerText}\n// https://learn.microsoft.com/en-us/dotnet/csharp/whats-new/csharp-${document.getElementById('supportedCSharpVersion').innerText}
+using System;
+class Foo
+{
+    void Bar() => Console.WriteLine("Hello World!");
+};`);
         
         csharpCode.focus();
         focusedEditor = csharpCode;
@@ -301,7 +311,7 @@ function retrieveListOfFixedIssuesInStagingServer(callback) {
                     message: `Unable to retrieve list of fixed issues in staging server.`,
                     dismissible: true,
                     status: "Warning",
-                    timeout: 120000,
+                    timeout: 30000,
                     icon: "exclamation"
                 });
                 
@@ -736,7 +746,7 @@ function setAlert(div_id, msg) {
 function initializeWebSocket() {
     const scheme = document.location.protocol === "https:" ? "wss" : "ws";
     const port = document.location.port ? (":" + document.location.port) : "";
-    const connectionURL = scheme + "://" + document.location.hostname + port + "/ws";
+    const connectionURL = scheme + "://" + document.location.hostname + port + "/connection/ws";
 
     let newSocket = new WebSocket(connectionURL);
     newSocket.isRetryingToConnect = websocket === undefined ?  0 : websocket.isRetryingToConnect;
@@ -791,9 +801,9 @@ function initializeWebSocket() {
         
         // this is where we get the cecilified code back...
         let response = JSON.parse(event.data);
-        if (response.status === 0) {
-
-
+        if (response.status === CecilifierResponseStatus.Success) {
+            updateUsageStatisticsToolTip(response);
+            
             if (response.kind === 'Z') {
                 setTimeout(function() {
                     const buttonId = createProjectZip(base64ToArrayBuffer(response.cecilifiedCode), response.mainTypeName + ".zip", 'application/zip');
@@ -802,16 +812,18 @@ function initializeWebSocket() {
             }
             else {
                 cecilifiedCode.setValue(response.cecilifiedCode);
-                updateUsageStatisticsToolTip(response);
-                
                 // save the returned mappings used to map between code snippet <-> Cecilified Code.
                 blockMappings = response.mappings;
             }
-        } else if (response.status === 4) {
+            
+            for(let i = 0; i < onCecilifiySuccessCallbacks.length; i++) {
+                onCecilifiySuccessCallbacks[i].callback(onCecilifiySuccessCallbacks[i].state);
+            }
+                
+        } else if (response.status === CecilifierResponseStatus.ConnectionEstablished) {
             let response = JSON.parse(event.data);
             updateUsageStatisticsToolTip(response);
-            
-        } else if (response.status === 1) {
+        } else if (response.status === CecilifierResponseStatus.SyntaxError) {
             let compilerErrors = response.errors;
             for(let i = 0; i < compilerErrors.length; i++) {
                 compilerErrors[i].severity = monaco.MarkerSeverity.Error;
@@ -830,11 +842,10 @@ function initializeWebSocket() {
                         function: removeMarkersFromCSharpCode
                     }
                 ]
-            });         
-            
-        } else if (response.status === 2) {
+            });
+        } else if (response.status === CecilifierResponseStatus.InternalError) {
             ShowErrorDialog("", response.error, "We've got an internal error.");
-        } else if (response.status === 3) {
+        } else if (response.status === CecilifierResponseStatus.MissingAssemblies) {
             console.log(`Cecilifier server asked for missing assemblies => ${response.missingAssemblies}`);            
             sendMissingAssemblyReferences(response.missingAssemblies, function () {
                 send(websocket, response.originalFormat);
@@ -953,42 +964,6 @@ function simulateClick(elementId) {
 
 function copyToClipboard(elementId) {
     navigator.clipboard.writeText(cecilifiedCode.getValue("\r\n"));
-}
-
-function cecilifyFromGist(counter) {
-    if (websocket.readyState !== WebSocket.OPEN) {
-        if (counter < 4) {
-            setTimeout(cecilifyFromGist, 500, counter + 1);
-        }
-    }
-    else {
-        simulateClick("sendbutton");
-    }
-}
-
-function handleGist(gist, errorAccessingGist) {
-    if (errorAccessingGist.length === 0) {
-        setValueFromGist(gist);
-    } else {
-        setError(errorAccessingGist);
-    }
-}
-
-function setValueFromGist(snippet) {
-    if (snippet === null || snippet.length === 0)
-        return;
-
-    csharpCode.setValue(
-            snippet
-            .replace(/&quot;/g, '"')
-            .replace(/&gt;/g, '>')
-            .replace(/&lt;/g, '<')
-            .replace(/&#x27;/g, "'")
-            .replace(/&#x2B;/g, '+')
-            .replace(/&#x38;/g, '&')
-            .replace(/&amp;/g, '&'));
-
-    cecilifyFromGist(1);
 }
 
 function showSpinner() {

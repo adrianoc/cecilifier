@@ -132,8 +132,10 @@ public class DefaultExpressions : CecilifierUnitTestBase
     public void TestDefaultLiteralExpressionWithStructs(string code)
     {
         var expected = """
-                    var (l_v_\d+) = new VariableDefinition\((.+)\);
+                    \s+//(?:.+ v = default)|(?:Foo v);
+                    \s+var (l_v_\d+) = new VariableDefinition\((.+)\);
                     \s+m_topLevelStatements_\d+.Body.Variables.Add\(\1\);
+                    (?:\s+//v = default;)?
                     \s+(il_topLevelMain_\d+\.Emit\(OpCodes\.)Ldloca, l_v_\d+\);
                     \s+\3Initobj, \2\);
                     """;
