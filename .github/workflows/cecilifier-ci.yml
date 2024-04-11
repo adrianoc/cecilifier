@@ -14,6 +14,4 @@ jobs:
       - run: dotnet test --filter 'TestCategory !~ Issues' --collect:"XPlat Code Coverage"
       - run: dotnet format style --verify-no-changes
       - name: Upload coverage reports to Codecov with GitHub Action
-        uses: codecov/codecov-action@v4
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        uses: codecov/codecov-action@v3
