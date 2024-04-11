@@ -208,7 +208,7 @@ public static class Outer
             "System.DateTime d = new();",
             """
             (il_topLevelMain_\d+).Emit\(OpCodes.Ldloca_S, l_d_\d+\);
-            \s+\1.Emit\(OpCodes.Initobj, assembly.MainModule.TypeSystem.DateTime\);
+            \s+\1.Emit\(OpCodes.Initobj, .+ImportReference\(typeof\(System.DateTime\)\)\);
             """,
             TestName = "Value Type")]
 
