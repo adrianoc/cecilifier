@@ -5,8 +5,8 @@ jobs:
  RunTests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-dotnet@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
       - run: dotnet tool install --global dotnet-ilverify --version 8.0.0
@@ -14,4 +14,6 @@ jobs:
       - run: dotnet test --filter 'TestCategory !~ Issues' --collect:"XPlat Code Coverage"
       - run: dotnet format style --verify-no-changes
       - name: Upload coverage reports to Codecov with GitHub Action
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
