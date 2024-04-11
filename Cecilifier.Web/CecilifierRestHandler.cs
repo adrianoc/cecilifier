@@ -191,7 +191,7 @@ namespace Cecilifier.Web
         
         internal static async Task RetrieveListOfFixedIssuesInStagingServerEndPointAsync(HttpContext context)
         {
-            await ExecuteReadOnlyGitHubApiAuthenticated(context, "https://api.github.com/repos/adrianoc/cecilifier/issues?state=open&labels=fixed-in-staging");
+            await ExecuteReadOnlyGitHubApiAuthenticated(context, "https://api.github.com/repos/adrianoc/cecilifier/issues?state=closed&labels=fixed-in-staging");
         }
         
         internal static async Task RetrieveReleaseNotes(HttpContext context)
