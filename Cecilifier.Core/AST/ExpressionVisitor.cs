@@ -1226,13 +1226,13 @@ namespace Cecilifier.Core.AST
         {
             propertySymbol.EnsurePropertyExists(Context, node);
             
-            var isAccessOnThisOrObjectCreation = node.Parent.IsAccessOnThisOrObjectCreation();
             if (!propertySymbol.IsStatic && !node.IsQualifiedAccessToTypeOrMember())
             {
                 // if this is an *unqualified* access we need to load *this*
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
             }
 
+            var isAccessOnThisOrObjectCreation = node.Parent.IsAccessOnThisOrObjectCreation();
             var parentMae = node.Parent as MemberAccessExpressionSyntax;
             if (node.Parent.IsKind(SyntaxKind.SimpleAssignmentExpression) || parentMae != null && parentMae.Name.Identifier == node.Identifier && parentMae.Parent.IsKind(SyntaxKind.SimpleAssignmentExpression))
             {
@@ -1338,15 +1338,9 @@ namespace Cecilifier.Core.AST
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
             }
             EnsureForwardedMethod(Context, method.OverriddenMethod ?? method.OriginalDefinition);
-            var isAccessOnThis = !node.Parent.IsKind(SyntaxKind.SimpleMemberAccessExpression);
+            
+            var isAccessOnThis = node.Parent.IsAccessOnThisOrObjectCreation();
 
-            var mae = node.Parent as MemberAccessExpressionSyntax;
-            if (mae?.Expression.IsKind(SyntaxKind.ObjectCreationExpression) == true)
-            {
-                isAccessOnThis = true;
-            }
-
-            //_instructionBefore = Context.CurrentLine;
             OnLastInstructionLoadingTargetOfInvocation();
             AddMethodCall(ilVar, method, isAccessOnThis);
         }
