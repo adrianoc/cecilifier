@@ -79,6 +79,19 @@ public class TypeResolutionTests : CecilifierUnitTestBase
             Does.Match(testSpecificExpectation));
     }
 
+    [TestCase("DateTime field;", TestName = "Field")]
+    [TestCase("DateTime Prop { get => default(DateTime); }", TestName = "Property")]
+    [TestCase("DateTime M() => default(DateTime);", TestName = "Method return type")]
+    [TestCase("void M(DateTime d) {}", TestName = "Parameter")]
+    [TestCase("void M() { DateTime d; }", TestName = "Local variable")]
+    [TestCase("void M() { Action<DateTime> d; }", TestName = "Local variable (generic)")]
+    [TestCase("void M() { Delegate d; }", TestName = "Delegate")]
+    public void TestTypeResolution_Issue277(string memberDefinition)
+    {
+        var result = RunCecilifier($$"""using System; class C { {{memberDefinition}} }""");
+        Assert.That(result.GeneratedCode.ReadToEnd(), Does.Not.Match(@"assembly\.MainModule\.TypeSystem\.DateTime"));
+    }
+
     private static IEnumerable ExternalTypeTestScenarios()
     {
         const string fieldTemplate = @"using System.Collections; class Foo {{ {0} field; }}";
