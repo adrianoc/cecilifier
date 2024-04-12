@@ -168,7 +168,7 @@ public class StructSpecificTests : CecilifierUnitTestBase
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
         Assert.That(cecilifiedCode, Does.Match(
              """
-             (?://return new Test\(\))?;
+             \s+//(?:return )?new Test\(\);?
              .+var (l_vt_\d+) = new VariableDefinition\((st_test_\d+)\);
              .+m_M_3.Body.Variables.Add\(\1\);
              (.+il_M_\d+.Emit\(OpCodes\.)Ldloca_S, \1\);
@@ -220,6 +220,7 @@ public class StructSpecificTests : CecilifierUnitTestBase
               //Parameters of 'S TernaryOperators\(int i\) => i == 2 \? new S\(\): new S\(\);'
               \s+var p_i_4 = new ParameterDefinition\("i", ParameterAttributes.None, assembly.MainModule.TypeSystem.Int32\);
               \s+m_ternaryOperators_2.Parameters.Add\(p_i_4\);
+              \s+//i == 2 \? new S\(\): new S\(\)
               \s+var lbl_conditionEnd_5 = il_ternaryOperators_3.Create\(OpCodes.Nop\);
               \s+var lbl_whenFalse_6 = il_ternaryOperators_3.Create\(OpCodes.Nop\);
               (\s+il_ternaryOperators_\d+\.Emit\(OpCodes\.)Ldarg_1\);

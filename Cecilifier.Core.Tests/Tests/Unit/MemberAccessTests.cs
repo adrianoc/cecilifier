@@ -23,6 +23,7 @@ public class MemberAccessTests : CecilifierUnitTestBase
                                                                     //Parameters of 'string C<T>\(T t\) where T : struct => t.ToString\(\);'
                                                                     \s+var (p_t_\d+) = new ParameterDefinition\("t", ParameterAttributes.None, (gp_T_\d+)\);
                                                                     \s+m_C_10.Parameters.Add\(\1\);
+                                                                    \s+//t\.ToString\(\)
                                                                     (\s+il_C_\d+\.Emit\(OpCodes\.)Ldarga, \1\);
                                                                     \3Constrained, \2\);
                                                                     \3Callvirt, .+ImportReference\(.+ResolveMethod\(typeof\(System.Object\), "ToString",.+\)\)\);
@@ -33,6 +34,7 @@ public class MemberAccessTests : CecilifierUnitTestBase
                                                               //Parameters of 'string C<T>\(T t\) where T : IFoo => t.Get\(\);'
                                                               \s+var (p_t_\d+) = new ParameterDefinition\("t", ParameterAttributes.None, (gp_T_\d+)\);
                                                               \s+m_C_10.Parameters.Add\(\1\);
+                                                              \s+//t\.Get\(\)
                                                               (\s+il_C_\d+\.Emit\(OpCodes\.)Ldarga, \1\);
                                                               \3Constrained, \2\);
                                                               \3Callvirt, m_get_1\);
@@ -43,6 +45,7 @@ public class MemberAccessTests : CecilifierUnitTestBase
                                                                   //Parameters of 'string C<T>\(T t\) where T : IFoo => t.ToString\(\);'
                                                                   \s+var (p_t_\d+) = new ParameterDefinition\("t", ParameterAttributes.None, (gp_T_\d+)\);
                                                                   \s+m_C_10.Parameters.Add\(\1\);
+                                                                  \s+//t\.ToString\(\)
                                                                   (\s+il_C_\d+\.Emit\(OpCodes\.)Ldarga, \1\);
                                                                   \3Constrained, \2\);
                                                                   \3Callvirt, .+ImportReference\(.+ResolveMethod\(typeof\(System.Object\), "ToString",.+\)\)\);
@@ -53,6 +56,7 @@ public class MemberAccessTests : CecilifierUnitTestBase
                                                    //Parameters of 'string C<T>\(T t\) => t.ToString\(\);'
                                                    \s+var (p_t_\d+) = new ParameterDefinition\("t", ParameterAttributes.None, (gp_T_\d+)\);
                                                    \s+m_C_10.Parameters.Add\(\1\);
+                                                   \s+//t\.ToString\(\)
                                                    (\s+il_C_\d+\.Emit\(OpCodes\.)Ldarga, \1\);
                                                    \3Constrained, \2\);
                                                    \3Callvirt, .+ImportReference\(.+ResolveMethod\(typeof\(System.Object\), "ToString",.+\)\)\);
@@ -63,6 +67,7 @@ public class MemberAccessTests : CecilifierUnitTestBase
                                                                    //Parameters of 'string C<T>\(T t\) where T : class => t.ToString\(\);'
                                                                    \s+var (p_t_\d+) = new ParameterDefinition\("t", ParameterAttributes.None, (gp_T_\d+)\);
                                                                    \s+m_C_10.Parameters.Add\(\1\);
+                                                                   \s+//t\.ToString\(\)
                                                                    (\s+il_C_\d+\.Emit\(OpCodes\.)Ldarg_1\);
                                                                    \3Box, \2\);
                                                                    \3Callvirt, .+ImportReference\(.+ResolveMethod\(typeof\(System.Object\), "ToString",.+\)\)\);
@@ -73,6 +78,7 @@ public class MemberAccessTests : CecilifierUnitTestBase
                                                                  //Parameters of 'string C<T>\(T t\) where T : Foo => t.ToString\(\);'
                                                                  \s+var (p_t_\d+) = new ParameterDefinition\("t", ParameterAttributes.None, (gp_T_\d+)\);
                                                                  \s+m_C_10.Parameters.Add\(\1\);
+                                                                 \s+//t.ToString\(\)
                                                                  (\s+il_C_\d+\.Emit\(OpCodes\.)Ldarg_1\);
                                                                  \3Box, \2\);
                                                                  \3Callvirt, .+ImportReference\(.+ResolveMethod\(typeof\(System.Object\), "ToString",.+\)\)\);

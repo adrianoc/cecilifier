@@ -70,6 +70,7 @@ public class MethodTests : CecilifierUnitTestBase
             \s+cls_derived_5.Methods.Add\(\1\);
             \s+\1\.Body\.InitLocals = true;
             \s+var (il_callOverloadedInType_\d+) = \1\.Body\.GetILProcessor\(\);
+            \s+//FromBase\(\)
             \s+(\2\.Emit\(OpCodes\.)Ldarg_0\);
             \s+\3Callvirt, m_fromBase_\d+\);
             \s+\3Ret\);
@@ -84,6 +85,7 @@ public class MethodTests : CecilifierUnitTestBase
             \s+cls_derived_5.Methods.Add\(m_callBase_\d+\);
             \s+m_callBase_\d+.Body.InitLocals = true;
             \s+var (il_callBase_\d+) = m_callBase_8.Body.GetILProcessor\(\);
+            \s+//GetType\(\).FullName
             \s+(\1\.Emit\(OpCodes\.)Ldarg_0\);
             \s+\2Call, .+"GetType".+\);
             \s+\2Callvirt,.+"get_FullName".+\);

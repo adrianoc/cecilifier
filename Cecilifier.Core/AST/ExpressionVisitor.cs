@@ -166,6 +166,7 @@ namespace Cecilifier.Core.AST
         public override void VisitArrowExpressionClause(ArrowExpressionClauseSyntax node)
         {
             using var _ = LineInformationTracker.Track(Context, node);
+            Context.WriteComment(node.Expression.ToString());
             node.Expression.Accept(this);
             InjectRequiredConversions(node.Expression);
         }

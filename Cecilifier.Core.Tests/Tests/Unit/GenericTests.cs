@@ -601,6 +601,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
                                                               \s+cls_inner_\d+.Methods.Add\(\k<overload>\);
                                                               \s+\k<overload>.Body.InitLocals = true;
                                                               \s+var il_M_7 = \k<overload>.Body.GetILProcessor\(\);
+                                                              \s+//M<T>\(\)
                                                               \s+il_M_7.Emit\(OpCodes.Ldarg_0\);
                                                               \s+var (?<gen_method>gi_M_\d+) = new GenericInstanceMethod\(\k<overload>\);
                                                               \s+\k<gen_method>.GenericArguments.Add\(gp_T_6\);
