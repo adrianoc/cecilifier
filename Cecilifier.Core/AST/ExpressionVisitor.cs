@@ -195,7 +195,7 @@ namespace Cecilifier.Core.AST
                     
                     Context.EmitCilInstruction(ilVar, OpCodes.Dup);
                     initializeExp.Accept(this);
-                    AddMethodCall(ilVar, addMethod);
+                    AddMethodCall(ilVar, addMethod, MethodCallOptions.None);
                 }
             }
             else
@@ -281,7 +281,7 @@ namespace Cecilifier.Core.AST
             if (expressionInfo.Symbol.GetMemberType().Kind != SymbolKind.ArrayType && indexer != null)
             {
                 indexer.EnsurePropertyExists(Context, node);
-                AddMethodCall(ilVar, indexer.GetMethod);
+                AddMethodCall(ilVar, indexer.GetMethod, MethodCallOptions.None);
                 HandlePotentialRefLoad(ilVar, node, indexer.Type);
             }
             else if (node.Parent.IsKind(SyntaxKind.RefExpression))
@@ -334,7 +334,8 @@ namespace Cecilifier.Core.AST
             if (expSymbol is not IEventSymbol @event)
                 return;
 
-            AddMethodCall(ilVar, node.OperatorToken.IsKind(SyntaxKind.PlusEqualsToken) ? @event.AddMethod : @event.RemoveMethod, node.Left.IsAccessOnThisOrObjectCreation());
+            bool isAccessOnThisOrObjectCreation = node.Left.IsAccessOnThisOrObjectCreation();
+            AddMethodCall(ilVar, node.OperatorToken.IsKind(SyntaxKind.PlusEqualsToken) ? @event.AddMethod : @event.RemoveMethod, isAccessOnThisOrObjectCreation ? MethodCallOptions.TargetIsNotMemberAccessExpression : MethodCallOptions.None);
         }
 
         private void ProcessCompoundAssignmentExpression(AssignmentExpressionSyntax node, AssignmentVisitor visitor)
@@ -356,7 +357,7 @@ namespace Cecilifier.Core.AST
             {
                 if (method.IsDefinedInCurrentAssembly(Context))
                     EnsureForwardedMethod(Context, method);
-                AddMethodCall(ilVar, method);
+                AddMethodCall(ilVar, method, MethodCallOptions.None);
             }
             else
                 operatorHandlers[equivalentTokenKind].Process(Context, ilVar, Context.SemanticModel.GetTypeInfo(node.Left).Type, Context.SemanticModel.GetTypeInfo(node.Right).Type);
@@ -548,7 +549,7 @@ namespace Cecilifier.Core.AST
             if (node.IsOperatorOnCustomUserType(Context.SemanticModel, out var method))
             {
                 Visit(node.Operand);
-                AddMethodCall(ilVar, method);
+                AddMethodCall(ilVar, method, MethodCallOptions.None);
                 return;
             }
 
@@ -597,7 +598,7 @@ namespace Cecilifier.Core.AST
             if (node.IsOperatorOnCustomUserType(Context.SemanticModel, out var method))
             {
                 Visit(node.Operand);
-                AddMethodCall(ilVar, method);
+                AddMethodCall(ilVar, method, MethodCallOptions.None);
                 return;
             }
 
@@ -751,7 +752,7 @@ namespace Cecilifier.Core.AST
             }
             else if (conversion.IsExplicit)
             {
-                AddMethodCall(ilVar, conversion.MethodSymbol);
+                AddMethodCall(ilVar, conversion.MethodSymbol, MethodCallOptions.None);
             }
         }
 
@@ -878,7 +879,7 @@ namespace Cecilifier.Core.AST
                 var opEquality = comparisonType.GetMembers().FirstOrDefault(m => m.Kind == SymbolKind.Method && m.Name == "op_Equality");
                 if (opEquality != null)
                 {
-                    AddMethodCall(ilVar, opEquality.EnsureNotNull<ISymbol, IMethodSymbol>(), false);
+                    AddMethodCall(ilVar, opEquality.EnsureNotNull<ISymbol, IMethodSymbol>(), MethodCallOptions.None);
                     Context.EmitCilInstruction(ilVar, OpCodes.Brfalse_S, typeDoesNotMatchVar);
                 }
                 else
@@ -910,6 +911,12 @@ namespace Cecilifier.Core.AST
                 OnLastInstructionLoadingTargetOfInvocation();
             
             node.Name.Accept(this);
+        }
+
+        public override void VisitBaseExpression(BaseExpressionSyntax node)
+        {
+            using var _ = LineInformationTracker.Track(Context, node);
+            Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
         }
 
         public override void VisitAwaitExpression(AwaitExpressionSyntax node) => LogUnsupportedSyntax(node);
@@ -1088,7 +1095,8 @@ namespace Cecilifier.Core.AST
             Utils.EnsureNotNull(indexed.Type, "Cannot be null.");
             if (indexed.Type.Name == "Span")
             {
-                AddMethodCall(ilVar, ((IPropertySymbol) indexed.Type.GetMembers("Length").Single()).GetMethod);
+                IMethodSymbol method = ((IPropertySymbol) indexed.Type.GetMembers("Length").Single()).GetMethod;
+                AddMethodCall(ilVar, method, MethodCallOptions.None);
             }
             else
             {
@@ -1117,7 +1125,7 @@ namespace Cecilifier.Core.AST
             using var _ = LineInformationTracker.Track(Context, node);
             Visit(node.Left);
             Visit(node.Right);
-            AddMethodCall(ilVar, method, false);
+            AddMethodCall(ilVar, method, MethodCallOptions.None);
         }
 
         private void ProcessBinaryExpression(BinaryExpressionSyntax node)
@@ -1237,7 +1245,7 @@ namespace Cecilifier.Core.AST
             var parentMae = node.Parent as MemberAccessExpressionSyntax;
             if (node.Parent.IsKind(SyntaxKind.SimpleAssignmentExpression) || parentMae != null && parentMae.Name.Identifier == node.Identifier && parentMae.Parent.IsKind(SyntaxKind.SimpleAssignmentExpression))
             {
-                AddMethodCall(ilVar, propertySymbol.SetMethod, isAccessOnThisOrObjectCreation);
+                AddMethodCall(ilVar, propertySymbol.SetMethod, isAccessOnThisOrObjectCreation ? MethodCallOptions.TargetIsNotMemberAccessExpression : MethodCallOptions.None);
             }
             else
             {
@@ -1259,7 +1267,7 @@ namespace Cecilifier.Core.AST
             }
             else
             {
-                AddMethodCall(ilVar, propertySymbol.GetMethod, isAccessOnThisOrObjectCreation);
+                AddMethodCall(ilVar, propertySymbol.GetMethod, isAccessOnThisOrObjectCreation ? MethodCallOptions.TargetIsNotMemberAccessExpression : MethodCallOptions.None);
                 StoreTopOfStackInLocalVariableAndReloadItIfNeeded(node);
                 HandlePotentialRefLoad(ilVar, node, propertySymbol.Type);
             }
@@ -1339,11 +1347,15 @@ namespace Cecilifier.Core.AST
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
             }
             EnsureForwardedMethod(Context, method.OverriddenMethod ?? method.OriginalDefinition);
-            
-            var isAccessOnThis = node.Parent.IsAccessOnThisOrObjectCreation();
 
+            var callOptions = node.Parent.IsAccessOnThisOrObjectCreation()
+                                ? MethodCallOptions.TargetIsNotMemberAccessExpression
+                                : node.Parent is MemberAccessExpressionSyntax mae && mae.Expression.IsKind(SyntaxKind.BaseExpression) 
+                                ? MethodCallOptions.NonVirtual
+                                : MethodCallOptions.None; 
+            
             OnLastInstructionLoadingTargetOfInvocation();
-            AddMethodCall(ilVar, method, isAccessOnThis);
+            AddMethodCall(ilVar, method, callOptions);
         }
 
         private BinaryOperatorHandler OperatorHandlerFor(SyntaxToken operatorToken)

@@ -47,12 +47,14 @@ namespace Cecilifier.Core.AST
             Context.WriteNewLine();
         }
 
-        protected void AddMethodCall(string ilVar, IMethodSymbol method, bool isAccessOnThisOrObjectCreation = false)
+        protected void AddMethodCall(string ilVar, IMethodSymbol method, MethodCallOptions callOptions)
         {
             var needsVirtualDispatch = (method.IsVirtual || method.IsAbstract || method.IsOverride) && !method.ContainingType.IsPrimitiveType();
-            var opCode = !method.IsStatic && 
-                         (!isAccessOnThisOrObjectCreation || needsVirtualDispatch) && 
-                         (method.ContainingType.TypeKind == TypeKind.TypeParameter || !method.ContainingType.IsValueType || needsVirtualDispatch)
+
+            var opCode = !method.IsStatic
+                         && callOptions != MethodCallOptions.NonVirtual
+                         && (callOptions != MethodCallOptions.TargetIsNotMemberAccessExpression || needsVirtualDispatch) 
+                         && (method.ContainingType.TypeKind == TypeKind.TypeParameter || !method.ContainingType.IsValueType || needsVirtualDispatch)
                 ? OpCodes.Callvirt
                 : OpCodes.Call;
 

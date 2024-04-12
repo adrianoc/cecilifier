@@ -71,7 +71,7 @@ namespace Cecilifier.Core.AST
                 // with a non empty stack.
                 Context.WriteNewLine();
                 Context.WriteComment("variable to store the returned 'IEnumerator<T>'.");
-                AddMethodCall(_ilVar, context.GetEnumeratorMethod);
+                AddMethodCall(_ilVar, context.GetEnumeratorMethod, MethodCallOptions.None);
                 context.EnumeratorVariableName = CodeGenerationHelpers.StoreTopOfStackInLocalVariable(Context, _ilVar, "enumerator", context.GetEnumeratorMethod.ReturnType).VariableName;
 
                 if (isDisposable)
@@ -124,11 +124,11 @@ namespace Cecilifier.Core.AST
 
             var loadOpCode = forEachHandlerContext.GetEnumeratorMethod.ReturnType.IsValueType || forEachHandlerContext.GetEnumeratorMethod.ReturnType.TypeKind == TypeKind.TypeParameter ? OpCodes.Ldloca : OpCodes.Ldloc;
             Context.EmitCilInstruction(_ilVar, loadOpCode, forEachHandlerContext.EnumeratorVariableName);
-            AddMethodCall(_ilVar, forEachHandlerContext.EnumeratorMoveNextMethod);
+            AddMethodCall(_ilVar, forEachHandlerContext.EnumeratorMoveNextMethod, MethodCallOptions.None);
             Context.EmitCilInstruction(_ilVar, OpCodes.Brfalse, endOfLoopLabelVar);
             
             Context.EmitCilInstruction(_ilVar, loadOpCode, forEachHandlerContext.EnumeratorVariableName);
-            AddMethodCall(_ilVar, forEachHandlerContext.EnumeratorCurrentMethod);
+            AddMethodCall(_ilVar, forEachHandlerContext.EnumeratorCurrentMethod, MethodCallOptions.None);
             Context.EmitCilInstruction(_ilVar, OpCodes.Stloc, foreachCurrentValueVarName);
 
             // process body of foreach

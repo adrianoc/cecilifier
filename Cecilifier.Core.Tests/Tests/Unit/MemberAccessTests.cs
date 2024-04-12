@@ -240,4 +240,53 @@ class Bar {{ public void M() {{ }} }}
             $@"\1Call, {expectedMethodCall}\);\s+"),
             "ldarg.0 is not expected");
     }
+
+    [TestCase("""
+              class Base { public virtual void M() { } }
+              class Derived : Base { public override void M()  { base.M(); } }
+              """, TestName = "Same compilation Unit (Method)")]
+    
+    [TestCase("""
+              class Base { public virtual int P { get; set; } }
+              class Derived : Base { 
+                  public override int P 
+                  {
+                    get { return base.P; }
+                    set { base.P = value; }
+                  }
+              }
+              """, TestName = "Same compilation Unit (Property)")]
+    
+    [TestCase("""
+              class Base { public virtual event System.EventHandler MyEvent; }
+              class Derived : Base 
+              {
+                  public override event System.EventHandler MyEvent
+                  {
+                      add { base.MyEvent += value; }
+                      remove { base.MyEvent -= value; }
+                  } 
+              }
+              """, true, TestName = "Same compilation Unit (Event)")]
+    
+    [TestCase("""
+              using System;
+              class Derived : Exception { public override Exception GetBaseException() => base.GetBaseException(); }
+              """, TestName = "External type")]
+    public void AccessingMember_ThroughBaseKeyword(string source, bool requiresExtraParameterInCall = false)
+    {
+        var result = RunCecilifier(source);
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+
+        var pattern = $"""
+                      \s+//.*base\..+(?:\(\))?;?
+                      (\s+il_.+\d+\.Emit\(OpCodes\.)Ldarg_0\);
+                      { (requiresExtraParameterInCall ? @"(\s+il_.+\d+\.Emit\(OpCodes\.)Ldarg_1\);" : "")}
+                      \1Call,.+\);
+                      """;
+        if (!requiresExtraParameterInCall)
+            pattern = pattern.Replace("\n\n", "\n");
+        
+        Assert.That(cecilifiedCode, Does.Match(pattern));
+    }
 }

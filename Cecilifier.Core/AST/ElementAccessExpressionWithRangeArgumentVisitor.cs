@@ -31,7 +31,7 @@ internal class ElementAccessExpressionWithRangeArgumentVisitor : SyntaxWalkerBas
         node.ArgumentList.Accept(this); // Visit the argument list with ourselves.
 
         var sliceMethod = elementAccessExpressionType.GetMembers("Slice").OfType<IMethodSymbol>().Single(candidate => candidate.Parameters.Length == 2); // Slice(int, int)
-        AddMethodCall(_ilVar, sliceMethod);
+        AddMethodCall(_ilVar, sliceMethod, MethodCallOptions.None);
     }
 
     // This will handle usages like s[1..^3], i.e, RangeExpressions used in the argument
@@ -77,7 +77,7 @@ internal class ElementAccessExpressionWithRangeArgumentVisitor : SyntaxWalkerBas
     private void ProcessIndexerExpressionWithRangeAsArgument(ExpressionSyntax node)
     {
         using var _ = LineInformationTracker.Track(Context, node);
-        AddMethodCall(_ilVar, _targetSpanType.GetMembers().OfType<IPropertySymbol>().Single(p => p.Name == "Length").GetMethod);
+        AddMethodCall(_ilVar, _targetSpanType.GetMembers().OfType<IPropertySymbol>().Single(p => p.Name == "Length").GetMethod, MethodCallOptions.None);
         var spanLengthVar = CodeGenerationHelpers.StoreTopOfStackInLocalVariable(Context, _ilVar, "spanLengthVar", Context.RoslynTypeSystem.SystemInt32).VariableName;
 
         node.Accept(_expressionVisitor);
@@ -87,23 +87,23 @@ internal class ElementAccessExpressionWithRangeArgumentVisitor : SyntaxWalkerBas
         var rangeVar = CodeGenerationHelpers.StoreTopOfStackInLocalVariable(Context, _ilVar, "rangeVar", systemRange).VariableName;
 
         Context.EmitCilInstruction(_ilVar, OpCodes.Ldloca, rangeVar);
-        AddMethodCall(_ilVar, systemRange.GetMembers().OfType<IPropertySymbol>().Single(p => p.Name == "Start").GetMethod);
+        AddMethodCall(_ilVar, systemRange.GetMembers().OfType<IPropertySymbol>().Single(p => p.Name == "Start").GetMethod, MethodCallOptions.None);
         var indexVar = CodeGenerationHelpers.StoreTopOfStackInLocalVariable(Context, _ilVar, "index", systemIndex).VariableName;
 
         Context.EmitCilInstruction(_ilVar, OpCodes.Ldloca, indexVar);
         Context.EmitCilInstruction(_ilVar, OpCodes.Ldloc, spanLengthVar);
-        AddMethodCall(_ilVar, systemIndex.GetMembers().OfType<IMethodSymbol>().Single(p => p.Name == "GetOffset"));
+        AddMethodCall(_ilVar, systemIndex.GetMembers().OfType<IMethodSymbol>().Single(p => p.Name == "GetOffset"), MethodCallOptions.None);
 
         var startIndexVar = CodeGenerationHelpers.StoreTopOfStackInLocalVariable(Context, _ilVar, "startIndex", Context.RoslynTypeSystem.SystemInt32).VariableName;
 
         // Calculate number of elements to slice.
         Context.EmitCilInstruction(_ilVar, OpCodes.Ldloca, rangeVar);
-        AddMethodCall(_ilVar, systemRange.GetMembers().OfType<IPropertySymbol>().Single(p => p.Name == "End").GetMethod);
+        AddMethodCall(_ilVar, systemRange.GetMembers().OfType<IPropertySymbol>().Single(p => p.Name == "End").GetMethod, MethodCallOptions.None);
         Context.EmitCilInstruction(_ilVar, OpCodes.Stloc, indexVar);
 
         Context.EmitCilInstruction(_ilVar, OpCodes.Ldloca, indexVar);
         Context.EmitCilInstruction(_ilVar, OpCodes.Ldloc, spanLengthVar);
-        AddMethodCall(_ilVar, systemIndex.GetMembers().OfType<IMethodSymbol>().Single(p => p.Name == "GetOffset"));
+        AddMethodCall(_ilVar, systemIndex.GetMembers().OfType<IMethodSymbol>().Single(p => p.Name == "GetOffset"), MethodCallOptions.None);
         Context.EmitCilInstruction(_ilVar, OpCodes.Ldloc, startIndexVar);
         Context.EmitCilInstruction(_ilVar, OpCodes.Sub);
         var elementCountVar = CodeGenerationHelpers.StoreTopOfStackInLocalVariable(Context, _ilVar, "elementCount", Context.RoslynTypeSystem.SystemInt32).VariableName;

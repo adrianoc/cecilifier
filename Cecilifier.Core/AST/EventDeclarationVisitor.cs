@@ -237,12 +237,17 @@ namespace Cecilifier.Core.AST
         private string AddBackingField(EventFieldDeclarationSyntax node)
         {
             var privateModifier = SyntaxFactory.Token(SyntaxKind.PrivateKeyword); // always private no matter the accessibility of the event
-            var noAccessibilityModifier = node.Modifiers.Where(m => !m.IsKind(SyntaxKind.PublicKeyword)
-                                                                    && !m.IsKind(SyntaxKind.PrivateKeyword)
-                                                                    && !m.IsKind(SyntaxKind.InternalKeyword)
-                                                                    && !m.IsKind(SyntaxKind.ProtectedKeyword));
+            var cleanedUpModifiers = node.Modifiers
+                                                                    .Where(m =>
+                                                                        !m.IsKind(SyntaxKind.PublicKeyword)
+                                                                        && !m.IsKind(SyntaxKind.PrivateKeyword)
+                                                                        && !m.IsKind(SyntaxKind.InternalKeyword)
+                                                                        && !m.IsKind(SyntaxKind.ProtectedKeyword)
+                                                                        && !m.IsKind(SyntaxKind.VirtualKeyword)) // There's no such thing as a virtual field
+                                                                    .Append(privateModifier)
+                                                                    .ToList();
 
-            var fields = FieldDeclarationVisitor.HandleFieldDeclaration(Context, node, node.Declaration, noAccessibilityModifier.Append(privateModifier).ToList(), node.ResolveDeclaringType<TypeDeclarationSyntax>());
+            var fields = FieldDeclarationVisitor.HandleFieldDeclaration(Context, node, node.Declaration, cleanedUpModifiers, node.ResolveDeclaringType<TypeDeclarationSyntax>());
             return fields.First();
         }
 
