@@ -66,7 +66,7 @@ partial class ExpressionVisitor
 
             if (conversion.MethodSymbol != null)
             {
-                AddMethodCall(ilVar, conversion.MethodSymbol, MethodCallOptions.None);
+                AddMethodCall(ilVar, conversion.MethodSymbol, MethodDispatchInformation.MostLikelyVirtual);
             }
         }
 
@@ -83,11 +83,11 @@ partial class ExpressionVisitor
             var indexed = ModelExtensions.GetTypeInfo(Context.SemanticModel, expression.Ancestors().OfType<ElementAccessExpressionSyntax>().Single().Expression);
             Utils.EnsureNotNull(indexed.Type, "Cannot be null.");
             if (indexed.Type.Name == "Span")
-                AddMethodCall(ilVar, ((IPropertySymbol) indexed.Type.GetMembers("Length").Single()).GetMethod, MethodCallOptions.None);
+                AddMethodCall(ilVar, ((IPropertySymbol) indexed.Type.GetMembers("Length").Single()).GetMethod);
             else
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldlen);
             Context.EmitCilInstruction(ilVar, OpCodes.Conv_I4);
-            AddMethodCall(ilVar, (IMethodSymbol) typeInfo.Type.GetMembers().Single(m => m.Name == "GetOffset"), MethodCallOptions.None);
+            AddMethodCall(ilVar, (IMethodSymbol) typeInfo.Type.GetMembers().Single(m => m.Name == "GetOffset"));
         }
 
         // Empirically (verified in generated IL), expressions of type parameter used as:

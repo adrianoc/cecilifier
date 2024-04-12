@@ -157,7 +157,7 @@ namespace Cecilifier.Core.AST
             if (conversion.IsImplicit && conversion.MethodSymbol != null
                                       && !conversion.IsMethodGroup) // method group to delegate conversions should not call the method being converted...
             {
-                AddMethodCall(ilVar, conversion.MethodSymbol, MethodCallOptions.None);
+                AddMethodCall(ilVar, conversion.MethodSymbol);
             }
         }
 
@@ -201,14 +201,14 @@ namespace Cecilifier.Core.AST
                 //
                 // so we emit the call to get_item() and then move the instructions generated for `CalculateValue()`
                 // bellow it.
-                AddMethodCall(ilVar, propertySymbol.GetMethod, MethodCallOptions.None);
+                AddMethodCall(ilVar, propertySymbol.GetMethod);
                 Context.MoveLinesToEnd(InstructionPrecedingValueToLoad, lastInstructionLoadingRhs);
                 EmitIndirectStore(propertySymbol.Type);
             }
             else
             {
                 Context.MoveLinesToEnd(InstructionPrecedingValueToLoad, lastInstructionLoadingRhs);
-                AddMethodCall(ilVar, propertySymbol.SetMethod, MethodCallOptions.None);
+                AddMethodCall(ilVar, propertySymbol.SetMethod);
             }
 
             return true;
@@ -231,7 +231,7 @@ namespace Cecilifier.Core.AST
                 Context.EmitCilInstruction(ilVar, OpCodes.Stfld, found.VariableName);
             }
             else
-                AddMethodCall(ilVar, property.SetMethod, node.Parent.IsAccessOnThisOrObjectCreation() ? MethodCallOptions.TargetIsNotMemberAccessExpression : MethodCallOptions.None);
+                AddMethodCall(ilVar, property.SetMethod, node.Parent.MethodDispatchInformation());
         }
 
         private void FieldAssignment(IFieldSymbol field, IdentifierNameSyntax name)

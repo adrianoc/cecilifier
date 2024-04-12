@@ -103,17 +103,19 @@ namespace Cecilifier.Core.Extensions
             }
         }
 
-        public static bool IsAccessOnThisOrObjectCreation(this SyntaxNode nodeBeingAccessed)
+        public static MethodDispatchInformation MethodDispatchInformation(this SyntaxNode nodeBeingAccessed)
         {
-            if (nodeBeingAccessed.IsKind(SyntaxKind.NameColon))
-                return false;
-            
             if (nodeBeingAccessed is MemberAccessExpressionSyntax mae)
             {
-                return mae.Expression.IsKind(SyntaxKind.ObjectCreationExpression);
+                return mae.Expression.Kind() switch
+                {
+                    SyntaxKind.ObjectCreationExpression => AST.MethodDispatchInformation.MostLikelyNonVirtual,
+                    SyntaxKind.BaseExpression => AST.MethodDispatchInformation.NonVirtual,
+                    _ => AST.MethodDispatchInformation.MostLikelyVirtual
+                };
             }
-
-            return true;
+            
+            return nodeBeingAccessed.IsKind(SyntaxKind.NameColon)  ? AST.MethodDispatchInformation.MostLikelyVirtual : AST.MethodDispatchInformation.MostLikelyNonVirtual ;
         }
 
         [return: NotNull]
