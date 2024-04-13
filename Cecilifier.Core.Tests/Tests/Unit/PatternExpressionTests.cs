@@ -117,5 +117,13 @@ public class IsPatternExpressionTests : CecilifierUnitTestBase
             @"il_M_7.Append\(nop_12\);\s+" +
             @"\1Stloc, l_r_9\);")
         { TestName = "Multiple Properties" };
+
+        // Issue #281
+        // yield return new TestCaseData(
+        //         "void M(object o) { var r = o is System.Uri { Host.Length: 10 }; }",
+        //         "TODO: //DEFINE EXPECTATION")
+        //     {
+        //         TestName = "Property (MemberAccessExpression)"
+        //     };
     }
 }
