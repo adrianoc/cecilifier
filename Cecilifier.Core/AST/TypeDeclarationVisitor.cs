@@ -57,6 +57,19 @@ namespace Cecilifier.Core.AST
             }
         }
 
+        public override void VisitRecordDeclaration(RecordDeclarationSyntax node)
+        {
+            using var _ = LineInformationTracker.Track(Context, node);
+            var definitionVar = Context.Naming.Type(node);
+            var recordSymbol = Context.SemanticModel.GetDeclaredSymbol(node).EnsureNotNull();
+            using (Context.DefinitionVariables.WithCurrent(recordSymbol.ContainingSymbol.FullyQualifiedName(false), node.Identifier.ValueText, VariableMemberKind.Type, definitionVar))
+            {
+                HandleTypeDeclaration(node, definitionVar);
+                base.VisitRecordDeclaration(node);
+                EnsureCurrentTypeHasADefaultCtor(node, definitionVar);
+            }
+        }
+
         public override void VisitEnumDeclaration(EnumDeclarationSyntax node)
         {
             using var _ = LineInformationTracker.Track(Context, node);
@@ -180,7 +193,7 @@ namespace Cecilifier.Core.AST
         private static void AddTypeDefinition(IVisitorContext context, string typeDeclarationVar, ITypeSymbol typeSymbol, string typeModifiers, IEnumerable<TypeParameterSyntax> typeParameters, IEnumerable<TypeParameterSyntax> outerTypeParameters)
         {
             context.WriteNewLine();
-            context.WriteComment($"{typeSymbol.TypeKind} : {typeSymbol.Name}");
+            context.WriteComment($"{(typeSymbol.IsRecord ? "Record ": string.Empty)}{typeSymbol.TypeKind} : {typeSymbol.Name}");
 
             typeParameters ??= Array.Empty<TypeParameterSyntax>();
 

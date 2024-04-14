@@ -23,7 +23,7 @@ public class AttributesTest : CecilifierUnitTestBase
         var result = RunCecilifier($"[assembly:My(\"assembly\")] {AttributeDefinition}");
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
 
-        Assert.That(cecilifiedCode, Does.Match(@"var cls_myAttribute_0 = new TypeDefinition\("""", ""MyAttribute"", TypeAttributes.AnsiClass \| TypeAttributes.BeforeFieldInit \| TypeAttributes.NotPublic, .+\);"), "Expected TypeDefinition for attribute not found.");
+        Assert.That(cecilifiedCode, Does.Match(ClassDeclarationRegexFor("MyAttribute", "cls_myAttribute", ".+", "TypeAttributes.NotPublic")), "Expected TypeDefinition for attribute not found.");
         Assert.That(cecilifiedCode, Does.Match(@"var attr_my_1 = new CustomAttribute\(ctor_myAttribute_2\);"), "Reference to class declaring MyAttribute should be used when instantiating the custom attribute");
         Assert.That(cecilifiedCode, Does.Match(@"assembly.CustomAttributes.Add\(attr_my_1\);"), "Custom attribute should be be added to assembly");
     }

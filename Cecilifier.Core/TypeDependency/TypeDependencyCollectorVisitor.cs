@@ -46,6 +46,12 @@ public class TypeDependencyCollectorVisitor : CSharpSyntaxWalker
             base.VisitStructDeclaration(node);
     }
 
+    public override void VisitRecordDeclaration(RecordDeclarationSyntax node)
+    {
+        using (ProcessTypeDeclaration(node))
+            base.VisitRecordDeclaration(node);
+    }
+
     public override void VisitQualifiedName(QualifiedNameSyntax node)
     {
         AddCurrentTypeDependencyIfNotTheSame(node);

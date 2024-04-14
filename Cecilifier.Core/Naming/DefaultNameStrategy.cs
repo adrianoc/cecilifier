@@ -14,6 +14,7 @@ namespace Cecilifier.Core.Naming
             [ElementKind.Attribute] = "attr",
             [ElementKind.Class] = "cls",
             [ElementKind.Struct] = "st",
+            [ElementKind.Record] = "rec",
             [ElementKind.Interface] = "itf",
             [ElementKind.Enum] = "enum",
             [ElementKind.Delegate] = "del",
@@ -102,6 +103,8 @@ namespace Cecilifier.Core.Naming
             SyntaxKind.EnumDeclaration => ElementKind.Enum,
             SyntaxKind.InterfaceDeclaration => ElementKind.Interface,
             SyntaxKind.DelegateDeclaration => ElementKind.Delegate,
+            SyntaxKind.RecordDeclaration => ElementKind.Record,
+            SyntaxKind.RecordStructDeclaration => ElementKind.Record,
             _ => throw new NotSupportedException($"Cannot map {node.Kind()} to ElementKind")
         };
 

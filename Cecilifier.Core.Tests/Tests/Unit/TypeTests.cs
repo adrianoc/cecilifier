@@ -4,7 +4,7 @@ using NUnit.Framework;
 namespace Cecilifier.Core.Tests.Tests.Unit;
 
 [TestFixture]
-public class TypeTests : CecilifierUnitTestBase
+public partial class TypeTests : CecilifierUnitTestBase
 {
     [TestCase("static class T {}", TestName = "Top Level")]
     [TestCase("class T { public static class Inner { } }", TestName = "Inner")]

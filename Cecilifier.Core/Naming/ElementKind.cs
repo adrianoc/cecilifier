@@ -5,6 +5,7 @@ namespace Cecilifier.Core.Naming
     {
         Class,
         Struct,
+        Record,
         Interface,
         Enum,
         Method,
