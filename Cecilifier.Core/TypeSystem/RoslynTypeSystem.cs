@@ -1,6 +1,4 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Cecilifier.Core.AST;
@@ -17,11 +15,11 @@ internal struct RoslynTypeSystem
 {
     public RoslynTypeSystem(IVisitorContext ctx)
     {
-        SystemIndex = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(Index).FullName);
-        SystemRange = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(Range).FullName);
-        SystemType = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(Type).FullName);
-        SystemSpan = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(Span<>).FullName);
-        CallerArgumentExpressionAttribute = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(CallerArgumentExpressionAttribute).FullName);
+        SystemIndex = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(Index).FullName!);
+        SystemRange = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(Range).FullName!);
+        SystemType = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(Type).FullName!);
+        SystemSpan = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(Span<>).FullName!);
+        CallerArgumentExpressionAttribute = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(CallerArgumentExpressionAttribute).FullName!);
 
         SystemInt32 = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Int32);
         SystemInt64 = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Int64);
@@ -31,11 +29,11 @@ internal struct RoslynTypeSystem
         SystemVoid = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Void);
         SystemObject = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Object);
         SystemBoolean = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Boolean);
-        SystemIDisposable = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(IDisposable).FullName);
-        IsReadOnlyAttribute = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(IsReadOnlyAttribute).FullName);
-        SystemActivator = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(Activator).FullName);
-        IsByRefLikeAttribute = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(IsByRefLikeAttribute).FullName);
-        SystemObsoleteAttribute = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(ObsoleteAttribute).FullName);
+        SystemIDisposable = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(IDisposable).FullName!);
+        IsReadOnlyAttribute = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(IsReadOnlyAttribute).FullName!);
+        SystemActivator = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(Activator).FullName!);
+        IsByRefLikeAttribute = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(IsByRefLikeAttribute).FullName!);
+        SystemObsoleteAttribute = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(ObsoleteAttribute).FullName!);
         SystemValueType = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(ValueType).FullName);
         SystemRuntimeCompilerServicesRuntimeHelpers = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(RuntimeHelpers).FullName);
         SystemCollectionsIEnumerator = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Collections_IEnumerator);

@@ -174,6 +174,11 @@ namespace Cecilifier.Core.Extensions
         public static bool IsTypeParameterConstrainedToReferenceType(this ITypeSymbol typeSymbol) => 
             typeSymbol is ITypeParameterSymbol typeParameterSymbol 
             && (typeParameterSymbol.HasReferenceTypeConstraint || typeParameterSymbol.ConstraintTypes.Length > 0);
+
+        public static IEnumerable<string> ImplementedInterfaces(this ITypeSymbol typeSymbol, IVisitorContext context)
+        {
+            return typeSymbol.Interfaces.Select(itf => context.TypeResolver.Resolve(itf));
+        }
     }
 
     public sealed class VariableDefinitionComparer : IEqualityComparer<VariableDefinition>

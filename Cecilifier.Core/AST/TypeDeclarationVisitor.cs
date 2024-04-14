@@ -207,7 +207,7 @@ namespace Cecilifier.Core.AST
                 BaseTypeFor(context, typeSymbol),
                 typeSymbol.ContainingType?.Name,
                 isStructWithNoFields,
-                typeSymbol.Interfaces.Select(itf => context.TypeResolver.Resolve(itf)),
+                typeSymbol.ImplementedInterfaces(context),
                 typeParameters,
                 outerTypeParameters);
 
