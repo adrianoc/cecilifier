@@ -22,7 +22,7 @@ namespace Cecilifier.Core.AST
         private string backingFieldVar;
 
         public PropertyDeclarationVisitor(IVisitorContext context) : base(context) { }
-
+        
         public override void VisitIndexerDeclaration(IndexerDeclarationSyntax node)
         {
             if (PropertyAlreadyProcessed(node))
@@ -302,9 +302,9 @@ namespace Cecilifier.Core.AST
         private string AddPropertyDefinition(BasePropertyDeclarationSyntax propertyDeclarationSyntax, string propName, string propertyType)
         {
             var propDefVar = Context.Naming.PropertyDeclaration(propertyDeclarationSyntax);
-            var propDefExp = $"var {propDefVar} = new PropertyDefinition(\"{propName}\", PropertyAttributes.None, {propertyType});";
-            AddCecilExpression(propDefExp);
-
+            var exps = CecilDefinitionsFactory.PropertyDefinition(propDefVar, propName, propertyType);
+            Context.WriteCecilExpressions(exps);
+            
             return propDefVar;
         }
     }
