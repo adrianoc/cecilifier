@@ -420,7 +420,7 @@ namespace Cecilifier.Core.AST
         protected void ProcessParameter(string ilVar, SimpleNameSyntax node, IParameterSymbol paramSymbol)
         {
             var method = (IMethodSymbol) paramSymbol.ContainingSymbol;
-            var declaringMethodName = (method.AssociatedSymbol ?? method).ToDisplayString();
+            var declaringMethodName = method.ToDisplayString();
             if (HandleLoadAddressOnStorage(ilVar, paramSymbol.Type, node, OpCodes.Ldarga, paramSymbol.Name, VariableMemberKind.Parameter, declaringMethodName))
                 return;
 

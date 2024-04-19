@@ -98,7 +98,7 @@ public class DefaultExpressions : CecilifierUnitTestBase
     [TestCase("string M() => default(int).ToString();", @"(il_M_\d+\.Emit\(OpCodes\.)Stloc, (l_tmp_\d+)\);\s+" +
                                                                     @"\1Ldloca_S, \2\);", TestName = "Invocation On Default")]
     [TestCase("void M(int p = default) {}", @"p_p_\d+.Constant = 0;", TestName = "Literal Int Parameter")]
-    [TestCase("void M(double p = default) {}", @"p_p_\d+.Constant = 0.0D;", TestName = "Literal Double Parameter")]
+    [TestCase("void M(double p = default) {}", @"p_p_\d+.Constant = 0d;", TestName = "Literal Double Parameter")]
     [TestCase("void M(int p = default(int)) {}", @"p_p_\d+.Constant = 0;", TestName = "Int Parameter")]
     [TestCase("void M() { System.Action a = default; }", ReferenceTypeExpectation, TestName = "Literal Delegate")]
     [TestCase("void M() { System.Action a = default(System.Action); }", ReferenceTypeExpectation, TestName = "Delegate")]

@@ -93,7 +93,7 @@ internal partial class TypeDeclarationVisitor
                 Context.Naming.Parameter("ar"),
                 Context.TypeResolver.Bcl.System.IAsyncResult,
                 Constants.ParameterAttributes.None,
-                defaultParameterValue: null);
+                (null, false));
 
             AddCecilExpressions(Context, endInvokeExps);
             AddCecilExpressions(Context, endInvokeParamExps);

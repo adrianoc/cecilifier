@@ -51,7 +51,7 @@ namespace Cecilifier.Core.AST
                 paramVar,
                 $"{context.TypeResolver.Bcl.System.String}.MakeArrayType()",
                 Constants.ParameterAttributes.None,
-                defaultParameterValue: null);
+                (null, false));
 
             ilVar = context.Naming.ILProcessor("topLevelMain");
             var mainBodyExps = CecilDefinitionsFactory.MethodBody(methodVar, ilVar, Array.Empty<InstructionRepresentation>());

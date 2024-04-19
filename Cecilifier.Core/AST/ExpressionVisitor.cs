@@ -1444,7 +1444,7 @@ namespace Cecilifier.Core.AST
                     return arguments[expressionParameter.Ordinal].Expression.ToFullString();
             }
 
-            return arg.ExplicitDefaultValue();
+            return arg.ExplicitDefaultValue(rawString: true).Value;
         }
 
         private void HandleIdentifier(SimpleNameSyntax node)
