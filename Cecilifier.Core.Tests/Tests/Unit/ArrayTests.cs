@@ -165,8 +165,8 @@ public class ArrayTests : CecilifierUnitTestBase
     }
 
     [TestCase("Property", "Call, m_get_2", TestName = "Property")]
-    [TestCase("Method()", "Call, m_method_8", TestName = "Method")]
-    [TestCase("Field", "Ldfld, fld_field_7", TestName = "Field")]
+    [TestCase("Method()", @"Call, m_method_\d+", TestName = "Method")]
+    [TestCase("Field", @"Ldfld, fld_field_\d+", TestName = "Field")]
     public void MemberAccessOnElementAccessOnValueTypeArray_LoadsElementAddress(string member, string expectedILMemberRef)
     {
         var result = RunCecilifier($$"""int M(S[] sa) => sa[0].{{member}}; struct S { public int Property { get; set; } public int Field; public int Method() => 1; }""");
@@ -180,8 +180,8 @@ public class ArrayTests : CecilifierUnitTestBase
     }
     
     [TestCase("Property", "Callvirt, m_get_2", TestName = "Property")]
-    [TestCase("Method()", "Callvirt, m_method_8", TestName = "Method")]
-    [TestCase("Field", "Ldfld, fld_field_7", TestName = "Field")]
+    [TestCase("Method()", @"Callvirt, m_method_\d+", TestName = "Method")]
+    [TestCase("Field", @"Ldfld, fld_field_\d+", TestName = "Field")]
     public void MemberAccessOnElementAccessOnReferenceTypeArray_LoadsElementByReference(string member, string expectedILMemberRef)
     {
         var result = RunCecilifier($$"""int M(S[] sa) => sa[0].{{member}}; class S { public int Property { get; set; } public int Field; public int Method() => 1; }""");

@@ -108,7 +108,11 @@ namespace Cecilifier.Core.Tests.Tests.Unit
                     @"il_bar_3.Emit\(OpCodes.Ldarg_1\);\s+" +
                     @"var r_M_7 = new MethodReference\(m_M_5.Name, m_M_5.ReturnType\).+;"));
 
-            Assert.That(cecilifiedCode, Contains.Substring("il_M_9.Emit(OpCodes.Starg_S, p_t_6);")); // t = tl; ensures that the forwarded parameters has been used in M()'s implementation
+            Assert.That(cecilifiedCode, Does.Match("""
+                                                   //t = tl;
+                                                   \s+il_M_9.Emit\(OpCodes.Ldloc, l_tl_\d+\);
+                                                   \s+il_M_9.Emit\(OpCodes.Starg_S, p_t_\d+\);
+                                                   """)); // t = tl; ensures that the forwarded parameters has been used in M()'s implementation
         }
 
         [TestCase(@"class Foo<T> where T : new() { T M() => new T(); }")]

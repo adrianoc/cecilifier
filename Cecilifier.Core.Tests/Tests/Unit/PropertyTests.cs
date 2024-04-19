@@ -34,9 +34,11 @@ public class PropertyTests : CecilifierUnitTestBase
     {
         var result = RunCecilifier("class C { public int Value { get; set; } public C() => Value = 42; }");
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
-        Assert.That(cecilifiedCode, Contains.Substring(
-            @"il_ctor_8.Emit(OpCodes.Ldc_I4, 42);
-			il_ctor_8.Emit(OpCodes.Call, l_set_5);"));
+        Assert.That(cecilifiedCode, Does.Match(
+            """
+            (\s+il_ctor_\d+.Emit\(OpCodes\.)Ldc_I4, 42\);
+            \1Call, l_set_\d+\);
+            """));
     }
 
     [Test]
@@ -78,8 +80,10 @@ public class PropertyTests : CecilifierUnitTestBase
         var result = RunCecilifier($"class C {{ int Value {{ {accessorDeclaration} }} }}");
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
         Assert.That(cecilifiedCode, Does.Match(
-            @"var l_l_4 = new VariableDefinition\(assembly\.MainModule\.TypeSystem\.Int32\);\s+" +
-            $@"{targetMethod}\.Body\.Variables\.Add\(l_l_4\);"));
+            $"""
+             var (l_l_\d+) = new VariableDefinition\(assembly\.MainModule\.TypeSystem\.Int32\);
+             \s+{targetMethod}\.Body\.Variables\.Add\(\1\);
+             """));
     }
 
     [Test]

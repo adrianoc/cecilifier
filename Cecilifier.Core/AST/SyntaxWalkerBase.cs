@@ -976,13 +976,9 @@ namespace Cecilifier.Core.AST
             
             foreach (var parameter in method.Parameters)
             {
-                var parameterExp = CecilDefinitionsFactory.Parameter(parameter, context.TypeResolver.Resolve(parameter.Type));
                 var paramVar = context.Naming.Parameter(parameter.Name);
-                context.WriteCecilExpression($"var {paramVar} = {parameterExp};");
-                context.WriteNewLine();
-                context.WriteCecilExpression($"{methodDeclarationVar}.Parameters.Add({paramVar});");
-                context.WriteNewLine();
-            
+                var parameterExps = CecilDefinitionsFactory.Parameter(parameter, methodDeclarationVar, paramVar, context.TypeResolver.Resolve(parameter.Type));
+                context.WriteCecilExpressions(parameterExps);
                 context.DefinitionVariables.RegisterNonMethod(method.ToDisplayString(), parameter.Name, VariableMemberKind.Parameter, paramVar);
             }
             

@@ -158,7 +158,7 @@ public class ObjectInitializerTests : CecilifierUnitTestBase
             \1Ldloca_S, \2\);
             \1Dup\);
             \1Ldc_I4, 1\);
-            \1Call, l_set_11\);
+            \1Call, l_set_\d+\);
             \1Pop\);
             \1Ldloc, \2\);
             \s+var (l_vt_\d+) = new VariableDefinition\(st_bar_0\);
@@ -168,26 +168,26 @@ public class ObjectInitializerTests : CecilifierUnitTestBase
             \1Ldloca_S, \3\);
             \1Dup\);
             \1Ldc_I4, 2\);
-            \1Call, l_set_11\);
+            \1Call, l_set_\d+\);
             \1Pop\);
             \1Ldloca, \3\);
-            \1Call, m_M_19\);
+            \1Call, m_M_\d+\);
             """,
         TestName = "As method argument")]
     
     [TestCase("""var x = new Bar { Name = "A", Value = 3 };""", 
         """
         var (l_x_\d+) = new VariableDefinition\(st_bar_0\);
-        \s+m_topLevelStatements_14.Body.Variables.Add\(\1\);
+        \s+m_topLevelStatements_\d+.Body.Variables.Add\(\1\);
         (\s+il_topLevelMain_\d+\.Emit\(OpCodes\.)Ldloca_S, \1\);
         \2Initobj, st_bar_0\);
         \2Ldloca_S, \1\);
         \2Dup\);
         \2Ldstr, "A"\);
-        \2Call, l_set_5\);
+        \2Call, l_set_\d+\);
         \2Dup\);
         \2Ldc_I4, 3\);
-        \2Call, l_set_11\);
+        \2Call, l_set_\d+\);
         \2Pop\);
         """,
         TestName = "in variable initializer")]
@@ -199,7 +199,7 @@ public class ObjectInitializerTests : CecilifierUnitTestBase
         \1Initobj, st_bar_0\);
         \1Dup\);
         \1Ldc_I4, 3\);
-        \1Call, l_set_11\);
+        \1Call, l_set_\d+\);
         \1Pop\);
         """,
         TestName = "in assignment")]
@@ -216,30 +216,30 @@ public class ObjectInitializerTests : CecilifierUnitTestBase
                     \4Call, l_set_5\);
                     \4Dup\);
                     \4Ldc_I4, 6\);
-                    \4Call, l_set_11\);
+                    \4Call, l_set_1\d+\);
                     \4Pop\);
                     \4Ldloca, \1\);
-                    \4Call, m_get_8\);
+                    \4Call, m_get_\d+\);
                     """,
         TestName = "in member access expression")]
     
     [TestCase("Bar []ba = new Bar[1]; ba[0] = new Bar { Value = 3 };", 
         """
         \s+//Bar \[\]ba = new Bar\[1\];
-        \s+var l_ba_19 = new VariableDefinition\(st_bar_0.MakeArrayType\(\)\);
-        \s+m_topLevelStatements_14.Body.Variables.Add\(l_ba_19\);
+        \s+var (?<array_var>l_ba_\d+) = new VariableDefinition\(st_bar_0.MakeArrayType\(\)\);
+        \s+m_topLevelStatements_\d+.Body.Variables.Add\(\k<array_var>\);
         (\s+il_topLevelMain_\d+\.Emit\(OpCodes\.)Ldc_I4, 1\);
         \1Newarr, st_bar_0\);
-        \1Stloc, l_ba_19\);
+        \1Stloc, \k<array_var>\);
         \s+//ba\[0\] = new Bar { Value = 3 };
-        \1Ldloc, l_ba_19\);
+        \1Ldloc, \k<array_var>\);
         \1Ldc_I4, 0\);
         \1Ldelema, st_bar_0\);
         \1Dup\);
         \1Initobj, st_bar_0\);
         \1Dup\);
         \1Ldc_I4, 3\);
-        \1Call, l_set_11\);
+        \1Call, l_set_\d+\);
         \1Pop\);
         """,
         TestName = "in assignment to array element")]    

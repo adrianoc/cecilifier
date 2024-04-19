@@ -57,19 +57,21 @@ internal partial class PrivateImplementationDetailsGenerator
         var methodExpressions = CecilDefinitionsFactory.Method(
                                                         context,
                                                         $"{privateImplementationDetailsVar.MemberName}",
-                                                        methodVar, 
+                                                        methodVar,
+                                                        "NOT_IMPORTANT_NOONE_WILL_TRY_TO_RESOLVE_PARAMETER_VARS_FOR_THIS",
                                                         "InlineArrayAsSpan",
                                                         "MethodAttributes.Assembly | MethodAttributes.Static | MethodAttributes.HideBySig",
                                                         [ 
-                                                            new CecilDefinitionsFactory.ParameterSpec("buffer", "TBuffer", RefKind.Ref, (context, name) => ResolveOwnedGenericParameter(context, name, methodTypeQualifiedName)), 
-                                                            new CecilDefinitionsFactory.ParameterSpec("length", context.TypeResolver.Bcl.System.Int32, RefKind.None)
+                                                            new ParameterSpec("buffer", "TBuffer", RefKind.Ref, Constants.ParameterAttributes.None, null, (context, name) => ResolveOwnedGenericParameter(context, name, methodTypeQualifiedName)), 
+                                                            new ParameterSpec("length", context.TypeResolver.Bcl.System.Int32, RefKind.None, Constants.ParameterAttributes.None)
                                                         ],
                                                         ["TBuffer", "TElement"],
                                                         context =>
                                                         {
                                                             var spanTypeParameter = ResolveOwnedGenericParameter(context, "TElement", methodTypeQualifiedName);
                                                             return context.TypeResolver.Resolve(context.RoslynTypeSystem.SystemSpan).MakeGenericInstanceType(spanTypeParameter);
-                                                        });
+                                                        },
+                                                        out _);
 
         context.WriteCecilExpressions(methodExpressions);
         
@@ -137,15 +139,17 @@ internal partial class PrivateImplementationDetailsGenerator
                                                         context,
                                                         $"{privateImplementationDetailsVar.MemberName}",
                                                         methodVar, 
+                                                        "NOT_IMPORTANT_NOONE_WILL_TRY_TO_RESOLVE_PARAMETER_VARS_FOR_THIS",
                                                         "InlineArrayFirstElementRef",
                                                         "MethodAttributes.Assembly | MethodAttributes.Static | MethodAttributes.HideBySig",
-                                                        [ new CecilDefinitionsFactory.ParameterSpec("buffer", "TBuffer", RefKind.Ref, (ctx, name) => ResolveOwnedGenericParameter(ctx, name, methodTypeQualifiedName))],
+                                                        [ new ParameterSpec("buffer", "TBuffer", RefKind.Ref,  Constants.ParameterAttributes.None, null, (ctx, name) => ResolveOwnedGenericParameter(ctx, name, methodTypeQualifiedName))],
                                                         ["TBuffer", "TElement"],
                                                         ctx =>
                                                         {
                                                             var spanTypeParameter = ResolveOwnedGenericParameter(ctx, "TElement", methodTypeQualifiedName);
                                                             return spanTypeParameter.MakeByReferenceType();
-                                                        });
+                                                        },
+                                                        out _);
 
         context.WriteCecilExpressions(methodExpressions);
         
@@ -190,18 +194,20 @@ internal partial class PrivateImplementationDetailsGenerator
                                                         context,
                                                         $"{privateImplementationDetailsVar.MemberName}",
                                                         methodVar, 
+                                                        "NOT_IMPORTANT_NOONE_WILL_TRY_TO_RESOLVE_PARAMETER_VARS_FOR_THIS",
                                                         "InlineArrayElementRef",
                                                         "MethodAttributes.Assembly | MethodAttributes.Static | MethodAttributes.HideBySig",
                                                         [ 
-                                                            new CecilDefinitionsFactory.ParameterSpec("buffer", "TBuffer", RefKind.Ref, (ctx, name) => ResolveOwnedGenericParameter(ctx, name, methodTypeQualifiedName)),
-                                                            new CecilDefinitionsFactory.ParameterSpec("index", context.TypeResolver.Bcl.System.Int32, RefKind.None)
+                                                            new ParameterSpec("buffer", "TBuffer", RefKind.Ref, Constants.ParameterAttributes.None, null, (ctx, name) => ResolveOwnedGenericParameter(ctx, name, methodTypeQualifiedName)),
+                                                            new ParameterSpec("index", context.TypeResolver.Bcl.System.Int32, RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = "int" }
                                                         ],
                                                         ["TBuffer", "TElement"],
                                                         ctx =>
                                                         {
                                                             var spanTypeParameter = ResolveOwnedGenericParameter(ctx, "TElement", methodTypeQualifiedName);
                                                             return spanTypeParameter.MakeByReferenceType();
-                                                        });
+                                                        },
+                                                        out _);
 
         context.WriteCecilExpressions(methodExpressions);
         

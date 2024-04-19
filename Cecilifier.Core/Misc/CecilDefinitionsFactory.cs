@@ -14,6 +14,11 @@ using Mono.Cecil.Cil;
 
 namespace Cecilifier.Core.Misc
 {
+    internal record ParameterSpec(string Name, string ElementType, RefKind RefKind, string Attributes, string DefaultValue = null, Func<IVisitorContext, string, string> ElementTypeResolver = null)
+    {
+        public string RegistrationTypeName { get; init; }
+    }
+    
     internal sealed class CecilDefinitionsFactory
     {
         public static string CallSite(ITypeResolver resolver, IFunctionPointerTypeSymbol functionPointer)
@@ -53,32 +58,45 @@ namespace Cecilifier.Core.Misc
             return exps;
         }
 
-        public record ParameterSpec(string Name, string ElementType, RefKind RefKind, Func<IVisitorContext, string, string> ElementTypeResolver = null);
         public static IEnumerable<string> Method(
-            IVisitorContext context, 
-            string containingTypeName, 
-            string methodVar, 
-            string methodName, 
+            IVisitorContext context,
+            string declaringTypeName,
+            string methodVar,
+            string methodNameForParameterVariableRegistration, // we can't use the method name in some scenarios (indexers, for instance) 
+            string methodName,
             string methodModifiers,
             IReadOnlyList<ParameterSpec> parameters,
             IList<string> typeParameters,
-            Func<IVisitorContext, string> returnTypeResolver)
+            Func<IVisitorContext, string> returnTypeResolver,
+            out MethodDefinitionVariable methodDefinitionVariable)
         {
             var exps = new List<string>();
 
-            // for type parameters we may need to postpone setting the return type (using void as a placeholder, since we need to pass something) until the generic parameters has been
-            // handled. This is required because the type parameter may be defined by the method being processed.
-            exps.Add($"var {methodVar} = new MethodDefinition(\"{methodName}\", {methodModifiers}, {context.TypeResolver.Bcl.System.Void});");
-            ProcessGenericTypeParameters(methodVar, context, $"{containingTypeName}.{methodName}", typeParameters, exps);
-            exps.Add($"{methodVar}.ReturnType = {returnTypeResolver(context)};");
+            // if the method has type parameters we need to postpone setting the return type (using void as a placeholder, since we need to pass something) until the generic parameters has been
+            // handled. This is required because the type parameter may be defined by the method being processed which introduces a chicken and egg problem.
+            exps.Add($"var {methodVar} = new MethodDefinition(\"{methodName}\", {methodModifiers}, { (typeParameters.Count == 0 ? returnTypeResolver(context) : context.TypeResolver.Bcl.System.Void) });");
+            ProcessGenericTypeParameters(methodVar, context, $"{declaringTypeName}.{methodName}", typeParameters, exps);
+            if (typeParameters.Count > 0)
+                exps.Add($"{methodVar}.ReturnType = {returnTypeResolver(context)};");
 
             foreach (var parameter in parameters)
             {
-                var parameterExp = Parameter(parameter.Name, parameter.RefKind, parameter.ElementTypeResolver != null ? parameter.ElementTypeResolver(context, parameter.ElementType) : parameter.ElementType);
-                exps.Add($"{methodVar}.Parameters.Add({parameterExp});");
+                var paramVar = context.Naming.SyntheticVariable(parameter.Name, ElementKind.Parameter);
+                var parameterExp = Parameter(
+                    parameter.Name, 
+                    parameter.RefKind, 
+                    false, // for now,the only callers for this method don't have default parameters.
+                    methodVar,
+                    paramVar,
+                    parameter.ElementTypeResolver != null ? parameter.ElementTypeResolver(context, parameter.ElementType) : parameter.ElementType,
+                    parameter.Attributes,
+                    (parameter.DefaultValue, parameter.DefaultValue != null));
+                
+                context.DefinitionVariables.RegisterNonMethod(methodNameForParameterVariableRegistration, parameter.Name, VariableMemberKind.Parameter, paramVar);
+                exps.AddRange(parameterExp);
             }
 
-            context.DefinitionVariables.RegisterMethod(containingTypeName, methodName, parameters.Select(p => p.ElementType).ToArray(), typeParameters.Count, methodVar);
+            methodDefinitionVariable = context.DefinitionVariables.RegisterMethod(declaringTypeName, methodName, parameters.Select(p => p.RegistrationTypeName).ToArray(), typeParameters.Count, methodVar);
             return exps;
         }
 
@@ -215,7 +233,7 @@ namespace Cecilifier.Core.Misc
             };
         }
 
-        public static string Parameter(string name, RefKind byRef, string resolvedType, string paramAttributes = null)
+        public static string ParameterDoesNotHandleParamsKeywordOrDefaultValue(string name, RefKind byRef, string resolvedType, string paramAttributes = null)
         {
             paramAttributes ??= Constants.ParameterAttributes.None;
             if (RefKind.None != byRef)
@@ -226,18 +244,18 @@ namespace Cecilifier.Core.Misc
             return $"new ParameterDefinition(\"{name}\", {paramAttributes}, {resolvedType})";
         }
 
-        public static IEnumerable<string> Parameter(string name, RefKind byRef, bool isParams, string methodVar, string paramVar, string resolvedType, string paramAttributes, string defaultParameterValue)
+        public static IEnumerable<string> Parameter(string name, RefKind byRef, bool isParams, string methodVar, string paramVar, string resolvedType, string paramAttributes, (string Value, bool Present) defaultParameterValue)
         {
             var exps = new List<string>();
 
-            exps.Add($"var {paramVar} = {Parameter(name, byRef, resolvedType, paramAttributes)};");
+            exps.Add($"var {paramVar} = {ParameterDoesNotHandleParamsKeywordOrDefaultValue(name, byRef, resolvedType, paramAttributes)};");
             if (isParams)
             {
                 exps.Add($"{paramVar}.CustomAttributes.Add(new CustomAttribute(assembly.MainModule.Import(typeof(ParamArrayAttribute).GetConstructor(BindingFlags.Public | BindingFlags.Instance, null, new Type[0], null))));");
             }
 
-            if (defaultParameterValue != null)
-                exps.Add($"{paramVar}.Constant = {defaultParameterValue};");
+            if (defaultParameterValue.Present)
+                exps.Add($"{paramVar}.Constant = {defaultParameterValue.Value ?? "null" };");
 
             exps.Add($"{methodVar}.Parameters.Add({paramVar});");
 
@@ -247,24 +265,20 @@ namespace Cecilifier.Core.Misc
         public static IEnumerable<string> Parameter(ParameterSyntax node, SemanticModel semanticModel, string methodVar, string paramVar, string resolvedType, string defaultParameterValue)
         {
             var paramSymbol = semanticModel.GetDeclaredSymbol(node);
-            return Parameter(
-                node.Identifier.Text,
-                paramSymbol!.RefKind,
-                isParams: node.GetFirstToken().IsKind(SyntaxKind.ParamsKeyword),
-                methodVar,
-                paramVar,
-                resolvedType,
-                paramSymbol!.AsParameterAttribute(),
-                defaultParameterValue);
+            return Parameter(paramSymbol, methodVar, paramVar, resolvedType);
         }
 
-        public static string Parameter(IParameterSymbol paramSymbol, string resolvedType)
+        public static IEnumerable<string> Parameter(IParameterSymbol paramSymbol, string methodVar, string paramVar, string resolvedType)
         {
             return Parameter(
                 paramSymbol.Name,
                 paramSymbol.RefKind,
+                paramSymbol.IsParams,
+                methodVar,
+                paramVar,
                 resolvedType,
-                paramSymbol.AsParameterAttribute());
+                paramSymbol.AsParameterAttribute(),
+                paramSymbol.ExplicitDefaultValue(rawString: false));
         }
 
         public static IEnumerable<string> Attribute(string attrTargetVar, IVisitorContext context, AttributeSyntax attribute, Func<ITypeSymbol, AttributeArgumentSyntax[], string> ctorResolver)
@@ -448,7 +462,7 @@ namespace Cecilifier.Core.Misc
 
         private static string FunctionPointerTypeBasedCecilType(ITypeResolver resolver, IFunctionPointerTypeSymbol functionPointer, Func<string, string, string, string> factory)
         {
-            var parameters = $"Parameters={{ {string.Join(',', functionPointer.Signature.Parameters.Select(p => Parameter(p, resolver.Resolve(p.Type))))} }}";
+            var parameters = $"Parameters={{ {string.Join(',', functionPointer.Signature.Parameters.Select(p => ParameterDoesNotHandleParamsKeywordOrDefaultValue(p.Name, p.RefKind, resolver.Resolve(p.Type))))} }}";
             var returnType = resolver.Resolve(functionPointer.Signature.ReturnType);
             return factory("HasThis = false", parameters, returnType);
         }
