@@ -10,7 +10,6 @@ using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Mono.Cecil;
 using Mono.Cecil.Cil;
 
 namespace Cecilifier.Core.CodeGeneration;

@@ -199,7 +199,7 @@ namespace Cecilifier.Core.AST
                 var storageVariable = Context.DefinitionVariables.GetVariable(targetOfAssignmentSymbol.Name, targetOfAssignmentSymbol.ToVariableMemberKind(), string.Empty);
                 
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, storageVariable.VariableName);
-                Context.EmitCilInstruction(ilVar, OpCodes.Initobj, resolvedType);                
+                Context.EmitCilInstruction(ilVar, OpCodes.Initobj, resolvedType);
             }
             else
             {
