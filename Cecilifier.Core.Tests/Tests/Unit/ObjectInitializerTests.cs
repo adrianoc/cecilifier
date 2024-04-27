@@ -213,7 +213,7 @@ public class ObjectInitializerTests : CecilifierUnitTestBase
                     \4Ldloca_S, \1\);
                     \4Dup\);
                     \4Ldstr, "123"\);
-                    \4Call, l_set_5\);
+                    \4Call, l_set_\d+\);
                     \4Dup\);
                     \4Ldc_I4, 6\);
                     \4Call, l_set_1\d+\);

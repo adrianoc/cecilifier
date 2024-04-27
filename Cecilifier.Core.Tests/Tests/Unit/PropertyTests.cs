@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Tests.Unit;
@@ -103,10 +104,25 @@ public class PropertyTests : CecilifierUnitTestBase
         var result = RunCecilifier("class C { public static int Prop { get; set; } } class Driver { int M() => C.Prop; }");
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
 
-        Assert.That(cecilifiedCode, Does.Match(@"var fld_prop_\d+ = new FieldDefinition\(""<Prop>k__BackingField"",.+FieldAttributes\.Static.+\);"), "Backing field should be static");
-        Assert.That(cecilifiedCode, Does.Match(@"var l_set_\d+ = new MethodDefinition\(""set_Prop"", .+MethodAttributes\.Static.+\);"), "Setter should be static");
-        Assert.That(cecilifiedCode, Does.Match(@"var m_get_\d+ = new MethodDefinition\(""get_Prop"", .+MethodAttributes\.Static.+\);"), "Getter should be static");
-        Assert.That(cecilifiedCode, Does.Match(@"il_set_\d+.Emit\(OpCodes.Stsfld, fld_prop_\d+\);"), "Setter field access should be static");
-        Assert.That(cecilifiedCode, Does.Match(@"il_get_\d+.Emit\(OpCodes.Ldsfld, fld_prop_\d+\);"), "Getter field access should be static");
+        Assert.Multiple(delegate 
+        {
+            Assert.That(cecilifiedCode, Does.Match("""
+                                                   var fld_prop_\d+ = new FieldDefinition\("<Prop>k__BackingField",.+FieldAttributes\.Static \| FieldAttributes\.Private.+\);
+                                                   \s+cls_C_\d+\.Fields\.Add\(fld_prop_\d+\);
+                                                   """), "Backing field should be static");
+
+            var matches = Regex.Matches(cecilifiedCode, 
+                                                """
+                                                   var fld_prop_\d+ = new FieldDefinition\(.+\);
+                                                   \s+cls_C_\d+\.Fields\.Add\(fld_prop_\d+\);
+                                                   """);
+            
+            Assert.That(matches.Count, Is.EqualTo(1), $"Only one backing field is expected:\n{cecilifiedCode}");
+            
+            Assert.That(cecilifiedCode, Does.Match(@"var l_set_\d+ = new MethodDefinition\(""set_Prop"", .+MethodAttributes\.Static.+\);"), "Setter should be static");
+            Assert.That(cecilifiedCode, Does.Match(@"var m_get_\d+ = new MethodDefinition\(""get_Prop"", .+MethodAttributes\.Static.+\);"), "Getter should be static");
+            Assert.That(cecilifiedCode, Does.Match(@"il_set_\d+.Emit\(OpCodes.Stsfld, fld_prop_\d+\);"), "Setter field access should be static");
+            Assert.That(cecilifiedCode, Does.Match(@"il_get_\d+.Emit\(OpCodes.Ldsfld, fld_prop_\d+\);"), "Getter field access should be static");
+        });
     }
 }
