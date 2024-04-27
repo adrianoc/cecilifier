@@ -69,7 +69,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
                 return;
             }
 
-            const string source = "using System; public delegate void TestDelegate(); class TestClass { static TestClass() {} public TestClass() {} void Gen<TestGenericParameter>() {} [Obsolete] int TestAttribute; event Action TestEvent; public void Bar(int TestParameter) { int local1 = 0; if (TestParameter == local1) {} Gen<int>(); } int TestField; int TestProperty {get;set;} } struct TestStruct {} enum TestEnum {} interface TestInterface {}";
+            const string source = "using System; public delegate void TestDelegate(); class TestClass { static TestClass() {} public TestClass() {} void Gen<TestGenericParameter>() {} [Obsolete] int TestAttribute; event Action TestEvent; public void Bar(int TestParameter) { int local1 = 0; if (TestParameter == local1) {} Gen<int>(); } int TestField; int TestProperty {get;set;} } struct TestStruct {} enum TestEnum {} interface TestInterface {} record TestRecord;";
             var namingOptions = NamingOptions.All;
             var casingValidation = "a-z";
 
