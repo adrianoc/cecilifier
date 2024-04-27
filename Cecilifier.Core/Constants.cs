@@ -11,6 +11,7 @@ public struct Constants
         public const string StaticClassAttributes = $"TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit | {StaticTypeAttributes}";
         public const string InterfaceMethodDefinitionAttributes = "MethodAttributes.NewSlot | MethodAttributes.Virtual"; // Some common method attributes (like HideBySig) will be explicitly added.
         public const string MethodAttributesSpecialName = "MethodAttributes.SpecialName";
+        public const string MethodAttributesStatic = "MethodAttributes.Static";
         public const string DelegateMethodAttributes = "MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.NewSlot | MethodAttributes.Virtual";
 
         public const string CtorAttributes = "MethodAttributes.RTSpecialName | MethodAttributes.SpecialName";

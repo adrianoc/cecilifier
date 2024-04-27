@@ -995,6 +995,15 @@ namespace Cecilifier.Core.AST
         // needs to explicitly specify which methods they override.
         protected void AddToOverridenMethodsIfAppropriated(string methodVar, IMethodSymbol method)
         {
+            var overridenMethod = GetOverridenMethod(method);
+            if (overridenMethod == null)
+                return;
+            
+            WriteCecilExpression(Context, $"{methodVar}.Overrides.Add({overridenMethod});");
+        }
+        
+        protected string GetOverridenMethod(IMethodSymbol method)
+        {
             // first check explicit interface implementation...
             var overridenMethod = method?.ExplicitInterfaceImplementations.FirstOrDefault();
             if (overridenMethod == null)
@@ -1007,14 +1016,14 @@ namespace Cecilifier.Core.AST
                 {
                     // if it is not an explicit interface implementation check for abstract static method from interfaces
                     var lastDeclared = method.FindLastDefinition(method.ContainingType.Interfaces);
-                    if (lastDeclared == null || SymbolEqualityComparer.Default.Equals(lastDeclared, method) || lastDeclared.ContainingType.TypeKind != TypeKind.Interface || method?.IsStatic == false)
-                        return;
+                    if (lastDeclared == null || SymbolEqualityComparer.Default.Equals(lastDeclared, method) || lastDeclared.ContainingType.TypeKind != TypeKind.Interface || method.IsStatic == false)
+                        return null;
 
                     overridenMethod = lastDeclared;
                 }
             }
 
-            WriteCecilExpression(Context, $"{methodVar}.Overrides.Add({overridenMethod.MethodResolverExpression(Context)});");
+            return overridenMethod.MethodResolverExpression(Context);
         }
     }
 }
