@@ -394,9 +394,8 @@ namespace Cecilifier.Core.AST
 
         protected string ResolveExpressionType(ExpressionSyntax expression)
         {
-            Utils.EnsureNotNull(expression);
-            var info = Context.GetTypeInfo(expression);
-            return Context.TypeResolver.Resolve(info.Type);
+            var type = Context.GetTypeInfo(expression).Type.EnsureNotNull();
+            return Context.TypeResolver.Resolve(type);
         }
 
         protected string ResolveType(TypeSyntax type)
@@ -800,7 +799,7 @@ namespace Cecilifier.Core.AST
 
             return exps;
 
-            string EntryPoint() => attribute?.ArgumentList?.Arguments.FirstOrDefault(arg => arg.NameEquals?.Name.Identifier.Text == "EntryPoint")?.Expression.ToString() ?? "\"\"";
+            string EntryPoint() => attribute.ArgumentList?.Arguments.FirstOrDefault(arg => arg.NameEquals?.Name.Identifier.Text == "EntryPoint")?.Expression.ToString() ?? "\"\"";
 
             string MethodImplAttributes()
             {
@@ -996,10 +995,8 @@ namespace Cecilifier.Core.AST
         protected void AddToOverridenMethodsIfAppropriated(string methodVar, IMethodSymbol method)
         {
             var overridenMethod = GetOverridenMethod(method);
-            if (overridenMethod == null)
-                return;
-            
-            WriteCecilExpression(Context, $"{methodVar}.Overrides.Add({overridenMethod});");
+            if (overridenMethod != null)
+                WriteCecilExpression(Context, $"{methodVar}.Overrides.Add({overridenMethod});");
         }
         
         protected string GetOverridenMethod(IMethodSymbol method)

@@ -40,18 +40,15 @@ internal class ElementAccessExpressionWithRangeArgumentVisitor : SyntaxWalkerBas
         using var __ = LineInformationTracker.Track(Context, node);
         using var _ = Context.WithFlag<ContextFlagReseter>(Constants.ContextFlags.InRangeExpression);
 
-        Utils.EnsureNotNull(node.LeftOperand);
-        Utils.EnsureNotNull(node.RightOperand);
-
         // Compute range start index
-        node.LeftOperand.Accept(_expressionVisitor);
+        Utils.EnsureNotNull(node.LeftOperand).Accept(_expressionVisitor);
 
         var startIndexVar = CodeGenerationHelpers.StoreTopOfStackInLocalVariable(Context, _ilVar, "startIndex", Context.RoslynTypeSystem.SystemInt32).VariableName;
 
         // Compute number of elements to slice
 
         // compute range right index.
-        node.RightOperand.Accept(_expressionVisitor);
+        Utils.EnsureNotNull(node.RightOperand).Accept(_expressionVisitor);
 
         Context.EmitCilInstruction(_ilVar, OpCodes.Ldloc, startIndexVar);
         Context.EmitCilInstruction(_ilVar, OpCodes.Sub);

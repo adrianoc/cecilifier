@@ -85,7 +85,7 @@ namespace Cecilifier.Core.Extensions
         public static T EnsureNotNull<T>([NotNullIfNotNull("symbol")] this T symbol, [CallerArgumentExpression(nameof(symbol))] string expression = null) where T : ISymbol
         {
             if (symbol == null)
-                throw new NullReferenceException($"Expression '{expression}' is expected to not be null.");
+                throw new NullReferenceException($"Expression '{expression}' is expected to be non null.");
 
             return symbol;
         }

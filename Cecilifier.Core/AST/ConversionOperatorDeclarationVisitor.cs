@@ -1,3 +1,4 @@
+using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -30,8 +31,7 @@ namespace Cecilifier.Core.AST
         public override void VisitOperatorDeclaration(OperatorDeclarationSyntax node)
         {
             using var _ = LineInformationTracker.Track(Context, node);
-            var declaredSymbol = Context.SemanticModel.GetDeclaredSymbol(node);
-            Misc.Utils.EnsureNotNull(declaredSymbol, $"Failed to get declared symbol for {node}");
+            var declaredSymbol = Context.SemanticModel.GetDeclaredSymbol(node).EnsureNotNull();
 
             ProcessMethodDeclaration(
                 node,

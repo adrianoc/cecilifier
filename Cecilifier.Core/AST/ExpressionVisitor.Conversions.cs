@@ -80,10 +80,9 @@ partial class ExpressionVisitor
             // we need to convert from System.Index to *int* which is done through
             // the method System.Index::GetOffset(int32)
             loadArrayIntoStack();
-            var indexed = ModelExtensions.GetTypeInfo(Context.SemanticModel, expression.Ancestors().OfType<ElementAccessExpressionSyntax>().Single().Expression);
-            Utils.EnsureNotNull(indexed.Type, "Cannot be null.");
-            if (indexed.Type.Name == "Span")
-                AddMethodCall(ilVar, ((IPropertySymbol) indexed.Type.GetMembers("Length").Single()).GetMethod);
+            var indexedType = Context.SemanticModel.GetTypeInfo(expression.Ancestors().OfType<ElementAccessExpressionSyntax>().Single().Expression).Type.EnsureNotNull();
+            if (indexedType.Name == "Span")
+                AddMethodCall(ilVar, ((IPropertySymbol) indexedType.GetMembers("Length").Single()).GetMethod);
             else
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldlen);
             Context.EmitCilInstruction(ilVar, OpCodes.Conv_I4);

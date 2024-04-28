@@ -693,13 +693,10 @@ namespace Cecilifier.Core.AST
             using var _ = LineInformationTracker.Track(Context, node);
 
             node.Expression.Accept(this);
-            var castSource = Context.GetTypeInfo(node.Expression);
-            var castTarget = Context.GetTypeInfo(node.Type);
+            var castSourceType = Context.GetTypeInfo(node.Expression).Type.EnsureNotNull();
+            var castTargetType = Context.GetTypeInfo(node.Type).Type.EnsureNotNull();
 
-            Utils.EnsureNotNull(castSource.Type, $"Failed to get type information for expression: {node.Expression}");
-            Utils.EnsureNotNull(castTarget.Type, $"Failed to get type information for: {node.Type}");
-
-            if (castSource.Type.SpecialType == castTarget.Type.SpecialType && castSource.Type.SpecialType == SpecialType.System_Double)
+            if (castSourceType.SpecialType == castTargetType.SpecialType && castSourceType.SpecialType == SpecialType.System_Double)
             {
                 /*
                  * Even though a cast from double => double can be view as an identity conversion (from the pov of the developer who wrote it)
@@ -709,45 +706,45 @@ namespace Cecilifier.Core.AST
                 return;
             }
 
-            if (castSource.Type.SpecialType == castTarget.Type.SpecialType && castSource.Type.SpecialType != SpecialType.None ||
-                castSource.Type.SpecialType == SpecialType.System_Byte && castTarget.Type.SpecialType == SpecialType.System_Char ||
-                castSource.Type.SpecialType == SpecialType.System_Byte && castTarget.Type.SpecialType == SpecialType.System_Int16 ||
-                castSource.Type.SpecialType == SpecialType.System_Byte && castTarget.Type.SpecialType == SpecialType.System_Int32 ||
-                castSource.Type.SpecialType == SpecialType.System_Char && castTarget.Type.SpecialType == SpecialType.System_Int32 ||
-                castSource.Type.SpecialType == SpecialType.System_Int16 && castTarget.Type.SpecialType == SpecialType.System_Int32)
+            if (castSourceType.SpecialType == castTargetType.SpecialType && castSourceType.SpecialType != SpecialType.None ||
+                castSourceType.SpecialType == SpecialType.System_Byte && castTargetType.SpecialType == SpecialType.System_Char ||
+                castSourceType.SpecialType == SpecialType.System_Byte && castTargetType.SpecialType == SpecialType.System_Int16 ||
+                castSourceType.SpecialType == SpecialType.System_Byte && castTargetType.SpecialType == SpecialType.System_Int32 ||
+                castSourceType.SpecialType == SpecialType.System_Char && castTargetType.SpecialType == SpecialType.System_Int32 ||
+                castSourceType.SpecialType == SpecialType.System_Int16 && castTargetType.SpecialType == SpecialType.System_Int32)
                 return;
 
-            var conversion = Context.SemanticModel.ClassifyConversion(node.Expression, castTarget.Type, true);
-            if (castTarget.Type.SpecialType != SpecialType.None && conversion.IsNumeric)
+            var conversion = Context.SemanticModel.ClassifyConversion(node.Expression, castTargetType, true);
+            if (castTargetType.SpecialType != SpecialType.None && conversion.IsNumeric)
             {
-                var opcode = castTarget.Type.SpecialType switch
+                var opcode = castTargetType.SpecialType switch
                 {
                     SpecialType.System_Int16 => OpCodes.Conv_I2,
                     SpecialType.System_Int32 => OpCodes.Conv_I4,
-                    SpecialType.System_Int64 => castSource.Type.SpecialType == SpecialType.System_Byte || castSource.Type.SpecialType == SpecialType.System_Char ? OpCodes.Conv_U8 : OpCodes.Conv_I8,
+                    SpecialType.System_Int64 => castSourceType.SpecialType == SpecialType.System_Byte || castSourceType.SpecialType == SpecialType.System_Char ? OpCodes.Conv_U8 : OpCodes.Conv_I8,
 
                     SpecialType.System_Single => OpCodes.Conv_R4,
                     SpecialType.System_Double => OpCodes.Conv_R8,
                     SpecialType.System_Char => OpCodes.Conv_U2,
                     SpecialType.System_Byte => OpCodes.Conv_U1,
 
-                    _ => throw new Exception($"Cast from {node.Expression} ({castSource.Type}) to {castTarget.Type} is not supported.")
+                    _ => throw new Exception($"Cast from {node.Expression} ({castSourceType}) to {castTargetType} is not supported.")
                 };
 
                 Context.EmitCilInstruction(ilVar, opcode);
             }
             else if (conversion.IsExplicit && conversion.IsReference)
             {
-                var opcode = castTarget.Type.TypeKind == TypeKind.TypeParameter ? OpCodes.Unbox_Any : OpCodes.Castclass;
-                AddCilInstruction(ilVar, opcode, castTarget.Type);
+                var opcode = castTargetType.TypeKind == TypeKind.TypeParameter ? OpCodes.Unbox_Any : OpCodes.Castclass;
+                AddCilInstruction(ilVar, opcode, castTargetType);
             }
-            else if (conversion.IsBoxing || conversion.IsImplicit && conversion.IsReference && castSource.Type.TypeKind == TypeKind.TypeParameter)
+            else if (conversion.IsBoxing || conversion.IsImplicit && conversion.IsReference && castSourceType.TypeKind == TypeKind.TypeParameter)
             {
-                AddCilInstruction(ilVar, OpCodes.Box, castSource.Type);
+                AddCilInstruction(ilVar, OpCodes.Box, castSourceType);
             }
             else if (conversion.IsUnboxing)
             {
-                AddCilInstruction(ilVar, OpCodes.Unbox_Any, castTarget.Type);
+                AddCilInstruction(ilVar, OpCodes.Unbox_Any, castTargetType);
             }
             else if (conversion.IsExplicit)
             {
@@ -1090,11 +1087,10 @@ namespace Cecilifier.Core.AST
 
             Context.EmitCilInstruction(ilVar, OpCodes.Dup); // Duplicate the target of the element access expression
 
-            var indexed = Context.SemanticModel.GetTypeInfo(elementAccessExpressionSyntax.Expression);
-            Utils.EnsureNotNull(indexed.Type, "Cannot be null.");
-            if (indexed.Type.Name == "Span")
+            var indexedType = Context.SemanticModel.GetTypeInfo(elementAccessExpressionSyntax.Expression).Type.EnsureNotNull();
+            if (indexedType.Name == "Span")
             {
-                IMethodSymbol method = ((IPropertySymbol) indexed.Type.GetMembers("Length").Single()).GetMethod;
+                IMethodSymbol method = ((IPropertySymbol) indexedType.GetMembers("Length").Single()).GetMethod;
                 AddMethodCall(ilVar, method);
             }
             else

@@ -85,20 +85,18 @@ namespace Cecilifier.Core.AST
                 return;
             }
 
-            var member = Context.SemanticModel.GetSymbolInfo(node);
-            Utils.EnsureNotNull(member.Symbol, $"Failed to resolve symbol for node: {node.SourceDetails()}.");
-
-            if (member.Symbol.Kind != SymbolKind.NamedType
-                && member.Symbol.ContainingType.IsValueType
+            var member = Context.SemanticModel.GetSymbolInfo(node).Symbol.EnsureNotNull();
+            if (member.Kind != SymbolKind.NamedType
+                && member.ContainingType.IsValueType
                 && node.Parent is ObjectCreationExpressionSyntax { ArgumentList: { Arguments: { Count: 0 } } })
             {
                 return;
             }
 
-            LoadImplicitTargetForMemberReference(node, member.Symbol);
+            LoadImplicitTargetForMemberReference(node, member);
             AddCallToOpImplicitIfRequired(node);
 
-            switch (member.Symbol)
+            switch (member)
             {
                 case IParameterSymbol parameter:
                     ParameterAssignment(parameter);
