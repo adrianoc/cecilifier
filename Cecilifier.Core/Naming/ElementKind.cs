@@ -3,6 +3,7 @@ namespace Cecilifier.Core.Naming
     // Keep this in sync with cecilifier.settings.js
     public enum ElementKind
     {
+        None,
         Class,
         Struct,
         Record,
@@ -22,7 +23,6 @@ namespace Cecilifier.Core.Naming
         Attribute,
         IL,
         GenericParameter,
-        GenericInstance,
-        None
+        GenericInstance
     }
 }
