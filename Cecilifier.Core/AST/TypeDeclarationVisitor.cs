@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Cecilifier.Core.CodeGeneration;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Misc;
@@ -62,12 +63,11 @@ namespace Cecilifier.Core.AST
             using var _ = LineInformationTracker.Track(Context, node);
             var definitionVar = Context.Naming.Type(node);
             var recordSymbol = Context.SemanticModel.GetDeclaredSymbol(node).EnsureNotNull();
-            using (Context.DefinitionVariables.WithCurrent(recordSymbol.ContainingSymbol.FullyQualifiedName(false), node.Identifier.ValueText, VariableMemberKind.Type, definitionVar))
-            {
-                HandleTypeDeclaration(node, definitionVar);
-                base.VisitRecordDeclaration(node);
-                EnsureCurrentTypeHasADefaultCtor(node, definitionVar);
-            }
+            using var variable = Context.DefinitionVariables.WithCurrent(recordSymbol.ContainingSymbol.FullyQualifiedName(false), node.Identifier.ValueText, VariableMemberKind.Type, definitionVar);
+            HandleTypeDeclaration(node, definitionVar);
+            base.VisitRecordDeclaration(node);
+
+            RecordGenerator.AddSyntheticMembers(Context, definitionVar, node);
         }
 
         public override void VisitEnumDeclaration(EnumDeclarationSyntax node)

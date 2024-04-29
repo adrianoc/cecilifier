@@ -117,8 +117,8 @@ internal class PropertyGenerator
         
         return scopedVariable;
     }
-
-    internal void AddAutoGetterMethodImplementation(PropertyGenerationData propertyGenerationData, string ilVar)
+   
+    internal void AddAutoGetterMethodImplementation(ref readonly PropertyGenerationData propertyGenerationData, string ilVar)
     {
         AddBackingFieldIfNeeded(in propertyGenerationData);
 
