@@ -40,14 +40,28 @@ public class RecordTests : CecilifierUnitTestBase
     }
 
     [Test]
-    public void PrimaryConstructorParameters_AreMappedToPublicProperties()
+    public void PrimaryConstructorParameters_AreMappedToPublicProperties1()
     {
         var result = RunCecilifier("public record TheRecord(int Value, TheRecord Parent, char Ch = '?');");
 
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+        AssertPropertiesFromPrimaryConstructor(["Value:assembly.MainModule.TypeSystem.Int32", @"Parent:rec_theRecord_\d+", "Ch:assembly.MainModule.TypeSystem.Char"], cecilifiedCode);
+
+    }
+    
+    [Test]
+    public void PrimaryConstructorParameters_AreMappedToPublicProperties2()
+    {
+        var result = RunCecilifier("public record TheRecord<T>(T Value, TheRecord<T> Other);");
+
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+        AssertPropertiesFromPrimaryConstructor(["Value:gp_T_1", @"Other:rec_theRecord_\d+.MakeGenericInstanceType\(gp_T_\d+\)"], cecilifiedCode);
+    }
+
+    private static void AssertPropertiesFromPrimaryConstructor(string[] expectedNameTypePairs, string cecilifiedCode)
+    {
         Span<Range> ranges = stackalloc Range[2];
-        
-        foreach (var pair in new[] { "Value:assembly.MainModule.TypeSystem.Int32", @"Parent:rec_theRecord_\d+", "Ch:assembly.MainModule.TypeSystem.Char" })
+        foreach (var pair in expectedNameTypePairs)
         {
             var expected = pair.AsSpan();
             var splitted = expected.Split(ranges, ':', StringSplitOptions.TrimEntries);
@@ -55,20 +69,21 @@ public class RecordTests : CecilifierUnitTestBase
 
             var propertyName = expected[ranges[0]];
             var propertyType = expected[ranges[1]];
+            
             Assert.That(
                 cecilifiedCode, 
                 Does.Match($"""
-                           //Property: {propertyName} \(primary constructor\)
-                           \s+var (?<prop_var>prop_{Char.ToLower(propertyName[0])}{propertyName.Slice(1)}_\d+) = new PropertyDefinition\("{propertyName}", PropertyAttributes.None, {propertyType}\);
-                           \s+rec_theRecord_\d+.Properties.Add\(\k<prop_var>\);
-                           """));
+                            //Property: {propertyName} \(primary constructor\)
+                            \s+var (?<prop_var>prop_{Char.ToLower(propertyName[0])}{propertyName.Slice(1)}_\d+) = new PropertyDefinition\("{propertyName}", PropertyAttributes.None, {propertyType}\);
+                            \s+rec_theRecord_\d+.Properties.Add\(\k<prop_var>\);
+                            """));
             
             // ensure a method was generated for the `get` accessor
             Assert.That(cecilifiedCode, Does.Match($"""
-                                                   //{propertyName} getter
-                                                   \s+var (m_get{propertyName}_\d+) = new MethodDefinition\("get_{propertyName}", (MethodAttributes\.)Public \| \2HideBySig \| \2SpecialName, {propertyType}\);
-                                                   \s+rec_theRecord_\d+.Methods.Add\(\1\);
-                                                   """));
+                                                    //{propertyName} getter
+                                                    \s+var (m_get{propertyName}_\d+) = new MethodDefinition\("get_{propertyName}", (MethodAttributes\.)Public \| \2HideBySig \| \2SpecialName, {propertyType}\);
+                                                    \s+rec_theRecord_\d+.Methods.Add\(\1\);
+                                                    """));
         
             // ensure a method was generated for the `init` accessor
             Assert.That(cecilifiedCode, Does.Match($"""

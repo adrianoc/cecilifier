@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
@@ -96,6 +97,46 @@ public class PrimaryConstructorGenerator
                 
                 propertyGenerator.AddAutoSetterMethodImplementation(in propertyData, ilVar);
             }
+        }
+    }
+
+    internal static void AddPrimaryConstructor(IVisitorContext context, string recordTypeDefinitionVariable, TypeDeclarationSyntax typeDeclaration)
+    {
+        context.WriteComment($"Constructor: {typeDeclaration.Identifier.ValueText()}{typeDeclaration.ParameterList}");
+        var ctorVar = context.Naming.Constructor(typeDeclaration, false);
+        var ctorExp = CecilDefinitionsFactory.Constructor(
+                                        context, 
+                                        ctorVar, 
+                                        typeDeclaration.Identifier.ValueText, 
+                                        false, 
+                                        "MethodAttributes.Public", 
+                                        typeDeclaration.ParameterList?.Parameters.Select(p => p.Type?.ToString()).ToArray() ?? []);
+
+        context.WriteCecilExpressions(
+        [
+            ctorExp,
+            $"{recordTypeDefinitionVariable}.Methods.Add({ctorVar});"
+        ]);
+
+        var ctorIlVar = context.Naming.Constructor(typeDeclaration, false);
+        if (typeDeclaration.ParameterList?.Parameters == null)
+            return;
+        
+        foreach (var parameter in typeDeclaration.ParameterList?.Parameters)
+        {
+            context.WriteComment($"Parameter: {parameter.Identifier}");
+            var paramVar = context.Naming.Parameter(parameter);
+            var paramExps = CecilDefinitionsFactory.Parameter(parameter.Identifier.ValueText, RefKind.None, false, ctorVar, paramVar, "resolvedType", "paramAttrs", ("", false));
+            context.WriteCecilExpressions(paramExps);
+
+            context.EmitCilInstruction(ctorIlVar, OpCodes.Ldarg_0);
+            context.EmitCilInstruction(ctorIlVar, OpCodes.Ldarg, paramVar);
+
+            var backingFieldVar = context.DefinitionVariables.GetVariable(Utils.BackingFieldNameForAutoProperty(parameter.Identifier.ValueText), VariableMemberKind.Field, typeDeclaration.Identifier.ValueText);
+            if (!backingFieldVar.IsValid)
+                throw new InvalidOperationException("C");
+
+            context.EmitCilInstruction(ctorIlVar, OpCodes.Stfld, backingFieldVar.VariableName);
         }
     }
 }
