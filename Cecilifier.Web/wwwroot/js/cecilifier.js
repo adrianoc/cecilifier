@@ -586,7 +586,7 @@ function setTooltips(version) {
                         <td>Toggles visibility of cursor information.</td>\
                     </tr>\
                     <tr>\
-                        <td><kbd class=\"kbc-button\">Ctrl</kbd> + <kbd class=\"kbc-button\">Alt</kbd> + <kbd class=\"kbc-button\">S</kbd></td>\
+                        <td><kbd class=\"kbc-button\">Ctrl</kbd> + <kbd class=\"kbc-button\">Alt</kbd> + <kbd class=\"kbc-button\">L</kbd></td>\
                         <td/>\
                         <td>Display a list of locally saved snippets that can be reloaded<br/>by navigating to https://cecilifier.me/SAVEDNAME.</td>\
                     </tr>\
