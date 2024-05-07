@@ -22,9 +22,9 @@ internal record struct PropertyGenerationData(
     string ResolvedType, 
     string TypeNameForRegistration, 
     IReadOnlyList<ParameterSpec> Parameters,
-    string BackingFieldModifiers,
-    OpCode StoreOpCode,
-    OpCode LoadOpCode);
+    string BackingFieldModifiers =null, // Not used, unless on auto-properties
+    OpCode StoreOpCode = default, // Not used, unless on auto-properties
+    OpCode LoadOpCode = default); // Not used, unless on auto-properties
 
 internal class PropertyGenerator
 {

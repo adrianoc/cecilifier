@@ -67,7 +67,10 @@ namespace Cecilifier.Core.AST
             HandleTypeDeclaration(node, definitionVar);
             base.VisitRecordDeclaration(node);
 
-            RecordGenerator.AddSyntheticMembers(Context, definitionVar, node);
+            //TODO: Handle ctors
+            RecordGenerator generator = new();
+            generator.AddSyntheticMembers(Context, definitionVar, node);
+            //EnsureCurrentTypeHasADefaultCtor(node, definitionVar);
         }
 
         public override void VisitEnumDeclaration(EnumDeclarationSyntax node)
