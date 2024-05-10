@@ -63,13 +63,21 @@ public class RecordTests : CecilifierUnitTestBase
     [TestCase(null)]
     public void RecordType_Implements_IEquatable(string classOrStruct)
     {
-        var result = RunCecilifier($"public record {classOrStruct} TheRecord;");
+        var result = RunCecilifier($"public record {classOrStruct} TheRecord(int Value);");
 
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
         Assert.That(cecilifiedCode, Does.Match($"//Record {(classOrStruct ?? "class").PascalCase()} : TheRecord"));
         Assert.That(cecilifiedCode, Does.Match("""
                                                	(?<recVar>rec_theRecord_\d+)\.Interfaces\.Add\(new InterfaceImplementation\(.+ImportReference\(typeof\(System.IEquatable<>\)\).MakeGenericInstanceType\(\k<recVar>\)\)\);
                                                	\s+assembly.MainModule.Types.Add\(\k<recVar>\);
+                                               """));
+        
+        Assert.That(cecilifiedCode, Does.Match("""
+                                               //IEquatable<>.Equals\(TheRecord other\)
+                                               \s+var (?<eq>m_equals_\d+) = new MethodDefinition\("Equals", (MethodAttributes.)Public \| \1HideBySig \| \1NewSlot \| \1Virtual, .+TypeSystem.Boolean\);
+                                               \s+var (?<param>p_other_\d+) = new ParameterDefinition\("other", ParameterAttributes.None, (?<rec_var>rec_theRecord_\d+)\);
+                                               \s+\k<eq>.Parameters.Add\(\k<param>\);
+                                               \s+\k<rec_var>.Methods.Add\(\k<eq>\);
                                                """));
     }
 
@@ -94,6 +102,7 @@ public class RecordTests : CecilifierUnitTestBase
 
     private static void AssertPropertiesFromPrimaryConstructor(string[] expectedNameTypePairs, string cecilifiedCode)
     {
+        //TODO: Take inheritance into account
         Span<Range> ranges = stackalloc Range[2];
         foreach (var pair in expectedNameTypePairs)
         {

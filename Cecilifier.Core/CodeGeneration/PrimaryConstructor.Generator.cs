@@ -96,6 +96,7 @@ public class PrimaryConstructorGenerator
                 context.WriteCecilExpressions([$"var {ilVar} = {setMethodVar}.Body.GetILProcessor();"]);
                 
                 propertyGenerator.AddAutoSetterMethodImplementation(in propertyData, ilVar);
+                context.EmitCilInstruction(ilVar, OpCodes.Ret);
             }
         }
     }
@@ -118,16 +119,20 @@ public class PrimaryConstructorGenerator
             $"{recordTypeDefinitionVariable}.Methods.Add({ctorVar});"
         ]);
 
-        var ctorIlVar = context.Naming.Constructor(typeDeclaration, false);
         if (typeDeclaration.ParameterList?.Parameters == null)
             return;
         
+        var ctorIlVar = context.Naming.ILProcessor($"ctor_{typeDeclaration.Identifier.ValueText}");
+        var ctorExps = CecilDefinitionsFactory.MethodBody2(context.Naming, ctorVar, ctorIlVar, Array.Empty<InstructionRepresentation>());
+        context.WriteCecilExpressions(ctorExps);
+
+        //TODO: Extract code from RecordGenerator.GetUniqueParameters() and use instead of `typeDeclaration.ParameterList?.Parameters`  
         foreach (var parameter in typeDeclaration.ParameterList?.Parameters)
         {
             context.WriteComment($"Parameter: {parameter.Identifier}");
             var paramVar = context.Naming.Parameter(parameter);
             var parameterType = context.TypeResolver.Resolve(context.SemanticModel.GetTypeInfo(parameter.Type!).Type);
-            var paramExps = CecilDefinitionsFactory.Parameter(parameter.Identifier.ValueText, RefKind.None, false, ctorVar, paramVar, parameterType, "paramAttrs", ("", false));
+            var paramExps = CecilDefinitionsFactory.Parameter(parameter.Identifier.ValueText, RefKind.None, false, ctorVar, paramVar, parameterType, Constants.ParameterAttributes.None, ("", false));
             context.WriteCecilExpressions(paramExps);
 
             context.EmitCilInstruction(ctorIlVar, OpCodes.Ldarg_0);
@@ -139,5 +144,11 @@ public class PrimaryConstructorGenerator
 
             context.EmitCilInstruction(ctorIlVar, OpCodes.Stfld, backingFieldVar.VariableName);
         }
+
+        //TODO: Take inheritance into account.
+        var baseCtor = context.RoslynTypeSystem.SystemObject.GetMembers().OfType<IMethodSymbol>().Single(m => m is { Name: ".ctor" }).MethodResolverExpression(context);
+        context.EmitCilInstruction(ctorIlVar, OpCodes.Ldarg_0);
+        context.EmitCilInstruction(ctorIlVar, OpCodes.Call, baseCtor);
+        context.EmitCilInstruction(ctorIlVar, OpCodes.Ret);
     }
 }
