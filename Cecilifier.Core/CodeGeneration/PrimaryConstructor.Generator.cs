@@ -2,17 +2,22 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.AST;
+using Cecilifier.Core.CodeGeneration.Extensions;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Mono.Cecil.Cil;
 
 namespace Cecilifier.Core.CodeGeneration;
 
+/// <summary>
+/// Only primary constructors on *record*s are supported.
+/// </summary>
 public class PrimaryConstructorGenerator
 {
     internal static void AddPropertiesFrom(IVisitorContext context, string typeDefinitionVariable, TypeDeclarationSyntax type)
@@ -20,7 +25,7 @@ public class PrimaryConstructorGenerator
         if (type.ParameterList is null)
             return;
 
-        foreach (var parameter in type.ParameterList.Parameters)
+        foreach (var parameter in type.GetUniqueParameters(context))
         {
             AddPropertyFor(context, parameter, typeDefinitionVariable);
             context.WriteNewLine();
@@ -126,12 +131,11 @@ public class PrimaryConstructorGenerator
         var ctorExps = CecilDefinitionsFactory.MethodBody2(context.Naming, ctorVar, ctorIlVar, Array.Empty<InstructionRepresentation>());
         context.WriteCecilExpressions(ctorExps);
 
-        //TODO: Extract code from RecordGenerator.GetUniqueParameters() and use instead of `typeDeclaration.ParameterList?.Parameters`  
-        foreach (var parameter in typeDeclaration.ParameterList?.Parameters)
+        foreach (var parameter in typeDeclaration.GetUniqueParameters(context))
         {
             context.WriteComment($"Parameter: {parameter.Identifier}");
             var paramVar = context.Naming.Parameter(parameter);
-            var parameterType = context.TypeResolver.Resolve(context.SemanticModel.GetTypeInfo(parameter.Type!).Type);
+            var parameterType = context.TypeResolver.Resolve(ModelExtensions.GetTypeInfo(context.SemanticModel, parameter.Type!).Type);
             var paramExps = CecilDefinitionsFactory.Parameter(parameter.Identifier.ValueText, RefKind.None, false, ctorVar, paramVar, parameterType, Constants.ParameterAttributes.None, ("", false));
             context.WriteCecilExpressions(paramExps);
 
@@ -140,15 +144,35 @@ public class PrimaryConstructorGenerator
 
             var backingFieldVar = context.DefinitionVariables.GetVariable(Utils.BackingFieldNameForAutoProperty(parameter.Identifier.ValueText), VariableMemberKind.Field, typeDeclaration.Identifier.ValueText);
             if (!backingFieldVar.IsValid)
-                throw new InvalidOperationException("C");
+                throw new InvalidOperationException($"Backing field variable for property '{parameter.Identifier.ValueText}' could not be found.");
 
             context.EmitCilInstruction(ctorIlVar, OpCodes.Stfld, backingFieldVar.VariableName);
         }
 
-        //TODO: Take inheritance into account.
-        var baseCtor = context.RoslynTypeSystem.SystemObject.GetMembers().OfType<IMethodSymbol>().Single(m => m is { Name: ".ctor" }).MethodResolverExpression(context);
-        context.EmitCilInstruction(ctorIlVar, OpCodes.Ldarg_0);
-        context.EmitCilInstruction(ctorIlVar, OpCodes.Call, baseCtor);
+        InvokeBaseConstructor(context, ctorIlVar, typeDeclaration);
         context.EmitCilInstruction(ctorIlVar, OpCodes.Ret);
+
+        static void InvokeBaseConstructor(IVisitorContext context, string ctorIlVar, TypeDeclarationSyntax typeDeclaration)
+        {
+            var baseCtor = string.Empty;
+            context.EmitCilInstruction(ctorIlVar, OpCodes.Ldarg_0);
+        
+            var primaryConstructorBase = typeDeclaration.BaseList?.Types.OfType<PrimaryConstructorBaseTypeSyntax>().SingleOrDefault();
+            if (primaryConstructorBase != null)
+            {
+                // resolve base constructor and load arguments to pass to base primary constructor
+                baseCtor = context.SemanticModel.GetSymbolInfo(primaryConstructorBase).Symbol.EnsureNotNull<ISymbol, IMethodSymbol>().MethodResolverExpression(context);
+                foreach (var argument in primaryConstructorBase.ArgumentList.Arguments)
+                {
+                    ExpressionVisitor.Visit(context, ctorIlVar, argument);
+                }
+            }
+            else
+            {
+                baseCtor = context.RoslynTypeSystem.SystemObject.GetMembers().OfType<IMethodSymbol>().Single(m => m is { Name: ".ctor" }).MethodResolverExpression(context);
+            }
+        
+            context.EmitCilInstruction(ctorIlVar, OpCodes.Call, baseCtor);
+        }
     }
 }

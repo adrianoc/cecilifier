@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.AST;
+using Cecilifier.Core.CodeGeneration.Extensions;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
@@ -46,7 +47,7 @@ public class RecordGenerator
         // Compare each unique primary constructor parameter to compute equality.
         using (context.DefinitionVariables.WithVariable(methodDefinitionVariable))
         {
-            var uniqueParameters = GetUniqueParameters(context, record);
+            var uniqueParameters = record.GetUniqueParameters(context);
             var equalityDataByType = GenerateEqualityComparerMethods(context, uniqueParameters);
         
             List<InstructionRepresentation> instructions = new();
@@ -158,36 +159,6 @@ public class RecordGenerator
         }
 
         return equalityComparerDataByType;
-    }
-
-    /// <summary>
-    /// Each primary constructor parameter that does not have a matching parameter
-    /// in the base record (or the base record of the base record and so on) will have
-    /// a property associated with it.
-    /// </summary>
-    /// <param name="context"></param>
-    /// <param name="type"></param>
-    /// <returns>Returns a list of parameters that does not exist in the base type of the <paramref name="type"/> or in its parents.</returns>
-    static IReadOnlyList<ParameterSyntax> GetUniqueParameters(IVisitorContext context, TypeDeclarationSyntax type)
-    {
-        var records = context.SemanticModel.SyntaxTree.GetRoot().DescendantNodesAndSelf().OfType<RecordDeclarationSyntax>().ToArray();
-        List<ParameterSyntax> basesParameters = new();
-        var current = type;
-        while(true)
-        {
-            if (current.BaseList?.Types.Count is null or 0)
-                break;
-
-            var baseRecordName = ((IdentifierNameSyntax) current.BaseList!.Types.First().Type).Identifier;
-            var baseRecord = records.Single(r => r.Identifier.ValueText() == baseRecordName.ValueText);
-            basesParameters.AddRange(baseRecord.ParameterList!.Parameters);
-            
-            current = baseRecord;
-        }
-
-        return (IReadOnlyList<ParameterSyntax>) 
-               type.ParameterList?.Parameters.Where(candidate => basesParameters.All(bp => candidate.Identifier.ValueText != bp.Identifier.ValueText)).ToList() 
-               ?? Array.Empty<ParameterSyntax>();
     }
 
     private void AddEqualityContractPropertyIfNeeded(IVisitorContext context, string recordTypeDefinitionVariable, TypeDeclarationSyntax record)

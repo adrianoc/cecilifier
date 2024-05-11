@@ -1,4 +1,5 @@
 using System;
+using System.Text.RegularExpressions;
 using Cecilifier.Core.Extensions;
 using NUnit.Framework;
 
@@ -88,7 +89,6 @@ public class RecordTests : CecilifierUnitTestBase
 
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
         AssertPropertiesFromPrimaryConstructor(["Value:assembly.MainModule.TypeSystem.Int32", @"Parent:rec_theRecord_\d+", "Ch:assembly.MainModule.TypeSystem.Char"], cecilifiedCode);
-
     }
     
     [Test]
@@ -99,10 +99,50 @@ public class RecordTests : CecilifierUnitTestBase
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
         AssertPropertiesFromPrimaryConstructor(["Value:gp_T_1", @"Other:rec_theRecord_\d+.MakeGenericInstanceType\(gp_T_\d+\)"], cecilifiedCode);
     }
+    
+    [Test]
+    public void PropertiesAreNotEmitted_WhenMatchesPropertyFromBaseRecord()
+    {
+        var result = RunCecilifier("public record BaseRecord<T>(T Value); public record DerivedRecord(string Name, int Value) : BaseRecord<int>(Value);");
+
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+        Assert.Multiple(() =>
+        {
+            var message = """
+                              More than one `value getter/init` were generated. 
+                              Most likely properties for all parameters of DerivedRecord were generated whereas only properties for `Name`
+                              should have been emitted.
+                              """;
+            
+            Assert.That(Regex.Matches(cecilifiedCode, "//Value getter").Count, Is.EqualTo(1), message);
+            Assert.That(Regex.Matches(cecilifiedCode, "//Value init").Count, Is.EqualTo(1), message);
+        });
+    }
+    
+    [Test]
+    public void ObjectAsBase_BaseConstructor_IsInvoked()
+    {
+        var result = RunCecilifier("public record SimpleRecord(int Value);");
+
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+        Assert.That(cecilifiedCode, Does.Match( """il_ctor_SimpleRecord_\d+.Emit\(OpCodes.Call, .+ImportReference\(.+ResolveMethod\(typeof\(System.Object\), ".ctor",.+\)\)\);"""));
+    }
+    
+    [Test]
+    public void InheritingFromRecord_BaseConstructor_IsInvoked()
+    {
+        var result = RunCecilifier("public record BaseRecord(int Value); public record DerivedRecord(string Name, int Value) : BaseRecord(Value);");
+
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+        Assert.That(cecilifiedCode, Does.Match( """
+                                                \s+il_ctor_DerivedRecord_\d+.Emit\(OpCodes\.Ldarg_0\);
+                                                \s+il_ctor_DerivedRecord_\d+.Emit\(OpCodes.Ldarg_2\);
+                                                \s+il_ctor_DerivedRecord_\d+.Emit\(OpCodes.Call, ctor_baseRecord_\d+\);
+                                                """));
+    }
 
     private static void AssertPropertiesFromPrimaryConstructor(string[] expectedNameTypePairs, string cecilifiedCode)
     {
-        //TODO: Take inheritance into account
         Span<Range> ranges = stackalloc Range[2];
         foreach (var pair in expectedNameTypePairs)
         {
