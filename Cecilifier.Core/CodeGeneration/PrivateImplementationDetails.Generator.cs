@@ -85,6 +85,8 @@ internal partial class PrivateImplementationDetailsGenerator
         var memoryMarshalCreateSpanVar = GetMemoryMarshalCreateSpanMethod(context).MethodResolverExpression(context).MakeGenericInstanceMethod(context, "createSpan", [tElementVar]);
 
         var methodBodyExpressions = CecilDefinitionsFactory.MethodBody(
+            context.Naming,
+            "InlineArrayAsSpan",
             methodVar,
             [
                 OpCodes.Ldarg_0,
@@ -161,6 +163,8 @@ internal partial class PrivateImplementationDetailsGenerator
             .MakeGenericInstanceMethod(context, "unsafeAs", [tBufferTypeParameter, tElementTypeParameter]);
 
         var methodBodyExpressions = CecilDefinitionsFactory.MethodBody(
+            context.Naming,
+            "UnsafeAs",
             methodVar,
             [
                 OpCodes.Ldarg_0,
@@ -223,6 +227,8 @@ internal partial class PrivateImplementationDetailsGenerator
                                         .MakeGenericInstanceMethod(context, "unsafeAdd", [telementTypeParameter]);
         
         var methodBodyExpressions = CecilDefinitionsFactory.MethodBody(
+            context.Naming,
+            "UnsafeAdd",
             methodVar,
             [
                 OpCodes.Ldarg_0,

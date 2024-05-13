@@ -105,7 +105,7 @@ public class RecordGenerator
             ]);
             
             var ilVar = context.Naming.ILProcessor("Equals");
-            var equalsExps = CecilDefinitionsFactory.MethodBody2(context.Naming, equalsMethodVar, ilVar, instructions.ToArray());
+            var equalsExps = CecilDefinitionsFactory.MethodBody(context.Naming, "Equals",equalsMethodVar, ilVar, instructions.ToArray());
             context.WriteCecilExpressions(equalsExps);
         }
     }

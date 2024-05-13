@@ -51,8 +51,8 @@ public class InlineArrayTests : CecilifierUnitTestBase
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
         Assert.That(cecilifiedCode, Does.Match("""new TypeDefinition\("", "<PrivateImplementationDetails>", .+\)"""));
         Assert.That(cecilifiedCode, Does.Match("""cls_privateImplementationDetails_\d+.Methods.Add\(m_inlineArrayAsSpan_\d+\);"""));
-        Assert.That(cecilifiedCode, Does.Match("""(m_inlineArrayAsSpan_\d+)_inst.Add\(_ = \1_il.Create\(OpCodes.Call, gi_unsafeAs_\d+\)\);"""));
-        Assert.That(cecilifiedCode, Does.Match("""(m_inlineArrayAsSpan_\d+)_inst.Add\(_ = \1_il.Create\(OpCodes.Call, gi_createSpan_\d+\)\);"""));
+        Assert.That(cecilifiedCode, Does.Match("""l_inlineArrayAsSpan_\d+.Add\(il_inlineArrayAsSpan_\d+.Create\(OpCodes.Call, gi_unsafeAs_\d+\)\);"""));
+        Assert.That(cecilifiedCode, Does.Match("""l_inlineArrayAsSpan_\d+.Add\(il_inlineArrayAsSpan_\d+.Create\(OpCodes.Call, gi_createSpan_\d+\)\);"""));
     }
 
     [Test]

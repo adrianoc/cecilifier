@@ -114,6 +114,51 @@ namespace Cecilifier.Core.Misc
             return exp + ";";
         }
 
+        public static IEnumerable<string> MethodBody(INameStrategy nameStrategy, string methodName, string methodVar, InstructionRepresentation[] instructions)
+        {
+            var ilVar = nameStrategy.ILProcessor(methodName); 
+            return MethodBody(nameStrategy, methodName, methodVar, ilVar, instructions);
+        }
+
+        public static IEnumerable<string> MethodBody(INameStrategy nameStrategy, string methodName, string methodVar, string ilVar, InstructionRepresentation[] instructions)
+        {
+            var tagToInstructionDefMapping = new Dictionary<string, string>();
+            var exps = new List<string>(instructions.Length);
+            exps.Add($"{methodVar}.Body = new MethodBody({methodVar});");
+
+            exps.Add($"var {ilVar} = {methodVar}.Body.GetILProcessor();");
+            if (instructions.Length == 0)
+                return exps;
+
+            var methodInstVar = nameStrategy.SyntheticVariable(methodName, ElementKind.LocalVariable);
+            exps.Add($"var {methodInstVar} = {methodVar}.Body.Instructions;");
+
+            foreach (var inst in instructions)
+            {
+                if (inst.Tag == null)
+                    continue;
+                var instVar = nameStrategy.SyntheticVariable(inst.Tag, ElementKind.Label);
+                exps.Add($"var {instVar} = {ilVar}.Create({inst.OpCode.ConstantName()}{OperandFor(inst)});");
+                tagToInstructionDefMapping[inst.Tag] = instVar;
+            }
+
+            foreach (var inst in instructions)
+            {
+                exps.Add(inst.Tag != null 
+                    ? $"{methodInstVar}.Add({tagToInstructionDefMapping[inst.Tag]});" 
+                    : $"{methodInstVar}.Add({ilVar}.Create({inst.OpCode.ConstantName()}{OperandFor(inst)}));");
+            }
+
+            return exps;
+
+            string OperandFor(InstructionRepresentation inst)
+            {
+                return inst.Operand?.Insert(0, ", ")
+                       ?? inst.BranchTargetTag?.Replace(inst.BranchTargetTag, $", {tagToInstructionDefMapping[inst.BranchTargetTag]}")
+                       ?? string.Empty;
+            }
+        }
+        
         /*
          * Creates the snippet for a TypeDefinition.
          * 
@@ -399,84 +444,6 @@ namespace Cecilifier.Core.Misc
                 exps.Add(GenericParameter(context, ownerQualifiedTypeName, memberDefVar, genericParamName, genParamDefVar));
                 
                 exps.Add($"{memberDefVar}.GenericParameters.Add({genParamDefVar});");
-            }
-        }
-
-        public static IEnumerable<string> MethodBody(string methodVar, InstructionRepresentation[] instructions)
-        {
-            var ilVar = $"{methodVar}_il";
-            return MethodBody(methodVar, ilVar, instructions);
-        }
-
-        public static IEnumerable<string> MethodBody(string methodVar, string ilVar, InstructionRepresentation[] instructions)
-        {
-            var tagToInstructionDefMapping = new Dictionary<string, string>();
-            var exps = new List<string>();
-            exps.Add($"{methodVar}.Body = new MethodBody({methodVar});");
-
-            exps.Add($"var {ilVar} = {methodVar}.Body.GetILProcessor();");
-            if (instructions.Length == 0)
-                return exps;
-
-            var methodInstVar = $"{methodVar}_inst";
-            exps.Add($"var {methodInstVar} = {methodVar}.Body.Instructions;");
-
-            foreach (var inst in instructions)
-            {
-                var instVar = "_";
-                if (inst.Tag != null)
-                {
-                    instVar = $"{inst.Tag}_inst_{instructions.GetHashCode()}";
-                    exps.Add($"Instruction {instVar};");
-                    tagToInstructionDefMapping[inst.Tag] = instVar;
-                }
-
-                var operand = inst.Operand?.Insert(0, ", ")
-                              ?? inst.BranchTargetTag?.Replace(inst.BranchTargetTag, $", {tagToInstructionDefMapping[inst.BranchTargetTag]}")
-                              ?? string.Empty;
-
-                exps.Add($"{methodInstVar}.Add({instVar} = {ilVar}.Create({inst.OpCode.ConstantName()}{operand}));");
-            }
-
-            return exps;
-        }
-
-        public static IEnumerable<string> MethodBody2(INameStrategy nameStrategy, string methodVar, string ilVar, InstructionRepresentation[] instructions)
-        {
-            var tagToInstructionDefMapping = new Dictionary<string, string>();
-            var exps = new List<string>(instructions.Length);
-            exps.Add($"{methodVar}.Body = new MethodBody({methodVar});");
-
-            exps.Add($"var {ilVar} = {methodVar}.Body.GetILProcessor();");
-            if (instructions.Length == 0)
-                return exps;
-
-            var methodInstVar = nameStrategy.SyntheticVariable(methodVar, ElementKind.LocalVariable);
-            exps.Add($"var {methodInstVar} = {methodVar}.Body.Instructions;");
-
-            foreach (var inst in instructions)
-            {
-                if (inst.Tag == null)
-                    continue;
-                var instVar = nameStrategy.SyntheticVariable(inst.Tag, ElementKind.Label);
-                exps.Add($"var {instVar} = {ilVar}.Create({inst.OpCode.ConstantName()}{OperandFor(inst)});");
-                tagToInstructionDefMapping[inst.Tag] = instVar;
-            }
-
-            foreach (var inst in instructions)
-            {
-                exps.Add(inst.Tag != null 
-                    ? $"{methodInstVar}.Add({tagToInstructionDefMapping[inst.Tag]});" 
-                    : $"{methodInstVar}.Add({ilVar}.Create({inst.OpCode.ConstantName()}{OperandFor(inst)}));");
-            }
-
-            return exps;
-
-            string OperandFor(InstructionRepresentation inst)
-            {
-                return inst.Operand?.Insert(0, ", ")
-                       ?? inst.BranchTargetTag?.Replace(inst.BranchTargetTag, $", {tagToInstructionDefMapping[inst.BranchTargetTag]}")
-                       ?? string.Empty;
             }
         }
 

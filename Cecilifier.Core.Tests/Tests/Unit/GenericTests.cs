@@ -433,13 +433,13 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             Assert.Multiple(() =>
             {
                 var stringVersionCount = Regex.Matches(cecilifiedCode, """
-                                                                       \s+var gi_M_\d+ = new GenericInstanceMethod\(m_M_7\);
+                                                                       \s+var gi_M_\d+ = new GenericInstanceMethod\(m_M_\d+\);
                                                                        \s+gi_M_\d+.GenericArguments.Add\(assembly.MainModule.TypeSystem.String\);
                                                                        """);
                 Assert.That(stringVersionCount.Count, Is.EqualTo(1), cecilifiedCode);
 
                 var intVersionCount = Regex.Matches(cecilifiedCode, """
-                                                                    \s+var gi_M_\d+ = new GenericInstanceMethod\(m_M_7\);
+                                                                    \s+var gi_M_\d+ = new GenericInstanceMethod\(m_M_\d+\);
                                                                     \s+gi_M_\d+.GenericArguments.Add\(assembly.MainModule.TypeSystem.Int32\);
                                                                     """);
                 Assert.That(intVersionCount.Count, Is.EqualTo(1), cecilifiedCode);
@@ -449,7 +449,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
         [TestCase(
             "static int M<T>(T[] b) where T : Foo => b[0].data;",
             """
-            (\s+il_M_16\.Emit\(OpCodes\.)Ldarg_0\);
+            (\s+il_M_\d+\.Emit\(OpCodes\.)Ldarg_0\);
             \1Ldc_I4, 0\);
             \1Ldelem_Any, gp_T_\d+\);
             \1Box, gp_T_\d+\);

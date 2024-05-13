@@ -106,7 +106,7 @@ public class CustomValueTypesInstantiationTests : CecilifierUnitTestBase
 
     [TestCase("var x = new S(); struct S {}", 
         """
-        il_topLevelMain_4.Emit\(OpCodes.Ldloca_S, l_x_7\);
+        il_topLevelMain_4.Emit\(OpCodes.Ldloca_S, l_x_\d+\);
         \s+il_topLevelMain_4.Emit\(OpCodes.Initobj, st_S_0\);
         """,
         TestName = "Implicit parameterless ctor")]
@@ -114,7 +114,7 @@ public class CustomValueTypesInstantiationTests : CecilifierUnitTestBase
     [TestCase("var x = new S(); struct S { public S() {} }", 
         """
         (il_topLevelMain_\d+.Emit\(OpCodes\.)Newobj, ctor_S_1\);
-        \s+\1Stloc, l_x_9\);
+        \s+\1Stloc, l_x_\d+\);
         """,
         TestName = "Explicit parameterless ctor")]
     
