@@ -54,7 +54,7 @@ namespace Cecilifier.Core.AST
                 (null, false));
 
             ilVar = context.Naming.ILProcessor("topLevelMain");
-            var mainBodyExps = CecilDefinitionsFactory.MethodBody(context.Naming, "topLevelMain", methodVar, ilVar, []);
+            var mainBodyExps = CecilDefinitionsFactory.MethodBody(context.Naming, "topLevelMain", methodVar, ilVar, [], []);
 
             context.WriteCecilExpressions(typeExps);
             context.WriteCecilExpressions(methodExps);

@@ -128,7 +128,7 @@ public class PrimaryConstructorGenerator
             return;
         
         var ctorIlVar = context.Naming.ILProcessor($"ctor_{typeDeclaration.Identifier.ValueText}");
-        var ctorExps = CecilDefinitionsFactory.MethodBody(context.Naming, $"ctor_{typeDeclaration.Identifier.ValueText}", ctorVar, ctorIlVar, Array.Empty<InstructionRepresentation>());
+        var ctorExps = CecilDefinitionsFactory.MethodBody(context.Naming, $"ctor_{typeDeclaration.Identifier.ValueText}", ctorVar, ctorIlVar, [], []);
         context.WriteCecilExpressions(ctorExps);
 
         foreach (var parameter in typeDeclaration.GetUniqueParameters(context))

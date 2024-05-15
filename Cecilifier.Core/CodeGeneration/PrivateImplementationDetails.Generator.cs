@@ -88,6 +88,7 @@ internal partial class PrivateImplementationDetailsGenerator
             context.Naming,
             "InlineArrayAsSpan",
             methodVar,
+            [],
             [
                 OpCodes.Ldarg_0,
                 OpCodes.Call.WithOperand(unsafeAsVar),
@@ -166,6 +167,7 @@ internal partial class PrivateImplementationDetailsGenerator
             context.Naming,
             "UnsafeAs",
             methodVar,
+            [],
             [
                 OpCodes.Ldarg_0,
                 OpCodes.Call.WithOperand(unsafeAsVarName),
@@ -230,6 +232,7 @@ internal partial class PrivateImplementationDetailsGenerator
             context.Naming,
             "UnsafeAdd",
             methodVar,
+            [],
             [
                 OpCodes.Ldarg_0,
                 OpCodes.Call.WithOperand(unsafeAsVarName),

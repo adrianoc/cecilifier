@@ -114,18 +114,26 @@ namespace Cecilifier.Core.Misc
             return exp + ";";
         }
 
-        public static IEnumerable<string> MethodBody(INameStrategy nameStrategy, string methodName, string methodVar, InstructionRepresentation[] instructions)
+        public static IEnumerable<string> MethodBody(INameStrategy nameStrategy, string methodName, string methodVar, Span<string> localVariableTypes, InstructionRepresentation[] instructions)
         {
             var ilVar = nameStrategy.ILProcessor(methodName); 
-            return MethodBody(nameStrategy, methodName, methodVar, ilVar, instructions);
+            return MethodBody(nameStrategy, methodName, methodVar, ilVar, localVariableTypes, instructions);
         }
 
-        public static IEnumerable<string> MethodBody(INameStrategy nameStrategy, string methodName, string methodVar, string ilVar, InstructionRepresentation[] instructions)
+        public static IEnumerable<string> MethodBody(INameStrategy nameStrategy, string methodName, string methodVar, string ilVar, Span<string> localVariableTypes, InstructionRepresentation[] instructions)
         {
             var tagToInstructionDefMapping = new Dictionary<string, string>();
             var exps = new List<string>(instructions.Length);
             exps.Add($"{methodVar}.Body = new MethodBody({methodVar});");
-
+            if (localVariableTypes.Length > 0)
+            {
+                exps.Add($"{methodVar}.Body.InitLocals = true;");
+                foreach (var localVariableType in localVariableTypes)
+                {
+                    exps.Add($"{methodVar}.Body.Variables.Add({LocalVariable(localVariableType)});");
+                }
+            }
+            
             exps.Add($"var {ilVar} = {methodVar}.Body.GetILProcessor();");
             if (instructions.Length == 0)
                 return exps;
@@ -133,10 +141,12 @@ namespace Cecilifier.Core.Misc
             var methodInstVar = nameStrategy.SyntheticVariable(methodName, ElementKind.LocalVariable);
             exps.Add($"var {methodInstVar} = {methodVar}.Body.Instructions;");
 
+            // create `Mono.Cecil.Instruction` instances for each instruction that has a 'Tag'
             foreach (var inst in instructions)
             {
                 if (inst.Tag == null)
                     continue;
+                
                 var instVar = nameStrategy.SyntheticVariable(inst.Tag, ElementKind.Label);
                 exps.Add($"var {instVar} = {ilVar}.Create({inst.OpCode.ConstantName()}{OperandFor(inst)});");
                 tagToInstructionDefMapping[inst.Tag] = instVar;
@@ -158,6 +168,8 @@ namespace Cecilifier.Core.Misc
                        ?? string.Empty;
             }
         }
+
+        internal static string LocalVariable(string resolvedType) => $"new VariableDefinition({resolvedType})";
         
         /*
          * Creates the snippet for a TypeDefinition.
