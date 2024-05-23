@@ -179,3 +179,5 @@ Thanks
 ---
 
 I'd like to thank JetBrains for donating me a [Rider](https://www.jetbrains.com/rider/) license.
+
+This project is tested with BrowserStack
