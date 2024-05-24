@@ -74,7 +74,7 @@ public class RecordGenerator
                 [
                     OpCodes.Ldarg_0,
                     OpCodes.Ldarg_1,
-                    OpCodes.Call.WithOperand($"new MethodReference(\"{PrintMembersMethodName}\", {context.TypeResolver.Bcl.System.Boolean}, {context.TypeResolver.Resolve(recordSymbol.BaseType)})"),
+                    OpCodes.Call.WithOperand(PrintMembersMethodToCall()),
                     OpCodes.Brfalse_S.WithBranchOperand("DoNotAppendComma"),
                     OpCodes.Ldarg_1,
                     OpCodes.Ldstr.WithOperand("\", \""),
@@ -195,7 +195,7 @@ public class RecordGenerator
         string PrintMembersMethodToCall()
         {
             return HasBaseRecord(context, recordSymbol) 
-                ? $"""new MethodReference("PrintMembers", {context.TypeResolver.Bcl.System.Boolean}, {context.TypeResolver.Resolve(recordSymbol.BaseType)})"""
+                ? $$"""new MethodReference("PrintMembers", {{context.TypeResolver.Bcl.System.Boolean}}, {{context.TypeResolver.Resolve(recordSymbol.BaseType)}}) { HasThis = true, Parameters = { new ParameterDefinition({{ context.TypeResolver.Resolve(stringBuilderSymbol) }}) } }"""
                 : printMembersVar;
         }
     }
