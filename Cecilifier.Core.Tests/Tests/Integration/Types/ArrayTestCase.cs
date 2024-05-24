@@ -18,7 +18,7 @@ namespace Cecilifier.Core.Tests.Integration.Types
         public void ArrayInitializationOptimization()
         {
             var resource = @"Types/ArrayInitialization";
-            AssertResourceTest(resource, new ResourceTestOptions()
+            AssertResourceTest(resource, new CecilifyTestOptions()
             {
                 ToBeCecilified = ReadResource(resource, "cs"),
                 

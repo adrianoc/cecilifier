@@ -10,7 +10,7 @@ namespace Cecilifier.Core.Tests.Integration
         [TestCase("GenericOuterDeepGenericInner")]
         public void TestGenericOuterAndInnerPermutations(string testName)
         {
-            AssertResourceTest(new ResourceTestOptions
+            AssertResourceTest(new CecilifyTestOptions
             {
                 ResourceName = $"Generics/{testName}",
                 FailOnAssemblyVerificationErrors = IgnoredKnownIssue.MiscILVerifyVailuresNeedsInvestigation //https://github.com/adrianoc/cecilifier/issues/227

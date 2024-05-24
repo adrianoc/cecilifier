@@ -10,10 +10,10 @@ namespace Cecilifier.Core.Tests.Framework
     {
         protected void AssertResourceTest(string resourceName)
         {
-            AssertResourceTest(resourceName, new ResourceTestOptions() { ResourceName = resourceName, ToBeCecilified = ReadResource(resourceName, "cs") });
+            AssertResourceTest(resourceName, new CecilifyTestOptions() { ResourceName = resourceName, ToBeCecilified = ReadResource(resourceName, "cs") });
         }
 
-        protected void AssertResourceTest(ResourceTestOptions options)
+        protected void AssertResourceTest(CecilifyTestOptions options)
         {
             options.ToBeCecilified ??= ReadResource(options.ResourceName, "cs");
             AssertResourceTest(options.ResourceName, options);
@@ -21,11 +21,11 @@ namespace Cecilifier.Core.Tests.Framework
 
         protected void AssertResourceTestWithExplicitExpectation(string resourceName, string methodSignature)
         {
-            var options = new ResourceTestOptions() { ResourceName = resourceName, FailOnAssemblyVerificationErrors = true, BuildType = BuildType.Dll };
+            var options = new CecilifyTestOptions() { ResourceName = resourceName, FailOnAssemblyVerificationErrors = true, BuildType = BuildType.Dll };
             AssertResourceTestWithExplicitExpectation(options, methodSignature);
         }
         
-        protected void AssertResourceTestWithExplicitExpectation(ResourceTestOptions options, string methodSignature)
+        protected void AssertResourceTestWithExplicitExpectation(CecilifyTestOptions options, string methodSignature)
         {
             options.ToBeCecilified ??= ReadResource(options.ResourceName, "cs");
             using var expectedILStream = ReadResource(options.ResourceName, "cs.il");
@@ -45,7 +45,7 @@ namespace Cecilifier.Core.Tests.Framework
             var readToEnd = ReadToEnd(tbc);
 
             var testContents = string.Format(readToEnd, parameters);
-            var options = new ResourceTestOptions()
+            var options = new CecilifyTestOptions()
             {
                 ResourceName = $"{resourceName}_{string.Join('_', parameters)}",
                 AssemblyComparison = new StrictAssemblyDiffVisitor(),
@@ -65,7 +65,7 @@ namespace Cecilifier.Core.Tests.Framework
             AssertResourceTest(testBasePath, expectedAssemblyPath, tbc);
         }
 
-        protected void AssertResourceTest(string resourceName, ResourceTestOptions options)
+        protected void AssertResourceTest(string resourceName, CecilifyTestOptions options)
         {
             var testsFolder = Path.Combine(GetTestOutputBaseFolderFor("Integration"), resourceName);
 
@@ -79,7 +79,7 @@ namespace Cecilifier.Core.Tests.Framework
             AssertResourceTest(testsFolder, resourceCompiledAssemblyPath, options);
         }
 
-        private void AssertResourceTest(string testBasePath, string expectedAssemblyPath, ResourceTestOptions options)
+        private void AssertResourceTest(string testBasePath, string expectedAssemblyPath, CecilifyTestOptions options)
         {
             var cecilifyResult = CecilifyAndExecute(options.ToBeCecilified, testBasePath);
             CompareAssemblies(expectedAssemblyPath, cecilifyResult.CecilifiedOutputAssemblyFilePath, options.AssemblyComparison, options.InstructionComparer);
@@ -88,10 +88,10 @@ namespace Cecilifier.Core.Tests.Framework
 
         private void AssertResourceTest(string testBasePath, string expectedAssemblyPath, Stream tbc)
         {
-            AssertResourceTest(testBasePath, expectedAssemblyPath, new ResourceTestOptions { ToBeCecilified = tbc, AssemblyComparison = new StrictAssemblyDiffVisitor() });
+            AssertResourceTest(testBasePath, expectedAssemblyPath, new CecilifyTestOptions { ToBeCecilified = tbc, AssemblyComparison = new StrictAssemblyDiffVisitor() });
         }
 
-        private CecilifyResult AssertResourceTestWithExplicitExpectedIL(string testOutputBasePath, string expectedIL, string methodSignature, ResourceTestOptions options)
+        private CecilifyResult AssertResourceTestWithExplicitExpectedIL(string testOutputBasePath, string expectedIL, string methodSignature, CecilifyTestOptions options)
         {
             var cecilifyResult = CecilifyAndExecute(options.ToBeCecilified, testOutputBasePath);
 

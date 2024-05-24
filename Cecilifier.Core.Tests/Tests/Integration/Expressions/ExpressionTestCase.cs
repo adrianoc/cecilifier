@@ -98,13 +98,13 @@ namespace Cecilifier.Core.Tests.Integration
         [Test]
         public void TestValueTypeAddress()
         {
-            AssertResourceTest(new ResourceTestOptions { ResourceName = "Expressions/ValueTypeAddress" });
+            AssertResourceTest(new CecilifyTestOptions { ResourceName = "Expressions/ValueTypeAddress" });
         }
 
         [Test]
         public void TestNewPrimitive()
         {
-            AssertResourceTest(new ResourceTestOptions { ResourceName = "Expressions/NewPrimitive" });
+            AssertResourceTest(new CecilifyTestOptions { ResourceName = "Expressions/NewPrimitive" });
         }
 
         [Test]
@@ -168,19 +168,19 @@ namespace Cecilifier.Core.Tests.Integration
         [TestCase("LocalVariablesInitializer")]
         public void TestDelegateAssignment(string memberType)
         {
-            AssertResourceTest(new ResourceTestOptions { ResourceName = $"Expressions/DelegateAssignment_{memberType}" });
+            AssertResourceTest(new CecilifyTestOptions { ResourceName = $"Expressions/DelegateAssignment_{memberType}" });
         }
 
         [Test]
         public void TestDelegateInvocation()
         {
-            AssertResourceTest(new ResourceTestOptions { ResourceName = "Expressions/DelegateInvocation" });
+            AssertResourceTest(new CecilifyTestOptions { ResourceName = "Expressions/DelegateInvocation" });
         }
 
         [Test]
         public void TestExpressionBodiedMembers()
         {
-            AssertResourceTest(new ResourceTestOptions { ResourceName = "Expressions/ExpressionBodiedMembers" });
+            AssertResourceTest(new CecilifyTestOptions { ResourceName = "Expressions/ExpressionBodiedMembers" });
         }
     }
 }

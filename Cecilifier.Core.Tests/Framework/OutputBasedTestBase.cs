@@ -18,6 +18,8 @@ public class OutputBasedTestBase : CecilifierTestBase
         var codeStream = new MemoryStream(Encoding.ASCII.GetBytes(code));
         var cecilifyResult = CecilifyAndExecute(codeStream, outputBasedTestFolder);
         
+        VerifyAssembly(cecilifyResult.CecilifiedOutputAssemblyFilePath, null, new CecilifyTestOptions());
+        
         var refsToCopy = new List<string>
         {
             typeof(ILParser).Assembly.Location,

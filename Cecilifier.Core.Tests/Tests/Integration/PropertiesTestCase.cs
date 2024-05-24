@@ -14,7 +14,7 @@ namespace Cecilifier.Core.Tests.Integration
         [TestCase("PropertyAccessors", "ClassLoadGeneral")] //https://github.com/adrianoc/cecilifier/issues/227
         public void TestProperties(string testName, string ignoredILErrors = null)
         {
-            AssertResourceTest(new ResourceTestOptions
+            AssertResourceTest(new CecilifyTestOptions
             {
                 ResourceName = $"Members/Properties/{testName}", 
                 IgnoredILErrors = ignoredILErrors

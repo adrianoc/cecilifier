@@ -38,7 +38,7 @@ public class CecilifierTestBase
             : CompilationServices.CompileDLL(targetPath, tbc, ReferencedAssemblies.GetTrustedAssembliesPath());
     }
 
-    private protected void VerifyAssembly(string actualAssemblyPath, string expectedAssemblyPath, ResourceTestOptions options)
+    private protected void VerifyAssembly(string actualAssemblyPath, string expectedAssemblyPath, CecilifyTestOptions options)
     {
         var dotnetRootPath = Environment.GetEnvironmentVariable("DOTNET_ROOT");
         if (string.IsNullOrEmpty(dotnetRootPath))
