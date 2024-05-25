@@ -5,13 +5,17 @@ using System.Text;
 using Cecilifier.Runtime;
 using Mono.Cecil;
 using Mono.Cecil.Rocks;
+using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Framework;
+
+public record struct OutputBasedTestResult(CecilifyResult GeneralResult, string Output);
 
 public class OutputBasedTestBase : CecilifierTestBase
 {
     static readonly int NewLineLength = Environment.NewLine.Length;
-    protected string CecilifyAndExecute(string code)
+    
+    protected OutputBasedTestResult CecilifyAndExecute(string code)
     {
         var outputBasedTestFolder = GetTestOutputBaseFolderFor("OutputBasedTests");
 
@@ -30,6 +34,13 @@ public class OutputBasedTestBase : CecilifierTestBase
         CopyFilesNextToGeneratedExecutable(cecilifyResult.CecilifiedOutputAssemblyFilePath, refsToCopy);
 
         var output = TestFramework.ExecuteWithOutput("dotnet", cecilifyResult.CecilifiedOutputAssemblyFilePath);
-        return output.AsSpan()[..^NewLineLength].ToString(); // remove last new line
+        return new OutputBasedTestResult(cecilifyResult, output.AsSpan()[..^NewLineLength].ToString()); // remove last new line
+    }
+
+
+    protected void AssertOutput(string snippet, string expectedOutput)
+    {
+        var result = CecilifyAndExecute(snippet);
+        Assert.That(result.Output, Is.EqualTo(expectedOutput), $"Output Assembly: {result.GeneralResult.CecilifiedOutputAssemblyFilePath}");
     }
 }

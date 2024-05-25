@@ -9,15 +9,25 @@ public class RecordTests : OutputBasedTestBase
     [Test]
     public void ToString_WhenInheritFromObjectWithSingleProperty_ReturnsProperty()
     {
-        var output = CecilifyAndExecute("System.Console.WriteLine(new R(42)); record R(int Value);");
-        Assert.That(output, Is.EqualTo("R { Value = 42 }"));
+        AssertOutput("System.Console.WriteLine(new R(42)); record R(int Value);", "R { Value = 42 }");
     }
     
     [Test]
     public void ToString_WhenInheritFromObjectWithMultipleProperties_ReturnsProperties()
     {
-        var output = CecilifyAndExecute("System.Console.WriteLine(new R(42, true)); record R(int Value, bool IsCool);");
-        
-        Assert.That(output, Is.EqualTo("R { Value = 42, IsCool = True }"));
+        AssertOutput("System.Console.WriteLine(new R(42, true)); record R(int Value, bool IsCool);", "R { Value = 42, IsCool = True }");
+    }
+    
+    [Test]
+    public void Constructor_WhenInheritFromRecordWithProperties_CorrectArgumentsArePassed()
+    {
+        AssertOutput("""
+                     var d = new Derived(42, "Foo");
+                     System.Console.WriteLine("end");
+                      
+                     record Derived(int IntValue, string StringValue):Base(StringValue); 
+                     record Base(string StringValue);
+                     """,
+            "end");
     }
 }

@@ -131,7 +131,8 @@ public class PrimaryConstructorGenerator
         var ctorExps = CecilDefinitionsFactory.MethodBody(context.Naming, $"ctor_{typeDeclaration.Identifier.ValueText}", ctorVar, ctorIlVar, [], []);
         context.WriteCecilExpressions(ctorExps);
 
-        foreach (var parameter in typeDeclaration.GetUniqueParameters(context))
+        var uniqueParameters = typeDeclaration.GetUniqueParameters(context).ToHashSet();
+        foreach (var parameter in typeDeclaration.ParameterList.Parameters)
         {
             context.WriteComment($"Parameter: {parameter.Identifier}");
             var paramVar = context.Naming.Parameter(parameter);
@@ -139,6 +140,9 @@ public class PrimaryConstructorGenerator
             var paramExps = CecilDefinitionsFactory.Parameter(parameter.Identifier.ValueText, RefKind.None, false, ctorVar, paramVar, parameterType, Constants.ParameterAttributes.None, ("", false));
             context.WriteCecilExpressions(paramExps);
 
+            if (!uniqueParameters.Contains(parameter))
+                continue;
+            
             context.EmitCilInstruction(ctorIlVar, OpCodes.Ldarg_0);
             context.EmitCilInstruction(ctorIlVar, OpCodes.Ldarg, paramVar);
 
