@@ -18,14 +18,109 @@ namespace Cecilifier.Core.CodeGeneration;
 public class RecordGenerator
 {
     private string _equalityContractGetMethodVar;
+    private IDictionary<string, (string GetDefaultMethodVar, string EqualsMethodVar, string GetHashCodeMethodVar)> _equalityComparerMembersCache;
     
     internal void AddSyntheticMembers(IVisitorContext context, string recordTypeDefinitionVariable, TypeDeclarationSyntax record)
     {
+        InitializeEqualityComparerMemberCache(context, record);
+        
         AddEqualityContractPropertyIfNeeded(context, recordTypeDefinitionVariable, record);
         PrimaryConstructorGenerator.AddPropertiesFrom(context, recordTypeDefinitionVariable, record);
         PrimaryConstructorGenerator.AddPrimaryConstructor(context, recordTypeDefinitionVariable, record);
         AddIEquatableEquals(context, recordTypeDefinitionVariable, record);
         AddToStringAndRelatedMethods(context, recordTypeDefinitionVariable, record);
+        AddGetHashCodeMethod(context, recordTypeDefinitionVariable, record);
+    }
+
+    private void InitializeEqualityComparerMemberCache(IVisitorContext context, TypeDeclarationSyntax record)
+    {
+        var targetTypes = record.GetUniqueParameters(context)
+                                                            .Select(parameterType => context.SemanticModel.GetDeclaredSymbol(parameterType).EnsureNotNull<ISymbol, IParameterSymbol>().Type)
+                                                            .Append(context.RoslynTypeSystem.SystemType) // generates EqualityComparer member references for System.Type
+                                                            .ToArray();
+        
+        _equalityComparerMembersCache = GenerateEqualityComparerMethods(context, targetTypes);
+    }
+
+    private void AddGetHashCodeMethod(IVisitorContext context, string recordTypeDefinitionVariable, TypeDeclarationSyntax record)
+    {
+        var recordSymbol = context.SemanticModel.GetDeclaredSymbol(record).EnsureNotNull<ISymbol, ITypeSymbol>();
+        
+        var getHashCodeMethodVar = context.Naming.SyntheticVariable("GetHashCode", ElementKind.Method);
+        var getHashCodeMethodExps = CecilDefinitionsFactory.Method(
+                                                                            context,
+                                                                            record.Identifier.ValueText, 
+                                                                            getHashCodeMethodVar,
+                                                                            "GetHashCode",
+                                                                            "GetHashCode",
+                                                                            Constants.Cecil.PublicOverrideMethodAttributes,
+                                                                            [],
+                                                                            [],
+                                                                            ctx => ctx.TypeResolver.Bcl.System.Int32,
+                                                                            out var methodDefinitionVariable);
+        context.WriteNewLine();
+        context.WriteComment(" GetHashCode()");
+        context.WriteCecilExpressions(getHashCodeMethodExps);
+
+        const string HashCodeMultiplier = "-1521134295";
+        var getHashCodeMethodBodyExps = new List<InstructionRepresentation>();
+        getHashCodeMethodBodyExps.Add(OpCodes.Ldc_I4.WithOperand(HashCodeMultiplier));
+        if (HasBaseRecord(record))
+        {
+            // Initialize the hashcode with 'base.GetHashCode() * -1521134295'
+            var baseGetHashCode = $$"""new MethodReference("GetHashCode", {{context.TypeResolver.Bcl.System.Int32}}, {{context.TypeResolver.Resolve(recordSymbol.BaseType)}}) { HasThis = true }""";
+            getHashCodeMethodBodyExps.Add(OpCodes.Ldarg_0);
+            getHashCodeMethodBodyExps.Add(OpCodes.Call.WithOperand(baseGetHashCode));
+        }
+        else
+        {
+            // Initialize the hashcode with 'EqualityComparer<Type>.Default.GetHashCode(EqualityContract) * -1521134295'
+            var equalityComparerMembersForSystemType = _equalityComparerMembersCache[typeof(Type).Name];
+            var getEqualityContractMethodVar = context.DefinitionVariables.GetVariable("get_EqualityContract", VariableMemberKind.Method, record.Identifier.ValueText());
+            getHashCodeMethodBodyExps.AddRange( 
+            [
+                OpCodes.Call.WithOperand(equalityComparerMembersForSystemType.GetDefaultMethodVar),
+                OpCodes.Ldarg_0, // Load this
+                OpCodes.Call.WithOperand(getEqualityContractMethodVar.VariableName), // load EqualityContract
+                OpCodes.Callvirt.WithOperand(equalityComparerMembersForSystemType.GetHashCodeMethodVar)
+            ]);
+        }
+        getHashCodeMethodBodyExps.Add(OpCodes.Mul);
+        
+        var parameters = record.GetUniqueParameters(context);
+        var lastParameter = parameters[^1];
+        foreach(var parameter in parameters)
+        {
+            var parameterType = context.SemanticModel.GetTypeInfo(parameter.Type!).Type.EnsureNotNull();
+            var paramDefVar = context.DefinitionVariables.GetVariable(Utils.BackingFieldNameForAutoProperty(parameter.Identifier.ValueText()), VariableMemberKind.Field, record.Identifier.ValueText());
+            var equalityComparerMembersForParamType = _equalityComparerMembersCache[parameterType.Name];
+
+            getHashCodeMethodBodyExps.AddRange( 
+            [
+                OpCodes.Call.WithOperand(equalityComparerMembersForParamType.GetDefaultMethodVar), // EqualityComparer<{parameterType}}>.Default
+                OpCodes.Ldarg_0, // Load this
+                OpCodes.Ldfld.WithOperand(paramDefVar.VariableName), // load the backing field for the parameter
+                OpCodes.Callvirt.WithOperand(equalityComparerMembersForParamType.GetHashCodeMethodVar)
+            ]);
+
+            if (parameter != lastParameter)
+            {
+                getHashCodeMethodBodyExps.AddRange(
+                [
+                    OpCodes.Ldc_I4.WithOperand(HashCodeMultiplier),
+                    OpCodes.Mul
+                ]);
+            }
+
+            getHashCodeMethodBodyExps.Add(OpCodes.Add);
+        }
+        
+        var ilVar = context.Naming.ILProcessor("GetHashCode");
+        var bodyExps = CecilDefinitionsFactory.MethodBody(context.Naming, "GetHashCode", getHashCodeMethodVar, ilVar, [], [..getHashCodeMethodBodyExps, OpCodes.Ret]);
+        context.WriteCecilExpressions(bodyExps);
+        context.WriteNewLine();
+        context.WriteCecilExpression($"{recordTypeDefinitionVariable}.Methods.Add({getHashCodeMethodVar});");
+        context.WriteNewLine();
     }
 
     private void AddToStringAndRelatedMethods(IVisitorContext context, string recordTypeDefinitionVariable, TypeDeclarationSyntax record)
@@ -228,8 +323,7 @@ public class RecordGenerator
         using (context.DefinitionVariables.WithVariable(methodDefinitionVariable))
         {
             var uniqueParameters = record.GetUniqueParameters(context);
-            var equalityDataByType = GenerateEqualityComparerMethods(context, uniqueParameters);
-        
+
             List<InstructionRepresentation> instructions = new();
             instructions.AddRange(
             [
@@ -258,7 +352,7 @@ public class RecordGenerator
                 // Get the default comparer for the parameter type
                 // IL_001a: call class [System.Collections]System.Collections.Generic.EqualityComparer`1<!0> class [System.Collections]System.Collections.Generic.EqualityComparer`1<int32>::get_Default()
                 var parameterType = context.SemanticModel.GetTypeInfo(parameter.Type!).Type.EnsureNotNull();
-                instructions.Add(OpCodes.Call.WithOperand(equalityDataByType[parameterType.Name].GetDefaultMethodVar));
+                instructions.Add(OpCodes.Call.WithOperand(_equalityComparerMembersCache[parameterType.Name].GetDefaultMethodVar));
                 
                 // load property backing field for 'this' 
                 var paramDefVar = context.DefinitionVariables.GetVariable(Utils.BackingFieldNameForAutoProperty(parameter.Identifier.ValueText()), VariableMemberKind.Field, record.Identifier.ValueText());
@@ -270,7 +364,7 @@ public class RecordGenerator
                 instructions.Add(OpCodes.Ldfld.WithOperand(paramDefVar.VariableName));
                 
                 // compares both backing fields.
-                instructions.Add(OpCodes.Callvirt.WithOperand(equalityDataByType[parameterType.Name].EqualsMethodVar));
+                instructions.Add(OpCodes.Callvirt.WithOperand(_equalityComparerMembersCache[parameterType.Name].EqualsMethodVar));
                 instructions.Add(OpCodes.Brfalse.WithBranchOperand("NotEquals"));
             }
             
@@ -289,20 +383,31 @@ public class RecordGenerator
         }
     }
 
-    private IDictionary<string, (string GetDefaultMethodVar, string EqualsMethodVar)> GenerateEqualityComparerMethods(IVisitorContext context, IReadOnlyList<ParameterSyntax> uniqueParameters)
+    private IDictionary<string, (string GetDefaultMethodVar, string EqualsMethodVar, string GetHashCodeMethodVar)> GenerateEqualityComparerMethods(IVisitorContext context, IReadOnlyList<ITypeSymbol> targetTypes)
     {
-        Dictionary<string, (string, string)> equalityComparerDataByType = new();
+        Dictionary<string, (string, string, string)> equalityComparerDataByType = new();
         
-        foreach (var parameter in uniqueParameters)
+        foreach (var targetType in targetTypes)
         {
             var openEqualityComparerType = context.TypeResolver.Resolve(context.SemanticModel.Compilation.GetTypeByMetadataName(typeof(EqualityComparer<>).FullName!));
-            var parameterType = context.SemanticModel.GetTypeInfo(parameter.Type!).Type.EnsureNotNull();
-            if (equalityComparerDataByType.ContainsKey(parameterType.Name))
+            //var parameterType = context.SemanticModel.GetTypeInfo(targetType.Type!).Type.EnsureNotNull();
+            if (equalityComparerDataByType.ContainsKey(targetType.Name))
                 continue;
             
-            var equalityComparerOfParameterType = openEqualityComparerType.MakeGenericInstanceType(context.TypeResolver.Resolve(parameterType));
+            var equalityComparerOfParameterType = openEqualityComparerType.MakeGenericInstanceType(context.TypeResolver.Resolve(targetType));
             var openGetDefaultMethodVar = context.Naming.SyntheticVariable("openget_Default", ElementKind.LocalVariable);
 
+            var getDefaultMethodVar = EmitDefaultPropertyGetterMethod(targetType, openGetDefaultMethodVar, equalityComparerOfParameterType);
+            var equalsMethodVar = EmitEqualsMethod(equalityComparerOfParameterType);
+            var getHashCodeMethodVar = EmitGetHashCodeMethod(equalityComparerOfParameterType);
+            
+            equalityComparerDataByType[targetType.Name] = (getDefaultMethodVar, equalsMethodVar, getHashCodeMethodVar);
+        }
+
+        return equalityComparerDataByType;
+
+        string EmitDefaultPropertyGetterMethod(ITypeSymbol parameterType, string openGetDefaultMethodVar, string equalityComparerOfParameterType)
+        {
             var getDefaultMethodVar = context.Naming.SyntheticVariable($"get_Default_{parameterType.Name}", ElementKind.MemberReference);
             string[] defaultPropertyGetterExps =
             [
@@ -315,9 +420,12 @@ public class RecordGenerator
                 $"\tCallingConvention = {openGetDefaultMethodVar}.CallingConvention,",
                 "};"
             ];
-            
             context.WriteCecilExpressions(defaultPropertyGetterExps);
-            
+            return getDefaultMethodVar;
+        }
+
+        string EmitEqualsMethod(string equalityComparerOfParameterType)
+        {
             var equalsMethodVar = context.Naming.SyntheticVariable("Equals", ElementKind.MemberReference);
             var equalityComparerOpenEqualsMethodVar = context.Naming.SyntheticVariable("Equals", ElementKind.LocalVariable);
             string[] equalityComparerEqualsMethodExps = [
@@ -333,11 +441,29 @@ public class RecordGenerator
                 $"{equalsMethodVar}.Parameters.Add({equalityComparerOpenEqualsMethodVar}.Parameters[1]);"
             ];
             context.WriteCecilExpressions(equalityComparerEqualsMethodExps);
-
-            equalityComparerDataByType[parameterType.Name] = (getDefaultMethodVar, equalsMethodVar);
+            return equalsMethodVar;
         }
-
-        return equalityComparerDataByType;
+        
+        string EmitGetHashCodeMethod(string equalityComparerOfParameterType)
+        {
+            const string methodName = "GetHashCode";
+            var getHashCodeMethodVar = context.Naming.SyntheticVariable(methodName, ElementKind.MemberReference);
+            var equalityComparerOpenGetHashCodeMethodVar = context.Naming.SyntheticVariable(methodName, ElementKind.LocalVariable);
+            string[] equalityComparerGetHashCodeMethodExps = 
+            [
+                $$"""var {{equalityComparerOpenGetHashCodeMethodVar}} = assembly.MainModule.ImportReference(typeof(System.Collections.Generic.EqualityComparer<>)).Resolve().Methods.First(m => m.Name == "GetHashCode");""",
+                $"""var {getHashCodeMethodVar} = new MethodReference("GetHashCode", assembly.MainModule.ImportReference({equalityComparerOpenGetHashCodeMethodVar}).ReturnType)""",
+                "{",
+                $"\tDeclaringType = {equalityComparerOfParameterType},",
+                $"\tHasThis = {equalityComparerOpenGetHashCodeMethodVar}.HasThis,",
+                $"\tExplicitThis = {equalityComparerOpenGetHashCodeMethodVar}.ExplicitThis,",
+                $"\tCallingConvention = {equalityComparerOpenGetHashCodeMethodVar}.CallingConvention",
+                "};",
+                $"{getHashCodeMethodVar}.Parameters.Add({equalityComparerOpenGetHashCodeMethodVar}.Parameters[0]);"
+            ];
+            context.WriteCecilExpressions(equalityComparerGetHashCodeMethodExps);
+            return getHashCodeMethodVar;
+        }
     }
 
     private void AddEqualityContractPropertyIfNeeded(IVisitorContext context, string recordTypeDefinitionVariable, TypeDeclarationSyntax record)

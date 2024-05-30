@@ -79,6 +79,12 @@ public class CecilifierTestBase
         if (ilverifyProcess.ExitCode != 0)
         {
             output.Add($"ilverify for {actualAssemblyPath} failed with exit code = {ilverifyProcess.ExitCode}.\n{(expectedAssemblyPath != null ? $"Expected path={expectedAssemblyPath}\n" : "")}");
+
+            if (options.CecilifiedCode != null)
+            {
+                output.Add($"\n---------------------\nCecilified code:\n\n{options.CecilifiedCode}");
+            }
+            
             if (options.FailOnAssemblyVerificationErrors)
             {
                 throw new Exception(string.Join('\n', output));

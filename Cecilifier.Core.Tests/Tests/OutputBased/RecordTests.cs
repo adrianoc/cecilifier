@@ -1,7 +1,7 @@
 using Cecilifier.Core.Tests.Framework;
 using NUnit.Framework;
 
-namespace Cecilifier.Core.Tests.OutbutBased;
+namespace Cecilifier.Core.Tests.OutputBased;
 
 [TestFixture]
 public class RecordTests : OutputBasedTestBase
@@ -32,6 +32,23 @@ public class RecordTests : OutputBasedTestBase
         AssertOutput(
             """System.Console.WriteLine(new D(42, true, "42")); record D(int Value, bool IsCool, string Str):B1(IsCool, Str); record B1(bool IsCool, string Str) : B2(Str); record B2(string Str);""", 
             "D { Str = 42, IsCool = True, Value = 42 }");
+    }
+
+
+    [Test]
+    public void GetHashCode_WhenInheritFromObject_IsHandled()
+    {
+        AssertOutput(
+            """System.Console.WriteLine(new Record(42, "Foo").GetHashCode() != 0); record Record(int Value, string Str);""",
+            "True");
+    }
+    
+    [Test]
+    public void GetHashCode_WhenInheritFromRecord_IsHandled()
+    {
+        AssertOutput(
+            """System.Console.WriteLine(new Derived(42, "Foo").GetHashCode() != 0); record Base(int Value); record Derived(int Value, string Str) : Base(Value);""",
+            "True");
     }
     
     [Test]

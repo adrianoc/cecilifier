@@ -28,6 +28,8 @@ public ref struct CecilifyTestOptions
     internal IAssemblyDiffVisitor AssemblyComparison { get; init; }
     internal Func<Instruction, Instruction, bool?> InstructionComparer { get; init; }
     internal Stream ToBeCecilified { get; set; }
+    
+    internal string CecilifiedCode { get; set; }
     internal BuildType BuildType { get; init; }
     internal bool FailOnAssemblyVerificationErrors { get; init; }
     internal string IgnoredILErrors { get; set; }

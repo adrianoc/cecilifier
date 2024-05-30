@@ -19,10 +19,9 @@ public class OutputBasedTestBase : CecilifierTestBase
     {
         var outputBasedTestFolder = GetTestOutputBaseFolderFor("OutputBasedTests");
 
-        var codeStream = new MemoryStream(Encoding.ASCII.GetBytes(code));
-        var cecilifyResult = CecilifyAndExecute(codeStream, outputBasedTestFolder);
+        var cecilifyResult = CecilifyAndExecute(new MemoryStream(Encoding.ASCII.GetBytes(code)), outputBasedTestFolder);
         
-        VerifyAssembly(cecilifyResult.CecilifiedOutputAssemblyFilePath, null, new CecilifyTestOptions());
+        VerifyAssembly(cecilifyResult.CecilifiedOutputAssemblyFilePath, null, new CecilifyTestOptions { CecilifiedCode = cecilifyResult.CecilifiedCode });
         
         var refsToCopy = new List<string>
         {
