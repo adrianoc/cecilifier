@@ -45,14 +45,14 @@ public class RecordTests : CecilifierUnitTestBase
         Assert.That(cecilifiedCode, Does.Match("""
                                                \s+var (prop_equalityContract_\d+) = new PropertyDefinition\("EqualityContract", PropertyAttributes.None, assembly.MainModule.ImportReference\(typeof\(System.Type\)\)\);
                                                \s+(rec_theRecord_\d+).Properties.Add\(\1\);
-                                               \s+var m_equalityContract_get_2 = new MethodDefinition\("get_EqualityContract", .+Family \| .+HideBySig \| .+SpecialName \| .+NewSlot | .+Virtual, .+ImportReference\(typeof\(System.Type\)\)\);
-                                               \s+\2.Methods.Add\(m_equalityContract_get_2\);
-                                               \s+m_equalityContract_get_2.Body = new MethodBody\(m_equalityContract_get_2\);
-                                               \s+\1.GetMethod = m_equalityContract_get_2;
-                                               \s+var il_equalityContract_get_3 = m_equalityContract_get_2.Body.GetILProcessor\(\);
-                                               \s+m_equalityContract_get_2.Body = new MethodBody\(m_equalityContract_get_2\);
-                                               \s+var il_equalityContract_get_3 = m_equalityContract_get_2.Body.GetILProcessor\(\);
-                                               \s+var l_m_equalityContract_get_2_4 = m_equalityContract_get_2.Body.Instructions;
+                                               \s+var (?<ecget>m_equalityContract_get_\d+) = new MethodDefinition\("get_EqualityContract", .+Family \| .+HideBySig \| .+SpecialName \| .+NewSlot | .+Virtual, .+ImportReference\(typeof\(System.Type\)\)\);
+                                               \s+\2.Methods.Add\(\k<ecget>\);
+                                               \s+\k<ecget>.Body = new MethodBody\(\k<ecget>\);
+                                               \s+\1.GetMethod = \k<ecget>;
+                                               \s+var il_equalityContract_get_\d+ = \k<ecget>.Body.GetILProcessor\(\);
+                                               \s+\k<ecget>.Body = new MethodBody\(\k<ecget>\);
+                                               \s+var il_equalityContract_get_\d+ = \k<ecget>.Body.GetILProcessor\(\);
+                                               \s+var l_m_equalityContract_get_2_4 = \k<ecget>.Body.Instructions;
                                                \s+l_m_equalityContract_get_2_4.Add\(il_equalityContract_get_3.Create\(OpCodes.Ldtoken, \2\)\);
                                                \s+l_m_equalityContract_get_2_4.Add\(il_equalityContract_get_3.Create\(OpCodes.Call, .+assembly.MainModule.ImportReference\(TypeHelpers.ResolveMethod\(typeof\(System.Type\), "GetTypeFromHandle",.+\)\)\)\);
                                                \s+l_m_equalityContract_get_2_4.Add\(il_equalityContract_get_3.Create\(OpCodes.Ret\)\);

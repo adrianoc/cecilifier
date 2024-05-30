@@ -88,7 +88,7 @@ public class RecordGenerator
         getHashCodeMethodBodyExps.Add(OpCodes.Mul);
         
         var parameters = record.GetUniqueParameters(context);
-        var lastParameter = parameters[^1];
+        var lastParameter = parameters.Count > 0 ?  parameters[^1] : default;
         foreach(var parameter in parameters)
         {
             var parameterType = context.SemanticModel.GetTypeInfo(parameter.Type!).Type.EnsureNotNull();
@@ -519,7 +519,7 @@ public class RecordGenerator
         if (record.BaseList?.Types.Count is 0 or null)
             return false;
         
-        var baseRecordName = ((IdentifierNameSyntax) record.BaseList!.Types.First().Type).Identifier;
+        var baseRecordName = ((SimpleNameSyntax) record.BaseList!.Types.First().Type).Identifier;
         var found = record.Ancestors().OfType<CompilationUnitSyntax>().Single().DescendantNodes().SingleOrDefault(candidate => 
                                                                                             candidate is RecordDeclarationSyntax candidateBase 
                                                                                             && candidateBase.Identifier.ValueText == baseRecordName.ValueText
