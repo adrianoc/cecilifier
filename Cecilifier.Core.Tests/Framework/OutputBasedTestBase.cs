@@ -41,5 +41,6 @@ public class OutputBasedTestBase : CecilifierTestBase
     {
         var result = CecilifyAndExecute(snippet);
         Assert.That(result.Output, Is.EqualTo(expectedOutput), $"Output Assembly: {result.GeneralResult.CecilifiedOutputAssemblyFilePath}");
+        TestContext.WriteLine($"Output Assembly: {result.GeneralResult.CecilifiedOutputAssemblyFilePath}");
     }
 }

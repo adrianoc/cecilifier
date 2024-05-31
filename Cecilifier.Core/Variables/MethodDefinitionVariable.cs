@@ -87,4 +87,6 @@ public class MethodDefinitionVariable : DefinitionVariable, IEquatable<MethodDef
                    ^ TypeParameterCount.GetHashCode();
         }
     }
+
+    public override string ToString() => $"Method: {MemberName}({Parameters.Length}) => {VariableName}";
 }
