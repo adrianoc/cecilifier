@@ -19,7 +19,8 @@ public class RecordGenerator
 {
     private string _equalityContractGetMethodVar;
     private IDictionary<string, (string GetDefaultMethodVar, string EqualsMethodVar, string GetHashCodeMethodVar)> _equalityComparerMembersCache;
-    
+    private string _recordTypeEqualsOverloadMethodVar;
+
     internal void AddSyntheticMembers(IVisitorContext context, string recordTypeDefinitionVariable, TypeDeclarationSyntax record)
     {
         InitializeEqualityComparerMemberCache(context, record);
@@ -30,6 +31,7 @@ public class RecordGenerator
         AddIEquatableEquals(context, recordTypeDefinitionVariable, record);
         AddToStringAndRelatedMethods(context, recordTypeDefinitionVariable, record);
         AddGetHashCodeMethod(context, recordTypeDefinitionVariable, record);
+        AddEqualsOverloads(context, recordTypeDefinitionVariable, record);
     }
 
     private void InitializeEqualityComparerMemberCache(IVisitorContext context, TypeDeclarationSyntax record)
@@ -306,18 +308,18 @@ public class RecordGenerator
     {
         context.WriteNewLine();
         context.WriteComment($"IEquatable<>.Equals({record.Identifier.ValueText} other)");
-        var equalsMethodVar = context.Naming.SyntheticVariable("Equals", ElementKind.Method);
+        _recordTypeEqualsOverloadMethodVar = context.Naming.SyntheticVariable("Equals", ElementKind.Method);
         var exps = CecilDefinitionsFactory.Method(
                                     context,
                                     record.Identifier.ValueText(),
-                                    equalsMethodVar,
+                                    _recordTypeEqualsOverloadMethodVar,
                                     $"{record.Identifier.ValueText()}.Equals", "Equals",
                                     $"MethodAttributes.Public | MethodAttributes.HideBySig | {Constants.Cecil.InterfaceMethodDefinitionAttributes}", //TODO: No NEWSLOT if in derived record
-                                    [new ParameterSpec("other", recordTypeDefinitionVariable, RefKind.None, Constants.ParameterAttributes.None)],
+                                    [new ParameterSpec("other", recordTypeDefinitionVariable, RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = $"{record.Identifier.ValueText}?"} ],
                                     Array.Empty<string>(),
                                     ctx => ctx.TypeResolver.Bcl.System.Boolean, out var methodDefinitionVariable);
 
-        context.WriteCecilExpressions([..exps, $"{recordTypeDefinitionVariable}.Methods.Add({equalsMethodVar});"]);
+        context.WriteCecilExpressions([..exps, $"{recordTypeDefinitionVariable}.Methods.Add({_recordTypeEqualsOverloadMethodVar});"]);
         
         // Compare each unique primary constructor parameter to compute equality.
         using (context.DefinitionVariables.WithVariable(methodDefinitionVariable))
@@ -378,7 +380,7 @@ public class RecordGenerator
             ]);
             
             var ilVar = context.Naming.ILProcessor("Equals");
-            var equalsExps = CecilDefinitionsFactory.MethodBody(context.Naming, "Equals",equalsMethodVar, ilVar, [], instructions.ToArray());
+            var equalsExps = CecilDefinitionsFactory.MethodBody(context.Naming, "Equals",_recordTypeEqualsOverloadMethodVar, ilVar, [], instructions.ToArray());
             context.WriteCecilExpressions(equalsExps);
         }
     }
@@ -512,6 +514,85 @@ public class RecordGenerator
         context.EmitCilInstruction(getterIlVar, OpCodes.Ldtoken, recordTypeDefinitionVariable);
         context.EmitCilInstruction(getterIlVar, OpCodes.Call, getTypeFromHandleSymbol.MethodResolverExpression(context));
         context.EmitCilInstruction(getterIlVar, OpCodes.Ret);
+    }
+    
+    /// <summary>
+    /// If <paramref name="record"/> inherits from System.Object 2 Equals() overloads should be added:
+    /// - Equals(object other) => Equals( (RecordType) other)
+    /// - Equals(RecordType) is the same as IEquatable&lt;RecordType&gt;.Equals() so it is already implemented.
+    /// 
+    /// In cases where <paramref name="record"/> inherits from another record a third Equals() overload is introduced:
+    /// - Equals(BaseType other)  => Equals( (object) other)
+    /// </summary>
+    /// <param name="context"></param>
+    /// <param name="recordTypeDefinitionVariable"></param>
+    /// <param name="record"></param>
+    private void AddEqualsOverloads(IVisitorContext context, string recordTypeDefinitionVariable, TypeDeclarationSyntax record)
+    {
+        var recordSymbol = context.SemanticModel.GetDeclaredSymbol(record).EnsureNotNull<ISymbol, ITypeSymbol>();
+        const string methodName = "Equals";
+        
+        context.WriteNewLine();
+        context.WriteComment($"Equals(object)");
+        var equalsObjectOverloadMethodVar = context.Naming.SyntheticVariable($"{methodName}ObjectOverload", ElementKind.Method);
+        var equalsObjectOverloadMethodExps = CecilDefinitionsFactory.Method(
+            context,
+            recordSymbol.Name,
+            equalsObjectOverloadMethodVar,
+            methodName,
+            methodName,
+            Constants.Cecil.PublicOverrideMethodAttributes,
+            [new ParameterSpec("other", context.TypeResolver.Bcl.System.Object, RefKind.None, Constants.ParameterAttributes.None)],
+            [],
+            ctx => ctx.TypeResolver.Bcl.System.Boolean,
+            out _);
+        
+        context.WriteCecilExpressions(equalsObjectOverloadMethodExps);
+        
+        InstructionRepresentation[] equalsBodyInstructions = 
+        [
+            OpCodes.Ldarg_0,
+            OpCodes.Ldarg_1,
+            OpCodes.Isinst.WithOperand(recordTypeDefinitionVariable),
+            OpCodes.Callvirt.WithOperand(_recordTypeEqualsOverloadMethodVar),
+            OpCodes.Ret
+        ];
+        
+        var bodyExps = CecilDefinitionsFactory.MethodBody(context.Naming, methodName, equalsObjectOverloadMethodVar, [], equalsBodyInstructions);
+        context.WriteCecilExpressions(bodyExps);
+        context.WriteCecilExpression($"{recordTypeDefinitionVariable}.Methods.Add({equalsObjectOverloadMethodVar});");
+
+        if (!HasBaseRecord(record))
+            return;
+        
+        context.WriteNewLine();
+        context.WriteComment($"Equals({recordSymbol.BaseType?.Name})");
+        var equalsBaseOverloadMethodVar = context.Naming.SyntheticVariable($"{methodName}{recordSymbol.BaseType?.Name}Overload", ElementKind.Method);
+        var equalsBaseOverloadMethodExps = CecilDefinitionsFactory.Method(
+            context,
+            recordSymbol.Name,
+            equalsBaseOverloadMethodVar,
+            methodName,
+            methodName,
+            Constants.Cecil.PublicOverrideMethodAttributes,
+            [new ParameterSpec("other", context.TypeResolver.Resolve(recordSymbol.BaseType), RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = $"{recordSymbol.BaseType?.Name}?" }],
+            [],
+            ctx => ctx.TypeResolver.Bcl.System.Boolean,
+            out _);
+        
+        context.WriteCecilExpressions(equalsBaseOverloadMethodExps);
+        
+        InstructionRepresentation[] equalsBodyInstructions2 = 
+        [
+            OpCodes.Ldarg_0,
+            OpCodes.Ldarg_1,
+            OpCodes.Callvirt.WithOperand(equalsObjectOverloadMethodVar),
+            OpCodes.Ret
+        ];
+        
+        var bodyExps2 = CecilDefinitionsFactory.MethodBody(context.Naming, methodName, equalsBaseOverloadMethodVar, [], equalsBodyInstructions2);
+        context.WriteCecilExpressions(bodyExps2);
+        context.WriteCecilExpression($"{recordTypeDefinitionVariable}.Methods.Add({equalsBaseOverloadMethodVar});");
     }
 
     private static bool HasBaseRecord(TypeDeclarationSyntax record)

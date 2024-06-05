@@ -50,7 +50,58 @@ public class RecordTests : OutputBasedTestBase
             """System.Console.WriteLine(new Derived(42, "Foo").GetHashCode() != 0); record Base(int Value); record Derived(int Value, string Str) : Base(Value);""",
             "True");
     }
-    
+
+    [TestFixture]
+    public class Equals : OutputBasedTestBase
+    {
+        [Test]
+        public void RecordTypeOverload_WhenInheritingFromObject_Works()
+        {
+            AssertOutput("""
+                         var r1 = new Record(42, "Foo");
+                         var r2 = new Record(42, "Foo");
+                         var r3 = new Record(1, "Bar");
+                         
+                         System.Console.WriteLine($"{r1.Equals(r1)}/{r1.Equals(r2)}/{r1.Equals(r3)}");
+                          
+                         record Record(int Value, string Name);
+                         """,
+                "True/True/False");
+        }
+        
+        [Test]
+        public void ObjectOverload_WhenInheritingFromObject_Works()
+        {
+            AssertOutput("""
+                         object r1 = new Record(42, "Foo");
+                         object r2 = new Record(42, "Foo");
+                         object r3 = new Record(1, "Bar");
+                         
+                         System.Console.WriteLine($"{r1.Equals(r1)}/{r1.Equals(r2)}/{r1.Equals(r3)}");
+                          
+                         record Record(int Value, string Name);
+                         """,
+                "True/True/False");
+        }
+        
+        [Test]
+        public void VariousOverloads_WhenInheritingFromRecord_Works()
+        {
+            AssertOutput("""
+                         var r1 = new Derived(42, "Foo");
+                         var r2 = new Derived(42, "Foo");
+                         var r3 = new Derived(1, "Bar");
+                         Base r1AsBase = r1;
+                         
+                         System.Console.WriteLine($"{r1.Equals(r1)}/{r1.Equals(r2)}/{r1.Equals(r3)}/{r1.Equals(r1AsBase)}");
+                          
+                         record Base(string Name);
+                         record Derived(int Value, string Name) : Base(Name);
+                         """,
+                "True/True/False/True");
+        } 
+    }
+
     [Test]
     public void Constructor_WhenInheritFromRecordWithProperties_CorrectArgumentsArePassed()
     {
