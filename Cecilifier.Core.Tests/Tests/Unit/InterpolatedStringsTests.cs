@@ -27,7 +27,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
 			m_M_1.Body.Variables.Add(l_s_5);
 			il_M_2.Emit(OpCodes.Ldstr, ""1={0}, 2={1}, 3={2}, 4={3}, 5={4}"");
 			il_M_2.Emit(OpCodes.Ldc_I4, 5);
-			il_M_2.Emit(OpCodes.Newarr, object);
+			il_M_2.Emit(OpCodes.Newarr, assembly.MainModule.TypeSystem.Object);
 			il_M_2.Emit(OpCodes.Dup);
 			il_M_2.Emit(OpCodes.Ldc_I4, 0);
 			il_M_2.Emit(OpCodes.Ldarg_1);

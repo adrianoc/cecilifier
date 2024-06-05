@@ -39,7 +39,7 @@ namespace Cecilifier.Core.AST
         protected override void BeforeVisitInterpolatedStringExpression()
         {
             Context.EmitCilInstruction(_ilVar, OpCodes.Ldc_I4, _numberOfArguments);
-            Context.EmitCilInstruction(_ilVar, OpCodes.Newarr, Context.RoslynTypeSystem.SystemObject);
+            Context.EmitCilInstruction(_ilVar, OpCodes.Newarr, Context.TypeResolver.Bcl.System.Object);
         }
 
         public override void VisitInterpolation(InterpolationSyntax node)
