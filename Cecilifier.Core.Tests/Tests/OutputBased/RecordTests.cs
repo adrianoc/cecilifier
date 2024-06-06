@@ -99,9 +99,42 @@ public class RecordTests : OutputBasedTestBase
                          record Derived(int Value, string Name) : Base(Name);
                          """,
                 "True/True/False/True");
-        } 
-    }
+        }
+        
+        [TestCase("==", "True/True/False", TestName = "Equality")]
+        [TestCase("!=", "False/False/True", TestName = "Inequality")]
+        public void EqualityOperator_WhenInheritingFromObject_Works(string operatorToTest, string expectedResult)
+        {
+            AssertOutput($$"""
+                         var r1 = new Record(42, "Foo");
+                         var r2 = new Record(42, "Foo");
+                         var r3 = new Record(1, "Bar");
+                         
+                         System.Console.WriteLine($"{r1 {{operatorToTest}} r1}/{r1 {{operatorToTest}} r2}/{r1 {{operatorToTest}} r3}");
+                          
+                         record Record(int Value, string Name);
+                         """,
+                expectedResult);
+        }
+        
+        [Test]
+        public void EqualityOperator_WhenInheritingFromRecord_Works()
+        {
+            AssertOutput("""
+                         var r1 = new Derived(42, "Foo");
+                         var r2 = new Derived(42, "Foo");
+                         var r3 = new Derived(1, "Bar");
+                         Base r1AsBase = r1;
 
+                         System.Console.WriteLine($"{r1 == r1AsBase}");
+                          
+                         record Base(string Name);
+                         record Derived(int Value, string Name) : Base(Name);
+                         """,
+                "True");
+        }
+    }
+    
     [Test]
     public void Constructor_WhenInheritFromRecordWithProperties_CorrectArgumentsArePassed()
     {

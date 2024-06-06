@@ -16,6 +16,7 @@ public struct Constants
         public const string HideBySigNewSlotVirtual = "MethodAttributes.HideBySig | MethodAttributes.NewSlot | MethodAttributes.Virtual";
         public const string DelegateMethodAttributes = $"MethodAttributes.Public | {HideBySigNewSlotVirtual}";
         public const string PublicOverrideMethodAttributes = $"MethodAttributes.Public | {HideBySigVirtual}";
+        public const string PublicOverrideOperatorAttributes = $"MethodAttributes.Public | MethodAttributes.HideBySig | {MethodAttributesSpecialName} | {MethodAttributesStatic}";
 
         public const string CtorAttributes = "MethodAttributes.RTSpecialName | MethodAttributes.SpecialName";
         public const string InstanceConstructorName = "ctor";

@@ -32,6 +32,96 @@ public class RecordGenerator
         AddToStringAndRelatedMethods(context, recordTypeDefinitionVariable, record);
         AddGetHashCodeMethod(context, recordTypeDefinitionVariable, record);
         AddEqualsOverloads(context, recordTypeDefinitionVariable, record);
+        AddEqualityOperator(context, recordTypeDefinitionVariable, record);
+        AddInequalityOperator(context, recordTypeDefinitionVariable, record);
+    }
+
+    private void AddEqualityOperator(IVisitorContext context, string recordTypeDefinitionVariable, TypeDeclarationSyntax record)
+    {
+        var recordSymbol = context.SemanticModel.GetDeclaredSymbol(record).EnsureNotNull<ISymbol, ITypeSymbol>();
+        const string methodName = "op_Equality";
+        
+        context.WriteNewLine();
+        context.WriteComment("operator ==");
+        var equalsOperatorMethodVar = context.Naming.SyntheticVariable($"equalsOperator", ElementKind.Method);
+        var equalsOperatorMethodExps = CecilDefinitionsFactory.Method(
+            context,
+            recordSymbol.Name,
+            equalsOperatorMethodVar,
+            methodName,
+            methodName,
+            Constants.Cecil.PublicOverrideOperatorAttributes,
+            [
+                new ParameterSpec("left", context.TypeResolver.Resolve(recordSymbol), RefKind.None, Constants.ParameterAttributes.None)  { RegistrationTypeName = $"{record.Identifier.ValueText}?" },
+                new ParameterSpec("right", context.TypeResolver.Resolve(recordSymbol), RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = $"{record.Identifier.ValueText}?" }
+            ],
+            [],
+            ctx => ctx.TypeResolver.Bcl.System.Boolean,
+            out _);
+        
+        context.WriteCecilExpressions(equalsOperatorMethodExps);
+        
+        InstructionRepresentation[] equalsBodyInstructions = 
+        [
+            OpCodes.Ldarg_0,
+            OpCodes.Ldarg_1,
+            OpCodes.Beq_S.WithBranchOperand("Equal"),
+            OpCodes.Ldarg_0,
+            OpCodes.Brfalse_S.WithBranchOperand("NotEqual"),
+            OpCodes.Ldarg_0,
+            OpCodes.Ldarg_1,
+            OpCodes.Callvirt.WithOperand(_recordTypeEqualsOverloadMethodVar),
+            OpCodes.Ret,
+            OpCodes.Ldc_I4_0.WithInstructionMarker("NotEqual"),
+            OpCodes.Ret,
+            OpCodes.Ldc_I4_1.WithInstructionMarker("Equal"),
+            OpCodes.Ret
+        ];
+        
+        var bodyExps = CecilDefinitionsFactory.MethodBody(context.Naming, methodName, equalsOperatorMethodVar, [], equalsBodyInstructions);
+        context.WriteCecilExpressions(bodyExps);
+        context.WriteCecilExpression($"{recordTypeDefinitionVariable}.Methods.Add({equalsOperatorMethodVar});");
+    }
+    
+    private void AddInequalityOperator(IVisitorContext context, string recordTypeDefinitionVariable, TypeDeclarationSyntax record)
+    {
+        var recordSymbol = context.SemanticModel.GetDeclaredSymbol(record).EnsureNotNull<ISymbol, ITypeSymbol>();
+        const string methodName = "op_Inequality";
+        
+        context.WriteNewLine();
+        context.WriteComment("operator ==");
+        var inequalityOperatorMethodVar = context.Naming.SyntheticVariable($"inequalityOperator", ElementKind.Method);
+        var inequalityOperatorMethodExps = CecilDefinitionsFactory.Method(
+            context,
+            recordSymbol.Name,
+            inequalityOperatorMethodVar,
+            methodName,
+            methodName,
+            Constants.Cecil.PublicOverrideOperatorAttributes,
+            [
+                new ParameterSpec("left", context.TypeResolver.Resolve(recordSymbol), RefKind.None, Constants.ParameterAttributes.None)  { RegistrationTypeName = $"{record.Identifier.ValueText}?" },
+                new ParameterSpec("right", context.TypeResolver.Resolve(recordSymbol), RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = $"{record.Identifier.ValueText}?" }
+            ],
+            [],
+            ctx => ctx.TypeResolver.Bcl.System.Boolean,
+            out _);
+        
+        context.WriteCecilExpressions(inequalityOperatorMethodExps);
+
+        var equalityMethodDefinitionVariable = context.DefinitionVariables.GetMethodVariable(new MethodDefinitionVariable(recordSymbol.Name, "op_Equality", [$"{record.Identifier.ValueText}?", $"{record.Identifier.ValueText}?"], 0));
+        InstructionRepresentation[] inequalityBodyInstructions = 
+        [
+            OpCodes.Ldarg_0,
+            OpCodes.Ldarg_1,
+            OpCodes.Call.WithOperand(equalityMethodDefinitionVariable.VariableName),
+            OpCodes.Ldc_I4_0,
+            OpCodes.Ceq,
+            OpCodes.Ret
+        ];
+        
+        var bodyExps = CecilDefinitionsFactory.MethodBody(context.Naming, methodName, inequalityOperatorMethodVar, [], inequalityBodyInstructions);
+        context.WriteCecilExpressions(bodyExps);
+        context.WriteCecilExpression($"{recordTypeDefinitionVariable}.Methods.Add({inequalityOperatorMethodVar});");
     }
 
     private void InitializeEqualityComparerMemberCache(IVisitorContext context, TypeDeclarationSyntax record)
