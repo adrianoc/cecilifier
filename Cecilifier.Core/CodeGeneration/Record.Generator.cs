@@ -34,6 +34,7 @@ public class RecordGenerator
         AddEqualsOverloads(context, recordTypeDefinitionVariable, record);
         AddEqualityOperator(context, recordTypeDefinitionVariable, record);
         AddInequalityOperator(context, recordTypeDefinitionVariable, record);
+        AddDeconstructMethod(context, recordTypeDefinitionVariable, record);
     }
 
     private void AddEqualityOperator(IVisitorContext context, string recordTypeDefinitionVariable, TypeDeclarationSyntax record)
@@ -685,6 +686,67 @@ public class RecordGenerator
         context.WriteCecilExpression($"{recordTypeDefinitionVariable}.Methods.Add({equalsBaseOverloadMethodVar});");
     }
 
+    private void AddDeconstructMethod(IVisitorContext context, string recordTypeDefinitionVariable, TypeDeclarationSyntax record)
+    {
+        if (record.ParameterList?.Parameters.Count == 0)
+            return;
+        
+        var recordSymbol = context.SemanticModel.GetDeclaredSymbol(record).EnsureNotNull<ISymbol, ITypeSymbol>();
+        const string methodName = "Deconstruct";
+
+        var parametersInfo = record.ParameterList!.Parameters.Select(p => (p.Identifier.ValueText, context.SemanticModel.GetTypeInfo(p.Type!).Type));
+        var parameterTypeParamSpec = parametersInfo.Select(parameterInfo => 
+            new ParameterSpec(parameterInfo.ValueText, context.TypeResolver.Resolve(parameterInfo.Type), RefKind.Out, Constants.ParameterAttributes.Out) { RegistrationTypeName = parameterInfo.Type.ToDisplayString()})
+            .ToArray();
+        
+        context.WriteNewLine();
+        context.WriteComment($"Deconstruct({string.Join(',', parametersInfo.Select(parameterType => $"out {parameterType!.Type}"))})");
+        var deconstructMethodVar = context.Naming.SyntheticVariable(methodName, ElementKind.Method);
+        var deconstructMethodVarExps = CecilDefinitionsFactory.Method(
+            context,
+            recordSymbol.Name,
+            deconstructMethodVar,
+            methodName,
+            methodName,
+            Constants.Cecil.PublicInstanceMethod,
+            parameterTypeParamSpec,
+            [],
+            ctx => ctx.TypeResolver.Bcl.System.Void,
+            out _);
+        
+        context.WriteCecilExpressions(deconstructMethodVarExps);
+
+        List<InstructionRepresentation> deconstructInstructions = new();
+        int argIndex = 1;
+        foreach (var p in parametersInfo)
+        {
+            deconstructInstructions.Add(OpCodes.Ldarg.WithOperand(argIndex.ToString()));
+            deconstructInstructions.Add(OpCodes.Ldarg_0);
+            deconstructInstructions.Add(OpCodes.Call.WithOperand(GetGetterMethodVar(recordSymbol, p.ValueText)));
+            deconstructInstructions.Add(p.Type.StindOpCodeFor());
+            argIndex++;
+        }
+        deconstructInstructions.Add(OpCodes.Ret);
+        
+        var bodyExps = CecilDefinitionsFactory.MethodBody(context.Naming, methodName, deconstructMethodVar, [], deconstructInstructions.ToArray());
+        context.WriteCecilExpressions(bodyExps);
+        context.WriteCecilExpression($"{recordTypeDefinitionVariable}.Methods.Add({deconstructMethodVar});");
+
+        string GetGetterMethodVar(ITypeSymbol candidate, string propertyName)
+        {
+            var getterMethodVar = context.DefinitionVariables.GetMethodVariable(new MethodDefinitionVariable(candidate.Name, $"get_{propertyName}", [], 0));
+            if (getterMethodVar.IsValid)
+                return getterMethodVar.VariableName;
+            
+            // getter is not defined in the declaring record; this means the primary constructor parameter
+            // was passed to its base type ctor, lets validate that and retrieve the getter from the base.
+            if (SymbolEqualityComparer.Default.Equals(recordSymbol.BaseType, context.RoslynTypeSystem.SystemObject))
+                throw new InvalidOperationException($"Variable for the getter method for {recordSymbol.Name}.{propertyName} could not be found.");
+            
+            return GetGetterMethodVar(candidate.BaseType, propertyName);
+        }
+    }
+    
     private static bool HasBaseRecord(TypeDeclarationSyntax record)
     {
         if (record.BaseList?.Types.Count is 0 or null)

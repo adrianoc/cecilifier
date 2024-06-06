@@ -133,7 +133,16 @@ public class CecilifierTestBase
             return testCompilationResult;
             
         CopyFilesNextToGeneratedExecutable(cecilifierRunnerPath, refsToCopy);
-        TestFramework.Execute("dotnet", $"{cecilifierRunnerPath} {outputAssemblyPath}");
+
+        try
+        {
+            TestFramework.Execute("dotnet", $"{cecilifierRunnerPath} {outputAssemblyPath}");
+        }
+        catch (Exception)
+        {
+            Console.WriteLine($"Cecilified Code:\n{cecilifiedCode}\nCecilified Assembly: {cecilifierRunnerPath}\nCecilified Output Assembly:{outputAssemblyPath}");
+            throw;
+        }
 
         return testCompilationResult;
 

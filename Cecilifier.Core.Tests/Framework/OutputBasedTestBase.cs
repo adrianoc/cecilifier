@@ -20,7 +20,6 @@ public class OutputBasedTestBase : CecilifierTestBase
         var outputBasedTestFolder = GetTestOutputBaseFolderFor("OutputBasedTests");
 
         var cecilifyResult = CecilifyAndExecute(new MemoryStream(Encoding.ASCII.GetBytes(code)), outputBasedTestFolder);
-        
         VerifyAssembly(cecilifyResult.CecilifiedOutputAssemblyFilePath, null, new CecilifyTestOptions { CecilifiedCode = cecilifyResult.CecilifiedCode });
         
         var refsToCopy = new List<string>
@@ -32,7 +31,17 @@ public class OutputBasedTestBase : CecilifierTestBase
         
         CopyFilesNextToGeneratedExecutable(cecilifyResult.CecilifiedOutputAssemblyFilePath, refsToCopy);
 
-        var output = TestFramework.ExecuteWithOutput("dotnet", cecilifyResult.CecilifiedOutputAssemblyFilePath);
+        string output = null;
+        try
+        {
+            output = TestFramework.ExecuteWithOutput("dotnet", cecilifyResult.CecilifiedOutputAssemblyFilePath);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Cecilified source:\n{cecilifyResult.CecilifiedCode}\nCecilified Output Assembly: {cecilifyResult.CecilifiedOutputAssemblyFilePath}");
+            throw;
+        }
+
         return new OutputBasedTestResult(cecilifyResult, output.AsSpan()[..^NewLineLength].ToString()); // remove last new line
     }
 

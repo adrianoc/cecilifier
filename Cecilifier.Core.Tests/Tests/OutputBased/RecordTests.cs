@@ -30,7 +30,13 @@ public class RecordTests : OutputBasedTestBase
     public void ToString_WhenInheritFromRecord_IncludesBaseRecordProperties2()
     {
         AssertOutput(
-            """System.Console.WriteLine(new D(42, true, "42")); record D(int Value, bool IsCool, string Str):B1(IsCool, Str); record B1(bool IsCool, string Str) : B2(Str); record B2(string Str);""", 
+            """
+            System.Console.WriteLine(new D(42, true, "42")); 
+            
+            record D(int Value, bool IsCool, string Str):B1(IsCool, Str); 
+            record B1(bool IsCool, string Str) : B2(Str);
+            record B2(string Str);
+            """, 
             "D { Str = 42, IsCool = True, Value = 42 }");
     }
 
@@ -132,6 +138,42 @@ public class RecordTests : OutputBasedTestBase
                          record Derived(int Value, string Name) : Base(Name);
                          """,
                 "True");
+        }
+    }
+
+    [TestFixture]
+    public class Deconstruct : OutputBasedTestBase
+    {
+        [Test]
+        public void Deconstruct_WhenInheritingFromObject_IncludesAllPrimaryConstructorParameters()
+        {
+            AssertOutput(
+                """
+                var r = new Record(42, "Foo");
+                r.Deconstruct(out var i, out var s); // Cecilifier does not support deconstructing syntax so we just call the Deconstruct() method manually. 
+                
+                System.Console.WriteLine($"{i},{s}"); 
+                
+                record Record(int Value, string Name);
+                """,
+                "42,Foo");
+        }
+        
+        [Test]
+        public void Deconstruct_WhenInheritingFromRecord_IncludesAllPrimaryConstructorParameters()
+        {
+            AssertOutput(
+                """
+                var r = new Derived2(42, "Foo", true);
+                r.Deconstruct(out var i, out var s, out var b); // Cecilifier does not support deconstructing syntax so we just call the Deconstruct() method manually. 
+                
+                System.Console.WriteLine($"{i},{s},{b}"); 
+                
+                record Base(string Name);
+                record Derived(int Value, string Name) : Base(Name);
+                record Derived2(int Value, string Name, bool IsCool) : Derived(Value, Name);
+                """,
+                "42,Foo,True");
         }
     }
     
