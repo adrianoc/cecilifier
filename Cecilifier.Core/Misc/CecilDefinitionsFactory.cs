@@ -190,7 +190,7 @@ namespace Cecilifier.Core.Misc
             string baseTypeName,
             string outerTypeName,
             bool isStructWithNoFields,
-            IEnumerable<string> interfaces,
+            IEnumerable<ITypeSymbol> interfaces,
             IEnumerable<TypeParameterSyntax> ownTypeParameters,
             IEnumerable<TypeParameterSyntax> outerTypeParameters,
             params string[] properties)
@@ -212,9 +212,13 @@ namespace Cecilifier.Core.Misc
                 exps.Add($"{typeDefExp};");
             }
 
-            foreach (var itfName in interfaces)
+            // add type parameters from outer types. 
+            var outerTypeParametersArray = outerTypeParameters?.ToArray() ?? [];
+            ProcessGenericTypeParameters(typeVar, context, outerTypeParametersArray.Concat(typeParamList).ToArray(), exps);
+            
+            foreach (var itf in interfaces)
             {
-                exps.Add($"{typeVar}.Interfaces.Add(new InterfaceImplementation({itfName}));");
+                exps.Add($"{typeVar}.Interfaces.Add(new InterfaceImplementation({context.TypeResolver.Resolve(itf)}));");
             }
 
             var outerTypeVariable = context.DefinitionVariables.GetVariable(outerTypeName, VariableMemberKind.Type);
@@ -229,27 +233,7 @@ namespace Cecilifier.Core.Misc
                 exps.Add($"{typeVar}.PackingSize = 0;");
             }
 
-            // add type parameters from outer types. 
-            var outerTypeParametersArray = outerTypeParameters?.ToArray() ?? Array.Empty<TypeParameterSyntax>();
-            ProcessGenericTypeParameters(typeVar, context, outerTypeParametersArray.Concat(typeParamList).ToArray(), exps);
             return exps;
-        }
-
-        public static IEnumerable<string> Type(IVisitorContext context, string typeVar, string typeNamespace, string typeName, string outerTypeName, string attrs, string baseTypeName, bool isStructWithNoFields, IEnumerable<string> interfaces, TypeParameterListSyntax typeParameters = null, params string[] properties)
-        {
-            return Type(
-                context,
-                typeVar,
-                typeNamespace,
-                typeName,
-                attrs,
-                baseTypeName,
-                outerTypeName,
-                isStructWithNoFields,
-                interfaces,
-                typeParameters?.Parameters,
-                Array.Empty<TypeParameterSyntax>(),
-                properties);
         }
 
         private static string GenericParameter(IVisitorContext context, string typeParameterOwnerVar, string genericParamName, string genParamDefVar, ITypeParameterSymbol typeParameterSymbol)

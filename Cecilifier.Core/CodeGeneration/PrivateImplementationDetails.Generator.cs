@@ -325,7 +325,7 @@ internal partial class PrivateImplementationDetailsGenerator
             context.TypeResolver.Resolve(context.RoslynTypeSystem.SystemValueType), 
             Constants.CompilerGeneratedTypes.PrivateImplementationDetails,
             isStructWithNoFields: false, 
-            Array.Empty<string>(), 
+            Array.Empty<ITypeSymbol>(), 
             Array.Empty<TypeParameterSyntax>(),
             Array.Empty<TypeParameterSyntax>(), 
             $"ClassSize = {sizeInBytes}",
@@ -361,7 +361,7 @@ internal partial class PrivateImplementationDetailsGenerator
                                                                                     context.TypeResolver.Resolve(context.RoslynTypeSystem.SystemObject), 
                                                                                     string.Empty,
                                                                                     isStructWithNoFields: false, 
-                                                                                    Array.Empty<string>(), 
+                                                                                    Array.Empty<ITypeSymbol>(), 
                                                                                     Array.Empty<TypeParameterSyntax>(),
                                                                                     Array.Empty<TypeParameterSyntax>());
 

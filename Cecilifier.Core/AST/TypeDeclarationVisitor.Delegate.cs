@@ -27,12 +27,13 @@ internal partial class TypeDeclarationVisitor
             typeVar,
             delegateSymbol.ContainingNamespace?.FullyQualifiedName() ?? string.Empty,
             node.Identifier.ValueText,
-            delegateSymbol.ContainingType?.Name,
             CecilDefinitionsFactory.DefaultTypeAttributeFor(TypeKind.Delegate, false).AppendModifier(accessibility),
             Context.TypeResolver.Bcl.System.MulticastDelegate,
-            false,
-            Array.Empty<string>(),
-            node.TypeParameterList,
+            delegateSymbol.ContainingType?.Name,
+            isStructWithNoFields:false,
+            Array.Empty<ITypeSymbol>(),
+            node.TypeParameterList?.Parameters,
+            Array.Empty<TypeParameterSyntax>(),
             "IsAnsiClass = true");
 
         AddCecilExpressions(Context, typeDef);

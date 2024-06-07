@@ -210,7 +210,7 @@ namespace Cecilifier.Core.AST
                 BaseTypeFor(context, typeSymbol),
                 typeSymbol.ContainingType?.Name,
                 isStructWithNoFields,
-                typeSymbol.ImplementedInterfaces(context),
+                typeSymbol.Interfaces,
                 typeParameters,
                 outerTypeParameters);
 
