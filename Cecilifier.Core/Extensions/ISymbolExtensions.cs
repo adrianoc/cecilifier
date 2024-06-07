@@ -146,7 +146,7 @@ namespace Cecilifier.Core.Extensions
             if (declaringReference == null)
                 return;
 
-            var propertyDeclaration = (BasePropertyDeclarationSyntax) declaringReference.GetSyntax();
+            var propertyDeclaration = (CSharpSyntaxNode) declaringReference.GetSyntax();
             if (propertyDeclaration.Span.Start > node.Span.End)
             {
                 // this is a forward reference, process it...

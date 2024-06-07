@@ -112,12 +112,22 @@ public class RecordGenerator
         
         context.WriteCecilExpressions(inequalityOperatorMethodExps);
 
-        var equalityMethodDefinitionVariable = context.DefinitionVariables.GetMethodVariable(new MethodDefinitionVariable(recordSymbol.Name, "op_Equality", [$"{record.Identifier.ValueText}?", $"{record.Identifier.ValueText}?"], 0));
+        var equalityMethodDefinitionVariable = context.DefinitionVariables.GetMethodVariable(new MethodDefinitionVariable(recordSymbol.Name, "op_Equality", [$"{record.Identifier.ValueText}?", $"{record.Identifier.ValueText}?"], 0)).VariableName;
+        if (_recordSymbol is INamedTypeSymbol { IsGenericType: true })
+        {
+            var var = equalityMethodDefinitionVariable;
+            equalityMethodDefinitionVariable = context.Naming.SyntheticVariable("equalsOperator", ElementKind.GenericInstance);
+            context.WriteCecilExpressions(
+            [
+                $"var {equalityMethodDefinitionVariable} = new MethodReference({var}.Name, {var}.ReturnType, {context.TypeResolver.Resolve(_recordSymbol)}) {{ HasThis = {var}.HasThis, ExplicitThis = {var}.ExplicitThis, CallingConvention = {var}.CallingConvention, Parameters = {{ {var}.Parameters[0],  {var}.Parameters[1] }} }};",
+            ]);
+        }
+        
         InstructionRepresentation[] inequalityBodyInstructions = 
         [
             OpCodes.Ldarg_0,
             OpCodes.Ldarg_1,
-            OpCodes.Call.WithOperand(equalityMethodDefinitionVariable.VariableName),
+            OpCodes.Call.WithOperand(equalityMethodDefinitionVariable),
             OpCodes.Ldc_I4_0,
             OpCodes.Ceq,
             OpCodes.Ret
@@ -178,7 +188,7 @@ public class RecordGenerator
             [
                 OpCodes.Call.WithOperand(equalityComparerMembersForSystemType.GetDefaultMethodVar),
                 OpCodes.Ldarg_0, // Load this
-                OpCodes.Call.WithOperand(getEqualityContractMethodVar.VariableName), // load EqualityContract
+                OpCodes.Call.WithOperand(ClosedGenericMethodForMethodVariable(context, getEqualityContractMethodVar.VariableName, recordTypeDefinitionVariable)), // load EqualityContract
                 OpCodes.Callvirt.WithOperand(equalityComparerMembersForSystemType.GetHashCodeMethodVar)
             ]);
         }
@@ -192,11 +202,15 @@ public class RecordGenerator
             var paramDefVar = context.DefinitionVariables.GetVariable(Utils.BackingFieldNameForAutoProperty(parameter.Identifier.ValueText()), VariableMemberKind.Field, record.Identifier.ValueText());
             var equalityComparerMembersForParamType = _equalityComparerMembersCache[parameterType.Name];
 
+            var backingFieldRef = _recordSymbol is INamedTypeSymbol { IsGenericType: true } 
+                ? $"new FieldReference({paramDefVar.VariableName}.Name, {paramDefVar.VariableName}.FieldType, {context.TypeResolver.Resolve(_recordSymbol)})" 
+                : paramDefVar.VariableName;
+
             getHashCodeMethodBodyExps.AddRange( 
             [
                 OpCodes.Call.WithOperand(equalityComparerMembersForParamType.GetDefaultMethodVar), // EqualityComparer<{parameterType}}>.Default
                 OpCodes.Ldarg_0, // Load this
-                OpCodes.Ldfld.WithOperand(paramDefVar.VariableName), // load the backing field for the parameter
+                OpCodes.Ldfld.WithOperand(backingFieldRef), // load the backing field for the parameter
                 OpCodes.Callvirt.WithOperand(equalityComparerMembersForParamType.GetHashCodeMethodVar)
             ]);
 
@@ -234,8 +248,7 @@ public class RecordGenerator
             .MethodResolverExpression(context);
         
         var printMembersVar = context.Naming.SyntheticVariable(PrintMembersMethodName, ElementKind.Method);
-        var recordSymbol = context.SemanticModel.GetDeclaredSymbol(record).EnsureNotNull<ISymbol, ITypeSymbol>();
-        
+
         AddPrintMembersMethod();
         AddToStringMethod();
 
@@ -263,7 +276,7 @@ public class RecordGenerator
                 $"{recordTypeDefinitionVariable}.Methods.Add({printMembersVar});"
             ]);
 
-            List<InstructionRepresentation> bodyInstructions = HasBaseRecord(context, recordSymbol)
+            List<InstructionRepresentation> bodyInstructions = HasBaseRecord(context, _recordSymbol)
                 ? 
                 [
                     OpCodes.Ldarg_0,
@@ -279,13 +292,11 @@ public class RecordGenerator
                 : [];
 
             var separator = string.Empty;
-            foreach (var property in recordSymbol.GetMembers().OfType<IPropertySymbol>().Where(p => p.DeclaredAccessibility == Accessibility.Public))
+            foreach (var property in _recordSymbol.GetMembers().OfType<IPropertySymbol>().Where(p => p.DeclaredAccessibility == Accessibility.Public))
             {
                 var stringBuilderAppendMethod = StringBuilderAppendMethodFor(context, property.Type, stringBuilderSymbol);
                 if (stringBuilderAppendMethod == null)
                 {
-                    //TODO: Handle property type != string. Specifically value types and type parameters. The code need to call `ToString()`
-                    //      Most likely, for non-value type/type parameters we can simply call ToString() on the instance.
                     context.WriteComment($"Property '{property.Name}' of type {property.Type.Name} not supported in PrintMembers()/ToString() ");
                     context.WriteComment("Only primitives, string and object are supported. The implementation of PrintMembers()/ToString() is definitely incomplete.");
                     continue;
@@ -299,7 +310,7 @@ public class RecordGenerator
                     OpCodes.Pop,
                     OpCodes.Ldarg_1,
                     OpCodes.Ldarg_0,
-                    OpCodes.Call.WithOperand(context.DefinitionVariables.GetVariable($"get_{property.Name}", VariableMemberKind.Method, record.Identifier.ValueText)),
+                    OpCodes.Call.WithOperand(ClosedGenericMethodFor(context, $"get_{property.Name}", recordTypeDefinitionVariable)),
                     OpCodes.Box.WithOperand(context.TypeResolver.Resolve(property.Type)).IgnoreIf(property.Type.TypeKind != TypeKind.TypeParameter),
                     OpCodes.Callvirt.WithOperand(stringBuilderAppendMethod.MethodResolverExpression(context)),
                     OpCodes.Pop
@@ -387,8 +398,11 @@ public class RecordGenerator
         // If the record inherits from another record returns the base `PrintMembers()` method
         string PrintMembersMethodToCall()
         {
-            return HasBaseRecord(context, recordSymbol) 
-                ? $$"""new MethodReference("PrintMembers", {{context.TypeResolver.Bcl.System.Boolean}}, {{context.TypeResolver.Resolve(recordSymbol.BaseType)}}) { HasThis = true, Parameters = { new ParameterDefinition({{ context.TypeResolver.Resolve(stringBuilderSymbol) }}) } }"""
+            if (_recordSymbol is INamedTypeSymbol { IsGenericType: true } genericRecord)
+                return $$"""new MethodReference("PrintMembers", {{context.TypeResolver.Bcl.System.Boolean}}, {{context.TypeResolver.Resolve(_recordSymbol)}}) { HasThis = true, Parameters = { new ParameterDefinition({{context.TypeResolver.Resolve(stringBuilderSymbol)}}) } }""";
+            
+            return HasBaseRecord(context, _recordSymbol) 
+                ? $$"""new MethodReference("PrintMembers", {{context.TypeResolver.Bcl.System.Boolean}}, {{context.TypeResolver.Resolve(_recordSymbol.BaseType)}}) { HasThis = true, Parameters = { new ParameterDefinition({{ context.TypeResolver.Resolve(stringBuilderSymbol) }}) } }"""
                 : printMembersVar;
         }
 
@@ -405,6 +419,23 @@ public class RecordGenerator
         }
     }
 
+    private string ClosedGenericMethodFor(IVisitorContext context, string memberName, string recordVar)
+    {
+        var methodVar = context.DefinitionVariables.GetVariable(memberName, VariableMemberKind.Method, _recordSymbol.Name);
+        return ClosedGenericMethodForMethodVariable(context, methodVar.VariableName, recordVar);
+    }
+    
+    private string ClosedGenericMethodForMethodVariable(IVisitorContext context, string methodVar, string recordVar)
+    {
+        if (_recordSymbol is INamedTypeSymbol { IsGenericType: true } genericRecord)
+        {
+            var typeArguments = string.Join(',', genericRecord.TypeParameters.Select(tp => context.TypeResolver.Resolve(tp)));
+            return $"new MethodReference({methodVar}.Name, {methodVar}.ReturnType) {{ DeclaringType = {recordVar}.MakeGenericInstanceType([{typeArguments}]), HasThis = {methodVar}.HasThis, ExplicitThis = {methodVar}.ExplicitThis, CallingConvention = {methodVar}.CallingConvention }}";
+        }
+            
+        return methodVar;
+    }
+    
     private static bool HasBaseRecord(IVisitorContext context, ITypeSymbol recordSymbol)
     {
         return !SymbolEqualityComparer.Default.Equals(recordSymbol.BaseType, context.RoslynTypeSystem.SystemObject) &&
@@ -416,18 +447,20 @@ public class RecordGenerator
     {
         context.WriteNewLine();
         context.WriteComment($"IEquatable<>.Equals({record.Identifier.ValueText} other)");
-        _recordTypeEqualsOverloadMethodVar = context.Naming.SyntheticVariable("Equals", ElementKind.Method);
+        var equalsVar = context.Naming.SyntheticVariable("Equals", ElementKind.Method);
+        var declaringType = context.TypeResolver.Resolve(_recordSymbol);
+        
         var exps = CecilDefinitionsFactory.Method(
                                     context,
                                     record.Identifier.ValueText(),
-                                    _recordTypeEqualsOverloadMethodVar,
+                                    equalsVar,
                                     $"{record.Identifier.ValueText()}.Equals", "Equals",
                                     $"MethodAttributes.Public | MethodAttributes.HideBySig | {Constants.Cecil.InterfaceMethodDefinitionAttributes}", //TODO: No NEWSLOT if in derived record
-                                    [new ParameterSpec("other", context.TypeResolver.Resolve(_recordSymbol), RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = $"{record.Identifier.ValueText}?"} ],
+                                    [new ParameterSpec("other", declaringType, RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = $"{record.Identifier.ValueText}?"} ],
                                     Array.Empty<string>(),
                                     ctx => ctx.TypeResolver.Bcl.System.Boolean, out var methodDefinitionVariable);
 
-        context.WriteCecilExpressions([..exps, $"{recordTypeDefinitionVariable}.Methods.Add({_recordTypeEqualsOverloadMethodVar});"]);
+        context.WriteCecilExpressions([..exps, $"{recordTypeDefinitionVariable}.Methods.Add({equalsVar});"]);
         
         // Compare each unique primary constructor parameter to compute equality.
         using (context.DefinitionVariables.WithVariable(methodDefinitionVariable))
@@ -445,14 +478,15 @@ public class RecordGenerator
                 OpCodes.Ldarg_1,
                 OpCodes.Brfalse_S.WithBranchOperand("NotEquals"),
             ]);
-            
+
+            var equalityContractGetter = ClosedGenericMethodForMethodVariable(context, _equalityContractGetMethodVar, recordTypeDefinitionVariable);
             // TODO: reference records only
             instructions.AddRange(
             [
                 OpCodes.Ldarg_0,
-                OpCodes.Callvirt.WithOperand(_equalityContractGetMethodVar),
+                OpCodes.Callvirt.WithOperand(equalityContractGetter),
                 OpCodes.Ldarg_1,
-                OpCodes.Callvirt.WithOperand(_equalityContractGetMethodVar),
+                OpCodes.Callvirt.WithOperand(equalityContractGetter),
                 OpCodes.Call.WithOperand(TypeEqualityOperator(context)),
                 OpCodes.Brfalse_S.WithBranchOperand("NotEquals")
             ]);
@@ -464,14 +498,18 @@ public class RecordGenerator
                 var parameterType = context.SemanticModel.GetTypeInfo(parameter.Type!).Type.EnsureNotNull();
                 instructions.Add(OpCodes.Call.WithOperand(_equalityComparerMembersCache[parameterType.Name].GetDefaultMethodVar));
                 
+                var paramDefVar = context.DefinitionVariables.GetVariable(Utils.BackingFieldNameForAutoProperty(parameter.Identifier.ValueText()), VariableMemberKind.Field, _recordSymbol.Name);
+                var backingFieldRef = _recordSymbol is INamedTypeSymbol { IsGenericType: true } 
+                    ? $"new FieldReference({paramDefVar.VariableName}.Name, {paramDefVar.VariableName}.FieldType, {context.TypeResolver.Resolve(_recordSymbol)})" 
+                    : paramDefVar.VariableName;
+                
                 // load property backing field for 'this' 
-                var paramDefVar = context.DefinitionVariables.GetVariable(Utils.BackingFieldNameForAutoProperty(parameter.Identifier.ValueText()), VariableMemberKind.Field, record.Identifier.ValueText());
                 instructions.Add(OpCodes.Ldarg_0);
-                instructions.Add(OpCodes.Ldfld.WithOperand(paramDefVar.VariableName));
+                instructions.Add(OpCodes.Ldfld.WithOperand(backingFieldRef));
                 
                 // load property backing field for 'other' 
                 instructions.Add(OpCodes.Ldarg_1);
-                instructions.Add(OpCodes.Ldfld.WithOperand(paramDefVar.VariableName));
+                instructions.Add(OpCodes.Ldfld.WithOperand(backingFieldRef));
                 
                 // compares both backing fields.
                 instructions.Add(OpCodes.Callvirt.WithOperand(_equalityComparerMembersCache[parameterType.Name].EqualsMethodVar));
@@ -488,11 +526,25 @@ public class RecordGenerator
             ]);
             
             var ilVar = context.Naming.ILProcessor("Equals");
-            var equalsExps = CecilDefinitionsFactory.MethodBody(context.Naming, "Equals",_recordTypeEqualsOverloadMethodVar, ilVar, [], instructions.ToArray());
+            var equalsExps = CecilDefinitionsFactory.MethodBody(context.Naming, "Equals",equalsVar, ilVar, [], instructions.ToArray());
             context.WriteCecilExpressions(equalsExps);
         }
         
-        AddCompilerGeneratedAttributeTo(context, _recordTypeEqualsOverloadMethodVar);
+        AddCompilerGeneratedAttributeTo(context, equalsVar);
+
+        if (_recordSymbol is INamedTypeSymbol { IsGenericType: true } genericRecord)
+        {
+            _recordTypeEqualsOverloadMethodVar = context.Naming.SyntheticVariable("Equals", ElementKind.GenericInstance);
+            context.WriteCecilExpressions(
+            [
+                $$"""var {{_recordTypeEqualsOverloadMethodVar}} = new MethodReference({{equalsVar}}.Name, {{equalsVar}}.ReturnType, {{declaringType}}) { HasThis = {{equalsVar}}.HasThis, ExplicitThis = {{equalsVar}}.ExplicitThis, CallingConvention = {{equalsVar}}.CallingConvention };""",
+                $$"""{{_recordTypeEqualsOverloadMethodVar}}.Parameters.Add({{equalsVar}}.Parameters[0]);"""
+            ]);
+        }
+        else
+        {
+            _recordTypeEqualsOverloadMethodVar = equalsVar;
+        }
     }
 
     private IDictionary<string, (string GetDefaultMethodVar, string EqualsMethodVar, string GetHashCodeMethodVar)> GenerateEqualityComparerMethods(IVisitorContext context, IReadOnlyList<ITypeSymbol> targetTypes)
@@ -665,7 +717,7 @@ public class RecordGenerator
         [
             OpCodes.Ldarg_0,
             OpCodes.Ldarg_1,
-            OpCodes.Isinst.WithOperand(recordTypeDefinitionVariable),
+            OpCodes.Isinst.WithOperand($"{_recordTypeEqualsOverloadMethodVar}.DeclaringType"),
             OpCodes.Callvirt.WithOperand(_recordTypeEqualsOverloadMethodVar),
             OpCodes.Ret
         ];
@@ -746,7 +798,9 @@ public class RecordGenerator
             deconstructInstructions.Add(OpCodes.Ldarg.WithOperand(argIndex.ToString()));
             deconstructInstructions.Add(OpCodes.Ldarg_0);
             deconstructInstructions.Add(OpCodes.Call.WithOperand(GetGetterMethodVar(recordSymbol, p.ValueText)));
-            deconstructInstructions.Add(p.Type.StindOpCodeFor());
+            
+            var stindOpCode = p.Type.StindOpCodeFor();
+            deconstructInstructions.Add(stindOpCode == OpCodes.Stobj ? stindOpCode.WithOperand(context.TypeResolver.Resolve(p.Type)) : stindOpCode);
             argIndex++;
         }
         deconstructInstructions.Add(OpCodes.Ret);
@@ -760,7 +814,15 @@ public class RecordGenerator
         {
             var getterMethodVar = context.DefinitionVariables.GetMethodVariable(new MethodDefinitionVariable(candidate.Name, $"get_{propertyName}", [], 0));
             if (getterMethodVar.IsValid)
+            {
+                if (candidate is INamedTypeSymbol { IsGenericType: true })
+                {
+                    var var = getterMethodVar.VariableName;
+                    return $"new MethodReference({var}.Name, {var}.ReturnType, {context.TypeResolver.Resolve(candidate)}) {{ HasThis = {var}.HasThis, ExplicitThis = {var}.ExplicitThis, CallingConvention = {var}.CallingConvention }}";
+                }
+                
                 return getterMethodVar.VariableName;
+            }
             
             // getter is not defined in the declaring record; this means the primary constructor parameter
             // was passed to its base type ctor, lets validate that and retrieve the getter from the base.
@@ -789,6 +851,7 @@ public class RecordGenerator
     {
         var compilerGeneratedAttributeCtor = context.RoslynTypeSystem.SystemRuntimeCompilerServicesCompilerGeneratedAttribute.Ctor();
         var exps = CecilDefinitionsFactory.Attribute(memberVariable, context, compilerGeneratedAttributeCtor.MethodResolverExpression(context));
+        context.WriteNewLine();
         context.WriteCecilExpressions(exps);
     }
     

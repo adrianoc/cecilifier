@@ -25,14 +25,15 @@ public class PrimaryConstructorGenerator
         if (type.ParameterList is null)
             return;
 
+        var declaringTypeIsGeneric = type.TypeParameterList?.Parameters.Count > 0;
         foreach (var parameter in type.GetUniqueParameters(context))
         {
-            AddPropertyFor(context, parameter, typeDefinitionVariable);
+            AddPropertyFor(context, parameter, typeDefinitionVariable, declaringTypeIsGeneric);
             context.WriteNewLine();
         }
     }
 
-    private static void AddPropertyFor(IVisitorContext context, ParameterSyntax parameter, string typeDefinitionVariable)
+    private static void AddPropertyFor(IVisitorContext context, ParameterSyntax parameter, string typeDefinitionVariable, bool declaringTypeIsGeneric)
     {
         using var _ = LineInformationTracker.Track(context, parameter);
         
@@ -55,7 +56,7 @@ public class PrimaryConstructorGenerator
         var propertyData = new PropertyGenerationData(
                                     declaringTypeVariable.MemberName,
                                     declaringTypeVariable.VariableName,
-                                    false, // TODO
+                                    declaringTypeIsGeneric,
                                     propDefVar,
                                     parameter.Identifier.Text,
                                     new Dictionary<string, string>
@@ -74,7 +75,6 @@ public class PrimaryConstructorGenerator
         PropertyGenerator propertyGenerator = new (context);
         
         AddGetter();
-        context.WriteNewLine();
         AddInit();
 
         void AddGetter()
@@ -89,6 +89,7 @@ public class PrimaryConstructorGenerator
                 
                 propertyGenerator.AddAutoGetterMethodImplementation(in propertyData, ilVar, getMethodVar);
             }
+            context.WriteNewLine();
         }
         
         void AddInit()
@@ -103,12 +104,13 @@ public class PrimaryConstructorGenerator
                 propertyGenerator.AddAutoSetterMethodImplementation(in propertyData, ilVar, setMethodVar);
                 context.EmitCilInstruction(ilVar, OpCodes.Ret);
             }
+            context.WriteNewLine();
         }
     }
 
     internal static void AddPrimaryConstructor(IVisitorContext context, string recordTypeDefinitionVariable, TypeDeclarationSyntax typeDeclaration)
     {
-        context.WriteComment($"Constructor: {typeDeclaration.Identifier.ValueText()}{typeDeclaration.ParameterList}");
+        context.WriteComment($"Constructor: {typeDeclaration.Identifier.ValueText}{typeDeclaration.ParameterList}");
         var ctorVar = context.Naming.Constructor(typeDeclaration, false);
         var ctorExp = CecilDefinitionsFactory.Constructor(
                                         context, 
@@ -131,6 +133,12 @@ public class PrimaryConstructorGenerator
         var ctorExps = CecilDefinitionsFactory.MethodBody(context.Naming, $"ctor_{typeDeclaration.Identifier.ValueText}", ctorVar, ctorIlVar, [], []);
         context.WriteCecilExpressions(ctorExps);
 
+        var typeSymbol = context.SemanticModel.GetDeclaredSymbol(typeDeclaration).EnsureNotNull<ISymbol, ITypeSymbol>();
+        var resolvedType = context.TypeResolver.Resolve(typeSymbol);
+        Func<string, string> fieldRefResolver = backingFieldVar => typeDeclaration.TypeParameterList?.Parameters.Count > 0 
+            ? $"new FieldReference({backingFieldVar}.Name, {backingFieldVar}.FieldType, {resolvedType})" 
+            : backingFieldVar;
+
         var uniqueParameters = typeDeclaration.GetUniqueParameters(context).ToHashSet();
         foreach (var parameter in typeDeclaration.ParameterList.Parameters)
         {
@@ -150,7 +158,7 @@ public class PrimaryConstructorGenerator
             if (!backingFieldVar.IsValid)
                 throw new InvalidOperationException($"Backing field variable for property '{parameter.Identifier.ValueText}' could not be found.");
 
-            context.EmitCilInstruction(ctorIlVar, OpCodes.Stfld, backingFieldVar.VariableName);
+            context.EmitCilInstruction(ctorIlVar, OpCodes.Stfld, fieldRefResolver(backingFieldVar.VariableName));
         }
 
         InvokeBaseConstructor(context, ctorIlVar, typeDeclaration);
