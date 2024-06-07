@@ -176,7 +176,35 @@ public class RecordTests : OutputBasedTestBase
                 "42,Foo,True");
         }
     }
-    
+
+    [TestFixture]
+    public class Generics : OutputBasedTestBase
+    {
+        [Test]
+        public void SimpleGenericRecord()
+        {
+            AssertOutput(
+                """
+                var ri = new Record<int>(42);
+                System.Console.WriteLine($"{ri},{ri.Value},{ri.Value.GetType().Name}"); 
+
+                record Record<T>(T Value);
+                """,
+                "Record { Value = 42 },42,System.Int32");
+        }
+        
+        [Test]
+        public void SimpleGenericRecord2()
+        {
+            AssertOutput(
+                """
+                int i = 10;
+                System.Console.WriteLine($"{i.GetType().Name}"); 
+                """,
+                "Record { Value = 42 },42,System.Int32");
+        }
+    }
+        
     [Test]
     public void Constructor_WhenInheritFromRecordWithProperties_CorrectArgumentsArePassed()
     {
@@ -188,5 +216,18 @@ public class RecordTests : OutputBasedTestBase
                      record Base(string StringValue);
                      """,
             "end");
+    }
+    
+    [Test]
+    public void RecordPropertyAccess()
+    {
+        AssertOutput(
+            """
+            var ri = new Record(42);
+            System.Console.WriteLine(ri.Value); 
+
+            record Record(int Value);
+            """,
+            "42");
     }
 }
