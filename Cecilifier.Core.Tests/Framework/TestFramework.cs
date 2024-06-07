@@ -23,7 +23,7 @@ namespace Cecilifier.Core.Tests.Framework
             processInfo.RedirectStandardOutput = true;
             processInfo.UseShellExecute = false;
 
-            var process = Process.Start(processInfo);
+            using var process = Process.Start(processInfo);
 
             var err = new StringBuilder();
             var @out = new StringBuilder();
@@ -46,10 +46,10 @@ namespace Cecilifier.Core.Tests.Framework
             process.EnableRaisingEvents = true;
             process.WaitForExit();
 
-            if (string.IsNullOrWhiteSpace(err.ToString()))
+            if (err.Length == 0)
                 return @out.ToString();
                 
-            if (!string.IsNullOrWhiteSpace(@out.ToString()))
+            if (@out.Length > 0)
             {
                 Console.WriteLine($"{Environment.NewLine}Output: {@out}");
             }

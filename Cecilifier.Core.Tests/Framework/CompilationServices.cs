@@ -84,7 +84,7 @@ namespace Cecilifier.Core.Tests.Framework
                 exe ? OutputKind.ConsoleApplication : OutputKind.DynamicallyLinkedLibrary,
                 optimizationLevel: OptimizationLevel.Release,
                 allowUnsafe: true);
-
+            
             var compilation = CSharpCompilation.Create(
                 Path.GetFileNameWithoutExtension(outputFilePath),
                 new[] { syntaxTree },
@@ -97,10 +97,9 @@ namespace Cecilifier.Core.Tests.Framework
                 throw new Exception(diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).Aggregate("", (acc, curr) => acc + "\r\n" + curr.ToString()) + "\r\n\r\n" + source);
             }
 
-            using (var outputAssembly = File.Create(outputFilePath))
-            {
-                compilation.Emit(outputAssembly);
-            }
+            using var outputAssembly = File.Create(outputFilePath);
+            using var outputPdb = File.Create(Path.ChangeExtension(outputFilePath, ".pdb"));
+            compilation.Emit(outputAssembly, outputPdb);
 
             return outputFilePath;
         }
