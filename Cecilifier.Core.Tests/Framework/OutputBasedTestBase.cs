@@ -36,7 +36,7 @@ public class OutputBasedTestBase : CecilifierTestBase
         {
             output = TestFramework.ExecuteWithOutput("dotnet", cecilifyResult.CecilifiedOutputAssemblyFilePath);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             Console.WriteLine($"Cecilified source:\n{cecilifyResult.CecilifiedCode}\nCecilified Output Assembly: {cecilifyResult.CecilifiedOutputAssemblyFilePath}");
             throw;
