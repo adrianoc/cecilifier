@@ -132,7 +132,7 @@ namespace Cecilifier.Core.AST
 
             PropertyGenerator generator = new (Context);
             var propertyGenerationData = new PropertyGenerationData(
-                                    propertySymbol.ContainingType.ToDisplayString(),
+                                    propertySymbol.ContainingType.Name,
                                     propertyDeclaringTypeVar,
                                     propertySymbol.ContainingSymbol is INamedTypeSymbol { IsGenericType: true} && propertySymbol.IsDefinedInCurrentAssembly(Context),
                                     propDefVar,
