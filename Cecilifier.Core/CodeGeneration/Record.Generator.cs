@@ -82,6 +82,7 @@ public class RecordGenerator
         var bodyExps = CecilDefinitionsFactory.MethodBody(context.Naming, methodName, equalsOperatorMethodVar, [], equalsBodyInstructions);
         context.WriteCecilExpressions(bodyExps);
         context.WriteCecilExpression($"{recordTypeDefinitionVariable}.Methods.Add({equalsOperatorMethodVar});");
+        AddCompilerGeneratedAttributeTo(context, equalsOperatorMethodVar);
     }
     
     private void AddInequalityOperator(IVisitorContext context, string recordTypeDefinitionVariable, TypeDeclarationSyntax record)
@@ -123,6 +124,7 @@ public class RecordGenerator
         var bodyExps = CecilDefinitionsFactory.MethodBody(context.Naming, methodName, inequalityOperatorMethodVar, [], inequalityBodyInstructions);
         context.WriteCecilExpressions(bodyExps);
         context.WriteCecilExpression($"{recordTypeDefinitionVariable}.Methods.Add({inequalityOperatorMethodVar});");
+        AddCompilerGeneratedAttributeTo(context, inequalityOperatorMethodVar);
     }
 
     private void InitializeEqualityComparerMemberCache(IVisitorContext context, TypeDeclarationSyntax record)
@@ -214,6 +216,8 @@ public class RecordGenerator
         context.WriteNewLine();
         context.WriteCecilExpression($"{recordTypeDefinitionVariable}.Methods.Add({getHashCodeMethodVar});");
         context.WriteNewLine();
+        
+        AddCompilerGeneratedAttributeTo(context, getHashCodeMethodVar);
     }
 
     private void AddToStringAndRelatedMethods(IVisitorContext context, string recordTypeDefinitionVariable, TypeDeclarationSyntax record)
@@ -317,6 +321,7 @@ public class RecordGenerator
                 OpCodes.Ret
             ]);
             context.WriteCecilExpressions(printMemberBodyExps);
+            AddCompilerGeneratedAttributeTo(context, printMembersVar);
         }
 
         void AddToStringMethod()
@@ -376,6 +381,7 @@ public class RecordGenerator
                 OpCodes.Ret
             ]);
             context.WriteCecilExpressions(toStringBodyExps);
+            AddCompilerGeneratedAttributeTo(context, toStringMethodVar);
         }
         
         // Returns a `MethodReference` for the PrintMembers() method to be invoked
@@ -474,6 +480,8 @@ public class RecordGenerator
             var equalsExps = CecilDefinitionsFactory.MethodBody(context.Naming, "Equals",_recordTypeEqualsOverloadMethodVar, ilVar, [], instructions.ToArray());
             context.WriteCecilExpressions(equalsExps);
         }
+        
+        AddCompilerGeneratedAttributeTo(context, _recordTypeEqualsOverloadMethodVar);
     }
 
     private IDictionary<string, (string GetDefaultMethodVar, string EqualsMethodVar, string GetHashCodeMethodVar)> GenerateEqualityComparerMethods(IVisitorContext context, IReadOnlyList<ITypeSymbol> targetTypes)
@@ -605,6 +613,8 @@ public class RecordGenerator
         context.EmitCilInstruction(getterIlVar, OpCodes.Ldtoken, recordTypeDefinitionVariable);
         context.EmitCilInstruction(getterIlVar, OpCodes.Call, getTypeFromHandleSymbol.MethodResolverExpression(context));
         context.EmitCilInstruction(getterIlVar, OpCodes.Ret);
+
+        AddCompilerGeneratedAttributeTo(context, propertyData.Variable);
     }
     
     /// <summary>
@@ -652,7 +662,8 @@ public class RecordGenerator
         var bodyExps = CecilDefinitionsFactory.MethodBody(context.Naming, methodName, equalsObjectOverloadMethodVar, [], equalsBodyInstructions);
         context.WriteCecilExpressions(bodyExps);
         context.WriteCecilExpression($"{recordTypeDefinitionVariable}.Methods.Add({equalsObjectOverloadMethodVar});");
-
+        AddCompilerGeneratedAttributeTo(context, equalsObjectOverloadMethodVar);
+        
         if (!HasBaseRecord(record))
             return;
         
@@ -684,11 +695,12 @@ public class RecordGenerator
         var bodyExps2 = CecilDefinitionsFactory.MethodBody(context.Naming, methodName, equalsBaseOverloadMethodVar, [], equalsBodyInstructions2);
         context.WriteCecilExpressions(bodyExps2);
         context.WriteCecilExpression($"{recordTypeDefinitionVariable}.Methods.Add({equalsBaseOverloadMethodVar});");
+        AddCompilerGeneratedAttributeTo(context, equalsBaseOverloadMethodVar);
     }
 
     private void AddDeconstructMethod(IVisitorContext context, string recordTypeDefinitionVariable, TypeDeclarationSyntax record)
     {
-        if (record.ParameterList?.Parameters.Count == 0)
+        if (record.ParameterList?.Parameters.Count is null or 0)
             return;
         
         var recordSymbol = context.SemanticModel.GetDeclaredSymbol(record).EnsureNotNull<ISymbol, ITypeSymbol>();
@@ -731,6 +743,7 @@ public class RecordGenerator
         var bodyExps = CecilDefinitionsFactory.MethodBody(context.Naming, methodName, deconstructMethodVar, [], deconstructInstructions.ToArray());
         context.WriteCecilExpressions(bodyExps);
         context.WriteCecilExpression($"{recordTypeDefinitionVariable}.Methods.Add({deconstructMethodVar});");
+        AddCompilerGeneratedAttributeTo(context, deconstructMethodVar);
 
         string GetGetterMethodVar(ITypeSymbol candidate, string propertyName)
         {
@@ -759,6 +772,13 @@ public class RecordGenerator
                                                                                             && candidateBase.IsKind(SyntaxKind.RecordDeclaration));
 
         return found != null;
+    }
+
+    private void AddCompilerGeneratedAttributeTo(IVisitorContext context, string memberVariable)
+    {
+        var compilerGeneratedAttributeCtor = context.RoslynTypeSystem.SystemRuntimeCompilerServicesCompilerGeneratedAttribute.Ctor();
+        var exps = CecilDefinitionsFactory.Attribute(memberVariable, context, compilerGeneratedAttributeCtor.MethodResolverExpression(context));
+        context.WriteCecilExpressions(exps);
     }
     
     private static string TypeEqualityOperator(IVisitorContext context)

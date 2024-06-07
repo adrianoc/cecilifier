@@ -382,6 +382,24 @@ namespace Cecilifier.Core.Misc
                 }
             }
         }
+        
+        public static string[] Attribute(string memberVariable, IVisitorContext context, string resolvedCtor, params (string ResolvedType, string Value)[] parameters)
+        {
+            var attributeVar = context.Naming.SyntheticVariable("compilerGenerated", ElementKind.Attribute);
+
+            var exps = new string[2 + parameters.Length];
+            int expIndex = 0;
+            exps[expIndex++] = $"var {attributeVar} = new CustomAttribute({resolvedCtor});";
+
+            for(int i = 0; i < parameters.Length; i++)
+            {
+                var attributeArgument = $"new CustomAttributeArgument({parameters[i].ResolvedType}, {parameters[i].Value})";
+                exps[expIndex++] = $"{attributeVar}.ConstructorArguments.Add({attributeArgument});";
+            }
+            exps[expIndex] = $"{memberVariable}.CustomAttributes.Add({attributeVar});";
+
+            return exps;
+        }
 
         private static void ProcessGenericTypeParameters(string memberDefVar, IVisitorContext context, IList<TypeParameterSyntax> typeParamList, IList<string> exps)
         {

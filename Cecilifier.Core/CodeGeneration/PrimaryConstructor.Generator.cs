@@ -87,7 +87,7 @@ public class PrimaryConstructorGenerator
                 var ilVar = context.Naming.ILProcessor($"get{propertyData.Name}");
                 context.WriteCecilExpressions([$"var {ilVar} = {getMethodVar}.Body.GetILProcessor();"]);
                 
-                propertyGenerator.AddAutoGetterMethodImplementation(in propertyData, ilVar);
+                propertyGenerator.AddAutoGetterMethodImplementation(in propertyData, ilVar, getMethodVar);
             }
         }
         
@@ -100,7 +100,7 @@ public class PrimaryConstructorGenerator
                 var ilVar = context.Naming.ILProcessor($"set{propertyData.Name}");
                 context.WriteCecilExpressions([$"var {ilVar} = {setMethodVar}.Body.GetILProcessor();"]);
                 
-                propertyGenerator.AddAutoSetterMethodImplementation(in propertyData, ilVar);
+                propertyGenerator.AddAutoSetterMethodImplementation(in propertyData, ilVar, setMethodVar);
                 context.EmitCilInstruction(ilVar, OpCodes.Ret);
             }
         }

@@ -192,7 +192,7 @@ namespace Cecilifier.Core.AST
                 
                 if (accessor.Body == null && accessor.ExpressionBody == null) //is this an auto property ?
                 {
-                    generator.AddAutoSetterMethodImplementation(in propertyGenerationData, ilSetVar);
+                    generator.AddAutoSetterMethodImplementation(in propertyGenerationData, ilSetVar, setMethodVar);
                 }
                 else if (accessor.Body != null)
                 {
@@ -206,10 +206,9 @@ namespace Cecilifier.Core.AST
                 Context.EmitCilInstruction(ilSetVar, OpCodes.Ret);
             }
 
-            ScopedDefinitionVariable AddGetterMethodGuts(out string? ilVar)
+            ScopedDefinitionVariable AddGetterMethodGuts(string getMethodVar, out string? ilVar)
             {
                 Context.WriteComment("Getter");
-                var getMethodVar = Context.Naming.SyntheticVariable("get", ElementKind.Method);
                 var methodVariableScope = generator.AddGetterMethodDeclaration(
                                                         in propertyGenerationData, 
                                                         getMethodVar, 
@@ -232,20 +231,22 @@ namespace Cecilifier.Core.AST
 
             void AddExpressionBodiedGetterMethod()
             {
-                using var getterMethodScope = AddGetterMethodGuts(out var ilVar);
+                var getMethodVar = Context.Naming.SyntheticVariable("get", ElementKind.Method);
+                using var getterMethodScope = AddGetterMethodGuts(getMethodVar, out var ilVar);
                 Debug.Assert(ilVar != null);
                 ProcessExpressionBodiedGetter(ilVar, arrowExpression);
             }
 
             void AddGetterMethod(AccessorDeclarationSyntax accessor)
             {
-                using var getterMethodScope = AddGetterMethodGuts(out var ilVar);
+                var getMethodVar = Context.Naming.SyntheticVariable("get", ElementKind.Method);
+                using var getterMethodScope = AddGetterMethodGuts(getMethodVar, out var ilVar);
                 if (ilVar == null)
                     return;
 
                 if (accessor.Body == null && accessor.ExpressionBody == null) //is this an auto property ?
                 {
-                    generator.AddAutoGetterMethodImplementation(propertyGenerationData, ilVar);
+                    generator.AddAutoGetterMethodImplementation(ref propertyGenerationData, ilVar, getMethodVar);
                 }
                 else if (accessor.Body != null)
                 {

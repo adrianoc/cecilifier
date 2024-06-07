@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Cecilifier.Core.AST;
+using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.Variables;
@@ -74,7 +75,7 @@ internal class PropertyGenerator
         return methodVariableScope;
     }
 
-    internal void AddAutoSetterMethodImplementation(ref readonly PropertyGenerationData property, string ilSetVar)
+    internal void AddAutoSetterMethodImplementation(ref readonly PropertyGenerationData property, string ilSetVar, string setMethodVar)
     {
         AddBackingFieldIfNeeded(in property);
 
@@ -84,6 +85,7 @@ internal class PropertyGenerator
 
         var operand = property.DeclaringTypeIsGeneric ? MakeGenericType(in property) : _backingFieldVar;
         Context.EmitCilInstruction(ilSetVar, property.StoreOpCode, operand);
+        AddCompilerGeneratedAttributeTo(Context, setMethodVar);
     }
 
     internal ScopedDefinitionVariable AddGetterMethodDeclaration(ref readonly PropertyGenerationData property, string accessorMethodVar, bool hasCovariantReturn, string nameForRegistration, string overridenMethod)
@@ -118,7 +120,7 @@ internal class PropertyGenerator
         return scopedVariable;
     }
    
-    internal void AddAutoGetterMethodImplementation(ref readonly PropertyGenerationData propertyGenerationData, string ilVar)
+    internal void AddAutoGetterMethodImplementation(ref readonly PropertyGenerationData propertyGenerationData, string ilVar, string getMethodVar)
     {
         AddBackingFieldIfNeeded(in propertyGenerationData);
 
@@ -129,6 +131,8 @@ internal class PropertyGenerator
         var operand = propertyGenerationData.DeclaringTypeIsGeneric ? MakeGenericType(in propertyGenerationData) : _backingFieldVar;
         Context.EmitCilInstruction(ilVar, propertyGenerationData.LoadOpCode, operand);
         Context.EmitCilInstruction(ilVar, OpCodes.Ret);
+        
+        AddCompilerGeneratedAttributeTo(Context, getMethodVar);
     }
     
     private void AddToOverridenMethodsIfAppropriated(string accessorMethodVar, string overridenMethod)
@@ -157,8 +161,16 @@ internal class PropertyGenerator
             property.BackingFieldModifiers);
         
         Context.WriteCecilExpressions(backingFieldExps);
+        AddCompilerGeneratedAttributeTo(Context, _backingFieldVar);
     }
  
+    private void AddCompilerGeneratedAttributeTo(IVisitorContext context, string memberVariable)
+    {
+        var compilerGeneratedAttributeCtor = context.RoslynTypeSystem.SystemRuntimeCompilerServicesCompilerGeneratedAttribute.Ctor();
+        var exps = CecilDefinitionsFactory.Attribute(memberVariable, context, compilerGeneratedAttributeCtor.MethodResolverExpression(context));
+        context.WriteCecilExpressions(exps);
+    }
+
     private string MakeGenericType(ref readonly PropertyGenerationData property)
     {
         //TODO: Register the following variable?

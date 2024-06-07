@@ -43,6 +43,7 @@ internal struct RoslynTypeSystem
         SystemNullableOfT = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Nullable_T);
         SystemRuntimeCompilerServicesUnsafe = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(Unsafe).FullName);
         SystemRuntimeInteropServicesMemoryMarshal = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(MemoryMarshal).FullName);
+        SystemRuntimeCompilerServicesCompilerGeneratedAttribute = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(CompilerGeneratedAttribute).FullName);
     }
 
     public ITypeSymbol SystemIndex { get; }
@@ -69,6 +70,7 @@ internal struct RoslynTypeSystem
     public ITypeSymbol SystemObsoleteAttribute { get; }
     public ITypeSymbol SystemValueType { get; }
     public ITypeSymbol SystemRuntimeCompilerServicesRuntimeHelpers { get; }
+    public ITypeSymbol SystemRuntimeCompilerServicesCompilerGeneratedAttribute { get; }
     public ITypeSymbol SystemNullableOfT { get; }
     public ITypeSymbol SystemRuntimeCompilerServicesUnsafe { get;  }
     public ITypeSymbol SystemRuntimeInteropServicesMemoryMarshal { get; }

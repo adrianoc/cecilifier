@@ -141,6 +141,26 @@ public class RecordTests : CecilifierUnitTestBase
                                                 """));
     }
 
+    [Test]
+    public void Members_HaveCompilerGeneratedAttribute_Added()
+    {
+        var result = RunCecilifier("public record Record(int Value);");
+
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+        Assert.That(cecilifiedCode, Does.Match( """m_deconstruct_\d+.CustomAttributes.Add\(attr_compilerGenerated_\d+\);"""), "Deconstruct() method.");
+        Assert.That(cecilifiedCode, Does.Match( """prop_equalityContract_\d+.CustomAttributes.Add\(attr_compilerGenerated_\d+\);"""), "EqualityContract");
+        Assert.That(cecilifiedCode, Does.Match( """m_equals_\d+.CustomAttributes.Add\(attr_compilerGenerated_\d+\);"""), "Equals()");
+        Assert.That(cecilifiedCode, Does.Match( """m_printMembers_\d+.CustomAttributes.Add\(attr_compilerGenerated_\d+\);"""), "PrintMembers()");
+        Assert.That(cecilifiedCode, Does.Match( """m_toString_\d+.CustomAttributes.Add\(attr_compilerGenerated_\d+\);"""), "ToString()");
+        Assert.That(cecilifiedCode, Does.Match( """m_getHashCode_\d+.CustomAttributes.Add\(attr_compilerGenerated_\d+\);"""), "GetHashCode()");
+        Assert.That(cecilifiedCode, Does.Match( """m_equalsObjectOverload_\d+.CustomAttributes.Add\(attr_compilerGenerated_\d+\);"""), "Equals(object)");
+        Assert.That(cecilifiedCode, Does.Match( """m_equalsOperator_\d+.CustomAttributes.Add\(attr_compilerGenerated_\d+\);"""), "Operator ==");
+        Assert.That(cecilifiedCode, Does.Match( """m_inequalityOperator_\d+.CustomAttributes.Add\(attr_compilerGenerated_\d+\);"""), "Operator !=");
+        Assert.That(cecilifiedCode, Does.Match( """m_getValue_\d+.CustomAttributes.Add\(attr_compilerGenerated_\d+\);"""), "Value property getter");
+        Assert.That(cecilifiedCode, Does.Match( """m_setValue_\d+.CustomAttributes.Add\(attr_compilerGenerated_\d+\);"""), "Value property setter");
+        Assert.That(cecilifiedCode, Does.Match( """fld_value_\d+.CustomAttributes.Add\(attr_compilerGenerated_\d+\);"""), "Value property setter");
+    }
+
     private static void AssertPropertiesFromPrimaryConstructor(string[] expectedNameTypePairs, string cecilifiedCode)
     {
         Span<Range> ranges = stackalloc Range[2];
