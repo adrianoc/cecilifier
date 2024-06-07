@@ -20,9 +20,12 @@ public class RecordGenerator
     private string _equalityContractGetMethodVar;
     private IDictionary<string, (string GetDefaultMethodVar, string EqualsMethodVar, string GetHashCodeMethodVar)> _equalityComparerMembersCache;
     private string _recordTypeEqualsOverloadMethodVar;
+    private ITypeSymbol _recordSymbol;
 
     internal void AddSyntheticMembers(IVisitorContext context, string recordTypeDefinitionVariable, TypeDeclarationSyntax record)
     {
+        _recordSymbol = context.SemanticModel.GetDeclaredSymbol(record).EnsureNotNull<ISymbol, ITypeSymbol>();
+        
         InitializeEqualityComparerMemberCache(context, record);
         
         AddEqualityContractPropertyIfNeeded(context, recordTypeDefinitionVariable, record);
@@ -39,7 +42,6 @@ public class RecordGenerator
 
     private void AddEqualityOperator(IVisitorContext context, string recordTypeDefinitionVariable, TypeDeclarationSyntax record)
     {
-        var recordSymbol = context.SemanticModel.GetDeclaredSymbol(record).EnsureNotNull<ISymbol, ITypeSymbol>();
         const string methodName = "op_Equality";
         
         context.WriteNewLine();
@@ -47,14 +49,14 @@ public class RecordGenerator
         var equalsOperatorMethodVar = context.Naming.SyntheticVariable($"equalsOperator", ElementKind.Method);
         var equalsOperatorMethodExps = CecilDefinitionsFactory.Method(
             context,
-            recordSymbol.Name,
+            _recordSymbol.Name,
             equalsOperatorMethodVar,
             methodName,
             methodName,
             Constants.Cecil.PublicOverrideOperatorAttributes,
             [
-                new ParameterSpec("left", context.TypeResolver.Resolve(recordSymbol), RefKind.None, Constants.ParameterAttributes.None)  { RegistrationTypeName = $"{record.Identifier.ValueText}?" },
-                new ParameterSpec("right", context.TypeResolver.Resolve(recordSymbol), RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = $"{record.Identifier.ValueText}?" }
+                new ParameterSpec("left", context.TypeResolver.Resolve(_recordSymbol), RefKind.None, Constants.ParameterAttributes.None)  { RegistrationTypeName = $"{record.Identifier.ValueText}?" },
+                new ParameterSpec("right", context.TypeResolver.Resolve(_recordSymbol), RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = $"{record.Identifier.ValueText}?" }
             ],
             [],
             ctx => ctx.TypeResolver.Bcl.System.Boolean,
@@ -279,11 +281,7 @@ public class RecordGenerator
             var separator = string.Empty;
             foreach (var property in recordSymbol.GetMembers().OfType<IPropertySymbol>().Where(p => p.DeclaredAccessibility == Accessibility.Public))
             {
-                var stringBuilderAppendMethod = stringBuilderSymbol
-                                                    .GetMembers("Append")
-                                                    .OfType<IMethodSymbol>()
-                                                    .SingleOrDefault(m => m.Parameters.Length == 1 && SymbolEqualityComparer.Default.Equals(m.Parameters[0].Type, property.Type));
-
+                var stringBuilderAppendMethod = StringBuilderAppendMethodFor(context, property.Type, stringBuilderSymbol);
                 if (stringBuilderAppendMethod == null)
                 {
                     //TODO: Handle property type != string. Specifically value types and type parameters. The code need to call `ToString()`
@@ -302,6 +300,7 @@ public class RecordGenerator
                     OpCodes.Ldarg_1,
                     OpCodes.Ldarg_0,
                     OpCodes.Call.WithOperand(context.DefinitionVariables.GetVariable($"get_{property.Name}", VariableMemberKind.Method, record.Identifier.ValueText)),
+                    OpCodes.Box.WithOperand(context.TypeResolver.Resolve(property.Type)).IgnoreIf(property.Type.TypeKind != TypeKind.TypeParameter),
                     OpCodes.Callvirt.WithOperand(stringBuilderAppendMethod.MethodResolverExpression(context)),
                     OpCodes.Pop
                 ]);
@@ -392,6 +391,18 @@ public class RecordGenerator
                 ? $$"""new MethodReference("PrintMembers", {{context.TypeResolver.Bcl.System.Boolean}}, {{context.TypeResolver.Resolve(recordSymbol.BaseType)}}) { HasThis = true, Parameters = { new ParameterDefinition({{ context.TypeResolver.Resolve(stringBuilderSymbol) }}) } }"""
                 : printMembersVar;
         }
+
+        static IMethodSymbol StringBuilderAppendMethodFor(IVisitorContext context, ITypeSymbol type, ITypeSymbol stringBuilderSymbol)
+        {
+            // if type is a generic type parameter we should use the `object` overload instead and box.
+            var targetType = type.TypeKind == TypeKind.TypeParameter ? context.RoslynTypeSystem.SystemObject : type;
+            var stringBuilderAppendMethod = stringBuilderSymbol
+                .GetMembers("Append")
+                .OfType<IMethodSymbol>()
+                .SingleOrDefault(m => m.Parameters.Length == 1 && SymbolEqualityComparer.Default.Equals(m.Parameters[0].Type, targetType));
+            
+            return stringBuilderAppendMethod;
+        }
     }
 
     private static bool HasBaseRecord(IVisitorContext context, ITypeSymbol recordSymbol)
@@ -412,7 +423,7 @@ public class RecordGenerator
                                     _recordTypeEqualsOverloadMethodVar,
                                     $"{record.Identifier.ValueText()}.Equals", "Equals",
                                     $"MethodAttributes.Public | MethodAttributes.HideBySig | {Constants.Cecil.InterfaceMethodDefinitionAttributes}", //TODO: No NEWSLOT if in derived record
-                                    [new ParameterSpec("other", recordTypeDefinitionVariable, RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = $"{record.Identifier.ValueText}?"} ],
+                                    [new ParameterSpec("other", context.TypeResolver.Resolve(_recordSymbol), RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = $"{record.Identifier.ValueText}?"} ],
                                     Array.Empty<string>(),
                                     ctx => ctx.TypeResolver.Bcl.System.Boolean, out var methodDefinitionVariable);
 
@@ -422,7 +433,7 @@ public class RecordGenerator
         using (context.DefinitionVariables.WithVariable(methodDefinitionVariable))
         {
             var uniqueParameters = record.GetUniqueParameters(context);
-
+            
             List<InstructionRepresentation> instructions = new();
             instructions.AddRange(
             [
