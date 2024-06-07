@@ -8,5 +8,7 @@ namespace Cecilifier.Core.Misc
         {
             return new InstructionRepresentation { OpCode = opCode, Operand = null, Tag = null };
         }
+        
+        public bool Ignore { init; get; }
     }
 }

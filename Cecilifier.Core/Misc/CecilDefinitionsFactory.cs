@@ -142,7 +142,7 @@ namespace Cecilifier.Core.Misc
             exps.Add($"var {methodInstVar} = {methodVar}.Body.Instructions;");
 
             // create `Mono.Cecil.Instruction` instances for each instruction that has a 'Tag'
-            foreach (var inst in instructions)
+            foreach (var inst in instructions.Where(inst => !inst.Ignore))
             {
                 if (inst.Tag == null)
                     continue;
@@ -152,7 +152,7 @@ namespace Cecilifier.Core.Misc
                 tagToInstructionDefMapping[inst.Tag] = instVar;
             }
 
-            foreach (var inst in instructions)
+            foreach (var inst in instructions.Where(inst => !inst.Ignore))
             {
                 exps.Add(inst.Tag != null 
                     ? $"{methodInstVar}.Add({tagToInstructionDefMapping[inst.Tag]});" 

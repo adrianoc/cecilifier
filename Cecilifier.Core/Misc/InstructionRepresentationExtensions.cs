@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Mono.Cecil.Cil;
 
 namespace Cecilifier.Core.Misc
@@ -17,6 +18,11 @@ namespace Cecilifier.Core.Misc
         internal static InstructionRepresentation WithBranchOperand(this OpCode opCode, string branchTargetTag)
         {
             return new InstructionRepresentation { OpCode = opCode, BranchTargetTag = branchTargetTag };
+        }
+
+        internal static InstructionRepresentation IgnoreIf(this InstructionRepresentation self, bool shouldIgnore, [CallerArgumentExpression(nameof(shouldIgnore))] string expression = null)
+        {
+            return self with { Ignore = shouldIgnore };
         }
     }
 }
