@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
@@ -18,13 +17,9 @@ namespace Cecilifier.Core.AST
             var lambdas = node.DescendantNodesAndSelf().OfType<LambdaExpressionSyntax>();
             foreach (var lambda in lambdas)
             {
-                var captures = CapturesFrom(context, lambda);
-                if (captures.Any())
-                {
-                    context.WriteComment($"Lambdas that captures context are not supported. Lambda expression '{lambda}' captures {string.Join(",", captures)}");
+                if (!NoCapturedVariableValidator.IsValid(context, lambda))
                     continue;
-                }
-
+                
                 if (!IsValidConversion(context, lambda))
                 {
                     context.WriteComment("Lambda to delegates conversion is only supported for Func<> and Action<>");
@@ -42,25 +37,6 @@ namespace Cecilifier.Core.AST
                 return false;
 
             return namedType.Name.StartsWith("Func") || namedType.Name.StartsWith("Action");
-        }
-
-        private static string[] CapturesFrom(IVisitorContext context, LambdaExpressionSyntax lambda)
-        {
-            var captured = new List<string>();
-            foreach (var identifier in lambda.DescendantNodes().OfType<IdentifierNameSyntax>())
-            {
-                var symbolInfo = context.SemanticModel.GetSymbolInfo(identifier);
-                if ((symbolInfo.Symbol?.Kind == SymbolKind.Parameter || symbolInfo.Symbol?.Kind == SymbolKind.Local) && symbolInfo.Symbol?.ContainingSymbol is IMethodSymbol method && method.MethodKind != MethodKind.AnonymousFunction)
-                {
-                    captured.Add(identifier.Identifier.Text);
-                }
-                else if (symbolInfo.Symbol?.Kind == SymbolKind.Field && symbolInfo.Symbol?.ContainingSymbol is ITypeSymbol)
-                {
-                    captured.Add(identifier.Identifier.Text);
-                }
-            }
-
-            return captured.ToArray();
         }
 
         private static void InjectSyntheticMethodsFor(IVisitorContext context, string declaringTypeVarName, LambdaExpressionSyntax lambda)
@@ -122,7 +98,7 @@ namespace Cecilifier.Core.AST
 
             // Register the newly introduced method so we can replace the lambda with the method later.
             // Use the lambda string representation as the name of the method in order to allow us to look it up.
-            using (context.DefinitionVariables.WithCurrentMethod(string.Empty, lambda.ToString(), Array.Empty<string>(), methodVar))
+            using (context.DefinitionVariables.WithCurrentMethod(string.Empty, lambda.ToString(), [], 0, methodVar))
             {
                 if (lambda.Block != null)
                 {

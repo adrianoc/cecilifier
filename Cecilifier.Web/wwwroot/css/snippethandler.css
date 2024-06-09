@@ -1,0 +1,19 @@
+/* unvisited link */
+a.shortcut:link {
+    color: #7c95ec;
+}
+
+/* visited link */
+a.shortcut:visited {
+    color: #91f191;
+}
+
+/* mouse over link */
+a.shortcut:hover {
+    color: #f6e490;
+}
+
+/* selected link */
+a.shortcut:active {
+    color: #7474ea;
+}

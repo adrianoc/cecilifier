@@ -127,7 +127,24 @@ function decreaseFocusedEditorFontSize() {
     const newFontSize = options.fontSize -  1;
     focusedEditor.updateOptions({ fontSize: newFontSize });
 }
-function initializeSite(errorAccessingGist, gist, requestPath, removeStoredSnippet, version) {
+function initializeSite(
+    errorAccessingGist, // error message if accessing the gist produced an error. 
+    gist, // contents of a gist; this is set when user navigates to https://cecilifier.me?gistid=[gistid] 
+    requestPath, // something like `/name` where `name` is the string used to store the snippet in the browser local store.
+    removeStoredSnippet, // user has requested to remove the contents of a snippet from the browser local store
+    pageNotFoundPath, // if user navigated to a non-existing page in cecilifier this will contain the path of the page.
+    version) {
+    
+    if (pageNotFoundPath != null && pageNotFoundPath.length > 0) {
+        SnackBar({
+            message: `Requested path ${pageNotFoundPath} is not valid.`,
+            dismissible: true,
+            status: "Warning",
+            timeout: 30000,
+            icon: "exclamation"
+        });
+    }
+        
     require.config({ paths: { vs: 'lib/node_modules/monaco-editor/min/vs' } });
 
     require(['vs/editor/editor.main'], function () {
@@ -229,7 +246,11 @@ function configureKeyboardShortcuts() {
     csharpCode.onDidChangeCursorSelection((e) => {
         updateCursorInformation(csharpCode);
     });
-    
+
+    csharpCode.addCommand(monaco.KeyMod.CtrlCmd + monaco.KeyMod.Alt + monaco.KeyCode.KeyL, function() {
+        showListOfLocalyStoredSnippets();
+    });
+
     // Cecilified code
     cecilifiedCode.addCommand(monaco.KeyMod.CtrlCmd + monaco.KeyCode.BracketLeft , decreaseFocusedEditorFontSize);
     cecilifiedCode.addCommand(monaco.KeyMod.CtrlCmd + monaco.KeyCode.BracketRight , increaseFocusedEditorFontSize);
@@ -506,22 +527,70 @@ function setTooltips(version) {
     });
 
     tippy('#keyboard-shortcuts', {
-        content: "<div style='text-align:left; width: 1000px'>\
-                  <p><kbd class=\"kbc-button\">Ctrl</kbd> + <kbd class=\"kbc-button\">Alt</kbd> + <kbd class=\"kbc-button\">C</kbd> Cecilify the code.</p>\
-                  <p><kbd class=\"kbc-button\">Ctrl</kbd> + <kbd class=\"kbc-button\">Alt</kbd> + <kbd class=\"kbc-button\">D</kbd> Downloads project with cecilified code.</p>\
-                  <p><kbd class=\"kbc-button\">Ctrl</kbd> + <kbd class=\"kbc-button\">Alt</kbd> + <kbd class=\"kbc-button\">S</kbd> Opens settings page.</p>\
-                  <p><kbd class=\"kbc-button\">Alt</kbd> + <kbd class=\"kbc-button\">&larr;</kbd> Decreases CSharp editor width / increases Cecilified editor width.</p>\
-                  <p><kbd class=\"kbc-button\">Alt</kbd> + <kbd class=\"kbc-button\">&rarr;</kbd> Increases CSharp editor width / decreases Cecilified editor width.</p>\
-                  <p><kbd class=\"kbc-button\">Ctrl</kbd> + <kbd class=\"kbc-button\">]</kbd> Increases font size.</p>\
-                  <p><kbd class=\"kbc-button\">Ctrl</kbd> + <kbd class=\"kbc-button\">[</kbd> Decreases font size.</p>\
-                  <p><kbd class=\"kbc-button\">Ctrl</kbd> + <kbd class=\"kbc-button\">Alt</kbd> + <kbd class=\"kbc-button\">P</kbd> Toggles visibility of cursor information.</p>\
-                  </div>",
+        content: "<style>\
+                    table, td, th { border: none ; }\
+                    table {\
+                      border-collapse: collapse;\
+                      width: 100%;\
+                    }\
+                    th { text-align: left; }\
+                    table.shortcuts td:nth-child(1) { text-align: right; }\
+                    table.shortcuts td:nth-child(2) { width: 10px; }\
+                    table.shortcuts { width: 1000px; }\
+                    </style>\
+                    <table class='shortcuts'>\
+                    <tr>\
+                        <td><kbd class=\"kbc-button\">Ctrl</kbd> + <kbd class=\"kbc-button\">Alt</kbd> + <kbd class=\"kbc-button\">C</kbd></td>\
+                        <td/>\
+                        <td>Cecilify the code.</td>\
+                    </tr>\
+                    <tr>\
+                        <td><kbd class=\"kbc-button\">Ctrl</kbd> + <kbd class=\"kbc-button\">Alt</kbd> + <kbd class=\"kbc-button\">D</kbd></td>\
+                        <td/>\
+                        <td>Downloads project with cecilified code.</td>\
+                    </tr>\
+                    <tr>\
+                        <td><kbd class=\"kbc-button\">Ctrl</kbd> + <kbd class=\"kbc-button\">Alt</kbd> + <kbd class=\"kbc-button\">S</kbd></td>\
+                        <td/>\
+                        <td>Opens settings page.</td>\
+                    </tr>\
+                    <tr>\
+                        <td><kbd class=\"kbc-button\">Alt</kbd> + <kbd class=\"kbc-button\">&larr;</kbd></td>\
+                        <td/>\
+                        <td>Decreases CSharp editor width / increases Cecilified editor width.</td>\
+                    </tr>\
+                    <tr>\
+                        <td><kbd class=\"kbc-button\">Alt</kbd> + <kbd class=\"kbc-button\">&rarr;</kbd></td>\
+                        <td/>\
+                        <td>Increases CSharp editor width / decreases Cecilified editor width.</td>\
+                    </tr>\
+                    <tr>\
+                        <td><kbd class=\"kbc-button\">Ctrl</kbd> + <kbd class=\"kbc-button\">]</kbd></td>\
+                        <td/>\
+                        <td>Increases font size.</td>\
+                    </tr>\
+                    <tr>\
+                        <td><kbd class=\"kbc-button\">Ctrl</kbd> + <kbd class=\"kbc-button\">[</kbd></td>\
+                        <td/>\
+                        <td>Decreases font size.</td>\
+                    </tr>\
+                    <tr>\
+                        <td><kbd class=\"kbc-button\">Ctrl</kbd> + <kbd class=\"kbc-button\">Alt</kbd> + <kbd class=\"kbc-button\">P</kbd></td>\
+                        <td/>\
+                        <td>Toggles visibility of cursor information.</td>\
+                    </tr>\
+                    <tr>\
+                        <td><kbd class=\"kbc-button\">Ctrl</kbd> + <kbd class=\"kbc-button\">Alt</kbd> + <kbd class=\"kbc-button\">S</kbd></td>\
+                        <td/>\
+                        <td>Display a list of locally saved snippets that can be reloaded<br/>by navigating to https://cecilifier.me/SAVEDNAME.</td>\
+                    </tr>\
+                  </table>",
         placement: 'top',
         interactive: false,
         allowHTML: true,
         theme: 'cecilifier-tooltip',        
         delay: defaultDelay,
-        maxWidth: 650
+        maxWidth: 800
     });
 
     tippy('#report_internal_error_button', {

@@ -244,9 +244,9 @@ namespace Cecilifier.Core.AST
             return Context.GetDeclaredSymbol(node).EnsureNotNull<ITypeSymbol, INamedTypeSymbol>();
         }
 
-        protected void WithCurrentMethod(string declaringTypeName, string localVariable, string methodName, string[] paramTypes, Action<string> action)
+        protected void WithCurrentMethod(string declaringTypeName, string localVariable, string methodName, string[] paramTypes, int typeParameterCount, Action<string> action)
         {
-            using (Context.DefinitionVariables.WithCurrentMethod(declaringTypeName, methodName, paramTypes, localVariable))
+            using (Context.DefinitionVariables.WithCurrentMethod(declaringTypeName, methodName, paramTypes, typeParameterCount, localVariable))
             {
                 action(methodName);
             }

@@ -161,12 +161,11 @@ namespace Cecilifier.Core.Extensions
                 SpecialType.System_Int64 => OpCodes.Ldelem_I8,
                 SpecialType.System_Single => OpCodes.Ldelem_R4,
                 SpecialType.System_Double => OpCodes.Ldelem_R8,
-                SpecialType.None => type.IsValueType ? OpCodes.Ldelem_Any : OpCodes.Ldelem_Ref, // Any => Custom structs, Ref => class.
+                SpecialType.None => (type.IsValueType || type.TypeKind == TypeKind.TypeParameter) ? OpCodes.Ldelem_Any : OpCodes.Ldelem_Ref, // Any => Custom structs, Ref => class.
                 SpecialType.System_String => OpCodes.Ldelem_Ref,
                 SpecialType.System_Object => OpCodes.Ldelem_Ref,
                 _ => type.IsValueType ? OpCodes.Ldelem_Any : throw new Exception($"Element type {type.Name} not supported.")
             };
-        
 
         public static bool IsTypeParameterOrIsGenericTypeReferencingTypeParameter(this ITypeSymbol type) => 
             type.TypeKind == TypeKind.TypeParameter

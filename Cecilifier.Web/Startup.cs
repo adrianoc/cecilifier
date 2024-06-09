@@ -142,10 +142,17 @@ namespace Cecilifier.Web
                 }
                 else
                 {
-                    await next();
+                    await next(context);
                 }
             });
-            
+
+            // Upon http errors (404 being the most common one), redirect to the landing page.
+            app.UseStatusCodePages(context =>
+            {
+                context.HttpContext.Response.Redirect($"/?{Constants.FrontEnd.PathNotFoundRedirectQueryParameter}={context.HttpContext.Request.Path.Value}");
+                return Task.CompletedTask;
+            });
+
             async Task SendStatisticsAsync(WebSocket webSocket)
             {
                 var cecilifiedWebResult = new CecilifiedWebResult

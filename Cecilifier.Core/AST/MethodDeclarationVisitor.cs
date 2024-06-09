@@ -24,7 +24,11 @@ namespace Cecilifier.Core.AST
         public override void VisitLocalFunctionStatement(LocalFunctionStatementSyntax node)
         {
             var methodSymbol = Context.SemanticModel.GetDeclaredSymbol(node).EnsureNotNull<ISymbol, IMethodSymbol>($"Method symbol for {node.Identifier} could not be resolved.");
-
+            if (!NoCapturedVariableValidator.IsValid(Context, node))
+            {
+                Context.WriteComment("To make ensure local functions dont capture variables, declare them as static.");
+            }
+            
             // Local functions have a well defined list of modifiers.
             var modifiers = SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.InternalKeyword));
             if (methodSymbol.IsStatic)
@@ -165,7 +169,7 @@ namespace Cecilifier.Core.AST
                     // the later is a `mangled name` and any reference to the method will use its `unmangled name` for lookups which would fail
                     // should we use `methodName` as the registered name.
                     var nameUsedInRegisteredVariable = methodSymbol.MethodKind == MethodKind.LocalFunction ? simpleName : methodName;
-                    WithCurrentMethod(declaringTypeName, methodVar, nameUsedInRegisteredVariable, parameters.Select(p => Context.SemanticModel.GetDeclaredSymbol(p).Type.ToDisplayString()).ToArray(), runWithCurrent);
+                    WithCurrentMethod(declaringTypeName, methodVar, nameUsedInRegisteredVariable, parameters.Select(p => Context.SemanticModel.GetDeclaredSymbol(p).Type.ToDisplayString()).ToArray(), methodSymbol.TypeParameters.Length, runWithCurrent);
                     if (!methodSymbol.IsAbstract && !node.DescendantNodes().Any(n => n.IsKind(SyntaxKind.ReturnStatement)))
                     {
                         Context.EmitCilInstruction(ilVar, OpCodes.Ret);
@@ -173,14 +177,15 @@ namespace Cecilifier.Core.AST
                 }
                 else
                 {
-                    Context.DefinitionVariables.RegisterMethod(declaringTypeName, methodName, parameters.Select(p => Context.GetTypeInfo(p.Type).Type.ToDisplayString()).ToArray(), methodVar);
+                    Context.DefinitionVariables.RegisterMethod(declaringTypeName, methodName, parameters.Select(p => Context.GetTypeInfo(p.Type).Type.ToDisplayString()).ToArray(), typeParameters.Count, methodVar);
                 }
             }
         }
 
         private string AddOrUpdateMethodDefinition(string declaringTypeName, string variableName, string simpleName, string methodName, string methodModifiers, ITypeSymbol returnType, bool refReturn, SeparatedSyntaxList<ParameterSyntax> parameters, IList<TypeParameterSyntax> typeParameters)
         {
-            var found = Context.DefinitionVariables.GetMethodVariable(new MethodDefinitionVariable(declaringTypeName, simpleName, parameters.Select(paramSyntax => Context.GetTypeInfo(paramSyntax.Type).Type.ToDisplayString()).ToArray()));
+            var tbf = new MethodDefinitionVariable(declaringTypeName, simpleName, parameters.Select(paramSyntax => Context.GetTypeInfo(paramSyntax.Type).Type.ToDisplayString()).ToArray(), typeParameters.Count);
+            var found = Context.DefinitionVariables.GetMethodVariable(tbf);
             if (found.IsValid)
             {
                 AddCecilExpression("{0}.Attributes = {1};", found.VariableName, methodModifiers);

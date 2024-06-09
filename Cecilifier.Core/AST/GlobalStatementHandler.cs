@@ -71,7 +71,7 @@ namespace Cecilifier.Core.AST
         public bool HandleGlobalStatement(GlobalStatementSyntax node)
         {
             using (context.DefinitionVariables.WithCurrent(string.Empty, "Program", VariableMemberKind.Type, typeVar))
-            using (context.DefinitionVariables.WithCurrentMethod("Program", "<Main>$", Array.Empty<string>(), methodVar))
+            using (context.DefinitionVariables.WithCurrentMethod("Program", "<Main>$", [], 0, methodVar))
             {
                 if (node.Statement.IsKind(SyntaxKind.LocalFunctionStatement))
                 {
