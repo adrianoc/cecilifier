@@ -186,11 +186,22 @@ public class RecordTests : OutputBasedTestBase
             AssertOutput(
                 """
                 var ri = new Record<int>(42);
-                System.Console.WriteLine($"{ri},{ri.Value}"); 
+                System.Console.WriteLine($"{ri},{ri.Value},{ri.Value.GetType().Name}"); 
 
                 record Record<T>(T Value);
                 """,
-                "Record { Value = 42 },42");
+                "Record { Value = 42 },42,System.Int32");
+        }
+        
+        [Test]
+        public void SimpleGenericRecord2()
+        {
+            AssertOutput(
+                """
+                int i = 10;
+                System.Console.WriteLine($"{i.GetType().Name}"); 
+                """,
+                "Record { Value = 42 },42,System.Int32");
         }
     }
         
