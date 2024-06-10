@@ -55,8 +55,8 @@ public class RecordGenerator
             methodName,
             Constants.Cecil.PublicOverrideOperatorAttributes,
             [
-                new ParameterSpec("left", context.TypeResolver.Resolve(_recordSymbol), RefKind.None, Constants.ParameterAttributes.None)  { RegistrationTypeName = $"{record.Identifier.ValueText}?" },
-                new ParameterSpec("right", context.TypeResolver.Resolve(_recordSymbol), RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = $"{record.Identifier.ValueText}?" }
+                new ParameterSpec("left", context.TypeResolver.Resolve(_recordSymbol), RefKind.None, Constants.ParameterAttributes.None)  { RegistrationTypeName = $"{_recordSymbol.ToDisplayString()}?" },
+                new ParameterSpec("right", context.TypeResolver.Resolve(_recordSymbol), RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = $"{_recordSymbol.ToDisplayString()}?" }
             ],
             [],
             ctx => ctx.TypeResolver.Bcl.System.Boolean,
@@ -93,7 +93,7 @@ public class RecordGenerator
         const string methodName = "op_Inequality";
         
         context.WriteNewLine();
-        context.WriteComment("operator ==");
+        context.WriteComment("operator !=");
         var inequalityOperatorMethodVar = context.Naming.SyntheticVariable($"inequalityOperator", ElementKind.Method);
         var inequalityOperatorMethodExps = CecilDefinitionsFactory.Method(
             context,
@@ -103,8 +103,8 @@ public class RecordGenerator
             methodName,
             Constants.Cecil.PublicOverrideOperatorAttributes,
             [
-                new ParameterSpec("left", context.TypeResolver.Resolve(recordSymbol), RefKind.None, Constants.ParameterAttributes.None)  { RegistrationTypeName = $"{record.Identifier.ValueText}?" },
-                new ParameterSpec("right", context.TypeResolver.Resolve(recordSymbol), RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = $"{record.Identifier.ValueText}?" }
+                new ParameterSpec("left", context.TypeResolver.Resolve(recordSymbol), RefKind.None, Constants.ParameterAttributes.None)  { RegistrationTypeName = $"{_recordSymbol.ToDisplayString()}?" },
+                new ParameterSpec("right", context.TypeResolver.Resolve(recordSymbol), RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = $"{_recordSymbol.ToDisplayString()}?" }
             ],
             [],
             ctx => ctx.TypeResolver.Bcl.System.Boolean,
@@ -112,7 +112,7 @@ public class RecordGenerator
         
         context.WriteCecilExpressions(inequalityOperatorMethodExps);
 
-        var equalityMethodDefinitionVariable = context.DefinitionVariables.GetMethodVariable(new MethodDefinitionVariable(recordSymbol.Name, "op_Equality", [$"{record.Identifier.ValueText}?", $"{record.Identifier.ValueText}?"], 0)).VariableName;
+        var equalityMethodDefinitionVariable = context.DefinitionVariables.GetMethodVariable(new MethodDefinitionVariable(recordSymbol.Name, "op_Equality", [$"{_recordSymbol.ToDisplayString()}?", $"{_recordSymbol.ToDisplayString()}?"], 0)).VariableName;
         if (_recordSymbol is INamedTypeSymbol { IsGenericType: true })
         {
             var var = equalityMethodDefinitionVariable;
@@ -456,7 +456,7 @@ public class RecordGenerator
                                     equalsVar,
                                     $"{record.Identifier.ValueText()}.Equals", "Equals",
                                     $"MethodAttributes.Public | MethodAttributes.HideBySig | {Constants.Cecil.InterfaceMethodDefinitionAttributes}", //TODO: No NEWSLOT if in derived record
-                                    [new ParameterSpec("other", declaringType, RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = $"{record.Identifier.ValueText}?"} ],
+                                    [new ParameterSpec("other", declaringType, RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = $"{_recordSymbol.ToDisplayString()}?"} ],
                                     Array.Empty<string>(),
                                     ctx => ctx.TypeResolver.Bcl.System.Boolean, out var methodDefinitionVariable);
 
