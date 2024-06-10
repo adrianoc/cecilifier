@@ -1,3 +1,4 @@
+using System;
 using Cecilifier.Core.Tests.Framework;
 using NUnit.Framework;
 
@@ -186,22 +187,25 @@ public class RecordTests : OutputBasedTestBase
             AssertOutput(
                 """
                 var ri = new Record<int>(42);
-                System.Console.WriteLine($"{ri},{ri.Value},{ri.Value.GetType().Name}"); 
+                System.Console.WriteLine($"{ri},{ri.Value},{ri.GetHashCode() != 0},{ri.Equals(ri)},{ri == ri},{ri != ri}");
 
                 record Record<T>(T Value);
                 """,
-                "Record { Value = 42 },42,System.Int32");
+                "Record { Value = 42 },42,True,True,True,False");
         }
         
         [Test]
-        public void SimpleGenericRecord2()
+        public void Deconstruct()
         {
             AssertOutput(
                 """
-                int i = 10;
-                System.Console.WriteLine($"{i.GetType().Name}"); 
+                var gr = new Record<int>(42);
+                gr.Deconstruct(out var i); // Cecilifier does not support deconstructing syntax so we just call the Deconstruct() method manually.
+                System.Console.WriteLine($"{i}");
+
+                record Record<T>(T Value);
                 """,
-                "Record { Value = 42 },42,System.Int32");
+                "42");
         }
     }
         
