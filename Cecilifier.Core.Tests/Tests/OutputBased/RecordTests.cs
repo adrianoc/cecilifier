@@ -208,7 +208,23 @@ public class RecordTests : OutputBasedTestBase
                 "42");
         }
     }
-        
+
+    [TestFixture]
+    public class RecordStructs : OutputBasedTestBase
+    {
+        [Test]
+        public void Test()
+        {
+            AssertOutput("""
+                         var d = new RecordStruct(42, "Foo");
+                         System.Console.WriteLine(d);
+                          
+                         record struct RecordStruct(int IntValue, string StringValue); 
+                         """,
+                "RecordStruct { IntValue = 42, StringValue = Foo }");
+        }
+    }
+    
     [Test]
     public void Constructor_WhenInheritFromRecordWithProperties_CorrectArgumentsArePassed()
     {

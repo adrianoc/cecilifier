@@ -161,7 +161,8 @@ public class PrimaryConstructorGenerator
             context.EmitCilInstruction(ctorIlVar, OpCodes.Stfld, fieldRefResolver(backingFieldVar.VariableName));
         }
 
-        InvokeBaseConstructor(context, ctorIlVar, typeDeclaration);
+        if (!typeSymbol.IsValueType)
+            InvokeBaseConstructor(context, ctorIlVar, typeDeclaration);
         context.EmitCilInstruction(ctorIlVar, OpCodes.Ret);
 
         static void InvokeBaseConstructor(IVisitorContext context, string ctorIlVar, TypeDeclarationSyntax typeDeclaration)
