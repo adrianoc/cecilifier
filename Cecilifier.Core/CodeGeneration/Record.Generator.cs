@@ -64,22 +64,28 @@ public class RecordGenerator
         
         context.WriteCecilExpressions(equalsOperatorMethodExps);
         
-        InstructionRepresentation[] equalsBodyInstructions = 
-        [
-            OpCodes.Ldarg_0,
-            OpCodes.Ldarg_1,
-            OpCodes.Beq_S.WithBranchOperand("Equal"),
-            OpCodes.Ldarg_0,
-            OpCodes.Brfalse_S.WithBranchOperand("NotEqual"),
-            OpCodes.Ldarg_0,
-            OpCodes.Ldarg_1,
-            OpCodes.Callvirt.WithOperand(_recordTypeEqualsOverloadMethodVar),
-            OpCodes.Ret,
-            OpCodes.Ldc_I4_0.WithInstructionMarker("NotEqual"),
-            OpCodes.Ret,
-            OpCodes.Ldc_I4_1.WithInstructionMarker("Equal"),
-            OpCodes.Ret
-        ];
+        InstructionRepresentation[] equalsBodyInstructions = _recordSymbol.IsValueType 
+            ? [
+                OpCodes.Ldarga_S.WithOperand(context.DefinitionVariables.GetVariable("left", VariableMemberKind.Parameter, methodName)),
+                OpCodes.Ldarg_1,
+                OpCodes.Call.WithOperand(_recordTypeEqualsOverloadMethodVar),
+                OpCodes.Ret
+            ] 
+            : [
+                OpCodes.Ldarg_0,
+                OpCodes.Ldarg_1,
+                OpCodes.Beq_S.WithBranchOperand("Equal"),
+                OpCodes.Ldarg_0,
+                OpCodes.Brfalse_S.WithBranchOperand("NotEqual"),
+                OpCodes.Ldarg_0,
+                OpCodes.Ldarg_1,
+                OpCodes.Callvirt.WithOperand(_recordTypeEqualsOverloadMethodVar),
+                OpCodes.Ret,
+                OpCodes.Ldc_I4_0.WithInstructionMarker("NotEqual"),
+                OpCodes.Ret,
+                OpCodes.Ldc_I4_1.WithInstructionMarker("Equal"),
+                OpCodes.Ret
+            ];
         
         var bodyExps = CecilDefinitionsFactory.MethodBody(context.Naming, methodName, equalsOperatorMethodVar, [], equalsBodyInstructions);
         context.WriteCecilExpressions(bodyExps);
@@ -171,29 +177,8 @@ public class RecordGenerator
 
         const string HashCodeMultiplier = "-1521134295";
         var getHashCodeMethodBodyExps = new List<InstructionRepresentation>();
-        getHashCodeMethodBodyExps.Add(OpCodes.Ldc_I4.WithOperand(HashCodeMultiplier));
-        if (HasBaseRecord(record))
-        {
-            // Initialize the hashcode with 'base.GetHashCode() * -1521134295'
-            var baseGetHashCode = $$"""new MethodReference("GetHashCode", {{context.TypeResolver.Bcl.System.Int32}}, {{context.TypeResolver.Resolve(recordSymbol.BaseType)}}) { HasThis = true }""";
-            getHashCodeMethodBodyExps.Add(OpCodes.Ldarg_0);
-            getHashCodeMethodBodyExps.Add(OpCodes.Call.WithOperand(baseGetHashCode));
-        }
-        else
-        {
-            // Initialize the hashcode with 'EqualityComparer<Type>.Default.GetHashCode(EqualityContract) * -1521134295'
-            var equalityComparerMembersForSystemType = _equalityComparerMembersCache[typeof(Type).Name];
-            var getEqualityContractMethodVar = context.DefinitionVariables.GetVariable("get_EqualityContract", VariableMemberKind.Method, record.Identifier.ValueText());
-            getHashCodeMethodBodyExps.AddRange( 
-            [
-                OpCodes.Call.WithOperand(equalityComparerMembersForSystemType.GetDefaultMethodVar),
-                OpCodes.Ldarg_0, // Load this
-                OpCodes.Call.WithOperand(ClosedGenericMethodForMethodVariable(context, getEqualityContractMethodVar.VariableName, recordTypeDefinitionVariable)), // load EqualityContract
-                OpCodes.Callvirt.WithOperand(equalityComparerMembersForSystemType.GetHashCodeMethodVar)
-            ]);
-        }
-        getHashCodeMethodBodyExps.Add(OpCodes.Mul);
-        
+        AddRecordClassHashCodeSpecificCode();
+
         var parameters = record.GetUniqueParameters(context);
         var lastParameter = parameters.Count > 0 ?  parameters[^1] : default;
         foreach(var parameter in parameters)
@@ -234,6 +219,40 @@ public class RecordGenerator
         context.WriteNewLine();
         
         AddCompilerGeneratedAttributeTo(context, getHashCodeMethodVar);
+
+        void AddRecordClassHashCodeSpecificCode()
+        {
+            if (_recordSymbol.IsValueType)
+            {
+                // Ensure that there's a 0 at the top of the stack to allow the caller to 
+                // simply load another number and ADD them.
+                getHashCodeMethodBodyExps.Add(OpCodes.Ldc_I4_0);
+                return;
+            }
+            
+            getHashCodeMethodBodyExps.Add(OpCodes.Ldc_I4.WithOperand(HashCodeMultiplier));
+            if (HasBaseRecord(record))
+            {
+                // Initialize the hashcode with 'base.GetHashCode() * -1521134295'
+                var baseGetHashCode = $$"""new MethodReference("GetHashCode", {{context.TypeResolver.Bcl.System.Int32}}, {{context.TypeResolver.Resolve(recordSymbol.BaseType)}}) { HasThis = true }""";
+                getHashCodeMethodBodyExps.Add(OpCodes.Ldarg_0);
+                getHashCodeMethodBodyExps.Add(OpCodes.Call.WithOperand(baseGetHashCode));
+            }
+            else
+            {
+                // Initialize the hashcode with 'EqualityComparer<Type>.Default.GetHashCode(EqualityContract) * -1521134295'
+                var equalityComparerMembersForSystemType = _equalityComparerMembersCache[typeof(Type).Name];
+                var getEqualityContractMethodVar = context.DefinitionVariables.GetVariable("get_EqualityContract", VariableMemberKind.Method, record.Identifier.ValueText());
+                getHashCodeMethodBodyExps.AddRange( 
+                [
+                    OpCodes.Call.WithOperand(equalityComparerMembersForSystemType.GetDefaultMethodVar),
+                    OpCodes.Ldarg_0, // Load this
+                    OpCodes.Call.WithOperand(ClosedGenericMethodForMethodVariable(context, getEqualityContractMethodVar.VariableName, recordTypeDefinitionVariable)), // load EqualityContract
+                    OpCodes.Callvirt.WithOperand(equalityComparerMembersForSystemType.GetHashCodeMethodVar)
+                ]);
+            }
+            getHashCodeMethodBodyExps.Add(OpCodes.Mul);
+        }
     }
 
     private void AddToStringAndRelatedMethods(IVisitorContext context, string recordTypeDefinitionVariable, TypeDeclarationSyntax record)
@@ -374,7 +393,7 @@ public class RecordGenerator
                 OpCodes.Pop,
                 OpCodes.Ldarg_0,
                 OpCodes.Ldloc_0,
-                OpCodes.Callvirt.WithOperand(PrintMembersMethodToCall()), 
+                (_recordSymbol.IsValueType ? OpCodes.Call : OpCodes.Callvirt).WithOperand(PrintMembersMethodToCall()), 
                 OpCodes.Brfalse_S.WithBranchOperand("NoMemberToPrint"),
                 OpCodes.Ldloc_0,
                 OpCodes.Ldstr.WithOperand("\" \""),
@@ -442,7 +461,6 @@ public class RecordGenerator
                !SymbolEqualityComparer.Default.Equals(recordSymbol.BaseType, context.RoslynTypeSystem.SystemValueType);
     }
 
-    //TODO: Record struct (no need to check for null, no need to check EqualityContract, etc)
     private void AddIEquatableEquals(IVisitorContext context, string recordTypeDefinitionVariable, TypeDeclarationSyntax record)
     {
         context.WriteNewLine();
@@ -462,35 +480,15 @@ public class RecordGenerator
 
         context.WriteCecilExpressions([..exps, $"{recordTypeDefinitionVariable}.Methods.Add({equalsVar});"]);
         
-        // Compare each unique primary constructor parameter to compute equality.
         using (context.DefinitionVariables.WithVariable(methodDefinitionVariable))
         {
             var uniqueParameters = record.GetUniqueParameters(context);
             
             List<InstructionRepresentation> instructions = new();
-            instructions.AddRange(
-            [
-                // reference records only 
-                OpCodes.Ldarg_0,
-                OpCodes.Ldarg_1,
-                OpCodes.Beq_S.WithBranchOperand("ReferenceEquals"),
-                
-                OpCodes.Ldarg_1,
-                OpCodes.Brfalse_S.WithBranchOperand("NotEquals"),
-            ]);
-
-            var equalityContractGetter = ClosedGenericMethodForMethodVariable(context, _equalityContractGetMethodVar, recordTypeDefinitionVariable);
-            // TODO: reference records only
-            instructions.AddRange(
-            [
-                OpCodes.Ldarg_0,
-                OpCodes.Callvirt.WithOperand(equalityContractGetter),
-                OpCodes.Ldarg_1,
-                OpCodes.Callvirt.WithOperand(equalityContractGetter),
-                OpCodes.Call.WithOperand(TypeEqualityOperator(context)),
-                OpCodes.Brfalse_S.WithBranchOperand("NotEquals")
-            ]);
             
+            CheckForReferenceEqualityIfApplicable(instructions);
+
+            // Compare each unique primary constructor parameter to compute equality.
             foreach (var parameter in uniqueParameters)
             {
                 // Get the default comparer for the parameter type
@@ -544,6 +542,33 @@ public class RecordGenerator
         else
         {
             _recordTypeEqualsOverloadMethodVar = equalsVar;
+        }
+
+        void CheckForReferenceEqualityIfApplicable(List<InstructionRepresentation> instructions)
+        {
+            if (_recordSymbol.IsValueType)
+                return;
+            
+            instructions.AddRange(
+            [
+                OpCodes.Ldarg_0,
+                OpCodes.Ldarg_1,
+                OpCodes.Beq_S.WithBranchOperand("ReferenceEquals"),
+
+                OpCodes.Ldarg_1,
+                OpCodes.Brfalse_S.WithBranchOperand("NotEquals"),
+            ]);
+
+            var equalityContractGetter = ClosedGenericMethodForMethodVariable(context, _equalityContractGetMethodVar, recordTypeDefinitionVariable);
+            instructions.AddRange(
+            [
+                OpCodes.Ldarg_0,
+                OpCodes.Callvirt.WithOperand(equalityContractGetter),
+                OpCodes.Ldarg_1,
+                OpCodes.Callvirt.WithOperand(equalityContractGetter),
+                OpCodes.Call.WithOperand(TypeEqualityOperator(context)),
+                OpCodes.Brfalse_S.WithBranchOperand("NotEquals")
+            ]);
         }
     }
 
@@ -713,14 +738,27 @@ public class RecordGenerator
         
         context.WriteCecilExpressions(equalsObjectOverloadMethodExps);
         
-        InstructionRepresentation[] equalsBodyInstructions = 
-        [
-            OpCodes.Ldarg_0,
-            OpCodes.Ldarg_1,
-            OpCodes.Isinst.WithOperand($"{_recordTypeEqualsOverloadMethodVar}.DeclaringType"),
-            OpCodes.Callvirt.WithOperand(_recordTypeEqualsOverloadMethodVar),
-            OpCodes.Ret
-        ];
+        InstructionRepresentation[] equalsBodyInstructions =
+            _recordSymbol.IsValueType 
+                ? [
+                    OpCodes.Ldarg_1,
+                    OpCodes.Isinst.WithOperand($"{_recordTypeEqualsOverloadMethodVar}.DeclaringType"),
+                    OpCodes.Brfalse_S.WithBranchOperand("NotEqual"),
+                    OpCodes.Ldarg_0,
+                    OpCodes.Ldarg_1,
+                    OpCodes.Unbox_Any.WithOperand($"{_recordTypeEqualsOverloadMethodVar}.DeclaringType"),
+                    OpCodes.Call.WithOperand(_recordTypeEqualsOverloadMethodVar),
+                    OpCodes.Ret,
+                    OpCodes.Ldc_I4_1.WithInstructionMarker("NotEqual"),
+                    OpCodes.Ret
+                  ]
+                : [
+                    OpCodes.Ldarg_0,
+                    OpCodes.Ldarg_1,
+                    OpCodes.Isinst.WithOperand($"{_recordTypeEqualsOverloadMethodVar}.DeclaringType"),
+                    OpCodes.Callvirt.WithOperand(_recordTypeEqualsOverloadMethodVar),
+                    OpCodes.Ret
+                  ];
         
         var bodyExps = CecilDefinitionsFactory.MethodBody(context.Naming, methodName, equalsObjectOverloadMethodVar, [], equalsBodyInstructions);
         context.WriteCecilExpressions(bodyExps);
