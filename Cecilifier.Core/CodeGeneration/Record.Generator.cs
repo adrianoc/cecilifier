@@ -18,18 +18,20 @@ namespace Cecilifier.Core.CodeGeneration;
 public class RecordGenerator
 {
     private string _equalityContractGetMethodVar;
-    private IDictionary<string, (string GetDefaultMethodVar, string EqualsMethodVar, string GetHashCodeMethodVar)> _equalityComparerMembersCache;
     private string _recordTypeEqualsOverloadMethodVar;
+    private IDictionary<string, (string GetDefaultMethodVar, string EqualsMethodVar, string GetHashCodeMethodVar)> _equalityComparerMembersCache;
     private ITypeSymbol _recordSymbol;
+    private Action<IVisitorContext, ITypeSymbol, string> _isReadOnlyAttributeHandler;
 
     internal void AddSyntheticMembers(IVisitorContext context, string recordTypeDefinitionVariable, TypeDeclarationSyntax record)
     {
         _recordSymbol = context.SemanticModel.GetDeclaredSymbol(record).EnsureNotNull<ISymbol, ITypeSymbol>();
-        
+
+        InitializeIsReadOnlyAttributeHandler(_recordSymbol);
         InitializeEqualityComparerMemberCache(context, record);
         
         AddEqualityContractPropertyIfNeeded(context, recordTypeDefinitionVariable, record);
-        PrimaryConstructorGenerator.AddPropertiesFrom(context, recordTypeDefinitionVariable, record);
+        AddPropertiesFrom(context, recordTypeDefinitionVariable, record);
         PrimaryConstructorGenerator.AddPrimaryConstructor(context, recordTypeDefinitionVariable, record);
         AddIEquatableEquals(context, recordTypeDefinitionVariable, record);
         AddToStringAndRelatedMethods(context, recordTypeDefinitionVariable, record);
@@ -38,6 +40,18 @@ public class RecordGenerator
         AddEqualityOperator(context, recordTypeDefinitionVariable, record);
         AddInequalityOperator(context, recordTypeDefinitionVariable, record);
         AddDeconstructMethod(context, recordTypeDefinitionVariable, record);
+    }
+
+    private void AddPropertiesFrom(IVisitorContext context, string recordTypeDefinitionVariable, TypeDeclarationSyntax record)
+    {
+        PrimaryConstructorGenerator.AddPropertiesFrom(context, recordTypeDefinitionVariable, record);
+        if (!_recordSymbol.IsValueType)
+            return;
+        
+        foreach (var uniqueParameter in record.GetUniqueParameters(context))
+        {
+            RecordStructIsReadOnlyAttributeHandler(context, _recordSymbol, GetGetterMethodVar(context, _recordSymbol, uniqueParameter.Identifier.ValueText));
+        }
     }
 
     private void AddEqualityOperator(IVisitorContext context, string recordTypeDefinitionVariable, TypeDeclarationSyntax record)
@@ -145,16 +159,6 @@ public class RecordGenerator
         AddCompilerGeneratedAttributeTo(context, inequalityOperatorMethodVar);
     }
 
-    private void InitializeEqualityComparerMemberCache(IVisitorContext context, TypeDeclarationSyntax record)
-    {
-        var targetTypes = record.GetUniqueParameters(context)
-                                                            .Select(parameterType => context.SemanticModel.GetDeclaredSymbol(parameterType).EnsureNotNull<ISymbol, IParameterSymbol>().Type)
-                                                            .Append(context.RoslynTypeSystem.SystemType) // generates EqualityComparer member references for System.Type
-                                                            .ToArray();
-        
-        _equalityComparerMembersCache = GenerateEqualityComparerMethods(context, targetTypes);
-    }
-
     private void AddGetHashCodeMethod(IVisitorContext context, string recordTypeDefinitionVariable, TypeDeclarationSyntax record)
     {
         var recordSymbol = context.SemanticModel.GetDeclaredSymbol(record).EnsureNotNull<ISymbol, ITypeSymbol>();
@@ -219,7 +223,8 @@ public class RecordGenerator
         context.WriteNewLine();
         
         AddCompilerGeneratedAttributeTo(context, getHashCodeMethodVar);
-
+        AddIsReadOnlyAttributeTo(context, getHashCodeMethodVar);
+        
         void AddRecordClassHashCodeSpecificCode()
         {
             if (_recordSymbol.IsValueType)
@@ -351,6 +356,7 @@ public class RecordGenerator
             ]);
             context.WriteCecilExpressions(printMemberBodyExps);
             AddCompilerGeneratedAttributeTo(context, printMembersVar);
+            AddIsReadOnlyAttributeTo(context, printMembersVar);
         }
 
         void AddToStringMethod()
@@ -411,6 +417,7 @@ public class RecordGenerator
             ]);
             context.WriteCecilExpressions(toStringBodyExps);
             AddCompilerGeneratedAttributeTo(context, toStringMethodVar);
+            AddIsReadOnlyAttributeTo(context, toStringMethodVar);
         }
         
         // Returns a `MethodReference` for the PrintMembers() method to be invoked
@@ -529,6 +536,7 @@ public class RecordGenerator
         }
         
         AddCompilerGeneratedAttributeTo(context, equalsVar);
+        AddIsReadOnlyAttributeTo(context, equalsVar);
 
         if (_recordSymbol is INamedTypeSymbol { IsGenericType: true } genericRecord)
         {
@@ -703,6 +711,7 @@ public class RecordGenerator
         context.EmitCilInstruction(getterIlVar, OpCodes.Ret);
 
         AddCompilerGeneratedAttributeTo(context, propertyData.Variable);
+        AddIsReadOnlyAttributeTo(context, propertyData.Variable);
     }
     
     /// <summary>
@@ -764,6 +773,7 @@ public class RecordGenerator
         context.WriteCecilExpressions(bodyExps);
         context.WriteCecilExpression($"{recordTypeDefinitionVariable}.Methods.Add({equalsObjectOverloadMethodVar});");
         AddCompilerGeneratedAttributeTo(context, equalsObjectOverloadMethodVar);
+        AddIsReadOnlyAttributeTo(context, equalsObjectOverloadMethodVar);
         
         if (!HasBaseRecord(record))
             return;
@@ -797,6 +807,7 @@ public class RecordGenerator
         context.WriteCecilExpressions(bodyExps2);
         context.WriteCecilExpression($"{recordTypeDefinitionVariable}.Methods.Add({equalsBaseOverloadMethodVar});");
         AddCompilerGeneratedAttributeTo(context, equalsBaseOverloadMethodVar);
+        AddIsReadOnlyAttributeTo(context, equalsBaseOverloadMethodVar);
     }
 
     private void AddDeconstructMethod(IVisitorContext context, string recordTypeDefinitionVariable, TypeDeclarationSyntax record)
@@ -835,7 +846,7 @@ public class RecordGenerator
         {
             deconstructInstructions.Add(OpCodes.Ldarg.WithOperand(argIndex.ToString()));
             deconstructInstructions.Add(OpCodes.Ldarg_0);
-            deconstructInstructions.Add(OpCodes.Call.WithOperand(GetGetterMethodVar(recordSymbol, p.ValueText)));
+            deconstructInstructions.Add(OpCodes.Call.WithOperand(GetGetterMethodVar(context, recordSymbol, p.ValueText)));
             
             var stindOpCode = p.Type.StindOpCodeFor();
             deconstructInstructions.Add(stindOpCode == OpCodes.Stobj ? stindOpCode.WithOperand(context.TypeResolver.Resolve(p.Type)) : stindOpCode);
@@ -847,28 +858,29 @@ public class RecordGenerator
         context.WriteCecilExpressions(bodyExps);
         context.WriteCecilExpression($"{recordTypeDefinitionVariable}.Methods.Add({deconstructMethodVar});");
         AddCompilerGeneratedAttributeTo(context, deconstructMethodVar);
-
-        string GetGetterMethodVar(ITypeSymbol candidate, string propertyName)
+        AddIsReadOnlyAttributeTo(context, deconstructMethodVar);
+    }
+    
+    string GetGetterMethodVar(IVisitorContext context, ITypeSymbol candidate, string propertyName)
+    {
+        var getterMethodVar = context.DefinitionVariables.GetMethodVariable(new MethodDefinitionVariable(candidate.Name, $"get_{propertyName}", [], 0));
+        if (getterMethodVar.IsValid)
         {
-            var getterMethodVar = context.DefinitionVariables.GetMethodVariable(new MethodDefinitionVariable(candidate.Name, $"get_{propertyName}", [], 0));
-            if (getterMethodVar.IsValid)
+            if (candidate is INamedTypeSymbol { IsGenericType: true })
             {
-                if (candidate is INamedTypeSymbol { IsGenericType: true })
-                {
-                    var var = getterMethodVar.VariableName;
-                    return $"new MethodReference({var}.Name, {var}.ReturnType, {context.TypeResolver.Resolve(candidate)}) {{ HasThis = {var}.HasThis, ExplicitThis = {var}.ExplicitThis, CallingConvention = {var}.CallingConvention }}";
-                }
-                
-                return getterMethodVar.VariableName;
+                var var = getterMethodVar.VariableName;
+                return $"new MethodReference({var}.Name, {var}.ReturnType, {context.TypeResolver.Resolve(candidate)}) {{ HasThis = {var}.HasThis, ExplicitThis = {var}.ExplicitThis, CallingConvention = {var}.CallingConvention }}";
             }
-            
-            // getter is not defined in the declaring record; this means the primary constructor parameter
-            // was passed to its base type ctor, lets validate that and retrieve the getter from the base.
-            if (SymbolEqualityComparer.Default.Equals(recordSymbol.BaseType, context.RoslynTypeSystem.SystemObject))
-                throw new InvalidOperationException($"Variable for the getter method for {recordSymbol.Name}.{propertyName} could not be found.");
-            
-            return GetGetterMethodVar(candidate.BaseType, propertyName);
+                
+            return getterMethodVar.VariableName;
         }
+            
+        // getter is not defined in the declaring record; this means the primary constructor parameter
+        // was passed to its base type ctor, lets validate that and retrieve the getter from the base.
+        if (SymbolEqualityComparer.Default.Equals(_recordSymbol.BaseType, context.RoslynTypeSystem.SystemObject))
+            throw new InvalidOperationException($"Variable for the getter method for {_recordSymbol.Name}.{propertyName} could not be found.");
+            
+        return GetGetterMethodVar(context, candidate.BaseType, propertyName);
     }
     
     private static bool HasBaseRecord(TypeDeclarationSyntax record)
@@ -893,6 +905,23 @@ public class RecordGenerator
         context.WriteCecilExpressions(exps);
     }
     
+    private void AddIsReadOnlyAttributeTo(IVisitorContext context, string memberVariable) => _isReadOnlyAttributeHandler(context, _recordSymbol, memberVariable);
+
+    private void InitializeIsReadOnlyAttributeHandler(ITypeSymbol recordSymbol)
+    {
+        _isReadOnlyAttributeHandler = recordSymbol.IsValueType ? RecordStructIsReadOnlyAttributeHandler : RecordClassIsReadOnlyAttributeHandler;
+    }
+
+    private static void RecordClassIsReadOnlyAttributeHandler(IVisitorContext context, ITypeSymbol recordSymbol, string memberVar) { }
+    
+    private static void RecordStructIsReadOnlyAttributeHandler(IVisitorContext context, ITypeSymbol recordSymbol, string memberVar)
+    {
+        var compilerGeneratedAttributeCtor = context.RoslynTypeSystem.IsReadOnlyAttribute.Ctor();
+        var exps = CecilDefinitionsFactory.Attribute(memberVar, context, compilerGeneratedAttributeCtor.MethodResolverExpression(context));
+        context.WriteNewLine();
+        context.WriteCecilExpressions(exps);
+    }
+    
     private static string TypeEqualityOperator(IVisitorContext context)
     {
         var typeEqualityOperator = context.RoslynTypeSystem.SystemType.GetMembers("op_Equality")
@@ -904,5 +933,15 @@ public class RecordGenerator
         bool Has2SystemTypeParameters(IMethodSymbol candidate) => 
             candidate.Parameters.Length == 2
             && SymbolEqualityComparer.Default.Equals(candidate.Parameters[0].Type, candidate.Parameters[1].Type);
+    }
+    
+    private void InitializeEqualityComparerMemberCache(IVisitorContext context, TypeDeclarationSyntax record)
+    {
+        var targetTypes = record.GetUniqueParameters(context)
+            .Select(parameterType => context.SemanticModel.GetDeclaredSymbol(parameterType).EnsureNotNull<ISymbol, IParameterSymbol>().Type)
+            .Append(context.RoslynTypeSystem.SystemType) // generates EqualityComparer member references for System.Type
+            .ToArray();
+        
+        _equalityComparerMembersCache = GenerateEqualityComparerMethods(context, targetTypes);
     }
 }
