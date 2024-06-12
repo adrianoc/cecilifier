@@ -1,8 +1,6 @@
-using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using Cecilifier.Core.Misc;
-using Cecilifier.Core.Tests.Framework;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration

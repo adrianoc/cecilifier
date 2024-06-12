@@ -173,7 +173,6 @@ internal class PropertyGenerator
 
     private string MakeGenericType(ref readonly PropertyGenerationData property)
     {
-        //TODO: Register the following variable?
         var genTypeVar = Context.Naming.SyntheticVariable(property.Name, ElementKind.GenericInstance);
         var fieldRefVar = Context.Naming.MemberReference("fld_");
         
