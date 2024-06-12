@@ -367,9 +367,9 @@ namespace Cecilifier.Core.Misc
             }
         }
         
-        public static string[] Attribute(string memberVariable, IVisitorContext context, string resolvedCtor, params (string ResolvedType, string Value)[] parameters)
+        public static string[] Attribute(string attributeVarBaseName, string attributeTargetVar, IVisitorContext context, string resolvedCtor, params (string ResolvedType, string Value)[] parameters)
         {
-            var attributeVar = context.Naming.SyntheticVariable("compilerGenerated", ElementKind.Attribute);
+            var attributeVar = context.Naming.SyntheticVariable(attributeVarBaseName, ElementKind.Attribute);
 
             var exps = new string[2 + parameters.Length];
             int expIndex = 0;
@@ -380,7 +380,7 @@ namespace Cecilifier.Core.Misc
                 var attributeArgument = $"new CustomAttributeArgument({parameters[i].ResolvedType}, {parameters[i].Value})";
                 exps[expIndex++] = $"{attributeVar}.ConstructorArguments.Add({attributeArgument});";
             }
-            exps[expIndex] = $"{memberVariable}.CustomAttributes.Add({attributeVar});";
+            exps[expIndex] = $"{attributeTargetVar}.CustomAttributes.Add({attributeVar});";
 
             return exps;
         }
