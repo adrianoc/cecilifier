@@ -246,5 +246,17 @@ public static class Outer
                 Assert.That(cecilifiedCode, Does.Match(expected));
             }
         }
+        
+        public class RecordTests : CecilifierUnitTestBase
+        {
+            [TestCase("class", "struct", TestName = "NullableContext and NullableAttribute are added to the type definition")]
+            public void NullableContextAndNullableAttributes(string kind)
+            {
+                var r = RunCecilifier($"public record {kind} RecordTest;");
+                var cecilifiedCode = r.GeneratedCode.ReadToEnd();
+                Assert.That(cecilifiedCode, Does.Match(@"NullableContext\(1\)"));
+                Assert.That(cecilifiedCode, Does.Match(@"Nullable\(0\)"));
+            }
+        }
     }
 }
