@@ -15,34 +15,44 @@ using Mono.Cecil.Cil;
 
 namespace Cecilifier.Core.CodeGeneration;
 
-public class RecordGenerator
+internal class RecordGenerator
 {
+    private readonly IVisitorContext context;
+    private readonly string recordTypeDefinitionVariable;
+    private readonly RecordDeclarationSyntax record;
     private string _equalityContractGetMethodVar;
     private string _recordTypeEqualsOverloadMethodVar;
     private IDictionary<string, (string GetDefaultMethodVar, string EqualsMethodVar, string GetHashCodeMethodVar)> _equalityComparerMembersCache;
     private ITypeSymbol _recordSymbol;
     private Action<IVisitorContext, ITypeSymbol, string> _isReadOnlyAttributeHandler;
 
-    internal void AddSyntheticMembers(IVisitorContext context, string recordTypeDefinitionVariable, TypeDeclarationSyntax record)
+    public RecordGenerator(IVisitorContext context, string recordTypeDefinitionVariable, RecordDeclarationSyntax record)
+    {
+        this.context = context;
+        this.recordTypeDefinitionVariable = recordTypeDefinitionVariable;
+        this.record = record;
+    }
+
+    internal void AddSyntheticMembers()
     {
         _recordSymbol = context.SemanticModel.GetDeclaredSymbol(record).EnsureNotNull<ISymbol, ITypeSymbol>();
 
         InitializeIsReadOnlyAttributeHandler(_recordSymbol);
-        InitializeEqualityComparerMemberCache(context, record);
+        InitializeEqualityComparerMemberCache();
         
-        AddEqualityContractPropertyIfNeeded(context, recordTypeDefinitionVariable, record);
-        AddPropertiesFrom(context, recordTypeDefinitionVariable, record);
+        AddEqualityContractPropertyIfNeeded();
+        AddPropertiesFrom();
         PrimaryConstructorGenerator.AddPrimaryConstructor(context, recordTypeDefinitionVariable, record);
-        AddIEquatableEquals(context, recordTypeDefinitionVariable, record);
-        AddToStringAndRelatedMethods(context, recordTypeDefinitionVariable, record);
-        AddGetHashCodeMethod(context, recordTypeDefinitionVariable, record);
-        AddEqualsOverloads(context, recordTypeDefinitionVariable, record);
-        AddEqualityOperator(context, recordTypeDefinitionVariable, record);
-        AddInequalityOperator(context, recordTypeDefinitionVariable, record);
-        AddDeconstructMethod(context, recordTypeDefinitionVariable, record);
+        AddIEquatableEquals();
+        AddToStringAndRelatedMethods();
+        AddGetHashCodeMethod();
+        AddEqualsOverloads();
+        AddEqualityOperator();
+        AddInequalityOperator();
+        AddDeconstructMethod();
     }
 
-    private void AddPropertiesFrom(IVisitorContext context, string recordTypeDefinitionVariable, TypeDeclarationSyntax record)
+    private void AddPropertiesFrom()
     {
         PrimaryConstructorGenerator.AddPropertiesFrom(context, recordTypeDefinitionVariable, record);
         if (!_recordSymbol.IsValueType)
@@ -50,11 +60,11 @@ public class RecordGenerator
         
         foreach (var uniqueParameter in record.GetUniqueParameters(context))
         {
-            RecordStructIsReadOnlyAttributeHandler(context, _recordSymbol, GetGetterMethodVar(context, _recordSymbol, uniqueParameter.Identifier.ValueText));
+            RecordStructIsReadOnlyAttributeHandler(GetGetterMethodVar(context, _recordSymbol, uniqueParameter.Identifier.ValueText));
         }
     }
 
-    private void AddEqualityOperator(IVisitorContext context, string recordTypeDefinitionVariable, TypeDeclarationSyntax record)
+    private void AddEqualityOperator()
     {
         const string methodName = "op_Equality";
         
@@ -107,7 +117,7 @@ public class RecordGenerator
         AddCompilerGeneratedAttributeTo(context, equalsOperatorMethodVar);
     }
     
-    private void AddInequalityOperator(IVisitorContext context, string recordTypeDefinitionVariable, TypeDeclarationSyntax record)
+    private void AddInequalityOperator()
     {
         var recordSymbol = context.SemanticModel.GetDeclaredSymbol(record).EnsureNotNull<ISymbol, ITypeSymbol>();
         const string methodName = "op_Inequality";
@@ -159,7 +169,7 @@ public class RecordGenerator
         AddCompilerGeneratedAttributeTo(context, inequalityOperatorMethodVar);
     }
 
-    private void AddGetHashCodeMethod(IVisitorContext context, string recordTypeDefinitionVariable, TypeDeclarationSyntax record)
+    private void AddGetHashCodeMethod()
     {
         var recordSymbol = context.SemanticModel.GetDeclaredSymbol(record).EnsureNotNull<ISymbol, ITypeSymbol>();
         
@@ -260,7 +270,7 @@ public class RecordGenerator
         }
     }
 
-    private void AddToStringAndRelatedMethods(IVisitorContext context, string recordTypeDefinitionVariable, TypeDeclarationSyntax record)
+    private void AddToStringAndRelatedMethods()
     {
         const string PrintMembersMethodName = "PrintMembers";
         var stringBuilderSymbol = context.SemanticModel.Compilation.GetTypeByMetadataName(typeof(StringBuilder).FullName!).EnsureNotNull();
@@ -468,7 +478,7 @@ public class RecordGenerator
                !SymbolEqualityComparer.Default.Equals(recordSymbol.BaseType, context.RoslynTypeSystem.SystemValueType);
     }
 
-    private void AddIEquatableEquals(IVisitorContext context, string recordTypeDefinitionVariable, TypeDeclarationSyntax record)
+    private void AddIEquatableEquals()
     {
         context.WriteNewLine();
         context.WriteComment($"IEquatable<>.Equals({record.Identifier.ValueText} other)");
@@ -574,13 +584,13 @@ public class RecordGenerator
                 OpCodes.Callvirt.WithOperand(equalityContractGetter),
                 OpCodes.Ldarg_1,
                 OpCodes.Callvirt.WithOperand(equalityContractGetter),
-                OpCodes.Call.WithOperand(TypeEqualityOperator(context)),
+                OpCodes.Call.WithOperand(TypeEqualityOperator()),
                 OpCodes.Brfalse_S.WithBranchOperand("NotEquals")
             ]);
         }
     }
 
-    private IDictionary<string, (string GetDefaultMethodVar, string EqualsMethodVar, string GetHashCodeMethodVar)> GenerateEqualityComparerMethods(IVisitorContext context, IReadOnlyList<ITypeSymbol> targetTypes)
+    private IDictionary<string, (string GetDefaultMethodVar, string EqualsMethodVar, string GetHashCodeMethodVar)> GenerateEqualityComparerMethods(IReadOnlyList<ITypeSymbol> targetTypes)
     {
         Dictionary<string, (string, string, string)> equalityComparerDataByType = new();
         
@@ -663,7 +673,7 @@ public class RecordGenerator
         }
     }
 
-    private void AddEqualityContractPropertyIfNeeded(IVisitorContext context, string recordTypeDefinitionVariable, TypeDeclarationSyntax record)
+    private void AddEqualityContractPropertyIfNeeded()
     {
         if (record.IsKind(SyntaxKind.RecordStructDeclaration))
             return;
@@ -713,19 +723,16 @@ public class RecordGenerator
         AddCompilerGeneratedAttributeTo(context, propertyData.Variable);
         AddIsReadOnlyAttributeTo(context, propertyData.Variable);
     }
-    
+
     /// <summary>
     /// If <paramref name="record"/> inherits from System.Object 2 Equals() overloads should be added:
     /// - Equals(object other) => Equals( (RecordType) other)
     /// - Equals(RecordType) is the same as IEquatable&lt;RecordType&gt;.Equals() so it is already implemented.
     /// 
-    /// In cases where <paramref name="record"/> inherits from another record a third Equals() overload is introduced:
+    /// In cases where record inherits from another record a third Equals() overload is introduced:
     /// - Equals(BaseType other)  => Equals( (object) other)
     /// </summary>
-    /// <param name="context"></param>
-    /// <param name="recordTypeDefinitionVariable"></param>
-    /// <param name="record"></param>
-    private void AddEqualsOverloads(IVisitorContext context, string recordTypeDefinitionVariable, TypeDeclarationSyntax record)
+    private void AddEqualsOverloads()
     {
         var recordSymbol = context.SemanticModel.GetDeclaredSymbol(record).EnsureNotNull<ISymbol, ITypeSymbol>();
         const string methodName = "Equals";
@@ -810,7 +817,7 @@ public class RecordGenerator
         AddIsReadOnlyAttributeTo(context, equalsBaseOverloadMethodVar);
     }
 
-    private void AddDeconstructMethod(IVisitorContext context, string recordTypeDefinitionVariable, TypeDeclarationSyntax record)
+    private void AddDeconstructMethod()
     {
         if (record.ParameterList?.Parameters.Count is null or 0)
             return;
@@ -909,12 +916,12 @@ public class RecordGenerator
 
     private void InitializeIsReadOnlyAttributeHandler(ITypeSymbol recordSymbol)
     {
-        _isReadOnlyAttributeHandler = recordSymbol.IsValueType ? RecordStructIsReadOnlyAttributeHandler : RecordClassIsReadOnlyAttributeHandler;
+        _isReadOnlyAttributeHandler = recordSymbol.IsValueType ? (context1, recordSymbol1, memberVar) => RecordStructIsReadOnlyAttributeHandler(memberVar) : RecordClassIsReadOnlyAttributeHandler;
     }
 
     private static void RecordClassIsReadOnlyAttributeHandler(IVisitorContext context, ITypeSymbol recordSymbol, string memberVar) { }
     
-    private static void RecordStructIsReadOnlyAttributeHandler(IVisitorContext context, ITypeSymbol recordSymbol, string memberVar)
+    private void RecordStructIsReadOnlyAttributeHandler(string memberVar)
     {
         var compilerGeneratedAttributeCtor = context.RoslynTypeSystem.IsReadOnlyAttribute.Ctor();
         var exps = CecilDefinitionsFactory.Attribute(memberVar, context, compilerGeneratedAttributeCtor.MethodResolverExpression(context));
@@ -922,7 +929,7 @@ public class RecordGenerator
         context.WriteCecilExpressions(exps);
     }
     
-    private static string TypeEqualityOperator(IVisitorContext context)
+    private string TypeEqualityOperator()
     {
         var typeEqualityOperator = context.RoslynTypeSystem.SystemType.GetMembers("op_Equality")
             .OfType<IMethodSymbol>()
@@ -935,13 +942,13 @@ public class RecordGenerator
             && SymbolEqualityComparer.Default.Equals(candidate.Parameters[0].Type, candidate.Parameters[1].Type);
     }
     
-    private void InitializeEqualityComparerMemberCache(IVisitorContext context, TypeDeclarationSyntax record)
+    private void InitializeEqualityComparerMemberCache()
     {
         var targetTypes = record.GetUniqueParameters(context)
             .Select(parameterType => context.SemanticModel.GetDeclaredSymbol(parameterType).EnsureNotNull<ISymbol, IParameterSymbol>().Type)
             .Append(context.RoslynTypeSystem.SystemType) // generates EqualityComparer member references for System.Type
             .ToArray();
         
-        _equalityComparerMembersCache = GenerateEqualityComparerMethods(context, targetTypes);
+        _equalityComparerMembersCache = GenerateEqualityComparerMethods(targetTypes);
     }
 }
