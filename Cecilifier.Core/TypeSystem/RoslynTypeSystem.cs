@@ -15,6 +15,8 @@ internal struct RoslynTypeSystem
 {
     public RoslynTypeSystem(IVisitorContext ctx)
     {
+        _context = ctx;
+        
         SystemIndex = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(Index).FullName!);
         SystemRange = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(Range).FullName!);
         SystemType = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(Type).FullName!);
@@ -74,4 +76,8 @@ internal struct RoslynTypeSystem
     public ITypeSymbol SystemNullableOfT { get; }
     public ITypeSymbol SystemRuntimeCompilerServicesUnsafe { get;  }
     public ITypeSymbol SystemRuntimeInteropServicesMemoryMarshal { get; }
+
+    public readonly ITypeSymbol ForType<TType>() => _context.SemanticModel.Compilation.GetTypeByMetadataName(typeof(TType).FullName!);
+
+    private readonly IVisitorContext _context;
 }

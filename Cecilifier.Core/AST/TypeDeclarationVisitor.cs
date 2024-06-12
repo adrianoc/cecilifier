@@ -68,6 +68,7 @@ namespace Cecilifier.Core.AST
             base.VisitRecordDeclaration(node);
 
             RecordGenerator generator = new(Context, definitionVar, node);
+            generator.AddNullabilityAttributesToTypeDefinition(definitionVar);
             generator.AddSyntheticMembers();
         }
 

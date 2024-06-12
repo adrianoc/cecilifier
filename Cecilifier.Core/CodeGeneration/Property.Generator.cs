@@ -167,7 +167,7 @@ internal class PropertyGenerator
     private void AddCompilerGeneratedAttributeTo(IVisitorContext context, string memberVariable)
     {
         var compilerGeneratedAttributeCtor = context.RoslynTypeSystem.SystemRuntimeCompilerServicesCompilerGeneratedAttribute.Ctor();
-        var exps = CecilDefinitionsFactory.Attribute(memberVariable, context, compilerGeneratedAttributeCtor.MethodResolverExpression(context));
+        var exps = CecilDefinitionsFactory.Attribute("compilerGenerated", memberVariable, context, compilerGeneratedAttributeCtor.MethodResolverExpression(context));
         context.WriteCecilExpressions(exps);
     }
 

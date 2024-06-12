@@ -249,13 +249,21 @@ public static class Outer
         
         public class RecordTests : CecilifierUnitTestBase
         {
-            [TestCase("class", "struct", TestName = "NullableContext and NullableAttribute are added to the type definition")]
+            [TestCase("class", TestName = "NullableContext and NullableAttribute are added to the type definition - class")]
+            [TestCase("struct", TestName = "NullableContext and NullableAttribute are added to the type definition - struct")]
             public void NullableContextAndNullableAttributes(string kind)
             {
                 var r = RunCecilifier($"public record {kind} RecordTest;");
                 var cecilifiedCode = r.GeneratedCode.ReadToEnd();
-                Assert.That(cecilifiedCode, Does.Match(@"NullableContext\(1\)"));
-                Assert.That(cecilifiedCode, Does.Match(@"Nullable\(0\)"));
+                Assert.That(cecilifiedCode, Does.Match("""
+                                                       (attr_nullableContext_\d+).ConstructorArguments.Add\(new CustomAttributeArgument\(assembly.MainModule.TypeSystem.Int32, 1\)\);
+                                                       \s+rec_recordTest_\d+.CustomAttributes.Add\(\1\);
+                                                       """));
+
+                Assert.That(cecilifiedCode, Does.Match("""
+                                                       (attr_nullable_\d+).ConstructorArguments.Add\(new CustomAttributeArgument\(assembly.MainModule.TypeSystem.Int32, 0\)\);
+                                                       \s+rec_recordTest_\d+.CustomAttributes.Add\(\1\);
+                                                       """));
             }
         }
     }

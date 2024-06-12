@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.CodeGeneration.Extensions;
@@ -33,6 +34,31 @@ internal class RecordGenerator
         this.record = record;
     }
 
+    public void AddNullabilityAttributesToTypeDefinition(string definitionVar)
+    {
+        // https://github.com/dotnet/roslyn/blob/main/docs/features/nullable-metadata.md
+        const string NullableOblivious = "0";
+        const string NonNullable = "1";
+
+        var nullableAttributeCtor = context.RoslynTypeSystem.ForType<NullableAttribute>()
+                                                        .GetMembers(".ctor")
+                                                        .OfType<IMethodSymbol>()
+                                                        .Single(ctor => ctor.Parameters.Length == 1 && ctor.Parameters[0].Type.SpecialType == SpecialType.System_Byte)
+                                                        .MethodResolverExpression(context);
+        
+        var nullableAttrExps = CecilDefinitionsFactory.Attribute("nullable", definitionVar, context, nullableAttributeCtor, [(context.TypeResolver.Bcl.System.Int32, NullableOblivious)]);
+        context.WriteCecilExpressions(nullableAttrExps);
+        
+        var nullableContextAttributeCtor = context.RoslynTypeSystem.ForType<NullableContextAttribute>()
+                                                        .GetMembers(".ctor")
+                                                        .OfType<IMethodSymbol>()
+                                                        .Single(ctor => ctor.Parameters.Length == 1)
+                                                        .MethodResolverExpression(context);
+        
+        var nullableContextAttrExps = CecilDefinitionsFactory.Attribute("nullableContext", definitionVar, context, nullableContextAttributeCtor, [(context.TypeResolver.Bcl.System.Int32, NonNullable)]);
+        context.WriteCecilExpressions(nullableContextAttrExps);
+    }
+    
     internal void AddSyntheticMembers()
     {
         _recordSymbol = context.SemanticModel.GetDeclaredSymbol(record).EnsureNotNull<ISymbol, ITypeSymbol>();
@@ -907,7 +933,7 @@ internal class RecordGenerator
     private void AddCompilerGeneratedAttributeTo(IVisitorContext context, string memberVariable)
     {
         var compilerGeneratedAttributeCtor = context.RoslynTypeSystem.SystemRuntimeCompilerServicesCompilerGeneratedAttribute.Ctor();
-        var exps = CecilDefinitionsFactory.Attribute(memberVariable, context, compilerGeneratedAttributeCtor.MethodResolverExpression(context));
+        var exps = CecilDefinitionsFactory.Attribute("compilerGenerated", memberVariable, context, compilerGeneratedAttributeCtor.MethodResolverExpression(context));
         context.WriteNewLine();
         context.WriteCecilExpressions(exps);
     }
@@ -923,8 +949,8 @@ internal class RecordGenerator
     
     private void RecordStructIsReadOnlyAttributeHandler(string memberVar)
     {
-        var compilerGeneratedAttributeCtor = context.RoslynTypeSystem.IsReadOnlyAttribute.Ctor();
-        var exps = CecilDefinitionsFactory.Attribute(memberVar, context, compilerGeneratedAttributeCtor.MethodResolverExpression(context));
+        var isReadOnlyAttributeCtor = context.RoslynTypeSystem.IsReadOnlyAttribute.Ctor();
+        var exps = CecilDefinitionsFactory.Attribute("isReadOnly", memberVar, context, isReadOnlyAttributeCtor.MethodResolverExpression(context));
         context.WriteNewLine();
         context.WriteCecilExpressions(exps);
     }
