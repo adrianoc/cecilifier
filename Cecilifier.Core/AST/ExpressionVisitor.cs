@@ -924,6 +924,7 @@ namespace Cecilifier.Core.AST
         public override void VisitRefValueExpression(RefValueExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitCheckedExpression(CheckedExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitSizeOfExpression(SizeOfExpressionSyntax node) => LogUnsupportedSyntax(node);
+        public override void VisitWithExpression(WithExpressionSyntax node) => LogUnsupportedSyntax(node);
 
         private bool TryProcessMethodReferenceInObjectCreationExpression(BaseObjectCreationExpressionSyntax node)
         {
