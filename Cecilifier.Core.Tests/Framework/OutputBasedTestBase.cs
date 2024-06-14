@@ -14,7 +14,7 @@ public record struct OutputBasedTestResult(CecilifyResult GeneralResult, string 
 public class OutputBasedTestBase : CecilifierTestBase
 {
     static readonly int NewLineLength = Environment.NewLine.Length;
-    
+
     protected OutputBasedTestResult CecilifyAndExecute(string code)
     {
         var outputBasedTestFolder = GetTestOutputBaseFolderFor("OutputBasedTests");
