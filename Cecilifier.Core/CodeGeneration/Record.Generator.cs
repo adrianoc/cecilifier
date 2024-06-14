@@ -69,6 +69,7 @@ internal class RecordGenerator
         AddEqualityContractPropertyIfNeeded();
         AddPropertiesFrom();
         PrimaryConstructorGenerator.AddPrimaryConstructor(context, recordTypeDefinitionVariable, record);
+        AddCopyConstructor();
         AddIEquatableEquals();
         AddToStringAndRelatedMethods();
         AddGetHashCodeMethod();
@@ -76,6 +77,71 @@ internal class RecordGenerator
         AddEqualityOperator();
         AddInequalityOperator();
         AddDeconstructMethod();
+    }
+
+    private void AddCopyConstructor()
+    {
+        if (_recordSymbol.IsValueType || record.ParameterList?.Parameters.Count == 0)
+            return;
+        
+        context.WriteComment($"{_recordSymbol.Name} copy constructor");
+        var copyCtorVarToFind = _recordSymbol.GetMembers(".ctor").OfType<IMethodSymbol>().Single(c => c.Parameters.Length == 1 && SymbolEqualityComparer.Default.Equals(c.Parameters[0].Type, c.ContainingType)).AsMethodDefinitionVariable();
+        var found = context.DefinitionVariables.GetMethodVariable(copyCtorVarToFind);
+        var copyCtorVar = found.VariableName;
+
+        if (!found.IsValid)
+        {
+            copyCtorVar = context.Naming.Constructor(record, false);
+            var copyCtor = CecilDefinitionsFactory.Constructor(context, copyCtorVar, _recordSymbol.Name, false, Constants.Cecil.CtorAttributes.AppendModifier("MethodAttributes.Family | MethodAttributes.HideBySig"), [_recordSymbol.Name]);
+            context.WriteCecilExpressions(
+            [
+                copyCtor,
+                ..CecilDefinitionsFactory.Parameter("other", RefKind.None, false, copyCtorVar, context.Naming.Parameter("other"), context.TypeResolver.Resolve(_recordSymbol), Constants.ParameterAttributes.None, (null, false))
+            ]);
+        }
+
+        context.WriteCecilExpression($"{recordTypeDefinitionVariable}.Methods.Add({copyCtorVar});");
+        context.WriteNewLine();
+
+        List<InstructionRepresentation> instructions = new();
+        if (HasBaseRecord(context, _recordSymbol))
+        {
+            instructions.Add(OpCodes.Ldarg_0);
+            instructions.Add(OpCodes.Ldarg_1);
+            var tbf = _recordSymbol.BaseType!.GetMembers(".ctor").OfType<IMethodSymbol>().Single(c => c.Parameters.Length == 1 && SymbolEqualityComparer.Default.Equals(c.Parameters[0].Type, c.ContainingType)).AsMethodDefinitionVariable();
+            var baseCopyCtorVar = context.DefinitionVariables.GetMethodVariable(tbf);
+            instructions.Add(OpCodes.Call.WithOperand(baseCopyCtorVar));
+        }
+        else
+        {
+            var baseCtor = context.RoslynTypeSystem.SystemObject.GetMembers(".ctor").OfType<IMethodSymbol>().Single(c => c.Parameters.Length == 0).MethodResolverExpression(context);
+            instructions.Add(OpCodes.Ldarg_0);
+            instructions.Add(OpCodes.Call.WithOperand(baseCtor));
+        }
+        
+        foreach (var parameter in record.GetUniqueParameters(context))
+        {
+            var paramDefVar = context.DefinitionVariables.GetVariable(Utils.BackingFieldNameForAutoProperty(parameter.Identifier.ValueText()), VariableMemberKind.Field, _recordSymbol.Name);
+            var backingFieldRef = _recordSymbol is INamedTypeSymbol { IsGenericType: true } 
+                    ? $"new FieldReference({paramDefVar.VariableName}.Name, {paramDefVar.VariableName}.FieldType, {context.TypeResolver.Resolve(_recordSymbol)})" 
+                    : paramDefVar.VariableName;
+                
+            instructions.Add(OpCodes.Ldarg_0);
+            
+            // load property backing field for 'other' 
+            instructions.Add(OpCodes.Ldarg_1);
+            instructions.Add(OpCodes.Ldfld.WithOperand(backingFieldRef));
+                
+            // stores to property backing field on 'this' 
+            instructions.Add(OpCodes.Stfld.WithOperand(backingFieldRef));
+        }
+        instructions.Add(OpCodes.Ret);
+        
+        context.WriteCecilExpressions(
+            CecilDefinitionsFactory.MethodBody(context.Naming, Constants.Cecil.InstanceConstructorName, copyCtorVar, context.Naming.ILProcessor(Constants.Cecil.InstanceConstructorName), [], instructions.ToArray())
+        );
+        
+        AddCompilerGeneratedAttributeTo(context, copyCtorVar);
     }
 
     private void AddPropertiesFrom()

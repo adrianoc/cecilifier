@@ -204,6 +204,38 @@ public class RecordTests
                 """,
                 "42,Foo,True");
         }
+        
+        [TestCase("class", true, TestName = "Class")]
+        [TestCase("", true, TestName = "Class (implicit)")]
+        public void CopyConstructor_WhenInheritingFromObject_Works(string kind, bool copyCtorExpected)
+        {
+            AssertOutput($$"""
+                               System.Console.WriteLine(new Foo(42).Duplicate());
+                               
+                               record {{kind}} Foo(int Value)
+                               {
+                                  public Foo Duplicate() => new Foo(this);
+                               }
+                               """,
+                "Foo { Value = 42 }");
+        }
+        
+        [TestCase("class", true, TestName = "Class")]
+        [TestCase("", true, TestName = "Class (implicit)")]
+        public void CopyConstructor_WhenInheritingFromRecord_Works(string kind, bool copyCtorExpected)
+        {
+            AssertOutput($$"""
+                               System.Console.WriteLine(new Derived(42, "Foo").Duplicate());
+                               
+                               record {{kind}} Base(int Value);
+                               
+                               record {{kind}} Derived(int Value, string Name) : Base(Value)
+                               {
+                                  public Derived Duplicate() => new Derived(this);
+                               }
+                               """,
+                "Derived { Value = 42, Name = Foo }");
+        }
     }
 
     [TestFixture]
