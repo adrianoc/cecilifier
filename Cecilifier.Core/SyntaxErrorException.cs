@@ -13,6 +13,8 @@ namespace Cecilifier.Core
             Errors = errors;
         }
 
+        public override string Message => ToString();
+
         public override string ToString()
         {
             return string.Join('\n', Errors.Select(err => err.Message));
