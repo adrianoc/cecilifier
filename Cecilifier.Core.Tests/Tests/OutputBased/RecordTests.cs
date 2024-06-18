@@ -83,6 +83,19 @@ public class RecordTests
                 record Record(int Value);
                 """,
                 "42");
+        }        
+        
+        [Test]
+        public void CyclicReferences()
+        {
+            AssertOutput(
+                """
+                var ri = new Record("Child", new Record("Parent", null));
+                System.Console.WriteLine($"{ri.Name},{ri.Other.Equals(ri.Other)},{ri}"); 
+
+                record Record(string Name, Record Other);
+                """,
+                "Child,True,Record { Name = Child, Other = Record { Name = Parent, Other =  } }");
         }
     }
 

@@ -569,14 +569,23 @@ internal class RecordGenerator
 
         static IMethodSymbol StringBuilderAppendMethodFor(IVisitorContext context, ITypeSymbol type, ITypeSymbol stringBuilderSymbol)
         {
-            // if type is a generic type parameter we should use the `object` overload instead and box.
-            var targetType = type.TypeKind == TypeKind.TypeParameter ? context.RoslynTypeSystem.SystemObject : type;
-            var stringBuilderAppendMethod = stringBuilderSymbol
-                .GetMembers("Append")
-                .OfType<IMethodSymbol>()
-                .SingleOrDefault(m => m.Parameters.Length == 1 && SymbolEqualityComparer.Default.Equals(m.Parameters[0].Type, targetType));
+            var stringBuilderAppendMethod = AppendMethodFor(stringBuilderSymbol, type);
+            if (stringBuilderAppendMethod != null)
+                return stringBuilderAppendMethod;
+
+            // if type is a generic type parameter or a class use the `object` overload instead.
+            return type.TypeKind == TypeKind.TypeParameter || !type.IsValueType 
+                ? AppendMethodFor(stringBuilderSymbol, context.RoslynTypeSystem.SystemObject)  
+                :null;
             
-            return stringBuilderAppendMethod;
+            static IMethodSymbol AppendMethodFor(ITypeSymbol typeSymbol, ITypeSymbol type)
+            {
+                var stringBuilderAppendMethod = typeSymbol
+                    .GetMembers("Append")
+                    .OfType<IMethodSymbol>()
+                    .SingleOrDefault(m => m.Parameters.Length == 1 && SymbolEqualityComparer.Default.Equals(m.Parameters[0].Type, type));
+                return stringBuilderAppendMethod;
+            }
         }
     }
 
