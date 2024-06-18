@@ -36,27 +36,17 @@ internal class RecordGenerator
 
     public void AddNullabilityAttributesToTypeDefinition(string definitionVar)
     {
-        // https://github.com/dotnet/roslyn/blob/main/docs/features/nullable-metadata.md
-        const string NullableOblivious = "0";
-        const string NonNullable = "1";
-
         var nullableAttributeCtor = context.RoslynTypeSystem.ForType<NullableAttribute>()
                                                         .GetMembers(".ctor")
                                                         .OfType<IMethodSymbol>()
                                                         .Single(ctor => ctor.Parameters.Length == 1 && ctor.Parameters[0].Type.SpecialType == SpecialType.System_Byte)
                                                         .MethodResolverExpression(context);
-        
-        var nullableAttrExps = CecilDefinitionsFactory.Attribute("nullable", definitionVar, context, nullableAttributeCtor, [(context.TypeResolver.Bcl.System.Int32, NullableOblivious)]);
+
+        var nullableAwareness = ((int) NullableAwareness.NullableOblivious).ToString();
+        var nullableAttrExps = CecilDefinitionsFactory.Attribute("nullable", definitionVar, context, nullableAttributeCtor, [(context.TypeResolver.Bcl.System.Int32, nullableAwareness)]);
         context.WriteCecilExpressions(nullableAttrExps);
-        
-        var nullableContextAttributeCtor = context.RoslynTypeSystem.ForType<NullableContextAttribute>()
-                                                        .GetMembers(".ctor")
-                                                        .OfType<IMethodSymbol>()
-                                                        .Single(ctor => ctor.Parameters.Length == 1)
-                                                        .MethodResolverExpression(context);
-        
-        var nullableContextAttrExps = CecilDefinitionsFactory.Attribute("nullableContext", definitionVar, context, nullableContextAttributeCtor, [(context.TypeResolver.Bcl.System.Int32, NonNullable)]);
-        context.WriteCecilExpressions(nullableContextAttrExps);
+
+        AddNullableContextAttributeTo(definitionVar, NullableAwareness.NonNullable);
     }
     
     internal void AddSyntheticMembers()
@@ -245,6 +235,9 @@ internal class RecordGenerator
         context.WriteCecilExpressions(bodyExps);
         context.WriteCecilExpression($"{recordTypeDefinitionVariable}.Methods.Add({equalsOperatorMethodVar});");
         AddCompilerGeneratedAttributeTo(context, equalsOperatorMethodVar);
+        
+        if (!_recordSymbol.IsValueType)
+            AddNullableContextAttributeTo(equalsOperatorMethodVar, NullableAwareness.Nullable);
     }
     
     private void AddInequalityOperator()
@@ -297,6 +290,8 @@ internal class RecordGenerator
         context.WriteCecilExpressions(bodyExps);
         context.WriteCecilExpression($"{recordTypeDefinitionVariable}.Methods.Add({inequalityOperatorMethodVar});");
         AddCompilerGeneratedAttributeTo(context, inequalityOperatorMethodVar);
+        if (!_recordSymbol.IsValueType)
+            AddNullableContextAttributeTo(inequalityOperatorMethodVar, NullableAwareness.Nullable);
     }
 
     private void AddGetHashCodeMethod()
@@ -911,6 +906,7 @@ internal class RecordGenerator
         context.WriteCecilExpression($"{recordTypeDefinitionVariable}.Methods.Add({equalsObjectOverloadMethodVar});");
         AddCompilerGeneratedAttributeTo(context, equalsObjectOverloadMethodVar);
         AddIsReadOnlyAttributeTo(context, equalsObjectOverloadMethodVar);
+        AddNullableContextAttributeTo(equalsObjectOverloadMethodVar, _recordSymbol.IsValueType ? NullableAwareness.NullableOblivious : NullableAwareness.Nullable);
         
         if (!HasBaseRecord(record))
             return;
@@ -945,6 +941,7 @@ internal class RecordGenerator
         context.WriteCecilExpression($"{recordTypeDefinitionVariable}.Methods.Add({equalsBaseOverloadMethodVar});");
         AddCompilerGeneratedAttributeTo(context, equalsBaseOverloadMethodVar);
         AddIsReadOnlyAttributeTo(context, equalsBaseOverloadMethodVar);
+        AddNullableContextAttributeTo(equalsBaseOverloadMethodVar, _recordSymbol.IsValueType ? NullableAwareness.NullableOblivious : NullableAwareness.Nullable);
     }
 
     private void AddDeconstructMethod()
@@ -1070,6 +1067,19 @@ internal class RecordGenerator
         bool Has2SystemTypeParameters(IMethodSymbol candidate) => 
             candidate.Parameters.Length == 2
             && SymbolEqualityComparer.Default.Equals(candidate.Parameters[0].Type, candidate.Parameters[1].Type);
+    }
+    
+    private void AddNullableContextAttributeTo(string memberVar, NullableAwareness value)
+    {
+        var nullableContextAttributeCtor = context.RoslynTypeSystem.ForType<NullableContextAttribute>()
+            .GetMembers(".ctor")
+            .OfType<IMethodSymbol>()
+            .Single(ctor => ctor.Parameters.Length == 1)
+            .MethodResolverExpression(context);
+
+        var nullableContextValue = ((int)value).ToString();
+        var nullableContextAttrExps = CecilDefinitionsFactory.Attribute("nullableContext", memberVar, context, nullableContextAttributeCtor, [(context.TypeResolver.Bcl.System.Int32, nullableContextValue)]);
+        context.WriteCecilExpressions(nullableContextAttrExps);
     }
     
     private void InitializeEqualityComparerMemberCache()
