@@ -153,5 +153,27 @@ public class PropertyTests : CecilifierUnitTestBase
                                                \s+var l_set_\d+ = new MethodDefinition\("set_Value", MethodAttributes.Public.+, .+TypeSystem.Void\);
                                                """));
     }
+    
+    [Test]
+    public void AttributeTargetingFieldOfNonAutomaticProperties_DoesNot_EmitAttribute()
+    {
+        var code = """
+                   using System;
+                   class Foo
+                   {
+                       [field:Obsolete] // This is invalid; C# compiler emits a warning.
+                       public int Value
+                       {
+                           private get => _v;
+                           set => _v = 1;
+                       }
+                   
+                       private int _v; // Not important
+                   }
+                   """;
 
+        var result = RunCecilifier(code);
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+        Assert.That(cecilifiedCode, Does.Not.Match("""\s+\.CustomAttributes.Add\(attr_obsolete_\d+\);"""));
+    }
 }
