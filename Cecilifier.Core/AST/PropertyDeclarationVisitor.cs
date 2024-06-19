@@ -82,7 +82,9 @@ namespace Cecilifier.Core.AST
             AddCecilExpression($"{propertyDeclaringTypeVar}.Properties.Add({propDefVar});");
 
             HandleAttributesInMemberDeclaration(node.AttributeLists, TargetDoesNotMatch, SyntaxKind.FieldKeyword, propDefVar); // Normal property attrs
-            HandleAttributesInMemberDeclaration(node.AttributeLists, TargetMatches, SyntaxKind.FieldKeyword, backingFieldVar ?? string.Empty); // [field: attr], i.e, attr belongs to the backing field.
+            // Attributes targeting backing field is only valid on auto-properties.
+            if (node.AccessorList?.Accessors.All(a => a.Body == null && a.ExpressionBody == null) == true)
+                HandleAttributesInMemberDeclaration(node.AttributeLists, TargetMatches, SyntaxKind.FieldKeyword, backingFieldVar ?? string.Empty); // [field: attr], i.e, attr belongs to the backing field.
         }
 
         private bool PropertyAlreadyProcessed(BasePropertyDeclarationSyntax node)
