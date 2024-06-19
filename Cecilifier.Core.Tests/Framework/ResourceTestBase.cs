@@ -72,10 +72,6 @@ namespace Cecilifier.Core.Tests.Framework
             var cecilifiedAssemblyPath = Path.Combine(testsFolder, Path.GetFileName(resourceName) + ".dll");
             var resourceCompiledAssemblyPath = CompileExpectedTestAssembly(cecilifiedAssemblyPath, options.BuildType, ReadToEnd(options.ToBeCecilified));
 
-            Console.WriteLine();
-            Console.WriteLine("Compiled from res        : {0}", resourceCompiledAssemblyPath);
-            Console.WriteLine("Generated from Cecilifier: {0}", cecilifiedAssemblyPath);
-
             AssertResourceTest(testsFolder, resourceCompiledAssemblyPath, options);
         }
 
@@ -84,6 +80,10 @@ namespace Cecilifier.Core.Tests.Framework
             var cecilifyResult = CecilifyAndExecute(options.ToBeCecilified, testBasePath);
             CompareAssemblies(expectedAssemblyPath, cecilifyResult.CecilifiedOutputAssemblyFilePath, options.AssemblyComparison, options.InstructionComparer);
             VerifyAssembly(cecilifyResult.CecilifiedOutputAssemblyFilePath, expectedAssemblyPath, options);
+            
+            Console.WriteLine();
+            Console.WriteLine($"Compiled from res        : {expectedAssemblyPath}");
+            Console.WriteLine($"Generated from Cecilifier: {cecilifyResult.CecilifiedOutputAssemblyFilePath}");
         }
 
         private void AssertResourceTest(string testBasePath, string expectedAssemblyPath, Stream tbc)
