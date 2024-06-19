@@ -23,12 +23,13 @@ namespace Cecilifier.Core.Extensions
         /// 1. in, `Foo f = new NS.Foo();`, `Foo` : Foo f => Unqualified, NS.Foo => Qualified
         /// 2. `o.field ?? otherField`, otherField => Unqualified, `field` in `o.field` => Qualified
         /// </remarks>
-        public static bool IsQualifiedAccessToTypeOrMember(this SimpleNameSyntax node) => node.Parent switch
+        public static bool IsMemberAccessThroughImplicitThis(this SyntaxNode node) => node.Parent switch
         {
-            MemberAccessExpressionSyntax mae => mae.Name == node,
-            MemberBindingExpressionSyntax mbe => mbe.Name == node, // A MemberBindExpression represents `?.` in the null conditional operator, for instance, `o?.member`
-            NameColonSyntax => true, // A NameColon syntax represents the `Length: 42` in an expression like `o as string { Length: 42 }`. In this case, `Length` is equivalent to `o.Length`
-            _ => false
+            MemberAccessExpressionSyntax mae => mae.Name != node && mae.IsMemberAccessThroughImplicitThis(),
+            MemberBindingExpressionSyntax mbe => mbe.Name != node, // A MemberBindExpression represents `?.` in the null conditional operator, for instance, `o?.member`
+            NameColonSyntax => false, // A NameColon syntax represents the `Length: 42` in an expression like `o as string { Length: 42 }`. In this case, `Length` is equivalent to `o.Length`
+            ExpressionColonSyntax => false, // `o as Uri { Host.Length : 10 }`. Parent of `Host.Length` (which is equivalent to `o.Host.Length`) is an ExpressionColonSyntax
+            _ => true
         };
 
         /// <summary>

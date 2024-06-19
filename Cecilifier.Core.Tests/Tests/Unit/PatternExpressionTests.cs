@@ -119,11 +119,36 @@ public class IsPatternExpressionTests : CecilifierUnitTestBase
         { TestName = "Multiple Properties" };
 
         // Issue #281
-        // yield return new TestCaseData(
-        //         "void M(object o) { var r = o is System.Uri { Host.Length: 10 }; }",
-        //         "TODO: //DEFINE EXPECTATION")
-        //     {
-        //         TestName = "Property (MemberAccessExpression)"
-        //     };
+        yield return new TestCaseData(
+                "void M(object o) { var r = o is System.Uri { Host.Length: 10 }; }",
+                """
+                //var r = o is System.Uri { Host.Length: 10 };
+                \s+var l_r_\d+ = new VariableDefinition\(assembly.MainModule.TypeSystem.Boolean\);
+                \s+m_M_\d+.Body.Variables.Add\(l_r_\d+\);
+                \s+il_M_\d+.Emit\(OpCodes.Ldarg_1\);
+                \s+var l_tmp_\d+ = new VariableDefinition\(assembly.MainModule.ImportReference\(typeof\(System.Uri\)\)\);
+                \s+m_M_\d+.Body.Variables.Add\(l_tmp_\d+\);
+                \s+var ldc_I4_0_\d+ = il_M_\d+.Create\(OpCodes.Ldc_I4_0\);
+                \s+var nop_\d+ = il_M_\d+.Create\(OpCodes.Nop\);
+                (\s+il_M_\d+\.Emit\(OpCodes\.)Isinst, assembly.MainModule.ImportReference\(typeof\(System.Uri\)\)\);
+                \1Stloc, l_tmp_\d+\);
+                \1Ldloc, l_tmp_\d+\);
+                \1Brfalse_S, ldc_I4_0_\d+\);
+                \1Ldloc, l_tmp_\d+\);
+                \1Callvirt, .+ImportReference\(.+ResolveMethod\(typeof\(System.Uri\), "get_Host",.+\)\)\);
+                \1Callvirt, .+ImportReference\(.+ResolveMethod\(typeof\(System.String\), "get_Length",.+\)\)\);
+                \1Ldc_I4, 10\);
+                \1Bne_Un, ldc_I4_0_\d+\);
+                \1Ldc_I4_1\);
+                \1Br_S, nop_\d+\);
+                \s+il_M_\d+.Append\(ldc_I4_0_\d+\);
+                \s+il_M_\d+.Append\(nop_\d+\);
+                \1Stloc, l_r_\d+\);
+                \1Ret\);
+                \s+//End of local function.
+                """)
+            {
+                TestName = "Property (MemberAccessExpression)"
+            };
     }
 }
