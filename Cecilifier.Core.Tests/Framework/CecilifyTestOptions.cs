@@ -15,9 +15,9 @@ public struct IgnoredKnownIssue
 
     public static implicit operator bool(IgnoredKnownIssue s) => s._failTests;
 }
-public ref struct ResourceTestOptions
+public ref struct CecilifyTestOptions
 {
-    public ResourceTestOptions()
+    public CecilifyTestOptions()
     {
         BuildType = BuildType.Dll;
         AssemblyComparison = new StrictAssemblyDiffVisitor();
@@ -28,6 +28,8 @@ public ref struct ResourceTestOptions
     internal IAssemblyDiffVisitor AssemblyComparison { get; init; }
     internal Func<Instruction, Instruction, bool?> InstructionComparer { get; init; }
     internal Stream ToBeCecilified { get; set; }
+    
+    internal string CecilifiedCode { get; set; }
     internal BuildType BuildType { get; init; }
     internal bool FailOnAssemblyVerificationErrors { get; init; }
     internal string IgnoredILErrors { get; set; }

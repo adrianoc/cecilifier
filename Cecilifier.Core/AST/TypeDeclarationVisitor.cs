@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Cecilifier.Core.CodeGeneration;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Misc;
@@ -55,6 +56,20 @@ namespace Cecilifier.Core.AST
                 base.VisitStructDeclaration(node);
                 EnsureCurrentTypeHasADefaultCtor(node, definitionVar);
             }
+        }
+
+        public override void VisitRecordDeclaration(RecordDeclarationSyntax node)
+        {
+            using var _ = LineInformationTracker.Track(Context, node);
+            var definitionVar = Context.Naming.Type(node);
+            var recordSymbol = Context.SemanticModel.GetDeclaredSymbol(node).EnsureNotNull();
+            using var variable = Context.DefinitionVariables.WithCurrent(recordSymbol.ContainingSymbol.FullyQualifiedName(false), node.Identifier.ValueText, VariableMemberKind.Type, definitionVar);
+            HandleTypeDeclaration(node, definitionVar);
+            base.VisitRecordDeclaration(node);
+
+            RecordGenerator generator = new(Context, definitionVar, node);
+            generator.AddNullabilityAttributesToTypeDefinition(definitionVar);
+            generator.AddSyntheticMembers();
         }
 
         public override void VisitEnumDeclaration(EnumDeclarationSyntax node)
@@ -180,7 +195,7 @@ namespace Cecilifier.Core.AST
         private static void AddTypeDefinition(IVisitorContext context, string typeDeclarationVar, ITypeSymbol typeSymbol, string typeModifiers, IEnumerable<TypeParameterSyntax> typeParameters, IEnumerable<TypeParameterSyntax> outerTypeParameters)
         {
             context.WriteNewLine();
-            context.WriteComment($"{typeSymbol.TypeKind} : {typeSymbol.Name}");
+            context.WriteComment($"{(typeSymbol.IsRecord ? "Record ": string.Empty)}{typeSymbol.TypeKind} : {typeSymbol.Name}");
 
             typeParameters ??= Array.Empty<TypeParameterSyntax>();
 
@@ -194,7 +209,7 @@ namespace Cecilifier.Core.AST
                 BaseTypeFor(context, typeSymbol),
                 typeSymbol.ContainingType?.Name,
                 isStructWithNoFields,
-                typeSymbol.Interfaces.Select(itf => context.TypeResolver.Resolve(itf)),
+                typeSymbol.Interfaces,
                 typeParameters,
                 outerTypeParameters);
 

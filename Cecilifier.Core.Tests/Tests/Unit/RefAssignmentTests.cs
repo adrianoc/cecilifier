@@ -112,7 +112,7 @@ public class RefAssignmentTests : CecilifierUnitTestBase
                                                //other\[0\] = new S\(\);
                                                (\s+il_doIt_\d+\.Emit\(OpCodes\.)Ldarg_1\);
                                                \1Ldc_I4, 0\);
-                                               \1Callvirt, m_get_9\);
+                                               \1Callvirt, m_get_\d+\);
                                                \1Newobj, ctor_S_1\);
                                                \1Stobj, st_S_0\);
                                                \1Ret\);

@@ -168,7 +168,7 @@ public class StructSpecificTests : CecilifierUnitTestBase
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
         Assert.That(cecilifiedCode, Does.Match(
              """
-             (?://return new Test\(\))?;
+             \s+//(?:return )?new Test\(\);?
              .+var (l_vt_\d+) = new VariableDefinition\((st_test_\d+)\);
              .+m_M_3.Body.Variables.Add\(\1\);
              (.+il_M_\d+.Emit\(OpCodes\.)Ldloca_S, \1\);
@@ -220,6 +220,7 @@ public class StructSpecificTests : CecilifierUnitTestBase
               //Parameters of 'S TernaryOperators\(int i\) => i == 2 \? new S\(\): new S\(\);'
               \s+var p_i_4 = new ParameterDefinition\("i", ParameterAttributes.None, assembly.MainModule.TypeSystem.Int32\);
               \s+m_ternaryOperators_2.Parameters.Add\(p_i_4\);
+              \s+//i == 2 \? new S\(\): new S\(\)
               \s+var lbl_conditionEnd_5 = il_ternaryOperators_3.Create\(OpCodes.Nop\);
               \s+var lbl_whenFalse_6 = il_ternaryOperators_3.Create\(OpCodes.Nop\);
               (\s+il_ternaryOperators_\d+\.Emit\(OpCodes\.)Ldarg_1\);
@@ -281,22 +282,22 @@ public class StructSpecificTests : CecilifierUnitTestBase
               }
               """,
               """
-              (il_ternaryOperators_\d+\.Emit\(OpCodes\.)Brfalse_S, lbl_whenFalse_12\);
+              (il_ternaryOperators_\d+\.Emit\(OpCodes\.)Brfalse_S, lbl_whenFalse_\d+\);
               \s+var (?<firstVar>l_vt_\d+) = new VariableDefinition\(st_S_0\);
-              \s+m_ternaryOperators_8.Body.Variables.Add\(\k<firstVar>\);
+              \s+m_ternaryOperators_\d+.Body.Variables.Add\(\k<firstVar>\);
               (\s+\1)Ldloca_S, \k<firstVar>\);
               \2Initobj, st_S_0\);
               \2Ldloca, \k<firstVar>\);
-              \2Call, m_get_2\);
-              \2Br_S, lbl_conditionEnd_11\);
-              \s+il_ternaryOperators_9.Append\(lbl_whenFalse_12\);
+              \2Call, m_get_\d+\);
+              \2Br_S, lbl_conditionEnd_\d+\);
+              \s+il_ternaryOperators_\d+.Append\(lbl_whenFalse_\d+\);
               \s+var (?<secondVar>l_vt_\d+) = new VariableDefinition\(st_S_0\);
-              \s+m_ternaryOperators_8.Body.Variables.Add\(\k<secondVar>\);
+              \s+m_ternaryOperators_\d+.Body.Variables.Add\(\k<secondVar>\);
               \2Ldloca_S, \k<secondVar>\);
               \2Initobj, st_S_0\);
               \2Ldloca, \k<secondVar>\);
               \2Call, m_get_2\);
-              \s+il_ternaryOperators_9.Append\(lbl_conditionEnd_11\);
+              \s+il_ternaryOperators_\d+.Append\(lbl_conditionEnd_\d+\);
               \2Ret\);
               """,
               TestName = "Mae/Mae, introduces two variables")]
@@ -312,20 +313,20 @@ public class StructSpecificTests : CecilifierUnitTestBase
               """,
               """
               var (?<firstVar>l_vt_\d+) = new VariableDefinition\((?<structType>st_S_\d+)\);
-              \s+m_ternaryOperators_11.Body.Variables.Add\(\k<firstVar>\);
+              \s+m_ternaryOperators_\d+.Body.Variables.Add\(\k<firstVar>\);
               (\s+il_ternaryOperators_\d+\.Emit\(OpCodes\.)Ldloca_S, \k<firstVar>\);
               \1Initobj, \k<structType>\);
               \1Ldloc, \k<firstVar>\);
-              \1Br_S, lbl_conditionEnd_14\);
-              \s+il_ternaryOperators_12.Append\(lbl_whenFalse_15\);
+              \1Br_S, lbl_conditionEnd_\d+\);
+              \s+il_ternaryOperators_\d+.Append\(lbl_whenFalse_\d+\);
               \1Ldarg_0\);
               \s+var (?<secondVar>l_vt_\d+) = new VariableDefinition\(\k<structType>\);
-              \s+m_ternaryOperators_11.Body.Variables.Add\(\k<secondVar>\);
+              \s+m_ternaryOperators_\d+.Body.Variables.Add\(\k<secondVar>\);
               \1Ldloca_S, \k<secondVar>\);
               \1Initobj, \k<structType>\);
               \1Ldloc, \k<secondVar>\);
-              \1Call, m_M_8\);
-              \s+il_ternaryOperators_12.Append\(lbl_conditionEnd_14\);
+              \1Call, m_M_\d+\);
+              \s+il_ternaryOperators_\d+.Append\(lbl_conditionEnd_\d+\);
               \1Ret\);
               """,
               TestName = "Branch/Argument, introduces local variable")]
@@ -340,23 +341,23 @@ public class StructSpecificTests : CecilifierUnitTestBase
               }
               """,
               """
-              (il_ternaryOperators_\d+\.Emit\(OpCodes\.)Brfalse_S, lbl_whenFalse_16\);
+              (il_ternaryOperators_\d+\.Emit\(OpCodes\.)Brfalse_S, lbl_whenFalse_\d+\);
               \s+var (l_vt_\d+) = new VariableDefinition\(st_S_0\);
-              \s+m_ternaryOperators_11.Body.Variables.Add\(\2\);
+              \s+m_ternaryOperators_\d+.Body.Variables.Add\(\2\);
               (\s+\1)Ldloca_S, \2\);
               \3Initobj, st_S_0\);
               \3Ldloc, \2\);
-              \3Br_S, lbl_conditionEnd_15\);
-              \s+il_ternaryOperators_12.Append\(lbl_whenFalse_16\);
+              \3Br_S, lbl_conditionEnd_\d+\);
+              \s+il_ternaryOperators_\d+.Append\(lbl_whenFalse_\d+\);
               \3Ldarg_0\);
               \s+var (l_vt_\d+) = new VariableDefinition\(st_S_0\);
-              \s+m_ternaryOperators_11.Body.Variables.Add\(\4\);
+              \s+m_ternaryOperators_\d+.Body.Variables.Add\(\4\);
               \3Ldloca_S, \4\);
               \3Initobj, st_S_0\);
               \3Ldloc, \4\);
-              \3Call, m_M_8\);
-              \s+il_ternaryOperators_12.Append\(lbl_conditionEnd_15\);
-              \3Stloc, l_l_14\);
+              \3Call, m_M_\d+\);
+              \s+il_ternaryOperators_\d+.Append\(lbl_conditionEnd_\d+\);
+              \3Stloc, l_l_\d+\);
               """,
               TestName = "Branch/Argument, in variable declaration, introduces local variable")]
     
@@ -370,14 +371,14 @@ public class StructSpecificTests : CecilifierUnitTestBase
               """,
               """
               var (?<conditionVar>l_vt_\d+) = new VariableDefinition\(st_S_0\);
-              \s+m_ternaryOperators_8.Body.Variables.Add\(\k<conditionVar>\);
+              \s+m_ternaryOperators_\d+.Body.Variables.Add\(\k<conditionVar>\);
               (\s+il_ternaryOperators_\d+\.Emit\(OpCodes\.)Ldloca_S, \k<conditionVar>\);
               \1Initobj, st_S_0\);
               \1Ldloca, \k<conditionVar>\);
               \1Call, m_get_2\);
               \1Ldc_I4, 2\);
               \1Ceq\);
-              \1Brfalse_S, lbl_whenFalse_12\);
+              \1Brfalse_S, lbl_whenFalse_\d+\);
               """,
               TestName = "Target of a member access in condition")]
     

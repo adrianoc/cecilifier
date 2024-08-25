@@ -35,6 +35,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
         [TestCase(ElementKind.Parameter, "changed_param1", "Parameter_param1")]
         [TestCase(ElementKind.Property, "changed_prop1", "Property_prop1")]
         [TestCase(ElementKind.Struct, "changed_S", "Struct_S")]
+        [TestCase(ElementKind.Record, "changed_R", "Record_S")]
         [TestCase(ElementKind.StaticConstructor, "changed_foo", "StaticConstructor_foo")]
         [TestCase(ElementKind.GenericInstance, "changed_gen", "GenericInstance_gen")]
         [TestCase(ElementKind.GenericParameter, "changed_gP", "GenericParameter_gP")]
@@ -42,7 +43,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
         [TestCase(ElementKind.LocalVariable, "changed_local1", "LocalVariable_local1")]
         public void ElementKind_Is_Used(ElementKind elementKind, string expected, string notExpected)
         {
-            const string source = "using System; public delegate void Del(); class Foo { static Foo() {} public Foo() {} void Gen<GP>() {} [Obsolete] int Obsolete; event Action Evt; public void Bar(int param1) { int local1 = 0; if (param1 == local1) {} Gen<int>();} int field; int Prop1 {get;set;} } struct S {} enum E {} interface I {}";
+            const string source = "using System; public record R; public delegate void Del(); class Foo { static Foo() {} public Foo() {} void Gen<GP>() {} [Obsolete] int Obsolete; event Action Evt; public void Bar(int param1) { int local1 = 0; if (param1 == local1) {} Gen<int>();} int field; int Prop1 {get;set;} } struct S {} enum E {} interface I {}";
             prefixes[elementKind] = "changed";
 
             var nameStrategy = new DefaultNameStrategy(NamingOptions.All, prefixes);
@@ -68,7 +69,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
                 return;
             }
 
-            const string source = "using System; public delegate void TestDelegate(); class TestClass { static TestClass() {} public TestClass() {} void Gen<TestGenericParameter>() {} [Obsolete] int TestAttribute; event Action TestEvent; public void Bar(int TestParameter) { int local1 = 0; if (TestParameter == local1) {} Gen<int>(); } int TestField; int TestProperty {get;set;} } struct TestStruct {} enum TestEnum {} interface TestInterface {}";
+            const string source = "using System; public delegate void TestDelegate(); class TestClass { static TestClass() {} public TestClass() {} void Gen<TestGenericParameter>() {} [Obsolete] int TestAttribute; event Action TestEvent; public void Bar(int TestParameter) { int local1 = 0; if (TestParameter == local1) {} Gen<int>(); } int TestField; int TestProperty {get;set;} } struct TestStruct {} enum TestEnum {} interface TestInterface {} record TestRecord;";
             var namingOptions = NamingOptions.All;
             var casingValidation = "a-z";
 

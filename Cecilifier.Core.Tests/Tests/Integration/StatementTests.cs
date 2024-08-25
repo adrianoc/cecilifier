@@ -10,7 +10,7 @@ namespace Cecilifier.Core.Tests.Integration
         [TestCase("System.Void FixedStatementTest::Test()", TestName = "Local")]
         public void TestFixedStatement(string methodToVerify)
         {
-            var options = new ResourceTestOptions()
+            var options = new CecilifyTestOptions()
             {
                 ResourceName = $"Statements/FixedStatement{TestContext.CurrentContext.Test.Name}",
                 IgnoredILErrors = "ExpectedNumericType" // looks like harmless (not sure why ilverify complains)

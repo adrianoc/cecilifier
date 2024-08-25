@@ -13,7 +13,7 @@ public class StackallocTests : ResourceTestBase
     [TestCase("CustomValueType", TestName = "CustomValueType")]
     public void TestStackalloc(string testFile, bool hasExplicitExpectations = false)
     {
-        var options = new ResourceTestOptions()
+        var options = new CecilifyTestOptions()
         {
             ResourceName = $"Expressions/Stackalloc/{testFile}",
             IgnoredILErrors = "Unverifiable|UnmanagedPointer|StackByRef" //https://github.com/adrianoc/cecilifier/issues/227

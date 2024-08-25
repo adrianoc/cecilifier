@@ -100,7 +100,7 @@ public static class Outer
                     }");
 
             var cecilifiedCode = result.GeneratedCode.ReadToEnd();
-            Assert.That(cecilifiedCode, Does.Match("il_method_21.Emit\\(OpCodes.Callvirt, .*typeof\\(System.Diagnostics.Process\\), \"Kill\".+"), cecilifiedCode);
+            Assert.That(cecilifiedCode, Does.Match("""il_method_\d+.Emit\(OpCodes.Callvirt, .*typeof\(System.Diagnostics.Process\), "Kill".+"""), cecilifiedCode);
             Assert.That(cecilifiedCode, Does.Match(@"il_property_\d+.Emit\(OpCodes.Callvirt, .+typeof\(System.Diagnostics.Process\), ""get_ProcessName"".+"), cecilifiedCode);
         }
 
@@ -208,7 +208,7 @@ public static class Outer
             "System.DateTime d = new();",
             """
             (il_topLevelMain_\d+).Emit\(OpCodes.Ldloca_S, l_d_\d+\);
-            \s+\1.Emit\(OpCodes.Initobj, assembly.MainModule.TypeSystem.DateTime\);
+            \s+\1.Emit\(OpCodes.Initobj, .+ImportReference\(typeof\(System.DateTime\)\)\);
             """,
             TestName = "Value Type")]
 
@@ -244,6 +244,26 @@ public static class Outer
             foreach(var expected in expectations)
             {
                 Assert.That(cecilifiedCode, Does.Match(expected));
+            }
+        }
+        
+        public class RecordTests : CecilifierUnitTestBase
+        {
+            [TestCase("class", TestName = "NullableContext and NullableAttribute are added to the type definition - class")]
+            [TestCase("struct", TestName = "NullableContext and NullableAttribute are added to the type definition - struct")]
+            public void NullableContextAndNullableAttributes(string kind)
+            {
+                var r = RunCecilifier($"public record {kind} RecordTest;");
+                var cecilifiedCode = r.GeneratedCode.ReadToEnd();
+                Assert.That(cecilifiedCode, Does.Match("""
+                                                       (attr_nullableContext_\d+).ConstructorArguments.Add\(new CustomAttributeArgument\(assembly.MainModule.TypeSystem.Int32, 1\)\);
+                                                       \s+rec_recordTest_\d+.CustomAttributes.Add\(\1\);
+                                                       """));
+
+                Assert.That(cecilifiedCode, Does.Match("""
+                                                       (attr_nullable_\d+).ConstructorArguments.Add\(new CustomAttributeArgument\(assembly.MainModule.TypeSystem.Int32, 0\)\);
+                                                       \s+rec_recordTest_\d+.CustomAttributes.Add\(\1\);
+                                                       """));
             }
         }
     }

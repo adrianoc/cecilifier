@@ -3,25 +3,27 @@
 // Keep it in sync with ElementKind.cs
 const ElementKind =
 {
-    Class : 0,
-    Struct : 1,
-    Interface : 2,
-    Enum : 3,
-    Method: 4,
-    Delegate: 5,
-    Property: 6,
-    Field: 7,
-    Event: 8,
-    Constructor: 9,
-    StaticConstructor: 10,
-    LocalVariable: 11,
-    Parameter: 12,
-    MemberReference: 13,
-    Label: 14,
-    Attribute: 15,
-    IL: 16,
-    GenericParameter: 17,
-    GenericInstance: 18
+    None: 0,
+    Class : 1,
+    Struct : 2,
+    Record: 3,
+    Interface : 4,
+    Enum : 5,
+    Method: 6,
+    Delegate: 7,
+    Property: 8,
+    Field: 9,
+    Event: 10,
+    Constructor: 11,
+    StaticConstructor: 12,
+    LocalVariable: 13,
+    Parameter: 14,
+    MemberReference: 15,
+    Label: 16,
+    Attribute: 17,
+    IL: 18,
+    GenericParameter: 19,
+    GenericInstance: 20
 };
 
 // Keep it in sync with NameOptions.cs
@@ -231,7 +233,7 @@ class SettingsManager {
     }
 
     toTransportObject() {
-        let namingOptionsValue = 0;        
+        let namingOptionsValue = 0;
         this.namingOptions.forEach((prop, key) => { if (prop.getter()) namingOptionsValue = namingOptionsValue | key; });
 
         return {

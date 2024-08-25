@@ -72,21 +72,29 @@ function cecilifyFromSnippet(counter) {
     }
 }
 
-function showListOfLocalyStoredSnippets() {
+function showListOfLocallyStoredSnippets() {
     let snippetNames = [];
     for(let i = 0; i < window.localStorage.length; i++) {
         let key = window.localStorage.key(i);
         if (key.startsWith(saved_snippet_prefix)) {
             let snippetName= key.substring(saved_snippet_prefix.length); 
-            snippetNames.push(`<a href="${snippetName}" class="shortcut">${snippetName}</a>`);
+            snippetNames.push(`<div id="${snippetName}-to-remove" class="shortcut"><a href="#" title="Removes ${snippetName}." onclick="removeSnippet('${snippetName}');"><i class="fa-solid fa-trash-can"></i></a> <a href="${snippetName}" title="Loads ${snippetName}.">${snippetName}</a><br /></div>`);
         }
     }
     
     SnackBar({
-        message: `<b>List of saved snippets</b><br /><br/>${snippetNames.reduce( (acc, current) => `${acc}<br />${current}`)}`,
+        message: `<b>Saved snippets</b><br /><br/>${snippetNames.reduce( (acc, current) => `${acc}${current}`)}`,
         dismissible: true,
         status: "Info",
         timeout: false,
-        icon: "Info"
+        icon: "!"
     });
+}
+
+function removeSnippet(snippetName) {
+    if (confirm(`Are you sure you want to remove the snippet '${snippetName}' ?`)) {
+        window.localStorage.removeItem(saved_snippet_prefix + snippetName);
+        let toBeRemoved = document.getElementById(`${snippetName}-to-remove`);
+        toBeRemoved.parentNode.removeChild(toBeRemoved);
+    }
 }

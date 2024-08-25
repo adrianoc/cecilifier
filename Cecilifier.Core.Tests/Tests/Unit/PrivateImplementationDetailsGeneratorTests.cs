@@ -108,10 +108,14 @@ public class PrivateImplementationDetailsGeneratorTests
         found = context.DefinitionVariables.GetVariablesOf(VariableMemberKind.Method).ToArray();
         Assert.That(found.Length, Is.EqualTo(1));
         Assert.That(found[0].MemberName, Is.EqualTo("InlineArrayAsSpan"));
-        
-        Assert.That(context.Output, Does.Match("""var m_inlineArrayAsSpan_\d+ = new MethodDefinition\("InlineArrayAsSpan", MethodAttributes.Assembly | MethodAttributes.Static | MethodAttributes.HideBySig, assembly.MainModule.TypeSystem.Void\);"""));
-        Assert.That(context.Output, Does.Match("""m_inlineArrayAsSpan_\d+.Parameters.Add\(new ParameterDefinition\("buffer", ParameterAttributes.None, gp_tBuffer_\d+.MakeByReferenceType\(\)\)\);"""));
-        Assert.That(context.Output, Does.Match("""m_inlineArrayAsSpan_\d+.Parameters.Add\(new ParameterDefinition\("length", ParameterAttributes.None, assembly.MainModule.TypeSystem.Int32\)\);"""));
+
+        Assert.That(context.Output,
+            Does.Match(
+                """var m_inlineArrayAsSpan_\d+ = new MethodDefinition\("InlineArrayAsSpan", MethodAttributes.Assembly | MethodAttributes.Static | MethodAttributes.HideBySig, assembly.MainModule.TypeSystem.Void\);"""));
+        Assert.That(context.Output, Does.Match("""var p_buffer_\d+ = new ParameterDefinition\("buffer", ParameterAttributes.None, gp_tBuffer_\d+.MakeByReferenceType\(\)\);"""));
+        Assert.That(context.Output, Does.Match("""m_inlineArrayAsSpan_\d+.Parameters.Add\(p_buffer_\d+\);"""));
+        Assert.That(context.Output, Does.Match("""var p_length_\d+ = new ParameterDefinition\("length", ParameterAttributes.None, assembly.MainModule.TypeSystem.Int32\);"""));
+        Assert.That(context.Output, Does.Match("""m_inlineArrayAsSpan_\d+.Parameters.Add\(p_length_\d+\);"""));
     }
     
     static CSharpCompilation CompilationFor(string code)

@@ -16,7 +16,7 @@ public class ArrayTests : CecilifierUnitTestBase
     [TestCase("long", Code.Ldelem_I8)]
     [TestCase("float", Code.Ldelem_R4)]
     [TestCase("double", Code.Ldelem_R8)]
-    [TestCase("System.DateTime", Code.Ldelem_Any, ", assembly.MainModule.TypeSystem.DateTime")]
+    [TestCase("System.DateTime", Code.Ldelem_Any, @", .+ImportReference\(typeof\(System.DateTime\)\)")]
     public void TestAccessStringArray(string elementType, Code code, string operand = "")
     {
         var result = RunCecilifier($@"struct S {{}} class C {{ {elementType} M({elementType} []a) => a[2]; }}");
@@ -41,7 +41,7 @@ public class ArrayTests : CecilifierUnitTestBase
     [TestCase("long", Code.Stelem_I8)]
     [TestCase("float", Code.Stelem_R4)]
     [TestCase("double", Code.Stelem_R8)]
-    [TestCase("System.DateTime", Code.Stelem_Any, ", assembly.MainModule.TypeSystem.DateTime")]
+    [TestCase("System.DateTime", Code.Stelem_Any, @", .+ImportReference\(typeof\(System.DateTime\)\)")]
     [TestCase("S", Code.Stelem_Any, @", st_S_\d+")]
     public void TestArrayInstantiation(string elementType, Code code, string operand = "")
     {
@@ -68,7 +68,7 @@ public class ArrayTests : CecilifierUnitTestBase
     [TestCase("System.Int64")]
     [TestCase("System.Single")]
     [TestCase("System.Double")]
-    [TestCase("System.DateTime")]
+    [TestCase("System.DateTime", @".+ImportReference\(typeof\(System.DateTime\)\)")]
     [TestCase("S", @"st_S_\d+")]
     public void TestJaggedArrayInstantiation(string elementType, string operand = null)
     {
@@ -97,7 +97,7 @@ public class ArrayTests : CecilifierUnitTestBase
     [TestCase("long", Code.Stelem_I8)]
     [TestCase("float", Code.Stelem_R4)]
     [TestCase("double", Code.Stelem_R8)]
-    [TestCase("System.DateTime", Code.Stelem_Any, ", assembly.MainModule.TypeSystem.DateTime")]
+    [TestCase("System.DateTime", Code.Stelem_Any, @", .+ImportReference\(typeof\(System.DateTime\)\)")]
     [TestCase("S", Code.Stelem_Any, @", st_S_\d+")]
     public void TestJaggedArrayAssignment(string elementType, Code code, string operand = "")
     {
@@ -165,8 +165,8 @@ public class ArrayTests : CecilifierUnitTestBase
     }
 
     [TestCase("Property", "Call, m_get_2", TestName = "Property")]
-    [TestCase("Method()", "Call, m_method_8", TestName = "Method")]
-    [TestCase("Field", "Ldfld, fld_field_7", TestName = "Field")]
+    [TestCase("Method()", @"Call, m_method_\d+", TestName = "Method")]
+    [TestCase("Field", @"Ldfld, fld_field_\d+", TestName = "Field")]
     public void MemberAccessOnElementAccessOnValueTypeArray_LoadsElementAddress(string member, string expectedILMemberRef)
     {
         var result = RunCecilifier($$"""int M(S[] sa) => sa[0].{{member}}; struct S { public int Property { get; set; } public int Field; public int Method() => 1; }""");
@@ -180,8 +180,8 @@ public class ArrayTests : CecilifierUnitTestBase
     }
     
     [TestCase("Property", "Callvirt, m_get_2", TestName = "Property")]
-    [TestCase("Method()", "Callvirt, m_method_8", TestName = "Method")]
-    [TestCase("Field", "Ldfld, fld_field_7", TestName = "Field")]
+    [TestCase("Method()", @"Callvirt, m_method_\d+", TestName = "Method")]
+    [TestCase("Field", @"Ldfld, fld_field_\d+", TestName = "Field")]
     public void MemberAccessOnElementAccessOnReferenceTypeArray_LoadsElementByReference(string member, string expectedILMemberRef)
     {
         var result = RunCecilifier($$"""int M(S[] sa) => sa[0].{{member}}; class S { public int Property { get; set; } public int Field; public int Method() => 1; }""");

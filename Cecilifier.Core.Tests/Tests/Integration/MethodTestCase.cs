@@ -18,7 +18,7 @@ namespace Cecilifier.Core.Tests.Integration
         [Test]
         public void TestCtorWithParameters()
         {
-            AssertResourceTest(new ResourceTestOptions { ResourceName = "Members/Methods/CtorWithParameters" });
+            AssertResourceTest(new CecilifyTestOptions { ResourceName = "Members/Methods/CtorWithParameters" });
         }
 
         [Test]
@@ -48,7 +48,7 @@ namespace Cecilifier.Core.Tests.Integration
         [Test]
         public void TestMethodCallOnValueType()
         {
-            AssertResourceTest(new ResourceTestOptions { ResourceName = "Members/Methods/MethodCallOnValueType" });
+            AssertResourceTest(new CecilifyTestOptions { ResourceName = "Members/Methods/MethodCallOnValueType" });
         }
 
         [Test]
@@ -130,14 +130,14 @@ namespace Cecilifier.Core.Tests.Integration
         [Test]
         public void TestReturnDelegate()
         {
-            AssertResourceTest(new ResourceTestOptions { ResourceName = $"Members/Methods/ReturnDelegate" });
+            AssertResourceTest(new CecilifyTestOptions { ResourceName = $"Members/Methods/ReturnDelegate" });
         }
 
         [TestCase("Implicit")]
         [TestCase("Explicit", Ignore = "Not supported")]
         public void TestDelegateAsParameter(string implicitOrExplicit)
         {
-            AssertResourceTest(new ResourceTestOptions { ResourceName = $"Members/Methods/{implicitOrExplicit}Delegate_AsParameter" });
+            AssertResourceTest(new CecilifyTestOptions { ResourceName = $"Members/Methods/{implicitOrExplicit}Delegate_AsParameter" });
         }
 
         [TestCase("RefParamBodied", "ReturnPtrToStack")] // https://github.com/adrianoc/cecilifier/issues/227
@@ -147,7 +147,7 @@ namespace Cecilifier.Core.Tests.Integration
         [TestCase("RefReturnField")]
         public void TestRefReturn(string test, string ignoredErrors = null)
         {
-            var options = new ResourceTestOptions { ResourceName = $"Members/Methods/{test}", IgnoredILErrors = ignoredErrors };
+            var options = new CecilifyTestOptions { ResourceName = $"Members/Methods/{test}", IgnoredILErrors = ignoredErrors };
             AssertResourceTest(options);
         }
 

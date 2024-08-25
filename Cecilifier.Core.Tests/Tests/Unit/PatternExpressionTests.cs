@@ -63,7 +63,7 @@ public class IsPatternExpressionTests : CecilifierUnitTestBase
                                         @"m_M_\d+.Body.Variables.Add\(\1\);\s+" +
                                         @"(il_M_\d+).Emit\(OpCodes.Ldarg_1\);\s+" +
                                         @"var (l_s_\d+) = new VariableDefinition\(assembly.MainModule.TypeSystem.String\);\s+" +
-                                        @"m_M_6.Body.Variables.Add\(\3\);\s+" +
+                                        @"m_M_\d+.Body.Variables.Add\(\3\);\s+" +
                                         @"var ldc_I4_0_\d+ = \2.Create\(OpCodes.Ldc_I4_0\);\s+" +
                                         @"var (nop_\d+) = \2.Create\(OpCodes.Nop\);\s+" +
                                         @"(\2.Emit\(OpCodes\.)Isinst, assembly.MainModule.TypeSystem.String\);\s+" +
@@ -112,10 +112,18 @@ public class IsPatternExpressionTests : CecilifierUnitTestBase
             @"\1Ldc_I4, 42\);\s+" +
             @"\1Bne_Un, \3\);\s+" +
             @"\1Ldc_I4_1\);\s+" +
-            @"\1Br_S, nop_12\);\s+" +
-            @"il_M_7.Append\(\3\);\s+" +
-            @"il_M_7.Append\(nop_12\);\s+" +
-            @"\1Stloc, l_r_9\);")
+            @"\1Br_S, nop_\d+\);\s+" +
+            @"il_M_\d+.Append\(\3\);\s+" +
+            @"il_M_\d+.Append\(nop_\d+\);\s+" +
+            @"\1Stloc, l_r_\d+\);")
         { TestName = "Multiple Properties" };
+
+        // Issue #281
+        // yield return new TestCaseData(
+        //         "void M(object o) { var r = o is System.Uri { Host.Length: 10 }; }",
+        //         "TODO: //DEFINE EXPECTATION")
+        //     {
+        //         TestName = "Property (MemberAccessExpression)"
+        //     };
     }
 }

@@ -90,7 +90,7 @@ namespace Cecilifier.Core.Misc
         
         public void WriteCecilExpressions(IEnumerable<string> expressions)
         {
-            foreach (var expression in expressions)
+            foreach (var expression in expressions.Where(exp => !string.IsNullOrWhiteSpace(exp)))
             {
                 WriteCecilExpression(expression);
                 WriteNewLine();

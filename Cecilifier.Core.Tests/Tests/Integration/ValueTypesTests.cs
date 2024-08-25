@@ -15,7 +15,7 @@ namespace Cecilifier.Core.Tests.Integration
         [TestCase("ValueTypeReturnAsTargetOfCallInsideConstructor")]
         public void ValueTypeAsTargetOfCall(string testResourceBaseName)
         {
-            AssertResourceTest(new ResourceTestOptions { ResourceName = $"ValueTypes/AsTargetOfCall/{testResourceBaseName}" });
+            AssertResourceTest(new CecilifyTestOptions { ResourceName = $"ValueTypes/AsTargetOfCall/{testResourceBaseName}" });
         }
 
         [Test]

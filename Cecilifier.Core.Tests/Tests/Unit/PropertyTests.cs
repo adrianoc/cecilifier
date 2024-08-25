@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Tests.Unit;
@@ -11,9 +12,9 @@ public class PropertyTests : CecilifierUnitTestBase
         var result = RunCecilifier("class C { public int Value { get; } public C() => Value = 42; }");
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
         Assert.That(cecilifiedCode, Contains.Substring(
-            @"il_ctor_6.Emit(OpCodes.Ldarg_0);
-			il_ctor_6.Emit(OpCodes.Ldc_I4, 42);
-			il_ctor_6.Emit(OpCodes.Stfld, fld_value_4);"));
+            @"il_ctor_8.Emit(OpCodes.Ldarg_0);
+			il_ctor_8.Emit(OpCodes.Ldc_I4, 42);
+			il_ctor_8.Emit(OpCodes.Stfld, fld_value_4);"));
     }
 
     [Test]
@@ -22,11 +23,11 @@ public class PropertyTests : CecilifierUnitTestBase
         var result = RunCecilifier("class C { public int Value { get; } public C(int n) => Value = n * 2; }");
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
         Assert.That(cecilifiedCode, Contains.Substring(
-            @"il_ctor_6.Emit(OpCodes.Ldarg_0);
-			il_ctor_6.Emit(OpCodes.Ldarg_1);
-			il_ctor_6.Emit(OpCodes.Ldc_I4, 2);
-			il_ctor_6.Emit(OpCodes.Mul);
-			il_ctor_6.Emit(OpCodes.Stfld, fld_value_4);"));
+            @"il_ctor_8.Emit(OpCodes.Ldarg_0);
+			il_ctor_8.Emit(OpCodes.Ldarg_1);
+			il_ctor_8.Emit(OpCodes.Ldc_I4, 2);
+			il_ctor_8.Emit(OpCodes.Mul);
+			il_ctor_8.Emit(OpCodes.Stfld, fld_value_4);"));
     }
 
     [Test]
@@ -34,9 +35,11 @@ public class PropertyTests : CecilifierUnitTestBase
     {
         var result = RunCecilifier("class C { public int Value { get; set; } public C() => Value = 42; }");
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
-        Assert.That(cecilifiedCode, Contains.Substring(
-            @"il_ctor_8.Emit(OpCodes.Ldc_I4, 42);
-			il_ctor_8.Emit(OpCodes.Call, l_set_5);"));
+        Assert.That(cecilifiedCode, Does.Match(
+            """
+            (\s+il_ctor_\d+.Emit\(OpCodes\.)Ldc_I4, 42\);
+            \1Call, l_set_\d+\);
+            """));
     }
 
     [Test]
@@ -46,14 +49,14 @@ public class PropertyTests : CecilifierUnitTestBase
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
         Assert.That(cecilifiedCode, Does.Match(
             @"//int Value1 { get; } = 42;\s+" +
-            @"(il_ctor_C_13\.Emit\(OpCodes\.)Ldarg_0\);\s+" +
+            @"(il_ctor_C_17\.Emit\(OpCodes\.)Ldarg_0\);\s+" +
             @"\1Ldc_I4, 42\);\s+" +
             @"\1Stfld, fld_value1_4\);\s+" +
             @"//int Value2 { get; } = M\(21\);\s+" +
-            @"(il_ctor_C_13\.Emit\(OpCodes\.)Ldarg_0\);\s+" +
+            @"(il_ctor_C_17\.Emit\(OpCodes\.)Ldarg_0\);\s+" +
             @"\1Ldc_I4, 21\);\s+" +
-            @"\1Call, m_M_9\);\s+" +
-            @"\1Stfld, fld_value2_8\);"));
+            @"\1Call, m_M_13\);\s+" +
+            @"\1Stfld, fld_value2_10\);"));
     }
 
     [Test]
@@ -63,11 +66,11 @@ public class PropertyTests : CecilifierUnitTestBase
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
         Assert.That(cecilifiedCode, Does.Match(
             @"//Index Value1 { get; } = \^42;\s+" +
-            @"il_ctor_C_6.Emit\(OpCodes.Ldarg_0\);\s+" +
-            @"il_ctor_C_6.Emit\(OpCodes.Ldc_I4, 42\);\s+" +
-            @"il_ctor_C_6.Emit\(OpCodes.Ldc_I4_1\);\s+" +
-            @"il_ctor_C_6.Emit\(OpCodes.Newobj,.+typeof\(System.Index\), ""\.ctor"",.+""System.Int32"", ""System.Boolean"".+\);\s+" +
-            @"il_ctor_C_6.Emit\(OpCodes.Stfld, fld_value1_4\);"));
+            @"il_ctor_C_8.Emit\(OpCodes.Ldarg_0\);\s+" +
+            @"il_ctor_C_8.Emit\(OpCodes.Ldc_I4, 42\);\s+" +
+            @"il_ctor_C_8.Emit\(OpCodes.Ldc_I4_1\);\s+" +
+            @"il_ctor_C_8.Emit\(OpCodes.Newobj,.+typeof\(System.Index\), ""\.ctor"",.+""System.Int32"", ""System.Boolean"".+\);\s+" +
+            @"il_ctor_C_8.Emit\(OpCodes.Stfld, fld_value1_4\);"));
     }
 
     [TestCase("get { int l = 42; return l; }", "m_get_2", TestName = "Getter")]
@@ -78,8 +81,10 @@ public class PropertyTests : CecilifierUnitTestBase
         var result = RunCecilifier($"class C {{ int Value {{ {accessorDeclaration} }} }}");
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
         Assert.That(cecilifiedCode, Does.Match(
-            @"var l_l_4 = new VariableDefinition\(assembly\.MainModule\.TypeSystem\.Int32\);\s+" +
-            $@"{targetMethod}\.Body\.Variables\.Add\(l_l_4\);"));
+            $"""
+             var (l_l_\d+) = new VariableDefinition\(assembly\.MainModule\.TypeSystem\.Int32\);
+             \s+{targetMethod}\.Body\.Variables\.Add\(\1\);
+             """));
     }
 
     [Test]
@@ -99,10 +104,25 @@ public class PropertyTests : CecilifierUnitTestBase
         var result = RunCecilifier("class C { public static int Prop { get; set; } } class Driver { int M() => C.Prop; }");
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
 
-        Assert.That(cecilifiedCode, Does.Match(@"var fld_prop_\d+ = new FieldDefinition\(""<Prop>k__BackingField"",.+FieldAttributes\.Static.+\);"), "Backing field should be static");
-        Assert.That(cecilifiedCode, Does.Match(@"var l_set_\d+ = new MethodDefinition\(""set_Prop"", .+MethodAttributes\.Static.+\);"), "Setter should be static");
-        Assert.That(cecilifiedCode, Does.Match(@"var m_get_\d+ = new MethodDefinition\(""get_Prop"", .+MethodAttributes\.Static.+\);"), "Getter should be static");
-        Assert.That(cecilifiedCode, Does.Match(@"il_set_\d+.Emit\(OpCodes.Stsfld, fld_prop_\d+\);"), "Setter field access should be static");
-        Assert.That(cecilifiedCode, Does.Match(@"il_get_\d+.Emit\(OpCodes.Ldsfld, fld_prop_\d+\);"), "Getter field access should be static");
+        Assert.Multiple(delegate 
+        {
+            Assert.That(cecilifiedCode, Does.Match("""
+                                                   var fld_prop_\d+ = new FieldDefinition\("<Prop>k__BackingField",.+FieldAttributes\.Static \| FieldAttributes\.Private.+\);
+                                                   \s+cls_C_\d+\.Fields\.Add\(fld_prop_\d+\);
+                                                   """), "Backing field should be static");
+
+            var matches = Regex.Matches(cecilifiedCode, 
+                                                """
+                                                   var fld_prop_\d+ = new FieldDefinition\(.+\);
+                                                   \s+cls_C_\d+\.Fields\.Add\(fld_prop_\d+\);
+                                                   """);
+            
+            Assert.That(matches.Count, Is.EqualTo(1), $"Only one backing field is expected:\n{cecilifiedCode}");
+            
+            Assert.That(cecilifiedCode, Does.Match(@"var l_set_\d+ = new MethodDefinition\(""set_Prop"", .+MethodAttributes\.Static.+\);"), "Setter should be static");
+            Assert.That(cecilifiedCode, Does.Match(@"var m_get_\d+ = new MethodDefinition\(""get_Prop"", .+MethodAttributes\.Static.+\);"), "Getter should be static");
+            Assert.That(cecilifiedCode, Does.Match(@"il_set_\d+.Emit\(OpCodes.Stsfld, fld_prop_\d+\);"), "Setter field access should be static");
+            Assert.That(cecilifiedCode, Does.Match(@"il_get_\d+.Emit\(OpCodes.Ldsfld, fld_prop_\d+\);"), "Getter field access should be static");
+        });
     }
 }

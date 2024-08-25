@@ -74,7 +74,7 @@ namespace Cecilifier.Core.Extensions
             // (as opposed to their own operator overloads) whence the check for IsUnmanagedType; the extra check (SpecialType) is meant to filter out
             // custom structs (non primitives) which may be deemed as unmanaged (see the link above for more details)
             return method is { Parameters: { Length: > 0 } }
-                   && method.Parameters[0].Type?.BaseType?.SpecialType != SpecialType.System_MulticastDelegate
+                   && method.Parameters[0].Type.BaseType?.SpecialType != SpecialType.System_MulticastDelegate
                    && ((!method.Parameters[0].Type.IsUnmanagedType && method.Parameters[0].Type.SpecialType != SpecialType.System_String)
                        || (method.Parameters[0].Type.SpecialType == SpecialType.None && method.Parameters[0].Type.Kind != SymbolKind.PointerType));
         }
@@ -103,27 +103,31 @@ namespace Cecilifier.Core.Extensions
             }
         }
 
-        public static bool IsAccessOnThisOrObjectCreation(this SyntaxNode nodeBeingAccessed)
+        public static MethodDispatchInformation MethodDispatchInformation(this SyntaxNode nodeBeingAccessed)
         {
-            if (nodeBeingAccessed.IsKind(SyntaxKind.NameColon))
-                return false;
-            
             if (nodeBeingAccessed is MemberAccessExpressionSyntax mae)
             {
-                return mae.Expression.IsKind(SyntaxKind.ObjectCreationExpression);
+                return mae.Expression.Kind() switch
+                {
+                    SyntaxKind.ObjectCreationExpression => AST.MethodDispatchInformation.MostLikelyNonVirtual,
+                    SyntaxKind.BaseExpression => AST.MethodDispatchInformation.NonVirtual,
+                    _ => AST.MethodDispatchInformation.MostLikelyVirtual
+                };
             }
-
-            return true;
+            
+            return nodeBeingAccessed.IsKind(SyntaxKind.NameColon)  ? AST.MethodDispatchInformation.MostLikelyVirtual : AST.MethodDispatchInformation.MostLikelyNonVirtual ;
         }
 
+        #nullable enable
         [return: NotNull]
-        public static TTarget EnsureNotNull<TSource, TTarget>([NotNullIfNotNull("source")] this TSource source, [CallerArgumentExpression("source")] string exp = null) where TTarget : TSource
+        public static TTarget EnsureNotNull<TSource, TTarget>([NotNullIfNotNull("source")] this TSource? source, [CallerArgumentExpression("source")] string exp = null) where TTarget : TSource
         {
             if (source == null)
                 throw new ArgumentNullException(exp);
 
             return (TTarget) source;
         }
+        #nullable restore
         
         internal static bool IsPassedAsInParameter(this ArgumentSyntax toBeChecked, IVisitorContext context)
         {
@@ -167,6 +171,13 @@ namespace Cecilifier.Core.Extensions
             }
 
             return false;
+        }
+
+        internal static IEnumerable<SyntaxToken> ModifiersExcludingAccessibility(this MemberDeclarationSyntax member)
+        {
+            return member.Modifiers.ExceptBy(
+                [SyntaxKind.PublicKeyword, SyntaxKind.PrivateKeyword, SyntaxKind.InternalKeyword, SyntaxKind.ProtectedKeyword],
+                c => (SyntaxKind) c.RawKind);
         }
     }
 }

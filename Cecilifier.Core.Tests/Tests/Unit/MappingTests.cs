@@ -36,7 +36,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             Assert.That(cecilifiedResult.Mappings[0].Source.End.Column, Is.EqualTo(46), message);
 
             Assert.That(cecilifiedResult.Mappings[0].Cecilified.Begin.Line, Is.EqualTo(25), message);
-            Assert.That(cecilifiedResult.Mappings[0].Cecilified.End.Line, Is.EqualTo(54), message);
+            Assert.That(cecilifiedResult.Mappings[0].Cecilified.End.Line, Is.EqualTo(55), message);
 
             // => int Sum(int i, int j) => i + j;
             Assert.That(cecilifiedResult.Mappings[1].Source.Begin.Line, Is.EqualTo(1), message);
@@ -44,7 +44,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             Assert.That(cecilifiedResult.Mappings[1].Source.End.Column, Is.EqualTo(44), message);
 
             Assert.That(cecilifiedResult.Mappings[1].Cecilified.Begin.Line, Is.EqualTo(30), message);
-            Assert.That(cecilifiedResult.Mappings[1].Cecilified.End.Line, Is.EqualTo(46), message);
+            Assert.That(cecilifiedResult.Mappings[1].Cecilified.End.Line, Is.EqualTo(47), message);
             
             // parameter i
             Assert.That(cecilifiedResult.Mappings[2].Source.Begin.Line, Is.EqualTo(1), message);
@@ -67,7 +67,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             Assert.That(cecilifiedResult.Mappings[4].Source.Begin.Column, Is.EqualTo(35), message);
 
             Assert.That(cecilifiedResult.Mappings[4].Cecilified.Begin.Line, Is.EqualTo(42), message);
-            Assert.That(cecilifiedResult.Mappings[4].Cecilified.End.Line, Is.EqualTo(45), message);
+            Assert.That(cecilifiedResult.Mappings[4].Cecilified.End.Line, Is.EqualTo(46), message);
         }
 
         [Test]

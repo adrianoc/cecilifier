@@ -87,7 +87,7 @@ namespace Cecilifier.Core.AST
                     context.Naming.SyntheticVariable(parameter.Identifier.Text, ElementKind.Parameter),
                     resolvedParamType,
                     parameter.Default != null ? Constants.ParameterAttributes.Optional : Constants.ParameterAttributes.None,
-                    parameter.Accept(DefaultParameterExtractorVisitor.Instance));
+                    (parameter.Accept(DefaultParameterExtractorVisitor.Instance), parameter.Default != null));
 
                 context.WriteCecilExpressions(paramExps);
             }

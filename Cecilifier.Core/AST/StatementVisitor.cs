@@ -240,7 +240,7 @@ namespace Cecilifier.Core.AST
             //https://github.com/dotnet/csharpstandard/blob/draft-v7/standard/statements.md#1214-the-using-statement
 
             ExpressionVisitor.Visit(Context, _ilVar, node.Expression);
-            var localVarDef = string.Empty;
+            string localVarDef;
 
             ITypeSymbol usingType;
             if (node.Declaration != null)

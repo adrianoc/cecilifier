@@ -194,7 +194,7 @@ using System;
 class Foo
 {
     void Bar() => Console.WriteLine("Hello World!");
-};`);
+}`);
         
         csharpCode.focus();
         focusedEditor = csharpCode;
@@ -248,12 +248,15 @@ function configureKeyboardShortcuts() {
     });
 
     csharpCode.addCommand(monaco.KeyMod.CtrlCmd + monaco.KeyMod.Alt + monaco.KeyCode.KeyL, function() {
-        showListOfLocalyStoredSnippets();
+        showListOfLocallyStoredSnippets();
     });
 
     // Cecilified code
     cecilifiedCode.addCommand(monaco.KeyMod.CtrlCmd + monaco.KeyCode.BracketLeft , decreaseFocusedEditorFontSize);
     cecilifiedCode.addCommand(monaco.KeyMod.CtrlCmd + monaco.KeyCode.BracketRight , increaseFocusedEditorFontSize);
+    cecilifiedCode.addCommand(monaco.KeyMod.CtrlCmd + monaco.KeyMod.Alt + monaco.KeyCode.KeyL, function() {
+        showListOfLocallyStoredSnippets();
+    });
 }
 
 function configureCursorInformationVisibility(show) {
@@ -365,6 +368,7 @@ function initializeFormattingSettings() {
 struct AStruct { }
 enum AnEnum { }
 interface Interface {}
+record TheRecord();
 delegate void ADelegate(int i);
 */
 //ClassDeclaration : AClass
@@ -401,6 +405,8 @@ var e_AnEnum_28 = new TypeDefinition("", "AnEnum", TypeAttributes.Private | Type
 var itf_Interface_27 = new TypeDefinition("", "Interface", TypeAttributes.Interface | TypeAttributes.Abstract | TypeAttributes.NotPublic);
 
 var del_ADelegate_30 = new TypeDefinition("", "ADelegate", TypeAttributes.Sealed | TypeAttributes.Private, assembly.MainModule.ImportReference(typeof(System.MulticastDelegate))) { IsAnsiClass = true };
+
+var rec_ARecord_0 = new TypeDefinition("", "ARecord", TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit | TypeAttributes.NotPublic, assembly.MainModule.TypeSystem.Object);
 
 var lv_i_4 = new VariableDefinition(assembly.MainModule.TypeSystem.Int32);
 
@@ -580,7 +586,7 @@ function setTooltips(version) {
                         <td>Toggles visibility of cursor information.</td>\
                     </tr>\
                     <tr>\
-                        <td><kbd class=\"kbc-button\">Ctrl</kbd> + <kbd class=\"kbc-button\">Alt</kbd> + <kbd class=\"kbc-button\">S</kbd></td>\
+                        <td><kbd class=\"kbc-button\">Ctrl</kbd> + <kbd class=\"kbc-button\">Alt</kbd> + <kbd class=\"kbc-button\">L</kbd></td>\
                         <td/>\
                         <td>Display a list of locally saved snippets that can be reloaded<br/>by navigating to https://cecilifier.me/SAVEDNAME.</td>\
                     </tr>\
@@ -658,15 +664,15 @@ function setTooltips(version) {
 
 function initializeSettings(formattingSettingsSample) {
 
-    const startLine = 15;
+    const startLine = 16;
     
     settings = new SettingsManager(formattingSettingsSample, [
         new Setting(ElementKind.Class, {line: startLine, ch: 5}, "Class", "prefix to be used for classes", "AClass", "cls"),
         new Setting(ElementKind.GenericParameter, {line: startLine + 2, ch: 5}, "Generic Parameter", "generic parameters prefix","T", "gp"),
-        new Setting(ElementKind.Attribute, {line: startLine + 4, ch: 5}, "Attribute", "attribute prefix","Obsolete", "attr"),       
+        new Setting(ElementKind.Attribute, {line: startLine + 4, ch: 5}, "Attribute", "attribute prefix","Obsolete", "attr"),
         new Setting(ElementKind.Field, {line: startLine + 6, ch: 5}, "Field", "field prefix","field", "fld"),
         new Setting(ElementKind.GenericInstance, {line: startLine + 8, ch: 5}, "Generic Instance", "generic instance prefix","AClass", "gi"),
-        new Setting(ElementKind.Event, {line: startLine + 10, ch: 5}, "Event", "event declaration prefix","AnEvent", "evt"),    
+        new Setting(ElementKind.Event, {line: startLine + 10, ch: 5}, "Event", "event declaration prefix","AnEvent", "evt"),
         new Setting(ElementKind.Property, {line: startLine + 12, ch: 5}, "Property", "property prefix","Property", "prop"),
         new Setting(ElementKind.Method, {line: startLine + 14, ch: 5}, "Method", "method prefix","Method", "md"),
         new Setting(ElementKind.Parameter, {line: startLine + 16, ch: 5}, "Parameter", "parameter prefix","value", "p"),
@@ -676,10 +682,11 @@ function initializeSettings(formattingSettingsSample) {
         new Setting(ElementKind.Struct, {line: startLine + 26, ch: 5}, "Struct", "struct prefix","AStruct", "st"),
         new Setting(ElementKind.Enum, {line: startLine + 28, ch: 5}, "Enum", "enum prefix","AnEnum", "e"),
         new Setting(ElementKind.Interface, {line: startLine + 30, ch: 5}, "Interface", "interface prefix","Interface", "itf"),
-        new Setting(ElementKind.Delegate, {line: startLine + 32, ch: 5}, "Delegate", "delegate prefix","ADelegate", "del"),
-        new Setting(ElementKind.LocalVariable, {line: startLine + 34, ch: 5}, "Local Variable", "local variable prefix","i", "lv"),
-        new Setting(ElementKind.MemberReference, {line: startLine + 36, ch: 5}, "Member Reference", "Member reference prefix","i", "mr"),
-        new Setting(ElementKind.Label, {line: startLine + 38, ch: 5}, "Jump Label", "Jump Label Prefix","jump", "lbl"),
+        new Setting(ElementKind.Delegate, {line: startLine + 32, ch: 5}, "Delegate", "delegate prefix","ADelegate", "del"), 
+        new Setting(ElementKind.Record, {line: startLine + 34, ch: 5}, "Record", "prefix to be used for records", "ARecord", "rec"),
+        new Setting(ElementKind.LocalVariable, {line: startLine + 36, ch: 5}, "Local Variable", "local variable prefix","i", "lv"),
+        new Setting(ElementKind.MemberReference, {line: startLine + 38, ch: 5}, "Member Reference", "Member reference prefix","i", "mr"),
+        new Setting(ElementKind.Label, {line: startLine + 40, ch: 5}, "Jump Label", "Jump Label Prefix","jump", "lbl"),
         ],
         document.getElementById("cecilifierSettings"));
 
@@ -698,7 +705,7 @@ function initializeSettings(formattingSettingsSample) {
     };
     
     settings.addHeader("Name prefixes");
-    settings.initialize();    
+    settings.initialize();
     
     settings.addConditionalFormat(
         NamingOptions.PrefixVariableNamesWithElementKind, 

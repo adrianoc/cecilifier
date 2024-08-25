@@ -24,9 +24,8 @@ partial class ExpressionVisitor
         using var _ = LineInformationTracker.Track(Context, node);
         var spanType = Context.SemanticModel.GetTypeInfo(node).Type.EnsureNotNull<ITypeSymbol, INamedTypeSymbol>();
         var arrayElementType = spanType.TypeArguments[0];
-
-        Utils.EnsureNotNull(node.Initializer);
-        Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, node.Initializer.Expressions.Count);
+        
+        Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, node.Initializer.EnsureNotNull<SyntaxNode, InitializerExpressionSyntax>().Expressions.Count);
 
         var stackallocSpanAssignmentTracker = new StackallocSpanAssignmentTracker(node, Context);
         var resolvedArrayElementType = Context.TypeResolver.Resolve(arrayElementType);
@@ -64,12 +63,10 @@ partial class ExpressionVisitor
         Debug.Assert(arrayType.RankSpecifiers.Count == 1);
         if (rankNode.IsKind(SyntaxKind.OmittedArraySizeExpression))
         {
-            Utils.EnsureNotNull(node.Initializer);
-            Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, node.Initializer.Expressions.Count);
+            Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, Utils.EnsureNotNull(node.Initializer).Expressions.Count);
         }
 
         var stackallocSpanAssignmentTracker = new StackallocSpanAssignmentTracker(node, Context);
-        uint sizeInBytes = 0;
 
         var arrayElementTypeSize = arrayElementType.Type.IsPrimitiveType()
             ? arrayElementType.Type.SizeofArrayLikeItemElement()
@@ -79,7 +76,7 @@ partial class ExpressionVisitor
         if (rankNode.IsKind(SyntaxKind.NumericLiteralExpression) && arrayElementType.Type.IsPrimitiveType())
         {
             var elementCount = Int32.Parse(rankNode.GetFirstToken().Text);
-            sizeInBytes = (uint) elementCount * arrayElementTypeSize;
+            var sizeInBytes = (uint) elementCount * arrayElementTypeSize;
             stackallocSpanAssignmentTracker.RememberConstantElementCount(elementCount);
             Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, sizeInBytes, $"{elementCount} (elements) * {arrayElementTypeSize} (bytes per element)");
             Context.EmitCilInstruction(ilVar, OpCodes.Conv_U);
@@ -182,8 +179,8 @@ partial class ExpressionVisitor
         var spanInstanceType = Context.TypeResolver.Resolve(Context.RoslynTypeSystem.SystemSpan).MakeGenericInstanceType(resolvedSpanType);
         var spanCtorVar = Context.Naming.SyntheticVariable("spanCtor", ElementKind.LocalVariable);
         AddCecilExpression($"var {spanCtorVar} = new MethodReference(\".ctor\", {Context.TypeResolver.Bcl.System.Void}, {spanInstanceType}) {{ HasThis = true }};");
-        AddCecilExpression($"{spanCtorVar}.Parameters.Add({CecilDefinitionsFactory.Parameter("ptr", RefKind.None, Context.TypeResolver.Resolve("void*"))});");
-        AddCecilExpression($"{spanCtorVar}.Parameters.Add({CecilDefinitionsFactory.Parameter("length", RefKind.None, Context.TypeResolver.Bcl.System.Int32)});");
+        AddCecilExpression($"{spanCtorVar}.Parameters.Add({CecilDefinitionsFactory.ParameterDoesNotHandleParamsKeywordOrDefaultValue("ptr", RefKind.None, Context.TypeResolver.Resolve("void*"))});");
+        AddCecilExpression($"{spanCtorVar}.Parameters.Add({CecilDefinitionsFactory.ParameterDoesNotHandleParamsKeywordOrDefaultValue("length", RefKind.None, Context.TypeResolver.Bcl.System.Int32)});");
 
         Context.EmitCilInstruction(ilVar, OpCodes.Newobj, Utils.ImportFromMainModule($"{spanCtorVar}"));
     }
@@ -227,14 +224,11 @@ internal interface IStackallocAsArgumentFixer
 
 class NoOpStackallocAsArgumentHandler : IStackallocAsArgumentFixer
 {
-    public NoOpStackallocAsArgumentHandler(IVisitorContext context) => Context = context;
-
     void IStackallocAsArgumentFixer.StoreTopOfStackToLocalVariable(ITypeSymbol type) { }
 
     void IStackallocAsArgumentFixer.MarkEndOfComputedCallTargetBlock(LinkedListNode<string> last) { }
 
     void IStackallocAsArgumentFixer.RestoreCallStackIfRequired() { }
-    public IVisitorContext Context { get; }
     public IDisposable FlagAsHavingStackallocArguments() => default;
 }
 
@@ -246,7 +240,7 @@ internal class StackallocAsArgumentFixer : IStackallocAsArgumentFixer
     private readonly IVisitorContext context;
     private readonly string ilVar;
     private LinkedListNode<string> lastLoadTargetOfCallInstruction;
-    private LinkedListNode<string> firstLoadTargetOfCallInstruction;
+    private readonly LinkedListNode<string> firstLoadTargetOfCallInstruction;
 
     private StackallocAsArgumentFixer(IVisitorContext context, string ilVar)
     {
@@ -291,6 +285,7 @@ internal class StackallocAsArgumentFixer : IStackallocAsArgumentFixer
         var c = lastLoadTargetOfCallInstruction;
         while (c != firstLoadTargetOfCallInstruction)
         {
+            Debug.Assert(c != null);
             var previous = c.Previous;
             context.MoveLineAfter(c, callInstruction);
             c = previous;
@@ -323,7 +318,7 @@ internal class StackallocAsArgumentFixer : IStackallocAsArgumentFixer
             .Any(candidate => candidate.First.Expression.IsKind(SyntaxKind.StackAllocArrayCreationExpression)
                               && candidate.Second.Type.OriginalDefinition.MetadataToken == context.RoslynTypeSystem.SystemSpan.MetadataToken);
 
-        return new StackallocPassedAsSpanDisposal(isPassingStackAllocToSpanArg ? new StackallocAsArgumentFixer(context, ilVar) : new NoOpStackallocAsArgumentHandler(context));
+        return new StackallocPassedAsSpanDisposal(isPassingStackAllocToSpanArg ? new StackallocAsArgumentFixer(context, ilVar) : new NoOpStackallocAsArgumentHandler());
     }
 
     public static IStackallocAsArgumentFixer Current => handlers.Count > 0 ? handlers.Peek() : null;
@@ -365,7 +360,7 @@ internal class StackallocAsArgumentFixer : IStackallocAsArgumentFixer
 internal class StackallocSpanAssignmentTracker
 {
     private readonly bool isAssignedToSpan;
-    private int _constElementCount = 0;
+    private int _constElementCount;
 
     public StackallocSpanAssignmentTracker(SyntaxNode node, IVisitorContext context)
     {
@@ -385,11 +380,10 @@ internal class StackallocSpanAssignmentTracker
 
         if (rankNode != null && rankNode.IsKind(SyntaxKind.IdentifierName))
         {
-            var rankSymbolInfo = context.SemanticModel.GetSymbolInfo(rankNode);
-            Utils.EnsureNotNull(rankSymbolInfo.Symbol, "Failed to resolve symbol");
+            var rankSymbol = context.SemanticModel.GetSymbolInfo(rankNode).Symbol.EnsureNotNull();
 
-            var parentTypeName = rankSymbolInfo.Symbol.Kind == SymbolKind.Field // TODO: What about properties and/or methods? 
-                ? rankSymbolInfo.Symbol.ContainingType.ToDisplayString()
+            var parentTypeName = rankSymbol.Kind == SymbolKind.Field // TODO: What about properties and/or methods? 
+                ? rankSymbol.ContainingType.ToDisplayString()
                 : string.Empty;
 
             var spanSizeStorageVariable = context.DefinitionVariables.GetVariable(rankNode.ToFullString(), VariableMemberKind.LocalVariable | VariableMemberKind.Field | VariableMemberKind.Parameter, parentTypeName);

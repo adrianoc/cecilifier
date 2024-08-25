@@ -7,6 +7,7 @@ using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Mono.Cecil.Cil;
 
@@ -84,7 +85,7 @@ namespace Cecilifier.Core.Extensions
         public static T EnsureNotNull<T>([NotNullIfNotNull("symbol")] this T symbol, [CallerArgumentExpression(nameof(symbol))] string expression = null) where T : ISymbol
         {
             if (symbol == null)
-                throw new NullReferenceException($"Expression '{expression}' is expected to not be null.");
+                throw new NullReferenceException($"Expression '{expression}' is expected to be non null.");
 
             return symbol;
         }
@@ -99,13 +100,23 @@ namespace Cecilifier.Core.Extensions
             return refRelatedAttr.AppendModifier(optionalAttribute);
         }
 
-        public static string ExplicitDefaultValue(this IParameterSymbol symbol)
+        public static (string Value, bool Present) ExplicitDefaultValue(this IParameterSymbol symbol, bool rawString = true)
         {
-            var value = symbol.ExplicitDefaultValue?.ToString();
+            if (!symbol.HasExplicitDefaultValue)
+                return (null, false);
+
+            if (symbol.ExplicitDefaultValue == null)
+                return (null, true);
+
+            if (symbol.Type.SpecialType == SpecialType.System_String && rawString)
+                return ((string)symbol.ExplicitDefaultValue, true);
+            
+            var value = SymbolDisplay.FormatPrimitive(symbol.ExplicitDefaultValue, !rawString, false);
             return symbol.Type.SpecialType switch
             {
-                SpecialType.System_Single => $"{value}f",
-                _ => value
+                SpecialType.System_Single => ($"{value}f", true),
+                SpecialType.System_Double => ($"{value}d", true),
+                _ => (value, true)
             };
         }
 
@@ -135,7 +146,7 @@ namespace Cecilifier.Core.Extensions
             if (declaringReference == null)
                 return;
 
-            var propertyDeclaration = (BasePropertyDeclarationSyntax) declaringReference.GetSyntax();
+            var propertyDeclaration = (CSharpSyntaxNode) declaringReference.GetSyntax();
             if (propertyDeclaration.Span.Start > node.Span.End)
             {
                 // this is a forward reference, process it...

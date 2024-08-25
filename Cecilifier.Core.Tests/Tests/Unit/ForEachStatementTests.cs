@@ -141,12 +141,12 @@ public class ForEachStatementTests : CecilifierUnitTestBase
         Assert.That(
             cecilifiedCode, 
             Does.Match("""
-                       (il_topLevelMain_\d+\.)Append\(nop_12\);
-                       (\s+\1Emit\(OpCodes\.)Ldloc, l_index_11\);
-                       \2Ldloc, l_array_9\);
+                       (il_topLevelMain_\d+\.)Append\(nop_\d+\);
+                       (\s+\1Emit\(OpCodes\.)Ldloc, l_index_\d+\);
+                       \2Ldloc, l_array_\d+\);
                        \2Ldlen\);
                        \2Conv_I4\);
-                       \2Blt, ldloc_13\);
+                       \2Blt, ldloc_\d+\);
                        """), 
             "Array loop index check code does not match");
          
@@ -173,7 +173,7 @@ public class ForEachStatementTests : CecilifierUnitTestBase
                                                //finally start
                                                \s+var nop_\d+ = (?<il>il_topLevelMain_\d+\.)Create\(OpCodes.Nop\);
                                                \s+\k<il>Append\(nop_\d+\);
-                                               (?<emit>\s+\k<il>Emit\(OpCodes\.)Ldloca, l_enumerator_18\);
+                                               (?<emit>\s+\k<il>Emit\(OpCodes\.)Ldloca, l_enumerator_\d+\);
                                                \k<emit>Constrained, st_enumerator_0\);
                                                \k<emit>Callvirt, .+ImportReference\(.+ResolveMethod\(typeof\(System.IDisposable\), "Dispose",.+\)\)\);
                                                \k<emit>Endfinally\);

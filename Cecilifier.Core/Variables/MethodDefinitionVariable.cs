@@ -4,10 +4,10 @@ namespace Cecilifier.Core.Variables;
 
 public class MethodDefinitionVariable : DefinitionVariable, IEquatable<MethodDefinitionVariable>
 {
-    public MethodDefinitionVariable(string parentTypeName, string methodName, string[] parameterTypeName, int typeParameterCountCount, string variableName = null) 
+    public MethodDefinitionVariable(string parentTypeName, string methodName, string[] parameterTypeNames, int typeParameterCountCount, string variableName = null) 
         : base(parentTypeName, methodName, VariableMemberKind.Method, variableName)
     {
-        Parameters = parameterTypeName;
+        Parameters = parameterTypeNames;
         TypeParameterCount = typeParameterCountCount;
     }
 
@@ -87,4 +87,6 @@ public class MethodDefinitionVariable : DefinitionVariable, IEquatable<MethodDef
                    ^ TypeParameterCount.GetHashCode();
         }
     }
+
+    public override string ToString() => $"Method: {MemberName}({Parameters.Length}) => {VariableName}";
 }

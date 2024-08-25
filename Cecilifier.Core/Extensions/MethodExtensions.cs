@@ -155,7 +155,7 @@ namespace Cecilifier.Core.Extensions
                 variableName);
         }
 
-        public static string MethodModifiersToCecil(this SyntaxTokenList modifiers, string specificModifiers = null, IMethodSymbol methodSymbol = null)
+        public static string MethodModifiersToCecil(this IEnumerable<SyntaxToken> modifiers, string specificModifiers = null, IMethodSymbol methodSymbol = null)
         {
             var lastDeclaredIn = methodSymbol.FindLastDefinition();
             var modifiersStr = MapExplicitModifiers(modifiers, lastDeclaredIn.ContainingType.TypeKind);
@@ -256,7 +256,7 @@ namespace Cecilifier.Core.Extensions
             return methodSymbol.ExplicitInterfaceImplementations.Any();
         }
 
-        private static string MapExplicitModifiers(SyntaxTokenList modifiers, TypeKind typeKind)
+        private static string MapExplicitModifiers(IEnumerable<SyntaxToken> modifiers, TypeKind typeKind)
         {
             foreach (var mod in modifiers)
             {
@@ -278,7 +278,7 @@ namespace Cecilifier.Core.Extensions
             return string.Empty;
         }
 
-        private static IEnumerable<SyntaxToken> RemoveSourceModifiersWithNoILEquivalent(SyntaxTokenList modifiers)
+        private static IEnumerable<SyntaxToken> RemoveSourceModifiersWithNoILEquivalent(IEnumerable<SyntaxToken> modifiers)
         {
             return modifiers.Where(
                 mod => !mod.IsKind(SyntaxKind.OverrideKeyword)

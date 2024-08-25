@@ -47,12 +47,14 @@ namespace Cecilifier.Core.AST
             Context.WriteNewLine();
         }
 
-        protected void AddMethodCall(string ilVar, IMethodSymbol method, bool isAccessOnThisOrObjectCreation = false)
+        protected void AddMethodCall(string ilVar, IMethodSymbol method, MethodDispatchInformation dispatchInformation = MethodDispatchInformation.MostLikelyVirtual)
         {
             var needsVirtualDispatch = (method.IsVirtual || method.IsAbstract || method.IsOverride) && !method.ContainingType.IsPrimitiveType();
-            var opCode = !method.IsStatic && 
-                         (!isAccessOnThisOrObjectCreation || needsVirtualDispatch) && 
-                         (method.ContainingType.TypeKind == TypeKind.TypeParameter || !method.ContainingType.IsValueType || needsVirtualDispatch)
+
+            var opCode = !method.IsStatic
+                         && dispatchInformation != MethodDispatchInformation.NonVirtual
+                         && (dispatchInformation != MethodDispatchInformation.MostLikelyNonVirtual || needsVirtualDispatch) 
+                         && (method.ContainingType.TypeKind == TypeKind.TypeParameter || !method.ContainingType.IsValueType || needsVirtualDispatch)
                 ? OpCodes.Callvirt
                 : OpCodes.Call;
 
@@ -197,7 +199,7 @@ namespace Cecilifier.Core.AST
                 var storageVariable = Context.DefinitionVariables.GetVariable(targetOfAssignmentSymbol.Name, targetOfAssignmentSymbol.ToVariableMemberKind(), string.Empty);
                 
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, storageVariable.VariableName);
-                Context.EmitCilInstruction(ilVar, OpCodes.Initobj, resolvedType);                
+                Context.EmitCilInstruction(ilVar, OpCodes.Initobj, resolvedType);
             }
             else
             {
@@ -392,9 +394,8 @@ namespace Cecilifier.Core.AST
 
         protected string ResolveExpressionType(ExpressionSyntax expression)
         {
-            Utils.EnsureNotNull(expression);
-            var info = Context.GetTypeInfo(expression);
-            return Context.TypeResolver.Resolve(info.Type);
+            var type = Context.GetTypeInfo(expression).Type.EnsureNotNull();
+            return Context.TypeResolver.Resolve(type);
         }
 
         protected string ResolveType(TypeSyntax type)
@@ -418,7 +419,7 @@ namespace Cecilifier.Core.AST
         protected void ProcessParameter(string ilVar, SimpleNameSyntax node, IParameterSymbol paramSymbol)
         {
             var method = (IMethodSymbol) paramSymbol.ContainingSymbol;
-            var declaringMethodName = (method.AssociatedSymbol ?? method).ToDisplayString();
+            var declaringMethodName = method.ToDisplayString();
             if (HandleLoadAddressOnStorage(ilVar, paramSymbol.Type, node, OpCodes.Ldarga, paramSymbol.Name, VariableMemberKind.Parameter, declaringMethodName))
                 return;
 
@@ -798,7 +799,7 @@ namespace Cecilifier.Core.AST
 
             return exps;
 
-            string EntryPoint() => attribute?.ArgumentList?.Arguments.FirstOrDefault(arg => arg.NameEquals?.Name.Identifier.Text == "EntryPoint")?.Expression.ToString() ?? "\"\"";
+            string EntryPoint() => attribute.ArgumentList?.Arguments.FirstOrDefault(arg => arg.NameEquals?.Name.Identifier.Text == "EntryPoint")?.Expression.ToString() ?? "\"\"";
 
             string MethodImplAttributes()
             {
@@ -974,13 +975,9 @@ namespace Cecilifier.Core.AST
             
             foreach (var parameter in method.Parameters)
             {
-                var parameterExp = CecilDefinitionsFactory.Parameter(parameter, context.TypeResolver.Resolve(parameter.Type));
                 var paramVar = context.Naming.Parameter(parameter.Name);
-                context.WriteCecilExpression($"var {paramVar} = {parameterExp};");
-                context.WriteNewLine();
-                context.WriteCecilExpression($"{methodDeclarationVar}.Parameters.Add({paramVar});");
-                context.WriteNewLine();
-            
+                var parameterExps = CecilDefinitionsFactory.Parameter(parameter, methodDeclarationVar, paramVar, context.TypeResolver.Resolve(parameter.Type));
+                context.WriteCecilExpressions(parameterExps);
                 context.DefinitionVariables.RegisterNonMethod(method.ToDisplayString(), parameter.Name, VariableMemberKind.Parameter, paramVar);
             }
             
@@ -997,6 +994,13 @@ namespace Cecilifier.Core.AST
         // needs to explicitly specify which methods they override.
         protected void AddToOverridenMethodsIfAppropriated(string methodVar, IMethodSymbol method)
         {
+            var overridenMethod = GetOverridenMethod(method);
+            if (overridenMethod != null)
+                WriteCecilExpression(Context, $"{methodVar}.Overrides.Add({overridenMethod});");
+        }
+        
+        protected string GetOverridenMethod(IMethodSymbol method)
+        {
             // first check explicit interface implementation...
             var overridenMethod = method?.ExplicitInterfaceImplementations.FirstOrDefault();
             if (overridenMethod == null)
@@ -1009,14 +1013,14 @@ namespace Cecilifier.Core.AST
                 {
                     // if it is not an explicit interface implementation check for abstract static method from interfaces
                     var lastDeclared = method.FindLastDefinition(method.ContainingType.Interfaces);
-                    if (lastDeclared == null || SymbolEqualityComparer.Default.Equals(lastDeclared, method) || lastDeclared.ContainingType.TypeKind != TypeKind.Interface || method?.IsStatic == false)
-                        return;
+                    if (lastDeclared == null || SymbolEqualityComparer.Default.Equals(lastDeclared, method) || lastDeclared.ContainingType.TypeKind != TypeKind.Interface || method.IsStatic == false)
+                        return null;
 
                     overridenMethod = lastDeclared;
                 }
             }
 
-            WriteCecilExpression(Context, $"{methodVar}.Overrides.Add({overridenMethod.MethodResolverExpression(Context)});");
+            return overridenMethod.MethodResolverExpression(Context);
         }
     }
 }

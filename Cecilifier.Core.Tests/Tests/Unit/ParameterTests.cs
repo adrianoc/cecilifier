@@ -8,13 +8,13 @@ public class ParameterTests : CecilifierUnitTestBase
 {
     [TestCase("Int32", "-42", TestName = "Integer Negative")]
     [TestCase("Int32", "10", TestName = "Integer Positive (implicit)")]
-    [TestCase("Int32", "+10", TestName = "Integer Positive (explicit)")]
+    [TestCase("Int32", "+10", "10", TestName = "Integer Positive (explicit)")]
     [TestCase("Int32", "0x42", "66", TestName = "Integer Hex")]
     [TestCase("Boolean", "true", TestName = "Boolean True")]
     [TestCase("Boolean", "false", TestName = "Boolean False")]
     [TestCase("Single", "4.2f", TestName = "Float")]
-    [TestCase("Double", "4.2", TestName = "Double Implicit")]
-    [TestCase("Double", "4.2d", "4.2", TestName = "Double Explicit")] // float point literals without suffixes are double by default.
+    [TestCase("Double", "4.2", "4.2d", TestName = "Double Implicit")]
+    [TestCase("Double", "4.2d", "4.2d", TestName = "Double Explicit")] // float point literals without suffixes are double by default.
     [TestCase("String", "\"Foo\"", TestName = "String")]
     [TestCase("Object", "null", TestName = "Object Null")]
     [TestCase("Object", "default", "null", TestName = "Object Default")]
@@ -22,6 +22,7 @@ public class ParameterTests : CecilifierUnitTestBase
     {
         var result = RunCecilifier($"using System; class Foo {{ void Bar(string s, {paramType} p = {paramValue}) {{ }} }}");
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+        
         Assert.That(cecilifiedCode, Contains.Substring("ParameterDefinition(\"s\", ParameterAttributes.None, assembly.MainModule.TypeSystem.String)"));
         Assert.That(cecilifiedCode, Does.Match($@"var (?<param_def>.*) = new ParameterDefinition\(""p"", ParameterAttributes.Optional, assembly.MainModule.TypeSystem.{paramType}\);\s+" +
                                                $@"\k<param_def>.Constant = {Regex.Escape(expectedParamValue ?? paramValue)};"));

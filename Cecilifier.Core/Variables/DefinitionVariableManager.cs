@@ -76,6 +76,15 @@ public class DefinitionVariableManager
         return WithVariable(registered);
     }
 
+    public ScopedDefinitionVariable WithCurrentMethod(MethodDefinitionVariable methodVariable)
+    {
+        var found = GetMethodVariable(methodVariable);
+        var registered = found.IsValid 
+                                        ? found 
+                                        : RegisterMethod(methodVariable);
+        return WithVariable(registered);
+    }
+
     public ScopedDefinitionVariable WithVariable(DefinitionVariable variable)
     {
         _definitionStack.Add(variable);
@@ -89,8 +98,7 @@ public class DefinitionVariableManager
             ? found
             : RegisterNonMethod(parentName, memberName, variableMemberKind, definitionVariableName);
 
-        _definitionStack.Add(registered);
-        return new ScopedDefinitionVariable(_definitionStack, _definitionStack.Count - 1);
+        return WithVariable(registered);
     }
 
     /// <summary>

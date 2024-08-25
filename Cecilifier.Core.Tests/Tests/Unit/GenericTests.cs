@@ -108,11 +108,15 @@ namespace Cecilifier.Core.Tests.Tests.Unit
                     @"il_bar_3.Emit\(OpCodes.Ldarg_1\);\s+" +
                     @"var r_M_7 = new MethodReference\(m_M_5.Name, m_M_5.ReturnType\).+;"));
 
-            Assert.That(cecilifiedCode, Contains.Substring("il_M_9.Emit(OpCodes.Starg_S, p_t_6);")); // t = tl; ensures that the forwarded parameters has been used in M()'s implementation
+            Assert.That(cecilifiedCode, Does.Match("""
+                                                   //t = tl;
+                                                   \s+il_M_9.Emit\(OpCodes.Ldloc, l_tl_\d+\);
+                                                   \s+il_M_9.Emit\(OpCodes.Starg_S, p_t_\d+\);
+                                                   """)); // t = tl; ensures that the forwarded parameters has been used in M()'s implementation
         }
 
-        [TestCase(@"class Foo<T> where T : new() { T M() => new T(); }")]
-        [TestCase(@"class Foo { T M<T>() where T : new() => new T(); }")]
+        [TestCase("class Foo<T> where T : new() { T M() => new T(); }")]
+        [TestCase("class Foo { T M<T>() where T : new() => new T(); }")]
         public void TestInstantiatingGenericTypeParameter(string code)
         {
             var result = RunCecilifier(code);
@@ -120,44 +124,6 @@ namespace Cecilifier.Core.Tests.Tests.Unit
 
             Assert.That(cecilifiedCode, Does.Match(@"il_M_\d+.Emit\(OpCodes.Call, .+ImportReference\(typeof\(System\.Activator\)\)\.MakeGenericInstanceType\(gp_T_\d+\)\);"));
             Assert.That(cecilifiedCode, Does.Match(@"m_M_\d+\.ReturnType = gp_T_\d+;"));
-        }
-
-        [TestCase("var x = typeof(System.Collections.Generic.Dictionary<int, int>.Enumerator);",
-            """il_topLevelMain_3.Emit\(OpCodes.Ldtoken, assembly.MainModule.ImportReference\(typeof\(System.Collections.Generic.Dictionary<int, int>.Enumerator\)\)\);""")]
-
-        [TestCase("class Foo { void Bar(System.Collections.Generic.Dictionary<int, int> dict) { var enu = dict.GetEnumerator(); } }",
-            """
-                    (il_bar_\d+).Emit\(OpCodes.Callvirt,.+ImportReference\(.+typeof\(System.Collections.Generic.Dictionary<System.Int32, System.Int32>\), "GetEnumerator",.+\)\);
-                    \s+\1.Emit\(OpCodes.Stloc, l_enu_\d+\);
-                    """)]
-        public void TestReferenceToNonGenericInnerTypeOfGenericOuterType(string code, string expected)
-        {
-            var result = RunCecilifier(code);
-            Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(expected));
-        }
-
-        [Test]
-        public void TestInnerTypeOfOuterGenericType()
-        {
-            var r = RunCecilifier("class C { System.Collections.Generic.List<int>.Enumerator e; }");
-            Assert.That(
-                r.GeneratedCode.ReadToEnd(),
-                Does.Match("""var fld_e_1 = new FieldDefinition\("e", FieldAttributes.Private, assembly.MainModule.ImportReference\(typeof\(System.Collections.Generic.List<int>.Enumerator\)\)\);"""));
-        }
-
-        [Test]
-        public void TestRecursiveTypeParameterConstraint()
-        {
-            //Test for issue #218
-            var r = RunCecilifier("interface I<T> where T : I<T> {}");
-            Assert.That(
-                r.GeneratedCode.ReadToEnd(),
-                Does.Match(
-                      """
-                            var gp_T_1 = new Mono.Cecil.GenericParameter\("T", itf_I_0\);
-                            \s+itf_I_0.GenericParameters.Add\(gp_T_1\);
-                            \s+gp_T_1.Constraints.Add\(new GenericParameterConstraint\(itf_I_0.MakeGenericInstanceType\(gp_T_1\)\)\);
-                            """));
         }
 
         [Test]
@@ -429,13 +395,13 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             Assert.Multiple(() =>
             {
                 var stringVersionCount = Regex.Matches(cecilifiedCode, """
-                                                                       \s+var gi_M_\d+ = new GenericInstanceMethod\(m_M_7\);
+                                                                       \s+var gi_M_\d+ = new GenericInstanceMethod\(m_M_\d+\);
                                                                        \s+gi_M_\d+.GenericArguments.Add\(assembly.MainModule.TypeSystem.String\);
                                                                        """);
                 Assert.That(stringVersionCount.Count, Is.EqualTo(1), cecilifiedCode);
 
                 var intVersionCount = Regex.Matches(cecilifiedCode, """
-                                                                    \s+var gi_M_\d+ = new GenericInstanceMethod\(m_M_7\);
+                                                                    \s+var gi_M_\d+ = new GenericInstanceMethod\(m_M_\d+\);
                                                                     \s+gi_M_\d+.GenericArguments.Add\(assembly.MainModule.TypeSystem.Int32\);
                                                                     """);
                 Assert.That(intVersionCount.Count, Is.EqualTo(1), cecilifiedCode);
@@ -445,7 +411,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
         [TestCase(
             "static int M<T>(T[] b) where T : Foo => b[0].data;",
             """
-            (\s+il_M_16\.Emit\(OpCodes\.)Ldarg_0\);
+            (\s+il_M_\d+\.Emit\(OpCodes\.)Ldarg_0\);
             \1Ldc_I4, 0\);
             \1Ldelem_Any, gp_T_\d+\);
             \1Box, gp_T_\d+\);
@@ -601,6 +567,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
                                                               \s+cls_inner_\d+.Methods.Add\(\k<overload>\);
                                                               \s+\k<overload>.Body.InitLocals = true;
                                                               \s+var il_M_7 = \k<overload>.Body.GetILProcessor\(\);
+                                                              \s+//M<T>\(\)
                                                               \s+il_M_7.Emit\(OpCodes.Ldarg_0\);
                                                               \s+var (?<gen_method>gi_M_\d+) = new GenericInstanceMethod\(\k<overload>\);
                                                               \s+\k<gen_method>.GenericArguments.Add\(gp_T_6\);

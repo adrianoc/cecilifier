@@ -48,7 +48,7 @@ namespace Cecilifier.Core.AST
 
                 var methodVar = Context.Naming.SyntheticVariable(acc.Keyword.ValueText, ElementKind.Method);
                 var methodILVar = Context.Naming.ILProcessor(acc.Keyword.ValueText);
-                var body = CecilDefinitionsFactory.MethodBody(methodVar, methodILVar, Array.Empty<InstructionRepresentation>());
+                var body = CecilDefinitionsFactory.MethodBody(Context.Naming, acc.Keyword.ValueText, methodVar, methodILVar, [], []);
                 var accessorMethodVar = AddAccessor(node, eventSymbol, methodVar, acc.Keyword.ValueText, eventType, body);
                 using (Context.DefinitionVariables.WithVariable(accessorMethodVar))
                 {
@@ -98,7 +98,7 @@ namespace Cecilifier.Core.AST
             HandleAttributesInMemberDeclaration(node.AttributeLists, evtDefVar);
         }
 
-        private string AddAccessor(EventFieldDeclarationSyntax node, IEventSymbol eventSymbol, string accessorName, string backingFieldVar, string eventType, Func<EventFieldDeclarationSyntax, IEventSymbol, string, string, IEnumerable<string>> methodBodyFactory)
+        private string AddAccessor(EventFieldDeclarationSyntax node, IEventSymbol eventSymbol, string accessorName, string backingFieldVar, string eventType, Func<EventFieldDeclarationSyntax, IEventSymbol, string, string, string, IEnumerable<string>> methodBodyFactory)
         {
             var methodVar = Context.Naming.SyntheticVariable(accessorName, ElementKind.Method);
             var isInterfaceDef = eventSymbol.ContainingType.TypeKind == TypeKind.Interface;
@@ -106,7 +106,7 @@ namespace Cecilifier.Core.AST
             if (!isInterfaceDef)
             {
                 var localVarsExps = CreateLocalVarsForEventRegistrationMethods(methodVar, backingFieldVar);
-                methodBodyExpressions = methodBodyFactory(node, eventSymbol, backingFieldVar, methodVar)
+                methodBodyExpressions = methodBodyFactory(node, eventSymbol, accessorName, methodVar, backingFieldVar)
                                                 .Concat(localVarsExps)
                                                 .Append($"{methodVar}.Body.InitLocals = true;");
             }
@@ -139,7 +139,7 @@ namespace Cecilifier.Core.AST
                 yield return $"{methodVar}.Body.Variables.Add(new VariableDefinition({backingFieldVar}.FieldType));";
         }
 
-        private IEnumerable<string> RemoveMethodBody(EventFieldDeclarationSyntax context, IEventSymbol eventSymbol, string backingFieldVar, string removeMethodVar)
+        private IEnumerable<string> RemoveMethodBody(EventFieldDeclarationSyntax context, IEventSymbol eventSymbol, string accessorName, string removeMethodVar, string backingFieldVar)
         {
             var isStatic = eventSymbol.IsStatic;
             var (ldfld, ldflda) = isStatic ? (OpCodes.Ldsfld, OpCodes.Ldsflda) : (OpCodes.Ldfld, OpCodes.Ldflda);
@@ -151,8 +151,8 @@ namespace Cecilifier.Core.AST
 
             // static member access does not have a *this* so simply replace with *Nop*
             var lgarg_0 = isStatic ? OpCodes.Nop : OpCodes.Ldarg_0;
-            var bodyExps = CecilDefinitionsFactory.MethodBody(removeMethodVar, new[]
-            {
+            var bodyExps = CecilDefinitionsFactory.MethodBody(Context.Naming, accessorName, removeMethodVar, [],
+            [
                 lgarg_0,
                 ldfld.WithOperand(fieldVar),
                 OpCodes.Stloc_0,
@@ -173,12 +173,12 @@ namespace Cecilifier.Core.AST
                 OpCodes.Ldloc_1,
                 OpCodes.Bne_Un_S.WithBranchOperand("LoopStart"),
                 OpCodes.Ret
-            });
+            ]);
 
             return compareExchangeExps.Concat(bodyExps);
         }
 
-        private IEnumerable<string> AddMethodBody(EventFieldDeclarationSyntax context, IEventSymbol eventSymbol, string backingFieldVar, string addMethodVar)
+        private IEnumerable<string> AddMethodBody(EventFieldDeclarationSyntax context, IEventSymbol eventSymbol, string accessorName, string addMethodVar, string backingFieldVar)
         {
             var isStatic = eventSymbol.IsStatic;
             var (ldfld, ldflda) = isStatic ? (OpCodes.Ldsfld, OpCodes.Ldsflda) : (OpCodes.Ldfld, OpCodes.Ldflda);
@@ -190,8 +190,8 @@ namespace Cecilifier.Core.AST
 
             // static member access does not have a *this* so simply replace with *Nop*
             var lgarg_0 = isStatic ? OpCodes.Nop : OpCodes.Ldarg_0;
-            var bodyExps = CecilDefinitionsFactory.MethodBody(addMethodVar, new[]
-            {
+            var bodyExps = CecilDefinitionsFactory.MethodBody(Context.Naming, accessorName, addMethodVar, [], 
+            [
                 lgarg_0,
                 ldfld.WithOperand(fieldVar),
                 OpCodes.Stloc_0,
@@ -213,7 +213,7 @@ namespace Cecilifier.Core.AST
                 OpCodes.Bne_Un_S.WithBranchOperand("LoopStart"),
                 OpCodes.Nop,
                 OpCodes.Ret
-            });
+            ]);
 
             return compareExchangeExps.Concat(bodyExps);
         }
@@ -237,12 +237,17 @@ namespace Cecilifier.Core.AST
         private string AddBackingField(EventFieldDeclarationSyntax node)
         {
             var privateModifier = SyntaxFactory.Token(SyntaxKind.PrivateKeyword); // always private no matter the accessibility of the event
-            var noAccessibilityModifier = node.Modifiers.Where(m => !m.IsKind(SyntaxKind.PublicKeyword)
-                                                                    && !m.IsKind(SyntaxKind.PrivateKeyword)
-                                                                    && !m.IsKind(SyntaxKind.InternalKeyword)
-                                                                    && !m.IsKind(SyntaxKind.ProtectedKeyword));
+            var cleanedUpModifiers = node.Modifiers
+                                                                    .Where(m =>
+                                                                        !m.IsKind(SyntaxKind.PublicKeyword)
+                                                                        && !m.IsKind(SyntaxKind.PrivateKeyword)
+                                                                        && !m.IsKind(SyntaxKind.InternalKeyword)
+                                                                        && !m.IsKind(SyntaxKind.ProtectedKeyword)
+                                                                        && !m.IsKind(SyntaxKind.VirtualKeyword)) // There's no such thing as a virtual field
+                                                                    .Append(privateModifier)
+                                                                    .ToList();
 
-            var fields = FieldDeclarationVisitor.HandleFieldDeclaration(Context, node, node.Declaration, noAccessibilityModifier.Append(privateModifier).ToList(), node.ResolveDeclaringType<TypeDeclarationSyntax>());
+            var fields = FieldDeclarationVisitor.HandleFieldDeclaration(Context, node, node.Declaration, cleanedUpModifiers, node.ResolveDeclaringType<TypeDeclarationSyntax>());
             return fields.First();
         }
 

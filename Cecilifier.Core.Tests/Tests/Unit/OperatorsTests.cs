@@ -239,6 +239,7 @@ public class OperatorsTests : CecilifierUnitTestBase
         """
         var (p_o_\d+) = new ParameterDefinition\("o", ParameterAttributes.None, assembly.MainModule.TypeSystem.Object\);
         \s+m_foo_\d+.Parameters.Add\(\1\);
+        \s+//o != null
         (\s+il_foo_\d+\.Emit\(OpCodes\.)Ldarg_1\);
         \2Ldnull\);
         \2Ceq\);
@@ -252,6 +253,7 @@ public class OperatorsTests : CecilifierUnitTestBase
         """
                 var (p_o_\d+) = new ParameterDefinition\("o", ParameterAttributes.None, assembly.MainModule.TypeSystem.Object\);
                 \s+m_foo_\d+.Parameters.Add\(\1\);
+                \s+//o == null
                 (\s+il_foo_\d+\.Emit\(OpCodes\.)Ldarg_1\);
                 \2Ldnull\);
                 \2Ceq\);
@@ -262,6 +264,7 @@ public class OperatorsTests : CecilifierUnitTestBase
         """
                 var (p_o_\d+) = new ParameterDefinition\("o", ParameterAttributes.None, gp_T_7\);
                 \s+m_foo_\d+.Parameters.Add\(\1\);
+                \s+//o == null
                 (\s+il_foo_\d+\.Emit\(OpCodes\.)Ldarg_1\);
                 \2Box, gp_T_7\);
                 \2Ldnull\);

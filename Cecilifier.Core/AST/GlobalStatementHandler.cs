@@ -26,11 +26,13 @@ namespace Cecilifier.Core.AST
                 typeVar,
                 null, // global statements cannot be declared in namespace
                 "Program",
-                null, // Top level type has no outer type.
                 typeModifiers,
                 context.TypeResolver.Bcl.System.Object,
+                null, // Top level type has no outer type.
                 false,
-                Array.Empty<string>());
+                Array.Empty<ITypeSymbol>(), 
+                [], 
+                []);
 
             methodVar = context.Naming.SyntheticVariable("topLevelStatements", ElementKind.Method);
             var methodExps = CecilDefinitionsFactory.Method(
@@ -51,10 +53,10 @@ namespace Cecilifier.Core.AST
                 paramVar,
                 $"{context.TypeResolver.Bcl.System.String}.MakeArrayType()",
                 Constants.ParameterAttributes.None,
-                defaultParameterValue: null);
+                (null, false));
 
             ilVar = context.Naming.ILProcessor("topLevelMain");
-            var mainBodyExps = CecilDefinitionsFactory.MethodBody(methodVar, ilVar, Array.Empty<InstructionRepresentation>());
+            var mainBodyExps = CecilDefinitionsFactory.MethodBody(context.Naming, "topLevelMain", methodVar, ilVar, [], []);
 
             context.WriteCecilExpressions(typeExps);
             context.WriteCecilExpressions(methodExps);

@@ -44,7 +44,7 @@ namespace Cecilifier.Core.Tests.Integration
              */
             // Don't know how to emit that using cecil yet. `AssemblyDefinition.HasSecurityDeclarations` and `AssemblyDefinition.SecurityDeclarations`
             // are likely involved. For now we'll prevent ilverification to fail the test since the code looks to run with no problem
-            AssertResourceTest(new ResourceTestOptions
+            AssertResourceTest(new CecilifyTestOptions
             {
                 ResourceName = $"Misc/Pointers/{testName}", 
                 IgnoredILErrors = "ExpectedNumericType"
@@ -57,7 +57,7 @@ namespace Cecilifier.Core.Tests.Integration
         [TestCase("GenericFunctionPointers")]
         public void TestFunctionPointer(string testName)
         {
-            AssertResourceTest(new ResourceTestOptions
+            AssertResourceTest(new CecilifyTestOptions
             {
                 ResourceName = $"Misc/Pointers/{testName}", 
                 FailOnAssemblyVerificationErrors = IgnoredKnownIssue.MiscILVerifyVailuresNeedsInvestigation // https://github.com/adrianoc/cecilifier/issues/227
@@ -96,7 +96,7 @@ namespace Cecilifier.Core.Tests.Integration
         [TestCase("TopLevelStatements")]
         public void TestTopLevelStatements(string testName)
         {
-            AssertResourceTest(new ResourceTestOptions { ResourceName = $"Misc/{testName}", BuildType = BuildType.Exe });
+            AssertResourceTest(new CecilifyTestOptions { ResourceName = $"Misc/{testName}", BuildType = BuildType.Exe });
         }
     }
 }

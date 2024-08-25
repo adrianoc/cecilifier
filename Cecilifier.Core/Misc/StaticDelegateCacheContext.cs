@@ -81,11 +81,13 @@ public struct StaticDelegateCacheContext
             cachedTypeVar,
             DeclaringTypeNamespace,
             cacheTypeName,
-            DeclaringTypeName,
             Constants.Cecil.StaticClassAttributes.AppendModifier("TypeAttributes.NestedPrivate"),
             context.TypeResolver.Bcl.System.Object,
+            DeclaringTypeName,
             isStructWithNoFields: false,
-            Array.Empty<string>());
+            Array.Empty<ITypeSymbol>(),
+            [], 
+            []);
 
         context.WriteCecilExpressions(cacheTypeExps);
 

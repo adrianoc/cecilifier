@@ -7,13 +7,13 @@ public class DefaultExpressions : CecilifierUnitTestBase
 {
     private const string DefaultTypeParameterMethodInvocationExpectation = """
                                                                            var (l_T_\d+) = new VariableDefinition\((gp_T_\d+)\);
-                                                                           \s+m_M_6.Body.Variables.Add\(\1\);
-                                                                           (\s+il_M_8\.Emit\(OpCodes\.)Ldloca_S, \1\);
+                                                                           \s+m_M_\d+.Body.Variables.Add\(\1\);
+                                                                           (\s+il_M_\d+\.Emit\(OpCodes\.)Ldloca_S, \1\);
                                                                            \3Initobj, \2\);
                                                                            \3Ldloca_S, \1\);
                                                                            \3Constrained, \2\);
                                                                            \3Callvirt, .+ImportReference\(.+ResolveMethod\(typeof\(System.Object\), "GetHashCode",.+\)\);
-                                                                           """;    
+                                                                           """;
     
     private const string DefaultTypeParameterMethodInvocationOnReferenceTypeExpectation = """
                                                                            var (l_T_\d+) = new VariableDefinition\((gp_T_\d+)\);
@@ -98,7 +98,7 @@ public class DefaultExpressions : CecilifierUnitTestBase
     [TestCase("string M() => default(int).ToString();", @"(il_M_\d+\.Emit\(OpCodes\.)Stloc, (l_tmp_\d+)\);\s+" +
                                                                     @"\1Ldloca_S, \2\);", TestName = "Invocation On Default")]
     [TestCase("void M(int p = default) {}", @"p_p_\d+.Constant = 0;", TestName = "Literal Int Parameter")]
-    [TestCase("void M(double p = default) {}", @"p_p_\d+.Constant = 0.0D;", TestName = "Literal Double Parameter")]
+    [TestCase("void M(double p = default) {}", @"p_p_\d+.Constant = 0d;", TestName = "Literal Double Parameter")]
     [TestCase("void M(int p = default(int)) {}", @"p_p_\d+.Constant = 0;", TestName = "Int Parameter")]
     [TestCase("void M() { System.Action a = default; }", ReferenceTypeExpectation, TestName = "Literal Delegate")]
     [TestCase("void M() { System.Action a = default(System.Action); }", ReferenceTypeExpectation, TestName = "Delegate")]
