@@ -33,7 +33,7 @@ namespace Cecilifier.Core
 
             var errors = comp.GetDiagnostics()
                                             .Where(d => d.Severity == DiagnosticSeverity.Error)
-                                            .Select(d => (CompilationError) d)
+                                            .Select(CecilifierDiagnostic.FromCompiler)
                                             .ToArray();
             if (errors.Length > 0)
             {
@@ -51,7 +51,7 @@ namespace Cecilifier.Core
             //new SyntaxTreeDump("TREE: ", root);
 
             var mainTypeName = visitor.MainType != null ? visitor.MainType.Identifier.Text : "Cecilified";
-            return new CecilifierResult(new StringReader(ctx.Output.AsCecilApplication(mainTypeName, visitor.MainMethodDefinitionVariable)), mainTypeName, ctx.Mappings);
+            return new CecilifierResult(new StringReader(ctx.Output.AsCecilApplication(mainTypeName, visitor.MainMethodDefinitionVariable)), mainTypeName, ctx.Mappings, ctx.Diagnostics);
         }
 
         private static OutputKind OutputKindFor(SyntaxTree syntaxTree)
@@ -73,15 +73,17 @@ namespace Cecilifier.Core
 
     public struct CecilifierResult
     {
-        public CecilifierResult(StringReader generatedCode, string mainTypeName, IList<Mapping> mappings)
+        public CecilifierResult(StringReader generatedCode, string mainTypeName, IList<Mapping> mappings, IList<CecilifierDiagnostic> diagnostics = null)
         {
             GeneratedCode = generatedCode;
             MainTypeName = mainTypeName;
             Mappings = mappings;
+            Diagnostics = diagnostics ?? [];
         }
 
         public StringReader GeneratedCode { get; }
         public string MainTypeName { get; }
         public IList<Mapping> Mappings { get; }
+        public IList<CecilifierDiagnostic> Diagnostics { get; }
     }
 }

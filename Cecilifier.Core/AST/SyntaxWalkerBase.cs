@@ -986,6 +986,7 @@ namespace Cecilifier.Core.AST
 
         protected void LogUnsupportedSyntax(SyntaxNode node)
         {
+            Context.EmitWarning($"Syntax {node.Kind()} ({node.HumanReadableSummary()}) is not supported.\nGenerated code may not compile, or if it compiles, produce invalid results.", node);
             var lineSpan = node.GetLocation().GetLineSpan();
             AddCecilExpression($"/* Syntax '{node.Kind()}' is not supported in {lineSpan.Path} ({lineSpan.Span.Start.Line + 1},{lineSpan.Span.Start.Character + 1}):\n------\n{node}\n----*/");
         }

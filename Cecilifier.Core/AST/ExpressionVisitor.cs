@@ -143,7 +143,7 @@ namespace Cecilifier.Core.AST
 
             var ev = new ExpressionVisitor(ctx, ilVar);
             ev.Visit(node);
-
+            
             return ev.skipLeftSideVisitingInAssignment;
         }
 

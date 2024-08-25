@@ -12,7 +12,6 @@ using System.Reflection;
 using System.Resources;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
@@ -30,18 +29,6 @@ using Microsoft.Extensions.Hosting;
 
 namespace Cecilifier.Web
 {
-    public class CecilifiedWebResult
-    {
-        [JsonPropertyName("status")] public int Status { get; set; }
-        [JsonPropertyName("cecilifiedCode")] public string CecilifiedCode { get; set; }
-        [JsonPropertyName("counter")] public int Counter { get; set; }
-        [JsonPropertyName("clientsCounter")] public uint Clients { get; set; }
-        [JsonPropertyName("maximumUnique")] public uint MaximumUnique { get; set; }
-        [JsonPropertyName("kind")] public char Kind { get; set; }
-        [JsonPropertyName("mappings")] public IList<Mapping> Mappings { get; set; }
-        [JsonPropertyName("mainTypeName")] public string MainTypeName { get; set; }
-    }
-
     public class Startup
     {
         private const string ProjectContents = """
@@ -158,7 +145,7 @@ namespace Cecilifier.Web
                 var cecilifiedWebResult = new CecilifiedWebResult
                 {
                     Status = 4,
-                    CecilifiedCode = String.Empty,
+                    Data = String.Empty,
                     Counter = CecilifierApplication.Count,
                     MaximumUnique = CecilifierApplication.MaximumUnique,
                     Clients = CecilifierApplication.UniqueClients,
@@ -260,11 +247,11 @@ namespace Cecilifier.Web
                 catch (SyntaxErrorException ex)
                 {
                     var source = includeSourceInErrorReports ? codeSnippet : string.Empty;
-                    await SendMessageWithCodeToChatAsync("Syntax Error", string.Join('\n', ex.Errors.Select(err => err.Message)), "15746887", source);
+                    await SendMessageWithCodeToChatAsync("Syntax Error", string.Join('\n', ex.Diagnostics.Select(err => err.Message)), "15746887", source);
 
                     var jsonOptions = new JsonSerializerOptions(JsonSerializerOptions.Default);
                     jsonOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
-                    var serializedErrors = JsonSerializer.Serialize(ex.Errors, jsonOptions);
+                    var serializedErrors = JsonSerializer.Serialize(ex.Diagnostics, jsonOptions);
                     var dataToReturn = Encoding.UTF8.GetBytes($"{{ \"status\" : 1, \"error\": \"Code contains syntax errors\", \"errors\": {serializedErrors} }}").AsMemory();
                     await webSocket.SendAsync(dataToReturn, WebSocketMessageType.Text, true, CancellationToken.None);
                 }
@@ -338,18 +325,19 @@ namespace Cecilifier.Web
             }
         }
         
-        private static byte[] JsonSerializedBytes(string cecilifiedCode, char kind, CecilifierResult cecilifierResult)
+        private static byte[] JsonSerializedBytes(string data, char kind, CecilifierResult cecilifierResult)
         {
             var cecilifiedWebResult = new CecilifiedWebResult
             {
                 Status = 0,
-                CecilifiedCode = cecilifiedCode,
+                Data = data,
                 Counter = CecilifierApplication.Count,
                 MaximumUnique = CecilifierApplication.MaximumUnique,
                 Clients = CecilifierApplication.UniqueClients,
                 Kind = kind,
                 MainTypeName = cecilifierResult.MainTypeName,
                 Mappings = cecilifierResult.Mappings.OrderBy(x => x.Cecilified.Length).ToArray(),
+                Diagnostics = cecilifierResult.Diagnostics
             };
 
             return JsonSerializer.SerializeToUtf8Bytes(cecilifiedWebResult);

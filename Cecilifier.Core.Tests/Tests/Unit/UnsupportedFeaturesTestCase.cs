@@ -1,26 +1,20 @@
-using System.IO;
-using System.Text;
-using Cecilifier.Core.Misc;
 using NUnit.Framework;
 
-namespace Cecilifier.Core.Tests.Integration
+namespace Cecilifier.Core.Tests.Tests.Unit
 {
     /// <summary>
     ///     These tests are meant to document the list of known unsupported features and also to ensure that these are reported if used.
     /// </summary>
     [TestFixture]
-    public class UnsupportedFeaturesTestCase
+    public class UnsupportedFeaturesTestCase : CecilifierUnitTestBase
     {
         [TestCase("yield return 1", TestName = "YieldReturn")]
         [TestCase("yield break", TestName = "YieldBreak")]
         public void EnumeratorBlocks(string statement)
         {
-            var code = new MemoryStream(Encoding.ASCII.GetBytes($"class Test {{ System.Collections.IEnumerable Do() {{ {statement}; }} }} "));
-            using (var stream = Cecilifier.Process(code, new CecilifierOptions { References = ReferencedAssemblies.GetTrustedAssembliesPath() }).GeneratedCode)
-            {
-                var cecilifiedCode = stream.ReadToEnd();
-                Assert.That(cecilifiedCode, Does.Match("Syntax 'Yield(Return|Break)Statement' is not supported"));
-            }
+            var result = RunCecilifier($"class Test {{ System.Collections.IEnumerable Do() {{ {statement}; }} }} ");
+            var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+            Assert.That(cecilifiedCode, Does.Match("Syntax 'Yield(Return|Break)Statement' is not supported"));
         }
 
         [TestCase("var (a,b)")]
@@ -40,12 +34,9 @@ namespace Cecilifier.Core.Tests.Integration
 
         private static void AssertUnsupportedFeature(string codeString, string expectedMessage)
         {
-            var code = new MemoryStream(Encoding.ASCII.GetBytes(codeString));
-            using (var stream = Cecilifier.Process(code, new CecilifierOptions { References = ReferencedAssemblies.GetTrustedAssembliesPath() }).GeneratedCode)
-            {
-                var cecilifiedCode = stream.ReadToEnd();
-                Assert.That(cecilifiedCode, Contains.Substring(expectedMessage));
-            }
+            var result = RunCecilifier(codeString);
+            var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+            Assert.That(cecilifiedCode, Contains.Substring(expectedMessage));
         }
 
         [Test]

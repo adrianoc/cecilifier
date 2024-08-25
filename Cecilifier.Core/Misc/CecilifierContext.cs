@@ -31,6 +31,7 @@ namespace Cecilifier.Core.Misc
             roslynTypeSystem = new RoslynTypeSystem(this);
             TypeResolver = new TypeResolverImpl(this);
             Mappings = new List<Mapping>();
+            Diagnostics = [];
             CecilifiedLineNumber = startingLine;
             startLineNumber = startingLine;
 
@@ -62,6 +63,24 @@ namespace Cecilifier.Core.Misc
 
         public IList<Mapping> Mappings { get; }
 
+        public IList<CecilifierDiagnostic> Diagnostics { get; }
+
+        public void EmitWarning(string message, SyntaxNode node = null) => EmitDiagnostic(message, node, DiagnosticKind.Warning); 
+        public void EmitError(string message, SyntaxNode node = null) => EmitDiagnostic(message, node, DiagnosticKind.Error);
+        
+        private void EmitDiagnostic(string message, SyntaxNode node, DiagnosticKind diagnosticKind)
+        {
+            Diagnostics.Add(CecilifierDiagnostic.FromAstNode(node, diagnosticKind, message));
+            
+            var diagnosticKindString = diagnosticKind == DiagnosticKind.Warning ? "warning" : "error";
+            var lines = message.Split('\n');
+            foreach (var line in lines)
+            {
+                WriteCecilExpression($"#{diagnosticKindString} {line}");
+                WriteNewLine();
+            }
+        }
+        
         public IMethodSymbol GetDeclaredSymbol(BaseMethodDeclarationSyntax methodDeclaration)
         {
             return (IMethodSymbol) SemanticModel.GetDeclaredSymbol(methodDeclaration);
