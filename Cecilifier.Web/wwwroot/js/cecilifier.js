@@ -1014,8 +1014,6 @@ function send(websocket, format) {
 
     removeMarkersFromCSharpCode();
 
-    clearError();
-
     showSpinner();
 
     getAssemblyReferencesMetadata(assemblyReferences =>
@@ -1164,14 +1162,6 @@ function ResizeErrorDialog(){
     getErrorBodyElement().style.height = `${h * 0.70}px`;
 }
 
-function clearError() {
-    setAlert("cecilifier_error", null);
-}
-
-function setError(str) {
-    setAlert("cecilifier_error", str);
-}
-
 function updateReportErrorButton(element) {
     UpdateButtonState(getReportErrorButton(), element.value !== "");
 }
@@ -1187,7 +1177,6 @@ function UpdateButtonState(element, enable) {
 }
 
 function fileIssueInGitHub() {
-    clearError();
     showSpinner();
     
     try {
