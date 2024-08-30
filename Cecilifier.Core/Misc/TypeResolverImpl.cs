@@ -49,6 +49,7 @@ namespace Cecilifier.Core.Misc
             }
             
             if (type.SpecialType == SpecialType.None 
+                || type.SpecialType == SpecialType.System_Array 
                 || type.SpecialType == SpecialType.System_Enum 
                 || type.SpecialType == SpecialType.System_ValueType 
                 || type.SpecialType == SpecialType.System_Decimal 

@@ -56,8 +56,7 @@ internal partial class TypeDeclarationVisitor
                 "Invoke",
                 ResolveType(node.ReturnType),
                 node.ParameterList.Parameters,
-                (methodVar, param) => CecilDefinitionsFactory.Parameter(param, Context.SemanticModel, methodVar, Context.Naming.Parameter(param), ResolveType(param.Type),
-                    param.Accept(DefaultParameterExtractorVisitor.Instance)));
+                (methodVar, param) => CecilDefinitionsFactory.Parameter(Context, param, methodVar, Context.Naming.Parameter(param)));
 
             // BeginInvoke() method
             var beginInvokeMethodVar = AddDelegateMethod(
@@ -65,8 +64,7 @@ internal partial class TypeDeclarationVisitor
                  "BeginInvoke",
                  Context.TypeResolver.Bcl.System.IAsyncResult,
                  node.ParameterList.Parameters,
-                 (methodVar, param) => CecilDefinitionsFactory.Parameter(param, Context.SemanticModel, methodVar, Context.Naming.Parameter(param), ResolveType(param.Type),
-                     param.Accept(DefaultParameterExtractorVisitor.Instance)));
+                 (methodVar, param) => CecilDefinitionsFactory.Parameter(Context, param, methodVar, Context.Naming.Parameter(param)));
 
             AddCecilExpression($"{beginInvokeMethodVar}.Parameters.Add(new ParameterDefinition({Context.TypeResolver.Bcl.System.AsyncCallback}));");
             AddCecilExpression($"{beginInvokeMethodVar}.Parameters.Add(new ParameterDefinition({Context.TypeResolver.Bcl.System.Object}));");

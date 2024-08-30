@@ -62,14 +62,6 @@ namespace Cecilifier.Core.AST
                 EnsureForwardedMethod(Context, method);
             
             var operand = method.MethodResolverExpression(Context);
-            if (method.IsGenericMethod && (method.IsDefinedInCurrentAssembly(Context) || method.TypeArguments.Any(t => t.TypeKind == TypeKind.TypeParameter)))
-            {
-                // If the generic method is an open one or if it is defined in the same assembly then the call need to happen in the generic instance method (note that for 
-                // methods defined in the snippet being cecilified, even if 'method' represents a generic instance method, MethodResolverExpression() will return the open
-                // generic one instead).
-                operand = operand.MakeGenericInstanceMethod(Context, method.Name, method.TypeArguments.Select(t => Context.TypeResolver.Resolve(t)).ToArray());
-            }
-
             if (Context.TryGetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, out var constrainedType))
             {
                 Context.EmitCilInstruction(ilVar, OpCodes.Constrained, constrainedType);
@@ -976,7 +968,7 @@ namespace Cecilifier.Core.AST
             foreach (var parameter in method.Parameters)
             {
                 var paramVar = context.Naming.Parameter(parameter.Name);
-                var parameterExps = CecilDefinitionsFactory.Parameter(parameter, methodDeclarationVar, paramVar, context.TypeResolver.Resolve(parameter.Type));
+                var parameterExps = CecilDefinitionsFactory.Parameter(context, parameter, methodDeclarationVar, paramVar);
                 context.WriteCecilExpressions(parameterExps);
                 context.DefinitionVariables.RegisterNonMethod(method.ToDisplayString(), parameter.Name, VariableMemberKind.Parameter, paramVar);
             }

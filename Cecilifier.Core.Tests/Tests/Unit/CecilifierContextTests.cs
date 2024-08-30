@@ -16,7 +16,6 @@ public class CecilifierContextTests
         var comp = CSharpCompilation.Create("", new[] { syntaxTree });
         _semanticModel = comp.GetSemanticModel(syntaxTree);
     }
-
     
     [Test]
     public void WarningDiagnosticsAreEmitted()
