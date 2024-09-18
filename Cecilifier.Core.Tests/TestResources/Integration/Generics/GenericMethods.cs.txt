@@ -9,4 +9,9 @@ class GenericMethods
     
     void InferredCall() { B(10); }
     void Explicit() { A<string>(); B<bool>(false); }
+    
+    void InvokeGenericMethodFromDifferentAssembly()
+    {
+        System.Array.Empty<int>();
+    }
 }
