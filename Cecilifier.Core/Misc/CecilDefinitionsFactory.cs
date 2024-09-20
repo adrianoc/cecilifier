@@ -318,7 +318,7 @@ namespace Cecilifier.Core.Misc
                 paramSymbol.IsParams,
                 methodVar,
                 paramVar,
-                context.TypeResolver.Resolve(paramSymbol.Type),
+                context.TypeResolver.Resolve(paramSymbol.Type, methodVar),
                 paramSymbol.AsParameterAttribute(),
                 paramSymbol.ExplicitDefaultValue(rawString: false));
         }

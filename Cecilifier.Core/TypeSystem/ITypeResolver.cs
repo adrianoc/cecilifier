@@ -4,7 +4,7 @@ namespace Cecilifier.Core.TypeSystem
 {
     internal interface ITypeResolver
     {
-        string Resolve(ITypeSymbol type);
+        string Resolve(ITypeSymbol type, string cecilTypeParameterProviderVar = null);
         string Resolve(string typeName);
 
         string ResolvePredefinedType(ITypeSymbol type);

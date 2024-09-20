@@ -216,16 +216,18 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             Assert.That(cecilified, Does.Not.Contain("typeof(Foo)"));
             Assert.That(cecilified, Does.Match("""
                                                //System.Array.Empty<Foo>\(\);
-                                               \s+var r_empty_9 = new MethodReference\("Empty", cls_foo_0.MakeArrayType\(\), assembly.MainModule.ImportReference\(typeof\(System.Array\)\)\)
+                                               \s+var r_empty_9 = new MethodReference\("Empty", assembly.MainModule.TypeSystem.Void, assembly.MainModule.ImportReference\(typeof\(System.Array\)\)\)
                                                \s+{
                                                \s+HasThis = false,
                                                \s+ExplicitThis = false,
                                                \s+CallingConvention = 0,
                                                \s+};
-                                               \s+r_empty_9.GenericParameters.Add\(new GenericParameter\("T", r_empty_9\)\);
-                                               \s+var gi_empty_10 = new GenericInstanceMethod\(r_empty_9\);
-                                               \s+gi_empty_10.GenericArguments.Add\(cls_foo_0\);
-                                               \s+il_topLevelMain_6.Emit\(OpCodes.Call, gi_empty_10\);
+                                               \s+var gi_T_10 = new GenericParameter\("T", r_empty_9\);
+                                               \s+r_empty_9.GenericParameters.Add\(gi_T_10\);
+                                               \s+r_empty_9.ReturnType = gi_T_10.MakeArrayType\(\);
+                                               \s+var gi_empty_11 = new GenericInstanceMethod\(r_empty_9\);
+                                               \s+gi_empty_11.GenericArguments.Add\(cls_foo_0\);
+                                               \s+il_topLevelMain_6.Emit\(OpCodes.Call, gi_empty_11\);
                                                """));
         }
 

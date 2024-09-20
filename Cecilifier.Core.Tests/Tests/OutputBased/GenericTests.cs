@@ -26,4 +26,25 @@ public class GenericTests : OutputBasedTestBase
                      """, 
             "42");
     }
+
+    [Test]
+    public void GenericInstanceMethod_ReferencingTypeParametersFromDeclaringType_Works()
+    {
+        AssertOutput("""
+                           using System;
+                           using System.Collections.Generic;
+                           using System.Linq;
+
+                           List<int> ints = new List<int>() { 1,2,3 };
+                           var strings = ints.ConvertAll(FromInt);
+                           // We need to call ToArray() due to a bug in cecilifier that crashes if List<T>.GetEnumerator()
+                           // is used in a foreach. 
+                           foreach(var s in strings.ToArray()) 
+                                Console.Write(s);
+
+                           static string FromInt(int i) => i.ToString();
+                           """, 
+            "123");
+    }
+    
 }
