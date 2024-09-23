@@ -134,6 +134,8 @@ namespace Cecilifier.Core.AST
             this.ilVar = ilVar;
         }
 
+        public string ILVariable => ilVar;
+
         internal static bool Visit(IVisitorContext ctx, string ilVar, SyntaxNode node)
         {
             if (node == null)
@@ -917,15 +919,7 @@ namespace Cecilifier.Core.AST
 
         public override void VisitCollectionExpression(CollectionExpressionSyntax node)
         {
-            Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, node.Elements.Count);
-            var arrayTypeSymbol = Context.GetTypeInfo(node).ConvertedType.EnsureNotNull<ITypeSymbol, IArrayTypeSymbol>();
-            AddCilInstruction(ilVar, OpCodes.Newarr, arrayTypeSymbol.ElementType);
-            
-            using var _ = LineInformationTracker.Track(Context, node);
-            if (PrivateImplementationDetailsGenerator.IsApplicableTo(node))
-                InitializeArrayOptimized(arrayTypeSymbol.ElementType, node.Elements);
-            else
-                InitializeArrayUnoptimized<CollectionElementSyntax>(arrayTypeSymbol.ElementType, node.Elements);
+            CollectionExpressionProcessor.Process(this, node);
         }
 
         public override void VisitAwaitExpression(AwaitExpressionSyntax node) => LogUnsupportedSyntax(node);
@@ -1505,53 +1499,10 @@ namespace Cecilifier.Core.AST
         {
             AddCilInstruction(ilVar, OpCodes.Newarr, elementType);
             if (PrivateImplementationDetailsGenerator.IsApplicableTo(initializer, Context))
-                InitializeArrayOptimized(elementType, initializer.Expressions);
+                ArrayInitializationProcessor.InitializeOptimized(this, elementType, initializer.Expressions);
             else
-                InitializeArrayUnoptimized(elementType, initializer?.Expressions);
+                ArrayInitializationProcessor.InitializeUnoptimized(this, elementType, initializer?.Expressions);
         }
-
-        private void InitializeArrayUnoptimized<TElement>(ITypeSymbol elementType, SeparatedSyntaxList<TElement>? elements) where TElement : CSharpSyntaxNode
-        {
-            var stelemOpCode = elementType.StelemOpCode();
-            for (var i = 0; i < elements?.Count; i++)
-            {
-                Context.EmitCilInstruction(ilVar, OpCodes.Dup);
-                Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, i);
-                elements.Value[i].Accept(this);
-
-                var itemType = Context.SemanticModel.GetTypeInfo(elements.Value[i]);
-                if (elementType.IsReferenceType && itemType.Type != null && itemType.Type.IsValueType)
-                {
-                    AddCilInstruction(ilVar, OpCodes.Box, itemType.Type);
-                }
-
-                Context.EmitCilInstruction(ilVar, stelemOpCode, stelemOpCode == OpCodes.Stelem_Any ? Context.TypeResolver.Resolve(elementType) : null);
-            }
-        }
-
-        private void InitializeArrayOptimized<TElement>(ITypeSymbol elementType, SeparatedSyntaxList<TElement> elements) where TElement: SyntaxNode
-        {
-            var initializeArrayHelper = Context.RoslynTypeSystem.SystemRuntimeCompilerServicesRuntimeHelpers
-                .GetMembers(Constants.Common.RuntimeHelpersInitializeArrayMethodName)
-                .Single()
-                .EnsureNotNull<ISymbol, IMethodSymbol>()
-                .MethodResolverExpression(Context);
-
-            //IL_0006: dup
-            //IL_0007: ldtoken field valuetype '<PrivateImplementationDetails>'/'__StaticArrayInitTypeSize=24' '<PrivateImplementationDetails>'::'5BC33F8E8CDE3A32E1CF1EE1B1771AC0400514A8675FC99966FCAE1E8184FDFE'
-            //IL_000c: call void [System.Runtime]System.Runtime.CompilerServices.RuntimeHelpers::InitializeArray(class [System.Runtime]System.Array, valuetype [System.Runtime]System.RuntimeFieldHandle)
-            //IL_0011: pop
-            var backingFieldVar = PrivateImplementationDetailsGenerator.GetOrCreateInitializationBackingFieldVariableName(
-                Context,
-                elementType.SizeofArrayLikeItemElement() * elements.Count,
-                elementType.Name,
-                $"new {elementType.Name}[] {{ {elements.ToFullString()}}}");
-
-            Context.EmitCilInstruction(ilVar, OpCodes.Dup);
-            Context.EmitCilInstruction(ilVar, OpCodes.Ldtoken, backingFieldVar);
-            Context.EmitCilInstruction(ilVar, OpCodes.Call, initializeArrayHelper);
-        }
-
         string EmitTargetLabel(string relatedToName)
         {
             var instVarName = Context.Naming.Label(relatedToName);

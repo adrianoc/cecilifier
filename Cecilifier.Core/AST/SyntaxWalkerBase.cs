@@ -26,7 +26,7 @@ namespace Cecilifier.Core.AST
             DefaultParameterExtractorVisitor.Initialize(ctx);
         }
 
-        protected IVisitorContext Context { get; }
+        public IVisitorContext Context { get; }
 
         protected static void AddCecilExpressions(IVisitorContext context, IEnumerable<string> exps)
         {
