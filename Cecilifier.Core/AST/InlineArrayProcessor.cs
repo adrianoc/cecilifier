@@ -102,7 +102,7 @@ public class InlineArrayProcessor
             // Takes the inline array and convert to a Span<T>
             HandleInlineArrayConversionToSpan(context, ilVar, inlineArrayType, elementAccess, storageSymbol.LoadAddressOpcodeForMember(), elementAccess.Expression.ToString(), storageVariableMemberKind, memberParentName);
             
-            // at this point we have a Span<T> (for the inline array)) at the top of the stack so just delegate to the visitor in charge of handling
+            // at this point we have a Span<T> (for the inline array) at the top of the stack so just delegate to the visitor in charge of handling
             // indexing Span<T> with a range.
             elementAccess.Accept(new ElementAccessExpressionWithRangeArgumentVisitor(context, ilVar, expressionVisitor, targetAlreadyLoaded: true));
             return true;

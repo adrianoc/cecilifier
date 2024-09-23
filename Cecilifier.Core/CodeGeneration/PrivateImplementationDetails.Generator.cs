@@ -384,15 +384,13 @@ internal partial class PrivateImplementationDetailsGenerator
     {
         return node switch
         {
-            { RawKind: (int) SyntaxKind.ArrayInitializerExpression } => IsLargeEnoughToWarrantOptimization(node),
-            { RawKind: (int) SyntaxKind.ImplicitArrayCreationExpression } => IsLargeEnoughToWarrantOptimization(node),
+            { RawKind: (int) SyntaxKind.ArrayInitializerExpression } => IsLargeEnoughToWarrantOptimization(node.Expressions),
+            { RawKind: (int) SyntaxKind.ImplicitArrayCreationExpression } => IsLargeEnoughToWarrantOptimization(node.Expressions),
 
-            { RawKind: (int) SyntaxKind.StackAllocArrayCreationExpression } => IsLargeEnoughToWarrantOptimization(node) && HasCompatibleType(node, context),
-            { RawKind: (int) SyntaxKind.ImplicitStackAllocArrayCreationExpression} => IsLargeEnoughToWarrantOptimization(node) && HasCompatibleType(node, context),
+            { RawKind: (int) SyntaxKind.StackAllocArrayCreationExpression } => IsLargeEnoughToWarrantOptimization(node.Expressions) && HasCompatibleType(node, context),
+            { RawKind: (int) SyntaxKind.ImplicitStackAllocArrayCreationExpression} => IsLargeEnoughToWarrantOptimization(node.Expressions) && HasCompatibleType(node, context),
             _ => false
         };
-
-        static bool IsLargeEnoughToWarrantOptimization(InitializerExpressionSyntax initializer) => initializer.Expressions.Count > 2;
 
         // As of Roslyn x, empirically only stackalloc of one byte sized elements are optimized.
         static bool HasCompatibleType(InitializerExpressionSyntax expression, IVisitorContext context)
@@ -406,4 +404,8 @@ internal partial class PrivateImplementationDetailsGenerator
                    || type.SpecialType == SpecialType.System_Boolean;
         }
     }
+
+    public static bool IsApplicableTo(CollectionExpressionSyntax node) => IsLargeEnoughToWarrantOptimization(node.Elements);
+    
+    static bool IsLargeEnoughToWarrantOptimization<TElement>(SeparatedSyntaxList<TElement> elements) where TElement : SyntaxNode => elements.Count > 2;
 }

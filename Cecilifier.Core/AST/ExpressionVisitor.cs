@@ -915,6 +915,19 @@ namespace Cecilifier.Core.AST
             Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
         }
 
+        public override void VisitCollectionExpression(CollectionExpressionSyntax node)
+        {
+            Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, node.Elements.Count);
+            var arrayTypeSymbol = Context.GetTypeInfo(node).ConvertedType.EnsureNotNull<ITypeSymbol, IArrayTypeSymbol>();
+            AddCilInstruction(ilVar, OpCodes.Newarr, arrayTypeSymbol.ElementType);
+            
+            using var _ = LineInformationTracker.Track(Context, node);
+            if (PrivateImplementationDetailsGenerator.IsApplicableTo(node))
+                InitializeArrayOptimized(arrayTypeSymbol.ElementType, node.Elements);
+            else
+                InitializeArrayUnoptimized<CollectionElementSyntax>(arrayTypeSymbol.ElementType, node.Elements);
+        }
+
         public override void VisitAwaitExpression(AwaitExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitTupleExpression(TupleExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitSwitchExpression(SwitchExpressionSyntax node) => LogUnsupportedSyntax(node);
@@ -1492,21 +1505,21 @@ namespace Cecilifier.Core.AST
         {
             AddCilInstruction(ilVar, OpCodes.Newarr, elementType);
             if (PrivateImplementationDetailsGenerator.IsApplicableTo(initializer, Context))
-                InitializeArrayOptimized(elementType, initializer);
+                InitializeArrayOptimized(elementType, initializer.Expressions);
             else
-                InitializeArrayUnoptimized(elementType, initializer);
+                InitializeArrayUnoptimized(elementType, initializer?.Expressions);
         }
 
-        private void InitializeArrayUnoptimized(ITypeSymbol elementType, InitializerExpressionSyntax initializer)
+        private void InitializeArrayUnoptimized<TElement>(ITypeSymbol elementType, SeparatedSyntaxList<TElement>? elements) where TElement : CSharpSyntaxNode
         {
             var stelemOpCode = elementType.StelemOpCode();
-            for (var i = 0; i < initializer?.Expressions.Count; i++)
+            for (var i = 0; i < elements?.Count; i++)
             {
                 Context.EmitCilInstruction(ilVar, OpCodes.Dup);
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, i);
-                initializer.Expressions[i].Accept(this);
+                elements.Value[i].Accept(this);
 
-                var itemType = Context.GetTypeInfo(initializer.Expressions[i]);
+                var itemType = Context.SemanticModel.GetTypeInfo(elements.Value[i]);
                 if (elementType.IsReferenceType && itemType.Type != null && itemType.Type.IsValueType)
                 {
                     AddCilInstruction(ilVar, OpCodes.Box, itemType.Type);
@@ -1516,7 +1529,7 @@ namespace Cecilifier.Core.AST
             }
         }
 
-        private void InitializeArrayOptimized(ITypeSymbol elementType, InitializerExpressionSyntax initializer)
+        private void InitializeArrayOptimized<TElement>(ITypeSymbol elementType, SeparatedSyntaxList<TElement> elements) where TElement: SyntaxNode
         {
             var initializeArrayHelper = Context.RoslynTypeSystem.SystemRuntimeCompilerServicesRuntimeHelpers
                 .GetMembers(Constants.Common.RuntimeHelpersInitializeArrayMethodName)
@@ -1530,9 +1543,9 @@ namespace Cecilifier.Core.AST
             //IL_0011: pop
             var backingFieldVar = PrivateImplementationDetailsGenerator.GetOrCreateInitializationBackingFieldVariableName(
                 Context,
-                elementType.SizeofArrayLikeItemElement() * initializer.Expressions.Count,
+                elementType.SizeofArrayLikeItemElement() * elements.Count,
                 elementType.Name,
-                $"new {elementType.Name}[] {initializer.ToFullString()}");
+                $"new {elementType.Name}[] {{ {elements.ToFullString()}}}");
 
             Context.EmitCilInstruction(ilVar, OpCodes.Dup);
             Context.EmitCilInstruction(ilVar, OpCodes.Ldtoken, backingFieldVar);
