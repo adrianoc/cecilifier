@@ -54,7 +54,7 @@ namespace Cecilifier.Core.Tests.Framework
                 Console.WriteLine($"{Environment.NewLine}Output: {@out}");
             }
 
-            throw new ApplicationException("Error: " + err + $"{Environment.NewLine}Executable: {executable}");
+            throw new ApplicationException($"Error: {err}{Environment.NewLine}Executable: {executable}{Environment.NewLine}Args: {args}");
         }
     }
 }
