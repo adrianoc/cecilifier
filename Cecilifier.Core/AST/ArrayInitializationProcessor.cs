@@ -23,7 +23,7 @@ public class ArrayInitializationProcessor
             var itemType = context.SemanticModel.GetTypeInfo(elements.Value[i]);
             if (elementType.IsReferenceType && itemType.Type != null && itemType.Type.IsValueType)
             {
-                context.EmitCilInstruction(visitor.ILVariable, OpCodes.Box, itemType.Type);
+                context.EmitCilInstruction(visitor.ILVariable, OpCodes.Box, context.TypeResolver.Resolve(itemType.Type));
             }
 
             context.EmitCilInstruction(visitor.ILVariable, stelemOpCode, stelemOpCode == OpCodes.Stelem_Any ? context.TypeResolver.Resolve(elementType) : null);
