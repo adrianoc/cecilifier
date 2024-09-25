@@ -919,6 +919,7 @@ namespace Cecilifier.Core.AST
 
         public override void VisitCollectionExpression(CollectionExpressionSyntax node)
         {
+            using var _ = LineInformationTracker.Track(Context, node);
             CollectionExpressionProcessor.Process(this, node);
         }
 

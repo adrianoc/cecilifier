@@ -18,6 +18,7 @@ namespace Cecilifier.Core.TypeSystem
                 [SpecialType.System_Object] = typeResolver.ResolvePredefinedType(context.RoslynTypeSystem.SystemObject),
                 [SpecialType.System_Boolean] = typeResolver.ResolvePredefinedType(context.RoslynTypeSystem.SystemBoolean),
                 [SpecialType.System_Enum] = typeResolver.Resolve("System.Enum"),
+                [SpecialType.System_ValueType] = typeResolver.Resolve("System.ValueType"),
                 [SpecialType.System_MulticastDelegate] = typeResolver.Resolve("System.MulticastDelegate"),
                 [SpecialType.System_AsyncCallback] = typeResolver.Resolve("System.AsyncCallback"),
                 [SpecialType.System_IAsyncResult] = typeResolver.Resolve("System.IAsyncResult"),
@@ -37,6 +38,7 @@ namespace Cecilifier.Core.TypeSystem
         public string AsyncCallback => _resolvedTypes[SpecialType.System_AsyncCallback];
         public string IAsyncResult => _resolvedTypes[SpecialType.System_IAsyncResult];
         public string NullableOfT => _resolvedTypes[SpecialType.System_Nullable_T];
+        public string ValueType => _resolvedTypes[SpecialType.System_ValueType];
 
         private readonly IReadOnlyDictionary<SpecialType, string> _resolvedTypes;
     }

@@ -85,7 +85,7 @@ internal class PropertyGenerator
 
         var operand = property.DeclaringTypeIsGeneric ? MakeGenericType(in property) : _backingFieldVar;
         Context.EmitCilInstruction(ilSetVar, property.StoreOpCode, operand);
-        AddCompilerGeneratedAttributeTo(Context, setMethodVar);
+        Context.AddCompilerGeneratedAttributeTo(setMethodVar);
     }
 
     internal ScopedDefinitionVariable AddGetterMethodDeclaration(ref readonly PropertyGenerationData property, string accessorMethodVar, bool hasCovariantReturn, string nameForRegistration, string overridenMethod)
@@ -132,7 +132,7 @@ internal class PropertyGenerator
         Context.EmitCilInstruction(ilVar, propertyGenerationData.LoadOpCode, operand);
         Context.EmitCilInstruction(ilVar, OpCodes.Ret);
         
-        AddCompilerGeneratedAttributeTo(Context, getMethodVar);
+        Context.AddCompilerGeneratedAttributeTo(getMethodVar);
     }
     
     private void AddToOverridenMethodsIfAppropriated(string accessorMethodVar, string overridenMethod)
@@ -161,16 +161,9 @@ internal class PropertyGenerator
             property.BackingFieldModifiers);
         
         Context.WriteCecilExpressions(backingFieldExps);
-        AddCompilerGeneratedAttributeTo(Context, _backingFieldVar);
+        Context.AddCompilerGeneratedAttributeTo(_backingFieldVar);
     }
- 
-    private void AddCompilerGeneratedAttributeTo(IVisitorContext context, string memberVariable)
-    {
-        var compilerGeneratedAttributeCtor = context.RoslynTypeSystem.SystemRuntimeCompilerServicesCompilerGeneratedAttribute.Ctor();
-        var exps = CecilDefinitionsFactory.Attribute("compilerGenerated", memberVariable, context, compilerGeneratedAttributeCtor.MethodResolverExpression(context));
-        context.WriteCecilExpressions(exps);
-    }
-
+    
     private string MakeGenericType(ref readonly PropertyGenerationData property)
     {
         var genTypeVar = Context.Naming.SyntheticVariable(property.Name, ElementKind.GenericInstance);
