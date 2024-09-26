@@ -14,6 +14,8 @@ public class ArrayInitializationProcessor
     {
         var context = visitor.Context;
         var stelemOpCode = elementType.StelemOpCode();
+        var resolvedElementType = context.TypeResolver.Resolve(elementType);
+
         for (var i = 0; i < elements?.Count; i++)
         {
             context.EmitCilInstruction(visitor.ILVariable, OpCodes.Dup);
@@ -26,7 +28,7 @@ public class ArrayInitializationProcessor
                 context.EmitCilInstruction(visitor.ILVariable, OpCodes.Box, context.TypeResolver.Resolve(itemType.Type));
             }
 
-            context.EmitCilInstruction(visitor.ILVariable, stelemOpCode, stelemOpCode == OpCodes.Stelem_Any ? context.TypeResolver.Resolve(elementType) : null);
+            context.EmitCilInstruction(visitor.ILVariable, stelemOpCode, stelemOpCode == OpCodes.Stelem_Any ? resolvedElementType : null);
         }
     }
 

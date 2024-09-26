@@ -16,14 +16,14 @@ namespace Cecilifier.Core.Extensions
         {
             return $"{type}.MakeByReferenceType()";
         }
-        public static string MakeGenericInstanceType(this string type, IEnumerable<string> genericTypes)
+        public static string MakeGenericInstanceType(this string type, IEnumerable<string> typeArguments)
         {
-            return $"{type}.MakeGenericInstanceType({string.Join(", ", genericTypes)})";
+            return $"{type}.MakeGenericInstanceType({string.Join(", ", typeArguments)})";
         }
 
-        public static string MakeGenericInstanceType(this string type, string genericType)
+        public static string MakeGenericInstanceType(this string type, string typeArgument)
         {
-            return $"{type}.MakeGenericInstanceType({genericType})";
+            return $"{type}.MakeGenericInstanceType({typeArgument})";
         }
 
         public static bool IsPrimitiveType(this ITypeSymbol type) => type.SpecialType switch
