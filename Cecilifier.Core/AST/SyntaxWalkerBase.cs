@@ -196,7 +196,7 @@ namespace Cecilifier.Core.AST
             else
             {
                 // no variable exists yet (for instance, passing `default(T)` as a parameter) so we add one.
-                var storageVariable = AddLocalVariableToCurrentMethod(Context, type.Name, resolvedType);
+                var storageVariable = Context.AddLocalVariableToCurrentMethod(type.Name, resolvedType);
                 
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, storageVariable.VariableName);
                 Context.EmitCilInstruction(ilVar, OpCodes.Initobj, resolvedType);

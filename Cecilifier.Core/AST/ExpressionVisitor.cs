@@ -416,7 +416,7 @@ namespace Cecilifier.Core.AST
                 var resolvedOutArgType = Context.TypeResolver.Resolve(localSymbol.Type);
 
                 DefinitionVariable methodVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
-                var outLocalName = AddLocalVariableWithResolvedType(Context, designation.Identifier.Text, methodVar, resolvedOutArgType).VariableName;
+                var outLocalName = Context.AddLocalVariableToMethod(designation.Identifier.Text, methodVar, resolvedOutArgType).VariableName;
 
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, outLocalName);
             }
@@ -463,7 +463,7 @@ namespace Cecilifier.Core.AST
             var currentMethodVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
             var expressionTypeInfo = Context.SemanticModel.GetTypeInfo(node);
             var resolvedConcreteNullableType = Context.TypeResolver.Resolve(expressionTypeInfo.Type);
-            var tempNullableVar = AddLocalVariableWithResolvedType(Context, "nullable", currentMethodVar, resolvedConcreteNullableType).VariableName;
+            var tempNullableVar = Context.AddLocalVariableToMethod("nullable", currentMethodVar, resolvedConcreteNullableType).VariableName;
 
             Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, tempNullableVar);
             Context.EmitCilInstruction(ilVar, OpCodes.Initobj, resolvedConcreteNullableType);
@@ -843,7 +843,7 @@ namespace Cecilifier.Core.AST
 
             var varType = Context.TypeResolver.Resolve(Context.SemanticModel.GetTypeInfo(node.Type).Type);
             string localVarName = ((SingleVariableDesignationSyntax) node.Designation).Identifier.ValueText;
-            var localVar = AddLocalVariableToCurrentMethod(Context, localVarName, varType).VariableName;
+            var localVar = Context.AddLocalVariableToCurrentMethod(localVarName, varType).VariableName;
 
             Context.EmitCilInstruction(ilVar, OpCodes.Isinst, varType);
             Context.EmitCilInstruction(ilVar, OpCodes.Stloc, localVar);
@@ -858,7 +858,7 @@ namespace Cecilifier.Core.AST
 
             var varType = Context.TypeResolver.Resolve(Context.SemanticModel.GetTypeInfo(node.Type).Type);
             string localVarName = LocalVariableNameOrDefault(node, "tmp");
-            var localVar = AddLocalVariableToCurrentMethod(Context, localVarName, varType).VariableName;
+            var localVar = Context.AddLocalVariableToCurrentMethod(localVarName, varType).VariableName;
 
             var typeDoesNotMatchVar = CreateCilInstruction(ilVar, OpCodes.Ldc_I4_0);
             var typeMatchesVar = CreateCilInstruction(ilVar, OpCodes.Nop);

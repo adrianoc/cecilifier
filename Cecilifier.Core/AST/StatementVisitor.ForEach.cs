@@ -25,8 +25,8 @@ namespace Cecilifier.Core.AST
                 // save array in local variable...
                 var arrayVariable = CodeGenerationHelpers.StoreTopOfStackInLocalVariable(Context, _ilVar, "array", enumerableType);
                 
-                var loopVariable = CodeGenerationHelpers.AddLocalVariableToCurrentMethod(Context, node.Identifier.ValueText, Context.TypeResolver.Resolve(enumerableType.ElementTypeSymbolOf())).VariableName;
-                var loopIndexVar = CodeGenerationHelpers.AddLocalVariableToCurrentMethod(Context, "index", Context.TypeResolver.Resolve(Context.RoslynTypeSystem.SystemInt32)).VariableName;
+                var loopVariable = Context.AddLocalVariableToCurrentMethod(node.Identifier.ValueText, Context.TypeResolver.Resolve(enumerableType.ElementTypeSymbolOf())).VariableName;
+                var loopIndexVar = Context.AddLocalVariableToCurrentMethod("index", Context.TypeResolver.Resolve(Context.RoslynTypeSystem.SystemInt32)).VariableName;
 
                 var conditionCheckLabelVar = CreateCilInstruction(_ilVar, OpCodes.Nop);
                 Context.EmitCilInstruction(_ilVar, OpCodes.Br, conditionCheckLabelVar);
@@ -114,7 +114,7 @@ namespace Cecilifier.Core.AST
             // Adds a variable to store current value in the foreach loop.
             Context.WriteNewLine();
             Context.WriteComment("variable to store current value in the foreach loop.");
-            var foreachCurrentValueVarName = CodeGenerationHelpers.AddLocalVariableToCurrentMethod(Context, node.Identifier.ValueText, Context.TypeResolver.Resolve(forEachHandlerContext.EnumeratorCurrentMethod.GetMemberType())).VariableName;
+            var foreachCurrentValueVarName = Context.AddLocalVariableToCurrentMethod(node.Identifier.ValueText, Context.TypeResolver.Resolve(forEachHandlerContext.EnumeratorCurrentMethod.GetMemberType())).VariableName;
             
             var endOfLoopLabelVar = Context.Naming.Label("endForEach");
             CreateCilInstruction(_ilVar, endOfLoopLabelVar, OpCodes.Nop);

@@ -1,5 +1,6 @@
 using System;
 using Cecilifier.Core.AST;
+using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
@@ -13,29 +14,8 @@ public struct CodeGenerationHelpers
     {
         var methodVar = context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
         var resolvedVarType = context.TypeResolver.Resolve(type);
-        var tempLocalDefinitionVariable = AddLocalVariableWithResolvedType(context, variableName, methodVar, resolvedVarType);
+        var tempLocalDefinitionVariable = context.AddLocalVariableToMethod(variableName, methodVar, resolvedVarType);
         context.EmitCilInstruction(ilVar, OpCodes.Stloc, tempLocalDefinitionVariable.VariableName);
         return tempLocalDefinitionVariable;
     }
-        
-    internal static DefinitionVariable AddLocalVariableWithResolvedType(IVisitorContext context, string localVarName, DefinitionVariable methodVar, string resolvedVarType)
-    {
-        var cecilVarDeclName = context.Naming.SyntheticVariable(localVarName, ElementKind.LocalVariable);
-
-        context.WriteCecilExpression($"var {cecilVarDeclName} = new VariableDefinition({resolvedVarType});");
-        context.WriteNewLine();
-        context.WriteCecilExpression($"{methodVar.VariableName}.Body.Variables.Add({cecilVarDeclName});");
-        context.WriteNewLine();
-
-        return context.DefinitionVariables.RegisterNonMethod(string.Empty, localVarName, VariableMemberKind.LocalVariable, cecilVarDeclName);
-    }
-    
-    internal static DefinitionVariable AddLocalVariableToCurrentMethod(IVisitorContext context, string localVarName, string varType)
-    {
-        var currentMethod = context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
-        if (!currentMethod.IsValid)
-            throw new InvalidOperationException("Could not resolve current method declaration variable.");
-
-        return AddLocalVariableWithResolvedType(context, localVarName, currentMethod, varType);
-    }       
 }
