@@ -71,7 +71,7 @@ internal static class CollectionExpressionProcessor
         context.WriteNewLine();
         context.WriteComment($"Initialize each list element through the span (variable '{spanToList.VariableName}')");
         var index = 0;
-        var spanGetItemMethod = GetMethod(context, resolvedListTypeArgument);
+        var spanGetItemMethod = GetSpanIndexerGetMethod(context, resolvedListTypeArgument);
         var stindOpCode = listOfTTypeSymbol.TypeArguments[0].StindOpCodeFor();
         
         foreach (var element in node.Elements)
@@ -87,21 +87,7 @@ internal static class CollectionExpressionProcessor
             index++;
         }
     }
-
-    private static string GetMethod(IVisitorContext context, string typeArgument)
-    {
-        var methodVar = context.Naming.SyntheticVariable("getItem", ElementKind.Method);
-        var declaringType = context.TypeResolver.Resolve(context.RoslynTypeSystem.SystemSpan).MakeGenericInstanceType(typeArgument);
-        context.WriteCecilExpression($$"""var {{methodVar}} = new MethodReference("get_Item", {{context.TypeResolver.Bcl.System.Void}}, {{declaringType}}) { HasThis = true, ExplicitThis = false };""");
-        context.WriteNewLine();
-        context.WriteCecilExpression($"{methodVar}.Parameters.Add(new ParameterDefinition({context.TypeResolver.Bcl.System.Int32}));");
-        context.WriteNewLine();
-        context.WriteCecilExpression($"""{methodVar}.ReturnType = ((GenericInstanceType) {methodVar}.DeclaringType).ElementType.GenericParameters[0].MakeByReferenceType();""");
-        context.WriteNewLine();
-
-        return methodVar;
-    }
-    
+   
     private static void HandleAssignmentToSpan(ExpressionVisitor visitor, CollectionExpressionSyntax node, INamedTypeSymbol spanTypeSymbol)
     {
         Debug.Assert(SymbolEqualityComparer.Default.Equals(spanTypeSymbol.OriginalDefinition, visitor.Context.RoslynTypeSystem.SystemSpan));
@@ -211,5 +197,19 @@ internal static class CollectionExpressionProcessor
             ArrayInitializationProcessor.InitializeOptimized(visitor, arrayTypeSymbol.ElementType, node.Elements);
         else
             ArrayInitializationProcessor.InitializeUnoptimized<CollectionElementSyntax>(visitor, arrayTypeSymbol.ElementType, node.Elements);
+    }
+    
+    private static string GetSpanIndexerGetMethod(IVisitorContext context, string typeArgument)
+    {
+        var methodVar = context.Naming.SyntheticVariable("getItem", ElementKind.Method);
+        var declaringType = context.TypeResolver.Resolve(context.RoslynTypeSystem.SystemSpan).MakeGenericInstanceType(typeArgument);
+        context.WriteCecilExpression($$"""var {{methodVar}} = new MethodReference("get_Item", {{context.TypeResolver.Bcl.System.Void}}, {{declaringType}}) { HasThis = true, ExplicitThis = false };""");
+        context.WriteNewLine();
+        context.WriteCecilExpression($"{methodVar}.Parameters.Add(new ParameterDefinition({context.TypeResolver.Bcl.System.Int32}));");
+        context.WriteNewLine();
+        context.WriteCecilExpression($"""{methodVar}.ReturnType = ((GenericInstanceType) {methodVar}.DeclaringType).ElementType.GenericParameters[0].MakeByReferenceType();""");
+        context.WriteNewLine();
+
+        return methodVar;
     }
 }
