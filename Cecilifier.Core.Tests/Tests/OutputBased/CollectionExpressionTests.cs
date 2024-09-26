@@ -41,4 +41,15 @@ public class CollectionExpressionTests : OutputBasedTestBase
                                                   // generates the same error. 
             );
     }
+    
+    [Test]
+    public void ListOfT()
+    {
+        AssertOutput(
+            """
+            System.Collections.Generic.List<char> list = ['C', 'E', 'C', 'I', 'L'];
+            foreach(var c in list.ToArray()) System.Console.Write(c);
+            """, 
+            "CECIL");
+    }
 }
