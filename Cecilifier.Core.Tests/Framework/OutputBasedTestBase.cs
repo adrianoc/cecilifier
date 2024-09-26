@@ -49,7 +49,7 @@ public class OutputBasedTestBase : CecilifierTestBase
             throw;
         }
 
-        return new OutputBasedTestResult(cecilifyResult, output.AsSpan()[..^NewLineLength].ToString()); // remove last new line
+        return new OutputBasedTestResult(cecilifyResult, string.IsNullOrEmpty(output) ? string.Empty : output.AsSpan()[..^NewLineLength].ToString()); // remove last new line
     }
 
     protected void AssertOutput(string snippet, string expectedOutput, string ignoreIlVerificationErrors = null)
