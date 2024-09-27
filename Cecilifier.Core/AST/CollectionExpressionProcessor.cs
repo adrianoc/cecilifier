@@ -10,7 +10,9 @@ using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Operations;
 using Mono.Cecil.Cil;
 
 namespace Cecilifier.Core.AST;
@@ -74,15 +76,14 @@ internal static class CollectionExpressionProcessor
         var spanGetItemMethod = GetSpanIndexerGetMethod(context, resolvedListTypeArgument);
         var stindOpCode = listOfTTypeSymbol.TypeArguments[0].StindOpCodeFor();
         
+        var collectionExpressionOperation = context.SemanticModel.GetOperation(node).EnsureNotNull<IOperation, ICollectionExpressionOperation>();
         foreach (var element in node.Elements)
         {
             context.EmitCilInstruction(visitor.ILVariable, OpCodes.Ldloca_S, spanToList.VariableName);
             context.EmitCilInstruction(visitor.ILVariable, OpCodes.Ldc_I4, index);
             context.EmitCilInstruction(visitor.ILVariable, OpCodes.Call, spanGetItemMethod);
             visitor.Visit(element);
-            //TODO: Inject conversions if needed. Test with
-            //      List<object> l = [1, 2, 3];
-            //      List<long> l = [1, 2, 3];
+            ApplyNumericConversions(context, visitor.ILVariable, collectionExpressionOperation.Elements[index]);
             context.EmitCilInstruction(visitor.ILVariable, stindOpCode);
             index++;
         }
@@ -111,6 +112,7 @@ internal static class CollectionExpressionProcessor
                                                         .MakeGenericInstanceMethod(context, "InlineArrayElementRef", [$"{inlineArrayLocalVar}.VariableType", context.TypeResolver.Resolve(spanTypeSymbol.TypeArguments[0])]);
         
         var storeOpCode = inlineArrayElementType.StindOpCodeFor();
+        var collectionExpressionOperation = context.SemanticModel.GetOperation(node).EnsureNotNull<IOperation, ICollectionExpressionOperation>();
         var index = 0;
         foreach (var element in node.Elements)
         {
@@ -118,7 +120,7 @@ internal static class CollectionExpressionProcessor
             context.EmitCilInstruction(visitor.ILVariable, OpCodes.Ldc_I4, index);
             context.EmitCilInstruction(visitor.ILVariable, OpCodes.Call, inlineArrayElementRefMethodVar);
             visitor.Visit(element);
-            
+            ApplyNumericConversions(context, visitor.ILVariable, collectionExpressionOperation.Elements[index]);
             context.EmitCilInstruction(visitor.ILVariable, storeOpCode, storeOpCode == OpCodes.Ldobj ? context.TypeResolver.Resolve(inlineArrayElementType) : null);
             index++;
         }
@@ -196,7 +198,7 @@ internal static class CollectionExpressionProcessor
         if (PrivateImplementationDetailsGenerator.IsApplicableTo(node))
             ArrayInitializationProcessor.InitializeOptimized(visitor, arrayTypeSymbol.ElementType, node.Elements);
         else
-            ArrayInitializationProcessor.InitializeUnoptimized<CollectionElementSyntax>(visitor, arrayTypeSymbol.ElementType, node.Elements);
+            ArrayInitializationProcessor.InitializeUnoptimized<CollectionElementSyntax>(visitor, arrayTypeSymbol.ElementType, node.Elements, visitor.Context.SemanticModel.GetOperation(node));
     }
     
     private static string GetSpanIndexerGetMethod(IVisitorContext context, string typeArgument)
@@ -211,5 +213,15 @@ internal static class CollectionExpressionProcessor
         context.WriteNewLine();
 
         return methodVar;
+    }
+    
+    static void ApplyNumericConversions(IVisitorContext context, string ilVar, IOperation operation)
+    {
+        if (operation is not IConversionOperation { Conversion.IsNumeric: true } elementConversion)
+            return;
+            
+        var result = context.TryApplyNumericConversion(ilVar, operation.Type, elementConversion.Type);
+        if (!result)
+            throw new Exception();
     }
 }

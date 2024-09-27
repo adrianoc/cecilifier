@@ -1,8 +1,11 @@
 using System;
+using System.Linq;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.Variables;
+using Microsoft.CodeAnalysis;
+using Mono.Cecil.Cil;
 
 namespace Cecilifier.Core.Extensions;
 
@@ -34,5 +37,42 @@ public static class CecilifierContextExtensions
         context.WriteNewLine();
 
         return context.DefinitionVariables.RegisterNonMethod(string.Empty, localVarName, VariableMemberKind.LocalVariable, cecilVarDeclName);
+    }
+
+    internal static bool TryApplyNumericConversion(this IVisitorContext context, string ilVar, ITypeSymbol source, ITypeSymbol target)
+    {
+        switch (target.SpecialType)
+        {
+            case SpecialType.System_Single:
+                context.EmitCilInstruction(ilVar, OpCodes.Conv_R4);
+                break;
+            case SpecialType.System_Double:
+                context.EmitCilInstruction(ilVar, OpCodes.Conv_R8);
+                break;
+            case SpecialType.System_Byte:
+                context.EmitCilInstruction(ilVar, OpCodes.Conv_I1);
+                break;
+            case SpecialType.System_Int16:
+                context.EmitCilInstruction(ilVar, OpCodes.Conv_I2);
+                break;
+            case SpecialType.System_Int32:
+                // byte/char are pushed as Int32 by the runtime 
+                if (source.SpecialType != SpecialType.System_SByte && source.SpecialType != SpecialType.System_Byte && source.SpecialType != SpecialType.System_Char)
+                    context.EmitCilInstruction(ilVar, OpCodes.Conv_I4);
+                break;
+            case SpecialType.System_Int64:
+                var convOpCode = source.SpecialType == SpecialType.System_Char || source.SpecialType == SpecialType.System_Byte ? OpCodes.Conv_U8 : OpCodes.Conv_I8;
+                context.EmitCilInstruction(ilVar, convOpCode);
+                break;
+            case SpecialType.System_Decimal:
+                var operand = target.GetMembers().OfType<IMethodSymbol>()
+                    .Single(m => m.MethodKind == MethodKind.Constructor && m.Parameters.Length == 1 && m.Parameters[0].Type.SpecialType == source.SpecialType);
+                context.EmitCilInstruction(ilVar, OpCodes.Newobj, operand.MethodResolverExpression(context));
+                break;
+            
+            default: return false;
+        }
+
+        return true;
     }
 }

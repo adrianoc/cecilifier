@@ -255,7 +255,7 @@ namespace Cecilifier.Core.AST
                 localVarDef = StoreTopOfStackInLocalVariable(Context, _ilVar, "tmp", usingType).VariableName;
             }
 
-            void FinallyBlockHandler(object _)
+            void FinallyBlockHandler(ForEachHandlerContext _)
             {
                 string? lastFinallyInstructionLabel = null;
                 if (usingType.TypeKind == TypeKind.TypeParameter || usingType.IsValueType)
@@ -278,7 +278,7 @@ namespace Cecilifier.Core.AST
                     AddCecilExpression($"{_ilVar}.Append({lastFinallyInstructionLabel});");
             }
 
-            ProcessTryCatchFinallyBlock(_ilVar, node.Statement, Array.Empty<CatchClauseSyntax>(), FinallyBlockHandler);
+            ProcessTryCatchFinallyBlock<ForEachHandlerContext>(_ilVar, node.Statement, Array.Empty<CatchClauseSyntax>(), FinallyBlockHandler);
         }
 
         public override void VisitLocalFunctionStatement(LocalFunctionStatementSyntax node) => node.Accept(new MethodDeclarationVisitor(Context));

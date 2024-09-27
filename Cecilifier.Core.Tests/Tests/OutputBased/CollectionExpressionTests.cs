@@ -1,3 +1,5 @@
+using System;
+using System.Text.RegularExpressions;
 using Cecilifier.Core.Tests.Framework;
 using NUnit.Framework;
 
@@ -51,5 +53,21 @@ public class CollectionExpressionTests : OutputBasedTestBase
             foreach(var c in list.ToArray()) System.Console.Write(c);
             """, 
             "CECIL");
+    }    
+    
+    [Test]
+    public void ImplicitNumericConversions_Are_Applied([Values("List<long>", "long[]", "Span<long>")] string targetType, [Values("[2, 1]", "[5, 4, 3, 2, 1]")] string items)
+    {
+        AssertOutput(
+            $"""
+            using System.Collections.Generic;
+            using System;
+            
+            {targetType} items = {items}; 
+            foreach(var c in items) System.Console.Write(c);
+            """, 
+            Regex.Replace(items, @"\s+|\[|\]|,", ""),
+            "ReturnPtrToStack" // This is required only for spans.
+        );
     }
 }

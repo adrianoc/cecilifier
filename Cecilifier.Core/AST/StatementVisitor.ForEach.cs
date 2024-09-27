@@ -1,8 +1,8 @@
-using System;
 using System.Linq;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Mono.Cecil.Cil;
 
@@ -78,9 +78,9 @@ namespace Cecilifier.Core.AST
                 {
                     ProcessWithInTryCatchFinallyBlock(
                         _ilVar,
-                        context => ProcessForEach((ForEachHandlerContext) context, node),
-                        Array.Empty<CatchClauseSyntax>(),
-                        context => ProcessForEachFinally((ForEachHandlerContext) context),
+                        context => ProcessForEach(context, node),
+                        [],
+                        ProcessForEachFinally,
                         context);
                 }
                 else
@@ -129,6 +129,13 @@ namespace Cecilifier.Core.AST
             
             Context.EmitCilInstruction(_ilVar, loadOpCode, forEachHandlerContext.EnumeratorVariableName);
             AddMethodCall(_ilVar, forEachHandlerContext.EnumeratorCurrentMethod);
+
+            var info = Context.SemanticModel.GetForEachStatementInfo(node);
+            if (!node.Type.IsKind(SyntaxKind.RefType) && info.CurrentProperty.ReturnsByRef)
+            {
+                Context.EmitCilInstruction(_ilVar, info.ElementType.LdindOpCodeFor());
+            }
+            
             Context.EmitCilInstruction(_ilVar, OpCodes.Stloc, foreachCurrentValueVarName);
 
             // process body of foreach

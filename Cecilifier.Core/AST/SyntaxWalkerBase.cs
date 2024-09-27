@@ -521,7 +521,7 @@ namespace Cecilifier.Core.AST
                 // in this case we need to call System.Index.GetOffset(int32) on a value type (System.Index)
                 // which requires the address of the value type.
                 var isSystemIndexUsedAsIndex = IsSystemIndexUsedAsIndex(symbol, parentNode);
-                var usageResult = parentNode.Accept(UsageVisitor.GetInstance(Context));
+                var usageResult = parentNode.Accept(UsageVisitor.GetInstance(Context).WithTargetNode(node));
                 if (isSystemIndexUsedAsIndex || parentNode.IsKind(SyntaxKind.AddressOfExpression) || IsPseudoAssignmentToValueType() || node.IsMemberAccessOnElementAccess() || usageResult.Kind == UsageKind.CallTarget)
                 {
                     Context.EmitCilInstruction(ilVar, opCode, operand);

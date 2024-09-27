@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -5,12 +6,13 @@ using Mono.Cecil.Cil;
 
 using Cecilifier.Core.CodeGeneration;
 using Cecilifier.Core.Extensions;
+using Microsoft.CodeAnalysis.Operations;
 
 namespace Cecilifier.Core.AST;
 
 public class ArrayInitializationProcessor
 {
-    internal static void InitializeUnoptimized<TElement>(ExpressionVisitor visitor, ITypeSymbol elementType, SeparatedSyntaxList<TElement>? elements) where TElement : CSharpSyntaxNode
+    internal static void InitializeUnoptimized<TElement>(ExpressionVisitor visitor, ITypeSymbol elementType, SeparatedSyntaxList<TElement>? elements, IOperation parentOperation = null) where TElement : CSharpSyntaxNode
     {
         var context = visitor.Context;
         var stelemOpCode = elementType.StelemOpCode();
@@ -22,10 +24,15 @@ public class ArrayInitializationProcessor
             context.EmitCilInstruction(visitor.ILVariable, OpCodes.Ldc_I4, i);
             elements.Value[i].Accept(visitor);
 
+            //TODO: Refactor to extract all this into some common method to apply conversions.
             var itemType = context.SemanticModel.GetTypeInfo(elements.Value[i]);
             if (elementType.IsReferenceType && itemType.Type != null && itemType.Type.IsValueType)
             {
                 context.EmitCilInstruction(visitor.ILVariable, OpCodes.Box, context.TypeResolver.Resolve(itemType.Type));
+            }
+            else if(parentOperation != null && parentOperation is ICollectionExpressionOperation ceo && ceo.Elements[i] is IConversionOperation conversion)
+            {
+                context.TryApplyNumericConversion(visitor.ILVariable, conversion.Operand.Type, conversion.Type);
             }
 
             context.EmitCilInstruction(visitor.ILVariable, stelemOpCode, stelemOpCode == OpCodes.Stelem_Any ? resolvedElementType : null);

@@ -2,7 +2,6 @@ using System;
 using System.Diagnostics;
 using System.Linq;
 using Cecilifier.Core.Extensions;
-using Cecilifier.Core.Misc;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -12,10 +11,11 @@ namespace Cecilifier.Core.AST;
 
 partial class ExpressionVisitor
 {
-    private void InjectRequiredConversions(ExpressionSyntax expression, Action loadArrayIntoStack = null)
+    public void InjectRequiredConversions(ExpressionSyntax expression, Action loadArrayIntoStack = null)
     {
         var typeInfo = ModelExtensions.GetTypeInfo(Context.SemanticModel, expression);
         if (typeInfo.Type == null) return;
+        
         var conversion = Context.SemanticModel.GetConversion(expression);
         if (conversion.IsImplicit)
         {
@@ -30,37 +30,9 @@ partial class ExpressionVisitor
 
             if (conversion.IsNumeric)
             {
-                Debug.Assert(typeInfo.ConvertedType != null);
-                switch (typeInfo.ConvertedType.SpecialType)
+                if (!Context.TryApplyNumericConversion(ilVar, typeInfo.Type, typeInfo.ConvertedType))
                 {
-                    case SpecialType.System_Single:
-                        Context.EmitCilInstruction(ilVar, OpCodes.Conv_R4);
-                        return;
-                    case SpecialType.System_Double:
-                        Context.EmitCilInstruction(ilVar, OpCodes.Conv_R8);
-                        return;
-                    case SpecialType.System_Byte:
-                        Context.EmitCilInstruction(ilVar, OpCodes.Conv_I1);
-                        return;
-                    case SpecialType.System_Int16:
-                        Context.EmitCilInstruction(ilVar, OpCodes.Conv_I2);
-                        return;
-                    case SpecialType.System_Int32:
-                        // byte/char are pushed as Int32 by the runtime 
-                        if (typeInfo.Type.SpecialType != SpecialType.System_SByte && typeInfo.Type.SpecialType != SpecialType.System_Byte && typeInfo.Type.SpecialType != SpecialType.System_Char)
-                            Context.EmitCilInstruction(ilVar, OpCodes.Conv_I4);
-                        return;
-                    case SpecialType.System_Int64:
-                        var convOpCode = typeInfo.Type.SpecialType == SpecialType.System_Char || typeInfo.Type.SpecialType == SpecialType.System_Byte ? OpCodes.Conv_U8 : OpCodes.Conv_I8;
-                        Context.EmitCilInstruction(ilVar, convOpCode);
-                        return;
-                    case SpecialType.System_Decimal:
-                        var operand = typeInfo.ConvertedType.GetMembers().OfType<IMethodSymbol>()
-                            .Single(m => m.MethodKind == MethodKind.Constructor && m.Parameters.Length == 1 && m.Parameters[0].Type.SpecialType == typeInfo.Type.SpecialType);
-                        Context.EmitCilInstruction(ilVar, OpCodes.Newobj, operand.MethodResolverExpression(Context));
-                        return;
-                    default:
-                        throw new Exception($"Conversion from {typeInfo.Type} to {typeInfo.ConvertedType}  not implemented.");
+                    throw new Exception($"Conversion from {typeInfo.Type} to {typeInfo.ConvertedType}  not implemented.");
                 }
             }
 
