@@ -196,7 +196,7 @@ internal static class CollectionExpressionProcessor
         visitor.Context.EmitCilInstruction(visitor.ILVariable, OpCodes.Ldc_I4, node.Elements.Count);
         visitor.Context.EmitCilInstruction(visitor.ILVariable, OpCodes.Newarr, visitor.Context.TypeResolver.Resolve(arrayTypeSymbol.ElementType));
             
-        if (PrivateImplementationDetailsGenerator.IsApplicableTo(node))
+        if (PrivateImplementationDetailsGenerator.IsApplicableTo(node, visitor.Context))
             ArrayInitializationProcessor.InitializeOptimized(visitor, arrayTypeSymbol.ElementType, node.Elements);
         else
             ArrayInitializationProcessor.InitializeUnoptimized<CollectionElementSyntax>(visitor, arrayTypeSymbol.ElementType, node.Elements, visitor.Context.SemanticModel.GetOperation(node));

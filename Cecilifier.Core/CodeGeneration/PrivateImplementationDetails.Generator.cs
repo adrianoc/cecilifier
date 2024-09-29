@@ -374,7 +374,7 @@ internal partial class PrivateImplementationDetailsGenerator
     /// Encodes rules used by C# compiler to decide whether to apply the array/stackalloc initialization optimization.
     ///
     /// Note that as of version 4.6.1 of Roslyn, the empirically discovered rules are:
-    /// 1. Any array initialization expression with length > 2 are optimized
+    /// 1. Array initialization expression with length > 2 are optimized if the element type is a primitive.
     /// 2. Stackalloc initialization is only considered if the type being allocated is byte/sbyte/bool plus same length rule above
     /// </summary>
     /// <param name="node"></param>
@@ -405,7 +405,14 @@ internal partial class PrivateImplementationDetailsGenerator
         }
     }
 
-    public static bool IsApplicableTo(CollectionExpressionSyntax node) => IsLargeEnoughToWarrantOptimization(node.Elements);
-    
+    public static bool IsApplicableTo(CollectionExpressionSyntax node, IVisitorContext context)
+    {
+        if (!IsLargeEnoughToWarrantOptimization(node.Elements))
+            return false;
+        
+        var operation = context.SemanticModel.GetOperation(node);
+        return operation?.Type.ElementTypeSymbolOf().IsPrimitiveType() == true;
+    }
+
     static bool IsLargeEnoughToWarrantOptimization<TElement>(SeparatedSyntaxList<TElement> elements) where TElement : SyntaxNode => elements.Count > 2;
 }

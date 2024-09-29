@@ -80,9 +80,9 @@ public class CollectionExpressionTests : OutputBasedTestBase
               using System.Collections.Generic;
               using System;
 
-              {{targetType}} items = [1, 2];
+              {{targetType}} items = {{items}};
               // We can´t rely on a foreach (to simplify the code) due to issue #306
-              for(var i = {{lengthExtractor}} - 1 ; i >= 0; i--) System.Console.Write(items[i].Value);
+              for(var i = 0; i < {{lengthExtractor}}; i++) System.Console.Write(items[i].Value);
 
               struct Foo
               {
@@ -91,6 +91,9 @@ public class CollectionExpressionTests : OutputBasedTestBase
                   public int Value;
               }
               """,
+            Regex.Replace(items, @"[\[\],\s+]", ""),
+            expectedILError);
+    }
             "21",
             expectedILError);
     }
