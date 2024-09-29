@@ -220,7 +220,7 @@ namespace Cecilifier.Core.Extensions
             // find the original method.
             var originalMethodVar = ctx.Naming.SyntheticVariable($"open{method.Name}", ElementKind.LocalVariable);
             // TODO: handle overloads
-            ctx.WriteCecilExpression($"""var {originalMethodVar} = {ctx.TypeResolver.Resolve(method.ContainingType.OriginalDefinition)}.Resolve().Methods.First(m => m.Name == "{method.Name}");""");
+            ctx.WriteCecilExpression($"""var {originalMethodVar} = {ctx.TypeResolver.Resolve(method.ContainingType.OriginalDefinition)}.Resolve().Methods.First(m => m.Name == "{method.Name}" && m.Parameters.Count == {method.Parameters.Length} );""");
             ctx.WriteNewLine();
 
             // Instantiates a MethodReference representing the called method.

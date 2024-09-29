@@ -10,7 +10,6 @@ using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Operations;
 using Mono.Cecil.Cil;
@@ -75,6 +74,7 @@ internal static class CollectionExpressionProcessor
         var index = 0;
         var spanGetItemMethod = GetSpanIndexerGetMethod(context, resolvedListTypeArgument);
         var stindOpCode = listOfTTypeSymbol.TypeArguments[0].StindOpCodeFor();
+        var targetElementType = stindOpCode == OpCodes.Stobj ? resolvedListTypeArgument : null; // Stobj expects the type of the object being stored.
         
         var collectionExpressionOperation = context.SemanticModel.GetOperation(node).EnsureNotNull<IOperation, ICollectionExpressionOperation>();
         foreach (var element in node.Elements)
@@ -83,8 +83,8 @@ internal static class CollectionExpressionProcessor
             context.EmitCilInstruction(visitor.ILVariable, OpCodes.Ldc_I4, index);
             context.EmitCilInstruction(visitor.ILVariable, OpCodes.Call, spanGetItemMethod);
             visitor.Visit(element);
-            ApplyNumericConversions(context, visitor.ILVariable, collectionExpressionOperation.Elements[index]);
-            context.EmitCilInstruction(visitor.ILVariable, stindOpCode);
+            ApplyConversions(context, visitor.ILVariable, collectionExpressionOperation.Elements[index]);
+            context.EmitCilInstruction(visitor.ILVariable, stindOpCode, targetElementType);
             index++;
         }
     }
@@ -112,6 +112,7 @@ internal static class CollectionExpressionProcessor
                                                         .MakeGenericInstanceMethod(context, "InlineArrayElementRef", [$"{inlineArrayLocalVar}.VariableType", context.TypeResolver.Resolve(spanTypeSymbol.TypeArguments[0])]);
         
         var storeOpCode = inlineArrayElementType.StindOpCodeFor();
+        var targetElementType = storeOpCode == OpCodes.Stobj ? context.TypeResolver.Resolve(inlineArrayElementType) : null; // Stobj expects the type of the object being stored.
         var collectionExpressionOperation = context.SemanticModel.GetOperation(node).EnsureNotNull<IOperation, ICollectionExpressionOperation>();
         var index = 0;
         foreach (var element in node.Elements)
@@ -120,8 +121,8 @@ internal static class CollectionExpressionProcessor
             context.EmitCilInstruction(visitor.ILVariable, OpCodes.Ldc_I4, index);
             context.EmitCilInstruction(visitor.ILVariable, OpCodes.Call, inlineArrayElementRefMethodVar);
             visitor.Visit(element);
-            ApplyNumericConversions(context, visitor.ILVariable, collectionExpressionOperation.Elements[index]);
-            context.EmitCilInstruction(visitor.ILVariable, storeOpCode, storeOpCode == OpCodes.Ldobj ? context.TypeResolver.Resolve(inlineArrayElementType) : null);
+            ApplyConversions(context, visitor.ILVariable, collectionExpressionOperation.Elements[index]);
+            context.EmitCilInstruction(visitor.ILVariable, storeOpCode, targetElementType);
             index++;
         }
         
@@ -215,13 +216,17 @@ internal static class CollectionExpressionProcessor
         return methodVar;
     }
     
-    static void ApplyNumericConversions(IVisitorContext context, string ilVar, IOperation operation)
+    static void ApplyConversions(IVisitorContext context, string ilVar, IOperation operation)
     {
-        if (operation is not IConversionOperation { Conversion.IsNumeric: true } elementConversion)
-            return;
-            
-        var result = context.TryApplyNumericConversion(ilVar, operation.Type, elementConversion.Type);
-        if (!result)
-            throw new Exception();
+        if (operation is IConversionOperation { Conversion.IsNumeric: true } elementConversion)
+        {
+            var result = context.TryApplyNumericConversion(ilVar, operation.Type, elementConversion.Type);
+            if (!result)
+                throw new Exception();
+        }
+        else if (operation is IConversionOperation { OperatorMethod: not null } conversion)
+        {
+            context.AddCallToMethod(conversion.OperatorMethod, ilVar);
+        }
     }
 }

@@ -5,6 +5,7 @@ using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Mono.Cecil.Cil;
 
 namespace Cecilifier.Core.Extensions;
@@ -74,5 +75,76 @@ public static class CecilifierContextExtensions
         }
 
         return true;
+    }
+
+    internal static void AddCallToMethod(this IVisitorContext context, IMethodSymbol method, string ilVar, MethodDispatchInformation dispatchInformation = MethodDispatchInformation.MostLikelyVirtual)
+    {
+        var needsVirtualDispatch = (method.IsVirtual || method.IsAbstract || method.IsOverride) && !method.ContainingType.IsPrimitiveType();
+
+        var opCode = !method.IsStatic && dispatchInformation != MethodDispatchInformation.NonVirtual && (dispatchInformation != MethodDispatchInformation.MostLikelyNonVirtual || needsVirtualDispatch) &&
+                     (method.ContainingType.TypeKind == TypeKind.TypeParameter || !method.ContainingType.IsValueType || needsVirtualDispatch)
+            ? OpCodes.Callvirt
+            : OpCodes.Call;
+
+        EnsureForwardedMethod(context, method);
+
+        var operand = method.MethodResolverExpression(context);
+        if (context.TryGetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, out var constrainedType))
+        {
+            context.EmitCilInstruction(ilVar, OpCodes.Constrained, constrainedType);
+            context.ClearFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint);
+        }
+
+        context.EmitCilInstruction(ilVar, opCode, operand);
+    }
+
+    /*
+     * Ensure forward member references are correctly handled, i.e, support for scenario in which a method is being referenced
+     * before it has been declared. This can happen for instance in code like:
+     *
+     * class C
+     * {
+     *     void Foo() { Bar(); }
+     *     void Bar() {}
+     * }
+     *
+     * In this case when the first reference to Bar() is found (in method Foo()) the method itself has not been defined yet
+     * so we add a MethodDefinition for it but *no body*. Method body will be processed later, when the method is visited.
+     */
+    internal static void EnsureForwardedMethod(this IVisitorContext context, IMethodSymbol method)
+    {
+        if (!method.IsDefinedInCurrentAssembly(context)) 
+            return;
+
+        var found = context.DefinitionVariables.GetMethodVariable(method.AsMethodDefinitionVariable());
+        if (found.IsValid) 
+            return;
+
+        string methodDeclarationVar;
+        var methodName = method.Name;
+        if (method.MethodKind == MethodKind.LocalFunction)
+        {
+            methodDeclarationVar = context.Naming.SyntheticVariable(method.Name, ElementKind.Method);
+            methodName = $"<{method.ContainingSymbol.Name}>g__{method.Name}|0_0";
+        }
+        else
+        {
+            methodDeclarationVar = method.MethodKind == MethodKind.Constructor
+                ? context.Naming.Constructor((BaseTypeDeclarationSyntax) method.ContainingType.DeclaringSyntaxReferences.SingleOrDefault()?.GetSyntax(), method.IsStatic)
+                : context.Naming.MethodDeclaration((BaseMethodDeclarationSyntax) method.DeclaringSyntaxReferences.SingleOrDefault()?.GetSyntax());
+        }
+
+        var exps = CecilDefinitionsFactory.Method(context, methodDeclarationVar, methodName, "MethodAttributes.Private", method.ReturnType, method.ReturnsByRef, method.GetTypeParameterSyntax());
+        context.WriteCecilExpressions(exps);
+
+        foreach (var parameter in method.Parameters)
+        {
+            var paramVar = context.Naming.Parameter(parameter.Name);
+            var parameterExps = CecilDefinitionsFactory.Parameter(context, parameter, methodDeclarationVar, paramVar);
+            context.WriteCecilExpressions(parameterExps);
+            context.DefinitionVariables.RegisterNonMethod(method.ToDisplayString(), parameter.Name, VariableMemberKind.Parameter, paramVar);
+        }
+
+        context.DefinitionVariables.RegisterMethod(method.AsMethodDefinitionVariable(methodDeclarationVar));
     }
 }

@@ -193,11 +193,11 @@ namespace Cecilifier.Core.AST
                     // (or an extension method to be available) with a signature that matches the types passed in the list of
                     // expressions
                     var addMethod = Context.SemanticModel.GetCollectionInitializerSymbolInfo(node.Expressions.First()).Symbol.EnsureNotNull<ISymbol, IMethodSymbol>();
-                    EnsureForwardedMethod(Context, addMethod);
+                    Context.EnsureForwardedMethod(addMethod);
                     
                     Context.EmitCilInstruction(ilVar, OpCodes.Dup);
                     initializeExp.Accept(this);
-                    AddMethodCall(ilVar, addMethod);
+                    Context.AddCallToMethod(addMethod, ilVar, MethodDispatchInformation.MostLikelyVirtual);
                 }
             }
             else
@@ -283,7 +283,7 @@ namespace Cecilifier.Core.AST
             if (expressionInfo.Symbol.GetMemberType().Kind != SymbolKind.ArrayType && indexer != null)
             {
                 indexer.EnsurePropertyExists(Context, node);
-                AddMethodCall(ilVar, indexer.GetMethod);
+                Context.AddCallToMethod(indexer.GetMethod, ilVar, MethodDispatchInformation.MostLikelyVirtual);
                 HandlePotentialRefLoad(ilVar, node, indexer.Type);
             }
             else if (node.Parent.IsKind(SyntaxKind.RefExpression))
@@ -336,7 +336,8 @@ namespace Cecilifier.Core.AST
             if (expSymbol is not IEventSymbol @event)
                 return;
 
-            AddMethodCall(ilVar, node.OperatorToken.IsKind(SyntaxKind.PlusEqualsToken) ? @event.AddMethod : @event.RemoveMethod, node.Left.MethodDispatchInformation());
+            MethodDispatchInformation dispatchInformation = node.Left.MethodDispatchInformation();
+            Context.AddCallToMethod(node.OperatorToken.IsKind(SyntaxKind.PlusEqualsToken) ? @event.AddMethod : @event.RemoveMethod, ilVar, dispatchInformation);
         }
 
         private void ProcessCompoundAssignmentExpression(AssignmentExpressionSyntax node, AssignmentVisitor visitor)
@@ -357,8 +358,8 @@ namespace Cecilifier.Core.AST
             if (node.IsOperatorOnCustomUserType(Context.SemanticModel, out var method))
             {
                 if (method.IsDefinedInCurrentAssembly(Context))
-                    EnsureForwardedMethod(Context, method);
-                AddMethodCall(ilVar, method);
+                    Context.EnsureForwardedMethod(method);
+                Context.AddCallToMethod(method, ilVar, MethodDispatchInformation.MostLikelyVirtual);
             }
             else
                 operatorHandlers[equivalentTokenKind].Process(Context, ilVar, Context.SemanticModel.GetTypeInfo(node.Left).Type, Context.SemanticModel.GetTypeInfo(node.Right).Type);
@@ -550,7 +551,7 @@ namespace Cecilifier.Core.AST
             if (node.IsOperatorOnCustomUserType(Context.SemanticModel, out var method))
             {
                 Visit(node.Operand);
-                AddMethodCall(ilVar, method);
+                Context.AddCallToMethod(method, ilVar, MethodDispatchInformation.MostLikelyVirtual);
                 return;
             }
 
@@ -599,7 +600,7 @@ namespace Cecilifier.Core.AST
             if (node.IsOperatorOnCustomUserType(Context.SemanticModel, out var method))
             {
                 Visit(node.Operand);
-                AddMethodCall(ilVar, method);
+                Context.AddCallToMethod(method, ilVar, MethodDispatchInformation.MostLikelyVirtual);
                 return;
             }
 
@@ -654,7 +655,7 @@ namespace Cecilifier.Core.AST
             if (TryProcessInvocationOnParameterlessImplicitCtorOnValueType(node, ctorInfo))
                 return;
 
-            EnsureForwardedMethod(Context, ctor);
+            Context.EnsureForwardedMethod(ctor);
 
             var operand = ctor.MethodResolverExpression(Context);
             Context.EmitCilInstruction(ilVar, OpCodes.Newobj, operand);
@@ -750,7 +751,7 @@ namespace Cecilifier.Core.AST
             }
             else if (conversion.IsExplicit)
             {
-                AddMethodCall(ilVar, conversion.MethodSymbol);
+                Context.AddCallToMethod(conversion.MethodSymbol, ilVar, MethodDispatchInformation.MostLikelyVirtual);
             }
         }
 
@@ -877,7 +878,7 @@ namespace Cecilifier.Core.AST
                 var opEquality = comparisonType.GetMembers().FirstOrDefault(m => m.Kind == SymbolKind.Method && m.Name == "op_Equality");
                 if (opEquality != null)
                 {
-                    AddMethodCall(ilVar, opEquality.EnsureNotNull<ISymbol, IMethodSymbol>());
+                    Context.AddCallToMethod(opEquality.EnsureNotNull<ISymbol, IMethodSymbol>(), ilVar, MethodDispatchInformation.MostLikelyVirtual);
                     Context.EmitCilInstruction(ilVar, OpCodes.Brfalse_S, typeDoesNotMatchVar);
                 }
                 else
@@ -1100,7 +1101,7 @@ namespace Cecilifier.Core.AST
             if (indexedType.Name == "Span")
             {
                 IMethodSymbol method = ((IPropertySymbol) indexedType.GetMembers("Length").Single()).GetMethod;
-                AddMethodCall(ilVar, method);
+                Context.AddCallToMethod(method, ilVar, MethodDispatchInformation.MostLikelyVirtual);
             }
             else
             {
@@ -1129,7 +1130,7 @@ namespace Cecilifier.Core.AST
             using var _ = LineInformationTracker.Track(Context, node);
             Visit(node.Left);
             Visit(node.Right);
-            AddMethodCall(ilVar, method);
+            Context.AddCallToMethod(method, ilVar, MethodDispatchInformation.MostLikelyVirtual);
         }
 
         private void ProcessBinaryExpression(BinaryExpressionSyntax node)
@@ -1249,7 +1250,7 @@ namespace Cecilifier.Core.AST
             var parentMae = node.Parent as MemberAccessExpressionSyntax;
             if (node.Parent.IsKind(SyntaxKind.SimpleAssignmentExpression) || parentMae != null && parentMae.Name.Identifier == node.Identifier && parentMae.Parent.IsKind(SyntaxKind.SimpleAssignmentExpression))
             {
-                AddMethodCall(ilVar, propertySymbol.SetMethod, callOptions);
+                Context.AddCallToMethod(propertySymbol.SetMethod, ilVar, callOptions);
             }
             else
             {
@@ -1271,7 +1272,7 @@ namespace Cecilifier.Core.AST
             }
             else
             {
-                AddMethodCall(ilVar, propertySymbol.GetMethod, dispatchInformation);
+                Context.AddCallToMethod(propertySymbol.GetMethod, ilVar, dispatchInformation);
                 StoreTopOfStackInLocalVariableAndReloadItIfNeeded(node);
                 HandlePotentialRefLoad(ilVar, node, propertySymbol.Type);
             }
@@ -1333,7 +1334,7 @@ namespace Cecilifier.Core.AST
             //IL_0002: ldarg.0
             //IL_0002: ldftn string Test::M(int32)
             //IL_0008: newobj instance void class [System.Private.CoreLib]System.Func`2<int32, string>::.ctor(object, native int)
-            EnsureForwardedMethod(Context, method.OverriddenMethod ?? method.OriginalDefinition);
+            Context.EnsureForwardedMethod(method.OverriddenMethod ?? method.OriginalDefinition);
             CecilDefinitionsFactory.InstantiateDelegate(Context, ilVar, delegateType, method.MethodResolverExpression(Context), new StaticDelegateCacheContext()
             {
                 IsStaticDelegate = method.IsStatic,
@@ -1350,11 +1351,11 @@ namespace Cecilifier.Core.AST
             {
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
             }
-            EnsureForwardedMethod(Context, method.OverriddenMethod ?? method.OriginalDefinition);
+            Context.EnsureForwardedMethod(method.OverriddenMethod ?? method.OriginalDefinition);
 
             var callOptions = node.Parent.MethodDispatchInformation();
             OnLastInstructionLoadingTargetOfInvocation();
-            AddMethodCall(ilVar, method, callOptions);
+            Context.AddCallToMethod(method, ilVar, callOptions);
         }
 
         private BinaryOperatorHandler OperatorHandlerFor(SyntaxToken operatorToken)
@@ -1502,7 +1503,7 @@ namespace Cecilifier.Core.AST
             if (PrivateImplementationDetailsGenerator.IsApplicableTo(initializer, Context))
                 ArrayInitializationProcessor.InitializeOptimized(this, elementType, initializer.Expressions);
             else
-                ArrayInitializationProcessor.InitializeUnoptimized(this, elementType, initializer?.Expressions);
+                ArrayInitializationProcessor.InitializeUnoptimized(this, elementType, initializer?.Expressions, initializer != null ? Context.SemanticModel.GetOperation(initializer) : null);
         }
         string EmitTargetLabel(string relatedToName)
         {

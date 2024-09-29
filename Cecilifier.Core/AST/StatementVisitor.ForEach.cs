@@ -71,7 +71,7 @@ namespace Cecilifier.Core.AST
                 // with a non empty stack.
                 Context.WriteNewLine();
                 Context.WriteComment("variable to store the returned 'IEnumerator<T>'.");
-                AddMethodCall(_ilVar, context.GetEnumeratorMethod);
+                Context.AddCallToMethod(context.GetEnumeratorMethod, _ilVar, MethodDispatchInformation.MostLikelyVirtual);
                 context.EnumeratorVariableName = CodeGenerationHelpers.StoreTopOfStackInLocalVariable(Context, _ilVar, "enumerator", context.GetEnumeratorMethod.ReturnType).VariableName;
 
                 if (isDisposable)
@@ -124,11 +124,11 @@ namespace Cecilifier.Core.AST
 
             var loadOpCode = forEachHandlerContext.GetEnumeratorMethod.ReturnType.IsValueType || forEachHandlerContext.GetEnumeratorMethod.ReturnType.TypeKind == TypeKind.TypeParameter ? OpCodes.Ldloca : OpCodes.Ldloc;
             Context.EmitCilInstruction(_ilVar, loadOpCode, forEachHandlerContext.EnumeratorVariableName);
-            AddMethodCall(_ilVar, forEachHandlerContext.EnumeratorMoveNextMethod);
+            Context.AddCallToMethod(forEachHandlerContext.EnumeratorMoveNextMethod, _ilVar, MethodDispatchInformation.MostLikelyVirtual);
             Context.EmitCilInstruction(_ilVar, OpCodes.Brfalse, endOfLoopLabelVar);
             
             Context.EmitCilInstruction(_ilVar, loadOpCode, forEachHandlerContext.EnumeratorVariableName);
-            AddMethodCall(_ilVar, forEachHandlerContext.EnumeratorCurrentMethod);
+            Context.AddCallToMethod(forEachHandlerContext.EnumeratorCurrentMethod, _ilVar, MethodDispatchInformation.MostLikelyVirtual);
 
             var info = Context.SemanticModel.GetForEachStatementInfo(node);
             if (!node.Type.IsKind(SyntaxKind.RefType) && info.CurrentProperty.ReturnsByRef)

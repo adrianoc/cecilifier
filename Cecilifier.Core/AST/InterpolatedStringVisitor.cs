@@ -43,7 +43,7 @@ namespace Cecilifier.Core.AST
             Context.EmitCilInstruction(_ilVar, OpCodes.Ldstr, _computedFormat.ValueText());
             Context.MoveLineAfter(Context.CurrentLine, lastInstructionBeforeInterpolatedString);
 
-            AddMethodCall(_ilVar, GetStringFormatOverloadToCall());
+            Context.AddCallToMethod(GetStringFormatOverloadToCall(), _ilVar, MethodDispatchInformation.MostLikelyVirtual);
         }
 
         protected virtual void BeforeVisitInterpolatedStringExpression() { }

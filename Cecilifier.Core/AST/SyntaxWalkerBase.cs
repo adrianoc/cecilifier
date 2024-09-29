@@ -47,29 +47,6 @@ namespace Cecilifier.Core.AST
             Context.WriteNewLine();
         }
 
-        protected void AddMethodCall(string ilVar, IMethodSymbol method, MethodDispatchInformation dispatchInformation = MethodDispatchInformation.MostLikelyVirtual)
-        {
-            var needsVirtualDispatch = (method.IsVirtual || method.IsAbstract || method.IsOverride) && !method.ContainingType.IsPrimitiveType();
-
-            var opCode = !method.IsStatic
-                         && dispatchInformation != MethodDispatchInformation.NonVirtual
-                         && (dispatchInformation != MethodDispatchInformation.MostLikelyNonVirtual || needsVirtualDispatch) 
-                         && (method.ContainingType.TypeKind == TypeKind.TypeParameter || !method.ContainingType.IsValueType || needsVirtualDispatch)
-                ? OpCodes.Callvirt
-                : OpCodes.Call;
-
-            if (!method.IsDefinedInCurrentAssembly(Context))
-                EnsureForwardedMethod(Context, method);
-            
-            var operand = method.MethodResolverExpression(Context);
-            if (Context.TryGetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, out var constrainedType))
-            {
-                Context.EmitCilInstruction(ilVar, OpCodes.Constrained, constrainedType);
-                Context.ClearFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint);
-            }
-            Context.EmitCilInstruction(ilVar, opCode, operand);
-        }
-
         protected void AddCilInstruction(string ilVar, OpCode opCode, ITypeSymbol type)
         {
             var operand = Context.TypeResolver.Resolve(type);
@@ -918,62 +895,12 @@ namespace Cecilifier.Core.AST
 
                 // Attribute is defined in the same assembly. We need to find the variable that holds its "ctor declaration"
                 var attrCtor = attrType.GetMembers().OfType<IMethodSymbol>().SingleOrDefault(m => m.MethodKind == MethodKind.Constructor && m.Parameters.Length == attrArgs.Length);
-                EnsureForwardedMethod(context, attrCtor);
+                context.EnsureForwardedMethod(attrCtor);
 
                 return attrCtor.MethodResolverExpression(context);
             });
 
             return attrsExp;
-        }
-
-        /*
-         * Ensure forward member references are correctly handled, i.e, support for scenario in which a method is being referenced
-         * before it has been declared. This can happen for instance in code like:
-         *
-         * class C
-         * {
-         *     void Foo() { Bar(); }
-         *     void Bar() {}
-         * }
-         *
-         * In this case when the first reference to Bar() is found (in method Foo()) the method itself has not been defined yet
-         * so we add a MethodDefinition for it but *no body*. Method body will be processed later, when the method is visited.
-         */
-        protected static void EnsureForwardedMethod(IVisitorContext context, IMethodSymbol method)
-        {
-            if (!method.IsDefinedInCurrentAssembly(context))
-                return;
-
-            var found = context.DefinitionVariables.GetMethodVariable(method.AsMethodDefinitionVariable());
-            if (found.IsValid)
-                return;
-
-            string methodDeclarationVar;
-            var methodName = method.Name;
-            if (method.MethodKind == MethodKind.LocalFunction)
-            {
-                methodDeclarationVar = context.Naming.SyntheticVariable(method.Name, ElementKind.Method);
-                methodName = $"<{method.ContainingSymbol.Name}>g__{method.Name}|0_0";
-            }
-            else
-            {
-                methodDeclarationVar = method.MethodKind == MethodKind.Constructor
-                    ? context.Naming.Constructor((BaseTypeDeclarationSyntax) method.ContainingType.DeclaringSyntaxReferences.SingleOrDefault()?.GetSyntax(), method.IsStatic)
-                    : context.Naming.MethodDeclaration((BaseMethodDeclarationSyntax) method.DeclaringSyntaxReferences.SingleOrDefault()?.GetSyntax());
-            }
-
-            var exps = CecilDefinitionsFactory.Method(context, methodDeclarationVar, methodName, "MethodAttributes.Private", method.ReturnType, method.ReturnsByRef, method.GetTypeParameterSyntax());
-            context.WriteCecilExpressions(exps);
-            
-            foreach (var parameter in method.Parameters)
-            {
-                var paramVar = context.Naming.Parameter(parameter.Name);
-                var parameterExps = CecilDefinitionsFactory.Parameter(context, parameter, methodDeclarationVar, paramVar);
-                context.WriteCecilExpressions(parameterExps);
-                context.DefinitionVariables.RegisterNonMethod(method.ToDisplayString(), parameter.Name, VariableMemberKind.Parameter, paramVar);
-            }
-            
-            context.DefinitionVariables.RegisterMethod(method.AsMethodDefinitionVariable(methodDeclarationVar));
         }
 
         protected void LogUnsupportedSyntax(SyntaxNode node)

@@ -70,4 +70,28 @@ public class CollectionExpressionTests : OutputBasedTestBase
             "ReturnPtrToStack" // This is required only for spans.
         );
     }
+    
+    [Test]
+    public void ImplicitTypeConversions_Are_Applied([Values("List<Foo>", "Foo[]", "Span<Foo>")] string targetType, [Values("[2, 1]", "[5, 4, 3, 2, 1]")] string items)
+    {
+        var (lengthExtractor, expectedILError) = targetType == "Span<Foo>" ? ("items.Length", "[ReturnPtrToStack]") : ("((ICollection<Foo>) items).Count", null);
+        AssertOutput(
+            $$"""
+              using System.Collections.Generic;
+              using System;
+
+              {{targetType}} items = [1, 2];
+              // We can´t rely on a foreach (to simplify the code) due to issue #306
+              for(var i = {{lengthExtractor}} - 1 ; i >= 0; i--) System.Console.Write(items[i].Value);
+
+              struct Foo
+              {
+                  public Foo(int i) => Value = i;
+                  public static implicit operator Foo(int i) => new Foo(i);
+                  public int Value;
+              }
+              """,
+            "21",
+            expectedILError);
+    }
 }

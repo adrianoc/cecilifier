@@ -30,12 +30,33 @@ public class ArrayInitializationProcessor
             {
                 context.EmitCilInstruction(visitor.ILVariable, OpCodes.Box, context.TypeResolver.Resolve(itemType.Type));
             }
-            else if(parentOperation != null && parentOperation is ICollectionExpressionOperation ceo && ceo.Elements[i] is IConversionOperation conversion)
+            else
             {
-                context.TryApplyNumericConversion(visitor.ILVariable, conversion.Operand.Type, conversion.Type);
+                var conversionInfo = GetConversionInfo(parentOperation, i);
+                if (conversionInfo?.ConvertionMethod != null)
+                {
+                    context.AddCallToMethod(conversionInfo?.ConvertionMethod, visitor.ILVariable);
+                }
+                else if (conversionInfo != null)
+                    context.TryApplyNumericConversion(visitor.ILVariable, conversionInfo?.Source, conversionInfo?.Destination);
             }
 
             context.EmitCilInstruction(visitor.ILVariable, stelemOpCode, stelemOpCode == OpCodes.Stelem_Any ? resolvedElementType : null);
+        }
+
+        (ITypeSymbol Source, ITypeSymbol Destination, IMethodSymbol ConvertionMethod)? GetConversionInfo(IOperation operation, int index)
+        {
+            var conversionOperation = operation switch
+            {
+                ICollectionExpressionOperation ceo => ceo.Elements[index],
+                IArrayInitializerOperation initializerOperation => initializerOperation.ElementValues[index], 
+                _ => null
+            } as IConversionOperation;
+
+            if (conversionOperation == null)
+                return null;
+            
+            return (conversionOperation.Operand.Type, conversionOperation.Type, conversionOperation.OperatorMethod);
         }
     }
 
@@ -63,3 +84,4 @@ public class ArrayInitializationProcessor
         context.EmitCilInstruction(visitor.ILVariable, OpCodes.Call, initializeArrayHelper);
     }
 }
+
