@@ -612,7 +612,8 @@ namespace Cecilifier.Core.AST
 
             if (needsLoadIndirect)
             {
-                Context.EmitCilInstruction(ilVar, type.LdindOpCodeFor());
+                var opCode = type.LdindOpCodeFor();
+                Context.EmitCilInstruction(ilVar, opCode, opCode == OpCodes.Ldobj ? Context.TypeResolver.Resolve(type) : null);
             }
         }
 

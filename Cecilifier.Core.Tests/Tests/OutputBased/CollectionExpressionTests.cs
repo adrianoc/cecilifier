@@ -72,43 +72,36 @@ public class CollectionExpressionTests : OutputBasedTestBase
     }
     
     [Test]
-    public void ImplicitTypeConversions_Are_Applied([Values("List<Foo>", "Foo[]", "Span<Foo>")] string targetType, [Values("[2, 1]", "[5, 4, 3, 2, 1]")] string items)
+    public void ImplicitUserDefinedConversions_Are_Applied([Values("List<Foo>", "Foo[]", "Span<Foo>")] string targetType, [Values("[2, 1]", "[5, 4, 3, 2, 1]")] string items)
     {
-        var (lengthExtractor, expectedILError) = targetType == "Span<Foo>" ? ("items.Length", "[ReturnPtrToStack]") : ("((ICollection<Foo>) items).Count", null);
-        AssertOutput(
-            $$"""
-              using System.Collections.Generic;
-              using System;
-
-              {{targetType}} items = {{items}};
-              // We can´t use a foreach (to simplify the code) due to issue #306
-              for(var i = 0; i < {{lengthExtractor}}; i++) System.Console.Write(items[i].Value);
-
-              struct Foo
-              {
-                  public Foo(int i) => Value = i;
-                  public static implicit operator Foo(int i) => new Foo(i);
-                  public int Value;
-              }
-              """,
-            Regex.Replace(items, @"[\[\],\s+]", ""),
-            expectedILError);
+        AssertConversionIsApplied(targetType, items, "Foo");
     }
     
     [Test]
     public void BoxConversions_Are_Applied([Values("List<object>", "object[]", "Span<object>")] string targetType, [Values("[2, 1]", "[5, 4, 3, 2, 1]")] string items)
     {
-        var (lengthExtractor, expectedILError) = targetType == "Span<object>" ? ("items.Length", "[ReturnPtrToStack]") : ("((ICollection<object>) items).Count", null);
+        AssertConversionIsApplied(targetType, items, "object");
+    }
+
+    void AssertConversionIsApplied(string targetType, string items, string elementType)
+    {
+        var (lengthExtractor, expectedILError) = targetType == $"Span<{elementType}>" ? ("items.Length", "[ReturnPtrToStack]") : ("((ICollection) items).Count", null);
         AssertOutput(
             $$"""
               using System.Collections.Generic;
+              using System.Collections;
               using System;
 
               {{targetType}} items = {{items}};
-              // We can´t usa a foreach (to simplify the code) due to issue #306
-              for(var i = 0; i < {{lengthExtractor}}; i++) 
+              // We can´t use a foreach (to simplify the code) due to issue #306
+              for(var i = 0; i < {{lengthExtractor}}; i++) System.Console.Write(items[i]);
+
+              struct Foo
               {
-                  System.Console.Write(items[i]);
+                  public Foo(int i) => Value = i;
+                  public static implicit operator Foo(int i) => new Foo(i);
+                  public static implicit operator int(Foo f) => f.Value;
+                  public int Value;
               }
               """,
             Regex.Replace(items, @"[\[\],\s+]", ""),
