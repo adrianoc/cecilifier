@@ -10,6 +10,7 @@ using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Operations;
 using Mono.Cecil.Cil;
@@ -227,6 +228,10 @@ internal static class CollectionExpressionProcessor
         else if (operation is IConversionOperation { OperatorMethod: not null } conversion)
         {
             context.AddCallToMethod(conversion.OperatorMethod, ilVar);
+        }
+        else if (operation is IConversionOperation conversion2 && context.SemanticModel.Compilation.ClassifyConversion(conversion2.Operand.Type, operation.Type).IsBoxing)
+        {
+            context.EmitCilInstruction(ilVar, OpCodes.Box, context.TypeResolver.Resolve(conversion2.Operand.Type));
         }
     }
 }

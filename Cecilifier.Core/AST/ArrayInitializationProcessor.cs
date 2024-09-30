@@ -1,4 +1,3 @@
-using System;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -6,12 +5,21 @@ using Mono.Cecil.Cil;
 
 using Cecilifier.Core.CodeGeneration;
 using Cecilifier.Core.Extensions;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Operations;
 
 namespace Cecilifier.Core.AST;
 
 public class ArrayInitializationProcessor
 {
+    /// <summary>
+    /// Generates Cecil calls to initialize an array which reference is at the top of the stack.
+    /// </summary>
+    /// <param name="visitor">An <see cref="ExpressionVisitor"/> used to visit each value to be stored in the array</param>
+    /// <param name="elementType"></param>
+    /// <param name="elements">Values to be stored.</param>
+    /// <param name="parentOperation">A operation conveying information on potential conversions.</param>
+    /// <typeparam name="TElement">The type of the ast node representing the elements.</typeparam>
     internal static void InitializeUnoptimized<TElement>(ExpressionVisitor visitor, ITypeSymbol elementType, SeparatedSyntaxList<TElement>? elements, IOperation parentOperation = null) where TElement : CSharpSyntaxNode
     {
         var context = visitor.Context;
@@ -25,7 +33,7 @@ public class ArrayInitializationProcessor
             elements.Value[i].Accept(visitor);
 
             //TODO: Refactor to extract all this into some common method to apply conversions.
-            var itemType = context.SemanticModel.GetTypeInfo(elements.Value[i]);
+            var itemType = context.SemanticModel.GetTypeInfo(elements.Value[i] is ExpressionElementSyntax els ? els.Expression : elements.Value[i]);
             if (elementType.IsReferenceType && itemType.Type != null && itemType.Type.IsValueType)
             {
                 context.EmitCilInstruction(visitor.ILVariable, OpCodes.Box, context.TypeResolver.Resolve(itemType.Type));

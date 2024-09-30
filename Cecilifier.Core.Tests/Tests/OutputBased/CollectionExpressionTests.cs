@@ -81,7 +81,7 @@ public class CollectionExpressionTests : OutputBasedTestBase
               using System;
 
               {{targetType}} items = {{items}};
-              // We can´t rely on a foreach (to simplify the code) due to issue #306
+              // We can´t use a foreach (to simplify the code) due to issue #306
               for(var i = 0; i < {{lengthExtractor}}; i++) System.Console.Write(items[i].Value);
 
               struct Foo
@@ -94,7 +94,24 @@ public class CollectionExpressionTests : OutputBasedTestBase
             Regex.Replace(items, @"[\[\],\s+]", ""),
             expectedILError);
     }
-            "21",
+    
+    [Test]
+    public void BoxConversions_Are_Applied([Values("List<object>", "object[]", "Span<object>")] string targetType, [Values("[2, 1]", "[5, 4, 3, 2, 1]")] string items)
+    {
+        var (lengthExtractor, expectedILError) = targetType == "Span<object>" ? ("items.Length", "[ReturnPtrToStack]") : ("((ICollection<object>) items).Count", null);
+        AssertOutput(
+            $$"""
+              using System.Collections.Generic;
+              using System;
+
+              {{targetType}} items = {{items}};
+              // We can´t usa a foreach (to simplify the code) due to issue #306
+              for(var i = 0; i < {{lengthExtractor}}; i++) 
+              {
+                  System.Console.Write(items[i]);
+              }
+              """,
+            Regex.Replace(items, @"[\[\],\s+]", ""),
             expectedILError);
     }
 }
