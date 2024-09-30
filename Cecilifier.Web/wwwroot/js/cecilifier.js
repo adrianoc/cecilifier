@@ -5,7 +5,7 @@ let csharpCode;
 let focusedEditor; // either csharpCode or cecilifiedCode
 let blockMappings = null;
 let csharpCodeEditorWidthMultiplier = 0.3;
-let compilationErrorToast = null; // toast informing user about compilation errors. This reference is used to close the toast before cecilifying code.
+let toastsToCleanUpBeforeCecilifying = []; // toast with diagnostics (reset before cecilifying) 
 let onCecilifiySuccessCallbacks = [];
 
 const CecilifierResponseStatus = Object.freeze({
@@ -281,9 +281,10 @@ function removeMarkersFromCSharpCode() {
     const markers = []
     monaco.editor.setModelMarkers(csharpCode.getModel(), "Errors", markers);
 
-    if (compilationErrorToast !== null) {
-        compilationErrorToast.Close();
-        compilationErrorToast = null;
+    while (toastsToCleanUpBeforeCecilifying.length > 0)
+    {
+        const toast = toastsToCleanUpBeforeCecilifying.pop();
+        toast.Close();
     }
 }
 /*
@@ -882,20 +883,21 @@ function initializeWebSocket() {
             
             if (response.kind === 'Z') {
                 setTimeout(function() {
-                    const buttonId = createProjectZip(base64ToArrayBuffer(response.cecilifiedCode), response.mainTypeName + ".zip", 'application/zip');
+                    const buttonId = createProjectZip(base64ToArrayBuffer(response.data), response.mainTypeName + ".zip", 'application/zip');
                     simulateClick(buttonId);
                 });
             }
             else {
-                cecilifiedCode.setValue(response.cecilifiedCode);
-                // save the returned mappings used to map between code snippet <-> Cecilified Code.
-                blockMappings = response.mappings;
+                cecilifiedCode.setValue(response.data);
             }
-            
+
+            // save the returned mappings used to map between code snippet <-> Cecilified Code.
+            blockMappings = response.mappings;
             for(let i = 0; i < onCecilifiySuccessCallbacks.length; i++) {
                 onCecilifiySuccessCallbacks[i].callback(onCecilifiySuccessCallbacks[i].state);
             }
-                
+            showDiagnostics(response.diagnostics);
+            
         } else if (response.status === CecilifierResponseStatus.ConnectionEstablished) {
             let response = JSON.parse(event.data);
             updateUsageStatisticsToolTip(response);
@@ -903,10 +905,16 @@ function initializeWebSocket() {
             let compilerErrors = response.errors;
             for(let i = 0; i < compilerErrors.length; i++) {
                 compilerErrors[i].severity = monaco.MarkerSeverity.Error;
+                
+                compilerErrors[i].startLineNumber = compilerErrors[i].lineInformation.startLineNumber;
+                compilerErrors[i].endLineNumber = compilerErrors[i].lineInformation.endLineNumber;
+                compilerErrors[i].startColumn = compilerErrors[i].lineInformation.startColumn;
+                compilerErrors[i].endColumn = compilerErrors[i].lineInformation.endColumn;
             }
 
             monaco.editor.setModelMarkers(csharpCode.getModel(), "Errors", compilerErrors);
-            compilationErrorToast = SnackBar({
+            
+            const toast = SnackBar({
                 message: `Code contains ${compilerErrors.length} compilation errors.`,
                 dismissible: false,
                 status: "Error",
@@ -919,15 +927,29 @@ function initializeWebSocket() {
                     }
                 ]
             });
+            toastsToCleanUpBeforeCecilifying.push(toast);
         } else if (response.status === CecilifierResponseStatus.InternalError) {
             ShowErrorDialog("", response.error, "We've got an internal error.");
         } else if (response.status === CecilifierResponseStatus.MissingAssemblies) {
-            console.log(`Cecilifier server asked for missing assemblies => ${response.missingAssemblies}`);            
+            console.log(`Cecilifier server asked for missing assemblies => ${response.missingAssemblies}`);
             sendMissingAssemblyReferences(response.missingAssemblies, function () {
                 send(websocket, response.originalFormat);
             });
         }
     };
+}
+
+function showDiagnostics(diagnostics) {
+    for (let i = 0; i < diagnostics.length; i++) {
+        const diagnosticToast = SnackBar({
+            message: diagnostics[i].Message.replace(/(\r)?\n/g, "<br />"),
+            dismissible: true,
+            status: diagnostics[i].Kind === 3 ? "Error" : "Warning", // map DiagnosticKind.Information and Warning as warning
+            timeout: 60000
+        });
+        
+        toastsToCleanUpBeforeCecilifying.push(diagnosticToast);
+    }
 }
 
 function updateUsageStatisticsToolTip(response) {
@@ -991,8 +1013,6 @@ function send(websocket, format) {
     }
 
     removeMarkersFromCSharpCode();
-
-    clearError();
 
     showSpinner();
 
@@ -1142,14 +1162,6 @@ function ResizeErrorDialog(){
     getErrorBodyElement().style.height = `${h * 0.70}px`;
 }
 
-function clearError() {
-    setAlert("cecilifier_error", null);
-}
-
-function setError(str) {
-    setAlert("cecilifier_error", str);
-}
-
 function updateReportErrorButton(element) {
     UpdateButtonState(getReportErrorButton(), element.value !== "");
 }
@@ -1165,7 +1177,6 @@ function UpdateButtonState(element, enable) {
 }
 
 function fileIssueInGitHub() {
-    clearError();
     showSpinner();
     
     try {

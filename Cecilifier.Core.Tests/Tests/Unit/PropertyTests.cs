@@ -125,4 +125,55 @@ public class PropertyTests : CecilifierUnitTestBase
             Assert.That(cecilifiedCode, Does.Match(@"il_get_\d+.Emit\(OpCodes.Ldsfld, fld_prop_\d+\);"), "Getter field access should be static");
         });
     }
+    
+    [Test]
+    public void AccessorAccessibility_IsRespected()
+    {
+        var code = """
+                   class Foo
+                   {
+                       public int Value
+                       {
+                           private get => 1;
+                           set {  }
+                       }
+                   }
+                   """;
+
+        var result = RunCecilifier(code);
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+        
+        Assert.That(cecilifiedCode, Does.Match("""
+                                               //Getter
+                                               \s+var m_get_\d+ = new MethodDefinition\("get_Value", MethodAttributes.Private.+, .+TypeSystem.Int32\);
+                                               """));
+        
+        Assert.That(cecilifiedCode, Does.Match("""
+                                               // Setter
+                                               \s+var l_set_\d+ = new MethodDefinition\("set_Value", MethodAttributes.Public.+, .+TypeSystem.Void\);
+                                               """));
+    }
+    
+    [Test]
+    public void AttributeTargetingFieldOfNonAutomaticProperties_DoesNot_EmitAttribute()
+    {
+        var code = """
+                   using System;
+                   class Foo
+                   {
+                       [field:Obsolete] // This is invalid; C# compiler emits a warning.
+                       public int Value
+                       {
+                           private get => _v;
+                           set => _v = 1;
+                       }
+                   
+                       private int _v; // Not important
+                   }
+                   """;
+
+        var result = RunCecilifier(code);
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+        Assert.That(cecilifiedCode, Does.Not.Match("""\s+\.CustomAttributes.Add\(attr_obsolete_\d+\);"""));
+    }
 }

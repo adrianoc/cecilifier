@@ -105,7 +105,7 @@ namespace Cecilifier.Core.AST
             else
             {
                 Context.DefinitionVariables.RegisterNonMethod(containingSymbol.ToDisplayString(), node.Identifier.ValueText, VariableMemberKind.Parameter, paramVar);
-                var exps = CecilDefinitionsFactory.Parameter(node, Context.SemanticModel, methodVar.VariableName, paramVar, ResolveType(node.Type), node.Accept(DefaultParameterExtractorVisitor.Instance));
+                var exps = CecilDefinitionsFactory.Parameter(Context, node, methodVar.VariableName, paramVar);
                 AddCecilExpressions(Context, exps);
             }
 

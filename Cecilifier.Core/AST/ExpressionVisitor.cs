@@ -143,7 +143,7 @@ namespace Cecilifier.Core.AST
 
             var ev = new ExpressionVisitor(ctx, ilVar);
             ev.Visit(node);
-
+            
             return ev.skipLeftSideVisitingInAssignment;
         }
 
@@ -871,7 +871,7 @@ namespace Cecilifier.Core.AST
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, localVar);
                 pattern.Accept(this);
 
-                var comparisonType = Context.SemanticModel.GetSymbolInfo(pattern.NameColon.Name).Symbol.GetMemberType();
+                var comparisonType = Context.SemanticModel.GetSymbolInfo(pattern.NameColon?.Name ?? pattern.ExpressionColon?.Expression).Symbol.GetMemberType();
                 var opEquality = comparisonType.GetMembers().FirstOrDefault(m => m.Kind == SymbolKind.Method && m.Name == "op_Equality");
                 if (opEquality != null)
                 {
@@ -1231,7 +1231,7 @@ namespace Cecilifier.Core.AST
         {
             propertySymbol.EnsurePropertyExists(Context, node);
             
-            if (!propertySymbol.IsStatic && !node.IsQualifiedAccessToTypeOrMember())
+            if (!propertySymbol.IsStatic && node.IsMemberAccessThroughImplicitThis())
             {
                 // if this is an *unqualified* access we need to load *this*
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);

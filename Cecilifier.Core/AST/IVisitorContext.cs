@@ -15,6 +15,10 @@ namespace Cecilifier.Core.AST
     {
         ServiceCollection Services { get; }
         
+        void EmitWarning(string message, SyntaxNode node = null);
+        
+        void EmitError(string message, SyntaxNode node = null);
+        
         INameStrategy Naming { get; }
 
         SemanticModel SemanticModel { get; }

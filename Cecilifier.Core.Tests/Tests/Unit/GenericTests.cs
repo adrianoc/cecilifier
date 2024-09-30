@@ -186,6 +186,69 @@ namespace Cecilifier.Core.Tests.Tests.Unit
                                                    """), "Target of call instruction validation.");
         }
 
+        [Test]
+        public void NonGenericMethod_OnExternalGenericTypeWithLocalTypeAsTypeArgument_Issue284()
+        {
+            var result = RunCecilifier("System.Collections.Generic.IEnumerable<Foo> e = null; var enumerator = e.GetEnumerator(); class Foo {}");
+
+            var cecilified = result.GeneratedCode.ReadToEnd();
+            Assert.That(cecilified, Does.Not.Contain("typeof(System.Collections.Generic.IEnumerable<Foo>)"));
+
+            Assert.That(cecilified, Does.Match("""
+                                               var (l_iEnumerable_\d+) = .+ImportReference\(typeof\(.+IEnumerable<>\)\).MakeGenericInstanceType\(cls_foo_\d+\);
+                                               \s+var (l_openGetEnumerator_\d+) = .+ImportReference\(typeof\(.+IEnumerable<>\)\).Resolve\(\).Methods.First\(m => m.Name == "GetEnumerator"\);
+                                               \s+var r_getEnumerator_\d+ = new MethodReference\("GetEnumerator", .+ImportReference\(\2\).ReturnType\)
+                                               \s+{
+                                               \s+DeclaringType = \1,
+                                               \s+HasThis = \2.HasThis,
+                                               \s+ExplicitThis = \2.ExplicitThis,
+                                               \s+CallingConvention = \2.CallingConvention,
+                                               \s+};
+                                               """));
+        }
+        
+        [Test]
+        public void GenericMethod_OnExternalNonGenericTypeWithLocalTypeAsTypeArgument_DoesNotUseTypeofToReferenceLocalType_Issue284()
+        {
+            var result = RunCecilifier("System.Array.Empty<Foo>(); class Foo {}");
+
+            var cecilified = result.GeneratedCode.ReadToEnd();
+            Assert.That(cecilified, Does.Not.Contain("typeof(Foo)"));
+            Assert.That(cecilified, Does.Match("""
+                                               //System.Array.Empty<Foo>\(\);
+                                               \s+var r_empty_9 = new MethodReference\("Empty", cls_foo_0.MakeArrayType\(\), assembly.MainModule.ImportReference\(typeof\(System.Array\)\)\)
+                                               \s+{
+                                               \s+HasThis = false,
+                                               \s+ExplicitThis = false,
+                                               \s+CallingConvention = 0,
+                                               \s+};
+                                               \s+r_empty_9.GenericParameters.Add\(new GenericParameter\("T", r_empty_9\)\);
+                                               \s+var gi_empty_10 = new GenericInstanceMethod\(r_empty_9\);
+                                               \s+gi_empty_10.GenericArguments.Add\(cls_foo_0\);
+                                               \s+il_topLevelMain_6.Emit\(OpCodes.Call, gi_empty_10\);
+                                               """));
+        }
+
+        [Test]
+        public void GenericMethod_OnLocalGenericType_DoesNotUseTypeofToReferenceLocalType_Issue284()
+        {
+            var result = RunCecilifier("Foo<int>.M<string>(); class Foo<TType> { public static void M<TMethod>() {} }");
+
+            var cecilified = result.GeneratedCode.ReadToEnd();
+            Assert.That(cecilified, Does.Not.Contain("typeof(Foo)"));
+            Assert.That(cecilified, Does.Match("""
+                                               //Foo<int>.M<string>\(\);
+                                               \s+var (?<openMethod>r_M_\d+) = new MethodReference\(m_M_2.Name, m_M_2.ReturnType\) {  HasThis = m_M_2.HasThis, ExplicitThis = m_M_2.ExplicitThis, DeclaringType = cls_foo_0.MakeGenericInstanceType\(assembly.MainModule.TypeSystem.Int32\), CallingConvention = m_M_2.CallingConvention,};
+                                               \s+foreach\(var gp in m_M_2.GenericParameters\)
+                                               \s+{
+                                               \s+\k<openMethod>.GenericParameters.Add\(new Mono.Cecil.GenericParameter\(gp.Name, \k<openMethod>\)\);
+                                               \s+}
+                                               \s+var gi_M_\d+ = new GenericInstanceMethod\(\k<openMethod>\);
+                                               \s+gi_M_\d+.GenericArguments.Add\(assembly.MainModule.TypeSystem.String\);
+                                               \s+il_topLevelMain_\d+.Emit\(OpCodes.Call, gi_M_\d+\);
+                                               """));
+        }
+        
         [TestCase("bool bx = value != null", """
                                       //bool bx = value != null;
                                       \s+var l_bx_13 = new VariableDefinition\(assembly.MainModule.TypeSystem.Boolean\);

@@ -303,13 +303,14 @@ namespace Cecilifier.Core.Misc
             return exps;
         }
 
-        public static IEnumerable<string> Parameter(ParameterSyntax node, SemanticModel semanticModel, string methodVar, string paramVar, string resolvedType, string defaultParameterValue)
+        public static IEnumerable<string> Parameter(IVisitorContext context, ParameterSyntax node, string methodVar, string paramVar)
         {
-            var paramSymbol = semanticModel.GetDeclaredSymbol(node);
-            return Parameter(paramSymbol, methodVar, paramVar, resolvedType);
+            var paramSymbol = context.SemanticModel.GetDeclaredSymbol(node);
+            TypeDeclarationVisitor.EnsureForwardedTypeDefinition(context, paramSymbol!.Type, Array.Empty<TypeParameterSyntax>());
+            return Parameter(context, paramSymbol, methodVar, paramVar);
         }
 
-        public static IEnumerable<string> Parameter(IParameterSymbol paramSymbol, string methodVar, string paramVar, string resolvedType)
+        public static IEnumerable<string> Parameter(IVisitorContext context, IParameterSymbol paramSymbol, string methodVar, string paramVar)
         {
             return Parameter(
                 paramSymbol.Name,
@@ -317,7 +318,7 @@ namespace Cecilifier.Core.Misc
                 paramSymbol.IsParams,
                 methodVar,
                 paramVar,
-                resolvedType,
+                context.TypeResolver.Resolve(paramSymbol.Type),
                 paramSymbol.AsParameterAttribute(),
                 paramSymbol.ExplicitDefaultValue(rawString: false));
         }

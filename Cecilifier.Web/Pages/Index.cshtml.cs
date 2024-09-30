@@ -45,7 +45,7 @@ namespace Cecilifier.Web.Pages
                 }
                 else
                 {
-                    ErrorAccessingGist = Encode($"Error accessing GistId = {gistid}: {result.StatusCode}\\n{result.RequestMessage}");
+                    ErrorAccessingGist = $"Error accessing gist ({gistid}). HttpStatus={result.StatusCode}\\n\\n{Encode(result.RequestMessage.ToString())}";
                 }
             }
 

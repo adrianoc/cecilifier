@@ -3,10 +3,19 @@ const saved_snippet_prefix = "saved-snippet-";
 function handleInitialSnippet(gist, errorAccessingGist, requestPath, removeStoredSnippet, defaultSnippet) {
     let snippet = gist;
     let autoCecilify = false;
+
+    if (errorAccessingGist.length !== 0) {
+        const gistErrorToast = SnackBar({
+            message: errorAccessingGist.replace(/(\r)?\n/g, "<br />"),
+            dismissible: true,
+            status: "Error",
+            timeout: 60000
+        });
+        
+        toastsToCleanUpBeforeCecilifying.push(gistErrorToast);
+    }
     
     if (snippet !== null && snippet.length > 0) {
-        if (errorAccessingGist.length !== 0)
-            setError(errorAccessingGist);
         autoCecilify = true;
     }
     else {

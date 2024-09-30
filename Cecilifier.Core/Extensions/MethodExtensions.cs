@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using Cecilifier.Core.AST;
+using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.Services;
 using Cecilifier.Core.Variables;
@@ -65,12 +66,12 @@ namespace Cecilifier.Core.Extensions
                     throw new ArgumentException($"Could not find variable declaration for method {method.Name}.");
 
                 if (!method.ContainingType.IsGenericType)
-                    return found.VariableName;
+                    return found.VariableName.MakeGenericInstanceMethod(ctx, method);
 
                 var declaringTypeResolveExp = ctx.TypeResolver.Resolve(method.ContainingType);
                 var exps = found.VariableName.CloneMethodReferenceOverriding(ctx, new() { ["DeclaringType"] = declaringTypeResolveExp }, method, out var variable);
                 ctx.WriteCecilExpressions(exps);
-                return variable;
+                return variable.MakeGenericInstanceMethod(ctx, method);
             }
 
             var declaringTypeName = method.ContainingType.FullyQualifiedName();
@@ -85,6 +86,34 @@ namespace Cecilifier.Core.Extensions
 
             if (method.IsGenericMethod)
             {
+                if (method.TypeArguments.Any(t => t.IsDefinedInCurrentAssembly(ctx)))
+                {
+                    var tempMethodVar = ctx.Naming.SyntheticVariable(method.Name, ElementKind.MemberReference);
+                    ctx.WriteCecilExpression($$"""
+                                               var {{tempMethodVar}} = new MethodReference("{{method.Name}}", {{ctx.TypeResolver.Resolve(method.ReturnType)}}, {{ctx.TypeResolver.Resolve(method.ContainingType)}})
+                                                           {
+                                                               HasThis = {{(method.IsStatic ? "false" : "true")}},
+                                                               ExplicitThis = {{(method.IsStatic ? "false" : "true")}},
+                                                               CallingConvention = {{ (int) method.CallingConvention}},
+                                                           };
+                                               """);
+                    ctx.WriteNewLine();
+                    foreach (var parameter in method.Parameters)
+                    {
+                        var tempParamVar = ctx.Naming.SyntheticVariable(parameter.Name, ElementKind.Parameter);
+                        var exps = CecilDefinitionsFactory.Parameter(ctx, parameter, tempMethodVar, tempParamVar);
+                        ctx.WriteCecilExpressions(exps);
+                    }
+
+                    foreach (var genericParameter in method.TypeParameters)
+                    {
+                        ctx.WriteCecilExpression($"""{tempMethodVar}.GenericParameters.Add(new GenericParameter("{genericParameter.Name}", {tempMethodVar}));""");
+                        ctx.WriteNewLine();
+                    }
+                    
+                    return tempMethodVar.MakeGenericInstanceMethod(ctx, method.Name, method.TypeArguments.Select(t => ctx.TypeResolver.Resolve(t)).ToList());
+                }
+                
                 var parameters = $$"""new ParamData[] { {{ string.Join(',', method.Parameters.Select(p => $$"""new ParamData { FullName="{{p.Type.ElementTypeSymbolOf().FullyQualifiedName()}}", IsArray={{(p.Type.TypeKind == TypeKind.Array ? "true" : "false")}}, IsTypeParameter={{(p.Type.TypeKind == TypeKind.TypeParameter ? "true" : "false") }} } """)) }} }""";
                 var genericTypeParameters = $$"""new [] { {{ string.Join(',', method.TypeArguments.Select(TypeNameFrom)) }} }""";
                 
@@ -93,8 +122,10 @@ namespace Cecilifier.Core.Extensions
                       TypeHelpers.ResolveGenericMethodInstance(typeof({declaringTypeName}).AssemblyQualifiedName, "{method.Name}", {method.ReflectionBindingsFlags()}, {parameters}, {genericTypeParameters}) 
                       """);
             }
-            
-            if (method.Parameters.Any(p => p.Type.IsTypeParameterOrIsGenericTypeReferencingTypeParameter()) || method.ReturnType.IsTypeParameterOrIsGenericTypeReferencingTypeParameter())
+
+            if (method.Parameters.Any(p => p.Type.IsTypeParameterOrIsGenericTypeReferencingTypeParameter()) 
+                || method.ReturnType.IsTypeParameterOrIsGenericTypeReferencingTypeParameter()
+                || method.ContainingType.TypeArguments.Any(t => t.IsDefinedInCurrentAssembly(ctx)))
             {
                 return ResolveMethodFromGenericType(method, ctx);
             }
@@ -225,7 +256,6 @@ namespace Cecilifier.Core.Extensions
             foreach (var t in resolvedTypeArguments)
                 hash.Add(t);
 
-
             List<string> exps = new();
             varName = context.Services.Get<GenericInstanceMethodCacheService<int, string>>().GetOrCreate(hash.ToHashCode(), (context, methodName, resolvedTypeArguments, methodReferenceVariable, exps),
                 static (hashCode, state) =>
@@ -246,6 +276,17 @@ namespace Cecilifier.Core.Extensions
         public static string MakeGenericInstanceMethod(this string methodReferenceVariable, IVisitorContext context, string methodName, IReadOnlyList<string> resolvedTypeArguments)
         {
             var exps = methodReferenceVariable.MakeGenericInstanceMethod(context, methodName, resolvedTypeArguments, out var genericInstanceVarName);
+            context.WriteCecilExpressions(exps);
+
+            return genericInstanceVarName;
+        }
+        
+        public static string MakeGenericInstanceMethod(this string methodReferenceVariable, IVisitorContext context, IMethodSymbol method)
+        {
+            if (method.IsGenericMethod is false)
+                return methodReferenceVariable;
+            
+            var exps = methodReferenceVariable.MakeGenericInstanceMethod(context, method.Name, method.TypeArguments.Select(t => context.TypeResolver.Resolve(t)).ToList(), out var genericInstanceVarName);
             context.WriteCecilExpressions(exps);
 
             return genericInstanceVarName;

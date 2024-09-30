@@ -6,18 +6,18 @@ namespace Cecilifier.Core
 {
     public class SyntaxErrorException : Exception
     {
-        public CompilationError[] Errors { get; }
+        public CecilifierDiagnostic[] Diagnostics { get; }
 
-        public SyntaxErrorException(CompilationError[] errors)
+        public SyntaxErrorException(CecilifierDiagnostic[] diagnostics)
         {
-            Errors = errors;
+            Diagnostics = diagnostics;
         }
 
         public override string Message => ToString();
 
         public override string ToString()
         {
-            return string.Join('\n', Errors.Select(err => err.Message));
+            return string.Join('\n', Diagnostics.Select(err => err.Message));
         }
     }
 }
