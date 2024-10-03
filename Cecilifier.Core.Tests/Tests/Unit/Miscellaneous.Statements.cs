@@ -34,7 +34,7 @@ public partial class MiscellaneousStatements : CecilifierUnitTestBase
                  \s+var (lbl_fel_\d+) = il_M_7.Create\(OpCodes.Nop\);
                  \s+var nop_10 = il_M_7.Create\(OpCodes.Nop\);
                  \s+il_M_7.Append\(nop_10\);
-                 \s+//for condition
+                 \s+//for condition: j < 10
                  \s+il_M_7.Emit\(OpCodes.Ldloc, l_j_8\);
                  \s+il_M_7.Emit\(OpCodes.Ldc_I4, 10\);
                  \s+il_M_7.Emit\(OpCodes.Clt\);
