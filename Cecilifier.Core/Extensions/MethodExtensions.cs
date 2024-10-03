@@ -164,7 +164,8 @@ namespace Cecilifier.Core.Extensions
 
             if (method.Parameters.Any(p => p.Type.IsTypeParameterOrIsGenericTypeReferencingTypeParameter()) 
                 || method.ReturnType.IsTypeParameterOrIsGenericTypeReferencingTypeParameter()
-                || method.ContainingType.TypeArguments.Any(t => t.IsDefinedInCurrentAssembly(ctx)))
+                || method.ContainingType.TypeArguments.Any(t => t.IsDefinedInCurrentAssembly(ctx))
+                || method.ContainingType.HasTypeArgumentOfTypeFromCecilifiedCodeTransitive(ctx))
             {
                 return ResolveMethodFromGenericType(method, ctx);
             }
@@ -213,7 +214,7 @@ namespace Cecilifier.Core.Extensions
         {
             // resolve declaring type of the method.
             var targetTypeVarName = ctx.Naming.SyntheticVariable($"{method.ContainingType.Name}", ElementKind.LocalVariable);
-            var resolvedTargetTypeExp = ctx.TypeResolver.Resolve(method.ContainingType.OriginalDefinition).MakeGenericInstanceType(method.ContainingType.TypeArguments.Select(t => ctx.TypeResolver.Resolve(t)));
+            var resolvedTargetTypeExp = ctx.TypeResolver.Resolve(method.ContainingType.OriginalDefinition).MakeGenericInstanceType(method.ContainingType.GetAllTypeArguments().Select(t => ctx.TypeResolver.Resolve(t)));
             ctx.WriteCecilExpression($"var {targetTypeVarName} = {resolvedTargetTypeExp};");
             ctx.WriteNewLine();
 

@@ -237,5 +237,10 @@ namespace Cecilifier.Core.Extensions
             attributeData = symbol.GetAttributes().SingleOrDefault(attr => attr.AttributeClass?.Name == typeOfT.Name);
             return attributeData != null;
         }
+        public static bool HasTypeArgumentOfTypeFromCecilifiedCodeTransitive(this INamedTypeSymbol type, IVisitorContext context)
+        {
+            return type.TypeArguments.Any(t => t.IsDefinedInCurrentAssembly(context)) 
+                   || (type.ContainingType != null && (SymbolEqualityComparer.Default.Equals(type.ContainingType, type) ? false : HasTypeArgumentOfTypeFromCecilifiedCodeTransitive(type.ContainingType, context)));
+        }
     }
 }

@@ -179,6 +179,27 @@ namespace Cecilifier.Core.Extensions
         {
             return typeSymbol.Interfaces.Select(itf => context.TypeResolver.Resolve(itf));
         }
+        
+        
+        /// <summary>
+        /// Returns a list of type arguments used in the generic type instantiation of <paramref name="type"/> 
+        /// </summary>
+        /// <param name="type"></param>
+        /// <returns></returns>
+        /// <remarks>
+        /// For nested types this list includes all type's type arguments and *all* type arguments from *all*
+        /// parent types.
+        ///
+        /// For instance, given the type <![CDATA[Foo<int>.Bar<string,bool>.FooBar]]> this method will return
+        /// [int, string, bool]
+        /// </remarks>
+        public static IEnumerable<ITypeSymbol> GetAllTypeArguments(this INamedTypeSymbol type)
+        {
+            if (type.ContainingType == null)
+                return type.TypeArguments;
+                
+            return type.ContainingType.GetAllTypeArguments().Concat(type.TypeArguments);
+        }
     }
 
     public sealed class VariableDefinitionComparer : IEqualityComparer<VariableDefinition>

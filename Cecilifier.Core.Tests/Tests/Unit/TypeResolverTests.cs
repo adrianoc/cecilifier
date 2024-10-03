@@ -23,6 +23,8 @@ public class TypeResolverTests
         var syntaxTree = CSharpSyntaxTree.ParseText("""
                                                     using System;
                                                     using System.Collections.Generic;
+                                                    using Cecilifier.Core.Tests.Tests.Unit;
+                                                    
                                                     class Foo<T> 
                                                     { 
                                                         Func<T> M1() => default;
@@ -32,13 +34,24 @@ public class TypeResolverTests
                                                         List<int> M4<TM>(List<TM> list) => list.ConvertAll(GenToInt<TM>); 
                                                         
                                                         static int GenToInt<TGen>(TGen gen) => 1;
+                                                        
+                                                        List<Bar>.Enumerator Bars() => new();
+                                                        
+                                                        A<Bar, int>.B<Bar> B() => default;
+                                                        A<Bar, int>.B<Bar>.C C() => default;
+                                                        D.E<Bar> E() => default;
+                                                        D.F F() => default;
                                                     }
+                                                    
+                                                    class Bar {}
                                                     """);
         _comp = CSharpCompilation.Create(
             "TypeResolverTests", 
             new[] { syntaxTree },
             [
+                MetadataReference.CreateFromFile(typeof(TypeResolverTests).Assembly.Location),
                 MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
+                MetadataReference.CreateFromFile(typeof(List<>).Assembly.Location),
             ]
         );
     }
@@ -98,6 +111,43 @@ public class TypeResolverTests
         var resolved = context.TypeResolver.Resolve(methodSymbol.OriginalDefinition.ReturnType, "methodReference");
         Assert.That(resolved, Does.Match(@".+ImportReference\(typeof\(System.Collections.Generic.List<>\)\)\.MakeGenericInstanceType\(methodReference.GenericParameters\[0\]\)"));
     }
+    
+    [TestCase("B", 
+        """.+NewRawNestedTypeReference\("B", .+, .+ImportReference\(typeof\(Cecilifier.Core.Tests.Tests.Unit.A<,>\)\), isValueType: false, 3\).MakeGenericInstanceType\(BarDefinition, assembly.MainModule.TypeSystem.Int32, BarDefinition\)""",
+        TestName = "Generic nested and parent type")]
+    [TestCase("C", 
+        """.+NewRawNestedTypeReference\("C", .+, .+NewRawNestedTypeReference\("B", .+, .+ImportReference\(typeof\(Cecilifier.Core.Tests.Tests.Unit.A<,>\)\), isValueType: false, 3\), isValueType: false, 3\).MakeGenericInstanceType\(BarDefinition, assembly.MainModule.TypeSystem.Int32, BarDefinition\)""",
+        TestName = "Non generic nested type with generic parents")]
+    [TestCase("E", 
+        """.+NewRawNestedTypeReference\("E", .+, .+ImportReference\(typeof\(Cecilifier.Core.Tests.Tests.Unit.D\)\), isValueType: false, 1\).MakeGenericInstanceType\(BarDefinition\)""",
+        TestName = "Generic nested type of non generic parent")]
+    public void NestedTypes_WithTypeArguments_DefinedInCecilifiedCode(string methodName, string expectedTypeReference)
+    {
+        // A<Bar, int>.B<Bar>.C C() => default;
+        // D.E<Bar> E() => default;
+
+        var context = NewContext();
+        var methodSyntax = GetMethodSyntax(context, methodName);
+        var methodSymbol = context.SemanticModel.GetDeclaredSymbol(methodSyntax).EnsureNotNull<ISymbol, IMethodSymbol>();
+
+        using var bar = context.DefinitionVariables.WithCurrent("", "Bar", VariableMemberKind.Type, "BarDefinition");
+        var resolved = context.TypeResolver.Resolve(methodSymbol.OriginalDefinition.ReturnType, "methodReference");
+        Assert.That(
+            resolved, 
+            Does.Match(expectedTypeReference));
+    }
+    
+    [Test]
+    public void NonGeneric_NestedTypes()
+    {
+        var context = NewContext();
+        var methodSyntax = GetMethodSyntax(context, "F");
+        var methodSymbol = context.SemanticModel.GetDeclaredSymbol(methodSyntax).EnsureNotNull<ISymbol, IMethodSymbol>();
+        var resolved = context.TypeResolver.Resolve(methodSymbol.OriginalDefinition.ReturnType, "methodReference");
+        Assert.That(
+            resolved, 
+            Does.Match("""assembly.MainModule.ImportReference\(typeof\(Cecilifier.Core.Tests.Tests.Unit.D.F\)\)"""));
+    }
 
     private MethodDeclarationSyntax GetMethodSyntax(CecilifierContext context, string methodName)
     {
@@ -105,4 +155,19 @@ public class TypeResolverTests
     }
     
     private CecilifierContext NewContext() => new(_comp.GetSemanticModel(_comp.SyntaxTrees[0]), new CecilifierOptions(), 1);
+}
+
+public class A<T1, T2>
+{
+    public class B<T3>
+    {
+        public class C { }
+    }
+}
+
+public class D
+{
+    public class E<T> { }
+    
+    public class F {}
 }

@@ -10,6 +10,15 @@ namespace Cecilifier.Runtime
 {
     public class TypeHelpers
     {
+        public static TypeReference NewRawNestedTypeReference(string typeName, ModuleDefinition module, TypeReference declaringType, bool isValueType, int typeParameterCount)
+        {
+            var typeReference = new TypeReference(String.Empty, typeName, module, declaringType.Scope) { DeclaringType = declaringType, IsValueType = isValueType ? true : false };
+            for(int i =0; i < typeParameterCount; i++)
+                typeReference.GenericParameters.Add(new GenericParameter(typeReference));
+            
+            return typeReference;
+        }
+
         public static MethodReference DefaultCtorFor(TypeReference type)
         {
             var resolved = type.Resolve();
