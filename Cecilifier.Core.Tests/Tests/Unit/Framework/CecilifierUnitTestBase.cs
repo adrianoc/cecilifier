@@ -4,7 +4,7 @@ using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using NUnit.Framework;
 
-namespace Cecilifier.Core.Tests.Tests.Unit
+namespace Cecilifier.Core.Tests.Tests.Unit.Framework
 {
     public class CecilifierUnitTestBase
     {

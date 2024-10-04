@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Cecilifier.Core.Tests.Tests.Unit.Framework;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Tests.Unit;

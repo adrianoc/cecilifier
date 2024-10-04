@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.Extensions;
-using Cecilifier.Core.Misc;
+using Cecilifier.Core.Tests.Tests.Unit.Framework;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -13,49 +13,37 @@ namespace Cecilifier.Core.Tests.Tests.Unit;
 #nullable enable
 
 [TestFixture]
-public class TypeResolverTests
+internal class TypeResolverTests : CecilifierContextBasedTestBase
 {
-    private CSharpCompilation _comp;
+    protected override string Snippet =>
+        """
+        using System;
+        using System.Collections.Generic;
+        using Cecilifier.Core.Tests.Tests.Unit;
 
-    [OneTimeSetUp]
-    public void OneTimeSetUp()
-    {
-        var syntaxTree = CSharpSyntaxTree.ParseText("""
-                                                    using System;
-                                                    using System.Collections.Generic;
-                                                    using Cecilifier.Core.Tests.Tests.Unit;
-                                                    
-                                                    class Foo<T> 
-                                                    { 
-                                                        Func<T> M1() => default;
-                                                        Func<TM> M2<TM>() => default; 
-                                                        Func<T, TM> M3<TM>() => default;
-                                                        
-                                                        List<int> M4<TM>(List<TM> list) => list.ConvertAll(GenToInt<TM>); 
-                                                        
-                                                        static int GenToInt<TGen>(TGen gen) => 1;
-                                                        
-                                                        List<Bar>.Enumerator Bars() => new();
-                                                        
-                                                        A<Bar, int>.B<Bar> B() => default;
-                                                        A<Bar, int>.B<Bar>.C C() => default;
-                                                        D.E<Bar> E() => default;
-                                                        D.F F() => default;
-                                                    }
-                                                    
-                                                    class Bar {}
-                                                    """);
-        _comp = CSharpCompilation.Create(
-            "TypeResolverTests", 
-            new[] { syntaxTree },
-            [
-                MetadataReference.CreateFromFile(typeof(TypeResolverTests).Assembly.Location),
-                MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
-                MetadataReference.CreateFromFile(typeof(List<>).Assembly.Location),
-            ]
-        );
-    }
-    
+        class Foo<T> 
+        { 
+            Func<T> M1() => default;
+            Func<TM> M2<TM>() => default; 
+            Func<T, TM> M3<TM>() => default;
+            
+            List<int> M4<TM>(List<TM> list) => list.ConvertAll(GenToInt<TM>); 
+            
+            static int GenToInt<TGen>(TGen gen) => 1;
+            
+            List<Bar>.Enumerator Bars() => new();
+            
+            A<Bar, int>.B<Bar> B() => default;
+            A<Bar, int>.B<Bar>.C C() => default;
+            D.E<Bar> E() => default;
+            D.F F() => default;
+        }
+
+        class Bar {}
+        """;
+
+    protected override IEnumerable<MetadataReference> ExtraAssemblyReferences()  => [MetadataReference.CreateFromFile(typeof(TypeResolverTests).Assembly.Location)];
+
     [Test]
     public void TypeParameterFromDeclaringType_Resolves_To_DeclaredVariable()
     {
@@ -148,13 +136,6 @@ public class TypeResolverTests
             resolved, 
             Does.Match("""assembly.MainModule.ImportReference\(typeof\(Cecilifier.Core.Tests.Tests.Unit.D.F\)\)"""));
     }
-
-    private MethodDeclarationSyntax GetMethodSyntax(CecilifierContext context, string methodName)
-    {
-        return context.SemanticModel.SyntaxTree.GetRoot().DescendantNodes().OfType<MethodDeclarationSyntax>().Single(m => m.Identifier.Text == methodName);
-    }
-    
-    private CecilifierContext NewContext() => new(_comp.GetSemanticModel(_comp.SyntaxTrees[0]), new CecilifierOptions(), 1);
 }
 
 public class A<T1, T2>
