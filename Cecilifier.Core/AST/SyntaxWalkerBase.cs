@@ -77,7 +77,7 @@ namespace Cecilifier.Core.AST
             return instVar;
         }
 
-        protected void LoadLiteralValue(string ilVar, ITypeSymbol type, string value, bool isTargetOfCall, SyntaxNode parent)
+        protected void LoadLiteralValue(string ilVar, ITypeSymbol type, string value, UsageResult usageResult, SyntaxNode parent)
         {
             if (LoadDefaultValueForTypeParameter(ilVar, type, parent))
                 return;
@@ -114,7 +114,7 @@ namespace Cecilifier.Core.AST
                     break;
 
                 case SpecialType.System_Char:
-                    LoadLiteralToStackHandlingCallOnValueTypeLiterals(ilVar, type, (int) value[0], isTargetOfCall);
+                    LoadLiteralToStackHandlingCallOnValueTypeLiterals(ilVar, type, (int) value[0], usageResult);
                     break;
 
                 case SpecialType.System_Byte:
@@ -126,15 +126,15 @@ namespace Cecilifier.Core.AST
                 case SpecialType.System_UInt64:
                 case SpecialType.System_Double:
                 case SpecialType.System_Single:
-                    LoadLiteralToStackHandlingCallOnValueTypeLiterals(ilVar, type, value, isTargetOfCall);
+                    LoadLiteralToStackHandlingCallOnValueTypeLiterals(ilVar, type, value, usageResult);
                     break;
 
                 case SpecialType.System_Boolean:
-                    LoadLiteralToStackHandlingCallOnValueTypeLiterals(ilVar, type, Boolean.Parse(value) ? 1 : 0, isTargetOfCall);
+                    LoadLiteralToStackHandlingCallOnValueTypeLiterals(ilVar, type, Boolean.Parse(value) ? 1 : 0, usageResult);
                     break;
 
                 case SpecialType.System_IntPtr:
-                    LoadLiteralToStackHandlingCallOnValueTypeLiterals(ilVar, type, value, isTargetOfCall);
+                    LoadLiteralToStackHandlingCallOnValueTypeLiterals(ilVar, type, value, usageResult);
                     Context.EmitCilInstruction(ilVar, OpCodes.Conv_I);
                     break;
 
@@ -191,12 +191,21 @@ namespace Cecilifier.Core.AST
             return true;
         }
 
-        private void LoadLiteralToStackHandlingCallOnValueTypeLiterals(string ilVar, ITypeSymbol literalType, object literalValue, bool isTargetOfCall)
+        private void LoadLiteralToStackHandlingCallOnValueTypeLiterals(string ilVar, ITypeSymbol literalType, object literalValue, UsageResult usageResult)
         {
             var opCode = literalType.LoadOpCodeFor();
             Context.EmitCilInstruction(ilVar, opCode, literalValue);
-            if (isTargetOfCall)
-                StoreTopOfStackInLocalVariableAndLoadItsAddress(ilVar, literalType);
+            if (usageResult.Kind == UsageKind.CallTarget)
+            {
+                var tempLocalName = StoreTopOfStackInLocalVariable(Context, ilVar, "tmp", literalType).VariableName;
+                if (!usageResult.Target.IsVirtual && SymbolEqualityComparer.Default.Equals(usageResult.Target.ContainingType, Context.RoslynTypeSystem.SystemObject))
+                {
+                    Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, tempLocalName);
+                    Context.EmitCilInstruction(ilVar, OpCodes.Box, Context.TypeResolver.Resolve(literalType));
+                }
+                else
+                    Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, tempLocalName);
+            }
         }
 
         private void StoreTopOfStackInLocalVariableAndLoadItsAddress(string ilVar, ITypeSymbol type, string variableName = "tmp")
@@ -429,7 +438,7 @@ namespace Cecilifier.Core.AST
                         SpecialType.System_Boolean => (bool) fieldSymbol.ConstantValue ? 1 : 0,
                         _ => fieldSymbol.ConstantValue
                     },
-                    nodeParent.Accept(UsageVisitor.GetInstance(Context)) == UsageKind.CallTarget);
+                    nodeParent.Accept(UsageVisitor.GetInstance(Context)));
                 return;
             }
 
@@ -485,30 +494,51 @@ namespace Cecilifier.Core.AST
             return HandleLoadAddress(ilVar, symbol, node, opCode, operand);
         }
 
-        protected bool HandleLoadAddress(string ilVar, ITypeSymbol symbol, CSharpSyntaxNode node, OpCode opCode, string operand)
+        protected bool HandleLoadAddress(string ilVar, ITypeSymbol loadedType, CSharpSyntaxNode node, OpCode loadOpCode, string operand)
         {
             var parentNode = (CSharpSyntaxNode)node.Parent;
             return HandleCallOnTypeParameter() || HandleCallOnValueType() || HandleRefAssignment() || HandleParameter() || HandleInlineArrayElementAccess();
 
             bool HandleCallOnValueType()
             {
-                if (!symbol.IsValueType)
+                if (!loadedType.IsValueType)
                     return false;
 
                 // in this case we need to call System.Index.GetOffset(int32) on a value type (System.Index)
                 // which requires the address of the value type.
-                var isSystemIndexUsedAsIndex = IsSystemIndexUsedAsIndex(symbol, parentNode);
-                var usageResult = parentNode.Accept(UsageVisitor.GetInstance(Context).WithTargetNode(node));
+                var isSystemIndexUsedAsIndex = IsSystemIndexUsedAsIndex(loadedType, parentNode);
+                var usageResult = parentNode!.Accept(UsageVisitor.GetInstance(Context).WithTargetNode(node));
                 if (isSystemIndexUsedAsIndex || parentNode.IsKind(SyntaxKind.AddressOfExpression) || IsPseudoAssignmentToValueType() || node.IsMemberAccessOnElementAccess() || usageResult.Kind == UsageKind.CallTarget)
                 {
-                    Context.EmitCilInstruction(ilVar, opCode, operand);
+                    if (usageResult.Kind == UsageKind.CallTarget && SymbolEqualityComparer.Default.Equals(usageResult.Target.ContainingType, Context.RoslynTypeSystem.SystemObject) && !usageResult.Target.IsVirtual)
+                    {
+                        var ordinaryLoad = loadOpCode.Code switch
+                        {
+                            Code.Ldarga => OpCodes.Ldarg,
+                            Code.Ldarga_S => OpCodes.Ldarg_S,
+                            
+                            Code.Ldloca => OpCodes.Ldloc,
+                            Code.Ldloca_S => OpCodes.Ldloc_S,
+                            
+                            Code.Ldflda => OpCodes.Ldfld,
+                            Code.Ldsflda => OpCodes.Ldsfld,
+                            
+                            Code.Ldelema => (Dummy:operand=null, Ret:loadedType.LdelemOpCode()).Ret,
+                            _ => throw new InvalidOperationException($"Cannot find ordinary load op code for {loadOpCode}")
+                        };
+                        Context.EmitCilInstruction(ilVar, ordinaryLoad, operand);
+                        Context.EmitCilInstruction(ilVar, OpCodes.Box, Context.TypeResolver.Resolve(loadedType));
+                    }
+                    else
+                        Context.EmitCilInstruction(ilVar, loadOpCode, operand);
+                    
                     if (!Context.HasFlag(Constants.ContextFlags.Fixed) && parentNode.IsKind(SyntaxKind.AddressOfExpression))
                         Context.EmitCilInstruction(ilVar, OpCodes.Conv_U);
 
                     // calls to virtual methods on custom value types needs to be constrained (don't know why, but the generated IL for such scenarios does `constrains`).
                     // the only methods that falls into this category are virtual methods on Object (ToString()/Equals()/GetHashCode())
                     if (usageResult.Target is { IsOverride: true } && usageResult.Target.ContainingType.IsNonPrimitiveValueType(Context))
-                        Context.SetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, Context.TypeResolver.Resolve(symbol));
+                        Context.SetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, Context.TypeResolver.Resolve(loadedType));
                     return true;
                 }
 
@@ -517,7 +547,7 @@ namespace Cecilifier.Core.AST
 
             bool HandleCallOnTypeParameter()
             {
-                if (symbol is not ITypeParameterSymbol typeParameter)
+                if (loadedType is not ITypeParameterSymbol typeParameter)
                     return false;
 
                 if (typeParameter.HasReferenceTypeConstraint || typeParameter.IsReferenceType)
@@ -526,8 +556,8 @@ namespace Cecilifier.Core.AST
                 if (parentNode.Accept(UsageVisitor.GetInstance(Context)) != UsageKind.CallTarget)
                     return false;
 
-                Context.EmitCilInstruction(ilVar, opCode, operand);
-                Context.SetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, Context.TypeResolver.Resolve(symbol));
+                Context.EmitCilInstruction(ilVar, loadOpCode, operand);
+                Context.SetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, Context.TypeResolver.Resolve(loadedType));
                 return true;
             }
 
@@ -540,7 +570,7 @@ namespace Cecilifier.Core.AST
                 if (assignedValueSymbol.Symbol.IsByRef())
                     return false;
 
-                Context.EmitCilInstruction(ilVar, opCode, operand);
+                Context.EmitCilInstruction(ilVar, loadOpCode, operand);
                 return true;
             }
 
@@ -551,7 +581,7 @@ namespace Cecilifier.Core.AST
 
                 if (Context.SemanticModel.GetSymbolInfo(argument.Expression).Symbol?.IsByRef() == false)
                 {
-                    Context.EmitCilInstruction(ilVar, opCode, operand);
+                    Context.EmitCilInstruction(ilVar, loadOpCode, operand);
                     return true;
                 }
                 return false;
@@ -559,10 +589,10 @@ namespace Cecilifier.Core.AST
 
             bool HandleInlineArrayElementAccess()
             {
-                if (!node.Parent.IsKind(SyntaxKind.ElementAccessExpression) || !symbol.TryGetAttribute<InlineArrayAttribute>(out var _))
+                if (!node.Parent.IsKind(SyntaxKind.ElementAccessExpression) || !loadedType.TryGetAttribute<InlineArrayAttribute>(out var _))
                     return false;
                 
-                Context.EmitCilInstruction(ilVar, opCode, operand);
+                Context.EmitCilInstruction(ilVar, loadOpCode, operand);
                 return true;
             }
             

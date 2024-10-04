@@ -5,7 +5,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit;
 
 
 /// <summary>
-/// These tests covers scenarios in which we end up with a call on a value type.
+/// These tests cover scenarios in which we end up with a call on a value type.
 /// </summary>
 [TestFixture]
 public class InvocationOnValueTypeTests : CecilifierUnitTestBase
@@ -108,5 +108,61 @@ public class InvocationOnValueTypeTests : CecilifierUnitTestBase
 
         var found = Regex.Matches(cecilifiedCode, expectedCall);
         Assert.That(found.Count, Is.EqualTo(1), $"Expected call instruction not found ({expectedCall})\n\n{cecilifiedCode}");
+    }
+
+    [TestCase(
+        "System.Console.WriteLine(42.GetType().Name);",
+        "assembly.MainModule.TypeSystem.Int32",
+        "Ldloc",
+        TestName = "Literal")]
+    [TestCase(
+        "bool b = true; System.Console.WriteLine(b.GetType().Name);",
+        "assembly.MainModule.TypeSystem.Boolean",
+        "Ldloc",
+        TestName = "Local Variable")]
+    [TestCase(
+        "int Get() => 42; string M() => Get().GetType().Name;",
+        "assembly.MainModule.TypeSystem.Int32",
+        "Ldloc",
+        TestName = "Return")]
+    [TestCase(
+        "string M(long l) => l.GetType().Name;",
+        "assembly.MainModule.TypeSystem.Int64",
+        "Ldarg",
+        TestName = "Parameter")]
+    [TestCase(
+        "class Foo { double d; string M() => d.GetType().Name; }",
+        "assembly.MainModule.TypeSystem.Double",
+        "Ldfld",
+        TestName = "Field")]
+    [TestCase(
+        "int[] ints = {1}; System.Console.WriteLine(ints[0].GetType().Name);",
+        "assembly.MainModule.TypeSystem.Int32",
+        "Ldelem",
+        TestName = "Array Element")]
+    [TestCase(
+        "int i =42; ref int rf = ref i; System.Console.WriteLine(rf.GetType().Name);",
+        "assembly.MainModule.TypeSystem.Int32",
+        "Ldind",
+        TestName = "Local Ref",
+        IgnoreReason = "Corner case, does not worth the extra complexity to handle.")]
+    [TestCase(
+        "string M(ref int ri) => ri.GetType().Name;",
+        "assembly.MainModule.TypeSystem.Int32",
+        "Ldind",
+        TestName = "Parameter Ref",
+        IgnoreReason = "Corner case, does not worth the extra complexity to handle.")]
+    public void CallGetTypeOnValueType(string snippet, string boxTargetType, string expectedLoadBeforeBox)
+    {
+        var result = RunCecilifier(snippet);
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+
+        var expectedCall = $"""
+                           (\s+.+\.Emit\(OpCodes.){expectedLoadBeforeBox}.+\);
+                           \1Box, {boxTargetType}\);
+                           \1Callvirt,.+ImportReference\(TypeHelpers.ResolveMethod\(typeof\(System.Object\), "GetType".+(System\.Reflection\.BindingFlags\.)Default\|\2Instance\|\2Public\)\)\);
+                           """;
+        var found = Regex.Matches(cecilifiedCode, expectedCall);
+        Assert.That(found.Count, Is.EqualTo(1), $"Expected call instruction not found:\n{expectedCall}\n\n{cecilifiedCode}");
     }
 }
