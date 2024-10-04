@@ -17,7 +17,7 @@ using static Cecilifier.Core.Misc.Utils;
 
 namespace Cecilifier.Core.Extensions
 {
-    internal static class MethodExtensions
+    public static class MethodExtensions
     {
         public static TypeParameterSyntax[] GetTypeParameterSyntax(this IMethodSymbol method)
         {
@@ -170,7 +170,7 @@ namespace Cecilifier.Core.Extensions
                 return ResolveMethodFromGenericType(method, ctx);
             }
 
-            return ImportFromMainModule($"TypeHelpers.ResolveMethod(typeof({declaringTypeName}), \"{method.Name}\",{method.ReflectionBindingsFlags()}{method.Parameters.Aggregate("", (acc, curr) => acc + ", \"" + curr.Type.FullyQualifiedName() + "\"")})");
+            return ImportFromMainModule($"TypeHelpers.ResolveMethod(typeof({declaringTypeName}), \"{method.Name}\",{method.ReflectionBindingsFlags()}{method.Parameters.Aggregate("", (acc, curr) => acc + ", \"" + curr.Type.GetReflectionName() + "\"")})");
         }
 
         private static (HashSet<ITypeParameterSymbol>, bool) CollectReferencedMethodTypeParameters(IMethodSymbol method)

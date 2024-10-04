@@ -4,7 +4,7 @@ using Microsoft.CodeAnalysis;
 
 namespace Cecilifier.Core.TypeSystem
 {
-    internal class SystemTypeSystem
+    public class SystemTypeSystem
     {
         public SystemTypeSystem(ITypeResolver typeResolver, IVisitorContext context)
         {

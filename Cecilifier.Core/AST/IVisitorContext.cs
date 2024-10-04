@@ -11,7 +11,7 @@ using Mono.Cecil.Cil;
 
 namespace Cecilifier.Core.AST
 {
-    internal interface IVisitorContext
+    public interface IVisitorContext
     {
         ServiceCollection Services { get; }
         
