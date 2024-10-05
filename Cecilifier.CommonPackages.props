@@ -2,6 +2,6 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.12.0-1.final" />
     <PackageReference Include="Microsoft.CodeAnalysis.Common" Version="4.12.0-1.final" /> 
-    <PackageReference Include="Mono.Cecil"><Version>0.11.5</Version></PackageReference>
+    <PackageReference Include="Mono.Cecil"><Version>0.11.6</Version></PackageReference>
   </ItemGroup>
 </Project>
