@@ -13,4 +13,14 @@ public class MiscellaneousMemberTests : CecilifierUnitTestBase
         var result = RunCecilifier(source);
         Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(expectedRegEx));
     }
+
+    [TestCase("[System.Runtime.CompilerServices.SkipLocalsInit] void Method() { int i; }", TestName = "Local function in global statement")]
+    [TestCase("void Foo() { [System.Runtime.CompilerServices.SkipLocalsInit] void Method() { int i; } }", TestName = "Local function")]
+    [TestCase("class Foo { [System.Runtime.CompilerServices.SkipLocalsInit] void Method() { int i; } }", TestName = "Member method")]
+    public void SkipLocalsInitAttribute_IsRespected(string snippet)
+    {
+        var result = RunCecilifier(snippet);
+        
+        Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(@"m_method_\d+\.Body.InitLocals = false;"));
+    }
 }

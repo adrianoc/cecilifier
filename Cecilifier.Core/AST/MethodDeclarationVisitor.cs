@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Misc;
@@ -161,7 +162,7 @@ namespace Cecilifier.Core.AST
                     if (!methodSymbol.IsAbstract)
                     {
                         ilVar = Context.Naming.ILProcessor(simpleName);
-                        AddCecilExpression($"{methodVar}.Body.InitLocals = true;");
+                        AddCecilExpression($"{methodVar}.Body.InitLocals = {(!methodSymbol.TryGetAttribute<SkipLocalsInitAttribute>(out var _)).ToString().ToLower()};");
                         AddCecilExpression($"var {ilVar} = {methodVar}.Body.GetILProcessor();");
                     }
 
