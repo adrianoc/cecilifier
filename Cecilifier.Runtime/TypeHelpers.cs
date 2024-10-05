@@ -54,70 +54,7 @@ namespace Cecilifier.Runtime
 
             return resolvedMethod;
         }
-        
-        public static MethodInfo ResolveGenericMethodInstance(string declaringTypeName, string methodName, BindingFlags bindingFlags, IEnumerable<ParamData> paramTypes, IEnumerable<string> genericParameters)
-        {
-            var declaringType = Type.GetType(declaringTypeName);
 
-            var numberOfGenericParameters = genericParameters.Count();
-            var methods = declaringType.GetMethods(bindingFlags)
-                .Where(c => c.Name == methodName
-                            && c.IsGenericMethodDefinition
-                            && c.GetParameters().Length == paramTypes.Count()
-                            && numberOfGenericParameters == c.GetGenericArguments().Length)
-                .ToArray();
-
-            if (methods.Length == 0)
-            {
-                throw new MissingMethodException(declaringTypeName, methodName);
-            }
-
-            var paramTypesArray = paramTypes.ToArray();
-            foreach (var mc in methods)
-            {
-                var parameters = mc.GetParameters();
-                var found = true;
-                var hasOpenGenericTypes = false;
-
-                for (var i = 0; i < parameters.Length && found; i++)
-                {
-                    found &= CompareParameters(parameters[i], paramTypesArray[i]); 
-                    hasOpenGenericTypes |= paramTypesArray[i].IsTypeParameter;
-                }
-
-                if (found)
-                {
-                    return hasOpenGenericTypes 
-                        ? mc 
-                        : mc.MakeGenericMethod(genericParameters.Select(Type.GetType).ToArray());
-                }
-            }
-
-            return null;
-        }
-
-        private static bool CompareParameters(ParameterInfo candidate, ParamData original)
-        {
-            if (candidate.ParameterType.IsArray ^ original.IsArray)
-            {
-                return false;
-            }
-
-            var candidateElementType = candidate.ParameterType.HasElementType ? candidate.ParameterType.GetElementType() : candidate.ParameterType;
-            //if (candidateElementType.IsGenericParameter ^ original.IsTypeParameter)
-            if (candidateElementType.IsGenericParameter)
-            {
-                return true;
-            }
-
-            if (original.IsTypeParameter)
-            {
-                return candidateElementType.Name == original.FullName;
-            }
-
-            return candidateElementType.FullName == original.FullName;
-        }
-        
         public static FieldInfo ResolveField(string declaringType, string fieldName)
         {
             var type = Type.GetType(declaringType);

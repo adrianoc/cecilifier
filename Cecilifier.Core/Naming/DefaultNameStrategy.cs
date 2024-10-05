@@ -85,7 +85,7 @@ namespace Cecilifier.Core.Naming
                 return string.Empty;
 
             var casingAdjustedName = (Options & NamingOptions.CamelCaseElementNames) == NamingOptions.CamelCaseElementNames ? name.CamelCase() : name.PascalCase();
-            return $"{PartsSeparator}{casingAdjustedName}";
+            return $"{PartsSeparator}{casingAdjustedName.Replace('.', '_')}";
         }
 
         private string ILOpcodeFor(string opCodeName)

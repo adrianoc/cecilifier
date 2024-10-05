@@ -1,8 +1,8 @@
-using System;
 using System.Linq;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Mono.Cecil.Cil;
 
@@ -25,8 +25,8 @@ namespace Cecilifier.Core.AST
                 // save array in local variable...
                 var arrayVariable = CodeGenerationHelpers.StoreTopOfStackInLocalVariable(Context, _ilVar, "array", enumerableType);
                 
-                var loopVariable = CodeGenerationHelpers.AddLocalVariableToCurrentMethod(Context, node.Identifier.ValueText, Context.TypeResolver.Resolve(enumerableType.ElementTypeSymbolOf())).VariableName;
-                var loopIndexVar = CodeGenerationHelpers.AddLocalVariableToCurrentMethod(Context, "index", Context.TypeResolver.Resolve(Context.RoslynTypeSystem.SystemInt32)).VariableName;
+                var loopVariable = Context.AddLocalVariableToCurrentMethod(node.Identifier.ValueText, Context.TypeResolver.Resolve(enumerableType.ElementTypeSymbolOf())).VariableName;
+                var loopIndexVar = Context.AddLocalVariableToCurrentMethod("index", Context.TypeResolver.Resolve(Context.RoslynTypeSystem.SystemInt32)).VariableName;
 
                 var conditionCheckLabelVar = CreateCilInstruction(_ilVar, OpCodes.Nop);
                 Context.EmitCilInstruction(_ilVar, OpCodes.Br, conditionCheckLabelVar);
@@ -71,16 +71,16 @@ namespace Cecilifier.Core.AST
                 // with a non empty stack.
                 Context.WriteNewLine();
                 Context.WriteComment("variable to store the returned 'IEnumerator<T>'.");
-                AddMethodCall(_ilVar, context.GetEnumeratorMethod);
+                Context.AddCallToMethod(context.GetEnumeratorMethod, _ilVar, MethodDispatchInformation.MostLikelyVirtual);
                 context.EnumeratorVariableName = CodeGenerationHelpers.StoreTopOfStackInLocalVariable(Context, _ilVar, "enumerator", context.GetEnumeratorMethod.ReturnType).VariableName;
 
                 if (isDisposable)
                 {
                     ProcessWithInTryCatchFinallyBlock(
                         _ilVar,
-                        context => ProcessForEach((ForEachHandlerContext) context, node),
-                        Array.Empty<CatchClauseSyntax>(),
-                        context => ProcessForEachFinally((ForEachHandlerContext) context),
+                        context => ProcessForEach(context, node),
+                        [],
+                        ProcessForEachFinally,
                         context);
                 }
                 else
@@ -114,7 +114,7 @@ namespace Cecilifier.Core.AST
             // Adds a variable to store current value in the foreach loop.
             Context.WriteNewLine();
             Context.WriteComment("variable to store current value in the foreach loop.");
-            var foreachCurrentValueVarName = CodeGenerationHelpers.AddLocalVariableToCurrentMethod(Context, node.Identifier.ValueText, Context.TypeResolver.Resolve(forEachHandlerContext.EnumeratorCurrentMethod.GetMemberType())).VariableName;
+            var foreachCurrentValueVarName = Context.AddLocalVariableToCurrentMethod(node.Identifier.ValueText, Context.TypeResolver.Resolve(forEachHandlerContext.EnumeratorCurrentMethod.GetMemberType())).VariableName;
             
             var endOfLoopLabelVar = Context.Naming.Label("endForEach");
             CreateCilInstruction(_ilVar, endOfLoopLabelVar, OpCodes.Nop);
@@ -124,11 +124,18 @@ namespace Cecilifier.Core.AST
 
             var loadOpCode = forEachHandlerContext.GetEnumeratorMethod.ReturnType.IsValueType || forEachHandlerContext.GetEnumeratorMethod.ReturnType.TypeKind == TypeKind.TypeParameter ? OpCodes.Ldloca : OpCodes.Ldloc;
             Context.EmitCilInstruction(_ilVar, loadOpCode, forEachHandlerContext.EnumeratorVariableName);
-            AddMethodCall(_ilVar, forEachHandlerContext.EnumeratorMoveNextMethod);
+            Context.AddCallToMethod(forEachHandlerContext.EnumeratorMoveNextMethod, _ilVar, MethodDispatchInformation.MostLikelyVirtual);
             Context.EmitCilInstruction(_ilVar, OpCodes.Brfalse, endOfLoopLabelVar);
             
             Context.EmitCilInstruction(_ilVar, loadOpCode, forEachHandlerContext.EnumeratorVariableName);
-            AddMethodCall(_ilVar, forEachHandlerContext.EnumeratorCurrentMethod);
+            Context.AddCallToMethod(forEachHandlerContext.EnumeratorCurrentMethod, _ilVar, MethodDispatchInformation.MostLikelyVirtual);
+
+            var info = Context.SemanticModel.GetForEachStatementInfo(node);
+            if (!node.Type.IsKind(SyntaxKind.RefType) && info.CurrentProperty.ReturnsByRef)
+            {
+                Context.EmitCilInstruction(_ilVar, info.ElementType.LdindOpCodeFor());
+            }
+            
             Context.EmitCilInstruction(_ilVar, OpCodes.Stloc, foreachCurrentValueVarName);
 
             // process body of foreach

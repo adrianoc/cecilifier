@@ -90,7 +90,7 @@ public class CecilifierTestBase
                 throw new Exception(string.Join('\n', output));
             }
 
-            TestContext.WriteLine(string.Join('\n', output));
+            TestContext.WriteLine($"ilverify failed but test was configured to ignore such failures:\n\t{string.Join('\n', output)}");
         }
     }
 

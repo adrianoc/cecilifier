@@ -374,7 +374,7 @@ internal partial class PrivateImplementationDetailsGenerator
     /// Encodes rules used by C# compiler to decide whether to apply the array/stackalloc initialization optimization.
     ///
     /// Note that as of version 4.6.1 of Roslyn, the empirically discovered rules are:
-    /// 1. Any array initialization expression with length > 2 are optimized
+    /// 1. Array initialization expression with length > 2 are optimized if the element type is a primitive.
     /// 2. Stackalloc initialization is only considered if the type being allocated is byte/sbyte/bool plus same length rule above
     /// </summary>
     /// <param name="node"></param>
@@ -384,15 +384,13 @@ internal partial class PrivateImplementationDetailsGenerator
     {
         return node switch
         {
-            { RawKind: (int) SyntaxKind.ArrayInitializerExpression } => IsLargeEnoughToWarrantOptimization(node),
-            { RawKind: (int) SyntaxKind.ImplicitArrayCreationExpression } => IsLargeEnoughToWarrantOptimization(node),
+            { RawKind: (int) SyntaxKind.ArrayInitializerExpression } => IsLargeEnoughToWarrantOptimization(node.Expressions),
+            { RawKind: (int) SyntaxKind.ImplicitArrayCreationExpression } => IsLargeEnoughToWarrantOptimization(node.Expressions),
 
-            { RawKind: (int) SyntaxKind.StackAllocArrayCreationExpression } => IsLargeEnoughToWarrantOptimization(node) && HasCompatibleType(node, context),
-            { RawKind: (int) SyntaxKind.ImplicitStackAllocArrayCreationExpression} => IsLargeEnoughToWarrantOptimization(node) && HasCompatibleType(node, context),
+            { RawKind: (int) SyntaxKind.StackAllocArrayCreationExpression } => IsLargeEnoughToWarrantOptimization(node.Expressions) && HasCompatibleType(node, context),
+            { RawKind: (int) SyntaxKind.ImplicitStackAllocArrayCreationExpression} => IsLargeEnoughToWarrantOptimization(node.Expressions) && HasCompatibleType(node, context),
             _ => false
         };
-
-        static bool IsLargeEnoughToWarrantOptimization(InitializerExpressionSyntax initializer) => initializer.Expressions.Count > 2;
 
         // As of Roslyn x, empirically only stackalloc of one byte sized elements are optimized.
         static bool HasCompatibleType(InitializerExpressionSyntax expression, IVisitorContext context)
@@ -406,4 +404,15 @@ internal partial class PrivateImplementationDetailsGenerator
                    || type.SpecialType == SpecialType.System_Boolean;
         }
     }
+
+    public static bool IsApplicableTo(CollectionExpressionSyntax node, IVisitorContext context)
+    {
+        if (!IsLargeEnoughToWarrantOptimization(node.Elements))
+            return false;
+        
+        var operation = context.SemanticModel.GetOperation(node);
+        return operation?.Type.ElementTypeSymbolOf().IsPrimitiveType() == true;
+    }
+
+    static bool IsLargeEnoughToWarrantOptimization<TElement>(SeparatedSyntaxList<TElement> elements) where TElement : SyntaxNode => elements.Count > 2;
 }

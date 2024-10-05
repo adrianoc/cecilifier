@@ -76,7 +76,7 @@ namespace Cecilifier.Core.AST
         public override void VisitSwitchStatement(SwitchStatementSyntax node)
         {
             var switchExpressionType = ResolveExpressionType(node.Expression);
-            var evaluatedExpressionVariable = AddLocalVariableToCurrentMethod(Context, "switchCondition", switchExpressionType).VariableName;
+            var evaluatedExpressionVariable = Context.AddLocalVariableToCurrentMethod("switchCondition", switchExpressionType).VariableName;
 
             ExpressionVisitor.Visit(Context, _ilVar, node.Expression);
             Context.EmitCilInstruction(_ilVar, OpCodes.Stloc, evaluatedExpressionVariable); // stores evaluated expression in local var
@@ -164,7 +164,7 @@ namespace Cecilifier.Core.AST
                 var currentMethodVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
                 var localVar = node.Declaration.Variables[0];
                 var resolvedVarType = Context.TypeResolver.Resolve(pointerType.PointedAtType).MakeByReferenceType();
-                AddLocalVariableWithResolvedType(Context, localVar.Identifier.Text, currentMethodVar, resolvedVarType);
+                Context.AddLocalVariableToMethod(localVar.Identifier.Text, currentMethodVar, resolvedVarType);
                 ProcessVariableInitialization(localVar, declaredType);
             }
 
@@ -255,7 +255,7 @@ namespace Cecilifier.Core.AST
                 localVarDef = StoreTopOfStackInLocalVariable(Context, _ilVar, "tmp", usingType).VariableName;
             }
 
-            void FinallyBlockHandler(object _)
+            void FinallyBlockHandler(ForEachHandlerContext _)
             {
                 string? lastFinallyInstructionLabel = null;
                 if (usingType.TypeKind == TypeKind.TypeParameter || usingType.IsValueType)
@@ -278,7 +278,7 @@ namespace Cecilifier.Core.AST
                     AddCecilExpression($"{_ilVar}.Append({lastFinallyInstructionLabel});");
             }
 
-            ProcessTryCatchFinallyBlock(_ilVar, node.Statement, Array.Empty<CatchClauseSyntax>(), FinallyBlockHandler);
+            ProcessTryCatchFinallyBlock<ForEachHandlerContext>(_ilVar, node.Statement, Array.Empty<CatchClauseSyntax>(), FinallyBlockHandler);
         }
 
         public override void VisitLocalFunctionStatement(LocalFunctionStatementSyntax node) => node.Accept(new MethodDeclarationVisitor(Context));
@@ -297,7 +297,7 @@ namespace Cecilifier.Core.AST
                 ? ResolveExpressionType(localVar.Initializer?.Value)
                 : ResolveType(type);
 
-            return AddLocalVariableWithResolvedType(Context, localVar.Identifier.Text, methodVar, resolvedVarType);
+            return Context.AddLocalVariableToMethod(localVar.Identifier.Text, methodVar, resolvedVarType);
         }
 
         private void ProcessVariableInitialization(VariableDeclaratorSyntax localVar, ITypeSymbol variableType)

@@ -153,7 +153,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
 
             var cecilifiedCode = result.GeneratedCode.ReadToEnd();
             
-            Assert.That(cecilifiedCode, Does.Match("""var l_openEquals_\d+ = .+ImportReference\(typeof\(System.IEquatable<>\)\).Resolve\(\).Methods.First\(m => m.Name == "Equals"\);"""), "method from open generic type not match");
+            Assert.That(cecilifiedCode, Does.Match("""var l_openEquals_\d+ = .+ImportReference\(typeof\(System.IEquatable<>\)\).Resolve\(\).Methods.First\(m => m.Name == "Equals" && m.Parameters.Count == 1 \);"""), "method from open generic type not match");
             Assert.That(cecilifiedCode, Does.Match("""var r_equals_\d+ = new MethodReference\("Equals", assembly.MainModule.ImportReference\(l_openEquals_\d+\).ReturnType\)"""), "MethodReference does not match");
             Assert.That(cecilifiedCode, Does.Match("""il_M_3.Emit\(OpCodes.Callvirt, r_equals_\d+\);"""), "Call to the target method does not match");
         }
@@ -196,7 +196,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
 
             Assert.That(cecilified, Does.Match("""
                                                var (l_iEnumerable_\d+) = .+ImportReference\(typeof\(.+IEnumerable<>\)\).MakeGenericInstanceType\(cls_foo_\d+\);
-                                               \s+var (l_openGetEnumerator_\d+) = .+ImportReference\(typeof\(.+IEnumerable<>\)\).Resolve\(\).Methods.First\(m => m.Name == "GetEnumerator"\);
+                                               \s+var (l_openGetEnumerator_\d+) = .+ImportReference\(typeof\(.+IEnumerable<>\)\).Resolve\(\).Methods.First\(m => m.Name == "GetEnumerator" && m.Parameters.Count == 0 \);
                                                \s+var r_getEnumerator_\d+ = new MethodReference\("GetEnumerator", .+ImportReference\(\2\).ReturnType\)
                                                \s+{
                                                \s+DeclaringType = \1,
@@ -216,16 +216,18 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             Assert.That(cecilified, Does.Not.Contain("typeof(Foo)"));
             Assert.That(cecilified, Does.Match("""
                                                //System.Array.Empty<Foo>\(\);
-                                               \s+var r_empty_9 = new MethodReference\("Empty", cls_foo_0.MakeArrayType\(\), assembly.MainModule.ImportReference\(typeof\(System.Array\)\)\)
+                                               \s+var r_empty_9 = new MethodReference\("Empty", assembly.MainModule.TypeSystem.Void, assembly.MainModule.ImportReference\(typeof\(System.Array\)\)\)
                                                \s+{
                                                \s+HasThis = false,
                                                \s+ExplicitThis = false,
                                                \s+CallingConvention = 0,
                                                \s+};
-                                               \s+r_empty_9.GenericParameters.Add\(new GenericParameter\("T", r_empty_9\)\);
-                                               \s+var gi_empty_10 = new GenericInstanceMethod\(r_empty_9\);
-                                               \s+gi_empty_10.GenericArguments.Add\(cls_foo_0\);
-                                               \s+il_topLevelMain_6.Emit\(OpCodes.Call, gi_empty_10\);
+                                               \s+var gi_T_10 = new GenericParameter\("T", r_empty_9\);
+                                               \s+r_empty_9.GenericParameters.Add\(gi_T_10\);
+                                               \s+r_empty_9.ReturnType = gi_T_10.MakeArrayType\(\);
+                                               \s+var gi_empty_11 = new GenericInstanceMethod\(r_empty_9\);
+                                               \s+gi_empty_11.GenericArguments.Add\(cls_foo_0\);
+                                               \s+il_topLevelMain_6.Emit\(OpCodes.Call, gi_empty_11\);
                                                """));
         }
 

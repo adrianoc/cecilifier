@@ -242,7 +242,7 @@ namespace Cecilifier.Core.Misc
             return $"var {genParamDefVar} = new Mono.Cecil.GenericParameter(\"{genericParamName}\", {typeParameterOwnerVar}){Variance(typeParameterSymbol)};";
         }
 
-        private static string GenericParameter(IVisitorContext context, string ownerContainingTypeName, string typeParameterOwnerVar, string genericParamName, string genParamDefVar)
+        public static string GenericParameter(IVisitorContext context, string ownerContainingTypeName, string typeParameterOwnerVar, string genericParamName, string genParamDefVar)
         {
             context.DefinitionVariables.RegisterNonMethod(ownerContainingTypeName, genericParamName, VariableMemberKind.TypeParameter, genParamDefVar);
             return $"var {genParamDefVar} = new Mono.Cecil.GenericParameter(\"{genericParamName}\", {typeParameterOwnerVar});";
@@ -267,11 +267,11 @@ namespace Cecilifier.Core.Misc
         {
             context.DefinitionVariables.RegisterNonMethod(declaringTypeName, name, VariableMemberKind.Field, fieldVar);
             var fieldExp = $"var {fieldVar} = new FieldDefinition(\"{name}\", {fieldAttributes}, {fieldType})";
-            return new[]
-            {
+            return
+            [
                 constantValue != null ? $"{fieldExp} {{ Constant = {constantValue} }} ;" : $"{fieldExp};",
                 $"{declaringTypeVar}.Fields.Add({fieldVar});"
-            };
+            ];
         }
 
         public static string ParameterDoesNotHandleParamsKeywordOrDefaultValue(string name, RefKind byRef, string resolvedType, string paramAttributes = null)
@@ -318,7 +318,7 @@ namespace Cecilifier.Core.Misc
                 paramSymbol.IsParams,
                 methodVar,
                 paramVar,
-                context.TypeResolver.Resolve(paramSymbol.Type),
+                context.TypeResolver.Resolve(paramSymbol.Type, methodVar),
                 paramSymbol.AsParameterAttribute(),
                 paramSymbol.ExplicitDefaultValue(rawString: false));
         }

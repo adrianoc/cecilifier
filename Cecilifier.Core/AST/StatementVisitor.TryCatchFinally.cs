@@ -9,12 +9,12 @@ namespace Cecilifier.Core.AST
 {
     internal partial class StatementVisitor
     {
-        private void ProcessTryCatchFinallyBlock(string ilVar, CSharpSyntaxNode tryStatement, CatchClauseSyntax[] catches, Action<object> finallyBlockHandler, object state = null)
+        private void ProcessTryCatchFinallyBlock<TState>(string ilVar, CSharpSyntaxNode tryStatement, CatchClauseSyntax[] catches, Action<TState> finallyBlockHandler, TState state = default)
         {
             ProcessWithInTryCatchFinallyBlock(ilVar, _ => tryStatement.Accept(this), catches, finallyBlockHandler, state);
         }
 
-        private void ProcessWithInTryCatchFinallyBlock(string ilVar, Action<object> toProcess, CatchClauseSyntax[] catches, Action<object> finallyBlockHandler, object state)
+        private void ProcessWithInTryCatchFinallyBlock<TState>(string ilVar, Action<TState> toProcess, CatchClauseSyntax[] catches, Action<TState> finallyBlockHandler, TState state)
         {
             var exceptionHandlerTable = new ExceptionHandlerEntry[catches.Length + (finallyBlockHandler != null ? 1 : 0)];
 
@@ -88,7 +88,7 @@ namespace Cecilifier.Core.AST
             Context.EmitCilInstruction(ilVar, OpCodes.Leave, firstInstructionAfterTryCatchBlock);
         }
 
-        private void HandleFinallyClause(string ilVar, Action<object> finallyBlockHandler, ExceptionHandlerEntry[] exceptionHandlerTable, object state)
+        private void HandleFinallyClause<TState>(string ilVar, Action<TState> finallyBlockHandler, ExceptionHandlerEntry[] exceptionHandlerTable, TState state)
         {
             if (finallyBlockHandler == null)
                 return;

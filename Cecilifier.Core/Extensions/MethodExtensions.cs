@@ -56,6 +56,18 @@ namespace Cecilifier.Core.Extensions
             return res.Length > 0 ? res.Remove(0, 1).ToString() : string.Empty;
         }
 
+        /// <summary>
+        /// Generates a string containing the code required to produce a `Mono.Cecil.MethodReference` for the specified <see cref="method"/>
+        /// </summary>
+        /// <param name="method"></param>
+        /// <param name="ctx"></param>
+        /// <returns>A string containing the code required to produce a `Mono.Cecil.MethodReference` for the specified <see cref="method"/></returns>
+        /// <exception cref="ArgumentException"></exception>
+        /// <remarks>
+        /// If <see cref="method"/> represents a `method definition` the caller is responsible for taking the returned resolved `open generic method`
+        /// and turning it into a `generic instance method` by providing the corresponding `type arguments`
+        /// For `method references` the `type arguments` are encoded in the reference itself
+        /// </remarks>
         public static string MethodResolverExpression(this IMethodSymbol method, IVisitorContext ctx)
         {
             if (method.IsDefinedInCurrentAssembly(ctx))
@@ -86,41 +98,68 @@ namespace Cecilifier.Core.Extensions
 
             if (method.IsGenericMethod)
             {
-                if (method.TypeArguments.Any(t => t.IsDefinedInCurrentAssembly(ctx)))
-                {
-                    var tempMethodVar = ctx.Naming.SyntheticVariable(method.Name, ElementKind.MemberReference);
-                    ctx.WriteCecilExpression($$"""
-                                               var {{tempMethodVar}} = new MethodReference("{{method.Name}}", {{ctx.TypeResolver.Resolve(method.ReturnType)}}, {{ctx.TypeResolver.Resolve(method.ContainingType)}})
-                                                           {
-                                                               HasThis = {{(method.IsStatic ? "false" : "true")}},
-                                                               ExplicitThis = {{(method.IsStatic ? "false" : "true")}},
-                                                               CallingConvention = {{ (int) method.CallingConvention}},
-                                                           };
-                                               """);
-                    ctx.WriteNewLine();
-                    foreach (var parameter in method.Parameters)
-                    {
-                        var tempParamVar = ctx.Naming.SyntheticVariable(parameter.Name, ElementKind.Parameter);
-                        var exps = CecilDefinitionsFactory.Parameter(ctx, parameter, tempMethodVar, tempParamVar);
-                        ctx.WriteCecilExpressions(exps);
-                    }
+                var (referencedMethodTypeParameters, returnReferencesTypeParameter) = CollectReferencedMethodTypeParameters(method);
+                var returnType = !returnReferencesTypeParameter ? ctx.TypeResolver.Resolve(method.ReturnType) : ctx.TypeResolver.Bcl.System.Void;
+                var tempMethodVar = ctx.Naming.SyntheticVariable(method.Name, ElementKind.MemberReference);
+                ctx.WriteCecilExpression($$"""
+                                           var {{tempMethodVar}} = new MethodReference("{{method.Name}}", {{ returnType }}, {{ctx.TypeResolver.Resolve(method.ContainingType)}})
+                                                       {
+                                                           HasThis = {{(method.IsStatic ? "false" : "true")}},
+                                                           ExplicitThis = false,
+                                                           CallingConvention = {{ (int) method.CallingConvention}},
+                                                       };
+                                           """);
+                ctx.WriteNewLine();
 
-                    foreach (var genericParameter in method.TypeParameters)
+                List<ScopedDefinitionVariable> toDispose = new();
+                foreach (var typeParameter in method.OriginalDefinition.TypeParameters)
+                {
+                    if (referencedMethodTypeParameters.Contains(typeParameter))
                     {
-                        ctx.WriteCecilExpression($"""{tempMethodVar}.GenericParameters.Add(new GenericParameter("{genericParameter.Name}", {tempMethodVar}));""");
+                        // method signature *does* reference this type parameter; store the `GenericParameter` instance in a variable
+                        // to reference it later.
+                        var genericVar = ctx.Naming.SyntheticVariable(typeParameter.Name, ElementKind.GenericInstance);
+                        ctx.WriteCecilExpression($"""var {genericVar} = new GenericParameter("{typeParameter.Name}", {tempMethodVar});""");
+                        ctx.WriteNewLine();
+                        ctx.WriteCecilExpression($"""{tempMethodVar}.GenericParameters.Add({genericVar});""");
+                        ctx.WriteNewLine();
+                            
+                        toDispose.Add(ctx.DefinitionVariables.WithCurrent(method.OriginalDefinition.FullyQualifiedName(false), typeParameter.Name, VariableMemberKind.TypeParameter, genericVar ));
+                    }
+                    else
+                    {
+                        // method signature does not reference this type parameter so no need to store the `GenericParameter` instance in a variable
+                        // (we will not reference it later anyway)
+                        ctx.WriteCecilExpression($"""{tempMethodVar}.GenericParameters.Add(new GenericParameter("{typeParameter.Name}", {tempMethodVar}));""");
                         ctx.WriteNewLine();
                     }
-                    
-                    return tempMethodVar.MakeGenericInstanceMethod(ctx, method.Name, method.TypeArguments.Select(t => ctx.TypeResolver.Resolve(t)).ToList());
                 }
+
+                if (returnReferencesTypeParameter)
+                {
+                    var resolvedReturnType = ctx.TypeResolver.Resolve(method.OriginalDefinition.ReturnType, tempMethodVar);
+                    
+                    // the information about the type being passed as `ref` is not in the ITypeSymbol so we need to check and produce
+                    // a Mono.Cecil.ByReferenceType
+                    if (method.ReturnsByRef || method.ReturnsByRefReadonly)
+                        resolvedReturnType = resolvedReturnType.MakeByReferenceType();
+                        
+                    ctx.WriteCecilExpression($"{tempMethodVar}.ReturnType = {resolvedReturnType};");
+                    ctx.WriteNewLine();
+                }
+                    
+                foreach (var parameter in method.Parameters)
+                {
+                    var tempParamVar = ctx.Naming.SyntheticVariable(parameter.Name, ElementKind.Parameter);
+                    var exps = CecilDefinitionsFactory.Parameter(ctx, parameter.OriginalDefinition, tempMethodVar, tempParamVar);
+                    ctx.WriteCecilExpressions(exps);
+                }
+                    
+                toDispose.ForEach(v => v.Dispose());
                 
-                var parameters = $$"""new ParamData[] { {{ string.Join(',', method.Parameters.Select(p => $$"""new ParamData { FullName="{{p.Type.ElementTypeSymbolOf().FullyQualifiedName()}}", IsArray={{(p.Type.TypeKind == TypeKind.Array ? "true" : "false")}}, IsTypeParameter={{(p.Type.TypeKind == TypeKind.TypeParameter ? "true" : "false") }} } """)) }} }""";
-                var genericTypeParameters = $$"""new [] { {{ string.Join(',', method.TypeArguments.Select(TypeNameFrom)) }} }""";
-                
-                return ImportFromMainModule(
-                    $"""
-                      TypeHelpers.ResolveGenericMethodInstance(typeof({declaringTypeName}).AssemblyQualifiedName, "{method.Name}", {method.ReflectionBindingsFlags()}, {parameters}, {genericTypeParameters}) 
-                      """);
+                return method.IsDefinition 
+                        ? tempMethodVar 
+                        : tempMethodVar.MakeGenericInstanceMethod(ctx, method.Name, method.TypeArguments.Select(t => ctx.TypeResolver.Resolve(t)).ToList());
             }
 
             if (method.Parameters.Any(p => p.Type.IsTypeParameterOrIsGenericTypeReferencingTypeParameter()) 
@@ -131,10 +170,43 @@ namespace Cecilifier.Core.Extensions
             }
 
             return ImportFromMainModule($"TypeHelpers.ResolveMethod(typeof({declaringTypeName}), \"{method.Name}\",{method.ReflectionBindingsFlags()}{method.Parameters.Aggregate("", (acc, curr) => acc + ", \"" + curr.Type.FullyQualifiedName() + "\"")})");
-            
-            static string TypeNameFrom(ITypeSymbol typeSymbol) => typeSymbol.TypeKind == TypeKind.TypeParameter 
-                ? $"\"{typeSymbol.Name}\"" 
-                : $"typeof({typeSymbol.ElementTypeSymbolOf().FullyQualifiedName()}).AssemblyQualifiedName";
+        }
+
+        private static (HashSet<ITypeParameterSymbol>, bool) CollectReferencedMethodTypeParameters(IMethodSymbol method)
+        {
+            HashSet<ITypeParameterSymbol> ret = new(method.TypeParameters.Length, SymbolEqualityComparer.Default);
+            var referencedTypeParameter = method.OriginalDefinition.TypeParameters.FirstOrDefault(y => ReferencesTypeParameter(method.OriginalDefinition.ReturnType, y));
+            var returnReferencesTypeParameter = false;
+            if (referencedTypeParameter is not null)
+            {
+                // method return type has a reference to method's type parameter.
+                ret.Add(referencedTypeParameter);
+                returnReferencesTypeParameter = true;
+            }
+
+            // check if method parameters references any of the method's type parameters...
+            foreach (var parameter in method.OriginalDefinition.Parameters)
+            {
+                referencedTypeParameter = method.OriginalDefinition.TypeParameters.FirstOrDefault(y => ReferencesTypeParameter(parameter.Type, y));
+                if (referencedTypeParameter is not null)
+                    ret.Add(referencedTypeParameter);
+            }
+
+            return (ret, returnReferencesTypeParameter);
+
+            // checks whether `toCheck` references (directly or indirectly) the `typeParameter` 
+            static bool ReferencesTypeParameter(ITypeSymbol toCheck, ITypeParameterSymbol typeParameter)
+            {
+                if (SymbolEqualityComparer.Default.Equals(toCheck, typeParameter))
+                    return true;
+
+                return toCheck switch
+                {
+                    INamedTypeSymbol { IsGenericType: true } toCheckGeneric => toCheckGeneric.TypeArguments.Any(t => ReferencesTypeParameter(t, typeParameter)),
+                    IArrayTypeSymbol arrayType => ReferencesTypeParameter(arrayType.ElementType, typeParameter),
+                    _ => false
+                };
+            }
         }
 
         private static string ResolveMethodFromGenericType(IMethodSymbol method, IVisitorContext ctx)
@@ -148,7 +220,7 @@ namespace Cecilifier.Core.Extensions
             // find the original method.
             var originalMethodVar = ctx.Naming.SyntheticVariable($"open{method.Name}", ElementKind.LocalVariable);
             // TODO: handle overloads
-            ctx.WriteCecilExpression($"""var {originalMethodVar} = {ctx.TypeResolver.Resolve(method.ContainingType.OriginalDefinition)}.Resolve().Methods.First(m => m.Name == "{method.Name}");""");
+            ctx.WriteCecilExpression($"""var {originalMethodVar} = {ctx.TypeResolver.Resolve(method.ContainingType.OriginalDefinition)}.Resolve().Methods.First(m => m.Name == "{method.Name}" && m.Parameters.Count == {method.Parameters.Length} );""");
             ctx.WriteNewLine();
 
             // Instantiates a MethodReference representing the called method.

@@ -15,12 +15,19 @@ public class OutputBasedTestBase : CecilifierTestBase
 {
     static readonly int NewLineLength = Environment.NewLine.Length;
 
-    protected OutputBasedTestResult CecilifyAndExecute(string code)
+    private OutputBasedTestResult CecilifyAndExecute(string code, string ignoredIlVerificationErrors)
     {
         var outputBasedTestFolder = GetTestOutputBaseFolderFor("OutputBasedTests");
 
         var cecilifyResult = CecilifyAndExecute(new MemoryStream(Encoding.ASCII.GetBytes(code)), outputBasedTestFolder);
-        VerifyAssembly(cecilifyResult.CecilifiedOutputAssemblyFilePath, null, new CecilifyTestOptions { CecilifiedCode = cecilifyResult.CecilifiedCode });
+        VerifyAssembly(
+            cecilifyResult.CecilifiedOutputAssemblyFilePath, 
+            null, 
+            new CecilifyTestOptions
+            {
+                CecilifiedCode = cecilifyResult.CecilifiedCode,
+                IgnoredILErrors = ignoredIlVerificationErrors
+            });
         
         var refsToCopy = new List<string>
         {
@@ -42,13 +49,12 @@ public class OutputBasedTestBase : CecilifierTestBase
             throw;
         }
 
-        return new OutputBasedTestResult(cecilifyResult, output.AsSpan()[..^NewLineLength].ToString()); // remove last new line
+        return new OutputBasedTestResult(cecilifyResult, string.IsNullOrEmpty(output) ? string.Empty : output.AsSpan()[..^NewLineLength].ToString()); // remove last new line
     }
 
-
-    protected void AssertOutput(string snippet, string expectedOutput)
+    protected void AssertOutput(string snippet, string expectedOutput, string ignoreIlVerificationErrors = null)
     {
-        var result = CecilifyAndExecute(snippet);
+        var result = CecilifyAndExecute(snippet, ignoreIlVerificationErrors);
         Assert.That(result.Output, Is.EqualTo(expectedOutput), $"Output Assembly: {result.GeneralResult.CecilifiedOutputAssemblyFilePath}");
         TestContext.WriteLine($"Output Assembly: {result.GeneralResult.CecilifiedOutputAssemblyFilePath}");
     }

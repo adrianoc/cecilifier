@@ -138,7 +138,7 @@ namespace Cecilifier.Core.AST
         private DefinitionVariable DeclareAndInitializeValueTypeLocalVariable()
         {
             var resolvedVarType = ResolvedStructType();
-            var tempLocal = AddLocalVariableToCurrentMethod(Context, "vt", resolvedVarType);
+            var tempLocal = Context.AddLocalVariableToCurrentMethod("vt", resolvedVarType);
             
             using var _ = Context.DefinitionVariables.WithVariable(tempLocal);
             

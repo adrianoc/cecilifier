@@ -19,10 +19,5 @@ class User
     void InvokeMethodFromDifferentAssembly(string s)
     {
         s.GetHashCode();
-    }
-    
-    void InvokeGenericMethodFromDifferentAssembly()
-    {
-        System.Array.Empty<int>();
-    }
+    }    
 }

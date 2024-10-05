@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.TypeSystem;
@@ -19,11 +21,12 @@ namespace Cecilifier.Core.Misc
 
         public Bcl Bcl { get; }
 
-        public string Resolve(ITypeSymbol type)
+        public string Resolve(ITypeSymbol type, string cecilTypeParameterProviderVar = null)
         {
             return ResolveLocalVariableType(type)
                    ?? ResolvePredefinedAndComposedTypes(type)
-                   ?? ResolveGenericType(type)
+                   ?? ResolveGenericType(type, cecilTypeParameterProviderVar)
+                   ?? ResolveTypeParameter(type, cecilTypeParameterProviderVar)
                    ?? Resolve(type.ToDisplayString());
         }
 
@@ -63,7 +66,23 @@ namespace Cecilifier.Core.Misc
             return ResolvePredefinedType(type);
         }
         
-        private string ResolveGenericType(ITypeSymbol type)
+        private string ResolveTypeParameter(ITypeSymbol type, string cecilTypeParameterProviderVar)
+        {
+            if (type is not ITypeParameterSymbol typeParameterSymbol)
+                return null;
+
+            if (cecilTypeParameterProviderVar == null)
+                return null;
+            
+            return typeParameterSymbol.ContainingSymbol.Kind switch
+            {
+                SymbolKind.NamedType => $"(({cecilTypeParameterProviderVar} is MethodReference methodReference) ? ((GenericInstanceType) methodReference.DeclaringType).ElementType : (IGenericParameterProvider) {cecilTypeParameterProviderVar} ).GenericParameters[{typeParameterSymbol.Ordinal}]",
+                SymbolKind.Method => $"{cecilTypeParameterProviderVar}.GenericParameters[{typeParameterSymbol.Ordinal}]",
+                _ => null
+            };
+        }
+        
+        private string ResolveGenericType(ITypeSymbol type, string cecilTypeParameterProviderVar)
         {
             if (!(type is INamedTypeSymbol { IsGenericType: true, TypeArguments.Length: > 0 } genericTypeSymbol))
             {
@@ -78,7 +97,7 @@ namespace Cecilifier.Core.Misc
             var genericType = Resolve(OpenGenericTypeName(genericTypeSymbol.ConstructedFrom));
             return genericTypeSymbol.IsDefinition
                 ? genericType
-                : MakeGenericInstanceType(genericType, genericTypeSymbol);
+                : MakeGenericInstanceType(genericType, genericTypeSymbol, cecilTypeParameterProviderVar);
         }
 
         public string ResolveLocalVariableType(ITypeSymbol type)
@@ -89,26 +108,26 @@ namespace Cecilifier.Core.Misc
 
             if (found != null && type is INamedTypeSymbol { IsGenericType: true } genericTypeSymbol)
             {
-                return MakeGenericInstanceType(found, genericTypeSymbol);
+                return MakeGenericInstanceType(found, genericTypeSymbol, null);
             }
 
             return found;
         }
 
-        private IList<string> CollectTypeArguments(INamedTypeSymbol typeArgumentProvider, List<string> collectTo)
+        private IList<string> CollectTypeArguments(INamedTypeSymbol typeArgumentProvider, List<string> collectTo, string cecilTypeParameterProviderVar)
         {
             if (typeArgumentProvider.ContainingType != null)
             {
-                CollectTypeArguments(typeArgumentProvider.ContainingType, collectTo);
+                CollectTypeArguments(typeArgumentProvider.ContainingType, collectTo, cecilTypeParameterProviderVar);
             }
-            collectTo.AddRange(typeArgumentProvider.TypeArguments.Where(t => t.Kind != SymbolKind.ErrorType).Select(Resolve));
+            collectTo.AddRange(typeArgumentProvider.TypeArguments.Where(t => t.Kind != SymbolKind.ErrorType).Select(t => Resolve(t, cecilTypeParameterProviderVar)));
 
             return collectTo;
         }
 
-        private string MakeGenericInstanceType(string typeReference, INamedTypeSymbol genericTypeSymbol)
+        private string MakeGenericInstanceType(string typeReference, INamedTypeSymbol genericTypeSymbol, string cecilTypeParameterProviderVar)
         {
-            var typeArgs = CollectTypeArguments(genericTypeSymbol, new List<string>());
+            var typeArgs = CollectTypeArguments(genericTypeSymbol, new List<string>(), cecilTypeParameterProviderVar);
             return typeArgs.Count > 0
                 ? typeReference.MakeGenericInstanceType(typeArgs)
                 : typeReference;
