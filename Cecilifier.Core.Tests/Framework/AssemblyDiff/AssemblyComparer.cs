@@ -125,7 +125,6 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                 ret = ret && CheckImplementedInterfaces(typeVisitor, sourceType, targetType);
             }
 
-            //TODO: Check missing classes
             return ret;
         }
 
