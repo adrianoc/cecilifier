@@ -200,10 +200,17 @@ public class CecilifierTestBase
 
     internal void CompareAssemblies(string expectedAssemblyPath, string actualAssemblyPath, IAssemblyDiffVisitor visitor, Func<Instruction, Instruction, bool?> instructionComparer)
     {
-        var comparer = new AssemblyComparer(expectedAssemblyPath, actualAssemblyPath);
-        if (!comparer.Compare(visitor, instructionComparer))
+        try
         {
-            Assert.Fail($"Expected and generated assemblies differs:\r\n\tExpected:  {comparer.First}\r\n\tGenerated: {comparer.Second}\r\n\r\n{visitor.Reason}\r\n\r\nCecilified Code:\r\n{cecilifiedCode}");
+            var comparer = new AssemblyComparer(expectedAssemblyPath, actualAssemblyPath);
+            if (!comparer.Compare(visitor, instructionComparer))
+            {
+                Assert.Fail($"Expected and generated assemblies differs:\r\n\tExpected:  {comparer.First}\r\n\tGenerated: {comparer.Second}\r\n\r\n{visitor.Reason}\r\n\r\nCecilified Code:\r\n{cecilifiedCode}");
+            }
+        }
+        catch (Exception exception)
+        {
+            Assert.Fail($"Exception caught while comparing assemblies:\n\t{expectedAssemblyPath}\n\t{actualAssemblyPath}\n\n{exception}");
         }
     }
 
