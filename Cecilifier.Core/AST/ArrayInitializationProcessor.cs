@@ -32,39 +32,18 @@ public class ArrayInitializationProcessor
             context.EmitCilInstruction(visitor.ILVariable, OpCodes.Ldc_I4, i);
             elements.Value[i].Accept(visitor);
 
-            //TODO: Refactor to extract all this into some common method to apply conversions.
-            var itemType = context.SemanticModel.GetTypeInfo(elements.Value[i] is ExpressionElementSyntax els ? els.Expression : elements.Value[i]);
-            if (elementType.IsReferenceType && itemType.Type != null && itemType.Type.IsValueType)
-            {
-                context.EmitCilInstruction(visitor.ILVariable, OpCodes.Box, context.TypeResolver.Resolve(itemType.Type));
-            }
-            else
-            {
-                var conversionInfo = GetConversionInfo(parentOperation, i);
-                if (conversionInfo?.ConvertionMethod != null)
-                {
-                    context.AddCallToMethod(conversionInfo?.ConvertionMethod, visitor.ILVariable);
-                }
-                else if (conversionInfo != null)
-                    context.TryApplyNumericConversion(visitor.ILVariable, conversionInfo?.Source, conversionInfo?.Destination);
-            }
-
+            var operation = GetConversionOperation(parentOperation, i);
+            context.TryApplyConversions(visitor.ILVariable, operation);
             context.EmitCilInstruction(visitor.ILVariable, stelemOpCode, stelemOpCode == OpCodes.Stelem_Any ? resolvedElementType : null);
         }
-
-        (ITypeSymbol Source, ITypeSymbol Destination, IMethodSymbol ConvertionMethod)? GetConversionInfo(IOperation operation, int index)
+        IConversionOperation GetConversionOperation(IOperation operation, int index)
         {
-            var conversionOperation = operation switch
+            return operation switch
             {
                 ICollectionExpressionOperation ceo => ceo.Elements[index],
                 IArrayInitializerOperation initializerOperation => initializerOperation.ElementValues[index], 
                 _ => null
             } as IConversionOperation;
-
-            if (conversionOperation == null)
-                return null;
-            
-            return (conversionOperation.Operand.Type, conversionOperation.Type, conversionOperation.OperatorMethod);
         }
     }
 
