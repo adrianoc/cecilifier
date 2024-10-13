@@ -7,6 +7,25 @@ namespace Cecilifier.Core.Tests.Tests.Unit
     [TestFixture]
     public class PointerTypeTests : CecilifierUnitTestBase
     {
+        [TestCase("int")]
+        [TestCase("uint")]
+        [TestCase("long")]
+        [TestCase("ulong")]
+        [TestCase("byte")]
+        public void TestAssignment_OfPointerToPointer_DoesNotGenerateStoreIndirect(string type)
+        {
+            var code = $$"""struct S { } unsafe class C { {{type}} field; void M({{type}} value) { {{type}} *l = &value; {{type}} *l1; l1 = l; } }""";
+            var result = RunCecilifier(code);
+            var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+
+            Assert.That(cecilifiedCode, Does.Match("""
+                                                    //l1 = l;
+                                                    (\s+il_M_\d+\.Emit\(OpCodes\.)Ldloc, l_l_\d+\);
+                                                    \1Stloc, l_l1_\d+\);
+                                                    """));
+
+        }
+        
         [TestCaseSource(nameof(PointerAssignmentTypesToTest))]
         public void TestFixedIndirectAssignmentType(string type, string expectedOpCode)
         {

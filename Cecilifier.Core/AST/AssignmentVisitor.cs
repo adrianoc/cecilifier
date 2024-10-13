@@ -272,14 +272,11 @@ namespace Cecilifier.Core.AST
             }
         }
 
-        //TODO: the logic to decide whether an assignment should be an indirect store looks to be wrong
-        //      at least the pointer check looks to be missing a case like:
-        //      int *p, *p1 = null;
-        //      p = p1; // <-- *p* is a pointer and right (p1) is not an AddressOffExpression but still,
-        //              //     this is a simple store, not an indirect one.
-        private bool NeedsIndirectStore(ITypeSymbol assignmentTargetMemberType, RefKind assignmentTargetMemberRefKind) =>
-            (assignmentTargetMemberType is IPointerTypeSymbol && !assignment.Right.IsKind(SyntaxKind.AddressOfExpression))
-            || assignmentTargetMemberRefKind != RefKind.None && !assignment.Right.IsKind(SyntaxKind.RefExpression);
+        private bool NeedsIndirectStore(ITypeSymbol assignmentTargetMemberType, RefKind assignmentTargetMemberRefKind)
+        {
+            return (assignmentTargetMemberType is IPointerTypeSymbol && !assignment.Right.IsKind(SyntaxKind.AddressOfExpression) && Context.SemanticModel.GetTypeInfo(assignment.Right).Type!.Kind != SymbolKind.PointerType)
+                   || assignmentTargetMemberRefKind != RefKind.None && !assignment.Right.IsKind(SyntaxKind.RefExpression);
+        }
 
         /// <summary>
         /// When assigning a value to a *ref like* member, the generated IL needs to load
