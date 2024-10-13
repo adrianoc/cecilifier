@@ -311,8 +311,6 @@ namespace Cecilifier.Core.Extensions
             cecilModifiersStr.AppendModifier(specificModifiers);
             cecilModifiersStr.AppendModifier("MethodAttributes.HideBySig").AppendModifier(modifiersStr);
 
-            //TODO: This is not taking into account static abstract methods. We need to pass whether the method is static or not as a parameter
-            //      and in case it is static, do not add NewSlot (which is part of InterfaceMethodDefinitionAttributes)
             if (declaringType.TypeKind == TypeKind.Interface)
                 cecilModifiersStr.AppendModifier(Constants.Cecil.InterfaceMethodDefinitionAttributes).AppendModifier("MethodAttributes.Abstract");
 
