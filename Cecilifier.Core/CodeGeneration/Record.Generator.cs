@@ -872,7 +872,7 @@ internal class RecordGenerator
         const string methodName = "Equals";
         
         context.WriteNewLine();
-        context.WriteComment($"Equals(object)");
+        context.WriteComment("Equals(object)");
         var equalsObjectOverloadMethodVar = context.Naming.SyntheticVariable($"{methodName}ObjectOverload", ElementKind.Method);
         var equalsObjectOverloadMethodExps = CecilDefinitionsFactory.Method(
             context,
