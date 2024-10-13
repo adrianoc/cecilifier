@@ -713,8 +713,6 @@ namespace Cecilifier.Core.AST
                 ? $"{localDelegateDeclaration}.Methods.Single(m => m.Name == \"Invoke\")"
                 : ((IMethodSymbol) typeSymbol.GetMembers("Invoke").SingleOrDefault()).MethodResolverExpression(Context);
 
-            //TODO: Find all call sites that adds a Call/Callvirt instruction and make sure
-            //      they call X().
             OnLastInstructionLoadingTargetOfInvocation();
             Context.EmitCilInstruction(ilVar, OpCodes.Callvirt, resolvedMethod);
         }
