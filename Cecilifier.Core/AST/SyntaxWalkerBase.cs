@@ -378,11 +378,12 @@ namespace Cecilifier.Core.AST
 
         protected string ResolveType(TypeSyntax type)
         {
-            // TODO: Ensure there are tests covering all the derived types from TypeSyntax (https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.typesyntax?view=roslyn-dotnet-4.7.0)
+            // Special case types that Context.GetTypeInfo() is not able to handle. As of Oct/2024 only the ones below are requires such special handling.
             var typeToCheck = type switch
             {
                 RefTypeSyntax refType  => refType.Type,
-                ScopedTypeSyntax scopedTypeSyntax => scopedTypeSyntax.Type,
+                ScopedTypeSyntax scopedTypeSyntax => scopedTypeSyntax.Type, // `scoped` types have the same semantics as a `non scoped` one; `scoped` only changes how variables of the type can be captured/used
+                                                                            // (and this is handled entirely by the compiler) 
                 _ => type
             };
         
