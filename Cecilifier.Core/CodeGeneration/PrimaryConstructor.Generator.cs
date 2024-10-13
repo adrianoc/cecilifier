@@ -68,7 +68,7 @@ public class PrimaryConstructorGenerator
                                     context.TypeResolver.Resolve(propertyType),
                                     propertyType.ToDisplayString(),
                                     Array.Empty<ParameterSpec>(),
-                                    "FieldAttributes.Private", //TODO: Constant
+                                    "FieldAttributes.Private",
                                     OpCodes.Stfld,
                                     OpCodes.Ldfld);
         
