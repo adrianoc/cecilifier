@@ -78,8 +78,8 @@ namespace Cecilifier.Core.AST
 
         public override void VisitIdentifierName(IdentifierNameSyntax node)
         {
-            //TODO: tuple declaration with an initializer is represented as an assignment
-            //      revisit the following if/when we handle tuples
+            //T uple declaration with an initializer is represented as an assignment
+            //revisit the following when we handle tuples (https://github.com/adrianoc/cecilifier/issues/93)
             if (node.IsVar)
             {
                 return;
