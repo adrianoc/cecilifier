@@ -752,12 +752,12 @@ namespace Cecilifier.Core.AST
         {
             foreach (var attribute in attributeLists.SelectMany(al => al.Attributes))
             {
-                var type = context.SemanticModel.GetSymbolInfo(attribute).Symbol.EnsureNotNull<ISymbol, IMethodSymbol>().ContainingType;
+                var attributeType = context.SemanticModel.GetSymbolInfo(attribute).Symbol.EnsureNotNull<ISymbol, IMethodSymbol>().ContainingType;
 
-                //TODO: Pass the correct list of type parameters when C# supports generic attributes.
-                TypeDeclarationVisitor.EnsureForwardedTypeDefinition(context, type, Array.Empty<TypeParameterSyntax>());
+                //https://github.com/adrianoc/cecilifier/issues/311
+                TypeDeclarationVisitor.EnsureForwardedTypeDefinition(context, attributeType, Array.Empty<TypeParameterSyntax>());
 
-                var attrsExp = type.AttributeKind() switch
+                var attrsExp = attributeType.AttributeKind() switch
                     {
                         AttributeKind.DllImport => ProcessDllImportAttribute(context, attribute, targetDeclarationVar),
                         AttributeKind.StructLayout => ProcessStructLayoutAttribute(attribute, targetDeclarationVar),
