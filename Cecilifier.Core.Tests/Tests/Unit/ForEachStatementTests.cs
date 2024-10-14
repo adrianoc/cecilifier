@@ -117,7 +117,7 @@ public class ForEachStatementTests : CecilifierUnitTestBase
         Assert.That(cecilifiedCode, Does.Match("""
                                                il_run_\d+.Emit\(OpCodes.Callvirt, .+ImportReference\(.+ResolveMethod\(typeof\(System.Collections.IEnumerator\), "MoveNext",.+\)\)\);
                                                """));
-        Assert.That(cecilifiedCode, Does.Match("""var l_openget_Current_\d+ = .+ImportReference\(typeof\(.+IEnumerator<>\)\).Resolve\(\).Methods.First\(m => m.Name == "get_Current" && m.Parameters.Count == 0 \);"""));
+        Assert.That(cecilifiedCode, Does.Match("""var l_openget_Current_\d+ = .+ImportReference\(typeof\(.+IEnumerator<>\)\).Resolve\(\).Methods.First\(m => m.Name == "get_Current" && m.Parameters.Count == 0\);"""));
     }
  
     [Test]
