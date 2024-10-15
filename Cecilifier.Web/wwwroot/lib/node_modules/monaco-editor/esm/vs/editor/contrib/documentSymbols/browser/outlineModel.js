@@ -26,8 +26,7 @@ import { DisposableStore } from '../../../../base/common/lifecycle.js';
 import { ILanguageFeaturesService } from '../../../common/services/languageFeatures.js';
 export class TreeElement {
     remove() {
-        var _a;
-        (_a = this.parent) === null || _a === void 0 ? void 0 : _a.children.delete(this.id);
+        this.parent?.children.delete(this.id);
     }
     static findId(candidate, container) {
         // complex id-computation which contains the origin/extension,
@@ -77,9 +76,8 @@ export class OutlineModel extends TreeElement {
         const result = new OutlineModel(textModel.uri);
         const provider = registry.ordered(textModel);
         const promises = provider.map((provider, index) => {
-            var _a;
             const id = TreeElement.findId(`provider_${index}`, result);
-            const group = new OutlineGroup(id, result, (_a = provider.displayName) !== null && _a !== void 0 ? _a : 'Unknown Outline Provider', index);
+            const group = new OutlineGroup(id, result, provider.displayName ?? 'Unknown Outline Provider', index);
             return Promise.resolve(provider.provideDocumentSymbols(textModel, cts.token)).then(result => {
                 for (const info of result || []) {
                     OutlineModel._makeOutlineElement(info, group);

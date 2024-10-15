@@ -16,6 +16,7 @@ Registry.add(Extensions.DragAndDropContribution, new DragAndDropContributionRegi
  * A singleton to store transfer data during drag & drop operations that are only valid within the application.
  */
 export class LocalSelectionTransfer {
+    static { this.INSTANCE = new LocalSelectionTransfer(); }
     constructor() {
         // protect against external instantiation
     }
@@ -32,5 +33,4 @@ export class LocalSelectionTransfer {
         return undefined;
     }
 }
-LocalSelectionTransfer.INSTANCE = new LocalSelectionTransfer();
 //#endregion

@@ -205,7 +205,6 @@ export class GuidesTextModelPart extends TextModelPart {
         return { startLineNumber, endLineNumber, indent };
     }
     getLinesBracketGuides(startLineNumber, endLineNumber, activePosition, options) {
-        var _a;
         const result = [];
         for (let lineNumber = startLineNumber; lineNumber <= endLineNumber; lineNumber++) {
             result.push([]);
@@ -220,7 +219,7 @@ export class GuidesTextModelPart extends TextModelPart {
                 // We don't need to query the brackets again if the cursor is in the viewport
                 ? bracketPairs
                 : this.textModel.bracketPairs.getBracketPairsInRange(Range.fromPositions(activePosition)).toArray()).filter((bp) => Range.strictContainsPosition(bp.range, activePosition));
-            activeBracketPairRange = (_a = findLast(bracketsContainingActivePosition, (i) => includeSingleLinePairs || i.range.startLineNumber !== i.range.endLineNumber)) === null || _a === void 0 ? void 0 : _a.range;
+            activeBracketPairRange = findLast(bracketsContainingActivePosition, (i) => includeSingleLinePairs || i.range.startLineNumber !== i.range.endLineNumber)?.range;
         }
         const independentColorPoolPerBracketType = this.textModel.getOptions().bracketPairColorizationOptions.independentColorPoolPerBracketType;
         const colorProvider = new BracketPairGuidesClassNames();

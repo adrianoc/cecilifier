@@ -8,6 +8,7 @@ import { Disposable } from '../../../../base/common/lifecycle.js';
 import { registerEditorContribution } from '../../../browser/editorExtensions.js';
 import { isIOS } from '../../../../base/common/platform.js';
 export class IPadShowKeyboard extends Disposable {
+    static { this.ID = 'editor.contrib.iPadShowKeyboard'; }
     constructor(editor) {
         super();
         this.editor = editor;
@@ -18,7 +19,7 @@ export class IPadShowKeyboard extends Disposable {
         }
     }
     update() {
-        const shouldHaveWidget = (!this.editor.getOption(90 /* EditorOption.readOnly */));
+        const shouldHaveWidget = (!this.editor.getOption(92 /* EditorOption.readOnly */));
         if (!this.widget && shouldHaveWidget) {
             this.widget = new ShowKeyboardWidget(this.editor);
         }
@@ -35,8 +36,8 @@ export class IPadShowKeyboard extends Disposable {
         }
     }
 }
-IPadShowKeyboard.ID = 'editor.contrib.iPadShowKeyboard';
 class ShowKeyboardWidget extends Disposable {
+    static { this.ID = 'editor.contrib.ShowKeyboardWidget'; }
     constructor(editor) {
         super();
         this.editor = editor;
@@ -67,5 +68,4 @@ class ShowKeyboardWidget extends Disposable {
         };
     }
 }
-ShowKeyboardWidget.ID = 'editor.contrib.ShowKeyboardWidget';
 registerEditorContribution(IPadShowKeyboard.ID, IPadShowKeyboard, 3 /* EditorContributionInstantiation.Eventually */);

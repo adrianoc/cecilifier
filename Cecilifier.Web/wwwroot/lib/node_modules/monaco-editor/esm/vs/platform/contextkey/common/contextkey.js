@@ -49,6 +49,9 @@ const hintUnexpectedEOF = localize('contextkey.parser.error.unexpectedEOF.hint',
  * ```
  */
 export class Parser {
+    // Note: this doesn't produce an exact syntax tree but a normalized one
+    // ContextKeyExpression's that we use as AST nodes do not expose constructors that do not normalize
+    static { this._parseError = new Error(); }
     constructor(_config = defaultConfig) {
         this._config = _config;
         // lifetime note: `_scanner` lives as long as the parser does, i.e., is not reset between calls to `parse`
@@ -124,7 +127,7 @@ export class Parser {
                     this._advance();
                     const expr = this._expr();
                     this._consume(1 /* TokenType.RParen */, errorClosingParenthesis);
-                    return expr === null || expr === void 0 ? void 0 : expr.negate();
+                    return expr?.negate();
                 }
                 case 17 /* TokenType.Str */:
                     this._advance();
@@ -388,9 +391,6 @@ export class Parser {
         return this._peek().type === 20 /* TokenType.EOF */;
     }
 }
-// Note: this doesn't produce an exact syntax tree but a normalized one
-// ContextKeyExpression's that we use as AST nodes do not expose constructors that do not normalize
-Parser._parseError = new Error();
 export class ContextKeyExpr {
     static false() {
         return ContextKeyFalseExpr.INSTANCE;
@@ -425,6 +425,7 @@ export class ContextKeyExpr {
     static or(...expr) {
         return ContextKeyOrExpr.create(expr, null, true);
     }
+    static { this._parser = new Parser({ regexParsingWithErrorRecovery: false }); }
     static deserialize(serialized) {
         if (serialized === undefined || serialized === null) { // an empty string needs to be handled by the parser to get a corresponding parsing error reported
             return undefined;
@@ -433,7 +434,6 @@ export class ContextKeyExpr {
         return expr;
     }
 }
-ContextKeyExpr._parser = new Parser({ regexParsingWithErrorRecovery: false });
 export function expressionsAreEqualWithConstantSubstitution(a, b) {
     const aExpr = a ? a.substituteConstants() : undefined;
     const bExpr = b ? b.substituteConstants() : undefined;
@@ -449,6 +449,7 @@ function cmp(a, b) {
     return a.cmp(b);
 }
 export class ContextKeyFalseExpr {
+    static { this.INSTANCE = new ContextKeyFalseExpr(); }
     constructor() {
         this.type = 0 /* ContextKeyExprType.False */;
     }
@@ -474,8 +475,8 @@ export class ContextKeyFalseExpr {
         return ContextKeyTrueExpr.INSTANCE;
     }
 }
-ContextKeyFalseExpr.INSTANCE = new ContextKeyFalseExpr();
 export class ContextKeyTrueExpr {
+    static { this.INSTANCE = new ContextKeyTrueExpr(); }
     constructor() {
         this.type = 1 /* ContextKeyExprType.True */;
     }
@@ -501,7 +502,6 @@ export class ContextKeyTrueExpr {
         return ContextKeyFalseExpr.INSTANCE;
     }
 }
-ContextKeyTrueExpr.INSTANCE = new ContextKeyTrueExpr();
 export class ContextKeyDefinedExpr {
     static create(key, negated = null) {
         const constantValue = CONSTANT_VALUES.get(key);
@@ -1425,6 +1425,7 @@ export class ContextKeyOrExpr {
     }
 }
 export class RawContextKey extends ContextKeyDefinedExpr {
+    static { this._info = []; }
     static all() {
         return RawContextKey._info.values();
     }
@@ -1452,7 +1453,6 @@ export class RawContextKey extends ContextKeyDefinedExpr {
         return ContextKeyEqualsExpr.create(this.key, value);
     }
 }
-RawContextKey._info = [];
 export const IContextKeyService = createDecorator('contextKeyService');
 function cmp1(key1, key2) {
     if (key1 < key2) {

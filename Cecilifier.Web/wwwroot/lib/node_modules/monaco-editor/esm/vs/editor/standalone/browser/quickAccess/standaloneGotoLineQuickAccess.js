@@ -27,8 +27,7 @@ let StandaloneGotoLineQuickAccessProvider = class StandaloneGotoLineQuickAccessP
         this.onDidActiveTextEditorControlChange = Event.None;
     }
     get activeTextEditorControl() {
-        var _a;
-        return (_a = this.editorService.getFocusedCodeEditor()) !== null && _a !== void 0 ? _a : undefined;
+        return this.editorService.getFocusedCodeEditor() ?? undefined;
     }
 };
 StandaloneGotoLineQuickAccessProvider = __decorate([
@@ -36,6 +35,7 @@ StandaloneGotoLineQuickAccessProvider = __decorate([
 ], StandaloneGotoLineQuickAccessProvider);
 export { StandaloneGotoLineQuickAccessProvider };
 export class GotoLineAction extends EditorAction {
+    static { this.ID = 'editor.action.gotoLine'; }
     constructor() {
         super({
             id: GotoLineAction.ID,
@@ -54,7 +54,6 @@ export class GotoLineAction extends EditorAction {
         accessor.get(IQuickInputService).quickAccess.show(StandaloneGotoLineQuickAccessProvider.PREFIX);
     }
 }
-GotoLineAction.ID = 'editor.action.gotoLine';
 registerEditorAction(GotoLineAction);
 Registry.as(Extensions.Quickaccess).registerQuickAccessProvider({
     ctor: StandaloneGotoLineQuickAccessProvider,

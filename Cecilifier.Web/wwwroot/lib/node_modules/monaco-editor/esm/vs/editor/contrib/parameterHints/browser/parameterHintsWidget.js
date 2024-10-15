@@ -21,8 +21,9 @@ import { Disposable, DisposableStore } from '../../../../base/common/lifecycle.j
 import { escapeRegExpCharacters } from '../../../../base/common/strings.js';
 import { assertIsDefined } from '../../../../base/common/types.js';
 import './parameterHints.css';
+import { EDITOR_FONT_DEFAULTS } from '../../../common/config/editorOptions.js';
 import { ILanguageService } from '../../../common/languages/language.js';
-import { MarkdownRenderer } from '../../markdownRenderer/browser/markdownRenderer.js';
+import { MarkdownRenderer } from '../../../browser/widget/markdownRenderer/browser/markdownRenderer.js';
 import { Context } from './provideSignatureHelp.js';
 import * as nls from '../../../../nls.js';
 import { IContextKeyService } from '../../../../platform/contextkey/common/contextkey.js';
@@ -30,14 +31,19 @@ import { IOpenerService } from '../../../../platform/opener/common/opener.js';
 import { listHighlightForeground, registerColor } from '../../../../platform/theme/common/colorRegistry.js';
 import { registerIcon } from '../../../../platform/theme/common/iconRegistry.js';
 import { ThemeIcon } from '../../../../base/common/themables.js';
+import { StopWatch } from '../../../../base/common/stopwatch.js';
+import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 const $ = dom.$;
 const parameterHintsNextIcon = registerIcon('parameter-hints-next', Codicon.chevronDown, nls.localize('parameterHintsNextIcon', 'Icon for show next parameter hint.'));
 const parameterHintsPreviousIcon = registerIcon('parameter-hints-previous', Codicon.chevronUp, nls.localize('parameterHintsPreviousIcon', 'Icon for show previous parameter hint.'));
-let ParameterHintsWidget = ParameterHintsWidget_1 = class ParameterHintsWidget extends Disposable {
-    constructor(editor, model, contextKeyService, openerService, languageService) {
+let ParameterHintsWidget = class ParameterHintsWidget extends Disposable {
+    static { ParameterHintsWidget_1 = this; }
+    static { this.ID = 'editor.widget.parameterHintsWidget'; }
+    constructor(editor, model, contextKeyService, openerService, languageService, telemetryService) {
         super();
         this.editor = editor;
         this.model = model;
+        this.telemetryService = telemetryService;
         this.renderDisposeables = this._register(new DisposableStore());
         this.visible = false;
         this.announcedLabel = null;
@@ -91,8 +97,11 @@ let ParameterHintsWidget = ParameterHintsWidget_1 = class ParameterHintsWidget e
                 return;
             }
             const fontInfo = this.editor.getOption(50 /* EditorOption.fontInfo */);
-            this.domNodes.element.style.fontSize = `${fontInfo.fontSize}px`;
-            this.domNodes.element.style.lineHeight = `${fontInfo.lineHeight / fontInfo.fontSize}`;
+            const element = this.domNodes.element;
+            element.style.fontSize = `${fontInfo.fontSize}px`;
+            element.style.lineHeight = `${fontInfo.lineHeight / fontInfo.fontSize}`;
+            element.style.setProperty('--vscode-parameterHintsWidget-editorFontFamily', fontInfo.fontFamily);
+            element.style.setProperty('--vscode-parameterHintsWidget-editorFontFamilyDefault', EDITOR_FONT_DEFAULTS.fontFamily);
         };
         updateFont();
         this._register(Event.chain(this.editor.onDidChangeConfiguration.bind(this.editor), $ => $.filter(e => e.hasChanged(50 /* EditorOption.fontInfo */)))(updateFont));
@@ -109,13 +118,11 @@ let ParameterHintsWidget = ParameterHintsWidget_1 = class ParameterHintsWidget e
         this.keyVisible.set(true);
         this.visible = true;
         setTimeout(() => {
-            var _a;
-            (_a = this.domNodes) === null || _a === void 0 ? void 0 : _a.element.classList.add('visible');
+            this.domNodes?.element.classList.add('visible');
         }, 100);
         this.editor.layoutContentWidget(this);
     }
     hide() {
-        var _a;
         this.renderDisposeables.clear();
         if (!this.visible) {
             return;
@@ -123,7 +130,7 @@ let ParameterHintsWidget = ParameterHintsWidget_1 = class ParameterHintsWidget e
         this.keyVisible.reset();
         this.visible = false;
         this.announcedLabel = null;
-        (_a = this.domNodes) === null || _a === void 0 ? void 0 : _a.element.classList.remove('visible');
+        this.domNodes?.element.classList.remove('visible');
         this.editor.layoutContentWidget(this);
     }
     getPosition() {
@@ -136,7 +143,6 @@ let ParameterHintsWidget = ParameterHintsWidget_1 = class ParameterHintsWidget e
         return null;
     }
     render(hints) {
-        var _a;
         this.renderDisposeables.clear();
         if (!this.domNodes) {
             return;
@@ -151,11 +157,8 @@ let ParameterHintsWidget = ParameterHintsWidget_1 = class ParameterHintsWidget e
             return;
         }
         const code = dom.append(this.domNodes.signature, $('.code'));
-        const fontInfo = this.editor.getOption(50 /* EditorOption.fontInfo */);
-        code.style.fontSize = `${fontInfo.fontSize}px`;
-        code.style.fontFamily = fontInfo.fontFamily;
         const hasParameters = signature.parameters.length > 0;
-        const activeParameterIndex = (_a = signature.activeParameter) !== null && _a !== void 0 ? _a : hints.activeParameter;
+        const activeParameterIndex = signature.activeParameter ?? hints.activeParameter;
         if (!hasParameters) {
             const label = dom.append(code, $('span'));
             label.textContent = signature.label;
@@ -164,7 +167,7 @@ let ParameterHintsWidget = ParameterHintsWidget_1 = class ParameterHintsWidget e
             this.renderParameters(code, signature, activeParameterIndex);
         }
         const activeParameter = signature.parameters[activeParameterIndex];
-        if (activeParameter === null || activeParameter === void 0 ? void 0 : activeParameter.documentation) {
+        if (activeParameter?.documentation) {
             const documentation = $('span.documentation');
             if (typeof activeParameter.documentation === 'string') {
                 documentation.textContent = activeParameter.documentation;
@@ -216,13 +219,19 @@ let ParameterHintsWidget = ParameterHintsWidget_1 = class ParameterHintsWidget e
         this.domNodes.scrollbar.scanDomNode();
     }
     renderMarkdownDocs(markdown) {
+        const stopWatch = new StopWatch();
         const renderedContents = this.renderDisposeables.add(this.markdownRenderer.render(markdown, {
             asyncRenderCallback: () => {
-                var _a;
-                (_a = this.domNodes) === null || _a === void 0 ? void 0 : _a.scrollbar.scanDomNode();
+                this.domNodes?.scrollbar.scanDomNode();
             }
         }));
         renderedContents.element.classList.add('markdown-docs');
+        const renderDuration = stopWatch.elapsed();
+        if (renderDuration > 300) {
+            this.telemetryService.publicLog2('parameterHints.parseMarkdown', {
+                renderDuration
+            });
+        }
         return renderedContents;
     }
     hasDocs(signature, activeParameter) {
@@ -301,11 +310,11 @@ let ParameterHintsWidget = ParameterHintsWidget_1 = class ParameterHintsWidget e
         }
     }
 };
-ParameterHintsWidget.ID = 'editor.widget.parameterHintsWidget';
 ParameterHintsWidget = ParameterHintsWidget_1 = __decorate([
     __param(2, IContextKeyService),
     __param(3, IOpenerService),
-    __param(4, ILanguageService)
+    __param(4, ILanguageService),
+    __param(5, ITelemetryService)
 ], ParameterHintsWidget);
 export { ParameterHintsWidget };
-registerColor('editorHoverWidget.highlightForeground', { dark: listHighlightForeground, light: listHighlightForeground, hcDark: listHighlightForeground, hcLight: listHighlightForeground }, nls.localize('editorHoverWidgetHighlightForeground', 'Foreground color of the active item in the parameter hint.'));
+registerColor('editorHoverWidget.highlightForeground', listHighlightForeground, nls.localize('editorHoverWidgetHighlightForeground', 'Foreground color of the active item in the parameter hint.'));

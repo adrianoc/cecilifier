@@ -124,7 +124,6 @@ function getAssociations(resource, firstLine) {
     return [{ id: 'unknown', mime: Mimes.unknown }];
 }
 function getAssociationByPath(path, filename, associations) {
-    var _a;
     let filenameMatch = undefined;
     let patternMatch = undefined;
     let extensionMatch = undefined;
@@ -141,7 +140,7 @@ function getAssociationByPath(path, filename, associations) {
         if (association.filepattern) {
             if (!patternMatch || association.filepattern.length > patternMatch.filepattern.length) {
                 const target = association.filepatternOnPath ? path : filename; // match on full path if pattern contains path separator
-                if ((_a = association.filepatternLowercase) === null || _a === void 0 ? void 0 : _a.call(association, target)) {
+                if (association.filepatternLowercase?.(target)) {
                     patternMatch = association;
                 }
             }

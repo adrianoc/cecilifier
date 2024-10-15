@@ -4,20 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 import { splitLines } from '../../../../../base/common/strings.js';
 import { Range } from '../../../core/range.js';
-/**
- * Represents a non-negative length in terms of line and column count.
- * Prefer using {@link Length} for performance reasons.
-*/
-export class LengthObj {
-    constructor(lineCount, columnCount) {
-        this.lineCount = lineCount;
-        this.columnCount = columnCount;
-    }
-    toString() {
-        return `${this.lineCount},${this.columnCount}`;
-    }
-}
-LengthObj.zero = new LengthObj(0, 0);
+import { TextLength } from '../../../core/textLength.js';
 /**
  * The end must be greater than or equal to the start.
 */
@@ -50,7 +37,7 @@ export function lengthToObj(length) {
     const l = length;
     const lineCount = Math.floor(l / factor);
     const columnCount = l - lineCount * factor;
-    return new LengthObj(lineCount, columnCount);
+    return new TextLength(lineCount, columnCount);
 }
 export function lengthGetLineCount(length) {
     return Math.floor(length / factor);

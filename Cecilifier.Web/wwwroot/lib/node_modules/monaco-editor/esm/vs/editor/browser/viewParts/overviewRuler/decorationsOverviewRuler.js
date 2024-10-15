@@ -7,23 +7,27 @@ import { Color } from '../../../../base/common/color.js';
 import { ViewPart } from '../../view/viewPart.js';
 import { Position } from '../../../common/core/position.js';
 import { TokenizationRegistry } from '../../../common/languages.js';
-import { editorCursorForeground, editorOverviewRulerBorder, editorOverviewRulerBackground } from '../../../common/core/editorColorRegistry.js';
+import { editorCursorForeground, editorOverviewRulerBorder, editorOverviewRulerBackground, editorMultiCursorSecondaryForeground, editorMultiCursorPrimaryForeground } from '../../../common/core/editorColorRegistry.js';
 import { OverviewRulerDecorationsGroup } from '../../../common/viewModel.js';
 import { equals } from '../../../../base/common/arrays.js';
 class Settings {
     constructor(config, theme) {
         const options = config.options;
-        this.lineHeight = options.get(66 /* EditorOption.lineHeight */);
-        this.pixelRatio = options.get(141 /* EditorOption.pixelRatio */);
-        this.overviewRulerLanes = options.get(82 /* EditorOption.overviewRulerLanes */);
-        this.renderBorder = options.get(81 /* EditorOption.overviewRulerBorder */);
+        this.lineHeight = options.get(67 /* EditorOption.lineHeight */);
+        this.pixelRatio = options.get(144 /* EditorOption.pixelRatio */);
+        this.overviewRulerLanes = options.get(83 /* EditorOption.overviewRulerLanes */);
+        this.renderBorder = options.get(82 /* EditorOption.overviewRulerBorder */);
         const borderColor = theme.getColor(editorOverviewRulerBorder);
         this.borderColor = borderColor ? borderColor.toString() : null;
         this.hideCursor = options.get(59 /* EditorOption.hideCursorInOverviewRuler */);
-        const cursorColor = theme.getColor(editorCursorForeground);
-        this.cursorColor = cursorColor ? cursorColor.transparent(0.7).toString() : null;
+        const cursorColorSingle = theme.getColor(editorCursorForeground);
+        this.cursorColorSingle = cursorColorSingle ? cursorColorSingle.transparent(0.7).toString() : null;
+        const cursorColorPrimary = theme.getColor(editorMultiCursorPrimaryForeground);
+        this.cursorColorPrimary = cursorColorPrimary ? cursorColorPrimary.transparent(0.7).toString() : null;
+        const cursorColorSecondary = theme.getColor(editorMultiCursorSecondaryForeground);
+        this.cursorColorSecondary = cursorColorSecondary ? cursorColorSecondary.transparent(0.7).toString() : null;
         this.themeType = theme.type;
-        const minimapOpts = options.get(72 /* EditorOption.minimap */);
+        const minimapOpts = options.get(73 /* EditorOption.minimap */);
         const minimapEnabled = minimapOpts.enabled;
         const minimapSide = minimapOpts.side;
         const themeColor = theme.getColor(editorOverviewRulerBackground);
@@ -37,7 +41,7 @@ class Settings {
         else {
             this.backgroundColor = null;
         }
-        const layoutInfo = options.get(143 /* EditorOption.layoutInfo */);
+        const layoutInfo = options.get(146 /* EditorOption.layoutInfo */);
         const position = layoutInfo.overviewRuler;
         this.top = position.top;
         this.right = position.right;
@@ -147,7 +151,9 @@ class Settings {
             && this.renderBorder === other.renderBorder
             && this.borderColor === other.borderColor
             && this.hideCursor === other.hideCursor
-            && this.cursorColor === other.cursorColor
+            && this.cursorColorSingle === other.cursorColorSingle
+            && this.cursorColorPrimary === other.cursorColorPrimary
+            && this.cursorColorSecondary === other.cursorColorSecondary
             && this.themeType === other.themeType
             && Color.equals(this.backgroundColor, other.backgroundColor)
             && this.top === other.top
@@ -176,7 +182,7 @@ export class DecorationsOverviewRuler extends ViewPart {
                 this._updateSettings(true);
             }
         });
-        this._cursorPositions = [];
+        this._cursorPositions = [{ position: new Position(1, 1), color: this._settings.cursorColorSingle }];
     }
     dispose() {
         super.dispose();
@@ -215,9 +221,13 @@ export class DecorationsOverviewRuler extends ViewPart {
     onCursorStateChanged(e) {
         this._cursorPositions = [];
         for (let i = 0, len = e.selections.length; i < len; i++) {
-            this._cursorPositions[i] = e.selections[i].getPosition();
+            let color = this._settings.cursorColorSingle;
+            if (len > 1) {
+                color = i === 0 ? this._settings.cursorColorPrimary : this._settings.cursorColorSecondary;
+            }
+            this._cursorPositions.push({ position: e.selections[i].getPosition(), color });
         }
-        this._cursorPositions.sort(Position.compare);
+        this._cursorPositions.sort((a, b) => Position.compare(a.position, b.position));
         return this._markRenderingIsMaybeNeeded();
     }
     onDecorationsChanged(e) {
@@ -262,7 +272,7 @@ export class DecorationsOverviewRuler extends ViewPart {
         if (this._actualShouldRender === 1 /* ShouldRenderValue.Maybe */ && !OverviewRulerDecorationsGroup.equalsArr(this._renderedDecorations, decorations)) {
             this._actualShouldRender = 2 /* ShouldRenderValue.Needed */;
         }
-        if (this._actualShouldRender === 1 /* ShouldRenderValue.Maybe */ && !equals(this._renderedCursorPositions, this._cursorPositions, (a, b) => a.lineNumber === b.lineNumber)) {
+        if (this._actualShouldRender === 1 /* ShouldRenderValue.Maybe */ && !equals(this._renderedCursorPositions, this._cursorPositions, (a, b) => a.position.lineNumber === b.position.lineNumber && a.color === b.color)) {
             this._actualShouldRender = 2 /* ShouldRenderValue.Needed */;
         }
         if (this._actualShouldRender === 1 /* ShouldRenderValue.Maybe */) {
@@ -345,16 +355,20 @@ export class DecorationsOverviewRuler extends ViewPart {
             canvasCtx.fillRect(x[prevLane], prevY1, w[prevLane], prevY2 - prevY1);
         }
         // Draw cursors
-        if (!this._settings.hideCursor && this._settings.cursorColor) {
+        if (!this._settings.hideCursor) {
             const cursorHeight = (2 * this._settings.pixelRatio) | 0;
             const halfCursorHeight = (cursorHeight / 2) | 0;
             const cursorX = this._settings.x[7 /* OverviewRulerLane.Full */];
             const cursorW = this._settings.w[7 /* OverviewRulerLane.Full */];
-            canvasCtx.fillStyle = this._settings.cursorColor;
             let prevY1 = -100;
             let prevY2 = -100;
+            let prevColor = null;
             for (let i = 0, len = this._cursorPositions.length; i < len; i++) {
-                const cursor = this._cursorPositions[i];
+                const color = this._cursorPositions[i].color;
+                if (!color) {
+                    continue;
+                }
+                const cursor = this._cursorPositions[i].position;
                 let yCenter = (viewLayout.getVerticalOffsetForLineNumber(cursor.lineNumber) * heightRatio) | 0;
                 if (yCenter < halfCursorHeight) {
                     yCenter = halfCursorHeight;
@@ -364,9 +378,9 @@ export class DecorationsOverviewRuler extends ViewPart {
                 }
                 const y1 = yCenter - halfCursorHeight;
                 const y2 = y1 + cursorHeight;
-                if (y1 > prevY2 + 1) {
+                if (y1 > prevY2 + 1 || color !== prevColor) {
                     // flush prev
-                    if (i !== 0) {
+                    if (i !== 0 && prevColor) {
                         canvasCtx.fillRect(cursorX, prevY1, cursorW, prevY2 - prevY1);
                     }
                     prevY1 = y1;
@@ -378,8 +392,12 @@ export class DecorationsOverviewRuler extends ViewPart {
                         prevY2 = y2;
                     }
                 }
+                prevColor = color;
+                canvasCtx.fillStyle = color;
             }
-            canvasCtx.fillRect(cursorX, prevY1, cursorW, prevY2 - prevY1);
+            if (prevColor) {
+                canvasCtx.fillRect(cursorX, prevY1, cursorW, prevY2 - prevY1);
+            }
         }
         if (this._settings.renderBorder && this._settings.borderColor && this._settings.overviewRulerLanes > 0) {
             canvasCtx.beginPath();
@@ -387,8 +405,7 @@ export class DecorationsOverviewRuler extends ViewPart {
             canvasCtx.strokeStyle = this._settings.borderColor;
             canvasCtx.moveTo(0, 0);
             canvasCtx.lineTo(0, canvasHeight);
-            canvasCtx.stroke();
-            canvasCtx.moveTo(0, 0);
+            canvasCtx.moveTo(1, 0);
             canvasCtx.lineTo(canvasWidth, 0);
             canvasCtx.stroke();
         }

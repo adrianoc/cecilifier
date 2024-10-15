@@ -9,7 +9,13 @@ import { ResourceMap } from '../../../base/common/map.js';
 import { Schemas } from '../../../base/common/network.js';
 import { URI } from '../../../base/common/uri.js';
 import { MarkerSeverity } from './markers.js';
-export const unsupportedSchemas = new Set([Schemas.inMemory, Schemas.vscodeSourceControl, Schemas.walkThrough, Schemas.walkThroughSnippet]);
+export const unsupportedSchemas = new Set([
+    Schemas.inMemory,
+    Schemas.vscodeSourceControl,
+    Schemas.walkThrough,
+    Schemas.walkThroughSnippet,
+    Schemas.vscodeChatCodeBlock,
+]);
 class DoubleResourceMap {
     constructor() {
         this._byResource = new ResourceMap();
@@ -31,7 +37,7 @@ class DoubleResourceMap {
     }
     get(resource, owner) {
         const ownerMap = this._byResource.get(resource);
-        return ownerMap === null || ownerMap === void 0 ? void 0 : ownerMap.get(owner);
+        return ownerMap?.get(owner);
     }
     delete(resource, owner) {
         let removedA = false;
@@ -50,12 +56,11 @@ class DoubleResourceMap {
         return removedA && removedB;
     }
     values(key) {
-        var _a, _b, _c, _d;
         if (typeof key === 'string') {
-            return (_b = (_a = this._byOwner.get(key)) === null || _a === void 0 ? void 0 : _a.values()) !== null && _b !== void 0 ? _b : Iterable.empty();
+            return this._byOwner.get(key)?.values() ?? Iterable.empty();
         }
         if (URI.isUri(key)) {
-            return (_d = (_c = this._byResource.get(key)) === null || _c === void 0 ? void 0 : _c.values()) !== null && _d !== void 0 ? _d : Iterable.empty();
+            return this._byResource.get(key)?.values() ?? Iterable.empty();
         }
         return Iterable.map(Iterable.concat(...this._byOwner.values()), map => map[1]);
     }
@@ -266,7 +271,7 @@ export class MarkerService {
         }
         else {
             // of one resource OR owner
-            const iterable = this._data.values(resource !== null && resource !== void 0 ? resource : owner);
+            const iterable = this._data.values(resource ?? owner);
             const result = [];
             for (const markers of iterable) {
                 for (const data of markers) {

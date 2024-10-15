@@ -6,13 +6,14 @@ import * as strings from '../../../base/common/strings.js';
 import { EditOperation } from '../core/editOperation.js';
 import { Range } from '../core/range.js';
 export class TrimTrailingWhitespaceCommand {
-    constructor(selection, cursors) {
+    constructor(selection, cursors, trimInRegexesAndStrings) {
         this._selection = selection;
         this._cursors = cursors;
         this._selectionId = null;
+        this._trimInRegexesAndStrings = trimInRegexesAndStrings;
     }
     getEditOperations(model, builder) {
-        const ops = trimTrailingWhitespace(model, this._cursors);
+        const ops = trimTrailingWhitespace(model, this._cursors, this._trimInRegexesAndStrings);
         for (let i = 0, len = ops.length; i < len; i++) {
             const op = ops[i];
             builder.addEditOperation(op.range, op.text);
@@ -26,7 +27,7 @@ export class TrimTrailingWhitespaceCommand {
 /**
  * Generate commands for trimming trailing whitespace on a model and ignore lines on which cursors are sitting.
  */
-export function trimTrailingWhitespace(model, cursors) {
+export function trimTrailingWhitespace(model, cursors, trimInRegexesAndStrings) {
     // Sort cursors ascending
     cursors.sort((a, b) => {
         if (a.lineNumber === b.lineNumber) {
@@ -73,6 +74,19 @@ export function trimTrailingWhitespace(model, cursors) {
         else {
             // There is no trailing whitespace
             continue;
+        }
+        if (!trimInRegexesAndStrings) {
+            if (!model.tokenization.hasAccurateTokensForLine(lineNumber)) {
+                // We don't want to force line tokenization, as that can be expensive, but we also don't want to trim
+                // trailing whitespace in lines that are not tokenized yet, as that can be wrong and trim whitespace from
+                // lines that the user requested we don't. So we bail out if the tokens are not accurate for this line.
+                continue;
+            }
+            const lineTokens = model.tokenization.getLineTokens(lineNumber);
+            const fromColumnType = lineTokens.getStandardTokenType(lineTokens.findTokenIndexAtOffset(fromColumn));
+            if (fromColumnType === 2 /* StandardTokenType.String */ || fromColumnType === 3 /* StandardTokenType.RegEx */) {
+                continue;
+            }
         }
         fromColumn = Math.max(minEditColumn, fromColumn);
         r[rLen++] = EditOperation.delete(new Range(lineNumber, fromColumn, lineNumber, maxLineColumn));

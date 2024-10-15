@@ -84,6 +84,7 @@ export function toHexString(bufferOrValue, bitsize = 32) {
  * A SHA1 implementation that works with strings and does not allocate.
  */
 export class StringSHA1 {
+    static { this._bigBlock32 = new DataView(new ArrayBuffer(320)); } // 80 * 4 = 320
     constructor() {
         this._h0 = 0x67452301;
         this._h1 = 0xEFCDAB89;
@@ -255,4 +256,3 @@ export class StringSHA1 {
         this._h4 = (this._h4 + e) & 0xffffffff;
     }
 }
-StringSHA1._bigBlock32 = new DataView(new ArrayBuffer(320)); // 80 * 4 = 320

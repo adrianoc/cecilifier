@@ -8,6 +8,7 @@ import { registerEditorContribution } from '../../../browser/editorExtensions.js
 import { MessageController } from '../../message/browser/messageController.js';
 import * as nls from '../../../../nls.js';
 export class ReadOnlyMessageController extends Disposable {
+    static { this.ID = 'editor.contrib.readOnlyMessageController'; }
     constructor(editor) {
         super();
         this.editor = editor;
@@ -16,7 +17,7 @@ export class ReadOnlyMessageController extends Disposable {
     _onDidAttemptReadOnlyEdit() {
         const messageController = MessageController.get(this.editor);
         if (messageController && this.editor.hasModel()) {
-            let message = this.editor.getOptions().get(91 /* EditorOption.readOnlyMessage */);
+            let message = this.editor.getOptions().get(93 /* EditorOption.readOnlyMessage */);
             if (!message) {
                 if (this.editor.isSimpleWidget) {
                     message = new MarkdownString(nls.localize('editor.simple.readonly', "Cannot edit in read-only input"));
@@ -29,5 +30,4 @@ export class ReadOnlyMessageController extends Disposable {
         }
     }
 }
-ReadOnlyMessageController.ID = 'editor.contrib.readOnlyMessageController';
 registerEditorContribution(ReadOnlyMessageController.ID, ReadOnlyMessageController, 2 /* EditorContributionInstantiation.BeforeFirstInteraction */);

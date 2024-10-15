@@ -24,7 +24,9 @@ import * as nls from '../../../../nls.js';
 import { ContextKeyExpr } from '../../../../platform/contextkey/common/contextkey.js';
 import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
 import { ParameterHintsWidget } from './parameterHintsWidget.js';
-let ParameterHintsController = ParameterHintsController_1 = class ParameterHintsController extends Disposable {
+let ParameterHintsController = class ParameterHintsController extends Disposable {
+    static { ParameterHintsController_1 = this; }
+    static { this.ID = 'editor.controller.parameterHints'; }
     static get(editor) {
         return editor.getContribution(ParameterHintsController_1.ID);
     }
@@ -33,13 +35,12 @@ let ParameterHintsController = ParameterHintsController_1 = class ParameterHints
         this.editor = editor;
         this.model = this._register(new ParameterHintsModel(editor, languageFeaturesService.signatureHelpProvider));
         this._register(this.model.onChangedHints(newParameterHints => {
-            var _a;
             if (newParameterHints) {
                 this.widget.value.show();
                 this.widget.value.render(newParameterHints);
             }
             else {
-                (_a = this.widget.rawValue) === null || _a === void 0 ? void 0 : _a.hide();
+                this.widget.rawValue?.hide();
             }
         }));
         this.widget = new Lazy(() => this._register(instantiationService.createInstance(ParameterHintsWidget, this.editor, this.model)));
@@ -48,18 +49,15 @@ let ParameterHintsController = ParameterHintsController_1 = class ParameterHints
         this.model.cancel();
     }
     previous() {
-        var _a;
-        (_a = this.widget.rawValue) === null || _a === void 0 ? void 0 : _a.previous();
+        this.widget.rawValue?.previous();
     }
     next() {
-        var _a;
-        (_a = this.widget.rawValue) === null || _a === void 0 ? void 0 : _a.next();
+        this.widget.rawValue?.next();
     }
     trigger(context) {
         this.model.trigger(context, 0);
     }
 };
-ParameterHintsController.ID = 'editor.controller.parameterHints';
 ParameterHintsController = ParameterHintsController_1 = __decorate([
     __param(1, IInstantiationService),
     __param(2, ILanguageFeaturesService)
@@ -81,7 +79,7 @@ export class TriggerParameterHintsAction extends EditorAction {
     }
     run(accessor, editor) {
         const controller = ParameterHintsController.get(editor);
-        controller === null || controller === void 0 ? void 0 : controller.trigger({
+        controller?.trigger({
             triggerKind: languages.SignatureHelpTriggerKind.Invoke
         });
     }

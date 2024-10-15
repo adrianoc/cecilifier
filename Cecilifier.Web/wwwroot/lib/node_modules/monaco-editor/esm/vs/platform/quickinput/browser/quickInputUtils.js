@@ -14,7 +14,7 @@ import './media/quickInput.css';
 import { localize } from '../../../nls.js';
 const iconPathToClass = {};
 const iconClassGenerator = new IdGenerator('quick-input-button-icon-');
-export function getIconClass(iconPath) {
+function getIconClass(iconPath) {
     if (!iconPath) {
         return undefined;
     }
@@ -30,6 +30,20 @@ export function getIconClass(iconPath) {
         iconPathToClass[key] = iconClass;
     }
     return iconClass;
+}
+export function quickInputButtonToAction(button, id, run) {
+    let cssClasses = button.iconClass || getIconClass(button.iconPath);
+    if (button.alwaysVisible) {
+        cssClasses = cssClasses ? `${cssClasses} always-visible` : 'always-visible';
+    }
+    return {
+        id,
+        label: '',
+        tooltip: button.tooltip || '',
+        class: cssClasses,
+        enabled: true,
+        run
+    };
 }
 export function renderQuickInputDescription(description, container, actionHandler) {
     dom.reset(container);

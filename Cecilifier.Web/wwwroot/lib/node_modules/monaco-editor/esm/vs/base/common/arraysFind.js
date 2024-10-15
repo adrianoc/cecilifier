@@ -2,7 +2,7 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-export function findLast(array, predicate, fromIdx) {
+export function findLast(array, predicate) {
     const idx = findLastIdx(array, predicate);
     if (idx === -1) {
         return undefined;
@@ -85,6 +85,7 @@ export function findFirstIdxMonotonousOrArrLen(array, predicate, startIdx = 0, e
  * * You query this array multiple times with monotonous predicates that get weaker and weaker.
  */
 export class MonotonousArray {
+    static { this.assertInvariants = false; }
     constructor(_array) {
         this._array = _array;
         this._findLastMonotonousLastIdx = 0;
@@ -109,11 +110,10 @@ export class MonotonousArray {
         return idx === -1 ? undefined : this._array[idx];
     }
 }
-MonotonousArray.assertInvariants = false;
 /**
  * Returns the first item that is equal to or greater than every other item.
 */
-export function findFirstMaxBy(array, comparator) {
+export function findFirstMax(array, comparator) {
     if (array.length === 0) {
         return undefined;
     }
@@ -129,7 +129,7 @@ export function findFirstMaxBy(array, comparator) {
 /**
  * Returns the last item that is equal to or greater than every other item.
 */
-export function findLastMaxBy(array, comparator) {
+export function findLastMax(array, comparator) {
     if (array.length === 0) {
         return undefined;
     }
@@ -145,10 +145,10 @@ export function findLastMaxBy(array, comparator) {
 /**
  * Returns the first item that is equal to or less than every other item.
 */
-export function findFirstMinBy(array, comparator) {
-    return findFirstMaxBy(array, (a, b) => -comparator(a, b));
+export function findFirstMin(array, comparator) {
+    return findFirstMax(array, (a, b) => -comparator(a, b));
 }
-export function findMaxIdxBy(array, comparator) {
+export function findMaxIdx(array, comparator) {
     if (array.length === 0) {
         return -1;
     }

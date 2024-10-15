@@ -117,11 +117,10 @@ export class Scrollable extends Disposable {
         return this._state;
     }
     setScrollDimensions(dimensions, useRawScrollPositions) {
-        var _a;
         const newState = this._state.withScrollDimensions(dimensions, useRawScrollPositions);
         this._setState(newState, Boolean(this._smoothScrolling));
         // Validate outstanding animated scroll position target
-        (_a = this._smoothScrolling) === null || _a === void 0 ? void 0 : _a.acceptScrollDimensions(this._state);
+        this._smoothScrolling?.acceptScrollDimensions(this._state);
     }
     /**
      * Returns the final scroll position that the instance will have once the smooth scroll animation concludes.

@@ -24,6 +24,7 @@ import { getCodeActions, quickFixCommandId } from '../../codeAction/browser/code
 import { CodeActionController } from '../../codeAction/browser/codeActionController.js';
 import { CodeActionKind, CodeActionTriggerSource } from '../../codeAction/common/types.js';
 import { MarkerController, NextMarkerAction } from '../../gotoError/browser/gotoError.js';
+import { RenderedHoverParts } from './hoverTypes.js';
 import * as nls from '../../../../nls.js';
 import { IMarkerData, MarkerSeverity } from '../../../../platform/markers/common/markers.js';
 import { IOpenerService } from '../../../../platform/opener/common/opener.js';
@@ -77,15 +78,21 @@ let MarkerHoverParticipant = class MarkerHoverParticipant {
     }
     renderHoverParts(context, hoverParts) {
         if (!hoverParts.length) {
-            return Disposable.None;
+            return new RenderedHoverParts([]);
         }
         const disposables = new DisposableStore();
-        hoverParts.forEach(msg => context.fragment.appendChild(this.renderMarkerHover(msg, disposables)));
+        const renderedHoverParts = [];
+        hoverParts.forEach(hoverPart => {
+            const renderedMarkerHover = this._renderMarkerHover(hoverPart);
+            context.fragment.appendChild(renderedMarkerHover.hoverElement);
+            renderedHoverParts.push(renderedMarkerHover);
+        });
         const markerHoverForStatusbar = hoverParts.length === 1 ? hoverParts[0] : hoverParts.sort((a, b) => MarkerSeverity.compare(a.marker.severity, b.marker.severity))[0];
         this.renderMarkerStatusbar(context, markerHoverForStatusbar, disposables);
-        return disposables;
+        return new RenderedHoverParts(renderedHoverParts);
     }
-    renderMarkerHover(markerHover, disposables) {
+    _renderMarkerHover(markerHover) {
+        const disposables = new DisposableStore();
         const hoverElement = $('div.hover-row');
         const markerElement = dom.append(hoverElement, $('div.marker.hover-contents'));
         const { source, message, code, relatedInformation } = markerHover.marker;
@@ -132,9 +139,10 @@ let MarkerHoverParticipant = class MarkerHoverParticipant {
                     e.stopPropagation();
                     e.preventDefault();
                     if (this._openerService) {
+                        const editorOptions = { selection: { startLineNumber, startColumn } };
                         this._openerService.open(resource, {
                             fromUserGesture: true,
-                            editorOptions: { selection: { startLineNumber, startColumn } }
+                            editorOptions
                         }).catch(onUnexpectedError);
                     }
                 }));
@@ -143,22 +151,29 @@ let MarkerHoverParticipant = class MarkerHoverParticipant {
                 this._editor.applyFontInfo(messageElement);
             }
         }
-        return hoverElement;
+        const renderedHoverPart = {
+            hoverPart: markerHover,
+            hoverElement,
+            dispose: () => disposables.dispose()
+        };
+        return renderedHoverPart;
     }
     renderMarkerStatusbar(context, markerHover, disposables) {
         if (markerHover.marker.severity === MarkerSeverity.Error || markerHover.marker.severity === MarkerSeverity.Warning || markerHover.marker.severity === MarkerSeverity.Info) {
-            context.statusBar.addAction({
-                label: nls.localize('view problem', "View Problem"),
-                commandId: NextMarkerAction.ID,
-                run: () => {
-                    var _a;
-                    context.hide();
-                    (_a = MarkerController.get(this._editor)) === null || _a === void 0 ? void 0 : _a.showAtMarker(markerHover.marker);
-                    this._editor.focus();
-                }
-            });
+            const markerController = MarkerController.get(this._editor);
+            if (markerController) {
+                context.statusBar.addAction({
+                    label: nls.localize('view problem', "View Problem"),
+                    commandId: NextMarkerAction.ID,
+                    run: () => {
+                        context.hide();
+                        markerController.showAtMarker(markerHover.marker);
+                        this._editor.focus();
+                    }
+                });
+            }
         }
-        if (!this._editor.getOption(90 /* EditorOption.readOnly */)) {
+        if (!this._editor.getOption(92 /* EditorOption.readOnly */)) {
             const quickfixPlaceholderElement = context.statusBar.append($('div'));
             if (this.recentMarkerCodeActionsInfo) {
                 if (IMarkerData.makeKey(this.recentMarkerCodeActionsInfo.marker) === IMarkerData.makeKey(markerHover.marker)) {
@@ -170,7 +185,7 @@ let MarkerHoverParticipant = class MarkerHoverParticipant {
                     this.recentMarkerCodeActionsInfo = undefined;
                 }
             }
-            const updatePlaceholderDisposable = this.recentMarkerCodeActionsInfo && !this.recentMarkerCodeActionsInfo.hasCodeActions ? Disposable.None : disposables.add(disposableTimeout(() => quickfixPlaceholderElement.textContent = nls.localize('checkingForQuickFixes', "Checking for quick fixes..."), 200));
+            const updatePlaceholderDisposable = this.recentMarkerCodeActionsInfo && !this.recentMarkerCodeActionsInfo.hasCodeActions ? Disposable.None : disposableTimeout(() => quickfixPlaceholderElement.textContent = nls.localize('checkingForQuickFixes', "Checking for quick fixes..."), 200, disposables);
             if (!quickfixPlaceholderElement.textContent) {
                 // Have some content in here to avoid flickering
                 quickfixPlaceholderElement.textContent = String.fromCharCode(0xA0); // &nbsp;
@@ -202,7 +217,7 @@ let MarkerHoverParticipant = class MarkerHoverParticipant {
                         // Hide the hover pre-emptively, otherwise the editor can close the code actions
                         // context menu as well when using keyboard navigation
                         context.hide();
-                        controller === null || controller === void 0 ? void 0 : controller.showCodeActions(markerCodeActionTrigger, actions, {
+                        controller?.showCodeActions(markerCodeActionTrigger, actions, {
                             x: elementPosition.left,
                             y: elementPosition.top,
                             width: elementPosition.width,

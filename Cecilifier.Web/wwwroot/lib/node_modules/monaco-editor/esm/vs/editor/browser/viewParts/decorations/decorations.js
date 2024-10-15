@@ -11,7 +11,6 @@ export class DecorationsOverlay extends DynamicViewOverlay {
         super();
         this._context = context;
         const options = this._context.configuration.options;
-        this._lineHeight = options.get(66 /* EditorOption.lineHeight */);
         this._typicalHalfwidthCharacterWidth = options.get(50 /* EditorOption.fontInfo */).typicalHalfwidthCharacterWidth;
         this._renderResult = null;
         this._context.addEventHandler(this);
@@ -24,7 +23,6 @@ export class DecorationsOverlay extends DynamicViewOverlay {
     // --- begin event handlers
     onConfigurationChanged(e) {
         const options = this._context.configuration.options;
-        this._lineHeight = options.get(66 /* EditorOption.lineHeight */);
         this._typicalHalfwidthCharacterWidth = options.get(50 /* EditorOption.fontInfo */).typicalHalfwidthCharacterWidth;
         return true;
     }
@@ -92,7 +90,6 @@ export class DecorationsOverlay extends DynamicViewOverlay {
         this._renderResult = output;
     }
     _renderWholeLineDecorations(ctx, decorations, output) {
-        const lineHeight = String(this._lineHeight);
         const visibleStartLineNumber = ctx.visibleRange.startLineNumber;
         const visibleEndLineNumber = ctx.visibleRange.endLineNumber;
         for (let i = 0, lenI = decorations.length; i < lenI; i++) {
@@ -102,9 +99,7 @@ export class DecorationsOverlay extends DynamicViewOverlay {
             }
             const decorationOutput = ('<div class="cdr '
                 + d.options.className
-                + '" style="left:0;width:100%;height:'
-                + lineHeight
-                + 'px;"></div>');
+                + '" style="left:0;width:100%;"></div>');
             const startLineNumber = Math.max(d.range.startLineNumber, visibleStartLineNumber);
             const endLineNumber = Math.min(d.range.endLineNumber, visibleEndLineNumber);
             for (let j = startLineNumber; j <= endLineNumber; j++) {
@@ -114,8 +109,6 @@ export class DecorationsOverlay extends DynamicViewOverlay {
         }
     }
     _renderNormalDecorations(ctx, decorations, output) {
-        var _a;
-        const lineHeight = String(this._lineHeight);
         const visibleStartLineNumber = ctx.visibleRange.startLineNumber;
         let prevClassName = null;
         let prevShowIfCollapsed = false;
@@ -139,18 +132,18 @@ export class DecorationsOverlay extends DynamicViewOverlay {
             }
             // flush previous decoration
             if (prevClassName !== null) {
-                this._renderNormalDecoration(ctx, prevRange, prevClassName, prevShouldFillLineOnLineBreak, prevShowIfCollapsed, lineHeight, visibleStartLineNumber, output);
+                this._renderNormalDecoration(ctx, prevRange, prevClassName, prevShouldFillLineOnLineBreak, prevShowIfCollapsed, visibleStartLineNumber, output);
             }
             prevClassName = className;
             prevShowIfCollapsed = showIfCollapsed;
             prevRange = range;
-            prevShouldFillLineOnLineBreak = (_a = d.options.shouldFillLineOnLineBreak) !== null && _a !== void 0 ? _a : false;
+            prevShouldFillLineOnLineBreak = d.options.shouldFillLineOnLineBreak ?? false;
         }
         if (prevClassName !== null) {
-            this._renderNormalDecoration(ctx, prevRange, prevClassName, prevShouldFillLineOnLineBreak, prevShowIfCollapsed, lineHeight, visibleStartLineNumber, output);
+            this._renderNormalDecoration(ctx, prevRange, prevClassName, prevShouldFillLineOnLineBreak, prevShowIfCollapsed, visibleStartLineNumber, output);
         }
     }
-    _renderNormalDecoration(ctx, range, className, shouldFillLineOnLineBreak, showIfCollapsed, lineHeight, visibleStartLineNumber, output) {
+    _renderNormalDecoration(ctx, range, className, shouldFillLineOnLineBreak, showIfCollapsed, visibleStartLineNumber, output) {
         const linesVisibleRanges = ctx.linesVisibleRangesForRange(range, /*TODO@Alex*/ className === 'findMatch');
         if (!linesVisibleRanges) {
             return;
@@ -178,11 +171,11 @@ export class DecorationsOverlay extends DynamicViewOverlay {
                     + className
                     + '" style="left:'
                     + String(visibleRange.left)
+                    + 'px;width:'
                     + (expandToLeft ?
-                        'px;width:100%;height:' :
-                        ('px;width:' + String(visibleRange.width) + 'px;height:'))
-                    + lineHeight
-                    + 'px;"></div>');
+                        '100%;' :
+                        (String(visibleRange.width) + 'px;'))
+                    + '"></div>');
                 output[lineIndex] += decorationOutput;
             }
         }

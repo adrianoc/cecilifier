@@ -28,6 +28,7 @@ let AccessibilityService = class AccessibilityService extends Disposable {
         this._accessibilitySupport = 0 /* AccessibilitySupport.Unknown */;
         this._onDidChangeScreenReaderOptimized = new Emitter();
         this._onDidChangeReducedMotion = new Emitter();
+        this._onDidChangeLinkUnderline = new Emitter();
         this._accessibilityModeEnabledContext = CONTEXT_ACCESSIBILITY_MODE_ENABLED.bindTo(this._contextKeyService);
         const updateContextKey = () => this._accessibilityModeEnabledContext.set(this.isScreenReaderOptimized());
         this._register(this._configurationService.onDidChangeConfiguration(e => {
@@ -45,7 +46,9 @@ let AccessibilityService = class AccessibilityService extends Disposable {
         const reduceMotionMatcher = mainWindow.matchMedia(`(prefers-reduced-motion: reduce)`);
         this._systemMotionReduced = reduceMotionMatcher.matches;
         this._configMotionReduced = this._configurationService.getValue('workbench.reduceMotion');
+        this._linkUnderlinesEnabled = this._configurationService.getValue('accessibility.underlineLinks');
         this.initReducedMotionListeners(reduceMotionMatcher);
+        this.initLinkUnderlineListeners();
     }
     initReducedMotionListeners(reduceMotionMatcher) {
         this._register(addDisposableListener(reduceMotionMatcher, 'change', () => {
@@ -61,6 +64,24 @@ let AccessibilityService = class AccessibilityService extends Disposable {
         };
         updateRootClasses();
         this._register(this.onDidChangeReducedMotion(() => updateRootClasses()));
+    }
+    initLinkUnderlineListeners() {
+        this._register(this._configurationService.onDidChangeConfiguration(e => {
+            if (e.affectsConfiguration('accessibility.underlineLinks')) {
+                const linkUnderlinesEnabled = this._configurationService.getValue('accessibility.underlineLinks');
+                this._linkUnderlinesEnabled = linkUnderlinesEnabled;
+                this._onDidChangeLinkUnderline.fire();
+            }
+        }));
+        const updateLinkUnderlineClasses = () => {
+            const underlineLinks = this._linkUnderlinesEnabled;
+            this._layoutService.mainContainer.classList.toggle('underline-links', underlineLinks);
+        };
+        updateLinkUnderlineClasses();
+        this._register(this.onDidChangeLinkUnderlines(() => updateLinkUnderlineClasses()));
+    }
+    onDidChangeLinkUnderlines(listener) {
+        return this._onDidChangeLinkUnderline.event(listener);
     }
     get onDidChangeScreenReaderOptimized() {
         return this._onDidChangeScreenReaderOptimized.event;

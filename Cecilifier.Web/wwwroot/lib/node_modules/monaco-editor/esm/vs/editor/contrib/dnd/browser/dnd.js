@@ -20,6 +20,8 @@ function hasTriggerModifier(e) {
     }
 }
 export class DragAndDropController extends Disposable {
+    static { this.ID = 'editor.contrib.dragAndDrop'; }
+    static { this.TRIGGER_KEY_VALUE = isMacintosh ? 6 /* KeyCode.Alt */ : 5 /* KeyCode.Ctrl */; }
     constructor(editor) {
         super();
         this._editor = editor;
@@ -159,6 +161,10 @@ export class DragAndDropController extends Disposable {
         this._dragSelection = null;
         this._mouseDown = false;
     }
+    static { this._DECORATION_OPTIONS = ModelDecorationOptions.register({
+        description: 'dnd-target',
+        className: 'dnd-target'
+    }); }
     showAt(position) {
         this._dndDecorationIds.set([{
                 range: new Range(position.lineNumber, position.column, position.lineNumber, position.column),
@@ -186,10 +192,4 @@ export class DragAndDropController extends Disposable {
         super.dispose();
     }
 }
-DragAndDropController.ID = 'editor.contrib.dragAndDrop';
-DragAndDropController.TRIGGER_KEY_VALUE = isMacintosh ? 6 /* KeyCode.Alt */ : 5 /* KeyCode.Ctrl */;
-DragAndDropController._DECORATION_OPTIONS = ModelDecorationOptions.register({
-    description: 'dnd-target',
-    className: 'dnd-target'
-});
 registerEditorContribution(DragAndDropController.ID, DragAndDropController, 2 /* EditorContributionInstantiation.BeforeFirstInteraction */);

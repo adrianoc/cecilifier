@@ -175,7 +175,7 @@ export class DeleteOperations {
                         endLineNumber = position.lineNumber + 1;
                         endColumn = 1;
                     }
-                    else if (position.lineNumber > 1 && (lastCutRange === null || lastCutRange === void 0 ? void 0 : lastCutRange.endLineNumber) !== position.lineNumber) {
+                    else if (position.lineNumber > 1 && lastCutRange?.endLineNumber !== position.lineNumber) {
                         // Cutting the last line & there are more than 1 lines in the model & a previous cut operation does not touch the current cut operation
                         startLineNumber = position.lineNumber - 1;
                         startColumn = model.getLineMaxColumn(position.lineNumber - 1);

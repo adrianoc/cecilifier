@@ -38,6 +38,7 @@ export class LanguageIdCodec {
     }
 }
 export class LanguagesRegistry extends Disposable {
+    static { this.instanceCount = 0; }
     constructor(useModesRegistry = true, warnOnOverwrite = false) {
         super();
         this._onDidChange = this._register(new Emitter());
@@ -233,4 +234,3 @@ export class LanguagesRegistry extends Disposable {
         return getLanguageIds(resource, firstLine);
     }
 }
-LanguagesRegistry.instanceCount = 0;

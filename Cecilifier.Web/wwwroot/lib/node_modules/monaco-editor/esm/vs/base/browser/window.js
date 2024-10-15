@@ -12,9 +12,3 @@ export function ensureCodeWindow(targetWindow, fallbackWindowId) {
 }
 // eslint-disable-next-line no-restricted-globals
 export const mainWindow = window;
-/**
- * @deprecated to support multi-window scenarios, use `DOM.mainWindow`
- * if you target the main global window or use helpers such as `DOM.getWindow()`
- * or `DOM.getActiveWindow()` to obtain the correct window for the context you are in.
- */
-export const $window = mainWindow;

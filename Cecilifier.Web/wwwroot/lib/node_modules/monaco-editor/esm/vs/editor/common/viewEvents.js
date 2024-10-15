@@ -36,11 +36,13 @@ export class ViewDecorationsChangedEvent {
             this.affectsMinimap = source.affectsMinimap;
             this.affectsOverviewRuler = source.affectsOverviewRuler;
             this.affectsGlyphMargin = source.affectsGlyphMargin;
+            this.affectsLineNumber = source.affectsLineNumber;
         }
         else {
             this.affectsMinimap = true;
             this.affectsOverviewRuler = true;
             this.affectsGlyphMargin = true;
+            this.affectsLineNumber = true;
         }
     }
 }

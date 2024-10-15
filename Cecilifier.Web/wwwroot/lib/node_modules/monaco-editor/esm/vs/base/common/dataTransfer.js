@@ -42,8 +42,7 @@ export class VSDataTransfer {
         return matchesMimeType_normalized(normalizeMimeType(pattern), mimes);
     }
     get(mimeType) {
-        var _a;
-        return (_a = this._entries.get(this.toKey(mimeType))) === null || _a === void 0 ? void 0 : _a[0];
+        return this._entries.get(this.toKey(mimeType))?.[0];
     }
     /**
      * Add a new entry to this data transfer.

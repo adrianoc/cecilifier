@@ -6,6 +6,7 @@ export const emptyProgressRunner = Object.freeze({
     done() { }
 });
 export class Progress {
+    static { this.None = Object.freeze({ report() { } }); }
     constructor(callback) {
         this.callback = callback;
     }
@@ -14,5 +15,4 @@ export class Progress {
         this.callback(this._value);
     }
 }
-Progress.None = Object.freeze({ report() { } });
 export const IEditorProgressService = createDecorator('editorProgressService');

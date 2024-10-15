@@ -17,7 +17,7 @@ import { Range } from '../../../common/core/range.js';
 import { Selection } from '../../../common/core/selection.js';
 import { IndentAction } from '../../../common/languages/languageConfiguration.js';
 import { ILanguageConfigurationService } from '../../../common/languages/languageConfigurationRegistry.js';
-import * as indentUtils from '../../indentation/browser/indentUtils.js';
+import * as indentUtils from '../../indentation/common/indentUtils.js';
 import { getGoodIndentForLine, getIndentMetadata } from '../../../common/languages/autoIndent.js';
 import { getEnterAction } from '../../../common/languages/enterAction.js';
 let MoveLinesCommand = class MoveLinesCommand {
@@ -30,6 +30,12 @@ let MoveLinesCommand = class MoveLinesCommand {
         this._moveEndLineSelectionShrink = false;
     }
     getEditOperations(model, builder) {
+        const getLanguageId = () => {
+            return model.getLanguageId();
+        };
+        const getLanguageIdAtPosition = (lineNumber, column) => {
+            return model.getLanguageIdAtPosition(lineNumber, column);
+        };
         const modelLineCount = model.getLineCount();
         if (this._isMovingDown && this._selection.endLineNumber === modelLineCount) {
             this._selectionId = builder.trackSelection(this._selection);
@@ -47,20 +53,6 @@ let MoveLinesCommand = class MoveLinesCommand {
         }
         const { tabSize, indentSize, insertSpaces } = model.getOptions();
         const indentConverter = this.buildIndentConverter(tabSize, indentSize, insertSpaces);
-        const virtualModel = {
-            tokenization: {
-                getLineTokens: (lineNumber) => {
-                    return model.tokenization.getLineTokens(lineNumber);
-                },
-                getLanguageId: () => {
-                    return model.getLanguageId();
-                },
-                getLanguageIdAtPosition: (lineNumber, column) => {
-                    return model.getLanguageIdAtPosition(lineNumber, column);
-                },
-            },
-            getLineContent: null,
-        };
         if (s.startLineNumber === s.endLineNumber && model.getLineMaxColumn(s.startLineNumber) === 1) {
             // Current line is empty
             const lineNumber = s.startLineNumber;
@@ -99,13 +91,27 @@ let MoveLinesCommand = class MoveLinesCommand {
                     }
                     else {
                         // no enter rule matches, let's check indentatin rules then.
-                        virtualModel.getLineContent = (lineNumber) => {
-                            if (lineNumber === s.startLineNumber) {
-                                return model.getLineContent(movingLineNumber);
-                            }
-                            else {
-                                return model.getLineContent(lineNumber);
-                            }
+                        const virtualModel = {
+                            tokenization: {
+                                getLineTokens: (lineNumber) => {
+                                    if (lineNumber === s.startLineNumber) {
+                                        return model.tokenization.getLineTokens(movingLineNumber);
+                                    }
+                                    else {
+                                        return model.tokenization.getLineTokens(lineNumber);
+                                    }
+                                },
+                                getLanguageId,
+                                getLanguageIdAtPosition,
+                            },
+                            getLineContent: (lineNumber) => {
+                                if (lineNumber === s.startLineNumber) {
+                                    return model.getLineContent(movingLineNumber);
+                                }
+                                else {
+                                    return model.getLineContent(lineNumber);
+                                }
+                            },
                         };
                         const indentOfMovingLine = getGoodIndentForLine(this._autoIndent, virtualModel, model.getLanguageIdAtPosition(movingLineNumber, 1), s.startLineNumber, indentConverter, this._languageConfigurationService);
                         if (indentOfMovingLine !== null) {
@@ -130,16 +136,34 @@ let MoveLinesCommand = class MoveLinesCommand {
                     }
                     else {
                         // it doesn't match onEnter rules, let's check indentation rules then.
-                        virtualModel.getLineContent = (lineNumber) => {
-                            if (lineNumber === s.startLineNumber) {
-                                return insertingText;
-                            }
-                            else if (lineNumber >= s.startLineNumber + 1 && lineNumber <= s.endLineNumber + 1) {
-                                return model.getLineContent(lineNumber - 1);
-                            }
-                            else {
-                                return model.getLineContent(lineNumber);
-                            }
+                        const virtualModel = {
+                            tokenization: {
+                                getLineTokens: (lineNumber) => {
+                                    if (lineNumber === s.startLineNumber) {
+                                        // TODO@aiday-mar: the tokens here don't correspond exactly to the corresponding content (after indentation adjustment), have to fix this.
+                                        return model.tokenization.getLineTokens(movingLineNumber);
+                                    }
+                                    else if (lineNumber >= s.startLineNumber + 1 && lineNumber <= s.endLineNumber + 1) {
+                                        return model.tokenization.getLineTokens(lineNumber - 1);
+                                    }
+                                    else {
+                                        return model.tokenization.getLineTokens(lineNumber);
+                                    }
+                                },
+                                getLanguageId,
+                                getLanguageIdAtPosition,
+                            },
+                            getLineContent: (lineNumber) => {
+                                if (lineNumber === s.startLineNumber) {
+                                    return insertingText;
+                                }
+                                else if (lineNumber >= s.startLineNumber + 1 && lineNumber <= s.endLineNumber + 1) {
+                                    return model.getLineContent(lineNumber - 1);
+                                }
+                                else {
+                                    return model.getLineContent(lineNumber);
+                                }
+                            },
                         };
                         const newIndentatOfMovingBlock = getGoodIndentForLine(this._autoIndent, virtualModel, model.getLanguageIdAtPosition(movingLineNumber, 1), s.startLineNumber + 1, indentConverter, this._languageConfigurationService);
                         if (newIndentatOfMovingBlock !== null) {
@@ -166,13 +190,27 @@ let MoveLinesCommand = class MoveLinesCommand {
                 // Insert line that needs to be moved after
                 builder.addEditOperation(new Range(s.endLineNumber, model.getLineMaxColumn(s.endLineNumber), s.endLineNumber, model.getLineMaxColumn(s.endLineNumber)), '\n' + movingLineText);
                 if (this.shouldAutoIndent(model, s)) {
-                    virtualModel.getLineContent = (lineNumber) => {
-                        if (lineNumber === movingLineNumber) {
-                            return model.getLineContent(s.startLineNumber);
-                        }
-                        else {
-                            return model.getLineContent(lineNumber);
-                        }
+                    const virtualModel = {
+                        tokenization: {
+                            getLineTokens: (lineNumber) => {
+                                if (lineNumber === movingLineNumber) {
+                                    return model.tokenization.getLineTokens(s.startLineNumber);
+                                }
+                                else {
+                                    return model.tokenization.getLineTokens(lineNumber);
+                                }
+                            },
+                            getLanguageId,
+                            getLanguageIdAtPosition,
+                        },
+                        getLineContent: (lineNumber) => {
+                            if (lineNumber === movingLineNumber) {
+                                return model.getLineContent(s.startLineNumber);
+                            }
+                            else {
+                                return model.getLineContent(lineNumber);
+                            }
+                        },
                     };
                     const ret = this.matchEnterRule(model, indentConverter, tabSize, s.startLineNumber, s.startLineNumber - 2);
                     // check if s.startLineNumber - 2 matches onEnter rules, if so adjust the moving block by onEnter rules.

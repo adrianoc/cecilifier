@@ -28,6 +28,10 @@ exports.features = [
     "entry": "vs/editor/contrib/codeAction/browser/codeActionContributions"
   },
   {
+    "label": "codeEditor",
+    "entry": "vs/editor/browser/widget/codeEditor/codeEditorWidget"
+  },
+  {
     "label": "codelens",
     "entry": "vs/editor/contrib/codelens/browser/codelensController"
   },
@@ -53,6 +57,10 @@ exports.features = [
   {
     "label": "diffEditor",
     "entry": "vs/editor/browser/widget/diffEditor/diffEditor.contribution"
+  },
+  {
+    "label": "diffEditorBreadcrumbs",
+    "entry": "vs/editor/contrib/diffEditorBreadcrumbs/browser/contribution"
   },
   {
     "label": "dnd",
@@ -102,7 +110,7 @@ exports.features = [
   },
   {
     "label": "hover",
-    "entry": "vs/editor/contrib/hover/browser/hover"
+    "entry": "vs/editor/contrib/hover/browser/hoverContribution"
   },
   {
     "label": "iPadShowKeyboard",
@@ -123,6 +131,14 @@ exports.features = [
   {
     "label": "inlineCompletions",
     "entry": "vs/editor/contrib/inlineCompletions/browser/inlineCompletions.contribution"
+  },
+  {
+    "label": "inlineEdit",
+    "entry": "vs/editor/contrib/inlineEdit/browser/inlineEdit.contribution"
+  },
+  {
+    "label": "inlineEdits",
+    "entry": "vs/editor/contrib/inlineEdits/browser/inlineEdits.contribution"
   },
   {
     "label": "inlineProgress",
@@ -161,6 +177,10 @@ exports.features = [
     "entry": "vs/editor/contrib/parameterHints/browser/parameterHints"
   },
   {
+    "label": "placeholderText",
+    "entry": "vs/editor/contrib/placeholderText/browser/placeholderText.contribution"
+  },
+  {
     "label": "quickCommand",
     "entry": "vs/editor/standalone/browser/quickAccess/standaloneCommandsQuickAccess"
   },
@@ -183,6 +203,10 @@ exports.features = [
   {
     "label": "rename",
     "entry": "vs/editor/contrib/rename/browser/rename"
+  },
+  {
+    "label": "sectionHeaders",
+    "entry": "vs/editor/contrib/sectionHeaders/browser/sectionHeaders"
   },
   {
     "label": "semanticTokens",
@@ -576,6 +600,10 @@ exports.languages = [
       "id": "vs/language/typescript/tsWorker",
       "entry": "vs/language/typescript/ts.worker"
     }
+  },
+  {
+    "label": "typespec",
+    "entry": "vs/basic-languages/typespec/typespec.contribution"
   },
   {
     "label": "vb",

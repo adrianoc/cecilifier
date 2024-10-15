@@ -199,7 +199,7 @@ export class StandaloneThemeService extends Disposable {
             this._codiconCSS = iconsStyleSheet.getCSS();
             this._updateCSS();
         }));
-        addMatchMediaChangeListener('(forced-colors: active)', () => {
+        addMatchMediaChangeListener(mainWindow, '(forced-colors: active)', () => {
             this._onOSSchemeChanged();
         });
     }

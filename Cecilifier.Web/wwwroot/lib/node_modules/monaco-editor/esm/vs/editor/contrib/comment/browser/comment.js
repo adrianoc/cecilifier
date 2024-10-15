@@ -45,7 +45,7 @@ class CommentLineAction extends EditorAction {
             }
         }
         for (const selection of selections) {
-            commands.push(new LineCommentCommand(languageConfigurationService, selection.selection, modelOptions.tabSize, this._type, commentsOptions.insertSpace, commentsOptions.ignoreEmptyLines, selection.ignoreFirstLine));
+            commands.push(new LineCommentCommand(languageConfigurationService, selection.selection, modelOptions.indentSize, this._type, commentsOptions.insertSpace, commentsOptions.ignoreEmptyLines, selection.ignoreFirstLine));
         }
         editor.pushUndoStop();
         editor.executeCommands(this.id, commands);

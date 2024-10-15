@@ -79,9 +79,8 @@ let StringRepresentationProvider = class StringRepresentationProvider {
         this._keybindingService = _keybindingService;
     }
     getKeyboardNavigationLabel(element) {
-        var _a;
         if (element instanceof OneReference) {
-            const parts = (_a = element.parent.getPreview(element)) === null || _a === void 0 ? void 0 : _a.preview(element.range);
+            const parts = element.parent.getPreview(element)?.preview(element.range);
             if (parts) {
                 return parts.value;
             }
@@ -126,7 +125,9 @@ let FileReferencesTemplate = class FileReferencesTemplate extends Disposable {
 FileReferencesTemplate = __decorate([
     __param(1, ILabelService)
 ], FileReferencesTemplate);
-let FileReferencesRenderer = FileReferencesRenderer_1 = class FileReferencesRenderer {
+let FileReferencesRenderer = class FileReferencesRenderer {
+    static { FileReferencesRenderer_1 = this; }
+    static { this.id = 'FileReferencesRenderer'; }
     constructor(_instantiationService) {
         this._instantiationService = _instantiationService;
         this.templateId = FileReferencesRenderer_1.id;
@@ -141,20 +142,19 @@ let FileReferencesRenderer = FileReferencesRenderer_1 = class FileReferencesRend
         templateData.dispose();
     }
 };
-FileReferencesRenderer.id = 'FileReferencesRenderer';
 FileReferencesRenderer = FileReferencesRenderer_1 = __decorate([
     __param(0, IInstantiationService)
 ], FileReferencesRenderer);
 export { FileReferencesRenderer };
 //#endregion
 //#region render: Reference
-class OneReferenceTemplate {
+class OneReferenceTemplate extends Disposable {
     constructor(container) {
-        this.label = new HighlightedLabel(container);
+        super();
+        this.label = this._register(new HighlightedLabel(container));
     }
     set(element, score) {
-        var _a;
-        const preview = (_a = element.parent.getPreview(element)) === null || _a === void 0 ? void 0 : _a.preview(element.range);
+        const preview = element.parent.getPreview(element)?.preview(element.range);
         if (!preview || !preview.value) {
             // this means we FAILED to resolve the document or the value is the empty string
             this.label.set(`${basename(element.uri)}:${element.range.startLineNumber + 1}:${element.range.startColumn + 1}`);
@@ -178,16 +178,17 @@ export class OneReferenceRenderer {
     constructor() {
         this.templateId = OneReferenceRenderer.id;
     }
+    static { this.id = 'OneReferenceRenderer'; }
     renderTemplate(container) {
         return new OneReferenceTemplate(container);
     }
     renderElement(node, index, templateData) {
         templateData.set(node.element, node.filterData);
     }
-    disposeTemplate() {
+    disposeTemplate(templateData) {
+        templateData.dispose();
     }
 }
-OneReferenceRenderer.id = 'OneReferenceRenderer';
 //#endregion
 export class AccessibilityProvider {
     getWidgetAriaLabel() {

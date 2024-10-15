@@ -20,12 +20,15 @@ import { DisposableStore, MutableDisposable } from '../../../../base/common/life
 import './messageController.css';
 import { EditorCommand, registerEditorCommand, registerEditorContribution } from '../../../browser/editorExtensions.js';
 import { Range } from '../../../common/core/range.js';
-import { openLinkFromMarkdown } from '../../markdownRenderer/browser/markdownRenderer.js';
+import { openLinkFromMarkdown } from '../../../browser/widget/markdownRenderer/browser/markdownRenderer.js';
 import * as nls from '../../../../nls.js';
 import { IContextKeyService, RawContextKey } from '../../../../platform/contextkey/common/contextkey.js';
 import { IOpenerService } from '../../../../platform/opener/common/opener.js';
 import * as dom from '../../../../base/browser/dom.js';
-let MessageController = MessageController_1 = class MessageController {
+let MessageController = class MessageController {
+    static { MessageController_1 = this; }
+    static { this.ID = 'editor.contrib.messageController'; }
+    static { this.MESSAGE_VISIBLE = new RawContextKey('messageVisible', false, nls.localize('messageVisible', 'Whether the editor is currently showing an inline message')); }
     static get(editor) {
         return editor.getContribution(MessageController_1.ID);
     }
@@ -38,8 +41,7 @@ let MessageController = MessageController_1 = class MessageController {
         this._visible = MessageController_1.MESSAGE_VISIBLE.bindTo(contextKeyService);
     }
     dispose() {
-        var _a;
-        (_a = this._message) === null || _a === void 0 ? void 0 : _a.dispose();
+        this._message?.dispose();
         this._messageListeners.dispose();
         this._messageWidget.dispose();
         this._visible.reset();
@@ -51,7 +53,10 @@ let MessageController = MessageController_1 = class MessageController {
         this._messageListeners.clear();
         this._message = isMarkdownString(message) ? renderMarkdown(message, {
             actionHandler: {
-                callback: (url) => openLinkFromMarkdown(this._openerService, url, isMarkdownString(message) ? message.isTrusted : undefined),
+                callback: (url) => {
+                    this.closeMessage();
+                    openLinkFromMarkdown(this._openerService, url, isMarkdownString(message) ? message.isTrusted : undefined);
+                },
                 disposables: this._messageListeners
             },
         }) : undefined;
@@ -96,8 +101,6 @@ let MessageController = MessageController_1 = class MessageController {
         }
     }
 };
-MessageController.ID = 'editor.contrib.messageController';
-MessageController.MESSAGE_VISIBLE = new RawContextKey('messageVisible', false, nls.localize('messageVisible', 'Whether the editor is currently showing an inline message'));
 MessageController = MessageController_1 = __decorate([
     __param(1, IContextKeyService),
     __param(2, IOpenerService)

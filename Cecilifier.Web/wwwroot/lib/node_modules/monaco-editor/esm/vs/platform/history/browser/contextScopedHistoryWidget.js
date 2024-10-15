@@ -90,7 +90,7 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
     primary: 16 /* KeyCode.UpArrow */,
     secondary: [512 /* KeyMod.Alt */ | 16 /* KeyCode.UpArrow */],
     handler: (accessor) => {
-        lastFocusedWidget === null || lastFocusedWidget === void 0 ? void 0 : lastFocusedWidget.showPreviousValue();
+        lastFocusedWidget?.showPreviousValue();
     }
 });
 KeybindingsRegistry.registerCommandAndKeybindingRule({
@@ -100,6 +100,6 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
     primary: 18 /* KeyCode.DownArrow */,
     secondary: [512 /* KeyMod.Alt */ | 18 /* KeyCode.DownArrow */],
     handler: (accessor) => {
-        lastFocusedWidget === null || lastFocusedWidget === void 0 ? void 0 : lastFocusedWidget.showNextValue();
+        lastFocusedWidget?.showNextValue();
     }
 });

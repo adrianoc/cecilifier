@@ -15,6 +15,10 @@ export class StopWatch {
     stop() {
         this._stopTime = this._now();
     }
+    reset() {
+        this._startTime = this._now();
+        this._stopTime = -1;
+    }
     elapsed() {
         if (this._stopTime !== -1) {
             return this._stopTime - this._startTime;

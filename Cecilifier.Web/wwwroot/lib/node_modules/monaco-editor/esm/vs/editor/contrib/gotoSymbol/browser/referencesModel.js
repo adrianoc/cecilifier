@@ -23,16 +23,14 @@ export class OneReference {
         return this.link.uri;
     }
     get range() {
-        var _a, _b;
-        return (_b = (_a = this._range) !== null && _a !== void 0 ? _a : this.link.targetSelectionRange) !== null && _b !== void 0 ? _b : this.link.range;
+        return this._range ?? this.link.targetSelectionRange ?? this.link.range;
     }
     set range(value) {
         this._range = value;
         this._rangeCallback(this);
     }
     get ariaMessage() {
-        var _a;
-        const preview = (_a = this.parent.getPreview(this)) === null || _a === void 0 ? void 0 : _a.preview(this.range);
+        const preview = this.parent.getPreview(this)?.preview(this.range);
         if (!preview) {
             return localize('aria.oneReference', "in {0} on line {1} at column {2}", basename(this.uri), this.range.startLineNumber, this.range.startColumn);
         }

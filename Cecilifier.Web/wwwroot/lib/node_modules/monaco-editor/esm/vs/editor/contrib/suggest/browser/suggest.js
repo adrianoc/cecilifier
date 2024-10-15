@@ -33,7 +33,6 @@ export const Context = {
 export const suggestWidgetStatusbarMenu = new MenuId('suggestWidgetStatusBar');
 export class CompletionItem {
     constructor(position, completion, container, provider) {
-        var _a;
         this.position = position;
         this.completion = completion;
         this.container = container;
@@ -45,7 +44,7 @@ export class CompletionItem {
         this.distance = 0;
         this.textLabel = typeof completion.label === 'string'
             ? completion.label
-            : (_a = completion.label) === null || _a === void 0 ? void 0 : _a.label;
+            : completion.label?.label;
         // ensure lower-variants (perf)
         this.labelLow = this.textLabel.toLowerCase();
         // validate label
@@ -110,6 +109,7 @@ export class CompletionItem {
     }
 }
 export class CompletionOptions {
+    static { this.default = new CompletionOptions(); }
     constructor(snippetSortOrder = 2 /* SnippetSortOrder.Bottom */, kindFilter = new Set(), providerFilter = new Set(), providerItemsToReuse = new Map(), showDeprecated = true) {
         this.snippetSortOrder = snippetSortOrder;
         this.kindFilter = kindFilter;
@@ -118,7 +118,6 @@ export class CompletionOptions {
         this.showDeprecated = showDeprecated;
     }
 }
-CompletionOptions.default = new CompletionOptions();
 let _snippetSuggestSupport;
 export function getSnippetSuggestSupport() {
     return _snippetSuggestSupport;
@@ -142,7 +141,6 @@ export async function provideSuggestionItems(registry, model, position, options 
     const durations = [];
     let needsClipboard = false;
     const onCompletionList = (provider, container, sw) => {
-        var _a, _b, _c;
         let didAddResult = false;
         if (!container) {
             return didAddResult;
@@ -150,7 +148,7 @@ export async function provideSuggestionItems(registry, model, position, options 
         for (const suggestion of container.suggestions) {
             if (!options.kindFilter.has(suggestion.kind)) {
                 // skip if not showing deprecated suggestions
-                if (!options.showDeprecated && ((_a = suggestion === null || suggestion === void 0 ? void 0 : suggestion.tags) === null || _a === void 0 ? void 0 : _a.includes(1 /* languages.CompletionItemTag.Deprecated */))) {
+                if (!options.showDeprecated && suggestion?.tags?.includes(1 /* languages.CompletionItemTag.Deprecated */)) {
                     continue;
                 }
                 // fill in default range when missing
@@ -172,7 +170,7 @@ export async function provideSuggestionItems(registry, model, position, options 
             disposables.add(container);
         }
         durations.push({
-            providerName: (_b = provider._debugDisplayName) !== null && _b !== void 0 ? _b : 'unknown_provider', elapsedProvider: (_c = container.duration) !== null && _c !== void 0 ? _c : -1, elapsedOverall: sw.elapsed()
+            providerName: provider._debugDisplayName ?? 'unknown_provider', elapsedProvider: container.duration ?? -1, elapsedOverall: sw.elapsed()
         });
         return didAddResult;
     };
@@ -297,9 +295,9 @@ CommandsRegistry.registerCommand('_executeCompletionItemProvider', async (access
         };
         const resolving = [];
         const actualPosition = ref.object.textEditorModel.validatePosition(position);
-        const completions = await provideSuggestionItems(completionProvider, ref.object.textEditorModel, actualPosition, undefined, { triggerCharacter: triggerCharacter !== null && triggerCharacter !== void 0 ? triggerCharacter : undefined, triggerKind: triggerCharacter ? 1 /* languages.CompletionTriggerKind.TriggerCharacter */ : 0 /* languages.CompletionTriggerKind.Invoke */ });
+        const completions = await provideSuggestionItems(completionProvider, ref.object.textEditorModel, actualPosition, undefined, { triggerCharacter: triggerCharacter ?? undefined, triggerKind: triggerCharacter ? 1 /* languages.CompletionTriggerKind.TriggerCharacter */ : 0 /* languages.CompletionTriggerKind.Invoke */ });
         for (const item of completions.items) {
-            if (resolving.length < (maxItemsToResolve !== null && maxItemsToResolve !== void 0 ? maxItemsToResolve : 0)) {
+            if (resolving.length < (maxItemsToResolve ?? 0)) {
                 resolving.push(item.resolve(CancellationToken.None));
             }
             result.incomplete = result.incomplete || item.container.incomplete;
@@ -318,8 +316,7 @@ CommandsRegistry.registerCommand('_executeCompletionItemProvider', async (access
     }
 });
 export function showSimpleSuggestions(editor, provider) {
-    var _a;
-    (_a = editor.getContribution('editor.contrib.suggestController')) === null || _a === void 0 ? void 0 : _a.triggerSuggest(new Set().add(provider), undefined, true);
+    editor.getContribution('editor.contrib.suggestController')?.triggerSuggest(new Set().add(provider), undefined, true);
 }
 export class QuickSuggestionsOptions {
     static isAllOff(config) {

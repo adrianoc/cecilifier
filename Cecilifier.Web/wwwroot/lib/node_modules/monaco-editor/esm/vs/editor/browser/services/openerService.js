@@ -32,7 +32,7 @@ let CommandOpener = class CommandOpener {
         if (!matchesScheme(target, Schemas.command)) {
             return false;
         }
-        if (!(options === null || options === void 0 ? void 0 : options.allowCommands)) {
+        if (!options?.allowCommands) {
             // silently ignore commands when command-links are disabled, also
             // suppress other openers by returning TRUE
             return true;
@@ -52,12 +52,12 @@ let CommandOpener = class CommandOpener {
         try {
             args = parse(decodeURIComponent(target.query));
         }
-        catch (_a) {
+        catch {
             // ignore and retry
             try {
                 args = parse(target.query);
             }
-            catch (_b) {
+            catch {
                 // ignore error
             }
         }
@@ -88,10 +88,10 @@ let EditorOpener = class EditorOpener {
             resource: target,
             options: {
                 selection,
-                source: (options === null || options === void 0 ? void 0 : options.fromUserGesture) ? EditorOpenSource.USER : EditorOpenSource.API,
-                ...options === null || options === void 0 ? void 0 : options.editorOptions
+                source: options?.fromUserGesture ? EditorOpenSource.USER : EditorOpenSource.API,
+                ...options?.editorOptions
             }
-        }, this._editorService.getFocusedCodeEditor(), options === null || options === void 0 ? void 0 : options.openToSide);
+        }, this._editorService.getFocusedCodeEditor(), options?.openToSide);
         return true;
     }
 };
@@ -124,7 +124,7 @@ let OpenerService = class OpenerService {
         // Default opener: any external, maito, http(s), command, and catch-all-editors
         this._openers.push({
             open: async (target, options) => {
-                if ((options === null || options === void 0 ? void 0 : options.openExternal) || matchesSomeScheme(target, Schemas.mailto, Schemas.http, Schemas.https, Schemas.vsls)) {
+                if (options?.openExternal || matchesSomeScheme(target, Schemas.mailto, Schemas.http, Schemas.https, Schemas.vsls)) {
                     // open externally
                     await this._doOpenExternal(target, options);
                     return true;
@@ -140,11 +140,10 @@ let OpenerService = class OpenerService {
         return { dispose: remove };
     }
     async open(target, options) {
-        var _a;
         // check with contributed validators
         const targetURI = typeof target === 'string' ? URI.parse(target) : target;
         // validate against the original URI that this URI resolves to, if one exists
-        const validationTarget = (_a = this._resolvedUriTargets.get(targetURI)) !== null && _a !== void 0 ? _a : target;
+        const validationTarget = this._resolvedUriTargets.get(targetURI) ?? target;
         for (const validator of this._validators) {
             if (!(await validator.shouldOpen(validationTarget, options))) {
                 return false;
@@ -170,7 +169,7 @@ let OpenerService = class OpenerService {
                     return result;
                 }
             }
-            catch (_a) {
+            catch {
                 // noop
             }
         }
@@ -183,7 +182,7 @@ let OpenerService = class OpenerService {
         try {
             externalUri = (await this.resolveExternalUri(uri, options)).resolved;
         }
-        catch (_a) {
+        catch {
             externalUri = uri;
         }
         let href;
@@ -195,8 +194,8 @@ let OpenerService = class OpenerService {
             // open URI using the toString(noEncode)+encodeURI-trick
             href = encodeURI(externalUri.toString(true));
         }
-        if (options === null || options === void 0 ? void 0 : options.allowContributedOpeners) {
-            const preferredOpenerId = typeof (options === null || options === void 0 ? void 0 : options.allowContributedOpeners) === 'string' ? options === null || options === void 0 ? void 0 : options.allowContributedOpeners : undefined;
+        if (options?.allowContributedOpeners) {
+            const preferredOpenerId = typeof options?.allowContributedOpeners === 'string' ? options?.allowContributedOpeners : undefined;
             for (const opener of this._externalOpeners) {
                 const didOpen = await opener.openExternal(href, {
                     sourceUri: uri,

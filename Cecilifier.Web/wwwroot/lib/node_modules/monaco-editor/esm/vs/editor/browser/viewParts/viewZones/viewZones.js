@@ -11,8 +11,8 @@ export class ViewZones extends ViewPart {
     constructor(context) {
         super(context);
         const options = this._context.configuration.options;
-        const layoutInfo = options.get(143 /* EditorOption.layoutInfo */);
-        this._lineHeight = options.get(66 /* EditorOption.lineHeight */);
+        const layoutInfo = options.get(146 /* EditorOption.layoutInfo */);
+        this._lineHeight = options.get(67 /* EditorOption.lineHeight */);
         this._contentWidth = layoutInfo.contentWidth;
         this._contentLeft = layoutInfo.contentLeft;
         this.domNode = createFastDomNode(document.createElement('div'));
@@ -58,11 +58,11 @@ export class ViewZones extends ViewPart {
     }
     onConfigurationChanged(e) {
         const options = this._context.configuration.options;
-        const layoutInfo = options.get(143 /* EditorOption.layoutInfo */);
-        this._lineHeight = options.get(66 /* EditorOption.lineHeight */);
+        const layoutInfo = options.get(146 /* EditorOption.layoutInfo */);
+        this._lineHeight = options.get(67 /* EditorOption.lineHeight */);
         this._contentWidth = layoutInfo.contentWidth;
         this._contentLeft = layoutInfo.contentLeft;
-        if (e.hasChanged(66 /* EditorOption.lineHeight */)) {
+        if (e.hasChanged(67 /* EditorOption.lineHeight */)) {
             this._recomputeWhitespacesProps();
         }
         return true;
@@ -84,8 +84,7 @@ export class ViewZones extends ViewPart {
     }
     // ---- end view event handlers
     _getZoneOrdinal(zone) {
-        var _a, _b;
-        return (_b = (_a = zone.ordinal) !== null && _a !== void 0 ? _a : zone.afterColumn) !== null && _b !== void 0 ? _b : 10000;
+        return zone.ordinal ?? zone.afterColumn ?? 10000;
     }
     _computeWhitespaceProps(zone) {
         if (zone.afterLineNumber === 0) {
@@ -196,11 +195,11 @@ export class ViewZones extends ViewPart {
             whitespaceAccessor.removeWhitespace(zone.whitespaceId);
             zone.domNode.removeAttribute('monaco-visible-view-zone');
             zone.domNode.removeAttribute('monaco-view-zone');
-            zone.domNode.domNode.parentNode.removeChild(zone.domNode.domNode);
+            zone.domNode.domNode.remove();
             if (zone.marginDomNode) {
                 zone.marginDomNode.removeAttribute('monaco-visible-view-zone');
                 zone.marginDomNode.removeAttribute('monaco-view-zone');
-                zone.marginDomNode.domNode.parentNode.removeChild(zone.marginDomNode.domNode);
+                zone.marginDomNode.domNode.remove();
             }
             this.setShouldRender();
             return true;

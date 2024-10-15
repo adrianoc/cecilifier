@@ -8,10 +8,10 @@ import { pushMany, compareBy, numberComparator, reverseOrder } from '../../../..
 import { MonotonousArray, findLastMonotonous } from '../../../../base/common/arraysFind.js';
 import { SetMap } from '../../../../base/common/map.js';
 import { LineRange, LineRangeSet } from '../../core/lineRange.js';
-import { OffsetRange } from '../../core/offsetRange.js';
 import { LinesSliceCharSequence } from './linesSliceCharSequence.js';
 import { LineRangeFragment, isSpace } from './utils.js';
 import { MyersDiffAlgorithm } from './algorithms/myersDiffAlgorithm.js';
+import { Range } from '../../core/range.js';
 export function computeMovedLines(changes, originalLines, modifiedLines, hashedOriginalLines, hashedModifiedLines, timeout) {
     let { moves, excludedChanges } = computeMovesFromSimpleDeletionsToSimpleInsertions(changes, originalLines, modifiedLines, timeout);
     if (!timeout.isValid()) {
@@ -190,7 +190,7 @@ function areLinesSimilar(line1, line2, timeout) {
         return false;
     }
     const myersDiffingAlgorithm = new MyersDiffAlgorithm();
-    const result = myersDiffingAlgorithm.compute(new LinesSliceCharSequence([line1], new OffsetRange(0, 1), false), new LinesSliceCharSequence([line2], new OffsetRange(0, 1), false), timeout);
+    const result = myersDiffingAlgorithm.compute(new LinesSliceCharSequence([line1], new Range(1, 1, 1, line1.length), false), new LinesSliceCharSequence([line2], new Range(1, 1, 1, line2.length), false), timeout);
     let commonNonSpaceCharCount = 0;
     const inverted = SequenceDiff.invert(result.diffs, line1.length);
     for (const seq of inverted) {

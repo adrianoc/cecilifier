@@ -168,7 +168,7 @@ export class EditorCommand extends Command {
         }
         return editor.invokeWithinContext((editorAccessor) => {
             const kbService = editorAccessor.get(IContextKeyService);
-            if (!kbService.contextMatchesRules(precondition !== null && precondition !== void 0 ? precondition : undefined)) {
+            if (!kbService.contextMatchesRules(precondition ?? undefined)) {
                 // precondition does not hold
                 return;
             }
@@ -270,12 +270,11 @@ export class EditorAction2 extends Action2 {
         }
         // precondition does hold
         return editor.invokeWithinContext((editorAccessor) => {
-            var _a, _b;
             const kbService = editorAccessor.get(IContextKeyService);
             const logService = editorAccessor.get(ILogService);
-            const enabled = kbService.contextMatchesRules((_a = this.desc.precondition) !== null && _a !== void 0 ? _a : undefined);
+            const enabled = kbService.contextMatchesRules(this.desc.precondition ?? undefined);
             if (!enabled) {
-                logService.debug(`[EditorAction2] NOT running command because its precondition is FALSE`, this.desc.id, (_b = this.desc.precondition) === null || _b === void 0 ? void 0 : _b.serialize());
+                logService.debug(`[EditorAction2] NOT running command because its precondition is FALSE`, this.desc.id, this.desc.precondition?.serialize());
                 return;
             }
             return this.runEditorCommand(editorAccessor, editor, ...args);
@@ -361,6 +360,7 @@ const Extensions = {
     EditorCommonContributions: 'editor.contributions'
 };
 class EditorContributionRegistry {
+    static { this.INSTANCE = new EditorContributionRegistry(); }
     constructor() {
         this.editorContributions = [];
         this.diffEditorContributions = [];
@@ -391,7 +391,6 @@ class EditorContributionRegistry {
         return (this.editorCommands[commandId] || null);
     }
 }
-EditorContributionRegistry.INSTANCE = new EditorContributionRegistry();
 Registry.add(Extensions.EditorCommonContributions, EditorContributionRegistry.INSTANCE);
 function registerCommand(command) {
     command.register();

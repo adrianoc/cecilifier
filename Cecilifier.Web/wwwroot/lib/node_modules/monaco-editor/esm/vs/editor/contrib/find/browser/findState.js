@@ -105,7 +105,6 @@ export class FindReplaceState extends Disposable {
         }
     }
     change(newState, moveCursor, updateHistory = true) {
-        var _a;
         const changeEvent = {
             moveCursor: moveCursor,
             updateHistory: updateHistory,
@@ -171,12 +170,11 @@ export class FindReplaceState extends Disposable {
             this._preserveCase = newState.preserveCase;
         }
         if (typeof newState.searchScope !== 'undefined') {
-            if (!((_a = newState.searchScope) === null || _a === void 0 ? void 0 : _a.every((newSearchScope) => {
-                var _a;
-                return (_a = this._searchScope) === null || _a === void 0 ? void 0 : _a.some(existingSearchScope => {
+            if (!newState.searchScope?.every((newSearchScope) => {
+                return this._searchScope?.some(existingSearchScope => {
                     return !Range.equalsRange(existingSearchScope, newSearchScope);
                 });
-            }))) {
+            })) {
                 this._searchScope = newState.searchScope;
                 changeEvent.searchScope = true;
                 somethingChanged = true;

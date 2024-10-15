@@ -12,14 +12,14 @@ import { Selection } from '../core/selection.js';
 import { Token } from '../languages.js';
 import * as standaloneEnums from '../standalone/standaloneEnums.js';
 export class KeyMod {
+    static { this.CtrlCmd = 2048 /* ConstKeyMod.CtrlCmd */; }
+    static { this.Shift = 1024 /* ConstKeyMod.Shift */; }
+    static { this.Alt = 512 /* ConstKeyMod.Alt */; }
+    static { this.WinCtrl = 256 /* ConstKeyMod.WinCtrl */; }
     static chord(firstPart, secondPart) {
         return KeyChord(firstPart, secondPart);
     }
 }
-KeyMod.CtrlCmd = 2048 /* ConstKeyMod.CtrlCmd */;
-KeyMod.Shift = 1024 /* ConstKeyMod.Shift */;
-KeyMod.Alt = 512 /* ConstKeyMod.Alt */;
-KeyMod.WinCtrl = 256 /* ConstKeyMod.WinCtrl */;
 export function createMonacoBaseAPI() {
     return {
         editor: undefined, // undefined override expected here

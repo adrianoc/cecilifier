@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 import { SimpleWorkerServer } from '../base/common/worker/simpleWorker.js';
 import { EditorSimpleWorker } from './common/services/editorSimpleWorker.js';
+import { EditorWorkerHost } from './common/services/editorWorkerHost.js';
 let initialized = false;
 export function initialize(foreignModule) {
     if (initialized) {
@@ -12,7 +13,7 @@ export function initialize(foreignModule) {
     initialized = true;
     const simpleWorker = new SimpleWorkerServer((msg) => {
         globalThis.postMessage(msg);
-    }, (host) => new EditorSimpleWorker(host, foreignModule));
+    }, (workerServer) => new EditorSimpleWorker(EditorWorkerHost.getChannel(workerServer), foreignModule));
     globalThis.onmessage = (e) => {
         simpleWorker.onmessage(e.data);
     };

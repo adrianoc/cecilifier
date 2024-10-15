@@ -7,6 +7,19 @@ export class Scanner {
         this.value = '';
         this.pos = 0;
     }
+    static { this._table = {
+        [36 /* CharCode.DollarSign */]: 0 /* TokenType.Dollar */,
+        [58 /* CharCode.Colon */]: 1 /* TokenType.Colon */,
+        [44 /* CharCode.Comma */]: 2 /* TokenType.Comma */,
+        [123 /* CharCode.OpenCurlyBrace */]: 3 /* TokenType.CurlyOpen */,
+        [125 /* CharCode.CloseCurlyBrace */]: 4 /* TokenType.CurlyClose */,
+        [92 /* CharCode.Backslash */]: 5 /* TokenType.Backslash */,
+        [47 /* CharCode.Slash */]: 6 /* TokenType.Forwardslash */,
+        [124 /* CharCode.Pipe */]: 7 /* TokenType.Pipe */,
+        [43 /* CharCode.Plus */]: 11 /* TokenType.Plus */,
+        [45 /* CharCode.Dash */]: 12 /* TokenType.Dash */,
+        [63 /* CharCode.QuestionMark */]: 13 /* TokenType.QuestionMark */,
+    }; }
     static isDigitCharacter(ch) {
         return ch >= 48 /* CharCode.Digit0 */ && ch <= 57 /* CharCode.Digit9 */;
     }
@@ -69,19 +82,6 @@ export class Scanner {
         return { type, pos, len };
     }
 }
-Scanner._table = {
-    [36 /* CharCode.DollarSign */]: 0 /* TokenType.Dollar */,
-    [58 /* CharCode.Colon */]: 1 /* TokenType.Colon */,
-    [44 /* CharCode.Comma */]: 2 /* TokenType.Comma */,
-    [123 /* CharCode.OpenCurlyBrace */]: 3 /* TokenType.CurlyOpen */,
-    [125 /* CharCode.CloseCurlyBrace */]: 4 /* TokenType.CurlyClose */,
-    [92 /* CharCode.Backslash */]: 5 /* TokenType.Backslash */,
-    [47 /* CharCode.Slash */]: 6 /* TokenType.Forwardslash */,
-    [124 /* CharCode.Pipe */]: 7 /* TokenType.Pipe */,
-    [43 /* CharCode.Plus */]: 11 /* TokenType.Plus */,
-    [45 /* CharCode.Dash */]: 12 /* TokenType.Dash */,
-    [63 /* CharCode.QuestionMark */]: 13 /* TokenType.QuestionMark */,
-};
 export class Marker {
     constructor() {
         this._children = [];
@@ -461,7 +461,7 @@ export class SnippetParser {
     parse(value, insertFinalTabstop, enforceFinalTabstop) {
         const snippet = new TextmateSnippet();
         this.parseFragment(value, snippet);
-        this.ensureFinalTabstop(snippet, enforceFinalTabstop !== null && enforceFinalTabstop !== void 0 ? enforceFinalTabstop : false, insertFinalTabstop !== null && insertFinalTabstop !== void 0 ? insertFinalTabstop : false);
+        this.ensureFinalTabstop(snippet, enforceFinalTabstop ?? false, insertFinalTabstop ?? false);
         return snippet;
     }
     parseFragment(value, snippet) {

@@ -6,6 +6,7 @@ import * as strings from '../../../base/common/strings.js';
 import { Range } from '../../common/core/range.js';
 export const _debugComposition = false;
 export class TextAreaState {
+    static { this.EMPTY = new TextAreaState('', 0, 0, null, undefined); }
     constructor(value, 
     /** the offset where selection starts inside `value` */
     selectionStart, 
@@ -54,21 +55,20 @@ export class TextAreaState {
         }
     }
     deduceEditorPosition(offset) {
-        var _a, _b, _c, _d, _e, _f, _g, _h;
         if (offset <= this.selectionStart) {
             const str = this.value.substring(offset, this.selectionStart);
-            return this._finishDeduceEditorPosition((_b = (_a = this.selection) === null || _a === void 0 ? void 0 : _a.getStartPosition()) !== null && _b !== void 0 ? _b : null, str, -1);
+            return this._finishDeduceEditorPosition(this.selection?.getStartPosition() ?? null, str, -1);
         }
         if (offset >= this.selectionEnd) {
             const str = this.value.substring(this.selectionEnd, offset);
-            return this._finishDeduceEditorPosition((_d = (_c = this.selection) === null || _c === void 0 ? void 0 : _c.getEndPosition()) !== null && _d !== void 0 ? _d : null, str, 1);
+            return this._finishDeduceEditorPosition(this.selection?.getEndPosition() ?? null, str, 1);
         }
         const str1 = this.value.substring(this.selectionStart, offset);
         if (str1.indexOf(String.fromCharCode(8230)) === -1) {
-            return this._finishDeduceEditorPosition((_f = (_e = this.selection) === null || _e === void 0 ? void 0 : _e.getStartPosition()) !== null && _f !== void 0 ? _f : null, str1, 1);
+            return this._finishDeduceEditorPosition(this.selection?.getStartPosition() ?? null, str1, 1);
         }
         const str2 = this.value.substring(offset, this.selectionEnd);
-        return this._finishDeduceEditorPosition((_h = (_g = this.selection) === null || _g === void 0 ? void 0 : _g.getEndPosition()) !== null && _h !== void 0 ? _h : null, str2, -1);
+        return this._finishDeduceEditorPosition(this.selection?.getEndPosition() ?? null, str2, -1);
     }
     _finishDeduceEditorPosition(anchor, deltaText, signum) {
         let lineFeedCnt = 0;
@@ -170,7 +170,6 @@ export class TextAreaState {
         };
     }
 }
-TextAreaState.EMPTY = new TextAreaState('', 0, 0, null, undefined);
 export class PagedScreenReaderStrategy {
     static _getPageOfLine(lineNumber, linesPerPage) {
         return Math.floor((lineNumber - 1) / linesPerPage);

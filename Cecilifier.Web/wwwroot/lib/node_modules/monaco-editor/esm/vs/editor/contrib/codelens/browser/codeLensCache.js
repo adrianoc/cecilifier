@@ -43,20 +43,18 @@ let CodeLensCache = class CodeLensCache {
         const raw = storageService.get(key, 1 /* StorageScope.WORKSPACE */, '{}');
         this._deserialize(raw);
         // store lens data on shutdown
-        Event.once(storageService.onWillSaveState)(e => {
-            if (e.reason === WillSaveStateReason.SHUTDOWN) {
-                storageService.store(key, this._serialize(), 1 /* StorageScope.WORKSPACE */, 1 /* StorageTarget.MACHINE */);
-            }
+        const onWillSaveStateBecauseOfShutdown = Event.filter(storageService.onWillSaveState, e => e.reason === WillSaveStateReason.SHUTDOWN);
+        Event.once(onWillSaveStateBecauseOfShutdown)(e => {
+            storageService.store(key, this._serialize(), 1 /* StorageScope.WORKSPACE */, 1 /* StorageTarget.MACHINE */);
         });
     }
     put(model, data) {
         // create a copy of the model that is without command-ids
         // but with comand-labels
-        const copyItems = data.lenses.map(item => {
-            var _a;
+        const copyItems = data.lenses.map((item) => {
             return {
                 range: item.symbol.range,
-                command: item.symbol.command && { id: '', title: (_a = item.symbol.command) === null || _a === void 0 ? void 0 : _a.title },
+                command: item.symbol.command && { id: '', title: item.symbol.command?.title },
             };
         });
         const copyModel = new CodeLensModel();
@@ -100,7 +98,7 @@ let CodeLensCache = class CodeLensCache {
                 this._cache.set(key, new CacheItem(element.lineCount, model));
             }
         }
-        catch (_a) {
+        catch {
             // ignore...
         }
     }

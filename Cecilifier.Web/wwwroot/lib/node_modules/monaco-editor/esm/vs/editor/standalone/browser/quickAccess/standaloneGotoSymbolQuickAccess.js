@@ -31,8 +31,7 @@ let StandaloneGotoSymbolQuickAccessProvider = class StandaloneGotoSymbolQuickAcc
         this.onDidActiveTextEditorControlChange = Event.None;
     }
     get activeTextEditorControl() {
-        var _a;
-        return (_a = this.editorService.getFocusedCodeEditor()) !== null && _a !== void 0 ? _a : undefined;
+        return this.editorService.getFocusedCodeEditor() ?? undefined;
     }
 };
 StandaloneGotoSymbolQuickAccessProvider = __decorate([
@@ -42,6 +41,7 @@ StandaloneGotoSymbolQuickAccessProvider = __decorate([
 ], StandaloneGotoSymbolQuickAccessProvider);
 export { StandaloneGotoSymbolQuickAccessProvider };
 export class GotoSymbolAction extends EditorAction {
+    static { this.ID = 'editor.action.quickOutline'; }
     constructor() {
         super({
             id: GotoSymbolAction.ID,
@@ -63,7 +63,6 @@ export class GotoSymbolAction extends EditorAction {
         accessor.get(IQuickInputService).quickAccess.show(AbstractGotoSymbolQuickAccessProvider.PREFIX, { itemActivation: ItemActivation.NONE });
     }
 }
-GotoSymbolAction.ID = 'editor.action.quickOutline';
 registerEditorAction(GotoSymbolAction);
 Registry.as(Extensions.Quickaccess).registerQuickAccessProvider({
     ctor: StandaloneGotoSymbolQuickAccessProvider,

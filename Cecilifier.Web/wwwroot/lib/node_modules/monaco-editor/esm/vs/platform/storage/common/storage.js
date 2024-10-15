@@ -29,6 +29,7 @@ export function loadKeyTargets(storage) {
     return Object.create(null);
 }
 export class AbstractStorageService extends Disposable {
+    static { this.DEFAULT_FLUSH_INTERVAL = 60 * 1000; } // every minute
     constructor(options = { flushInterval: AbstractStorageService.DEFAULT_FLUSH_INTERVAL }) {
         super();
         this.options = options;
@@ -68,16 +69,13 @@ export class AbstractStorageService extends Disposable {
         }
     }
     get(key, scope, fallbackValue) {
-        var _a;
-        return (_a = this.getStorage(scope)) === null || _a === void 0 ? void 0 : _a.get(key, fallbackValue);
+        return this.getStorage(scope)?.get(key, fallbackValue);
     }
     getBoolean(key, scope, fallbackValue) {
-        var _a;
-        return (_a = this.getStorage(scope)) === null || _a === void 0 ? void 0 : _a.getBoolean(key, fallbackValue);
+        return this.getStorage(scope)?.getBoolean(key, fallbackValue);
     }
     getNumber(key, scope, fallbackValue) {
-        var _a;
-        return (_a = this.getStorage(scope)) === null || _a === void 0 ? void 0 : _a.getNumber(key, fallbackValue);
+        return this.getStorage(scope)?.getNumber(key, fallbackValue);
     }
     store(key, value, scope, target, external = false) {
         // We remove the key for undefined/null values
@@ -87,21 +85,19 @@ export class AbstractStorageService extends Disposable {
         }
         // Update our datastructures but send events only after
         this.withPausedEmitters(() => {
-            var _a;
             // Update key-target map
             this.updateKeyTarget(key, scope, target);
             // Store actual value
-            (_a = this.getStorage(scope)) === null || _a === void 0 ? void 0 : _a.set(key, value, external);
+            this.getStorage(scope)?.set(key, value, external);
         });
     }
     remove(key, scope, external = false) {
         // Update our datastructures but send events only after
         this.withPausedEmitters(() => {
-            var _a;
             // Update key-target map
             this.updateKeyTarget(key, scope, undefined);
             // Remove actual key
-            (_a = this.getStorage(scope)) === null || _a === void 0 ? void 0 : _a.delete(key, external);
+            this.getStorage(scope)?.delete(key, external);
         });
     }
     withPausedEmitters(fn) {
@@ -118,20 +114,19 @@ export class AbstractStorageService extends Disposable {
         }
     }
     updateKeyTarget(key, scope, target, external = false) {
-        var _a, _b;
         // Add
         const keyTargets = this.getKeyTargets(scope);
         if (typeof target === 'number') {
             if (keyTargets[key] !== target) {
                 keyTargets[key] = target;
-                (_a = this.getStorage(scope)) === null || _a === void 0 ? void 0 : _a.set(TARGET_KEY, JSON.stringify(keyTargets), external);
+                this.getStorage(scope)?.set(TARGET_KEY, JSON.stringify(keyTargets), external);
             }
         }
         // Remove
         else {
             if (typeof keyTargets[key] === 'number') {
                 delete keyTargets[key];
-                (_b = this.getStorage(scope)) === null || _b === void 0 ? void 0 : _b.set(TARGET_KEY, JSON.stringify(keyTargets), external);
+                this.getStorage(scope)?.set(TARGET_KEY, JSON.stringify(keyTargets), external);
             }
         }
     }
@@ -168,7 +163,6 @@ export class AbstractStorageService extends Disposable {
         return storage ? loadKeyTargets(storage) : Object.create(null);
     }
 }
-AbstractStorageService.DEFAULT_FLUSH_INTERVAL = 60 * 1000; // every minute
 export class InMemoryStorageService extends AbstractStorageService {
     constructor() {
         super();

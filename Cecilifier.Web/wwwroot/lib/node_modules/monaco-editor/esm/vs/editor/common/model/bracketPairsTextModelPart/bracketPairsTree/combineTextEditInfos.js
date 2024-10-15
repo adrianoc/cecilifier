@@ -35,7 +35,7 @@ export function combineTextEditInfos(textEditInfoFirst, textEditInfoSecond) {
             const [item, remainingItem] = curItem.splitAt(s1Length);
             result.push(item);
             s1Length = lengthDiffNonNegative(item.lengthAfter, s1Length);
-            curItem = remainingItem !== null && remainingItem !== void 0 ? remainingItem : s0ToS1Map.dequeue();
+            curItem = remainingItem ?? s0ToS1Map.dequeue();
         }
         if (!lengthIsZero(s1Length)) {
             result.push(new LengthMapping(false, s1Length, s1Length));

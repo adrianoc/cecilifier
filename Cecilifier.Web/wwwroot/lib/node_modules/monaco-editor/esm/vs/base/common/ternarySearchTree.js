@@ -228,12 +228,10 @@ class TernarySearchTreeNode {
         return this.heightRight - this.heightLeft;
     }
     get heightLeft() {
-        var _a, _b;
-        return (_b = (_a = this.left) === null || _a === void 0 ? void 0 : _a.height) !== null && _b !== void 0 ? _b : 0;
+        return this.left?.height ?? 0;
     }
     get heightRight() {
-        var _a, _b;
-        return (_b = (_a = this.right) === null || _a === void 0 ? void 0 : _a.height) !== null && _b !== void 0 ? _b : 0;
+        return this.right?.height ?? 0;
     }
 }
 export class TernarySearchTree {
@@ -352,8 +350,7 @@ export class TernarySearchTree {
         return oldElement;
     }
     get(key) {
-        var _a;
-        return (_a = this._getNode(key)) === null || _a === void 0 ? void 0 : _a.value;
+        return this._getNode(key)?.value;
     }
     _getNode(key) {
         const iter = this._iter.reset(key);
@@ -381,7 +378,7 @@ export class TernarySearchTree {
     }
     has(key) {
         const node = this._getNode(key);
-        return !((node === null || node === void 0 ? void 0 : node.value) === undefined && (node === null || node === void 0 ? void 0 : node.mid) === undefined);
+        return !(node?.value === undefined && node?.mid === undefined);
     }
     delete(key) {
         return this._delete(key, false);
@@ -390,7 +387,6 @@ export class TernarySearchTree {
         return this._delete(key, true);
     }
     _delete(key, superStr) {
-        var _a;
         const iter = this._iter.reset(key);
         const stack = [];
         let node = this._root;
@@ -450,7 +446,7 @@ export class TernarySearchTree {
             }
             else {
                 // empty or half empty
-                const newChild = (_a = node.left) !== null && _a !== void 0 ? _a : node.right;
+                const newChild = node.left ?? node.right;
                 if (stack.length > 0) {
                     const [dir, parent] = stack[stack.length - 1];
                     switch (dir) {

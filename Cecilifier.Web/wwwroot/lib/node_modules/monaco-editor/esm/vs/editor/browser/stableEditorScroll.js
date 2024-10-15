@@ -45,6 +45,6 @@ export class StableEditorScrollState {
             return;
         }
         const offset = editor.getTopForLineNumber(currentCursorPosition.lineNumber) - editor.getTopForLineNumber(this._cursorPosition.lineNumber);
-        editor.setScrollTop(editor.getScrollTop() + offset);
+        editor.setScrollTop(editor.getScrollTop() + offset, 1 /* ScrollType.Immediate */);
     }
 }

@@ -2,15 +2,15 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import * as dom from '../../../base/browser/dom.js';
-import * as platform from '../../../base/common/platform.js';
-import { EventType, Gesture } from '../../../base/browser/touch.js';
-import { Disposable } from '../../../base/common/lifecycle.js';
-import { MouseHandler } from './mouseHandler.js';
-import { EditorMouseEvent, EditorPointerEventFactory } from '../editorDom.js';
 import { BrowserFeatures } from '../../../base/browser/canIUse.js';
-import { TextAreaSyntethicEvents } from './textAreaInput.js';
+import * as dom from '../../../base/browser/dom.js';
+import { EventType, Gesture } from '../../../base/browser/touch.js';
 import { mainWindow } from '../../../base/browser/window.js';
+import { Disposable } from '../../../base/common/lifecycle.js';
+import * as platform from '../../../base/common/platform.js';
+import { MouseHandler } from './mouseHandler.js';
+import { TextAreaSyntethicEvents } from './textAreaInput.js';
+import { EditorMouseEvent, EditorPointerEventFactory } from '../editorDom.js';
 /**
  * Currently only tested on iOS 13/ iPadOS.
  */
@@ -48,16 +48,26 @@ export class PointerEventHandler extends MouseHandler {
         }
         event.preventDefault();
         this.viewHelper.focusTextArea();
+        this._dispatchGesture(event, /*inSelectionMode*/ false);
+    }
+    onChange(event) {
+        if (this._lastPointerType === 'touch') {
+            this._context.viewModel.viewLayout.deltaScrollNow(-event.translationX, -event.translationY);
+        }
+        if (this._lastPointerType === 'pen') {
+            this._dispatchGesture(event, /*inSelectionMode*/ true);
+        }
+    }
+    _dispatchGesture(event, inSelectionMode) {
         const target = this._createMouseTarget(new EditorMouseEvent(event, false, this.viewHelper.viewDomNode), false);
         if (target.position) {
-            // this.viewController.moveTo(target.position);
             this.viewController.dispatchMouse({
                 position: target.position,
                 mouseColumn: target.position.column,
                 startedOnLineNumbers: false,
                 revealType: 1 /* NavigationCommandRevealType.Minimal */,
                 mouseDownCount: event.tapCount,
-                inSelectionMode: false,
+                inSelectionMode,
                 altKey: false,
                 ctrlKey: false,
                 metaKey: false,
@@ -66,11 +76,6 @@ export class PointerEventHandler extends MouseHandler {
                 middleButton: false,
                 onInjectedText: target.type === 6 /* MouseTargetType.CONTENT_TEXT */ && target.detail.injectedText !== null
             });
-        }
-    }
-    onChange(e) {
-        if (this._lastPointerType === 'touch') {
-            this._context.viewModel.viewLayout.deltaScrollNow(-e.translationX, -e.translationY);
         }
     }
     _onMouseDown(e, pointerId) {
@@ -107,7 +112,8 @@ class TouchHandler extends MouseHandler {
 export class PointerHandler extends Disposable {
     constructor(context, viewController, viewHelper) {
         super();
-        if ((platform.isIOS && BrowserFeatures.pointerEvents)) {
+        const isPhone = platform.isIOS || (platform.isAndroid && platform.isMobile);
+        if (isPhone && BrowserFeatures.pointerEvents) {
             this.handler = this._register(new PointerEventHandler(context, viewController, viewHelper));
         }
         else if (mainWindow.TouchEvent) {

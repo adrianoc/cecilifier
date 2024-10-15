@@ -76,17 +76,15 @@ export class ScrollbarVisibilityController extends Disposable {
         this._isVisible = true;
         // The CSS animation doesn't play otherwise
         this._revealTimer.setIfNotSet(() => {
-            var _a;
-            (_a = this._domNode) === null || _a === void 0 ? void 0 : _a.setClassName(this._visibleClassName);
+            this._domNode?.setClassName(this._visibleClassName);
         }, 0);
     }
     _hide(withFadeAway) {
-        var _a;
         this._revealTimer.cancel();
         if (!this._isVisible) {
             return;
         }
         this._isVisible = false;
-        (_a = this._domNode) === null || _a === void 0 ? void 0 : _a.setClassName(this._invisibleClassName + (withFadeAway ? ' fade' : ''));
+        this._domNode?.setClassName(this._invisibleClassName + (withFadeAway ? ' fade' : ''));
     }
 }

@@ -7,36 +7,6 @@ import { DisposableStore } from '../../../../base/common/lifecycle.js';
 import { autorunOpts } from '../../../../base/common/observable.js';
 import { Position } from '../../../common/core/position.js';
 import { Range } from '../../../common/core/range.js';
-export function applyEdits(text, edits) {
-    const transformer = new PositionOffsetTransformer(text);
-    const offsetEdits = edits.map(e => {
-        const range = Range.lift(e.range);
-        return ({
-            startOffset: transformer.getOffset(range.getStartPosition()),
-            endOffset: transformer.getOffset(range.getEndPosition()),
-            text: e.text
-        });
-    });
-    offsetEdits.sort((a, b) => b.startOffset - a.startOffset);
-    for (const edit of offsetEdits) {
-        text = text.substring(0, edit.startOffset) + edit.text + text.substring(edit.endOffset);
-    }
-    return text;
-}
-class PositionOffsetTransformer {
-    constructor(text) {
-        this.lineStartOffsetByLineIdx = [];
-        this.lineStartOffsetByLineIdx.push(0);
-        for (let i = 0; i < text.length; i++) {
-            if (text.charAt(i) === '\n') {
-                this.lineStartOffsetByLineIdx.push(i + 1);
-            }
-        }
-    }
-    getOffset(position) {
-        return this.lineStartOffsetByLineIdx[position.lineNumber - 1] + position.column - 1;
-    }
-}
 const array = [];
 export function getReadonlyEmptyArray() {
     return array;
@@ -74,17 +44,6 @@ export function applyObservableDecorations(editor, decorations) {
 export function addPositions(pos1, pos2) {
     return new Position(pos1.lineNumber + pos2.lineNumber - 1, pos2.lineNumber === 1 ? pos1.column + pos2.column - 1 : pos2.column);
 }
-export function lengthOfText(text) {
-    let line = 1;
-    let column = 1;
-    for (const c of text) {
-        if (c === '\n') {
-            line++;
-            column = 1;
-        }
-        else {
-            column++;
-        }
-    }
-    return new Position(line, column);
+export function subtractPositions(pos1, pos2) {
+    return new Position(pos1.lineNumber - pos2.lineNumber + 1, pos1.lineNumber - pos2.lineNumber === 0 ? pos1.column - pos2.column + 1 : pos1.column);
 }

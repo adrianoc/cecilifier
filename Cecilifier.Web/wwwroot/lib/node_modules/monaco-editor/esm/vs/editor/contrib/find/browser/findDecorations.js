@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import { Range } from '../../../common/core/range.js';
-import { MinimapPosition, OverviewRulerLane } from '../../../common/model.js';
+import { OverviewRulerLane } from '../../../common/model.js';
 import { ModelDecorationOptions } from '../../../common/model/textModel.js';
 import { minimapFindMatch, overviewRulerFindMatchForeground } from '../../../../platform/theme/common/colorRegistry.js';
 import { themeColorFromId } from '../../../../platform/theme/common/themeService.js';
@@ -181,7 +181,7 @@ export class FindDecorations {
                 this._findScopeDecorationIds.forEach(findScopeDecorationId => accessor.removeDecoration(findScopeDecorationId));
                 this._findScopeDecorationIds = [];
             }
-            if (findScopes === null || findScopes === void 0 ? void 0 : findScopes.length) {
+            if (findScopes?.length) {
                 this._findScopeDecorationIds = findScopes.map(findScope => accessor.addDecoration(findScope, FindDecorations._FIND_SCOPE_DECORATION));
             }
         });
@@ -238,59 +238,61 @@ export class FindDecorations {
         }
         return result;
     }
+    static { this._CURRENT_FIND_MATCH_DECORATION = ModelDecorationOptions.register({
+        description: 'current-find-match',
+        stickiness: 1 /* TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges */,
+        zIndex: 13,
+        className: 'currentFindMatch',
+        inlineClassName: 'currentFindMatchInline',
+        showIfCollapsed: true,
+        overviewRuler: {
+            color: themeColorFromId(overviewRulerFindMatchForeground),
+            position: OverviewRulerLane.Center
+        },
+        minimap: {
+            color: themeColorFromId(minimapFindMatch),
+            position: 1 /* MinimapPosition.Inline */
+        }
+    }); }
+    static { this._FIND_MATCH_DECORATION = ModelDecorationOptions.register({
+        description: 'find-match',
+        stickiness: 1 /* TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges */,
+        zIndex: 10,
+        className: 'findMatch',
+        inlineClassName: 'findMatchInline',
+        showIfCollapsed: true,
+        overviewRuler: {
+            color: themeColorFromId(overviewRulerFindMatchForeground),
+            position: OverviewRulerLane.Center
+        },
+        minimap: {
+            color: themeColorFromId(minimapFindMatch),
+            position: 1 /* MinimapPosition.Inline */
+        }
+    }); }
+    static { this._FIND_MATCH_NO_OVERVIEW_DECORATION = ModelDecorationOptions.register({
+        description: 'find-match-no-overview',
+        stickiness: 1 /* TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges */,
+        className: 'findMatch',
+        showIfCollapsed: true
+    }); }
+    static { this._FIND_MATCH_ONLY_OVERVIEW_DECORATION = ModelDecorationOptions.register({
+        description: 'find-match-only-overview',
+        stickiness: 1 /* TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges */,
+        overviewRuler: {
+            color: themeColorFromId(overviewRulerFindMatchForeground),
+            position: OverviewRulerLane.Center
+        }
+    }); }
+    static { this._RANGE_HIGHLIGHT_DECORATION = ModelDecorationOptions.register({
+        description: 'find-range-highlight',
+        stickiness: 1 /* TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges */,
+        className: 'rangeHighlight',
+        isWholeLine: true
+    }); }
+    static { this._FIND_SCOPE_DECORATION = ModelDecorationOptions.register({
+        description: 'find-scope',
+        className: 'findScope',
+        isWholeLine: true
+    }); }
 }
-FindDecorations._CURRENT_FIND_MATCH_DECORATION = ModelDecorationOptions.register({
-    description: 'current-find-match',
-    stickiness: 1 /* TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges */,
-    zIndex: 13,
-    className: 'currentFindMatch',
-    showIfCollapsed: true,
-    overviewRuler: {
-        color: themeColorFromId(overviewRulerFindMatchForeground),
-        position: OverviewRulerLane.Center
-    },
-    minimap: {
-        color: themeColorFromId(minimapFindMatch),
-        position: MinimapPosition.Inline
-    }
-});
-FindDecorations._FIND_MATCH_DECORATION = ModelDecorationOptions.register({
-    description: 'find-match',
-    stickiness: 1 /* TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges */,
-    zIndex: 10,
-    className: 'findMatch',
-    showIfCollapsed: true,
-    overviewRuler: {
-        color: themeColorFromId(overviewRulerFindMatchForeground),
-        position: OverviewRulerLane.Center
-    },
-    minimap: {
-        color: themeColorFromId(minimapFindMatch),
-        position: MinimapPosition.Inline
-    }
-});
-FindDecorations._FIND_MATCH_NO_OVERVIEW_DECORATION = ModelDecorationOptions.register({
-    description: 'find-match-no-overview',
-    stickiness: 1 /* TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges */,
-    className: 'findMatch',
-    showIfCollapsed: true
-});
-FindDecorations._FIND_MATCH_ONLY_OVERVIEW_DECORATION = ModelDecorationOptions.register({
-    description: 'find-match-only-overview',
-    stickiness: 1 /* TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges */,
-    overviewRuler: {
-        color: themeColorFromId(overviewRulerFindMatchForeground),
-        position: OverviewRulerLane.Center
-    }
-});
-FindDecorations._RANGE_HIGHLIGHT_DECORATION = ModelDecorationOptions.register({
-    description: 'find-range-highlight',
-    stickiness: 1 /* TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges */,
-    className: 'rangeHighlight',
-    isWholeLine: true
-});
-FindDecorations._FIND_SCOPE_DECORATION = ModelDecorationOptions.register({
-    description: 'find-scope',
-    className: 'findScope',
-    isWholeLine: true
-});

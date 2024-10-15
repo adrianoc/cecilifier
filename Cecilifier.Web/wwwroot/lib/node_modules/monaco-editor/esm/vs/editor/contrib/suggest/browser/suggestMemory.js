@@ -181,7 +181,14 @@ export class PrefixMemory extends Memory {
         }
     }
 }
-let SuggestMemoryService = SuggestMemoryService_1 = class SuggestMemoryService {
+let SuggestMemoryService = class SuggestMemoryService {
+    static { SuggestMemoryService_1 = this; }
+    static { this._strategyCtors = new Map([
+        ['recentlyUsedByPrefix', PrefixMemory],
+        ['recentlyUsed', LRUMemory],
+        ['first', NoMemory]
+    ]); }
+    static { this._storagePrefix = 'suggest/memories'; }
     constructor(_storageService, _configService) {
         this._storageService = _storageService;
         this._configService = _configService;
@@ -205,12 +212,11 @@ let SuggestMemoryService = SuggestMemoryService_1 = class SuggestMemoryService {
         return this._withStrategy(model, pos).select(model, pos, items);
     }
     _withStrategy(model, pos) {
-        var _a;
         const mode = this._configService.getValue('editor.suggestSelection', {
             overrideIdentifier: model.getLanguageIdAtPosition(pos.lineNumber, pos.column),
             resource: model.uri
         });
-        if (((_a = this._strategy) === null || _a === void 0 ? void 0 : _a.name) !== mode) {
+        if (this._strategy?.name !== mode) {
             this._saveState();
             const ctor = SuggestMemoryService_1._strategyCtors.get(mode) || NoMemory;
             this._strategy = new ctor();
@@ -237,12 +243,6 @@ let SuggestMemoryService = SuggestMemoryService_1 = class SuggestMemoryService {
         }
     }
 };
-SuggestMemoryService._strategyCtors = new Map([
-    ['recentlyUsedByPrefix', PrefixMemory],
-    ['recentlyUsed', LRUMemory],
-    ['first', NoMemory]
-]);
-SuggestMemoryService._storagePrefix = 'suggest/memories';
 SuggestMemoryService = SuggestMemoryService_1 = __decorate([
     __param(0, IStorageService),
     __param(1, IConfigurationService)

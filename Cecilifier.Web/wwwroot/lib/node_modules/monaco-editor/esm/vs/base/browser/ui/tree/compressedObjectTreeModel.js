@@ -128,6 +128,9 @@ export class CompressedObjectTreeModel {
             diffDepth: node.depth - parent.depth,
         });
     }
+    isCompressionEnabled() {
+        return this.enabled;
+    }
     setCompressionEnabled(enabled) {
         if (enabled === this.enabled) {
             return;
@@ -309,6 +312,9 @@ export class CompressibleObjectTreeModel {
     }
     setChildren(element, children = Iterable.empty(), options = {}) {
         this.model.setChildren(element, children, options);
+    }
+    isCompressionEnabled() {
+        return this.model.isCompressionEnabled();
     }
     setCompressionEnabled(enabled) {
         this.model.setCompressionEnabled(enabled);

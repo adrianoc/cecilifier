@@ -73,9 +73,9 @@ export class FoldingModel {
         }
         this.updatePost(FoldingRegions.fromFoldRanges(newFoldingRanges));
     }
-    update(newRegions, blockedLineNumers = []) {
-        const foldedOrManualRanges = this._currentFoldedOrManualRanges(blockedLineNumers);
-        const newRanges = FoldingRegions.sanitizeAndMerge(newRegions, foldedOrManualRanges, this._textModel.getLineCount());
+    update(newRegions, selection) {
+        const foldedOrManualRanges = this._currentFoldedOrManualRanges(selection);
+        const newRanges = FoldingRegions.sanitizeAndMerge(newRegions, foldedOrManualRanges, this._textModel.getLineCount(), selection);
         this.updatePost(FoldingRegions.fromFoldRanges(newRanges));
     }
     updatePost(newRegions) {
@@ -101,15 +101,7 @@ export class FoldingModel {
         this._regions = newRegions;
         this._updateEventEmitter.fire({ model: this });
     }
-    _currentFoldedOrManualRanges(blockedLineNumers = []) {
-        const isBlocked = (startLineNumber, endLineNumber) => {
-            for (const blockedLineNumber of blockedLineNumers) {
-                if (startLineNumber < blockedLineNumber && blockedLineNumber <= endLineNumber) { // first line is visible
-                    return true;
-                }
-            }
-            return false;
-        };
+    _currentFoldedOrManualRanges(selection) {
         const foldedRanges = [];
         for (let i = 0, limit = this._regions.length; i < limit; i++) {
             let isCollapsed = this.regions.isCollapsed(i);
@@ -118,7 +110,7 @@ export class FoldingModel {
                 const foldRange = this._regions.toFoldRange(i);
                 const decRange = this._textModel.getDecorationRange(this._editorDecorationIds[i]);
                 if (decRange) {
-                    if (isCollapsed && isBlocked(decRange.startLineNumber, decRange.endLineNumber)) {
+                    if (isCollapsed && selection?.startsInside(decRange.startLineNumber + 1, decRange.endLineNumber)) {
                         isCollapsed = false; // uncollapse is the range is blocked
                     }
                     foldedRanges.push({
@@ -160,7 +152,6 @@ export class FoldingModel {
      * Apply persisted state, for persistence only
      */
     applyMemento(state) {
-        var _a, _b;
         if (!Array.isArray(state)) {
             return;
         }
@@ -176,8 +167,8 @@ export class FoldingModel {
                     startLineNumber: range.startLineNumber,
                     endLineNumber: range.endLineNumber,
                     type: undefined,
-                    isCollapsed: (_a = range.isCollapsed) !== null && _a !== void 0 ? _a : true,
-                    source: (_b = range.source) !== null && _b !== void 0 ? _b : 0 /* FoldSource.provider */
+                    isCollapsed: range.isCollapsed ?? true,
+                    source: range.source ?? 0 /* FoldSource.provider */
                 });
             }
         }

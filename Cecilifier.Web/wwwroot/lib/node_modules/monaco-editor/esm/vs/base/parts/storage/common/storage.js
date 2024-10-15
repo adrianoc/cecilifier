@@ -25,6 +25,7 @@ export var StorageState;
     StorageState[StorageState["Closed"] = 2] = "Closed";
 })(StorageState || (StorageState = {}));
 export class Storage extends Disposable {
+    static { this.DEFAULT_FLUSH_DELAY = 100; }
     constructor(database, options = Object.create(null)) {
         super();
         this.database = database;
@@ -43,14 +44,13 @@ export class Storage extends Disposable {
         this._register(this.database.onDidChangeItemsExternal(e => this.onDidChangeItemsExternal(e)));
     }
     onDidChangeItemsExternal(e) {
-        var _a, _b;
         this._onDidChangeStorage.pause();
         try {
             // items that change external require us to update our
             // caches with the values. we just accept the value and
             // emit an event if there is a change.
-            (_a = e.changed) === null || _a === void 0 ? void 0 : _a.forEach((value, key) => this.acceptExternal(key, value));
-            (_b = e.deleted) === null || _b === void 0 ? void 0 : _b.forEach(key => this.acceptExternal(key, undefined));
+            e.changed?.forEach((value, key) => this.acceptExternal(key, value));
+            e.deleted?.forEach(key => this.acceptExternal(key, undefined));
         }
         finally {
             this._onDidChangeStorage.resume();
@@ -156,10 +156,9 @@ export class Storage extends Disposable {
         // Update in storage and release any
         // waiters we have once done
         return this.database.updateItems(updateRequest).finally(() => {
-            var _a;
             if (!this.hasPending) {
                 while (this.whenFlushedCallbacks.length) {
-                    (_a = this.whenFlushedCallbacks.pop()) === null || _a === void 0 ? void 0 : _a();
+                    this.whenFlushedCallbacks.pop()?.();
                 }
             }
         });
@@ -171,15 +170,13 @@ export class Storage extends Disposable {
         return this.flushDelayer.trigger(() => this.flushPending(), delay);
     }
 }
-Storage.DEFAULT_FLUSH_DELAY = 100;
 export class InMemoryStorageDatabase {
     constructor() {
         this.onDidChangeItemsExternal = Event.None;
         this.items = new Map();
     }
     async updateItems(request) {
-        var _a, _b;
-        (_a = request.insert) === null || _a === void 0 ? void 0 : _a.forEach((value, key) => this.items.set(key, value));
-        (_b = request.delete) === null || _b === void 0 ? void 0 : _b.forEach(key => this.items.delete(key));
+        request.insert?.forEach((value, key) => this.items.set(key, value));
+        request.delete?.forEach(key => this.items.delete(key));
     }
 }

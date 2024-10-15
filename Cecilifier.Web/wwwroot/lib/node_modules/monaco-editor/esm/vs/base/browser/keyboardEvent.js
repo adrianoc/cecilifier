@@ -63,7 +63,7 @@ export class StandardKeyboardEvent {
         this.shiftKey = e.shiftKey;
         this.altKey = e.altKey;
         this.metaKey = e.metaKey;
-        this.altGraphKey = e.getModifierState('AltGraph');
+        this.altGraphKey = e.getModifierState?.('AltGraph');
         this.keyCode = extractKeyCode(e);
         this.code = e.code;
         // console.info(e.type + ": keyCode: " + e.keyCode + ", which: " + e.which + ", charCode: " + e.charCode + ", detail: " + e.detail + " ====> " + this.keyCode + ' -- ' + KeyCode[this.keyCode]);

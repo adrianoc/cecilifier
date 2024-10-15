@@ -292,9 +292,9 @@ function prepareBracketForRegExp(str) {
     str = strings.escapeRegExpCharacters(str);
     return (insertWordBoundaries ? `\\b${str}\\b` : str);
 }
-function createBracketOrRegExp(pieces) {
+export function createBracketOrRegExp(pieces, options) {
     const regexStr = `(${pieces.map(prepareBracketForRegExp).join(')|(')})`;
-    return strings.createRegExp(regexStr, true);
+    return strings.createRegExp(regexStr, true, options);
 }
 const toReversedString = (function () {
     function reverse(str) {

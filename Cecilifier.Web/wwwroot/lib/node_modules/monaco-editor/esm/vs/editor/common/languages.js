@@ -41,6 +41,17 @@ export class EncodedTokenizationResult {
         this._encodedTokenizationResultBrand = undefined;
     }
 }
+export var HoverVerbosityAction;
+(function (HoverVerbosityAction) {
+    /**
+     * Increase the verbosity of the hover
+     */
+    HoverVerbosityAction[HoverVerbosityAction["Increase"] = 0] = "Increase";
+    /**
+     * Decrease the verbosity of the hover
+     */
+    HoverVerbosityAction[HoverVerbosityAction["Decrease"] = 1] = "Decrease";
+})(HoverVerbosityAction || (HoverVerbosityAction = {}));
 /**
  * @internal
  */
@@ -161,6 +172,14 @@ export class SelectedSuggestionInfo {
             && this.isSnippetText === other.isSnippetText;
     }
 }
+/**
+ * @internal
+ */
+export var DocumentPasteTriggerKind;
+(function (DocumentPasteTriggerKind) {
+    DocumentPasteTriggerKind[DocumentPasteTriggerKind["Automatic"] = 0] = "Automatic";
+    DocumentPasteTriggerKind[DocumentPasteTriggerKind["PasteAs"] = 1] = "PasteAs";
+})(DocumentPasteTriggerKind || (DocumentPasteTriggerKind = {}));
 export var SignatureHelpTriggerKind;
 (function (SignatureHelpTriggerKind) {
     SignatureHelpTriggerKind[SignatureHelpTriggerKind["Invoke"] = 1] = "Invoke";
@@ -281,6 +300,19 @@ export class TextEdit {
 }
 export class FoldingRangeKind {
     /**
+     * Kind for folding range representing a comment. The value of the kind is 'comment'.
+     */
+    static { this.Comment = new FoldingRangeKind('comment'); }
+    /**
+     * Kind for folding range representing a import. The value of the kind is 'imports'.
+     */
+    static { this.Imports = new FoldingRangeKind('imports'); }
+    /**
+     * Kind for folding range representing regions (for example marked by `#region`, `#endregion`).
+     * The value of the kind is 'region'.
+     */
+    static { this.Region = new FoldingRangeKind('region'); }
+    /**
      * Returns a {@link FoldingRangeKind} for the given value.
      *
      * @param value of the kind.
@@ -302,19 +334,15 @@ export class FoldingRangeKind {
         this.value = value;
     }
 }
-/**
- * Kind for folding range representing a comment. The value of the kind is 'comment'.
- */
-FoldingRangeKind.Comment = new FoldingRangeKind('comment');
-/**
- * Kind for folding range representing a import. The value of the kind is 'imports'.
- */
-FoldingRangeKind.Imports = new FoldingRangeKind('imports');
-/**
- * Kind for folding range representing regions (for example marked by `#region`, `#endregion`).
- * The value of the kind is 'region'.
- */
-FoldingRangeKind.Region = new FoldingRangeKind('region');
+export var NewSymbolNameTag;
+(function (NewSymbolNameTag) {
+    NewSymbolNameTag[NewSymbolNameTag["AIGenerated"] = 1] = "AIGenerated";
+})(NewSymbolNameTag || (NewSymbolNameTag = {}));
+export var NewSymbolNameTriggerKind;
+(function (NewSymbolNameTriggerKind) {
+    NewSymbolNameTriggerKind[NewSymbolNameTriggerKind["Invoke"] = 0] = "Invoke";
+    NewSymbolNameTriggerKind[NewSymbolNameTriggerKind["Automatic"] = 1] = "Automatic";
+})(NewSymbolNameTriggerKind || (NewSymbolNameTriggerKind = {}));
 /**
  * @internal
  */
@@ -365,3 +393,12 @@ export class LazyTokenizationSupport {
  * @internal
  */
 export const TokenizationRegistry = new TokenizationRegistryImpl();
+/**
+ * @internal
+ */
+export const TreeSitterTokenizationRegistry = new TokenizationRegistryImpl();
+export var InlineEditTriggerKind;
+(function (InlineEditTriggerKind) {
+    InlineEditTriggerKind[InlineEditTriggerKind["Invoke"] = 0] = "Invoke";
+    InlineEditTriggerKind[InlineEditTriggerKind["Automatic"] = 1] = "Automatic";
+})(InlineEditTriggerKind || (InlineEditTriggerKind = {}));

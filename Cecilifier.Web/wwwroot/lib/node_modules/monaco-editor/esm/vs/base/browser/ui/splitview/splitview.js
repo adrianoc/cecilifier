@@ -28,7 +28,6 @@ class ViewItem {
         return typeof this._cachedVisibleSize === 'undefined';
     }
     setVisible(visible, size) {
-        var _a, _b;
         if (visible === this.visible) {
             return;
         }
@@ -42,7 +41,7 @@ class ViewItem {
         }
         this.container.classList.toggle('visible', visible);
         try {
-            (_b = (_a = this.view).setVisible) === null || _b === void 0 ? void 0 : _b.call(_a, visible);
+            this.view.setVisible?.(visible);
         }
         catch (e) {
             console.error('Splitview: Failed to set visible view');
@@ -54,7 +53,7 @@ class ViewItem {
     get maximumSize() { return this.visible ? this.view.maximumSize : 0; }
     get viewMaximumSize() { return this.view.maximumSize; }
     get priority() { return this.view.priority; }
-    get proportionalLayout() { var _a; return (_a = this.view.proportionalLayout) !== null && _a !== void 0 ? _a : true; }
+    get proportionalLayout() { return this.view.proportionalLayout ?? true; }
     get snap() { return !!this.view.snap; }
     set enabled(enabled) {
         this.container.style.pointerEvents = enabled ? '' : 'none';
@@ -209,7 +208,6 @@ export class SplitView extends Disposable {
      * Create a new {@link SplitView} instance.
      */
     constructor(container, options = {}) {
-        var _a, _b, _c, _d, _e;
         super();
         this.size = 0;
         this._contentSize = 0;
@@ -229,9 +227,9 @@ export class SplitView extends Disposable {
          * Fires whenever the user double clicks a {@link Sash sash}.
          */
         this.onDidSashReset = this._onDidSashReset.event;
-        this.orientation = (_a = options.orientation) !== null && _a !== void 0 ? _a : 0 /* Orientation.VERTICAL */;
-        this.inverseAltBehavior = (_b = options.inverseAltBehavior) !== null && _b !== void 0 ? _b : false;
-        this.proportionalLayout = (_c = options.proportionalLayout) !== null && _c !== void 0 ? _c : true;
+        this.orientation = options.orientation ?? 0 /* Orientation.VERTICAL */;
+        this.inverseAltBehavior = options.inverseAltBehavior ?? false;
+        this.proportionalLayout = options.proportionalLayout ?? true;
         this.getSashOrthogonalSize = options.getSashOrthogonalSize;
         this.el = document.createElement('div');
         this.el.classList.add('monaco-split-view2');
@@ -245,8 +243,8 @@ export class SplitView extends Disposable {
             scheduleAtNextAnimationFrame: callback => scheduleAtNextAnimationFrame(getWindow(this.el), callback),
         }));
         this.scrollableElement = this._register(new SmoothScrollableElement(this.viewContainer, {
-            vertical: this.orientation === 0 /* Orientation.VERTICAL */ ? ((_d = options.scrollbarVisibility) !== null && _d !== void 0 ? _d : 1 /* ScrollbarVisibility.Auto */) : 2 /* ScrollbarVisibility.Hidden */,
-            horizontal: this.orientation === 1 /* Orientation.HORIZONTAL */ ? ((_e = options.scrollbarVisibility) !== null && _e !== void 0 ? _e : 1 /* ScrollbarVisibility.Auto */) : 2 /* ScrollbarVisibility.Hidden */
+            vertical: this.orientation === 0 /* Orientation.VERTICAL */ ? (options.scrollbarVisibility ?? 1 /* ScrollbarVisibility.Auto */) : 2 /* ScrollbarVisibility.Hidden */,
+            horizontal: this.orientation === 1 /* Orientation.HORIZONTAL */ ? (options.scrollbarVisibility ?? 1 /* ScrollbarVisibility.Auto */) : 2 /* ScrollbarVisibility.Hidden */
         }, this.scrollable));
         // https://github.com/microsoft/vscode/issues/157737
         const onDidScrollViewContainer = this._register(new DomEmitter(this.viewContainer, 'scroll')).event;
@@ -531,7 +529,7 @@ export class SplitView extends Disposable {
                 this.viewContainer.insertBefore(container, this.viewContainer.children.item(index));
             }
             const onChangeDisposable = view.onDidChange(size => this.onViewChange(item, size));
-            const containerDisposable = toDisposable(() => this.viewContainer.removeChild(container));
+            const containerDisposable = toDisposable(() => container.remove());
             const disposable = combinedDisposable(onChangeDisposable, containerDisposable);
             let viewSize;
             if (typeof size === 'number') {
@@ -818,8 +816,7 @@ export class SplitView extends Disposable {
         return true;
     }
     dispose() {
-        var _a;
-        (_a = this.sashDragState) === null || _a === void 0 ? void 0 : _a.disposable.dispose();
+        this.sashDragState?.disposable.dispose();
         dispose(this.viewItems);
         this.viewItems = [];
         this.sashItems.forEach(i => i.disposable.dispose());

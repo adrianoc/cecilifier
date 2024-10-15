@@ -3,7 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import { RunOnceScheduler } from '../../../base/common/async.js';
-import { Codicon, getCodiconFontCharacters } from '../../../base/common/codicons.js';
+import { Codicon } from '../../../base/common/codicons.js';
+import { getCodiconFontCharacters } from '../../../base/common/codiconsUtil.js';
 import { ThemeIcon } from '../../../base/common/themables.js';
 import { Emitter } from '../../../base/common/event.js';
 import { isString } from '../../../base/common/types.js';

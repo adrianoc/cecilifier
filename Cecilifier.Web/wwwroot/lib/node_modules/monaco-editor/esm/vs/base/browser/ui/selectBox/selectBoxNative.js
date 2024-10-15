@@ -122,12 +122,11 @@ export class SelectBoxNative extends Disposable {
         this.applyStyles();
     }
     applyStyles() {
-        var _a, _b, _c;
         // Style native select
         if (this.selectElement) {
-            this.selectElement.style.backgroundColor = (_a = this.styles.selectBackground) !== null && _a !== void 0 ? _a : '';
-            this.selectElement.style.color = (_b = this.styles.selectForeground) !== null && _b !== void 0 ? _b : '';
-            this.selectElement.style.borderColor = (_c = this.styles.selectBorder) !== null && _c !== void 0 ? _c : '';
+            this.selectElement.style.backgroundColor = this.styles.selectBackground ?? '';
+            this.selectElement.style.color = this.styles.selectForeground ?? '';
+            this.selectElement.style.borderColor = this.styles.selectBorder ?? '';
         }
     }
     createOption(value, index, disabled) {

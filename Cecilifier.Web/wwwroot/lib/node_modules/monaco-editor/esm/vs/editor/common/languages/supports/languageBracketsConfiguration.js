@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import { CachedFunction } from '../../../../base/common/cache.js';
+import { createBracketOrRegExp } from './richEditBrackets.js';
 /**
  * Captures all bracket related configurations for a single language.
  * Immutable.
@@ -71,6 +72,10 @@ export class LanguageBracketsConfiguration {
     }
     getBracketInfo(bracketText) {
         return this.getOpeningBracketInfo(bracketText) || this.getClosingBracketInfo(bracketText);
+    }
+    getBracketRegExp(options) {
+        const brackets = Array.from([...this._openingBrackets.keys(), ...this._closingBrackets.keys()]);
+        return createBracketOrRegExp(brackets, options);
     }
 }
 function filterValidBrackets(bracketPairs) {

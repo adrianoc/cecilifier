@@ -32,7 +32,6 @@ export class DOMLineBreaksComputerFactory {
     }
 }
 function createLineBreaks(targetWindow, requests, fontInfo, tabSize, firstLineBreakColumn, wrappingIndent, wordBreak, injectedTextsPerLine) {
-    var _a;
     function createEmptyLineBreakWithPossiblyInjectedText(requestIdx) {
         const injectedTexts = injectedTextsPerLine[requestIdx];
         if (injectedTexts) {
@@ -105,7 +104,7 @@ function createLineBreaks(targetWindow, requests, fontInfo, tabSize, firstLineBr
         allVisibleColumns[i] = tmp[1];
     }
     const html = sb.build();
-    const trustedhtml = (_a = ttPolicy === null || ttPolicy === void 0 ? void 0 : ttPolicy.createHTML(html)) !== null && _a !== void 0 ? _a : html;
+    const trustedhtml = ttPolicy?.createHTML(html) ?? html;
     containerDomNode.innerHTML = trustedhtml;
     containerDomNode.style.position = 'absolute';
     containerDomNode.style.top = '10000';
@@ -156,7 +155,7 @@ function createLineBreaks(targetWindow, requests, fontInfo, tabSize, firstLineBr
         }
         result[i] = new ModelLineProjectionData(injectionOffsets, injectionOptions, breakOffsets, breakOffsetsVisibleColumn, wrappedTextIndentLength);
     }
-    targetWindow.document.body.removeChild(containerDomNode);
+    containerDomNode.remove();
     return result;
 }
 function renderLine(lineContent, initialVisibleColumn, tabSize, width, sb, wrappingIndentLength) {

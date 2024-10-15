@@ -19,6 +19,8 @@ import { Event } from '../../../base/common/event.js';
 import { Disposable } from '../../../base/common/lifecycle.js';
 import { IOpenerService } from '../common/opener.js';
 import './link.css';
+import { getDefaultHoverDelegate } from '../../../base/browser/ui/hover/hoverDelegateFactory.js';
+import { IHoverService } from '../../hover/browser/hover.js';
 let Link = class Link extends Disposable {
     get enabled() {
         return this._enabled;
@@ -42,16 +44,17 @@ let Link = class Link extends Disposable {
         }
         this._enabled = enabled;
     }
-    constructor(container, _link, options = {}, openerService) {
-        var _a;
+    constructor(container, _link, options = {}, _hoverService, openerService) {
         super();
         this._link = _link;
+        this._hoverService = _hoverService;
         this._enabled = true;
         this.el = append(container, $('a.monaco-link', {
-            tabIndex: (_a = _link.tabIndex) !== null && _a !== void 0 ? _a : 0,
+            tabIndex: _link.tabIndex ?? 0,
             href: _link.href,
-            title: _link.title
         }, _link.label));
+        this.hoverDelegate = options.hoverDelegate ?? getDefaultHoverDelegate('mouse');
+        this.setTooltip(_link.title);
         this.el.setAttribute('role', 'button');
         const onClickEmitter = this._register(new DomEmitter(this.el, 'click'));
         const onKeyPress = this._register(new DomEmitter(this.el, 'keypress'));
@@ -65,7 +68,7 @@ let Link = class Link extends Disposable {
                 return;
             }
             EventHelper.stop(e, true);
-            if (options === null || options === void 0 ? void 0 : options.opener) {
+            if (options?.opener) {
                 options.opener(this._link.href);
             }
             else {
@@ -74,8 +77,20 @@ let Link = class Link extends Disposable {
         }));
         this.enabled = true;
     }
+    setTooltip(title) {
+        if (this.hoverDelegate.showNativeHover) {
+            this.el.title = title ?? '';
+        }
+        else if (!this.hover && title) {
+            this.hover = this._register(this._hoverService.setupManagedHover(this.hoverDelegate, this.el, title));
+        }
+        else if (this.hover) {
+            this.hover.update(title);
+        }
+    }
 };
 Link = __decorate([
-    __param(3, IOpenerService)
+    __param(3, IHoverService),
+    __param(4, IOpenerService)
 ], Link);
 export { Link };
