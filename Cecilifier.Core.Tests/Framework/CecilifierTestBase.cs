@@ -111,17 +111,17 @@ public class CecilifierTestBase
         {
             // ensures that the cecilified code will be compiled if any of the hashes changes:
             // 1. Snippet
-            // 2. Cecilifier Core Assembly
+            // 2. Cecilifier Runtime Assembly
             using var hasher = SHA1.Create();
             var cecilifiedBytes = Encoding.ASCII.GetBytes(cecilifiedCode);
             hasher.TransformBlock(cecilifiedBytes, 0, cecilifiedBytes.Length, cecilifiedBytes, 0);
 
-            var cecilifierCoreAssemblyInfo = new FileInfo(typeof(Cecilifier).Assembly.Location);
+            var cecilifierRuntimeAssemblyInfo = new FileInfo(typeof(TypeHelpers).Assembly.Location);
                 
-            var lastWriteBytes = BitConverter.GetBytes(cecilifierCoreAssemblyInfo.LastWriteTimeUtc.Ticks);
+            var lastWriteBytes = BitConverter.GetBytes(cecilifierRuntimeAssemblyInfo.LastWriteTimeUtc.Ticks);
             hasher.TransformBlock(lastWriteBytes, 0, lastWriteBytes.Length, lastWriteBytes, 0);
                 
-            var cecilifierAssemblySize = BitConverter.GetBytes(cecilifierCoreAssemblyInfo.Length);
+            var cecilifierAssemblySize = BitConverter.GetBytes(cecilifierRuntimeAssemblyInfo.Length);
             hasher.TransformFinalBlock(cecilifierAssemblySize, 0, cecilifierAssemblySize.Length);
 
             return BitConverter.ToString(hasher.Hash!).Replace("-", "");
