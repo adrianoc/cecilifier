@@ -280,8 +280,18 @@ public class RecordTests
                 """,
                 "42");
         }
+    
+        [Test]
+        public void PrintMembers_Includes_PublicFields([Values] bool isGeneric)
+        {
+            AssertOutput($$"""
+                         System.Console.Write(new Record{{(isGeneric ? "<bool>": "")}}(42) { Name = "Foo" });
+                         public record Record{{(isGeneric ? "<T>": "")}}(int Value) { public string Name; }
+                         """,
+                "Record { Value = 42, Name = Foo }");
+        }
     }
-
+    
     [TestFixture]
     public class RecordStructs : OutputBasedTestBase
     {
