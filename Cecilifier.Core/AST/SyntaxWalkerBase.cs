@@ -443,7 +443,7 @@ namespace Cecilifier.Core.AST
                 return;
             }
 
-            var fieldDeclarationVariable = fieldSymbol.EnsureFieldExists(Context, node);
+            fieldSymbol.EnsureFieldExists(Context, node);
 
             if (!fieldSymbol.IsStatic && node.IsMemberAccessThroughImplicitThis())
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
@@ -456,13 +456,9 @@ namespace Cecilifier.Core.AST
             if (fieldSymbol.IsVolatile)
                 Context.EmitCilInstruction(ilVar, OpCodes.Volatile);
 
-            var resolvedField = fieldDeclarationVariable.IsValid
-                ? fieldDeclarationVariable.VariableName
-                : fieldSymbol.FieldResolverExpression(Context);
-
+            var resolvedField = fieldSymbol.FieldResolverExpression(Context);
             var opCode = fieldSymbol.LoadOpCodeForFieldAccess();
             Context.EmitCilInstruction(ilVar, opCode, resolvedField);
-
             HandlePotentialDelegateInvocationOn(node, fieldSymbol.Type, ilVar);
         }
 

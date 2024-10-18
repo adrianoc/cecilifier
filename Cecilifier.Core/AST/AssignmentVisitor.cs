@@ -240,8 +240,9 @@ namespace Cecilifier.Core.AST
             if (field.IsVolatile)
                 Context.EmitCilInstruction(ilVar, OpCodes.Volatile);
 
-            var fieldDefinitionVariable = field.EnsureFieldExists(Context, name);
-            MemberAssignment(field.Type, field.RefKind, fieldDefinitionVariable, field.StoreOpCodeForFieldAccess());
+            field.EnsureFieldExists(Context, name);
+            var fieldReference = field.FieldResolverExpression(Context);
+            MemberAssignment(field.Type, field.RefKind, fieldReference, field.StoreOpCodeForFieldAccess());
         }
 
         private void LocalVariableAssignment(ILocalSymbol localVariable)
@@ -258,17 +259,22 @@ namespace Cecilifier.Core.AST
 
         private void MemberAssignment(ITypeSymbol memberType, RefKind memberRefKind, DefinitionVariable memberDefinitionVariable, OpCode storeOpCode)
         {
+            if (!NeedsIndirectStore(memberType, memberRefKind) && !memberDefinitionVariable.IsValid)
+            {
+                throw new InvalidOperationException("Invalid definition variable");
+            }
+            MemberAssignment(memberType, memberRefKind, memberDefinitionVariable.VariableName, storeOpCode);
+        }
+        
+        private void MemberAssignment(ITypeSymbol memberType, RefKind memberRefKind, string memberReference, OpCode storeOpCode)
+        {
             if (NeedsIndirectStore(memberType, memberRefKind))
             {
                 EmitIndirectStore(memberType);
             }
             else
             {
-                if (!memberDefinitionVariable.IsValid)
-                {
-                    throw new InvalidOperationException("Invalid definition variable");
-                }
-                Context.EmitCilInstruction(ilVar, storeOpCode, memberDefinitionVariable.VariableName);
+                Context.EmitCilInstruction(ilVar, storeOpCode, memberReference);
             }
         }
 

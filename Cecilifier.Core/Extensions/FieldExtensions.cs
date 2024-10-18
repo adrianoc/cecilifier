@@ -12,13 +12,17 @@ namespace Cecilifier.Core.Extensions
         {
             if (field.IsDefinedInCurrentAssembly(context))
             {
-                var found = context.DefinitionVariables.GetVariable(field.Name, VariableMemberKind.Field, field.ContainingType.ToDisplayString());
+                var found = context.DefinitionVariables.GetVariable(field.Name, VariableMemberKind.Field, field.ContainingType.OriginalDefinition.ToDisplayString());
                 if (!found.IsValid)
                 {
                     throw new Exception($"Failed to resolve variable with field definition for `{field}`");
                 }
 
-                return found.VariableName;
+                var resolvedField = field.ContainingType.IsGenericType && !field.ContainingType.IsDefinition 
+                    ? $$"""new FieldReference("{{field.Name}}", {{context.TypeResolver.Resolve(field.OriginalDefinition.Type)}}, {{context.TypeResolver.Resolve(field.ContainingType)}})""" 
+                    : found.VariableName;
+                
+                return resolvedField;
             }
 
             var declaringTypeName = field.ContainingType.FullyQualifiedName();
