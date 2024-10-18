@@ -17,7 +17,7 @@ using static Cecilifier.Core.Misc.Utils;
 
 namespace Cecilifier.Core.Extensions
 {
-    internal static class MethodExtensions
+    public static class MethodExtensions
     {
         public static TypeParameterSyntax[] GetTypeParameterSyntax(this IMethodSymbol method)
         {
@@ -164,12 +164,13 @@ namespace Cecilifier.Core.Extensions
 
             if (method.Parameters.Any(p => p.Type.IsTypeParameterOrIsGenericTypeReferencingTypeParameter()) 
                 || method.ReturnType.IsTypeParameterOrIsGenericTypeReferencingTypeParameter()
-                || method.ContainingType.TypeArguments.Any(t => t.IsDefinedInCurrentAssembly(ctx)))
+                || method.ContainingType.TypeArguments.Any(t => t.IsDefinedInCurrentAssembly(ctx))
+                || method.ContainingType.HasTypeArgumentOfTypeFromCecilifiedCodeTransitive(ctx))
             {
                 return ResolveMethodFromGenericType(method, ctx);
             }
 
-            return ImportFromMainModule($"TypeHelpers.ResolveMethod(typeof({declaringTypeName}), \"{method.Name}\",{method.ReflectionBindingsFlags()}{method.Parameters.Aggregate("", (acc, curr) => acc + ", \"" + curr.Type.FullyQualifiedName() + "\"")})");
+            return ImportFromMainModule($"TypeHelpers.ResolveMethod(typeof({declaringTypeName}), \"{method.Name}\",{method.ReflectionBindingsFlags()}{method.Parameters.Aggregate("", (acc, curr) => acc + ", \"" + curr.Type.GetReflectionName() + "\"")})");
         }
 
         private static (HashSet<ITypeParameterSymbol>, bool) CollectReferencedMethodTypeParameters(IMethodSymbol method)
@@ -213,7 +214,7 @@ namespace Cecilifier.Core.Extensions
         {
             // resolve declaring type of the method.
             var targetTypeVarName = ctx.Naming.SyntheticVariable($"{method.ContainingType.Name}", ElementKind.LocalVariable);
-            var resolvedTargetTypeExp = ctx.TypeResolver.Resolve(method.ContainingType.OriginalDefinition).MakeGenericInstanceType(method.ContainingType.TypeArguments.Select(t => ctx.TypeResolver.Resolve(t)));
+            var resolvedTargetTypeExp = ctx.TypeResolver.Resolve(method.ContainingType.OriginalDefinition).MakeGenericInstanceType(method.ContainingType.GetAllTypeArguments().Select(t => ctx.TypeResolver.Resolve(t)));
             ctx.WriteCecilExpression($"var {targetTypeVarName} = {resolvedTargetTypeExp};");
             ctx.WriteNewLine();
 

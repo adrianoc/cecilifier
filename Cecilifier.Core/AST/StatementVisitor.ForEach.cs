@@ -55,15 +55,12 @@ namespace Cecilifier.Core.AST
             
             void ProcessForEachOverEnumerable()
             {
-                var getEnumeratorMethod = GetEnumeratorMethodFor(enumerableType);
-                var enumeratorType = EnumeratorTypeFor(getEnumeratorMethod);
-
-                var enumeratorMoveNextMethod = MoveNextMethodFor(enumeratorType);
-                var enumeratorCurrentMethod = CurrentMethodFor(enumeratorType);
+                var info = Context.SemanticModel.GetForEachStatementInfo(node);
+                var enumeratorType = EnumeratorTypeFor(info.GetEnumeratorMethod);
 
                 var isDisposable = enumeratorType.Interfaces.FirstOrDefault(candidate => SymbolEqualityComparer.Default.Equals(candidate, Context.RoslynTypeSystem.SystemIDisposable)) != null;
 
-                var context = new ForEachHandlerContext(getEnumeratorMethod, enumeratorCurrentMethod, enumeratorMoveNextMethod);
+                var context = new ForEachHandlerContext(info.GetEnumeratorMethod, info.MoveNextMethod, info.CurrentProperty!);
 
                 // Get the enumerator..
                 // we need to do this here (as opposed to in ProcessForEach() method) because we have a enumerable instance in the stack 
@@ -114,7 +111,7 @@ namespace Cecilifier.Core.AST
             // Adds a variable to store current value in the foreach loop.
             Context.WriteNewLine();
             Context.WriteComment("variable to store current value in the foreach loop.");
-            var foreachCurrentValueVarName = Context.AddLocalVariableToCurrentMethod(node.Identifier.ValueText, Context.TypeResolver.Resolve(forEachHandlerContext.EnumeratorCurrentMethod.GetMemberType())).VariableName;
+            var foreachCurrentValueVarName = Context.AddLocalVariableToCurrentMethod(node.Identifier.ValueText, Context.TypeResolver.Resolve(forEachHandlerContext.EnumeratorCurrentProperty.GetMemberType())).VariableName;
             
             var endOfLoopLabelVar = Context.Naming.Label("endForEach");
             CreateCilInstruction(_ilVar, endOfLoopLabelVar, OpCodes.Nop);
@@ -128,12 +125,11 @@ namespace Cecilifier.Core.AST
             Context.EmitCilInstruction(_ilVar, OpCodes.Brfalse, endOfLoopLabelVar);
             
             Context.EmitCilInstruction(_ilVar, loadOpCode, forEachHandlerContext.EnumeratorVariableName);
-            Context.AddCallToMethod(forEachHandlerContext.EnumeratorCurrentMethod, _ilVar, MethodDispatchInformation.MostLikelyVirtual);
+            Context.AddCallToMethod(forEachHandlerContext.EnumeratorCurrentProperty.GetMethod, _ilVar, MethodDispatchInformation.MostLikelyVirtual);
 
-            var info = Context.SemanticModel.GetForEachStatementInfo(node);
-            if (!node.Type.IsKind(SyntaxKind.RefType) && info.CurrentProperty.ReturnsByRef)
+            if (!node.Type.IsKind(SyntaxKind.RefType) && forEachHandlerContext.EnumeratorCurrentProperty.ReturnsByRef)
             {
-                Context.EmitCilInstruction(_ilVar, info.ElementType.LdindOpCodeFor());
+                Context.EmitCilInstruction(_ilVar, forEachHandlerContext.EnumeratorCurrentProperty.Type.LdindOpCodeFor());
             }
             
             Context.EmitCilInstruction(_ilVar, OpCodes.Stloc, foreachCurrentValueVarName);
@@ -152,49 +148,6 @@ namespace Cecilifier.Core.AST
             Context.WriteNewLine();
         }
 
-        public override void VisitForEachVariableStatement(ForEachVariableStatementSyntax node)
-        {
-            base.VisitForEachVariableStatement(node);
-        }
-
-        private IMethodSymbol GetEnumeratorMethodFor(ITypeSymbol enumerableType)
-        {
-            var interfacesToCheck = new[] { Context.RoslynTypeSystem.SystemCollectionsGenericIEnumerableOfT, Context.RoslynTypeSystem.SystemCollectionsIEnumerable };
-            return GetMethodOnTypeOrImplementedInterfaces(enumerableType, interfacesToCheck, "GetEnumerator");
-        }
-
-        private IMethodSymbol GetMethodOnTypeOrImplementedInterfaces(ITypeSymbol inType, ITypeSymbol[] interfacesToCheck, string methodName)
-        {
-            var found = inType.GetMembers(methodName).SingleOrDefault();
-            if (found != null)
-                return (IMethodSymbol) found;
-
-            int i = -1;
-            while (found == null && ++i < interfacesToCheck.Length)
-            {
-                found = inType.Interfaces.SingleOrDefault(itf => SymbolEqualityComparer.Default.Equals(itf.OriginalDefinition, interfacesToCheck[i]))?.EnsureNotNull<ISymbol, ITypeSymbol>().GetMembers(methodName).SingleOrDefault();
-            }
-
-            return found.EnsureNotNull<ISymbol, IMethodSymbol>();
-        }
-        
-        /*
-         * MoveNext() method may be implemented in ...
-         * 1. IEnumerator
-         * 2. A type following the enumerator pattern
-         */
-        private IMethodSymbol MoveNextMethodFor(ITypeSymbol enumeratorType)
-        {
-            var interfacesToCheck = new[] { Context.RoslynTypeSystem.SystemCollectionsGenericIEnumeratorOfT, Context.RoslynTypeSystem.SystemCollectionsIEnumerator };
-            return GetMethodOnTypeOrImplementedInterfaces(enumeratorType, interfacesToCheck, "MoveNext");
-        }
-        
-        private IMethodSymbol CurrentMethodFor(ITypeSymbol enumeratorType)
-        {
-            var interfacesToCheck = new[] { Context.RoslynTypeSystem.SystemCollectionsGenericIEnumeratorOfT, Context.RoslynTypeSystem.SystemCollectionsIEnumerator };
-            return GetMethodOnTypeOrImplementedInterfaces(enumeratorType, interfacesToCheck, "get_Current");
-        }
-        
         /*
          * either the type returned by GetEnumerator() implements `IEnumerator` interface *or*
          * it abides to the enumerator pattern, i.e, it has the following members:
@@ -217,7 +170,7 @@ namespace Cecilifier.Core.AST
             return enumeratorType ?? getEnumeratorMethod.ReturnType;
         }
 
-        private record ForEachHandlerContext(IMethodSymbol GetEnumeratorMethod, IMethodSymbol EnumeratorCurrentMethod, IMethodSymbol EnumeratorMoveNextMethod)
+        private record ForEachHandlerContext(IMethodSymbol GetEnumeratorMethod, IMethodSymbol EnumeratorMoveNextMethod, IPropertySymbol EnumeratorCurrentProperty)
         {
             public string EnumeratorVariableName { get; set; }
         }

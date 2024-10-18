@@ -1,5 +1,6 @@
 using System;
 using Cecilifier.Core.Extensions;
+using Cecilifier.Core.Tests.Tests.Unit.Framework;
 using Microsoft.CodeAnalysis;
 using Mono.Cecil.Cil;
 using NUnit.Framework;

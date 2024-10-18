@@ -13,7 +13,7 @@ using Mono.Cecil.Cil;
 
 namespace Cecilifier.Core.Extensions
 {
-    internal static class ISymbolExtensions
+    public static class ISymbolExtensions
     {
         private static readonly SymbolDisplayFormat QualifiedNameWithoutTypeParametersFormat = new SymbolDisplayFormat(typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces)
             .AddMiscellaneousOptions(SymbolDisplayMiscellaneousOptions.ExpandNullable)
@@ -51,6 +51,36 @@ namespace Cecilifier.Core.Extensions
             }
 
             return type.ToDisplayString(includingTypeParameters ? QualifiedNameIncludingTypeParametersFormat : QualifiedNameWithoutTypeParametersFormat);
+        }
+        
+        public static string GetReflectionName(this ITypeSymbol typeSymbol)
+        {
+            var sb = new System.Text.StringBuilder();
+
+            if (typeSymbol is IArrayTypeSymbol array)
+            {
+                return $"{GetReflectionName(array.ElementType)}[{new String(',', array.Rank - 1)}]";
+            }
+            
+            // Append the namespace if it's not a global namespace
+            if (!typeSymbol.ContainingNamespace.IsGlobalNamespace)
+            {
+                sb.Append($"{typeSymbol.ContainingNamespace.ToDisplayString()}.");
+            }
+    
+            sb.Append(typeSymbol.MetadataName);
+    
+            if (typeSymbol is INamedTypeSymbol { IsGenericType: true, TypeArguments.Length: > 0 } namedTypeSymbol)
+            {
+                sb.Append($"[[{string.Join(", ", namedTypeSymbol.TypeArguments.Select(t => t.GetReflectionName()))}]]");
+            }
+    
+            if (typeSymbol.ContainingType != null)
+            {
+                sb.Insert(0, $"{typeSymbol.ContainingType.GetReflectionName()}+");
+            }
+
+            return sb.ToString();
         }
 
         public static ITypeSymbol GetMemberType(this ISymbol symbol) => symbol switch
@@ -236,6 +266,11 @@ namespace Cecilifier.Core.Extensions
             var typeOfT = typeof(T);
             attributeData = symbol.GetAttributes().SingleOrDefault(attr => attr.AttributeClass?.Name == typeOfT.Name);
             return attributeData != null;
+        }
+        public static bool HasTypeArgumentOfTypeFromCecilifiedCodeTransitive(this INamedTypeSymbol type, IVisitorContext context)
+        {
+            return type.TypeArguments.Any(t => t.IsDefinedInCurrentAssembly(context)) 
+                   || (type.ContainingType != null && (SymbolEqualityComparer.Default.Equals(type.ContainingType, type) ? false : HasTypeArgumentOfTypeFromCecilifiedCodeTransitive(type.ContainingType, context)));
         }
     }
 }

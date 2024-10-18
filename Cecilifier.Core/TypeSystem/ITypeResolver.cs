@@ -2,7 +2,7 @@ using Microsoft.CodeAnalysis;
 
 namespace Cecilifier.Core.TypeSystem
 {
-    internal interface ITypeResolver
+    public interface ITypeResolver
     {
         string Resolve(ITypeSymbol type, string cecilTypeParameterProviderVar = null);
         string Resolve(string typeName);

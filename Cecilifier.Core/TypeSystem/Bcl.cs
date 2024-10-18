@@ -2,7 +2,7 @@ using Cecilifier.Core.Misc;
 
 namespace Cecilifier.Core.TypeSystem
 {
-    internal sealed class Bcl
+    public sealed class Bcl
     {
         public Bcl(ITypeResolver typeResolver, CecilifierContext cecilifierContext)
         {

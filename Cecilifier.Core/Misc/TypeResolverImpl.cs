@@ -24,6 +24,7 @@ namespace Cecilifier.Core.Misc
         public string Resolve(ITypeSymbol type, string cecilTypeParameterProviderVar = null)
         {
             return ResolveLocalVariableType(type)
+                   ?? ResolveNestedType(type)
                    ?? ResolvePredefinedAndComposedTypes(type)
                    ?? ResolveGenericType(type, cecilTypeParameterProviderVar)
                    ?? ResolveTypeParameter(type, cecilTypeParameterProviderVar)
@@ -31,6 +32,35 @@ namespace Cecilifier.Core.Misc
         }
 
         public string Resolve(string typeName) => Utils.ImportFromMainModule($"typeof({typeName})");
+        
+        private string ResolveNestedType(ITypeSymbol type)
+        {
+            if (type.ContainingType == null || type.Kind == SymbolKind.TypeParameter)
+                return null;
+
+            if (type is INamedTypeSymbol { IsGenericType: true } nestedType 
+                && (nestedType.HasTypeArgumentOfTypeFromCecilifiedCodeTransitive(_context) || nestedType.ContainingType.IsTypeParameterOrIsGenericTypeReferencingTypeParameter()))
+            {
+                // collects the type arguments for all types in the parent chain. 
+                var typeArguments = nestedType.GetAllTypeArguments().ToArray();
+                var resolveNestedType = $"""TypeHelpers.NewRawNestedTypeReference("{type.Name}", module: assembly.MainModule, {Resolve(type.ContainingType.OriginalDefinition)}, isValueType: {(type.IsValueType ? "true" : "false")}, {typeArguments.Length})""";
+            
+                // if type is a generic type definition we return the open, resolved type
+                // otherwise this method is expected to return a 'GenericInstanceType'.
+                // Note that in this case even if the parent type is the generic one,
+                // in IL, we need to create a 'GenericInstanceType' of the nested 
+                // (irrespective to it being a generic type or not). For instance, 
+                // to represent the type 'List<string>.Enumerator', a 'TypeReference'
+                // for 'Enumerator' is instantiated and a 'generic parameter' is added
+                // to it (even though it is *not* a generic type, it's parent type is
+                // and the parent's type generic parameters are added to the nested type) 
+                return type.IsDefinition 
+                    ? resolveNestedType 
+                    : resolveNestedType.MakeGenericInstanceType(typeArguments.Select(t => _context.TypeResolver.Resolve(t)).ToArray());
+            }
+
+            return null;
+        }
 
         public string ResolvePredefinedType(ITypeSymbol type) => $"assembly.MainModule.TypeSystem.{type.Name}";
 

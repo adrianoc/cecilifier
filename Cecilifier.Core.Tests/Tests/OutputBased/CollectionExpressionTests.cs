@@ -53,7 +53,29 @@ public class CollectionExpressionTests : OutputBasedTestBase
             foreach(var c in list.ToArray()) System.Console.Write(c);
             """, 
             "CECIL");
-    }    
+    }
+
+    [Test]
+    public void X()
+    {
+        AssertOutput(
+            """
+            using System.Collections.Generic;
+            List<Bar> list = [new Bar(1), new Bar(2)];
+            
+            for(List<Bar>.Enumerator enumerator = list.GetEnumerator(); enumerator.MoveNext();)
+                System.Console.Write(enumerator.Current);
+            
+            class Bar 
+            {
+                public Bar(int i) => Value = i;
+                public override string ToString() => Value.ToString();
+                public int Value;
+            }
+            """, 
+            "12");
+        
+    }
     
     [Test]
     public void ImplicitNumericConversions_Are_Applied([Values("List<long>", "long[]", "Span<long>")] string targetType, [Values("[2, 1]", "[5, 4, 3, 2, 1]")] string items)

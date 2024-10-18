@@ -3,6 +3,7 @@ using System.IO;
 using System.Text;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Tests.Framework;
+using Cecilifier.Core.Tests.Tests.Unit.Framework;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Tests.Unit;

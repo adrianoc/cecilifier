@@ -14,7 +14,7 @@ using Mono.Cecil.Cil;
 
 namespace Cecilifier.Core.Misc
 {
-    internal class CecilifierContext : IVisitorContext
+    public class CecilifierContext : IVisitorContext
     {
         private readonly IDictionary<string, string> flags = new Dictionary<string, string>();
         private readonly LinkedList<string> output = new();

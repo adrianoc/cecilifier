@@ -52,7 +52,7 @@ namespace Cecilifier.Core.AST
 
             var forConditionLabel = AddCilInstructionWithLocalVariable(_ilVar, OpCodes.Nop);
 
-            Context.WriteComment("for condition");
+            Context.WriteComment($"for condition: {node.Condition.HumanReadableSummary()}");
             // Condition
             ExpressionVisitor.Visit(Context, _ilVar, node.Condition);
             Context.EmitCilInstruction(_ilVar, OpCodes.Brfalse, forEndLabel);

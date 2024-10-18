@@ -401,7 +401,7 @@ namespace Cecilifier.Core.AST
             LoadLiteralValue(ilVar,
                 literalType,
                 value,
-                literalParent.Accept(UsageVisitor.GetInstance(Context)) == UsageKind.CallTarget,
+                literalParent.Accept(UsageVisitor.GetInstance(Context)),
                 literalParent);
 
             skipLeftSideVisitingInAssignment = (literalType.IsValueType || literalType.TypeKind == TypeKind.TypeParameter) && !literalType.IsPrimitiveType();
@@ -816,8 +816,8 @@ namespace Cecilifier.Core.AST
             var type = Context.GetTypeInfo(node.Type).Type.EnsureNotNull();
 
             var defaultParent = node.Parent.EnsureNotNull<SyntaxNode, CSharpSyntaxNode>();
-            var isTargetOfCall = defaultParent.Accept(UsageVisitor.GetInstance(Context)) == UsageKind.CallTarget;
-            LoadLiteralValue(ilVar, type, type.ValueForDefaultLiteral(), isTargetOfCall, defaultParent);
+            var usageResult = defaultParent.Accept(UsageVisitor.GetInstance(Context));
+            LoadLiteralValue(ilVar, type, type.ValueForDefaultLiteral(), usageResult, defaultParent);
 
             skipLeftSideVisitingInAssignment = (type.IsValueType || type.TypeKind == TypeKind.TypeParameter) && !type.IsPrimitiveType();
         }
@@ -1214,7 +1214,13 @@ namespace Cecilifier.Core.AST
         private void StoreTopOfStackInLocalVariableAndLoad(ExpressionSyntax expressionSyntax, ITypeSymbol type)
         {
             var tempLocalName = StoreTopOfStackInLocalVariable(Context, ilVar, "tmp", type).VariableName;
-            Context.EmitCilInstruction(ilVar, RequiresAddressOfValue() ? OpCodes.Ldloca_S : OpCodes.Ldloc, tempLocalName);
+            if (!HandleLoadAddress(ilVar, type, expressionSyntax, OpCodes.Ldloca_S, tempLocalName))
+            {
+                // HandleLoadAddress() does not handle scenarios in which a value type instantiation is passed as an 
+                // 'in parameter' to a method (that method is already complex so I don't want to make it even more
+                // complex)
+                Context.EmitCilInstruction(ilVar, RequiresAddressOfValue() ? OpCodes.Ldloca_S : OpCodes.Ldloc, tempLocalName);
+            }
 
             var parentMae = expressionSyntax.FirstAncestorOrSelf<MemberAccessExpressionSyntax>(ancestor => ancestor.Kind() == SyntaxKind.SimpleMemberAccessExpression);
             if (parentMae != null && SymbolEqualityComparer.Default.Equals(Context.SemanticModel.GetSymbolInfo(parentMae).Symbol.ContainingType, Context.RoslynTypeSystem.SystemValueType))
@@ -1437,7 +1443,7 @@ namespace Cecilifier.Core.AST
 
             foreach (var arg in methodSymbol.Parameters.Skip(args.Arguments.Count))
             {
-                LoadLiteralValue(ilVar, arg.Type, ArgumentValueToUseForDefaultParameter(arg, methodSymbol.Parameters, args.Arguments), false, args);
+                LoadLiteralValue(ilVar, arg.Type, ArgumentValueToUseForDefaultParameter(arg, methodSymbol.Parameters, args.Arguments), UsageResult.None, args);
             }
         }
 

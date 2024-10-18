@@ -11,7 +11,7 @@ namespace Cecilifier.Core.TypeSystem;
 /// RoslynTypeSystem contains Roslyn symbols for common types. These are useful when one needs to
 /// compare or emit code referencing those types. 
 /// </summary>
-internal struct RoslynTypeSystem
+public struct RoslynTypeSystem
 {
     public RoslynTypeSystem(IVisitorContext ctx)
     {
