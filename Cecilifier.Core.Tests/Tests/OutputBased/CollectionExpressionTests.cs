@@ -107,7 +107,7 @@ public class CollectionExpressionTests : OutputBasedTestBase
 
     void AssertConversionIsApplied(string targetType, string items, string elementType)
     {
-        var (lengthExtractor, expectedILError) = targetType == $"Span<{elementType}>" ? ("items.Length", "[ReturnPtrToStack]") : ("((ICollection) items).Count", null);
+        var (lengthExtractor, expectedILError) = targetType == $"Span<{elementType}>" ? ("items.Length", "ReturnPtrToStack") : ("((ICollection) items).Count", null);
         AssertOutput(
             $$"""
               using System.Collections.Generic;

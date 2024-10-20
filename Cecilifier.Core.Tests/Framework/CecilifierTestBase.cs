@@ -1,18 +1,21 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection.Metadata;
+using System.Reflection.PortableExecutable;
 using System.Security.Cryptography;
 using System.Text;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.Tests.Framework.AssemblyDiff;
+using Cecilifier.Core.Tests.Framework.ILVerification;
 using Cecilifier.Runtime;
-using Mono.Cecil;
 using Mono.Cecil.Cil;
+using Mono.Cecil;
 using Mono.Cecil.Rocks;
 using NUnit.Framework;
+using ILVerify;
 
 namespace Cecilifier.Core.Tests.Framework;
 
@@ -38,6 +41,38 @@ public class CecilifierTestBase
             : CompilationServices.CompileDLL(targetPath, tbc, ReferencedAssemblies.GetTrustedAssembliesPath());
     }
 
+    class AssemblyResolver : IResolver
+    {
+        private readonly Dictionary<string, PEReader> assemblyCache = new();
+        public PEReader ResolveAssembly(AssemblyNameInfo assemblyName)
+        {
+            if (assemblyCache.TryGetValue(assemblyName.Name, out var assembly))
+                return assembly;
+            
+            var assemblyPath = referenceAssemblies.SingleOrDefault(assemblyPath => Path.GetFileName(Path.GetFileNameWithoutExtension(assemblyPath)) == assemblyName.Name);
+            if (assemblyPath != null)
+            {
+                var resolvedAssembly = new PEReader(File.OpenRead(assemblyPath));
+                assemblyCache[assemblyName.Name] = resolvedAssembly;
+                return resolvedAssembly;
+            }
+
+            return null;
+        }
+
+        public PEReader ResolveModule(AssemblyNameInfo referencingAssembly, string fileName)
+        {
+            return null;
+        }
+
+        public AssemblyResolver(string dotnetRoot)
+        {
+            referenceAssemblies = Directory.GetFiles($"{dotnetRoot}/packs/Microsoft.NETCore.App.Ref/{Environment.Version}/ref/net{Environment.Version.Major}.{Environment.Version.Minor}", "*.dll");
+        }
+
+        private string[] referenceAssemblies;
+    }
+    
     private protected void VerifyAssembly(string actualAssemblyPath, string expectedAssemblyPath, CecilifyTestOptions options)
     {
         var dotnetRootPath = Environment.GetEnvironmentVariable("DOTNET_ROOT");
@@ -47,38 +82,28 @@ public class CecilifierTestBase
             return;
         }
 
-        var ignoreErrorsArg = options.IgnoredILErrors != null ? $" -g {options.IgnoredILErrors}" : string.Empty;
-        var ilVerifyStartInfo = new ProcessStartInfo
+        var v = new Verifier(new AssemblyResolver(dotnetRootPath), new VerifierOptions() { IncludeMetadataTokensInErrorMessages = true});
+        v.SetSystemModuleName(new AssemblyNameInfo("mscorlib"));
+        var assemblyReaderToVerify = new PEReader(new FileStream(actualAssemblyPath, FileMode.Open));
+        var verifierResults = v.Verify(assemblyReaderToVerify).ToArray();
+        
+        if (verifierResults.Length > 0)
         {
-            FileName = "ilverify",
-            Arguments = $"""{actualAssemblyPath} -r "{dotnetRootPath}/packs/Microsoft.NETCore.App.Ref/{Environment.Version}/ref/net{Environment.Version.Major}.{Environment.Version.Minor}/*.dll"{ignoreErrorsArg}""",
-            WindowStyle = ProcessWindowStyle.Normal,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false
-        };
-
-        using var ilverifyProcess = new Process
-        {
-            StartInfo = ilVerifyStartInfo
-        };
-
-        var output = new List<string>();
-        ilverifyProcess.OutputDataReceived += (_, arg) => output.Add(arg.Data);
-        ilverifyProcess.ErrorDataReceived += (_, arg) => output.Add(arg.Data);
-
-        ilverifyProcess.Start();
-        ilverifyProcess.BeginOutputReadLine();
-        ilverifyProcess.BeginErrorReadLine();
-
-        if (!ilverifyProcess.WaitForExit(TimeSpan.FromSeconds(30)))
-        {
-            throw new TimeoutException($"ilverify ({ilverifyProcess.Id}) took more than 30 secs to process {actualAssemblyPath}");
-        }
-
-        if (ilverifyProcess.ExitCode != 0)
-        {
-            output.Add($"ilverify for {actualAssemblyPath} failed with exit code = {ilverifyProcess.ExitCode}.\n{(expectedAssemblyPath != null ? $"Expected path={expectedAssemblyPath}\n" : "")}");
+            var ignoredErrorsSpan = options.IgnoredILErrors.AsSpan();
+            Span<Range> splitPositions = stackalloc Range[ignoredErrorsSpan.Count('|') + 1];
+            var ignoredErrorsCount = ignoredErrorsSpan.Split(splitPositions, '|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            HashSet<VerifierError> ignoredErrors = new();
+            foreach (var ignoredErrorNamePosition in splitPositions.Slice(0, ignoredErrorsCount))
+            {
+                ignoredErrors.Add(Enum.Parse<VerifierError>(ignoredErrorsSpan[ignoredErrorNamePosition]));
+            }
+            
+            List<string> output = new();
+            output.AddRange(verifierResults.Where(error => !ignoredErrors.Contains(error.Code)).Select(error => ILVerifierResult.From(error, assemblyReaderToVerify.GetMetadataReader()).GetErrorMessage()).ToArray());
+            if (output.Count == 0)
+                return;
+            
+            output.Add($"ilverify for {actualAssemblyPath} failed.\n{(expectedAssemblyPath != null ? $"Expected path={expectedAssemblyPath}\n" : "")}");
 
             if (options.CecilifiedCode != null)
             {
@@ -101,7 +126,7 @@ public class CecilifierTestBase
         var references = ReferencedAssemblies.GetTrustedAssembliesPath().Where(a => !a.Contains("mscorlib"));
         List<string> refsToCopy = [
             typeof(ILParser).Assembly.Location,
-            typeof(TypeReference).Assembly.Location,
+            typeof(Mono.Cecil.TypeReference).Assembly.Location,
             typeof(TypeHelpers).Assembly.Location
         ];
 
@@ -178,16 +203,14 @@ public class CecilifierTestBase
 
     private protected string GetILFrom(string actualAssemblyPath, string methodSignature)
     {
-        using (var assembly = AssemblyDefinition.ReadAssembly(actualAssemblyPath))
+        using var assembly = Mono.Cecil.AssemblyDefinition.ReadAssembly(actualAssemblyPath);
+        var method = assembly.MainModule.Types.SelectMany(t => t.Methods).SingleOrDefault(m => m.FullName == methodSignature);
+        if (method == null)
         {
-            var method = assembly.MainModule.Types.SelectMany(t => t.Methods).SingleOrDefault(m => m.FullName == methodSignature);
-            if (method == null)
-            {
-                Assert.Fail($"Method {methodSignature} could not be found in {actualAssemblyPath}");
-            }
-
-            return Formatter.FormatMethodBody(method).Replace("\t", "");
+            Assert.Fail($"Method {methodSignature} could not be found in {actualAssemblyPath}");
         }
+
+        return Formatter.FormatMethodBody(method).Replace("\t", "");
     }
 
     private protected static string ReadToEnd(Stream tbc)
