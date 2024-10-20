@@ -123,7 +123,24 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             var result = RunCecilifier(code);
             var cecilifiedCode = result.GeneratedCode.ReadToEnd();
 
-            Assert.That(cecilifiedCode, Does.Match(@"il_M_\d+.Emit\(OpCodes.Call, .+ImportReference\(typeof\(System\.Activator\)\)\.MakeGenericInstanceType\(gp_T_\d+\)\);"));
+            Assert.That(
+                cecilifiedCode, 
+                Does.Match("""
+                           //new T\(\)
+                           \s+var r_createInstance_4 = new MethodReference\("CreateInstance", .+TypeSystem.Void, .+ImportReference\(typeof\(System.Activator\)\)\)
+                           \s+{
+                           \s+HasThis = false,
+                           \s+ExplicitThis = false,
+                           \s+CallingConvention = 0,
+                           \s+};
+                           \s+var gi_T_5 = new GenericParameter\("T", r_createInstance_4\);
+                           \s+r_createInstance_4.GenericParameters.Add\(gi_T_5\);
+                           \s+r_createInstance_4.ReturnType = gi_T_5;
+                           \s+var gi_createInstance_6 = new GenericInstanceMethod\(r_createInstance_4\);
+                           \s+gi_createInstance_6.GenericArguments.Add\(gp_T_\d+\);
+                           \s+il_M_3.Emit\(OpCodes.Call, gi_createInstance_6\);
+                           """));
+            
             Assert.That(cecilifiedCode, Does.Match(@"m_M_\d+\.ReturnType = gp_T_\d+;"));
         }
 

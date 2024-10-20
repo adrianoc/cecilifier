@@ -954,11 +954,15 @@ namespace Cecilifier.Core.AST
                 return false;
 
             //call !!0 [System.Runtime]System.Activator::CreateInstance<!!T>()
-            Context.EmitCilInstruction(
-                ilVar,
-                OpCodes.Call,
-                Context.TypeResolver.Resolve(Context.RoslynTypeSystem.SystemActivator).MakeGenericInstanceType(Context.TypeResolver.Resolve(instantiatedType)));
-
+            var openCreateInstanceMethod = Context.RoslynTypeSystem.SystemActivator.GetMembers("CreateInstance").OfType<IMethodSymbol>().Single(m => m.IsGenericMethod);
+            var exps = openCreateInstanceMethod.MethodResolverExpression(Context)
+                                                        .MakeGenericInstanceMethod(
+                                                            Context, 
+                                                            "CreateInstance", 
+                                                            [Context.TypeResolver.Resolve(instantiatedType)], 
+                                                            out var closedCreateInstanceMethod);
+            Context.WriteCecilExpressions(exps);
+            Context.EmitCilInstruction(ilVar,  OpCodes.Call, closedCreateInstanceMethod);
             return true;
         }
 
