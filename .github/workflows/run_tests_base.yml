@@ -3,7 +3,7 @@ run-name: Verifying ${{ github.ref }} 🚀
 on: 
   workflow_call:
     inputs:
-      run-outputbased-tests:
+      run_outputbased_tests:
         required: false
         type: boolean
 jobs:

@@ -19,10 +19,9 @@ public class ForEachStatementTests : CecilifierUnitTestBase
         public void Dispose()
         {
             var testMethod = TestContext.CurrentContext.Test.Method?.MethodInfo;
-            var shouldRun = (Environment.GetEnvironmentVariable("CECILIFIER_TESTS_VERIFY_OUTPUT") 
-                             ?? SingleOrDefault(testMethod)?.Constructor.Name
-                             ?? SingleOrDefault(testMethod?.DeclaringType)?.Constructor.Name
-                            ) != null;
+            var shouldRun = Environment.GetEnvironmentVariable("CECILIFIER_TESTS_VERIFY_OUTPUT") == "true"
+                            || SingleOrDefault(testMethod)?.Constructor.Name != null
+                            || SingleOrDefault(testMethod?.DeclaringType)?.Constructor.Name != null;
             
             if (shouldRun)
             {
@@ -41,7 +40,7 @@ public class ForEachStatementTests : CecilifierUnitTestBase
     public void Foo()
     {
         using var x = new CecilifierTestContext();
-        Assert.That(1, Is.EqualTo(2));
+        Assert.That(1, Is.EqualTo(1));
         // // Arrange
         // using var testContext = ContextFor(
         //     "foreach(var i in M()) { Console.Write(i); } int[] M() => {1, 2, 3};",

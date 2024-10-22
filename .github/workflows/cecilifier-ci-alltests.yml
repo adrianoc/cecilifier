@@ -1,5 +1,5 @@
 name: Run Tests
-run-name: Verifying ${{ github.ref }} 🚀
+run-name: Verifying ${{ github.ref }} (push to test-env branch) 🚀
 on:
   push:
     branches:
@@ -8,4 +8,4 @@ jobs:
  RunTests:
     uses: ./.github/workflows/run_tests_base.yml
     with:
-      run-outputbased-tests: true
+      run_outputbased_tests: true

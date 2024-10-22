@@ -1,6 +1,7 @@
 name: Run Tests
-run-name: Verifying ${{ github.ref }} 🚀
+run-name: Verifying ${{ github.ref }} (push, any branch but test-env) 🚀
 on: [push]
 jobs:
  RunTests:
+    if: github.ref != 'refs/heads/test-env'
     uses: ./.github/workflows/run_tests_base.yml
