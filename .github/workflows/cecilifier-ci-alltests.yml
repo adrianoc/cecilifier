@@ -6,6 +6,6 @@ on:
       - 'test-env'
 jobs:
  RunTests:
-    uses: .github/workflows/run_tests_base.yml
+    uses: ./.github/workflows/run_tests_base.yml
     with:
       run-outputbased-tests: 1

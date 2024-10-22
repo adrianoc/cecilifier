@@ -3,4 +3,4 @@ run-name: Verifying ${{ github.ref }} 🚀
 on: [push]
 jobs:
  RunTests:
-    uses: .github/workflows/run_tests_base.yml
+    uses: ./.github/workflows/run_tests_base.yml
