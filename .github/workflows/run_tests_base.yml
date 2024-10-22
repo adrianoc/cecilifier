@@ -10,10 +10,6 @@ jobs:
     RunTests:
         runs-on: ubuntu-latest
         steps:
-        - name: Set environment variables
-          env:
-            CECILIFIER_TESTS_VERIFY_OUTPUT: ${{ inputs.run_outputbased_tests }}
-          run: echo "CECILIFIER_TESTS_VERIFY_OUTPUT set."
         - uses: actions/checkout@v4
         - uses: actions/setup-dotnet@v4
           with:
@@ -21,6 +17,8 @@ jobs:
         - run: dotnet tool install --global dotnet-ilverify --version 8.0.0
         - run: dotnet restore
         - run: dotnet test --filter 'TestCategory !~ Issues' --collect:"XPlat Code Coverage"
+          env:
+            CECILIFIER_TESTS_VERIFY_OUTPUT: ${{ inputs.run_outputbased_tests }}
         - run: dotnet format style --verify-no-changes
         - name: Upload coverage reports to Codecov with GitHub Action
           uses: codecov/codecov-action@v3
