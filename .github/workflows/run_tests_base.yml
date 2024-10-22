@@ -1,0 +1,26 @@
+name: Run Tests Base
+run-name: Verifying ${{ github.ref }} 🚀
+on: 
+  workflow_call:
+    inputs:
+      run-outputbased-tests:
+        required: false
+        type: boolean
+jobs:
+    RunTests:
+        runs-on: ubuntu-latest
+        steps:
+        - name: Set environemtn variables
+          run:
+            if inputs.run-outputbased-tests
+              echo "CECILIFIER_TESTS_VERIFY_OUTPUT=1" > $GITHUB_ENV
+        - uses: actions/checkout@v4
+        - uses: actions/setup-dotnet@v4
+          with:
+            dotnet-version: '8.0.x'
+        - run: dotnet tool install --global dotnet-ilverify --version 8.0.0
+        - run: dotnet restore
+        - run: dotnet test --filter 'TestCategory !~ Issues' --collect:"XPlat Code Coverage"
+        - run: dotnet format style --verify-no-changes
+        - name: Upload coverage reports to Codecov with GitHub Action
+          uses: codecov/codecov-action@v3

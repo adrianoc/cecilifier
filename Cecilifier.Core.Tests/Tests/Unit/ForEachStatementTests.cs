@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using Cecilifier.Core.Tests.Tests.Unit.Framework;
 using NUnit.Framework;
 
@@ -10,6 +11,64 @@ namespace Cecilifier.Core.Tests.Tests.Unit;
 [TestFixture]
 public class ForEachStatementTests : CecilifierUnitTestBase
 {
+    [AttributeUsage(AttributeTargets.Method | AttributeTargets.Class)]
+    public class AlwaysRunOutputBasedTests : Attribute { }
+    
+    class CecilifierTestContext : IDisposable
+    {
+        public void Dispose()
+        {
+            var testMethod = TestContext.CurrentContext.Test.Method?.MethodInfo;
+            var shouldRun = (Environment.GetEnvironmentVariable("CECILIFIER_TESTS_VERIFY_OUTPUT") 
+                             ?? SingleOrDefault(testMethod)?.Constructor.Name
+                             ?? SingleOrDefault(testMethod?.DeclaringType)?.Constructor.Name
+                            ) != null;
+            
+            if (shouldRun)
+            {
+                Assert.That(3, Is.EqualTo(42));
+                //AssertOutput(_cecilifiedCode, _expectedOutput);
+            }
+
+            CustomAttributeData SingleOrDefault(MemberInfo? member)
+            {
+                return member?.GetCustomAttributesData().SingleOrDefault(c => c.Constructor.DeclaringType == typeof(AlwaysRunOutputBasedTests));
+            }
+        }
+    }
+    
+    [Test]
+    public void Foo()
+    {
+        using var x = new CecilifierTestContext();
+        Assert.That(1, Is.EqualTo(2));
+        // // Arrange
+        // using var testContext = ContextFor(
+        //     "foreach(var i in M()) { Console.Write(i); } int[] M() => {1, 2, 3};",
+        //     "123");
+        // 
+        // // forces the output to be verified.
+        // using var testContext = ContextFor(
+        //     "foreach(var i in M()) { Console.Write(i); } int[] M() => {1, 2, 3};",
+        //     "123",
+        //     TestOutputCheck.Always);
+        // // Act
+        // var result = RunCecilifier(testContext);
+        //
+        // // Assert
+        // // ...
+        //
+        // // testContext.Dispose();
+        //
+        // // void TestContext.Dispose()
+        // // {
+        // //      if (Environment.GetVariable("CECILIFIER_TESTS_VERIFY_OUTPUT") == "1")
+        // //      {
+        // //          AssertOutput(_cecilifiedCode, _expectedOutput);
+        // //      }
+        // // }
+    }
+    
     // https://cutt.ly/swrhz6VE
     //[TestCase("struct")]
     [TestCase("sealed class")]

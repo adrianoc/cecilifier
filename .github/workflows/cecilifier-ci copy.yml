@@ -1,0 +1,13 @@
+name: Run Tests
+run-name: Verifying ${{ github.ref }} 🚀
+on:
+  push:
+    branches:
+      - 'alltests'
+jobs:
+ RunTests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: ./github/workflows/run_tests_base.yml
+        with:
+          run-outputbased-tests: 1
