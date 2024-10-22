@@ -6,8 +6,6 @@ on:
       - 'alltests'
 jobs:
  RunTests:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: ./github/workflows/run_tests_base.yml
-        with:
-          run-outputbased-tests: 1
+    uses: ./github/workflows/run_tests_base.yml
+    with:
+      run-outputbased-tests: 1
