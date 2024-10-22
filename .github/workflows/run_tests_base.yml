@@ -10,10 +10,10 @@ jobs:
     RunTests:
         runs-on: ubuntu-latest
         steps:
-        - name: Set environemtn variables
-          run:
-            if inputs.run-outputbased-tests
-              echo "CECILIFIER_TESTS_VERIFY_OUTPUT=1" > $GITHUB_ENV
+        - name: Set environment variables
+          env:
+            CECILIFIER_TESTS_VERIFY_OUTPUT: ${{ github.event.inputs.run-outputbased-tests == 'true' }}
+          run: echo "CECILIFIER_TESTS_VERIFY_OUTPUT set."
         - uses: actions/checkout@v4
         - uses: actions/setup-dotnet@v4
           with:

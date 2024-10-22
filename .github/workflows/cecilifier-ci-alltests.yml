@@ -8,4 +8,4 @@ jobs:
  RunTests:
     uses: ./.github/workflows/run_tests_base.yml
     with:
-      run-outputbased-tests: 1
+      run-outputbased-tests: true
