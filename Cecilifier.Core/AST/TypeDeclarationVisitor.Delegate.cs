@@ -15,13 +15,15 @@ internal partial class TypeDeclarationVisitor
 {
     public override void VisitDelegateDeclaration(DelegateDeclarationSyntax node)
     {
-        using var __ = LineInformationTracker.Track(Context, node);
+        using var _ = LineInformationTracker.Track(Context, node);
         Context.WriteNewLine();
         Context.WriteComment($"Delegate: {node.Identifier.Text}");
         var typeVar = Context.Naming.Delegate(node);
         var delegateSymbol = Context.SemanticModel.GetDeclaredSymbol(node).EnsureNotNull<ISymbol, INamedTypeSymbol>();
         var accessibility = TypeModifiersToCecil(delegateSymbol, node.Modifiers);
 
+        EnsureContainingTypeForwarded(node, delegateSymbol);
+        
         var typeDef = CecilDefinitionsFactory.Type(
             Context,
             typeVar,
@@ -119,5 +121,12 @@ internal partial class TypeDeclarationVisitor
             AddCecilExpression($"{typeLocalVar}.Methods.Add({methodLocalVar});");
             return methodLocalVar;
         }
+    }
+
+    private void EnsureContainingTypeForwarded(DelegateDeclarationSyntax delegateDeclaration, INamedTypeSymbol delegateSymbol)
+    {
+        if (delegateSymbol.ContainingType == null)
+            return;
+        EnsureForwardedTypeDefinition(Context, delegateSymbol.ContainingType, delegateDeclaration.TypeParameterList?.Parameters);
     }
 }
