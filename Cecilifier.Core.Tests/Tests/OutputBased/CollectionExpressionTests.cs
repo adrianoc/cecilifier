@@ -1,10 +1,10 @@
-using System;
 using System.Text.RegularExpressions;
 using Cecilifier.Core.Tests.Framework;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.OutputBased;
 
+[TestFixture]
 public class CollectionExpressionTests : OutputBasedTestBase
 {
     [Test]

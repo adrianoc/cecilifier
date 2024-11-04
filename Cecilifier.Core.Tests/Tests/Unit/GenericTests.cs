@@ -94,7 +94,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
         [Test]
         public void Issue_169_ReferenceToForwardedMethodContainingGenericParameters()
         {
-            var code = @"class Foo<T> { void Bar(T t) { M(t); } T M(T t) { T tl = t; t = tl; return t; } }";
+            var code = "class Foo<T> { void Bar(T t) { M(t); } T M(T t) { T tl = t; t = tl; return t; } }";
             var result = RunCecilifier(code);
 
             var cecilifiedCode = result.GeneratedCode.ReadToEnd();
