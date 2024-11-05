@@ -378,11 +378,12 @@ namespace Cecilifier.Core.AST
 
         protected string ResolveType(TypeSyntax type)
         {
-            // TODO: Ensure there are tests covering all the derived types from TypeSyntax (https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.typesyntax?view=roslyn-dotnet-4.7.0)
+            // Special case types that Context.GetTypeInfo() is not able to handle. As of Oct/2024 only the ones below are requires such special handling.
             var typeToCheck = type switch
             {
                 RefTypeSyntax refType  => refType.Type,
-                ScopedTypeSyntax scopedTypeSyntax => scopedTypeSyntax.Type,
+                ScopedTypeSyntax scopedTypeSyntax => scopedTypeSyntax.Type, // `scoped` types have the same semantics as a `non scoped` one; `scoped` only changes how variables of the type can be captured/used
+                                                                            // (and this is handled entirely by the compiler) 
                 _ => type
             };
         
@@ -442,7 +443,7 @@ namespace Cecilifier.Core.AST
                 return;
             }
 
-            var fieldDeclarationVariable = fieldSymbol.EnsureFieldExists(Context, node);
+            fieldSymbol.EnsureFieldExists(Context, node);
 
             if (!fieldSymbol.IsStatic && node.IsMemberAccessThroughImplicitThis())
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
@@ -455,13 +456,9 @@ namespace Cecilifier.Core.AST
             if (fieldSymbol.IsVolatile)
                 Context.EmitCilInstruction(ilVar, OpCodes.Volatile);
 
-            var resolvedField = fieldDeclarationVariable.IsValid
-                ? fieldDeclarationVariable.VariableName
-                : fieldSymbol.FieldResolverExpression(Context);
-
+            var resolvedField = fieldSymbol.FieldResolverExpression(Context);
             var opCode = fieldSymbol.LoadOpCodeForFieldAccess();
             Context.EmitCilInstruction(ilVar, opCode, resolvedField);
-
             HandlePotentialDelegateInvocationOn(node, fieldSymbol.Type, ilVar);
         }
 
@@ -713,8 +710,6 @@ namespace Cecilifier.Core.AST
                 ? $"{localDelegateDeclaration}.Methods.Single(m => m.Name == \"Invoke\")"
                 : ((IMethodSymbol) typeSymbol.GetMembers("Invoke").SingleOrDefault()).MethodResolverExpression(Context);
 
-            //TODO: Find all call sites that adds a Call/Callvirt instruction and make sure
-            //      they call X().
             OnLastInstructionLoadingTargetOfInvocation();
             Context.EmitCilInstruction(ilVar, OpCodes.Callvirt, resolvedMethod);
         }
@@ -754,12 +749,12 @@ namespace Cecilifier.Core.AST
         {
             foreach (var attribute in attributeLists.SelectMany(al => al.Attributes))
             {
-                var type = context.SemanticModel.GetSymbolInfo(attribute).Symbol.EnsureNotNull<ISymbol, IMethodSymbol>().ContainingType;
+                var attributeType = context.SemanticModel.GetSymbolInfo(attribute).Symbol.EnsureNotNull<ISymbol, IMethodSymbol>().ContainingType;
 
-                //TODO: Pass the correct list of type parameters when C# supports generic attributes.
-                TypeDeclarationVisitor.EnsureForwardedTypeDefinition(context, type, Array.Empty<TypeParameterSyntax>());
+                //https://github.com/adrianoc/cecilifier/issues/311
+                TypeDeclarationVisitor.EnsureForwardedTypeDefinition(context, attributeType, Array.Empty<TypeParameterSyntax>());
 
-                var attrsExp = type.AttributeKind() switch
+                var attrsExp = attributeType.AttributeKind() switch
                     {
                         AttributeKind.DllImport => ProcessDllImportAttribute(context, attribute, targetDeclarationVar),
                         AttributeKind.StructLayout => ProcessStructLayoutAttribute(attribute, targetDeclarationVar),

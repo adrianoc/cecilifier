@@ -18,7 +18,6 @@ import * as platform from '../../../base/common/platform.js';
 import { TextModel } from '../model/textModel.js';
 import { EDITOR_MODEL_DEFAULTS } from '../core/textModelDefaults.js';
 import { PLAINTEXT_LANGUAGE_ID } from '../languages/modesRegistry.js';
-import { ILanguageService } from '../languages/language.js';
 import { ITextResourcePropertiesService } from './textResourceConfiguration.js';
 import { IConfigurationService } from '../../../platform/configuration/common/configuration.js';
 import { IUndoRedoService } from '../../../platform/undoRedo/common/undoRedo.js';
@@ -26,7 +25,7 @@ import { StringSHA1 } from '../../../base/common/hash.js';
 import { isEditStackElement } from '../model/editStack.js';
 import { Schemas } from '../../../base/common/network.js';
 import { equals } from '../../../base/common/objects.js';
-import { ILanguageConfigurationService } from '../languages/languageConfigurationRegistry.js';
+import { IInstantiationService } from '../../../platform/instantiation/common/instantiation.js';
 function MODEL_ID(resource) {
     return resource.toString();
 }
@@ -55,14 +54,15 @@ class DisposedModelInfo {
         this.alternativeVersionId = alternativeVersionId;
     }
 }
-let ModelService = ModelService_1 = class ModelService extends Disposable {
-    constructor(_configurationService, _resourcePropertiesService, _undoRedoService, _languageService, _languageConfigurationService) {
+let ModelService = class ModelService extends Disposable {
+    static { ModelService_1 = this; }
+    static { this.MAX_MEMORY_FOR_CLOSED_FILES_UNDO_STACK = 20 * 1024 * 1024; }
+    constructor(_configurationService, _resourcePropertiesService, _undoRedoService, _instantiationService) {
         super();
         this._configurationService = _configurationService;
         this._resourcePropertiesService = _resourcePropertiesService;
         this._undoRedoService = _undoRedoService;
-        this._languageService = _languageService;
-        this._languageConfigurationService = _languageConfigurationService;
+        this._instantiationService = _instantiationService;
         this._onModelAdded = this._register(new Emitter());
         this.onModelAdded = this._onModelAdded.event;
         this._onModelRemoved = this._register(new Emitter());
@@ -77,7 +77,6 @@ let ModelService = ModelService_1 = class ModelService extends Disposable {
         this._updateModelOptions(undefined);
     }
     static _readModelOptions(config, isForSimpleWidget) {
-        var _a;
         let tabSize = EDITOR_MODEL_DEFAULTS.tabSize;
         if (config.editor && typeof config.editor.tabSize !== 'undefined') {
             const parsedTabSize = parseInt(config.editor.tabSize, 10);
@@ -120,7 +119,7 @@ let ModelService = ModelService_1 = class ModelService extends Disposable {
             largeFileOptimizations = (config.editor.largeFileOptimizations === 'false' ? false : Boolean(config.editor.largeFileOptimizations));
         }
         let bracketPairColorizationOptions = EDITOR_MODEL_DEFAULTS.bracketPairColorizationOptions;
-        if (((_a = config.editor) === null || _a === void 0 ? void 0 : _a.bracketPairColorization) && typeof config.editor.bracketPairColorization === 'object') {
+        if (config.editor?.bracketPairColorization && typeof config.editor.bracketPairColorization === 'object') {
             bracketPairColorizationOptions = {
                 enabled: !!config.editor.bracketPairColorization.enabled,
                 independentColorPoolPerBracketType: !!config.editor.bracketPairColorization.independentColorPoolPerBracketType
@@ -250,7 +249,7 @@ let ModelService = ModelService_1 = class ModelService extends Disposable {
     _createModelData(value, languageIdOrSelection, resource, isForSimpleWidget) {
         // create & save the model
         const options = this.getCreationOptions(languageIdOrSelection, resource, isForSimpleWidget);
-        const model = new TextModel(value, languageIdOrSelection, options, resource, this._undoRedoService, this._languageService, this._languageConfigurationService);
+        const model = this._instantiationService.createInstance(TextModel, value, languageIdOrSelection, options, resource);
         if (resource && this._disposedModels.has(MODEL_ID(resource))) {
             const disposedModelData = this._removeDisposedModel(resource);
             const elements = this._undoRedoService.getElements(resource);
@@ -394,16 +393,15 @@ let ModelService = ModelService_1 = class ModelService extends Disposable {
         return new DefaultModelSHA1Computer();
     }
 };
-ModelService.MAX_MEMORY_FOR_CLOSED_FILES_UNDO_STACK = 20 * 1024 * 1024;
 ModelService = ModelService_1 = __decorate([
     __param(0, IConfigurationService),
     __param(1, ITextResourcePropertiesService),
     __param(2, IUndoRedoService),
-    __param(3, ILanguageService),
-    __param(4, ILanguageConfigurationService)
+    __param(3, IInstantiationService)
 ], ModelService);
 export { ModelService };
 export class DefaultModelSHA1Computer {
+    static { this.MAX_MODEL_SIZE = 10 * 1024 * 1024; } // takes 200ms to compute a sha1 on a 10MB model on a new machine
     canComputeSHA1(model) {
         return (model.getValueLength() <= DefaultModelSHA1Computer.MAX_MODEL_SIZE);
     }
@@ -418,4 +416,3 @@ export class DefaultModelSHA1Computer {
         return shaComputer.digest();
     }
 }
-DefaultModelSHA1Computer.MAX_MODEL_SIZE = 10 * 1024 * 1024; // takes 200ms to compute a sha1 on a 10MB model on a new machine

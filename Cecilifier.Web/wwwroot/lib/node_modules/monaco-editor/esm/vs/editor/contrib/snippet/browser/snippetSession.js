@@ -26,6 +26,12 @@ import { IWorkspaceContextService } from '../../../../platform/workspace/common/
 import { Choice, Placeholder, SnippetParser, Text, TextmateSnippet } from './snippetParser.js';
 import { ClipboardBasedVariableResolver, CommentBasedVariableResolver, CompositeSnippetVariableResolver, ModelBasedVariableResolver, RandomBasedVariableResolver, SelectionBasedVariableResolver, TimeBasedVariableResolver, WorkspaceBasedVariableResolver } from './snippetVariables.js';
 export class OneSnippet {
+    static { this._decor = {
+        active: ModelDecorationOptions.register({ description: 'snippet-placeholder-1', stickiness: 0 /* TrackedRangeStickiness.AlwaysGrowsWhenTypingAtEdges */, className: 'snippet-placeholder' }),
+        inactive: ModelDecorationOptions.register({ description: 'snippet-placeholder-2', stickiness: 1 /* TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges */, className: 'snippet-placeholder' }),
+        activeFinal: ModelDecorationOptions.register({ description: 'snippet-placeholder-3', stickiness: 1 /* TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges */, className: 'finish-snippet-placeholder' }),
+        inactiveFinal: ModelDecorationOptions.register({ description: 'snippet-placeholder-4', stickiness: 1 /* TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges */, className: 'finish-snippet-placeholder' }),
+    }; }
     constructor(_editor, _snippet, _snippetLineLeadingWhitespace) {
         this._editor = _editor;
         this._snippet = _snippet;
@@ -138,7 +144,7 @@ export class OneSnippet {
             }
             return selections;
         });
-        return !couldSkipThisPlaceholder ? newSelections !== null && newSelections !== void 0 ? newSelections : [] : this.move(fwd);
+        return !couldSkipThisPlaceholder ? newSelections ?? [] : this.move(fwd);
     }
     _hasPlaceholderBeenCollapsed(placeholder) {
         // A placeholder is empty when it wasn't empty when authored but
@@ -216,7 +222,7 @@ export class OneSnippet {
             return undefined;
         }
         const placeholder = this._placeholderGroups[this._placeholderGroupsIdx][0];
-        if (!(placeholder === null || placeholder === void 0 ? void 0 : placeholder.choice)) {
+        if (!placeholder?.choice) {
             return undefined;
         }
         const id = this._placeholderDecorations.get(placeholder);
@@ -282,12 +288,6 @@ export class OneSnippet {
         });
     }
 }
-OneSnippet._decor = {
-    active: ModelDecorationOptions.register({ description: 'snippet-placeholder-1', stickiness: 0 /* TrackedRangeStickiness.AlwaysGrowsWhenTypingAtEdges */, className: 'snippet-placeholder' }),
-    inactive: ModelDecorationOptions.register({ description: 'snippet-placeholder-2', stickiness: 1 /* TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges */, className: 'snippet-placeholder' }),
-    activeFinal: ModelDecorationOptions.register({ description: 'snippet-placeholder-3', stickiness: 1 /* TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges */, className: 'finish-snippet-placeholder' }),
-    inactiveFinal: ModelDecorationOptions.register({ description: 'snippet-placeholder-4', stickiness: 1 /* TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges */, className: 'finish-snippet-placeholder' }),
-};
 const _defaultOptions = {
     overwriteBefore: 0,
     overwriteAfter: 0,
@@ -323,7 +323,7 @@ let SnippetSession = SnippetSession_1 = class SnippetSession {
                 }
                 else {
                     // check if text start is after a linebreak
-                    snippetTextString = snippetTextString !== null && snippetTextString !== void 0 ? snippetTextString : snippet.toString();
+                    snippetTextString = snippetTextString ?? snippet.toString();
                     const prevChar = snippetTextString.charCodeAt(offset - 1);
                     if (prevChar === 10 /* CharCode.LineFeed */ || prevChar === 13 /* CharCode.CarriageReturn */) {
                         lines[0] = model.normalizeIndentation(lineLeadingWhitespace + lines[0]);
@@ -408,7 +408,7 @@ let SnippetSession = SnippetSession_1 = class SnippetSession {
             const snippetLineLeadingWhitespace = SnippetSession_1.adjustWhitespace(model, start, adjustWhitespace || (idx > 0 && firstLineFirstNonWhitespace !== model.getLineFirstNonWhitespaceColumn(selection.positionLineNumber)), snippet);
             snippet.resolveVariables(new CompositeSnippetVariableResolver([
                 modelBasedVariableResolver,
-                new ClipboardBasedVariableResolver(readClipboardText, idx, indexedSelections.length, editor.getOption(78 /* EditorOption.multiCursorPaste */) === 'spread'),
+                new ClipboardBasedVariableResolver(readClipboardText, idx, indexedSelections.length, editor.getOption(79 /* EditorOption.multiCursorPaste */) === 'spread'),
                 new SelectionBasedVariableResolver(model, selection, idx, overtypingCapturer),
                 new CommentBasedVariableResolver(model, selection, languageConfigurationService),
                 new TimeBasedVariableResolver,
@@ -436,7 +436,7 @@ let SnippetSession = SnippetSession_1 = class SnippetSession {
         // snippet variables resolver
         const resolver = new CompositeSnippetVariableResolver([
             editor.invokeWithinContext(accessor => new ModelBasedVariableResolver(accessor.get(ILabelService), model)),
-            new ClipboardBasedVariableResolver(() => clipboardText, 0, editor.getSelections().length, editor.getOption(78 /* EditorOption.multiCursorPaste */) === 'spread'),
+            new ClipboardBasedVariableResolver(() => clipboardText, 0, editor.getSelections().length, editor.getOption(79 /* EditorOption.multiCursorPaste */) === 'spread'),
             new SelectionBasedVariableResolver(model, editor.getSelection(), 0, overtypingCapturer),
             new CommentBasedVariableResolver(model, editor.getSelection(), languageConfigurationService),
             new TimeBasedVariableResolver,

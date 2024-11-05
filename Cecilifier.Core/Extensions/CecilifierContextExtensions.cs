@@ -5,7 +5,9 @@ using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Operations;
 using Mono.Cecil.Cil;
 
 namespace Cecilifier.Core.Extensions;
@@ -40,8 +42,40 @@ public static class CecilifierContextExtensions
         return context.DefinitionVariables.RegisterNonMethod(string.Empty, localVarName, VariableMemberKind.LocalVariable, cecilVarDeclName);
     }
 
-    internal static bool TryApplyNumericConversion(this IVisitorContext context, string ilVar, ITypeSymbol source, ITypeSymbol target)
+    internal static bool TryApplyConversions(this IVisitorContext context, string ilVar, IOperation operation)
     {
+        if (operation is IConversionOperation { Conversion.IsNumeric: true } elementConversion)
+        {
+            var result = context.TryApplyNumericConversion(ilVar, elementConversion.Operand.Type, elementConversion.Type);
+            if (!result)
+                throw new Exception();
+        }
+        else if (operation is IConversionOperation { OperatorMethod: not null } conversion)
+        {
+            context.AddCallToMethod(conversion.OperatorMethod, ilVar);
+        }
+        else if (operation is IConversionOperation { Operand.Type: not null } conversion2 && context.SemanticModel.Compilation.ClassifyConversion(conversion2.Operand.Type, operation.Type).IsBoxing)
+        {
+            context.EmitCilInstruction(ilVar, OpCodes.Box, context.TypeResolver.Resolve(conversion2.Operand.Type));
+        }
+        else if (operation is IConversionOperation { Conversion.IsNullable: true } nullableConversion)
+        {
+            context.EmitCilInstruction(
+                ilVar, 
+                OpCodes.Newobj,
+                $"assembly.MainModule.ImportReference(typeof(System.Nullable<>).MakeGenericType(typeof({nullableConversion.Operand.Type.FullyQualifiedName()})).GetConstructors().Single(ctor => ctor.GetParameters().Length == 1))");
+        }
+        else
+            return false;
+
+        return true;
+    }
+
+    private static bool TryApplyNumericConversion(this IVisitorContext context, string ilVar, ITypeSymbol source, ITypeSymbol target)
+    {
+        if (source.SpecialType == target.SpecialType)
+            return true;
+        
         switch (target.SpecialType)
         {
             case SpecialType.System_Single:

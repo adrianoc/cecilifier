@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import { compareBy } from '../../../base/common/arrays.js';
-import { findLastMaxBy, findFirstMinBy } from '../../../base/common/arraysFind.js';
+import { findLastMax, findFirstMin } from '../../../base/common/arraysFind.js';
 import { CursorState } from '../cursorCommon.js';
 import { Cursor } from './oneCursor.js';
 import { Position } from '../core/position.js';
@@ -48,10 +48,10 @@ export class CursorCollection {
         return this.cursors.map(c => c.viewState.position);
     }
     getTopMostViewPosition() {
-        return findFirstMinBy(this.cursors, compareBy(c => c.viewState.position, Position.compare)).viewState.position;
+        return findFirstMin(this.cursors, compareBy(c => c.viewState.position, Position.compare)).viewState.position;
     }
     getBottomMostViewPosition() {
-        return findLastMaxBy(this.cursors, compareBy(c => c.viewState.position, Position.compare)).viewState.position;
+        return findLastMax(this.cursors, compareBy(c => c.viewState.position, Position.compare)).viewState.position;
     }
     getSelections() {
         return this.cursors.map(c => c.modelState.selection);

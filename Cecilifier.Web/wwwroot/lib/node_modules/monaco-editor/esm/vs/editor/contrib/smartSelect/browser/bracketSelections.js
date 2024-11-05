@@ -17,6 +17,8 @@ export class BracketSelectionRangeProvider {
         }
         return result;
     }
+    static { this._maxDuration = 30; }
+    static { this._maxRounds = 2; }
     static _bracketsRightYield(resolve, round, model, pos, ranges) {
         const counts = new Map();
         const t1 = Date.now();
@@ -142,5 +144,3 @@ export class BracketSelectionRangeProvider {
         }
     }
 }
-BracketSelectionRangeProvider._maxDuration = 30;
-BracketSelectionRangeProvider._maxRounds = 2;

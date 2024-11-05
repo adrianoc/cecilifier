@@ -78,8 +78,8 @@ namespace Cecilifier.Core.AST
 
         public override void VisitIdentifierName(IdentifierNameSyntax node)
         {
-            //TODO: tuple declaration with an initializer is represented as an assignment
-            //      revisit the following if/when we handle tuples
+            //T uple declaration with an initializer is represented as an assignment
+            //revisit the following when we handle tuples (https://github.com/adrianoc/cecilifier/issues/93)
             if (node.IsVar)
             {
                 return;
@@ -240,8 +240,9 @@ namespace Cecilifier.Core.AST
             if (field.IsVolatile)
                 Context.EmitCilInstruction(ilVar, OpCodes.Volatile);
 
-            var fieldDefinitionVariable = field.EnsureFieldExists(Context, name);
-            MemberAssignment(field.Type, field.RefKind, fieldDefinitionVariable, field.StoreOpCodeForFieldAccess());
+            field.EnsureFieldExists(Context, name);
+            var fieldReference = field.FieldResolverExpression(Context);
+            MemberAssignment(field.Type, field.RefKind, fieldReference, field.StoreOpCodeForFieldAccess());
         }
 
         private void LocalVariableAssignment(ILocalSymbol localVariable)
@@ -258,28 +259,30 @@ namespace Cecilifier.Core.AST
 
         private void MemberAssignment(ITypeSymbol memberType, RefKind memberRefKind, DefinitionVariable memberDefinitionVariable, OpCode storeOpCode)
         {
+            if (!NeedsIndirectStore(memberType, memberRefKind) && !memberDefinitionVariable.IsValid)
+            {
+                throw new InvalidOperationException("Invalid definition variable");
+            }
+            MemberAssignment(memberType, memberRefKind, memberDefinitionVariable.VariableName, storeOpCode);
+        }
+        
+        private void MemberAssignment(ITypeSymbol memberType, RefKind memberRefKind, string memberReference, OpCode storeOpCode)
+        {
             if (NeedsIndirectStore(memberType, memberRefKind))
             {
                 EmitIndirectStore(memberType);
             }
             else
             {
-                if (!memberDefinitionVariable.IsValid)
-                {
-                    throw new InvalidOperationException("Invalid definition variable");
-                }
-                Context.EmitCilInstruction(ilVar, storeOpCode, memberDefinitionVariable.VariableName);
+                Context.EmitCilInstruction(ilVar, storeOpCode, memberReference);
             }
         }
 
-        //TODO: the logic to decide whether an assignment should be an indirect store looks to be wrong
-        //      at least the pointer check looks to be missing a case like:
-        //      int *p, *p1 = null;
-        //      p = p1; // <-- *p* is a pointer and right (p1) is not an AddressOffExpression but still,
-        //              //     this is a simple store, not an indirect one.
-        private bool NeedsIndirectStore(ITypeSymbol assignmentTargetMemberType, RefKind assignmentTargetMemberRefKind) =>
-            (assignmentTargetMemberType is IPointerTypeSymbol && !assignment.Right.IsKind(SyntaxKind.AddressOfExpression))
-            || assignmentTargetMemberRefKind != RefKind.None && !assignment.Right.IsKind(SyntaxKind.RefExpression);
+        private bool NeedsIndirectStore(ITypeSymbol assignmentTargetMemberType, RefKind assignmentTargetMemberRefKind)
+        {
+            return (assignmentTargetMemberType is IPointerTypeSymbol && !assignment.Right.IsKind(SyntaxKind.AddressOfExpression) && Context.SemanticModel.GetTypeInfo(assignment.Right).Type!.Kind != SymbolKind.PointerType)
+                   || assignmentTargetMemberRefKind != RefKind.None && !assignment.Right.IsKind(SyntaxKind.RefExpression);
+        }
 
         /// <summary>
         /// When assigning a value to a *ref like* member, the generated IL needs to load

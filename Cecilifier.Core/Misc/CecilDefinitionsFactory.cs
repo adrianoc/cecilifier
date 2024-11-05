@@ -441,7 +441,11 @@ namespace Cecilifier.Core.Misc
                     exps.Add($"{genParamDefVar}.IsCovariant = true;");
                 }
 
-                //TODO: symbol.HasNotNullConstraint causes no difference in the generated assembly?
+                //https://github.com/adrianoc/cecilifier/issues/312
+                // if (typeParam.HasNotNullConstraint)
+                // {
+                // }
+
                 foreach (var type in typeParam.ConstraintTypes)
                 {
                     exps.Add($"{genParamDefVar}.Constraints.Add(new GenericParameterConstraint({context.TypeResolver.Resolve(type)}));");
@@ -455,7 +459,6 @@ namespace Cecilifier.Core.Misc
             {
                 var genericParamName = typeParamList[i];
                 var genParamDefVar = context.Naming.SyntheticVariable(typeParamList[i], ElementKind.GenericParameter);
-                //var genParamDefVar = context.Naming.GenericParameterDeclaration(typeParamList[i]);
                 exps.Add(GenericParameter(context, ownerQualifiedTypeName, memberDefVar, genericParamName, genParamDefVar));
                 
                 exps.Add($"{memberDefVar}.GenericParameters.Add({genParamDefVar});");

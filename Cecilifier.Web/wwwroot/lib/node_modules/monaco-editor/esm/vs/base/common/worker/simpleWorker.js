@@ -2,12 +2,19 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { transformErrorForSerialization } from '../errors.js';
+import { onUnexpectedError, transformErrorForSerialization } from '../errors.js';
 import { Emitter } from '../event.js';
 import { Disposable } from '../lifecycle.js';
-import { getAllMethodNames } from '../objects.js';
+import { FileAccess } from '../network.js';
 import { isWeb } from '../platform.js';
 import * as strings from '../strings.js';
+// ESM-comment-begin
+// const isESM = false;
+// ESM-comment-end
+// ESM-uncomment-begin
+const isESM = true;
+// ESM-uncomment-end
+const DEFAULT_CHANNEL = 'default';
 const INITIALIZE = '$initialize';
 let webWorkerWarningLogged = false;
 export function logOnceWebWorkerWarning(err) {
@@ -22,9 +29,10 @@ export function logOnceWebWorkerWarning(err) {
     console.warn(err.message);
 }
 class RequestMessage {
-    constructor(vsWorker, req, method, args) {
+    constructor(vsWorker, req, channel, method, args) {
         this.vsWorker = vsWorker;
         this.req = req;
+        this.channel = channel;
         this.method = method;
         this.args = args;
         this.type = 0 /* MessageType.Request */;
@@ -40,9 +48,10 @@ class ReplyMessage {
     }
 }
 class SubscribeEventMessage {
-    constructor(vsWorker, req, eventName, arg) {
+    constructor(vsWorker, req, channel, eventName, arg) {
         this.vsWorker = vsWorker;
         this.req = req;
+        this.channel = channel;
         this.eventName = eventName;
         this.arg = arg;
         this.type = 2 /* MessageType.SubscribeEvent */;
@@ -75,23 +84,23 @@ class SimpleWorkerProtocol {
     setWorkerId(workerId) {
         this._workerId = workerId;
     }
-    sendMessage(method, args) {
+    sendMessage(channel, method, args) {
         const req = String(++this._lastSentReq);
         return new Promise((resolve, reject) => {
             this._pendingReplies[req] = {
                 resolve: resolve,
                 reject: reject
             };
-            this._send(new RequestMessage(this._workerId, req, method, args));
+            this._send(new RequestMessage(this._workerId, req, channel, method, args));
         });
     }
-    listen(eventName, arg) {
+    listen(channel, eventName, arg) {
         let req = null;
         const emitter = new Emitter({
             onWillAddFirstListener: () => {
                 req = String(++this._lastSentReq);
                 this._pendingEmitters.set(req, emitter);
-                this._send(new SubscribeEventMessage(this._workerId, req, eventName, arg));
+                this._send(new SubscribeEventMessage(this._workerId, req, channel, eventName, arg));
             },
             onDidRemoveLastListener: () => {
                 this._pendingEmitters.delete(req);
@@ -109,6 +118,30 @@ class SimpleWorkerProtocol {
             return;
         }
         this._handleMessage(message);
+    }
+    createProxyToRemoteChannel(channel, sendMessageBarrier) {
+        const handler = {
+            get: (target, name) => {
+                if (typeof name === 'string' && !target[name]) {
+                    if (propertyIsDynamicEvent(name)) { // onDynamic...
+                        target[name] = (arg) => {
+                            return this.listen(channel, name, arg);
+                        };
+                    }
+                    else if (propertyIsEvent(name)) { // on...
+                        target[name] = this.listen(channel, name, undefined);
+                    }
+                    else if (name.charCodeAt(0) === 36 /* CharCode.DollarSign */) { // $...
+                        target[name] = async (...myArgs) => {
+                            await sendMessageBarrier?.();
+                            return this.sendMessage(channel, name, myArgs);
+                        };
+                    }
+                }
+                return target[name];
+            }
+        };
+        return new Proxy(Object.create(null), handler);
     }
     _handleMessage(msg) {
         switch (msg.type) {
@@ -146,7 +179,7 @@ class SimpleWorkerProtocol {
     }
     _handleRequestMessage(requestMessage) {
         const req = requestMessage.req;
-        const result = this._handler.handleMessage(requestMessage.method, requestMessage.args);
+        const result = this._handler.handleMessage(requestMessage.channel, requestMessage.method, requestMessage.args);
         result.then((r) => {
             this._send(new ReplyMessage(this._workerId, req, r, undefined));
         }, (e) => {
@@ -159,7 +192,7 @@ class SimpleWorkerProtocol {
     }
     _handleSubscribeEventMessage(msg) {
         const req = msg.req;
-        const disposable = this._handler.handleEvent(msg.eventName, msg.arg)((event) => {
+        const disposable = this._handler.handleEvent(msg.channel, msg.eventName, msg.arg)((event) => {
             this._send(new EventMessage(this._workerId, req, event));
         });
         this._pendingEvents.set(req, disposable);
@@ -200,47 +233,29 @@ class SimpleWorkerProtocol {
  * Main thread side
  */
 export class SimpleWorkerClient extends Disposable {
-    constructor(workerFactory, moduleId, host) {
+    constructor(workerFactory, workerDescriptor) {
         super();
-        let lazyProxyReject = null;
-        this._worker = this._register(workerFactory.create('vs/base/common/worker/simpleWorker', (msg) => {
+        this._localChannels = new Map();
+        this._worker = this._register(workerFactory.create({
+            amdModuleId: 'vs/base/common/worker/simpleWorker',
+            esmModuleLocation: workerDescriptor.esmModuleLocation,
+            label: workerDescriptor.label
+        }, (msg) => {
             this._protocol.handleMessage(msg);
         }, (err) => {
             // in Firefox, web workers fail lazily :(
             // we will reject the proxy
-            lazyProxyReject === null || lazyProxyReject === void 0 ? void 0 : lazyProxyReject(err);
+            onUnexpectedError(err);
         }));
         this._protocol = new SimpleWorkerProtocol({
             sendMessage: (msg, transfer) => {
                 this._worker.postMessage(msg, transfer);
             },
-            handleMessage: (method, args) => {
-                if (typeof host[method] !== 'function') {
-                    return Promise.reject(new Error('Missing method ' + method + ' on main thread host.'));
-                }
-                try {
-                    return Promise.resolve(host[method].apply(host, args));
-                }
-                catch (e) {
-                    return Promise.reject(e);
-                }
+            handleMessage: (channel, method, args) => {
+                return this._handleMessage(channel, method, args);
             },
-            handleEvent: (eventName, arg) => {
-                if (propertyIsDynamicEvent(eventName)) {
-                    const event = host[eventName].call(host, arg);
-                    if (typeof event !== 'function') {
-                        throw new Error(`Missing dynamic event ${eventName} on main thread host.`);
-                    }
-                    return event;
-                }
-                if (propertyIsEvent(eventName)) {
-                    const event = host[eventName];
-                    if (typeof event !== 'function') {
-                        throw new Error(`Missing event ${eventName} on main thread host.`);
-                    }
-                    return event;
-                }
-                throw new Error(`Malformed event name ${eventName}`);
+            handleEvent: (channel, eventName, arg) => {
+                return this._handleEvent(channel, eventName, arg);
             }
         });
         this._protocol.setWorkerId(this._worker.getId());
@@ -255,40 +270,55 @@ export class SimpleWorkerClient extends Disposable {
             // Get the configuration from requirejs
             loaderConfiguration = globalThis.requirejs.s.contexts._.config;
         }
-        const hostMethods = getAllMethodNames(host);
         // Send initialize message
-        this._onModuleLoaded = this._protocol.sendMessage(INITIALIZE, [
+        this._onModuleLoaded = this._protocol.sendMessage(DEFAULT_CHANNEL, INITIALIZE, [
             this._worker.getId(),
             JSON.parse(JSON.stringify(loaderConfiguration)),
-            moduleId,
-            hostMethods,
+            workerDescriptor.amdModuleId,
         ]);
-        // Create proxy to loaded code
-        const proxyMethodRequest = (method, args) => {
-            return this._request(method, args);
-        };
-        const proxyListen = (eventName, arg) => {
-            return this._protocol.listen(eventName, arg);
-        };
-        this._lazyProxy = new Promise((resolve, reject) => {
-            lazyProxyReject = reject;
-            this._onModuleLoaded.then((availableMethods) => {
-                resolve(createProxyObject(availableMethods, proxyMethodRequest, proxyListen));
-            }, (e) => {
-                reject(e);
-                this._onError('Worker failed to load ' + moduleId, e);
-            });
+        this.proxy = this._protocol.createProxyToRemoteChannel(DEFAULT_CHANNEL, async () => { await this._onModuleLoaded; });
+        this._onModuleLoaded.catch((e) => {
+            this._onError('Worker failed to load ' + workerDescriptor.amdModuleId, e);
         });
     }
-    getProxyObject() {
-        return this._lazyProxy;
+    _handleMessage(channelName, method, args) {
+        const channel = this._localChannels.get(channelName);
+        if (!channel) {
+            return Promise.reject(new Error(`Missing channel ${channelName} on main thread`));
+        }
+        if (typeof channel[method] !== 'function') {
+            return Promise.reject(new Error(`Missing method ${method} on main thread channel ${channelName}`));
+        }
+        try {
+            return Promise.resolve(channel[method].apply(channel, args));
+        }
+        catch (e) {
+            return Promise.reject(e);
+        }
     }
-    _request(method, args) {
-        return new Promise((resolve, reject) => {
-            this._onModuleLoaded.then(() => {
-                this._protocol.sendMessage(method, args).then(resolve, reject);
-            }, reject);
-        });
+    _handleEvent(channelName, eventName, arg) {
+        const channel = this._localChannels.get(channelName);
+        if (!channel) {
+            throw new Error(`Missing channel ${channelName} on main thread`);
+        }
+        if (propertyIsDynamicEvent(eventName)) {
+            const event = channel[eventName].call(channel, arg);
+            if (typeof event !== 'function') {
+                throw new Error(`Missing dynamic event ${eventName} on main thread channel ${channelName}.`);
+            }
+            return event;
+        }
+        if (propertyIsEvent(eventName)) {
+            const event = channel[eventName];
+            if (typeof event !== 'function') {
+                throw new Error(`Missing event ${eventName} on main thread channel ${channelName}.`);
+            }
+            return event;
+        }
+        throw new Error(`Malformed event name ${eventName}`);
+    }
+    setChannel(channel, handler) {
+        this._localChannels.set(channel, handler);
     }
     _onError(message, error) {
         console.error(message);
@@ -303,77 +333,58 @@ function propertyIsDynamicEvent(name) {
     // Assume a property is a dynamic event (a method that returns an event) if it has a form of "onDynamicSomething"
     return /^onDynamic/.test(name) && strings.isUpperAsciiLetter(name.charCodeAt(9));
 }
-function createProxyObject(methodNames, invoke, proxyListen) {
-    const createProxyMethod = (method) => {
-        return function () {
-            const args = Array.prototype.slice.call(arguments, 0);
-            return invoke(method, args);
-        };
-    };
-    const createProxyDynamicEvent = (eventName) => {
-        return function (arg) {
-            return proxyListen(eventName, arg);
-        };
-    };
-    const result = {};
-    for (const methodName of methodNames) {
-        if (propertyIsDynamicEvent(methodName)) {
-            result[methodName] = createProxyDynamicEvent(methodName);
-            continue;
-        }
-        if (propertyIsEvent(methodName)) {
-            result[methodName] = proxyListen(methodName, undefined);
-            continue;
-        }
-        result[methodName] = createProxyMethod(methodName);
-    }
-    return result;
-}
 /**
  * Worker side
  */
 export class SimpleWorkerServer {
     constructor(postMessage, requestHandlerFactory) {
+        this._localChannels = new Map();
+        this._remoteChannels = new Map();
         this._requestHandlerFactory = requestHandlerFactory;
         this._requestHandler = null;
         this._protocol = new SimpleWorkerProtocol({
             sendMessage: (msg, transfer) => {
                 postMessage(msg, transfer);
             },
-            handleMessage: (method, args) => this._handleMessage(method, args),
-            handleEvent: (eventName, arg) => this._handleEvent(eventName, arg)
+            handleMessage: (channel, method, args) => this._handleMessage(channel, method, args),
+            handleEvent: (channel, eventName, arg) => this._handleEvent(channel, eventName, arg)
         });
     }
     onmessage(msg) {
         this._protocol.handleMessage(msg);
     }
-    _handleMessage(method, args) {
-        if (method === INITIALIZE) {
-            return this.initialize(args[0], args[1], args[2], args[3]);
+    _handleMessage(channel, method, args) {
+        if (channel === DEFAULT_CHANNEL && method === INITIALIZE) {
+            return this.initialize(args[0], args[1], args[2]);
         }
-        if (!this._requestHandler || typeof this._requestHandler[method] !== 'function') {
-            return Promise.reject(new Error('Missing requestHandler or method: ' + method));
+        const requestHandler = (channel === DEFAULT_CHANNEL ? this._requestHandler : this._localChannels.get(channel));
+        if (!requestHandler) {
+            return Promise.reject(new Error(`Missing channel ${channel} on worker thread`));
+        }
+        if (typeof requestHandler[method] !== 'function') {
+            return Promise.reject(new Error(`Missing method ${method} on worker thread channel ${channel}`));
         }
         try {
-            return Promise.resolve(this._requestHandler[method].apply(this._requestHandler, args));
+            return Promise.resolve(requestHandler[method].apply(requestHandler, args));
         }
         catch (e) {
             return Promise.reject(e);
         }
     }
-    _handleEvent(eventName, arg) {
-        if (!this._requestHandler) {
-            throw new Error(`Missing requestHandler`);
+    _handleEvent(channel, eventName, arg) {
+        const requestHandler = (channel === DEFAULT_CHANNEL ? this._requestHandler : this._localChannels.get(channel));
+        if (!requestHandler) {
+            throw new Error(`Missing channel ${channel} on worker thread`);
         }
         if (propertyIsDynamicEvent(eventName)) {
-            const event = this._requestHandler[eventName].call(this._requestHandler, arg);
+            const event = requestHandler[eventName].call(requestHandler, arg);
             if (typeof event !== 'function') {
                 throw new Error(`Missing dynamic event ${eventName} on request handler.`);
             }
             return event;
         }
         if (propertyIsEvent(eventName)) {
-            const event = this._requestHandler[eventName];
+            const event = requestHandler[eventName];
             if (typeof event !== 'function') {
                 throw new Error(`Missing event ${eventName} on request handler.`);
             }
@@ -381,19 +392,19 @@ export class SimpleWorkerServer {
         }
         throw new Error(`Malformed event name ${eventName}`);
     }
-    initialize(workerId, loaderConfig, moduleId, hostMethods) {
+    getChannel(channel) {
+        if (!this._remoteChannels.has(channel)) {
+            const inst = this._protocol.createProxyToRemoteChannel(channel);
+            this._remoteChannels.set(channel, inst);
+        }
+        return this._remoteChannels.get(channel);
+    }
+    async initialize(workerId, loaderConfig, moduleId) {
         this._protocol.setWorkerId(workerId);
-        const proxyMethodRequest = (method, args) => {
-            return this._protocol.sendMessage(method, args);
-        };
-        const proxyListen = (eventName, arg) => {
-            return this._protocol.listen(eventName, arg);
-        };
-        const hostProxy = createProxyObject(hostMethods, proxyMethodRequest, proxyListen);
         if (this._requestHandlerFactory) {
             // static request handler
-            this._requestHandler = this._requestHandlerFactory(hostProxy);
-            return Promise.resolve(getAllMethodNames(this._requestHandler));
+            this._requestHandler = this._requestHandlerFactory(this);
+            return;
         }
         if (loaderConfig) {
             // Remove 'baseUrl', handling it is beyond scope for now
@@ -405,13 +416,22 @@ export class SimpleWorkerServer {
                     delete loaderConfig.paths['vs'];
                 }
             }
-            if (typeof loaderConfig.trustedTypesPolicy !== undefined) {
+            if (typeof loaderConfig.trustedTypesPolicy !== 'undefined') {
                 // don't use, it has been destroyed during serialize
                 delete loaderConfig['trustedTypesPolicy'];
             }
             // Since this is in a web worker, enable catching errors
             loaderConfig.catchError = true;
             globalThis.require.config(loaderConfig);
+        }
+        if (isESM) {
+            const url = FileAccess.asBrowserUri(`${moduleId}.js`).toString(true);
+            return import(`${url}`).then((module) => {
+                this._requestHandler = module.create(this);
+                if (!this._requestHandler) {
+                    throw new Error(`No RequestHandler!`);
+                }
+            });
         }
         return new Promise((resolve, reject) => {
             // Use the global require to be sure to get the global config
@@ -422,18 +442,18 @@ export class SimpleWorkerServer {
             const req = globalThis.require;
             // ESM-uncomment-end
             req([moduleId], (module) => {
-                this._requestHandler = module.create(hostProxy);
+                this._requestHandler = module.create(this);
                 if (!this._requestHandler) {
                     reject(new Error(`No RequestHandler!`));
                     return;
                 }
-                resolve(getAllMethodNames(this._requestHandler));
+                resolve();
             }, reject);
         });
     }
 }
 /**
- * Called on the worker side
+ * Defines the worker entry point. Must be exported and named `create`.
  * @skipMangle
  */
 export function create(postMessage) {

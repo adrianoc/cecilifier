@@ -13,7 +13,9 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 };
 var SuggestAlternatives_1;
 import { IContextKeyService, RawContextKey } from '../../../../platform/contextkey/common/contextkey.js';
-let SuggestAlternatives = SuggestAlternatives_1 = class SuggestAlternatives {
+let SuggestAlternatives = class SuggestAlternatives {
+    static { SuggestAlternatives_1 = this; }
+    static { this.OtherSuggestions = new RawContextKey('hasOtherSuggestions', false); }
     constructor(_editor, contextKeyService) {
         this._editor = _editor;
         this._index = 0;
@@ -23,9 +25,8 @@ let SuggestAlternatives = SuggestAlternatives_1 = class SuggestAlternatives {
         this.reset();
     }
     reset() {
-        var _a;
         this._ckOtherSuggestions.reset();
-        (_a = this._listener) === null || _a === void 0 ? void 0 : _a.dispose();
+        this._listener?.dispose();
         this._model = undefined;
         this._acceptNext = undefined;
         this._ignore = false;
@@ -86,7 +87,6 @@ let SuggestAlternatives = SuggestAlternatives_1 = class SuggestAlternatives {
         }
     }
 };
-SuggestAlternatives.OtherSuggestions = new RawContextKey('hasOtherSuggestions', false);
 SuggestAlternatives = SuggestAlternatives_1 = __decorate([
     __param(1, IContextKeyService)
 ], SuggestAlternatives);

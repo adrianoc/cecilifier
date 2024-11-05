@@ -12,6 +12,7 @@ export class DelegatingEditor extends Disposable {
         this.onDidDispose = this._onDidDispose.event;
         // #endregion
     }
+    static { this.idCounter = 0; }
     getId() { return this.getEditorType() + ':v2:' + this._id; }
     // #region editorBrowser.IDiffEditor: Delegating to modified Editor
     getVisibleColumnFromPosition(position) {
@@ -105,4 +106,3 @@ export class DelegatingEditor extends Disposable {
         return this._targetEditor.changeDecorations(callback);
     }
 }
-DelegatingEditor.idCounter = 0;

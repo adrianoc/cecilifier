@@ -434,11 +434,45 @@ public class StructSpecificTests : CecilifierUnitTestBase
                 @"\k<il>Stfld, fld_value_1\);"));
     }
 
-    [Test]
-    public void CallOnValueType_ThroughInterface_IsConstrained()
+    [TestCase(
+        """
+        int Call<T>() where T : struct, Itf => Get<T>().M(42);
+        static T Get<T>() where T : struct, Itf => default(T);
+        """,
+        """
+        (\s+il_call_\d+\.Emit\(OpCodes\.)Call, gi_get_\d+\);
+        \s+var l_tmp_\d+ = new VariableDefinition\(gp_T_\d+\);
+        \s+m_call_\d+\.Body\.Variables.Add\(l_tmp_\d+\);
+        \1Stloc, l_tmp_\d+\);
+        \1Ldloca_S, l_tmp_\d+\);
+        """,
+        TestName = "On Return")]
+    [TestCase(
+        "int Call<T>(T t) where T : struct, Itf => t.M(42);",
+        @"\s+il_call_15.Emit\(OpCodes\.Ldarga, p_t_\d+\);",
+        TestName = "On Parameter")]
+    [TestCase(
+        "int Call<T>(T t) where T : struct, Itf { T local = t; return local.M(42); }",
+        @"\s+il_call_15.Emit\(OpCodes\.Ldloca, l_local_\d+\);",
+        TestName = "On Local")]
+    [TestCase(
+        """
+        class Field<T> where T : struct, Itf
+        {
+            public T field;
+            public int Call() => field.M(42);
+        }
+        """,
+        """
+            //field.M\(42\)
+            \s+il_call_\d+.Emit\(OpCodes\.Ldarg_0\);
+            \s+il_call_\d+.Emit\(OpCodes\.Ldflda, fld_field_\d+\);
+            """,
+        TestName = "On Field")]
+    public void CallOnValueType_ThroughInterface_IsConstrained(string t, string loadTargetOfCallIlRegex)
     {
-        var result = RunCecilifier("""
-                                   int Call<T>(T t) where T : struct, Itf => t.M(42);
+        var result = RunCecilifier($$"""
+                                   {{t}}
                                    
                                    interface Itf { int M(int i); } // The important part here is that M() has at least one parameter.
                                    struct Foo : Itf { public int M(int i) => i; }
@@ -446,11 +480,11 @@ public class StructSpecificTests : CecilifierUnitTestBase
         
         Assert.That(
             result.GeneratedCode.ReadToEnd(),
-            Does.Match("""
-                       (\s+il_call_15.Emit\(OpCodes\.)Ldarga, p_t_\d+\);
-                       \1Ldc_I4, 42\);
-                       \1Constrained, gp_T_\d+\);
-                       \1Callvirt, m_M_\d+\);
+            Does.Match($"""
+                       {loadTargetOfCallIlRegex}
+                       (?<prefix>\s+il_call_\d+\.Emit\(OpCodes\.)Ldc_I4, 42\);
+                       \k<prefix>Constrained, gp_T_\d+\);
+                       \k<prefix>Callvirt, m_M_\d+\);
                        """));
     }
     

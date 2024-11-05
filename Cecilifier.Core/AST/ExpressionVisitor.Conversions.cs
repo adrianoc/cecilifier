@@ -11,42 +11,10 @@ namespace Cecilifier.Core.AST;
 
 partial class ExpressionVisitor
 {
-    public void InjectRequiredConversions(ExpressionSyntax expression, Action loadArrayIntoStack = null)
+    private void InjectRequiredConversions(ExpressionSyntax expression, Action loadArrayIntoStack = null)
     {
-        var typeInfo = ModelExtensions.GetTypeInfo(Context.SemanticModel, expression);
-        if (typeInfo.Type == null) return;
-        
-        var conversion = Context.SemanticModel.GetConversion(expression);
-        if (conversion.IsImplicit)
-        {
-            if (conversion.IsNullable)
-            {
-                Context.EmitCilInstruction(
-                    ilVar, 
-                    OpCodes.Newobj,
-                    $"assembly.MainModule.ImportReference(typeof(System.Nullable<>).MakeGenericType(typeof({typeInfo.Type.FullyQualifiedName()})).GetConstructors().Single(ctor => ctor.GetParameters().Length == 1))");
-                return;
-            }
-
-            if (conversion.IsNumeric)
-            {
-                if (!Context.TryApplyNumericConversion(ilVar, typeInfo.Type, typeInfo.ConvertedType))
-                {
-                    throw new Exception($"Conversion from {typeInfo.Type} to {typeInfo.ConvertedType}  not implemented.");
-                }
-            }
-
-            if (conversion.MethodSymbol != null)
-            {
-                Context.AddCallToMethod(conversion.MethodSymbol, ilVar, MethodDispatchInformation.MostLikelyVirtual);
-            }
-        }
-
-        if (conversion.IsImplicit && (conversion.IsBoxing || NeedsBoxing(Context, expression, typeInfo.Type)))
-        {
-            AddCilInstruction(ilVar, OpCodes.Box, typeInfo.Type);
-        }
-        else if (conversion.IsIdentity && typeInfo.Type.Name == "Index" && !expression.IsKind(SyntaxKind.IndexExpression) && loadArrayIntoStack != null)
+        var operation = Context.SemanticModel.GetOperation(expression);
+        if (SymbolEqualityComparer.Default.Equals(operation?.Type, Context.RoslynTypeSystem.SystemIndex) && !expression.IsKind(SyntaxKind.IndexExpression) && loadArrayIntoStack != null)
         {
             // We are indexing an array/indexer (this[]) using a System.Index variable; In this case
             // we need to convert from System.Index to *int* which is done through
@@ -54,11 +22,23 @@ partial class ExpressionVisitor
             loadArrayIntoStack();
             var indexedType = Context.SemanticModel.GetTypeInfo(expression.Ancestors().OfType<ElementAccessExpressionSyntax>().Single().Expression).Type.EnsureNotNull();
             if (indexedType.Name == "Span")
-                Context.AddCallToMethod(((IPropertySymbol) indexedType.GetMembers("Length").Single()).GetMethod, ilVar, MethodDispatchInformation.MostLikelyVirtual);
+                Context.AddCallToMethod(((IPropertySymbol) indexedType.GetMembers("Length").Single()).GetMethod, ilVar);
             else
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldlen);
             Context.EmitCilInstruction(ilVar, OpCodes.Conv_I4);
-            Context.AddCallToMethod((IMethodSymbol) typeInfo.Type.GetMembers().Single(m => m.Name == "GetOffset"), ilVar, MethodDispatchInformation.MostLikelyVirtual);
+            Context.AddCallToMethod((IMethodSymbol) operation!.Type.GetMembers().Single(m => m.Name == "GetOffset"), ilVar);
+        }
+        else if (!Context.TryApplyConversions(ilVar, operation?.Parent))
+        {
+            var typeInfo = Context.SemanticModel.GetTypeInfo(expression);
+            if (typeInfo.Type == null)
+                return;
+            
+            var conversion = Context.SemanticModel.GetConversion(expression);
+            if (conversion.IsImplicit && NeedsBoxing(Context, expression, typeInfo.Type))
+            {
+                AddCilInstruction(ilVar, OpCodes.Box, typeInfo.Type);
+            }
         }
 
         // Empirically (verified in generated IL), expressions of type parameter used as:
@@ -90,7 +70,7 @@ partial class ExpressionVisitor
             static bool AssignmentExpressionNeedsBoxing(IVisitorContext context, ExpressionSyntax expression, ITypeSymbol rightType)
             {
                 if (expression.Parent is not AssignmentExpressionSyntax assignment) return false;
-                var leftType = ModelExtensions.GetTypeInfo(context.SemanticModel, assignment.Left).Type;
+                var leftType = context.SemanticModel.GetTypeInfo(assignment.Left).Type;
                 return !SymbolEqualityComparer.Default.Equals(leftType, rightType) && leftType.IsReferenceType;
             }
 
@@ -99,7 +79,7 @@ partial class ExpressionVisitor
                 if (!expression.Parent.IsKind(SyntaxKind.SimpleMemberAccessExpression))
                     return false;
                 
-                var symbol = ModelExtensions.GetSymbolInfo(context.SemanticModel, expression).Symbol;
+                var symbol = context.SemanticModel.GetSymbolInfo(expression).Symbol;
                 // only triggers when expression `T` used in T.Method() (i.e, abstract static methods from an interface)
                 if (symbol is { Kind: SymbolKind.TypeParameter }) return false;
                 ITypeParameterSymbol typeParameter = null;
@@ -109,7 +89,7 @@ partial class ExpressionVisitor
                 }
                 else
                 {
-                    // 'expression' represents a local variable, parameters, etc.. so we get its element type 
+                    // 'expression' represents a local variable, parameter, etc... so we get its element type 
                     typeParameter = symbol.GetMemberType() as ITypeParameterSymbol;
                 }
 

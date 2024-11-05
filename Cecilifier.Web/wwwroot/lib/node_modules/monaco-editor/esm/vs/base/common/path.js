@@ -3,7 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 // NOTE: VSCode's copy of nodejs path library to be usable in common (non-node) namespace
-// Copied from: https://github.com/nodejs/node/blob/v16.14.2/lib/path.js
+// Copied from: https://github.com/nodejs/node/commits/v20.9.0/lib/path.js
+// Excluding: the change that adds primordials
+// (https://github.com/nodejs/node/commit/187a862d221dec42fa9a5c4214e7034d9092792f and others)
 /**
  * Copyright Joyent, Inc. and other Node contributors.
  *
@@ -148,11 +150,14 @@ function normalizeString(path, allowAboveRoot, separator, isPathSeparator) {
     }
     return res;
 }
+function formatExt(ext) {
+    return ext ? `${ext[0] === '.' ? '' : '.'}${ext}` : '';
+}
 function _format(sep, pathObject) {
     validateObject(pathObject, 'pathObject');
     const dir = pathObject.dir || pathObject.root;
     const base = pathObject.base ||
-        `${pathObject.name || ''}${pathObject.ext || ''}`;
+        `${pathObject.name || ''}${formatExt(pathObject.ext)}`;
     if (!dir) {
         return base;
     }
@@ -168,7 +173,7 @@ export const win32 = {
             let path;
             if (i >= 0) {
                 path = pathSegments[i];
-                validateString(path, 'path');
+                validateString(path, `paths[${i}]`);
                 // Skip empty entries
                 if (path.length === 0) {
                     continue;
@@ -678,9 +683,9 @@ export const win32 = {
         }
         return path.slice(0, end);
     },
-    basename(path, ext) {
-        if (ext !== undefined) {
-            validateString(ext, 'ext');
+    basename(path, suffix) {
+        if (suffix !== undefined) {
+            validateString(suffix, 'suffix');
         }
         validateString(path, 'path');
         let start = 0;
@@ -695,11 +700,11 @@ export const win32 = {
             path.charCodeAt(1) === CHAR_COLON) {
             start = 2;
         }
-        if (ext !== undefined && ext.length > 0 && ext.length <= path.length) {
-            if (ext === path) {
+        if (suffix !== undefined && suffix.length > 0 && suffix.length <= path.length) {
+            if (suffix === path) {
                 return '';
             }
-            let extIdx = ext.length - 1;
+            let extIdx = suffix.length - 1;
             let firstNonSlashEnd = -1;
             for (i = path.length - 1; i >= start; --i) {
                 const code = path.charCodeAt(i);
@@ -720,7 +725,7 @@ export const win32 = {
                     }
                     if (extIdx >= 0) {
                         // Try to match the explicit extension
-                        if (code === ext.charCodeAt(extIdx)) {
+                        if (code === suffix.charCodeAt(extIdx)) {
                             if (--extIdx === -1) {
                                 // We matched the extension, so mark this as the end of our path
                                 // component
@@ -1000,7 +1005,7 @@ export const posix = {
         let resolvedAbsolute = false;
         for (let i = pathSegments.length - 1; i >= -1 && !resolvedAbsolute; i--) {
             const path = i >= 0 ? pathSegments[i] : posixCwd();
-            validateString(path, 'path');
+            validateString(path, `paths[${i}]`);
             // Skip empty entries
             if (path.length === 0) {
                 continue;
@@ -1163,20 +1168,20 @@ export const posix = {
         }
         return path.slice(0, end);
     },
-    basename(path, ext) {
-        if (ext !== undefined) {
-            validateString(ext, 'ext');
+    basename(path, suffix) {
+        if (suffix !== undefined) {
+            validateString(suffix, 'ext');
         }
         validateString(path, 'path');
         let start = 0;
         let end = -1;
         let matchedSlash = true;
         let i;
-        if (ext !== undefined && ext.length > 0 && ext.length <= path.length) {
-            if (ext === path) {
+        if (suffix !== undefined && suffix.length > 0 && suffix.length <= path.length) {
+            if (suffix === path) {
                 return '';
             }
-            let extIdx = ext.length - 1;
+            let extIdx = suffix.length - 1;
             let firstNonSlashEnd = -1;
             for (i = path.length - 1; i >= 0; --i) {
                 const code = path.charCodeAt(i);
@@ -1197,7 +1202,7 @@ export const posix = {
                     }
                     if (extIdx >= 0) {
                         // Try to match the explicit extension
-                        if (code === ext.charCodeAt(extIdx)) {
+                        if (code === suffix.charCodeAt(extIdx)) {
                             if (--extIdx === -1) {
                                 // We matched the extension, so mark this as the end of our path
                                 // component
@@ -1385,6 +1390,7 @@ export const posix = {
 posix.win32 = win32.win32 = win32;
 posix.posix = win32.posix = posix;
 export const normalize = (platformIsWin32 ? win32.normalize : posix.normalize);
+export const join = (platformIsWin32 ? win32.join : posix.join);
 export const resolve = (platformIsWin32 ? win32.resolve : posix.resolve);
 export const relative = (platformIsWin32 ? win32.relative : posix.relative);
 export const dirname = (platformIsWin32 ? win32.dirname : posix.dirname);

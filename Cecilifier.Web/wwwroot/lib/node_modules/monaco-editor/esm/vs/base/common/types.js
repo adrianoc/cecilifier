@@ -105,7 +105,7 @@ export function validateConstraint(arg, constraint) {
                 return;
             }
         }
-        catch (_a) {
+        catch {
             // ignore
         }
         if (!isUndefinedOrNull(arg) && arg.constructor === constraint) {

@@ -91,6 +91,13 @@ export class Scanner {
                 throw illegalState(`unhandled token type: ${JSON.stringify(token)}; have you forgotten to add a case?`);
         }
     }
+    static { this._regexFlags = new Set(['i', 'g', 's', 'm', 'y', 'u'].map(ch => ch.charCodeAt(0))); }
+    static { this._keywords = new Map([
+        ['not', 14 /* TokenType.Not */],
+        ['in', 13 /* TokenType.In */],
+        ['false', 12 /* TokenType.False */],
+        ['true', 11 /* TokenType.True */],
+    ]); }
     reset(value) {
         this._input = value;
         this._start = 0;
@@ -275,10 +282,3 @@ export class Scanner {
         return this._current >= this._input.length;
     }
 }
-Scanner._regexFlags = new Set(['i', 'g', 's', 'm', 'y', 'u'].map(ch => ch.charCodeAt(0)));
-Scanner._keywords = new Map([
-    ['not', 14 /* TokenType.Not */],
-    ['in', 13 /* TokenType.In */],
-    ['false', 12 /* TokenType.False */],
-    ['true', 11 /* TokenType.True */],
-]);

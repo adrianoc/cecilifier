@@ -12,18 +12,16 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
 import { Color, RGBA } from '../../../../base/common/color.js';
-import { EditorWorkerClient } from '../../../browser/services/editorWorkerService.js';
-import { IModelService } from '../../../common/services/model.js';
-import { ILanguageConfigurationService } from '../../../common/languages/languageConfigurationRegistry.js';
 import { Disposable } from '../../../../base/common/lifecycle.js';
 import { ILanguageFeaturesService } from '../../../common/services/languageFeatures.js';
 import { registerEditorFeature } from '../../../common/editorFeatures.js';
-export class DefaultDocumentColorProvider {
-    constructor(modelService, languageConfigurationService) {
-        this._editorWorkerClient = new EditorWorkerClient(modelService, false, 'editorWorkerService', languageConfigurationService);
+import { IEditorWorkerService } from '../../../common/services/editorWorker.js';
+let DefaultDocumentColorProvider = class DefaultDocumentColorProvider {
+    constructor(_editorWorkerService) {
+        this._editorWorkerService = _editorWorkerService;
     }
     async provideDocumentColors(model, _token) {
-        return this._editorWorkerClient.computeDefaultDocumentColors(model.uri);
+        return this._editorWorkerService.computeDefaultDocumentColors(model.uri);
     }
     provideColorPresentations(_model, colorInfo, _token) {
         const range = colorInfo.range;
@@ -39,16 +37,19 @@ export class DefaultDocumentColorProvider {
         colorPresentations.push({ label: hex, textEdit: { range: range, text: hex } });
         return colorPresentations;
     }
-}
+};
+DefaultDocumentColorProvider = __decorate([
+    __param(0, IEditorWorkerService)
+], DefaultDocumentColorProvider);
+export { DefaultDocumentColorProvider };
 let DefaultDocumentColorProviderFeature = class DefaultDocumentColorProviderFeature extends Disposable {
-    constructor(_modelService, _languageConfigurationService, _languageFeaturesService) {
+    constructor(_languageFeaturesService, editorWorkerService) {
         super();
-        this._register(_languageFeaturesService.colorProvider.register('*', new DefaultDocumentColorProvider(_modelService, _languageConfigurationService)));
+        this._register(_languageFeaturesService.colorProvider.register('*', new DefaultDocumentColorProvider(editorWorkerService)));
     }
 };
 DefaultDocumentColorProviderFeature = __decorate([
-    __param(0, IModelService),
-    __param(1, ILanguageConfigurationService),
-    __param(2, ILanguageFeaturesService)
+    __param(0, ILanguageFeaturesService),
+    __param(1, IEditorWorkerService)
 ], DefaultDocumentColorProviderFeature);
 registerEditorFeature(DefaultDocumentColorProviderFeature);

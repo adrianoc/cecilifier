@@ -23,7 +23,9 @@ import { NullState, nullTokenize, nullTokenizeEncoded } from '../../../common/la
 import { ILanguageService } from '../../../common/languages/language.js';
 import { IStandaloneThemeService } from '../../common/standaloneTheme.js';
 import { InspectTokensNLS } from '../../../common/standaloneStrings.js';
-let InspectTokensController = InspectTokensController_1 = class InspectTokensController extends Disposable {
+let InspectTokensController = class InspectTokensController extends Disposable {
+    static { InspectTokensController_1 = this; }
+    static { this.ID = 'editor.contrib.inspectTokens'; }
     static get(editor) {
         return editor.getContribution(InspectTokensController_1.ID);
     }
@@ -57,7 +59,6 @@ let InspectTokensController = InspectTokensController_1 = class InspectTokensCon
         }
     }
 };
-InspectTokensController.ID = 'editor.contrib.inspectTokens';
 InspectTokensController = InspectTokensController_1 = __decorate([
     __param(1, IStandaloneThemeService),
     __param(2, ILanguageService)
@@ -73,7 +74,7 @@ class InspectTokens extends EditorAction {
     }
     run(accessor, editor) {
         const controller = InspectTokensController.get(editor);
-        controller === null || controller === void 0 ? void 0 : controller.launch();
+        controller?.launch();
     }
 }
 function renderTokenText(tokenText) {
@@ -106,6 +107,7 @@ function getSafeTokenizationSupport(languageIdCodec, languageId) {
     };
 }
 class InspectTokensWidget extends Disposable {
+    static { this._ID = 'editor.contrib.inspectTokensWidget'; }
     constructor(editor, languageService) {
         super();
         // Editor.IContentWidget.allowEditorOverflow
@@ -233,6 +235,5 @@ class InspectTokensWidget extends Disposable {
         };
     }
 }
-InspectTokensWidget._ID = 'editor.contrib.inspectTokensWidget';
 registerEditorContribution(InspectTokensController.ID, InspectTokensController, 4 /* EditorContributionInstantiation.Lazy */);
 registerEditorAction(InspectTokens);

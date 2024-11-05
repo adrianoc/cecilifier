@@ -24,8 +24,8 @@ export class BareFontInfo {
         const fontSize = options.get(52 /* EditorOption.fontSize */);
         const fontFeatureSettings = options.get(51 /* EditorOption.fontLigatures */);
         const fontVariationSettings = options.get(54 /* EditorOption.fontVariations */);
-        const lineHeight = options.get(66 /* EditorOption.lineHeight */);
-        const letterSpacing = options.get(63 /* EditorOption.letterSpacing */);
+        const lineHeight = options.get(67 /* EditorOption.lineHeight */);
+        const letterSpacing = options.get(64 /* EditorOption.letterSpacing */);
         return BareFontInfo._create(fontFamily, fontWeight, fontSize, fontFeatureSettings, fontVariationSettings, lineHeight, letterSpacing, pixelRatio, ignoreEditorZoom);
     }
     /**

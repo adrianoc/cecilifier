@@ -18,7 +18,6 @@ namespace Cecilifier.Core.Misc
             if (!(memberSymbol.ContainingSymbol is INamedTypeSymbol ts) || !ts.IsGenericType || !memberSymbol.IsDefinedInCurrentAssembly(context))
                 return backingFieldVar;
 
-            //TODO: Register the following variable?
             var genTypeVar = context.Naming.GenericInstance(memberSymbol);
             context.WriteCecilExpression($"var {genTypeVar} = {memberDeclaringTypeVar}.MakeGenericInstanceType({memberDeclaringTypeVar}.GenericParameters.ToArray());");
             context.WriteNewLine();

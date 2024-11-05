@@ -11,10 +11,10 @@ export class EditorScrollbar extends ViewPart {
     constructor(context, linesContent, viewDomNode, overflowGuardDomNode) {
         super(context);
         const options = this._context.configuration.options;
-        const scrollbar = options.get(102 /* EditorOption.scrollbar */);
-        const mouseWheelScrollSensitivity = options.get(74 /* EditorOption.mouseWheelScrollSensitivity */);
+        const scrollbar = options.get(104 /* EditorOption.scrollbar */);
+        const mouseWheelScrollSensitivity = options.get(75 /* EditorOption.mouseWheelScrollSensitivity */);
         const fastScrollSensitivity = options.get(40 /* EditorOption.fastScrollSensitivity */);
-        const scrollPredominantAxis = options.get(105 /* EditorOption.scrollPredominantAxis */);
+        const scrollPredominantAxis = options.get(107 /* EditorOption.scrollPredominantAxis */);
         const scrollbarOptions = {
             listenOnDomNode: viewDomNode.domNode,
             className: 'editor-scrollable' + ' ' + getThemeTypeSelector(context.theme.type),
@@ -37,7 +37,7 @@ export class EditorScrollbar extends ViewPart {
             scrollByPage: scrollbar.scrollByPage,
         };
         this.scrollbar = this._register(new SmoothScrollableElement(linesContent.domNode, scrollbarOptions, this._context.viewLayout.getScrollable()));
-        PartFingerprints.write(this.scrollbar.getDomNode(), 5 /* PartFingerprint.ScrollableElement */);
+        PartFingerprints.write(this.scrollbar.getDomNode(), 6 /* PartFingerprint.ScrollableElement */);
         this.scrollbarDomNode = createFastDomNode(this.scrollbar.getDomNode());
         this.scrollbarDomNode.setPosition('absolute');
         this._setLayout();
@@ -73,9 +73,9 @@ export class EditorScrollbar extends ViewPart {
     }
     _setLayout() {
         const options = this._context.configuration.options;
-        const layoutInfo = options.get(143 /* EditorOption.layoutInfo */);
+        const layoutInfo = options.get(146 /* EditorOption.layoutInfo */);
         this.scrollbarDomNode.setLeft(layoutInfo.contentLeft);
-        const minimap = options.get(72 /* EditorOption.minimap */);
+        const minimap = options.get(73 /* EditorOption.minimap */);
         const side = minimap.side;
         if (side === 'right') {
             this.scrollbarDomNode.setWidth(layoutInfo.contentWidth + layoutInfo.minimap.minimapWidth);
@@ -99,14 +99,14 @@ export class EditorScrollbar extends ViewPart {
     }
     // --- begin event handlers
     onConfigurationChanged(e) {
-        if (e.hasChanged(102 /* EditorOption.scrollbar */)
-            || e.hasChanged(74 /* EditorOption.mouseWheelScrollSensitivity */)
+        if (e.hasChanged(104 /* EditorOption.scrollbar */)
+            || e.hasChanged(75 /* EditorOption.mouseWheelScrollSensitivity */)
             || e.hasChanged(40 /* EditorOption.fastScrollSensitivity */)) {
             const options = this._context.configuration.options;
-            const scrollbar = options.get(102 /* EditorOption.scrollbar */);
-            const mouseWheelScrollSensitivity = options.get(74 /* EditorOption.mouseWheelScrollSensitivity */);
+            const scrollbar = options.get(104 /* EditorOption.scrollbar */);
+            const mouseWheelScrollSensitivity = options.get(75 /* EditorOption.mouseWheelScrollSensitivity */);
             const fastScrollSensitivity = options.get(40 /* EditorOption.fastScrollSensitivity */);
-            const scrollPredominantAxis = options.get(105 /* EditorOption.scrollPredominantAxis */);
+            const scrollPredominantAxis = options.get(107 /* EditorOption.scrollPredominantAxis */);
             const newOpts = {
                 vertical: scrollbar.vertical,
                 horizontal: scrollbar.horizontal,
@@ -120,7 +120,7 @@ export class EditorScrollbar extends ViewPart {
             };
             this.scrollbar.updateOptions(newOpts);
         }
-        if (e.hasChanged(143 /* EditorOption.layoutInfo */)) {
+        if (e.hasChanged(146 /* EditorOption.layoutInfo */)) {
             this._setLayout();
         }
         return true;

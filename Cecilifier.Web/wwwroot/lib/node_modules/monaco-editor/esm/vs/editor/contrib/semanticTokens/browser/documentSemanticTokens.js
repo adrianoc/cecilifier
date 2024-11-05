@@ -53,6 +53,11 @@ let DocumentSemanticTokensFeature = class DocumentSemanticTokensFeature extends 
                 }
             }
         };
+        modelService.getModels().forEach(model => {
+            if (isSemanticColoringEnabled(model, themeService, configurationService)) {
+                register(model);
+            }
+        });
         this._register(modelService.onModelAdded((model) => {
             if (isSemanticColoringEnabled(model, themeService, configurationService)) {
                 register(model);
@@ -88,7 +93,10 @@ DocumentSemanticTokensFeature = __decorate([
     __param(5, ILanguageFeaturesService)
 ], DocumentSemanticTokensFeature);
 export { DocumentSemanticTokensFeature };
-let ModelSemanticColoring = ModelSemanticColoring_1 = class ModelSemanticColoring extends Disposable {
+let ModelSemanticColoring = class ModelSemanticColoring extends Disposable {
+    static { ModelSemanticColoring_1 = this; }
+    static { this.REQUEST_MIN_DELAY = 300; }
+    static { this.REQUEST_MAX_DELAY = 2000; }
     constructor(model, _semanticTokensStylingService, themeService, languageFeatureDebounceService, languageFeaturesService) {
         super();
         this._semanticTokensStylingService = _semanticTokensStylingService;
@@ -333,8 +341,6 @@ let ModelSemanticColoring = ModelSemanticColoring_1 = class ModelSemanticColorin
         rescheduleIfNeeded();
     }
 };
-ModelSemanticColoring.REQUEST_MIN_DELAY = 300;
-ModelSemanticColoring.REQUEST_MAX_DELAY = 2000;
 ModelSemanticColoring = ModelSemanticColoring_1 = __decorate([
     __param(1, ISemanticTokensStylingService),
     __param(2, IThemeService),

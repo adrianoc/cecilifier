@@ -24,11 +24,10 @@ export class CountBadge {
         this.render();
     }
     render() {
-        var _a, _b;
         this.element.textContent = format(this.countFormat, this.count);
         this.element.title = format(this.titleFormat, this.count);
-        this.element.style.backgroundColor = (_a = this.styles.badgeBackground) !== null && _a !== void 0 ? _a : '';
-        this.element.style.color = (_b = this.styles.badgeForeground) !== null && _b !== void 0 ? _b : '';
+        this.element.style.backgroundColor = this.styles.badgeBackground ?? '';
+        this.element.style.color = this.styles.badgeForeground ?? '';
         if (this.styles.badgeBorder) {
             this.element.style.border = `1px solid ${this.styles.badgeBorder}`;
         }

@@ -357,9 +357,8 @@ public class InlineArrayTests : CecilifierUnitTestBase
         Assert.That(cecilified, Does.Match(expecetdIL));
     }
 
-    //TODO: InlineArray : Implement support for slicing through ranges
     [Test]
-    public void Range()
+    public void Slice_Range()
     {
         var result = RunCecilifier("""
                                      class C

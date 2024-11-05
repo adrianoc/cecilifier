@@ -52,12 +52,13 @@ namespace Cecilifier.Core.AST
         private void VisitDeclaredTypesSortedByDependencies()
         {
             var collectedTypes = new TypeDependency.TypeDependencyCollector((CSharpCompilation) Context.SemanticModel.Compilation);
+            var typeDeclarationVisitor = new TypeDeclarationVisitor(Context);
             foreach (var typeDeclaration in collectedTypes.Ordered.Dependencies)
             {
                 if (Context.SemanticModel.GetDeclaredSymbol(typeDeclaration).ContainingType != null)
                     continue;
 
-                new TypeDeclarationVisitor(Context).Visit(typeDeclaration);
+                typeDeclarationVisitor.Visit(typeDeclaration);
                 UpdateTypeInformation(typeDeclaration);
             }
         }

@@ -84,7 +84,7 @@ internal static class CollectionExpressionProcessor
             context.EmitCilInstruction(visitor.ILVariable, OpCodes.Ldc_I4, index);
             context.EmitCilInstruction(visitor.ILVariable, OpCodes.Call, spanGetItemMethod);
             visitor.Visit(element);
-            ApplyConversions(context, visitor.ILVariable, collectionExpressionOperation.Elements[index]);
+            context.TryApplyConversions(visitor.ILVariable, collectionExpressionOperation.Elements[index]);
             context.EmitCilInstruction(visitor.ILVariable, stindOpCode, targetElementType);
             index++;
         }
@@ -122,7 +122,7 @@ internal static class CollectionExpressionProcessor
             context.EmitCilInstruction(visitor.ILVariable, OpCodes.Ldc_I4, index);
             context.EmitCilInstruction(visitor.ILVariable, OpCodes.Call, inlineArrayElementRefMethodVar);
             visitor.Visit(element);
-            ApplyConversions(context, visitor.ILVariable, collectionExpressionOperation.Elements[index]);
+            context.TryApplyConversions(visitor.ILVariable, collectionExpressionOperation.Elements[index]);
             context.EmitCilInstruction(visitor.ILVariable, storeOpCode, targetElementType);
             index++;
         }
@@ -215,23 +215,5 @@ internal static class CollectionExpressionProcessor
         context.WriteNewLine();
 
         return methodVar;
-    }
-    
-    static void ApplyConversions(IVisitorContext context, string ilVar, IOperation operation)
-    {
-        if (operation is IConversionOperation { Conversion.IsNumeric: true } elementConversion)
-        {
-            var result = context.TryApplyNumericConversion(ilVar, operation.Type, elementConversion.Type);
-            if (!result)
-                throw new Exception();
-        }
-        else if (operation is IConversionOperation { OperatorMethod: not null } conversion)
-        {
-            context.AddCallToMethod(conversion.OperatorMethod, ilVar);
-        }
-        else if (operation is IConversionOperation conversion2 && context.SemanticModel.Compilation.ClassifyConversion(conversion2.Operand.Type, operation.Type).IsBoxing)
-        {
-            context.EmitCilInstruction(ilVar, OpCodes.Box, context.TypeResolver.Resolve(conversion2.Operand.Type));
-        }
     }
 }

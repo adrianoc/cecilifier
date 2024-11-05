@@ -25,10 +25,14 @@ export class ScopedLineTokens {
         this._lastTokenIndex = lastTokenIndex;
         this.firstCharOffset = firstCharOffset;
         this._lastCharOffset = lastCharOffset;
+        this.languageIdCodec = actual.languageIdCodec;
     }
     getLineContent() {
         const actualLineContent = this._actual.getLineContent();
         return actualLineContent.substring(this.firstCharOffset, this._lastCharOffset);
+    }
+    getLineLength() {
+        return this._lastCharOffset - this.firstCharOffset;
     }
     getActualLineContentBefore(offset) {
         const actualLineContent = this._actual.getLineContent();
@@ -42,6 +46,9 @@ export class ScopedLineTokens {
     }
     getStandardTokenType(tokenIndex) {
         return this._actual.getStandardTokenType(tokenIndex + this._firstTokenIndex);
+    }
+    toIViewLineTokens() {
+        return this._actual.sliceAndInflate(this.firstCharOffset, this._lastCharOffset, 0);
     }
 }
 export function ignoreBracketsInToken(standardTokenType) {

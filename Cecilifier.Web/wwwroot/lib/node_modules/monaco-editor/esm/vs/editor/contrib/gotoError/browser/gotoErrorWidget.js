@@ -78,7 +78,7 @@ class MessageWidget {
     }
     update(marker) {
         const { source, message, relatedInformation, code } = marker;
-        let sourceAndCodeLength = ((source === null || source === void 0 ? void 0 : source.length) || 0) + '()'.length;
+        let sourceAndCodeLength = (source?.length || 0) + '()'.length;
         if (code) {
             if (typeof code === 'string') {
                 sourceAndCodeLength += code.length;
@@ -140,7 +140,7 @@ class MessageWidget {
         this._editor.applyFontInfo(this._relatedBlock);
         if (isNonEmptyArray(relatedInformation)) {
             const relatedInformationNode = this._relatedBlock.appendChild(document.createElement('div'));
-            relatedInformationNode.style.paddingTop = `${Math.floor(this._editor.getOption(66 /* EditorOption.lineHeight */) * 0.66)}px`;
+            relatedInformationNode.style.paddingTop = `${Math.floor(this._editor.getOption(67 /* EditorOption.lineHeight */) * 0.66)}px`;
             this._lines += 1;
             for (const related of relatedInformation) {
                 const container = document.createElement('div');
@@ -195,7 +195,9 @@ class MessageWidget {
         return ariaLabel;
     }
 }
-let MarkerNavigationWidget = MarkerNavigationWidget_1 = class MarkerNavigationWidget extends PeekViewWidget {
+let MarkerNavigationWidget = class MarkerNavigationWidget extends PeekViewWidget {
+    static { MarkerNavigationWidget_1 = this; }
+    static { this.TitleMenu = new MenuId('gotoErrorTitleMenu'); }
     constructor(editor, _themeService, _openerService, _menuService, instantiationService, _contextKeyService, _labelService) {
         super(editor, { showArrow: true, showFrame: true, isAccessible: true, frameWidth: 1 }, instantiationService);
         this._themeService = _themeService;
@@ -248,10 +250,9 @@ let MarkerNavigationWidget = MarkerNavigationWidget_1 = class MarkerNavigationWi
         super._fillHead(container);
         this._disposables.add(this._actionbarWidget.actionRunner.onWillRun(e => this.editor.focus()));
         const actions = [];
-        const menu = this._menuService.createMenu(MarkerNavigationWidget_1.TitleMenu, this._contextKeyService);
-        createAndFillInActionBarActions(menu, undefined, actions);
+        const menu = this._menuService.getMenuActions(MarkerNavigationWidget_1.TitleMenu, this._contextKeyService);
+        createAndFillInActionBarActions(menu, actions);
         this._actionbarWidget.push(actions, { label: false, icon: true, index: 0 });
-        menu.dispose();
     }
     _fillTitleIcon(container) {
         this._icon = dom.append(container, dom.$(''));
@@ -318,7 +319,6 @@ let MarkerNavigationWidget = MarkerNavigationWidget_1 = class MarkerNavigationWi
         return 3 + this._message.getHeightInLines();
     }
 };
-MarkerNavigationWidget.TitleMenu = new MenuId('gotoErrorTitleMenu');
 MarkerNavigationWidget = MarkerNavigationWidget_1 = __decorate([
     __param(1, IThemeService),
     __param(2, IOpenerService),
@@ -338,4 +338,4 @@ const editorMarkerNavigationWarning = registerColor('editorMarkerNavigationWarni
 const editorMarkerNavigationWarningHeader = registerColor('editorMarkerNavigationWarning.headerBackground', { dark: transparent(editorMarkerNavigationWarning, .1), light: transparent(editorMarkerNavigationWarning, .1), hcDark: '#0C141F', hcLight: transparent(editorMarkerNavigationWarning, .2) }, nls.localize('editorMarkerNavigationWarningBackground', 'Editor marker navigation widget warning heading background.'));
 const editorMarkerNavigationInfo = registerColor('editorMarkerNavigationInfo.background', { dark: infoDefault, light: infoDefault, hcDark: contrastBorder, hcLight: contrastBorder }, nls.localize('editorMarkerNavigationInfo', 'Editor marker navigation widget info color.'));
 const editorMarkerNavigationInfoHeader = registerColor('editorMarkerNavigationInfo.headerBackground', { dark: transparent(editorMarkerNavigationInfo, .1), light: transparent(editorMarkerNavigationInfo, .1), hcDark: null, hcLight: null }, nls.localize('editorMarkerNavigationInfoHeaderBackground', 'Editor marker navigation widget info heading background.'));
-const editorMarkerNavigationBackground = registerColor('editorMarkerNavigation.background', { dark: editorBackground, light: editorBackground, hcDark: editorBackground, hcLight: editorBackground }, nls.localize('editorMarkerNavigationBackground', 'Editor marker navigation widget background.'));
+const editorMarkerNavigationBackground = registerColor('editorMarkerNavigation.background', editorBackground, nls.localize('editorMarkerNavigationBackground', 'Editor marker navigation widget background.'));

@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 import { DisposableStore } from '../../../../base/common/lifecycle.js';
 export class OvertypingCapturer {
+    static { this._maxSelectionLength = 51200; }
     constructor(editor, suggestModel) {
         this._disposables = new DisposableStore();
         this._lastOvertyped = [];
@@ -56,4 +57,3 @@ export class OvertypingCapturer {
         this._disposables.dispose();
     }
 }
-OvertypingCapturer._maxSelectionLength = 51200;

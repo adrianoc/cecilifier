@@ -150,11 +150,11 @@ namespace Cecilifier.Core.Extensions
             };
         }
 
-        public static DefinitionVariable EnsureFieldExists(this IFieldSymbol fieldSymbol, [NotNull] IVisitorContext context, [NotNull] SimpleNameSyntax node)
+        public static void EnsureFieldExists(this IFieldSymbol fieldSymbol, [NotNull] IVisitorContext context, [NotNull] SimpleNameSyntax node)
         {
             var declaringSyntaxReference = fieldSymbol.DeclaringSyntaxReferences.SingleOrDefault();
             if (declaringSyntaxReference == null)
-                return DefinitionVariable.NotFound;
+                return;
 
             var fieldDeclaration = declaringSyntaxReference.GetSyntax().Parent.Parent.EnsureNotNull<SyntaxNode,FieldDeclarationSyntax>();
             if (fieldDeclaration.Span.Start > node.Span.End)
@@ -163,11 +163,9 @@ namespace Cecilifier.Core.Extensions
                 fieldDeclaration.Accept(new FieldDeclarationVisitor(context));
             }
 
-            var fieldDeclarationVariable = context.DefinitionVariables.GetVariable(fieldSymbol.Name, VariableMemberKind.Field, fieldSymbol.ContainingType.ToDisplayString());
+            var fieldDeclarationVariable = context.DefinitionVariables.GetVariable(fieldSymbol.Name, VariableMemberKind.Field, fieldSymbol.ContainingType.OriginalDefinition.ToDisplayString());
             if (!fieldDeclarationVariable.IsValid)
                 throw new Exception($"Could not resolve reference to field: {fieldSymbol.Name}");
-
-            return fieldDeclarationVariable;
         }
 
         public static void EnsurePropertyExists(this IPropertySymbol propertySymbol, IVisitorContext context, [NotNull] SyntaxNode node)

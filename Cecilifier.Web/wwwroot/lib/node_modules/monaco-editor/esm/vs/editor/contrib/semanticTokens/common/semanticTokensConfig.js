@@ -4,8 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 export const SEMANTIC_HIGHLIGHTING_SETTING_ID = 'editor.semanticHighlighting';
 export function isSemanticColoringEnabled(model, themeService, configurationService) {
-    var _a;
-    const setting = (_a = configurationService.getValue(SEMANTIC_HIGHLIGHTING_SETTING_ID, { overrideIdentifier: model.getLanguageId(), resource: model.uri })) === null || _a === void 0 ? void 0 : _a.enabled;
+    const setting = configurationService.getValue(SEMANTIC_HIGHLIGHTING_SETTING_ID, { overrideIdentifier: model.getLanguageId(), resource: model.uri })?.enabled;
     if (typeof setting === 'boolean') {
         return setting;
     }

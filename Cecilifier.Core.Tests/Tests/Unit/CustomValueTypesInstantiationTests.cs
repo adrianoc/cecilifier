@@ -6,13 +6,23 @@ namespace Cecilifier.Core.Tests.Tests.Unit;
 [TestFixture]
 public class CustomValueTypesInstantiationTests : CecilifierUnitTestBase
 {
-    [Test]
-    public void ParameterAssignment()
+    public enum MethodKind
     {
-        var result = RunCecilifier(@"struct MyStruct { } class Foo { void M(MyStruct m) { m = new MyStruct(); } }");
-        Assert.That(result.GeneratedCode.ReadToEnd(), Contains.Substring(
-            @"il_M_3.Emit(OpCodes.Ldarga, 0);
-			il_M_3.Emit(OpCodes.Initobj, st_myStruct_0);"));
+        Static = 0,
+        Instance = 1,
+    }
+    
+    [Test]
+    public void ParameterAssignment([Values] MethodKind kind)
+    {
+        var result = RunCecilifier($$"""struct MyStruct { } class Foo { {{(kind == MethodKind.Static ? "static" : "") }} void M(MyStruct m) { m = new MyStruct(); } }""");
+        Assert.That(
+            result.GeneratedCode.ReadToEnd(), Does.Match(
+            $"""
+            //m = new MyStruct\(\);
+            \s+il_M_3.Emit\(OpCodes.Ldarga, {(int) kind}\);
+            \s+il_M_3.Emit\(OpCodes.Initobj, st_myStruct_0\);
+            """));
     }
 
     [TestCase("out")]

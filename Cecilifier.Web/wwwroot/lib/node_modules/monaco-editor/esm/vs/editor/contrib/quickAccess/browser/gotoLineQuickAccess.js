@@ -7,6 +7,7 @@ import { getCodeEditor } from '../../../browser/editorBrowser.js';
 import { AbstractEditorNavigationQuickAccessProvider } from './editorNavigationQuickAccess.js';
 import { localize } from '../../../../nls.js';
 export class AbstractGotoLineQuickAccessProvider extends AbstractEditorNavigationQuickAccessProvider {
+    static { this.PREFIX = ':'; }
     constructor() {
         super({ canAcceptInBackground: true });
     }
@@ -61,7 +62,7 @@ export class AbstractGotoLineQuickAccessProvider extends AbstractEditorNavigatio
         const codeEditor = getCodeEditor(editor);
         if (codeEditor) {
             const options = codeEditor.getOptions();
-            const lineNumbers = options.get(67 /* EditorOption.lineNumbers */);
+            const lineNumbers = options.get(68 /* EditorOption.lineNumbers */);
             if (lineNumbers.renderType === 2 /* RenderLineNumbersType.Relative */) {
                 codeEditor.updateOptions({ lineNumbers: 'on' });
                 disposables.add(toDisposable(() => codeEditor.updateOptions({ lineNumbers: 'relative' })));
@@ -120,8 +121,6 @@ export class AbstractGotoLineQuickAccessProvider extends AbstractEditorNavigatio
         return model.validatePosition(positionCandidate).equals(positionCandidate);
     }
     lineCount(editor) {
-        var _a, _b;
-        return (_b = (_a = this.getModel(editor)) === null || _a === void 0 ? void 0 : _a.getLineCount()) !== null && _b !== void 0 ? _b : 0;
+        return this.getModel(editor)?.getLineCount() ?? 0;
     }
 }
-AbstractGotoLineQuickAccessProvider.PREFIX = ':';

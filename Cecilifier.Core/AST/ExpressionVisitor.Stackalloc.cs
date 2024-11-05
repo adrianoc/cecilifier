@@ -378,13 +378,11 @@ internal class StackallocSpanAssignmentTracker
         if (!isAssignedToSpan)
             return false;
 
-        if (rankNode != null && rankNode.IsKind(SyntaxKind.IdentifierName))
+        if (rankNode != null && rankNode.IsKind(SyntaxKind.IdentifierName) && context.SemanticModel.GetSymbolInfo(rankNode).Symbol is { Kind: not SymbolKind.Property } rankSymbol)
         {
-            var rankSymbol = context.SemanticModel.GetSymbolInfo(rankNode).Symbol.EnsureNotNull();
-
-            var parentTypeName = rankSymbol.Kind == SymbolKind.Field // TODO: What about properties and/or methods? 
-                ? rankSymbol.ContainingType.ToDisplayString()
-                : string.Empty;
+            var parentTypeName = rankSymbol.Kind == SymbolKind.Field || rankSymbol.Kind == SymbolKind.Parameter
+                    ? rankSymbol.ContainingSymbol.ToDisplayString()
+                    : string.Empty;
 
             var spanSizeStorageVariable = context.DefinitionVariables.GetVariable(rankNode.ToFullString(), VariableMemberKind.LocalVariable | VariableMemberKind.Field | VariableMemberKind.Parameter, parentTypeName);
             Debug.Assert(spanSizeStorageVariable.IsValid);

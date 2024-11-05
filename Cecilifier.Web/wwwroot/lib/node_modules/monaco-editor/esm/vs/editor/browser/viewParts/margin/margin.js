@@ -6,10 +6,12 @@ import './margin.css';
 import { createFastDomNode } from '../../../../base/browser/fastDomNode.js';
 import { ViewPart } from '../../view/viewPart.js';
 export class Margin extends ViewPart {
+    static { this.CLASS_NAME = 'glyph-margin'; }
+    static { this.OUTER_CLASS_NAME = 'margin'; }
     constructor(context) {
         super(context);
         const options = this._context.configuration.options;
-        const layoutInfo = options.get(143 /* EditorOption.layoutInfo */);
+        const layoutInfo = options.get(146 /* EditorOption.layoutInfo */);
         this._canUseLayerHinting = !options.get(32 /* EditorOption.disableLayerHinting */);
         this._contentLeft = layoutInfo.contentLeft;
         this._glyphMarginLeft = layoutInfo.glyphMarginLeft;
@@ -32,7 +34,7 @@ export class Margin extends ViewPart {
     // --- begin event handlers
     onConfigurationChanged(e) {
         const options = this._context.configuration.options;
-        const layoutInfo = options.get(143 /* EditorOption.layoutInfo */);
+        const layoutInfo = options.get(146 /* EditorOption.layoutInfo */);
         this._canUseLayerHinting = !options.get(32 /* EditorOption.disableLayerHinting */);
         this._contentLeft = layoutInfo.contentLeft;
         this._glyphMarginLeft = layoutInfo.glyphMarginLeft;
@@ -59,5 +61,3 @@ export class Margin extends ViewPart {
         this._glyphMarginBackgroundDomNode.setHeight(height);
     }
 }
-Margin.CLASS_NAME = 'glyph-margin';
-Margin.OUTER_CLASS_NAME = 'margin';

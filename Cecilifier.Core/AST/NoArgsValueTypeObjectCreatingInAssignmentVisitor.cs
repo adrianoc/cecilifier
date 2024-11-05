@@ -93,8 +93,7 @@ namespace Cecilifier.Core.AST
                         break;
                     }
 
-                    var opCode = parameterSymbol.RefKind == RefKind.None ? OpCodes.Ldarga : OpCodes.Ldarg;
-                    Context.EmitCilInstruction(ilVar, opCode, parameterSymbol.Ordinal); // TODO: Static / Instance methods handling...
+                    Context.EmitCilInstruction(ilVar, OpCodes.Ldarga, parameterSymbol.Ordinal + (parameterSymbol.ContainingSymbol.IsStatic ? 0 : 1));
                     break;
             }
 

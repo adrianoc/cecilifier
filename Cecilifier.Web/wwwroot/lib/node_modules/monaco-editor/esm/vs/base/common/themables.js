@@ -77,8 +77,7 @@ export var ThemeIcon;
     }
     ThemeIcon.getModifier = getModifier;
     function isEqual(ti1, ti2) {
-        var _a, _b;
-        return ti1.id === ti2.id && ((_a = ti1.color) === null || _a === void 0 ? void 0 : _a.id) === ((_b = ti2.color) === null || _b === void 0 ? void 0 : _b.id);
+        return ti1.id === ti2.id && ti1.color?.id === ti2.color?.id;
     }
     ThemeIcon.isEqual = isEqual;
 })(ThemeIcon || (ThemeIcon = {}));

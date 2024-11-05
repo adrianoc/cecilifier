@@ -3,13 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 class Node {
+    static { this.Undefined = new Node(undefined); }
     constructor(element) {
         this.element = element;
         this.next = Node.Undefined;
         this.prev = Node.Undefined;
     }
 }
-Node.Undefined = new Node(undefined);
 export class LinkedList {
     constructor() {
         this._first = Node.Undefined;

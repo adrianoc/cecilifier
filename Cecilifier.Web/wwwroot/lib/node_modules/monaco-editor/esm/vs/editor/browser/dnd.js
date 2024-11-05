@@ -59,7 +59,7 @@ export function toExternalVSDataTransfer(sourceDataTransfer, overwriteUriList = 
                             editorData.push(URI.parse(file.name, true).toString());
                         }
                     }
-                    catch (_a) {
+                    catch {
                         // Parsing failed. Leave out from list
                     }
                 }

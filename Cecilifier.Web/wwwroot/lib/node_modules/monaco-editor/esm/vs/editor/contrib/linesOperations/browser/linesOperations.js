@@ -8,6 +8,7 @@ import { EditorAction, registerEditorAction } from '../../../browser/editorExten
 import { ReplaceCommand, ReplaceCommandThatPreservesSelection, ReplaceCommandThatSelectsText } from '../../../common/commands/replaceCommand.js';
 import { TrimTrailingWhitespaceCommand } from '../../../common/commands/trimTrailingWhitespaceCommand.js';
 import { TypeOperations } from '../../../common/cursor/cursorTypeOperations.js';
+import { EnterOperation } from '../../../common/cursor/cursorTypeEditOperations.js';
 import { EditOperation } from '../../../common/core/editOperation.js';
 import { Position } from '../../../common/core/position.js';
 import { Range } from '../../../common/core/range.js';
@@ -19,6 +20,7 @@ import { SortLinesCommand } from './sortLinesCommand.js';
 import * as nls from '../../../../nls.js';
 import { MenuId } from '../../../../platform/actions/common/actions.js';
 import { ILanguageConfigurationService } from '../../../common/languages/languageConfigurationRegistry.js';
+import { IConfigurationService } from '../../../../platform/configuration/common/configuration.js';
 // copy lines
 class AbstractCopyLinesAction extends EditorAction {
     constructor(down, opts) {
@@ -206,7 +208,15 @@ export class AbstractSortLinesAction extends EditorAction {
         this.descending = descending;
     }
     run(_accessor, editor) {
-        const selections = editor.getSelections() || [];
+        if (!editor.hasModel()) {
+            return;
+        }
+        const model = editor.getModel();
+        let selections = editor.getSelections();
+        if (selections.length === 1 && selections[0].isEmpty()) {
+            // Apply to whole document.
+            selections = [new Selection(1, 1, model.getLineCount(), model.getLineMaxColumn(model.getLineCount()))];
+        }
         for (const selection of selections) {
             if (!SortLinesCommand.canRun(editor.getModel(), selection, this.descending)) {
                 return;
@@ -261,7 +271,14 @@ export class DeleteDuplicateLinesAction extends EditorAction {
         const edits = [];
         const endCursorState = [];
         let linesDeleted = 0;
-        for (const selection of editor.getSelections()) {
+        let updateSelection = true;
+        let selections = editor.getSelections();
+        if (selections.length === 1 && selections[0].isEmpty()) {
+            // Apply to whole document.
+            selections = [new Selection(1, 1, model.getLineCount(), model.getLineMaxColumn(model.getLineCount()))];
+            updateSelection = false;
+        }
+        for (const selection of selections) {
             const uniqueLines = new Set();
             const lines = [];
             for (let i = selection.startLineNumber; i <= selection.endLineNumber; i++) {
@@ -280,11 +297,12 @@ export class DeleteDuplicateLinesAction extends EditorAction {
             linesDeleted += (selection.endLineNumber - selection.startLineNumber + 1) - lines.length;
         }
         editor.pushUndoStop();
-        editor.executeEdits(this.id, edits, endCursorState);
+        editor.executeEdits(this.id, edits, updateSelection ? endCursorState : undefined);
         editor.pushUndoStop();
     }
 }
 export class TrimTrailingWhitespaceAction extends EditorAction {
+    static { this.ID = 'editor.action.trimTrailingWhitespace'; }
     constructor() {
         super({
             id: TrimTrailingWhitespaceAction.ID,
@@ -310,13 +328,15 @@ export class TrimTrailingWhitespaceAction extends EditorAction {
         if (selection === null) {
             return;
         }
-        const command = new TrimTrailingWhitespaceCommand(selection, cursors);
+        const config = _accessor.get(IConfigurationService);
+        const model = editor.getModel();
+        const trimInRegexAndStrings = config.getValue('files.trimTrailingWhitespaceInRegexAndStrings', { overrideIdentifier: model?.getLanguageId(), resource: model?.uri });
+        const command = new TrimTrailingWhitespaceCommand(selection, cursors, trimInRegexAndStrings);
         editor.pushUndoStop();
         editor.executeCommands(this.id, [command]);
         editor.pushUndoStop();
     }
 }
-TrimTrailingWhitespaceAction.ID = 'editor.action.trimTrailingWhitespace';
 export class DeleteLinesAction extends EditorAction {
     constructor() {
         super({
@@ -468,7 +488,7 @@ export class InsertLineBeforeAction extends EditorAction {
             return;
         }
         editor.pushUndoStop();
-        editor.executeCommands(this.id, TypeOperations.lineInsertBefore(viewModel.cursorConfig, editor.getModel(), editor.getSelections()));
+        editor.executeCommands(this.id, EnterOperation.lineInsertBefore(viewModel.cursorConfig, editor.getModel(), editor.getSelections()));
     }
 }
 export class InsertLineAfterAction extends EditorAction {
@@ -491,7 +511,7 @@ export class InsertLineAfterAction extends EditorAction {
             return;
         }
         editor.pushUndoStop();
-        editor.executeCommands(this.id, TypeOperations.lineInsertAfter(viewModel.cursorConfig, editor.getModel(), editor.getSelections()));
+        editor.executeCommands(this.id, EnterOperation.lineInsertAfter(viewModel.cursorConfig, editor.getModel(), editor.getSelections()));
     }
 }
 export class AbstractDeleteAllToBoundaryAction extends EditorAction {
@@ -850,7 +870,7 @@ export class AbstractCaseAction extends EditorAction {
         if (model === null) {
             return;
         }
-        const wordSeparators = editor.getOption(129 /* EditorOption.wordSeparators */);
+        const wordSeparators = editor.getOption(132 /* EditorOption.wordSeparators */);
         const textEdits = [];
         for (const selection of selections) {
             if (selection.isEmpty()) {
@@ -923,6 +943,7 @@ class BackwardsCompatibleRegExp {
     }
 }
 export class TitleCaseAction extends AbstractCaseAction {
+    static { this.titleBoundary = new BackwardsCompatibleRegExp('(^|[^\\p{L}\\p{N}\']|((^|\\P{L})\'))\\p{L}', 'gmu'); }
     constructor() {
         super({
             id: 'editor.action.transformToTitlecase',
@@ -942,8 +963,9 @@ export class TitleCaseAction extends AbstractCaseAction {
             .replace(titleBoundary, (b) => b.toLocaleUpperCase());
     }
 }
-TitleCaseAction.titleBoundary = new BackwardsCompatibleRegExp('(^|[^\\p{L}\\p{N}\']|((^|\\P{L})\'))\\p{L}', 'gmu');
 export class SnakeCaseAction extends AbstractCaseAction {
+    static { this.caseBoundary = new BackwardsCompatibleRegExp('(\\p{Ll})(\\p{Lu})', 'gmu'); }
+    static { this.singleLetters = new BackwardsCompatibleRegExp('(\\p{Lu}|\\p{N})(\\p{Lu})(\\p{Ll})', 'gmu'); }
     constructor() {
         super({
             id: 'editor.action.transformToSnakecase',
@@ -965,9 +987,8 @@ export class SnakeCaseAction extends AbstractCaseAction {
             .toLocaleLowerCase());
     }
 }
-SnakeCaseAction.caseBoundary = new BackwardsCompatibleRegExp('(\\p{Ll})(\\p{Lu})', 'gmu');
-SnakeCaseAction.singleLetters = new BackwardsCompatibleRegExp('(\\p{Lu}|\\p{N})(\\p{Lu})(\\p{Ll})', 'gmu');
 export class CamelCaseAction extends AbstractCaseAction {
+    static { this.wordBoundary = new BackwardsCompatibleRegExp('[_\\s-]', 'gm'); }
     constructor() {
         super({
             id: 'editor.action.transformToCamelcase',
@@ -988,7 +1009,30 @@ export class CamelCaseAction extends AbstractCaseAction {
             .join('');
     }
 }
-CamelCaseAction.wordBoundary = new BackwardsCompatibleRegExp('[_\\s-]', 'gm');
+export class PascalCaseAction extends AbstractCaseAction {
+    static { this.wordBoundary = new BackwardsCompatibleRegExp('[_\\s-]', 'gm'); }
+    static { this.wordBoundaryToMaintain = new BackwardsCompatibleRegExp('(?<=\\.)', 'gm'); }
+    constructor() {
+        super({
+            id: 'editor.action.transformToPascalcase',
+            label: nls.localize('editor.transformToPascalcase', "Transform to Pascal Case"),
+            alias: 'Transform to Pascal Case',
+            precondition: EditorContextKeys.writable
+        });
+    }
+    _modifyText(text, wordSeparators) {
+        const wordBoundary = PascalCaseAction.wordBoundary.get();
+        const wordBoundaryToMaintain = PascalCaseAction.wordBoundaryToMaintain.get();
+        if (!wordBoundary || !wordBoundaryToMaintain) {
+            // cannot support this
+            return text;
+        }
+        const wordsWithMaintainBoundaries = text.split(wordBoundaryToMaintain);
+        const words = wordsWithMaintainBoundaries.map((word) => word.split(wordBoundary)).flat();
+        return words.map((word) => word.substring(0, 1).toLocaleUpperCase() + word.substring(1))
+            .join('');
+    }
+}
 export class KebabCaseAction extends AbstractCaseAction {
     static isSupported() {
         const areAllRegexpsSupported = [
@@ -998,6 +1042,9 @@ export class KebabCaseAction extends AbstractCaseAction {
         ].every((regexp) => regexp.isSupported());
         return areAllRegexpsSupported;
     }
+    static { this.caseBoundary = new BackwardsCompatibleRegExp('(\\p{Ll})(\\p{Lu})', 'gmu'); }
+    static { this.singleLetters = new BackwardsCompatibleRegExp('(\\p{Lu}|\\p{N})(\\p{Lu}\\p{Ll})', 'gmu'); }
+    static { this.underscoreBoundary = new BackwardsCompatibleRegExp('(\\S)(_)(\\S)', 'gm'); }
     constructor() {
         super({
             id: 'editor.action.transformToKebabcase',
@@ -1021,9 +1068,6 @@ export class KebabCaseAction extends AbstractCaseAction {
             .toLocaleLowerCase();
     }
 }
-KebabCaseAction.caseBoundary = new BackwardsCompatibleRegExp('(\\p{Ll})(\\p{Lu})', 'gmu');
-KebabCaseAction.singleLetters = new BackwardsCompatibleRegExp('(\\p{Lu}|\\p{N})(\\p{Lu}\\p{Ll})', 'gmu');
-KebabCaseAction.underscoreBoundary = new BackwardsCompatibleRegExp('(\\S)(_)(\\S)', 'gm');
 registerEditorAction(CopyLinesUpAction);
 registerEditorAction(CopyLinesDownAction);
 registerEditorAction(DuplicateSelectionAction);
@@ -1049,6 +1093,9 @@ if (SnakeCaseAction.caseBoundary.isSupported() && SnakeCaseAction.singleLetters.
 }
 if (CamelCaseAction.wordBoundary.isSupported()) {
     registerEditorAction(CamelCaseAction);
+}
+if (PascalCaseAction.wordBoundary.isSupported()) {
+    registerEditorAction(PascalCaseAction);
 }
 if (TitleCaseAction.titleBoundary.isSupported()) {
     registerEditorAction(TitleCaseAction);

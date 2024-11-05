@@ -44,7 +44,7 @@ export class ViewController {
         return viewPosition;
     }
     _hasMulticursorModifier(data) {
-        switch (this.configuration.options.get(77 /* EditorOption.multiCursorModifier */)) {
+        switch (this.configuration.options.get(78 /* EditorOption.multiCursorModifier */)) {
             case 'altKey':
                 return data.altKey;
             case 'ctrlKey':
@@ -56,7 +56,7 @@ export class ViewController {
         }
     }
     _hasNonMulticursorModifier(data) {
-        switch (this.configuration.options.get(77 /* EditorOption.multiCursorModifier */)) {
+        switch (this.configuration.options.get(78 /* EditorOption.multiCursorModifier */)) {
             case 'altKey':
                 return data.ctrlKey || data.metaKey;
             case 'ctrlKey':
@@ -69,7 +69,7 @@ export class ViewController {
     }
     dispatchMouse(data) {
         const options = this.configuration.options;
-        const selectionClipboardIsOn = (platform.isLinux && options.get(106 /* EditorOption.selectionClipboard */));
+        const selectionClipboardIsOn = (platform.isLinux && options.get(108 /* EditorOption.selectionClipboard */));
         const columnSelection = options.get(22 /* EditorOption.columnSelection */);
         if (data.middleButton && !selectionClipboardIsOn) {
             this._columnSelect(data.position, data.mouseColumn, data.inSelectionMode);

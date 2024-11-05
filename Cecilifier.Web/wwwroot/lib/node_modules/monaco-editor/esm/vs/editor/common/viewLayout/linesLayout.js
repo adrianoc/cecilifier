@@ -56,6 +56,7 @@ export class EditorWhitespace {
  * This provides commodity operations for working with lines that contain whitespace that pushes lines lower (vertically).
  */
 export class LinesLayout {
+    static { this.INSTANCE_COUNT = 0; }
     constructor(lineCount, lineHeight, paddingTop, paddingBottom) {
         this._instanceId = strings.singleLetterHash(++LinesLayout.INSTANCE_COUNT);
         this._pendingChanges = new PendingChanges();
@@ -598,7 +599,8 @@ export class LinesLayout {
             relativeVerticalOffset: linesOffsets,
             centeredLineNumber: centeredLineNumber,
             completelyVisibleStartLineNumber: completelyVisibleStartLineNumber,
-            completelyVisibleEndLineNumber: completelyVisibleEndLineNumber
+            completelyVisibleEndLineNumber: completelyVisibleEndLineNumber,
+            lineHeight: this._lineHeight,
         };
     }
     getVerticalOffsetForWhitespaceIndex(whitespaceIndex) {
@@ -764,4 +766,3 @@ export class LinesLayout {
         return this._arr[index].height;
     }
 }
-LinesLayout.INSTANCE_COUNT = 0;

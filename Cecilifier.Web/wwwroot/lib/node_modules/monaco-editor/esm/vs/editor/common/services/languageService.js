@@ -2,13 +2,15 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { Emitter } from '../../../base/common/event.js';
+import { Emitter, Event } from '../../../base/common/event.js';
 import { Disposable } from '../../../base/common/lifecycle.js';
 import { LanguagesRegistry } from './languagesRegistry.js';
 import { firstOrDefault } from '../../../base/common/arrays.js';
 import { TokenizationRegistry } from '../languages.js';
 import { PLAINTEXT_LANGUAGE_ID } from '../languages/modesRegistry.js';
+import { observableFromEvent } from '../../../base/common/observable.js';
 export class LanguageService extends Disposable {
+    static { this.instanceCount = 0; }
     constructor(warnOnOverwrite = false) {
         super();
         this._onDidRequestBasicLanguageFeatures = this._register(new Emitter());
@@ -76,46 +78,12 @@ export class LanguageService extends Disposable {
         }
     }
 }
-LanguageService.instanceCount = 0;
 class LanguageSelection {
-    constructor(_onDidChangeLanguages, _selector) {
-        this._onDidChangeLanguages = _onDidChangeLanguages;
-        this._selector = _selector;
-        this._listener = null;
-        this._emitter = null;
-        this.languageId = this._selector();
+    constructor(onDidChangeLanguages, selector) {
+        this._value = observableFromEvent(this, onDidChangeLanguages, () => selector());
+        this.onDidChange = Event.fromObservable(this._value);
     }
-    _dispose() {
-        if (this._listener) {
-            this._listener.dispose();
-            this._listener = null;
-        }
-        if (this._emitter) {
-            this._emitter.dispose();
-            this._emitter = null;
-        }
-    }
-    get onDidChange() {
-        if (!this._listener) {
-            this._listener = this._onDidChangeLanguages(() => this._evaluate());
-        }
-        if (!this._emitter) {
-            this._emitter = new Emitter({
-                onDidRemoveLastListener: () => {
-                    this._dispose();
-                }
-            });
-        }
-        return this._emitter.event;
-    }
-    _evaluate() {
-        var _a;
-        const languageId = this._selector();
-        if (languageId === this.languageId) {
-            // no change
-            return;
-        }
-        this.languageId = languageId;
-        (_a = this._emitter) === null || _a === void 0 ? void 0 : _a.fire(this.languageId);
+    get languageId() {
+        return this._value.get();
     }
 }

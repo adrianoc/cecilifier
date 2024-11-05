@@ -26,7 +26,9 @@ import { IContextKeyService, RawContextKey } from '../../../../platform/contextk
 import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
 import { registerIcon } from '../../../../platform/theme/common/iconRegistry.js';
 import { MarkerNavigationWidget } from './gotoErrorWidget.js';
-let MarkerController = MarkerController_1 = class MarkerController {
+let MarkerController = class MarkerController {
+    static { MarkerController_1 = this; }
+    static { this.ID = 'editor.contrib.markerController'; }
     static get(editor) {
         return editor.getContribution(MarkerController_1.ID);
     }
@@ -69,9 +71,8 @@ let MarkerController = MarkerController_1 = class MarkerController {
         this._sessionDispoables.add(this._widget);
         // follow cursor
         this._sessionDispoables.add(this._editor.onDidChangeCursorPosition(e => {
-            var _a, _b, _c;
-            if (!((_a = this._model) === null || _a === void 0 ? void 0 : _a.selected) || !Range.containsPosition((_b = this._model) === null || _b === void 0 ? void 0 : _b.selected.marker, e.position)) {
-                (_c = this._model) === null || _c === void 0 ? void 0 : _c.resetIndex();
+            if (!this._model?.selected || !Range.containsPosition(this._model?.selected.marker, e.position)) {
+                this._model?.resetIndex();
             }
         }));
         // update markers
@@ -115,7 +116,6 @@ let MarkerController = MarkerController_1 = class MarkerController {
         }
     }
     async nagivate(next, multiFile) {
-        var _a, _b;
         if (this._editor.hasModel()) {
             const model = this._getOrCreateModel(multiFile ? undefined : this._editor.getModel().uri);
             model.move(next, this._editor.getModel(), this._editor.getPosition());
@@ -130,8 +130,8 @@ let MarkerController = MarkerController_1 = class MarkerController {
                     options: { pinned: false, revealIfOpened: true, selectionRevealType: 2 /* TextEditorSelectionRevealType.NearTop */, selection: model.selected.marker }
                 }, this._editor);
                 if (otherEditor) {
-                    (_a = MarkerController_1.get(otherEditor)) === null || _a === void 0 ? void 0 : _a.close();
-                    (_b = MarkerController_1.get(otherEditor)) === null || _b === void 0 ? void 0 : _b.nagivate(next, multiFile);
+                    MarkerController_1.get(otherEditor)?.close();
+                    MarkerController_1.get(otherEditor)?.nagivate(next, multiFile);
                 }
             }
             else {
@@ -141,7 +141,6 @@ let MarkerController = MarkerController_1 = class MarkerController {
         }
     }
 };
-MarkerController.ID = 'editor.contrib.markerController';
 MarkerController = MarkerController_1 = __decorate([
     __param(1, IMarkerNavigationService),
     __param(2, IContextKeyService),
@@ -156,13 +155,14 @@ class MarkerNavigationAction extends EditorAction {
         this._multiFile = _multiFile;
     }
     async run(_accessor, editor) {
-        var _a;
         if (editor.hasModel()) {
-            (_a = MarkerController.get(editor)) === null || _a === void 0 ? void 0 : _a.nagivate(this._next, this._multiFile);
+            MarkerController.get(editor)?.nagivate(this._next, this._multiFile);
         }
     }
 }
 export class NextMarkerAction extends MarkerNavigationAction {
+    static { this.ID = 'editor.action.marker.next'; }
+    static { this.LABEL = nls.localize('markerAction.next.label', "Go to Next Problem (Error, Warning, Info)"); }
     constructor() {
         super(true, false, {
             id: NextMarkerAction.ID,
@@ -184,9 +184,9 @@ export class NextMarkerAction extends MarkerNavigationAction {
         });
     }
 }
-NextMarkerAction.ID = 'editor.action.marker.next';
-NextMarkerAction.LABEL = nls.localize('markerAction.next.label', "Go to Next Problem (Error, Warning, Info)");
 class PrevMarkerAction extends MarkerNavigationAction {
+    static { this.ID = 'editor.action.marker.prev'; }
+    static { this.LABEL = nls.localize('markerAction.previous.label', "Go to Previous Problem (Error, Warning, Info)"); }
     constructor() {
         super(false, false, {
             id: PrevMarkerAction.ID,
@@ -208,8 +208,6 @@ class PrevMarkerAction extends MarkerNavigationAction {
         });
     }
 }
-PrevMarkerAction.ID = 'editor.action.marker.prev';
-PrevMarkerAction.LABEL = nls.localize('markerAction.previous.label', "Go to Previous Problem (Error, Warning, Info)");
 class NextMarkerInFilesAction extends MarkerNavigationAction {
     constructor() {
         super(true, true, {

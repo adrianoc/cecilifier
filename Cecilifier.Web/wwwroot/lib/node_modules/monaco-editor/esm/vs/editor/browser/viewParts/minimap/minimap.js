@@ -16,12 +16,13 @@ import { Range } from '../../../common/core/range.js';
 import { RGBA8 } from '../../../common/core/rgba.js';
 import { MinimapTokensColorTracker } from '../../../common/viewModel/minimapTokensColorTracker.js';
 import { ViewModelDecoration } from '../../../common/viewModel.js';
-import { minimapSelection, minimapBackground, minimapForegroundOpacity } from '../../../../platform/theme/common/colorRegistry.js';
+import { minimapSelection, minimapBackground, minimapForegroundOpacity, editorForeground } from '../../../../platform/theme/common/colorRegistry.js';
 import { Selection } from '../../../common/core/selection.js';
 import { EventType, Gesture } from '../../../../base/browser/touch.js';
 import { MinimapCharRendererFactory } from './minimapCharRendererFactory.js';
-import { MinimapPosition } from '../../../common/model.js';
 import { createSingleCallFunction } from '../../../../base/common/functional.js';
+import { LRUCache } from '../../../../base/common/map.js';
+import { DEFAULT_FONT_FAMILY } from '../../../../base/browser/fonts.js';
 /**
  * The orthogonal distance to the slider at which dragging "resets". This implements "snapping"
  */
@@ -30,22 +31,22 @@ const GUTTER_DECORATION_WIDTH = 2;
 class MinimapOptions {
     constructor(configuration, theme, tokensColorTracker) {
         const options = configuration.options;
-        const pixelRatio = options.get(141 /* EditorOption.pixelRatio */);
-        const layoutInfo = options.get(143 /* EditorOption.layoutInfo */);
+        const pixelRatio = options.get(144 /* EditorOption.pixelRatio */);
+        const layoutInfo = options.get(146 /* EditorOption.layoutInfo */);
         const minimapLayout = layoutInfo.minimap;
         const fontInfo = options.get(50 /* EditorOption.fontInfo */);
-        const minimapOpts = options.get(72 /* EditorOption.minimap */);
+        const minimapOpts = options.get(73 /* EditorOption.minimap */);
         this.renderMinimap = minimapLayout.renderMinimap;
         this.size = minimapOpts.size;
         this.minimapHeightIsEditorHeight = minimapLayout.minimapHeightIsEditorHeight;
-        this.scrollBeyondLastLine = options.get(104 /* EditorOption.scrollBeyondLastLine */);
-        this.paddingTop = options.get(83 /* EditorOption.padding */).top;
-        this.paddingBottom = options.get(83 /* EditorOption.padding */).bottom;
+        this.scrollBeyondLastLine = options.get(106 /* EditorOption.scrollBeyondLastLine */);
+        this.paddingTop = options.get(84 /* EditorOption.padding */).top;
+        this.paddingBottom = options.get(84 /* EditorOption.padding */).bottom;
         this.showSlider = minimapOpts.showSlider;
         this.autohide = minimapOpts.autohide;
         this.pixelRatio = pixelRatio;
         this.typicalHalfwidthCharacterWidth = fontInfo.typicalHalfwidthCharacterWidth;
-        this.lineHeight = options.get(66 /* EditorOption.lineHeight */);
+        this.lineHeight = options.get(67 /* EditorOption.lineHeight */);
         this.minimapLeft = minimapLayout.minimapLeft;
         this.minimapWidth = minimapLayout.minimapWidth;
         this.minimapHeight = layoutInfo.height;
@@ -58,6 +59,10 @@ class MinimapOptions {
         this.fontScale = minimapLayout.minimapScale;
         this.minimapLineHeight = minimapLayout.minimapLineHeight;
         this.minimapCharWidth = 1 /* Constants.BASE_CHAR_WIDTH */ * this.fontScale;
+        this.sectionHeaderFontFamily = DEFAULT_FONT_FAMILY;
+        this.sectionHeaderFontSize = minimapOpts.sectionHeaderFontSize * pixelRatio;
+        this.sectionHeaderLetterSpacing = minimapOpts.sectionHeaderLetterSpacing; // intentionally not multiplying by pixelRatio
+        this.sectionHeaderFontColor = MinimapOptions._getSectionHeaderColor(theme, tokensColorTracker.getColor(1 /* ColorId.DefaultForeground */));
         this.charRenderer = createSingleCallFunction(() => MinimapCharRendererFactory.create(this.fontScale, fontInfo.fontFamily));
         this.defaultBackgroundColor = tokensColorTracker.getColor(2 /* ColorId.DefaultBackground */);
         this.backgroundColor = MinimapOptions._getMinimapBackground(theme, this.defaultBackgroundColor);
@@ -76,6 +81,13 @@ class MinimapOptions {
             return RGBA8._clamp(Math.round(255 * themeColor.rgba.a));
         }
         return 255;
+    }
+    static _getSectionHeaderColor(theme, defaultForegroundColor) {
+        const themeColor = theme.getColor(editorForeground);
+        if (themeColor) {
+            return new RGBA8(themeColor.rgba.r, themeColor.rgba.g, themeColor.rgba.b, Math.round(255 * themeColor.rgba.a));
+        }
+        return defaultForegroundColor;
     }
     equals(other) {
         return (this.renderMinimap === other.renderMinimap
@@ -101,6 +113,8 @@ class MinimapOptions {
             && this.fontScale === other.fontScale
             && this.minimapLineHeight === other.minimapLineHeight
             && this.minimapCharWidth === other.minimapCharWidth
+            && this.sectionHeaderFontSize === other.sectionHeaderFontSize
+            && this.sectionHeaderLetterSpacing === other.sectionHeaderLetterSpacing
             && this.defaultBackgroundColor && this.defaultBackgroundColor.equals(other.defaultBackgroundColor)
             && this.backgroundColor && this.backgroundColor.equals(other.backgroundColor)
             && this.foregroundAlpha === other.foregroundAlpha);
@@ -289,6 +303,7 @@ class MinimapLayout {
     }
 }
 class MinimapLine {
+    static { this.INVALID = new MinimapLine(-1); }
     constructor(dy) {
         this.dy = dy;
     }
@@ -299,12 +314,13 @@ class MinimapLine {
         this.dy = -1;
     }
 }
-MinimapLine.INVALID = new MinimapLine(-1);
 class RenderData {
     constructor(renderedLayout, imageData, lines) {
         this.renderedLayout = renderedLayout;
         this._imageData = imageData;
-        this._renderedLines = new RenderedLinesCollection(() => MinimapLine.INVALID);
+        this._renderedLines = new RenderedLinesCollection({
+            createLine: () => MinimapLine.INVALID
+        });
         this._renderedLines._set(renderedLayout.startLineNumber, lines);
     }
     /**
@@ -500,7 +516,8 @@ class MinimapSamplingState {
         }
         return [new MinimapSamplingState(ratio, result), events];
     }
-    constructor(samplingRatio, minimapLines) {
+    constructor(samplingRatio, minimapLines // a map of 0-based minimap line indexes to 1-based view line numbers
+    ) {
         this.samplingRatio = samplingRatio;
         this.minimapLines = minimapLines;
     }
@@ -581,6 +598,7 @@ class MinimapSamplingState {
 export class Minimap extends ViewPart {
     constructor(context) {
         super(context);
+        this._sectionHeaderCache = new LRUCache(10, 1.5);
         this.tokensColorTracker = MinimapTokensColorTracker.getInstance();
         this._selections = [];
         this._minimapSelections = null;
@@ -803,16 +821,8 @@ export class Minimap extends ViewPart {
         return this._minimapSelections;
     }
     getMinimapDecorationsInViewport(startLineNumber, endLineNumber) {
-        let visibleRange;
-        if (this._samplingState) {
-            const modelStartLineNumber = this._samplingState.minimapLines[startLineNumber - 1];
-            const modelEndLineNumber = this._samplingState.minimapLines[endLineNumber - 1];
-            visibleRange = new Range(modelStartLineNumber, 1, modelEndLineNumber, this._context.viewModel.getLineMaxColumn(modelEndLineNumber));
-        }
-        else {
-            visibleRange = new Range(startLineNumber, 1, endLineNumber, this._context.viewModel.getLineMaxColumn(endLineNumber));
-        }
-        const decorations = this._context.viewModel.getMinimapDecorationsInRange(visibleRange);
+        const decorations = this._getMinimapDecorationsInViewport(startLineNumber, endLineNumber)
+            .filter(decoration => !decoration.options.minimap?.sectionHeaderStyle);
         if (this._samplingState) {
             const result = [];
             for (const decoration of decorations) {
@@ -827,6 +837,39 @@ export class Minimap extends ViewPart {
             return result;
         }
         return decorations;
+    }
+    getSectionHeaderDecorationsInViewport(startLineNumber, endLineNumber) {
+        const minimapLineHeight = this.options.minimapLineHeight;
+        const sectionHeaderFontSize = this.options.sectionHeaderFontSize;
+        const headerHeightInMinimapLines = sectionHeaderFontSize / minimapLineHeight;
+        startLineNumber = Math.floor(Math.max(1, startLineNumber - headerHeightInMinimapLines));
+        return this._getMinimapDecorationsInViewport(startLineNumber, endLineNumber)
+            .filter(decoration => !!decoration.options.minimap?.sectionHeaderStyle);
+    }
+    _getMinimapDecorationsInViewport(startLineNumber, endLineNumber) {
+        let visibleRange;
+        if (this._samplingState) {
+            const modelStartLineNumber = this._samplingState.minimapLines[startLineNumber - 1];
+            const modelEndLineNumber = this._samplingState.minimapLines[endLineNumber - 1];
+            visibleRange = new Range(modelStartLineNumber, 1, modelEndLineNumber, this._context.viewModel.getLineMaxColumn(modelEndLineNumber));
+        }
+        else {
+            visibleRange = new Range(startLineNumber, 1, endLineNumber, this._context.viewModel.getLineMaxColumn(endLineNumber));
+        }
+        return this._context.viewModel.getMinimapDecorationsInRange(visibleRange);
+    }
+    getSectionHeaderText(decoration, fitWidth) {
+        const headerText = decoration.options.minimap?.sectionHeaderText;
+        if (!headerText) {
+            return null;
+        }
+        const cachedText = this._sectionHeaderCache.get(headerText);
+        if (cachedText) {
+            return cachedText;
+        }
+        const fittedText = fitWidth(headerText);
+        this._sectionHeaderCache.set(headerText, fittedText);
+        return fittedText;
     }
     getOptions() {
         return this._context.viewModel.model.getOptions();
@@ -854,7 +897,7 @@ class InnerMinimap extends Disposable {
         this._buffers = null;
         this._selectionColor = this._theme.getColor(minimapSelection);
         this._domNode = createFastDomNode(document.createElement('div'));
-        PartFingerprints.write(this._domNode, 8 /* PartFingerprint.Minimap */);
+        PartFingerprints.write(this._domNode, 9 /* PartFingerprint.Minimap */);
         this._domNode.setClassName(this._getMinimapDomNodeClassName());
         this._domNode.setPosition('absolute');
         this._domNode.setAttribute('role', 'presentation');
@@ -1043,13 +1086,11 @@ class InnerMinimap extends Disposable {
         return false;
     }
     onLinesDeleted(deleteFromLineNumber, deleteToLineNumber) {
-        var _a;
-        (_a = this._lastRenderData) === null || _a === void 0 ? void 0 : _a.onLinesDeleted(deleteFromLineNumber, deleteToLineNumber);
+        this._lastRenderData?.onLinesDeleted(deleteFromLineNumber, deleteToLineNumber);
         return true;
     }
     onLinesInserted(insertFromLineNumber, insertToLineNumber) {
-        var _a;
-        (_a = this._lastRenderData) === null || _a === void 0 ? void 0 : _a.onLinesInserted(insertFromLineNumber, insertToLineNumber);
+        this._lastRenderData?.onLinesInserted(insertFromLineNumber, insertToLineNumber);
         return true;
     }
     onScrollChanged() {
@@ -1126,6 +1167,7 @@ class InnerMinimap extends Disposable {
             const lineOffsetMap = new ContiguousLineMap(layout.startLineNumber, layout.endLineNumber, null);
             this._renderSelectionsHighlights(canvasContext, selections, lineOffsetMap, layout, minimapLineHeight, tabSize, minimapCharWidth, canvasInnerWidth);
             this._renderDecorationsHighlights(canvasContext, decorations, lineOffsetMap, layout, minimapLineHeight, tabSize, minimapCharWidth, canvasInnerWidth);
+            this._renderSectionHeaders(layout);
         }
     }
     _renderSelectionLineHighlights(canvasContext, selections, highlightedLines, layout, minimapLineHeight) {
@@ -1171,7 +1213,7 @@ class InnerMinimap extends Disposable {
         for (let i = decorations.length - 1; i >= 0; i--) {
             const decoration = decorations[i];
             const minimapOptions = decoration.options.minimap;
-            if (!minimapOptions || minimapOptions.position !== MinimapPosition.Inline) {
+            if (!minimapOptions || minimapOptions.position !== 1 /* MinimapPosition.Inline */) {
                 continue;
             }
             const intersection = layout.intersectWithViewport(decoration.range);
@@ -1235,10 +1277,10 @@ class InnerMinimap extends Disposable {
             }
             for (let line = startLineNumber; line <= endLineNumber; line++) {
                 switch (minimapOptions.position) {
-                    case MinimapPosition.Inline:
+                    case 1 /* MinimapPosition.Inline */:
                         this.renderDecorationOnLine(canvasContext, lineOffsetMap, decoration.range, decorationColor, layout, line, minimapLineHeight, minimapLineHeight, tabSize, characterWidth, canvasInnerWidth);
                         continue;
-                    case MinimapPosition.Gutter: {
+                    case 2 /* MinimapPosition.Gutter */: {
                         const y = layout.getYForLineNumber(line, minimapLineHeight);
                         const x = 2;
                         this.renderDecoration(canvasContext, decorationColor, x, y, GUTTER_DECORATION_WIDTH, minimapLineHeight);
@@ -1304,6 +1346,70 @@ class InnerMinimap extends Disposable {
     renderDecoration(canvasContext, decorationColor, x, y, width, height) {
         canvasContext.fillStyle = decorationColor && decorationColor.toString() || '';
         canvasContext.fillRect(x, y, width, height);
+    }
+    _renderSectionHeaders(layout) {
+        const minimapLineHeight = this._model.options.minimapLineHeight;
+        const sectionHeaderFontSize = this._model.options.sectionHeaderFontSize;
+        const sectionHeaderLetterSpacing = this._model.options.sectionHeaderLetterSpacing;
+        const backgroundFillHeight = sectionHeaderFontSize * 1.5;
+        const { canvasInnerWidth } = this._model.options;
+        const backgroundColor = this._model.options.backgroundColor;
+        const backgroundFill = `rgb(${backgroundColor.r} ${backgroundColor.g} ${backgroundColor.b} / .7)`;
+        const foregroundColor = this._model.options.sectionHeaderFontColor;
+        const foregroundFill = `rgb(${foregroundColor.r} ${foregroundColor.g} ${foregroundColor.b})`;
+        const separatorStroke = foregroundFill;
+        const canvasContext = this._decorationsCanvas.domNode.getContext('2d');
+        canvasContext.letterSpacing = sectionHeaderLetterSpacing + 'px';
+        canvasContext.font = '500 ' + sectionHeaderFontSize + 'px ' + this._model.options.sectionHeaderFontFamily;
+        canvasContext.strokeStyle = separatorStroke;
+        canvasContext.lineWidth = 0.2;
+        const decorations = this._model.getSectionHeaderDecorationsInViewport(layout.startLineNumber, layout.endLineNumber);
+        decorations.sort((a, b) => a.range.startLineNumber - b.range.startLineNumber);
+        const fitWidth = InnerMinimap._fitSectionHeader.bind(null, canvasContext, canvasInnerWidth - MINIMAP_GUTTER_WIDTH);
+        for (const decoration of decorations) {
+            const y = layout.getYForLineNumber(decoration.range.startLineNumber, minimapLineHeight) + sectionHeaderFontSize;
+            const backgroundFillY = y - sectionHeaderFontSize;
+            const separatorY = backgroundFillY + 2;
+            const headerText = this._model.getSectionHeaderText(decoration, fitWidth);
+            InnerMinimap._renderSectionLabel(canvasContext, headerText, decoration.options.minimap?.sectionHeaderStyle === 2 /* MinimapSectionHeaderStyle.Underlined */, backgroundFill, foregroundFill, canvasInnerWidth, backgroundFillY, backgroundFillHeight, y, separatorY);
+        }
+    }
+    static _fitSectionHeader(target, maxWidth, headerText) {
+        if (!headerText) {
+            return headerText;
+        }
+        const ellipsis = '…';
+        const width = target.measureText(headerText).width;
+        const ellipsisWidth = target.measureText(ellipsis).width;
+        if (width <= maxWidth || width <= ellipsisWidth) {
+            return headerText;
+        }
+        const len = headerText.length;
+        const averageCharWidth = width / headerText.length;
+        const maxCharCount = Math.floor((maxWidth - ellipsisWidth) / averageCharWidth) - 1;
+        // Find a halfway point that isn't after whitespace
+        let halfCharCount = Math.ceil(maxCharCount / 2);
+        while (halfCharCount > 0 && /\s/.test(headerText[halfCharCount - 1])) {
+            --halfCharCount;
+        }
+        // Split with ellipsis
+        return headerText.substring(0, halfCharCount)
+            + ellipsis + headerText.substring(len - (maxCharCount - halfCharCount));
+    }
+    static _renderSectionLabel(target, headerText, hasSeparatorLine, backgroundFill, foregroundFill, minimapWidth, backgroundFillY, backgroundFillHeight, textY, separatorY) {
+        if (headerText) {
+            target.fillStyle = backgroundFill;
+            target.fillRect(0, backgroundFillY, minimapWidth, backgroundFillHeight);
+            target.fillStyle = foregroundFill;
+            target.fillText(headerText, MINIMAP_GUTTER_WIDTH, textY);
+        }
+        if (hasSeparatorLine) {
+            target.beginPath();
+            target.moveTo(0, separatorY);
+            target.lineTo(minimapWidth, separatorY);
+            target.closePath();
+            target.stroke();
+        }
     }
     renderLines(layout) {
         const startLineNumber = layout.startLineNumber;

@@ -34,6 +34,19 @@ export class HoverForeignElementAnchor {
         return (lastAnchor.type === 2 /* HoverAnchorType.ForeignElement */ && this.owner === lastAnchor.owner);
     }
 }
+/**
+ * Default implementation of IRenderedHoverParts.
+ */
+export class RenderedHoverParts {
+    constructor(renderedHoverParts) {
+        this.renderedHoverParts = renderedHoverParts;
+    }
+    dispose() {
+        for (const part of this.renderedHoverParts) {
+            part.dispose();
+        }
+    }
+}
 export const HoverParticipantRegistry = (new class HoverParticipantRegistry {
     constructor() {
         this._participants = [];

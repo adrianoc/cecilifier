@@ -5,8 +5,6 @@ using Mono.Cecil.Cil;
 
 namespace Cecilifier.Core.AST
 {
-    //TODO: Introduce CilEmitterSyntaxWalker
-    // class ConstructorInitializerVisitor : CilEmiterSyntaxWalker, IMemoryLocationResolver
     internal class ConstructorInitializerVisitor : SyntaxWalkerBase
     {
         private readonly string ilVar;

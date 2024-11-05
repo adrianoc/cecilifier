@@ -20,13 +20,15 @@ import { isIOS } from '../../../../base/common/platform.js';
 import { EditorAction, registerEditorAction, registerEditorContribution } from '../../../browser/editorExtensions.js';
 import { EditorContextKeys } from '../../../common/editorContextKeys.js';
 import * as nls from '../../../../nls.js';
-import { IMenuService, MenuId, SubmenuItemAction } from '../../../../platform/actions/common/actions.js';
+import { IMenuService, SubmenuItemAction } from '../../../../platform/actions/common/actions.js';
 import { IContextKeyService } from '../../../../platform/contextkey/common/contextkey.js';
 import { IContextMenuService, IContextViewService } from '../../../../platform/contextview/browser/contextView.js';
 import { IKeybindingService } from '../../../../platform/keybinding/common/keybinding.js';
 import { IConfigurationService } from '../../../../platform/configuration/common/configuration.js';
 import { IWorkspaceContextService, isStandaloneEditorWorkspace } from '../../../../platform/workspace/common/workspace.js';
-let ContextMenuController = ContextMenuController_1 = class ContextMenuController {
+let ContextMenuController = class ContextMenuController {
+    static { ContextMenuController_1 = this; }
+    static { this.ID = 'editor.contrib.contextmenu'; }
     static get(editor) {
         return editor.getContribution(ContextMenuController_1.ID);
     }
@@ -122,7 +124,7 @@ let ContextMenuController = ContextMenuController_1 = class ContextMenuControlle
             return;
         }
         // Find actions available for menu
-        const menuActions = this._getMenuActions(this._editor.getModel(), this._editor.isSimpleWidget ? MenuId.SimpleEditorContext : MenuId.EditorContext);
+        const menuActions = this._getMenuActions(this._editor.getModel(), this._editor.contextMenuId);
         // Show menu if we have actions to show
         if (menuActions.length > 0) {
             this._doShowContextMenu(menuActions, anchor);
@@ -131,9 +133,7 @@ let ContextMenuController = ContextMenuController_1 = class ContextMenuControlle
     _getMenuActions(model, menuId) {
         const result = [];
         // get menu groups
-        const menu = this._menuService.createMenu(menuId, this._contextKeyService);
-        const groups = menu.getActions({ arg: model.uri });
-        menu.dispose();
+        const groups = this._menuService.getMenuActions(menuId, this._contextKeyService, { arg: model.uri });
         // translate them into other actions
         for (const group of groups) {
             const [, actions] = group;
@@ -183,11 +183,11 @@ let ContextMenuController = ContextMenuController_1 = class ContextMenuControlle
             const posy = editorCoords.top + cursorCoords.top + cursorCoords.height;
             anchor = { x: posx, y: posy };
         }
-        const useShadowDOM = this._editor.getOption(126 /* EditorOption.useShadowDOM */) && !isIOS; // Do not use shadow dom on IOS #122035
+        const useShadowDOM = this._editor.getOption(128 /* EditorOption.useShadowDOM */) && !isIOS; // Do not use shadow dom on IOS #122035
         // Show menu
         this._contextMenuIsBeingShownCount++;
         this._contextMenuService.showContextMenu({
-            domForShadowRoot: useShadowDOM ? this._editor.getDomNode() : undefined,
+            domForShadowRoot: useShadowDOM ? this._editor.getOverflowWidgetsDomNode() ?? this._editor.getDomNode() : undefined,
             getAnchor: () => anchor,
             getActions: () => actions,
             getActionViewItem: (action) => {
@@ -220,7 +220,7 @@ let ContextMenuController = ContextMenuController_1 = class ContextMenuControlle
             // can't update the configuration properly in the standalone editor
             return;
         }
-        const minimapOptions = this._editor.getOption(72 /* EditorOption.minimap */);
+        const minimapOptions = this._editor.getOption(73 /* EditorOption.minimap */);
         let lastId = 0;
         const createAction = (opts) => {
             return {
@@ -289,7 +289,7 @@ let ContextMenuController = ContextMenuController_1 = class ContextMenuControlle
                 label: nls.localize('context.minimap.slider.always', "Always"),
                 value: 'always'
             }]));
-        const useShadowDOM = this._editor.getOption(126 /* EditorOption.useShadowDOM */) && !isIOS; // Do not use shadow dom on IOS #122035
+        const useShadowDOM = this._editor.getOption(128 /* EditorOption.useShadowDOM */) && !isIOS; // Do not use shadow dom on IOS #122035
         this._contextMenuIsBeingShownCount++;
         this._contextMenuService.showContextMenu({
             domForShadowRoot: useShadowDOM ? this._editor.getDomNode() : undefined,
@@ -311,7 +311,6 @@ let ContextMenuController = ContextMenuController_1 = class ContextMenuControlle
         this._toDispose.dispose();
     }
 };
-ContextMenuController.ID = 'editor.contrib.contextmenu';
 ContextMenuController = ContextMenuController_1 = __decorate([
     __param(1, IContextMenuService),
     __param(2, IContextViewService),
@@ -337,8 +336,7 @@ class ShowContextMenu extends EditorAction {
         });
     }
     run(accessor, editor) {
-        var _a;
-        (_a = ContextMenuController.get(editor)) === null || _a === void 0 ? void 0 : _a.showContextMenu();
+        ContextMenuController.get(editor)?.showContextMenu();
     }
 }
 registerEditorContribution(ContextMenuController.ID, ContextMenuController, 2 /* EditorContributionInstantiation.BeforeFirstInteraction */);

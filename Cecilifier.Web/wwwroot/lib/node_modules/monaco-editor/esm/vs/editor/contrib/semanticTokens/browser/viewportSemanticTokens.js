@@ -24,6 +24,7 @@ import { StopWatch } from '../../../../base/common/stopwatch.js';
 import { ILanguageFeaturesService } from '../../../common/services/languageFeatures.js';
 import { ISemanticTokensStylingService } from '../../../common/services/semanticTokensStyling.js';
 let ViewportSemanticTokensContribution = class ViewportSemanticTokensContribution extends Disposable {
+    static { this.ID = 'editor.contrib.viewportSemanticTokens'; }
     constructor(editor, _semanticTokensStylingService, _themeService, _configurationService, languageFeatureDebounceService, languageFeaturesService) {
         super();
         this._semanticTokensStylingService = _semanticTokensStylingService;
@@ -119,7 +120,6 @@ let ViewportSemanticTokensContribution = class ViewportSemanticTokensContributio
         return request;
     }
 };
-ViewportSemanticTokensContribution.ID = 'editor.contrib.viewportSemanticTokens';
 ViewportSemanticTokensContribution = __decorate([
     __param(1, ISemanticTokensStylingService),
     __param(2, IThemeService),

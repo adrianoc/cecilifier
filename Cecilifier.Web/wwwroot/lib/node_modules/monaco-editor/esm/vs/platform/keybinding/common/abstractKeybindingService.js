@@ -31,6 +31,7 @@ export class AbstractKeybindingService extends Disposable {
         this._ignoreSingleModifiers = KeybindingModifierSet.EMPTY;
         this._currentSingleModifier = null;
         this._currentSingleModifierClearTimeout = new TimeoutTimer();
+        this._currentlyDispatchingCommandId = null;
         this._logging = false;
     }
     dispose() {
@@ -164,7 +165,6 @@ export class AbstractKeybindingService extends Disposable {
         return false;
     }
     _doDispatch(userKeypress, target, isSingleModiferChord = false) {
-        var _a;
         let shouldPreventDefault = false;
         if (userKeypress.hasMultipleChords()) { // warn - because user can press a single chord at a time
             console.warn('Unexpected keyboard event mapped to multiple chords');
@@ -230,14 +230,20 @@ export class AbstractKeybindingService extends Disposable {
                         shouldPreventDefault = true;
                     }
                     this._log(`+ Invoking command ${resolveResult.commandId}.`);
-                    if (typeof resolveResult.commandArgs === 'undefined') {
-                        this._commandService.executeCommand(resolveResult.commandId).then(undefined, err => this._notificationService.warn(err));
+                    this._currentlyDispatchingCommandId = resolveResult.commandId;
+                    try {
+                        if (typeof resolveResult.commandArgs === 'undefined') {
+                            this._commandService.executeCommand(resolveResult.commandId).then(undefined, err => this._notificationService.warn(err));
+                        }
+                        else {
+                            this._commandService.executeCommand(resolveResult.commandId, resolveResult.commandArgs).then(undefined, err => this._notificationService.warn(err));
+                        }
                     }
-                    else {
-                        this._commandService.executeCommand(resolveResult.commandId, resolveResult.commandArgs).then(undefined, err => this._notificationService.warn(err));
+                    finally {
+                        this._currentlyDispatchingCommandId = null;
                     }
                     if (!HIGH_FREQ_COMMANDS.test(resolveResult.commandId)) {
-                        this._telemetryService.publicLog2('workbenchActionExecuted', { id: resolveResult.commandId, from: 'keybinding', detail: (_a = userKeypress.getUserSettingsLabel()) !== null && _a !== void 0 ? _a : undefined });
+                        this._telemetryService.publicLog2('workbenchActionExecuted', { id: resolveResult.commandId, from: 'keybinding', detail: userKeypress.getUserSettingsLabel() ?? undefined });
                     }
                 }
                 return shouldPreventDefault;
@@ -259,6 +265,7 @@ export class AbstractKeybindingService extends Disposable {
     }
 }
 class KeybindingModifierSet {
+    static { this.EMPTY = new KeybindingModifierSet(null); }
     constructor(source) {
         this._ctrlKey = source ? source.ctrlKey : false;
         this._shiftKey = source ? source.shiftKey : false;
@@ -274,4 +281,3 @@ class KeybindingModifierSet {
         }
     }
 }
-KeybindingModifierSet.EMPTY = new KeybindingModifierSet(null);

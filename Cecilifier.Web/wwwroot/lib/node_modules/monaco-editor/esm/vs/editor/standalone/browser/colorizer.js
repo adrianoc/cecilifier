@@ -24,8 +24,7 @@ export class Colorizer {
         const text = domNode.firstChild ? domNode.firstChild.nodeValue : '';
         domNode.className += ' ' + theme;
         const render = (str) => {
-            var _a;
-            const trustedhtml = (_a = ttPolicy === null || ttPolicy === void 0 ? void 0 : ttPolicy.createHTML(str)) !== null && _a !== void 0 ? _a : str;
+            const trustedhtml = ttPolicy?.createHTML(str) ?? str;
             domNode.innerHTML = trustedhtml;
         };
         return this.colorize(languageService, text || '', languageId, options).then(render, (err) => console.error(err));

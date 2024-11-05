@@ -28,7 +28,7 @@ export class ExpandLineSelectionAction extends EditorAction {
         const viewModel = editor._getViewModel();
         viewModel.model.pushStackElement();
         viewModel.setCursorStates(args.source, 3 /* CursorChangeReason.Explicit */, CursorMoveCommands.expandLineSelection(viewModel, viewModel.getCursorStates()));
-        viewModel.revealPrimaryCursor(args.source, true);
+        viewModel.revealAllCursors(args.source, true);
     }
 }
 registerEditorAction(ExpandLineSelectionAction);

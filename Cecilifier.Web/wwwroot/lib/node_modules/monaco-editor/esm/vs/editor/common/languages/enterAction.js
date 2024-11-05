@@ -3,33 +3,20 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import { IndentAction } from './languageConfiguration.js';
-import { getIndentationAtPosition, getScopedLineTokens } from './languageConfigurationRegistry.js';
+import { getIndentationAtPosition } from './languageConfigurationRegistry.js';
+import { IndentationContextProcessor } from './supports/indentationLineProcessor.js';
 export function getEnterAction(autoIndent, model, range, languageConfigurationService) {
-    const scopedLineTokens = getScopedLineTokens(model, range.startLineNumber, range.startColumn);
-    const richEditSupport = languageConfigurationService.getLanguageConfiguration(scopedLineTokens.languageId);
+    model.tokenization.forceTokenization(range.startLineNumber);
+    const languageId = model.getLanguageIdAtPosition(range.startLineNumber, range.startColumn);
+    const richEditSupport = languageConfigurationService.getLanguageConfiguration(languageId);
     if (!richEditSupport) {
         return null;
     }
-    const scopedLineText = scopedLineTokens.getLineContent();
-    const beforeEnterText = scopedLineText.substr(0, range.startColumn - 1 - scopedLineTokens.firstCharOffset);
-    // selection support
-    let afterEnterText;
-    if (range.isEmpty()) {
-        afterEnterText = scopedLineText.substr(range.startColumn - 1 - scopedLineTokens.firstCharOffset);
-    }
-    else {
-        const endScopedLineTokens = getScopedLineTokens(model, range.endLineNumber, range.endColumn);
-        afterEnterText = endScopedLineTokens.getLineContent().substr(range.endColumn - 1 - scopedLineTokens.firstCharOffset);
-    }
-    let previousLineText = '';
-    if (range.startLineNumber > 1 && scopedLineTokens.firstCharOffset === 0) {
-        // This is not the first line and the entire line belongs to this mode
-        const oneLineAboveScopedLineTokens = getScopedLineTokens(model, range.startLineNumber - 1);
-        if (oneLineAboveScopedLineTokens.languageId === scopedLineTokens.languageId) {
-            // The line above ends with text belonging to the same mode
-            previousLineText = oneLineAboveScopedLineTokens.getLineContent();
-        }
-    }
+    const indentationContextProcessor = new IndentationContextProcessor(model, languageConfigurationService);
+    const processedContextTokens = indentationContextProcessor.getProcessedTokenContextAroundRange(range);
+    const previousLineText = processedContextTokens.previousLineProcessedTokens.getLineContent();
+    const beforeEnterText = processedContextTokens.beforeRangeProcessedTokens.getLineContent();
+    const afterEnterText = processedContextTokens.afterRangeProcessedTokens.getLineContent();
     const enterResult = richEditSupport.onEnter(autoIndent, previousLineText, beforeEnterText, afterEnterText);
     if (!enterResult) {
         return null;

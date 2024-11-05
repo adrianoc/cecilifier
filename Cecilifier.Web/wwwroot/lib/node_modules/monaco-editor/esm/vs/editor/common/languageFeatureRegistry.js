@@ -18,18 +18,19 @@ function isExclusive(selector) {
     }
 }
 class MatchCandidate {
-    constructor(uri, languageId, notebookUri, notebookType) {
+    constructor(uri, languageId, notebookUri, notebookType, recursive) {
         this.uri = uri;
         this.languageId = languageId;
         this.notebookUri = notebookUri;
         this.notebookType = notebookType;
+        this.recursive = recursive;
     }
     equals(other) {
-        var _a, _b;
         return this.notebookType === other.notebookType
             && this.languageId === other.languageId
             && this.uri.toString() === other.uri.toString()
-            && ((_a = this.notebookUri) === null || _a === void 0 ? void 0 : _a.toString()) === ((_b = other.notebookUri) === null || _b === void 0 ? void 0 : _b.toString());
+            && this.notebookUri?.toString() === other.notebookUri?.toString()
+            && this.recursive === other.recursive;
     }
 }
 export class LanguageFeatureRegistry {
@@ -69,7 +70,7 @@ export class LanguageFeatureRegistry {
         if (!model) {
             return [];
         }
-        this._updateScores(model);
+        this._updateScores(model, false);
         const result = [];
         // from registry
         for (const entry of this._entries) {
@@ -79,16 +80,16 @@ export class LanguageFeatureRegistry {
         }
         return result;
     }
-    ordered(model) {
+    ordered(model, recursive = false) {
         const result = [];
-        this._orderedForEach(model, entry => result.push(entry.provider));
+        this._orderedForEach(model, recursive, entry => result.push(entry.provider));
         return result;
     }
     orderedGroups(model) {
         const result = [];
         let lastBucket;
         let lastBucketScore;
-        this._orderedForEach(model, entry => {
+        this._orderedForEach(model, false, entry => {
             if (lastBucket && lastBucketScore === entry._score) {
                 lastBucket.push(entry.provider);
             }
@@ -100,23 +101,22 @@ export class LanguageFeatureRegistry {
         });
         return result;
     }
-    _orderedForEach(model, callback) {
-        this._updateScores(model);
+    _orderedForEach(model, recursive, callback) {
+        this._updateScores(model, recursive);
         for (const entry of this._entries) {
             if (entry._score > 0) {
                 callback(entry);
             }
         }
     }
-    _updateScores(model) {
-        var _a, _b;
-        const notebookInfo = (_a = this._notebookInfoResolver) === null || _a === void 0 ? void 0 : _a.call(this, model.uri);
+    _updateScores(model, recursive) {
+        const notebookInfo = this._notebookInfoResolver?.(model.uri);
         // use the uri (scheme, pattern) of the notebook info iff we have one
         // otherwise it's the model's/document's uri
         const candidate = notebookInfo
-            ? new MatchCandidate(model.uri, model.getLanguageId(), notebookInfo.uri, notebookInfo.type)
-            : new MatchCandidate(model.uri, model.getLanguageId(), undefined, undefined);
-        if ((_b = this._lastCandidate) === null || _b === void 0 ? void 0 : _b.equals(candidate)) {
+            ? new MatchCandidate(model.uri, model.getLanguageId(), notebookInfo.uri, notebookInfo.type, recursive)
+            : new MatchCandidate(model.uri, model.getLanguageId(), undefined, undefined, recursive);
+        if (this._lastCandidate?.equals(candidate)) {
             // nothing has changed
             return;
         }
@@ -124,13 +124,18 @@ export class LanguageFeatureRegistry {
         for (const entry of this._entries) {
             entry._score = score(entry.selector, candidate.uri, candidate.languageId, shouldSynchronizeModel(model), candidate.notebookUri, candidate.notebookType);
             if (isExclusive(entry.selector) && entry._score > 0) {
-                // support for one exclusive selector that overwrites
-                // any other selector
-                for (const entry of this._entries) {
+                if (recursive) {
                     entry._score = 0;
                 }
-                entry._score = 1000;
-                break;
+                else {
+                    // support for one exclusive selector that overwrites
+                    // any other selector
+                    for (const entry of this._entries) {
+                        entry._score = 0;
+                    }
+                    entry._score = 1000;
+                    break;
+                }
             }
         }
         // needs sorting

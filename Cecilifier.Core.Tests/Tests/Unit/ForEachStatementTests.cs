@@ -17,6 +17,8 @@ public class ForEachStatementTests : CecilifierUnitTestBase
     {
         // Compiler uses GetEnumerator() method, does not require implementing IEnumerable<T>
         var result = RunCecilifier($$"""
+                                   foreach(var v in new Enumerator()) {}
+                                   
                                    public {{enumeratorKind}} Enumerator
                                    {
                                         public int Current => 1;
@@ -24,25 +26,16 @@ public class ForEachStatementTests : CecilifierUnitTestBase
 
                                         public Enumerator GetEnumerator() => default(Enumerator);
                                    }
-                                   
-                                   //TODO: change to top level statements when order of visiting of top level/classes gets fixed. 
-                                   class Driver
-                                   {
-                                       static void Main()
-                                       {
-                                            foreach(var v in new Enumerator()) {}
-                                       }
-                                   }
                                    """);
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
         Assert.That(cecilifiedCode, Does.Match("""
                                                \s+//foreach\(var v in new Enumerator\(\)\) {}
-                                               \s+il_main_\d+.Emit\(OpCodes.Newobj, ctor_enumerator_\d+\);
+                                               \s+il_topLevelMain_\d+.Emit\(OpCodes.Newobj, ctor_enumerator_\d+\);
                                                """), "enumerator type defined in the snippet should be used.");
         
         Assert.That(cecilifiedCode, Does.Match("""
                                                \s+//variable to store the returned 'IEnumerator<T>'.
-                                               \s+il_main_\d+.Emit\(OpCodes.Callvirt, m_getEnumerator_\d+\);
+                                               \s+il_topLevelMain_\d+.Emit\(OpCodes.Callvirt, m_getEnumerator_\d+\);
                                                """), "GetEnumerator() defined in the snippet should be used.");
     }
 
@@ -124,7 +117,7 @@ public class ForEachStatementTests : CecilifierUnitTestBase
         Assert.That(cecilifiedCode, Does.Match("""
                                                il_run_\d+.Emit\(OpCodes.Callvirt, .+ImportReference\(.+ResolveMethod\(typeof\(System.Collections.IEnumerator\), "MoveNext",.+\)\)\);
                                                """));
-        Assert.That(cecilifiedCode, Does.Match("""var l_openget_Current_\d+ = .+ImportReference\(typeof\(.+IEnumerator<>\)\).Resolve\(\).Methods.First\(m => m.Name == "get_Current" && m.Parameters.Count == 0 \);"""));
+        Assert.That(cecilifiedCode, Does.Match("""var l_openget_Current_\d+ = .+ImportReference\(typeof\(.+IEnumerator<>\)\).Resolve\(\).Methods.First\(m => m.Name == "get_Current" && m.Parameters.Count == 0\);"""));
     }
  
     [Test]

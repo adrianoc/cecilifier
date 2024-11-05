@@ -16,7 +16,6 @@ import { Disposable, toDisposable } from '../../../base/common/lifecycle.js';
 import * as strings from '../../../base/common/strings.js';
 import { DEFAULT_WORD_REGEXP, ensureValidWordDefinition } from '../core/wordHelper.js';
 import { AutoClosingPairs } from './languageConfiguration.js';
-import { createScopedLineTokens } from './supports.js';
 import { CharacterPairSupport } from './supports/characterPair.js';
 import { BracketElectricCharacterSupport } from './supports/electricCharacter.js';
 import { IndentRulesSupport } from './supports/indentRules.js';
@@ -136,12 +135,6 @@ export function getIndentationAtPosition(model, lineNumber, column) {
         indentation = indentation.substring(0, column - 1);
     }
     return indentation;
-}
-export function getScopedLineTokens(model, lineNumber, columnNumber) {
-    model.tokenization.forceTokenization(lineNumber);
-    const lineTokens = model.tokenization.getLineTokens(lineNumber);
-    const column = (typeof columnNumber === 'undefined' ? model.getLineMaxColumn(lineNumber) - 1 : columnNumber - 1);
-    return createScopedLineTokens(lineTokens, column);
 }
 class ComposedLanguageConfiguration {
     constructor(languageId) {
@@ -278,7 +271,7 @@ export class LanguageConfigurationRegistry extends Disposable {
     }
     getLanguageConfiguration(languageId) {
         const entries = this._entries.get(languageId);
-        return (entries === null || entries === void 0 ? void 0 : entries.getResolvedConfiguration()) || null;
+        return entries?.getResolvedConfiguration() || null;
     }
 }
 /**

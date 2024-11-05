@@ -26,7 +26,7 @@ export class WhitespaceOverlay extends DynamicViewOverlay {
     onConfigurationChanged(e) {
         const newOptions = new WhitespaceOptions(this._context.configuration);
         if (this._options.equals(newOptions)) {
-            return e.hasChanged(143 /* EditorOption.layoutInfo */);
+            return e.hasChanged(146 /* EditorOption.layoutInfo */);
         }
         this._options = newOptions;
         return true;
@@ -194,7 +194,7 @@ export class WhitespaceOverlay extends DynamicViewOverlay {
         }
         if (USE_SVG) {
             maxLeft = Math.round(maxLeft + spaceWidth);
-            return (`<svg style="position:absolute;width:${maxLeft}px;height:${lineHeight}px" viewBox="0 0 ${maxLeft} ${lineHeight}" xmlns="http://www.w3.org/2000/svg" fill="${color}">`
+            return (`<svg style="bottom:0;position:absolute;width:${maxLeft}px;height:${lineHeight}px" viewBox="0 0 ${maxLeft} ${lineHeight}" xmlns="http://www.w3.org/2000/svg" fill="${color}">`
                 + result
                 + `</svg>`);
         }
@@ -241,19 +241,19 @@ class WhitespaceOptions {
             this.renderWithSVG = false;
         }
         else if (experimentalWhitespaceRendering === 'svg') {
-            this.renderWhitespace = options.get(98 /* EditorOption.renderWhitespace */);
+            this.renderWhitespace = options.get(100 /* EditorOption.renderWhitespace */);
             this.renderWithSVG = true;
         }
         else {
-            this.renderWhitespace = options.get(98 /* EditorOption.renderWhitespace */);
+            this.renderWhitespace = options.get(100 /* EditorOption.renderWhitespace */);
             this.renderWithSVG = false;
         }
         this.spaceWidth = fontInfo.spaceWidth;
         this.middotWidth = fontInfo.middotWidth;
         this.wsmiddotWidth = fontInfo.wsmiddotWidth;
         this.canUseHalfwidthRightwardsArrow = fontInfo.canUseHalfwidthRightwardsArrow;
-        this.lineHeight = options.get(66 /* EditorOption.lineHeight */);
-        this.stopRenderingLineAfter = options.get(116 /* EditorOption.stopRenderingLineAfter */);
+        this.lineHeight = options.get(67 /* EditorOption.lineHeight */);
+        this.stopRenderingLineAfter = options.get(118 /* EditorOption.stopRenderingLineAfter */);
     }
     equals(other) {
         return (this.renderWhitespace === other.renderWhitespace

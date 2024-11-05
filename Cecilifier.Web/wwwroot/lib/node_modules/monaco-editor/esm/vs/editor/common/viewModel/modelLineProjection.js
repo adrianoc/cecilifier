@@ -203,6 +203,7 @@ class ModelLineProjection {
  * This projection does not change the model line.
 */
 class IdentityModelLineProjection {
+    static { this.INSTANCE = new IdentityModelLineProjection(); }
     constructor() { }
     isVisible() {
         return true;
@@ -259,11 +260,11 @@ class IdentityModelLineProjection {
         return null;
     }
 }
-IdentityModelLineProjection.INSTANCE = new IdentityModelLineProjection();
 /**
  * This projection hides the model line.
  */
 class HiddenModelLineProjection {
+    static { this.INSTANCE = new HiddenModelLineProjection(); }
     constructor() { }
     isVisible() {
         return false;
@@ -314,7 +315,6 @@ class HiddenModelLineProjection {
         throw new Error('Not supported');
     }
 }
-HiddenModelLineProjection.INSTANCE = new HiddenModelLineProjection();
 const _spaces = [''];
 function spaces(count) {
     if (count >= _spaces.length) {

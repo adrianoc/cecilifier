@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 import { show } from '../../dom.js';
 import { RunOnceScheduler } from '../../../common/async.js';
-import { Disposable } from '../../../common/lifecycle.js';
+import { Disposable, MutableDisposable } from '../../../common/lifecycle.js';
 import './progressbar.css';
 const CSS_DONE = 'done';
 const CSS_ACTIVE = 'active';
@@ -15,8 +15,18 @@ const CSS_DISCRETE = 'discrete';
  * A progress bar with support for infinite or discrete progress.
  */
 export class ProgressBar extends Disposable {
+    /**
+     * After a certain time of showing the progress bar, switch
+     * to long-running mode and throttle animations to reduce
+     * the pressure on the GPU process.
+     *
+     * https://github.com/microsoft/vscode/issues/97900
+     * https://github.com/microsoft/vscode/issues/138396
+     */
+    static { this.LONG_RUNNING_INFINITE_THRESHOLD = 10000; }
     constructor(container, options) {
         super();
+        this.progressSignal = this._register(new MutableDisposable());
         this.workedVal = 0;
         this.showDelayedScheduler = this._register(new RunOnceScheduler(() => show(this.element), 0));
         this.longRunningScheduler = this._register(new RunOnceScheduler(() => this.infiniteLongRunning(), ProgressBar.LONG_RUNNING_INFINITE_THRESHOLD));
@@ -30,7 +40,7 @@ export class ProgressBar extends Disposable {
         container.appendChild(this.element);
         this.bit = document.createElement('div');
         this.bit.classList.add('progress-bit');
-        this.bit.style.backgroundColor = (options === null || options === void 0 ? void 0 : options.progressBarBackground) || '#0E70C0';
+        this.bit.style.backgroundColor = options?.progressBarBackground || '#0E70C0';
         this.element.appendChild(this.bit);
     }
     off() {
@@ -40,6 +50,7 @@ export class ProgressBar extends Disposable {
         this.workedVal = 0;
         this.totalWork = undefined;
         this.longRunningScheduler.cancel();
+        this.progressSignal.clear();
     }
     /**
      * Stops the progressbar from showing any progress instantly without fading out.
@@ -89,12 +100,3 @@ export class ProgressBar extends Disposable {
         return this.element;
     }
 }
-/**
- * After a certain time of showing the progress bar, switch
- * to long-running mode and throttle animations to reduce
- * the pressure on the GPU process.
- *
- * https://github.com/microsoft/vscode/issues/97900
- * https://github.com/microsoft/vscode/issues/138396
- */
-ProgressBar.LONG_RUNNING_INFINITE_THRESHOLD = 10000;

@@ -14,22 +14,25 @@ function freeze(data) {
     return Object.isFrozen(data) ? data : objects.deepFreeze(data);
 }
 export class ConfigurationModel {
-    constructor(_contents = {}, _keys = [], _overrides = [], raw) {
+    static createEmptyModel(logService) {
+        return new ConfigurationModel({}, [], [], undefined, logService);
+    }
+    constructor(_contents, _keys, _overrides, raw, logService) {
         this._contents = _contents;
         this._keys = _keys;
         this._overrides = _overrides;
         this.raw = raw;
+        this.logService = logService;
         this.overrideConfigurations = new Map();
     }
     get rawConfiguration() {
-        var _a;
         if (!this._rawConfiguration) {
-            if ((_a = this.raw) === null || _a === void 0 ? void 0 : _a.length) {
+            if (this.raw?.length) {
                 const rawConfigurationModels = this.raw.map(raw => {
                     if (raw instanceof ConfigurationModel) {
                         return raw;
                     }
-                    const parser = new ConfigurationModelParser('');
+                    const parser = new ConfigurationModelParser('', this.logService);
                     parser.parseRaw(raw);
                     return parser.configurationModel;
                 });
@@ -58,10 +61,28 @@ export class ConfigurationModel {
         return section ? getConfigurationValue(this.contents, section) : this.contents;
     }
     inspect(section, overrideIdentifier) {
-        const value = this.rawConfiguration.getValue(section);
-        const override = overrideIdentifier ? this.rawConfiguration.getOverrideValue(section, overrideIdentifier) : undefined;
-        const merged = overrideIdentifier ? this.rawConfiguration.override(overrideIdentifier).getValue(section) : value;
-        return { value, override, merged };
+        const that = this;
+        return {
+            get value() {
+                return freeze(that.rawConfiguration.getValue(section));
+            },
+            get override() {
+                return overrideIdentifier ? freeze(that.rawConfiguration.getOverrideValue(section, overrideIdentifier)) : undefined;
+            },
+            get merged() {
+                return freeze(overrideIdentifier ? that.rawConfiguration.override(overrideIdentifier).getValue(section) : that.rawConfiguration.getValue(section));
+            },
+            get overrides() {
+                const overrides = [];
+                for (const { contents, identifiers, keys } of that.rawConfiguration.overrides) {
+                    const value = new ConfigurationModel(contents, keys, [], undefined, that.logService).getValue(section);
+                    if (value !== undefined) {
+                        overrides.push({ identifiers, value });
+                    }
+                }
+                return overrides.length ? freeze(overrides) : undefined;
+            }
+        };
     }
     getOverrideValue(section, overrideIdentifier) {
         const overrideContents = this.getContentsForOverrideIdentifer(overrideIdentifier);
@@ -78,13 +99,12 @@ export class ConfigurationModel {
         return overrideConfigurationModel;
     }
     merge(...others) {
-        var _a, _b;
         const contents = objects.deepClone(this.contents);
         const overrides = objects.deepClone(this.overrides);
         const keys = [...this.keys];
-        const raws = ((_a = this.raw) === null || _a === void 0 ? void 0 : _a.length) ? [...this.raw] : [this];
+        const raws = this.raw?.length ? [...this.raw] : [this];
         for (const other of others) {
-            raws.push(...(((_b = other.raw) === null || _b === void 0 ? void 0 : _b.length) ? other.raw : [other]));
+            raws.push(...(other.raw?.length ? other.raw : [other]));
             if (other.isEmpty()) {
                 continue;
             }
@@ -106,7 +126,7 @@ export class ConfigurationModel {
                 }
             }
         }
-        return new ConfigurationModel(contents, keys, overrides, raws.every(raw => raw instanceof ConfigurationModel) ? undefined : raws);
+        return new ConfigurationModel(contents, keys, overrides, raws.every(raw => raw instanceof ConfigurationModel) ? undefined : raws, this.logService);
     }
     createOverrideConfigurationModel(identifier) {
         const overrideContents = this.getContentsForOverrideIdentifer(identifier);
@@ -131,7 +151,7 @@ export class ConfigurationModel {
             }
             contents[key] = contentsForKey;
         }
-        return new ConfigurationModel(contents, this.keys, this.overrides);
+        return new ConfigurationModel(contents, this.keys, this.overrides, undefined, this.logService);
     }
     mergeContents(source, target) {
         for (const key of Object.keys(target)) {
@@ -176,10 +196,6 @@ export class ConfigurationModel {
             keys: this.keys
         };
     }
-    // Update methods
-    addValue(key, value) {
-        this.updateValue(key, value, true);
-    }
     setValue(key, value) {
         this.updateValue(key, value, false);
     }
@@ -195,49 +211,57 @@ export class ConfigurationModel {
         }
     }
     updateValue(key, value, add) {
-        addToValueTree(this.contents, key, value, e => console.error(e));
+        addToValueTree(this.contents, key, value, e => this.logService.error(e));
         add = add || this.keys.indexOf(key) === -1;
         if (add) {
             this.keys.push(key);
         }
         if (OVERRIDE_PROPERTY_REGEX.test(key)) {
-            this.overrides.push({
-                identifiers: overrideIdentifiersFromKey(key),
+            const identifiers = overrideIdentifiersFromKey(key);
+            const override = {
+                identifiers,
                 keys: Object.keys(this.contents[key]),
-                contents: toValuesTree(this.contents[key], message => console.error(message)),
-            });
+                contents: toValuesTree(this.contents[key], message => this.logService.error(message)),
+            };
+            const index = this.overrides.findIndex(o => arrays.equals(o.identifiers, identifiers));
+            if (index !== -1) {
+                this.overrides[index] = override;
+            }
+            else {
+                this.overrides.push(override);
+            }
         }
     }
 }
 export class ConfigurationModelParser {
-    constructor(_name) {
+    constructor(_name, logService) {
         this._name = _name;
+        this.logService = logService;
         this._raw = null;
         this._configurationModel = null;
         this._restrictedConfigurations = [];
     }
     get configurationModel() {
-        return this._configurationModel || new ConfigurationModel();
+        return this._configurationModel || ConfigurationModel.createEmptyModel(this.logService);
     }
     parseRaw(raw, options) {
         this._raw = raw;
         const { contents, keys, overrides, restricted, hasExcludedProperties } = this.doParseRaw(raw, options);
-        this._configurationModel = new ConfigurationModel(contents, keys, overrides, hasExcludedProperties ? [raw] : undefined /* raw has not changed */);
+        this._configurationModel = new ConfigurationModel(contents, keys, overrides, hasExcludedProperties ? [raw] : undefined /* raw has not changed */, this.logService);
         this._restrictedConfigurations = restricted || [];
     }
     doParseRaw(raw, options) {
         const configurationProperties = Registry.as(Extensions.Configuration).getConfigurationProperties();
         const filtered = this.filter(raw, configurationProperties, true, options);
         raw = filtered.raw;
-        const contents = toValuesTree(raw, message => console.error(`Conflict in settings file ${this._name}: ${message}`));
+        const contents = toValuesTree(raw, message => this.logService.error(`Conflict in settings file ${this._name}: ${message}`));
         const keys = Object.keys(raw);
-        const overrides = this.toOverrides(raw, message => console.error(`Conflict in settings file ${this._name}: ${message}`));
+        const overrides = this.toOverrides(raw, message => this.logService.error(`Conflict in settings file ${this._name}: ${message}`));
         return { contents, keys, overrides, restricted: filtered.restricted, hasExcludedProperties: filtered.hasExcludedProperties };
     }
     filter(properties, configurationProperties, filterOverriddenProperties, options) {
-        var _a, _b, _c;
         let hasExcludedProperties = false;
-        if (!(options === null || options === void 0 ? void 0 : options.scopes) && !(options === null || options === void 0 ? void 0 : options.skipRestricted) && !((_a = options === null || options === void 0 ? void 0 : options.exclude) === null || _a === void 0 ? void 0 : _a.length)) {
+        if (!options?.scopes && !options?.skipRestricted && !options?.exclude?.length) {
             return { raw: properties, restricted: [], hasExcludedProperties };
         }
         const raw = {};
@@ -252,13 +276,13 @@ export class ConfigurationModelParser {
             else {
                 const propertySchema = configurationProperties[key];
                 const scope = propertySchema ? typeof propertySchema.scope !== 'undefined' ? propertySchema.scope : 3 /* ConfigurationScope.WINDOW */ : undefined;
-                if (propertySchema === null || propertySchema === void 0 ? void 0 : propertySchema.restricted) {
+                if (propertySchema?.restricted) {
                     restricted.push(key);
                 }
-                if (!((_b = options.exclude) === null || _b === void 0 ? void 0 : _b.includes(key)) /* Check exclude */
-                    && (((_c = options.include) === null || _c === void 0 ? void 0 : _c.includes(key) /* Check include */)
+                if (!options.exclude?.includes(key) /* Check exclude */
+                    && (options.include?.includes(key) /* Check include */
                         || ((scope === undefined || options.scopes === undefined || options.scopes.includes(scope)) /* Check scopes */
-                            && !(options.skipRestricted && (propertySchema === null || propertySchema === void 0 ? void 0 : propertySchema.restricted))))) /* Check restricted */ {
+                            && !(options.skipRestricted && propertySchema?.restricted)))) /* Check restricted */ {
                     raw[key] = properties[key];
                 }
                 else {
@@ -302,26 +326,21 @@ class ConfigurationInspectValue {
         this.folderConfigurationModel = folderConfigurationModel;
         this.memoryConfigurationModel = memoryConfigurationModel;
     }
-    inspect(model, section, overrideIdentifier) {
-        const inspectValue = model.inspect(section, overrideIdentifier);
-        return {
-            get value() { return freeze(inspectValue.value); },
-            get override() { return freeze(inspectValue.override); },
-            get merged() { return freeze(inspectValue.merged); }
-        };
+    toInspectValue(inspectValue) {
+        return inspectValue?.value !== undefined || inspectValue?.override !== undefined || inspectValue?.overrides !== undefined ? inspectValue : undefined;
     }
     get userInspectValue() {
         if (!this._userInspectValue) {
-            this._userInspectValue = this.inspect(this.userConfiguration, this.key, this.overrides.overrideIdentifier);
+            this._userInspectValue = this.userConfiguration.inspect(this.key, this.overrides.overrideIdentifier);
         }
         return this._userInspectValue;
     }
     get user() {
-        return this.userInspectValue.value !== undefined || this.userInspectValue.override !== undefined ? { value: this.userInspectValue.value, override: this.userInspectValue.override } : undefined;
+        return this.toInspectValue(this.userInspectValue);
     }
 }
 export class Configuration {
-    constructor(_defaultConfiguration, _policyConfiguration, _applicationConfiguration, _localUserConfiguration, _remoteUserConfiguration = new ConfigurationModel(), _workspaceConfiguration = new ConfigurationModel(), _folderConfigurations = new ResourceMap(), _memoryConfiguration = new ConfigurationModel(), _memoryConfigurationByResource = new ResourceMap()) {
+    constructor(_defaultConfiguration, _policyConfiguration, _applicationConfiguration, _localUserConfiguration, _remoteUserConfiguration, _workspaceConfiguration, _folderConfigurations, _memoryConfiguration, _memoryConfigurationByResource, logService) {
         this._defaultConfiguration = _defaultConfiguration;
         this._policyConfiguration = _policyConfiguration;
         this._applicationConfiguration = _applicationConfiguration;
@@ -331,6 +350,7 @@ export class Configuration {
         this._folderConfigurations = _folderConfigurations;
         this._memoryConfiguration = _memoryConfiguration;
         this._memoryConfigurationByResource = _memoryConfigurationByResource;
+        this.logService = logService;
         this._workspaceConsolidatedConfiguration = null;
         this._foldersConsolidatedConfigurations = new ResourceMap();
         this._userConfiguration = null;
@@ -344,7 +364,7 @@ export class Configuration {
         if (overrides.resource) {
             memoryConfiguration = this._memoryConfigurationByResource.get(overrides.resource);
             if (!memoryConfiguration) {
-                memoryConfiguration = new ConfigurationModel();
+                memoryConfiguration = ConfigurationModel.createEmptyModel(this.logService);
                 this._memoryConfigurationByResource.set(overrides.resource, memoryConfiguration);
             }
         }
@@ -478,28 +498,29 @@ export class Configuration {
             }, [])
         };
     }
-    static parse(data) {
-        const defaultConfiguration = this.parseConfigurationModel(data.defaults);
-        const policyConfiguration = this.parseConfigurationModel(data.policy);
-        const applicationConfiguration = this.parseConfigurationModel(data.application);
-        const userConfiguration = this.parseConfigurationModel(data.user);
-        const workspaceConfiguration = this.parseConfigurationModel(data.workspace);
+    static parse(data, logService) {
+        const defaultConfiguration = this.parseConfigurationModel(data.defaults, logService);
+        const policyConfiguration = this.parseConfigurationModel(data.policy, logService);
+        const applicationConfiguration = this.parseConfigurationModel(data.application, logService);
+        const userConfiguration = this.parseConfigurationModel(data.user, logService);
+        const workspaceConfiguration = this.parseConfigurationModel(data.workspace, logService);
         const folders = data.folders.reduce((result, value) => {
-            result.set(URI.revive(value[0]), this.parseConfigurationModel(value[1]));
+            result.set(URI.revive(value[0]), this.parseConfigurationModel(value[1], logService));
             return result;
         }, new ResourceMap());
-        return new Configuration(defaultConfiguration, policyConfiguration, applicationConfiguration, userConfiguration, new ConfigurationModel(), workspaceConfiguration, folders, new ConfigurationModel(), new ResourceMap());
+        return new Configuration(defaultConfiguration, policyConfiguration, applicationConfiguration, userConfiguration, ConfigurationModel.createEmptyModel(logService), workspaceConfiguration, folders, ConfigurationModel.createEmptyModel(logService), new ResourceMap(), logService);
     }
-    static parseConfigurationModel(model) {
-        return new ConfigurationModel(model.contents, model.keys, model.overrides);
+    static parseConfigurationModel(model, logService) {
+        return new ConfigurationModel(model.contents, model.keys, model.overrides, undefined, logService);
     }
 }
 export class ConfigurationChangeEvent {
-    constructor(change, previous, currentConfiguraiton, currentWorkspace) {
+    constructor(change, previous, currentConfiguraiton, currentWorkspace, logService) {
         this.change = change;
         this.previous = previous;
         this.currentConfiguraiton = currentConfiguraiton;
         this.currentWorkspace = currentWorkspace;
+        this.logService = logService;
         this._marker = '\n';
         this._markerCode1 = this._marker.charCodeAt(0);
         this._markerCode2 = '.'.charCodeAt(0);
@@ -521,12 +542,11 @@ export class ConfigurationChangeEvent {
     }
     get previousConfiguration() {
         if (!this._previousConfiguration && this.previous) {
-            this._previousConfiguration = Configuration.parse(this.previous.data);
+            this._previousConfiguration = Configuration.parse(this.previous.data, this.logService);
         }
         return this._previousConfiguration;
     }
     affectsConfiguration(section, overrides) {
-        var _a;
         // we have one large string with all keys that have changed. we pad (marker) the section
         // and check that either find it padded or before a segment character
         const needle = this._marker + section;
@@ -545,7 +565,7 @@ export class ConfigurationChangeEvent {
             return false;
         }
         if (overrides) {
-            const value1 = this.previousConfiguration ? this.previousConfiguration.getValue(section, overrides, (_a = this.previous) === null || _a === void 0 ? void 0 : _a.workspace) : undefined;
+            const value1 = this.previousConfiguration ? this.previousConfiguration.getValue(section, overrides, this.previous?.workspace) : undefined;
             const value2 = this.currentConfiguraiton.getValue(section, overrides, this.currentWorkspace);
             return !objects.equals(value1, value2);
         }

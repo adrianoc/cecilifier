@@ -28,12 +28,11 @@ export class SyntaxRangeProvider {
     }
     compute(cancellationToken) {
         return collectSyntaxRanges(this.providers, this.editorModel, cancellationToken).then(ranges => {
-            var _a, _b;
             if (ranges) {
                 const res = sanitizeRanges(ranges, this.foldingRangesLimit);
                 return res;
             }
-            return (_b = (_a = this.fallbackRangeProvider) === null || _a === void 0 ? void 0 : _a.compute(cancellationToken)) !== null && _b !== void 0 ? _b : null;
+            return this.fallbackRangeProvider?.compute(cancellationToken) ?? null;
         });
     }
     dispose() {

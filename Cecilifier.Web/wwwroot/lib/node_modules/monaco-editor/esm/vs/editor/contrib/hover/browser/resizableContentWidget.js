@@ -41,8 +41,7 @@ export class ResizableContentWidget extends Disposable {
         return this._contentPosition;
     }
     get position() {
-        var _a;
-        return ((_a = this._contentPosition) === null || _a === void 0 ? void 0 : _a.position) ? Position.lift(this._contentPosition.position) : undefined;
+        return this._contentPosition?.position ? Position.lift(this._contentPosition.position) : undefined;
     }
     _availableVerticalSpaceAbove(position) {
         const editorDomNode = this._editor.getDomNode();
@@ -65,9 +64,8 @@ export class ResizableContentWidget extends Disposable {
         return bodyBox.height - mouseBottom - BOTTOM_HEIGHT;
     }
     _findPositionPreference(widgetHeight, showAtPosition) {
-        var _a, _b;
-        const maxHeightBelow = Math.min((_a = this._availableVerticalSpaceBelow(showAtPosition)) !== null && _a !== void 0 ? _a : Infinity, widgetHeight);
-        const maxHeightAbove = Math.min((_b = this._availableVerticalSpaceAbove(showAtPosition)) !== null && _b !== void 0 ? _b : Infinity, widgetHeight);
+        const maxHeightBelow = Math.min(this._availableVerticalSpaceBelow(showAtPosition) ?? Infinity, widgetHeight);
+        const maxHeightAbove = Math.min(this._availableVerticalSpaceAbove(showAtPosition) ?? Infinity, widgetHeight);
         const maxHeight = Math.min(Math.max(maxHeightAbove, maxHeightBelow), widgetHeight);
         const height = Math.min(widgetHeight, maxHeight);
         let renderingAbove;

@@ -191,6 +191,7 @@ export class GlobalEditorPointerMoveMonitor extends Disposable {
  * Reference counting and delayed garbage collection ensure that no rules leak.
 */
 export class DynamicCssRules {
+    static { this._idPool = 0; }
     constructor(_editor) {
         this._editor = _editor;
         this._instanceId = ++DynamicCssRules._idPool;
@@ -234,7 +235,6 @@ export class DynamicCssRules {
         }
     }
 }
-DynamicCssRules._idPool = 0;
 class RefCountedCssRule {
     constructor(key, className, _containerElement, properties) {
         this.key = key;

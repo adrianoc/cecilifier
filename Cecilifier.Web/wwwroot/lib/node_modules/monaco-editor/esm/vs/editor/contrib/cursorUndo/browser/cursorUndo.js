@@ -32,6 +32,7 @@ class StackElement {
     }
 }
 export class CursorUndoRedoController extends Disposable {
+    static { this.ID = 'editor.contrib.cursorUndoRedoController'; }
     static get(editor) {
         return editor.getContribution(CursorUndoRedoController.ID);
     }
@@ -95,7 +96,6 @@ export class CursorUndoRedoController extends Disposable {
         this._isCursorUndoRedo = false;
     }
 }
-CursorUndoRedoController.ID = 'editor.contrib.cursorUndoRedoController';
 export class CursorUndo extends EditorAction {
     constructor() {
         super({
@@ -111,8 +111,7 @@ export class CursorUndo extends EditorAction {
         });
     }
     run(accessor, editor, args) {
-        var _a;
-        (_a = CursorUndoRedoController.get(editor)) === null || _a === void 0 ? void 0 : _a.cursorUndo();
+        CursorUndoRedoController.get(editor)?.cursorUndo();
     }
 }
 export class CursorRedo extends EditorAction {
@@ -125,8 +124,7 @@ export class CursorRedo extends EditorAction {
         });
     }
     run(accessor, editor, args) {
-        var _a;
-        (_a = CursorUndoRedoController.get(editor)) === null || _a === void 0 ? void 0 : _a.cursorRedo();
+        CursorUndoRedoController.get(editor)?.cursorRedo();
     }
 }
 registerEditorContribution(CursorUndoRedoController.ID, CursorUndoRedoController, 0 /* EditorContributionInstantiation.Eager */); // eager because it needs to listen to record cursor state ASAP

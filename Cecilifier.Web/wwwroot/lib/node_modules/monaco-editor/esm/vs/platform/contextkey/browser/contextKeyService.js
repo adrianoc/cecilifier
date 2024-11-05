@@ -57,6 +57,7 @@ export class Context {
     }
 }
 class NullContext extends Context {
+    static { this.INSTANCE = new NullContext(); }
     constructor() {
         super(-1, null);
     }
@@ -70,8 +71,8 @@ class NullContext extends Context {
         return undefined;
     }
 }
-NullContext.INSTANCE = new NullContext();
 class ConfigAwareContextValuesContainer extends Context {
+    static { this._keyPrefix = 'config.'; }
     constructor(id, _configurationService, emitter) {
         super(id, null);
         this._configurationService = _configurationService;
@@ -138,7 +139,6 @@ class ConfigAwareContextValuesContainer extends Context {
         return super.removeValue(key);
     }
 }
-ConfigAwareContextValuesContainer._keyPrefix = 'config.';
 class ContextKey {
     constructor(service, key, defaultValue) {
         this._service = service;

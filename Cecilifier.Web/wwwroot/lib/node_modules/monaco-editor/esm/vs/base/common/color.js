@@ -313,15 +313,15 @@ export class Color {
         factor = factor * (lum1 - lum2) / lum1;
         return of.darken(factor);
     }
+    static { this.white = new Color(new RGBA(255, 255, 255, 1)); }
+    static { this.black = new Color(new RGBA(0, 0, 0, 1)); }
+    static { this.red = new Color(new RGBA(255, 0, 0, 1)); }
+    static { this.blue = new Color(new RGBA(0, 0, 255, 1)); }
+    static { this.green = new Color(new RGBA(0, 255, 0, 1)); }
+    static { this.cyan = new Color(new RGBA(0, 255, 255, 1)); }
+    static { this.lightgrey = new Color(new RGBA(211, 211, 211, 1)); }
+    static { this.transparent = new Color(new RGBA(0, 0, 0, 0)); }
 }
-Color.white = new Color(new RGBA(255, 255, 255, 1));
-Color.black = new Color(new RGBA(0, 0, 0, 1));
-Color.red = new Color(new RGBA(255, 0, 0, 1));
-Color.blue = new Color(new RGBA(0, 0, 255, 1));
-Color.green = new Color(new RGBA(0, 255, 0, 1));
-Color.cyan = new Color(new RGBA(0, 255, 255, 1));
-Color.lightgrey = new Color(new RGBA(211, 211, 211, 1));
-Color.transparent = new Color(new RGBA(0, 0, 0, 0));
 (function (Color) {
     let Format;
     (function (Format) {

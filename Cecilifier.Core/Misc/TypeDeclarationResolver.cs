@@ -71,7 +71,10 @@ namespace Cecilifier.Core.Misc
 
         private static BaseTypeDeclarationSyntax ParentTypeDeclarationFor(SyntaxNode node)
         {
-            return (BaseTypeDeclarationSyntax) node.Ancestors().First(a => a.IsKind(SyntaxKind.ClassDeclaration) || a.IsKind(SyntaxKind.StructDeclaration) || a.IsKind(SyntaxKind.InterfaceDeclaration));
+            return (BaseTypeDeclarationSyntax) node.Ancestors().First(a => a.IsKind(SyntaxKind.ClassDeclaration) 
+                                                                           || a.IsKind(SyntaxKind.StructDeclaration) 
+                                                                           || a.IsKind(SyntaxKind.InterfaceDeclaration) 
+                                                                           || a.IsKind(SyntaxKind.RecordDeclaration));
         }
     }
 }

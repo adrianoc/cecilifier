@@ -125,7 +125,6 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                 ret = ret && CheckImplementedInterfaces(typeVisitor, sourceType, targetType);
             }
 
-            //TODO: Check missing classes
             return ret;
         }
 
@@ -431,24 +430,72 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                     return result.Value;
             }
             
-            // TODO: For now we are starting enforcing field references are the same in the two instructions..
-            // in the future we want to validate more. For example:
-            // - Method references matches
-            // - Event references matches
-            // - Constants
-            // - etc.
-            if (instruction.Operand is FieldReference frInstruction && current.Operand is FieldReference frCurrent)
-            {
-                if (frInstruction.Name != frCurrent.Name || frInstruction.DeclaringType.FullName != frCurrent.DeclaringType.FullName)
-                    return false;
-
-                if (scopesToIgnore.Contains(frInstruction.DeclaringType.Scope) || scopesToIgnore.Contains(frCurrent.DeclaringType.Scope))
-                    return true;
-
-                return (frInstruction.DeclaringType.Scope.Name == frCurrent.DeclaringType.Scope.Name ||
-                         frInstruction.DeclaringType.Scope.Name == "System.Private.CoreLib" && frCurrent.DeclaringType.Scope.Name == "System.Runtime");
-            }
+            if (TryValidateFieldReference(instruction, current, scopesToIgnore, out var validationResult))
+                return validationResult;
             
+            if (TryValidateMethodReference(instruction, current, scopesToIgnore, out validationResult))
+                return validationResult;
+            
+            if (TryValidateTypeReference(instruction, current, scopesToIgnore, out validationResult))
+                return validationResult;
+            
+            return true;
+        }
+
+        private static bool TryValidateTypeReference(Instruction instruction, Instruction current, HashSet<IMetadataScope> scopesToIgnore, out bool validationResult)
+        {
+            validationResult = false;
+            if (instruction.Operand is not TypeReference trInstruction || current.Operand is not TypeReference trCurrent)
+                return false;
+
+            if (scopesToIgnore.Contains(trInstruction.Scope) || scopesToIgnore.Contains(trCurrent.Scope))
+            {
+                validationResult = true;
+            }
+            else
+            {
+                validationResult = trInstruction.FullName == trCurrent.FullName;
+            }
+
+            return true;
+        }
+
+        private static bool TryValidateMethodReference(Instruction instruction, Instruction current, HashSet<IMetadataScope> scopesToIgnore, out bool validationResult)
+        {
+            validationResult = false;
+            if (instruction.Operand is not MethodReference mrInstruction || current.Operand is not MethodReference mrCurrent)
+                return false;
+
+            if (scopesToIgnore.Contains(mrInstruction.DeclaringType.Scope) || scopesToIgnore.Contains(mrCurrent.DeclaringType.Scope))
+            {
+                validationResult = true;
+            }
+            else
+            {
+                validationResult = MethodReferenceComparer.Instance.Compare(mrInstruction, mrCurrent) == 0;
+            }
+            return true;
+        }
+
+        private static bool TryValidateFieldReference(Instruction instruction, Instruction current, HashSet<IMetadataScope> scopesToIgnore, out bool validationResult)
+        {
+            validationResult = false;
+            if (instruction.Operand is not FieldReference frInstruction || current.Operand is not FieldReference frCurrent)
+                return false;
+            
+            if (frInstruction.Name != frCurrent.Name || frInstruction.DeclaringType.FullName != frCurrent.DeclaringType.FullName)
+            {
+                validationResult = false;
+            }
+            else if (scopesToIgnore.Contains(frInstruction.DeclaringType.Scope) || scopesToIgnore.Contains(frCurrent.DeclaringType.Scope))
+            {
+                validationResult = true;
+            }
+            else
+            {
+                validationResult = (frInstruction.DeclaringType.Scope.Name == frCurrent.DeclaringType.Scope.Name ||
+                          frInstruction.DeclaringType.Scope.Name == "System.Private.CoreLib" && frCurrent.DeclaringType.Scope.Name == "System.Runtime"); 
+            }
             return true;
         }
 
@@ -525,7 +572,6 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 
             return true;
         }
-
 
         private static bool CheckTypeMember<T>(IMemberDiffVisitor memberVisitor, IMemberDefinition sourceMember, TypeDefinition target, IDictionary<string, T> targetMembers) where T : IMemberDefinition
         {

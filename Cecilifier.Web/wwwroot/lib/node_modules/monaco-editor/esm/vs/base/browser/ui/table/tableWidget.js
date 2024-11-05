@@ -3,12 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import { $, append, clearNode, createStyleSheet } from '../../dom.js';
+import { getBaseLayerHoverDelegate } from '../hover/hoverDelegate2.js';
+import { getDefaultHoverDelegate } from '../hover/hoverDelegateFactory.js';
 import { List, unthemedListStyles } from '../list/listWidget.js';
 import { SplitView } from '../splitview/splitview.js';
 import { Emitter, Event } from '../../../common/event.js';
-import { DisposableStore } from '../../../common/lifecycle.js';
+import { Disposable, DisposableStore } from '../../../common/lifecycle.js';
 import './table.css';
 class TableListRenderer {
+    static { this.TemplateId = 'row'; }
     constructor(columns, renderers, getColumnSize) {
         this.columns = columns;
         this.getColumnSize = getColumnSize;
@@ -71,29 +74,33 @@ class TableListRenderer {
         }
     }
 }
-TableListRenderer.TemplateId = 'row';
 function asListVirtualDelegate(delegate) {
     return {
         getHeight(row) { return delegate.getHeight(row); },
         getTemplateId() { return TableListRenderer.TemplateId; },
     };
 }
-class ColumnHeader {
-    get minimumSize() { var _a; return (_a = this.column.minimumWidth) !== null && _a !== void 0 ? _a : 120; }
-    get maximumSize() { var _a; return (_a = this.column.maximumWidth) !== null && _a !== void 0 ? _a : Number.POSITIVE_INFINITY; }
-    get onDidChange() { var _a; return (_a = this.column.onDidChangeWidthConstraints) !== null && _a !== void 0 ? _a : Event.None; }
+class ColumnHeader extends Disposable {
+    get minimumSize() { return this.column.minimumWidth ?? 120; }
+    get maximumSize() { return this.column.maximumWidth ?? Number.POSITIVE_INFINITY; }
+    get onDidChange() { return this.column.onDidChangeWidthConstraints ?? Event.None; }
     constructor(column, index) {
+        super();
         this.column = column;
         this.index = index;
         this._onDidLayout = new Emitter();
         this.onDidLayout = this._onDidLayout.event;
-        this.element = $('.monaco-table-th', { 'data-col-index': index, title: column.tooltip }, column.label);
+        this.element = $('.monaco-table-th', { 'data-col-index': index }, column.label);
+        if (column.tooltip) {
+            this._register(getBaseLayerHoverDelegate().setupManagedHover(getDefaultHoverDelegate('mouse'), this.element, column.tooltip));
+        }
     }
     layout(size) {
         this._onDidLayout.fire([this.index, size]);
     }
 }
 export class Table {
+    static { this.InstanceCount = 0; }
     get onDidChangeFocus() { return this.list.onDidChangeFocus; }
     get onDidChangeSelection() { return this.list.onDidChangeSelection; }
     get onDidScroll() { return this.list.onDidScroll; }
@@ -107,12 +114,13 @@ export class Table {
     get onDidDispose() { return this.list.onDidDispose; }
     constructor(user, container, virtualDelegate, columns, renderers, _options) {
         this.virtualDelegate = virtualDelegate;
+        this.columns = columns;
         this.domId = `table_id_${++Table.InstanceCount}`;
         this.disposables = new DisposableStore();
         this.cachedWidth = 0;
         this.cachedHeight = 0;
         this.domNode = append(container, $(`.monaco-table.${this.domId}`));
-        const headers = columns.map((c, i) => new ColumnHeader(c, i));
+        const headers = columns.map((c, i) => this.disposables.add(new ColumnHeader(c, i)));
         const descriptor = {
             size: headers.reduce((a, b) => a + b.column.weight, 0),
             views: headers.map(view => ({ size: view.column.weight, view }))
@@ -167,4 +175,3 @@ export class Table {
         this.disposables.dispose();
     }
 }
-Table.InstanceCount = 0;

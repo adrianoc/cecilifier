@@ -164,7 +164,6 @@ namespace Cecilifier.Core.Extensions
 
             if (method.Parameters.Any(p => p.Type.IsTypeParameterOrIsGenericTypeReferencingTypeParameter()) 
                 || method.ReturnType.IsTypeParameterOrIsGenericTypeReferencingTypeParameter()
-                || method.ContainingType.TypeArguments.Any(t => t.IsDefinedInCurrentAssembly(ctx))
                 || method.ContainingType.HasTypeArgumentOfTypeFromCecilifiedCodeTransitive(ctx))
             {
                 return ResolveMethodFromGenericType(method, ctx);
@@ -220,10 +219,17 @@ namespace Cecilifier.Core.Extensions
 
             // find the original method.
             var originalMethodVar = ctx.Naming.SyntheticVariable($"open{method.Name}", ElementKind.LocalVariable);
-            // TODO: handle overloads
-            ctx.WriteCecilExpression($"""var {originalMethodVar} = {ctx.TypeResolver.Resolve(method.ContainingType.OriginalDefinition)}.Resolve().Methods.First(m => m.Name == "{method.Name}" && m.Parameters.Count == {method.Parameters.Length} );""");
+            
+            var methodParameterNames = method.Parameters.Aggregate(new StringBuilder(), (acc, curr) => acc.Append($"""
+                                                                                                                                                        "{curr.Type.FullyQualifiedName()}",
+                                                                                                                                                        """));
+            var parameterTypesCheck = method.Parameters.Length > 0 
+                ? $" && !m.Parameters.Select(p => p.ParameterType.FullName).Except([{methodParameterNames}]).Any()" 
+                : string.Empty;
+            
+            ctx.WriteCecilExpression($"""var {originalMethodVar} = {ctx.TypeResolver.Resolve(method.ContainingType.OriginalDefinition)}.Resolve().Methods.First(m => m.Name == "{method.Name}" && m.Parameters.Count == {method.Parameters.Length}{parameterTypesCheck});""");
             ctx.WriteNewLine();
-
+            
             // Instantiates a MethodReference representing the called method.
             var targetMethodVar = ctx.Naming.SyntheticVariable($"{method.Name}", ElementKind.MemberReference);
             ctx.WriteCecilExpression(
@@ -241,8 +247,7 @@ namespace Cecilifier.Core.Extensions
             // Add original parameters to the MethodReference
             foreach (var parameter in method.Parameters)
             {
-                //TODO: pass the correct ParameterAttributes.None
-                ctx.WriteCecilExpression($"""{targetMethodVar}.Parameters.Add(new ParameterDefinition("{parameter.Name}", ParameterAttributes.None, {originalMethodVar}.Parameters[{parameter.Ordinal}].ParameterType));""");
+                ctx.WriteCecilExpression($"""{targetMethodVar}.Parameters.Add(new ParameterDefinition("{parameter.Name}", {originalMethodVar}.Parameters[{parameter.Ordinal}].Attributes, {originalMethodVar}.Parameters[{parameter.Ordinal}].ParameterType));""");
                 ctx.WriteNewLine();
             }
             
@@ -311,8 +316,6 @@ namespace Cecilifier.Core.Extensions
             cecilModifiersStr.AppendModifier(specificModifiers);
             cecilModifiersStr.AppendModifier("MethodAttributes.HideBySig").AppendModifier(modifiersStr);
 
-            //TODO: This is not taking into account static abstract methods. We need to pass whether the method is static or not as a parameter
-            //      and in case it is static, do not add NewSlot (which is part of InterfaceMethodDefinitionAttributes)
             if (declaringType.TypeKind == TypeKind.Interface)
                 cecilModifiersStr.AppendModifier(Constants.Cecil.InterfaceMethodDefinitionAttributes).AppendModifier("MethodAttributes.Abstract");
 

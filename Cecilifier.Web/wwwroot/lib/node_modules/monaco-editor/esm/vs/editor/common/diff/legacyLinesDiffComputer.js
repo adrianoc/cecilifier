@@ -12,7 +12,6 @@ import { LineRange } from '../core/lineRange.js';
 const MINIMUM_MATCHING_CHARACTER_LENGTH = 3;
 export class LegacyLinesDiffComputer {
     computeDiff(originalLines, modifiedLines, options) {
-        var _a;
         const diffComputer = new DiffComputer(originalLines, modifiedLines, {
             maxComputationTime: options.maxComputationTimeMs,
             shouldIgnoreTrimWhitespace: options.ignoreTrimWhitespace,
@@ -40,7 +39,7 @@ export class LegacyLinesDiffComputer {
             else {
                 modifiedRange = new LineRange(c.modifiedStartLineNumber, c.modifiedEndLineNumber + 1);
             }
-            let change = new DetailedLineRangeMapping(originalRange, modifiedRange, (_a = c.charChanges) === null || _a === void 0 ? void 0 : _a.map(c => new RangeMapping(new Range(c.originalStartLineNumber, c.originalStartColumn, c.originalEndLineNumber, c.originalEndColumn), new Range(c.modifiedStartLineNumber, c.modifiedStartColumn, c.modifiedEndLineNumber, c.modifiedEndColumn))));
+            let change = new DetailedLineRangeMapping(originalRange, modifiedRange, c.charChanges?.map(c => new RangeMapping(new Range(c.originalStartLineNumber, c.originalStartColumn, c.originalEndLineNumber, c.originalEndColumn), new Range(c.modifiedStartLineNumber, c.modifiedStartColumn, c.modifiedEndLineNumber, c.modifiedEndColumn))));
             if (lastChange) {
                 if (lastChange.modified.endLineNumberExclusive === change.modified.startLineNumber
                     || lastChange.original.endLineNumberExclusive === change.original.startLineNumber) {

@@ -10,11 +10,11 @@ import { createDecorator } from '../../instantiation/common/instantiation.js';
 export const IWorkspaceContextService = createDecorator('contextService');
 export function isSingleFolderWorkspaceIdentifier(obj) {
     const singleFolderIdentifier = obj;
-    return typeof (singleFolderIdentifier === null || singleFolderIdentifier === void 0 ? void 0 : singleFolderIdentifier.id) === 'string' && URI.isUri(singleFolderIdentifier.uri);
+    return typeof singleFolderIdentifier?.id === 'string' && URI.isUri(singleFolderIdentifier.uri);
 }
 export function isEmptyWorkspaceIdentifier(obj) {
     const emptyWorkspaceIdentifier = obj;
-    return typeof (emptyWorkspaceIdentifier === null || emptyWorkspaceIdentifier === void 0 ? void 0 : emptyWorkspaceIdentifier.id) === 'string'
+    return typeof emptyWorkspaceIdentifier?.id === 'string'
         && !isSingleFolderWorkspaceIdentifier(obj)
         && !isWorkspaceIdentifier(obj);
 }
@@ -59,7 +59,7 @@ export function toWorkspaceIdentifier(arg0, isExtensionDevelopment) {
 }
 export function isWorkspaceIdentifier(obj) {
     const workspaceIdentifier = obj;
-    return typeof (workspaceIdentifier === null || workspaceIdentifier === void 0 ? void 0 : workspaceIdentifier.id) === 'string' && URI.isUri(workspaceIdentifier.configPath);
+    return typeof workspaceIdentifier?.id === 'string' && URI.isUri(workspaceIdentifier.configPath);
 }
 export class Workspace {
     constructor(_id, folders, _transient, _configuration, _ignorePathCasing) {

@@ -5,6 +5,7 @@
 import { EditOperation } from '../../../common/core/editOperation.js';
 import { Range } from '../../../common/core/range.js';
 export class SortLinesCommand {
+    static { this._COLLATOR = null; }
     static getCollator() {
         if (!SortLinesCommand._COLLATOR) {
             SortLinesCommand._COLLATOR = new Intl.Collator();
@@ -42,7 +43,6 @@ export class SortLinesCommand {
         return false;
     }
 }
-SortLinesCommand._COLLATOR = null;
 function getSortData(model, selection, descending) {
     const startLineNumber = selection.startLineNumber;
     let endLineNumber = selection.endLineNumber;

@@ -8,7 +8,6 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.WebSockets;
-using System.Reflection;
 using System.Resources;
 using System.Text;
 using System.Text.Json;
@@ -229,7 +228,7 @@ namespace Cecilifier.Web
                         );
 
                         var output = new Memory<byte>(buffer);
-                        var ret = Base64.EncodeToUtf8(responseData.Span, output.Span, out var bytesConsumed, out var bytesWritten);
+                        var ret = Base64.EncodeToUtf8(responseData, output.Span, out var bytesConsumed, out var bytesWritten);
                         if (ret == OperationStatus.Done)
                         {
                             output = output[0..bytesWritten];
@@ -277,51 +276,19 @@ namespace Cecilifier.Web
                 Interlocked.Exchange(ref CecilifierApplication.MaximumUnique, seemClientIPHashCodes.Values.Max());
             }
 
-            Memory<byte> ZipProject(params (string fileName, string contents)[] files)
+            static byte[] ZipProject(params (string fileName, string contents)[] files)
             {
-                /*
-                //TODO: For some reason this code produces an invalid stream. Need to investigate.
                 using var zipStream = new MemoryStream();
-                using var zipFile = new ZipArchive(zipStream, ZipArchiveMode.Create);
-                foreach (var source in sources)
+                using (var zipFile = new ZipArchive(zipStream, ZipArchiveMode.Create))
                 {
-                    var entry = zipFile.CreateEntry(source.fileName, CompressionLevel.Fastest);
-                    using var entryWriter = new StreamWriter(entry.Open());
-                    entryWriter.Write(source.contents);
-                }
-
-                zipStream.Position = 0;
-                Memory<byte> s = zipStream.GetBuffer();
-                Console.WriteLine($"Stream Size = {zipStream.Length}");
-                return s.Slice(0, (int)zipStream.Length);
-                */
-
-                var tempPath = Path.GetTempPath();
-                var assetsPath = Path.Combine(tempPath, "output");
-                if (Directory.Exists(assetsPath))
-                    Directory.Delete(assetsPath, true);
-
-                foreach (var file in files)
-                {
-                    var filePath = Path.Combine(assetsPath, $"{file.fileName}");
-                    Directory.CreateDirectory(Path.GetDirectoryName(filePath));
-                    if (file.contents.StartsWith("file-relative-path://"))
+                    foreach (var source in files)
                     {
-                        var basePath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-                        File.Copy(Path.Combine(basePath, file.contents.Substring("file-relative-path://".Length)), filePath, true);
-                    }
-                    else
-                    {
-                        File.WriteAllText(filePath, file.contents);    
+                        var entry = zipFile.CreateEntry(source.fileName, CompressionLevel.Optimal);
+                        using var entryWriter = new StreamWriter(entry.Open());
+                        entryWriter.Write(source.contents);
                     }
                 }
-
-                var outputZipPath = Path.Combine(tempPath, "Cecilified.zip");
-                if (File.Exists(outputZipPath))
-                    File.Delete(outputZipPath);
-
-                ZipFile.CreateFromDirectory(assetsPath, outputZipPath, CompressionLevel.Fastest, false);
-                return File.ReadAllBytes(outputZipPath);
+                return zipStream.ToArray();
             }
         }
         

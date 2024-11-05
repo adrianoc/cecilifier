@@ -28,7 +28,6 @@ export var QuickOutlineNLS;
 export var StandaloneCodeEditorNLS;
 (function (StandaloneCodeEditorNLS) {
     StandaloneCodeEditorNLS.editorViewAccessibleLabel = nls.localize('editorViewAccessibleLabel', "Editor content");
-    StandaloneCodeEditorNLS.accessibilityHelpMessage = nls.localize('accessibilityHelpMessage', "Press Alt+F1 for Accessibility Options.");
 })(StandaloneCodeEditorNLS || (StandaloneCodeEditorNLS = {}));
 export var ToggleHighContrastNLS;
 (function (ToggleHighContrastNLS) {

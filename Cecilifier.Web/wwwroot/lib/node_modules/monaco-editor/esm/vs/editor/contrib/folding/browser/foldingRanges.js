@@ -240,8 +240,8 @@ export class FoldingRegions {
      * 		it is out of sequence or has the same start line as a preceding entry,
      * 		it overlaps a preceding entry and is not fully contained by that entry.
      */
-    static sanitizeAndMerge(rangesA, rangesB, maxLineNumber) {
-        maxLineNumber = maxLineNumber !== null && maxLineNumber !== void 0 ? maxLineNumber : Number.MAX_VALUE;
+    static sanitizeAndMerge(rangesA, rangesB, maxLineNumber, selection) {
+        maxLineNumber = maxLineNumber ?? Number.MAX_VALUE;
         const getIndexedFunction = (r, limit) => {
             return Array.isArray(r)
                 ? ((i) => { return (i < limit) ? r[i] : undefined; })
@@ -268,7 +268,8 @@ export class FoldingRegions {
                     else {
                         // a previously folded range or a (possibly unfolded) recovered range
                         useRange = nextA;
-                        useRange.isCollapsed = nextB.isCollapsed && nextA.endLineNumber === nextB.endLineNumber;
+                        // stays collapsed if the range still has the same number of lines or the selection is not in the range or after it
+                        useRange.isCollapsed = nextB.isCollapsed && (nextA.endLineNumber === nextB.endLineNumber || !selection?.startsInside(nextA.startLineNumber + 1, nextA.endLineNumber + 1));
                         useRange.source = 0 /* FoldSource.provider */;
                     }
                     nextA = getA(++indexA); // not necessary, just for speed

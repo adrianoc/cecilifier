@@ -20,7 +20,7 @@ export class BlockDecorations extends ViewPart {
     update() {
         let didChange = false;
         const options = this._context.configuration.options;
-        const layoutInfo = options.get(143 /* EditorOption.layoutInfo */);
+        const layoutInfo = options.get(146 /* EditorOption.layoutInfo */);
         const newContentWidth = layoutInfo.contentWidth - layoutInfo.verticalScrollbarWidth;
         if (this.contentWidth !== newContentWidth) {
             this.contentWidth = newContentWidth;
@@ -54,7 +54,6 @@ export class BlockDecorations extends ViewPart {
         // Nothing to read
     }
     render(ctx) {
-        var _a;
         let count = 0;
         const decorations = ctx.getDecorationsInViewport();
         for (const decoration of decorations) {
@@ -79,7 +78,7 @@ export class BlockDecorations extends ViewPart {
                     ? ctx.getVerticalOffsetForLineNumber(decoration.range.startLineNumber, false)
                     : ctx.getVerticalOffsetAfterLineNumber(decoration.range.endLineNumber, true);
             }
-            const [paddingTop, paddingRight, paddingBottom, paddingLeft] = (_a = decoration.options.blockPadding) !== null && _a !== void 0 ? _a : [0, 0, 0, 0];
+            const [paddingTop, paddingRight, paddingBottom, paddingLeft] = decoration.options.blockPadding ?? [0, 0, 0, 0];
             block.setClassName('blockDecorations-block ' + decoration.options.blockClassName);
             block.setLeft(this.contentLeft - paddingLeft);
             block.setWidth(this.contentWidth + paddingLeft + paddingRight);

@@ -162,7 +162,7 @@
 </script>
 
 <script>
-    initializeSite("@Model.ErrorAccessingGist", "@fromGist", "@Request.Path", "@Request.Query["remove"]", "@Request.Query[Constants.FrontEnd.PathNotFoundRedirectQueryParameter]", "@GetType().Assembly.GetName().Version");
+    initializeSite("@Model.ErrorAccessingGist", "@fromGist", "@Request.Path", "@Request.Query["remove"]", "@Request.Query[Constants.FrontEnd.PathNotFoundRedirectQueryParameter]", "@GetType().Assembly.GetName().Version (@System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription)");
 </script>
 
 <script>

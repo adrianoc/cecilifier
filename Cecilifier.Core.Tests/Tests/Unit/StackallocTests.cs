@@ -131,6 +131,39 @@ public class StackallocTests : CecilifierUnitTestBase
     }
     
     [Test]
+    public void Test_Span_InitializedByStackallocWithSizeFromProperty()
+    {
+        var result = RunCecilifier("using System; class Foo { public static int CountProperty => 42; static void Bar(Span<int> span) {  Bar(stackalloc int[CountProperty]); } }");
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+        
+        Assert.That(cecilifiedCode, Does.Match("""
+                                               //Bar\(stackalloc int\[CountProperty\]\);
+                                               (?<ilp>\s+il_bar_\d+\.Emit\(OpCodes\.)Call, m_get_2\);
+                                               \s+var (?<span_count>l_spanElementCount_\d+) = new VariableDefinition\(assembly.MainModule.TypeSystem.Int32\);
+                                               \s+m_bar_\d+.Body\.Variables\.Add\(\k<span_count>\);
+                                               \k<ilp>Stloc, \k<span_count>\);
+                                               \k<ilp>Ldloc, \k<span_count>\);
+                                               """));
+
+    }
+    
+    [TestCase("paramCount", "Ldarg_0", TestName = "Parameter")]
+    [TestCase("localCount", @"Ldloc, l_localCount_\d+", TestName = "Local Variable")]
+    public void Test_Span_InitializedByStackallocWithSizeFromLocalVariableOrParameter(string memberToUse, string storageLoadOpCodeAndArgument)
+    {
+        var result = RunCecilifier($"using System; class Foo {{ static void Bar(int paramCount) {{ int localCount = paramCount; Span<int> span = stackalloc int[{memberToUse}]; }} }}");
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+        
+        Assert.That(cecilifiedCode, Does.Match($"""
+                                               //Span<int> span = stackalloc int\[{memberToUse}\];
+                                               \s+var (?<span_var>l_span_\d+) = new VariableDefinition\(.+ImportReference\(typeof\(System.Span<>\)\).MakeGenericInstanceType\(.+Int32\)\);
+                                               \s+m_bar_\d+\.Body.Variables.Add\(\k<span_var>\);
+                                               (?<ilp>\s+il_bar_\d+\.Emit\(OpCodes\.){storageLoadOpCodeAndArgument}\);
+                                               \k<ilp>Conv_U\);
+                                               """));
+    }
+    
+    [Test]
     public void ImplicitStackAllocInNestedExpressions()
     {
         var code = @"using System; class C { void M() => M2(stackalloc [] { 1, 2, 3}); void M2(Span<int> span) {} }";

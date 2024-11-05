@@ -4,6 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 import { StandardAutoClosingPairConditional } from '../languageConfiguration.js';
 export class CharacterPairSupport {
+    static { this.DEFAULT_AUTOCLOSE_BEFORE_LANGUAGE_DEFINED_QUOTES = ';:.,=}])> \n\t'; }
+    static { this.DEFAULT_AUTOCLOSE_BEFORE_LANGUAGE_DEFINED_BRACKETS = '\'"`;:.,=}])> \n\t'; }
     constructor(config) {
         if (config.autoClosingPairs) {
             this._autoClosingPairs = config.autoClosingPairs.map(el => new StandardAutoClosingPairConditional(el));
@@ -33,5 +35,3 @@ export class CharacterPairSupport {
         return this._surroundingPairs;
     }
 }
-CharacterPairSupport.DEFAULT_AUTOCLOSE_BEFORE_LANGUAGE_DEFINED_QUOTES = ';:.,=}])> \n\t';
-CharacterPairSupport.DEFAULT_AUTOCLOSE_BEFORE_LANGUAGE_DEFINED_BRACKETS = '\'"`;:.,=}])> \n\t';

@@ -47,7 +47,7 @@ export function parseLabelWithIcons(input) {
     while (true) {
         const pos = _parseIconsRegex.lastIndex;
         const match = _parseIconsRegex.exec(input);
-        const chars = input.substring(pos, match === null || match === void 0 ? void 0 : match.index);
+        const chars = input.substring(pos, match?.index);
         if (chars.length > 0) {
             text += chars;
             for (let i = 0; i < chars.length; i++) {

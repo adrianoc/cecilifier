@@ -14,26 +14,10 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 import * as dom from '../../../../base/browser/dom.js';
 import { ActionBar } from '../../../../base/browser/ui/actionbar/actionbar.js';
 import { DisposableStore } from '../../../../base/common/lifecycle.js';
-import { localize } from '../../../../nls.js';
-import { MenuEntryActionViewItem } from '../../../../platform/actions/browser/menuEntryActionViewItem.js';
+import { TextOnlyMenuEntryActionViewItem } from '../../../../platform/actions/browser/menuEntryActionViewItem.js';
 import { IMenuService, MenuItemAction } from '../../../../platform/actions/common/actions.js';
 import { IContextKeyService } from '../../../../platform/contextkey/common/contextkey.js';
 import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
-class StatusBarViewItem extends MenuEntryActionViewItem {
-    updateLabel() {
-        const kb = this._keybindingService.lookupKeybinding(this._action.id, this._contextKeyService);
-        if (!kb) {
-            return super.updateLabel();
-        }
-        if (this.label) {
-            this.label.textContent = localize({ key: 'content', comment: ['A label', 'A keybinding'] }, '{0} ({1})', this._action.label, StatusBarViewItem.symbolPrintEnter(kb));
-        }
-    }
-    static symbolPrintEnter(kb) {
-        var _a;
-        return (_a = kb.getLabel()) === null || _a === void 0 ? void 0 : _a.replace(/\benter\b/gi, '\u23CE');
-    }
-}
 let SuggestWidgetStatus = class SuggestWidgetStatus {
     constructor(container, _menuId, instantiationService, _menuService, _contextKeyService) {
         this._menuId = _menuId;
@@ -42,7 +26,7 @@ let SuggestWidgetStatus = class SuggestWidgetStatus {
         this._menuDisposables = new DisposableStore();
         this.element = dom.append(container, dom.$('.suggest-status-bar'));
         const actionViewItemProvider = (action => {
-            return action instanceof MenuItemAction ? instantiationService.createInstance(StatusBarViewItem, action, undefined) : undefined;
+            return action instanceof MenuItemAction ? instantiationService.createInstance(TextOnlyMenuEntryActionViewItem, action, { useComma: true }) : undefined;
         });
         this._leftActions = new ActionBar(this.element, { actionViewItemProvider });
         this._rightActions = new ActionBar(this.element, { actionViewItemProvider });

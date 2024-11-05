@@ -15,7 +15,7 @@ import * as dom from '../../../base/browser/dom.js';
 import { ActionBar } from '../../../base/browser/ui/actionbar/actionbar.js';
 import { Disposable, DisposableStore, MutableDisposable } from '../../../base/common/lifecycle.js';
 import './actionWidget.css';
-import { localize } from '../../../nls.js';
+import { localize, localize2 } from '../../../nls.js';
 import { acceptSelectedActionCommand, ActionList, previewSelectedActionCommand } from './actionList.js';
 import { Action2, registerAction2 } from '../../actions/common/actions.js';
 import { IContextKeyService, RawContextKey } from '../../contextkey/common/contextkey.js';
@@ -23,7 +23,7 @@ import { IContextViewService } from '../../contextview/browser/contextView.js';
 import { registerSingleton } from '../../instantiation/common/extensions.js';
 import { createDecorator, IInstantiationService } from '../../instantiation/common/instantiation.js';
 import { inputActiveOptionBackground, registerColor } from '../../theme/common/colorRegistry.js';
-registerColor('actionBar.toggledBackground', { dark: inputActiveOptionBackground, light: inputActiveOptionBackground, hcDark: inputActiveOptionBackground, hcLight: inputActiveOptionBackground, }, localize('actionBar.toggledBackground', 'Background color for toggled action items in action bar.'));
+registerColor('actionBar.toggledBackground', inputActiveOptionBackground, localize('actionBar.toggledBackground', 'Background color for toggled action items in action bar.'));
 const ActionWidgetContextKeys = {
     Visible: new RawContextKey('codeActionMenuVisible', false, localize('codeActionMenuVisible', "Whether the action widget list is visible"))
 };
@@ -46,7 +46,7 @@ let ActionWidgetService = class ActionWidgetService extends Disposable {
             getAnchor: () => anchor,
             render: (container) => {
                 visibleContext.set(true);
-                return this._renderWidget(container, list, actionBarActions !== null && actionBarActions !== void 0 ? actionBarActions : []);
+                return this._renderWidget(container, list, actionBarActions ?? []);
             },
             onHide: (didCancel) => {
                 visibleContext.reset();
@@ -55,24 +55,19 @@ let ActionWidgetService = class ActionWidgetService extends Disposable {
         }, container, false);
     }
     acceptSelected(preview) {
-        var _a;
-        (_a = this._list.value) === null || _a === void 0 ? void 0 : _a.acceptSelected(preview);
+        this._list.value?.acceptSelected(preview);
     }
     focusPrevious() {
-        var _a, _b;
-        (_b = (_a = this._list) === null || _a === void 0 ? void 0 : _a.value) === null || _b === void 0 ? void 0 : _b.focusPrevious();
+        this._list?.value?.focusPrevious();
     }
     focusNext() {
-        var _a, _b;
-        (_b = (_a = this._list) === null || _a === void 0 ? void 0 : _a.value) === null || _b === void 0 ? void 0 : _b.focusNext();
+        this._list?.value?.focusNext();
     }
-    hide() {
-        var _a;
-        (_a = this._list.value) === null || _a === void 0 ? void 0 : _a.hide();
+    hide(didCancel) {
+        this._list.value?.hide(didCancel);
         this._list.clear();
     }
     _renderWidget(element, list, actionBarActions) {
-        var _a;
         const widget = document.createElement('div');
         widget.classList.add('action-widget');
         element.appendChild(widget);
@@ -106,10 +101,10 @@ let ActionWidgetService = class ActionWidgetService extends Disposable {
                 actionBarWidth = actionBar.getContainer().offsetWidth;
             }
         }
-        const width = (_a = this._list.value) === null || _a === void 0 ? void 0 : _a.layout(actionBarWidth);
+        const width = this._list.value?.layout(actionBarWidth);
         widget.style.width = `${width}px`;
         const focusTracker = renderDisposables.add(dom.trackFocus(element));
-        renderDisposables.add(focusTracker.onDidBlur(() => this.hide()));
+        renderDisposables.add(focusTracker.onDidBlur(() => this.hide(true)));
         return renderDisposables;
     }
     _createActionBar(className, actions) {
@@ -122,8 +117,7 @@ let ActionWidgetService = class ActionWidgetService extends Disposable {
         return actionBar;
     }
     _onWidgetClosed(didCancel) {
-        var _a;
-        (_a = this._list.value) === null || _a === void 0 ? void 0 : _a.hide(didCancel);
+        this._list.value?.hide(didCancel);
     }
 };
 ActionWidgetService = __decorate([
@@ -137,10 +131,7 @@ registerAction2(class extends Action2 {
     constructor() {
         super({
             id: 'hideCodeActionWidget',
-            title: {
-                value: localize('hideCodeActionWidget.title', "Hide action widget"),
-                original: 'Hide action widget'
-            },
+            title: localize2('hideCodeActionWidget.title', "Hide action widget"),
             precondition: ActionWidgetContextKeys.Visible,
             keybinding: {
                 weight,
@@ -150,17 +141,14 @@ registerAction2(class extends Action2 {
         });
     }
     run(accessor) {
-        accessor.get(IActionWidgetService).hide();
+        accessor.get(IActionWidgetService).hide(true);
     }
 });
 registerAction2(class extends Action2 {
     constructor() {
         super({
             id: 'selectPrevCodeAction',
-            title: {
-                value: localize('selectPrevCodeAction.title', "Select previous action"),
-                original: 'Select previous action'
-            },
+            title: localize2('selectPrevCodeAction.title', "Select previous action"),
             precondition: ActionWidgetContextKeys.Visible,
             keybinding: {
                 weight,
@@ -181,10 +169,7 @@ registerAction2(class extends Action2 {
     constructor() {
         super({
             id: 'selectNextCodeAction',
-            title: {
-                value: localize('selectNextCodeAction.title', "Select next action"),
-                original: 'Select next action'
-            },
+            title: localize2('selectNextCodeAction.title', "Select next action"),
             precondition: ActionWidgetContextKeys.Visible,
             keybinding: {
                 weight,
@@ -205,10 +190,7 @@ registerAction2(class extends Action2 {
     constructor() {
         super({
             id: acceptSelectedActionCommand,
-            title: {
-                value: localize('acceptSelected.title', "Accept selected action"),
-                original: 'Accept selected action'
-            },
+            title: localize2('acceptSelected.title', "Accept selected action"),
             precondition: ActionWidgetContextKeys.Visible,
             keybinding: {
                 weight,
@@ -228,10 +210,7 @@ registerAction2(class extends Action2 {
     constructor() {
         super({
             id: previewSelectedActionCommand,
-            title: {
-                value: localize('previewSelected.title', "Preview selected action"),
-                original: 'Preview selected action'
-            },
+            title: localize2('previewSelected.title', "Preview selected action"),
             precondition: ActionWidgetContextKeys.Visible,
             keybinding: {
                 weight,

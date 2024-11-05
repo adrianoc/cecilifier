@@ -27,13 +27,19 @@ function toStyled(item) {
     return new LineVisibleRangesWithStyle(item.lineNumber, item.ranges.map(toStyledRange));
 }
 export class SelectionsOverlay extends DynamicViewOverlay {
+    static { this.SELECTION_CLASS_NAME = 'selected-text'; }
+    static { this.SELECTION_TOP_LEFT = 'top-left-radius'; }
+    static { this.SELECTION_BOTTOM_LEFT = 'bottom-left-radius'; }
+    static { this.SELECTION_TOP_RIGHT = 'top-right-radius'; }
+    static { this.SELECTION_BOTTOM_RIGHT = 'bottom-right-radius'; }
+    static { this.EDITOR_BACKGROUND_CLASS_NAME = 'monaco-editor-background'; }
+    static { this.ROUNDED_PIECE_WIDTH = 10; }
     constructor(context) {
         super();
         this._previousFrameVisibleRangesWithStyle = [];
         this._context = context;
         const options = this._context.configuration.options;
-        this._lineHeight = options.get(66 /* EditorOption.lineHeight */);
-        this._roundedSelection = options.get(100 /* EditorOption.roundedSelection */);
+        this._roundedSelection = options.get(102 /* EditorOption.roundedSelection */);
         this._typicalHalfwidthCharacterWidth = options.get(50 /* EditorOption.fontInfo */).typicalHalfwidthCharacterWidth;
         this._selections = [];
         this._renderResult = null;
@@ -47,8 +53,7 @@ export class SelectionsOverlay extends DynamicViewOverlay {
     // --- begin event handlers
     onConfigurationChanged(e) {
         const options = this._context.configuration.options;
-        this._lineHeight = options.get(66 /* EditorOption.lineHeight */);
-        this._roundedSelection = options.get(100 /* EditorOption.roundedSelection */);
+        this._roundedSelection = options.get(102 /* EditorOption.roundedSelection */);
         this._typicalHalfwidthCharacterWidth = options.get(50 /* EditorOption.fontInfo */).typicalHalfwidthCharacterWidth;
         return true;
     }
@@ -188,34 +193,29 @@ export class SelectionsOverlay extends DynamicViewOverlay {
         // The visible ranges are sorted TOP-BOTTOM and LEFT-RIGHT
         return linesVisibleRanges;
     }
-    _createSelectionPiece(top, height, className, left, width) {
+    _createSelectionPiece(top, bottom, className, left, width) {
         return ('<div class="cslr '
             + className
-            + '" style="top:'
-            + top.toString()
-            + 'px;left:'
-            + left.toString()
-            + 'px;width:'
-            + width.toString()
-            + 'px;height:'
-            + height
-            + 'px;"></div>');
+            + '" style="'
+            + 'top:' + top.toString() + 'px;'
+            + 'bottom:' + bottom.toString() + 'px;'
+            + 'left:' + left.toString() + 'px;'
+            + 'width:' + width.toString() + 'px;'
+            + '"></div>');
     }
     _actualRenderOneSelection(output2, visibleStartLineNumber, hasMultipleSelections, visibleRanges) {
         if (visibleRanges.length === 0) {
             return;
         }
         const visibleRangesHaveStyle = !!visibleRanges[0].ranges[0].startStyle;
-        const fullLineHeight = (this._lineHeight).toString();
-        const reducedLineHeight = (this._lineHeight - 1).toString();
         const firstLineNumber = visibleRanges[0].lineNumber;
         const lastLineNumber = visibleRanges[visibleRanges.length - 1].lineNumber;
         for (let i = 0, len = visibleRanges.length; i < len; i++) {
             const lineVisibleRanges = visibleRanges[i];
             const lineNumber = lineVisibleRanges.lineNumber;
             const lineIndex = lineNumber - visibleStartLineNumber;
-            const lineHeight = hasMultipleSelections ? (lineNumber === lastLineNumber || lineNumber === firstLineNumber ? reducedLineHeight : fullLineHeight) : fullLineHeight;
             const top = hasMultipleSelections ? (lineNumber === firstLineNumber ? 1 : 0) : 0;
+            const bottom = hasMultipleSelections ? (lineNumber !== firstLineNumber && lineNumber === lastLineNumber ? 1 : 0) : 0;
             let innerCornerOutput = '';
             let restOfSelectionOutput = '';
             for (let j = 0, lenJ = lineVisibleRanges.ranges.length; j < lenJ; j++) {
@@ -226,7 +226,7 @@ export class SelectionsOverlay extends DynamicViewOverlay {
                     if (startStyle.top === 1 /* CornerStyle.INTERN */ || startStyle.bottom === 1 /* CornerStyle.INTERN */) {
                         // Reverse rounded corner to the left
                         // First comes the selection (blue layer)
-                        innerCornerOutput += this._createSelectionPiece(top, lineHeight, SelectionsOverlay.SELECTION_CLASS_NAME, visibleRange.left - SelectionsOverlay.ROUNDED_PIECE_WIDTH, SelectionsOverlay.ROUNDED_PIECE_WIDTH);
+                        innerCornerOutput += this._createSelectionPiece(top, bottom, SelectionsOverlay.SELECTION_CLASS_NAME, visibleRange.left - SelectionsOverlay.ROUNDED_PIECE_WIDTH, SelectionsOverlay.ROUNDED_PIECE_WIDTH);
                         // Second comes the background (white layer) with inverse border radius
                         let className = SelectionsOverlay.EDITOR_BACKGROUND_CLASS_NAME;
                         if (startStyle.top === 1 /* CornerStyle.INTERN */) {
@@ -235,12 +235,12 @@ export class SelectionsOverlay extends DynamicViewOverlay {
                         if (startStyle.bottom === 1 /* CornerStyle.INTERN */) {
                             className += ' ' + SelectionsOverlay.SELECTION_BOTTOM_RIGHT;
                         }
-                        innerCornerOutput += this._createSelectionPiece(top, lineHeight, className, visibleRange.left - SelectionsOverlay.ROUNDED_PIECE_WIDTH, SelectionsOverlay.ROUNDED_PIECE_WIDTH);
+                        innerCornerOutput += this._createSelectionPiece(top, bottom, className, visibleRange.left - SelectionsOverlay.ROUNDED_PIECE_WIDTH, SelectionsOverlay.ROUNDED_PIECE_WIDTH);
                     }
                     if (endStyle.top === 1 /* CornerStyle.INTERN */ || endStyle.bottom === 1 /* CornerStyle.INTERN */) {
                         // Reverse rounded corner to the right
                         // First comes the selection (blue layer)
-                        innerCornerOutput += this._createSelectionPiece(top, lineHeight, SelectionsOverlay.SELECTION_CLASS_NAME, visibleRange.left + visibleRange.width, SelectionsOverlay.ROUNDED_PIECE_WIDTH);
+                        innerCornerOutput += this._createSelectionPiece(top, bottom, SelectionsOverlay.SELECTION_CLASS_NAME, visibleRange.left + visibleRange.width, SelectionsOverlay.ROUNDED_PIECE_WIDTH);
                         // Second comes the background (white layer) with inverse border radius
                         let className = SelectionsOverlay.EDITOR_BACKGROUND_CLASS_NAME;
                         if (endStyle.top === 1 /* CornerStyle.INTERN */) {
@@ -249,7 +249,7 @@ export class SelectionsOverlay extends DynamicViewOverlay {
                         if (endStyle.bottom === 1 /* CornerStyle.INTERN */) {
                             className += ' ' + SelectionsOverlay.SELECTION_BOTTOM_LEFT;
                         }
-                        innerCornerOutput += this._createSelectionPiece(top, lineHeight, className, visibleRange.left + visibleRange.width, SelectionsOverlay.ROUNDED_PIECE_WIDTH);
+                        innerCornerOutput += this._createSelectionPiece(top, bottom, className, visibleRange.left + visibleRange.width, SelectionsOverlay.ROUNDED_PIECE_WIDTH);
                     }
                 }
                 let className = SelectionsOverlay.SELECTION_CLASS_NAME;
@@ -269,7 +269,7 @@ export class SelectionsOverlay extends DynamicViewOverlay {
                         className += ' ' + SelectionsOverlay.SELECTION_BOTTOM_RIGHT;
                     }
                 }
-                restOfSelectionOutput += this._createSelectionPiece(top, lineHeight, className, visibleRange.left, visibleRange.width);
+                restOfSelectionOutput += this._createSelectionPiece(top, bottom, className, visibleRange.left, visibleRange.width);
             }
             output2[lineIndex][0] += innerCornerOutput;
             output2[lineIndex][1] += restOfSelectionOutput;
@@ -311,13 +311,6 @@ export class SelectionsOverlay extends DynamicViewOverlay {
         return this._renderResult[lineIndex];
     }
 }
-SelectionsOverlay.SELECTION_CLASS_NAME = 'selected-text';
-SelectionsOverlay.SELECTION_TOP_LEFT = 'top-left-radius';
-SelectionsOverlay.SELECTION_BOTTOM_LEFT = 'bottom-left-radius';
-SelectionsOverlay.SELECTION_TOP_RIGHT = 'top-right-radius';
-SelectionsOverlay.SELECTION_BOTTOM_RIGHT = 'bottom-right-radius';
-SelectionsOverlay.EDITOR_BACKGROUND_CLASS_NAME = 'monaco-editor-background';
-SelectionsOverlay.ROUNDED_PIECE_WIDTH = 10;
 registerThemingParticipant((theme, collector) => {
     const editorSelectionForegroundColor = theme.getColor(editorSelectionForeground);
     if (editorSelectionForegroundColor && !editorSelectionForegroundColor.isTransparent()) {

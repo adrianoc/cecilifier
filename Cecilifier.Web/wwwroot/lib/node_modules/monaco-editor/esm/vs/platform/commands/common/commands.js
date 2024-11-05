@@ -48,7 +48,7 @@ export const CommandsRegistry = new class {
         const ret = toDisposable(() => {
             removeFn();
             const command = this._commands.get(id);
-            if (command === null || command === void 0 ? void 0 : command.isEmpty()) {
+            if (command?.isEmpty()) {
                 this._commands.delete(id);
             }
         });

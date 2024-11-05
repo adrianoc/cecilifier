@@ -2,7 +2,7 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { $, addDisposableListener, EventType, getActiveElement, getWindow, isAncestor } from '../../../base/browser/dom.js';
+import { $, addDisposableListener, EventType, getActiveElement, getWindow, isAncestor, isHTMLElement } from '../../../base/browser/dom.js';
 import { StandardMouseEvent } from '../../../base/browser/mouseEvent.js';
 import { Menu } from '../../../base/browser/ui/menu/menu.js';
 import { ActionRunner } from '../../../base/common/actions.js';
@@ -31,14 +31,13 @@ export class ContextMenuHandler {
         }
         this.focusToReturn = getActiveElement();
         let menu;
-        const shadowRootElement = delegate.domForShadowRoot instanceof HTMLElement ? delegate.domForShadowRoot : undefined;
+        const shadowRootElement = isHTMLElement(delegate.domForShadowRoot) ? delegate.domForShadowRoot : undefined;
         this.contextViewService.showContextView({
             getAnchor: () => delegate.getAnchor(),
             canRelayout: false,
             anchorAlignment: delegate.anchorAlignment,
             anchorAxisAlignment: delegate.anchorAxisAlignment,
             render: (container) => {
-                var _a;
                 this.lastContainer = container;
                 const className = delegate.getMenuClassName ? delegate.getMenuClassName() : '';
                 if (className) {
@@ -54,7 +53,7 @@ export class ContextMenuHandler {
                     this.block.style.width = '100%';
                     this.block.style.height = '100%';
                     this.block.style.zIndex = '-1';
-                    (_a = this.blockDisposable) === null || _a === void 0 ? void 0 : _a.dispose();
+                    this.blockDisposable?.dispose();
                     this.blockDisposable = addDisposableListener(this.block, EventType.MOUSE_DOWN, e => e.stopPropagation());
                 }
                 const menuDisposables = new DisposableStore();
@@ -92,19 +91,18 @@ export class ContextMenuHandler {
                 return combinedDisposable(menuDisposables, menu);
             },
             focus: () => {
-                menu === null || menu === void 0 ? void 0 : menu.focus(!!delegate.autoSelectFirstItem);
+                menu?.focus(!!delegate.autoSelectFirstItem);
             },
             onHide: (didCancel) => {
-                var _a, _b, _c;
-                (_a = delegate.onHide) === null || _a === void 0 ? void 0 : _a.call(delegate, !!didCancel);
+                delegate.onHide?.(!!didCancel);
                 if (this.block) {
                     this.block.remove();
                     this.block = null;
                 }
-                (_b = this.blockDisposable) === null || _b === void 0 ? void 0 : _b.dispose();
+                this.blockDisposable?.dispose();
                 this.blockDisposable = null;
                 if (!!this.lastContainer && (getActiveElement() === this.lastContainer || isAncestor(getActiveElement(), this.lastContainer))) {
-                    (_c = this.focusToReturn) === null || _c === void 0 ? void 0 : _c.focus();
+                    this.focusToReturn?.focus();
                 }
                 this.lastContainer = null;
             }

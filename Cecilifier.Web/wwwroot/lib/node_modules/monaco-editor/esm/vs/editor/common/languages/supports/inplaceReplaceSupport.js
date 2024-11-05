@@ -11,6 +11,7 @@ export class BasicInplaceReplace {
             ['public', 'protected', 'private'],
         ];
     }
+    static { this.INSTANCE = new BasicInplaceReplace(); }
     navigateValueSet(range1, text1, range2, text2, up) {
         if (range1 && text1) {
             const result = this.doNavigateValueSet(text1, up);
@@ -82,4 +83,3 @@ export class BasicInplaceReplace {
         return null;
     }
 }
-BasicInplaceReplace.INSTANCE = new BasicInplaceReplace();

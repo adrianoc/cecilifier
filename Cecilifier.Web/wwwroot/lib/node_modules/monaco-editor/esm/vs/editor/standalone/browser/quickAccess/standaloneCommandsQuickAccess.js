@@ -25,7 +25,7 @@ import { EditorAction, registerEditorAction } from '../../../browser/editorExten
 import { EditorContextKeys } from '../../../common/editorContextKeys.js';
 import { IQuickInputService } from '../../../../platform/quickinput/common/quickInput.js';
 let StandaloneCommandsQuickAccessProvider = class StandaloneCommandsQuickAccessProvider extends AbstractEditorCommandsQuickAccessProvider {
-    get activeTextEditorControl() { var _a; return (_a = this.codeEditorService.getFocusedCodeEditor()) !== null && _a !== void 0 ? _a : undefined; }
+    get activeTextEditorControl() { return this.codeEditorService.getFocusedCodeEditor() ?? undefined; }
     constructor(instantiationService, codeEditorService, keybindingService, commandService, telemetryService, dialogService) {
         super({ showAlias: false }, instantiationService, keybindingService, commandService, telemetryService, dialogService);
         this.codeEditorService = codeEditorService;
@@ -50,6 +50,7 @@ StandaloneCommandsQuickAccessProvider = __decorate([
 ], StandaloneCommandsQuickAccessProvider);
 export { StandaloneCommandsQuickAccessProvider };
 export class GotoLineAction extends EditorAction {
+    static { this.ID = 'editor.action.quickCommand'; }
     constructor() {
         super({
             id: GotoLineAction.ID,
@@ -71,7 +72,6 @@ export class GotoLineAction extends EditorAction {
         accessor.get(IQuickInputService).quickAccess.show(StandaloneCommandsQuickAccessProvider.PREFIX);
     }
 }
-GotoLineAction.ID = 'editor.action.quickCommand';
 registerEditorAction(GotoLineAction);
 Registry.as(Extensions.Quickaccess).registerQuickAccessProvider({
     ctor: StandaloneCommandsQuickAccessProvider,

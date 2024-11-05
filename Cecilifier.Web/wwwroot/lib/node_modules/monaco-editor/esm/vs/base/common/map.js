@@ -13,22 +13,23 @@ function isEntries(arg) {
     return Array.isArray(arg);
 }
 export class ResourceMap {
+    static { this.defaultToKey = (resource) => resource.toString(); }
     constructor(arg, toKey) {
         this[_a] = 'ResourceMap';
         if (arg instanceof ResourceMap) {
             this.map = new Map(arg.map);
-            this.toKey = toKey !== null && toKey !== void 0 ? toKey : ResourceMap.defaultToKey;
+            this.toKey = toKey ?? ResourceMap.defaultToKey;
         }
         else if (isEntries(arg)) {
             this.map = new Map();
-            this.toKey = toKey !== null && toKey !== void 0 ? toKey : ResourceMap.defaultToKey;
+            this.toKey = toKey ?? ResourceMap.defaultToKey;
             for (const [resource, value] of arg) {
                 this.set(resource, value);
             }
         }
         else {
             this.map = new Map();
-            this.toKey = arg !== null && arg !== void 0 ? arg : ResourceMap.defaultToKey;
+            this.toKey = arg ?? ResourceMap.defaultToKey;
         }
     }
     set(resource, value) {
@@ -36,8 +37,7 @@ export class ResourceMap {
         return this;
     }
     get(resource) {
-        var _c;
-        return (_c = this.map.get(this.toKey(resource))) === null || _c === void 0 ? void 0 : _c.value;
+        return this.map.get(this.toKey(resource))?.value;
     }
     has(resource) {
         return this.map.has(this.toKey(resource));
@@ -80,7 +80,6 @@ export class ResourceMap {
         }
     }
 }
-ResourceMap.defaultToKey = (resource) => resource.toString();
 export class LinkedMap {
     constructor() {
         this[_b] = 'LinkedMap';
@@ -104,12 +103,10 @@ export class LinkedMap {
         return this._size;
     }
     get first() {
-        var _c;
-        return (_c = this._head) === null || _c === void 0 ? void 0 : _c.value;
+        return this._head?.value;
     }
     get last() {
-        var _c;
-        return (_c = this._tail) === null || _c === void 0 ? void 0 : _c.value;
+        return this._tail?.value;
     }
     has(key) {
         return this._map.has(key);
@@ -292,6 +289,28 @@ export class LinkedMap {
         }
         this._state++;
     }
+    trimNew(newSize) {
+        if (newSize >= this.size) {
+            return;
+        }
+        if (newSize === 0) {
+            this.clear();
+            return;
+        }
+        let current = this._tail;
+        let currentSize = this.size;
+        while (current && currentSize > newSize) {
+            this._map.delete(current.key);
+            current = current.previous;
+            currentSize--;
+        }
+        this._tail = current;
+        this._size = currentSize;
+        if (current) {
+            current.next = undefined;
+        }
+        this._state++;
+    }
     addItemFirst(item) {
         // First time Insert
         if (!this._head && !this._tail) {
@@ -429,7 +448,7 @@ export class LinkedMap {
         }
     }
 }
-export class LRUCache extends LinkedMap {
+class Cache extends LinkedMap {
     constructor(limit, ratio = 1) {
         super();
         this._limit = limit;
@@ -450,13 +469,25 @@ export class LRUCache extends LinkedMap {
     }
     set(key, value) {
         super.set(key, value, 2 /* Touch.AsNew */);
-        this.checkTrim();
         return this;
     }
     checkTrim() {
         if (this.size > this._limit) {
-            this.trimOld(Math.round(this._limit * this._ratio));
+            this.trim(Math.round(this._limit * this._ratio));
         }
+    }
+}
+export class LRUCache extends Cache {
+    constructor(limit, ratio = 1) {
+        super(limit, ratio);
+    }
+    trim(newSize) {
+        this.trimOld(newSize);
+    }
+    set(key, value) {
+        super.set(key, value);
+        this.checkTrim();
+        return this;
     }
 }
 /**

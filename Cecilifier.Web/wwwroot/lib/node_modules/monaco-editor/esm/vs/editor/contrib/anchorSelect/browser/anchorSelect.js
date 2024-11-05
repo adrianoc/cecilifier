@@ -22,7 +22,9 @@ import { EditorContextKeys } from '../../../common/editorContextKeys.js';
 import { localize } from '../../../../nls.js';
 import { IContextKeyService, RawContextKey } from '../../../../platform/contextkey/common/contextkey.js';
 export const SelectionAnchorSet = new RawContextKey('selectionAnchorSet', false);
-let SelectionAnchorController = SelectionAnchorController_1 = class SelectionAnchorController {
+let SelectionAnchorController = class SelectionAnchorController {
+    static { SelectionAnchorController_1 = this; }
+    static { this.ID = 'editor.contrib.selectionAnchorController'; }
     static get(editor) {
         return editor.getContribution(SelectionAnchorController_1.ID);
     }
@@ -82,7 +84,6 @@ let SelectionAnchorController = SelectionAnchorController_1 = class SelectionAnc
         this.modelChangeListener.dispose();
     }
 };
-SelectionAnchorController.ID = 'editor.contrib.selectionAnchorController';
 SelectionAnchorController = SelectionAnchorController_1 = __decorate([
     __param(1, IContextKeyService)
 ], SelectionAnchorController);
@@ -101,8 +102,7 @@ class SetSelectionAnchor extends EditorAction {
         });
     }
     async run(_accessor, editor) {
-        var _a;
-        (_a = SelectionAnchorController.get(editor)) === null || _a === void 0 ? void 0 : _a.setSelectionAnchor();
+        SelectionAnchorController.get(editor)?.setSelectionAnchor();
     }
 }
 class GoToSelectionAnchor extends EditorAction {
@@ -115,8 +115,7 @@ class GoToSelectionAnchor extends EditorAction {
         });
     }
     async run(_accessor, editor) {
-        var _a;
-        (_a = SelectionAnchorController.get(editor)) === null || _a === void 0 ? void 0 : _a.goToSelectionAnchor();
+        SelectionAnchorController.get(editor)?.goToSelectionAnchor();
     }
 }
 class SelectFromAnchorToCursor extends EditorAction {
@@ -134,8 +133,7 @@ class SelectFromAnchorToCursor extends EditorAction {
         });
     }
     async run(_accessor, editor) {
-        var _a;
-        (_a = SelectionAnchorController.get(editor)) === null || _a === void 0 ? void 0 : _a.selectFromAnchorToCursor();
+        SelectionAnchorController.get(editor)?.selectFromAnchorToCursor();
     }
 }
 class CancelSelectionAnchor extends EditorAction {
@@ -153,8 +151,7 @@ class CancelSelectionAnchor extends EditorAction {
         });
     }
     async run(_accessor, editor) {
-        var _a;
-        (_a = SelectionAnchorController.get(editor)) === null || _a === void 0 ? void 0 : _a.cancelSelectionAnchor();
+        SelectionAnchorController.get(editor)?.cancelSelectionAnchor();
     }
 }
 registerEditorContribution(SelectionAnchorController.ID, SelectionAnchorController, 4 /* EditorContributionInstantiation.Lazy */);
