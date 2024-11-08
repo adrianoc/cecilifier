@@ -11,7 +11,7 @@ public class CastTests : CecilifierUnitTestBase
     {
         var result = RunCecilifier("int UnboxIt(object o) => (int) o;");
         Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match("""
-                                                                 (il_unboxIt_\d+\.Emit\(OpCodes\.)Ldarg_1\);
+                                                                 (il_unboxIt_\d+\.Emit\(OpCodes\.)Ldarg_0\);
                                                                  \s+\1Unbox_Any, assembly.MainModule.TypeSystem.Int32\);
                                                                  """));
     }
@@ -22,7 +22,7 @@ public class CastTests : CecilifierUnitTestBase
     {
         var result = RunCecilifier($"object BoxIt(int i) => {expression};");
         Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match("""
-                                                                 (il_boxIt_\d+\.Emit\(OpCodes\.)Ldarg_1\);
+                                                                 (il_boxIt_\d+\.Emit\(OpCodes\.)Ldarg_0\);
                                                                  \s+\1Box, assembly.MainModule.TypeSystem.Int32\);
                                                                  """));
     }
