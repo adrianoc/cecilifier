@@ -30,10 +30,8 @@ namespace Cecilifier.Core.AST
                 Context.WriteComment("To make ensure local functions dont capture variables, declare them as static.");
             }
             
-            // Local functions have a well-defined list of modifiers.
-            var modifiers = SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.InternalKeyword));
-            if (methodSymbol.IsStatic)
-                modifiers = modifiers.Add(SyntaxFactory.Token(SyntaxKind.StaticKeyword));
+            // Local functions have a well defined list of modifiers.
+            var modifiers = SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.InternalKeyword), SyntaxFactory.Token(SyntaxKind.StaticKeyword));
 
             // local functions are not first class citizens wrt variable naming... handle them as methods for now.
             var localFunctionVar = Context.Naming.SyntheticVariable(node.Identifier.Text, ElementKind.Method);
