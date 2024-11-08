@@ -17,7 +17,7 @@ public class IsPatternExpressionTests : CecilifierUnitTestBase
                 @"//var r = o is string s;\s+" +
                 @"var l_r_\d+ = new VariableDefinition\(assembly.MainModule.TypeSystem.Boolean\);\s+" +
                 @"m_M_\d+.Body.Variables.Add\(l_r_\d+\);\s+" +
-                @"(il_M_\d+.Emit\(OpCodes.)Ldarg_1\);\s+" +
+                @"(il_M_\d+.Emit\(OpCodes.)Ldarg_0\);\s+" +
                 @"var (l_s_\d+) = new VariableDefinition\((.+\.String)\);\s+" +
                 @"m_M_\d+.Body.Variables.Add\(\2\);\s+" +
                 @"\1Isinst, \3\);\s+" +
@@ -38,7 +38,7 @@ public class IsPatternExpressionTests : CecilifierUnitTestBase
                 @"//var r = o is string s;\s+" +
                 @"var l_r_\d+ = new VariableDefinition\(assembly.MainModule.TypeSystem.Boolean\);\s+" +
                 @"m_M_\d+.Body.Variables.Add\(l_r_\d+\);\s+" +
-                @"(il_M_\d+.Emit\(OpCodes.)Ldarg_1\);\s+" +
+                @"(il_M_\d+.Emit\(OpCodes.)Ldarg_0\);\s+" +
                 @"\1Box, gp_T_\d+\);\s+" +
                 @"var (l_s_\d+) = new VariableDefinition\((.+\.String)\);\s+" +
                 @"m_M_\d+.Body.Variables.Add\(\2\);\s+" +
@@ -62,7 +62,7 @@ public class IsPatternExpressionTests : CecilifierUnitTestBase
         var singlePropertyExpectation = @"//var r = o is string { Length: 10 } s;\s+" +
                                         @"var (l_r_\d+) = new VariableDefinition\(assembly.MainModule.TypeSystem.Boolean\);\s+" +
                                         @"m_M_\d+.Body.Variables.Add\(\1\);\s+" +
-                                        @"(il_M_\d+).Emit\(OpCodes.Ldarg_1\);\s+" +
+                                        @"(il_M_\d+).Emit\(OpCodes.Ldarg_0\);\s+" +
                                         @"var (l_s_\d+) = new VariableDefinition\(assembly.MainModule.TypeSystem.String\);\s+" +
                                         @"m_M_\d+.Body.Variables.Add\(\3\);\s+" +
                                         @"var ldc_I4_0_\d+ = \2.Create\(OpCodes.Ldc_I4_0\);\s+" +
@@ -126,7 +126,7 @@ public class IsPatternExpressionTests : CecilifierUnitTestBase
                 //var r = o is System.Uri { Host.Length: 10 };
                 \s+var l_r_\d+ = new VariableDefinition\(assembly.MainModule.TypeSystem.Boolean\);
                 \s+m_M_\d+.Body.Variables.Add\(l_r_\d+\);
-                \s+il_M_\d+.Emit\(OpCodes.Ldarg_1\);
+                \s+il_M_\d+.Emit\(OpCodes.Ldarg_0\);
                 \s+var l_tmp_\d+ = new VariableDefinition\(assembly.MainModule.ImportReference\(typeof\(System.Uri\)\)\);
                 \s+m_M_\d+.Body.Variables.Add\(l_tmp_\d+\);
                 \s+var ldc_I4_0_\d+ = il_M_\d+.Create\(OpCodes.Ldc_I4_0\);
