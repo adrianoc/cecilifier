@@ -49,6 +49,9 @@ public class TypeDependencyCollectorTests
     [TestCase("class A { object M() => B.M(); } class B { public static M() {} }", "B,A", TestName = "In static member reference")]
     [TestCase("class A { B<int> b; } class B<T> {}", "B,A", TestName = "Closed generic type")]
     [TestCase("class A<TParent> { B<TParent> b; } class B<T> {}", "B,A", TestName = "Open generic type")]
+    [TestCase("[A] class B {} class AAttribute : System.Attribute {}", "AAttribute,B", TestName = "Attribute short syntax")]
+    [TestCase("[AAttribute] class B {} class AAttribute : System.Attribute {}", "AAttribute,B", TestName = "Attribute long syntax")]
+    [TestCase("[A<int>] class B {} class AAttribute<T> : System.Attribute {}", "AAttribute,B", TestName = "Attribute (generic) short syntax")]
     public void In_Various_Nodes(string code, string expected)
     {
         var comp = CompilationFor(code);
