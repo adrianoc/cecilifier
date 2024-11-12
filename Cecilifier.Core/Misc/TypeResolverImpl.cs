@@ -1,6 +1,4 @@
-using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.TypeSystem;
@@ -132,13 +130,13 @@ namespace Cecilifier.Core.Misc
 
         public string ResolveLocalVariableType(ITypeSymbol type)
         {
-            var containingSymbolName = type.ContainingSymbol?.FullyQualifiedName(false);
-            var found = _context.DefinitionVariables.GetVariable(type.Name, VariableMemberKind.Type, containingSymbolName).VariableName
-                        ?? _context.DefinitionVariables.GetVariable(type.Name, VariableMemberKind.TypeParameter, containingSymbolName).VariableName;
+            var containingSymbolName = type.ContainingSymbol?.OriginalDefinition.ToDisplayString();
+            var found = _context.DefinitionVariables.GetVariable(type.OriginalDefinition.ToDisplayString(), VariableMemberKind.Type, containingSymbolName).VariableName
+                        ?? _context.DefinitionVariables.GetVariable(type.OriginalDefinition.ToDisplayString(), VariableMemberKind.TypeParameter, containingSymbolName).VariableName;
 
             if (found != null && type is INamedTypeSymbol { IsGenericType: true } genericTypeSymbol)
             {
-                return MakeGenericInstanceType(found, genericTypeSymbol, null);
+                return MakeGenericInstanceType(found, genericTypeSymbol, found);
             }
 
             return found;

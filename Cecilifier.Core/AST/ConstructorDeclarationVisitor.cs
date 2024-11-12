@@ -81,26 +81,44 @@ namespace Cecilifier.Core.AST
 
         internal void DefaultCtorInjector(string typeDefVar, ClassDeclarationSyntax declaringClass, bool isStatic)
         {
-            DefaultCtorInjector(typeDefVar, declaringClass.Identifier.Text, DefaultCtorAccessibilityFor(declaringClass, isStatic), ResolveDefaultCtorFor(typeDefVar, declaringClass), isStatic, ctorBodyIL =>
+            var typeSymbol = Context.SemanticModel.GetDeclaredSymbol(declaringClass).EnsureNotNull();
+            DefaultCtorInjector(typeDefVar,  typeSymbol, DefaultCtorAccessibilityFor(declaringClass, isStatic), ResolveDefaultCtorFor(typeDefVar, declaringClass), isStatic, ctorBodyIL =>
             {
                 ProcessFieldInitialization(declaringClass, ctorBodyIL, isStatic);
             });
         }
 
+        internal void DefaultCtorInjector(string typeDefVar, INamedTypeSymbol type, string ctorAccessibility, string baseCtor, bool isStatic, Action<string> processInitializers)
+        {
+            DefaultCtorInjector(typeDefVar, type.Name, type.OriginalDefinition.ToDisplayString(), ctorAccessibility, baseCtor, isStatic, processInitializers);
+        }
+
         internal void DefaultCtorInjector(string typeDefVar, string typeName, string ctorAccessibility, string baseCtor, bool isStatic, Action<string> processInitializers)
         {
+            DefaultCtorInjector(typeDefVar, typeName, typeName, ctorAccessibility, baseCtor, isStatic, processInitializers);
+        }
+
+        /// <param name="typeDefVar"></param>
+        /// <param name="normalizedTypeName">The type name without any symbols (such as angle brackets) considered invalid in variable names</param>
+        /// <param name="typeName">The symbol original definition name. For instance the generic type Gen&lt;T&gt; has a <paramref name="typeName"/> of Gen&lt;&gt;</param>
+        /// <param name="ctorAccessibility"></param>
+        /// <param name="baseCtor"></param>
+        /// <param name="isStatic"></param>
+        /// <param name="processInitializers">Action in charge of handling constructor initializers</param>
+        private void DefaultCtorInjector(string typeDefVar, string normalizedTypeName, string typeName, string ctorAccessibility, string baseCtor, bool isStatic, Action<string> processInitializers)
+        {
             Context.WriteNewLine();
-            Context.WriteComment($"** Constructor: {typeName}() **");
+            Context.WriteComment($"** Constructor: {normalizedTypeName}() **");
 
             var ctorLocalVar = AddOrUpdateParameterlessCtorDefinition(
                 typeName,
                 ctorAccessibility,
                 isStatic,
-                Context.Naming.SyntheticVariable(typeName, isStatic ? ElementKind.StaticConstructor : ElementKind.Constructor));
+                Context.Naming.SyntheticVariable(normalizedTypeName, isStatic ? ElementKind.StaticConstructor : ElementKind.Constructor));
 
             AddCecilExpression($"{typeDefVar}.Methods.Add({ctorLocalVar});");
 
-            var ctorBodyIL = Context.Naming.ILProcessor($"ctor_{typeName}");
+            var ctorBodyIL = Context.Naming.ILProcessor($"ctor_{normalizedTypeName}");
             AddCecilExpression($"var {ctorBodyIL} = {ctorLocalVar}.Body.GetILProcessor();");
 
             processInitializers?.Invoke(ctorBodyIL);

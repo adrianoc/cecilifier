@@ -188,7 +188,7 @@ namespace Cecilifier.Core.Misc
             string typeName,
             string attrs,
             string baseTypeName,
-            string outerTypeName,
+            DefinitionVariable outerTypeVariable,
             bool isStructWithNoFields,
             IEnumerable<ITypeSymbol> interfaces,
             IEnumerable<TypeParameterSyntax> ownTypeParameters,
@@ -221,8 +221,7 @@ namespace Cecilifier.Core.Misc
                 exps.Add($"{typeVar}.Interfaces.Add(new InterfaceImplementation({context.TypeResolver.Resolve(itf)}));");
             }
 
-            var outerTypeVariable = context.DefinitionVariables.GetVariable(outerTypeName, VariableMemberKind.Type);
-            if (!string.IsNullOrEmpty(outerTypeName) && outerTypeVariable.IsValid && outerTypeVariable.VariableName != typeVar)
+            if (outerTypeVariable.IsValid && outerTypeVariable.VariableName != typeVar)
                 exps.Add($"{outerTypeVariable.VariableName}.NestedTypes.Add({typeVar});"); // type is a inner type of *context.CurrentType* 
             else
                 exps.Add($"assembly.MainModule.Types.Add({typeVar});");
@@ -238,7 +237,7 @@ namespace Cecilifier.Core.Misc
 
         private static string GenericParameter(IVisitorContext context, string typeParameterOwnerVar, string genericParamName, string genParamDefVar, ITypeParameterSymbol typeParameterSymbol)
         {
-            context.DefinitionVariables.RegisterNonMethod(typeParameterSymbol.ContainingSymbol.FullyQualifiedName(false), genericParamName, VariableMemberKind.TypeParameter, genParamDefVar);
+            context.DefinitionVariables.RegisterNonMethod(typeParameterSymbol.ContainingSymbol.ToDisplayString(), genericParamName, VariableMemberKind.TypeParameter, genParamDefVar);
             return $"var {genParamDefVar} = new Mono.Cecil.GenericParameter(\"{genericParamName}\", {typeParameterOwnerVar}){Variance(typeParameterSymbol)};";
         }
 

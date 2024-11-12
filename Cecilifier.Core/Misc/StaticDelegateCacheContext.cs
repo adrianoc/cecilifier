@@ -76,6 +76,8 @@ public struct StaticDelegateCacheContext
     private DefinitionVariable EmitCacheType(string cacheTypeName)
     {
         var cachedTypeVar = context.Naming.Type("", ElementKind.Class);
+        var outerTypeVariable = context.DefinitionVariables.GetVariable(Method.ContainingType.ToDisplayString(), VariableMemberKind.Type, Method.ContainingType.ContainingSymbol.ToDisplayString());
+
         var cacheTypeExps = CecilDefinitionsFactory.Type(
             context,
             cachedTypeVar,
@@ -83,7 +85,7 @@ public struct StaticDelegateCacheContext
             cacheTypeName,
             Constants.Cecil.StaticClassAttributes.AppendModifier("TypeAttributes.NestedPrivate"),
             context.TypeResolver.Bcl.System.Object,
-            DeclaringTypeName,
+            outerTypeVariable,
             isStructWithNoFields: false,
             Array.Empty<ITypeSymbol>(),
             [], 
