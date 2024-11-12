@@ -70,6 +70,68 @@ class Foo<TFoo> {{ }}");
                 $@"(?s)var (attr_myGeneric_1_\d+) = new CustomAttribute\(new MethodReference\((ctor_myGenericAttribute_\d+)\.Name.+\2\.ReturnType\).+DeclaringType = cls_myGenericAttribute_\d+.MakeGenericInstanceType\(.*{expectedType}\).+\);\s+" + 
                 @"cls_foo_\d+\.CustomAttributes\.Add\(\1\);"));        
     }
+    
+    [Test]
+    public void ForwardReferenceToGenericAttributeWorks()
+    {
+        var result = RunCecilifier($$"""
+                                        [MyGeneric<int>]
+                                        class Foo<TFoo> { }
+                                        {{GenericAttributeDefinition}}
+                                        """);
+        
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+        Assert.That(
+            cecilifiedCode, 
+            Does.Match("""
+                       \s+assembly\.MainModule\.Types\.Add\((?<targetType>cls_foo_\d+)\);
+                       \s+var (?<attr>attr_myGeneric_\d+_\d+) = new CustomAttribute\(.+(?<attrCtor>ctor_myGenericAttribute_\d+).Name, \k<attrCtor>.ReturnType\) {.+DeclaringType = cls_myGenericAttribute_\d+.MakeGenericInstanceType\(assembly.MainModule.TypeSystem.Int32\), .+\);
+                       \s+cls_foo_22.CustomAttributes.Add\(\k<attr>\);
+                       """));
+    }
+    
+    [Test]
+    public void ForwardReferenceToGenericAttributeWorks2()
+    {
+        var result = RunCecilifier($$"""
+                                        class Foo 
+                                        {
+                                            [MyGeneric<int>]
+                                            void M() {}
+                                        }
+                                        {{GenericAttributeDefinition}}
+                                        """);
+        
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+        Assert.That(
+            cecilifiedCode, 
+            Does.Match("""
+                       \s+var (?<m>m_M_\d+) = new MethodDefinition\("M",.+\);
+                       \s+cls_foo_\d+.Methods.Add\(\k<m>\);
+                       \s+var (?<attr>attr_myGeneric_\d+_\d+) = new CustomAttribute\(.+(?<attrCtor>ctor_myGenericAttribute_\d+).Name, \k<attrCtor>.ReturnType\) {.+DeclaringType = cls_myGenericAttribute_\d+.MakeGenericInstanceType\(assembly.MainModule.TypeSystem.Int32\), .+\);
+                       \s+\k<m>.CustomAttributes.Add\(\k<attr>\);
+                       """));
+    }
+    
+    [Test]
+    public void CyclicForwardReferenceToGenericAttributeWorks1()
+    {
+        var result = RunCecilifier("""
+                                        [MyGeneric<Foo>]
+                                        class Foo { }
+                                        
+                                        class MyGenericAttribute<T> : System.Attribute {}
+                                        """);
+        
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+        Assert.That(
+            cecilifiedCode, 
+            Does.Match("""
+                       \s+assembly\.MainModule\.Types\.Add\((?<targetType>cls_foo_\d+)\);
+                       \s+var (?<attr>attr_myGeneric_\d+_\d+) = new CustomAttribute\(.+(?<attrCtor>ctor_myGenericAttribute_\d+).Name, \k<attrCtor>.ReturnType\) {.+DeclaringType = cls_myGenericAttribute_\d+.MakeGenericInstanceType\(\k<targetType>\), .+\);
+                       \s+cls_foo_\d+.CustomAttributes.Add\(\k<attr>\);
+                       """));
+    }
 
     [TestCase("LayoutKind.Auto, Pack=1, Size=12", 1, 12)]
     [TestCase("LayoutKind.Auto, Pack=1", 1, 0)]
