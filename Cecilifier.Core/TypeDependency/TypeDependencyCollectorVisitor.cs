@@ -90,7 +90,7 @@ public class TypeDependencyCollectorVisitor : CSharpSyntaxWalker
             {
                 referenceCounter = 0; // this is the first reference found from `current type` -> type, set to 0, will increment below.
             }
-            foundDependencies[type.NameFrom()] = ++referenceCounter;
+            foundDependencies[type.NameFrom(expandAttributeName:true)] = ++referenceCounter;
         }
     }
     private DeclaredTypeTracker ProcessTypeDeclaration(BaseTypeDeclarationSyntax node)
