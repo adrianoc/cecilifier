@@ -26,13 +26,6 @@ namespace Cecilifier.Core.Tests.Integration
 
         [Test]
         [Ignore("Not Implemented yet")]
-        public void NullCoalescingTest()
-        {
-            AssertResourceTest(@"CodeBlock/Conditional/");
-        }
-
-        [Test]
-        [Ignore("Not Implemented yet")]
         public void SwitchStatementTest()
         {
             AssertResourceTest(@"CodeBlock/Conditional/");
