@@ -103,6 +103,10 @@ namespace Cecilifier.Core.Misc
 
         public void WriteCecilExpression(string expression)
         {
+            if (expression.Contains("Methods.Add"))
+            {
+                Console.WriteLine();
+            }
             CecilifiedLineNumber += expression.CountNewLines();
             output.AddLast($"{identation}{expression}");
         }

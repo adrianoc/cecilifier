@@ -739,9 +739,12 @@ namespace Cecilifier.Core.AST
             foreach (var typeParameter in typeParameters)
             {
                 var symbol = context.SemanticModel.GetDeclaredSymbol(typeParameter).EnsureNotNull();
-                var parentName = symbol.TypeParameterKind == TypeParameterKind.Method ? symbol.DeclaringMethod?.Name : symbol.DeclaringType?.Name;
-                var found = context.DefinitionVariables.GetVariable(typeParameter.Identifier.Text, VariableMemberKind.TypeParameter, parentName);
-                HandleAttributesInMemberDeclaration(context, typeParameter.AttributeLists, found.VariableName);
+                var parentName = symbol.TypeParameterKind == TypeParameterKind.Method ? symbol.DeclaringMethod?.OriginalDefinition.ToDisplayString() : symbol.DeclaringType?.OriginalDefinition.ToDisplayString();
+                var typeParamVariable = context.DefinitionVariables.GetVariable(typeParameter.Identifier.Text, VariableMemberKind.TypeParameter, parentName);
+                if (!typeParamVariable.IsValid)
+                    throw new Exception($"Failed to find variable for {symbol.ToDisplayString()}");
+                
+                HandleAttributesInMemberDeclaration(context, typeParameter.AttributeLists, typeParamVariable.VariableName);
             }
         }
 
@@ -752,7 +755,7 @@ namespace Cecilifier.Core.AST
                 var attributeType = context.SemanticModel.GetSymbolInfo(attribute).Symbol.EnsureNotNull<ISymbol, IMethodSymbol>().ContainingType;
 
                 //https://github.com/adrianoc/cecilifier/issues/311
-                TypeDeclarationVisitor.EnsureForwardedTypeDefinition(context, attributeType, Array.Empty<TypeParameterSyntax>());
+                TypeDeclarationVisitor.EnsureForwardedTypeDefinition(context, attributeType, attributeType.OriginalDefinition.TypeParameters.SelectMany(tp => tp.DeclaringSyntaxReferences).Select(dsr => (TypeParameterSyntax) dsr.GetSyntax()));
 
                 var attrsExp = attributeType.AttributeKind() switch
                     {

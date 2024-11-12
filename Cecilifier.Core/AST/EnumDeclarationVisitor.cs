@@ -31,7 +31,7 @@ namespace Cecilifier.Core.AST
             var typeDef = CecilDefinitionsFactory.Type(Context, enumType, enumSymbol.ContainingNamespace?.FullyQualifiedName(), enumSymbol.Name, attrs + " | TypeAttributes.Sealed", Context.TypeResolver.Bcl.System.Enum, enumSymbol.ContainingType?.Name,false, Array.Empty<ITypeSymbol>(), [], []);
             AddCecilExpressions(Context, typeDef);
 
-            var parentName = enumSymbol.ContainingSymbol.FullyQualifiedName();
+            var parentName = enumSymbol.ContainingSymbol.ToDisplayString();
             using (Context.DefinitionVariables.WithCurrent(parentName, enumSymbol.FullyQualifiedName(), VariableMemberKind.Type, enumType))
             {
                 //.class private auto ansi MyEnum
