@@ -103,4 +103,17 @@ public class NullableTests : CecilifierUnitTestBase
         var result = RunCecilifier(code);
         Assert.That(result.GeneratedCode.ReadToEnd(),  Does.Match(expectedSnippet));
     }
+
+    [Test]
+    public void ConstructorIsInvokedAfterCast()
+    {
+        var result = RunCecilifier("""int? M(object o) => (int) o;""");
+        Assert.That(result.GeneratedCode.ReadToEnd(),  Does.Match("""
+                                                                  \s+//\(int\) o
+                                                                  (?<emit>\s+il_M_\d+\.Emit\(OpCodes\.)Ldarg_0\);
+                                                                  \k<emit>Unbox_Any, assembly.MainModule.TypeSystem.Int32\);
+                                                                  \k<emit>Newobj,.+ImportReference\(typeof\(System.Nullable<>\)\.MakeGenericType\(typeof\(System.Int32\)\)\.GetConstructors\(\).+\);
+                                                                  \k<emit>Ret\);
+                                                                  """));
+    }
 }

@@ -8,6 +8,7 @@ using Cecilifier.Core.CodeGeneration;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Mappings;
+using Cecilifier.Core.Naming;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -48,7 +49,7 @@ namespace Cecilifier.Core.AST
         static ExpressionVisitor()
         {
             // Arithmetic operators
-            operatorHandlers[SyntaxKind.PlusToken] = new BinaryOperatorHandler((ctx, ilVar, left, right) =>
+            operatorHandlers[SyntaxKind.PlusToken] = BinaryOperatorHandler.Raw((ctx, ilVar, left, right) =>
             {
                 if (left.SpecialType == SpecialType.System_String)
                 {
@@ -61,29 +62,29 @@ namespace Cecilifier.Core.AST
                 }
             });
 
-            operatorHandlers[SyntaxKind.MinusToken] = new BinaryOperatorHandler((ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, OpCodes.Sub));
-            operatorHandlers[SyntaxKind.AsteriskToken] = new BinaryOperatorHandler((ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, OpCodes.Mul));
-            operatorHandlers[SyntaxKind.SlashToken] = new BinaryOperatorHandler((ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, OpCodes.Div));
-            operatorHandlers[SyntaxKind.PercentToken] = new BinaryOperatorHandler(HandleModulusExpression);
+            operatorHandlers[SyntaxKind.MinusToken] = BinaryOperatorHandler.Raw((ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, OpCodes.Sub));
+            operatorHandlers[SyntaxKind.AsteriskToken] = BinaryOperatorHandler.Raw((ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, OpCodes.Mul));
+            operatorHandlers[SyntaxKind.SlashToken] = BinaryOperatorHandler.Raw((ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, OpCodes.Div));
+            operatorHandlers[SyntaxKind.PercentToken] = BinaryOperatorHandler.Raw(HandleModulusExpression);
 
-            operatorHandlers[SyntaxKind.GreaterThanToken] = new BinaryOperatorHandler((ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, CompareOpCodeFor(left)));
-            operatorHandlers[SyntaxKind.GreaterThanEqualsToken] = new BinaryOperatorHandler((ctx, ilVar, left, right) =>
+            operatorHandlers[SyntaxKind.GreaterThanToken] = BinaryOperatorHandler.Raw((ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, CompareOpCodeFor(left)));
+            operatorHandlers[SyntaxKind.GreaterThanEqualsToken] = BinaryOperatorHandler.Raw((ctx, ilVar, left, right) =>
             {
                 ctx.EmitCilInstruction(ilVar, OpCodes.Clt);
                 ctx.EmitCilInstruction(ilVar, OpCodes.Ldc_I4_0);
                 ctx.EmitCilInstruction(ilVar, OpCodes.Ceq);
             });
 
-            operatorHandlers[SyntaxKind.LessThanEqualsToken] = new BinaryOperatorHandler((ctx, ilVar, left, right) =>
+            operatorHandlers[SyntaxKind.LessThanEqualsToken] = BinaryOperatorHandler.Raw((ctx, ilVar, left, right) =>
             {
                 ctx.EmitCilInstruction(ilVar, OpCodes.Cgt);
                 ctx.EmitCilInstruction(ilVar, OpCodes.Ldc_I4_0);
                 ctx.EmitCilInstruction(ilVar, OpCodes.Ceq);
             });
 
-            operatorHandlers[SyntaxKind.EqualsEqualsToken] = new BinaryOperatorHandler((ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, OpCodes.Ceq));
-            operatorHandlers[SyntaxKind.LessThanToken] = new BinaryOperatorHandler((ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, OpCodes.Clt));
-            operatorHandlers[SyntaxKind.ExclamationEqualsToken] = new BinaryOperatorHandler((ctx, ilVar, left, right) =>
+            operatorHandlers[SyntaxKind.EqualsEqualsToken] = BinaryOperatorHandler.Raw((ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, OpCodes.Ceq));
+            operatorHandlers[SyntaxKind.LessThanToken] = BinaryOperatorHandler.Raw((ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, OpCodes.Clt));
+            operatorHandlers[SyntaxKind.ExclamationEqualsToken] = BinaryOperatorHandler.Raw((ctx, ilVar, left, right) =>
             {
                 // This is not the most optimized way to handle != operator but it is generic and correct.
                 ctx.EmitCilInstruction(ilVar, OpCodes.Ceq);
@@ -92,23 +93,69 @@ namespace Cecilifier.Core.AST
             });
 
             // Bitwise Operators
-            operatorHandlers[SyntaxKind.AmpersandToken] = new BinaryOperatorHandler((ctx, ilVar, _, _) => ctx.EmitCilInstruction(ilVar, OpCodes.And));
-            operatorHandlers[SyntaxKind.BarToken] = new BinaryOperatorHandler((ctx, ilVar, _, _) => ctx.EmitCilInstruction(ilVar, OpCodes.Or));
-            operatorHandlers[SyntaxKind.CaretToken] = new BinaryOperatorHandler((ctx, ilVar, _, _) => ctx.EmitCilInstruction(ilVar, OpCodes.Xor));
-            operatorHandlers[SyntaxKind.LessThanLessThanToken] = new BinaryOperatorHandler((ctx, ilVar, _, _) => ctx.EmitCilInstruction(ilVar, OpCodes.Shl));
-            operatorHandlers[SyntaxKind.GreaterThanGreaterThanToken] = new BinaryOperatorHandler((ctx, ilVar, _, _) => ctx.EmitCilInstruction(ilVar, OpCodes.Shr));
+            operatorHandlers[SyntaxKind.AmpersandToken] = BinaryOperatorHandler.Raw((ctx, ilVar, _, _) => ctx.EmitCilInstruction(ilVar, OpCodes.And));
+            operatorHandlers[SyntaxKind.BarToken] = BinaryOperatorHandler.Raw((ctx, ilVar, _, _) => ctx.EmitCilInstruction(ilVar, OpCodes.Or));
+            operatorHandlers[SyntaxKind.CaretToken] = BinaryOperatorHandler.Raw((ctx, ilVar, _, _) => ctx.EmitCilInstruction(ilVar, OpCodes.Xor));
+            operatorHandlers[SyntaxKind.LessThanLessThanToken] = BinaryOperatorHandler.Raw((ctx, ilVar, _, _) => ctx.EmitCilInstruction(ilVar, OpCodes.Shl));
+            operatorHandlers[SyntaxKind.GreaterThanGreaterThanToken] = BinaryOperatorHandler.Raw((ctx, ilVar, _, _) => ctx.EmitCilInstruction(ilVar, OpCodes.Shr));
 
             // Logical Operators
-            operatorHandlers[SyntaxKind.AmpersandAmpersandToken] = new BinaryOperatorHandler((ctx, ilVar, _, _) => ctx.EmitCilInstruction(ilVar, OpCodes.And));
-            operatorHandlers[SyntaxKind.BarBarToken] = new BinaryOperatorHandler((ctx, ilVar, _, _) => ctx.EmitCilInstruction(ilVar, OpCodes.Or));
+            operatorHandlers[SyntaxKind.AmpersandAmpersandToken] = BinaryOperatorHandler.Raw((ctx, ilVar, _, _) => ctx.EmitCilInstruction(ilVar, OpCodes.And));
+            operatorHandlers[SyntaxKind.BarBarToken] = BinaryOperatorHandler.Raw((ctx, ilVar, _, _) => ctx.EmitCilInstruction(ilVar, OpCodes.Or));
 
-            operatorHandlers[SyntaxKind.IsKeyword] = new BinaryOperatorHandler((ctx, ilVar, _, rightType) =>
+            operatorHandlers[SyntaxKind.IsKeyword] = BinaryOperatorHandler.Raw((ctx, ilVar, _, rightType) =>
             {
                 ctx.EmitCilInstruction(ilVar, OpCodes.Isinst, ctx.TypeResolver.Resolve(rightType));
                 ctx.EmitCilInstruction(ilVar, OpCodes.Ldnull);
                 ctx.EmitCilInstruction(ilVar, OpCodes.Cgt);
             }, visitRightOperand: false); // Isinst opcode takes the type to check as a parameter (instead of taking it from the stack) so
-                                          // we must not visit the right hand side of the binary expression 
+                                          // we must not visit the right hand side of the binary expression
+
+            operatorHandlers[SyntaxKind.QuestionQuestionToken] = new BinaryOperatorHandler((ctx, ilVar, binaryExpression, expressionVisitor) =>
+            {
+                // Null coalescing operator `??`
+                var lhsType = ctx.SemanticModel.GetTypeInfo(binaryExpression.Left).Type;
+                if (SymbolEqualityComparer.Default.Equals(lhsType?.OriginalDefinition, ctx.RoslynTypeSystem.SystemNullableOfT))
+                {
+                    binaryExpression.Left.Accept(expressionVisitor);
+                    var evaluatedLeftVar = ctx.AddLocalVariableToCurrentMethod(
+                        "leftValue", 
+                        ctx.TypeResolver.Resolve(lhsType));
+                    
+                    ctx.EmitCilInstruction(ilVar, OpCodes.Stloc, evaluatedLeftVar.VariableName);
+                    ctx.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, evaluatedLeftVar.VariableName);
+                    ctx.EmitCilInstruction(ilVar, OpCodes.Call, lhsType.GetMembers("get_HasValue").OfType<IMethodSymbol>().Single().MethodResolverExpression(ctx));
+                    
+                    var loadLeftValueInst = ctx.Naming.Instruction("loadLeftValueTarget");
+                    ctx.WriteCecilExpression($"var {loadLeftValueInst} = {ilVar}.Create({OpCodes.Ldloc_S.ConstantName()}, {evaluatedLeftVar.VariableName});");
+                    ctx.WriteNewLine();
+
+                    ctx.EmitCilInstruction(ilVar, OpCodes.Brtrue_S, loadLeftValueInst);
+
+                    binaryExpression.Right.Accept(expressionVisitor);
+                    binaryExpression.Right.InjectRequiredConversions(ctx, ilVar);
+                    ctx.EmitCilInstruction(ilVar, OpCodes.Ret);
+                    ctx.WriteCecilExpression($"{ilVar}.Body.Instructions.Add({loadLeftValueInst});");
+                    ctx.WriteNewLine();
+                    // method handler will add the required ret
+                }
+                else
+                {
+                    var returnInstruction = ctx.Naming.Instruction("return");
+                    ctx.WriteCecilExpression($"var {returnInstruction} = {ilVar}.Create({OpCodes.Nop.ConstantName()});");
+                    ctx.WriteNewLine();
+
+                    binaryExpression.Left.Accept(expressionVisitor);
+                    ctx.EmitCilInstruction(ilVar, OpCodes.Dup);
+                    ctx.EmitCilInstruction(ilVar, OpCodes.Brtrue_S, returnInstruction);
+
+                    ctx.EmitCilInstruction(ilVar, OpCodes.Pop); // removes evaluated LEFT expression from stack
+                    binaryExpression.Right.Accept(expressionVisitor);
+                    binaryExpression.Right.InjectRequiredConversions(ctx, ilVar);
+                    ctx.WriteCecilExpression($"{ilVar}.Body.Instructions.Add({returnInstruction});");
+                    ctx.WriteNewLine();
+                }
+            });
         }
         
         private static OpCode CompareOpCodeFor(ITypeSymbol left)
@@ -162,7 +209,7 @@ namespace Cecilifier.Core.AST
             if (node.Expression == null)
                 return;
             node.Expression.Accept(this);
-            InjectRequiredConversions(node.Expression);
+            node.Expression.InjectRequiredConversions(Context, ilVar);
         }
 
         public override void VisitArrowExpressionClause(ArrowExpressionClauseSyntax node)
@@ -170,7 +217,7 @@ namespace Cecilifier.Core.AST
             using var _ = LineInformationTracker.Track(Context, node);
             Context.WriteComment(node.Expression.ToString());
             node.Expression.Accept(this);
-            InjectRequiredConversions(node.Expression);
+            node.Expression.InjectRequiredConversions(Context, ilVar);
         }
 
         public override void VisitInitializerExpression(InitializerExpressionSyntax node)
@@ -304,7 +351,7 @@ namespace Cecilifier.Core.AST
         {
             using var _ = LineInformationTracker.Track(Context, node);
             base.VisitEqualsValueClause(node);
-            InjectRequiredConversions(node.Value);
+            node.Value.InjectRequiredConversions(Context, ilVar);
         }
 
         public override void VisitAssignmentExpression(AssignmentExpressionSyntax node)
@@ -318,7 +365,7 @@ namespace Cecilifier.Core.AST
 
             visitor.InstructionPrecedingValueToLoad = Context.CurrentLine;
             Visit(node.Right);
-            InjectRequiredConversions(node.Right);
+            node.Right.InjectRequiredConversions(Context, ilVar);
             if (!skipLeftSideVisitingInAssignment)
             {
                 ProcessCompoundAssignmentExpression(node, visitor);
@@ -362,7 +409,7 @@ namespace Cecilifier.Core.AST
                 Context.AddCallToMethod(method, ilVar, MethodDispatchInformation.MostLikelyVirtual);
             }
             else
-                operatorHandlers[equivalentTokenKind].Process(Context, ilVar, Context.SemanticModel.GetTypeInfo(node.Left).Type, Context.SemanticModel.GetTypeInfo(node.Right).Type);
+                operatorHandlers[equivalentTokenKind].ProcessRaw(Context, ilVar, node.Left, node.Right);
         }
 
         public override void VisitBinaryExpression(BinaryExpressionSyntax node)
@@ -390,6 +437,7 @@ namespace Cecilifier.Core.AST
 
             var value = node.Token.Kind() switch
             {
+                SyntaxKind.NullKeyword => null,
                 SyntaxKind.SingleLineRawStringLiteralToken => node.Token.ValueText,
                 SyntaxKind.MultiLineRawStringLiteralToken => node.Token.ValueText, // ValueText does not includes quotes, so nothing to remove.
                 SyntaxKind.StringLiteralToken => node.Token.Text.Substring(1, node.Token.Text.Length - 2), // removes quotes because LoadLiteralValue() expects string to not be quoted.
@@ -398,6 +446,7 @@ namespace Cecilifier.Core.AST
                 _ => node.Token.Text
             };
 
+            literalType ??= Context.SemanticModel.GetTypeInfo(literalParent).Type;
             LoadLiteralValue(ilVar,
                 literalType,
                 value,
@@ -537,10 +586,11 @@ namespace Cecilifier.Core.AST
 
             base.VisitArgument(node);
 
-            InjectRequiredConversions(node.Expression, () =>
+            node.Expression.InjectRequiredConversions(Context, ilVar, () =>
             {
                 AddCecilExpression(last.Value.Replace("\t", string.Empty).Replace("\n", String.Empty));
             });
+
 
             StackallocAsArgumentFixer.Current?.StoreTopOfStackToLocalVariable(Context.SemanticModel.GetTypeInfo(node.Expression).Type);
         }
@@ -562,7 +612,7 @@ namespace Cecilifier.Core.AST
             else if (node.IsKind(SyntaxKind.UnaryMinusExpression))
             {
                 Visit(node.Operand);
-                InjectRequiredConversions(node.Operand);
+                node.Operand.InjectRequiredConversions(Context, ilVar);
                 Context.EmitCilInstruction(ilVar, OpCodes.Neg);
             }
             else if (node.IsKind(SyntaxKind.PreDecrementExpression))
@@ -794,7 +844,7 @@ namespace Cecilifier.Core.AST
                 switch (index.Kind())
                 {
                     case SyntaxKind.NumericLiteralExpression:
-                        InjectRequiredConversions(index);
+                        index.InjectRequiredConversions(Context, ilVar);
                         break;
 
                     case SyntaxKind.IndexExpression:
@@ -905,7 +955,7 @@ namespace Cecilifier.Core.AST
         public override void VisitMemberAccessExpression(MemberAccessExpressionSyntax node)
         {
             node.Expression.Accept(this);
-            InjectRequiredConversions(node.Expression);
+            node.Expression.InjectRequiredConversions(Context, ilVar);
             if (node.Parent.IsKind(SyntaxKind.InvocationExpression))
                 OnLastInstructionLoadingTargetOfInvocation();
             
@@ -923,7 +973,7 @@ namespace Cecilifier.Core.AST
             using var _ = LineInformationTracker.Track(Context, node);
             CollectionExpressionProcessor.Process(this, node);
         }
-
+        
         public override void VisitAwaitExpression(AwaitExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitTupleExpression(TupleExpressionSyntax node) => LogUnsupportedSyntax(node);
         public override void VisitSwitchExpression(SwitchExpressionSyntax node) => LogUnsupportedSyntax(node);
@@ -970,7 +1020,7 @@ namespace Cecilifier.Core.AST
         {
             using var _ = LineInformationTracker.Track(Context, operand);
             Visit(operand);
-            InjectRequiredConversions(operand);
+            operand.InjectRequiredConversions(Context, ilVar);
 
             var assignmentVisitor = new AssignmentVisitor(Context, ilVar);
 
@@ -1141,22 +1191,7 @@ namespace Cecilifier.Core.AST
         {
             using var _ = LineInformationTracker.Track(Context, node);
             var handler = OperatorHandlerFor(node.OperatorToken);
-
-            Visit(node.Left);
-            InjectRequiredConversions(node.Left);
-
-            if (handler.VisitRightOperand)
-            {
-                Visit(node.Right);
-                InjectRequiredConversions(node.Right);
-            }
-
-            handler.Process(
-                Context,
-                ilVar,
-                Context.SemanticModel.GetTypeInfo(node.Left).Type,
-                Context.SemanticModel.GetTypeInfo(node.Right).Type);
-            
+            handler.Process(Context, ilVar, node, this);
             StoreTopOfStackInLocalVariableAndReloadItIfNeeded(node);
         }
 
