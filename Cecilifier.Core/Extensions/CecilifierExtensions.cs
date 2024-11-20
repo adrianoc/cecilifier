@@ -1,9 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Text;
 using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Misc;
@@ -86,7 +84,7 @@ public class SnippetRunner
         // setup `reflection/metadata importers` to ensure references to System.Private.CoreLib are replaced with references to the correct reference assemblies`.
         var mp = new ModuleParameters
         {{
-            Architecture = TargetArchitecture.AMD64,
+            Architecture = System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture ==  System.Runtime.InteropServices.Architecture.Arm64 ? TargetArchitecture.ARM64 : TargetArchitecture.AMD64,
             Kind =  {moduleKind},
             MetadataImporterProvider = new SystemPrivateCoreLibFixerMetadataImporterProvider(),
             ReflectionImporterProvider = new SystemPrivateCoreLibFixerReflectionProvider()
