@@ -1,9 +1,9 @@
 ﻿class RefProperties
 {
-    private int field;
+    private int prop;
 	ref int Property
 	{
-		get => ref field;
+		get => ref prop;
 	}
 	
 	public ref int UseRefProperty() => ref Property;

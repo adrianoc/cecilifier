@@ -23,7 +23,7 @@ public class MemberDependencyTestBase
     protected static CSharpCompilation CompilationFor(params string[] code)
     {
         var syntaxTrees = code.Select(source => CSharpSyntaxTree.ParseText(source));
-        var comp = CSharpCompilation.Create("Test", syntaxTrees, Basic.Reference.Assemblies.Net80.References.All, new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+        var comp = CSharpCompilation.Create("Test", syntaxTrees, Basic.Reference.Assemblies.Net90.References.All, new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
         
         var errors = comp.GetDiagnostics()
             .Where(d => d.Severity == DiagnosticSeverity.Error)
