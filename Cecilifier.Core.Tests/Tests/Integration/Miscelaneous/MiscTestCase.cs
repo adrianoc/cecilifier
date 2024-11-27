@@ -9,7 +9,7 @@ namespace Cecilifier.Core.Tests.Integration
         [TestCase("Parameters")]
         [TestCase("Parameters2")]
         [TestCase("LocalVariables")]
-        [TestCase("OnFields", Ignore = "Generates invalid code. See https://github.com/adrianoc/cecilifier/issues/61")]
+        [TestCase("OnFields")]
         public void TestDelegateInvocation(string storageType)
         {
             AssertResourceTest($"Misc/DelegateInvocation_{storageType}");
