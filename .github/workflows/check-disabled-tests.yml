@@ -1,0 +1,71 @@
+name: Check disabled tests
+run-name: Checking for closing issues referenced in source at ${{ github.ref }} 🚀
+on: 
+    issues:
+      types:
+        - closed 
+jobs:
+ CheckDisabledTests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Grep for the issue 
+        run : grep -rHn -E "Test\(.*Ignore=.+#${{ github.event.issue.number }}.+\)" --include="*.cs" . > sources-referencing-closed-issues.txt && \
+              grep -rHn -E "Ignore\(.+?#${{ github.event.issue.number }}.+\)" --include="*.cs" . >> sources-referencing-closed-issues.txt && \
+              grep -rHn -E "IgnoreReason\s*=.*#${{ github.event.issue.number }}.*" --include="*.cs" . >> sources-referencing-closed-issues.txt && \
+              grep -rHn -E "SetIgnore\(.+?#${{ github.event.issue.number }}.+\)" --include="*.cs" . >> sources-referencing-closed-issues.txt || true
+      - name: Checking grep resuls
+        uses : actions/github-script@v6
+        with: 
+          script: |
+
+            function parseSourcesReferencingIssue(content, repo) {
+              const lines = content.trim().split('\n');
+
+              const splitLines = lines.map(line => {
+                const lineParts = line.split(':');
+                return `[${lineParts[0]}](${repo}/blob/main/${lineParts[0]}#L${lineParts[1]}), Line:${lineParts[1]}, Reference:${lineParts[2]}`;
+              });
+
+              return splitLines.join("<br/>");
+            }
+            
+            const fs = require('fs');
+              
+            // Read the grep results
+            const grepOutput = fs.readFileSync('./sources-referencing-closed-issues.txt', 'utf8');
+            
+            if (grepOutput) {
+              
+              const issueBody = context.payload.issue.body;
+              const issueLabels = context.payload.issue.labels.map(label => label.name);
+              const projectURL = `https://github.com/${context.repo.owner}/${context.repo.repo}`;
+              var offendingSources = parseSourcesReferencingIssue(grepOutput, projectURL);
+
+              if (issueLabels.includes("force-close")) {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.payload.issue.number,
+                  body: `:warning: The following source files contains disabled tests due to this issue but 'force-close' label was applied so issue has been closed.\n\n${offendingSources}`
+                });
+              }
+              else {
+                // Reopen the issue
+                await github.rest.issues.update({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: context.payload.issue.number,
+                    state: 'open'
+                });
+
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.payload.issue.number,
+                  body: `:warning: The following source files contains disabled tests due to this issue. Reenable them before closing the issue.\n\n${offendingSources}`
+                });
+              }
+              core.warning(grepOutput);
+            }
