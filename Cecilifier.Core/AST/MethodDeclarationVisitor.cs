@@ -96,14 +96,14 @@ namespace Cecilifier.Core.AST
             using var _ = LineInformationTracker.Track(Context, node);
             
             var containingSymbol = Context.SemanticModel.GetDeclaredSymbol(node).EnsureNotNull().ContainingSymbol;
-            var forwardedParamVar = Context.DefinitionVariables.GetVariable(node.Identifier.ValueText, VariableMemberKind.Parameter, containingSymbol.ToDisplayString());
+            var forwardedParamVar = Context.DefinitionVariables.GetVariable(node.Identifier.ValueText, VariableMemberKind.Parameter, containingSymbol.OriginalDefinition.ToDisplayString());
             if (forwardedParamVar.IsValid)
             {
                 paramVar = forwardedParamVar.VariableName;
             }
             else
             {
-                Context.DefinitionVariables.RegisterNonMethod(containingSymbol.ToDisplayString(), node.Identifier.ValueText, VariableMemberKind.Parameter, paramVar);
+                Context.DefinitionVariables.RegisterNonMethod(containingSymbol.OriginalDefinition.ToDisplayString(), node.Identifier.ValueText, VariableMemberKind.Parameter, paramVar);
                 var exps = CecilDefinitionsFactory.Parameter(Context, node, methodVar.VariableName, paramVar);
                 AddCecilExpressions(Context, exps);
             }
@@ -201,7 +201,7 @@ namespace Cecilifier.Core.AST
             var methodSymbol = Context.GetDeclaredSymbol(node);
             ProcessMethodDeclarationInternal(
                             node,
-                            methodSymbol.ContainingSymbol.Name,
+                            methodSymbol.ContainingSymbol.ToDisplayString(),
                             variableName,
                             methodSymbol,
                             node.Modifiers,

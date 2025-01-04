@@ -25,7 +25,7 @@ namespace Cecilifier.Core.AST
             using var _ = LineInformationTracker.Track(Context, node);
             var definitionVar = Context.Naming.Type(node);
             var interfaceSymbol = Context.SemanticModel.GetDeclaredSymbol(node);
-            using (Context.DefinitionVariables.WithCurrent(interfaceSymbol.ContainingSymbol.FullyQualifiedName(false), node.Identifier.ValueText, VariableMemberKind.Type, definitionVar))
+            using (Context.DefinitionVariables.WithCurrent(interfaceSymbol.ContainingSymbol.ToDisplayString(), interfaceSymbol.OriginalDefinition.ToDisplayString(), VariableMemberKind.Type, definitionVar))
             {
                 HandleTypeDeclaration(node, definitionVar);
                 ProcessMembers(node);
@@ -37,9 +37,12 @@ namespace Cecilifier.Core.AST
         {
             using var _ = LineInformationTracker.Track(Context, node);
             var definitionVar = Context.Naming.Type(node);
-            var classSymbol = Context.SemanticModel.GetDeclaredSymbol(node);
+            var classSymbol = Context.SemanticModel.GetDeclaredSymbol(node).EnsureNotNull();
+            var found = Context.DefinitionVariables.GetVariable(classSymbol.OriginalDefinition.ToDisplayString(), VariableMemberKind.Type, classSymbol.ContainingType?.OriginalDefinition.ToDisplayString());
+            if (found.IsValid && found.IsForwarded)
+                definitionVar = found.VariableName;
             
-            using (Context.DefinitionVariables.WithCurrent(classSymbol.ContainingSymbol.FullyQualifiedName(false), node.Identifier.ValueText, VariableMemberKind.Type, definitionVar))
+            using (Context.DefinitionVariables.WithCurrent(classSymbol.ContainingSymbol.OriginalDefinition.ToDisplayString(), classSymbol.OriginalDefinition.ToDisplayString(), VariableMemberKind.Type, definitionVar))
             {
                 ProcessTypeDeclaration(node, definitionVar);
             }
@@ -49,8 +52,8 @@ namespace Cecilifier.Core.AST
         {
             using var _ = LineInformationTracker.Track(Context, node);
             var definitionVar = Context.Naming.Type(node);
-            var structSymbol = Context.SemanticModel.GetDeclaredSymbol(node);
-            using (Context.DefinitionVariables.WithCurrent(structSymbol.ContainingSymbol.FullyQualifiedName(false), node.Identifier.ValueText, VariableMemberKind.Type, definitionVar))
+            var structSymbol = Context.SemanticModel.GetDeclaredSymbol(node).EnsureNotNull();
+            using (Context.DefinitionVariables.WithCurrent(structSymbol.ContainingSymbol.OriginalDefinition.ToDisplayString(), structSymbol.OriginalDefinition.ToDisplayString(), VariableMemberKind.Type, definitionVar))
             {
                 ProcessTypeDeclaration(node, definitionVar);
                 ProcessStructPseudoAttributes(definitionVar, structSymbol);
@@ -62,7 +65,7 @@ namespace Cecilifier.Core.AST
             using var _ = LineInformationTracker.Track(Context, node);
             var definitionVar = Context.Naming.Type(node);
             var recordSymbol = Context.SemanticModel.GetDeclaredSymbol(node).EnsureNotNull();
-            using var variable = Context.DefinitionVariables.WithCurrent(recordSymbol.ContainingSymbol.FullyQualifiedName(false), node.Identifier.ValueText, VariableMemberKind.Type, definitionVar);
+            using var variable = Context.DefinitionVariables.WithCurrent(recordSymbol.ContainingSymbol.ToDisplayString(), recordSymbol.OriginalDefinition.ToDisplayString(), VariableMemberKind.Type, definitionVar);
             ProcessTypeDeclaration(node, definitionVar);
             
 
@@ -135,7 +138,7 @@ namespace Cecilifier.Core.AST
         {
             var typeSymbol = DeclaredSymbolFor(node);
 
-            var found = Context.DefinitionVariables.GetVariable(typeSymbol.Name, VariableMemberKind.Type, typeSymbol.ContainingType?.Name);
+            var found = Context.DefinitionVariables.GetVariable(typeSymbol.OriginalDefinition.ToDisplayString(), VariableMemberKind.Type, typeSymbol.ContainingSymbol?.ToDisplayString());
             if (!found.IsValid || !found.IsForwarded)
             {
                 AddTypeDefinition(Context, varName, typeSymbol, TypeModifiersToCecil(typeSymbol, node.Modifiers), node.TypeParameterList?.Parameters, node.CollectOuterTypeArguments());
@@ -164,7 +167,7 @@ namespace Cecilifier.Core.AST
             if (!typeSymbol.IsDefinedInCurrentAssembly(context))
                 goto processGenerics;
 
-            var found = context.DefinitionVariables.GetVariable(typeSymbol.Name, VariableMemberKind.Type, typeSymbol.ContainingType?.FullyQualifiedName(false));
+            var found = context.DefinitionVariables.GetVariable(typeSymbol.OriginalDefinition.ToDisplayString(), VariableMemberKind.Type, typeSymbol.ContainingSymbol?.OriginalDefinition.ToDisplayString());
             if (found.IsValid)
                 goto processGenerics;
 
@@ -173,8 +176,8 @@ namespace Cecilifier.Core.AST
             AddTypeDefinition(context, typeDeclarationVar, typeSymbol, TypeModifiersToCecil((INamedTypeSymbol) typeSymbol, typeDeclaration.Modifiers), typeParameters, Array.Empty<TypeParameterSyntax>());
 
             var v = context.DefinitionVariables.RegisterNonMethod(
-                typeSymbol.ContainingSymbol?.FullyQualifiedName(false),
-                typeSymbol.Name,
+                typeSymbol.ContainingSymbol?.OriginalDefinition.ToDisplayString(),
+                typeSymbol.OriginalDefinition.ToDisplayString(),
                 VariableMemberKind.Type,
                 typeDeclarationVar);
 
@@ -197,6 +200,7 @@ namespace Cecilifier.Core.AST
 
             typeParameters ??= Array.Empty<TypeParameterSyntax>();
 
+            var outerTypeVariable = context.DefinitionVariables.GetVariable(typeSymbol.ContainingType?.ToDisplayString(), VariableMemberKind.Type, typeSymbol.ContainingType?.ContainingSymbol.ToDisplayString());
             var isStructWithNoFields = typeSymbol.TypeKind == TypeKind.Struct && typeSymbol.GetMembers().Length == 0;
             var typeDefinitionExp = CecilDefinitionsFactory.Type(
                 context,
@@ -205,7 +209,7 @@ namespace Cecilifier.Core.AST
                 typeSymbol.Name,
                 typeModifiers,
                 BaseTypeFor(context, typeSymbol),
-                typeSymbol.ContainingType?.Name,
+                outerTypeVariable,
                 isStructWithNoFields,
                 typeSymbol.Interfaces,
                 typeParameters,
@@ -290,7 +294,7 @@ namespace Cecilifier.Core.AST
             {
                 member.Accept(this);
             }
-
+            
             if ((foundConstructors & ConstructorKind.Instance) != ConstructorKind.Instance)
             {
                 new ConstructorDeclarationVisitor(context).DefaultCtorInjector(localVarName, node, false);

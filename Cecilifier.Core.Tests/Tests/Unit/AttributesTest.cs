@@ -132,6 +132,38 @@ class Foo<TFoo> {{ }}");
                        \s+cls_foo_\d+.CustomAttributes.Add\(\k<attr>\);
                        """));
     }
+    
+    [Test]
+    public void CyclicForwardReferenceToGenericAttributeWorks2()
+    {
+        var result = RunCecilifier("""
+                                        [MyGeneric<int>]
+                                        class Foo { }
+                                        
+                                        class MyGenericAttribute<T> : System.Attribute 
+                                        {
+                                            public Foo _foo;
+                                        }
+                                        """);
+        
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+        Assert.That(
+            cecilifiedCode, 
+            Does.Match("""
+                       //Class : Foo
+                       \s+var (?<appliedTo>cls_foo_\d+) = new TypeDefinition\("", "Foo",.+\);
+                       \s+assembly.MainModule.Types.Add\(\k<appliedTo>\);
+                       
+                       \s+//Class : MyGenericAttribute
+                       \s+var (?<attrType>cls_myGenericAttribute_\d+) = new TypeDefinition\("", "MyGenericAttribute`1",.+ImportReference\(typeof\(System.Attribute\)\)\);
+                       \s+var gp_T_\d+ = new Mono.Cecil.GenericParameter\("T", \k<attrType>\);
+                       \s+\k<attrType>.GenericParameters.Add\(gp_T_\d+\);
+                       \s+assembly.MainModule.Types.Add\(\k<attrType>\);
+                       \s+var ctor_myGenericAttribute_4 = new MethodDefinition\(".ctor",.+TypeSystem.Void\);
+                       \s+var (?<attrInstance>attr_myGeneric_1_\d+) = new CustomAttribute\(new MethodReference\(ctor_myGenericAttribute_4.Name, ctor_myGenericAttribute_4.ReturnType\) {.+DeclaringType = \k<attrType>.MakeGenericInstanceType\(.+Int32\).+}\);
+                       \s+\k<appliedTo>.CustomAttributes.Add\(\k<attrInstance>\);
+                       """));
+    }
 
     [TestCase("LayoutKind.Auto, Pack=1, Size=12", 1, 12)]
     [TestCase("LayoutKind.Auto, Pack=1", 1, 0)]

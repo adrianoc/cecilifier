@@ -70,12 +70,13 @@ public static class Outer
                     class Foo 
                     {
                          public FileStream file; // System.IO.FileStream since NS.FileStream is not in scope here. 
-                         public NS.FileStream definedInFooBar; 
+                         public NS.FileStream definedInNS; 
                     }");
 
             var cecilifiedCode = result.GeneratedCode.ReadToEnd();
             Assert.That(cecilifiedCode.Contains("FieldDefinition(\"file\", FieldAttributes.Public, st_fileStream_0);"), Is.False, cecilifiedCode);
-            Assert.That(cecilifiedCode.Contains("FieldDefinition(\"definedInFooBar\", FieldAttributes.Public, st_fileStream_3);"), Is.True, cecilifiedCode);
+            Assert.That(cecilifiedCode,Does.Match("""var st_fileStream_0 = new TypeDefinition\("NS", "FileStream", .+\);"""));
+            Assert.That(cecilifiedCode.Contains("FieldDefinition(\"definedInNS\", FieldAttributes.Public, st_fileStream_0);"), Is.True, cecilifiedCode);
             Assert.That(cecilifiedCode.Contains("FieldDefinition(\"file\", FieldAttributes.Public, assembly.MainModule.ImportReference(typeof(System.IO.FileStream)));"), Is.True, cecilifiedCode);
         }
 

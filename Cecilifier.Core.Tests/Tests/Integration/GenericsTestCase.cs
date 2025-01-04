@@ -26,13 +26,13 @@ namespace Cecilifier.Core.Tests.Integration
         [Test]
         public void TestGenericInferredStaticMethods()
         {
-            AssertResourceTest(@"Generics/StaticInferredMethods");
+            AssertResourceTest("Generics/StaticInferredMethods");
         }
 
         [Test]
         public void TestGenericExplicitStaticMethods()
         {
-            AssertResourceTest(@"Generics/StaticExplicitMethods");
+            AssertResourceTest("Generics/StaticExplicitMethods");
         }
 
         [Test]
