@@ -78,9 +78,12 @@ namespace Cecilifier.Core.Extensions
             // requires boxing, but for some reason, the conversion returned by GetConversion() does not reflects that. 
             static bool NeedsBoxing(IVisitorContext context, ExpressionSyntax expression, ITypeSymbol type)
             {
-                var needsBoxing = type.TypeKind == TypeKind.TypeParameter && (NeedsBoxingUsedAsTargetOfReference(context, expression) || AssignmentExpressionNeedsBoxing(context, expression, type) ||
-                                                                              TypeIsReferenceType(context, expression, type) || expression.Parent.IsArgumentPassedToReferenceTypeParameter(context, type) ||
-                                                                              expression.Parent is BinaryExpressionSyntax binaryExpressionSyntax && binaryExpressionSyntax.OperatorToken.IsKind(SyntaxKind.IsKeyword));
+                var needsBoxing = type.TypeKind == TypeKind.TypeParameter && 
+                                  (NeedsBoxingUsedAsTargetOfReference(context, expression) 
+                                   || AssignmentExpressionNeedsBoxing(context, expression, type) 
+                                   || TypeIsReferenceType(context, expression, type) 
+                                   || expression.Parent.IsArgumentPassedToReferenceTypeParameter(context, type) 
+                                   || BinaryExpressionOperandRequiresBoxing(context, expression));
                 return needsBoxing;
 
                 bool TypeIsReferenceType(IVisitorContext context, ExpressionSyntax expression, ITypeSymbol rightType)
@@ -125,7 +128,22 @@ namespace Cecilifier.Core.Extensions
                     return typeParameter.HasReferenceTypeConstraint || (typeParameter.ConstraintTypes.Length > 0 && typeParameter.ConstraintTypes.Any(candidate => candidate.TypeKind != TypeKind.Interface));
                 }
             }
-        }        
+        }
+
+        private static bool BinaryExpressionOperandRequiresBoxing(IVisitorContext context, ExpressionSyntax expression)
+        {
+            if (expression.Parent is not BinaryExpressionSyntax binaryExpressionSyntax)
+                return false;
+            
+            var left = context.SemanticModel.GetTypeInfo(binaryExpressionSyntax.Left);
+            var right = context.SemanticModel.GetTypeInfo(binaryExpressionSyntax.Right);
+
+            var leftType = left.Type ?? left.ConvertedType;
+            var rightType = right.Type ?? right.ConvertedType;
+            
+            return leftType.TypeKind == TypeKind.TypeParameter && rightType.IsReferenceType 
+                   || rightType.TypeKind == TypeKind.TypeParameter && leftType.IsReferenceType;
+        }
     }
 
     public class CustomAttributeArgumentEvaluator : CSharpSyntaxVisitor<string>
