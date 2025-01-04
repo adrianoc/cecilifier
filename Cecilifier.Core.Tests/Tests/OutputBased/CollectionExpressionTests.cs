@@ -115,9 +115,9 @@ public class CollectionExpressionTests : OutputBasedTestBase
               using System;
 
               {{targetType}} items = {{items}};
-              // We can´t use a foreach (to simplify the code) due to issue #306
+              // We can´t use a foreach (to simplify the code) due to problems
               for(var i = 0; i < {{lengthExtractor}}; i++) System.Console.Write(items[i]);
-
+              
               struct Foo
               {
                   public Foo(int i) => Value = i;
