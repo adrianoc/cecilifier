@@ -8,91 +8,91 @@ namespace Cecilifier.Core.Tests.Integration
         [Test]
         public void TestParameterAssignment()
         {
-            AssertResourceTest(@"Expressions/ParameterAssignment");
+            AssertResourceTest("Expressions/ParameterAssignment");
         }
 
         [Test]
         public void TestLocalVariableAssignment()
         {
-            AssertResourceTest(@"Expressions/LocalVariableAssignment");
+            AssertResourceTest("Expressions/LocalVariableAssignment");
         }
 
         [Test]
         public void TestMultipleLocalVariableAssignment()
         {
-            AssertResourceTestWithExplicitExpectation(@"Expressions/MultipleLocalVariableAssignment", "System.Void MultipleLocalVariableAssignment::Method(System.Int32,System.String)");
+            AssertResourceTestWithExplicitExpectation("Expressions/MultipleLocalVariableAssignment", "System.Void MultipleLocalVariableAssignment::Method(System.Int32,System.String)");
         }
 
         [Test]
         public void TestLocalVariableInitialization()
         {
-            AssertResourceTest(@"Expressions/LocalVariableInitialization");
+            AssertResourceTest("Expressions/LocalVariableInitialization");
         }
 
         [Test]
         public void TestDoubleLocalVariableInitialization()
         {
-            AssertResourceTest(@"Expressions/DoubleLocalVariableInitialization");
+            AssertResourceTest("Expressions/DoubleLocalVariableInitialization");
         }
 
         [Test]
         public void TestDoubleLocalVariableInitializationComplex()
         {
-            AssertResourceTestWithExplicitExpectation(@"Expressions/DoubleLocalVariableInitializationComplex", "System.Double DoubleLocalVariableInitializationComplex::Complex(System.Int32,System.Double)");
+            AssertResourceTestWithExplicitExpectation("Expressions/DoubleLocalVariableInitializationComplex", "System.Double DoubleLocalVariableInitializationComplex::Complex(System.Int32,System.Double)");
         }
 
         [Test]
         public void TestBox()
         {
-            AssertResourceTest(@"Expressions/Box");
+            AssertResourceTest("Expressions/Box");
         }
 
         [Test]
         public void TestAdd()
         {
-            AssertResourceTest(@"Expressions/Operators/Add");
+            AssertResourceTest("Expressions/Operators/Add");
         }
 
         [Test]
         public void TestAdd2()
         {
-            AssertResourceTestWithExplicitExpectation(@"Expressions/Operators/Add2", "System.Void AddOperations2::IntegerString(System.String,System.Int32)");
+            AssertResourceTestWithExplicitExpectation("Expressions/Operators/Add2", "System.Void AddOperations2::IntegerString(System.String,System.Int32)");
         }
 
         [Test]
         public void TestTimes()
         {
-            AssertResourceTest(@"Expressions/Operators/Times");
+            AssertResourceTest("Expressions/Operators/Times");
         }
 
         [Test]
         public void TestModulus()
         {
-            AssertResourceTest(@"Expressions/Operators/Arithmetic/Modulus");
+            AssertResourceTest("Expressions/Operators/Arithmetic/Modulus");
         }
 
         [Test]
         public void TestEquals()
         {
-            AssertResourceTest(@"Expressions/Operators/Equals");
+            AssertResourceTest("Expressions/Operators/Equals");
         }
 
         [Test]
         public void TestLessThan()
         {
-            AssertResourceTest(@"Expressions/Operators/LessThan");
+            AssertResourceTest("Expressions/Operators/LessThan");
         }
 
         [Test]
         public void TestTernaryOperator()
         {
-            AssertResourceTestBinary(@"Expressions/Operators/Ternary");
+            AssertResourceTestBinary("Expressions/Operators/Ternary");
         }
 
         [Test]
         public void TestTypeInferenceInDeclarations()
         {
-            AssertResourceTestWithExplicitExpectation(@"Expressions/TypeInferenceInDeclarations", "System.Void TypeInferenceInDeclarations::Foo()");
+            AssertResourceTestWithExplicitExpectation("Expressions/TypeInferenceInDeclarations", "System.Void TypeInferenceInDeclarations::Foo()");
         }
 
         [Test]
@@ -110,13 +110,13 @@ namespace Cecilifier.Core.Tests.Integration
         [Test]
         public void TestNewCustom()
         {
-            AssertResourceTest(@"Expressions/NewCustom");
+            AssertResourceTest("Expressions/NewCustom");
         }
 
         [Test]
         public void TestNewSingleDimensionArray()
         {
-            AssertResourceTest(@"Expressions/NewSingleDimensionArray");
+            AssertResourceTest("Expressions/NewSingleDimensionArray");
         }
 
         [TestCase("Minus")]
@@ -124,14 +124,14 @@ namespace Cecilifier.Core.Tests.Integration
         [TestCase("NotBinary")]
         public void TestUnaryExpressions(string testName)
         {
-            AssertResourceTest($@"Expressions/Operators/Unary/{testName}");
+            AssertResourceTest($"Expressions/Operators/Unary/{testName}");
         }
 
         [Test]
         public void TestIncrementDecrementExpressions([Values("Pre", "Post")] string kind, [Values("Increment", "Decrement")] string expressionType, [Values("Param", "Field", "Local", "Prop")] string memberType)
         {
             var testName = $"{kind}{expressionType}{memberType}";
-            AssertResourceTestWithExplicitExpectation($@"Expressions/Operators/Unary/{testName}", $"System.Int32 {testName}::M(System.Int32)");
+            AssertResourceTestWithExplicitExpectation($"Expressions/Operators/Unary/{testName}", $"System.Int32 {testName}::M(System.Int32)");
         }
 
         [TestCase("ArrayRead")]
@@ -140,25 +140,25 @@ namespace Cecilifier.Core.Tests.Integration
         [TestCase("PropertyWrite")]
         public void TestIndexerAccess(string prefix)
         {
-            AssertResourceTest($@"Expressions/{prefix}IndexerAccess");
+            AssertResourceTest($"Expressions/{prefix}IndexerAccess");
         }
 
         [Test]
         public void TestArrayLength()
         {
-            AssertResourceTest($@"Expressions/ArrayLength");
+            AssertResourceTest("Expressions/ArrayLength");
         }
 
         [Test]
         public void TestRangeExpression()
         {
-            AssertResourceTest(@"Expressions/RangeExpression");
+            AssertResourceTest("Expressions/RangeExpression");
         }
 
         [Test]
         public void TestIndexExpression()
         {
-            AssertResourceTestWithExplicitExpectation(@"Expressions/IndexExpression", "System.Int32 C::M(System.Int32,System.Int32[])");
+            AssertResourceTestWithExplicitExpectation("Expressions/IndexExpression", "System.Int32 C::M(System.Int32,System.Int32[])");
         }
 
         [TestCase("Parameters")]

@@ -1,10 +1,10 @@
-using System;
 using System.Text.RegularExpressions;
 using Cecilifier.Core.Tests.Framework;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.OutputBased;
 
+[TestFixture]
 public class CollectionExpressionTests : OutputBasedTestBase
 {
     [Test]
@@ -107,7 +107,7 @@ public class CollectionExpressionTests : OutputBasedTestBase
 
     void AssertConversionIsApplied(string targetType, string items, string elementType)
     {
-        var (lengthExtractor, expectedILError) = targetType == $"Span<{elementType}>" ? ("items.Length", "[ReturnPtrToStack]") : ("((ICollection) items).Count", null);
+        var (lengthExtractor, expectedILError) = targetType == $"Span<{elementType}>" ? ("items.Length", "ReturnPtrToStack") : ("((ICollection) items).Count", null);
         AssertOutput(
             $$"""
               using System.Collections.Generic;

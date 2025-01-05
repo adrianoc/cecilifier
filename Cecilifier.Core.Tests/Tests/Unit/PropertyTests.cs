@@ -56,8 +56,8 @@ public class PropertyTests : CecilifierUnitTestBase
             @"//int Value2 { get; } = M\(21\);\s+" +
             @"(il_ctor_C_17\.Emit\(OpCodes\.)Ldarg_0\);\s+" +
             @"\1Ldc_I4, 21\);\s+" +
-            @"\1Call, m_M_13\);\s+" +
-            @"\1Stfld, fld_value2_10\);"));
+            @"\1Call, m_M_7\);\s+" +
+            @"\1Stfld, fld_value2_13\);"));
     }
 
     [Test]

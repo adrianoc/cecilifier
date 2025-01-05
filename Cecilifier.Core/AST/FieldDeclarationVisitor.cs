@@ -19,6 +19,17 @@ namespace Cecilifier.Core.AST
         {
         }
 
+        public override void VisitVariableDeclarator(VariableDeclaratorSyntax node)
+        {
+            var memberDeclarationSyntax = (MemberDeclarationSyntax) node.Parent!.Parent;
+            var modifiers = memberDeclarationSyntax!.Modifiers;
+            var declaringType = memberDeclarationSyntax.ResolveDeclaringType<TypeDeclarationSyntax>();
+
+            HandleFieldDeclaration(memberDeclarationSyntax, (VariableDeclarationSyntax)node.Parent, modifiers, declaringType);
+
+            base.VisitVariableDeclarator(node);
+        }
+
         public override void VisitFieldDeclaration(FieldDeclarationSyntax node)
         {
             var variableDeclarationSyntax = node.Declaration;

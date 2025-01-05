@@ -195,7 +195,7 @@ namespace Cecilifier.Core.Misc
             IEnumerable<TypeParameterSyntax> outerTypeParameters,
             params string[] properties)
         {
-            var typeParamList = ownTypeParameters?.ToArray() ?? Array.Empty<TypeParameterSyntax>();
+            var typeParamList = ownTypeParameters?.ToArray() ?? [];
             if (typeParamList.Length > 0)
             {
                 typeName = typeName + "`" + typeParamList.Length;

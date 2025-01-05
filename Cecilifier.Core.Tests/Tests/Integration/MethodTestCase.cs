@@ -12,7 +12,7 @@ namespace Cecilifier.Core.Tests.Integration
         [Test]
         public void TestAbstractMethod()
         {
-            AssertResourceTest(@"Members/Methods/AbstractMethod");
+            AssertResourceTest("Members/Methods/AbstractMethod");
         }
 
         [Test]
@@ -24,25 +24,25 @@ namespace Cecilifier.Core.Tests.Integration
         [Test]
         public void TestDefaultCtorFromBaseClass()
         {
-            AssertResourceTest(@"Members/Methods/DefaultCtorFromBaseClass");
+            AssertResourceTest("Members/Methods/DefaultCtorFromBaseClass");
         }
 
         [Test]
         public void TestExplicityDefaultCtor()
         {
-            AssertResourceTest(@"Members/Methods/ExplicityDefaultCtor");
+            AssertResourceTest("Members/Methods/ExplicityDefaultCtor");
         }
 
         [Test]
         public void TestExternalMethodReference()
         {
-            AssertResourceTest(@"Members/Methods/ExternalMethodReference");
+            AssertResourceTest("Members/Methods/ExternalMethodReference");
         }
 
         [Test]
         public void TestInterfaceMethodVirtualImplementation()
         {
-            AssertResourceTest(@"Members/Methods/InterfaceMethodVirtualImplementation");
+            AssertResourceTest("Members/Methods/InterfaceMethodVirtualImplementation");
         }
 
         [Test]
@@ -64,67 +64,67 @@ namespace Cecilifier.Core.Tests.Integration
         [Test]
         public void TestMultipleParameters()
         {
-            AssertResourceTest(@"Members/Methods/MultipleParameters");
+            AssertResourceTest("Members/Methods/MultipleParameters");
         }
 
         [Test]
         public void TestMutuallyRecursive()
         {
-            AssertResourceTest(@"Members/Methods/MutuallyRecursive");
+            AssertResourceTest("Members/Methods/MutuallyRecursive");
         }
 
         [Test]
         public void TestNoParameters()
         {
-            AssertResourceTest(@"Members/Methods/NoParameters");
+            AssertResourceTest("Members/Methods/NoParameters");
         }
 
         [Test]
         public void TestParameterModifiers()
         {
-            AssertResourceTest(@"Members/Methods/ParameterModifiers");
+            AssertResourceTest("Members/Methods/ParameterModifiers");
         }
 
         [Test]
         public void TestRefParameters()
         {
-            AssertResourceTest(@"Members/Methods/RefParameters");
+            AssertResourceTest("Members/Methods/RefParameters");
         }
 
         [Test]
         public void TestReturnValue()
         {
-            AssertResourceTest(@"Members/Methods/ReturnValue");
+            AssertResourceTest("Members/Methods/ReturnValue");
         }
 
         [Test]
         public void TestSelfReferencingCtor()
         {
-            AssertResourceTest(@"Members/Methods/SelfRefCtor");
+            AssertResourceTest("Members/Methods/SelfRefCtor");
         }
 
         [Test]
         public void TestSingleSimpleParameter()
         {
-            AssertResourceTest(@"Members/Methods/SingleSimpleParameter");
+            AssertResourceTest("Members/Methods/SingleSimpleParameter");
         }
 
         [Test]
         public void TestTypeWithNoArgCtorAndInnerClass()
         {
-            AssertResourceTest(@"Members/Methods/TypeWithNoArgCtorAndInnerClass");
+            AssertResourceTest("Members/Methods/TypeWithNoArgCtorAndInnerClass");
         }
 
         [Test]
         public void TestVariableNumberOfParameters()
         {
-            AssertResourceTest(@"Members/Methods/VariableNumberOfParameters");
+            AssertResourceTest("Members/Methods/VariableNumberOfParameters");
         }
 
         [Test]
         public void TestVirtualMethod()
         {
-            AssertResourceTest(@"Members/Methods/VirtualMethod");
+            AssertResourceTest("Members/Methods/VirtualMethod");
         }
 
         [Test]

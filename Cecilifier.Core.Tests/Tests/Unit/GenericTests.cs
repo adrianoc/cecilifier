@@ -94,7 +94,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
         [Test]
         public void Issue_169_ReferenceToForwardedMethodContainingGenericParameters()
         {
-            var code = @"class Foo<T> { void Bar(T t) { M(t); } T M(T t) { T tl = t; t = tl; return t; } }";
+            var code = "class Foo<T> { void Bar(T t) { M(t); } T M(T t) { T tl = t; t = tl; return t; } }";
             var result = RunCecilifier(code);
 
             var cecilifiedCode = result.GeneratedCode.ReadToEnd();
@@ -102,17 +102,19 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             Assert.That(
                 cecilifiedCode,
                 Does.Match(
-                    @"var m_M_5 = new MethodDefinition\(""M"", MethodAttributes.Private, assembly.MainModule.TypeSystem.Void\);\s+" +
-                    @"m_M_5.ReturnType = gp_T_1;\s+" +
-                    @"var p_t_6 = new ParameterDefinition\(""t"", ParameterAttributes.None, gp_T_1\);\s+" +
-                    @"m_M_5.Parameters.Add\(p_t_6\);\s+" +
-                    @"il_bar_3.Emit\(OpCodes.Ldarg_1\);\s+" +
-                    @"var r_M_7 = new MethodReference\(m_M_5.Name, m_M_5.ReturnType\).+;"));
+                    @"var m_M_2 = new MethodDefinition\(""M"", MethodAttributes.Private \| MethodAttributes.HideBySig, assembly.MainModule.TypeSystem.Void\);\s+" +
+                    @"m_M_2.ReturnType = gp_T_1;\s+" +
+                    @"cls_foo_0.Methods.Add\(m_M_2\);\s+" +
+                    @"m_M_2.Body.InitLocals = true;\s+" +
+                    @"var il_M_3 = m_M_2.Body.GetILProcessor\(\);\s+" + 
+                    @"//Parameters of 'T M\(T t\) { T tl = t; t = tl; return t; }'\s+" + 
+                    @"var p_t_4 = new ParameterDefinition\(""t"", ParameterAttributes.None, gp_T_1\);\s+" +
+                    @"m_M_2.Parameters.Add\(p_t_4\);\s+"));
 
             Assert.That(cecilifiedCode, Does.Match("""
                                                    //t = tl;
-                                                   \s+il_M_9.Emit\(OpCodes.Ldloc, l_tl_\d+\);
-                                                   \s+il_M_9.Emit\(OpCodes.Starg_S, p_t_\d+\);
+                                                   \s+il_M_3.Emit\(OpCodes.Ldloc, l_tl_\d+\);
+                                                   \s+il_M_3.Emit\(OpCodes.Starg_S, p_t_\d+\);
                                                    """)); // t = tl; ensures that the forwarded parameters has been used in M()'s implementation
         }
 
@@ -123,7 +125,24 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             var result = RunCecilifier(code);
             var cecilifiedCode = result.GeneratedCode.ReadToEnd();
 
-            Assert.That(cecilifiedCode, Does.Match(@"il_M_\d+.Emit\(OpCodes.Call, .+ImportReference\(typeof\(System\.Activator\)\)\.MakeGenericInstanceType\(gp_T_\d+\)\);"));
+            Assert.That(
+                cecilifiedCode, 
+                Does.Match("""
+                           //new T\(\)
+                           \s+var r_createInstance_4 = new MethodReference\("CreateInstance", .+TypeSystem.Void, .+ImportReference\(typeof\(System.Activator\)\)\)
+                           \s+{
+                           \s+HasThis = false,
+                           \s+ExplicitThis = false,
+                           \s+CallingConvention = 0,
+                           \s+};
+                           \s+var gi_T_5 = new GenericParameter\("T", r_createInstance_4\);
+                           \s+r_createInstance_4.GenericParameters.Add\(gi_T_5\);
+                           \s+r_createInstance_4.ReturnType = gi_T_5;
+                           \s+var gi_createInstance_6 = new GenericInstanceMethod\(r_createInstance_4\);
+                           \s+gi_createInstance_6.GenericArguments.Add\(gp_T_\d+\);
+                           \s+il_M_3.Emit\(OpCodes.Call, gi_createInstance_6\);
+                           """));
+            
             Assert.That(cecilifiedCode, Does.Match(@"m_M_\d+\.ReturnType = gp_T_\d+;"));
         }
 
@@ -628,16 +647,16 @@ namespace Cecilifier.Core.Tests.Tests.Unit
                 new TestCaseData("class Inner { void M<T>() => M<T>(); }", """
                                                               \s+//Method : M
                                                               \s+var (?<overload>m_M_\d+) = new MethodDefinition\("M",.+\);
-                                                              \s+var gp_T_6 = new Mono.Cecil.GenericParameter\("T", \k<overload>\);
-                                                              \s+\k<overload>.GenericParameters.Add\(gp_T_6\);
+                                                              \s+var gp_T_3 = new Mono.Cecil.GenericParameter\("T", \k<overload>\);
+                                                              \s+\k<overload>.GenericParameters.Add\(gp_T_3\);
                                                               \s+cls_inner_\d+.Methods.Add\(\k<overload>\);
                                                               \s+\k<overload>.Body.InitLocals = true;
-                                                              \s+var il_M_7 = \k<overload>.Body.GetILProcessor\(\);
+                                                              \s+var il_M_4 = \k<overload>.Body.GetILProcessor\(\);
                                                               \s+//M<T>\(\)
-                                                              \s+il_M_7.Emit\(OpCodes.Ldarg_0\);
+                                                              \s+il_M_4.Emit\(OpCodes.Ldarg_0\);
                                                               \s+var (?<gen_method>gi_M_\d+) = new GenericInstanceMethod\(\k<overload>\);
-                                                              \s+\k<gen_method>.GenericArguments.Add\(gp_T_6\);
-                                                              \s+il_M_7.Emit\(OpCodes.Call, \k<gen_method>\)
+                                                              \s+\k<gen_method>.GenericArguments.Add\(gp_T_3\);
+                                                              \s+il_M_4.Emit\(OpCodes.Call, \k<gen_method>\)
                                                               """)
                     .SetName("Inner Generic - Calls inner"),
             ];

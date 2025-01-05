@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Cecilifier.Core.AST.MemberDependencies;
 using Cecilifier.Core.CodeGeneration;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
@@ -27,6 +28,7 @@ namespace Cecilifier.Core.AST
             using (Context.DefinitionVariables.WithCurrent(interfaceSymbol.ContainingSymbol.FullyQualifiedName(false), node.Identifier.ValueText, VariableMemberKind.Type, definitionVar))
             {
                 HandleTypeDeclaration(node, definitionVar);
+                ProcessMembers(node);
                 base.VisitInterfaceDeclaration(node);
             }
         }
@@ -36,11 +38,10 @@ namespace Cecilifier.Core.AST
             using var _ = LineInformationTracker.Track(Context, node);
             var definitionVar = Context.Naming.Type(node);
             var classSymbol = Context.SemanticModel.GetDeclaredSymbol(node);
+            
             using (Context.DefinitionVariables.WithCurrent(classSymbol.ContainingSymbol.FullyQualifiedName(false), node.Identifier.ValueText, VariableMemberKind.Type, definitionVar))
             {
-                HandleTypeDeclaration(node, definitionVar);
-                base.VisitClassDeclaration(node);
-                EnsureCurrentTypeHasADefaultCtor(node, definitionVar);
+                ProcessTypeDeclaration(node, definitionVar);
             }
         }
 
@@ -51,10 +52,8 @@ namespace Cecilifier.Core.AST
             var structSymbol = Context.SemanticModel.GetDeclaredSymbol(node);
             using (Context.DefinitionVariables.WithCurrent(structSymbol.ContainingSymbol.FullyQualifiedName(false), node.Identifier.ValueText, VariableMemberKind.Type, definitionVar))
             {
-                HandleTypeDeclaration(node, definitionVar);
+                ProcessTypeDeclaration(node, definitionVar);
                 ProcessStructPseudoAttributes(definitionVar, structSymbol);
-                base.VisitStructDeclaration(node);
-                EnsureCurrentTypeHasADefaultCtor(node, definitionVar);
             }
         }
 
@@ -64,8 +63,8 @@ namespace Cecilifier.Core.AST
             var definitionVar = Context.Naming.Type(node);
             var recordSymbol = Context.SemanticModel.GetDeclaredSymbol(node).EnsureNotNull();
             using var variable = Context.DefinitionVariables.WithCurrent(recordSymbol.ContainingSymbol.FullyQualifiedName(false), node.Identifier.ValueText, VariableMemberKind.Type, definitionVar);
-            HandleTypeDeclaration(node, definitionVar);
-            base.VisitRecordDeclaration(node);
+            ProcessTypeDeclaration(node, definitionVar);
+            
 
             RecordGenerator generator = new(Context, definitionVar, node);
             generator.AddNullabilityAttributesToTypeDefinition(definitionVar);
@@ -78,55 +77,54 @@ namespace Cecilifier.Core.AST
             node.Accept(new EnumDeclarationVisitor(Context));
         }
 
-        public override void VisitFieldDeclaration(FieldDeclarationSyntax node)
+        void ProcessTypeDeclaration(TypeDeclarationSyntax node, string definitionVar)
         {
-            using var _ = LineInformationTracker.Track(Context, node);
-            new FieldDeclarationVisitor(Context).Visit(node);
+            HandleTypeDeclaration(node, definitionVar);
+            foreach (var innerType in node.Members.OfType<BaseTypeDeclarationSyntax>())
+            {
+                innerType.Accept(this);
+            }
+            ProcessMembers(node);
+            EnsureCurrentTypeHasADefaultCtor(node, definitionVar);
         }
-
-        public override void VisitIndexerDeclaration(IndexerDeclarationSyntax node)
+        
+        /// <summary>
+        /// In order to generate more readable cecilified code, sort a type's members
+        /// by dependency and process then so any referenced members have a higher
+        /// chance to be handled before the referrer.
+        ///
+        /// For instance, given the type:
+        /// <code>
+        /// class Foo
+        /// {
+        ///     void M1() { M2(); }
+        ///     void M2() {}
+        /// }
+        /// </code>
+        /// process M2() and M1() in this order.
+        ///
+        /// If we don´t sort and rely on the order the members appears in the code
+        /// then the order of processing would be M1() and then M2(); the problem
+        /// with that is since M1() has a call (reference) to M2() while generating
+        /// M1() body's Cecilifier would emmit the code to include a <see cref="Mono.Cecil.MethodDefinition"/>
+        /// for M2() and then, after finishing the code for M1() emit the rest of
+        /// M2() method. Mixing code related to members like this turns the code
+        /// harder to reason about.
+        ///
+        /// </summary>
+        /// <param name="node">Type declaration node with members to be visited</param>
+        private void ProcessMembers(TypeDeclarationSyntax node)
         {
-            using var _ = LineInformationTracker.Track(Context, node);
-            new PropertyDeclarationVisitor(Context).Visit(node);
-        }
+            var depCollector = new MemberDependencyCollector<MemberDependency>();
+            var members  = depCollector.Process(node, Context.SemanticModel);
 
-        public override void VisitPropertyDeclaration(PropertyDeclarationSyntax node)
-        {
-            using var _ = LineInformationTracker.Track(Context, node);
-            new PropertyDeclarationVisitor(Context).Visit(node);
+            var visitor = new ForwardMemberReferenceAvoidanceVisitor(new MemberDeclarationVisitor(Context));
+            foreach (var member in members)
+            {
+                member.Accept(visitor);
+            }
         }
-
-        public override void VisitConstructorDeclaration(ConstructorDeclarationSyntax node)
-        {
-            using var _ = LineInformationTracker.Track(Context, node);
-            new ConstructorDeclarationVisitor(Context).Visit(node);
-        }
-
-        public override void VisitMethodDeclaration(MethodDeclarationSyntax node)
-        {
-            new MethodDeclarationVisitor(Context).Visit(node);
-        }
-
-        public override void VisitConversionOperatorDeclaration(ConversionOperatorDeclarationSyntax node)
-        {
-            new ConversionOperatorDeclarationVisitor(Context).Visit(node);
-        }
-
-        public override void VisitOperatorDeclaration(OperatorDeclarationSyntax node)
-        {
-            new ConversionOperatorDeclarationVisitor(Context).Visit(node);
-        }
-
-        public override void VisitEventDeclaration(EventDeclarationSyntax node)
-        {
-            new EventDeclarationVisitor(Context).Visit(node);
-        }
-
-        public override void VisitEventFieldDeclaration(EventFieldDeclarationSyntax node)
-        {
-            new EventDeclarationVisitor(Context).Visit(node);
-        }
-
+        
         private string ProcessBase(TypeDeclarationSyntax classDeclaration)
         {
             var classSymbol = DeclaredSymbolFor(classDeclaration);
@@ -170,7 +168,7 @@ namespace Cecilifier.Core.AST
             if (found.IsValid)
                 goto processGenerics;
 
-            var typeDeclaration = (BaseTypeDeclarationSyntax) typeSymbol.DeclaringSyntaxReferences.First().GetSyntax();
+            var typeDeclaration = (MemberDeclarationSyntax) typeSymbol.DeclaringSyntaxReferences.First().GetSyntax();
             var typeDeclarationVar = context.Naming.Type(typeSymbol.Name, typeSymbol.TypeKind.ToElementKind());
             AddTypeDefinition(context, typeDeclarationVar, typeSymbol, TypeModifiersToCecil((INamedTypeSymbol) typeSymbol, typeDeclaration.Modifiers), typeParameters, Array.Empty<TypeParameterSyntax>());
 
