@@ -553,6 +553,23 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             Assert.That(cecilifiedCode, Does.Match(expectedIL));
         }
 
+        [Test]
+        public void MemberAccess_OnArraysOfGenericType_EmitsReadonlyPrefixBeforeLdelema()
+        {
+            var result = RunCecilifier("string M<T>(T[] array) => array[0].ToString();");
+
+            var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+            Assert.That(cecilifiedCode, Does.Match("""
+                                                                \s+//array\[0\].ToString\(\)
+                                                                (?<prefix>\s+il_M_\d+\.Emit\(OpCodes\.)Ldarg_0\);
+                                                                \k<prefix>Ldc_I4, 0\);
+                                                                \k<prefix>Readonly\);
+                                                                \k<prefix>Ldelema, gp_T_7\);
+                                                                \k<prefix>Constrained, gp_T_7\);
+                                                                \k<prefix>Callvirt, .+ImportReference\(.+"ToString".+\)\)\);
+                                                                """));
+        }
+
         [TestCaseSource(nameof(Scenarios))]
         public void GenericMethod_Overloads(string snippet, string expectedIL)
         {
