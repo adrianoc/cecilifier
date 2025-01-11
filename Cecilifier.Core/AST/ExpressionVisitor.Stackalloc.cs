@@ -69,8 +69,8 @@ partial class ExpressionVisitor
         var stackallocSpanAssignmentTracker = new StackallocSpanAssignmentTracker(node, Context);
 
         var arrayElementTypeSize = arrayElementType.Type.IsPrimitiveType()
-            ? arrayElementType.Type.SizeofArrayLikeItemElement()
-            : uint.MaxValue; // this means the size of the elements need to be calculated at runtime... 
+            ? arrayElementType.Type.SizeofPrimitiveType()
+            : int.MaxValue; // this means the size of the elements need to be calculated at runtime... 
 
         var resolvedElementType = ResolveType(arrayType.ElementType);
         if (rankNode.IsKind(SyntaxKind.NumericLiteralExpression) && arrayElementType.Type.IsPrimitiveType())
@@ -120,8 +120,12 @@ partial class ExpressionVisitor
     private void EmitOptimizedInitialization(InitializerExpressionSyntax node, TypeInfo typeInfo)
     {
         var arrayType = (typeInfo.Type ?? typeInfo.ConvertedType).ElementTypeSymbolOf();
-        var sizeInBytes = arrayType.SizeofArrayLikeItemElement() * node.Expressions.Count;
-        var fieldWithRawData = PrivateImplementationDetailsGenerator.GetOrCreateInitializationBackingFieldVariableName(Context, sizeInBytes, arrayType.Name, $"stackalloc {arrayType.Name}[] {node.ToFullString()}");
+        var sizeInBytes = arrayType.SizeofPrimitiveType() * node.Expressions.Count;
+        var fieldWithRawData = PrivateImplementationDetailsGenerator.GetOrCreateInitializationBackingFieldVariableName(
+                                                    Context, 
+                                                    arrayType.SizeofPrimitiveType(), 
+                                                    node.Expressions.Select(item => item.DescendantNodesAndSelf().OfType<LiteralExpressionSyntax>().Single().Token.ValueText).ToArray(),
+                                                    StringToSpanOfBytesConverters.For(arrayType.FullyQualifiedName()));
         
         Context.WriteNewLine();
         Context.WriteComment($"duplicates the top of the stack (the newly `stackalloced` buffer) and initialize it from the raw buffer ({fieldWithRawData}).");
@@ -136,8 +140,8 @@ partial class ExpressionVisitor
     private void EmitSlowInitialization(InitializerExpressionSyntax node, TypeInfo typeInfo)
     {
         var arrayType = typeInfo.Type ?? typeInfo.ConvertedType;
-        uint elementTypeSize = arrayType.SizeofArrayLikeItemElement();
-        uint offset = 0;
+        int elementTypeSize = arrayType.SizeofPrimitiveType();
+        int offset = 0;
 
         foreach (var exp in node.Expressions)
         {

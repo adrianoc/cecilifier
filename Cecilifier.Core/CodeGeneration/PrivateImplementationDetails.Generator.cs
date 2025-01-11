@@ -1,7 +1,12 @@
 using System;
+using System.Buffers;
+using System.Buffers.Binary;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Numerics;
 using System.Security.Cryptography;
+using System.Text;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
@@ -259,11 +264,18 @@ internal partial class PrivateImplementationDetailsGenerator
 
         return spanTypeParameter.VariableName;
     }
-    
-    internal static string GetOrCreateInitializationBackingFieldVariableName(IVisitorContext context, long sizeInBytes, string arrayElementTypeName, string initializationExpression)
+
+    internal static string GetOrCreateInitializationBackingFieldVariableName(IVisitorContext context, int elementSizeInBytes, IList<string> elements, SpanAction<byte, string> converter)
     {
-        Span<byte> toBeHashed = stackalloc byte[System.Text.Encoding.UTF8.GetByteCount(initializationExpression)];
-        System.Text.Encoding.UTF8.GetBytes(initializationExpression, toBeHashed);
+        var bufferSize = elementSizeInBytes * elements.Count;
+        byte[] toReturn = null;
+        var toBeHashed = bufferSize <= Constants.MaxStackAlloc ? stackalloc byte[bufferSize] : toReturn = ArrayPool<byte>.Shared.Rent(bufferSize);
+        Span<byte> target = toBeHashed;
+        foreach (var element in elements)
+        {
+            converter(target, element);
+            target = target.Slice(elementSizeInBytes);
+        }
         
         Span<byte> hash = stackalloc byte[SHA256.HashSizeInBytes];
         SHA256.HashData(toBeHashed, hash);
@@ -274,7 +286,7 @@ internal partial class PrivateImplementationDetailsGenerator
             return found.VariableName;
         
         var privateImplementationDetailsVar = GetOrCreatePrivateImplementationDetailsTypeVariable(context);
-        var rawDataTypeVar = GetOrCreateRawDataType(context, sizeInBytes);
+        var rawDataTypeVar = GetOrCreateRawDataType(context, bufferSize);
         
         // Add a field to hold the static initialization data.
         //
@@ -292,12 +304,23 @@ internal partial class PrivateImplementationDetailsGenerator
                                                                 rawDataTypeVar,
                                                                 Constants.CompilerGeneratedTypes.StaticArrayInitFieldModifiers);
         context.WriteCecilExpressions(fieldExpressions);
-        context.WriteCecilExpression($"{fieldVar}.InitialValue = Cecilifier.Runtime.TypeHelpers.ToByteArray<{arrayElementTypeName}>({initializationExpression});");
+        var initializationByteArrayAsString = new StringBuilder();
+        foreach (var itemValue in toBeHashed)
+        {
+            initializationByteArrayAsString.Append($"0x{itemValue:x2},");
+        }
+        
+        context.WriteCecilExpression($"{fieldVar}.InitialValue = [ { initializationByteArrayAsString } ];");
         context.WriteNewLine();
+
+        if (toReturn is not null)
+        {
+            ArrayPool<byte>.Shared.Return(toReturn);
+        }
 
         return context.DefinitionVariables.GetVariable(fieldName, VariableMemberKind.Field, Constants.CompilerGeneratedTypes.PrivateImplementationDetails);
     }
-
+    
     private static string GetOrCreateRawDataType(IVisitorContext context, long sizeInBytes)
     {
         if (sizeInBytes == sizeof(int))

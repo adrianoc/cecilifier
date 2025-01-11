@@ -5,6 +5,7 @@ using Mono.Cecil.Cil;
 
 using Cecilifier.Core.CodeGeneration;
 using Cecilifier.Core.Extensions;
+using Cecilifier.Core.Misc;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Operations;
 
@@ -60,11 +61,12 @@ public class ArrayInitializationProcessor
         //IL_0007: ldtoken field valuetype '<PrivateImplementationDetails>'/'__StaticArrayInitTypeSize=24' '<PrivateImplementationDetails>'::'5BC33F8E8CDE3A32E1CF1EE1B1771AC0400514A8675FC99966FCAE1E8184FDFE'
         //IL_000c: call void [System.Runtime]System.Runtime.CompilerServices.RuntimeHelpers::InitializeArray(class [System.Runtime]System.Array, valuetype [System.Runtime]System.RuntimeFieldHandle)
         //IL_0011: pop
+
         var backingFieldVar = PrivateImplementationDetailsGenerator.GetOrCreateInitializationBackingFieldVariableName(
             context,
-            elementType.SizeofArrayLikeItemElement() * elements.Count,
-            elementType.Name,
-            $"new {elementType.Name}[] {{ {elements.ToFullString()}}}");
+            elementType.SizeofPrimitiveType(),
+            elements.Select(item => item.DescendantNodesAndSelf().OfType<LiteralExpressionSyntax>().Single().Token.ValueText).ToArray(),
+            StringToSpanOfBytesConverters.For(elementType.FullyQualifiedName()));
 
         context.EmitCilInstruction(visitor.ILVariable, OpCodes.Dup);
         context.EmitCilInstruction(visitor.ILVariable, OpCodes.Ldtoken, backingFieldVar);

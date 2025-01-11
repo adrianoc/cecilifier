@@ -3,6 +3,7 @@ namespace Cecilifier.Core;
 public struct Constants
 {
     public const string AssemblyReferenceCacheBasePath = "/tmp/CecilifierUserAssemblyReferenceCache";
+    public const int MaxStackAlloc = 256;
 
     public struct Cecil
     {
