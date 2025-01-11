@@ -1,6 +1,6 @@
 <Project>
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <LangVersion>12</LangVersion>
     <AssemblyVersion>2.16.0</AssemblyVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
