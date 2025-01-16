@@ -8,7 +8,6 @@ using Cecilifier.Core.CodeGeneration;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Mappings;
-using Cecilifier.Core.Naming;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -360,7 +359,6 @@ namespace Cecilifier.Core.AST
             if (HandlePseudoAssignment(node))
                 return;
 
-            // check if the left hand side of the assignment is a property (but not indexers) and handle that as a method (set) call.
             var visitor = new AssignmentVisitor(Context, ilVar, node);
 
             visitor.InstructionPrecedingValueToLoad = Context.CurrentLine;
@@ -584,13 +582,13 @@ namespace Cecilifier.Core.AST
             // compute it's length)
             var last = Context.CurrentLine;
 
+            using var nah = new NullLiteralArgumentDecorator(Context, node, ilVar);
             base.VisitArgument(node);
 
             node.Expression.InjectRequiredConversions(Context, ilVar, () =>
             {
                 AddCecilExpression(last.Value.Replace("\t", string.Empty).Replace("\n", String.Empty));
             });
-
 
             StackallocAsArgumentFixer.Current?.StoreTopOfStackToLocalVariable(Context.SemanticModel.GetTypeInfo(node.Expression).Type);
         }
@@ -1070,6 +1068,13 @@ namespace Cecilifier.Core.AST
             operand.Accept(assignmentVisitor);
         }
 
+        /*
+         * Normal assignments usually requires visiting the *right* node first (i.e, the value to be assigned) and
+         * then the *left* one (i.e, the target of the assignment)
+         *
+         * Some syntaxes (mostly involving value types) requires the order of visiting to be swapped, i.e, target of assignment
+         * first and then the value. One example of such cases is when assigning `default` to a value type (DateTime d = default;)
+         */
         private bool HandlePseudoAssignment(AssignmentExpressionSyntax node)
         {
             var lhsType = Context.SemanticModel.GetTypeInfo(node.Left).Type.EnsureNotNull();
@@ -1077,9 +1082,12 @@ namespace Cecilifier.Core.AST
                                 && node.Right.IsKind(SyntaxKind.IndexExpression)
                                 && !node.Left.IsKind(SyntaxKind.SimpleMemberAccessExpression);
 
+            var isNullAssignmentToNullableValueType = node.Right is LiteralExpressionSyntax { RawKind: (int) SyntaxKind.NullLiteralExpression }
+                                && SymbolEqualityComparer.Default.Equals(lhsType.OriginalDefinition, Context.RoslynTypeSystem.SystemNullableOfT);
+
             var isRhsStructDefaultLiteralExpression = node.Right.IsKind(SyntaxKind.DefaultLiteralExpression) && lhsType.IsValueType;
 
-            if (!isSimpleIndexAccess && !isRhsStructDefaultLiteralExpression)
+            if (!isSimpleIndexAccess && !isRhsStructDefaultLiteralExpression && !isNullAssignmentToNullableValueType)
                 return false;
 
             if (Context.SemanticModel.GetSymbolInfo(node.Left).Symbol is IParameterSymbol { RefKind: RefKind.Out or RefKind.Ref or RefKind.RefReadOnly })
