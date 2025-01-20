@@ -48,7 +48,7 @@ internal ref struct  NullLiteralArgumentDecorator
     {
         // Step 4 (see remarks in the method description)
         string localVariable = Interlocked.Exchange(ref _localVariableName, null);
-        if ( localVariable != null)
+        if (localVariable != null)
         {
             _context!.EmitCilInstruction(_ilVar, OpCodes.Ldloc_S, localVariable);
         }
