@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
@@ -28,7 +27,7 @@ namespace Cecilifier.Core.AST
                 "Program",
                 typeModifiers,
                 context.TypeResolver.Bcl.System.Object,
-                null, // Top level type has no outer type.
+                DefinitionVariable.NotFound, // Top level type has no outer type.
                 false,
                 Array.Empty<ITypeSymbol>(), 
                 [], 
@@ -72,7 +71,7 @@ namespace Cecilifier.Core.AST
 
         public bool HandleGlobalStatement(GlobalStatementSyntax node)
         {
-            using (context.DefinitionVariables.WithCurrent(string.Empty, "Program", VariableMemberKind.Type, typeVar))
+            using (context.DefinitionVariables.WithCurrent("<global namespace>", "Program", VariableMemberKind.Type, typeVar))
             using (context.DefinitionVariables.WithCurrentMethod("Program", "<Main>$", [], 0, methodVar))
             {
                 if (node.Statement.IsKind(SyntaxKind.LocalFunctionStatement))

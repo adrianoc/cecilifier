@@ -241,7 +241,7 @@ public class OperatorsTests : CecilifierUnitTestBase
         var (p_o_\d+) = new ParameterDefinition\("o", ParameterAttributes.None, assembly.MainModule.TypeSystem.Object\);
         \s+m_foo_\d+.Parameters.Add\(\1\);
         \s+//o != null
-        (\s+il_foo_\d+\.Emit\(OpCodes\.)Ldarg_1\);
+        (\s+il_foo_\d+\.Emit\(OpCodes\.)Ldarg_0\);
         \2Ldnull\);
         \2Ceq\);
         \2Ldc_I4_0\);
@@ -255,7 +255,7 @@ public class OperatorsTests : CecilifierUnitTestBase
                 var (p_o_\d+) = new ParameterDefinition\("o", ParameterAttributes.None, assembly.MainModule.TypeSystem.Object\);
                 \s+m_foo_\d+.Parameters.Add\(\1\);
                 \s+//o == null
-                (\s+il_foo_\d+\.Emit\(OpCodes\.)Ldarg_1\);
+                (\s+il_foo_\d+\.Emit\(OpCodes\.)Ldarg_0\);
                 \2Ldnull\);
                 \2Ceq\);
                 \2Ret\);
@@ -266,7 +266,7 @@ public class OperatorsTests : CecilifierUnitTestBase
                 var (p_o_\d+) = new ParameterDefinition\("o", ParameterAttributes.None, gp_T_7\);
                 \s+m_foo_\d+.Parameters.Add\(\1\);
                 \s+//o == null
-                (\s+il_foo_\d+\.Emit\(OpCodes\.)Ldarg_1\);
+                (\s+il_foo_\d+\.Emit\(OpCodes\.)Ldarg_0\);
                 \2Box, gp_T_7\);
                 \2Ldnull\);
                 \2Ceq\);
@@ -286,7 +286,7 @@ public class OperatorsTests : CecilifierUnitTestBase
         Assert.That(
             result.GeneratedCode.ReadToEnd(),
             Does.Match(
-                @"(il_M_\d+\.Emit\(OpCodes\.)Ldarg_1\);\s+" +
+                @"(il_M_\d+\.Emit\(OpCodes\.)Ldarg_0\);\s+" +
                 $@"\1Isinst, .+{expectedType}.*\);\s+" +
                 @"\1Ldnull\);\s+" +
                 @"\1Cgt\);"));

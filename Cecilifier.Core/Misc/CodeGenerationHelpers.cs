@@ -1,7 +1,5 @@
-using System;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
-using Cecilifier.Core.Naming;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Mono.Cecil.Cil;

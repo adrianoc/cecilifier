@@ -172,7 +172,7 @@ public class ArrayTests : CecilifierUnitTestBase
     {
         var result = RunCecilifier($$"""int M(S[] sa) => sa[0].{{member}}; struct S { public int Property { get; set; } public int Field; public int Method() => 1; }""");
         Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match($"""
-                                                                 (il_M_\d+\.Emit\(OpCodes\.)Ldarg_1\);
+                                                                 (il_M_\d+\.Emit\(OpCodes\.)Ldarg_0\);
                                                                  \s+\1Ldc_I4, 0\);
                                                                  \s+\1Ldelema, st_S_0\);
                                                                  \s+\1{expectedILMemberRef}\);
@@ -187,7 +187,7 @@ public class ArrayTests : CecilifierUnitTestBase
     {
         var result = RunCecilifier($$"""int M(S[] sa) => sa[0].{{member}}; class S { public int Property { get; set; } public int Field; public int Method() => 1; }""");
         Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match($"""
-                                                                 (il_M_\d+\.Emit\(OpCodes\.)Ldarg_1\);
+                                                                 (il_M_\d+\.Emit\(OpCodes\.)Ldarg_0\);
                                                                  \s+\1Ldc_I4, 0\);
                                                                  \s+\1Ldelem_Ref\);
                                                                  \s+\1{expectedILMemberRef}\);

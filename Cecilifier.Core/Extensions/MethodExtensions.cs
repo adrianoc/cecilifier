@@ -124,7 +124,7 @@ namespace Cecilifier.Core.Extensions
                         ctx.WriteCecilExpression($"""{tempMethodVar}.GenericParameters.Add({genericVar});""");
                         ctx.WriteNewLine();
                             
-                        toDispose.Add(ctx.DefinitionVariables.WithCurrent(method.OriginalDefinition.FullyQualifiedName(false), typeParameter.Name, VariableMemberKind.TypeParameter, genericVar ));
+                        toDispose.Add(ctx.DefinitionVariables.WithCurrent(method.OriginalDefinition.ToDisplayString(), typeParameter.Name, VariableMemberKind.TypeParameter, genericVar ));
                     }
                     else
                     {
@@ -257,7 +257,7 @@ namespace Cecilifier.Core.Extensions
         public static MethodDefinitionVariable AsMethodDefinitionVariable(this IMethodSymbol method, string variableName = null)
         {
             return new MethodDefinitionVariable(
-                method.OriginalDefinition.ContainingType.Name,
+                method.OriginalDefinition.ContainingType.ToDisplayString(),
                 method.OriginalDefinition.Name,
                 method.OriginalDefinition.Parameters.Select(p => p.Type.ToDisplayString()).ToArray(),
                 method.TypeParameters.Length,

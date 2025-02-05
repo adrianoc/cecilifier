@@ -30,10 +30,8 @@ namespace Cecilifier.Core.AST
                 Context.WriteComment("To make ensure local functions dont capture variables, declare them as static.");
             }
             
-            // Local functions have a well-defined list of modifiers.
-            var modifiers = SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.InternalKeyword));
-            if (methodSymbol.IsStatic)
-                modifiers = modifiers.Add(SyntaxFactory.Token(SyntaxKind.StaticKeyword));
+            // Local functions have a well defined list of modifiers.
+            var modifiers = SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.InternalKeyword), SyntaxFactory.Token(SyntaxKind.StaticKeyword));
 
             // local functions are not first class citizens wrt variable naming... handle them as methods for now.
             var localFunctionVar = Context.Naming.SyntheticVariable(node.Identifier.Text, ElementKind.Method);
@@ -98,14 +96,14 @@ namespace Cecilifier.Core.AST
             using var _ = LineInformationTracker.Track(Context, node);
             
             var containingSymbol = Context.SemanticModel.GetDeclaredSymbol(node).EnsureNotNull().ContainingSymbol;
-            var forwardedParamVar = Context.DefinitionVariables.GetVariable(node.Identifier.ValueText, VariableMemberKind.Parameter, containingSymbol.ToDisplayString());
+            var forwardedParamVar = Context.DefinitionVariables.GetVariable(node.Identifier.ValueText, VariableMemberKind.Parameter, containingSymbol.OriginalDefinition.ToDisplayString());
             if (forwardedParamVar.IsValid)
             {
                 paramVar = forwardedParamVar.VariableName;
             }
             else
             {
-                Context.DefinitionVariables.RegisterNonMethod(containingSymbol.ToDisplayString(), node.Identifier.ValueText, VariableMemberKind.Parameter, paramVar);
+                Context.DefinitionVariables.RegisterNonMethod(containingSymbol.OriginalDefinition.ToDisplayString(), node.Identifier.ValueText, VariableMemberKind.Parameter, paramVar);
                 var exps = CecilDefinitionsFactory.Parameter(Context, node, methodVar.VariableName, paramVar);
                 AddCecilExpressions(Context, exps);
             }
@@ -203,7 +201,7 @@ namespace Cecilifier.Core.AST
             var methodSymbol = Context.GetDeclaredSymbol(node);
             ProcessMethodDeclarationInternal(
                             node,
-                            methodSymbol.ContainingSymbol.Name,
+                            methodSymbol.ContainingSymbol.ToDisplayString(),
                             variableName,
                             methodSymbol,
                             node.Modifiers,

@@ -26,7 +26,7 @@ internal partial class RecordGenerator
         var builderParameter = new ParameterSpec("builder", context.TypeResolver.Resolve(typeof(StringBuilder).FullName), RefKind.None, Constants.ParameterAttributes.None);
         var printMembersDeclExps = CecilDefinitionsFactory.Method(
             context,
-            record.Identifier.ValueText,
+            _recordSymbol.OriginalDefinition.ToDisplayString(),
             PrintMembersVar,
             PrintMembersMethodName,
             PrintMembersMethodName,

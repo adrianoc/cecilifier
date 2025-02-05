@@ -52,7 +52,7 @@ internal class TypeResolverTests : CecilifierContextBasedTestBase
         var m1Symbol = context.SemanticModel.GetDeclaredSymbol(m1Syntax);
 
         // Simulates type parameter `T` being registered under type `Foo`
-        using var _ = context.DefinitionVariables.WithCurrent("Foo", "T", VariableMemberKind.TypeParameter, "TypeParameter_T_var");
+        using var _ = context.DefinitionVariables.WithCurrent("Foo<T>", "T", VariableMemberKind.TypeParameter, "TypeParameter_T_var");
         var resolved = context.TypeResolver.Resolve(m1Symbol.ReturnType, "fakeReference"); 
         
         Assert.That(resolved, Does.Match(@".+ImportReference\(typeof\(System.Func<>\)\)\.MakeGenericInstanceType\(TypeParameter_T_var\)"));
@@ -66,7 +66,7 @@ internal class TypeResolverTests : CecilifierContextBasedTestBase
         var methodSymbol = context.SemanticModel.GetDeclaredSymbol(methodSyntax);
 
         // Simulates type parameter `T` being registered under method `M2`
-        using var _ = context.DefinitionVariables.WithCurrent("M2", "TM", VariableMemberKind.TypeParameter, "TypeParameter_TM_var");
+        using var _ = context.DefinitionVariables.WithCurrent("Foo<T>.M2<TM>()", "TM", VariableMemberKind.TypeParameter, "TypeParameter_TM_var");
         var resolved = context.TypeResolver.Resolve(methodSymbol.OriginalDefinition.ReturnType, "fakeReference"); 
         
         Assert.That(resolved, Does.Match(@".+ImportReference\(typeof\(System.Func<>\)\)\.MakeGenericInstanceType\(TypeParameter_TM_var\)"));
@@ -80,8 +80,8 @@ internal class TypeResolverTests : CecilifierContextBasedTestBase
         var methodSymbol = context.SemanticModel.GetDeclaredSymbol(methodSyntax);
 
         // Simulates type parameters `T` & `TM` being registered under their respective members.
-        using var t = context.DefinitionVariables.WithCurrent("Foo", "T", VariableMemberKind.TypeParameter, "TypeParameter_Foo");
-        using var tm = context.DefinitionVariables.WithCurrent("M3", "TM", VariableMemberKind.TypeParameter, "TypeParameter_M3");
+        using var t = context.DefinitionVariables.WithCurrent("Foo<T>", "T", VariableMemberKind.TypeParameter, "TypeParameter_Foo");
+        using var tm = context.DefinitionVariables.WithCurrent("Foo<T>.M3<TM>()", "TM", VariableMemberKind.TypeParameter, "TypeParameter_M3");
         var resolved = context.TypeResolver.Resolve(methodSymbol.OriginalDefinition.ReturnType, "fakeReference"); 
         
         Assert.That(resolved, Does.Match(@".+ImportReference\(typeof\(System.Func<,>\)\)\.MakeGenericInstanceType\(TypeParameter_Foo, TypeParameter_M3\)"));
@@ -118,7 +118,7 @@ internal class TypeResolverTests : CecilifierContextBasedTestBase
         var methodSyntax = GetMethodSyntax(context, methodName);
         var methodSymbol = context.SemanticModel.GetDeclaredSymbol(methodSyntax).EnsureNotNull<ISymbol, IMethodSymbol>();
 
-        using var bar = context.DefinitionVariables.WithCurrent("", "Bar", VariableMemberKind.Type, "BarDefinition");
+        using var bar = context.DefinitionVariables.WithCurrent("<global namespace>", "Bar", VariableMemberKind.Type, "BarDefinition");
         var resolved = context.TypeResolver.Resolve(methodSymbol.OriginalDefinition.ReturnType, "methodReference");
         Assert.That(
             resolved, 

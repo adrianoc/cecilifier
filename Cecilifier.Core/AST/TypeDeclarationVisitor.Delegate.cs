@@ -18,12 +18,13 @@ internal partial class TypeDeclarationVisitor
         using var _ = LineInformationTracker.Track(Context, node);
         Context.WriteNewLine();
         Context.WriteComment($"Delegate: {node.Identifier.Text}");
+        
         var typeVar = Context.Naming.Delegate(node);
         var delegateSymbol = Context.SemanticModel.GetDeclaredSymbol(node).EnsureNotNull<ISymbol, INamedTypeSymbol>();
         var accessibility = TypeModifiersToCecil(delegateSymbol, node.Modifiers);
 
         EnsureContainingTypeForwarded(node, delegateSymbol);
-        
+        var outerTypeVariable = Context.DefinitionVariables.GetVariable(delegateSymbol.ContainingType?.ToDisplayString(), VariableMemberKind.Type, delegateSymbol.ContainingType?.ContainingSymbol.ToDisplayString());
         var typeDef = CecilDefinitionsFactory.Type(
             Context,
             typeVar,
@@ -31,7 +32,7 @@ internal partial class TypeDeclarationVisitor
             node.Identifier.ValueText,
             CecilDefinitionsFactory.DefaultTypeAttributeFor(TypeKind.Delegate, false).AppendModifier(accessibility),
             Context.TypeResolver.Bcl.System.MulticastDelegate,
-            delegateSymbol.ContainingType?.Name,
+            outerTypeVariable,
             isStructWithNoFields:false,
             Array.Empty<ITypeSymbol>(),
             node.TypeParameterList?.Parameters,
@@ -41,7 +42,7 @@ internal partial class TypeDeclarationVisitor
         AddCecilExpressions(Context, typeDef);
         HandleAttributesInMemberDeclaration(node.AttributeLists, typeVar);
 
-        using (Context.DefinitionVariables.WithCurrent(delegateSymbol.ContainingType?.Name ?? string.Empty, node.Identifier.ValueText, VariableMemberKind.Type, typeVar))
+        using (Context.DefinitionVariables.WithCurrent(delegateSymbol.ContainingSymbol?.OriginalDefinition.ToDisplayString() ?? string.Empty, delegateSymbol.OriginalDefinition.ToDisplayString(), VariableMemberKind.Type, typeVar))
         {
             var ctorLocalVar = Context.Naming.Delegate(node);
 

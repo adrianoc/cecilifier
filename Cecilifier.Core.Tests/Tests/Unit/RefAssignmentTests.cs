@@ -68,7 +68,7 @@ public class RefAssignmentTests : CecilifierUnitTestBase
             cecilifiedCode,
             Does.Match(
                 """
-            (il_M_\d+.Emit\(OpCodes\.)Ldarg_1\);
+            (il_M_\d+.Emit\(OpCodes\.)Ldarg_0\);
             \s+\1Ldind_I4\);
             \s+\1Ldc_I4, 42\);
             \s+\1Add\);
@@ -84,7 +84,7 @@ public class RefAssignmentTests : CecilifierUnitTestBase
     
         Assert.That(cecilifiedCode, Does.Match("""
                                                //s = new S\(\);
-                                               (\s+il_M_\d+\.Emit\(OpCodes\.)Ldarg_1\);
+                                               (\s+il_M_\d+\.Emit\(OpCodes\.)Ldarg_0\);
                                                \1Newobj, ctor_S_1\);
                                                \1Stobj, st_S_0\);
                                                """));

@@ -58,12 +58,22 @@ public static class CecilifierContextExtensions
         {
             context.EmitCilInstruction(ilVar, OpCodes.Box, context.TypeResolver.Resolve(conversion2.Operand.Type));
         }
-        else if (operation is IConversionOperation { Conversion.IsNullable: true } nullableConversion)
+        else if (operation is IConversionOperation { Conversion.IsNullable: true } nullableConversion && !nullableConversion.Syntax.IsKind(SyntaxKind.CoalesceExpression))
         {
             context.EmitCilInstruction(
                 ilVar, 
                 OpCodes.Newobj,
                 $"assembly.MainModule.ImportReference(typeof(System.Nullable<>).MakeGenericType(typeof({nullableConversion.Operand.Type.FullyQualifiedName()})).GetConstructors().Single(ctor => ctor.GetParameters().Length == 1))");
+        }
+        else if (operation is ICoalesceOperation coalesce 
+                 && !SymbolEqualityComparer.Default.Equals(coalesce.Type?.OriginalDefinition, context.RoslynTypeSystem.SystemNullableOfT)
+                 && SymbolEqualityComparer.Default.Equals(coalesce.Value.Type?.OriginalDefinition, context.RoslynTypeSystem.SystemNullableOfT)
+                 )
+        {
+            context.EmitCilInstruction(
+                ilVar, 
+                OpCodes.Newobj,
+                $"assembly.MainModule.ImportReference(typeof(System.Nullable<>).MakeGenericType(typeof({coalesce.Type?.FullyQualifiedName()})).GetConstructors().Single(ctor => ctor.GetParameters().Length == 1))");
         }
         else
             return false;

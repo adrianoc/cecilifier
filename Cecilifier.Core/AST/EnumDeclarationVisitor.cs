@@ -28,10 +28,11 @@ namespace Cecilifier.Core.AST
             var enumType = Context.Naming.Type(node);
             var enumSymbol = Context.SemanticModel.GetDeclaredSymbol(node).EnsureNotNull<ISymbol, INamedTypeSymbol>($"Something really bad happened. Roslyn failed to resolve the symbol for the enum {node.Identifier.Text}");
             var attrs = TypeModifiersToCecil(enumSymbol, node.Modifiers);
-            var typeDef = CecilDefinitionsFactory.Type(Context, enumType, enumSymbol.ContainingNamespace?.FullyQualifiedName(), enumSymbol.Name, attrs + " | TypeAttributes.Sealed", Context.TypeResolver.Bcl.System.Enum, enumSymbol.ContainingType?.Name,false, Array.Empty<ITypeSymbol>(), [], []);
+            var outerTypeVariable = Context.DefinitionVariables.GetVariable(enumSymbol.ContainingType?.ToDisplayString(), VariableMemberKind.Type, enumSymbol.ContainingType?.ContainingSymbol.ToDisplayString());
+            var typeDef = CecilDefinitionsFactory.Type(Context, enumType, enumSymbol.ContainingNamespace?.FullyQualifiedName(), enumSymbol.Name, attrs + " | TypeAttributes.Sealed", Context.TypeResolver.Bcl.System.Enum, outerTypeVariable,false, Array.Empty<ITypeSymbol>(), [], []);
             AddCecilExpressions(Context, typeDef);
 
-            var parentName = enumSymbol.ContainingSymbol.FullyQualifiedName();
+            var parentName = enumSymbol.ContainingSymbol.ToDisplayString();
             using (Context.DefinitionVariables.WithCurrent(parentName, enumSymbol.FullyQualifiedName(), VariableMemberKind.Type, enumType))
             {
                 //.class private auto ansi MyEnum

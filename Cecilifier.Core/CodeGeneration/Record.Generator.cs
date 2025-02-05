@@ -24,7 +24,7 @@ internal partial class RecordGenerator
     private string _equalityContractGetMethodVar;
     private string _recordTypeEqualsOverloadMethodVar;
     private IDictionary<string, (string GetDefaultMethodVar, string EqualsMethodVar, string GetHashCodeMethodVar)> _equalityComparerMembersCache;
-    private ITypeSymbol _recordSymbol;
+    private INamedTypeSymbol _recordSymbol;
     private Action<IVisitorContext, ITypeSymbol, string> _isReadOnlyAttributeHandler;
 
     public RecordGenerator(IVisitorContext context, string recordTypeDefinitionVariable, RecordDeclarationSyntax record)
@@ -51,7 +51,7 @@ internal partial class RecordGenerator
     
     internal void AddSyntheticMembers()
     {
-        _recordSymbol = context.SemanticModel.GetDeclaredSymbol(record).EnsureNotNull<ISymbol, ITypeSymbol>();
+        _recordSymbol = context.SemanticModel.GetDeclaredSymbol(record).EnsureNotNull<ISymbol, INamedTypeSymbol>();
 
         InitializeIsReadOnlyAttributeHandler(_recordSymbol);
         InitializeEqualityComparerMemberCache();
@@ -120,7 +120,7 @@ internal partial class RecordGenerator
         if (!found.IsValid)
         {
             copyCtorVar = context.Naming.Constructor(record, false);
-            var copyCtor = CecilDefinitionsFactory.Constructor(context, copyCtorVar, _recordSymbol.Name, false, Constants.Cecil.CtorAttributes.AppendModifier("MethodAttributes.Family | MethodAttributes.HideBySig"), [_recordSymbol.ToDisplayString()]);
+            var copyCtor = CecilDefinitionsFactory.Constructor(context, copyCtorVar, _recordSymbol.OriginalDefinition.ToDisplayString(), false, Constants.Cecil.CtorAttributes.AppendModifier("MethodAttributes.Family | MethodAttributes.HideBySig"), [_recordSymbol.ToDisplayString()]);
             context.WriteCecilExpressions(
             [
                 copyCtor,
@@ -149,7 +149,7 @@ internal partial class RecordGenerator
         
         foreach (var parameter in record.GetUniqueParameters(context))
         {
-            var paramDefVar = context.DefinitionVariables.GetVariable(Utils.BackingFieldNameForAutoProperty(parameter.Identifier.ValueText()), VariableMemberKind.Field, _recordSymbol.Name);
+            var paramDefVar = context.DefinitionVariables.GetVariable(Utils.BackingFieldNameForAutoProperty(parameter.Identifier.ValueText()), VariableMemberKind.Field, _recordSymbol.OriginalDefinition.ToDisplayString());
             var backingFieldRef = _recordSymbol is INamedTypeSymbol { IsGenericType: true } 
                     ? $"new FieldReference({paramDefVar.VariableName}.Name, {paramDefVar.VariableName}.FieldType, {context.TypeResolver.Resolve(_recordSymbol)})" 
                     : paramDefVar.VariableName;
@@ -174,7 +174,7 @@ internal partial class RecordGenerator
 
     private void AddPropertiesFrom()
     {
-        PrimaryConstructorGenerator.AddPropertiesFrom(context, recordTypeDefinitionVariable, record);
+        PrimaryConstructorGenerator.AddPropertiesFrom(context, recordTypeDefinitionVariable, record, _recordSymbol);
         if (!_recordSymbol.IsValueType)
             return;
         
@@ -193,7 +193,7 @@ internal partial class RecordGenerator
         var equalsOperatorMethodVar = context.Naming.SyntheticVariable($"equalsOperator", ElementKind.Method);
         var equalsOperatorMethodExps = CecilDefinitionsFactory.Method(
             context,
-            _recordSymbol.Name,
+            _recordSymbol.OriginalDefinition.ToDisplayString(),
             equalsOperatorMethodVar,
             methodName,
             methodName,
@@ -242,7 +242,7 @@ internal partial class RecordGenerator
     
     private void AddInequalityOperator()
     {
-        var recordSymbol = context.SemanticModel.GetDeclaredSymbol(record).EnsureNotNull<ISymbol, ITypeSymbol>();
+        var recordSymbol = _recordSymbol;
         const string methodName = "op_Inequality";
         
         context.WriteNewLine();
@@ -250,14 +250,14 @@ internal partial class RecordGenerator
         var inequalityOperatorMethodVar = context.Naming.SyntheticVariable($"inequalityOperator", ElementKind.Method);
         var inequalityOperatorMethodExps = CecilDefinitionsFactory.Method(
             context,
-            recordSymbol.Name,
+            recordSymbol.OriginalDefinition.ToDisplayString(),
             inequalityOperatorMethodVar,
             methodName,
             methodName,
             Constants.Cecil.PublicOverrideOperatorAttributes,
             [
-                new ParameterSpec("left", context.TypeResolver.Resolve(recordSymbol), RefKind.None, Constants.ParameterAttributes.None)  { RegistrationTypeName = $"{_recordSymbol.ToDisplayString()}?" },
-                new ParameterSpec("right", context.TypeResolver.Resolve(recordSymbol), RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = $"{_recordSymbol.ToDisplayString()}?" }
+                new ParameterSpec("left", context.TypeResolver.Resolve(recordSymbol), RefKind.None, Constants.ParameterAttributes.None)  { RegistrationTypeName = $"{_recordSymbol.OriginalDefinition.ToDisplayString()}?" },
+                new ParameterSpec("right", context.TypeResolver.Resolve(recordSymbol), RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = $"{_recordSymbol.OriginalDefinition.ToDisplayString()}?" }
             ],
             [],
             ctx => ctx.TypeResolver.Bcl.System.Boolean,
@@ -265,7 +265,7 @@ internal partial class RecordGenerator
         
         context.WriteCecilExpressions(inequalityOperatorMethodExps);
 
-        var equalityMethodDefinitionVariable = context.DefinitionVariables.GetMethodVariable(new MethodDefinitionVariable(recordSymbol.Name, "op_Equality", [$"{_recordSymbol.ToDisplayString()}?", $"{_recordSymbol.ToDisplayString()}?"], 0)).VariableName;
+        var equalityMethodDefinitionVariable = context.DefinitionVariables.GetMethodVariable(new MethodDefinitionVariable(_recordSymbol.OriginalDefinition.ToDisplayString(), "op_Equality", [$"{_recordSymbol.ToDisplayString()}?", $"{_recordSymbol.ToDisplayString()}?"], 0)).VariableName;
         if (_recordSymbol is INamedTypeSymbol { IsGenericType: true })
         {
             var var = equalityMethodDefinitionVariable;
@@ -296,12 +296,12 @@ internal partial class RecordGenerator
 
     private void AddGetHashCodeMethod()
     {
-        var recordSymbol = context.SemanticModel.GetDeclaredSymbol(record).EnsureNotNull<ISymbol, ITypeSymbol>();
-        
+        //var recordSymbol = context.SemanticModel.GetDeclaredSymbol(record).EnsureNotNull<ISymbol, ITypeSymbol>();
+        var recordSymbol = _recordSymbol;
         var getHashCodeMethodVar = context.Naming.SyntheticVariable("GetHashCode", ElementKind.Method);
         var getHashCodeMethodExps = CecilDefinitionsFactory.Method(
                                                                             context,
-                                                                            record.Identifier.ValueText, 
+                                                                            _recordSymbol.OriginalDefinition.ToDisplayString(), 
                                                                             getHashCodeMethodVar,
                                                                             "GetHashCode",
                                                                             "GetHashCode",
@@ -323,7 +323,7 @@ internal partial class RecordGenerator
         foreach(var parameter in parameters)
         {
             var parameterType = context.SemanticModel.GetTypeInfo(parameter.Type!).Type.EnsureNotNull();
-            var paramDefVar = context.DefinitionVariables.GetVariable(Utils.BackingFieldNameForAutoProperty(parameter.Identifier.ValueText()), VariableMemberKind.Field, record.Identifier.ValueText());
+            var paramDefVar = context.DefinitionVariables.GetVariable(Utils.BackingFieldNameForAutoProperty(parameter.Identifier.ValueText()), VariableMemberKind.Field, _recordSymbol.OriginalDefinition.ToDisplayString());
             var equalityComparerMembersForParamType = _equalityComparerMembersCache[parameterType.Name];
 
             var backingFieldRef = _recordSymbol is INamedTypeSymbol { IsGenericType: true } 
@@ -382,7 +382,7 @@ internal partial class RecordGenerator
             {
                 // Initialize the hashcode with 'EqualityComparer<Type>.Default.GetHashCode(EqualityContract) * -1521134295'
                 var equalityComparerMembersForSystemType = _equalityComparerMembersCache[typeof(Type).Name];
-                var getEqualityContractMethodVar = context.DefinitionVariables.GetVariable("get_EqualityContract", VariableMemberKind.Method, record.Identifier.ValueText());
+                var getEqualityContractMethodVar = context.DefinitionVariables.GetVariable("get_EqualityContract", VariableMemberKind.Method, _recordSymbol.OriginalDefinition.ToDisplayString());
                 getHashCodeMethodBodyExps.AddRange( 
                 [
                     OpCodes.Call.WithOperand(equalityComparerMembersForSystemType.GetDefaultMethodVar),
@@ -418,7 +418,7 @@ internal partial class RecordGenerator
             var toStringMethodVar = context.Naming.SyntheticVariable(ToStringName, ElementKind.Method);
             var toStringDeclExps = CecilDefinitionsFactory.Method(
                 context,
-                record.Identifier.ValueText,
+                _recordSymbol.OriginalDefinition.ToDisplayString(),
                 toStringMethodVar,
                 ToStringName,
                 ToStringName,
@@ -472,7 +472,7 @@ internal partial class RecordGenerator
 
     private string ClosedGenericMethodFor(string memberName, string recordVar)
     {
-        var methodVar = context.DefinitionVariables.GetVariable(memberName, VariableMemberKind.Method, _recordSymbol.Name);
+        var methodVar = context.DefinitionVariables.GetVariable(memberName, VariableMemberKind.Method, _recordSymbol.OriginalDefinition.ToDisplayString());
         return MethodOnClosedGenericTypeForMethodVariable(methodVar.VariableName, recordVar);
     }
     
@@ -513,9 +513,10 @@ internal partial class RecordGenerator
         
         var exps = CecilDefinitionsFactory.Method(
                                     context,
-                                    record.Identifier.ValueText(),
+                                    _recordSymbol.OriginalDefinition.ToDisplayString(),
                                     equalsVar,
-                                    $"{record.Identifier.ValueText()}.Equals", "Equals",
+                                    //$"{record.Identifier.ValueText()}.Equals", "Equals",
+                                    $"{_recordSymbol.OriginalDefinition.ToDisplayString()}.Equals", "Equals",
                                     $"MethodAttributes.Public | MethodAttributes.HideBySig | {Constants.Cecil.InterfaceMethodDefinitionAttributes}",
                                     [new ParameterSpec("other", declaringType, RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = $"{_recordSymbol.ToDisplayString()}?"} ],
                                     Array.Empty<string>(),
@@ -539,7 +540,7 @@ internal partial class RecordGenerator
                 var parameterType = context.SemanticModel.GetTypeInfo(parameter.Type!).Type.EnsureNotNull();
                 instructions.Add(OpCodes.Call.WithOperand(_equalityComparerMembersCache[parameterType.Name].GetDefaultMethodVar));
                 
-                var paramDefVar = context.DefinitionVariables.GetVariable(Utils.BackingFieldNameForAutoProperty(parameter.Identifier.ValueText()), VariableMemberKind.Field, _recordSymbol.Name);
+                var paramDefVar = context.DefinitionVariables.GetVariable(Utils.BackingFieldNameForAutoProperty(parameter.Identifier.ValueText()), VariableMemberKind.Field, _recordSymbol.OriginalDefinition.ToDisplayString());
                 var backingFieldRef = _recordSymbol is INamedTypeSymbol { IsGenericType: true } 
                     ? $"new FieldReference({paramDefVar.VariableName}.Name, {paramDefVar.VariableName}.FieldType, {context.TypeResolver.Resolve(_recordSymbol)})" 
                     : paramDefVar.VariableName;
@@ -703,14 +704,12 @@ internal partial class RecordGenerator
         if (record.IsKind(SyntaxKind.RecordStructDeclaration))
             return;
 
-        //var hasBaseRecord = HasBaseRecord(record);
-
         const string propertyName = "EqualityContract";
         PropertyGenerator propertyGenerator = new(context);
 
         var equalityContractPropertyVar = context.Naming.SyntheticVariable(propertyName, ElementKind.Property);
         PropertyGenerationData propertyData = new(
-            record.Identifier.ValueText,
+            _recordSymbol.OriginalDefinition.ToDisplayString(),
             recordTypeDefinitionVariable,
             record.TypeParameterList?.Parameters.Count > 0,
             equalityContractPropertyVar,
@@ -849,7 +848,8 @@ internal partial class RecordGenerator
         if (record.ParameterList?.Parameters.Count is null or 0)
             return;
         
-        var recordSymbol = context.SemanticModel.GetDeclaredSymbol(record).EnsureNotNull<ISymbol, ITypeSymbol>();
+        //var recordSymbol = context.SemanticModel.GetDeclaredSymbol(record).EnsureNotNull<ISymbol, ITypeSymbol>();
+        var recordSymbol = _recordSymbol;
         const string methodName = "Deconstruct";
 
         var parametersInfo = record.ParameterList!.Parameters.Select(p => (p.Identifier.ValueText, context.SemanticModel.GetTypeInfo(p.Type!).Type));
@@ -862,7 +862,7 @@ internal partial class RecordGenerator
         var deconstructMethodVar = context.Naming.SyntheticVariable(methodName, ElementKind.Method);
         var deconstructMethodVarExps = CecilDefinitionsFactory.Method(
             context,
-            recordSymbol.Name,
+            recordSymbol.OriginalDefinition.ToDisplayString(),
             deconstructMethodVar,
             methodName,
             methodName,
@@ -897,7 +897,7 @@ internal partial class RecordGenerator
     
     string GetGetterMethodVar(IVisitorContext context, ITypeSymbol candidate, string propertyName)
     {
-        var getterMethodVar = context.DefinitionVariables.GetMethodVariable(new MethodDefinitionVariable(candidate.Name, $"get_{propertyName}", [], 0));
+        var getterMethodVar = context.DefinitionVariables.GetMethodVariable(new MethodDefinitionVariable(candidate.OriginalDefinition.ToDisplayString(), $"get_{propertyName}", [], 0));
         if (getterMethodVar.IsValid)
         {
             if (candidate is INamedTypeSymbol { IsGenericType: true })

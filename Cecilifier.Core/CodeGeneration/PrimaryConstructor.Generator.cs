@@ -20,7 +20,7 @@ namespace Cecilifier.Core.CodeGeneration;
 /// </summary>
 public class PrimaryConstructorGenerator
 {
-    internal static void AddPropertiesFrom(IVisitorContext context, string typeDefinitionVariable, TypeDeclarationSyntax type)
+    internal static void AddPropertiesFrom(IVisitorContext context, string typeDefinitionVariable, TypeDeclarationSyntax type, INamedTypeSymbol declaringType)
     {
         if (type.ParameterList is null)
             return;
@@ -28,12 +28,12 @@ public class PrimaryConstructorGenerator
         var declaringTypeIsGeneric = type.TypeParameterList?.Parameters.Count > 0;
         foreach (var parameter in type.GetUniqueParameters(context))
         {
-            AddPropertyFor(context, parameter, typeDefinitionVariable, declaringTypeIsGeneric);
+            AddPropertyFor(context, parameter, typeDefinitionVariable, declaringType);
             context.WriteNewLine();
         }
     }
 
-    private static void AddPropertyFor(IVisitorContext context, ParameterSyntax parameter, string typeDefinitionVariable, bool declaringTypeIsGeneric)
+    private static void AddPropertyFor(IVisitorContext context, ParameterSyntax parameter, string typeDefinitionVariable, INamedTypeSymbol declaringType)
     {
         using var _ = LineInformationTracker.Track(context, parameter);
         
@@ -54,9 +54,9 @@ public class PrimaryConstructorGenerator
         var publicPropertyMethodAttributes = "MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName";
         var propertyType = context.SemanticModel.GetDeclaredSymbol(parameter).GetMemberType();
         var propertyData = new PropertyGenerationData(
-                                    declaringTypeVariable.MemberName,
+                                    declaringType.OriginalDefinition.ToDisplayString(),
                                     declaringTypeVariable.VariableName,
-                                    declaringTypeIsGeneric,
+                                    declaringType.TypeParameters.Length > 0,
                                     propDefVar,
                                     parameter.Identifier.Text,
                                     new Dictionary<string, string>
@@ -111,11 +111,13 @@ public class PrimaryConstructorGenerator
     internal static void AddPrimaryConstructor(IVisitorContext context, string recordTypeDefinitionVariable, TypeDeclarationSyntax typeDeclaration)
     {
         context.WriteComment($"Constructor: {typeDeclaration.Identifier.ValueText}{typeDeclaration.ParameterList}");
+        var typeSymbol = context.SemanticModel.GetDeclaredSymbol(typeDeclaration).EnsureNotNull<ISymbol, ITypeSymbol>();
+        
         var ctorVar = context.Naming.Constructor(typeDeclaration, false);
         var ctorExp = CecilDefinitionsFactory.Constructor(
                                         context, 
                                         ctorVar, 
-                                        typeDeclaration.Identifier.ValueText, 
+                                        typeSymbol.OriginalDefinition.ToDisplayString(), 
                                         false, 
                                         "MethodAttributes.Public", 
                                         typeDeclaration.ParameterList?.Parameters.Select(p => p.Type?.ToString()).ToArray() ?? []);
@@ -133,7 +135,6 @@ public class PrimaryConstructorGenerator
         var ctorExps = CecilDefinitionsFactory.MethodBody(context.Naming, $"ctor_{typeDeclaration.Identifier.ValueText}", ctorVar, ctorIlVar, [], []);
         context.WriteCecilExpressions(ctorExps);
 
-        var typeSymbol = context.SemanticModel.GetDeclaredSymbol(typeDeclaration).EnsureNotNull<ISymbol, ITypeSymbol>();
         var resolvedType = context.TypeResolver.Resolve(typeSymbol);
         Func<string, string> fieldRefResolver = backingFieldVar => typeDeclaration.TypeParameterList?.Parameters.Count > 0 
             ? $"new FieldReference({backingFieldVar}.Name, {backingFieldVar}.FieldType, {resolvedType})" 
@@ -154,7 +155,7 @@ public class PrimaryConstructorGenerator
             context.EmitCilInstruction(ctorIlVar, OpCodes.Ldarg_0);
             context.EmitCilInstruction(ctorIlVar, OpCodes.Ldarg, paramVar);
 
-            var backingFieldVar = context.DefinitionVariables.GetVariable(Utils.BackingFieldNameForAutoProperty(parameter.Identifier.ValueText), VariableMemberKind.Field, typeDeclaration.Identifier.ValueText);
+            var backingFieldVar = context.DefinitionVariables.GetVariable(Utils.BackingFieldNameForAutoProperty(parameter.Identifier.ValueText), VariableMemberKind.Field, typeSymbol.OriginalDefinition.ToDisplayString());
             if (!backingFieldVar.IsValid)
                 throw new InvalidOperationException($"Backing field variable for property '{parameter.Identifier.ValueText}' could not be found.");
 
