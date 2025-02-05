@@ -177,7 +177,7 @@ function sendMissingAssemblyReferences(missingAssemblyHashes, continuation) {
     getAssemblyReferencesContents(missingAssemblyHashes, function (missingAssemblies) {
         const xhttp = new XMLHttpRequest();
         xhttp.onreadystatechange = function() {
-            if (this.readyState !== 4)
+            if (this.readyState !== this.DONE)
                 return;
             
             if (this.status === 200) {
@@ -194,7 +194,7 @@ function sendMissingAssemblyReferences(missingAssemblyHashes, continuation) {
             }
             else if (this.status !== 0) {
                 SnackBar({
-                    message:  `Error code ${this.status} : ${this.statusText}`,
+                    message:  `Error sending assemblies to cecilifier server.<br /><br />${this.responseText}`,
                     dismissible: true,
                     status: "Error",
                     timeout: 30000,
