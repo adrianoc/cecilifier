@@ -1,7 +1,9 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Cecilifier.Core.Variables;
 
+[ExcludeFromCodeCoverage]
 public class MethodDefinitionVariable : DefinitionVariable, IEquatable<MethodDefinitionVariable>
 {
     public MethodDefinitionVariable(string parentTypeName, string methodName, string[] parameterTypeNames, int typeParameterCountCount, string variableName = null) 

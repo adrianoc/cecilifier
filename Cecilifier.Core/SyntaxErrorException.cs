@@ -1,9 +1,11 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Cecilifier.Core.Misc;
 
 namespace Cecilifier.Core
 {
+    [ExcludeFromCodeCoverage]
     public class SyntaxErrorException : Exception
     {
         public CecilifierDiagnostic[] Diagnostics { get; }
