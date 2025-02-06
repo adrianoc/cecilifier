@@ -1,4 +1,10 @@
+using System;
+using System.Collections.Generic;
+using Cecilifier.Core.Misc;
 using Cecilifier.Core.Tests.Tests.Unit.Framework;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using NSubstitute;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Tests.Unit
@@ -247,6 +253,27 @@ public static class Outer
             {
                 Assert.That(cecilifiedCode, Does.Match(expected));
             }
+        }
+
+        [Test]
+        public void CecilifierDiagnostic_IsMapped_FromCompilerDiagnostic([Values] DiagnosticSeverity severity)
+        {
+            var location = Substitute.For<Location>();
+            location.GetLineSpan().Returns(new FileLinePositionSpan());
+                
+            var compilerDiagnostic = Substitute.For<Diagnostic>();
+            compilerDiagnostic.Id.Returns("foo");
+            compilerDiagnostic.Severity.Returns(severity);
+            compilerDiagnostic.Location.Returns(location);
+            
+            var cecilifierDiagnostic = CecilifierDiagnostic.FromCompiler(compilerDiagnostic);
+            Assert.That(cecilifierDiagnostic.Kind, Is.EqualTo(severity switch
+            {
+                DiagnosticSeverity.Hidden => DiagnosticKind.Information,
+                DiagnosticSeverity.Info => DiagnosticKind.Information,
+                DiagnosticSeverity.Error => DiagnosticKind.Error,
+                DiagnosticSeverity.Warning => DiagnosticKind.Warning,
+            }));
         }
         
         public class RecordTests : CecilifierUnitTestBase
