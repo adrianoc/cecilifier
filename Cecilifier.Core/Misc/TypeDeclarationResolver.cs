@@ -11,6 +11,7 @@ namespace Cecilifier.Core.Misc
 
         public BaseTypeDeclarationSyntax Resolve(SyntaxNode node)
         {
+            declaringType = null;
             Visit(node);
             return declaringType;
         }
@@ -49,6 +50,8 @@ namespace Cecilifier.Core.Misc
         {
             Visit(node.Parent);
         }
+
+        public override void VisitEnumMemberDeclaration(EnumMemberDeclarationSyntax node) => Visit(node.Parent);
 
         public override void VisitConversionOperatorDeclaration(ConversionOperatorDeclarationSyntax node) => Visit(node.Parent);
 

@@ -278,6 +278,75 @@ public static class Outer
                 _ => throw new ArgumentOutOfRangeException(nameof(severity), severity, null)
             }));
         }
+
+        [TestCase("""
+                  public class DeclaringClass 
+                  {
+                      public DeclaringClass() {}
+                      public int publicField;
+                      public string PublicProperty { get; set; }
+                      public event System.Action PublicEvent;
+                      public void PublicMethod() { }
+                      public int this[int i] => i;
+                      public int this[string s] => s.Length;
+                      public static int operator+(DeclaringClass d1, DeclaringClass d2) => 0;
+                      
+                      private int privateField;
+                      private string PrivateProperty { get; set; }
+                      private event System.Action PrivateEvent;
+                      private void PrivateMethod() { }
+                      
+                      public void InnerClass() { }
+                  }
+                  """, TestName = "Class")]
+        [TestCase("""
+                  public struct DeclaringStruct 
+                  {
+                      public int publicField;
+                      public string PublicProperty { get; set; }
+                      public event System.Action PublicEvent;
+                      public void PublicMethod() { }
+                      public int this[int i] => i;
+                      public int this[string s] => s.Length;
+                      public static int operator+(DeclaringClass d1, DeclaringClass d2) => 0;
+                  }
+                  """, TestName = "Struct")]
+        [TestCase("""
+                  public interface IDeclaringInterface 
+                  {
+                      string Property { get; set; }
+                      event System.Action Event;
+                      void Method() { }
+                  }
+                  """, TestName = "Interface")]
+        
+        [TestCase("""
+                  public interface IDeclaringInterface<T> where T : IDeclaringInterface<T> 
+                  {
+                      static T Zero { get; }
+                      static T operator+(T d1, T d2); 
+                  }
+                  """, TestName = "Interface2")]
+        
+        [TestCase("""
+                  public enum DeclaringEnum 
+                  {
+                    None = 0,
+                    Value1 = 1
+                  }
+                  """, TestName = "Enums")]
+        public void TypeDeclarationResolverTests(string code)
+        {
+            var st = CSharpSyntaxTree.ParseText(code);
+            
+            var resolver = new TypeDeclarationResolver();
+            var parentType = st.GetRoot().DescendantNodes().OfType<BaseTypeDeclarationSyntax>().First();
+            var memberDeclarationSyntaxes = st.GetRoot().DescendantNodes().OfType<MemberDeclarationSyntax>();
+            foreach (var syntax in memberDeclarationSyntaxes)
+            {
+                Assert.That(resolver.Resolve(syntax), Is.SameAs(parentType), syntax.ToString());
+            }
+        }
         
         public class RecordTests : CecilifierUnitTestBase
         {
