@@ -43,13 +43,6 @@ namespace Cecilifier.Core.Extensions
 
         public static string FullyQualifiedName(this ISymbol type, bool includingTypeParameters = true)
         {
-            // ISymbol.ToDisplayString() does not have the option to use the metadata name for IntPtr
-            // returning `nint` instead.
-            if (type is ITypeSymbol { SpecialType: SpecialType.System_IntPtr } ts)
-            {
-                return "System.IntPtr";
-            }
-
             return type.ToDisplayString(includingTypeParameters ? QualifiedNameIncludingTypeParametersFormat : QualifiedNameWithoutTypeParametersFormat);
         }
         
