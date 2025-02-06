@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Tests.Tests.Unit.Framework;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using NSubstitute;
 using NUnit.Framework;
 
@@ -273,6 +275,7 @@ public static class Outer
                 DiagnosticSeverity.Info => DiagnosticKind.Information,
                 DiagnosticSeverity.Error => DiagnosticKind.Error,
                 DiagnosticSeverity.Warning => DiagnosticKind.Warning,
+                _ => throw new ArgumentOutOfRangeException(nameof(severity), severity, null)
             }));
         }
         
