@@ -29,6 +29,7 @@ public class InlineArrayTests : CecilifierUnitTestBase
     [TestCase("scoped System.Span<int> span; span = l;", TestName = "Local Variable assignment")]
     [TestCase("Consume(l);", TestName = "Local passed as argument")]
     [TestCase("Consume(p);", TestName = "Parameter passed as argument")]
+    [TestCase("var foo = new Foo(); Consume(foo.Buffer);", TestName = "Field passed as argument", IgnoreReason = "Issue #330")]
     public void Assigning_InlineArrayToSpan_EmitsPrivateImplementationDetailsType(string triggeringStatements)
     {
         var result = RunCecilifier($$"""
@@ -46,6 +47,11 @@ public class InlineArrayTests : CecilifierUnitTestBase
                                    public struct IntBuffer
                                    {
                                        private int _element0;
+                                   }
+                                   
+                                   class Foo
+                                   {
+                                       public IntBuffer Buffer;
                                    }
                                    """);
 
@@ -269,7 +275,7 @@ public class InlineArrayTests : CecilifierUnitTestBase
     [Test]
     public void InlineArray_MemberAccess_OnIndex()
     {
-        var result = RunCecilifier($$"""
+        var result = RunCecilifier("""
                                    class C
                                    {
                                        int M(Buffer b) => b[0].Value; 
