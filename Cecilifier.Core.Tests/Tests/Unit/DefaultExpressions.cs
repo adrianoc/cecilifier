@@ -120,7 +120,10 @@ public class DefaultExpressions : CecilifierUnitTestBase
     [TestCase("float", "Emit(OpCodes.Ldc_R4, 0.0F)")]
     [TestCase("double", "Emit(OpCodes.Ldc_R8, 0.0D)")]
     [TestCase("bool", "Emit(OpCodes.Ldc_I4, 0)")]
+    [TestCase("short", "Emit(OpCodes.Ldc_I4, 0)")]
+    [TestCase("ushort", "Emit(OpCodes.Ldc_I4, 0)")]
     [TestCase("System.IntPtr", "Emit(OpCodes.Conv_I)")]
+    [TestCase("System.UIntPtr", "Emit(OpCodes.Conv_I)")]
     public void TestDefaultLiteralExpression(string type, string expected)
     {
         var result = RunCecilifier($"{type} v = default;");
