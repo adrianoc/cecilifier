@@ -124,9 +124,10 @@ public class DefaultExpressions : CecilifierUnitTestBase
     [TestCase("ushort", "Emit(OpCodes.Ldc_I4, 0)")]
     [TestCase("System.IntPtr", "Emit(OpCodes.Conv_I)")]
     [TestCase("System.UIntPtr", "Emit(OpCodes.Conv_I)")]
+    [TestCase("T", "Emit(OpCodes.Initobj,")]
     public void TestDefaultLiteralExpression(string type, string expected)
     {
-        var result = RunCecilifier($"{type} v = default;");
+        var result = RunCecilifier($"class C<T> {{ {type} v = default; }}");
         Assert.That(result.GeneratedCode.ReadToEnd(), Contains.Substring(expected));
     }
 
