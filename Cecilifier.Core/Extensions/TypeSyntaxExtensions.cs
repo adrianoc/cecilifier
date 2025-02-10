@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -6,28 +7,33 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Cecilifier.Core.Extensions;
 
-internal static class TypesExtensions
+internal static class TypeSyntaxExtensions
 {
     public static string NameFrom(this TypeSyntax type, bool expandAttributeName = false)
     {
+        // Note that we don´t expect `type` to ever be a `SimpleNameSyntax` since this type is abstract.
         return type switch
         {
             ArrayTypeSyntax arrayTypeSyntax => NameFrom(arrayTypeSyntax.ElementType),
-            AliasQualifiedNameSyntax aliasQualifiedNameSyntax => throw new NotImplementedException(),
+            AliasQualifiedNameSyntax aliasQualifiedNameSyntax => aliasQualifiedNameSyntax.ToString(),
             FunctionPointerTypeSyntax functionPointerTypeSyntax => functionPointerTypeSyntax.ToString(),
             GenericNameSyntax genericNameSyntax => NameFromIdentifier(genericNameSyntax.Identifier, expandAttributeName),
             IdentifierNameSyntax identifierNameSyntax => NameFromIdentifier(identifierNameSyntax.Identifier, expandAttributeName),
             QualifiedNameSyntax qualifiedNameSyntax => qualifiedNameSyntax.ToString(),
-            SimpleNameSyntax simpleNameSyntax => simpleNameSyntax.Identifier.Text,
             NullableTypeSyntax nullableTypeSyntax => NameFrom(nullableTypeSyntax.ElementType),
-            OmittedTypeArgumentSyntax omittedTypeArgumentSyntax => throw new NotImplementedException(),
+            OmittedTypeArgumentSyntax omittedTypeArgumentSyntax => omittedTypeArgumentSyntax.Parent?.Parent?.ToString(),
             PointerTypeSyntax pointerTypeSyntax => NameFrom(pointerTypeSyntax.ElementType),
             PredefinedTypeSyntax predefinedTypeSyntax => predefinedTypeSyntax.Keyword.Text,
             RefTypeSyntax refTypeSyntax => NameFrom(refTypeSyntax.Type),
             TupleTypeSyntax tupleTypeSyntax => tupleTypeSyntax.ToString(),
-            
-            _ => throw new InvalidOperationException($"Unexpected syntax: {type}"), 
+            _ => ThrowCannotHappen() 
         };
+
+        [ExcludeFromCodeCoverage]
+        string ThrowCannotHappen()
+        {
+            throw new InvalidOperationException($"Unexpected syntax: {type} ({type.GetType().Name})");
+        }
 
         static string NameFromIdentifier(SyntaxToken identifierToken, bool expandAttributeName)
         {
