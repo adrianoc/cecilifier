@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Tests.Tests.Unit.Framework;
@@ -348,6 +347,13 @@ public static class Outer
             }
         }
         
+        [Test, Ignore("Issue #331")]
+        public void Lambda_With_DefaultParameter()
+        {
+            var ctx = RunCecilifier("var f = (int i = 41) => i + 1;");
+            Assert.Pass();
+        }
+
         public class RecordTests : CecilifierUnitTestBase
         {
             [TestCase("class", TestName = "NullableContext and NullableAttribute are added to the type definition - class")]
