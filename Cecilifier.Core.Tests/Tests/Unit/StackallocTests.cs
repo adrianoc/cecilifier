@@ -39,7 +39,10 @@ public class StackallocTests : CecilifierUnitTestBase
     [TestCase("ushort", nameof(UInt16), sizeof(ushort), "Stind_I2", TestName = "ushort")]
     [TestCase("long", nameof(Int64), sizeof(long), "Stind_I8", TestName = "long")]
     [TestCase("ulong", nameof(UInt64), sizeof(ulong), "Stind_I8", TestName = "ulong")]
-    public void Test_Issue_134_Stackalloc_ArrayInitialization_Numeric(string type, string flcTypeName, int sizeofElement, string expectedStindOpCode)
+    
+    [TestCase("double", nameof(Double), sizeof(double), "Stind_R8", TestName = nameof(Double))]
+    [TestCase("float", nameof(Single), sizeof(Single), "Stind_R4", TestName = nameof(Single))]
+    public void Test_Issue_134_Stackalloc_ArrayInitialization_Numeric(string type, string fclTypeName, int sizeofElement, string expectedStindOpCode)
     {
         var code = @$"using System; class Foo {{ unsafe void Bar() {{ {type}* b = stackalloc {type}[] {{ 1, 2 }}; }} }}";
         var result = RunCecilifier(code);
@@ -48,10 +51,10 @@ public class StackallocTests : CecilifierUnitTestBase
 
         var sizeOfElementSupport = sizeofElement == 1
             ? string.Empty
-            : @$"\1Sizeof, assembly.MainModule.TypeSystem.{flcTypeName}\);\s+" +
+            : @$"\1Sizeof, assembly.MainModule.TypeSystem.{fclTypeName}\);\s+" +
               @"\1Mul_Ovf_Un\);\s+";
 
-        Assert.That(cecilifiedCode, Does.Match(@$"var l_b_3 = new VariableDefinition\(assembly.MainModule.TypeSystem.{flcTypeName}.MakePointerType\(\)\);\s+"
+        Assert.That(cecilifiedCode, Does.Match(@$"var l_b_3 = new VariableDefinition\(assembly.MainModule.TypeSystem.{fclTypeName}.MakePointerType\(\)\);\s+"
                                                + @"m_bar_1.Body.Variables.Add\(l_b_3\);\s+"
                                                + @"(.+\.Emit\(OpCodes\.)Ldc_I4, 2\);\s+"
                                                + @"\1Conv_U\);\s+"

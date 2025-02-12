@@ -77,7 +77,7 @@ namespace Cecilifier.Core.Extensions
                 SpecialType.System_UInt32 => sizeof(uint),
                 SpecialType.System_Int64 => sizeof(long),
                 SpecialType.System_UInt64 => sizeof(ulong),
-                _ => throw new NotImplementedException()
+                _ => throw new NotImplementedException($"Type not supported: {type}")
             };
         }
 
@@ -175,12 +175,6 @@ namespace Cecilifier.Core.Extensions
             typeSymbol is ITypeParameterSymbol typeParameterSymbol 
             && (typeParameterSymbol.HasReferenceTypeConstraint || typeParameterSymbol.ConstraintTypes.Length > 0);
 
-        public static IEnumerable<string> ImplementedInterfaces(this ITypeSymbol typeSymbol, IVisitorContext context)
-        {
-            return typeSymbol.Interfaces.Select(itf => context.TypeResolver.Resolve(itf));
-        }
-        
-        
         /// <summary>
         /// Returns a list of type arguments used in the generic type instantiation of <paramref name="type"/> 
         /// </summary>
