@@ -4,5 +4,8 @@
     <LangVersion>12</LangVersion>
     <AssemblyVersion>2.20.0</AssemblyVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+    <!-- Only copy english resource assemblies -->
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
   </PropertyGroup>
 </Project>
