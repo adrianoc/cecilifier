@@ -12,9 +12,10 @@ namespace Cecilifier.Core.Tests.Tests.Unit;
 public class NoCapturedVariableValidatorTests
 {
     [TestCase("class Foo { void M(Foo foo) { bool Capture() => foo == null; } }", TestName = "Parent Parameter")]
-    [TestCase("class Foo { void M(Foo foo) { void Capture() => foo.M(foo); } }", TestName = "Parent Parameter With Method Invocation")]
+    [TestCase("class Foo { void M(Foo foo) { void Capture() => foo.M(null); } }", TestName = "Method Invocation on captured parameter")]
     [TestCase("class Foo { void M(int parameter) { void Capture() { parameter++; } } }", TestName = "Parameter")]
     [TestCase("class Foo { void M() { int local = 42; void Capture() { local++; } } }", TestName = "Local")]
+    [TestCase("class Foo { void M(string s) { int Capture() => s.Length; } }", TestName = "Property access on captured parameter")]
     public void LocalFunctions_Positive(string source)
     {
         var ctx = ParseAndCreateContextFor(source);

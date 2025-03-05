@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Cecilifier.Core.Extensions;
 using Microsoft.CodeAnalysis;
@@ -19,14 +20,20 @@ internal static class NoCapturedVariableValidator
         context.WriteComment("The generated code will most likely not work.");
         return false;
     }
-        
+     
     private static (string, IList<string>) CapturesFrom(IVisitorContext context, SyntaxNode node)
     {
+        Debug.Assert(
+            node.IsKind(SyntaxKind.LocalFunctionStatement) ||
+            node.IsKind(SyntaxKind.SimpleLambdaExpression) ||
+            node.IsKind(SyntaxKind.ParenthesizedLambdaExpression) ||
+            node.IsKind(SyntaxKind.AnonymousMethodExpression));
+        
         var method = (context.SemanticModel.GetSymbolInfo(node).Symbol ?? context.SemanticModel.GetDeclaredSymbol(node)).EnsureNotNull<ISymbol, IMethodSymbol>();
         var captured = new List<string>();
-        foreach (var identifier in node.DescendantNodes().OfType<IdentifierNameSyntax>().Where(identifier => identifier?.Parent.IsKind(SyntaxKind.SimpleMemberAccessExpression) == false))
+        foreach (var identifier in node.DescendantNodes().OfType<IdentifierNameSyntax>().Where(identifier => identifier.Parent is not MemberAccessExpressionSyntax mae || mae.Expression == identifier))
         {
-            var symbolInfo = ModelExtensions.GetSymbolInfo(context.SemanticModel, identifier);
+            var symbolInfo = context.SemanticModel.GetSymbolInfo(identifier);
             if ((symbolInfo.Symbol?.Kind == SymbolKind.Parameter || symbolInfo.Symbol?.Kind == SymbolKind.Local) && !SymbolEqualityComparer.Default.Equals(symbolInfo.Symbol?.ContainingSymbol, method))
             {
                 captured.Add(identifier.Identifier.Text);
