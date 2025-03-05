@@ -116,4 +116,59 @@ public class NullableTests : CecilifierUnitTestBase
                                                                   \k<emit>Ret\);
                                                                   """));
     }
+
+    [TestCase(/*language=C#*/
+        //"class C { void M(System.DateTime p) => p = default; }",
+        "class C { void M(int? p) => p = null; }",
+        """
+        //p = null
+        \s+il_M_2.Emit\(OpCodes.Ldarga, p_p_\d+\);
+        \s+il_M_2.Emit\(OpCodes.Initobj, .+ImportReference\(typeof\(System.Nullable<>\)\).MakeGenericInstanceType\(.+Int32\)\);
+        """,
+        TestName = "Parameter")]
+    [TestCase(/*language=C#*/
+        "class C { void M()  { int? i;  i = null; } }",
+        """
+        //i = null;
+        \s+il_M_2.Emit\(OpCodes.Ldloca, l_i_\d+\);
+        \s+il_M_2.Emit\(OpCodes.Initobj, .+ImportReference\(typeof\(System.Nullable<>\)\).MakeGenericInstanceType\(.+Int32\)\);
+        """,
+        TestName = "Local variable assignment")]
+    [TestCase(/*language=C#*/
+        "class C { void M()  { int? i = null; } }",
+        """
+        //int\? i = null;
+        \s+var (?<var>l_i_\d+) = new VariableDefinition\((?<nullable>.+ImportReference\(typeof\(System.Nullable<>\)\)\.MakeGenericInstanceType\(.+Int32\))\);
+        \s+m_M_1.Body.Variables.Add\(\k<var>\);
+        (?<emit>\s+il_M_\d+\.Emit\(OpCodes\.)Ldloca, \k<var>\);
+        \k<emit>Initobj, \k<nullable>\);
+        """,
+        TestName = "Local variable initializer")]
+    [TestCase(/*language=C#*/
+        "class C { void M(int? p) => M(null); }", 
+        """
+        //M\(null\)
+        (\s+il_M_\d+\.Emit\(OpCodes\.)Ldarg_0\);
+        \s+var (?<var>l_tmpNull_\d+) = new VariableDefinition\(.+ImportReference\(.+System.Nullable<>\)\).MakeGenericInstanceType\(.+Int32\)\);
+        \s+m_M_\d+.Body.Variables.Add\(\k<var>\);
+        \1Ldloca_S, \k<var>\);
+        \1Initobj, .+ImportReference\(typeof\(System.Nullable<>\)\).MakeGenericInstanceType\(.+Int32\)\);
+        (\s+il_M_\d+\.Emit\(OpCodes\.)Ldloc_S, \k<var>\);
+        \1Call, m_M_\d+\);
+        """,
+        TestName = "Argument")]
+    [TestCase(/*language=C#*/
+        "class C { void M(int? p) => f = null;  int ?f; }", 
+        """
+                      //f = null
+                      (\s+il_M_\d+\.Emit\(OpCodes\.)Ldarg_0\);
+                      \1Ldflda, fld_f_\d+\);
+                      \1Initobj, .+ImportReference\(typeof\(System.Nullable<>\)\).MakeGenericInstanceType\(.+Int32\)\);
+                      """,
+        TestName = "Field")]
+    public void InitializingWithNull_EmitsCorrectCode(string code, string expectedSnippet)
+    {
+        var result = RunCecilifier(code);
+        Assert.That(result.GeneratedCode.ReadToEnd(),  Does.Match(expectedSnippet));
+    }
 }

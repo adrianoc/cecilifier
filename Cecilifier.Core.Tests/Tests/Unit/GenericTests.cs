@@ -273,24 +273,28 @@ namespace Cecilifier.Core.Tests.Tests.Unit
         
         [TestCase("bool bx = value != null", """
                                       //bool bx = value != null;
-                                      \s+var l_bx_13 = new VariableDefinition\(assembly.MainModule.TypeSystem.Boolean\);
-                                      \s+m_test_6.Body.Variables.Add\(l_bx_13\);
+                                      \s+var (l_bx_\d+) = new VariableDefinition\(assembly.MainModule.TypeSystem.Boolean\);
+                                      \s+m_test_6.Body.Variables.Add\(\1\);
                                       (\s+il_test_\d+\.Emit\(OpCodes\.)Ldarg_1\);
-                                      \1Box, gp_T_\d+\);
-                                      \1Ldnull\);
-                                      \1Cgt\);
-                                      \1Stloc, l_bx_13\);
-                                      """, IgnoreReason = "Issue #242")]
+                                      \2Box, gp_T_\d+\);
+                                      \2Ldnull\);
+                                      \2Ceq\);
+                                      \2Ldc_I4_0\);
+                                      \2Ceq\);
+                                      \2Stloc, \1\);
+                                      """)]
         
         [TestCase("bool bx; bx = value != null", """
                                       //bx = value != null;
                                       (\s+il_test_\d+\.Emit\(OpCodes\.)Ldarg_1\);
                                       \1Box, gp_T_\d+\);
                                       \1Ldnull\);
-                                      \1Cgt\);
-                                      \1Stloc, l_bx_13\);
+                                      \1Ceq\);
+                                      \1Ldc_I4_0\);
+                                      \1Ceq\);
+                                      \1Stloc, l_bx_\d+\);
                                       \1Ret\);
-                                      """, IgnoreReason = "Issue #242")]
+                                      """)]
         
         [TestCase(
             "bool b; b = value is string", 
@@ -547,6 +551,23 @@ namespace Cecilifier.Core.Tests.Tests.Unit
 
             var cecilifiedCode = result.GeneratedCode.ReadToEnd();
             Assert.That(cecilifiedCode, Does.Match(expectedIL));
+        }
+
+        [Test]
+        public void MemberAccess_OnArraysOfGenericType_EmitsReadonlyPrefixBeforeLdelema()
+        {
+            var result = RunCecilifier("string M<T>(T[] array) => array[0].ToString();");
+
+            var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+            Assert.That(cecilifiedCode, Does.Match("""
+                                                                \s+//array\[0\].ToString\(\)
+                                                                (?<prefix>\s+il_M_\d+\.Emit\(OpCodes\.)Ldarg_0\);
+                                                                \k<prefix>Ldc_I4, 0\);
+                                                                \k<prefix>Readonly\);
+                                                                \k<prefix>Ldelema, gp_T_7\);
+                                                                \k<prefix>Constrained, gp_T_7\);
+                                                                \k<prefix>Callvirt, .+ImportReference\(.+"ToString".+\)\)\);
+                                                                """));
         }
 
         [TestCaseSource(nameof(Scenarios))]

@@ -109,7 +109,7 @@ public class MemberAccessTests : CecilifierUnitTestBase
                                                                                        \1Constrained, gp_T_11\);
                                                                                        \1Callvirt, .+ImportReference\(.+ResolveMethod\(typeof\(System.Object\), "Equals",.+\)\)\);
                                                                                        \1Ret\);
-                                                                                       """, TestName = "LocalConstrainedToStructCallEquals", IgnoreReason = "KnownIssue: #263")]
+                                                                                       """, TestName = "LocalConstrainedToStructCallEquals")]
 
     [TestCase("string C<T>(T t) where T : IFoo { var l = t; return l.Get(); }", """
                                                                                 //return l.Get\(\);

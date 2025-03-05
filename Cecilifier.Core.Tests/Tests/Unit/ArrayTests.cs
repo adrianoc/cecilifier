@@ -159,7 +159,7 @@ public class ArrayTests : CecilifierUnitTestBase
                   \s+\1.NestedTypes.Add\(\2\);
                   \s+var (fld_arrayInitializerData_\d+) = new FieldDefinition\("[A-Z0-9]+", FieldAttributes.Assembly \| FieldAttributes.Static \| FieldAttributes.InitOnly, \2\);
                   \s+\1.Fields.Add\(\3\);
-                  \s+\3.InitialValue = Cecilifier.Runtime.TypeHelpers.ToByteArray<Int32>\(new Int32\[\] { 1, 2, 3 }\);
+                  \s+\3.InitialValue = \[ 0x01,0x00,0x00,0x00,0x02,0x00,0x00,0x00,0x03,0x00,0x00,0x00, \];
                   \s+(il_.+).Emit\(OpCodes.Dup\);
                   \s+\4.Emit\(OpCodes.Ldtoken, \3\);
                   """));

@@ -51,16 +51,16 @@ namespace Cecilifier.Core.Extensions
             _ => type
         };
 
-        public static uint SizeofArrayLikeItemElement(this ITypeSymbol type)
+        public static int SizeofPrimitiveType(this ITypeSymbol type)
         {
             switch (type)
             {
                 case INamedTypeSymbol { IsGenericType: true } ns:
-                    return SizeofArrayLikeItemElement(ns.TypeArguments[0]);
+                    return SizeofPrimitiveType(ns.TypeArguments[0]);
                 case IPointerTypeSymbol ptr:
-                    return SizeofArrayLikeItemElement(ptr.PointedAtType);
+                    return SizeofPrimitiveType(ptr.PointedAtType);
                 case IArrayTypeSymbol array:
-                    return SizeofArrayLikeItemElement(array.ElementType);
+                    return SizeofPrimitiveType(array.ElementType);
             }
 
             return type.SpecialType switch

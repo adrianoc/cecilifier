@@ -314,7 +314,10 @@ namespace Cecilifier.Core.AST
 
             // the same applies if...
             var isDefaultLiteralExpressionOnNonPrimitiveValueType = localVar.Initializer.Value.IsKind(SyntaxKind.DefaultLiteralExpression) && variableType.IsValueType && !variableType.IsPrimitiveType();
-            if (isIndexExpression || isDefaultLiteralExpressionOnNonPrimitiveValueType)
+            var isNullAssignmentToNullableValueType = localVar.Initializer is EqualsValueClauseSyntax { Value: LiteralExpressionSyntax { RawKind: (int) SyntaxKind.NullLiteralExpression } }
+                                                      && SymbolEqualityComparer.Default.Equals(variableType.OriginalDefinition, Context.RoslynTypeSystem.SystemNullableOfT);
+
+            if (isIndexExpression || isDefaultLiteralExpressionOnNonPrimitiveValueType || isNullAssignmentToNullableValueType)
             {
                 Context.EmitCilInstruction(_ilVar, OpCodes.Ldloca, localVarDef.VariableName);
             }

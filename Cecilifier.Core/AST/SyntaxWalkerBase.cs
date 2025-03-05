@@ -553,6 +553,11 @@ namespace Cecilifier.Core.AST
                 if (parentNode.Accept(UsageVisitor.GetInstance(Context)) != UsageKind.CallTarget)
                     return false;
 
+                if (loadOpCode == OpCodes.Ldelema)
+                {
+                    Context.EmitCilInstruction(ilVar, OpCodes.Readonly);
+                }
+                
                 Context.EmitCilInstruction(ilVar, loadOpCode, operand);
                 Context.SetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, Context.TypeResolver.Resolve(loadedType));
                 return true;
