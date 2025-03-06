@@ -49,7 +49,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
         {
             var context = RunProcessorOn(source);
             Assert.That(context.Output, Does.Not.Contains("//Synthetic method for lambda expression: i => i + 1"));
-            Assert.That(context.Output, Contains.Substring("//Lambda to delegates conversion is only supported for Func<> and Action<>"));
+            Assert.That(context.Output, Contains.Substring("#warning Lambda to delegates conversion is only supported for Func<> and Action<>"));
         }
 
         [TestCase("using System; class Foo { void M(Func<int, int> a) { M(x => x + 1); } }", TestName = "Expression")]

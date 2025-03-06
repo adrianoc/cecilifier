@@ -347,10 +347,11 @@ public static class Outer
             }
         }
         
-        [Test, Ignore("Issue #331")]
-        public void Lambda_With_DefaultParameter()
+        [TestCase("var f = (int i) => i + 1;")]
+        [TestCase("System.Func<int, int> f = (int i) => i + 1;")]
+        public void SimpleLambda_ToDelegateConversion_DoesNotCrash(string code)
         {
-            var ctx = RunCecilifier("var f = (int i = 41) => i + 1;");
+            var ctx = RunCecilifier(code);
             Assert.Pass();
         }
 
