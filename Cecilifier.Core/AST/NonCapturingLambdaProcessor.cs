@@ -22,7 +22,7 @@ namespace Cecilifier.Core.AST
                 
                 if (!IsValidConversion(context, lambda))
                 {
-                    context.WriteComment("Lambda to delegates conversion is only supported for Func<> and Action<>");
+                    context.EmitWarning($"Lambda to delegates conversion is only supported for Func<> and Action<>: {node.HumanReadableSummary()}", node);
                     continue;
                 }
 

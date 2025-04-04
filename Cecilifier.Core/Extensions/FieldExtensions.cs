@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
@@ -13,10 +14,7 @@ namespace Cecilifier.Core.Extensions
             if (field.IsDefinedInCurrentAssembly(context))
             {
                 var found = context.DefinitionVariables.GetVariable(field.Name, VariableMemberKind.Field, field.ContainingType.OriginalDefinition.ToDisplayString());
-                if (!found.IsValid)
-                {
-                    throw new Exception($"Failed to resolve variable with field definition for `{field}`");
-                }
+                ThrowIfVariableNotFound(found.IsValid);
 
                 var resolvedField = field.ContainingType.IsGenericType && !field.ContainingType.IsDefinition 
                     ? $$"""new FieldReference("{{field.Name}}", {{context.TypeResolver.Resolve(field.OriginalDefinition.Type)}}, {{context.TypeResolver.Resolve(field.ContainingType)}})""" 
@@ -27,6 +25,9 @@ namespace Cecilifier.Core.Extensions
 
             var declaringTypeName = field.ContainingType.FullyQualifiedName();
             return ImportFromMainModule($"TypeHelpers.ResolveField(\"{declaringTypeName}\",\"{field.Name}\")");
+
+            [ExcludeFromCodeCoverage]
+            void ThrowIfVariableNotFound(bool found) { if(!found) throw new Exception($"Failed to resolve variable with field definition for `{field}`"); }
         }
     }
 }

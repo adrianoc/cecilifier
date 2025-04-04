@@ -43,13 +43,6 @@ namespace Cecilifier.Core.Extensions
 
         public static string FullyQualifiedName(this ISymbol type, bool includingTypeParameters = true)
         {
-            // ISymbol.ToDisplayString() does not have the option to use the metadata name for IntPtr
-            // returning `nint` instead.
-            if (type is ITypeSymbol { SpecialType: SpecialType.System_IntPtr } ts)
-            {
-                return "System.IntPtr";
-            }
-
             return type.ToDisplayString(includingTypeParameters ? QualifiedNameIncludingTypeParametersFormat : QualifiedNameWithoutTypeParametersFormat);
         }
         
@@ -111,6 +104,7 @@ namespace Cecilifier.Core.Extensions
                 _ => false
             };
 
+        [ExcludeFromCodeCoverage]
         [return: NotNull]
         public static T EnsureNotNull<T>([NotNullIfNotNull("symbol")] this T symbol, [CallerArgumentExpression(nameof(symbol))] string expression = null) where T : ISymbol
         {
@@ -164,8 +158,14 @@ namespace Cecilifier.Core.Extensions
             }
 
             var fieldDeclarationVariable = context.DefinitionVariables.GetVariable(fieldSymbol.Name, VariableMemberKind.Field, fieldSymbol.ContainingType.OriginalDefinition.ToDisplayString());
-            if (!fieldDeclarationVariable.IsValid)
-                throw new Exception($"Could not resolve reference to field: {fieldSymbol.Name}");
+            ThrowIfVariableIsNotValid(fieldDeclarationVariable, fieldSymbol.Name);
+
+            [ExcludeFromCodeCoverage]
+            void ThrowIfVariableIsNotValid(DefinitionVariable variable, string fieldName)
+            {
+                if (!variable.IsValid)
+                    throw new Exception($"Could not resolve reference to field: {fieldName}");
+            }
         }
 
         public static void EnsurePropertyExists(this IPropertySymbol propertySymbol, IVisitorContext context, [NotNull] SyntaxNode node)

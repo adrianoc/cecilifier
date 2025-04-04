@@ -177,4 +177,24 @@ public class PropertyTests : CecilifierUnitTestBase
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
         Assert.That(cecilifiedCode, Does.Not.Match("""\s+\.CustomAttributes.Add\(attr_obsolete_\d+\);"""));
     }
+    
+    [Test]
+    public void IndexersWithDefaultParameters_InitializesParameterValues()
+    {
+        var code = """
+                   class Foo { public int this[int index, int value = 1, float floatWithUnaryOperator = -4.2f] => index + value; }
+                   """;
+
+        var result = RunCecilifier(code);
+        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
+        Assert.That(cecilifiedCode, Does.Match("""
+                                               var (p_value_\d+) = new ParameterDefinition\("value", ParameterAttributes.Optional, assembly.MainModule.TypeSystem.Int32\);
+                                               \s+\1\.Constant = 1;
+                                               """));
+        
+        Assert.That(cecilifiedCode, Does.Match("""
+                                               var (p_floatWithUnaryOperator_\d+) = new ParameterDefinition\("floatWithUnaryOperator", ParameterAttributes.Optional, assembly.MainModule.TypeSystem.Single\);
+                                               \s+\1\.Constant = -4.2f;
+                                               """));
+    }
 }

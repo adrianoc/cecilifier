@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Cecilifier.Core.Extensions;
 
 namespace Cecilifier.Core.Mappings
@@ -11,6 +12,7 @@ namespace Cecilifier.Core.Mappings
         public Microsoft.CodeAnalysis.SyntaxNode Node;
 #endif
 
+        [ExcludeFromCodeCoverage]
         public override string ToString()
         {
 #if DEBUG

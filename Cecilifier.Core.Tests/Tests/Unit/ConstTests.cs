@@ -41,7 +41,10 @@ namespace Cecilifier.Core.Tests.Tests.Unit
         [TestCase("class C { public const string StringValue = \"foo\"; int Foo() => StringValue.Length; }", Code.Ldstr)]
         [TestCase("class C { public const byte ByteValue = 42; byte Foo() => ByteValue; }", Code.Ldc_I4)]
         [TestCase("class C { public const sbyte SByteValue = -42; sbyte Foo() => SByteValue; }", Code.Ldc_I4)]
-        [TestCase("class C { public const sbyte SByteValue = -42; sbyte Foo() => SByteValue; }", Code.Ldc_I4)]
+        [TestCase("class C { public const short ShortValue = -42; short Foo() => ShortValue; }", Code.Ldc_I4)]
+        [TestCase("class C { public const ushort UShortValue = 42; ushort Foo() => UShortValue; }", Code.Ldc_I4)]
+        [TestCase("class C { public const System.IntPtr IntPtrValue = 42; System.IntPtr Foo() => IntPtrValue; }", Code.Ldc_I4)]
+        [TestCase("class C { public const System.UIntPtr UIntPtrValue = 42; System.UIntPtr Foo() => UIntPtrValue; }", Code.Ldc_I4)]
         [TestCase("class C { public const C NullRef = null; C Foo() => NullRef; }", Code.Ldnull)]
         public void ConstTypes(string code, Code expectedLoad)
         {

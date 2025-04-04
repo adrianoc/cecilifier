@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using Cecilifier.Core.Extensions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -21,9 +22,7 @@ internal sealed class BinaryOperatorHandler
         }
         else if (_rawHandler != null)
         {
-            if (visitor == null)
-                throw new InvalidOperationException();
-            
+            ThrowIfVisitorIsNull();
             binaryExpression.Left.Accept(visitor);
             binaryExpression.Left.InjectRequiredConversions(context, ilVar);
 
@@ -35,18 +34,28 @@ internal sealed class BinaryOperatorHandler
             
             ProcessRaw(context, ilVar, binaryExpression.Left, binaryExpression.Right);
         }
+
+        [ExcludeFromCodeCoverage]
+        void ThrowIfVisitorIsNull()
+        {
+            if (visitor == null) throw new InvalidOperationException();
+        }
     }
     
     public void ProcessRaw(IVisitorContext context, string ilVar, ExpressionSyntax left, ExpressionSyntax right)
     {
-        if (_rawHandler == null)
-            throw new InvalidOperationException("The constructor taking two ITypeSymbols should be used to initialize this instance.");
-        
+        ThrowIfRawHandlerIsNull();
         _rawHandler(
             context, 
             ilVar, 
             context.SemanticModel.GetTypeInfo(left).Type, 
             context.SemanticModel.GetTypeInfo(right).Type);
+
+        [ExcludeFromCodeCoverage]
+        void ThrowIfRawHandlerIsNull()
+        {
+            if (_rawHandler == null) throw new InvalidOperationException("The constructor taking two ITypeSymbols should be used to initialize this instance.");
+        }
     }
 
     public BinaryOperatorHandler(Action<IVisitorContext, string, BinaryExpressionSyntax, ExpressionVisitor> handler)

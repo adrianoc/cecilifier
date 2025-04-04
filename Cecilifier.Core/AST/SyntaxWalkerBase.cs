@@ -120,6 +120,7 @@ namespace Cecilifier.Core.AST
                 case SpecialType.System_Byte:
                 case SpecialType.System_SByte:
                 case SpecialType.System_Int16:
+                case SpecialType.System_UInt16:
                 case SpecialType.System_Int32:
                 case SpecialType.System_UInt32:
                 case SpecialType.System_Int64:
@@ -134,6 +135,7 @@ namespace Cecilifier.Core.AST
                     break;
 
                 case SpecialType.System_IntPtr:
+                case SpecialType.System_UIntPtr:
                     LoadLiteralToStackHandlingCallOnValueTypeLiterals(ilVar, type, value, usageResult);
                     Context.EmitCilInstruction(ilVar, OpCodes.Conv_I);
                     break;
@@ -372,7 +374,8 @@ namespace Cecilifier.Core.AST
 
         protected string ResolveExpressionType(ExpressionSyntax expression)
         {
-            var type = Context.GetTypeInfo(expression).Type.EnsureNotNull();
+            var typeInfo = Context.GetTypeInfo(expression);
+            var type = (typeInfo.Type ?? typeInfo.ConvertedType).EnsureNotNull();
             return Context.TypeResolver.Resolve(type);
         }
 
@@ -939,9 +942,14 @@ namespace Cecilifier.Core.AST
 
         protected void LogUnsupportedSyntax(SyntaxNode node)
         {
-            Context.EmitWarning($"Syntax {node.Kind()} ({node.HumanReadableSummary()}) is not supported.\nGenerated code may not compile, or if it compiles, produce invalid results.", node);
+            LogWarning($"Syntax {node.Kind()} ({node.HumanReadableSummary()}) is not supported.", node);
             var lineSpan = node.GetLocation().GetLineSpan();
             AddCecilExpression($"/* Syntax '{node.Kind()}' is not supported in {lineSpan.Path} ({lineSpan.Span.Start.Line + 1},{lineSpan.Span.Start.Character + 1}):\n------\n{node}\n----*/");
+        }
+
+        private void LogWarning(string message, SyntaxNode node)
+        {
+            Context.EmitWarning($"{message}\nGenerated code may not compile, or if it compiles, produce invalid results.", node);
         }
 
         // Methods implementing explicit interfaces, static abstract methods from interfaces and overriden methods with covariant return types
