@@ -51,7 +51,10 @@ function initializeSite(
     requestPath, // something like `/name` where `name` is the string used to store the snippet in the browser local store.
     removeStoredSnippet, // user has requested to remove the contents of a snippet from the browser local store
     pageNotFoundPath, // if user navigated to a non-existing page in cecilifier this will contain the path of the page.
-    version) {
+    cecilifierVersion,
+    frameWorkVersion,
+    buildDate,
+    buildGitRevision) {
     
     if (pageNotFoundPath != null && pageNotFoundPath.length > 0) {
         SnackBar({
@@ -120,7 +123,7 @@ class Foo
 
     showListOfFixedIssuesInStagingServer(false);
     
-    setTooltips(version);
+    setTooltips(cecilifierVersion, frameWorkVersion, buildDate, buildGitRevision);
     initializeWebSocket();
     disableScroll();
 }
@@ -384,8 +387,11 @@ function updateEditorsSize() {
     cecilifiedCode.layout();
 }
 
-function setTooltips(version) {
-    let msg = `Cecilifier version ${version}<br/><br/>Cecilifier is meant to make it easier to learn how to use <a href="https://github.com/jbevain/cecil" target="_blank">Mono.Cecil</a>. You can read more details about it in its <a href="https://programing-fun.blogspot.com/2019/02/making-it-easier-to-getting-started.html" target="_blank">blog announcement</a>.`;
+function setTooltips(cecilifierVersion,
+                     frameWorkVersion,
+                     buildDate,
+                     buildGitRevision) {
+    let msg = `Cecilifier is meant to make it easier to learn how to use <a href="https://github.com/jbevain/cecil" target="_blank">Mono.Cecil</a>.<br/>You can read more details about it in its <a href="https://programing-fun.blogspot.com/2019/02/making-it-easier-to-getting-started.html" target="_blank">blog announcement</a>.<br/><br/>Version ${cecilifierVersion} (${frameWorkVersion})<br/>Git Commig: <a href="https://github.com/adrianoc/cecilifier/commit/${buildGitRevision}">${buildGitRevision}</a></br>Built on: ${buildDate}`;
     
     let defaultDelay =  [500, null];
     tippy('#aboutSpan2', {
@@ -394,7 +400,8 @@ function setTooltips(version) {
         interactive: true,
         allowHTML: true,
         theme: 'cecilifier-tooltip',
-        delay: defaultDelay
+        delay: defaultDelay,
+        maxWidth: 'none'
     });
 
     tippy('#csharpcode-container', {
