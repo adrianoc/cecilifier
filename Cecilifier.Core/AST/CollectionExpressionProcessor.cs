@@ -188,8 +188,8 @@ internal static class CollectionExpressionProcessor
         if (ctors.Count() == 1)
             return ctors.First().MethodResolverExpression(context);
 
-        var expectedParamTypes = ctorParamTypes.Select(paramType => context.SemanticModel.Compilation.GetTypeByMetadataName(paramType.FullName!)).ToHashSet();
-        return ctors.Single(ctor => !ctor.Parameters.Select(p => p.Type).ToHashSet().Except(expectedParamTypes, SymbolEqualityComparer.Default).Any()).MethodResolverExpression(context);
+        var expectedParamTypes = ctorParamTypes.Select(paramType => context.SemanticModel.Compilation.GetTypeByMetadataName(paramType.FullName!)).ToHashSet(SymbolEqualityComparer.Default);
+        return ctors.Single(ctor => !ctor.Parameters.Select(p => p.Type).ToHashSet(SymbolEqualityComparer.Default).Except(expectedParamTypes, SymbolEqualityComparer.Default).Any()).MethodResolverExpression(context);
     }
 
     private static void HandleAssignmentToArray(ExpressionVisitor visitor, CollectionExpressionSyntax node, IArrayTypeSymbol arrayTypeSymbol)

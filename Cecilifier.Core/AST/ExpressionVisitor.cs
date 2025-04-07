@@ -1451,7 +1451,7 @@ namespace Cecilifier.Core.AST
 		 * 
 		 * To fix this we visit in the order [exp, args] and move the call operation after visiting the arguments
 		 */
-        private void HandleMethodInvocation(SyntaxNode target, ArgumentListSyntax args, ISymbol? method = null)
+        private void HandleMethodInvocation(SyntaxNode target, ArgumentListSyntax args, ISymbol method = null)
         {
             var targetTypeInfo = Context.SemanticModel.GetTypeInfo(target).Type;
             if (targetTypeInfo?.TypeKind == TypeKind.FunctionPointer)
@@ -1482,7 +1482,7 @@ namespace Cecilifier.Core.AST
             _lastInstructionLoadingTargetOfInvocation = Context.CurrentLine;
         }
         
-        private void ProcessArgumentsTakingDefaultParametersIntoAccount(ISymbol? method, ArgumentListSyntax args)
+        private void ProcessArgumentsTakingDefaultParametersIntoAccount(ISymbol method, ArgumentListSyntax args)
         {
             Visit(args);
             if (method is not IMethodSymbol methodSymbol || methodSymbol.Parameters.Length <= args.Arguments.Count)

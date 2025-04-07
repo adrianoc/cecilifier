@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
@@ -12,6 +13,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Mono.Cecil.Cil;
 using static Cecilifier.Core.Misc.CodeGenerationHelpers;
 
+#nullable enable annotations
 namespace Cecilifier.Core.AST
 {
     internal partial class StatementVisitor : SyntaxWalkerBase
@@ -257,6 +259,8 @@ namespace Cecilifier.Core.AST
 
             void FinallyBlockHandler(ForEachHandlerContext _)
             {
+                Debug.Assert(usingType != null);
+                
                 string? lastFinallyInstructionLabel = null;
                 if (usingType.TypeKind == TypeKind.TypeParameter || usingType.IsValueType)
                 {

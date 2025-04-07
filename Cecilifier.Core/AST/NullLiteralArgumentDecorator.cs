@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Threading;
 using Cecilifier.Core.Extensions;
 using Microsoft.CodeAnalysis;
@@ -21,13 +22,13 @@ namespace Cecilifier.Core.AST;
 /// </remarks>
 internal ref struct  NullLiteralArgumentDecorator
 {
-    private string? _localVariableName;
-    private readonly IVisitorContext? _context;
-    private readonly string? _ilVar;
+    private string _localVariableName;
+    private readonly IVisitorContext _context;
+    private readonly string _ilVar;
         
     public NullLiteralArgumentDecorator(IVisitorContext context, ArgumentSyntax node, string ilVar)
     {
-        if (node.Expression is not LiteralExpressionSyntax { RawKind: (int) SyntaxKind.NullLiteralExpression } nullLiteralExpression)
+        if (node.Expression is not LiteralExpressionSyntax { RawKind: (int) SyntaxKind.NullLiteralExpression })
             return;
             
         var argType = context.SemanticModel.GetTypeInfo(node.Expression).ConvertedType.EnsureNotNull();
@@ -50,6 +51,8 @@ internal ref struct  NullLiteralArgumentDecorator
         string localVariable = Interlocked.Exchange(ref _localVariableName, null);
         if (localVariable != null)
         {
+            Debug.Assert(_context != null);
+            Debug.Assert(_ilVar != null);
             _context!.EmitCilInstruction(_ilVar, OpCodes.Ldloc_S, localVariable);
         }
     }

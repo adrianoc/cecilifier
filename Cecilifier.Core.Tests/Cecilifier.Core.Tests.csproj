@@ -1,19 +1,28 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <Import Project="../Cecilifier.Common.props" />
   <Import Project="../Cecilifier.CommonPackages.props" />
+  
+  <PropertyGroup>
+    <!--
+    NuGet resolution complains about `Microsoft.CodeAnalysis.CSharp 4.13.0` requiring `System.Reflection.Metadata (>= 9.0.0-rtm.24511.16)` 
+    but according to https://www.nuget.org/packages/Microsoft.CodeAnalysis.CSharp#dependencies-body-tab when targeting
+    .NET 9.0 it depends on `System.Reflection.Metadata (>= 8.0.0)` 
+    
+    Cecilifier.Core.Tests.csproj: Warning NU1603 : Microsoft.CodeAnalysis.CSharp 4.13.0 depends on System.Reflection.Metadata (>= 9.0.0-rtm.24511.16) but System.Reflection.Metadata 9.0.0-rtm.24511.16 was not found. System.Reflection.Metadata 9.0.0 was resolved instead. 
+    -->
+    <NoWarn>$(NoWarn);NU1603</NoWarn>
+  </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Basic.Reference.Assemblies.Net90" Version="1.8.0" />
     <PackageReference Include="coverlet.collector" Version="6.0.4">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.ILVerification" Version="10.0.0-preview.2.25163.2" />
+    <PackageReference Include="Microsoft.ILVerification" Version="9.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.9.0" />
     <PackageReference Include="NSubstitute" Version="5.3.0" />
     <PackageReference Include="NUnit" Version="4.2.2" />
     <PackageReference Include="NUnit3TestAdapter" Version="5.0.0-beta.5" />
-    <PackageReference Update="Microsoft.CodeAnalysis.Common" Version="4.13.0" />
-    <PackageReference Update="Microsoft.CodeAnalysis.CSharp" Version="4.13.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Cecilifier.Core\Cecilifier.Core.csproj" />

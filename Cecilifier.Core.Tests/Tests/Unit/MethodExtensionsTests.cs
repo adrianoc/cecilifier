@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Tests.Tests.Unit.Framework;
@@ -42,7 +43,7 @@ internal class MethodExtensionsTests : CecilifierContextBasedTestBase
     {
         var context = NewContext();
 
-        var testType = context.SemanticModel.Compilation.GetTypeByMetadataName("Cecilifier.Core.Tests.Tests.Unit.TestScenario");
+        var testType = context.SemanticModel.Compilation.GetTypeByMetadataName("Cecilifier.Core.Tests.Tests.Unit.TestScenario").EnsureNotNull();
         var testMethod = testType.GetMembers("UseNestedType").Single().EnsureNotNull<ISymbol, IMethodSymbol>();
 
         var resolvedMethod = testMethod.MethodResolverExpression(context);
@@ -54,7 +55,7 @@ internal class MethodExtensionsTests : CecilifierContextBasedTestBase
     {
         var context = NewContext();
 
-        var testType = context.SemanticModel.Compilation.GetTypeByMetadataName("Cecilifier.Core.Tests.Tests.Unit.SomeClass`1");
+        var testType = context.SemanticModel.Compilation.GetTypeByMetadataName("Cecilifier.Core.Tests.Tests.Unit.SomeClass`1").EnsureNotNull();
         var testMethod = testType.GetMembers("Overload1").OfType<IMethodSymbol>().First(m => m.Parameters.Length == 2).EnsureNotNull<ISymbol, IMethodSymbol>();
 
         var resolvedMethod = testMethod.MethodResolverExpression(context);
@@ -79,7 +80,7 @@ internal class MethodExtensionsTests : CecilifierContextBasedTestBase
     {
         var context = NewContext();
 
-        var testType = context.SemanticModel.Compilation.GetTypeByMetadataName("Cecilifier.Core.Tests.Tests.Unit.SomeClass`1");
+        var testType = context.SemanticModel.Compilation.GetTypeByMetadataName("Cecilifier.Core.Tests.Tests.Unit.SomeClass`1").EnsureNotNull();
         var testMethod = testType.GetMembers("Overload2").OfType<IMethodSymbol>().First(m => m.Parameters.Length == 2).EnsureNotNull<ISymbol, IMethodSymbol>();
 
         var resolvedMethod = testMethod.MethodResolverExpression(context);
