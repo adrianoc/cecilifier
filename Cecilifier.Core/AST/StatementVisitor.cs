@@ -13,24 +13,24 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Mono.Cecil.Cil;
 using static Cecilifier.Core.Misc.CodeGenerationHelpers;
 
-#nullable enable annotations
+#nullable enable
 namespace Cecilifier.Core.AST
 {
     internal partial class StatementVisitor : SyntaxWalkerBase
     {
-        private static string _ilVar;
+        private string _ilVar;
 
-        private StatementVisitor(IVisitorContext ctx) : base(ctx)
+        private StatementVisitor(IVisitorContext ctx, string ilVar) : base(ctx)
         {
+            _ilVar = ilVar;
         }
 
         internal static void Visit(IVisitorContext context, string ilVar, CSharpSyntaxNode node)
         {
-            _ilVar = ilVar;
-            node.Accept(new StatementVisitor(context));
+            node.Accept(new StatementVisitor(context, ilVar));
         }
 
-        public override void Visit(SyntaxNode node)
+        public override void Visit(SyntaxNode? node)
         {
             using var _ = LineInformationTracker.Track(Context, node);
             Context.WriteNewLine();
@@ -42,7 +42,7 @@ namespace Cecilifier.Core.AST
         public override void VisitForStatement(ForStatementSyntax node)
         {
             // Initialization
-            HandleVariableDeclaration(node.Declaration);
+            HandleVariableDeclaration(node.Declaration!);
             foreach (var init in node.Initializers)
             {
                 ExpressionVisitor.Visit(Context, _ilVar, init);
@@ -160,7 +160,7 @@ namespace Cecilifier.Core.AST
         {
             using (Context.WithFlag<ContextFlagReseter>(Constants.ContextFlags.Fixed))
             {
-                var declaredType = Context.GetTypeInfo((PointerTypeSyntax) node.Declaration.Type).Type;
+                var declaredType = Context.GetTypeInfo((PointerTypeSyntax) node.Declaration.Type).Type.EnsureNotNull();
                 var pointerType = (IPointerTypeSymbol) declaredType.EnsureNotNull();
 
                 var currentMethodVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
@@ -226,7 +226,7 @@ namespace Cecilifier.Core.AST
         {
 
             var finallyBlockHandler = node.Finally == null ?
-                                (Action<object>) null :
+                                (Action<object?>?) null :
                                 _ => node.Finally.Accept(this);
 
             ProcessTryCatchFinallyBlock(_ilVar, node.Block, node.Catches.ToArray(), finallyBlockHandler);
@@ -247,13 +247,13 @@ namespace Cecilifier.Core.AST
             ITypeSymbol usingType;
             if (node.Declaration != null)
             {
-                usingType = (ITypeSymbol) Context.SemanticModel.GetSymbolInfo(node.Declaration.Type).Symbol;
+                usingType = (ITypeSymbol) Context.SemanticModel.GetSymbolInfo(node.Declaration.Type).Symbol.EnsureNotNull();
                 HandleVariableDeclaration(node.Declaration);
                 localVarDef = Context.DefinitionVariables.GetVariable(node.Declaration.Variables[0].Identifier.ValueText, VariableMemberKind.LocalVariable);
             }
             else
             {
-                usingType = Context.SemanticModel.GetTypeInfo(node.Expression).Type;
+                usingType = Context.SemanticModel.GetTypeInfo(node.Expression!).Type.EnsureNotNull();
                 localVarDef = StoreTopOfStackInLocalVariable(Context, _ilVar, "tmp", usingType).VariableName;
             }
 
@@ -304,7 +304,7 @@ namespace Cecilifier.Core.AST
             return Context.AddLocalVariableToMethod(localVar.Identifier.Text, methodVar, resolvedVarType);
         }
 
-        private void ProcessVariableInitialization(VariableDeclaratorSyntax localVar, ITypeSymbol variableType)
+        private void ProcessVariableInitialization(VariableDeclaratorSyntax localVar, ITypeSymbol? variableType)
         {
             if (localVar.Initializer == null)
                 return;
@@ -317,9 +317,9 @@ namespace Cecilifier.Core.AST
             var isIndexExpression = localVar.Initializer.Value.IsKind(SyntaxKind.IndexExpression);
 
             // the same applies if...
-            var isDefaultLiteralExpressionOnNonPrimitiveValueType = localVar.Initializer.Value.IsKind(SyntaxKind.DefaultLiteralExpression) && variableType.IsValueType && !variableType.IsPrimitiveType();
+            var isDefaultLiteralExpressionOnNonPrimitiveValueType = localVar.Initializer.Value.IsKind(SyntaxKind.DefaultLiteralExpression) && variableType is { IsValueType: true } && !variableType.IsPrimitiveType();
             var isNullAssignmentToNullableValueType = localVar.Initializer is EqualsValueClauseSyntax { Value: LiteralExpressionSyntax { RawKind: (int) SyntaxKind.NullLiteralExpression } }
-                                                      && SymbolEqualityComparer.Default.Equals(variableType.OriginalDefinition, Context.RoslynTypeSystem.SystemNullableOfT);
+                                                      && SymbolEqualityComparer.Default.Equals(variableType?.OriginalDefinition, Context.RoslynTypeSystem.SystemNullableOfT);
 
             if (isIndexExpression || isDefaultLiteralExpressionOnNonPrimitiveValueType || isNullAssignmentToNullableValueType)
             {

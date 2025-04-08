@@ -5,11 +5,12 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Mono.Cecil.Cil;
 
+#nullable enable annotations
 namespace Cecilifier.Core.AST
 {
     internal partial class StatementVisitor
     {
-        private void ProcessTryCatchFinallyBlock<TState>(string ilVar, CSharpSyntaxNode tryStatement, CatchClauseSyntax[] catches, Action<TState> finallyBlockHandler, TState state = default)
+        private void ProcessTryCatchFinallyBlock<TState>(string ilVar, CSharpSyntaxNode tryStatement, CatchClauseSyntax[] catches, Action<TState>? finallyBlockHandler, TState state = default)
         {
             ProcessWithInTryCatchFinallyBlock(ilVar, _ => tryStatement.Accept(this), catches, finallyBlockHandler, state);
         }
