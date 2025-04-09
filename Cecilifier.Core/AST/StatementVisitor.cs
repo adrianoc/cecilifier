@@ -56,7 +56,7 @@ namespace Cecilifier.Core.AST
 
             Context.WriteComment($"for condition: {node.Condition.HumanReadableSummary()}");
             // Condition
-            ExpressionVisitor.Visit(Context, _ilVar, node.Condition);
+            ExpressionVisitor.Visit(Context, _ilVar, node.Condition!);
             Context.EmitCilInstruction(_ilVar, OpCodes.Brfalse, forEndLabel);
 
             // Body
@@ -241,7 +241,7 @@ namespace Cecilifier.Core.AST
         {
             //https://github.com/dotnet/csharpstandard/blob/draft-v7/standard/statements.md#1214-the-using-statement
 
-            ExpressionVisitor.Visit(Context, _ilVar, node.Expression);
+            ExpressionVisitor.Visit(Context, _ilVar, node.Expression!);
             string localVarDef;
 
             ITypeSymbol usingType;
