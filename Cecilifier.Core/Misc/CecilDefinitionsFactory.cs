@@ -403,12 +403,12 @@ namespace Cecilifier.Core.Misc
             for (int i = 0; i < typeParamList.Count; i++)
             {
                 exps.Add($"{memberDefVar}.GenericParameters.Add({genericTypeParamEntries[i].genParamDefVar});");
-                AddConstraints(genericTypeParamEntries[i].genParamDefVar, genericTypeParamEntries[i].typeParameterSymbol);
+                AddConstraints(genericTypeParamEntries[i].genParamDefVar, genericTypeParamEntries[i].typeParameterSymbol, typeParamList[i]);
             }
 
             ArrayPool<(string genParamDefVar, ITypeParameterSymbol typeParameterSymbol)>.Shared.Return(genericTypeParamEntries);
 
-            void AddConstraints(string genParamDefVar, ITypeParameterSymbol typeParam)
+            void AddConstraints(string genParamDefVar, ITypeParameterSymbol typeParam, TypeParameterSyntax typeParameterSyntax)
             {
                 if (typeParam.HasConstructorConstraint || typeParam.HasValueTypeConstraint) // struct constraint implies new()
                 {
@@ -438,6 +438,10 @@ namespace Cecilifier.Core.Misc
                 else if (typeParam.Variance == VarianceKind.Out)
                 {
                     exps.Add($"{genParamDefVar}.IsCovariant = true;");
+                }
+                else if (typeParam.AllowsRefLikeType)
+                {
+                    context.EmitWarning("`allow ref struct` feature is not implemented yet.", typeParameterSyntax);
                 }
 
                 //https://github.com/adrianoc/cecilifier/issues/312

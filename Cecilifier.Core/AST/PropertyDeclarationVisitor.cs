@@ -303,7 +303,7 @@ namespace Cecilifier.Core.AST
         private static string BackingFieldModifiersFor(BasePropertyDeclarationSyntax node)
         {
             var m = node.Modifiers.ExceptBy(
-                [SyntaxKind.PublicKeyword, SyntaxKind.ProtectedKeyword, SyntaxKind.InternalKeyword, SyntaxKind.VirtualKeyword, SyntaxKind.OverrideKeyword],
+                [SyntaxKind.PublicKeyword, SyntaxKind.ProtectedKeyword, SyntaxKind.InternalKeyword, SyntaxKind.VirtualKeyword, SyntaxKind.OverrideKeyword, SyntaxKind.PartialKeyword],
                 c => c.Kind());
             
             if (node.AccessorList != null && node.AccessorList.Accessors.Any(acc => acc.IsKind(SyntaxKind.InitAccessorDeclaration)))
