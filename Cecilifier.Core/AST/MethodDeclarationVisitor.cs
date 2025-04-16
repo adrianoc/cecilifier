@@ -91,7 +91,7 @@ namespace Cecilifier.Core.AST
 
             var methodVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
             if (!methodVar.IsValid)
-                throw new InvalidOperationException($"Failed to retrieve current method.");
+                throw new InvalidOperationException("Failed to retrieve current method.");
 
             using var _ = LineInformationTracker.Track(Context, node);
             
