@@ -1,8 +1,11 @@
+#nullable enable annotations
+
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Cecilifier.Core.AST;
+using Cecilifier.Core.AST.Params;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.Variables;
@@ -106,7 +109,7 @@ namespace Cecilifier.Core.Extensions
 
         [ExcludeFromCodeCoverage]
         [return: NotNull]
-        public static T EnsureNotNull<T>([NotNullIfNotNull("symbol")] this T symbol, [CallerArgumentExpression(nameof(symbol))] string expression = null) where T : ISymbol
+        public static T EnsureNotNull<T>([NotNullIfNotNull("symbol")] this T? symbol, [CallerArgumentExpression(nameof(symbol))] string expression = null) where T : ISymbol
         {
             if (symbol == null)
                 throw new NullReferenceException($"Expression '{expression}' is expected to be non null.");
@@ -269,6 +272,27 @@ namespace Cecilifier.Core.Extensions
         {
             return type.TypeArguments.Any(t => t.IsDefinedInCurrentAssembly(context)) 
                    || (type.ContainingType != null && (SymbolEqualityComparer.Default.Equals(type.ContainingType, type) ? false : HasTypeArgumentOfTypeFromCecilifiedCodeTransitive(type.ContainingType, context)));
+        }
+        
+        internal static bool IsExpandedParamsUsage(this IMethodSymbol methodSymbol, IVisitorContext context, string ilVar, ArgumentListSyntax argumentList, [NotNullWhen(true)] out ExpandedParamsArgumentContext? expandedParamsArgumentContext)
+        {
+            var paramsParameter = methodSymbol.Parameters.FirstOrDefault(p => p.IsParams);
+            expandedParamsArgumentContext = null;
+            if (paramsParameter == null || !IsExpandedForm(argumentList, paramsParameter))
+            {
+                // There's no `params` parameter in the method signature or the argument is being passed in its non-expanded form, i.e. `new type[] {....}` 
+                return false;
+            }
+                
+            expandedParamsArgumentContext = new ExpandedParamsArgumentContext(context, paramsParameter, argumentList, ilVar);
+            return true;
+            
+            static bool IsExpandedForm(ArgumentListSyntax argumentList, IParameterSymbol paramsParameter)
+            {
+                var firstParamsArgument = argumentList.Arguments[paramsParameter.Ordinal];
+                var isExpandedForm = !firstParamsArgument.Expression.IsKind(SyntaxKind.ArrayInitializerExpression) && !firstParamsArgument.Expression.IsKind(SyntaxKind.ImplicitArrayCreationExpression);
+                return isExpandedForm;
+            }            
         }
     }
 }

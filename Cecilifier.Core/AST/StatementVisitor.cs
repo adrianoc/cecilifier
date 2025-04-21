@@ -304,7 +304,7 @@ namespace Cecilifier.Core.AST
             return Context.AddLocalVariableToMethod(localVar.Identifier.Text, methodVar, resolvedVarType);
         }
 
-        private void ProcessVariableInitialization(VariableDeclaratorSyntax localVar, ITypeSymbol? variableType)
+        private void ProcessVariableInitialization(VariableDeclaratorSyntax localVar, ITypeSymbol variableType)
         {
             if (localVar.Initializer == null)
                 return;
@@ -319,7 +319,7 @@ namespace Cecilifier.Core.AST
             // the same applies if...
             var isDefaultLiteralExpressionOnNonPrimitiveValueType = localVar.Initializer.Value.IsKind(SyntaxKind.DefaultLiteralExpression) && variableType is { IsValueType: true } && !variableType.IsPrimitiveType();
             var isNullAssignmentToNullableValueType = localVar.Initializer is EqualsValueClauseSyntax { Value: LiteralExpressionSyntax { RawKind: (int) SyntaxKind.NullLiteralExpression } }
-                                                      && SymbolEqualityComparer.Default.Equals(variableType?.OriginalDefinition, Context.RoslynTypeSystem.SystemNullableOfT);
+                                                      && SymbolEqualityComparer.Default.Equals(variableType.OriginalDefinition, Context.RoslynTypeSystem.SystemNullableOfT);
 
             if (isIndexExpression || isDefaultLiteralExpressionOnNonPrimitiveValueType || isNullAssignmentToNullableValueType)
             {
@@ -331,7 +331,7 @@ namespace Cecilifier.Core.AST
                 return;
             }
 
-            var valueBeingAssignedIsByRef = Context.SemanticModel.GetSymbolInfo(localVar.Initializer.Value).Symbol.IsByRef();
+            var valueBeingAssignedIsByRef = Context.SemanticModel.GetSymbolInfo(localVar.Initializer.Value).Symbol!.IsByRef();
             if (!variableType.IsByRef() && valueBeingAssignedIsByRef)
             {
                 OpCode opCode = variableType.LdindOpCodeFor();
@@ -349,7 +349,7 @@ namespace Cecilifier.Core.AST
             {
                 var declaredVariable = AddLocalVariable(declaration.Type, localVar, methodVar);
                 using var _ = Context.DefinitionVariables.WithVariable(declaredVariable);
-                ProcessVariableInitialization(localVar, variableType.Type);
+                ProcessVariableInitialization(localVar, variableType.Type!);
             }
         }
 
