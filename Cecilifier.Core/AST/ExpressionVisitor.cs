@@ -4,6 +4,7 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using Cecilifier.Core.AST.Params;
 using Cecilifier.Core.CodeGeneration;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
@@ -45,6 +46,8 @@ namespace Cecilifier.Core.AST
         /// In this scenario, '_lastInstructionLoadingTargetOfInvocation' will point to IL1 when processing
         /// the call to M1() and to IL5 when processing the call to M2()
         private LinkedListNode<string>? _lastInstructionLoadingTargetOfInvocation;
+
+        private ExpandedParamsArgumentContext? _expandedParamsArgumentContext;
 
         static ExpressionVisitor()
         {
@@ -441,7 +444,7 @@ namespace Cecilifier.Core.AST
                 SyntaxKind.MultiLineRawStringLiteralToken => node.Token.ValueText, // ValueText does not includes quotes, so nothing to remove.
                 SyntaxKind.StringLiteralToken => node.Token.Text.Substring(1, node.Token.Text.Length - 2), // removes quotes because LoadLiteralValue() expects string to not be quoted.
                 SyntaxKind.CharacterLiteralToken => node.Token.Text.Substring(1, node.Token.Text.Length - 2), // removes quotes because LoadLiteralValue() expects chars to not be quoted.
-                SyntaxKind.DefaultKeyword => literalType.ValueForDefaultLiteral(),
+                SyntaxKind.DefaultKeyword => literalType!.ValueForDefaultLiteral(),
                 _ => node.Token.Text
             };
 
@@ -478,7 +481,7 @@ namespace Cecilifier.Core.AST
             using var __ = LineInformationTracker.Track(Context, node);
             using var _ = StackallocAsArgumentFixer.TrackPassingStackAllocToSpanArgument(Context, node, ilVar);
             var constantValue = Context.SemanticModel.GetConstantValue(node);
-            if (constantValue.HasValue && node.Expression is IdentifierNameSyntax { Identifier: { Text: "nameof" } } nameofExpression)
+            if (constantValue.HasValue && node.Expression is IdentifierNameSyntax { Identifier.Text: "nameof" })
             {
                 string operand = $"\"{node.ArgumentList.Arguments[0].ToFullString()}\"";
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldstr, operand);
@@ -566,6 +569,20 @@ namespace Cecilifier.Core.AST
             HandleIdentifier(node);
         }
 
+        public override void VisitArgumentList(ArgumentListSyntax node)
+        {
+            var candidateSymbol = Context.SemanticModel.GetSymbolInfo(node.Parent!).Symbol.EnsureNotNull();
+            if (candidateSymbol is IMethodSymbol method && method.IsExpandedParamsUsage(Context, ilVar, node, out _expandedParamsArgumentContext))
+            {
+                var paramsType = Context.TypeResolver.Resolve(_expandedParamsArgumentContext.ElementType);
+                Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, _expandedParamsArgumentContext.ElementCount);
+                Context.EmitCilInstruction(ilVar, OpCodes.Newarr, paramsType);
+                Context.EmitCilInstruction(ilVar, OpCodes.Stloc, _expandedParamsArgumentContext.BackingVariableName);
+            }
+
+            base.VisitArgumentList(node);
+        }
+
         public override void VisitArgument(ArgumentSyntax node)
         {
             using var _ = LineInformationTracker.Track(Context, node);
@@ -583,6 +600,7 @@ namespace Cecilifier.Core.AST
             // compute it's length)
             var last = Context.CurrentLine;
 
+            _expandedParamsArgumentContext?.PreProcessArgument(node);
             using var nah = new NullLiteralArgumentDecorator(Context, node, ilVar);
             base.VisitArgument(node);
 
@@ -592,6 +610,7 @@ namespace Cecilifier.Core.AST
             });
 
             StackallocAsArgumentFixer.Current?.StoreTopOfStackToLocalVariable(Context.SemanticModel.GetTypeInfo(node.Expression).Type);
+            _expandedParamsArgumentContext?.PostProcessArgument(node);
         }
 
         public override void VisitPrefixUnaryExpression(PrefixUnaryExpressionSyntax node)
@@ -923,7 +942,7 @@ namespace Cecilifier.Core.AST
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, localVar);
                 pattern.Accept(this);
 
-                var comparisonType = Context.SemanticModel.GetSymbolInfo(pattern.NameColon?.Name ?? pattern.ExpressionColon?.Expression!).Symbol.GetMemberType();
+                var comparisonType = Context.SemanticModel.GetSymbolInfo(pattern.NameColon?.Name ?? pattern.ExpressionColon?.Expression!).Symbol!.GetMemberType();
                 var opEquality = comparisonType.GetMembers().FirstOrDefault(m => m.Kind == SymbolKind.Method && m.Name == "op_Equality");
                 if (opEquality != null)
                 {
