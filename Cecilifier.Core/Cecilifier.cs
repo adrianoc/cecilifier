@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Cecilifier.Core.AST;
+using Cecilifier.Core.CodeGeneration;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Misc;
@@ -20,6 +21,7 @@ namespace Cecilifier.Core
 
         public static CecilifierResult Process(Stream content, CecilifierOptions options)
         {
+            InlineArrayGenerator.Reset();
             UsageVisitor.ResetInstance();
             using var stream = new StreamReader(content);
             var syntaxTree = CSharpSyntaxTree.ParseText(stream.ReadToEnd(), new CSharpParseOptions(CurrentLanguageVersion));

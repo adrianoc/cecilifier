@@ -90,7 +90,7 @@ internal partial class TypeDeclarationVisitor
             var endInvokeParamExps = CecilDefinitionsFactory.Parameter(
                 "ar",
                 RefKind.None,
-                false,
+                paramsAttributeTypeName: null,
                 endInvokeMethodVar,
                 Context.Naming.Parameter("ar"),
                 Context.TypeResolver.Bcl.System.IAsyncResult,

@@ -223,7 +223,7 @@ namespace Cecilifier.Core.Extensions
             };
         }
 
-        public static string ValueForDefaultLiteral(this ITypeSymbol literalType) => literalType switch
+        public static string? ValueForDefaultLiteral(this ITypeSymbol literalType) => literalType switch
         {
             { SpecialType: SpecialType.System_Char } => "\0",
             { SpecialType: SpecialType.System_SByte } => "0",
@@ -262,7 +262,7 @@ namespace Cecilifier.Core.Extensions
             _ => throw new ArgumentException($"Invalid symbol type for '{self}' ({self.Kind})")
         };
 
-        public static bool TryGetAttribute<T>(this ISymbol symbol, [NotNullWhen(true)] out AttributeData attributeData) where T : Attribute
+        public static bool TryGetAttribute<T>(this ISymbol symbol, [NotNullWhen(true)] out AttributeData? attributeData) where T : Attribute
         {
             var typeOfT = typeof(T);
             attributeData = symbol.GetAttributes().SingleOrDefault(attr => attr.AttributeClass?.Name == typeOfT.Name);
@@ -274,18 +274,21 @@ namespace Cecilifier.Core.Extensions
                    || (type.ContainingType != null && (SymbolEqualityComparer.Default.Equals(type.ContainingType, type) ? false : HasTypeArgumentOfTypeFromCecilifiedCodeTransitive(type.ContainingType, context)));
         }
         
-        internal static bool IsExpandedParamsUsage(this IMethodSymbol methodSymbol, IVisitorContext context, string ilVar, ArgumentListSyntax argumentList, [NotNullWhen(true)] out ExpandedParamsArgumentContext? expandedParamsArgumentContext)
+        internal static ExpandedParamsArgumentHandler? CreateExpandedParamsUsageHandler(this IMethodSymbol methodSymbol, IVisitorContext context, string ilVar, ArgumentListSyntax argumentList)
         {
             var paramsParameter = methodSymbol.Parameters.FirstOrDefault(p => p.IsParams);
-            expandedParamsArgumentContext = null;
             if (paramsParameter == null || !IsExpandedForm(argumentList, paramsParameter))
             {
                 // There's no `params` parameter in the method signature or the argument is being passed in its non-expanded form, i.e. `new type[] {....}` 
-                return false;
+                return null;
             }
-                
-            expandedParamsArgumentContext = new ExpandedParamsArgumentContext(context, paramsParameter, argumentList, ilVar);
-            return true;
+
+            return paramsParameter.Type switch
+            {
+                IArrayTypeSymbol => new ArrayExpandedParamsArgumentHandler(context, paramsParameter, argumentList, ilVar),
+                INamedTypeSymbol namedType when SymbolEqualityComparer.Default.Equals(namedType.OriginalDefinition, context.RoslynTypeSystem.SystemSpan)  => new SpanExpandedParamsArgumentHandler(context, paramsParameter, argumentList, ilVar),
+                _ => throw new NotImplementedException($"Type {paramsParameter.Type} is not supported.")
+            };
             
             static bool IsExpandedForm(ArgumentListSyntax argumentList, IParameterSymbol paramsParameter)
             {
@@ -294,5 +297,7 @@ namespace Cecilifier.Core.Extensions
                 return isExpandedForm;
             }            
         }
+
+        internal static string? ParamsAttributeMatchingType(this ITypeSymbol paramsParameter) => paramsParameter.Kind ==  SymbolKind.ArrayType ? typeof(ParamArrayAttribute).FullName : typeof(ParamCollectionAttribute).FullName;
     }
 }

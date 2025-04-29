@@ -47,7 +47,7 @@ namespace Cecilifier.Core.AST
             var mainParametersExps = CecilDefinitionsFactory.Parameter(
                 "args",
                 RefKind.None,
-                false,
+                null,
                 methodVar,
                 paramVar,
                 $"{context.TypeResolver.Bcl.System.String}.MakeArrayType()",

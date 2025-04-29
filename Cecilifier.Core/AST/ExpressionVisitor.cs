@@ -47,7 +47,7 @@ namespace Cecilifier.Core.AST
         /// the call to M1() and to IL5 when processing the call to M2()
         private LinkedListNode<string>? _lastInstructionLoadingTargetOfInvocation;
 
-        private ExpandedParamsArgumentContext? _expandedParamsArgumentContext;
+        private ExpandedParamsArgumentHandler? _expandedParamsArgumentHandler;
 
         static ExpressionVisitor()
         {
@@ -270,7 +270,7 @@ namespace Cecilifier.Core.AST
             }
 
             var arrayTypeSymbol = Context.GetTypeInfo(node.Type).Type.EnsureNotNull<ITypeSymbol, IArrayTypeSymbol>();
-            ProcessArrayCreation(arrayTypeSymbol.ElementType, node.Initializer);
+            ProcessArrayCreation(arrayTypeSymbol.ElementType, node.Initializer!);
         }
 
         public override void VisitImplicitArrayCreationExpression(ImplicitArrayCreationExpressionSyntax node)
@@ -572,15 +572,12 @@ namespace Cecilifier.Core.AST
         public override void VisitArgumentList(ArgumentListSyntax node)
         {
             var candidateSymbol = Context.SemanticModel.GetSymbolInfo(node.Parent!).Symbol.EnsureNotNull();
-            if (candidateSymbol is IMethodSymbol method && method.IsExpandedParamsUsage(Context, ilVar, node, out _expandedParamsArgumentContext))
+            if (candidateSymbol is IMethodSymbol method)
             {
-                var paramsType = Context.TypeResolver.Resolve(_expandedParamsArgumentContext.ElementType);
-                Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, _expandedParamsArgumentContext.ElementCount);
-                Context.EmitCilInstruction(ilVar, OpCodes.Newarr, paramsType);
-                Context.EmitCilInstruction(ilVar, OpCodes.Stloc, _expandedParamsArgumentContext.BackingVariableName);
+                _expandedParamsArgumentHandler = method.CreateExpandedParamsUsageHandler(Context, ilVar, node);
             }
-
             base.VisitArgumentList(node);
+            _expandedParamsArgumentHandler?.PostProcessArgumentList(node);
         }
 
         public override void VisitArgument(ArgumentSyntax node)
@@ -600,7 +597,7 @@ namespace Cecilifier.Core.AST
             // compute it's length)
             var last = Context.CurrentLine;
 
-            _expandedParamsArgumentContext?.PreProcessArgument(node);
+            _expandedParamsArgumentHandler?.PreProcessArgument(node);
             using var nah = new NullLiteralArgumentDecorator(Context, node, ilVar);
             base.VisitArgument(node);
 
@@ -610,7 +607,7 @@ namespace Cecilifier.Core.AST
             });
 
             StackallocAsArgumentFixer.Current?.StoreTopOfStackToLocalVariable(Context.SemanticModel.GetTypeInfo(node.Expression).Type);
-            _expandedParamsArgumentContext?.PostProcessArgument(node);
+            _expandedParamsArgumentHandler?.PostProcessArgument(node);
         }
 
         public override void VisitPrefixUnaryExpression(PrefixUnaryExpressionSyntax node)
@@ -1572,7 +1569,7 @@ namespace Cecilifier.Core.AST
             ProcessArrayCreation(arrayType.ElementType, initializer);
         }
 
-        private void ProcessArrayCreation(ITypeSymbol elementType, InitializerExpressionSyntax? initializer)
+        private void ProcessArrayCreation(ITypeSymbol elementType, InitializerExpressionSyntax initializer)
         {
             AddCilInstruction(ilVar, OpCodes.Newarr, elementType);
             if (PrivateImplementationDetailsGenerator.IsApplicableTo(initializer, Context))

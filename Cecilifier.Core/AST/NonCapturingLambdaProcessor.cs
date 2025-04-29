@@ -82,7 +82,7 @@ namespace Cecilifier.Core.AST
                 var paramExps = CecilDefinitionsFactory.Parameter(
                     parameter.Identifier.Text,
                     RefKind.None,
-                    isParams: false,
+                    paramsAttributeTypeName: null,
                     methodVar,
                     context.Naming.SyntheticVariable(parameter.Identifier.Text, ElementKind.Parameter),
                     resolvedParamType,
