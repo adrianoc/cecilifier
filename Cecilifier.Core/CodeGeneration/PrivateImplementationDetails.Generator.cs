@@ -1,10 +1,10 @@
+#nullable enable annotations
+
 using System;
 using System.Buffers;
-using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Numerics;
 using System.Security.Cryptography;
 using System.Text;
 using Cecilifier.Core.AST;
@@ -46,11 +46,11 @@ namespace Cecilifier.Core.CodeGeneration;
  */
 internal partial class PrivateImplementationDetailsGenerator
 {
-    internal static string GetOrEmmitInlineArrayAsSpanMethod(IVisitorContext context)
+    internal static DefinitionVariable GetOrEmmitInlineArrayAsSpanMethod(IVisitorContext context)
     {
         var found = context.DefinitionVariables.GetVariable("InlineArrayAsSpan", VariableMemberKind.Method, Constants.CompilerGeneratedTypes.PrivateImplementationDetails);
         if (found.IsValid)
-            return found.VariableName;
+            return found;
         
         var privateImplementationDetailsVar = GetOrCreatePrivateImplementationDetailsTypeVariable(context);
         
@@ -76,7 +76,7 @@ internal partial class PrivateImplementationDetailsGenerator
                                                             var spanTypeParameter = ResolveOwnedGenericParameter(context, "TElement", methodTypeQualifiedName);
                                                             return context.TypeResolver.Resolve(context.RoslynTypeSystem.SystemSpan).MakeGenericInstanceType(spanTypeParameter);
                                                         },
-                                                        out _);
+                                                        out var methodDefinitionVariable);
 
         context.WriteCecilExpressions(methodExpressions);
         
@@ -105,7 +105,7 @@ internal partial class PrivateImplementationDetailsGenerator
         var finalExps = methodBodyExpressions.Append($"{privateImplementationDetailsVar.VariableName}.Methods.Add({methodVar});");
         context.WriteCecilExpressions(finalExps);
         
-        return methodVar;
+        return methodDefinitionVariable;
         
         static IMethodSymbol GetMemoryMarshalCreateSpanMethod(IVisitorContext context)
         {
@@ -130,11 +130,11 @@ internal partial class PrivateImplementationDetailsGenerator
         }
     }
     
-    public static string GetOrEmmitInlineArrayFirstElementRefMethod(IVisitorContext context)
+    public static DefinitionVariable GetOrEmmitInlineArrayFirstElementRefMethod(IVisitorContext context)
     {
         var found = context.DefinitionVariables.GetVariable("InlineArrayFirstElementRef", VariableMemberKind.Method, Constants.CompilerGeneratedTypes.PrivateImplementationDetails);
         if (found.IsValid)
-            return found.VariableName;
+            return found;
         
         var privateImplementationDetailsVar = GetOrCreatePrivateImplementationDetailsTypeVariable(context);
         
@@ -157,7 +157,7 @@ internal partial class PrivateImplementationDetailsGenerator
                                                             var spanTypeParameter = ResolveOwnedGenericParameter(ctx, "TElement", methodTypeQualifiedName);
                                                             return spanTypeParameter.MakeByReferenceType();
                                                         },
-                                                        out _);
+                                                        out var methodDefinitionVariable);
 
         context.WriteCecilExpressions(methodExpressions);
         
@@ -185,14 +185,14 @@ internal partial class PrivateImplementationDetailsGenerator
         context.WriteNewLine();
         context.WriteComment("-------------------------------");
         context.WriteNewLine();
-        return methodVar;
+        return methodDefinitionVariable;
     }
     
-    public static string GetOrEmmitInlineArrayElementRefMethod(IVisitorContext context)
+    public static DefinitionVariable GetOrEmmitInlineArrayElementRefMethod(IVisitorContext context)
     {
         var found = context.DefinitionVariables.GetVariable("InlineArrayElementRef", VariableMemberKind.Method, Constants.CompilerGeneratedTypes.PrivateImplementationDetails);
         if (found.IsValid)
-            return found.VariableName;
+            return found;
         
         var privateImplementationDetailsVar = GetOrCreatePrivateImplementationDetailsTypeVariable(context);
         
@@ -218,7 +218,7 @@ internal partial class PrivateImplementationDetailsGenerator
                                                             var spanTypeParameter = ResolveOwnedGenericParameter(ctx, "TElement", methodTypeQualifiedName);
                                                             return spanTypeParameter.MakeByReferenceType();
                                                         },
-                                                        out _);
+                                                        out var methodDefinitionVariable);
 
         context.WriteCecilExpressions(methodExpressions);
         
@@ -252,7 +252,7 @@ internal partial class PrivateImplementationDetailsGenerator
         context.WriteComment("-------------------------------");
         context.WriteNewLine();
         
-        return methodVar;
+        return methodDefinitionVariable;
     }
     
     private static string ResolveOwnedGenericParameter(IVisitorContext context, string name, string methodTypeQualifiedName)
@@ -372,7 +372,7 @@ internal partial class PrivateImplementationDetailsGenerator
         
         context.WriteNewLine();
         context.WriteComment($"{Constants.CompilerGeneratedTypes.PrivateImplementationDetails} class.");
-        context.WriteComment($"This type is emitted by the compiler.");
+        context.WriteComment("This type is emitted by the compiler.");
         
         var privateImplementationDetailsVar = context.Naming.Type("privateImplementationDetails", ElementKind.Class);
         var privateImplementationDetails = CecilDefinitionsFactory.Type(

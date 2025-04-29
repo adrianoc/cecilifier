@@ -72,15 +72,14 @@ public class InlineArrayProcessor
             return PrivateImplementationInlineArrayGenericInstanceMethodFor(
                 context,
                 PrivateImplementationDetailsGenerator.GetOrEmmitInlineArrayAsSpanMethod(context),
-                "InlineArrayAsSpan",
                 inlineArrayType);
         }
     }
 
     /// <summary>
-    /// The expression 'InlineArray[range]' returns a sliced Span<T> where 'T' is the element type of the inline array.
-    /// All this method needs to do is to convert the inline array => Span<T> and use the same code that handles
-    /// 'indexing' a Span<T> with ranges.  
+    /// The expression 'InlineArray[range]' returns a sliced Span{T} where 'T' is the element type of the inline array.
+    /// All this method needs to do is to convert the inline array => Span{T} and use the same code that handles
+    /// 'indexing' a Span{T} with ranges.  
     /// </summary>
     internal static bool TryHandleRangeElementAccess(IVisitorContext context, ExpressionVisitor expressionVisitor, string ilVar, ElementAccessExpressionSyntax elementAccess, out ITypeSymbol elementType)
     {
@@ -123,7 +122,7 @@ public class InlineArrayProcessor
         ExpressionVisitor.Visit(context, ilVar, elementAccess.Expression);
         Debug.Assert(elementAccess.ArgumentList.Arguments.Count == 1);
 
-        var method = string.Empty;
+        string method;
         if (elementAccess.ArgumentList.Arguments[0].Expression.TryGetLiteralValueFor(out int index) && index == 0)
         {
             method = InlineArrayFirstElementRefMethodFor(context, inlineArrayType);
@@ -143,7 +142,6 @@ public class InlineArrayProcessor
             return PrivateImplementationInlineArrayGenericInstanceMethodFor(
                 context,
                 PrivateImplementationDetailsGenerator.GetOrEmmitInlineArrayFirstElementRefMethod(context),
-                "InlineArrayFirstElementRef",
                 inlineArrayType);
         }
         
@@ -152,16 +150,15 @@ public class InlineArrayProcessor
             return PrivateImplementationInlineArrayGenericInstanceMethodFor(
                 context,
                 PrivateImplementationDetailsGenerator.GetOrEmmitInlineArrayElementRefMethod(context),
-                "InlineArrayElementRef",
                 inlineArrayType);
         }
     }
     
-    private static string PrivateImplementationInlineArrayGenericInstanceMethodFor(IVisitorContext context, string openGenericTypeVar, string methodName, ITypeSymbol inlineArrayType)
+    static string PrivateImplementationInlineArrayGenericInstanceMethodFor(IVisitorContext context, DefinitionVariable openGenericTypeVar, ITypeSymbol inlineArrayType)
     {
-        var varName = openGenericTypeVar.MakeGenericInstanceMethod(
+        var varName = openGenericTypeVar.VariableName.MakeGenericInstanceMethod(
                                 context,
-                                methodName,
+                                openGenericTypeVar.MemberName,
                                 [
                                     context.TypeResolver.Resolve(inlineArrayType), // TBuffer
                                     context.TypeResolver.Resolve(InlineArrayElementTypeFrom(inlineArrayType)) // TElement

@@ -85,7 +85,7 @@ namespace Cecilifier.Core.Misc
                 var parameterExp = Parameter(
                     parameter.Name, 
                     parameter.RefKind, 
-                    false, // for now,the only callers for this method don't have default parameters.
+                    null, // for now,the only callers for this method don't have any `params` parameters.
                     methodVar,
                     paramVar,
                     parameter.ElementTypeResolver != null ? parameter.ElementTypeResolver(context, parameter.ElementType) : parameter.ElementType,
@@ -284,14 +284,14 @@ namespace Cecilifier.Core.Misc
             return $"new ParameterDefinition(\"{name}\", {paramAttributes}, {resolvedType})";
         }
 
-        public static IEnumerable<string> Parameter(string name, RefKind byRef, bool isParams, string methodVar, string paramVar, string resolvedType, string paramAttributes, (string Value, bool Present) defaultParameterValue)
+        public static IEnumerable<string> Parameter(string name, RefKind byRef, string paramsAttributeTypeName, string methodVar, string paramVar, string resolvedType, string paramAttributes, (string Value, bool Present) defaultParameterValue)
         {
             var exps = new List<string>();
 
             exps.Add($"var {paramVar} = {ParameterDoesNotHandleParamsKeywordOrDefaultValue(name, byRef, resolvedType, paramAttributes)};");
-            if (isParams)
+            if (!string.IsNullOrWhiteSpace(paramsAttributeTypeName))
             {
-                exps.Add($"{paramVar}.CustomAttributes.Add(new CustomAttribute(assembly.MainModule.Import(typeof(ParamArrayAttribute).GetConstructor(BindingFlags.Public | BindingFlags.Instance, null, new Type[0], null))));");
+                exps.Add($"{paramVar}.CustomAttributes.Add(new CustomAttribute(assembly.MainModule.Import(typeof({paramsAttributeTypeName}).GetConstructor(BindingFlags.Public | BindingFlags.Instance, null, new Type[0], null))));");
             }
 
             if (defaultParameterValue.Present)
@@ -314,7 +314,7 @@ namespace Cecilifier.Core.Misc
             return Parameter(
                 paramSymbol.Name,
                 paramSymbol.RefKind,
-                paramSymbol.IsParams,
+                paramSymbol.IsParams ? paramSymbol.Type.ParamsAttributeMatchingType() : null,
                 methodVar,
                 paramVar,
                 context.TypeResolver.Resolve(paramSymbol.Type, methodVar),

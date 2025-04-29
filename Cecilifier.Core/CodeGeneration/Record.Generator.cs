@@ -124,7 +124,7 @@ internal partial class RecordGenerator
             context.WriteCecilExpressions(
             [
                 copyCtor,
-                ..CecilDefinitionsFactory.Parameter("other", RefKind.None, false, copyCtorVar, context.Naming.Parameter("other"), context.TypeResolver.Resolve(_recordSymbol), Constants.ParameterAttributes.None, (null, false))
+                ..CecilDefinitionsFactory.Parameter("other", RefKind.None, null, copyCtorVar, context.Naming.Parameter("other"), context.TypeResolver.Resolve(_recordSymbol), Constants.ParameterAttributes.None, (null, false))
             ]);
         }
 
