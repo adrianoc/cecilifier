@@ -1,8 +1,10 @@
 #nullable enable
 using System.Collections.Generic;
-using System.Text.RegularExpressions;
+using System.Linq;
+using Cecilifier.Core.Misc;
 using Cecilifier.Core.Tests.Tests.Unit.Framework;
 using NUnit.Framework;
+using NUnit.Framework.Legacy;
 
 namespace Cecilifier.Core.Tests.Tests.Unit;
 
@@ -92,7 +94,7 @@ public class ParamsTests : CecilifierUnitTestBase
         
         yield return new TestCaseData(
             "IList<int>",
-            new [] 
+            new []
             {
                 """
 
@@ -101,21 +103,12 @@ public class ParamsTests : CecilifierUnitTestBase
         
         yield return new TestCaseData(
             "ICollection<int>",
-            new [] 
+            new []
             {
                 """
 
                 """
             }).SetName("ICollection<int>").Ignore("placeholder");
-        
-        yield return new TestCaseData(
-            "IEnumerable<int>",
-            new [] 
-            {
-                """
-
-                """
-            }).SetName("IEnumerable<int>").Ignore("placeholder");
     }
 
     [TestCase("int[]", "ParamArrayAttribute", @".+assembly\.MainModule\.TypeSystem\.Int32\.MakeArrayType\(\)")]
@@ -123,7 +116,6 @@ public class ParamsTests : CecilifierUnitTestBase
     [TestCase("ReadOnlySpan<int>", null, @".+ImportReference\(typeof\(.+ReadOnlySpan<>\)\)\.MakeGenericInstanceType\(.+Int32\)")]
     [TestCase("IList<int>", null, @".+ImportReference\(typeof\(.+IList<>\)\)\.MakeGenericInstanceType\(.+Int32\)", IgnoreReason = "Placeholder")]
     [TestCase("ICollection<int>", null, @".+ImportReference\(typeof\(.+ICollection<>\)\)\.MakeGenericInstanceType\(.+Int32\)", IgnoreReason = "Placeholder")]
-    [TestCase("IEnumerable<int>", null, @".+ImportReference\(typeof\(.+IEnumerable<>\)\)\.MakeGenericInstanceType\(.+Int32\)", IgnoreReason = "Placeholder")]
     public void Declaration(string paramsType, string? paramsAttribute, string actualCecilParameterType)
     {
         paramsAttribute ??= "ParamCollectionAttribute";
@@ -146,9 +138,22 @@ public class ParamsTests : CecilifierUnitTestBase
                          \s+\k<mv>\.Parameters\.Add\(\k<pp>\);
                          """));
     }
-}
 
-static class Extensions
-{
-    public static string RegexEncoded(this string str) => Regex.Replace(str, @"(\[|\])", "\\$1");
+    [Test]
+    public void TestUnsupportedTypesAsParams()
+    {
+        var result = RunCecilifier("""
+                                   using System.Collections.Generic;
+                                   using System;
+
+                                   M(1, 2, 3);
+
+                                   void M(params IEnumerable<int> items) { }
+                                   """);
+
+        Assert.That(result.Diagnostics.Count, Is.EqualTo(1));
+        Assert.That(result.Diagnostics[0].Kind, Is.EqualTo(DiagnosticKind.Error));
+        Assert.That(result.Diagnostics[0].Message, Contains.Substring("Cecilifier does not support type System.Collections.Generic.IEnumerable<int> as a 'params' parameter (items). You may change items' to 'ICollection<T>'"));
+        Assert.That(result.GeneratedCode.ReadToEnd(), Contains.Substring(result.Diagnostics[0].Message));
+    }
 }

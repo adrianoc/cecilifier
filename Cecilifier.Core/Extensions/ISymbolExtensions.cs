@@ -285,6 +285,12 @@ namespace Cecilifier.Core.Extensions
                 return null;
             }
 
+            if (SymbolEqualityComparer.Default.Equals(paramsParameter.Type.OriginalDefinition, context.RoslynTypeSystem.SystemCollectionsGenericIEnumerableOfT))
+            {
+                context.EmitError($"Cecilifier does not support type {paramsParameter.Type} as a 'params' parameter ({paramsParameter.Name}). You may change {paramsParameter.Name}' to 'ICollection<T>'", paramsParameter.DeclaringSyntaxReferences.First().GetSyntax());
+                return null;
+            }
+            
             return paramsParameter.Type switch
             {
                 IArrayTypeSymbol => new ArrayExpandedParamsArgumentHandler(context, paramsParameter, argumentList, ilVar),
