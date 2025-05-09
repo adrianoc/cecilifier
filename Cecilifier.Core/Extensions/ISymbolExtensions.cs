@@ -98,9 +98,11 @@ namespace Cecilifier.Core.Extensions
         public static bool IsByRef(this ISymbol symbol) =>
             symbol switch
             {
-                IParameterSymbol parameterSymbol when parameterSymbol.RefKind != RefKind.None => true,
+                IParameterSymbol { RefKind: RefKind.In or RefKind.Out or RefKind.RefReadOnlyParameter or RefKind.Ref } => true,
                 IPropertySymbol { ReturnsByRef: true } => true,
+                IPropertySymbol { ReturnsByRefReadonly: true } => true,
                 IMethodSymbol { ReturnsByRef: true } => true,
+                IMethodSymbol { ReturnsByRefReadonly: true } => true,
                 ILocalSymbol { IsRef: true } => true,
                 IFieldSymbol { RefKind: not RefKind.None } => true,
 
@@ -287,6 +289,8 @@ namespace Cecilifier.Core.Extensions
             {
                 IArrayTypeSymbol => new ArrayExpandedParamsArgumentHandler(context, paramsParameter, argumentList, ilVar),
                 INamedTypeSymbol namedType when SymbolEqualityComparer.Default.Equals(namedType.OriginalDefinition, context.RoslynTypeSystem.SystemSpan)  => new SpanExpandedParamsArgumentHandler(context, paramsParameter, argumentList, ilVar),
+                INamedTypeSymbol namedType when SymbolEqualityComparer.Default.Equals(namedType.OriginalDefinition, context.RoslynTypeSystem.SystemReadOnlySpan.Value) => new ReadOnlySpanExpandedParamsArgumentHandler(context, paramsParameter, argumentList, ilVar),
+                INamedTypeSymbol namedType when SymbolEqualityComparer.Default.Equals(namedType.OriginalDefinition, context.RoslynTypeSystem.SystemCollectionsGenericIEnumerableOfT)  => new ReadOnlySpanExpandedParamsArgumentHandler(context, paramsParameter, argumentList, ilVar),
                 _ => throw new NotImplementedException($"Type {paramsParameter.Type} is not supported.")
             };
             

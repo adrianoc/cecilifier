@@ -127,7 +127,7 @@ namespace Cecilifier.Core.AST
             Context.EmitCilInstruction(_ilVar, loadOpCode, forEachHandlerContext.EnumeratorVariableName);
             Context.AddCallToMethod(forEachHandlerContext.EnumeratorCurrentProperty.GetMethod, _ilVar, MethodDispatchInformation.MostLikelyVirtual);
 
-            if (!node.Type.IsKind(SyntaxKind.RefType) && forEachHandlerContext.EnumeratorCurrentProperty.ReturnsByRef)
+            if (!node.Type.IsKind(SyntaxKind.RefType) && forEachHandlerContext.EnumeratorCurrentProperty.IsByRef())
             {
                 Context.EmitCilInstruction(_ilVar, forEachHandlerContext.EnumeratorCurrentProperty.Type.LdindOpCodeFor());
             }

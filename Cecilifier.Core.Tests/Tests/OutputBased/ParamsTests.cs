@@ -19,7 +19,7 @@ public class ParamsTests : OutputBasedTestBase
 
     private static IEnumerable<TestCaseData> ParamsTestScenarios()
     {
-        string[] paramsTypes = ["int[]", "Span<int>"/*, "ReadOnlySpan<int>"*/];
+        string[] paramsTypes = ["int[]", "Span<int>", "ReadOnlySpan<int>"];
         foreach (var paramsType in paramsTypes)
         {
             yield return new TestCaseData(paramsType, "1, 2, 3").SetName($"Expanded - {paramsType}");
@@ -27,3 +27,4 @@ public class ParamsTests : OutputBasedTestBase
         }
     }
 }
+

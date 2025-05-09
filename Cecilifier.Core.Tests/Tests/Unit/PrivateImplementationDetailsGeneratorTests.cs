@@ -3,6 +3,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using Cecilifier.Core.AST;
 using Cecilifier.Core.CodeGeneration;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
@@ -122,8 +123,22 @@ public class PrivateImplementationDetailsGeneratorTests
         Assert.That(secondVariableName, Is.Not.EqualTo(variableName), context.Output);
     }
 
+    
     [Test]
-    public void InlineArrayAsSpan_HelperMethod_Properties()
+    public void InlineArrayAsSpan_HelperMethod()
+    {
+        // internal static Span<TElement> InlineArrayAsSpan<TBuffer, TElement>(ref TBuffer buffer, int length)
+        AssertInlineArrayAsX("InlineArrayAsSpan", PrivateImplementationDetailsGenerator.GetOrEmmitInlineArrayAsSpanMethod, "CreateSpan");
+    }
+
+    [Test]
+    public void InlineArrayAsReadOnlySpan_HelperMethod()
+    {
+        // internal static ReadOnlySpan<TElement> InlineArrayAsReadOnlySpan<TBuffer, TElement>(ref TBuffer buffer, int length)
+        AssertInlineArrayAsX("InlineArrayAsReadOnlySpan", PrivateImplementationDetailsGenerator.GetOrEmmitInlineArrayAsReadOnlySpanMethod, "CreateReadOnlySpan");
+    }
+    
+    private static void AssertInlineArrayAsX(string methodUnderTestName, Func<IVisitorContext, DefinitionVariable> methodUnderTest, string spanCreationMethodName)
     {
         var comp = CompilationFor("class Foo {}");
         var context = new CecilifierContext(comp.GetSemanticModel(comp.SyntaxTrees[0]), new CecilifierOptions(), 1);
@@ -131,19 +146,32 @@ public class PrivateImplementationDetailsGeneratorTests
         var found = context.DefinitionVariables.GetVariablesOf(VariableMemberKind.Method).ToArray();
         Assert.That(found.Length, Is.EqualTo(0));
         
-        // internal static Span<TElement> InlineArrayAsSpan<TBuffer, TElement>(ref TBuffer buffer, int length)
-        var methodVariableName = PrivateImplementationDetailsGenerator.GetOrEmmitInlineArrayAsSpanMethod(context);
+        // Act, i.e. execute the method to be tested.
+        var methodVariable = methodUnderTest(context);
+        
+        // Assert
         found = context.DefinitionVariables.GetVariablesOf(VariableMemberKind.Method).ToArray();
-        Assert.That(found.Length, Is.EqualTo(1));
-        Assert.That(found[0].MemberName, Is.EqualTo("InlineArrayAsSpan"));
+        Assert.That(found.Length, Is.EqualTo(1), $"Variable storing MethodDefinition for `{methodUnderTestName}` not found.");
+        Assert.That(found[0].MemberName, Is.EqualTo(methodUnderTestName));
+        Assert.That(found[0], Is.EqualTo(methodVariable));
 
         Assert.That(context.Output,
             Does.Match(
-                """var m_inlineArrayAsSpan_\d+ = new MethodDefinition\("InlineArrayAsSpan", MethodAttributes.Assembly | MethodAttributes.Static | MethodAttributes.HideBySig, assembly.MainModule.TypeSystem.Void\);"""));
+                $"""var (?<methodDefVariable>m_.+Span_\d+) = new MethodDefinition\("{methodUnderTestName}", MethodAttributes.Assembly | MethodAttributes.Static | MethodAttributes.HideBySig, assembly.MainModule.TypeSystem.Void\);"""));
         Assert.That(context.Output, Does.Match("""var p_buffer_\d+ = new ParameterDefinition\("buffer", ParameterAttributes.None, gp_tBuffer_\d+.MakeByReferenceType\(\)\);"""));
-        Assert.That(context.Output, Does.Match("""m_inlineArrayAsSpan_\d+.Parameters.Add\(p_buffer_\d+\);"""));
+        Assert.That(context.Output, Does.Match("""m_.+Span_\d+.Parameters.Add\(p_buffer_\d+\);"""));
         Assert.That(context.Output, Does.Match("""var p_length_\d+ = new ParameterDefinition\("length", ParameterAttributes.None, assembly.MainModule.TypeSystem.Int32\);"""));
-        Assert.That(context.Output, Does.Match("""m_inlineArrayAsSpan_\d+.Parameters.Add\(p_length_\d+\);"""));
+        Assert.That(context.Output, Does.Match("""m_.+Span_\d+.Parameters.Add\(p_length_\d+\);"""));
+        
+        Assert.That(context.Output, Does.Match($"""//MemoryMarshal.{spanCreationMethodName}\(\) generic instance method"""));
+        Assert.That(context.Output, Does.Match($$"""
+                                               var r_{{spanCreationMethodName.CamelCase()}}_\d+ = new MethodReference\("{{spanCreationMethodName}}", .+TypeSystem.Void, .+ImportReference\(typeof\(.+InteropServices.MemoryMarshal\)\)\)
+                                               \s+{
+                                               \s+HasThis = false,
+                                               \s+ExplicitThis = false,
+                                               \s+CallingConvention = 0,
+                                               \s+};
+                                               """));
     }
     
     static CSharpCompilation CompilationFor(string code)

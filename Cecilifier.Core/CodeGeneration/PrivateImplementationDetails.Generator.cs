@@ -46,25 +46,30 @@ namespace Cecilifier.Core.CodeGeneration;
  */
 internal partial class PrivateImplementationDetailsGenerator
 {
-    internal static DefinitionVariable GetOrEmmitInlineArrayAsSpanMethod(IVisitorContext context)
+    internal static DefinitionVariable GetOrEmmitInlineArrayAsReadOnlySpanMethod(IVisitorContext context) => 
+        GetOrEmmitInlineArrayAsSpanLikeMethod(context, "InlineArrayAsReadOnlySpan", "CreateReadOnlySpan", context.RoslynTypeSystem.SystemReadOnlySpan.Value);
+    internal static DefinitionVariable GetOrEmmitInlineArrayAsSpanMethod(IVisitorContext context) => 
+        GetOrEmmitInlineArrayAsSpanLikeMethod(context, "InlineArrayAsSpan", "CreateSpan", context.RoslynTypeSystem.SystemSpan);
+
+    private static DefinitionVariable GetOrEmmitInlineArrayAsSpanLikeMethod(IVisitorContext context, string methodName, string createSpanMethodName, ITypeSymbol containingType)
     {
-        var found = context.DefinitionVariables.GetVariable("InlineArrayAsSpan", VariableMemberKind.Method, Constants.CompilerGeneratedTypes.PrivateImplementationDetails);
-        if (found.IsValid)
-            return found;
+        var privateImplementationDetailsVar = context.DefinitionVariables.GetVariable(methodName, VariableMemberKind.Method, Constants.CompilerGeneratedTypes.PrivateImplementationDetails);
+        if (privateImplementationDetailsVar.IsValid)
+            return privateImplementationDetailsVar;
         
-        var privateImplementationDetailsVar = GetOrCreatePrivateImplementationDetailsTypeVariable(context);
+        privateImplementationDetailsVar = GetOrCreatePrivateImplementationDetailsTypeVariable(context);
         
         context.WriteNewLine();
-        context.WriteComment($"{Constants.CompilerGeneratedTypes.PrivateImplementationDetails}.InlineArrayAsSpan()");
+        context.WriteComment($"{Constants.CompilerGeneratedTypes.PrivateImplementationDetails}.{methodName}()");
         var methodVar = context.Naming.SyntheticVariable("inlineArrayAsSpan", ElementKind.Method);
 
-        var methodTypeQualifiedName = $"{privateImplementationDetailsVar.MemberName}.InlineArrayAsSpan";
+        var methodTypeQualifiedName = $"{privateImplementationDetailsVar.MemberName}.{methodName}";
         var methodExpressions = CecilDefinitionsFactory.Method(
                                                         context,
                                                         $"{privateImplementationDetailsVar.MemberName}",
                                                         methodVar,
-                                                        "NOT_IMPORTANT_NOONE_WILL_TRY_TO_RESOLVE_PARAMETER_VARS_FOR_THIS",
-                                                        "InlineArrayAsSpan",
+                                                        "NOT_IMPORTANT_NO_ONE_WILL_TRY_TO_RESOLVE_PARAMETER_VARS_FOR_THIS",
+                                                        methodName,
                                                         "MethodAttributes.Assembly | MethodAttributes.Static | MethodAttributes.HideBySig",
                                                         [ 
                                                             new ParameterSpec("buffer", "TBuffer", RefKind.Ref, Constants.ParameterAttributes.None, null, (context, name) => ResolveOwnedGenericParameter(context, name, methodTypeQualifiedName)), 
@@ -74,7 +79,7 @@ internal partial class PrivateImplementationDetailsGenerator
                                                         context =>
                                                         {
                                                             var spanTypeParameter = ResolveOwnedGenericParameter(context, "TElement", methodTypeQualifiedName);
-                                                            return context.TypeResolver.Resolve(context.RoslynTypeSystem.SystemSpan).MakeGenericInstanceType(spanTypeParameter);
+                                                            return context.TypeResolver.Resolve(containingType).MakeGenericInstanceType(spanTypeParameter);
                                                         },
                                                         out var methodDefinitionVariable);
 
@@ -86,12 +91,12 @@ internal partial class PrivateImplementationDetailsGenerator
         context.WriteComment("Unsafe.As() generic instance method");
         var unsafeAsVar = GetUnsafeAsMethod(context).MethodResolverExpression(context).MakeGenericInstanceMethod(context, "unsafeAs", [tBufferVar, tElementVar]);
         
-        context.WriteComment("MemoryMarshal.CreateSpan() generic instance method");
-        var memoryMarshalCreateSpanVar = GetMemoryMarshalCreateSpanMethod(context).MethodResolverExpression(context).MakeGenericInstanceMethod(context, "createSpan", [tElementVar]);
+        context.WriteComment($"MemoryMarshal.{createSpanMethodName}() generic instance method");
+        var memoryMarshalCreateSpanVar = GetMemoryMarshalCreateSpanMethod(context, createSpanMethodName).MethodResolverExpression(context).MakeGenericInstanceMethod(context, "createSpan", [tElementVar]);
 
         var methodBodyExpressions = CecilDefinitionsFactory.MethodBody(
             context.Naming,
-            "InlineArrayAsSpan",
+            methodName,
             methodVar,
             [],
             [
@@ -107,19 +112,22 @@ internal partial class PrivateImplementationDetailsGenerator
         
         return methodDefinitionVariable;
         
-        static IMethodSymbol GetMemoryMarshalCreateSpanMethod(IVisitorContext context)
+        static IMethodSymbol GetMemoryMarshalCreateSpanMethod(IVisitorContext context, string methodName)
         {
-            VerifyCreateSpanHasOnlyOneOverload(context);
+            AssertCreateSpanHasOnlyOneOverload(context);
             var createSpanMethod= context.RoslynTypeSystem.SystemRuntimeInteropServicesMemoryMarshal
                 .GetMembers()
                 .OfType<IMethodSymbol>()
-                .Single(m => m.Name == "CreateSpan" && m.Parameters.Length == 2 && m.Parameters[0].RefKind == RefKind.Ref && m.Parameters[1].Type.Equals(context.RoslynTypeSystem.SystemInt32, SymbolEqualityComparer.Default));
+                .Single(m => m.Name == methodName 
+                             && m.Parameters.Length == 2 
+                             && m.Parameters[0].IsByRef() 
+                             && m.Parameters[1].Type.Equals(context.RoslynTypeSystem.SystemInt32, SymbolEqualityComparer.Default));
 
             return createSpanMethod;
         }
 
         [Conditional("DEBUG")]
-        static void VerifyCreateSpanHasOnlyOneOverload(IVisitorContext context)
+        static void AssertCreateSpanHasOnlyOneOverload(IVisitorContext context)
         {
             var candidates= context.RoslynTypeSystem.SystemRuntimeInteropServicesMemoryMarshal
                 .GetMembers()

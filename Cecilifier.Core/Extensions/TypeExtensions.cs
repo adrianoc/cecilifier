@@ -46,6 +46,7 @@ namespace Cecilifier.Core.Extensions
         public static ITypeSymbol ElementTypeSymbolOf(this ITypeSymbol type) => type switch
         {
             INamedTypeSymbol { IsGenericType: true, OriginalDefinition: { ContainingNamespace.Name: "System", Name: "Span" } } ns =>  ns.TypeArguments[0],
+            INamedTypeSymbol { IsGenericType: true, OriginalDefinition: { ContainingNamespace.Name: "System", Name: "ReadOnlySpan" } } ns =>  ns.TypeArguments[0],
             IPointerTypeSymbol ptr => ptr.PointedAtType,
             IArrayTypeSymbol array =>  array.ElementType,
             _ => type
