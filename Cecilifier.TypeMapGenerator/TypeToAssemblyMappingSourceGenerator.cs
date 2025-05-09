@@ -98,7 +98,7 @@ public class SampleIncrementalSourceGenerator : ISourceGenerator
 
         foreach(var td in metadataReader.TypeDefinitions.Select(th => metadataReader.GetTypeDefinition(th)).Where(IsPublic))
         {
-            var fullName = $"{metadataReader.GetString(td.Namespace)}.{metadataReader.GetString(td.Name)}";
+            var fullName = FullNameFor(metadataReader, td);
             typeToAssemblyReferenceVar[fullName] = (assemblyNameReference, fullName);  
         }
 
@@ -118,6 +118,7 @@ public class SampleIncrementalSourceGenerator : ISourceGenerator
                 assemblyNameReferenceCache[assemblyName.FullName.GetHashCode()] = assemblyNameReference = $"ar{index}";
             }
 
+            // TODO: Do we need to use FullNameFor() ?
             var fullName = $"{metadataReader.GetString(et.Namespace)}.{metadataReader.GetString(et.Name)}";
             typeToAssemblyReferenceVar[fullName] = (assemblyNameReference, fullName);
         }
@@ -125,5 +126,13 @@ public class SampleIncrementalSourceGenerator : ISourceGenerator
         return assemblyReferences.ToString();
 
         static bool IsPublic(TypeDefinition typeDefinition) => (typeDefinition.Attributes & TypeAttributes.VisibilityMask) != TypeAttributes.NotPublic;
+    }
+
+    private static string FullNameFor(MetadataReader metadataReader, TypeDefinition td)
+    {
+        var declaringTypeHandle = td.GetDeclaringType();
+        var prefix = declaringTypeHandle.IsNil ?  $"{metadataReader.GetString(td.Namespace)}." : $"{FullNameFor(metadataReader, metadataReader.GetTypeDefinition(declaringTypeHandle))}+";
+        Console.WriteLine($"{prefix}{metadataReader.GetString(td.Name)}");
+        return $"{prefix}{metadataReader.GetString(td.Name)}";
     }
 }

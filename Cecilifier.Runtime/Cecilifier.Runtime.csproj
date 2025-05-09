@@ -11,6 +11,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Cecilifier.Core.Tests" />
     <ProjectReference Include="..\Cecilifier.TypeMapGenerator\Cecilifier.TypeMapGenerator.csproj" 
                       OutputItemType="Analyzer"
                       ReferenceOutputAssembly="false" />
