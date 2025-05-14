@@ -43,6 +43,8 @@ public struct RoslynTypeSystem
         SystemCollectionsGenericIEnumeratorOfT = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Collections_Generic_IEnumerator_T);
         SystemCollectionsIEnumerable = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Collections_IEnumerable);
         SystemCollectionsGenericIEnumerableOfT = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Collections_Generic_IEnumerable_T);
+        SystemCollectionsGenericIListOfT = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Collections_Generic_IList_T);
+        SystemCollectionsGenericICollectionOfT = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Collections_Generic_ICollection_T);
         SystemNullableOfT = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Nullable_T);
         SystemRuntimeCompilerServicesUnsafe = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(Unsafe).FullName);
         SystemRuntimeInteropServicesMemoryMarshal = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(MemoryMarshal).FullName);
@@ -69,6 +71,7 @@ public struct RoslynTypeSystem
     public ITypeSymbol SystemCollectionsGenericIEnumeratorOfT { get; }
     public ITypeSymbol SystemCollectionsIEnumerable { get; }
     public ITypeSymbol SystemCollectionsGenericIEnumerableOfT { get; }
+    public ITypeSymbol SystemCollectionsGenericIListOfT { get; }
     public ITypeSymbol CallerArgumentExpressionAttribute { get; }
     public ITypeSymbol IsReadOnlyAttribute { get; }
     public ITypeSymbol IsByRefLikeAttribute { get; }
@@ -79,6 +82,7 @@ public struct RoslynTypeSystem
     public ITypeSymbol SystemNullableOfT { get; }
     public ITypeSymbol SystemRuntimeCompilerServicesUnsafe { get;  }
     public ITypeSymbol SystemRuntimeInteropServicesMemoryMarshal { get; }
+    public ITypeSymbol SystemCollectionsGenericICollectionOfT { get; }
 
     public readonly ITypeSymbol ForType<TType>() => _context.SemanticModel.Compilation.GetTypeByMetadataName(typeof(TType).FullName!);
 

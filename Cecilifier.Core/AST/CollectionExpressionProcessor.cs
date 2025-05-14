@@ -36,51 +36,23 @@ internal static class CollectionExpressionProcessor
     private static void HandleAssignmentToList(ExpressionVisitor visitor, CollectionExpressionSyntax node, INamedTypeSymbol listOfTTypeSymbol)
     {
         var context = visitor.Context;
-        var resolvedListTypeArgument = context.TypeResolver.Resolve(listOfTTypeSymbol.TypeArguments[0]);
-
-        context.WriteNewLine();
-        context.WriteComment("Instantiates a List<T> passing the # of elements in the collection expression to its ctor.");
-        context.EmitCilInstruction(visitor.ILVariable, OpCodes.Ldc_I4, node.Elements.Count);
-        context.EmitCilInstruction(visitor.ILVariable, OpCodes.Newobj, listOfTTypeSymbol.Constructors.First(ctor => ctor.Parameters.Length == 1).MethodResolverExpression(visitor.Context));
-
-        // Pushes an extra copy of the reference to the list instance into the stack
-        // to avoid introducing a local variable. This will be left at the top of the stack
-        // when the initialization code finishes.
-        context.EmitCilInstruction(visitor.ILVariable, OpCodes.Dup);
-
-        // Calls 'CollectionsMarshal.SetCount(list, num)' on the list.
-        var collectionMarshalTypeSymbol = context.SemanticModel.Compilation.GetTypeByMetadataName(typeof(CollectionsMarshal).FullName!);
-        var setCountMethod = collectionMarshalTypeSymbol.GetMembers("SetCount").OfType<IMethodSymbol>().Single().MethodResolverExpression(context).MakeGenericInstanceMethod(context, "SetCount", [ resolvedListTypeArgument ]); 
+        var collectionExpressionOperation = context.SemanticModel.GetOperation(node).EnsureNotNull<IOperation, ICollectionExpressionOperation>();
+        var (spanToList, resolvedListTypeArgument) = CecilDefinitionsFactory.Collections.InstantiateListToStoreElements(context, visitor.ILVariable, listOfTTypeSymbol, collectionExpressionOperation.Elements.Length);
         
-        context.EmitCilInstruction(visitor.ILVariable, OpCodes.Dup);
-        context.EmitCilInstruction(visitor.ILVariable, OpCodes.Ldc_I4, node.Elements.Count);
-        context.EmitCilInstruction(visitor.ILVariable, OpCodes.Call, setCountMethod);
-        
-        context.WriteNewLine();
-        context.WriteComment("Add a Span<T> local variable and initialize it with `CollectionsMarshal.AsSpan(list)`");
-        var spanToList = context.AddLocalVariableToCurrentMethod(
-            "listSpan", 
-            context.TypeResolver.Resolve(context.RoslynTypeSystem.SystemSpan).MakeGenericInstanceType(resolvedListTypeArgument));
-
-        context.EmitCilInstruction(visitor.ILVariable, 
-            OpCodes.Call, 
-            collectionMarshalTypeSymbol.GetMembers("AsSpan").OfType<IMethodSymbol>().Single().MethodResolverExpression(context).MakeGenericInstanceMethod(context, "AsSpan", [ resolvedListTypeArgument ]));
-        context.EmitCilInstruction(visitor.ILVariable, OpCodes.Stloc, spanToList.VariableName);
-
         context.WriteNewLine();
         context.WriteComment($"Initialize each list element through the span (variable '{spanToList.VariableName}')");
         var index = 0;
-        var spanGetItemMethod = GetSpanIndexerGetMethod(context, resolvedListTypeArgument);
+        var spanGetItemMethod = CecilDefinitionsFactory.Collections.GetSpanIndexerGetter(context, resolvedListTypeArgument);
         var stindOpCode = listOfTTypeSymbol.TypeArguments[0].StindOpCodeFor();
         var targetElementType = stindOpCode == OpCodes.Stobj ? resolvedListTypeArgument : null; // Stobj expects the type of the object being stored.
         
-        var collectionExpressionOperation = context.SemanticModel.GetOperation(node).EnsureNotNull<IOperation, ICollectionExpressionOperation>();
         foreach (var element in node.Elements)
         {
             context.EmitCilInstruction(visitor.ILVariable, OpCodes.Ldloca_S, spanToList.VariableName);
             context.EmitCilInstruction(visitor.ILVariable, OpCodes.Ldc_I4, index);
             context.EmitCilInstruction(visitor.ILVariable, OpCodes.Call, spanGetItemMethod);
             visitor.Visit(element);
+            //TODO: Why do we need to apply conversions? Isn´t visiting the element enough?
             context.TryApplyConversions(visitor.ILVariable, collectionExpressionOperation.Elements[index]);
             context.EmitCilInstruction(visitor.ILVariable, stindOpCode, targetElementType);
             index++;
@@ -150,19 +122,5 @@ internal static class CollectionExpressionProcessor
             ArrayInitializationProcessor.InitializeOptimized(visitor, arrayTypeSymbol.ElementType, node.Elements);
         else
             ArrayInitializationProcessor.InitializeUnoptimized<CollectionElementSyntax>(visitor, arrayTypeSymbol.ElementType, node.Elements, visitor.Context.SemanticModel.GetOperation(node));
-    }
-    
-    private static string GetSpanIndexerGetMethod(IVisitorContext context, string typeArgument)
-    {
-        var methodVar = context.Naming.SyntheticVariable("getItem", ElementKind.Method);
-        var declaringType = context.TypeResolver.Resolve(context.RoslynTypeSystem.SystemSpan).MakeGenericInstanceType(typeArgument);
-        context.WriteCecilExpression($$"""var {{methodVar}} = new MethodReference("get_Item", {{context.TypeResolver.Bcl.System.Void}}, {{declaringType}}) { HasThis = true, ExplicitThis = false };""");
-        context.WriteNewLine();
-        context.WriteCecilExpression($"{methodVar}.Parameters.Add(new ParameterDefinition({context.TypeResolver.Bcl.System.Int32}));");
-        context.WriteNewLine();
-        context.WriteCecilExpression($"""{methodVar}.ReturnType = ((GenericInstanceType) {methodVar}.DeclaringType).ElementType.GenericParameters[0].MakeByReferenceType();""");
-        context.WriteNewLine();
-
-        return methodVar;
     }
 }

@@ -8,18 +8,19 @@ namespace Cecilifier.Core.Tests.OutputBased;
 public class ParamsTests : OutputBasedTestBase
 {
     [TestCaseSource(nameof(ParamsTestScenarios))]
-    public void Test(string paramsType, string args)
+    public void TestNonNullables(string paramsType, string args)
     {
         AssertOutput($$"""
                        using System;
+                       using System.Collections.Generic;
                        M({{args}});
                        void M(params {{paramsType}} items) { foreach(var item in items) Console.Write($"{item},"); }
                        """, "1,2,3,", "ReturnPtrToStack");
     }
-
+    
     private static IEnumerable<TestCaseData> ParamsTestScenarios()
     {
-        string[] paramsTypes = ["int[]", "Span<int>", "ReadOnlySpan<int>"];
+        string[] paramsTypes = ["int[]", "Span<int>", "ReadOnlySpan<int>", "IList<int>", "ICollection<int>"];
         foreach (var paramsType in paramsTypes)
         {
             yield return new TestCaseData(paramsType, "1, 2, 3").SetName($"Expanded - {paramsType}");
