@@ -1,5 +1,6 @@
 #nullable enable
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Tests.Tests.Unit.Framework;
 using NUnit.Framework;
@@ -96,22 +97,26 @@ public class ParamsTests : CecilifierUnitTestBase
                          """));
     }
 
-    [TestCase("IEnumerable<int>")]
-    [TestCase("IEnumerable<T>")]
-    public void TestUnsupportedTypesAsParams(string paramsType)
+    private const string NullableNotSupportedExtraHelp = " Nullable<T> (i.e, int?) are not supported yet.";
+    private const string ParamsParameterTypeNotSupportedExtraHelp = " You may change items' to 'ICollection<T>'";
+    [TestCase("IEnumerable<int>", ParamsParameterTypeNotSupportedExtraHelp)]
+    [TestCase("IEnumerable<T>",  ParamsParameterTypeNotSupportedExtraHelp)]
+    [TestCase("int?[]", NullableNotSupportedExtraHelp, TestName = "Nullable Array")]
+    [TestCase("Span<int?>", NullableNotSupportedExtraHelp)]
+    public void TestUnsupportedTypesAsParams(string paramsType, string expectedExtraHelp)
     {
         var result = RunCecilifier($$"""
                                    using System.Collections.Generic;
                                    using System;
 
-                                   M(0, 1, 2, 3);
+                                   M(0, 1);
 
                                    void M<T>(T value, params {{paramsType}} items) { }
                                    """);
 
         Assert.That(result.Diagnostics.Count, Is.EqualTo(1));
         Assert.That(result.Diagnostics[0].Kind, Is.EqualTo(DiagnosticKind.Error));
-        Assert.That(result.Diagnostics[0].Message, Contains.Substring("Cecilifier does not support type System.Collections.Generic.IEnumerable<int> as a 'params' parameter (items). You may change items' to 'ICollection<T>'"));
+        Assert.That(result.Diagnostics[0].Message, Does.Match($@"Cecilifier does not support type .+ as a 'params' parameter \(items\).{Regex.Escape(expectedExtraHelp)}"));
         Assert.That(result.GeneratedCode.ReadToEnd(), Contains.Substring(result.Diagnostics[0].Message));
     }
     
