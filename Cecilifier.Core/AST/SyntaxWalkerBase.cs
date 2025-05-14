@@ -673,7 +673,12 @@ namespace Cecilifier.Core.AST
                     _ => throw new NotImplementedException($"Found not supported symbol {symbol.ToDisplayString()} ({symbol.GetType().Name}) when trying to find index of argument ({argument})")
                 };
 
-                return method.Parameters[argumentIndex];
+                Debug.Assert(method != null);
+                if (method.Parameters.Length > argumentIndex)
+                    return method.Parameters[argumentIndex];
+                        
+                Debug.Assert(method.Parameters.Last().IsParams);
+                return method.Parameters.Last();
             }
 
             var elementAccess = argument.Ancestors().OfType<ElementAccessExpressionSyntax>().SingleOrDefault();

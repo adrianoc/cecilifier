@@ -25,11 +25,6 @@ internal class ArrayExpandedParamsArgumentHandler : ExpandedParamsArgumentHandle
     private OpCode _stelemOpCode;
     private string _backingVariableName;
 
-    /// <summary>
-    /// Callback used to pre-process argument handling. It can be used to inject code
-    /// before the code generation for each argument.
-    /// </summary>
-    /// <param name="argument">Argument being processed.</param>
     internal override void PreProcessArgument(ArgumentSyntax argument)
     {
         var argumentIndex = ParentArgumentList.Arguments.IndexOf(argument);
@@ -47,11 +42,6 @@ internal class ArrayExpandedParamsArgumentHandler : ExpandedParamsArgumentHandle
         Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, _currentIndex++);
     }
 
-    /// <summary>
-    /// Callback used to post-process argument handling. It can be used to inject code
-    /// *after* generating code for each attribute.
-    /// </summary>
-    /// <param name="argument">Argument being processed.</param>
     internal override void PostProcessArgument(ArgumentSyntax argument)
     {
         var argumentIndex = ParentArgumentList.Arguments.IndexOf(argument);

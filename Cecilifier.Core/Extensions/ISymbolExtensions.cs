@@ -276,7 +276,7 @@ namespace Cecilifier.Core.Extensions
                    || (type.ContainingType != null && (SymbolEqualityComparer.Default.Equals(type.ContainingType, type) ? false : HasTypeArgumentOfTypeFromCecilifiedCodeTransitive(type.ContainingType, context)));
         }
         
-        internal static ExpandedParamsArgumentHandler? CreateExpandedParamsUsageHandler(this IMethodSymbol methodSymbol, IVisitorContext context, string ilVar, ArgumentListSyntax argumentList)
+        internal static ExpandedParamsArgumentHandler? CreateExpandedParamsUsageHandler(this IMethodSymbol methodSymbol, ExpressionVisitor expressionVisitor, string ilVar, ArgumentListSyntax argumentList)
         {
             var paramsParameter = methodSymbol.Parameters.FirstOrDefault(p => p.IsParams);
             if (paramsParameter == null || !IsExpandedForm(argumentList, paramsParameter))
@@ -285,6 +285,7 @@ namespace Cecilifier.Core.Extensions
                 return null;
             }
 
+            var context = expressionVisitor.Context;
             if (SymbolEqualityComparer.Default.Equals(paramsParameter.Type.OriginalDefinition, context.RoslynTypeSystem.SystemCollectionsGenericIEnumerableOfT))
             {
                 context.EmitError($"Cecilifier does not support type {paramsParameter.Type} as a 'params' parameter ({paramsParameter.Name}). You may change {paramsParameter.Name}' to 'ICollection<T>'", paramsParameter.DeclaringSyntaxReferences.First().GetSyntax());
@@ -297,6 +298,8 @@ namespace Cecilifier.Core.Extensions
                 INamedTypeSymbol namedType when SymbolEqualityComparer.Default.Equals(namedType.OriginalDefinition, context.RoslynTypeSystem.SystemSpan)  => new SpanExpandedParamsArgumentHandler(context, paramsParameter, argumentList, ilVar),
                 INamedTypeSymbol namedType when SymbolEqualityComparer.Default.Equals(namedType.OriginalDefinition, context.RoslynTypeSystem.SystemReadOnlySpan.Value) => new ReadOnlySpanExpandedParamsArgumentHandler(context, paramsParameter, argumentList, ilVar),
                 INamedTypeSymbol namedType when SymbolEqualityComparer.Default.Equals(namedType.OriginalDefinition, context.RoslynTypeSystem.SystemCollectionsGenericIEnumerableOfT)  => new ReadOnlySpanExpandedParamsArgumentHandler(context, paramsParameter, argumentList, ilVar),
+                INamedTypeSymbol namedType when SymbolEqualityComparer.Default.Equals(namedType.OriginalDefinition, context.RoslynTypeSystem.SystemCollectionsGenericIListOfT)  => new ListBackedExpandedParamsArgumentHandler(expressionVisitor, paramsParameter, argumentList),
+                INamedTypeSymbol namedType when SymbolEqualityComparer.Default.Equals(namedType.OriginalDefinition, context.RoslynTypeSystem.SystemCollectionsGenericICollectionOfT)  => new ListBackedExpandedParamsArgumentHandler(expressionVisitor, paramsParameter, argumentList),
                 _ => throw new NotImplementedException($"Type {paramsParameter.Type} is not supported.")
             };
             

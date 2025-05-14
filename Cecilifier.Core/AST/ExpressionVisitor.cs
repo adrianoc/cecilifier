@@ -574,7 +574,7 @@ namespace Cecilifier.Core.AST
             var candidateSymbol = Context.SemanticModel.GetSymbolInfo(node.Parent!).Symbol.EnsureNotNull();
             if (candidateSymbol is IMethodSymbol method)
             {
-                _expandedParamsArgumentHandler = method.CreateExpandedParamsUsageHandler(Context, ilVar, node);
+                _expandedParamsArgumentHandler = method.CreateExpandedParamsUsageHandler(this, ilVar, node);
             }
             base.VisitArgumentList(node);
             _expandedParamsArgumentHandler?.PostProcessArgumentList(node);
@@ -1233,7 +1233,7 @@ namespace Cecilifier.Core.AST
             }
 
             Context.EmitCilInstruction(ilVar, OpCodes.Ldnull);
-            CecilDefinitionsFactory.InstantiateDelegate(Context, ilVar, Context.GetTypeInfo(node).ConvertedType, syntheticMethodVariable.VariableName, new StaticDelegateCacheContext
+            CecilDefinitionsFactory.InstantiateDelegate(Context, ilVar, Context.GetTypeInfo(node).ConvertedType!, syntheticMethodVariable.VariableName, new StaticDelegateCacheContext
             {
                 IsStaticDelegate = false
             });
@@ -1399,6 +1399,7 @@ namespace Cecilifier.Core.AST
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
             }
 
+            Debug.Assert(delegateType != null);
             // we have a reference to a method used to initialize a delegate
             // and need to load the referenced method token and instantiate the delegate. For instance:
             //IL_0002: ldarg.0

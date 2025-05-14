@@ -6,7 +6,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 namespace Cecilifier.Core.AST.Params;
 
 /// <summary>
-/// Handles specifics of expanded params argument passing. You can read more details about <see href="">expanded/non-expanded forms</see>.
+/// Handles specifics of expanded params argument passing. You can read more details about <see href="https://github.com/dotnet/csharpstandard/blob/draft-v8/standard/expressions.md#12642-applicable-function-member">expanded/non-expanded forms</see>.
 ///
 /// When calling methods with `params` parameters users can either pass 1) an array (non-expanded form) or 2) the actual values (expanded form)
 ///
@@ -16,7 +16,12 @@ namespace Cecilifier.Core.AST.Params;
 /// </code>
 /// 
 /// 1) Non-Expanded:  M(new [] { 1, 2, 3});
-/// 2) Expanded: M(1, 2, 3);
+/// 2) Expanded: M(4 5, 6);
+///
+/// <remarks>
+/// When invoked with the expanded form Cecilifier needs to create a variable to hold the argument values. In the example above a new array of
+/// length 3 need to be allocated and initialized with values 4, 5 and 6.
+/// </remarks>
 /// </summary>
 internal abstract class ExpandedParamsArgumentHandler
 {
@@ -77,7 +82,7 @@ internal abstract class ExpandedParamsArgumentHandler
 
     /// <summary>
     /// Callback used to post-process argument handling. It can be used to inject code
-    /// *after* generating code for each attribute.
+    /// *after* generating code that process each argument in the expanded params items.
     /// </summary>
     /// <param name="argument">Argument being processed.</param>
     internal abstract void PostProcessArgument(ArgumentSyntax argument);
