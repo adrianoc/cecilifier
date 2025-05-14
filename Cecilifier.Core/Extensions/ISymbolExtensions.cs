@@ -286,9 +286,9 @@ namespace Cecilifier.Core.Extensions
             }
 
             var context = expressionVisitor.Context;
-            if (SymbolEqualityComparer.Default.Equals(paramsParameter.Type.OriginalDefinition, context.RoslynTypeSystem.SystemCollectionsGenericIEnumerableOfT))
+            if (IsUnsupportedParamsParameterType(context, paramsParameter, out var extraHelp))
             {
-                context.EmitError($"Cecilifier does not support type {paramsParameter.Type} as a 'params' parameter ({paramsParameter.Name}). You may change {paramsParameter.Name}' to 'ICollection<T>'", paramsParameter.DeclaringSyntaxReferences.First().GetSyntax());
+                context.EmitError($"Cecilifier does not support type {paramsParameter.Type} as a 'params' parameter ({paramsParameter.Name}).{extraHelp}", paramsParameter.DeclaringSyntaxReferences.First().GetSyntax());
                 return null;
             }
             
@@ -306,9 +306,27 @@ namespace Cecilifier.Core.Extensions
             static bool IsExpandedForm(ArgumentListSyntax argumentList, IParameterSymbol paramsParameter)
             {
                 var firstParamsArgument = argumentList.Arguments[paramsParameter.Ordinal];
-                var isExpandedForm = !firstParamsArgument.Expression.IsKind(SyntaxKind.ArrayInitializerExpression) && !firstParamsArgument.Expression.IsKind(SyntaxKind.ImplicitArrayCreationExpression);
-                return isExpandedForm;
-            }            
+                return !firstParamsArgument.Expression.IsKind(SyntaxKind.ArrayInitializerExpression) && 
+                       !firstParamsArgument.Expression.IsKind(SyntaxKind.ImplicitArrayCreationExpression);
+            }
+
+            static bool IsUnsupportedParamsParameterType(IVisitorContext context, IParameterSymbol paramsParameter, out string extraHelp)
+            {
+                if (SymbolEqualityComparer.Default.Equals(paramsParameter.Type.OriginalDefinition, context.RoslynTypeSystem.SystemCollectionsGenericIEnumerableOfT))
+                {
+                    extraHelp = $" You may change {paramsParameter.Name}' to 'ICollection<T>'";
+                    return true;
+                }
+
+                if (SymbolEqualityComparer.Default.Equals(paramsParameter.Type.ElementTypeSymbolOf().OriginalDefinition, context.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Nullable_T)))
+                {
+                    extraHelp = " Nullable<T> (i.e, int?) are not supported yet.";
+                    return true;
+                }
+
+                extraHelp = string.Empty;
+                return false;
+            }
         }
 
         internal static string? ParamsAttributeMatchingType(this ITypeSymbol paramsParameter) => paramsParameter.Kind ==  SymbolKind.ArrayType ? typeof(ParamArrayAttribute).FullName : typeof(ParamCollectionAttribute).FullName;
