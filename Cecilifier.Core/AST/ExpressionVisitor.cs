@@ -15,6 +15,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Mono.Cecil.Cil;
 using static Cecilifier.Core.Misc.CodeGenerationHelpers;
 
+#nullable enable
 namespace Cecilifier.Core.AST
 {
     internal partial class ExpressionVisitor : SyntaxWalkerBase
@@ -43,7 +44,7 @@ namespace Cecilifier.Core.AST
         ///  
         /// In this scenario, '_lastInstructionLoadingTargetOfInvocation' will point to IL1 when processing
         /// the call to M1() and to IL5 when processing the call to M2()
-        private LinkedListNode<string> _lastInstructionLoadingTargetOfInvocation;
+        private LinkedListNode<string>? _lastInstructionLoadingTargetOfInvocation;
 
         static ExpressionVisitor()
         {
@@ -229,7 +230,7 @@ namespace Cecilifier.Core.AST
                 // `ImplicitArrayCreationExpressionSyntax` is not a parent of the initializer expression, 
                 // which means, VisitImplicitArrayCreationExpression() will not be called
                 // https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/arrays/single-dimensional-arrays
-                ProcessImplicitArrayCreationExpression(node, Context.GetTypeInfo(node).ConvertedType);
+                ProcessImplicitArrayCreationExpression(node, Context.GetTypeInfo(node).ConvertedType.EnsureNotNull<ITypeSymbol, ITypeSymbol>());
             }
             else if (node.IsKind(SyntaxKind.CollectionInitializerExpression))
             {
@@ -272,7 +273,7 @@ namespace Cecilifier.Core.AST
         public override void VisitImplicitArrayCreationExpression(ImplicitArrayCreationExpressionSyntax node)
         {
             using var _ = LineInformationTracker.Track(Context, node);
-            ProcessImplicitArrayCreationExpression(node.Initializer, Context.GetTypeInfo(node).Type);
+            ProcessImplicitArrayCreationExpression(node.Initializer, Context.GetTypeInfo(node).Type!);
         }
 
         public override void VisitElementAccessExpression(ElementAccessExpressionSyntax node)
@@ -282,7 +283,7 @@ namespace Cecilifier.Core.AST
             if (expressionInfo.Symbol == null)
                 return;
 
-            var targetType = expressionInfo.Symbol.Accept(ElementTypeSymbolResolver.Instance);
+            var targetType = expressionInfo.Symbol.Accept(ElementTypeSymbolResolver.Instance)!;
             if (SymbolEqualityComparer.Default.Equals(targetType.OriginalDefinition, Context.RoslynTypeSystem.SystemSpan)
                 && node.ArgumentList.Arguments.Count == 1
                 && SymbolEqualityComparer.Default.Equals(Context.GetTypeInfo(node.ArgumentList.Arguments[0].Expression).Type, Context.RoslynTypeSystem.SystemRange))
@@ -427,7 +428,7 @@ namespace Cecilifier.Core.AST
         {
             using var _ = LineInformationTracker.Track(Context, node);
 
-            var literalParent = (CSharpSyntaxNode) node.Parent;
+            var literalParent = (CSharpSyntaxNode) node.Parent!;
             Debug.Assert(literalParent != null);
 
             var nodeType = Context.SemanticModel.GetTypeInfo(node);
@@ -444,7 +445,7 @@ namespace Cecilifier.Core.AST
                 _ => node.Token.Text
             };
 
-            literalType ??= Context.SemanticModel.GetTypeInfo(literalParent).Type;
+            literalType ??= Context.SemanticModel.GetTypeInfo(literalParent).Type!;
             LoadLiteralValue(ilVar,
                 literalType,
                 value,
@@ -459,7 +460,7 @@ namespace Cecilifier.Core.AST
             using var _ = LineInformationTracker.Track(Context, node);
             if (node.Parent is ArgumentSyntax argument && argument.RefKindKeyword.IsKind(SyntaxKind.OutKeyword))
             {
-                var localSymbol = (ILocalSymbol) Context.SemanticModel.GetSymbolInfo(node).Symbol;
+                var localSymbol = Context.SemanticModel.GetSymbolInfo(node).Symbol.EnsureNotNull<ISymbol, ILocalSymbol>();
                 var designation = ((SingleVariableDesignationSyntax) node.Designation);
                 var resolvedOutArgType = Context.TypeResolver.Resolve(localSymbol.Type);
 
@@ -688,7 +689,7 @@ namespace Cecilifier.Core.AST
         {
             var ctorInfo = Context.SemanticModel.GetSymbolInfo(node);
 
-            var ctor = (IMethodSymbol) ctorInfo.Symbol;
+            var ctor = (IMethodSymbol?) ctorInfo.Symbol;
             if (ctor == null)
             {
                 if (TryProcessTypeParameterInstantiation(node))
@@ -824,8 +825,8 @@ namespace Cecilifier.Core.AST
         {
             using var _ = LineInformationTracker.Track(Context, node);
 
-            VisitIndex(node.LeftOperand);
-            VisitIndex(node.RightOperand);
+            VisitIndex(node.LeftOperand!);
+            VisitIndex(node.RightOperand!);
 
             var indexType = Context.RoslynTypeSystem.SystemIndex;
             var rangeCtor = Context.RoslynTypeSystem.SystemRange
@@ -905,7 +906,7 @@ namespace Cecilifier.Core.AST
         {
             using var _ = LineInformationTracker.Track(Context, node);
 
-            var varType = Context.TypeResolver.Resolve(Context.SemanticModel.GetTypeInfo(node.Type).Type);
+            var varType = Context.TypeResolver.Resolve(Context.SemanticModel.GetTypeInfo(node.Type!).Type);
             string localVarName = LocalVariableNameOrDefault(node, "tmp");
             var localVar = Context.AddLocalVariableToCurrentMethod(localVarName, varType).VariableName;
 
@@ -917,12 +918,12 @@ namespace Cecilifier.Core.AST
             Context.EmitCilInstruction(ilVar, OpCodes.Brfalse_S, typeDoesNotMatchVar);
 
             // Compares each sub-pattern
-            foreach (var pattern in node.PropertyPatternClause.Subpatterns)
+            foreach (var pattern in node.PropertyPatternClause!.Subpatterns)
             {
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, localVar);
                 pattern.Accept(this);
 
-                var comparisonType = Context.SemanticModel.GetSymbolInfo(pattern.NameColon?.Name ?? pattern.ExpressionColon?.Expression).Symbol.GetMemberType();
+                var comparisonType = Context.SemanticModel.GetSymbolInfo(pattern.NameColon?.Name ?? pattern.ExpressionColon?.Expression!).Symbol.GetMemberType();
                 var opEquality = comparisonType.GetMembers().FirstOrDefault(m => m.Kind == SymbolKind.Method && m.Name == "op_Equality");
                 if (opEquality != null)
                 {
@@ -1051,7 +1052,7 @@ namespace Cecilifier.Core.AST
                 Context.EmitCilInstruction(ilVar, opCode);
             }
 
-            ITypeSymbol type = Context.SemanticModel.GetTypeInfo(operand).Type;
+            var type = Context.SemanticModel.GetTypeInfo(operand).Type;
             var tempLocalName = StoreTopOfStackInLocalVariable(Context, ilVar, "tmp", type).VariableName;
             
             Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, tempLocalName);
@@ -1147,7 +1148,7 @@ namespace Cecilifier.Core.AST
             var parentElementAccessExpression = node.Ancestors().OfType<ElementAccessExpressionSyntax>().FirstOrDefault(candidate => candidate.ArgumentList.Contains(node));
             if (parentElementAccessExpression != null)
             {
-                ITypeSymbol type = Context.SemanticModel.GetTypeInfo(node).Type;
+                var type = Context.SemanticModel.GetTypeInfo(node).Type;
                 var tempLocal = StoreTopOfStackInLocalVariable(Context, ilVar, "tmpIndex", type).VariableName;
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldloca, tempLocal);
             }
@@ -1162,7 +1163,7 @@ namespace Cecilifier.Core.AST
             var indexedType = Context.SemanticModel.GetTypeInfo(elementAccessExpressionSyntax.Expression).Type.EnsureNotNull();
             if (indexedType.Name == "Span")
             {
-                IMethodSymbol method = ((IPropertySymbol) indexedType.GetMembers("Length").Single()).GetMethod;
+                var method = indexedType.GetMembers("Length").Single().EnsureNotNull<ISymbol, IPropertySymbol>().GetMethod;
                 Context.AddCallToMethod(method, ilVar, MethodDispatchInformation.MostLikelyVirtual);
             }
             else
@@ -1232,7 +1233,7 @@ namespace Cecilifier.Core.AST
                 || IsObjectCreationExpressionUsedAsSourceOfCast(node)
                 || IsObjectCreationExpressionUsedAsInParameter(node)
                 || IsSimpleMethodInvocation(node))
-                StoreTopOfStackInLocalVariableAndLoad(node, targetOfInvocationType.Type);
+                StoreTopOfStackInLocalVariableAndLoad(node, targetOfInvocationType.Type!);
         }
 
         private static bool IsLeftHandSideOfMemberAccessExpression(ExpressionSyntax toBeChecked)
@@ -1270,13 +1271,13 @@ namespace Cecilifier.Core.AST
             }
 
             var parentMae = expressionSyntax.FirstAncestorOrSelf<MemberAccessExpressionSyntax>(ancestor => ancestor.Kind() == SyntaxKind.SimpleMemberAccessExpression);
-            if (parentMae != null && SymbolEqualityComparer.Default.Equals(Context.SemanticModel.GetSymbolInfo(parentMae).Symbol.ContainingType, Context.RoslynTypeSystem.SystemValueType))
+            if (parentMae != null && SymbolEqualityComparer.Default.Equals(Context.SemanticModel.GetSymbolInfo(parentMae).Symbol!.ContainingType, Context.RoslynTypeSystem.SystemValueType))
             {
                 // it is a reference on a value type to a method defined in System.ValueType (GetHashCode(), ToString(), etc)
                 Context.SetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, Context.TypeResolver.Resolve(type));
             }
 
-            bool RequiresAddressOfValue() => IsObjectCreationExpressionUsedAsInParameter(expressionSyntax) || expressionSyntax.Parent.FirstAncestorOrSelf<SyntaxNode>(c => !c.IsKind(SyntaxKind.ParenthesizedExpression)).IsKind(SyntaxKind.SimpleMemberAccessExpression);
+            bool RequiresAddressOfValue() => IsObjectCreationExpressionUsedAsInParameter(expressionSyntax) || expressionSyntax.Parent!.FirstAncestorOrSelf<SyntaxNode>(c => !c.IsKind(SyntaxKind.ParenthesizedExpression)).IsKind(SyntaxKind.SimpleMemberAccessExpression);
         }
         
         private void FixCallSite()
@@ -1358,12 +1359,12 @@ namespace Cecilifier.Core.AST
             var delegateType = firstParentNotPartOfName switch
             {
                 // assumes that a method reference in an object creation expression can only be a delegate instantiation.
-                ArgumentSyntax { Parent.Parent.RawKind: (int) SyntaxKind.ObjectCreationExpression } arg => Context.SemanticModel.GetTypeInfo(arg.Parent.Parent).Type,
+                ArgumentSyntax { Parent.Parent.RawKind: (int) SyntaxKind.ObjectCreationExpression } arg => Context.SemanticModel.GetTypeInfo(arg.Parent!.Parent!).Type,
 
                 // assumes that a method reference in an invocation expression is method group -> delegate conversion. 
-                ArgumentSyntax { Parent.Parent.RawKind: (int) SyntaxKind.InvocationExpression } arg => ((IMethodSymbol) Context.SemanticModel.GetSymbolInfo(arg.Parent.Parent).Symbol).Parameters[arg.FirstAncestorOrSelf<ArgumentListSyntax>().Arguments.IndexOf(arg)].Type,
+                ArgumentSyntax { Parent.Parent.RawKind: (int) SyntaxKind.InvocationExpression } arg => ((IMethodSymbol) Context.SemanticModel.GetSymbolInfo(arg.Parent!.Parent!).Symbol!).Parameters[arg.FirstAncestorOrSelf<ArgumentListSyntax>()!.Arguments.IndexOf(arg)].Type,
 
-                AssignmentExpressionSyntax assignment => Context.SemanticModel.GetSymbolInfo(assignment.Left).Symbol.Accept(ElementTypeSymbolResolver.Instance),
+                AssignmentExpressionSyntax assignment => Context.SemanticModel.GetSymbolInfo(assignment.Left).Symbol!.Accept(ElementTypeSymbolResolver.Instance),
 
                 VariableDeclarationSyntax variableDeclaration => Context.SemanticModel.GetTypeInfo(variableDeclaration.Type).Type,
 
@@ -1467,6 +1468,7 @@ namespace Cecilifier.Core.AST
                 var callContext = (FirstInstruction: _lastInstructionLoadingTargetOfInvocation, LastInstruction: Context.CurrentLine);
 
                 StackallocAsArgumentFixer.Current?.MarkEndOfComputedCallTargetBlock(callContext.FirstInstruction);
+                Debug.Assert(method != null);
                 ProcessArgumentsTakingDefaultParametersIntoAccount(method, args);
                 
                 if (callContext.FirstInstruction != null)
@@ -1482,7 +1484,7 @@ namespace Cecilifier.Core.AST
             _lastInstructionLoadingTargetOfInvocation = Context.CurrentLine;
         }
         
-        private void ProcessArgumentsTakingDefaultParametersIntoAccount(ISymbol? method, ArgumentListSyntax args)
+        private void ProcessArgumentsTakingDefaultParametersIntoAccount(ISymbol method, ArgumentListSyntax args)
         {
             Visit(args);
             if (method is not IMethodSymbol methodSymbol || methodSymbol.Parameters.Length <= args.Arguments.Count)
@@ -1498,7 +1500,7 @@ namespace Cecilifier.Core.AST
         {
             if (arg.TryGetAttribute<CallerArgumentExpressionAttribute>(out var callerArgumentExpressionAttribute))
             {
-                var expressionParameter = parameters.SingleOrDefault(p => p.Name == (string) callerArgumentExpressionAttribute.ConstructorArguments[0].Value);
+                var expressionParameter = parameters.SingleOrDefault(p => p.Name == (string) callerArgumentExpressionAttribute.ConstructorArguments[0].Value!);
                 if (expressionParameter != null)
                     return arguments[expressionParameter.Ordinal].Expression.ToFullString();
             }
@@ -1510,10 +1512,11 @@ namespace Cecilifier.Core.AST
         {
             using var trackIfNotPartOfTypeName = LineInformationTracker.Track(Context, node);
             var member = Context.SemanticModel.GetSymbolInfo(node);
+            Debug.Assert(member.Symbol != null);
             switch (member.Symbol.Kind)
             {
                 case SymbolKind.Method:
-                    ProcessMethodReference(node, member.Symbol as IMethodSymbol);
+                    ProcessMethodReference(node, (IMethodSymbol) member.Symbol);
                     trackIfNotPartOfTypeName.Discard(); // for methods it is better to use the whole invocation expression.
                     break;
 
@@ -1530,7 +1533,7 @@ namespace Cecilifier.Core.AST
                     break;
 
                 case SymbolKind.Property:
-                    ProcessProperty(node, member.Symbol as IPropertySymbol);
+                    ProcessProperty(node, (IPropertySymbol) member.Symbol);
                     break;
 
                 case SymbolKind.TypeParameter:
@@ -1545,16 +1548,16 @@ namespace Cecilifier.Core.AST
 
         private void ProcessImplicitArrayCreationExpression(InitializerExpressionSyntax initializer, ITypeSymbol typeSymbol)
         {
-            var arrayType = typeSymbol.EnsureNotNull<ITypeSymbol, IArrayTypeSymbol>($"Unable to infer array type from {initializer.Parent}");
+            var arrayType = typeSymbol.EnsureNotNull<ITypeSymbol, IArrayTypeSymbol>();
             Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, initializer.Expressions.Count);
             ProcessArrayCreation(arrayType.ElementType, initializer);
         }
 
-        private void ProcessArrayCreation(ITypeSymbol elementType, InitializerExpressionSyntax initializer)
+        private void ProcessArrayCreation(ITypeSymbol elementType, InitializerExpressionSyntax? initializer)
         {
             AddCilInstruction(ilVar, OpCodes.Newarr, elementType);
             if (PrivateImplementationDetailsGenerator.IsApplicableTo(initializer, Context))
-                ArrayInitializationProcessor.InitializeOptimized(this, elementType, initializer.Expressions);
+                ArrayInitializationProcessor.InitializeOptimized(this, elementType, initializer!.Expressions);
             else
                 ArrayInitializationProcessor.InitializeUnoptimized(this, elementType, initializer?.Expressions, initializer != null ? Context.SemanticModel.GetOperation(initializer) : null);
         }
@@ -1598,37 +1601,37 @@ namespace Cecilifier.Core.AST
     {
         public static ElementTypeSymbolResolver Instance = new ElementTypeSymbolResolver();
 
-        public override ITypeSymbol VisitEvent(IEventSymbol symbol)
+        public override ITypeSymbol? VisitEvent(IEventSymbol symbol)
         {
             return symbol.Type.Accept(this);
         }
 
-        public override ITypeSymbol VisitField(IFieldSymbol symbol)
+        public override ITypeSymbol? VisitField(IFieldSymbol symbol)
         {
             return symbol.Type.Accept(this);
         }
 
-        public override ITypeSymbol VisitLocal(ILocalSymbol symbol)
+        public override ITypeSymbol? VisitLocal(ILocalSymbol symbol)
         {
             return symbol.Type.Accept(this);
         }
 
-        public override ITypeSymbol VisitMethod(IMethodSymbol symbol)
+        public override ITypeSymbol? VisitMethod(IMethodSymbol symbol)
         {
             return symbol.ReturnType.Accept(this);
         }
 
-        public override ITypeSymbol VisitProperty(IPropertySymbol symbol)
+        public override ITypeSymbol? VisitProperty(IPropertySymbol symbol)
         {
             return symbol.Type.Accept(this);
         }
 
-        public override ITypeSymbol VisitParameter(IParameterSymbol symbol)
+        public override ITypeSymbol? VisitParameter(IParameterSymbol symbol)
         {
             return symbol.Type.Accept(this);
         }
 
-        public override ITypeSymbol VisitArrayType(IArrayTypeSymbol symbol)
+        public override ITypeSymbol? VisitArrayType(IArrayTypeSymbol symbol)
         {
             return symbol.ElementType;
         }

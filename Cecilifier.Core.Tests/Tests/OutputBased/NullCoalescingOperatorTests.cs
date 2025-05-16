@@ -60,6 +60,6 @@ public class NullCoalescingOperatorTests : OutputBasedTestBase
     {
         AssertOutput($"System.Console.Write({Quote(a)} ?? {Quote(b)} ?? {Quote(c)});", expectedOutput);
         
-        string? Quote(string s) => s == null ? "null" : $"\"{s}\"";
+        string Quote(string s) => s == null ? "null" : $"\"{s}\"";
     }
 }

@@ -167,7 +167,6 @@ public class PrivateImplementationDetailsGeneratorTests
 
         static TestCaseData TestCaseDataFor<T>(Expression<Func<T[]>> expression, FieldInfo[] fields)
         {
-            Boolean b;
             var fieldExpression = (MemberExpression) expression.Body;
             var fieldName = fieldExpression.Member.Name.AsSpan();
             var sizeSeparatorIndex = fieldName.IndexOf('_');

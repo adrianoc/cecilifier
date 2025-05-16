@@ -121,7 +121,7 @@ namespace Cecilifier.Core.Extensions
 
         #nullable enable
         [return: NotNull]
-        public static TTarget EnsureNotNull<TSource, TTarget>([NotNullIfNotNull("source")] this TSource? source, [CallerArgumentExpression("source")] string exp = null) where TTarget : TSource
+        public static TTarget EnsureNotNull<TSource, TTarget>([NotNullIfNotNull("source")] this TSource? source, [CallerArgumentExpression("source")] string? exp = null) where TTarget : TSource
         {
             if (source == null)
                 throw new ArgumentNullException(exp);

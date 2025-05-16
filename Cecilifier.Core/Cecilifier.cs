@@ -15,7 +15,7 @@ namespace Cecilifier.Core
     {
         internal const int CecilifierProgramPreambleLength = 25; // The # of lines before the 1st cecilified line of code (see CecilifierExtensions.AsCecilApplication())
 
-        private const LanguageVersion CurrentLanguageVersion = LanguageVersion.CSharp12;
+        private const LanguageVersion CurrentLanguageVersion = LanguageVersion.CSharp13;
         public static readonly int SupportedCSharpVersion = int.Parse(CurrentLanguageVersion.ToString().Substring("CSharp".Length));
 
         public static CecilifierResult Process(Stream content, CecilifierOptions options)

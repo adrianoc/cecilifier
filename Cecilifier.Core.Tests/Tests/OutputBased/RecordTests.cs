@@ -100,7 +100,7 @@ public class RecordTests
     }
 
     [TestFixture]
-    public class Equals : OutputBasedTestBase
+    public class EqualsOverloadTest : OutputBasedTestBase
     {
         [Test]
         public void RecordTypeOverload_WhenInheritingFromObject_Works()

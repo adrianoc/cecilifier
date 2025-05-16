@@ -161,7 +161,7 @@ namespace Cecilifier.Core.Extensions
             return _context.TypeResolver.Resolve(typeSymbol.Type);
         }
 
-        public override string? VisitInvocationExpression(InvocationExpressionSyntax node)
+        public override string VisitInvocationExpression(InvocationExpressionSyntax node)
         {
             if (node.Expression is IdentifierNameSyntax { Identifier.Text: "nameof" } )
             {

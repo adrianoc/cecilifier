@@ -1,6 +1,8 @@
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
+#nullable enable annotations
+
 namespace Cecilifier.Core.Misc
 {
     public static class NameSyntaxExtensions

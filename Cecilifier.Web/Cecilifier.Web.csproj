@@ -3,6 +3,7 @@
   
   <PropertyGroup>
     <_DotNetPackTypeMapGeneratorCommand>dotnet pack $(MSBuildProjectDirectory)/../Cecilifier.TypeMapGenerator/Cecilifier.TypeMapGenerator.csproj</_DotNetPackTypeMapGeneratorCommand>  
+    <NoWarn>$(NoWarn);NU5128</NoWarn>
   </PropertyGroup>
   
   <Target Name="PackCodeGeneratorPublish" AfterTargets="Publish">

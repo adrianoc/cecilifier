@@ -44,18 +44,14 @@ internal sealed class BinaryOperatorHandler
     
     public void ProcessRaw(IVisitorContext context, string ilVar, ExpressionSyntax left, ExpressionSyntax right)
     {
-        ThrowIfRawHandlerIsNull();
+        if (_rawHandler == null) 
+            throw new InvalidOperationException("The constructor taking two ITypeSymbols should be used to initialize this instance.");
+        
         _rawHandler(
             context, 
             ilVar, 
             context.SemanticModel.GetTypeInfo(left).Type, 
             context.SemanticModel.GetTypeInfo(right).Type);
-
-        [ExcludeFromCodeCoverage]
-        void ThrowIfRawHandlerIsNull()
-        {
-            if (_rawHandler == null) throw new InvalidOperationException("The constructor taking two ITypeSymbols should be used to initialize this instance.");
-        }
     }
 
     public BinaryOperatorHandler(Action<IVisitorContext, string, BinaryExpressionSyntax, ExpressionVisitor> handler)
@@ -66,7 +62,7 @@ internal sealed class BinaryOperatorHandler
 
     private BinaryOperatorHandler(Action<IVisitorContext, string, ITypeSymbol, ITypeSymbol> action, bool visitRightOperand)
     {
-        _rawHandler = action;
+        _rawHandler = action!;
         _visitRightOperand = visitRightOperand;
     }
     

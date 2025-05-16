@@ -34,10 +34,10 @@ namespace Cecilifier.Web
                                                <Project Sdk="Microsoft.NET.Sdk">
                                                    <PropertyGroup>
                                                        <OutputType>Exe</OutputType>
-                                                       <TargetFramework>net8.0</TargetFramework>
+                                                       <TargetFramework>net9.0</TargetFramework>
                                                    </PropertyGroup>
                                                    <ItemGroup>
-                                                       <PackageReference Include="Mono.Cecil" Version="0.11.5" />
+                                                       <PackageReference Include="Mono.Cecil" Version="0.11.6" />
                                                        <PackageReference Include="Cecilifier.TypeMapGenerator" Version="1.0.0" />
                                                    </ItemGroup>
                                                </Project>

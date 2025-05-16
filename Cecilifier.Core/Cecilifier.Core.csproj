@@ -5,4 +5,33 @@
   <ItemGroup>
     <InternalsVisibleTo Include="$(AssemblyName).Tests"/>
   </ItemGroup>
+  
+  <Target Name="Generate" BeforeTargets="CoreCompile">
+    <Exec Command="git log -1 --pretty=format:%H" ConsoleToMSBuild="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="GitRevision" />
+    </Exec>
+
+    <PropertyGroup>
+      <BuildInformationPartialCode>
+        namespace Cecilifier.Core.Misc%3B
+        
+        public static partial class BuildInformation
+        {
+        public static partial string GitRevision() => "$(GitRevision)"%3B
+        public static partial string BuildDate() => "$([System.DateTime]::Now)"%3B
+        }
+      </BuildInformationPartialCode>
+      
+      <BuildInformationPartialFilePath>$(IntermediateOutputPath)BuildInformationPartialCode.g.cs</BuildInformationPartialFilePath>
+    </PropertyGroup>
+
+    <WriteLinesToFile
+            File="$(BuildInformationPartialFilePath)"
+            Overwrite="true"
+            Lines="$(BuildInformationPartialCode)" />
+
+    <ItemGroup>
+      <Compile Include="$(BuildInformationPartialFilePath)" />
+    </ItemGroup>
+  </Target>
 </Project>

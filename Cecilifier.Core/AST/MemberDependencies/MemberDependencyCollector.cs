@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+
+#nullable enable annotations
 
 namespace Cecilifier.Core.AST.MemberDependencies;
 
@@ -11,17 +14,17 @@ namespace Cecilifier.Core.AST.MemberDependencies;
 /// This is used to allow Cecilifier to process a type's members in an order that minimizes interleaving code generated for
 /// its members. 
 /// </summary>
-internal class MemberDependencyCollector<T> where T : MemberDependency, IMemberDependencyFactory<MemberDependency>
+internal class MemberDependencyCollector<TNode> where TNode : MemberDependency, IMemberDependencyFactory<MemberDependency>
 {
     public IReadOnlyCollection<MemberDependency> Process(TypeDeclarationSyntax node, SemanticModel semanticModel)
     {
-        var collectorVisitor = new MemberCollectorVisitor<T>(semanticModel, node);
+        var collectorVisitor = new MemberCollectorVisitor(semanticModel, node);
         node.Accept(collectorVisitor);
         
         return collectorVisitor.Dependencies;
     }
 
-    private class MemberCollectorVisitor<TNode> : CSharpSyntaxWalker where TNode : MemberDependency, IMemberDependencyFactory<MemberDependency>
+    private sealed class MemberCollectorVisitor : CSharpSyntaxWalker
     {
         public IReadOnlyCollection<TNode> Dependencies => _members.Values;
 
@@ -159,7 +162,7 @@ internal class MemberDependencyCollector<T> where T : MemberDependency, IMemberD
             base.VisitCastExpression(node);
         }
         
-        private bool TryGetMemberForUsage(CSharpSyntaxNode candidateNode, out TNode referencee)
+        private bool TryGetMemberForUsage(CSharpSyntaxNode candidateNode, [NotNullWhen(true)] out TNode? referencee)
         {
             referencee = null;
             var symbol = _semanticModel.GetSymbolInfo(candidateNode).Symbol;
@@ -168,7 +171,10 @@ internal class MemberDependencyCollector<T> where T : MemberDependency, IMemberD
 
             if (_current.Count > 0)
             {
+//Disables false warning due to false positives (see https://github.com/dotnet/roslyn-analyzers/issues/7436)
+#pragma warning disable RS1039
                 var currentSymbol = _semanticModel.GetDeclaredSymbol(_current.Peek().Declaration);
+#pragma warning restore RS1039
                 if (!SymbolEqualityComparer.Default.Equals(currentSymbol.ContainingType, symbol.ContainingType)
                     && !SymbolEqualityComparer.Default.Equals(currentSymbol.ContainingType, symbol))
                     return false;
@@ -179,7 +185,10 @@ internal class MemberDependencyCollector<T> where T : MemberDependency, IMemberD
             
         private bool TryGetMemberForDeclaration(CSharpSyntaxNode memberDeclaration, out TNode referencee)
         {
+//Disables false warning due to false positives (see https://github.com/dotnet/roslyn-analyzers/issues/7436)
+#pragma warning disable RS1039
             var symbol = _semanticModel.GetDeclaredSymbol(memberDeclaration);
+#pragma warning restore RS1039
             if (symbol == null)
             {
                 referencee = null;

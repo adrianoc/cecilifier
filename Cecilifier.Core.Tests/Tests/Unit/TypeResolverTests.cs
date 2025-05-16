@@ -49,7 +49,7 @@ internal class TypeResolverTests : CecilifierContextBasedTestBase
     {
         var context = NewContext();
         var m1Syntax = GetMethodSyntax(context, "M1"); // Func<T> M1() {}
-        var m1Symbol = context.SemanticModel.GetDeclaredSymbol(m1Syntax);
+        var m1Symbol = context.SemanticModel.GetDeclaredSymbol(m1Syntax).EnsureNotNull();
 
         // Simulates type parameter `T` being registered under type `Foo`
         using var _ = context.DefinitionVariables.WithCurrent("Foo<T>", "T", VariableMemberKind.TypeParameter, "TypeParameter_T_var");
@@ -63,7 +63,7 @@ internal class TypeResolverTests : CecilifierContextBasedTestBase
     {
         var context = NewContext();
         var methodSyntax = GetMethodSyntax(context, "M2"); // Func<TM> M2<TM>() {}
-        var methodSymbol = context.SemanticModel.GetDeclaredSymbol(methodSyntax);
+        var methodSymbol = context.SemanticModel.GetDeclaredSymbol(methodSyntax).EnsureNotNull();
 
         // Simulates type parameter `T` being registered under method `M2`
         using var _ = context.DefinitionVariables.WithCurrent("Foo<T>.M2<TM>()", "TM", VariableMemberKind.TypeParameter, "TypeParameter_TM_var");
@@ -77,7 +77,7 @@ internal class TypeResolverTests : CecilifierContextBasedTestBase
     {
         var context = NewContext();
         var methodSyntax = GetMethodSyntax(context, "M3"); // Func<T, TM> M3<TM>() {}
-        var methodSymbol = context.SemanticModel.GetDeclaredSymbol(methodSyntax);
+        var methodSymbol = context.SemanticModel.GetDeclaredSymbol(methodSyntax).EnsureNotNull();
 
         // Simulates type parameters `T` & `TM` being registered under their respective members.
         using var t = context.DefinitionVariables.WithCurrent("Foo<T>", "T", VariableMemberKind.TypeParameter, "TypeParameter_Foo");
