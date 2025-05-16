@@ -2,7 +2,7 @@
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <LangVersion>13</LangVersion>
-    <AssemblyVersion>2.21.0</AssemblyVersion>
+    <AssemblyVersion>2.22.0</AssemblyVersion>
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
   </PropertyGroup>
 
