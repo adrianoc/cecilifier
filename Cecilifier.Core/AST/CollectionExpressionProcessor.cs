@@ -52,7 +52,6 @@ internal static class CollectionExpressionProcessor
             context.EmitCilInstruction(visitor.ILVariable, OpCodes.Ldc_I4, index);
             context.EmitCilInstruction(visitor.ILVariable, OpCodes.Call, spanGetItemMethod);
             visitor.Visit(element);
-            //TODO: Why do we need to apply conversions? Isn´t visiting the element enough?
             context.TryApplyConversions(visitor.ILVariable, collectionExpressionOperation.Elements[index]);
             context.EmitCilInstruction(visitor.ILVariable, stindOpCode, targetElementType);
             index++;
