@@ -284,8 +284,17 @@ namespace Cecilifier.Web
                     foreach (var source in files)
                     {
                         var entry = zipFile.CreateEntry(source.fileName, CompressionLevel.Optimal);
-                        using var entryWriter = new StreamWriter(entry.Open());
-                        entryWriter.Write(source.contents);
+                        if (source.contents.StartsWith("file-relative-path://"))
+                        {
+                            using var entryStream = entry.Open();
+                            var basePath = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+                            entryStream.Write(File.ReadAllBytes(Path.Combine(basePath, source.contents.Substring("file-relative-path://".Length))));
+                        }
+                        else
+                        {
+                            using var entryWriter = new StreamWriter(entry.Open());
+                            entryWriter.Write(source.contents);
+                        }
                     }
                 }
                 return zipStream.ToArray();
