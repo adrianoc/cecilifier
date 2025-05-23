@@ -84,6 +84,11 @@ function cecilifyFromSnippet(counter) {
 let savedSnippetSnack = null;
 function showListOfLocallyStoredSnippets(editor) {
     let snippetNames = [];
+    if (savedSnippetSnack !== null)
+    {
+        return;
+    }
+
     for(let i = 0; i < window.localStorage.length; i++) {
         let key = window.localStorage.key(i);
         if (key.startsWith(saved_snippet_prefix)) {
@@ -152,6 +157,8 @@ function setupObserverToResetSavedSnippetListSnackUponClosing(closeSavedSnippetL
                 savedSnippetSnack = null;
                 closeSavedSnippetListAction.dispose();
             }
+            if (mutation.attributeName === 'style')
+                savedSnippetSnack = null;
         });
     };
 

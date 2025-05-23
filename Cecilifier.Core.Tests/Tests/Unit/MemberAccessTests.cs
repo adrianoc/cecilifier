@@ -205,14 +205,14 @@ class Foo
         Assert.That(cecilifiedCode, Does.Match(expectedExpressions));
     }
 
-    [TestCase("where T : struct", "string ConstrainedToStruct() => field.ToString();", "Ldflda, fld_field_4", "Constrained, gp_T_3")]
-    [TestCase("where T : IFoo", "string ConstrainedToInterfaceCallInterfaceMethod() => field.Get();", "Ldflda, fld_field_4", "Constrained, gp_T_3")]
-    [TestCase("where T : IFoo", "string ConstrainedToInterfaceCallToString() => field.ToString();", "Ldflda, fld_field_4", "Constrained, gp_T_3")]
-    [TestCase("", "string Unconstrained() => field.ToString();", "Ldflda, fld_field_4", "Constrained, gp_T_3")]
-    [TestCase("where T : class", "string ConstrainedToReferenceType() => field.ToString();", "Ldfld, fld_field_4", "Box, gp_T_3")]
-    [TestCase("where T: Bar", "string ConstrainedToClassCallToString() => field.ToString();", "Ldfld, fld_field_9", "Box, gp_T_8")]
-    [TestCase("where T: Bar", "void ConstrainedToClassCallClassMethod() => field.M();", "Ldfld, fld_field_9", "Box, gp_T_8")]
-    public void TestCallOn_TypeParameter_CallOnField(string constraint, string snippet, params string[] expectedExpressions)
+    [TestCase("where T : struct", "string ConstrainedToStruct() => field.ToString();", "Ldflda", "Constrained, gp_T_3")]
+    [TestCase("where T : IFoo", "string ConstrainedToInterfaceCallInterfaceMethod() => field.Get();", "Ldflda", "Constrained, gp_T_3")]
+    [TestCase("where T : IFoo", "string ConstrainedToInterfaceCallToString() => field.ToString();", "Ldflda", "Constrained, gp_T_3")]
+    [TestCase("", "string Unconstrained() => field.ToString();", "Ldflda", "Constrained, gp_T_3")]
+    [TestCase("where T : class", "string ConstrainedToReferenceType() => field.ToString();", """Ldfld""", "Box, gp_T_3")]
+    [TestCase("where T: Bar", "string ConstrainedToClassCallToString() => field.ToString();", "Ldfld", "Box, gp_T_8")]
+    [TestCase("where T: Bar", "void ConstrainedToClassCallClassMethod() => field.M();", "Ldfld", "Box, gp_T_8")]
+    public void TestCallOn_TypeParameter_CallOnField(string constraint, string snippet, string expectedLoadOpCode, string expectedConversionExpression)
     {
         var code = $@"interface IFoo {{ string Get(); }}
 class Foo<T> {constraint}
@@ -225,8 +225,8 @@ class Bar {{ public void M() {{ }} }}
 ";
         var result = RunCecilifier(code);
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
-        foreach (var expectedExpression in expectedExpressions)
-            Assert.That(cecilifiedCode, Contains.Substring(expectedExpression));
+        Assert.That(cecilifiedCode, Does.Match($"""{expectedLoadOpCode}, new FieldReference\("field", gp_T_\d+, cls_foo_\d+.MakeGenericInstanceType\(gp_T_\d+\)\)"""));
+        Assert.That(cecilifiedCode, Does.Match(expectedLoadOpCode));
     }
 
     // Issue #187
@@ -289,5 +289,49 @@ class Bar {{ public void M() {{ }} }}
             pattern = pattern.Replace("\n\n", "\n");
         
         Assert.That(cecilifiedCode, Does.Match(pattern));
+    }
+
+    [Test]
+    public void GenericMemberReferences_Issue334()
+    {
+        var result = RunCecilifier("""
+                                   using System; 
+                                   class C<T> 
+                                   { 
+                                        T field; 
+                                        event Action Event; 
+                                        T Property {get; set; } 
+                                        
+                                        public void Set(T toSet) => field = toSet; 
+                                        // Issue #339
+                                        // public void SetEvent(Action toSet) => Event += toSet; 
+                                        public void SetProperty(T toSet) => Property = toSet;
+                                   }
+                                   """);
+        var actual = result.GeneratedCode.ReadToEnd();
+        Assert.That(actual, Does.Match("""
+                                          //field = toSet
+                                          (?<emit>\s+il_set_\d+\.Emit\(OpCodes\.)Ldarg_0\);
+                                          \k<emit>Ldarg_1\);
+                                          \k<emit>Stfld, new FieldReference\("field", (?<typeParam>gp_T_\d+), cls_C_\d+.MakeGenericInstanceType\(\k<typeParam>\)\)\);
+                                          """));
+        
+        Assert.That(actual, Does.Match("""
+                                          //Property = toSet
+                                          (?<emit>\s+il_setProperty_\d+\.Emit\(OpCodes\.)Ldarg_0\);
+                                          \k<emit>Ldarg_1\);
+                                          \s+var (?<setter>r_set_Property_\d+) = new MethodReference\(l_set_\d+.Name, l_set_\d+.ReturnType\) {.+DeclaringType = cls_C_\d+.MakeGenericInstanceType\(gp_T_\d+\).+};
+                                          \s+foreach\(var p in l_set_\d+.Parameters\)
+                                          \s+{
+                                          \s+\k<setter>\.Parameters.Add\(new ParameterDefinition\(p.Name, p.Attributes, p.ParameterType\)\);
+                                          \s+}
+                                          \k<emit>Call, \k<setter>\);
+                                          """));
+        
+        // Placeholder for events. Ignore(#339)
+        // Assert.That(actual, Does.Match("""
+        //                                   //Event += toSet
+        //                                   ....
+        //                                   """));
     }
 }
