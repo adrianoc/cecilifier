@@ -210,12 +210,6 @@ namespace Cecilifier.Core.AST
             }
         }
 
-        private void StoreTopOfStackInLocalVariableAndLoadItsAddress(string ilVar, ITypeSymbol type, string variableName = "tmp")
-        {
-            var tempLocalName = StoreTopOfStackInLocalVariable(Context, ilVar, variableName, type).VariableName;
-            Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, tempLocalName);
-        }
-
         protected IMethodSymbol DeclaredSymbolFor<T>(T node) where T : BaseMethodDeclarationSyntax
         {
             return Context.GetDeclaredSymbol(node);
@@ -402,7 +396,8 @@ namespace Cecilifier.Core.AST
         {
             var method = (IMethodSymbol) paramSymbol.ContainingSymbol;
             var declaringMethodName = method.ToDisplayString();
-            if (HandleLoadAddressOnStorage(ilVar, paramSymbol.Type, node, OpCodes.Ldarga, paramSymbol.Name, VariableMemberKind.Parameter, declaringMethodName))
+            var operand = Context.DefinitionVariables.GetVariable(paramSymbol.Name, VariableMemberKind.Parameter, declaringMethodName).VariableName;
+            if (HandleLoadAddress(ilVar, paramSymbol.Type, node, OpCodes.Ldarga, operand))
                 return;
 
             if (InlineArrayProcessor.HandleInlineArrayConversionToSpan(Context, ilVar, paramSymbol.Type, node, OpCodes.Ldarga_S, paramSymbol.Name, VariableMemberKind.Parameter, declaringMethodName))
@@ -431,6 +426,9 @@ namespace Cecilifier.Core.AST
             var nodeParent = (CSharpSyntaxNode) node.Parent;
             Debug.Assert(nodeParent != null);
 
+            fieldSymbol.EnsureFieldExists(Context, node);
+            var resolvedFieldVariable = fieldSymbol.FieldResolverExpression(Context);
+            
             if (fieldSymbol.HasConstantValue && fieldSymbol.IsConst)
             {
                 LoadLiteralToStackHandlingCallOnValueTypeLiterals(
@@ -446,12 +444,10 @@ namespace Cecilifier.Core.AST
                 return;
             }
 
-            fieldSymbol.EnsureFieldExists(Context, node);
-
             if (!fieldSymbol.IsStatic && node.IsMemberAccessThroughImplicitThis())
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
 
-            if (HandleLoadAddressOnStorage(ilVar, fieldSymbol.Type, node, fieldSymbol.IsStatic ? OpCodes.Ldsflda : OpCodes.Ldflda, fieldSymbol.Name, VariableMemberKind.Field, fieldSymbol.ContainingType.ToDisplayString()))
+            if (HandleLoadAddress(ilVar, fieldSymbol.Type, node, fieldSymbol.IsStatic ? OpCodes.Ldsflda : OpCodes.Ldflda, resolvedFieldVariable))
             {
                 return;
             }
@@ -459,21 +455,20 @@ namespace Cecilifier.Core.AST
             if (fieldSymbol.IsVolatile)
                 Context.EmitCilInstruction(ilVar, OpCodes.Volatile);
 
-            var resolvedField = fieldSymbol.FieldResolverExpression(Context);
             var opCode = fieldSymbol.LoadOpCodeForFieldAccess();
-            Context.EmitCilInstruction(ilVar, opCode, resolvedField);
+            Context.EmitCilInstruction(ilVar, opCode, resolvedFieldVariable);
             HandlePotentialDelegateInvocationOn(node, fieldSymbol.Type, ilVar);
         }
 
         protected void ProcessLocalVariable(string ilVar, SimpleNameSyntax localVarSyntax, ILocalSymbol symbol)
         {
-            if (HandleLoadAddressOnStorage(ilVar, symbol.Type, localVarSyntax, OpCodes.Ldloca, symbol.Name, VariableMemberKind.LocalVariable))
+            var operand = Context.DefinitionVariables.GetVariable(symbol.Name, VariableMemberKind.LocalVariable).VariableName;
+            if (HandleLoadAddress(ilVar, symbol.Type, localVarSyntax, OpCodes.Ldloca, operand))
                 return;
 
             if (InlineArrayProcessor.HandleInlineArrayConversionToSpan(Context, ilVar, symbol.Type, localVarSyntax, OpCodes.Ldloca_S, symbol.Name, VariableMemberKind.LocalVariable))
                 return;
-            
-            var operand = Context.DefinitionVariables.GetVariable(symbol.Name, VariableMemberKind.LocalVariable).VariableName;
+
             Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, operand);
 
             HandlePotentialDelegateInvocationOn(localVarSyntax, symbol.Type, ilVar);
@@ -486,12 +481,6 @@ namespace Cecilifier.Core.AST
                 return;
 
             Context.EmitCilInstruction(ilVar, OpCodes.Conv_U);
-        }
-
-        private bool HandleLoadAddressOnStorage(string ilVar, ITypeSymbol symbol, CSharpSyntaxNode node, OpCode opCode, string symbolName, VariableMemberKind variableMemberKind, string parentName = null)
-        {
-            var operand = Context.DefinitionVariables.GetVariable(symbolName, variableMemberKind, parentName).VariableName;
-            return HandleLoadAddress(ilVar, symbol, node, opCode, operand);
         }
 
         protected bool HandleLoadAddress(string ilVar, ITypeSymbol loadedType, CSharpSyntaxNode node, OpCode loadOpCode, string operand)

@@ -1281,7 +1281,7 @@ namespace Cecilifier.Core.AST
             if (!HandleLoadAddress(ilVar, type, expressionSyntax, OpCodes.Ldloca_S, tempLocalName))
             {
                 // HandleLoadAddress() does not handle scenarios in which a value type instantiation is passed as an 
-                // 'in parameter' to a method (that method is already complex so I don't want to make it even more
+                // 'in parameter' to a method (that method is already complex, so I don't want to make it even more
                 // complex)
                 Context.EmitCilInstruction(ilVar, RequiresAddressOfValue() ? OpCodes.Ldloca_S : OpCodes.Ldloc, tempLocalName);
             }

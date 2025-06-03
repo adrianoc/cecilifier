@@ -466,7 +466,7 @@ public class StructSpecificTests : CecilifierUnitTestBase
         """
             //field.M\(42\)
             \s+il_call_\d+.Emit\(OpCodes\.Ldarg_0\);
-            \s+il_call_\d+.Emit\(OpCodes\.Ldflda, fld_field_\d+\);
+            \s+il_call_\d+.Emit\(OpCodes\.Ldflda, new FieldReference\("field", gp_T_\d+, cls_field_\d+.MakeGenericInstanceType\(gp_T_\d+\)\)\);
             """,
         TestName = "On Field")]
     public void CallOnValueType_ThroughInterface_IsConstrained(string t, string loadTargetOfCallIlRegex)
