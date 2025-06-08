@@ -225,7 +225,7 @@ class Bar {{ public void M() {{ }} }}
 ";
         var result = RunCecilifier(code);
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
-        Assert.That(cecilifiedCode, Does.Match($"""{expectedLoadOpCode}, new FieldReference\("field", gp_T_\d+, cls_foo_\d+.MakeGenericInstanceType\(gp_T_\d+\)\)"""));
+        Assert.That(cecilifiedCode, Does.Match($"""{expectedLoadOpCode}, new FieldReference\(fld_field_\d+.Name, fld_field_\d+.FieldType, cls_foo_\d+.MakeGenericInstanceType\(gp_T_\d+\)\)"""));
         Assert.That(cecilifiedCode, Does.Match(expectedLoadOpCode));
     }
 
@@ -313,7 +313,7 @@ class Bar {{ public void M() {{ }} }}
                                           //field = toSet
                                           (?<emit>\s+il_set_\d+\.Emit\(OpCodes\.)Ldarg_0\);
                                           \k<emit>Ldarg_1\);
-                                          \k<emit>Stfld, new FieldReference\("field", (?<typeParam>gp_T_\d+), cls_C_\d+.MakeGenericInstanceType\(\k<typeParam>\)\)\);
+                                          \k<emit>Stfld, new FieldReference\(fld_field_\d+.Name, fld_field_\d+.FieldType, cls_C_\d+.MakeGenericInstanceType\(gp_T_\d+\)\)\);
                                           """));
         
         Assert.That(actual, Does.Match("""
@@ -327,11 +327,39 @@ class Bar {{ public void M() {{ }} }}
                                           \s+}
                                           \k<emit>Call, \k<setter>\);
                                           """));
-        
         // Placeholder for events. Ignore(#339)
         // Assert.That(actual, Does.Match("""
         //                                   //Event += toSet
         //                                   ....
         //                                   """));
+    }
+    
+    [Test]
+    public void GenericRefMemberReferences_Issue340()
+    {
+        var result = RunCecilifier("""
+                                   using System;
+                                   using System.Runtime.CompilerServices;
+                                   
+                                   var f = new Ref<int>();
+                                   f.Print();
+                                   
+                                   ref struct Ref<T>
+                                   {
+                                       private ref T item;
+                                       public void Print() => Console.WriteLine(item);
+                                   }
+                                   """);
+        var actual = result.GeneratedCode.ReadToEnd();
+        Assert.That(actual, Does.Match("""
+                                          //Console.WriteLine\(item\)
+                                          (?<emit>\s+il_print_\d+.Emit\(OpCodes\.)Ldarg_0\);
+                                          \k<emit>Ldfld, new FieldReference\((?<fieldRef>fld_item_\d+).Name, \k<fieldRef>.FieldType, st_ref_0.MakeGenericInstanceType\(gp_T_1\).+\);
+                                          \k<emit>Ldobj, gp_T_1\);
+                                          \k<emit>Box, gp_T_1\);
+                                          \k<emit>Call, .+"WriteLine".+\);
+                                          \k<emit>Ret\);
+                                          """));
+        
     }
 }

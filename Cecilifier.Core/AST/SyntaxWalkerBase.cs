@@ -458,6 +458,7 @@ namespace Cecilifier.Core.AST
             var opCode = fieldSymbol.LoadOpCodeForFieldAccess();
             Context.EmitCilInstruction(ilVar, opCode, resolvedFieldVariable);
             HandlePotentialDelegateInvocationOn(node, fieldSymbol.Type, ilVar);
+            HandlePotentialRefLoad(ilVar, node, fieldSymbol.Type);
         }
 
         protected void ProcessLocalVariable(string ilVar, SimpleNameSyntax localVarSyntax, ILocalSymbol symbol)
