@@ -1,3 +1,4 @@
+using Cecilifier.ApiDriver.MonoCecil;
 using Cecilifier.Core.Tests.Framework;
 using NUnit.Framework;
 
@@ -5,8 +6,7 @@ namespace Cecilifier.Core.Tests.OutputBased;
 
 public class RecordTests
 {
-    [TestFixture]
-    public class Misc : OutputBasedTestBase
+    public class Misc(IILGeneratorApiDriver driver) : OutputBasedTestBase(driver)
     {
         [Test]
         public void ToString_WhenInheritFromObjectWithSingleProperty_ReturnsProperty()
@@ -99,8 +99,7 @@ public class RecordTests
         }
     }
 
-    [TestFixture]
-    public class EqualsOverloadTest : OutputBasedTestBase
+    public class EqualsOverloadTest(IILGeneratorApiDriver driver) : OutputBasedTestBase(driver)
     {
         [Test]
         public void RecordTypeOverload_WhenInheritingFromObject_Works()
@@ -183,8 +182,7 @@ public class RecordTests
         }
     }
 
-    [TestFixture]
-    public class Deconstruct : OutputBasedTestBase
+    public class Deconstruct(IILGeneratorApiDriver driver) : OutputBasedTestBase(driver)
     {
         [Test]
         public void Deconstruct_WhenInheritingFromObject_IncludesAllPrimaryConstructorParameters()
@@ -251,8 +249,7 @@ public class RecordTests
         }
     }
 
-    [TestFixture]
-    public class Generics : OutputBasedTestBase
+    public class Generics(IILGeneratorApiDriver driver) : OutputBasedTestBase(driver)
     {
         [Test]
         public void SimpleGenericRecord()
@@ -292,8 +289,7 @@ public class RecordTests
         }
     }
     
-    [TestFixture]
-    public class RecordStructs : OutputBasedTestBase
+    public class RecordStructs(IILGeneratorApiDriver driver) : OutputBasedTestBase(driver)
     {
         [Test]
         public void Test()

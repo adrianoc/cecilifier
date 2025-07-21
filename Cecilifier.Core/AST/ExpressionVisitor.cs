@@ -229,7 +229,7 @@ namespace Cecilifier.Core.AST
             if (node.IsKind(SyntaxKind.ArrayInitializerExpression))
             {
                 // handles array initialization in the form `int []x = {1, 2, 3};`
-                // Notice that even though the documentation call this a 'implicitly typed array'
+                // Notice that even though the documentation call this an 'implicitly typed array'
                 // `ImplicitArrayCreationExpressionSyntax` is not a parent of the initializer expression, 
                 // which means, VisitImplicitArrayCreationExpression() will not be called
                 // https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/arrays/single-dimensional-arrays
@@ -1570,11 +1570,11 @@ namespace Cecilifier.Core.AST
             ProcessArrayCreation(arrayType.ElementType, initializer);
         }
 
-        private void ProcessArrayCreation(ITypeSymbol elementType, InitializerExpressionSyntax initializer)
+        private void ProcessArrayCreation(ITypeSymbol elementType, InitializerExpressionSyntax? initializer)
         {
             AddCilInstruction(ilVar, OpCodes.Newarr, elementType);
             if (PrivateImplementationDetailsGenerator.IsApplicableTo(initializer, Context))
-                ArrayInitializationProcessor.InitializeOptimized(this, elementType, initializer!.Expressions);
+                ArrayInitializationProcessor.InitializeOptimized(this, elementType, initializer.Expressions);
             else
                 ArrayInitializationProcessor.InitializeUnoptimized(this, elementType, initializer?.Expressions, initializer != null ? Context.SemanticModel.GetOperation(initializer) : null);
         }

@@ -3,8 +3,7 @@ using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.OutputBased;
 
-[TestFixture]
-public class FieldTests : OutputBasedTestBase
+public class FieldTests(IILGeneratorApiDriver driver) : OutputBasedTestBase(driver)
 {
     [TestCase("int", "field = 42", "42",  TestName = "Non generic")]
     [TestCase("T", "field = true", "True", TestName = "Generic")]

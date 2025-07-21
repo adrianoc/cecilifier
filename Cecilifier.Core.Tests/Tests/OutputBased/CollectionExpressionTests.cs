@@ -4,8 +4,7 @@ using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.OutputBased;
 
-[TestFixture]
-public class CollectionExpressionTests : OutputBasedTestBase
+public class CollectionExpressionTests(IILGeneratorApiDriver driver) : OutputBasedTestBase(driver)
 {
     [Test]
     public void ArrayWith3OrMoreElements()

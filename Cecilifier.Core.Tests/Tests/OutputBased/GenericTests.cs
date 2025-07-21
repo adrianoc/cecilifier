@@ -3,8 +3,7 @@ using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.OutputBased;
 
-[TestFixture]
-public class GenericTests : OutputBasedTestBase
+public class GenericTests(IILGeneratorApiDriver driver) : OutputBasedTestBase(driver)
 {
     [Test]
     public void NonGenericTypedProperty_OnGenericType_Works()

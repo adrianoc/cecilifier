@@ -3,8 +3,7 @@ using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.OutputBased;
 
-[TestFixture]
-public class MemberAccessTests : OutputBasedTestBase
+public class MemberAccessTests(IILGeneratorApiDriver driver) : OutputBasedTestBase(driver)
 {
     [Test]
     public void GenericRefMemberReferences_Issue340()
