@@ -1,7 +1,9 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using Cecilifier.ApiDriver.MonoCecil;
 using Cecilifier.Runtime;
 using Mono.Cecil;
 using Mono.Cecil.Rocks;
@@ -11,15 +13,21 @@ namespace Cecilifier.Core.Tests.Framework;
 
 public record struct OutputBasedTestResult(CecilifyResult GeneralResult, string Output);
 
+[TestFixtureSource(typeof(GeneratorApiDriverProvider))]
 public class OutputBasedTestBase : CecilifierTestBase
 {
     static readonly int NewLineLength = Environment.NewLine.Length;
+    
+    protected OutputBasedTestBase(IILGeneratorApiDriver apiDriver) => ApiDriver = apiDriver;
+
+    protected IILGeneratorApiDriver ApiDriver { get; }
 
     private OutputBasedTestResult CecilifyAndExecute(string code, string ignoredIlVerificationErrors)
     {
         var outputBasedTestFolder = GetTestOutputBaseFolderFor("OutputBasedTests");
 
         var cecilifyResult = CecilifyAndExecute(new MemoryStream(Encoding.ASCII.GetBytes(code)), outputBasedTestFolder);
+        
         VerifyAssembly(
             cecilifyResult.CecilifiedOutputAssemblyFilePath, 
             null, 
@@ -57,5 +65,13 @@ public class OutputBasedTestBase : CecilifierTestBase
         var result = CecilifyAndExecute(snippet, ignoreIlVerificationErrors);
         Assert.That(result.Output, Is.EqualTo(expectedOutput), $"Output Assembly: {result.GeneralResult.CecilifiedOutputAssemblyFilePath}");
         TestContext.WriteLine($"Output Assembly: {result.GeneralResult.CecilifiedOutputAssemblyFilePath}");
+    }
+
+    private class GeneratorApiDriverProvider : IEnumerable
+    {
+        public IEnumerator GetEnumerator()
+        {
+            yield return new TestFixtureData(new MonoCecilGeneratorDriver()).SetArgDisplayNames("MonoCecil");
+        }
     }
 }

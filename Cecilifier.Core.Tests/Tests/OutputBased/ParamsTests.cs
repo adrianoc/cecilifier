@@ -4,8 +4,7 @@ using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.OutputBased;
 
-[TestFixture]
-public class ParamsTests : OutputBasedTestBase
+public class ParamsTests(IILGeneratorApiDriver driver) : OutputBasedTestBase(driver)
 {
     [TestCaseSource(nameof(ParamsTestScenarios))]
     public void TestNonNullables(string paramsType, string args)

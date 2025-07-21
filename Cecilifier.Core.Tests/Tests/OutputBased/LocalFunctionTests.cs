@@ -3,8 +3,7 @@ using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.OutputBased;
 
-[TestFixture]
-public class LocalFunctionTests : OutputBasedTestBase
+public class LocalFunctionTests(IILGeneratorApiDriver driver) : OutputBasedTestBase(driver)
 {
     [TestCase("static", TestName = "Static")]
     [TestCase("", TestName = "Instance")]

@@ -4,6 +4,7 @@ using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
@@ -411,7 +412,7 @@ internal partial class PrivateImplementationDetailsGenerator
     /// <param name="node"></param>
     /// <param name="context"></param>
     /// <returns></returns>
-    internal static bool IsApplicableTo(InitializerExpressionSyntax node, IVisitorContext context)
+    internal static bool IsApplicableTo([NotNullWhen(true)] InitializerExpressionSyntax? node, IVisitorContext context)
     {
         return node switch
         {
