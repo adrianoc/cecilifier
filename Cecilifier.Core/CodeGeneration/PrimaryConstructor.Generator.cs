@@ -146,7 +146,7 @@ public class PrimaryConstructorGenerator
             context.WriteComment($"Parameter: {parameter.Identifier}");
             var paramVar = context.Naming.Parameter(parameter);
             var parameterType = context.TypeResolver.Resolve(ModelExtensions.GetTypeInfo(context.SemanticModel, parameter.Type!).Type);
-            var paramExps = CecilDefinitionsFactory.Parameter(parameter.Identifier.ValueText, RefKind.None, false, ctorVar, paramVar, parameterType, Constants.ParameterAttributes.None, ("", false));
+            var paramExps = CecilDefinitionsFactory.Parameter(parameter.Identifier.ValueText, RefKind.None, null, ctorVar, paramVar, parameterType, Constants.ParameterAttributes.None, ("", false));
             context.WriteCecilExpressions(paramExps);
 
             if (!uniqueParameters.Contains(parameter))

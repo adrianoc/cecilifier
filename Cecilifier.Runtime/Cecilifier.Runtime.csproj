@@ -2,7 +2,7 @@
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <LangVersion>13</LangVersion>
-    <AssemblyVersion>2.21.0</AssemblyVersion>
+    <AssemblyVersion>2.22.0</AssemblyVersion>
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
   </PropertyGroup>
 
@@ -11,6 +11,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Cecilifier.Core.Tests" />
     <ProjectReference Include="..\Cecilifier.TypeMapGenerator\Cecilifier.TypeMapGenerator.csproj" 
                       OutputItemType="Analyzer"
                       ReferenceOutputAssembly="false" />

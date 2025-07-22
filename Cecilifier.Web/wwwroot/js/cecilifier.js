@@ -169,15 +169,12 @@ function configureKeyboardShortcuts() {
     });
 
     csharpCode.addCommand(monaco.KeyMod.CtrlCmd + monaco.KeyMod.Alt + monaco.KeyCode.KeyL, function() {
-        showListOfLocallyStoredSnippets();
+        showListOfLocallyStoredSnippets(csharpCode);
     });
 
     // Cecilified code
     cecilifiedCode.addCommand(monaco.KeyMod.CtrlCmd + monaco.KeyCode.BracketLeft , decreaseFocusedEditorFontSize);
     cecilifiedCode.addCommand(monaco.KeyMod.CtrlCmd + monaco.KeyCode.BracketRight , increaseFocusedEditorFontSize);
-    cecilifiedCode.addCommand(monaco.KeyMod.CtrlCmd + monaco.KeyMod.Alt + monaco.KeyCode.KeyL, function() {
-        showListOfLocallyStoredSnippets();
-    });
 }
 
 function configureCursorInformationVisibility(show) {

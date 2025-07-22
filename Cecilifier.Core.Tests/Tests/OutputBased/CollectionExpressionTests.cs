@@ -56,7 +56,7 @@ public class CollectionExpressionTests : OutputBasedTestBase
     }
 
     [Test]
-    public void X()
+    public void ReferenceTypes()
     {
         AssertOutput(
             """

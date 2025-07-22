@@ -21,6 +21,7 @@ public struct RoslynTypeSystem
         SystemRange = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(Range).FullName!);
         SystemType = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(Type).FullName!);
         SystemSpan = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(Span<>).FullName!);
+        SystemReadOnlySpan = new Lazy<ITypeSymbol>(() => ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(ReadOnlySpan<>).FullName!));
         CallerArgumentExpressionAttribute = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(CallerArgumentExpressionAttribute).FullName!);
 
         SystemInt32 = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Int32);
@@ -42,6 +43,8 @@ public struct RoslynTypeSystem
         SystemCollectionsGenericIEnumeratorOfT = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Collections_Generic_IEnumerator_T);
         SystemCollectionsIEnumerable = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Collections_IEnumerable);
         SystemCollectionsGenericIEnumerableOfT = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Collections_Generic_IEnumerable_T);
+        SystemCollectionsGenericIListOfT = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Collections_Generic_IList_T);
+        SystemCollectionsGenericICollectionOfT = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Collections_Generic_ICollection_T);
         SystemNullableOfT = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Nullable_T);
         SystemRuntimeCompilerServicesUnsafe = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(Unsafe).FullName);
         SystemRuntimeInteropServicesMemoryMarshal = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(MemoryMarshal).FullName);
@@ -52,6 +55,8 @@ public struct RoslynTypeSystem
     public ITypeSymbol SystemRange { get; }
     public ITypeSymbol SystemType { get; }
     public ITypeSymbol SystemSpan { get; }
+    
+    public Lazy<ITypeSymbol> SystemReadOnlySpan { get; }
     public ITypeSymbol SystemInt32 { get; }
     public ITypeSymbol SystemInt64 { get; }
     public ITypeSymbol SystemIntPtr { get; }
@@ -66,6 +71,7 @@ public struct RoslynTypeSystem
     public ITypeSymbol SystemCollectionsGenericIEnumeratorOfT { get; }
     public ITypeSymbol SystemCollectionsIEnumerable { get; }
     public ITypeSymbol SystemCollectionsGenericIEnumerableOfT { get; }
+    public ITypeSymbol SystemCollectionsGenericIListOfT { get; }
     public ITypeSymbol CallerArgumentExpressionAttribute { get; }
     public ITypeSymbol IsReadOnlyAttribute { get; }
     public ITypeSymbol IsByRefLikeAttribute { get; }
@@ -76,6 +82,7 @@ public struct RoslynTypeSystem
     public ITypeSymbol SystemNullableOfT { get; }
     public ITypeSymbol SystemRuntimeCompilerServicesUnsafe { get;  }
     public ITypeSymbol SystemRuntimeInteropServicesMemoryMarshal { get; }
+    public ITypeSymbol SystemCollectionsGenericICollectionOfT { get; }
 
     public readonly ITypeSymbol ForType<TType>() => _context.SemanticModel.Compilation.GetTypeByMetadataName(typeof(TType).FullName!);
 

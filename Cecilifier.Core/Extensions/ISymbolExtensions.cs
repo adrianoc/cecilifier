@@ -1,8 +1,11 @@
+#nullable enable annotations
+
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Cecilifier.Core.AST;
+using Cecilifier.Core.AST.Params;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.Variables;
@@ -95,9 +98,11 @@ namespace Cecilifier.Core.Extensions
         public static bool IsByRef(this ISymbol symbol) =>
             symbol switch
             {
-                IParameterSymbol parameterSymbol when parameterSymbol.RefKind != RefKind.None => true,
+                IParameterSymbol { RefKind: RefKind.In or RefKind.Out or RefKind.RefReadOnlyParameter or RefKind.Ref } => true,
                 IPropertySymbol { ReturnsByRef: true } => true,
+                IPropertySymbol { ReturnsByRefReadonly: true } => true,
                 IMethodSymbol { ReturnsByRef: true } => true,
+                IMethodSymbol { ReturnsByRefReadonly: true } => true,
                 ILocalSymbol { IsRef: true } => true,
                 IFieldSymbol { RefKind: not RefKind.None } => true,
 
@@ -106,7 +111,7 @@ namespace Cecilifier.Core.Extensions
 
         [ExcludeFromCodeCoverage]
         [return: NotNull]
-        public static T EnsureNotNull<T>([NotNullIfNotNull("symbol")] this T symbol, [CallerArgumentExpression(nameof(symbol))] string expression = null) where T : ISymbol
+        public static T EnsureNotNull<T>([NotNullIfNotNull("symbol")] this T? symbol, [CallerArgumentExpression(nameof(symbol))] string expression = null) where T : ISymbol
         {
             if (symbol == null)
                 throw new NullReferenceException($"Expression '{expression}' is expected to be non null.");
@@ -220,7 +225,7 @@ namespace Cecilifier.Core.Extensions
             };
         }
 
-        public static string ValueForDefaultLiteral(this ITypeSymbol literalType) => literalType switch
+        public static string? ValueForDefaultLiteral(this ITypeSymbol literalType) => literalType switch
         {
             { SpecialType: SpecialType.System_Char } => "\0",
             { SpecialType: SpecialType.System_SByte } => "0",
@@ -259,7 +264,7 @@ namespace Cecilifier.Core.Extensions
             _ => throw new ArgumentException($"Invalid symbol type for '{self}' ({self.Kind})")
         };
 
-        public static bool TryGetAttribute<T>(this ISymbol symbol, [NotNullWhen(true)] out AttributeData attributeData) where T : Attribute
+        public static bool TryGetAttribute<T>(this ISymbol symbol, [NotNullWhen(true)] out AttributeData? attributeData) where T : Attribute
         {
             var typeOfT = typeof(T);
             attributeData = symbol.GetAttributes().SingleOrDefault(attr => attr.AttributeClass?.Name == typeOfT.Name);
@@ -270,5 +275,60 @@ namespace Cecilifier.Core.Extensions
             return type.TypeArguments.Any(t => t.IsDefinedInCurrentAssembly(context)) 
                    || (type.ContainingType != null && (SymbolEqualityComparer.Default.Equals(type.ContainingType, type) ? false : HasTypeArgumentOfTypeFromCecilifiedCodeTransitive(type.ContainingType, context)));
         }
+        
+        internal static ExpandedParamsArgumentHandler? CreateExpandedParamsUsageHandler(this IMethodSymbol methodSymbol, ExpressionVisitor expressionVisitor, string ilVar, ArgumentListSyntax argumentList)
+        {
+            var paramsParameter = methodSymbol.Parameters.FirstOrDefault(p => p.IsParams);
+            if (paramsParameter == null || !IsExpandedForm(argumentList, paramsParameter))
+            {
+                // There's no `params` parameter in the method signature or the argument is being passed in its non-expanded form, i.e. `new type[] {....}` 
+                return null;
+            }
+
+            var context = expressionVisitor.Context;
+            if (IsUnsupportedParamsParameterType(context, paramsParameter, out var extraHelp))
+            {
+                context.EmitError($"Cecilifier does not support type {paramsParameter.Type} as a 'params' parameter ({paramsParameter.Name}).{extraHelp}", paramsParameter.DeclaringSyntaxReferences.First().GetSyntax());
+                return null;
+            }
+            
+            return paramsParameter.Type switch
+            {
+                IArrayTypeSymbol => new ArrayExpandedParamsArgumentHandler(context, paramsParameter, argumentList, ilVar),
+                INamedTypeSymbol namedType when SymbolEqualityComparer.Default.Equals(namedType.OriginalDefinition, context.RoslynTypeSystem.SystemSpan)  => new SpanExpandedParamsArgumentHandler(context, paramsParameter, argumentList, ilVar),
+                INamedTypeSymbol namedType when SymbolEqualityComparer.Default.Equals(namedType.OriginalDefinition, context.RoslynTypeSystem.SystemReadOnlySpan.Value) => new ReadOnlySpanExpandedParamsArgumentHandler(context, paramsParameter, argumentList, ilVar),
+                INamedTypeSymbol namedType when SymbolEqualityComparer.Default.Equals(namedType.OriginalDefinition, context.RoslynTypeSystem.SystemCollectionsGenericIEnumerableOfT)  => new ReadOnlySpanExpandedParamsArgumentHandler(context, paramsParameter, argumentList, ilVar),
+                INamedTypeSymbol namedType when SymbolEqualityComparer.Default.Equals(namedType.OriginalDefinition, context.RoslynTypeSystem.SystemCollectionsGenericIListOfT)  => new ListBackedExpandedParamsArgumentHandler(expressionVisitor, paramsParameter, argumentList),
+                INamedTypeSymbol namedType when SymbolEqualityComparer.Default.Equals(namedType.OriginalDefinition, context.RoslynTypeSystem.SystemCollectionsGenericICollectionOfT)  => new ListBackedExpandedParamsArgumentHandler(expressionVisitor, paramsParameter, argumentList),
+                _ => throw new NotImplementedException($"Type {paramsParameter.Type} is not supported.")
+            };
+            
+            static bool IsExpandedForm(ArgumentListSyntax argumentList, IParameterSymbol paramsParameter)
+            {
+                var firstParamsArgument = argumentList.Arguments[paramsParameter.Ordinal];
+                return !firstParamsArgument.Expression.IsKind(SyntaxKind.ArrayInitializerExpression) && 
+                       !firstParamsArgument.Expression.IsKind(SyntaxKind.ImplicitArrayCreationExpression);
+            }
+
+            static bool IsUnsupportedParamsParameterType(IVisitorContext context, IParameterSymbol paramsParameter, out string extraHelp)
+            {
+                if (SymbolEqualityComparer.Default.Equals(paramsParameter.Type.OriginalDefinition, context.RoslynTypeSystem.SystemCollectionsGenericIEnumerableOfT))
+                {
+                    extraHelp = $" You may change {paramsParameter.Name}' to 'ICollection<T>'";
+                    return true;
+                }
+
+                if (SymbolEqualityComparer.Default.Equals(paramsParameter.Type.ElementTypeSymbolOf().OriginalDefinition, context.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Nullable_T)))
+                {
+                    extraHelp = " Nullable<T> (i.e, int?) are not supported yet.";
+                    return true;
+                }
+
+                extraHelp = string.Empty;
+                return false;
+            }
+        }
+
+        internal static string? ParamsAttributeMatchingType(this ITypeSymbol paramsParameter) => paramsParameter.Kind ==  SymbolKind.ArrayType ? typeof(ParamArrayAttribute).FullName : typeof(ParamCollectionAttribute).FullName;
     }
 }

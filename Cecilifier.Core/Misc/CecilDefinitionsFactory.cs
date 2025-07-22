@@ -1,3 +1,5 @@
+#nullable enable annotations
+
 using System;
 using System.Buffers;
 using System.Collections.Generic;
@@ -14,7 +16,7 @@ using Mono.Cecil.Cil;
 
 namespace Cecilifier.Core.Misc
 {
-    internal record ParameterSpec(string Name, string ElementType, RefKind RefKind, string Attributes, string DefaultValue = null, Func<IVisitorContext, string, string> ElementTypeResolver = null)
+    internal record ParameterSpec(string Name, string ElementType, RefKind RefKind, string Attributes, string? DefaultValue = null, Func<IVisitorContext, string, string>? ElementTypeResolver = null)
     {
         public string RegistrationTypeName { get; init; }
     }
@@ -85,7 +87,7 @@ namespace Cecilifier.Core.Misc
                 var parameterExp = Parameter(
                     parameter.Name, 
                     parameter.RefKind, 
-                    false, // for now,the only callers for this method don't have default parameters.
+                    null, // for now,the only callers for this method don't have any `params` parameters.
                     methodVar,
                     paramVar,
                     parameter.ElementTypeResolver != null ? parameter.ElementTypeResolver(context, parameter.ElementType) : parameter.ElementType,
@@ -100,7 +102,7 @@ namespace Cecilifier.Core.Misc
             return exps;
         }
 
-        internal static string Constructor(IVisitorContext context, string ctorLocalVar, string typeName, bool isStatic, string methodAccessibility, string[] paramTypes, string methodDefinitionPropertyValues = null)
+        internal static string Constructor(IVisitorContext context, string ctorLocalVar, string typeName, bool isStatic, string methodAccessibility, string[] paramTypes, string? methodDefinitionPropertyValues = null)
         {
             var ctorName = Utils.ConstructorMethodName(isStatic);
             context.DefinitionVariables.RegisterMethod(typeName, ctorName, paramTypes, 0, ctorLocalVar);
@@ -191,7 +193,7 @@ namespace Cecilifier.Core.Misc
             DefinitionVariable outerTypeVariable,
             bool isStructWithNoFields,
             IEnumerable<ITypeSymbol> interfaces,
-            IEnumerable<TypeParameterSyntax> ownTypeParameters,
+            IEnumerable<TypeParameterSyntax>? ownTypeParameters,
             IEnumerable<TypeParameterSyntax> outerTypeParameters,
             params string[] properties)
         {
@@ -213,7 +215,7 @@ namespace Cecilifier.Core.Misc
             }
 
             // add type parameters from outer types. 
-            var outerTypeParametersArray = outerTypeParameters?.ToArray() ?? [];
+            var outerTypeParametersArray = outerTypeParameters.ToArray();
             ProcessGenericTypeParameters(typeVar, context, outerTypeParametersArray.Concat(typeParamList).ToArray(), exps);
             
             foreach (var itf in interfaces)
@@ -262,7 +264,7 @@ namespace Cecilifier.Core.Misc
             return string.Empty;
         }
 
-        public static IEnumerable<string> Field(IVisitorContext context, string declaringTypeName, string declaringTypeVar, string fieldVar, string name, string fieldType, string fieldAttributes, object constantValue = null)
+        public static IEnumerable<string> Field(IVisitorContext context, string declaringTypeName, string declaringTypeVar, string fieldVar, string name, string fieldType, string fieldAttributes, object? constantValue = null)
         {
             context.DefinitionVariables.RegisterNonMethod(declaringTypeName, name, VariableMemberKind.Field, fieldVar);
             var fieldExp = $"var {fieldVar} = new FieldDefinition(\"{name}\", {fieldAttributes}, {fieldType})";
@@ -273,7 +275,7 @@ namespace Cecilifier.Core.Misc
             ];
         }
 
-        public static string ParameterDoesNotHandleParamsKeywordOrDefaultValue(string name, RefKind byRef, string resolvedType, string paramAttributes = null)
+        public static string ParameterDoesNotHandleParamsKeywordOrDefaultValue(string name, RefKind byRef, string resolvedType, string? paramAttributes = null)
         {
             paramAttributes ??= Constants.ParameterAttributes.None;
             if (RefKind.None != byRef)
@@ -284,14 +286,14 @@ namespace Cecilifier.Core.Misc
             return $"new ParameterDefinition(\"{name}\", {paramAttributes}, {resolvedType})";
         }
 
-        public static IEnumerable<string> Parameter(string name, RefKind byRef, bool isParams, string methodVar, string paramVar, string resolvedType, string paramAttributes, (string Value, bool Present) defaultParameterValue)
+        public static IEnumerable<string> Parameter(string name, RefKind byRef, string? paramsAttributeTypeName, string methodVar, string paramVar, string resolvedType, string paramAttributes, (string Value, bool Present) defaultParameterValue)
         {
             var exps = new List<string>();
 
             exps.Add($"var {paramVar} = {ParameterDoesNotHandleParamsKeywordOrDefaultValue(name, byRef, resolvedType, paramAttributes)};");
-            if (isParams)
+            if (!string.IsNullOrWhiteSpace(paramsAttributeTypeName))
             {
-                exps.Add($"{paramVar}.CustomAttributes.Add(new CustomAttribute(assembly.MainModule.Import(typeof(ParamArrayAttribute).GetConstructor(BindingFlags.Public | BindingFlags.Instance, null, new Type[0], null))));");
+                exps.Add($"{paramVar}.CustomAttributes.Add(new CustomAttribute(assembly.MainModule.Import(typeof({paramsAttributeTypeName}).GetConstructor(BindingFlags.Public | BindingFlags.Instance, null, new Type[0], null))));");
             }
 
             if (defaultParameterValue.Present)
@@ -314,7 +316,7 @@ namespace Cecilifier.Core.Misc
             return Parameter(
                 paramSymbol.Name,
                 paramSymbol.RefKind,
-                paramSymbol.IsParams,
+                paramSymbol.IsParams ? paramSymbol.Type.ParamsAttributeMatchingType() : null,
                 methodVar,
                 paramVar,
                 context.TypeResolver.Resolve(paramSymbol.Type, methodVar),
@@ -358,11 +360,11 @@ namespace Cecilifier.Core.Misc
 
             void ProcessAttributeNamedArguments(SymbolKind symbolKind, string container)
             {
-                var attrMemberNames = attrType.Type.GetMembers().Where(m => m.Kind == symbolKind).Select(m => m.Name).ToHashSet();
-                foreach (var namedArgument in attribute.ArgumentList.Arguments.Except(attributeArguments).Where(arg => attrMemberNames.Contains(arg.NameEquals.Name.Identifier.Text)))
+                var attrMemberNames = attrType.Type!.GetMembers().Where(m => m.Kind == symbolKind).Select(m => m.Name).ToHashSet();
+                foreach (var namedArgument in attribute.ArgumentList.Arguments.Except(attributeArguments).Where(arg => attrMemberNames.Contains(arg.NameEquals!.Name.Identifier.Text)))
                 {
                     var argType = context.GetTypeInfo(namedArgument.Expression);
-                    exps.Add($"{customAttrVar}.{container}.Add(new CustomAttributeNamedArgument(\"{namedArgument.NameEquals.Name.Identifier.ValueText}\", {CustomAttributeArgument(argType, namedArgument)}));");
+                    exps.Add($"{customAttrVar}.{container}.Add(new CustomAttributeNamedArgument(\"{namedArgument.NameEquals!.Name.Identifier.ValueText}\", {CustomAttributeArgument(argType, namedArgument)}));");
                 }
             }
         }
@@ -392,7 +394,7 @@ namespace Cecilifier.Core.Misc
             var genericTypeParamEntries = ArrayPool<(string genParamDefVar, ITypeParameterSymbol typeParameterSymbol)>.Shared.Rent(typeParamList.Count);
             for (int i = 0; i < typeParamList.Count; i++)
             {
-                var symbol = context.SemanticModel.GetDeclaredSymbol(typeParamList[i]);
+                var symbol = context.SemanticModel.GetDeclaredSymbol(typeParamList[i]).EnsureNotNull();
                 var genericParamName = typeParamList[i].Identifier.Text;
 
                 var genParamDefVar = context.Naming.GenericParameterDeclaration(typeParamList[i]);
@@ -535,6 +537,69 @@ namespace Cecilifier.Core.Misc
                 context.WriteComment($"*****************************************************************");
                 context.WriteComment($"WARNING: Converting static method ({staticDelegateCacheContext.Method.FullyQualifiedName()}) to delegate in a type other than the one defining it may generate incorrect code. Access type: {currentType.MemberName}, Method type: {staticDelegateCacheContext.Method.ContainingType.Name}");
                 context.WriteComment($"*****************************************************************");
+            }
+        }
+
+        public static class Collections
+        {
+            /// <summary>
+            /// When passing some types of params parameters Cecilifier needs to generate code to instantiate a List{T} and populate its values.
+            /// In addition to that this method introduces a local variable of type <see cref="System.Span{T}"/> and initializes it with a
+            /// reference to the instantiated <see cref="System.Collections.Generic.List{T}"/>.
+            ///
+            /// Callers can use that variable to initialize the list in a performant way.  
+            /// </summary>
+            /// <param name="context"></param>
+            /// <param name="listOfTTypeSymbol"><see cref="ITypeSymbol"/> for the List{T}.</param>
+            /// <param name="elementCount">Number of elements to be stored.</param>
+            public static (DefinitionVariable, string) InstantiateListToStoreElements(IVisitorContext context, string ilVar, INamedTypeSymbol listOfTTypeSymbol, int elementCount)
+            {
+                var resolvedListTypeArgument = context.TypeResolver.Resolve(listOfTTypeSymbol.TypeArguments[0]);
+
+                context.WriteNewLine();
+                context.WriteComment("Instantiates a List<T> passing the # of elements to its ctor.");
+                context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, elementCount);
+                context.EmitCilInstruction(ilVar, OpCodes.Newobj, listOfTTypeSymbol.Constructors.First(ctor => ctor.Parameters.Length == 1).MethodResolverExpression(context));
+
+                // Pushes an extra copy of the reference to the list instance into the stack
+                // to avoid introducing a local variable. This will be left at the top of the stack
+                // when the initialization code finishes.
+                context.EmitCilInstruction(ilVar, OpCodes.Dup);
+
+                // Calls 'CollectionsMarshal.SetCount(list, num)' on the list.
+                var collectionMarshalTypeSymbol = context.SemanticModel.Compilation.GetTypeByMetadataName(typeof(System.Runtime.InteropServices.CollectionsMarshal).FullName!).EnsureNotNull();
+                var setCountMethod = collectionMarshalTypeSymbol.GetMembers("SetCount").OfType<IMethodSymbol>().Single().MethodResolverExpression(context).MakeGenericInstanceMethod(context, "SetCount", [ resolvedListTypeArgument ]); 
+                
+                context.EmitCilInstruction(ilVar, OpCodes.Dup);
+                context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, elementCount);
+                context.EmitCilInstruction(ilVar, OpCodes.Call, setCountMethod);
+                
+                context.WriteNewLine();
+                context.WriteComment("Add a Span<T> local variable and initialize it with `CollectionsMarshal.AsSpan(list)`");
+                var spanToList = context.AddLocalVariableToCurrentMethod(
+                    "listSpan", 
+                    context.TypeResolver.Resolve(context.RoslynTypeSystem.SystemSpan).MakeGenericInstanceType(resolvedListTypeArgument));
+
+                context.EmitCilInstruction(ilVar, 
+                    OpCodes.Call, 
+                    collectionMarshalTypeSymbol.GetMembers("AsSpan").OfType<IMethodSymbol>().Single().MethodResolverExpression(context).MakeGenericInstanceMethod(context, "AsSpan", [ resolvedListTypeArgument ]));
+                context.EmitCilInstruction(ilVar, OpCodes.Stloc, spanToList.VariableName);
+                
+                return (spanToList, resolvedListTypeArgument);
+            }
+            
+            public static string GetSpanIndexerGetter(IVisitorContext context, string typeArgument)
+            {
+                var methodVar = context.Naming.SyntheticVariable("getItem", ElementKind.Method);
+                var declaringType = context.TypeResolver.Resolve(context.RoslynTypeSystem.SystemSpan).MakeGenericInstanceType(typeArgument);
+                context.WriteCecilExpression($$"""var {{methodVar}} = new MethodReference("get_Item", {{context.TypeResolver.Bcl.System.Void}}, {{declaringType}}) { HasThis = true, ExplicitThis = false };""");
+                context.WriteNewLine();
+                context.WriteCecilExpression($"{methodVar}.Parameters.Add(new ParameterDefinition({context.TypeResolver.Bcl.System.Int32}));");
+                context.WriteNewLine();
+                context.WriteCecilExpression($"""{methodVar}.ReturnType = ((GenericInstanceType) {methodVar}.DeclaringType).ElementType.GenericParameters[0].MakeByReferenceType();""");
+                context.WriteNewLine();
+
+                return methodVar;
             }
         }
     }

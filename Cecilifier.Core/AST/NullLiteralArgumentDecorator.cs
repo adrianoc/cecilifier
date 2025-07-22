@@ -12,7 +12,7 @@ namespace Cecilifier.Core.AST;
 /// A `Disposable` type used to emit code to handle passing null as arguments to parameters typed as Nullable{T} 
 /// </summary>
 /// <remarks>
-/// Since Nullable{T} is a struct passing `null` as an argument the code needs to:
+/// Since Nullable{T} is a struct, passing `null` as an argument the code needs to:
 /// 1. Add a synthetic local variable
 /// 2. Loads it address to stack
 /// 3. Execute InitObj instruction
