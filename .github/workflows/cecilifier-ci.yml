@@ -1,6 +1,6 @@
 name: Run Tests
 run-name: Verifying ${{ github.ref }} 🚀
-on: [push]
+on: [push, workflow_dispatch]
 jobs:
  RunTests:
     runs-on: ubuntu-latest
