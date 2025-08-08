@@ -14,13 +14,11 @@ namespace Cecilifier.Core.Tests.Framework;
 public record struct OutputBasedTestResult(CecilifyResult GeneralResult, string Output);
 
 [TestFixtureSource(typeof(GeneratorApiDriverProvider))]
-public class OutputBasedTestBase : CecilifierTestBase
+public abstract class OutputBasedTestBase : CecilifierTestBase
 {
     static readonly int NewLineLength = Environment.NewLine.Length;
     
     protected OutputBasedTestBase(IILGeneratorApiDriver apiDriver) => ApiDriver = apiDriver;
-
-    protected IILGeneratorApiDriver ApiDriver { get; }
 
     private OutputBasedTestResult CecilifyAndExecute(string code, string ignoredIlVerificationErrors)
     {

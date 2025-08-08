@@ -1,5 +1,7 @@
 using System;
+using System.Collections;
 using System.IO;
+using Cecilifier.ApiDriver.MonoCecil;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
@@ -7,17 +9,21 @@ using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Tests.Unit
 {
-    [TestFixture]
+    [TestFixtureSource(typeof(GeneratorApiDriverProvider))]
     public class MappingTests
     {
+        public MappingTests(IILGeneratorApiDriver apiDriver) => ApiDriver = apiDriver;
+
+        private static IILGeneratorApiDriver ApiDriver { get; set; }
+        
         [Test]
         public void Test_CecilifierPreamble_LineCount()
         {
             var cecilifiedResult = RunCecilifier("class Foo {}");
             Assert.That(
                 cecilifiedResult.Mappings[0].Cecilified.Begin.Line,
-                Is.EqualTo(Cecilifier.CecilifierProgramPreambleLength),
-                $"If this test ever fail check {nameof(CecilifierExtensions.AsCecilApplication)}(). Most likely the preamble appended to the cecilified code has changed.");
+                Is.EqualTo(ApiDriver.PreambleLineCount),
+                $"If this test ever fail check {ApiDriver.GetType().Name}AsCecilApplication(). Most likely `{ApiDriver.GetType().Name}.PreambleLineCount` does not match the first line appended after the preamble.");
         }
 
         [Test]
@@ -93,7 +99,15 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             memoryStream.Write(System.Text.Encoding.ASCII.GetBytes(code));
             memoryStream.Position = 0;
 
-            return Cecilifier.Process(memoryStream, new CecilifierOptions { References = ReferencedAssemblies.GetTrustedAssembliesPath(), Naming = nameStrategy });
+            return Cecilifier.Process(memoryStream, new CecilifierOptions { References = ReferencedAssemblies.GetTrustedAssembliesPath(), Naming = nameStrategy, GeneratorApiDriver = ApiDriver });
+        }
+        
+        private class GeneratorApiDriverProvider : IEnumerable
+        {
+            public IEnumerator GetEnumerator()
+            {
+                yield return new TestFixtureData(new MonoCecilGeneratorDriver()).SetArgDisplayNames("MonoCecil");
+            }
         }
     }
 }

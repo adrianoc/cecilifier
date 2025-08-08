@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using Cecilifier.ApiDriver.MonoCecil;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using NUnit.Framework;
@@ -17,7 +18,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit.Framework
 
             try
             {
-                return Cecilifier.Process(memoryStream, new CecilifierOptions { References = ReferencedAssemblies.GetTrustedAssembliesPath(), Naming = nameStrategy });
+                return Cecilifier.Process(memoryStream, new CecilifierOptions { References = ReferencedAssemblies.GetTrustedAssembliesPath(), Naming = nameStrategy, GeneratorApiDriver = new MonoCecilGeneratorDriver() });
             }
             catch (Exception ex)
             {

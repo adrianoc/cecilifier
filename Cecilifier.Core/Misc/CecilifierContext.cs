@@ -23,7 +23,7 @@ namespace Cecilifier.Core.Misc
         private int startLineNumber;
         private RoslynTypeSystem roslynTypeSystem;
 
-        public CecilifierContext(SemanticModel semanticModel, CecilifierOptions options, int startingLine, byte indentation = 3)
+        public CecilifierContext(SemanticModel semanticModel, CecilifierOptions options, byte indentation = 3)
         {
             SemanticModel = semanticModel;
             Options = options;
@@ -32,8 +32,8 @@ namespace Cecilifier.Core.Misc
             TypeResolver = new TypeResolverImpl(this);
             Mappings = new List<Mapping>();
             Diagnostics = [];
-            CecilifiedLineNumber = startingLine;
-            startLineNumber = startingLine;
+            CecilifiedLineNumber = options.GeneratorApiDriver.PreambleLineCount;
+            startLineNumber = options.GeneratorApiDriver.PreambleLineCount;
 
             identation = new String('\t', indentation);
             

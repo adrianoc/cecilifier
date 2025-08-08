@@ -6,6 +6,7 @@ using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
 using System.Security.Cryptography;
 using System.Text;
+using Cecilifier.ApiDriver.MonoCecil;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.Tests.Framework.AssemblyDiff;
@@ -24,6 +25,10 @@ public record struct CecilifyResult(string CecilifiedCode, string CecilifiedAsse
 public class CecilifierTestBase
 {
     private protected string cecilifiedCode;
+
+    //TODO: Only OutputBasedTests tests anything other than Mono.Cecil.
+    //      Do we need to run other tests (Integration for instance) for System.Reflection.Metadata also? Is there an easy way to do that?
+    protected IILGeneratorApiDriver ApiDriver { get; init; } = new MonoCecilGeneratorDriver();
 
     [SetUp]
     public void Setup()
@@ -240,6 +245,9 @@ public class CecilifierTestBase
     private string Cecilfy(Stream stream)
     {
         stream.Position = 0;
-        return Cecilifier.Process(stream, new CecilifierOptions { References = ReferencedAssemblies.GetTrustedAssembliesPath(), Naming = new DefaultNameStrategy() }).GeneratedCode.ReadToEnd();
+        return Cecilifier.Process(
+            stream, 
+            new CecilifierOptions { References = ReferencedAssemblies.GetTrustedAssembliesPath(), Naming = new DefaultNameStrategy(), GeneratorApiDriver = ApiDriver }
+            ).GeneratedCode.ReadToEnd();
     }
 }

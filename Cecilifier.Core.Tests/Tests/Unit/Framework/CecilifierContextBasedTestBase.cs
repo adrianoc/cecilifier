@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Cecilifier.ApiDriver.MonoCecil;
 using Cecilifier.Core.Misc;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -44,5 +45,6 @@ internal abstract class CecilifierContextBasedTestBase
         return context.SemanticModel.SyntaxTree.GetRoot().DescendantNodes().OfType<MethodDeclarationSyntax>().Single(m => m.Identifier.Text == methodName);
     }
     
-    protected CecilifierContext NewContext() => new(_comp.GetSemanticModel(_comp.SyntaxTrees[0]), new CecilifierOptions(), 1);
+    //TODO: Is this test ILApiDriver specific ? for now only test for Mono.Cecil.
+    protected CecilifierContext NewContext() => new(_comp.GetSemanticModel(_comp.SyntaxTrees[0]), new CecilifierOptions {GeneratorApiDriver = new MonoCecilGeneratorDriver() }, 1);
 }
