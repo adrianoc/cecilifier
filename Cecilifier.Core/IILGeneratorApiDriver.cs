@@ -9,5 +9,5 @@ namespace Cecilifier.Core;
 public interface IILGeneratorApiDriver
 {
     string AsCecilApplication(string cecilifiedCode, string mainTypeName, string? entryPointVar);
-    int PreambleLineCount { get; init; }
+    int PreambleLineCount { get; }
 }

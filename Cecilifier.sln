@@ -17,6 +17,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cecilifier.TypeMapGenerator
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cecilifier.ApiDriver.MonoCecil", "Cecilifier.ApiDriver.MonoCecil\Cecilifier.ApiDriver.MonoCecil.csproj", "{03B9CC99-FEC9-4FBF-A8F7-0E8A29A5B4C3}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cecilifier.ApiDriver.SystemReflectionMetadata", "Cecilifier.ApiDriver.SystemReflectionMetadata\Cecilifier.ApiDriver.SystemReflectionMetadata.csproj", "{91116E66-4631-4D69-9104-3F8813E7CB7D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -105,6 +107,18 @@ Global
 		{03B9CC99-FEC9-4FBF-A8F7-0E8A29A5B4C3}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{03B9CC99-FEC9-4FBF-A8F7-0E8A29A5B4C3}.Release|x86.ActiveCfg = Release|Any CPU
 		{03B9CC99-FEC9-4FBF-A8F7-0E8A29A5B4C3}.Release|x86.Build.0 = Release|Any CPU
+		{91116E66-4631-4D69-9104-3F8813E7CB7D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{91116E66-4631-4D69-9104-3F8813E7CB7D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{91116E66-4631-4D69-9104-3F8813E7CB7D}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{91116E66-4631-4D69-9104-3F8813E7CB7D}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{91116E66-4631-4D69-9104-3F8813E7CB7D}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{91116E66-4631-4D69-9104-3F8813E7CB7D}.Debug|x86.Build.0 = Debug|Any CPU
+		{91116E66-4631-4D69-9104-3F8813E7CB7D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{91116E66-4631-4D69-9104-3F8813E7CB7D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{91116E66-4631-4D69-9104-3F8813E7CB7D}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{91116E66-4631-4D69-9104-3F8813E7CB7D}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{91116E66-4631-4D69-9104-3F8813E7CB7D}.Release|x86.ActiveCfg = Release|Any CPU
+		{91116E66-4631-4D69-9104-3F8813E7CB7D}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

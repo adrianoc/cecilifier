@@ -2,9 +2,11 @@ using System;
 using System.Collections;
 using System.IO;
 using Cecilifier.ApiDriver.MonoCecil;
+using Cecilifier.ApiDriver.SystemReflectionMetadata;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
+using Cecilifier.Core.Tests.Framework;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Tests.Unit
@@ -26,7 +28,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
                 $"If this test ever fail check {ApiDriver.GetType().Name}AsCecilApplication(). Most likely `{ApiDriver.GetType().Name}.PreambleLineCount` does not match the first line appended after the preamble.");
         }
 
-        [Test]
+        [Test, IgnoredByApiDriver<SystemReflectionMetadataGeneratorDriver>(IgnoreReason = "Not Implemented")]
         public void Test_ClassAndMethod_InSingleLine()
         {
             //                                                  1         2         3         4         5
@@ -76,7 +78,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             Assert.That(cecilifiedResult.Mappings[4].Cecilified.End.Line, Is.EqualTo(46), message);
         }
 
-        [Test]
+        [Test, IgnoredByApiDriver<SystemReflectionMetadataGeneratorDriver>(IgnoreReason = "Not Implemented")]
         public void Test_Content_Matches_ReportedCecilifiedMappings()
         {
             var cecilifiedResult = RunCecilifier("class Foo { int Sum(int i, int j) => i + j; }");
@@ -107,6 +109,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             public IEnumerator GetEnumerator()
             {
                 yield return new TestFixtureData(new MonoCecilGeneratorDriver()).SetArgDisplayNames("MonoCecil");
+                yield return new TestFixtureData(new SystemReflectionMetadataGeneratorDriver()).SetArgDisplayNames("SRM");
             }
         }
     }

@@ -26,6 +26,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Cecilifier.ApiDriver.MonoCecil\Cecilifier.ApiDriver.MonoCecil.csproj" />
+    <ProjectReference Include="..\Cecilifier.ApiDriver.SystemReflectionMetadata\Cecilifier.ApiDriver.SystemReflectionMetadata.csproj" />
     <ProjectReference Include="..\Cecilifier.Core\Cecilifier.Core.csproj" />
     <ProjectReference Include="..\Cecilifier.Runtime\Cecilifier.Runtime.csproj" />
   </ItemGroup>

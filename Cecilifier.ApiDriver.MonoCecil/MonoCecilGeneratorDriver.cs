@@ -46,5 +46,5 @@ public class SnippetRunner
 }}";
     }
 
-    public int PreambleLineCount { get; init; } = 25; // The # of lines before the 1st cecilified line of code (see `cecilifiedCode` parameter from AsCecilApplication())
+    public int PreambleLineCount => 25; // The # of lines before the 1st cecilified line of code (see `cecilifiedCode` parameter from AsCecilApplication())
 }
