@@ -1,3 +1,4 @@
+#nullable enable
 namespace Cecilifier.Core;
 
 
@@ -7,4 +8,6 @@ namespace Cecilifier.Core;
 /// </summary>
 public interface IILGeneratorApiDriver
 {
+    string AsCecilApplication(string cecilifiedCode, string mainTypeName, string? entryPointVar);
+    int PreambleLineCount { get; init; }
 }

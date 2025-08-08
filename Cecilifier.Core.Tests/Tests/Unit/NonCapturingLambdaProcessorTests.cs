@@ -3,6 +3,7 @@ using System.Collections;
 using System.Linq;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Misc;
+using Cecilifier.Core.Tests.Tests.Unit.Framework;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -11,8 +12,8 @@ using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Tests.Unit
 {
-    [TestFixture]
-    public class NonCapturingLambdaProcessorTests
+    [TestFixtureSource(typeof(GeneratorApiDriverProvider))]
+    public class NonCapturingLambdaProcessorTests(IILGeneratorApiDriver apiDriver) : MultipleILGeneratorApiDriverTest(apiDriver)
     {
         [TestCase("class Foo { System.Func<string, int> Bar() => s => s.Length; }", TestName = "Simple Lambda Expression")]
         [TestCase("class Foo { System.Func<string, int> Bar() => (s) => s.Length; }", TestName = "Parenthesized Lambda Expression")]
@@ -150,7 +151,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
         }
 
 
-        private static CecilifierContext RunProcessorOn(string source)
+        private CecilifierContext RunProcessorOn(string source)
         {
             var syntaxTree = CSharpSyntaxTree.ParseText(source);
             var comp = CSharpCompilation.Create(null, new[] { syntaxTree }, new[] { MetadataReference.CreateFromFile(typeof(Func<>).Assembly.Location) }, new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
@@ -160,7 +161,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             if (errors.Any())
                 throw new Exception(errors.Aggregate("", (acc, curr) => acc + curr.GetMessage() + Environment.NewLine));
 
-            var context = new CecilifierContext(comp.GetSemanticModel(syntaxTree), new CecilifierOptions(), -1);
+            var context = new CecilifierContext(comp.GetSemanticModel(syntaxTree), new CecilifierOptions() { GeneratorApiDriver = ApiDriver });
             DefaultParameterExtractorVisitor.Initialize(context);
             UsageVisitor.ResetInstance();
 

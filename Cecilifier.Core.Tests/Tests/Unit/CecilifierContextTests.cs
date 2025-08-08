@@ -1,4 +1,5 @@
 using System.Linq;
+using Cecilifier.ApiDriver.MonoCecil;
 using Cecilifier.Core.Misc;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -20,7 +21,7 @@ public class CecilifierContextTests
     [Test]
     public void WarningDiagnosticsAreEmitted()
     {
-        var cecilifierContext = new CecilifierContext(_semanticModel, new CecilifierOptions(), 0);
+        var cecilifierContext = CreateContext();
         cecilifierContext.EmitWarning("Simple Warning");
 
         var found = cecilifierContext.Diagnostics.Where(d => d.Message.Contains("Simple Warning")).ToList();
@@ -32,7 +33,7 @@ public class CecilifierContextTests
     [Test]
     public void ErrorDiagnosticsAreEmitted()
     {
-        var cecilifierContext = new CecilifierContext(_semanticModel, new CecilifierOptions(), 0);
+        var cecilifierContext = CreateContext();
         cecilifierContext.EmitError("Simple Error");
 
         var found = cecilifierContext.Diagnostics.Where(d => d.Message.Contains("Simple Error")).ToList();
@@ -44,7 +45,7 @@ public class CecilifierContextTests
     [Test]
     public void DiagnosticsEmitsEquivalentPreprocessorDirectives()
     {
-        var cecilifierContext = new CecilifierContext(_semanticModel, new CecilifierOptions(), 0);
+        var cecilifierContext = CreateContext();
         cecilifierContext.EmitError("Simple Error");
         cecilifierContext.EmitWarning("Simple Warning");
 
@@ -55,13 +56,15 @@ public class CecilifierContextTests
     [Test]
     public void NewLinesInDiagnosticsEmitsMultiplePreprocessorDirectives()
     {
-        var cecilifierContext = new CecilifierContext(_semanticModel, new CecilifierOptions(), 0);
+        var cecilifierContext = CreateContext();
         cecilifierContext.EmitWarning("Warning with\nmultiple\nlines");
 
         Assert.That(cecilifierContext.Output, Contains.Substring("#warning Warning with"));
         Assert.That(cecilifierContext.Output, Contains.Substring("#warning multiple"));
         Assert.That(cecilifierContext.Output, Contains.Substring("#warning lines"));
     }
+
+    private CecilifierContext CreateContext() => new CecilifierContext(_semanticModel, new CecilifierOptions { GeneratorApiDriver = new MonoCecilGeneratorDriver() }, 0);
 
     private SemanticModel _semanticModel;
 }

@@ -2,14 +2,15 @@ using System;
 using System.Linq;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Misc;
+using Cecilifier.Core.Tests.Tests.Unit.Framework;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Tests.Unit;
 
-[TestFixture]
-public class NoCapturedVariableValidatorTests
+[TestFixtureSource(typeof(GeneratorApiDriverProvider))]
+public class NoCapturedVariableValidatorTests(IILGeneratorApiDriver apiDriver) : MultipleILGeneratorApiDriverTest(apiDriver)
 {
     [TestCase("class Foo { void M(Foo foo) { bool Capture() => foo == null; } }", TestName = "Parent Parameter")]
     [TestCase("class Foo { void M(Foo foo) { void Capture() => foo.M(null); } }", TestName = "Method Invocation on captured parameter")]
@@ -40,7 +41,7 @@ public class NoCapturedVariableValidatorTests
         Assert.That(ctx.Output, Does.Not.Contain("Local function that captures context are not supported"));
     }
     
-    private static CecilifierContext ParseAndCreateContextFor(string source)
+    private CecilifierContext ParseAndCreateContextFor(string source)
     {
         var syntaxTree = CSharpSyntaxTree.ParseText(source);
         var comp = CSharpCompilation.Create(null, new[] { syntaxTree }, new[] { MetadataReference.CreateFromFile(typeof(Func<>).Assembly.Location) }, new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
@@ -50,7 +51,7 @@ public class NoCapturedVariableValidatorTests
         if (errors.Length != 0)
             throw new Exception(errors.Aggregate("", (acc, curr) => acc + curr.GetMessage() + Environment.NewLine));
 
-        var context = new CecilifierContext(comp.GetSemanticModel(syntaxTree), new CecilifierOptions(), -1);
+        var context = new CecilifierContext(comp.GetSemanticModel(syntaxTree), new CecilifierOptions { GeneratorApiDriver = ApiDriver });
         DefaultParameterExtractorVisitor.Initialize(context);
         UsageVisitor.ResetInstance();
         
