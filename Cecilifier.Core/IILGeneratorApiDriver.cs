@@ -1,4 +1,6 @@
 #nullable enable
+using System.Collections.Generic;
+
 namespace Cecilifier.Core;
 
 
@@ -10,4 +12,5 @@ public interface IILGeneratorApiDriver
 {
     string AsCecilApplication(string cecilifiedCode, string mainTypeName, string? entryPointVar);
     int PreambleLineCount { get; }
+    IReadOnlyCollection<string> AssemblyReferences { get; }
 }

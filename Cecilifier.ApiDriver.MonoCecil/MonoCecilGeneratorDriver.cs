@@ -47,4 +47,10 @@ public class SnippetRunner
     }
 
     public int PreambleLineCount => 25; // The # of lines before the 1st cecilified line of code (see `cecilifiedCode` parameter from AsCecilApplication())
+
+    public IReadOnlyCollection<string> AssemblyReferences { get; } = 
+        [
+            typeof(Mono.Cecil.AssemblyDefinition).Assembly.Location,
+            typeof(Mono.Cecil.Rocks.ILParser).Assembly.Location,
+        ];
 }
