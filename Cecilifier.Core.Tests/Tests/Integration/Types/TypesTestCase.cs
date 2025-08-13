@@ -89,10 +89,10 @@ namespace Cecilifier.Core.Tests.Integration.Types
             AssertResourceTest("Types/SealedClass");
         }
 
-        [Test]
-        public void SimplestTest()
+        [TestCaseSource(nameof(AllILGenerators))]
+        public void SimplestTest(IILGeneratorApiDriver driver)
         {
-            AssertResourceTest("Types/Simplest");
+            WithApiDriver(driver, () => AssertResourceTest("Types/Simplest"));
         }
 
         [Test]

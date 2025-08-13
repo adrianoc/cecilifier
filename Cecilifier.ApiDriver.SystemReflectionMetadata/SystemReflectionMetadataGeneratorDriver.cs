@@ -6,8 +6,10 @@ public class SystemReflectionMetadataGeneratorDriver : IILGeneratorApiDriver
 {
     public string AsCecilApplication(string cecilifiedCode, string mainTypeName, string? entryPointVar)
     {
-        var entryPointExpression = entryPointVar ?? "new MethodDefinitionHandle()";
+        var entryPointExpression = entryPointVar ?? "new MethodDefinitionHandle(0)";
         return $$"""
+                 using System;
+                 using System.IO;
                  using System.Collections.Immutable;
                  using System.Reflection;
                  using System.Reflection.Metadata;
@@ -23,7 +25,7 @@ public class SystemReflectionMetadataGeneratorDriver : IILGeneratorApiDriver
                             var ilBuilder = new BlobBuilder();
                             var metadataBuilder = new MetadataBuilder();
                             GenerateIL(metadataBuilder, ilBuilder, "{{mainTypeName}}");
-                            WritePEImage(peStream, metadataBuilder, ilBuilder, {{entryPointVar}});
+                            WritePEImage(peStream, metadataBuilder, ilBuilder, {{entryPointExpression}});
                             peStream.Position = 0;
                         }
 
@@ -42,7 +44,7 @@ public class SystemReflectionMetadataGeneratorDriver : IILGeneratorApiDriver
                     {
                         var peHeaderBuilder = new PEHeaderBuilder(
                                                     imageCharacteristics: entryPointHandle.IsNil ? Characteristics.Dll : Characteristics.ExecutableImage,
-                                                    machine: machine);
+                                                    machine: Machine.Unknown);
 
                         BlobContentId s_contentId = new BlobContentId(Guid.NewGuid(), 0x04030201);
                         var peBuilder = new ManagedPEBuilder(
@@ -50,42 +52,40 @@ public class SystemReflectionMetadataGeneratorDriver : IILGeneratorApiDriver
                                                 new MetadataRootBuilder(metadataBuilder),
                                                 ilBuilder,
                                                 entryPoint: entryPointHandle,
-                                                   flags: CorFlags.ILOnly,
+                                                flags: CorFlags.ILOnly,
                                                 deterministicIdProvider: content => s_contentId);
 
                         var peBlob = new BlobBuilder();
                         var contentId = peBuilder.Serialize(peBlob);
 
-                        if (!mvidFixup.IsDefault)
-                        {
-                            new BlobWriter(mvidFixup).WriteGuid(contentId.Guid);
-                        }
-                            peBlob.WriteContentTo(peStream);
+                        peBlob.WriteContentTo(peStream);
                     }
-                 }
-                 
-                 static MethodDefinitionHandle GenerateIL(MetadataBuilder metadata, BlobBuilder ilBuilder, string mainTypeName)
-                 {
-                    var moduleAndAssemblyName = metadata.GetOrAddString($"{mainTypeName}");
-                    var mainModuleHandle = metadata.AddModule(
-                         0,
-                         moduleAndAssemblyName,
-                         metadata.GetOrAddGuid(Guid.NewGuid()),
-                         default(GuidHandle),
-                         default(GuidHandle));
-                 
-                    var assemblyRef = metadata.AddAssembly(
-                         moduleAndAssemblyName,
-                         version: new Version(1, 0, 0, 0),
-                         culture: default(StringHandle),
-                         publicKey: default,
-                         flags: 0,
-                         hashAlgorithm: AssemblyHashAlgorithm.None);
-                 
-                    {{cecilifiedCode}}
+                    
+                    static void GenerateIL(MetadataBuilder metadata, BlobBuilder ilBuilder, string mainTypeName)
+                    {
+                        var moduleAndAssemblyName = metadata.GetOrAddString($"{mainTypeName}");
+                        var mainModuleHandle = metadata.AddModule(
+                             0,
+                             moduleAndAssemblyName,
+                             metadata.GetOrAddGuid(Guid.NewGuid()),
+                             default(GuidHandle),
+                             default(GuidHandle));
+                     
+                        var assemblyRef = metadata.AddAssembly(
+                             moduleAndAssemblyName,
+                             version: new Version(1, 0, 0, 0),
+                             culture: default(StringHandle),
+                             publicKey: default,
+                             flags: 0,
+                             hashAlgorithm: AssemblyHashAlgorithm.None);
+                     
+                        {{cecilifiedCode}}
+                    }
                  }
                  """;
     }
 
     public int PreambleLineCount => 74;
+    
+    public IReadOnlyCollection<string> AssemblyReferences { get; } = [typeof(System.Reflection.Metadata.BlobBuilder).Assembly.Location];
 }

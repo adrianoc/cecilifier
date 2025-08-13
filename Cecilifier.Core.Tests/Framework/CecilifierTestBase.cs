@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -7,13 +8,13 @@ using System.Reflection.PortableExecutable;
 using System.Security.Cryptography;
 using System.Text;
 using Cecilifier.ApiDriver.MonoCecil;
+using Cecilifier.ApiDriver.SystemReflectionMetadata;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.Tests.Framework.AssemblyDiff;
 using Cecilifier.Core.Tests.Framework.ILVerification;
 using Cecilifier.Runtime;
 using Mono.Cecil.Cil;
-using Mono.Cecil;
 using Mono.Cecil.Rocks;
 using NUnit.Framework;
 using ILVerify;
@@ -28,7 +29,7 @@ public class CecilifierTestBase
 
     //TODO: Only OutputBasedTests tests anything other than Mono.Cecil.
     //      Do we need to run other tests (Integration for instance) for System.Reflection.Metadata also? Is there an easy way to do that?
-    protected IILGeneratorApiDriver ApiDriver { get; init; } = new MonoCecilGeneratorDriver();
+    protected IILGeneratorApiDriver ApiDriver { get; set; } = new MonoCecilGeneratorDriver();
 
     [SetUp]
     public void Setup()
@@ -130,10 +131,11 @@ public class CecilifierTestBase
 
         var references = ReferencedAssemblies.GetTrustedAssembliesPath().Where(a => !a.Contains("mscorlib"));
         List<string> refsToCopy = [
-            typeof(ILParser).Assembly.Location,
-            typeof(Mono.Cecil.TypeReference).Assembly.Location,
+            // typeof(ILParser).Assembly.Location,
+            // typeof(Mono.Cecil.TypeReference).Assembly.Location,
             typeof(TypeHelpers).Assembly.Location
         ];
+        refsToCopy.AddRange(ApiDriver.AssemblyReferences);
 
         references = references.Concat(refsToCopy).ToList();
 
@@ -249,5 +251,25 @@ public class CecilifierTestBase
             stream, 
             new CecilifierOptions { References = ReferencedAssemblies.GetTrustedAssembliesPath(), Naming = new DefaultNameStrategy(), GeneratorApiDriver = ApiDriver }
             ).GeneratedCode.ReadToEnd();
+    }
+
+    protected void WithApiDriver(IILGeneratorApiDriver driver, Action action)
+    {
+        var previousDriver = ApiDriver;
+        try
+        {
+            ApiDriver = driver;
+            action();
+        }
+        finally
+        {
+            ApiDriver = previousDriver;
+        }
+    }
+
+    public static IEnumerable AllILGenerators()
+    {
+        yield return new MonoCecilGeneratorDriver();
+        yield return new SystemReflectionMetadataGeneratorDriver();
     }
 }
