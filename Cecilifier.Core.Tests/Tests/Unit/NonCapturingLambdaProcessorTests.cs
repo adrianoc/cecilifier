@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Linq;
+using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Tests.Tests.Unit.Framework;

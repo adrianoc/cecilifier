@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.Services;

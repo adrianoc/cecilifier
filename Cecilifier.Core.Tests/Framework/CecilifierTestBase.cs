@@ -9,6 +9,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Cecilifier.ApiDriver.MonoCecil;
 using Cecilifier.ApiDriver.SystemReflectionMetadata;
+using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.Tests.Framework.AssemblyDiff;

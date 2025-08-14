@@ -1,7 +1,7 @@
 #nullable enable
 using System.Collections.Generic;
 
-namespace Cecilifier.Core;
+namespace Cecilifier.Core.ApiDriver;
 
 
 /// <summary>

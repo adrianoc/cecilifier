@@ -1,3 +1,4 @@
+using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.Tests.Framework;
 using NUnit.Framework;
 
