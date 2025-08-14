@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using Cecilifier.Core.ApiDriver;
 using NUnit.Framework;
 using NUnit.Framework.Interfaces;
 using NUnit.Framework.Internal;

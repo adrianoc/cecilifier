@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using Cecilifier.ApiDriver.MonoCecil;
+using Cecilifier.Core.ApiDriver;
 using Cecilifier.Runtime;
 using Mono.Cecil;
 using Mono.Cecil.Rocks;

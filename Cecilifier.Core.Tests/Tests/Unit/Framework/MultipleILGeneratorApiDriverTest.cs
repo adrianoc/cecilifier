@@ -1,3 +1,5 @@
+using Cecilifier.Core.ApiDriver;
+
 namespace Cecilifier.Core.Tests.Tests.Unit.Framework;
 
 public class MultipleILGeneratorApiDriverTest 
