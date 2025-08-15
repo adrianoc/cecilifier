@@ -35,12 +35,15 @@ namespace Cecilifier.Core.Misc
             Diagnostics = [];
             CecilifiedLineNumber = options.GeneratorApiDriver.PreambleLineCount;
             startLineNumber = options.GeneratorApiDriver.PreambleLineCount;
+            ApiDefinitionsFactory = Options.GeneratorApiDriver.CreateDefinitionsFactory();
 
             identation = new String('\t', indentation);
             
             Services.Add(new GenericInstanceMethodCacheService<int, string>());
         }
 
+        public IApiDriverDefinitionsFactory ApiDefinitionsFactory { get; }
+        
         public ServiceCollection Services { get; } = new();
 
         public string Output
@@ -49,9 +52,7 @@ namespace Cecilifier.Core.Misc
         }
 
         public ITypeResolver TypeResolver { get; }
-
         public ref readonly RoslynTypeSystem RoslynTypeSystem => ref roslynTypeSystem;
-
         public SemanticModel SemanticModel { get; }
         public CecilifierOptions Options { get; }
         public INameStrategy Naming => Options.Naming;

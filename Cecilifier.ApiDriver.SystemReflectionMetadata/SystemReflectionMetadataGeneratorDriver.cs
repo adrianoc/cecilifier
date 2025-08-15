@@ -89,4 +89,5 @@ public class SystemReflectionMetadataGeneratorDriver : IILGeneratorApiDriver
     public int PreambleLineCount => 74;
     
     public IReadOnlyCollection<string> AssemblyReferences { get; } = [typeof(System.Reflection.Metadata.BlobBuilder).Assembly.Location];
+    public IApiDriverDefinitionsFactory CreateDefinitionsFactory() => new SystemReflectionMetadataDefinitionsFactory();
 }

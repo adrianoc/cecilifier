@@ -16,12 +16,12 @@ using Mono.Cecil.Cil;
 
 namespace Cecilifier.Core.Misc
 {
-    internal record ParameterSpec(string Name, string ElementType, RefKind RefKind, string Attributes, string? DefaultValue = null, Func<IVisitorContext, string, string>? ElementTypeResolver = null)
+    public record ParameterSpec(string Name, string ElementType, RefKind RefKind, string Attributes, string? DefaultValue = null, Func<IVisitorContext, string, string>? ElementTypeResolver = null)
     {
         public string RegistrationTypeName { get; init; }
     }
     
-    internal sealed class CecilDefinitionsFactory
+    public sealed class CecilDefinitionsFactory
     {
         public static string CallSite(ITypeResolver resolver, IFunctionPointerTypeSymbol functionPointer)
         {

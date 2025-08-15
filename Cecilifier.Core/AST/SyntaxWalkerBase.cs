@@ -228,78 +228,9 @@ namespace Cecilifier.Core.AST
             }
         }
 
-        protected static string TypeModifiersToCecil(INamedTypeSymbol typeSymbol, SyntaxTokenList modifiers)
-        {
-            var hasStaticCtor = typeSymbol.Constructors.Any(ctor => ctor.IsStatic && !ctor.IsImplicitlyDeclared);
-            var typeAttributes = new StringBuilder(CecilDefinitionsFactory.DefaultTypeAttributeFor(typeSymbol.TypeKind, hasStaticCtor));
-            AppendStructLayoutTo(typeSymbol, typeAttributes);
-            if (typeSymbol.ContainingType != null)
-            {
-                if (modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword)))
-                {
-                    typeAttributes = typeAttributes.AppendModifier(Constants.Cecil.StaticTypeAttributes);
-                    modifiers = modifiers.Remove(SyntaxFactory.Token(SyntaxKind.StaticKeyword));
-                }
-                return typeAttributes.AppendModifier(ModifiersToCecil(modifiers, m => "TypeAttributes.Nested" + m.ValueText.PascalCase())).ToString();
-            }
+        protected string TypeModifiersToCecil(INamedTypeSymbol typeSymbol, SyntaxTokenList modifiers) => Context.ApiDefinitionsFactory.MappedTypeModifiersFor(typeSymbol, modifiers);
 
-            var convertedModifiers = ModifiersToCecil<TypeAttributes>(modifiers, "NotPublic", MapAttribute);
-            return typeAttributes.AppendModifier(convertedModifiers).ToString();
-
-            IEnumerable<string> MapAttribute(SyntaxToken token)
-            {
-                var isModifierWithNoILRepresentation =
-                    token.IsKind(SyntaxKind.PartialKeyword)
-                    || token.IsKind(SyntaxKind.VolatileKeyword)
-                    || token.IsKind(SyntaxKind.UnsafeKeyword)
-                    || token.IsKind(SyntaxKind.AsyncKeyword)
-                    || token.IsKind(SyntaxKind.ExternKeyword)
-                    || token.IsKind(SyntaxKind.ReadOnlyKeyword)
-                    || token.IsKind(SyntaxKind.RefKeyword);
-
-                if (isModifierWithNoILRepresentation)
-                    return Array.Empty<string>();
-
-                var mapped = token.Kind() switch
-                {
-                    SyntaxKind.InternalKeyword => "NotPublic",
-                    SyntaxKind.ProtectedKeyword => "Family",
-                    SyntaxKind.PrivateKeyword => "Private",
-                    SyntaxKind.PublicKeyword => "Public",
-                    SyntaxKind.StaticKeyword => "Abstract | TypeAttributes.Sealed",
-                    SyntaxKind.AbstractKeyword => "Abstract",
-                    SyntaxKind.SealedKeyword => "Sealed",
-
-                    _ => throw new ArgumentException()
-                };
-
-                return new[] { mapped };
-            }
-        }
-
-        private static void AppendStructLayoutTo(ITypeSymbol typeSymbol, StringBuilder typeAttributes)
-        {
-            if (typeSymbol.TypeKind != TypeKind.Struct)
-                return;
-
-            if (!typeSymbol.TryGetAttribute<StructLayoutAttribute>(out var structLayoutAttribute))
-            {
-                typeAttributes.AppendModifier("TypeAttributes.SequentialLayout");
-            }
-            else
-            {
-                var specifiedLayout = ((LayoutKind) structLayoutAttribute.ConstructorArguments.First().Value) switch
-                {
-                    LayoutKind.Auto => "TypeAttributes.AutoLayout",
-                    LayoutKind.Explicit => "TypeAttributes.ExplicitLayout",
-                    LayoutKind.Sequential => "TypeAttributes.SequentialLayout",
-                    _ => throw new ArgumentException($"Invalid StructLayout value for {typeSymbol.Name}")
-                };
-
-                typeAttributes.AppendModifier(specifiedLayout);
-            }
-        }
-
+        //TODO: Probably we need to abstract this one also
         internal static string ModifiersToCecil<TEnumAttr>(
             IEnumerable<SyntaxToken> modifiers,
             string defaultAccessibility,
@@ -347,17 +278,6 @@ namespace Cecilifier.Core.AST
 
                 return false;
             }
-        }
-
-        private static string ModifiersToCecil(IEnumerable<SyntaxToken> modifiers, Func<SyntaxToken, string> map)
-        {
-            var cecilModifierStr = modifiers.Aggregate(new StringBuilder(), (acc, token) =>
-            {
-                acc.AppendModifier(map(token));
-                return acc;
-            });
-
-            return cecilModifierStr.ToString();
         }
 
         protected static void WriteCecilExpression(IVisitorContext context, string value)

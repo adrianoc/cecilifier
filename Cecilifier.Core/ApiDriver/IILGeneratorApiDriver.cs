@@ -1,5 +1,9 @@
 #nullable enable
 using System.Collections.Generic;
+using Cecilifier.Core.AST;
+using Cecilifier.Core.Variables;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Cecilifier.Core.ApiDriver;
 
@@ -13,4 +17,25 @@ public interface IILGeneratorApiDriver
     string AsCecilApplication(string cecilifiedCode, string mainTypeName, string? entryPointVar);
     int PreambleLineCount { get; }
     IReadOnlyCollection<string> AssemblyReferences { get; }
+    
+    IApiDriverDefinitionsFactory CreateDefinitionsFactory();
+}
+
+public interface IApiDriverDefinitionsFactory
+{
+    public string MappedTypeModifiersFor(INamedTypeSymbol type, SyntaxTokenList modifiers);
+    
+    public IEnumerable<string> Type(
+        IVisitorContext context,
+        string typeVar,
+        string typeNamespace,
+        string typeName,
+        string attrs,
+        string resolvedBaseType,
+        DefinitionVariable outerTypeVariable,
+        bool isStructWithNoFields,
+        IEnumerable<ITypeSymbol> interfaces,
+        IEnumerable<TypeParameterSyntax>? ownTypeParameters,
+        IEnumerable<TypeParameterSyntax> outerTypeParameters,
+        params string[] properties);
 }
