@@ -14,6 +14,8 @@ namespace Cecilifier.Core.AST
 {
     public interface IVisitorContext
     {
+        IApiDriverDefinitionsFactory ApiDefinitionsFactory { get; }
+        
         ServiceCollection Services { get; }
         
         void EmitWarning(string message, SyntaxNode node = null);

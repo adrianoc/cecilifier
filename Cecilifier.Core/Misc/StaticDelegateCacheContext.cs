@@ -87,7 +87,7 @@ public struct StaticDelegateCacheContext
             context.TypeResolver.Bcl.System.Object,
             outerTypeVariable,
             isStructWithNoFields: false,
-            Array.Empty<ITypeSymbol>(),
+            [],
             [], 
             []);
 

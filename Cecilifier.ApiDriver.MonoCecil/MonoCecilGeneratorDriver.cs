@@ -54,4 +54,6 @@ public class SnippetRunner
             typeof(Mono.Cecil.AssemblyDefinition).Assembly.Location,
             typeof(Mono.Cecil.Rocks.ILParser).Assembly.Location,
         ];
+
+    public IApiDriverDefinitionsFactory CreateDefinitionsFactory() => new MonoCecilDefinitionsFactory();
 }

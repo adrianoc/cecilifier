@@ -141,7 +141,7 @@ namespace Cecilifier.Core.AST
             var found = Context.DefinitionVariables.GetVariable(typeSymbol.OriginalDefinition.ToDisplayString(), VariableMemberKind.Type, typeSymbol.ContainingSymbol?.ToDisplayString());
             if (!found.IsValid || !found.IsForwarded)
             {
-                AddTypeDefinition(Context, varName, typeSymbol, TypeModifiersToCecil(typeSymbol, node.Modifiers), node.TypeParameterList?.Parameters, node.CollectOuterTypeArguments());
+                AddTypeDefinition(Context, varName, typeSymbol, node.Modifiers, node.TypeParameterList?.Parameters, node.CollectOuterTypeArguments());
             }
 
             if (typeSymbol.BaseType?.IsGenericType == true)
@@ -173,7 +173,7 @@ namespace Cecilifier.Core.AST
 
             var typeDeclaration = (MemberDeclarationSyntax) typeSymbol.DeclaringSyntaxReferences.First().GetSyntax();
             var typeDeclarationVar = context.Naming.Type(typeSymbol.Name, typeSymbol.TypeKind.ToElementKind());
-            AddTypeDefinition(context, typeDeclarationVar, typeSymbol, TypeModifiersToCecil((INamedTypeSymbol) typeSymbol, typeDeclaration.Modifiers), typeParameters, Array.Empty<TypeParameterSyntax>());
+            AddTypeDefinition(context, typeDeclarationVar, typeSymbol, typeDeclaration.Modifiers, typeParameters, []);
 
             var v = context.DefinitionVariables.RegisterNonMethod(
                 typeSymbol.ContainingSymbol?.OriginalDefinition.ToDisplayString(),
@@ -193,21 +193,21 @@ namespace Cecilifier.Core.AST
             }
         }
 
-        private static void AddTypeDefinition(IVisitorContext context, string typeDeclarationVar, ITypeSymbol typeSymbol, string typeModifiers, IEnumerable<TypeParameterSyntax> typeParameters, IEnumerable<TypeParameterSyntax> outerTypeParameters)
+        private static void AddTypeDefinition(IVisitorContext context, string typeDeclarationVar, ITypeSymbol typeSymbol, SyntaxTokenList typeModifiers, IEnumerable<TypeParameterSyntax> typeParameters, IEnumerable<TypeParameterSyntax> outerTypeParameters)
         {
             context.WriteNewLine();
             context.WriteComment($"{(typeSymbol.IsRecord ? "Record ": string.Empty)}{typeSymbol.TypeKind} : {typeSymbol.Name}");
 
-            typeParameters ??= Array.Empty<TypeParameterSyntax>();
+            typeParameters ??= [];
 
             var outerTypeVariable = context.DefinitionVariables.GetVariable(typeSymbol.ContainingType?.ToDisplayString(), VariableMemberKind.Type, typeSymbol.ContainingType?.ContainingSymbol.ToDisplayString());
             var isStructWithNoFields = typeSymbol.TypeKind == TypeKind.Struct && typeSymbol.GetMembers().Length == 0;
-            var typeDefinitionExp = CecilDefinitionsFactory.Type(
+            var typeDefinitionExp = context.ApiDefinitionsFactory.Type(
                 context,
                 typeDeclarationVar,
                 typeSymbol.ContainingNamespace?.FullyQualifiedName() ?? string.Empty,
                 typeSymbol.Name,
-                typeModifiers,
+                context.ApiDefinitionsFactory.MappedTypeModifiersFor((INamedTypeSymbol)typeSymbol, typeModifiers),
                 BaseTypeFor(context, typeSymbol),
                 outerTypeVariable,
                 isStructWithNoFields,
@@ -225,7 +225,7 @@ namespace Cecilifier.Core.AST
             if (typeSymbol.BaseType == null)
                 return null;
 
-            EnsureForwardedTypeDefinition(context, typeSymbol.BaseType, Array.Empty<TypeParameterSyntax>());
+            EnsureForwardedTypeDefinition(context, typeSymbol.BaseType, []);
 
             return typeSymbol.BaseType.IsGenericType ? null : context.TypeResolver.Resolve(typeSymbol.BaseType);
         }
