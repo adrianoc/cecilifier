@@ -1,16 +1,16 @@
-using System;
 using System.Collections.Generic;
+using System;
 using System.Diagnostics;
 using System.Linq;
+using System.Reflection.Emit;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.Variables;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Mono.Cecil.Cil;
 using static Cecilifier.Core.Misc.CodeGenerationHelpers;
 
 #nullable enable

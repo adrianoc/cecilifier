@@ -5,15 +5,17 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Reflection.Emit;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.Variables;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Mono.Cecil;
-using Mono.Cecil.Cil;
+using CecilOpCodes = Mono.Cecil.Cil.OpCodes;
+
 using static Cecilifier.Core.Misc.CodeGenerationHelpers;
 
 namespace Cecilifier.Core.AST
@@ -64,7 +66,7 @@ namespace Cecilifier.Core.AST
         protected string CreateCilInstruction(string ilVar, OpCode opCode, object operand = null)
         {
             var operandStr = operand == null ? string.Empty : $", {operand}";
-            var instVar = Context.Naming.Instruction(opCode.Code.ToString());
+            var instVar = Context.Naming.Instruction(opCode.OpCodeName());
             AddCecilExpression($"var {instVar} = {ilVar}.Create({opCode.ConstantName()}{operandStr});");
 
             return instVar;
@@ -422,20 +424,26 @@ namespace Cecilifier.Core.AST
                 {
                     if (usageResult.Kind == UsageKind.CallTarget && SymbolEqualityComparer.Default.Equals(usageResult.Target.ContainingType, Context.RoslynTypeSystem.SystemObject) && !usageResult.Target.IsVirtual)
                     {
-                        var ordinaryLoad = loadOpCode.Code switch
+                        Dictionary<short, OpCode> ordinaryLoadMapping = new()
                         {
-                            Code.Ldarga => OpCodes.Ldarg,
-                            Code.Ldarga_S => OpCodes.Ldarg_S,
+                            [CecilOpCodes.Ldarga.Value] = OpCodes.Ldarg,
+                            [CecilOpCodes.Ldarga_S.Value] = OpCodes.Ldarg_S,
                             
-                            Code.Ldloca => OpCodes.Ldloc,
-                            Code.Ldloca_S => OpCodes.Ldloc_S,
+                            [CecilOpCodes.Ldloca.Value] = OpCodes.Ldloc,
+                            [CecilOpCodes.Ldloca_S.Value] = OpCodes.Ldloc_S,
                             
-                            Code.Ldflda => OpCodes.Ldfld,
-                            Code.Ldsflda => OpCodes.Ldsfld,
-                            
-                            Code.Ldelema => (Dummy:operand=null, Ret:loadedType.LdelemOpCode()).Ret,
-                            _ => throw new InvalidOperationException($"Cannot find ordinary load op code for {loadOpCode}")
+                            [CecilOpCodes.Ldflda.Value] = OpCodes.Ldfld,
+                            [CecilOpCodes.Ldsflda.Value] = OpCodes.Ldsfld,
+
+                            [CecilOpCodes.Ldelema.Value] = loadedType.LdelemOpCode()
                         };
+                        
+                        if (!ordinaryLoadMapping.TryGetValue(loadOpCode.Value, out var ordinaryLoad))
+                            throw new InvalidOperationException($"Cannot find ordinary load op code for {loadOpCode}");
+
+                        if (loadOpCode == OpCodes.Ldelem)
+                            operand = null;
+                        
                         Context.EmitCilInstruction(ilVar, ordinaryLoad, operand);
                         Context.EmitCilInstruction(ilVar, OpCodes.Box, Context.TypeResolver.Resolve(loadedType));
                     }

@@ -1,12 +1,12 @@
-using System;
 using System.Collections.Generic;
-using Cecilifier.Core.Extensions;
-using Cecilifier.Core.Misc;
-using Cecilifier.Core.Variables;
+using System;
+using System.Reflection.Emit;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Mono.Cecil.Cil;
+using Cecilifier.Core.Extensions;
+using Cecilifier.Core.Misc;
+using Cecilifier.Core.Variables;
 
 namespace Cecilifier.Core.AST
 {
@@ -62,7 +62,7 @@ namespace Cecilifier.Core.AST
                 Context.MoveLinesToEnd(InstructionPrecedingValueToLoad, lastInstructionLoadingRhs);
                 var arrayElementType = Context.SemanticModel.GetTypeInfo(node).Type.EnsureNotNull();
                 var stelemOpCode = arrayElementType.StelemOpCode();
-                var operand = stelemOpCode == OpCodes.Stelem_Any ? Context.TypeResolver.Resolve(arrayElementType) : null;
+                var operand = stelemOpCode == OpCodes.Stelem ? Context.TypeResolver.Resolve(arrayElementType) : null;
                 Context.EmitCilInstruction(ilVar, stelemOpCode, operand);
             }
         }
