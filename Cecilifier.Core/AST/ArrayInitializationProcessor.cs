@@ -1,13 +1,12 @@
 using System.Linq;
+using System.Reflection.Emit;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using Mono.Cecil.Cil;
-
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Operations;
 using Cecilifier.Core.CodeGeneration;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Operations;
 
 namespace Cecilifier.Core.AST;
 
@@ -35,7 +34,7 @@ public class ArrayInitializationProcessor
 
             var operation = GetConversionOperation(parentOperation, i);
             context.TryApplyConversions(visitor.ILVariable, operation);
-            context.EmitCilInstruction(visitor.ILVariable, stelemOpCode, stelemOpCode == OpCodes.Stelem_Any ? resolvedElementType : null);
+            context.EmitCilInstruction(visitor.ILVariable, stelemOpCode, stelemOpCode == OpCodes.Stelem ? resolvedElementType : null);
         }
         IConversionOperation GetConversionOperation(IOperation operation, int index)
         {

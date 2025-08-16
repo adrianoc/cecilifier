@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection.Emit;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Mono.Cecil.Cil;
 
 #nullable enable annotations
 namespace Cecilifier.Core.AST
@@ -53,7 +53,7 @@ namespace Cecilifier.Core.AST
             {
                 AddCecilExpression($"{methodVar}.Body.ExceptionHandlers.Add(new ExceptionHandler(ExceptionHandlerType.{handlerEntry.Kind})");
                 AddCecilExpression("{");
-                if (handlerEntry.Kind == ExceptionHandlerType.Catch)
+                if (handlerEntry.Kind == Mono.Cecil.Cil.ExceptionHandlerType.Catch)
                 {
                     AddCecilExpression($"    CatchType = {handlerEntry.CatchType},");
                 }
@@ -68,7 +68,7 @@ namespace Cecilifier.Core.AST
 
         private void HandleCatchClause(string ilVar, CatchClauseSyntax node, ExceptionHandlerEntry[] exceptionHandlerTable, int currentIndex, string firstInstructionAfterTryCatchBlock)
         {
-            exceptionHandlerTable[currentIndex].Kind = ExceptionHandlerType.Catch;
+            exceptionHandlerTable[currentIndex].Kind = Mono.Cecil.Cil.ExceptionHandlerType.Catch;
             exceptionHandlerTable[currentIndex].HandlerStart = AddCilInstructionWithLocalVariable(ilVar, OpCodes.Pop); // pops the exception object from stack...
 
             if (currentIndex == 0)
@@ -98,7 +98,7 @@ namespace Cecilifier.Core.AST
 
             exceptionHandlerTable[finallyEntryIndex].TryStart = exceptionHandlerTable[0].TryStart;
             exceptionHandlerTable[finallyEntryIndex].TryEnd = exceptionHandlerTable[0].TryEnd;
-            exceptionHandlerTable[finallyEntryIndex].Kind = ExceptionHandlerType.Finally;
+            exceptionHandlerTable[finallyEntryIndex].Kind = Mono.Cecil.Cil.ExceptionHandlerType.Finally;
 
             Context.WriteNewLine();
             Context.WriteComment("finally start");
@@ -121,7 +121,7 @@ namespace Cecilifier.Core.AST
         
         private struct ExceptionHandlerEntry
         {
-            public ExceptionHandlerType Kind;
+            public Mono.Cecil.Cil.ExceptionHandlerType Kind;
             public string CatchType;
             public string TryStart;
             public string TryEnd;

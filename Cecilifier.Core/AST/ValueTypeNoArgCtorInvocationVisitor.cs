@@ -1,10 +1,9 @@
 using Cecilifier.Core.Extensions;
+using Cecilifier.Core.Variables;
+using System.Reflection.Emit;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis.CSharp;
-using Mono.Cecil.Cil;
-using static Cecilifier.Core.Misc.CodeGenerationHelpers;
 
 namespace Cecilifier.Core.AST
 {

@@ -4,16 +4,17 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using System.Reflection.Emit;
 using Cecilifier.Core.AST.Params;
 using Cecilifier.Core.CodeGeneration;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Variables;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Mono.Cecil.Cil;
+
 using static Cecilifier.Core.Misc.CodeGenerationHelpers;
 
 #nullable enable
@@ -346,7 +347,7 @@ namespace Cecilifier.Core.AST
                     return;
                 
                 var ldelemOpCodeToUse = targetType.LdelemOpCode();
-                Context.EmitCilInstruction(ilVar, ldelemOpCodeToUse, ldelemOpCodeToUse == OpCodes.Ldelem_Any ? Context.TypeResolver.Resolve(targetType) : null);
+                Context.EmitCilInstruction(ilVar, ldelemOpCodeToUse, ldelemOpCodeToUse == OpCodes.Ldelem ? Context.TypeResolver.Resolve(targetType) : null);
             }
         }
 
