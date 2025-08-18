@@ -33,11 +33,11 @@ internal class SystemReflectionMetadataDefinitionsFactory : IApiDriverDefinition
         yield return $"""
                       metadata.AddTypeDefinition(
                             {attrs}, // TypeAttributes.Class | TypeAttributes.Public | TypeAttributes.AutoLayout | TypeAttributes.BeforeFieldInit
-                            metadata.GetOrAddString(typeNamespace),
-                            metadata.GetOrAddString(typeName),
+                            metadata.GetOrAddString("{typeNamespace}"),
+                            metadata.GetOrAddString("{typeName}"),
                             {resolvedBaseType},
-                            fieldList: System.Reflection.Metadata.Ecma335.MetadataTokens.FieldDefinitionHandle(1),
-                            methodList: System.Reflection.Metadata.Ecma335.MetadataTokens.MethodDefinitionHandle(1));
+                            fieldList: MetadataTokens.FieldDefinitionHandle(1),
+                            methodList: MetadataTokens.MethodDefinitionHandle(1));
                       """;
     }
 }

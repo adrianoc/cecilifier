@@ -7,7 +7,7 @@ public class SystemReflectionMetadataGeneratorDriver : IILGeneratorApiDriver
 {
     public string AsCecilApplication(string cecilifiedCode, string mainTypeName, string? entryPointVar)
     {
-        var entryPointExpression = entryPointVar ?? "new MethodDefinitionHandle(0)";
+        var entryPointExpression = entryPointVar ?? "MetadataTokens.MethodDefinitionHandle(0)";
         return $$"""
                  using System;
                  using System.IO;
