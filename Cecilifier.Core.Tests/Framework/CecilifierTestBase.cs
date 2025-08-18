@@ -268,9 +268,9 @@ public class CecilifierTestBase
         }
     }
 
-    public static IEnumerable AllILGenerators()
+    public static IEnumerable<TestCaseData> AllILGenerators()
     {
-        yield return new MonoCecilGeneratorDriver();
-        yield return new SystemReflectionMetadataGeneratorDriver();
+        yield return new TestCaseData(new MonoCecilGeneratorDriver()).SetName("Mono.Cecil");
+        yield return new TestCaseData(new SystemReflectionMetadataGeneratorDriver()).SetName("System.Reflection.Metadata");
     }
 }

@@ -109,8 +109,8 @@ namespace Cecilifier.Core.Tests.Tests.Unit
         {
             public IEnumerator GetEnumerator()
             {
-                yield return new TestFixtureData(new MonoCecilGeneratorDriver()).SetArgDisplayNames("MonoCecil");
-                yield return new TestFixtureData(new SystemReflectionMetadataGeneratorDriver()).SetArgDisplayNames("SRM");
+                yield return new TestFixtureData(new MonoCecilGeneratorDriver()).SetArgDisplayNames("Mono.Cecil");
+                yield return new TestFixtureData(new SystemReflectionMetadataGeneratorDriver()).SetArgDisplayNames("System.Reflection.Metadata");
             }
         }
     }
