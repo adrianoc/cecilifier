@@ -1,9 +1,12 @@
+using Cecilifier.ApiDriver.MonoCecil;
+using Cecilifier.Core.AST;
 using Cecilifier.Core.Tests.Framework;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration;
 
-public class InlineArraysTests : ResourceTestBase
+[TestFixture(typeof(MonoCecilContext))]
+public class InlineArraysTests<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
 {
     [Test]
     public void TestInlineArrays()

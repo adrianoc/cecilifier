@@ -2,6 +2,7 @@ using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Cecilifier.Core.AST;
+using Cecilifier.Core.Misc;
 using Microsoft.CodeAnalysis;
 using IsByRefLikeAttribute = System.Runtime.CompilerServices.IsByRefLikeAttribute;
 
@@ -13,7 +14,7 @@ namespace Cecilifier.Core.TypeSystem;
 /// </summary>
 public struct RoslynTypeSystem
 {
-    public RoslynTypeSystem(IVisitorContext ctx)
+    public RoslynTypeSystem(CecilifierContextBase ctx)
     {
         _context = ctx;
         
@@ -86,5 +87,5 @@ public struct RoslynTypeSystem
 
     public readonly ITypeSymbol ForType<TType>() => _context.SemanticModel.Compilation.GetTypeByMetadataName(typeof(TType).FullName!);
 
-    private readonly IVisitorContext _context;
+    private readonly CecilifierContextBase _context;
 }

@@ -1,3 +1,5 @@
+using Cecilifier.ApiDriver.MonoCecil;
+using Cecilifier.Core.AST;
 using Cecilifier.Core.Tests.Framework;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
@@ -5,8 +7,8 @@ using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration.Types
 {
-    [TestFixture]
-    internal class ArrayTests : ResourceTestBase
+    [TestFixture(typeof(MonoCecilContext))]
+    internal class ArrayTests<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
     {
         [Test]
         public void SmokeTests()

@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.Linq;
 using Cecilifier.Core.AST;
@@ -13,7 +14,7 @@ namespace Cecilifier.Core
         private const LanguageVersion CurrentLanguageVersion = LanguageVersion.CSharp13;
         public static readonly int SupportedCSharpVersion = int.Parse(CurrentLanguageVersion.ToString().Substring("CSharp".Length));
 
-        public static CecilifierResult Process(Stream content, CecilifierOptions options)
+        public static CecilifierResult Process<TContext>(Stream content, CecilifierOptions options) where TContext : IVisitorContext
         {
             InlineArrayGenerator.Reset();
             UsageVisitor.ResetInstance();
@@ -37,15 +38,16 @@ namespace Cecilifier.Core
             }
 
             var semanticModel = comp.GetSemanticModel(syntaxTree);
-
-            var ctx = new CecilifierContext(semanticModel, options);
-            var visitor = new CompilationUnitVisitor(ctx);
+            var context = TContext.CreateContext(options, semanticModel);
+            
+            var visitor = new CompilationUnitVisitor(context);
 
             syntaxTree.TryGetRoot(out var root);
             visitor.Visit(root);
 
             var mainTypeName = visitor.MainType != null ? visitor.MainType.Identifier.Text : "Cecilified";
-            return new CecilifierResult(new StringReader(options.GeneratorApiDriver.AsCecilApplication(ctx.Output, mainTypeName, visitor.MainMethodDefinitionVariable)), mainTypeName, ctx.Mappings, ctx.Diagnostics);
+            var reader = new StringReader(context.ApiDriver.AsCecilApplication(context.Output, mainTypeName, visitor.MainMethodDefinitionVariable));
+            return new CecilifierResult(reader, mainTypeName, context.Mappings, context, context.Diagnostics);
         }
 
         private static OutputKind OutputKindFor(SyntaxTree syntaxTree)

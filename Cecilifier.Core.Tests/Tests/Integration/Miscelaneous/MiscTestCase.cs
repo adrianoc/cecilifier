@@ -1,10 +1,12 @@
+using Cecilifier.ApiDriver.MonoCecil;
+using Cecilifier.Core.AST;
 using Cecilifier.Core.Tests.Framework;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration
 {
-    [TestFixture]
-    public class MiscTestCase : ResourceTestBase
+    [TestFixture(typeof(MonoCecilContext))]
+    public class MiscTestCase<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
     {
         [TestCase("Parameters")]
         [TestCase("Parameters2")]

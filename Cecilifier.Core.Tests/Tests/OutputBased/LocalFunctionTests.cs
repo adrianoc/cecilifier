@@ -1,10 +1,15 @@
-using Cecilifier.Core.ApiDriver;
+using Cecilifier.ApiDriver.MonoCecil;
+using Cecilifier.ApiDriver.SystemReflectionMetadata;
+using Cecilifier.Core.AST;
 using Cecilifier.Core.Tests.Framework;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.OutputBased;
 
-public class LocalFunctionTests(IILGeneratorApiDriver driver) : OutputBasedTestBase(driver)
+[TestFixture(typeof(MonoCecilContext))]
+[TestFixture(typeof(SystemReflectionMetadataContext))]
+[EnableForContext<SystemReflectionMetadataContext>(IgnoreReason = "Not implemented yet")]
+public class LocalFunctionTests<TContext> : OutputBasedTestBase<TContext> where TContext : IVisitorContext
 {
     [TestCase("static", TestName = "Static")]
     [TestCase("", TestName = "Instance")]

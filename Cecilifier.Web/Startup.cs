@@ -14,6 +14,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
+using Cecilifier.ApiDriver.MonoCecil;
 using Cecilifier.Core;
 using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Misc;
@@ -22,6 +23,7 @@ using Cecilifier.Web.Pages;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.CodeAnalysis;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -208,12 +210,14 @@ namespace Cecilifier.Web
                     await using var code = new MemoryStream(bytes, 0, bytes.Length);
 
                     var deployKind = toBeCecilified.WebOptions.DeployKind;
-                    var cecilifiedResult = Core.Cecilifier.Process(code,
-                        new CecilifierOptions
-                        {
-                            References = ReferencedAssemblies.GetTrustedAssembliesPath().Concat(userAssemblyReferences.Success).ToList(),
-                            Naming = new DefaultNameStrategy(toBeCecilified.Settings.NamingOptions, toBeCecilified.Settings.ElementKindPrefixes.ToDictionary(entry => entry.ElementKind, entry => entry.Prefix))
-                        });
+                    //TODO: Take SystemReflectionMetadataContext into account.
+                    var cecilifiedResult = Core.Cecilifier.Process<MonoCecilContext>(
+                                                                code,
+                                                                new CecilifierOptions
+                                                                {
+                                                                    References = ReferencedAssemblies.GetTrustedAssembliesPath().Concat(userAssemblyReferences.Success).ToList(),
+                                                                    Naming = new DefaultNameStrategy(toBeCecilified.Settings.NamingOptions, toBeCecilified.Settings.ElementKindPrefixes.ToDictionary(entry => entry.ElementKind, entry => entry.Prefix))
+                                                                });
 
                     await SendTextMessageToChatAsync($"One more happy user {(deployKind == 'Z' ? "(project)" : "")}", $"Total so far: {CecilifierApplication.Count}\n\n***********\n\n```{toBeCecilified.Code}```", "4437377");
 

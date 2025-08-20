@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using Cecilifier.ApiDriver.MonoCecil;
 using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Misc;
@@ -42,7 +43,7 @@ public class NoCapturedVariableValidatorTests(IILGeneratorApiDriver apiDriver) :
         Assert.That(ctx.Output, Does.Not.Contain("Local function that captures context are not supported"));
     }
     
-    private CecilifierContext ParseAndCreateContextFor(string source)
+    private IVisitorContext ParseAndCreateContextFor(string source)
     {
         var syntaxTree = CSharpSyntaxTree.ParseText(source);
         var comp = CSharpCompilation.Create(null, new[] { syntaxTree }, new[] { MetadataReference.CreateFromFile(typeof(Func<>).Assembly.Location) }, new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
@@ -52,7 +53,7 @@ public class NoCapturedVariableValidatorTests(IILGeneratorApiDriver apiDriver) :
         if (errors.Length != 0)
             throw new Exception(errors.Aggregate("", (acc, curr) => acc + curr.GetMessage() + Environment.NewLine));
 
-        var context = new CecilifierContext(comp.GetSemanticModel(syntaxTree), new CecilifierOptions { GeneratorApiDriver = ApiDriver });
+        var context = new MonoCecilContext(new CecilifierOptions(), comp.GetSemanticModel(syntaxTree), indentation: 3);
         DefaultParameterExtractorVisitor.Initialize(context);
         UsageVisitor.ResetInstance();
         

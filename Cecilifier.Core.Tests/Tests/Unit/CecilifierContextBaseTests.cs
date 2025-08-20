@@ -8,7 +8,7 @@ using NUnit.Framework;
 namespace Cecilifier.Core.Tests.Tests.Unit;
 
 [TestFixture]
-public class CecilifierContextTests
+public class CecilifierContextBaseTests
 {
     [OneTimeSetUp]
     public void SetUpFixture()
@@ -64,7 +64,7 @@ public class CecilifierContextTests
         Assert.That(cecilifierContext.Output, Contains.Substring("#warning lines"));
     }
 
-    private CecilifierContext CreateContext() => new CecilifierContext(_semanticModel, new CecilifierOptions { GeneratorApiDriver = new MonoCecilGeneratorDriver() }, 0);
+    private CecilifierContextBase CreateContext() => new MonoCecilContext(new CecilifierOptions(), _semanticModel);
 
     private SemanticModel _semanticModel;
 }

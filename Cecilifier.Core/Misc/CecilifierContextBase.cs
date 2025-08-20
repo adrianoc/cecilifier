@@ -15,43 +15,36 @@ using Cecilifier.Core.Variables;
 
 namespace Cecilifier.Core.Misc
 {
-    public class CecilifierContext : IVisitorContext
+    public abstract class CecilifierContextBase
     {
         private readonly IDictionary<string, string> flags = new Dictionary<string, string>();
         private readonly LinkedList<string> output = new();
 
         private readonly string identation;
-        private int startLineNumber;
         private RoslynTypeSystem roslynTypeSystem;
 
-        public CecilifierContext(SemanticModel semanticModel, CecilifierOptions options, byte indentation = 3)
+        protected internal CecilifierContextBase(CecilifierOptions options, SemanticModel semanticModel, byte indentation)
         {
             SemanticModel = semanticModel;
             Options = options;
             DefinitionVariables = new DefinitionVariableManager();
             roslynTypeSystem = new RoslynTypeSystem(this);
-            TypeResolver = new TypeResolverImpl(this);
             Mappings = new List<Mapping>();
             Diagnostics = [];
-            CecilifiedLineNumber = options.GeneratorApiDriver.PreambleLineCount;
-            startLineNumber = options.GeneratorApiDriver.PreambleLineCount;
-            ApiDefinitionsFactory = Options.GeneratorApiDriver.CreateDefinitionsFactory();
-
             identation = new String('\t', indentation);
             
             Services.Add(new GenericInstanceMethodCacheService<int, string>());
         }
 
-        public IApiDriverDefinitionsFactory ApiDefinitionsFactory { get; }
-        
+        public IILGeneratorApiDriver ApiDriver { get; protected init; }
+
+        public IApiDriverDefinitionsFactory ApiDefinitionsFactory { get; protected init; }
+        public string Output => output.Aggregate("", (acc, curr) => acc + curr);
+        public IList<CecilifierDiagnostic> Diagnostics { get; }
+
         public ServiceCollection Services { get; } = new();
 
-        public string Output
-        {
-            get { return output.Aggregate("", (acc, curr) => acc + curr); }
-        }
-
-        public ITypeResolver TypeResolver { get; }
+        public ITypeResolver TypeResolver { get; protected init; }
         public ref readonly RoslynTypeSystem RoslynTypeSystem => ref roslynTypeSystem;
         public SemanticModel SemanticModel { get; }
         public CecilifierOptions Options { get; }
@@ -61,11 +54,11 @@ namespace Cecilifier.Core.Misc
 
         public LinkedListNode<string> CurrentLine => output.Last;
 
-        public int CecilifiedLineNumber { get; private set; }
+        public int CecilifiedLineNumber { get; protected set; }
 
         public IList<Mapping> Mappings { get; }
-
-        public IList<CecilifierDiagnostic> Diagnostics { get; }
+       
+        protected int StartLineNumber { get; init; }
 
         public void EmitWarning(string message, SyntaxNode node = null) => EmitDiagnostic(message, node, DiagnosticKind.Warning); 
         public void EmitError(string message, SyntaxNode node = null) => EmitDiagnostic(message, node, DiagnosticKind.Error);
@@ -187,7 +180,7 @@ namespace Cecilifier.Core.Misc
                     f = f.Next;
                 }
 
-                return lineUntilPassedNode + startLineNumber;
+                return lineUntilPassedNode + StartLineNumber;
             }
         }
 

@@ -3,6 +3,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using Cecilifier.ApiDriver.MonoCecil;
 using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.CodeGeneration;
@@ -183,9 +184,9 @@ public class PrivateImplementationDetailsGeneratorTests(IILGeneratorApiDriver ap
         return CSharpCompilation.Create("Test", new[] { syntaxTree }, references: new [] { MetadataReference.CreateFromFile(typeof(object).Assembly.Location), });
     }
 
-    private CecilifierContext NewContext(CSharpCompilation comp)
+    private IVisitorContext NewContext(CSharpCompilation comp)
     {
-        return new CecilifierContext(comp.GetSemanticModel(comp.SyntaxTrees[0]), new CecilifierOptions {GeneratorApiDriver = ApiDriver }, 1);
+        return new MonoCecilContext(new CecilifierOptions(), comp.GetSemanticModel(comp.SyntaxTrees[0]), 1);
     }
     
     static TestCaseData[] BackingFieldNameTestScenarios()

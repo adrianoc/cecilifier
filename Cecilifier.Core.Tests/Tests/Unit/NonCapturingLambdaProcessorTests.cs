@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Linq;
+using Cecilifier.ApiDriver.MonoCecil;
 using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Misc;
@@ -152,7 +153,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
         }
 
 
-        private CecilifierContext RunProcessorOn(string source)
+        private CecilifierContextBase RunProcessorOn(string source)
         {
             var syntaxTree = CSharpSyntaxTree.ParseText(source);
             var comp = CSharpCompilation.Create(null, new[] { syntaxTree }, new[] { MetadataReference.CreateFromFile(typeof(Func<>).Assembly.Location) }, new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
@@ -162,7 +163,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             if (errors.Any())
                 throw new Exception(errors.Aggregate("", (acc, curr) => acc + curr.GetMessage() + Environment.NewLine));
 
-            var context = new CecilifierContext(comp.GetSemanticModel(syntaxTree), new CecilifierOptions() { GeneratorApiDriver = ApiDriver });
+            var context = new MonoCecilContext(new CecilifierOptions(), comp.GetSemanticModel(syntaxTree), indentation: 3);
             DefaultParameterExtractorVisitor.Initialize(context);
             UsageVisitor.ResetInstance();
 

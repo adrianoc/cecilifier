@@ -1,10 +1,12 @@
+using Cecilifier.ApiDriver.MonoCecil;
+using Cecilifier.Core.AST;
 using Cecilifier.Core.Tests.Framework;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration
 {
-    [TestFixture]
-    public class StatementTests : ResourceTestBase
+    [TestFixture(typeof(MonoCecilContext))]
+    public class StatementTests<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
     {
         [TestCase("System.Int32* FixedStatementTest::Test()", TestName = "Return")]
         [TestCase("System.Void FixedStatementTest::Test()", TestName = "Local")]

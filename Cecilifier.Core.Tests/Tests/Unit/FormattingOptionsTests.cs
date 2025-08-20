@@ -52,10 +52,9 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             memoryStream.Write(System.Text.Encoding.ASCII.GetBytes(source));
             memoryStream.Position = 0;
 
-            var cecilified = Cecilifier.Process(
-                memoryStream, 
-                new CecilifierOptions { References = ReferencedAssemblies.GetTrustedAssembliesPath(), Naming = nameStrategy, GeneratorApiDriver = new MonoCecilGeneratorDriver() }
-                ).GeneratedCode.ReadToEnd();
+            var cecilified = Cecilifier.Process<MonoCecilContext>(
+                                                memoryStream,
+                                                new CecilifierOptions { References = ReferencedAssemblies.GetTrustedAssembliesPath(), Naming = nameStrategy }).GeneratedCode.ReadToEnd();
 
             Assert.That(cecilified, Does.Match($"\\b{expected}"), $"{elementKind} prefix not applied.");
             Assert.That(cecilified, Does.Not.Match($"\\b{notExpected}"), $"{elementKind} prefix not applied.");
@@ -88,7 +87,9 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             memoryStream.Write(System.Text.Encoding.ASCII.GetBytes(source));
             memoryStream.Position = 0;
 
-            var cecilified = Cecilifier.Process(memoryStream, new CecilifierOptions { References = ReferencedAssemblies.GetTrustedAssembliesPath(), Naming = nameStrategy, GeneratorApiDriver = new MonoCecilGeneratorDriver() }).GeneratedCode.ReadToEnd();
+            var cecilified = Cecilifier
+                                        .Process<MonoCecilContext>(memoryStream, new CecilifierOptions { References = ReferencedAssemblies.GetTrustedAssembliesPath(), Naming = nameStrategy })
+                                        .GeneratedCode.ReadToEnd();
 
             Assert.That(cecilified, Does.Match($"{elementKind}_[{casingValidation}][a-zA-Z]+"), "Casing");
         }

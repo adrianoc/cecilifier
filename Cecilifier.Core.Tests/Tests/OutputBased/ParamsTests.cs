@@ -1,11 +1,17 @@
 using System.Collections.Generic;
+using Cecilifier.ApiDriver.MonoCecil;
+using Cecilifier.ApiDriver.SystemReflectionMetadata;
 using Cecilifier.Core.ApiDriver;
+using Cecilifier.Core.AST;
 using Cecilifier.Core.Tests.Framework;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.OutputBased;
 
-public class ParamsTests(IILGeneratorApiDriver driver) : OutputBasedTestBase(driver)
+[TestFixture(typeof(MonoCecilContext))]
+[TestFixture(typeof(SystemReflectionMetadataContext))]
+[EnableForContext<SystemReflectionMetadataContext>(IgnoreReason = "Not implemented yet")]
+public class ParamsTests<TContext> : OutputBasedTestBase<TContext> where TContext : IVisitorContext
 {
     [TestCaseSource(nameof(ParamsTestScenarios))]
     public void TestNonNullables(string paramsType, string args)

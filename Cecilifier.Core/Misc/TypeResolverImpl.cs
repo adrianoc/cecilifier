@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
@@ -7,11 +8,11 @@ using Microsoft.CodeAnalysis;
 
 namespace Cecilifier.Core.Misc
 {
-    internal class TypeResolverImpl : ITypeResolver
+    public class TypeResolverImpl : ITypeResolver
     {
-        private readonly CecilifierContext _context;
+        private readonly IVisitorContext _context;
 
-        public TypeResolverImpl(CecilifierContext context)
+        public TypeResolverImpl(IVisitorContext context)
         {
             _context = context;
             Bcl = new Bcl(this, _context);

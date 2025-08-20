@@ -9,6 +9,4 @@ public record CecilifierOptions
     public INameStrategy Naming { get; init; } = new DefaultNameStrategy();
 
     public IReadOnlyList<string> References { get; init; }
-    
-    public IILGeneratorApiDriver GeneratorApiDriver { get; init; }
 }

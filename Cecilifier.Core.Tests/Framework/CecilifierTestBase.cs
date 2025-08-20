@@ -10,6 +10,7 @@ using System.Text;
 using Cecilifier.ApiDriver.MonoCecil;
 using Cecilifier.ApiDriver.SystemReflectionMetadata;
 using Cecilifier.Core.ApiDriver;
+using Cecilifier.Core.AST;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.Tests.Framework.AssemblyDiff;
@@ -24,13 +25,9 @@ namespace Cecilifier.Core.Tests.Framework;
 
 public record struct CecilifyResult(string CecilifiedCode, string CecilifiedAssemblyFilePath, string CecilifiedOutputAssemblyFilePath);
 
-public class CecilifierTestBase
+public class CecilifierTestBase<TContext> where TContext : IVisitorContext
 {
     private protected string cecilifiedCode;
-
-    //TODO: Only OutputBasedTests tests anything other than Mono.Cecil.
-    //      Do we need to run other tests (Integration for instance) for System.Reflection.Metadata also? Is there an easy way to do that?
-    protected IILGeneratorApiDriver ApiDriver { get; set; } = new MonoCecilGeneratorDriver();
 
     [SetUp]
     public void Setup()
@@ -128,7 +125,8 @@ public class CecilifierTestBase
 
     protected CecilifyResult CecilifyAndExecute(Stream tbc, string testBasePath)
     {
-        cecilifiedCode = Cecilfy(tbc);
+        var result = Cecilfy(tbc);
+        cecilifiedCode = result.GeneratedCode.ReadToEnd();
 
         var references = ReferencedAssemblies.GetTrustedAssembliesPath().Where(a => !a.Contains("mscorlib"));
         List<string> refsToCopy = [
@@ -136,7 +134,7 @@ public class CecilifierTestBase
             // typeof(Mono.Cecil.TypeReference).Assembly.Location,
             typeof(TypeHelpers).Assembly.Location
         ];
-        refsToCopy.AddRange(ApiDriver.AssemblyReferences);
+        refsToCopy.AddRange(result.Context.ApiDriver.AssemblyReferences);
 
         references = references.Concat(refsToCopy).ToList();
 
@@ -245,32 +243,11 @@ public class CecilifierTestBase
         }
     }
 
-    private string Cecilfy(Stream stream)
+    private CecilifierResult Cecilfy(Stream stream)
     {
         stream.Position = 0;
-        return Cecilifier.Process(
-            stream, 
-            new CecilifierOptions { References = ReferencedAssemblies.GetTrustedAssembliesPath(), Naming = new DefaultNameStrategy(), GeneratorApiDriver = ApiDriver }
-            ).GeneratedCode.ReadToEnd();
-    }
-
-    protected void WithApiDriver(IILGeneratorApiDriver driver, Action action)
-    {
-        var previousDriver = ApiDriver;
-        try
-        {
-            ApiDriver = driver;
-            action();
-        }
-        finally
-        {
-            ApiDriver = previousDriver;
-        }
-    }
-
-    public static IEnumerable<TestCaseData> AllILGenerators()
-    {
-        yield return new TestCaseData(new MonoCecilGeneratorDriver()).SetName("Mono.Cecil");
-        yield return new TestCaseData(new SystemReflectionMetadataGeneratorDriver()).SetName("System.Reflection.Metadata");
+        return Cecilifier.Process<TContext>(
+            stream,
+            new CecilifierOptions { References = ReferencedAssemblies.GetTrustedAssembliesPath(), Naming = new DefaultNameStrategy() });
     }
 }

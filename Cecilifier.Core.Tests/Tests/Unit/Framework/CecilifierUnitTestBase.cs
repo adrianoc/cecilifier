@@ -18,7 +18,9 @@ namespace Cecilifier.Core.Tests.Tests.Unit.Framework
 
             try
             {
-                return Cecilifier.Process(memoryStream, new CecilifierOptions { References = ReferencedAssemblies.GetTrustedAssembliesPath(), Naming = nameStrategy, GeneratorApiDriver = new MonoCecilGeneratorDriver() });
+                return Cecilifier.Process<MonoCecilContext>(
+                    memoryStream,
+                    new CecilifierOptions { References = ReferencedAssemblies.GetTrustedAssembliesPath(), Naming = nameStrategy });
             }
             catch (Exception ex)
             {

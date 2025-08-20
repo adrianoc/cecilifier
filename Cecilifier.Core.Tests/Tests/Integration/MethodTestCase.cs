@@ -1,13 +1,12 @@
-using System.IO;
-using System.Linq;
-using System.Text;
+using Cecilifier.ApiDriver.MonoCecil;
+using Cecilifier.Core.AST;
 using Cecilifier.Core.Tests.Framework;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration
 {
-    [TestFixture]
-    public class MethodTestCase : ResourceTestBase
+    [TestFixture(typeof(MonoCecilContext))]
+    public class MethodTestCase<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
     {
         [Test]
         public void TestAbstractMethod()

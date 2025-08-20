@@ -1,13 +1,14 @@
 using System;
+using Cecilifier.Core.AST;
 
 namespace Cecilifier.Core.Misc
 {
     internal struct ContextFlagReseter : IDisposable
     {
-        private readonly CecilifierContext _context;
+        private readonly CecilifierContextBase _context;
         private readonly string _flagName;
 
-        public ContextFlagReseter(CecilifierContext context, string flagName)
+        public ContextFlagReseter(CecilifierContextBase context, string flagName)
         {
             _context = context;
             _flagName = flagName;
