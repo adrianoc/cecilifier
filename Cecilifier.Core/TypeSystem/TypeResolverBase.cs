@@ -2,17 +2,17 @@ using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
-using Cecilifier.Core.TypeSystem;
+using Cecilifier.Core.Misc;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 
-namespace Cecilifier.Core.Misc
+namespace Cecilifier.Core.TypeSystem
 {
-    public class TypeResolverImpl : ITypeResolver
+    public class TypeResolverBase : ITypeResolver
     {
         private readonly IVisitorContext _context;
 
-        public TypeResolverImpl(IVisitorContext context)
+        public TypeResolverBase(IVisitorContext context)
         {
             _context = context;
             Bcl = new Bcl(this, _context);

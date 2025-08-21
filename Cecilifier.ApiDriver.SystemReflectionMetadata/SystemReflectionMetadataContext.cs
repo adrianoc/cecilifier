@@ -1,6 +1,7 @@
 using Cecilifier.Core;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Misc;
+using Cecilifier.Core.TypeSystem;
 using Microsoft.CodeAnalysis;
 
 namespace Cecilifier.ApiDriver.SystemReflectionMetadata;
@@ -11,7 +12,7 @@ public class SystemReflectionMetadataContext : CecilifierContextBase, IVisitorCo
     {
         ApiDriver = new SystemReflectionMetadataGeneratorDriver();
         ApiDefinitionsFactory = ApiDriver.CreateDefinitionsFactory();
-        TypeResolver = new TypeResolverImpl(this);
+        TypeResolver = new TypeResolverBase(this);
         
         CecilifiedLineNumber = ApiDriver.PreambleLineCount;
         StartLineNumber = ApiDriver.PreambleLineCount;
