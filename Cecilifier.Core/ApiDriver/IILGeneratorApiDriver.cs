@@ -1,9 +1,8 @@
 #nullable enable
+using System;
 using System.Collections.Generic;
 using Cecilifier.Core.AST;
-using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Cecilifier.Core.ApiDriver;
 
@@ -21,21 +20,7 @@ public interface IILGeneratorApiDriver
     IApiDriverDefinitionsFactory CreateDefinitionsFactory();
 }
 
-public interface IApiDriverDefinitionsFactory
+public record ParameterSpec(string Name, string ElementType, RefKind RefKind, string Attributes, string? DefaultValue = null, Func<IVisitorContext, string, string>? ElementTypeResolver = null)
 {
-    public string MappedTypeModifiersFor(INamedTypeSymbol type, SyntaxTokenList modifiers);
-    
-    public IEnumerable<string> Type(
-        IVisitorContext context,
-        string typeVar,
-        string typeNamespace,
-        string typeName,
-        string attrs,
-        string resolvedBaseType,
-        DefinitionVariable outerTypeVariable,
-        bool isStructWithNoFields,
-        IEnumerable<ITypeSymbol> interfaces,
-        IEnumerable<TypeParameterSyntax>? ownTypeParameters,
-        IEnumerable<TypeParameterSyntax> outerTypeParameters,
-        params string[] properties);
+    public string? RegistrationTypeName { get; init; }
 }

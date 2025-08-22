@@ -9,6 +9,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Reflection.Emit;
+using Cecilifier.Core.ApiDriver;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;

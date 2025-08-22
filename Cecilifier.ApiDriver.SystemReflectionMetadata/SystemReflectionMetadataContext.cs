@@ -1,23 +1,23 @@
+using Cecilifier.ApiDriver.SystemReflectionMetadata.TypeSystem;
 using Cecilifier.Core;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Misc;
-using Cecilifier.Core.TypeSystem;
 using Microsoft.CodeAnalysis;
 
 namespace Cecilifier.ApiDriver.SystemReflectionMetadata;
 
 public class SystemReflectionMetadataContext : CecilifierContextBase, IVisitorContext
 {
-    public SystemReflectionMetadataContext(CecilifierOptions options, SemanticModel semanticModel, byte indentation = 3) : base(options, semanticModel, indentation)
+    private SystemReflectionMetadataContext(CecilifierOptions options, SemanticModel semanticModel, byte indentation = 3) : base(options, semanticModel, indentation)
     {
         ApiDriver = new SystemReflectionMetadataGeneratorDriver();
         ApiDefinitionsFactory = ApiDriver.CreateDefinitionsFactory();
-        TypeResolver = new TypeResolverBase(this);
+        TypeResolver = new SystemReflectionMetadataTypeResolver(this);
         
         CecilifiedLineNumber = ApiDriver.PreambleLineCount;
         StartLineNumber = ApiDriver.PreambleLineCount;
         ApiDefinitionsFactory = ApiDriver.CreateDefinitionsFactory();
     }
     
-    public new static IVisitorContext CreateContext(CecilifierOptions options, SemanticModel semanticModel) => new SystemReflectionMetadataContext(options, semanticModel);
+    public static IVisitorContext CreateContext(CecilifierOptions options, SemanticModel semanticModel) => new SystemReflectionMetadataContext(options, semanticModel);
 }

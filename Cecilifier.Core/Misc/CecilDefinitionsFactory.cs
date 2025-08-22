@@ -8,6 +8,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Reflection.Emit;
+using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Naming;
@@ -16,11 +17,6 @@ using Cecilifier.Core.Variables;
 
 namespace Cecilifier.Core.Misc
 {
-    public record ParameterSpec(string Name, string ElementType, RefKind RefKind, string Attributes, string? DefaultValue = null, Func<IVisitorContext, string, string>? ElementTypeResolver = null)
-    {
-        public string RegistrationTypeName { get; init; }
-    }
-    
     public sealed class CecilDefinitionsFactory
     {
         public static string CallSite(ITypeResolver resolver, IFunctionPointerTypeSymbol functionPointer)
@@ -110,7 +106,7 @@ namespace Cecilifier.Core.Misc
             var exp = $@"var {ctorLocalVar} = new MethodDefinition(""{ctorName}"", {methodAccessibility} | MethodAttributes.HideBySig | {Constants.Cecil.CtorAttributes}, assembly.MainModule.TypeSystem.Void)";
             if (methodDefinitionPropertyValues != null)
             {
-                exp = exp + $"{{ {methodDefinitionPropertyValues} }}";
+                exp += $"{{ {methodDefinitionPropertyValues} }}";
             }
 
             return exp + ";";

@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Reflection.Emit;
+using Cecilifier.Core.ApiDriver;
 using Microsoft.CodeAnalysis;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;

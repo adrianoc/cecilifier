@@ -143,8 +143,9 @@ namespace Cecilifier.Core.AST
                 return ctorLocalVar;
             }
 
-            var ctorMethodDefinitionExp = CecilDefinitionsFactory.Constructor(Context, ctorLocalVar, typeName, isStatic, ctorAccessibility, Array.Empty<string>());
-            AddCecilExpression(ctorMethodDefinitionExp);
+            var exps = Context.ApiDefinitionsFactory.Constructor(Context, ctorLocalVar, typeName, isStatic, ctorAccessibility, []);
+            AddCecilExpressions(Context, exps);
+            
             return ctorLocalVar;
         }
 

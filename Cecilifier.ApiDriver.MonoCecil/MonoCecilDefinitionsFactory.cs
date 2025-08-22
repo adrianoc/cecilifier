@@ -31,9 +31,44 @@ internal class MonoCecilDefinitionsFactory : IApiDriverDefinitionsFactory
         IEnumerable<TypeParameterSyntax> outerTypeParameters,
         params string[] properties)
     {
-        return CecilDefinitionsFactory.Type(context, typeVar, typeNamespace, typeName, attrs, resolvedBaseType, outerTypeVariable, isStructWithNoFields, interfaces, ownTypeParameters, outerTypeParameters,
-            properties);
+        return CecilDefinitionsFactory.Type(context, typeVar, typeNamespace, typeName, attrs, resolvedBaseType, outerTypeVariable, isStructWithNoFields, interfaces, ownTypeParameters, outerTypeParameters, properties);
     }
+
+    public IEnumerable<string> Method(IVisitorContext context, string methodVar, string methodName, string methodModifiers, ITypeSymbol returnType, bool refReturn, IList<TypeParameterSyntax> typeParameters)
+    {
+        return CecilDefinitionsFactory.Method(context, methodVar, methodName, methodModifiers, returnType, refReturn, typeParameters);
+    }
+
+    public IEnumerable<string> Method(IVisitorContext context, string declaringTypeName, string methodVar, string methodNameForParameterVariableRegistration, string methodName, string methodModifiers, IReadOnlyList<ParameterSpec> parameters,
+        IList<string> typeParameters, Func<IVisitorContext, string> returnTypeResolver, out MethodDefinitionVariable methodDefinitionVariable)
+    {
+        return CecilDefinitionsFactory.Method(
+                            context, 
+                            declaringTypeName, 
+                            methodVar, 
+                            methodNameForParameterVariableRegistration, 
+                            methodName, 
+                            methodModifiers, 
+                            parameters, 
+                            typeParameters, 
+                            returnTypeResolver,
+                            out methodDefinitionVariable);
+    }
+    
+    public IEnumerable<string> Constructor(IVisitorContext context, string ctorLocalVar, string typeName, bool isStatic, string methodAccessibility, string[] paramTypes, string? methodDefinitionPropertyValues = null)
+    {
+        var ctorName = Utils.ConstructorMethodName(isStatic);
+        context.DefinitionVariables.RegisterMethod(typeName, ctorName, paramTypes, 0, ctorLocalVar);
+
+        var exp = $@"var {ctorLocalVar} = new MethodDefinition(""{ctorName}"", {methodAccessibility} | MethodAttributes.HideBySig | {Constants.Cecil.CtorAttributes}, assembly.MainModule.TypeSystem.Void)";
+        if (methodDefinitionPropertyValues != null)
+        {
+            exp = exp + $"{{ {methodDefinitionPropertyValues} }}";
+        }
+
+        return [exp + ";"];
+    }
+
 
     //TODO: Try to extract common code to be shared with SRM.
     private static string TypeModifiersToCecil(INamedTypeSymbol typeSymbol, SyntaxTokenList modifiers)

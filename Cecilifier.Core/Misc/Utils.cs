@@ -7,7 +7,7 @@ using Microsoft.CodeAnalysis;
 #nullable enable
 namespace Cecilifier.Core.Misc
 {
-    internal struct Utils
+    public struct Utils
     {
         public static string ConstructorMethodName(bool isStatic) => $".{(isStatic ? Constants.Cecil.StaticConstructorName : Constants.Cecil.InstanceConstructorName)}";
 

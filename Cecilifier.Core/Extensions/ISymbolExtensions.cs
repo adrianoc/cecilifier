@@ -254,8 +254,8 @@ namespace Cecilifier.Core.Extensions
             _ => throw new ArgumentOutOfRangeException(nameof(literalType), literalType, null)
         };
 
-        public static IMethodSymbol ParameterlessCtor(this ITypeSymbol self) => self?.GetMembers(".ctor").OfType<IMethodSymbol>().Single(ctor => ctor.Parameters.Length == 0);
-        public static IMethodSymbol Ctor(this ITypeSymbol self, params ITypeSymbol[] parameters) => self?.GetMembers(".ctor")
+        public static IMethodSymbol ParameterlessCtor(this ITypeSymbol self) => self.GetMembers(".ctor").OfType<IMethodSymbol>().Single(ctor => ctor.Parameters.Length == 0);
+        public static IMethodSymbol Ctor(this ITypeSymbol self, params ITypeSymbol[] parameters) => self.GetMembers(".ctor")
                                                                                                 .OfType<IMethodSymbol>()
                                                                                                 .Single(ctor => ctor.Parameters.Select(p => p.Type).SequenceEqual(parameters, SymbolEqualityComparer.Default));
 

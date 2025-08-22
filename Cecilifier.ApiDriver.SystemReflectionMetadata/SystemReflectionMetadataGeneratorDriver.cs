@@ -79,6 +79,14 @@ public class SystemReflectionMetadataGeneratorDriver : IILGeneratorApiDriver
                              publicKey: default,
                              flags: 0,
                              hashAlgorithm: AssemblyHashAlgorithm.None);
+                             
+                        var mscorlibAssemblyRef = metadata.AddAssemblyReference(
+                            name: metadata.GetOrAddString("mscorlib"),
+                            version: new Version(4, 0, 0, 0),
+                            culture: default(StringHandle),
+                            publicKeyOrToken: metadata.GetOrAddBlob(ImmutableArray.Create<byte>(0xB7, 0x7A, 0x5C, 0x56, 0x19, 0x34, 0xE0, 0x89)),
+                            flags: default(AssemblyFlags),
+                            hashValue: default(BlobHandle));            
                      
                         {{cecilifiedCode}}
                     }

@@ -2,17 +2,16 @@ using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
-using Cecilifier.Core.Misc;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 
 namespace Cecilifier.Core.TypeSystem
 {
-    public class TypeResolverBase : ITypeResolver
+    public abstract class TypeResolverBase : ITypeResolver
     {
         private readonly IVisitorContext _context;
 
-        public TypeResolverBase(IVisitorContext context)
+        protected TypeResolverBase(IVisitorContext context)
         {
             _context = context;
             Bcl = new Bcl(this, _context);
@@ -30,7 +29,7 @@ namespace Cecilifier.Core.TypeSystem
                    ?? Resolve(type.ToDisplayString());
         }
 
-        public string Resolve(string typeName) => Utils.ImportFromMainModule($"typeof({typeName})");
+        public abstract string Resolve(string typeName);
         
         private string ResolveNestedType(ITypeSymbol type)
         {
@@ -61,23 +60,29 @@ namespace Cecilifier.Core.TypeSystem
             return null;
         }
 
-        public string ResolvePredefinedType(ITypeSymbol type) => $"assembly.MainModule.TypeSystem.{type.Name}";
+        public abstract string ResolvePredefinedType(ITypeSymbol type);
 
+        protected abstract string ResolveArrayType(IArrayTypeSymbol type);
+
+        protected abstract string MakePointerType(IPointerTypeSymbol pointerType);
+
+        protected abstract string MakeFunctionPointerType(IFunctionPointerTypeSymbol functionPointer);
+        
         private string ResolvePredefinedAndComposedTypes(ITypeSymbol type)
         {
             if (type is IArrayTypeSymbol array)
             {
-                return Resolve(array.ElementType) + ".MakeArrayType()";
+                return ResolveArrayType(array);
             }
 
             if (type is IPointerTypeSymbol pointerType)
             {
-                return Resolve(pointerType.PointedAtType) + ".MakePointerType()";
+                return MakePointerType(pointerType);
             }
 
             if (type is IFunctionPointerTypeSymbol functionPointer)
             {
-                return CecilDefinitionsFactory.FunctionPointerType(this, functionPointer);
+                return MakeFunctionPointerType(functionPointer);
             }
             
             if (type.SpecialType == SpecialType.None 
@@ -94,7 +99,7 @@ namespace Cecilifier.Core.TypeSystem
 
             return ResolvePredefinedType(type);
         }
-        
+
         private string ResolveTypeParameter(ITypeSymbol type, string cecilTypeParameterProviderVar)
         {
             if (type is not ITypeParameterSymbol typeParameterSymbol)

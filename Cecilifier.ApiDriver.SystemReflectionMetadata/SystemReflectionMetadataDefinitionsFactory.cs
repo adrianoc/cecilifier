@@ -1,5 +1,6 @@
 using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.AST;
+using Cecilifier.Core.Naming;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -32,12 +33,47 @@ internal class SystemReflectionMetadataDefinitionsFactory : IApiDriverDefinition
         //      all types/members.
         yield return $"""
                       metadata.AddTypeDefinition(
-                            {attrs}, // TypeAttributes.Class | TypeAttributes.Public | TypeAttributes.AutoLayout | TypeAttributes.BeforeFieldInit
-                            metadata.GetOrAddString("{typeNamespace}"),
-                            metadata.GetOrAddString("{typeName}"),
-                            {resolvedBaseType},
-                            fieldList: MetadataTokens.FieldDefinitionHandle(1),
-                            methodList: MetadataTokens.MethodDefinitionHandle(1));
+                        {attrs}, // TypeAttributes.Class | TypeAttributes.Public | TypeAttributes.AutoLayout | TypeAttributes.BeforeFieldInit
+                        metadata.GetOrAddString("{typeNamespace}"),
+                        metadata.GetOrAddString("{typeName}"),
+                        {resolvedBaseType},
+                        fieldList: MetadataTokens.FieldDefinitionHandle(1),
+                        methodList: MetadataTokens.MethodDefinitionHandle(1));
                       """;
+    }
+
+    public IEnumerable<string> Method(IVisitorContext context, string methodVar, string methodName, string methodModifiers, ITypeSymbol returnType, bool refReturn, IList<TypeParameterSyntax> typeParameters)
+    {
+        throw new NotImplementedException();
+    }
+
+    public IEnumerable<string> Method(IVisitorContext context, string declaringTypeName, string methodVar, string methodNameForParameterVariableRegistration, string methodName, string methodModifiers, IReadOnlyList<ParameterSpec> parameters,
+        IList<string> typeParameters, Func<IVisitorContext, string> returnTypeResolver, out MethodDefinitionVariable methodDefinitionVariable)
+    {
+        throw new NotImplementedException();
+    }
+
+    public IEnumerable<string> Constructor(IVisitorContext context, string ctorLocalVar, string typeName, bool isStatic, string methodAccessibility, string[] paramTypes, string? methodDefinitionPropertyValues = null)
+    {
+        var parameterlessCtorSignatureVar = context.Naming.SyntheticVariable("parameterlessCtorSignature", ElementKind.LocalVariable);
+        var expressions = new List<string>();
+        
+        expressions.Add($"var {parameterlessCtorSignatureVar} = new BlobBuilder();");
+        expressions.Add($$"""
+                          new BlobEncoder({{parameterlessCtorSignatureVar}})
+                                 .MethodSignature(isInstanceMethod: {{ (isStatic ? "false" : "true") }})
+                                 .Parameters(0, returnType => returnType.Void(), parameters => { });
+                          """);
+
+        var ctorBlobIndexVar = context.Naming.SyntheticVariable("parameterlessCtorBlobIndex", ElementKind.LocalVariable);
+        expressions.Add($"var {ctorBlobIndexVar} = metadata.GetOrAddBlob({parameterlessCtorSignatureVar});");
+        expressions.Add($"""
+                var objectCtorMemberRef = metadata.AddMemberReference(
+                                                {context.TypeResolver.Resolve(context.RoslynTypeSystem.SystemObject)},
+                                                metadata.GetOrAddString(".ctor"),
+                                                {ctorBlobIndexVar});
+                """);
+        
+        return expressions;
     }
 }
