@@ -1,5 +1,8 @@
-﻿using Cecilifier.Core;
+﻿using System.Reflection.Emit;
+using Cecilifier.Core;
 using Cecilifier.Core.ApiDriver;
+using Cecilifier.Core.AST;
+using Cecilifier.Core.Extensions;
 
 namespace Cecilifier.ApiDriver.MonoCecil;
 
@@ -56,4 +59,31 @@ public class SnippetRunner
         ];
 
     public IApiDriverDefinitionsFactory CreateDefinitionsFactory() => new MonoCecilDefinitionsFactory();
+    
+    public void EmitCilInstruction<T>(IVisitorContext context, IlContext il, OpCode opCode, T? operand, string? comment = null)
+    {
+        var operandStr = operand == null ? string.Empty : $", {operand}";
+        context.WriteCecilExpression($"{il.VariableName}.Emit({opCode.ConstantName()}{operandStr});{(comment != null ? $" // {comment}" : string.Empty)}");
+        context.WriteNewLine();
+    }
+    
+    public void EmitCilInstruction(IVisitorContext context, IlContext il, OpCode opCode)
+    {
+        EmitCilInstruction<string>(context, il, opCode, null);
+    }
+
+    public IlContext NewIlContext(IVisitorContext context, string memberName, string methodLocalVar)
+    {
+        var ilVarName = context.Naming.ILProcessor($"{memberName}");
+        context.WriteCecilExpression($"var {ilVarName} = {methodLocalVar}.Body.GetILProcessor();");
+        
+        return new MonoCecilIlContext(ilVarName);
+    }
+}
+
+public class MonoCecilIlContext : IlContext
+{
+    protected internal MonoCecilIlContext(string variableName) : base(variableName)
+    {
+    }
 }

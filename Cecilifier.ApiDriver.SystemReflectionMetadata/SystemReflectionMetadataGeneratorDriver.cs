@@ -1,5 +1,11 @@
-﻿using Cecilifier.Core;
+﻿using System.Reflection;
+using System.Reflection.Emit;
+using Cecilifier.Core;
 using Cecilifier.Core.ApiDriver;
+using Cecilifier.Core.AST;
+using Cecilifier.Core.Extensions;
+using Cecilifier.Core.Naming;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Cecilifier.ApiDriver.SystemReflectionMetadata;
 
@@ -98,4 +104,46 @@ public class SystemReflectionMetadataGeneratorDriver : IILGeneratorApiDriver
     
     public IReadOnlyCollection<string> AssemblyReferences { get; } = [typeof(System.Reflection.Metadata.BlobBuilder).Assembly.Location];
     public IApiDriverDefinitionsFactory CreateDefinitionsFactory() => new SystemReflectionMetadataDefinitionsFactory();
+    
+    public IlContext NewIlContext(IVisitorContext context, string memberName, string methodLocalVar)
+    {
+        var ilVarName = context.Naming.ILProcessor(memberName);
+        context.WriteCecilExpression($"var {ilVarName} = new InstructionEncoder(new BlobBuilder());");
+        context.WriteNewLine();
+        
+        return new SystemReflectionMetadataIlContext(ilVarName);
+    }
+
+    public void EmitCilInstruction<T>(IVisitorContext context, IlContext il, OpCode opCode, T? operand, string? comment = null)
+    {
+        context.WriteCecilExpression($"{il.VariableName}.OpCode(ILOpCode.{opCode.OpCodeName()});{(comment != null ? $" // {comment}" : string.Empty)}");
+        context.WriteNewLine();
+        if (operand != null)
+        {
+            if (operand is CilMetadataHandle handle)
+            {
+                context.WriteCecilExpression($"{il.VariableName}.Token({handle.VariableName});");
+            }
+            else
+            {
+                //TODO: Fix name of WriteX() method to be called; it is not always derivable from the type  
+                context.WriteCecilExpression($"{il.VariableName}.CodeBuilder.Write{operand.GetType().Name}({operand});");
+            }
+            context.WriteNewLine();
+        }
+    }
+    
+    public void EmitCilInstruction(IVisitorContext context, IlContext il, OpCode opCode)
+    {
+        EmitCilInstruction<string>(context, il, opCode, null);
+    }
+}
+
+public class SystemReflectionMetadataIlContext : IlContext
+{
+    public SystemReflectionMetadataIlContext(string variableName) : base(variableName)
+    {
+    }
+    
+    public int Value { get; set; }
 }

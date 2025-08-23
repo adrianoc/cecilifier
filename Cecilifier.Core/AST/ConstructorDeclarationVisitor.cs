@@ -5,11 +5,13 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Reflection.Emit;
+using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.Variables;
+using Mono.Cecil;
 
 namespace Cecilifier.Core.AST
 {
@@ -52,7 +54,9 @@ namespace Cecilifier.Core.AST
             ProcessMethodDeclaration(node, ctorVariable, "ctor", ".ctor", false, ctorVar =>
             {
                 if (node.Initializer == null || node.Initializer.IsKind(SyntaxKind.BaseConstructorInitializer))
+                {
                     ProcessFieldInitialization(declaringType, ilVar, false);
+                }
 
                 if (declaringType.Kind() != SyntaxKind.StructDeclaration)
                 {
@@ -88,12 +92,12 @@ namespace Cecilifier.Core.AST
             });
         }
 
-        internal void DefaultCtorInjector(string typeDefVar, INamedTypeSymbol type, string ctorAccessibility, string baseCtor, bool isStatic, Action<string> processInitializers)
+        internal void DefaultCtorInjector(string typeDefVar, INamedTypeSymbol type, string ctorAccessibility, string baseCtor, bool isStatic, Action<IlContext> processInitializers)
         {
             DefaultCtorInjector(typeDefVar, type.Name, type.OriginalDefinition.ToDisplayString(), ctorAccessibility, baseCtor, isStatic, processInitializers);
         }
 
-        internal void DefaultCtorInjector(string typeDefVar, string typeName, string ctorAccessibility, string baseCtor, bool isStatic, Action<string> processInitializers)
+        internal void DefaultCtorInjector(string typeDefVar, string typeName, string ctorAccessibility, string baseCtor, bool isStatic, Action<IlContext> processInitializers)
         {
             DefaultCtorInjector(typeDefVar, typeName, typeName, ctorAccessibility, baseCtor, isStatic, processInitializers);
         }
@@ -105,7 +109,7 @@ namespace Cecilifier.Core.AST
         /// <param name="baseCtor"></param>
         /// <param name="isStatic"></param>
         /// <param name="processInitializers">Action in charge of handling constructor initializers</param>
-        private void DefaultCtorInjector(string typeDefVar, string normalizedTypeName, string typeName, string ctorAccessibility, string baseCtor, bool isStatic, Action<string> processInitializers)
+        private void DefaultCtorInjector(string typeDefVar, string normalizedTypeName, string typeName, string ctorAccessibility, string baseCtor, bool isStatic, Action<IlContext> processInitializers)
         {
             Context.WriteNewLine();
             Context.WriteComment($"** Constructor: {normalizedTypeName}() **");
@@ -118,17 +122,17 @@ namespace Cecilifier.Core.AST
 
             AddCecilExpression($"{typeDefVar}.Methods.Add({ctorLocalVar});");
 
-            var ctorBodyIL = Context.Naming.ILProcessor($"ctor_{normalizedTypeName}");
-            AddCecilExpression($"var {ctorBodyIL} = {ctorLocalVar}.Body.GetILProcessor();");
-
-            processInitializers?.Invoke(ctorBodyIL);
+            var ilContext = Context.ApiDriver.NewIlContext(Context, normalizedTypeName, ctorLocalVar);
+            processInitializers?.Invoke(ilContext);
+            
             if (!isStatic)
             {
-                Context.EmitCilInstruction(ctorBodyIL, OpCodes.Ldarg_0);
-                Context.EmitCilInstruction(ctorBodyIL, OpCodes.Call, baseCtor);
+                Context.ApiDriver.EmitCilInstruction(Context, ilContext, OpCodes.Ldarg_0);
+                Context.ApiDriver.EmitCilInstruction(Context, ilContext, OpCodes.Call, new CilMetadataHandle(baseCtor));
             }
 
-            Context.EmitCilInstruction(ctorBodyIL, OpCodes.Ret);
+            //Context.EmitCilInstruction(ctorBodyIL, OpCodes.Ret);
+            Context.ApiDriver.EmitCilInstruction(Context, ilContext, OpCodes.Ret);
         }
 
         private string AddOrUpdateParameterlessCtorDefinition(string typeName, string ctorAccessibility, bool isStatic, string ctorLocalVar)
@@ -149,7 +153,7 @@ namespace Cecilifier.Core.AST
             return ctorLocalVar;
         }
 
-        private void ProcessFieldInitialization(TypeDeclarationSyntax declaringClass, string ctorBodyIL, bool statics)
+        private void ProcessFieldInitialization(TypeDeclarationSyntax declaringClass, IlContext ctorBodyIL, bool statics)
         {
             var declaringTypeSymbol = Context.SemanticModel.GetDeclaredSymbol(declaringClass).EnsureNotNull();
             // Handles non const field initialization...
@@ -211,7 +215,7 @@ namespace Cecilifier.Core.AST
                 .Where(f => f.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword)) == statics && !f.Modifiers.Any(m => m.IsKind(SyntaxKind.ConstKeyword)));
         }
 
-        private bool HandleSystemIndexInitialization(VariableDeclaratorSyntax dec, ISymbol declaringTypeSymbol, string ctorBodyIL)
+        private bool HandleSystemIndexInitialization(VariableDeclaratorSyntax dec, ISymbol declaringTypeSymbol, IlContext il)
         {
             if (dec.Initializer == null || !dec.Initializer.Value.IsKind(SyntaxKind.IndexExpression))
                 return false;
@@ -220,8 +224,8 @@ namespace Cecilifier.Core.AST
             // in this case we need to load the address of the field since the expression ^5 (IndexerExpression) will result in a call to System.Index ctor (which is a value type and expects
             // the address of the value type to be in the top of the stack
             var operand = Context.DefinitionVariables.GetVariable(dec.Identifier.Text, VariableMemberKind.Field, declaringTypeSymbol.ToDisplayString()).VariableName;
-            Context.EmitCilInstruction(ctorBodyIL, OpCodes.Ldflda, operand);
-            ExpressionVisitor.Visit(Context, ctorBodyIL, dec.Initializer);
+            Context.EmitCilInstruction(il, OpCodes.Ldflda, operand);
+            ExpressionVisitor.Visit(Context, il, dec.Initializer);
             return true;
         }
 

@@ -1,8 +1,7 @@
 #nullable enable
-using System;
 using System.Collections.Generic;
+using System.Reflection.Emit;
 using Cecilifier.Core.AST;
-using Microsoft.CodeAnalysis;
 
 namespace Cecilifier.Core.ApiDriver;
 
@@ -18,9 +17,9 @@ public interface IILGeneratorApiDriver
     IReadOnlyCollection<string> AssemblyReferences { get; }
     
     IApiDriverDefinitionsFactory CreateDefinitionsFactory();
-}
 
-public record ParameterSpec(string Name, string ElementType, RefKind RefKind, string Attributes, string? DefaultValue = null, Func<IVisitorContext, string, string>? ElementTypeResolver = null)
-{
-    public string? RegistrationTypeName { get; init; }
+    IlContext NewIlContext(IVisitorContext context, string memberName, string methodLocalVar);
+    
+    void EmitCilInstruction<T>(IVisitorContext context, IlContext il, OpCode opCode, T? operand, string? comment = null);
+    void EmitCilInstruction(IVisitorContext context, IlContext il, OpCode opCode);
 }
