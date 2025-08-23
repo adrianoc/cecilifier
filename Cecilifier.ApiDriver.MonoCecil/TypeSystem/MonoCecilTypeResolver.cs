@@ -3,7 +3,7 @@ using Cecilifier.Core.Misc;
 using Cecilifier.Core.TypeSystem;
 using Microsoft.CodeAnalysis;
 
-namespace Cecilifier.ApiDriver.MonoCecil;
+namespace Cecilifier.ApiDriver.MonoCecil.TypeSystem;
 
 public class MonoCecilTypeResolver(IVisitorContext context) : TypeResolverBase(context)
 {
