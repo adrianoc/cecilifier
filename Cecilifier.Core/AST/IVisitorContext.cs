@@ -60,8 +60,9 @@ public interface IVisitorContext
     void MoveLineAfter(LinkedListNode<string> instruction, LinkedListNode<string> after);
     void MoveLinesToEnd(LinkedListNode<string> start, LinkedListNode<string> end);
 
-    //TODO: Introduce MonoCecilTypeResolver (previous TypeResolverImpl) and SystemReflectionMetadataTypeResolver
     ITypeResolver TypeResolver { get; }
+    IMethodResolver MethodResolver { get; }
+    
     IList<Mapping> Mappings { get; }
 
     ref readonly RoslynTypeSystem RoslynTypeSystem { get; }

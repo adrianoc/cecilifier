@@ -5,7 +5,7 @@ using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration.Casts
 {
-    [TestFixture(typeof(MonoCecilContext))]
+    [TestFixture(typeof(MonoCecilContext), TestName = "Mono.Cecil")]
     public class CastsTestCase<TContext> : ResourceTestBase<TContext> where TContext : IVisitorContext
     {
         [Test]

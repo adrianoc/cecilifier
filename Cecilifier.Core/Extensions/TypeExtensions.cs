@@ -8,7 +8,7 @@ using OpCodes = System.Reflection.Emit.OpCodes;
 
 namespace Cecilifier.Core.Extensions
 {
-    internal static class TypeExtensions
+    public static class TypeExtensions
     {
         public static bool IsNonPrimitiveValueType(this ITypeSymbol type, IVisitorContext context) => !type.IsPrimitiveType() 
                                                                                                       && (type.IsValueType || SymbolEqualityComparer.Default.Equals(type, context.RoslynTypeSystem.SystemValueType));
@@ -17,6 +17,7 @@ namespace Cecilifier.Core.Extensions
         {
             return $"{type}.MakeByReferenceType()";
         }
+        
         public static string MakeGenericInstanceType(this string type, IEnumerable<string> typeArguments)
         {
             return $"{type}.MakeGenericInstanceType({string.Join(", ", typeArguments)})";

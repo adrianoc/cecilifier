@@ -311,6 +311,7 @@ namespace Cecilifier.Core.AST
             TypeDeclarationVisitor.EnsureForwardedTypeDefinition(Context, typeInfo.Type, Array.Empty<TypeParameterSyntax>());
 
             var resolvedType = Context.TypeResolver.Resolve(typeInfo.Type);
+            //TODO: Can't this check be moved inside the Resolve() method as the other checks for arrays,
             return type is RefTypeSyntax ? resolvedType.MakeByReferenceType() : resolvedType;
         }
 

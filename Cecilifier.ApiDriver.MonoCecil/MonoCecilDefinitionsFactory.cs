@@ -69,7 +69,6 @@ internal class MonoCecilDefinitionsFactory : IApiDriverDefinitionsFactory
         return [exp + ";"];
     }
 
-
     //TODO: Try to extract common code to be shared with SRM.
     private static string TypeModifiersToCecil(INamedTypeSymbol typeSymbol, SyntaxTokenList modifiers)
     {

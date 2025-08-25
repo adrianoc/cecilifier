@@ -6,5 +6,6 @@ namespace Cecilifier.Core.TypeSystem;
 public interface IMethodResolver
 {
     // Returns an expression? that represents the resolved method
-    string Resolve(IMethodSymbol method, IVisitorContext context);
+    string Resolve(IMethodSymbol method);
+    string ResolveDefaultConstructor(ITypeSymbol type, string derivedTypeVar);
 }

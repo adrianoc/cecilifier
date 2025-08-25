@@ -92,7 +92,7 @@ namespace Cecilifier.Core.AST
             });
         }
 
-        internal void DefaultCtorInjector(string typeDefVar, INamedTypeSymbol type, string ctorAccessibility, string baseCtor, bool isStatic, Action<IlContext> processInitializers)
+        private void DefaultCtorInjector(string typeDefVar, INamedTypeSymbol type, string ctorAccessibility, string baseCtor, bool isStatic, Action<IlContext> processInitializers)
         {
             DefaultCtorInjector(typeDefVar, type.Name, type.OriginalDefinition.ToDisplayString(), ctorAccessibility, baseCtor, isStatic, processInitializers);
         }
@@ -122,7 +122,7 @@ namespace Cecilifier.Core.AST
 
             AddCecilExpression($"{typeDefVar}.Methods.Add({ctorLocalVar});");
 
-            var ilContext = Context.ApiDriver.NewIlContext(Context, normalizedTypeName, ctorLocalVar);
+            var ilContext = Context.ApiDriver.NewIlContext(Context, $"ctor_{normalizedTypeName}", ctorLocalVar);
             processInitializers?.Invoke(ilContext);
             
             if (!isStatic)
@@ -235,13 +235,7 @@ namespace Cecilifier.Core.AST
             if (typeSymbol == null)
                 return Utils.ImportFromMainModule($"TypeHelpers.DefaultCtorFor({typeDefVar}.BaseType)");
 
-            var baseTypeVarDef = Context.TypeResolver.ResolveLocalVariableType(typeSymbol.BaseType);
-            if (baseTypeVarDef != null)
-            {
-                return $"new MethodReference(\".ctor\", {Context.TypeResolver.Bcl.System.Void} ,{baseTypeVarDef}) {{ HasThis = true }}";
-            }
-
-            return Utils.ImportFromMainModule($"TypeHelpers.DefaultCtorFor({typeDefVar}.BaseType)");
+            return Context.MethodResolver.ResolveDefaultConstructor(typeSymbol, typeDefVar);
         }
 
         private static string DefaultCtorAccessibilityFor(MemberDeclarationSyntax declaringClass, bool isStatic)
