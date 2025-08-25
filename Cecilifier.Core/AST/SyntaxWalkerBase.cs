@@ -2,17 +2,18 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Reflection.Emit;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.Variables;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Mono.Cecil;
 using CecilOpCodes = Mono.Cecil.Cil.OpCodes;
 
@@ -282,9 +283,15 @@ namespace Cecilifier.Core.AST
             }
         }
 
-        protected static void WriteCecilExpression(IVisitorContext context, string value)
+        protected static void WriteCecilExpression(IVisitorContext context, CecilifierInterpolatedStringHandler value)
+        {
+            WriteCecilExpression(context, value.Result);
+        }
+
+        private static void WriteCecilExpression(IVisitorContext context, string value)
         {
             context.WriteCecilExpression(value);
+            //TODO: DO we need this new line with the use of the ISH ?
             context.WriteNewLine();
         }
 

@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.CodeGeneration;
 using Cecilifier.Core.Misc;
@@ -18,6 +19,7 @@ namespace Cecilifier.Core
         {
             InlineArrayGenerator.Reset();
             UsageVisitor.ResetInstance();
+            
             using var stream = new StreamReader(content);
             var syntaxTree = CSharpSyntaxTree.ParseText(stream.ReadToEnd(), new CSharpParseOptions(CurrentLanguageVersion));
             var metadataReferences = options.References.Select(refPath => MetadataReference.CreateFromFile(refPath)).ToArray();
@@ -39,7 +41,8 @@ namespace Cecilifier.Core
 
             var semanticModel = comp.GetSemanticModel(syntaxTree);
             var context = TContext.CreateContext(options, semanticModel);
-            
+
+            CecilifierInterpolatedStringHandler.BaseIndentation = context.Indentation;
             var visitor = new CompilationUnitVisitor(context);
 
             syntaxTree.TryGetRoot(out var root);

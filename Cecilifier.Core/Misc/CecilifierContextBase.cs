@@ -5,7 +5,6 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Reflection.Emit;
 using Cecilifier.Core.ApiDriver;
-using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Naming;
@@ -20,7 +19,7 @@ namespace Cecilifier.Core.Misc
         private readonly IDictionary<string, string> flags = new Dictionary<string, string>();
         private readonly LinkedList<string> output = new();
 
-        private readonly string identation;
+        private readonly string indentation;
         private RoslynTypeSystem roslynTypeSystem;
 
         protected internal CecilifierContextBase(CecilifierOptions options, SemanticModel semanticModel, byte indentation)
@@ -31,11 +30,13 @@ namespace Cecilifier.Core.Misc
             roslynTypeSystem = new RoslynTypeSystem(this);
             Mappings = new List<Mapping>();
             Diagnostics = [];
-            identation = new String('\t', indentation);
+            this.indentation = new String('\t', indentation);
             
             Services.Add(new GenericInstanceMethodCacheService<int, string>());
         }
-
+        
+        public int Indentation => indentation.Length;
+        
         public IILGeneratorApiDriver ApiDriver { get; protected init; }
 
         public IApiDriverDefinitionsFactory ApiDefinitionsFactory { get; protected init; }
@@ -96,10 +97,17 @@ namespace Cecilifier.Core.Misc
             return SemanticModel.GetTypeInfo(expressionSyntax);
         }
 
+        public void WriteCecilExpression(CecilifierInterpolatedStringHandler expression)
+        {
+            WriteCecilExpression(expression.Result);
+        }
+
         public void WriteCecilExpression(string expression)
         {
-            CecilifiedLineNumber += expression.CountNewLines();
-            output.AddLast($"{identation}{expression}");
+            var lineCount = expression.CountNewLines();
+            CecilifiedLineNumber += lineCount;
+            
+            output.AddLast($"{indentation}{expression}");
         }
         
         public void WriteCecilExpressions(IEnumerable<string> expressions)
@@ -115,7 +123,7 @@ namespace Cecilifier.Core.Misc
         {
             if ((Options.Naming.Options & NamingOptions.AddCommentsToMemberDeclarations) == NamingOptions.AddCommentsToMemberDeclarations)
             {
-                output.AddLast($"{identation}//{comment}");
+                output.AddLast($"{indentation}//{comment}");
                 CecilifiedLineNumber += comment.CountNewLines();
                 WriteNewLine();
             }
@@ -139,7 +147,7 @@ namespace Cecilifier.Core.Misc
             var operandStr = operand == null ? string.Empty : $", {operand}";
             var toBeWritten = $"{ilVar}.Emit({opCode.ConstantName()}{operandStr});{(comment != null ? $" // {comment}" : string.Empty)}\n";
             
-            output.AddAfter(after, $"{identation}{toBeWritten}");
+            output.AddAfter(after, $"{indentation}{toBeWritten}");
             CecilifiedLineNumber += toBeWritten.CountNewLines();
         }
         

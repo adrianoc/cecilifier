@@ -23,6 +23,7 @@ public interface IVisitorContext
     IApiDriverDefinitionsFactory ApiDefinitionsFactory { get; }
     public IILGeneratorApiDriver ApiDriver { get; }
         
+    public int Indentation { get; }
     public string Output { get; }
     public IList<CecilifierDiagnostic> Diagnostics { get; }
 
@@ -51,6 +52,7 @@ public interface IVisitorContext
     //      among the ApiDrivers
     void EmitCilInstruction(string ilVar, OpCode opCode);
     void EmitCilInstruction<T>(string ilVar, OpCode opCode, T operand, string comment = null);
+    void WriteCecilExpression(CecilifierInterpolatedStringHandler expression);
     void WriteCecilExpression(string expression);
     void WriteCecilExpressions(IEnumerable<string> expressions);
     void WriteComment(string comment);

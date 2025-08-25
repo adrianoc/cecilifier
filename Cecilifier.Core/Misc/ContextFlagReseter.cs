@@ -1,5 +1,4 @@
 using System;
-using Cecilifier.Core.AST;
 
 namespace Cecilifier.Core.Misc
 {

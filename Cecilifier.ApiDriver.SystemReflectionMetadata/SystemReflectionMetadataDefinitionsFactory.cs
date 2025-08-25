@@ -31,15 +31,15 @@ internal class SystemReflectionMetadataDefinitionsFactory : IApiDriverDefinition
     {
         //TODO: We need to pass the handle of the 1st field/method defined in the module so we need to postpone the type generation after we have visited
         //      all types/members.
-        yield return $"""
+        yield return Format($"""
                       metadata.AddTypeDefinition(
-                        {attrs}, // TypeAttributes.Class | TypeAttributes.Public | TypeAttributes.AutoLayout | TypeAttributes.BeforeFieldInit
-                        metadata.GetOrAddString("{typeNamespace}"),
-                        metadata.GetOrAddString("{typeName}"),
-                        {resolvedBaseType},
-                        fieldList: MetadataTokens.FieldDefinitionHandle(1),
-                        methodList: MetadataTokens.MethodDefinitionHandle(1));
-                      """;
+                         {attrs}, // TypeAttributes.Class | TypeAttributes.Public | TypeAttributes.AutoLayout | TypeAttributes.BeforeFieldInit
+                         metadata.GetOrAddString("{typeNamespace}"),
+                         metadata.GetOrAddString("{typeName}"),
+                         {resolvedBaseType},
+                         fieldList: MetadataTokens.FieldDefinitionHandle(1),
+                         methodList: MetadataTokens.MethodDefinitionHandle(1));
+                      """);
     }
 
     public IEnumerable<string> Method(IVisitorContext context, string methodVar, string methodName, string methodModifiers, ITypeSymbol returnType, bool refReturn, IList<TypeParameterSyntax> typeParameters)
@@ -56,24 +56,28 @@ internal class SystemReflectionMetadataDefinitionsFactory : IApiDriverDefinition
     public IEnumerable<string> Constructor(IVisitorContext context, string ctorLocalVar, string typeName, bool isStatic, string methodAccessibility, string[] paramTypes, string? methodDefinitionPropertyValues = null)
     {
         var parameterlessCtorSignatureVar = context.Naming.SyntheticVariable("parameterlessCtorSignature", ElementKind.LocalVariable);
-        var expressions = new List<string>();
-        
-        expressions.Add($"var {parameterlessCtorSignatureVar} = new BlobBuilder();");
-        expressions.Add($$"""
-                          new BlobEncoder({{parameterlessCtorSignatureVar}})
-                                 .MethodSignature(isInstanceMethod: {{ (isStatic ? "false" : "true") }})
-                                 .Parameters(0, returnType => returnType.Void(), parameters => { });
-                          """);
-
         var ctorBlobIndexVar = context.Naming.SyntheticVariable("parameterlessCtorBlobIndex", ElementKind.LocalVariable);
-        expressions.Add($"var {ctorBlobIndexVar} = metadata.GetOrAddBlob({parameterlessCtorSignatureVar});");
-        expressions.Add($"""
-                var objectCtorMemberRef = metadata.AddMemberReference(
-                                                {context.TypeResolver.Resolve(context.RoslynTypeSystem.SystemObject)},
-                                                metadata.GetOrAddString(".ctor"),
-                                                {ctorBlobIndexVar});
-                """);
-        
-        return expressions;
+
+        var expressions = new List<CecilifierInterpolatedStringHandler>
+        {
+            $$"""
+             var {{parameterlessCtorSignatureVar}} = new BlobBuilder();
+             new BlobEncoder({{parameterlessCtorSignatureVar}})
+                    .MethodSignature(isInstanceMethod: {{(isStatic ? "false" : "true")}})
+                    .Parameters(0, returnType => returnType.Void(), parameters => { });
+             
+             var {{ctorBlobIndexVar}} = metadata.GetOrAddBlob({{parameterlessCtorSignatureVar}});
+                
+             var objectCtorMemberRef = metadata.AddMemberReference(
+                                                 {{context.TypeResolver.Resolve(context.RoslynTypeSystem.SystemObject)}},
+                                                 metadata.GetOrAddString(".ctor"),
+                                                 {{ctorBlobIndexVar}});
+             """
+        };
+
+        return expressions.Select(cish => cish.Result);
+
     }
+
+    static string Format(CecilifierInterpolatedStringHandler handler) => handler.Result;
 }

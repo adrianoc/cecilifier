@@ -9,7 +9,7 @@ namespace Cecilifier.ApiDriver.SystemReflectionMetadata;
 
 public class SystemReflectionMetadataContext : CecilifierContextBase, IVisitorContext
 {
-    private SystemReflectionMetadataContext(CecilifierOptions options, SemanticModel semanticModel, byte indentation = 3) : base(options, semanticModel, indentation)
+    private SystemReflectionMetadataContext(CecilifierOptions options, SemanticModel semanticModel, byte indentation = 2) : base(options, semanticModel, indentation)
     {
         ApiDriver = new SystemReflectionMetadataGeneratorDriver();
         ApiDefinitionsFactory = ApiDriver.CreateDefinitionsFactory();

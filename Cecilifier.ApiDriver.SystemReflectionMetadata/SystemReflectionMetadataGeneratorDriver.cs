@@ -49,12 +49,12 @@ public class SystemReflectionMetadataGeneratorDriver : IILGeneratorApiDriver
                                     BlobBuilder ilBuilder,
                                     MethodDefinitionHandle entryPointHandle)
                     {
-                        var peHeaderBuilder = new PEHeaderBuilder(
+                         var peHeaderBuilder = new PEHeaderBuilder(
                                                     imageCharacteristics: entryPointHandle.IsNil ? Characteristics.Dll : Characteristics.ExecutableImage,
                                                     machine: Machine.Unknown);
 
-                        BlobContentId s_contentId = new BlobContentId(Guid.NewGuid(), 0x04030201);
-                        var peBuilder = new ManagedPEBuilder(
+                         BlobContentId s_contentId = new BlobContentId(Guid.NewGuid(), 0x04030201);
+                         var peBuilder = new ManagedPEBuilder(
                                                 peHeaderBuilder,
                                                 new MetadataRootBuilder(metadataBuilder),
                                                 ilBuilder,
@@ -62,23 +62,23 @@ public class SystemReflectionMetadataGeneratorDriver : IILGeneratorApiDriver
                                                 flags: CorFlags.ILOnly,
                                                 deterministicIdProvider: content => s_contentId);
 
-                        var peBlob = new BlobBuilder();
-                        var contentId = peBuilder.Serialize(peBlob);
+                         var peBlob = new BlobBuilder();
+                         var contentId = peBuilder.Serialize(peBlob);
 
-                        peBlob.WriteContentTo(peStream);
+                         peBlob.WriteContentTo(peStream);
                     }
                     
                     static void GenerateIL(MetadataBuilder metadata, BlobBuilder ilBuilder, string mainTypeName)
                     {
-                        var moduleAndAssemblyName = metadata.GetOrAddString($"{mainTypeName}");
-                        var mainModuleHandle = metadata.AddModule(
+                         var moduleAndAssemblyName = metadata.GetOrAddString($"{mainTypeName}");
+                         var mainModuleHandle = metadata.AddModule(
                              0,
                              moduleAndAssemblyName,
                              metadata.GetOrAddGuid(Guid.NewGuid()),
                              default(GuidHandle),
                              default(GuidHandle));
                      
-                        var assemblyRef = metadata.AddAssembly(
+                         var assemblyRef = metadata.AddAssembly(
                              moduleAndAssemblyName,
                              version: new Version(1, 0, 0, 0),
                              culture: default(StringHandle),
@@ -86,15 +86,15 @@ public class SystemReflectionMetadataGeneratorDriver : IILGeneratorApiDriver
                              flags: 0,
                              hashAlgorithm: AssemblyHashAlgorithm.None);
                              
-                        var mscorlibAssemblyRef = metadata.AddAssemblyReference(
-                            name: metadata.GetOrAddString("mscorlib"),
-                            version: new Version(4, 0, 0, 0),
-                            culture: default(StringHandle),
-                            publicKeyOrToken: metadata.GetOrAddBlob(ImmutableArray.Create<byte>(0xB7, 0x7A, 0x5C, 0x56, 0x19, 0x34, 0xE0, 0x89)),
-                            flags: default(AssemblyFlags),
-                            hashValue: default(BlobHandle));            
+                         var mscorlibAssemblyRef = metadata.AddAssemblyReference(
+                             name: metadata.GetOrAddString("mscorlib"),
+                             version: new Version(4, 0, 0, 0),
+                             culture: default(StringHandle),
+                             publicKeyOrToken: metadata.GetOrAddBlob(ImmutableArray.Create<byte>(0xB7, 0x7A, 0x5C, 0x56, 0x19, 0x34, 0xE0, 0x89)),
+                             flags: default(AssemblyFlags),
+                             hashValue: default(BlobHandle));            
                      
-                        {{cecilifiedCode}}
+                         {{cecilifiedCode}}
                     }
                  }
                  """;
