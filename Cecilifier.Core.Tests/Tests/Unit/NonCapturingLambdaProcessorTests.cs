@@ -14,8 +14,8 @@ using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Tests.Unit
 {
-    [TestFixtureSource(typeof(GeneratorApiDriverProvider))]
-    public class NonCapturingLambdaProcessorTests(IILGeneratorApiDriver apiDriver) : MultipleILGeneratorApiDriverTest(apiDriver)
+    [TestFixture]
+    public class NonCapturingLambdaProcessorTests
     {
         [TestCase("class Foo { System.Func<string, int> Bar() => s => s.Length; }", TestName = "Simple Lambda Expression")]
         [TestCase("class Foo { System.Func<string, int> Bar() => (s) => s.Length; }", TestName = "Parenthesized Lambda Expression")]
@@ -151,7 +151,6 @@ namespace Cecilifier.Core.Tests.Tests.Unit
 			il_lambda_0_58_2.Emit(OpCodes.Ret);").SetName("Local Variable In Expression"),
             };
         }
-
 
         private CecilifierContextBase RunProcessorOn(string source)
         {

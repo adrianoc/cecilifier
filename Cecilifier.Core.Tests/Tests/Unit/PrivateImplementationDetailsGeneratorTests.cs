@@ -18,8 +18,8 @@ using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Tests.Unit;
 
-[TestFixtureSource(typeof(GeneratorApiDriverProvider))]
-public class PrivateImplementationDetailsGeneratorTests(IILGeneratorApiDriver apiDriver) : MultipleILGeneratorApiDriverTest(apiDriver)
+[TestFixture]
+public class PrivateImplementationDetailsGeneratorTests
 {
     [Test]
     public void PrivateImplementationType_IsCached()

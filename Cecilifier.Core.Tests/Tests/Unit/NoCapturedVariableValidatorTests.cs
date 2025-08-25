@@ -11,8 +11,8 @@ using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Tests.Unit;
 
-[TestFixtureSource(typeof(GeneratorApiDriverProvider))]
-public class NoCapturedVariableValidatorTests(IILGeneratorApiDriver apiDriver) : MultipleILGeneratorApiDriverTest(apiDriver)
+[TestFixture]
+public class NoCapturedVariableValidatorTests
 {
     [TestCase("class Foo { void M(Foo foo) { bool Capture() => foo == null; } }", TestName = "Parent Parameter")]
     [TestCase("class Foo { void M(Foo foo) { void Capture() => foo.M(null); } }", TestName = "Method Invocation on captured parameter")]
