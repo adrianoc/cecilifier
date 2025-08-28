@@ -149,12 +149,15 @@ namespace Cecilifier.Core.Extensions
             };
         }
 
-        public static void EnsureFieldExists(this IFieldSymbol fieldSymbol, [NotNull] IVisitorContext context, [NotNull] SimpleNameSyntax node)
+        public static void EnsureFieldExists(this IFieldSymbol fieldSymbol, IVisitorContext context, SimpleNameSyntax node)
         {
+            if (fieldSymbol.ContainingType?.TypeKind == TypeKind.Enum)
+                return; // Enum members can never be forward referenced.
+            
             var declaringSyntaxReference = fieldSymbol.DeclaringSyntaxReferences.SingleOrDefault();
             if (declaringSyntaxReference == null)
                 return;
-
+            
             var fieldDeclaration = declaringSyntaxReference.GetSyntax().Parent.Parent.EnsureNotNull<SyntaxNode,FieldDeclarationSyntax>();
             if (fieldDeclaration.Span.Start > node.Span.End)
             {
@@ -219,7 +222,7 @@ namespace Cecilifier.Core.Extensions
                 SpecialType.System_Char => OpCodes.Ldc_I4,
                 SpecialType.System_Boolean => OpCodes.Ldc_I4,
                 SpecialType.System_String => OpCodes.Ldstr,
-                SpecialType.None => OpCodes.Ldnull,
+                SpecialType.None => type.TypeKind == TypeKind.Enum ? OpCodes.Ldc_I4 : OpCodes.Ldnull,
                 
                 _ => throw new ArgumentException($"Literal type {type} not supported.", nameof(type))
             };
