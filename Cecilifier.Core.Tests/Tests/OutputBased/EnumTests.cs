@@ -1,10 +1,15 @@
+using Cecilifier.ApiDriver.MonoCecil;
+using Cecilifier.ApiDriver.SystemReflectionMetadata;
+using Cecilifier.Core.AST;
 using Cecilifier.Core.Tests.Framework;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.OutputBased;
 
-[TestFixture]
-public class EnumTests : OutputBasedTestBase
+[TestFixture(typeof(MonoCecilContext))]
+[TestFixture(typeof(SystemReflectionMetadataContext))]
+[EnableForContext<SystemReflectionMetadataContext>(IgnoreReason = "Not implemented yet")]
+public class EnumTests<TContext> : OutputBasedTestBase<TContext> where TContext : IVisitorContext
 {
     [Test]
     public void TestEnum()
