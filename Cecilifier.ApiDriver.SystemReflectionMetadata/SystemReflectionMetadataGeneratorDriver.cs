@@ -1,11 +1,8 @@
-﻿using System.Reflection;
-using System.Reflection.Emit;
+﻿using System.Reflection.Emit;
 using Cecilifier.Core;
 using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
-using Cecilifier.Core.Naming;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Cecilifier.ApiDriver.SystemReflectionMetadata;
 
@@ -137,13 +134,4 @@ public class SystemReflectionMetadataGeneratorDriver : IILGeneratorApiDriver
     {
         EmitCilInstruction<string>(context, il, opCode, null);
     }
-}
-
-public class SystemReflectionMetadataIlContext : IlContext
-{
-    public SystemReflectionMetadataIlContext(string variableName) : base(variableName)
-    {
-    }
-    
-    public int Value { get; set; }
 }
