@@ -14,7 +14,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : IApiDriverDefinition
         //TODO: Return actual attributes ;) 
         return "TypeAttributes.Class | TypeAttributes.Public | TypeAttributes.AutoLayout | TypeAttributes.BeforeFieldInit";
     }
-
+    
     public IEnumerable<string> Type(
         IVisitorContext context, 
         string typeVar, 
@@ -32,13 +32,22 @@ internal class SystemReflectionMetadataDefinitionsFactory : IApiDriverDefinition
         //TODO: We need to pass the handle of the 1st field/method defined in the module so we need to postpone the type generation after we have visited
         //      all types/members.
         yield return Format($"""
+                      // Add a type reference for the new type. Types/Member references to the new type uses this.
+                      var {typeVar} = metadata.AddTypeReference(
+                                                  mainModuleHandle, 
+                                                  metadata.GetOrAddString("{typeNamespace}"), 
+                                                  metadata.GetOrAddString("{typeName}"));
+                      
+                      """);
+        
+        yield return Format($"""
                       metadata.AddTypeDefinition(
-                         {attrs}, // TypeAttributes.Class | TypeAttributes.Public | TypeAttributes.AutoLayout | TypeAttributes.BeforeFieldInit
-                         metadata.GetOrAddString("{typeNamespace}"),
-                         metadata.GetOrAddString("{typeName}"),
-                         {resolvedBaseType},
-                         fieldList: MetadataTokens.FieldDefinitionHandle(1),
-                         methodList: MetadataTokens.MethodDefinitionHandle(1));
+                                     {attrs}, // TypeAttributes.Class | TypeAttributes.Public | TypeAttributes.AutoLayout | TypeAttributes.BeforeFieldInit
+                                     metadata.GetOrAddString("{typeNamespace}"),
+                                     metadata.GetOrAddString("{typeName}"),
+                                     {resolvedBaseType},
+                                     fieldList: MetadataTokens.FieldDefinitionHandle(1),
+                                     methodList: MetadataTokens.MethodDefinitionHandle(1));
                       """);
     }
 
