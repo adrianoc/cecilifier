@@ -1,5 +1,6 @@
 using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.AST;
+using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
@@ -7,12 +8,12 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Cecilifier.ApiDriver.SystemReflectionMetadata;
 
-internal class SystemReflectionMetadataDefinitionsFactory : IApiDriverDefinitionsFactory
+internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBase, IApiDriverDefinitionsFactory
 {
     public string MappedTypeModifiersFor(INamedTypeSymbol type, SyntaxTokenList modifiers)
     {
-        //TODO: Return actual attributes ;) 
-        return "TypeAttributes.Class | TypeAttributes.Public | TypeAttributes.AutoLayout | TypeAttributes.BeforeFieldInit";
+        return RoslynToApiDriverModifiers(type, modifiers); 
+        //return "TypeAttributes.Class | TypeAttributes.Public | TypeAttributes.AutoLayout | TypeAttributes.BeforeFieldInit";
     }
     
     public IEnumerable<string> Type(
@@ -62,7 +63,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : IApiDriverDefinition
         throw new NotImplementedException();
     }
 
-    public IEnumerable<string> Constructor(IVisitorContext context, string ctorLocalVar, string typeName, bool isStatic, string methodAccessibility, string[] paramTypes, string? methodDefinitionPropertyValues = null)
+    public IEnumerable<string> Constructor(IVisitorContext context, MemberDefinitionContext memberDefinitionContext, string typeName, bool isStatic, string methodAccessibility, string[] paramTypes, string? methodDefinitionPropertyValues = null)
     {
         var parameterlessCtorSignatureVar = context.Naming.SyntheticVariable("parameterlessCtorSignature", ElementKind.LocalVariable);
         var ctorBlobIndexVar = context.Naming.SyntheticVariable("parameterlessCtorBlobIndex", ElementKind.LocalVariable);

@@ -40,5 +40,7 @@ public interface IApiDriverDefinitionsFactory
         Func<IVisitorContext, string> returnTypeResolver,
         out MethodDefinitionVariable methodDefinitionVariable);
 
-    public IEnumerable<string> Constructor(IVisitorContext context, string ctorLocalVar, string typeName, bool isStatic, string methodAccessibility, string[] paramTypes, string? methodDefinitionPropertyValues = null);
+    public IEnumerable<string> Constructor(IVisitorContext context, MemberDefinitionContext memberDefinitionContext, string typeName, bool isStatic, string methodAccessibility, string[] paramTypes, string? methodDefinitionPropertyValues = null);
 }
+
+public record struct MemberDefinitionContext(string MemberDefinitionVariableName, string ParentDefinitionVariableName);

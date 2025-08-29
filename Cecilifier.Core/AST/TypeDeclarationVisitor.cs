@@ -270,13 +270,13 @@ namespace Cecilifier.Core.AST
 
         private readonly IVisitorContext context;
 
-        private readonly string localVarName;
+        private readonly string declaringTypeVarName;
         private ConstructorKind foundConstructors;
         private bool hasStaticInitialization;
 
-        public DefaultCtorVisitor(IVisitorContext context, string localVarName)
+        public DefaultCtorVisitor(IVisitorContext context, string declaringTypeVarName)
         {
-            this.localVarName = localVarName;
+            this.declaringTypeVarName = declaringTypeVarName;
             this.context = context;
         }
 
@@ -297,12 +297,12 @@ namespace Cecilifier.Core.AST
             
             if ((foundConstructors & ConstructorKind.Instance) != ConstructorKind.Instance)
             {
-                new ConstructorDeclarationVisitor(context).DefaultCtorInjector(localVarName, node, false);
+                new ConstructorDeclarationVisitor(context).DefaultCtorInjector(declaringTypeVarName, node, false);
             }
 
             if ((foundConstructors & ConstructorKind.Static) != ConstructorKind.Static && hasStaticInitialization)
             {
-                new ConstructorDeclarationVisitor(context).DefaultCtorInjector(localVarName, node, true);
+                new ConstructorDeclarationVisitor(context).DefaultCtorInjector(declaringTypeVarName, node, true);
             }
         }
 

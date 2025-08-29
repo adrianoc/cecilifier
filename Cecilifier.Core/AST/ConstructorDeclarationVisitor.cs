@@ -116,11 +116,10 @@ namespace Cecilifier.Core.AST
 
             var ctorLocalVar = AddOrUpdateParameterlessCtorDefinition(
                 typeName,
+                typeDefVar,
                 ctorAccessibility,
                 isStatic,
                 Context.Naming.SyntheticVariable(normalizedTypeName, isStatic ? ElementKind.StaticConstructor : ElementKind.Constructor));
-
-            AddCecilExpression($"{typeDefVar}.Methods.Add({ctorLocalVar});");
 
             var ilContext = Context.ApiDriver.NewIlContext(Context, $"ctor_{normalizedTypeName}", ctorLocalVar);
             processInitializers?.Invoke(ilContext);
@@ -135,7 +134,7 @@ namespace Cecilifier.Core.AST
             Context.ApiDriver.EmitCilInstruction(Context, ilContext, OpCodes.Ret);
         }
 
-        private string AddOrUpdateParameterlessCtorDefinition(string typeName, string ctorAccessibility, bool isStatic, string ctorLocalVar)
+        private string AddOrUpdateParameterlessCtorDefinition(string typeName, string typeDefVar, string ctorAccessibility, bool isStatic, string ctorLocalVar)
         {
             var found = Context.DefinitionVariables.GetMethodVariable(new MethodDefinitionVariable(typeName, Utils.ConstructorMethodName(isStatic), [], 0));
             if (found.IsValid)
@@ -147,7 +146,7 @@ namespace Cecilifier.Core.AST
                 return ctorLocalVar;
             }
 
-            var exps = Context.ApiDefinitionsFactory.Constructor(Context, ctorLocalVar, typeName, isStatic, ctorAccessibility, []);
+            var exps = Context.ApiDefinitionsFactory.Constructor(Context, new MemberDefinitionContext(ctorLocalVar, typeDefVar), typeName, isStatic, ctorAccessibility, []);
             AddCecilExpressions(Context, exps);
             
             return ctorLocalVar;
