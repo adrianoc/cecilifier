@@ -65,10 +65,10 @@ internal class PropertyGenerator
                                             out var methodDefinitionVariable);
 
         var methodVariableScope = Context.DefinitionVariables.WithCurrentMethod(methodDefinitionVariable);
-        Context.WriteCecilExpressions(exps);
+        Context.Generate(exps);
         AddToOverridenMethodsIfAppropriated(accessorMethodVar, overridenMethod);
 
-        Context.WriteCecilExpressions([
+        Context.Generate([
                 $"{property.DeclaringTypeVariable}.Methods.Add({accessorMethodVar});",
                 $"{accessorMethodVar}.Body = new MethodBody({accessorMethodVar});",
                 $"{property.Variable}.SetMethod = {accessorMethodVar};" ]);
@@ -104,13 +104,13 @@ internal class PropertyGenerator
                                         _ => propertyResolvedType,
                                         out var methodDefinitionVariable);
         
-        Context.WriteCecilExpressions(exps);
+        Context.Generate(exps);
         
         var scopedVariable = Context.DefinitionVariables.WithCurrentMethod(methodDefinitionVariable);
         
         AddToOverridenMethodsIfAppropriated(accessorMethodVar, overridenMethod);
         
-        Context.WriteCecilExpressions([
+        Context.Generate([
             hasCovariantReturn ? 
                 $"{accessorMethodVar}.CustomAttributes.Add(new CustomAttribute(assembly.MainModule.Import(typeof(System.Runtime.CompilerServices.PreserveBaseOverridesAttribute).GetConstructor(BindingFlags.Public | BindingFlags.Instance, null, new Type[0], null))));" 
                 : String.Empty,
@@ -141,7 +141,7 @@ internal class PropertyGenerator
         if (string.IsNullOrWhiteSpace(overridenMethod))
             return;
         
-        Context.WriteCecilExpression($"{accessorMethodVar}.Overrides.Add({overridenMethod});");
+        Context.Generate($"{accessorMethodVar}.Overrides.Add({overridenMethod});");
         Context.WriteNewLine();
     }
 
@@ -161,7 +161,7 @@ internal class PropertyGenerator
             property.ResolvedType,
             property.BackingFieldModifiers);
         
-        Context.WriteCecilExpressions(backingFieldExps);
+        Context.Generate(backingFieldExps);
         Context.AddCompilerGeneratedAttributeTo(_backingFieldVar);
     }
     
@@ -170,7 +170,7 @@ internal class PropertyGenerator
         var genTypeVar = Context.Naming.SyntheticVariable(property.Name, ElementKind.GenericInstance);
         var fieldRefVar = Context.Naming.MemberReference("fld_");
         
-        Context.WriteCecilExpressions(
+        Context.Generate(
             [
                 $"var {genTypeVar} = {property.DeclaringTypeVariable}.MakeGenericInstanceType({property.DeclaringTypeVariable}.GenericParameters.ToArray());",
                 $"var {fieldRefVar} = new FieldReference({_backingFieldVar}.Name, {_backingFieldVar}.FieldType, {genTypeVar});"

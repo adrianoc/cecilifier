@@ -504,7 +504,7 @@ namespace Cecilifier.Core.Misc
                 context.EmitCilInstruction(ilVar, OpCodes.Dup);
 
                 var cacheAlreadyInitializedTargetVarName = context.Naming.Label("cacheHit");
-                context.WriteCecilExpression($"var {cacheAlreadyInitializedTargetVarName} = {ilVar}.Create(OpCodes.Nop);");
+                context.Generate($"var {cacheAlreadyInitializedTargetVarName} = {ilVar}.Create(OpCodes.Nop);");
                 context.WriteNewLine();
                 context.EmitCilInstruction(ilVar, OpCodes.Brtrue, cacheAlreadyInitializedTargetVarName);
                 context.EmitCilInstruction(ilVar, OpCodes.Pop);
@@ -514,7 +514,7 @@ namespace Cecilifier.Core.Misc
                 context.EmitCilInstruction(ilVar, OpCodes.Newobj, delegateCtor.MethodResolverExpression(context));
                 context.EmitCilInstruction(ilVar, OpCodes.Dup);
                 context.EmitCilInstruction(ilVar, OpCodes.Stsfld, staticDelegateCacheContext.CacheBackingField);
-                context.WriteCecilExpression($"{ilVar}.Append({cacheAlreadyInitializedTargetVarName});");
+                context.Generate($"{ilVar}.Append({cacheAlreadyInitializedTargetVarName});");
                 context.WriteNewLine();
             }
             else
@@ -588,11 +588,11 @@ namespace Cecilifier.Core.Misc
             {
                 var methodVar = context.Naming.SyntheticVariable("getItem", ElementKind.Method);
                 var declaringType = context.TypeResolver.Resolve(context.RoslynTypeSystem.SystemSpan).MakeGenericInstanceType(typeArgument);
-                context.WriteCecilExpression($$"""var {{methodVar}} = new MethodReference("get_Item", {{context.TypeResolver.Bcl.System.Void}}, {{declaringType}}) { HasThis = true, ExplicitThis = false };""");
+                context.Generate($$"""var {{methodVar}} = new MethodReference("get_Item", {{context.TypeResolver.Bcl.System.Void}}, {{declaringType}}) { HasThis = true, ExplicitThis = false };""");
                 context.WriteNewLine();
-                context.WriteCecilExpression($"{methodVar}.Parameters.Add(new ParameterDefinition({context.TypeResolver.Bcl.System.Int32}));");
+                context.Generate($"{methodVar}.Parameters.Add(new ParameterDefinition({context.TypeResolver.Bcl.System.Int32}));");
                 context.WriteNewLine();
-                context.WriteCecilExpression($"""{methodVar}.ReturnType = ((GenericInstanceType) {methodVar}.DeclaringType).ElementType.GenericParameters[0].MakeByReferenceType();""");
+                context.Generate($"""{methodVar}.ReturnType = ((GenericInstanceType) {methodVar}.DeclaringType).ElementType.GenericParameters[0].MakeByReferenceType();""");
                 context.WriteNewLine();
 
                 return methodVar;

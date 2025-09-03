@@ -39,7 +39,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
 
         ((SystemReflectionMetadataContext) context).DelayedDefinitionsManager.RegisterTypeDefinition(typeVar, $"{typeNamespace}.{typeName}", (ctx, typeRecord) =>
         {
-            ctx.WriteCecilExpression(Format($"""
+            ctx.Generate(Format($"""
                                                        metadata.AddTypeDefinition(
                                                                     {attrs},
                                                                     metadata.GetOrAddString("{typeNamespace}"),
@@ -86,7 +86,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         ((SystemReflectionMetadataContext) context).DelayedDefinitionsManager.RegisterMethodDefinition( memberDefinitionContext.ParentDefinitionVariableName, (ctx, methodRecord) =>
         {
             var ctorDefVar = ctx.Naming.SyntheticVariable("ctor", ElementKind.LocalVariable);
-            ctx.WriteCecilExpression($"""
+            ctx.Generate($"""
                                    var {ctorDefVar} = metadata.AddMethodDefinition(
                                                              MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName,
                                                              MethodImplAttributes.IL | MethodImplAttributes.Managed,

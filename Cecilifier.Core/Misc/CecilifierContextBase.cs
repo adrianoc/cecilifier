@@ -5,6 +5,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Reflection.Emit;
 using Cecilifier.Core.ApiDriver;
+using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Naming;
@@ -14,7 +15,7 @@ using Cecilifier.Core.Variables;
 
 namespace Cecilifier.Core.Misc
 {
-    public abstract class CecilifierContextBase
+    public abstract class CecilifierContextBase : IVisitorContext
     {
         private readonly IDictionary<string, string> flags = new Dictionary<string, string>();
         private readonly LinkedList<string> output = new();
@@ -74,11 +75,13 @@ namespace Cecilifier.Core.Misc
             var lines = message.Split('\n');
             foreach (var line in lines)
             {
-                WriteCecilExpression($"#{diagnosticKindString} {line}");
+                Generate($"#{diagnosticKindString} {line}");
                 WriteNewLine();
             }
         }
-        
+
+        public abstract void OnFinishedTypeDeclaration();
+
         public IMethodSymbol GetDeclaredSymbol(BaseMethodDeclarationSyntax methodDeclaration)
         {
             return (IMethodSymbol) SemanticModel.GetDeclaredSymbol(methodDeclaration);
@@ -99,12 +102,12 @@ namespace Cecilifier.Core.Misc
             return SemanticModel.GetTypeInfo(expressionSyntax);
         }
 
-        public void WriteCecilExpression(CecilifierInterpolatedStringHandler expression)
+        public void Generate(CecilifierInterpolatedStringHandler expression)
         {
-            WriteCecilExpression(expression.Result);
+            Generate(expression.Result);
         }
 
-        public void WriteCecilExpression(string expression)
+        public void Generate(string expression)
         {
             var lineCount = expression.CountNewLines();
             CecilifiedLineNumber += lineCount;
@@ -112,11 +115,11 @@ namespace Cecilifier.Core.Misc
             output.AddLast($"{indentation}{expression}");
         }
         
-        public void WriteCecilExpressions(IEnumerable<string> expressions)
+        public void Generate(IEnumerable<string> expressions)
         {
             foreach (var expression in expressions.Where(exp => !string.IsNullOrWhiteSpace(exp)))
             {
-                WriteCecilExpression(expression);
+                Generate(expression);
                 WriteNewLine();
             }
         }
@@ -243,7 +246,7 @@ namespace Cecilifier.Core.Misc
         public void EmitCilInstruction<T>(string ilVar, OpCode opCode, T operand, string comment = null)
         {
             var operandStr = operand == null ? string.Empty : $", {operand}";
-            WriteCecilExpression($"{ilVar}.Emit({opCode.ConstantName()}{operandStr});{(comment != null ? $" // {comment}" : string.Empty)}");
+            Generate($"{ilVar}.Emit({opCode.ConstantName()}{operandStr});{(comment != null ? $" // {comment}" : string.Empty)}");
             WriteNewLine();
         }
 

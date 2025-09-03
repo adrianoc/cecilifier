@@ -314,7 +314,7 @@ namespace Cecilifier.Core.AST
         {
             var propDefVar = Context.Naming.PropertyDeclaration(propertyDeclarationSyntax);
             var exps = CecilDefinitionsFactory.PropertyDefinition(propDefVar, propName, propertyType);
-            Context.WriteCecilExpressions(exps);
+            Context.Generate(exps);
             
             return propDefVar;
         }

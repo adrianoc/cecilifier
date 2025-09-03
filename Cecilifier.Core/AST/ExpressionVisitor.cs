@@ -131,7 +131,7 @@ namespace Cecilifier.Core.AST
                     ctx.EmitCilInstruction(ilVar, OpCodes.Call, lhsType.GetMembers("get_HasValue").OfType<IMethodSymbol>().Single().MethodResolverExpression(ctx));
                     
                     var loadLeftValueInst = ctx.Naming.Instruction("loadLeftValueTarget");
-                    ctx.WriteCecilExpression($"var {loadLeftValueInst} = {ilVar}.Create({OpCodes.Ldloc_S.ConstantName()}, {evaluatedLeftVar.VariableName});");
+                    ctx.Generate($"var {loadLeftValueInst} = {ilVar}.Create({OpCodes.Ldloc_S.ConstantName()}, {evaluatedLeftVar.VariableName});");
                     ctx.WriteNewLine();
 
                     ctx.EmitCilInstruction(ilVar, OpCodes.Brtrue_S, loadLeftValueInst);
@@ -139,14 +139,14 @@ namespace Cecilifier.Core.AST
                     binaryExpression.Right.Accept(expressionVisitor);
                     binaryExpression.Right.InjectRequiredConversions(ctx, ilVar);
                     ctx.EmitCilInstruction(ilVar, OpCodes.Ret);
-                    ctx.WriteCecilExpression($"{ilVar}.Body.Instructions.Add({loadLeftValueInst});");
+                    ctx.Generate($"{ilVar}.Body.Instructions.Add({loadLeftValueInst});");
                     ctx.WriteNewLine();
                     // method handler will add the required ret
                 }
                 else
                 {
                     var returnInstruction = ctx.Naming.Instruction("return");
-                    ctx.WriteCecilExpression($"var {returnInstruction} = {ilVar}.Create({OpCodes.Nop.ConstantName()});");
+                    ctx.Generate($"var {returnInstruction} = {ilVar}.Create({OpCodes.Nop.ConstantName()});");
                     ctx.WriteNewLine();
 
                     binaryExpression.Left.Accept(expressionVisitor);
@@ -156,7 +156,7 @@ namespace Cecilifier.Core.AST
                     ctx.EmitCilInstruction(ilVar, OpCodes.Pop); // removes evaluated LEFT expression from stack
                     binaryExpression.Right.Accept(expressionVisitor);
                     binaryExpression.Right.InjectRequiredConversions(ctx, ilVar);
-                    ctx.WriteCecilExpression($"{ilVar}.Body.Instructions.Add({returnInstruction});");
+                    ctx.Generate($"{ilVar}.Body.Instructions.Add({returnInstruction});");
                     ctx.WriteNewLine();
                 }
             });
@@ -1027,7 +1027,7 @@ namespace Cecilifier.Core.AST
                                                             "CreateInstance", 
                                                             [Context.TypeResolver.Resolve(instantiatedType)], 
                                                             out var closedCreateInstanceMethod);
-            Context.WriteCecilExpressions(exps);
+            Context.Generate(exps);
             Context.EmitCilInstruction(ilVar,  OpCodes.Call, closedCreateInstanceMethod);
             return true;
         }

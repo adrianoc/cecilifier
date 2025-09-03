@@ -43,8 +43,8 @@ public class PrimaryConstructorGenerator
         var paramSymbol = context.SemanticModel.GetDeclaredSymbol(parameter).EnsureNotNull<ISymbol, IParameterSymbol>();
         var exps = CecilDefinitionsFactory.PropertyDefinition(propDefVar, parameter.Identifier.Text, context.TypeResolver.Resolve(paramSymbol.Type));
         
-        context.WriteCecilExpressions(exps);
-        context.WriteCecilExpression($"{typeDefinitionVariable}.Properties.Add({propDefVar});");
+        context.Generate(exps);
+        context.Generate($"{typeDefinitionVariable}.Properties.Add({propDefVar});");
         context.WriteNewLine();
         context.WriteNewLine();
 
@@ -86,7 +86,7 @@ public class PrimaryConstructorGenerator
             using (propertyGenerator.AddGetterMethodDeclaration(in propertyData, getMethodVar, false, $"get_{propertyData.Name}", null))
             {
                 var ilVar = context.Naming.ILProcessor($"get{propertyData.Name}");
-                context.WriteCecilExpressions([$"var {ilVar} = {getMethodVar}.Body.GetILProcessor();"]);
+                context.Generate([$"var {ilVar} = {getMethodVar}.Body.GetILProcessor();"]);
                 
                 propertyGenerator.AddAutoGetterMethodImplementation(in propertyData, ilVar, getMethodVar);
             }
@@ -122,7 +122,7 @@ public class PrimaryConstructorGenerator
                                         "MethodAttributes.Public", 
                                         typeDeclaration.ParameterList?.Parameters.Select(p => p.Type?.ToString()).ToArray() ?? []);
 
-        context.WriteCecilExpressions(
+        context.Generate(
         [
             ctorExp,
             $"{recordTypeDefinitionVariable}.Methods.Add({ctorVar});"
@@ -133,7 +133,7 @@ public class PrimaryConstructorGenerator
         
         var ctorIlVar = context.Naming.ILProcessor($"ctor_{typeDeclaration.Identifier.ValueText}");
         var ctorExps = CecilDefinitionsFactory.MethodBody(context.Naming, $"ctor_{typeDeclaration.Identifier.ValueText}", ctorVar, ctorIlVar, [], []);
-        context.WriteCecilExpressions(ctorExps);
+        context.Generate(ctorExps);
 
         var resolvedType = context.TypeResolver.Resolve(typeSymbol);
         Func<string, string> fieldRefResolver = backingFieldVar => typeDeclaration.TypeParameterList?.Parameters.Count > 0 
@@ -147,7 +147,7 @@ public class PrimaryConstructorGenerator
             var paramVar = context.Naming.Parameter(parameter);
             var parameterType = context.TypeResolver.Resolve(ModelExtensions.GetTypeInfo(context.SemanticModel, parameter.Type!).Type);
             var paramExps = CecilDefinitionsFactory.Parameter(parameter.Identifier.ValueText, RefKind.None, null, ctorVar, paramVar, parameterType, Constants.ParameterAttributes.None, ("", false));
-            context.WriteCecilExpressions(paramExps);
+            context.Generate(paramExps);
 
             if (!uniqueParameters.Contains(parameter))
                 continue;

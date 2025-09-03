@@ -21,5 +21,5 @@ public class MonoCecilContext : CecilifierContextBase, IVisitorContext
     }
 
     public static IVisitorContext CreateContext(CecilifierOptions options, SemanticModel semanticModel) => new MonoCecilContext(options, semanticModel);
-    public void OnFinishedTypeDeclaration() { }
+    public override void OnFinishedTypeDeclaration() { }
 }

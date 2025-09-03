@@ -57,10 +57,10 @@ namespace Cecilifier.Core.AST
             ilVar = context.Naming.ILProcessor("topLevelMain");
             var mainBodyExps = CecilDefinitionsFactory.MethodBody(context.Naming, "topLevelMain", methodVar, ilVar, [], []);
 
-            context.WriteCecilExpressions(typeExps);
-            context.WriteCecilExpressions(methodExps);
-            context.WriteCecilExpressions(mainParametersExps);
-            context.WriteCecilExpressions(mainBodyExps);
+            context.Generate(typeExps);
+            context.Generate(methodExps);
+            context.Generate(mainParametersExps);
+            context.Generate(mainBodyExps);
             WriteCecilExpression($"{methodVar}.Body.InitLocals = true;");
             WriteCecilExpression($"{typeVar}.Methods.Add({methodVar});");
 
@@ -94,7 +94,7 @@ namespace Cecilifier.Core.AST
             }
 
             if (!node.Statement.IsKind(SyntaxKind.ReturnStatement))
-                context.WriteCecilExpression($"{methodVar}.Body.Instructions.Add({ilVar}.Create(OpCodes.Ret));");
+                context.Generate($"{methodVar}.Body.Instructions.Add({ilVar}.Create(OpCodes.Ret));");
 
             return true;
 
@@ -108,7 +108,7 @@ namespace Cecilifier.Core.AST
 
         private void WriteCecilExpression(string expression)
         {
-            context.WriteCecilExpression(expression);
+            context.Generate(expression);
             context.WriteNewLine();
         }
 

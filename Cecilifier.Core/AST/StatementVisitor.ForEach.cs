@@ -144,7 +144,7 @@ namespace Cecilifier.Core.AST
             Context.EmitCilInstruction(_ilVar, OpCodes.Br, forEachLoopBegin);
             Context.WriteNewLine();
             Context.WriteComment("end of foreach loop");
-            Context.WriteCecilExpression($"{_ilVar}.Append({endOfLoopLabelVar});");
+            Context.Generate($"{_ilVar}.Append({endOfLoopLabelVar});");
             Context.WriteNewLine();
         }
 

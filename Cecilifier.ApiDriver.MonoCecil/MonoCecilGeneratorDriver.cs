@@ -63,7 +63,7 @@ public class SnippetRunner
     public void EmitCilInstruction<T>(IVisitorContext context, IlContext il, OpCode opCode, T? operand, string? comment = null)
     {
         var operandStr = operand == null ? string.Empty : $", {operand}";
-        context.WriteCecilExpression($"{il.VariableName}.Emit({opCode.ConstantName()}{operandStr});{(comment != null ? $" // {comment}" : string.Empty)}");
+        context.Generate($"{il.VariableName}.Emit({opCode.ConstantName()}{operandStr});{(comment != null ? $" // {comment}" : string.Empty)}");
         context.WriteNewLine();
     }
     
@@ -97,7 +97,7 @@ public class MonoCecilDeferredIlContext : IlContext
             if (!_emitted)
             {
                 _emitted = true;
-                _context.WriteCecilExpression($"var {base.VariableName} = {RelatedMethodVariable}.Body.GetILProcessor();");
+                _context.Generate($"var {base.VariableName} = {RelatedMethodVariable}.Body.GetILProcessor();");
                 _context.WriteNewLine();
             }
             

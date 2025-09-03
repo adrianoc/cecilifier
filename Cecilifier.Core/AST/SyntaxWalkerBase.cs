@@ -46,7 +46,7 @@ namespace Cecilifier.Core.AST
 
         protected void AddCecilExpression(string format, params object[] args)
         {
-            Context.WriteCecilExpression(string.Format(format, args));
+            Context.Generate(string.Format(format, args));
             Context.WriteNewLine();
         }
 
@@ -290,7 +290,7 @@ namespace Cecilifier.Core.AST
 
         private static void WriteCecilExpression(IVisitorContext context, string value)
         {
-            context.WriteCecilExpression(value);
+            context.Generate(value);
             //TODO: DO we need this new line with the use of the ISH ?
             context.WriteNewLine();
         }

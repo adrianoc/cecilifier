@@ -45,10 +45,10 @@ internal class InlineArrayGenerator
                 typeParameterVar, 
                 "FieldAttributes.Private");
             
-            context.WriteCecilExpressions(typeExps);
+            context.Generate(typeExps);
             
             //[InlineArray(2)]
-            context.WriteCecilExpressions(
+            context.Generate(
                 CecilDefinitionsFactory.Attribute(
                     "inlineArray", 
                     typeVar, 
@@ -56,9 +56,9 @@ internal class InlineArrayGenerator
                     ConstructorFor<InlineArrayAttribute>(context, typeof(int)),
                     (context.TypeResolver.Bcl.System.Int32, elementCount.ToString())));
             
-            context.WriteCecilExpressions(fieldExps);
+            context.Generate(fieldExps);
             context.AddCompilerGeneratedAttributeTo(fieldVar);
-            context.WriteCecilExpression($"assembly.MainModule.Types.Add({typeVar});\n");
+            context.Generate($"assembly.MainModule.Types.Add({typeVar});\n");
         }
         
         return typeVar;

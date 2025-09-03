@@ -19,11 +19,11 @@ namespace Cecilifier.Core.Misc
                 return backingFieldVar;
 
             var genTypeVar = context.Naming.GenericInstance(memberSymbol);
-            context.WriteCecilExpression($"var {genTypeVar} = {memberDeclaringTypeVar}.MakeGenericInstanceType({memberDeclaringTypeVar}.GenericParameters.ToArray());");
+            context.Generate($"var {genTypeVar} = {memberDeclaringTypeVar}.MakeGenericInstanceType({memberDeclaringTypeVar}.GenericParameters.ToArray());");
             context.WriteNewLine();
 
             var fieldRefVar = context.Naming.MemberReference("fld_");
-            context.WriteCecilExpression($"var {fieldRefVar} = new FieldReference({backingFieldVar}.Name, {backingFieldVar}.FieldType, {genTypeVar});");
+            context.Generate($"var {fieldRefVar} = new FieldReference({backingFieldVar}.Name, {backingFieldVar}.FieldType, {genTypeVar});");
             context.WriteNewLine();
 
             return fieldRefVar;

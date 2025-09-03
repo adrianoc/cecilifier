@@ -148,7 +148,7 @@ namespace Cecilifier.Core.Extensions
         public static string MakeGenericInstanceMethod(this string methodReferenceVariable, IVisitorContext context, string methodName, IReadOnlyList<string> resolvedTypeArguments)
         {
             var exps = methodReferenceVariable.MakeGenericInstanceMethod(context, methodName, resolvedTypeArguments, out var genericInstanceVarName);
-            context.WriteCecilExpressions(exps);
+            context.Generate(exps);
 
             return genericInstanceVarName;
         }
@@ -159,7 +159,7 @@ namespace Cecilifier.Core.Extensions
                 return methodReferenceVariable;
             
             var exps = methodReferenceVariable.MakeGenericInstanceMethod(context, method.Name, method.TypeArguments.Select(t => context.TypeResolver.Resolve(t)).ToList(), out var genericInstanceVarName);
-            context.WriteCecilExpressions(exps);
+            context.Generate(exps);
 
             return genericInstanceVarName;
         }

@@ -27,7 +27,7 @@ public class MonoCecilMethodResolver(MonoCecilContext context) : IMethodResolver
 
             var declaringTypeResolveExp = context.TypeResolver.Resolve(method.ContainingType);
             var exps = found.VariableName.CloneMethodReferenceOverriding(context, new() { ["DeclaringType"] = declaringTypeResolveExp }, method, out var variable);
-            context.WriteCecilExpressions(exps);
+            context.Generate(exps);
             return variable.MakeGenericInstanceMethod(context, method);
         }
 
@@ -46,7 +46,7 @@ public class MonoCecilMethodResolver(MonoCecilContext context) : IMethodResolver
             var (referencedMethodTypeParameters, returnReferencesTypeParameter) = CollectReferencedMethodTypeParameters(method);
             var returnType = !returnReferencesTypeParameter ? context.TypeResolver.Resolve(method.ReturnType) : context.TypeResolver.Bcl.System.Void;
             var tempMethodVar = context.Naming.SyntheticVariable(method.Name, ElementKind.MemberReference);
-            context.WriteCecilExpression($$"""
+            context.Generate($$"""
                                        var {{tempMethodVar}} = new MethodReference("{{method.Name}}", {{returnType}}, {{context.TypeResolver.Resolve(method.ContainingType)}})
                                                    {
                                                        HasThis = {{(method.IsStatic ? "false" : "true")}},
@@ -64,9 +64,9 @@ public class MonoCecilMethodResolver(MonoCecilContext context) : IMethodResolver
                     // method signature *does* reference this type parameter; store the `GenericParameter` instance in a variable
                     // to reference it later.
                     var genericVar = context.Naming.SyntheticVariable(typeParameter.Name, ElementKind.GenericInstance);
-                    context.WriteCecilExpression($"""var {genericVar} = new GenericParameter("{typeParameter.Name}", {tempMethodVar});""");
+                    context.Generate($"""var {genericVar} = new GenericParameter("{typeParameter.Name}", {tempMethodVar});""");
                     context.WriteNewLine();
-                    context.WriteCecilExpression($"""{tempMethodVar}.GenericParameters.Add({genericVar});""");
+                    context.Generate($"""{tempMethodVar}.GenericParameters.Add({genericVar});""");
                     context.WriteNewLine();
 
                     toDispose.Add(context.DefinitionVariables.WithCurrent(method.OriginalDefinition.ToDisplayString(), typeParameter.Name, VariableMemberKind.TypeParameter, genericVar));
@@ -75,7 +75,7 @@ public class MonoCecilMethodResolver(MonoCecilContext context) : IMethodResolver
                 {
                     // method signature does not reference this type parameter so no need to store the `GenericParameter` instance in a variable
                     // (we will not reference it later anyway)
-                    context.WriteCecilExpression($"""{tempMethodVar}.GenericParameters.Add(new GenericParameter("{typeParameter.Name}", {tempMethodVar}));""");
+                    context.Generate($"""{tempMethodVar}.GenericParameters.Add(new GenericParameter("{typeParameter.Name}", {tempMethodVar}));""");
                     context.WriteNewLine();
                 }
             }
@@ -89,7 +89,7 @@ public class MonoCecilMethodResolver(MonoCecilContext context) : IMethodResolver
                 if (method.ReturnsByRef || method.ReturnsByRefReadonly)
                     resolvedReturnType = resolvedReturnType.MakeByReferenceType();
 
-                context.WriteCecilExpression($"{tempMethodVar}.ReturnType = {resolvedReturnType};");
+                context.Generate($"{tempMethodVar}.ReturnType = {resolvedReturnType};");
                 context.WriteNewLine();
             }
 
@@ -97,7 +97,7 @@ public class MonoCecilMethodResolver(MonoCecilContext context) : IMethodResolver
             {
                 var tempParamVar = context.Naming.SyntheticVariable(parameter.Name, ElementKind.Parameter);
                 var exps = CecilDefinitionsFactory.Parameter(context, parameter.OriginalDefinition, tempMethodVar, tempParamVar);
-                context.WriteCecilExpressions(exps);
+                context.Generate(exps);
             }
 
             toDispose.ForEach(v => v.Dispose());
@@ -171,7 +171,7 @@ public class MonoCecilMethodResolver(MonoCecilContext context) : IMethodResolver
         // resolve declaring type of the method.
         var targetTypeVarName = _context.Naming.SyntheticVariable($"{method.ContainingType.Name}", ElementKind.LocalVariable);
         var resolvedTargetTypeExp = _context.TypeResolver.Resolve(method.ContainingType.OriginalDefinition).MakeGenericInstanceType(method.ContainingType.GetAllTypeArguments().Select(t => _context.TypeResolver.Resolve(t)));
-        _context.WriteCecilExpression($"var {targetTypeVarName} = {resolvedTargetTypeExp};");
+        _context.Generate($"var {targetTypeVarName} = {resolvedTargetTypeExp};");
         _context.WriteNewLine();
 
         // find the original method.
@@ -184,13 +184,13 @@ public class MonoCecilMethodResolver(MonoCecilContext context) : IMethodResolver
             ? $" && !m.Parameters.Select(p => p.ParameterType.FullName).Except([{methodParameterNames}]).Any()"
             : string.Empty;
 
-        _context.WriteCecilExpression(
+        _context.Generate(
             $"""var {originalMethodVar} = {_context.TypeResolver.Resolve(method.ContainingType.OriginalDefinition)}.Resolve().Methods.First(m => m.Name == "{method.Name}" && m.Parameters.Count == {method.Parameters.Length}{parameterTypesCheck});""");
         _context.WriteNewLine();
 
         // Instantiates a MethodReference representing the called method.
         var targetMethodVar = _context.Naming.SyntheticVariable($"{method.Name}", ElementKind.MemberReference);
-        _context.WriteCecilExpression(
+        _context.Generate(
             $$"""
               var {{targetMethodVar}} = new MethodReference("{{method.Name}}", assembly.MainModule.ImportReference({{originalMethodVar}}).ReturnType)
                           {
@@ -205,7 +205,7 @@ public class MonoCecilMethodResolver(MonoCecilContext context) : IMethodResolver
         // Add original parameters to the MethodReference
         foreach (var parameter in method.Parameters)
         {
-            _context.WriteCecilExpression(
+            _context.Generate(
                 $"""{targetMethodVar}.Parameters.Add(new ParameterDefinition("{parameter.Name}", {originalMethodVar}.Parameters[{parameter.Ordinal}].Attributes, {originalMethodVar}.Parameters[{parameter.Ordinal}].ParameterType));""");
             _context.WriteNewLine();
         }

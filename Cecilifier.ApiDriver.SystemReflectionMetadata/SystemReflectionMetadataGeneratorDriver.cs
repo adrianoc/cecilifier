@@ -6,7 +6,7 @@ using Cecilifier.Core.Extensions;
 
 namespace Cecilifier.ApiDriver.SystemReflectionMetadata;
 
-public class SystemReflectionMetadataGeneratorDriver : IILGeneratorApiDriver
+public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase, IILGeneratorApiDriver
 {
     public string AsCecilApplication(string cecilifiedCode, string mainTypeName, string? entryPointVar)
     {
@@ -107,7 +107,7 @@ public class SystemReflectionMetadataGeneratorDriver : IILGeneratorApiDriver
     public IlContext NewIlContext(IVisitorContext context, string memberName, string relatedMethodVar)
     {
         var ilVarName = context.Naming.ILProcessor(memberName);
-        context.WriteCecilExpression($"var {ilVarName} = new InstructionEncoder(new BlobBuilder());");
+        context.Generate($"var {ilVarName} = new InstructionEncoder(new BlobBuilder());");
         context.WriteNewLine();
         
         return new SystemReflectionMetadataIlContext(ilVarName, relatedMethodVar);
@@ -115,18 +115,18 @@ public class SystemReflectionMetadataGeneratorDriver : IILGeneratorApiDriver
 
     public void EmitCilInstruction<T>(IVisitorContext context, IlContext il, OpCode opCode, T? operand, string? comment = null)
     {
-        context.WriteCecilExpression($"{il.VariableName}.OpCode(ILOpCode.{opCode.OpCodeName()});{(comment != null ? $" // {comment}" : string.Empty)}");
+        context.Generate($"{il.VariableName}.OpCode(ILOpCode.{opCode.OpCodeName()});{(comment != null ? $" // {comment}" : string.Empty)}");
         context.WriteNewLine();
         if (operand != null)
         {
             if (operand is CilMetadataHandle handle)
             {
-                context.WriteCecilExpression($"{il.VariableName}.Token({handle.VariableName});");
+                context.Generate($"{il.VariableName}.Token({handle.VariableName});");
             }
             else
             {
                 //TODO: Fix name of WriteX() method to be called; it is not always derivable from the type  
-                context.WriteCecilExpression($"{il.VariableName}.CodeBuilder.Write{operand.GetType().Name}({operand});");
+                context.Generate($"{il.VariableName}.CodeBuilder.Write{operand.GetType().Name}({operand});");
             }
             context.WriteNewLine();
         }

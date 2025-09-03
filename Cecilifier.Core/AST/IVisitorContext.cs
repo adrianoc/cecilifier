@@ -51,13 +51,13 @@ public interface IVisitorContext
     //      among the ApiDrivers
     void EmitCilInstruction(string ilVar, OpCode opCode);
     void EmitCilInstruction<T>(string ilVar, OpCode opCode, T operand, string comment = null);
-    void WriteCecilExpression(CecilifierInterpolatedStringHandler expression);
-    void WriteCecilExpression(string expression);
-    void WriteCecilExpressions(IEnumerable<string> expressions);
+    void WriteCilInstructionAfter<T>(string ilVar, OpCode opCode, T operand, string comment, LinkedListNode<string> after);
+    
+    void Generate(CecilifierInterpolatedStringHandler expression);
+    void Generate(string expression);
+    void Generate(IEnumerable<string> expressions);
     void WriteComment(string comment);
     void WriteNewLine();
-    void WriteCilInstructionAfter<T>(string ilVar, OpCode opCode, T operand, string comment, LinkedListNode<string> after);
-
     void MoveLineAfter(LinkedListNode<string> instruction, LinkedListNode<string> after);
     void MoveLinesToEnd(LinkedListNode<string> start, LinkedListNode<string> end);
 

@@ -38,7 +38,7 @@ internal partial class RecordGenerator
             out var methodDefinitionVariable);
 
         using var _ = context.DefinitionVariables.WithVariable(methodDefinitionVariable);
-        context.WriteCecilExpressions([
+        context.Generate([
             ..printMembersDeclExps,
             $"{recordTypeDefinitionVariable}.Methods.Add({PrintMembersVar});"
         ]);
@@ -117,7 +117,7 @@ internal partial class RecordGenerator
             OpCodes.Ldc_I4_1,
             OpCodes.Ret
         ]);
-        context.WriteCecilExpressions(printMemberBodyExps);
+        context.Generate(printMemberBodyExps);
         AddCompilerGeneratedAttributeTo(context, PrintMembersVar);
         AddIsReadOnlyAttributeTo(context, PrintMembersVar);
         static IMethodSymbol StringBuilderAppendMethodFor(IVisitorContext context, ITypeSymbol type, ITypeSymbol stringBuilderSymbol)

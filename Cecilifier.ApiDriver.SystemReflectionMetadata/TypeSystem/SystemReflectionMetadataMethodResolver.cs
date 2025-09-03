@@ -38,7 +38,7 @@ public class SystemReflectionMetadataMethodResolver(SystemReflectionMetadataCont
         if (!voidParameterlessMethodRef.IsValid)
         {
             var voidParameterlessMethodRefVarName = _context.Naming.SyntheticVariable("voidParameterlessMethodRef", ElementKind.LocalVariable);
-            _context.WriteCecilExpression($$"""
+            _context.Generate($$"""
                                           var parameterlessCtorSignature = new BlobBuilder();
                                           
                                           new BlobEncoder(parameterlessCtorSignature).

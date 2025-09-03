@@ -18,7 +18,7 @@ public static class CecilifierContextExtensions
     {
         var compilerGeneratedAttributeCtor = context.RoslynTypeSystem.SystemRuntimeCompilerServicesCompilerGeneratedAttribute.Ctor();
         var exps = CecilDefinitionsFactory.Attribute("compilerGenerated", memberVariable, context, compilerGeneratedAttributeCtor.MethodResolverExpression(context));
-        context.WriteCecilExpressions(exps);
+        context.Generate(exps);
     }
     
     internal static DefinitionVariable AddLocalVariableToCurrentMethod(this IVisitorContext context, string localVarName, string varType)
@@ -34,9 +34,9 @@ public static class CecilifierContextExtensions
     {
         var cecilVarDeclName = context.Naming.SyntheticVariable(localVarName, ElementKind.LocalVariable);
 
-        context.WriteCecilExpression($"var {cecilVarDeclName} = new VariableDefinition({resolvedVarType});");
+        context.Generate($"var {cecilVarDeclName} = new VariableDefinition({resolvedVarType});");
         context.WriteNewLine();
-        context.WriteCecilExpression($"{methodVar.VariableName}.Body.Variables.Add({cecilVarDeclName});");
+        context.Generate($"{methodVar.VariableName}.Body.Variables.Add({cecilVarDeclName});");
         context.WriteNewLine();
 
         return context.DefinitionVariables.RegisterNonMethod(string.Empty, localVarName, VariableMemberKind.LocalVariable, cecilVarDeclName);
@@ -179,13 +179,13 @@ public static class CecilifierContextExtensions
         }
 
         var exps = CecilDefinitionsFactory.Method(context, methodDeclarationVar, methodName, "MethodAttributes.Private", method.ReturnType, method.ReturnsByRef, method.GetTypeParameterSyntax());
-        context.WriteCecilExpressions(exps);
+        context.Generate(exps);
         
         foreach (var parameter in method.Parameters)
         {
             var paramVar = context.Naming.Parameter(parameter.Name);
             var parameterExps = CecilDefinitionsFactory.Parameter(context, parameter, methodDeclarationVar, paramVar);
-            context.WriteCecilExpressions(parameterExps);
+            context.Generate(parameterExps);
             context.DefinitionVariables.RegisterNonMethod(method.ToDisplayString(), parameter.Name, VariableMemberKind.Parameter, paramVar);
         }
 

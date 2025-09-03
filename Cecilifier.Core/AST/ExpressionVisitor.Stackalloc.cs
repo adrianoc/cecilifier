@@ -408,9 +408,9 @@ internal class StackallocSpanAssignmentTracker
         var currentMethodVar = context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
         Debug.Assert(currentMethodVar.IsValid);
 
-        context.WriteCecilExpression($"var {SpanLengthVariable} = new VariableDefinition({context.TypeResolver.Bcl.System.Int32});");
+        context.Generate($"var {SpanLengthVariable} = new VariableDefinition({context.TypeResolver.Bcl.System.Int32});");
         context.WriteNewLine();
-        context.WriteCecilExpression($"{currentMethodVar.VariableName}.Body.Variables.Add({SpanLengthVariable});");
+        context.Generate($"{currentMethodVar.VariableName}.Body.Variables.Add({SpanLengthVariable});");
         context.WriteNewLine();
 
         LoadOpCode = OpCodes.Ldloc;

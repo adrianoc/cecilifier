@@ -85,7 +85,7 @@ internal partial class PrivateImplementationDetailsGenerator
                                                         },
                                                         out var methodDefinitionVariable);
 
-        context.WriteCecilExpressions(methodExpressions);
+        context.Generate(methodExpressions);
         
         var tBufferVar = ResolveOwnedGenericParameter(context, "TBuffer", methodTypeQualifiedName);
         var tElementVar = ResolveOwnedGenericParameter(context, "TElement", methodTypeQualifiedName);
@@ -110,7 +110,7 @@ internal partial class PrivateImplementationDetailsGenerator
             ]);
 
         var finalExps = methodBodyExpressions.Append($"{privateImplementationDetailsVar.VariableName}.Methods.Add({methodVar});");
-        context.WriteCecilExpressions(finalExps);
+        context.Generate(finalExps);
         
         return methodDefinitionVariable;
         
@@ -169,7 +169,7 @@ internal partial class PrivateImplementationDetailsGenerator
                                                         },
                                                         out var methodDefinitionVariable);
 
-        context.WriteCecilExpressions(methodExpressions);
+        context.Generate(methodExpressions);
         
         var tBufferTypeParameter = ResolveOwnedGenericParameter(context, "TBuffer", methodTypeQualifiedName);
         var tElementTypeParameter = ResolveOwnedGenericParameter(context, "TElement", methodTypeQualifiedName);
@@ -189,9 +189,9 @@ internal partial class PrivateImplementationDetailsGenerator
                 OpCodes.Ret
             ]);
         
-        context.WriteCecilExpressions(methodBodyExpressions);
+        context.Generate(methodBodyExpressions);
         
-        context.WriteCecilExpression($"{privateImplementationDetailsVar.VariableName}.Methods.Add({methodVar});");
+        context.Generate($"{privateImplementationDetailsVar.VariableName}.Methods.Add({methodVar});");
         context.WriteNewLine();
         context.WriteComment("-------------------------------");
         context.WriteNewLine();
@@ -230,7 +230,7 @@ internal partial class PrivateImplementationDetailsGenerator
                                                         },
                                                         out var methodDefinitionVariable);
 
-        context.WriteCecilExpressions(methodExpressions);
+        context.Generate(methodExpressions);
         
         var tbufferTypeParameter = ResolveOwnedGenericParameter(context, "TBuffer", methodTypeQualifiedName);
         var telementTypeParameter = ResolveOwnedGenericParameter(context, "TElement", methodTypeQualifiedName);
@@ -256,8 +256,8 @@ internal partial class PrivateImplementationDetailsGenerator
                 OpCodes.Ret
             ]);
         
-        context.WriteCecilExpressions(methodBodyExpressions);
-        context.WriteCecilExpression($"{privateImplementationDetailsVar.VariableName}.Methods.Add({methodVar});");
+        context.Generate(methodBodyExpressions);
+        context.Generate($"{privateImplementationDetailsVar.VariableName}.Methods.Add({methodVar});");
         context.WriteNewLine();
         context.WriteComment("-------------------------------");
         context.WriteNewLine();
@@ -313,14 +313,14 @@ internal partial class PrivateImplementationDetailsGenerator
                                                                 fieldName,
                                                                 rawDataTypeVar,
                                                                 Constants.CompilerGeneratedTypes.StaticArrayInitFieldModifiers);
-        context.WriteCecilExpressions(fieldExpressions);
+        context.Generate(fieldExpressions);
         var initializationByteArrayAsString = new StringBuilder();
         foreach (var itemValue in toBeHashed)
         {
             initializationByteArrayAsString.Append($"0x{itemValue:x2},");
         }
         
-        context.WriteCecilExpression($"{fieldVar}.InitialValue = [ { initializationByteArrayAsString } ];");
+        context.Generate($"{fieldVar}.InitialValue = [ { initializationByteArrayAsString } ];");
         context.WriteNewLine();
 
         if (toReturn is not null)
@@ -364,7 +364,7 @@ internal partial class PrivateImplementationDetailsGenerator
             $"ClassSize = {sizeInBytes}",
             "PackingSize = 1");
 
-        context.WriteCecilExpressions(privateImplementationDetails);
+        context.Generate(privateImplementationDetails);
 
         var rawDataTypeVar = context.DefinitionVariables.RegisterNonMethod(
                                                                 Constants.CompilerGeneratedTypes.PrivateImplementationDetails, 
@@ -398,7 +398,7 @@ internal partial class PrivateImplementationDetailsGenerator
                                                                                     Array.Empty<TypeParameterSyntax>(),
                                                                                     Array.Empty<TypeParameterSyntax>());
 
-        context.WriteCecilExpressions(privateImplementationDetails);
+        context.Generate(privateImplementationDetails);
 
         return context.DefinitionVariables.RegisterNonMethod(string.Empty, Constants.CompilerGeneratedTypes.PrivateImplementationDetails, VariableMemberKind.Type, privateImplementationDetailsVar);
     }

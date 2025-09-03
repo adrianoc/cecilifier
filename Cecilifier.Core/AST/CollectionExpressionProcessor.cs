@@ -67,8 +67,8 @@ internal static class CollectionExpressionProcessor
         var inlineArrayElementType = spanTypeSymbol.TypeArguments[0];
         var inlineArrayLocalVar = context.Naming.SyntheticVariable("buffer", ElementKind.LocalVariable);
         var inlineArrayTypeVar = inlineArrayVar.MakeGenericInstanceType(context.TypeResolver.Resolve(inlineArrayElementType));
-        context.WriteCecilExpression($"var {inlineArrayLocalVar} = {CecilDefinitionsFactory.LocalVariable(inlineArrayTypeVar)};\n");
-        context.WriteCecilExpression($"{currentMethodVar}.Body.Variables.Add({inlineArrayLocalVar});\n");
+        context.Generate($"var {inlineArrayLocalVar} = {CecilDefinitionsFactory.LocalVariable(inlineArrayTypeVar)};\n");
+        context.Generate($"{currentMethodVar}.Body.Variables.Add({inlineArrayLocalVar});\n");
         
         // Initializes the inline array
         context.EmitCilInstruction(visitor.ILVariable, OpCodes.Ldloca_S, inlineArrayLocalVar);

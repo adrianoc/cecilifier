@@ -45,7 +45,7 @@ internal partial class RecordGenerator
 
         var nullableAwareness = ((int) NullableAwareness.NullableOblivious).ToString();
         var nullableAttrExps = CecilDefinitionsFactory.Attribute("nullable", definitionVar, context, nullableAttributeCtor, [(context.TypeResolver.Bcl.System.Int32, nullableAwareness)]);
-        context.WriteCecilExpressions(nullableAttrExps);
+        context.Generate(nullableAttrExps);
 
         AddNullableContextAttributeTo(definitionVar, NullableAwareness.NonNullable);
     }
@@ -81,7 +81,7 @@ internal partial class RecordGenerator
 
         var cloneMethodVar = context.Naming.SyntheticVariable("clone", ElementKind.Method);
         var cloneMethodExps = CecilDefinitionsFactory.Method(context, cloneMethodVar, CloneMethodName, Constants.Cecil.HideBySigNewSlotVirtual.AppendModifier("MethodAttributes.Public"), _recordSymbol, false, []);
-        context.WriteCecilExpressions(
+        context.Generate(
         [
             ..cloneMethodExps,
             $"{recordTypeDefinitionVariable}.Methods.Add({cloneMethodVar});"
@@ -101,7 +101,7 @@ internal partial class RecordGenerator
             OpCodes.Ret
         ];
         
-        context.WriteCecilExpressions(
+        context.Generate(
             CecilDefinitionsFactory.MethodBody(context.Naming, "clone", cloneMethodVar, context.Naming.ILProcessor("clone"), [], instructions)
         );
         
@@ -122,14 +122,14 @@ internal partial class RecordGenerator
         {
             copyCtorVar = context.Naming.Constructor(record, false);
             var copyCtor = CecilDefinitionsFactory.Constructor(context, copyCtorVar, _recordSymbol.OriginalDefinition.ToDisplayString(), false, Constants.Cecil.CtorAttributes.AppendModifier("MethodAttributes.Family | MethodAttributes.HideBySig"), [_recordSymbol.ToDisplayString()]);
-            context.WriteCecilExpressions(
+            context.Generate(
             [
                 copyCtor,
                 ..CecilDefinitionsFactory.Parameter("other", RefKind.None, null, copyCtorVar, context.Naming.Parameter("other"), context.TypeResolver.Resolve(_recordSymbol), Constants.ParameterAttributes.None, (null, false))
             ]);
         }
 
-        context.WriteCecilExpression($"{recordTypeDefinitionVariable}.Methods.Add({copyCtorVar});");
+        context.Generate($"{recordTypeDefinitionVariable}.Methods.Add({copyCtorVar});");
         context.WriteNewLine();
 
         List<InstructionRepresentation> instructions = new();
@@ -166,7 +166,7 @@ internal partial class RecordGenerator
         }
         instructions.Add(OpCodes.Ret);
         
-        context.WriteCecilExpressions(
+        context.Generate(
             CecilDefinitionsFactory.MethodBody(context.Naming, Constants.Cecil.InstanceConstructorName, copyCtorVar, context.Naming.ILProcessor(Constants.Cecil.InstanceConstructorName), [], instructions.ToArray())
         );
         
@@ -207,7 +207,7 @@ internal partial class RecordGenerator
             ctx => ctx.TypeResolver.Bcl.System.Boolean,
             out _);
         
-        context.WriteCecilExpressions(equalsOperatorMethodExps);
+        context.Generate(equalsOperatorMethodExps);
         
         InstructionRepresentation[] equalsBodyInstructions = _recordSymbol.IsValueType 
             ? [
@@ -233,8 +233,8 @@ internal partial class RecordGenerator
             ];
         
         var bodyExps = CecilDefinitionsFactory.MethodBody(context.Naming, methodName, equalsOperatorMethodVar, [], equalsBodyInstructions);
-        context.WriteCecilExpressions(bodyExps);
-        context.WriteCecilExpression($"{recordTypeDefinitionVariable}.Methods.Add({equalsOperatorMethodVar});");
+        context.Generate(bodyExps);
+        context.Generate($"{recordTypeDefinitionVariable}.Methods.Add({equalsOperatorMethodVar});");
         AddCompilerGeneratedAttributeTo(context, equalsOperatorMethodVar);
         
         if (!_recordSymbol.IsValueType)
@@ -264,14 +264,14 @@ internal partial class RecordGenerator
             ctx => ctx.TypeResolver.Bcl.System.Boolean,
             out _);
         
-        context.WriteCecilExpressions(inequalityOperatorMethodExps);
+        context.Generate(inequalityOperatorMethodExps);
 
         var equalityMethodDefinitionVariable = context.DefinitionVariables.GetMethodVariable(new MethodDefinitionVariable(_recordSymbol.OriginalDefinition.ToDisplayString(), "op_Equality", [$"{_recordSymbol.ToDisplayString()}?", $"{_recordSymbol.ToDisplayString()}?"], 0)).VariableName;
         if (_recordSymbol is INamedTypeSymbol { IsGenericType: true })
         {
             var var = equalityMethodDefinitionVariable;
             equalityMethodDefinitionVariable = context.Naming.SyntheticVariable("equalsOperator", ElementKind.GenericInstance);
-            context.WriteCecilExpressions(
+            context.Generate(
             [
                 $"var {equalityMethodDefinitionVariable} = new MethodReference({var}.Name, {var}.ReturnType, {context.TypeResolver.Resolve(_recordSymbol)}) {{ HasThis = {var}.HasThis, ExplicitThis = {var}.ExplicitThis, CallingConvention = {var}.CallingConvention, Parameters = {{ {var}.Parameters[0],  {var}.Parameters[1] }} }};",
             ]);
@@ -288,8 +288,8 @@ internal partial class RecordGenerator
         ];
         
         var bodyExps = CecilDefinitionsFactory.MethodBody(context.Naming, methodName, inequalityOperatorMethodVar, [], inequalityBodyInstructions);
-        context.WriteCecilExpressions(bodyExps);
-        context.WriteCecilExpression($"{recordTypeDefinitionVariable}.Methods.Add({inequalityOperatorMethodVar});");
+        context.Generate(bodyExps);
+        context.Generate($"{recordTypeDefinitionVariable}.Methods.Add({inequalityOperatorMethodVar});");
         AddCompilerGeneratedAttributeTo(context, inequalityOperatorMethodVar);
         if (!_recordSymbol.IsValueType)
             AddNullableContextAttributeTo(inequalityOperatorMethodVar, NullableAwareness.Nullable);
@@ -313,7 +313,7 @@ internal partial class RecordGenerator
                                                                             out var methodDefinitionVariable);
         context.WriteNewLine();
         context.WriteComment(" GetHashCode()");
-        context.WriteCecilExpressions(getHashCodeMethodExps);
+        context.Generate(getHashCodeMethodExps);
 
         const string HashCodeMultiplier = "-1521134295";
         var getHashCodeMethodBodyExps = new List<InstructionRepresentation>();
@@ -353,9 +353,9 @@ internal partial class RecordGenerator
         
         var ilVar = context.Naming.ILProcessor("GetHashCode");
         var bodyExps = CecilDefinitionsFactory.MethodBody(context.Naming, "GetHashCode", getHashCodeMethodVar, ilVar, [], [..getHashCodeMethodBodyExps, OpCodes.Ret]);
-        context.WriteCecilExpressions(bodyExps);
+        context.Generate(bodyExps);
         context.WriteNewLine();
-        context.WriteCecilExpression($"{recordTypeDefinitionVariable}.Methods.Add({getHashCodeMethodVar});");
+        context.Generate($"{recordTypeDefinitionVariable}.Methods.Add({getHashCodeMethodVar});");
         context.WriteNewLine();
         
         AddCompilerGeneratedAttributeTo(context, getHashCodeMethodVar);
@@ -429,7 +429,7 @@ internal partial class RecordGenerator
                 ctx => context.TypeResolver.Bcl.System.String,
                 out var methodDefinitionVariable);
             
-            context.WriteCecilExpressions([
+            context.Generate([
                 ..toStringDeclExps,
                 $"{recordTypeDefinitionVariable}.Methods.Add({toStringMethodVar});"
             ]);
@@ -465,7 +465,7 @@ internal partial class RecordGenerator
                 OpCodes.Callvirt.WithOperand(stringBuilderSymbol.GetMembers("ToString").OfType<IMethodSymbol>().Single(m => m.Parameters.Length == 0).MethodResolverExpression(context)),
                 OpCodes.Ret
             ]);
-            context.WriteCecilExpressions(toStringBodyExps);
+            context.Generate(toStringBodyExps);
             AddCompilerGeneratedAttributeTo(context, toStringMethodVar);
             AddIsReadOnlyAttributeTo(context, toStringMethodVar);
         }
@@ -523,7 +523,7 @@ internal partial class RecordGenerator
                                     Array.Empty<string>(),
                                     ctx => ctx.TypeResolver.Bcl.System.Boolean, out var methodDefinitionVariable);
 
-        context.WriteCecilExpressions([..exps, $"{recordTypeDefinitionVariable}.Methods.Add({equalsVar});"]);
+        context.Generate([..exps, $"{recordTypeDefinitionVariable}.Methods.Add({equalsVar});"]);
         
         using (context.DefinitionVariables.WithVariable(methodDefinitionVariable))
         {
@@ -570,7 +570,7 @@ internal partial class RecordGenerator
             
             var ilVar = context.Naming.ILProcessor("Equals");
             var equalsExps = CecilDefinitionsFactory.MethodBody(context.Naming, "Equals",equalsVar, ilVar, [], instructions.ToArray());
-            context.WriteCecilExpressions(equalsExps);
+            context.Generate(equalsExps);
         }
         
         AddCompilerGeneratedAttributeTo(context, equalsVar);
@@ -579,7 +579,7 @@ internal partial class RecordGenerator
         if (_recordSymbol is INamedTypeSymbol { IsGenericType: true } genericRecord)
         {
             _recordTypeEqualsOverloadMethodVar = context.Naming.SyntheticVariable("Equals", ElementKind.GenericInstance);
-            context.WriteCecilExpressions(
+            context.Generate(
             [
                 $$"""var {{_recordTypeEqualsOverloadMethodVar}} = new MethodReference({{equalsVar}}.Name, {{equalsVar}}.ReturnType, {{declaringType}}) { HasThis = {{equalsVar}}.HasThis, ExplicitThis = {{equalsVar}}.ExplicitThis, CallingConvention = {{equalsVar}}.CallingConvention };""",
                 $$"""{{_recordTypeEqualsOverloadMethodVar}}.Parameters.Add({{equalsVar}}.Parameters[0]);"""
@@ -654,7 +654,7 @@ internal partial class RecordGenerator
                 $"\tCallingConvention = {openGetDefaultMethodVar}.CallingConvention,",
                 "};"
             ];
-            context.WriteCecilExpressions(defaultPropertyGetterExps);
+            context.Generate(defaultPropertyGetterExps);
             return getDefaultMethodVar;
         }
 
@@ -674,7 +674,7 @@ internal partial class RecordGenerator
                 $"{equalsMethodVar}.Parameters.Add({equalityComparerOpenEqualsMethodVar}.Parameters[0]);",
                 $"{equalsMethodVar}.Parameters.Add({equalityComparerOpenEqualsMethodVar}.Parameters[1]);"
             ];
-            context.WriteCecilExpressions(equalityComparerEqualsMethodExps);
+            context.Generate(equalityComparerEqualsMethodExps);
             return equalsMethodVar;
         }
         
@@ -695,7 +695,7 @@ internal partial class RecordGenerator
                 "};",
                 $"{getHashCodeMethodVar}.Parameters.Add({equalityComparerOpenGetHashCodeMethodVar}.Parameters[0]);"
             ];
-            context.WriteCecilExpressions(equalityComparerGetHashCodeMethodExps);
+            context.Generate(equalityComparerGetHashCodeMethodExps);
             return getHashCodeMethodVar;
         }
     }
@@ -722,7 +722,7 @@ internal partial class RecordGenerator
             Array.Empty<ParameterSpec>());
         
         var exps = CecilDefinitionsFactory.PropertyDefinition(propertyData.Variable, propertyName, propertyData.ResolvedType);
-        context.WriteCecilExpressions(
+        context.Generate(
         [
             ..exps,
             $"{propertyData.DeclaringTypeVariable}.Properties.Add({propertyData.Variable});"
@@ -739,7 +739,7 @@ internal partial class RecordGenerator
         var getterIlVar = context.Naming.ILProcessor("EqualityContract_get");
         
         var getTypeFromHandleSymbol = (IMethodSymbol) context.RoslynTypeSystem.SystemType.GetMembers("GetTypeFromHandle").First();
-        context.WriteCecilExpression($"var {getterIlVar} = {_equalityContractGetMethodVar}.Body.GetILProcessor();");
+        context.Generate($"var {getterIlVar} = {_equalityContractGetMethodVar}.Body.GetILProcessor();");
         context.WriteNewLine();
         context.EmitCilInstruction(getterIlVar, OpCodes.Ldtoken, recordTypeDefinitionVariable);
         context.EmitCilInstruction(getterIlVar, OpCodes.Call, getTypeFromHandleSymbol.MethodResolverExpression(context));
@@ -777,7 +777,7 @@ internal partial class RecordGenerator
             ctx => ctx.TypeResolver.Bcl.System.Boolean,
             out _);
         
-        context.WriteCecilExpressions(equalsObjectOverloadMethodExps);
+        context.Generate(equalsObjectOverloadMethodExps);
         
         InstructionRepresentation[] equalsBodyInstructions =
             _recordSymbol.IsValueType 
@@ -802,8 +802,8 @@ internal partial class RecordGenerator
                   ];
         
         var bodyExps = CecilDefinitionsFactory.MethodBody(context.Naming, methodName, equalsObjectOverloadMethodVar, [], equalsBodyInstructions);
-        context.WriteCecilExpressions(bodyExps);
-        context.WriteCecilExpression($"{recordTypeDefinitionVariable}.Methods.Add({equalsObjectOverloadMethodVar});");
+        context.Generate(bodyExps);
+        context.Generate($"{recordTypeDefinitionVariable}.Methods.Add({equalsObjectOverloadMethodVar});");
         AddCompilerGeneratedAttributeTo(context, equalsObjectOverloadMethodVar);
         AddIsReadOnlyAttributeTo(context, equalsObjectOverloadMethodVar);
         AddNullableContextAttributeTo(equalsObjectOverloadMethodVar, _recordSymbol.IsValueType ? NullableAwareness.NullableOblivious : NullableAwareness.Nullable);
@@ -826,7 +826,7 @@ internal partial class RecordGenerator
             ctx => ctx.TypeResolver.Bcl.System.Boolean,
             out _);
         
-        context.WriteCecilExpressions(equalsBaseOverloadMethodExps);
+        context.Generate(equalsBaseOverloadMethodExps);
         
         InstructionRepresentation[] equalsBodyInstructions2 = 
         [
@@ -837,8 +837,8 @@ internal partial class RecordGenerator
         ];
         
         var bodyExps2 = CecilDefinitionsFactory.MethodBody(context.Naming, methodName, equalsBaseOverloadMethodVar, [], equalsBodyInstructions2);
-        context.WriteCecilExpressions(bodyExps2);
-        context.WriteCecilExpression($"{recordTypeDefinitionVariable}.Methods.Add({equalsBaseOverloadMethodVar});");
+        context.Generate(bodyExps2);
+        context.Generate($"{recordTypeDefinitionVariable}.Methods.Add({equalsBaseOverloadMethodVar});");
         AddCompilerGeneratedAttributeTo(context, equalsBaseOverloadMethodVar);
         AddIsReadOnlyAttributeTo(context, equalsBaseOverloadMethodVar);
         AddNullableContextAttributeTo(equalsBaseOverloadMethodVar, _recordSymbol.IsValueType ? NullableAwareness.NullableOblivious : NullableAwareness.Nullable);
@@ -873,7 +873,7 @@ internal partial class RecordGenerator
             ctx => ctx.TypeResolver.Bcl.System.Void,
             out _);
         
-        context.WriteCecilExpressions(deconstructMethodVarExps);
+        context.Generate(deconstructMethodVarExps);
 
         List<InstructionRepresentation> deconstructInstructions = new();
         int argIndex = 1;
@@ -890,8 +890,8 @@ internal partial class RecordGenerator
         deconstructInstructions.Add(OpCodes.Ret);
         
         var bodyExps = CecilDefinitionsFactory.MethodBody(context.Naming, methodName, deconstructMethodVar, [], deconstructInstructions.ToArray());
-        context.WriteCecilExpressions(bodyExps);
-        context.WriteCecilExpression($"{recordTypeDefinitionVariable}.Methods.Add({deconstructMethodVar});");
+        context.Generate(bodyExps);
+        context.Generate($"{recordTypeDefinitionVariable}.Methods.Add({deconstructMethodVar});");
         AddCompilerGeneratedAttributeTo(context, deconstructMethodVar);
         AddIsReadOnlyAttributeTo(context, deconstructMethodVar);
     }
@@ -937,7 +937,7 @@ internal partial class RecordGenerator
         var compilerGeneratedAttributeCtor = context.RoslynTypeSystem.SystemRuntimeCompilerServicesCompilerGeneratedAttribute.Ctor();
         var exps = CecilDefinitionsFactory.Attribute("compilerGenerated", memberVariable, context, compilerGeneratedAttributeCtor.MethodResolverExpression(context));
         context.WriteNewLine();
-        context.WriteCecilExpressions(exps);
+        context.Generate(exps);
     }
     
     private void AddIsReadOnlyAttributeTo(IVisitorContext context, string memberVariable) => _isReadOnlyAttributeHandler(context, _recordSymbol, memberVariable);
@@ -954,7 +954,7 @@ internal partial class RecordGenerator
         var isReadOnlyAttributeCtor = context.RoslynTypeSystem.IsReadOnlyAttribute.Ctor();
         var exps = CecilDefinitionsFactory.Attribute("isReadOnly", memberVar, context, isReadOnlyAttributeCtor.MethodResolverExpression(context));
         context.WriteNewLine();
-        context.WriteCecilExpressions(exps);
+        context.Generate(exps);
     }
     
     private string TypeEqualityOperator()
@@ -980,7 +980,7 @@ internal partial class RecordGenerator
 
         var nullableContextValue = ((int)value).ToString();
         var nullableContextAttrExps = CecilDefinitionsFactory.Attribute("nullableContext", memberVar, context, nullableContextAttributeCtor, [(context.TypeResolver.Bcl.System.Int32, nullableContextValue)]);
-        context.WriteCecilExpressions(nullableContextAttrExps);
+        context.Generate(nullableContextAttrExps);
     }
     
     private void InitializeEqualityComparerMemberCache()
