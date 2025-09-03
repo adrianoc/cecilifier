@@ -43,4 +43,7 @@ public interface IApiDriverDefinitionsFactory
     public IEnumerable<string> Constructor(IVisitorContext context, MemberDefinitionContext memberDefinitionContext, string typeName, bool isStatic, string methodAccessibility, string[] paramTypes, string? methodDefinitionPropertyValues = null);
 }
 
-public record struct MemberDefinitionContext(string MemberDefinitionVariableName, string ParentDefinitionVariableName);
+public record struct MemberDefinitionContext(
+                            string MemberDefinitionVariableName, 
+                            string ParentDefinitionVariableName, 
+                            IlContext IlContext);

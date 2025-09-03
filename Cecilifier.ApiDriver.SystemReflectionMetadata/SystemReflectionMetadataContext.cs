@@ -1,8 +1,8 @@
+using Cecilifier.ApiDriver.SystemReflectionMetadata.DelayedDefinitions;
 using Cecilifier.ApiDriver.SystemReflectionMetadata.TypeSystem;
 using Cecilifier.Core;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Misc;
-using Cecilifier.Core.TypeSystem;
 using Microsoft.CodeAnalysis;
 
 namespace Cecilifier.ApiDriver.SystemReflectionMetadata;
@@ -22,5 +22,12 @@ public class SystemReflectionMetadataContext : CecilifierContextBase, IVisitorCo
     }
     
     public static IVisitorContext CreateContext(CecilifierOptions options, SemanticModel semanticModel) => new SystemReflectionMetadataContext(options, semanticModel);
-    public IMethodResolver MethodResolver { get; }
+    
+    public DelayedDefinitionsManager DelayedDefinitionsManager { get; } = new();
+    
+    public void OnProcessingFinished()
+    {
+        DelayedDefinitionsManager.ProcessDefinitions(this);
+    }
 }
+

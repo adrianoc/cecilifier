@@ -153,7 +153,7 @@ public static class CecilifierContextExtensions
      * }
      *
      * In this case when the first reference to Bar() is found (in method Foo()) the method itself has not been defined yet
-     * so we add a MethodDefinition for it but *no body*. Method body will be processed later, when the method is visited.
+     * so we add a MethodDefinition for it but *not a body*. Method body will be processed later, when the method is visited.
      */
     internal static void EnsureForwardedMethod(this IVisitorContext context, IMethodSymbol method)
     {
@@ -180,7 +180,7 @@ public static class CecilifierContextExtensions
 
         var exps = CecilDefinitionsFactory.Method(context, methodDeclarationVar, methodName, "MethodAttributes.Private", method.ReturnType, method.ReturnsByRef, method.GetTypeParameterSyntax());
         context.WriteCecilExpressions(exps);
-
+        
         foreach (var parameter in method.Parameters)
         {
             var paramVar = context.Naming.Parameter(parameter.Name);

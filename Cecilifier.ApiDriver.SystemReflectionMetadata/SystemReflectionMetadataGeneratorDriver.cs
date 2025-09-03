@@ -91,6 +91,8 @@ public class SystemReflectionMetadataGeneratorDriver : IILGeneratorApiDriver
                              flags: default(AssemblyFlags),
                              hashValue: default(BlobHandle));            
                      
+                         var methodBodyStream = new MethodBodyStreamEncoder(ilBuilder);
+                         
                          {{cecilifiedCode}}
                     }
                  }

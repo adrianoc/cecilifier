@@ -75,9 +75,7 @@ public class SnippetRunner
     public IlContext NewIlContext(IVisitorContext context, string memberName, string methodLocalVar)
     {
         var ilVarName = context.Naming.ILProcessor($"{memberName}");
-        context.WriteCecilExpression($"var {ilVarName} = {methodLocalVar}.Body.GetILProcessor();");
-        
-        return new MonoCecilIlContext(ilVarName);
+        return new MonoCecilDeferredIlContext(context, ilVarName, methodLocalVar);
     }
 }
 
@@ -85,5 +83,34 @@ public class MonoCecilIlContext : IlContext
 {
     protected internal MonoCecilIlContext(string variableName) : base(variableName)
     {
+    }
+}
+
+public class MonoCecilDeferredIlContext : IlContext
+{
+    private readonly IVisitorContext _context;
+    private readonly string _methodLocalVar;
+    private bool _emitted;
+
+    protected internal MonoCecilDeferredIlContext(IVisitorContext context, string ilVarName, string methodLocalVar) : base(ilVarName)
+    {
+        _context = context;
+        _methodLocalVar = methodLocalVar;
+        _emitted = false;
+    }
+
+    public override string VariableName
+    {
+        get
+        {
+            if (!_emitted)
+            {
+                _emitted = true;
+                _context.WriteCecilExpression($"var {base.VariableName} = {_methodLocalVar}.Body.GetILProcessor();");
+                _context.WriteNewLine();
+            }
+            
+            return base.VariableName;
+        }
     }
 }

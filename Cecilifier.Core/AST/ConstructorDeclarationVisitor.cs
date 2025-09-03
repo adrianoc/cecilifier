@@ -114,14 +114,15 @@ namespace Cecilifier.Core.AST
             Context.WriteNewLine();
             Context.WriteComment($"** Constructor: {normalizedTypeName}() **");
 
-            var ctorLocalVar = AddOrUpdateParameterlessCtorDefinition(
+            var ilContext = AddOrUpdateParameterlessCtorDefinition(
                 typeName,
+                normalizedTypeName,
                 typeDefVar,
                 ctorAccessibility,
                 isStatic,
                 Context.Naming.SyntheticVariable(normalizedTypeName, isStatic ? ElementKind.StaticConstructor : ElementKind.Constructor));
 
-            var ilContext = Context.ApiDriver.NewIlContext(Context, $"ctor_{normalizedTypeName}", ctorLocalVar);
+            // = Context.ApiDriver.NewIlContext(Context, $"ctor_{normalizedTypeName}", ctorLocalVar);
             processInitializers?.Invoke(ilContext);
             
             if (!isStatic)
@@ -130,26 +131,37 @@ namespace Cecilifier.Core.AST
                 Context.ApiDriver.EmitCilInstruction(Context, ilContext, OpCodes.Call, new CilMetadataHandle(baseCtor));
             }
 
-            //Context.EmitCilInstruction(ctorBodyIL, OpCodes.Ret);
             Context.ApiDriver.EmitCilInstruction(Context, ilContext, OpCodes.Ret);
         }
 
-        private string AddOrUpdateParameterlessCtorDefinition(string typeName, string typeDefVar, string ctorAccessibility, bool isStatic, string ctorLocalVar)
+        private IlContext AddOrUpdateParameterlessCtorDefinition(string typeName, string normalizedTypeName, string typeDefVar, string ctorAccessibility, bool isStatic, string ctorLocalVar)
         {
             var found = Context.DefinitionVariables.GetMethodVariable(new MethodDefinitionVariable(typeName, Utils.ConstructorMethodName(isStatic), [], 0));
             if (found.IsValid)
             {
+                //TODO: This is Cecil specific. Abstract it and add a test in SRM that exercises it
                 ctorLocalVar = found.VariableName;
 
                 AddCecilExpression($"{ctorLocalVar}.Attributes = {ctorAccessibility} | MethodAttributes.HideBySig | {Constants.Cecil.CtorAttributes};");
                 AddCecilExpression($"{ctorLocalVar}.HasThis = !{ctorLocalVar}.IsStatic;", ctorLocalVar);
-                return ctorLocalVar;
+                
+                //TODO: This code was in the caller before and we moved it to `DefinitionFactory.Constructor()`
+                //      the problem is that `CecilifierContextExtensions.EnsureForwardedMethod()` will emit a 
+                //      method definition for the constructor and assume the caller will add it to the type,
+                //      which now does not happen anymore. Probably we want to move EnsureForwardedMethod()
+                //      to the factory class and add the method definition to the type there. For now just
+                //      add it here (this will break tests for SRM driver).
+                AddCecilExpression($"{typeDefVar}.Methods.Add({ctorLocalVar});");
+                
+                return Context.ApiDriver.NewIlContext(Context, $"ctor_{normalizedTypeName}", ctorLocalVar);
             }
 
-            var exps = Context.ApiDefinitionsFactory.Constructor(Context, new MemberDefinitionContext(ctorLocalVar, typeDefVar), typeName, isStatic, ctorAccessibility, []);
+            var ilContext = Context.ApiDriver.NewIlContext(Context, $"ctor_{normalizedTypeName}", ctorLocalVar);
+            var definitionContext = new MemberDefinitionContext( ctorLocalVar, typeDefVar, ilContext);
+            var exps = Context.ApiDefinitionsFactory.Constructor(Context, definitionContext, typeName, isStatic, ctorAccessibility, []);
             AddCecilExpressions(Context, exps);
-            
-            return ctorLocalVar;
+
+            return ilContext;
         }
 
         private void ProcessFieldInitialization(TypeDeclarationSyntax declaringClass, IlContext ctorBodyIL, bool statics)
@@ -234,7 +246,7 @@ namespace Cecilifier.Core.AST
             if (typeSymbol == null)
                 return Utils.ImportFromMainModule($"TypeHelpers.DefaultCtorFor({typeDefVar}.BaseType)");
 
-            return Context.MethodResolver.ResolveDefaultConstructor(typeSymbol, typeDefVar);
+            return Context.MethodResolver.ResolveDefaultConstructor(typeSymbol.BaseType, typeDefVar);
         }
 
         private static string DefaultCtorAccessibilityFor(MemberDeclarationSyntax declaringClass, bool isStatic)

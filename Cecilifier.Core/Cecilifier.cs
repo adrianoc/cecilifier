@@ -46,6 +46,8 @@ namespace Cecilifier.Core
 
             syntaxTree.TryGetRoot(out var root);
             visitor.Visit(root);
+            
+            context.OnProcessingFinished();
 
             var mainTypeName = visitor.MainType != null ? visitor.MainType.Identifier.Text : "Cecilified";
             var reader = new StringReader(context.ApiDriver.AsCecilApplication(context.Output, mainTypeName, visitor.MainMethodDefinitionVariable));

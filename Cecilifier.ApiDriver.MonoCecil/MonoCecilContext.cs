@@ -21,6 +21,5 @@ public class MonoCecilContext : CecilifierContextBase, IVisitorContext
     }
 
     public static IVisitorContext CreateContext(CecilifierOptions options, SemanticModel semanticModel) => new MonoCecilContext(options, semanticModel);
-    
-    public IMethodResolver MethodResolver { get; }
+    public void OnProcessingFinished() { }
 }

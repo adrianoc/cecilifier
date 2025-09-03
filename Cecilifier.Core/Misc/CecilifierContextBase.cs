@@ -46,6 +46,8 @@ namespace Cecilifier.Core.Misc
         public ServiceCollection Services { get; } = new();
 
         public ITypeResolver TypeResolver { get; protected init; }
+        public IMethodResolver MethodResolver { get; protected init; }
+        
         public ref readonly RoslynTypeSystem RoslynTypeSystem => ref roslynTypeSystem;
         public SemanticModel SemanticModel { get; }
         public CecilifierOptions Options { get; }

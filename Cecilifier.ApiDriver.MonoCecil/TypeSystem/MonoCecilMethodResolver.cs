@@ -120,7 +120,7 @@ public class MonoCecilMethodResolver(MonoCecilContext context) : IMethodResolver
 
     public string ResolveDefaultConstructor(ITypeSymbol type, string derivedTypeVar)
     {
-        var baseTypeVarDef = context.TypeResolver.ResolveLocalVariableType(type.BaseType);
+        var baseTypeVarDef = context.TypeResolver.ResolveLocalVariableType(type);
         if (baseTypeVarDef != null)
         {
             return $"new MethodReference(\".ctor\", {context.TypeResolver.Bcl.System.Void} ,{baseTypeVarDef}) {{ HasThis = true }}";

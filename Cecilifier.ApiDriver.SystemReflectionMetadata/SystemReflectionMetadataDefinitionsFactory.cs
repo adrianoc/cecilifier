@@ -10,12 +10,8 @@ namespace Cecilifier.ApiDriver.SystemReflectionMetadata;
 
 internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBase, IApiDriverDefinitionsFactory
 {
-    public string MappedTypeModifiersFor(INamedTypeSymbol type, SyntaxTokenList modifiers)
-    {
-        return RoslynToApiDriverModifiers(type, modifiers); 
-        //return "TypeAttributes.Class | TypeAttributes.Public | TypeAttributes.AutoLayout | TypeAttributes.BeforeFieldInit";
-    }
-    
+    public string MappedTypeModifiersFor(INamedTypeSymbol type, SyntaxTokenList modifiers) => RoslynToApiDriverModifiers(type, modifiers);
+
     public IEnumerable<string> Type(
         IVisitorContext context, 
         string typeVar, 
@@ -40,16 +36,20 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                                                   metadata.GetOrAddString("{typeName}"));
                       
                       """);
-        
-        yield return Format($"""
-                      metadata.AddTypeDefinition(
-                                     {attrs}, // TypeAttributes.Class | TypeAttributes.Public | TypeAttributes.AutoLayout | TypeAttributes.BeforeFieldInit
-                                     metadata.GetOrAddString("{typeNamespace}"),
-                                     metadata.GetOrAddString("{typeName}"),
-                                     {resolvedBaseType},
-                                     fieldList: MetadataTokens.FieldDefinitionHandle(1),
-                                     methodList: MetadataTokens.MethodDefinitionHandle(1));
-                      """);
+
+        ((SystemReflectionMetadataContext) context).DelayedDefinitionsManager.RegisterTypeDefinition(typeVar, $"{typeNamespace}.{typeName}", (ctx, typeRecord) =>
+        {
+            ctx.WriteCecilExpression(Format($"""
+                                                       metadata.AddTypeDefinition(
+                                                                    {attrs},
+                                                                    metadata.GetOrAddString("{typeNamespace}"),
+                                                                    metadata.GetOrAddString("{typeName}"),
+                                                                    {resolvedBaseType},
+                                                                    fieldList: {typeRecord.FirstFieldHandle},
+                                                                    methodList: {typeRecord.FirstMethodHandle});
+                                                       """));
+
+        });
     }
 
     public IEnumerable<string> Method(IVisitorContext context, string methodVar, string methodName, string methodModifiers, ITypeSymbol returnType, bool refReturn, IList<TypeParameterSyntax> typeParameters)
@@ -68,25 +68,35 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         var parameterlessCtorSignatureVar = context.Naming.SyntheticVariable("parameterlessCtorSignature", ElementKind.LocalVariable);
         var ctorBlobIndexVar = context.Naming.SyntheticVariable("parameterlessCtorBlobIndex", ElementKind.LocalVariable);
 
-        var expressions = new List<CecilifierInterpolatedStringHandler>
-        {
+        yield return Format(
             $$"""
-             var {{parameterlessCtorSignatureVar}} = new BlobBuilder();
-             new BlobEncoder({{parameterlessCtorSignatureVar}})
-                    .MethodSignature(isInstanceMethod: {{(isStatic ? "false" : "true")}})
-                    .Parameters(0, returnType => returnType.Void(), parameters => { });
-             
-             var {{ctorBlobIndexVar}} = metadata.GetOrAddBlob({{parameterlessCtorSignatureVar}});
-                
-             var objectCtorMemberRef = metadata.AddMemberReference(
-                                                 {{context.TypeResolver.Resolve(context.RoslynTypeSystem.SystemObject)}},
-                                                 metadata.GetOrAddString(".ctor"),
-                                                 {{ctorBlobIndexVar}});
-             """
-        };
+              var {{parameterlessCtorSignatureVar}} = new BlobBuilder();
+              new BlobEncoder({{parameterlessCtorSignatureVar}})
+                     .MethodSignature(isInstanceMethod: {{(isStatic ? "false" : "true")}})
+                     .Parameters(0, returnType => returnType.Void(), parameters => { });
 
-        return expressions.Select(cish => cish.Result);
-
+              var {{ctorBlobIndexVar}} = metadata.GetOrAddBlob({{parameterlessCtorSignatureVar}});
+                 
+              var objectCtorMemberRef = metadata.AddMemberReference(
+                                                  {{memberDefinitionContext.ParentDefinitionVariableName}},
+                                                  metadata.GetOrAddString(".ctor"),
+                                                  {{ctorBlobIndexVar}});
+              """);
+        
+        ((SystemReflectionMetadataContext) context).DelayedDefinitionsManager.RegisterMethodDefinition( memberDefinitionContext.ParentDefinitionVariableName, (ctx, methodRecord) =>
+        {
+            var ctorDefVar = ctx.Naming.SyntheticVariable("ctor", ElementKind.LocalVariable);
+            ctx.WriteCecilExpression($"""
+                                   var {ctorDefVar} = metadata.AddMethodDefinition(
+                                                             MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName,
+                                                             MethodImplAttributes.IL | MethodImplAttributes.Managed,
+                                                             metadata.GetOrAddString(".ctor"),
+                                                             metadata.GetOrAddBlob({parameterlessCtorSignatureVar}),
+                                                             methodBodyStream.AddMethodBody({memberDefinitionContext.IlContext.VariableName}),
+                                                             parameterList: {methodRecord.FirstParameterHandle});
+                                   """);
+            return ctorDefVar;
+        });
     }
 
     static string Format(CecilifierInterpolatedStringHandler handler) => handler.Result;

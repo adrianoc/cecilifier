@@ -15,11 +15,8 @@ namespace Cecilifier.Core.AST;
 
 public interface IVisitorContext
 {
-    static virtual IVisitorContext CreateContext(CecilifierOptions options, SemanticModel semanticModel)
-    {
-        throw new NotImplementedException();
-    }
-        
+    static virtual IVisitorContext CreateContext(CecilifierOptions options, SemanticModel semanticModel) => throw new NotImplementedException();
+
     IApiDriverDefinitionsFactory ApiDefinitionsFactory { get; }
     public IILGeneratorApiDriver ApiDriver { get; }
         
@@ -41,6 +38,8 @@ public interface IVisitorContext
 
     LinkedListNode<string> CurrentLine { get; }
     int CecilifiedLineNumber { get; }
+
+    void OnProcessingFinished();
 
     IMethodSymbol GetDeclaredSymbol(BaseMethodDeclarationSyntax methodDeclaration);
     ITypeSymbol GetDeclaredSymbol(BaseTypeDeclarationSyntax classDeclaration);
@@ -87,5 +86,5 @@ public class IlContext
     //TODO: Remove these implicit operators and fix all usages of il variable names
     public static implicit operator IlContext(string x) => new(x);
     public static implicit operator string(IlContext x) => x.VariableName;
-    public string VariableName { get; }
+    public virtual string VariableName { get; }
 }

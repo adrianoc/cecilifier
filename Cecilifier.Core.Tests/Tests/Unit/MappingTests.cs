@@ -43,7 +43,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             Assert.That(result.Mappings[0].Source.End.Column, Is.EqualTo(46), message);
 
             Assert.That(result.Mappings[0].Cecilified.Begin.Line, Is.EqualTo(25), message);
-            Assert.That(result.Mappings[0].Cecilified.End.Line, Is.EqualTo(54), message);
+            Assert.That(result.Mappings[0].Cecilified.End.Line, Is.EqualTo(55), message);
 
             // => int Sum(int i, int j) => i + j;
             Assert.That(result.Mappings[1].Source.Begin.Line, Is.EqualTo(1), message);
