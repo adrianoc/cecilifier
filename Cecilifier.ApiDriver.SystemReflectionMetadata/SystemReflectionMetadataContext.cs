@@ -25,7 +25,7 @@ public class SystemReflectionMetadataContext : CecilifierContextBase, IVisitorCo
     
     public DelayedDefinitionsManager DelayedDefinitionsManager { get; } = new();
     
-    public void OnProcessingFinished()
+    public void OnFinishedTypeDeclaration()
     {
         DelayedDefinitionsManager.ProcessDefinitions(this);
     }

@@ -39,7 +39,7 @@ public interface IVisitorContext
     LinkedListNode<string> CurrentLine { get; }
     int CecilifiedLineNumber { get; }
 
-    void OnProcessingFinished();
+    void OnFinishedTypeDeclaration();
 
     IMethodSymbol GetDeclaredSymbol(BaseMethodDeclarationSyntax methodDeclaration);
     ITypeSymbol GetDeclaredSymbol(BaseTypeDeclarationSyntax classDeclaration);

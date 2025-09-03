@@ -31,6 +31,7 @@ namespace Cecilifier.Core.AST
                 ProcessMembers(node);
                 base.VisitInterfaceDeclaration(node);
             }
+            Context.OnFinishedTypeDeclaration();
         }
 
         public override void VisitClassDeclaration(ClassDeclarationSyntax node)
@@ -46,6 +47,7 @@ namespace Cecilifier.Core.AST
             {
                 ProcessTypeDeclaration(node, definitionVar);
             }
+            Context.OnFinishedTypeDeclaration();
         }
 
         public override void VisitStructDeclaration(StructDeclarationSyntax node)
@@ -58,6 +60,7 @@ namespace Cecilifier.Core.AST
                 ProcessTypeDeclaration(node, definitionVar);
                 ProcessStructPseudoAttributes(definitionVar, structSymbol);
             }
+            Context.OnFinishedTypeDeclaration();
         }
 
         public override void VisitRecordDeclaration(RecordDeclarationSyntax node)
@@ -72,12 +75,14 @@ namespace Cecilifier.Core.AST
             RecordGenerator generator = new(Context, definitionVar, node);
             generator.AddNullabilityAttributesToTypeDefinition(definitionVar);
             generator.AddSyntheticMembers();
+            Context.OnFinishedTypeDeclaration();
         }
 
         public override void VisitEnumDeclaration(EnumDeclarationSyntax node)
         {
             using var _ = LineInformationTracker.Track(Context, node);
             node.Accept(new EnumDeclarationVisitor(Context));
+            Context.OnFinishedTypeDeclaration();
         }
 
         void ProcessTypeDeclaration(TypeDeclarationSyntax node, string definitionVar)
