@@ -99,11 +99,10 @@ public class PrimaryConstructorGenerator
             var setMethodVar = context.Naming.SyntheticVariable($"set{propertyData.Name}", ElementKind.Method);
             using (propertyGenerator.AddSetterMethodDeclaration(in propertyData, setMethodVar, true, $"set_{propertyData.Name}", null))
             {
-                var ilVar = context.Naming.ILProcessor($"set{propertyData.Name}");
-                context.WriteCecilExpressions([$"var {ilVar} = {setMethodVar}.Body.GetILProcessor();"]);
+                var ilContext = context.ApiDriver.NewIlContext(context, $"set{propertyData.Name}", setMethodVar);
                 
-                propertyGenerator.AddAutoSetterMethodImplementation(in propertyData, ilVar, setMethodVar);
-                context.EmitCilInstruction(ilVar, OpCodes.Ret);
+                propertyGenerator.AddAutoSetterMethodImplementation(in propertyData, ilContext);
+                context.ApiDriver.EmitCilInstruction(context, ilContext, OpCodes.Ret);
             }
             context.WriteNewLine();
         }

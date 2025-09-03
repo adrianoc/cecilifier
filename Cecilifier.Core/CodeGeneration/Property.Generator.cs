@@ -76,17 +76,17 @@ internal class PropertyGenerator
         return methodVariableScope;
     }
 
-    internal void AddAutoSetterMethodImplementation(ref readonly PropertyGenerationData property, string ilSetVar, string setMethodVar)
+    internal void AddAutoSetterMethodImplementation(ref readonly PropertyGenerationData property, IlContext ilContext)
     {
         AddBackingFieldIfNeeded(in property);
 
-        Context.EmitCilInstruction(ilSetVar, OpCodes.Ldarg_0);
+        Context.ApiDriver.EmitCilInstruction(Context, ilContext, OpCodes.Ldarg_0);
         if (!property.IsStatic)
-            Context.EmitCilInstruction(ilSetVar, OpCodes.Ldarg_1);
+            Context.ApiDriver.EmitCilInstruction(Context, ilContext, OpCodes.Ldarg_1);
 
         var operand = property.DeclaringTypeIsGeneric ? MakeGenericType(in property) : _backingFieldVar;
-        Context.EmitCilInstruction(ilSetVar, property.StoreOpCode, operand);
-        Context.AddCompilerGeneratedAttributeTo(setMethodVar);
+        Context.ApiDriver.EmitCilInstruction(Context, ilContext, property.StoreOpCode, operand);
+        Context.AddCompilerGeneratedAttributeTo(ilContext.RelatedMethodVariable);
     }
 
     internal ScopedDefinitionVariable AddGetterMethodDeclaration(ref readonly PropertyGenerationData property, string accessorMethodVar, bool hasCovariantReturn, string nameForRegistration, string overridenMethod)

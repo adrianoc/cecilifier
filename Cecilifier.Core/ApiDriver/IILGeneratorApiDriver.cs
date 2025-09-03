@@ -18,7 +18,7 @@ public interface IILGeneratorApiDriver
     
     IApiDriverDefinitionsFactory CreateDefinitionsFactory();
 
-    IlContext NewIlContext(IVisitorContext context, string memberName, string methodLocalVar);
+    IlContext NewIlContext(IVisitorContext context, string memberName, string relatedMethodVar);
     
     void EmitCilInstruction<T>(IVisitorContext context, IlContext il, OpCode opCode, T? operand, string? comment = null);
     void EmitCilInstruction(IVisitorContext context, IlContext il, OpCode opCode);

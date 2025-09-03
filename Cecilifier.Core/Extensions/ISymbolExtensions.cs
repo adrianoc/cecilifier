@@ -23,6 +23,9 @@ namespace Cecilifier.Core.Extensions
             .RemoveMiscellaneousOptions(SymbolDisplayMiscellaneousOptions.UseSpecialTypes);
 
         private static readonly SymbolDisplayFormat QualifiedNameIncludingTypeParametersFormat = QualifiedNameWithoutTypeParametersFormat.WithGenericsOptions(SymbolDisplayGenericsOptions.IncludeTypeParameters);
+        private static readonly SymbolDisplayFormat ValidVariableNameFormat = new SymbolDisplayFormat(typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameOnly)
+                .AddMiscellaneousOptions(SymbolDisplayMiscellaneousOptions.ExpandNullable)
+                .RemoveMiscellaneousOptions(SymbolDisplayMiscellaneousOptions.UseSpecialTypes);
 
         public static ElementKind ToElementKind(this TypeKind self) => self switch
         {
@@ -47,6 +50,11 @@ namespace Cecilifier.Core.Extensions
         public static string FullyQualifiedName(this ISymbol type, bool includingTypeParameters = true)
         {
             return type.ToDisplayString(includingTypeParameters ? QualifiedNameIncludingTypeParametersFormat : QualifiedNameWithoutTypeParametersFormat);
+        }
+        
+        public static string ToValidVariableName(this ISymbol type)
+        {
+            return type.ToDisplayString(ValidVariableNameFormat);
         }
         
         public static string GetReflectionName(this ITypeSymbol typeSymbol)

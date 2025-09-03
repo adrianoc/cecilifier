@@ -104,13 +104,13 @@ public class SystemReflectionMetadataGeneratorDriver : IILGeneratorApiDriver
     public IReadOnlyCollection<string> AssemblyReferences { get; } = [typeof(System.Reflection.Metadata.BlobBuilder).Assembly.Location];
     public IApiDriverDefinitionsFactory CreateDefinitionsFactory() => new SystemReflectionMetadataDefinitionsFactory();
     
-    public IlContext NewIlContext(IVisitorContext context, string memberName, string methodLocalVar)
+    public IlContext NewIlContext(IVisitorContext context, string memberName, string relatedMethodVar)
     {
         var ilVarName = context.Naming.ILProcessor(memberName);
         context.WriteCecilExpression($"var {ilVarName} = new InstructionEncoder(new BlobBuilder());");
         context.WriteNewLine();
         
-        return new SystemReflectionMetadataIlContext(ilVarName);
+        return new SystemReflectionMetadataIlContext(ilVarName, relatedMethodVar);
     }
 
     public void EmitCilInstruction<T>(IVisitorContext context, IlContext il, OpCode opCode, T? operand, string? comment = null)

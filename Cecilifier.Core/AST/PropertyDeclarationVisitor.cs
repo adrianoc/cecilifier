@@ -189,24 +189,21 @@ namespace Cecilifier.Core.AST
                 if (propertySymbol.ContainingType.TypeKind == TypeKind.Interface)
                     return;
 
-                var ilSetVar = Context.Naming.ILProcessor("set");
-                Context.WriteCecilExpression($"var {ilSetVar} = {setMethodVar}.Body.GetILProcessor();");
-                Context.WriteNewLine();
-                
+                var ilContext = Context.ApiDriver.NewIlContext(Context, "set", setMethodVar);
                 if (accessor.Body == null && accessor.ExpressionBody == null) //is this an auto property ?
                 {
-                    generator.AddAutoSetterMethodImplementation(in propertyGenerationData, ilSetVar, setMethodVar);
+                    generator.AddAutoSetterMethodImplementation(in propertyGenerationData, ilContext);
                 }
                 else if (accessor.Body != null)
                 {
-                    StatementVisitor.Visit(Context, ilSetVar, accessor.Body);
+                    StatementVisitor.Visit(Context, ilContext, accessor.Body);
                 }
                 else
                 {
-                    ExpressionVisitor.Visit(Context, ilSetVar, accessor.ExpressionBody!);
+                    ExpressionVisitor.Visit(Context, ilContext, accessor.ExpressionBody!);
                 }
 
-                Context.EmitCilInstruction(ilSetVar, OpCodes.Ret);
+                Context.ApiDriver.EmitCilInstruction(Context, ilContext, OpCodes.Ret);
             }
 
             ScopedDefinitionVariable AddGetterMethodGuts(string getMethodVar, out string? ilVar)
