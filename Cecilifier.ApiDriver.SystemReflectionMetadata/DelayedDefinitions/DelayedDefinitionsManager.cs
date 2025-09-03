@@ -24,7 +24,8 @@ public class DelayedDefinitionsManager
         _postponedTypeDefinitionDetails.Add(new TypeDefinitionRecord(typeQualifiedName, typeVarName)
         {
             DefinitionFunction = action,
-            FirstFieldHandle = "MetadataTokens.FieldDefinitionHandle(1)"
+            FirstFieldHandle = "MetadataTokens.FieldDefinitionHandle(1)",
+            FirstMethodHandle = "MetadataTokens.MethodDefinitionHandle(1)"
         });
     }
 

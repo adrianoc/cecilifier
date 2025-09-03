@@ -30,9 +30,9 @@ public struct CecilifierInterpolatedStringHandler
         lastIndent = WriteString(value, computeIndent: true);
     }
     
-    public void AppendFormatted<T>(T value) where T : notnull
+    public void AppendFormatted<T>(T value)
     {
-        WriteString(value.ToString(), typeof(T) == typeof(string));
+        WriteString(value == null ? "null" : value.ToString(), typeof(T) == typeof(string));
         lastIndent = 0;
     }
 
