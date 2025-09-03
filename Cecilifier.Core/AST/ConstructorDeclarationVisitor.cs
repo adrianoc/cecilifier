@@ -136,6 +136,7 @@ namespace Cecilifier.Core.AST
 
         private IlContext AddOrUpdateParameterlessCtorDefinition(string typeName, string normalizedTypeName, string typeDefVar, string ctorAccessibility, bool isStatic, string ctorLocalVar)
         {
+            var ctorName = isStatic ? "cctor" : "ctor";
             var found = Context.DefinitionVariables.GetMethodVariable(new MethodDefinitionVariable(typeName, Utils.ConstructorMethodName(isStatic), [], 0));
             if (found.IsValid)
             {
@@ -153,10 +154,10 @@ namespace Cecilifier.Core.AST
                 //      add it here (this will break tests for SRM driver).
                 AddCecilExpression($"{typeDefVar}.Methods.Add({ctorLocalVar});");
                 
-                return Context.ApiDriver.NewIlContext(Context, $"ctor_{normalizedTypeName}", ctorLocalVar);
+                return Context.ApiDriver.NewIlContext(Context, $"{ctorName}_{normalizedTypeName}", ctorLocalVar);
             }
 
-            var ilContext = Context.ApiDriver.NewIlContext(Context, $"ctor_{normalizedTypeName}", ctorLocalVar);
+            var ilContext = Context.ApiDriver.NewIlContext(Context, $"{ctorName}_{normalizedTypeName}", ctorLocalVar);
             var definitionContext = new MemberDefinitionContext( ctorLocalVar, typeDefVar, ilContext);
             var exps = Context.ApiDefinitionsFactory.Constructor(Context, definitionContext, typeName, isStatic, ctorAccessibility, []);
             AddCecilExpressions(Context, exps);

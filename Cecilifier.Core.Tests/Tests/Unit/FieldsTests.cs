@@ -86,9 +86,7 @@ public class FieldsTests : CecilifierUnitTestBase
         Assert.That(
             cecilifiedCode,
             Does.Match(
-                @"//static int .+ = 42;\s+" +
-                @"var (il_.+_\d+) = .+.Body.GetILProcessor\(\);\s+" +
-                @"\1.Emit\(OpCodes.Ldc_I4, 42\);\s+" +
+                @"(il_cctor.+\d+).Emit\(OpCodes.Ldc_I4, 42\);\s+" +
                 @"\1.Emit\(OpCodes.Stsfld, fld_.+\);"));
     }
 

@@ -79,13 +79,6 @@ public class SnippetRunner
     }
 }
 
-public class MonoCecilIlContext : IlContext
-{
-    protected internal MonoCecilIlContext(string variableName) : base(variableName)
-    {
-    }
-}
-
 public class MonoCecilDeferredIlContext : IlContext
 {
     private readonly IVisitorContext _context;

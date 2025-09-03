@@ -2,11 +2,18 @@ using System.Runtime.InteropServices;
 
 namespace Cecilifier.ApiDriver.SystemReflectionMetadata.DelayedDefinitions;
 
+//TODO: Handle fields && parameters
+/// <summary>
+/// System.Reflection.Metadata model requires members (methods, field) as well parameters
+/// to be defined before the containing member (type, method, property) whereas Cecilifier
+/// follows Roslyn model, in which type definitions happens first, followed by the member
+/// definitions.
+///
+/// Upon visiting types/members, SRM driver adds a type/member *reference* and postpones
+/// the related type/member *definition* when finishing visiting types. 
+/// </summary>
 public class DelayedDefinitionsManager
 {
-    /// <summary>
-    /// 
-    /// </summary>
     private List<TypeDefinitionRecord> _postponedTypeDefinitionDetails = new();
     private List<MethodDefinitionRecord> _postponedMethodDefinitionDetails = new();
 
@@ -28,7 +35,6 @@ public class DelayedDefinitionsManager
 
     internal void ProcessDefinitions(SystemReflectionMetadataContext context)
     {
-        //TODO: Handle fields && parameters
         var postponedTypeDefinitions = CollectionsMarshal.AsSpan(_postponedTypeDefinitionDetails);
         foreach (var methodRecord in _postponedMethodDefinitionDetails)
         {
@@ -42,7 +48,6 @@ public class DelayedDefinitionsManager
                     postponedTypeDefinitions[i].FirstMethodHandle = methodHandleVariableName;
                 }
             }
-            //TODO: Update TypeRecord with method handle var.
         }
         
         _firstMethodHandleVariable ??= "MetadataTokens.MethodDefinitionHandle(1)";
@@ -50,5 +55,8 @@ public class DelayedDefinitionsManager
         {
             typeRecord.DefinitionFunction(context, typeRecord);
         }
+
+        _postponedMethodDefinitionDetails.Clear();
+        _postponedTypeDefinitionDetails.Clear();
     }
 }

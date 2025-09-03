@@ -13,6 +13,10 @@ internal record struct TypeDefinitionRecord(string TypeQualifiedName, string Typ
     /// fields. See MetadataBuilder.AddMethodDefinition() for more details.
     /// </summary>
     public string FirstFieldHandle { get; set; }
+
+    /// <summary>
+    /// The name of the variable representing the definition of the first method of the type. <see cref="FirstFieldHandle"/>
+    /// </summary>
     public string FirstMethodHandle { get; set; }
     
     /// <summary>
