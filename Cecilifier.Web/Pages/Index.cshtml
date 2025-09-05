@@ -71,11 +71,18 @@
               <div style="margin-bottom: 35px; display: flex; justify-content: center; align-items: center; gap:5px">
                   <button type="submit" id="sendbutton" class="button">Cecilify your code!</button>
                   <button type="submit" id="downloadProject" class="button">Generate Project <i class="fa fa-box"></i></button>
+                  <div class="btn-group dropup">
+                      <button type="button" id="targetApiButton" class="button dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Targeting: Mono.Cecil <span class="caret"></span>
+                      </button>
+                      <ul class="dropdown-menu">
+                          <li><a href="#" onclick="document.getElementById('targetApiButton').innerHTML = 'Targeting: Mono.Cecil <span class=\'caret\'>'">Mono.Cecil</a></li>
+                          <li><a href="#" onclick="document.getElementById('targetApiButton').innerHTML = 'Targeting: System.Reflection.Metadata <span class=\'caret\'>'">System.Reflection.Metadata</a></li>
+                      </ul>
+                  </div>
                   <button class="button" id="copyToClipboard" onclick="copyToClipboard('copyPastHelper');"><i class="fa fa-copy"></i></button>
                   <button class="button" id="changeSettings" onclick="changeCecilifierSettings();"><i class="fas fa-sliders-h"></i></button>
                   <button class="button" id="showFixedBugsInStaging" onclick="showListOfFixedIssuesInStagingServer(true);"><i class="fa fa-bug fa-lg"></i></button>
                   <button class="button" id="assembly_references_button" onclick="ShowAssemblyReferencesDialog('Assembly References', 'ssss');"><i class="fas fa-database"></i></button>
-
                   <span id="keyboard-shortcuts">
                       <i class="fas fa-keyboard" style="font-size:28px; vertical-align: middle;"></i>
                   </span>
@@ -92,18 +99,6 @@
         <div></div>
         <div></div>
         <div></div></div>
-
-    <div align="center" style="vertical-align: middle; margin-bottom: 5px;">
-        <button type="submit" id="sendbutton" class="button">Cecilify your code!</button>
-        <button type="submit" id="downloadProject" class="button">Generate Project <i class="fa fa-box"></i></button>
-        <button class="button" id="copyToClipboard" onclick="copyToClipboard('copyPastHelper');"><i class="fa fa-copy"></i></button>
-        <button class="button" onclick="changeCecilifierSettings();" id="changeSettings"><i class="fas fa-sliders-h"></i></button>
-        <button class="button" id="showFixedBugsInStaging" onclick="showListOfFixedIssuesInStagingServer(true);"><i class="fa fa-bug fa-lg"></i></button>
-        <button class="button" onclick="ShowAssemblyReferencesDialog('Assembly References', 'ssss');" id="assembly_references_button"><i class="fas fa-database"></i></button>
-
-        <span id="keyboard-shortcuts"><i class="fas fa-keyboard" style="font-size:28px; vertical-align: middle;"></i></span>
-        <span id="aboutSpan2"><i class="fas fa-question-circle" style="font-size:28px; vertical-align: middle;"></i></span>
-    </div>
 
     <div id="cecilifiedcode-container" style="margin-bottom: 0;">
         <div id="cecilifiedcode" style="width: 100%; height: 600px; border-left: 10px solid white; border-right: 10px solid white"></div>

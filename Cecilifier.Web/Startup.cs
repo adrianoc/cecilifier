@@ -4,6 +4,7 @@ using System.Buffers.Text;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
+using System.IO.Enumeration;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -15,7 +16,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using Cecilifier.ApiDriver.MonoCecil;
+using Cecilifier.ApiDriver.SystemReflectionMetadata;
 using Cecilifier.Core;
+using Cecilifier.Core.AST;
 using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
@@ -23,7 +26,6 @@ using Cecilifier.Web.Pages;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
-using Microsoft.CodeAnalysis;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -187,7 +189,7 @@ namespace Cecilifier.Web
 
                 try
                 {
-                    var toBeCecilified = JsonSerializer.Deserialize<CecilifierRequest>(memory.Span[0..received.Count]);
+                    var toBeCecilified = JsonSerializer.Deserialize<CecilifierRequest>(memory.Span[..received.Count]);
                     var userAssemblyReferences = AssemblyReferenceCacheHandler.RetrieveAssemblyReferences(Constants.AssemblyReferenceCacheBasePath, toBeCecilified.AssemblyReferences);
 
                     if (userAssemblyReferences.NotFound.Count > 0)
@@ -203,21 +205,13 @@ namespace Cecilifier.Web
                         continue;
                     }
 
-                    codeSnippet = toBeCecilified.Code;
                     includeSourceInErrorReports = (toBeCecilified.Settings.NamingOptions & NamingOptions.IncludeSourceInErrorReports) == NamingOptions.IncludeSourceInErrorReports;
-
-                    var bytes = Encoding.UTF8.GetBytes(toBeCecilified.Code);
-                    await using var code = new MemoryStream(bytes, 0, bytes.Length);
-
+                    codeSnippet = toBeCecilified.Code;
                     var deployKind = toBeCecilified.WebOptions.DeployKind;
-                    //TODO: Take SystemReflectionMetadataContext into account.
-                    var cecilifiedResult = Core.Cecilifier.Process<MonoCecilContext>(
-                                                                code,
-                                                                new CecilifierOptions
-                                                                {
-                                                                    References = ReferencedAssemblies.GetTrustedAssembliesPath().Concat(userAssemblyReferences.Success).ToList(),
-                                                                    Naming = new DefaultNameStrategy(toBeCecilified.Settings.NamingOptions, toBeCecilified.Settings.ElementKindPrefixes.ToDictionary(entry => entry.ElementKind, entry => entry.Prefix))
-                                                                });
+                    
+                    var cecilifiedResult = toBeCecilified.TargetApi == "Mono.Cecil"
+                        ? Run<MonoCecilContext>(toBeCecilified, userAssemblyReferences.Success)
+                        : Run<SystemReflectionMetadataContext>(toBeCecilified, userAssemblyReferences.Success);
 
                     await SendTextMessageToChatAsync($"One more happy user {(deployKind == 'Z' ? "(project)" : "")}", $"Total so far: {CecilifierApplication.Count}\n\n***********\n\n```{toBeCecilified.Code}```", "4437377");
 
@@ -269,6 +263,22 @@ namespace Cecilifier.Web
                 received = await webSocket.ReceiveAsync(memory, CancellationToken.None);
             }
 
+            static CecilifierResult Run<TContext>(CecilifierRequest request, IReadOnlyList<string> userAssemblyReferences) where TContext : IVisitorContext
+            {
+                var bytes = Encoding.UTF8.GetBytes(request.Code);
+                using var code = new MemoryStream(bytes, 0, bytes.Length);
+                    
+                var cecilifiedResult = Core.Cecilifier.Process<TContext>(
+                    code,
+                    new CecilifierOptions
+                    {
+                        References = ReferencedAssemblies.GetTrustedAssembliesPath().Concat(userAssemblyReferences).ToList(),
+                        Naming = new DefaultNameStrategy(request.Settings.NamingOptions, request.Settings.ElementKindPrefixes.ToDictionary(entry => entry.ElementKind, entry => entry.Prefix))
+                    });
+
+                return cecilifiedResult;
+            }
+            
             static void UpdateStatistics(int remoteIpAddressHashCode)
             {
                 Interlocked.Increment(ref CecilifierApplication.Count);

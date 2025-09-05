@@ -1,7 +1,14 @@
 using System.Text.Json.Serialization;
+using Newtonsoft.Json;
 
 namespace Cecilifier.Web
 {
+    public enum TargetApiKind
+    {
+        MonoCecil,
+        SystemReflectionMetadata
+    }
+    
     public class AssemblyReference
     {
         [JsonPropertyName("assemblyName")] public string AssemblyName { get; set; }
@@ -14,6 +21,7 @@ namespace Cecilifier.Web
         [JsonPropertyName("options")] public WebOptions WebOptions { get; set; }
         [JsonPropertyName("code")] public string Code { get; set; }
         [JsonPropertyName("settings")] public CecilifierSettings Settings { get; set; }
+        [JsonPropertyName("targetApi")] public string TargetApi { get; set; }
         [JsonPropertyName("assemblyReferences")] public AssemblyReference[] AssemblyReferences { get; set; }
     }
 

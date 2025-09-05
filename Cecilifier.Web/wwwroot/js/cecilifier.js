@@ -18,10 +18,11 @@ const CecilifierResponseStatus = Object.freeze({
 
 class CecilifierRequest
 {
-    constructor(code, options, settings, assemblyReferences) {
-        this.code = code;
+    constructor(code, options, settings, targetApi, assemblyReferences) {
+        this.code = code;        
         this.options = options;
         this.settings = settings;
+        this.targetApi = targetApi;
         this.assemblyReferences = assemblyReferences;
     }
 }
@@ -755,12 +756,18 @@ function initializeWebSocket() {
 
     const sendButton = document.getElementById("sendbutton");
     sendButton.onclick = function() {
-        send(websocket, 'C');
+        const targetApi = document.getElementById('targetApiButton').innerText.indexOf("Mono.Cecil") === -1
+            ? "System.Reflection.Metadata"
+            : "Mono.Cecil";
+        send(websocket, 'C', targetApi);
     };
 
     const downloadProjectButton = document.getElementById("downloadProject");
     downloadProjectButton.onclick = function() {
-        send(websocket, 'Z');
+        const targetApi = document.getElementById('targetApiButton').innerText.indexOf("Mono.Cecil") === -1
+            ? "System.Reflection.Metadata"
+            : "Mono.Cecil";
+        send(websocket, 'Z', targetApi);
     };
 
     websocket.onopen = function (event) {
@@ -895,7 +902,7 @@ function updateUsageStatisticsToolTip(response) {
 
 function getSendToDiscordValue() { return settings.isEnabled(NamingOptions.IncludeSourceInErrorReports); }
 
-function send(websocket, format) {
+function send(websocket, format, targetApi) {
     if (!websocket || websocket.readyState !== WebSocket.OPEN) {
         SnackBar({
             message: "Lost WebSocket connection with Cecilifier site; please, refresh the page.",
@@ -918,6 +925,7 @@ function send(websocket, format) {
                 csharpCode.getValue(),
                 new WebOptions(format),
                 settings.toTransportObject(),
+                targetApi,
                 assemblyReferences);
 
         websocket.send(JSON.stringify(request));}
