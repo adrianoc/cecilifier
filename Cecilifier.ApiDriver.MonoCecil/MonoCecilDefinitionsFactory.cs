@@ -1,6 +1,8 @@
+using System.Runtime.CompilerServices;
 using Cecilifier.Core;
 using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.AST;
+using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
@@ -29,9 +31,16 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
         return CecilDefinitionsFactory.Type(context, typeVar, typeNamespace, typeName, attrs, resolvedBaseType, outerTypeVariable, isStructWithNoFields, interfaces, ownTypeParameters, outerTypeParameters, properties);
     }
 
-    public IEnumerable<string> Method(IVisitorContext context, string methodVar, string methodName, string methodModifiers, ITypeSymbol returnType, bool refReturn, IList<TypeParameterSyntax> typeParameters)
+    public IEnumerable<string> Method(IVisitorContext context, IMethodSymbol methodSymbol, MemberDefinitionContext memberDefinitionContext, string methodName, string methodModifiers,
+        IParameterSymbol[] resolvedParameterTypes, IList<TypeParameterSyntax> typeParameters)
     {
-        return CecilDefinitionsFactory.Method(context, methodVar, methodName, methodModifiers, returnType, refReturn, typeParameters);
+        var exps = CecilDefinitionsFactory.Method(context, memberDefinitionContext.MemberDefinitionVariableName, methodName, methodModifiers, methodSymbol.ReturnType, methodSymbol.ReturnsByRef || methodSymbol.ReturnsByRef, typeParameters).ToList();
+        exps.Add($"{context.DefinitionVariables.GetLastOf(VariableMemberKind.Type).VariableName}.Methods.Add({memberDefinitionContext.MemberDefinitionVariableName});");
+        if (methodSymbol is { IsAbstract: false, IsExtern: false })
+        {
+            exps.Add($"{memberDefinitionContext.MemberDefinitionVariableName}.Body.InitLocals = {(!methodSymbol.TryGetAttribute<SkipLocalsInitAttribute>(out _)).ToString().ToLower()};");
+        }
+        return exps;
     }
 
     public IEnumerable<string> Method(IVisitorContext context, string declaringTypeName, string methodVar, string methodNameForParameterVariableRegistration, string methodName, string methodModifiers, IReadOnlyList<ParameterSpec> parameters,

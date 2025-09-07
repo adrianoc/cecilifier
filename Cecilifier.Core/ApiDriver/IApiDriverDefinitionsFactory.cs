@@ -26,7 +26,8 @@ public interface IApiDriverDefinitionsFactory
         IEnumerable<TypeParameterSyntax> outerTypeParameters,
         params string[] properties);
 
-    public IEnumerable<string> Method(IVisitorContext context, string methodVar, string methodName, string methodModifiers, ITypeSymbol returnType, bool refReturn, IList<TypeParameterSyntax> typeParameters);
+    public IEnumerable<string> Method(IVisitorContext context, IMethodSymbol methodSymbol, MemberDefinitionContext memberDefinitionContext, string methodName, string methodModifiers,
+        IParameterSymbol[] resolvedParameterTypes, IList<TypeParameterSyntax> typeParameters);
 
     public IEnumerable<string> Method(
         IVisitorContext context,

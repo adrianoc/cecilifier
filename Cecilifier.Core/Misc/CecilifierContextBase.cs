@@ -147,10 +147,9 @@ namespace Cecilifier.Core.Misc
             CecilifiedLineNumber++;
         }
 
-        public void WriteCilInstructionAfter<T>(string ilVar, OpCode opCode, T operand, string comment, LinkedListNode<string> after)
+        public void WriteCilInstructionAfter(string ilVar, OpCode opCode, LinkedListNode<string> after)
         {
-            var operandStr = operand == null ? string.Empty : $", {operand}";
-            var toBeWritten = $"{ilVar}.Emit({opCode.ConstantName()}{operandStr});{(comment != null ? $" // {comment}" : string.Empty)}\n";
+            var toBeWritten = $"{ilVar}.Emit({opCode.ConstantName()});\n";
             
             output.AddAfter(after, $"{indentation}{toBeWritten}");
             CecilifiedLineNumber += toBeWritten.CountNewLines();

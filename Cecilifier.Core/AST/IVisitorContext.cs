@@ -51,7 +51,7 @@ public interface IVisitorContext
     //      among the ApiDrivers
     void EmitCilInstruction(string ilVar, OpCode opCode);
     void EmitCilInstruction<T>(string ilVar, OpCode opCode, T operand, string comment = null);
-    void WriteCilInstructionAfter<T>(string ilVar, OpCode opCode, T operand, string comment, LinkedListNode<string> after);
+    void WriteCilInstructionAfter(string ilVar, OpCode opCode, LinkedListNode<string> after);
     
     void Generate(CecilifierInterpolatedStringHandler expression);
     void Generate(string expression);

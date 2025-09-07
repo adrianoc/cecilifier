@@ -1,5 +1,6 @@
 using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.AST;
+using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.Variables;
@@ -26,8 +27,6 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         IEnumerable<TypeParameterSyntax> outerTypeParameters, 
         params string[] properties)
     {
-        //TODO: We need to pass the handle of the 1st field/method defined in the module so we need to postpone the type generation after we have visited
-        //      all types/members.
         yield return Format($"""
                       // Add a type reference for the new type. Types/Member references to the new type uses this.
                       var {typeVar} = metadata.AddTypeReference(
@@ -37,6 +36,8 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                       
                       """);
 
+        // We need to pass the handle of the 1st field/method defined in the module so we need to postpone the type generation after we have visited
+        // all types/members.
         ((SystemReflectionMetadataContext) context).DelayedDefinitionsManager.RegisterTypeDefinition(typeVar, $"{typeNamespace}.{typeName}", (ctx, typeRecord) =>
         {
             ctx.Generate(Format($"""
@@ -52,9 +53,54 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         });
     }
 
-    public IEnumerable<string> Method(IVisitorContext context, string methodVar, string methodName, string methodModifiers, ITypeSymbol returnType, bool refReturn, IList<TypeParameterSyntax> typeParameters)
+    public IEnumerable<string> Method(IVisitorContext context, IMethodSymbol methodSymbol, MemberDefinitionContext memberDefinitionContext, string methodName, string methodModifiers, IParameterSymbol[] resolvedParameterTypes, IList<TypeParameterSyntax> typeParameters)
     {
-        throw new NotImplementedException();
+        var methodSignatureVar = context.Naming.SyntheticVariable($"{methodName}Signature", ElementKind.LocalVariable);
+        var methodBlobIndexVar = context.Naming.SyntheticVariable($"{methodName}BlobIndex", ElementKind.LocalVariable);
+
+        yield return Format(
+            $$"""
+              var {{methodSignatureVar}} = new BlobBuilder();
+              new BlobEncoder({{methodSignatureVar}})
+                     .MethodSignature(isInstanceMethod: false)
+                     .Parameters(
+                            {{resolvedParameterTypes.Length}}, 
+                            returnType => returnType
+                                                .Type(isByRef:false)
+                                                .Type({{context.TypeResolver.Resolve(methodSymbol.ReturnType)}}, IsValueType: {{methodSymbol.ReturnType.IsValueType}}), 
+                            parameters => 
+                            {
+                                {{string.Join('\n', resolvedParameterTypes.Select(p => $"""
+                                                                         parameters.AddParameter()
+                                                                                .Type(isByRef: {p.IsByRef()})
+                                                                                .Type({context.TypeResolver.Resolve(p.Type)}, isValueType: {p.Type.IsValueType});
+                                                                      """))}}
+                            });
+
+              var {{methodBlobIndexVar}} = metadata.GetOrAddBlob({{methodSignatureVar}});
+                 
+              var {{context.Naming.SyntheticVariable($"{methodName}Ref", ElementKind.LocalVariable)}} = metadata.AddMemberReference(
+                                                  {{memberDefinitionContext.ParentDefinitionVariableName}},
+                                                  metadata.GetOrAddString("{{methodName}}"),
+                                                  {{methodBlobIndexVar}});
+              """);
+        
+        ((SystemReflectionMetadataContext) context).DelayedDefinitionsManager.RegisterMethodDefinition(memberDefinitionContext.ParentDefinitionVariableName, (ctx, methodRecord) =>
+        {
+            var methodDefVar = ctx.Naming.SyntheticVariable(methodName, ElementKind.LocalVariable);
+            ctx.Generate($"""
+                                   var {methodDefVar} = metadata.AddMethodDefinition(
+                                                             {methodModifiers},
+                                                             MethodImplAttributes.IL | MethodImplAttributes.Managed,
+                                                             metadata.GetOrAddString("{methodName}"),
+                                                             metadata.GetOrAddBlob({methodSignatureVar}),
+                                                             methodBodyStream.AddMethodBody({memberDefinitionContext.IlContext.VariableName}),
+                                                             parameterList: {methodRecord.FirstParameterHandle});
+                                   """);
+            
+            ctx.WriteNewLine();
+            return methodDefVar;
+        });
     }
 
     public IEnumerable<string> Method(IVisitorContext context, string declaringTypeName, string methodVar, string methodNameForParameterVariableRegistration, string methodName, string methodModifiers, IReadOnlyList<ParameterSpec> parameters,
@@ -95,9 +141,11 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                                                              methodBodyStream.AddMethodBody({memberDefinitionContext.IlContext.VariableName}),
                                                              parameterList: {methodRecord.FirstParameterHandle});
                                    """);
+            
+            ctx.WriteNewLine();
             return ctorDefVar;
         });
     }
 
-    static string Format(CecilifierInterpolatedStringHandler handler) => handler.Result;
+    static string Format(CecilifierInterpolatedStringHandler cecilFormattedString) => cecilFormattedString.Result;
 }
