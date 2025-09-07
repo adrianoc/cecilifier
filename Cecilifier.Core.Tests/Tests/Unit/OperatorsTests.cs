@@ -263,11 +263,11 @@ public class OperatorsTests : CecilifierUnitTestBase
     
     [TestCase("bool Foo<T>(T o) => o == null;", 
         """
-                var (p_o_\d+) = new ParameterDefinition\("o", ParameterAttributes.None, gp_T_7\);
+                var (p_o_\d+) = new ParameterDefinition\("o", ParameterAttributes.None, (?<tt>gp_T_\d+)\);
                 \s+m_foo_\d+.Parameters.Add\(\1\);
                 \s+//o == null
                 (\s+il_foo_\d+\.Emit\(OpCodes\.)Ldarg_0\);
-                \2Box, gp_T_7\);
+                \2Box, \k<tt>\);
                 \2Ldnull\);
                 \2Ceq\);
                 \2Ret\);

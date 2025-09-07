@@ -188,7 +188,7 @@ public static class CecilifierContextExtensions
             context.Generate(parameterExps);
             context.DefinitionVariables.RegisterNonMethod(method.ToDisplayString(), parameter.Name, VariableMemberKind.Parameter, paramVar);
         }
-
+        
         context.DefinitionVariables.RegisterMethod(method.AsMethodDefinitionVariable(methodDeclarationVar));
     }
 }

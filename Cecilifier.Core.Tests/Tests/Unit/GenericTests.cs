@@ -140,7 +140,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
                            \s+r_createInstance_4.ReturnType = gi_T_5;
                            \s+var gi_createInstance_6 = new GenericInstanceMethod\(r_createInstance_4\);
                            \s+gi_createInstance_6.GenericArguments.Add\(gp_T_\d+\);
-                           \s+il_M_3.Emit\(OpCodes.Call, gi_createInstance_6\);
+                           \s+il_M_\d+.Emit\(OpCodes.Call, gi_createInstance_6\);
                            """));
             
             Assert.That(cecilifiedCode, Does.Match(@"m_M_\d+\.ReturnType = gp_T_\d+;"));
@@ -175,7 +175,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             
             Assert.That(cecilifiedCode, Does.Match("""var l_openEquals_\d+ = .+ImportReference\(typeof\(System.IEquatable<>\)\).Resolve\(\).Methods.First\(m => m.Name == "Equals" && m.Parameters.Count == 1 && !m.Parameters.Select\(p => p.ParameterType.FullName\).Except\(\["T",\]\).Any\(\)\);"""), "method from open generic type not match");
             Assert.That(cecilifiedCode, Does.Match("""var r_equals_\d+ = new MethodReference\("Equals", assembly.MainModule.ImportReference\(l_openEquals_\d+\).ReturnType\)"""), "MethodReference does not match");
-            Assert.That(cecilifiedCode, Does.Match("""il_M_3.Emit\(OpCodes.Callvirt, r_equals_\d+\);"""), "Call to the target method does not match");
+            Assert.That(cecilifiedCode, Does.Match("""il_M_\d+.Emit\(OpCodes.Callvirt, r_equals_\d+\);"""), "Call to the target method does not match");
         }
         
         [Test]
@@ -202,7 +202,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
                                                    \s+ExplicitThis = l_openGetEnumerator_6.ExplicitThis,
                                                    \s+CallingConvention = l_openGetEnumerator_6.CallingConvention,
                                                    \s+};
-                                                   \s+il_M_3.Emit\(OpCodes.Callvirt, r_getEnumerator_7\);
+                                                   \s+il_M_\d+.Emit\(OpCodes.Callvirt, r_getEnumerator_7\);
                                                    """), "Target of call instruction validation.");
         }
 
@@ -315,7 +315,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
                                       \s+var (l_o_\d+) = new VariableDefinition\(assembly.MainModule.TypeSystem.Object\);
                                       \s+m_test_6.Body.Variables.Add\(\1\);
                                       (\s+il_test_\d+\.Emit\(OpCodes\.)Ldarg_1\);
-                                      \2Box, gp_T_7\);
+                                      \2Box, gp_T_\d+\);
                                       \2Stloc, \1\);
                                       \2Ret\);
                                       """)]
@@ -564,8 +564,8 @@ namespace Cecilifier.Core.Tests.Tests.Unit
                                                                 (?<prefix>\s+il_M_\d+\.Emit\(OpCodes\.)Ldarg_0\);
                                                                 \k<prefix>Ldc_I4, 0\);
                                                                 \k<prefix>Readonly\);
-                                                                \k<prefix>Ldelema, gp_T_7\);
-                                                                \k<prefix>Constrained, gp_T_7\);
+                                                                \k<prefix>Ldelema, (?<tt>gp_T_\d+)\);
+                                                                \k<prefix>Constrained, \k<tt>\);
                                                                 \k<prefix>Callvirt, .+ImportReference\(.+"ToString".+\)\)\);
                                                                 """));
         }
@@ -592,8 +592,8 @@ namespace Cecilifier.Core.Tests.Tests.Unit
                 new TestCaseData("void M() { M(); }", """
                                                       \s+//Method : M
                                                       \s+var (?<generic>m_M_\d+) = new MethodDefinition\("M",.+\);
-                                                      \s+var gp_T_2 = new Mono.Cecil.GenericParameter\("T", \k<generic>\);
-                                                      \s+\k<generic>.GenericParameters.Add\(gp_T_2\);
+                                                      \s+var (?<typeparameter>gp_T_\d+) = new Mono.Cecil.GenericParameter\("T", \k<generic>\);
+                                                      \s+\k<generic>.GenericParameters.Add\(\k<typeparameter>\);
                                                       \s+cls_foo_0.Methods.Add\(\k<generic>\);
                                                       \s+\k<generic>.Body.InitLocals = true;
                                                       \s+var il_M_\d+ = \k<generic>.Body.GetILProcessor\(\);
@@ -613,71 +613,71 @@ namespace Cecilifier.Core.Tests.Tests.Unit
                 new TestCaseData("void M<T,S>() { M<T,S>(); }", """
                                                       \s+//Method : M
                                                       \s+var (?<g1>m_M_\d+) = new MethodDefinition\("M",.+\);
-                                                      \s+var gp_T_2 = new Mono.Cecil.GenericParameter\("T", \k<g1>\);
-                                                      \s+\k<g1>.GenericParameters.Add\(gp_T_2\);
+                                                      \s+var (?<typeparameter>gp_T_\d+) = new Mono.Cecil.GenericParameter\("T", \k<g1>\);
+                                                      \s+\k<g1>.GenericParameters.Add\(\k<typeparameter>\);
                                                       \s+cls_foo_0.Methods.Add\(\k<g1>\);
                                                       \s+\k<g1>.Body.InitLocals = true;
-                                                      \s+var il_M_3 = \k<g1>.Body.GetILProcessor\(\);
-                                                      \s+il_M_3.Emit\(OpCodes.Ret\);
+                                                      \s+var (?<il1>il_M_\d+) = \k<g1>.Body.GetILProcessor\(\);
+                                                      \s+\k<il1>.Emit\(OpCodes.Ret\);
                                                       \s+//Method : M
                                                       \s+var (?<test_method>m_M_\d+) = new MethodDefinition\("M",.+\);
-                                                      \s+var gp_T_5 = new Mono.Cecil.GenericParameter\("T", \k<test_method>\);
-                                                      \s+var gp_S_6 = new Mono.Cecil.GenericParameter\("S", \k<test_method>\);
-                                                      \s+\k<test_method>.GenericParameters.Add\(gp_T_5\);
-                                                      \s+\k<test_method>.GenericParameters.Add\(gp_S_6\);
+                                                      \s+var gp_T_6 = new Mono.Cecil.GenericParameter\("T", \k<test_method>\);
+                                                      \s+var gp_S_7 = new Mono.Cecil.GenericParameter\("S", \k<test_method>\);
+                                                      \s+\k<test_method>.GenericParameters.Add\(gp_T_6\);
+                                                      \s+\k<test_method>.GenericParameters.Add\(gp_S_7\);
                                                       \s+cls_foo_0.Methods.Add\(\k<test_method>\);
                                                       \s+\k<test_method>.Body.InitLocals = true;
-                                                      \s+var il_M_7 = \k<test_method>.Body.GetILProcessor\(\);
+                                                      \s+var il_M_5 = \k<test_method>.Body.GetILProcessor\(\);
                                                       \s+//M<T,S>\(\);
-                                                      \s+il_M_7.Emit\(OpCodes.Ldarg_0\);
+                                                      \s+il_M_5.Emit\(OpCodes.Ldarg_0\);
                                                       \s+var gi_M_8 = new GenericInstanceMethod\(\k<test_method>\);
-                                                      \s+gi_M_8.GenericArguments.Add\(gp_T_5\);
-                                                      \s+gi_M_8.GenericArguments.Add\(gp_S_6\);
-                                                      \s+il_M_7.Emit\(OpCodes.Call, gi_M_8\);
-                                                      \s+il_M_7.Emit\(OpCodes.Ret\);
+                                                      \s+gi_M_8.GenericArguments.Add\(gp_T_6\);
+                                                      \s+gi_M_8.GenericArguments.Add\(gp_S_7\);
+                                                      \s+il_M_5.Emit\(OpCodes.Call, gi_M_8\);
+                                                      \s+il_M_5.Emit\(OpCodes.Ret\);
                                                       """)
                     .SetName("Generic - Recursive"),
                 
                 new TestCaseData("void M<T,S>() { M<T>(); }", """
                                                               \s+//Method : M
                                                               \s+var (?<g1>m_M_\d+) = new MethodDefinition\("M",.+\);
-                                                              \s+var gp_T_2 = new Mono.Cecil.GenericParameter\("T", \k<g1>\);
-                                                              \s+\k<g1>.GenericParameters.Add\(gp_T_2\);
+                                                              \s+var gp_T_\d+ = new Mono.Cecil.GenericParameter\("T", \k<g1>\);
+                                                              \s+\k<g1>.GenericParameters.Add\(gp_T_\d+\);
                                                               \s+cls_foo_0.Methods.Add\(\k<g1>\);
                                                               \s+\k<g1>.Body.InitLocals = true;
-                                                              \s+var il_M_3 = \k<g1>.Body.GetILProcessor\(\);
-                                                              \s+il_M_3.Emit\(OpCodes.Ret\);
+                                                              \s+var il_M_\d+ = \k<g1>.Body.GetILProcessor\(\);
+                                                              \s+il_M_\d+.Emit\(OpCodes.Ret\);
                                                               \s+//Method : M
                                                               \s+var (?<test_method>m_M_\d+) = new MethodDefinition\("M",.+\);
-                                                              \s+var gp_T_5 = new Mono.Cecil.GenericParameter\("T", \k<test_method>\);
-                                                              \s+var gp_S_6 = new Mono.Cecil.GenericParameter\("S", \k<test_method>\);
-                                                              \s+\k<test_method>.GenericParameters.Add\(gp_T_5\);
-                                                              \s+\k<test_method>.GenericParameters.Add\(gp_S_6\);
+                                                              \s+var (?<tt>gp_T_\d+) = new Mono.Cecil.GenericParameter\("T", \k<test_method>\);
+                                                              \s+var (?<ts>gp_S_\d+) = new Mono.Cecil.GenericParameter\("S", \k<test_method>\);
+                                                              \s+\k<test_method>.GenericParameters.Add\(\k<tt>\);
+                                                              \s+\k<test_method>.GenericParameters.Add\(\k<ts>\);
                                                               \s+cls_foo_0.Methods.Add\(\k<test_method>\);
                                                               \s+\k<test_method>.Body.InitLocals = true;
-                                                              \s+var il_M_7 = \k<test_method>.Body.GetILProcessor\(\);
+                                                              \s+var il_M_\d+ = \k<test_method>.Body.GetILProcessor\(\);
                                                               \s+//M<T>\(\);
-                                                              \s+il_M_7.Emit\(OpCodes.Ldarg_0\);
-                                                              \s+var gi_M_8 = new GenericInstanceMethod\(\k<g1>\);
-                                                              \s+gi_M_8.GenericArguments.Add\(gp_T_5\);
-                                                              \s+il_M_7.Emit\(OpCodes.Call, gi_M_8\);
-                                                              \s+il_M_7.Emit\(OpCodes.Ret\);
+                                                              \s+il_M_\d+.Emit\(OpCodes.Ldarg_0\);
+                                                              \s+var gi_M_\d+ = new GenericInstanceMethod\(\k<g1>\);
+                                                              \s+gi_M_\d+.GenericArguments.Add\(gp_T_\d+\);
+                                                              \s+il_M_\d+.Emit\(OpCodes.Call, gi_M_\d+\);
+                                                              \s+il_M_\d+.Emit\(OpCodes.Ret\);
                                                               """)
                     .SetName("Generic - Calls overload"),
                 
                 new TestCaseData("class Inner { void M<T>() => M<T>(); }", """
                                                               \s+//Method : M
                                                               \s+var (?<overload>m_M_\d+) = new MethodDefinition\("M",.+\);
-                                                              \s+var gp_T_3 = new Mono.Cecil.GenericParameter\("T", \k<overload>\);
-                                                              \s+\k<overload>.GenericParameters.Add\(gp_T_3\);
+                                                              \s+var gp_T_4 = new Mono.Cecil.GenericParameter\("T", \k<overload>\);
+                                                              \s+\k<overload>.GenericParameters.Add\(gp_T_4\);
                                                               \s+cls_inner_\d+.Methods.Add\(\k<overload>\);
                                                               \s+\k<overload>.Body.InitLocals = true;
-                                                              \s+var il_M_4 = \k<overload>.Body.GetILProcessor\(\);
+                                                              \s+var il_M_3 = \k<overload>.Body.GetILProcessor\(\);
                                                               \s+//M<T>\(\)
-                                                              \s+il_M_4.Emit\(OpCodes.Ldarg_0\);
+                                                              \s+il_M_3.Emit\(OpCodes.Ldarg_0\);
                                                               \s+var (?<gen_method>gi_M_\d+) = new GenericInstanceMethod\(\k<overload>\);
-                                                              \s+\k<gen_method>.GenericArguments.Add\(gp_T_3\);
-                                                              \s+il_M_4.Emit\(OpCodes.Call, \k<gen_method>\)
+                                                              \s+\k<gen_method>.GenericArguments.Add\(gp_T_4\);
+                                                              \s+il_M_3.Emit\(OpCodes.Call, \k<gen_method>\)
                                                               """)
                     .SetName("Inner Generic - Calls inner"),
             ];

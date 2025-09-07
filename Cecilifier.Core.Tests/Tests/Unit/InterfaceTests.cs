@@ -20,7 +20,7 @@ public class InterfaceTests : CecilifierUnitTestBase
             """));
     }
 
-    [TestCase("public interface IFoo<T> { abstract static T M(); } class Foo : IFoo<Foo> { public static Foo M() => null; }", "cls_foo_3", TestName = "With Generic1")]
+    [TestCase("public interface IFoo<T> { abstract static T M(); } class Foo : IFoo<Foo> { public static Foo M() => null; }", "cls_foo_4", TestName = "With Generic1")]
     [TestCase("public interface IFoo { abstract static int M(); } class Foo : IFoo { public static int M() => 0; }", "assembly.MainModule.TypeSystem.Int32", TestName = "Simple1")]
     public void AbstractStaticMethodImplementationTest(string code, string expectedReturnTypeInImplementation)
     {
@@ -60,6 +60,8 @@ public class InterfaceTests : CecilifierUnitTestBase
             """
                         var (m_M_\d+) = new MethodDefinition\("IFoo<Foo>.M",.+\);
                         \s+(cls_foo_\d+).Methods.Add\(\1\);
+                        \s+m_M_5.Body.InitLocals = true;
+                        \s+var il_M_\d+ = m_M_\d+.Body.GetILProcessor\(\);
                         \s+m_M_\d+.Overrides.Add\(new MethodReference\(m_M_2.Name, m_M_2.ReturnType\) {.+DeclaringType = itf_iFoo_\d+.MakeGenericInstanceType\(\2\),.+\);
                         """,
         TestName = "Generics")]

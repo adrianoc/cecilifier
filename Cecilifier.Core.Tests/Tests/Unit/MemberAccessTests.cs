@@ -23,7 +23,7 @@ public class MemberAccessTests : CecilifierUnitTestBase
     [TestCase("string C<T>(T t) where T : struct => t.ToString();", """
                                                                     //Parameters of 'string C<T>\(T t\) where T : struct => t.ToString\(\);'
                                                                     \s+var (p_t_\d+) = new ParameterDefinition\("t", ParameterAttributes.None, (gp_T_\d+)\);
-                                                                    \s+m_C_10.Parameters.Add\(\1\);
+                                                                    \s+m_C_\d+.Parameters.Add\(\1\);
                                                                     \s+//t\.ToString\(\)
                                                                     (\s+il_C_\d+\.Emit\(OpCodes\.)Ldarga, \1\);
                                                                     \3Constrained, \2\);
@@ -34,7 +34,7 @@ public class MemberAccessTests : CecilifierUnitTestBase
     [TestCase("string C<T>(T t) where T : IFoo => t.Get();",  """
                                                               //Parameters of 'string C<T>\(T t\) where T : IFoo => t.Get\(\);'
                                                               \s+var (p_t_\d+) = new ParameterDefinition\("t", ParameterAttributes.None, (gp_T_\d+)\);
-                                                              \s+m_C_10.Parameters.Add\(\1\);
+                                                              \s+m_C_\d+.Parameters.Add\(\1\);
                                                               \s+//t\.Get\(\)
                                                               (\s+il_C_\d+\.Emit\(OpCodes\.)Ldarga, \1\);
                                                               \3Constrained, \2\);
@@ -45,7 +45,7 @@ public class MemberAccessTests : CecilifierUnitTestBase
     [TestCase("string C<T>(T t) where T : IFoo => t.ToString();", """
                                                                   //Parameters of 'string C<T>\(T t\) where T : IFoo => t.ToString\(\);'
                                                                   \s+var (p_t_\d+) = new ParameterDefinition\("t", ParameterAttributes.None, (gp_T_\d+)\);
-                                                                  \s+m_C_10.Parameters.Add\(\1\);
+                                                                  \s+m_C_\d+.Parameters.Add\(\1\);
                                                                   \s+//t\.ToString\(\)
                                                                   (\s+il_C_\d+\.Emit\(OpCodes\.)Ldarga, \1\);
                                                                   \3Constrained, \2\);
@@ -56,7 +56,7 @@ public class MemberAccessTests : CecilifierUnitTestBase
     [TestCase("string C<T>(T t) => t.ToString();", """
                                                    //Parameters of 'string C<T>\(T t\) => t.ToString\(\);'
                                                    \s+var (p_t_\d+) = new ParameterDefinition\("t", ParameterAttributes.None, (gp_T_\d+)\);
-                                                   \s+m_C_10.Parameters.Add\(\1\);
+                                                   \s+m_C_\d+.Parameters.Add\(\1\);
                                                    \s+//t\.ToString\(\)
                                                    (\s+il_C_\d+\.Emit\(OpCodes\.)Ldarga, \1\);
                                                    \3Constrained, \2\);
@@ -67,7 +67,7 @@ public class MemberAccessTests : CecilifierUnitTestBase
     [TestCase("string C<T>(T t) where T : class => t.ToString();", """
                                                                    //Parameters of 'string C<T>\(T t\) where T : class => t.ToString\(\);'
                                                                    \s+var (p_t_\d+) = new ParameterDefinition\("t", ParameterAttributes.None, (gp_T_\d+)\);
-                                                                   \s+m_C_10.Parameters.Add\(\1\);
+                                                                   \s+m_C_\d+.Parameters.Add\(\1\);
                                                                    \s+//t\.ToString\(\)
                                                                    (\s+il_C_\d+\.Emit\(OpCodes\.)Ldarg_1\);
                                                                    \3Box, \2\);
@@ -78,7 +78,7 @@ public class MemberAccessTests : CecilifierUnitTestBase
     [TestCase("string C<T>(T t) where T : Foo => t.ToString();", """
                                                                  //Parameters of 'string C<T>\(T t\) where T : Foo => t.ToString\(\);'
                                                                  \s+var (p_t_\d+) = new ParameterDefinition\("t", ParameterAttributes.None, (gp_T_\d+)\);
-                                                                 \s+m_C_10.Parameters.Add\(\1\);
+                                                                 \s+m_C_\d+.Parameters.Add\(\1\);
                                                                  \s+//t.ToString\(\)
                                                                  (\s+il_C_\d+\.Emit\(OpCodes\.)Ldarg_1\);
                                                                  \3Box, \2\);
@@ -88,65 +88,65 @@ public class MemberAccessTests : CecilifierUnitTestBase
 
     [TestCase("void C<T>(T t) where T : Foo => t.M();", """
                                                         (il_C_\d+\.Emit\(OpCodes\.)Ldarg_1\);
-                                                        \s+\1Box, gp_T_11\);
-                                                        \s+\1Callvirt, m_M_5\);
+                                                        \s+\1Box, gp_T_\d+\);
+                                                        \s+\1Callvirt, m_M_\d+\);
                                                         \s+\1Ret\);
                                                         """, TestName = "ParameterConstrainedToClassCallClassMethod")]
 
     [TestCase("string C<T>(T t) where T : struct { var l = t; return l.ToString(); }", """
                                                                                        //return l.ToString\(\);
-                                                                                       (\s+il_C_\d+\.Emit\(OpCodes\.)Ldloca, l_l_14\);
-                                                                                       \1Constrained, gp_T_11\);
+                                                                                       (\s+il_C_\d+\.Emit\(OpCodes\.)Ldloca, l_l_\d+\);
+                                                                                       \1Constrained, gp_T_\d+\);
                                                                                        \1Callvirt, .+ImportReference\(.+ResolveMethod\(typeof\(System.Object\), "ToString",.+\)\)\);
                                                                                        \1Ret\);
                                                                                        """, TestName = "LocalConstrainedToStruct")]
     
     [TestCase("bool C<T>(T t) where T : struct { var l = t; return l.Equals(l); }", """
                                                                                        //return l.Equals\(l\);
-                                                                                       (\s+il_C_\d+\.Emit\(OpCodes\.)Ldloca, l_l_14\);
-                                                                                       \1Ldloc, l_l_14\);
-                                                                                       \1Box, gp_T_11\);
-                                                                                       \1Constrained, gp_T_11\);
+                                                                                       (\s+il_C_\d+\.Emit\(OpCodes\.)Ldloca, (?<local>l_l_\d+)\);
+                                                                                       \1Ldloc, \k<local>\);
+                                                                                       \1Box, (?<tp>gp_T_\d+)\);
+                                                                                       \1Constrained, \k<tp>\);
                                                                                        \1Callvirt, .+ImportReference\(.+ResolveMethod\(typeof\(System.Object\), "Equals",.+\)\)\);
                                                                                        \1Ret\);
                                                                                        """, TestName = "LocalConstrainedToStructCallEquals")]
 
     [TestCase("string C<T>(T t) where T : IFoo { var l = t; return l.Get(); }", """
                                                                                 //return l.Get\(\);
-                                                                                (\s+il_C_\d+\.Emit\(OpCodes\.)Ldloca, l_l_14\);
-                                                                                \1Constrained, gp_T_11\);
-                                                                                \1Callvirt, m_get_1\);
+                                                                                (\s+il_C_\d+\.Emit\(OpCodes\.)Ldloca, l_l_\d+\);
+                                                                                \1Constrained, gp_T_\d+\);
+                                                                                \1Callvirt, m_get_\d+\);
                                                                                 \1Ret\);
                                                                                 """, TestName = "LocalConstrainedToInterfaceCallInterfaceMethod")]
     
     [TestCase("string C<T>(T t) where T : IFoo { var l = t; return l.ToString(); }", """
                                                                                      //return l.ToString\(\);
-                                                                                     (\s+il_C_\d+\.Emit\(OpCodes\.)Ldloca, l_l_14\);
-                                                                                     \1Constrained, gp_T_11\);
+                                                                                     (\s+il_C_\d+\.Emit\(OpCodes\.)Ldloca, l_l_\d+\);
+                                                                                     \1Constrained, gp_T_\d+\);
                                                                                      \1Callvirt, .+ImportReference\(.+ResolveMethod\(typeof\(System.Object\), "ToString",.+\)\)\);
                                                                                      \1Ret\);
                                                                                      """, TestName = "LocalConstrainedToInterfaceCallToString")]
     
     [TestCase("string C<T>(T t) { var l = t; return l.ToString(); }", """
                                                                       //return l.ToString\(\);
-                                                                      (\s+il_C_\d+\.Emit\(OpCodes\.)Ldloca, l_l_14\);
-                                                                      \1Constrained, gp_T_11\);
+                                                                      (\s+il_C_\d+\.Emit\(OpCodes\.)Ldloca, l_l_\d+\);
+                                                                      \1Constrained, gp_T_\d+\);
                                                                       \1Callvirt, .+ImportReference\(.+ResolveMethod\(typeof\(System.Object\), "ToString",.+\)\)\);
                                                                       \1Ret\);
                                                                       """, TestName = "LocalUnconstrained")]
     
     [TestCase("string C<T>(T t) where T : class { var l = t; return l.ToString(); }", """
                                                                                       //return l.ToString\(\);
-                                                                                      (\s+il_C_\d+\.Emit\(OpCodes\.)Ldloc, l_l_14\);
-                                                                                      \1Box, gp_T_11\);
+                                                                                      (\s+il_C_\d+\.Emit\(OpCodes\.)Ldloc, l_l_\d+\);
+                                                                                      \1Box, gp_T_\d+\);
                                                                                       \1Callvirt, .+ImportReference\(.+ResolveMethod\(typeof\(System.Object\), "ToString",.+\)\)\);
                                                                                       \1Ret\);
                                                                                       """, TestName = "LocalConstrainedToClassCallToString")]
     
     [TestCase("string C<T>(T t) where T : Foo { var l = t; return l.ToString(); }", """
                                                                                     //return l.ToString\(\);
-                                                                                    (\s+il_C_\d+\.Emit\(OpCodes\.)Ldloc, l_l_14\);
-                                                                                    \1Box, gp_T_11\);
+                                                                                    (\s+il_C_\d+\.Emit\(OpCodes\.)Ldloc, l_l_\d+\);
+                                                                                    \1Box, gp_T_\d+\);
                                                                                     \1Callvirt, .+ImportReference\(.+ResolveMethod\(typeof\(System.Object\), "ToString",.+\)\)\);
                                                                                     \1Ret\);
                                                                                     """, TestName = "LocalConstrainedToClassTypeCallToString")]
@@ -160,32 +160,32 @@ public class MemberAccessTests : CecilifierUnitTestBase
                                                                     """, TestName = "LocalConstrainedToTypeCallClassMethod")]
 
     [TestCase("int C<T>(T t) where T : IFoo => t.Property;", """
-                                                             (il_C_\d+\.Emit\(OpCodes\.)Ldarga, p_t_13\);
-                                                             \s+\1Constrained, gp_T_11\);
-                                                             \s+\1Callvirt, m_get_3\);
+                                                             (il_C_\d+\.Emit\(OpCodes\.)Ldarga, p_t_\d+\);
+                                                             \s+\1Constrained, gp_T_\d+\);
+                                                             \s+\1Callvirt, m_get_\d+\);
                                                              \s+\1Ret\);
                                                              """, TestName = "ParameterConstrainedToInterfaceAccessProperty")] // m_get_3 should be the getter on the interface (as opposed to the one in the class)
     
     [TestCase("int C<T>(T t) where T : Foo => t.Property;", """
                                                             (il_C_\d+\.Emit\(OpCodes\.)Ldarg_1\);
-                                                            \s+\1Box, gp_T_11\);
-                                                            \s+\1Callvirt, m_get_8\);
+                                                            \s+\1Box, gp_T_\d+\);
+                                                            \s+\1Callvirt, m_get_\d+\);
                                                             \s+\1Ret\);
                                                             """, TestName = "ParameterConstrainedToClassProperty")]
 
     [TestCase("int C<T>(T t) where T : IFoo { var l = t; return l.Property; }", """
                                                                                 //return l.Property;
-                                                                                (\s+il_C_\d+\.Emit\(OpCodes\.)Ldloca, l_l_14\);
-                                                                                \1Constrained, gp_T_11\);
-                                                                                \1Callvirt, m_get_3\);
+                                                                                (\s+il_C_\d+\.Emit\(OpCodes\.)Ldloca, l_l_\d+\);
+                                                                                \1Constrained, gp_T_\d+\);
+                                                                                \1Callvirt, m_get_\d+\);
                                                                                 \1Ret\);
                                                                                 """ , TestName = "LocalConstrainedToInterfaceAccessProperty")]
     
     [TestCase("int C<T>(T t) where T : Foo  { var l = t; return l.Property; }", """
                                                                                 //return l.Property;
-                                                                                (\s+il_C_\d+\.Emit\(OpCodes\.)Ldloc, l_l_14\);
-                                                                                \1Box, gp_T_11\);
-                                                                                \1Callvirt, m_get_8\);
+                                                                                (\s+il_C_\d+\.Emit\(OpCodes\.)Ldloc, l_l_\d+\);
+                                                                                \1Box, gp_T_\d+\);
+                                                                                \1Callvirt, m_get_\d+\);
                                                                                 \1Ret\);
                                                                                 """, TestName = "LocalConstrainedToTypeAccessProperty")]
     public void TestCallOn_TypeParameter_CallOnParametersAndLocals(string snippet, string expectedExpressions)

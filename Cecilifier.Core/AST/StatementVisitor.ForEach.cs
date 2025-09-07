@@ -27,6 +27,11 @@ namespace Cecilifier.Core.AST
                 
                 var loopVariable = Context.AddLocalVariableToCurrentMethod(node.Identifier.ValueText, Context.TypeResolver.Resolve(enumerableType.ElementTypeSymbolOf())).VariableName;
                 var loopIndexVar = Context.AddLocalVariableToCurrentMethod("index", Context.TypeResolver.Resolve(Context.RoslynTypeSystem.SystemInt32)).VariableName;
+                
+                //TODO: Why this is not needed on main?
+                // Initialize Index
+                Context.EmitCilInstruction(_ilVar, OpCodes.Ldc_I4_0);
+                Context.EmitCilInstruction(_ilVar, OpCodes.Stloc, loopIndexVar);
 
                 var conditionCheckLabelVar = CreateCilInstruction(_ilVar, OpCodes.Nop);
                 Context.EmitCilInstruction(_ilVar, OpCodes.Br, conditionCheckLabelVar);

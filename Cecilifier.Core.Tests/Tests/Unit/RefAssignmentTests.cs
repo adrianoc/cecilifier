@@ -121,7 +121,7 @@ public class RefAssignmentTests : CecilifierUnitTestBase
     }
 
     [Test]
-    public void TesRefFieldAssignment()
+    public void TestRefFieldAssignment()
     {
         var result = RunCecilifier("ref struct RefStruct { ref int refInt; public RefStruct(ref int r) { refInt = ref r; refInt = 42; } }");
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();

@@ -57,7 +57,7 @@ public abstract class OutputBasedTestBase<TContext> : CecilifierTestBase<TContex
     protected void AssertOutput(string snippet, string expectedOutput, string ignoreIlVerificationErrors = null)
     {
         var result = CecilifyAndExecute(snippet, ignoreIlVerificationErrors);
-        Assert.That(result.Output, Is.EqualTo(expectedOutput), $"Output Assembly: {result.GeneralResult.CecilifiedOutputAssemblyFilePath}");
+        Assert.That(result.Output, Is.EqualTo(expectedOutput), $"Output Assembly: {result.GeneralResult.CecilifiedOutputAssemblyFilePath}\nCecilified Code: {result.GeneralResult.CecilifiedCode}");
         TestContext.WriteLine($"Output Assembly: {result.GeneralResult.CecilifiedOutputAssemblyFilePath}");
     }
 }
