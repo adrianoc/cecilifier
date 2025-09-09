@@ -158,7 +158,7 @@ namespace Cecilifier.Core.Extensions
             if (method.IsGenericMethod is false)
                 return methodReferenceVariable;
             
-            var exps = methodReferenceVariable.MakeGenericInstanceMethod(context, method.Name, method.TypeArguments.Select(t => context.TypeResolver.Resolve(t)).ToList(), out var genericInstanceVarName);
+            var exps = methodReferenceVariable.MakeGenericInstanceMethod(context, method.Name, method.TypeArguments.Select(t => context.TypeResolver.ResolveAny(t)).ToList(), out var genericInstanceVarName);
             context.Generate(exps);
 
             return genericInstanceVarName;

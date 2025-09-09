@@ -41,7 +41,7 @@ public class PrimaryConstructorGenerator
         context.WriteComment($"Property: {parameter.Identifier.Text} (primary constructor)");
         var propDefVar = context.Naming.SyntheticVariable(parameter.Identifier.Text, ElementKind.Property);
         var paramSymbol = context.SemanticModel.GetDeclaredSymbol(parameter).EnsureNotNull<ISymbol, IParameterSymbol>();
-        var exps = CecilDefinitionsFactory.PropertyDefinition(propDefVar, parameter.Identifier.Text, context.TypeResolver.Resolve(paramSymbol.Type));
+        var exps = CecilDefinitionsFactory.PropertyDefinition(propDefVar, parameter.Identifier.Text, context.TypeResolver.ResolveAny(paramSymbol.Type));
         
         context.Generate(exps);
         context.Generate($"{typeDefinitionVariable}.Properties.Add({propDefVar});");
@@ -66,7 +66,7 @@ public class PrimaryConstructorGenerator
                                         ["set"] = publicPropertyMethodAttributes
                                     },
                                     false,
-                                    context.TypeResolver.Resolve(propertyType),
+                                    context.TypeResolver.ResolveAny(propertyType),
                                     propertyType.ToDisplayString(),
                                     Array.Empty<ParameterSpec>(),
                                     "FieldAttributes.Private",
@@ -135,7 +135,7 @@ public class PrimaryConstructorGenerator
         var ctorExps = CecilDefinitionsFactory.MethodBody(context.Naming, $"ctor_{typeDeclaration.Identifier.ValueText}", ctorVar, ctorIlVar, [], []);
         context.Generate(ctorExps);
 
-        var resolvedType = context.TypeResolver.Resolve(typeSymbol);
+        var resolvedType = context.TypeResolver.ResolveAny(typeSymbol);
         Func<string, string> fieldRefResolver = backingFieldVar => typeDeclaration.TypeParameterList?.Parameters.Count > 0 
             ? $"new FieldReference({backingFieldVar}.Name, {backingFieldVar}.FieldType, {resolvedType})" 
             : backingFieldVar;
@@ -145,7 +145,7 @@ public class PrimaryConstructorGenerator
         {
             context.WriteComment($"Parameter: {parameter.Identifier}");
             var paramVar = context.Naming.Parameter(parameter);
-            var parameterType = context.TypeResolver.Resolve(ModelExtensions.GetTypeInfo(context.SemanticModel, parameter.Type!).Type);
+            var parameterType = context.TypeResolver.ResolveAny(ModelExtensions.GetTypeInfo(context.SemanticModel, parameter.Type!).Type);
             var paramExps = CecilDefinitionsFactory.Parameter(parameter.Identifier.ValueText, RefKind.None, null, ctorVar, paramVar, parameterType, Constants.ParameterAttributes.None, ("", false));
             context.Generate(paramExps);
 

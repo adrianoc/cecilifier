@@ -7,11 +7,11 @@ using Microsoft.CodeAnalysis;
 
 namespace Cecilifier.Core.TypeSystem
 {
-    public abstract class TypeResolverBase : ITypeResolver
+    public abstract class TypeResolverBase<TContext> : ITypeResolver where TContext : IVisitorContext
     {
-        private readonly IVisitorContext _context;
+        protected readonly TContext _context;
 
-        protected TypeResolverBase(IVisitorContext context)
+        protected TypeResolverBase(TContext context)
         {
             _context = context;
             Bcl = new Bcl(this, _context);
@@ -19,18 +19,17 @@ namespace Cecilifier.Core.TypeSystem
 
         public Bcl Bcl { get; }
 
-        public string Resolve(ITypeSymbol type, string cecilTypeParameterProviderVar = null)
+        public string ResolveAny(ITypeSymbol type, string cecilTypeParameterProviderVar = null)
         {
             return ResolveLocalVariableType(type)
                    ?? ResolveNestedType(type)
                    ?? ResolvePredefinedAndComposedTypes(type)
                    ?? ResolveGenericType(type, cecilTypeParameterProviderVar)
                    ?? ResolveTypeParameter(type, cecilTypeParameterProviderVar)
-                   ?? Resolve(type.ToDisplayString());
+                   ?? Resolve(type);
+                   //?? Resolve(type.ToDisplayString());
         }
-
-        public abstract string Resolve(string typeName);
-        
+       
         private string ResolveNestedType(ITypeSymbol type)
         {
             if (type.ContainingType == null || type.Kind == SymbolKind.TypeParameter)
@@ -41,7 +40,7 @@ namespace Cecilifier.Core.TypeSystem
             {
                 // collects the type arguments for all types in the parent chain. 
                 var typeArguments = nestedType.GetAllTypeArguments().ToArray();
-                var resolveNestedType = $"""TypeHelpers.NewRawNestedTypeReference("{type.Name}", module: assembly.MainModule, {Resolve(type.ContainingType.OriginalDefinition)}, isValueType: {(type.IsValueType ? "true" : "false")}, {typeArguments.Length})""";
+                var resolveNestedType = $"""TypeHelpers.NewRawNestedTypeReference("{type.Name}", module: assembly.MainModule, {ResolveAny(type.ContainingType.OriginalDefinition)}, isValueType: {(type.IsValueType ? "true" : "false")}, {typeArguments.Length})""";
             
                 // if type is a generic type definition we return the open, resolved type
                 // otherwise this method is expected to return a 'GenericInstanceType'.
@@ -54,12 +53,14 @@ namespace Cecilifier.Core.TypeSystem
                 // and the parent's type generic parameters are added to the nested type) 
                 return type.IsDefinition 
                     ? resolveNestedType 
-                    : resolveNestedType.MakeGenericInstanceType(typeArguments.Select(t => _context.TypeResolver.Resolve(t)).ToArray());
+                    : resolveNestedType.MakeGenericInstanceType(typeArguments.Select(t => _context.TypeResolver.ResolveAny(t)).ToArray());
             }
 
             return null;
         }
 
+        public abstract string Resolve(string typeName);
+        public abstract string Resolve(ITypeSymbol type);
         public abstract string ResolvePredefinedType(ITypeSymbol type);
 
         protected abstract string ResolveArrayType(IArrayTypeSymbol type);
@@ -154,7 +155,7 @@ namespace Cecilifier.Core.TypeSystem
             {
                 CollectTypeArguments(typeArgumentProvider.ContainingType, collectTo, cecilTypeParameterProviderVar);
             }
-            collectTo.AddRange(typeArgumentProvider.TypeArguments.Where(t => t.Kind != SymbolKind.ErrorType).Select(t => Resolve(t, cecilTypeParameterProviderVar)));
+            collectTo.AddRange(typeArgumentProvider.TypeArguments.Where(t => t.Kind != SymbolKind.ErrorType).Select(t => ResolveAny(t, cecilTypeParameterProviderVar)));
 
             return collectTo;
         }

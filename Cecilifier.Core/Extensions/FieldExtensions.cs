@@ -17,7 +17,7 @@ namespace Cecilifier.Core.Extensions
                 ThrowIfVariableNotFound(found.IsValid);
 
                 var resolvedField = field.ContainingType.IsGenericType
-                    ? $$"""new FieldReference({{found.VariableName}}.Name, {{found.VariableName}}.FieldType, {{context.TypeResolver.Resolve(field.ContainingType)}})""" 
+                    ? $$"""new FieldReference({{found.VariableName}}.Name, {{found.VariableName}}.FieldType, {{context.TypeResolver.ResolveAny(field.ContainingType)}})""" 
                     : found.VariableName;
                 
                 return resolvedField;

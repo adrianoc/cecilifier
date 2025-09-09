@@ -48,7 +48,7 @@ public class SystemReflectionMetadataMethodResolver(SystemReflectionMetadataCont
                                           var parameterlessCtorBlobIndex = metadata.GetOrAddBlob(parameterlessCtorSignature);
                                           
                                           var {{voidParameterlessMethodRefVarName}} = metadata.AddMemberReference(
-                                                                                                    {{_context.TypeResolver.Resolve(type)}},
+                                                                                                    {{context.TypeResolver.ResolveAny(type)}},
                                                                                                     metadata.GetOrAddString(".ctor"),
                                                                                                     parameterlessCtorBlobIndex);
                                           """);

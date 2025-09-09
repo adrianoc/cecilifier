@@ -28,7 +28,7 @@ partial class ExpressionVisitor
         Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, node.Initializer.EnsureNotNull<SyntaxNode, InitializerExpressionSyntax>().Expressions.Count);
 
         var stackallocSpanAssignmentTracker = new StackallocSpanAssignmentTracker(node, Context);
-        var resolvedArrayElementType = Context.TypeResolver.Resolve(arrayElementType);
+        var resolvedArrayElementType = Context.TypeResolver.ResolveAny(arrayElementType);
         CalculateLengthInBytesAndEmitLocalloc(stackallocSpanAssignmentTracker, null, resolvedArrayElementType, false);
 
         ProcessStackAllocInitializer(node.Initializer);
@@ -180,7 +180,7 @@ partial class ExpressionVisitor
 
     private void EmitNewobjForSpanOfType(string resolvedSpanType)
     {
-        var spanInstanceType = Context.TypeResolver.Resolve(Context.RoslynTypeSystem.SystemSpan).MakeGenericInstanceType(resolvedSpanType);
+        var spanInstanceType = Context.TypeResolver.ResolveAny(Context.RoslynTypeSystem.SystemSpan).MakeGenericInstanceType(resolvedSpanType);
         var spanCtorVar = Context.Naming.SyntheticVariable("spanCtor", ElementKind.LocalVariable);
         AddCecilExpression($"var {spanCtorVar} = new MethodReference(\".ctor\", {Context.TypeResolver.Bcl.System.Void}, {spanInstanceType}) {{ HasThis = true }};");
         AddCecilExpression($"{spanCtorVar}.Parameters.Add({CecilDefinitionsFactory.ParameterDoesNotHandleParamsKeywordOrDefaultValue("ptr", RefKind.None, Context.TypeResolver.Resolve("void*"))});");

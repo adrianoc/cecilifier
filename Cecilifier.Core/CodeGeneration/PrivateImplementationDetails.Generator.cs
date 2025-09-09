@@ -81,7 +81,7 @@ internal partial class PrivateImplementationDetailsGenerator
                                                         context =>
                                                         {
                                                             var spanTypeParameter = ResolveOwnedGenericParameter(context, "TElement", methodTypeQualifiedName);
-                                                            return context.TypeResolver.Resolve(containingType).MakeGenericInstanceType(spanTypeParameter);
+                                                            return context.TypeResolver.ResolveAny(containingType).MakeGenericInstanceType(spanTypeParameter);
                                                         },
                                                         out var methodDefinitionVariable);
 
@@ -355,7 +355,7 @@ internal partial class PrivateImplementationDetailsGenerator
             string.Empty,
             rawDataHolderStructName,
             Constants.CompilerGeneratedTypes.StaticArrayRawDataHolderTypeModifiers, 
-            context.TypeResolver.Resolve(context.RoslynTypeSystem.SystemValueType), 
+            context.TypeResolver.ResolveAny(context.RoslynTypeSystem.SystemValueType), 
             GetOrCreatePrivateImplementationDetailsTypeVariable(context),
             isStructWithNoFields: false, 
             Array.Empty<ITypeSymbol>(), 
@@ -391,7 +391,7 @@ internal partial class PrivateImplementationDetailsGenerator
                                                                                     string.Empty,
                                                                                     Constants.CompilerGeneratedTypes.PrivateImplementationDetails,
                                                                                     Constants.CompilerGeneratedTypes.PrivateImplementationDetailsModifiers, 
-                                                                                    context.TypeResolver.Resolve(context.RoslynTypeSystem.SystemObject), 
+                                                                                    context.TypeResolver.ResolveAny(context.RoslynTypeSystem.SystemObject), 
                                                                                     DefinitionVariable.NotFound, 
                                                                                     isStructWithNoFields: false, 
                                                                                     Array.Empty<ITypeSymbol>(), 

@@ -25,8 +25,8 @@ namespace Cecilifier.Core.AST
                 // save array in local variable...
                 var arrayVariable = CodeGenerationHelpers.StoreTopOfStackInLocalVariable(Context, _ilVar, "array", enumerableType);
                 
-                var loopVariable = Context.AddLocalVariableToCurrentMethod(node.Identifier.ValueText, Context.TypeResolver.Resolve(enumerableType.ElementTypeSymbolOf())).VariableName;
-                var loopIndexVar = Context.AddLocalVariableToCurrentMethod("index", Context.TypeResolver.Resolve(Context.RoslynTypeSystem.SystemInt32)).VariableName;
+                var loopVariable = Context.AddLocalVariableToCurrentMethod(node.Identifier.ValueText, Context.TypeResolver.ResolveAny(enumerableType.ElementTypeSymbolOf())).VariableName;
+                var loopIndexVar = Context.AddLocalVariableToCurrentMethod("index", Context.TypeResolver.ResolveAny(Context.RoslynTypeSystem.SystemInt32)).VariableName;
                 
                 //TODO: Why this is not needed on main?
                 // Initialize Index
@@ -97,7 +97,7 @@ namespace Cecilifier.Core.AST
             if (forEachHandlerContext.GetEnumeratorMethod.ReturnType.IsValueType || forEachHandlerContext.GetEnumeratorMethod.ReturnType.TypeKind == TypeKind.TypeParameter)
             {
                 Context.EmitCilInstruction(_ilVar, OpCodes.Ldloca, forEachHandlerContext.EnumeratorVariableName);
-                Context.EmitCilInstruction(_ilVar, OpCodes.Constrained, Context.TypeResolver.Resolve(forEachHandlerContext.GetEnumeratorMethod.ReturnType));
+                Context.EmitCilInstruction(_ilVar, OpCodes.Constrained, Context.TypeResolver.ResolveAny(forEachHandlerContext.GetEnumeratorMethod.ReturnType));
                 Context.EmitCilInstruction(_ilVar, OpCodes.Callvirt, Context.RoslynTypeSystem.SystemIDisposable.GetMembers("Dispose").OfType<IMethodSymbol>().Single().MethodResolverExpression(Context));
             }
             else
@@ -116,7 +116,7 @@ namespace Cecilifier.Core.AST
             // Adds a variable to store current value in the foreach loop.
             Context.WriteNewLine();
             Context.WriteComment("variable to store current value in the foreach loop.");
-            var foreachCurrentValueVarName = Context.AddLocalVariableToCurrentMethod(node.Identifier.ValueText, Context.TypeResolver.Resolve(forEachHandlerContext.EnumeratorCurrentProperty.GetMemberType())).VariableName;
+            var foreachCurrentValueVarName = Context.AddLocalVariableToCurrentMethod(node.Identifier.ValueText, Context.TypeResolver.ResolveAny(forEachHandlerContext.EnumeratorCurrentProperty.GetMemberType())).VariableName;
             
             var endOfLoopLabelVar = Context.Naming.Label("endForEach");
             CreateCilInstruction(_ilVar, endOfLoopLabelVar, OpCodes.Nop);

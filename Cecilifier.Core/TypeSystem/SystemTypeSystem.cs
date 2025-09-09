@@ -17,12 +17,12 @@ namespace Cecilifier.Core.TypeSystem
                 [SpecialType.System_Void] = typeResolver.ResolvePredefinedType(context.RoslynTypeSystem.SystemVoid),
                 [SpecialType.System_Object] = typeResolver.ResolvePredefinedType(context.RoslynTypeSystem.SystemObject),
                 [SpecialType.System_Boolean] = typeResolver.ResolvePredefinedType(context.RoslynTypeSystem.SystemBoolean),
-                [SpecialType.System_Enum] = typeResolver.Resolve("System.Enum"),
-                [SpecialType.System_ValueType] = typeResolver.Resolve("System.ValueType"),
-                [SpecialType.System_MulticastDelegate] = typeResolver.Resolve("System.MulticastDelegate"),
-                [SpecialType.System_AsyncCallback] = typeResolver.Resolve("System.AsyncCallback"),
-                [SpecialType.System_IAsyncResult] = typeResolver.Resolve("System.IAsyncResult"),
-                [SpecialType.System_Nullable_T] = typeResolver.Resolve("System.Nullable<>"),
+                [SpecialType.System_Enum] = typeResolver.Resolve(context.RoslynTypeSystem.ForType<System.Enum>()),
+                [SpecialType.System_ValueType] = typeResolver.Resolve(context.RoslynTypeSystem.ForType<System.ValueType>()),
+                [SpecialType.System_MulticastDelegate] = typeResolver.Resolve(context.RoslynTypeSystem.ForType<System.MulticastDelegate>()),
+                [SpecialType.System_AsyncCallback] = typeResolver.Resolve(context.RoslynTypeSystem.ForType<System.AsyncCallback>()),
+                [SpecialType.System_IAsyncResult] = typeResolver.Resolve(context.RoslynTypeSystem.ForType<System.IAsyncResult>()),
+                [SpecialType.System_Nullable_T] = typeResolver.Resolve(context.RoslynTypeSystem.ForType<System.Nullable<int>>().OriginalDefinition),
             };
         }
 

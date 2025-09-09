@@ -193,6 +193,6 @@ namespace Cecilifier.Core.AST
             context.EmitCilInstruction(ilVar, OpCodes.Pop);
         }
 
-        private string ResolvedStructType() =>  Context.TypeResolver.Resolve(ctorInfo.Symbol.ContainingType);
+        private string ResolvedStructType() =>  Context.TypeResolver.ResolveAny(ctorInfo.Symbol.ContainingType);
     }
 }

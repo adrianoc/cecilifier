@@ -109,7 +109,7 @@ namespace Cecilifier.Core.AST
 
             operatorHandlers[SyntaxKind.IsKeyword] = BinaryOperatorHandler.Raw((ctx, ilVar, _, rightType) =>
             {
-                ctx.EmitCilInstruction(ilVar, OpCodes.Isinst, ctx.TypeResolver.Resolve(rightType));
+                ctx.EmitCilInstruction(ilVar, OpCodes.Isinst, ctx.TypeResolver.ResolveAny(rightType));
                 ctx.EmitCilInstruction(ilVar, OpCodes.Ldnull);
                 ctx.EmitCilInstruction(ilVar, OpCodes.Cgt);
             }, visitRightOperand: false); // Isinst opcode takes the type to check as a parameter (instead of taking it from the stack) so
@@ -124,7 +124,7 @@ namespace Cecilifier.Core.AST
                     binaryExpression.Left.Accept(expressionVisitor);
                     var evaluatedLeftVar = ctx.AddLocalVariableToCurrentMethod(
                         "leftValue", 
-                        ctx.TypeResolver.Resolve(lhsType));
+                        ctx.TypeResolver.ResolveAny(lhsType));
                     
                     ctx.EmitCilInstruction(ilVar, OpCodes.Stloc, evaluatedLeftVar.VariableName);
                     ctx.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, evaluatedLeftVar.VariableName);
@@ -313,7 +313,7 @@ namespace Cecilifier.Core.AST
                 {
                     if (UsageVisitor.GetInstance(Context).Visit(node.Parent) == UsageKind.CallTarget)
                     {
-                        Context.SetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, Context.TypeResolver.Resolve(elementType));
+                        Context.SetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, Context.TypeResolver.ResolveAny(elementType));
                         return;
                     }
                     
@@ -323,7 +323,7 @@ namespace Cecilifier.Core.AST
                 
                 // ... otherwise, we need to take the top of the stack (address of the element) and load the actual instance to the stack.
                 var loadOpCode = elementType.LdindOpCodeFor();
-                Context.EmitCilInstruction(ilVar, loadOpCode, loadOpCode == OpCodes.Ldobj ? Context.TypeResolver.Resolve(elementType) : null);
+                Context.EmitCilInstruction(ilVar, loadOpCode, loadOpCode == OpCodes.Ldobj ? Context.TypeResolver.ResolveAny(elementType) : null);
                 return;
             }
 
@@ -343,11 +343,11 @@ namespace Cecilifier.Core.AST
             }
             else
             {
-                if (HandleLoadAddress(ilVar, targetType, node, OpCodes.Ldelema, Context.TypeResolver.Resolve(targetType)))
+                if (HandleLoadAddress(ilVar, targetType, node, OpCodes.Ldelema, Context.TypeResolver.ResolveAny(targetType)))
                     return;
                 
                 var ldelemOpCodeToUse = targetType.LdelemOpCode();
-                Context.EmitCilInstruction(ilVar, ldelemOpCodeToUse, ldelemOpCodeToUse == OpCodes.Ldelem ? Context.TypeResolver.Resolve(targetType) : null);
+                Context.EmitCilInstruction(ilVar, ldelemOpCodeToUse, ldelemOpCodeToUse == OpCodes.Ldelem ? Context.TypeResolver.ResolveAny(targetType) : null);
             }
         }
 
@@ -466,7 +466,7 @@ namespace Cecilifier.Core.AST
             {
                 var localSymbol = Context.SemanticModel.GetSymbolInfo(node).Symbol.EnsureNotNull<ISymbol, ILocalSymbol>();
                 var designation = ((SingleVariableDesignationSyntax) node.Designation);
-                var resolvedOutArgType = Context.TypeResolver.Resolve(localSymbol.Type);
+                var resolvedOutArgType = Context.TypeResolver.ResolveAny(localSymbol.Type);
 
                 DefinitionVariable methodVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
                 var outLocalName = Context.AddLocalVariableToMethod(designation.Identifier.Text, methodVar, resolvedOutArgType).VariableName;
@@ -515,7 +515,7 @@ namespace Cecilifier.Core.AST
             // code to handle null case 
             var currentMethodVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
             var expressionTypeInfo = Context.SemanticModel.GetTypeInfo(node);
-            var resolvedConcreteNullableType = Context.TypeResolver.Resolve(expressionTypeInfo.Type);
+            var resolvedConcreteNullableType = Context.TypeResolver.ResolveAny(expressionTypeInfo.Type);
             var tempNullableVar = Context.AddLocalVariableToMethod("nullable", currentMethodVar, resolvedConcreteNullableType).VariableName;
 
             Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, tempNullableVar);
@@ -899,7 +899,7 @@ namespace Cecilifier.Core.AST
             var t = Context.SemanticModel.GetTypeInfo(node.Expression).Type.EnsureNotNull();
             if (t.TypeKind == TypeKind.TypeParameter)
             {
-                Context.EmitCilInstruction(ilVar, OpCodes.Box, Context.TypeResolver.Resolve(t));
+                Context.EmitCilInstruction(ilVar, OpCodes.Box, Context.TypeResolver.ResolveAny(t));
             }
             node.Pattern.Accept(this);
         }
@@ -908,7 +908,7 @@ namespace Cecilifier.Core.AST
         {
             using var _ = LineInformationTracker.Track(Context, node);
 
-            var varType = Context.TypeResolver.Resolve(Context.SemanticModel.GetTypeInfo(node.Type).Type);
+            var varType = Context.TypeResolver.ResolveAny(Context.SemanticModel.GetTypeInfo(node.Type).Type);
             string localVarName = ((SingleVariableDesignationSyntax) node.Designation).Identifier.ValueText;
             var localVar = Context.AddLocalVariableToCurrentMethod(localVarName, varType).VariableName;
 
@@ -923,7 +923,7 @@ namespace Cecilifier.Core.AST
         {
             using var _ = LineInformationTracker.Track(Context, node);
 
-            var varType = Context.TypeResolver.Resolve(Context.SemanticModel.GetTypeInfo(node.Type!).Type);
+            var varType = Context.TypeResolver.ResolveAny(Context.SemanticModel.GetTypeInfo(node.Type!).Type);
             string localVarName = LocalVariableNameOrDefault(node, "tmp");
             var localVar = Context.AddLocalVariableToCurrentMethod(localVarName, varType).VariableName;
 
@@ -1025,7 +1025,7 @@ namespace Cecilifier.Core.AST
                                                         .MakeGenericInstanceMethod(
                                                             Context, 
                                                             "CreateInstance", 
-                                                            [Context.TypeResolver.Resolve(instantiatedType)], 
+                                                            [Context.TypeResolver.ResolveAny(instantiatedType)], 
                                                             out var closedCreateInstanceMethod);
             Context.Generate(exps);
             Context.EmitCilInstruction(ilVar,  OpCodes.Call, closedCreateInstanceMethod);
@@ -1291,7 +1291,7 @@ namespace Cecilifier.Core.AST
             if (parentMae != null && SymbolEqualityComparer.Default.Equals(Context.SemanticModel.GetSymbolInfo(parentMae).Symbol!.ContainingType, Context.RoslynTypeSystem.SystemValueType))
             {
                 // it is a reference on a value type to a method defined in System.ValueType (GetHashCode(), ToString(), etc)
-                Context.SetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, Context.TypeResolver.Resolve(type));
+                Context.SetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, Context.TypeResolver.ResolveAny(type));
             }
 
             bool RequiresAddressOfValue() => IsObjectCreationExpressionUsedAsInParameter(expressionSyntax) || expressionSyntax.Parent!.FirstAncestorOrSelf<SyntaxNode>(c => !c.IsKind(SyntaxKind.ParenthesizedExpression)).IsKind(SyntaxKind.SimpleMemberAccessExpression);
@@ -1555,7 +1555,7 @@ namespace Cecilifier.Core.AST
                     break;
 
                 case SymbolKind.TypeParameter:
-                    Context.SetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, Context.TypeResolver.Resolve((ITypeSymbol) member.Symbol));
+                    Context.SetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, Context.TypeResolver.ResolveAny((ITypeSymbol) member.Symbol));
                     break;
 
                 default:

@@ -56,7 +56,7 @@ public static class CecilifierContextExtensions
         }
         else if (operation is IConversionOperation { Operand.Type: not null } conversion2 && context.SemanticModel.Compilation.ClassifyConversion(conversion2.Operand.Type, operation.Type).IsBoxing)
         {
-            context.EmitCilInstruction(ilVar, OpCodes.Box, context.TypeResolver.Resolve(conversion2.Operand.Type));
+            context.EmitCilInstruction(ilVar, OpCodes.Box, context.TypeResolver.ResolveAny(conversion2.Operand.Type));
         }
         else if (operation is IConversionOperation { Conversion.IsNullable: true } nullableConversion && !nullableConversion.Syntax.IsKind(SyntaxKind.CoalesceExpression))
         {

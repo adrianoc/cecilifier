@@ -64,7 +64,7 @@ namespace Cecilifier.Core.Extensions
                 var conversion = context.SemanticModel.GetConversion(expression);
                 if (conversion.IsImplicit && NeedsBoxing(context, expression, typeInfo.Type))
                 {
-                    context.EmitCilInstruction(ilVar, OpCodes.Box, context.TypeResolver.Resolve(typeInfo.Type));
+                    context.EmitCilInstruction(ilVar, OpCodes.Box, context.TypeResolver.ResolveAny(typeInfo.Type));
                 }
             }
 
@@ -158,7 +158,7 @@ namespace Cecilifier.Core.Extensions
         public override string VisitTypeOfExpression(TypeOfExpressionSyntax node)
         {
             var typeSymbol = _context.SemanticModel.GetTypeInfo(node.Type);
-            return _context.TypeResolver.Resolve(typeSymbol.Type);
+            return _context.TypeResolver.ResolveAny(typeSymbol.Type);
         }
 
         public override string VisitInvocationExpression(InvocationExpressionSyntax node)
@@ -193,13 +193,13 @@ namespace Cecilifier.Core.Extensions
                 return $"new CustomAttributeArgument[{node.Type.RankSpecifiers[0].Sizes[0]}]";
             }
 
-            var elementType = _context.TypeResolver.Resolve(_context.SemanticModel.GetTypeInfo(node.Type.ElementType).Type);
+            var elementType = _context.TypeResolver.ResolveAny(_context.SemanticModel.GetTypeInfo(node.Type.ElementType).Type);
             return CustomAttributeArgumentArray(node.Initializer, elementType);
         }
 
         public override string VisitImplicitArrayCreationExpression(ImplicitArrayCreationExpressionSyntax node)
         {
-            var elementType = _context.TypeResolver.Resolve(_context.SemanticModel.GetTypeInfo(node.Initializer.Expressions[0]).Type);
+            var elementType = _context.TypeResolver.ResolveAny(_context.SemanticModel.GetTypeInfo(node.Initializer.Expressions[0]).Type);
             return CustomAttributeArgumentArray(node.Initializer, elementType);
         }
 

@@ -62,7 +62,7 @@ namespace Cecilifier.Core.AST
                 Context.MoveLinesToEnd(InstructionPrecedingValueToLoad, lastInstructionLoadingRhs);
                 var arrayElementType = Context.SemanticModel.GetTypeInfo(node).Type.EnsureNotNull();
                 var stelemOpCode = arrayElementType.StelemOpCode();
-                var operand = stelemOpCode == OpCodes.Stelem ? Context.TypeResolver.Resolve(arrayElementType) : null;
+                var operand = stelemOpCode == OpCodes.Stelem ? Context.TypeResolver.ResolveAny(arrayElementType) : null;
                 Context.EmitCilInstruction(ilVar, stelemOpCode, operand);
             }
         }
@@ -214,7 +214,7 @@ namespace Cecilifier.Core.AST
         private void EmitIndirectStore(ITypeSymbol typeBeingStored)
         {
             var indirectStoreOpCode = typeBeingStored.StindOpCodeFor();
-            Context.EmitCilInstruction(ilVar, indirectStoreOpCode, indirectStoreOpCode == OpCodes.Stobj ? Context.TypeResolver.Resolve(typeBeingStored.ElementTypeSymbolOf()) : null);
+            Context.EmitCilInstruction(ilVar, indirectStoreOpCode, indirectStoreOpCode == OpCodes.Stobj ? Context.TypeResolver.ResolveAny(typeBeingStored.ElementTypeSymbolOf()) : null);
         }
 
         private void PropertyAssignment(IdentifierNameSyntax node, IPropertySymbol property)

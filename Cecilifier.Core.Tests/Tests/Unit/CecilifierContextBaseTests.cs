@@ -14,7 +14,7 @@ public class CecilifierContextBaseTests
     public void SetUpFixture()
     {
         var syntaxTree = CSharpSyntaxTree.ParseText("class C {}");
-        var comp = CSharpCompilation.Create("", new[] { syntaxTree });
+        var comp = CSharpCompilation.Create("", [syntaxTree], ReferencedAssemblies.GetTrustedAssembliesPath().Select(p => MetadataReference.CreateFromFile(p)));
         _semanticModel = comp.GetSemanticModel(syntaxTree);
     }
     

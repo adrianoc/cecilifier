@@ -31,7 +31,7 @@ namespace Cecilifier.Core.AST
             {
                 var tempVar = tempValueTypeDeclarer();
                 Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, tempVar.VariableName);
-                Context.EmitCilInstruction(ilVar, OpCodes.Stobj, Context.TypeResolver.Resolve(elementType));
+                Context.EmitCilInstruction(ilVar, OpCodes.Stobj, Context.TypeResolver.ResolveAny(elementType));
                 return;
             }
             

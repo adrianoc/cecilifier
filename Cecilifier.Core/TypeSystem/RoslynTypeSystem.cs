@@ -85,7 +85,14 @@ public struct RoslynTypeSystem
     public ITypeSymbol SystemRuntimeInteropServicesMemoryMarshal { get; }
     public ITypeSymbol SystemCollectionsGenericICollectionOfT { get; }
 
-    public readonly ITypeSymbol ForType<TType>() => _context.SemanticModel.Compilation.GetTypeByMetadataName(typeof(TType).FullName!);
+    public readonly ITypeSymbol ForType<TType>()
+    {
+        var type = typeof(TType);
+        if (type.IsConstructedGenericType)
+            return _context.SemanticModel.Compilation.GetTypeByMetadataName(type.FullName!.Substring(0, type.FullName.IndexOf('['))); 
+        
+        return _context.SemanticModel.Compilation.GetTypeByMetadataName(type.FullName!);
+    }
 
     private readonly CecilifierContextBase _context;
 }

@@ -78,7 +78,7 @@ namespace Cecilifier.Core.AST
             {
                 context.WriteNewLine();
                 context.WriteComment($"Parameter: {parameter}");
-                var resolvedParamType = context.TypeResolver.Resolve(namedTypeSymbol.TypeArguments[i++]);
+                var resolvedParamType = context.TypeResolver.ResolveAny(namedTypeSymbol.TypeArguments[i++]);
                 var paramExps = CecilDefinitionsFactory.Parameter(
                     parameter.Identifier.Text,
                     RefKind.None,

@@ -136,7 +136,7 @@ namespace Cecilifier.Core.AST
         private string ProcessBase(TypeDeclarationSyntax classDeclaration)
         {
             var classSymbol = DeclaredSymbolFor(classDeclaration);
-            return Context.TypeResolver.Resolve(classSymbol.BaseType);
+            return Context.TypeResolver.ResolveAny(classSymbol.BaseType);
         }
 
         private void HandleTypeDeclaration(TypeDeclarationSyntax node, string varName)
@@ -232,7 +232,7 @@ namespace Cecilifier.Core.AST
 
             EnsureForwardedTypeDefinition(context, typeSymbol.BaseType, []);
 
-            return typeSymbol.BaseType.IsGenericType ? null : context.TypeResolver.Resolve(typeSymbol.BaseType);
+            return typeSymbol.BaseType.IsGenericType ? null : context.TypeResolver.ResolveAny(typeSymbol.BaseType);
         }
 
         private void EnsureCurrentTypeHasADefaultCtor(TypeDeclarationSyntax node, string typeLocalVar)

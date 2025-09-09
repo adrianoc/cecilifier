@@ -14,9 +14,9 @@ internal class ArrayExpandedParamsArgumentHandler : ExpandedParamsArgumentHandle
         _currentIndex = 0;
         _stelemOpCode = ElementType.StelemOpCode();
         
-        _backingVariableName = Context.AddLocalVariableToCurrentMethod($"{paramsParameter.Name}Params", Context.TypeResolver.Resolve(paramsParameter.Type));
+        _backingVariableName = Context.AddLocalVariableToCurrentMethod($"{paramsParameter.Name}Params", Context.TypeResolver.ResolveAny(paramsParameter.Type));
         
-        var paramsType = Context.TypeResolver.Resolve(ElementType);
+        var paramsType = Context.TypeResolver.ResolveAny(ElementType);
         Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, ElementCount);
         Context.EmitCilInstruction(ilVar, OpCodes.Newarr, paramsType);
         Context.EmitCilInstruction(ilVar, OpCodes.Stloc, _backingVariableName);

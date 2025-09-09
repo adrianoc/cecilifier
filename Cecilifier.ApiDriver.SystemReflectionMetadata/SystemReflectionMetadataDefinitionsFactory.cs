@@ -67,13 +67,13 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                             {{resolvedParameterTypes.Length}}, 
                             returnType => returnType
                                                 .Type(isByRef:false)
-                                                .Type({{context.TypeResolver.Resolve(methodSymbol.ReturnType)}}, IsValueType: {{methodSymbol.ReturnType.IsValueType}}), 
+                                                .Type({{context.TypeResolver.ResolveAny(methodSymbol.ReturnType)}}, IsValueType: {{methodSymbol.ReturnType.IsValueType}}), 
                             parameters => 
                             {
                                 {{string.Join('\n', resolvedParameterTypes.Select(p => $"""
                                                                          parameters.AddParameter()
                                                                                 .Type(isByRef: {p.IsByRef()})
-                                                                                .Type({context.TypeResolver.Resolve(p.Type)}, isValueType: {p.Type.IsValueType});
+                                                                                .Type({context.TypeResolver.ResolveAny(p.Type)}, isValueType: {p.Type.IsValueType.ToKeyword()});
                                                                       """))}}
                             });
 
