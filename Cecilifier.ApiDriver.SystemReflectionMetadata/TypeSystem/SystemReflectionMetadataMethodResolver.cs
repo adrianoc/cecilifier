@@ -34,24 +34,6 @@ public class SystemReflectionMetadataMethodResolver(SystemReflectionMetadataCont
 
     public string ResolveDefaultConstructor(ITypeSymbol type, string derivedTypeVar)
     {
-        /*
-         *
-        var parameterlessCtorSignature = new BlobBuilder();
-
-           new BlobEncoder(parameterlessCtorSignature).
-               MethodSignature(isInstanceMethod: true).
-               Parameters(0, returnType => returnType.Void(), parameters => { });
-
-           var parameterlessCtorBlobIndex = metadata.GetOrAddBlob(parameterlessCtorSignature);
-
-           var objectCtorMemberRef = metadata.AddMemberReference(
-               systemObjectTypeRef,
-               metadata.GetOrAddString(".ctor"),
-               parameterlessCtorBlobIndex);
-
-
-         */
-
         var voidParameterlessMethodRef = context.DefinitionVariables.GetVariable("voidParameterlessMethodRef", VariableMemberKind.LocalVariable);
         if (!voidParameterlessMethodRef.IsValid)
         {
