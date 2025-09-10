@@ -152,7 +152,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             };
         }
 
-        private CecilifierContextBase RunProcessorOn(string source)
+        private IVisitorContext RunProcessorOn(string source)
         {
             var syntaxTree = CSharpSyntaxTree.ParseText(source);
             var comp = CSharpCompilation.Create(null, new[] { syntaxTree }, new[] { MetadataReference.CreateFromFile(typeof(Func<>).Assembly.Location) }, new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
@@ -171,6 +171,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
                 context,
                 syntaxTree.GetRoot().DescendantNodes().OfType<ClassDeclarationSyntax>().SingleOrDefault(),
                 "");
+            
             return context;
         }
     }

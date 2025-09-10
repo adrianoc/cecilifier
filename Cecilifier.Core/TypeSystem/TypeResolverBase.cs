@@ -40,7 +40,7 @@ namespace Cecilifier.Core.TypeSystem
             {
                 // collects the type arguments for all types in the parent chain. 
                 var typeArguments = nestedType.GetAllTypeArguments().ToArray();
-                var resolveNestedType = $"""TypeHelpers.NewRawNestedTypeReference("{type.Name}", module: assembly.MainModule, {ResolveAny(type.ContainingType.OriginalDefinition)}, isValueType: {(type.IsValueType ? "true" : "false")}, {typeArguments.Length})""";
+                var resolveNestedType = $"""TypeHelpers.NewRawNestedTypeReference("{type.Name}", module: assembly.MainModule, {ResolveAny(type.ContainingType.OriginalDefinition)}, isValueType: {type.IsValueType.ToKeyword()}, {typeArguments.Length})""";
             
                 // if type is a generic type definition we return the open, resolved type
                 // otherwise this method is expected to return a 'GenericInstanceType'.

@@ -13,9 +13,8 @@ namespace Cecilifier.ApiDriver.SystemReflectionMetadata.TypeSystem;
 //          it may be required to introduce an assembly reference. If the code can only return expressions
 //          it becomes hard (if not impossible) to store this reference in a variable to be used in a future
 //          call to ResolveX()
-public class SystemReflectionMetadataTypeResolver : TypeResolverBase<SystemReflectionMetadataContext>
+public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContext context) : TypeResolverBase<SystemReflectionMetadataContext>(context)
 {
-    public SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContext context) : base(context) { }
 
     public override string Resolve(string typeName) => $"TODO: Fix Resolve(\"{typeName}\")";
     public override string Resolve(ITypeSymbol type)

@@ -14,7 +14,7 @@ namespace Cecilifier.Core.TypeSystem;
 /// </summary>
 public struct RoslynTypeSystem
 {
-    public RoslynTypeSystem(CecilifierContextBase ctx)
+    public RoslynTypeSystem(IVisitorContext ctx)
     {
         _context = ctx;
         
@@ -94,5 +94,5 @@ public struct RoslynTypeSystem
         return _context.SemanticModel.Compilation.GetTypeByMetadataName(type.FullName!);
     }
 
-    private readonly CecilifierContextBase _context;
+    private readonly IVisitorContext _context;
 }
