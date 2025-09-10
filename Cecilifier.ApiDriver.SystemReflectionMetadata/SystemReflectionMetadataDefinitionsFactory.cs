@@ -121,7 +121,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
             $$"""
               var {{parameterlessCtorSignatureVar}} = new BlobBuilder();
               new BlobEncoder({{parameterlessCtorSignatureVar}})
-                     .MethodSignature(isInstanceMethod: {{(isStatic ? "false" : "true")}})
+                     .MethodSignature(isInstanceMethod: {{ (!isStatic).ToKeyword()}})
                      .Parameters(0, returnType => returnType.Void(), parameters => { });
 
               var {{ctorBlobIndexVar}} = metadata.GetOrAddBlob({{parameterlessCtorSignatureVar}});

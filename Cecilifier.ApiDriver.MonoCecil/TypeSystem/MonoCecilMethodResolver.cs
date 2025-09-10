@@ -49,7 +49,7 @@ public class MonoCecilMethodResolver(MonoCecilContext context) : IMethodResolver
             context.Generate($$"""
                                        var {{tempMethodVar}} = new MethodReference("{{method.Name}}", {{returnType}}, {{context.TypeResolver.ResolveAny(method.ContainingType)}})
                                                    {
-                                                       HasThis = {{(method.IsStatic ? "false" : "true")}},
+                                                       HasThis = {{(!method.IsStatic).ToKeyword()}},
                                                        ExplicitThis = false,
                                                        CallingConvention = {{(int) method.CallingConvention}},
                                                    };
