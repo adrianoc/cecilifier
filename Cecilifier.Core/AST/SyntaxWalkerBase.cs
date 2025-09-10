@@ -113,7 +113,7 @@ namespace Cecilifier.Core.AST
                     if (value == null)
                         Context.EmitCilInstruction(ilVar, OpCodes.Ldnull);
                     else
-                        Context.EmitCilInstruction(ilVar, OpCodes.Ldstr, SymbolDisplay.FormatLiteral(value, true));
+                        Context.ApiDriver.EmitCilInstruction(Context, ilVar, OpCodes.Ldstr, SymbolDisplay.FormatLiteral(value, true));
                     break;
 
                 case SpecialType.System_Char:

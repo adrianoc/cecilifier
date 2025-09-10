@@ -1,3 +1,4 @@
+using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
@@ -7,11 +8,28 @@ namespace Cecilifier.ApiDriver.SystemReflectionMetadata.TypeSystem;
 
 public class SystemReflectionMetadataMethodResolver(SystemReflectionMetadataContext context) : IMethodResolver
 {
-    private readonly SystemReflectionMetadataContext _context = context;
-
     public string Resolve(IMethodSymbol method)
     {
-        return method.Name + " !! FIX ME !!";
+        var containingTypeRefVar= context.TypeResolver.ResolveAny(method.ContainingType);
+        var methodSignatureBlobVar = context.Naming.SyntheticVariable($"{method.ToValidVariableName()}Signature", ElementKind.LocalVariable);
+        var methodRefVar = context.Naming.SyntheticVariable($"{method.ToValidVariableName()}Ref", ElementKind.LocalVariable);
+        
+        context.Generate($"""
+                            var {methodSignatureBlobVar} = new BlobBuilder();
+
+                            new BlobEncoder({methodSignatureBlobVar}).
+                                MethodSignature().
+                                Parameters(1,
+                                    returnType => returnType.Void(),
+                                    parameters => parameters.AddParameter().Type().String());
+
+                            var {methodRefVar} = metadata.AddMemberReference(
+                                                                {containingTypeRefVar},
+                                                                metadata.GetOrAddString("{method.Name}"),
+                                                                metadata.GetOrAddBlob({methodSignatureBlobVar}));
+                            """);
+        context.WriteNewLine();
+        return methodRefVar;
     }
 
     public string ResolveDefaultConstructor(ITypeSymbol type, string derivedTypeVar)
@@ -34,11 +52,11 @@ public class SystemReflectionMetadataMethodResolver(SystemReflectionMetadataCont
 
          */
 
-        var voidParameterlessMethodRef = _context.DefinitionVariables.GetVariable("voidParameterlessMethodRef", VariableMemberKind.LocalVariable);
+        var voidParameterlessMethodRef = context.DefinitionVariables.GetVariable("voidParameterlessMethodRef", VariableMemberKind.LocalVariable);
         if (!voidParameterlessMethodRef.IsValid)
         {
-            var voidParameterlessMethodRefVarName = _context.Naming.SyntheticVariable("voidParameterlessMethodRef", ElementKind.LocalVariable);
-            _context.Generate($$"""
+            var voidParameterlessMethodRefVarName = context.Naming.SyntheticVariable("voidParameterlessMethodRef", ElementKind.LocalVariable);
+            context.Generate($$"""
                                           var parameterlessCtorSignature = new BlobBuilder();
                                           
                                           new BlobEncoder(parameterlessCtorSignature).
@@ -53,7 +71,7 @@ public class SystemReflectionMetadataMethodResolver(SystemReflectionMetadataCont
                                                                                                     parameterlessCtorBlobIndex);
                                           """);
             
-            voidParameterlessMethodRef = _context.DefinitionVariables.RegisterNonMethod("", "voidParameterlessMethodRef", VariableMemberKind.LocalVariable, voidParameterlessMethodRefVarName);
+            voidParameterlessMethodRef = context.DefinitionVariables.RegisterNonMethod("", "voidParameterlessMethodRef", VariableMemberKind.LocalVariable, voidParameterlessMethodRefVarName);
         }
         
         return voidParameterlessMethodRef.VariableName;

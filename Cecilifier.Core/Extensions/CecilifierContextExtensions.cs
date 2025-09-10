@@ -135,11 +135,11 @@ public static class CecilifierContextExtensions
         var operand = method.MethodResolverExpression(context);
         if (context.TryGetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, out var constrainedType))
         {
-            context.EmitCilInstruction(ilVar, OpCodes.Constrained, constrainedType);
+            context.ApiDriver.EmitCilInstruction(context, ilVar, OpCodes.Constrained, constrainedType); 
             context.ClearFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint);
         }
 
-        context.EmitCilInstruction(ilVar, opCode, operand);
+        context.ApiDriver.EmitCilInstruction(context, ilVar, opCode, new CilMetadataHandle(operand));
     }
 
     /*

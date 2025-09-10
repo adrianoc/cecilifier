@@ -12,12 +12,12 @@ internal record struct TypeDefinitionRecord(string TypeQualifiedName, string Typ
     /// or System.Reflection.Metadata.Ecma335.MetadataTokens.FieldDefinitionHandle(1) if no types in the module defines
     /// fields. See MetadataBuilder.AddMethodDefinition() for more details.
     /// </summary>
-    public string FirstFieldHandle { get; set; }
+    public string? FirstFieldHandle { get; set; }
 
     /// <summary>
     /// The name of the variable representing the definition of the first method of the type. <see cref="FirstFieldHandle"/>
     /// </summary>
-    public string FirstMethodHandle { get; set; }
+    public string? FirstMethodHandle { get; set; }
     
     /// <summary>
     /// 

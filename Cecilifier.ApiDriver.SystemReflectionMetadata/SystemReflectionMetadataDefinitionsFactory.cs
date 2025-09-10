@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
@@ -46,8 +47,8 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                                                                     metadata.GetOrAddString("{typeNamespace}"),
                                                                     metadata.GetOrAddString("{typeName}"),
                                                                     {resolvedBaseType},
-                                                                    fieldList: {typeRecord.FirstFieldHandle},
-                                                                    methodList: {typeRecord.FirstMethodHandle});
+                                                                    fieldList: {typeRecord.FirstFieldHandle ?? "MetadataTokens.FieldDefinitionHandle(1)"},
+                                                                    methodList: {typeRecord.FirstMethodHandle ?? "MetadataTokens.MethodDefinitionHandle(1)"});
                                                        """));
 
         });
@@ -67,7 +68,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                             {{resolvedParameterTypes.Length}}, 
                             returnType => returnType
                                                 .Type(isByRef:false)
-                                                .Type({{context.TypeResolver.ResolveAny(methodSymbol.ReturnType)}}, IsValueType: {{methodSymbol.ReturnType.IsValueType}}), 
+                                                .Type({{context.TypeResolver.ResolveAny(methodSymbol.ReturnType)}}, isValueType: {{methodSymbol.ReturnType.IsValueType.ToKeyword()}}), 
                             parameters => 
                             {
                                 {{string.Join('\n', resolvedParameterTypes.Select(p => $"""
@@ -87,9 +88,11 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         
         ((SystemReflectionMetadataContext) context).DelayedDefinitionsManager.RegisterMethodDefinition(memberDefinitionContext.ParentDefinitionVariableName, (ctx, methodRecord) =>
         {
-            var methodDefVar = ctx.Naming.SyntheticVariable(methodName, ElementKind.LocalVariable);
+            var methodDefVar = ctx.DefinitionVariables.GetMethodVariable(methodSymbol.AsMethodDefinitionVariable());
+            Debug.Assert(methodDefVar.IsValid);
+            
             ctx.Generate($"""
-                                   var {methodDefVar} = metadata.AddMethodDefinition(
+                                   var {methodDefVar.VariableName} = metadata.AddMethodDefinition(
                                                              {methodModifiers},
                                                              MethodImplAttributes.IL | MethodImplAttributes.Managed,
                                                              metadata.GetOrAddString("{methodName}"),
@@ -99,7 +102,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                                    """);
             
             ctx.WriteNewLine();
-            return methodDefVar;
+            return methodDefVar.VariableName;
         });
     }
 

@@ -24,8 +24,8 @@ public class DelayedDefinitionsManager
         _postponedTypeDefinitionDetails.Add(new TypeDefinitionRecord(typeQualifiedName, typeVarName)
         {
             DefinitionFunction = action,
-            FirstFieldHandle = "MetadataTokens.FieldDefinitionHandle(1)",
-            FirstMethodHandle = "MetadataTokens.MethodDefinitionHandle(1)"
+            FirstFieldHandle = null,
+            FirstMethodHandle = null
         });
     }
 
@@ -44,7 +44,7 @@ public class DelayedDefinitionsManager
 
             for (int i = 0; i < postponedTypeDefinitions.Length; i++)
             {
-                if (postponedTypeDefinitions[i].TypeVarName == methodRecord.DeclaringTypeVarName)
+                if (postponedTypeDefinitions[i].TypeVarName == methodRecord.DeclaringTypeVarName && postponedTypeDefinitions[i].FirstMethodHandle == null)
                 {
                     postponedTypeDefinitions[i].FirstMethodHandle = methodHandleVariableName;
                 }

@@ -159,7 +159,7 @@ namespace Cecilifier.Core.AST
                     WithCurrentMethod(declaringTypeName, methodVar, nameUsedInRegisteredVariable, parameters.Select(p => Context.SemanticModel.GetDeclaredSymbol(p).Type.ToDisplayString()).ToArray(), methodSymbol.TypeParameters.Length, runWithCurrent);
                     if (!methodSymbol.IsAbstract && !node.DescendantNodes().Any(n => n.IsKind(SyntaxKind.ReturnStatement)))
                     {
-                        Context.EmitCilInstruction(ilVar, OpCodes.Ret);
+                        Context.ApiDriver.EmitCilInstruction(Context, ilVar, OpCodes.Ret);
                     }
                 }
                 else

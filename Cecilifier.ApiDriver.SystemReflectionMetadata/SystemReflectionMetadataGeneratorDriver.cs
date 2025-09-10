@@ -28,8 +28,8 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
                         {
                             var ilBuilder = new BlobBuilder();
                             var metadataBuilder = new MetadataBuilder();
-                            GenerateIL(metadataBuilder, ilBuilder, "{{mainTypeName}}");
-                            WritePEImage(peStream, metadataBuilder, ilBuilder, {{entryPointExpression}});
+                            var entryPointOrNull = GenerateIL(metadataBuilder, ilBuilder, "{{mainTypeName}}");
+                            WritePEImage(peStream, metadataBuilder, ilBuilder, entryPointOrNull);
                             peStream.Position = 0;
                         }
 
@@ -65,9 +65,9 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
                          peBlob.WriteContentTo(peStream);
                     }
                     
-                    static void GenerateIL(MetadataBuilder metadata, BlobBuilder ilBuilder, string mainTypeName)
+                    static MethodDefinitionHandle GenerateIL(MetadataBuilder metadata, BlobBuilder ilBuilder, string mainTypeName)
                     {
-                         var moduleAndAssemblyName = metadata.GetOrAddString($"{mainTypeName}");
+                         var moduleAndAssemblyName = metadata.GetOrAddString(mainTypeName);
                          var mainModuleHandle = metadata.AddModule(
                              0,
                              moduleAndAssemblyName,
@@ -91,9 +91,19 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
                              flags: default(AssemblyFlags),
                              hashValue: default(BlobHandle));            
                      
-                         var methodBodyStream = new MethodBodyStreamEncoder(ilBuilder);
+                         metadata.AddTypeDefinition(
+                            default(TypeAttributes),
+                            default(StringHandle),
+                            metadata.GetOrAddString("<Module>"),
+                            baseType: default(EntityHandle),
+                            fieldList: MetadataTokens.FieldDefinitionHandle(1),
+                            methodList: MetadataTokens.MethodDefinitionHandle(1));
+                            
+                            var methodBodyStream = new MethodBodyStreamEncoder(ilBuilder);
                          
                          {{cecilifiedCode}}
+                         
+                         return {{entryPointExpression}};
                     }
                  }
                  """;
@@ -119,14 +129,20 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
         context.WriteNewLine();
         if (operand != null)
         {
-            if (operand is CilMetadataHandle handle)
+            switch (operand)
             {
-                context.Generate($"{il.VariableName}.Token({handle.VariableName});");
-            }
-            else
-            {
-                //TODO: Fix name of WriteX() method to be called; it is not always derivable from the type  
-                context.Generate($"{il.VariableName}.CodeBuilder.Write{operand.GetType().Name}({operand});");
+                case string s:
+                    context.Generate($"""{il.VariableName}.Token(MetadataTokens.GetToken(metadata.GetOrAddUserString({operand})));""");
+                    break;
+                
+                case CilMetadataHandle handle:
+                    context.Generate($"{il.VariableName}.Token({handle.VariableName});");
+                    break;
+                
+                default:
+                    //TODO: Fix name of WriteX() method to be called; it is not always derivable from the type  
+                    context.Generate($"{il.VariableName}.CodeBuilder.Write{operand.GetType().Name}({operand});");
+                    break;
             }
             context.WriteNewLine();
         }
