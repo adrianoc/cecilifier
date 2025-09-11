@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Cecilifier.ApiDriver.SystemReflectionMetadata.TypeSystem;
 using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
@@ -58,7 +59,9 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
     {
         var methodSignatureVar = context.Naming.SyntheticVariable($"{methodName}Signature", ElementKind.LocalVariable);
         var methodBlobIndexVar = context.Naming.SyntheticVariable($"{methodName}BlobIndex", ElementKind.LocalVariable);
-
+        
+        var typedTypeResolver = (SystemReflectionMetadataTypeResolver) context.TypeResolver;
+        
         yield return Format(
             $$"""
               var {{methodSignatureVar}} = new BlobBuilder();
@@ -66,16 +69,13 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                      .MethodSignature(isInstanceMethod: false)
                      .Parameters(
                             {{resolvedParameterTypes.Length}}, 
-                            returnType => returnType
-                                                .Type(isByRef:false)
-                                                .Type({{context.TypeResolver.ResolveAny(methodSymbol.ReturnType)}}, isValueType: {{methodSymbol.ReturnType.IsValueType.ToKeyword()}}), 
+                            returnType => returnType.{{typedTypeResolver.ResolveForEncoder(methodSymbol.ReturnType, methodSymbol.ReturnsByRef)}},
                             parameters => 
                             {
                                 {{string.Join('\n', resolvedParameterTypes.Select(p => $"""
-                                                                         parameters.AddParameter()
-                                                                                .Type(isByRef: {p.IsByRef()})
-                                                                                .Type({context.TypeResolver.ResolveAny(p.Type)}, isValueType: {p.Type.IsValueType.ToKeyword()});
-                                                                      """))}}
+                                                                                           parameters.AddParameter()
+                                                                                                  .{typedTypeResolver.ResolveForEncoder(p.Type, p.IsByRef())};
+                                                                                        """))}}
                             });
 
               var {{methodBlobIndexVar}} = metadata.GetOrAddBlob({{methodSignatureVar}});

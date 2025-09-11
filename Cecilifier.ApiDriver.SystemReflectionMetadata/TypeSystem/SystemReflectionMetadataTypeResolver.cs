@@ -1,4 +1,3 @@
-using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.TypeSystem;
@@ -15,7 +14,6 @@ namespace Cecilifier.ApiDriver.SystemReflectionMetadata.TypeSystem;
 //          call to ResolveX()
 public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContext context) : TypeResolverBase<SystemReflectionMetadataContext>(context)
 {
-
     public override string Resolve(string typeName) => $"TODO: Fix Resolve(\"{typeName}\")";
     public override string Resolve(ITypeSymbol type)
     {
@@ -31,15 +29,36 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
         return memberRefVarName;
     }
 
-    public override string ResolvePredefinedType(ITypeSymbol type)
+    /// <summary>
+    /// Returns an expression that is suitable to be used with Parameter/ReturnTypeEncoder
+    /// </summary>
+    /// <param name="type"></param>
+    /// <param name="isByRef"></param>
+    /// <returns></returns>
+    public string ResolveForEncoder(ITypeSymbol type, bool isByRef)
     {
+        if (type.SpecialType == SpecialType.System_Void)
+        {
+            return "Void()";
+        }
+        
+        if (type.IsPrimitiveType())
+            return $"Type().{type.MetadataName}()";
+
         return $"""
-                metadata.AddTypeReference(
-                             mscorlibAssemblyRef,
-                             metadata.GetOrAddString("{type.ContainingNamespace.Name}"),
-                             metadata.GetOrAddString("{type.Name}"))
+                Type(isByRef: ?)
+                .Type(
+                    {Resolve(type)},
+                    isValueType: {type.IsValueType.ToKeyword()})
                 """;
     }
+
+    public override string ResolvePredefinedType(ITypeSymbol type) => $"""
+                                                                       metadata.AddTypeReference(
+                                                                                    mscorlibAssemblyRef,
+                                                                                    metadata.GetOrAddString("{type.ContainingNamespace.Name}"),
+                                                                                    metadata.GetOrAddString("{type.Name}"))
+                                                                       """;
 
     protected override string ResolveArrayType(IArrayTypeSymbol type)
     {
