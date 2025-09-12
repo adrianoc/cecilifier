@@ -59,4 +59,6 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
         
         return voidParameterlessMethodRef.VariableName;
     }
+    
+    public string ResolveField(IFieldSymbol field) => throw new NotImplementedException();
 }

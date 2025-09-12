@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Text;
 using Cecilifier.ApiDriver.MonoCecil.Extensions;
@@ -229,5 +230,26 @@ public class MonoCecilMemberResolver(MonoCecilContext context) : IMemberResolver
         }
 
         return res.Length > 0 ? res.Remove(0, 1).ToString() : string.Empty;
+    }
+
+    public string ResolveField(IFieldSymbol field)
+    {
+        if(field.IsDefinedInCurrentAssembly(context))
+        {
+            var found = context.DefinitionVariables.GetVariable(field.Name, VariableMemberKind.Field, field.ContainingType.OriginalDefinition.ToDisplayString());
+            ThrowIfVariableNotFound(found.IsValid);
+
+            var resolvedField = field.ContainingType.IsGenericType
+                ? $$"""new FieldReference({{found.VariableName}}.Name, {{found.VariableName}}.FieldType, {{context.TypeResolver.ResolveAny(field.ContainingType)}})""" 
+                : found.VariableName;
+                
+            return resolvedField;
+        }
+
+        var declaringTypeName = field.ContainingType.FullyQualifiedName();
+        return Utils.ImportFromMainModule($"TypeHelpers.ResolveField(\"{declaringTypeName}\",\"{field.Name}\")");
+
+        [ExcludeFromCodeCoverage]
+        void ThrowIfVariableNotFound(bool found) { if(!found) throw new Exception($"Failed to resolve variable with field definition for `{field}`"); }
     }
 }
