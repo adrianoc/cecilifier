@@ -42,9 +42,12 @@ public interface IApiDriverDefinitionsFactory
         out MethodDefinitionVariable methodDefinitionVariable);
 
     public IEnumerable<string> Constructor(IVisitorContext context, MemberDefinitionContext memberDefinitionContext, string typeName, bool isStatic, string methodAccessibility, string[] paramTypes, string? methodDefinitionPropertyValues = null);
+    //TODO: Can we compute 'fieldAttributes` based of `field` ? 
+    public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext memberDefinitionContext, ISymbol fieldOrEvent, ITypeSymbol fieldType, string fieldAttributes, bool isVolatile, bool isByRef, object? constantValue = null);
+    public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext memberDefinitionContext, string fieldVar, string name, string fieldType, string fieldAttributes, bool isVolatile, bool isByRef, object? constantValue = null);
 }
 
 public record struct MemberDefinitionContext(
-                            string MemberDefinitionVariableName, 
-                            string ParentDefinitionVariableName, 
-                            IlContext IlContext);
+    string MemberDefinitionVariableName,
+    string ParentDefinitionVariableName,
+    IlContext IlContext);

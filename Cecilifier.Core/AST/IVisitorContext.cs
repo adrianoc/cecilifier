@@ -63,7 +63,6 @@ public interface IVisitorContext
 
     ITypeResolver TypeResolver { get; }
     IMethodResolver MethodResolver { get; }
-    
     IList<Mapping> Mappings { get; }
 
     ref readonly RoslynTypeSystem RoslynTypeSystem { get; }
@@ -82,6 +81,7 @@ public interface IVisitorContext
 public class IlContext
 {
     protected IlContext(string variableName, string relatedMethodVar) => (VariableName, RelatedMethodVariable) = (variableName, relatedMethodVar);
+    public static readonly IlContext None = new IlContext(string.Empty, string.Empty);
     
     //TODO: Remove these implicit operators and fix all usages of il variable names
     public static implicit operator IlContext(string variableName) => new(variableName, "N/A");

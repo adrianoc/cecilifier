@@ -304,6 +304,13 @@ namespace Cecilifier.Core.AST
 
         protected string ResolveType(TypeSyntax type)
         {
+            var resolvedType = Context.TypeResolver.ResolveAny(ResolveTypeSymbol(type));
+            //TODO: Can't this check be moved inside the Resolve() method as the other checks for arrays,
+            return type is RefTypeSyntax ? resolvedType.MakeByReferenceType() : resolvedType;
+        }
+        
+        protected ITypeSymbol ResolveTypeSymbol(TypeSyntax type)
+        {
             // Special case types that Context.GetTypeInfo() is not able to handle. As of Oct/2024 only the ones below are requires such special handling.
             var typeToCheck = type switch
             {
@@ -315,11 +322,10 @@ namespace Cecilifier.Core.AST
         
             var typeInfo = Context.GetTypeInfo(typeToCheck);
 
-            TypeDeclarationVisitor.EnsureForwardedTypeDefinition(Context, typeInfo.Type, Array.Empty<TypeParameterSyntax>());
+            TypeDeclarationVisitor.EnsureForwardedTypeDefinition(Context, typeInfo.Type, []);
 
-            var resolvedType = Context.TypeResolver.ResolveAny(typeInfo.Type);
-            //TODO: Can't this check be moved inside the Resolve() method as the other checks for arrays,
-            return type is RefTypeSyntax ? resolvedType.MakeByReferenceType() : resolvedType;
+            return typeInfo.Type;
+
         }
 
         protected void ProcessParameter(string ilVar, SimpleNameSyntax node, IParameterSymbol paramSymbol)

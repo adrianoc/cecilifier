@@ -33,9 +33,10 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
     /// Returns an expression that is suitable to be used with Parameter/ReturnTypeEncoder
     /// </summary>
     /// <param name="type"></param>
+    /// <param name="encoderKind"></param>
     /// <param name="isByRef"></param>
     /// <returns></returns>
-    public string ResolveForEncoder(ITypeSymbol type, bool isByRef)
+    public string ResolveForEncoder(ITypeSymbol type, TargetEncoderKind encoderKind, bool isByRef)
     {
         if (type.SpecialType == SpecialType.System_Void)
         {
@@ -43,12 +44,12 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
         }
         
         if (type.IsPrimitiveType())
-            return $"Type().{type.MetadataName}()";
+            return $"{(encoderKind == TargetEncoderKind.Field ? "" : "Type()")}.{type.MetadataName}()";
 
         return $"""
-                Type(isByRef: ?)
+                Type(isByRef: {isByRef.ToKeyword()})
                 .Type(
-                    {Resolve(type)},
+                    {ResolveAny(type)},
                     isValueType: {type.IsValueType.ToKeyword()})
                 """;
     }
@@ -74,4 +75,11 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
     {
         throw new NotImplementedException();
     }
+}
+
+public enum TargetEncoderKind
+{
+    Parameter,
+    Field,
+    ReturnType
 }

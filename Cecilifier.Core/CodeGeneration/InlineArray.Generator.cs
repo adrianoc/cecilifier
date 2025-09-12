@@ -37,13 +37,14 @@ internal class InlineArrayGenerator
 
             var fieldVar = context.Naming.SyntheticVariable("_element0", ElementKind.Field);
             var fieldExps = CecilDefinitionsFactory.Field(
-                context, 
-                $"{typeVar}.Name", 
-                typeVar,
-                fieldVar, 
-                "_element0", 
-                typeParameterVar, 
-                "FieldAttributes.Private");
+                                                context, 
+                                                $"{typeVar}.Name", 
+                                                typeVar,
+                                                fieldVar, 
+                                                "_element0", 
+                                                typeParameterVar, 
+                                                "FieldAttributes.Private",
+                                                isByRef: false);
             
             context.Generate(typeExps);
             

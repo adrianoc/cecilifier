@@ -28,6 +28,7 @@ public class SystemReflectionMetadataMethodResolver(SystemReflectionMetadataCont
                                                                 metadata.GetOrAddString("{method.Name}"),
                                                                 metadata.GetOrAddBlob({methodSignatureBlobVar}));
                             """);
+        
         context.WriteNewLine();
         return methodRefVar;
     }

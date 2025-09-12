@@ -67,7 +67,7 @@ public struct StaticDelegateCacheContext
         cacheTypeVar.Properties[counterName] = ++staticMethodToDelegateConversionCount;
 
         CacheBackingField = context.Naming.SyntheticVariable("cachedDelegate", ElementKind.Field);
-        var fieldExps = CecilDefinitionsFactory.Field(context, cacheInnerTypeName, cacheTypeVar, CacheBackingField, backingFieldName, delegateType, Constants.Cecil.StaticFieldAttributes);
+        var fieldExps = CecilDefinitionsFactory.Field(context, cacheInnerTypeName, cacheTypeVar, CacheBackingField, backingFieldName, delegateType, Constants.Cecil.StaticFieldAttributes, isByRef: false);
         context.Generate(fieldExps);
 
         return CacheBackingField;

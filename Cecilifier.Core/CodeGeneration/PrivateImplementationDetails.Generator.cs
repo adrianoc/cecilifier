@@ -312,7 +312,8 @@ internal partial class PrivateImplementationDetailsGenerator
                                                                 fieldVar,
                                                                 fieldName,
                                                                 rawDataTypeVar,
-                                                                Constants.CompilerGeneratedTypes.StaticArrayInitFieldModifiers);
+                                                                Constants.CompilerGeneratedTypes.StaticArrayInitFieldModifiers,
+                                                                isByRef: false);
         context.Generate(fieldExpressions);
         var initializationByteArrayAsString = new StringBuilder();
         foreach (var itemValue in toBeHashed)

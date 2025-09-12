@@ -37,8 +37,15 @@ namespace Cecilifier.Core.AST
             {
                 //.class private auto ansi MyEnum
                 var fieldVar = Context.Naming.LocalVariable(node);
-                var valueFieldExp = CecilDefinitionsFactory.Field(Context, enumSymbol.ToDisplayString(), enumType, fieldVar, "value__", Context.TypeResolver.Bcl.System.Int32,
-                    "FieldAttributes.SpecialName | FieldAttributes.RTSpecialName | FieldAttributes.Public");
+                var valueFieldExp = CecilDefinitionsFactory.Field(
+                                                            Context, 
+                                                            enumSymbol.ToDisplayString(), 
+                                                            enumType, 
+                                                            fieldVar, 
+                                                            "value__", 
+                                                            Context.TypeResolver.Bcl.System.Int32,
+                                                            "FieldAttributes.SpecialName | FieldAttributes.RTSpecialName | FieldAttributes.Public",
+                                                            isByRef: false);
                 AddCecilExpressions(Context, valueFieldExp);
 
                 HandleAttributesInMemberDeclaration(node.AttributeLists, enumType);
@@ -58,7 +65,7 @@ namespace Cecilifier.Core.AST
             var enumMemberSymbol = Context.SemanticModel.GetDeclaredSymbol(node).EnsureNotNull();
             var fieldVar = Context.Naming.LocalVariable(node);
             var exp = CecilDefinitionsFactory.Field(Context, enumMemberSymbol.ContainingSymbol.ToDisplayString(), enumVarDef.VariableName, fieldVar, node.Identifier.ValueText, enumVarDef.VariableName,
-                "FieldAttributes.Static | FieldAttributes.Literal | FieldAttributes.Public | FieldAttributes.HasDefault", enumMemberValue);
+                "FieldAttributes.Static | FieldAttributes.Literal | FieldAttributes.Public | FieldAttributes.HasDefault", isByRef: false, enumMemberValue);
             AddCecilExpressions(Context, exp);
 
             HandleAttributesInMemberDeclaration(node.AttributeLists, fieldVar);

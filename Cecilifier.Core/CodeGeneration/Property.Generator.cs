@@ -153,13 +153,14 @@ internal class PropertyGenerator
         _backingFieldVar = Context.Naming.SyntheticVariable(property.Name, ElementKind.Field);
         
         var backingFieldExps = CecilDefinitionsFactory.Field(
-            Context,
-            property.DeclaringTypeNameForRegistration,
-            property.DeclaringTypeVariable,
-            _backingFieldVar,
-            Utils.BackingFieldNameForAutoProperty(property.Name),
-            property.ResolvedType,
-            property.BackingFieldModifiers);
+                                                        Context,
+                                                        property.DeclaringTypeNameForRegistration,
+                                                        property.DeclaringTypeVariable,
+                                                        _backingFieldVar,
+                                                        Utils.BackingFieldNameForAutoProperty(property.Name),
+                                                        property.ResolvedType,
+                                                        property.BackingFieldModifiers,
+                                                        isByRef: false);
         
         Context.Generate(backingFieldExps);
         Context.AddCompilerGeneratedAttributeTo(_backingFieldVar);

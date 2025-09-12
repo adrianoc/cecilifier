@@ -260,15 +260,9 @@ namespace Cecilifier.Core.Misc
             return string.Empty;
         }
 
-        public static IEnumerable<string> Field(IVisitorContext context, string declaringTypeName, string declaringTypeVar, string fieldVar, string name, string fieldType, string fieldAttributes, object? constantValue = null)
+        public static IEnumerable<string> Field(IVisitorContext context, string declaringTypeName, string declaringTypeVar, string fieldVar, string name, string fieldType, string fieldAttributes, bool isByRef, object? constantValue = null)
         {
-            context.DefinitionVariables.RegisterNonMethod(declaringTypeName, name, VariableMemberKind.Field, fieldVar);
-            var fieldExp = $"var {fieldVar} = new FieldDefinition(\"{name}\", {fieldAttributes}, {fieldType})";
-            return
-            [
-                constantValue != null ? $"{fieldExp} {{ Constant = {constantValue} }} ;" : $"{fieldExp};",
-                $"{declaringTypeVar}.Fields.Add({fieldVar});"
-            ];
+            return context.ApiDefinitionsFactory.Field(context, new MemberDefinitionContext(fieldVar, declaringTypeVar, IlContext.None), declaringTypeName, name, fieldType, fieldAttributes, false, isByRef, constantValue);
         }
 
         public static string ParameterDoesNotHandleParamsKeywordOrDefaultValue(string name, RefKind byRef, string resolvedType, string? paramAttributes = null)
@@ -422,7 +416,7 @@ namespace Cecilifier.Core.Misc
                 {
                     var systemValueTypeRef = Utils.ImportFromMainModule("typeof(System.ValueType)");
                     var constraintType = typeParam.HasUnmanagedTypeConstraint
-                        ? $"{systemValueTypeRef}.MakeRequiredModifierType({context.TypeResolver.Resolve(context.RoslynTypeSystem.ForType<System.Runtime.InteropServices.UnmanagedType>())})"
+                        ? $"{systemValueTypeRef}.MakeRequiredModifierType({context.TypeResolver.ResolveAny(context.RoslynTypeSystem.ForType<System.Runtime.InteropServices.UnmanagedType>())})"
                         : systemValueTypeRef;
 
                     exps.Add($"{genParamDefVar}.Constraints.Add(new GenericParameterConstraint({constraintType}));");

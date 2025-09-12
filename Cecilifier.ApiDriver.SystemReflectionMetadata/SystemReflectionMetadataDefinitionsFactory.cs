@@ -69,12 +69,12 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                      .MethodSignature(isInstanceMethod: false)
                      .Parameters(
                             {{resolvedParameterTypes.Length}}, 
-                            returnType => returnType.{{typedTypeResolver.ResolveForEncoder(methodSymbol.ReturnType, methodSymbol.ReturnsByRef)}},
+                            returnType => returnType.{{typedTypeResolver.ResolveForEncoder(methodSymbol.ReturnType, TargetEncoderKind.ReturnType,  methodSymbol.ReturnsByRef)}},
                             parameters => 
                             {
                                 {{string.Join('\n', resolvedParameterTypes.Select(p => $"""
                                                                                            parameters.AddParameter()
-                                                                                                  .{typedTypeResolver.ResolveForEncoder(p.Type, p.IsByRef())};
+                                                                                                  .{typedTypeResolver.ResolveForEncoder(p.Type, TargetEncoderKind.Parameter, p.IsByRef())};
                                                                                         """))}}
                             });
 
@@ -148,6 +148,44 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
             ctx.WriteNewLine();
             return ctorDefVar;
         });
+    }
+
+    public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext memberDefinitionContext, ISymbol fieldOrEvent, ITypeSymbol fieldType, string fieldAttributes, bool isVolatile, bool isByRef, object? constantValue = null)
+    {
+        //TODO: Handle isByRef
+        Debug.Assert(isByRef == false, "Handle isByRef");
+        var typedTypeResolver = (SystemReflectionMetadataTypeResolver) context.TypeResolver;
+        
+        context.DefinitionVariables.RegisterNonMethod(fieldOrEvent.ContainingType.ToDisplayString(), fieldOrEvent.Name, VariableMemberKind.Field, memberDefinitionContext.MemberDefinitionVariableName);
+        var fieldSignatureVar = context.Naming.SyntheticVariable($"{fieldOrEvent.Name}_fs", ElementKind.LocalVariable);
+        return [
+            $"""
+             BlobBuilder {fieldSignatureVar} = new();
+             new BlobEncoder({fieldSignatureVar})
+                 .FieldSignature()
+                 {typedTypeResolver.ResolveForEncoder(fieldType, TargetEncoderKind.Field, false)};
+                 
+             var {memberDefinitionContext.MemberDefinitionVariableName} = metadata.AddFieldDefinition({fieldAttributes}, metadata.GetOrAddString("{fieldOrEvent.Name}"), metadata.GetOrAddBlob({fieldSignatureVar}));
+             """
+        ];
+    }
+
+    public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext memberDefinitionContext, string declaringTypeName, string name, string fieldType, string fieldAttributes, bool isVolatile, bool isByRef, object? constantValue = null)
+    {
+        var typedTypeResolver = (SystemReflectionMetadataTypeResolver) context.TypeResolver;
+        
+        context.DefinitionVariables.RegisterNonMethod(declaringTypeName, name, VariableMemberKind.Field, memberDefinitionContext.MemberDefinitionVariableName);
+        var fieldSignatureVar = context.Naming.SyntheticVariable($"{name}_fs", ElementKind.LocalVariable);
+        return [
+            $"""
+             BlobBuilder {fieldSignatureVar} = new();
+             new BlobEncoder({fieldSignatureVar})
+                 .FieldSignature()
+                 TODO: Handle Field Type Resolution.;
+                 
+             var {memberDefinitionContext.MemberDefinitionVariableName} = metadata.AddFieldDefinition({fieldAttributes}, metadata.GetOrAddString("{name}"), metadata.GetOrAddBlob({fieldSignatureVar}));
+             """
+        ];
     }
 
     static string Format(CecilifierInterpolatedStringHandler cecilFormattedString) => cecilFormattedString.Result;

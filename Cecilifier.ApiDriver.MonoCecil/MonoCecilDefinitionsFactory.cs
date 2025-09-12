@@ -72,4 +72,39 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
 
         return [exp + ";", $"{memberDefinitionContext.ParentDefinitionVariableName}.Methods.Add({memberDefinitionContext.MemberDefinitionVariableName});"];
     }
+
+    public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext memberDefinitionContext, ISymbol fieldOrEvent, ITypeSymbol fieldType, string fieldAttributes, bool isVolatile, bool isByRef, object? constantValue = null)
+    {
+        return Field(context, memberDefinitionContext, fieldOrEvent.ContainingType.ToDisplayString(), fieldOrEvent.Name, context.TypeResolver.ResolveAny(fieldType), fieldAttributes, isVolatile, isByRef, constantValue);
+    }
+
+    public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext memberDefinitionContext, string declaringTypeName, string name, string fieldType, string fieldAttributes, bool isVolatile, bool isByRef, object? constantValue = null)
+    {
+        if (isByRef)
+            fieldType = fieldType.MakeByReferenceType();
+        
+        context.DefinitionVariables.RegisterNonMethod(declaringTypeName, name, VariableMemberKind.Field, memberDefinitionContext.MemberDefinitionVariableName);
+        
+        var resolvedFieldType = ProcessRequiredModifiers(context, fieldType, isVolatile);
+        var fieldExp = $"var {memberDefinitionContext.MemberDefinitionVariableName} = new FieldDefinition(\"{name}\", {fieldAttributes}, {resolvedFieldType})";
+        List<string> exps = 
+        [
+            constantValue != null ? $"{fieldExp} {{ Constant = {constantValue} }} ;" : $"{fieldExp};",
+            $"{memberDefinitionContext.ParentDefinitionVariableName}.Fields.Add({memberDefinitionContext.MemberDefinitionVariableName});"
+        ];
+
+        return exps;
+    }
+
+    
+    private string ProcessRequiredModifiers(IVisitorContext context, string originalType, bool isVolatile)
+    {
+        if (!isVolatile)
+            return originalType;
+        
+        var id = context.Naming.RequiredModifier();
+        context.Generate($"var {id} = new RequiredModifierType({context.TypeResolver.Resolve(typeof(IsVolatile).FullName)}, {originalType});");
+        
+        return id;
+    }
 }

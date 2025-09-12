@@ -93,6 +93,8 @@ namespace Cecilifier.Core.TypeSystem
                 || type.SpecialType == SpecialType.System_Decimal 
                 || type.SpecialType == SpecialType.System_DateTime
                 || type.SpecialType == SpecialType.System_Delegate
+                || type.SpecialType == SpecialType.System_MulticastDelegate
+                || type.SpecialType == SpecialType.System_AsyncCallback
                 || type.TypeKind == TypeKind.Interface)
             {
                 return null;

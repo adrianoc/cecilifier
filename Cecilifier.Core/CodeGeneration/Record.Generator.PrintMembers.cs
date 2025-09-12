@@ -24,7 +24,7 @@ internal partial class RecordGenerator
         context.WriteNewLine();
         context.WriteComment($"{record.Identifier.ValueText}.{PrintMembersMethodName}()");
 
-        var builderParameter = new ParameterSpec("builder", context.TypeResolver.Resolve(context.RoslynTypeSystem.ForType<StringBuilder>()), RefKind.None, Constants.ParameterAttributes.None);
+        var builderParameter = new ParameterSpec("builder", context.TypeResolver.ResolveAny(context.RoslynTypeSystem.ForType<StringBuilder>()), RefKind.None, Constants.ParameterAttributes.None);
         var printMembersDeclExps = CecilDefinitionsFactory.Method(
             context,
             _recordSymbol.OriginalDefinition.ToDisplayString(),
