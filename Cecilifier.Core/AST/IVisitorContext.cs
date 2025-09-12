@@ -62,7 +62,7 @@ public interface IVisitorContext
     void MoveLinesToEnd(LinkedListNode<string> start, LinkedListNode<string> end);
 
     ITypeResolver TypeResolver { get; }
-    IMethodResolver MethodResolver { get; }
+    IMemberResolver MemberResolver { get; }
     IList<Mapping> Mappings { get; }
 
     ref readonly RoslynTypeSystem RoslynTypeSystem { get; }

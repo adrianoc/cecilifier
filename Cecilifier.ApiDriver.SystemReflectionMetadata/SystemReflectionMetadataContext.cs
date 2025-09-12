@@ -15,7 +15,7 @@ public class SystemReflectionMetadataContext : CecilifierContextBase, IVisitorCo
         ApiDriver = new SystemReflectionMetadataGeneratorDriver();
         ApiDefinitionsFactory = ApiDriver.CreateDefinitionsFactory();
         TypeResolver = new SystemReflectionMetadataTypeResolver(this);
-        MethodResolver = new SystemReflectionMetadataMethodResolver(this);
+        MemberResolver = new SystemReflectionMetadataMemberResolver(this);
         
         CecilifiedLineNumber = ApiDriver.PreambleLineCount;
         StartLineNumber = ApiDriver.PreambleLineCount;
@@ -25,7 +25,7 @@ public class SystemReflectionMetadataContext : CecilifierContextBase, IVisitorCo
     public static IVisitorContext CreateContext(CecilifierOptions options, SemanticModel semanticModel) => new SystemReflectionMetadataContext(options, semanticModel);
     
     public DelayedDefinitionsManager DelayedDefinitionsManager { get; } = new();
-
+    
     public SystemReflectionMetadataAssemblyResolver AssemblyResolver { get; init; }
     
     public override void OnFinishedTypeDeclaration()

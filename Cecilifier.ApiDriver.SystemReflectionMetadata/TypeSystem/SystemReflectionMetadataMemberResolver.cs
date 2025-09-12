@@ -6,9 +6,9 @@ using Microsoft.CodeAnalysis;
 
 namespace Cecilifier.ApiDriver.SystemReflectionMetadata.TypeSystem;
 
-public class SystemReflectionMetadataMethodResolver(SystemReflectionMetadataContext context) : IMethodResolver
+public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataContext context) : IMemberResolver
 {
-    public string Resolve(IMethodSymbol method)
+    public string ResolveMethod(IMethodSymbol method)
     {
         var containingTypeRefVar= context.TypeResolver.ResolveAny(method.ContainingType);
         var methodSignatureBlobVar = context.Naming.SyntheticVariable($"{method.ToValidVariableName()}Signature", ElementKind.LocalVariable);

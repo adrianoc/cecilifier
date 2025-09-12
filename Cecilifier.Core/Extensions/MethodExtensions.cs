@@ -48,7 +48,7 @@ namespace Cecilifier.Core.Extensions
         /// and turning it into a `generic instance method` by providing the corresponding `type arguments`
         /// For `method references` the `type arguments` are encoded in the reference itself
         /// </remarks>
-        public static string MethodResolverExpression(this IMethodSymbol method, IVisitorContext ctx) => ctx.MethodResolver.Resolve(method);
+        public static string MethodResolverExpression(this IMethodSymbol method, IVisitorContext ctx) => ctx.MemberResolver.ResolveMethod(method);
 
         public static MethodDefinitionVariable AsMethodDefinitionVariable(this IMethodSymbol method, string variableName = null)
         {

@@ -11,7 +11,7 @@ public class MonoCecilContext : CecilifierContextBase, IVisitorContext
 {
     public MonoCecilContext(CecilifierOptions options, SemanticModel semanticModel, byte indentation = 3) : base(options, semanticModel, indentation)
     {
-        MethodResolver = new MonoCecilMethodResolver(this);
+        MemberResolver = new MonoCecilMemberResolver(this);
         TypeResolver = new MonoCecilTypeResolver(this);
         ApiDriver = new MonoCecilGeneratorDriver();
         

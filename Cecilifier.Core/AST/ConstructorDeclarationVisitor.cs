@@ -247,7 +247,7 @@ namespace Cecilifier.Core.AST
             if (typeSymbol == null)
                 return Utils.ImportFromMainModule($"TypeHelpers.DefaultCtorFor({typeDefVar}.BaseType)");
 
-            return Context.MethodResolver.ResolveDefaultConstructor(typeSymbol.BaseType, typeDefVar);
+            return Context.MemberResolver.ResolveDefaultConstructor(typeSymbol.BaseType, typeDefVar);
         }
 
         private static string DefaultCtorAccessibilityFor(MemberDeclarationSyntax declaringClass, bool isStatic)

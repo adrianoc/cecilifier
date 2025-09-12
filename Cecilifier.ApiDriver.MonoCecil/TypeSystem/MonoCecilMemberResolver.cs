@@ -11,9 +11,9 @@ using Microsoft.CodeAnalysis;
 
 namespace Cecilifier.ApiDriver.MonoCecil.TypeSystem;
 
-public class MonoCecilMethodResolver(MonoCecilContext context) : IMethodResolver
+public class MonoCecilMemberResolver(MonoCecilContext context) : IMemberResolver
 {
-    public string Resolve(IMethodSymbol method)
+    public string ResolveMethod(IMethodSymbol method)
     {
         if (method.IsDefinedInCurrentAssembly(context))
         {
