@@ -62,7 +62,11 @@ public class SnippetRunner
     
     public void EmitCilInstruction<T>(IVisitorContext context, IlContext il, OpCode opCode, T? operand, string? comment = null)
     {
-        var operandStr = operand == null ? string.Empty : $", {operand}";
+        var operandStr = operand switch
+        {
+            CilOperandValue cilOperand => $", {cilOperand.Value}",
+            _ => operand == null ? string.Empty : $", {operand}"
+        };
         context.Generate($"{il.VariableName}.Emit({opCode.ConstantName()}{operandStr});{(comment != null ? $" // {comment}" : string.Empty)}");
         context.WriteNewLine();
     }

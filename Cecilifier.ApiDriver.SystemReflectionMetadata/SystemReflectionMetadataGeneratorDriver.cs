@@ -1,4 +1,5 @@
 ﻿using System.Reflection.Emit;
+using System.Text;
 using Cecilifier.Core;
 using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.AST;
@@ -125,7 +126,8 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
 
     public void EmitCilInstruction<T>(IVisitorContext context, IlContext il, OpCode opCode, T? operand, string? comment = null)
     {
-        context.Generate($"{il.VariableName}.OpCode(ILOpCode.{opCode.OpCodeName()});{(comment != null ? $" // {comment}" : string.Empty)}");
+        var mappedOpCodeName = MapSystemReflectionOpCodeNameToSystemReflectionMetadata(opCode);
+        context.Generate($"{il.VariableName}.OpCode(ILOpCode.{mappedOpCodeName});{(comment != null ? $" // {comment}" : string.Empty)}");
         context.WriteNewLine();
         if (operand != null)
         {
@@ -137,6 +139,10 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
                 
                 case CilMetadataHandle handle:
                     context.Generate($"{il.VariableName}.Token({handle.VariableName});");
+                    break;
+                
+                case CilOperandValue operandValue:
+                    context.Generate($"{il.VariableName}.CodeBuilder.Write{operandValue.Type.Name}({operandValue.Value});");
                     break;
                 
                 default:
@@ -152,4 +158,18 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
     {
         EmitCilInstruction<string>(context, il, opCode, null);
     }
+    
+    private static string MapSystemReflectionOpCodeNameToSystemReflectionMetadata(OpCode opCode)
+    {
+        var reflectionOpCodeName = opCode.OpCodeName();
+        if (reflectionOpCodeName.StartsWith("Ldc_"))
+        {
+            StringBuilder buffer = new(reflectionOpCodeName);
+            buffer[4] =  Char.ToLower(buffer[4]); // Ldc_Ix => Ldc_ix, Ldc_Rx => Ldc_rx, etc.
+            return buffer.ToString();
+        }
+            
+        return reflectionOpCodeName;
+    }
+
 }

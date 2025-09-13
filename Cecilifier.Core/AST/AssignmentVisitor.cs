@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System;
 using System.Reflection.Emit;
+using Cecilifier.Core.ApiDriver;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -214,7 +215,7 @@ namespace Cecilifier.Core.AST
         private void EmitIndirectStore(ITypeSymbol typeBeingStored)
         {
             var indirectStoreOpCode = typeBeingStored.StindOpCodeFor();
-            Context.EmitCilInstruction(ilVar, indirectStoreOpCode, indirectStoreOpCode == OpCodes.Stobj ? Context.TypeResolver.ResolveAny(typeBeingStored.ElementTypeSymbolOf()) : null);
+            Context.ApiDriver.EmitCilInstruction(Context, ilVar, indirectStoreOpCode, indirectStoreOpCode == OpCodes.Stobj ? Context.TypeResolver.ResolveAny(typeBeingStored.ElementTypeSymbolOf()) : null);
         }
 
         private void PropertyAssignment(IdentifierNameSyntax node, IPropertySymbol property)
@@ -238,7 +239,7 @@ namespace Cecilifier.Core.AST
         private void FieldAssignment(IFieldSymbol field, IdentifierNameSyntax name)
         {
             if (field.IsVolatile)
-                Context.EmitCilInstruction(ilVar, OpCodes.Volatile);
+                Context.ApiDriver.EmitCilInstruction(Context, ilVar, OpCodes.Volatile);
 
             field.EnsureFieldExists(Context, name);
             var fieldReference = field.FieldResolverExpression(Context);
@@ -274,7 +275,7 @@ namespace Cecilifier.Core.AST
             }
             else
             {
-                Context.EmitCilInstruction(ilVar, storeOpCode, memberReference);
+                Context.ApiDriver.EmitCilInstruction(Context, ilVar, storeOpCode, new CilMetadataHandle(memberReference));
             }
         }
 

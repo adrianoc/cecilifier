@@ -9,7 +9,7 @@ namespace Cecilifier.Core.Tests.OutputBased;
 
 [TestFixture(typeof(MonoCecilContext))]
 [TestFixture(typeof(SystemReflectionMetadataContext))]
-[EnableForContext<SystemReflectionMetadataContext>(IgnoreReason = "Not implemented yet")]
+[EnableForContext<SystemReflectionMetadataContext>(nameof(Simple), IgnoreReason = "Not implemented yet")]
 public class FieldTests<TContext> : OutputBasedTestBase<TContext> where TContext : IVisitorContext
 {
     [TestCase("int", "field = 42", "42",  TestName = "Non generic")]
@@ -36,5 +36,24 @@ public class FieldTests<TContext> : OutputBasedTestBase<TContext> where TContext
                             class Foo<T> { public static {{fieldType}} field; }
                             """, 
             expectedOutput);
+    }
+
+    [TestCase("int", "42", "42", TestName = "int")]
+    [TestCase("string", "\"foo\"", "foo", TestName = "string")]
+    public void Simple(string fieldType, string fieldValue, string expectedOutput)
+    {
+        AssertOutput($$"""
+                       class Foo 
+                       { 
+                            public static {{fieldType}} field;
+                            public static void Main()
+                            {
+                                Foo.field = {{ fieldValue }};
+                                System.Console.WriteLine(Foo.field);
+                            } 
+                       }
+                       """, 
+            expectedOutput);
+        
     }
 }

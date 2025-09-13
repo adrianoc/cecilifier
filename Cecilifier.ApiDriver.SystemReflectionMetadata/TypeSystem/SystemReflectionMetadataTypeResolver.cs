@@ -43,15 +43,11 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
             return "Void()";
         }
         
-        if (type.IsPrimitiveType())
-            return $"{(encoderKind == TargetEncoderKind.Field ? "" : "Type()")}.{type.MetadataName}()";
+        if (type.IsPrimitiveType() || type.SpecialType == SpecialType.System_String)
+            return $"{(encoderKind == TargetEncoderKind.Field ? "" : "Type().")}{type.MetadataName}()";
 
-        return $"""
-                Type(isByRef: {isByRef.ToKeyword()})
-                .Type(
-                    {ResolveAny(type)},
-                    isValueType: {type.IsValueType.ToKeyword()})
-                """;
+        return (encoderKind == TargetEncoderKind.Field ? "" : $"Type(isByRef: {isByRef.ToKeyword()}).") + 
+                                    $"Type({ResolveAny(type)}, isValueType: {type.IsValueType.ToKeyword()})";
     }
 
     public override string ResolvePredefinedType(ITypeSymbol type) => $"""

@@ -193,7 +193,7 @@ namespace Cecilifier.Core.AST
                     ? OpCodes.Stsfld
                     : OpCodes.Stfld;
 
-                Context.EmitCilInstruction(ctorBodyIL, fieldStoreOpCode, fieldVarDef.VariableName);
+                Context.ApiDriver.EmitCilInstruction(Context, ctorBodyIL, fieldStoreOpCode, new CilMetadataHandle(fieldVarDef.VariableName));
             }
 
             // Handles property initialization...

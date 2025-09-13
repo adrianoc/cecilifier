@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Cecilifier.Core.ApiDriver;
 using Microsoft.CodeAnalysis;
 using Cecilifier.Core.AST;
 using OpCode = System.Reflection.Emit.OpCode;
@@ -197,5 +198,7 @@ namespace Cecilifier.Core.Extensions
                 
             return type.ContainingType.GetAllTypeArguments().Concat(type.TypeArguments);
         }
+
+        public static CilOperandValue ToCilOperandValue(this ITypeSymbol type, object value) => new(type, value);
     }
 }

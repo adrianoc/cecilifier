@@ -115,31 +115,22 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
     public IEnumerable<string> Constructor(IVisitorContext context, MemberDefinitionContext memberDefinitionContext, string typeName, bool isStatic, string methodAccessibility, string[] paramTypes, string? methodDefinitionPropertyValues = null)
     {
         var parameterlessCtorSignatureVar = context.Naming.SyntheticVariable("parameterlessCtorSignature", ElementKind.LocalVariable);
-        var ctorBlobIndexVar = context.Naming.SyntheticVariable("parameterlessCtorBlobIndex", ElementKind.LocalVariable);
-
         yield return Format(
             $$"""
               var {{parameterlessCtorSignatureVar}} = new BlobBuilder();
               new BlobEncoder({{parameterlessCtorSignatureVar}})
                      .MethodSignature(isInstanceMethod: {{ (!isStatic).ToKeyword()}})
                      .Parameters(0, returnType => returnType.Void(), parameters => { });
-
-              var {{ctorBlobIndexVar}} = metadata.GetOrAddBlob({{parameterlessCtorSignatureVar}});
-                 
-              var objectCtorMemberRef = metadata.AddMemberReference(
-                                                  {{memberDefinitionContext.ParentDefinitionVariableName}},
-                                                  metadata.GetOrAddString(".ctor"),
-                                                  {{ctorBlobIndexVar}});
               """);
         
-        ((SystemReflectionMetadataContext) context).DelayedDefinitionsManager.RegisterMethodDefinition( memberDefinitionContext.ParentDefinitionVariableName, (ctx, methodRecord) =>
+        ((SystemReflectionMetadataContext) context).DelayedDefinitionsManager.RegisterMethodDefinition(memberDefinitionContext.ParentDefinitionVariableName, (ctx, methodRecord) =>
         {
             var ctorDefVar = ctx.Naming.SyntheticVariable("ctor", ElementKind.LocalVariable);
             ctx.Generate($"""
                                    var {ctorDefVar} = metadata.AddMethodDefinition(
-                                                             MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName,
+                                                             {(isStatic ? "MethodAttributes.Private | MethodAttributes.Static" : "MethodAttributes.Public")} | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName,
                                                              MethodImplAttributes.IL | MethodImplAttributes.Managed,
-                                                             metadata.GetOrAddString(".ctor"),
+                                                             metadata.GetOrAddString("{(isStatic ? ".cctor" : ".ctor")}"),
                                                              metadata.GetOrAddBlob({parameterlessCtorSignatureVar}),
                                                              methodBodyStream.AddMethodBody({memberDefinitionContext.IlContext.VariableName}),
                                                              parameterList: {methodRecord.FirstParameterHandle});
@@ -163,7 +154,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
              BlobBuilder {fieldSignatureVar} = new();
              new BlobEncoder({fieldSignatureVar})
                  .FieldSignature()
-                 {typedTypeResolver.ResolveForEncoder(fieldType, TargetEncoderKind.Field, false)};
+                 .{typedTypeResolver.ResolveForEncoder(fieldType, TargetEncoderKind.Field, false)};
                  
              var {memberDefinitionContext.MemberDefinitionVariableName} = metadata.AddFieldDefinition({fieldAttributes}, metadata.GetOrAddString("{fieldOrEvent.Name}"), metadata.GetOrAddBlob({fieldSignatureVar}));
              """

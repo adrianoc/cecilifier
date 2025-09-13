@@ -8,6 +8,7 @@ namespace Cecilifier.Core.Misc;
 
 public struct CodeGenerationHelpers
 {
+    //TODO: Introduce method in IILGeneratorApiDriver
     internal static DefinitionVariable StoreTopOfStackInLocalVariable(IVisitorContext context, string ilVar, string variableName, ITypeSymbol type)
     {
         var methodVar = context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);

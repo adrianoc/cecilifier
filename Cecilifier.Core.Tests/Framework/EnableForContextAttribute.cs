@@ -22,7 +22,7 @@ public class EnableForContextAttribute<T> : Attribute, IApplyToTest where T : IV
             return;
         
         var filterType = test.TypeInfo?.Type.GenericTypeArguments[0]!;
-        if (filterType.Name != this.GetType().GenericTypeArguments[0].Name)
+        if (filterType.Name != GetType().GenericTypeArguments[0].Name)
             return;
         
         foreach (var childTest in test.Tests)
