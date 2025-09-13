@@ -24,7 +24,7 @@ public class DefinitionVariable : IEquatable<DefinitionVariable>
 
     public IDictionary<string, object> Properties { get; } = new Dictionary<string, object>();
 
-    private string ParentName { get; }
+    public string ParentName { get; }
 
     public bool Equals(DefinitionVariable other)
     {

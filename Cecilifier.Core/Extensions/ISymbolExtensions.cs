@@ -174,14 +174,7 @@ namespace Cecilifier.Core.Extensions
             }
 
             var fieldDeclarationVariable = context.DefinitionVariables.GetVariable(fieldSymbol.Name, VariableMemberKind.Field, fieldSymbol.ContainingType.OriginalDefinition.ToDisplayString());
-            ThrowIfVariableIsNotValid(fieldDeclarationVariable, fieldSymbol.Name);
-
-            [ExcludeFromCodeCoverage]
-            void ThrowIfVariableIsNotValid(DefinitionVariable variable, string fieldName)
-            {
-                if (!variable.IsValid)
-                    throw new Exception($"Could not resolve reference to field: {fieldName}");
-            }
+            fieldDeclarationVariable.ThrowIfVariableIsNotValid();
         }
 
         public static void EnsurePropertyExists(this IPropertySymbol propertySymbol, IVisitorContext context, [NotNull] SyntaxNode node)

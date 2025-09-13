@@ -237,7 +237,7 @@ public class MonoCecilMemberResolver(MonoCecilContext context) : IMemberResolver
         if(field.IsDefinedInCurrentAssembly(context))
         {
             var found = context.DefinitionVariables.GetVariable(field.Name, VariableMemberKind.Field, field.ContainingType.OriginalDefinition.ToDisplayString());
-            ThrowIfVariableNotFound(found.IsValid);
+            found.ThrowIfVariableIsNotValid();
 
             var resolvedField = field.ContainingType.IsGenericType
                 ? $$"""new FieldReference({{found.VariableName}}.Name, {{found.VariableName}}.FieldType, {{context.TypeResolver.ResolveAny(field.ContainingType)}})""" 
@@ -248,8 +248,5 @@ public class MonoCecilMemberResolver(MonoCecilContext context) : IMemberResolver
 
         var declaringTypeName = field.ContainingType.FullyQualifiedName();
         return Utils.ImportFromMainModule($"TypeHelpers.ResolveField(\"{declaringTypeName}\",\"{field.Name}\")");
-
-        [ExcludeFromCodeCoverage]
-        void ThrowIfVariableNotFound(bool found) { if(!found) throw new Exception($"Failed to resolve variable with field definition for `{field}`"); }
     }
 }
