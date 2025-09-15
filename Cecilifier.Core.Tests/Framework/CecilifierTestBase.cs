@@ -82,7 +82,7 @@ public class CecilifierTestBase<TContext> where TContext : IVisitorContext
         var dotnetRootPath = Environment.GetEnvironmentVariable("DOTNET_ROOT");
         if (string.IsNullOrEmpty(dotnetRootPath))
         {
-            Console.WriteLine($"Unable to resolve DOTNET_ROOT environment variable. Skping ilverify on {actualAssemblyPath}");
+            Console.WriteLine($"Unable to resolve DOTNET_ROOT environment variable. Skipping ilverify on {actualAssemblyPath}");
             return;
         }
 

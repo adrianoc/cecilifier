@@ -162,6 +162,7 @@ class Foo<TFoo> {{ }}");
                        \s+\k<attrType>.GenericParameters.Add\(gp_T_\d+\);
                        \s+assembly.MainModule.Types.Add\(\k<attrType>\);
                        \s+var ctor_myGenericAttribute_4 = new MethodDefinition\(".ctor",.+TypeSystem.Void\);
+                       \s+ctor_myGenericAttribute_4\.Body\.InitLocals = true;
                        \s+var (?<attrInstance>attr_myGeneric_1_\d+) = new CustomAttribute\(new MethodReference\(ctor_myGenericAttribute_4.Name, ctor_myGenericAttribute_4.ReturnType\) {.+DeclaringType = \k<attrType>.MakeGenericInstanceType\(.+Int32\).+}\);
                        \s+\k<appliedTo>.CustomAttributes.Add\(\k<attrInstance>\);
                        """));

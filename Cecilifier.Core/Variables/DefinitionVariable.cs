@@ -30,7 +30,7 @@ public class DefinitionVariable : IEquatable<DefinitionVariable>
     {
         return string.Equals(MemberName, other.MemberName)
                && string.Equals(ParentName, other.ParentName)
-               && (Kind & other.Kind) != 0;
+               && (Kind & other.Kind) == Kind;
     }
 
     public override int GetHashCode()

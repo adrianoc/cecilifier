@@ -12,4 +12,6 @@ public enum VariableMemberKind
     Parameter = 1 << 5,
     LocalVariable = 1 << 6,
     ModuleReference = 1 << 7,
+    MethodSignature = 1 << 8,
+    MethodReference = 1 << 9,
 }

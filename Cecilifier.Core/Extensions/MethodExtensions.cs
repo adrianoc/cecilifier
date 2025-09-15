@@ -50,9 +50,12 @@ namespace Cecilifier.Core.Extensions
         /// </remarks>
         public static string MethodResolverExpression(this IMethodSymbol method, IVisitorContext ctx) => ctx.MemberResolver.ResolveMethod(method);
 
-        public static MethodDefinitionVariable AsMethodDefinitionVariable(this IMethodSymbol method, string variableName = null)
+        public static MethodDefinitionVariable AsMethodDefinitionVariable(this IMethodSymbol method, string variableName = null) => AsMethodVariable(method, VariableMemberKind.Method, variableName);
+        
+        public static MethodDefinitionVariable AsMethodVariable(this IMethodSymbol method, VariableMemberKind methodKind, string variableName = null)
         {
             return new MethodDefinitionVariable(
+                methodKind,
                 method.OriginalDefinition.ContainingType.ToDisplayString(),
                 method.OriginalDefinition.Name,
                 method.OriginalDefinition.Parameters.Select(p => p.Type.ToDisplayString()).ToArray(),

@@ -41,6 +41,8 @@ namespace Cecilifier.Core
             var semanticModel = comp.GetSemanticModel(syntaxTree);
             var context = TContext.CreateContext(options, semanticModel);
 
+            xxxx = typeof(TContext).Name.Contains("SystemReflectionMetadataContext");
+
             CecilifierInterpolatedStringHandler.BaseIndentation = context.Indentation;
             var visitor = new CompilationUnitVisitor(context);
 
@@ -51,6 +53,8 @@ namespace Cecilifier.Core
             var reader = new StringReader(context.ApiDriver.AsCecilApplication(context.Output, mainTypeName, visitor.MainMethodDefinitionVariable));
             return new CecilifierResult(reader, mainTypeName, context.Mappings, context, context.Diagnostics);
         }
+
+        public static bool xxxx;
 
         private static OutputKind OutputKindFor(SyntaxTree syntaxTree)
         {

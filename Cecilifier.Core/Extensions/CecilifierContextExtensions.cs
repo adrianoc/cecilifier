@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Reflection.Emit;
+using System.Runtime.CompilerServices;
 using Cecilifier.Core.ApiDriver;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -144,7 +145,7 @@ public static class CecilifierContextExtensions
     }
 
     /*
-     * Ensure forward member references are correctly handled, i.e, support for scenario in which a method is being referenced
+     * Ensure forward member references are correctly handled, i.e, support for scenarios in which a method is being referenced
      * before it has been declared. This can happen for instance in code like:
      *
      * class C
@@ -158,6 +159,14 @@ public static class CecilifierContextExtensions
      */
     internal static void EnsureForwardedMethod(this IVisitorContext context, IMethodSymbol method)
     {
+        //TODO: The code of this method is causing problems when visiting methods; that driver
+        //      will emit a method reference immediately and postpone the method definition to later
+        //      and the check for retrieving the method variable bellow fails (because definition of the variable
+        //      for the method definition has been postponed also).
+        //      For now there are not tests relying on forwarded methods in SRM
+        if (Cecilifier.xxxx)
+            return;
+        
         if (!method.IsDefinedInCurrentAssembly(context)) 
             return;
 
@@ -188,6 +197,13 @@ public static class CecilifierContextExtensions
             var parameterExps = CecilDefinitionsFactory.Parameter(context, parameter, methodDeclarationVar, paramVar);
             context.Generate(parameterExps);
             context.DefinitionVariables.RegisterNonMethod(method.ToDisplayString(), parameter.Name, VariableMemberKind.Parameter, paramVar);
+        }
+ 
+        
+        if (!method.IsAbstract)
+        {
+            context.Generate($"{methodDeclarationVar}.Body.InitLocals = {(!method.TryGetAttribute<SkipLocalsInitAttribute>(out _)).ToKeyword()};");
+            context.WriteNewLine();
         }
         
         context.DefinitionVariables.RegisterMethod(method.AsMethodDefinitionVariable(methodDeclarationVar));

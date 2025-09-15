@@ -57,53 +57,31 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
 
     public IEnumerable<string> Method(IVisitorContext context, IMethodSymbol methodSymbol, MemberDefinitionContext memberDefinitionContext, string methodName, string methodModifiers, IParameterSymbol[] resolvedParameterTypes, IList<TypeParameterSyntax> typeParameters)
     {
-        var methodSignatureVar = context.Naming.SyntheticVariable($"{methodName}Signature", ElementKind.LocalVariable);
-        var methodBlobIndexVar = context.Naming.SyntheticVariable($"{methodName}BlobIndex", ElementKind.LocalVariable);
-        
-        var typedTypeResolver = (SystemReflectionMetadataTypeResolver) context.TypeResolver;
-        
-        yield return Format(
-            $$"""
-              var {{methodSignatureVar}} = new BlobBuilder();
-              new BlobEncoder({{methodSignatureVar}})
-                     .MethodSignature(isInstanceMethod: false)
-                     .Parameters(
-                            {{resolvedParameterTypes.Length}}, 
-                            returnType => returnType.{{typedTypeResolver.ResolveForEncoder(methodSymbol.ReturnType, TargetEncoderKind.ReturnType,  methodSymbol.ReturnsByRef)}},
-                            parameters => 
-                            {
-                                {{string.Join('\n', resolvedParameterTypes.Select(p => $"""
-                                                                                           parameters.AddParameter()
-                                                                                                  .{typedTypeResolver.ResolveForEncoder(p.Type, TargetEncoderKind.Parameter, p.IsByRef())};
-                                                                                        """))}}
-                            });
-
-              var {{methodBlobIndexVar}} = metadata.GetOrAddBlob({{methodSignatureVar}});
-                 
-              var {{context.Naming.SyntheticVariable($"{methodName}Ref", ElementKind.LocalVariable)}} = metadata.AddMemberReference(
-                                                  {{memberDefinitionContext.ParentDefinitionVariableName}},
-                                                  metadata.GetOrAddString("{{methodName}}"),
-                                                  {{methodBlobIndexVar}});
-              """);
-        
+        context.MemberResolver.ResolveMethod(methodSymbol);
         ((SystemReflectionMetadataContext) context).DelayedDefinitionsManager.RegisterMethodDefinition(memberDefinitionContext.ParentDefinitionVariableName, (ctx, methodRecord) =>
         {
-            var methodDefVar = ctx.DefinitionVariables.GetMethodVariable(methodSymbol.AsMethodDefinitionVariable());
-            Debug.Assert(methodDefVar.IsValid);
+            var methodSignatureVar = ctx.DefinitionVariables.GetVariable(methodSymbol.Name, VariableMemberKind.MethodSignature, methodSymbol.ContainingSymbol.ToDisplayString());
+            Debug.Assert(methodSignatureVar.IsValid);
             
+            var methodDefVar = context.Naming.SyntheticVariable(methodName, ElementKind.Method);
             ctx.Generate($"""
-                                   var {methodDefVar.VariableName} = metadata.AddMethodDefinition(
-                                                             {methodModifiers},
-                                                             MethodImplAttributes.IL | MethodImplAttributes.Managed,
-                                                             metadata.GetOrAddString("{methodName}"),
-                                                             metadata.GetOrAddBlob({methodSignatureVar}),
-                                                             methodBodyStream.AddMethodBody({memberDefinitionContext.IlContext.VariableName}),
-                                                             parameterList: {methodRecord.FirstParameterHandle});
-                                   """);
+                          var {methodDefVar}  = metadata.AddMethodDefinition(
+                                                    {methodModifiers},
+                                                    MethodImplAttributes.IL | MethodImplAttributes.Managed,
+                                                    metadata.GetOrAddString("{methodName}"),
+                                                    {methodSignatureVar.VariableName},
+                                                    methodBodyStream.AddMethodBody({memberDefinitionContext.IlContext.VariableName}),
+                                                    parameterList: {methodRecord.FirstParameterHandle});
+                          """);
             
             ctx.WriteNewLine();
-            return methodDefVar.VariableName;
+            
+            ctx.DefinitionVariables.RegisterMethod(methodSymbol.AsMethodDefinitionVariable(methodDefVar));
+            
+            return methodDefVar;
         });
+        
+        yield break;
     }
 
     public IEnumerable<string> Method(IVisitorContext context, string declaringTypeName, string methodVar, string methodNameForParameterVariableRegistration, string methodName, string methodModifiers, IReadOnlyList<ParameterSpec> parameters,

@@ -33,5 +33,5 @@ public class SystemReflectionMetadataContext : CecilifierContextBase, IVisitorCo
         DelayedDefinitionsManager.ProcessDefinitions(this);
     }
     
-    public SystemReflectionMetadataTypeResolver TypeTypeResolver => (SystemReflectionMetadataTypeResolver)TypeResolver;
+    public SystemReflectionMetadataTypeResolver TypedTypeResolver => (SystemReflectionMetadataTypeResolver)TypeResolver;
 }

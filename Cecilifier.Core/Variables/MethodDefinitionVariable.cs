@@ -7,12 +7,19 @@ namespace Cecilifier.Core.Variables;
 public class MethodDefinitionVariable : DefinitionVariable, IEquatable<MethodDefinitionVariable>
 {
     public MethodDefinitionVariable(string parentTypeName, string methodName, string[] parameterTypeNames, int typeParameterCountCount, string variableName = null) 
-        : base(parentTypeName, methodName, VariableMemberKind.Method, variableName)
+        : this(VariableMemberKind.Method, parentTypeName, methodName, parameterTypeNames, typeParameterCountCount, variableName)
+    {
+    }
+    
+    public MethodDefinitionVariable(VariableMemberKind methodKind, string parentTypeName, string methodName, string[] parameterTypeNames, int typeParameterCountCount, string variableName = null) 
+        : base(parentTypeName, methodName, methodKind, variableName)
     {
         Parameters = parameterTypeNames;
         TypeParameterCount = typeParameterCountCount;
     }
-
+    
+    public MethodDefinitionVariable WithVariableName(string variableName) => new(Kind, ParentName, MemberName, Parameters, TypeParameterCount, variableName);
+    
     private string[] Parameters { get; }
     
     private int TypeParameterCount { get; }
