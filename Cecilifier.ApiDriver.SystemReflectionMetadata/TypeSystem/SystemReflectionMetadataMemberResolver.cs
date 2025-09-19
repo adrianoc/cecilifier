@@ -53,7 +53,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
         return methodRefVar;
     }
 
-    public string ResolveDefaultConstructor(ITypeSymbol type, string derivedTypeVar)
+    public string ResolveDefaultConstructor(ITypeSymbol baseType, string derivedTypeVar)
     {
         var voidParameterlessMethodRef = context.DefinitionVariables.GetVariable("voidParameterlessMethodRef", VariableMemberKind.LocalVariable);
         if (!voidParameterlessMethodRef.IsValid)
@@ -69,7 +69,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
                                           var parameterlessCtorBlobIndex = metadata.GetOrAddBlob(parameterlessCtorSignature);
                                           
                                           var {{voidParameterlessMethodRefVarName}} = metadata.AddMemberReference(
-                                                                                                    {{context.TypeResolver.ResolveAny(type)}},
+                                                                                                    {{context.TypeResolver.ResolveAny(baseType)}},
                                                                                                     metadata.GetOrAddString(".ctor"),
                                                                                                     parameterlessCtorBlobIndex);
                                           """);

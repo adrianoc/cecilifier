@@ -60,16 +60,26 @@ namespace Cecilifier.Core.AST
 
                 if (declaringType.Kind() != SyntaxKind.StructDeclaration)
                 {
-                    Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
+                    Context.ApiDriver.EmitCilInstruction(Context, ilVar, OpCodes.Ldarg_0);
                 }
 
                 // If this ctor has an initializer the call to the base ctor will happen when we visit call base.VisitConstructorDeclaration()
                 // otherwise we need to call it here.
                 if (node.Initializer == null && declaringType.Kind() != SyntaxKind.StructDeclaration)
                 {
-                    var declaringTypeLocalVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Type).VariableName;
-                    var operand = Utils.ImportFromMainModule($"TypeHelpers.DefaultCtorFor({declaringTypeLocalVar}.BaseType)");
-                    Context.EmitCilInstruction(ilVar, OpCodes.Call, operand);
+                    var baseTypeSymbol = Context.RoslynTypeSystem.SystemObject;
+                    if (declaringType.BaseList != null)
+                    {
+                        // Assumes the first type in a base list is an actual type.
+                        var baseTypeSyntax = declaringType.BaseList.Types.First();
+                        var type = Context.SemanticModel.GetTypeInfo(baseTypeSyntax.Type).Type.EnsureNotNull();
+                        if (type.TypeKind != TypeKind.Interface)
+                            baseTypeSymbol = type;
+                    }
+                    
+                    var declaringTypeLocalVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Type).ThrowIfVariableIsNotValid();
+                    var operand = Context.MemberResolver.ResolveDefaultConstructor(baseTypeSymbol, declaringTypeLocalVar.VariableName);
+                    Context.ApiDriver.EmitCilInstruction(Context, ilVar, OpCodes.Call, new CilMetadataHandle(operand));
                 }
 
                 callBaseMethod(node);
@@ -183,7 +193,7 @@ namespace Cecilifier.Core.AST
                     continue;
 
                 if (!fieldDeclaration.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword)))
-                    Context.EmitCilInstruction(ctorBodyIL, OpCodes.Ldarg_0);
+                    Context.ApiDriver.EmitCilInstruction(Context, ctorBodyIL, OpCodes.Ldarg_0);
 
                 if (ExpressionVisitor.Visit(Context, ctorBodyIL, dec.Initializer))
                     continue;

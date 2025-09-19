@@ -6,6 +6,6 @@ public interface IMemberResolver
 {
     // Returns an expression? that represents the resolved method
     string ResolveMethod(IMethodSymbol method);
-    string ResolveDefaultConstructor(ITypeSymbol type, string derivedTypeVar);
+    string ResolveDefaultConstructor(ITypeSymbol baseType, string derivedTypeVar);
     string ResolveField(IFieldSymbol field);
 }

@@ -109,6 +109,10 @@ namespace Cecilifier.Core.Misc
 
         public void Generate(string expression)
         {
+            if (expression.Contains("il_ctor_13.Token(assembly.MainModule.ImportReference(TypeHelpers.DefaultCtorFor(cls_initializedFieldSingleCtor_5.BaseType)));"))
+            {
+                Console.WriteLine();
+            }
             var lineCount = expression.CountNewLines();
             CecilifiedLineNumber += lineCount;
             

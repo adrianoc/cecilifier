@@ -8,7 +8,7 @@ namespace Cecilifier.Core.Tests.Integration
 {
     [TestFixture(typeof(MonoCecilContext))]
     [TestFixture(typeof(SystemReflectionMetadataContext))]
-    [EnableForContext<SystemReflectionMetadataContext>(nameof(TestSingleField), nameof(TestStatic))]
+    [EnableForContext<SystemReflectionMetadataContext>(nameof(TestSingleField), nameof(TestStatic), nameof(TestInternalFields))]
     public class FieldsTestCase<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
     {
         [Test]

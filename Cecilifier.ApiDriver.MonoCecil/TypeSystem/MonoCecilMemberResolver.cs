@@ -119,9 +119,9 @@ public class MonoCecilMemberResolver(MonoCecilContext context) : IMemberResolver
             $"TypeHelpers.ResolveMethod(typeof({declaringTypeName}), \"{method.Name}\",{ReflectionBindingsFlags(method)}{method.Parameters.Aggregate("", (acc, curr) => acc + ", \"" + curr.Type.GetReflectionName() + "\"")})");
     }
 
-    public string ResolveDefaultConstructor(ITypeSymbol type, string derivedTypeVar)
+    public string ResolveDefaultConstructor(ITypeSymbol baseType, string derivedTypeVar)
     {
-        var baseTypeVarDef = context.TypeResolver.ResolveLocalVariableType(type);
+        var baseTypeVarDef = context.TypeResolver.ResolveLocalVariableType(baseType);
         if (baseTypeVarDef != null)
         {
             return $"new MethodReference(\".ctor\", {context.TypeResolver.Bcl.System.Void} ,{baseTypeVarDef}) {{ HasThis = true }}";
