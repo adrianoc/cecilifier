@@ -124,34 +124,33 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
         return new SystemReflectionMetadataIlContext(ilVarName, relatedMethodVar);
     }
 
-    public void WriteCilInstruction<T>(IVisitorContext context, IlContext il, OpCode opCode, T? operand, string? comment = null)
+    public string EmitCilInstruction<T>(IVisitorContext context, IlContext il, OpCode opCode, T? operand, string? comment = null)
     {
         var mappedOpCodeName = MapSystemReflectionOpCodeNameToSystemReflectionMetadata(opCode);
-        context.Generate($"{il.VariableName}.OpCode(ILOpCode.{mappedOpCodeName});{(comment != null ? $" // {comment}" : string.Empty)}");
-        context.WriteNewLine();
-        if (operand != null)
-        {
-            switch (operand)
-            {
-                case string s:
-                    context.Generate($"""{il.VariableName}.Token(MetadataTokens.GetToken(metadata.GetOrAddUserString({operand})));""");
-                    break;
-                
-                case CilMetadataHandle handle:
-                    context.Generate($"{il.VariableName}.Token({handle.VariableName});");
-                    break;
-                
-                case CilOperandValue operandValue:
-                    context.Generate($"{il.VariableName}.CodeBuilder.Write{operandValue.Type.Name}({operandValue.Value});");
-                    break;
-                
-                default:
+        var emitted = $"{il.VariableName}.OpCode(ILOpCode.{mappedOpCodeName});{(comment != null ? $" // {comment}" : string.Empty)}";
+        if (operand == null)
+            return emitted;
+
+        return $$""""
+            {{emitted}}{{Environment.NewLine}}
+            {{
+                operand switch
+                {
+                    string => $"{il.VariableName}.Token(MetadataTokens.GetToken(metadata.GetOrAddUserString({operand})));",
+                    CilMetadataHandle handle => $"{il.VariableName}.Token({handle.VariableName});",
+                    CilOperandValue operandValue => $"{il.VariableName}.CodeBuilder.Write{operandValue.Type.Name}({operandValue.Value});",
+
                     //TODO: Fix name of WriteX() method to be called; it is not always derivable from the type  
-                    context.Generate($"{il.VariableName}.CodeBuilder.Write{operand.GetType().Name}({operand});");
-                    break;
-            }
-            context.WriteNewLine();
-        }
+                    _ => $"{il.VariableName}.CodeBuilder.Write{operand.GetType().Name}({operand});"
+                }            
+            }}
+            """";
+    }
+
+    public void WriteCilInstruction<T>(IVisitorContext context, IlContext il, OpCode opCode, T? operand, string? comment = null)
+    {
+        context.Generate(EmitCilInstruction(context, il, opCode, operand, comment));
+        context.WriteNewLine();
     }
     
     public void WriteCilInstruction(IVisitorContext context, IlContext il, OpCode opCode)

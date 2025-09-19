@@ -72,11 +72,6 @@ public class DefinitionVariableManager
 
     public ScopedDefinitionVariable WithCurrentMethod(string parentName, string memberName, string[] paramTypes, int typeParameterCount, string definitionVariableName)
     {
-        // TODO: Investigate why allowing the variable to be registered here causes issues. Note that SRMDefinitionsFactory.Method() does *register* the variable for
-        //       the method definition.
-        if (Cecilifier.xxxx)
-            return new ScopedDefinitionVariable(new List<DefinitionVariable>(), 0);
-        
         var registered = RegisterMethod(parentName, memberName, paramTypes, typeParameterCount, definitionVariableName);
         return WithVariable(registered);
     }

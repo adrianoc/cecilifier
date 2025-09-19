@@ -84,12 +84,13 @@ namespace Cecilifier.Core.AST
 
         public override void VisitParameter(ParameterSyntax node)
         {
+            //TODO: Introduce a way for contexts specify that the related ApiDriver does not need
+            //      to handle ParameterSyntax ?
+            if (Context.GetType().Name.Contains("SystemReflectionMetadataContext"))
+            {
+                return;
+            }
             var paramVar = Context.Naming.Parameter(node);
-
-            var methodVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
-            if (!methodVar.IsValid)
-                throw new InvalidOperationException("Failed to retrieve current method.");
-
             using var _ = LineInformationTracker.Track(Context, node);
             
             var containingSymbol = Context.SemanticModel.GetDeclaredSymbol(node).EnsureNotNull().ContainingSymbol;
@@ -100,6 +101,10 @@ namespace Cecilifier.Core.AST
             }
             else
             {
+                var methodVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
+                if (!methodVar.IsValid)
+                    throw new InvalidOperationException("Failed to retrieve current method.");
+
                 Context.DefinitionVariables.RegisterNonMethod(containingSymbol.OriginalDefinition.ToDisplayString(), node.Identifier.ValueText, VariableMemberKind.Parameter, paramVar);
                 var exps = CecilDefinitionsFactory.Parameter(Context, node, methodVar.VariableName, paramVar);
                 AddCecilExpressions(Context, exps);

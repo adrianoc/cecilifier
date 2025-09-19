@@ -59,15 +59,22 @@ public class SnippetRunner
         ];
 
     public IApiDriverDefinitionsFactory CreateDefinitionsFactory() => new MonoCecilDefinitionsFactory();
-    
-    public void WriteCilInstruction<T>(IVisitorContext context, IlContext il, OpCode opCode, T? operand, string? comment = null)
+
+
+    public string EmitCilInstruction<T>(IVisitorContext context, IlContext il, OpCode opCode, T? operand, string? comment = null)
     {
         var operandStr = operand switch
         {
             CilOperandValue cilOperand => $", {cilOperand.Value}",
             _ => operand == null ? string.Empty : $", {operand}"
         };
-        context.Generate($"{il.VariableName}.Emit({opCode.ConstantName()}{operandStr});{(comment != null ? $" // {comment}" : string.Empty)}");
+        
+        return $"{il.VariableName}.Emit({opCode.ConstantName()}{operandStr});{(comment != null ? $" // {comment}" : string.Empty)}";
+    }
+
+    public void WriteCilInstruction<T>(IVisitorContext context, IlContext il, OpCode opCode, T? operand, string? comment = null)
+    {
+        context.Generate(EmitCilInstruction(context, il, opCode, operand, comment));
         context.WriteNewLine();
     }
     

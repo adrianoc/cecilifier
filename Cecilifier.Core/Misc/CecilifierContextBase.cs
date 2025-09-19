@@ -109,10 +109,6 @@ namespace Cecilifier.Core.Misc
 
         public void Generate(string expression)
         {
-            if (expression.Contains("Emit"))
-            {
-                Console.WriteLine();
-            }
             var lineCount = expression.CountNewLines();
             CecilifiedLineNumber += lineCount;
             
@@ -153,9 +149,8 @@ namespace Cecilifier.Core.Misc
 
         public void WriteCilInstructionAfter(string ilVar, OpCode opCode, LinkedListNode<string> after)
         {
-            var toBeWritten = $"{ilVar}.Emit({opCode.ConstantName()});\n";
-            
-            output.AddAfter(after, $"{indentation}{toBeWritten}");
+            var toBeWritten = ApiDriver.EmitCilInstruction<string>(this, ilVar, opCode, null);
+            output.AddAfter(after, $"{indentation}{toBeWritten}{Environment.NewLine}");
             CecilifiedLineNumber += toBeWritten.CountNewLines();
         }
         

@@ -350,7 +350,7 @@ namespace Cecilifier.Core.AST
             else
             {
                 OpCode[] optimizedLdArgs = { OpCodes.Ldarg_0, OpCodes.Ldarg_1, OpCodes.Ldarg_2, OpCodes.Ldarg_3 };
-                Context.EmitCilInstruction(ilVar, optimizedLdArgs[adjustedParameterIndex]);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, optimizedLdArgs[adjustedParameterIndex]);
             }
 
             HandlePotentialDelegateInvocationOn(node, paramSymbol.Type, ilVar);
