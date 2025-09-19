@@ -20,6 +20,6 @@ public interface IILGeneratorApiDriver
 
     IlContext NewIlContext(IVisitorContext context, string memberName, string relatedMethodVar);
     
-    void EmitCilInstruction<T>(IVisitorContext context, IlContext il, OpCode opCode, T? operand, string? comment = null);
-    void EmitCilInstruction(IVisitorContext context, IlContext il, OpCode opCode);
+    void WriteCilInstruction<T>(IVisitorContext context, IlContext il, OpCode opCode, T? operand, string? comment = null);
+    void WriteCilInstruction(IVisitorContext context, IlContext il, OpCode opCode);
 }

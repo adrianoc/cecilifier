@@ -203,7 +203,7 @@ namespace Cecilifier.Core.AST
                     ExpressionVisitor.Visit(Context, ilContext, accessor.ExpressionBody!);
                 }
 
-                Context.ApiDriver.EmitCilInstruction(Context, ilContext, OpCodes.Ret);
+                Context.ApiDriver.WriteCilInstruction(Context, ilContext, OpCodes.Ret);
             }
 
             ScopedDefinitionVariable AddGetterMethodGuts(string getMethodVar, out string? ilVar)

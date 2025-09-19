@@ -80,12 +80,12 @@ internal class PropertyGenerator
     {
         AddBackingFieldIfNeeded(in property);
 
-        Context.ApiDriver.EmitCilInstruction(Context, ilContext, OpCodes.Ldarg_0);
+        Context.ApiDriver.WriteCilInstruction(Context, ilContext, OpCodes.Ldarg_0);
         if (!property.IsStatic)
-            Context.ApiDriver.EmitCilInstruction(Context, ilContext, OpCodes.Ldarg_1);
+            Context.ApiDriver.WriteCilInstruction(Context, ilContext, OpCodes.Ldarg_1);
 
         var operand = property.DeclaringTypeIsGeneric ? MakeGenericType(in property) : _backingFieldVar;
-        Context.ApiDriver.EmitCilInstruction(Context, ilContext, property.StoreOpCode, operand);
+        Context.ApiDriver.WriteCilInstruction(Context, ilContext, property.StoreOpCode, operand);
         Context.AddCompilerGeneratedAttributeTo(ilContext.RelatedMethodVariable);
     }
 

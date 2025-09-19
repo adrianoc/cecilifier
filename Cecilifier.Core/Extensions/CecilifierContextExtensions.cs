@@ -58,7 +58,7 @@ public static class CecilifierContextExtensions
         }
         else if (operation is IConversionOperation { Operand.Type: not null } conversion2 && context.SemanticModel.Compilation.ClassifyConversion(conversion2.Operand.Type, operation.Type).IsBoxing)
         {
-            context.ApiDriver.EmitCilInstruction(context, ilVar, OpCodes.Box, new CilMetadataHandle(context.TypeResolver.ResolveAny(conversion2.Operand.Type)));
+            context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Box, new CilMetadataHandle(context.TypeResolver.ResolveAny(conversion2.Operand.Type)));
         }
         else if (operation is IConversionOperation { Conversion.IsNullable: true } nullableConversion && !nullableConversion.Syntax.IsKind(SyntaxKind.CoalesceExpression))
         {
@@ -91,30 +91,30 @@ public static class CecilifierContextExtensions
         switch (target.SpecialType)
         {
             case SpecialType.System_Single:
-                context.ApiDriver.EmitCilInstruction(context, ilVar, OpCodes.Conv_R4);
+                context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Conv_R4);
                 break;
             case SpecialType.System_Double:
-                context.ApiDriver.EmitCilInstruction(context, ilVar, OpCodes.Conv_R8);
+                context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Conv_R8);
                 break;
             case SpecialType.System_Byte:
-                context.ApiDriver.EmitCilInstruction(context, ilVar, OpCodes.Conv_I1);
+                context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Conv_I1);
                 break;
             case SpecialType.System_Int16:
-                context.ApiDriver.EmitCilInstruction(context, ilVar, OpCodes.Conv_I2);
+                context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Conv_I2);
                 break;
             case SpecialType.System_Int32:
                 // byte/char are pushed as Int32 by the runtime 
                 if (source.SpecialType != SpecialType.System_SByte && source.SpecialType != SpecialType.System_Byte && source.SpecialType != SpecialType.System_Char)
-                    context.ApiDriver.EmitCilInstruction(context, ilVar, OpCodes.Conv_I4);
+                    context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Conv_I4);
                 break;
             case SpecialType.System_Int64:
                 var convOpCode = source.SpecialType == SpecialType.System_Char || source.SpecialType == SpecialType.System_Byte ? OpCodes.Conv_U8 : OpCodes.Conv_I8;
-                context.ApiDriver.EmitCilInstruction(context, ilVar, convOpCode);
+                context.ApiDriver.WriteCilInstruction(context, ilVar, convOpCode);
                 break;
             case SpecialType.System_Decimal:
                 var operand = target.GetMembers().OfType<IMethodSymbol>()
                     .Single(m => m.MethodKind == MethodKind.Constructor && m.Parameters.Length == 1 && m.Parameters[0].Type.SpecialType == source.SpecialType);
-                context.ApiDriver.EmitCilInstruction(context, ilVar, OpCodes.Newobj, operand.MethodResolverExpression(context));
+                context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Newobj, operand.MethodResolverExpression(context));
                 break;
             
             default: return false;
@@ -137,11 +137,11 @@ public static class CecilifierContextExtensions
         var operand = method.MethodResolverExpression(context);
         if (context.TryGetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, out var constrainedType))
         {
-            context.ApiDriver.EmitCilInstruction(context, ilVar, OpCodes.Constrained, constrainedType); 
+            context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Constrained, constrainedType); 
             context.ClearFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint);
         }
 
-        context.ApiDriver.EmitCilInstruction(context, ilVar, opCode, new CilMetadataHandle(operand));
+        context.ApiDriver.WriteCilInstruction(context, ilVar, opCode, new CilMetadataHandle(operand));
     }
 
     /*

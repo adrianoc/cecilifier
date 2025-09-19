@@ -124,7 +124,7 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
         return new SystemReflectionMetadataIlContext(ilVarName, relatedMethodVar);
     }
 
-    public void EmitCilInstruction<T>(IVisitorContext context, IlContext il, OpCode opCode, T? operand, string? comment = null)
+    public void WriteCilInstruction<T>(IVisitorContext context, IlContext il, OpCode opCode, T? operand, string? comment = null)
     {
         var mappedOpCodeName = MapSystemReflectionOpCodeNameToSystemReflectionMetadata(opCode);
         context.Generate($"{il.VariableName}.OpCode(ILOpCode.{mappedOpCodeName});{(comment != null ? $" // {comment}" : string.Empty)}");
@@ -154,9 +154,9 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
         }
     }
     
-    public void EmitCilInstruction(IVisitorContext context, IlContext il, OpCode opCode)
+    public void WriteCilInstruction(IVisitorContext context, IlContext il, OpCode opCode)
     {
-        EmitCilInstruction<string>(context, il, opCode, null);
+        WriteCilInstruction<string>(context, il, opCode, null);
     }
     
     private static string MapSystemReflectionOpCodeNameToSystemReflectionMetadata(OpCode opCode)

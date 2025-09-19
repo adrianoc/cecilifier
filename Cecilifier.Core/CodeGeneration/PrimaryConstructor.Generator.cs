@@ -102,7 +102,7 @@ public class PrimaryConstructorGenerator
                 var ilContext = context.ApiDriver.NewIlContext(context, $"set{propertyData.Name}", setMethodVar);
                 
                 propertyGenerator.AddAutoSetterMethodImplementation(in propertyData, ilContext);
-                context.ApiDriver.EmitCilInstruction(context, ilContext, OpCodes.Ret);
+                context.ApiDriver.WriteCilInstruction(context, ilContext, OpCodes.Ret);
             }
             context.WriteNewLine();
         }

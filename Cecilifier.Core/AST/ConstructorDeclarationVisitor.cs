@@ -60,7 +60,7 @@ namespace Cecilifier.Core.AST
 
                 if (declaringType.Kind() != SyntaxKind.StructDeclaration)
                 {
-                    Context.ApiDriver.EmitCilInstruction(Context, ilVar, OpCodes.Ldarg_0);
+                    Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldarg_0);
                 }
 
                 // If this ctor has an initializer the call to the base ctor will happen when we visit call base.VisitConstructorDeclaration()
@@ -79,7 +79,7 @@ namespace Cecilifier.Core.AST
                     
                     var declaringTypeLocalVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Type).ThrowIfVariableIsNotValid();
                     var operand = Context.MemberResolver.ResolveDefaultConstructor(baseTypeSymbol, declaringTypeLocalVar.VariableName);
-                    Context.ApiDriver.EmitCilInstruction(Context, ilVar, OpCodes.Call, new CilMetadataHandle(operand));
+                    Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Call, new CilMetadataHandle(operand));
                 }
 
                 callBaseMethod(node);
@@ -137,11 +137,11 @@ namespace Cecilifier.Core.AST
             
             if (!isStatic)
             {
-                Context.ApiDriver.EmitCilInstruction(Context, ilContext, OpCodes.Ldarg_0);
-                Context.ApiDriver.EmitCilInstruction(Context, ilContext, OpCodes.Call, new CilMetadataHandle(baseCtor));
+                Context.ApiDriver.WriteCilInstruction(Context, ilContext, OpCodes.Ldarg_0);
+                Context.ApiDriver.WriteCilInstruction(Context, ilContext, OpCodes.Call, new CilMetadataHandle(baseCtor));
             }
 
-            Context.ApiDriver.EmitCilInstruction(Context, ilContext, OpCodes.Ret);
+            Context.ApiDriver.WriteCilInstruction(Context, ilContext, OpCodes.Ret);
         }
 
         private IlContext AddOrUpdateParameterlessCtorDefinition(string typeName, string normalizedTypeName, string typeDefVar, string ctorAccessibility, bool isStatic, string ctorLocalVar)
@@ -193,7 +193,7 @@ namespace Cecilifier.Core.AST
                     continue;
 
                 if (!fieldDeclaration.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword)))
-                    Context.ApiDriver.EmitCilInstruction(Context, ctorBodyIL, OpCodes.Ldarg_0);
+                    Context.ApiDriver.WriteCilInstruction(Context, ctorBodyIL, OpCodes.Ldarg_0);
 
                 if (ExpressionVisitor.Visit(Context, ctorBodyIL, dec.Initializer))
                     continue;
@@ -203,7 +203,7 @@ namespace Cecilifier.Core.AST
                     ? OpCodes.Stsfld
                     : OpCodes.Stfld;
 
-                Context.ApiDriver.EmitCilInstruction(Context, ctorBodyIL, fieldStoreOpCode, new CilMetadataHandle(fieldVarDef.VariableName));
+                Context.ApiDriver.WriteCilInstruction(Context, ctorBodyIL, fieldStoreOpCode, new CilMetadataHandle(fieldVarDef.VariableName));
             }
 
             // Handles property initialization...

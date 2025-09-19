@@ -60,7 +60,7 @@ public class SnippetRunner
 
     public IApiDriverDefinitionsFactory CreateDefinitionsFactory() => new MonoCecilDefinitionsFactory();
     
-    public void EmitCilInstruction<T>(IVisitorContext context, IlContext il, OpCode opCode, T? operand, string? comment = null)
+    public void WriteCilInstruction<T>(IVisitorContext context, IlContext il, OpCode opCode, T? operand, string? comment = null)
     {
         var operandStr = operand switch
         {
@@ -71,9 +71,9 @@ public class SnippetRunner
         context.WriteNewLine();
     }
     
-    public void EmitCilInstruction(IVisitorContext context, IlContext il, OpCode opCode)
+    public void WriteCilInstruction(IVisitorContext context, IlContext il, OpCode opCode)
     {
-        EmitCilInstruction<string>(context, il, opCode, null);
+        WriteCilInstruction<string>(context, il, opCode, null);
     }
 
     public IlContext NewIlContext(IVisitorContext context, string memberName, string relatedMethodVar)

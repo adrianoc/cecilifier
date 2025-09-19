@@ -87,7 +87,7 @@ namespace Cecilifier.Core.AST
 
             if (type.SpecialType == SpecialType.None && type.IsValueType && type.TypeKind != TypeKind.Pointer || type.SpecialType == SpecialType.System_DateTime)
             {
-                Context.ApiDriver.EmitCilInstruction(Context, ilVar, OpCodes.Initobj, Context.TypeResolver.ResolveAny(type));
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Initobj, Context.TypeResolver.ResolveAny(type));
                 return;
             }
 
@@ -102,18 +102,18 @@ namespace Cecilifier.Core.AST
                 case SpecialType.None:
                     if (type.TypeKind == TypeKind.Pointer)
                     {
-                        Context.ApiDriver.EmitCilInstruction(Context, ilVar, OpCodes.Ldc_I4_0);
-                        Context.ApiDriver.EmitCilInstruction(Context, ilVar, OpCodes.Conv_U);
+                        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldc_I4_0);
+                        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Conv_U);
                     }
                     else
-                        Context.ApiDriver.EmitCilInstruction(Context, ilVar, OpCodes.Ldnull);
+                        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldnull);
                     break;
 
                 case SpecialType.System_String:
                     if (value == null)
-                        Context.ApiDriver.EmitCilInstruction(Context, ilVar, OpCodes.Ldnull);
+                        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldnull);
                     else
-                        Context.ApiDriver.EmitCilInstruction(Context, ilVar, OpCodes.Ldstr, SymbolDisplay.FormatLiteral(value, true));
+                        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldstr, SymbolDisplay.FormatLiteral(value, true));
                     break;
 
                 case SpecialType.System_Char:
@@ -140,7 +140,7 @@ namespace Cecilifier.Core.AST
                 case SpecialType.System_IntPtr:
                 case SpecialType.System_UIntPtr:
                     LoadLiteralToStackHandlingCallOnValueTypeLiterals(ilVar, type, value, usageResult);
-                    Context.ApiDriver.EmitCilInstruction(Context, ilVar, OpCodes.Conv_I);
+                    Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Conv_I);
                     break;
 
                 default:
@@ -163,8 +163,8 @@ namespace Cecilifier.Core.AST
                 var loadAddressOpcode = targetOfAssignmentSymbol.LoadAddressOpcodeForMember(); // target of assignment may be a local, field or parameter so we need to figure out the correct opcode to load its address
                 var storageVariable = Context.DefinitionVariables.GetVariable(targetOfAssignmentSymbol.Name, targetOfAssignmentSymbol.ToVariableMemberKind(), targetOfAssignmentSymbol.Kind == SymbolKind.Local ? string.Empty : targetOfAssignmentSymbol.ContainingSymbol.ToDisplayString());
                 
-                Context.ApiDriver.EmitCilInstruction(Context, ilVar, loadAddressOpcode, storageVariable.VariableName);
-                Context.ApiDriver.EmitCilInstruction(Context, ilVar, OpCodes.Initobj, resolvedType);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, loadAddressOpcode, storageVariable.VariableName);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Initobj, resolvedType);
             }
             else if (parent.Parent is VariableDeclaratorSyntax equalsValueClauseSyntax)
             {
@@ -172,25 +172,25 @@ namespace Cecilifier.Core.AST
                 var targetOfAssignmentSymbol = Context.SemanticModel.GetDeclaredSymbol(equalsValueClauseSyntax).EnsureNotNull();
                 var storageVariable = Context.DefinitionVariables.GetVariable(targetOfAssignmentSymbol.Name, targetOfAssignmentSymbol.ToVariableMemberKind(), string.Empty);
                 
-                Context.ApiDriver.EmitCilInstruction(Context, ilVar, OpCodes.Ldloca_S, storageVariable.VariableName);
-                Context.ApiDriver.EmitCilInstruction(Context, ilVar, OpCodes.Initobj, resolvedType);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloca_S, storageVariable.VariableName);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Initobj, resolvedType);
             }
             else
             {
                 // no variable exists yet (for instance, passing `default(T)` as a parameter) so we add one.
                 var storageVariable = Context.AddLocalVariableToCurrentMethod(type.Name, resolvedType);
                 
-                Context.ApiDriver.EmitCilInstruction(Context, ilVar, OpCodes.Ldloca_S, storageVariable.VariableName);
-                Context.ApiDriver.EmitCilInstruction(Context, ilVar, OpCodes.Initobj, resolvedType);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloca_S, storageVariable.VariableName);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Initobj, resolvedType);
                 if (!typeParameterSymbol.IsTypeParameterConstrainedToReferenceType() && parent is MemberAccessExpressionSyntax mae && mae.Parent.IsKind(SyntaxKind.InvocationExpression))
                 {
                     // scenario: default(T).ToString()
-                    Context.ApiDriver.EmitCilInstruction(Context, ilVar, OpCodes.Ldloca_S, storageVariable.VariableName);
+                    Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloca_S, storageVariable.VariableName);
                     Context.SetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, resolvedType);
                 }
                 else
                 {
-                    Context.ApiDriver.EmitCilInstruction(Context, ilVar, OpCodes.Ldloc, storageVariable.VariableName);
+                    Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloc, storageVariable.VariableName);
                 }
             }
             return true;
@@ -199,17 +199,17 @@ namespace Cecilifier.Core.AST
         private void LoadLiteralToStackHandlingCallOnValueTypeLiterals(string ilVar, ITypeSymbol literalType, object literalValue, UsageResult usageResult)
         {
             var opCode = literalType.LoadOpCodeFor();
-            Context.ApiDriver.EmitCilInstruction(Context, ilVar, opCode, literalType.ToCilOperandValue(literalValue));
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, opCode, literalType.ToCilOperandValue(literalValue));
             if (usageResult.Kind == UsageKind.CallTarget)
             {
                 var tempLocalName = StoreTopOfStackInLocalVariable(Context, ilVar, "tmp", literalType).VariableName;
                 if (!usageResult.Target.IsVirtual && SymbolEqualityComparer.Default.Equals(usageResult.Target.ContainingType, Context.RoslynTypeSystem.SystemObject))
                 {
-                    Context.ApiDriver.EmitCilInstruction(Context, ilVar, OpCodes.Ldloc, tempLocalName);
-                    Context.ApiDriver.EmitCilInstruction(Context, ilVar, OpCodes.Box, Context.TypeResolver.ResolveAny(literalType));
+                    Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloc, tempLocalName);
+                    Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Box, Context.TypeResolver.ResolveAny(literalType));
                 }
                 else
-                    Context.ApiDriver.EmitCilInstruction(Context, ilVar, OpCodes.Ldloca_S, tempLocalName);
+                    Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloca_S, tempLocalName);
             }
         }
 
@@ -381,7 +381,7 @@ namespace Cecilifier.Core.AST
             }
 
             if (!fieldSymbol.IsStatic && node.IsMemberAccessThroughImplicitThis())
-                Context.ApiDriver.EmitCilInstruction(Context, ilVar, OpCodes.Ldarg_0);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldarg_0);
 
             if (HandleLoadAddress(ilVar, fieldSymbol.Type, node, fieldSymbol.IsStatic ? OpCodes.Ldsflda : OpCodes.Ldflda, resolvedFieldVariable))
             {
@@ -389,10 +389,10 @@ namespace Cecilifier.Core.AST
             }
 
             if (fieldSymbol.IsVolatile)
-                Context.ApiDriver.EmitCilInstruction(Context, ilVar, OpCodes.Volatile);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Volatile);
 
             var opCode = fieldSymbol.LoadOpCodeForFieldAccess();
-            Context.ApiDriver.EmitCilInstruction(Context, ilVar, opCode, new CilMetadataHandle(resolvedFieldVariable));
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, opCode, new CilMetadataHandle(resolvedFieldVariable));
             HandlePotentialDelegateInvocationOn(node, fieldSymbol.Type, ilVar);
             HandlePotentialRefLoad(ilVar, node, fieldSymbol.Type);
         }
