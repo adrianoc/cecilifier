@@ -27,7 +27,6 @@ namespace Cecilifier.Core.TypeSystem
                    ?? ResolveGenericType(type, cecilTypeParameterProviderVar)
                    ?? ResolveTypeParameter(type, cecilTypeParameterProviderVar)
                    ?? Resolve(type);
-                   //?? Resolve(type.ToDisplayString());
         }
        
         private string ResolveNestedType(ITypeSymbol type)
