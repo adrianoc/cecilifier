@@ -1,7 +1,9 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Cecilifier.Core.AST;
+using Cecilifier.Core.Misc;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -31,22 +33,24 @@ public interface IApiDriverDefinitionsFactory
 
     public IEnumerable<string> Method(
         IVisitorContext context,
+        MemberDefinitionContext memberDefinitionContext,
         string declaringTypeName,
-        string methodVar,
-        string methodNameForParameterVariableRegistration, // we can't use the method name in some scenarios (indexers, for instance) 
+        string methodNameForVariableRegistration, // we can't use the method name in some scenarios (indexers, for instance) 
         string methodName,
         string methodModifiers,
         IReadOnlyList<ParameterSpec> parameters,
         IList<string> typeParameters,
-        Func<IVisitorContext, string> returnTypeResolver,
+        ITypeSymbol returnType,
         out MethodDefinitionVariable methodDefinitionVariable);
 
     public IEnumerable<string> Constructor(IVisitorContext context, MemberDefinitionContext memberDefinitionContext, string typeName, bool isStatic, string methodAccessibility, string[] paramTypes, string? methodDefinitionPropertyValues = null);
     //TODO: Can we compute 'fieldAttributes` based of `field` ? 
     public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext memberDefinitionContext, ISymbol fieldOrEvent, ITypeSymbol fieldType, string fieldAttributes, bool isVolatile, bool isByRef, object? constantValue = null);
     public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext memberDefinitionContext, string fieldVar, string name, string fieldType, string fieldAttributes, bool isVolatile, bool isByRef, object? constantValue = null);
+    IEnumerable<string> MethodBody(IVisitorContext context, string methodName, IlContext ilContext, string[] localVariableTypes, InstructionRepresentation[] instructions);
 }
 
+[DebuggerDisplay("MemberDefinitionContext ({MemberDefinitionVariableName}, {ParentDefinitionVariableName}, {IlContext})")]
 public record struct MemberDefinitionContext(
     string MemberDefinitionVariableName,
     string ParentDefinitionVariableName,

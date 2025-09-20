@@ -85,7 +85,7 @@ public class SnippetRunner
 
     public IlContext NewIlContext(IVisitorContext context, string memberName, string relatedMethodVar)
     {
-        var ilVarName = context.Naming.ILProcessor($"{memberName}");
+        var ilVarName = context.Naming.ILProcessor(memberName);
         return new MonoCecilDeferredIlContext(context, ilVarName, relatedMethodVar);
     }
 }

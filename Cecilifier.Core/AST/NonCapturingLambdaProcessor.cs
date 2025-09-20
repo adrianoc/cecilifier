@@ -105,12 +105,12 @@ namespace Cecilifier.Core.AST
                     StatementVisitor.Visit(context, syntheticIlVar, lambda.Block);
                     var controlFlow = context.SemanticModel.AnalyzeControlFlow(lambda.Block.ChildNodes().First(), lambda.Block.ChildNodes().Last());
                     if (!controlFlow.ReturnStatements.Any())
-                        context.EmitCilInstruction(syntheticIlVar, OpCodes.Ret);
+                        context.ApiDriver.WriteCilInstruction(context, syntheticIlVar, OpCodes.Ret);
                 }
                 else
                 {
                     ExpressionVisitor.Visit(context, syntheticIlVar, lambda.Body);
-                    context.EmitCilInstruction(syntheticIlVar, OpCodes.Ret);
+                    context.ApiDriver.WriteCilInstruction(context, syntheticIlVar, OpCodes.Ret);
                 }
             }
 

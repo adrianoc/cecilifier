@@ -23,4 +23,12 @@ public class Simplest<TContext> : OutputBasedTestBase<TContext> where TContext :
                      }
                      """, "Hello World!");
     }
+    
+    [Test]
+    public void SimpleTopLevelCallToConsoleWriteLine()
+    {
+        AssertOutput("""
+                     System.Console.Write("Hello World!");
+                     """, "Hello World!");
+    }
 }

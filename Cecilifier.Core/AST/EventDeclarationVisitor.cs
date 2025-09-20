@@ -47,13 +47,13 @@ namespace Cecilifier.Core.AST
                 Context.WriteComment($"{node.Identifier.ValueText} {acc.Keyword} method.");
 
                 var methodVar = Context.Naming.SyntheticVariable(acc.Keyword.ValueText, ElementKind.Method);
-                var methodILVar = Context.Naming.ILProcessor(acc.Keyword.ValueText);
-                var body = CecilDefinitionsFactory.MethodBody(Context.Naming, acc.Keyword.ValueText, methodVar, methodILVar, [], []);
+                var ilContext = Context.ApiDriver.NewIlContext(Context, acc.Keyword.ValueText, methodVar);
+                var body = CecilDefinitionsFactory.MethodBody(Context.Naming, acc.Keyword.ValueText, ilContext, [], []);
                 var accessorMethodVar = AddAccessor(node, eventSymbol, methodVar, acc.Keyword.ValueText, eventType, body);
                 using (Context.DefinitionVariables.WithVariable(accessorMethodVar))
                 {
-                    StatementVisitor.Visit(Context, methodILVar, acc.Body);
-                    Context.EmitCilInstruction(methodILVar, OpCodes.Ret);
+                    StatementVisitor.Visit(Context, ilContext.VariableName, acc.Body);
+                    Context.EmitCilInstruction(ilContext.VariableName, OpCodes.Ret);
                 }
 
                 eventAccessorsDefVarMapping[acc.Keyword.ValueText] = methodVar;
@@ -151,7 +151,7 @@ namespace Cecilifier.Core.AST
 
             // static member access does not have a *this* so simply replace with *Nop*
             var lgarg_0 = isStatic ? OpCodes.Nop : OpCodes.Ldarg_0;
-            var bodyExps = CecilDefinitionsFactory.MethodBody(Context.Naming, accessorName, removeMethodVar, [],
+            var bodyExps = CecilDefinitionsFactory.MethodBody(Context, accessorName, removeMethodVar, [],
             [
                 lgarg_0,
                 ldfld.WithOperand(fieldVar),
@@ -190,7 +190,7 @@ namespace Cecilifier.Core.AST
 
             // static member access does not have a *this* so simply replace with *Nop*
             var lgarg_0 = isStatic ? OpCodes.Nop : OpCodes.Ldarg_0;
-            var bodyExps = CecilDefinitionsFactory.MethodBody(Context.Naming, accessorName, addMethodVar, [], 
+            var bodyExps = CecilDefinitionsFactory.MethodBody(Context, accessorName, addMethodVar, [], 
             [
                 lgarg_0,
                 ldfld.WithOperand(fieldVar),

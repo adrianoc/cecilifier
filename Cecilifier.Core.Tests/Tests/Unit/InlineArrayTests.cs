@@ -20,7 +20,7 @@ public class InlineArrayTests : CecilifierUnitTestBase
                                    """);
         
         Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(
-            @"m_topLevelStatements_\d+.Body.Variables.Add\((?<ia_var>l_b_\d+)\);\s+"+  // local variable *b*
+            @"m_topLevelMain_\d+.Body.Variables.Add\((?<ia_var>l_b_\d+)\);\s+"+  // local variable *b*
             @"(?<emit>il_topLevelMain_\d+.Emit\(OpCodes\.)Ldloca_S, \k<ia_var>\);\s+" +      // Loads *b* address 
             @"\k<emit>Initobj, st_intBuffer_\d+\);"));                                       // Execute *initobj* on *b*
     }

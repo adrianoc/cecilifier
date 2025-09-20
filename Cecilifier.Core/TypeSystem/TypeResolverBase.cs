@@ -62,9 +62,9 @@ namespace Cecilifier.Core.TypeSystem
         public abstract string Resolve(ITypeSymbol type);
         public abstract string ResolvePredefinedType(ITypeSymbol type);
 
-        protected abstract string ResolveArrayType(IArrayTypeSymbol type);
+        public abstract string MakeArrayType(ITypeSymbol elementType);
 
-        protected abstract string MakePointerType(IPointerTypeSymbol pointerType);
+        protected abstract string MakePointerType(ITypeSymbol pointerType);
 
         protected abstract string MakeFunctionPointerType(IFunctionPointerTypeSymbol functionPointer);
         
@@ -72,12 +72,12 @@ namespace Cecilifier.Core.TypeSystem
         {
             if (type is IArrayTypeSymbol array)
             {
-                return ResolveArrayType(array);
+                return MakeArrayType(array.ElementType);
             }
 
             if (type is IPointerTypeSymbol pointerType)
             {
-                return MakePointerType(pointerType);
+                return MakePointerType(pointerType.PointedAtType);
             }
 
             if (type is IFunctionPointerTypeSymbol functionPointer)

@@ -128,11 +128,12 @@ public class PrimaryConstructorGenerator
             $"{recordTypeDefinitionVariable}.Methods.Add({ctorVar});"
         ]);
 
+        //TODO: What happens if the record has a primary ctor with no params? will the ctor have a body (it would be added later in this method...) ? is it even possible? 
         if (typeDeclaration.ParameterList?.Parameters == null)
             return;
         
-        var ctorIlVar = context.Naming.ILProcessor($"ctor_{typeDeclaration.Identifier.ValueText}");
-        var ctorExps = CecilDefinitionsFactory.MethodBody(context.Naming, $"ctor_{typeDeclaration.Identifier.ValueText}", ctorVar, ctorIlVar, [], []);
+        var ilContext = context.ApiDriver.NewIlContext(context, $"ctor_{typeDeclaration.Identifier.ValueText}", ctorVar);
+        var ctorExps = CecilDefinitionsFactory.MethodBody(context.Naming, $"ctor_{typeDeclaration.Identifier.ValueText}", ilContext, [], []);
         context.Generate(ctorExps);
 
         var resolvedType = context.TypeResolver.ResolveAny(typeSymbol);
@@ -152,19 +153,19 @@ public class PrimaryConstructorGenerator
             if (!uniqueParameters.Contains(parameter))
                 continue;
             
-            context.EmitCilInstruction(ctorIlVar, OpCodes.Ldarg_0);
-            context.EmitCilInstruction(ctorIlVar, OpCodes.Ldarg, paramVar);
+            context.EmitCilInstruction(ilContext.VariableName, OpCodes.Ldarg_0);
+            context.EmitCilInstruction(ilContext.VariableName, OpCodes.Ldarg, paramVar);
 
             var backingFieldVar = context.DefinitionVariables.GetVariable(Utils.BackingFieldNameForAutoProperty(parameter.Identifier.ValueText), VariableMemberKind.Field, typeSymbol.OriginalDefinition.ToDisplayString());
             if (!backingFieldVar.IsValid)
                 throw new InvalidOperationException($"Backing field variable for property '{parameter.Identifier.ValueText}' could not be found.");
 
-            context.EmitCilInstruction(ctorIlVar, OpCodes.Stfld, fieldRefResolver(backingFieldVar.VariableName));
+            context.EmitCilInstruction(ilContext.VariableName, OpCodes.Stfld, fieldRefResolver(backingFieldVar.VariableName));
         }
 
         if (!typeSymbol.IsValueType)
-            InvokeBaseConstructor(context, ctorIlVar, typeDeclaration);
-        context.EmitCilInstruction(ctorIlVar, OpCodes.Ret);
+            InvokeBaseConstructor(context, ilContext.VariableName, typeDeclaration);
+        context.EmitCilInstruction(ilContext.VariableName, OpCodes.Ret);
 
         static void InvokeBaseConstructor(IVisitorContext context, string ctorIlVar, TypeDeclarationSyntax typeDeclaration)
         {

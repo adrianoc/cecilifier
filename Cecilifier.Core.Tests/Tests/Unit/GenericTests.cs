@@ -247,7 +247,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
                                                \s+r_empty_9.ReturnType = gi_T_10.MakeArrayType\(\);
                                                \s+var gi_empty_11 = new GenericInstanceMethod\(r_empty_9\);
                                                \s+gi_empty_11.GenericArguments.Add\(cls_foo_0\);
-                                               \s+il_topLevelMain_6.Emit\(OpCodes.Call, gi_empty_11\);
+                                               \s+il_topLevelMain_\d+.Emit\(OpCodes.Call, gi_empty_11\);
                                                """));
         }
 

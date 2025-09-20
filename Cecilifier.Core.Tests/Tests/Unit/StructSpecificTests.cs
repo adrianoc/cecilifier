@@ -202,7 +202,7 @@ public class StructSpecificTests : CecilifierUnitTestBase
         Assert.That(cecilifiedCode, Does.Match("""
                                                (il_topLevelMain_\d+\.Emit\(OpCodes\.)Add\);
                                                \s+var (l_tmp_\d+) = new VariableDefinition\(assembly.MainModule.TypeSystem.Int32\);
-                                               \s+m_topLevelStatements_\d+.Body.Variables.Add\(\2\);
+                                               \s+m_topLevelMain_\d+.Body.Variables.Add\(\2\);
                                                \s+\1Stloc, \2\);
                                                \s+\1Ldloca_S, \2\);
                                                \s+\1Call, .+ImportReference\(.+ResolveMethod\(typeof\(System.Int32\), "ToString",.+\)\)\);

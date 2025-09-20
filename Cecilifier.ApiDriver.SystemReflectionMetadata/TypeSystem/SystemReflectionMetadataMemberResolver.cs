@@ -1,3 +1,4 @@
+using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.TypeSystem;
@@ -15,11 +16,13 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
         if (found.IsValid)
             return found.VariableName;
             
+        //TODO: Try this var containingTypeRefVar= context.TypeResolver.ResolveLocalVariableType(method.ContainingType);
         var containingTypeRefVar= context.TypeResolver.ResolveAny(method.ContainingType);
         var methodSignatureBlobVar = context.Naming.SyntheticVariable($"{method.ToValidVariableName()}Signature", ElementKind.LocalVariable);
         var methodRefVar = context.Naming.SyntheticVariable($"{method.ToValidVariableName()}Ref", ElementKind.LocalVariable);
         
         var methodSignatureVar = context.Naming.SyntheticVariable($"{method.Name}Signature", ElementKind.LocalVariable);
+        //TODO: This should call RegisterMethod() as opposed to RegisterNonMethod(). Also need to fix the location that is retrieving the method variable.
         context.DefinitionVariables.RegisterNonMethod(method.ContainingSymbol.ToDisplayString(), method.Name, VariableMemberKind.MethodSignature, methodSignatureVar);
         
         context.Generate($$"""
@@ -51,6 +54,62 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
         
         context.DefinitionVariables.RegisterMethod(toBeFound.WithVariableName(methodRefVar));
         return methodRefVar;
+    }
+    
+    public string ResolveMethod(string declaringTypeName, string declaringTypeVariable, string methodNameForVariableRegistration, string resolvedReturnType, IReadOnlyList<ParameterSpec> parameters, int typeParameterCountCount)
+    {
+        var methodReferenceToFind = new MethodDefinitionVariable(
+                                                VariableMemberKind.MethodReference,
+                                                declaringTypeName,
+                                                methodNameForVariableRegistration,
+                                                parameters.Select(p => p.ElementType).ToArray(),
+                                                typeParameterCountCount);
+        
+        var found = context.DefinitionVariables.GetMethodVariable(methodReferenceToFind);
+        if (found.IsValid)
+            return found.VariableName;
+          
+        var methodSignatureBlobVar = context.Naming.SyntheticVariable($"{methodNameForVariableRegistration}Signature", ElementKind.LocalVariable);
+        var methodSignatureVar = context.Naming.SyntheticVariable("methodSignature", ElementKind.LocalVariable);
+        var methodRefVar = context.Naming.SyntheticVariable($"{methodNameForVariableRegistration}Ref", ElementKind.LocalVariable);
+        
+        context.DefinitionVariables.RegisterMethod(new MethodDefinitionVariable(
+                                                            VariableMemberKind.MethodSignature,
+                                                            declaringTypeName,
+                                                            methodNameForVariableRegistration,
+                                                            parameters.Select(p => p.ElementType).ToArray(),
+                                                            typeParameterCountCount,
+                                                            methodSignatureVar));
+          
+        context.Generate($$"""
+                              var {{methodSignatureBlobVar}} = new BlobBuilder();
+
+                              new BlobEncoder({{methodSignatureBlobVar}}).
+                                  MethodSignature(isInstanceMethod: false). //TODO: This is wrong. The value for this parameter needs to come from IApiDriverDefinitionsFactory.Method()
+                                  Parameters({{parameters.Count}},
+                                      returnType => returnType.{{resolvedReturnType}},
+                                      parameters => 
+                                      {
+                                          {{
+                                              string.Join('\n',
+                                                  parameters.Select(p => $"""
+                                                                                 parameters
+                                                                                         .AddParameter()
+                                                                                         .{p.ElementType};
+                                                                             """))}}
+                                      });
+
+                              var {{methodSignatureVar}} = metadata.GetOrAddBlob({{methodSignatureBlobVar}});
+                              var {{methodRefVar}} = metadata.AddMemberReference(
+                                                                  {{declaringTypeVariable}},
+                                                                  metadata.GetOrAddString("{{methodNameForVariableRegistration}}"),
+                                                                  {{methodSignatureVar}});
+                              """);
+          
+          context.WriteNewLine();
+          context.DefinitionVariables.RegisterMethod(methodReferenceToFind.WithVariableName(methodRefVar));
+
+          return methodRefVar;
     }
 
     public string ResolveDefaultConstructor(ITypeSymbol baseType, string derivedTypeVar)

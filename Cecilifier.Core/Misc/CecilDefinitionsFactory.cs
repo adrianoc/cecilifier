@@ -112,32 +112,30 @@ namespace Cecilifier.Core.Misc
             return exp + ";";
         }
 
-        public static IEnumerable<string> MethodBody(INameStrategy nameStrategy, string methodName, string methodVar, Span<string> localVariableTypes, InstructionRepresentation[] instructions)
+        public static IEnumerable<string> MethodBody(IVisitorContext context, string methodName, string methodVar, string[] localVariableTypes, InstructionRepresentation[] instructions)
         {
-            var ilVar = nameStrategy.ILProcessor(methodName); 
-            return MethodBody(nameStrategy, methodName, methodVar, ilVar, localVariableTypes, instructions);
+            return MethodBody(context.Naming, methodName, context.ApiDriver.NewIlContext(context, methodName, methodVar), localVariableTypes, instructions);
         }
 
-        public static IEnumerable<string> MethodBody(INameStrategy nameStrategy, string methodName, string methodVar, string ilVar, Span<string> localVariableTypes, InstructionRepresentation[] instructions)
+        public static IEnumerable<string> MethodBody(INameStrategy nameStrategy, string methodName, IlContext ilContext, string[] localVariableTypes, InstructionRepresentation[] instructions)
         {
             var tagToInstructionDefMapping = new Dictionary<string, string>();
-            var exps = new List<string>(instructions.Length);
-            exps.Add($"{methodVar}.Body = new MethodBody({methodVar});");
+            yield return $"{ilContext.RelatedMethodVariable}.Body = new MethodBody({ilContext.RelatedMethodVariable});";
+            
             if (localVariableTypes.Length > 0)
             {
-                exps.Add($"{methodVar}.Body.InitLocals = true;");
+                yield return $"{ilContext.RelatedMethodVariable}.Body.InitLocals = true;";
                 foreach (var localVariableType in localVariableTypes)
                 {
-                    exps.Add($"{methodVar}.Body.Variables.Add({LocalVariable(localVariableType)});");
+                    yield return $"{ilContext.RelatedMethodVariable}.Body.Variables.Add({LocalVariable(localVariableType)});";
                 }
             }
             
-            exps.Add($"var {ilVar} = {methodVar}.Body.GetILProcessor();");
             if (instructions.Length == 0)
-                return exps;
+                yield break;
 
             var methodInstVar = nameStrategy.SyntheticVariable(methodName, ElementKind.LocalVariable);
-            exps.Add($"var {methodInstVar} = {methodVar}.Body.Instructions;");
+            yield return $"var {methodInstVar} = {ilContext.RelatedMethodVariable}.Body.Instructions;";
 
             // create `Mono.Cecil.Instruction` instances for each instruction that has a 'Tag'
             foreach (var inst in instructions.Where(inst => !inst.Ignore))
@@ -146,18 +144,17 @@ namespace Cecilifier.Core.Misc
                     continue;
                 
                 var instVar = nameStrategy.SyntheticVariable(inst.Tag, ElementKind.Label);
-                exps.Add($"var {instVar} = {ilVar}.Create({inst.OpCode.ConstantName()}{OperandFor(inst)});");
+                yield return $"var {instVar} = {ilContext.VariableName}.Create({inst.OpCode.ConstantName()}{OperandFor(inst)});";
                 tagToInstructionDefMapping[inst.Tag] = instVar;
             }
 
             foreach (var inst in instructions.Where(inst => !inst.Ignore))
             {
-                exps.Add(inst.Tag != null 
+                yield return inst.Tag != null 
                     ? $"{methodInstVar}.Add({tagToInstructionDefMapping[inst.Tag]});" 
-                    : $"{methodInstVar}.Add({ilVar}.Create({inst.OpCode.ConstantName()}{OperandFor(inst)}));");
+                    : $"{methodInstVar}.Add({ilContext.VariableName}.Create({inst.OpCode.ConstantName()}{OperandFor(inst)}));";
             }
-
-            return exps;
+           
 
             string OperandFor(InstructionRepresentation inst)
             {

@@ -232,8 +232,8 @@ public static class Outer
                     \s+ctor_C_\d+.Parameters.Add\(\1\);
                     """,
                     """
-                    \s+il_topLevelMain_7.Emit\(OpCodes.Ldc_I4, 42\);
-                    \s+il_topLevelMain_7.Emit\(OpCodes.Newobj, ctor_C_\d+\);
+                    \s+il_topLevelMain_\d+.Emit\(OpCodes.Ldc_I4, 42\);
+                    \s+il_topLevelMain_\d+.Emit\(OpCodes.Newobj, ctor_C_\d+\);
                     """,
             TestName = "Constructor")]
         [TestCase(

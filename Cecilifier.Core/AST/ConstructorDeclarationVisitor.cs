@@ -132,7 +132,6 @@ namespace Cecilifier.Core.AST
                 isStatic,
                 Context.Naming.SyntheticVariable(normalizedTypeName, isStatic ? ElementKind.StaticConstructor : ElementKind.Constructor));
 
-            // = Context.ApiDriver.NewIlContext(Context, $"ctor_{normalizedTypeName}", ctorLocalVar);
             processInitializers?.Invoke(ilContext);
             
             if (!isStatic)

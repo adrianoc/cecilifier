@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Text;
 using Cecilifier.ApiDriver.MonoCecil.Extensions;
+using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
@@ -117,6 +118,11 @@ public class MonoCecilMemberResolver(MonoCecilContext context) : IMemberResolver
 
         return Utils.ImportFromMainModule(
             $"TypeHelpers.ResolveMethod(typeof({declaringTypeName}), \"{method.Name}\",{ReflectionBindingsFlags(method)}{method.Parameters.Aggregate("", (acc, curr) => acc + ", \"" + curr.Type.GetReflectionName() + "\"")})");
+    }
+
+    public string ResolveMethod(string declaringTypeName, string declaringTypeVariable, string methodNameForVariableRegistration, string resolvedReturnType, IReadOnlyList<ParameterSpec> parameters, int typeParameterCountCount)
+    {
+        throw new NotImplementedException();
     }
 
     public string ResolveDefaultConstructor(ITypeSymbol baseType, string derivedTypeVar)

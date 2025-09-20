@@ -1,5 +1,6 @@
-using System;
 using System.Linq;
+using System.Reflection.Emit;
+using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
@@ -20,53 +21,49 @@ namespace Cecilifier.Core.AST
 
             var typeModifiers = CecilDefinitionsFactory.DefaultTypeAttributeFor(TypeKind.Class, false).AppendModifier("TypeAttributes.NotPublic | TypeAttributes.AutoLayout");
             typeVar = context.Naming.Type("topLevelStatements", ElementKind.Class);
-            var typeExps = CecilDefinitionsFactory.Type(
-                context,
-                typeVar,
-                null, // global statements cannot be declared in namespace
-                "Program",
-                typeModifiers,
-                context.TypeResolver.Bcl.System.Object,
-                DefinitionVariable.NotFound, // Top level type has no outer type.
-                false,
-                Array.Empty<ITypeSymbol>(), 
-                [], 
-                []);
-
-            methodVar = context.Naming.SyntheticVariable("topLevelStatements", ElementKind.Method);
-            var methodExps = CecilDefinitionsFactory.Method(
-                context,
-                methodVar,
-                "<Main>$",
-                "MethodAttributes.Private | MethodAttributes.HideBySig | MethodAttributes.Static",
-                hasReturnStatement ? context.RoslynTypeSystem.SystemInt32 : context.RoslynTypeSystem.SystemVoid,
-                false,
-                Array.Empty<TypeParameterSyntax>());
-
-            var paramVar = context.Naming.Parameter("args");
-            var mainParametersExps = CecilDefinitionsFactory.Parameter(
-                "args",
-                RefKind.None,
-                null,
-                methodVar,
-                paramVar,
-                $"{context.TypeResolver.Bcl.System.String}.MakeArrayType()",
-                Constants.ParameterAttributes.None,
-                (null, false));
-
-            ilVar = context.Naming.ILProcessor("topLevelMain");
-            var mainBodyExps = CecilDefinitionsFactory.MethodBody(context.Naming, "topLevelMain", methodVar, ilVar, [], []);
-
+            var typeExps = context.ApiDefinitionsFactory.Type(
+                                                        context,
+                                                        typeVar,
+                                                        string.Empty, // global statements cannot be declared in namespace
+                                                        "Program",
+                                                        typeModifiers,
+                                                        context.TypeResolver.Bcl.System.Object,
+                                                        DefinitionVariable.NotFound, // Top level type has no outer type.
+                                                        false,
+                                                        [], 
+                                                        [], 
+                                                        []);
             context.Generate(typeExps);
-            context.Generate(methodExps);
-            context.Generate(mainParametersExps);
-            context.Generate(mainBodyExps);
-            WriteCecilExpression($"{methodVar}.Body.InitLocals = true;");
-            WriteCecilExpression($"{typeVar}.Methods.Add({methodVar});");
 
+            methodVar = context.Naming.SyntheticVariable("topLevelMain", ElementKind.Method);
+            var ilContext = context.ApiDriver.NewIlContext(context, "topLevelMain", methodVar);
+            var methodExps = context.ApiDefinitionsFactory.Method(
+                                                    context,
+                                                    new MemberDefinitionContext(methodVar, typeVar, ilContext),
+                                                    "Program",
+                                                    "programMain",
+                                                    "<Main>$",
+                                                    "MethodAttributes.Private | MethodAttributes.HideBySig | MethodAttributes.Static",
+                                                    [new ParameterSpec("args", context.TypeResolver.MakeArrayType(context.RoslynTypeSystem.SystemString), RefKind.None, Constants.ParameterAttributes.None)],
+                                                    [],
+                                                    hasReturnStatement ? context.RoslynTypeSystem.SystemInt32 : context.RoslynTypeSystem.SystemVoid,
+                                                    out _);
+            context.Generate(methodExps);
+            
+            var mainBodyExps = context.ApiDefinitionsFactory.MethodBody(context, "topLevelMain", ilContext, [], []);
+            context.Generate(mainBodyExps);
+
+            ilVar = ilContext.VariableName; // TODO: (remove) This forces the related ILProcessor variable to be emitted.
             NonCapturingLambdaProcessor.InjectSyntheticMethodsForNonCapturingLambdas(context, firstGlobalStatement, typeVar);
 
-            new ConstructorDeclarationVisitor(context).DefaultCtorInjector(typeVar, "Program", "MethodAttributes.Public", $"TypeHelpers.DefaultCtorFor({typeVar}.BaseType)", false, null);
+            new ConstructorDeclarationVisitor(context)
+                .DefaultCtorInjector(
+                    typeVar,
+                    "Program",
+                    "MethodAttributes.Public",
+                    context.MemberResolver.ResolveDefaultConstructor(context.RoslynTypeSystem.SystemObject, typeVar),
+                    false,
+                    null);
         }
 
         public bool HandleGlobalStatement(GlobalStatementSyntax node)
@@ -94,8 +91,9 @@ namespace Cecilifier.Core.AST
             }
 
             if (!node.Statement.IsKind(SyntaxKind.ReturnStatement))
-                context.Generate($"{methodVar}.Body.Instructions.Add({ilVar}.Create(OpCodes.Ret));");
+                context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Ret);
 
+            context.OnFinishedTypeDeclaration();
             return true;
 
             bool IsLastGlobalStatement(CompilationUnitSyntax compilation, int index)

@@ -57,7 +57,9 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
 
     public IEnumerable<string> Method(IVisitorContext context, IMethodSymbol methodSymbol, MemberDefinitionContext memberDefinitionContext, string methodName, string methodModifiers, IParameterSymbol[] resolvedParameterTypes, IList<TypeParameterSyntax> typeParameters)
     {
+        // Resolve the method to make sure there's a method ref available (this will be used to fulfill any references to this method)
         context.MemberResolver.ResolveMethod(methodSymbol);
+
         ((SystemReflectionMetadataContext) context).DelayedDefinitionsManager.RegisterMethodDefinition(memberDefinitionContext.ParentDefinitionVariableName, (ctx, methodRecord) =>
         {
             var methodSignatureVar = ctx.DefinitionVariables.GetVariable(methodSymbol.Name, VariableMemberKind.MethodSignature, methodSymbol.ContainingSymbol.ToDisplayString());
@@ -84,10 +86,68 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         yield break;
     }
 
-    public IEnumerable<string> Method(IVisitorContext context, string declaringTypeName, string methodVar, string methodNameForParameterVariableRegistration, string methodName, string methodModifiers, IReadOnlyList<ParameterSpec> parameters,
-        IList<string> typeParameters, Func<IVisitorContext, string> returnTypeResolver, out MethodDefinitionVariable methodDefinitionVariable)
+    public IEnumerable<string> Method(
+        IVisitorContext context,
+        MemberDefinitionContext memberDefinitionContext,
+        string declaringTypeName, 
+        string methodNameForVariableRegistration, 
+        string methodName, 
+        string methodModifiers, 
+        IReadOnlyList<ParameterSpec> parameters,
+        IList<string> typeParameters, 
+        ITypeSymbol returnType, 
+        out MethodDefinitionVariable methodDefinitionVariable)
     {
-        throw new NotImplementedException();
+        var typedTypeResolver = (SystemReflectionMetadataTypeResolver) context.TypeResolver;
+        context.MemberResolver.ResolveMethod(
+            declaringTypeName, 
+            memberDefinitionContext.ParentDefinitionVariableName, 
+            methodNameForVariableRegistration, 
+            typedTypeResolver.ResolveForEncoder(returnType, TargetEncoderKind.ReturnType, false), 
+            parameters, 
+            typeParameters.Count);
+        
+        ((SystemReflectionMetadataContext) context).DelayedDefinitionsManager.RegisterMethodDefinition(memberDefinitionContext.ParentDefinitionVariableName, (ctx, methodRecord) =>
+        {
+            var methodReferenceToFind = new MethodDefinitionVariable(
+                                                VariableMemberKind.MethodSignature,
+                                                declaringTypeName,
+                                                methodNameForVariableRegistration,
+                                                parameters.Select(p => p.ElementType).ToArray(),
+                                                typeParameters.Count);
+
+            var methodSignatureVar = ctx.DefinitionVariables.GetMethodVariable(methodReferenceToFind);
+            Debug.Assert(methodSignatureVar.IsValid);
+            
+            var methodDefVar = memberDefinitionContext.MemberDefinitionVariableName;
+            ctx.Generate($"""
+                          var {methodDefVar}  = metadata.AddMethodDefinition(
+                                                    {methodModifiers},
+                                                    MethodImplAttributes.IL | MethodImplAttributes.Managed,
+                                                    metadata.GetOrAddString("{methodName}"),
+                                                    {methodSignatureVar.VariableName},
+                                                    methodBodyStream.AddMethodBody({memberDefinitionContext.IlContext.VariableName}),
+                                                    parameterList: {methodRecord.FirstParameterHandle});
+                          """);
+            
+            ctx.WriteNewLine();
+        
+            var toBeRegistered = new MethodDefinitionVariable(
+                                        VariableMemberKind.Method,
+                                        declaringTypeName,
+                                        methodName,
+                                        parameters.Select(p => p.ElementType).ToArray(),
+                                        0);
+            
+            ctx.DefinitionVariables.RegisterMethod(toBeRegistered);
+            
+            return methodDefVar;
+        });
+        
+        //TODO: Can re remove methodDefinitionVariable ?
+        methodDefinitionVariable = new MethodDefinitionVariable(VariableMemberKind.Method, string.Empty, string.Empty, null, 0);
+        
+        return [];
     }
 
     public IEnumerable<string> Constructor(IVisitorContext context, MemberDefinitionContext memberDefinitionContext, string typeName, bool isStatic, string methodAccessibility, string[] paramTypes, string? methodDefinitionPropertyValues = null)
@@ -154,6 +214,8 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
              """
         ];
     }
+
+    public IEnumerable<string> MethodBody(IVisitorContext context, string methodName, IlContext ilContext, string[] localVariableTypes, InstructionRepresentation[] instructions) => [];
 
     static string Format(CecilifierInterpolatedStringHandler cecilFormattedString) => cecilFormattedString.Result;
 }

@@ -111,7 +111,7 @@ internal partial class RecordGenerator
             separator = ", ";
         }
 
-        var printMemberBodyExps = CecilDefinitionsFactory.MethodBody(context.Naming, PrintMembersMethodName, PrintMembersVar, [],
+        var printMemberBodyExps = CecilDefinitionsFactory.MethodBody(context, PrintMembersMethodName, PrintMembersVar, [],
         [
             ..bodyInstructions,
             OpCodes.Ldc_I4_1,

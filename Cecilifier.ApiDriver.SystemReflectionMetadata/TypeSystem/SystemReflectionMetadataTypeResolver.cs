@@ -44,9 +44,9 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
         }
         
         if (type.IsPrimitiveType() || type.SpecialType == SpecialType.System_String)
-            return $"{(encoderKind == TargetEncoderKind.Field ? "" : "Type().")}{type.MetadataName}()";
+            return $"{(encoderKind <= TargetEncoderKind.Field ? "" : "Type().")}{type.MetadataName}()";
 
-        return (encoderKind == TargetEncoderKind.Field ? "" : $"Type(isByRef: {isByRef.ToKeyword()}).") + 
+        return (encoderKind <= TargetEncoderKind.Field ? "" : $"Type(isByRef: {isByRef.ToKeyword()}).") + 
                                     $"Type({ResolveAny(type)}, isValueType: {type.IsValueType.ToKeyword()})";
     }
 
@@ -57,12 +57,13 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
                                                                                     metadata.GetOrAddString("{type.Name}"))
                                                                        """;
 
-    protected override string ResolveArrayType(IArrayTypeSymbol type)
+    public override string MakeArrayType(ITypeSymbol elementType)
     {
-        throw new NotImplementedException();
+        //TODO: What about arrays of references? Wouldn't those require isByRef: true ? 
+        return $"Type().SZArray().{ResolveForEncoder(elementType, TargetEncoderKind.ArrayElementType, isByRef: false)}";
     }
 
-    protected override string MakePointerType(IPointerTypeSymbol pointerType)
+    protected override string MakePointerType(ITypeSymbol pointerType)
     {
         throw new NotImplementedException();
     }
@@ -75,7 +76,9 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
 
 public enum TargetEncoderKind
 {
+    ArrayElementType,
+    Field, // Any enum values equals to or smaller than `Field` have special handling when resolving types.
+    
     Parameter,
-    Field,
-    ReturnType
+    ReturnType,
 }

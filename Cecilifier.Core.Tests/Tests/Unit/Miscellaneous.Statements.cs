@@ -11,7 +11,7 @@ public partial class MiscellaneousStatements : CecilifierUnitTestBase
     public void EntryPointInTopLevelStatements()
     {
         var result = RunCecilifier("System.Console.WriteLine(42);");
-        Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(@"assembly\.EntryPoint = m_topLevelStatements_\d+"));
+        Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(@"assembly\.EntryPoint = m_topLevelMain_\d+"));
     }
     
     [Test]
