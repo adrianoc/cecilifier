@@ -493,8 +493,9 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
             }
             else
             {
-                validationResult = (frInstruction.DeclaringType.Scope.Name == frCurrent.DeclaringType.Scope.Name ||
-                          frInstruction.DeclaringType.Scope.Name == "System.Private.CoreLib" && frCurrent.DeclaringType.Scope.Name == "System.Runtime"); 
+                validationResult = frInstruction.DeclaringType.Scope.Name == frCurrent.DeclaringType.Scope.Name ||
+                                   frInstruction.DeclaringType.Scope.Name == "System.Private.CoreLib" 
+                                            && (frCurrent.DeclaringType.Scope.Name == "System.Runtime" || frCurrent.DeclaringType.Scope.Name == "mscorlib"); 
             }
             return true;
         }

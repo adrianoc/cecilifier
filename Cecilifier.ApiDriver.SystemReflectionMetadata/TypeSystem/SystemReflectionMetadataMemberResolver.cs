@@ -85,9 +85,8 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
         var found = context.DefinitionVariables.GetVariable(field.Name, VariableMemberKind.Field, field.ContainingType.ToDisplayString());
         if (found.IsValid)
             return found.VariableName;
-        
-        var declaringTypeVar = context.DefinitionVariables.GetVariable(field.ContainingType.ToDisplayString(), VariableMemberKind.Type, field.ContainingType.ContainingType?.ToDisplayString());
-        declaringTypeVar.ThrowIfVariableIsNotValid();
+
+        var resolvedDeclaringType = context.TypeResolver.ResolveAny(field.ContainingType);
 
         var fieldSignatureVarName = context.Naming.SyntheticVariable($"{field.ToValidVariableName()}Signature", ElementKind.LocalVariable);
         var fieldRefVarName = context.Naming.SyntheticVariable(field.Name, ElementKind.Field);
@@ -95,7 +94,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
         context.Generate($"""
                           BlobBuilder {fieldSignatureVarName} = new();
                           new BlobEncoder({fieldSignatureVarName}).FieldSignature().{typeResolver.ResolveForEncoder(field.Type, TargetEncoderKind.Field, false)};
-                          var {fieldRefVarName} = metadata.AddMemberReference({declaringTypeVar.VariableName}, metadata.GetOrAddString("{field.Name}"), metadata.GetOrAddBlob({fieldSignatureVarName}));
+                          var {fieldRefVarName} = metadata.AddMemberReference({resolvedDeclaringType}, metadata.GetOrAddString("{field.Name}"), metadata.GetOrAddBlob({fieldSignatureVarName}));
                           """);
         
         context.WriteNewLine();
