@@ -34,13 +34,13 @@ internal class ListBackedExpandedParamsArgumentHandler : ExpandedParamsArgumentH
 
     internal override void PreProcessArgument(ArgumentSyntax argument)
     {
-        Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, spanWrappingListVariable.VariableName);
-        Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, index++);
-        Context.EmitCilInstruction(ilVar, OpCodes.Call, spanIndexerGetter);
+        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloca_S, spanWrappingListVariable.VariableName);
+        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldc_I4, index++);
+        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Call, spanIndexerGetter);
     }
 
     internal override void PostProcessArgument(ArgumentSyntax argument)
     { 
-        Context.EmitCilInstruction(ilVar, stIndOpCodeToUse, targetElementTypeWhenStoring);
+        Context.ApiDriver.WriteCilInstruction(Context, ilVar, stIndOpCodeToUse, targetElementTypeWhenStoring);
     }
 }

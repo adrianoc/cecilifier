@@ -38,17 +38,17 @@ namespace Cecilifier.Core.AST
 
         protected override void BeforeVisitInterpolatedStringExpression()
         {
-            Context.EmitCilInstruction(_ilVar, OpCodes.Ldc_I4, _numberOfArguments);
-            Context.EmitCilInstruction(_ilVar, OpCodes.Newarr, Context.TypeResolver.Bcl.System.Object);
+            Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldc_I4, _numberOfArguments);
+            Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Newarr, Context.TypeResolver.Bcl.System.Object);
         }
 
         public override void VisitInterpolation(InterpolationSyntax node)
         {
-            Context.EmitCilInstruction(_ilVar, OpCodes.Dup);
-            Context.EmitCilInstruction(_ilVar, OpCodes.Ldc_I4, _currentParameterIndex);
+            Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Dup);
+            Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldc_I4, _currentParameterIndex);
 
             base.VisitInterpolation(node);
-            Context.EmitCilInstruction(_ilVar, OpCodes.Stelem_Ref);
+            Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Stelem_Ref);
         }
 
         private readonly int _numberOfArguments;

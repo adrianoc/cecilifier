@@ -22,7 +22,7 @@ namespace Cecilifier.Core.AST
             var targetCtor = (IMethodSymbol) info.Symbol;
 
             string operand = targetCtor.MethodResolverExpression(Context);
-            Context.EmitCilInstruction(ilVar, OpCodes.Call, operand);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Call, operand);
 
             var declaringType = (BaseTypeDeclarationSyntax) node.Parent.Parent;
 

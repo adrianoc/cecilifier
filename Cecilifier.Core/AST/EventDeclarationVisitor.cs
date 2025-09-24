@@ -53,7 +53,7 @@ namespace Cecilifier.Core.AST
                 using (Context.DefinitionVariables.WithVariable(accessorMethodVar))
                 {
                     StatementVisitor.Visit(Context, ilContext.VariableName, acc.Body);
-                    Context.EmitCilInstruction(ilContext.VariableName, OpCodes.Ret);
+                    Context.ApiDriver.WriteCilInstruction(Context, ilContext.VariableName, OpCodes.Ret);
                 }
 
                 eventAccessorsDefVarMapping[acc.Keyword.ValueText] = methodVar;

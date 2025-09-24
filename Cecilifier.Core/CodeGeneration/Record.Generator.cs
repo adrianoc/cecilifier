@@ -741,9 +741,9 @@ internal partial class RecordGenerator
         var getTypeFromHandleSymbol = (IMethodSymbol) context.RoslynTypeSystem.SystemType.GetMembers("GetTypeFromHandle").First();
         context.Generate($"var {getterIlVar} = {_equalityContractGetMethodVar}.Body.GetILProcessor();");
         context.WriteNewLine();
-        context.EmitCilInstruction(getterIlVar, OpCodes.Ldtoken, recordTypeDefinitionVariable);
-        context.EmitCilInstruction(getterIlVar, OpCodes.Call, getTypeFromHandleSymbol.MethodResolverExpression(context));
-        context.EmitCilInstruction(getterIlVar, OpCodes.Ret);
+        context.ApiDriver.WriteCilInstruction(context, getterIlVar, OpCodes.Ldtoken, recordTypeDefinitionVariable);
+        context.ApiDriver.WriteCilInstruction(context, getterIlVar, OpCodes.Call, getTypeFromHandleSymbol.MethodResolverExpression(context));
+        context.ApiDriver.WriteCilInstruction(context, getterIlVar, OpCodes.Ret);
 
         AddCompilerGeneratedAttributeTo(context, propertyData.Variable);
         AddIsReadOnlyAttributeTo(context, propertyData.Variable);

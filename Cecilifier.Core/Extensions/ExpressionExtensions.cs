@@ -51,8 +51,8 @@ namespace Cecilifier.Core.Extensions
                 if (indexedType.Name == "Span")
                     context.AddCallToMethod(((IPropertySymbol) indexedType.GetMembers("Length").Single()).GetMethod, ilVar);
                 else
-                    context.EmitCilInstruction(ilVar, OpCodes.Ldlen);
-                context.EmitCilInstruction(ilVar, OpCodes.Conv_I4);
+                    context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Ldlen);
+                context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Conv_I4);
                 context.AddCallToMethod((IMethodSymbol) operation!.Type.GetMembers().Single(m => m.Name == "GetOffset"), ilVar);
             }
             else if (!context.TryApplyConversions(ilVar, operation?.Parent))
@@ -64,7 +64,7 @@ namespace Cecilifier.Core.Extensions
                 var conversion = context.SemanticModel.GetConversion(expression);
                 if (conversion.IsImplicit && NeedsBoxing(context, expression, typeInfo.Type))
                 {
-                    context.EmitCilInstruction(ilVar, OpCodes.Box, context.TypeResolver.ResolveAny(typeInfo.Type));
+                    context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Box, context.TypeResolver.ResolveAny(typeInfo.Type));
                 }
             }
 

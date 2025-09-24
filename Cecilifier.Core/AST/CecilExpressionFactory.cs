@@ -10,6 +10,6 @@ internal static class CecilExpressionFactory
     {
         _ = LineInformationTracker.Track(context, expression);
         ExpressionVisitor.Visit(context, ilVar, expression);
-        context.EmitCilInstruction(ilVar, OpCodes.Throw);
+        context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Throw);
     }
 }

@@ -46,13 +46,7 @@ public interface IVisitorContext
     TypeInfo GetTypeInfo(TypeSyntax node);
     TypeInfo GetTypeInfo(ExpressionSyntax expressionSyntax);
 
-    //TODO: Move IL related methods to IILGeneratorApiDriver
-    //      Do we need to move all of them? Maybe introduce a base type to extract common functionality 
-    //      among the ApiDrivers
-    void EmitCilInstruction(string ilVar, OpCode opCode);
-    void EmitCilInstruction<T>(string ilVar, OpCode opCode, T operand, string comment = null);
     void WriteCilInstructionAfter(string ilVar, OpCode opCode, LinkedListNode<string> after);
-    
     void Generate(CecilifierInterpolatedStringHandler expression);
     void Generate(string expression);
     void Generate(IEnumerable<string> expressions);

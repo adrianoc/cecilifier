@@ -261,7 +261,7 @@ namespace Cecilifier.Core.AST
             void ProcessExpressionBodiedGetter(string ilVar, ArrowExpressionClauseSyntax? expression)
             {
                 ExpressionVisitor.Visit(Context, ilVar, expression!);
-                Context.EmitCilInstruction(ilVar, OpCodes.Ret);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ret);
             }
         }
 

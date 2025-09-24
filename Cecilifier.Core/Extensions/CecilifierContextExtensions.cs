@@ -62,7 +62,7 @@ public static class CecilifierContextExtensions
         }
         else if (operation is IConversionOperation { Conversion.IsNullable: true } nullableConversion && !nullableConversion.Syntax.IsKind(SyntaxKind.CoalesceExpression))
         {
-            context.EmitCilInstruction(
+            context.ApiDriver.WriteCilInstruction(context, 
                 ilVar, 
                 OpCodes.Newobj,
                 $"assembly.MainModule.ImportReference(typeof(System.Nullable<>).MakeGenericType(typeof({nullableConversion.Operand.Type.FullyQualifiedName()})).GetConstructors().Single(ctor => ctor.GetParameters().Length == 1))");
@@ -72,7 +72,7 @@ public static class CecilifierContextExtensions
                  && SymbolEqualityComparer.Default.Equals(coalesce.Value.Type?.OriginalDefinition, context.RoslynTypeSystem.SystemNullableOfT)
                  )
         {
-            context.EmitCilInstruction(
+            context.ApiDriver.WriteCilInstruction(context, 
                 ilVar, 
                 OpCodes.Newobj,
                 $"assembly.MainModule.ImportReference(typeof(System.Nullable<>).MakeGenericType(typeof({coalesce.Type?.FullyQualifiedName()})).GetConstructors().Single(ctor => ctor.GetParameters().Length == 1))");

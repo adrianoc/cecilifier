@@ -38,7 +38,7 @@ internal ref struct  NullLiteralArgumentDecorator
         // we have a `null` being passed to a Nullable<T> parameter so we need to emit code
         // for steps 1 & 2 as outlined in the remarks section above.
         var local = context.AddLocalVariableToCurrentMethod("tmpNull", context.TypeResolver.ResolveAny(argType));
-        context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, local.VariableName);
+        context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Ldloca_S, local.VariableName);
             
         _localVariableName = local.VariableName;
         _context = context;
@@ -53,7 +53,7 @@ internal ref struct  NullLiteralArgumentDecorator
         {
             Debug.Assert(_context != null);
             Debug.Assert(_ilVar != null);
-            _context!.EmitCilInstruction(_ilVar, OpCodes.Ldloc_S, localVariable);
+            _context!.ApiDriver.WriteCilInstruction(_context, _ilVar, OpCodes.Ldloc_S, localVariable);
         }
     }
 }

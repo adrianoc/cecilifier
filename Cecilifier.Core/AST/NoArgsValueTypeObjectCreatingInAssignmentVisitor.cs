@@ -30,8 +30,8 @@ namespace Cecilifier.Core.AST
             if (InlineArrayProcessor.TryHandleIntIndexElementAccess(Context, ilVar, node, out var elementType))
             {
                 var tempVar = tempValueTypeDeclarer();
-                Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, tempVar.VariableName);
-                Context.EmitCilInstruction(ilVar, OpCodes.Stobj, Context.TypeResolver.ResolveAny(elementType));
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloc, tempVar.VariableName);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Stobj, Context.TypeResolver.ResolveAny(elementType));
                 return;
             }
             
@@ -44,7 +44,7 @@ namespace Cecilifier.Core.AST
 
             //...since we have an `assignment` to an array element which is of type
             //struct, we need to load the element address instead. 
-            Context.EmitCilInstruction(ilVar, OpCodes.Ldelema, resolvedInstantiatedType);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldelema, resolvedInstantiatedType);
             InitializeAndProcessObjectInitializerExpression();
         }
 
@@ -56,7 +56,7 @@ namespace Cecilifier.Core.AST
                 // if the target of the assignment is not a value type, it is either an interface or `System.Object`
                 // in both cases we need to introduce a local variable which will be boxed later.
                 var valueTypeLocalTempVar = tempValueTypeDeclarer();
-                Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, valueTypeLocalTempVar.VariableName);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloc, valueTypeLocalTempVar.VariableName);
                 
                 TargetOfAssignmentIsValueType = false;
                 return;
@@ -67,7 +67,7 @@ namespace Cecilifier.Core.AST
                 case SymbolKind.Local:
                     var operand = Context.DefinitionVariables.GetVariable(node.Identifier.ValueText, VariableMemberKind.LocalVariable).VariableName;
                     var localSymbol = (ILocalSymbol) info.Symbol;
-                    Context.EmitCilInstruction(ilVar, localSymbol.RefKind == RefKind.None ? OpCodes.Ldloca_S : OpCodes.Ldloc_S, operand);
+                    Context.ApiDriver.WriteCilInstruction(Context, ilVar, localSymbol.RefKind == RefKind.None ? OpCodes.Ldloca_S : OpCodes.Ldloc_S, operand);
                     break;
 
                 case SymbolKind.Field:
@@ -75,12 +75,12 @@ namespace Cecilifier.Core.AST
                     var fieldResolverExpression = fs.FieldResolverExpression(Context);
                     if (info.Symbol.IsStatic)
                     {
-                        Context.EmitCilInstruction(ilVar, OpCodes.Ldsflda, fieldResolverExpression);
+                        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldsflda, fieldResolverExpression);
                     }
                     else
                     {
-                        Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
-                        Context.EmitCilInstruction(ilVar, OpCodes.Ldflda, fieldResolverExpression);
+                        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldarg_0);
+                        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldflda, fieldResolverExpression);
                     }
                     break;
 
@@ -93,7 +93,7 @@ namespace Cecilifier.Core.AST
                         break;
                     }
 
-                    Context.EmitCilInstruction(ilVar, OpCodes.Ldarga, parameterSymbol.Ordinal + (parameterSymbol.ContainingSymbol.IsStatic ? 0 : 1));
+                    Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldarga, parameterSymbol.Ordinal + (parameterSymbol.ContainingSymbol.IsStatic ? 0 : 1));
                     break;
             }
 
@@ -106,10 +106,10 @@ namespace Cecilifier.Core.AST
             {
                 // See comment in ValueTypeNoArgCtorInvocationVisitor.InitValueTypeLocalVariable() for an explanation on why we
                 // duplicate the top of the stack.
-                Context.EmitCilInstruction(ilVar, OpCodes.Dup);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Dup);
             }
 
-            Context.EmitCilInstruction(ilVar, OpCodes.Initobj, resolvedInstantiatedType);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Initobj, resolvedInstantiatedType);
             ValueTypeNoArgCtorInvocationVisitor.ProcessInitializerIfNotNull(Context, ilVar,  objectCreationExpression.Initializer);
         }
     }

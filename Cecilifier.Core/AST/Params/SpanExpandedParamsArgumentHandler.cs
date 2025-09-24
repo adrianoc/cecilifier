@@ -27,31 +27,31 @@ internal class SpanExpandedParamsArgumentHandler : ExpandedParamsArgumentHandler
         var inlineArrayBuffer = context.AddLocalVariableToCurrentMethod($"{paramsParameter.Name}Arg", _inlineArrayType);
         _inlineArrayVariableName = inlineArrayBuffer.VariableName;
         
-        context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, _inlineArrayVariableName);
-        context.EmitCilInstruction(ilVar, OpCodes.Initobj, _inlineArrayType);
+        context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Ldloca_S, _inlineArrayVariableName);
+        context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Initobj, _inlineArrayType);
     }
 
     internal override void PreProcessArgument(ArgumentSyntax argument)
     {
-        Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, _inlineArrayVariableName);
-        Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, _currentIndex++);
+        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloca_S, _inlineArrayVariableName);
+        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldc_I4, _currentIndex++);
         var openInlineArrayElementRefMethod = PrivateImplementationDetailsGenerator.GetOrEmmitInlineArrayElementRefMethod(Context);
 
-        Context.EmitCilInstruction(ilVar, OpCodes.Call, MakeGenericInstanceMethod(openInlineArrayElementRefMethod));
+        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Call, MakeGenericInstanceMethod(openInlineArrayElementRefMethod));
     }
 
     internal override void PostProcessArgument(ArgumentSyntax argument)
     {
-        Context.EmitCilInstruction(ilVar, _stindOpCode);
+        Context.ApiDriver.WriteCilInstruction(Context, ilVar, _stindOpCode);
     }
 
     public override void PostProcessArgumentList(ArgumentListSyntax argumentList)
     {
-        Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, _inlineArrayVariableName);
-        Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, ElementCount);
+        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloca_S, _inlineArrayVariableName);
+        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldc_I4, ElementCount);
         
         // gets a Span<T> from the inline array
-        Context.EmitCilInstruction(ilVar, OpCodes.Call, MakeGenericInstanceMethod(GetInlineArrayToSpanResolvedMethod()));
+        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Call, MakeGenericInstanceMethod(GetInlineArrayToSpanResolvedMethod()));
     }
 
     protected virtual DefinitionVariable GetInlineArrayToSpanResolvedMethod() => PrivateImplementationDetailsGenerator.GetOrEmmitInlineArrayAsSpanMethod(Context);

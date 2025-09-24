@@ -53,7 +53,7 @@ namespace Cecilifier.Core.AST
         protected void AddCilInstruction(string ilVar, OpCode opCode, ITypeSymbol type)
         {
             var operand = Context.TypeResolver.ResolveAny(type);
-            Context.EmitCilInstruction(ilVar, opCode, operand);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, opCode, operand);
         }
 
         protected string AddCilInstructionWithLocalVariable(string ilVar, OpCode opCode)
@@ -345,7 +345,7 @@ namespace Cecilifier.Core.AST
             var adjustedParameterIndex = paramSymbol.Ordinal + (method.IsStatic || method.MethodKind == MethodKind.AnonymousFunction || method.MethodKind == MethodKind.LocalFunction ? 0 : 1);
             if (adjustedParameterIndex > 3)
             {
-                Context.EmitCilInstruction(ilVar, OpCodes.Ldarg, adjustedParameterIndex);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldarg, adjustedParameterIndex);
             }
             else
             {
@@ -406,7 +406,7 @@ namespace Cecilifier.Core.AST
             if (InlineArrayProcessor.HandleInlineArrayConversionToSpan(Context, ilVar, symbol.Type, localVarSyntax, OpCodes.Ldloca_S, symbol.Name, VariableMemberKind.LocalVariable))
                 return;
 
-            Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, operand);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloc, operand);
 
             HandlePotentialDelegateInvocationOn(localVarSyntax, symbol.Type, ilVar);
             HandlePotentialFixedLoad(ilVar, symbol);
@@ -417,7 +417,7 @@ namespace Cecilifier.Core.AST
             if (!symbol.IsFixed)
                 return;
 
-            Context.EmitCilInstruction(ilVar, OpCodes.Conv_U);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Conv_U);
         }
 
         protected bool HandleLoadAddress(string ilVar, ITypeSymbol loadedType, CSharpSyntaxNode node, OpCode loadOpCode, string operand)
@@ -458,14 +458,14 @@ namespace Cecilifier.Core.AST
                         if (loadOpCode == OpCodes.Ldelem)
                             operand = null;
                         
-                        Context.EmitCilInstruction(ilVar, ordinaryLoad, operand);
-                        Context.EmitCilInstruction(ilVar, OpCodes.Box, Context.TypeResolver.ResolveAny(loadedType));
+                        Context.ApiDriver.WriteCilInstruction(Context, ilVar, ordinaryLoad, operand);
+                        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Box, Context.TypeResolver.ResolveAny(loadedType));
                     }
                     else
-                        Context.EmitCilInstruction(ilVar, loadOpCode, operand);
+                        Context.ApiDriver.WriteCilInstruction(Context, ilVar, loadOpCode, operand);
                     
                     if (!Context.HasFlag(Constants.ContextFlags.Fixed) && parentNode.IsKind(SyntaxKind.AddressOfExpression))
-                        Context.EmitCilInstruction(ilVar, OpCodes.Conv_U);
+                        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Conv_U);
 
                     // calls to virtual methods on custom value types needs to be constrained (don't know why, but the generated IL for such scenarios does `constrains`).
                     // the only methods that falls into this category are virtual methods on Object (ToString()/Equals()/GetHashCode())
@@ -490,10 +490,10 @@ namespace Cecilifier.Core.AST
 
                 if (loadOpCode == OpCodes.Ldelema)
                 {
-                    Context.EmitCilInstruction(ilVar, OpCodes.Readonly);
+                    Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Readonly);
                 }
                 
-                Context.EmitCilInstruction(ilVar, loadOpCode, operand);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, loadOpCode, operand);
                 Context.SetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, Context.TypeResolver.ResolveAny(loadedType));
                 return true;
             }
@@ -507,7 +507,7 @@ namespace Cecilifier.Core.AST
                 if (assignedValueSymbol.Symbol.IsByRef())
                     return false;
 
-                Context.EmitCilInstruction(ilVar, loadOpCode, operand);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, loadOpCode, operand);
                 return true;
             }
 
@@ -518,7 +518,7 @@ namespace Cecilifier.Core.AST
 
                 if (Context.SemanticModel.GetSymbolInfo(argument.Expression).Symbol?.IsByRef() == false)
                 {
-                    Context.EmitCilInstruction(ilVar, loadOpCode, operand);
+                    Context.ApiDriver.WriteCilInstruction(Context, ilVar, loadOpCode, operand);
                     return true;
                 }
                 return false;
@@ -529,7 +529,7 @@ namespace Cecilifier.Core.AST
                 if (!node.Parent.IsKind(SyntaxKind.ElementAccessExpression) || !loadedType.TryGetAttribute<InlineArrayAttribute>(out var _))
                     return false;
                 
-                Context.EmitCilInstruction(ilVar, loadOpCode, operand);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, loadOpCode, operand);
                 return true;
             }
             
@@ -580,7 +580,7 @@ namespace Cecilifier.Core.AST
             if (needsLoadIndirect)
             {
                 var opCode = type.LdindOpCodeFor();
-                Context.EmitCilInstruction(ilVar, opCode, opCode == OpCodes.Ldobj ? Context.TypeResolver.ResolveAny(type) : null);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, opCode, opCode == OpCodes.Ldobj ? Context.TypeResolver.ResolveAny(type) : null);
             }
         }
 
@@ -646,7 +646,7 @@ namespace Cecilifier.Core.AST
             if (typeSymbol is IFunctionPointerTypeSymbol functionPointer)
             {
                 var operand = CecilDefinitionsFactory.CallSite(Context.TypeResolver, functionPointer);
-                Context.EmitCilInstruction(ilVar, OpCodes.Calli, operand);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Calli, operand);
                 return;
             }
 
@@ -656,7 +656,7 @@ namespace Cecilifier.Core.AST
                 : ((IMethodSymbol) typeSymbol.GetMembers("Invoke").SingleOrDefault()).MethodResolverExpression(Context);
 
             OnLastInstructionLoadingTargetOfInvocation();
-            Context.EmitCilInstruction(ilVar, OpCodes.Callvirt, resolvedMethod);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Callvirt, resolvedMethod);
         }
 
         /// <summary>

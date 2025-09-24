@@ -40,7 +40,7 @@ namespace Cecilifier.Core.AST
 
             base.VisitInterpolatedStringExpression(node);
 
-            Context.EmitCilInstruction(_ilVar, OpCodes.Ldstr, _computedFormat.ValueText());
+            Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldstr, _computedFormat.ValueText());
             Context.MoveLineAfter(Context.CurrentLine, lastInstructionBeforeInterpolatedString);
 
             Context.AddCallToMethod(GetStringFormatOverloadToCall(), _ilVar, MethodDispatchInformation.MostLikelyVirtual);

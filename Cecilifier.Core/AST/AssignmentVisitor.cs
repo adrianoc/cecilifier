@@ -48,7 +48,7 @@ namespace Cecilifier.Core.AST
             if (InlineArrayProcessor.TryHandleIntIndexElementAccess(Context, ilVar, node, out var elementType))
             {
                 Context.MoveLinesToEnd(InstructionPrecedingValueToLoad, lastInstructionLoadingRhs);
-                Context.EmitCilInstruction(ilVar, elementType.StindOpCodeFor());
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, elementType.StindOpCodeFor());
                 return;
             }
             
@@ -64,7 +64,7 @@ namespace Cecilifier.Core.AST
                 var arrayElementType = Context.SemanticModel.GetTypeInfo(node).Type.EnsureNotNull();
                 var stelemOpCode = arrayElementType.StelemOpCode();
                 var operand = stelemOpCode == OpCodes.Stelem ? Context.TypeResolver.ResolveAny(arrayElementType) : null;
-                Context.EmitCilInstruction(ilVar, stelemOpCode, operand);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, stelemOpCode, operand);
             }
         }
 
@@ -137,7 +137,7 @@ namespace Cecilifier.Core.AST
         {
             var lastInstructionLoadingRhs = Context.CurrentLine;
 
-            Context.EmitCilInstruction(ilVar, OpCodes.Dup);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Dup);
             foreach (var arg in node.ArgumentList.Arguments)
             {
                 ExpressionVisitor.Visit(Context, ilVar, arg.Expression);
@@ -227,7 +227,7 @@ namespace Cecilifier.Core.AST
             {
                 var propertyBackingFieldName = Utils.BackingFieldNameForAutoProperty(property.Name);
                 var found = Context.DefinitionVariables.GetVariable(propertyBackingFieldName, VariableMemberKind.Field, property.ContainingType.ToDisplayString());
-                Context.EmitCilInstruction(ilVar, OpCodes.Stfld, found.VariableName);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Stfld, found.VariableName);
             }
             else
             {

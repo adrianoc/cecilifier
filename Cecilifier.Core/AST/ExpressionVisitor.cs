@@ -58,60 +58,60 @@ namespace Cecilifier.Core.AST
                 if (left.SpecialType == SpecialType.System_String)
                 {
                     var concatArgType = right.SpecialType == SpecialType.System_String ? "string" : "object";
-                    ctx.EmitCilInstruction(ilVar, OpCodes.Call, $"assembly.MainModule.Import(typeof(string).GetMethod(\"Concat\", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public, null, new[] {{ typeof({concatArgType}), typeof({concatArgType}) }}, null))");
+                    ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Call, $"assembly.MainModule.Import(typeof(string).GetMethod(\"Concat\", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public, null, new[] {{ typeof({concatArgType}), typeof({concatArgType}) }}, null))");
                 }
                 else
                 {
-                    ctx.EmitCilInstruction(ilVar, OpCodes.Add);
+                    ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Add);
                 }
             });
 
-            operatorHandlers[SyntaxKind.MinusToken] = BinaryOperatorHandler.Raw((ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, OpCodes.Sub));
-            operatorHandlers[SyntaxKind.AsteriskToken] = BinaryOperatorHandler.Raw((ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, OpCodes.Mul));
-            operatorHandlers[SyntaxKind.SlashToken] = BinaryOperatorHandler.Raw((ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, OpCodes.Div));
+            operatorHandlers[SyntaxKind.MinusToken] = BinaryOperatorHandler.Raw((ctx, ilVar, left, right) => ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Sub));
+            operatorHandlers[SyntaxKind.AsteriskToken] = BinaryOperatorHandler.Raw((ctx, ilVar, left, right) => ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Mul));
+            operatorHandlers[SyntaxKind.SlashToken] = BinaryOperatorHandler.Raw((ctx, ilVar, left, right) => ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Div));
             operatorHandlers[SyntaxKind.PercentToken] = BinaryOperatorHandler.Raw(HandleModulusExpression);
 
-            operatorHandlers[SyntaxKind.GreaterThanToken] = BinaryOperatorHandler.Raw((ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, CompareOpCodeFor(left)));
+            operatorHandlers[SyntaxKind.GreaterThanToken] = BinaryOperatorHandler.Raw((ctx, ilVar, left, right) => ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, CompareOpCodeFor(left)));
             operatorHandlers[SyntaxKind.GreaterThanEqualsToken] = BinaryOperatorHandler.Raw((ctx, ilVar, left, right) =>
             {
-                ctx.EmitCilInstruction(ilVar, OpCodes.Clt);
-                ctx.EmitCilInstruction(ilVar, OpCodes.Ldc_I4_0);
-                ctx.EmitCilInstruction(ilVar, OpCodes.Ceq);
+                ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Clt);
+                ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Ldc_I4_0);
+                ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Ceq);
             });
 
             operatorHandlers[SyntaxKind.LessThanEqualsToken] = BinaryOperatorHandler.Raw((ctx, ilVar, left, right) =>
             {
-                ctx.EmitCilInstruction(ilVar, OpCodes.Cgt);
-                ctx.EmitCilInstruction(ilVar, OpCodes.Ldc_I4_0);
-                ctx.EmitCilInstruction(ilVar, OpCodes.Ceq);
+                ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Cgt);
+                ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Ldc_I4_0);
+                ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Ceq);
             });
 
-            operatorHandlers[SyntaxKind.EqualsEqualsToken] = BinaryOperatorHandler.Raw((ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, OpCodes.Ceq));
-            operatorHandlers[SyntaxKind.LessThanToken] = BinaryOperatorHandler.Raw((ctx, ilVar, left, right) => ctx.EmitCilInstruction(ilVar, OpCodes.Clt));
+            operatorHandlers[SyntaxKind.EqualsEqualsToken] = BinaryOperatorHandler.Raw((ctx, ilVar, left, right) => ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Ceq));
+            operatorHandlers[SyntaxKind.LessThanToken] = BinaryOperatorHandler.Raw((ctx, ilVar, left, right) => ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Clt));
             operatorHandlers[SyntaxKind.ExclamationEqualsToken] = BinaryOperatorHandler.Raw((ctx, ilVar, left, right) =>
             {
                 // This is not the most optimized way to handle != operator but it is generic and correct.
-                ctx.EmitCilInstruction(ilVar, OpCodes.Ceq);
-                ctx.EmitCilInstruction(ilVar, OpCodes.Ldc_I4_0);
-                ctx.EmitCilInstruction(ilVar, OpCodes.Ceq);
+                ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Ceq);
+                ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Ldc_I4_0);
+                ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Ceq);
             });
 
             // Bitwise Operators
-            operatorHandlers[SyntaxKind.AmpersandToken] = BinaryOperatorHandler.Raw((ctx, ilVar, _, _) => ctx.EmitCilInstruction(ilVar, OpCodes.And));
-            operatorHandlers[SyntaxKind.BarToken] = BinaryOperatorHandler.Raw((ctx, ilVar, _, _) => ctx.EmitCilInstruction(ilVar, OpCodes.Or));
-            operatorHandlers[SyntaxKind.CaretToken] = BinaryOperatorHandler.Raw((ctx, ilVar, _, _) => ctx.EmitCilInstruction(ilVar, OpCodes.Xor));
-            operatorHandlers[SyntaxKind.LessThanLessThanToken] = BinaryOperatorHandler.Raw((ctx, ilVar, _, _) => ctx.EmitCilInstruction(ilVar, OpCodes.Shl));
-            operatorHandlers[SyntaxKind.GreaterThanGreaterThanToken] = BinaryOperatorHandler.Raw((ctx, ilVar, _, _) => ctx.EmitCilInstruction(ilVar, OpCodes.Shr));
+            operatorHandlers[SyntaxKind.AmpersandToken] = BinaryOperatorHandler.Raw((ctx, ilVar, _, _) => ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.And));
+            operatorHandlers[SyntaxKind.BarToken] = BinaryOperatorHandler.Raw((ctx, ilVar, _, _) => ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Or));
+            operatorHandlers[SyntaxKind.CaretToken] = BinaryOperatorHandler.Raw((ctx, ilVar, _, _) => ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Xor));
+            operatorHandlers[SyntaxKind.LessThanLessThanToken] = BinaryOperatorHandler.Raw((ctx, ilVar, _, _) => ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Shl));
+            operatorHandlers[SyntaxKind.GreaterThanGreaterThanToken] = BinaryOperatorHandler.Raw((ctx, ilVar, _, _) => ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Shr));
 
             // Logical Operators
-            operatorHandlers[SyntaxKind.AmpersandAmpersandToken] = BinaryOperatorHandler.Raw((ctx, ilVar, _, _) => ctx.EmitCilInstruction(ilVar, OpCodes.And));
-            operatorHandlers[SyntaxKind.BarBarToken] = BinaryOperatorHandler.Raw((ctx, ilVar, _, _) => ctx.EmitCilInstruction(ilVar, OpCodes.Or));
+            operatorHandlers[SyntaxKind.AmpersandAmpersandToken] = BinaryOperatorHandler.Raw((ctx, ilVar, _, _) => ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.And));
+            operatorHandlers[SyntaxKind.BarBarToken] = BinaryOperatorHandler.Raw((ctx, ilVar, _, _) => ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Or));
 
             operatorHandlers[SyntaxKind.IsKeyword] = BinaryOperatorHandler.Raw((ctx, ilVar, _, rightType) =>
             {
-                ctx.EmitCilInstruction(ilVar, OpCodes.Isinst, ctx.TypeResolver.ResolveAny(rightType));
-                ctx.EmitCilInstruction(ilVar, OpCodes.Ldnull);
-                ctx.EmitCilInstruction(ilVar, OpCodes.Cgt);
+                ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Isinst, ctx.TypeResolver.ResolveAny(rightType));
+                ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Ldnull);
+                ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Cgt);
             }, visitRightOperand: false); // Isinst opcode takes the type to check as a parameter (instead of taking it from the stack) so
                                           // we must not visit the right hand side of the binary expression
 
@@ -126,19 +126,19 @@ namespace Cecilifier.Core.AST
                         "leftValue", 
                         ctx.TypeResolver.ResolveAny(lhsType));
                     
-                    ctx.EmitCilInstruction(ilVar, OpCodes.Stloc, evaluatedLeftVar.VariableName);
-                    ctx.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, evaluatedLeftVar.VariableName);
-                    ctx.EmitCilInstruction(ilVar, OpCodes.Call, lhsType.GetMembers("get_HasValue").OfType<IMethodSymbol>().Single().MethodResolverExpression(ctx));
+                    ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Stloc, evaluatedLeftVar.VariableName);
+                    ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Ldloca_S, evaluatedLeftVar.VariableName);
+                    ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Call, lhsType.GetMembers("get_HasValue").OfType<IMethodSymbol>().Single().MethodResolverExpression(ctx));
                     
                     var loadLeftValueInst = ctx.Naming.Instruction("loadLeftValueTarget");
                     ctx.Generate($"var {loadLeftValueInst} = {ilVar}.Create({OpCodes.Ldloc_S.ConstantName()}, {evaluatedLeftVar.VariableName});");
                     ctx.WriteNewLine();
 
-                    ctx.EmitCilInstruction(ilVar, OpCodes.Brtrue_S, loadLeftValueInst);
+                    ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Brtrue_S, loadLeftValueInst);
 
                     binaryExpression.Right.Accept(expressionVisitor);
                     binaryExpression.Right.InjectRequiredConversions(ctx, ilVar);
-                    ctx.EmitCilInstruction(ilVar, OpCodes.Ret);
+                    ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Ret);
                     ctx.Generate($"{ilVar}.Body.Instructions.Add({loadLeftValueInst});");
                     ctx.WriteNewLine();
                     // method handler will add the required ret
@@ -150,10 +150,10 @@ namespace Cecilifier.Core.AST
                     ctx.WriteNewLine();
 
                     binaryExpression.Left.Accept(expressionVisitor);
-                    ctx.EmitCilInstruction(ilVar, OpCodes.Dup);
-                    ctx.EmitCilInstruction(ilVar, OpCodes.Brtrue_S, returnInstruction);
+                    ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Dup);
+                    ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Brtrue_S, returnInstruction);
 
-                    ctx.EmitCilInstruction(ilVar, OpCodes.Pop); // removes evaluated LEFT expression from stack
+                    ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Pop); // removes evaluated LEFT expression from stack
                     binaryExpression.Right.Accept(expressionVisitor);
                     binaryExpression.Right.InjectRequiredConversions(ctx, ilVar);
                     ctx.Generate($"{ilVar}.Body.Instructions.Add({returnInstruction});");
@@ -246,7 +246,7 @@ namespace Cecilifier.Core.AST
                     var addMethod = Context.SemanticModel.GetCollectionInitializerSymbolInfo(node.Expressions.First()).Symbol.EnsureNotNull<ISymbol, IMethodSymbol>();
                     Context.EnsureForwardedMethod(addMethod);
                     
-                    Context.EmitCilInstruction(ilVar, OpCodes.Dup);
+                    Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Dup);
                     initializeExp.Accept(this);
                     Context.AddCallToMethod(addMethod, ilVar, MethodDispatchInformation.MostLikelyVirtual);
                 }
@@ -267,7 +267,7 @@ namespace Cecilifier.Core.AST
             }
             else
             {
-                Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, node.Initializer.Expressions.Count);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldc_I4, node.Initializer.Expressions.Count);
             }
 
             var arrayTypeSymbol = Context.GetTypeInfo(node.Type).Type.EnsureNotNull<ITypeSymbol, IArrayTypeSymbol>();
@@ -323,7 +323,7 @@ namespace Cecilifier.Core.AST
                 
                 // ... otherwise, we need to take the top of the stack (address of the element) and load the actual instance to the stack.
                 var loadOpCode = elementType.LdindOpCodeFor();
-                Context.EmitCilInstruction(ilVar, loadOpCode, loadOpCode == OpCodes.Ldobj ? Context.TypeResolver.ResolveAny(elementType) : null);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, loadOpCode, loadOpCode == OpCodes.Ldobj ? Context.TypeResolver.ResolveAny(elementType) : null);
                 return;
             }
 
@@ -347,7 +347,7 @@ namespace Cecilifier.Core.AST
                     return;
                 
                 var ldelemOpCodeToUse = targetType.LdelemOpCode();
-                Context.EmitCilInstruction(ilVar, ldelemOpCodeToUse, ldelemOpCodeToUse == OpCodes.Ldelem ? Context.TypeResolver.ResolveAny(targetType) : null);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, ldelemOpCodeToUse, ldelemOpCodeToUse == OpCodes.Ldelem ? Context.TypeResolver.ResolveAny(targetType) : null);
             }
         }
 
@@ -471,7 +471,7 @@ namespace Cecilifier.Core.AST
                 DefinitionVariable methodVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
                 var outLocalName = Context.AddLocalVariableToMethod(designation.Identifier.Text, methodVar, resolvedOutArgType).VariableName;
 
-                Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, outLocalName);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloca_S, outLocalName);
             }
 
             base.VisitDeclarationExpression(node);
@@ -485,7 +485,7 @@ namespace Cecilifier.Core.AST
             if (constantValue.HasValue && node.Expression is IdentifierNameSyntax { Identifier.Text: "nameof" })
             {
                 string operand = $"\"{node.ArgumentList.Arguments[0].ToFullString()}\"";
-                Context.EmitCilInstruction(ilVar, OpCodes.Ldstr, operand);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldstr, operand);
                 return;
             }
 
@@ -505,12 +505,12 @@ namespace Cecilifier.Core.AST
 
             var targetEvaluationDoNotHaveSideEffects = Context.SemanticModel.GetSymbolInfo(node.Expression).Symbol?.Kind is SymbolKind.Local or SymbolKind.Parameter or SymbolKind.Field;
             if (!targetEvaluationDoNotHaveSideEffects)
-                Context.EmitCilInstruction(ilVar, OpCodes.Dup);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Dup);
 
-            Context.EmitCilInstruction(ilVar, OpCodes.Brtrue_S, whenTrueLabel);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Brtrue_S, whenTrueLabel);
 
             if (!targetEvaluationDoNotHaveSideEffects)
-                Context.EmitCilInstruction(ilVar, OpCodes.Pop);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Pop);
 
             // code to handle null case 
             var currentMethodVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
@@ -518,10 +518,10 @@ namespace Cecilifier.Core.AST
             var resolvedConcreteNullableType = Context.TypeResolver.ResolveAny(expressionTypeInfo.Type);
             var tempNullableVar = Context.AddLocalVariableToMethod("nullable", currentMethodVar, resolvedConcreteNullableType).VariableName;
 
-            Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, tempNullableVar);
-            Context.EmitCilInstruction(ilVar, OpCodes.Initobj, resolvedConcreteNullableType);
-            Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, tempNullableVar);
-            Context.EmitCilInstruction(ilVar, OpCodes.Br, conditionalEnd);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloca_S, tempNullableVar);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Initobj, resolvedConcreteNullableType);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloc, tempNullableVar);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Br, conditionalEnd);
 
             // handle not null case...
             AddCecilExpression("{0}.Append({1});", ilVar, whenTrueLabel);
@@ -534,7 +534,7 @@ namespace Cecilifier.Core.AST
                 .OfType<IMethodSymbol>()
                 .Single(method => method.Parameters.Length == 1 && method.Parameters[0].Type.MetadataToken == ((INamedTypeSymbol) expressionTypeInfo.Type).TypeArguments[0].MetadataToken);
 
-            Context.EmitCilInstruction(ilVar,
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar,
                 OpCodes.Newobj,
                 nullableCtor.MethodResolverExpression(Context));
 
@@ -549,10 +549,10 @@ namespace Cecilifier.Core.AST
             var whenFalse = EmitTargetLabel("whenFalse");
 
             Visit(node.Condition);
-            Context.EmitCilInstruction(ilVar, OpCodes.Brfalse_S, whenFalse);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Brfalse_S, whenFalse);
 
             Visit(node.WhenTrue);
-            Context.EmitCilInstruction(ilVar, OpCodes.Br_S, conditionEnd);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Br_S, conditionEnd);
 
             AddCecilExpression("{0}.Append({1});", ilVar, whenFalse);
             Visit(node.WhenFalse);
@@ -629,7 +629,7 @@ namespace Cecilifier.Core.AST
             {
                 Visit(node.Operand);
                 node.Operand.InjectRequiredConversions(Context, ilVar);
-                Context.EmitCilInstruction(ilVar, OpCodes.Neg);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Neg);
             }
             else if (node.IsKind(SyntaxKind.PreDecrementExpression))
             {
@@ -642,13 +642,13 @@ namespace Cecilifier.Core.AST
             else if (node.IsKind(SyntaxKind.LogicalNotExpression))
             {
                 node.Operand.Accept(this);
-                Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4_0);
-                Context.EmitCilInstruction(ilVar, OpCodes.Ceq);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldc_I4_0);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ceq);
             }
             else if (node.IsKind(SyntaxKind.BitwiseNotExpression))
             {
                 node.Operand.Accept(this);
-                Context.EmitCilInstruction(ilVar, OpCodes.Not);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Not);
             }
             else if (node.IsKind(SyntaxKind.IndexExpression))
             {
@@ -724,7 +724,7 @@ namespace Cecilifier.Core.AST
             Context.EnsureForwardedMethod(ctor);
 
             var operand = ctor.MethodResolverExpression(Context);
-            Context.EmitCilInstruction(ilVar, OpCodes.Newobj, operand);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Newobj, operand);
             PushCall();
 
             Visit(node.ArgumentList);
@@ -744,7 +744,7 @@ namespace Cecilifier.Core.AST
         public override void VisitThisExpression(ThisExpressionSyntax node)
         {
             using var _ = LineInformationTracker.Track(Context, node);
-            Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldarg_0);
             base.VisitThisExpression(node);
         }
 
@@ -771,7 +771,7 @@ namespace Cecilifier.Core.AST
                  * Even though a cast from double => double can be view as an identity conversion (from the pov of the developer who wrote it)
                  * we still need to emit a *conv.r8* opcode. * (For more details see https://github.com/dotnet/roslyn/discussions/56198)
                  */
-                Context.EmitCilInstruction(ilVar, OpCodes.Conv_R8);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Conv_R8);
                 return;
             }
 
@@ -800,7 +800,7 @@ namespace Cecilifier.Core.AST
                     _ => throw new Exception($"Cast from {node.Expression} ({castSourceType}) to {castTargetType} is not supported.")
                 };
 
-                Context.EmitCilInstruction(ilVar, opcode);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, opcode);
             }
             else if (conversion.IsExplicit && conversion.IsReference)
             {
@@ -835,7 +835,7 @@ namespace Cecilifier.Core.AST
 
             AddCilInstruction(ilVar, OpCodes.Ldtoken, Context.GetTypeInfo(node.Type).Type);
             string operand = getTypeFromHandleSymbol.MethodResolverExpression(Context);
-            Context.EmitCilInstruction(ilVar, OpCodes.Call, operand);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Call, operand);
         }
 
         public override void VisitRangeExpression(RangeExpressionSyntax node)
@@ -851,7 +851,7 @@ namespace Cecilifier.Core.AST
                 .OfType<IMethodSymbol>()
                 .Single(ctor => ctor.Parameters.Length == 2 && SymbolEqualityComparer.Default.Equals(ctor.Parameters[0].Type, indexType) && SymbolEqualityComparer.Default.Equals(ctor.Parameters[1].Type, indexType));
 
-            Context.EmitCilInstruction(ilVar, OpCodes.Newobj, rangeCtor.MethodResolverExpression(Context));
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Newobj, rangeCtor.MethodResolverExpression(Context));
 
             void VisitIndex(ExpressionSyntax index)
             {
@@ -899,7 +899,7 @@ namespace Cecilifier.Core.AST
             var t = Context.SemanticModel.GetTypeInfo(node.Expression).Type.EnsureNotNull();
             if (t.TypeKind == TypeKind.TypeParameter)
             {
-                Context.EmitCilInstruction(ilVar, OpCodes.Box, Context.TypeResolver.ResolveAny(t));
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Box, Context.TypeResolver.ResolveAny(t));
             }
             node.Pattern.Accept(this);
         }
@@ -912,11 +912,11 @@ namespace Cecilifier.Core.AST
             string localVarName = ((SingleVariableDesignationSyntax) node.Designation).Identifier.ValueText;
             var localVar = Context.AddLocalVariableToCurrentMethod(localVarName, varType).VariableName;
 
-            Context.EmitCilInstruction(ilVar, OpCodes.Isinst, varType);
-            Context.EmitCilInstruction(ilVar, OpCodes.Stloc, localVar);
-            Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, localVar);
-            Context.EmitCilInstruction(ilVar, OpCodes.Ldnull);
-            Context.EmitCilInstruction(ilVar, OpCodes.Cgt);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Isinst, varType);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Stloc, localVar);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloc, localVar);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldnull);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Cgt);
         }
 
         public override void VisitRecursivePattern(RecursivePatternSyntax node)
@@ -929,15 +929,15 @@ namespace Cecilifier.Core.AST
 
             var typeDoesNotMatchVar = CreateCilInstruction(ilVar, OpCodes.Ldc_I4_0);
             var typeMatchesVar = CreateCilInstruction(ilVar, OpCodes.Nop);
-            Context.EmitCilInstruction(ilVar, OpCodes.Isinst, varType);
-            Context.EmitCilInstruction(ilVar, OpCodes.Stloc, localVar);
-            Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, localVar);
-            Context.EmitCilInstruction(ilVar, OpCodes.Brfalse_S, typeDoesNotMatchVar);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Isinst, varType);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Stloc, localVar);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloc, localVar);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Brfalse_S, typeDoesNotMatchVar);
 
             // Compares each sub-pattern
             foreach (var pattern in node.PropertyPatternClause!.Subpatterns)
             {
-                Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, localVar);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloc, localVar);
                 pattern.Accept(this);
 
                 var comparisonType = Context.SemanticModel.GetSymbolInfo(pattern.NameColon?.Name ?? pattern.ExpressionColon?.Expression!).Symbol!.GetMemberType();
@@ -945,17 +945,17 @@ namespace Cecilifier.Core.AST
                 if (opEquality != null)
                 {
                     Context.AddCallToMethod(opEquality.EnsureNotNull<ISymbol, IMethodSymbol>(), ilVar, MethodDispatchInformation.MostLikelyVirtual);
-                    Context.EmitCilInstruction(ilVar, OpCodes.Brfalse_S, typeDoesNotMatchVar);
+                    Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Brfalse_S, typeDoesNotMatchVar);
                 }
                 else
                 {
-                    Context.EmitCilInstruction(ilVar, OpCodes.Bne_Un, typeDoesNotMatchVar);
+                    Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Bne_Un, typeDoesNotMatchVar);
                 }
             }
 
-            Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4_1); // if the execution (at runtime) reaches this point it means the 
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldc_I4_1); // if the execution (at runtime) reaches this point it means the 
                                                                  // pattern is a match
-            Context.EmitCilInstruction(ilVar, OpCodes.Br_S, typeMatchesVar);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Br_S, typeMatchesVar);
             AddCecilExpression($"{ilVar}.Append({typeDoesNotMatchVar});");
             AddCecilExpression($"{ilVar}.Append({typeMatchesVar});");
 
@@ -981,7 +981,7 @@ namespace Cecilifier.Core.AST
         public override void VisitBaseExpression(BaseExpressionSyntax node)
         {
             using var _ = LineInformationTracker.Track(Context, node);
-            Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldarg_0);
         }
 
         public override void VisitCollectionExpression(CollectionExpressionSyntax node)
@@ -1028,7 +1028,7 @@ namespace Cecilifier.Core.AST
                                                             [Context.TypeResolver.ResolveAny(instantiatedType)], 
                                                             out var closedCreateInstanceMethod);
             Context.Generate(exps);
-            Context.EmitCilInstruction(ilVar,  OpCodes.Call, closedCreateInstanceMethod);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar,  OpCodes.Call, closedCreateInstanceMethod);
             return true;
         }
 
@@ -1045,15 +1045,15 @@ namespace Cecilifier.Core.AST
             {
                 if (!isPrefix) // For *postfix* operators we duplicate the value *before* applying the operator...
                 {
-                    Context.EmitCilInstruction(ilVar, OpCodes.Dup);
+                    Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Dup);
                 }
 
-                Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4_1);
-                Context.EmitCilInstruction(ilVar, opCode);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldc_I4_1);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, opCode);
 
                 if (isPrefix) // For prefix operators we duplicate the value *after* applying the operator...
                 {
-                    Context.EmitCilInstruction(ilVar, OpCodes.Dup);
+                    Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Dup);
                 }
 
                 //assign (top of stack to the operand)
@@ -1065,21 +1065,21 @@ namespace Cecilifier.Core.AST
 
             if (isPrefix)
             {
-                Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4_1);
-                Context.EmitCilInstruction(ilVar, opCode);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldc_I4_1);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, opCode);
             }
 
             var type = Context.SemanticModel.GetTypeInfo(operand).Type;
             var tempLocalName = StoreTopOfStackInLocalVariable(Context, ilVar, "tmp", type).VariableName;
             
-            Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, tempLocalName);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloc, tempLocalName);
             assignmentVisitor.InstructionPrecedingValueToLoad = Context.CurrentLine;
-            Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, tempLocalName);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloc, tempLocalName);
 
             if (!isPrefix)
             {
-                Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4_1);
-                Context.EmitCilInstruction(ilVar, opCode);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldc_I4_1);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, opCode);
             }
 
             // assign (top of stack to the operand)
@@ -1140,7 +1140,7 @@ namespace Cecilifier.Core.AST
                 .Single(m => m.Parameters.Length == 2 && m.Parameters[0].Type.SpecialType == SpecialType.System_Int32 && m.Parameters[1].Type.SpecialType == SpecialType.System_Boolean);
 
             node.Operand.Accept(this);
-            Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4_1); // From end = true.
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldc_I4_1); // From end = true.
 
             /* 
              * node is something like '^3'
@@ -1160,14 +1160,14 @@ namespace Cecilifier.Core.AST
                                                && !node.Parent.IsKind(SyntaxKind.RangeExpression)
                                                && (node.Parent.IsKind(SyntaxKind.SimpleAssignmentExpression) || node.Parent.IsKind(SyntaxKind.EqualsValueClause));
 
-            Context.EmitCilInstruction(ilVar, skipLeftSideVisitingInAssignment ? OpCodes.Call : OpCodes.Newobj, resolvedCtor);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, skipLeftSideVisitingInAssignment ? OpCodes.Call : OpCodes.Newobj, resolvedCtor);
 
             var parentElementAccessExpression = node.Ancestors().OfType<ElementAccessExpressionSyntax>().FirstOrDefault(candidate => candidate.ArgumentList.Contains(node));
             if (parentElementAccessExpression != null)
             {
                 var type = Context.SemanticModel.GetTypeInfo(node).Type;
                 var tempLocal = StoreTopOfStackInLocalVariable(Context, ilVar, "tmpIndex", type).VariableName;
-                Context.EmitCilInstruction(ilVar, OpCodes.Ldloca, tempLocal);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloca, tempLocal);
             }
         }
 
@@ -1175,7 +1175,7 @@ namespace Cecilifier.Core.AST
         {
             Utils.EnsureNotNull(elementAccessExpressionSyntax);
 
-            Context.EmitCilInstruction(ilVar, OpCodes.Dup); // Duplicate the target of the element access expression
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Dup); // Duplicate the target of the element access expression
 
             var indexedType = Context.SemanticModel.GetTypeInfo(elementAccessExpressionSyntax.Expression).Type.EnsureNotNull();
             if (indexedType.Name == "Span")
@@ -1185,12 +1185,12 @@ namespace Cecilifier.Core.AST
             }
             else
             {
-                Context.EmitCilInstruction(ilVar, OpCodes.Ldlen);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldlen);
             }
 
-            Context.EmitCilInstruction(ilVar, OpCodes.Conv_I4);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Conv_I4);
             indexerExpression.Operand.Accept(this);
-            Context.EmitCilInstruction(ilVar, OpCodes.Sub);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Sub);
         }
 
         private bool TryProcessInvocationOnParameterlessImplicitCtorOnValueType(BaseObjectCreationExpressionSyntax node, SymbolInfo ctorInfo)
@@ -1233,7 +1233,7 @@ namespace Cecilifier.Core.AST
                 return;
             }
 
-            Context.EmitCilInstruction(ilVar, OpCodes.Ldnull);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldnull);
             CecilDefinitionsFactory.InstantiateDelegate(Context, ilVar, Context.GetTypeInfo(node).ConvertedType!, syntheticMethodVariable.VariableName, new StaticDelegateCacheContext
             {
                 IsStaticDelegate = false
@@ -1284,7 +1284,7 @@ namespace Cecilifier.Core.AST
                 // HandleLoadAddress() does not handle scenarios in which a value type instantiation is passed as an 
                 // 'in parameter' to a method (that method is already complex, so I don't want to make it even more
                 // complex)
-                Context.EmitCilInstruction(ilVar, RequiresAddressOfValue() ? OpCodes.Ldloca_S : OpCodes.Ldloc, tempLocalName);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, RequiresAddressOfValue() ? OpCodes.Ldloca_S : OpCodes.Ldloc, tempLocalName);
             }
 
             var parentMae = expressionSyntax.FirstAncestorOrSelf<MemberAccessExpressionSyntax>(ancestor => ancestor.Kind() == SyntaxKind.SimpleMemberAccessExpression);
@@ -1314,7 +1314,7 @@ namespace Cecilifier.Core.AST
             if (!propertySymbol.IsStatic && node.IsMemberAccessThroughImplicitThis())
             {
                 // if this is an *unqualified* access we need to load *this*
-                Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldarg_0);
             }
 
             var callOptions = node.Parent.MethodDispatchInformation();
@@ -1333,13 +1333,13 @@ namespace Cecilifier.Core.AST
         {
             if (propertySymbol.ContainingType.SpecialType == SpecialType.System_Array && propertySymbol.Name == "Length")
             {
-                Context.EmitCilInstruction(ilVar, OpCodes.Ldlen);
-                Context.EmitCilInstruction(ilVar, OpCodes.Conv_I4);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldlen);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Conv_I4);
             }
             else if (propertySymbol.ContainingType.SpecialType == SpecialType.System_Array && propertySymbol.Name == "LongLength")
             {
-                Context.EmitCilInstruction(ilVar, OpCodes.Ldlen);
-                Context.EmitCilInstruction(ilVar, OpCodes.Conv_I8);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldlen);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Conv_I8);
             }
             else
             {
@@ -1369,7 +1369,7 @@ namespace Cecilifier.Core.AST
             if (firstParentNotPartOfName is PrefixUnaryExpressionSyntax unaryPrefix && unaryPrefix.IsKind(SyntaxKind.AddressOfExpression))
             {
                 string operand = method.MethodResolverExpression(Context);
-                Context.EmitCilInstruction(ilVar, OpCodes.Ldftn, operand);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldftn, operand);
                 return;
             }
 
@@ -1397,7 +1397,7 @@ namespace Cecilifier.Core.AST
             // If we have a non-static method being referenced though an implicit "this" reference, load "this" onto stack 
             if (!method.IsStatic && !node.Parent.IsKind(SyntaxKind.ThisExpression) && node.Parent == firstParentNotPartOfName)
             {
-                Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldarg_0);
             }
 
             Debug.Assert(delegateType != null);
@@ -1421,7 +1421,7 @@ namespace Cecilifier.Core.AST
             // Local methods are always static.
             if (method.MethodKind != MethodKind.LocalFunction && !method.IsStatic && node.Parent.IsKind(SyntaxKind.InvocationExpression))
             {
-                Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldarg_0);
             }
             Context.EnsureForwardedMethod(method.OverriddenMethod ?? method.OriginalDefinition);
 
@@ -1567,7 +1567,7 @@ namespace Cecilifier.Core.AST
         private void ProcessImplicitArrayCreationExpression(InitializerExpressionSyntax initializer, ITypeSymbol typeSymbol)
         {
             var arrayType = typeSymbol.EnsureNotNull<ITypeSymbol, IArrayTypeSymbol>();
-            Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, initializer.Expressions.Count);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldc_I4, initializer.Expressions.Count);
             ProcessArrayCreation(arrayType.ElementType, initializer);
         }
 
@@ -1594,7 +1594,7 @@ namespace Cecilifier.Core.AST
                 && node.Kind().MapCompoundAssignment() == SyntaxKind.None
                 && nodeType.SpecialType != SpecialType.System_Void)
             {
-                ctx.EmitCilInstruction(ilVar, OpCodes.Pop);
+                ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Pop);
             }
         }
 
@@ -1606,11 +1606,11 @@ namespace Cecilifier.Core.AST
             var operatorMethod = r ?? l;
             if (operatorMethod != null)
             {
-                context.EmitCilInstruction(ilVar, OpCodes.Call, operatorMethod.MethodResolverExpression(context));
+                context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Call, operatorMethod.MethodResolverExpression(context));
             }
             else
             {
-                context.EmitCilInstruction(ilVar, OpCodes.Rem);
+                context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Rem);
             }
         }
     }

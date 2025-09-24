@@ -491,28 +491,28 @@ namespace Cecilifier.Core.Misc
                 staticDelegateCacheContext.EnsureCacheBackingFieldIsEmitted(context.TypeResolver.ResolveAny(delegateType));
                 LogWarningIfStaticMethodIsDeclaredInOtherType(context, staticDelegateCacheContext);
 
-                context.EmitCilInstruction(ilVar, OpCodes.Ldsfld, staticDelegateCacheContext.CacheBackingField);
-                context.EmitCilInstruction(ilVar, OpCodes.Dup);
+                context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Ldsfld, staticDelegateCacheContext.CacheBackingField);
+                context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Dup);
 
                 var cacheAlreadyInitializedTargetVarName = context.Naming.Label("cacheHit");
                 context.Generate($"var {cacheAlreadyInitializedTargetVarName} = {ilVar}.Create(OpCodes.Nop);");
                 context.WriteNewLine();
-                context.EmitCilInstruction(ilVar, OpCodes.Brtrue, cacheAlreadyInitializedTargetVarName);
-                context.EmitCilInstruction(ilVar, OpCodes.Pop);
-                context.EmitCilInstruction(ilVar, OpCodes.Ldnull);
-                context.EmitCilInstruction(ilVar, OpCodes.Ldftn, targetMethodExp);
+                context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Brtrue, cacheAlreadyInitializedTargetVarName);
+                context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Pop);
+                context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Ldnull);
+                context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Ldftn, targetMethodExp);
                 var delegateCtor = delegateType.GetMembers().OfType<IMethodSymbol>().FirstOrDefault(m => m.Name == ".ctor");
-                context.EmitCilInstruction(ilVar, OpCodes.Newobj, delegateCtor.MethodResolverExpression(context));
-                context.EmitCilInstruction(ilVar, OpCodes.Dup);
-                context.EmitCilInstruction(ilVar, OpCodes.Stsfld, staticDelegateCacheContext.CacheBackingField);
+                context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Newobj, delegateCtor.MethodResolverExpression(context));
+                context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Dup);
+                context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Stsfld, staticDelegateCacheContext.CacheBackingField);
                 context.Generate($"{ilVar}.Append({cacheAlreadyInitializedTargetVarName});");
                 context.WriteNewLine();
             }
             else
             {
-                context.EmitCilInstruction(ilVar, OpCodes.Ldftn, targetMethodExp);
+                context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Ldftn, targetMethodExp);
                 var delegateCtor = delegateType.GetMembers().OfType<IMethodSymbol>().FirstOrDefault(m => m.Name == ".ctor");
-                context.EmitCilInstruction(ilVar, OpCodes.Newobj, delegateCtor.MethodResolverExpression(context));
+                context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Newobj, delegateCtor.MethodResolverExpression(context));
             }
         }
 
@@ -545,21 +545,21 @@ namespace Cecilifier.Core.Misc
 
                 context.WriteNewLine();
                 context.WriteComment("Instantiates a List<T> passing the # of elements to its ctor.");
-                context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, elementCount);
-                context.EmitCilInstruction(ilVar, OpCodes.Newobj, listOfTTypeSymbol.Constructors.First(ctor => ctor.Parameters.Length == 1).MethodResolverExpression(context));
+                context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Ldc_I4, elementCount);
+                context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Newobj, listOfTTypeSymbol.Constructors.First(ctor => ctor.Parameters.Length == 1).MethodResolverExpression(context));
 
                 // Pushes an extra copy of the reference to the list instance into the stack
                 // to avoid introducing a local variable. This will be left at the top of the stack
                 // when the initialization code finishes.
-                context.EmitCilInstruction(ilVar, OpCodes.Dup);
+                context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Dup);
 
                 // Calls 'CollectionsMarshal.SetCount(list, num)' on the list.
                 var collectionMarshalTypeSymbol = context.SemanticModel.Compilation.GetTypeByMetadataName(typeof(System.Runtime.InteropServices.CollectionsMarshal).FullName!).EnsureNotNull();
                 var setCountMethod = collectionMarshalTypeSymbol.GetMembers("SetCount").OfType<IMethodSymbol>().Single().MethodResolverExpression(context).MakeGenericInstanceMethod(context, "SetCount", [ resolvedListTypeArgument ]); 
                 
-                context.EmitCilInstruction(ilVar, OpCodes.Dup);
-                context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, elementCount);
-                context.EmitCilInstruction(ilVar, OpCodes.Call, setCountMethod);
+                context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Dup);
+                context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Ldc_I4, elementCount);
+                context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Call, setCountMethod);
                 
                 context.WriteNewLine();
                 context.WriteComment("Add a Span<T> local variable and initialize it with `CollectionsMarshal.AsSpan(list)`");
@@ -567,10 +567,10 @@ namespace Cecilifier.Core.Misc
                     "listSpan", 
                     context.TypeResolver.ResolveAny(context.RoslynTypeSystem.SystemSpan).MakeGenericInstanceType(resolvedListTypeArgument));
 
-                context.EmitCilInstruction(ilVar, 
+                context.ApiDriver.WriteCilInstruction(context, ilVar, 
                     OpCodes.Call, 
                     collectionMarshalTypeSymbol.GetMembers("AsSpan").OfType<IMethodSymbol>().Single().MethodResolverExpression(context).MakeGenericInstanceMethod(context, "AsSpan", [ resolvedListTypeArgument ]));
-                context.EmitCilInstruction(ilVar, OpCodes.Stloc, spanToList.VariableName);
+                context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Stloc, spanToList.VariableName);
                 
                 return (spanToList, resolvedListTypeArgument);
             }

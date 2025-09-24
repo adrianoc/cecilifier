@@ -239,18 +239,6 @@ namespace Cecilifier.Core.Misc
         public void ClearFlag(string name)
         {
             flags.Remove(name);
-        }        
-
-        public void EmitCilInstruction<T>(string ilVar, OpCode opCode, T operand, string comment = null)
-        {
-            var operandStr = operand == null ? string.Empty : $", {operand}";
-            Generate($"{ilVar}.Emit({opCode.ConstantName()}{operandStr});{(comment != null ? $" // {comment}" : string.Empty)}");
-            WriteNewLine();
-        }
-
-        public void EmitCilInstruction(string ilVar, OpCode opCode)
-        {
-            EmitCilInstruction<string>(ilVar, opCode, null);
         }
     }
 }

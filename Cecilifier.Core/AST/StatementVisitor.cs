@@ -57,7 +57,7 @@ namespace Cecilifier.Core.AST
             Context.WriteComment($"for condition: {node.Condition.HumanReadableSummary()}");
             // Condition
             ExpressionVisitor.Visit(Context, _ilVar, node.Condition!);
-            Context.EmitCilInstruction(_ilVar, OpCodes.Brfalse, forEndLabel);
+            Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Brfalse, forEndLabel);
 
             // Body
             Context.WriteComment("for body");
@@ -70,7 +70,7 @@ namespace Cecilifier.Core.AST
                 ExpressionVisitor.VisitAndPopIfNotConsumed(Context, _ilVar, incrementExpression);
             }
 
-            Context.EmitCilInstruction(_ilVar, OpCodes.Br, forConditionLabel);
+            Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Br, forConditionLabel);
             WriteCecilExpression(Context, $"{_ilVar}.Append({forEndLabel});");
             breakToInstructionVars.Pop();
         }
@@ -81,7 +81,7 @@ namespace Cecilifier.Core.AST
             var evaluatedExpressionVariable = Context.AddLocalVariableToCurrentMethod("switchCondition", switchExpressionType).VariableName;
 
             ExpressionVisitor.Visit(Context, _ilVar, node.Expression);
-            Context.EmitCilInstruction(_ilVar, OpCodes.Stloc, evaluatedExpressionVariable); // stores evaluated expression in local var
+            Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Stloc, evaluatedExpressionVariable); // stores evaluated expression in local var
 
             // Add label to end of switch
             var endOfSwitchLabel = CreateCilInstruction(_ilVar, Context.Naming.Label("endOfSwitch"), OpCodes.Nop);
@@ -101,7 +101,7 @@ namespace Cecilifier.Core.AST
             {
                 if (switchSection.Labels.First().Kind() == SyntaxKind.DefaultSwitchLabel)
                 {
-                    Context.EmitCilInstruction(_ilVar, OpCodes.Br, nextTestLabels[currentLabelIndex]);
+                    Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Br, nextTestLabels[currentLabelIndex]);
                     hasDefault = true;
                     continue;
                 }
@@ -112,9 +112,9 @@ namespace Cecilifier.Core.AST
                     
                     Context.WriteNewLine();
                     Context.WriteComment($"{sectionLabel.ToString()} (condition)");
-                    Context.EmitCilInstruction(_ilVar, OpCodes.Ldloc, evaluatedExpressionVariable);
+                    Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloc, evaluatedExpressionVariable);
                     ExpressionVisitor.Visit(Context, _ilVar, sectionLabel);
-                    Context.EmitCilInstruction(_ilVar, OpCodes.Beq_S, nextTestLabels[currentLabelIndex]);
+                    Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Beq_S, nextTestLabels[currentLabelIndex]);
                 }
                 currentLabelIndex++;
             }
@@ -122,7 +122,7 @@ namespace Cecilifier.Core.AST
             // if at runtime the code hits this point and the switch does not have a default section
             // it means none of the labels matched so just jump to the end of the switch.
             if (!hasDefault)
-                Context.EmitCilInstruction(_ilVar, OpCodes.Br, endOfSwitchLabel);
+                Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Br, endOfSwitchLabel);
 
             // Write the statements for each switch section...
             currentLabelIndex = 0;
@@ -153,7 +153,7 @@ namespace Cecilifier.Core.AST
                 throw new InvalidOperationException("Invalid break.");
             }
 
-            Context.EmitCilInstruction(_ilVar, OpCodes.Br, breakToInstructionVars.Peek());
+            Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Br, breakToInstructionVars.Peek());
         }
 
         public override void VisitFixedStatement(FixedStatementSyntax node)
@@ -176,7 +176,7 @@ namespace Cecilifier.Core.AST
         public override void VisitReturnStatement(ReturnStatementSyntax node)
         {
             ExpressionVisitor.Visit(Context, _ilVar, node);
-            Context.EmitCilInstruction(_ilVar, OpCodes.Ret);
+            Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ret);
         }
 
         public override void VisitExpressionStatement(ExpressionStatementSyntax node)
@@ -190,7 +190,7 @@ namespace Cecilifier.Core.AST
 
             var elsePrologVarName = Context.Naming.Label("elseEntryPoint");
             WriteCecilExpression(Context, $"var {elsePrologVarName} = {_ilVar}.Create(OpCodes.Nop);");
-            Context.EmitCilInstruction(_ilVar, OpCodes.Brfalse, elsePrologVarName);
+            Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Brfalse, elsePrologVarName);
 
             Context.WriteComment("if body");
             node.Statement.Accept(this);
@@ -264,20 +264,20 @@ namespace Cecilifier.Core.AST
                 string? lastFinallyInstructionLabel = null;
                 if (usingType.TypeKind == TypeKind.TypeParameter || usingType.IsValueType)
                 {
-                    Context.EmitCilInstruction(_ilVar, OpCodes.Ldloca, localVarDef);
-                    Context.EmitCilInstruction(_ilVar, OpCodes.Constrained, $"{localVarDef}.VariableType");
+                    Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloca, localVarDef);
+                    Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Constrained, $"{localVarDef}.VariableType");
                 }
                 else
                 {
                     lastFinallyInstructionLabel = Context.Naming.SyntheticVariable("endFinally", ElementKind.Label);
 
-                    Context.EmitCilInstruction(_ilVar, OpCodes.Ldloc, localVarDef);
+                    Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloc, localVarDef);
                     CreateCilInstruction(_ilVar, lastFinallyInstructionLabel, OpCodes.Nop);
-                    Context.EmitCilInstruction(_ilVar, OpCodes.Brfalse, lastFinallyInstructionLabel, "check if the disposable is not null");
-                    Context.EmitCilInstruction(_ilVar, OpCodes.Ldloc, localVarDef);
+                    Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Brfalse, lastFinallyInstructionLabel, "check if the disposable is not null");
+                    Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloc, localVarDef);
                 }
 
-                Context.EmitCilInstruction(_ilVar, OpCodes.Callvirt, Context.RoslynTypeSystem.SystemIDisposable.GetMembers("Dispose").OfType<IMethodSymbol>().Single().MethodResolverExpression(Context));
+                Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Callvirt, Context.RoslynTypeSystem.SystemIDisposable.GetMembers("Dispose").OfType<IMethodSymbol>().Single().MethodResolverExpression(Context));
                 if (lastFinallyInstructionLabel != null)
                     AddCecilExpression($"{_ilVar}.Append({lastFinallyInstructionLabel});");
             }
@@ -323,7 +323,7 @@ namespace Cecilifier.Core.AST
 
             if (isIndexExpression || isDefaultLiteralExpressionOnNonPrimitiveValueType || isNullAssignmentToNullableValueType)
             {
-                Context.EmitCilInstruction(_ilVar, OpCodes.Ldloca, localVarDef.VariableName);
+                Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloca, localVarDef.VariableName);
             }
 
             if (ExpressionVisitor.Visit(Context, _ilVar, localVar.Initializer))
@@ -335,10 +335,10 @@ namespace Cecilifier.Core.AST
             if (!variableType.IsByRef() && valueBeingAssignedIsByRef)
             {
                 OpCode opCode = variableType.LdindOpCodeFor();
-                Context.EmitCilInstruction(_ilVar, opCode);
+                Context.ApiDriver.WriteCilInstruction(Context, _ilVar, opCode);
             }
 
-            Context.EmitCilInstruction(_ilVar, OpCodes.Stloc, localVarDef.VariableName);
+            Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Stloc, localVarDef.VariableName);
         }
 
         private void HandleVariableDeclaration(VariableDeclarationSyntax declaration)

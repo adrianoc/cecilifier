@@ -153,24 +153,24 @@ public class PrimaryConstructorGenerator
             if (!uniqueParameters.Contains(parameter))
                 continue;
             
-            context.EmitCilInstruction(ilContext.VariableName, OpCodes.Ldarg_0);
-            context.EmitCilInstruction(ilContext.VariableName, OpCodes.Ldarg, paramVar);
+            context.ApiDriver.WriteCilInstruction(context, ilContext.VariableName, OpCodes.Ldarg_0);
+            context.ApiDriver.WriteCilInstruction(context, ilContext.VariableName, OpCodes.Ldarg, paramVar);
 
             var backingFieldVar = context.DefinitionVariables.GetVariable(Utils.BackingFieldNameForAutoProperty(parameter.Identifier.ValueText), VariableMemberKind.Field, typeSymbol.OriginalDefinition.ToDisplayString());
             if (!backingFieldVar.IsValid)
                 throw new InvalidOperationException($"Backing field variable for property '{parameter.Identifier.ValueText}' could not be found.");
 
-            context.EmitCilInstruction(ilContext.VariableName, OpCodes.Stfld, fieldRefResolver(backingFieldVar.VariableName));
+            context.ApiDriver.WriteCilInstruction(context, ilContext.VariableName, OpCodes.Stfld, fieldRefResolver(backingFieldVar.VariableName));
         }
 
         if (!typeSymbol.IsValueType)
             InvokeBaseConstructor(context, ilContext.VariableName, typeDeclaration);
-        context.EmitCilInstruction(ilContext.VariableName, OpCodes.Ret);
+        context.ApiDriver.WriteCilInstruction(context, ilContext.VariableName, OpCodes.Ret);
 
         static void InvokeBaseConstructor(IVisitorContext context, string ctorIlVar, TypeDeclarationSyntax typeDeclaration)
         {
             var baseCtor = string.Empty;
-            context.EmitCilInstruction(ctorIlVar, OpCodes.Ldarg_0);
+            context.ApiDriver.WriteCilInstruction(context, ctorIlVar, OpCodes.Ldarg_0);
         
             var primaryConstructorBase = typeDeclaration.BaseList?.Types.OfType<PrimaryConstructorBaseTypeSyntax>().SingleOrDefault();
             if (primaryConstructorBase != null)
@@ -187,7 +187,7 @@ public class PrimaryConstructorGenerator
                 baseCtor = context.RoslynTypeSystem.SystemObject.GetMembers().OfType<IMethodSymbol>().Single(m => m is { Name: ".ctor" }).MethodResolverExpression(context);
             }
         
-            context.EmitCilInstruction(ctorIlVar, OpCodes.Call, baseCtor);
+            context.ApiDriver.WriteCilInstruction(context, ctorIlVar, OpCodes.Call, baseCtor);
         }
     }
 }

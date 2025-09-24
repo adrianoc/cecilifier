@@ -216,7 +216,7 @@ namespace Cecilifier.Core.AST
                 Context.WriteComment(dec.HumanReadableSummary());
 
                 if (!dec.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword)))
-                    Context.EmitCilInstruction(ctorBodyIL, OpCodes.Ldarg_0);
+                    Context.ApiDriver.WriteCilInstruction(Context, ctorBodyIL, OpCodes.Ldarg_0);
 
                 if (ExpressionVisitor.Visit(Context, ctorBodyIL, dec.Initializer))
                     continue;
@@ -226,7 +226,7 @@ namespace Cecilifier.Core.AST
                     ? OpCodes.Stsfld
                     : OpCodes.Stfld;
 
-                Context.EmitCilInstruction(ctorBodyIL, fieldStoreOpCode, backingFieldVar.VariableName);
+                Context.ApiDriver.WriteCilInstruction(Context, ctorBodyIL, fieldStoreOpCode, backingFieldVar.VariableName);
             }
         }
 
@@ -245,7 +245,7 @@ namespace Cecilifier.Core.AST
             // in this case we need to load the address of the field since the expression ^5 (IndexerExpression) will result in a call to System.Index ctor (which is a value type and expects
             // the address of the value type to be in the top of the stack
             var operand = Context.DefinitionVariables.GetVariable(dec.Identifier.Text, VariableMemberKind.Field, declaringTypeSymbol.ToDisplayString()).VariableName;
-            Context.EmitCilInstruction(il, OpCodes.Ldflda, operand);
+            Context.ApiDriver.WriteCilInstruction(Context, il, OpCodes.Ldflda, operand);
             ExpressionVisitor.Visit(Context, il, dec.Initializer);
             return true;
         }
