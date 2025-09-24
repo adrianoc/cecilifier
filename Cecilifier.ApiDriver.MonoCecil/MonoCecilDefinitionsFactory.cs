@@ -44,17 +44,15 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
         return exps;
     }
 
-    public IEnumerable<string> Method(
-        IVisitorContext context, 
-        MemberDefinitionContext memberDefinitionContext, 
-        string declaringTypeName, 
-        string methodNameForVariableRegistration, 
-        string methodName, 
-        string methodModifiers, 
+    public IEnumerable<string> Method(IVisitorContext context,
+        MemberDefinitionContext memberDefinitionContext,
+        string declaringTypeName,
+        string methodNameForVariableRegistration,
+        string methodName,
+        string methodModifiers,
         IReadOnlyList<ParameterSpec> parameters,
-        IList<string> typeParameters, 
-        ITypeSymbol returnType, 
-        out MethodDefinitionVariable methodDefinitionVariable)
+        IList<string> typeParameters,
+        ITypeSymbol returnType)
     {
         var exps = CecilDefinitionsFactory.Method(
                             context, 
@@ -66,7 +64,7 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
                             parameters, 
                             typeParameters, 
                             ctx => ctx.TypeResolver.ResolveAny(returnType),
-                            out methodDefinitionVariable);
+                            out _);
         
         exps =  [
             ..exps, 

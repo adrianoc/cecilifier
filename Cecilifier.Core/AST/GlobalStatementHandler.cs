@@ -46,8 +46,7 @@ namespace Cecilifier.Core.AST
                                                     "MethodAttributes.Private | MethodAttributes.HideBySig | MethodAttributes.Static",
                                                     [new ParameterSpec("args", context.TypeResolver.MakeArrayType(context.RoslynTypeSystem.SystemString), RefKind.None, Constants.ParameterAttributes.None)],
                                                     [],
-                                                    hasReturnStatement ? context.RoslynTypeSystem.SystemInt32 : context.RoslynTypeSystem.SystemVoid,
-                                                    out _);
+                                                    hasReturnStatement ? context.RoslynTypeSystem.SystemInt32 : context.RoslynTypeSystem.SystemVoid);
             context.Generate(methodExps);
             
             var mainBodyExps = context.ApiDefinitionsFactory.MethodBody(context, "topLevelMain", ilContext, [], []);

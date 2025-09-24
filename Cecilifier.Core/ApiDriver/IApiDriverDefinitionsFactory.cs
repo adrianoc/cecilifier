@@ -31,8 +31,7 @@ public interface IApiDriverDefinitionsFactory
     public IEnumerable<string> Method(IVisitorContext context, IMethodSymbol methodSymbol, MemberDefinitionContext memberDefinitionContext, string methodName, string methodModifiers,
         IParameterSymbol[] resolvedParameterTypes, IList<TypeParameterSyntax> typeParameters);
 
-    public IEnumerable<string> Method(
-        IVisitorContext context,
+    public IEnumerable<string> Method(IVisitorContext context,
         MemberDefinitionContext memberDefinitionContext,
         string declaringTypeName,
         string methodNameForVariableRegistration, // we can't use the method name in some scenarios (indexers, for instance) 
@@ -40,8 +39,8 @@ public interface IApiDriverDefinitionsFactory
         string methodModifiers,
         IReadOnlyList<ParameterSpec> parameters,
         IList<string> typeParameters,
-        ITypeSymbol returnType,
-        out MethodDefinitionVariable methodDefinitionVariable);
+        ITypeSymbol returnType
+    );
 
     public IEnumerable<string> Constructor(IVisitorContext context, MemberDefinitionContext memberDefinitionContext, string typeName, bool isStatic, string methodAccessibility, string[] paramTypes, string? methodDefinitionPropertyValues = null);
     //TODO: Can we compute 'fieldAttributes` based of `field` ? 
