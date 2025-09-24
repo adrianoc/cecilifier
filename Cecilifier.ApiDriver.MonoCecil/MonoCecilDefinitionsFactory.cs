@@ -69,7 +69,6 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
         exps =  [
             ..exps, 
             $"{memberDefinitionContext.ParentDefinitionVariableName}.Methods.Add({memberDefinitionContext.MemberDefinitionVariableName});",
-            $"{memberDefinitionContext.MemberDefinitionVariableName}.Body.InitLocals = true;"
         ];
         
         return exps;
@@ -78,11 +77,11 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
     public IEnumerable<string> MethodBody(IVisitorContext context, string methodName, IlContext ilContext, string[] localVariableTypes, InstructionRepresentation[] instructions)
     {
         var tagToInstructionDefMapping = new Dictionary<string, string>();
-        yield return $"{ilContext.RelatedMethodVariable}.Body = new MethodBody({ilContext.RelatedMethodVariable});";
+        yield return $"{ilContext.RelatedMethodVariable}.Body = new MethodBody({ilContext.RelatedMethodVariable});"; 
+        yield return $"{ilContext.RelatedMethodVariable}.Body.InitLocals = true;";
 
         if (localVariableTypes.Length > 0)
         {
-            yield return $"{ilContext.RelatedMethodVariable}.Body.InitLocals = true;";
             foreach (var localVariableType in localVariableTypes)
             {
                 yield return $"{ilContext.RelatedMethodVariable}.Body.Variables.Add({LocalVariable(localVariableType)});";
