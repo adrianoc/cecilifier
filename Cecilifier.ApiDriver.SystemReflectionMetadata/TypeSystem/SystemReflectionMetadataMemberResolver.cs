@@ -16,15 +16,13 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
         if (found.IsValid)
             return found.VariableName;
             
-        //TODO: Try this var containingTypeRefVar= context.TypeResolver.ResolveLocalVariableType(method.ContainingType);
         var containingTypeRefVar= context.TypeResolver.ResolveAny(method.ContainingType);
         var methodSignatureBlobVar = context.Naming.SyntheticVariable($"{method.ToValidVariableName()}Signature", ElementKind.LocalVariable);
         var methodRefVar = context.Naming.SyntheticVariable($"{method.ToValidVariableName()}Ref", ElementKind.LocalVariable);
         
         var methodSignatureVar = context.Naming.SyntheticVariable($"{method.Name}Signature", ElementKind.LocalVariable);
-        //TODO: This should call RegisterMethod() as opposed to RegisterNonMethod(). Also need to fix the location that is retrieving the method variable.
-        context.DefinitionVariables.RegisterNonMethod(method.ContainingSymbol.ToDisplayString(), method.Name, VariableMemberKind.MethodSignature, methodSignatureVar);
-        
+        context.DefinitionVariables.RegisterMethod(method.AsMethodVariable(VariableMemberKind.MethodSignature, methodSignatureVar));
+
         context.Generate($$"""
                             var {{methodSignatureBlobVar}} = new BlobBuilder();
 

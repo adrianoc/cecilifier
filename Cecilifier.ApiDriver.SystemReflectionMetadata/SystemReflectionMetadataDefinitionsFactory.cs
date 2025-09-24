@@ -62,7 +62,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
 
         ((SystemReflectionMetadataContext) context).DelayedDefinitionsManager.RegisterMethodDefinition(memberDefinitionContext.ParentDefinitionVariableName, (ctx, methodRecord) =>
         {
-            var methodSignatureVar = ctx.DefinitionVariables.GetVariable(methodSymbol.Name, VariableMemberKind.MethodSignature, methodSymbol.ContainingSymbol.ToDisplayString());
+            var methodSignatureVar = ctx.DefinitionVariables.GetMethodVariable(methodSymbol.AsMethodVariable(VariableMemberKind.MethodSignature));
             Debug.Assert(methodSignatureVar.IsValid);
             
             var methodDefVar = context.Naming.SyntheticVariable(methodName, ElementKind.Method);
@@ -86,17 +86,15 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         yield break;
     }
 
-    public IEnumerable<string> Method(
-        IVisitorContext context,
+    public IEnumerable<string> Method(IVisitorContext context,
         MemberDefinitionContext memberDefinitionContext,
-        string declaringTypeName, 
-        string methodNameForVariableRegistration, 
-        string methodName, 
-        string methodModifiers, 
+        string declaringTypeName,
+        string methodNameForVariableRegistration,
+        string methodName,
+        string methodModifiers,
         IReadOnlyList<ParameterSpec> parameters,
-        IList<string> typeParameters, 
-        ITypeSymbol returnType, 
-        out MethodDefinitionVariable methodDefinitionVariable)
+        IList<string> typeParameters,
+        ITypeSymbol returnType)
     {
         var typedTypeResolver = (SystemReflectionMetadataTypeResolver) context.TypeResolver;
         context.MemberResolver.ResolveMethod(
@@ -143,9 +141,6 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
             
             return methodDefVar;
         });
-        
-        //TODO: Can re remove methodDefinitionVariable ?
-        methodDefinitionVariable = new MethodDefinitionVariable(VariableMemberKind.Method, string.Empty, string.Empty, null, 0);
         
         return [];
     }
