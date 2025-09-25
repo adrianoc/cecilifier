@@ -46,6 +46,5 @@ internal abstract class CecilifierContextBasedTestBase<TContext> where TContext 
         return context.SemanticModel.SyntaxTree.GetRoot().DescendantNodes().OfType<MethodDeclarationSyntax>().Single(m => m.Identifier.Text == methodName);
     }
     
-    //TODO: Is this test ILApiDriver specific ? for now only test for Mono.Cecil.
     protected TContext NewContext() => (TContext) TContext.CreateContext(new CecilifierOptions(), _comp.GetSemanticModel(_comp.SyntaxTrees[0]));
 }

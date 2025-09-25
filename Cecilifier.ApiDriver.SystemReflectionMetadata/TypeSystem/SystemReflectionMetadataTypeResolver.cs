@@ -59,7 +59,6 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
 
     public override string MakeArrayType(ITypeSymbol elementType)
     {
-        //TODO: What about arrays of references? Wouldn't those require isByRef: true ? 
         return $"Type().SZArray().{ResolveForEncoder(elementType, TargetEncoderKind.ArrayElementType, isByRef: false)}";
     }
 

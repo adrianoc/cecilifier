@@ -186,6 +186,8 @@ namespace Cecilifier.Core.AST
             var found = Context.DefinitionVariables.GetMethodVariable(tbf);
             if (found.IsValid)
             {
+                //TODO: Move this code to IApiDriverDefinitionsFactory.XXXForwardedMethod() (in SRM most likely we'll do nothing)
+
                 AddCecilExpression("{0}.Attributes = {1};", found.VariableName, methodModifiers);
                 AddCecilExpression("{0}.HasThis = !{0}.IsStatic;", found.VariableName);
                 
@@ -196,12 +198,9 @@ namespace Cecilifier.Core.AST
                     var ilContext = Context.ApiDriver.NewIlContext(Context, simpleName, found.VariableName);
                     ilVar = ilContext.VariableName;
                 }
-                //TODO: Move this code to IApiDriverDefinitionsFactory.XXXForwardedMethod() (in SRM most likely we'll do nothing)
-                if (Context.GetType().Name == "MonoCecilContext")
-                {
-                    var declaringTypeVarName = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Type).VariableName;
-                    Context.Generate($"{declaringTypeVarName}.Methods.Add({found.VariableName});");
-                }
+                
+                var declaringTypeVarName = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Type).VariableName;
+                Context.Generate($"{declaringTypeVarName}.Methods.Add({found.VariableName});");
                 return found.VariableName;
             }
 

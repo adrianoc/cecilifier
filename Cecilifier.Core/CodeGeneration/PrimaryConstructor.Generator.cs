@@ -128,7 +128,8 @@ public class PrimaryConstructorGenerator
             $"{recordTypeDefinitionVariable}.Methods.Add({ctorVar});"
         ]);
 
-        //TODO: What happens if the record has a primary ctor with no params? will the ctor have a body (it would be added later in this method...) ? is it even possible? 
+        // parameterless primary constructors still have a body comprised of a single return.
+        // in this scenario Parameters will be an empty list.
         if (typeDeclaration.ParameterList?.Parameters == null)
             return;
         

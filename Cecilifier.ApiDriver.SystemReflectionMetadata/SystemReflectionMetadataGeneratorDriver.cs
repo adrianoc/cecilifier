@@ -170,5 +170,4 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
             
         return reflectionOpCodeName;
     }
-
 }
