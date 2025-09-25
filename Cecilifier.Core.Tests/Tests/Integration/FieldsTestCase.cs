@@ -15,6 +15,9 @@ namespace Cecilifier.Core.Tests.Integration
         nameof(TestInitializedFieldSingleCtor), 
         nameof(TestAssignment), 
         nameof(TestExternalFieldAccess),
+        nameof(TestQualifiedFieldAccess),
+        nameof(TestSingleFieldMultipleModifiers),
+        nameof(TestSingleRefField),
         nameof(TestInitializedFieldNoCtor),
         nameof(TestInitializedFieldWithBaseCtor),
         nameof(TestInitializedFieldMultipleCtor))]
