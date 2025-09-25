@@ -1,8 +1,9 @@
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 namespace Cecilifier.ApiDriver.SystemReflectionMetadata.DelayedDefinitions;
 
-//TODO: Handle fields && parameters
+//TODO: Handle parameters
 /// <summary>
 /// System.Reflection.Metadata model requires members (methods, field) as well as parameters
 /// to be defined before the containing member (type, method, property) whereas Cecilifier
@@ -14,10 +15,12 @@ namespace Cecilifier.ApiDriver.SystemReflectionMetadata.DelayedDefinitions;
 /// </summary>
 public class DelayedDefinitionsManager
 {
-    private List<TypeDefinitionRecord> _postponedTypeDefinitionDetails = new();
-    private List<MethodDefinitionRecord> _postponedMethodDefinitionDetails = new();
+    private readonly List<TypeDefinitionRecord> _postponedTypeDefinitionDetails = new();
+    private readonly List<MethodDefinitionRecord> _postponedMethodDefinitionDetails = new();
+    private readonly Dictionary<string, string> _firstFieldByTypeVariable = new();
 
-    private string? _firstMethodHandleVariable = null;
+    private string? _firstMethodHandleVariable;
+    private string? _firstFieldHandleVariable;
 
     internal void RegisterTypeDefinition(string typeVarName, string typeQualifiedName, Action<SystemReflectionMetadataContext, TypeDefinitionRecord> action)
     {
@@ -33,6 +36,12 @@ public class DelayedDefinitionsManager
     {
         _postponedMethodDefinitionDetails.Add(new MethodDefinitionRecord(newMethodFunc, declaringTypeVarName));
     }
+    
+    internal void RegisterFieldDefinition(string parentDefinitionVariableName, string fieldVariableName)
+    {
+        _firstFieldHandleVariable ??= fieldVariableName;
+        _firstFieldByTypeVariable.TryAdd(parentDefinitionVariableName, fieldVariableName);
+    }
 
     internal void ProcessDefinitions(SystemReflectionMetadataContext context)
     {
@@ -40,6 +49,40 @@ public class DelayedDefinitionsManager
             return;
         
         var postponedTypeDefinitions = CollectionsMarshal.AsSpan(_postponedTypeDefinitionDetails);
+
+        ProcessFields(postponedTypeDefinitions);
+        ProcessMethodRecords(context, postponedTypeDefinitions);
+        UpdateTypeDefinitionRecords(postponedTypeDefinitions);
+
+        foreach (var typeRecord in _postponedTypeDefinitionDetails)
+        {
+            typeRecord.DefinitionFunction(context, typeRecord);
+        }
+
+        _postponedMethodDefinitionDetails.Clear();
+        _postponedTypeDefinitionDetails.Clear();
+        
+        _firstMethodHandleVariable = null;
+        _firstFieldHandleVariable = null;
+    }
+
+    private void ProcessFields(Span<TypeDefinitionRecord> postponedTypeDefinitions)
+    {
+        foreach (var (typeVar, fieldVar) in _firstFieldByTypeVariable)
+        {
+            for (int i = 0; i < postponedTypeDefinitions.Length; i++)
+            {
+                if (postponedTypeDefinitions[i].TypeVarName == typeVar)
+                {
+                    Debug.Assert(postponedTypeDefinitions[i].FirstFieldHandle == null);
+                    postponedTypeDefinitions[i].FirstFieldHandle = fieldVar;
+                }
+            }
+        }
+    }
+    
+    private void ProcessMethodRecords(SystemReflectionMetadataContext context, Span<TypeDefinitionRecord> postponedTypeDefinitions)
+    {
         foreach (var methodRecord in _postponedMethodDefinitionDetails)
         {
             var methodHandleVariableName = methodRecord.DefinitionFunction(context, methodRecord);
@@ -53,24 +96,22 @@ public class DelayedDefinitionsManager
                 }
             }
         }
-        
+    }
+
+    private void UpdateTypeDefinitionRecords(Span<TypeDefinitionRecord> postponedTypeDefinitions)
+    {
         _firstMethodHandleVariable ??= "MetadataTokens.MethodDefinitionHandle(1)";
+        _firstFieldHandleVariable ??= "MetadataTokens.FieldDefinitionHandle(1)";
         
         postponedTypeDefinitions[^1].FirstMethodHandle ??= _firstMethodHandleVariable;
+        postponedTypeDefinitions[^1].FirstFieldHandle ??= _firstFieldHandleVariable;
         
-        // updates the type definition records with the method/parameter/field handles
         for (var index = _postponedTypeDefinitionDetails.Count - 2; index >= 0; index--)
         {
             ref var typeRecord = ref postponedTypeDefinitions[index];
-            typeRecord.FirstMethodHandle ??= postponedTypeDefinitions[index + 1].FirstMethodHandle ??  _firstMethodHandleVariable;
+            typeRecord.FirstMethodHandle ??= postponedTypeDefinitions[index + 1].FirstMethodHandle;
+            typeRecord.FirstFieldHandle ??= postponedTypeDefinitions[index + 1].FirstFieldHandle;
+            //typeRecord.FirstFieldHandle ??= postponedTypeDefinitions[index + 1].FirstFieldHandle ??  _firstFieldHandleVariable;
         }
-
-        foreach (var typeRecord in _postponedTypeDefinitionDetails)
-        {
-            typeRecord.DefinitionFunction(context, typeRecord);
-        }
-
-        _postponedMethodDefinitionDetails.Clear();
-        _postponedTypeDefinitionDetails.Clear();
     }
 }

@@ -1,19 +1,15 @@
-using System.Collections.Generic;
-using Cecilifier.ApiDriver.SystemReflectionMetadata;
-using Cecilifier.ApiDriver.SystemReflectionMetadata.DelayedDefinitions;
-using Cecilifier.Core.Tests.Tests.Unit.Framework;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Tests.Unit.ApiDriver;
 
 [TestFixture]
-internal class DelayedDefinitionsManagerTests : CecilifierContextBasedTestBase<SystemReflectionMetadataContext>
+internal partial class DelayedDefinitionsManagerTests
 {
     [TestCase("T1V", "T2V")]
     [TestCase("T1V")]
     public void NoMethods(params string[] typeVariables)
     {
-        var testContext = new TestContext();
+        var testContext = new DelayedDefinitionsManagerTestContext();
         var context = NewContext();
         
         foreach (var typeVariable in typeVariables)
@@ -30,7 +26,7 @@ internal class DelayedDefinitionsManagerTests : CecilifierContextBasedTestBase<S
     [Test]
     public void SingleTypeWithSingleMethod()
     {
-        var testContext = new TestContext();
+        var testContext = new DelayedDefinitionsManagerTestContext();
         var context = NewContext();
         
         context.DelayedDefinitionsManager.RegisterMethodDefinition("T1V", (ctx, tdr) => "T1M1");
@@ -44,7 +40,7 @@ internal class DelayedDefinitionsManagerTests : CecilifierContextBasedTestBase<S
     [Test]
     public void SingleTypeWithTwoMethods()
     {
-        var testContext = new TestContext();
+        var testContext = new DelayedDefinitionsManagerTestContext();
         
         var context = NewContext();
         context.DelayedDefinitionsManager.RegisterMethodDefinition("T1V1", (ctx, tdr) => "T1M1");
@@ -60,7 +56,7 @@ internal class DelayedDefinitionsManagerTests : CecilifierContextBasedTestBase<S
     [TestCase("T2V")]
     public void TwoTypes_MethodOnlyInOne(string declaringTypeName)
     {
-        var testContext = new TestContext();
+        var testContext = new DelayedDefinitionsManagerTestContext();
         var context = NewContext();
         
         context.DelayedDefinitionsManager.RegisterMethodDefinition(declaringTypeName, (ctx, tdr) => "TheMethod");
@@ -76,7 +72,7 @@ internal class DelayedDefinitionsManagerTests : CecilifierContextBasedTestBase<S
     [Test]
     public void TwoTypes_MethodsInBoth()
     {
-        var testContext = new TestContext();
+        var testContext = new DelayedDefinitionsManagerTestContext();
         var context = NewContext();
         
         context.DelayedDefinitionsManager.RegisterMethodDefinition("T1V", (ctx, tdr) => "T1M");
@@ -93,7 +89,7 @@ internal class DelayedDefinitionsManagerTests : CecilifierContextBasedTestBase<S
     [Test]
     public void TreeTypes_MethodsInLastTwo()
     {
-        var testContext = new TestContext();
+        var testContext = new DelayedDefinitionsManagerTestContext();
         var context = NewContext();
         
         context.DelayedDefinitionsManager.RegisterMethodDefinition("T2V", (ctx, tdr) => "T2M");
@@ -112,7 +108,7 @@ internal class DelayedDefinitionsManagerTests : CecilifierContextBasedTestBase<S
     [Test]
     public void FourTypes_MethodsInSecondAndLastOnes()
     {
-        var testContext = new TestContext();
+        var testContext = new DelayedDefinitionsManagerTestContext();
         var context = NewContext();
         
         context.DelayedDefinitionsManager.RegisterMethodDefinition("T2V", (ctx, tdr) => "T2M");
@@ -131,14 +127,4 @@ internal class DelayedDefinitionsManagerTests : CecilifierContextBasedTestBase<S
     }
     
     protected override string Snippet => "class NotRelevant {}"; 
-}
-
-record TestContext
-{
-    public Dictionary<string, TypeDefinitionRecord> Result { get; } = new();
-
-    public void OnTypeRegistration(SystemReflectionMetadataContext context, TypeDefinitionRecord typeDefinitionRecord)
-    {
-        Result[typeDefinitionRecord.TypeVarName] = typeDefinitionRecord;
-    }
 }

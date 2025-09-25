@@ -176,6 +176,8 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
 
     public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext memberDefinitionContext, ISymbol fieldOrEvent, ITypeSymbol fieldType, string fieldAttributes, bool isVolatile, bool isByRef, object? constantValue = null)
     {
+        ((SystemReflectionMetadataContext) context).DelayedDefinitionsManager.RegisterFieldDefinition(memberDefinitionContext.ParentDefinitionVariableName, memberDefinitionContext.MemberDefinitionVariableName);
+        
         //TODO: Handle isByRef
         Debug.Assert(isByRef == false, "Handle isByRef");
         var typedTypeResolver = (SystemReflectionMetadataTypeResolver) context.TypeResolver;
@@ -196,6 +198,8 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
 
     public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext memberDefinitionContext, string declaringTypeName, string name, string fieldType, string fieldAttributes, bool isVolatile, bool isByRef, object? constantValue = null)
     {
+        ((SystemReflectionMetadataContext) context).DelayedDefinitionsManager.RegisterFieldDefinition(memberDefinitionContext.ParentDefinitionVariableName, memberDefinitionContext.MemberDefinitionVariableName);
+        
         context.DefinitionVariables.RegisterNonMethod(declaringTypeName, name, VariableMemberKind.Field, memberDefinitionContext.MemberDefinitionVariableName);
         var fieldSignatureVar = context.Naming.SyntheticVariable($"{name}_fs", ElementKind.LocalVariable);
         return [

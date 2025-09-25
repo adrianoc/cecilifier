@@ -112,7 +112,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
 
     public string ResolveDefaultConstructor(ITypeSymbol baseType, string derivedTypeVar)
     {
-        var voidParameterlessMethodRef = context.DefinitionVariables.GetVariable("voidParameterlessMethodRef", VariableMemberKind.LocalVariable);
+        var voidParameterlessMethodRef = context.DefinitionVariables.GetVariable("voidParameterlessMethodRef", VariableMemberKind.MethodReference);
         if (!voidParameterlessMethodRef.IsValid)
         {
             var voidParameterlessMethodRefVarName = context.Naming.SyntheticVariable("voidParameterlessMethodRef", ElementKind.LocalVariable);
@@ -131,7 +131,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
                                                                                                     parameterlessCtorBlobIndex);
                                           """);
             
-            voidParameterlessMethodRef = context.DefinitionVariables.RegisterNonMethod("", "voidParameterlessMethodRef", VariableMemberKind.LocalVariable, voidParameterlessMethodRefVarName);
+            voidParameterlessMethodRef = context.DefinitionVariables.RegisterNonMethod("", "voidParameterlessMethodRef", VariableMemberKind.MethodReference, voidParameterlessMethodRefVarName);
         }
         
         return voidParameterlessMethodRef.VariableName;
