@@ -1,4 +1,5 @@
 using System.Reflection.Emit;
+using Cecilifier.Core.ApiDriver;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Cecilifier.Core.Extensions;
@@ -21,8 +22,7 @@ namespace Cecilifier.Core.AST
             var info = Context.SemanticModel.GetSymbolInfo(node);
             var targetCtor = (IMethodSymbol) info.Symbol;
 
-            string operand = targetCtor.MethodResolverExpression(Context);
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Call, operand);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Call, new CilMetadataHandle(targetCtor.MethodResolverExpression(Context)));
 
             var declaringType = (BaseTypeDeclarationSyntax) node.Parent.Parent;
 
