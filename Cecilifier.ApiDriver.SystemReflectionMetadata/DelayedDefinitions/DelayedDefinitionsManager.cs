@@ -4,10 +4,10 @@ namespace Cecilifier.ApiDriver.SystemReflectionMetadata.DelayedDefinitions;
 
 //TODO: Handle fields && parameters
 /// <summary>
-/// System.Reflection.Metadata model requires members (methods, field) as well parameters
+/// System.Reflection.Metadata model requires members (methods, field) as well as parameters
 /// to be defined before the containing member (type, method, property) whereas Cecilifier
-/// follows Roslyn model, in which type definitions happens first, followed by the member
-/// definitions.
+/// follows Roslyn model, in which type definitions are processed first, followed by its
+/// member definitions.
 ///
 /// Upon visiting types/members, SRM driver adds a type/member *reference* and postpones
 /// the related type/member *definition* when finishing visiting types. 
@@ -36,6 +36,9 @@ public class DelayedDefinitionsManager
 
     internal void ProcessDefinitions(SystemReflectionMetadataContext context)
     {
+        if (_postponedTypeDefinitionDetails.Count == 0)
+            return;
+        
         var postponedTypeDefinitions = CollectionsMarshal.AsSpan(_postponedTypeDefinitionDetails);
         foreach (var methodRecord in _postponedMethodDefinitionDetails)
         {
@@ -52,6 +55,16 @@ public class DelayedDefinitionsManager
         }
         
         _firstMethodHandleVariable ??= "MetadataTokens.MethodDefinitionHandle(1)";
+        
+        postponedTypeDefinitions[^1].FirstMethodHandle ??= _firstMethodHandleVariable;
+        
+        // updates the type definition records with the method/parameter/field handles
+        for (var index = _postponedTypeDefinitionDetails.Count - 2; index >= 0; index--)
+        {
+            ref var typeRecord = ref postponedTypeDefinitions[index];
+            typeRecord.FirstMethodHandle ??= postponedTypeDefinitions[index + 1].FirstMethodHandle ??  _firstMethodHandleVariable;
+        }
+
         foreach (var typeRecord in _postponedTypeDefinitionDetails)
         {
             typeRecord.DefinitionFunction(context, typeRecord);

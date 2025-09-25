@@ -11,7 +11,7 @@ using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Tests.Unit.Framework;
 
-internal abstract class CecilifierContextBasedTestBase
+internal abstract class CecilifierContextBasedTestBase<TContext> where TContext : IVisitorContext
 {
     protected abstract string Snippet { get;  }
     protected virtual IEnumerable<MetadataReference> ExtraAssemblyReferences() => [];
@@ -47,5 +47,5 @@ internal abstract class CecilifierContextBasedTestBase
     }
     
     //TODO: Is this test ILApiDriver specific ? for now only test for Mono.Cecil.
-    protected IVisitorContext NewContext() => new MonoCecilContext(new CecilifierOptions(), _comp.GetSemanticModel(_comp.SyntaxTrees[0]), 1);
+    protected TContext NewContext() => (TContext) TContext.CreateContext(new CecilifierOptions(), _comp.GetSemanticModel(_comp.SyntaxTrees[0]));
 }

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using Cecilifier.ApiDriver.MonoCecil;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Tests.Tests.Unit.Framework;
 using Cecilifier.Core.Variables;
@@ -13,7 +14,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit;
 #nullable enable
 
 [TestFixture]
-internal class TypeResolverTests : CecilifierContextBasedTestBase
+internal class TypeResolverTests : CecilifierContextBasedTestBase<MonoCecilContext>
 {
     protected override string Snippet =>
         """

@@ -16,6 +16,7 @@ namespace Cecilifier.Core.Tests.Integration
         nameof(TestAssignment), 
         nameof(TestExternalFieldAccess),
         nameof(TestInitializedFieldNoCtor),
+        nameof(TestInitializedFieldWithBaseCtor),
         nameof(TestInitializedFieldMultipleCtor))]
     public class FieldsTestCase<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
     {

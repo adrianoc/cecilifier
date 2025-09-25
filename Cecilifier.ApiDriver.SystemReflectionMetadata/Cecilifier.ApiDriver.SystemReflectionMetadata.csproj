@@ -8,6 +8,6 @@
 
     <ItemGroup>
       <ProjectReference Include="..\Cecilifier.Core\Cecilifier.Core.csproj" />
+      <InternalsVisibleTo Include="Cecilifier.Core.Tests"/>
     </ItemGroup>
-
 </Project>
