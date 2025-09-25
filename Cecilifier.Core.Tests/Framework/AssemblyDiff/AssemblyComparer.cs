@@ -489,7 +489,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
             }
             else if (scopesToIgnore.Contains(frInstruction.DeclaringType.Scope) || scopesToIgnore.Contains(frCurrent.DeclaringType.Scope))
             {
-                validationResult = true;
+                validationResult = frInstruction.FieldType.FullName == frCurrent.FieldType.FullName;
             }
             else
             {
