@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using Cecilifier.Core.AST;
+using Cecilifier.Core.Naming;
 
 namespace Cecilifier.ApiDriver.SystemReflectionMetadata.DelayedDefinitions;
 
@@ -41,6 +43,14 @@ public class DelayedDefinitionsManager
     {
         _firstFieldHandleVariable ??= fieldVariableName;
         _firstFieldByTypeVariable.TryAdd(parentDefinitionVariableName, fieldVariableName);
+    }
+
+    public int RegisterLocalVariable(string localVarName, string resolvedVarType, Action<IVisitorContext, string, string> action)
+    {
+        var localVariable = new LocalVariableRecord(localVarName, resolvedVarType, action);
+        _postponedMethodDefinitionDetails[^1].LocalVariables.Add(localVariable);
+
+        return _postponedMethodDefinitionDetails[^1].LocalVariables.Count;
     }
 
     internal void ProcessDefinitions(SystemReflectionMetadataContext context)
@@ -111,7 +121,6 @@ public class DelayedDefinitionsManager
             ref var typeRecord = ref postponedTypeDefinitions[index];
             typeRecord.FirstMethodHandle ??= postponedTypeDefinitions[index + 1].FirstMethodHandle;
             typeRecord.FirstFieldHandle ??= postponedTypeDefinitions[index + 1].FirstFieldHandle;
-            //typeRecord.FirstFieldHandle ??= postponedTypeDefinitions[index + 1].FirstFieldHandle ??  _firstFieldHandleVariable;
         }
     }
 }

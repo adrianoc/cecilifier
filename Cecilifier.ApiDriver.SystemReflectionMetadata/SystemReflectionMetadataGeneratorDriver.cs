@@ -132,7 +132,7 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
             return emitted;
 
         return $$""""
-            {{emitted}}{{Environment.NewLine}}
+            {{emitted}}
             {{
                 operand switch
                 {
@@ -149,7 +149,7 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
 
     public void WriteCilInstruction<T>(IVisitorContext context, IlContext il, OpCode opCode, T? operand, string? comment = null)
     {
-        context.Generate(EmitCilInstruction(context, il, opCode, operand, comment));
+        context.Generate($"{EmitCilInstruction(context, il, opCode, operand, comment)}"); // Use interpolated string to force usage of CecilifierInterpolatedStringHandler
         context.WriteNewLine();
     }
     

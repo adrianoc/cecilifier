@@ -3,6 +3,7 @@ using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection.Emit;
+using Cecilifier.Core.ApiDriver;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -166,7 +167,7 @@ namespace Cecilifier.Core.AST
                 var currentMethodVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
                 var localVar = node.Declaration.Variables[0];
                 var resolvedVarType = Context.TypeResolver.ResolveAny(pointerType.PointedAtType).MakeByReferenceType();
-                Context.AddLocalVariableToMethod(localVar.Identifier.Text, currentMethodVar, resolvedVarType);
+                Context.ApiDefinitionsFactory.LocalVariable(Context, localVar.Identifier.Text, currentMethodVar.VariableName, resolvedVarType);
                 ProcessVariableInitialization(localVar, declaredType);
             }
 
@@ -301,7 +302,7 @@ namespace Cecilifier.Core.AST
                 ? ResolveExpressionType(localVar.Initializer?.Value)
                 : ResolveType(type);
 
-            return Context.AddLocalVariableToMethod(localVar.Identifier.Text, methodVar, resolvedVarType);
+            return Context.ApiDefinitionsFactory.LocalVariable(Context, localVar.Identifier.Text, methodVar.VariableName, resolvedVarType);
         }
 
         private void ProcessVariableInitialization(VariableDeclaratorSyntax localVar, ITypeSymbol variableType)
@@ -338,7 +339,7 @@ namespace Cecilifier.Core.AST
                 Context.ApiDriver.WriteCilInstruction(Context, _ilVar, opCode);
             }
 
-            Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Stloc, localVarDef.VariableName);
+            Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Stloc, new CilMetadataHandle(localVarDef.VariableName));
         }
 
         private void HandleVariableDeclaration(VariableDeclarationSyntax declaration)

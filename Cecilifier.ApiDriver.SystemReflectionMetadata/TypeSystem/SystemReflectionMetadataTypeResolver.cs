@@ -30,7 +30,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
     }
 
     /// <summary>
-    /// Returns an expression that is suitable to be used with Parameter/ReturnTypeEncoder
+    /// Returns an expression that is suitable to be used with Parameter/Locals/Field/ReturnTypeEncoder
     /// </summary>
     /// <param name="type"></param>
     /// <param name="encoderKind"></param>
@@ -46,8 +46,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
         if (type.IsPrimitiveType() || type.SpecialType == SpecialType.System_String)
             return $"{(encoderKind <= TargetEncoderKind.Field ? "" : "Type().")}{type.MetadataName}()";
 
-        return (encoderKind <= TargetEncoderKind.Field ? "" : $"Type(isByRef: {isByRef.ToKeyword()}).") + 
-                                    $"Type({ResolveAny(type)}, isValueType: {type.IsValueType.ToKeyword()})";
+        return $"""{(encoderKind <= TargetEncoderKind.Field ? "" : $"Type(isByRef: {isByRef.ToKeyword()}).")}Type({ResolveAny(type)}, isValueType: {type.IsValueType.ToKeyword()})""";
     }
 
     public override string ResolvePredefinedType(ITypeSymbol type) => $"""

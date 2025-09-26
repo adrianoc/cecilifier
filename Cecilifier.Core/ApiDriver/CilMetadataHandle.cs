@@ -11,6 +11,4 @@ public struct CilMetadataHandle
     public override string ToString() => VariableName;
 }
 
-public record struct CilOperandValue(ITypeSymbol Type, object Value)
-{
-}
+public record struct CilOperandValue(ITypeSymbol Type, object Value);

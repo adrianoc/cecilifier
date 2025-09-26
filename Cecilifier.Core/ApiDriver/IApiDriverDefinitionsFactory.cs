@@ -46,6 +46,7 @@ public interface IApiDriverDefinitionsFactory
     public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext memberDefinitionContext, ISymbol fieldOrEvent, ITypeSymbol fieldType, string fieldAttributes, bool isVolatile, bool isByRef, object? constantValue = null);
     public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext memberDefinitionContext, string fieldVar, string name, string fieldType, string fieldAttributes, bool isVolatile, bool isByRef, object? constantValue = null);
     IEnumerable<string> MethodBody(IVisitorContext context, string methodName, IlContext ilContext, string[] localVariableTypes, InstructionRepresentation[] instructions);
+    DefinitionVariable LocalVariable(IVisitorContext context, string variableName, string methodDefinitionVariableName, string resolvedVarType);
 }
 
 [DebuggerDisplay("MemberDefinitionContext ({MemberDefinitionVariableName}, {ParentDefinitionVariableName}, {IlContext})")]

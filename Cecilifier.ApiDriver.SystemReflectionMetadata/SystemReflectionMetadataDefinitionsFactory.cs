@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Cecilifier.ApiDriver.SystemReflectionMetadata.DelayedDefinitions;
 using Cecilifier.ApiDriver.SystemReflectionMetadata.TypeSystem;
 using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.AST;
@@ -62,6 +63,8 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
 
         ((SystemReflectionMetadataContext) context).DelayedDefinitionsManager.RegisterMethodDefinition(memberDefinitionContext.ParentDefinitionVariableName, (ctx, methodRecord) =>
         {
+            EmitLocalVariables(ctx, methodRecord);
+            
             var methodSignatureVar = ctx.DefinitionVariables.GetMethodVariable(methodSymbol.AsMethodVariable(VariableMemberKind.MethodSignature));
             Debug.Assert(methodSignatureVar.IsValid);
             
@@ -72,7 +75,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                                                     MethodImplAttributes.IL | MethodImplAttributes.Managed,
                                                     metadata.GetOrAddString("{methodName}"),
                                                     {methodSignatureVar.VariableName},
-                                                    methodBodyStream.AddMethodBody({memberDefinitionContext.IlContext.VariableName}),
+                                                    methodBodyStream.AddMethodBody({memberDefinitionContext.IlContext.VariableName}, localVariablesSignature: {methodRecord.LocalSignatureHandleVariable}),
                                                     parameterList: {methodRecord.FirstParameterHandle});
                           """);
             
@@ -105,8 +108,10 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
             parameters, 
             typeParameters.Count);
         
-        ((SystemReflectionMetadataContext) context).DelayedDefinitionsManager.RegisterMethodDefinition(memberDefinitionContext.ParentDefinitionVariableName, (ctx, methodRecord) =>
+        TypedContext(context).DelayedDefinitionsManager.RegisterMethodDefinition(memberDefinitionContext.ParentDefinitionVariableName, (ctx, methodRecord) =>
         {
+            EmitLocalVariables(ctx, methodRecord);
+            
             var methodReferenceToFind = new MethodDefinitionVariable(
                                                 VariableMemberKind.MethodSignature,
                                                 declaringTypeName,
@@ -124,7 +129,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                                                     MethodImplAttributes.IL | MethodImplAttributes.Managed,
                                                     metadata.GetOrAddString("{methodName}"),
                                                     {methodSignatureVar.VariableName},
-                                                    methodBodyStream.AddMethodBody({memberDefinitionContext.IlContext.VariableName}),
+                                                    methodBodyStream.AddMethodBody({memberDefinitionContext.IlContext.VariableName}, localVariablesSignature: {methodRecord.LocalSignatureHandleVariable}),
                                                     parameterList: {methodRecord.FirstParameterHandle});
                           """);
             
@@ -156,8 +161,10 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                      .Parameters(0, returnType => returnType.Void(), parameters => { });
               """);
         
-        ((SystemReflectionMetadataContext) context).DelayedDefinitionsManager.RegisterMethodDefinition(memberDefinitionContext.ParentDefinitionVariableName, (ctx, methodRecord) =>
+        TypedContext(context).DelayedDefinitionsManager.RegisterMethodDefinition(memberDefinitionContext.ParentDefinitionVariableName, (ctx, methodRecord) =>
         {
+            EmitLocalVariables(ctx, methodRecord);
+            
             var ctorDefVar = ctx.Naming.SyntheticVariable("ctor", ElementKind.LocalVariable);
             ctx.Generate($"""
                                    var {ctorDefVar} = metadata.AddMethodDefinition(
@@ -165,7 +172,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                                                              MethodImplAttributes.IL | MethodImplAttributes.Managed,
                                                              metadata.GetOrAddString("{(isStatic ? ".cctor" : ".ctor")}"),
                                                              metadata.GetOrAddBlob({parameterlessCtorSignatureVar}),
-                                                             methodBodyStream.AddMethodBody({memberDefinitionContext.IlContext.VariableName}),
+                                                             methodBodyStream.AddMethodBody({memberDefinitionContext.IlContext.VariableName}, localVariablesSignature: {methodRecord.LocalSignatureHandleVariable}),
                                                              parameterList: {methodRecord.FirstParameterHandle});
                                    """);
             
@@ -215,6 +222,41 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
     }
 
     public IEnumerable<string> MethodBody(IVisitorContext context, string methodName, IlContext ilContext, string[] localVariableTypes, InstructionRepresentation[] instructions) => [];
+
+    public DefinitionVariable LocalVariable(IVisitorContext context, string variableName, string methodDefinitionVariableName, string resolvedVarType)
+    {
+        var variableIndex = TypedContext(context).DelayedDefinitionsManager.RegisterLocalVariable(variableName, resolvedVarType,  (ctx, localVariableEncoderVar, localVarType) =>
+        {
+            context.Generate($"{localVariableEncoderVar}.AddVariable().{localVarType};");
+        });
+
+        // TODO: This is a hack. SRM access local variables by index and Cecilifier does not have a way to pass that index around; it only has variable names but the code  
+        //       needs to decide how to write the operands and it bases its decisions on the type of the value passed (in this case, the variable name, a string, whence
+        //       it assumes it needs to load an string).
+        //       Need to find a way for code that references the local variable to find its index and pass it correcly typed as int when emitting Ldloc/Stloc/etc.
+        return context.DefinitionVariables.RegisterNonMethod(string.Empty, variableName, VariableMemberKind.LocalVariable, variableIndex.ToString());
+    }
+
+    private SystemReflectionMetadataContext TypedContext(IVisitorContext context) => ((SystemReflectionMetadataContext) context);
+    
+    static void EmitLocalVariables(SystemReflectionMetadataContext context, MethodDefinitionRecord methodRecord)
+    {
+        var locals = methodRecord.LocalVariables;
+
+        var encoderVar = context.Naming.SyntheticVariable("localVariablesEncoder", ElementKind.LocalVariable);
+        context.Generate($"LocalVariablesEncoder {encoderVar} = new BlobEncoder(new BlobBuilder()).LocalVariableSignature({locals.Count});");
+        context.WriteNewLine();
+        
+        foreach (var local in locals)
+        {
+            local.EmitFunction(context, encoderVar, local.Type);
+        }
+        
+        methodRecord.LocalSignatureHandleVariable = context.Naming.SyntheticVariable("localSignatureHandle", ElementKind.LocalVariable);
+        context.Generate($"var {methodRecord.LocalSignatureHandleVariable} = metadata.AddStandaloneSignature(metadata.GetOrAddBlob({encoderVar}.Builder));");
+        context.WriteNewLine();
+    }
+
 
     static string Format(CecilifierInterpolatedStringHandler cecilFormattedString) => cecilFormattedString.Result;
 }

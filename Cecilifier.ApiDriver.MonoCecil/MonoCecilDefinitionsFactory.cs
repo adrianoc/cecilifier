@@ -158,6 +158,18 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
         return exps;
     }
 
+    public DefinitionVariable LocalVariable(IVisitorContext context, string variableName, string methodDefinitionVariableName, string resolvedVarType)
+    {
+        var cecilVarDeclName = context.Naming.SyntheticVariable(variableName, ElementKind.LocalVariable);
+
+        context.Generate($"var {cecilVarDeclName} = new VariableDefinition({resolvedVarType});");
+        context.WriteNewLine();
+        context.Generate($"{methodDefinitionVariableName}.Body.Variables.Add({cecilVarDeclName});");
+        context.WriteNewLine();
+
+        return context.DefinitionVariables.RegisterNonMethod(string.Empty, variableName, VariableMemberKind.LocalVariable, cecilVarDeclName);
+    }
+
     private static string LocalVariable(string resolvedType) => $"new VariableDefinition({resolvedType})";
     
     private string ProcessRequiredModifiers(IVisitorContext context, string originalType, bool isVolatile)

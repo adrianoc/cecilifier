@@ -29,19 +29,7 @@ public static class CecilifierContextExtensions
         if (!currentMethod.IsValid)
             throw new InvalidOperationException("Could not resolve current method declaration variable.");
 
-        return AddLocalVariableToMethod(context, localVarName, currentMethod, varType);
-    }
-
-    internal static DefinitionVariable AddLocalVariableToMethod(this IVisitorContext context, string localVarName, DefinitionVariable methodVar, string resolvedVarType)
-    {
-        var cecilVarDeclName = context.Naming.SyntheticVariable(localVarName, ElementKind.LocalVariable);
-
-        context.Generate($"var {cecilVarDeclName} = new VariableDefinition({resolvedVarType});");
-        context.WriteNewLine();
-        context.Generate($"{methodVar.VariableName}.Body.Variables.Add({cecilVarDeclName});");
-        context.WriteNewLine();
-
-        return context.DefinitionVariables.RegisterNonMethod(string.Empty, localVarName, VariableMemberKind.LocalVariable, cecilVarDeclName);
+        return context.ApiDefinitionsFactory.LocalVariable(context, localVarName, currentMethod.VariableName, varType);
     }
 
     internal static bool TryApplyConversions(this IVisitorContext context, string ilVar, IOperation operation)

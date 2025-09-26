@@ -406,7 +406,7 @@ namespace Cecilifier.Core.AST
             if (InlineArrayProcessor.HandleInlineArrayConversionToSpan(Context, ilVar, symbol.Type, localVarSyntax, OpCodes.Ldloca_S, symbol.Name, VariableMemberKind.LocalVariable))
                 return;
 
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloc, operand);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloc, new CilMetadataHandle(operand));
 
             HandlePotentialDelegateInvocationOn(localVarSyntax, symbol.Type, ilVar);
             HandlePotentialFixedLoad(ilVar, symbol);

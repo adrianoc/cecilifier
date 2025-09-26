@@ -469,7 +469,7 @@ namespace Cecilifier.Core.AST
                 var resolvedOutArgType = Context.TypeResolver.ResolveAny(localSymbol.Type);
 
                 DefinitionVariable methodVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
-                var outLocalName = Context.AddLocalVariableToMethod(designation.Identifier.Text, methodVar, resolvedOutArgType).VariableName;
+                var outLocalName = Context.ApiDefinitionsFactory.LocalVariable(Context, designation.Identifier.Text, methodVar.VariableName, resolvedOutArgType).VariableName;
 
                 Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloca_S, outLocalName);
             }
@@ -516,7 +516,7 @@ namespace Cecilifier.Core.AST
             var currentMethodVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
             var expressionTypeInfo = Context.SemanticModel.GetTypeInfo(node);
             var resolvedConcreteNullableType = Context.TypeResolver.ResolveAny(expressionTypeInfo.Type);
-            var tempNullableVar = Context.AddLocalVariableToMethod("nullable", currentMethodVar, resolvedConcreteNullableType).VariableName;
+            var tempNullableVar = Context.ApiDefinitionsFactory.LocalVariable(Context, "nullable", currentMethodVar.VariableName, resolvedConcreteNullableType).VariableName;
 
             Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloca_S, tempNullableVar);
             Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Initobj, resolvedConcreteNullableType);

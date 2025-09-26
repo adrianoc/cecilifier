@@ -13,7 +13,7 @@ public struct CodeGenerationHelpers
     {
         var methodVar = context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
         var resolvedVarType = context.TypeResolver.ResolveAny(type);
-        var tempLocalDefinitionVariable = context.AddLocalVariableToMethod(variableName, methodVar, resolvedVarType);
+        var tempLocalDefinitionVariable = context.ApiDefinitionsFactory.LocalVariable(context, variableName, methodVar.VariableName, resolvedVarType);
         context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Stloc, tempLocalDefinitionVariable.VariableName);
         return tempLocalDefinitionVariable;
     }
