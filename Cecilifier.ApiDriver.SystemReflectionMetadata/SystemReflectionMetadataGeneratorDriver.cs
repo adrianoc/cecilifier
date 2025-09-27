@@ -1,5 +1,4 @@
 ﻿using System.Reflection.Emit;
-using System.Text;
 using Cecilifier.Core;
 using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.AST;
@@ -159,16 +158,25 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
         WriteCilInstruction<string>(context, il, opCode, null);
     }
     
+    /// <summary>
+    /// Maps Ldc_Ix => Ldc_ix, Ldc_Rx, Conv_Ix => Ldc_rx, etc. 
+    /// </summary>
     private static string MapSystemReflectionOpCodeNameToSystemReflectionMetadata(OpCode opCode)
     {
         var reflectionOpCodeName = opCode.OpCodeName();
-        if (reflectionOpCodeName.StartsWith("Ldc_"))
+        var index = reflectionOpCodeName.IndexOf('_');
+        if (index > -1)
         {
-            StringBuilder buffer = new(reflectionOpCodeName);
-            buffer[4] =  Char.ToLower(buffer[4]); // Ldc_Ix => Ldc_ix, Ldc_Rx => Ldc_rx, etc.
-            return buffer.ToString();
+            Span<char> span = stackalloc char[reflectionOpCodeName.Length];
+            reflectionOpCodeName.AsSpan().CopyTo(span);
+            var toConvertToLower = span.Slice(index + 1);
+            for (int i = 0; i < toConvertToLower.Length; i++)
+            {
+                toConvertToLower[i] = char.ToLowerInvariant(toConvertToLower[i]);
+            }
+
+            return span.ToString();
         }
-            
         return reflectionOpCodeName;
     }
 }
