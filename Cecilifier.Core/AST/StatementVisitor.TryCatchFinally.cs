@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection.Emit;
+using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -83,7 +84,7 @@ namespace Cecilifier.Core.AST
 
             exceptionHandlerTable[currentIndex].TryStart = exceptionHandlerTable[0].TryStart;
             exceptionHandlerTable[currentIndex].TryEnd = exceptionHandlerTable[0].TryEnd;
-            exceptionHandlerTable[currentIndex].CatchType = ResolveType(node.Declaration.Type);
+            exceptionHandlerTable[currentIndex].CatchType = ResolveType(node.Declaration!.Type, ResolveTargetKind.None);
 
             VisitCatchClause(node);
             Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Leave, firstInstructionAfterTryCatchBlock);

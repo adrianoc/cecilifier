@@ -11,4 +11,10 @@ public struct CilMetadataHandle
     public override string ToString() => VariableName;
 }
 
+public record struct CilLocalVariableHandle
+{
+    public CilLocalVariableHandle(string value) => Value = value;
+    
+    public string Value { get; } }
+
 public record struct CilOperandValue(ITypeSymbol Type, object Value);

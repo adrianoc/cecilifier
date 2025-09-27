@@ -19,7 +19,8 @@ namespace Cecilifier.Core.TypeSystem
 
         public Bcl Bcl { get; }
 
-        public string ResolveAny(ITypeSymbol type, string cecilTypeParameterProviderVar = null)
+        // Resolvers for api drivers that need to generate different code based on the target can override this method.
+        public virtual string ResolveAny(ITypeSymbol type, ResolveTargetKind _ = ResolveTargetKind.None, string cecilTypeParameterProviderVar = null)
         {
             return ResolveLocalVariableType(type)
                    ?? ResolveNestedType(type)
@@ -156,7 +157,7 @@ namespace Cecilifier.Core.TypeSystem
             {
                 CollectTypeArguments(typeArgumentProvider.ContainingType, collectTo, cecilTypeParameterProviderVar);
             }
-            collectTo.AddRange(typeArgumentProvider.TypeArguments.Where(t => t.Kind != SymbolKind.ErrorType).Select(t => ResolveAny(t, cecilTypeParameterProviderVar)));
+            collectTo.AddRange(typeArgumentProvider.TypeArguments.Where(t => t.Kind != SymbolKind.ErrorType).Select(t => ResolveAny(t, ResolveTargetKind.None, cecilTypeParameterProviderVar)));
 
             return collectTo;
         }

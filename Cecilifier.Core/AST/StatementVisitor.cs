@@ -11,6 +11,7 @@ using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
+using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
 using static Cecilifier.Core.Misc.CodeGenerationHelpers;
 
@@ -78,11 +79,11 @@ namespace Cecilifier.Core.AST
 
         public override void VisitSwitchStatement(SwitchStatementSyntax node)
         {
-            var switchExpressionType = ResolveExpressionType(node.Expression);
+            var switchExpressionType = ResolveExpressionType(node.Expression, ResolveTargetKind.LocalVariable);
             var evaluatedExpressionVariable = Context.AddLocalVariableToCurrentMethod("switchCondition", switchExpressionType).VariableName;
 
             ExpressionVisitor.Visit(Context, _ilVar, node.Expression);
-            Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Stloc, evaluatedExpressionVariable); // stores evaluated expression in local var
+            Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Stloc, new CilLocalVariableHandle(evaluatedExpressionVariable)); // stores evaluated expression in local var
 
             // Add label to end of switch
             var endOfSwitchLabel = CreateCilInstruction(_ilVar, Context.Naming.Label("endOfSwitch"), OpCodes.Nop);
@@ -299,8 +300,8 @@ namespace Cecilifier.Core.AST
         private DefinitionVariable AddLocalVariable(TypeSyntax type, VariableDeclaratorSyntax localVar, DefinitionVariable methodVar)
         {
             var resolvedVarType = type.IsVar
-                ? ResolveExpressionType(localVar.Initializer?.Value)
-                : ResolveType(type);
+                ? ResolveExpressionType(localVar.Initializer?.Value, ResolveTargetKind.LocalVariable)
+                : ResolveType(type, ResolveTargetKind.LocalVariable);
 
             return Context.ApiDefinitionsFactory.LocalVariable(Context, localVar.Identifier.Text, methodVar.VariableName, resolvedVarType);
         }

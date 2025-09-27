@@ -1,5 +1,6 @@
 using System.Linq;
 using System.Reflection.Emit;
+using Cecilifier.Core.ApiDriver;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -34,19 +35,19 @@ namespace Cecilifier.Core.AST
                 WriteCecilExpression(Context, $"{_ilVar}.Append({firstLoopBodyInstructionVar});");
                 Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloc, loopIndexVar);
                 Context.ApiDriver.WriteCilInstruction(Context, _ilVar, enumerableType.ElementTypeSymbolOf().LdelemOpCode());
-                Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Stloc, loopVariable);
+                Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Stloc, new CilLocalVariableHandle(loopVariable));
 
                 // Loop body.
                 node.Statement.Accept(this);
                 
-                Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloc, loopIndexVar);
+                Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloc, new CilLocalVariableHandle(loopIndexVar));
                 Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldc_I4_1);
                 Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Add);
-                Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Stloc, loopIndexVar);
+                Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Stloc, new CilLocalVariableHandle(loopIndexVar));
                 
                 // condition check...
                 WriteCecilExpression(Context, $"{_ilVar}.Append({conditionCheckLabelVar});");
-                Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloc, loopIndexVar);
+                Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloc, new CilLocalVariableHandle(loopIndexVar));
                 Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloc, arrayVariable.VariableName);
                 Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldlen);
                 Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Conv_I4);
@@ -132,7 +133,7 @@ namespace Cecilifier.Core.AST
                 Context.ApiDriver.WriteCilInstruction(Context, _ilVar, forEachHandlerContext.EnumeratorCurrentProperty.Type.LdindOpCodeFor());
             }
             
-            Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Stloc, foreachCurrentValueVarName);
+            Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Stloc, new CilLocalVariableHandle(foreachCurrentValueVarName));
 
             // process body of foreach
             Context.WriteNewLine();

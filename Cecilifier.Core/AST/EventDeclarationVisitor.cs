@@ -9,6 +9,7 @@ using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
+using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
 
 namespace Cecilifier.Core.AST
@@ -90,7 +91,7 @@ namespace Cecilifier.Core.AST
                 ? string.Empty
                 : AddBackingField(node); // backing field will have same name as the event
 
-            var eventType = ResolveType(node.Declaration.Type);
+            var eventType = ResolveType(node.Declaration.Type, ResolveTargetKind.None);
             var addAccessorVar = AddAccessor(node, eventSymbol, "add", backingFieldVar, eventType, AddMethodBody);
             var removeAccessorVar = AddAccessor(node, eventSymbol, "remove", backingFieldVar, eventType, RemoveMethodBody);
 

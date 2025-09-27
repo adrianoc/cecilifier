@@ -66,6 +66,7 @@ public class SnippetRunner
         var operandStr = operand switch
         {
             CilOperandValue cilOperand => $", {cilOperand.Value}",
+            CilLocalVariableHandle fieldHandle => $", {fieldHandle.Value}",
             _ => operand == null ? string.Empty : $", {operand}"
         };
         
@@ -87,32 +88,5 @@ public class SnippetRunner
     {
         var ilVarName = context.Naming.ILProcessor(memberName);
         return new MonoCecilDeferredIlContext(context, ilVarName, relatedMethodVar);
-    }
-}
-
-public class MonoCecilDeferredIlContext : IlContext
-{
-    private readonly IVisitorContext _context;
-    private bool _emitted;
-
-    protected internal MonoCecilDeferredIlContext(IVisitorContext context, string ilVarName, string relatedMethodVar) : base(ilVarName, relatedMethodVar)
-    {
-        _context = context;
-        _emitted = false;
-    }
-
-    public override string VariableName
-    {
-        get
-        {
-            if (!_emitted)
-            {
-                _emitted = true;
-                _context.Generate($"var {base.VariableName} = {RelatedMethodVariable}.Body.GetILProcessor();");
-                _context.WriteNewLine();
-            }
-            
-            return base.VariableName;
-        }
     }
 }

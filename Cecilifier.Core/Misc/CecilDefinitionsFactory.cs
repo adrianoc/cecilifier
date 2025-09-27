@@ -306,7 +306,7 @@ namespace Cecilifier.Core.Misc
                 paramSymbol.IsParams ? paramSymbol.Type.ParamsAttributeMatchingType() : null,
                 methodVar,
                 paramVar,
-                context.TypeResolver.ResolveAny(paramSymbol.Type, methodVar),
+                context.TypeResolver.ResolveAny(paramSymbol.Type, ResolveTargetKind.Parameter, methodVar),
                 paramSymbol.AsParameterAttribute(),
                 paramSymbol.ExplicitDefaultValue(rawString: false));
         }
@@ -570,7 +570,7 @@ namespace Cecilifier.Core.Misc
                 context.ApiDriver.WriteCilInstruction(context, ilVar, 
                     OpCodes.Call, 
                     collectionMarshalTypeSymbol.GetMembers("AsSpan").OfType<IMethodSymbol>().Single().MethodResolverExpression(context).MakeGenericInstanceMethod(context, "AsSpan", [ resolvedListTypeArgument ]));
-                context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Stloc, spanToList.VariableName);
+                context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Stloc, new CilLocalVariableHandle(spanToList.VariableName));
                 
                 return (spanToList, resolvedListTypeArgument);
             }

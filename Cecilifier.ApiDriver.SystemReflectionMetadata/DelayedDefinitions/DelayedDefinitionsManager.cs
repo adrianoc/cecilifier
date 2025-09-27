@@ -50,7 +50,7 @@ public class DelayedDefinitionsManager
         var localVariable = new LocalVariableRecord(localVarName, resolvedVarType, action);
         _postponedMethodDefinitionDetails[^1].LocalVariables.Add(localVariable);
 
-        return _postponedMethodDefinitionDetails[^1].LocalVariables.Count;
+        return _postponedMethodDefinitionDetails[^1].LocalVariables.Count - 1;
     }
 
     internal void ProcessDefinitions(SystemReflectionMetadataContext context)

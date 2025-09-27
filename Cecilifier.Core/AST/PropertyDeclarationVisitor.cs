@@ -13,6 +13,7 @@ using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
+using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
 using static Cecilifier.Core.Misc.Utils;
 
@@ -34,7 +35,7 @@ namespace Cecilifier.Core.AST
             Context.WriteNewLine();
             Context.WriteComment("** Property indexer **");
 
-            var propertyType = ResolveType(node.Type);
+            var propertyType = ResolveType(node.Type, ResolveTargetKind.None);
             var propertyDeclaringTypeVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Type).VariableName;
             var propName = "Item";
 
@@ -48,7 +49,7 @@ namespace Cecilifier.Core.AST
                 paramsVar.Add(
                     new ParameterSpec(
                         parameter.Identifier.Text, 
-                        ResolveType(parameter.Type),
+                        ResolveType(parameter.Type, ResolveTargetKind.Parameter),
                         paramSymbol.RefKind,
                         paramSymbol.AsParameterAttribute(),
                         parameter.Accept(DefaultParameterExtractorVisitor.Instance))
@@ -73,7 +74,7 @@ namespace Cecilifier.Core.AST
             using var _ = LineInformationTracker.Track(Context, node);
             Context.WriteNewLine();
             Context.WriteComment($"** Property: {node.Identifier} **");
-            var propertyType = ResolveType(node.Type);
+            var propertyType = ResolveType(node.Type, ResolveTargetKind.None);
             var propertyDeclaringTypeVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Type).VariableName;
             var propName = node.Identifier.ValueText;
 
@@ -142,7 +143,7 @@ namespace Cecilifier.Core.AST
                                     propertyName,
                                     AccessorsModifiersFor(node, propertySymbol),
                                     propertySymbol.IsStatic,
-                                    ResolveType(node.Type),
+                                    ResolveType(node.Type, ResolveTargetKind.None),
                                     propertySymbol.Type.ToDisplayString(),
                                     parameters,
                                     BackingFieldModifiersFor(node), 

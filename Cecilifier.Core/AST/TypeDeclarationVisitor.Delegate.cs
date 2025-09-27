@@ -5,6 +5,7 @@ using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
+using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -57,7 +58,7 @@ internal partial class TypeDeclarationVisitor
             AddDelegateMethod(
                 typeVar,
                 "Invoke",
-                ResolveType(node.ReturnType),
+                ResolveType(node.ReturnType, ResolveTargetKind.ReturnType),
                 node.ParameterList.Parameters,
                 (methodVar, param) => CecilDefinitionsFactory.Parameter(Context, param, methodVar, Context.Naming.Parameter(param)));
 

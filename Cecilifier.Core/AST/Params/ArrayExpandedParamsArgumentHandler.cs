@@ -1,6 +1,7 @@
 #nullable enable
 using System.Diagnostics;
 using System.Reflection.Emit;
+using Cecilifier.Core.ApiDriver;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Cecilifier.Core.Extensions;
@@ -19,7 +20,7 @@ internal class ArrayExpandedParamsArgumentHandler : ExpandedParamsArgumentHandle
         var paramsType = Context.TypeResolver.ResolveAny(ElementType);
         Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldc_I4, ElementCount);
         Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Newarr, paramsType);
-        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Stloc, _backingVariableName);
+        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Stloc, new CilLocalVariableHandle(_backingVariableName));
     }
 
     private OpCode _stelemOpCode;

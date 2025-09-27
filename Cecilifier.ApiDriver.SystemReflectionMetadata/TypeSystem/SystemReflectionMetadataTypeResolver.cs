@@ -14,6 +14,13 @@ namespace Cecilifier.ApiDriver.SystemReflectionMetadata.TypeSystem;
 //          call to ResolveX()
 public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContext context) : TypeResolverBase<SystemReflectionMetadataContext>(context)
 {
+    public override string ResolveAny(ITypeSymbol type, ResolveTargetKind resolveTargetKind = ResolveTargetKind.None, string cecilTypeParameterProviderVar = null)
+    {
+        return resolveTargetKind == ResolveTargetKind.None 
+            ? base.ResolveAny(type, resolveTargetKind, cecilTypeParameterProviderVar) 
+            : ResolveForTargetKind(type, resolveTargetKind, false);        
+    }
+
     public override string Resolve(string typeName) => $"TODO: Fix Resolve(\"{typeName}\")";
     public override string Resolve(ITypeSymbol type)
     {
@@ -33,10 +40,10 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
     /// Returns an expression that is suitable to be used with Parameter/Locals/Field/ReturnTypeEncoder
     /// </summary>
     /// <param name="type"></param>
-    /// <param name="encoderKind"></param>
+    /// <param name="kind"></param>
     /// <param name="isByRef"></param>
     /// <returns></returns>
-    public string ResolveForEncoder(ITypeSymbol type, TargetEncoderKind encoderKind, bool isByRef)
+    public string ResolveForTargetKind(ITypeSymbol type, ResolveTargetKind kind, bool isByRef)
     {
         if (type.SpecialType == SpecialType.System_Void)
         {
@@ -44,9 +51,9 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
         }
         
         if (type.IsPrimitiveType() || type.SpecialType == SpecialType.System_String)
-            return $"{(encoderKind <= TargetEncoderKind.Field ? "" : "Type().")}{type.MetadataName}()";
+            return $"{(kind <= ResolveTargetKind.Field ? "" : "Type().")}{type.MetadataName}()";
 
-        return $"""{(encoderKind <= TargetEncoderKind.Field ? "" : $"Type(isByRef: {isByRef.ToKeyword()}).")}Type({ResolveAny(type)}, isValueType: {type.IsValueType.ToKeyword()})""";
+        return $"""{(kind <= ResolveTargetKind.Field ? "" : $"Type(isByRef: {isByRef.ToKeyword()}).")}Type({ResolveAny(type, ResolveTargetKind.None)}, isValueType: {type.IsValueType.ToKeyword()})""";
     }
 
     public override string ResolvePredefinedType(ITypeSymbol type) => $"""
@@ -58,7 +65,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
 
     public override string MakeArrayType(ITypeSymbol elementType)
     {
-        return $"Type().SZArray().{ResolveForEncoder(elementType, TargetEncoderKind.ArrayElementType, isByRef: false)}";
+        return $"Type().SZArray().{ResolveForTargetKind(elementType, ResolveTargetKind.ArrayElementType, isByRef: false)}";
     }
 
     protected override string MakePointerType(ITypeSymbol pointerType)
@@ -70,13 +77,4 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
     {
         throw new NotImplementedException();
     }
-}
-
-public enum TargetEncoderKind
-{
-    ArrayElementType,
-    Field, // Any enum values equals to or smaller than `Field` have special handling when resolving types.
-    
-    Parameter,
-    ReturnType,
 }

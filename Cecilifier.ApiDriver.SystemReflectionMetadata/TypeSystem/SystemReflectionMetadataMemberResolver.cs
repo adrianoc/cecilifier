@@ -29,7 +29,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
                             new BlobEncoder({{methodSignatureBlobVar}}).
                                 MethodSignature(isInstanceMethod: {{ (!method.IsStatic).ToKeyword() }}).
                                 Parameters({{method.Parameters.Length}},
-                                    returnType => returnType.{{context.TypedTypeResolver.ResolveForEncoder(method.ReturnType, TargetEncoderKind.ReturnType, method.IsByRef())}},
+                                    returnType => returnType.{{context.TypedTypeResolver.ResolveForTargetKind(method.ReturnType, ResolveTargetKind.ReturnType, method.IsByRef())}},
                                     parameters => 
                                     {
                                         {{
@@ -37,7 +37,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
                                                 method.Parameters.Select(p => $"""
                                                                                parameters
                                                                                        .AddParameter()
-                                                                                       .{context.TypedTypeResolver.ResolveForEncoder(p.Type, TargetEncoderKind.Parameter, p.RefKind != RefKind.None)};
+                                                                                       .{context.TypedTypeResolver.ResolveForTargetKind(p.Type, ResolveTargetKind.Parameter, p.RefKind != RefKind.None)};
                                                                            """))}}
                                     });
 
@@ -150,7 +150,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
         var typeResolver = (SystemReflectionMetadataTypeResolver) context.TypeResolver;
         context.Generate($"""
                           BlobBuilder {fieldSignatureVarName} = new();
-                          new BlobEncoder({fieldSignatureVarName}).FieldSignature().{typeResolver.ResolveForEncoder(field.Type, TargetEncoderKind.Field, false)};
+                          new BlobEncoder({fieldSignatureVarName}).FieldSignature().{typeResolver.ResolveForTargetKind(field.Type, ResolveTargetKind.Field, false)};
                           var {fieldRefVarName} = metadata.AddMemberReference({resolvedDeclaringType}, metadata.GetOrAddString("{field.Name}"), metadata.GetOrAddBlob({fieldSignatureVarName}));
                           """);
         

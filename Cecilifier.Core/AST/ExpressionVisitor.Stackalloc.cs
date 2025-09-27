@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Reflection.Emit;
+using Cecilifier.Core.ApiDriver;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -12,6 +13,7 @@ using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
+using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
 using static Cecilifier.Core.Misc.CodeGenerationHelpers;
 
@@ -72,7 +74,7 @@ partial class ExpressionVisitor
             ? arrayElementType.Type.SizeofPrimitiveType()
             : int.MaxValue; // this means the size of the elements need to be calculated at runtime... 
 
-        var resolvedElementType = ResolveType(arrayType.ElementType);
+        var resolvedElementType = ResolveType(arrayType.ElementType, ResolveTargetKind.None);
         if (rankNode.IsKind(SyntaxKind.NumericLiteralExpression) && arrayElementType.Type.IsPrimitiveType())
         {
             var elementCount = Int32.Parse(rankNode.GetFirstToken().Text);
@@ -164,8 +166,8 @@ partial class ExpressionVisitor
         {
             // result of the stackalloc is being assigned to a Span<T>. We need to initialize it later.. for that we need
             // element count so we store in a new local variable.
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Stloc, stackallocSpanAssignmentTracker.SpanLengthVariable);
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloc, stackallocSpanAssignmentTracker.SpanLengthVariable);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Stloc, new CilLocalVariableHandle(stackallocSpanAssignmentTracker.SpanLengthVariable));
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloc, new CilLocalVariableHandle(stackallocSpanAssignmentTracker.SpanLengthVariable));
         }
 
         Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Conv_U);

@@ -6,6 +6,7 @@ using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
+using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -104,7 +105,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
             declaringTypeName, 
             memberDefinitionContext.ParentDefinitionVariableName, 
             methodNameForVariableRegistration, 
-            typedTypeResolver.ResolveForEncoder(returnType, TargetEncoderKind.ReturnType, false), 
+            typedTypeResolver.ResolveForTargetKind(returnType, ResolveTargetKind.ReturnType, false), 
             parameters, 
             typeParameters.Count);
         
@@ -196,7 +197,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
              BlobBuilder {fieldSignatureVar} = new();
              new BlobEncoder({fieldSignatureVar})
                  .FieldSignature()
-                 .{typedTypeResolver.ResolveForEncoder(fieldType, TargetEncoderKind.Field, false)};
+                 .{typedTypeResolver.ResolveAny(fieldType, ResolveTargetKind.Field)};
                  
              var {memberDefinitionContext.MemberDefinitionVariableName} = metadata.AddFieldDefinition({fieldAttributes}, metadata.GetOrAddString("{fieldOrEvent.Name}"), metadata.GetOrAddBlob({fieldSignatureVar}));
              """
@@ -230,10 +231,9 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
             context.Generate($"{localVariableEncoderVar}.AddVariable().{localVarType};");
         });
 
-        // TODO: This is a hack. SRM access local variables by index and Cecilifier does not have a way to pass that index around; it only has variable names but the code  
-        //       needs to decide how to write the operands and it bases its decisions on the type of the value passed (in this case, the variable name, a string, whence
-        //       it assumes it needs to load an string).
-        //       Need to find a way for code that references the local variable to find its index and pass it correcly typed as int when emitting Ldloc/Stloc/etc.
+        // This is a hack. SRM accesses local variables by index, and Cecilifier does not have a way to pass that index around; it only has variable names,
+        // so we register the `index` of the local variable as the name.
+        // Code that emits Ldloc/Stloc/etc will pass a CilFieldHandle() with this `name` (actually the local variable index) as its value
         return context.DefinitionVariables.RegisterNonMethod(string.Empty, variableName, VariableMemberKind.LocalVariable, variableIndex.ToString());
     }
 

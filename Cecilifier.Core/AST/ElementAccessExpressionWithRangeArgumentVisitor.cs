@@ -1,5 +1,6 @@
 using System.Linq;
 using System.Reflection.Emit;
+using Cecilifier.Core.ApiDriver;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Cecilifier.Core.Extensions;
@@ -97,7 +98,7 @@ internal class ElementAccessExpressionWithRangeArgumentVisitor : SyntaxWalkerBas
         // Calculate number of elements to slice.
         Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloca, rangeVar);
         Context.AddCallToMethod(systemRange.GetMembers().OfType<IPropertySymbol>().Single(p => p.Name == "End").GetMethod, _ilVar, MethodDispatchInformation.MostLikelyVirtual);
-        Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Stloc, indexVar);
+        Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Stloc, new CilLocalVariableHandle(indexVar));
 
         Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloca, indexVar);
         Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloc, spanLengthVar);

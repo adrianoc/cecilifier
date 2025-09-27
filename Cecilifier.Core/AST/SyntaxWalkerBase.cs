@@ -10,6 +10,7 @@ using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
+using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -295,16 +296,16 @@ namespace Cecilifier.Core.AST
             context.WriteNewLine();
         }
 
-        protected string ResolveExpressionType(ExpressionSyntax expression)
+        protected string ResolveExpressionType(ExpressionSyntax expression, ResolveTargetKind resolveTargetKind)
         {
             var typeInfo = Context.GetTypeInfo(expression);
             var type = (typeInfo.Type ?? typeInfo.ConvertedType).EnsureNotNull();
-            return Context.TypeResolver.ResolveAny(type);
+            return Context.TypeResolver.ResolveAny(type, resolveTargetKind);
         }
 
-        protected string ResolveType(TypeSyntax type)
+        protected string ResolveType(TypeSyntax type, ResolveTargetKind resolveTargetKind)
         {
-            var resolvedType = Context.TypeResolver.ResolveAny(ResolveTypeSymbol(type));
+            var resolvedType = Context.TypeResolver.ResolveAny(ResolveTypeSymbol(type), resolveTargetKind);
             //TODO: Can't this check be moved inside the Resolve() method as the other checks for arrays,
             return type is RefTypeSyntax ? resolvedType.MakeByReferenceType() : resolvedType;
         }
@@ -406,7 +407,7 @@ namespace Cecilifier.Core.AST
             if (InlineArrayProcessor.HandleInlineArrayConversionToSpan(Context, ilVar, symbol.Type, localVarSyntax, OpCodes.Ldloca_S, symbol.Name, VariableMemberKind.LocalVariable))
                 return;
 
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloc, new CilMetadataHandle(operand));
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloc, new CilLocalVariableHandle(operand));
 
             HandlePotentialDelegateInvocationOn(localVarSyntax, symbol.Type, ilVar);
             HandlePotentialFixedLoad(ilVar, symbol);

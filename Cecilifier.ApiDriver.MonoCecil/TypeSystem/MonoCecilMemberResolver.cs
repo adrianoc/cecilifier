@@ -84,7 +84,7 @@ public class MonoCecilMemberResolver(MonoCecilContext context) : IMemberResolver
 
             if (returnReferencesTypeParameter)
             {
-                var resolvedReturnType = context.TypeResolver.ResolveAny(method.OriginalDefinition.ReturnType, tempMethodVar);
+                var resolvedReturnType = context.TypeResolver.ResolveAny(method.OriginalDefinition.ReturnType, ResolveTargetKind.ReturnType, tempMethodVar);
 
                 // the information about the type being passed as `ref` is not in the ITypeSymbol so we need to check and produce
                 // a Mono.Cecil.ByReferenceType

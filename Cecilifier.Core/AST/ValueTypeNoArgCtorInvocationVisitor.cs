@@ -1,6 +1,7 @@
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Variables;
 using System.Reflection.Emit;
+using Cecilifier.Core.ApiDriver;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.CSharp;
@@ -151,7 +152,7 @@ namespace Cecilifier.Core.AST
                     Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldc_I4_0);
                     if (ctorInfo.Symbol.ContainingType.SpecialType == SpecialType.System_Int64)
                         Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Conv_I8);
-                    Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Stloc, tempLocal.VariableName);
+                    Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Stloc, new CilLocalVariableHandle(tempLocal.VariableName));
                     break;
 
                 case SpecialType.None:
