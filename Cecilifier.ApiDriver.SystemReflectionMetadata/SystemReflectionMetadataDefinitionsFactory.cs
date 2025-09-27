@@ -242,6 +242,8 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
     static void EmitLocalVariables(SystemReflectionMetadataContext context, MethodDefinitionRecord methodRecord)
     {
         var locals = methodRecord.LocalVariables;
+        if (locals.Count == 0)
+            return;
 
         var encoderVar = context.Naming.SyntheticVariable("localVariablesEncoder", ElementKind.LocalVariable);
         context.Generate($"LocalVariablesEncoder {encoderVar} = new BlobEncoder(new BlobBuilder()).LocalVariableSignature({locals.Count});");
