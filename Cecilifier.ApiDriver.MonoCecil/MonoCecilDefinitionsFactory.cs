@@ -91,20 +91,37 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
         string methodModifiers,
         IReadOnlyList<ParameterSpec> parameters,
         IList<string> typeParameters,
-        ITypeSymbol returnType)
+        Func<IVisitorContext, string> returnTypeResolver,
+        out MethodDefinitionVariable methodVariable)
     {
-        var exps = CecilDefinitionsFactory.Method(
-                            context, 
-                            declaringTypeName, 
-                            memberDefinitionContext.MemberDefinitionVariableName, 
-                            methodNameForVariableRegistration, 
-                            methodName, 
-                            methodModifiers, 
-                            parameters, 
-                            typeParameters, 
-                            ctx => ctx.TypeResolver.ResolveAny(returnType),
-                            out _);
-        
+        var exps = new List<string>();
+
+        // if the method has type parameters we need to postpone setting the return type (using void as a placeholder, since we need to pass something) until the generic parameters has been
+        // handled. This is required because the type parameter may be defined by the method being processed which introduces a chicken and egg problem.
+        exps.Add($"var {memberDefinitionContext.MemberDefinitionVariableName} = new MethodDefinition(\"{methodName}\", {methodModifiers}, {(typeParameters.Count == 0 ? returnTypeResolver(context) : context.TypeResolver.Bcl.System.Void)});");
+        ProcessGenericTypeParameters(memberDefinitionContext.MemberDefinitionVariableName, context, $"{declaringTypeName}.{methodName}", typeParameters, exps);
+        if (typeParameters.Count > 0)
+            exps.Add($"{memberDefinitionContext.MemberDefinitionVariableName}.ReturnType = {returnTypeResolver(context)};");
+
+        foreach (var parameter in parameters)
+        {
+            var paramVar = context.Naming.SyntheticVariable(parameter.Name, ElementKind.Parameter);
+            var parameterExp = CecilDefinitionsFactory.Parameter(
+                                                                            parameter.Name,
+                                                                            parameter.RefKind,
+                                                                            null, // for now,the only callers for this method don't have any `params` parameters.
+                                                                            memberDefinitionContext.MemberDefinitionVariableName,
+                                                                            paramVar,
+                                                                            parameter.ElementTypeResolver != null ? parameter.ElementTypeResolver(context, parameter.ElementType) : parameter.ElementType,
+                                                                            parameter.Attributes,
+                                                                            (parameter.DefaultValue, parameter.DefaultValue != null));
+
+            context.DefinitionVariables.RegisterNonMethod(methodNameForVariableRegistration, parameter.Name, VariableMemberKind.Parameter, paramVar);
+            exps.AddRange(parameterExp);
+        }
+
+        methodVariable = context.DefinitionVariables.RegisterMethod(declaringTypeName, methodName, parameters.Select(p => p.RegistrationTypeName).ToArray(), typeParameters.Count, memberDefinitionContext.MemberDefinitionVariableName);
+
         exps =  [
             ..exps, 
             $"{memberDefinitionContext.ParentDefinitionVariableName}.Methods.Add({memberDefinitionContext.MemberDefinitionVariableName});",
@@ -280,15 +297,37 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
         }
     }
     
+    private static void ProcessGenericTypeParameters(string memberDefVar, IVisitorContext context, string ownerQualifiedTypeName, IList<string> typeParamList, IList<string> exps)
+    {
+        for (int i = 0; i < typeParamList.Count; i++)
+        {
+            var genericParamName = typeParamList[i];
+            var genParamDefVar = context.Naming.SyntheticVariable(typeParamList[i], ElementKind.GenericParameter);
+            //TODO: Accept `variance` as a parameter. 
+            exps.Add(GenericParameter(context, ownerQualifiedTypeName, memberDefVar, genericParamName, genParamDefVar, VarianceKind.None));
+                
+            exps.Add($"{memberDefVar}.GenericParameters.Add({genParamDefVar});");
+        }
+    }
+    
     private static string GenericParameter(IVisitorContext context, string typeParameterOwnerVar, string genericParamName, string genParamDefVar, ITypeParameterSymbol typeParameterSymbol)
     {
-        context.DefinitionVariables.RegisterNonMethod(typeParameterSymbol.ContainingSymbol.ToDisplayString(), genericParamName, VariableMemberKind.TypeParameter, genParamDefVar);
-        return $"var {genParamDefVar} = new Mono.Cecil.GenericParameter(\"{genericParamName}\", {typeParameterOwnerVar}){Variance(typeParameterSymbol)};";
+        return GenericParameter(context, typeParameterSymbol.ContainingSymbol.ToDisplayString(), typeParameterOwnerVar, genericParamName, genParamDefVar, typeParameterSymbol.Variance);
+        // context.DefinitionVariables.RegisterNonMethod(typeParameterSymbol.ContainingSymbol.ToDisplayString(), genericParamName, VariableMemberKind.TypeParameter, genParamDefVar);
+        // return $"var {genParamDefVar} = new Mono.Cecil.GenericParameter(\"{genericParamName}\", {typeParameterOwnerVar}){Variance(typeParameterSymbol)};";
+    }
+    
+    private static string GenericParameter(IVisitorContext context, string ownerContainingTypeName, string typeParameterOwnerVar, string genericParamName, string genParamDefVar, VarianceKind variance)
+    {
+        context.DefinitionVariables.RegisterNonMethod(ownerContainingTypeName, genericParamName, VariableMemberKind.TypeParameter, genParamDefVar);
+        return $"var {genParamDefVar} = new Mono.Cecil.GenericParameter(\"{genericParamName}\", {typeParameterOwnerVar}){Variance(variance)};";
     }
 
-    private static string Variance(ITypeParameterSymbol typeParameterSymbol)
+    private static string Variance(ITypeParameterSymbol typeParameterSymbol) => Variance(typeParameterSymbol.Variance);
+    
+    private static string Variance(VarianceKind variance)
     {
-        return typeParameterSymbol.Variance switch
+        return variance switch
         {
             VarianceKind.In => " { IsContravariant = true }",
             VarianceKind.Out => " { IsCovariant = true }",

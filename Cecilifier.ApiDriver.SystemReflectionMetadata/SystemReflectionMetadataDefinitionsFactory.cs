@@ -98,17 +98,18 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         string methodModifiers,
         IReadOnlyList<ParameterSpec> parameters,
         IList<string> typeParameters,
-        ITypeSymbol returnType)
+        Func<IVisitorContext, string> returnTypeResolver,
+        out MethodDefinitionVariable methodDefinitionVariable)
     {
-        var typedTypeResolver = (SystemReflectionMetadataTypeResolver) context.TypeResolver;
-        context.MemberResolver.ResolveMethod(
-            declaringTypeName, 
-            memberDefinitionContext.ParentDefinitionVariableName, 
-            methodNameForVariableRegistration, 
-            typedTypeResolver.ResolveForTargetKind(returnType, ResolveTargetKind.ReturnType, false), 
-            parameters, 
-            typeParameters.Count);
-        
+        var methodRefVar = context.MemberResolver.ResolveMethod(
+                                                            declaringTypeName, 
+                                                            memberDefinitionContext.ParentDefinitionVariableName, 
+                                                            methodNameForVariableRegistration, 
+                                                            returnTypeResolver(context), 
+                                                            parameters, 
+                                                            typeParameters.Count);
+
+        methodDefinitionVariable = context.DefinitionVariables.FindByVariableName<MethodDefinitionVariable>(methodRefVar) ?? MethodDefinitionVariable.MethodNotFound;
         TypedContext(context).DelayedDefinitionsManager.RegisterMethodDefinition(memberDefinitionContext.ParentDefinitionVariableName, (ctx, methodRecord) =>
         {
             EmitLocalVariables(ctx, methodRecord);

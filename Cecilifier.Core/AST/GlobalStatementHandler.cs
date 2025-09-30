@@ -4,6 +4,7 @@ using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
+using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -55,7 +56,8 @@ namespace Cecilifier.Core.AST
                                                     "MethodAttributes.Private | MethodAttributes.HideBySig | MethodAttributes.Static",
                                                     [new ParameterSpec("args", context.TypeResolver.MakeArrayType(context.RoslynTypeSystem.SystemString), RefKind.None, Constants.ParameterAttributes.None)],
                                                     [],
-                                                    hasReturnStatement ? context.RoslynTypeSystem.SystemInt32 : context.RoslynTypeSystem.SystemVoid);
+                                                    ctx => ctx.TypeResolver.ResolveAny(hasReturnStatement ? context.RoslynTypeSystem.SystemInt32 : context.RoslynTypeSystem.SystemVoid, ResolveTargetKind.ReturnType),
+                                                    out _);
             context.Generate(methodExps);
             
             var mainBodyExps = context.ApiDefinitionsFactory.MethodBody(context, "topLevelMain", ilContext, [], []);

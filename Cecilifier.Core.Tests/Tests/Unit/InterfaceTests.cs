@@ -68,8 +68,8 @@ public class InterfaceTests : CecilifierUnitTestBase
     [TestCase(
         "interface IFoo { int P { get; set; } } class Foo : IFoo { int IFoo.P { get => 42; set {} } }",
             """
-                        (m_get_\d+).Overrides.Add\(m_get_\d+\);
-                        \s+cls_foo_\d+.Methods.Add\(\1\);
+                        cls_foo_\d+.Methods.Add\((m_get_\d+)\);
+                        \s+\1.Overrides.Add\(m_get_\d+\);
                         """,
         TestName = "Property")]
     public void ExplicitInterfaceImplementation_SetsOverrideProperty(string source, string expectedRegex)

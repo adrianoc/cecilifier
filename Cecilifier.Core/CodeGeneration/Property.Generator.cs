@@ -52,24 +52,27 @@ internal class PropertyGenerator
                 Constants.ParameterAttributes.None) { RegistrationTypeName = property.TypeNameForRegistration }
         };
 
-        var exps = CecilDefinitionsFactory.Method(
-                                            Context,
-                                            property.DeclaringTypeNameForRegistration,
-                                            accessorMethodVar,
-                                            nameForRegistration,
-                                            $"set_{property.Name}",
-                                            property.AccessorModifiers["set"],
-                                            completeParamList,
-                                            [], // Properties cannot declare TypeParameters
-                                            ctx => isInitOnly ? $"new RequiredModifierType({ctx.TypeResolver.Resolve(typeof(IsExternalInit).FullName)}, {ctx.TypeResolver.Bcl.System.Void})" : ctx.TypeResolver.Bcl.System.Void,
-                                            out var methodDefinitionVariable);
+        string methodName = $"set_{property.Name}";
+        string methodModifiers = property.AccessorModifiers["set"];
+        IList<string> typeParameters = [];
+        Func<IVisitorContext, string> returnTypeResolver = ctx => isInitOnly ? $"new RequiredModifierType({ctx.TypeResolver.Resolve(typeof(IsExternalInit).FullName)}, {ctx.TypeResolver.Bcl.System.Void})" : ctx.TypeResolver.Bcl.System.Void;
+        var exps = Context.ApiDefinitionsFactory.Method(
+            Context, 
+            new MemberDefinitionContext(accessorMethodVar, property.DeclaringTypeVariable, IlContext.None), 
+            property.DeclaringTypeNameForRegistration, 
+            nameForRegistration, 
+            methodName, 
+            methodModifiers, 
+            completeParamList, 
+            typeParameters, 
+            returnTypeResolver,
+            out var methodDefinitionVariable);
 
         var methodVariableScope = Context.DefinitionVariables.WithCurrentMethod(methodDefinitionVariable);
         Context.Generate(exps);
         AddToOverridenMethodsIfAppropriated(accessorMethodVar, overridenMethod);
 
         Context.Generate([
-                $"{property.DeclaringTypeVariable}.Methods.Add({accessorMethodVar});",
                 $"{accessorMethodVar}.Body = new MethodBody({accessorMethodVar});",
                 $"{property.Variable}.SetMethod = {accessorMethodVar};" ]);
         
@@ -92,17 +95,21 @@ internal class PropertyGenerator
     internal ScopedDefinitionVariable AddGetterMethodDeclaration(ref readonly PropertyGenerationData property, string accessorMethodVar, bool hasCovariantReturn, string nameForRegistration, string overridenMethod)
     {
         var propertyResolvedType = property.ResolvedType;
-        var exps = CecilDefinitionsFactory.Method(
-                                        Context,
-                                        property.DeclaringTypeNameForRegistration,
-                                        accessorMethodVar,
-                                        nameForRegistration,
-                                        $"get_{property.Name}",
-                                        property.AccessorModifiers["get"],
-                                        property.Parameters, 
-                                        [], // Properties cannot declare TypeParameters
-                                        _ => propertyResolvedType,
-                                        out var methodDefinitionVariable);
+        string methodName = $"get_{property.Name}";
+        string methodModifiers = property.AccessorModifiers["get"];
+        IList<string> typeParameters = [];
+        Func<IVisitorContext, string> returnTypeResolver = _ => propertyResolvedType;
+        var exps = Context.ApiDefinitionsFactory.Method(
+            Context, 
+            new MemberDefinitionContext(accessorMethodVar, property.DeclaringTypeVariable, IlContext.None), 
+            property.DeclaringTypeNameForRegistration, 
+            nameForRegistration, 
+            methodName, 
+            methodModifiers, 
+            property.Parameters, 
+            typeParameters, 
+            returnTypeResolver,
+            out var methodDefinitionVariable);
         
         Context.Generate(exps);
         
@@ -114,7 +121,6 @@ internal class PropertyGenerator
             hasCovariantReturn ? 
                 $"{accessorMethodVar}.CustomAttributes.Add(new CustomAttribute(assembly.MainModule.Import(typeof(System.Runtime.CompilerServices.PreserveBaseOverridesAttribute).GetConstructor(BindingFlags.Public | BindingFlags.Instance, null, new Type[0], null))));" 
                 : String.Empty,
-            $"{property.DeclaringTypeVariable}.Methods.Add({accessorMethodVar});",
             $"{accessorMethodVar}.Body = new MethodBody({accessorMethodVar});",
             $"{property.Variable}.GetMethod = {accessorMethodVar};" ]);
         

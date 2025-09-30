@@ -6,6 +6,8 @@ namespace Cecilifier.Core.Variables;
 [ExcludeFromCodeCoverage]
 public class MethodDefinitionVariable : DefinitionVariable, IEquatable<MethodDefinitionVariable>
 {
+    public static readonly MethodDefinitionVariable MethodNotFound = new MethodDefinitionVariable(string.Empty, string.Empty, [], 0);
+    
     public MethodDefinitionVariable(string parentTypeName, string methodName, string[] parameterTypeNames, int typeParameterCountCount, string variableName = null) 
         : this(VariableMemberKind.Method, parentTypeName, methodName, parameterTypeNames, typeParameterCountCount, variableName)
     {

@@ -66,24 +66,28 @@ internal partial class PrivateImplementationDetailsGenerator
         var methodVar = context.Naming.SyntheticVariable("inlineArrayAsSpan", ElementKind.Method);
 
         var methodTypeQualifiedName = $"{privateImplementationDetailsVar.MemberName}.{methodName}";
-        var methodExpressions = CecilDefinitionsFactory.Method(
-                                                        context,
-                                                        $"{privateImplementationDetailsVar.MemberName}",
-                                                        methodVar,
-                                                        "NOT_IMPORTANT_NO_ONE_WILL_TRY_TO_RESOLVE_PARAMETER_VARS_FOR_THIS",
-                                                        methodName,
-                                                        "MethodAttributes.Assembly | MethodAttributes.Static | MethodAttributes.HideBySig",
-                                                        [ 
-                                                            new ParameterSpec("buffer", "TBuffer", RefKind.Ref, Constants.ParameterAttributes.None, null, (context, name) => ResolveOwnedGenericParameter(context, name, methodTypeQualifiedName)), 
-                                                            new ParameterSpec("length", context.TypeResolver.Bcl.System.Int32, RefKind.None, Constants.ParameterAttributes.None)
-                                                        ],
-                                                        ["TBuffer", "TElement"],
-                                                        context =>
-                                                        {
-                                                            var spanTypeParameter = ResolveOwnedGenericParameter(context, "TElement", methodTypeQualifiedName);
-                                                            return context.TypeResolver.ResolveAny(containingType).MakeGenericInstanceType(spanTypeParameter);
-                                                        },
-                                                        out var methodDefinitionVariable);
+        string declaringTypeName = $"{privateImplementationDetailsVar.MemberName}";
+        IReadOnlyList<ParameterSpec> parameters = [ 
+            new ParameterSpec("buffer", "TBuffer", RefKind.Ref, Constants.ParameterAttributes.None, null, (context, name) => ResolveOwnedGenericParameter(context, name, methodTypeQualifiedName)), 
+            new ParameterSpec("length", context.TypeResolver.Bcl.System.Int32, RefKind.None, Constants.ParameterAttributes.None)
+        ];
+        IList<string> typeParameters = ["TBuffer", "TElement"];
+        Func<IVisitorContext, string> returnTypeResolver = ctx =>
+        {
+            var spanTypeParameter = ResolveOwnedGenericParameter(context, "TElement", methodTypeQualifiedName);
+            return ctx.TypeResolver.ResolveAny(containingType).MakeGenericInstanceType(spanTypeParameter);
+        };
+        var methodExpressions = context.ApiDefinitionsFactory.Method(
+            context, 
+            new MemberDefinitionContext(methodVar, privateImplementationDetailsVar.VariableName, IlContext.None), 
+            declaringTypeName, 
+            "NOT_IMPORTANT_NO_ONE_WILL_TRY_TO_RESOLVE_PARAMETER_VARS_FOR_THIS", 
+            methodName, 
+            "MethodAttributes.Assembly | MethodAttributes.Static | MethodAttributes.HideBySig", 
+            parameters, 
+            typeParameters, 
+            returnTypeResolver,
+            out var methodDefinitionVariable);
 
         context.Generate(methodExpressions);
         
@@ -104,7 +108,7 @@ internal partial class PrivateImplementationDetailsGenerator
             OpCodes.Ret
         ];
         var exps = context.ApiDefinitionsFactory.MethodBody(context, methodName, context.ApiDriver.NewIlContext(context, methodName, methodVar), [], instructions);
-        context.Generate([..exps, $"{privateImplementationDetailsVar.VariableName}.Methods.Add({methodVar});"]);
+        context.Generate(exps);
         
         return methodDefinitionVariable;
         
@@ -147,22 +151,25 @@ internal partial class PrivateImplementationDetailsGenerator
         var methodVar = context.Naming.SyntheticVariable("inlineArrayFirstElementRef", ElementKind.Method);
 
         var methodTypeQualifiedName = $"{privateImplementationDetailsVar.MemberName}.InlineArrayFirstElementRef";
-        var methodExpressions = CecilDefinitionsFactory.Method(
-                                                        context,
-                                                        $"{privateImplementationDetailsVar.MemberName}",
-                                                        methodVar, 
-                                                        "NOT_IMPORTANT_NOONE_WILL_TRY_TO_RESOLVE_PARAMETER_VARS_FOR_THIS",
-                                                        "InlineArrayFirstElementRef",
-                                                        "MethodAttributes.Assembly | MethodAttributes.Static | MethodAttributes.HideBySig",
-                                                        [ new ParameterSpec("buffer", "TBuffer", RefKind.Ref,  Constants.ParameterAttributes.None, null, (ctx, name) => ResolveOwnedGenericParameter(ctx, name, methodTypeQualifiedName))],
-                                                        ["TBuffer", "TElement"],
-                                                        ctx =>
-                                                        {
-                                                            var spanTypeParameter = ResolveOwnedGenericParameter(ctx, "TElement", methodTypeQualifiedName);
-                                                            return spanTypeParameter.MakeByReferenceType();
-                                                        },
-                                                        out var methodDefinitionVariable);
-
+        string declaringTypeName = $"{privateImplementationDetailsVar.MemberName}";
+        IReadOnlyList<ParameterSpec> parameters = [ new ParameterSpec("buffer", "TBuffer", RefKind.Ref,  Constants.ParameterAttributes.None, null, (ctx, name) => ResolveOwnedGenericParameter(ctx, name, methodTypeQualifiedName))];
+        IList<string> typeParameters = ["TBuffer", "TElement"];
+        Func<IVisitorContext, string> returnTypeResolver = ctx =>
+        {
+            var spanTypeParameter = ResolveOwnedGenericParameter(ctx, "TElement", methodTypeQualifiedName);
+            return spanTypeParameter.MakeByReferenceType();
+        };
+        var methodExpressions = context.ApiDefinitionsFactory.Method(
+            context, 
+            new MemberDefinitionContext(methodVar, privateImplementationDetailsVar.VariableName, IlContext.None), 
+            declaringTypeName, 
+            "NOT_IMPORTANT_NOONE_WILL_TRY_TO_RESOLVE_PARAMETER_VARS_FOR_THIS", 
+            "InlineArrayFirstElementRef", 
+            "MethodAttributes.Assembly | MethodAttributes.Static | MethodAttributes.HideBySig", 
+            parameters, 
+            typeParameters, 
+            returnTypeResolver,
+            out var methodDefinitionVariable);
         context.Generate(methodExpressions);
         
         var tBufferTypeParameter = ResolveOwnedGenericParameter(context, "TBuffer", methodTypeQualifiedName);
@@ -180,8 +187,6 @@ internal partial class PrivateImplementationDetailsGenerator
         var ilContext = context.ApiDriver.NewIlContext(context, "UnsafeAs", methodVar);
         var exps = context.ApiDefinitionsFactory.MethodBody(context, "UnsafeAs", ilContext, [], instructions);
         context.Generate(exps);
-        
-        context.Generate($"{privateImplementationDetailsVar.VariableName}.Methods.Add({methodVar});");
         context.WriteNewLine();
         context.WriteComment("-------------------------------");
         context.WriteNewLine();
@@ -201,24 +206,28 @@ internal partial class PrivateImplementationDetailsGenerator
         var methodVar = context.Naming.SyntheticVariable("inlineArrayElementRef", ElementKind.Method);
 
         var methodTypeQualifiedName = $"{privateImplementationDetailsVar.MemberName}.InlineArrayElementRef";
-        var methodExpressions = CecilDefinitionsFactory.Method(
-                                                        context,
-                                                        $"{privateImplementationDetailsVar.MemberName}",
-                                                        methodVar, 
-                                                        "NOT_IMPORTANT_NOONE_WILL_TRY_TO_RESOLVE_PARAMETER_VARS_FOR_THIS",
-                                                        "InlineArrayElementRef",
-                                                        "MethodAttributes.Assembly | MethodAttributes.Static | MethodAttributes.HideBySig",
-                                                        [ 
-                                                            new ParameterSpec("buffer", "TBuffer", RefKind.Ref, Constants.ParameterAttributes.None, null, (ctx, name) => ResolveOwnedGenericParameter(ctx, name, methodTypeQualifiedName)),
-                                                            new ParameterSpec("index", context.TypeResolver.Bcl.System.Int32, RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = "int" }
-                                                        ],
-                                                        ["TBuffer", "TElement"],
-                                                        ctx =>
-                                                        {
-                                                            var spanTypeParameter = ResolveOwnedGenericParameter(ctx, "TElement", methodTypeQualifiedName);
-                                                            return spanTypeParameter.MakeByReferenceType();
-                                                        },
-                                                        out var methodDefinitionVariable);
+        string declaringTypeName = $"{privateImplementationDetailsVar.MemberName}";
+        IReadOnlyList<ParameterSpec> parameters = [ 
+            new ParameterSpec("buffer", "TBuffer", RefKind.Ref, Constants.ParameterAttributes.None, null, (ctx, name) => ResolveOwnedGenericParameter(ctx, name, methodTypeQualifiedName)),
+            new ParameterSpec("index", context.TypeResolver.Bcl.System.Int32, RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = "int" }
+        ];
+        IList<string> typeParameters = ["TBuffer", "TElement"];
+        Func<IVisitorContext, string> returnTypeResolver = ctx =>
+        {
+            var spanTypeParameter = ResolveOwnedGenericParameter(ctx, "TElement", methodTypeQualifiedName);
+            return spanTypeParameter.MakeByReferenceType();
+        };
+        var methodExpressions = context.ApiDefinitionsFactory.Method(
+            context, 
+            new MemberDefinitionContext(methodVar, privateImplementationDetailsVar.VariableName, IlContext.None), 
+            declaringTypeName, 
+            "NOT_IMPORTANT_NOONE_WILL_TRY_TO_RESOLVE_PARAMETER_VARS_FOR_THIS", 
+            "InlineArrayElementRef", 
+            "MethodAttributes.Assembly | MethodAttributes.Static | MethodAttributes.HideBySig", 
+            parameters, 
+            typeParameters, 
+            returnTypeResolver,
+            out var methodDefinitionVariable);
 
         context.Generate(methodExpressions);
         
@@ -243,7 +252,6 @@ internal partial class PrivateImplementationDetailsGenerator
         var methodBodyExpressions = context.ApiDefinitionsFactory.MethodBody(context, "UnsafeAdd", context.ApiDriver.NewIlContext(context, "UnsafeAdd", methodVar), [], instructions);
         
         context.Generate(methodBodyExpressions);
-        context.Generate($"{privateImplementationDetailsVar.VariableName}.Methods.Add({methodVar});");
         context.WriteNewLine();
         context.WriteComment("-------------------------------");
         context.WriteNewLine();

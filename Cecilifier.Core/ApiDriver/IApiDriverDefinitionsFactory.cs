@@ -1,4 +1,5 @@
 #nullable enable
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Cecilifier.Core.AST;
@@ -60,7 +61,8 @@ public interface IApiDriverDefinitionsFactory
         string methodModifiers,
         IReadOnlyList<ParameterSpec> parameters,
         IList<string> typeParameters,
-        ITypeSymbol returnType
+        Func<IVisitorContext, string> returnTypeResolver,
+        out MethodDefinitionVariable methodDefinitionVariable
     );
 
     public IEnumerable<string> Constructor(IVisitorContext context, MemberDefinitionContext memberDefinitionContext, string typeName, bool isStatic, string methodAccessibility, string[] paramTypes, string? methodDefinitionPropertyValues = null);

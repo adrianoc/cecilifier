@@ -29,7 +29,7 @@ namespace Cecilifier.Core.Tests.Integration
         [Test]
         public void NonCapturingLambda_SimpleLambdaExpression()
         {
-            AssertResourceTestWithExplicitExpectation(@"Expressions/Lambda/SimpleLambdaExpression", "System.Void C::SimpleLambdaExpression()");
+            AssertResourceTestWithExplicitExpectation("Expressions/Lambda/SimpleLambdaExpression", "System.Void C::SimpleLambdaExpression()");
         }
 
         [Test]

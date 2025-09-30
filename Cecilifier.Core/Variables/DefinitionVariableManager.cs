@@ -31,6 +31,11 @@ public class DefinitionVariableManager
         return definitionVariable;
     }
 
+    public TVariableType FindByVariableName<TVariableType>(string variableName) where TVariableType : DefinitionVariable
+    {
+        return _definitionVariables.OfType<TVariableType>().FirstOrDefault(candidate => candidate.VariableName == variableName);
+    }
+
     public DefinitionVariable GetMethodVariable(MethodDefinitionVariable tbf)
     {
         var methodVars = _definitionVariables.OfType<MethodDefinitionVariable>().Reverse();

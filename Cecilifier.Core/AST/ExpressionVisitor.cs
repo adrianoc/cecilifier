@@ -12,6 +12,7 @@ using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.ApiDriver.Handles;
 using Cecilifier.Core.AST.Params;
 using Cecilifier.Core.CodeGeneration;
+using Cecilifier.Core.CodeGeneration.Extensions;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Mappings;
@@ -1228,8 +1229,8 @@ namespace Cecilifier.Core.AST
         private void HandleLambdaExpression(LambdaExpressionSyntax node)
         {
             // We handle all lambdas as static, i.e, non-capturing.
-            // use the lambda string representation to lookup the variable with the synthetic method definition 
-            var syntheticMethodVariable = Context.DefinitionVariables.GetVariable(node.ToString(), VariableMemberKind.Method);
+            // use the lambda string representation to lookup the variable with the synthetic method definition
+            var syntheticMethodVariable = Context.DefinitionVariables.GetVariable(node.GetSyntheticMethodName(), VariableMemberKind.Method, node.ToString());
             if (!syntheticMethodVariable.IsValid)
             {
                 // if we fail to resolve the variable it means this is un unsupported scenario (like a lambda that captures context)

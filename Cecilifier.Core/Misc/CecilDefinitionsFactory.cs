@@ -57,48 +57,6 @@ namespace Cecilifier.Core.Misc
             return exps;
         }
 
-        public static IEnumerable<string> Method(
-            IVisitorContext context,
-            string declaringTypeName,
-            string methodVar,
-            string methodNameForParameterVariableRegistration, // we can't use the method name in some scenarios (indexers, for instance) 
-            string methodName,
-            string methodModifiers,
-            IReadOnlyList<ParameterSpec> parameters,
-            IList<string> typeParameters,
-            Func<IVisitorContext, string> returnTypeResolver,
-            out MethodDefinitionVariable methodDefinitionVariable)
-        {
-            var exps = new List<string>();
-
-            // if the method has type parameters we need to postpone setting the return type (using void as a placeholder, since we need to pass something) until the generic parameters has been
-            // handled. This is required because the type parameter may be defined by the method being processed which introduces a chicken and egg problem.
-            exps.Add($"var {methodVar} = new MethodDefinition(\"{methodName}\", {methodModifiers}, { (typeParameters.Count == 0 ? returnTypeResolver(context) : context.TypeResolver.Bcl.System.Void) });");
-            ProcessGenericTypeParameters(methodVar, context, $"{declaringTypeName}.{methodName}", typeParameters, exps);
-            if (typeParameters.Count > 0)
-                exps.Add($"{methodVar}.ReturnType = {returnTypeResolver(context)};");
-
-            foreach (var parameter in parameters)
-            {
-                var paramVar = context.Naming.SyntheticVariable(parameter.Name, ElementKind.Parameter);
-                var parameterExp = Parameter(
-                    parameter.Name, 
-                    parameter.RefKind, 
-                    null, // for now,the only callers for this method don't have any `params` parameters.
-                    methodVar,
-                    paramVar,
-                    parameter.ElementTypeResolver != null ? parameter.ElementTypeResolver(context, parameter.ElementType) : parameter.ElementType,
-                    parameter.Attributes,
-                    (parameter.DefaultValue, parameter.DefaultValue != null));
-                
-                context.DefinitionVariables.RegisterNonMethod(methodNameForParameterVariableRegistration, parameter.Name, VariableMemberKind.Parameter, paramVar);
-                exps.AddRange(parameterExp);
-            }
-
-            methodDefinitionVariable = context.DefinitionVariables.RegisterMethod(declaringTypeName, methodName, parameters.Select(p => p.RegistrationTypeName).ToArray(), typeParameters.Count, methodVar);
-            return exps;
-        }
-
         internal static string Constructor(IVisitorContext context, string ctorLocalVar, string typeName, bool isStatic, string methodAccessibility, string[] paramTypes, string? methodDefinitionPropertyValues = null)
         {
             var ctorName = Utils.ConstructorMethodName(isStatic);
@@ -158,7 +116,7 @@ namespace Cecilifier.Core.Misc
             return $"new ParameterDefinition(\"{name}\", {paramAttributes}, {resolvedType})";
         }
 
-        public static IEnumerable<string> Parameter(string name, RefKind byRef, string? paramsAttributeTypeName, string methodVar, string paramVar, string resolvedType, string paramAttributes, (string Value, bool Present) defaultParameterValue)
+        public static IEnumerable<string> Parameter(string name, RefKind byRef, string? paramsAttributeTypeName, string methodVar, string paramVar, string resolvedType, string paramAttributes, (string? Value, bool Present) defaultParameterValue)
         {
             var exps = new List<string>();
 

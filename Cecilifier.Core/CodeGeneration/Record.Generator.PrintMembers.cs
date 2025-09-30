@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -25,16 +26,21 @@ internal partial class RecordGenerator
         context.WriteComment($"{record.Identifier.ValueText}.{PrintMembersMethodName}()");
 
         var builderParameter = new ParameterSpec("builder", context.TypeResolver.ResolveAny(context.RoslynTypeSystem.ForType<StringBuilder>()), RefKind.None, Constants.ParameterAttributes.None);
-        var printMembersDeclExps = CecilDefinitionsFactory.Method(
-            context,
-            _recordSymbol.OriginalDefinition.ToDisplayString(),
-            PrintMembersVar,
-            PrintMembersMethodName,
-            PrintMembersMethodName,
-            $"MethodAttributes.Family | {(HasBaseRecord(record) ? Constants.Cecil.HideBySigVirtual : Constants.Cecil.HideBySigNewSlotVirtual)}",
-            [builderParameter],
-            [],
-            ctx => context.TypeResolver.Bcl.System.Boolean,
+        string declaringTypeName = _recordSymbol.OriginalDefinition.ToDisplayString();
+        string methodModifiers = $"MethodAttributes.Family | {(HasBaseRecord(record) ? Constants.Cecil.HideBySigVirtual : Constants.Cecil.HideBySigNewSlotVirtual)}";
+        IReadOnlyList<ParameterSpec> parameters = [builderParameter];
+        IList<string> typeParameters = [];
+        Func<IVisitorContext, string> returnTypeResolver = ctx => context.TypeResolver.Bcl.System.Boolean;
+        var printMembersDeclExps = context.ApiDefinitionsFactory.Method(
+            context, 
+            new MemberDefinitionContext(PrintMembersVar, recordTypeDefinitionVariable, IlContext.None), 
+            declaringTypeName, 
+            PrintMembersMethodName, 
+            PrintMembersMethodName, 
+            methodModifiers, 
+            parameters, 
+            typeParameters, 
+            returnTypeResolver,
             out var methodDefinitionVariable);
 
         using var _ = context.DefinitionVariables.WithVariable(methodDefinitionVariable);

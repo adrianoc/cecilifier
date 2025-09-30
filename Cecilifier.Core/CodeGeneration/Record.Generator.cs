@@ -192,19 +192,23 @@ internal partial class RecordGenerator
         context.WriteNewLine();
         context.WriteComment("operator ==");
         var equalsOperatorMethodVar = context.Naming.SyntheticVariable($"equalsOperator", ElementKind.Method);
-        var equalsOperatorMethodExps = CecilDefinitionsFactory.Method(
-            context,
-            _recordSymbol.OriginalDefinition.ToDisplayString(),
-            equalsOperatorMethodVar,
-            methodName,
-            methodName,
-            Constants.Cecil.PublicOverrideOperatorAttributes,
-            [
-                new ParameterSpec("left", context.TypeResolver.ResolveAny(_recordSymbol), RefKind.None, Constants.ParameterAttributes.None)  { RegistrationTypeName = $"{_recordSymbol.ToDisplayString()}?" },
-                new ParameterSpec("right", context.TypeResolver.ResolveAny(_recordSymbol), RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = $"{_recordSymbol.ToDisplayString()}?" }
-            ],
-            [],
-            ctx => ctx.TypeResolver.Bcl.System.Boolean,
+        string declaringTypeName = _recordSymbol.OriginalDefinition.ToDisplayString();
+        IReadOnlyList<ParameterSpec> parameters = [
+            new ParameterSpec("left", context.TypeResolver.ResolveAny(_recordSymbol), RefKind.None, Constants.ParameterAttributes.None)  { RegistrationTypeName = $"{_recordSymbol.ToDisplayString()}?" },
+            new ParameterSpec("right", context.TypeResolver.ResolveAny(_recordSymbol), RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = $"{_recordSymbol.ToDisplayString()}?" }
+        ];
+        IList<string> typeParameters = [];
+        Func<IVisitorContext, string> returnTypeResolver = ctx => ctx.TypeResolver.Bcl.System.Boolean;
+        var equalsOperatorMethodExps = context.ApiDefinitionsFactory.Method(
+            context, 
+            new MemberDefinitionContext(equalsOperatorMethodVar, recordTypeDefinitionVariable, IlContext.None), 
+            declaringTypeName, 
+            methodName, 
+            methodName, 
+            Constants.Cecil.PublicOverrideOperatorAttributes, 
+            parameters, 
+            typeParameters, 
+            returnTypeResolver,
             out _);
         
         context.Generate(equalsOperatorMethodExps);
@@ -249,19 +253,23 @@ internal partial class RecordGenerator
         context.WriteNewLine();
         context.WriteComment("operator !=");
         var inequalityOperatorMethodVar = context.Naming.SyntheticVariable($"inequalityOperator", ElementKind.Method);
-        var inequalityOperatorMethodExps = CecilDefinitionsFactory.Method(
-            context,
-            recordSymbol.OriginalDefinition.ToDisplayString(),
-            inequalityOperatorMethodVar,
-            methodName,
-            methodName,
-            Constants.Cecil.PublicOverrideOperatorAttributes,
-            [
-                new ParameterSpec("left", context.TypeResolver.ResolveAny(recordSymbol), RefKind.None, Constants.ParameterAttributes.None)  { RegistrationTypeName = $"{_recordSymbol.OriginalDefinition.ToDisplayString()}?" },
-                new ParameterSpec("right", context.TypeResolver.ResolveAny(recordSymbol), RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = $"{_recordSymbol.OriginalDefinition.ToDisplayString()}?" }
-            ],
-            [],
-            ctx => ctx.TypeResolver.Bcl.System.Boolean,
+        string declaringTypeName = recordSymbol.OriginalDefinition.ToDisplayString();
+        IReadOnlyList<ParameterSpec> parameters = [
+            new ParameterSpec("left", context.TypeResolver.ResolveAny(recordSymbol), RefKind.None, Constants.ParameterAttributes.None)  { RegistrationTypeName = $"{_recordSymbol.OriginalDefinition.ToDisplayString()}?" },
+            new ParameterSpec("right", context.TypeResolver.ResolveAny(recordSymbol), RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = $"{_recordSymbol.OriginalDefinition.ToDisplayString()}?" }
+        ];
+        IList<string> typeParameters = [];
+        Func<IVisitorContext, string> returnTypeResolver = ctx => ctx.TypeResolver.Bcl.System.Boolean;
+        var inequalityOperatorMethodExps = context.ApiDefinitionsFactory.Method(
+            context, 
+            new MemberDefinitionContext(inequalityOperatorMethodVar, recordTypeDefinitionVariable, IlContext.None), 
+            declaringTypeName, 
+            methodName, 
+            methodName, 
+            Constants.Cecil.PublicOverrideOperatorAttributes, 
+            parameters, 
+            typeParameters, 
+            returnTypeResolver,
             out _);
         
         context.Generate(inequalityOperatorMethodExps);
@@ -297,20 +305,23 @@ internal partial class RecordGenerator
 
     private void AddGetHashCodeMethod()
     {
-        //var recordSymbol = context.SemanticModel.GetDeclaredSymbol(record).EnsureNotNull<ISymbol, ITypeSymbol>();
         var recordSymbol = _recordSymbol;
         var getHashCodeMethodVar = context.Naming.SyntheticVariable("GetHashCode", ElementKind.Method);
-        var getHashCodeMethodExps = CecilDefinitionsFactory.Method(
-                                                                            context,
-                                                                            _recordSymbol.OriginalDefinition.ToDisplayString(), 
-                                                                            getHashCodeMethodVar,
-                                                                            "GetHashCode",
-                                                                            "GetHashCode",
-                                                                            Constants.Cecil.PublicOverrideMethodAttributes,
-                                                                            [],
-                                                                            [],
-                                                                            ctx => ctx.TypeResolver.Bcl.System.Int32,
-                                                                            out var methodDefinitionVariable);
+        string declaringTypeName = _recordSymbol.OriginalDefinition.ToDisplayString();
+        IReadOnlyList<ParameterSpec> parameters1 = [];
+        IList<string> typeParameters = [];
+        Func<IVisitorContext, string> returnTypeResolver = ctx => ctx.TypeResolver.Bcl.System.Int32;
+        var getHashCodeMethodExps = context.ApiDefinitionsFactory.Method(
+            context, 
+            new MemberDefinitionContext(getHashCodeMethodVar, recordTypeDefinitionVariable, IlContext.None), 
+            declaringTypeName, 
+            "GetHashCode", 
+            "GetHashCode", 
+            Constants.Cecil.PublicOverrideMethodAttributes, 
+            parameters1, 
+            typeParameters, 
+            returnTypeResolver,
+            out _);
         context.WriteNewLine();
         context.WriteComment(" GetHashCode()");
         context.Generate(getHashCodeMethodExps);
@@ -327,7 +338,7 @@ internal partial class RecordGenerator
             var paramDefVar = context.DefinitionVariables.GetVariable(Utils.BackingFieldNameForAutoProperty(parameter.Identifier.ValueText()), VariableMemberKind.Field, _recordSymbol.OriginalDefinition.ToDisplayString());
             var equalityComparerMembersForParamType = _equalityComparerMembersCache[parameterType.Name];
 
-            var backingFieldRef = _recordSymbol is INamedTypeSymbol { IsGenericType: true } 
+            var backingFieldRef = _recordSymbol is { IsGenericType: true } 
                 ? $"new FieldReference({paramDefVar.VariableName}.Name, {paramDefVar.VariableName}.FieldType, {context.TypeResolver.ResolveAny(_recordSymbol)})" 
                 : paramDefVar.VariableName;
 
@@ -417,16 +428,20 @@ internal partial class RecordGenerator
             context.WriteComment($"{record.Identifier.ValueText}.{ToStringName}()");
 
             var toStringMethodVar = context.Naming.SyntheticVariable(ToStringName, ElementKind.Method);
-            var toStringDeclExps = CecilDefinitionsFactory.Method(
-                context,
-                _recordSymbol.OriginalDefinition.ToDisplayString(),
-                toStringMethodVar,
-                ToStringName,
-                ToStringName,
-                Constants.Cecil.PublicOverrideMethodAttributes,
-                [],
-                [],
-                ctx => context.TypeResolver.Bcl.System.String,
+            string declaringTypeName = _recordSymbol.OriginalDefinition.ToDisplayString();
+            IReadOnlyList<ParameterSpec> parameters = [];
+            IList<string> typeParameters = [];
+            Func<IVisitorContext, string> returnTypeResolver = ctx => context.TypeResolver.Bcl.System.String;
+            var toStringDeclExps = context.ApiDefinitionsFactory.Method(
+                context, 
+                new MemberDefinitionContext(toStringMethodVar, recordTypeDefinitionVariable, IlContext.None), 
+                declaringTypeName, 
+                ToStringName, 
+                ToStringName, 
+                Constants.Cecil.PublicOverrideMethodAttributes, 
+                parameters, 
+                typeParameters, 
+                returnTypeResolver,
                 out var methodDefinitionVariable);
             
             context.Generate([
@@ -512,16 +527,23 @@ internal partial class RecordGenerator
         context.WriteComment($"IEquatable<>.Equals({record.Identifier.ValueText} other)");
         var equalsVar = context.Naming.SyntheticVariable("Equals", ElementKind.Method);
         var declaringType = context.TypeResolver.ResolveAny(_recordSymbol);
-        
-        var exps = CecilDefinitionsFactory.Method(
-                                    context,
-                                    _recordSymbol.OriginalDefinition.ToDisplayString(),
-                                    equalsVar,
-                                    $"{_recordSymbol.OriginalDefinition.ToDisplayString()}.Equals", "Equals",
-                                    $"MethodAttributes.Public | MethodAttributes.HideBySig | {Constants.Cecil.InterfaceMethodDefinitionAttributes}",
-                                    [new ParameterSpec("other", declaringType, RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = $"{_recordSymbol.ToDisplayString()}?"} ],
-                                    Array.Empty<string>(),
-                                    ctx => ctx.TypeResolver.Bcl.System.Boolean, out var methodDefinitionVariable);
+
+        string declaringTypeName = _recordSymbol.OriginalDefinition.ToDisplayString();
+        string methodNameForParameterVariableRegistration = $"{_recordSymbol.OriginalDefinition.ToDisplayString()}.Equals";
+        string methodModifiers = $"MethodAttributes.Public | MethodAttributes.HideBySig | {Constants.Cecil.InterfaceMethodDefinitionAttributes}";
+        IReadOnlyList<ParameterSpec> parameters = [new ParameterSpec("other", declaringType, RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = $"{_recordSymbol.ToDisplayString()}?"} ];
+        Func<IVisitorContext, string> returnTypeResolver = ctx => ctx.TypeResolver.Bcl.System.Boolean;
+        var exps = context.ApiDefinitionsFactory.Method(
+            context, 
+            new MemberDefinitionContext(equalsVar, recordTypeDefinitionVariable, IlContext.None), 
+            declaringTypeName, 
+            methodNameForParameterVariableRegistration, 
+            "Equals", 
+            methodModifiers, 
+            parameters, 
+            Array.Empty<string>(), 
+            returnTypeResolver,
+            out var methodDefinitionVariable);
 
         context.Generate([..exps, $"{recordTypeDefinitionVariable}.Methods.Add({equalsVar});"]);
         
@@ -765,16 +787,19 @@ internal partial class RecordGenerator
         context.WriteNewLine();
         context.WriteComment("Equals(object)");
         var equalsObjectOverloadMethodVar = context.Naming.SyntheticVariable($"{methodName}ObjectOverload", ElementKind.Method);
-        var equalsObjectOverloadMethodExps = CecilDefinitionsFactory.Method(
-            context,
-            recordSymbol.Name,
-            equalsObjectOverloadMethodVar,
-            methodName,
-            methodName,
-            Constants.Cecil.PublicOverrideMethodAttributes,
-            [new ParameterSpec("other", context.TypeResolver.Bcl.System.Object, RefKind.None, Constants.ParameterAttributes.None)],
-            [],
-            ctx => ctx.TypeResolver.Bcl.System.Boolean,
+        IReadOnlyList<ParameterSpec> parameters = [new ParameterSpec("other", context.TypeResolver.Bcl.System.Object, RefKind.None, Constants.ParameterAttributes.None)];
+        IList<string> typeParameters = [];
+        Func<IVisitorContext, string> returnTypeResolver = ctx => ctx.TypeResolver.Bcl.System.Boolean;
+        var equalsObjectOverloadMethodExps = context.ApiDefinitionsFactory.Method(
+            context, 
+            new MemberDefinitionContext(equalsObjectOverloadMethodVar, recordTypeDefinitionVariable, IlContext.None), 
+            recordSymbol.Name, 
+            methodName, 
+            methodName, 
+            Constants.Cecil.PublicOverrideMethodAttributes, 
+            parameters, 
+            typeParameters, 
+            returnTypeResolver,
             out _);
         
         context.Generate(equalsObjectOverloadMethodExps);
@@ -815,16 +840,19 @@ internal partial class RecordGenerator
         context.WriteNewLine();
         context.WriteComment($"Equals({recordSymbol.BaseType?.Name})");
         var equalsBaseOverloadMethodVar = context.Naming.SyntheticVariable($"{methodName}{recordSymbol.BaseType?.Name}Overload", ElementKind.Method);
-        var equalsBaseOverloadMethodExps = CecilDefinitionsFactory.Method(
-            context,
-            recordSymbol.Name,
-            equalsBaseOverloadMethodVar,
-            methodName,
-            methodName,
-            Constants.Cecil.PublicOverrideMethodAttributes,
-            [new ParameterSpec("other", context.TypeResolver.ResolveAny(recordSymbol.BaseType), RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = $"{recordSymbol.BaseType?.Name}?" }],
-            [],
-            ctx => ctx.TypeResolver.Bcl.System.Boolean,
+        IReadOnlyList<ParameterSpec> parameters1 = [new ParameterSpec("other", context.TypeResolver.ResolveAny(recordSymbol.BaseType), RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = $"{recordSymbol.BaseType?.Name}?" }];
+        IList<string> typeParameters1 = [];
+        Func<IVisitorContext, string> returnTypeResolver1 = ctx => ctx.TypeResolver.Bcl.System.Boolean;
+        var equalsBaseOverloadMethodExps = context.ApiDefinitionsFactory.Method(
+            context, 
+            new MemberDefinitionContext(equalsBaseOverloadMethodVar, recordTypeDefinitionVariable, IlContext.None), 
+            recordSymbol.Name, 
+            methodName, 
+            methodName, 
+            Constants.Cecil.PublicOverrideMethodAttributes, 
+            parameters1, 
+            typeParameters1, 
+            returnTypeResolver1,
             out _);
         
         context.Generate(equalsBaseOverloadMethodExps);
@@ -862,16 +890,19 @@ internal partial class RecordGenerator
         context.WriteNewLine();
         context.WriteComment($"Deconstruct({string.Join(',', parametersInfo.Select(parameterType => $"out {parameterType!.Type}"))})");
         var deconstructMethodVar = context.Naming.SyntheticVariable(methodName, ElementKind.Method);
-        var deconstructMethodVarExps = CecilDefinitionsFactory.Method(
-            context,
-            recordSymbol.OriginalDefinition.ToDisplayString(),
-            deconstructMethodVar,
-            methodName,
-            methodName,
-            Constants.Cecil.PublicInstanceMethod,
-            parameterTypeParamSpec,
-            [],
-            ctx => ctx.TypeResolver.Bcl.System.Void,
+        string declaringTypeName = recordSymbol.OriginalDefinition.ToDisplayString();
+        IList<string> typeParameters = [];
+        Func<IVisitorContext, string> returnTypeResolver = ctx => ctx.TypeResolver.Bcl.System.Void;
+        var deconstructMethodVarExps = context.ApiDefinitionsFactory.Method(
+            context, 
+            new MemberDefinitionContext(deconstructMethodVar, recordTypeDefinitionVariable, IlContext.None), 
+            declaringTypeName, 
+            methodName, 
+            methodName, 
+            Constants.Cecil.PublicInstanceMethod, 
+            parameterTypeParamSpec, 
+            typeParameters, 
+            returnTypeResolver,
             out _);
         
         context.Generate(deconstructMethodVarExps);

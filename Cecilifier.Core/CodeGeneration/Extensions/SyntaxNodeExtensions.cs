@@ -8,6 +8,13 @@ namespace Cecilifier.Core.CodeGeneration.Extensions;
 
 public static class SyntaxNodeExtensions
 {
+    internal static string GetSyntheticMethodName(this LambdaExpressionSyntax lambda)
+    {
+        var lambdaSourcePosition = lambda.GetLocation().GetLineSpan().StartLinePosition;
+        var syntheticMethodName = $"Lambda_{lambdaSourcePosition.Line}_{lambdaSourcePosition.Character}";
+        return syntheticMethodName;
+    }
+    
     /// <summary>
     /// Each primary constructor parameter that does not have a matching parameter
     /// in the base record (or the base record of the base record and so on) will have
