@@ -19,7 +19,7 @@ internal class ArrayExpandedParamsArgumentHandler : ExpandedParamsArgumentHandle
         
         var paramsType = Context.TypeResolver.ResolveAny(ElementType);
         Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldc_I4, ElementCount);
-        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Newarr, paramsType);
+        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Newarr, new CilMetadataHandle(paramsType));
         Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Stloc, new CilLocalVariableHandle(_backingVariableName));
     }
 

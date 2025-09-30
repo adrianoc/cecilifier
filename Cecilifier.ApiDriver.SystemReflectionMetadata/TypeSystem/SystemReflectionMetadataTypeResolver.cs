@@ -16,7 +16,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
 {
     public override string ResolveAny(ITypeSymbol type, ResolveTargetKind resolveTargetKind = ResolveTargetKind.None, string cecilTypeParameterProviderVar = null)
     {
-        return resolveTargetKind == ResolveTargetKind.None 
+        return resolveTargetKind == ResolveTargetKind.None || type.TypeKind == TypeKind.Array ||  type.TypeKind == TypeKind.Pointer
             ? base.ResolveAny(type, resolveTargetKind, cecilTypeParameterProviderVar) 
             : ResolveForTargetKind(type, resolveTargetKind, false);        
     }
