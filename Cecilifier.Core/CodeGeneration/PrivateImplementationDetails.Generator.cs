@@ -96,21 +96,15 @@ internal partial class PrivateImplementationDetailsGenerator
         context.WriteComment($"MemoryMarshal.{createSpanMethodName}() generic instance method");
         var memoryMarshalCreateSpanVar = GetMemoryMarshalCreateSpanMethod(context, createSpanMethodName).MethodResolverExpression(context).MakeGenericInstanceMethod(context, "createSpan", [tElementVar]);
 
-        var methodBodyExpressions = CecilDefinitionsFactory.MethodBody(
-            context,
-            methodName,
-            methodVar,
-            [],
-            [
-                OpCodes.Ldarg_0,
-                OpCodes.Call.WithOperand(unsafeAsVar),
-                OpCodes.Ldarg_1,
-                OpCodes.Call.WithOperand(memoryMarshalCreateSpanVar),
-                OpCodes.Ret
-            ]);
-
-        var finalExps = methodBodyExpressions.Append($"{privateImplementationDetailsVar.VariableName}.Methods.Add({methodVar});");
-        context.Generate(finalExps);
+        InstructionRepresentation[] instructions = [
+            OpCodes.Ldarg_0,
+            OpCodes.Call.WithOperand(unsafeAsVar),
+            OpCodes.Ldarg_1,
+            OpCodes.Call.WithOperand(memoryMarshalCreateSpanVar),
+            OpCodes.Ret
+        ];
+        var exps = context.ApiDefinitionsFactory.MethodBody(context, methodName, context.ApiDriver.NewIlContext(context, methodName, methodVar), [], instructions);
+        context.Generate([..exps, $"{privateImplementationDetailsVar.VariableName}.Methods.Add({methodVar});"]);
         
         return methodDefinitionVariable;
         
@@ -178,18 +172,14 @@ internal partial class PrivateImplementationDetailsGenerator
             .MethodResolverExpression(context)
             .MakeGenericInstanceMethod(context, "unsafeAs", [tBufferTypeParameter, tElementTypeParameter]);
 
-        var methodBodyExpressions = CecilDefinitionsFactory.MethodBody(
-            context,
-            "UnsafeAs",
-            methodVar,
-            [],
-            [
-                OpCodes.Ldarg_0,
-                OpCodes.Call.WithOperand(unsafeAsVarName),
-                OpCodes.Ret
-            ]);
-        
-        context.Generate(methodBodyExpressions);
+        InstructionRepresentation[] instructions = [
+            OpCodes.Ldarg_0,
+            OpCodes.Call.WithOperand(unsafeAsVarName),
+            OpCodes.Ret
+        ];
+        var ilContext = context.ApiDriver.NewIlContext(context, "UnsafeAs", methodVar);
+        var exps = context.ApiDefinitionsFactory.MethodBody(context, "UnsafeAs", ilContext, [], instructions);
+        context.Generate(exps);
         
         context.Generate($"{privateImplementationDetailsVar.VariableName}.Methods.Add({methodVar});");
         context.WriteNewLine();
@@ -242,19 +232,15 @@ internal partial class PrivateImplementationDetailsGenerator
         var unsafeAddVarName = GetUnsafeAddMethod(context)
                                         .MethodResolverExpression(context)
                                         .MakeGenericInstanceMethod(context, "unsafeAdd", [telementTypeParameter]);
-        
-        var methodBodyExpressions = CecilDefinitionsFactory.MethodBody(
-            context,
-            "UnsafeAdd",
-            methodVar,
-            [],
-            [
-                OpCodes.Ldarg_0,
-                OpCodes.Call.WithOperand(unsafeAsVarName),
-                OpCodes.Ldarg_1,
-                OpCodes.Call.WithOperand(unsafeAddVarName),
-                OpCodes.Ret
-            ]);
+
+        InstructionRepresentation[] instructions = [
+            OpCodes.Ldarg_0,
+            OpCodes.Call.WithOperand(unsafeAsVarName),
+            OpCodes.Ldarg_1,
+            OpCodes.Call.WithOperand(unsafeAddVarName),
+            OpCodes.Ret
+        ];
+        var methodBodyExpressions = context.ApiDefinitionsFactory.MethodBody(context, "UnsafeAdd", context.ApiDriver.NewIlContext(context, "UnsafeAdd", methodVar), [], instructions);
         
         context.Generate(methodBodyExpressions);
         context.Generate($"{privateImplementationDetailsVar.VariableName}.Methods.Add({methodVar});");

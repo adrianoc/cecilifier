@@ -134,7 +134,7 @@ public class PrimaryConstructorGenerator
             return;
         
         var ilContext = context.ApiDriver.NewIlContext(context, $"ctor_{typeDeclaration.Identifier.ValueText}", ctorVar);
-        var ctorExps = CecilDefinitionsFactory.MethodBody(context.Naming, $"ctor_{typeDeclaration.Identifier.ValueText}", ilContext, [], []);
+        var ctorExps = context.ApiDefinitionsFactory.MethodBody(context, $"ctor_{typeDeclaration.Identifier.ValueText}", ilContext, [], []);
         context.Generate(ctorExps);
 
         var resolvedType = context.TypeResolver.ResolveAny(typeSymbol);

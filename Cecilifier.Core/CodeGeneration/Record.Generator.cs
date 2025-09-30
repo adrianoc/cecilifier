@@ -102,7 +102,7 @@ internal partial class RecordGenerator
         ];
         
         context.Generate(
-            CecilDefinitionsFactory.MethodBody(context.Naming, "clone", context.ApiDriver.NewIlContext(context, "clone", cloneMethodVar), [], instructions)
+            context.ApiDefinitionsFactory.MethodBody(context, "clone", context.ApiDriver.NewIlContext(context, "clone", cloneMethodVar), [], instructions)
         );
         
         AddCompilerGeneratedAttributeTo(context, cloneMethodVar);
@@ -167,7 +167,7 @@ internal partial class RecordGenerator
         instructions.Add(OpCodes.Ret);
         
         context.Generate(
-            CecilDefinitionsFactory.MethodBody(context.Naming, Constants.Cecil.InstanceConstructorName, context.ApiDriver.NewIlContext(context, Constants.Cecil.InstanceConstructorName, copyCtorVar), [], instructions.ToArray())
+            context.ApiDefinitionsFactory.MethodBody(context, Constants.Cecil.InstanceConstructorName, context.ApiDriver.NewIlContext(context, Constants.Cecil.InstanceConstructorName, copyCtorVar), [], instructions.ToArray())
         );
         
         AddCompilerGeneratedAttributeTo(context, copyCtorVar);
@@ -231,8 +231,8 @@ internal partial class RecordGenerator
                 OpCodes.Ldc_I4_1.WithInstructionMarker("Equal"),
                 OpCodes.Ret
             ];
-        
-        var bodyExps = CecilDefinitionsFactory.MethodBody(context, methodName, equalsOperatorMethodVar, [], equalsBodyInstructions);
+
+        var bodyExps = context.ApiDefinitionsFactory.MethodBody(context, methodName, context.ApiDriver.NewIlContext(context, methodName, equalsOperatorMethodVar), [], equalsBodyInstructions);
         context.Generate(bodyExps);
         context.Generate($"{recordTypeDefinitionVariable}.Methods.Add({equalsOperatorMethodVar});");
         AddCompilerGeneratedAttributeTo(context, equalsOperatorMethodVar);
@@ -286,8 +286,8 @@ internal partial class RecordGenerator
             OpCodes.Ceq,
             OpCodes.Ret
         ];
-        
-        var bodyExps = CecilDefinitionsFactory.MethodBody(context, methodName, inequalityOperatorMethodVar, [], inequalityBodyInstructions);
+
+        var bodyExps = context.ApiDefinitionsFactory.MethodBody(context, methodName, context.ApiDriver.NewIlContext(context, methodName, inequalityOperatorMethodVar), [], inequalityBodyInstructions);
         context.Generate(bodyExps);
         context.Generate($"{recordTypeDefinitionVariable}.Methods.Add({inequalityOperatorMethodVar});");
         AddCompilerGeneratedAttributeTo(context, inequalityOperatorMethodVar);
@@ -352,7 +352,7 @@ internal partial class RecordGenerator
         }
         
         var ilContext = context.ApiDriver.NewIlContext(context, "GetHashCode", getHashCodeMethodVar);
-        var bodyExps = CecilDefinitionsFactory.MethodBody(context.Naming, "GetHashCode", ilContext, [], [..getHashCodeMethodBodyExps, OpCodes.Ret]);
+        var bodyExps = context.ApiDefinitionsFactory.MethodBody(context, "GetHashCode", ilContext, [], [..getHashCodeMethodBodyExps, OpCodes.Ret]);
         context.Generate(bodyExps);
         context.WriteNewLine();
         context.Generate($"{recordTypeDefinitionVariable}.Methods.Add({getHashCodeMethodVar});");
@@ -436,9 +436,9 @@ internal partial class RecordGenerator
             
             using var _ = context.DefinitionVariables.WithVariable(methodDefinitionVariable);
             var stringBuildDefaultCtor = stringBuilderSymbol.GetMembers(".ctor").OfType<IMethodSymbol>().Single(ctor => ctor.Parameters.Length == 0).MethodResolverExpression(context);
-            
-            var toStringBodyExps = CecilDefinitionsFactory.MethodBody(context, ToStringName, toStringMethodVar, [context.TypeResolver.ResolveAny(stringBuilderSymbol)],
-            [
+
+            string[] localVariableTypes = [context.TypeResolver.ResolveAny(stringBuilderSymbol)];
+            InstructionRepresentation[] instructions = [
                 OpCodes.Newobj.WithOperand(stringBuildDefaultCtor),
                 OpCodes.Stloc_0,
                 OpCodes.Ldloc_0,
@@ -464,7 +464,8 @@ internal partial class RecordGenerator
                 
                 OpCodes.Callvirt.WithOperand(stringBuilderSymbol.GetMembers("ToString").OfType<IMethodSymbol>().Single(m => m.Parameters.Length == 0).MethodResolverExpression(context)),
                 OpCodes.Ret
-            ]);
+            ];
+            var toStringBodyExps = context.ApiDefinitionsFactory.MethodBody(context, ToStringName, context.ApiDriver.NewIlContext(context, ToStringName, toStringMethodVar), localVariableTypes, instructions);
             context.Generate(toStringBodyExps);
             AddCompilerGeneratedAttributeTo(context, toStringMethodVar);
             AddIsReadOnlyAttributeTo(context, toStringMethodVar);
@@ -569,7 +570,7 @@ internal partial class RecordGenerator
             ]);
             
             var ilContext = context.ApiDriver.NewIlContext(context, "Equals", equalsVar);
-            var equalsExps = CecilDefinitionsFactory.MethodBody(context.Naming, "Equals", ilContext, [], instructions.ToArray());
+            var equalsExps = context.ApiDefinitionsFactory.MethodBody(context, "Equals", ilContext, [], instructions.ToArray());
             context.Generate(equalsExps);
         }
         
@@ -800,8 +801,9 @@ internal partial class RecordGenerator
                     OpCodes.Callvirt.WithOperand(_recordTypeEqualsOverloadMethodVar),
                     OpCodes.Ret
                   ];
-        
-        var bodyExps = CecilDefinitionsFactory.MethodBody(context, methodName, equalsObjectOverloadMethodVar, [], equalsBodyInstructions);
+
+        string[] localVariableTypes = [];
+        var bodyExps = context.ApiDefinitionsFactory.MethodBody(context, methodName, context.ApiDriver.NewIlContext(context, methodName, equalsObjectOverloadMethodVar), localVariableTypes, equalsBodyInstructions);
         context.Generate(bodyExps);
         context.Generate($"{recordTypeDefinitionVariable}.Methods.Add({equalsObjectOverloadMethodVar});");
         AddCompilerGeneratedAttributeTo(context, equalsObjectOverloadMethodVar);
@@ -835,8 +837,8 @@ internal partial class RecordGenerator
             OpCodes.Callvirt.WithOperand(equalsObjectOverloadMethodVar),
             OpCodes.Ret
         ];
-        
-        var bodyExps2 = CecilDefinitionsFactory.MethodBody(context, methodName, equalsBaseOverloadMethodVar, [], equalsBodyInstructions2);
+
+        var bodyExps2 = context.ApiDefinitionsFactory.MethodBody(context, methodName, context.ApiDriver.NewIlContext(context, methodName, equalsBaseOverloadMethodVar), [], equalsBodyInstructions2);
         context.Generate(bodyExps2);
         context.Generate($"{recordTypeDefinitionVariable}.Methods.Add({equalsBaseOverloadMethodVar});");
         AddCompilerGeneratedAttributeTo(context, equalsBaseOverloadMethodVar);
@@ -888,8 +890,8 @@ internal partial class RecordGenerator
             argIndex++;
         }
         deconstructInstructions.Add(OpCodes.Ret);
-        
-        var bodyExps = CecilDefinitionsFactory.MethodBody(context, methodName, deconstructMethodVar, [], deconstructInstructions.ToArray());
+
+        var bodyExps = context.ApiDefinitionsFactory.MethodBody(context, methodName, context.ApiDriver.NewIlContext(context, methodName, deconstructMethodVar), [], deconstructInstructions.ToArray());
         context.Generate(bodyExps);
         context.Generate($"{recordTypeDefinitionVariable}.Methods.Add({deconstructMethodVar});");
         AddCompilerGeneratedAttributeTo(context, deconstructMethodVar);

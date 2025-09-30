@@ -49,7 +49,7 @@ namespace Cecilifier.Core.AST
 
                 var methodVar = Context.Naming.SyntheticVariable(acc.Keyword.ValueText, ElementKind.Method);
                 var ilContext = Context.ApiDriver.NewIlContext(Context, acc.Keyword.ValueText, methodVar);
-                var body = CecilDefinitionsFactory.MethodBody(Context.Naming, acc.Keyword.ValueText, ilContext, [], []);
+                var body = Context.ApiDefinitionsFactory.MethodBody(Context, acc.Keyword.ValueText, ilContext, [], []);
                 var accessorMethodVar = AddAccessor(node, eventSymbol, methodVar, acc.Keyword.ValueText, eventType, body);
                 using (Context.DefinitionVariables.WithVariable(accessorMethodVar))
                 {
@@ -152,8 +152,8 @@ namespace Cecilifier.Core.AST
 
             // static member access does not have a *this* so simply replace with *Nop*
             var lgarg_0 = isStatic ? OpCodes.Nop : OpCodes.Ldarg_0;
-            var bodyExps = CecilDefinitionsFactory.MethodBody(Context, accessorName, removeMethodVar, [],
-            [
+            string[] localVariableTypes = [];
+            InstructionRepresentation[] instructions = [
                 lgarg_0,
                 ldfld.WithOperand(fieldVar),
                 OpCodes.Stloc_0,
@@ -174,7 +174,8 @@ namespace Cecilifier.Core.AST
                 OpCodes.Ldloc_1,
                 OpCodes.Bne_Un_S.WithBranchOperand("LoopStart"),
                 OpCodes.Ret
-            ]);
+            ];
+            var bodyExps = Context.ApiDefinitionsFactory.MethodBody(Context, accessorName, Context.ApiDriver.NewIlContext(Context, accessorName, removeMethodVar), localVariableTypes, instructions);
 
             return compareExchangeExps.Concat(bodyExps);
         }
@@ -191,8 +192,8 @@ namespace Cecilifier.Core.AST
 
             // static member access does not have a *this* so simply replace with *Nop*
             var lgarg_0 = isStatic ? OpCodes.Nop : OpCodes.Ldarg_0;
-            var bodyExps = CecilDefinitionsFactory.MethodBody(Context, accessorName, addMethodVar, [], 
-            [
+            string[] localVariableTypes = [];
+            InstructionRepresentation[] instructions = [
                 lgarg_0,
                 ldfld.WithOperand(fieldVar),
                 OpCodes.Stloc_0,
@@ -214,7 +215,8 @@ namespace Cecilifier.Core.AST
                 OpCodes.Bne_Un_S.WithBranchOperand("LoopStart"),
                 OpCodes.Nop,
                 OpCodes.Ret
-            ]);
+            ];
+            var bodyExps = Context.ApiDefinitionsFactory.MethodBody(Context, accessorName, Context.ApiDriver.NewIlContext(Context, accessorName, addMethodVar), localVariableTypes, instructions);
 
             return compareExchangeExps.Concat(bodyExps);
         }

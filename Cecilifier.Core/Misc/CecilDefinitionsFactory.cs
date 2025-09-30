@@ -113,58 +113,6 @@ namespace Cecilifier.Core.Misc
             return exp + ";";
         }
 
-        public static IEnumerable<string> MethodBody(IVisitorContext context, string methodName, string methodVar, string[] localVariableTypes, InstructionRepresentation[] instructions)
-        {
-            return MethodBody(context.Naming, methodName, context.ApiDriver.NewIlContext(context, methodName, methodVar), localVariableTypes, instructions);
-        }
-
-        public static IEnumerable<string> MethodBody(INameStrategy nameStrategy, string methodName, IlContext ilContext, string[] localVariableTypes, InstructionRepresentation[] instructions)
-        {
-            var tagToInstructionDefMapping = new Dictionary<string, string>();
-            yield return $"{ilContext.RelatedMethodVariable}.Body = new MethodBody({ilContext.RelatedMethodVariable});";
-            
-            if (localVariableTypes.Length > 0)
-            {
-                yield return $"{ilContext.RelatedMethodVariable}.Body.InitLocals = true;";
-                foreach (var localVariableType in localVariableTypes)
-                {
-                    yield return $"{ilContext.RelatedMethodVariable}.Body.Variables.Add({LocalVariable(localVariableType)});";
-                }
-            }
-            
-            if (instructions.Length == 0)
-                yield break;
-
-            var methodInstVar = nameStrategy.SyntheticVariable(methodName, ElementKind.LocalVariable);
-            yield return $"var {methodInstVar} = {ilContext.RelatedMethodVariable}.Body.Instructions;";
-
-            // create `Mono.Cecil.Instruction` instances for each instruction that has a 'Tag'
-            foreach (var inst in instructions.Where(inst => !inst.Ignore))
-            {
-                if (inst.Tag == null)
-                    continue;
-                
-                var instVar = nameStrategy.SyntheticVariable(inst.Tag, ElementKind.Label);
-                yield return $"var {instVar} = {ilContext.VariableName}.Create({inst.OpCode.ConstantName()}{OperandFor(inst)});";
-                tagToInstructionDefMapping[inst.Tag] = instVar;
-            }
-
-            foreach (var inst in instructions.Where(inst => !inst.Ignore))
-            {
-                yield return inst.Tag != null 
-                    ? $"{methodInstVar}.Add({tagToInstructionDefMapping[inst.Tag]});" 
-                    : $"{methodInstVar}.Add({ilContext.VariableName}.Create({inst.OpCode.ConstantName()}{OperandFor(inst)}));";
-            }
-           
-
-            string OperandFor(InstructionRepresentation inst)
-            {
-                return inst.Operand?.Insert(0, ", ")
-                       ?? inst.BranchTargetTag?.Replace(inst.BranchTargetTag, $", {tagToInstructionDefMapping[inst.BranchTargetTag]}")
-                       ?? string.Empty;
-            }
-        }
-
         internal static string LocalVariable(string resolvedType) => $"new VariableDefinition({resolvedType})";
         
         /*

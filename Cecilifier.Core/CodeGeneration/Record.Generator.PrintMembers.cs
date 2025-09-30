@@ -111,12 +111,13 @@ internal partial class RecordGenerator
             separator = ", ";
         }
 
-        var printMemberBodyExps = CecilDefinitionsFactory.MethodBody(context, PrintMembersMethodName, PrintMembersVar, [],
-        [
+        InstructionRepresentation[] instructions = [
             ..bodyInstructions,
             OpCodes.Ldc_I4_1,
             OpCodes.Ret
-        ]);
+        ];
+        var ilContext = context.ApiDriver.NewIlContext(context, PrintMembersMethodName, PrintMembersVar);
+        var printMemberBodyExps = context.ApiDefinitionsFactory.MethodBody(context, PrintMembersMethodName, ilContext, [], instructions);
         context.Generate(printMemberBodyExps);
         AddCompilerGeneratedAttributeTo(context, PrintMembersVar);
         AddIsReadOnlyAttributeTo(context, PrintMembersVar);
