@@ -2,6 +2,7 @@ using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Variables;
 using System.Reflection.Emit;
 using Cecilifier.Core.ApiDriver;
+using Cecilifier.Core.ApiDriver.Handles;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.CSharp;

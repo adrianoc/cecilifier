@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Reflection.Emit;
 using Cecilifier.Core.ApiDriver;
+using Cecilifier.Core.ApiDriver.Handles;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;

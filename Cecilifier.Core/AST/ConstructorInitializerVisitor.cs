@@ -1,5 +1,6 @@
 using System.Reflection.Emit;
 using Cecilifier.Core.ApiDriver;
+using Cecilifier.Core.ApiDriver.Handles;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Cecilifier.Core.Extensions;

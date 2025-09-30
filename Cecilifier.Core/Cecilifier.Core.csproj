@@ -6,10 +6,6 @@
     <InternalsVisibleTo Include="$(AssemblyName).Tests"/>
   </ItemGroup>
   
-  <ItemGroup>
-    <Folder Include="ApiDriver\Handles\" />
-  </ItemGroup>
-  
   <Target Name="Generate" BeforeTargets="CoreCompile">
     <Exec Command="git log -1 --pretty=format:%H" ConsoleToMSBuild="true">
       <Output TaskParameter="ConsoleOutput" PropertyName="GitRevision" />

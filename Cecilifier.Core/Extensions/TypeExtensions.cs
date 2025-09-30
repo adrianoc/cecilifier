@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.ApiDriver;
+using Cecilifier.Core.ApiDriver.Handles;
 using Microsoft.CodeAnalysis;
 using Cecilifier.Core.AST;
 using OpCode = System.Reflection.Emit.OpCode;
