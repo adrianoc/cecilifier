@@ -44,7 +44,8 @@ public class TypeResolutionTests : CecilifierUnitTestBase
     [TestCase(
         "using System; class Foo { event EventHandler<Bar> Bar; } class Bar : EventArgs { Foo foo; }",
         @".+fld_bar_\d+ = new FieldDefinition\(""Bar"",.+ImportReference\(typeof\(.+EventHandler\<\>\)\)\.MakeGenericInstanceType\(cls_bar_\d+\)\);\s+",
-        @"m_add_\d+.Parameters.Add\(new ParameterDefinition\(""value"",.+ImportReference\(typeof\(.+EventHandler\<\>\)\)\.MakeGenericInstanceType\(cls_bar_\d+\)\)\);",
+        @"var p_value_\d+ = new ParameterDefinition\(""value"",.+ImportReference\(typeof\(.+EventHandler\<\>\)\)\.MakeGenericInstanceType\(cls_bar_\d+\)\);",
+        @"m_add_\d+.Parameters.Add\(p_value_\d+\);",
         TestName = "Generic argument in event")]
     public void TypeForwardingCyclicTests(string code, params string[] expected)
     {
