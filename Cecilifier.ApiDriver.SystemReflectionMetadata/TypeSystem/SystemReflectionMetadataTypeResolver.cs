@@ -14,7 +14,7 @@ namespace Cecilifier.ApiDriver.SystemReflectionMetadata.TypeSystem;
 //          call to ResolveX()
 public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContext context) : TypeResolverBase<SystemReflectionMetadataContext>(context)
 {
-    public override string ResolveAny(ITypeSymbol type, ResolveTargetKind resolveTargetKind = ResolveTargetKind.None, string cecilTypeParameterProviderVar = null)
+    public override string ResolveAny(ITypeSymbol type, ResolveTargetKind resolveTargetKind = ResolveTargetKind.None, string? cecilTypeParameterProviderVar = null)
     {
         return resolveTargetKind == ResolveTargetKind.None || type.TypeKind == TypeKind.Array ||  type.TypeKind == TypeKind.Pointer
             ? base.ResolveAny(type, resolveTargetKind, cecilTypeParameterProviderVar) 

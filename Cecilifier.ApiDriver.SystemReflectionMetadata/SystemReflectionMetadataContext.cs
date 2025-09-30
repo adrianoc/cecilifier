@@ -11,7 +11,7 @@ public class SystemReflectionMetadataContext : CecilifierContextBase, IVisitorCo
 {
     private SystemReflectionMetadataContext(CecilifierOptions options, SemanticModel semanticModel, byte indentation = 2) : base(options, semanticModel, indentation)
     {
-        AssemblyResolver = new SystemReflectionMetadataAssemblyResolver(this);
+        AssemblyResolver = new SystemReflectionMetadataAssemblyResolver();
         ApiDriver = new SystemReflectionMetadataGeneratorDriver();
         ApiDefinitionsFactory = ApiDriver.CreateDefinitionsFactory();
         TypeResolver = new SystemReflectionMetadataTypeResolver(this);

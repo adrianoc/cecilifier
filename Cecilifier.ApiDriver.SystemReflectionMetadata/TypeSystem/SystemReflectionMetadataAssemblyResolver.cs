@@ -2,7 +2,7 @@ using Microsoft.CodeAnalysis;
 
 namespace Cecilifier.ApiDriver.SystemReflectionMetadata.TypeSystem;
 
-public class SystemReflectionMetadataAssemblyResolver(SystemReflectionMetadataContext context)
+public class SystemReflectionMetadataAssemblyResolver()
 {
     public string Resolve(IAssemblySymbol assembly)
     {
