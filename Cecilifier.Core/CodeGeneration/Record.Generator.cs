@@ -13,6 +13,7 @@ using Cecilifier.Core.CodeGeneration.Extensions;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
+using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
 
 namespace Cecilifier.Core.CodeGeneration;
@@ -80,12 +81,18 @@ internal partial class RecordGenerator
         context.WriteComment($"{_recordSymbol.Name} {CloneMethodName} method");
 
         var cloneMethodVar = context.Naming.SyntheticVariable("clone", ElementKind.Method);
-        var cloneMethodExps = CecilDefinitionsFactory.Method(context, cloneMethodVar, CloneMethodName, Constants.Cecil.HideBySigNewSlotVirtual.AppendModifier("MethodAttributes.Public"), _recordSymbol, false, []);
-        context.Generate(
-        [
-            ..cloneMethodExps,
-            $"{recordTypeDefinitionVariable}.Methods.Add({cloneMethodVar});"
-        ]);
+        var clonedMethodExps = context.ApiDefinitionsFactory.Method(
+                                                                                context, 
+                                                                                new MemberDefinitionContext(cloneMethodVar, recordTypeDefinitionVariable, IlContext.None),  
+                                                                                recordTypeDefinitionVariable, 
+                                                                                "Clone",
+                                                                                CloneMethodName,
+                                                                                Constants.Cecil.HideBySigNewSlotVirtual.AppendModifier("MethodAttributes.Public"), 
+                                                                                [], 
+                                                                                [], 
+                                                                                ctx => ctx.TypeResolver.ResolveAny(_recordSymbol, ResolveTargetKind.ReturnType), 
+                                                                                out var _);
+        context.Generate(clonedMethodExps);
 
         var copyCtorVarToFind = _recordSymbol.GetMembers(".ctor").OfType<IMethodSymbol>().Single(c => c.Parameters.Length == 1 && SymbolEqualityComparer.Default.Equals(c.Parameters[0].Type, c.ContainingType)).AsMethodDefinitionVariable();
         var copyCtorVar = context.DefinitionVariables.GetMethodVariable(copyCtorVarToFind);
