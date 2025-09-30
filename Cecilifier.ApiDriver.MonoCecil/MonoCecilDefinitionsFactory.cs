@@ -1,4 +1,8 @@
+using System.Buffers;
 using System.Runtime.CompilerServices;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Cecilifier.Core;
 using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.AST;
@@ -6,8 +10,6 @@ using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.Variables;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Cecilifier.ApiDriver.MonoCecil;
 
@@ -29,7 +31,44 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
         IEnumerable<TypeParameterSyntax> outerTypeParameters,
         params string[] properties)
     {
-        return CecilDefinitionsFactory.Type(context, typeVar, typeNamespace, typeName, attrs, resolvedBaseType, outerTypeVariable, isStructWithNoFields, interfaces, ownTypeParameters, outerTypeParameters, properties);
+        var typeParamList = ownTypeParameters?.ToArray() ?? [];
+        if (typeParamList.Length > 0)
+        {
+            typeName = typeName + "`" + typeParamList.Length;
+        }
+
+        var exps = new List<string>();
+        var typeDefExp = $"var {typeVar} = new TypeDefinition(\"{typeNamespace}\", \"{typeName}\", {attrs}{(!string.IsNullOrWhiteSpace(resolvedBaseType) ? ", " + resolvedBaseType : "")})";
+        if (properties.Length > 0)
+        {
+            exps.Add($"{typeDefExp} {{ {string.Join(',', properties)} }};");
+        }
+        else
+        {
+            exps.Add($"{typeDefExp};");
+        }
+
+        // add type parameters from outer types. 
+        var outerTypeParametersArray = outerTypeParameters.ToArray();
+        ProcessGenericTypeParameters(typeVar, context, outerTypeParametersArray.Concat(typeParamList).ToArray(), exps);
+            
+        foreach (var itf in interfaces)
+        {
+            exps.Add($"{typeVar}.Interfaces.Add(new InterfaceImplementation({context.TypeResolver.ResolveAny(itf)}));");
+        }
+
+        if (outerTypeVariable.IsValid && outerTypeVariable.VariableName != typeVar)
+            exps.Add($"{outerTypeVariable.VariableName}.NestedTypes.Add({typeVar});"); // type is a inner type of *context.CurrentType* 
+        else
+            exps.Add($"assembly.MainModule.Types.Add({typeVar});");
+
+        if (isStructWithNoFields)
+        {
+            exps.Add($"{typeVar}.ClassSize = 1;");
+            exps.Add($"{typeVar}.PackingSize = 0;");
+        }
+
+        return exps;
     }
 
     public IEnumerable<string> Method(IVisitorContext context, IMethodSymbol methodSymbol, MemberDefinitionContext memberDefinitionContext, string methodName, string methodModifiers,
@@ -168,6 +207,93 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
         context.WriteNewLine();
 
         return context.DefinitionVariables.RegisterNonMethod(string.Empty, variableName, VariableMemberKind.LocalVariable, cecilVarDeclName);
+    }
+
+    private static void ProcessGenericTypeParameters(string memberDefVar, IVisitorContext context, IList<TypeParameterSyntax> typeParamList, IList<string> exps)
+    {
+        // forward declare all generic type parameters to allow one type parameter to reference any of the others; this is useful in constraints for example:
+        // class Foo<T,S> where T: S  { }
+        var genericTypeParamEntries = ArrayPool<(string genParamDefVar, ITypeParameterSymbol typeParameterSymbol)>.Shared.Rent(typeParamList.Count);
+        for (int i = 0; i < typeParamList.Count; i++)
+        {
+            var symbol = context.SemanticModel.GetDeclaredSymbol(typeParamList[i]).EnsureNotNull();
+            var genericParamName = typeParamList[i].Identifier.Text;
+
+            var genParamDefVar = context.Naming.GenericParameterDeclaration(typeParamList[i]);
+            exps.Add(GenericParameter(context, memberDefVar, genericParamName, genParamDefVar, symbol));
+            genericTypeParamEntries[i] = (genParamDefVar, symbol);
+        }
+
+        for (int i = 0; i < typeParamList.Count; i++)
+        {
+            exps.Add($"{memberDefVar}.GenericParameters.Add({genericTypeParamEntries[i].genParamDefVar});");
+            AddConstraints(genericTypeParamEntries[i].genParamDefVar, genericTypeParamEntries[i].typeParameterSymbol, typeParamList[i]);
+        }
+
+        ArrayPool<(string genParamDefVar, ITypeParameterSymbol typeParameterSymbol)>.Shared.Return(genericTypeParamEntries);
+
+        void AddConstraints(string genParamDefVar, ITypeParameterSymbol typeParam, TypeParameterSyntax typeParameterSyntax)
+        {
+            if (typeParam.HasConstructorConstraint || typeParam.HasValueTypeConstraint) // struct constraint implies new()
+            {
+                exps.Add($"{genParamDefVar}.HasDefaultConstructorConstraint = true;");
+            }
+
+            if (typeParam.HasReferenceTypeConstraint)
+            {
+                exps.Add($"{genParamDefVar}.HasReferenceTypeConstraint = true;");
+            }
+
+            if (typeParam.HasValueTypeConstraint)
+            {
+                var systemValueTypeRef = Utils.ImportFromMainModule("typeof(System.ValueType)");
+                var constraintType = typeParam.HasUnmanagedTypeConstraint
+                    ? $"{systemValueTypeRef}.MakeRequiredModifierType({context.TypeResolver.ResolveAny(context.RoslynTypeSystem.ForType<System.Runtime.InteropServices.UnmanagedType>())})"
+                    : systemValueTypeRef;
+
+                exps.Add($"{genParamDefVar}.Constraints.Add(new GenericParameterConstraint({constraintType}));");
+                exps.Add($"{genParamDefVar}.HasNotNullableValueTypeConstraint = true;");
+            }
+
+            if (typeParam.Variance == VarianceKind.In)
+            {
+                exps.Add($"{genParamDefVar}.IsContravariant = true;");
+            }
+            else if (typeParam.Variance == VarianceKind.Out)
+            {
+                exps.Add($"{genParamDefVar}.IsCovariant = true;");
+            }
+            else if (typeParam.AllowsRefLikeType)
+            {
+                context.EmitWarning("`allow ref struct` feature is not implemented yet.", typeParameterSyntax);
+            }
+
+            //https://github.com/adrianoc/cecilifier/issues/312
+            // if (typeParam.HasNotNullConstraint)
+            // {
+            // }
+
+            foreach (var type in typeParam.ConstraintTypes)
+            {
+                exps.Add($"{genParamDefVar}.Constraints.Add(new GenericParameterConstraint({context.TypeResolver.ResolveAny(type)}));");
+            }
+        }
+    }
+    
+    private static string GenericParameter(IVisitorContext context, string typeParameterOwnerVar, string genericParamName, string genParamDefVar, ITypeParameterSymbol typeParameterSymbol)
+    {
+        context.DefinitionVariables.RegisterNonMethod(typeParameterSymbol.ContainingSymbol.ToDisplayString(), genericParamName, VariableMemberKind.TypeParameter, genParamDefVar);
+        return $"var {genParamDefVar} = new Mono.Cecil.GenericParameter(\"{genericParamName}\", {typeParameterOwnerVar}){Variance(typeParameterSymbol)};";
+    }
+
+    private static string Variance(ITypeParameterSymbol typeParameterSymbol)
+    {
+        return typeParameterSymbol.Variance switch
+        {
+            VarianceKind.In => " { IsContravariant = true }",
+            VarianceKind.Out => " { IsCovariant = true }",
+            _ => string.Empty
+        };
     }
 
     private static string LocalVariable(string resolvedType) => $"new VariableDefinition({resolvedType})";

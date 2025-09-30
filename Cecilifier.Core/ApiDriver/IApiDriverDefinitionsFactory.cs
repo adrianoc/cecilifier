@@ -1,5 +1,4 @@
 #nullable enable
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Cecilifier.Core.AST;
@@ -14,6 +13,28 @@ public interface IApiDriverDefinitionsFactory
 {
     public string MappedTypeModifiersFor(INamedTypeSymbol type, SyntaxTokenList modifiers);
 
+    /// <summary>Generates the code for a type declaration.
+    /// </summary>
+    /// <remarks>
+    /// 1. At IL level, type parameters from *outer* types are considered to be part of a inner type whence these type parameters need to be added to the list of type parameters even
+    ///    if the type being declared is not a generic type.
+    /// 
+    /// 2. Only type parameters owned by the type being declared are considered when computing the arity of the type (whence the number following the backtick reflects only the
+    ///    # of the type parameters declared by the type being declared).
+    /// </remarks>
+    /// <param name="context"></param>
+    /// <param name="typeVar"></param>
+    /// <param name="typeNamespace"></param>
+    /// <param name="typeName"></param>
+    /// <param name="attrs"></param>
+    /// <param name="resolvedBaseType"></param>
+    /// <param name="outerTypeVariable"></param>
+    /// <param name="isStructWithNoFields"></param>
+    /// <param name="interfaces"></param>
+    /// <param name="ownTypeParameters"></param>
+    /// <param name="outerTypeParameters"></param>
+    /// <param name="properties"></param>
+    /// <returns></returns>
     public IEnumerable<string> Type(
         IVisitorContext context,
         string typeVar,

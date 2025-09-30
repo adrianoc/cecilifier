@@ -26,19 +26,19 @@ internal partial class TypeDeclarationVisitor
 
         EnsureContainingTypeForwarded(node, delegateSymbol);
         var outerTypeVariable = Context.DefinitionVariables.GetVariable(delegateSymbol.ContainingType?.ToDisplayString(), VariableMemberKind.Type, delegateSymbol.ContainingType?.ContainingSymbol.ToDisplayString());
-        var typeDef = CecilDefinitionsFactory.Type(
-            Context,
-            typeVar,
-            delegateSymbol.ContainingNamespace?.FullyQualifiedName() ?? string.Empty,
-            node.Identifier.ValueText,
-            CecilDefinitionsFactory.DefaultTypeAttributeFor(TypeKind.Delegate, false).AppendModifier(accessibility),
-            Context.TypeResolver.Bcl.System.MulticastDelegate,
-            outerTypeVariable,
-            isStructWithNoFields:false,
-            Array.Empty<ITypeSymbol>(),
-            node.TypeParameterList?.Parameters,
-            Array.Empty<TypeParameterSyntax>(),
-            "IsAnsiClass = true");
+        var typeDef = Context.ApiDefinitionsFactory.Type(
+                                                    Context, 
+                                                    typeVar, 
+                                                    delegateSymbol.ContainingNamespace?.FullyQualifiedName() ?? string.Empty, 
+                                                    node.Identifier.ValueText, 
+                                                    CecilDefinitionsFactory.DefaultTypeAttributeFor(TypeKind.Delegate, false).AppendModifier(accessibility), 
+                                                    Context.TypeResolver.Bcl.System.MulticastDelegate, 
+                                                    outerTypeVariable, 
+                                                    false, 
+                                                    [], 
+                                                    node.TypeParameterList?.Parameters, 
+                                                    [], 
+                                                    "IsAnsiClass = true");
 
         AddCecilExpressions(Context, typeDef);
         HandleAttributesInMemberDeclaration(node.AttributeLists, typeVar);

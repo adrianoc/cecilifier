@@ -25,22 +25,33 @@ namespace Cecilifier.Core.AST
             _memberCollector = new EnumMemberValueCollector();
             node.Accept(_memberCollector);
 
-            var enumType = Context.Naming.Type(node);
             var enumSymbol = Context.SemanticModel.GetDeclaredSymbol(node).EnsureNotNull<ISymbol, INamedTypeSymbol>($"Something really bad happened. Roslyn failed to resolve the symbol for the enum {node.Identifier.Text}");
-            var attrs = TypeModifiersToCecil(enumSymbol, node.Modifiers);
             var outerTypeVariable = Context.DefinitionVariables.GetVariable(enumSymbol.ContainingType?.ToDisplayString(), VariableMemberKind.Type, enumSymbol.ContainingType?.ContainingSymbol.ToDisplayString());
-            var typeDef = CecilDefinitionsFactory.Type(Context, enumType, enumSymbol.ContainingNamespace?.FullyQualifiedName(), enumSymbol.Name, attrs + " | TypeAttributes.Sealed", Context.TypeResolver.Bcl.System.Enum, outerTypeVariable,false, Array.Empty<ITypeSymbol>(), [], []);
+            var enumTypeVariable = Context.Naming.Type(node);
+            var typeDef = Context.ApiDefinitionsFactory.Type(
+                                                        Context, 
+                                                        enumTypeVariable, 
+                                                        enumSymbol.ContainingNamespace?.FullyQualifiedName() ?? string.Empty, 
+                                                        enumSymbol.Name, 
+                                                        TypeModifiersToCecil(enumSymbol, node.Modifiers) + " | TypeAttributes.Sealed", 
+                                                        Context.TypeResolver.Bcl.System.Enum, 
+                                                        outerTypeVariable, 
+                                                        false, 
+                                                        Array.Empty<ITypeSymbol>(), 
+                                                        [], 
+                                                        [], 
+                                                        new string[0]);
             AddCecilExpressions(Context, typeDef);
 
             var parentName = enumSymbol.ContainingSymbol.ToDisplayString();
-            using (Context.DefinitionVariables.WithCurrent(parentName, enumSymbol.FullyQualifiedName(), VariableMemberKind.Type, enumType))
+            using (Context.DefinitionVariables.WithCurrent(parentName, enumSymbol.FullyQualifiedName(), VariableMemberKind.Type, enumTypeVariable))
             {
                 //.class private auto ansi MyEnum
                 var fieldVar = Context.Naming.LocalVariable(node);
                 var valueFieldExp = CecilDefinitionsFactory.Field(
                                                             Context, 
                                                             enumSymbol.ToDisplayString(), 
-                                                            enumType, 
+                                                            enumTypeVariable, 
                                                             fieldVar, 
                                                             "value__", 
                                                             Context.TypeResolver.Bcl.System.Int32,
@@ -48,7 +59,7 @@ namespace Cecilifier.Core.AST
                                                             isByRef: false);
                 AddCecilExpressions(Context, valueFieldExp);
 
-                HandleAttributesInMemberDeclaration(node.AttributeLists, enumType);
+                HandleAttributesInMemberDeclaration(node.AttributeLists, enumTypeVariable);
 
                 base.VisitEnumDeclaration(node);
             }

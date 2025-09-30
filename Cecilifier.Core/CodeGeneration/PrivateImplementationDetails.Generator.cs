@@ -336,20 +336,10 @@ internal partial class PrivateImplementationDetailsGenerator
         context.WriteComment($"This struct is emitted by the compiler and is used to hold raw data used in arrays/span initialization optimizations");
         
         var rawDataHolderTypeVar = context.Naming.Type("rawDataTypeVar", ElementKind.Struct);
-        var privateImplementationDetails = CecilDefinitionsFactory.Type(
-            context, 
-            rawDataHolderTypeVar, 
-            string.Empty,
-            rawDataHolderStructName,
-            Constants.CompilerGeneratedTypes.StaticArrayRawDataHolderTypeModifiers, 
-            context.TypeResolver.ResolveAny(context.RoslynTypeSystem.SystemValueType), 
-            GetOrCreatePrivateImplementationDetailsTypeVariable(context),
-            isStructWithNoFields: false, 
-            Array.Empty<ITypeSymbol>(), 
-            Array.Empty<TypeParameterSyntax>(),
-            Array.Empty<TypeParameterSyntax>(), 
-            $"ClassSize = {sizeInBytes}",
-            "PackingSize = 1");
+        string typeNamespace = string.Empty;
+        string baseTypeName = context.TypeResolver.ResolveAny(context.RoslynTypeSystem.SystemValueType);
+        DefinitionVariable outerTypeVariable = GetOrCreatePrivateImplementationDetailsTypeVariable(context);
+        var privateImplementationDetails = context.ApiDefinitionsFactory.Type(context, rawDataHolderTypeVar, typeNamespace, rawDataHolderStructName, Constants.CompilerGeneratedTypes.StaticArrayRawDataHolderTypeModifiers, baseTypeName, outerTypeVariable, false, Array.Empty<ITypeSymbol>(), Array.Empty<TypeParameterSyntax>(), Array.Empty<TypeParameterSyntax>(), $"ClassSize = {sizeInBytes}", "PackingSize = 1");
 
         context.Generate(privateImplementationDetails);
 
@@ -372,20 +362,19 @@ internal partial class PrivateImplementationDetailsGenerator
         context.WriteComment("This type is emitted by the compiler.");
         
         var privateImplementationDetailsVar = context.Naming.Type("privateImplementationDetails", ElementKind.Class);
-        var privateImplementationDetails = CecilDefinitionsFactory.Type(
-                                                                                    context, 
-                                                                                    privateImplementationDetailsVar, 
-                                                                                    string.Empty,
-                                                                                    Constants.CompilerGeneratedTypes.PrivateImplementationDetails,
-                                                                                    Constants.CompilerGeneratedTypes.PrivateImplementationDetailsModifiers, 
-                                                                                    context.TypeResolver.ResolveAny(context.RoslynTypeSystem.SystemObject), 
-                                                                                    DefinitionVariable.NotFound, 
-                                                                                    isStructWithNoFields: false, 
-                                                                                    Array.Empty<ITypeSymbol>(), 
-                                                                                    Array.Empty<TypeParameterSyntax>(),
-                                                                                    Array.Empty<TypeParameterSyntax>());
-
-        context.Generate(privateImplementationDetails);
+        var exps = context.ApiDefinitionsFactory.Type(
+                                                    context, 
+                                                    privateImplementationDetailsVar, 
+                                                    string.Empty, 
+                                                    Constants.CompilerGeneratedTypes.PrivateImplementationDetails, 
+                                                    Constants.CompilerGeneratedTypes.PrivateImplementationDetailsModifiers, 
+                                                    context.TypeResolver.ResolveAny(context.RoslynTypeSystem.SystemObject), 
+                                                    DefinitionVariable.NotFound, 
+                                                    false, 
+                                                    Array.Empty<ITypeSymbol>(),
+                                                    Array.Empty<TypeParameterSyntax>(),
+                                                    Array.Empty<TypeParameterSyntax>());
+        context.Generate(exps);
 
         return context.DefinitionVariables.RegisterNonMethod(string.Empty, Constants.CompilerGeneratedTypes.PrivateImplementationDetails, VariableMemberKind.Type, privateImplementationDetailsVar);
     }
