@@ -517,7 +517,6 @@ internal partial class RecordGenerator
                                     context,
                                     _recordSymbol.OriginalDefinition.ToDisplayString(),
                                     equalsVar,
-                                    //$"{record.Identifier.ValueText()}.Equals", "Equals",
                                     $"{_recordSymbol.OriginalDefinition.ToDisplayString()}.Equals", "Equals",
                                     $"MethodAttributes.Public | MethodAttributes.HideBySig | {Constants.Cecil.InterfaceMethodDefinitionAttributes}",
                                     [new ParameterSpec("other", declaringType, RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = $"{_recordSymbol.ToDisplayString()}?"} ],
