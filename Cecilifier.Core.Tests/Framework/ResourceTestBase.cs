@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Text;
+using Cecilifier.ApiDriver.MonoCecil;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Tests.Framework.AssemblyDiff;
 using NUnit.Framework;
@@ -29,7 +30,9 @@ public class ResourceTestBase<TContext> : CecilifierTestBase<TContext> where TCo
     protected void AssertResourceTestWithExplicitExpectation(CecilifyTestOptions options, string methodSignature)
     {
         options.ToBeCecilified ??= ReadResource(options.ResourceName, "cs");
-        using var expectedILStream = ReadResource(options.ResourceName, "cs.il");
+        using var expectedILStream = ReadResourceIfPresent(options.ResourceName, $"{ExpectedILSuffixForContext()}.cs.il") 
+                                     ?? ReadResource(options.ResourceName, "cs.il");
+        
         var expectedIL = ReadToEnd(expectedILStream);
 
         var testBaseOutputPath = Path.Combine(GetTestOutputBaseFolderFor("Integration"), options.ResourceName);
@@ -38,6 +41,8 @@ public class ResourceTestBase<TContext> : CecilifierTestBase<TContext> where TCo
         Console.WriteLine();
         Console.WriteLine($"Expected IL:{expectedIL}\n");
         Console.WriteLine($"Actual assembly path : {cecilifyResult.CecilifiedOutputAssemblyFilePath}");
+        
+        static string ExpectedILSuffixForContext() => typeof(TContext) == typeof(MonoCecilContext) ? "cecil" : "srm";
     }
 
     protected void AssertResourceTestWithParameters(string resourceName, params string[] parameters)
@@ -102,6 +107,13 @@ public class ResourceTestBase<TContext> : CecilifierTestBase<TContext> where TCo
         Assert.That(actualIL, Is.EqualTo(expectedIL), $"Actual IL differs from expected.\nActual Assembly Path = {cecilifyResult.CecilifiedOutputAssemblyFilePath}\nExpected IL:\n{expectedIL}\nActual IL:{actualIL}");
 
         return cecilifyResult;
+    }
+
+    
+    protected Stream ReadResourceIfPresent(string resourceName, string type)
+    {
+        var resourcePath = resourceName.GetPathOfTextResource(type);
+        return File.Exists(resourcePath) ? ReadResource(resourcePath) : null; 
     }
 
     protected Stream ReadResource(string resourceName, string type) => ReadResource(resourceName.GetPathOfTextResource(type));

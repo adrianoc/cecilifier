@@ -52,7 +52,7 @@ public class DelayedDefinitionsManager
 
         return _postponedMethodDefinitionDetails[^1].LocalVariables.Count - 1;
     }
-
+    
     internal void ProcessDefinitions(SystemReflectionMetadataContext context)
     {
         if (_postponedTypeDefinitionDetails.Count == 0)

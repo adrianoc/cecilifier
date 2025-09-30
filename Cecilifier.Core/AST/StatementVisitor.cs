@@ -51,15 +51,17 @@ namespace Cecilifier.Core.AST
             }
 
             var forEndLabel = Context.Naming.Label("fel");
-            WriteCecilExpression(Context, $"var {forEndLabel} = {_ilVar}.Create(OpCodes.Nop);");
+            Context.ApiDriver.DefineLabel(Context,_ilVar, forEndLabel);
             breakToInstructionVars.Push(forEndLabel);
 
-            var forConditionLabel = AddCilInstructionWithLocalVariable(_ilVar, OpCodes.Nop);
-
+            var forConditionLabel = Context.Naming.Label("forCondition");
+            Context.ApiDriver.DefineLabel(Context, _ilVar, forConditionLabel);
+            Context.ApiDriver.MarkLabel(Context, _ilVar, forConditionLabel);
+            
             Context.WriteComment($"for condition: {node.Condition.HumanReadableSummary()}");
             // Condition
             ExpressionVisitor.Visit(Context, _ilVar, node.Condition!);
-            Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Brfalse, forEndLabel);
+            Context.ApiDriver.WriteCilBranch(Context, _ilVar, OpCodes.Brfalse, forEndLabel);
 
             // Body
             Context.WriteComment("for body");
@@ -72,8 +74,8 @@ namespace Cecilifier.Core.AST
                 ExpressionVisitor.VisitAndPopIfNotConsumed(Context, _ilVar, incrementExpression);
             }
 
-            Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Br, forConditionLabel);
-            WriteCecilExpression(Context, $"{_ilVar}.Append({forEndLabel});");
+            Context.ApiDriver.WriteCilBranch(Context, _ilVar, OpCodes.Br, forConditionLabel);
+            Context.ApiDriver.MarkLabel(Context, _ilVar, forEndLabel);
             breakToInstructionVars.Pop();
         }
 

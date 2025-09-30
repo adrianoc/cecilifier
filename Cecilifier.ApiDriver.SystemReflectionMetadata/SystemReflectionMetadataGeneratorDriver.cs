@@ -117,9 +117,8 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
     public IlContext NewIlContext(IVisitorContext context, string memberName, string relatedMethodVar)
     {
         var ilVarName = context.Naming.ILProcessor(memberName);
-        context.Generate($"var {ilVarName} = new InstructionEncoder(new BlobBuilder());");
+        context.Generate($"var {ilVarName} = new InstructionEncoder(new BlobBuilder(), new ControlFlowBuilder());");
         context.WriteNewLine();
-        
         return new SystemReflectionMetadataIlContext(ilVarName, relatedMethodVar);
     }
 
@@ -157,7 +156,25 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
     {
         WriteCilInstruction<string>(context, il, opCode, null);
     }
-    
+
+    public void WriteCilBranch(IVisitorContext context, IlContext il, OpCode branchOpCode, string targetLabel, string? comment = null)
+    {
+        context.Generate($"{il.VariableName}.Branch(ILOpCode.{branchOpCode.OpCodeName()}, {targetLabel});");
+        context.WriteNewLine();
+    }
+
+    public void DefineLabel(IVisitorContext context, IlContext il, string labelVariable)
+    {
+        context.Generate($"var {labelVariable} = {il.VariableName}.DefineLabel();");
+        context.WriteNewLine();
+    }
+
+    public void MarkLabel(IVisitorContext context, IlContext il, string labelVariable)
+    {
+        context.Generate($"{il.VariableName}.MarkLabel({labelVariable});");
+        context.WriteNewLine();
+    }
+
     /// <summary>
     /// Maps Ldc_Ix => Ldc_ix, Ldc_Rx, Conv_Ix => Ldc_rx, etc. 
     /// </summary>

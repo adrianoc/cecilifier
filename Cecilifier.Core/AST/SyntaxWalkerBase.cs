@@ -61,7 +61,7 @@ namespace Cecilifier.Core.AST
         {
             var instVar = CreateCilInstruction(ilVar, opCode);
             AddCecilExpression($"{ilVar}.Append({instVar});");
-
+            
             return instVar;
         }
 
