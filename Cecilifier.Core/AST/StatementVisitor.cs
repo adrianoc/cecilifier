@@ -340,7 +340,7 @@ namespace Cecilifier.Core.AST
                 Context.ApiDriver.WriteCilInstruction(Context, _ilVar, opCode);
             }
 
-            Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Stloc, new CilMetadataHandle(localVarDef.VariableName));
+            Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Stloc, new CilLocalVariableHandle(localVarDef.VariableName));
         }
 
         private void HandleVariableDeclaration(VariableDeclarationSyntax declaration)
