@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Misc;
@@ -64,44 +65,32 @@ internal partial class TypeDeclarationVisitor
 
             // BeginInvoke() method
             var beginInvokeMethodVar = AddDelegateMethod(
-                 typeVar,
-                 "BeginInvoke",
-                 Context.TypeResolver.Bcl.System.IAsyncResult,
-                 node.ParameterList.Parameters,
-                 (methodVar, param) => CecilDefinitionsFactory.Parameter(Context, param, methodVar, Context.Naming.Parameter(param)));
+                                                 typeVar,
+                                                 "BeginInvoke",
+                                                 Context.TypeResolver.Bcl.System.IAsyncResult,
+                                                 node.ParameterList.Parameters,
+                                                 (methodVar, param) => CecilDefinitionsFactory.Parameter(Context, param, methodVar, Context.Naming.Parameter(param)));
 
             AddCecilExpression($"{beginInvokeMethodVar}.Parameters.Add(new ParameterDefinition({Context.TypeResolver.Bcl.System.AsyncCallback}));");
             AddCecilExpression($"{beginInvokeMethodVar}.Parameters.Add(new ParameterDefinition({Context.TypeResolver.Bcl.System.Object}));");
 
             // EndInvoke() method
             var endInvokeMethodVar = Context.Naming.SyntheticVariable("EndInvoke", ElementKind.Method);
-
-            var endInvokeExps = CecilDefinitionsFactory.Method(
-                Context,
-                endInvokeMethodVar,
-                "EndInvoke",
-                Constants.Cecil.DelegateMethodAttributes,
-                Context.GetTypeInfo(node.ReturnType).Type,
-                false,
-                Array.Empty<TypeParameterSyntax>()
-            );
+            var endInvokeExps = Context.ApiDefinitionsFactory.Method(
+                                                                        Context,
+                                                                        new MemberDefinitionContext(endInvokeMethodVar, typeVar, IlContext.None),
+                                                                        "declarintTypeName",
+                                                                        "EnvInvoke",
+                                                                        "EndInvoke",
+                                                                        Constants.Cecil.DelegateMethodAttributes,
+                                                                        [new ParameterSpec("ar", Context.TypeResolver.Bcl.System.IAsyncResult, RefKind.None, Constants.ParameterAttributes.None)],
+                                                                        [],
+                                                                        ctx => ctx.TypeResolver.ResolveAny(Context.GetTypeInfo(node.ReturnType).Type, ResolveTargetKind.ReturnType),
+                                                                        out var _);
 
             endInvokeExps = endInvokeExps.Concat(new[] { $"{endInvokeMethodVar}.HasThis = true;", $"{endInvokeMethodVar}.IsRuntime = true;", });
-
-            var endInvokeParamExps = CecilDefinitionsFactory.Parameter(
-                "ar",
-                RefKind.None,
-                paramsAttributeTypeName: null,
-                endInvokeMethodVar,
-                Context.Naming.Parameter("ar"),
-                Context.TypeResolver.Bcl.System.IAsyncResult,
-                Constants.ParameterAttributes.None,
-                (null, false));
-
             AddCecilExpressions(Context, endInvokeExps);
-            AddCecilExpressions(Context, endInvokeParamExps);
-            AddCecilExpression($"{typeVar}.Methods.Add({endInvokeMethodVar});");
-
+            
             base.VisitDelegateDeclaration(node);
         }
 
