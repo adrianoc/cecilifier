@@ -35,6 +35,15 @@ namespace Cecilifier.Core.AST
                                                         []);
             context.Generate(typeExps);
 
+            new ConstructorDeclarationVisitor(context)
+                .DefaultCtorInjector(
+                    typeVar,
+                    "Program",
+                    "MethodAttributes.Public",
+                    context.MemberResolver.ResolveDefaultConstructor(context.RoslynTypeSystem.SystemObject, typeVar),
+                    false,
+                    null);
+
             methodVar = context.Naming.SyntheticVariable("topLevelMain", ElementKind.Method);
             var ilContext = context.ApiDriver.NewIlContext(context, "topLevelMain", methodVar);
             var methodExps = context.ApiDefinitionsFactory.Method(
@@ -54,15 +63,6 @@ namespace Cecilifier.Core.AST
 
             ilVar = ilContext.VariableName; // TODO: (remove) This forces the related ILProcessor variable to be emitted.
             NonCapturingLambdaProcessor.InjectSyntheticMethodsForNonCapturingLambdas(context, firstGlobalStatement, typeVar);
-
-            new ConstructorDeclarationVisitor(context)
-                .DefaultCtorInjector(
-                    typeVar,
-                    "Program",
-                    "MethodAttributes.Public",
-                    context.MemberResolver.ResolveDefaultConstructor(context.RoslynTypeSystem.SystemObject, typeVar),
-                    false,
-                    null);
         }
 
         public bool HandleGlobalStatement(GlobalStatementSyntax node)

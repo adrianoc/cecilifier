@@ -13,7 +13,7 @@ public class CollectionExpressionTests : CecilifierUnitTestBase
         var cecilified = result.GeneratedCode.ReadToEnd();
         Assert.That(cecilified, Does.Match("//__StaticArrayInitTypeSize=12 struct."));
         Assert.That(cecilified, Does.Match(@"var fld_arrayInitializerData_\d+ = new FieldDefinition\(""[A-F0-9]+"",.+, st_rawDataTypeVar_\d+\);"));
-        Assert.That(cecilified, Does.Match(@"il_topLevelMain_2.Emit\(OpCodes.Ldtoken, fld_arrayInitializerData_\d+\);"));
+        Assert.That(cecilified, Does.Match(@"il_topLevelMain_\d+.Emit\(OpCodes.Ldtoken, fld_arrayInitializerData_\d+\);"));
     }
     
     [Test]
