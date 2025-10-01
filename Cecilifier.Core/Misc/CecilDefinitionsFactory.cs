@@ -36,27 +36,6 @@ namespace Cecilifier.Core.Misc
                 (hasThis, parameters, returnType) => $"new FunctionPointerType() {{ {hasThis}, ReturnType = {returnType}, {parameters} }}");
         }
 
-        public static IEnumerable<string> Method(IVisitorContext context, string methodVar, string methodName, string methodModifiers, ITypeSymbol returnType, bool refReturn, IList<TypeParameterSyntax> typeParameters)
-        {
-            var exps = new List<string>();
-
-            var resolvedReturnType = context.TypeResolver.ResolveAny(returnType);
-            if (refReturn)
-                resolvedReturnType = resolvedReturnType.MakeByReferenceType();
-
-            // for type parameters we may need to postpone setting the return type (using void as a placeholder, since we need to pass something) until the generic parameters has been
-            // handled. This is required because the type parameter may be defined by the method being processed.
-            exps.Add($"var {methodVar} = new MethodDefinition(\"{methodName}\", {methodModifiers}, {(returnType.IsTypeParameterOrIsGenericTypeReferencingTypeParameter() ? context.TypeResolver.Bcl.System.Void : resolvedReturnType)});");
-            ProcessGenericTypeParameters(methodVar, context, typeParameters, exps);
-            if (returnType.IsTypeParameterOrIsGenericTypeReferencingTypeParameter())
-            {
-                resolvedReturnType = context.TypeResolver.ResolveAny(returnType);
-                exps.Add($"{methodVar}.ReturnType = {(refReturn ? resolvedReturnType.MakeByReferenceType() : resolvedReturnType)};");
-            }
-
-            return exps;
-        }
-
         internal static string Constructor(IVisitorContext context, string ctorLocalVar, string typeName, bool isStatic, string methodAccessibility, string[] paramTypes, string? methodDefinitionPropertyValues = null)
         {
             var ctorName = Utils.ConstructorMethodName(isStatic);

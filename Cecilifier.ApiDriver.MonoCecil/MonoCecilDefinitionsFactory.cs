@@ -74,7 +74,23 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
     public IEnumerable<string> Method(IVisitorContext context, IMethodSymbol methodSymbol, MemberDefinitionContext memberDefinitionContext, string methodName, string methodModifiers,
         IParameterSymbol[] resolvedParameterTypes, IList<TypeParameterSyntax> typeParameters)
     {
-        var exps = CecilDefinitionsFactory.Method(context, memberDefinitionContext.MemberDefinitionVariableName, methodName, methodModifiers, methodSymbol.ReturnType, methodSymbol.ReturnsByRef || methodSymbol.ReturnsByRef, typeParameters).ToList();
+        var exps = new List<string>();
+
+        var resolvedReturnType = context.TypeResolver.ResolveAny(methodSymbol.ReturnType);
+        var refReturn = methodSymbol.ReturnsByRef || methodSymbol.ReturnsByRefReadonly;
+        if (refReturn)
+            resolvedReturnType = resolvedReturnType.MakeByReferenceType();
+
+        // for type parameters we may need to postpone setting the return type (using void as a placeholder, since we need to pass something) until the generic parameters has been
+        // handled. This is required because the type parameter may be defined by the method being processed.
+        exps.Add($"var {memberDefinitionContext.MemberDefinitionVariableName} = new MethodDefinition(\"{methodName}\", {methodModifiers}, {(methodSymbol.ReturnType.IsTypeParameterOrIsGenericTypeReferencingTypeParameter() ? context.TypeResolver.Bcl.System.Void : resolvedReturnType)});");
+        ProcessGenericTypeParameters(memberDefinitionContext.MemberDefinitionVariableName, context, typeParameters, exps);
+        if (methodSymbol.ReturnType.IsTypeParameterOrIsGenericTypeReferencingTypeParameter())
+        {
+            resolvedReturnType = context.TypeResolver.ResolveAny(methodSymbol.ReturnType);
+            exps.Add($"{memberDefinitionContext.MemberDefinitionVariableName}.ReturnType = {(refReturn ? resolvedReturnType.MakeByReferenceType() : resolvedReturnType)};");
+        }
+
         exps.Add($"{context.DefinitionVariables.GetLastOf(VariableMemberKind.Type).VariableName}.Methods.Add({memberDefinitionContext.MemberDefinitionVariableName});");
         if (methodSymbol is { IsAbstract: false, IsExtern: false })
         {
@@ -301,7 +317,7 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
             }
         }
     }
-    
+
     private static void ProcessGenericTypeParameters(string memberDefVar, IVisitorContext context, string ownerQualifiedTypeName, IList<string> typeParamList, IList<string> exps)
     {
         for (int i = 0; i < typeParamList.Count; i++)
@@ -318,8 +334,6 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
     private static string GenericParameter(IVisitorContext context, string typeParameterOwnerVar, string genericParamName, string genParamDefVar, ITypeParameterSymbol typeParameterSymbol)
     {
         return GenericParameter(context, typeParameterSymbol.ContainingSymbol.ToDisplayString(), typeParameterOwnerVar, genericParamName, genParamDefVar, typeParameterSymbol.Variance);
-        // context.DefinitionVariables.RegisterNonMethod(typeParameterSymbol.ContainingSymbol.ToDisplayString(), genericParamName, VariableMemberKind.TypeParameter, genParamDefVar);
-        // return $"var {genParamDefVar} = new Mono.Cecil.GenericParameter(\"{genericParamName}\", {typeParameterOwnerVar}){Variance(typeParameterSymbol)};";
     }
     
     private static string GenericParameter(IVisitorContext context, string ownerContainingTypeName, string typeParameterOwnerVar, string genericParamName, string genParamDefVar, VarianceKind variance)
