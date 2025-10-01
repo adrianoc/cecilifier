@@ -99,7 +99,7 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
         // if the method has type parameters we need to postpone setting the return type (using void as a placeholder, since we need to pass something) until the generic parameters has been
         // handled. This is required because the type parameter may be defined by the method being processed which introduces a chicken and egg problem.
         exps.Add($"var {memberDefinitionContext.MemberDefinitionVariableName} = new MethodDefinition(\"{methodName}\", {methodModifiers}, {(typeParameters.Count == 0 ? returnTypeResolver(context) : context.TypeResolver.Bcl.System.Void)});");
-        ProcessGenericTypeParameters(memberDefinitionContext.MemberDefinitionVariableName, context, $"{declaringTypeName}.{methodName}", typeParameters, exps);
+        ProcessGenericTypeParameters(memberDefinitionContext.MemberDefinitionVariableName, context, methodNameForVariableRegistration, typeParameters, exps);
         if (typeParameters.Count > 0)
             exps.Add($"{memberDefinitionContext.MemberDefinitionVariableName}.ReturnType = {returnTypeResolver(context)};");
 
@@ -109,7 +109,7 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
             var parameterExp = CecilDefinitionsFactory.Parameter(
                                                                             parameter.Name,
                                                                             parameter.RefKind,
-                                                                            null, // for now,the only callers for this method don't have any `params` parameters.
+                                                                            parameter.ParamsAttributeName, // for now,the only callers for this method don't have any `params` parameters.
                                                                             memberDefinitionContext.MemberDefinitionVariableName,
                                                                             paramVar,
                                                                             parameter.ElementTypeResolver != null ? parameter.ElementTypeResolver(context, parameter.ElementType) : parameter.ElementType,
@@ -120,13 +120,18 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
             exps.AddRange(parameterExp);
         }
 
-        methodVariable = context.DefinitionVariables.RegisterMethod(declaringTypeName, methodName, parameters.Select(p => p.RegistrationTypeName).ToArray(), typeParameters.Count, memberDefinitionContext.MemberDefinitionVariableName);
+        if (memberDefinitionContext.ParentDefinitionVariableName != null)
+        {
+            methodVariable = context.DefinitionVariables.RegisterMethod(declaringTypeName, methodName, parameters.Select(p => p.RegistrationTypeName).ToArray(), typeParameters.Count, memberDefinitionContext.MemberDefinitionVariableName);
+            exps =
+            [
+                ..exps,
+                $"{memberDefinitionContext.ParentDefinitionVariableName}.Methods.Add({memberDefinitionContext.MemberDefinitionVariableName});",
+            ];
+        }
+        else
+            methodVariable = MethodDefinitionVariable.MethodNotFound;
 
-        exps =  [
-            ..exps, 
-            $"{memberDefinitionContext.ParentDefinitionVariableName}.Methods.Add({memberDefinitionContext.MemberDefinitionVariableName});",
-        ];
-        
         return exps;
     }
 

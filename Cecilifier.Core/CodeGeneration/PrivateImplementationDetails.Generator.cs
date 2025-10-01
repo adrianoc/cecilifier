@@ -71,23 +71,22 @@ internal partial class PrivateImplementationDetailsGenerator
             new ParameterSpec("buffer", "TBuffer", RefKind.Ref, Constants.ParameterAttributes.None, null, (context, name) => ResolveOwnedGenericParameter(context, name, methodTypeQualifiedName)), 
             new ParameterSpec("length", context.TypeResolver.Bcl.System.Int32, RefKind.None, Constants.ParameterAttributes.None)
         ];
-        IList<string> typeParameters = ["TBuffer", "TElement"];
         Func<IVisitorContext, string> returnTypeResolver = ctx =>
         {
             var spanTypeParameter = ResolveOwnedGenericParameter(context, "TElement", methodTypeQualifiedName);
             return ctx.TypeResolver.ResolveAny(containingType).MakeGenericInstanceType(spanTypeParameter);
         };
         var methodExpressions = context.ApiDefinitionsFactory.Method(
-            context, 
-            new MemberDefinitionContext(methodVar, privateImplementationDetailsVar.VariableName, IlContext.None), 
-            declaringTypeName, 
-            "NOT_IMPORTANT_NO_ONE_WILL_TRY_TO_RESOLVE_PARAMETER_VARS_FOR_THIS", 
-            methodName, 
-            "MethodAttributes.Assembly | MethodAttributes.Static | MethodAttributes.HideBySig", 
-            parameters, 
-            typeParameters, 
-            returnTypeResolver,
-            out var methodDefinitionVariable);
+                                                                    context, 
+                                                                    new MemberDefinitionContext(methodVar, privateImplementationDetailsVar.VariableName, IlContext.None), 
+                                                                    declaringTypeName, 
+                                                                    methodTypeQualifiedName, 
+                                                                    methodName, 
+                                                                    "MethodAttributes.Assembly | MethodAttributes.Static | MethodAttributes.HideBySig", 
+                                                                    parameters, 
+                                                                    new [] {"TBuffer", "TElement" }, 
+                                                                    returnTypeResolver,
+                                                                    out var methodDefinitionVariable);
 
         context.Generate(methodExpressions);
         
@@ -163,7 +162,7 @@ internal partial class PrivateImplementationDetailsGenerator
             context, 
             new MemberDefinitionContext(methodVar, privateImplementationDetailsVar.VariableName, IlContext.None), 
             declaringTypeName, 
-            "NOT_IMPORTANT_NOONE_WILL_TRY_TO_RESOLVE_PARAMETER_VARS_FOR_THIS", 
+            methodTypeQualifiedName, 
             "InlineArrayFirstElementRef", 
             "MethodAttributes.Assembly | MethodAttributes.Static | MethodAttributes.HideBySig", 
             parameters, 
@@ -221,7 +220,7 @@ internal partial class PrivateImplementationDetailsGenerator
             context, 
             new MemberDefinitionContext(methodVar, privateImplementationDetailsVar.VariableName, IlContext.None), 
             declaringTypeName, 
-            "NOT_IMPORTANT_NOONE_WILL_TRY_TO_RESOLVE_PARAMETER_VARS_FOR_THIS", 
+            methodTypeQualifiedName, 
             "InlineArrayElementRef", 
             "MethodAttributes.Assembly | MethodAttributes.Static | MethodAttributes.HideBySig", 
             parameters, 

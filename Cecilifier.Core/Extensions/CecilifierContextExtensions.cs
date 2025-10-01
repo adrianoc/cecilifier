@@ -11,6 +11,7 @@ using Microsoft.CodeAnalysis.Operations;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
+using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
 
 namespace Cecilifier.Core.Extensions;
@@ -148,7 +149,7 @@ public static class CecilifierContextExtensions
      */
     internal static void EnsureForwardedMethod(this IVisitorContext context, IMethodSymbol method)
     {
-        //TODO: The code of this method is causing problems when visiting methods; that driver
+        //TODO: The code of this method is causing problems when visiting methods in SRM; that driver
         //      will emit a method reference immediately and postpone the method definition to later
         //      and the check for retrieving the method variable bellow fails (because definition of the variable
         //      for the method definition has been postponed also).
@@ -165,6 +166,8 @@ public static class CecilifierContextExtensions
 
         string methodDeclarationVar;
         var methodName = method.Name;
+        var methodNameForVariableRegistration = method.ToDisplayString();
+        //var methodNameForVariableRegistration = method.Name;
         if (method.MethodKind == MethodKind.LocalFunction)
         {
             methodDeclarationVar = context.Naming.SyntheticVariable(method.Name, ElementKind.Method);
@@ -177,24 +180,36 @@ public static class CecilifierContextExtensions
                 : context.Naming.MethodDeclaration((BaseMethodDeclarationSyntax) method.DeclaringSyntaxReferences.SingleOrDefault()?.GetSyntax());
         }
 
-        var exps = CecilDefinitionsFactory.Method(context, methodDeclarationVar, methodName, "MethodAttributes.Private", method.ReturnType, method.ReturnsByRef, method.GetTypeParameterSyntax());
+        var resolvedReturnType = context.TypeResolver.ResolveAny(method.ReturnType, ResolveTargetKind.ReturnType);
+        var exps = context.ApiDefinitionsFactory.Method(
+                                                                    context, 
+                                                                    new MemberDefinitionContext(methodDeclarationVar, null, IlContext.None), 
+                                                                    null,
+                                                                    methodNameForVariableRegistration, 
+                                                                    methodName,
+                                                                    "MethodAttributes.Private",
+                                                                    method.Parameters.Select( p => new ParameterSymbolParameterSpec(p, context)).ToArray(),
+                                                                    method.GetTypeParameterSyntax().Select(tps => tps.Identifier.Text).ToArray(),
+                                                                    ctx => method.ReturnsByRef 
+                                                                                                                ? resolvedReturnType.MakeByReferenceType()
+                                                                                                                : resolvedReturnType,
+                                                                    out _);
         context.Generate(exps);
         
-        foreach (var parameter in method.Parameters)
-        {
-            var paramVar = context.Naming.Parameter(parameter.Name);
-            var parameterExps = CecilDefinitionsFactory.Parameter(context, parameter, methodDeclarationVar, paramVar);
-            context.Generate(parameterExps);
-            context.DefinitionVariables.RegisterNonMethod(method.ToDisplayString(), parameter.Name, VariableMemberKind.Parameter, paramVar);
-        }
- 
-        
+        // foreach (var parameter in method.Parameters)
+        // {
+        //     var paramVar = context.Naming.Parameter(parameter.Name);
+        //     var parameterExps = CecilDefinitionsFactory.Parameter(context, parameter, methodDeclarationVar, paramVar);
+        //     context.Generate(parameterExps);
+        //     context.DefinitionVariables.RegisterNonMethod(method.ToDisplayString(), parameter.Name, VariableMemberKind.Parameter, paramVar);
+        // }
         if (!method.IsAbstract)
         {
             context.Generate($"{methodDeclarationVar}.Body.InitLocals = {(!method.TryGetAttribute<SkipLocalsInitAttribute>(out _)).ToKeyword()};");
             context.WriteNewLine();
         }
         
-        context.DefinitionVariables.RegisterMethod(method.AsMethodDefinitionVariable(methodDeclarationVar));
+        var methodVar =  context.DefinitionVariables.RegisterMethod(method.AsMethodDefinitionVariable(methodDeclarationVar));
+        methodVar.IsForwarded = true;
     }
 }

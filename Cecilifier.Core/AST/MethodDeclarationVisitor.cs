@@ -74,6 +74,11 @@ namespace Cecilifier.Core.AST
 
         public override void VisitParameterList(ParameterListSyntax node)
         {
+            // var containingMethod = Context.SemanticModel.GetDeclaredSymbol(node.Parent!).EnsureNotNull<ISymbol, IMethodSymbol>();
+            // var found = Context.DefinitionVariables.GetMethodVariable(containingMethod.AsMethodDefinitionVariable());
+            // if (found.IsForwarded)
+            //     return; // The method has already been processed as a forward declaration and its parameters have already been handled.
+            //
             if (node.Parameters.Count > 0)
             {
                 Context.WriteNewLine();
@@ -162,6 +167,15 @@ namespace Cecilifier.Core.AST
                     // should we use `methodName` as the registered name.
                     var nameUsedInRegisteredVariable = methodSymbol.MethodKind == MethodKind.LocalFunction ? simpleName : methodName;
                     WithCurrentMethod(declaringTypeName, methodVar, nameUsedInRegisteredVariable, parameters.Select(p => Context.SemanticModel.GetDeclaredSymbol(p).Type.ToDisplayString()).ToArray(), methodSymbol.TypeParameters.Length, runWithCurrent);
+                    // var x = Context.DefinitionVariables.FindByVariableName<MethodDefinitionVariable>(methodVar);
+                    // if (x == null || !x.IsValid)
+                    //     WithCurrentMethod(declaringTypeName, methodVar, nameUsedInRegisteredVariable, parameters.Select(p => Context.SemanticModel.GetDeclaredSymbol(p).Type.ToDisplayString()).ToArray(), methodSymbol.TypeParameters.Length, runWithCurrent);
+                    // else
+                    // {
+                    //     Context.DefinitionVariables.WithVariable(Context.DefinitionVariables.FindByVariableName<MethodDefinitionVariable>(methodVar));
+                    //     runWithCurrent(methodVar);
+                    //}
+                    
                     if (!methodSymbol.IsAbstract && !node.DescendantNodes().Any(n => n.IsKind(SyntaxKind.ReturnStatement)))
                     {
                         Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ret);

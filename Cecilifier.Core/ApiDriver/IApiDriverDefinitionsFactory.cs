@@ -75,5 +75,5 @@ public interface IApiDriverDefinitionsFactory
 [DebuggerDisplay("MemberDefinitionContext ({MemberDefinitionVariableName}, {ParentDefinitionVariableName}, {IlContext})")]
 public record struct MemberDefinitionContext(
     string MemberDefinitionVariableName,
-    string ParentDefinitionVariableName,
+    string? ParentDefinitionVariableName,
     IlContext IlContext);

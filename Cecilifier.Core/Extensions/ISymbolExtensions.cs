@@ -333,6 +333,8 @@ namespace Cecilifier.Core.Extensions
             }
         }
 
-        internal static string? ParamsAttributeMatchingType(this ITypeSymbol paramsParameter) => paramsParameter.Kind ==  SymbolKind.ArrayType ? typeof(ParamArrayAttribute).FullName : typeof(ParamCollectionAttribute).FullName;
+        internal static string? ParamsAttributeMatchingType(this IParameterSymbol paramsParameter) => paramsParameter.IsParams 
+                                                                                                        ? paramsParameter.Type.Kind ==  SymbolKind.ArrayType ? typeof(ParamArrayAttribute).FullName : typeof(ParamCollectionAttribute).FullName
+                                                                                                        : null;
     }
 }

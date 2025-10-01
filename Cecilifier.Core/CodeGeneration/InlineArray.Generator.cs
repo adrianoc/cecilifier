@@ -32,6 +32,7 @@ internal class InlineArrayGenerator
                 //[StructLayout(LayoutKind.Auto)]
                 $"""var {typeVar} = new TypeDefinition(string.Empty, "<>y_InlineArray{elementCount}`1", TypeAttributes.NotPublic | TypeAttributes.AutoLayout | TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit | TypeAttributes.Sealed, {context.TypeResolver.Bcl.System.ValueType});""",
                 CecilDefinitionsFactory.GenericParameter(context, $"{typeVar}.Name", typeVar, "TElementType", typeParameterVar),
+                //CecilDefinitionsFactory.GenericParameter(context, $"{typeVar}.Name", typeVar, "TElementType", typeParameterVar),
                 $"""{typeVar}.GenericParameters.Add({typeParameterVar});"""
             ];
 

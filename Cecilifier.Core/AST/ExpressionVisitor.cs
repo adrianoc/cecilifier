@@ -245,7 +245,7 @@ namespace Cecilifier.Core.AST
             {
                 foreach (var initializeExp in node.Expressions)
                 {
-                    // Collection initializers with this syntax depends on the type being initialized to expose an `Add()` method
+                    // Collection initializers with this syntax depend on the type being initialized to expose an `Add()` method
                     // (or an extension method to be available) with a signature that matches the types passed in the list of
                     // expressions
                     var addMethod = Context.SemanticModel.GetCollectionInitializerSymbolInfo(node.Expressions.First()).Symbol.EnsureNotNull<ISymbol, IMethodSymbol>();

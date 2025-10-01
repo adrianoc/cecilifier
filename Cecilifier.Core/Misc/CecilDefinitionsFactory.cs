@@ -146,7 +146,7 @@ namespace Cecilifier.Core.Misc
             return Parameter(
                 paramSymbol.Name,
                 paramSymbol.RefKind,
-                paramSymbol.IsParams ? paramSymbol.Type.ParamsAttributeMatchingType() : null,
+                paramSymbol.ParamsAttributeMatchingType(),
                 methodVar,
                 paramVar,
                 context.TypeResolver.ResolveAny(paramSymbol.Type, ResolveTargetKind.Parameter, methodVar),

@@ -61,6 +61,9 @@ public class MethodDefinitionVariable : DefinitionVariable, IEquatable<MethodDef
 
     public static bool operator ==(MethodDefinitionVariable lhs, MethodDefinitionVariable rhs)
     {
+        if (ReferenceEquals(lhs, null))
+            return ReferenceEquals(rhs, null);
+        
         return lhs.Equals(rhs);
     }
 
