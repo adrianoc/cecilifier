@@ -128,15 +128,23 @@ internal partial class RecordGenerator
         if (!found.IsValid)
         {
             copyCtorVar = context.Naming.Constructor(record, false);
-            var copyCtor = CecilDefinitionsFactory.Constructor(context, copyCtorVar, _recordSymbol.OriginalDefinition.ToDisplayString(), false, Constants.Cecil.CtorAttributes.AppendModifier("MethodAttributes.Family | MethodAttributes.HideBySig"), [_recordSymbol.ToDisplayString()]);
+            var exps = context.ApiDefinitionsFactory.Constructor(
+                                context, 
+                                new MemberDefinitionContext(copyCtorVar, recordTypeDefinitionVariable, IlContext.None), 
+                                _recordSymbol.OriginalDefinition.ToDisplayString(), 
+                                false, 
+                                Constants.Cecil.CtorAttributes.AppendModifier("MethodAttributes.Family | MethodAttributes.HideBySig"), 
+                                new[] { _recordSymbol.ToDisplayString() });
+
             context.Generate(
             [
-                copyCtor,
+                ..exps,
                 ..CecilDefinitionsFactory.Parameter("other", RefKind.None, null, copyCtorVar, context.Naming.Parameter("other"), context.TypeResolver.ResolveAny(_recordSymbol), Constants.ParameterAttributes.None, (null, false))
             ]);
         }
-
-        context.Generate($"{recordTypeDefinitionVariable}.Methods.Add({copyCtorVar});");
+        else
+            context.Generate($"{recordTypeDefinitionVariable}.Methods.Add({copyCtorVar});");
+        
         context.WriteNewLine();
 
         List<InstructionRepresentation> instructions = new();
@@ -885,7 +893,6 @@ internal partial class RecordGenerator
         if (record.ParameterList?.Parameters.Count is null or 0)
             return;
         
-        //var recordSymbol = context.SemanticModel.GetDeclaredSymbol(record).EnsureNotNull<ISymbol, ITypeSymbol>();
         var recordSymbol = _recordSymbol;
         const string methodName = "Deconstruct";
 

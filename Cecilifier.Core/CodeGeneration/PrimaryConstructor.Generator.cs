@@ -114,19 +114,18 @@ public class PrimaryConstructorGenerator
         var typeSymbol = context.SemanticModel.GetDeclaredSymbol(typeDeclaration).EnsureNotNull<ISymbol, ITypeSymbol>();
         
         var ctorVar = context.Naming.Constructor(typeDeclaration, false);
-        var ctorExp = CecilDefinitionsFactory.Constructor(
-                                        context, 
-                                        ctorVar, 
-                                        typeSymbol.OriginalDefinition.ToDisplayString(), 
-                                        false, 
-                                        "MethodAttributes.Public", 
-                                        typeDeclaration.ParameterList?.Parameters.Select(p => p.Type?.ToString()).ToArray() ?? []);
-
-        context.Generate(
-        [
-            ctorExp,
-            $"{recordTypeDefinitionVariable}.Methods.Add({ctorVar});"
-        ]);
+        string typeName = typeSymbol.OriginalDefinition.ToDisplayString();
+        string[] paramTypes = typeDeclaration.ParameterList?.Parameters.Select(p => p.Type?.ToString()).ToArray() ?? [];
+        var exps = context.ApiDefinitionsFactory.Constructor(
+            context, 
+            new MemberDefinitionContext(ctorVar, recordTypeDefinitionVariable, IlContext.None), 
+            typeName, 
+            false, 
+            "MethodAttributes.Public", 
+            paramTypes, 
+            null);
+        var ctorExp = exps;
+        context.Generate(ctorExp);
 
         // parameterless primary constructors still have a body comprised of a single return.
         // in this scenario Parameters will be an empty list.

@@ -36,20 +36,6 @@ namespace Cecilifier.Core.Misc
                 (hasThis, parameters, returnType) => $"new FunctionPointerType() {{ {hasThis}, ReturnType = {returnType}, {parameters} }}");
         }
 
-        internal static string Constructor(IVisitorContext context, string ctorLocalVar, string typeName, bool isStatic, string methodAccessibility, string[] paramTypes, string? methodDefinitionPropertyValues = null)
-        {
-            var ctorName = Utils.ConstructorMethodName(isStatic);
-            context.DefinitionVariables.RegisterMethod(typeName, ctorName, paramTypes, 0, ctorLocalVar);
-
-            var exp = $@"var {ctorLocalVar} = new MethodDefinition(""{ctorName}"", {methodAccessibility} | MethodAttributes.HideBySig | {Constants.Cecil.CtorAttributes}, assembly.MainModule.TypeSystem.Void)";
-            if (methodDefinitionPropertyValues != null)
-            {
-                exp += $"{{ {methodDefinitionPropertyValues} }}";
-            }
-
-            return exp + ";";
-        }
-
         internal static string LocalVariable(string resolvedType) => $"new VariableDefinition({resolvedType})";
 
         private static string GenericParameter(IVisitorContext context, string typeParameterOwnerVar, string genericParamName, string genParamDefVar, ITypeParameterSymbol typeParameterSymbol)

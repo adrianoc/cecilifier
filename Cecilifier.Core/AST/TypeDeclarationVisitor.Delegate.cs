@@ -49,11 +49,18 @@ internal partial class TypeDeclarationVisitor
             var ctorLocalVar = Context.Naming.Delegate(node);
 
             // Delegate ctor
-            AddCecilExpression(CecilDefinitionsFactory.Constructor(Context, ctorLocalVar, node.Identifier.Text, false, "MethodAttributes.FamANDAssem | MethodAttributes.Family",
-                new[] { "System.Object", "System.IntPtr" }, "IsRuntime = true"));
+            string[] paramTypes = new[] { "System.Object", "System.IntPtr" };
+            var exps = Context.ApiDefinitionsFactory.Constructor(
+                Context, 
+                new MemberDefinitionContext(ctorLocalVar, typeVar, IlContext.None), 
+                node.Identifier.Text, 
+                false, 
+                "MethodAttributes.FamANDAssem | MethodAttributes.Family", 
+                paramTypes, 
+                "IsRuntime = true");
+            Context.Generate(exps);
             AddCecilExpression($"{ctorLocalVar}.Parameters.Add(new ParameterDefinition({Context.TypeResolver.Bcl.System.Object}));");
             AddCecilExpression($"{ctorLocalVar}.Parameters.Add(new ParameterDefinition({Context.TypeResolver.Bcl.System.IntPtr}));");
-            AddCecilExpression($"{typeVar}.Methods.Add({ctorLocalVar});");
 
             // Invoke() method
             AddDelegateMethod(
