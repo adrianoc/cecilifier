@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Naming;
@@ -69,7 +70,7 @@ public struct StaticDelegateCacheContext
         cacheTypeVar.Properties[counterName] = ++staticMethodToDelegateConversionCount;
 
         CacheBackingField = context.Naming.SyntheticVariable("cachedDelegate", ElementKind.Field);
-        var fieldExps = CecilDefinitionsFactory.Field(context, cacheInnerTypeName, cacheTypeVar, CacheBackingField, backingFieldName, delegateType, Constants.Cecil.StaticFieldAttributes, isByRef: false);
+        var fieldExps = context.ApiDefinitionsFactory.Field(context, new MemberDefinitionContext(CacheBackingField, (string)cacheTypeVar, IlContext.None), cacheInnerTypeName, backingFieldName, delegateType, Constants.Cecil.StaticFieldAttributes, false, false, null);
         context.Generate(fieldExps);
 
         return CacheBackingField;

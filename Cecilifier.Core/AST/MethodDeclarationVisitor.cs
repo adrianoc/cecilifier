@@ -74,11 +74,6 @@ namespace Cecilifier.Core.AST
 
         public override void VisitParameterList(ParameterListSyntax node)
         {
-            // var containingMethod = Context.SemanticModel.GetDeclaredSymbol(node.Parent!).EnsureNotNull<ISymbol, IMethodSymbol>();
-            // var found = Context.DefinitionVariables.GetMethodVariable(containingMethod.AsMethodDefinitionVariable());
-            // if (found.IsForwarded)
-            //     return; // The method has already been processed as a forward declaration and its parameters have already been handled.
-            //
             if (node.Parameters.Count > 0)
             {
                 Context.WriteNewLine();

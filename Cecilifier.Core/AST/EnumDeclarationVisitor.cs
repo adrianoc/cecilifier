@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Misc;
@@ -48,15 +49,8 @@ namespace Cecilifier.Core.AST
             {
                 //.class private auto ansi MyEnum
                 var fieldVar = Context.Naming.LocalVariable(node);
-                var valueFieldExp = CecilDefinitionsFactory.Field(
-                                                            Context, 
-                                                            enumSymbol.ToDisplayString(), 
-                                                            enumTypeVariable, 
-                                                            fieldVar, 
-                                                            "value__", 
-                                                            Context.TypeResolver.Bcl.System.Int32,
-                                                            "FieldAttributes.SpecialName | FieldAttributes.RTSpecialName | FieldAttributes.Public",
-                                                            isByRef: false);
+                string declaringTypeName = enumSymbol.ToDisplayString();
+                var valueFieldExp = Context.ApiDefinitionsFactory.Field(Context, new MemberDefinitionContext(fieldVar, enumTypeVariable, IlContext.None), declaringTypeName, "value__", Context.TypeResolver.Bcl.System.Int32, "FieldAttributes.SpecialName | FieldAttributes.RTSpecialName | FieldAttributes.Public", false, false, null);
                 AddCecilExpressions(Context, valueFieldExp);
 
                 HandleAttributesInMemberDeclaration(node.AttributeLists, enumTypeVariable);
@@ -75,8 +69,8 @@ namespace Cecilifier.Core.AST
 
             var enumMemberSymbol = Context.SemanticModel.GetDeclaredSymbol(node).EnsureNotNull();
             var fieldVar = Context.Naming.LocalVariable(node);
-            var exp = CecilDefinitionsFactory.Field(Context, enumMemberSymbol.ContainingSymbol.ToDisplayString(), enumVarDef.VariableName, fieldVar, node.Identifier.ValueText, enumVarDef.VariableName,
-                "FieldAttributes.Static | FieldAttributes.Literal | FieldAttributes.Public | FieldAttributes.HasDefault", isByRef: false, enumMemberValue);
+            string declaringTypeName = enumMemberSymbol.ContainingSymbol.ToDisplayString();
+            var exp = Context.ApiDefinitionsFactory.Field(Context, new MemberDefinitionContext(fieldVar, enumVarDef.VariableName, IlContext.None), declaringTypeName, node.Identifier.ValueText, enumVarDef.VariableName, "FieldAttributes.Static | FieldAttributes.Literal | FieldAttributes.Public | FieldAttributes.HasDefault", false, false, enumMemberValue);
             AddCecilExpressions(Context, exp);
 
             HandleAttributesInMemberDeclaration(node.AttributeLists, fieldVar);
