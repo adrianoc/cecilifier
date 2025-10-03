@@ -57,16 +57,16 @@ internal class PropertyGenerator
         IList<string> typeParameters = [];
         Func<IVisitorContext, string> returnTypeResolver = ctx => isInitOnly ? $"new RequiredModifierType({ctx.TypeResolver.Resolve(typeof(IsExternalInit).FullName)}, {ctx.TypeResolver.Bcl.System.Void})" : ctx.TypeResolver.Bcl.System.Void;
         var exps = Context.ApiDefinitionsFactory.Method(
-            Context, 
-            new MemberDefinitionContext(accessorMethodVar, property.DeclaringTypeVariable, IlContext.None), 
-            property.DeclaringTypeNameForRegistration, 
-            nameForRegistration, 
-            methodName, 
-            methodModifiers, 
-            completeParamList, 
-            typeParameters, 
-            returnTypeResolver,
-            out var methodDefinitionVariable);
+                                            Context, 
+                                            new MemberDefinitionContext(accessorMethodVar, property.DeclaringTypeVariable, IlContext.None), 
+                                            property.DeclaringTypeNameForRegistration, 
+                                            nameForRegistration, 
+                                            methodName, 
+                                            methodModifiers, 
+                                            completeParamList, 
+                                            typeParameters, 
+                                            returnTypeResolver,
+                                            out var methodDefinitionVariable);
 
         var methodVariableScope = Context.DefinitionVariables.WithCurrentMethod(methodDefinitionVariable);
         Context.Generate(exps);
@@ -87,7 +87,7 @@ internal class PropertyGenerator
         if (!property.IsStatic)
             Context.ApiDriver.WriteCilInstruction(Context, ilContext, OpCodes.Ldarg_1);
 
-        var operand = property.DeclaringTypeIsGeneric ? MakeGenericType(in property) : _backingFieldVar;
+        var operand = property.DeclaringTypeIsGeneric ? MakeGenericInstanceType(in property) : _backingFieldVar;
         Context.ApiDriver.WriteCilInstruction(Context, ilContext, property.StoreOpCode, operand);
         Context.AddCompilerGeneratedAttributeTo(ilContext.RelatedMethodVariable);
     }
@@ -135,7 +135,7 @@ internal class PropertyGenerator
             Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldarg_0);
         
         Debug.Assert(_backingFieldVar != null);
-        var operand = propertyGenerationData.DeclaringTypeIsGeneric ? MakeGenericType(in propertyGenerationData) : _backingFieldVar;
+        var operand = propertyGenerationData.DeclaringTypeIsGeneric ? MakeGenericInstanceType(in propertyGenerationData) : _backingFieldVar;
         Context.ApiDriver.WriteCilInstruction(Context, ilVar, propertyGenerationData.LoadOpCode, operand);
         Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ret);
         
@@ -158,14 +158,14 @@ internal class PropertyGenerator
 
         _backingFieldVar = Context.Naming.SyntheticVariable(property.Name, ElementKind.Field);
 
-        string name = Utils.BackingFieldNameForAutoProperty(property.Name);
+        var name = Utils.BackingFieldNameForAutoProperty(property.Name);
         var backingFieldExps = Context.ApiDefinitionsFactory.Field(Context, new MemberDefinitionContext(_backingFieldVar, property.DeclaringTypeVariable, IlContext.None), property.DeclaringTypeNameForRegistration, name, property.ResolvedType, property.BackingFieldModifiers, false, false, null);
         
         Context.Generate(backingFieldExps);
         Context.AddCompilerGeneratedAttributeTo(_backingFieldVar);
     }
     
-    private string MakeGenericType(ref readonly PropertyGenerationData property)
+    private string MakeGenericInstanceType(ref readonly PropertyGenerationData property)
     {
         var genTypeVar = Context.Naming.SyntheticVariable(property.Name, ElementKind.GenericInstance);
         var fieldRefVar = Context.Naming.MemberReference("fld_");
