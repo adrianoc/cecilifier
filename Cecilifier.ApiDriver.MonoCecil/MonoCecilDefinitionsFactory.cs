@@ -71,7 +71,7 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
         return exps;
     }
 
-    public IEnumerable<string> Method(IVisitorContext context, IMethodSymbol methodSymbol, MemberDefinitionContext memberDefinitionContext, string methodName, string methodModifiers,
+    public IEnumerable<string> Method(IVisitorContext context, IMethodSymbol methodSymbol, BodiedMemberDefinitionContext bodiedMemberDefinitionContext, string methodName, string methodModifiers,
         IParameterSymbol[] resolvedParameterTypes, IList<TypeParameterSyntax> typeParameters)
     {
         var exps = new List<string>();
@@ -83,24 +83,24 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
 
         // for type parameters we may need to postpone setting the return type (using void as a placeholder, since we need to pass something) until the generic parameters has been
         // handled. This is required because the type parameter may be defined by the method being processed.
-        exps.Add($"var {memberDefinitionContext.MemberDefinitionVariableName} = new MethodDefinition(\"{methodName}\", {methodModifiers}, {(methodSymbol.ReturnType.IsTypeParameterOrIsGenericTypeReferencingTypeParameter() ? context.TypeResolver.Bcl.System.Void : resolvedReturnType)});");
-        ProcessGenericTypeParameters(memberDefinitionContext.MemberDefinitionVariableName, context, typeParameters, exps);
+        exps.Add($"var {bodiedMemberDefinitionContext.MemberDefinitionVariableName} = new MethodDefinition(\"{methodName}\", {methodModifiers}, {(methodSymbol.ReturnType.IsTypeParameterOrIsGenericTypeReferencingTypeParameter() ? context.TypeResolver.Bcl.System.Void : resolvedReturnType)});");
+        ProcessGenericTypeParameters(bodiedMemberDefinitionContext.MemberDefinitionVariableName, context, typeParameters, exps);
         if (methodSymbol.ReturnType.IsTypeParameterOrIsGenericTypeReferencingTypeParameter())
         {
             resolvedReturnType = context.TypeResolver.ResolveAny(methodSymbol.ReturnType);
-            exps.Add($"{memberDefinitionContext.MemberDefinitionVariableName}.ReturnType = {(refReturn ? resolvedReturnType.MakeByReferenceType() : resolvedReturnType)};");
+            exps.Add($"{bodiedMemberDefinitionContext.MemberDefinitionVariableName}.ReturnType = {(refReturn ? resolvedReturnType.MakeByReferenceType() : resolvedReturnType)};");
         }
 
-        exps.Add($"{context.DefinitionVariables.GetLastOf(VariableMemberKind.Type).VariableName}.Methods.Add({memberDefinitionContext.MemberDefinitionVariableName});");
+        exps.Add($"{context.DefinitionVariables.GetLastOf(VariableMemberKind.Type).VariableName}.Methods.Add({bodiedMemberDefinitionContext.MemberDefinitionVariableName});");
         if (methodSymbol is { IsAbstract: false, IsExtern: false })
         {
-            exps.Add($"{memberDefinitionContext.MemberDefinitionVariableName}.Body.InitLocals = {(!methodSymbol.TryGetAttribute<SkipLocalsInitAttribute>(out _)).ToString().ToLower()};");
+            exps.Add($"{bodiedMemberDefinitionContext.MemberDefinitionVariableName}.Body.InitLocals = {(!methodSymbol.TryGetAttribute<SkipLocalsInitAttribute>(out _)).ToString().ToLower()};");
         }
         return exps;
     }
 
     public IEnumerable<string> Method(IVisitorContext context,
-        MemberDefinitionContext memberDefinitionContext,
+        BodiedMemberDefinitionContext definitionContext,
         string declaringTypeName,
         string methodNameForVariableRegistration,
         string methodName,
@@ -114,10 +114,10 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
 
         // if the method has type parameters we need to postpone setting the return type (using void as a placeholder, since we need to pass something) until the generic parameters has been
         // handled. This is required because the type parameter may be defined by the method being processed which introduces a chicken and egg problem.
-        exps.Add($"var {memberDefinitionContext.MemberDefinitionVariableName} = new MethodDefinition(\"{methodName}\", {methodModifiers}, {(typeParameters.Count == 0 ? returnTypeResolver(context) : context.TypeResolver.Bcl.System.Void)});");
-        ProcessGenericTypeParameters(memberDefinitionContext.MemberDefinitionVariableName, context, methodNameForVariableRegistration, typeParameters, exps);
+        exps.Add($"var {definitionContext.MemberDefinitionVariableName} = new MethodDefinition(\"{methodName}\", {methodModifiers}, {(typeParameters.Count == 0 ? returnTypeResolver(context) : context.TypeResolver.Bcl.System.Void)});");
+        ProcessGenericTypeParameters(definitionContext.MemberDefinitionVariableName, context, methodNameForVariableRegistration, typeParameters, exps);
         if (typeParameters.Count > 0)
-            exps.Add($"{memberDefinitionContext.MemberDefinitionVariableName}.ReturnType = {returnTypeResolver(context)};");
+            exps.Add($"{definitionContext.MemberDefinitionVariableName}.ReturnType = {returnTypeResolver(context)};");
 
         foreach (var parameter in parameters)
         {
@@ -126,7 +126,7 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
                                                                             parameter.Name,
                                                                             parameter.RefKind,
                                                                             parameter.ParamsAttributeName, // for now,the only callers for this method don't have any `params` parameters.
-                                                                            memberDefinitionContext.MemberDefinitionVariableName,
+                                                                            definitionContext.MemberDefinitionVariableName,
                                                                             paramVar,
                                                                             parameter.ElementTypeResolver != null ? parameter.ElementTypeResolver(context, parameter.ElementType) : parameter.ElementType,
                                                                             parameter.Attributes,
@@ -136,13 +136,13 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
             exps.AddRange(parameterExp);
         }
 
-        if (memberDefinitionContext.ParentDefinitionVariableName != null)
+        if (definitionContext.ParentDefinitionVariableName != null)
         {
-            methodVariable = context.DefinitionVariables.RegisterMethod(declaringTypeName, methodName, parameters.Select(p => p.RegistrationTypeName).ToArray(), typeParameters.Count, memberDefinitionContext.MemberDefinitionVariableName);
+            methodVariable = context.DefinitionVariables.RegisterMethod(declaringTypeName, methodName, parameters.Select(p => p.RegistrationTypeName).ToArray(), typeParameters.Count, definitionContext.MemberDefinitionVariableName);
             exps =
             [
                 ..exps,
-                $"{memberDefinitionContext.ParentDefinitionVariableName}.Methods.Add({memberDefinitionContext.MemberDefinitionVariableName});",
+                $"{definitionContext.ParentDefinitionVariableName}.Methods.Add({definitionContext.MemberDefinitionVariableName});",
             ];
         }
         else
@@ -198,38 +198,38 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
         }
     }
 
-    public IEnumerable<string> Constructor(IVisitorContext context, MemberDefinitionContext memberDefinitionContext, string typeName, bool isStatic, string methodAccessibility, string[] paramTypes, string? methodDefinitionPropertyValues = null)
+    public IEnumerable<string> Constructor(IVisitorContext context, BodiedMemberDefinitionContext definitionContext, string typeName, bool isStatic, string methodAccessibility, string[] paramTypes, string? methodDefinitionPropertyValues = null)
     {
         var ctorName = Utils.ConstructorMethodName(isStatic);
-        context.DefinitionVariables.RegisterMethod(typeName, ctorName, paramTypes, 0, memberDefinitionContext.MemberDefinitionVariableName);
+        context.DefinitionVariables.RegisterMethod(typeName, ctorName, paramTypes, 0, definitionContext.MemberDefinitionVariableName);
 
-        var exp = $@"var {memberDefinitionContext.MemberDefinitionVariableName} = new MethodDefinition(""{ctorName}"", {methodAccessibility} | MethodAttributes.HideBySig | {Constants.Cecil.CtorAttributes}, assembly.MainModule.TypeSystem.Void)";
+        var exp = $@"var {definitionContext.MemberDefinitionVariableName} = new MethodDefinition(""{ctorName}"", {methodAccessibility} | MethodAttributes.HideBySig | {Constants.Cecil.CtorAttributes}, assembly.MainModule.TypeSystem.Void)";
         if (methodDefinitionPropertyValues != null)
         {
             exp = exp + $"{{ {methodDefinitionPropertyValues} }}";
         }
 
-        return [exp + ";", $"{memberDefinitionContext.ParentDefinitionVariableName}.Methods.Add({memberDefinitionContext.MemberDefinitionVariableName});"];
+        return [exp + ";", $"{definitionContext.ParentDefinitionVariableName}.Methods.Add({definitionContext.MemberDefinitionVariableName});"];
     }
 
-    public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext memberDefinitionContext, ISymbol fieldOrEvent, ITypeSymbol fieldType, string fieldAttributes, bool isVolatile, bool isByRef, object? constantValue = null)
+    public IEnumerable<string> Field(IVisitorContext context, in BodiedMemberDefinitionContext definitionContext, ISymbol fieldOrEvent, ITypeSymbol fieldType, string fieldAttributes, bool isVolatile, bool isByRef, object? constantValue = null)
     {
-        return Field(context, memberDefinitionContext, fieldOrEvent.ContainingType.ToDisplayString(), fieldOrEvent.Name, context.TypeResolver.ResolveAny(fieldType), fieldAttributes, isVolatile, isByRef, constantValue);
+        return Field(context, definitionContext, fieldOrEvent.ContainingType.ToDisplayString(), fieldOrEvent.Name, context.TypeResolver.ResolveAny(fieldType), fieldAttributes, isVolatile, isByRef, constantValue);
     }
 
-    public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext memberDefinitionContext, string declaringTypeName, string name, string fieldType, string fieldAttributes, bool isVolatile, bool isByRef, object? constantValue = null)
+    public IEnumerable<string> Field(IVisitorContext context, in BodiedMemberDefinitionContext definitionContext, string declaringTypeName, string name, string fieldType, string fieldAttributes, bool isVolatile, bool isByRef, object? constantValue = null)
     {
         if (isByRef)
             fieldType = fieldType.MakeByReferenceType();
         
-        context.DefinitionVariables.RegisterNonMethod(declaringTypeName, name, VariableMemberKind.Field, memberDefinitionContext.MemberDefinitionVariableName);
+        context.DefinitionVariables.RegisterNonMethod(declaringTypeName, name, VariableMemberKind.Field, definitionContext.MemberDefinitionVariableName);
         
         var resolvedFieldType = ProcessRequiredModifiers(context, fieldType, isVolatile);
-        var fieldExp = $"var {memberDefinitionContext.MemberDefinitionVariableName} = new FieldDefinition(\"{name}\", {fieldAttributes}, {resolvedFieldType})";
+        var fieldExp = $"var {definitionContext.MemberDefinitionVariableName} = new FieldDefinition(\"{name}\", {fieldAttributes}, {resolvedFieldType})";
         List<string> exps = 
         [
             constantValue != null ? $"{fieldExp} {{ Constant = {constantValue} }} ;" : $"{fieldExp};",
-            $"{memberDefinitionContext.ParentDefinitionVariableName}.Fields.Add({memberDefinitionContext.MemberDefinitionVariableName});"
+            $"{definitionContext.ParentDefinitionVariableName}.Fields.Add({definitionContext.MemberDefinitionVariableName});"
         ];
 
         return exps;

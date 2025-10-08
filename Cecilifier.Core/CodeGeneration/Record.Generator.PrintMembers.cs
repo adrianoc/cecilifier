@@ -30,7 +30,7 @@ internal partial class RecordGenerator
         Func<IVisitorContext, string> returnTypeResolver = ctx => context.TypeResolver.Bcl.System.Boolean;
         var printMembersDeclExps = context.ApiDefinitionsFactory.Method(
                                                                 context, 
-                                                                new MemberDefinitionContext(PrintMembersVar, recordTypeDefinitionVariable, MemberOptions.None, IlContext.None), 
+                                                                new BodiedMemberDefinitionContext(PrintMembersVar, recordTypeDefinitionVariable, MemberOptions.None, IlContext.None), 
                                                                 _recordSymbol.OriginalDefinition.ToDisplayString(), 
                                                                 PrintMembersMethodName, 
                                                                 PrintMembersMethodName, 

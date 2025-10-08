@@ -78,7 +78,7 @@ internal partial class PrivateImplementationDetailsGenerator
         };
         var methodExpressions = context.ApiDefinitionsFactory.Method(
                                                                     context, 
-                                                                    new MemberDefinitionContext(methodVar, privateImplementationDetailsVar.VariableName, MemberOptions.None, IlContext.None), 
+                                                                    new BodiedMemberDefinitionContext(methodVar, privateImplementationDetailsVar.VariableName, MemberOptions.None, IlContext.None), 
                                                                     declaringTypeName, 
                                                                     methodTypeQualifiedName, 
                                                                     methodName, 
@@ -160,7 +160,7 @@ internal partial class PrivateImplementationDetailsGenerator
         };
         var methodExpressions = context.ApiDefinitionsFactory.Method(
             context, 
-            new MemberDefinitionContext(methodVar, privateImplementationDetailsVar.VariableName, MemberOptions.None, IlContext.None), 
+            new BodiedMemberDefinitionContext(methodVar, privateImplementationDetailsVar.VariableName, MemberOptions.None, IlContext.None), 
             declaringTypeName, 
             methodTypeQualifiedName, 
             "InlineArrayFirstElementRef", 
@@ -218,7 +218,7 @@ internal partial class PrivateImplementationDetailsGenerator
         };
         var methodExpressions = context.ApiDefinitionsFactory.Method(
             context, 
-            new MemberDefinitionContext(methodVar, privateImplementationDetailsVar.VariableName, MemberOptions.None, IlContext.None), 
+            new BodiedMemberDefinitionContext(methodVar, privateImplementationDetailsVar.VariableName, MemberOptions.None, IlContext.None), 
             declaringTypeName, 
             methodTypeQualifiedName, 
             "InlineArrayElementRef", 
@@ -298,7 +298,7 @@ internal partial class PrivateImplementationDetailsGenerator
         //                                           /                                                          \                        /                                                   / 
         // .field assembly static initonly valuetype '<PrivateImplementationDetails>'/'__StaticArrayInitTypeSize=3' '039058C6F2C0CB492C533B0A4D14EF77CC0F78ABCCCED5287D84A1A2011CFB81' at I_00002B50
         var fieldVar = context.Naming.SyntheticVariable("arrayInitializerData", ElementKind.Field);
-        var fieldExpressions = context.ApiDefinitionsFactory.Field(context, new MemberDefinitionContext(fieldVar, privateImplementationDetailsVar.VariableName, MemberOptions.None, IlContext.None), privateImplementationDetailsVar.MemberName, fieldName, rawDataTypeVar, Constants.CompilerGeneratedTypes.StaticArrayInitFieldModifiers, false, false, null);
+        var fieldExpressions = context.ApiDefinitionsFactory.Field(context, new BodiedMemberDefinitionContext(fieldVar, privateImplementationDetailsVar.VariableName, MemberOptions.None, IlContext.None), privateImplementationDetailsVar.MemberName, fieldName, rawDataTypeVar, Constants.CompilerGeneratedTypes.StaticArrayInitFieldModifiers, false, false, null);
         context.Generate(fieldExpressions);
         var initializationByteArrayAsString = new StringBuilder();
         foreach (var itemValue in toBeHashed)

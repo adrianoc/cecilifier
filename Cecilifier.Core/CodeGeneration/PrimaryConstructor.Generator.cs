@@ -117,7 +117,7 @@ public class PrimaryConstructorGenerator
         string[] paramTypes = typeDeclaration.ParameterList?.Parameters.Select(p => p.Type?.ToString()).ToArray() ?? [];
         var exps = context.ApiDefinitionsFactory.Constructor(
             context, 
-            new MemberDefinitionContext(ctorVar, recordTypeDefinitionVariable, MemberOptions.None, IlContext.None), 
+            new BodiedMemberDefinitionContext(ctorVar, recordTypeDefinitionVariable, MemberOptions.None, IlContext.None), 
             typeName, 
             false, 
             "MethodAttributes.Public", 

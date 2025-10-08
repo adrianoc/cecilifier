@@ -251,7 +251,7 @@ namespace Cecilifier.Core.AST
             
             var declaringTypeVarName = context.DefinitionVariables.GetLastOf(VariableMemberKind.Type).VariableName;
             var parameterSymbols = parameters.Select(p => context.SemanticModel.GetDeclaredSymbol(p)).ToArray();
-            var exps = context.ApiDefinitionsFactory.Method(context, methodSymbol, new MemberDefinitionContext(methodVar, declaringTypeVarName, MemberOptions.None, ilContext), methodName, methodModifiers, parameterSymbols, typeParameters);
+            var exps = context.ApiDefinitionsFactory.Method(context, methodSymbol, new BodiedMemberDefinitionContext(methodVar, declaringTypeVarName, MemberOptions.None, ilContext), methodName, methodModifiers, parameterSymbols, typeParameters);
             AddCecilExpressions(context, exps);
 
             //TODO: Temporary setting ilVar until we change its type to IlContext...

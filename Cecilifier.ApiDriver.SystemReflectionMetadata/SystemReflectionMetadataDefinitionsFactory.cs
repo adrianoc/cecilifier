@@ -63,12 +63,12 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         }
     }
 
-    public IEnumerable<string> Method(IVisitorContext context, IMethodSymbol methodSymbol, MemberDefinitionContext memberDefinitionContext, string methodName, string methodModifiers, IParameterSymbol[] resolvedParameterTypes, IList<TypeParameterSyntax> typeParameters)
+    public IEnumerable<string> Method(IVisitorContext context, IMethodSymbol methodSymbol, BodiedMemberDefinitionContext bodiedMemberDefinitionContext, string methodName, string methodModifiers, IParameterSymbol[] resolvedParameterTypes, IList<TypeParameterSyntax> typeParameters)
     {
         // Resolve the method to make sure there's a method ref available (this will be used to fulfill any references to this method)
         context.MemberResolver.ResolveMethod(methodSymbol);
 
-        ((SystemReflectionMetadataContext) context).DelayedDefinitionsManager.RegisterMethodDefinition(memberDefinitionContext.ParentDefinitionVariableName, (ctx, methodRecord) =>
+        ((SystemReflectionMetadataContext) context).DelayedDefinitionsManager.RegisterMethodDefinition(bodiedMemberDefinitionContext.ParentDefinitionVariableName, (ctx, methodRecord) =>
         {
             EmitLocalVariables(ctx, methodRecord);
             
@@ -82,7 +82,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                                                     MethodImplAttributes.IL | MethodImplAttributes.Managed,
                                                     metadata.GetOrAddString("{methodName}"),
                                                     {methodSignatureVar.VariableName},
-                                                    methodBodyStream.AddMethodBody({memberDefinitionContext.IlContext.VariableName}, localVariablesSignature: {methodRecord.LocalSignatureHandleVariable}),
+                                                    methodBodyStream.AddMethodBody({bodiedMemberDefinitionContext.IlContext.VariableName}, localVariablesSignature: {methodRecord.LocalSignatureHandleVariable}),
                                                     parameterList: {methodRecord.FirstParameterHandle});
                           """);
             
@@ -97,7 +97,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
     }
 
     public IEnumerable<string> Method(IVisitorContext context,
-        MemberDefinitionContext memberDefinitionContext,
+        BodiedMemberDefinitionContext definitionContext,
         string declaringTypeName,
         string methodNameForVariableRegistration,
         string methodName,
@@ -109,15 +109,15 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
     {
         var methodRefVar = context.MemberResolver.ResolveMethod(
                                                             declaringTypeName, 
-                                                            memberDefinitionContext.ParentDefinitionVariableName, 
+                                                            definitionContext.ParentDefinitionVariableName, 
                                                             methodNameForVariableRegistration, 
                                                             returnTypeResolver(context), 
                                                             parameters, 
                                                             typeParameters.Count,
-                                                            memberDefinitionContext.Options);
+                                                            definitionContext.Options);
 
         methodDefinitionVariable = context.DefinitionVariables.FindByVariableName<MethodDefinitionVariable>(methodRefVar) ?? MethodDefinitionVariable.MethodNotFound;
-        TypedContext(context).DelayedDefinitionsManager.RegisterMethodDefinition(memberDefinitionContext.ParentDefinitionVariableName, (ctx, methodRecord) =>
+        TypedContext(context).DelayedDefinitionsManager.RegisterMethodDefinition(definitionContext.ParentDefinitionVariableName, (ctx, methodRecord) =>
         {
             EmitLocalVariables(ctx, methodRecord);
             
@@ -131,14 +131,14 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
             var methodSignatureVar = ctx.DefinitionVariables.GetMethodVariable(methodReferenceToFind);
             Debug.Assert(methodSignatureVar.IsValid);
             
-            var methodDefVar = memberDefinitionContext.MemberDefinitionVariableName;
+            var methodDefVar = definitionContext.MemberDefinitionVariableName;
             ctx.Generate($"""
                           var {methodDefVar}  = metadata.AddMethodDefinition(
                                                     {methodModifiers},
                                                     MethodImplAttributes.IL | MethodImplAttributes.Managed,
                                                     metadata.GetOrAddString("{methodName}"),
                                                     {methodSignatureVar.VariableName},
-                                                    methodBodyStream.AddMethodBody({memberDefinitionContext.IlContext.VariableName}, localVariablesSignature: {methodRecord.LocalSignatureHandleVariable}),
+                                                    methodBodyStream.AddMethodBody({definitionContext.IlContext.VariableName}, localVariablesSignature: {methodRecord.LocalSignatureHandleVariable}),
                                                     parameterList: {methodRecord.FirstParameterHandle});
                           """);
             
@@ -160,7 +160,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         return [];
     }
 
-    public IEnumerable<string> Constructor(IVisitorContext context, MemberDefinitionContext memberDefinitionContext, string typeName, bool isStatic, string methodAccessibility, string[] paramTypes, string? methodDefinitionPropertyValues = null)
+    public IEnumerable<string> Constructor(IVisitorContext context, BodiedMemberDefinitionContext definitionContext, string typeName, bool isStatic, string methodAccessibility, string[] paramTypes, string? methodDefinitionPropertyValues = null)
     {
         var parameterlessCtorSignatureVar = context.Naming.SyntheticVariable("parameterlessCtorSignature", ElementKind.LocalVariable);
         yield return Format(
@@ -171,7 +171,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                      .Parameters(0, returnType => returnType.Void(), parameters => { });
               """);
         
-        TypedContext(context).DelayedDefinitionsManager.RegisterMethodDefinition(memberDefinitionContext.ParentDefinitionVariableName, (ctx, methodRecord) =>
+        TypedContext(context).DelayedDefinitionsManager.RegisterMethodDefinition(definitionContext.ParentDefinitionVariableName, (ctx, methodRecord) =>
         {
             EmitLocalVariables(ctx, methodRecord);
             
@@ -182,7 +182,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                                                              MethodImplAttributes.IL | MethodImplAttributes.Managed,
                                                              metadata.GetOrAddString("{(isStatic ? ".cctor" : ".ctor")}"),
                                                              metadata.GetOrAddBlob({parameterlessCtorSignatureVar}),
-                                                             methodBodyStream.AddMethodBody({memberDefinitionContext.IlContext.VariableName}, localVariablesSignature: {methodRecord.LocalSignatureHandleVariable}),
+                                                             methodBodyStream.AddMethodBody({definitionContext.IlContext.VariableName}, localVariablesSignature: {methodRecord.LocalSignatureHandleVariable}),
                                                              parameterList: {methodRecord.FirstParameterHandle});
                                    """);
             
@@ -191,15 +191,15 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         });
     }
 
-    public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext memberDefinitionContext, ISymbol fieldOrEvent, ITypeSymbol fieldType, string fieldAttributes, bool isVolatile, bool isByRef, object? constantValue = null)
+    public IEnumerable<string> Field(IVisitorContext context, in BodiedMemberDefinitionContext definitionContext, ISymbol fieldOrEvent, ITypeSymbol fieldType, string fieldAttributes, bool isVolatile, bool isByRef, object? constantValue = null)
     {
-        ((SystemReflectionMetadataContext) context).DelayedDefinitionsManager.RegisterFieldDefinition(memberDefinitionContext.ParentDefinitionVariableName, memberDefinitionContext.MemberDefinitionVariableName);
+        ((SystemReflectionMetadataContext) context).DelayedDefinitionsManager.RegisterFieldDefinition(definitionContext.ParentDefinitionVariableName, definitionContext.MemberDefinitionVariableName);
         
         //TODO: Handle isByRef
         Debug.Assert(isByRef == false, "Handle isByRef");
         var typedTypeResolver = (SystemReflectionMetadataTypeResolver) context.TypeResolver;
         
-        context.DefinitionVariables.RegisterNonMethod(fieldOrEvent.ContainingType.ToDisplayString(), fieldOrEvent.Name, VariableMemberKind.Field, memberDefinitionContext.MemberDefinitionVariableName);
+        context.DefinitionVariables.RegisterNonMethod(fieldOrEvent.ContainingType.ToDisplayString(), fieldOrEvent.Name, VariableMemberKind.Field, definitionContext.MemberDefinitionVariableName);
         var fieldSignatureVar = context.Naming.SyntheticVariable($"{fieldOrEvent.Name}_fs", ElementKind.LocalVariable);
         return [
             $"""
@@ -208,16 +208,16 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                  .FieldSignature()
                  .{typedTypeResolver.ResolveAny(fieldType, ResolveTargetKind.Field)};
                  
-             var {memberDefinitionContext.MemberDefinitionVariableName} = metadata.AddFieldDefinition({fieldAttributes}, metadata.GetOrAddString("{fieldOrEvent.Name}"), metadata.GetOrAddBlob({fieldSignatureVar}));
+             var {definitionContext.MemberDefinitionVariableName} = metadata.AddFieldDefinition({fieldAttributes}, metadata.GetOrAddString("{fieldOrEvent.Name}"), metadata.GetOrAddBlob({fieldSignatureVar}));
              """
         ];
     }
 
-    public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext memberDefinitionContext, string declaringTypeName, string name, string fieldType, string fieldAttributes, bool isVolatile, bool isByRef, object? constantValue = null)
+    public IEnumerable<string> Field(IVisitorContext context, in BodiedMemberDefinitionContext definitionContext, string declaringTypeName, string name, string fieldType, string fieldAttributes, bool isVolatile, bool isByRef, object? constantValue = null)
     {
-        ((SystemReflectionMetadataContext) context).DelayedDefinitionsManager.RegisterFieldDefinition(memberDefinitionContext.ParentDefinitionVariableName, memberDefinitionContext.MemberDefinitionVariableName);
+        ((SystemReflectionMetadataContext) context).DelayedDefinitionsManager.RegisterFieldDefinition(definitionContext.ParentDefinitionVariableName, definitionContext.MemberDefinitionVariableName);
         
-        context.DefinitionVariables.RegisterNonMethod(declaringTypeName, name, VariableMemberKind.Field, memberDefinitionContext.MemberDefinitionVariableName);
+        context.DefinitionVariables.RegisterNonMethod(declaringTypeName, name, VariableMemberKind.Field, definitionContext.MemberDefinitionVariableName);
         var fieldSignatureVar = context.Naming.SyntheticVariable($"{name}_fs", ElementKind.LocalVariable);
         return [
             $"""
@@ -226,7 +226,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                  .FieldSignature()
                  .{fieldType};
                  
-             var {memberDefinitionContext.MemberDefinitionVariableName} = metadata.AddFieldDefinition({fieldAttributes}, metadata.GetOrAddString("{name}"), metadata.GetOrAddBlob({fieldSignatureVar}));
+             var {definitionContext.MemberDefinitionVariableName} = metadata.AddFieldDefinition({fieldAttributes}, metadata.GetOrAddString("{name}"), metadata.GetOrAddBlob({fieldSignatureVar}));
              """
         ];
     }

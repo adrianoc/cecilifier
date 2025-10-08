@@ -52,7 +52,7 @@ internal partial class TypeDeclarationVisitor
             string[] paramTypes = new[] { "System.Object", "System.IntPtr" };
             var exps = Context.ApiDefinitionsFactory.Constructor(
                 Context, 
-                new MemberDefinitionContext(ctorLocalVar, typeVar, MemberOptions.None, IlContext.None), 
+                new BodiedMemberDefinitionContext(ctorLocalVar, typeVar, MemberOptions.None, IlContext.None), 
                 node.Identifier.Text, 
                 false, 
                 "MethodAttributes.FamANDAssem | MethodAttributes.Family", 
@@ -85,7 +85,7 @@ internal partial class TypeDeclarationVisitor
             var endInvokeMethodVar = Context.Naming.SyntheticVariable("EndInvoke", ElementKind.Method);
             var endInvokeExps = Context.ApiDefinitionsFactory.Method(
                                                                         Context,
-                                                                        new MemberDefinitionContext(endInvokeMethodVar, typeVar, MemberOptions.None, IlContext.None),
+                                                                        new BodiedMemberDefinitionContext(endInvokeMethodVar, typeVar, MemberOptions.None, IlContext.None),
                                                                         "declarintTypeName",
                                                                         "EnvInvoke",
                                                                         "EndInvoke",

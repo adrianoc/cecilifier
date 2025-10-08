@@ -75,7 +75,7 @@ namespace Cecilifier.Core.AST
                 var constant = modifiers.Any(m => m.IsKind(SyntaxKind.ConstKeyword)) && field.Initializer != null ? Context.SemanticModel.GetConstantValue(field.Initializer.Value) : null;
                 var exps = Context.ApiDefinitionsFactory.Field(
                                                             Context, 
-                                                            new MemberDefinitionContext(fieldVar, declaringTypeVar.VariableName, MemberOptions.None, IlContext.None), 
+                                                            new BodiedMemberDefinitionContext(fieldVar, declaringTypeVar.VariableName, MemberOptions.None, IlContext.None), 
                                                             fieldSymbol, 
                                                             fieldType,
                                                             fieldAttributes, 
