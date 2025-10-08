@@ -754,11 +754,11 @@ internal partial class RecordGenerator
             propertyName,
             new Dictionary<string, string> { ["get"] = "MethodAttributes.Family | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.NewSlot | MethodAttributes.Virtual" },
             false,
-            context.TypeResolver.ResolveAny(context.RoslynTypeSystem.SystemType),
+            resolveTargetKind => context.TypeResolver.ResolveAny(context.RoslynTypeSystem.SystemType, resolveTargetKind),
             string.Empty, // used for registering the parameter for setters. In this case, there are none.
             Array.Empty<ParameterSpec>());
         
-        var exps = context.ApiDefinitionsFactory.Property(context, recordTypeDefinitionVariable, record.Identifier.Text, propertyData.Variable, propertyName, propertyData.ResolvedType);
+        var exps = context.ApiDefinitionsFactory.Property(context, recordTypeDefinitionVariable, record.Identifier.Text, propertyData.Variable, propertyName, propertyData.Type(ResolveTargetKind.Field));
         context.Generate(exps);
 
         _equalityContractGetMethodVar = context.Naming.SyntheticVariable("EqualityContract_get", ElementKind.Method);

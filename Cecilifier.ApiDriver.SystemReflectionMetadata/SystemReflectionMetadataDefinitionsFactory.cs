@@ -224,7 +224,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
              BlobBuilder {fieldSignatureVar} = new();
              new BlobEncoder({fieldSignatureVar})
                  .FieldSignature()
-                 TODO: Handle Field Type Resolution.;
+                 .{fieldType};
                  
              var {memberDefinitionContext.MemberDefinitionVariableName} = metadata.AddFieldDefinition({fieldAttributes}, metadata.GetOrAddString("{name}"), metadata.GetOrAddBlob({fieldSignatureVar}));
              """

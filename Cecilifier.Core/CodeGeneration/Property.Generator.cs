@@ -22,7 +22,7 @@ internal record struct PropertyGenerationData(
     string Name, 
     IDictionary<string, string> AccessorModifiers,
     bool IsStatic,
-    string ResolvedType, 
+    Func<ResolveTargetKind, string> Type, 
     string TypeNameForRegistration, 
     IReadOnlyList<ParameterSpec> Parameters,
     string BackingFieldModifiers =null, // Not used, unless on auto-properties
@@ -48,7 +48,7 @@ internal class PropertyGenerator
             // Setters always have at least one `value` parameter but Roslyn does not have it explicitly listed.
             new(
                 "value",
-                property.ResolvedType,
+                property.Type(ResolveTargetKind.ReturnType),
                 RefKind.None,
                 Constants.ParameterAttributes.None) { RegistrationTypeName = property.TypeNameForRegistration }
         };
@@ -94,7 +94,7 @@ internal class PropertyGenerator
 
     internal ScopedDefinitionVariable AddGetterMethodDeclaration(ref readonly PropertyGenerationData property, string accessorMethodVar, bool hasCovariantReturn, string nameForRegistration, string overridenMethod, in IlContext ilContext)
     {
-        var propertyResolvedType = property.ResolvedType;
+        var propertyResolvedType = property.Type(ResolveTargetKind.ReturnType);
         IList<string> typeParameters = [];
         var memberDefinitionContext = new MemberDefinitionContext(accessorMethodVar, property.DeclaringTypeVariable, property.IsStatic ? MemberOptions.Static : MemberOptions.None, ilContext);
         var exps = Context.ApiDefinitionsFactory.Method(
@@ -156,7 +156,8 @@ internal class PropertyGenerator
         _backingFieldVar = Context.Naming.SyntheticVariable(property.Name, ElementKind.Field);
 
         var name = Utils.BackingFieldNameForAutoProperty(property.Name);
-        var backingFieldExps = Context.ApiDefinitionsFactory.Field(Context, new MemberDefinitionContext(_backingFieldVar, property.DeclaringTypeVariable, MemberOptions.None, IlContext.None), property.DeclaringTypeNameForRegistration, name, property.ResolvedType, property.BackingFieldModifiers, false, false, null);
+        var memberDefinitionContext = new MemberDefinitionContext(_backingFieldVar, property.DeclaringTypeVariable, MemberOptions.None, IlContext.None);
+        var backingFieldExps = Context.ApiDefinitionsFactory.Field(Context, memberDefinitionContext, property.DeclaringTypeNameForRegistration, name, property.Type(ResolveTargetKind.Field), property.BackingFieldModifiers, false, false, null);
         
         Context.Generate(backingFieldExps);
         Context.AddCompilerGeneratedAttributeTo(_backingFieldVar);

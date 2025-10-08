@@ -66,7 +66,7 @@ public class PrimaryConstructorGenerator
                                         ["set"] = publicPropertyMethodAttributes
                                     },
                                     false,
-                                    context.TypeResolver.ResolveAny(propertyType),
+                                    resolveTargetKind => context.TypeResolver.ResolveAny(propertyType, resolveTargetKind),
                                     propertyType.ToDisplayString(),
                                     Array.Empty<ParameterSpec>(),
                                     "FieldAttributes.Private",

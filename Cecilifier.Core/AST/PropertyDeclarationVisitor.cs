@@ -141,7 +141,7 @@ namespace Cecilifier.Core.AST
                                     propertyName,
                                     AccessorsModifiersFor(node, propertySymbol),
                                     propertySymbol.IsStatic,
-                                    ResolveType(node.Type, ResolveTargetKind.Parameter),
+                                    resolveTargetKind => ResolveType(node.Type, resolveTargetKind),
                                     propertySymbol.Type.ToDisplayString(),
                                     parameters,
                                     BackingFieldModifiersFor(node), 
