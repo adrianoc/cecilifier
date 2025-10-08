@@ -254,6 +254,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                     }
                 }
 
+                ret &= memberVisitor.VisitMemberProperties(sourceMethod, targetMethod);
                 if (sourceMethod.Attributes != targetMethod.Attributes)
                 {
                     if (!memberVisitor.VisitAttributes(sourceMethod, targetMethod))
@@ -574,7 +575,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
             return true;
         }
 
-        private static bool CheckTypeMember<T>(IMemberDiffVisitor memberVisitor, IMemberDefinition sourceMember, TypeDefinition target, IDictionary<string, T> targetMembers) where T : IMemberDefinition
+        private static bool CheckTypeMember<T>(IMemberDiffVisitor memberVisitor, T sourceMember, TypeDefinition target, IDictionary<string, T> targetMembers) where T : IMemberDefinition
         {
             if (!targetMembers.ContainsKey(sourceMember.FullName))
             {
@@ -582,22 +583,16 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
             }
 
             var targetMember = targetMembers[sourceMember.FullName];
-            if (sourceMember.FullName != targetMember.FullName)
+            if (sourceMember.FullName != targetMember.FullName && !memberVisitor.VisitName(sourceMember, targetMember))
             {
-                if (!memberVisitor.VisitName(sourceMember, targetMember))
-                {
-                    return false;
-                }
+                return false;
             }
 
-            if (sourceMember.DeclaringType.FullName != targetMember.DeclaringType.FullName)
+            if (sourceMember.DeclaringType.FullName != targetMember.DeclaringType.FullName && !memberVisitor.VisitDeclaringType(sourceMember, target))
             {
-                if (!memberVisitor.VisitDeclaringType(sourceMember, target))
-                {
-                    return false;
-                }
+                return false;
             }
-
+            
             return true;
         }
 
