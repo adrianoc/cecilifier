@@ -18,7 +18,9 @@ internal record struct TypeDefinitionRecord(string TypeQualifiedName, string Typ
     /// The name of the variable representing the definition of the first method of the type. <see cref="FirstFieldHandle"/>
     /// </summary>
     public string? FirstMethodHandle { get; set; }
-    
+
+    public IList<PropertyDefinitionRecord> Properties { get; } = new List<PropertyDefinitionRecord>();
+
     /// <summary>
     /// 
     /// </summary>

@@ -86,7 +86,7 @@ class Foo<TFoo> {{ }}");
             Does.Match("""
                        \s+assembly\.MainModule\.Types\.Add\((?<targetType>cls_foo_\d+)\);
                        \s+var (?<attr>attr_myGeneric_\d+_\d+) = new CustomAttribute\(.+(?<attrCtor>ctor_myGenericAttribute_\d+).Name, \k<attrCtor>.ReturnType\) {.+DeclaringType = cls_myGenericAttribute_\d+.MakeGenericInstanceType\(assembly.MainModule.TypeSystem.Int32\), .+\);
-                       \s+cls_foo_22.CustomAttributes.Add\(\k<attr>\);
+                       \s+cls_foo_\d+.CustomAttributes.Add\(\k<attr>\);
                        """));
     }
     
@@ -108,7 +108,7 @@ class Foo<TFoo> {{ }}");
             Does.Match("""
                        \s+var (?<m>m_M_\d+) = new MethodDefinition\("M",.+\);
                        \s+cls_foo_\d+.Methods.Add\(\k<m>\);
-                       \s+m_M_23.Body.InitLocals = true;
+                       \s+m_M_\d+.Body.InitLocals = true;
                        \s+var il_M_\d+ = m_M_\d+.Body.GetILProcessor\(\);
                        \s+var (?<attr>attr_myGeneric_\d+_\d+) = new CustomAttribute\(.+(?<attrCtor>ctor_myGenericAttribute_\d+).Name, \k<attrCtor>.ReturnType\) {.+DeclaringType = cls_myGenericAttribute_\d+.MakeGenericInstanceType\(assembly.MainModule.TypeSystem.Int32\), .+\);
                        \s+\k<m>.CustomAttributes.Add\(\k<attr>\);

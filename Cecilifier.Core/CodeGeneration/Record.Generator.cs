@@ -83,7 +83,7 @@ internal partial class RecordGenerator
         var cloneMethodVar = context.Naming.SyntheticVariable("clone", ElementKind.Method);
         var clonedMethodExps = context.ApiDefinitionsFactory.Method(
                                                                                 context, 
-                                                                                new MemberDefinitionContext(cloneMethodVar, recordTypeDefinitionVariable, IlContext.None),  
+                                                                                new MemberDefinitionContext(cloneMethodVar, recordTypeDefinitionVariable, MemberOptions.None, IlContext.None),  
                                                                                 recordTypeDefinitionVariable, 
                                                                                 "Clone",
                                                                                 CloneMethodName,
@@ -130,7 +130,7 @@ internal partial class RecordGenerator
             copyCtorVar = context.Naming.Constructor(record, false);
             var exps = context.ApiDefinitionsFactory.Constructor(
                                 context, 
-                                new MemberDefinitionContext(copyCtorVar, recordTypeDefinitionVariable, IlContext.None), 
+                                new MemberDefinitionContext(copyCtorVar, recordTypeDefinitionVariable, MemberOptions.None, IlContext.None), 
                                 _recordSymbol.OriginalDefinition.ToDisplayString(), 
                                 false, 
                                 Constants.Cecil.CtorAttributes.AppendModifier("MethodAttributes.Family | MethodAttributes.HideBySig"), 
@@ -216,7 +216,7 @@ internal partial class RecordGenerator
         Func<IVisitorContext, string> returnTypeResolver = ctx => ctx.TypeResolver.Bcl.System.Boolean;
         var equalsOperatorMethodExps = context.ApiDefinitionsFactory.Method(
             context, 
-            new MemberDefinitionContext(equalsOperatorMethodVar, recordTypeDefinitionVariable, IlContext.None), 
+            new MemberDefinitionContext(equalsOperatorMethodVar, recordTypeDefinitionVariable, MemberOptions.None, IlContext.None), 
             declaringTypeName, 
             methodName, 
             methodName, 
@@ -277,7 +277,7 @@ internal partial class RecordGenerator
         Func<IVisitorContext, string> returnTypeResolver = ctx => ctx.TypeResolver.Bcl.System.Boolean;
         var inequalityOperatorMethodExps = context.ApiDefinitionsFactory.Method(
             context, 
-            new MemberDefinitionContext(inequalityOperatorMethodVar, recordTypeDefinitionVariable, IlContext.None), 
+            new MemberDefinitionContext(inequalityOperatorMethodVar, recordTypeDefinitionVariable, MemberOptions.None, IlContext.None), 
             declaringTypeName, 
             methodName, 
             methodName, 
@@ -328,7 +328,7 @@ internal partial class RecordGenerator
         Func<IVisitorContext, string> returnTypeResolver = ctx => ctx.TypeResolver.Bcl.System.Int32;
         var getHashCodeMethodExps = context.ApiDefinitionsFactory.Method(
             context, 
-            new MemberDefinitionContext(getHashCodeMethodVar, recordTypeDefinitionVariable, IlContext.None), 
+            new MemberDefinitionContext(getHashCodeMethodVar, recordTypeDefinitionVariable, MemberOptions.None, IlContext.None), 
             declaringTypeName, 
             "GetHashCode", 
             "GetHashCode", 
@@ -449,7 +449,7 @@ internal partial class RecordGenerator
             Func<IVisitorContext, string> returnTypeResolver = ctx => context.TypeResolver.Bcl.System.String;
             var toStringDeclExps = context.ApiDefinitionsFactory.Method(
                 context, 
-                new MemberDefinitionContext(toStringMethodVar, recordTypeDefinitionVariable, IlContext.None), 
+                new MemberDefinitionContext(toStringMethodVar, recordTypeDefinitionVariable, MemberOptions.None, IlContext.None), 
                 declaringTypeName, 
                 ToStringName, 
                 ToStringName, 
@@ -550,7 +550,7 @@ internal partial class RecordGenerator
         Func<IVisitorContext, string> returnTypeResolver = ctx => ctx.TypeResolver.Bcl.System.Boolean;
         var exps = context.ApiDefinitionsFactory.Method(
             context, 
-            new MemberDefinitionContext(equalsVar, recordTypeDefinitionVariable, IlContext.None), 
+            new MemberDefinitionContext(equalsVar, recordTypeDefinitionVariable, MemberOptions.None, IlContext.None), 
             declaringTypeName, 
             methodNameForParameterVariableRegistration, 
             "Equals", 
@@ -758,22 +758,18 @@ internal partial class RecordGenerator
             string.Empty, // used for registering the parameter for setters. In this case, there are none.
             Array.Empty<ParameterSpec>());
         
-        var exps = CecilDefinitionsFactory.PropertyDefinition(propertyData.Variable, propertyName, propertyData.ResolvedType);
-        context.Generate(
-        [
-            ..exps,
-            $"{propertyData.DeclaringTypeVariable}.Properties.Add({propertyData.Variable});"
-        ]);
+        var exps = context.ApiDefinitionsFactory.Property(context, recordTypeDefinitionVariable, record.Identifier.Text, propertyData.Variable, propertyName, propertyData.ResolvedType);
+        context.Generate(exps);
 
         _equalityContractGetMethodVar = context.Naming.SyntheticVariable("EqualityContract_get", ElementKind.Method);
+        var getterIlVar = context.Naming.ILProcessor("EqualityContract_get");
         using var _ = propertyGenerator.AddGetterMethodDeclaration(
                                                                 in propertyData, 
                                                                 _equalityContractGetMethodVar, 
                                                                 false, 
                                                                 string.Empty, // used for registering property parameters. In this case, there are none.
-                                                                null);
-        
-        var getterIlVar = context.Naming.ILProcessor("EqualityContract_get");
+                                                                null,
+                                                                getterIlVar);
         
         var getTypeFromHandleSymbol = (IMethodSymbol) context.RoslynTypeSystem.SystemType.GetMembers("GetTypeFromHandle").First();
         context.Generate($"var {getterIlVar} = {_equalityContractGetMethodVar}.Body.GetILProcessor();");
@@ -807,7 +803,7 @@ internal partial class RecordGenerator
         Func<IVisitorContext, string> returnTypeResolver = ctx => ctx.TypeResolver.Bcl.System.Boolean;
         var equalsObjectOverloadMethodExps = context.ApiDefinitionsFactory.Method(
             context, 
-            new MemberDefinitionContext(equalsObjectOverloadMethodVar, recordTypeDefinitionVariable, IlContext.None), 
+            new MemberDefinitionContext(equalsObjectOverloadMethodVar, recordTypeDefinitionVariable, MemberOptions.None, IlContext.None), 
             recordSymbol.Name, 
             methodName, 
             methodName, 
@@ -860,7 +856,7 @@ internal partial class RecordGenerator
         Func<IVisitorContext, string> returnTypeResolver1 = ctx => ctx.TypeResolver.Bcl.System.Boolean;
         var equalsBaseOverloadMethodExps = context.ApiDefinitionsFactory.Method(
             context, 
-            new MemberDefinitionContext(equalsBaseOverloadMethodVar, recordTypeDefinitionVariable, IlContext.None), 
+            new MemberDefinitionContext(equalsBaseOverloadMethodVar, recordTypeDefinitionVariable, MemberOptions.None, IlContext.None), 
             recordSymbol.Name, 
             methodName, 
             methodName, 
@@ -909,7 +905,7 @@ internal partial class RecordGenerator
         Func<IVisitorContext, string> returnTypeResolver = ctx => ctx.TypeResolver.Bcl.System.Void;
         var deconstructMethodVarExps = context.ApiDefinitionsFactory.Method(
             context, 
-            new MemberDefinitionContext(deconstructMethodVar, recordTypeDefinitionVariable, IlContext.None), 
+            new MemberDefinitionContext(deconstructMethodVar, recordTypeDefinitionVariable, MemberOptions.None, IlContext.None), 
             declaringTypeName, 
             methodName, 
             methodName, 

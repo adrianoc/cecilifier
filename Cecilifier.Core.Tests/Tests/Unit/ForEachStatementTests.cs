@@ -200,8 +200,8 @@ public class ForEachStatementTests : CecilifierUnitTestBase
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
         Assert.That(cecilifiedCode, Does.Match("""
                                                //finally start
-                                               \s+var nop_22 = il_use_14.Create\(OpCodes.Nop\);
-                                               \s+(il_use_\d+)\.Append\(nop_22\);
+                                               \s+var nop_\d+ = il_use_\d+.Create\(OpCodes.Nop\);
+                                               \s+(il_use_\d+)\.Append\(nop_\d+\);
                                                \s+var (?<skip_disposable>nop_\d+) = \1.Create\(OpCodes.Nop\);
                                                (?<e>\s+\1\.Emit\(OpCodes\.)Ldloc, (?<enum_var>l_enumerator_\d+)\);
                                                \3Brfalse_S, \k<skip_disposable>\);

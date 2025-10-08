@@ -58,7 +58,7 @@ public interface IApiDriverDefinitionsFactory
         string declaringTypeName,
         string methodNameForVariableRegistration, // we can't use the method name in some scenarios (indexers, for instance) 
         string methodName,
-        string methodModifiers,
+        string methodModifiers, //TODO: Try to change to MethodAttributes enum (reflection) in the same way we do with IL opcodes (and remove MemberDefinitionContext.Options)
         IReadOnlyList<ParameterSpec> parameters,
         IList<string> typeParameters,
         Func<IVisitorContext, string> returnTypeResolver,
@@ -70,10 +70,14 @@ public interface IApiDriverDefinitionsFactory
     public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext memberDefinitionContext, string fieldVar, string name, string fieldType, string fieldAttributes, bool isVolatile, bool isByRef, object? constantValue = null);
     IEnumerable<string> MethodBody(IVisitorContext context, string methodName, IlContext ilContext, string[] localVariableTypes, InstructionRepresentation[] instructions);
     DefinitionVariable LocalVariable(IVisitorContext context, string variableName, string methodDefinitionVariableName, string resolvedVarType);
+    IEnumerable<string> Property(IVisitorContext context, string declaringTypeVariable, string declaringTypeName, string propertyDefinitionVariable, string propertyName, string propertyType);
 }
 
 [DebuggerDisplay("MemberDefinitionContext ({MemberDefinitionVariableName}, {ParentDefinitionVariableName}, {IlContext})")]
-public record struct MemberDefinitionContext(
-    string MemberDefinitionVariableName,
-    string? ParentDefinitionVariableName,
-    IlContext IlContext);
+public record struct MemberDefinitionContext(string MemberDefinitionVariableName, string? ParentDefinitionVariableName, MemberOptions Options, IlContext IlContext);
+
+public enum MemberOptions
+{
+    None = 0,
+    Static,
+}

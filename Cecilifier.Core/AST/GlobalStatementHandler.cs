@@ -49,7 +49,7 @@ namespace Cecilifier.Core.AST
             var ilContext = context.ApiDriver.NewIlContext(context, "topLevelMain", methodVar);
             var methodExps = context.ApiDefinitionsFactory.Method(
                                                     context,
-                                                    new MemberDefinitionContext(methodVar, typeVar, ilContext),
+                                                    new MemberDefinitionContext(methodVar, typeVar, MemberOptions.Static, ilContext),
                                                     "Program",
                                                     "programMain",
                                                     "<Main>$",

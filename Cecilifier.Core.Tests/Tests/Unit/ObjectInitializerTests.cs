@@ -217,7 +217,7 @@ public class ObjectInitializerTests : CecilifierUnitTestBase
                     \4Call, l_set_\d+\);
                     \4Dup\);
                     \4Ldc_I4, 6\);
-                    \4Call, l_set_1\d+\);
+                    \4Call, l_set_\d+\);
                     \4Pop\);
                     \4Ldloca, \1\);
                     \4Call, m_get_\d+\);

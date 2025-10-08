@@ -108,9 +108,9 @@ public class OperatorsTests : CecilifierUnitTestBase
                         @"il_M_3.Append\(lbl_conditionEnd_7\);"));
     }
 
-    [TestCase("f", "Ldfld, fld_f_6", TestName = "Field")]
-    [TestCase("P", "Call, m_get_2", TestName = "Property")]
-    [TestCase("M()", "Call, m_M_4", TestName = "Method")]
+    [TestCase("f", @"Ldfld, fld_f_\d+", TestName = "Field")]
+    [TestCase("P", @"Call, m_get_\d+", TestName = "Property")]
+    [TestCase("M()", @"Call, m_M_\d+", TestName = "Method")]
     public void TestNullConditionalOperator_OnQualifiedMemberAccess_DoesNoLoadThis(string member, string expected)
     {
         var result = RunCecilifier($$"""class Foo { private int P => 0; private int M() => 0; private int f; object Bar(Foo p) => p?.{{member}}; }""");
@@ -204,22 +204,22 @@ public class OperatorsTests : CecilifierUnitTestBase
         Assert.That(
             cecilifiedCode,
             Does.Match(
-                $@"var lbl_whenTrue_13 = (il_M_10\.Create\(OpCodes\.)Nop\);\s+" +
-                        @"var lbl_conditionEnd_14 = \1Nop.+;\s+" +
+                $@"var lbl_whenTrue_\d+ = (il_M_\d+\.Create\(OpCodes\.)Nop\);\s+" +
+                        @"var lbl_conditionEnd_\d+ = \1Nop.+;\s+" +
                         expectedIlRegexForLoadingTarget +
                         @"\2Dup.+;\s+" +
-                        @"\2Brtrue_S, lbl_whenTrue_13.+;\s+" +
+                        @"\2Brtrue_S, lbl_whenTrue_\d+.+;\s+" +
                         @"\2Pop.+;\s+" +
                         @"var (l_nullable_\d+) = new VariableDefinition\(assembly\.MainModule.ImportReference\(typeof\(System.Nullable<>\)\).MakeGenericInstanceType\(assembly.MainModule.TypeSystem.Int32\)\);\s+" +
                         @".+Body\.Variables.Add\(\3\);\s+" +
                         @"\2Ldloca_S, \3.+;\s+" +
                         @"\2Initobj, assembly.MainModule.ImportReference\(typeof\(System.Nullable<>\)\).MakeGenericInstanceType\(assembly.MainModule.TypeSystem.Int32\)\);\s+" +
                         @"\2Ldloc, \3.+;\s+" +
-                        @"\2Br, lbl_conditionEnd_14.+;\s+" +
-                        @"il_M_10.Append\(lbl_whenTrue_13\);\s+" +
+                        @"\2Br, lbl_conditionEnd_\d+.+;\s+" +
+                        @"il_M_\d+.Append\(lbl_whenTrue_\d+\);\s+" +
                         @"\2Call,.+typeof\(System.String\), ""get_Length"".+;\s+" +
                         @"\2Newobj,.+typeof\(System.Nullable<System.Int32>\), "".ctor"".+""System.Int32"".+;\s+" +
-                        @"il_M_10.Append\(lbl_conditionEnd_14\);"));
+                        @"il_M_\d+.Append\(lbl_conditionEnd_\d+\);"));
     }
 
     [TestCase("int M(char a) => a % 3;")]
@@ -480,24 +480,24 @@ public class OperatorsTests : CecilifierUnitTestBase
     {
         yield return new TestCaseData(
             "G()",
-            @"(il_M_10\.Emit\(OpCodes\.)Ldarg_0.+;\s+" +
-            @"\2Call, m_G_4.+;\s+").SetName("On Method (this)");
+            @"(il_M_\d+\.Emit\(OpCodes\.)Ldarg_0.+;\s+" +
+            @"\2Call, m_G_\d+.+;\s+").SetName("On Method (this)");
 
         yield return new TestCaseData(
             "M().G()",
-            @"(il_M_10\.Emit\(OpCodes\.)Ldarg_0.+;\s+" +
-            @"\2Call, m_M_6.+;\s+" +
-            @"\2Callvirt, m_G_4.+;\s+").SetName("On Method through member reference");
+            @"(il_M_\d+\.Emit\(OpCodes\.)Ldarg_0.+;\s+" +
+            @"\2Call, m_M_\d+.+;\s+" +
+            @"\2Callvirt, m_G_\d+.+;\s+").SetName("On Method through member reference");
 
         yield return new TestCaseData(
             "Property",
-            @"(il_M_10\.Emit\(OpCodes\.)Ldarg_0.+;\s+" +
+            @"(il_M_\d+\.Emit\(OpCodes\.)Ldarg_0.+;\s+" +
             @"\2Call, m_get_2.+;\s+").SetName("On Property (this)");
 
         yield return new TestCaseData(
             "M().Property",
-            @"(il_M_10\.Emit\(OpCodes\.)Ldarg_0.+;\s+" +
-            @"\2Call, m_M_6.+;\s+" +
-            @"\2Callvirt, m_get_2.+;\s+").SetName("On Property  through member reference");
+            @"(il_M_\d+\.Emit\(OpCodes\.)Ldarg_0.+;\s+" +
+            @"\2Call, m_M_\d+.+;\s+" +
+            @"\2Callvirt, m_get_\d+.+;\s+").SetName("On Property  through member reference");
     }
 }

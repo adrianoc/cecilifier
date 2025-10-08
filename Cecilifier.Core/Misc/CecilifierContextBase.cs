@@ -109,10 +109,6 @@ namespace Cecilifier.Core.Misc
 
         public void Generate(string expression)
         {
-            if (expression.Contains("m_inlineArrayElementRef_15.ReturnType = .MakeByReferenceType()"))
-            {
-                Console.WriteLine();
-            }
             var lineCount = expression.CountNewLines();
             CecilifiedLineNumber += lineCount;
             

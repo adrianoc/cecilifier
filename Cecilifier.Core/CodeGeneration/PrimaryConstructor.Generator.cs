@@ -37,20 +37,20 @@ public class PrimaryConstructorGenerator
     private static void AddPropertyFor(IVisitorContext context, ParameterSyntax parameter, string typeDefinitionVariable, INamedTypeSymbol declaringType)
     {
         using var _ = LineInformationTracker.Track(context, parameter);
+
+        var declaringTypeVariable = context.DefinitionVariables.GetLastOf(VariableMemberKind.Type);
+        if (!declaringTypeVariable.IsValid)
+            throw new InvalidOperationException();
         
         context.WriteComment($"Property: {parameter.Identifier.Text} (primary constructor)");
         var propDefVar = context.Naming.SyntheticVariable(parameter.Identifier.Text, ElementKind.Property);
         var paramSymbol = context.SemanticModel.GetDeclaredSymbol(parameter).EnsureNotNull<ISymbol, IParameterSymbol>();
-        var exps = CecilDefinitionsFactory.PropertyDefinition(propDefVar, parameter.Identifier.Text, context.TypeResolver.ResolveAny(paramSymbol.Type));
+        var exps = context.ApiDefinitionsFactory.Property(context, declaringTypeVariable.VariableName, declaringTypeVariable.MemberName,propDefVar, parameter.Identifier.Text, context.TypeResolver.ResolveAny(paramSymbol.Type));
         
         context.Generate(exps);
         context.Generate($"{typeDefinitionVariable}.Properties.Add({propDefVar});");
         context.WriteNewLine();
         context.WriteNewLine();
-
-        var declaringTypeVariable = context.DefinitionVariables.GetLastOf(VariableMemberKind.Type);
-        if (!declaringTypeVariable.IsValid)
-            throw new InvalidOperationException();
 
         var publicPropertyMethodAttributes = "MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName";
         var propertyType = context.SemanticModel.GetDeclaredSymbol(parameter).GetMemberType();
@@ -83,9 +83,9 @@ public class PrimaryConstructorGenerator
             context.WriteComment($"{propertyData.Name} getter");
             var getMethodVar = context.Naming.SyntheticVariable($"get{propertyData.Name}", ElementKind.Method);
             // properties for primary ctor parameters cannot override base properties, so hasCovariantReturn = false and overridenMethod = null (none)
-            using (propertyGenerator.AddGetterMethodDeclaration(in propertyData, getMethodVar, false, $"get_{propertyData.Name}", null))
+            var ilVar = context.Naming.ILProcessor($"get{propertyData.Name}");
+            using (propertyGenerator.AddGetterMethodDeclaration(in propertyData, getMethodVar, false, $"get_{propertyData.Name}", null, ilVar))
             {
-                var ilVar = context.Naming.ILProcessor($"get{propertyData.Name}");
                 context.Generate([$"var {ilVar} = {getMethodVar}.Body.GetILProcessor();"]);
                 
                 propertyGenerator.AddAutoGetterMethodImplementation(in propertyData, ilVar, getMethodVar);
@@ -97,10 +97,9 @@ public class PrimaryConstructorGenerator
         {
             context.WriteComment($"{propertyData.Name} init");
             var setMethodVar = context.Naming.SyntheticVariable($"set{propertyData.Name}", ElementKind.Method);
-            using (propertyGenerator.AddSetterMethodDeclaration(in propertyData, setMethodVar, true, $"set_{propertyData.Name}", null))
+            var ilContext = context.ApiDriver.NewIlContext(context, $"set{propertyData.Name}", setMethodVar);
+            using (propertyGenerator.AddSetterMethodDeclaration(in propertyData, setMethodVar, true, $"set_{propertyData.Name}", null, ilContext))
             {
-                var ilContext = context.ApiDriver.NewIlContext(context, $"set{propertyData.Name}", setMethodVar);
-                
                 propertyGenerator.AddAutoSetterMethodImplementation(in propertyData, ilContext);
                 context.ApiDriver.WriteCilInstruction(context, ilContext, OpCodes.Ret);
             }
@@ -118,7 +117,7 @@ public class PrimaryConstructorGenerator
         string[] paramTypes = typeDeclaration.ParameterList?.Parameters.Select(p => p.Type?.ToString()).ToArray() ?? [];
         var exps = context.ApiDefinitionsFactory.Constructor(
             context, 
-            new MemberDefinitionContext(ctorVar, recordTypeDefinitionVariable, IlContext.None), 
+            new MemberDefinitionContext(ctorVar, recordTypeDefinitionVariable, MemberOptions.None, IlContext.None), 
             typeName, 
             false, 
             "MethodAttributes.Public", 

@@ -12,7 +12,6 @@ using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.Variables;
-using Mono.Cecil;
 
 namespace Cecilifier.Core.AST
 {
@@ -168,7 +167,7 @@ namespace Cecilifier.Core.AST
             }
 
             var ilContext = Context.ApiDriver.NewIlContext(Context, $"{ctorName}_{normalizedTypeName}", ctorLocalVar);
-            var definitionContext = new MemberDefinitionContext( ctorLocalVar, typeDefVar, ilContext);
+            var definitionContext = new MemberDefinitionContext( ctorLocalVar, typeDefVar, MemberOptions.None, ilContext);
             var exps = Context.ApiDefinitionsFactory.Constructor(Context, definitionContext, typeName, isStatic, ctorAccessibility, []);
             AddCecilExpressions(Context, exps);
 

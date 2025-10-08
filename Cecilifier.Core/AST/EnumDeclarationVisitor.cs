@@ -50,7 +50,7 @@ namespace Cecilifier.Core.AST
                 //.class private auto ansi MyEnum
                 var fieldVar = Context.Naming.LocalVariable(node);
                 string declaringTypeName = enumSymbol.ToDisplayString();
-                var valueFieldExp = Context.ApiDefinitionsFactory.Field(Context, new MemberDefinitionContext(fieldVar, enumTypeVariable, IlContext.None), declaringTypeName, "value__", Context.TypeResolver.Bcl.System.Int32, "FieldAttributes.SpecialName | FieldAttributes.RTSpecialName | FieldAttributes.Public", false, false, null);
+                var valueFieldExp = Context.ApiDefinitionsFactory.Field(Context, new MemberDefinitionContext(fieldVar, enumTypeVariable, MemberOptions.None, IlContext.None), declaringTypeName, "value__", Context.TypeResolver.Bcl.System.Int32, "FieldAttributes.SpecialName | FieldAttributes.RTSpecialName | FieldAttributes.Public", false, false, null);
                 AddCecilExpressions(Context, valueFieldExp);
 
                 HandleAttributesInMemberDeclaration(node.AttributeLists, enumTypeVariable);
@@ -70,7 +70,7 @@ namespace Cecilifier.Core.AST
             var enumMemberSymbol = Context.SemanticModel.GetDeclaredSymbol(node).EnsureNotNull();
             var fieldVar = Context.Naming.LocalVariable(node);
             string declaringTypeName = enumMemberSymbol.ContainingSymbol.ToDisplayString();
-            var exp = Context.ApiDefinitionsFactory.Field(Context, new MemberDefinitionContext(fieldVar, enumVarDef.VariableName, IlContext.None), declaringTypeName, node.Identifier.ValueText, enumVarDef.VariableName, "FieldAttributes.Static | FieldAttributes.Literal | FieldAttributes.Public | FieldAttributes.HasDefault", false, false, enumMemberValue);
+            var exp = Context.ApiDefinitionsFactory.Field(Context, new MemberDefinitionContext(fieldVar, enumVarDef.VariableName, MemberOptions.None, IlContext.None), declaringTypeName, node.Identifier.ValueText, enumVarDef.VariableName, "FieldAttributes.Static | FieldAttributes.Literal | FieldAttributes.Public | FieldAttributes.HasDefault", false, false, enumMemberValue);
             AddCecilExpressions(Context, exp);
 
             HandleAttributesInMemberDeclaration(node.AttributeLists, fieldVar);

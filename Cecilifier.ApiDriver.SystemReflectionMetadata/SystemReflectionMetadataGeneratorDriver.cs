@@ -4,6 +4,7 @@ using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.ApiDriver.Handles;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
+using Microsoft.CodeAnalysis;
 
 namespace Cecilifier.ApiDriver.SystemReflectionMetadata;
 
@@ -174,6 +175,11 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
     {
         context.Generate($"{il.VariableName}.MarkLabel({labelVariable});");
         context.WriteNewLine();
+    }
+
+    public void AddMethodSemantics(IVisitorContext context, string targetVariable, string methodVariable, MethodKind methodKind)
+    {
+        // In SRM, properties/event methods are handled in IApiDriverDefinitionsFactory.Property(). 
     }
 
     /// <summary>

@@ -37,24 +37,30 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                                                   mainModuleHandle, 
                                                   metadata.GetOrAddString("{typeNamespace}"), 
                                                   metadata.GetOrAddString("{typeName}"));
-                      
                       """);
 
         // We need to pass the handle of the 1st field/method defined in the module so we need to postpone the type generation after we have visited
         // all types/members.
-        ((SystemReflectionMetadataContext) context).DelayedDefinitionsManager.RegisterTypeDefinition(typeVar, $"{typeNamespace}.{typeName}", (ctx, typeRecord) =>
+        ((SystemReflectionMetadataContext) context).DelayedDefinitionsManager.RegisterTypeDefinition(typeVar, $"{typeNamespace}.{typeName}", DefineDelayed);
+        void DefineDelayed(SystemReflectionMetadataContext ctx, TypeDefinitionRecord typeRecord)
         {
+            var typeDefVar = ctx.Naming.Type(typeName, ElementKind.Class);
             ctx.Generate(Format($"""
-                                                       metadata.AddTypeDefinition(
-                                                                    {attrs},
-                                                                    metadata.GetOrAddString("{typeNamespace}"),
-                                                                    metadata.GetOrAddString("{typeName}"),
-                                                                    {resolvedBaseType},
-                                                                    fieldList: {typeRecord.FirstFieldHandle ?? "MetadataTokens.FieldDefinitionHandle(1)"},
-                                                                    methodList: {typeRecord.FirstMethodHandle ?? "MetadataTokens.MethodDefinitionHandle(1)"});
-                                                       """));
-
-        });
+                                 var {typeDefVar} = metadata.AddTypeDefinition(
+                                                                  {attrs},
+                                                                  metadata.GetOrAddString("{typeNamespace}"),
+                                                                  metadata.GetOrAddString("{typeName}"),
+                                                                  {resolvedBaseType},
+                                                                  fieldList: {typeRecord.FirstFieldHandle ?? "MetadataTokens.FieldDefinitionHandle(1)"},
+                                                                  methodList: {typeRecord.FirstMethodHandle ?? "MetadataTokens.MethodDefinitionHandle(1)"});
+                                 """));
+            
+            foreach (var property in typeRecord.Properties)
+            {
+                // process each property passing the type definition variable (as opposed to the type reference variable) 
+                property.Processor(context, property.Name, property.DefinitionVariable, property.DeclaringTypeName, typeDefVar);
+            }
+        }
     }
 
     public IEnumerable<string> Method(IVisitorContext context, IMethodSymbol methodSymbol, MemberDefinitionContext memberDefinitionContext, string methodName, string methodModifiers, IParameterSymbol[] resolvedParameterTypes, IList<TypeParameterSyntax> typeParameters)
@@ -107,7 +113,8 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                                                             methodNameForVariableRegistration, 
                                                             returnTypeResolver(context), 
                                                             parameters, 
-                                                            typeParameters.Count);
+                                                            typeParameters.Count,
+                                                            memberDefinitionContext.Options);
 
         methodDefinitionVariable = context.DefinitionVariables.FindByVariableName<MethodDefinitionVariable>(methodRefVar) ?? MethodDefinitionVariable.MethodNotFound;
         TypedContext(context).DelayedDefinitionsManager.RegisterMethodDefinition(memberDefinitionContext.ParentDefinitionVariableName, (ctx, methodRecord) =>
@@ -142,7 +149,8 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                                         declaringTypeName,
                                         methodName,
                                         parameters.Select(p => p.ElementType).ToArray(),
-                                        0);
+                                        0,
+                                        methodDefVar);
             
             ctx.DefinitionVariables.RegisterMethod(toBeRegistered);
             
@@ -236,6 +244,45 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         // so we register the `index` of the local variable as the name.
         // Code that emits Ldloc/Stloc/etc will pass a CilFieldHandle() with this `name` (actually the local variable index) as its value
         return context.DefinitionVariables.RegisterNonMethod(string.Empty, variableName, VariableMemberKind.LocalVariable, variableIndex.ToString());
+    }
+
+    public IEnumerable<string> Property(IVisitorContext context, string declaringTypeVariable, string declaringTypeName, string propertyDefinitionVariable, string propertyName, string propertyType)
+    {
+        var propertySignatureTempVar =  context.Naming.SyntheticVariable($"{propertyName}SignatureBuilder", ElementKind.LocalVariable);
+
+        TypedContext(context).DelayedDefinitionsManager.RegisterProperty(propertyName, propertyDefinitionVariable, declaringTypeName, declaringTypeVariable, 
+            static (context,  propertyName, propertyDefinitionVariable, declaringTypeName, declaringTypeVariable) =>
+        {
+            var getterMethodVariable = context.DefinitionVariables.GetVariable($"get_{propertyName}", VariableMemberKind.Method, declaringTypeName);
+            var setterMethodVariable = context.DefinitionVariables.GetVariable($"set_{propertyName}", VariableMemberKind.Method, declaringTypeName);
+
+            foreach (var accessor in new[] {(getterMethodVariable, "Getter"), (setterMethodVariable, "Setter") })
+            {
+                if (!accessor.Item1.IsValid)
+                    continue;
+                
+                context.Generate($"""
+                                  // Associate method {accessor.Item1.MemberName} with property {propertyName}
+                                  metadata.AddMethodSemantics(
+                                                  {propertyDefinitionVariable},
+                                                  MethodSemanticsAttributes.{accessor.Item2},
+                                                  {accessor.Item1.VariableName});
+                                  """);
+                context.WriteNewLine();
+            }
+            
+            context.Generate($"metadata.AddPropertyMap({declaringTypeVariable}, {propertyDefinitionVariable});");
+            context.WriteNewLine();
+        });
+        
+        return [$$"""
+                var {{propertySignatureTempVar}} = new BlobBuilder();
+                new BlobEncoder({{propertySignatureTempVar}}).PropertySignature().Parameters(0,
+                                                                    returnType => returnType.{{propertyType}},
+                                                                    parameters =>  {});
+                
+                var {{propertyDefinitionVariable}} = metadata.AddProperty(PropertyAttributes.None, metadata.GetOrAddString("{{propertyName}}"), metadata.GetOrAddBlob({{propertySignatureTempVar}}));
+                """];
     }
 
     private SystemReflectionMetadataContext TypedContext(IVisitorContext context) => ((SystemReflectionMetadataContext) context);

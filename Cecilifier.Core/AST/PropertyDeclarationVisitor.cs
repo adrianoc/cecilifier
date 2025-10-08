@@ -36,11 +36,11 @@ namespace Cecilifier.Core.AST
             Context.WriteComment("** Property indexer **");
 
             var propertyType = ResolveType(node.Type, ResolveTargetKind.None);
-            var propertyDeclaringTypeVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Type).VariableName;
+            var propertyDeclaringTypeVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Type);
             var propName = "Item";
 
-            AddDefaultMemberAttribute(propertyDeclaringTypeVar, propName);
-            var propDefVar = AddPropertyDefinition(node, propName, propertyType);
+            AddDefaultMemberAttribute(propertyDeclaringTypeVar.VariableName, propName);
+            var propDefVar = AddPropertyDefinition(node, propertyDeclaringTypeVar.VariableName, propertyDeclaringTypeVar.MemberName, propName, propertyType);
 
             var paramsVar = new List<ParameterSpec>();
             foreach (var parameter in node.ParameterList.Parameters)
@@ -58,9 +58,9 @@ namespace Cecilifier.Core.AST
                     });
             }
 
-            var backingFieldVar = ProcessPropertyAccessors(node, propertyDeclaringTypeVar, propDefVar, propName, paramsVar, node.ExpressionBody);
+            var backingFieldVar = ProcessPropertyAccessors(node, propertyDeclaringTypeVar.VariableName, propDefVar, propName, paramsVar, node.ExpressionBody);
 
-            AddCecilExpression($"{propertyDeclaringTypeVar}.Properties.Add({propDefVar});");
+            AddCecilExpression($"{propertyDeclaringTypeVar.VariableName}.Properties.Add({propDefVar});");
 
             HandleAttributesInMemberDeclaration(node.AttributeLists, TargetDoesNotMatch, SyntaxKind.FieldKeyword, propDefVar); // Normal property attrs
             HandleAttributesInMemberDeclaration(node.AttributeLists, TargetMatches, SyntaxKind.FieldKeyword, backingFieldVar ?? String.Empty); // [field: attr], i.e, attr belongs to the backing field.
@@ -74,14 +74,12 @@ namespace Cecilifier.Core.AST
             using var _ = LineInformationTracker.Track(Context, node);
             Context.WriteNewLine();
             Context.WriteComment($"** Property: {node.Identifier} **");
-            var propertyType = ResolveType(node.Type, ResolveTargetKind.None);
-            var propertyDeclaringTypeVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Type).VariableName;
+            var propertyType = ResolveType(node.Type, ResolveTargetKind.Parameter);
+            var propertyDeclaringTypeVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Type);
             var propName = node.Identifier.ValueText;
 
-            var propDefVar = AddPropertyDefinition(node, propName, propertyType);
-            var backingFieldVar = ProcessPropertyAccessors(node, propertyDeclaringTypeVar, propDefVar, node.Identifier.ValueText, NoParameters, node.ExpressionBody);
-
-            AddCecilExpression($"{propertyDeclaringTypeVar}.Properties.Add({propDefVar});");
+            var propDefVar = AddPropertyDefinition(node, propertyDeclaringTypeVar.VariableName, propertyDeclaringTypeVar.MemberName, propName, propertyType);
+            var backingFieldVar = ProcessPropertyAccessors(node, propertyDeclaringTypeVar.VariableName, propDefVar, node.Identifier.ValueText, NoParameters, node.ExpressionBody);
 
             HandleAttributesInMemberDeclaration(node.AttributeLists, TargetDoesNotMatch, SyntaxKind.FieldKeyword, propDefVar); // Normal property attrs
             // Attributes targeting backing field is only valid on auto-properties.
@@ -143,7 +141,7 @@ namespace Cecilifier.Core.AST
                                     propertyName,
                                     AccessorsModifiersFor(node, propertySymbol),
                                     propertySymbol.IsStatic,
-                                    ResolveType(node.Type, ResolveTargetKind.None),
+                                    ResolveType(node.Type, ResolveTargetKind.Parameter),
                                     propertySymbol.Type.ToDisplayString(),
                                     parameters,
                                     BackingFieldModifiersFor(node), 
@@ -171,7 +169,7 @@ namespace Cecilifier.Core.AST
                         AddSetterMethod(propertySymbol, accessor);
                         break;
                     default:
-                        throw new NotImplementedException($"Accessor: {accessor.Keyword}");
+                        throw new NotImplementedException($"Accessor {propertyName}.{accessor.Keyword} not support.");
                 }
             }
 
@@ -180,17 +178,18 @@ namespace Cecilifier.Core.AST
             void AddSetterMethod(IPropertySymbol property, AccessorDeclarationSyntax accessor)
             {
                 var setMethodVar = Context.Naming.SyntheticVariable("set", ElementKind.LocalVariable);
+                var ilContext = Context.ApiDriver.NewIlContext(Context, "set", setMethodVar);
                 using var methodVariableScope = generator.AddSetterMethodDeclaration(
                                                                     in propertyGenerationData,
                                                                     setMethodVar,
                                                                     accessor.IsKind(SyntaxKind.InitAccessorDeclaration),
                                                                     property.SetMethod!.ToDisplayString(),
-                                                                    GetOverridenMethod(propertySymbol.SetMethod));
+                                                                    GetOverridenMethod(propertySymbol.SetMethod),
+                                                                    ilContext);
                 
                 if (propertySymbol.ContainingType.TypeKind == TypeKind.Interface)
                     return;
 
-                var ilContext = Context.ApiDriver.NewIlContext(Context, "set", setMethodVar);
                 if (accessor.Body == null && accessor.ExpressionBody == null) //is this an auto property ?
                 {
                     generator.AddAutoSetterMethodImplementation(in propertyGenerationData, ilContext);
@@ -207,26 +206,22 @@ namespace Cecilifier.Core.AST
                 Context.ApiDriver.WriteCilInstruction(Context, ilContext, OpCodes.Ret);
             }
 
-            ScopedDefinitionVariable AddGetterMethodGuts(string getMethodVar, out string? ilVar)
+            ScopedDefinitionVariable AddGetterMethodGuts(string getMethodVar, out IlContext? ilContext)
             {
                 Context.WriteComment("Getter");
+                var il = propertySymbol.ContainingType.TypeKind != TypeKind.Interface 
+                                                            ? Context.ApiDriver.NewIlContext(Context, "get", getMethodVar) 
+                                                            : null;
+                
                 var methodVariableScope = generator.AddGetterMethodDeclaration(
                                                         in propertyGenerationData, 
                                                         getMethodVar, 
                                                         propertySymbol.HasCovariantGetter(),
                                                         propertySymbol.GetMethod!.ToDisplayString(), 
-                                                        GetOverridenMethod(propertySymbol.GetMethod));
+                                                        GetOverridenMethod(propertySymbol.GetMethod),
+                                                        il);
 
-                if (propertySymbol.ContainingType.TypeKind != TypeKind.Interface)
-                {
-                    ilVar = Context.Naming.ILProcessor("get");
-                    AddCecilExpression($"var {ilVar} = {getMethodVar}.Body.GetILProcessor();");
-                }
-                else
-                {
-                    ilVar = null;
-                }
-                
+                ilContext = propertySymbol.ContainingType.TypeKind != TypeKind.Interface ? il : null;
                 return methodVariableScope;
             }
 
@@ -311,10 +306,10 @@ namespace Cecilifier.Core.AST
             return ModifiersToCecil<FieldAttributes>(m, "Private", FieldDeclarationVisitor.MapFieldAttributesFor);
         }
 
-        private string AddPropertyDefinition(BasePropertyDeclarationSyntax propertyDeclarationSyntax, string propName, string propertyType)
+        private string AddPropertyDefinition(BasePropertyDeclarationSyntax propertyDeclarationSyntax, string declaringTypeVariable, string declaringTypeName, string propName, string propertyType)
         {
             var propDefVar = Context.Naming.PropertyDeclaration(propertyDeclarationSyntax);
-            var exps = CecilDefinitionsFactory.PropertyDefinition(propDefVar, propName, propertyType);
+            var exps = Context.ApiDefinitionsFactory.Property(Context, declaringTypeVariable, declaringTypeName, propDefVar, propName, propertyType);
             Context.Generate(exps);
             
             return propDefVar;

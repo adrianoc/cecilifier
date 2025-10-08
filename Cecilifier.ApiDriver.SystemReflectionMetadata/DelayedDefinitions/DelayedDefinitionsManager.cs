@@ -53,6 +53,15 @@ public class DelayedDefinitionsManager
         return _postponedMethodDefinitionDetails[^1].LocalVariables.Count - 1;
     }
     
+    public void RegisterProperty(string propertyName,string propertyDefinitionVariable, string declaringTypeName, string declaringTypeVariable, Action<IVisitorContext, string, string, string, string> propertyProcessor)
+    {
+        //TODO: For now assume the last type is the current one. This may not hold true if we need to process type B while processing type A and after
+        //      finishing processing B we get back to process the reminder of A. 
+        //      We need to track current `type` (pushing when start visiting, popping when finish).
+        //      Same thing for Local Variable wrt methods.
+        _postponedTypeDefinitionDetails[^1].Properties.Add(new PropertyDefinitionRecord(propertyName, propertyDefinitionVariable, declaringTypeName, propertyProcessor));
+    }
+
     internal void ProcessDefinitions(SystemReflectionMetadataContext context)
     {
         if (_postponedTypeDefinitionDetails.Count == 0)
@@ -62,13 +71,15 @@ public class DelayedDefinitionsManager
 
         ProcessFields(postponedTypeDefinitions);
         ProcessMethodRecords(context, postponedTypeDefinitions);
+        
         UpdateTypeDefinitionRecords(postponedTypeDefinitions);
 
-        foreach (var typeRecord in _postponedTypeDefinitionDetails)
+        for (var index = 0; index < postponedTypeDefinitions.Length; index++)
         {
+            ref var typeRecord = ref postponedTypeDefinitions[index];
             typeRecord.DefinitionFunction(context, typeRecord);
         }
-
+        
         _postponedMethodDefinitionDetails.Clear();
         _postponedTypeDefinitionDetails.Clear();
         

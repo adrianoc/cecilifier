@@ -247,6 +247,14 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
         return context.DefinitionVariables.RegisterNonMethod(string.Empty, variableName, VariableMemberKind.LocalVariable, cecilVarDeclName);
     }
 
+    public IEnumerable<string> Property(IVisitorContext context, string declaringTypeVariable, string declaringTypeName, string propertyDefinitionVariable, string propertyName, string propertyType)
+    {
+        return [
+            $"var {propertyDefinitionVariable} = new PropertyDefinition(\"{propertyName}\", PropertyAttributes.None, {propertyType});",
+            $"{declaringTypeVariable}.Properties.Add({propertyDefinitionVariable});"
+        ];
+    }
+
     private static void ProcessGenericTypeParameters(string memberDefVar, IVisitorContext context, IList<TypeParameterSyntax> typeParamList, IList<string> exps)
     {
         // forward declare all generic type parameters to allow one type parameter to reference any of the others; this is useful in constraints for example:

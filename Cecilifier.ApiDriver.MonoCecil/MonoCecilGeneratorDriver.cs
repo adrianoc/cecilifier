@@ -4,6 +4,7 @@ using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.ApiDriver.Handles;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
+using Microsoft.CodeAnalysis;
 
 namespace Cecilifier.ApiDriver.MonoCecil;
 
@@ -106,5 +107,22 @@ public class SnippetRunner
     {
         var ilVarName = context.Naming.ILProcessor(memberName);
         return new MonoCecilDeferredIlContext(context, ilVarName, relatedMethodVar);
+    }
+
+    public void AddMethodSemantics(IVisitorContext context, string targetVariable, string methodVariable, MethodKind methodKind)
+    {
+        var accessor = methodKind switch
+        {
+            MethodKind.PropertyGet => "GetMethod",
+            MethodKind.PropertySet => "SetMethod",
+            MethodKind.EventAdd => "AddMethod",
+            MethodKind.EventRemove => "RemoveMethod",
+            
+            _ => throw new ArgumentOutOfRangeException(nameof(methodKind), methodKind, "")
+        };
+        
+        context.Generate([
+                $"{methodVariable}.Body = new MethodBody({methodVariable});",
+                $"{targetVariable}.{accessor} = {methodVariable};" ]);
     }
 }

@@ -54,7 +54,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
         return methodRefVar;
     }
     
-    public string ResolveMethod(string declaringTypeName, string declaringTypeVariable, string methodNameForVariableRegistration, string resolvedReturnType, IReadOnlyList<ParameterSpec> parameters, int typeParameterCountCount)
+    public string ResolveMethod(string declaringTypeName, string declaringTypeVariable, string methodNameForVariableRegistration, string resolvedReturnType, IReadOnlyList<ParameterSpec> parameters, int typeParameterCountCount, MemberOptions options)
     {
         var methodReferenceToFind = new MethodDefinitionVariable(
                                                 VariableMemberKind.MethodReference,
@@ -83,7 +83,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
                               var {{methodSignatureBlobVar}} = new BlobBuilder();
 
                               new BlobEncoder({{methodSignatureBlobVar}}).
-                                  MethodSignature(isInstanceMethod: false). //TODO: This is wrong. The value for this parameter needs to come from IApiDriverDefinitionsFactory.Method()
+                                  MethodSignature(isInstanceMethod: {{(options != MemberOptions.Static).ToKeyword()}}).
                                   Parameters({{parameters.Count}},
                                       returnType => returnType.{{resolvedReturnType}},
                                       parameters => 

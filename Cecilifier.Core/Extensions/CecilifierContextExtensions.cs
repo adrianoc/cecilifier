@@ -183,7 +183,7 @@ public static class CecilifierContextExtensions
         var resolvedReturnType = context.TypeResolver.ResolveAny(method.ReturnType, ResolveTargetKind.ReturnType);
         var exps = context.ApiDefinitionsFactory.Method(
                                                                     context, 
-                                                                    new MemberDefinitionContext(methodDeclarationVar, null, IlContext.None), 
+                                                                    new MemberDefinitionContext(methodDeclarationVar, null, MemberOptions.None, IlContext.None), 
                                                                     null,
                                                                     methodNameForVariableRegistration, 
                                                                     methodName,

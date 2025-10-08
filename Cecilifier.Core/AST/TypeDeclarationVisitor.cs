@@ -181,11 +181,10 @@ namespace Cecilifier.Core.AST
             AddTypeDefinition(context, typeDeclarationVar, typeSymbol, typeDeclaration.Modifiers, typeParameters, []);
 
             var v = context.DefinitionVariables.RegisterNonMethod(
-                typeSymbol.ContainingSymbol?.OriginalDefinition.ToDisplayString(),
-                typeSymbol.OriginalDefinition.ToDisplayString(),
-                VariableMemberKind.Type,
-                typeDeclarationVar);
-
+                                        typeSymbol.ContainingSymbol?.OriginalDefinition.ToDisplayString(),
+                                        typeSymbol.OriginalDefinition.ToDisplayString(),
+                                        VariableMemberKind.Type,
+                                        typeDeclarationVar);
             v.IsForwarded = true;
 
         processGenerics:

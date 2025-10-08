@@ -155,11 +155,6 @@ namespace Cecilifier.Core.Misc
             return exps;
         }
 
-        public static IEnumerable<string> PropertyDefinition(string propDefVar, string propName, string propertyType)
-        {
-            return [$"var {propDefVar} = new PropertyDefinition(\"{propName}\", PropertyAttributes.None, {propertyType});"];
-        }
-
         public static string DefaultTypeAttributeFor(TypeKind typeKind, bool hasStaticCtor)
         {
             var basicClassAttrs = "TypeAttributes.AnsiClass" + (hasStaticCtor ? "" : " | TypeAttributes.BeforeFieldInit");

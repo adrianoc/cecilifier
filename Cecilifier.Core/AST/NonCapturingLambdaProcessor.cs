@@ -73,7 +73,7 @@ namespace Cecilifier.Core.AST
             // if/when we decide to support lambdas that captures variables/fields/params/etc we will probably need to revisit this.
             var methodExps = context.ApiDefinitionsFactory.Method(
                                                             context,
-                                                            new MemberDefinitionContext(methodVar, declaringTypeVarName, IlContext.None),
+                                                            new MemberDefinitionContext(methodVar, declaringTypeVarName, MemberOptions.None, IlContext.None),
                                                             lambda.ToString(),
                                                             syntheticMethodName,
                                                             syntheticMethodName,

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Reflection.Emit;
 using Cecilifier.Core.AST;
+using Microsoft.CodeAnalysis;
 
 namespace Cecilifier.Core.ApiDriver;
 
@@ -27,4 +28,6 @@ public interface IILGeneratorApiDriver
     
     void DefineLabel(IVisitorContext context, IlContext il, string labelVariable);
     void MarkLabel(IVisitorContext context, IlContext il, string labelVariable);
+    
+    void AddMethodSemantics(IVisitorContext context, string targetVariable, string methodVariable, MethodKind methodKind);
 }

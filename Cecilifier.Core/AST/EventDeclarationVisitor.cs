@@ -123,7 +123,7 @@ namespace Cecilifier.Core.AST
             var methodName = $"{accessorName}_{eventSymbol.Name}";
             var methodExps = Context.ApiDefinitionsFactory.Method(
                                                                                 Context, 
-                                                                                new MemberDefinitionContext(methodVar, eventDeclaringTypeVar.VariableName, IlContext.None), 
+                                                                                new MemberDefinitionContext(methodVar, eventDeclaringTypeVar.VariableName, eventSymbol.IsStatic ? MemberOptions.Static : MemberOptions.None, IlContext.None), 
                                                                                 eventDeclaringTypeVar.MemberName, 
                                                                                 methodName, 
                                                                                 methodName, 
