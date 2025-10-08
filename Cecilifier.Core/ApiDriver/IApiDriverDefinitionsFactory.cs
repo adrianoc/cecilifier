@@ -1,7 +1,6 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Variables;
@@ -71,13 +70,4 @@ public interface IApiDriverDefinitionsFactory
     IEnumerable<string> MethodBody(IVisitorContext context, string methodName, IlContext ilContext, string[] localVariableTypes, InstructionRepresentation[] instructions);
     DefinitionVariable LocalVariable(IVisitorContext context, string variableName, string methodDefinitionVariableName, string resolvedVarType);
     IEnumerable<string> Property(IVisitorContext context, string declaringTypeVariable, string declaringTypeName, string propertyDefinitionVariable, string propertyName, string propertyType);
-}
-
-[DebuggerDisplay("MemberDefinitionContext ({MemberDefinitionVariableName}, {ParentDefinitionVariableName}, {IlContext})")]
-public record struct MemberDefinitionContext(string MemberDefinitionVariableName, string? ParentDefinitionVariableName, MemberOptions Options, IlContext IlContext);
-
-public enum MemberOptions
-{
-    None = 0,
-    Static,
 }
