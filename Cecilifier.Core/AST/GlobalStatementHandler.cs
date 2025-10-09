@@ -51,8 +51,6 @@ namespace Cecilifier.Core.AST
                                                     context,
                                                     new BodiedMemberDefinitionContext("<Main>$", "programMain", methodVar, typeVar, MemberOptions.Static, ilContext),
                                                     "Program",
-                                                    "programMain",
-                                                    "<Main>$",
                                                     "MethodAttributes.Private | MethodAttributes.HideBySig | MethodAttributes.Static",
                                                     [new ParameterSpec("args", context.TypeResolver.MakeArrayType(context.RoslynTypeSystem.SystemString), RefKind.None, Constants.ParameterAttributes.None)],
                                                     [],

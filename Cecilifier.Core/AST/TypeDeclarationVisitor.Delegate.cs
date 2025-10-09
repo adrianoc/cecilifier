@@ -87,8 +87,6 @@ internal partial class TypeDeclarationVisitor
                                                                         Context,
                                                                         new BodiedMemberDefinitionContext("EndInvoke", endInvokeMethodVar, typeVar, MemberOptions.None, IlContext.None),
                                                                         "declaringTypeName",
-                                                                        "EndInvoke",
-                                                                        "EndInvoke",
                                                                         Constants.Cecil.DelegateMethodAttributes,
                                                                         [new ParameterSpec("ar", Context.TypeResolver.Bcl.System.IAsyncResult, RefKind.None, Constants.ParameterAttributes.None)],
                                                                         [],

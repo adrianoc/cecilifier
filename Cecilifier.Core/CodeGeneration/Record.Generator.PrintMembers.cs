@@ -32,8 +32,6 @@ internal partial class RecordGenerator
                                                                 context, 
                                                                 new BodiedMemberDefinitionContext(PrintMembersMethodName, PrintMembersVar, recordTypeDefinitionVariable, MemberOptions.None, IlContext.None), 
                                                                 _recordSymbol.OriginalDefinition.ToDisplayString(), 
-                                                                PrintMembersMethodName, 
-                                                                PrintMembersMethodName, 
                                                                 methodModifiers, 
                                                                 new [] { builderParameter }, 
                                                                 Array.Empty<string>(), 

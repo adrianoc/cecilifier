@@ -125,8 +125,6 @@ namespace Cecilifier.Core.AST
                                                                                 Context, 
                                                                                 new BodiedMemberDefinitionContext(methodName, methodVar, eventDeclaringTypeVar.VariableName, eventSymbol.IsStatic ? MemberOptions.Static : MemberOptions.None, IlContext.None), 
                                                                                 eventDeclaringTypeVar.MemberName, 
-                                                                                methodName, 
-                                                                                methodName, 
                                                                                 accessorModifiers, 
                                                                                 [ new ParameterSpec("value", eventType, RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = eventSymbol.Type.ToDisplayString() }],
                                                                                 [], 

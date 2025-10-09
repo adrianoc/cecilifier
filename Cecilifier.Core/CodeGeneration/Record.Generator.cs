@@ -84,9 +84,7 @@ internal partial class RecordGenerator
         var clonedMethodExps = context.ApiDefinitionsFactory.Method(
                                                                                 context, 
                                                                                 new BodiedMemberDefinitionContext( CloneMethodName, "Clone", cloneMethodVar, recordTypeDefinitionVariable, MemberOptions.None, IlContext.None),  
-                                                                                recordTypeDefinitionVariable, 
-                                                                                "Clone",
-                                                                                CloneMethodName,
+                                                                                recordTypeDefinitionVariable,
                                                                                 Constants.Cecil.HideBySigNewSlotVirtual.AppendModifier("MethodAttributes.Public"), 
                                                                                 [], 
                                                                                 [], 
@@ -215,16 +213,14 @@ internal partial class RecordGenerator
         IList<string> typeParameters = [];
         Func<IVisitorContext, string> returnTypeResolver = ctx => ctx.TypeResolver.Bcl.System.Boolean;
         var equalsOperatorMethodExps = context.ApiDefinitionsFactory.Method(
-            context, 
-            new BodiedMemberDefinitionContext(methodName, equalsOperatorMethodVar, recordTypeDefinitionVariable, MemberOptions.None, IlContext.None), 
-            declaringTypeName, 
-            methodName, 
-            methodName, 
-            Constants.Cecil.PublicOverrideOperatorAttributes, 
-            parameters, 
-            typeParameters, 
-            returnTypeResolver,
-            out _);
+                                                                        context, 
+                                                                        new BodiedMemberDefinitionContext(methodName, equalsOperatorMethodVar, recordTypeDefinitionVariable, MemberOptions.None, IlContext.None), 
+                                                                        declaringTypeName, 
+                                                                        Constants.Cecil.PublicOverrideOperatorAttributes, 
+                                                                        parameters, 
+                                                                        typeParameters, 
+                                                                        returnTypeResolver,
+                                                                        out _);
         
         context.Generate(equalsOperatorMethodExps);
         
@@ -279,8 +275,6 @@ internal partial class RecordGenerator
             context, 
             new BodiedMemberDefinitionContext(methodName, inequalityOperatorMethodVar, recordTypeDefinitionVariable, MemberOptions.None, IlContext.None), 
             declaringTypeName, 
-            methodName, 
-            methodName, 
             Constants.Cecil.PublicOverrideOperatorAttributes, 
             parameters, 
             typeParameters, 
@@ -330,8 +324,6 @@ internal partial class RecordGenerator
             context, 
             new BodiedMemberDefinitionContext("GetHashCode", getHashCodeMethodVar, recordTypeDefinitionVariable, MemberOptions.None, IlContext.None), 
             declaringTypeName, 
-            "GetHashCode", 
-            "GetHashCode", 
             Constants.Cecil.PublicOverrideMethodAttributes, 
             parameters1, 
             typeParameters, 
@@ -451,8 +443,6 @@ internal partial class RecordGenerator
                 context, 
                 new BodiedMemberDefinitionContext(ToStringName, toStringMethodVar, recordTypeDefinitionVariable, MemberOptions.None, IlContext.None), 
                 declaringTypeName, 
-                ToStringName, 
-                ToStringName, 
                 Constants.Cecil.PublicOverrideMethodAttributes, 
                 parameters, 
                 typeParameters, 
@@ -547,10 +537,8 @@ internal partial class RecordGenerator
         IReadOnlyList<ParameterSpec> parameters = [new("other", declaringType, RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = $"{_recordSymbol.ToDisplayString()}?"} ];
         var exps = context.ApiDefinitionsFactory.Method(
                                                 context, 
-                                                new BodiedMemberDefinitionContext(equalsVar, methodNameForParameterVariableRegistration, equalsVar, recordTypeDefinitionVariable, MemberOptions.None, IlContext.None), 
+                                                new BodiedMemberDefinitionContext("Equals", methodNameForParameterVariableRegistration, equalsVar, recordTypeDefinitionVariable, MemberOptions.None, IlContext.None), 
                                                 _recordSymbol.OriginalDefinition.ToDisplayString(), 
-                                                methodNameForParameterVariableRegistration, 
-                                                "Equals", 
                                                 $"MethodAttributes.Public | MethodAttributes.HideBySig | {Constants.Cecil.InterfaceMethodDefinitionAttributes}", 
                                                 parameters, 
                                                 Array.Empty<string>(), 
@@ -802,8 +790,6 @@ internal partial class RecordGenerator
             context, 
             new BodiedMemberDefinitionContext(methodName, equalsObjectOverloadMethodVar, recordTypeDefinitionVariable, MemberOptions.None, IlContext.None), 
             recordSymbol.Name, 
-            methodName, 
-            methodName, 
             Constants.Cecil.PublicOverrideMethodAttributes, 
             parameters, 
             typeParameters, 
@@ -855,8 +841,6 @@ internal partial class RecordGenerator
             context, 
             new BodiedMemberDefinitionContext(methodName, equalsBaseOverloadMethodVar, recordTypeDefinitionVariable, MemberOptions.None, IlContext.None), 
             recordSymbol.Name, 
-            methodName, 
-            methodName, 
             Constants.Cecil.PublicOverrideMethodAttributes, 
             parameters1, 
             typeParameters1, 
@@ -904,8 +888,6 @@ internal partial class RecordGenerator
             context, 
             new BodiedMemberDefinitionContext(methodName, deconstructMethodVar, recordTypeDefinitionVariable, MemberOptions.None, IlContext.None), 
             declaringTypeName, 
-            methodName, 
-            methodName, 
             Constants.Cecil.PublicInstanceMethod, 
             parameterTypeParamSpec, 
             typeParameters, 

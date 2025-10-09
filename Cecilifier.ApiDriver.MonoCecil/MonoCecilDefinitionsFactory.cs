@@ -102,8 +102,6 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
     public IEnumerable<string> Method(IVisitorContext context,
         BodiedMemberDefinitionContext definitionContext,
         string declaringTypeName,
-        string methodNameForVariableRegistration,
-        string methodName,
         string methodModifiers,
         IReadOnlyList<ParameterSpec> parameters,
         IList<string> typeParameters,
@@ -114,8 +112,8 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
 
         // if the method has type parameters we need to postpone setting the return type (using void as a placeholder, since we need to pass something) until the generic parameters has been
         // handled. This is required because the type parameter may be defined by the method being processed which introduces a chicken and egg problem.
-        exps.Add($"var {definitionContext.Member.DefinitionVariable} = new MethodDefinition(\"{methodName}\", {methodModifiers}, {(typeParameters.Count == 0 ? returnTypeResolver(context) : context.TypeResolver.Bcl.System.Void)});");
-        ProcessGenericTypeParameters(definitionContext.Member.DefinitionVariable, context, methodNameForVariableRegistration, typeParameters, exps);
+        exps.Add($"var {definitionContext.Member.DefinitionVariable} = new MethodDefinition(\"{definitionContext.Member.Name}\", {methodModifiers}, {(typeParameters.Count == 0 ? returnTypeResolver(context) : context.TypeResolver.Bcl.System.Void)});");
+        ProcessGenericTypeParameters(definitionContext.Member.DefinitionVariable, context, definitionContext.Member.Identifier, typeParameters, exps);
         if (typeParameters.Count > 0)
             exps.Add($"{definitionContext.Member.DefinitionVariable}.ReturnType = {returnTypeResolver(context)};");
 
@@ -132,13 +130,13 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
                                                                             parameter.Attributes,
                                                                             (parameter.DefaultValue, parameter.DefaultValue != null));
 
-            context.DefinitionVariables.RegisterNonMethod(methodNameForVariableRegistration, parameter.Name, VariableMemberKind.Parameter, paramVar);
+            context.DefinitionVariables.RegisterNonMethod(definitionContext.Member.Identifier, parameter.Name, VariableMemberKind.Parameter, paramVar);
             exps.AddRange(parameterExp);
         }
 
         if (definitionContext.Member.ParentDefinitionVariable != null)
         {
-            methodVariable = context.DefinitionVariables.RegisterMethod(declaringTypeName, methodName, parameters.Select(p => p.RegistrationTypeName).ToArray(), typeParameters.Count, definitionContext.Member.DefinitionVariable);
+            methodVariable = context.DefinitionVariables.RegisterMethod(declaringTypeName, definitionContext.Member.Name, parameters.Select(p => p.RegistrationTypeName).ToArray(), typeParameters.Count, definitionContext.Member.DefinitionVariable);
             exps =
             [
                 ..exps,

@@ -78,10 +78,8 @@ internal partial class PrivateImplementationDetailsGenerator
         };
         var methodExpressions = context.ApiDefinitionsFactory.Method(
                                                                     context, 
-                                                                    new BodiedMemberDefinitionContext(methodTypeQualifiedName, methodName, methodVar, privateImplementationDetailsVar.VariableName, MemberOptions.None, IlContext.None), 
+                                                                    new BodiedMemberDefinitionContext(methodName, methodTypeQualifiedName,methodVar, privateImplementationDetailsVar.VariableName, MemberOptions.None, IlContext.None), 
                                                                     declaringTypeName, 
-                                                                    methodTypeQualifiedName, 
-                                                                    methodName, 
                                                                     "MethodAttributes.Assembly | MethodAttributes.Static | MethodAttributes.HideBySig", 
                                                                     parameters, 
                                                                     new [] {"TBuffer", "TElement" }, 
@@ -159,16 +157,14 @@ internal partial class PrivateImplementationDetailsGenerator
             return spanTypeParameter.MakeByReferenceType();
         };
         var methodExpressions = context.ApiDefinitionsFactory.Method(
-            context, 
-            new BodiedMemberDefinitionContext(methodTypeQualifiedName, "InlineArrayFirstElementRef", methodVar, privateImplementationDetailsVar.VariableName, MemberOptions.None, IlContext.None), 
-            declaringTypeName, 
-            methodTypeQualifiedName, 
-            "InlineArrayFirstElementRef", 
-            "MethodAttributes.Assembly | MethodAttributes.Static | MethodAttributes.HideBySig", 
-            parameters, 
-            typeParameters, 
-            returnTypeResolver,
-            out var methodDefinitionVariable);
+                                                                    context, 
+                                                                    new BodiedMemberDefinitionContext("InlineArrayFirstElementRef", methodTypeQualifiedName, methodVar, privateImplementationDetailsVar.VariableName, MemberOptions.None, IlContext.None), 
+                                                                    declaringTypeName, 
+                                                                    "MethodAttributes.Assembly | MethodAttributes.Static | MethodAttributes.HideBySig", 
+                                                                    parameters, 
+                                                                    typeParameters, 
+                                                                    returnTypeResolver,
+                                                                    out var methodDefinitionVariable);
         context.Generate(methodExpressions);
         
         var tBufferTypeParameter = ResolveOwnedGenericParameter(context, "TBuffer", methodTypeQualifiedName);
@@ -218,10 +214,8 @@ internal partial class PrivateImplementationDetailsGenerator
         };
         var methodExpressions = context.ApiDefinitionsFactory.Method(
             context, 
-            new BodiedMemberDefinitionContext(methodTypeQualifiedName, "InlineArrayElementRef", methodVar, privateImplementationDetailsVar.VariableName, MemberOptions.None, IlContext.None), 
+            new BodiedMemberDefinitionContext("InlineArrayElementRef", methodTypeQualifiedName, methodVar, privateImplementationDetailsVar.VariableName, MemberOptions.None, IlContext.None), 
             declaringTypeName, 
-            methodTypeQualifiedName, 
-            "InlineArrayElementRef", 
             "MethodAttributes.Assembly | MethodAttributes.Static | MethodAttributes.HideBySig", 
             parameters, 
             typeParameters, 

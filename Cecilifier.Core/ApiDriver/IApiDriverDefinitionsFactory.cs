@@ -55,13 +55,11 @@ public interface IApiDriverDefinitionsFactory
     public IEnumerable<string> Method(IVisitorContext context,
         BodiedMemberDefinitionContext definitionContext,
         string declaringTypeName,
-        string methodNameForVariableRegistration, // we can't use the method name in some scenarios (indexers, for instance) 
-        string methodName,
         string methodModifiers, //TODO: Try to change to MethodAttributes enum (reflection) in the same way we do with IL opcodes (and remove MemberDefinitionContext.Options)
         IReadOnlyList<ParameterSpec> parameters,
         IList<string> typeParameters,
         Func<IVisitorContext, string> returnTypeResolver,
-        out MethodDefinitionVariable methodDefinitionVariable
+        out MethodDefinitionVariable methodDefinitionVariable // we can't use the method name in some scenarios (indexers, for instance) 
     );
 
     public IEnumerable<string> Constructor(IVisitorContext context, BodiedMemberDefinitionContext definitionContext, string typeName, bool isStatic, string methodAccessibility, string[] paramTypes, string? methodDefinitionPropertyValues = null);

@@ -75,8 +75,6 @@ namespace Cecilifier.Core.AST
                                                             context,
                                                             new BodiedMemberDefinitionContext(syntheticMethodName,methodVar, declaringTypeVarName, MemberOptions.None, IlContext.None),
                                                             lambda.ToString(),
-                                                            syntheticMethodName,
-                                                            syntheticMethodName,
                                                             "MethodAttributes.Public | MethodAttributes.Static",
                                                             lambda.ParameterList().Select(ParamSpecFor).ToArray(),
                                                             [],

@@ -99,8 +99,6 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
     public IEnumerable<string> Method(IVisitorContext context,
         BodiedMemberDefinitionContext definitionContext,
         string declaringTypeName,
-        string methodNameForVariableRegistration,
-        string methodName,
         string methodModifiers,
         IReadOnlyList<ParameterSpec> parameters,
         IList<string> typeParameters,
@@ -110,7 +108,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         var methodRefVar = context.MemberResolver.ResolveMethod(
                                                             declaringTypeName, 
                                                             definitionContext.Member.ParentDefinitionVariable, 
-                                                            methodNameForVariableRegistration, 
+                                                            definitionContext.Member.Identifier, 
                                                             returnTypeResolver(context), 
                                                             parameters, 
                                                             typeParameters.Count,
@@ -124,7 +122,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
             var methodReferenceToFind = new MethodDefinitionVariable(
                                                 VariableMemberKind.MethodSignature,
                                                 declaringTypeName,
-                                                methodNameForVariableRegistration,
+                                                definitionContext.Member.Identifier,
                                                 parameters.Select(p => p.ElementType).ToArray(),
                                                 typeParameters.Count);
 
@@ -136,7 +134,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                           var {methodDefVar}  = metadata.AddMethodDefinition(
                                                     {methodModifiers},
                                                     MethodImplAttributes.IL | MethodImplAttributes.Managed,
-                                                    metadata.GetOrAddString("{methodName}"),
+                                                    metadata.GetOrAddString("{definitionContext.Member.Name}"),
                                                     {methodSignatureVar.VariableName},
                                                     methodBodyStream.AddMethodBody({definitionContext.IlContext.VariableName}, localVariablesSignature: {methodRecord.LocalSignatureHandleVariable}),
                                                     parameterList: {methodRecord.FirstParameterHandle});
@@ -147,7 +145,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
             var toBeRegistered = new MethodDefinitionVariable(
                                         VariableMemberKind.Method,
                                         declaringTypeName,
-                                        methodName,
+                                        definitionContext.Member.Name,
                                         parameters.Select(p => p.ElementType).ToArray(),
                                         0,
                                         methodDefVar);
@@ -170,8 +168,9 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                      .MethodSignature(isInstanceMethod: {{ (!isStatic).ToKeyword()}})
                      .Parameters(0, returnType => returnType.Void(), parameters => { });
               """);
-        
-        TypedContext(context).DelayedDefinitionsManager.RegisterMethodDefinition(definitionContext.Member.ParentDefinitionVariable, (ctx, methodRecord) =>
+
+        var parentDefinitionVariable = definitionContext.Member.ParentDefinitionVariable ?? throw new ArgumentNullException(nameof(definitionContext.Member.ParentDefinitionVariable));
+        TypedContext(context).DelayedDefinitionsManager.RegisterMethodDefinition(parentDefinitionVariable, (ctx, methodRecord) =>
         {
             EmitLocalVariables(ctx, methodRecord);
             

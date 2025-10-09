@@ -185,24 +185,15 @@ public static class CecilifierContextExtensions
                                                                     context, 
                                                                     new BodiedMemberDefinitionContext(methodName, methodNameForVariableRegistration,methodDeclarationVar, null, MemberOptions.None, IlContext.None), 
                                                                     null,
-                                                                    methodNameForVariableRegistration, 
-                                                                    methodName,
                                                                     "MethodAttributes.Private",
                                                                     method.Parameters.Select( p => new ParameterSymbolParameterSpec(p, context)).ToArray(),
                                                                     method.GetTypeParameterSyntax().Select(tps => tps.Identifier.Text).ToArray(),
                                                                     ctx => method.ReturnsByRef 
-                                                                                                                ? resolvedReturnType.MakeByReferenceType()
-                                                                                                                : resolvedReturnType,
+                                                                        ? resolvedReturnType.MakeByReferenceType()
+                                                                        : resolvedReturnType,
                                                                     out _);
         context.Generate(exps);
-        
-        // foreach (var parameter in method.Parameters)
-        // {
-        //     var paramVar = context.Naming.Parameter(parameter.Name);
-        //     var parameterExps = CecilDefinitionsFactory.Parameter(context, parameter, methodDeclarationVar, paramVar);
-        //     context.Generate(parameterExps);
-        //     context.DefinitionVariables.RegisterNonMethod(method.ToDisplayString(), parameter.Name, VariableMemberKind.Parameter, paramVar);
-        // }
+
         if (!method.IsAbstract)
         {
             context.Generate($"{methodDeclarationVar}.Body.InitLocals = {(!method.TryGetAttribute<SkipLocalsInitAttribute>(out _)).ToKeyword()};");
