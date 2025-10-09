@@ -4,7 +4,7 @@ Cecilifier
 
 About
 ---
-Cecilifier is a tool meant to make it easier to learn how to use [Mono.Cecil](https://github.com/jbevain/cecil) a library used to manipulate MS IL. It was developed after the idea of [asmifier](https://asm.ow2.io/faq.html#Q10). You can read more details about it in its [announcement blog](https://programing-fun.blogspot.com/2019/02/making-it-easier-to-getting-started.html).
+Cecilifier was born as a tool meant to make it easier to learn how to use [Mono.Cecil](https://github.com/jbevain/cecil) a library used to manipulate MS IL. It was developed after the idea of [asmifier](https://asm.ow2.io/faq.html#Q10). You can read more details about it in its [announcement blog](https://programing-fun.blogspot.com/2019/02/making-it-easier-to-getting-started.html).
 
 You can use it live in [this site](https://cecilifier.me/).
 
@@ -51,7 +51,7 @@ Supported Features
     - Co/Contra variance
 - Pointer types (int*, void*, etc)
 - Fixed statement
-- for statment
+- for/foreach statement
 - Cast operator
 - Non-capturing lambdas(converting to Func<>/Action<>)
      
@@ -65,11 +65,18 @@ Unsupported Features
 - Newer C# syntax (elvis operator, static import, to name some)
 - Much more :(
 
+>[!WARNING!]
+>Support for `System.Reflection.Metadata` is considered **experimental** and many C# syntax may not work or generate invalid code (most of the time with mixed syntax for `Mono.Cecil`).
+
+>[!IMPORTANT!]
+>Support for `Mono.Cecil` is much more mature than `System.Reflection.Metadata` simply because the former was the initial target of Cecilifier.
+
+
 How to use it
 ---
 
 - The easiest way is to [browse to its site](https://cecilifier.me/).
-- Another alternative is to build and run it  locally (see bellow)
+- Another alternative is to build and run it locally (see bellow)
 
 Orthogonal to these options, after you Cecilifier some code you can create a project and debug the generated code to get more insight about how Mono.Cecil works.
 
@@ -100,6 +107,11 @@ There are basically 2 types of tests ...
 Unit Tests
 ---
 
+Sources: [Cecilifier.Core.Tests/Tests/Unit](Cecilifier.Core.Tests/Tests/Unit)
+
+>[!NOTE]
+> Unit tests only covers `Mono.Cecil`. Due to historical reasons the expectations of such tests are tightly coupled with `Mono.Cecil` syntax. `System.Reflection.Metadata` relies only on [Integration](integration-tests)/[Output Based](output-based-tests) tests.
+
 These resembles tradicional Unit tests, at least from performance characteristics. They can be found [in this folder](Cecilifier.Core.Tests/Tests/Unit) and work by cecilifying some code and asserting the cecilified code for expected patterns.
 
 - Pros
@@ -111,6 +123,8 @@ These resembles tradicional Unit tests, at least from performance characteristic
 
 Integration Tests
 ---
+
+Sources: [Cecilifier.Core.Tests/Tests/Integration](Cecilifier.Core.Tests/Tests/Integration)
 
 These tests work basically taking a [snippet of code](https://github.com/adrianoc/cecilifier/blob/dev/Cecilifier.Core.Tests/TestResources/Integration/CodeBlock/Conditional/IfStatement.cs.txt), _Cecilifying_ it (generating the Mono.Cecil API calls to produce an assembly equivalent to the compiled snippet), compiling it,  and finally either comparing the two assemblies or comparing the generated IL for some method with the expected output [as in this example](https://github.com/adrianoc/cecilifier/blob/dev/Cecilifier.Core.Tests/TestResources/Integration/CodeBlock/Conditional/IfStatement.cs.il.txt). 
 
@@ -137,6 +151,15 @@ developers to store the expected IL) but in some cases the comparison code would
 	- Verification depends on custom code that compares assemblies; this code is not straighforward and is prone to bugs
 	- Harder to reason about failures.
 	- Prone to false negatives due to differences in the compiler generated IL and cecilifier generated IL.
+
+Output Based Tests
+---
+Sources: [Cecilifier.Core.Tests/Tests/OutputBased](Cecilifier.Core.Tests/Tests/OutputBased)
+
+These tests are similar to *Integration Tests* with 2 main differences:
+1. They don't compare the generated assemblies, but...
+2. Each test runs the generated assembly and compares its output with an expected output.
+
 
 How to report issues
 ---
