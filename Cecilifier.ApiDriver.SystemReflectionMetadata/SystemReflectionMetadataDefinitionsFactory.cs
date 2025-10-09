@@ -245,11 +245,11 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         return context.DefinitionVariables.RegisterNonMethod(string.Empty, variableName, VariableMemberKind.LocalVariable, variableIndex.ToString());
     }
 
-    public IEnumerable<string> Property(IVisitorContext context, string declaringTypeVariable, string declaringTypeName, string propertyDefinitionVariable, string propertyName, string propertyType)
+    public IEnumerable<string> Property(IVisitorContext context, BodiedMemberDefinitionContext definitionContext, string declaringTypeName, string propertyType)
     {
-        var propertySignatureTempVar =  context.Naming.SyntheticVariable($"{propertyName}SignatureBuilder", ElementKind.LocalVariable);
+        var propertySignatureTempVar =  context.Naming.SyntheticVariable($"{definitionContext.Member.Name}SignatureBuilder", ElementKind.LocalVariable);
 
-        TypedContext(context).DelayedDefinitionsManager.RegisterProperty(propertyName, propertyDefinitionVariable, declaringTypeName, declaringTypeVariable, 
+        TypedContext(context).DelayedDefinitionsManager.RegisterProperty(definitionContext.Member.Name, definitionContext.Member.DefinitionVariable, declaringTypeName, definitionContext.Member.ParentDefinitionVariable!, 
             static (context,  propertyName, propertyDefinitionVariable, declaringTypeName, declaringTypeVariable) =>
         {
             var getterMethodVariable = context.DefinitionVariables.GetVariable($"get_{propertyName}", VariableMemberKind.Method, declaringTypeName);
@@ -280,7 +280,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                                                                     returnType => returnType.{{propertyType}},
                                                                     parameters =>  {});
                 
-                var {{propertyDefinitionVariable}} = metadata.AddProperty(PropertyAttributes.None, metadata.GetOrAddString("{{propertyName}}"), metadata.GetOrAddBlob({{propertySignatureTempVar}}));
+                var {{definitionContext.Member.DefinitionVariable}} = metadata.AddProperty(PropertyAttributes.None, metadata.GetOrAddString("{{definitionContext.Member.Name}}"), metadata.GetOrAddBlob({{propertySignatureTempVar}}));
                 """];
     }
 

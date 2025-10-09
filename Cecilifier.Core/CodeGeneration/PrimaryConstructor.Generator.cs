@@ -44,7 +44,8 @@ public class PrimaryConstructorGenerator
         context.WriteComment($"Property: {parameter.Identifier.Text} (primary constructor)");
         var propDefVar = context.Naming.SyntheticVariable(parameter.Identifier.Text, ElementKind.Property);
         var paramSymbol = context.SemanticModel.GetDeclaredSymbol(parameter).EnsureNotNull<ISymbol, IParameterSymbol>();
-        var exps = context.ApiDefinitionsFactory.Property(context, declaringTypeVariable.VariableName, declaringTypeVariable.MemberName,propDefVar, parameter.Identifier.Text, context.TypeResolver.ResolveAny(paramSymbol.Type));
+        var definitionContext = new BodiedMemberDefinitionContext(parameter.Identifier.Text, propDefVar, declaringTypeVariable.VariableName, MemberOptions.None, IlContext.None);
+        var exps = context.ApiDefinitionsFactory.Property(context, definitionContext, declaringTypeVariable.MemberName, context.TypeResolver.ResolveAny(paramSymbol.Type));
         
         context.Generate(exps);
         context.Generate($"{typeDefinitionVariable}.Properties.Add({propDefVar});");

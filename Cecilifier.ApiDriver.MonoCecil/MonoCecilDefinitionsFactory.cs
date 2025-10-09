@@ -245,11 +245,11 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
         return context.DefinitionVariables.RegisterNonMethod(string.Empty, variableName, VariableMemberKind.LocalVariable, cecilVarDeclName);
     }
 
-    public IEnumerable<string> Property(IVisitorContext context, string declaringTypeVariable, string declaringTypeName, string propertyDefinitionVariable, string propertyName, string propertyType)
+    public IEnumerable<string> Property(IVisitorContext context, BodiedMemberDefinitionContext definitionContext, string declaringTypeName, string propertyType)
     {
         return [
-            $"var {propertyDefinitionVariable} = new PropertyDefinition(\"{propertyName}\", PropertyAttributes.None, {propertyType});",
-            $"{declaringTypeVariable}.Properties.Add({propertyDefinitionVariable});"
+            $"var {definitionContext.Member.DefinitionVariable} = new PropertyDefinition(\"{definitionContext.Member.Name}\", PropertyAttributes.None, {propertyType});",
+            $"{definitionContext.Member.ParentDefinitionVariable}.Properties.Add({definitionContext.Member.DefinitionVariable});"
         ];
     }
 

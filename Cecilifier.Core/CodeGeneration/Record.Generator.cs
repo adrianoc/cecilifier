@@ -742,26 +742,28 @@ internal partial class RecordGenerator
             resolveTargetKind => context.TypeResolver.ResolveAny(context.RoslynTypeSystem.SystemType, resolveTargetKind),
             string.Empty, // used for registering the parameter for setters. In this case, there are none.
             Array.Empty<ParameterSpec>());
-        
-        var exps = context.ApiDefinitionsFactory.Property(context, recordTypeDefinitionVariable, record.Identifier.Text, propertyData.Variable, propertyName, propertyData.Type(ResolveTargetKind.Field));
-        context.Generate(exps);
 
         _equalityContractGetMethodVar = context.Naming.SyntheticVariable("EqualityContract_get", ElementKind.Method);
-        var getterIlVar = context.Naming.ILProcessor("EqualityContract_get");
+        // var getterIlVar = context.Naming.ILProcessor("EqualityContract_get");
+        // context.Generate($"var {getterIlVar} = {_equalityContractGetMethodVar}.Body.GetILProcessor();");
+        var ilContext = context.ApiDriver.NewIlContext(context, "EqualityContract_get", _equalityContractGetMethodVar);
+        var definitionContext = new BodiedMemberDefinitionContext(propertyName, propertyData.Variable, recordTypeDefinitionVariable, MemberOptions.None, ilContext);
+        var exps = context.ApiDefinitionsFactory.Property(context, definitionContext, record.Identifier.Text, propertyData.Type(ResolveTargetKind.Field));
+        context.Generate(exps);
+
         using var _ = propertyGenerator.AddGetterMethodDeclaration(
                                                                 in propertyData, 
                                                                 _equalityContractGetMethodVar, 
                                                                 false, 
                                                                 string.Empty, // used for registering property parameters. In this case, there are none.
                                                                 null,
-                                                                getterIlVar);
+                                                                ilContext);
         
         var getTypeFromHandleSymbol = (IMethodSymbol) context.RoslynTypeSystem.SystemType.GetMembers("GetTypeFromHandle").First();
-        context.Generate($"var {getterIlVar} = {_equalityContractGetMethodVar}.Body.GetILProcessor();");
         context.WriteNewLine();
-        context.ApiDriver.WriteCilInstruction(context, getterIlVar, OpCodes.Ldtoken, recordTypeDefinitionVariable);
-        context.ApiDriver.WriteCilInstruction(context, getterIlVar, OpCodes.Call, getTypeFromHandleSymbol.MethodResolverExpression(context));
-        context.ApiDriver.WriteCilInstruction(context, getterIlVar, OpCodes.Ret);
+        context.ApiDriver.WriteCilInstruction(context, ilContext, OpCodes.Ldtoken, recordTypeDefinitionVariable);
+        context.ApiDriver.WriteCilInstruction(context, ilContext, OpCodes.Call, getTypeFromHandleSymbol.MethodResolverExpression(context));
+        context.ApiDriver.WriteCilInstruction(context, ilContext, OpCodes.Ret);
 
         AddCompilerGeneratedAttributeTo(context, propertyData.Variable);
         AddIsReadOnlyAttributeTo(context, propertyData.Variable);
