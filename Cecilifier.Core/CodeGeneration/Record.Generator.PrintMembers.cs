@@ -30,7 +30,7 @@ internal partial class RecordGenerator
         Func<IVisitorContext, string> returnTypeResolver = ctx => context.TypeResolver.Bcl.System.Boolean;
         var printMembersDeclExps = context.ApiDefinitionsFactory.Method(
                                                                 context, 
-                                                                new BodiedMemberDefinitionContext(PrintMembersVar, recordTypeDefinitionVariable, MemberOptions.None, IlContext.None), 
+                                                                new BodiedMemberDefinitionContext(PrintMembersMethodName, PrintMembersVar, recordTypeDefinitionVariable, MemberOptions.None, IlContext.None), 
                                                                 _recordSymbol.OriginalDefinition.ToDisplayString(), 
                                                                 PrintMembersMethodName, 
                                                                 PrintMembersMethodName, 
@@ -150,7 +150,7 @@ internal partial class RecordGenerator
     // If the record inherits from another record returns the base `PrintMembers()` method
     private string PrintMembersMethodToCall(INamedTypeSymbol stringBuilderSymbol)
     {
-        if (_recordSymbol is INamedTypeSymbol { IsGenericType: true })
+        if (_recordSymbol is { IsGenericType: true })
             return $$"""new MethodReference("PrintMembers", {{context.TypeResolver.Bcl.System.Boolean}}, {{context.TypeResolver.ResolveAny(_recordSymbol)}}) { HasThis = true, Parameters = { new ParameterDefinition({{context.TypeResolver.ResolveAny(stringBuilderSymbol)}}) } }""";
             
         return HasBaseRecord(context, _recordSymbol) 

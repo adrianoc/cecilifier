@@ -123,7 +123,7 @@ namespace Cecilifier.Core.AST
             var methodName = $"{accessorName}_{eventSymbol.Name}";
             var methodExps = Context.ApiDefinitionsFactory.Method(
                                                                                 Context, 
-                                                                                new BodiedMemberDefinitionContext(methodVar, eventDeclaringTypeVar.VariableName, eventSymbol.IsStatic ? MemberOptions.Static : MemberOptions.None, IlContext.None), 
+                                                                                new BodiedMemberDefinitionContext(methodName, methodVar, eventDeclaringTypeVar.VariableName, eventSymbol.IsStatic ? MemberOptions.Static : MemberOptions.None, IlContext.None), 
                                                                                 eventDeclaringTypeVar.MemberName, 
                                                                                 methodName, 
                                                                                 methodName, 
@@ -235,14 +235,6 @@ namespace Cecilifier.Core.AST
             var exp1 = $"var {openCompExcVar} = {Utils.ImportFromMainModule("typeof(System.Threading.Interlocked).GetMethods().Single(m => m.Name == \"CompareExchange\" && m.IsGenericMethodDefinition)")};";
 
             return new[] { exp1 }.Concat(openCompExcVar.MakeGenericInstanceMethod(Context, "compExp", [$"{backingFieldVar}.FieldType"], out compExcVar));
-        }
-
-        private IEnumerable<string> AddParameterTo(string methodVar, string fieldType)
-        {
-            return new[]
-            {
-                $"{methodVar}.Parameters.Add(new ParameterDefinition(\"value\", ParameterAttributes.None, {fieldType}));",
-            };
         }
 
         private string AddBackingField(EventFieldDeclarationSyntax node)

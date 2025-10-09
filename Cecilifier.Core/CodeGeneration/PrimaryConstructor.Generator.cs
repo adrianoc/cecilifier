@@ -26,7 +26,6 @@ public class PrimaryConstructorGenerator
         if (type.ParameterList is null)
             return;
 
-        var declaringTypeIsGeneric = type.TypeParameterList?.Parameters.Count > 0;
         foreach (var parameter in type.GetUniqueParameters(context))
         {
             AddPropertyFor(context, parameter, typeDefinitionVariable, declaringType);
@@ -117,7 +116,7 @@ public class PrimaryConstructorGenerator
         string[] paramTypes = typeDeclaration.ParameterList?.Parameters.Select(p => p.Type?.ToString()).ToArray() ?? [];
         var exps = context.ApiDefinitionsFactory.Constructor(
             context, 
-            new BodiedMemberDefinitionContext(ctorVar, recordTypeDefinitionVariable, MemberOptions.None, IlContext.None), 
+            new BodiedMemberDefinitionContext("ctor", ctorVar, recordTypeDefinitionVariable, MemberOptions.None, IlContext.None), 
             typeName, 
             false, 
             "MethodAttributes.Public", 
@@ -168,7 +167,7 @@ public class PrimaryConstructorGenerator
 
         static void InvokeBaseConstructor(IVisitorContext context, string ctorIlVar, TypeDeclarationSyntax typeDeclaration)
         {
-            var baseCtor = string.Empty;
+            string baseCtor;
             context.ApiDriver.WriteCilInstruction(context, ctorIlVar, OpCodes.Ldarg_0);
         
             var primaryConstructorBase = typeDeclaration.BaseList?.Types.OfType<PrimaryConstructorBaseTypeSyntax>().SingleOrDefault();

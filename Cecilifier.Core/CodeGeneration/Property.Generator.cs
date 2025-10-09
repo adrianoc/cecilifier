@@ -60,7 +60,7 @@ internal class PropertyGenerator
 
         var exps = Context.ApiDefinitionsFactory.Method(
                                             Context, 
-                                            new BodiedMemberDefinitionContext(accessorMethodVar, property.DeclaringTypeVariable, property.IsStatic ? MemberOptions.Static : MemberOptions.None, ilContext), 
+                                            new BodiedMemberDefinitionContext($"set_{property.Name}", nameForRegistration, accessorMethodVar, property.DeclaringTypeVariable, property.IsStatic ? MemberOptions.Static : MemberOptions.None, ilContext), 
                                             property.DeclaringTypeNameForRegistration, 
                                             nameForRegistration,
                                             $"set_{property.Name}", 
@@ -96,7 +96,7 @@ internal class PropertyGenerator
     {
         var propertyResolvedType = property.Type(ResolveTargetKind.ReturnType);
         IList<string> typeParameters = [];
-        var memberDefinitionContext = new BodiedMemberDefinitionContext(accessorMethodVar, property.DeclaringTypeVariable, property.IsStatic ? MemberOptions.Static : MemberOptions.None, ilContext);
+        var memberDefinitionContext = new BodiedMemberDefinitionContext($"get_{property.Name}", nameForRegistration, accessorMethodVar, property.DeclaringTypeVariable, property.IsStatic ? MemberOptions.Static : MemberOptions.None, ilContext);
         var exps = Context.ApiDefinitionsFactory.Method(
                                                                     Context, 
                                                                     memberDefinitionContext, 
@@ -156,7 +156,7 @@ internal class PropertyGenerator
         _backingFieldVar = Context.Naming.SyntheticVariable(property.Name, ElementKind.Field);
 
         var name = Utils.BackingFieldNameForAutoProperty(property.Name);
-        var memberDefinitionContext = new BodiedMemberDefinitionContext(_backingFieldVar, property.DeclaringTypeVariable, MemberOptions.None, IlContext.None);
+        var memberDefinitionContext = new MemberDefinitionContext(name, $"{property.Name}BackingField", _backingFieldVar, property.DeclaringTypeVariable);
         var backingFieldExps = Context.ApiDefinitionsFactory.Field(Context, memberDefinitionContext, property.DeclaringTypeNameForRegistration, name, property.Type(ResolveTargetKind.Field), property.BackingFieldModifiers, false, false, null);
         
         Context.Generate(backingFieldExps);

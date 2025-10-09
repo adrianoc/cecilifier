@@ -2,11 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
-using Cecilifier.Core.Misc;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -75,7 +73,7 @@ namespace Cecilifier.Core.AST
                 var constant = modifiers.Any(m => m.IsKind(SyntaxKind.ConstKeyword)) && field.Initializer != null ? Context.SemanticModel.GetConstantValue(field.Initializer.Value) : null;
                 var exps = Context.ApiDefinitionsFactory.Field(
                                                             Context, 
-                                                            new BodiedMemberDefinitionContext(fieldVar, declaringTypeVar.VariableName, MemberOptions.None, IlContext.None), 
+                                                            new MemberDefinitionContext(fieldSymbol.Name, fieldVar, declaringTypeVar.VariableName), 
                                                             fieldSymbol, 
                                                             fieldType,
                                                             fieldAttributes, 

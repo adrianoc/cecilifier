@@ -167,7 +167,7 @@ namespace Cecilifier.Core.AST
             }
 
             var ilContext = Context.ApiDriver.NewIlContext(Context, $"{ctorName}_{normalizedTypeName}", ctorLocalVar);
-            var definitionContext = new BodiedMemberDefinitionContext( ctorLocalVar, typeDefVar, MemberOptions.None, ilContext);
+            var definitionContext = new BodiedMemberDefinitionContext(ctorName, ctorName, ctorLocalVar, typeDefVar, MemberOptions.None, ilContext);
             var exps = Context.ApiDefinitionsFactory.Constructor(Context, definitionContext, typeName, isStatic, ctorAccessibility, []);
             AddCecilExpressions(Context, exps);
 

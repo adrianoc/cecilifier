@@ -49,10 +49,10 @@ internal partial class TypeDeclarationVisitor
             var ctorLocalVar = Context.Naming.Delegate(node);
 
             // Delegate ctor
-            string[] paramTypes = new[] { "System.Object", "System.IntPtr" };
+            string[] paramTypes = ["System.Object", "System.IntPtr"];
             var exps = Context.ApiDefinitionsFactory.Constructor(
                 Context, 
-                new BodiedMemberDefinitionContext(ctorLocalVar, typeVar, MemberOptions.None, IlContext.None), 
+                new BodiedMemberDefinitionContext("ctor", ctorLocalVar, typeVar, MemberOptions.None, IlContext.None), 
                 node.Identifier.Text, 
                 false, 
                 "MethodAttributes.FamANDAssem | MethodAttributes.Family", 
@@ -85,9 +85,9 @@ internal partial class TypeDeclarationVisitor
             var endInvokeMethodVar = Context.Naming.SyntheticVariable("EndInvoke", ElementKind.Method);
             var endInvokeExps = Context.ApiDefinitionsFactory.Method(
                                                                         Context,
-                                                                        new BodiedMemberDefinitionContext(endInvokeMethodVar, typeVar, MemberOptions.None, IlContext.None),
-                                                                        "declarintTypeName",
-                                                                        "EnvInvoke",
+                                                                        new BodiedMemberDefinitionContext("EndInvoke", endInvokeMethodVar, typeVar, MemberOptions.None, IlContext.None),
+                                                                        "declaringTypeName",
+                                                                        "EndInvoke",
                                                                         "EndInvoke",
                                                                         Constants.Cecil.DelegateMethodAttributes,
                                                                         [new ParameterSpec("ar", Context.TypeResolver.Bcl.System.IAsyncResult, RefKind.None, Constants.ParameterAttributes.None)],
@@ -95,7 +95,7 @@ internal partial class TypeDeclarationVisitor
                                                                         ctx => ctx.TypeResolver.ResolveAny(Context.GetTypeInfo(node.ReturnType).Type, ResolveTargetKind.ReturnType),
                                                                         out var _);
 
-            endInvokeExps = endInvokeExps.Concat(new[] { $"{endInvokeMethodVar}.HasThis = true;", $"{endInvokeMethodVar}.IsRuntime = true;", });
+            endInvokeExps = endInvokeExps.Concat([$"{endInvokeMethodVar}.HasThis = true;", $"{endInvokeMethodVar}.IsRuntime = true;"]);
             AddCecilExpressions(Context, endInvokeExps);
             
             base.VisitDelegateDeclaration(node);

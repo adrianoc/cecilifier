@@ -293,7 +293,6 @@ namespace Cecilifier.Core.AST
         private static void WriteCecilExpression(IVisitorContext context, string value)
         {
             context.Generate(value);
-            //TODO: DO we need this new line with the use of the ISH ?
             context.WriteNewLine();
         }
 
