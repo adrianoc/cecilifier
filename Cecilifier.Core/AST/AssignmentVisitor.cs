@@ -228,7 +228,7 @@ namespace Cecilifier.Core.AST
             {
                 var propertyBackingFieldName = Utils.BackingFieldNameForAutoProperty(property.Name);
                 var found = Context.DefinitionVariables.GetVariable(propertyBackingFieldName, VariableMemberKind.Field, property.ContainingType.ToDisplayString());
-                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Stfld, found.VariableName);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Stfld, found.VariableName.AsToken());
             }
             else
             {
@@ -276,7 +276,7 @@ namespace Cecilifier.Core.AST
             }
             else
             {
-                Context.ApiDriver.WriteCilInstruction(Context, ilVar, storeOpCode, new CilMetadataHandle(memberReference));
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, storeOpCode, memberReference.AsToken());
             }
         }
 

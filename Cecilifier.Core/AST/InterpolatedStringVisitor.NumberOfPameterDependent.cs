@@ -2,6 +2,7 @@ using System.Linq;
 using System.Reflection.Emit;
 using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.ApiDriver.Handles;
+using Cecilifier.Core.Extensions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
@@ -41,7 +42,7 @@ namespace Cecilifier.Core.AST
         protected override void BeforeVisitInterpolatedStringExpression()
         {
             Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldc_I4, _numberOfArguments);
-            Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Newarr, new CilMetadataHandle(Context.TypeResolver.Bcl.System.Object));
+            Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Newarr, Context.TypeResolver.Bcl.System.Object.AsToken());
         }
 
         public override void VisitInterpolation(InterpolationSyntax node)

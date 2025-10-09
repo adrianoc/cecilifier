@@ -79,7 +79,7 @@ namespace Cecilifier.Core.AST
                     
                     var declaringTypeLocalVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Type).ThrowIfVariableIsNotValid();
                     var operand = Context.MemberResolver.ResolveDefaultConstructor(baseTypeSymbol, declaringTypeLocalVar.VariableName);
-                    Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Call, new CilMetadataHandle(operand));
+                    Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Call, operand.AsToken());
                 }
 
                 callBaseMethod(node);
@@ -137,7 +137,7 @@ namespace Cecilifier.Core.AST
             if (!isStatic)
             {
                 Context.ApiDriver.WriteCilInstruction(Context, ilContext, OpCodes.Ldarg_0);
-                Context.ApiDriver.WriteCilInstruction(Context, ilContext, OpCodes.Call, new CilMetadataHandle(baseCtor));
+                Context.ApiDriver.WriteCilInstruction(Context, ilContext, OpCodes.Call, baseCtor.AsToken());
             }
 
             Context.ApiDriver.WriteCilInstruction(Context, ilContext, OpCodes.Ret);
@@ -202,7 +202,7 @@ namespace Cecilifier.Core.AST
                     ? OpCodes.Stsfld
                     : OpCodes.Stfld;
 
-                Context.ApiDriver.WriteCilInstruction(Context, ctorBodyIL, fieldStoreOpCode, new CilMetadataHandle(fieldVarDef.VariableName));
+                Context.ApiDriver.WriteCilInstruction(Context, ctorBodyIL, fieldStoreOpCode, fieldVarDef.VariableName.AsToken());
             }
 
             // Handles property initialization...

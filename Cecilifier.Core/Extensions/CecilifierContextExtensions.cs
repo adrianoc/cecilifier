@@ -48,7 +48,7 @@ public static class CecilifierContextExtensions
         }
         else if (operation is IConversionOperation { Operand.Type: not null } conversion2 && context.SemanticModel.Compilation.ClassifyConversion(conversion2.Operand.Type, operation.Type).IsBoxing)
         {
-            context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Box, new CilMetadataHandle(context.TypeResolver.ResolveAny(conversion2.Operand.Type)));
+            context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Box, context.TypeResolver.ResolveAny(conversion2.Operand.Type).AsToken());
         }
         else if (operation is IConversionOperation { Conversion.IsNullable: true } nullableConversion && !nullableConversion.Syntax.IsKind(SyntaxKind.CoalesceExpression))
         {
@@ -131,7 +131,7 @@ public static class CecilifierContextExtensions
             context.ClearFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint);
         }
 
-        context.ApiDriver.WriteCilInstruction(context, ilVar, opCode, new CilMetadataHandle(operand));
+        context.ApiDriver.WriteCilInstruction(context, ilVar, opCode, operand.AsToken());
     }
 
     /*

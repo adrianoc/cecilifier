@@ -86,7 +86,7 @@ internal class PropertyGenerator
             Context.ApiDriver.WriteCilInstruction(Context, ilContext, OpCodes.Ldarg_1);
 
         var operand = property.DeclaringTypeIsGeneric ? MakeGenericInstanceType(in property) : _backingFieldVar;
-        Context.ApiDriver.WriteCilInstruction(Context, ilContext, property.StoreOpCode, operand);
+        Context.ApiDriver.WriteCilInstruction(Context, ilContext, property.StoreOpCode, operand.AsToken());
         Context.AddCompilerGeneratedAttributeTo(ilContext.RelatedMethodVariable);
     }
 
@@ -129,7 +129,7 @@ internal class PropertyGenerator
         
         Debug.Assert(_backingFieldVar != null);
         var operand = propertyGenerationData.DeclaringTypeIsGeneric ? MakeGenericInstanceType(in propertyGenerationData) : _backingFieldVar;
-        Context.ApiDriver.WriteCilInstruction(Context, ilVar, propertyGenerationData.LoadOpCode, operand);
+        Context.ApiDriver.WriteCilInstruction(Context, ilVar, propertyGenerationData.LoadOpCode, operand.AsToken());
         Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ret);
         
         Context.AddCompilerGeneratedAttributeTo(getMethodVar);

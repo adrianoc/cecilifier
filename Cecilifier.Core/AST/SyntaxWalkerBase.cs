@@ -393,7 +393,7 @@ namespace Cecilifier.Core.AST
                 Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Volatile);
 
             var opCode = fieldSymbol.LoadOpCodeForFieldAccess();
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, opCode, new CilMetadataHandle(resolvedFieldVariable));
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, opCode, resolvedFieldVariable.AsToken());
             HandlePotentialDelegateInvocationOn(node, fieldSymbol.Type, ilVar);
             HandlePotentialRefLoad(ilVar, node, fieldSymbol.Type);
         }

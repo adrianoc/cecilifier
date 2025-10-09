@@ -137,7 +137,7 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
                 operand switch
                 {
                     string => $"{il.VariableName}.Token(MetadataTokens.GetToken(metadata.GetOrAddUserString({operand})));",
-                    CilMetadataHandle handle => $"{il.VariableName}.Token({handle.VariableName});",
+                    CilToken handle => $"{il.VariableName}.Token({handle.VariableName});",
                     CilOperandValue operandValue => $"{il.VariableName}.CodeBuilder.Write{operandValue.Type.Name}({operandValue.Value});",
                     CilLocalVariableHandle localVariableHandle => $"{il.VariableName}.CodeBuilder.WriteInt32({localVariableHandle.Value});",
 

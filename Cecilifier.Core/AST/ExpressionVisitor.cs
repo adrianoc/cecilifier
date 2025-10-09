@@ -1578,7 +1578,7 @@ namespace Cecilifier.Core.AST
 
         private void ProcessArrayCreation(ITypeSymbol elementType, InitializerExpressionSyntax? initializer)
         {
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Newarr, new CilMetadataHandle(Context.TypeResolver.ResolveAny(elementType, ResolveTargetKind.None)));
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Newarr, Context.TypeResolver.ResolveAny(elementType).AsToken());
             if (PrivateImplementationDetailsGenerator.IsApplicableTo(initializer, Context))
                 ArrayInitializationProcessor.InitializeOptimized(this, elementType, initializer.Expressions);
             else

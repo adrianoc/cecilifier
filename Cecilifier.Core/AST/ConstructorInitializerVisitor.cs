@@ -23,7 +23,7 @@ namespace Cecilifier.Core.AST
             var info = Context.SemanticModel.GetSymbolInfo(node);
             var targetCtor = (IMethodSymbol) info.Symbol;
 
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Call, new CilMetadataHandle(targetCtor.MethodResolverExpression(Context)));
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Call, targetCtor.MethodResolverExpression(Context).AsToken());
 
             var declaringType = (BaseTypeDeclarationSyntax) node.Parent.Parent;
 

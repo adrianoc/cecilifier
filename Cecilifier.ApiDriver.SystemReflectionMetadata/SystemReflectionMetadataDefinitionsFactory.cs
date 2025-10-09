@@ -199,7 +199,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         var typedTypeResolver = (SystemReflectionMetadataTypeResolver) context.TypeResolver;
         
         context.DefinitionVariables.RegisterNonMethod(fieldOrEvent.ContainingType.ToDisplayString(), fieldOrEvent.Name, VariableMemberKind.Field, definitionContext.DefinitionVariable);
-        var fieldSignatureVar = context.Naming.SyntheticVariable($"{fieldOrEvent.Name}_fs", ElementKind.LocalVariable);
+        var fieldSignatureVar = context.Naming.SyntheticVariable($"{definitionContext.Identifier}_fs", ElementKind.LocalVariable);
         return [
             $"""
              BlobBuilder {fieldSignatureVar} = new();
@@ -217,7 +217,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         ((SystemReflectionMetadataContext) context).DelayedDefinitionsManager.RegisterFieldDefinition(definitionContext.ParentDefinitionVariable, definitionContext.DefinitionVariable);
         
         context.DefinitionVariables.RegisterNonMethod(declaringTypeName, name, VariableMemberKind.Field, definitionContext.DefinitionVariable);
-        var fieldSignatureVar = context.Naming.SyntheticVariable($"{name}_fs", ElementKind.LocalVariable);
+        var fieldSignatureVar = context.Naming.SyntheticVariable($"{definitionContext.Identifier}_fs", ElementKind.LocalVariable);
         return [
             $"""
              BlobBuilder {fieldSignatureVar} = new();
