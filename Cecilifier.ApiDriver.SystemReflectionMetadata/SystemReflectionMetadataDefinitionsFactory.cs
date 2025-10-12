@@ -1,7 +1,11 @@
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using System.Text;
+using Cecilifier.ApiDriver.SystemReflectionMetadata.CustomAttributes;
 using Cecilifier.ApiDriver.SystemReflectionMetadata.DelayedDefinitions;
 using Cecilifier.ApiDriver.SystemReflectionMetadata.TypeSystem;
 using Cecilifier.Core.ApiDriver;
+using Cecilifier.Core.ApiDriver.Attributes;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
@@ -240,7 +244,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         });
 
         // This is a hack. SRM accesses local variables by index, and Cecilifier does not have a way to pass that index around; it only has variable names,
-        // so we register the `index` of the local variable as the name.
+        // so we record the `index` of the local variable as the variable name.
         // Code that emits Ldloc/Stloc/etc will pass a CilFieldHandle() with this `name` (actually the local variable index) as its value
         return context.DefinitionVariables.RegisterNonMethod(string.Empty, variableName, VariableMemberKind.LocalVariable, variableIndex.ToString());
     }
@@ -276,7 +280,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         
         return [$$"""
                 var {{propertySignatureTempVar}} = new BlobBuilder();
-                new BlobEncoder({{propertySignatureTempVar}}).PropertySignature().Parameters(0,
+                new BlobEncoder({{propertySignatureTempVar}}).PropertySignature(isInstanceProperty: {{((definitionContext.Options & MemberOptions.Static) == 0).ToKeyword()}}).Parameters(0,
                                                                     returnType => returnType.{{propertyType}},
                                                                     parameters =>  {});
                 
@@ -284,6 +288,44 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                 """];
     }
 
+    public IEnumerable<string> Attribute(IVisitorContext context, IMethodSymbol attributeCtor, string attributeVarBaseName, string attributeTargetVar, params CustomAttributeArgument[] arguments)
+    {
+        var attributeEncoderVariable = context.DefinitionVariables.GetVariable("EncoderMetaName", VariableMemberKind.None, attributeVarBaseName);
+        var buffer = new Buffer10<string>();
+        Span<string> exps = buffer;
+        int count = 0;
+        
+        if (!attributeEncoderVariable.IsValid)
+        {
+            var attributeEncoderVariableName = context.Naming.SyntheticVariable($"{attributeVarBaseName}Encoder", ElementKind.Attribute);
+            var attributeEncoder = new AttributeEncoder(context, attributeEncoderVariableName);
+            var namedArguments = arguments.OfType<CustomAttributeNamedArgument>().ToList();
+            var encodedArguments = attributeEncoder.Encode(arguments.Except(namedArguments).ToList(), namedArguments);
+            exps[count++] = Format($"""
+                             // encoded attribute arguments
+                             { encodedArguments }
+                             """);
+
+            attributeEncoderVariable = context.DefinitionVariables.RegisterNonMethod(attributeVarBaseName, "EncoderMetaName", VariableMemberKind.None, attributeEncoderVariableName);
+        }
+        
+        yield return exps[0];
+        
+        var resolvedAttrCtor = context.MemberResolver.ResolveMethod(attributeCtor);
+        var attr= Format($"""
+                  metadata.AddCustomAttribute(
+                             parent: {attributeTargetVar},
+                             constructor: {resolvedAttrCtor},
+                             value: metadata.GetOrAddBlob({attributeEncoderVariable.VariableName}));
+                  """);
+
+        context.DefinitionVariables.ExecuteUponVariableRegistration(attributeTargetVar, context, (ctx, exp) =>
+        {
+            ctx.Generate((string) exp);
+            ctx.WriteNewLine();
+        }, attr);
+    }
+   
     private SystemReflectionMetadataContext TypedContext(IVisitorContext context) => ((SystemReflectionMetadataContext) context);
     
     static void EmitLocalVariables(SystemReflectionMetadataContext context, MethodDefinitionRecord methodRecord)
@@ -308,4 +350,10 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
 
 
     static string Format(CecilifierInterpolatedStringHandler cecilFormattedString) => cecilFormattedString.Result;
+}
+
+[InlineArray(10)]
+file struct Buffer10<T>
+{
+    private T _elements;
 }

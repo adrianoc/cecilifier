@@ -5,6 +5,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Cecilifier.Core;
 using Cecilifier.Core.ApiDriver;
+using Cecilifier.Core.ApiDriver.Attributes;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
@@ -251,6 +252,31 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
             $"var {definitionContext.Member.DefinitionVariable} = new PropertyDefinition(\"{definitionContext.Member.Name}\", PropertyAttributes.None, {propertyType});",
             $"{definitionContext.Member.ParentDefinitionVariable}.Properties.Add({definitionContext.Member.DefinitionVariable});"
         ];
+    }
+    
+    public IEnumerable<string> Attribute(IVisitorContext context, IMethodSymbol attributeCtor, string attributeVarBaseName, string attributeTargetVar, params CustomAttributeArgument[] arguments)
+    {
+        var attributeVar = context.Naming.SyntheticVariable(attributeVarBaseName, ElementKind.Attribute);
+        var resolvedCtor = context.MemberResolver.ResolveMethod(attributeCtor);
+        
+        //TODO: To be on pair with original implementation of CecilDefinitionsFactory.Attribute() we only process positional arguments (ignoring named ones)
+        //      There is another overload of Attribute() method that does handle all arguments; most likely we'll merge the 2 overloads; when that happen
+        //      we'll need to revisit this code.
+        var namedArguments = arguments.OfType<CustomAttributeNamedArgument>();
+        var positionalArguments = arguments.Except(namedArguments).ToArray();
+        
+        var exps = new string[2 + positionalArguments.Length];
+        int expIndex = 0;
+        exps[expIndex++] = $"var {attributeVar} = new CustomAttribute({resolvedCtor});";
+
+        for(int i = 0; i < positionalArguments.Length; i++)
+        {
+            var attributeArgument = $"new CustomAttributeArgument({context.TypeResolver.Resolve(attributeCtor.Parameters[i].Type)}, {positionalArguments[i].Value})";
+            exps[expIndex++] = $"{attributeVar}.ConstructorArguments.Add({attributeArgument});";
+        }
+        exps[expIndex] = $"{attributeTargetVar}.CustomAttributes.Add({attributeVar});";
+
+        return exps;        
     }
 
     private static void ProcessGenericTypeParameters(string memberDefVar, IVisitorContext context, IList<TypeParameterSyntax> typeParamList, IList<string> exps)

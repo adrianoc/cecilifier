@@ -5,6 +5,7 @@ namespace Cecilifier.Core.Variables;
 [Flags]
 public enum VariableMemberKind
 {
+    None = 0,
     Type = 1 << 1,
     TypeParameter = 1 << 2,
     Field = 1 << 3,

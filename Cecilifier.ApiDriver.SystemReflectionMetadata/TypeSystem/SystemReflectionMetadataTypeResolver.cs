@@ -28,7 +28,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
         _context.Generate($"""
                            var {memberRefVarName} = metadata.AddTypeReference(
                                                                 {_context.AssemblyResolver.Resolve(type.ContainingAssembly)},
-                                                                metadata.GetOrAddString("{type.ContainingNamespace.Name}"),
+                                                                metadata.GetOrAddString("{type.ContainingNamespace.FullyQualifiedName()}"),
                                                                 metadata.GetOrAddString("{type.Name}"));
                            """);
         _context.WriteNewLine();

@@ -1,8 +1,8 @@
 #nullable enable
-namespace Cecilifier.Core.ApiDriver;
+namespace Cecilifier.Core.ApiDriver.Attributes;
 
-internal class CustomAttributeArgument
+public class CustomAttributeArgument
 {
-    public object Value;
-    public CustomAttributeArgument[]? Values;
+    public object? Value { get; set; }
+    public CustomAttributeArgument[]? Values { get; set; }
 }
