@@ -185,7 +185,8 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                 var ret = propertyVisitor.VisitType(sourceProperty, targetProperty)
                           && propertyVisitor.VisitAttributes(sourceProperty, targetProperty)
                           && propertyVisitor.VisitAccessors(sourceProperty, targetProperty)
-                          && propertyVisitor.VisitCustomAttributes(sourceProperty, targetProperty);
+                          && propertyVisitor.VisitCustomAttributes(sourceProperty, targetProperty)
+                          && sourceProperty.HasThis == targetProperty.HasThis;
 
                 if (!ret)
                     return false;
