@@ -200,6 +200,9 @@ namespace Cecilifier.Core.AST
 
         private void LoadLiteralToStackHandlingCallOnValueTypeLiterals(string ilVar, ITypeSymbol literalType, object literalValue, UsageResult usageResult)
         {
+            if (literalType.SpecialType == SpecialType.System_Boolean)
+                literalType = Context.RoslynTypeSystem.SystemInt32; // Booleans are handled internally as Int32
+            
             var opCode = literalType.LoadOpCodeFor();
             Context.ApiDriver.WriteCilInstruction(Context, ilVar, opCode, literalType.ToCilOperandValue(literalValue));
             if (usageResult.Kind == UsageKind.CallTarget)
