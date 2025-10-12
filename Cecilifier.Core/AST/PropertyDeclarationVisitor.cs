@@ -309,8 +309,8 @@ namespace Cecilifier.Core.AST
         private string AddPropertyDefinition(BasePropertyDeclarationSyntax propertyDeclarationSyntax, string declaringTypeVariable, string declaringTypeName, string propName, string propertyType)
         {
             var propDefVar = Context.Naming.PropertyDeclaration(propertyDeclarationSyntax);
-            var x = new BodiedMemberDefinitionContext(propName, propDefVar, declaringTypeVariable, MemberOptions.None, IlContext.None);
-            var exps = Context.ApiDefinitionsFactory.Property(Context, x, declaringTypeName, propertyType);
+            var mdc = new BodiedMemberDefinitionContext(propName, propDefVar, declaringTypeVariable, propertyDeclarationSyntax.IsStatic() ?  MemberOptions.Static : MemberOptions.None, IlContext.None);
+            var exps = Context.ApiDefinitionsFactory.Property(Context, mdc, declaringTypeName, propertyType);
             Context.Generate(exps);
             
             return propDefVar;

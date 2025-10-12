@@ -180,5 +180,7 @@ namespace Cecilifier.Core.Extensions
                 [SyntaxKind.PublicKeyword, SyntaxKind.PrivateKeyword, SyntaxKind.InternalKeyword, SyntaxKind.ProtectedKeyword],
                 c => (SyntaxKind) c.RawKind);
         }
+
+        internal static bool IsStatic(this MemberDeclarationSyntax member) => member.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword));
     }
 }
