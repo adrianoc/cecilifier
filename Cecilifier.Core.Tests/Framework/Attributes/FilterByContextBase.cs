@@ -27,11 +27,11 @@ internal class FilterByContextBase<T> : Attribute where T : IVisitorContext
     protected bool DisableTestIfNotApplicable(ITest test, string testName)
     {
         if (_enabledTests.Contains(testName))
-            return true;
+            return false;
         
         ((Test) test).RunState = RunState.Ignored;
         test.Properties[PropertyNames.SkipReason].Add(IgnoreReason);
 
-        return false;
+        return true;
     }
 }
