@@ -138,7 +138,8 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
                 {
                     string => $"{il.VariableName}.Token(MetadataTokens.GetToken(metadata.GetOrAddUserString({operand})));",
                     CilToken handle => $"{il.VariableName}.Token({handle.VariableName});",
-                    CilOperandValue operandValue => $"{il.VariableName}.CodeBuilder.Write{operandValue.Type.Name}({operandValue.Value});",
+                    // Even though the real operand type may be `Boolean` the operand value and the opCode emitted are for Int32 (that is because IL handles bools as ints)  
+                    CilOperandValue operandValue => $"{il.VariableName}.CodeBuilder.Write{(operandValue.Type.SpecialType == SpecialType.System_Boolean ? context.RoslynTypeSystem.SystemInt32 : operandValue.Type).Name}({operandValue.Value});",
                     CilLocalVariableHandle localVariableHandle => $"{il.VariableName}.CodeBuilder.WriteInt32({localVariableHandle.Value});",
 
                     //TODO: Fix name of WriteX() method to be called; it is not always derivable from the type  
