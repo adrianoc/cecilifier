@@ -4,7 +4,11 @@ Cecilifier
 
 About
 ---
-Cecilifier was born as a tool meant to make it easier to learn how to use [Mono.Cecil](https://github.com/jbevain/cecil) a library used to manipulate MS IL. It was developed after the idea of [asmifier](https://asm.ow2.io/faq.html#Q10). You can read more details about it in its [announcement blog](https://programing-fun.blogspot.com/2019/02/making-it-easier-to-getting-started.html).
+Cecilifier was born as a tool meant to make it easier to learn how to use [Mono.Cecil](https://github.com/jbevain/cecil), a library used to manipulate MS IL. It was developed after the idea of [asmifier](https://asm.ow2.io/faq.html#Q10). 
+
+Over time the idea of adding support for other libraries (mainly [System.Reflection.Metadata](https://learn.microsoft.com/en-us/dotnet/api/system.reflection.metadata?view=net-9.0)) matured and as of Oct/2025 there is an ongoing effort to achieve that.
+
+You can read more details about it in its [announcement blog](https://programing-fun.blogspot.com/2019/02/making-it-easier-to-getting-started.html).
 
 You can use it live in [this site](https://cecilifier.me/).
 
@@ -65,10 +69,10 @@ Unsupported Features
 - Newer C# syntax (elvis operator, static import, to name some)
 - Much more :(
 
->[!WARNING!]
+>[!WARNING]
 >Support for `System.Reflection.Metadata` is considered **experimental** and many C# syntax may not work or generate invalid code (most of the time with mixed syntax for `Mono.Cecil`).
 
->[!IMPORTANT!]
+>[!IMPORTANT]
 >Support for `Mono.Cecil` is much more mature than `System.Reflection.Metadata` simply because the former was the initial target of Cecilifier.
 
 
@@ -102,7 +106,7 @@ How to add tests
 ===
 First, and most importantly, tests should be self contained, clearly describing what they are testing and run quickly (unfortunately it is very likely that some of the existing tests does not meet this criteria, but nevertheless, we should strive to ;)
 
-There are basically 2 types of tests ...
+There are basically 3 types of tests ...
 
 Unit Tests
 ---
