@@ -153,14 +153,14 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
     public IEnumerable<string> MethodBody(IVisitorContext context, string methodName, IlContext ilContext, string[] localVariableTypes, InstructionRepresentation[] instructions)
     {
         var tagToInstructionDefMapping = new Dictionary<string, string>();
-        yield return $"{ilContext.RelatedMethodVariable}.Body = new MethodBody({ilContext.RelatedMethodVariable});"; 
-        yield return $"{ilContext.RelatedMethodVariable}.Body.InitLocals = true;";
+        yield return $"{ilContext.AssociatedMethodVariable}.Body = new MethodBody({ilContext.AssociatedMethodVariable});"; 
+        yield return $"{ilContext.AssociatedMethodVariable}.Body.InitLocals = true;";
 
         if (localVariableTypes.Length > 0)
         {
             foreach (var localVariableType in localVariableTypes)
             {
-                yield return $"{ilContext.RelatedMethodVariable}.Body.Variables.Add({LocalVariable(localVariableType)});";
+                yield return $"{ilContext.AssociatedMethodVariable}.Body.Variables.Add({LocalVariable(localVariableType)});";
             }
         }
 
@@ -168,7 +168,7 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
             yield break;
 
         var methodInstVar = context.Naming.SyntheticVariable(methodName, ElementKind.LocalVariable);
-        yield return $"var {methodInstVar} = {ilContext.RelatedMethodVariable}.Body.Instructions;";
+        yield return $"var {methodInstVar} = {ilContext.AssociatedMethodVariable}.Body.Instructions;";
 
         // create `Mono.Cecil.Instruction` instances for each instruction that has a 'Tag'
         foreach (var inst in instructions.Where(inst => !inst.Ignore))

@@ -74,12 +74,12 @@ public interface IVisitorContext
 
 public class IlContext
 {
-    protected IlContext(string variableName, string relatedMethodVar) => (VariableName, RelatedMethodVariable) = (variableName, relatedMethodVar);
+    protected IlContext(string variableName, string relatedMethodVar) => (VariableName, AssociatedMethodVariable) = (variableName, relatedMethodVar);
     public static readonly IlContext None = new IlContext(string.Empty, string.Empty);
     
     //TODO: Remove these implicit operators and fix all usages of il variable names
     public static implicit operator IlContext(string variableName) => new(variableName, "N/A");
     public static implicit operator string(IlContext x) => x.VariableName;
     public virtual string VariableName { get; }
-    public string RelatedMethodVariable { get; }
+    public string AssociatedMethodVariable { get; }
 }

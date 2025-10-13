@@ -87,7 +87,7 @@ internal class PropertyGenerator
 
         var operand = property.DeclaringTypeIsGeneric ? MakeGenericInstanceType(in property) : _backingFieldVar;
         Context.ApiDriver.WriteCilInstruction(Context, ilContext, property.StoreOpCode, operand.AsToken());
-        Context.AddCompilerGeneratedAttributeTo(ilContext.RelatedMethodVariable);
+        Context.AddCompilerGeneratedAttributeTo(ilContext.AssociatedMethodVariable);
     }
 
     internal ScopedDefinitionVariable AddGetterMethodDeclaration(ref readonly PropertyGenerationData property, string accessorMethodVar, bool hasCovariantReturn, string nameForRegistration, string overridenMethod, in IlContext ilContext)

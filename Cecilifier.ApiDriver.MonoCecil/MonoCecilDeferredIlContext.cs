@@ -20,7 +20,7 @@ public class MonoCecilDeferredIlContext : IlContext
             if (!_emitted)
             {
                 _emitted = true;
-                _context.Generate($"var {base.VariableName} = {RelatedMethodVariable}.Body.GetILProcessor();");
+                _context.Generate($"var {base.VariableName} = {AssociatedMethodVariable}.Body.GetILProcessor();");
                 _context.WriteNewLine();
             }
             
