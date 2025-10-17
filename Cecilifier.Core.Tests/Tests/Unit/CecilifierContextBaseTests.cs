@@ -14,7 +14,7 @@ public class CecilifierContextBaseTests
     public void SetUpFixture()
     {
         var syntaxTree = CSharpSyntaxTree.ParseText("class C {}");
-        var comp = CSharpCompilation.Create("", [syntaxTree], ReferencedAssemblies.GetTrustedAssembliesPath().Select(p => MetadataReference.CreateFromFile(p)));
+        var comp = CSharpCompilation.Create("", [syntaxTree], MonoCecilContext.BclAssembliesForCompilation().Select(p => MetadataReference.CreateFromFile(p)));
         _semanticModel = comp.GetSemanticModel(syntaxTree);
     }
     

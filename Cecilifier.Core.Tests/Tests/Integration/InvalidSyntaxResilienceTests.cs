@@ -16,7 +16,7 @@ namespace Cecilifier.Core.Tests.Integration
             using (var code = new MemoryStream(Encoding.ASCII.GetBytes(codeString)))
             {
                 Assert.Throws<SyntaxErrorException>(
-                    ()=> Cecilifier.Process<MonoCecilContext>(code, new CecilifierOptions { References = ReferencedAssemblies.GetTrustedAssembliesPath() }));
+                    ()=> Cecilifier.Process<MonoCecilContext>(code, new CecilifierOptions { References = MonoCecilContext.BclAssembliesForCompilation() }));
             }
         }
     }

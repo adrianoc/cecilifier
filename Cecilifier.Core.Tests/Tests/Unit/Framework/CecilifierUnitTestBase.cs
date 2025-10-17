@@ -2,7 +2,6 @@ using System;
 using System.IO;
 using Cecilifier.ApiDriver.MonoCecil;
 using Cecilifier.Core.AST;
-using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using NUnit.Framework;
 
@@ -23,7 +22,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit.Framework
             {
                 return Cecilifier.Process<TContext>(
                     memoryStream,
-                    new CecilifierOptions { References = ReferencedAssemblies.GetTrustedAssembliesPath(), Naming = nameStrategy });
+                    new CecilifierOptions { References = TContext.BclAssembliesForCompilation(), Naming = nameStrategy });
             }
             catch (Exception ex)
             {

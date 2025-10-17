@@ -16,6 +16,7 @@ namespace Cecilifier.Core.AST;
 public interface IVisitorContext
 {
     static virtual IVisitorContext CreateContext(CecilifierOptions options, SemanticModel semanticModel) => throw new NotImplementedException();
+    static virtual string[] BclAssembliesForCompilation() => throw new NotImplementedException();
 
     IApiDriverDefinitionsFactory ApiDefinitionsFactory { get; }
     public IILGeneratorApiDriver ApiDriver { get; }

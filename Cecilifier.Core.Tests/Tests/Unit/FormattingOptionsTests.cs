@@ -54,7 +54,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
 
             var cecilified = Cecilifier.Process<MonoCecilContext>(
                                                 memoryStream,
-                                                new CecilifierOptions { References = ReferencedAssemblies.GetTrustedAssembliesPath(), Naming = nameStrategy }).GeneratedCode.ReadToEnd();
+                                                new CecilifierOptions { References = MonoCecilContext.BclAssembliesForCompilation(), Naming = nameStrategy }).GeneratedCode.ReadToEnd();
 
             Assert.That(cecilified, Does.Match($"\\b{expected}"), $"{elementKind} prefix not applied.");
             Assert.That(cecilified, Does.Not.Match($"\\b{notExpected}"), $"{elementKind} prefix not applied.");
@@ -88,7 +88,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             memoryStream.Position = 0;
 
             var cecilified = Cecilifier
-                                        .Process<MonoCecilContext>(memoryStream, new CecilifierOptions { References = ReferencedAssemblies.GetTrustedAssembliesPath(), Naming = nameStrategy })
+                                        .Process<MonoCecilContext>(memoryStream, new CecilifierOptions { References = MonoCecilContext.BclAssembliesForCompilation(), Naming = nameStrategy })
                                         .GeneratedCode.ReadToEnd();
 
             Assert.That(cecilified, Does.Match($"{elementKind}_[{casingValidation}][a-zA-Z]+"), "Casing");

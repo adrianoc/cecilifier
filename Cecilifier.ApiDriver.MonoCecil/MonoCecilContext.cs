@@ -21,5 +21,10 @@ public class MonoCecilContext : CecilifierContextBase, IVisitorContext
     }
 
     public static IVisitorContext CreateContext(CecilifierOptions options, SemanticModel semanticModel) => new MonoCecilContext(options, semanticModel);
+    public static string[] BclAssembliesForCompilation()
+    {
+        return ((string) AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")).Split(Path.PathSeparator);
+    }
+
     public override void OnFinishedTypeDeclaration() { }
 }

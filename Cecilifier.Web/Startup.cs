@@ -272,7 +272,7 @@ namespace Cecilifier.Web
                     code,
                     new CecilifierOptions
                     {
-                        References = ReferencedAssemblies.GetTrustedAssembliesPath().Concat(userAssemblyReferences).ToList(),
+                        References = TContext.BclAssembliesForCompilation().Concat(userAssemblyReferences).ToList(),
                         Naming = new DefaultNameStrategy(request.Settings.NamingOptions, request.Settings.ElementKindPrefixes.ToDictionary(entry => entry.ElementKind, entry => entry.Prefix))
                     });
 

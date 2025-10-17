@@ -22,8 +22,6 @@ public class SystemReflectionMetadataContext : CecilifierContextBase, IVisitorCo
         ApiDefinitionsFactory = ApiDriver.CreateDefinitionsFactory();
     }
     
-    public static IVisitorContext CreateContext(CecilifierOptions options, SemanticModel semanticModel) => new SystemReflectionMetadataContext(options, semanticModel);
-    
     public DelayedDefinitionsManager DelayedDefinitionsManager { get; } = new();
     
     public SystemReflectionMetadataAssemblyResolver AssemblyResolver { get; init; }
@@ -34,4 +32,16 @@ public class SystemReflectionMetadataContext : CecilifierContextBase, IVisitorCo
     }
     
     public SystemReflectionMetadataTypeResolver TypedTypeResolver => (SystemReflectionMetadataTypeResolver)TypeResolver;
+    
+    public static IVisitorContext CreateContext(CecilifierOptions options, SemanticModel semanticModel) => new SystemReflectionMetadataContext(options, semanticModel);
+
+    public static string[] BclAssembliesForCompilation()
+    {
+        var dotnetRoot = Environment.GetEnvironmentVariable("DOTNET_ROOT");
+        if (string.IsNullOrEmpty(dotnetRoot))
+        {
+            throw new Exception("DOTNET_ROOT environment variable is not set");
+        }
+        return Directory.GetFiles($"{dotnetRoot}/packs/Microsoft.NETCore.App.Ref/{Environment.Version}/ref/net{Environment.Version.Major}.{Environment.Version.Minor}", "*.dll");
+    }
 }

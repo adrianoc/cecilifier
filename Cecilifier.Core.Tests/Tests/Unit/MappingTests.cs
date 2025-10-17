@@ -100,7 +100,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             memoryStream.Write(System.Text.Encoding.ASCII.GetBytes(code));
             memoryStream.Position = 0;
 
-            var options = new CecilifierOptions { References = ReferencedAssemblies.GetTrustedAssembliesPath(), Naming = new DefaultNameStrategy()};
+            var options = new CecilifierOptions { References = TContext.BclAssembliesForCompilation(), Naming = new DefaultNameStrategy()};
             return  Cecilifier.Process<TContext>(memoryStream, options);
         }
     }

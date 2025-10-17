@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -7,9 +6,6 @@ using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
 using System.Security.Cryptography;
 using System.Text;
-using Cecilifier.ApiDriver.MonoCecil;
-using Cecilifier.ApiDriver.SystemReflectionMetadata;
-using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
@@ -17,7 +13,6 @@ using Cecilifier.Core.Tests.Framework.AssemblyDiff;
 using Cecilifier.Core.Tests.Framework.ILVerification;
 using Cecilifier.Runtime;
 using Mono.Cecil.Cil;
-using Mono.Cecil.Rocks;
 using NUnit.Framework;
 using ILVerify;
 
@@ -41,8 +36,8 @@ public class CecilifierTestBase<TContext> where TContext : IVisitorContext
         var targetPath = Path.Combine(Path.GetDirectoryName(cecilifiedAssemblyPath), Path.GetFileNameWithoutExtension(cecilifiedAssemblyPath) + "-Expected");
 
         return buildType == BuildType.Exe
-            ? CompilationServices.CompileExe(targetPath, tbc, ReferencedAssemblies.GetTrustedAssembliesPath())
-            : CompilationServices.CompileDLL(targetPath, tbc, ReferencedAssemblies.GetTrustedAssembliesPath());
+            ? CompilationServices.CompileExe(targetPath, tbc, GetDotNetAssemblyReferences())
+            : CompilationServices.CompileDLL(targetPath, tbc, GetDotNetAssemblyReferences());
     }
 
     class AssemblyResolver : IResolver
@@ -128,12 +123,8 @@ public class CecilifierTestBase<TContext> where TContext : IVisitorContext
         var result = Cecilfy(tbc);
         cecilifiedCode = result.GeneratedCode.ReadToEnd();
 
-        var references = ReferencedAssemblies.GetTrustedAssembliesPath().Where(a => !a.Contains("mscorlib"));
-        List<string> refsToCopy = [
-            // typeof(ILParser).Assembly.Location,
-            // typeof(Mono.Cecil.TypeReference).Assembly.Location,
-            typeof(TypeHelpers).Assembly.Location
-        ];
+        var references = GetDotNetAssemblyReferences().Where(a => !a.Contains("mscorlib"));
+        List<string> refsToCopy = [ typeof(TypeHelpers).Assembly.Location ];
         refsToCopy.AddRange(result.Context.ApiDriver.AssemblyReferences);
 
         references = references.Concat(refsToCopy).ToList();
@@ -248,6 +239,11 @@ public class CecilifierTestBase<TContext> where TContext : IVisitorContext
         stream.Position = 0;
         return Cecilifier.Process<TContext>(
             stream,
-            new CecilifierOptions { References = ReferencedAssemblies.GetTrustedAssembliesPath(), Naming = new DefaultNameStrategy() });
+            new CecilifierOptions { References = GetDotNetAssemblyReferences(), Naming = new DefaultNameStrategy() });
+    }
+
+    private static string[] GetDotNetAssemblyReferences()
+    {
+        return TContext.BclAssembliesForCompilation();
     }
 }
