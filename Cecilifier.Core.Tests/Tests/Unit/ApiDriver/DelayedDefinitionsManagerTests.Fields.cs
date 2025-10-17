@@ -16,7 +16,7 @@ internal partial class DelayedDefinitionsManagerTests : CecilifierContextBasedTe
         context.DelayedDefinitionsManager.RegisterTypeDefinition("T1V", "T1", testContext.OnTypeRegistration);
         context.DelayedDefinitionsManager.ProcessDefinitions(context);
         
-        Assert.That(testContext.Result["T1V"].FirstFieldHandle, Is.EqualTo("MetadataTokens.FieldDefinitionHandle(1)"));
+        Assert.That(testContext.Result["T1V"].FirstFieldHandle, Is.EqualTo("MetadataTokens.FieldDefinitionHandle(metadata.GetRowCount(TableIndex.Field) + 1)"));
     }
     
     [Test]

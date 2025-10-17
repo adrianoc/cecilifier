@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Naming;
@@ -78,23 +79,32 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
                                                             parameters.Select(p => p.ElementType).ToArray(),
                                                             typeParameterCountCount,
                                                             methodSignatureVar));
-          
+
+        var modifierVariable = string.Empty;
+        if ((options & MemberOptions.InitOnly) != 0)
+        {
+            modifierVariable = context.TypedTypeResolver.Resolve(context.RoslynTypeSystem.ForType(typeof(IsExternalInit).FullName));
+        }
+        var requiredModifierOrEmpty = (options & MemberOptions.InitOnly) != 0 
+                                    ? $"returnTypeEncoder.CustomModifiers().AddModifier({modifierVariable}, isOptional: false);" 
+                                    : "";
+        
         context.Generate($$"""
                               var {{methodSignatureBlobVar}} = new BlobBuilder();
 
                               new BlobEncoder({{methodSignatureBlobVar}}).
                                   MethodSignature(isInstanceMethod: {{(options != MemberOptions.Static).ToKeyword()}}).
                                   Parameters({{parameters.Count}},
-                                      returnType => returnType.{{resolvedReturnType}},
+                                      returnTypeEncoder => 
+                                      {
+                                        {{requiredModifierOrEmpty}}
+                                        returnTypeEncoder.{{resolvedReturnType}};
+                                      },
                                       parameters => 
                                       {
                                           {{
-                                              string.Join('\n',
-                                                  parameters.Select(p => $"""
-                                                                                 parameters
-                                                                                         .AddParameter()
-                                                                                         .{p.ElementType};
-                                                                             """))}}
+                                              string.Join('\n', parameters.Select(p => $"parameters.AddParameter().{p.ElementType};"))
+                                          }}
                                       });
 
                               var {{methodSignatureVar}} = metadata.GetOrAddBlob({{methodSignatureBlobVar}});

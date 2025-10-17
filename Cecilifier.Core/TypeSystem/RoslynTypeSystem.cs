@@ -93,6 +93,11 @@ public struct RoslynTypeSystem
         
         return _context.SemanticModel.Compilation.GetTypeByMetadataName(type.FullName!);
     }
+    
+    public readonly ITypeSymbol ForType(string fullQualifiedName)
+    {
+        return _context.SemanticModel.Compilation.GetTypeByMetadataName(fullQualifiedName);
+    }
 
     private readonly IVisitorContext _context;
 }

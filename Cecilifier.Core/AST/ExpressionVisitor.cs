@@ -729,7 +729,7 @@ namespace Cecilifier.Core.AST
             Context.EnsureForwardedMethod(ctor);
 
             var operand = ctor.MethodResolverExpression(Context);
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Newobj, operand);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Newobj, operand.AsToken());
             PushCall();
 
             Visit(node.ArgumentList);

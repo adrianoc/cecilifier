@@ -16,8 +16,8 @@ namespace Cecilifier.Core.Tests.Integration
         [TestCase("SimpleStaticProperty")]
         [TestCase("Indexer")]
         [TestCase("IndexerOverloads")]
-        [TestCase("PropertyAccessors", "ClassLoadGeneral")] //https://github.com/adrianoc/cecilifier/issues/227
-        [ParameterizedResourceFilter<SystemReflectionMetadataContext>("SimpleProperty", "SimpleAutoProperty", "SimpleStaticProperty", IgnoreReason = "WIP")]
+        [TestCase("PropertyAccessors")]
+        [ParameterizedResourceFilter<SystemReflectionMetadataContext>("SimpleProperty", "SimpleAutoProperty", "SimpleStaticProperty", "PropertyAccessors", IgnoreReason = "WIP")]
         public void TestProperties(string testName, string ignoredILErrors = null)
         {
             AssertResourceTest(new CecilifyTestOptions

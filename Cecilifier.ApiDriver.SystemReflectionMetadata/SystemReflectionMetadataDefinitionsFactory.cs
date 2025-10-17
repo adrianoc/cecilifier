@@ -64,6 +64,13 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                 // process each property passing the type definition variable (as opposed to the type reference variable) 
                 property.Processor(context, property.Name, property.DefinitionVariable, property.DeclaringTypeName, typeDefVar);
             }
+            
+            var firstProperty = typeRecord.Properties.FirstOrDefault();
+            if (firstProperty.IsValid)
+            {
+                context.Generate($"metadata.AddPropertyMap({typeDefVar}, {firstProperty.DefinitionVariable});");
+                context.WriteNewLine();
+            }
         }
     }
 
@@ -273,9 +280,6 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                                   """);
                 context.WriteNewLine();
             }
-            
-            context.Generate($"metadata.AddPropertyMap({declaringTypeVariable}, {propertyDefinitionVariable});");
-            context.WriteNewLine();
         });
         
         return [$$"""

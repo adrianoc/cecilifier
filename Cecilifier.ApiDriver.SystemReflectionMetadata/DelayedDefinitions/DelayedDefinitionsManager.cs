@@ -122,7 +122,7 @@ public class DelayedDefinitionsManager
     private void UpdateTypeDefinitionRecords(Span<TypeDefinitionRecord> postponedTypeDefinitions)
     {
         _firstMethodHandleVariable ??= "MetadataTokens.MethodDefinitionHandle(1)";
-        _firstFieldHandleVariable ??= "MetadataTokens.FieldDefinitionHandle(1)";
+        _firstFieldHandleVariable ??= "MetadataTokens.FieldDefinitionHandle(metadata.GetRowCount(TableIndex.Field) + 1)";
         
         postponedTypeDefinitions[^1].FirstMethodHandle ??= _firstMethodHandleVariable;
         postponedTypeDefinitions[^1].FirstFieldHandle ??= _firstFieldHandleVariable;

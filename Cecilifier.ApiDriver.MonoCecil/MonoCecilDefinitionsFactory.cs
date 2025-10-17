@@ -111,6 +111,12 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
     {
         var exps = new List<string>();
 
+        Func<IVisitorContext, string> f = returnTypeResolver; 
+        if ((definitionContext.Options & MemberOptions.InitOnly) == MemberOptions.InitOnly)
+        {
+            returnTypeResolver = ctx => $"new RequiredModifierType({context.TypeResolver.Resolve(ctx.RoslynTypeSystem.ForType(typeof(IsExternalInit).FullName))}, {f(ctx)})";
+        }
+        
         // if the method has type parameters we need to postpone setting the return type (using void as a placeholder, since we need to pass something) until the generic parameters has been
         // handled. This is required because the type parameter may be defined by the method being processed which introduces a chicken and egg problem.
         exps.Add($"var {definitionContext.Member.DefinitionVariable} = new MethodDefinition(\"{definitionContext.Member.Name}\", {methodModifiers}, {(typeParameters.Count == 0 ? returnTypeResolver(context) : context.TypeResolver.Bcl.System.Void)});");

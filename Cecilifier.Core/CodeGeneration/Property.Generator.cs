@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Runtime.CompilerServices;
 using System.Reflection.Emit;
 using Cecilifier.Core.ApiDriver;
 using Microsoft.CodeAnalysis;
@@ -54,18 +53,17 @@ internal class PropertyGenerator
         };
 
         IList<string> typeParameters = [];
-        Func<IVisitorContext, string> returnTypeResolver = ctx => isInitOnly 
-                                                                        ? $"new RequiredModifierType({ctx.TypeResolver.Resolve(typeof(IsExternalInit).FullName)}, {Context.TypeResolver.ResolveAny(Context.RoslynTypeSystem.SystemVoid, ResolveTargetKind.Parameter)})" 
-                                                                        : Context.TypeResolver.ResolveAny(Context.RoslynTypeSystem.SystemVoid, ResolveTargetKind.Parameter);
-
+        var memberOptions = (property.IsStatic ? MemberOptions.Static :  MemberOptions.None) 
+                            | (isInitOnly ? MemberOptions.InitOnly : MemberOptions.None);
+        
         var exps = Context.ApiDefinitionsFactory.Method(
                                             Context, 
-                                            new BodiedMemberDefinitionContext($"set_{property.Name}", nameForRegistration, accessorMethodVar, property.DeclaringTypeVariable, property.IsStatic ? MemberOptions.Static : MemberOptions.None, ilContext), 
+                                            new BodiedMemberDefinitionContext($"set_{property.Name}", nameForRegistration, accessorMethodVar, property.DeclaringTypeVariable, memberOptions, ilContext), 
                                             property.DeclaringTypeNameForRegistration, 
                                             property.AccessorModifiers["set"], 
                                             completeParamList, 
-                                            typeParameters, 
-                                            returnTypeResolver,
+                                            typeParameters,
+                                            ctx => ctx.TypeResolver.ResolveAny(Context.RoslynTypeSystem.SystemVoid, ResolveTargetKind.ReturnType),
                                             out var methodDefinitionVariable);
 
         var methodVariableScope = Context.DefinitionVariables.WithCurrentMethod(methodDefinitionVariable);

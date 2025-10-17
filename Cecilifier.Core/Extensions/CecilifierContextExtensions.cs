@@ -165,7 +165,6 @@ public static class CecilifierContextExtensions
         string methodDeclarationVar;
         var methodName = method.Name;
         var methodNameForVariableRegistration = method.ToDisplayString();
-        //var methodNameForVariableRegistration = method.Name;
         if (method.MethodKind == MethodKind.LocalFunction)
         {
             methodDeclarationVar = context.Naming.SyntheticVariable(method.Name, ElementKind.Method);

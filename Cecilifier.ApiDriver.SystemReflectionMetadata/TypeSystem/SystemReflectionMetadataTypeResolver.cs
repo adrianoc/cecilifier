@@ -24,10 +24,11 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
     public override string Resolve(string typeName) => $"TODO: Fix Resolve(\"{typeName}\")";
     public override string Resolve(ITypeSymbol type)
     {
-        var memberRefVarName = _context.Naming.SyntheticVariable($"{type.ToValidVariableName()}Ref", ElementKind.LocalVariable); 
+        var memberRefVarName = _context.Naming.SyntheticVariable($"{type.ToValidVariableName()}Ref", ElementKind.LocalVariable);
+        var assemblyReferenceName = _context.AssemblyResolver.Resolve(_context, type.ContainingAssembly);
         _context.Generate($"""
                            var {memberRefVarName} = metadata.AddTypeReference(
-                                                                {_context.AssemblyResolver.Resolve(type.ContainingAssembly)},
+                                                                {assemblyReferenceName},
                                                                 metadata.GetOrAddString("{type.ContainingNamespace.FullyQualifiedName()}"),
                                                                 metadata.GetOrAddString("{type.Name}"));
                            """);
@@ -58,7 +59,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
 
     public override string ResolvePredefinedType(ITypeSymbol type) => $"""
                                                                        metadata.AddTypeReference(
-                                                                                    mscorlibAssemblyRef,
+                                                                                    systemRuntimeAssemblyRef,
                                                                                     metadata.GetOrAddString("{type.ContainingNamespace.Name}"),
                                                                                     metadata.GetOrAddString("{type.Name}"))
                                                                        """;
