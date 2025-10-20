@@ -2,12 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
 using System.Reflection.Emit;
 using Cecilifier.Core.ApiDriver;
+using Cecilifier.Core.ApiDriver.Attributes;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Mono.Cecil;
 using Cecilifier.Core.CodeGeneration;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
@@ -16,6 +17,7 @@ using Cecilifier.Core.Naming;
 using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
 using static Cecilifier.Core.Misc.Utils;
+using FieldAttributes = Mono.Cecil.FieldAttributes;
 
 #nullable enable
 namespace Cecilifier.Core.AST
@@ -104,28 +106,50 @@ namespace Cecilifier.Core.AST
             if (AttributeAlreadyAddedForAnotherMember())
                 return;
             
-            var ctorVar = Context.Naming.MemberReference("ctor");
-            var customAttrVar = Context.Naming.CustomAttribute("DefaultMember");
-
-            var exps = new[]
-            {
-                $"var {ctorVar} = {ImportFromMainModule("typeof(System.Reflection.DefaultMemberAttribute).GetConstructor(new Type[] { typeof(string) })")};",
-                $"var {customAttrVar} = new CustomAttribute({ctorVar});",
-                $"{customAttrVar}.ConstructorArguments.Add(new CustomAttributeArgument({Context.TypeResolver.Bcl.System.String}, \"{value}\"));",
-                $"{declaringTypeDefinitionVar}.CustomAttributes.Add({customAttrVar});"
-            };
-
-            AddCecilExpressions(Context, exps);
+            var exps = Context.ApiDefinitionsFactory.Attribute(
+                                                    Context, 
+                                                    Context.RoslynTypeSystem.ForType<DefaultMemberAttribute>().Ctor(Context.RoslynTypeSystem.SystemString), 
+                                                    "defaultMember", 
+                                                    declaringTypeDefinitionVar,
+                                                    new CustomAttributeArgument() { Value = $"\"{value}\"" });
+            Context.Generate(exps);
             
             bool AttributeAlreadyAddedForAnotherMember()
             {
                 var defaultMemberTrackerFlagName = $"{declaringTypeDefinitionVar}-{Constants.ContextFlags.DefaultMemberTracker}";
-                var ret = Context.TryGetFlag(defaultMemberTrackerFlagName, out var _);
+                var ret = Context.TryGetFlag(defaultMemberTrackerFlagName, out _);
                 if (!ret)
                     Context.SetFlag(defaultMemberTrackerFlagName);
                 return ret;
             }
         }
+        // private void AddDefaultMemberAttribute(string declaringTypeDefinitionVar, string value)
+        // {
+        //     if (AttributeAlreadyAddedForAnotherMember())
+        //         return;
+        //     
+        //     var ctorVar = Context.Naming.MemberReference("ctor");
+        //     var customAttrVar = Context.Naming.CustomAttribute("DefaultMember");
+        //
+        //     var exps = new[]
+        //     {
+        //         $"var {ctorVar} = {ImportFromMainModule("typeof(System.Reflection.DefaultMemberAttribute).GetConstructor(new Type[] { typeof(string) })")};",
+        //         $"var {customAttrVar} = new CustomAttribute({ctorVar});",
+        //         $"{customAttrVar}.ConstructorArguments.Add(new CustomAttributeArgument({Context.TypeResolver.Bcl.System.String}, \"{value}\"));",
+        //         $"{declaringTypeDefinitionVar}.CustomAttributes.Add({customAttrVar});"
+        //     };
+        //
+        //     AddCecilExpressions(Context, exps);
+        //     
+        //     bool AttributeAlreadyAddedForAnotherMember()
+        //     {
+        //         var defaultMemberTrackerFlagName = $"{declaringTypeDefinitionVar}-{Constants.ContextFlags.DefaultMemberTracker}";
+        //         var ret = Context.TryGetFlag(defaultMemberTrackerFlagName, out var _);
+        //         if (!ret)
+        //             Context.SetFlag(defaultMemberTrackerFlagName);
+        //         return ret;
+        //     }
+        // }
 
         private string? ProcessPropertyAccessors(BasePropertyDeclarationSyntax node, string propertyDeclaringTypeVar, string propDefVar, string propertyName, List<ParameterSpec> parameters, ArrowExpressionClauseSyntax? arrowExpression)
         {
