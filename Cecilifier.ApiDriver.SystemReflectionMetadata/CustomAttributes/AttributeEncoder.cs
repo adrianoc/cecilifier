@@ -46,7 +46,7 @@ internal struct AttributeEncoder
 
     private void EncodeArgument(CustomAttributeArgument customAttributeArgument, StringBuilder encoded)
     {
-        if (customAttributeArgument.Values == null)
+        if (customAttributeArgument.Values != null)
             EncodeArray(encoded, customAttributeArgument);
         else
             EncodeScalar(encoded, customAttributeArgument);
