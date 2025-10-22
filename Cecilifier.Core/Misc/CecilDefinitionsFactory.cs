@@ -38,8 +38,6 @@ namespace Cecilifier.Core.Misc
                 (hasThis, parameters, returnType) => $"new FunctionPointerType() {{ {hasThis}, ReturnType = {returnType}, {parameters} }}");
         }
 
-        internal static string LocalVariable(string resolvedType) => $"new VariableDefinition({resolvedType})";
-
         public static string GenericParameter(IVisitorContext context, string ownerContainingTypeName, string typeParameterOwnerVar, string genericParamName, string genParamDefVar)
         {
             context.DefinitionVariables.RegisterNonMethod(ownerContainingTypeName, genericParamName, VariableMemberKind.TypeParameter, genParamDefVar);
