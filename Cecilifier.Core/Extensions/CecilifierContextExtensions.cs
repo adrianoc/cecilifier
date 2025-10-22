@@ -16,10 +16,10 @@ namespace Cecilifier.Core.Extensions;
 
 public static class CecilifierContextExtensions
 {
-    internal static void AddCompilerGeneratedAttributeTo(this IVisitorContext context, string memberVariable)
+    internal static void AddCompilerGeneratedAttributeTo(this IVisitorContext context, string memberVariable, VariableMemberKind memberKind)
     {
         var compilerGeneratedAttributeCtor = context.RoslynTypeSystem.SystemRuntimeCompilerServicesCompilerGeneratedAttribute.Ctor();
-        var exps = context.ApiDefinitionsFactory.Attribute(context, compilerGeneratedAttributeCtor, "compilerGenerated", memberVariable);
+        var exps = context.ApiDefinitionsFactory.Attribute(context, compilerGeneratedAttributeCtor, "compilerGenerated", memberVariable, memberKind);
         context.Generate(exps);
     }
     

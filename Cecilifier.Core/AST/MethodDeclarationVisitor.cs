@@ -161,14 +161,6 @@ namespace Cecilifier.Core.AST
                     // should we use `methodName` as the registered name.
                     var nameUsedInRegisteredVariable = methodSymbol.MethodKind == MethodKind.LocalFunction ? simpleName : methodName;
                     WithCurrentMethod(declaringTypeName, methodVar, nameUsedInRegisteredVariable, parameters.Select(p => Context.SemanticModel.GetDeclaredSymbol(p).Type.ToDisplayString()).ToArray(), methodSymbol.TypeParameters.Length, runWithCurrent);
-                    // var x = Context.DefinitionVariables.FindByVariableName<MethodDefinitionVariable>(methodVar);
-                    // if (x == null || !x.IsValid)
-                    //     WithCurrentMethod(declaringTypeName, methodVar, nameUsedInRegisteredVariable, parameters.Select(p => Context.SemanticModel.GetDeclaredSymbol(p).Type.ToDisplayString()).ToArray(), methodSymbol.TypeParameters.Length, runWithCurrent);
-                    // else
-                    // {
-                    //     Context.DefinitionVariables.WithVariable(Context.DefinitionVariables.FindByVariableName<MethodDefinitionVariable>(methodVar));
-                    //     runWithCurrent(methodVar);
-                    //}
                     
                     if (!methodSymbol.IsAbstract && !node.DescendantNodes().Any(n => n.IsKind(SyntaxKind.ReturnStatement)))
                     {

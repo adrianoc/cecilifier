@@ -12,11 +12,9 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Cecilifier.Core.CodeGeneration;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
-using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
-using static Cecilifier.Core.Misc.Utils;
 using FieldAttributes = Mono.Cecil.FieldAttributes;
 
 #nullable enable
@@ -37,18 +35,17 @@ namespace Cecilifier.Core.AST
             Context.WriteNewLine();
             Context.WriteComment("** Property indexer **");
 
-            var propertyType = ResolveType(node.Type, ResolveTargetKind.None);
+            var propertyType = ResolveType(node.Type, ResolveTargetKind.ReturnType);
             var propertyDeclaringTypeVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Type);
             var propName = "Item";
 
             AddDefaultMemberAttribute(propertyDeclaringTypeVar.VariableName, propName);
-            var propDefVar = AddPropertyDefinition(node, propertyDeclaringTypeVar.VariableName, propertyDeclaringTypeVar.MemberName, propName, propertyType);
 
-            var paramsVar = new List<ParameterSpec>();
+            var propertyParameters = new List<ParameterSpec>();
             foreach (var parameter in node.ParameterList.Parameters)
             {
                 var paramSymbol = Context.SemanticModel.GetDeclaredSymbol(parameter).EnsureNotNull<ISymbol, IParameterSymbol>();
-                paramsVar.Add(
+                propertyParameters.Add(
                     new ParameterSpec(
                         parameter.Identifier.Text, 
                         ResolveType(parameter.Type, ResolveTargetKind.Parameter),
@@ -60,9 +57,8 @@ namespace Cecilifier.Core.AST
                     });
             }
 
-            var backingFieldVar = ProcessPropertyAccessors(node, propertyDeclaringTypeVar.VariableName, propDefVar, propName, paramsVar, node.ExpressionBody);
-
-            AddCecilExpression($"{propertyDeclaringTypeVar.VariableName}.Properties.Add({propDefVar});");
+            var propDefVar = AddPropertyDefinition(node, propertyDeclaringTypeVar.VariableName, propertyDeclaringTypeVar.MemberName, propName, propertyParameters, propertyType);
+            var backingFieldVar = ProcessPropertyAccessors(node, propertyDeclaringTypeVar.VariableName, propDefVar, propName, propertyParameters, node.ExpressionBody);
 
             HandleAttributesInMemberDeclaration(node.AttributeLists, TargetDoesNotMatch, SyntaxKind.FieldKeyword, propDefVar); // Normal property attrs
             HandleAttributesInMemberDeclaration(node.AttributeLists, TargetMatches, SyntaxKind.FieldKeyword, backingFieldVar ?? String.Empty); // [field: attr], i.e, attr belongs to the backing field.
@@ -80,7 +76,7 @@ namespace Cecilifier.Core.AST
             var propertyDeclaringTypeVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Type);
             var propName = node.Identifier.ValueText;
 
-            var propDefVar = AddPropertyDefinition(node, propertyDeclaringTypeVar.VariableName, propertyDeclaringTypeVar.MemberName, propName, propertyType);
+            var propDefVar = AddPropertyDefinition(node, propertyDeclaringTypeVar.VariableName, propertyDeclaringTypeVar.MemberName, propName, [], propertyType);
             var backingFieldVar = ProcessPropertyAccessors(node, propertyDeclaringTypeVar.VariableName, propDefVar, node.Identifier.ValueText, NoParameters, node.ExpressionBody);
 
             HandleAttributesInMemberDeclaration(node.AttributeLists, TargetDoesNotMatch, SyntaxKind.FieldKeyword, propDefVar); // Normal property attrs
@@ -111,7 +107,8 @@ namespace Cecilifier.Core.AST
                                                     Context.RoslynTypeSystem.ForType<DefaultMemberAttribute>().Ctor(Context.RoslynTypeSystem.SystemString), 
                                                     "defaultMember", 
                                                     declaringTypeDefinitionVar,
-                                                    new CustomAttributeArgument() { Value = $"\"{value}\"" });
+                                                    VariableMemberKind.Type,
+                                                    new CustomAttributeArgument { Value = $"\"{value}\"" });
             Context.Generate(exps);
             
             bool AttributeAlreadyAddedForAnotherMember()
@@ -123,33 +120,6 @@ namespace Cecilifier.Core.AST
                 return ret;
             }
         }
-        // private void AddDefaultMemberAttribute(string declaringTypeDefinitionVar, string value)
-        // {
-        //     if (AttributeAlreadyAddedForAnotherMember())
-        //         return;
-        //     
-        //     var ctorVar = Context.Naming.MemberReference("ctor");
-        //     var customAttrVar = Context.Naming.CustomAttribute("DefaultMember");
-        //
-        //     var exps = new[]
-        //     {
-        //         $"var {ctorVar} = {ImportFromMainModule("typeof(System.Reflection.DefaultMemberAttribute).GetConstructor(new Type[] { typeof(string) })")};",
-        //         $"var {customAttrVar} = new CustomAttribute({ctorVar});",
-        //         $"{customAttrVar}.ConstructorArguments.Add(new CustomAttributeArgument({Context.TypeResolver.Bcl.System.String}, \"{value}\"));",
-        //         $"{declaringTypeDefinitionVar}.CustomAttributes.Add({customAttrVar});"
-        //     };
-        //
-        //     AddCecilExpressions(Context, exps);
-        //     
-        //     bool AttributeAlreadyAddedForAnotherMember()
-        //     {
-        //         var defaultMemberTrackerFlagName = $"{declaringTypeDefinitionVar}-{Constants.ContextFlags.DefaultMemberTracker}";
-        //         var ret = Context.TryGetFlag(defaultMemberTrackerFlagName, out var _);
-        //         if (!ret)
-        //             Context.SetFlag(defaultMemberTrackerFlagName);
-        //         return ret;
-        //     }
-        // }
 
         private string? ProcessPropertyAccessors(BasePropertyDeclarationSyntax node, string propertyDeclaringTypeVar, string propDefVar, string propertyName, List<ParameterSpec> parameters, ArrowExpressionClauseSyntax? arrowExpression)
         {
@@ -330,11 +300,11 @@ namespace Cecilifier.Core.AST
             return ModifiersToCecil<FieldAttributes>(m, "Private", FieldDeclarationVisitor.MapFieldAttributesFor);
         }
 
-        private string AddPropertyDefinition(BasePropertyDeclarationSyntax propertyDeclarationSyntax, string declaringTypeVariable, string declaringTypeName, string propName, string propertyType)
+        private string AddPropertyDefinition(BasePropertyDeclarationSyntax propertyDeclarationSyntax, string declaringTypeVariable, string declaringTypeName, string propName, List<ParameterSpec> propertyParameters, string propertyType)
         {
             var propDefVar = Context.Naming.PropertyDeclaration(propertyDeclarationSyntax);
             var mdc = new BodiedMemberDefinitionContext(propName, propDefVar, declaringTypeVariable, propertyDeclarationSyntax.IsStatic() ?  MemberOptions.Static : MemberOptions.None, IlContext.None);
-            var exps = Context.ApiDefinitionsFactory.Property(Context, mdc, declaringTypeName, propertyType);
+            var exps = Context.ApiDefinitionsFactory.Property(Context, mdc, declaringTypeName, propertyParameters, propertyType);
             Context.Generate(exps);
             
             return propDefVar;

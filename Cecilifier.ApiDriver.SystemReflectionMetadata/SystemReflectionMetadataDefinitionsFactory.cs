@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using System.Text;
 using Cecilifier.ApiDriver.SystemReflectionMetadata.CustomAttributes;
 using Cecilifier.ApiDriver.SystemReflectionMetadata.DelayedDefinitions;
 using Cecilifier.ApiDriver.SystemReflectionMetadata.TypeSystem;
@@ -45,7 +44,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
 
         // We need to pass the handle of the 1st field/method defined in the module so we need to postpone the type generation after we have visited
         // all types/members.
-        ((SystemReflectionMetadataContext) context).DelayedDefinitionsManager.RegisterTypeDefinition(typeVar, $"{typeNamespace}.{typeName}", DefineDelayed);
+        TypedContext(context).DelayedDefinitionsManager.RegisterTypeDefinition(typeVar, $"{typeNamespace}.{typeName}", DefineDelayed);
         void DefineDelayed(SystemReflectionMetadataContext ctx, TypeDefinitionRecord typeRecord)
         {
             var typeDefVar = ctx.Naming.Type(typeName, ElementKind.Class);
@@ -58,6 +57,12 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                                                                   fieldList: {typeRecord.FirstFieldHandle ?? "MetadataTokens.FieldDefinitionHandle(1)"},
                                                                   methodList: {typeRecord.FirstMethodHandle ?? "MetadataTokens.MethodDefinitionHandle(1)"});
                                  """));
+
+            // Add attributes to the type definition
+            foreach (var attributeEmitter in typeRecord.Attributes)
+            {
+                attributeEmitter(ctx, typeDefVar);    
+            }
             
             foreach (var property in typeRecord.Properties)
             {
@@ -141,6 +146,8 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
             Debug.Assert(methodSignatureVar.IsValid);
             
             var methodDefVar = definitionContext.Member.DefinitionVariable;
+            var firstParameterHandle = AddParametersMetadata(ctx, parameters.Select(p => p.Name));
+
             ctx.Generate($"""
                           var {methodDefVar}  = metadata.AddMethodDefinition(
                                                     {methodModifiers},
@@ -148,11 +155,10 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                                                     metadata.GetOrAddString("{definitionContext.Member.Name}"),
                                                     {methodSignatureVar.VariableName},
                                                     methodBodyStream.AddMethodBody({definitionContext.IlContext.VariableName}, localVariablesSignature: {methodRecord.LocalSignatureHandleVariable}),
-                                                    parameterList: {methodRecord.FirstParameterHandle});
+                                                    parameterList: {firstParameterHandle});
                           """);
-            
             ctx.WriteNewLine();
-        
+            
             var toBeRegistered = new MethodDefinitionVariable(
                                         VariableMemberKind.Method,
                                         declaringTypeName,
@@ -205,7 +211,6 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
     {
         ((SystemReflectionMetadataContext) context).DelayedDefinitionsManager.RegisterFieldDefinition(definitionContext.ParentDefinitionVariable, definitionContext.DefinitionVariable);
         
-        //TODO: Handle isByRef
         Debug.Assert(isByRef == false, "Handle isByRef");
         var typedTypeResolver = (SystemReflectionMetadataTypeResolver) context.TypeResolver;
         
@@ -256,7 +261,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         return context.DefinitionVariables.RegisterNonMethod(string.Empty, variableName, VariableMemberKind.LocalVariable, variableIndex.ToString());
     }
 
-    public IEnumerable<string> Property(IVisitorContext context, BodiedMemberDefinitionContext definitionContext, string declaringTypeName, string propertyType)
+    public IEnumerable<string> Property(IVisitorContext context, BodiedMemberDefinitionContext definitionContext, string declaringTypeName, List<ParameterSpec> propertyParameters, string propertyType)
     {
         var propertySignatureTempVar =  context.Naming.SyntheticVariable($"{definitionContext.Member.Name}SignatureBuilder", ElementKind.LocalVariable);
 
@@ -284,28 +289,28 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         
         return [$$"""
                 var {{propertySignatureTempVar}} = new BlobBuilder();
-                new BlobEncoder({{propertySignatureTempVar}}).PropertySignature(isInstanceProperty: {{((definitionContext.Options & MemberOptions.Static) == 0).ToKeyword()}}).Parameters(0,
+                new BlobEncoder({{propertySignatureTempVar}}).PropertySignature(isInstanceProperty: {{((definitionContext.Options & MemberOptions.Static) == 0).ToKeyword()}}).Parameters({{propertyParameters.Count}},
                                                                     returnType => returnType.{{propertyType}},
-                                                                    parameters =>  {});
+                                                                    parameters =>  
+                                                                    {
+                                                                        {{ string.Join('\n', propertyParameters.Select(p => $"parameters.AddParameter().{p.ElementType};")) }}
+                                                                    });
                 
                 var {{definitionContext.Member.DefinitionVariable}} = metadata.AddProperty(PropertyAttributes.None, metadata.GetOrAddString("{{definitionContext.Member.Name}}"), metadata.GetOrAddBlob({{propertySignatureTempVar}}));
                 """];
     }
 
-    public IEnumerable<string> Attribute(IVisitorContext context, IMethodSymbol attributeCtor, string attributeVarBaseName, string attributeTargetVar, params CustomAttributeArgument[] arguments)
+    public IEnumerable<string> Attribute(IVisitorContext context, IMethodSymbol attributeCtor, string attributeVarBaseName, string attributeTargetVar, VariableMemberKind targetKind, params CustomAttributeArgument[] arguments)
     {
         var attributeEncoderVariable = context.DefinitionVariables.GetVariable("EncoderMetaName", VariableMemberKind.None, attributeVarBaseName);
-        var buffer = new Buffer10<string>();
-        Span<string> exps = buffer;
-        int count = 0;
-        
+
         if (!attributeEncoderVariable.IsValid)
         {
             var attributeEncoderVariableName = context.Naming.SyntheticVariable($"{attributeVarBaseName}Encoder", ElementKind.Attribute);
             var attributeEncoder = new AttributeEncoder(context, attributeEncoderVariableName);
             var namedArguments = arguments.OfType<CustomAttributeNamedArgument>().ToList();
             var encodedArguments = attributeEncoder.Encode(arguments.Except(namedArguments).ToList(), namedArguments);
-            exps[count++] = Format($"""
+            yield return Format($"""
                              // encoded attribute arguments
                              { encodedArguments }
                              """);
@@ -313,23 +318,41 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
             attributeEncoderVariable = context.DefinitionVariables.RegisterNonMethod(attributeVarBaseName, "EncoderMetaName", VariableMemberKind.None, attributeEncoderVariableName);
         }
         
-        yield return exps[0];
-        
         var resolvedAttrCtor = context.MemberResolver.ResolveMethod(attributeCtor);
-        var attr= Format($"""
-                  metadata.AddCustomAttribute(
-                             parent: {attributeTargetVar},
-                             constructor: {resolvedAttrCtor},
-                             value: metadata.GetOrAddBlob({attributeEncoderVariable.VariableName}));
-                  """);
 
-        context.DefinitionVariables.ExecuteUponVariableRegistration(attributeTargetVar, context, (ctx, exp) =>
+        if (targetKind == VariableMemberKind.Type)
         {
-            ctx.Generate((string) exp);
+            TypedContext(context).DelayedDefinitionsManager.AddAttributeToCurrentType((ctx, typeDefinitionVariable) =>
+            {
+                AddAttributeTo(ctx, typeDefinitionVariable, resolvedAttrCtor, attributeEncoderVariable);
+            });
+        }
+        else
+        {
+            // in cases which the attribute is being applied not to a type (a method, a field, etc), the target member may not yet b processed
+            // so a callback is registered to be invoked when the tha member is processed and its associated variable is registered.
+            // The same approach could be used with types but that would require that the variable used to hold the type definition to be
+            // defined up-front which would add more complexity so in that case we simply delegate to `DelayedDefinitionManager`
+            context.DefinitionVariables.ExecuteUponVariableRegistration(attributeTargetVar, context, (ctx, state) =>
+            {
+                var target = (NonTypeAttributeTargetState) state;
+                AddAttributeTo(ctx, target.AttributeTarget, target.ResolvedAttributeCtor, target.AttributeEncoderVariable);
+            }, new NonTypeAttributeTargetState(attributeTargetVar, resolvedAttrCtor, attributeEncoderVariable.VariableName));
+        }
+
+        static void AddAttributeTo(IVisitorContext ctx, string targetVariable, string resolvedAttributeCtor, string attributeEncoderVariable)
+        {
+            var attr= Format($"""
+                              metadata.AddCustomAttribute(
+                                         parent: {targetVariable},
+                                         constructor: {resolvedAttributeCtor},
+                                         value: metadata.GetOrAddBlob({attributeEncoderVariable}));
+                              """);
+            ctx.Generate(attr);
             ctx.WriteNewLine();
-        }, attr);
+        }
     }
-   
+
     private SystemReflectionMetadataContext TypedContext(IVisitorContext context) => ((SystemReflectionMetadataContext) context);
     
     static void EmitLocalVariables(SystemReflectionMetadataContext context, MethodDefinitionRecord methodRecord)
@@ -352,9 +375,29 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         context.WriteNewLine();
     }
 
+    private static string AddParametersMetadata(SystemReflectionMetadataContext ctx, IEnumerable<string> parameters)
+    {
+        
+        var firstParameterHandle = "MetadataTokens.ParameterHandle(metadata.GetRowCount(TableIndex.Param) + 1)";
+        int i = 1;
+        foreach (var p in parameters)
+        {
+            if (i == 1)
+            {
+                firstParameterHandle = ctx.Naming.SyntheticVariable(p, ElementKind.Parameter);
+                ctx.Generate($"var {firstParameterHandle} = ");
+            }
+            ctx.Generate($"""metadata.AddParameter(ParameterAttributes.None, metadata.GetOrAddString("{p}"), {i++});""");
+            ctx.WriteNewLine();
+        }
+        
+        return firstParameterHandle;
+    }
 
     static string Format(CecilifierInterpolatedStringHandler cecilFormattedString) => cecilFormattedString.Result;
 }
+
+file record struct NonTypeAttributeTargetState (string AttributeTarget, string ResolvedAttributeCtor, string AttributeEncoderVariable);
 
 [InlineArray(10)]
 file struct Buffer10<T>

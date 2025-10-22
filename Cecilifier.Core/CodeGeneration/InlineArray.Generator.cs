@@ -10,6 +10,7 @@ using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
+using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 
 namespace Cecilifier.Core.CodeGeneration;
@@ -53,7 +54,7 @@ internal class InlineArrayGenerator
                     (context.TypeResolver.Bcl.System.Int32, elementCount.ToString())));
             
             context.Generate(fieldExps);
-            context.AddCompilerGeneratedAttributeTo(fieldVar);
+            context.AddCompilerGeneratedAttributeTo(fieldVar, VariableMemberKind.Field);
             context.Generate($"assembly.MainModule.Types.Add({typeVar});\n");
         }
         

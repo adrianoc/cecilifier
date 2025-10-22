@@ -252,7 +252,7 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
         return context.DefinitionVariables.RegisterNonMethod(string.Empty, variableName, VariableMemberKind.LocalVariable, cecilVarDeclName);
     }
 
-    public IEnumerable<string> Property(IVisitorContext context, BodiedMemberDefinitionContext definitionContext, string declaringTypeName, string propertyType)
+    public IEnumerable<string> Property(IVisitorContext context, BodiedMemberDefinitionContext definitionContext, string declaringTypeName, List<ParameterSpec> propertyParameters, string propertyType)
     {
         return [
             $"var {definitionContext.Member.DefinitionVariable} = new PropertyDefinition(\"{definitionContext.Member.Name}\", PropertyAttributes.None, {propertyType});",
@@ -260,12 +260,12 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
         ];
     }
     
-    public IEnumerable<string> Attribute(IVisitorContext context, IMethodSymbol attributeCtor, string attributeVarBaseName, string attributeTargetVar, params CustomAttributeArgument[] arguments)
+    public IEnumerable<string> Attribute(IVisitorContext context, IMethodSymbol attributeCtor, string attributeVarBaseName, string attributeTargetVar,  VariableMemberKind targetKind, params CustomAttributeArgument[] arguments)
     {
         var attributeVar = context.Naming.SyntheticVariable(attributeVarBaseName, ElementKind.Attribute);
         var resolvedCtor = context.MemberResolver.ResolveMethod(attributeCtor);
         
-        //TODO: To be on pair with original implementation of CecilDefinitionsFactory.Attribute() we only process positional arguments (ignoring named ones)
+        //TODO: To be on par with original implementation of CecilDefinitionsFactory.Attribute() we only process positional arguments (ignoring named ones)
         //      There is another overload of Attribute() method that does handle all arguments; most likely we'll merge the 2 overloads; when that happen
         //      we'll need to revisit this code.
         var namedArguments = arguments.OfType<CustomAttributeNamedArgument>();

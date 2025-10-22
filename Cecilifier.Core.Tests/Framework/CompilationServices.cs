@@ -28,7 +28,7 @@ namespace Cecilifier.Core.Tests.Framework
             {
                 Directory.CreateDirectory(targetFolder);
             }
-
+            
             var hash = BitConverter.ToString(SHA1.Create().ComputeHash(Encoding.ASCII.GetBytes(source))).Replace("-", "");
             var outputFilePath = $"{targetPath}-{hash}.{(exe ? "exe" : "dll")}";
             if (File.Exists(outputFilePath))

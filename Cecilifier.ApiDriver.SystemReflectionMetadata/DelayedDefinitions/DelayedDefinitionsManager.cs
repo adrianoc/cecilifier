@@ -5,7 +5,6 @@ using Cecilifier.Core.Naming;
 
 namespace Cecilifier.ApiDriver.SystemReflectionMetadata.DelayedDefinitions;
 
-//TODO: Handle parameters
 /// <summary>
 /// System.Reflection.Metadata model requires members (methods, field) as well as parameters
 /// to be defined before the containing member (type, method, property) whereas Cecilifier
@@ -60,6 +59,11 @@ public class DelayedDefinitionsManager
         //      We need to track current `type` (pushing when start visiting, popping when finish).
         //      Same thing for Local Variable wrt methods.
         _postponedTypeDefinitionDetails[^1].Properties.Add(new PropertyDefinitionRecord(propertyName, propertyDefinitionVariable, declaringTypeName, propertyProcessor));
+    }
+
+    public void AddAttributeToCurrentType(Action<IVisitorContext, string> attributeEmitter)
+    {
+        _postponedTypeDefinitionDetails[^1].Attributes.Add(attributeEmitter);
     }
 
     internal void ProcessDefinitions(SystemReflectionMetadataContext context)

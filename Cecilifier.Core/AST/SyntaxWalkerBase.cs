@@ -332,7 +332,12 @@ namespace Cecilifier.Core.AST
         protected void ProcessParameter(string ilVar, SimpleNameSyntax node, IParameterSymbol paramSymbol)
         {
             var method = (IMethodSymbol) paramSymbol.ContainingSymbol;
-            var declaringMethodName = method.ToDisplayString();
+            //TODO: Investigate whether we should/could extract the logic to get a valid method name to an extension method and
+            //      use it across the board.
+            var declaringMethodName = method.MethodKind == MethodKind.PropertyGet  || method.MethodKind == MethodKind.PropertySet || method.MethodKind == MethodKind.EventAdd || method.MethodKind == MethodKind.EventRemove
+                                                ? method.Name // get_X/set_X/add_X/remove_X, in these cases `method.ToDisplayString()` generates a mangled name (for instance `Indexer.this[int].get`) 
+                                                : method.ToDisplayString();
+            
             var operand = Context.DefinitionVariables.GetVariable(paramSymbol.Name, VariableMemberKind.Parameter, declaringMethodName).VariableName;
             if (HandleLoadAddress(ilVar, paramSymbol.Type, node, OpCodes.Ldarga, operand))
                 return;

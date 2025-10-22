@@ -58,7 +58,7 @@ internal class PropertyGenerator
         
         var exps = Context.ApiDefinitionsFactory.Method(
                                             Context, 
-                                            new BodiedMemberDefinitionContext($"set_{property.Name}", nameForRegistration, accessorMethodVar, property.DeclaringTypeVariable, memberOptions, ilContext), 
+                                            new BodiedMemberDefinitionContext($"set_{property.Name}", accessorMethodVar, property.DeclaringTypeVariable, memberOptions, ilContext), 
                                             property.DeclaringTypeNameForRegistration, 
                                             property.AccessorModifiers["set"], 
                                             completeParamList, 
@@ -85,14 +85,14 @@ internal class PropertyGenerator
 
         var operand = property.DeclaringTypeIsGeneric ? MakeGenericInstanceType(in property) : _backingFieldVar;
         Context.ApiDriver.WriteCilInstruction(Context, ilContext, property.StoreOpCode, operand.AsToken());
-        Context.AddCompilerGeneratedAttributeTo(ilContext.AssociatedMethodVariable);
+        Context.AddCompilerGeneratedAttributeTo(ilContext.AssociatedMethodVariable, VariableMemberKind.Method);
     }
 
     internal ScopedDefinitionVariable AddGetterMethodDeclaration(ref readonly PropertyGenerationData property, string accessorMethodVar, bool hasCovariantReturn, string nameForRegistration, string overridenMethod, in IlContext ilContext)
     {
         var propertyResolvedType = property.Type(ResolveTargetKind.ReturnType);
         IList<string> typeParameters = [];
-        var memberDefinitionContext = new BodiedMemberDefinitionContext($"get_{property.Name}", nameForRegistration, accessorMethodVar, property.DeclaringTypeVariable, property.IsStatic ? MemberOptions.Static : MemberOptions.None, ilContext);
+        var memberDefinitionContext = new BodiedMemberDefinitionContext($"get_{property.Name}", accessorMethodVar, property.DeclaringTypeVariable, property.IsStatic ? MemberOptions.Static : MemberOptions.None, ilContext);
         var exps = Context.ApiDefinitionsFactory.Method(
                                                                     Context, 
                                                                     memberDefinitionContext, 
@@ -130,7 +130,7 @@ internal class PropertyGenerator
         Context.ApiDriver.WriteCilInstruction(Context, ilVar, propertyGenerationData.LoadOpCode, operand.AsToken());
         Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ret);
         
-        Context.AddCompilerGeneratedAttributeTo(getMethodVar);
+        Context.AddCompilerGeneratedAttributeTo(getMethodVar, VariableMemberKind.Method);
     }
     
     private void AddToOverridenMethodsIfAppropriated(string accessorMethodVar, string overridenMethod)
@@ -154,7 +154,7 @@ internal class PropertyGenerator
         var backingFieldExps = Context.ApiDefinitionsFactory.Field(Context, memberDefinitionContext, property.DeclaringTypeNameForRegistration, name, property.Type(ResolveTargetKind.Field), property.BackingFieldModifiers, false, false, null);
         
         Context.Generate(backingFieldExps);
-        Context.AddCompilerGeneratedAttributeTo(_backingFieldVar);
+        Context.AddCompilerGeneratedAttributeTo(_backingFieldVar, VariableMemberKind.Field);
     }
     
     private string MakeGenericInstanceType(ref readonly PropertyGenerationData property)

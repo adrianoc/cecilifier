@@ -744,11 +744,9 @@ internal partial class RecordGenerator
             Array.Empty<ParameterSpec>());
 
         _equalityContractGetMethodVar = context.Naming.SyntheticVariable("EqualityContract_get", ElementKind.Method);
-        // var getterIlVar = context.Naming.ILProcessor("EqualityContract_get");
-        // context.Generate($"var {getterIlVar} = {_equalityContractGetMethodVar}.Body.GetILProcessor();");
         var ilContext = context.ApiDriver.NewIlContext(context, "EqualityContract_get", _equalityContractGetMethodVar);
         var definitionContext = new BodiedMemberDefinitionContext(propertyName, propertyData.Variable, recordTypeDefinitionVariable, MemberOptions.None, ilContext);
-        var exps = context.ApiDefinitionsFactory.Property(context, definitionContext, record.Identifier.Text, propertyData.Type(ResolveTargetKind.Field));
+        var exps = context.ApiDefinitionsFactory.Property(context, definitionContext, record.Identifier.Text, [], propertyData.Type(ResolveTargetKind.Field));
         context.Generate(exps);
 
         using var _ = propertyGenerator.AddGetterMethodDeclaration(

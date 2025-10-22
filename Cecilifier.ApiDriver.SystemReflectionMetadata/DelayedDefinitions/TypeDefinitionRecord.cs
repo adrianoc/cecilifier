@@ -1,3 +1,5 @@
+using Cecilifier.Core.AST;
+
 namespace Cecilifier.ApiDriver.SystemReflectionMetadata.DelayedDefinitions;
 
 /// <summary>
@@ -25,4 +27,6 @@ internal record struct TypeDefinitionRecord(string TypeQualifiedName, string Typ
     /// 
     /// </summary>
     public required Action<SystemReflectionMetadataContext, TypeDefinitionRecord> DefinitionFunction { internal get; init; }
+
+    public IList<Action<IVisitorContext, string>> Attributes { get; }  = new List<Action<IVisitorContext, string>>();
 }
