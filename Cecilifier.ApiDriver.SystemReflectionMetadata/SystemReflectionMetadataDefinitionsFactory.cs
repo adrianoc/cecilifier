@@ -398,9 +398,3 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
 }
 
 file record struct NonTypeAttributeTargetState (string AttributeTarget, string ResolvedAttributeCtor, string AttributeEncoderVariable);
-
-[InlineArray(10)]
-file struct Buffer10<T>
-{
-    private T _elements;
-}
