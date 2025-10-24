@@ -19,6 +19,8 @@ public class MonoCecilMemberResolver(MonoCecilContext context) : IMemberResolver
     {
         if (method.IsDefinedInCurrentAssembly(context))
         {
+            context.EnsureForwardedMethod(method);
+            
             var tbf = method.AsMethodDefinitionVariable();
             var found = context.DefinitionVariables.GetMethodVariable(tbf);
             if (!found.IsValid)

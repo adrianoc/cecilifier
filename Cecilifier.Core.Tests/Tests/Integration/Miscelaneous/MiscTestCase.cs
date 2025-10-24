@@ -85,7 +85,7 @@ namespace Cecilifier.Core.Tests.Integration
         [Test]
         public void TestAttributeWithArrayInitializer()
         {
-            AssertResourceTest($@"Misc/Attributes/AttributeWithArrayInitializer");
+            AssertResourceTest("Misc/Attributes/AttributeWithArrayInitializer");
         }
 
         [Test]

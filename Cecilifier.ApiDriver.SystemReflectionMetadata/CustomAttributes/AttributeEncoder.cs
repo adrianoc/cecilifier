@@ -72,7 +72,7 @@ internal struct AttributeEncoder
         encoded.AppendLine("}");
     }
 
-    private string ScalarExpressionFor(CustomAttributeArgument customAttributeArgument) => $"Scalar().Constant({customAttributeArgument.Value})";
+    private string ScalarExpressionFor(CustomAttributeArgument customAttributeArgument) => $"Scalar().Constant({customAttributeArgument.Value.ValueText()})";
 
     private void EncodeNamedArguments(IList<CustomAttributeNamedArgument> namedArguments, StringBuilder encoded)
     {

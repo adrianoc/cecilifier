@@ -109,7 +109,7 @@ namespace Cecilifier.Core.AST
                 AddCecilExpressions(Context, exps);
             }
 
-            HandleAttributesInMemberDeclaration(node.AttributeLists, paramVar);
+            HandleAttributesInMemberDeclaration(node.AttributeLists, paramVar, VariableMemberKind.Parameter);
 
             base.VisitParameter(node);
         }
@@ -144,8 +144,8 @@ namespace Cecilifier.Core.AST
                                             parameters,
                                             typeParameters);
 
-                HandleAttributesInMemberDeclaration(attributes, TargetDoesNotMatch, SyntaxKind.ReturnKeyword, methodVar); // Normal method attrs.
-                HandleAttributesInMemberDeclaration(attributes, TargetMatches, SyntaxKind.ReturnKeyword, $"{methodVar}.MethodReturnType"); // [return:Attr]
+                HandleAttributesInMemberDeclaration(attributes, TargetDoesNotMatch, SyntaxKind.ReturnKeyword, methodVar, VariableMemberKind.None); // Normal method attrs.
+                HandleAttributesInMemberDeclaration(attributes, TargetMatches, SyntaxKind.ReturnKeyword, $"{methodVar}.MethodReturnType", VariableMemberKind.Field); // [return:Attr]
 
                 AddToOverridenMethodsIfAppropriated(methodVar, methodSymbol);
 

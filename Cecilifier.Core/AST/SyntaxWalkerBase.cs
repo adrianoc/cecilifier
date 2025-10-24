@@ -20,6 +20,7 @@ using Mono.Cecil;
 using CecilOpCodes = Mono.Cecil.Cil.OpCodes;
 
 using static Cecilifier.Core.Misc.CodeGenerationHelpers;
+using CustomAttributeArgument = Cecilifier.Core.ApiDriver.Attributes.CustomAttributeArgument;
 
 namespace Cecilifier.Core.AST
 {
@@ -671,18 +672,18 @@ namespace Cecilifier.Core.AST
         /// </summary>
         protected virtual void OnLastInstructionLoadingTargetOfInvocation() { }
 
-        protected void HandleAttributesInMemberDeclaration(in SyntaxList<AttributeListSyntax> nodeAttributeLists, Func<AttributeTargetSpecifierSyntax, SyntaxKind, bool> predicate, SyntaxKind toMatch, string whereToAdd)
+        protected void HandleAttributesInMemberDeclaration(in SyntaxList<AttributeListSyntax> nodeAttributeLists, Func<AttributeTargetSpecifierSyntax, SyntaxKind, bool> predicate, SyntaxKind toMatch, string whereToAdd, VariableMemberKind targetKind)
         {
             var attributeLists = nodeAttributeLists.Where(c => predicate(c.Target, toMatch));
-            HandleAttributesInMemberDeclaration(attributeLists, whereToAdd);
+            HandleAttributesInMemberDeclaration(attributeLists, whereToAdd, targetKind);
         }
 
         protected static bool TargetDoesNotMatch(AttributeTargetSpecifierSyntax target, SyntaxKind operand) => target == null || !target.Identifier.IsKind(operand);
         protected static bool TargetMatches(AttributeTargetSpecifierSyntax target, SyntaxKind operand) => target != null && target.Identifier.IsKind(operand);
 
-        protected void HandleAttributesInMemberDeclaration(IEnumerable<AttributeListSyntax> attributeLists, string varName)
+        protected void HandleAttributesInMemberDeclaration(IEnumerable<AttributeListSyntax> attributeLists, string varName, VariableMemberKind targetKind)
         {
-            HandleAttributesInMemberDeclaration(Context, attributeLists, varName);
+            HandleAttributesInMemberDeclaration(Context, attributeLists, varName, targetKind);
         }
 
         protected static void HandleAttributesInTypeParameter(IVisitorContext context, IEnumerable<TypeParameterSyntax> typeParameters)
@@ -695,24 +696,20 @@ namespace Cecilifier.Core.AST
                 if (!typeParamVariable.IsValid)
                     throw new Exception($"Failed to find variable for {symbol.ToDisplayString()}");
                 
-                HandleAttributesInMemberDeclaration(context, typeParameter.AttributeLists, typeParamVariable.VariableName);
+                HandleAttributesInMemberDeclaration(context, typeParameter.AttributeLists, typeParamVariable.VariableName, VariableMemberKind.TypeParameter);
             }
         }
 
-        private static void HandleAttributesInMemberDeclaration(IVisitorContext context, IEnumerable<AttributeListSyntax> attributeLists, string targetDeclarationVar)
+        private static void HandleAttributesInMemberDeclaration(IVisitorContext context, IEnumerable<AttributeListSyntax> attributeLists, string targetDeclarationVar, VariableMemberKind targetKind)
         {
             foreach (var attribute in attributeLists.SelectMany(al => al.Attributes))
             {
-                var attributeType = context.SemanticModel.GetSymbolInfo(attribute).Symbol.EnsureNotNull<ISymbol, IMethodSymbol>().ContainingType;
-
-                //https://github.com/adrianoc/cecilifier/issues/311
-                TypeDeclarationVisitor.EnsureForwardedTypeDefinition(context, attributeType, attributeType.OriginalDefinition.TypeParameters.SelectMany(tp => tp.DeclaringSyntaxReferences).Select(dsr => (TypeParameterSyntax) dsr.GetSyntax()));
-
-                var attrsExp = attributeType.AttributeKind() switch
+                var attrType = context.SemanticModel.GetTypeInfo(attribute).Type.EnsureNotNull();
+                var attrsExp = attrType.AttributeKind() switch
                     {
                         AttributeKind.DllImport => ProcessDllImportAttribute(context, attribute, targetDeclarationVar),
                         AttributeKind.StructLayout => ProcessStructLayoutAttribute(attribute, targetDeclarationVar),
-                        _ => ProcessNormalMemberAttribute(context, attribute, targetDeclarationVar)
+                        _ => ProcessNormalMemberAttribute(context, attribute, targetDeclarationVar, targetKind)
                     };
                 
                 AddCecilExpressions(context, attrsExp);
@@ -861,26 +858,23 @@ namespace Cecilifier.Core.AST
             return $"PInvokeAttributes.{pinvokeAttribute.ToString()}";
         }
 
-        private static IEnumerable<string> ProcessNormalMemberAttribute(IVisitorContext context, AttributeSyntax attribute, string targetDeclarationVar)
+        private static IEnumerable<string> ProcessNormalMemberAttribute(IVisitorContext context, AttributeSyntax attribute, string targetDeclarationVar, VariableMemberKind targetKind)
         {
-            var attrsExp = CecilDefinitionsFactory.Attribute(targetDeclarationVar, context, attribute, (attrType, attrArgs) =>
-            {
-                var typeVar = context.TypeResolver.ResolveLocalVariableType(attrType);
-                if (typeVar == null)
-                {
-                    //attribute is not declared in the same assembly....
-                    var ctorArgumentTypes = $"new Type[{attrArgs.Length}] {{ {string.Join(",", attrArgs.Select(arg => $"typeof({context.GetTypeInfo(arg.Expression).Type?.Name})"))} }}";
-                    return Utils.ImportFromMainModule($"typeof({attrType.FullyQualifiedName()}).GetConstructor({ctorArgumentTypes})");
-                }
+            var attributeCtor = context.SemanticModel.GetSymbolInfo(attribute).Symbol.EnsureNotNull<ISymbol, IMethodSymbol>();
+            var attributeType = attributeCtor.ContainingType;
 
-                // Attribute is defined in the same assembly. We need to find the variable that holds its "ctor declaration"
-                var attrCtor = attrType.GetMembers().OfType<IMethodSymbol>().SingleOrDefault(m => m.MethodKind == MethodKind.Constructor && m.Parameters.Length == attrArgs.Length);
-                context.EnsureForwardedMethod(attrCtor);
+            //https://github.com/adrianoc/cecilifier/issues/311
+            TypeDeclarationVisitor.EnsureForwardedTypeDefinition(context, attributeType, attributeType.OriginalDefinition.TypeParameters.SelectMany(tp => tp.DeclaringSyntaxReferences).Select(dsr => (TypeParameterSyntax) dsr.GetSyntax()));
+            
+            var exps = context.ApiDefinitionsFactory.Attribute(
+                                            context, 
+                                            attributeCtor, 
+                                            attributeType.OriginalDefinition.Name, 
+                                            targetDeclarationVar, 
+                                            targetKind, 
+                                            attribute.ArgumentList.ToCustomAttributeArguments(context).ToArray() );
 
-                return attrCtor.MethodResolverExpression(context);
-            });
-
-            return attrsExp;
+            return exps;
         }
 
         protected void LogUnsupportedSyntax(SyntaxNode node)

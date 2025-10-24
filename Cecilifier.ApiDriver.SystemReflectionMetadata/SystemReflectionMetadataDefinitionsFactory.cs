@@ -83,7 +83,8 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         // Resolve the method to make sure there's a method ref available (this will be used to fulfill any references to this method)
         context.MemberResolver.ResolveMethod(methodSymbol);
 
-        ((SystemReflectionMetadataContext) context).DelayedDefinitionsManager.RegisterMethodDefinition(bodiedMemberDefinitionContext.Member.ParentDefinitionVariable, (ctx, methodRecord) =>
+        var memberParentDefinitionVariable = bodiedMemberDefinitionContext.Member.ParentDefinitionVariable ?? throw new ArgumentNullException(nameof(bodiedMemberDefinitionContext.Member.ParentDefinitionVariable));
+        ((SystemReflectionMetadataContext) context).DelayedDefinitionsManager.RegisterMethodDefinition(memberParentDefinitionVariable, (ctx, methodRecord) =>
         {
             EmitLocalVariables(ctx, methodRecord);
             

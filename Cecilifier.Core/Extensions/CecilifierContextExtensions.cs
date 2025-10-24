@@ -145,7 +145,7 @@ public static class CecilifierContextExtensions
      * In this case when the first reference to Bar() is found (in method Foo()) the method itself has not been defined yet
      * so we add a MethodDefinition for it but *not a body*. Method body will be processed later, when the method is visited.
      */
-    internal static void EnsureForwardedMethod(this IVisitorContext context, IMethodSymbol method)
+    public static void EnsureForwardedMethod(this IVisitorContext context, IMethodSymbol method)
     {
         //TODO: The code of this method is causing problems when visiting methods in SRM; that driver
         //      will emit a method reference immediately and postpone the method definition to later

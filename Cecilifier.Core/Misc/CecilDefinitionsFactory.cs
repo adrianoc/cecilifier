@@ -93,51 +93,6 @@ namespace Cecilifier.Core.Misc
                 paramSymbol.ExplicitDefaultValue(rawString: false));
         }
 
-        public static IEnumerable<string> Attribute(string attrTargetVar, IVisitorContext context, AttributeSyntax attribute, Func<ITypeSymbol, AttributeArgumentSyntax[], string> ctorResolver)
-        {
-            var exps = new List<string>();
-            var attrType = context.GetTypeInfo(attribute.Name);
-
-            var customAttrVar = context.Naming.CustomAttribute(attribute.Name.ToSimpleName());
-            var attributeArguments = attribute.ArgumentList == null
-                ? Array.Empty<AttributeArgumentSyntax>()
-                : attribute.ArgumentList.Arguments.Where(arg => arg.NameEquals == null).ToArray();
-
-            var ctorExp = ctorResolver(attrType.Type, attributeArguments);
-            exps.Add($"var {customAttrVar} = new CustomAttribute({ctorExp});");
-
-            if (attribute.ArgumentList != null)
-            {
-                foreach (var attrArg in attributeArguments)
-                {
-                    var argType = context.GetTypeInfo(attrArg.Expression);
-                    exps.Add($"{customAttrVar}.ConstructorArguments.Add({CustomAttributeArgument(argType, attrArg)});");
-                }
-
-                ProcessAttributeNamedArguments(SymbolKind.Property, "Properties");
-                ProcessAttributeNamedArguments(SymbolKind.Field, "Fields");
-            }
-
-            exps.Add($"{attrTargetVar}.CustomAttributes.Add({customAttrVar});");
-
-            return exps;
-
-            string CustomAttributeArgument(TypeInfo argType, AttributeArgumentSyntax attrArg)
-            {
-                return $"new CustomAttributeArgument({context.TypeResolver.ResolveAny(argType.Type)}, {attrArg.Expression.EvaluateAsCustomAttributeArgument(context)})";
-            }
-
-            void ProcessAttributeNamedArguments(SymbolKind symbolKind, string container)
-            {
-                var attrMemberNames = attrType.Type!.GetMembers().Where(m => m.Kind == symbolKind).Select(m => m.Name).ToHashSet();
-                foreach (var namedArgument in attribute.ArgumentList.Arguments.Except(attributeArguments).Where(arg => attrMemberNames.Contains(arg.NameEquals!.Name.Identifier.Text)))
-                {
-                    var argType = context.GetTypeInfo(namedArgument.Expression);
-                    exps.Add($"{customAttrVar}.{container}.Add(new CustomAttributeNamedArgument(\"{namedArgument.NameEquals!.Name.Identifier.ValueText}\", {CustomAttributeArgument(argType, namedArgument)}));");
-                }
-            }
-        }
-        
         internal static string[] Attribute(string attributeVarBaseName, string attributeTargetVar, IVisitorContext context, string resolvedCtor, params (string ResolvedType, string Value)[] parameters)
         {
             var attributeVar = context.Naming.SyntheticVariable(attributeVarBaseName, ElementKind.Attribute);

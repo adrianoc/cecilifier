@@ -53,7 +53,7 @@ namespace Cecilifier.Core.AST
                 var valueFieldExp = Context.ApiDefinitionsFactory.Field(Context, definitionContext, declaringTypeName, "value__", Context.TypeResolver.Bcl.System.Int32, "FieldAttributes.SpecialName | FieldAttributes.RTSpecialName | FieldAttributes.Public", false, false, null);
                 AddCecilExpressions(Context, valueFieldExp);
 
-                HandleAttributesInMemberDeclaration(node.AttributeLists, enumTypeVariable);
+                HandleAttributesInMemberDeclaration(node.AttributeLists, enumTypeVariable, VariableMemberKind.Type);
 
                 base.VisitEnumDeclaration(node);
             }
@@ -73,7 +73,7 @@ namespace Cecilifier.Core.AST
             var exp = Context.ApiDefinitionsFactory.Field(Context, new MemberDefinitionContext(node.Identifier.ValueText, fieldVar, enumVarDef.VariableName), declaringTypeName, node.Identifier.ValueText, enumVarDef.VariableName, "FieldAttributes.Static | FieldAttributes.Literal | FieldAttributes.Public | FieldAttributes.HasDefault", false, false, enumMemberValue);
             AddCecilExpressions(Context, exp);
 
-            HandleAttributesInMemberDeclaration(node.AttributeLists, fieldVar);
+            HandleAttributesInMemberDeclaration(node.AttributeLists, fieldVar, VariableMemberKind.Field);
 
             base.VisitEnumMemberDeclaration(node);
         }

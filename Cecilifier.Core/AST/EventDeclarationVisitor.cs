@@ -64,7 +64,7 @@ namespace Cecilifier.Core.AST
             Context.WriteNewLine();
             Context.WriteComment($"Event: {node.Identifier.Text}");
             var evtDefVar = AddEventDefinition(node, eventDeclaringTypeVar.VariableName, node.Identifier.Text, eventType, eventAccessorsDefVarMapping["add"], eventAccessorsDefVarMapping["remove"]);
-            HandleAttributesInMemberDeclaration(node.AttributeLists, evtDefVar);
+            HandleAttributesInMemberDeclaration(node.AttributeLists, evtDefVar, VariableMemberKind.None);
         }
 
         // Handles field like events (i.e, no add/remove accessors)
@@ -97,7 +97,7 @@ namespace Cecilifier.Core.AST
             var removeAccessorVar = AddAccessor(node, eventSymbol, "remove", backingFieldVar, eventType, RemoveMethodBody);
 
             var evtDefVar = AddEventDefinition(node, eventDeclaringTypeVar.VariableName, eventSymbol.Name, eventType, addAccessorVar, removeAccessorVar);
-            HandleAttributesInMemberDeclaration(node.AttributeLists, evtDefVar);
+            HandleAttributesInMemberDeclaration(node.AttributeLists, evtDefVar, VariableMemberKind.None);
         }
 
         private string AddAccessor(EventFieldDeclarationSyntax node, IEventSymbol eventSymbol, string accessorName, string backingFieldVar, string eventType, Func<EventFieldDeclarationSyntax, IEventSymbol, string, string, string, IEnumerable<string>> methodBodyFactory)

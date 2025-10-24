@@ -42,7 +42,7 @@ internal partial class TypeDeclarationVisitor
                                                     "IsAnsiClass = true");
 
         AddCecilExpressions(Context, typeDef);
-        HandleAttributesInMemberDeclaration(node.AttributeLists, typeVar);
+        HandleAttributesInMemberDeclaration(node.AttributeLists, typeVar, VariableMemberKind.Type);
 
         using (Context.DefinitionVariables.WithCurrent(delegateSymbol.ContainingSymbol?.OriginalDefinition.ToDisplayString() ?? string.Empty, delegateSymbol.OriginalDefinition.ToDisplayString(), VariableMemberKind.Type, typeVar))
         {

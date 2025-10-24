@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using System;
 using System.Linq;
-using System.Text;
 using System.Reflection.Emit;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -12,11 +11,6 @@ namespace Cecilifier.Core.Extensions
 {
     public static class ExpressionExtensions
     {
-        internal static string EvaluateAsCustomAttributeArgument(this ExpressionSyntax expression, IVisitorContext context)
-        {
-            return expression.Accept(new CustomAttributeArgumentEvaluator(context));
-        }
-
         internal static string ValueText(this LiteralExpressionSyntax node)
         {
             switch (node.Kind())
@@ -143,76 +137,6 @@ namespace Cecilifier.Core.Extensions
             
             return leftType.TypeKind == TypeKind.TypeParameter && rightType.IsReferenceType 
                    || rightType.TypeKind == TypeKind.TypeParameter && leftType.IsReferenceType;
-        }
-    }
-
-    public class CustomAttributeArgumentEvaluator : CSharpSyntaxVisitor<string>
-    {
-        private readonly IVisitorContext _context;
-
-        internal CustomAttributeArgumentEvaluator(IVisitorContext context)
-        {
-            _context = context;
-        }
-
-        public override string VisitTypeOfExpression(TypeOfExpressionSyntax node)
-        {
-            var typeSymbol = _context.SemanticModel.GetTypeInfo(node.Type);
-            return _context.TypeResolver.ResolveAny(typeSymbol.Type);
-        }
-
-        public override string VisitInvocationExpression(InvocationExpressionSyntax node)
-        {
-            if (node.Expression is IdentifierNameSyntax { Identifier.Text: "nameof" } )
-            {
-                return $"\"{node.ArgumentList.Arguments[0].Expression}\"";
-            }
-
-            return string.Empty;
-        }
-
-        public override string VisitMemberAccessExpression(MemberAccessExpressionSyntax node)
-        {
-            var type = _context.SemanticModel.GetTypeInfo(node.Expression);
-            if (type.Type != null && type.Type.TypeKind == TypeKind.Enum)
-            {
-                // if this is a enum member reference, return the enum member value.
-                var enumMember = (IFieldSymbol) type.Type.GetMembers().Single(member => member.Kind == SymbolKind.Field && member.IsStatic && member.Name == node.Name.Identifier.ValueText);
-                return enumMember.ConstantValue.ToString();
-            }
-
-            return $"{node.Expression.ToString()}.{node.Name.Identifier.ValueText}";
-        }
-
-        public override string VisitLiteralExpression(LiteralExpressionSyntax node) => node.ValueText();
-
-        public override string VisitArrayCreationExpression(ArrayCreationExpressionSyntax node)
-        {
-            if (node.Initializer == null)
-            {
-                return $"new CustomAttributeArgument[{node.Type.RankSpecifiers[0].Sizes[0]}]";
-            }
-
-            var elementType = _context.TypeResolver.ResolveAny(_context.SemanticModel.GetTypeInfo(node.Type.ElementType).Type);
-            return CustomAttributeArgumentArray(node.Initializer, elementType);
-        }
-
-        public override string VisitImplicitArrayCreationExpression(ImplicitArrayCreationExpressionSyntax node)
-        {
-            var elementType = _context.TypeResolver.ResolveAny(_context.SemanticModel.GetTypeInfo(node.Initializer.Expressions[0]).Type);
-            return CustomAttributeArgumentArray(node.Initializer, elementType);
-        }
-
-        private string CustomAttributeArgumentArray(InitializerExpressionSyntax initializer, string elementType)
-        {
-            var sb = new StringBuilder($"new CustomAttributeArgument[] {{");
-            foreach (var exp in initializer.Expressions)
-            {
-                sb.Append($"new CustomAttributeArgument({elementType}, {exp.Accept(this)}),");
-            }
-
-            sb.Append("}");
-            return sb.ToString();
         }
     }
 }

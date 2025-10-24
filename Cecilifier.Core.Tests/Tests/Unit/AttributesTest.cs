@@ -14,8 +14,8 @@ public class AttributesTest : CecilifierUnitTestBase
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
         Assert.That(cecilifiedCode, Does.Match(@"var ctor_myAttribute_\d+ = new MethodDefinition\("".ctor"", MethodAttributes.Private, assembly.MainModule.TypeSystem.Void\);")); // This represents the ctor with argument
         Assert.That(cecilifiedCode, Does.Not.Match(@"var ctor_myAttribute_\d+ = new MethodDefinition\("".ctor"", MethodAttributes.Public \| MethodAttributes.HideBySig \| MethodAttributes.RTSpecialName \| MethodAttributes.SpecialName, assembly.MainModule.TypeSystem.Void\);"), "Parameterless ctor not expected");
-        Assert.That(cecilifiedCode, Does.Match(@"cls_myAttribute_\d+\.CustomAttributes.Add\(attr_my_\d+\);"), "Custom attribute should be be added");
-        Assert.That(cecilifiedCode, Does.Match(@"var attr_my_\d+ = new CustomAttribute\(ctor_myAttribute_\d+\);"), "Reference to class declaring MyAttribute should be used when instantiating the custom attribute");
+        Assert.That(cecilifiedCode, Does.Match(@"cls_myAttribute_\d+\.CustomAttributes.Add\(attr_myAttribute_\d+\);"), "Custom attribute should be be added");
+        Assert.That(cecilifiedCode, Does.Match(@"var attr_myAttribute_\d+ = new CustomAttribute\(ctor_myAttribute_\d+\);"), "Reference to class declaring MyAttribute should be used when instantiating the custom attribute");
     }
 
     [Test]
@@ -25,8 +25,8 @@ public class AttributesTest : CecilifierUnitTestBase
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
 
         Assert.That(cecilifiedCode, Does.Match(ClassDeclarationRegexFor("MyAttribute", "cls_myAttribute", ".+", "TypeAttributes.NotPublic")), "Expected TypeDefinition for attribute not found.");
-        Assert.That(cecilifiedCode, Does.Match(@"var attr_my_1 = new CustomAttribute\(ctor_myAttribute_2\);"), "Reference to class declaring MyAttribute should be used when instantiating the custom attribute");
-        Assert.That(cecilifiedCode, Does.Match(@"assembly.CustomAttributes.Add\(attr_my_1\);"), "Custom attribute should be be added to assembly");
+        Assert.That(cecilifiedCode, Does.Match(@"var attr_myAttribute_1 = new CustomAttribute\(ctor_myAttribute_2\);"), "Reference to class declaring MyAttribute should be used when instantiating the custom attribute");
+        Assert.That(cecilifiedCode, Does.Match(@"assembly.CustomAttributes.Add\(attr_myAttribute_1\);"), "Custom attribute should be be added to assembly");
     }
 
     [TestCase("class Foo<[My(\"Type\")] T> {{ }} {0}", TestName = "Type")]
@@ -37,7 +37,7 @@ public class AttributesTest : CecilifierUnitTestBase
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
 
         Assert.That(cecilifiedCode, Does.Match(@"var gp_T_\d+ = new Mono.Cecil.GenericParameter\(""T"", .+\);"));
-        Assert.That(cecilifiedCode, Does.Match(@"gp_T_\d+.CustomAttributes.Add\(attr_my_\d+\);"));
+        Assert.That(cecilifiedCode, Does.Match(@"gp_T_\d+.CustomAttributes.Add\(attr_myAttribute_\d+\);"));
     }
 
     [Test]
@@ -67,7 +67,7 @@ class Foo<TFoo> {{ }}");
         Assert.That(
             cecilifiedCode, 
             Does.Match(
-                $@"(?s)var (attr_myGeneric_1_\d+) = new CustomAttribute\(new MethodReference\((ctor_myGenericAttribute_\d+)\.Name.+\2\.ReturnType\).+DeclaringType = cls_myGenericAttribute_\d+.MakeGenericInstanceType\(.*{expectedType}\).+\);\s+" + 
+                $@"(?s)var (attr_myGenericAttribute_\d+) = new CustomAttribute\(new MethodReference\((ctor_myGenericAttribute_\d+)\.Name.+\2\.ReturnType\).+DeclaringType = cls_myGenericAttribute_\d+.MakeGenericInstanceType\(.*{expectedType}\).+\);\s+" + 
                 @"cls_foo_\d+\.CustomAttributes\.Add\(\1\);"));        
     }
     
@@ -85,7 +85,7 @@ class Foo<TFoo> {{ }}");
             cecilifiedCode, 
             Does.Match("""
                        \s+assembly\.MainModule\.Types\.Add\((?<targetType>cls_foo_\d+)\);
-                       \s+var (?<attr>attr_myGeneric_\d+_\d+) = new CustomAttribute\(.+(?<attrCtor>ctor_myGenericAttribute_\d+).Name, \k<attrCtor>.ReturnType\) {.+DeclaringType = cls_myGenericAttribute_\d+.MakeGenericInstanceType\(assembly.MainModule.TypeSystem.Int32\), .+\);
+                       \s+var (?<attr>attr_myGenericAttribute_\d+) = new CustomAttribute\(.+(?<attrCtor>ctor_myGenericAttribute_\d+).Name, \k<attrCtor>.ReturnType\) {.+DeclaringType = cls_myGenericAttribute_\d+.MakeGenericInstanceType\(assembly.MainModule.TypeSystem.Int32\), .+\);
                        \s+cls_foo_\d+.CustomAttributes.Add\(\k<attr>\);
                        """));
     }
@@ -110,7 +110,7 @@ class Foo<TFoo> {{ }}");
                        \s+cls_foo_\d+.Methods.Add\(\k<m>\);
                        \s+m_M_\d+.Body.InitLocals = true;
                        \s+var il_M_\d+ = m_M_\d+.Body.GetILProcessor\(\);
-                       \s+var (?<attr>attr_myGeneric_\d+_\d+) = new CustomAttribute\(.+(?<attrCtor>ctor_myGenericAttribute_\d+).Name, \k<attrCtor>.ReturnType\) {.+DeclaringType = cls_myGenericAttribute_\d+.MakeGenericInstanceType\(assembly.MainModule.TypeSystem.Int32\), .+\);
+                       \s+var (?<attr>attr_myGenericAttribute_\d+) = new CustomAttribute\(.+(?<attrCtor>ctor_myGenericAttribute_\d+).Name, \k<attrCtor>.ReturnType\) {.+DeclaringType = cls_myGenericAttribute_\d+.MakeGenericInstanceType\(assembly.MainModule.TypeSystem.Int32\), .+\);
                        \s+\k<m>.CustomAttributes.Add\(\k<attr>\);
                        """));
     }
@@ -130,7 +130,7 @@ class Foo<TFoo> {{ }}");
             cecilifiedCode, 
             Does.Match("""
                        \s+assembly\.MainModule\.Types\.Add\((?<targetType>cls_foo_\d+)\);
-                       \s+var (?<attr>attr_myGeneric_\d+_\d+) = new CustomAttribute\(.+(?<attrCtor>ctor_myGenericAttribute_\d+).Name, \k<attrCtor>.ReturnType\) {.+DeclaringType = cls_myGenericAttribute_\d+.MakeGenericInstanceType\(\k<targetType>\), .+\);
+                       \s+var (?<attr>attr_myGenericAttribute_\d+) = new CustomAttribute\(.+(?<attrCtor>ctor_myGenericAttribute_\d+).Name, \k<attrCtor>.ReturnType\) {.+DeclaringType = cls_myGenericAttribute_\d+.MakeGenericInstanceType\(\k<targetType>\), .+\);
                        \s+cls_foo_\d+.CustomAttributes.Add\(\k<attr>\);
                        """));
     }
@@ -163,7 +163,7 @@ class Foo<TFoo> {{ }}");
                        \s+assembly.MainModule.Types.Add\(\k<attrType>\);
                        \s+var ctor_myGenericAttribute_4 = new MethodDefinition\(".ctor",.+TypeSystem.Void\);
                        \s+ctor_myGenericAttribute_4\.Body\.InitLocals = true;
-                       \s+var (?<attrInstance>attr_myGeneric_1_\d+) = new CustomAttribute\(new MethodReference\(ctor_myGenericAttribute_4.Name, ctor_myGenericAttribute_4.ReturnType\) {.+DeclaringType = \k<attrType>.MakeGenericInstanceType\(.+Int32\).+}\);
+                       \s+var (?<attrInstance>attr_myGenericAttribute_\d+) = new CustomAttribute\(new MethodReference\(ctor_myGenericAttribute_4.Name, ctor_myGenericAttribute_4.ReturnType\) {.+DeclaringType = \k<attrType>.MakeGenericInstanceType\(.+Int32\).+}\);
                        \s+\k<appliedTo>.CustomAttributes.Add\(\k<attrInstance>\);
                        """));
     }

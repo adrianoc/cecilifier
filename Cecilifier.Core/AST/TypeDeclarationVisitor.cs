@@ -156,7 +156,7 @@ namespace Cecilifier.Core.AST
                 WriteCecilExpression(Context, $"{varName}.BaseType = {ProcessBase(node)};");
             }
 
-            HandleAttributesInMemberDeclaration(node.AttributeLists, varName);
+            HandleAttributesInMemberDeclaration(node.AttributeLists, varName, VariableMemberKind.Type);
 
             NonCapturingLambdaProcessor.InjectSyntheticMethodsForNonCapturingLambdas(Context, node, varName);
 

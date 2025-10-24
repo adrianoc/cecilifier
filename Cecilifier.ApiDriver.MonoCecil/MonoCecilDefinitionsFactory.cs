@@ -1,5 +1,6 @@
 using System.Buffers;
 using System.Runtime.CompilerServices;
+using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -265,24 +266,57 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
         var attributeVar = context.Naming.SyntheticVariable(attributeVarBaseName, ElementKind.Attribute);
         var resolvedCtor = context.MemberResolver.ResolveMethod(attributeCtor);
         
-        //TODO: To be on par with original implementation of CecilDefinitionsFactory.Attribute() we only process positional arguments (ignoring named ones)
-        //      There is another overload of Attribute() method that does handle all arguments; most likely we'll merge the 2 overloads; when that happen
-        //      we'll need to revisit this code.
-        var namedArguments = arguments.OfType<CustomAttributeNamedArgument>();
+        var namedArguments = arguments.OfType<CustomAttributeNamedArgument>().ToArray();
         var positionalArguments = arguments.Except(namedArguments).ToArray();
-        
-        var exps = new string[2 + positionalArguments.Length];
+
+        var buffer = new Buffer256<string>();
+        Span<string> exps = buffer;
         int expIndex = 0;
         exps[expIndex++] = $"var {attributeVar} = new CustomAttribute({resolvedCtor});";
 
         for(int i = 0; i < positionalArguments.Length; i++)
         {
-            var attributeArgument = $"new CustomAttributeArgument({context.TypeResolver.Resolve(attributeCtor.Parameters[i].Type)}, {positionalArguments[i].Value})";
+            var attributeArgument = $"new CustomAttributeArgument({context.TypeResolver.ResolveAny(attributeCtor.Parameters[i].Type.OriginalDefinition)}, {CustomAttributeArgumentValueFor(context, positionalArguments[i].Value)})";
             exps[expIndex++] = $"{attributeVar}.ConstructorArguments.Add({attributeArgument});";
         }
-        exps[expIndex] = $"{attributeTargetVar}.CustomAttributes.Add({attributeVar});";
+        expIndex += ProcessAttributeNamedArguments(context, exps.Slice(expIndex), attributeVar, namedArguments);
+        
+        exps[expIndex++] = $"{attributeTargetVar}.CustomAttributes.Add({attributeVar});";
 
-        return exps;        
+        return exps.Slice(0, expIndex).ToArray();
+
+        static int ProcessAttributeNamedArguments(IVisitorContext context, Span<string> exps, string customAttrVariable, ReadOnlySpan<CustomAttributeNamedArgument> namedArguments)
+        {
+            int i = 0;
+            foreach (var namedArgument in namedArguments)
+            {
+                var container = (namedArgument.Kind == NamedArgumentKind.Field ? "Fields" : "Properties");
+                var value = $"new CustomAttributeArgument({namedArgument.ResolvedType}, {CustomAttributeArgumentValueFor(context, namedArgument.Value)})";
+                exps[i++] = $"{customAttrVariable}.{container}.Add(new CustomAttributeNamedArgument(\"{namedArgument.Name}\", {value}));";
+            }
+            return i;
+        }
+    }
+
+    private static string CustomAttributeArgumentValueFor(IVisitorContext context, object argument)
+    {
+        if (argument is Array array)
+        {
+            if (array.Length == 0)
+                return "new CustomAttributeArgument[0]";
+            
+            var sb = new StringBuilder("new [] {");
+            foreach (var arrayItem in array)
+            {
+                sb.Append($"new CustomAttributeArgument({context.TypeResolver.Resolve(context.RoslynTypeSystem.ForType(arrayItem.GetType().FullName))}, {CustomAttributeArgumentValueFor(context, arrayItem)}), ");
+            }
+            sb.Remove(sb.Length - 2, 2); // Removes the last ", "
+            sb.Append('}');
+            
+            return sb.ToString();
+        }
+        
+        return argument.ValueText(true);
     }
 
     private static void ProcessGenericTypeParameters(string memberDefVar, IVisitorContext context, IList<TypeParameterSyntax> typeParamList, IList<string> exps)
@@ -403,5 +437,11 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
         context.Generate($"var {id} = new RequiredModifierType({context.TypeResolver.Resolve(typeof(IsVolatile).FullName)}, {originalType});");
         
         return id;
+    }
+
+    [InlineArray(256)]
+    private struct Buffer256<T>
+    {
+        private T _data;
     }
 }

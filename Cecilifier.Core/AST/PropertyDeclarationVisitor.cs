@@ -60,8 +60,8 @@ namespace Cecilifier.Core.AST
             var propDefVar = AddPropertyDefinition(node, propertyDeclaringTypeVar.VariableName, propertyDeclaringTypeVar.MemberName, propName, propertyParameters, propertyType);
             var backingFieldVar = ProcessPropertyAccessors(node, propertyDeclaringTypeVar.VariableName, propDefVar, propName, propertyParameters, node.ExpressionBody);
 
-            HandleAttributesInMemberDeclaration(node.AttributeLists, TargetDoesNotMatch, SyntaxKind.FieldKeyword, propDefVar); // Normal property attrs
-            HandleAttributesInMemberDeclaration(node.AttributeLists, TargetMatches, SyntaxKind.FieldKeyword, backingFieldVar ?? String.Empty); // [field: attr], i.e, attr belongs to the backing field.
+            HandleAttributesInMemberDeclaration(node.AttributeLists, TargetDoesNotMatch, SyntaxKind.FieldKeyword, propDefVar, VariableMemberKind.None); // Normal property attrs
+            HandleAttributesInMemberDeclaration(node.AttributeLists, TargetMatches, SyntaxKind.FieldKeyword, backingFieldVar ?? String.Empty, VariableMemberKind.Field); // [field: attr], i.e, attr belongs to the backing field.
         }
 
         public override void VisitPropertyDeclaration(PropertyDeclarationSyntax node)
@@ -79,10 +79,10 @@ namespace Cecilifier.Core.AST
             var propDefVar = AddPropertyDefinition(node, propertyDeclaringTypeVar.VariableName, propertyDeclaringTypeVar.MemberName, propName, [], propertyType);
             var backingFieldVar = ProcessPropertyAccessors(node, propertyDeclaringTypeVar.VariableName, propDefVar, node.Identifier.ValueText, NoParameters, node.ExpressionBody);
 
-            HandleAttributesInMemberDeclaration(node.AttributeLists, TargetDoesNotMatch, SyntaxKind.FieldKeyword, propDefVar); // Normal property attrs
+            HandleAttributesInMemberDeclaration(node.AttributeLists, TargetDoesNotMatch, SyntaxKind.FieldKeyword, propDefVar, VariableMemberKind.None); // Normal property attrs
             // Attributes targeting backing field is only valid on auto-properties.
             if (node.AccessorList?.Accessors.All(a => a.Body == null && a.ExpressionBody == null) == true)
-                HandleAttributesInMemberDeclaration(node.AttributeLists, TargetMatches, SyntaxKind.FieldKeyword, backingFieldVar ?? string.Empty); // [field: attr], i.e, attr belongs to the backing field.
+                HandleAttributesInMemberDeclaration(node.AttributeLists, TargetMatches, SyntaxKind.FieldKeyword, backingFieldVar ?? string.Empty, VariableMemberKind.Field); // [field: attr], i.e, attr belongs to the backing field.
         }
 
         private bool PropertyAlreadyProcessed(BasePropertyDeclarationSyntax node)
@@ -108,7 +108,7 @@ namespace Cecilifier.Core.AST
                                                     "defaultMember", 
                                                     declaringTypeDefinitionVar,
                                                     VariableMemberKind.Type,
-                                                    new CustomAttributeArgument { Value = $"\"{value}\"" });
+                                                    new CustomAttributeArgument { Value =value });
             Context.Generate(exps);
             
             bool AttributeAlreadyAddedForAnotherMember()
