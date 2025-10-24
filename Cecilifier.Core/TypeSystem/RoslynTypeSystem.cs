@@ -25,6 +25,7 @@ public struct RoslynTypeSystem
         SystemReadOnlySpan = new Lazy<ITypeSymbol>(() => ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(ReadOnlySpan<>).FullName!));
         CallerArgumentExpressionAttribute = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(CallerArgumentExpressionAttribute).FullName!);
 
+        SystemByte = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Byte);
         SystemInt32 = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Int32);
         SystemInt64 = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Int64);
         SystemIntPtr = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_IntPtr);
@@ -58,6 +59,8 @@ public struct RoslynTypeSystem
     public ITypeSymbol SystemSpan { get; }
     
     public Lazy<ITypeSymbol> SystemReadOnlySpan { get; }
+    
+    public ITypeSymbol SystemByte { get; }
     public ITypeSymbol SystemInt32 { get; }
     public ITypeSymbol SystemInt64 { get; }
     public ITypeSymbol SystemIntPtr { get; }

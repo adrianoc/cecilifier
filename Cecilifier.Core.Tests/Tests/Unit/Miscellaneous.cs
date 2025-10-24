@@ -364,12 +364,12 @@ public static class Outer
                 var r = RunCecilifier($"public record {kind} RecordTest;");
                 var cecilifiedCode = r.GeneratedCode.ReadToEnd();
                 Assert.That(cecilifiedCode, Does.Match("""
-                                                       (attr_nullableContext_\d+).ConstructorArguments.Add\(new CustomAttributeArgument\(assembly.MainModule.TypeSystem.Int32, 1\)\);
+                                                       (attr_nullableContext_\d+).ConstructorArguments.Add\(new CustomAttributeArgument\(assembly.MainModule.TypeSystem.Byte, 1\)\);
                                                        \s+rec_recordTest_\d+.CustomAttributes.Add\(\1\);
                                                        """));
 
                 Assert.That(cecilifiedCode, Does.Match("""
-                                                       (attr_nullable_\d+).ConstructorArguments.Add\(new CustomAttributeArgument\(assembly.MainModule.TypeSystem.Int32, 0\)\);
+                                                       (attr_nullable_\d+).ConstructorArguments.Add\(new CustomAttributeArgument\(assembly.MainModule.TypeSystem.Byte, 0\)\);
                                                        \s+rec_recordTest_\d+.CustomAttributes.Add\(\1\);
                                                        """));
             }

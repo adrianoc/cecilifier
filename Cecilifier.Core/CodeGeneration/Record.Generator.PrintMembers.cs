@@ -9,6 +9,7 @@ using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
+using Cecilifier.Core.Variables;
 
 namespace Cecilifier.Core.CodeGeneration;
 
@@ -120,7 +121,7 @@ internal partial class RecordGenerator
         var ilContext = context.ApiDriver.NewIlContext(context, PrintMembersMethodName, PrintMembersVar);
         var printMemberBodyExps = context.ApiDefinitionsFactory.MethodBody(context, PrintMembersMethodName, ilContext, [], instructions);
         context.Generate(printMemberBodyExps);
-        AddCompilerGeneratedAttributeTo(context, PrintMembersVar);
+        AddCompilerGeneratedAttributeTo(context, PrintMembersVar, VariableMemberKind.Method);
         AddIsReadOnlyAttributeTo(context, PrintMembersVar);
         static IMethodSymbol StringBuilderAppendMethodFor(IVisitorContext context, ITypeSymbol type, ITypeSymbol stringBuilderSymbol)
         {

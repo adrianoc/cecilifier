@@ -7,10 +7,6 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Reflection.Emit;
-using System.Reflection.Metadata.Ecma335;
-using System.Text;
-using Cecilifier.Core.ApiDriver;
-using Cecilifier.Core.ApiDriver.Attributes;
 using Cecilifier.Core.ApiDriver.Handles;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
@@ -91,24 +87,6 @@ namespace Cecilifier.Core.Misc
                 context.TypeResolver.ResolveAny(paramSymbol.Type, ResolveTargetKind.Parameter, methodVar),
                 paramSymbol.AsParameterAttribute(),
                 paramSymbol.ExplicitDefaultValue(rawString: false));
-        }
-
-        internal static string[] Attribute(string attributeVarBaseName, string attributeTargetVar, IVisitorContext context, string resolvedCtor, params (string ResolvedType, string Value)[] parameters)
-        {
-            var attributeVar = context.Naming.SyntheticVariable(attributeVarBaseName, ElementKind.Attribute);
-
-            var exps = new string[2 + parameters.Length];
-            int expIndex = 0;
-            exps[expIndex++] = $"var {attributeVar} = new CustomAttribute({resolvedCtor});";
-
-            for(int i = 0; i < parameters.Length; i++)
-            {
-                var attributeArgument = $"new CustomAttributeArgument({parameters[i].ResolvedType}, {parameters[i].Value})";
-                exps[expIndex++] = $"{attributeVar}.ConstructorArguments.Add({attributeArgument});";
-            }
-            exps[expIndex] = $"{attributeTargetVar}.CustomAttributes.Add({attributeVar});";
-
-            return exps;
         }
 
         public static string DefaultTypeAttributeFor(TypeKind typeKind, bool hasStaticCtor)

@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Reflection.Emit;
 using Cecilifier.Core.ApiDriver;
+using Cecilifier.Core.ApiDriver.Attributes;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -38,16 +39,9 @@ internal partial class RecordGenerator
 
     public void AddNullabilityAttributesToTypeDefinition(string definitionVar)
     {
-        var nullableAttributeCtor = context.RoslynTypeSystem.ForType<NullableAttribute>()
-                                                        .GetMembers(".ctor")
-                                                        .OfType<IMethodSymbol>()
-                                                        .Single(ctor => ctor.Parameters.Length == 1 && ctor.Parameters[0].Type.SpecialType == SpecialType.System_Byte)
-                                                        .MethodResolverExpression(context);
-
-        var nullableAwareness = ((int) NullableAwareness.NullableOblivious).ToString();
-        var nullableAttrExps = CecilDefinitionsFactory.Attribute("nullable", definitionVar, context, nullableAttributeCtor, [(context.TypeResolver.Bcl.System.Int32, nullableAwareness)]);
+        var nullableAttributeCtor = context.RoslynTypeSystem.ForType<NullableAttribute>().Ctor(context.RoslynTypeSystem.SystemByte);
+        var nullableAttrExps = context.ApiDefinitionsFactory.Attribute(context, nullableAttributeCtor, "nullable", definitionVar, VariableMemberKind.Type, new CustomAttributeArgument { Value = (byte) NullableAwareness.NullableOblivious }); 
         context.Generate(nullableAttrExps);
-
         AddNullableContextAttributeTo(definitionVar, NullableAwareness.NonNullable);
     }
     
@@ -110,7 +104,7 @@ internal partial class RecordGenerator
             context.ApiDefinitionsFactory.MethodBody(context, "clone", context.ApiDriver.NewIlContext(context, "clone", cloneMethodVar), [], instructions)
         );
         
-        AddCompilerGeneratedAttributeTo(context, cloneMethodVar);
+        AddCompilerGeneratedAttributeTo(context, cloneMethodVar, VariableMemberKind.Method);
     }
 
     private void AddCopyConstructor()
@@ -183,7 +177,7 @@ internal partial class RecordGenerator
             context.ApiDefinitionsFactory.MethodBody(context, Constants.Cecil.InstanceConstructorName, context.ApiDriver.NewIlContext(context, Constants.Cecil.InstanceConstructorName, copyCtorVar), [], instructions.ToArray())
         );
         
-        AddCompilerGeneratedAttributeTo(context, copyCtorVar);
+        AddCompilerGeneratedAttributeTo(context, copyCtorVar, VariableMemberKind.Method);
     }
 
     private void AddPropertiesFrom()
@@ -250,7 +244,7 @@ internal partial class RecordGenerator
         var bodyExps = context.ApiDefinitionsFactory.MethodBody(context, methodName, context.ApiDriver.NewIlContext(context, methodName, equalsOperatorMethodVar), [], equalsBodyInstructions);
         context.Generate(bodyExps);
         context.Generate($"{recordTypeDefinitionVariable}.Methods.Add({equalsOperatorMethodVar});");
-        AddCompilerGeneratedAttributeTo(context, equalsOperatorMethodVar);
+        AddCompilerGeneratedAttributeTo(context, equalsOperatorMethodVar, VariableMemberKind.Method);
         
         if (!_recordSymbol.IsValueType)
             AddNullableContextAttributeTo(equalsOperatorMethodVar, NullableAwareness.Nullable);
@@ -307,7 +301,7 @@ internal partial class RecordGenerator
         var bodyExps = context.ApiDefinitionsFactory.MethodBody(context, methodName, context.ApiDriver.NewIlContext(context, methodName, inequalityOperatorMethodVar), [], inequalityBodyInstructions);
         context.Generate(bodyExps);
         context.Generate($"{recordTypeDefinitionVariable}.Methods.Add({inequalityOperatorMethodVar});");
-        AddCompilerGeneratedAttributeTo(context, inequalityOperatorMethodVar);
+        AddCompilerGeneratedAttributeTo(context, inequalityOperatorMethodVar, VariableMemberKind.Method);
         if (!_recordSymbol.IsValueType)
             AddNullableContextAttributeTo(inequalityOperatorMethodVar, NullableAwareness.Nullable);
     }
@@ -376,7 +370,7 @@ internal partial class RecordGenerator
         context.Generate($"{recordTypeDefinitionVariable}.Methods.Add({getHashCodeMethodVar});");
         context.WriteNewLine();
         
-        AddCompilerGeneratedAttributeTo(context, getHashCodeMethodVar);
+        AddCompilerGeneratedAttributeTo(context, getHashCodeMethodVar, VariableMemberKind.Method);
         AddIsReadOnlyAttributeTo(context, getHashCodeMethodVar);
         
         void AddRecordClassHashCodeSpecificCode()
@@ -487,7 +481,7 @@ internal partial class RecordGenerator
             ];
             var toStringBodyExps = context.ApiDefinitionsFactory.MethodBody(context, ToStringName, context.ApiDriver.NewIlContext(context, ToStringName, toStringMethodVar), localVariableTypes, instructions);
             context.Generate(toStringBodyExps);
-            AddCompilerGeneratedAttributeTo(context, toStringMethodVar);
+            AddCompilerGeneratedAttributeTo(context, toStringMethodVar, VariableMemberKind.Method);
             AddIsReadOnlyAttributeTo(context, toStringMethodVar);
         }
     }
@@ -595,7 +589,7 @@ internal partial class RecordGenerator
             context.Generate(equalsExps);
         }
         
-        AddCompilerGeneratedAttributeTo(context, equalsVar);
+        AddCompilerGeneratedAttributeTo(context, equalsVar, VariableMemberKind.Method);
         AddIsReadOnlyAttributeTo(context, equalsVar);
 
         if (_recordSymbol is INamedTypeSymbol { IsGenericType: true } genericRecord)
@@ -763,7 +757,7 @@ internal partial class RecordGenerator
         context.ApiDriver.WriteCilInstruction(context, ilContext, OpCodes.Call, getTypeFromHandleSymbol.MethodResolverExpression(context));
         context.ApiDriver.WriteCilInstruction(context, ilContext, OpCodes.Ret);
 
-        AddCompilerGeneratedAttributeTo(context, propertyData.Variable);
+        AddCompilerGeneratedAttributeTo(context, propertyData.Variable, VariableMemberKind.Method);
         AddIsReadOnlyAttributeTo(context, propertyData.Variable);
     }
 
@@ -824,7 +818,7 @@ internal partial class RecordGenerator
         var bodyExps = context.ApiDefinitionsFactory.MethodBody(context, methodName, context.ApiDriver.NewIlContext(context, methodName, equalsObjectOverloadMethodVar), localVariableTypes, equalsBodyInstructions);
         context.Generate(bodyExps);
         context.Generate($"{recordTypeDefinitionVariable}.Methods.Add({equalsObjectOverloadMethodVar});");
-        AddCompilerGeneratedAttributeTo(context, equalsObjectOverloadMethodVar);
+        AddCompilerGeneratedAttributeTo(context, equalsObjectOverloadMethodVar, VariableMemberKind.Method);
         AddIsReadOnlyAttributeTo(context, equalsObjectOverloadMethodVar);
         AddNullableContextAttributeTo(equalsObjectOverloadMethodVar, _recordSymbol.IsValueType ? NullableAwareness.NullableOblivious : NullableAwareness.Nullable);
         
@@ -860,7 +854,7 @@ internal partial class RecordGenerator
         var bodyExps2 = context.ApiDefinitionsFactory.MethodBody(context, methodName, context.ApiDriver.NewIlContext(context, methodName, equalsBaseOverloadMethodVar), [], equalsBodyInstructions2);
         context.Generate(bodyExps2);
         context.Generate($"{recordTypeDefinitionVariable}.Methods.Add({equalsBaseOverloadMethodVar});");
-        AddCompilerGeneratedAttributeTo(context, equalsBaseOverloadMethodVar);
+        AddCompilerGeneratedAttributeTo(context, equalsBaseOverloadMethodVar, VariableMemberKind.Method);
         AddIsReadOnlyAttributeTo(context, equalsBaseOverloadMethodVar);
         AddNullableContextAttributeTo(equalsBaseOverloadMethodVar, _recordSymbol.IsValueType ? NullableAwareness.NullableOblivious : NullableAwareness.Nullable);
     }
@@ -913,7 +907,7 @@ internal partial class RecordGenerator
         var bodyExps = context.ApiDefinitionsFactory.MethodBody(context, methodName, context.ApiDriver.NewIlContext(context, methodName, deconstructMethodVar), [], deconstructInstructions.ToArray());
         context.Generate(bodyExps);
         context.Generate($"{recordTypeDefinitionVariable}.Methods.Add({deconstructMethodVar});");
-        AddCompilerGeneratedAttributeTo(context, deconstructMethodVar);
+        AddCompilerGeneratedAttributeTo(context, deconstructMethodVar, VariableMemberKind.Method);
         AddIsReadOnlyAttributeTo(context, deconstructMethodVar);
     }
     
@@ -953,10 +947,11 @@ internal partial class RecordGenerator
         return found != null;
     }
 
-    private void AddCompilerGeneratedAttributeTo(IVisitorContext context, string memberVariable)
+    private void AddCompilerGeneratedAttributeTo(IVisitorContext context, string memberVariable, VariableMemberKind memberKind)
     {
         var compilerGeneratedAttributeCtor = context.RoslynTypeSystem.SystemRuntimeCompilerServicesCompilerGeneratedAttribute.Ctor();
-        var exps = CecilDefinitionsFactory.Attribute("compilerGenerated", memberVariable, context, compilerGeneratedAttributeCtor.MethodResolverExpression(context));
+        //var exps = CecilDefinitionsFactory.Attribute("compilerGenerated", memberVariable, context, compilerGeneratedAttributeCtor.MethodResolverExpression(context));
+        var exps = context.ApiDefinitionsFactory.Attribute(context, compilerGeneratedAttributeCtor, "compilerGenerated", memberVariable, memberKind);
         context.WriteNewLine();
         context.Generate(exps);
     }
@@ -973,7 +968,7 @@ internal partial class RecordGenerator
     private void RecordStructIsReadOnlyAttributeHandler(string memberVar)
     {
         var isReadOnlyAttributeCtor = context.RoslynTypeSystem.IsReadOnlyAttribute.Ctor();
-        var exps = CecilDefinitionsFactory.Attribute("isReadOnly", memberVar, context, isReadOnlyAttributeCtor.MethodResolverExpression(context));
+        var exps = context.ApiDefinitionsFactory.Attribute(context, isReadOnlyAttributeCtor, "isReadOnly", memberVar, VariableMemberKind.Method);
         context.WriteNewLine();
         context.Generate(exps);
     }
@@ -993,14 +988,8 @@ internal partial class RecordGenerator
     
     private void AddNullableContextAttributeTo(string memberVar, NullableAwareness value)
     {
-        var nullableContextAttributeCtor = context.RoslynTypeSystem.ForType<NullableContextAttribute>()
-            .GetMembers(".ctor")
-            .OfType<IMethodSymbol>()
-            .Single(ctor => ctor.Parameters.Length == 1)
-            .MethodResolverExpression(context);
-
-        var nullableContextValue = ((int)value).ToString();
-        var nullableContextAttrExps = CecilDefinitionsFactory.Attribute("nullableContext", memberVar, context, nullableContextAttributeCtor, [(context.TypeResolver.Bcl.System.Int32, nullableContextValue)]);
+        var nullableContextAttributeCtor = context.RoslynTypeSystem.ForType<NullableContextAttribute>().Ctor(context.RoslynTypeSystem.SystemByte);
+        var nullableContextAttrExps = context.ApiDefinitionsFactory.Attribute(context, nullableContextAttributeCtor,"nullableContext", memberVar, VariableMemberKind.Method, new CustomAttributeArgument { Value = (byte) value });
         context.Generate(nullableContextAttrExps);
     }
     

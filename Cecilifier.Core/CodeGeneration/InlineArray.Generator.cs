@@ -1,17 +1,15 @@
 #nullable enable
 
-using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Cecilifier.Core.ApiDriver;
+using Cecilifier.Core.ApiDriver.Attributes;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.Variables;
-using Microsoft.CodeAnalysis;
 
 namespace Cecilifier.Core.CodeGeneration;
 
@@ -37,41 +35,30 @@ internal class InlineArrayGenerator
                 //CecilDefinitionsFactory.GenericParameter(context, $"{typeVar}.Name", typeVar, "TElementType", typeParameterVar),
                 $"""{typeVar}.GenericParameters.Add({typeParameterVar});"""
             ];
+            context.Generate(typeExps);
 
             var fieldVar = context.Naming.SyntheticVariable("_element0", ElementKind.Field);
             string declaringTypeName = $"{typeVar}.Name";
+            
             var fieldExps = context.ApiDefinitionsFactory.Field(context, new MemberDefinitionContext("_element0", fieldVar, typeVar), declaringTypeName, "_element0", typeParameterVar, "FieldAttributes.Private", false, false, null);
-            
-            context.Generate(typeExps);
-            
-            //[InlineArray(2)]
-            context.Generate(
-                CecilDefinitionsFactory.Attribute(
-                    "inlineArray", 
-                    typeVar, 
-                    context,
-                    ConstructorFor<InlineArrayAttribute>(context, typeof(int)),
-                    (context.TypeResolver.Bcl.System.Int32, elementCount.ToString())));
-            
             context.Generate(fieldExps);
+
+            //[InlineArray(2)]
+            var exps = context.ApiDefinitionsFactory.Attribute(
+                            context,
+                            context.RoslynTypeSystem.ForType<InlineArrayAttribute>().Ctor(context.RoslynTypeSystem.SystemInt32),
+                            "inlineArray",
+                            typeVar,
+                            VariableMemberKind.Type,
+                            new CustomAttributeArgument { Value = elementCount });
+            context.Generate(exps);
+            
             context.AddCompilerGeneratedAttributeTo(fieldVar, VariableMemberKind.Field);
             context.Generate($"assembly.MainModule.Types.Add({typeVar});\n");
         }
         
         return typeVar;
     }
-    
-    private static string ConstructorFor<TType>(IVisitorContext context, params Type[] ctorParamTypes)
-    {
-        var typeSymbol = context.SemanticModel.Compilation.GetTypeByMetadataName(typeof(TType).FullName!).EnsureNotNull();
-        var ctors = typeSymbol.Constructors.Where(ctor => ctor.Parameters.Length == ctorParamTypes.Length);
 
-        if (ctors.Count() == 1)
-            return ctors.First().MethodResolverExpression(context);
-
-        var expectedParamTypes = ctorParamTypes.Select(paramType => context.SemanticModel.Compilation.GetTypeByMetadataName(paramType.FullName!)).ToHashSet(SymbolEqualityComparer.Default);
-        return ctors.Single(ctor => !ctor.Parameters.Select(p => p.Type).ToHashSet(SymbolEqualityComparer.Default).Except(expectedParamTypes, SymbolEqualityComparer.Default).Any()).MethodResolverExpression(context);
-    }
-    
     private static Dictionary<int, string> _typeVariablePerElementCount = new();
 }
