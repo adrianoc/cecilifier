@@ -4,13 +4,13 @@ Cecilifier
 
 About
 ---
-Cecilifier was born as a tool meant to make it easier to learn how to use [Mono.Cecil](https://github.com/jbevain/cecil), a library used to manipulate MS IL. It was developed after the idea of [asmifier](https://asm.ow2.io/faq.html#Q10). 
-
-Over time the idea of adding support for other libraries (mainly [System.Reflection.Metadata](https://learn.microsoft.com/en-us/dotnet/api/system.reflection.metadata?view=net-9.0)) matured and as of Oct/2025 there is an ongoing effort to achieve that.
+Cecilifier is a tool meant aiming to make it easier to learn how to use [Mono.Cecil](https://github.com/jbevain/cecil), a library used to manipulate MS IL. It was developed after the idea of [asmifier](https://asm.ow2.io/faq.html#Q10).
 
 You can read more details about it in its [announcement blog](https://programing-fun.blogspot.com/2019/02/making-it-easier-to-getting-started.html).
 
 You can use it live in [this site](https://cecilifier.me/).
+
+Over time the idea of adding support for other libraries (mainly [System.Reflection.Metadata](https://learn.microsoft.com/en-us/dotnet/api/system.reflection.metadata?view=net-9.0)) matured and as of Oct/2025 there is an [ongoing effort](https://github.com/adrianoc/cecilifier/tree/features/systemreflectionmetadata) to achieve that.
 
 Feel free to send comments, issues, PR, etc; I cannot promise I'll be responsive but I'll do my best.
 
@@ -114,7 +114,7 @@ Unit Tests
 Sources: [Cecilifier.Core.Tests/Tests/Unit](Cecilifier.Core.Tests/Tests/Unit)
 
 >[!NOTE]
-> Unit tests only covers `Mono.Cecil`. Due to historical reasons the expectations of such tests are tightly coupled with `Mono.Cecil` syntax. `System.Reflection.Metadata` relies only on [Integration](integration-tests)/[Output Based](output-based-tests) tests.
+> Unit tests only covers `Mono.Cecil`. Due to historical reasons the expectations of such tests are tightly coupled with `Mono.Cecil` syntax. `System.Reflection.Metadata` relies on [Integration](integration-tests)/[Output Based](output-based-tests) tests.
 
 These resembles tradicional Unit tests, at least from performance characteristics. They can be found [in this folder](Cecilifier.Core.Tests/Tests/Unit) and work by cecilifying some code and asserting the cecilified code for expected patterns.
 

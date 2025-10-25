@@ -6,6 +6,10 @@ using NUnit.Framework.Internal.Commands;
 
 namespace Cecilifier.Core.Tests.Framework.Attributes;
 
+/// <summary>
+/// Configures which tests in an integration test fixture are enabled/disabled for a specific Api Target (represented by the Target Api related context (See <typeparamref name="T" />) /> 
+/// </summary>
+/// <typeparam name="T">Context type associated with the target api./></typeparam>
 [AttributeUsage(AttributeTargets.Method)]
 internal class ParameterizedResourceFilterAttribute<T> : FilterByContextBase<T>, IWrapTestMethod where T : IVisitorContext
 {

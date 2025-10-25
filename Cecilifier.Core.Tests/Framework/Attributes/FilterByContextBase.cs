@@ -10,7 +10,7 @@ namespace Cecilifier.Core.Tests.Framework.Attributes;
 internal class FilterByContextBase<T> : Attribute where T : IVisitorContext
 {
     private readonly HashSet<string> _enabledTests;
-    public FilterByContextBase(params string[] testNames) => _enabledTests = [..testNames];
+    protected FilterByContextBase(params string[] testNames) => _enabledTests = [..testNames];
     
     public string IgnoreReason { get; init; } = string.Empty;
     
