@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using Cecilifier.ApiDriver.SystemReflectionMetadata.CustomAttributes;
 using Cecilifier.ApiDriver.SystemReflectionMetadata.DelayedDefinitions;
-using Cecilifier.ApiDriver.SystemReflectionMetadata.TypeSystem;
+using Cecilifier.Core;
 using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.ApiDriver.Attributes;
 using Cecilifier.Core.AST;
@@ -209,23 +209,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
 
     public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext definitionContext, ISymbol fieldOrEvent, ITypeSymbol fieldType, string fieldAttributes, bool isVolatile, bool isByRef, object? constantValue = null)
     {
-        ((SystemReflectionMetadataContext) context).DelayedDefinitionsManager.RegisterFieldDefinition(definitionContext.ParentDefinitionVariable, definitionContext.DefinitionVariable);
-        
-        Debug.Assert(isByRef == false, "Handle isByRef");
-        var typedTypeResolver = (SystemReflectionMetadataTypeResolver) context.TypeResolver;
-        
-        context.DefinitionVariables.RegisterNonMethod(fieldOrEvent.ContainingType.ToDisplayString(), fieldOrEvent.Name, VariableMemberKind.Field, definitionContext.DefinitionVariable);
-        var fieldSignatureVar = context.Naming.SyntheticVariable($"{definitionContext.Identifier}_fs", ElementKind.LocalVariable);
-        return [
-            $"""
-             BlobBuilder {fieldSignatureVar} = new();
-             new BlobEncoder({fieldSignatureVar})
-                 .FieldSignature()
-                 .{typedTypeResolver.ResolveAny(fieldType, ResolveTargetKind.Field)};
-                 
-             var {definitionContext.DefinitionVariable} = metadata.AddFieldDefinition({fieldAttributes}, metadata.GetOrAddString("{fieldOrEvent.Name}"), metadata.GetOrAddBlob({fieldSignatureVar}));
-             """
-        ];
+        return Field(context, definitionContext, fieldOrEvent.ContainingType.ToDisplayString(), fieldOrEvent.Name, context.TypeResolver.ResolveAny(fieldType, ResolveTargetKind.Field),  fieldAttributes, isVolatile, isByRef, constantValue);
     }
 
     public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext definitionContext, string declaringTypeName, string name, string fieldType, string fieldAttributes, bool isVolatile, bool isByRef, object? constantValue = null)
@@ -234,16 +218,25 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         
         context.DefinitionVariables.RegisterNonMethod(declaringTypeName, name, VariableMemberKind.Field, definitionContext.DefinitionVariable);
         var fieldSignatureVar = context.Naming.SyntheticVariable($"{definitionContext.Identifier}_fs", ElementKind.LocalVariable);
-        return [
-            $"""
-             BlobBuilder {fieldSignatureVar} = new();
-             new BlobEncoder({fieldSignatureVar})
-                 .FieldSignature()
-                 .{fieldType};
-                 
-             var {definitionContext.DefinitionVariable} = metadata.AddFieldDefinition({fieldAttributes}, metadata.GetOrAddString("{name}"), metadata.GetOrAddBlob({fieldSignatureVar}));
-             """
-        ];
+        Buffer256<string> exps = new();
+        byte expCount = 0;
+        exps[expCount++] =
+                            $"""
+                             BlobBuilder {fieldSignatureVar} = new();
+                             new BlobEncoder({fieldSignatureVar})
+                                 .FieldSignature()
+                                 .{fieldType};
+                                 
+                             var {definitionContext.DefinitionVariable} = metadata.AddFieldDefinition({fieldAttributes}, metadata.GetOrAddString("{name}"), metadata.GetOrAddBlob({fieldSignatureVar}));{Environment.NewLine}
+                             """;
+        
+        if (constantValue != null)
+        {
+            exps[expCount++] = $"metadata.AddConstant({definitionContext.DefinitionVariable}, {constantValue});{Environment.NewLine}";
+        }
+
+        Span<string> span = exps;
+        return span.Slice(0, expCount).ToArray();
     }
 
     public IEnumerable<string> MethodBody(IVisitorContext context, string methodName, IlContext ilContext, string[] localVariableTypes, InstructionRepresentation[] instructions) => [];

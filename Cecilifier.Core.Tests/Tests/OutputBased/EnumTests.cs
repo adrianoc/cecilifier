@@ -9,7 +9,6 @@ namespace Cecilifier.Core.Tests.OutputBased;
 
 [TestFixture(typeof(MonoCecilContext))]
 [TestFixture(typeof(SystemReflectionMetadataContext))]
-[EnableForContext<SystemReflectionMetadataContext>(IgnoreReason = "Not implemented yet")]
 public class EnumTests<TContext> : OutputBasedTestBase<TContext> where TContext : IVisitorContext
 {
     [Test]

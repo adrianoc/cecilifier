@@ -51,7 +51,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
             return "Void()";
         }
         
-        if (type.IsPrimitiveType() || type.SpecialType == SpecialType.System_String)
+        if (type.IsPrimitiveType() || type.SpecialType == SpecialType.System_String || type.SpecialType == SpecialType.System_Object)
             return $"{(kind <= ResolveTargetKind.Field ? "" : "Type().")}{type.MetadataName}()";
 
         return $"""{(kind <= ResolveTargetKind.Field ? "" : $"Type(isByRef: {isByRef.ToKeyword()}).")}Type({ResolveAny(type, ResolveTargetKind.None)}, isValueType: {type.IsValueType.ToKeyword()})""";

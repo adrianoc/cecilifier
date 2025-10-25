@@ -16,7 +16,7 @@ using Cecilifier.Core.Variables;
 
 namespace Cecilifier.ApiDriver.MonoCecil;
 
-internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverDefinitionsFactory
+internal partial class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverDefinitionsFactory
 {
     public string MappedTypeModifiersFor(INamedTypeSymbol type, SyntaxTokenList modifiers) => RoslynToApiDriverModifiers(type, modifiers);
 
@@ -438,11 +438,5 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
         context.Generate($"var {id} = new RequiredModifierType({context.TypeResolver.Resolve(typeof(IsVolatile).FullName)}, {originalType});");
         
         return id;
-    }
-
-    [InlineArray(256)]
-    private struct Buffer256<T>
-    {
-        private T _data;
     }
 }
