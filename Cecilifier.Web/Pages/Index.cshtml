@@ -76,7 +76,7 @@
                       </button>
                       <ul class="dropdown-menu">
                           <li><a href="#" onclick="document.getElementById('targetApiButton').innerHTML = 'Targeting: Mono.Cecil <span class=\'caret\'>'">Mono.Cecil</a></li>
-                          <li><a href="#" onclick="document.getElementById('targetApiButton').innerHTML = 'Targeting: System.Reflection.Metadata <span class=\'caret\'>'">System.Reflection.Metadata</a></li>
+                          <li><a href="#" onclick="ShowModalDialog('srm_warning_dialog_id'); document.getElementById('targetApiButton').innerHTML = 'Targeting: System.Reflection.Metadata <span class=\'caret\'>'">System.Reflection.Metadata</a></li>
                       </ul>
                   </div>
                   <button class="button" id="copyToClipboard" onclick="copyToClipboard('copyPastHelper');"><i class="fa fa-copy"></i></button>
@@ -104,6 +104,7 @@
         <div id="cecilifiedcode" style="width: 100%; height: 600px; border-left: 10px solid white; border-right: 10px solid white"></div>
     </div>
 
+    <!-- ISSUE DIALOG --> 
     <div class="modal" aria-hidden="true">
         <div class="modal-dialog" id="bug_reporter_dialog_id">
             <div class="modal-header">
@@ -125,12 +126,13 @@
             </div>
         </div>
     </div>
+    <!-- ISSUE DIALOG --> 
 
     <!-- Assembly References Dialog -->
     <div class="modal" aria-hidden="true">
         <div class="modal-dialog" id="assembly_references_dialog_id">
             <div class="modal-header" id="assembly_references_header_id" style="background-color: #2b669a; padding-left: 10px;color: white">
-                <h2 style="margin-top:0; margin-bottom: 0">Assembly References</h2><a href="#" class="btn-close closemodal" style="padding-top: 0;padding-bottom: 0" aria-hidden="true" onclick="CloseDialog()">&times;</a>
+                <h2 style="margin-top:0; margin-bottom: 0">Assembly References</h2><a href="#" class="btn-close closemodal" style="padding-top: 0;padding-bottom: 0" aria-hidden="true" onclick="CloseModalDialog('assembly_references_dialog_id')">&times;</a>
             </div>
             <div class="modal-body" style="align-content: center">
                 <select id="assembly_references_list" size="12" style="width: 100%" ondrop="DropAssemblyReference(event)" ondragover="AllowDrop(event)"></select>
@@ -146,7 +148,46 @@
             </div>
         </div>
     </div>
+    <!-- Assembly References Dialog -->
+    
+    <!-- SRM WARNING -->
+    <div class="modal" aria-hidden="true">
+        <div class="modal-dialog" id="srm_warning_dialog_id">
+            <div class="modal-header" id="srm_warning_header_id" style="background-color: #761c19; padding-left: 10px;color: white; text-align: center">
+                <h2 style="margin-top:0; margin-bottom: 0">System.Reflection.Metadata Support Status</h2><a href="#" class="btn-close closemodal" style="padding-top: 0;padding-bottom: 0" aria-hidden="true" onclick="CloseModalDialog('srm_warning_dialog_id')">&times;</a>
+            </div>
+            
+            <div class="modal-body" style="font-size: x-large">
+                Support for System.Reflection.Metadata is under active development and should be considered as experimental with many issues (non exhaustive list):<br/>
+                <ul>
+                    <li>Generics (types/methods) are not supported yet</li>
+                    <li>Interfaces are not supported yet</li>
+                    <li>Many C# syntaxes/features not implemented</li>
+                    <li>Some C# syntaxes/features will generate code with mixed APIs (Mono.Cecil/System.Reflection.Metadata)</li>
+                    <li>Generated code formatting issues</li>
+                    <li>Incorrect mapping between code snippet/cecilified code (clicking in lines in one of them will most likely not select the correct corresponding lines) </li>
+                    <li>etc</li>
+                </ul>
+                
+                That said you are more than welcome to try it out and suggest improvements. What is already working:<br/>
+                <ul>
+                    <li>Simple class/structs</li>
+                    <li>Instance/Static fields of primitive/custom types</li>
+                    <li>Instance/Static methods (no overloading)</li>
+                    <li>Custom attributes</li>
+                    <li>Basically anything covered by tests ;) (tests with <b>[TestFixture(typeof(SystemReflectionMetadataContext))]</b>. Note that test fixtures that also have <b>[EnableForContext&lt;SystemReflectionMetadataContext&gt;]</b> applied will only run the tests listed in the ctor of the attribute and an empty list means all tests are disabled (there are multiple tests like that).</li>
+                </ul>
+                
+                <span style="background-color: olivedrab; text-align: center">Before opening issues, please discuss in <a href="https://discord.com/channels/697096451397910548/697096452085907458" target="_blank">our discord server</a>.</span>
+            </div>
 
+            <div class="modal-footer" style="top:90%;left:94%">
+                <a href="#" class="btn" onclick="CloseModalDialog('srm_warning_dialog_id');" id="close_srm_warning_dialog">Close</a>
+            </div>
+        </div>
+    </div>
+    <!-- SRM WARNING -->
+    
     <a href="javascript:void(0)" id="dlbtn" style="display: none"><button></button></a>
 </div>
 

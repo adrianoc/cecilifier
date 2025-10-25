@@ -1157,3 +1157,26 @@ function escapeString(str) {
         .replaceAll('\f', '\\f')
         .replaceAll('\t', '\\t');
 }
+
+// Modal Dialogs
+function ResizeDialog(dialogId){
+    const dialog = document.getElementById(dialogId);
+    let footerOffset = dialog.parentNode.lastChild.offsetHeight;
+    let h = (dialog.offsetHeight - footerOffset);
+
+    document.getElementById("assembly_references_header_id").style.height = `${h * 0.02}px`;
+}
+
+function ShowModalDialog(id) {
+    const modalDialog = document.getElementById(id);
+
+    modalDialog.parentElement.classList.add("opened");
+    modalDialog.parentElement.style.display="block";
+}
+
+function CloseModalDialog(id) {
+    const assembliesReferenceDialogNode = document.getElementById(id);
+
+    assembliesReferenceDialogNode.parentElement.classList.remove("opened");
+    assembliesReferenceDialogNode.parentElement.style.display="none";
+}
