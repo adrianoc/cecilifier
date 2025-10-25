@@ -11,6 +11,7 @@ using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
+using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
 
 namespace Cecilifier.ApiDriver.MonoCecil;
@@ -220,7 +221,7 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
 
     public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext definitionContext, ISymbol fieldOrEvent, ITypeSymbol fieldType, string fieldAttributes, bool isVolatile, bool isByRef, object? constantValue = null)
     {
-        return Field(context, definitionContext, fieldOrEvent.ContainingType.ToDisplayString(), fieldOrEvent.Name, context.TypeResolver.ResolveAny(fieldType), fieldAttributes, isVolatile, isByRef, constantValue);
+        return Field(context, definitionContext, fieldOrEvent.ContainingType.ToDisplayString(), fieldOrEvent.Name, context.TypeResolver.ResolveAny(fieldType, ResolveTargetKind.Field), fieldAttributes, isVolatile, isByRef, constantValue);
     }
 
     public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext definitionContext, string declaringTypeName, string name, string fieldType, string fieldAttributes, bool isVolatile, bool isByRef, object? constantValue = null)

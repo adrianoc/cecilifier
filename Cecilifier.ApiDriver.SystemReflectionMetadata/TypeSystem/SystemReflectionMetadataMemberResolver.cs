@@ -24,30 +24,31 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
         var methodSignatureVar = context.Naming.SyntheticVariable($"{method.Name}Signature", ElementKind.LocalVariable);
         context.DefinitionVariables.RegisterMethod(method.AsMethodVariable(VariableMemberKind.MethodSignature, methodSignatureVar));
 
+        var isInstanceMethod = !method.IsStatic && method.MethodKind != MethodKind.LocalFunction; // local functions are always declared as static (we don't support capturing variables)
         context.Generate($$"""
-                            var {{methodSignatureBlobVar}} = new BlobBuilder();
+                           var {{methodSignatureBlobVar}} = new BlobBuilder();
 
-                            new BlobEncoder({{methodSignatureBlobVar}}).
-                                MethodSignature(isInstanceMethod: {{ (!method.IsStatic).ToKeyword() }}).
-                                Parameters({{method.Parameters.Length}},
-                                    returnType => returnType.{{context.TypedTypeResolver.ResolveForTargetKind(method.ReturnType, ResolveTargetKind.ReturnType, method.IsByRef())}},
-                                    parameters => 
-                                    {
-                                        {{
-                                            string.Join('\n',
-                                                method.Parameters.Select(p => $"""
-                                                                               parameters
-                                                                                       .AddParameter()
-                                                                                       .{context.TypedTypeResolver.ResolveForTargetKind(p.Type, ResolveTargetKind.Parameter, p.RefKind != RefKind.None)};
-                                                                           """))}}
-                                    });
+                           new BlobEncoder({{methodSignatureBlobVar}}).
+                               MethodSignature(isInstanceMethod: {{ isInstanceMethod.ToKeyword() }}).
+                               Parameters({{method.Parameters.Length}},
+                                   returnType => returnType.{{context.TypedTypeResolver.ResolveForTargetKind(method.ReturnType, ResolveTargetKind.ReturnType, method.IsByRef())}},
+                                   parameters => 
+                                   {
+                                       {{
+                                           string.Join('\n',
+                                               method.Parameters.Select(p => $"""
+                                                                                  parameters
+                                                                                          .AddParameter()
+                                                                                          .{context.TypedTypeResolver.ResolveForTargetKind(p.Type, ResolveTargetKind.Parameter, p.RefKind != RefKind.None)};
+                                                                              """))}}
+                                   });
 
-                            var {{methodSignatureVar}} = metadata.GetOrAddBlob({{methodSignatureBlobVar}});
-                            var {{methodRefVar}} = metadata.AddMemberReference(
-                                                                {{containingTypeRefVar}},
-                                                                metadata.GetOrAddString("{{method.Name}}"),
-                                                                {{methodSignatureVar}});
-                            """);
+                           var {{methodSignatureVar}} = metadata.GetOrAddBlob({{methodSignatureBlobVar}});
+                           var {{methodRefVar}} = metadata.AddMemberReference(
+                                                               {{containingTypeRefVar}},
+                                                               metadata.GetOrAddString("{{method.MappedName()}}"),
+                                                               {{methodSignatureVar}});
+                           """);
         
         context.WriteNewLine();
         

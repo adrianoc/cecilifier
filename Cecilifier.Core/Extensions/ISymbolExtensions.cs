@@ -47,6 +47,16 @@ namespace Cecilifier.Core.Extensions
                 : method.Name;
         }
 
+        /// <summary>
+        /// Returns a mangled name matching C# compiler name rules as of Oct/2025 if <paramref name="method"/> represents a local function otherwise <paramref name="method"/>.Name.
+        /// </summary>
+        /// <param name="method"></param>
+        /// method to return name for. 
+        /// <returns>a name appropriate for the passed method.</returns>
+        public static string MappedName(this IMethodSymbol method) => method.MethodKind == MethodKind.LocalFunction 
+                                                                            ? $"<{method.ContainingSymbol.Name}>g__{method.Name}|0_0"
+                                                                            : method.Name;
+
         public static string FullyQualifiedName(this ISymbol type, bool includingTypeParameters = true)
         {
             return type.ToDisplayString(includingTypeParameters ? QualifiedNameIncludingTypeParametersFormat : QualifiedNameWithoutTypeParametersFormat);

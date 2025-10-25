@@ -91,7 +91,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
             var methodSignatureVar = ctx.DefinitionVariables.GetMethodVariable(methodSymbol.AsMethodVariable(VariableMemberKind.MethodSignature));
             Debug.Assert(methodSignatureVar.IsValid);
             
-            var methodDefVar = context.Naming.SyntheticVariable(methodName, ElementKind.Method);
+            var methodDefVar = context.Naming.SyntheticVariable(bodiedMemberDefinitionContext.Member.Identifier, ElementKind.Method);
             ctx.Generate($"""
                           var {methodDefVar}  = metadata.AddMethodDefinition(
                                                     {methodModifiers},
