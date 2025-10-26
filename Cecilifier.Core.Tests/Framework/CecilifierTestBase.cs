@@ -6,14 +6,13 @@ using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
 using System.Security.Cryptography;
 using System.Text;
+using Cecilifier.Core.AST;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.Tests.Framework.AssemblyDiff;
 using Cecilifier.Core.Tests.Framework.ILVerification;
 using Cecilifier.Runtime;
 using Mono.Cecil.Cil;
-using Mono.Cecil;
-using Mono.Cecil.Rocks;
 using NUnit.Framework;
 using ILVerify;
 
@@ -21,7 +20,7 @@ namespace Cecilifier.Core.Tests.Framework;
 
 public record struct CecilifyResult(string CecilifiedCode, string CecilifiedAssemblyFilePath, string CecilifiedOutputAssemblyFilePath);
 
-public class CecilifierTestBase
+public class CecilifierTestBase<TContext> where TContext : IVisitorContext
 {
     private protected string cecilifiedCode;
 
@@ -37,8 +36,8 @@ public class CecilifierTestBase
         var targetPath = Path.Combine(Path.GetDirectoryName(cecilifiedAssemblyPath), Path.GetFileNameWithoutExtension(cecilifiedAssemblyPath) + "-Expected");
 
         return buildType == BuildType.Exe
-            ? CompilationServices.CompileExe(targetPath, tbc, ReferencedAssemblies.GetTrustedAssembliesPath())
-            : CompilationServices.CompileDLL(targetPath, tbc, ReferencedAssemblies.GetTrustedAssembliesPath());
+            ? CompilationServices.CompileExe(targetPath, tbc, GetDotNetAssemblyReferences())
+            : CompilationServices.CompileDLL(targetPath, tbc, GetDotNetAssemblyReferences());
     }
 
     class AssemblyResolver : IResolver
@@ -78,7 +77,7 @@ public class CecilifierTestBase
         var dotnetRootPath = Environment.GetEnvironmentVariable("DOTNET_ROOT");
         if (string.IsNullOrEmpty(dotnetRootPath))
         {
-            Console.WriteLine($"Unable to resolve DOTNET_ROOT environment variable. Skping ilverify on {actualAssemblyPath}");
+            Console.WriteLine($"Unable to resolve DOTNET_ROOT environment variable. Skipping ilverify on {actualAssemblyPath}");
             return;
         }
 
@@ -121,14 +120,12 @@ public class CecilifierTestBase
 
     protected CecilifyResult CecilifyAndExecute(Stream tbc, string testBasePath)
     {
-        cecilifiedCode = Cecilfy(tbc);
+        var result = Cecilfy(tbc);
+        cecilifiedCode = result.GeneratedCode.ReadToEnd();
 
-        var references = ReferencedAssemblies.GetTrustedAssembliesPath().Where(a => !a.Contains("mscorlib"));
-        List<string> refsToCopy = [
-            typeof(ILParser).Assembly.Location,
-            typeof(Mono.Cecil.TypeReference).Assembly.Location,
-            typeof(TypeHelpers).Assembly.Location
-        ];
+        var references = GetDotNetAssemblyReferences().Where(a => !a.Contains("mscorlib"));
+        List<string> refsToCopy = [ typeof(TypeHelpers).Assembly.Location ];
+        refsToCopy.AddRange(result.Context.ApiDriver.AssemblyReferences);
 
         references = references.Concat(refsToCopy).ToList();
 
@@ -237,9 +234,16 @@ public class CecilifierTestBase
         }
     }
 
-    private string Cecilfy(Stream stream)
+    private CecilifierResult Cecilfy(Stream stream)
     {
         stream.Position = 0;
-        return Cecilifier.Process(stream, new CecilifierOptions { References = ReferencedAssemblies.GetTrustedAssembliesPath(), Naming = new DefaultNameStrategy() }).GeneratedCode.ReadToEnd();
+        return Cecilifier.Process<TContext>(
+            stream,
+            new CecilifierOptions { References = GetDotNetAssemblyReferences(), Naming = new DefaultNameStrategy() });
+    }
+
+    private static string[] GetDotNetAssemblyReferences()
+    {
+        return TContext.BclAssembliesForCompilation();
     }
 }

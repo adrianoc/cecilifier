@@ -1,12 +1,15 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Reflection.Emit;
+using Cecilifier.Core.ApiDriver;
+using Microsoft.CodeAnalysis;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
-using Microsoft.CodeAnalysis;
-using Mono.Cecil.Cil;
+using Cecilifier.Core.Variables;
 
 namespace Cecilifier.Core.CodeGeneration;
 
@@ -23,21 +26,21 @@ internal partial class RecordGenerator
         context.WriteNewLine();
         context.WriteComment($"{record.Identifier.ValueText}.{PrintMembersMethodName}()");
 
-        var builderParameter = new ParameterSpec("builder", context.TypeResolver.Resolve(typeof(StringBuilder).FullName), RefKind.None, Constants.ParameterAttributes.None);
-        var printMembersDeclExps = CecilDefinitionsFactory.Method(
-            context,
-            _recordSymbol.OriginalDefinition.ToDisplayString(),
-            PrintMembersVar,
-            PrintMembersMethodName,
-            PrintMembersMethodName,
-            $"MethodAttributes.Family | {(HasBaseRecord(record) ? Constants.Cecil.HideBySigVirtual : Constants.Cecil.HideBySigNewSlotVirtual)}",
-            [builderParameter],
-            [],
-            ctx => context.TypeResolver.Bcl.System.Boolean,
-            out var methodDefinitionVariable);
+        var builderParameter = new ParameterSpec("builder", context.TypeResolver.ResolveAny(context.RoslynTypeSystem.ForType<StringBuilder>()), RefKind.None, Constants.ParameterAttributes.None);
+        string methodModifiers = $"MethodAttributes.Family | {(HasBaseRecord(record) ? Constants.Cecil.HideBySigVirtual : Constants.Cecil.HideBySigNewSlotVirtual)}";
+        Func<IVisitorContext, string> returnTypeResolver = ctx => context.TypeResolver.Bcl.System.Boolean;
+        var printMembersDeclExps = context.ApiDefinitionsFactory.Method(
+                                                                context, 
+                                                                new BodiedMemberDefinitionContext(PrintMembersMethodName, PrintMembersVar, recordTypeDefinitionVariable, MemberOptions.None, IlContext.None), 
+                                                                _recordSymbol.OriginalDefinition.ToDisplayString(), 
+                                                                methodModifiers, 
+                                                                new [] { builderParameter }, 
+                                                                Array.Empty<string>(), 
+                                                                returnTypeResolver,
+                                                                out var methodDefinitionVariable);
 
         using var _ = context.DefinitionVariables.WithVariable(methodDefinitionVariable);
-        context.WriteCecilExpressions([
+        context.Generate([
             ..printMembersDeclExps,
             $"{recordTypeDefinitionVariable}.Methods.Add({PrintMembersVar});"
         ]);
@@ -77,7 +80,7 @@ internal partial class RecordGenerator
                 OpCodes.Ldarg_1,
                 OpCodes.Ldarg_0,
                 OpCodes.Call.WithOperand(ClosedGenericMethodFor($"get_{property.Name}", recordTypeDefinitionVariable)),
-                OpCodes.Box.WithOperand(context.TypeResolver.Resolve(property.Type)).IgnoreIf(property.Type.TypeKind != TypeKind.TypeParameter),
+                OpCodes.Box.WithOperand(context.TypeResolver.ResolveAny(property.Type)).IgnoreIf(property.Type.TypeKind != TypeKind.TypeParameter),
                 OpCodes.Callvirt.WithOperand(stringBuilderAppendMethod.MethodResolverExpression(context)),
                 OpCodes.Pop
             ]);
@@ -102,22 +105,23 @@ internal partial class RecordGenerator
                 OpCodes.Pop,
                 OpCodes.Ldarg_1,
                 OpCodes.Ldarg_0,
-                OpCodes.Ldfld.WithOperand($"""new FieldReference("{field.Name}", {context.TypeResolver.Resolve(field.Type)}, {TypeOrClosedTypeFor(recordTypeDefinitionVariable)})"""),
-                OpCodes.Box.WithOperand(context.TypeResolver.Resolve(field.Type)).IgnoreIf(field.Type.TypeKind != TypeKind.TypeParameter),
+                OpCodes.Ldfld.WithOperand($"""new FieldReference("{field.Name}", {context.TypeResolver.ResolveAny(field.Type)}, {TypeOrClosedTypeFor(recordTypeDefinitionVariable)})"""),
+                OpCodes.Box.WithOperand(context.TypeResolver.ResolveAny(field.Type)).IgnoreIf(field.Type.TypeKind != TypeKind.TypeParameter),
                 OpCodes.Callvirt.WithOperand(stringBuilderAppendMethod.MethodResolverExpression(context)),
                 OpCodes.Pop
             ]);
             separator = ", ";
         }
 
-        var printMemberBodyExps = CecilDefinitionsFactory.MethodBody(context.Naming, PrintMembersMethodName, PrintMembersVar, [],
-        [
+        InstructionRepresentation[] instructions = [
             ..bodyInstructions,
             OpCodes.Ldc_I4_1,
             OpCodes.Ret
-        ]);
-        context.WriteCecilExpressions(printMemberBodyExps);
-        AddCompilerGeneratedAttributeTo(context, PrintMembersVar);
+        ];
+        var ilContext = context.ApiDriver.NewIlContext(context, PrintMembersMethodName, PrintMembersVar);
+        var printMemberBodyExps = context.ApiDefinitionsFactory.MethodBody(context, PrintMembersMethodName, ilContext, [], instructions);
+        context.Generate(printMemberBodyExps);
+        AddCompilerGeneratedAttributeTo(context, PrintMembersVar, VariableMemberKind.Method);
         AddIsReadOnlyAttributeTo(context, PrintMembersVar);
         static IMethodSymbol StringBuilderAppendMethodFor(IVisitorContext context, ITypeSymbol type, ITypeSymbol stringBuilderSymbol)
         {
@@ -145,11 +149,11 @@ internal partial class RecordGenerator
     // If the record inherits from another record returns the base `PrintMembers()` method
     private string PrintMembersMethodToCall(INamedTypeSymbol stringBuilderSymbol)
     {
-        if (_recordSymbol is INamedTypeSymbol { IsGenericType: true })
-            return $$"""new MethodReference("PrintMembers", {{context.TypeResolver.Bcl.System.Boolean}}, {{context.TypeResolver.Resolve(_recordSymbol)}}) { HasThis = true, Parameters = { new ParameterDefinition({{context.TypeResolver.Resolve(stringBuilderSymbol)}}) } }""";
+        if (_recordSymbol is { IsGenericType: true })
+            return $$"""new MethodReference("PrintMembers", {{context.TypeResolver.Bcl.System.Boolean}}, {{context.TypeResolver.ResolveAny(_recordSymbol)}}) { HasThis = true, Parameters = { new ParameterDefinition({{context.TypeResolver.ResolveAny(stringBuilderSymbol)}}) } }""";
             
         return HasBaseRecord(context, _recordSymbol) 
-            ? $$"""new MethodReference("PrintMembers", {{context.TypeResolver.Bcl.System.Boolean}}, {{context.TypeResolver.Resolve(_recordSymbol.BaseType)}}) { HasThis = true, Parameters = { new ParameterDefinition({{ context.TypeResolver.Resolve(stringBuilderSymbol) }}) } }"""
+            ? $$"""new MethodReference("PrintMembers", {{context.TypeResolver.Bcl.System.Boolean}}, {{context.TypeResolver.ResolveAny(_recordSymbol.BaseType)}}) { HasThis = true, Parameters = { new ParameterDefinition({{ context.TypeResolver.ResolveAny(stringBuilderSymbol) }}) } }"""
             : PrintMembersVar;
     }
 }

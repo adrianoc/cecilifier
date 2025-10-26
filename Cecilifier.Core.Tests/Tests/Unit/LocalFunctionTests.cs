@@ -18,11 +18,11 @@ public class LocalFunctionTests : CecilifierUnitTestBase
             cecilifiedCode);
 
         // asserts that il_topLevelMain_3 is the variable holding the ILProcessor for the top level statement body.
-        Assert.That(cecilifiedCode, Contains.Substring("var il_topLevelMain_3 = m_topLevelStatements_1.Body.GetILProcessor();"), cecilifiedCode);
+        Assert.That(cecilifiedCode, Contains.Substring("var il_topLevelMain_4 = m_topLevelMain_3.Body.GetILProcessor();"), cecilifiedCode);
 
         Assert.That(
             cecilifiedCode,
-            Does.Not.Match(@"il_topLevelMain_3.Emit\(OpCodes.Ldarg_0\);"),
+            Does.Not.Match(@"il_topLevelMain_\d+.Emit\(OpCodes.Ldarg_0\);"),
             "Looks like local function is being handled as instance method, instead of a static one.");
     }
 
@@ -37,7 +37,7 @@ public class LocalFunctionTests : CecilifierUnitTestBase
             Contains.Substring("var m_localFoo_6 = new MethodDefinition(\"<<Main>$>g__LocalFoo|0_0\", MethodAttributes.Private, assembly.MainModule.TypeSystem.Int32);"));
 
         // asserts that il_topLevelMain_3 is the variable holding the ILProcessor for the top level statement body.
-        Assert.That(cecilifiedCode, Contains.Substring("var il_topLevelMain_3 = m_topLevelStatements_1.Body.GetILProcessor();"));
+        Assert.That(cecilifiedCode, Contains.Substring("var il_topLevelMain_4 = m_topLevelMain_3.Body.GetILProcessor();"));
 
         Assert.That(
             cecilifiedCode,

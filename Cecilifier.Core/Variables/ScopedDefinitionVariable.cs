@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Cecilifier.Core.Variables;
 
-public unsafe readonly struct ScopedDefinitionVariable : IDisposable
+public readonly unsafe struct ScopedDefinitionVariable : IDisposable
 {
     private readonly List<DefinitionVariable> _definitionVariables;
     private readonly int _currentSize;

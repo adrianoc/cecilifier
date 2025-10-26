@@ -1,10 +1,11 @@
 using Cecilifier.Core.Extensions;
+using Cecilifier.Core.Variables;
+using System.Reflection.Emit;
+using Cecilifier.Core.ApiDriver;
+using Cecilifier.Core.ApiDriver.Handles;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis.CSharp;
-using Mono.Cecil.Cil;
-using static Cecilifier.Core.Misc.CodeGenerationHelpers;
 
 namespace Cecilifier.Core.AST
 {
@@ -46,7 +47,7 @@ namespace Cecilifier.Core.AST
             // our direct parent is a using statement, which means we have something like:
             // using(new Value()) {}
             var valueTypeLocalVariable = DeclareAndInitializeValueTypeLocalVariable();
-            Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, valueTypeLocalVariable.VariableName);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloc, valueTypeLocalVariable.VariableName);
         }
 
         public override void VisitEqualsValueClause(EqualsValueClauseSyntax node)
@@ -64,19 +65,19 @@ namespace Cecilifier.Core.AST
         public override void VisitReturnStatement(ReturnStatementSyntax node)
         {
             var valueTypeLocalVariable = DeclareAndInitializeValueTypeLocalVariable();
-            Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, valueTypeLocalVariable.VariableName);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloc, valueTypeLocalVariable.VariableName);
         }
 
         public override void VisitArrowExpressionClause(ArrowExpressionClauseSyntax node)
         {
             var valueTypeLocalVariable = DeclareAndInitializeValueTypeLocalVariable();
-            Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, valueTypeLocalVariable.VariableName);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloc, valueTypeLocalVariable.VariableName);
         }
 
         public override void VisitMemberAccessExpression(MemberAccessExpressionSyntax node)
         {
             var valueTypeLocalVariable = DeclareAndInitializeValueTypeLocalVariable();
-            Context.EmitCilInstruction(ilVar, OpCodes.Ldloca, valueTypeLocalVariable.VariableName);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloca, valueTypeLocalVariable.VariableName);
             var accessedMember = ModelExtensions.GetSymbolInfo(Context.SemanticModel, node).Symbol.EnsureNotNull();
             if (accessedMember.ContainingType.SpecialType == SpecialType.System_ValueType)
             {
@@ -109,13 +110,13 @@ namespace Cecilifier.Core.AST
             // one of the branches are not an object creation expression so we need to add a variable (for that at least),
             // initialize it and load it to the stack to be consumed, for instance as an argument of a method call.
             var valueTypeLocalVariable = DeclareAndInitializeValueTypeLocalVariable();
-            Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, valueTypeLocalVariable.VariableName);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloc, valueTypeLocalVariable.VariableName);
         }
 
         public override void VisitCastExpression(CastExpressionSyntax node)
         {
             var valueTypeLocalVariable = DeclareAndInitializeValueTypeLocalVariable();
-            Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, valueTypeLocalVariable.VariableName);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloc, valueTypeLocalVariable.VariableName);
         }
 
         public override void VisitAssignmentExpression(AssignmentExpressionSyntax node)
@@ -130,7 +131,7 @@ namespace Cecilifier.Core.AST
         {
             var valueTypeLocalVariable = DeclareAndInitializeValueTypeLocalVariable();
             var loadOpCode = node.IsPassedAsInParameter(Context) ? OpCodes.Ldloca : OpCodes.Ldloc;
-            Context.EmitCilInstruction(ilVar, loadOpCode, valueTypeLocalVariable.VariableName);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, loadOpCode, valueTypeLocalVariable.VariableName);
         }
 
         public bool TargetOfAssignmentIsValueType { get; private set; }
@@ -149,10 +150,10 @@ namespace Cecilifier.Core.AST
                 case SpecialType.System_Int16:
                 case SpecialType.System_Int32:
                 case SpecialType.System_Int64:
-                    Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4_0);
+                    Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldc_I4_0);
                     if (ctorInfo.Symbol.ContainingType.SpecialType == SpecialType.System_Int64)
-                        Context.EmitCilInstruction(ilVar, OpCodes.Conv_I8);
-                    Context.EmitCilInstruction(ilVar, OpCodes.Stloc, tempLocal.VariableName);
+                        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Conv_I8);
+                    Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Stloc, new CilLocalVariableHandle(tempLocal.VariableName));
                     break;
 
                 case SpecialType.None:
@@ -169,8 +170,8 @@ namespace Cecilifier.Core.AST
 
         private void InitValueTypeLocalVariable(string localVariable)
         {
-            Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, localVariable);
-            Context.EmitCilInstruction(ilVar, OpCodes.Initobj, ResolvedStructType());
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloca_S, localVariable);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Initobj, ResolvedStructType());
 
             if (objectCreationExpressionSyntax.Initializer is not null)
             {
@@ -180,7 +181,7 @@ namespace Cecilifier.Core.AST
                 // at this point there's no object reference in the stack (it was consumed by the `Initobj` instruction)
                 // so we push the address of the variable that we just initialised again. Notice that after processing
                 // the initializer we need to pop this reference from the stack again.
-                Context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, localVariable);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloca_S, localVariable);
                 ProcessInitializerIfNotNull(Context, ilVar, objectCreationExpressionSyntax.Initializer);
             }
         }
@@ -191,9 +192,9 @@ namespace Cecilifier.Core.AST
                 return;
             
             ExpressionVisitor.Visit(context, ilVar, initializer);
-            context.EmitCilInstruction(ilVar, OpCodes.Pop);
+            context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Pop);
         }
 
-        private string ResolvedStructType() =>  Context.TypeResolver.Resolve(ctorInfo.Symbol.ContainingType);
+        private string ResolvedStructType() =>  Context.TypeResolver.ResolveAny(ctorInfo.Symbol.ContainingType);
     }
 }

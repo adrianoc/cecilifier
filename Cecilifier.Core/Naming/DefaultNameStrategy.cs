@@ -31,6 +31,7 @@ namespace Cecilifier.Core.Naming
             [ElementKind.GenericInstance] = "gi",
             [ElementKind.MemberReference] = "r",
             [ElementKind.IL] = "il",
+            [ElementKind.AssemblyReference] = "ar",
             [ElementKind.None] = string.Empty,
         };
 
@@ -72,8 +73,8 @@ namespace Cecilifier.Core.Naming
         public string CustomAttribute(string typeName) => $"{PrefixFor(ElementKind.Attribute)}{NameFor(typeName)}{UniqueIdString()}";
         public string RequiredModifier() => $"modReq{UniqueIdString()}";
         public string Delegate(DelegateDeclarationSyntax node) => $"{PrefixFor(ElementKind.Delegate)}{NameFor(node)}{UniqueId()}";
-
         public NamingOptions Options { get; set; } = NamingOptions.All;
+        public INameStrategy WithOptions(NamingOptions options) => new DefaultNameStrategy(options, _format);
 
         private string PrefixFor(ElementKind kind) => (Options & NamingOptions.PrefixVariableNamesWithElementKind) == NamingOptions.PrefixVariableNamesWithElementKind ? $"{_format[kind]}" : string.Empty;
         private string UniqueIdString() => (Options & NamingOptions.SuffixVariableNamesWithUniqueId) == NamingOptions.SuffixVariableNamesWithUniqueId ? $"{PartsSeparator}{UniqueId()}" : string.Empty;

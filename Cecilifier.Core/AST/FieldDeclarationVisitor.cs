@@ -2,10 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.CompilerServices;
+using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
-using Cecilifier.Core.Misc;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -55,13 +54,15 @@ namespace Cecilifier.Core.AST
 
             var fieldDefVars = new List<string>(variableDeclarationSyntax.Variables.Count);
 
-            var type = ResolveType(variableDeclarationSyntax.Type);
-            var fieldType = ProcessRequiredModifiers(modifiers, type) ?? type;
+            var fieldType = ResolveTypeSymbol(variableDeclarationSyntax.Type);
             var fieldAttributes = ModifiersToCecil<FieldAttributes>(modifiers, "Private", MapFieldAttributesFor);
+            var isByRef = variableDeclarationSyntax.Type is RefTypeSyntax;
 
             foreach (var field in variableDeclarationSyntax.Variables)
             {
                 using var _ = LineInformationTracker.Track(Context, field);
+                
+                var fieldSymbol = Context.SemanticModel.GetDeclaredSymbol(field).EnsureNotNull();
                 // skip field already processed due to forward references.
                 var fieldDeclarationVariable = Context.DefinitionVariables.GetVariable(field.Identifier.Text, VariableMemberKind.Field, declaringTypeSymbol.ToDisplayString());
                 if (fieldDeclarationVariable.IsValid)
@@ -70,10 +71,17 @@ namespace Cecilifier.Core.AST
                 var fieldVar = Context.Naming.FieldDeclaration(node);
                 fieldDefVars.Add(fieldVar);
                 var constant = modifiers.Any(m => m.IsKind(SyntaxKind.ConstKeyword)) && field.Initializer != null ? Context.SemanticModel.GetConstantValue(field.Initializer.Value) : null;
-                var exps = CecilDefinitionsFactory.Field(Context, declaringTypeSymbol.ToDisplayString(), declaringTypeVar.VariableName, fieldVar, field.Identifier.ValueText, fieldType, fieldAttributes, constant.Value.ValueText());
+                var exps = Context.ApiDefinitionsFactory.Field(
+                                                            Context, 
+                                                            new MemberDefinitionContext(fieldSymbol.Name, fieldVar, declaringTypeVar.VariableName), 
+                                                            fieldSymbol, 
+                                                            fieldType,
+                                                            fieldAttributes, 
+                                                            modifiers.Any(m => m.IsKind(SyntaxKind.VolatileKeyword)),
+                                                            isByRef,
+                                                            constant.Value.ValueText());
                 AddCecilExpressions(Context, exps);
-
-                HandleAttributesInMemberDeclaration(node.AttributeLists, fieldVar);
+                HandleAttributesInMemberDeclaration(node.AttributeLists, fieldVar, VariableMemberKind.Field);
             }
 
             return fieldDefVars;
@@ -94,15 +102,5 @@ namespace Cecilifier.Core.AST
 
                 _ => throw new ArgumentException($"Unsupported attribute name: {token.Kind().ToString()}")
             };
-
-        private string ProcessRequiredModifiers(IReadOnlyList<SyntaxToken> modifiers, string originalType)
-        {
-            if (modifiers.All(m => !m.IsKind(SyntaxKind.VolatileKeyword)))
-                return null;
-
-            var id = Context.Naming.RequiredModifier();
-            AddCecilExpression($"var {id} = new RequiredModifierType({Context.TypeResolver.Resolve(typeof(IsVolatile).FullName)}, {originalType});");
-            return id;
-        }
     }
 }

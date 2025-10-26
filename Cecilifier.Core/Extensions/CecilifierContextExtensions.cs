@@ -1,24 +1,26 @@
 using System;
 using System.Linq;
-using Cecilifier.Core.AST;
-using Cecilifier.Core.Misc;
-using Cecilifier.Core.Naming;
-using Cecilifier.Core.Variables;
+using System.Reflection.Emit;
+using System.Runtime.CompilerServices;
+using Cecilifier.Core.ApiDriver;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Operations;
-using Mono.Cecil.Cil;
+using Cecilifier.Core.AST;
+using Cecilifier.Core.Naming;
+using Cecilifier.Core.TypeSystem;
+using Cecilifier.Core.Variables;
 
 namespace Cecilifier.Core.Extensions;
 
 public static class CecilifierContextExtensions
 {
-    internal static void AddCompilerGeneratedAttributeTo(this IVisitorContext context, string memberVariable)
+    internal static void AddCompilerGeneratedAttributeTo(this IVisitorContext context, string memberVariable, VariableMemberKind memberKind)
     {
         var compilerGeneratedAttributeCtor = context.RoslynTypeSystem.SystemRuntimeCompilerServicesCompilerGeneratedAttribute.Ctor();
-        var exps = CecilDefinitionsFactory.Attribute("compilerGenerated", memberVariable, context, compilerGeneratedAttributeCtor.MethodResolverExpression(context));
-        context.WriteCecilExpressions(exps);
+        var exps = context.ApiDefinitionsFactory.Attribute(context, compilerGeneratedAttributeCtor, "compilerGenerated", memberVariable, memberKind);
+        context.Generate(exps);
     }
     
     internal static DefinitionVariable AddLocalVariableToCurrentMethod(this IVisitorContext context, string localVarName, string varType)
@@ -27,19 +29,7 @@ public static class CecilifierContextExtensions
         if (!currentMethod.IsValid)
             throw new InvalidOperationException("Could not resolve current method declaration variable.");
 
-        return AddLocalVariableToMethod(context, localVarName, currentMethod, varType);
-    }
-
-    internal static DefinitionVariable AddLocalVariableToMethod(this IVisitorContext context, string localVarName, DefinitionVariable methodVar, string resolvedVarType)
-    {
-        var cecilVarDeclName = context.Naming.SyntheticVariable(localVarName, ElementKind.LocalVariable);
-
-        context.WriteCecilExpression($"var {cecilVarDeclName} = new VariableDefinition({resolvedVarType});");
-        context.WriteNewLine();
-        context.WriteCecilExpression($"{methodVar.VariableName}.Body.Variables.Add({cecilVarDeclName});");
-        context.WriteNewLine();
-
-        return context.DefinitionVariables.RegisterNonMethod(string.Empty, localVarName, VariableMemberKind.LocalVariable, cecilVarDeclName);
+        return context.ApiDefinitionsFactory.LocalVariable(context, localVarName, currentMethod.VariableName, varType);
     }
 
     internal static bool TryApplyConversions(this IVisitorContext context, string ilVar, IOperation operation)
@@ -56,11 +46,11 @@ public static class CecilifierContextExtensions
         }
         else if (operation is IConversionOperation { Operand.Type: not null } conversion2 && context.SemanticModel.Compilation.ClassifyConversion(conversion2.Operand.Type, operation.Type).IsBoxing)
         {
-            context.EmitCilInstruction(ilVar, OpCodes.Box, context.TypeResolver.Resolve(conversion2.Operand.Type));
+            context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Box, context.TypeResolver.ResolveAny(conversion2.Operand.Type).AsToken());
         }
         else if (operation is IConversionOperation { Conversion.IsNullable: true } nullableConversion && !nullableConversion.Syntax.IsKind(SyntaxKind.CoalesceExpression))
         {
-            context.EmitCilInstruction(
+            context.ApiDriver.WriteCilInstruction(context, 
                 ilVar, 
                 OpCodes.Newobj,
                 $"assembly.MainModule.ImportReference(typeof(System.Nullable<>).MakeGenericType(typeof({nullableConversion.Operand.Type.FullyQualifiedName()})).GetConstructors().Single(ctor => ctor.GetParameters().Length == 1))");
@@ -70,7 +60,7 @@ public static class CecilifierContextExtensions
                  && SymbolEqualityComparer.Default.Equals(coalesce.Value.Type?.OriginalDefinition, context.RoslynTypeSystem.SystemNullableOfT)
                  )
         {
-            context.EmitCilInstruction(
+            context.ApiDriver.WriteCilInstruction(context, 
                 ilVar, 
                 OpCodes.Newobj,
                 $"assembly.MainModule.ImportReference(typeof(System.Nullable<>).MakeGenericType(typeof({coalesce.Type?.FullyQualifiedName()})).GetConstructors().Single(ctor => ctor.GetParameters().Length == 1))");
@@ -89,30 +79,30 @@ public static class CecilifierContextExtensions
         switch (target.SpecialType)
         {
             case SpecialType.System_Single:
-                context.EmitCilInstruction(ilVar, OpCodes.Conv_R4);
+                context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Conv_R4);
                 break;
             case SpecialType.System_Double:
-                context.EmitCilInstruction(ilVar, OpCodes.Conv_R8);
+                context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Conv_R8);
                 break;
             case SpecialType.System_Byte:
-                context.EmitCilInstruction(ilVar, OpCodes.Conv_I1);
+                context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Conv_I1);
                 break;
             case SpecialType.System_Int16:
-                context.EmitCilInstruction(ilVar, OpCodes.Conv_I2);
+                context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Conv_I2);
                 break;
             case SpecialType.System_Int32:
                 // byte/char are pushed as Int32 by the runtime 
                 if (source.SpecialType != SpecialType.System_SByte && source.SpecialType != SpecialType.System_Byte && source.SpecialType != SpecialType.System_Char)
-                    context.EmitCilInstruction(ilVar, OpCodes.Conv_I4);
+                    context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Conv_I4);
                 break;
             case SpecialType.System_Int64:
                 var convOpCode = source.SpecialType == SpecialType.System_Char || source.SpecialType == SpecialType.System_Byte ? OpCodes.Conv_U8 : OpCodes.Conv_I8;
-                context.EmitCilInstruction(ilVar, convOpCode);
+                context.ApiDriver.WriteCilInstruction(context, ilVar, convOpCode);
                 break;
             case SpecialType.System_Decimal:
                 var operand = target.GetMembers().OfType<IMethodSymbol>()
                     .Single(m => m.MethodKind == MethodKind.Constructor && m.Parameters.Length == 1 && m.Parameters[0].Type.SpecialType == source.SpecialType);
-                context.EmitCilInstruction(ilVar, OpCodes.Newobj, operand.MethodResolverExpression(context));
+                context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Newobj, operand.MethodResolverExpression(context));
                 break;
             
             default: return false;
@@ -135,15 +125,15 @@ public static class CecilifierContextExtensions
         var operand = method.MethodResolverExpression(context);
         if (context.TryGetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, out var constrainedType))
         {
-            context.EmitCilInstruction(ilVar, OpCodes.Constrained, constrainedType);
+            context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Constrained, constrainedType); 
             context.ClearFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint);
         }
 
-        context.EmitCilInstruction(ilVar, opCode, operand);
+        context.ApiDriver.WriteCilInstruction(context, ilVar, opCode, operand.AsToken());
     }
 
     /*
-     * Ensure forward member references are correctly handled, i.e, support for scenario in which a method is being referenced
+     * Ensure forward member references are correctly handled, i.e, support for scenarios in which a method is being referenced
      * before it has been declared. This can happen for instance in code like:
      *
      * class C
@@ -153,10 +143,18 @@ public static class CecilifierContextExtensions
      * }
      *
      * In this case when the first reference to Bar() is found (in method Foo()) the method itself has not been defined yet
-     * so we add a MethodDefinition for it but *no body*. Method body will be processed later, when the method is visited.
+     * so we add a MethodDefinition for it but *not a body*. Method body will be processed later, when the method is visited.
      */
-    internal static void EnsureForwardedMethod(this IVisitorContext context, IMethodSymbol method)
+    public static void EnsureForwardedMethod(this IVisitorContext context, IMethodSymbol method)
     {
+        //TODO: The code of this method is causing problems when visiting methods in SRM; that driver
+        //      will emit a method reference immediately and postpone the method definition to later
+        //      and the check for retrieving the method variable bellow fails (because definition of the variable
+        //      for the method definition has been postponed also).
+        //      For now there are not tests relying on forwarded methods in SRM
+        if (Cecilifier.xxxx)
+            return;
+        
         if (!method.IsDefinedInCurrentAssembly(context)) 
             return;
 
@@ -166,6 +164,7 @@ public static class CecilifierContextExtensions
 
         string methodDeclarationVar;
         var methodName = method.Name;
+        var methodNameForVariableRegistration = method.ToDisplayString();
         if (method.MethodKind == MethodKind.LocalFunction)
         {
             methodDeclarationVar = context.Naming.SyntheticVariable(method.Name, ElementKind.Method);
@@ -178,17 +177,27 @@ public static class CecilifierContextExtensions
                 : context.Naming.MethodDeclaration((BaseMethodDeclarationSyntax) method.DeclaringSyntaxReferences.SingleOrDefault()?.GetSyntax());
         }
 
-        var exps = CecilDefinitionsFactory.Method(context, methodDeclarationVar, methodName, "MethodAttributes.Private", method.ReturnType, method.ReturnsByRef, method.GetTypeParameterSyntax());
-        context.WriteCecilExpressions(exps);
+        var resolvedReturnType = context.TypeResolver.ResolveAny(method.ReturnType, ResolveTargetKind.ReturnType);
+        var exps = context.ApiDefinitionsFactory.Method(
+                                                                    context, 
+                                                                    new BodiedMemberDefinitionContext(methodName, methodNameForVariableRegistration,methodDeclarationVar, null, MemberOptions.None, IlContext.None), 
+                                                                    null,
+                                                                    "MethodAttributes.Private",
+                                                                    method.Parameters.Select( p => new ParameterSymbolParameterSpec(p, context)).ToArray(),
+                                                                    method.GetTypeParameterSyntax().Select(tps => tps.Identifier.Text).ToArray(),
+                                                                    ctx => method.ReturnsByRef 
+                                                                        ? resolvedReturnType.MakeByReferenceType()
+                                                                        : resolvedReturnType,
+                                                                    out _);
+        context.Generate(exps);
 
-        foreach (var parameter in method.Parameters)
+        if (!method.IsAbstract)
         {
-            var paramVar = context.Naming.Parameter(parameter.Name);
-            var parameterExps = CecilDefinitionsFactory.Parameter(context, parameter, methodDeclarationVar, paramVar);
-            context.WriteCecilExpressions(parameterExps);
-            context.DefinitionVariables.RegisterNonMethod(method.ToDisplayString(), parameter.Name, VariableMemberKind.Parameter, paramVar);
+            context.Generate($"{methodDeclarationVar}.Body.InitLocals = {(!method.TryGetAttribute<SkipLocalsInitAttribute>(out _)).ToKeyword()};");
+            context.WriteNewLine();
         }
-
-        context.DefinitionVariables.RegisterMethod(method.AsMethodDefinitionVariable(methodDeclarationVar));
+        
+        var methodVar =  context.DefinitionVariables.RegisterMethod(method.AsMethodDefinitionVariable(methodDeclarationVar));
+        methodVar.IsForwarded = true;
     }
 }

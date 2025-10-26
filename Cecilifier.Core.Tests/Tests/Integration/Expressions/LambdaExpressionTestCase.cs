@@ -1,10 +1,12 @@
+using Cecilifier.ApiDriver.MonoCecil;
+using Cecilifier.Core.AST;
 using Cecilifier.Core.Tests.Framework;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration
 {
-    [TestFixture]
-    public class LambdaExpressionTestCase : ResourceTestBase
+    [TestFixture(typeof(MonoCecilContext))]
+    public class LambdaExpressionTestCase<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
     {
         [Test]
         public void NonCapturingLambda_VariableInitializer()
@@ -27,7 +29,7 @@ namespace Cecilifier.Core.Tests.Integration
         [Test]
         public void NonCapturingLambda_SimpleLambdaExpression()
         {
-            AssertResourceTestWithExplicitExpectation(@"Expressions/Lambda/SimpleLambdaExpression", "System.Void C::SimpleLambdaExpression()");
+            AssertResourceTestWithExplicitExpectation("Expressions/Lambda/SimpleLambdaExpression", "System.Void C::SimpleLambdaExpression()");
         }
 
         [Test]

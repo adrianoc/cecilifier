@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using Cecilifier.Core.AST;
 using Cecilifier.Runtime;
 using Mono.Cecil;
 using Mono.Cecil.Rocks;
@@ -11,15 +12,16 @@ namespace Cecilifier.Core.Tests.Framework;
 
 public record struct OutputBasedTestResult(CecilifyResult GeneralResult, string Output);
 
-public class OutputBasedTestBase : CecilifierTestBase
+public abstract class OutputBasedTestBase<TContext> : CecilifierTestBase<TContext> where TContext : IVisitorContext 
 {
     static readonly int NewLineLength = Environment.NewLine.Length;
-
+    
     private OutputBasedTestResult CecilifyAndExecute(string code, string ignoredIlVerificationErrors)
     {
         var outputBasedTestFolder = GetTestOutputBaseFolderFor("OutputBasedTests");
 
         var cecilifyResult = CecilifyAndExecute(new MemoryStream(Encoding.ASCII.GetBytes(code)), outputBasedTestFolder);
+        
         VerifyAssembly(
             cecilifyResult.CecilifiedOutputAssemblyFilePath, 
             null, 
@@ -55,7 +57,7 @@ public class OutputBasedTestBase : CecilifierTestBase
     protected void AssertOutput(string snippet, string expectedOutput, string ignoreIlVerificationErrors = null)
     {
         var result = CecilifyAndExecute(snippet, ignoreIlVerificationErrors);
-        Assert.That(result.Output, Is.EqualTo(expectedOutput), $"Output Assembly: {result.GeneralResult.CecilifiedOutputAssemblyFilePath}");
+        Assert.That(result.Output, Is.EqualTo(expectedOutput), $"Output Assembly: {result.GeneralResult.CecilifiedOutputAssemblyFilePath}\nCecilified Code: {result.GeneralResult.CecilifiedCode}");
         TestContext.WriteLine($"Output Assembly: {result.GeneralResult.CecilifiedOutputAssemblyFilePath}");
     }
 }

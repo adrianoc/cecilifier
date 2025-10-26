@@ -1,12 +1,9 @@
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.CodeGeneration;
-using Cecilifier.Core.Extensions;
-using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Misc;
-using Cecilifier.Core.Naming;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 
@@ -14,15 +11,14 @@ namespace Cecilifier.Core
 {
     public sealed class Cecilifier
     {
-        internal const int CecilifierProgramPreambleLength = 25; // The # of lines before the 1st cecilified line of code (see CecilifierExtensions.AsCecilApplication())
-
         private const LanguageVersion CurrentLanguageVersion = LanguageVersion.CSharp13;
         public static readonly int SupportedCSharpVersion = int.Parse(CurrentLanguageVersion.ToString().Substring("CSharp".Length));
 
-        public static CecilifierResult Process(Stream content, CecilifierOptions options)
+        public static CecilifierResult Process<TContext>(Stream content, CecilifierOptions options) where TContext : IVisitorContext
         {
             InlineArrayGenerator.Reset();
             UsageVisitor.ResetInstance();
+            
             using var stream = new StreamReader(content);
             var syntaxTree = CSharpSyntaxTree.ParseText(stream.ReadToEnd(), new CSharpParseOptions(CurrentLanguageVersion));
             var metadataReferences = options.References.Select(refPath => MetadataReference.CreateFromFile(refPath)).ToArray();
@@ -43,18 +39,22 @@ namespace Cecilifier.Core
             }
 
             var semanticModel = comp.GetSemanticModel(syntaxTree);
+            var context = TContext.CreateContext(options, semanticModel);
 
-            var ctx = new CecilifierContext(semanticModel, options, CecilifierProgramPreambleLength);
-            var visitor = new CompilationUnitVisitor(ctx);
+            xxxx = typeof(TContext).Name.Contains("SystemReflectionMetadataContext");
+
+            CecilifierInterpolatedStringHandler.BaseIndentation = context.Indentation;
+            var visitor = new CompilationUnitVisitor(context);
 
             syntaxTree.TryGetRoot(out var root);
             visitor.Visit(root);
-
-            //new SyntaxTreeDump("TREE: ", root);
-
+            
             var mainTypeName = visitor.MainType != null ? visitor.MainType.Identifier.Text : "Cecilified";
-            return new CecilifierResult(new StringReader(ctx.Output.AsCecilApplication(mainTypeName, visitor.MainMethodDefinitionVariable)), mainTypeName, ctx.Mappings, ctx.Diagnostics);
+            var reader = new StringReader(context.ApiDriver.AsCecilApplication(context.Output, mainTypeName, visitor.MainMethodDefinitionVariable));
+            return new CecilifierResult(reader, mainTypeName, context.Mappings, context, context.Diagnostics);
         }
+
+        public static bool xxxx;
 
         private static OutputKind OutputKindFor(SyntaxTree syntaxTree)
         {
@@ -64,28 +64,5 @@ namespace Cecilifier.Core
 
             return outputKind;
         }
-    }
-
-    public class CecilifierOptions
-    {
-        public INameStrategy Naming { get; init; } = new DefaultNameStrategy();
-
-        public IReadOnlyList<string> References { get; init; }
-    }
-
-    public struct CecilifierResult
-    {
-        public CecilifierResult(StringReader generatedCode, string mainTypeName, IList<Mapping> mappings, IList<CecilifierDiagnostic> diagnostics = null)
-        {
-            GeneratedCode = generatedCode;
-            MainTypeName = mainTypeName;
-            Mappings = mappings;
-            Diagnostics = diagnostics ?? [];
-        }
-
-        public StringReader GeneratedCode { get; }
-        public string MainTypeName { get; }
-        public IList<Mapping> Mappings { get; }
-        public IList<CecilifierDiagnostic> Diagnostics { get; }
     }
 }

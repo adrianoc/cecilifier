@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using Cecilifier.ApiDriver.MonoCecil;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using NUnit.Framework;
@@ -51,7 +52,9 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             memoryStream.Write(System.Text.Encoding.ASCII.GetBytes(source));
             memoryStream.Position = 0;
 
-            var cecilified = Cecilifier.Process(memoryStream, new CecilifierOptions { References = ReferencedAssemblies.GetTrustedAssembliesPath(), Naming = nameStrategy }).GeneratedCode.ReadToEnd();
+            var cecilified = Cecilifier.Process<MonoCecilContext>(
+                                                memoryStream,
+                                                new CecilifierOptions { References = MonoCecilContext.BclAssembliesForCompilation(), Naming = nameStrategy }).GeneratedCode.ReadToEnd();
 
             Assert.That(cecilified, Does.Match($"\\b{expected}"), $"{elementKind} prefix not applied.");
             Assert.That(cecilified, Does.Not.Match($"\\b{notExpected}"), $"{elementKind} prefix not applied.");
@@ -60,7 +63,9 @@ namespace Cecilifier.Core.Tests.Tests.Unit
         [Test, Combinatorial]
         public void Casing_Setting_Is_Respected([Values] ElementKind elementKind, [Values] bool camelCasing)
         {
-            if (elementKind == ElementKind.None)
+            // Assembly references are only used in SRM and it its current state SRM does not support generics,
+            // so I decided to not test casing settings for this specific element kind for now. 
+            if (elementKind == ElementKind.None || elementKind == ElementKind.AssemblyReference)
                 return;
 
             if (elementKind == ElementKind.Label && !camelCasing)
@@ -84,7 +89,9 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             memoryStream.Write(System.Text.Encoding.ASCII.GetBytes(source));
             memoryStream.Position = 0;
 
-            var cecilified = Cecilifier.Process(memoryStream, new CecilifierOptions { References = ReferencedAssemblies.GetTrustedAssembliesPath(), Naming = nameStrategy }).GeneratedCode.ReadToEnd();
+            var cecilified = Cecilifier
+                                        .Process<MonoCecilContext>(memoryStream, new CecilifierOptions { References = MonoCecilContext.BclAssembliesForCompilation(), Naming = nameStrategy })
+                                        .GeneratedCode.ReadToEnd();
 
             Assert.That(cecilified, Does.Match($"{elementKind}_[{casingValidation}][a-zA-Z]+"), "Casing");
         }

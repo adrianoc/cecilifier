@@ -1,13 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Cecilifier.Core.AST;
+using Cecilifier.Core.ApiDriver;
+using Cecilifier.Core.ApiDriver.Handles;
 using Microsoft.CodeAnalysis;
-using Mono.Cecil.Cil;
+using Cecilifier.Core.AST;
+using OpCode = System.Reflection.Emit.OpCode;
+using OpCodes = System.Reflection.Emit.OpCodes;
 
 namespace Cecilifier.Core.Extensions
 {
-    internal static class TypeExtensions
+    public static class TypeExtensions
     {
         public static bool IsNonPrimitiveValueType(this ITypeSymbol type, IVisitorContext context) => !type.IsPrimitiveType() 
                                                                                                       && (type.IsValueType || SymbolEqualityComparer.Default.Equals(type, context.RoslynTypeSystem.SystemValueType));
@@ -16,6 +19,7 @@ namespace Cecilifier.Core.Extensions
         {
             return $"{type}.MakeByReferenceType()";
         }
+        
         public static string MakeGenericInstanceType(this string type, IEnumerable<string> typeArguments)
         {
             return $"{type}.MakeGenericInstanceType({string.Join(", ", typeArguments)})";
@@ -146,10 +150,10 @@ namespace Cecilifier.Core.Extensions
                 SpecialType.System_Int64 => OpCodes.Stelem_I8,
                 SpecialType.System_Single => OpCodes.Stelem_R4,
                 SpecialType.System_Double => OpCodes.Stelem_R8,
-                SpecialType.None => type.IsValueType ? OpCodes.Stelem_Any : OpCodes.Stelem_Ref, // Any => Custom structs, Ref => class.
+                SpecialType.None => type.IsValueType ? OpCodes.Stelem : OpCodes.Stelem_Ref, // Any => Custom structs, Ref => class.
                 SpecialType.System_String => OpCodes.Stelem_Ref,
                 SpecialType.System_Object => OpCodes.Stelem_Ref,
-                _ => type.IsValueType ? OpCodes.Stelem_Any : throw new Exception($"Element type {type.Name} not supported.")
+                _ => type.IsValueType ? OpCodes.Stelem : throw new Exception($"Element type {type.Name} not supported.")
             };
         
         public static OpCode LdelemOpCode(this ITypeSymbol type) =>
@@ -162,10 +166,10 @@ namespace Cecilifier.Core.Extensions
                 SpecialType.System_Int64 => OpCodes.Ldelem_I8,
                 SpecialType.System_Single => OpCodes.Ldelem_R4,
                 SpecialType.System_Double => OpCodes.Ldelem_R8,
-                SpecialType.None => (type.IsValueType || type.TypeKind == TypeKind.TypeParameter) ? OpCodes.Ldelem_Any : OpCodes.Ldelem_Ref, // Any => Custom structs, Ref => class.
+                SpecialType.None => (type.IsValueType || type.TypeKind == TypeKind.TypeParameter) ? OpCodes.Ldelem : OpCodes.Ldelem_Ref, // Any => Custom structs, Ref => class.
                 SpecialType.System_String => OpCodes.Ldelem_Ref,
                 SpecialType.System_Object => OpCodes.Ldelem_Ref,
-                _ => type.IsValueType ? OpCodes.Ldelem_Any : throw new Exception($"Element type {type.Name} not supported.")
+                _ => type.IsValueType ? OpCodes.Ldelem : throw new Exception($"Element type {type.Name} not supported.")
             };
 
         public static bool IsTypeParameterOrIsGenericTypeReferencingTypeParameter(this ITypeSymbol type) => 
@@ -195,32 +199,7 @@ namespace Cecilifier.Core.Extensions
                 
             return type.ContainingType.GetAllTypeArguments().Concat(type.TypeArguments);
         }
-    }
 
-    public sealed class VariableDefinitionComparer : IEqualityComparer<VariableDefinition>
-    {
-        private static readonly Lazy<IEqualityComparer<VariableDefinition>> instance = new(() => new VariableDefinitionComparer());
-
-        public static IEqualityComparer<VariableDefinition> Instance => instance.Value;
-
-        public bool Equals(VariableDefinition x, VariableDefinition y)
-        {
-            if (x == null && y == null)
-            {
-                return true;
-            }
-
-            if (x == null || y == null)
-            {
-                return false;
-            }
-
-            return x.Index == y.Index && x.VariableType.FullName == y.VariableType.FullName;
-        }
-
-        public int GetHashCode(VariableDefinition obj)
-        {
-            return obj.Index.GetHashCode() + 37 * obj.VariableType.FullName.GetHashCode();
-        }
+        public static CilOperandValue ToCilOperandValue(this ITypeSymbol type, object value) => new(type, value);
     }
 }

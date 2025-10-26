@@ -3,16 +3,19 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using System.Reflection.Emit;
+using Cecilifier.Core.ApiDriver;
+using Cecilifier.Core.ApiDriver.Handles;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Cecilifier.Core.CodeGeneration;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
+using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Mono.Cecil.Cil;
 using static Cecilifier.Core.Misc.CodeGenerationHelpers;
 
 namespace Cecilifier.Core.AST;
@@ -25,10 +28,10 @@ partial class ExpressionVisitor
         var spanType = Context.SemanticModel.GetTypeInfo(node).Type.EnsureNotNull<ITypeSymbol, INamedTypeSymbol>();
         var arrayElementType = spanType.TypeArguments[0];
         
-        Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, node.Initializer.EnsureNotNull<SyntaxNode, InitializerExpressionSyntax>().Expressions.Count);
+        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldc_I4, node.Initializer.EnsureNotNull<SyntaxNode, InitializerExpressionSyntax>().Expressions.Count);
 
         var stackallocSpanAssignmentTracker = new StackallocSpanAssignmentTracker(node, Context);
-        var resolvedArrayElementType = Context.TypeResolver.Resolve(arrayElementType);
+        var resolvedArrayElementType = Context.TypeResolver.ResolveAny(arrayElementType);
         CalculateLengthInBytesAndEmitLocalloc(stackallocSpanAssignmentTracker, null, resolvedArrayElementType, false);
 
         ProcessStackAllocInitializer(node.Initializer);
@@ -36,7 +39,7 @@ partial class ExpressionVisitor
         if (!stackallocSpanAssignmentTracker)
             return;
 
-        Context.EmitCilInstruction(ilVar, stackallocSpanAssignmentTracker.LoadOpCode, stackallocSpanAssignmentTracker.SpanLengthVariable);
+        Context.ApiDriver.WriteCilInstruction(Context, ilVar, stackallocSpanAssignmentTracker.LoadOpCode, stackallocSpanAssignmentTracker.SpanLengthVariable);
         EmitNewobjForSpanOfType(resolvedArrayElementType);
     }
 
@@ -63,7 +66,7 @@ partial class ExpressionVisitor
         Debug.Assert(arrayType.RankSpecifiers.Count == 1);
         if (rankNode.IsKind(SyntaxKind.OmittedArraySizeExpression))
         {
-            Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, Utils.EnsureNotNull(node.Initializer).Expressions.Count);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldc_I4, Utils.EnsureNotNull(node.Initializer).Expressions.Count);
         }
 
         var stackallocSpanAssignmentTracker = new StackallocSpanAssignmentTracker(node, Context);
@@ -72,15 +75,15 @@ partial class ExpressionVisitor
             ? arrayElementType.Type.SizeofPrimitiveType()
             : int.MaxValue; // this means the size of the elements need to be calculated at runtime... 
 
-        var resolvedElementType = ResolveType(arrayType.ElementType);
+        var resolvedElementType = ResolveType(arrayType.ElementType, ResolveTargetKind.None);
         if (rankNode.IsKind(SyntaxKind.NumericLiteralExpression) && arrayElementType.Type.IsPrimitiveType())
         {
             var elementCount = Int32.Parse(rankNode.GetFirstToken().Text);
             var sizeInBytes = (uint) elementCount * arrayElementTypeSize;
             stackallocSpanAssignmentTracker.RememberConstantElementCount(elementCount);
-            Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, sizeInBytes, $"{elementCount} (elements) * {arrayElementTypeSize} (bytes per element)");
-            Context.EmitCilInstruction(ilVar, OpCodes.Conv_U);
-            Context.EmitCilInstruction(ilVar, OpCodes.Localloc);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldc_I4, sizeInBytes, $"{elementCount} (elements) * {arrayElementTypeSize} (bytes per element)");
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Conv_U);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Localloc);
         }
         else
         {
@@ -93,9 +96,9 @@ partial class ExpressionVisitor
         if (stackallocSpanAssignmentTracker)
         {
             if (stackallocSpanAssignmentTracker.HasConstantElementCount)
-                Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, stackallocSpanAssignmentTracker.ConstantElementCount);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldc_I4, stackallocSpanAssignmentTracker.ConstantElementCount);
             else
-                Context.EmitCilInstruction(ilVar, stackallocSpanAssignmentTracker.LoadOpCode, stackallocSpanAssignmentTracker.SpanLengthVariable);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, stackallocSpanAssignmentTracker.LoadOpCode, stackallocSpanAssignmentTracker.SpanLengthVariable);
             EmitNewobjForSpanOfType(resolvedElementType);
         }
     }
@@ -129,10 +132,10 @@ partial class ExpressionVisitor
         
         Context.WriteNewLine();
         Context.WriteComment($"duplicates the top of the stack (the newly `stackalloced` buffer) and initialize it from the raw buffer ({fieldWithRawData}).");
-        Context.EmitCilInstruction(ilVar, OpCodes.Dup);
-        Context.EmitCilInstruction(ilVar, OpCodes.Ldsflda, fieldWithRawData);
-        Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, sizeInBytes);
-        Context.EmitCilInstruction(ilVar, OpCodes.Cpblk);
+        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Dup);
+        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldsflda, fieldWithRawData);
+        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldc_I4, sizeInBytes);
+        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Cpblk);
         Context.WriteComment("finished initializing `stackalloced` buffer.");
         Context.WriteNewLine();
     }
@@ -145,15 +148,15 @@ partial class ExpressionVisitor
 
         foreach (var exp in node.Expressions)
         {
-            Context.EmitCilInstruction(ilVar, OpCodes.Dup);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Dup);
             if (offset != 0)
             {
-                Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, offset);
-                Context.EmitCilInstruction(ilVar, OpCodes.Add);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldc_I4, offset);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Add);
             }
 
             exp.Accept(this);
-            Context.EmitCilInstruction(ilVar, arrayType.StindOpCodeFor());
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, arrayType.StindOpCodeFor());
             offset += elementTypeSize;
         }
     }
@@ -164,29 +167,29 @@ partial class ExpressionVisitor
         {
             // result of the stackalloc is being assigned to a Span<T>. We need to initialize it later.. for that we need
             // element count so we store in a new local variable.
-            Context.EmitCilInstruction(ilVar, OpCodes.Stloc, stackallocSpanAssignmentTracker.SpanLengthVariable);
-            Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, stackallocSpanAssignmentTracker.SpanLengthVariable);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Stloc, new CilLocalVariableHandle(stackallocSpanAssignmentTracker.SpanLengthVariable));
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloc, new CilLocalVariableHandle(stackallocSpanAssignmentTracker.SpanLengthVariable));
         }
 
-        Context.EmitCilInstruction(ilVar, OpCodes.Conv_U);
+        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Conv_U);
         if (elementSizeTakesMoreThanOneByte) // if element type takes one byte them 'number of elements' == 'size in bytes' and we don't need to multiply
         {
-            Context.EmitCilInstruction(ilVar, OpCodes.Sizeof, resolvedElementType);
-            Context.EmitCilInstruction(ilVar, OpCodes.Mul_Ovf_Un);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Sizeof, resolvedElementType);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Mul_Ovf_Un);
         }
 
-        Context.EmitCilInstruction(ilVar, OpCodes.Localloc);
+        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Localloc);
     }
 
     private void EmitNewobjForSpanOfType(string resolvedSpanType)
     {
-        var spanInstanceType = Context.TypeResolver.Resolve(Context.RoslynTypeSystem.SystemSpan).MakeGenericInstanceType(resolvedSpanType);
+        var spanInstanceType = Context.TypeResolver.ResolveAny(Context.RoslynTypeSystem.SystemSpan).MakeGenericInstanceType(resolvedSpanType);
         var spanCtorVar = Context.Naming.SyntheticVariable("spanCtor", ElementKind.LocalVariable);
         AddCecilExpression($"var {spanCtorVar} = new MethodReference(\".ctor\", {Context.TypeResolver.Bcl.System.Void}, {spanInstanceType}) {{ HasThis = true }};");
         AddCecilExpression($"{spanCtorVar}.Parameters.Add({CecilDefinitionsFactory.ParameterDoesNotHandleParamsKeywordOrDefaultValue("ptr", RefKind.None, Context.TypeResolver.Resolve("void*"))});");
         AddCecilExpression($"{spanCtorVar}.Parameters.Add({CecilDefinitionsFactory.ParameterDoesNotHandleParamsKeywordOrDefaultValue("length", RefKind.None, Context.TypeResolver.Bcl.System.Int32)});");
 
-        Context.EmitCilInstruction(ilVar, OpCodes.Newobj, Utils.ImportFromMainModule($"{spanCtorVar}"));
+        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Newobj, Utils.ImportFromMainModule($"{spanCtorVar}"));
     }
 }
 
@@ -298,7 +301,7 @@ internal class StackallocAsArgumentFixer : IStackallocAsArgumentFixer
         // emit instruction to push original arguments to stack
         foreach (var localVariable in localVariablesStoringOriginalArguments)
         {
-            context.EmitCilInstruction(ilVar, OpCodes.Ldloc, localVariable);
+            context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Ldloc, localVariable);
             context.WriteNewLine();
         }
 
@@ -408,9 +411,9 @@ internal class StackallocSpanAssignmentTracker
         var currentMethodVar = context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
         Debug.Assert(currentMethodVar.IsValid);
 
-        context.WriteCecilExpression($"var {SpanLengthVariable} = new VariableDefinition({context.TypeResolver.Bcl.System.Int32});");
+        context.Generate($"var {SpanLengthVariable} = new VariableDefinition({context.TypeResolver.Bcl.System.Int32});");
         context.WriteNewLine();
-        context.WriteCecilExpression($"{currentMethodVar.VariableName}.Body.Variables.Add({SpanLengthVariable});");
+        context.Generate($"{currentMethodVar.VariableName}.Body.Variables.Add({SpanLengthVariable});");
         context.WriteNewLine();
 
         LoadOpCode = OpCodes.Ldloc;

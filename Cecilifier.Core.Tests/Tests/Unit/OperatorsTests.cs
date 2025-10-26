@@ -108,9 +108,9 @@ public class OperatorsTests : CecilifierUnitTestBase
                         @"il_M_3.Append\(lbl_conditionEnd_7\);"));
     }
 
-    [TestCase("f", "Ldfld, fld_f_6", TestName = "Field")]
-    [TestCase("P", "Call, m_get_2", TestName = "Property")]
-    [TestCase("M()", "Call, m_M_4", TestName = "Method")]
+    [TestCase("f", @"Ldfld, fld_f_\d+", TestName = "Field")]
+    [TestCase("P", @"Call, m_get_\d+", TestName = "Property")]
+    [TestCase("M()", @"Call, m_M_\d+", TestName = "Method")]
     public void TestNullConditionalOperator_OnQualifiedMemberAccess_DoesNoLoadThis(string member, string expected)
     {
         var result = RunCecilifier($$"""class Foo { private int P => 0; private int M() => 0; private int f; object Bar(Foo p) => p?.{{member}}; }""");
@@ -129,11 +129,11 @@ public class OperatorsTests : CecilifierUnitTestBase
 
     [TestCase(
         "int i = 42; i -= 10;",
-        @"(il_topLevelMain_\d\.Emit\(OpCodes\.)Ldc_I4, 42\);\s+\1Stloc, (l_i_\d+)\);\s+//i -= 10;\s+\1Ldloc, \2\);\s+\1Ldc_I4, 10\);\s+\1Sub\);\s+\1Stloc, \2\);\s+m_topLevelStatements_1\.Body\.Instructions\.Add\(.+OpCodes\.Ret\)\);",
+        @"(il_topLevelMain_\d\.Emit\(OpCodes\.)Ldc_I4, 42\);\s+\1Stloc, (l_i_\d+)\);\s+//i -= 10;\s+\1Ldloc, \2\);\s+\1Ldc_I4, 10\);\s+\1Sub\);\s+\1Stloc, \2\);\s+\1Ret\);",
         TestName = "Numeric Primitive Subtraction")]
     [TestCase(
         "int i = 10; i += 32;",
-        @"(il_topLevelMain_\d\.Emit\(OpCodes\.)Ldc_I4, 10\);\s+\1Stloc, (l_i_\d+)\);\s+//i \+= 32;\s+\1Ldloc, \2\);\s+\1Ldc_I4, 32\);\s+\1Add\);\s+\1Stloc, \2\);\s+m_topLevelStatements_1\.Body\.Instructions\.Add\(.+OpCodes\.Ret\)\);",
+        @"(il_topLevelMain_\d\.Emit\(OpCodes\.)Ldc_I4, 10\);\s+\1Stloc, (l_i_\d+)\);\s+//i \+= 32;\s+\1Ldloc, \2\);\s+\1Ldc_I4, 32\);\s+\1Add\);\s+\1Stloc, \2\);\s+\1Ret\);",
         TestName = "Numeric Primitive Addition")]
     [TestCase(
         "int []a = new[] { 10 }; a[0] += 32; System.Console.WriteLine(a[0]);",
@@ -141,7 +141,7 @@ public class OperatorsTests : CecilifierUnitTestBase
         TestName = "Array Numeric Primitive")]
     [TestCase(
         "string s = \"10\"; s += \"32\";",
-        @"(il_topLevelMain_\d\.Emit\(OpCodes\.)Ldstr, ""10""\);\s+\1Stloc, (l_s_\d+)\);\s+//s \+= ""32"";\s+\1Ldloc, \2\);\s+\1Ldstr, ""32""\);\s+\1Call, .+Import\(typeof\(string\)\.GetMethod\(""Concat"".+\)\);\s+\1Stloc, \2\);\s+m_topLevelStatements_1\.Body\.Instructions\.Add\(.+OpCodes\.Ret\)\);",
+        @"(il_topLevelMain_\d\.Emit\(OpCodes\.)Ldstr, ""10""\);\s+\1Stloc, (l_s_\d+)\);\s+//s \+= ""32"";\s+\1Ldloc, \2\);\s+\1Ldstr, ""32""\);\s+\1Call, .+Import\(typeof\(string\)\.GetMethod\(""Concat"".+\)\);\s+\1Stloc, \2\);\s+\1Ret\);",
         TestName = "String")]
     [TestCase(
         "C c = new C(); c += 42; class C { public static C operator+(C c, int i) => c; }",
@@ -204,22 +204,22 @@ public class OperatorsTests : CecilifierUnitTestBase
         Assert.That(
             cecilifiedCode,
             Does.Match(
-                $@"var lbl_whenTrue_13 = (il_M_10\.Create\(OpCodes\.)Nop\);\s+" +
-                        @"var lbl_conditionEnd_14 = \1Nop.+;\s+" +
+                $@"var lbl_whenTrue_\d+ = (il_M_\d+\.Create\(OpCodes\.)Nop\);\s+" +
+                        @"var lbl_conditionEnd_\d+ = \1Nop.+;\s+" +
                         expectedIlRegexForLoadingTarget +
                         @"\2Dup.+;\s+" +
-                        @"\2Brtrue_S, lbl_whenTrue_13.+;\s+" +
+                        @"\2Brtrue_S, lbl_whenTrue_\d+.+;\s+" +
                         @"\2Pop.+;\s+" +
                         @"var (l_nullable_\d+) = new VariableDefinition\(assembly\.MainModule.ImportReference\(typeof\(System.Nullable<>\)\).MakeGenericInstanceType\(assembly.MainModule.TypeSystem.Int32\)\);\s+" +
                         @".+Body\.Variables.Add\(\3\);\s+" +
                         @"\2Ldloca_S, \3.+;\s+" +
                         @"\2Initobj, assembly.MainModule.ImportReference\(typeof\(System.Nullable<>\)\).MakeGenericInstanceType\(assembly.MainModule.TypeSystem.Int32\)\);\s+" +
                         @"\2Ldloc, \3.+;\s+" +
-                        @"\2Br, lbl_conditionEnd_14.+;\s+" +
-                        @"il_M_10.Append\(lbl_whenTrue_13\);\s+" +
+                        @"\2Br, lbl_conditionEnd_\d+.+;\s+" +
+                        @"il_M_\d+.Append\(lbl_whenTrue_\d+\);\s+" +
                         @"\2Call,.+typeof\(System.String\), ""get_Length"".+;\s+" +
                         @"\2Newobj,.+typeof\(System.Nullable<System.Int32>\), "".ctor"".+""System.Int32"".+;\s+" +
-                        @"il_M_10.Append\(lbl_conditionEnd_14\);"));
+                        @"il_M_\d+.Append\(lbl_conditionEnd_\d+\);"));
     }
 
     [TestCase("int M(char a) => a % 3;")]
@@ -263,11 +263,11 @@ public class OperatorsTests : CecilifierUnitTestBase
     
     [TestCase("bool Foo<T>(T o) => o == null;", 
         """
-                var (p_o_\d+) = new ParameterDefinition\("o", ParameterAttributes.None, gp_T_7\);
+                var (p_o_\d+) = new ParameterDefinition\("o", ParameterAttributes.None, (?<tt>gp_T_\d+)\);
                 \s+m_foo_\d+.Parameters.Add\(\1\);
                 \s+//o == null
                 (\s+il_foo_\d+\.Emit\(OpCodes\.)Ldarg_0\);
-                \2Box, gp_T_7\);
+                \2Box, \k<tt>\);
                 \2Ldnull\);
                 \2Ceq\);
                 \2Ret\);
@@ -480,24 +480,24 @@ public class OperatorsTests : CecilifierUnitTestBase
     {
         yield return new TestCaseData(
             "G()",
-            @"(il_M_10\.Emit\(OpCodes\.)Ldarg_0.+;\s+" +
-            @"\2Call, m_G_4.+;\s+").SetName("On Method (this)");
+            @"(il_M_\d+\.Emit\(OpCodes\.)Ldarg_0.+;\s+" +
+            @"\2Call, m_G_\d+.+;\s+").SetName("On Method (this)");
 
         yield return new TestCaseData(
             "M().G()",
-            @"(il_M_10\.Emit\(OpCodes\.)Ldarg_0.+;\s+" +
-            @"\2Call, m_M_6.+;\s+" +
-            @"\2Callvirt, m_G_4.+;\s+").SetName("On Method through member reference");
+            @"(il_M_\d+\.Emit\(OpCodes\.)Ldarg_0.+;\s+" +
+            @"\2Call, m_M_\d+.+;\s+" +
+            @"\2Callvirt, m_G_\d+.+;\s+").SetName("On Method through member reference");
 
         yield return new TestCaseData(
             "Property",
-            @"(il_M_10\.Emit\(OpCodes\.)Ldarg_0.+;\s+" +
+            @"(il_M_\d+\.Emit\(OpCodes\.)Ldarg_0.+;\s+" +
             @"\2Call, m_get_2.+;\s+").SetName("On Property (this)");
 
         yield return new TestCaseData(
             "M().Property",
-            @"(il_M_10\.Emit\(OpCodes\.)Ldarg_0.+;\s+" +
-            @"\2Call, m_M_6.+;\s+" +
-            @"\2Callvirt, m_get_2.+;\s+").SetName("On Property  through member reference");
+            @"(il_M_\d+\.Emit\(OpCodes\.)Ldarg_0.+;\s+" +
+            @"\2Call, m_M_\d+.+;\s+" +
+            @"\2Callvirt, m_get_\d+.+;\s+").SetName("On Property  through member reference");
     }
 }

@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
+using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -25,82 +27,75 @@ internal partial class TypeDeclarationVisitor
 
         EnsureContainingTypeForwarded(node, delegateSymbol);
         var outerTypeVariable = Context.DefinitionVariables.GetVariable(delegateSymbol.ContainingType?.ToDisplayString(), VariableMemberKind.Type, delegateSymbol.ContainingType?.ContainingSymbol.ToDisplayString());
-        var typeDef = CecilDefinitionsFactory.Type(
-            Context,
-            typeVar,
-            delegateSymbol.ContainingNamespace?.FullyQualifiedName() ?? string.Empty,
-            node.Identifier.ValueText,
-            CecilDefinitionsFactory.DefaultTypeAttributeFor(TypeKind.Delegate, false).AppendModifier(accessibility),
-            Context.TypeResolver.Bcl.System.MulticastDelegate,
-            outerTypeVariable,
-            isStructWithNoFields:false,
-            Array.Empty<ITypeSymbol>(),
-            node.TypeParameterList?.Parameters,
-            Array.Empty<TypeParameterSyntax>(),
-            "IsAnsiClass = true");
+        var typeDef = Context.ApiDefinitionsFactory.Type(
+                                                    Context, 
+                                                    typeVar, 
+                                                    delegateSymbol.ContainingNamespace?.FullyQualifiedName() ?? string.Empty, 
+                                                    node.Identifier.ValueText, 
+                                                    CecilDefinitionsFactory.DefaultTypeAttributeFor(TypeKind.Delegate, false).AppendModifier(accessibility), 
+                                                    Context.TypeResolver.Bcl.System.MulticastDelegate, 
+                                                    outerTypeVariable, 
+                                                    false, 
+                                                    [], 
+                                                    node.TypeParameterList?.Parameters, 
+                                                    [], 
+                                                    "IsAnsiClass = true");
 
         AddCecilExpressions(Context, typeDef);
-        HandleAttributesInMemberDeclaration(node.AttributeLists, typeVar);
+        HandleAttributesInMemberDeclaration(node.AttributeLists, typeVar, VariableMemberKind.Type);
 
         using (Context.DefinitionVariables.WithCurrent(delegateSymbol.ContainingSymbol?.OriginalDefinition.ToDisplayString() ?? string.Empty, delegateSymbol.OriginalDefinition.ToDisplayString(), VariableMemberKind.Type, typeVar))
         {
             var ctorLocalVar = Context.Naming.Delegate(node);
 
             // Delegate ctor
-            AddCecilExpression(CecilDefinitionsFactory.Constructor(Context, ctorLocalVar, node.Identifier.Text, false, "MethodAttributes.FamANDAssem | MethodAttributes.Family",
-                new[] { "System.Object", "System.IntPtr" }, "IsRuntime = true"));
+            string[] paramTypes = ["System.Object", "System.IntPtr"];
+            var exps = Context.ApiDefinitionsFactory.Constructor(
+                Context, 
+                new BodiedMemberDefinitionContext("ctor", ctorLocalVar, typeVar, MemberOptions.None, IlContext.None), 
+                node.Identifier.Text, 
+                false, 
+                "MethodAttributes.FamANDAssem | MethodAttributes.Family", 
+                paramTypes, 
+                "IsRuntime = true");
+            Context.Generate(exps);
             AddCecilExpression($"{ctorLocalVar}.Parameters.Add(new ParameterDefinition({Context.TypeResolver.Bcl.System.Object}));");
             AddCecilExpression($"{ctorLocalVar}.Parameters.Add(new ParameterDefinition({Context.TypeResolver.Bcl.System.IntPtr}));");
-            AddCecilExpression($"{typeVar}.Methods.Add({ctorLocalVar});");
 
             // Invoke() method
             AddDelegateMethod(
                 typeVar,
                 "Invoke",
-                ResolveType(node.ReturnType),
+                ResolveType(node.ReturnType, ResolveTargetKind.ReturnType),
                 node.ParameterList.Parameters,
                 (methodVar, param) => CecilDefinitionsFactory.Parameter(Context, param, methodVar, Context.Naming.Parameter(param)));
 
             // BeginInvoke() method
             var beginInvokeMethodVar = AddDelegateMethod(
-                 typeVar,
-                 "BeginInvoke",
-                 Context.TypeResolver.Bcl.System.IAsyncResult,
-                 node.ParameterList.Parameters,
-                 (methodVar, param) => CecilDefinitionsFactory.Parameter(Context, param, methodVar, Context.Naming.Parameter(param)));
+                                                 typeVar,
+                                                 "BeginInvoke",
+                                                 Context.TypeResolver.Bcl.System.IAsyncResult,
+                                                 node.ParameterList.Parameters,
+                                                 (methodVar, param) => CecilDefinitionsFactory.Parameter(Context, param, methodVar, Context.Naming.Parameter(param)));
 
             AddCecilExpression($"{beginInvokeMethodVar}.Parameters.Add(new ParameterDefinition({Context.TypeResolver.Bcl.System.AsyncCallback}));");
             AddCecilExpression($"{beginInvokeMethodVar}.Parameters.Add(new ParameterDefinition({Context.TypeResolver.Bcl.System.Object}));");
 
             // EndInvoke() method
             var endInvokeMethodVar = Context.Naming.SyntheticVariable("EndInvoke", ElementKind.Method);
+            var endInvokeExps = Context.ApiDefinitionsFactory.Method(
+                                                                        Context,
+                                                                        new BodiedMemberDefinitionContext("EndInvoke", endInvokeMethodVar, typeVar, MemberOptions.None, IlContext.None),
+                                                                        "declaringTypeName",
+                                                                        Constants.Cecil.DelegateMethodAttributes,
+                                                                        [new ParameterSpec("ar", Context.TypeResolver.Bcl.System.IAsyncResult, RefKind.None, Constants.ParameterAttributes.None)],
+                                                                        [],
+                                                                        ctx => ctx.TypeResolver.ResolveAny(Context.GetTypeInfo(node.ReturnType).Type, ResolveTargetKind.ReturnType),
+                                                                        out var _);
 
-            var endInvokeExps = CecilDefinitionsFactory.Method(
-                Context,
-                endInvokeMethodVar,
-                "EndInvoke",
-                Constants.Cecil.DelegateMethodAttributes,
-                Context.GetTypeInfo(node.ReturnType).Type,
-                false,
-                Array.Empty<TypeParameterSyntax>()
-            );
-
-            endInvokeExps = endInvokeExps.Concat(new[] { $"{endInvokeMethodVar}.HasThis = true;", $"{endInvokeMethodVar}.IsRuntime = true;", });
-
-            var endInvokeParamExps = CecilDefinitionsFactory.Parameter(
-                "ar",
-                RefKind.None,
-                paramsAttributeTypeName: null,
-                endInvokeMethodVar,
-                Context.Naming.Parameter("ar"),
-                Context.TypeResolver.Bcl.System.IAsyncResult,
-                Constants.ParameterAttributes.None,
-                (null, false));
-
+            endInvokeExps = endInvokeExps.Concat([$"{endInvokeMethodVar}.HasThis = true;", $"{endInvokeMethodVar}.IsRuntime = true;"]);
             AddCecilExpressions(Context, endInvokeExps);
-            AddCecilExpressions(Context, endInvokeParamExps);
-            AddCecilExpression($"{typeVar}.Methods.Add({endInvokeMethodVar});");
-
+            
             base.VisitDelegateDeclaration(node);
         }
 

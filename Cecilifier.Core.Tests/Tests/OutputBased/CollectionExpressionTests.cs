@@ -1,11 +1,19 @@
 using System.Text.RegularExpressions;
+using Cecilifier.ApiDriver.MonoCecil;
+using Cecilifier.ApiDriver.SystemReflectionMetadata;
+using Cecilifier.Core.ApiDriver;
+using Cecilifier.Core.AST;
 using Cecilifier.Core.Tests.Framework;
+using Cecilifier.Core.Tests.Framework.Attributes;
 using NUnit.Framework;
+using NUnit.Framework.Internal;
 
 namespace Cecilifier.Core.Tests.OutputBased;
 
-[TestFixture]
-public class CollectionExpressionTests : OutputBasedTestBase
+[TestFixture(typeof(MonoCecilContext), TestName = "Mono.Cecil")]
+[TestFixture(typeof(SystemReflectionMetadataContext), TestName = "System.Reflection.Metadata")]
+[EnableForContext<SystemReflectionMetadataContext>(IgnoreReason = "Not implemented yet")]
+public class CollectionExpressionTests<TContext> : OutputBasedTestBase<TContext> where TContext : IVisitorContext
 {
     [Test]
     public void ArrayWith3OrMoreElements()

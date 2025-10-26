@@ -1,6 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using System.Reflection.Emit;
+using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
@@ -8,49 +12,44 @@ using Cecilifier.Core.Naming;
 using Cecilifier.Core.Services;
 using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Mono.Cecil.Cil;
 
 namespace Cecilifier.Core.Misc
 {
-    public class CecilifierContext : IVisitorContext
+    public abstract class CecilifierContextBase : IVisitorContext
     {
         private readonly IDictionary<string, string> flags = new Dictionary<string, string>();
         private readonly LinkedList<string> output = new();
 
-        private readonly string identation;
-        private int startLineNumber;
+        private readonly string indentation;
         private RoslynTypeSystem roslynTypeSystem;
 
-        public CecilifierContext(SemanticModel semanticModel, CecilifierOptions options, int startingLine, byte indentation = 3)
+        protected internal CecilifierContextBase(CecilifierOptions options, SemanticModel semanticModel, byte indentation)
         {
             SemanticModel = semanticModel;
             Options = options;
             DefinitionVariables = new DefinitionVariableManager();
             roslynTypeSystem = new RoslynTypeSystem(this);
-            TypeResolver = new TypeResolverImpl(this);
             Mappings = new List<Mapping>();
             Diagnostics = [];
-            CecilifiedLineNumber = startingLine;
-            startLineNumber = startingLine;
-
-            identation = new String('\t', indentation);
+            this.indentation = new String('\t', indentation);
             
             Services.Add(new GenericInstanceMethodCacheService<int, string>());
         }
+        
+        public int Indentation => indentation.Length;
+        
+        public IILGeneratorApiDriver ApiDriver { get; protected init; }
+
+        public IApiDriverDefinitionsFactory ApiDefinitionsFactory { get; protected init; }
+        public string Output => output.Aggregate("", (acc, curr) => acc + curr);
+        public IList<CecilifierDiagnostic> Diagnostics { get; }
 
         public ServiceCollection Services { get; } = new();
 
-        public string Output
-        {
-            get { return output.Aggregate("", (acc, curr) => acc + curr); }
-        }
-
-        public ITypeResolver TypeResolver { get; }
-
+        public ITypeResolver TypeResolver { get; protected init; }
+        public IMemberResolver MemberResolver { get; protected init; }
+        
         public ref readonly RoslynTypeSystem RoslynTypeSystem => ref roslynTypeSystem;
-
         public SemanticModel SemanticModel { get; }
         public CecilifierOptions Options { get; }
         public INameStrategy Naming => Options.Naming;
@@ -59,11 +58,11 @@ namespace Cecilifier.Core.Misc
 
         public LinkedListNode<string> CurrentLine => output.Last;
 
-        public int CecilifiedLineNumber { get; private set; }
+        public int CecilifiedLineNumber { get; protected set; }
 
         public IList<Mapping> Mappings { get; }
-
-        public IList<CecilifierDiagnostic> Diagnostics { get; }
+       
+        protected int StartLineNumber { get; init; }
 
         public void EmitWarning(string message, SyntaxNode node = null) => EmitDiagnostic(message, node, DiagnosticKind.Warning); 
         public void EmitError(string message, SyntaxNode node = null) => EmitDiagnostic(message, node, DiagnosticKind.Error);
@@ -76,11 +75,13 @@ namespace Cecilifier.Core.Misc
             var lines = message.Split('\n');
             foreach (var line in lines)
             {
-                WriteCecilExpression($"#{diagnosticKindString} {line}");
+                Generate($"#{diagnosticKindString} {line}");
                 WriteNewLine();
             }
         }
-        
+
+        public abstract void OnFinishedTypeDeclaration();
+
         public IMethodSymbol GetDeclaredSymbol(BaseMethodDeclarationSyntax methodDeclaration)
         {
             return (IMethodSymbol) SemanticModel.GetDeclaredSymbol(methodDeclaration);
@@ -101,17 +102,24 @@ namespace Cecilifier.Core.Misc
             return SemanticModel.GetTypeInfo(expressionSyntax);
         }
 
-        public void WriteCecilExpression(string expression)
+        public void Generate(CecilifierInterpolatedStringHandler expression)
         {
-            CecilifiedLineNumber += expression.CountNewLines();
-            output.AddLast($"{identation}{expression}");
+            Generate(expression.Result);
+        }
+
+        public void Generate(string expression)
+        {
+            var lineCount = expression.CountNewLines();
+            CecilifiedLineNumber += lineCount;
+            
+            output.AddLast($"{indentation}{expression}");
         }
         
-        public void WriteCecilExpressions(IEnumerable<string> expressions)
+        public void Generate(IEnumerable<string> expressions)
         {
             foreach (var expression in expressions.Where(exp => !string.IsNullOrWhiteSpace(exp)))
             {
-                WriteCecilExpression(expression);
+                Generate(expression);
                 WriteNewLine();
             }
         }
@@ -120,7 +128,7 @@ namespace Cecilifier.Core.Misc
         {
             if ((Options.Naming.Options & NamingOptions.AddCommentsToMemberDeclarations) == NamingOptions.AddCommentsToMemberDeclarations)
             {
-                output.AddLast($"{identation}//{comment}");
+                output.AddLast($"{indentation}//{comment}");
                 CecilifiedLineNumber += comment.CountNewLines();
                 WriteNewLine();
             }
@@ -139,12 +147,10 @@ namespace Cecilifier.Core.Misc
             CecilifiedLineNumber++;
         }
 
-        public void WriteCilInstructionAfter<T>(string ilVar, OpCode opCode, T operand, string comment, LinkedListNode<string> after)
+        public void WriteCilInstructionAfter(string ilVar, OpCode opCode, LinkedListNode<string> after)
         {
-            var operandStr = operand == null ? string.Empty : $", {operand}";
-            var toBeWritten = $"{ilVar}.Emit({opCode.ConstantName()}{operandStr});{(comment != null ? $" // {comment}" : string.Empty)}\n";
-            
-            output.AddAfter(after, $"{identation}{toBeWritten}");
+            var toBeWritten = ApiDriver.EmitCilInstruction<string>(this, ilVar, opCode, null);
+            output.AddAfter(after, $"{indentation}{toBeWritten}{Environment.NewLine}");
             CecilifiedLineNumber += toBeWritten.CountNewLines();
         }
         
@@ -185,7 +191,7 @@ namespace Cecilifier.Core.Misc
                     f = f.Next;
                 }
 
-                return lineUntilPassedNode + startLineNumber;
+                return lineUntilPassedNode + StartLineNumber;
             }
         }
 
@@ -233,18 +239,6 @@ namespace Cecilifier.Core.Misc
         public void ClearFlag(string name)
         {
             flags.Remove(name);
-        }        
-
-        public void EmitCilInstruction<T>(string ilVar, OpCode opCode, T operand, string comment = null)
-        {
-            var operandStr = operand == null ? string.Empty : $", {operand}";
-            WriteCecilExpression($"{ilVar}.Emit({opCode.ConstantName()}{operandStr});{(comment != null ? $" // {comment}" : string.Empty)}");
-            WriteNewLine();
-        }
-
-        public void EmitCilInstruction(string ilVar, OpCode opCode)
-        {
-            EmitCilInstruction<string>(ilVar, opCode, null);
         }
     }
 }

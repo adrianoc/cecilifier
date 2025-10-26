@@ -1,12 +1,14 @@
-using System;
 using System.Collections.Generic;
-using Cecilifier.Core.Extensions;
-using Cecilifier.Core.Misc;
-using Cecilifier.Core.Variables;
+using System;
+using System.Reflection.Emit;
+using Cecilifier.Core.ApiDriver;
+using Cecilifier.Core.ApiDriver.Handles;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Mono.Cecil.Cil;
+using Cecilifier.Core.Extensions;
+using Cecilifier.Core.Misc;
+using Cecilifier.Core.Variables;
 
 namespace Cecilifier.Core.AST
 {
@@ -47,7 +49,7 @@ namespace Cecilifier.Core.AST
             if (InlineArrayProcessor.TryHandleIntIndexElementAccess(Context, ilVar, node, out var elementType))
             {
                 Context.MoveLinesToEnd(InstructionPrecedingValueToLoad, lastInstructionLoadingRhs);
-                Context.EmitCilInstruction(ilVar, elementType.StindOpCodeFor());
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, elementType.StindOpCodeFor());
                 return;
             }
             
@@ -62,8 +64,8 @@ namespace Cecilifier.Core.AST
                 Context.MoveLinesToEnd(InstructionPrecedingValueToLoad, lastInstructionLoadingRhs);
                 var arrayElementType = Context.SemanticModel.GetTypeInfo(node).Type.EnsureNotNull();
                 var stelemOpCode = arrayElementType.StelemOpCode();
-                var operand = stelemOpCode == OpCodes.Stelem_Any ? Context.TypeResolver.Resolve(arrayElementType) : null;
-                Context.EmitCilInstruction(ilVar, stelemOpCode, operand);
+                var operand = stelemOpCode == OpCodes.Stelem ? Context.TypeResolver.ResolveAny(arrayElementType) : null;
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, stelemOpCode, operand);
             }
         }
 
@@ -136,7 +138,7 @@ namespace Cecilifier.Core.AST
         {
             var lastInstructionLoadingRhs = Context.CurrentLine;
 
-            Context.EmitCilInstruction(ilVar, OpCodes.Dup);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Dup);
             foreach (var arg in node.ArgumentList.Arguments)
             {
                 ExpressionVisitor.Visit(Context, ilVar, arg.Expression);
@@ -179,7 +181,7 @@ namespace Cecilifier.Core.AST
                                         ? OpCodes.Dup
                                         : OpCodes.Ldarg_0;
 
-                Context.WriteCilInstructionAfter<string>(ilVar, loadOpCode, null, null, InstructionPrecedingValueToLoad);
+                Context.WriteCilInstructionAfter(ilVar, loadOpCode, InstructionPrecedingValueToLoad);
             }
         }
 
@@ -214,7 +216,7 @@ namespace Cecilifier.Core.AST
         private void EmitIndirectStore(ITypeSymbol typeBeingStored)
         {
             var indirectStoreOpCode = typeBeingStored.StindOpCodeFor();
-            Context.EmitCilInstruction(ilVar, indirectStoreOpCode, indirectStoreOpCode == OpCodes.Stobj ? Context.TypeResolver.Resolve(typeBeingStored.ElementTypeSymbolOf()) : null);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, indirectStoreOpCode, indirectStoreOpCode == OpCodes.Stobj ? Context.TypeResolver.ResolveAny(typeBeingStored.ElementTypeSymbolOf()) : null);
         }
 
         private void PropertyAssignment(IdentifierNameSyntax node, IPropertySymbol property)
@@ -226,7 +228,7 @@ namespace Cecilifier.Core.AST
             {
                 var propertyBackingFieldName = Utils.BackingFieldNameForAutoProperty(property.Name);
                 var found = Context.DefinitionVariables.GetVariable(propertyBackingFieldName, VariableMemberKind.Field, property.ContainingType.ToDisplayString());
-                Context.EmitCilInstruction(ilVar, OpCodes.Stfld, found.VariableName);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Stfld, found.VariableName.AsToken());
             }
             else
             {
@@ -238,7 +240,7 @@ namespace Cecilifier.Core.AST
         private void FieldAssignment(IFieldSymbol field, IdentifierNameSyntax name)
         {
             if (field.IsVolatile)
-                Context.EmitCilInstruction(ilVar, OpCodes.Volatile);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Volatile);
 
             field.EnsureFieldExists(Context, name);
             var fieldReference = field.FieldResolverExpression(Context);
@@ -274,7 +276,7 @@ namespace Cecilifier.Core.AST
             }
             else
             {
-                Context.EmitCilInstruction(ilVar, storeOpCode, memberReference);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, storeOpCode, memberReference.AsToken());
             }
         }
 

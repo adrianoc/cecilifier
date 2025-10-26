@@ -117,8 +117,8 @@ public class CustomValueTypesInstantiationTests : CecilifierUnitTestBase
 
     [TestCase("var x = new S(); struct S {}", 
         """
-        il_topLevelMain_4.Emit\(OpCodes.Ldloca_S, l_x_\d+\);
-        \s+il_topLevelMain_4.Emit\(OpCodes.Initobj, st_S_0\);
+        il_topLevelMain_\d+.Emit\(OpCodes.Ldloca_S, l_x_\d+\);
+        \s+il_topLevelMain_\d+.Emit\(OpCodes.Initobj, st_S_0\);
         """,
         TestName = "Implicit parameterless ctor")]
     
@@ -156,21 +156,21 @@ public class CustomValueTypesInstantiationTests : CecilifierUnitTestBase
         {
             new TestCaseData(
                 "ByValue(new Test())", 
-                $"""
-                 (il_topLevelMain_\d+\.Emit\(OpCodes\.)Ldloca_S, (l_vt_\d+)\);
-                 \s+\1Initobj, st_test_0\);
-                 \s+\1Ldloc, \2\);
-                 \s+\1Call, .+\);
-                 """).SetName("by value"),
+                """
+                (il_topLevelMain_\d+\.Emit\(OpCodes\.)Ldloca_S, (l_vt_\d+)\);
+                \s+\1Initobj, st_test_0\);
+                \s+\1Ldloc, \2\);
+                \s+\1Call, .+\);
+                """).SetName("by value"),
             
             new TestCaseData(
                 "AsIn(new Test())", 
-                $"""
-                 (il_topLevelMain_\d+\.Emit\(OpCodes\.)Ldloca_S, (l_vt_\d+)\);
-                 \s+\1Initobj, st_test_0\);
-                 \s+\1Ldloca, \2\);
-                 \s+\1Call, .+\);
-                 """).SetName("as in implicit ctor"),
+                """
+                (il_topLevelMain_\d+\.Emit\(OpCodes\.)Ldloca_S, (l_vt_\d+)\);
+                \s+\1Initobj, st_test_0\);
+                \s+\1Ldloca, \2\);
+                \s+\1Call, .+\);
+                """).SetName("as in implicit ctor"),
             
             new TestCaseData(
                 "AsIn(new Test(42))", 
@@ -178,7 +178,7 @@ public class CustomValueTypesInstantiationTests : CecilifierUnitTestBase
                  (il_topLevelMain_\d+\.Emit\(OpCodes\.)Ldc_I4, 42\);
                  \s+\1Newobj, ctor_test_\d+\);
                  \s+var (l_tmp_\d+) = new VariableDefinition\(st_test_\d+\);
-                 \s+m_topLevelStatements_\d+.Body.Variables.Add\(\2\);
+                 \s+m_topLevelMain_\d+.Body.Variables.Add\(\2\);
                  \s+\1Stloc, \2\);
                  \s+\1Ldloca_S, \2\);
                  \s+\1Call, .+\);
@@ -192,62 +192,62 @@ public class CustomValueTypesInstantiationTests : CecilifierUnitTestBase
         {
             new TestCaseData(
                 "new Test().M()", 
-                $"""
-                 (m_topLevelStatements_\d+).Body.Variables.Add\((l_vt_\d+)\);
+                """
+                 (m_topLevelMain_\d+).Body.Variables.Add\((l_vt_\d+)\);
                  \s+(il_topLevelMain_\d+.Emit\(OpCodes\.)Ldloca_S, \2\);
                  \s+\3Initobj, st_test_0\);
                  \s+\3Ldloca, \2\);
                  \s+\3Call, m_M_\d+\);
-                 \s+\1\.Body\.Instructions\.Add\(il_topLevelMain_\d+.Create\(OpCodes.Ret\)\);
+                 \s+\3Ret\);
                  """).SetName("Implicit: direct call own method"),
             
             new TestCaseData(
                 "new Test().Dispose()",
                 """
-                (m_topLevelStatements_\d+).Body.Variables.Add\((l_vt_\d+)\);
+                (m_topLevelMain_\d+).Body.Variables.Add\((l_vt_\d+)\);
                 \s+(il_topLevelMain_\d+.Emit\(OpCodes\.)Ldloca_S, \2\);
                 \s+\3Initobj, st_test_0\);
                 \s+\3Ldloca, \2\);
                 \s+\3Call, m_dispose_\d+\);
-                \s+\1\.Body\.Instructions\.Add\(il_topLevelMain_\d+.Create\(OpCodes.Ret\)\);
+                \s+\3Ret\);
                 """).SetName("Implicit: direct interface method"),
             
             new TestCaseData(
                 "((IDisposable) new Test()).Dispose()", 
                 """
-                (m_topLevelStatements_\d+).Body.Variables.Add\((l_vt_\d+)\);
+                (m_topLevelMain_\d+).Body.Variables.Add\((l_vt_\d+)\);
                 \s+(il_topLevelMain_\d+.Emit\(OpCodes\.)Ldloca_S, \2\);
                 \s+\3Initobj, st_test_0\);
                 \s+\3Ldloc, \2\);
                 \s+\3Box, st_test_0\);
                 \s+\3Callvirt, .+"Dispose".+\);
-                \s+\1\.Body\.Instructions\.Add\(il_topLevelMain_\d+.Create\(OpCodes.Ret\)\);
+                \s+\3Ret\);
                 """).SetName("Implicit: call through interface cast"),
             
             new TestCaseData(
                 "new Test().GetHashCode()", 
                 """
-                (m_topLevelStatements_\d+).Body.Variables.Add\((l_vt_\d+)\);
+                (m_topLevelMain_\d+).Body.Variables.Add\((l_vt_\d+)\);
                 \s+(il_topLevelMain_\d+.Emit\(OpCodes\.)Ldloca_S, \2\);
                 \s+\3Initobj, st_test_0\);
                 \s+\3Ldloca, \2\);
                 \s+\3Constrained, st_test_0\);
                 \s+\3Callvirt, .+GetHashCode.+\);
                 \s+\3Pop\);
-                \s+\1\.Body\.Instructions\.Add\(il_topLevelMain_\d+.Create\(OpCodes.Ret\)\);
+                \s+\3Ret\);
                 """).SetName("Implicit: direct object method call"),
             
             new TestCaseData(
                 "((Object) new Test()).GetHashCode()", 
                 """
-                (m_topLevelStatements_\d+).Body.Variables.Add\((l_vt_\d+)\);
+                (m_topLevelMain_\d+).Body.Variables.Add\((l_vt_\d+)\);
                 \s+(il_topLevelMain_\d+.Emit\(OpCodes\.)Ldloca_S, \2\);
                 \s+\3Initobj, st_test_0\);
                 \s+\3Ldloc, \2\);
                 \s+\3Box, st_test_0\);
                 \s+\3Callvirt, .+GetHashCode.+\);
                 \s+\3Pop\);
-                \s+\1\.Body\.Instructions\.Add\(il_topLevelMain_\d+.Create\(OpCodes.Ret\)\);
+                \s+\3Ret\);
                 """).SetName("Implicit: call through object cast"),
             
             new TestCaseData(
@@ -256,7 +256,7 @@ public class CustomValueTypesInstantiationTests : CecilifierUnitTestBase
                 (il_topLevelMain_\d+\.Emit\(OpCodes\.)Ldc_I4, 1\);
                 \s+\1Newobj, ctor_test_\d+\);
                 \s+var (l_tmp_\d+) = new VariableDefinition\(st_test_\d+\);
-                \s+m_topLevelStatements_\d+.Body.Variables.Add\(\2\);
+                \s+m_topLevelMain_\d+.Body.Variables.Add\(\2\);
                 \s+\1Stloc, \2\);
                 \s+\1Ldloc, \2\);
                 \s+\1Box, st_test_\d+\);
@@ -269,7 +269,7 @@ public class CustomValueTypesInstantiationTests : CecilifierUnitTestBase
                 (il_topLevelMain_\d+\.Emit\(OpCodes\.)Ldc_I4, 1\);
                 \s+\1Newobj, ctor_test_\d+\);
                 \s+var (l_tmp_\d+) = new VariableDefinition\(st_test_\d+\);
-                \s+m_topLevelStatements_\d+.Body.Variables.Add\(\2\);
+                \s+m_topLevelMain_\d+.Body.Variables.Add\(\2\);
                 \s+\1Stloc, \2\);
                 \s+\1Ldloca_S, \2\);
                 \s+\1Constrained, st_test_\d+\);
@@ -283,7 +283,7 @@ public class CustomValueTypesInstantiationTests : CecilifierUnitTestBase
                 (il_topLevelMain_\d+\.Emit\(OpCodes\.)Ldc_I4, 1\);
                 \s+\1Newobj, ctor_test_\d+\);
                 \s+var (l_tmp_\d+) = new VariableDefinition\(st_test_\d+\);
-                \s+m_topLevelStatements_\d+.Body.Variables.Add\(\2\);
+                \s+m_topLevelMain_\d+.Body.Variables.Add\(\2\);
                 \s+\1Stloc, \2\);
                 \s+\1Ldloc, \2\);
                 \s+\1Box, st_test_\d+\);
@@ -293,15 +293,15 @@ public class CustomValueTypesInstantiationTests : CecilifierUnitTestBase
             
             new TestCaseData(
                 "new Test(1).M()", 
-                $"""
+                """
                  (il_topLevelMain_\d+\.Emit\(OpCodes\.)Ldc_I4, 1\);
                  \s+\1Newobj, ctor_test_\d+\);
                  \s+var (l_tmp_\d+) = new VariableDefinition\(st_test_\d+\);
-                 \s+m_topLevelStatements_\d+.Body.Variables.Add\(\2\);
+                 \s+m_topLevelMain_\d+.Body.Variables.Add\(\2\);
                  \s+\1Stloc, \2\);
                  \s+\1Ldloca_S, \2\);
                  \s+\1Call, m_M_\d+\);
-                 \s+m_topLevelStatements_\d+\.Body\.Instructions\.Add\(il_topLevelMain_\d+.Create\(OpCodes.Ret\)\);
+                 \s+\1Ret\);
                  """).SetName("Explicit: direct call own method"),
             
             new TestCaseData(
@@ -310,11 +310,11 @@ public class CustomValueTypesInstantiationTests : CecilifierUnitTestBase
                 (il_topLevelMain_\d+\.Emit\(OpCodes\.)Ldc_I4, 1\);
                 \s+\1Newobj, ctor_test_\d+\);
                 \s+var (l_tmp_\d+) = new VariableDefinition\(st_test_\d+\);
-                \s+m_topLevelStatements_\d+.Body.Variables.Add\(\2\);
+                \s+m_topLevelMain_\d+.Body.Variables.Add\(\2\);
                 \s+\1Stloc, \2\);
                 \s+\1Ldloca_S, \2\);
                 \s+\1Call, m_dispose_\d+\);
-                \s+m_topLevelStatements_\d+\.Body\.Instructions\.Add\(il_topLevelMain_\d+.Create\(OpCodes.Ret\)\);
+                \s+\1Ret\);
                 """).SetName("Explicit: direct interface method"),
         };
     }    

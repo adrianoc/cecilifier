@@ -7,7 +7,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit;
 public class GenericTypeTests : CecilifierUnitTestBase
 {
     [TestCase("var x = typeof(System.Collections.Generic.Dictionary<int, int>.Enumerator);",
-        """il_topLevelMain_3.Emit\(OpCodes.Ldtoken, assembly.MainModule.ImportReference\(typeof\(System.Collections.Generic.Dictionary<int, int>.Enumerator\)\)\);""")]
+        """il_topLevelMain_\d+.Emit\(OpCodes.Ldtoken, assembly.MainModule.ImportReference\(typeof\(System.Collections.Generic.Dictionary<int, int>.Enumerator\)\)\);""")]
 
     [TestCase("class Foo { void Bar(System.Collections.Generic.Dictionary<int, int> dict) { var enu = dict.GetEnumerator(); } }",
         """

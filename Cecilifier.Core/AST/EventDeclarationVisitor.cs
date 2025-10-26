@@ -1,15 +1,17 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using System.Reflection.Emit;
+using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
+using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Mono.Cecil.Cil;
 
 namespace Cecilifier.Core.AST
 {
@@ -36,9 +38,9 @@ namespace Cecilifier.Core.AST
             using var __ = LineInformationTracker.Track(Context, node);
             var eventSymbol = Context.SemanticModel.GetDeclaredSymbol(node).EnsureNotNull<ISymbol, IEventSymbol>();
 
-            eventDeclaringTypeVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Type).VariableName;
+            eventDeclaringTypeVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Type);
 
-            var eventType = Context.TypeResolver.Resolve(eventSymbol.Type);
+            var eventType = Context.TypeResolver.ResolveAny(eventSymbol.Type);
             var eventAccessorsDefVarMapping = new Dictionary<string, string>();
             foreach (var acc in node.AccessorList.Accessors)
             {
@@ -47,13 +49,13 @@ namespace Cecilifier.Core.AST
                 Context.WriteComment($"{node.Identifier.ValueText} {acc.Keyword} method.");
 
                 var methodVar = Context.Naming.SyntheticVariable(acc.Keyword.ValueText, ElementKind.Method);
-                var methodILVar = Context.Naming.ILProcessor(acc.Keyword.ValueText);
-                var body = CecilDefinitionsFactory.MethodBody(Context.Naming, acc.Keyword.ValueText, methodVar, methodILVar, [], []);
+                var ilContext = Context.ApiDriver.NewIlContext(Context, acc.Keyword.ValueText, methodVar);
+                var body = Context.ApiDefinitionsFactory.MethodBody(Context, acc.Keyword.ValueText, ilContext, [], []);
                 var accessorMethodVar = AddAccessor(node, eventSymbol, methodVar, acc.Keyword.ValueText, eventType, body);
                 using (Context.DefinitionVariables.WithVariable(accessorMethodVar))
                 {
-                    StatementVisitor.Visit(Context, methodILVar, acc.Body);
-                    Context.EmitCilInstruction(methodILVar, OpCodes.Ret);
+                    StatementVisitor.Visit(Context, ilContext.VariableName, acc.Body);
+                    Context.ApiDriver.WriteCilInstruction(Context, ilContext.VariableName, OpCodes.Ret);
                 }
 
                 eventAccessorsDefVarMapping[acc.Keyword.ValueText] = methodVar;
@@ -61,8 +63,8 @@ namespace Cecilifier.Core.AST
 
             Context.WriteNewLine();
             Context.WriteComment($"Event: {node.Identifier.Text}");
-            var evtDefVar = AddEventDefinition(node, eventDeclaringTypeVar, node.Identifier.Text, eventType, eventAccessorsDefVarMapping["add"], eventAccessorsDefVarMapping["remove"]);
-            HandleAttributesInMemberDeclaration(node.AttributeLists, evtDefVar);
+            var evtDefVar = AddEventDefinition(node, eventDeclaringTypeVar.VariableName, node.Identifier.Text, eventType, eventAccessorsDefVarMapping["add"], eventAccessorsDefVarMapping["remove"]);
+            HandleAttributesInMemberDeclaration(node.AttributeLists, evtDefVar, VariableMemberKind.None);
         }
 
         // Handles field like events (i.e, no add/remove accessors)
@@ -83,19 +85,19 @@ namespace Cecilifier.Core.AST
 
             var eventSymbol = (IEventSymbol) Context.SemanticModel.GetDeclaredSymbol(node.Declaration.Variables[0]);
 
-            eventDeclaringTypeVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Type).VariableName;
+            eventDeclaringTypeVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Type);
 
             var declaringType = node.ResolveDeclaringType<TypeDeclarationSyntax>();
             var backingFieldVar = declaringType.IsKind(SyntaxKind.InterfaceDeclaration)
                 ? string.Empty
                 : AddBackingField(node); // backing field will have same name as the event
 
-            var eventType = ResolveType(node.Declaration.Type);
+            var eventType = ResolveType(node.Declaration.Type, ResolveTargetKind.None);
             var addAccessorVar = AddAccessor(node, eventSymbol, "add", backingFieldVar, eventType, AddMethodBody);
             var removeAccessorVar = AddAccessor(node, eventSymbol, "remove", backingFieldVar, eventType, RemoveMethodBody);
 
-            var evtDefVar = AddEventDefinition(node, eventDeclaringTypeVar, eventSymbol.Name, eventType, addAccessorVar, removeAccessorVar);
-            HandleAttributesInMemberDeclaration(node.AttributeLists, evtDefVar);
+            var evtDefVar = AddEventDefinition(node, eventDeclaringTypeVar.VariableName, eventSymbol.Name, eventType, addAccessorVar, removeAccessorVar);
+            HandleAttributesInMemberDeclaration(node.AttributeLists, evtDefVar, VariableMemberKind.None);
         }
 
         private string AddAccessor(EventFieldDeclarationSyntax node, IEventSymbol eventSymbol, string accessorName, string backingFieldVar, string eventType, Func<EventFieldDeclarationSyntax, IEventSymbol, string, string, string, IEnumerable<string>> methodBodyFactory)
@@ -118,14 +120,19 @@ namespace Cecilifier.Core.AST
         private MethodDefinitionVariable AddAccessor(MemberDeclarationSyntax node, IEventSymbol eventSymbol, string methodVar, string accessorName, string eventType, IEnumerable<string> methodBodyExpressions)
         {
             var accessorModifiers = AccessModifiersForEventAccessors(node, eventSymbol.ContainingType);
-
             var methodName = $"{accessorName}_{eventSymbol.Name}";
-            var methodExps = CecilDefinitionsFactory.Method(Context, methodVar, methodName, accessorModifiers, Context.RoslynTypeSystem.SystemVoid, false, Array.Empty<TypeParameterSyntax>());
-            var paramsExps = AddParameterTo(methodVar, eventType);
+            var methodExps = Context.ApiDefinitionsFactory.Method(
+                                                                                Context, 
+                                                                                new BodiedMemberDefinitionContext(methodName, methodVar, eventDeclaringTypeVar.VariableName, eventSymbol.IsStatic ? MemberOptions.Static : MemberOptions.None, IlContext.None), 
+                                                                                eventDeclaringTypeVar.MemberName, 
+                                                                                accessorModifiers, 
+                                                                                [ new ParameterSpec("value", eventType, RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = eventSymbol.Type.ToDisplayString() }],
+                                                                                [], 
+                                                                                ctx => ctx.TypeResolver.ResolveAny(Context.RoslynTypeSystem.SystemVoid, ResolveTargetKind.ReturnType),  
+                                                                                out var eventAccessorMethodVar);
 
-            AddCecilExpressions(Context, methodExps.Concat(paramsExps).Concat(methodBodyExpressions));
-            AddCecilExpression($"{eventDeclaringTypeVar}.Methods.Add({methodVar});");
-            return Context.DefinitionVariables.RegisterMethod(eventSymbol.ContainingType.Name, methodName, new[] { eventSymbol.Type.ToDisplayString() }, 0, methodVar);
+            AddCecilExpressions(Context, methodExps.Concat(methodBodyExpressions));
+            return eventAccessorMethodVar;
         }
 
         private static string AccessModifiersForEventAccessors(MemberDeclarationSyntax node, ITypeSymbol typeSymbol)
@@ -147,12 +154,12 @@ namespace Cecilifier.Core.AST
             var removeMethod = Utils.ImportFromMainModule("typeof(Delegate).GetMethod(\"Remove\")");
             var compareExchangeExps = CompareExchangeMethodResolvingExps(backingFieldVar, out var compExcVar);
 
-            var fieldVar = Utils.MakeGenericTypeIfAppropriate(Context, eventSymbol, backingFieldVar, eventDeclaringTypeVar);
+            var fieldVar = Utils.MakeGenericTypeIfAppropriate(Context, eventSymbol, backingFieldVar, eventDeclaringTypeVar.VariableName);
 
             // static member access does not have a *this* so simply replace with *Nop*
             var lgarg_0 = isStatic ? OpCodes.Nop : OpCodes.Ldarg_0;
-            var bodyExps = CecilDefinitionsFactory.MethodBody(Context.Naming, accessorName, removeMethodVar, [],
-            [
+            string[] localVariableTypes = [];
+            InstructionRepresentation[] instructions = [
                 lgarg_0,
                 ldfld.WithOperand(fieldVar),
                 OpCodes.Stloc_0,
@@ -161,7 +168,7 @@ namespace Cecilifier.Core.AST
                 OpCodes.Ldloc_1,
                 OpCodes.Ldarg.WithOperand(isStatic ? "0" : "1"),
                 OpCodes.Call.WithOperand(removeMethod),
-                OpCodes.Castclass.WithOperand(Context.TypeResolver.Resolve(eventSymbol.Type)),
+                OpCodes.Castclass.WithOperand(Context.TypeResolver.ResolveAny(eventSymbol.Type)),
                 OpCodes.Stloc_2,
                 lgarg_0,
                 ldflda.WithOperand(fieldVar),
@@ -173,7 +180,8 @@ namespace Cecilifier.Core.AST
                 OpCodes.Ldloc_1,
                 OpCodes.Bne_Un_S.WithBranchOperand("LoopStart"),
                 OpCodes.Ret
-            ]);
+            ];
+            var bodyExps = Context.ApiDefinitionsFactory.MethodBody(Context, accessorName, Context.ApiDriver.NewIlContext(Context, accessorName, removeMethodVar), localVariableTypes, instructions);
 
             return compareExchangeExps.Concat(bodyExps);
         }
@@ -186,12 +194,12 @@ namespace Cecilifier.Core.AST
             var combineMethod = Utils.ImportFromMainModule("typeof(Delegate).GetMethods().Single(m => m.Name == \"Combine\" && m.IsStatic && m.GetParameters().Length == 2)");
             var compareExchangeExps = CompareExchangeMethodResolvingExps(backingFieldVar, out var compExcVar);
 
-            var fieldVar = Utils.MakeGenericTypeIfAppropriate(Context, eventSymbol, backingFieldVar, eventDeclaringTypeVar);
+            var fieldVar = Utils.MakeGenericTypeIfAppropriate(Context, eventSymbol, backingFieldVar, eventDeclaringTypeVar.VariableName);
 
             // static member access does not have a *this* so simply replace with *Nop*
             var lgarg_0 = isStatic ? OpCodes.Nop : OpCodes.Ldarg_0;
-            var bodyExps = CecilDefinitionsFactory.MethodBody(Context.Naming, accessorName, addMethodVar, [], 
-            [
+            string[] localVariableTypes = [];
+            InstructionRepresentation[] instructions = [
                 lgarg_0,
                 ldfld.WithOperand(fieldVar),
                 OpCodes.Stloc_0,
@@ -200,7 +208,7 @@ namespace Cecilifier.Core.AST
                 OpCodes.Ldloc_1,
                 OpCodes.Ldarg.WithOperand(isStatic ? "0" : "1"),
                 OpCodes.Call.WithOperand(combineMethod),
-                OpCodes.Castclass.WithOperand(Context.TypeResolver.Resolve(eventSymbol.Type)),
+                OpCodes.Castclass.WithOperand(Context.TypeResolver.ResolveAny(eventSymbol.Type)),
                 OpCodes.Stloc_2,
                 lgarg_0,
                 ldflda.WithOperand(fieldVar),
@@ -213,7 +221,8 @@ namespace Cecilifier.Core.AST
                 OpCodes.Bne_Un_S.WithBranchOperand("LoopStart"),
                 OpCodes.Nop,
                 OpCodes.Ret
-            ]);
+            ];
+            var bodyExps = Context.ApiDefinitionsFactory.MethodBody(Context, accessorName, Context.ApiDriver.NewIlContext(Context, accessorName, addMethodVar), localVariableTypes, instructions);
 
             return compareExchangeExps.Concat(bodyExps);
         }
@@ -224,14 +233,6 @@ namespace Cecilifier.Core.AST
             var exp1 = $"var {openCompExcVar} = {Utils.ImportFromMainModule("typeof(System.Threading.Interlocked).GetMethods().Single(m => m.Name == \"CompareExchange\" && m.IsGenericMethodDefinition)")};";
 
             return new[] { exp1 }.Concat(openCompExcVar.MakeGenericInstanceMethod(Context, "compExp", [$"{backingFieldVar}.FieldType"], out compExcVar));
-        }
-
-        private IEnumerable<string> AddParameterTo(string methodVar, string fieldType)
-        {
-            return new[]
-            {
-                $"{methodVar}.Parameters.Add(new ParameterDefinition(\"value\", ParameterAttributes.None, {fieldType}));",
-            };
         }
 
         private string AddBackingField(EventFieldDeclarationSyntax node)
@@ -262,6 +263,6 @@ namespace Cecilifier.Core.AST
             return evtDefVar;
         }
 
-        private string eventDeclaringTypeVar;
+        private DefinitionVariable eventDeclaringTypeVar;
     }
 }

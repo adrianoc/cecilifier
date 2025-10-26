@@ -11,7 +11,7 @@ public partial class MiscellaneousStatements : CecilifierUnitTestBase
     public void EntryPointInTopLevelStatements()
     {
         var result = RunCecilifier("System.Console.WriteLine(42);");
-        Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(@"assembly\.EntryPoint = m_topLevelStatements_\d+"));
+        Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(@"assembly\.EntryPoint = m_topLevelMain_\d+"));
     }
     
     [Test]
@@ -33,8 +33,8 @@ public partial class MiscellaneousStatements : CecilifierUnitTestBase
             Does.Match(
                  """
                  \s+var (lbl_fel_\d+) = il_M_7.Create\(OpCodes.Nop\);
-                 \s+var nop_10 = il_M_7.Create\(OpCodes.Nop\);
-                 \s+il_M_7.Append\(nop_10\);
+                 \s+var lbl_forCondition_10 = il_M_7.Create\(OpCodes.Nop\);
+                 \s+il_M_7.Append\(lbl_forCondition_10\);
                  \s+//for condition: j < 10
                  \s+il_M_7.Emit\(OpCodes.Ldloc, l_j_8\);
                  \s+il_M_7.Emit\(OpCodes.Ldc_I4, 10\);
@@ -49,7 +49,7 @@ public partial class MiscellaneousStatements : CecilifierUnitTestBase
                  \s+il_M_7.Emit\(OpCodes.Add\);
                  \s+il_M_7.Emit\(OpCodes.Stloc, l_j_8\);
                  \s+il_M_7.Emit\(OpCodes.Pop\);
-                 \s+il_M_7.Emit\(OpCodes.Br, nop_10\);
+                 \s+il_M_7.Emit\(OpCodes.Br, lbl_forCondition_10\);
                  \s+il_M_7.Append\(\1\);
                  """));
     }

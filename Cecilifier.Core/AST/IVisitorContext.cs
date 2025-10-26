@@ -1,63 +1,86 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection.Emit;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.Mappings;
+using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.Services;
 using Cecilifier.Core.Variables;
 using Cecilifier.Core.TypeSystem;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Mono.Cecil.Cil;
 
-namespace Cecilifier.Core.AST
+namespace Cecilifier.Core.AST;
+
+public interface IVisitorContext
 {
-    public interface IVisitorContext
-    {
-        ServiceCollection Services { get; }
+    static virtual IVisitorContext CreateContext(CecilifierOptions options, SemanticModel semanticModel) => throw new NotImplementedException();
+    static virtual string[] BclAssembliesForCompilation() => throw new NotImplementedException();
+
+    IApiDriverDefinitionsFactory ApiDefinitionsFactory { get; }
+    public IILGeneratorApiDriver ApiDriver { get; }
         
-        void EmitWarning(string message, SyntaxNode node = null);
+    public int Indentation { get; }
+    public string Output { get; }
+    public IList<CecilifierDiagnostic> Diagnostics { get; }
+
+    ServiceCollection Services { get; }
         
-        void EmitError(string message, SyntaxNode node = null);
+    void EmitWarning(string message, SyntaxNode node = null);
         
-        INameStrategy Naming { get; }
-
-        SemanticModel SemanticModel { get; }
-
-        DefinitionVariableManager DefinitionVariables { get; }
-
-        LinkedListNode<string> CurrentLine { get; }
-        int CecilifiedLineNumber { get; }
-
-        IMethodSymbol GetDeclaredSymbol(BaseMethodDeclarationSyntax methodDeclaration);
-        ITypeSymbol GetDeclaredSymbol(BaseTypeDeclarationSyntax classDeclaration);
-        TypeInfo GetTypeInfo(TypeSyntax node);
-        TypeInfo GetTypeInfo(ExpressionSyntax expressionSyntax);
-
-        void EmitCilInstruction(string ilVar, OpCode opCode);
-        void EmitCilInstruction<T>(string ilVar, OpCode opCode, T operand, string comment = null);
-        void WriteCecilExpression(string expression);
-        void WriteCecilExpressions(IEnumerable<string> expressions);
-        void WriteComment(string comment);
-        void WriteNewLine();
+    void EmitError(string message, SyntaxNode node = null);
         
-        void WriteCilInstructionAfter<T>(string ilVar, OpCode opCode, T operand, string comment, LinkedListNode<string> after);
-        void MoveLineAfter(LinkedListNode<string> instruction, LinkedListNode<string> after);
-        void MoveLinesToEnd(LinkedListNode<string> start, LinkedListNode<string> end);
+    INameStrategy Naming { get; }
 
-        ITypeResolver TypeResolver { get; }
-        IList<Mapping> Mappings { get; }
+    SemanticModel SemanticModel { get; }
 
-        ref readonly RoslynTypeSystem RoslynTypeSystem { get; }
+    DefinitionVariableManager DefinitionVariables { get; }
 
-        #region Flags Handling
-        T WithFlag<T>(string name) where T : struct, IDisposable;
-        bool HasFlag(string name);
+    LinkedListNode<string> CurrentLine { get; }
+    int CecilifiedLineNumber { get; }
 
-        void SetFlag(string name, string value = null);
-        bool TryGetFlag(string name, out string value);
-        void ClearFlag(string name);
+    void OnFinishedTypeDeclaration();
 
-        #endregion
+    IMethodSymbol GetDeclaredSymbol(BaseMethodDeclarationSyntax methodDeclaration);
+    ITypeSymbol GetDeclaredSymbol(BaseTypeDeclarationSyntax classDeclaration);
+    TypeInfo GetTypeInfo(TypeSyntax node);
+    TypeInfo GetTypeInfo(ExpressionSyntax expressionSyntax);
 
-    }
+    void WriteCilInstructionAfter(string ilVar, OpCode opCode, LinkedListNode<string> after);
+    void Generate(CecilifierInterpolatedStringHandler expression);
+    void Generate(string expression);
+    void Generate(IEnumerable<string> expressions);
+    void WriteComment(string comment);
+    void WriteNewLine();
+    void MoveLineAfter(LinkedListNode<string> instruction, LinkedListNode<string> after);
+    void MoveLinesToEnd(LinkedListNode<string> start, LinkedListNode<string> end);
+
+    ITypeResolver TypeResolver { get; }
+    IMemberResolver MemberResolver { get; }
+    IList<Mapping> Mappings { get; }
+
+    ref readonly RoslynTypeSystem RoslynTypeSystem { get; }
+
+    #region Flags Handling
+    T WithFlag<T>(string name) where T : struct, IDisposable;
+    bool HasFlag(string name);
+
+    void SetFlag(string name, string value = null);
+    bool TryGetFlag(string name, out string value);
+    void ClearFlag(string name);
+
+    #endregion
+}
+
+public class IlContext
+{
+    protected IlContext(string variableName, string relatedMethodVar) => (VariableName, AssociatedMethodVariable) = (variableName, relatedMethodVar);
+    public static readonly IlContext None = new IlContext(string.Empty, string.Empty);
+    
+    //TODO: Remove these implicit operators and fix all usages of il variable names
+    public static implicit operator IlContext(string variableName) => new(variableName, "N/A");
+    public static implicit operator string(IlContext x) => x.VariableName;
+    public virtual string VariableName { get; }
+    public string AssociatedMethodVariable { get; }
 }

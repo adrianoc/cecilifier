@@ -26,5 +26,6 @@ namespace Cecilifier.Core.Naming
         string RequiredModifier();
         string Delegate(DelegateDeclarationSyntax node);
         NamingOptions Options { get; set; }
+        INameStrategy WithOptions(NamingOptions options);
     }
 }

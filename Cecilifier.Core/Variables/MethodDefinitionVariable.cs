@@ -6,13 +6,22 @@ namespace Cecilifier.Core.Variables;
 [ExcludeFromCodeCoverage]
 public class MethodDefinitionVariable : DefinitionVariable, IEquatable<MethodDefinitionVariable>
 {
+    public static readonly MethodDefinitionVariable MethodNotFound = new MethodDefinitionVariable(string.Empty, string.Empty, [], 0);
+    
     public MethodDefinitionVariable(string parentTypeName, string methodName, string[] parameterTypeNames, int typeParameterCountCount, string variableName = null) 
-        : base(parentTypeName, methodName, VariableMemberKind.Method, variableName)
+        : this(VariableMemberKind.Method, parentTypeName, methodName, parameterTypeNames, typeParameterCountCount, variableName)
+    {
+    }
+    
+    public MethodDefinitionVariable(VariableMemberKind methodKind, string parentTypeName, string methodName, string[] parameterTypeNames, int typeParameterCountCount, string variableName = null) 
+        : base(parentTypeName, methodName, methodKind, variableName)
     {
         Parameters = parameterTypeNames;
         TypeParameterCount = typeParameterCountCount;
     }
-
+    
+    public MethodDefinitionVariable WithVariableName(string variableName) => new(Kind, ParentName, MemberName, Parameters, TypeParameterCount, variableName);
+    
     private string[] Parameters { get; }
     
     private int TypeParameterCount { get; }
@@ -52,6 +61,9 @@ public class MethodDefinitionVariable : DefinitionVariable, IEquatable<MethodDef
 
     public static bool operator ==(MethodDefinitionVariable lhs, MethodDefinitionVariable rhs)
     {
+        if (ReferenceEquals(lhs, null))
+            return ReferenceEquals(rhs, null);
+        
         return lhs.Equals(rhs);
     }
 

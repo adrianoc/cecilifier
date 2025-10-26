@@ -1,5 +1,6 @@
 using System.Linq;
 using Cecilifier.Core.Extensions;
+using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -17,7 +18,7 @@ namespace Cecilifier.Core.AST
 
         public override void VisitCompilationUnit(CompilationUnitSyntax node)
         {
-            HandleAttributesInMemberDeclaration(node.AttributeLists, "assembly");
+            HandleAttributesInMemberDeclaration(node.AttributeLists, "assembly", VariableMemberKind.None); // There's no enum member for assembly.. for now we use None.
             VisitDelegates();
             VisitDeclaredTypesSortedByDependencies();
             

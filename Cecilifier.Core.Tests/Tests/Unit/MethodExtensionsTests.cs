@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using Cecilifier.ApiDriver.MonoCecil;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Tests.Tests.Unit.Framework;
 using Microsoft.CodeAnalysis;
@@ -13,7 +14,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit;
 #nullable enable
 
 [TestFixture]
-internal class MethodExtensionsTests : CecilifierContextBasedTestBase
+internal class MethodExtensionsTests : CecilifierContextBasedTestBase<MonoCecilContext>
 {
     protected override string Snippet => """
                                          using System.Threading.Tasks;

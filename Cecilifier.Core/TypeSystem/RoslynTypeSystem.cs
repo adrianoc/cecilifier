@@ -2,6 +2,7 @@ using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Cecilifier.Core.AST;
+using Cecilifier.Core.Misc;
 using Microsoft.CodeAnalysis;
 using IsByRefLikeAttribute = System.Runtime.CompilerServices.IsByRefLikeAttribute;
 
@@ -24,6 +25,7 @@ public struct RoslynTypeSystem
         SystemReadOnlySpan = new Lazy<ITypeSymbol>(() => ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(ReadOnlySpan<>).FullName!));
         CallerArgumentExpressionAttribute = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(CallerArgumentExpressionAttribute).FullName!);
 
+        SystemByte = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Byte);
         SystemInt32 = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Int32);
         SystemInt64 = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Int64);
         SystemIntPtr = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_IntPtr);
@@ -57,6 +59,8 @@ public struct RoslynTypeSystem
     public ITypeSymbol SystemSpan { get; }
     
     public Lazy<ITypeSymbol> SystemReadOnlySpan { get; }
+    
+    public ITypeSymbol SystemByte { get; }
     public ITypeSymbol SystemInt32 { get; }
     public ITypeSymbol SystemInt64 { get; }
     public ITypeSymbol SystemIntPtr { get; }
@@ -84,7 +88,19 @@ public struct RoslynTypeSystem
     public ITypeSymbol SystemRuntimeInteropServicesMemoryMarshal { get; }
     public ITypeSymbol SystemCollectionsGenericICollectionOfT { get; }
 
-    public readonly ITypeSymbol ForType<TType>() => _context.SemanticModel.Compilation.GetTypeByMetadataName(typeof(TType).FullName!);
+    public readonly ITypeSymbol ForType<TType>()
+    {
+        var type = typeof(TType);
+        if (type.IsConstructedGenericType)
+            return _context.SemanticModel.Compilation.GetTypeByMetadataName(type.FullName!.Substring(0, type.FullName.IndexOf('['))); 
+        
+        return _context.SemanticModel.Compilation.GetTypeByMetadataName(type.FullName!);
+    }
+    
+    public readonly ITypeSymbol ForType(string fullQualifiedName)
+    {
+        return _context.SemanticModel.Compilation.GetTypeByMetadataName(fullQualifiedName);
+    }
 
     private readonly IVisitorContext _context;
 }

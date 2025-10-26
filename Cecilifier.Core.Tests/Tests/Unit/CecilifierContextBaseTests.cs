@@ -1,4 +1,5 @@
 using System.Linq;
+using Cecilifier.ApiDriver.MonoCecil;
 using Cecilifier.Core.Misc;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -7,20 +8,20 @@ using NUnit.Framework;
 namespace Cecilifier.Core.Tests.Tests.Unit;
 
 [TestFixture]
-public class CecilifierContextTests
+public class CecilifierContextBaseTests
 {
     [OneTimeSetUp]
     public void SetUpFixture()
     {
         var syntaxTree = CSharpSyntaxTree.ParseText("class C {}");
-        var comp = CSharpCompilation.Create("", new[] { syntaxTree });
+        var comp = CSharpCompilation.Create("", [syntaxTree], MonoCecilContext.BclAssembliesForCompilation().Select(p => MetadataReference.CreateFromFile(p)));
         _semanticModel = comp.GetSemanticModel(syntaxTree);
     }
     
     [Test]
     public void WarningDiagnosticsAreEmitted()
     {
-        var cecilifierContext = new CecilifierContext(_semanticModel, new CecilifierOptions(), 0);
+        var cecilifierContext = CreateContext();
         cecilifierContext.EmitWarning("Simple Warning");
 
         var found = cecilifierContext.Diagnostics.Where(d => d.Message.Contains("Simple Warning")).ToList();
@@ -32,7 +33,7 @@ public class CecilifierContextTests
     [Test]
     public void ErrorDiagnosticsAreEmitted()
     {
-        var cecilifierContext = new CecilifierContext(_semanticModel, new CecilifierOptions(), 0);
+        var cecilifierContext = CreateContext();
         cecilifierContext.EmitError("Simple Error");
 
         var found = cecilifierContext.Diagnostics.Where(d => d.Message.Contains("Simple Error")).ToList();
@@ -44,7 +45,7 @@ public class CecilifierContextTests
     [Test]
     public void DiagnosticsEmitsEquivalentPreprocessorDirectives()
     {
-        var cecilifierContext = new CecilifierContext(_semanticModel, new CecilifierOptions(), 0);
+        var cecilifierContext = CreateContext();
         cecilifierContext.EmitError("Simple Error");
         cecilifierContext.EmitWarning("Simple Warning");
 
@@ -55,13 +56,15 @@ public class CecilifierContextTests
     [Test]
     public void NewLinesInDiagnosticsEmitsMultiplePreprocessorDirectives()
     {
-        var cecilifierContext = new CecilifierContext(_semanticModel, new CecilifierOptions(), 0);
+        var cecilifierContext = CreateContext();
         cecilifierContext.EmitWarning("Warning with\nmultiple\nlines");
 
         Assert.That(cecilifierContext.Output, Contains.Substring("#warning Warning with"));
         Assert.That(cecilifierContext.Output, Contains.Substring("#warning multiple"));
         Assert.That(cecilifierContext.Output, Contains.Substring("#warning lines"));
     }
+
+    private CecilifierContextBase CreateContext() => new MonoCecilContext(new CecilifierOptions(), _semanticModel);
 
     private SemanticModel _semanticModel;
 }

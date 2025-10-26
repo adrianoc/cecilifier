@@ -1,10 +1,12 @@
+using Cecilifier.ApiDriver.MonoCecil;
+using Cecilifier.Core.AST;
 using Cecilifier.Core.Tests.Framework;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration.Casts
 {
-    [TestFixture]
-    public class CastsTestCase : ResourceTestBase
+    [TestFixture(typeof(MonoCecilContext), TestName = "Mono.Cecil")]
+    public class CastsTestCase<TContext> : ResourceTestBase<TContext> where TContext : IVisitorContext
     {
         [Test]
         public void TestPrimitiveNumericCasts([Values("int", "long", "double", "short", "byte", "char")] string source, [Values("int", "long", "double", "short", "byte", "char")] string target)

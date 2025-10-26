@@ -7,10 +7,11 @@ using Microsoft.CodeAnalysis;
 #nullable enable
 namespace Cecilifier.Core.Misc
 {
-    internal struct Utils
+    public struct Utils
     {
         public static string ConstructorMethodName(bool isStatic) => $".{(isStatic ? Constants.Cecil.StaticConstructorName : Constants.Cecil.InstanceConstructorName)}";
 
+        //TODO: Move to Cecil related code (Cecilifier.ApiDriver.MonoCecil project)
         public static string ImportFromMainModule(string expression) => $"assembly.MainModule.ImportReference({expression})";
 
         public static string MakeGenericTypeIfAppropriate(IVisitorContext context, ISymbol memberSymbol, string backingFieldVar, string memberDeclaringTypeVar)
@@ -19,11 +20,11 @@ namespace Cecilifier.Core.Misc
                 return backingFieldVar;
 
             var genTypeVar = context.Naming.GenericInstance(memberSymbol);
-            context.WriteCecilExpression($"var {genTypeVar} = {memberDeclaringTypeVar}.MakeGenericInstanceType({memberDeclaringTypeVar}.GenericParameters.ToArray());");
+            context.Generate($"var {genTypeVar} = {memberDeclaringTypeVar}.MakeGenericInstanceType({memberDeclaringTypeVar}.GenericParameters.ToArray());");
             context.WriteNewLine();
 
             var fieldRefVar = context.Naming.MemberReference("fld_");
-            context.WriteCecilExpression($"var {fieldRefVar} = new FieldReference({backingFieldVar}.Name, {backingFieldVar}.FieldType, {genTypeVar});");
+            context.Generate($"var {fieldRefVar} = new FieldReference({backingFieldVar}.Name, {backingFieldVar}.FieldType, {genTypeVar});");
             context.WriteNewLine();
 
             return fieldRefVar;

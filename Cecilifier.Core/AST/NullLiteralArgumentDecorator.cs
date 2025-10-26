@@ -1,10 +1,10 @@
-using System.Diagnostics;
 using System.Threading;
-using Cecilifier.Core.Extensions;
+using System.Diagnostics;
+using System.Reflection.Emit;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Mono.Cecil.Cil;
+using Cecilifier.Core.Extensions;
 
 namespace Cecilifier.Core.AST;
 
@@ -37,8 +37,8 @@ internal ref struct  NullLiteralArgumentDecorator
             
         // we have a `null` being passed to a Nullable<T> parameter so we need to emit code
         // for steps 1 & 2 as outlined in the remarks section above.
-        var local = context.AddLocalVariableToCurrentMethod("tmpNull", context.TypeResolver.Resolve(argType));
-        context.EmitCilInstruction(ilVar, OpCodes.Ldloca_S, local.VariableName);
+        var local = context.AddLocalVariableToCurrentMethod("tmpNull", context.TypeResolver.ResolveAny(argType));
+        context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Ldloca_S, local.VariableName);
             
         _localVariableName = local.VariableName;
         _context = context;
@@ -53,7 +53,7 @@ internal ref struct  NullLiteralArgumentDecorator
         {
             Debug.Assert(_context != null);
             Debug.Assert(_ilVar != null);
-            _context!.EmitCilInstruction(_ilVar, OpCodes.Ldloc_S, localVariable);
+            _context!.ApiDriver.WriteCilInstruction(_context, _ilVar, OpCodes.Ldloc_S, localVariable);
         }
     }
 }

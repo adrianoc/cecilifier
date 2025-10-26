@@ -1,12 +1,19 @@
+using Cecilifier.ApiDriver.MonoCecil;
+using Cecilifier.ApiDriver.SystemReflectionMetadata;
+using Cecilifier.Core.ApiDriver;
+using Cecilifier.Core.AST;
 using Cecilifier.Core.Tests.Framework;
+using Cecilifier.Core.Tests.Framework.Attributes;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.OutputBased;
 
 public class RecordTests
 {
-    [TestFixture]
-    public class Misc : OutputBasedTestBase
+    [TestFixture(typeof(MonoCecilContext), TestName = "Mono.Cecil")]
+    [TestFixture(typeof(SystemReflectionMetadataContext),  TestName = "System.Reflection.Metadata")]
+    [EnableForContext<SystemReflectionMetadataContext>(IgnoreReason = "Not implemented yet")]
+    public class Misc<TContext> : OutputBasedTestBase<TContext> where TContext : IVisitorContext
     {
         [Test]
         public void ToString_WhenInheritFromObjectWithSingleProperty_ReturnsProperty()
@@ -99,8 +106,10 @@ public class RecordTests
         }
     }
 
-    [TestFixture]
-    public class EqualsOverloadTest : OutputBasedTestBase
+    [TestFixture(typeof(MonoCecilContext), TestName = "Mono.Cecil")]
+    [TestFixture(typeof(SystemReflectionMetadataContext),  TestName = "System.Reflection.Metadata")]
+    [EnableForContext<SystemReflectionMetadataContext>(IgnoreReason = "Not implemented yet")]
+    public class EqualsOverloadTest<TContext> : OutputBasedTestBase<TContext> where TContext : IVisitorContext
     {
         [Test]
         public void RecordTypeOverload_WhenInheritingFromObject_Works()
@@ -183,8 +192,10 @@ public class RecordTests
         }
     }
 
-    [TestFixture]
-    public class Deconstruct : OutputBasedTestBase
+    [TestFixture(typeof(MonoCecilContext), TestName = "Mono.Cecil")]
+    [TestFixture(typeof(SystemReflectionMetadataContext),  TestName = "System.Reflection.Metadata")]
+    [EnableForContext<SystemReflectionMetadataContext>(IgnoreReason = "Not implemented yet")]
+    public class Deconstruct<TContext> : OutputBasedTestBase<TContext> where TContext : IVisitorContext
     {
         [Test]
         public void Deconstruct_WhenInheritingFromObject_IncludesAllPrimaryConstructorParameters()
@@ -251,8 +262,10 @@ public class RecordTests
         }
     }
 
-    [TestFixture]
-    public class Generics : OutputBasedTestBase
+    [TestFixture(typeof(MonoCecilContext), TestName = "Mono.Cecil")]
+    [TestFixture(typeof(SystemReflectionMetadataContext),  TestName = "System.Reflection.Metadata")]
+    [EnableForContext<SystemReflectionMetadataContext>(IgnoreReason = "Not implemented yet")]
+    public class Generic<TContext> : OutputBasedTestBase<TContext> where TContext : IVisitorContext
     {
         [Test]
         public void SimpleGenericRecord()
@@ -292,8 +305,10 @@ public class RecordTests
         }
     }
     
-    [TestFixture]
-    public class RecordStructs : OutputBasedTestBase
+    [TestFixture(typeof(MonoCecilContext))]
+    [TestFixture(typeof(SystemReflectionMetadataContext))]
+    [EnableForContext<SystemReflectionMetadataContext>(IgnoreReason = "Not implemented yet")]
+    public class RecordStructs<TContext> : OutputBasedTestBase<TContext> where TContext : IVisitorContext
     {
         [Test]
         public void Test()

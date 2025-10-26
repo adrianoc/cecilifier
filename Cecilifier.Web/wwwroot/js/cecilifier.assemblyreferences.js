@@ -101,21 +101,6 @@ function ShowAssemblyReferencesDialog(title, header) {
     ResizeDialog("assembly_references_dialog_id");
 }
 
-function ResizeDialog(dialogId){
-    const dialog = document.getElementById(dialogId);
-    let footerOffset = dialog.parentNode.lastChild.offsetHeight;
-    let h = (dialog.offsetHeight - footerOffset);
-
-    document.getElementById("assembly_references_header_id").style.height = `${h * 0.02}px`;
-}
-
-function CloseDialog() {
-    const assembliesReferenceDialogNode = document.getElementById("assembly_references_dialog_id");
-
-    assembliesReferenceDialogNode.parentElement.classList.remove("opened");
-    assembliesReferenceDialogNode.parentElement.style.display="none";
-}
-
 function DropAssemblyReference(ev) {
     ev.preventDefault();
     const files = ev.dataTransfer.files;

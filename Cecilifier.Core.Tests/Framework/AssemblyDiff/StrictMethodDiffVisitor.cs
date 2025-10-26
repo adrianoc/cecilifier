@@ -74,6 +74,16 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
             return ValidateGenericParameters(source, target, source.GenericParameters, target.GenericParameters, source.Module.FileName, target.Module.FileName);
         }
 
+        public bool VisitMemberProperties(MethodDefinition sourceMethod, MethodDefinition targetMethod)
+        {
+            if (sourceMethod.IsStatic == targetMethod.IsStatic && sourceMethod.HasThis == targetMethod.HasThis) 
+                return true;
+
+            output.WriteLine($"Methods have mismatching staticness\n\tExpected: {sourceMethod.FullName} (IsStatic={sourceMethod.IsStatic}, HasThis={sourceMethod.HasThis})\n\tActual:   {targetMethod.FullName} (IsStatic={targetMethod.IsStatic}, HasThis={targetMethod.HasThis})");
+            return false;
+
+        }
+
         private string FormatLocalVariables(Collection<VariableDefinition> variables)
         {
             return variables.Aggregate("", (acc, curr) => acc + curr.VariableType.Name + ", ");

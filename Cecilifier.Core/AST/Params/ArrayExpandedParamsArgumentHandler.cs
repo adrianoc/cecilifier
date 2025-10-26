@@ -1,9 +1,11 @@
 #nullable enable
 using System.Diagnostics;
-using Cecilifier.Core.Extensions;
+using System.Reflection.Emit;
+using Cecilifier.Core.ApiDriver;
+using Cecilifier.Core.ApiDriver.Handles;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Mono.Cecil.Cil;
+using Cecilifier.Core.Extensions;
 
 namespace Cecilifier.Core.AST.Params;
 
@@ -14,12 +16,12 @@ internal class ArrayExpandedParamsArgumentHandler : ExpandedParamsArgumentHandle
         _currentIndex = 0;
         _stelemOpCode = ElementType.StelemOpCode();
         
-        _backingVariableName = Context.AddLocalVariableToCurrentMethod($"{paramsParameter.Name}Params", Context.TypeResolver.Resolve(paramsParameter.Type));
+        _backingVariableName = Context.AddLocalVariableToCurrentMethod($"{paramsParameter.Name}Params", Context.TypeResolver.ResolveAny(paramsParameter.Type));
         
-        var paramsType = Context.TypeResolver.Resolve(ElementType);
-        Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, ElementCount);
-        Context.EmitCilInstruction(ilVar, OpCodes.Newarr, paramsType);
-        Context.EmitCilInstruction(ilVar, OpCodes.Stloc, _backingVariableName);
+        var paramsType = Context.TypeResolver.ResolveAny(ElementType);
+        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldc_I4, ElementCount);
+        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Newarr, paramsType.AsToken());
+        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Stloc, new CilLocalVariableHandle(_backingVariableName));
     }
 
     private OpCode _stelemOpCode;
@@ -35,11 +37,11 @@ internal class ArrayExpandedParamsArgumentHandler : ExpandedParamsArgumentHandle
                 
         if (argumentIndex == FirstArgumentIndex)
         {
-            Context.EmitCilInstruction(ilVar, OpCodes.Ldloc, _backingVariableName);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloc, _backingVariableName);
         }
                 
-        Context.EmitCilInstruction(ilVar, OpCodes.Dup);
-        Context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, _currentIndex++);
+        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Dup);
+        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldc_I4, _currentIndex++);
     }
 
     internal override void PostProcessArgument(ArgumentSyntax argument)
@@ -50,6 +52,6 @@ internal class ArrayExpandedParamsArgumentHandler : ExpandedParamsArgumentHandle
         if (argumentIndex < FirstArgumentIndex)
             return;
                 
-        Context.EmitCilInstruction(ilVar, _stelemOpCode);
+        Context.ApiDriver.WriteCilInstruction(Context, ilVar, _stelemOpCode);
     }
 }

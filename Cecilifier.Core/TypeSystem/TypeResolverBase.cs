@@ -1,17 +1,17 @@
 using System.Collections.Generic;
 using System.Linq;
+using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
-using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 
-namespace Cecilifier.Core.Misc
+namespace Cecilifier.Core.TypeSystem
 {
-    internal class TypeResolverImpl : ITypeResolver
+    public abstract class TypeResolverBase<TContext> : ITypeResolver where TContext : IVisitorContext
     {
-        private readonly CecilifierContext _context;
+        protected readonly TContext _context;
 
-        public TypeResolverImpl(CecilifierContext context)
+        protected TypeResolverBase(TContext context)
         {
             _context = context;
             Bcl = new Bcl(this, _context);
@@ -19,18 +19,17 @@ namespace Cecilifier.Core.Misc
 
         public Bcl Bcl { get; }
 
-        public string Resolve(ITypeSymbol type, string cecilTypeParameterProviderVar = null)
+        // Resolvers for api drivers that need to generate different code based on the target can override this method.
+        public virtual string ResolveAny(ITypeSymbol type, ResolveTargetKind _ = ResolveTargetKind.None, string cecilTypeParameterProviderVar = null)
         {
             return ResolveLocalVariableType(type)
                    ?? ResolveNestedType(type)
                    ?? ResolvePredefinedAndComposedTypes(type)
                    ?? ResolveGenericType(type, cecilTypeParameterProviderVar)
                    ?? ResolveTypeParameter(type, cecilTypeParameterProviderVar)
-                   ?? Resolve(type.ToDisplayString());
+                   ?? Resolve(type);
         }
-
-        public string Resolve(string typeName) => Utils.ImportFromMainModule($"typeof({typeName})");
-        
+       
         private string ResolveNestedType(ITypeSymbol type)
         {
             if (type.ContainingType == null || type.Kind == SymbolKind.TypeParameter)
@@ -41,7 +40,7 @@ namespace Cecilifier.Core.Misc
             {
                 // collects the type arguments for all types in the parent chain. 
                 var typeArguments = nestedType.GetAllTypeArguments().ToArray();
-                var resolveNestedType = $"""TypeHelpers.NewRawNestedTypeReference("{type.Name}", module: assembly.MainModule, {Resolve(type.ContainingType.OriginalDefinition)}, isValueType: {(type.IsValueType ? "true" : "false")}, {typeArguments.Length})""";
+                var resolveNestedType = $"""TypeHelpers.NewRawNestedTypeReference("{type.Name}", module: assembly.MainModule, {ResolveAny(type.ContainingType.OriginalDefinition)}, isValueType: {type.IsValueType.ToKeyword()}, {typeArguments.Length})""";
             
                 // if type is a generic type definition we return the open, resolved type
                 // otherwise this method is expected to return a 'GenericInstanceType'.
@@ -54,29 +53,37 @@ namespace Cecilifier.Core.Misc
                 // and the parent's type generic parameters are added to the nested type) 
                 return type.IsDefinition 
                     ? resolveNestedType 
-                    : resolveNestedType.MakeGenericInstanceType(typeArguments.Select(t => _context.TypeResolver.Resolve(t)).ToArray());
+                    : resolveNestedType.MakeGenericInstanceType(typeArguments.Select(t => _context.TypeResolver.ResolveAny(t)).ToArray());
             }
 
             return null;
         }
 
-        public string ResolvePredefinedType(ITypeSymbol type) => $"assembly.MainModule.TypeSystem.{type.Name}";
+        public abstract string Resolve(string typeName);
+        public abstract string Resolve(ITypeSymbol type);
+        public abstract string ResolvePredefinedType(ITypeSymbol type);
 
+        public abstract string MakeArrayType(ITypeSymbol elementType);
+
+        protected abstract string MakePointerType(ITypeSymbol pointerType);
+
+        protected abstract string MakeFunctionPointerType(IFunctionPointerTypeSymbol functionPointer);
+        
         private string ResolvePredefinedAndComposedTypes(ITypeSymbol type)
         {
             if (type is IArrayTypeSymbol array)
             {
-                return Resolve(array.ElementType) + ".MakeArrayType()";
+                return MakeArrayType(array.ElementType);
             }
 
             if (type is IPointerTypeSymbol pointerType)
             {
-                return Resolve(pointerType.PointedAtType) + ".MakePointerType()";
+                return MakePointerType(pointerType.PointedAtType);
             }
 
             if (type is IFunctionPointerTypeSymbol functionPointer)
             {
-                return CecilDefinitionsFactory.FunctionPointerType(this, functionPointer);
+                return MakeFunctionPointerType(functionPointer);
             }
             
             if (type.SpecialType == SpecialType.None 
@@ -86,6 +93,8 @@ namespace Cecilifier.Core.Misc
                 || type.SpecialType == SpecialType.System_Decimal 
                 || type.SpecialType == SpecialType.System_DateTime
                 || type.SpecialType == SpecialType.System_Delegate
+                || type.SpecialType == SpecialType.System_MulticastDelegate
+                || type.SpecialType == SpecialType.System_AsyncCallback
                 || type.TypeKind == TypeKind.Interface)
             {
                 return null;
@@ -93,7 +102,7 @@ namespace Cecilifier.Core.Misc
 
             return ResolvePredefinedType(type);
         }
-        
+
         private string ResolveTypeParameter(ITypeSymbol type, string cecilTypeParameterProviderVar)
         {
             if (type is not ITypeParameterSymbol typeParameterSymbol)
@@ -148,7 +157,7 @@ namespace Cecilifier.Core.Misc
             {
                 CollectTypeArguments(typeArgumentProvider.ContainingType, collectTo, cecilTypeParameterProviderVar);
             }
-            collectTo.AddRange(typeArgumentProvider.TypeArguments.Where(t => t.Kind != SymbolKind.ErrorType).Select(t => Resolve(t, cecilTypeParameterProviderVar)));
+            collectTo.AddRange(typeArgumentProvider.TypeArguments.Where(t => t.Kind != SymbolKind.ErrorType).Select(t => ResolveAny(t, ResolveTargetKind.None, cecilTypeParameterProviderVar)));
 
             return collectTo;
         }

@@ -1,10 +1,16 @@
+using Cecilifier.ApiDriver.MonoCecil;
+using Cecilifier.ApiDriver.SystemReflectionMetadata;
+using Cecilifier.Core.AST;
 using Cecilifier.Core.Tests.Framework;
+using Cecilifier.Core.Tests.Framework.Attributes;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration.Types
 {
-    [TestFixture]
-    internal class TypesTestCase : ResourceTestBase
+    [TestFixture(typeof(MonoCecilContext), TestName = "Mono.Cecil")]
+    [TestFixture(typeof(SystemReflectionMetadataContext), TestName = "SRM")]
+    [EnableForContext<SystemReflectionMetadataContext>(nameof(SimplestTest), nameof(SealedClassTest), IgnoreReason = "Not implemented")]
+    public class TypesTestCase<TContext> : ResourceTestBase<TContext> where TContext : IVisitorContext
     {
         [TestCase("SimpleTypeWithAttribute")]
         [TestCase("AttributeWithProperty")]
@@ -29,7 +35,6 @@ namespace Cecilifier.Core.Tests.Integration.Types
         }
 
         [Test]
-        [Ignore("Not supported yet")]
         public void ForwardTypeReferenceTest()
         {
             AssertResourceTest("Types/ForwardTypeReference");

@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Cecilifier.ApiDriver.MonoCecil;
+using Cecilifier.Core.AST;
 using Cecilifier.Core.Misc;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -9,7 +11,7 @@ using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Tests.Unit.Framework;
 
-internal abstract class CecilifierContextBasedTestBase
+internal abstract class CecilifierContextBasedTestBase<TContext> where TContext : IVisitorContext
 {
     protected abstract string Snippet { get;  }
     protected virtual IEnumerable<MetadataReference> ExtraAssemblyReferences() => [];
@@ -39,10 +41,10 @@ internal abstract class CecilifierContextBasedTestBase
         }
     }
 
-    protected MethodDeclarationSyntax GetMethodSyntax(CecilifierContext context, string methodName)
+    protected MethodDeclarationSyntax GetMethodSyntax(IVisitorContext context, string methodName)
     {
         return context.SemanticModel.SyntaxTree.GetRoot().DescendantNodes().OfType<MethodDeclarationSyntax>().Single(m => m.Identifier.Text == methodName);
     }
     
-    protected CecilifierContext NewContext() => new(_comp.GetSemanticModel(_comp.SyntaxTrees[0]), new CecilifierOptions(), 1);
+    protected TContext NewContext() => (TContext) TContext.CreateContext(new CecilifierOptions(), _comp.GetSemanticModel(_comp.SyntaxTrees[0]));
 }

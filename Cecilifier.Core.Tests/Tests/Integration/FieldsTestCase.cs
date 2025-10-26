@@ -1,106 +1,124 @@
+using Cecilifier.ApiDriver.MonoCecil;
+using Cecilifier.ApiDriver.SystemReflectionMetadata;
+using Cecilifier.Core.AST;
 using Cecilifier.Core.Tests.Framework;
+using Cecilifier.Core.Tests.Framework.Attributes;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration
 {
-    [TestFixture]
-    public class FieldsTestCase : ResourceTestBase
+    [TestFixture(typeof(MonoCecilContext))]
+    [TestFixture(typeof(SystemReflectionMetadataContext))]
+    [EnableForContext<SystemReflectionMetadataContext>(
+        nameof(TestSingleField), 
+        nameof(TestStatic), 
+        nameof(TestInternalFields), 
+        nameof(TestInitializedFieldSingleCtor), 
+        nameof(TestAssignment), 
+        nameof(TestExternalFieldAccess),
+        nameof(TestQualifiedFieldAccess),
+        nameof(TestSingleFieldMultipleModifiers),
+        nameof(TestSingleRefField),
+        nameof(TestInitializedFieldNoCtor),
+        nameof(TestInitializedFieldWithBaseCtor),
+        nameof(TestInitializedFieldMultipleCtor))]
+    public class FieldsTestCase<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
     {
         [Test]
         public void TestStatic()
         {
-            AssertResourceTest(@"Members/Fields/StaticField");
+            AssertResourceTest("Members/Fields/StaticField");
         }
 
         [Test]
         public void TestAssignment()
         {
-            AssertResourceTest(@"Members/Fields/Assignment");
+            AssertResourceTest("Members/Fields/Assignment");
         }
 
         [Test]
         public void TestInitializedFieldMultipleCtor()
         {
-            AssertResourceTest(@"Members/Fields/InitializedFieldMultipleCtor");
+            AssertResourceTest("Members/Fields/InitializedFieldMultipleCtor");
         }
 
         [Test]
         public void TestInitializedFieldNoCtor()
         {
-            AssertResourceTest(@"Members/Fields/InitializedFieldNoCtor");
+            AssertResourceTest("Members/Fields/InitializedFieldNoCtor");
         }
 
         [Test]
         public void TestInitializedFieldSingleCtor()
         {
-            AssertResourceTest(@"Members/Fields/InitializedFieldSingleCtor");
+            AssertResourceTest("Members/Fields/InitializedFieldSingleCtor");
         }
 
         [Test]
         public void TestInitializedFieldWithBaseCtor()
         {
-            AssertResourceTest(@"Members/Fields/InitializedFieldWithBaseCtor");
+            AssertResourceTest("Members/Fields/InitializedFieldWithBaseCtor");
         }
 
         [Test]
         public void TestInternalFields()
         {
-            AssertResourceTest(@"Members/Fields/InternalFields");
+            AssertResourceTest("Members/Fields/InternalFields");
         }
 
         [Test]
         [Ignore("Not Implemented yet")]
         public void TestJaggedArray()
         {
-            AssertResourceTest(@"Members/Fields/JaggedArray");
+            AssertResourceTest("Members/Fields/JaggedArray");
         }
 
         [Test]
         public void TestSimpleArray()
         {
-            AssertResourceTest(@"Members/Fields/SimpleArray");
+            AssertResourceTest("Members/Fields/SimpleArray");
         }
 
         [Test]
         public void TestSimpleFieldsInSingleDeclaration()
         {
-            AssertResourceTest(@"Members/Fields/SimpleFieldsInSingleDeclaration");
+            AssertResourceTest("Members/Fields/SimpleFieldsInSingleDeclaration");
         }
 
         [Test]
         public void TestSingleField()
         {
-            AssertResourceTest(@"Members/Fields/SingleField");
+            AssertResourceTest("Members/Fields/SingleField");
         }
 
         [Test]
         public void TestSingleFieldMultipleModifiers()
         {
-            AssertResourceTest(@"Members/Fields/SingleFieldMultipleModifiers");
+            AssertResourceTest("Members/Fields/SingleFieldMultipleModifiers");
         }
 
         [Test]
         public void TestSingleRefField()
         {
-            AssertResourceTest(@"Members/Fields/SingleRefField");
+            AssertResourceTest("Members/Fields/SingleRefField");
         }
 
         [Test]
         public void TestVolatileField()
         {
-            AssertResourceTest(@"Members/Fields/VolatileField");
+            AssertResourceTest("Members/Fields/VolatileField");
         }
 
         [Test]
         public void TestQualifiedFieldAccess()
         {
-            AssertResourceTest(@"Members/Fields/QualifiedFieldAccess");
+            AssertResourceTest("Members/Fields/QualifiedFieldAccess");
         }
 
         [Test]
         public void TestExternalFieldAccess()
         {
-            AssertResourceTest(@"Members/Fields/ExternalFieldAccess");
+            AssertResourceTest("Members/Fields/ExternalFieldAccess");
         }
     }
 }

@@ -44,7 +44,8 @@ public class TypeResolutionTests : CecilifierUnitTestBase
     [TestCase(
         "using System; class Foo { event EventHandler<Bar> Bar; } class Bar : EventArgs { Foo foo; }",
         @".+fld_bar_\d+ = new FieldDefinition\(""Bar"",.+ImportReference\(typeof\(.+EventHandler\<\>\)\)\.MakeGenericInstanceType\(cls_bar_\d+\)\);\s+",
-        @"m_add_\d+.Parameters.Add\(new ParameterDefinition\(""value"",.+ImportReference\(typeof\(.+EventHandler\<\>\)\)\.MakeGenericInstanceType\(cls_bar_\d+\)\)\);",
+        @"var p_value_\d+ = new ParameterDefinition\(""value"",.+ImportReference\(typeof\(.+EventHandler\<\>\)\)\.MakeGenericInstanceType\(cls_bar_\d+\)\);",
+        @"m_add_\d+.Parameters.Add\(p_value_\d+\);",
         TestName = "Generic argument in event")]
     public void TypeForwardingCyclicTests(string code, params string[] expected)
     {
@@ -63,7 +64,7 @@ public class TypeResolutionTests : CecilifierUnitTestBase
     }
 
     [TestCase("static void Test<T>(T value) { }", @"var p_value_\d+ = new ParameterDefinition\(""value"", ParameterAttributes.None, gp_T_\d+\);", TestName = "Parameter")]
-    [TestCase("static T Test<T>(T t) => t;", "m_test_6.ReturnType = gp_T_7;", TestName = "Return")]
+    [TestCase("static T Test<T>(T t) => t;", @"m_test_6.ReturnType = gp_T_\d+;", TestName = "Return")]
     public void GenericTypeParameterInTopLevelMethod(string code, string testSpecificExpectation)
     {
         var result = RunCecilifier(code);

@@ -1,13 +1,13 @@
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using Cecilifier.Core.CodeGeneration;
-using Cecilifier.Core.Extensions;
-using Cecilifier.Core.Variables;
+using System.Reflection.Emit;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Mono.Cecil.Cil;
+using Cecilifier.Core.CodeGeneration;
+using Cecilifier.Core.Extensions;
+using Cecilifier.Core.Variables;
 
 namespace Cecilifier.Core.AST;
 public class InlineArrayProcessor
@@ -26,9 +26,9 @@ public class InlineArrayProcessor
         
         // ldloca.s address of fromNode.
         // ldci4 fromNode.Length (size of the inline array)
-        context.EmitCilInstruction(ilVar, opcode, context.DefinitionVariables.GetVariable(name, memberKind, parentName).VariableName);
-        context.EmitCilInstruction(ilVar, OpCodes.Ldc_I4, inlineArrayLength);
-        context.EmitCilInstruction(ilVar, OpCodes.Call, InlineArrayAsSpanMethodFor(context, fromType));
+        context.ApiDriver.WriteCilInstruction(context, ilVar, opcode, context.DefinitionVariables.GetVariable(name, memberKind, parentName).VariableName);
+        context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Ldc_I4, inlineArrayLength);
+        context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Call, InlineArrayAsSpanMethodFor(context, fromType));
         return true;
 
         static bool IsNodeAssignedToLocalVariable(IVisitorContext context, SyntaxNode nodeToCheck)
@@ -132,7 +132,7 @@ public class InlineArrayProcessor
             ExpressionVisitor.Visit(context, ilVar, elementAccess.ArgumentList.Arguments[0].Expression);
             method = InlineArrayElementRefMethodFor(context, inlineArrayType);
         }
-        context.EmitCilInstruction(ilVar, OpCodes.Call, method);
+        context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Call, method);
 
         elementType = InlineArrayElementTypeFrom(inlineArrayType);
         return true;
@@ -160,8 +160,8 @@ public class InlineArrayProcessor
                                 context,
                                 openGenericTypeVar.MemberName,
                                 [
-                                    context.TypeResolver.Resolve(inlineArrayType), // TBuffer
-                                    context.TypeResolver.Resolve(InlineArrayElementTypeFrom(inlineArrayType)) // TElement
+                                    context.TypeResolver.ResolveAny(inlineArrayType), // TBuffer
+                                    context.TypeResolver.ResolveAny(InlineArrayElementTypeFrom(inlineArrayType)) // TElement
                                 ]);
         return varName;
     }

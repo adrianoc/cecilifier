@@ -1,5 +1,5 @@
 using System.Runtime.CompilerServices;
-using Mono.Cecil.Cil;
+using System.Reflection.Emit;
 
 namespace Cecilifier.Core.Misc
 {

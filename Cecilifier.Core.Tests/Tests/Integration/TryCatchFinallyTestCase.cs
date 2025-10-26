@@ -1,11 +1,12 @@
+using Cecilifier.ApiDriver.MonoCecil;
+using Cecilifier.Core.AST;
 using Cecilifier.Core.Tests.Framework;
-using Cecilifier.Core.Tests.Integration;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration
 {
-    [TestFixture]
-    public class TryCatchFinallyTestCase : ResourceTestBase
+    [TestFixture(typeof(MonoCecilContext))]
+    public class TryCatchFinallyTestCase<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
     {
         [TestCase("TryCatch")]
         [TestCase("TryFinally")]

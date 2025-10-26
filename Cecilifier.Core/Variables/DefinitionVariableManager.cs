@@ -1,34 +1,41 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using Cecilifier.Core.AST;
+using Mono.Cecil.Cil;
 
 namespace Cecilifier.Core.Variables;
 
 public class DefinitionVariableManager
 {
+    private readonly Dictionary<string, IList<ExecuteUponRegistrationState>> _executeUponRegistration = new();
     private readonly List<DefinitionVariable> _definitionStack = new();
-
     private readonly List<DefinitionVariable> _definitionVariables = new();
 
     public MethodDefinitionVariable RegisterMethod(MethodDefinitionVariable variable)
     {
-        _definitionVariables.Add(variable);
+        RegisterVariable(variable);
         return variable;
     }
 
     public MethodDefinitionVariable RegisterMethod(string parentName, string methodName, string[] parameterTypes, int typeParameterCount, string definitionVariableName)
     {
         var definitionVariable = new MethodDefinitionVariable(parentName, methodName, parameterTypes, typeParameterCount, definitionVariableName);
-        _definitionVariables.Add(definitionVariable);
-
+        RegisterVariable(definitionVariable);
         return definitionVariable;
     }
 
     public DefinitionVariable RegisterNonMethod(string parentName, string memberName, VariableMemberKind variableMemberKind, string definitionVariableName)
     {
         var definitionVariable = new DefinitionVariable(parentName, memberName, variableMemberKind, definitionVariableName);
-        _definitionVariables.Add(definitionVariable);
+        RegisterVariable(definitionVariable);
 
         return definitionVariable;
+    }
+
+    public TVariableType FindByVariableName<TVariableType>(string variableName) where TVariableType : DefinitionVariable
+    {
+        return _definitionVariables.OfType<TVariableType>().FirstOrDefault(candidate => candidate.VariableName == variableName);
     }
 
     public DefinitionVariable GetMethodVariable(MethodDefinitionVariable tbf)
@@ -134,4 +141,32 @@ public class DefinitionVariableManager
     {
         return new ScopedDefinitionVariable(_definitionVariables, _definitionVariables.Count, true);
     }
+
+    public void ExecuteUponVariableRegistration(string targetVariable, IVisitorContext context, Action<IVisitorContext, object> toExecute, object state)
+    {
+        var found = _definitionVariables.SingleOrDefault(candidate => candidate.VariableName == targetVariable);
+        if (found == null)
+        {
+            if (!_executeUponRegistration.TryGetValue(targetVariable, out var toExecuteList))
+            {
+                toExecuteList = new List<ExecuteUponRegistrationState>();
+                _executeUponRegistration.TryAdd(targetVariable, toExecuteList);
+            }
+            toExecuteList.Add(new ExecuteUponRegistrationState(context, toExecute, state));
+            return;
+        }
+        toExecute(context, state);
+    }
+    
+    private void RegisterVariable(DefinitionVariable definitionVariable)
+    {
+        _definitionVariables.Add(definitionVariable);
+        if (_executeUponRegistration.Remove(definitionVariable.VariableName, out var toExecuteList))
+        {
+            foreach (var toExecute in toExecuteList)
+                toExecute.Function(toExecute.Context,toExecute.State);
+        }
+    }
+
+    private record struct ExecuteUponRegistrationState(IVisitorContext Context, Action<IVisitorContext, object> Function, object State);
 }

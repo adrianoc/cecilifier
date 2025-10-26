@@ -3,10 +3,13 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using Cecilifier.ApiDriver.MonoCecil;
+using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.CodeGeneration;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
+using Cecilifier.Core.Tests.Tests.Unit.Framework;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -22,7 +25,7 @@ public class PrivateImplementationDetailsGeneratorTests
     public void PrivateImplementationType_IsCached()
     {
         var comp = CompilationFor("class Foo {}");
-        var context = new CecilifierContext(comp.GetSemanticModel(comp.SyntaxTrees[0]), new CecilifierOptions(), 1);
+        var context = NewContext(comp);
 
         var found = context.DefinitionVariables.GetVariablesOf(VariableMemberKind.Type);
         Assert.That(found.Any(), Is.False);
@@ -36,12 +39,13 @@ public class PrivateImplementationDetailsGeneratorTests
         found = context.DefinitionVariables.GetVariablesOf(VariableMemberKind.Type);
         Assert.That(found.Count(), Is.EqualTo(2));
     }
-    
+
+
     [Test]
     public void Int32AndInt64_AreUsedAsFieldBackingType_OfArraysOf4And8Bytes()
     {
         var comp = CompilationFor("class Foo {}");
-        var context = new CecilifierContext(comp.GetSemanticModel(comp.SyntaxTrees[0]), new CecilifierOptions(), 1);
+        var context = NewContext(comp);
 
         var found = context.DefinitionVariables.GetVariablesOf(VariableMemberKind.Type);
         Assert.That(found.Any(), Is.False);
@@ -65,7 +69,7 @@ public class PrivateImplementationDetailsGeneratorTests
         // If this test every fail it has a high chance that a new version of Roslyn has changed the way the field name is computed.
         // This test assumes the implementation from: https://github.com/dotnet/roslyn/blob/b7e891b8a884be1519a709edc7121140c5a1fac2/src/Compilers/Core/Portable/CodeGen/PrivateImplementationDetails.cs#L209
         var comp = CompilationFor($"class Foo {{ {array} }}");
-        var context = new CecilifierContext(comp.GetSemanticModel(comp.SyntaxTrees[0]), new CecilifierOptions(), 1);
+        var context = NewContext(comp);
 
         var found = context.DefinitionVariables.GetVariablesOf(VariableMemberKind.Field).SingleOrDefault();
         Assert.That(found, Is.Null);
@@ -85,7 +89,7 @@ public class PrivateImplementationDetailsGeneratorTests
     public void BackingField_ForSameSize_IsCached()
     {
         var comp = CompilationFor("class Foo {}");
-        var context = new CecilifierContext(comp.GetSemanticModel(comp.SyntaxTrees[0]), new CecilifierOptions(), 1);
+        var context = NewContext(comp);
 
         var found = context.DefinitionVariables.GetVariablesOf(VariableMemberKind.Field);
         Assert.That(found.Any(), Is.False);
@@ -106,7 +110,7 @@ public class PrivateImplementationDetailsGeneratorTests
     public void BackingField_IsUniquePerDataSize()
     {
         var comp = CompilationFor("class Foo {}");
-        var context = new CecilifierContext(comp.GetSemanticModel(comp.SyntaxTrees[0]), new CecilifierOptions(), 1);
+        var context = NewContext(comp);
 
         var found = context.DefinitionVariables.GetVariablesOf(VariableMemberKind.Field);
         Assert.That(found.Any(), Is.False);
@@ -138,10 +142,10 @@ public class PrivateImplementationDetailsGeneratorTests
         AssertInlineArrayAsX("InlineArrayAsReadOnlySpan", PrivateImplementationDetailsGenerator.GetOrEmmitInlineArrayAsReadOnlySpanMethod, "CreateReadOnlySpan");
     }
     
-    private static void AssertInlineArrayAsX(string methodUnderTestName, Func<IVisitorContext, DefinitionVariable> methodUnderTest, string spanCreationMethodName)
+    private void AssertInlineArrayAsX(string methodUnderTestName, Func<IVisitorContext, DefinitionVariable> methodUnderTest, string spanCreationMethodName)
     {
         var comp = CompilationFor("class Foo {}");
-        var context = new CecilifierContext(comp.GetSemanticModel(comp.SyntaxTrees[0]), new CecilifierOptions(), 1);
+        var context = NewContext(comp);
 
         var found = context.DefinitionVariables.GetVariablesOf(VariableMemberKind.Method).ToArray();
         Assert.That(found.Length, Is.EqualTo(0));
@@ -180,6 +184,11 @@ public class PrivateImplementationDetailsGeneratorTests
         return CSharpCompilation.Create("Test", new[] { syntaxTree }, references: new [] { MetadataReference.CreateFromFile(typeof(object).Assembly.Location), });
     }
 
+    private IVisitorContext NewContext(CSharpCompilation comp)
+    {
+        return new MonoCecilContext(new CecilifierOptions(), comp.GetSemanticModel(comp.SyntaxTrees[0]), 1);
+    }
+    
     static TestCaseData[] BackingFieldNameTestScenarios()
     {
         var actualPrivateImplementationDetails = Type.GetType("<PrivateImplementationDetails>")!;

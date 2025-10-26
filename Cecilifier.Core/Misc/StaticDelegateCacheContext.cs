@@ -1,9 +1,12 @@
 using System;
+using System.Collections.Generic;
+using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Cecilifier.Core.Misc;
 
@@ -67,8 +70,8 @@ public struct StaticDelegateCacheContext
         cacheTypeVar.Properties[counterName] = ++staticMethodToDelegateConversionCount;
 
         CacheBackingField = context.Naming.SyntheticVariable("cachedDelegate", ElementKind.Field);
-        var fieldExps = CecilDefinitionsFactory.Field(context, cacheInnerTypeName, cacheTypeVar, CacheBackingField, backingFieldName, delegateType, Constants.Cecil.StaticFieldAttributes);
-        context.WriteCecilExpressions(fieldExps);
+        var fieldExps = context.ApiDefinitionsFactory.Field(context, new MemberDefinitionContext(backingFieldName, CacheBackingField, (string)cacheTypeVar), cacheInnerTypeName, backingFieldName, delegateType, Constants.Cecil.StaticFieldAttributes, false, false, null);
+        context.Generate(fieldExps);
 
         return CacheBackingField;
     }
@@ -78,20 +81,19 @@ public struct StaticDelegateCacheContext
         var cachedTypeVar = context.Naming.Type("", ElementKind.Class);
         var outerTypeVariable = context.DefinitionVariables.GetVariable(Method.ContainingType.ToDisplayString(), VariableMemberKind.Type, Method.ContainingType.ContainingSymbol.ToDisplayString());
 
-        var cacheTypeExps = CecilDefinitionsFactory.Type(
-            context,
-            cachedTypeVar,
-            DeclaringTypeNamespace,
-            cacheTypeName,
-            Constants.Cecil.StaticClassAttributes.AppendModifier("TypeAttributes.NestedPrivate"),
-            context.TypeResolver.Bcl.System.Object,
-            outerTypeVariable,
-            isStructWithNoFields: false,
-            Array.Empty<ITypeSymbol>(),
-            [], 
-            []);
-
-        context.WriteCecilExpressions(cacheTypeExps);
+        string attrs = Constants.Cecil.StaticClassAttributes.AppendModifier("TypeAttributes.NestedPrivate");
+        var cacheTypeExps = context.ApiDefinitionsFactory.Type(
+                                                                context, 
+                                                                cachedTypeVar, 
+                                                                DeclaringTypeNamespace, 
+                                                                cacheTypeName, attrs, 
+                                                                context.TypeResolver.Bcl.System.Object, 
+                                                                outerTypeVariable, 
+                                                                false, 
+                                                                [], 
+                                                                [], 
+                                                                []);
+        context.Generate(cacheTypeExps);
 
         return context.DefinitionVariables.RegisterNonMethod(DeclaringTypeName, cacheTypeName, VariableMemberKind.Type, cachedTypeVar);
     }

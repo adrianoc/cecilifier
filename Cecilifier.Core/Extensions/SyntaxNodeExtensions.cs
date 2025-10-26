@@ -3,7 +3,10 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text;
+using Cecilifier.Core.ApiDriver.Attributes;
 using Cecilifier.Core.AST;
+using Cecilifier.Core.TypeSystem;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -179,6 +182,67 @@ namespace Cecilifier.Core.Extensions
             return member.Modifiers.ExceptBy(
                 [SyntaxKind.PublicKeyword, SyntaxKind.PrivateKeyword, SyntaxKind.InternalKeyword, SyntaxKind.ProtectedKeyword],
                 c => (SyntaxKind) c.RawKind);
+        }
+
+        internal static bool IsStatic(this MemberDeclarationSyntax member) => member.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword));
+
+        internal static IEnumerable<CustomAttributeArgument> ToCustomAttributeArguments(this AttributeArgumentListSyntax self, IVisitorContext context)
+        {
+            if (self == null)
+                yield break;
+            
+            foreach (var argument in self.Arguments)
+            {
+                var constantValue = GetConstantValue(context, argument.Expression);
+                if (argument.NameEquals == null)
+                {
+                    yield return new CustomAttributeArgument { Value = constantValue.Value };
+                    continue;
+                }
+
+                var namedArgumentSymbol = context.SemanticModel.GetSymbolInfo(argument.NameEquals!.Name).Symbol;
+                yield return new CustomAttributeNamedArgument
+                {
+                    Name= argument.NameEquals!.Name.Identifier.Text, 
+                    Value = constantValue.Value, 
+                    Kind = namedArgumentSymbol!.Kind == SymbolKind.Field ? NamedArgumentKind.Field : NamedArgumentKind.Property,
+                    ResolvedType = context.TypeResolver.ResolveAny(namedArgumentSymbol.GetMemberType(), ResolveTargetKind.Parameter)
+                };
+            }
+        }
+
+        private readonly record struct RawCSharpCode(string Code)
+        {
+            public override string ToString() => Code;
+        }
+        
+        private static Optional<object> GetConstantValue(IVisitorContext context, ExpressionSyntax expression)
+        {
+            return expression switch
+            {
+                TypeOfExpressionSyntax typeOf => new RawCSharpCode(context.TypeResolver.ResolveAny(context.SemanticModel.GetTypeInfo(typeOf.Type).Type)),
+                ImplicitArrayCreationExpressionSyntax implicitArrayCreation => ConstantValueForArray(implicitArrayCreation.Initializer),
+                ArrayCreationExpressionSyntax arrayCreation => ConstantValueForArray(arrayCreation.Initializer),
+                
+                _ => context.SemanticModel.GetConstantValue(expression)
+            };
+
+            Optional<object> ConstantValueForArray(InitializerExpressionSyntax initializer)
+            {
+                if (initializer == null)
+                {
+                    return Array.Empty<object>();
+                }
+
+                var array = new object[initializer.Expressions.Count];
+                int i = 0;
+                foreach (var exp in initializer.Expressions)
+                {
+                    array[i++] = context.SemanticModel.GetConstantValue(exp).Value;
+                }
+
+                return array;
+            }
         }
     }
 }

@@ -37,7 +37,7 @@ public class ObjectInitializerTests : CecilifierUnitTestBase
 
         var result = RunCecilifier(code);
 
-        var expected = @"m_topLevelStatements_1.Body.Variables.Add\((l_x_\d+)\);\s+" +
+        var expected = @"m_topLevelMain_\d+.Body.Variables.Add\((l_x_\d+)\);\s+" +
                             @"(il_topLevelMain_\d+\.Emit\(OpCodes\.)Newobj,.+typeof\(System\.Collections\.Generic\.Dictionary<System.Int32, System.Int32>\).+\)\);\s+" +
                             @"\2Dup\);\s+" +
                             @"\2Ldc_I4, 1\);\s+" +
@@ -153,7 +153,7 @@ public class ObjectInitializerTests : CecilifierUnitTestBase
     [TestCase(
         "M(new Bar() { Value = 1 } , new Bar() { Value = 2 } );",
         """
-            m_topLevelStatements_\d+.Body.Variables.Add\(l_vt_\d+\);
+            m_topLevelMain_\d+.Body.Variables.Add\(l_vt_\d+\);
             (\s+il_topLevelMain_\d+\.Emit\(OpCodes\.)Ldloca_S, (l_vt_\d+)\);
             \1Initobj, st_bar_0\);
             \1Ldloca_S, \2\);
@@ -163,7 +163,7 @@ public class ObjectInitializerTests : CecilifierUnitTestBase
             \1Pop\);
             \1Ldloc, \2\);
             \s+var (l_vt_\d+) = new VariableDefinition\(st_bar_0\);
-            \s+m_topLevelStatements_\d+.Body.Variables.Add\(\3\);
+            \s+m_topLevelMain_\d+.Body.Variables.Add\(\3\);
             \1Ldloca_S, \3\);
             \1Initobj, st_bar_0\);
             \1Ldloca_S, \3\);
@@ -179,7 +179,7 @@ public class ObjectInitializerTests : CecilifierUnitTestBase
     [TestCase("""var x = new Bar { Name = "A", Value = 3 };""", 
         """
         var (l_x_\d+) = new VariableDefinition\(st_bar_0\);
-        \s+m_topLevelStatements_\d+.Body.Variables.Add\(\1\);
+        \s+m_topLevelMain_\d+.Body.Variables.Add\(\1\);
         (\s+il_topLevelMain_\d+\.Emit\(OpCodes\.)Ldloca_S, \1\);
         \2Initobj, st_bar_0\);
         \2Ldloca_S, \1\);
@@ -208,7 +208,7 @@ public class ObjectInitializerTests : CecilifierUnitTestBase
     [TestCase("""var z = new Bar() { Name = "123", Value = 6 }.Value;""", 
         """
                     var (l_vt_\d+) = new VariableDefinition\((st_bar_\d+)\);
-                    \s+(m_topLevelStatements_\d+).Body.Variables.Add\(\1\);
+                    \s+(m_topLevelMain_\d+).Body.Variables.Add\(\1\);
                     (\s+il_topLevelMain_\d+.Emit\(OpCodes\.)Ldloca_S, \1\);
                     \4Initobj, \2\);
                     \4Ldloca_S, \1\);
@@ -217,7 +217,7 @@ public class ObjectInitializerTests : CecilifierUnitTestBase
                     \4Call, l_set_\d+\);
                     \4Dup\);
                     \4Ldc_I4, 6\);
-                    \4Call, l_set_1\d+\);
+                    \4Call, l_set_\d+\);
                     \4Pop\);
                     \4Ldloca, \1\);
                     \4Call, m_get_\d+\);
@@ -228,7 +228,7 @@ public class ObjectInitializerTests : CecilifierUnitTestBase
         """
         \s+//Bar \[\]ba = new Bar\[1\];
         \s+var (?<array_var>l_ba_\d+) = new VariableDefinition\(st_bar_0.MakeArrayType\(\)\);
-        \s+m_topLevelStatements_\d+.Body.Variables.Add\(\k<array_var>\);
+        \s+m_topLevelMain_\d+.Body.Variables.Add\(\k<array_var>\);
         (\s+il_topLevelMain_\d+\.Emit\(OpCodes\.)Ldc_I4, 1\);
         \1Newarr, st_bar_0\);
         \1Stloc, \k<array_var>\);

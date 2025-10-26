@@ -1,13 +1,12 @@
 using System.Linq;
+using System.Reflection.Emit;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using Mono.Cecil.Cil;
-
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Operations;
 using Cecilifier.Core.CodeGeneration;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Operations;
 
 namespace Cecilifier.Core.AST;
 
@@ -25,17 +24,17 @@ public class ArrayInitializationProcessor
     {
         var context = visitor.Context;
         var stelemOpCode = elementType.StelemOpCode();
-        var resolvedElementType = context.TypeResolver.Resolve(elementType);
+        var resolvedElementType = context.TypeResolver.ResolveAny(elementType);
 
         for (var i = 0; i < elements?.Count; i++)
         {
-            context.EmitCilInstruction(visitor.ILVariable, OpCodes.Dup);
-            context.EmitCilInstruction(visitor.ILVariable, OpCodes.Ldc_I4, i);
+            context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, OpCodes.Dup);
+            context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, OpCodes.Ldc_I4, i);
             elements.Value[i].Accept(visitor);
 
             var operation = GetConversionOperation(parentOperation, i);
             context.TryApplyConversions(visitor.ILVariable, operation);
-            context.EmitCilInstruction(visitor.ILVariable, stelemOpCode, stelemOpCode == OpCodes.Stelem_Any ? resolvedElementType : null);
+            context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, stelemOpCode, stelemOpCode == OpCodes.Stelem ? resolvedElementType : null);
         }
         IConversionOperation GetConversionOperation(IOperation operation, int index)
         {
@@ -68,9 +67,9 @@ public class ArrayInitializationProcessor
             elements.Select(item => item.DescendantNodesAndSelf().OfType<LiteralExpressionSyntax>().Single().Token.ValueText).ToArray(),
             StringToSpanOfBytesConverters.For(elementType.FullyQualifiedName()));
 
-        context.EmitCilInstruction(visitor.ILVariable, OpCodes.Dup);
-        context.EmitCilInstruction(visitor.ILVariable, OpCodes.Ldtoken, backingFieldVar);
-        context.EmitCilInstruction(visitor.ILVariable, OpCodes.Call, initializeArrayHelper);
+        context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, OpCodes.Dup);
+        context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, OpCodes.Ldtoken, backingFieldVar);
+        context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, OpCodes.Call, initializeArrayHelper);
     }
 }
 

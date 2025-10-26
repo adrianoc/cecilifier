@@ -4,15 +4,15 @@ using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Reflection.Emit;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.AST.Params;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.Variables;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Mono.Cecil.Cil;
 
 namespace Cecilifier.Core.Extensions
 {
@@ -23,6 +23,9 @@ namespace Cecilifier.Core.Extensions
             .RemoveMiscellaneousOptions(SymbolDisplayMiscellaneousOptions.UseSpecialTypes);
 
         private static readonly SymbolDisplayFormat QualifiedNameIncludingTypeParametersFormat = QualifiedNameWithoutTypeParametersFormat.WithGenericsOptions(SymbolDisplayGenericsOptions.IncludeTypeParameters);
+        private static readonly SymbolDisplayFormat ValidVariableNameFormat = new SymbolDisplayFormat(typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameOnly)
+                .AddMiscellaneousOptions(SymbolDisplayMiscellaneousOptions.ExpandNullable)
+                .RemoveMiscellaneousOptions(SymbolDisplayMiscellaneousOptions.UseSpecialTypes);
 
         public static ElementKind ToElementKind(this TypeKind self) => self switch
         {
@@ -44,9 +47,24 @@ namespace Cecilifier.Core.Extensions
                 : method.Name;
         }
 
+        /// <summary>
+        /// Returns a mangled name matching C# compiler name rules as of Oct/2025 if <paramref name="method"/> represents a local function otherwise <paramref name="method"/>.Name.
+        /// </summary>
+        /// <param name="method"></param>
+        /// method to return name for. 
+        /// <returns>a name appropriate for the passed method.</returns>
+        public static string MappedName(this IMethodSymbol method) => method.MethodKind == MethodKind.LocalFunction 
+                                                                            ? $"<{method.ContainingSymbol.Name}>g__{method.Name}|0_0"
+                                                                            : method.Name;
+
         public static string FullyQualifiedName(this ISymbol type, bool includingTypeParameters = true)
         {
             return type.ToDisplayString(includingTypeParameters ? QualifiedNameIncludingTypeParametersFormat : QualifiedNameWithoutTypeParametersFormat);
+        }
+        
+        public static string ToValidVariableName(this ISymbol type)
+        {
+            return type.ToDisplayString(ValidVariableNameFormat);
         }
         
         public static string GetReflectionName(this ITypeSymbol typeSymbol)
@@ -166,14 +184,7 @@ namespace Cecilifier.Core.Extensions
             }
 
             var fieldDeclarationVariable = context.DefinitionVariables.GetVariable(fieldSymbol.Name, VariableMemberKind.Field, fieldSymbol.ContainingType.OriginalDefinition.ToDisplayString());
-            ThrowIfVariableIsNotValid(fieldDeclarationVariable, fieldSymbol.Name);
-
-            [ExcludeFromCodeCoverage]
-            void ThrowIfVariableIsNotValid(DefinitionVariable variable, string fieldName)
-            {
-                if (!variable.IsValid)
-                    throw new Exception($"Could not resolve reference to field: {fieldName}");
-            }
+            fieldDeclarationVariable.ThrowIfVariableIsNotValid();
         }
 
         public static void EnsurePropertyExists(this IPropertySymbol propertySymbol, IVisitorContext context, [NotNull] SyntaxNode node)
@@ -254,8 +265,8 @@ namespace Cecilifier.Core.Extensions
             _ => throw new ArgumentOutOfRangeException(nameof(literalType), literalType, null)
         };
 
-        public static IMethodSymbol ParameterlessCtor(this ITypeSymbol self) => self?.GetMembers(".ctor").OfType<IMethodSymbol>().Single(ctor => ctor.Parameters.Length == 0);
-        public static IMethodSymbol Ctor(this ITypeSymbol self, params ITypeSymbol[] parameters) => self?.GetMembers(".ctor")
+        public static IMethodSymbol ParameterlessCtor(this ITypeSymbol self) => self.GetMembers(".ctor").OfType<IMethodSymbol>().Single(ctor => ctor.Parameters.Length == 0);
+        public static IMethodSymbol Ctor(this ITypeSymbol self, params ITypeSymbol[] parameters) => self.GetMembers(".ctor")
                                                                                                 .OfType<IMethodSymbol>()
                                                                                                 .Single(ctor => ctor.Parameters.Select(p => p.Type).SequenceEqual(parameters, SymbolEqualityComparer.Default));
 
@@ -332,6 +343,8 @@ namespace Cecilifier.Core.Extensions
             }
         }
 
-        internal static string? ParamsAttributeMatchingType(this ITypeSymbol paramsParameter) => paramsParameter.Kind ==  SymbolKind.ArrayType ? typeof(ParamArrayAttribute).FullName : typeof(ParamCollectionAttribute).FullName;
+        internal static string? ParamsAttributeMatchingType(this IParameterSymbol paramsParameter) => paramsParameter.IsParams 
+                                                                                                        ? paramsParameter.Type.Kind ==  SymbolKind.ArrayType ? typeof(ParamArrayAttribute).FullName : typeof(ParamCollectionAttribute).FullName
+                                                                                                        : null;
     }
 }

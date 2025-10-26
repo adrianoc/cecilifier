@@ -1,10 +1,16 @@
+using Cecilifier.ApiDriver.MonoCecil;
+using Cecilifier.ApiDriver.SystemReflectionMetadata;
+using Cecilifier.Core.AST;
 using Cecilifier.Core.Tests.Framework;
+using Cecilifier.Core.Tests.Framework.Attributes;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration
 {
-    [TestFixture]
-    public class StatementTests : ResourceTestBase
+    [TestFixture(typeof(MonoCecilContext))]
+    [TestFixture(typeof(SystemReflectionMetadataContext))]
+    [EnableForContext<SystemReflectionMetadataContext>(nameof(TestForStatement))]
+    public class StatementTests<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
     {
         [TestCase("System.Int32* FixedStatementTest::Test()", TestName = "Return")]
         [TestCase("System.Void FixedStatementTest::Test()", TestName = "Local")]
@@ -22,7 +28,7 @@ namespace Cecilifier.Core.Tests.Integration
         [Test]
         public void TestForStatement()
         {
-            AssertResourceTestWithExplicitExpectation(@"Statements/ForStatement", "System.Int32 ForStatement::M()");
+            AssertResourceTestWithExplicitExpectation("Statements/ForStatement", "System.Int32 ForStatement::M()");
         }
 
         [Test]

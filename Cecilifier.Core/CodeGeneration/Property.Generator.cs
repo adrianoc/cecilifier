@@ -1,14 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Runtime.CompilerServices;
+using System.Reflection.Emit;
+using Cecilifier.Core.ApiDriver;
+using Microsoft.CodeAnalysis;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
+using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
-using Microsoft.CodeAnalysis;
-using Mono.Cecil.Cil;
 
 namespace Cecilifier.Core.CodeGeneration;
 
@@ -20,7 +21,7 @@ internal record struct PropertyGenerationData(
     string Name, 
     IDictionary<string, string> AccessorModifiers,
     bool IsStatic,
-    string ResolvedType, 
+    Func<ResolveTargetKind, string> Type, 
     string TypeNameForRegistration, 
     IReadOnlyList<ParameterSpec> Parameters,
     string BackingFieldModifiers =null, // Not used, unless on auto-properties
@@ -39,84 +40,81 @@ internal class PropertyGenerator
     private IVisitorContext Context { get; init; }
     public string BackingFieldVariable => _backingFieldVar;
 
-    internal ScopedDefinitionVariable AddSetterMethodDeclaration(ref readonly PropertyGenerationData property, string accessorMethodVar, bool isInitOnly, string nameForRegistration, string overridenMethod)
+    internal ScopedDefinitionVariable AddSetterMethodDeclaration(ref readonly PropertyGenerationData property, string accessorMethodVar, bool isInitOnly, string nameForRegistration, string overridenMethod, in IlContext ilContext)
     {
         var completeParamList = new List<ParameterSpec>(property.Parameters)
         {
             // Setters always have at least one `value` parameter but Roslyn does not have it explicitly listed.
             new(
                 "value",
-                property.ResolvedType,
+                property.Type(ResolveTargetKind.ReturnType),
                 RefKind.None,
                 Constants.ParameterAttributes.None) { RegistrationTypeName = property.TypeNameForRegistration }
         };
 
-        var exps = CecilDefinitionsFactory.Method(
-                                            Context,
-                                            property.DeclaringTypeNameForRegistration,
-                                            accessorMethodVar,
-                                            nameForRegistration,
-                                            $"set_{property.Name}",
-                                            property.AccessorModifiers["set"],
-                                            completeParamList,
-                                            [], // Properties cannot declare TypeParameters
-                                            ctx => isInitOnly ? $"new RequiredModifierType({ctx.TypeResolver.Resolve(typeof(IsExternalInit).FullName)}, {ctx.TypeResolver.Bcl.System.Void})" : ctx.TypeResolver.Bcl.System.Void,
+        IList<string> typeParameters = [];
+        var memberOptions = (property.IsStatic ? MemberOptions.Static :  MemberOptions.None) 
+                            | (isInitOnly ? MemberOptions.InitOnly : MemberOptions.None);
+        
+        var exps = Context.ApiDefinitionsFactory.Method(
+                                            Context, 
+                                            new BodiedMemberDefinitionContext($"set_{property.Name}", accessorMethodVar, property.DeclaringTypeVariable, memberOptions, ilContext), 
+                                            property.DeclaringTypeNameForRegistration, 
+                                            property.AccessorModifiers["set"], 
+                                            completeParamList, 
+                                            typeParameters,
+                                            ctx => ctx.TypeResolver.ResolveAny(Context.RoslynTypeSystem.SystemVoid, ResolveTargetKind.ReturnType),
                                             out var methodDefinitionVariable);
 
         var methodVariableScope = Context.DefinitionVariables.WithCurrentMethod(methodDefinitionVariable);
-        Context.WriteCecilExpressions(exps);
+        Context.Generate(exps);
         AddToOverridenMethodsIfAppropriated(accessorMethodVar, overridenMethod);
 
-        Context.WriteCecilExpressions([
-                $"{property.DeclaringTypeVariable}.Methods.Add({accessorMethodVar});",
-                $"{accessorMethodVar}.Body = new MethodBody({accessorMethodVar});",
-                $"{property.Variable}.SetMethod = {accessorMethodVar};" ]);
+        Context.ApiDriver.AddMethodSemantics(Context, property.Variable, accessorMethodVar, MethodKind.PropertySet);
         
         return methodVariableScope;
     }
 
-    internal void AddAutoSetterMethodImplementation(ref readonly PropertyGenerationData property, string ilSetVar, string setMethodVar)
+    internal void AddAutoSetterMethodImplementation(ref readonly PropertyGenerationData property, IlContext ilContext)
     {
         AddBackingFieldIfNeeded(in property);
 
-        Context.EmitCilInstruction(ilSetVar, OpCodes.Ldarg_0);
+        Context.ApiDriver.WriteCilInstruction(Context, ilContext, OpCodes.Ldarg_0);
         if (!property.IsStatic)
-            Context.EmitCilInstruction(ilSetVar, OpCodes.Ldarg_1);
+            Context.ApiDriver.WriteCilInstruction(Context, ilContext, OpCodes.Ldarg_1);
 
-        var operand = property.DeclaringTypeIsGeneric ? MakeGenericType(in property) : _backingFieldVar;
-        Context.EmitCilInstruction(ilSetVar, property.StoreOpCode, operand);
-        Context.AddCompilerGeneratedAttributeTo(setMethodVar);
+        var operand = property.DeclaringTypeIsGeneric ? MakeGenericInstanceType(in property) : _backingFieldVar;
+        Context.ApiDriver.WriteCilInstruction(Context, ilContext, property.StoreOpCode, operand.AsToken());
+        Context.AddCompilerGeneratedAttributeTo(ilContext.AssociatedMethodVariable, VariableMemberKind.Method);
     }
 
-    internal ScopedDefinitionVariable AddGetterMethodDeclaration(ref readonly PropertyGenerationData property, string accessorMethodVar, bool hasCovariantReturn, string nameForRegistration, string overridenMethod)
+    internal ScopedDefinitionVariable AddGetterMethodDeclaration(ref readonly PropertyGenerationData property, string accessorMethodVar, bool hasCovariantReturn, string nameForRegistration, string overridenMethod, in IlContext ilContext)
     {
-        var propertyResolvedType = property.ResolvedType;
-        var exps = CecilDefinitionsFactory.Method(
-                                        Context,
-                                        property.DeclaringTypeNameForRegistration,
-                                        accessorMethodVar,
-                                        nameForRegistration,
-                                        $"get_{property.Name}",
-                                        property.AccessorModifiers["get"],
-                                        property.Parameters, 
-                                        [], // Properties cannot declare TypeParameters
-                                        _ => propertyResolvedType,
-                                        out var methodDefinitionVariable);
+        var propertyResolvedType = property.Type(ResolveTargetKind.ReturnType);
+        IList<string> typeParameters = [];
+        var memberDefinitionContext = new BodiedMemberDefinitionContext($"get_{property.Name}", accessorMethodVar, property.DeclaringTypeVariable, property.IsStatic ? MemberOptions.Static : MemberOptions.None, ilContext);
+        var exps = Context.ApiDefinitionsFactory.Method(
+                                                                    Context, 
+                                                                    memberDefinitionContext, 
+                                                                    property.DeclaringTypeNameForRegistration, 
+                                                                    property.AccessorModifiers["get"], 
+                                                                    property.Parameters, 
+                                                                    typeParameters, 
+                                                                    ctx => propertyResolvedType,
+                                                                    out var methodDefinitionVariable);
         
-        Context.WriteCecilExpressions(exps);
+        Context.Generate(exps);
         
         var scopedVariable = Context.DefinitionVariables.WithCurrentMethod(methodDefinitionVariable);
         
         AddToOverridenMethodsIfAppropriated(accessorMethodVar, overridenMethod);
         
-        Context.WriteCecilExpressions([
+        Context.Generate([
             hasCovariantReturn ? 
                 $"{accessorMethodVar}.CustomAttributes.Add(new CustomAttribute(assembly.MainModule.Import(typeof(System.Runtime.CompilerServices.PreserveBaseOverridesAttribute).GetConstructor(BindingFlags.Public | BindingFlags.Instance, null, new Type[0], null))));" 
-                : String.Empty,
-            $"{property.DeclaringTypeVariable}.Methods.Add({accessorMethodVar});",
-            $"{accessorMethodVar}.Body = new MethodBody({accessorMethodVar});",
-            $"{property.Variable}.GetMethod = {accessorMethodVar};" ]);
-        
+                : String.Empty]);
+            
+        Context.ApiDriver.AddMethodSemantics(Context, property.Variable, accessorMethodVar, MethodKind.PropertyGet);
         return scopedVariable;
     }
    
@@ -125,14 +123,14 @@ internal class PropertyGenerator
         AddBackingFieldIfNeeded(in propertyGenerationData);
 
         if (!propertyGenerationData.IsStatic)
-            Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldarg_0);
         
         Debug.Assert(_backingFieldVar != null);
-        var operand = propertyGenerationData.DeclaringTypeIsGeneric ? MakeGenericType(in propertyGenerationData) : _backingFieldVar;
-        Context.EmitCilInstruction(ilVar, propertyGenerationData.LoadOpCode, operand);
-        Context.EmitCilInstruction(ilVar, OpCodes.Ret);
+        var operand = propertyGenerationData.DeclaringTypeIsGeneric ? MakeGenericInstanceType(in propertyGenerationData) : _backingFieldVar;
+        Context.ApiDriver.WriteCilInstruction(Context, ilVar, propertyGenerationData.LoadOpCode, operand.AsToken());
+        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ret);
         
-        Context.AddCompilerGeneratedAttributeTo(getMethodVar);
+        Context.AddCompilerGeneratedAttributeTo(getMethodVar, VariableMemberKind.Method);
     }
     
     private void AddToOverridenMethodsIfAppropriated(string accessorMethodVar, string overridenMethod)
@@ -140,7 +138,7 @@ internal class PropertyGenerator
         if (string.IsNullOrWhiteSpace(overridenMethod))
             return;
         
-        Context.WriteCecilExpression($"{accessorMethodVar}.Overrides.Add({overridenMethod});");
+        Context.Generate($"{accessorMethodVar}.Overrides.Add({overridenMethod});");
         Context.WriteNewLine();
     }
 
@@ -150,26 +148,21 @@ internal class PropertyGenerator
             return;
 
         _backingFieldVar = Context.Naming.SyntheticVariable(property.Name, ElementKind.Field);
+
+        var name = Utils.BackingFieldNameForAutoProperty(property.Name);
+        var memberDefinitionContext = new MemberDefinitionContext(name, $"{property.Name}BackingField", _backingFieldVar, property.DeclaringTypeVariable);
+        var backingFieldExps = Context.ApiDefinitionsFactory.Field(Context, memberDefinitionContext, property.DeclaringTypeNameForRegistration, name, property.Type(ResolveTargetKind.Field), property.BackingFieldModifiers, false, false, null);
         
-        var backingFieldExps = CecilDefinitionsFactory.Field(
-            Context,
-            property.DeclaringTypeNameForRegistration,
-            property.DeclaringTypeVariable,
-            _backingFieldVar,
-            Utils.BackingFieldNameForAutoProperty(property.Name),
-            property.ResolvedType,
-            property.BackingFieldModifiers);
-        
-        Context.WriteCecilExpressions(backingFieldExps);
-        Context.AddCompilerGeneratedAttributeTo(_backingFieldVar);
+        Context.Generate(backingFieldExps);
+        Context.AddCompilerGeneratedAttributeTo(_backingFieldVar, VariableMemberKind.Field);
     }
     
-    private string MakeGenericType(ref readonly PropertyGenerationData property)
+    private string MakeGenericInstanceType(ref readonly PropertyGenerationData property)
     {
         var genTypeVar = Context.Naming.SyntheticVariable(property.Name, ElementKind.GenericInstance);
         var fieldRefVar = Context.Naming.MemberReference("fld_");
         
-        Context.WriteCecilExpressions(
+        Context.Generate(
             [
                 $"var {genTypeVar} = {property.DeclaringTypeVariable}.MakeGenericInstanceType({property.DeclaringTypeVariable}.GenericParameters.ToArray());",
                 $"var {fieldRefVar} = new FieldReference({_backingFieldVar}.Name, {_backingFieldVar}.FieldType, {genTypeVar});"

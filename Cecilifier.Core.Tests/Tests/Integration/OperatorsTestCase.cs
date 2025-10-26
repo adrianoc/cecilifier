@@ -1,9 +1,12 @@
+using Cecilifier.ApiDriver.MonoCecil;
+using Cecilifier.Core.AST;
 using Cecilifier.Core.Tests.Framework;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration
 {
-    public class Operators : ResourceTestBase
+    [TestFixture(typeof(MonoCecilContext))]
+    public class Operators<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
     {
         [Test]
         public void BitwiseOperators([Values("Or", "And", "Xor", "Shift")] string @operator, [Values("int", "char", "byte", "long", "sbyte")] string type1, [Values("int", "char", "byte", "long", "sbyte")] string type2)

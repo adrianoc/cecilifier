@@ -1,9 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
-using Cecilifier.Core.Misc;
+using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -25,23 +26,35 @@ namespace Cecilifier.Core.AST
             _memberCollector = new EnumMemberValueCollector();
             node.Accept(_memberCollector);
 
-            var enumType = Context.Naming.Type(node);
             var enumSymbol = Context.SemanticModel.GetDeclaredSymbol(node).EnsureNotNull<ISymbol, INamedTypeSymbol>($"Something really bad happened. Roslyn failed to resolve the symbol for the enum {node.Identifier.Text}");
-            var attrs = TypeModifiersToCecil(enumSymbol, node.Modifiers);
             var outerTypeVariable = Context.DefinitionVariables.GetVariable(enumSymbol.ContainingType?.ToDisplayString(), VariableMemberKind.Type, enumSymbol.ContainingType?.ContainingSymbol.ToDisplayString());
-            var typeDef = CecilDefinitionsFactory.Type(Context, enumType, enumSymbol.ContainingNamespace?.FullyQualifiedName(), enumSymbol.Name, attrs + " | TypeAttributes.Sealed", Context.TypeResolver.Bcl.System.Enum, outerTypeVariable,false, Array.Empty<ITypeSymbol>(), [], []);
+            var enumTypeVariable = Context.Naming.Type(node);
+            var typeDef = Context.ApiDefinitionsFactory.Type(
+                                                        Context, 
+                                                        enumTypeVariable, 
+                                                        enumSymbol.ContainingNamespace?.FullyQualifiedName() ?? string.Empty, 
+                                                        enumSymbol.Name, 
+                                                        TypeModifiersToCecil(enumSymbol, node.Modifiers) + " | TypeAttributes.Sealed", 
+                                                        Context.TypeResolver.Bcl.System.Enum, 
+                                                        outerTypeVariable, 
+                                                        false, 
+                                                        [], 
+                                                        [], 
+                                                        [], 
+                                                        new string[0]);
             AddCecilExpressions(Context, typeDef);
 
             var parentName = enumSymbol.ContainingSymbol.ToDisplayString();
-            using (Context.DefinitionVariables.WithCurrent(parentName, enumSymbol.FullyQualifiedName(), VariableMemberKind.Type, enumType))
+            string declaringTypeName = enumSymbol.ToDisplayString();
+            using (Context.DefinitionVariables.WithCurrent(parentName, enumSymbol.FullyQualifiedName(), VariableMemberKind.Type, enumTypeVariable))
             {
                 //.class private auto ansi MyEnum
                 var fieldVar = Context.Naming.LocalVariable(node);
-                var valueFieldExp = CecilDefinitionsFactory.Field(Context, enumSymbol.ToDisplayString(), enumType, fieldVar, "value__", Context.TypeResolver.Bcl.System.Int32,
-                    "FieldAttributes.SpecialName | FieldAttributes.RTSpecialName | FieldAttributes.Public");
+                var definitionContext = new MemberDefinitionContext("value__", "value__", fieldVar, enumTypeVariable);
+                var valueFieldExp = Context.ApiDefinitionsFactory.Field(Context, definitionContext, declaringTypeName, "value__", Context.TypeResolver.ResolveAny(Context.RoslynTypeSystem.SystemInt32, ResolveTargetKind.Field), "FieldAttributes.SpecialName | FieldAttributes.RTSpecialName | FieldAttributes.Public", false, false, null);
                 AddCecilExpressions(Context, valueFieldExp);
 
-                HandleAttributesInMemberDeclaration(node.AttributeLists, enumType);
+                HandleAttributesInMemberDeclaration(node.AttributeLists, enumTypeVariable, VariableMemberKind.Type);
 
                 base.VisitEnumDeclaration(node);
             }
@@ -57,11 +70,15 @@ namespace Cecilifier.Core.AST
 
             var enumMemberSymbol = Context.SemanticModel.GetDeclaredSymbol(node).EnsureNotNull();
             var fieldVar = Context.Naming.LocalVariable(node);
-            var exp = CecilDefinitionsFactory.Field(Context, enumMemberSymbol.ContainingSymbol.ToDisplayString(), enumVarDef.VariableName, fieldVar, node.Identifier.ValueText, enumVarDef.VariableName,
-                "FieldAttributes.Static | FieldAttributes.Literal | FieldAttributes.Public | FieldAttributes.HasDefault", enumMemberValue);
+            var declaringTypeName = enumMemberSymbol.ContainingSymbol.ToDisplayString();
+            //TODO: Consider introducing (or reusing ?) some abstraction so the code can add more information (like, is this a variable name? is this the result of TypeResolver.Resolve() ? etc)
+            //      to allow Api Drivers (the need for this first appeared in SRM) to decide how to encode/emit the code. For now we ignore that this reference is 100% certain to be the type
+            //      definition for the parent enum (and that we have that variable name in enumVarDef) and re-resolve it in a way that it will return a valid reference.
+            var enumType = Context.TypeResolver.ResolveAny(Context.SemanticModel.GetDeclaredSymbol(node.Parent).EnsureNotNull<ISymbol, INamedTypeSymbol>(), ResolveTargetKind.Field);
+            var exp = Context.ApiDefinitionsFactory.Field(Context, new MemberDefinitionContext(node.Identifier.ValueText, fieldVar, enumVarDef.VariableName), declaringTypeName, node.Identifier.ValueText, enumType, "FieldAttributes.Static | FieldAttributes.Literal | FieldAttributes.Public | FieldAttributes.HasDefault", false, false, enumMemberValue);
             AddCecilExpressions(Context, exp);
 
-            HandleAttributesInMemberDeclaration(node.AttributeLists, fieldVar);
+            HandleAttributesInMemberDeclaration(node.AttributeLists, fieldVar, VariableMemberKind.Field);
 
             base.VisitEnumMemberDeclaration(node);
         }

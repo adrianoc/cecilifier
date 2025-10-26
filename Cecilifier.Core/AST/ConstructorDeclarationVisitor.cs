@@ -1,15 +1,17 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using System.Reflection.Emit;
+using Cecilifier.Core.ApiDriver;
+using Cecilifier.Core.ApiDriver.Handles;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.Variables;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Mono.Cecil.Cil;
 
 namespace Cecilifier.Core.AST
 {
@@ -52,20 +54,32 @@ namespace Cecilifier.Core.AST
             ProcessMethodDeclaration(node, ctorVariable, "ctor", ".ctor", false, ctorVar =>
             {
                 if (node.Initializer == null || node.Initializer.IsKind(SyntaxKind.BaseConstructorInitializer))
+                {
                     ProcessFieldInitialization(declaringType, ilVar, false);
+                }
 
                 if (declaringType.Kind() != SyntaxKind.StructDeclaration)
                 {
-                    Context.EmitCilInstruction(ilVar, OpCodes.Ldarg_0);
+                    Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldarg_0);
                 }
 
                 // If this ctor has an initializer the call to the base ctor will happen when we visit call base.VisitConstructorDeclaration()
                 // otherwise we need to call it here.
                 if (node.Initializer == null && declaringType.Kind() != SyntaxKind.StructDeclaration)
                 {
-                    var declaringTypeLocalVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Type).VariableName;
-                    var operand = Utils.ImportFromMainModule($"TypeHelpers.DefaultCtorFor({declaringTypeLocalVar}.BaseType)");
-                    Context.EmitCilInstruction(ilVar, OpCodes.Call, operand);
+                    var baseTypeSymbol = Context.RoslynTypeSystem.SystemObject;
+                    if (declaringType.BaseList != null)
+                    {
+                        // Assumes the first type in a base list is an actual type.
+                        var baseTypeSyntax = declaringType.BaseList.Types.First();
+                        var type = Context.SemanticModel.GetTypeInfo(baseTypeSyntax.Type).Type.EnsureNotNull();
+                        if (type.TypeKind != TypeKind.Interface)
+                            baseTypeSymbol = type;
+                    }
+                    
+                    var declaringTypeLocalVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Type).ThrowIfVariableIsNotValid();
+                    var operand = Context.MemberResolver.ResolveDefaultConstructor(baseTypeSymbol, declaringTypeLocalVar.VariableName);
+                    Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Call, operand.AsToken());
                 }
 
                 callBaseMethod(node);
@@ -88,12 +102,12 @@ namespace Cecilifier.Core.AST
             });
         }
 
-        internal void DefaultCtorInjector(string typeDefVar, INamedTypeSymbol type, string ctorAccessibility, string baseCtor, bool isStatic, Action<string> processInitializers)
+        private void DefaultCtorInjector(string typeDefVar, INamedTypeSymbol type, string ctorAccessibility, string baseCtor, bool isStatic, Action<IlContext> processInitializers)
         {
             DefaultCtorInjector(typeDefVar, type.Name, type.OriginalDefinition.ToDisplayString(), ctorAccessibility, baseCtor, isStatic, processInitializers);
         }
 
-        internal void DefaultCtorInjector(string typeDefVar, string typeName, string ctorAccessibility, string baseCtor, bool isStatic, Action<string> processInitializers)
+        internal void DefaultCtorInjector(string typeDefVar, string typeName, string ctorAccessibility, string baseCtor, bool isStatic, Action<IlContext> processInitializers)
         {
             DefaultCtorInjector(typeDefVar, typeName, typeName, ctorAccessibility, baseCtor, isStatic, processInitializers);
         }
@@ -105,50 +119,62 @@ namespace Cecilifier.Core.AST
         /// <param name="baseCtor"></param>
         /// <param name="isStatic"></param>
         /// <param name="processInitializers">Action in charge of handling constructor initializers</param>
-        private void DefaultCtorInjector(string typeDefVar, string normalizedTypeName, string typeName, string ctorAccessibility, string baseCtor, bool isStatic, Action<string> processInitializers)
+        private void DefaultCtorInjector(string typeDefVar, string normalizedTypeName, string typeName, string ctorAccessibility, string baseCtor, bool isStatic, Action<IlContext> processInitializers)
         {
             Context.WriteNewLine();
             Context.WriteComment($"** Constructor: {normalizedTypeName}() **");
 
-            var ctorLocalVar = AddOrUpdateParameterlessCtorDefinition(
+            var ilContext = AddOrUpdateParameterlessCtorDefinition(
                 typeName,
+                normalizedTypeName,
+                typeDefVar,
                 ctorAccessibility,
                 isStatic,
                 Context.Naming.SyntheticVariable(normalizedTypeName, isStatic ? ElementKind.StaticConstructor : ElementKind.Constructor));
 
-            AddCecilExpression($"{typeDefVar}.Methods.Add({ctorLocalVar});");
-
-            var ctorBodyIL = Context.Naming.ILProcessor($"ctor_{normalizedTypeName}");
-            AddCecilExpression($"var {ctorBodyIL} = {ctorLocalVar}.Body.GetILProcessor();");
-
-            processInitializers?.Invoke(ctorBodyIL);
+            processInitializers?.Invoke(ilContext);
+            
             if (!isStatic)
             {
-                Context.EmitCilInstruction(ctorBodyIL, OpCodes.Ldarg_0);
-                Context.EmitCilInstruction(ctorBodyIL, OpCodes.Call, baseCtor);
+                Context.ApiDriver.WriteCilInstruction(Context, ilContext, OpCodes.Ldarg_0);
+                Context.ApiDriver.WriteCilInstruction(Context, ilContext, OpCodes.Call, baseCtor.AsToken());
             }
 
-            Context.EmitCilInstruction(ctorBodyIL, OpCodes.Ret);
+            Context.ApiDriver.WriteCilInstruction(Context, ilContext, OpCodes.Ret);
         }
 
-        private string AddOrUpdateParameterlessCtorDefinition(string typeName, string ctorAccessibility, bool isStatic, string ctorLocalVar)
+        private IlContext AddOrUpdateParameterlessCtorDefinition(string typeName, string normalizedTypeName, string typeDefVar, string ctorAccessibility, bool isStatic, string ctorLocalVar)
         {
+            var ctorName = isStatic ? "cctor" : "ctor";
             var found = Context.DefinitionVariables.GetMethodVariable(new MethodDefinitionVariable(typeName, Utils.ConstructorMethodName(isStatic), [], 0));
             if (found.IsValid)
             {
+                //TODO: This is Cecil specific. Abstract it and add a test in SRM that exercises it
                 ctorLocalVar = found.VariableName;
 
                 AddCecilExpression($"{ctorLocalVar}.Attributes = {ctorAccessibility} | MethodAttributes.HideBySig | {Constants.Cecil.CtorAttributes};");
                 AddCecilExpression($"{ctorLocalVar}.HasThis = !{ctorLocalVar}.IsStatic;", ctorLocalVar);
-                return ctorLocalVar;
+                
+                //TODO: This code was in the caller before and we moved it to `DefinitionFactory.Constructor()`
+                //      the problem is that `CecilifierContextExtensions.EnsureForwardedMethod()` will emit a 
+                //      method definition for the constructor and assume the caller will add it to the type,
+                //      which now does not happen anymore. Probably we want to move EnsureForwardedMethod()
+                //      to the factory class and add the method definition to the type there. For now just
+                //      add it here (this will break tests for SRM driver).
+                AddCecilExpression($"{typeDefVar}.Methods.Add({ctorLocalVar});");
+                
+                return Context.ApiDriver.NewIlContext(Context, $"{ctorName}_{normalizedTypeName}", ctorLocalVar);
             }
 
-            var ctorMethodDefinitionExp = CecilDefinitionsFactory.Constructor(Context, ctorLocalVar, typeName, isStatic, ctorAccessibility, Array.Empty<string>());
-            AddCecilExpression(ctorMethodDefinitionExp);
-            return ctorLocalVar;
+            var ilContext = Context.ApiDriver.NewIlContext(Context, $"{ctorName}_{normalizedTypeName}", ctorLocalVar);
+            var definitionContext = new BodiedMemberDefinitionContext(ctorName, ctorName, ctorLocalVar, typeDefVar, MemberOptions.None, ilContext);
+            var exps = Context.ApiDefinitionsFactory.Constructor(Context, definitionContext, typeName, isStatic, ctorAccessibility, []);
+            AddCecilExpressions(Context, exps);
+
+            return ilContext;
         }
 
-        private void ProcessFieldInitialization(TypeDeclarationSyntax declaringClass, string ctorBodyIL, bool statics)
+        private void ProcessFieldInitialization(TypeDeclarationSyntax declaringClass, IlContext ctorBodyIL, bool statics)
         {
             var declaringTypeSymbol = Context.SemanticModel.GetDeclaredSymbol(declaringClass).EnsureNotNull();
             // Handles non const field initialization...
@@ -166,7 +192,7 @@ namespace Cecilifier.Core.AST
                     continue;
 
                 if (!fieldDeclaration.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword)))
-                    Context.EmitCilInstruction(ctorBodyIL, OpCodes.Ldarg_0);
+                    Context.ApiDriver.WriteCilInstruction(Context, ctorBodyIL, OpCodes.Ldarg_0);
 
                 if (ExpressionVisitor.Visit(Context, ctorBodyIL, dec.Initializer))
                     continue;
@@ -176,7 +202,7 @@ namespace Cecilifier.Core.AST
                     ? OpCodes.Stsfld
                     : OpCodes.Stfld;
 
-                Context.EmitCilInstruction(ctorBodyIL, fieldStoreOpCode, fieldVarDef.VariableName);
+                Context.ApiDriver.WriteCilInstruction(Context, ctorBodyIL, fieldStoreOpCode, fieldVarDef.VariableName.AsToken());
             }
 
             // Handles property initialization...
@@ -190,7 +216,7 @@ namespace Cecilifier.Core.AST
                 Context.WriteComment(dec.HumanReadableSummary());
 
                 if (!dec.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword)))
-                    Context.EmitCilInstruction(ctorBodyIL, OpCodes.Ldarg_0);
+                    Context.ApiDriver.WriteCilInstruction(Context, ctorBodyIL, OpCodes.Ldarg_0);
 
                 if (ExpressionVisitor.Visit(Context, ctorBodyIL, dec.Initializer))
                     continue;
@@ -200,7 +226,7 @@ namespace Cecilifier.Core.AST
                     ? OpCodes.Stsfld
                     : OpCodes.Stfld;
 
-                Context.EmitCilInstruction(ctorBodyIL, fieldStoreOpCode, backingFieldVar.VariableName);
+                Context.ApiDriver.WriteCilInstruction(Context, ctorBodyIL, fieldStoreOpCode, backingFieldVar.VariableName);
             }
         }
 
@@ -210,7 +236,7 @@ namespace Cecilifier.Core.AST
                 .Where(f => f.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword)) == statics && !f.Modifiers.Any(m => m.IsKind(SyntaxKind.ConstKeyword)));
         }
 
-        private bool HandleSystemIndexInitialization(VariableDeclaratorSyntax dec, ISymbol declaringTypeSymbol, string ctorBodyIL)
+        private bool HandleSystemIndexInitialization(VariableDeclaratorSyntax dec, ISymbol declaringTypeSymbol, IlContext il)
         {
             if (dec.Initializer == null || !dec.Initializer.Value.IsKind(SyntaxKind.IndexExpression))
                 return false;
@@ -219,8 +245,8 @@ namespace Cecilifier.Core.AST
             // in this case we need to load the address of the field since the expression ^5 (IndexerExpression) will result in a call to System.Index ctor (which is a value type and expects
             // the address of the value type to be in the top of the stack
             var operand = Context.DefinitionVariables.GetVariable(dec.Identifier.Text, VariableMemberKind.Field, declaringTypeSymbol.ToDisplayString()).VariableName;
-            Context.EmitCilInstruction(ctorBodyIL, OpCodes.Ldflda, operand);
-            ExpressionVisitor.Visit(Context, ctorBodyIL, dec.Initializer);
+            Context.ApiDriver.WriteCilInstruction(Context, il, OpCodes.Ldflda, operand);
+            ExpressionVisitor.Visit(Context, il, dec.Initializer);
             return true;
         }
 
@@ -230,13 +256,7 @@ namespace Cecilifier.Core.AST
             if (typeSymbol == null)
                 return Utils.ImportFromMainModule($"TypeHelpers.DefaultCtorFor({typeDefVar}.BaseType)");
 
-            var baseTypeVarDef = Context.TypeResolver.ResolveLocalVariableType(typeSymbol.BaseType);
-            if (baseTypeVarDef != null)
-            {
-                return $"new MethodReference(\".ctor\", {Context.TypeResolver.Bcl.System.Void} ,{baseTypeVarDef}) {{ HasThis = true }}";
-            }
-
-            return Utils.ImportFromMainModule($"TypeHelpers.DefaultCtorFor({typeDefVar}.BaseType)");
+            return Context.MemberResolver.ResolveDefaultConstructor(typeSymbol.BaseType, typeDefVar);
         }
 
         private static string DefaultCtorAccessibilityFor(MemberDeclarationSyntax declaringClass, bool isStatic)

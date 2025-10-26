@@ -1,6 +1,7 @@
 using System;
 using System.IO;
-using Cecilifier.Core.Misc;
+using Cecilifier.ApiDriver.MonoCecil;
+using Cecilifier.Core.AST;
 using Cecilifier.Core.Naming;
 using NUnit.Framework;
 
@@ -8,7 +9,9 @@ namespace Cecilifier.Core.Tests.Tests.Unit.Framework
 {
     public class CecilifierUnitTestBase
     {
-        protected static CecilifierResult RunCecilifier(string code, INameStrategy nameStrategy = null)
+        protected static CecilifierResult RunCecilifier(string code, INameStrategy nameStrategy = null) => RunCecilifier<MonoCecilContext>(code, nameStrategy);
+
+        protected static CecilifierResult RunCecilifier<TContext>(string code, INameStrategy nameStrategy = null) where TContext : IVisitorContext
         {
             nameStrategy ??= new DefaultNameStrategy();
             var memoryStream = new MemoryStream();
@@ -17,7 +20,9 @@ namespace Cecilifier.Core.Tests.Tests.Unit.Framework
 
             try
             {
-                return Cecilifier.Process(memoryStream, new CecilifierOptions { References = ReferencedAssemblies.GetTrustedAssembliesPath(), Naming = nameStrategy });
+                return Cecilifier.Process<TContext>(
+                    memoryStream,
+                    new CecilifierOptions { References = TContext.BclAssembliesForCompilation(), Naming = nameStrategy });
             }
             catch (Exception ex)
             {

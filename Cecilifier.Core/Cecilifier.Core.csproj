@@ -18,7 +18,7 @@
         public static partial class BuildInformation
         {
         public static partial string GitRevision() => "$(GitRevision)"%3B
-        public static partial string BuildDate() => "$([System.DateTime]::Now)"%3B
+        public static partial string BuildDate() => "$([System.DateTime]::Now.ToString("dd/MMM/yyyy HH:MM:ss"))"%3B
         }
       </BuildInformationPartialCode>
       

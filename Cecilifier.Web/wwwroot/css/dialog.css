@@ -17,7 +17,7 @@
 }
 
 .btn {
-    background: #13b108;
+    background: darkolivegreen;
     border-radius: 3px;
     color: #fff;
     display: inline-block;
@@ -31,7 +31,7 @@
 }
 
 .btn:hover {
-    background: #f73b10;
+    background: olivedrab;
 }
 
 .btn.btn-big {

@@ -139,7 +139,7 @@ public class DefaultExpressions : CecilifierUnitTestBase
         var expected = """
                     \s+//(?:.+ v = default)|(?:Foo v);
                     \s+var (l_v_\d+) = new VariableDefinition\((.+)\);
-                    \s+m_topLevelStatements_\d+.Body.Variables.Add\(\1\);
+                    \s+m_topLevelMain_\d+.Body.Variables.Add\(\1\);
                     (?:\s+//v = default;)?
                     \s+(il_topLevelMain_\d+\.Emit\(OpCodes\.)Ldloca, l_v_\d+\);
                     \s+\3Initobj, \2\);

@@ -1,8 +1,8 @@
-using Mono.Cecil.Cil;
+using System.Reflection.Emit;
 
 namespace Cecilifier.Core.Misc
 {
-    record struct InstructionRepresentation(OpCode OpCode, string Operand, string BranchTargetTag, string Tag)
+    public record struct InstructionRepresentation(OpCode OpCode, string Operand, string BranchTargetTag, string Tag)
     {
         public static implicit operator InstructionRepresentation(OpCode opCode)
         {

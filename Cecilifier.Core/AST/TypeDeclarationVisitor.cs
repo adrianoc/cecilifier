@@ -31,6 +31,7 @@ namespace Cecilifier.Core.AST
                 ProcessMembers(node);
                 base.VisitInterfaceDeclaration(node);
             }
+            Context.OnFinishedTypeDeclaration();
         }
 
         public override void VisitClassDeclaration(ClassDeclarationSyntax node)
@@ -46,6 +47,7 @@ namespace Cecilifier.Core.AST
             {
                 ProcessTypeDeclaration(node, definitionVar);
             }
+            Context.OnFinishedTypeDeclaration();
         }
 
         public override void VisitStructDeclaration(StructDeclarationSyntax node)
@@ -58,6 +60,7 @@ namespace Cecilifier.Core.AST
                 ProcessTypeDeclaration(node, definitionVar);
                 ProcessStructPseudoAttributes(definitionVar, structSymbol);
             }
+            Context.OnFinishedTypeDeclaration();
         }
 
         public override void VisitRecordDeclaration(RecordDeclarationSyntax node)
@@ -72,12 +75,14 @@ namespace Cecilifier.Core.AST
             RecordGenerator generator = new(Context, definitionVar, node);
             generator.AddNullabilityAttributesToTypeDefinition(definitionVar);
             generator.AddSyntheticMembers();
+            Context.OnFinishedTypeDeclaration();
         }
 
         public override void VisitEnumDeclaration(EnumDeclarationSyntax node)
         {
             using var _ = LineInformationTracker.Track(Context, node);
             node.Accept(new EnumDeclarationVisitor(Context));
+            Context.OnFinishedTypeDeclaration();
         }
 
         void ProcessTypeDeclaration(TypeDeclarationSyntax node, string definitionVar)
@@ -131,7 +136,7 @@ namespace Cecilifier.Core.AST
         private string ProcessBase(TypeDeclarationSyntax classDeclaration)
         {
             var classSymbol = DeclaredSymbolFor(classDeclaration);
-            return Context.TypeResolver.Resolve(classSymbol.BaseType);
+            return Context.TypeResolver.ResolveAny(classSymbol.BaseType);
         }
 
         private void HandleTypeDeclaration(TypeDeclarationSyntax node, string varName)
@@ -141,7 +146,7 @@ namespace Cecilifier.Core.AST
             var found = Context.DefinitionVariables.GetVariable(typeSymbol.OriginalDefinition.ToDisplayString(), VariableMemberKind.Type, typeSymbol.ContainingSymbol?.ToDisplayString());
             if (!found.IsValid || !found.IsForwarded)
             {
-                AddTypeDefinition(Context, varName, typeSymbol, TypeModifiersToCecil(typeSymbol, node.Modifiers), node.TypeParameterList?.Parameters, node.CollectOuterTypeArguments());
+                AddTypeDefinition(Context, varName, typeSymbol, node.Modifiers, node.TypeParameterList?.Parameters, node.CollectOuterTypeArguments());
             }
 
             if (typeSymbol.BaseType?.IsGenericType == true)
@@ -151,7 +156,7 @@ namespace Cecilifier.Core.AST
                 WriteCecilExpression(Context, $"{varName}.BaseType = {ProcessBase(node)};");
             }
 
-            HandleAttributesInMemberDeclaration(node.AttributeLists, varName);
+            HandleAttributesInMemberDeclaration(node.AttributeLists, varName, VariableMemberKind.Type);
 
             NonCapturingLambdaProcessor.InjectSyntheticMethodsForNonCapturingLambdas(Context, node, varName);
 
@@ -173,14 +178,13 @@ namespace Cecilifier.Core.AST
 
             var typeDeclaration = (MemberDeclarationSyntax) typeSymbol.DeclaringSyntaxReferences.First().GetSyntax();
             var typeDeclarationVar = context.Naming.Type(typeSymbol.Name, typeSymbol.TypeKind.ToElementKind());
-            AddTypeDefinition(context, typeDeclarationVar, typeSymbol, TypeModifiersToCecil((INamedTypeSymbol) typeSymbol, typeDeclaration.Modifiers), typeParameters, Array.Empty<TypeParameterSyntax>());
+            AddTypeDefinition(context, typeDeclarationVar, typeSymbol, typeDeclaration.Modifiers, typeParameters, []);
 
             var v = context.DefinitionVariables.RegisterNonMethod(
-                typeSymbol.ContainingSymbol?.OriginalDefinition.ToDisplayString(),
-                typeSymbol.OriginalDefinition.ToDisplayString(),
-                VariableMemberKind.Type,
-                typeDeclarationVar);
-
+                                        typeSymbol.ContainingSymbol?.OriginalDefinition.ToDisplayString(),
+                                        typeSymbol.OriginalDefinition.ToDisplayString(),
+                                        VariableMemberKind.Type,
+                                        typeDeclarationVar);
             v.IsForwarded = true;
 
         processGenerics:
@@ -193,21 +197,21 @@ namespace Cecilifier.Core.AST
             }
         }
 
-        private static void AddTypeDefinition(IVisitorContext context, string typeDeclarationVar, ITypeSymbol typeSymbol, string typeModifiers, IEnumerable<TypeParameterSyntax> typeParameters, IEnumerable<TypeParameterSyntax> outerTypeParameters)
+        private static void AddTypeDefinition(IVisitorContext context, string typeDeclarationVar, ITypeSymbol typeSymbol, SyntaxTokenList typeModifiers, IEnumerable<TypeParameterSyntax> typeParameters, IEnumerable<TypeParameterSyntax> outerTypeParameters)
         {
             context.WriteNewLine();
             context.WriteComment($"{(typeSymbol.IsRecord ? "Record ": string.Empty)}{typeSymbol.TypeKind} : {typeSymbol.Name}");
 
-            typeParameters ??= Array.Empty<TypeParameterSyntax>();
+            typeParameters ??= [];
 
             var outerTypeVariable = context.DefinitionVariables.GetVariable(typeSymbol.ContainingType?.ToDisplayString(), VariableMemberKind.Type, typeSymbol.ContainingType?.ContainingSymbol.ToDisplayString());
             var isStructWithNoFields = typeSymbol.TypeKind == TypeKind.Struct && typeSymbol.GetMembers().Length == 0;
-            var typeDefinitionExp = CecilDefinitionsFactory.Type(
+            var typeDefinitionExp = context.ApiDefinitionsFactory.Type(
                 context,
                 typeDeclarationVar,
                 typeSymbol.ContainingNamespace?.FullyQualifiedName() ?? string.Empty,
                 typeSymbol.Name,
-                typeModifiers,
+                context.ApiDefinitionsFactory.MappedTypeModifiersFor((INamedTypeSymbol)typeSymbol, typeModifiers),
                 BaseTypeFor(context, typeSymbol),
                 outerTypeVariable,
                 isStructWithNoFields,
@@ -225,9 +229,9 @@ namespace Cecilifier.Core.AST
             if (typeSymbol.BaseType == null)
                 return null;
 
-            EnsureForwardedTypeDefinition(context, typeSymbol.BaseType, Array.Empty<TypeParameterSyntax>());
+            EnsureForwardedTypeDefinition(context, typeSymbol.BaseType, []);
 
-            return typeSymbol.BaseType.IsGenericType ? null : context.TypeResolver.Resolve(typeSymbol.BaseType);
+            return typeSymbol.BaseType.IsGenericType ? null : context.TypeResolver.ResolveAny(typeSymbol.BaseType);
         }
 
         private void EnsureCurrentTypeHasADefaultCtor(TypeDeclarationSyntax node, string typeLocalVar)
@@ -240,21 +244,21 @@ namespace Cecilifier.Core.AST
             if (structSymbol.IsReadOnly)
             {
                 var ctor = Context.RoslynTypeSystem.IsReadOnlyAttribute.ParameterlessCtor();
-                Context.WriteCecilExpression($"{structDefinitionVar}.CustomAttributes.Add(new CustomAttribute({ctor.MethodResolverExpression(Context)}));");
+                Context.Generate($"{structDefinitionVar}.CustomAttributes.Add(new CustomAttribute({ctor.MethodResolverExpression(Context)}));");
             }
 
             if (structSymbol.IsRefLikeType)
             {
                 var ctor = Context.RoslynTypeSystem.IsByRefLikeAttribute.ParameterlessCtor();
-                Context.WriteCecilExpression($"{structDefinitionVar}.CustomAttributes.Add(new CustomAttribute({ctor.MethodResolverExpression(Context)}));\n");
+                Context.Generate($"{structDefinitionVar}.CustomAttributes.Add(new CustomAttribute({ctor.MethodResolverExpression(Context)}));\n");
 
                 var obsoleteAttrCtor = Context.RoslynTypeSystem.SystemObsoleteAttribute.Ctor(Context.RoslynTypeSystem.SystemString, Context.RoslynTypeSystem.SystemBoolean);
                 var obsoleteAttributeVar = Context.Naming.SyntheticVariable("obsolete", ElementKind.Attribute);
                 const string RefStructObsoleteMsg = "Types with embedded references are not supported in this version of your compiler.";
-                Context.WriteCecilExpression($"var {obsoleteAttributeVar} = new CustomAttribute({obsoleteAttrCtor.MethodResolverExpression(Context)});\n");
-                Context.WriteCecilExpression($"{obsoleteAttributeVar}.ConstructorArguments.Add(new CustomAttributeArgument({Context.TypeResolver.Bcl.System.String}, \"{RefStructObsoleteMsg}\"));\n");
-                Context.WriteCecilExpression($"{obsoleteAttributeVar}.ConstructorArguments.Add(new CustomAttributeArgument({Context.TypeResolver.Bcl.System.Boolean}, true));\n");
-                Context.WriteCecilExpression($"{structDefinitionVar}.CustomAttributes.Add({obsoleteAttributeVar});\n");
+                Context.Generate($"var {obsoleteAttributeVar} = new CustomAttribute({obsoleteAttrCtor.MethodResolverExpression(Context)});\n");
+                Context.Generate($"{obsoleteAttributeVar}.ConstructorArguments.Add(new CustomAttributeArgument({Context.TypeResolver.Bcl.System.String}, \"{RefStructObsoleteMsg}\"));\n");
+                Context.Generate($"{obsoleteAttributeVar}.ConstructorArguments.Add(new CustomAttributeArgument({Context.TypeResolver.Bcl.System.Boolean}, true));\n");
+                Context.Generate($"{structDefinitionVar}.CustomAttributes.Add({obsoleteAttributeVar});\n");
             }
         }
     }
@@ -270,13 +274,13 @@ namespace Cecilifier.Core.AST
 
         private readonly IVisitorContext context;
 
-        private readonly string localVarName;
+        private readonly string declaringTypeVarName;
         private ConstructorKind foundConstructors;
         private bool hasStaticInitialization;
 
-        public DefaultCtorVisitor(IVisitorContext context, string localVarName)
+        public DefaultCtorVisitor(IVisitorContext context, string declaringTypeVarName)
         {
-            this.localVarName = localVarName;
+            this.declaringTypeVarName = declaringTypeVarName;
             this.context = context;
         }
 
@@ -297,12 +301,12 @@ namespace Cecilifier.Core.AST
             
             if ((foundConstructors & ConstructorKind.Instance) != ConstructorKind.Instance)
             {
-                new ConstructorDeclarationVisitor(context).DefaultCtorInjector(localVarName, node, false);
+                new ConstructorDeclarationVisitor(context).DefaultCtorInjector(declaringTypeVarName, node, false);
             }
 
             if ((foundConstructors & ConstructorKind.Static) != ConstructorKind.Static && hasStaticInitialization)
             {
-                new ConstructorDeclarationVisitor(context).DefaultCtorInjector(localVarName, node, true);
+                new ConstructorDeclarationVisitor(context).DefaultCtorInjector(declaringTypeVarName, node, true);
             }
         }
 

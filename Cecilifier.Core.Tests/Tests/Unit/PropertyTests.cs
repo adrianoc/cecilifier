@@ -50,6 +50,7 @@ public class PropertyTests : CecilifierUnitTestBase
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
         Assert.That(cecilifiedCode, Does.Match(
             @"//int Value1 { get; } = 42;\s+" +
+            @"var il_ctor_C_17 = ctor_C_\d+.Body.GetILProcessor\(\);\s+" + 
             @"(il_ctor_C_17\.Emit\(OpCodes\.)Ldarg_0\);\s+" +
             @"\1Ldc_I4, 42\);\s+" +
             @"\1Stfld, fld_value1_4\);\s+" +
@@ -67,6 +68,7 @@ public class PropertyTests : CecilifierUnitTestBase
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
         Assert.That(cecilifiedCode, Does.Match(
             @"//Index Value1 { get; } = \^42;\s+" +
+            @"var il_ctor_C_8 = ctor_C_\d+.Body.GetILProcessor\(\);\s+" +
             @"il_ctor_C_8.Emit\(OpCodes.Ldarg_0\);\s+" +
             @"il_ctor_C_8.Emit\(OpCodes.Ldc_I4, 42\);\s+" +
             @"il_ctor_C_8.Emit\(OpCodes.Ldc_I4_1\);\s+" +

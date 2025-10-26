@@ -24,13 +24,13 @@ public class DefinitionVariable : IEquatable<DefinitionVariable>
 
     public IDictionary<string, object> Properties { get; } = new Dictionary<string, object>();
 
-    private string ParentName { get; }
+    public string ParentName { get; }
 
     public bool Equals(DefinitionVariable other)
     {
         return string.Equals(MemberName, other.MemberName)
                && string.Equals(ParentName, other.ParentName)
-               && (Kind & other.Kind) != 0;
+               && (Kind & other.Kind) == Kind;
     }
 
     public override int GetHashCode()
