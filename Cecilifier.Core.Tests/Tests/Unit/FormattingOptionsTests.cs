@@ -63,7 +63,9 @@ namespace Cecilifier.Core.Tests.Tests.Unit
         [Test, Combinatorial]
         public void Casing_Setting_Is_Respected([Values] ElementKind elementKind, [Values] bool camelCasing)
         {
-            if (elementKind == ElementKind.None)
+            // Assembly references are only used in SRM and it its current state SRM does not support generics,
+            // so I decided to not test casing settings for this specific element kind for now. 
+            if (elementKind == ElementKind.None || elementKind == ElementKind.AssemblyReference)
                 return;
 
             if (elementKind == ElementKind.Label && !camelCasing)
