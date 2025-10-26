@@ -78,20 +78,13 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
                              default(GuidHandle));
                      
                          var assemblyRef = metadata.AddAssembly(
-                             moduleAndAssemblyName,
-                             version: new Version(1, 0, 0, 0),
-                             culture: default(StringHandle),
-                             publicKey: default,
-                             flags: 0,
-                             hashAlgorithm: AssemblyHashAlgorithm.None);
+                                                         moduleAndAssemblyName,
+                                                         version: new Version(1, 0, 0, 0),
+                                                         culture: default(StringHandle),
+                                                         publicKey: default,
+                                                         flags: 0,
+                                                         hashAlgorithm: AssemblyHashAlgorithm.None);
                              
-                        var systemRuntimeAssemblyRef = metadata.AddAssemblyReference(
-                                                      		                 name: metadata.GetOrAddString("System.Runtime"),
-                                                      		                 version: new Version(9,0,0,0),
-                                                      		                 culture: default(StringHandle),
-                                                      		                 publicKeyOrToken: metadata.GetOrAddBlob(ImmutableArray.Create<byte>(0xb0,0x3f,0x5f,0x7f,0x11,0xd5,0x0,0xa,0x3a)),
-                                                      		                 flags: default(AssemblyFlags),
-                                                      		                 hashValue: default(BlobHandle));
                          metadata.AddTypeDefinition(
                             default(TypeAttributes),
                             default(StringHandle),
@@ -100,9 +93,9 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
                             fieldList: MetadataTokens.FieldDefinitionHandle(1),
                             methodList: MetadataTokens.MethodDefinitionHandle(1));
                             
-                            var methodBodyStream = new MethodBodyStreamEncoder(ilBuilder);
+                         var methodBodyStream = new MethodBodyStreamEncoder(ilBuilder);
                          
-                         {{cecilifiedCode}}
+                 {{cecilifiedCode}}
                          
                          return {{entryPointExpression}};
                     }

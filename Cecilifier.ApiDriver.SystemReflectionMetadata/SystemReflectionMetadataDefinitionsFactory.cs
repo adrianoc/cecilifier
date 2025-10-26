@@ -220,15 +220,15 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         var fieldSignatureVar = context.Naming.SyntheticVariable($"{definitionContext.Identifier}_fs", ElementKind.LocalVariable);
         Buffer256<string> exps = new();
         byte expCount = 0;
-        exps[expCount++] =
-                            $"""
+        exps[expCount++] = Environment.NewLine;
+        exps[expCount++] = Format($"""
                              BlobBuilder {fieldSignatureVar} = new();
                              new BlobEncoder({fieldSignatureVar})
                                  .FieldSignature()
                                  .{fieldType};
                                  
                              var {definitionContext.DefinitionVariable} = metadata.AddFieldDefinition({fieldAttributes}, metadata.GetOrAddString("{name}"), metadata.GetOrAddBlob({fieldSignatureVar}));{Environment.NewLine}
-                             """;
+                             """);
         
         if (constantValue != null)
         {
@@ -280,7 +280,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
             }
         });
         
-        return [$$"""
+        return [Format($$"""
                 var {{propertySignatureTempVar}} = new BlobBuilder();
                 new BlobEncoder({{propertySignatureTempVar}}).PropertySignature(isInstanceProperty: {{((definitionContext.Options & MemberOptions.Static) == 0).ToKeyword()}}).Parameters({{propertyParameters.Count}},
                                                                     returnType => returnType.{{propertyType}},
@@ -290,7 +290,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                                                                     });
                 
                 var {{definitionContext.Member.DefinitionVariable}} = metadata.AddProperty(PropertyAttributes.None, metadata.GetOrAddString("{{definitionContext.Member.Name}}"), metadata.GetOrAddBlob({{propertySignatureTempVar}}));
-                """];
+                """)];
     }
 
     public IEnumerable<string> Attribute(IVisitorContext context, IMethodSymbol attributeCtor, string attributeVarBaseName, string attributeTargetVar, VariableMemberKind targetKind, params CustomAttributeArgument[] arguments)

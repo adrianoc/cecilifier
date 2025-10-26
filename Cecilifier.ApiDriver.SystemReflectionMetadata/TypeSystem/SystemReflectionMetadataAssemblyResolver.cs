@@ -12,7 +12,7 @@ public class SystemReflectionMetadataAssemblyResolver()
         if (existingVar.IsValid)
             return existingVar.VariableName;
 
-        var assemblyReferenceName = context.Naming.SyntheticVariable(assembly.Name, ElementKind.LocalVariable);
+        var assemblyReferenceName = context.Naming.WithOptions(context.Naming.Options & ~(NamingOptions.SuffixVariableNamesWithUniqueId | NamingOptions.CamelCaseElementNames)).SyntheticVariable($"{assembly.Name}", ElementKind.AssemblyReference);
         context.DefinitionVariables.RegisterNonMethod(string.Empty, assembly.ToDisplayString(),  VariableMemberKind.None, assemblyReferenceName);
         context.Generate($"""
                                  var {assemblyReferenceName} = metadata.AddAssemblyReference(
@@ -23,6 +23,7 @@ public class SystemReflectionMetadataAssemblyResolver()
                                                                       flags: default(AssemblyFlags),
                                                                       hashValue: default(BlobHandle));
                                  """);
+        context.WriteNewLine();
         
         return assemblyReferenceName;
     }

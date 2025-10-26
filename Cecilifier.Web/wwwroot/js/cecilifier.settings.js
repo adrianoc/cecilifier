@@ -23,7 +23,8 @@ const ElementKind =
     Attribute: 17,
     IL: 18,
     GenericParameter: 19,
-    GenericInstance: 20
+    GenericInstance: 20,
+    AssemblyReference: 21
 };
 
 // Keep it in sync with NameOptions.cs
@@ -239,7 +240,8 @@ class SettingsManager {
         return {
             elementKindPrefixes: this.settings.map((e) => {
                 return {elementKind: e.elementKind, prefix: e.prefix}
-            }),
+            }).concat({ elementKind: 21, prefix: "ar" }), // Assembly Reference (it is not configurable for now)
+            
             namingOptions: namingOptionsValue
         };
     }
