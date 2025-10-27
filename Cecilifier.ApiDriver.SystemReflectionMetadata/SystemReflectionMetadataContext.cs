@@ -37,11 +37,19 @@ public class SystemReflectionMetadataContext : CecilifierContextBase, IVisitorCo
 
     public static string[] BclAssembliesForCompilation()
     {
+        var aspnetEnvironment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+        if (aspnetEnvironment == "Production")
+        {
+            // since Cecilifier is deployed as a self-contained app, BCL assemblies are deployed to the same folder as the app.
+            return Directory.GetFiles(AppContext.BaseDirectory, "*.dll");
+        }
+
         var dotnetRoot = Environment.GetEnvironmentVariable("DOTNET_ROOT");
         if (string.IsNullOrEmpty(dotnetRoot))
         {
             throw new Exception("DOTNET_ROOT environment variable is not set");
-        }
+        }       
         return Directory.GetFiles($"{dotnetRoot}/packs/Microsoft.NETCore.App.Ref/{Environment.Version}/ref/net{Environment.Version.Major}.{Environment.Version.Minor}", "*.dll");
+        
     }
 }
