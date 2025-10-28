@@ -211,7 +211,7 @@ namespace Cecilifier.Web
                         ? Run<MonoCecilContext>(toBeCecilified, userAssemblyReferences.Success)
                         : Run<SystemReflectionMetadataContext>(toBeCecilified, userAssemblyReferences.Success);
 
-                    await SendTextMessageToChatAsync($"One more happy user {(deployKind == 'Z' ? "(project)" : "")}", $"Total so far: {CecilifierApplication.Count}\n\n***********\n\n```{toBeCecilified.Code}```", "4437377");
+                    await SendTextMessageToChatAsync($"One more happy user {(deployKind == 'Z' ? "(project)" : "")} (Api: {toBeCecilified.TargetApi})", $"Total so far: {CecilifierApplication.Count}\n\n***********\n\n```{toBeCecilified.Code}```", "4437377");
 
                     if (deployKind == 'Z')
                     {
