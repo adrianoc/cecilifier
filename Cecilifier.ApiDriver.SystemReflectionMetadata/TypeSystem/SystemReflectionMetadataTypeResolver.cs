@@ -59,7 +59,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
 
     public override string ResolvePredefinedType(ITypeSymbol type) => $"""
                                                                        metadata.AddTypeReference(
-                                                                                    ar_System_Runtime,
+                                                                                    {_context.AssemblyResolver.Resolve(_context, _context.RoslynTypeSystem.SystemObject.ContainingAssembly)},
                                                                                     metadata.GetOrAddString("{type.ContainingNamespace.Name}"),
                                                                                     metadata.GetOrAddString("{type.Name}"))
                                                                        """;
