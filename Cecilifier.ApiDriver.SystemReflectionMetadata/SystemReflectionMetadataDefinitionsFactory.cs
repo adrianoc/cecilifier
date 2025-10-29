@@ -35,10 +35,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
     {
         yield return Format($"""
                       // Add a type reference for the new type. Types/Member references to the new type uses this.
-                      var {typeVar} = metadata.AddTypeReference(
-                                                  mainModuleHandle, 
-                                                  metadata.GetOrAddString("{typeNamespace}"), 
-                                                  metadata.GetOrAddString("{typeName}"));
+                      var {typeVar} = metadata.AddTypeReference(mainModuleHandle, metadata.GetOrAddString("{typeNamespace}"), metadata.GetOrAddString("{typeName}"));
                       """);
 
         // We need to pass the handle of the 1st field/method defined in the module so we need to postpone the type generation after we have visited
@@ -86,7 +83,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         var memberParentDefinitionVariable = bodiedMemberDefinitionContext.Member.ParentDefinitionVariable ?? throw new ArgumentNullException(nameof(bodiedMemberDefinitionContext.Member.ParentDefinitionVariable));
         ((SystemReflectionMetadataContext) context).DelayedDefinitionsManager.RegisterMethodDefinition(memberParentDefinitionVariable, (ctx, methodRecord) =>
         {
-            EmitLocalVariables(ctx, methodRecord);
+            EmitLocalVariables(ctx, bodiedMemberDefinitionContext.Member.Identifier, in methodRecord);
             
             var methodSignatureVar = ctx.DefinitionVariables.GetMethodVariable(methodSymbol.AsMethodVariable(VariableMemberKind.MethodSignature));
             Debug.Assert(methodSignatureVar.IsValid);
@@ -133,7 +130,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         methodDefinitionVariable = context.DefinitionVariables.FindByVariableName<MethodDefinitionVariable>(methodRefVar) ?? MethodDefinitionVariable.MethodNotFound;
         TypedContext(context).DelayedDefinitionsManager.RegisterMethodDefinition(definitionContext.Member.ParentDefinitionVariable, (ctx, methodRecord) =>
         {
-            EmitLocalVariables(ctx, methodRecord);
+            EmitLocalVariables(ctx, definitionContext.Member.Identifier, in methodRecord);
             
             var methodReferenceToFind = new MethodDefinitionVariable(
                                                 VariableMemberKind.MethodSignature,
@@ -177,7 +174,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
 
     public IEnumerable<string> Constructor(IVisitorContext context, BodiedMemberDefinitionContext definitionContext, string typeName, bool isStatic, string methodAccessibility, string[] paramTypes, string? methodDefinitionPropertyValues = null)
     {
-        var parameterlessCtorSignatureVar = context.Naming.SyntheticVariable("parameterlessCtorSignature", ElementKind.LocalVariable);
+        var parameterlessCtorSignatureVar = context.Naming.SyntheticVariable($"{typeName}_ctorSignature", ElementKind.MemberReference);
         yield return Format(
             $$"""
               var {{parameterlessCtorSignatureVar}} = new BlobBuilder();
@@ -189,9 +186,9 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         var parentDefinitionVariable = definitionContext.Member.ParentDefinitionVariable ?? throw new ArgumentNullException(nameof(definitionContext.Member.ParentDefinitionVariable));
         TypedContext(context).DelayedDefinitionsManager.RegisterMethodDefinition(parentDefinitionVariable, (ctx, methodRecord) =>
         {
-            EmitLocalVariables(ctx, methodRecord);
+            EmitLocalVariables(ctx, "ctor", in methodRecord);
             
-            var ctorDefVar = ctx.Naming.SyntheticVariable("ctor", ElementKind.LocalVariable);
+            var ctorDefVar = ctx.Naming.SyntheticVariable($"{typeName}_Ctor", ElementKind.MemberReference);
             ctx.Generate($"""
                                    var {ctorDefVar} = metadata.AddMethodDefinition(
                                                              {(isStatic ? "MethodAttributes.Private | MethodAttributes.Static" : "MethodAttributes.Public")} | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName,
@@ -214,10 +211,11 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
 
     public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext definitionContext, string declaringTypeName, string name, string fieldType, string fieldAttributes, bool isVolatile, bool isByRef, object? constantValue = null)
     {
+        Debug.Assert(definitionContext.ParentDefinitionVariable != null);
         ((SystemReflectionMetadataContext) context).DelayedDefinitionsManager.RegisterFieldDefinition(definitionContext.ParentDefinitionVariable, definitionContext.DefinitionVariable);
         
         context.DefinitionVariables.RegisterNonMethod(declaringTypeName, name, VariableMemberKind.Field, definitionContext.DefinitionVariable);
-        var fieldSignatureVar = context.Naming.SyntheticVariable($"{definitionContext.Identifier}_fs", ElementKind.LocalVariable);
+        var fieldSignatureVar = context.Naming.SyntheticVariable($"{definitionContext.Identifier}_Signature", ElementKind.MemberReference);
         Buffer256<string> exps = new();
         byte expCount = 0;
         exps[expCount++] = Environment.NewLine;
@@ -256,7 +254,9 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
 
     public IEnumerable<string> Property(IVisitorContext context, BodiedMemberDefinitionContext definitionContext, string declaringTypeName, List<ParameterSpec> propertyParameters, string propertyType)
     {
-        var propertySignatureTempVar =  context.Naming.SyntheticVariable($"{definitionContext.Member.Name}SignatureBuilder", ElementKind.LocalVariable);
+        var propertySignatureTempVar =  context.Naming
+                                                    .With(NamingOptions.NoCasingElementNames)
+                                                    .Without(NamingOptions.CamelCaseElementNames).SyntheticVariable($"{definitionContext.Member.Name.CamelCase()}_blobBuilder", ElementKind.MemberReference);
 
         TypedContext(context).DelayedDefinitionsManager.RegisterProperty(definitionContext.Member.Name, definitionContext.Member.DefinitionVariable, declaringTypeName, definitionContext.Member.ParentDefinitionVariable!, 
             static (context,  propertyName, propertyDefinitionVariable, declaringTypeName, declaringTypeVariable) =>
@@ -299,8 +299,8 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
 
         if (!attributeEncoderVariable.IsValid)
         {
-            var attributeEncoderVariableName = context.Naming.SyntheticVariable($"{attributeVarBaseName}Encoder", ElementKind.Attribute);
-            var attributeEncoder = new AttributeEncoder(context, attributeEncoderVariableName);
+            var attributeEncoderVariableName = context.Naming.SyntheticVariable($"{attributeVarBaseName}_blobBuilder", ElementKind.MemberReference);
+            var attributeEncoder = new AttributeEncoder(context, attributeEncoderVariableName, attributeCtor.ContainingType.Name);
             var namedArguments = arguments.OfType<CustomAttributeNamedArgument>().ToList();
             var encodedArguments = attributeEncoder.Encode(arguments.Except(namedArguments).ToList(), namedArguments);
             yield return Format($"""
@@ -348,13 +348,13 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
 
     private SystemReflectionMetadataContext TypedContext(IVisitorContext context) => ((SystemReflectionMetadataContext) context);
     
-    static void EmitLocalVariables(SystemReflectionMetadataContext context, MethodDefinitionRecord methodRecord)
+    static void EmitLocalVariables(SystemReflectionMetadataContext context, string methodName, ref readonly MethodDefinitionRecord methodRecord)
     {
         var locals = methodRecord.LocalVariables;
         if (locals.Count == 0)
             return;
 
-        var encoderVar = context.Naming.SyntheticVariable("localVariablesEncoder", ElementKind.LocalVariable);
+        var encoderVar = context.Naming.SyntheticVariable($"{methodName}_Encoder", ElementKind.LocalVariable);
         context.Generate($"LocalVariablesEncoder {encoderVar} = new BlobEncoder(new BlobBuilder()).LocalVariableSignature({locals.Count});");
         context.WriteNewLine();
         
@@ -363,7 +363,8 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
             local.EmitFunction(context, encoderVar, local.Type);
         }
         
-        methodRecord.LocalSignatureHandleVariable = context.Naming.SyntheticVariable("localSignatureHandle", ElementKind.LocalVariable);
+        methodRecord.LocalSignatureHandleVariable = context.Naming.SyntheticVariable($"{methodName}_Signature", ElementKind.LocalVariable);
+        context.WriteNewLine();
         context.Generate($"var {methodRecord.LocalSignatureHandleVariable} = metadata.AddStandaloneSignature(metadata.GetOrAddBlob({encoderVar}.Builder));");
         context.WriteNewLine();
     }

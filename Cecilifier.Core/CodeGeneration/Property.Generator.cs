@@ -88,7 +88,7 @@ internal class PropertyGenerator
         Context.AddCompilerGeneratedAttributeTo(ilContext.AssociatedMethodVariable, VariableMemberKind.Method);
     }
 
-    internal ScopedDefinitionVariable AddGetterMethodDeclaration(ref readonly PropertyGenerationData property, string accessorMethodVar, bool hasCovariantReturn, string nameForRegistration, string overridenMethod, in IlContext ilContext)
+    internal ScopedDefinitionVariable AddGetterMethodDeclaration(ref readonly PropertyGenerationData property, string accessorMethodVar, bool hasCovariantReturn, string overridenMethod, in IlContext ilContext)
     {
         var propertyResolvedType = property.Type(ResolveTargetKind.ReturnType);
         IList<string> typeParameters = [];

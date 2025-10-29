@@ -746,8 +746,7 @@ internal partial class RecordGenerator
         using var _ = propertyGenerator.AddGetterMethodDeclaration(
                                                                 in propertyData, 
                                                                 _equalityContractGetMethodVar, 
-                                                                false, 
-                                                                string.Empty, // used for registering property parameters. In this case, there are none.
+                                                                false, // used for registering property parameters. In this case, there are none.
                                                                 null,
                                                                 ilContext);
         

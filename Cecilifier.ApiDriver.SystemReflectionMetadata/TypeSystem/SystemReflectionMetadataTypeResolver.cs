@@ -24,7 +24,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
     public override string Resolve(string typeName) => $"TODO: Fix Resolve(\"{typeName}\")";
     public override string Resolve(ITypeSymbol type)
     {
-        var memberRefVarName = _context.Naming.SyntheticVariable($"{type.ToValidVariableName()}Ref", ElementKind.LocalVariable);
+        var memberRefVarName = _context.Naming.SyntheticVariable($"{type.ToValidVariableName()}", ElementKind.MemberReference);
         var assemblyReferenceName = _context.AssemblyResolver.Resolve(_context, type.ContainingAssembly);
         _context.Generate($"""
                            var {memberRefVarName} = metadata.AddTypeReference(

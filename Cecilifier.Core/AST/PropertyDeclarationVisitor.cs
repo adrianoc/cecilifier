@@ -210,8 +210,7 @@ namespace Cecilifier.Core.AST
                 var methodVariableScope = generator.AddGetterMethodDeclaration(
                                                         in propertyGenerationData, 
                                                         getMethodVar, 
-                                                        propertySymbol.HasCovariantGetter(),
-                                                        propertySymbol.GetMethod!.ToDisplayString(), 
+                                                        propertySymbol.HasCovariantGetter(), 
                                                         GetOverridenMethod(propertySymbol.GetMethod),
                                                         il);
 
