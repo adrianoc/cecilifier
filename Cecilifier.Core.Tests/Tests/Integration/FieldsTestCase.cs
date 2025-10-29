@@ -22,7 +22,8 @@ namespace Cecilifier.Core.Tests.Integration
         nameof(TestSingleRefField),
         nameof(TestInitializedFieldNoCtor),
         nameof(TestInitializedFieldWithBaseCtor),
-        nameof(TestInitializedFieldMultipleCtor))]
+        nameof(TestInitializedFieldMultipleCtor),
+        nameof(TestSimpleFieldsInSingleDeclaration))]
     public class FieldsTestCase<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
     {
         [Test]
