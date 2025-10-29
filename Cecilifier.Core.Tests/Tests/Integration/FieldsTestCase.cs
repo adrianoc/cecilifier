@@ -11,7 +11,8 @@ namespace Cecilifier.Core.Tests.Integration
     [TestFixture(typeof(SystemReflectionMetadataContext))]
     [EnableForContext<SystemReflectionMetadataContext>(
         nameof(TestSingleField), 
-        nameof(TestStatic), 
+        nameof(TestStatic),
+        nameof(TestSimpleArray),
         nameof(TestInternalFields), 
         nameof(TestInitializedFieldSingleCtor), 
         nameof(TestAssignment), 

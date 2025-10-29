@@ -17,9 +17,9 @@ namespace Cecilifier.Core.TypeSystem
     public enum ResolveTargetKind
     {
         None,
-        ArrayElementType,
-        Field, // Any enum values equals to or smaller than `Field` have special handling when resolving types.
-
+        ArrayElementType, // Any enum values equals to or smaller than `ArrayElementType` have special handling when resolving types.
+        
+        Field, 
         LocalVariable,
         Parameter,
         ReturnType,

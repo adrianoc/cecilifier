@@ -21,7 +21,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
             : ResolveForTargetKind(type, resolveTargetKind, false);        
     }
 
-    public override string Resolve(string typeName) => $"TODO: Fix Resolve(\"{typeName}\")";
+    public override string Resolve(string typeName) => throw new NotSupportedException(nameof(Resolve));
     public override string Resolve(ITypeSymbol type)
     {
         var memberRefVarName = _context.Naming.SyntheticVariable($"{type.ToValidVariableName()}", ElementKind.MemberReference);
@@ -52,9 +52,9 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
         }
         
         if (type.IsPrimitiveType() || type.SpecialType == SpecialType.System_String || type.SpecialType == SpecialType.System_Object)
-            return $"{(kind <= ResolveTargetKind.Field ? "" : "Type().")}{type.MetadataName}()";
+            return $"{(kind <= ResolveTargetKind.ArrayElementType ? "" : "Type().")}{type.MetadataName}()";
 
-        return $"""{(kind <= ResolveTargetKind.Field ? "" : $"Type(isByRef: {isByRef.ToKeyword()}).")}Type({ResolveAny(type, ResolveTargetKind.None)}, isValueType: {type.IsValueType.ToKeyword()})""";
+        return $"""{(kind <= ResolveTargetKind.ArrayElementType ? "" : $"Type(isByRef: {isByRef.ToKeyword()}).")}Type({ResolveAny(type, ResolveTargetKind.None)}, isValueType: {type.IsValueType.ToKeyword()})""";
     }
 
     public override string ResolvePredefinedType(ITypeSymbol type) => $"""

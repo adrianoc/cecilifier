@@ -222,7 +222,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         exps[expCount++] = Format($"""
                              BlobBuilder {fieldSignatureVar} = new();
                              new BlobEncoder({fieldSignatureVar})
-                                 .FieldSignature()
+                                 .Field()
                                  .{fieldType};
                                  
                              var {definitionContext.DefinitionVariable} = metadata.AddFieldDefinition({fieldAttributes}, metadata.GetOrAddString("{name}"), metadata.GetOrAddBlob({fieldSignatureVar}));{Environment.NewLine}
