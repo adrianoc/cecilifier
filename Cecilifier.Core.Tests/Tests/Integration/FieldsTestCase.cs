@@ -23,7 +23,8 @@ namespace Cecilifier.Core.Tests.Integration
         nameof(TestInitializedFieldNoCtor),
         nameof(TestInitializedFieldWithBaseCtor),
         nameof(TestInitializedFieldMultipleCtor),
-        nameof(TestSimpleFieldsInSingleDeclaration))]
+        nameof(TestSimpleFieldsInSingleDeclaration),
+        nameof(TestVolatileField))]
     public class FieldsTestCase<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
     {
         [Test]

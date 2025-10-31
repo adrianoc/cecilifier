@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using Cecilifier.ApiDriver.SystemReflectionMetadata.CustomAttributes;
 using Cecilifier.ApiDriver.SystemReflectionMetadata.DelayedDefinitions;
 using Cecilifier.Core;
@@ -215,23 +216,36 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         ((SystemReflectionMetadataContext) context).DelayedDefinitionsManager.RegisterFieldDefinition(definitionContext.ParentDefinitionVariable, definitionContext.DefinitionVariable);
         
         context.DefinitionVariables.RegisterNonMethod(declaringTypeName, name, VariableMemberKind.Field, definitionContext.DefinitionVariable);
-        var fieldSignatureVar = context.Naming.SyntheticVariable($"{definitionContext.Identifier}_Signature", ElementKind.MemberReference);
+        var fieldSignatureVar = context.Naming.SyntheticVariable($"{definitionContext.Identifier}_Signature", ElementKind.Field);
+        var fieldEncoderVar = context.Naming.SyntheticVariable($"{definitionContext.Identifier}_Encoder", ElementKind.Field);
         Buffer256<string> exps = new();
         byte expCount = 0;
         exps[expCount++] = Environment.NewLine;
         exps[expCount++] = Format($"""
                              BlobBuilder {fieldSignatureVar} = new();
-                             new BlobEncoder({fieldSignatureVar})
-                                 .Field()
-                                 .{fieldType};
-                                 
-                             var {definitionContext.DefinitionVariable} = metadata.AddFieldDefinition({fieldAttributes}, metadata.GetOrAddString("{name}"), metadata.GetOrAddBlob({fieldSignatureVar}));{Environment.NewLine}
+                             var {fieldEncoderVar} = new BlobEncoder({fieldSignatureVar}).Field();
                              """);
-        
-        if (constantValue != null)
+        if (isVolatile)
         {
-            exps[expCount++] = $"metadata.AddConstant({definitionContext.DefinitionVariable}, {constantValue});{Environment.NewLine}";
+            // TODO: Gambiarra !!!
+            if (fieldType.StartsWith("Type()."))
+            {
+                var signatureTypeEncoderVar =  context.Naming.SyntheticVariable($"{definitionContext.Identifier}_TypeEncoder", ElementKind.Field);
+                exps[expCount++] = Format($"""
+                                           var {signatureTypeEncoderVar} = {fieldEncoderVar}.Type();
+                                           {signatureTypeEncoderVar}.CustomModifiers().AddModifier({context.TypeResolver.Resolve(context.RoslynTypeSystem.ForType(typeof(IsVolatile).FullName))}, isOptional: false);
+                                           {signatureTypeEncoderVar}.{fieldType.Substring("Type().".Length)};
+                                           """);
+            }
         }
+        else
+        {
+            exps[expCount++] = Format($"{fieldEncoderVar}.{fieldType};");
+        }
+        
+        exps[expCount++] = Format($"""var {definitionContext.DefinitionVariable} = metadata.AddFieldDefinition({fieldAttributes}, metadata.GetOrAddString("{name}"), metadata.GetOrAddBlob({fieldSignatureVar}));""");
+        if (constantValue != null) 
+            exps[expCount++] = $"metadata.AddConstant({definitionContext.DefinitionVariable}, {constantValue});{Environment.NewLine}";
 
         Span<string> span = exps;
         return span.Slice(0, expCount).ToArray();
