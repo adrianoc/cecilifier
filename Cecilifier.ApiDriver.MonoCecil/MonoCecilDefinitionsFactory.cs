@@ -227,7 +227,7 @@ internal partial class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IAp
     public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext definitionContext, string declaringTypeName, string name, string fieldType, string fieldAttributes, bool isVolatile, bool isByRef, object? constantValue = null)
     {
         if (isByRef)
-            fieldType = fieldType.MakeByReferenceType();
+            fieldType = new ResolvedType(fieldType).MakeByReferenceType();
         
         context.DefinitionVariables.RegisterNonMethod(declaringTypeName, name, VariableMemberKind.Field, definitionContext.DefinitionVariable);
         

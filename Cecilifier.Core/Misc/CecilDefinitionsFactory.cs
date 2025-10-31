@@ -45,7 +45,7 @@ namespace Cecilifier.Core.Misc
             paramAttributes ??= Constants.ParameterAttributes.None;
             if (RefKind.None != byRef)
             {
-                resolvedType = resolvedType.MakeByReferenceType();
+                resolvedType = new ResolvedType(resolvedType).MakeByReferenceType();
             }
 
             return $"new ParameterDefinition(\"{name}\", {paramAttributes}, {resolvedType})";

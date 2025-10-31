@@ -48,7 +48,7 @@ public class MonoCecilMemberResolver(MonoCecilContext context) : IMemberResolver
         if (method.IsGenericMethod)
         {
             var (referencedMethodTypeParameters, returnReferencesTypeParameter) = CollectReferencedMethodTypeParameters(method);
-            var returnType = !returnReferencesTypeParameter ? context.TypeResolver.ResolveAny(method.ReturnType) : context.TypeResolver.Bcl.System.Void;
+            var returnType = !returnReferencesTypeParameter ? context.TypeResolver.ResolveAny(method.ReturnType) : (ResolvedType) context.TypeResolver.Bcl.System.Void;
             var tempMethodVar = context.Naming.SyntheticVariable(method.Name, ElementKind.MemberReference);
             context.Generate($$"""
                                        var {{tempMethodVar}} = new MethodReference("{{method.Name}}", {{returnType}}, {{context.TypeResolver.ResolveAny(method.ContainingType)}})

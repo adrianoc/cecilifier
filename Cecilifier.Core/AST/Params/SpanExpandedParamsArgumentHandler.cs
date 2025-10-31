@@ -3,6 +3,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Cecilifier.Core.CodeGeneration;
 using Cecilifier.Core.Extensions;
+using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
 
 #nullable enable
@@ -22,7 +23,7 @@ internal class SpanExpandedParamsArgumentHandler : ExpandedParamsArgumentHandler
         _stindOpCode = _paramsParameterType.StindOpCodeFor();
         
         var openInlineArrayType = InlineArrayGenerator.GetOrGenerateInlineArrayType(context, argumentList.Arguments.Count, "InlineArray to store the `params` values.");
-        _inlineArrayType = openInlineArrayType.MakeGenericInstanceType([context.TypeResolver.ResolveAny(_paramsParameterType)]);
+        _inlineArrayType = new ResolvedType(openInlineArrayType).MakeGenericInstanceType([context.TypeResolver.ResolveAny(_paramsParameterType)]);
 
         var inlineArrayBuffer = context.AddLocalVariableToCurrentMethod($"{paramsParameter.Name}Arg", _inlineArrayType);
         _inlineArrayVariableName = inlineArrayBuffer.VariableName;

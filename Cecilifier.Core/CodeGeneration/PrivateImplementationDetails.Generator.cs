@@ -17,6 +17,7 @@ using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
+using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
 
 namespace Cecilifier.Core.CodeGeneration;
@@ -154,7 +155,7 @@ internal partial class PrivateImplementationDetailsGenerator
         Func<IVisitorContext, string> returnTypeResolver = ctx =>
         {
             var spanTypeParameter = ResolveOwnedGenericParameter(ctx, "TElement", methodTypeQualifiedName);
-            return spanTypeParameter.MakeByReferenceType();
+            return new ResolvedType(spanTypeParameter).MakeByReferenceType();
         };
         var methodExpressions = context.ApiDefinitionsFactory.Method(
                                                                     context, 
@@ -210,7 +211,7 @@ internal partial class PrivateImplementationDetailsGenerator
         Func<IVisitorContext, string> returnTypeResolver = ctx =>
         {
             var spanTypeParameter = ResolveOwnedGenericParameter(ctx, "TElement", methodTypeQualifiedName);
-            return spanTypeParameter.MakeByReferenceType();
+            return new ResolvedType(spanTypeParameter).MakeByReferenceType();
         };
         var methodExpressions = context.ApiDefinitionsFactory.Method(
             context, 

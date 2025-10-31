@@ -8,6 +8,7 @@ using Cecilifier.Core.CodeGeneration;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
+using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
 
 namespace Cecilifier.Core.AST;
@@ -65,7 +66,7 @@ internal static class CollectionExpressionProcessor
         
         var currentMethodVar = context.DefinitionVariables.GetLastOf(VariableMemberKind.Method).VariableName;
         var inlineArrayElementType = spanTypeSymbol.TypeArguments[0];
-        var inlineArrayTypeVar = inlineArrayVar.MakeGenericInstanceType(context.TypeResolver.ResolveAny(inlineArrayElementType));
+        var inlineArrayTypeVar = new ResolvedType(inlineArrayVar).MakeGenericInstanceType(context.TypeResolver.ResolveAny(inlineArrayElementType));
         var inlineArrayLocalVar = context.ApiDefinitionsFactory.LocalVariable(context, "buffer", currentMethodVar, inlineArrayTypeVar).VariableName;
         
         // Initializes the inline array

@@ -4,6 +4,7 @@ using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.ApiDriver.Handles;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
+using Cecilifier.Core.TypeSystem;
 using Microsoft.CodeAnalysis;
 
 namespace Cecilifier.ApiDriver.SystemReflectionMetadata;
@@ -120,7 +121,7 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
     {
         var mappedOpCodeName = MapSystemReflectionOpCodeNameToSystemReflectionMetadata(opCode);
         var emitted = $"{il.VariableName}.OpCode(ILOpCode.{mappedOpCodeName});{(comment != null ? $" // {comment}" : string.Empty)}";
-        if (operand == null)
+        if (operand == null || operand is ResolvedType { Expression: null })
             return emitted;
 
         return $$""""

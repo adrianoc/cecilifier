@@ -4,12 +4,12 @@ namespace Cecilifier.Core.TypeSystem
 {
     public interface ITypeResolver
     {
-        string ResolveAny(ITypeSymbol type, ResolveTargetKind targetKind = ResolveTargetKind.None, string cecilTypeParameterProviderVar = null);
-        string ResolvePredefinedType(ITypeSymbol type);
-        string ResolveLocalVariableType(ITypeSymbol type);
-        string Resolve(string typeName);
-        string Resolve(ITypeSymbol type);
-        string MakeArrayType(ITypeSymbol elementType);
+        ResolvedType ResolveAny(ITypeSymbol type, ResolveTargetKind targetKind = ResolveTargetKind.None, string cecilTypeParameterProviderVar = null);
+        ResolvedType ResolvePredefinedType(ITypeSymbol type);
+        ResolvedType ResolveLocalVariableType(ITypeSymbol type);
+        ResolvedType Resolve(string typeName);
+        ResolvedType Resolve(ITypeSymbol type);
+        ResolvedType MakeArrayType(ITypeSymbol elementType);
 
         Bcl Bcl { get; }
     }
