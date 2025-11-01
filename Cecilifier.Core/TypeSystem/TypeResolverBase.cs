@@ -20,17 +20,32 @@ namespace Cecilifier.Core.TypeSystem
         public Bcl Bcl { get; }
 
         // Resolvers for api drivers that need to generate different code based on the target can override this method.
-        public virtual string ResolveAny(ITypeSymbol type, ResolveTargetKind _ = ResolveTargetKind.None, string cecilTypeParameterProviderVar = null)
+        public virtual ResolvedType ResolveAny(ITypeSymbol type, ResolveTargetKind _ = ResolveTargetKind.None, string cecilTypeParameterProviderVar = null)
         {
-            return ResolveLocalVariableType(type)
-                   ?? ResolveNestedType(type)
-                   ?? ResolvePredefinedAndComposedTypes(type)
-                   ?? ResolveGenericType(type, cecilTypeParameterProviderVar)
-                   ?? ResolveTypeParameter(type, cecilTypeParameterProviderVar)
-                   ?? Resolve(type);
+            var resolvedType = ResolveLocalVariableType(type);
+            if (resolvedType)
+                return resolvedType;
+            
+            resolvedType = ResolveNestedType(type);
+            if (resolvedType)
+                return resolvedType;
+            
+            resolvedType = ResolvePredefinedAndComposedTypes(type);
+            if (resolvedType)
+                return resolvedType;
+
+            resolvedType = ResolveGenericType(type, cecilTypeParameterProviderVar);
+            if (resolvedType)
+                return resolvedType;
+                    
+            resolvedType = ResolveTypeParameter(type, cecilTypeParameterProviderVar);
+            if (resolvedType)
+                return resolvedType;
+                
+            return Resolve(type);
         }
        
-        private string ResolveNestedType(ITypeSymbol type)
+        private ResolvedType ResolveNestedType(ITypeSymbol type)
         {
             if (type.ContainingType == null || type.Kind == SymbolKind.TypeParameter)
                 return null;
@@ -40,7 +55,7 @@ namespace Cecilifier.Core.TypeSystem
             {
                 // collects the type arguments for all types in the parent chain. 
                 var typeArguments = nestedType.GetAllTypeArguments().ToArray();
-                var resolveNestedType = $"""TypeHelpers.NewRawNestedTypeReference("{type.Name}", module: assembly.MainModule, {ResolveAny(type.ContainingType.OriginalDefinition)}, isValueType: {type.IsValueType.ToKeyword()}, {typeArguments.Length})""";
+                var resolveNestedType = new ResolvedType($"""TypeHelpers.NewRawNestedTypeReference("{type.Name}", module: assembly.MainModule, {ResolveAny(type.ContainingType.OriginalDefinition)}, isValueType: {type.IsValueType.ToKeyword()}, {typeArguments.Length})""");
             
                 // if type is a generic type definition we return the open, resolved type
                 // otherwise this method is expected to return a 'GenericInstanceType'.
@@ -59,17 +74,17 @@ namespace Cecilifier.Core.TypeSystem
             return null;
         }
 
-        public abstract string Resolve(string typeName);
-        public abstract string Resolve(ITypeSymbol type);
-        public abstract string ResolvePredefinedType(ITypeSymbol type);
+        public abstract ResolvedType Resolve(string typeName);
+        public abstract ResolvedType Resolve(ITypeSymbol type);
+        public abstract ResolvedType ResolvePredefinedType(ITypeSymbol type);
 
-        public abstract string MakeArrayType(ITypeSymbol elementType);
+        public abstract ResolvedType MakeArrayType(ITypeSymbol elementType);
 
-        protected abstract string MakePointerType(ITypeSymbol pointerType);
+        protected abstract ResolvedType MakePointerType(ITypeSymbol pointerType);
 
-        protected abstract string MakeFunctionPointerType(IFunctionPointerTypeSymbol functionPointer);
+        protected abstract ResolvedType MakeFunctionPointerType(IFunctionPointerTypeSymbol functionPointer);
         
-        private string ResolvePredefinedAndComposedTypes(ITypeSymbol type)
+        private ResolvedType ResolvePredefinedAndComposedTypes(ITypeSymbol type)
         {
             if (type is IArrayTypeSymbol array)
             {
@@ -103,7 +118,7 @@ namespace Cecilifier.Core.TypeSystem
             return ResolvePredefinedType(type);
         }
 
-        private string ResolveTypeParameter(ITypeSymbol type, string cecilTypeParameterProviderVar)
+        private ResolvedType ResolveTypeParameter(ITypeSymbol type, string cecilTypeParameterProviderVar)
         {
             if (type is not ITypeParameterSymbol typeParameterSymbol)
                 return null;
@@ -111,15 +126,17 @@ namespace Cecilifier.Core.TypeSystem
             if (cecilTypeParameterProviderVar == null)
                 return null;
             
-            return typeParameterSymbol.ContainingSymbol.Kind switch
+            var resolvedType = typeParameterSymbol.ContainingSymbol.Kind switch
             {
                 SymbolKind.NamedType => $"(({cecilTypeParameterProviderVar} is MethodReference methodReference) ? ((GenericInstanceType) methodReference.DeclaringType).ElementType : (IGenericParameterProvider) {cecilTypeParameterProviderVar} ).GenericParameters[{typeParameterSymbol.Ordinal}]",
                 SymbolKind.Method => $"{cecilTypeParameterProviderVar}.GenericParameters[{typeParameterSymbol.Ordinal}]",
                 _ => null
             };
+
+            return new ResolvedType(resolvedType);
         }
         
-        private string ResolveGenericType(ITypeSymbol type, string cecilTypeParameterProviderVar)
+        private ResolvedType ResolveGenericType(ITypeSymbol type, string cecilTypeParameterProviderVar)
         {
             if (!(type is INamedTypeSymbol { IsGenericType: true, TypeArguments.Length: > 0 } genericTypeSymbol))
             {
@@ -137,7 +154,7 @@ namespace Cecilifier.Core.TypeSystem
                 : MakeGenericInstanceType(genericType, genericTypeSymbol, cecilTypeParameterProviderVar);
         }
 
-        public string ResolveLocalVariableType(ITypeSymbol type)
+        public ResolvedType ResolveLocalVariableType(ITypeSymbol type)
         {
             var containingSymbolName = type.ContainingSymbol?.OriginalDefinition.ToDisplayString();
             var found = _context.DefinitionVariables.GetVariable(type.OriginalDefinition.ToDisplayString(), VariableMemberKind.Type, containingSymbolName).VariableName
@@ -148,10 +165,10 @@ namespace Cecilifier.Core.TypeSystem
                 return MakeGenericInstanceType(found, genericTypeSymbol, found);
             }
 
-            return found;
+            return new ResolvedType(found);
         }
 
-        private IList<string> CollectTypeArguments(INamedTypeSymbol typeArgumentProvider, List<string> collectTo, string cecilTypeParameterProviderVar)
+        private IList<ResolvedType> CollectTypeArguments(INamedTypeSymbol typeArgumentProvider, List<ResolvedType> collectTo, string cecilTypeParameterProviderVar)
         {
             if (typeArgumentProvider.ContainingType != null)
             {
@@ -162,9 +179,9 @@ namespace Cecilifier.Core.TypeSystem
             return collectTo;
         }
 
-        private string MakeGenericInstanceType(string typeReference, INamedTypeSymbol genericTypeSymbol, string cecilTypeParameterProviderVar)
+        private ResolvedType MakeGenericInstanceType(ResolvedType typeReference, INamedTypeSymbol genericTypeSymbol, string cecilTypeParameterProviderVar)
         {
-            var typeArgs = CollectTypeArguments(genericTypeSymbol, new List<string>(), cecilTypeParameterProviderVar);
+            var typeArgs = CollectTypeArguments(genericTypeSymbol, [], cecilTypeParameterProviderVar);
             return typeArgs.Count > 0
                 ? typeReference.MakeGenericInstanceType(typeArgs)
                 : typeReference;

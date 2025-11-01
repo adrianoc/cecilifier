@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Naming;
+using Cecilifier.Core.TypeSystem;
 
 namespace Cecilifier.ApiDriver.SystemReflectionMetadata.DelayedDefinitions;
 
@@ -44,7 +45,7 @@ public class DelayedDefinitionsManager
         _firstFieldByTypeVariable.TryAdd(parentDefinitionVariableName, fieldVariableName);
     }
 
-    public int RegisterLocalVariable(string localVarName, string resolvedVarType, Action<IVisitorContext, string, string> action)
+    public int RegisterLocalVariable(string localVarName, ResolvedType resolvedVarType, Action<IVisitorContext, string, ResolvedType> action)
     {
         var localVariable = new LocalVariableRecord(localVarName, resolvedVarType, action);
         _postponedMethodDefinitionDetails[^1].LocalVariables.Add(localVariable);

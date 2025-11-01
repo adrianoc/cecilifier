@@ -37,7 +37,7 @@ function handleInitialSnippet(gist, errorAccessingGist, requestPath, removeStore
         if (snippet === null || snippet.length === 0) 
             snippet = defaultSnippet;
 
-        onCecilifiySuccessCallbacks = onCecilifiySuccessCallbacks.concat(
+        onCecilifySuccessCallbacks = onCecilifySuccessCallbacks.concat(
             [
                 {
                     state: snippetName,

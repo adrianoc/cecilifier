@@ -21,7 +21,7 @@ internal record struct PropertyGenerationData(
     string Name, 
     IDictionary<string, string> AccessorModifiers,
     bool IsStatic,
-    Func<ResolveTargetKind, string> Type, 
+    Func<ResolveTargetKind, ResolvedType> Type, 
     string TypeNameForRegistration, 
     IReadOnlyList<ParameterSpec> Parameters,
     string BackingFieldModifiers =null, // Not used, unless on auto-properties
@@ -88,7 +88,7 @@ internal class PropertyGenerator
         Context.AddCompilerGeneratedAttributeTo(ilContext.AssociatedMethodVariable, VariableMemberKind.Method);
     }
 
-    internal ScopedDefinitionVariable AddGetterMethodDeclaration(ref readonly PropertyGenerationData property, string accessorMethodVar, bool hasCovariantReturn, string nameForRegistration, string overridenMethod, in IlContext ilContext)
+    internal ScopedDefinitionVariable AddGetterMethodDeclaration(ref readonly PropertyGenerationData property, string accessorMethodVar, bool hasCovariantReturn, string overridenMethod, in IlContext ilContext)
     {
         var propertyResolvedType = property.Type(ResolveTargetKind.ReturnType);
         IList<string> typeParameters = [];

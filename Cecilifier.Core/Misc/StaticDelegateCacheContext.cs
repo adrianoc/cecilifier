@@ -1,12 +1,11 @@
 using System;
-using System.Collections.Generic;
 using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Naming;
+using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Cecilifier.Core.Misc;
 
@@ -34,7 +33,7 @@ public struct StaticDelegateCacheContext
     /// <param name="delegateType"></param>
     /// <returns>name of the declared variable that holds the static field definition.</returns>
 
-    public string EnsureCacheBackingFieldIsEmitted(string delegateType)
+    public string EnsureCacheBackingFieldIsEmitted(ResolvedType delegateType)
     {
         if (Method == null)
             throw new InvalidOperationException($"Unless 'IsStaticDelegate' is set to false {GetType().Name} needs to be fully initialized.");

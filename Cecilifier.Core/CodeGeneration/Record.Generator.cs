@@ -205,7 +205,7 @@ internal partial class RecordGenerator
             new ParameterSpec("right", context.TypeResolver.ResolveAny(_recordSymbol), RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = $"{_recordSymbol.ToDisplayString()}?" }
         ];
         IList<string> typeParameters = [];
-        Func<IVisitorContext, string> returnTypeResolver = ctx => ctx.TypeResolver.Bcl.System.Boolean;
+        Func<IVisitorContext, ResolvedType> returnTypeResolver = ctx => ctx.TypeResolver.Bcl.System.Boolean;
         var equalsOperatorMethodExps = context.ApiDefinitionsFactory.Method(
                                                                         context, 
                                                                         new BodiedMemberDefinitionContext(methodName, equalsOperatorMethodVar, recordTypeDefinitionVariable, MemberOptions.None, IlContext.None), 
@@ -264,7 +264,7 @@ internal partial class RecordGenerator
             new ParameterSpec("right", context.TypeResolver.ResolveAny(recordSymbol), RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = $"{_recordSymbol.OriginalDefinition.ToDisplayString()}?" }
         ];
         IList<string> typeParameters = [];
-        Func<IVisitorContext, string> returnTypeResolver = ctx => ctx.TypeResolver.Bcl.System.Boolean;
+        Func<IVisitorContext, ResolvedType> returnTypeResolver = ctx => ctx.TypeResolver.Bcl.System.Boolean;
         var inequalityOperatorMethodExps = context.ApiDefinitionsFactory.Method(
             context, 
             new BodiedMemberDefinitionContext(methodName, inequalityOperatorMethodVar, recordTypeDefinitionVariable, MemberOptions.None, IlContext.None), 
@@ -313,7 +313,7 @@ internal partial class RecordGenerator
         string declaringTypeName = _recordSymbol.OriginalDefinition.ToDisplayString();
         IReadOnlyList<ParameterSpec> parameters1 = [];
         IList<string> typeParameters = [];
-        Func<IVisitorContext, string> returnTypeResolver = ctx => ctx.TypeResolver.Bcl.System.Int32;
+        Func<IVisitorContext, ResolvedType> returnTypeResolver = ctx => ctx.TypeResolver.Bcl.System.Int32;
         var getHashCodeMethodExps = context.ApiDefinitionsFactory.Method(
             context, 
             new BodiedMemberDefinitionContext("GetHashCode", getHashCodeMethodVar, recordTypeDefinitionVariable, MemberOptions.None, IlContext.None), 
@@ -432,7 +432,7 @@ internal partial class RecordGenerator
             string declaringTypeName = _recordSymbol.OriginalDefinition.ToDisplayString();
             IReadOnlyList<ParameterSpec> parameters = [];
             IList<string> typeParameters = [];
-            Func<IVisitorContext, string> returnTypeResolver = ctx => context.TypeResolver.Bcl.System.String;
+            Func<IVisitorContext, ResolvedType> returnTypeResolver = ctx => ctx.TypeResolver.Bcl.System.String;
             var toStringDeclExps = context.ApiDefinitionsFactory.Method(
                 context, 
                 new BodiedMemberDefinitionContext(ToStringName, toStringMethodVar, recordTypeDefinitionVariable, MemberOptions.None, IlContext.None), 
@@ -451,7 +451,7 @@ internal partial class RecordGenerator
             using var _ = context.DefinitionVariables.WithVariable(methodDefinitionVariable);
             var stringBuildDefaultCtor = stringBuilderSymbol.GetMembers(".ctor").OfType<IMethodSymbol>().Single(ctor => ctor.Parameters.Length == 0).MethodResolverExpression(context);
 
-            string[] localVariableTypes = [context.TypeResolver.ResolveAny(stringBuilderSymbol)];
+            ResolvedType[] localVariableTypes = [context.TypeResolver.ResolveAny(stringBuilderSymbol)];
             InstructionRepresentation[] instructions = [
                 OpCodes.Newobj.WithOperand(stringBuildDefaultCtor),
                 OpCodes.Stloc_0,
@@ -486,15 +486,15 @@ internal partial class RecordGenerator
         }
     }
 
-    private string ClosedGenericMethodFor(string memberName, string recordVar)
+    private string ClosedGenericMethodFor(string memberName, ResolvedType recordVar)
     {
         var methodVar = context.DefinitionVariables.GetVariable(memberName, VariableMemberKind.Method, _recordSymbol.OriginalDefinition.ToDisplayString());
-        return MethodOnClosedGenericTypeForMethodVariable(methodVar.VariableName, recordVar);
+        return MethodOnClosedGenericTypeForMethodVariable(methodVar.VariableName, recordVar.Expression);
     }
     
-    private string MethodOnClosedGenericTypeForMethodVariable(string methodVar, string recordVar, params string[] parameterReferences)
+    private string MethodOnClosedGenericTypeForMethodVariable(string methodVar, string recordVar, params ResolvedType[] parameterReferences)
     {
-        if (_recordSymbol is INamedTypeSymbol { IsGenericType: true })
+        if (_recordSymbol is { IsGenericType: true })
         {
             var parameters = parameterReferences.Length > 0 ? $$""", Parameters = { {{string.Join(',', parameterReferences.Select(p => $"new ParameterDefinition({p})"))}} }""" : "";
             return $"new MethodReference({methodVar}.Name, {methodVar}.ReturnType) {{ DeclaringType = {TypeOrClosedTypeFor(recordVar)}, HasThis = {methodVar}.HasThis, ExplicitThis = {methodVar}.ExplicitThis, CallingConvention = {methodVar}.CallingConvention{parameters} }}";
@@ -505,7 +505,7 @@ internal partial class RecordGenerator
     
     private string TypeOrClosedTypeFor(string recordVar)
     {
-        if (_recordSymbol is INamedTypeSymbol { IsGenericType: true } genericRecord)
+        if (_recordSymbol is { IsGenericType: true } genericRecord)
         {
             var typeArguments = string.Join(',', genericRecord.TypeParameters.Select(tp => context.TypeResolver.ResolveAny(tp)));
             return $"{recordVar}.MakeGenericInstanceType([{typeArguments}])";
@@ -558,7 +558,7 @@ internal partial class RecordGenerator
                 instructions.Add(OpCodes.Call.WithOperand(_equalityComparerMembersCache[parameterType.Name].GetDefaultMethodVar));
                 
                 var paramDefVar = context.DefinitionVariables.GetVariable(Utils.BackingFieldNameForAutoProperty(parameter.Identifier.ValueText()), VariableMemberKind.Field, _recordSymbol.OriginalDefinition.ToDisplayString());
-                var backingFieldRef = _recordSymbol is INamedTypeSymbol { IsGenericType: true } 
+                var backingFieldRef = _recordSymbol is { IsGenericType: true } 
                     ? $"new FieldReference({paramDefVar.VariableName}.Name, {paramDefVar.VariableName}.FieldType, {context.TypeResolver.ResolveAny(_recordSymbol)})" 
                     : paramDefVar.VariableName;
                 
@@ -592,7 +592,7 @@ internal partial class RecordGenerator
         AddCompilerGeneratedAttributeTo(context, equalsVar, VariableMemberKind.Method);
         AddIsReadOnlyAttributeTo(context, equalsVar);
 
-        if (_recordSymbol is INamedTypeSymbol { IsGenericType: true } genericRecord)
+        if (_recordSymbol is { IsGenericType: true } genericRecord)
         {
             _recordTypeEqualsOverloadMethodVar = context.Naming.SyntheticVariable("Equals", ElementKind.GenericInstance);
             context.Generate(
@@ -656,7 +656,7 @@ internal partial class RecordGenerator
 
         return equalityComparerDataByType;
 
-        string EmitDefaultPropertyGetterMethod(ITypeSymbol parameterType, string openGetDefaultMethodVar, string equalityComparerOfParameterType)
+        string EmitDefaultPropertyGetterMethod(ITypeSymbol parameterType, string openGetDefaultMethodVar, ResolvedType equalityComparerOfParameterType)
         {
             var getDefaultMethodVar = context.Naming.SyntheticVariable($"get_Default_{parameterType.Name}", ElementKind.MemberReference);
             string[] defaultPropertyGetterExps =
@@ -674,7 +674,7 @@ internal partial class RecordGenerator
             return getDefaultMethodVar;
         }
 
-        string EmitEqualsMethod(string equalityComparerOfParameterType)
+        string EmitEqualsMethod(ResolvedType equalityComparerOfParameterType)
         {
             var equalsMethodVar = context.Naming.SyntheticVariable("Equals", ElementKind.MemberReference);
             var equalityComparerOpenEqualsMethodVar = context.Naming.SyntheticVariable("Equals", ElementKind.LocalVariable);
@@ -694,7 +694,7 @@ internal partial class RecordGenerator
             return equalsMethodVar;
         }
         
-        string EmitGetHashCodeMethod(string equalityComparerOfParameterType)
+        string EmitGetHashCodeMethod(ResolvedType equalityComparerOfParameterType)
         {
             const string methodName = "GetHashCode";
             var getHashCodeMethodVar = context.Naming.SyntheticVariable(methodName, ElementKind.MemberReference);
@@ -746,8 +746,7 @@ internal partial class RecordGenerator
         using var _ = propertyGenerator.AddGetterMethodDeclaration(
                                                                 in propertyData, 
                                                                 _equalityContractGetMethodVar, 
-                                                                false, 
-                                                                string.Empty, // used for registering property parameters. In this case, there are none.
+                                                                false, // used for registering property parameters. In this case, there are none.
                                                                 null,
                                                                 ilContext);
         
@@ -762,7 +761,7 @@ internal partial class RecordGenerator
     }
 
     /// <summary>
-    /// If <paramref name="record"/> inherits from System.Object 2 Equals() overloads should be added:
+    /// If <see cref="record"/> inherits from System.Object 2 Equals() overloads should be added:
     /// - Equals(object other) => Equals( (RecordType) other)
     /// - Equals(RecordType) is the same as IEquatable&lt;RecordType&gt;.Equals() so it is already implemented.
     /// 
@@ -779,7 +778,7 @@ internal partial class RecordGenerator
         var equalsObjectOverloadMethodVar = context.Naming.SyntheticVariable($"{methodName}ObjectOverload", ElementKind.Method);
         IReadOnlyList<ParameterSpec> parameters = [new ParameterSpec("other", context.TypeResolver.Bcl.System.Object, RefKind.None, Constants.ParameterAttributes.None)];
         IList<string> typeParameters = [];
-        Func<IVisitorContext, string> returnTypeResolver = ctx => ctx.TypeResolver.Bcl.System.Boolean;
+        Func<IVisitorContext, ResolvedType> returnTypeResolver = ctx => ctx.TypeResolver.Bcl.System.Boolean;
         var equalsObjectOverloadMethodExps = context.ApiDefinitionsFactory.Method(
             context, 
             new BodiedMemberDefinitionContext(methodName, equalsObjectOverloadMethodVar, recordTypeDefinitionVariable, MemberOptions.None, IlContext.None), 
@@ -814,7 +813,7 @@ internal partial class RecordGenerator
                     OpCodes.Ret
                   ];
 
-        string[] localVariableTypes = [];
+        ResolvedType[] localVariableTypes = [];
         var bodyExps = context.ApiDefinitionsFactory.MethodBody(context, methodName, context.ApiDriver.NewIlContext(context, methodName, equalsObjectOverloadMethodVar), localVariableTypes, equalsBodyInstructions);
         context.Generate(bodyExps);
         context.Generate($"{recordTypeDefinitionVariable}.Methods.Add({equalsObjectOverloadMethodVar});");
@@ -830,7 +829,7 @@ internal partial class RecordGenerator
         var equalsBaseOverloadMethodVar = context.Naming.SyntheticVariable($"{methodName}{recordSymbol.BaseType?.Name}Overload", ElementKind.Method);
         IReadOnlyList<ParameterSpec> parameters1 = [new ParameterSpec("other", context.TypeResolver.ResolveAny(recordSymbol.BaseType), RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = $"{recordSymbol.BaseType?.Name}?" }];
         IList<string> typeParameters1 = [];
-        Func<IVisitorContext, string> returnTypeResolver1 = ctx => ctx.TypeResolver.Bcl.System.Boolean;
+        Func<IVisitorContext, ResolvedType> returnTypeResolver1 = ctx => ctx.TypeResolver.Bcl.System.Boolean;
         var equalsBaseOverloadMethodExps = context.ApiDefinitionsFactory.Method(
             context, 
             new BodiedMemberDefinitionContext(methodName, equalsBaseOverloadMethodVar, recordTypeDefinitionVariable, MemberOptions.None, IlContext.None), 
@@ -877,7 +876,7 @@ internal partial class RecordGenerator
         var deconstructMethodVar = context.Naming.SyntheticVariable(methodName, ElementKind.Method);
         string declaringTypeName = recordSymbol.OriginalDefinition.ToDisplayString();
         IList<string> typeParameters = [];
-        Func<IVisitorContext, string> returnTypeResolver = ctx => ctx.TypeResolver.Bcl.System.Void;
+        Func<IVisitorContext, ResolvedType> returnTypeResolver = ctx => ctx.TypeResolver.Bcl.System.Void;
         var deconstructMethodVarExps = context.ApiDefinitionsFactory.Method(
             context, 
             new BodiedMemberDefinitionContext(methodName, deconstructMethodVar, recordTypeDefinitionVariable, MemberOptions.None, IlContext.None), 
@@ -899,7 +898,7 @@ internal partial class RecordGenerator
             deconstructInstructions.Add(OpCodes.Call.WithOperand(GetGetterMethodVar(recordSymbol, p.ValueText)));
             
             var stindOpCode = p.Type.StindOpCodeFor();
-            deconstructInstructions.Add(stindOpCode == OpCodes.Stobj ? stindOpCode.WithOperand(context.TypeResolver.ResolveAny(p.Type)) : stindOpCode);
+            deconstructInstructions.Add(stindOpCode == OpCodes.Stobj ? stindOpCode.WithOperand(context.TypeResolver.ResolveAny(p.Type).Expression) : stindOpCode);
             argIndex++;
         }
         deconstructInstructions.Add(OpCodes.Ret);

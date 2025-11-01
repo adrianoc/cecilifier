@@ -18,10 +18,10 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
             return found.VariableName;
             
         var containingTypeRefVar= context.TypeResolver.ResolveAny(method.ContainingType);
-        var methodSignatureBlobVar = context.Naming.SyntheticVariable($"{method.ToValidVariableName()}Signature", ElementKind.LocalVariable);
-        var methodRefVar = context.Naming.SyntheticVariable($"{method.ToValidVariableName()}Ref", ElementKind.LocalVariable);
+        var methodSignatureBlobVar = context.Naming.SyntheticVariable($"{method.ToValidVariableName()}BlobBuilder", ElementKind.MemberReference);
+        var methodRefVar = context.Naming.SyntheticVariable($"{method.ToValidVariableName()}", ElementKind.MemberReference);
         
-        var methodSignatureVar = context.Naming.SyntheticVariable($"{method.Name}Signature", ElementKind.LocalVariable);
+        var methodSignatureVar = context.Naming.SyntheticVariable($"{method.Name}Signature", ElementKind.MemberReference);
         context.DefinitionVariables.RegisterMethod(method.AsMethodVariable(VariableMemberKind.MethodSignature, methodSignatureVar));
 
         var isInstanceMethod = !method.IsStatic && method.MethodKind != MethodKind.LocalFunction; // local functions are always declared as static (we don't support capturing variables)
@@ -56,39 +56,37 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
         return methodRefVar;
     }
     
-    public string ResolveMethod(string declaringTypeName, string declaringTypeVariable, string methodNameForVariableRegistration, string resolvedReturnType, IReadOnlyList<ParameterSpec> parameters, int typeParameterCountCount, MemberOptions options)
+    public string ResolveMethod(string declaringTypeName, string declaringTypeVariable, string methodNameForVariableRegistration, ResolvedType returnType, IReadOnlyList<ParameterSpec> parameters, int typeParameterCountCount, MemberOptions options)
     {
         var methodReferenceToFind = new MethodDefinitionVariable(
                                                 VariableMemberKind.MethodReference,
                                                 declaringTypeName,
                                                 methodNameForVariableRegistration,
-                                                parameters.Select(p => p.ElementType).ToArray(),
+                                                parameters.Select(p => p.ElementType.Expression).ToArray(),
                                                 typeParameterCountCount);
         
         var found = context.DefinitionVariables.GetMethodVariable(methodReferenceToFind);
         if (found.IsValid)
             return found.VariableName;
           
-        var methodSignatureBlobVar = context.Naming.SyntheticVariable($"{methodNameForVariableRegistration}Signature", ElementKind.LocalVariable);
-        var methodSignatureVar = context.Naming.SyntheticVariable("methodSignature", ElementKind.LocalVariable);
-        var methodRefVar = context.Naming.SyntheticVariable($"{methodNameForVariableRegistration}Ref", ElementKind.LocalVariable);
+        var methodSignatureBlobVar = context.Naming.SyntheticVariable($"{methodNameForVariableRegistration}_blobBuilder", ElementKind.MemberReference);
+        var methodSignatureVar = context.Naming.SyntheticVariable($"{methodNameForVariableRegistration}_Signature", ElementKind.MemberReference);
+        var methodRefVar = context.Naming.SyntheticVariable($"{methodNameForVariableRegistration}", ElementKind.MemberReference);
         
         context.DefinitionVariables.RegisterMethod(new MethodDefinitionVariable(
                                                             VariableMemberKind.MethodSignature,
                                                             declaringTypeName,
                                                             methodNameForVariableRegistration,
-                                                            parameters.Select(p => p.ElementType).ToArray(),
+                                                            parameters.Select(p => p.ElementType.Expression).ToArray(),
                                                             typeParameterCountCount,
                                                             methodSignatureVar));
 
-        var modifierVariable = string.Empty;
+        var requiredModifierOrEmpty = string.Empty;
         if ((options & MemberOptions.InitOnly) != 0)
         {
-            modifierVariable = context.TypedTypeResolver.Resolve(context.RoslynTypeSystem.ForType(typeof(IsExternalInit).FullName));
+            var modifierVariable = context.TypedTypeResolver.Resolve(context.RoslynTypeSystem.ForType(typeof(IsExternalInit).FullName));
+            requiredModifierOrEmpty = $"returnTypeEncoder.CustomModifiers().AddModifier({modifierVariable}, isOptional: false);";
         }
-        var requiredModifierOrEmpty = (options & MemberOptions.InitOnly) != 0 
-                                    ? $"returnTypeEncoder.CustomModifiers().AddModifier({modifierVariable}, isOptional: false);" 
-                                    : "";
         
         context.Generate($$"""
                               var {{methodSignatureBlobVar}} = new BlobBuilder();
@@ -99,7 +97,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
                                       returnTypeEncoder => 
                                       {
                                         {{requiredModifierOrEmpty}}
-                                        returnTypeEncoder.{{resolvedReturnType}};
+                                        returnTypeEncoder.{{returnType}};
                                       },
                                       parameters => 
                                       {
@@ -126,7 +124,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
         var voidParameterlessMethodRef = context.DefinitionVariables.GetVariable("voidParameterlessMethodRef", VariableMemberKind.MethodReference);
         if (!voidParameterlessMethodRef.IsValid)
         {
-            var voidParameterlessMethodRefVarName = context.Naming.SyntheticVariable("voidParameterlessMethodRef", ElementKind.LocalVariable);
+            var voidParameterlessMethodRefVarName = context.Naming.SyntheticVariable("voidParameterlessMethod", ElementKind.MemberReference);
             context.Generate($$"""
                                           var parameterlessCtorSignature = new BlobBuilder();
                                           
@@ -156,12 +154,12 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
 
         var resolvedDeclaringType = context.TypeResolver.ResolveAny(field.ContainingType);
 
-        var fieldSignatureVarName = context.Naming.SyntheticVariable($"{field.ToValidVariableName()}Signature", ElementKind.LocalVariable);
+        var fieldSignatureVarName = context.Naming.SyntheticVariable($"{field.ToValidVariableName()}_Signature", ElementKind.MemberReference);
         var fieldRefVarName = context.Naming.SyntheticVariable(field.Name, ElementKind.Field);
         var typeResolver = (SystemReflectionMetadataTypeResolver) context.TypeResolver;
         context.Generate($"""
                           BlobBuilder {fieldSignatureVarName} = new();
-                          new BlobEncoder({fieldSignatureVarName}).FieldSignature().{typeResolver.ResolveForTargetKind(field.Type, ResolveTargetKind.Field, false)};
+                          new BlobEncoder({fieldSignatureVarName}).Field().{typeResolver.ResolveForTargetKind(field.Type, ResolveTargetKind.Field, false)};
                           var {fieldRefVarName} = metadata.AddMemberReference({resolvedDeclaringType}, metadata.GetOrAddString("{field.Name}"), metadata.GetOrAddBlob({fieldSignatureVarName}));
                           """);
         

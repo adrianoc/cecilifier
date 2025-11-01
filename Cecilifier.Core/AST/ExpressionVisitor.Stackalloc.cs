@@ -161,7 +161,7 @@ partial class ExpressionVisitor
         }
     }
 
-    private void CalculateLengthInBytesAndEmitLocalloc(StackallocSpanAssignmentTracker stackallocSpanAssignmentTracker, ExpressionSyntax rankNode, string resolvedElementType, bool elementSizeTakesMoreThanOneByte)
+    private void CalculateLengthInBytesAndEmitLocalloc(StackallocSpanAssignmentTracker stackallocSpanAssignmentTracker, ExpressionSyntax rankNode, ResolvedType elementType, bool elementSizeTakesMoreThanOneByte)
     {
         if (stackallocSpanAssignmentTracker.AddVariableToStoreElementCountIfRequired(Context, rankNode))
         {
@@ -174,16 +174,16 @@ partial class ExpressionVisitor
         Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Conv_U);
         if (elementSizeTakesMoreThanOneByte) // if element type takes one byte them 'number of elements' == 'size in bytes' and we don't need to multiply
         {
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Sizeof, resolvedElementType);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Sizeof, elementType);
             Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Mul_Ovf_Un);
         }
 
         Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Localloc);
     }
 
-    private void EmitNewobjForSpanOfType(string resolvedSpanType)
+    private void EmitNewobjForSpanOfType(ResolvedType spanType)
     {
-        var spanInstanceType = Context.TypeResolver.ResolveAny(Context.RoslynTypeSystem.SystemSpan).MakeGenericInstanceType(resolvedSpanType);
+        var spanInstanceType = Context.TypeResolver.ResolveAny(Context.RoslynTypeSystem.SystemSpan).MakeGenericInstanceType(spanType);
         var spanCtorVar = Context.Naming.SyntheticVariable("spanCtor", ElementKind.LocalVariable);
         AddCecilExpression($"var {spanCtorVar} = new MethodReference(\".ctor\", {Context.TypeResolver.Bcl.System.Void}, {spanInstanceType}) {{ HasThis = true }};");
         AddCecilExpression($"{spanCtorVar}.Parameters.Add({CecilDefinitionsFactory.ParameterDoesNotHandleParamsKeywordOrDefaultValue("ptr", RefKind.None, Context.TypeResolver.Resolve("void*"))});");

@@ -56,7 +56,7 @@ namespace Cecilifier.Core.AST
         protected void AddCilInstruction(string ilVar, OpCode opCode, ITypeSymbol type)
         {
             var operand = Context.TypeResolver.ResolveAny(type);
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, opCode, new CilToken(operand));
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, opCode, new CilToken(operand.Expression));
         }
 
         protected string AddCilInstructionWithLocalVariable(string ilVar, OpCode opCode)
@@ -189,7 +189,7 @@ namespace Cecilifier.Core.AST
                 {
                     // scenario: default(T).ToString()
                     Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloca_S, storageVariable.VariableName);
-                    Context.SetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, resolvedType);
+                    Context.SetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, resolvedType.Expression);
                 }
                 else
                 {
@@ -297,14 +297,14 @@ namespace Cecilifier.Core.AST
             context.WriteNewLine();
         }
 
-        protected string ResolveExpressionType(ExpressionSyntax expression, ResolveTargetKind resolveTargetKind)
+        protected ResolvedType ResolveExpressionType(ExpressionSyntax expression, ResolveTargetKind resolveTargetKind)
         {
             var typeInfo = Context.GetTypeInfo(expression);
             var type = (typeInfo.Type ?? typeInfo.ConvertedType).EnsureNotNull();
             return Context.TypeResolver.ResolveAny(type, resolveTargetKind);
         }
 
-        protected string ResolveType(TypeSyntax type, ResolveTargetKind resolveTargetKind)
+        protected ResolvedType ResolveType(TypeSyntax type, ResolveTargetKind resolveTargetKind)
         {
             var resolvedType = Context.TypeResolver.ResolveAny(ResolveTypeSymbol(type), resolveTargetKind);
             //TODO: Can't this check be moved inside the Resolve() method as the other checks for arrays,
@@ -477,7 +477,7 @@ namespace Cecilifier.Core.AST
                     // calls to virtual methods on custom value types needs to be constrained (don't know why, but the generated IL for such scenarios does `constrains`).
                     // the only methods that falls into this category are virtual methods on Object (ToString()/Equals()/GetHashCode())
                     if (usageResult.Target is { IsOverride: true } && usageResult.Target.ContainingType.IsNonPrimitiveValueType(Context))
-                        Context.SetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, Context.TypeResolver.ResolveAny(loadedType));
+                        Context.SetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, Context.TypeResolver.ResolveAny(loadedType).Expression);
                     return true;
                 }
 
@@ -501,7 +501,7 @@ namespace Cecilifier.Core.AST
                 }
                 
                 Context.ApiDriver.WriteCilInstruction(Context, ilVar, loadOpCode, operand);
-                Context.SetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, Context.TypeResolver.ResolveAny(loadedType));
+                Context.SetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, Context.TypeResolver.ResolveAny(loadedType).Expression);
                 return true;
             }
 

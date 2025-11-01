@@ -26,7 +26,7 @@ internal partial class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IAp
         string typeNamespace,
         string typeName,
         string attrs,
-        string resolvedBaseType,
+        ResolvedType baseType,
         DefinitionVariable outerTypeVariable,
         bool isStructWithNoFields,
         IEnumerable<ITypeSymbol> interfaces,
@@ -41,7 +41,7 @@ internal partial class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IAp
         }
 
         var exps = new List<string>();
-        var typeDefExp = $"var {typeVar} = new TypeDefinition(\"{typeNamespace}\", \"{typeName}\", {attrs}{(!string.IsNullOrWhiteSpace(resolvedBaseType) ? ", " + resolvedBaseType : "")})";
+        var typeDefExp = $"var {typeVar} = new TypeDefinition(\"{typeNamespace}\", \"{typeName}\", {attrs}{(baseType ? $", {baseType}" : "")})";
         if (properties.Length > 0)
         {
             exps.Add($"{typeDefExp} {{ {string.Join(',', properties)} }};");
@@ -108,12 +108,12 @@ internal partial class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IAp
         string methodModifiers,
         IReadOnlyList<ParameterSpec> parameters,
         IList<string> typeParameters,
-        Func<IVisitorContext, string> returnTypeResolver,
+        Func<IVisitorContext, ResolvedType> returnTypeResolver,
         out MethodDefinitionVariable methodVariable)
     {
         var exps = new List<string>();
 
-        Func<IVisitorContext, string> f = returnTypeResolver; 
+        Func<IVisitorContext, ResolvedType> f = returnTypeResolver; 
         if ((definitionContext.Options & MemberOptions.InitOnly) == MemberOptions.InitOnly)
         {
             returnTypeResolver = ctx => $"new RequiredModifierType({context.TypeResolver.Resolve(ctx.RoslynTypeSystem.ForType(typeof(IsExternalInit).FullName))}, {f(ctx)})";
@@ -135,7 +135,7 @@ internal partial class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IAp
                                                                             parameter.ParamsAttributeName, // for now,the only callers for this method don't have any `params` parameters.
                                                                             definitionContext.Member.DefinitionVariable,
                                                                             paramVar,
-                                                                            parameter.ElementTypeResolver != null ? parameter.ElementTypeResolver(context, parameter.ElementType) : parameter.ElementType,
+                                                                            parameter.ElementTypeResolver != null ? parameter.ElementTypeResolver(context, parameter.ElementType.Expression) : parameter.ElementType,
                                                                             parameter.Attributes,
                                                                             (parameter.DefaultValue, parameter.DefaultValue != null));
 
@@ -158,7 +158,7 @@ internal partial class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IAp
         return exps;
     }
 
-    public IEnumerable<string> MethodBody(IVisitorContext context, string methodName, IlContext ilContext, string[] localVariableTypes, InstructionRepresentation[] instructions)
+    public IEnumerable<string> MethodBody(IVisitorContext context, string methodName, IlContext ilContext, ResolvedType[] localVariableTypes, InstructionRepresentation[] instructions)
     {
         var tagToInstructionDefMapping = new Dictionary<string, string>();
         yield return $"{ilContext.AssociatedMethodVariable}.Body = new MethodBody({ilContext.AssociatedMethodVariable});"; 
@@ -224,7 +224,7 @@ internal partial class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IAp
         return Field(context, definitionContext, fieldOrEvent.ContainingType.ToDisplayString(), fieldOrEvent.Name, context.TypeResolver.ResolveAny(fieldType, ResolveTargetKind.Field), fieldAttributes, isVolatile, isByRef, constantValue);
     }
 
-    public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext definitionContext, string declaringTypeName, string name, string fieldType, string fieldAttributes, bool isVolatile, bool isByRef, object? constantValue = null)
+    public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext definitionContext, string declaringTypeName, string name, ResolvedType fieldType, string fieldAttributes, bool isVolatile, bool isByRef, object? constantValue = null)
     {
         if (isByRef)
             fieldType = fieldType.MakeByReferenceType();
@@ -242,7 +242,7 @@ internal partial class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IAp
         return exps;
     }
 
-    public DefinitionVariable LocalVariable(IVisitorContext context, string variableName, string methodDefinitionVariableName, string resolvedVarType)
+    public DefinitionVariable LocalVariable(IVisitorContext context, string variableName, string methodDefinitionVariableName, ResolvedType resolvedVarType)
     {
         var cecilVarDeclName = context.Naming.SyntheticVariable(variableName, ElementKind.LocalVariable);
 
@@ -254,7 +254,7 @@ internal partial class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IAp
         return context.DefinitionVariables.RegisterNonMethod(string.Empty, variableName, VariableMemberKind.LocalVariable, cecilVarDeclName);
     }
 
-    public IEnumerable<string> Property(IVisitorContext context, BodiedMemberDefinitionContext definitionContext, string declaringTypeName, List<ParameterSpec> propertyParameters, string propertyType)
+    public IEnumerable<string> Property(IVisitorContext context, BodiedMemberDefinitionContext definitionContext, string declaringTypeName, List<ParameterSpec> propertyParameters, ResolvedType propertyType)
     {
         return [
             $"var {definitionContext.Member.DefinitionVariable} = new PropertyDefinition(\"{definitionContext.Member.Name}\", PropertyAttributes.None, {propertyType});",
@@ -427,9 +427,9 @@ internal partial class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IAp
         };
     }
 
-    private static string LocalVariable(string resolvedType) => $"new VariableDefinition({resolvedType})";
+    private static string LocalVariable(ResolvedType resolvedType) => $"new VariableDefinition({resolvedType})";
     
-    private string ProcessRequiredModifiers(IVisitorContext context, string originalType, bool isVolatile)
+    private ResolvedType ProcessRequiredModifiers(IVisitorContext context, ResolvedType originalType, bool isVolatile)
     {
         if (!isVolatile)
             return originalType;

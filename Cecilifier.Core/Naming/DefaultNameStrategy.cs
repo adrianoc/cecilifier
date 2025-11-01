@@ -39,7 +39,7 @@ namespace Cecilifier.Core.Naming
 
         public DefaultNameStrategy()
         {
-            Options = NamingOptions.All;
+            Options = NamingOptions.Default;
             _format = _defaultFormat;
         }
 
@@ -73,8 +73,9 @@ namespace Cecilifier.Core.Naming
         public string CustomAttribute(string typeName) => $"{PrefixFor(ElementKind.Attribute)}{NameFor(typeName)}{UniqueIdString()}";
         public string RequiredModifier() => $"modReq{UniqueIdString()}";
         public string Delegate(DelegateDeclarationSyntax node) => $"{PrefixFor(ElementKind.Delegate)}{NameFor(node)}{UniqueId()}";
-        public NamingOptions Options { get; set; } = NamingOptions.All;
-        public INameStrategy WithOptions(NamingOptions options) => new DefaultNameStrategy(options, _format);
+        public NamingOptions Options { get; set; } = NamingOptions.Default;
+        public INameStrategy With(NamingOptions options) => new DefaultNameStrategy(Options | options, _format);
+        public INameStrategy Without(NamingOptions options) => new DefaultNameStrategy(Options & ~options, _format);
 
         private string PrefixFor(ElementKind kind) => (Options & NamingOptions.PrefixVariableNamesWithElementKind) == NamingOptions.PrefixVariableNamesWithElementKind ? $"{_format[kind]}" : string.Empty;
         private string UniqueIdString() => (Options & NamingOptions.SuffixVariableNamesWithUniqueId) == NamingOptions.SuffixVariableNamesWithUniqueId ? $"{PartsSeparator}{UniqueId()}" : string.Empty;
@@ -85,7 +86,12 @@ namespace Cecilifier.Core.Naming
             if ((Options & NamingOptions.AppendElementNameToVariables) != NamingOptions.AppendElementNameToVariables)
                 return string.Empty;
 
-            var casingAdjustedName = (Options & NamingOptions.CamelCaseElementNames) == NamingOptions.CamelCaseElementNames ? name.CamelCase() : name.PascalCase();
+            var casingAdjustedName = (Options & NamingOptions.NoCasingElementNames) != 0
+                                        ? name
+                                        : (Options & NamingOptions.CamelCaseElementNames) == NamingOptions.CamelCaseElementNames
+                                            ? name.CamelCase()
+                                            : name.PascalCase();
+                                                        
             return $"{PartsSeparator}{casingAdjustedName.Replace('.', '_')}";
         }
 

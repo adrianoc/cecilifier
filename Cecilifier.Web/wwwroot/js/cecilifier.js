@@ -6,7 +6,7 @@ let focusedEditor; // either csharpCode or cecilifiedCode
 let blockMappings = null;
 let csharpCodeEditorWidthMultiplier = 0.3;
 let toastsToCleanUpBeforeCecilifying = []; // toast with diagnostics (reset before cecilifying) 
-let onCecilifiySuccessCallbacks = [];
+let onCecilifySuccessCallbacks = [];
 
 const CecilifierResponseStatus = Object.freeze({
     Success: 0,
@@ -822,8 +822,8 @@ function initializeWebSocket() {
 
             // save the returned mappings used to map between code snippet <-> Cecilified Code.
             blockMappings = response.mappings;
-            for(let i = 0; i < onCecilifiySuccessCallbacks.length; i++) {
-                onCecilifiySuccessCallbacks[i].callback(onCecilifiySuccessCallbacks[i].state);
+            for(let i = 0; i < onCecilifySuccessCallbacks.length; i++) {
+                onCecilifySuccessCallbacks[i].callback(onCecilifySuccessCallbacks[i].state);
             }
             showDiagnostics(response.diagnostics);
             
@@ -1167,7 +1167,16 @@ function ResizeDialog(dialogId){
     document.getElementById("assembly_references_header_id").style.height = `${h * 0.02}px`;
 }
 
-function ShowModalDialog(id) {
+function ShowModalDialog(id, oncePerDay) {
+    if (oncePerDay === true) {
+        const cookieName = `modalDialog_${id}_Threshold`;
+        const cookie = getCookie(cookieName);
+        const today = new Date().toDateString();
+        if (cookie !== undefined && new Date(Date.parse(cookie)).toDateString() === today)
+            return;
+        
+        setCookie(cookieName, today, 1);
+    }
     const modalDialog = document.getElementById(id);
 
     modalDialog.parentElement.classList.add("opened");

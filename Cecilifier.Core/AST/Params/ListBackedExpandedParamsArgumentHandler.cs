@@ -5,6 +5,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
+using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
 
 namespace Cecilifier.Core.AST.Params;
@@ -14,7 +15,7 @@ internal class ListBackedExpandedParamsArgumentHandler : ExpandedParamsArgumentH
     private readonly DefinitionVariable spanWrappingListVariable;
     private int index;
     private readonly OpCode stIndOpCodeToUse;
-    private readonly string targetElementTypeWhenStoring;
+    private readonly ResolvedType targetElementTypeWhenStoring;
     private readonly string spanIndexerGetter;
     
     public ListBackedExpandedParamsArgumentHandler(ExpressionVisitor expressionVisitor, IParameterSymbol paramsParameter, ArgumentListSyntax argumentList) : base(expressionVisitor.Context, paramsParameter, argumentList, expressionVisitor.ILVariable)
@@ -27,7 +28,7 @@ internal class ListBackedExpandedParamsArgumentHandler : ExpandedParamsArgumentH
         Context.WriteNewLine();
         Context.WriteComment($"Initialize each list element through the span (variable '{spanWrappingListVariable.VariableName}')");
         stIndOpCodeToUse = elementType.StindOpCodeFor();
-        targetElementTypeWhenStoring = stIndOpCodeToUse == OpCodes.Stobj ? resolvedListTypeArgument : null; // Stobj expects the type of the object being stored.
+        targetElementTypeWhenStoring = stIndOpCodeToUse == OpCodes.Stobj ? resolvedListTypeArgument : default; // Stobj expects the type of the object being stored.
 
         spanIndexerGetter = CecilDefinitionsFactory.Collections.GetSpanIndexerGetter(Context, resolvedListTypeArgument);
     }

@@ -99,11 +99,11 @@ internal partial class TypeDeclarationVisitor
             base.VisitDelegateDeclaration(node);
         }
 
-        string AddDelegateMethod(string typeLocalVar, string methodName, string resolvedReturnType, in SeparatedSyntaxList<ParameterSyntax> parameters, Func<string, ParameterSyntax, IEnumerable<string>> parameterHandler)
+        string AddDelegateMethod(string typeLocalVar, string methodName, ResolvedType returnType, in SeparatedSyntaxList<ParameterSyntax> parameters, Func<string, ParameterSyntax, IEnumerable<string>> parameterHandler)
         {
             var methodLocalVar = Context.Naming.SyntheticVariable(methodName, ElementKind.Method);
             AddCecilExpression(
-                $@"var {methodLocalVar} = new MethodDefinition(""{methodName}"", {Constants.Cecil.DelegateMethodAttributes}, {resolvedReturnType})
+                $@"var {methodLocalVar} = new MethodDefinition(""{methodName}"", {Constants.Cecil.DelegateMethodAttributes}, {returnType})
 				{{
 					HasThis = true,
 					IsRuntime = true,

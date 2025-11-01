@@ -14,17 +14,17 @@ namespace Cecilifier.ApiDriver.SystemReflectionMetadata.TypeSystem;
 //          call to ResolveX()
 public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContext context) : TypeResolverBase<SystemReflectionMetadataContext>(context)
 {
-    public override string ResolveAny(ITypeSymbol type, ResolveTargetKind resolveTargetKind = ResolveTargetKind.None, string? cecilTypeParameterProviderVar = null)
+    public override ResolvedType ResolveAny(ITypeSymbol type, ResolveTargetKind resolveTargetKind = ResolveTargetKind.None, string? cecilTypeParameterProviderVar = null)
     {
         return resolveTargetKind == ResolveTargetKind.None || type.TypeKind == TypeKind.Array ||  type.TypeKind == TypeKind.Pointer
             ? base.ResolveAny(type, resolveTargetKind, cecilTypeParameterProviderVar) 
             : ResolveForTargetKind(type, resolveTargetKind, false);        
     }
 
-    public override string Resolve(string typeName) => $"TODO: Fix Resolve(\"{typeName}\")";
-    public override string Resolve(ITypeSymbol type)
+    public override ResolvedType Resolve(string typeName) => throw new NotSupportedException(nameof(Resolve));
+    public override ResolvedType Resolve(ITypeSymbol type)
     {
-        var memberRefVarName = _context.Naming.SyntheticVariable($"{type.ToValidVariableName()}Ref", ElementKind.LocalVariable);
+        var memberRefVarName = _context.Naming.SyntheticVariable($"{type.ToValidVariableName()}", ElementKind.MemberReference);
         var assemblyReferenceName = _context.AssemblyResolver.Resolve(_context, type.ContainingAssembly);
         _context.Generate($"""
                            var {memberRefVarName} = metadata.AddTypeReference(
@@ -44,37 +44,44 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
     /// <param name="kind"></param>
     /// <param name="isByRef"></param>
     /// <returns></returns>
-    public string ResolveForTargetKind(ITypeSymbol type, ResolveTargetKind kind, bool isByRef)
+    public ResolvedType ResolveForTargetKind(ITypeSymbol type, ResolveTargetKind kind, bool isByRef)
     {
         if (type.SpecialType == SpecialType.System_Void)
         {
             return "Void()";
         }
-        
-        if (type.IsPrimitiveType() || type.SpecialType == SpecialType.System_String || type.SpecialType == SpecialType.System_Object)
-            return $"{(kind <= ResolveTargetKind.Field ? "" : "Type().")}{type.MetadataName}()";
 
-        return $"""{(kind <= ResolveTargetKind.Field ? "" : $"Type(isByRef: {isByRef.ToKeyword()}).")}Type({ResolveAny(type, ResolveTargetKind.None)}, isValueType: {type.IsValueType.ToKeyword()})""";
+        var resolvedTypeDetails = new ResolvedTypeDetails();
+        if (type.IsPrimitiveType() || type.SpecialType == SpecialType.System_String || type.SpecialType == SpecialType.System_Object)
+            return ResolvedType.FromDetails(
+                            resolvedTypeDetails
+                                .WithTypeEncoder(kind <= ResolveTargetKind.ArrayElementType ? "" : "Type()")
+                                .WithMethodBuilder($"{type.MetadataName}()"));
+
+        return ResolvedType.FromDetails(
+            resolvedTypeDetails
+                .WithTypeEncoder(kind <= ResolveTargetKind.ArrayElementType ? "" : $"Type(isByRef: {isByRef.ToKeyword()})")
+                .WithMethodBuilder($"Type({ResolveAny(type, ResolveTargetKind.None)}, isValueType: {type.IsValueType.ToKeyword()})"));
     }
 
-    public override string ResolvePredefinedType(ITypeSymbol type) => $"""
-                                                                       metadata.AddTypeReference(
-                                                                                    {_context.AssemblyResolver.Resolve(_context, _context.RoslynTypeSystem.SystemObject.ContainingAssembly)},
-                                                                                    metadata.GetOrAddString("{type.ContainingNamespace.Name}"),
-                                                                                    metadata.GetOrAddString("{type.Name}"))
-                                                                       """;
+    public override ResolvedType ResolvePredefinedType(ITypeSymbol type) => $"""
+                                                                             metadata.AddTypeReference(
+                                                                                          {_context.AssemblyResolver.Resolve(_context, _context.RoslynTypeSystem.SystemObject.ContainingAssembly)},
+                                                                                          metadata.GetOrAddString("{type.ContainingNamespace.Name}"),
+                                                                                          metadata.GetOrAddString("{type.Name}"))
+                                                                             """;
 
-    public override string MakeArrayType(ITypeSymbol elementType)
+    public override ResolvedType MakeArrayType(ITypeSymbol elementType)
     {
         return $"Type().SZArray().{ResolveForTargetKind(elementType, ResolveTargetKind.ArrayElementType, isByRef: false)}";
     }
 
-    protected override string MakePointerType(ITypeSymbol pointerType)
+    protected override ResolvedType MakePointerType(ITypeSymbol pointerType)
     {
         throw new NotImplementedException();
     }
 
-    protected override string MakeFunctionPointerType(IFunctionPointerTypeSymbol functionPointer)
+    protected override ResolvedType MakeFunctionPointerType(IFunctionPointerTypeSymbol functionPointer)
     {
         throw new NotImplementedException();
     }

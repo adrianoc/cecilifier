@@ -47,7 +47,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             const string source = "using System; public record R; public delegate void Del(); class Foo { static Foo() {} public Foo() {} void Gen<GP>() {} [Obsolete] int Obsolete; event Action Evt; public void Bar(int param1) { int local1 = 0; if (param1 == local1) {} Gen<int>();} int field; int Prop1 {get;set;} } struct S {} enum E {} interface I {}";
             prefixes[elementKind] = "changed";
 
-            var nameStrategy = new DefaultNameStrategy(NamingOptions.All, prefixes);
+            var nameStrategy = new DefaultNameStrategy(NamingOptions.Default, prefixes);
             var memoryStream = new MemoryStream();
             memoryStream.Write(System.Text.Encoding.ASCII.GetBytes(source));
             memoryStream.Position = 0;
@@ -75,7 +75,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             }
 
             const string source = "using System; public delegate void TestDelegate(); class TestClass { static TestClass() {} public TestClass() {} void Gen<TestGenericParameter>() {} [Obsolete] int TestAttribute; event Action TestEvent; public void Bar(int TestParameter) { int local1 = 0; if (TestParameter == local1) {} Gen<int>(); } int TestField; int TestProperty {get;set;} } struct TestStruct {} enum TestEnum {} interface TestInterface {} record TestRecord;";
-            var namingOptions = NamingOptions.All;
+            var namingOptions = NamingOptions.Default;
             var casingValidation = "a-z";
 
             if (!camelCasing)

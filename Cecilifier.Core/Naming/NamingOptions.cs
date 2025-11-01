@@ -15,8 +15,9 @@ namespace Cecilifier.Core.Naming
         CamelCaseElementNames = 0x40,
         AddCommentsToMemberDeclarations = 0x80,
         IncludeSourceInErrorReports = 0x100,
+        NoCasingElementNames = 0x200,
 
-        All = DifferentiateDeclarationsAndReferences
+        Default = DifferentiateDeclarationsAndReferences
                | PrefixInstructionsWithILOpCodeName
                | AppendElementNameToVariables
                | PrefixVariableNamesWithElementKind

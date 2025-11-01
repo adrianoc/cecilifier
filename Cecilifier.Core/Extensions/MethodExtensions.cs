@@ -7,6 +7,7 @@ using System.Text;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.Services;
+using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -123,7 +124,7 @@ namespace Cecilifier.Core.Extensions
 
         public static bool HasCovariantReturnType(this IMethodSymbol method) => method is { IsOverride: true } && !SymbolEqualityComparer.Default.Equals(method.ReturnType, method.OverriddenMethod?.ReturnType);
 
-        public static IEnumerable<string> MakeGenericInstanceMethod(this string methodReferenceVariable, IVisitorContext context, string methodName, IReadOnlyList<string> resolvedTypeArguments, out string varName)
+        public static IEnumerable<string> MakeGenericInstanceMethod(this string methodReferenceVariable, IVisitorContext context, string methodName, IReadOnlyList<ResolvedType> resolvedTypeArguments, out string varName)
         {
             var hash = new HashCode();
             hash.Add(methodReferenceVariable);
@@ -148,7 +149,7 @@ namespace Cecilifier.Core.Extensions
             return exps;
         }
         
-        public static string MakeGenericInstanceMethod(this string methodReferenceVariable, IVisitorContext context, string methodName, IReadOnlyList<string> resolvedTypeArguments)
+        public static string MakeGenericInstanceMethod(this string methodReferenceVariable, IVisitorContext context, string methodName, IReadOnlyList<ResolvedType> resolvedTypeArguments)
         {
             var exps = methodReferenceVariable.MakeGenericInstanceMethod(context, methodName, resolvedTypeArguments, out var genericInstanceVarName);
             context.Generate(exps);

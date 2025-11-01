@@ -5,6 +5,7 @@ using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.ApiDriver.Handles;
 using Microsoft.CodeAnalysis;
 using Cecilifier.Core.AST;
+using Cecilifier.Core.TypeSystem;
 using OpCode = System.Reflection.Emit.OpCode;
 using OpCodes = System.Reflection.Emit.OpCodes;
 
@@ -15,19 +16,19 @@ namespace Cecilifier.Core.Extensions
         public static bool IsNonPrimitiveValueType(this ITypeSymbol type, IVisitorContext context) => !type.IsPrimitiveType() 
                                                                                                       && (type.IsValueType || SymbolEqualityComparer.Default.Equals(type, context.RoslynTypeSystem.SystemValueType));
         
-        public static string MakeByReferenceType(this string type)
+        public static ResolvedType MakeByReferenceType(this ResolvedType type)
         {
             return $"{type}.MakeByReferenceType()";
         }
         
-        public static string MakeGenericInstanceType(this string type, IEnumerable<string> typeArguments)
+        public static ResolvedType MakeGenericInstanceType(this ResolvedType type, IEnumerable<ResolvedType> typeArguments)
         {
-            return $"{type}.MakeGenericInstanceType({string.Join(", ", typeArguments)})";
+            return new ResolvedType($"{type}.MakeGenericInstanceType({string.Join(", ", typeArguments)})");
         }
 
-        public static string MakeGenericInstanceType(this string type, string typeArgument)
+        public static ResolvedType MakeGenericInstanceType(this ResolvedType type, ResolvedType typeArgument)
         {
-            return $"{type}.MakeGenericInstanceType({typeArgument})";
+            return new ResolvedType($"{type}.MakeGenericInstanceType({typeArgument})");
         }
 
         public static bool IsPrimitiveType(this ITypeSymbol type) => type.SpecialType switch

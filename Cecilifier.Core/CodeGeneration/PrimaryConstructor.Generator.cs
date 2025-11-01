@@ -68,7 +68,7 @@ public class PrimaryConstructorGenerator
                                     false,
                                     resolveTargetKind => context.TypeResolver.ResolveAny(propertyType, resolveTargetKind),
                                     propertyType.ToDisplayString(),
-                                    Array.Empty<ParameterSpec>(),
+                                    [],
                                     "FieldAttributes.Private",
                                     OpCodes.Stfld,
                                     OpCodes.Ldfld);
@@ -84,7 +84,7 @@ public class PrimaryConstructorGenerator
             var getMethodVar = context.Naming.SyntheticVariable($"get{propertyData.Name}", ElementKind.Method);
             // properties for primary ctor parameters cannot override base properties, so hasCovariantReturn = false and overridenMethod = null (none)
             var ilVar = context.Naming.ILProcessor($"get{propertyData.Name}");
-            using (propertyGenerator.AddGetterMethodDeclaration(in propertyData, getMethodVar, false, $"get_{propertyData.Name}", null, ilVar))
+            using (propertyGenerator.AddGetterMethodDeclaration(in propertyData, getMethodVar, false, null, ilVar))
             {
                 context.Generate([$"var {ilVar} = {getMethodVar}.Body.GetILProcessor();"]);
                 

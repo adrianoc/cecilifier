@@ -17,6 +17,7 @@ using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
+using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
 
 namespace Cecilifier.Core.CodeGeneration;
@@ -71,7 +72,7 @@ internal partial class PrivateImplementationDetailsGenerator
             new ParameterSpec("buffer", "TBuffer", RefKind.Ref, Constants.ParameterAttributes.None, null, (context, name) => ResolveOwnedGenericParameter(context, name, methodTypeQualifiedName)), 
             new ParameterSpec("length", context.TypeResolver.Bcl.System.Int32, RefKind.None, Constants.ParameterAttributes.None)
         ];
-        Func<IVisitorContext, string> returnTypeResolver = ctx =>
+        Func<IVisitorContext, ResolvedType> returnTypeResolver = ctx =>
         {
             var spanTypeParameter = ResolveOwnedGenericParameter(context, "TElement", methodTypeQualifiedName);
             return ctx.TypeResolver.ResolveAny(containingType).MakeGenericInstanceType(spanTypeParameter);
@@ -151,10 +152,10 @@ internal partial class PrivateImplementationDetailsGenerator
         string declaringTypeName = $"{privateImplementationDetailsVar.MemberName}";
         IReadOnlyList<ParameterSpec> parameters = [ new ParameterSpec("buffer", "TBuffer", RefKind.Ref,  Constants.ParameterAttributes.None, null, (ctx, name) => ResolveOwnedGenericParameter(ctx, name, methodTypeQualifiedName))];
         IList<string> typeParameters = ["TBuffer", "TElement"];
-        Func<IVisitorContext, string> returnTypeResolver = ctx =>
+        Func<IVisitorContext, ResolvedType> returnTypeResolver = ctx =>
         {
             var spanTypeParameter = ResolveOwnedGenericParameter(ctx, "TElement", methodTypeQualifiedName);
-            return spanTypeParameter.MakeByReferenceType();
+            return new ResolvedType(spanTypeParameter).MakeByReferenceType();
         };
         var methodExpressions = context.ApiDefinitionsFactory.Method(
                                                                     context, 
@@ -207,10 +208,10 @@ internal partial class PrivateImplementationDetailsGenerator
             new ParameterSpec("index", context.TypeResolver.Bcl.System.Int32, RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = "int" }
         ];
         IList<string> typeParameters = ["TBuffer", "TElement"];
-        Func<IVisitorContext, string> returnTypeResolver = ctx =>
+        Func<IVisitorContext, ResolvedType> returnTypeResolver = ctx =>
         {
             var spanTypeParameter = ResolveOwnedGenericParameter(ctx, "TElement", methodTypeQualifiedName);
-            return spanTypeParameter.MakeByReferenceType();
+            return new ResolvedType(spanTypeParameter).MakeByReferenceType();
         };
         var methodExpressions = context.ApiDefinitionsFactory.Method(
             context, 
@@ -292,7 +293,7 @@ internal partial class PrivateImplementationDetailsGenerator
         //                                           /                                                          \                        /                                                   / 
         // .field assembly static initonly valuetype '<PrivateImplementationDetails>'/'__StaticArrayInitTypeSize=3' '039058C6F2C0CB492C533B0A4D14EF77CC0F78ABCCCED5287D84A1A2011CFB81' at I_00002B50
         var fieldVar = context.Naming.SyntheticVariable("arrayInitializerData", ElementKind.Field);
-        var fieldExpressions = context.ApiDefinitionsFactory.Field(context, new MemberDefinitionContext(fieldName, fieldVar, privateImplementationDetailsVar.VariableName), privateImplementationDetailsVar.MemberName, fieldName, rawDataTypeVar, Constants.CompilerGeneratedTypes.StaticArrayInitFieldModifiers, false, false, null);
+        var fieldExpressions = context.ApiDefinitionsFactory.Field(context, new MemberDefinitionContext(fieldName, fieldVar, privateImplementationDetailsVar.VariableName), privateImplementationDetailsVar.MemberName, fieldName, rawDataTypeVar, Constants.CompilerGeneratedTypes.StaticArrayInitFieldModifiers, false, false);
         context.Generate(fieldExpressions);
         var initializationByteArrayAsString = new StringBuilder();
         foreach (var itemValue in toBeHashed)
@@ -311,7 +312,7 @@ internal partial class PrivateImplementationDetailsGenerator
         return context.DefinitionVariables.GetVariable(fieldName, VariableMemberKind.Field, Constants.CompilerGeneratedTypes.PrivateImplementationDetails);
     }
     
-    private static string GetOrCreateRawDataType(IVisitorContext context, long sizeInBytes)
+    private static ResolvedType GetOrCreateRawDataType(IVisitorContext context, long sizeInBytes)
     {
         if (sizeInBytes == sizeof(int))
             return context.TypeResolver.Bcl.System.Int32;
@@ -322,7 +323,7 @@ internal partial class PrivateImplementationDetailsGenerator
         var rawDataHolderStructName = Constants.CompilerGeneratedTypes.StaticArrayInitTypeNameFor(sizeInBytes);
         var found = context.DefinitionVariables.GetVariable(rawDataHolderStructName, VariableMemberKind.Type, Constants.CompilerGeneratedTypes.PrivateImplementationDetails);
         if (found.IsValid)
-            return found;
+            return new ResolvedType(found.VariableName);
 
         context.WriteNewLine();
         context.WriteComment($"{rawDataHolderStructName} struct.");
@@ -330,7 +331,7 @@ internal partial class PrivateImplementationDetailsGenerator
         
         var rawDataHolderTypeVar = context.Naming.Type("rawDataTypeVar", ElementKind.Struct);
         string typeNamespace = string.Empty;
-        string baseTypeName = context.TypeResolver.ResolveAny(context.RoslynTypeSystem.SystemValueType);
+        var baseTypeName = context.TypeResolver.ResolveAny(context.RoslynTypeSystem.SystemValueType);
         DefinitionVariable outerTypeVariable = GetOrCreatePrivateImplementationDetailsTypeVariable(context);
         var privateImplementationDetails = context.ApiDefinitionsFactory.Type(context, rawDataHolderTypeVar, typeNamespace, rawDataHolderStructName, Constants.CompilerGeneratedTypes.StaticArrayRawDataHolderTypeModifiers, baseTypeName, outerTypeVariable, false, Array.Empty<ITypeSymbol>(), Array.Empty<TypeParameterSyntax>(), Array.Empty<TypeParameterSyntax>(), $"ClassSize = {sizeInBytes}", "PackingSize = 1");
 

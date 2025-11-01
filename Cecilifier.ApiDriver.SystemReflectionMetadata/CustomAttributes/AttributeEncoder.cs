@@ -10,10 +10,12 @@ internal struct AttributeEncoder
 {
     private readonly IVisitorContext _context;
     private string _attributeEncoderVar;
+    private readonly string _attributeName;
 
-    public AttributeEncoder(IVisitorContext context, string attributeEncoderVarVariableName)
+    public AttributeEncoder(IVisitorContext context, string attributeEncoderVarVariableName, string attributeName)
     {
         _context = context;
+        _attributeName = attributeName;
         AttributeBuilderVariable = attributeEncoderVarVariableName;
     }
 
@@ -21,7 +23,7 @@ internal struct AttributeEncoder
 
     internal string Encode(IList<CustomAttributeArgument> arguments, IList<CustomAttributeNamedArgument> namedArguments)
     {
-        _attributeEncoderVar = _context.Naming.SyntheticVariable("attribute", ElementKind.Attribute);
+        _attributeEncoderVar = _context.Naming.SyntheticVariable(_attributeName, ElementKind.Attribute);
 
         StringBuilder encoded = new($"""
                                      var {AttributeBuilderVariable} = new BlobBuilder();

@@ -2,7 +2,9 @@ using Cecilifier.ApiDriver.SystemReflectionMetadata.DelayedDefinitions;
 using Cecilifier.ApiDriver.SystemReflectionMetadata.TypeSystem;
 using Cecilifier.Core;
 using Cecilifier.Core.AST;
+using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
+using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 
 namespace Cecilifier.ApiDriver.SystemReflectionMetadata;
@@ -25,7 +27,9 @@ public class SystemReflectionMetadataContext : CecilifierContextBase, IVisitorCo
     public DelayedDefinitionsManager DelayedDefinitionsManager { get; } = new();
     
     public SystemReflectionMetadataAssemblyResolver AssemblyResolver { get; init; }
-    
+
+    public override DefinitionVariable GetMethodVariable(IMethodSymbol method) => DefinitionVariables.GetMethodVariable(method.AsMethodVariable(VariableMemberKind.MethodSignature));
+
     public override void OnFinishedTypeDeclaration()
     {
         DelayedDefinitionsManager.ProcessDefinitions(this);

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -202,6 +203,7 @@ namespace Cecilifier.Core.AST
                     ? OpCodes.Stsfld
                     : OpCodes.Stfld;
 
+                Debug.Assert(fieldVarDef.IsValid);
                 Context.ApiDriver.WriteCilInstruction(Context, ctorBodyIL, fieldStoreOpCode, fieldVarDef.VariableName.AsToken());
             }
 

@@ -93,8 +93,7 @@ namespace Cecilifier.Core.AST
 
             // check the methods of the property because we do not register the property itself, only its methods. 
             var methodToCheck = propInfo.GetMethod ?? propInfo.SetMethod;
-            var found = Context.DefinitionVariables.GetMethodVariable(methodToCheck.AsMethodDefinitionVariable());
-            return found.IsValid;
+            return Context.GetMethodVariable(methodToCheck).IsValid;
         }
 
         private void AddDefaultMemberAttribute(string declaringTypeDefinitionVar, string value)
@@ -210,8 +209,7 @@ namespace Cecilifier.Core.AST
                 var methodVariableScope = generator.AddGetterMethodDeclaration(
                                                         in propertyGenerationData, 
                                                         getMethodVar, 
-                                                        propertySymbol.HasCovariantGetter(),
-                                                        propertySymbol.GetMethod!.ToDisplayString(), 
+                                                        propertySymbol.HasCovariantGetter(), 
                                                         GetOverridenMethod(propertySymbol.GetMethod),
                                                         il);
 
@@ -300,7 +298,7 @@ namespace Cecilifier.Core.AST
             return ModifiersToCecil<FieldAttributes>(m, "Private", FieldDeclarationVisitor.MapFieldAttributesFor);
         }
 
-        private string AddPropertyDefinition(BasePropertyDeclarationSyntax propertyDeclarationSyntax, string declaringTypeVariable, string declaringTypeName, string propName, List<ParameterSpec> propertyParameters, string propertyType)
+        private string AddPropertyDefinition(BasePropertyDeclarationSyntax propertyDeclarationSyntax, string declaringTypeVariable, string declaringTypeName, string propName, List<ParameterSpec> propertyParameters, ResolvedType propertyType)
         {
             var propDefVar = Context.Naming.PropertyDeclaration(propertyDeclarationSyntax);
             var mdc = new BodiedMemberDefinitionContext(propName, propDefVar, declaringTypeVariable, propertyDeclarationSyntax.IsStatic() ?  MemberOptions.Static : MemberOptions.None, IlContext.None);

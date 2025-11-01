@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
 using Cecilifier.Core.ApiDriver.Attributes;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.TypeSystem;
@@ -220,7 +219,7 @@ namespace Cecilifier.Core.Extensions
         {
             return expression switch
             {
-                TypeOfExpressionSyntax typeOf => new RawCSharpCode(context.TypeResolver.ResolveAny(context.SemanticModel.GetTypeInfo(typeOf.Type).Type)),
+                TypeOfExpressionSyntax typeOf => new RawCSharpCode(context.TypeResolver.ResolveAny(context.SemanticModel.GetTypeInfo(typeOf.Type).Type).Expression),
                 ImplicitArrayCreationExpressionSyntax implicitArrayCreation => ConstantValueForArray(implicitArrayCreation.Initializer),
                 ArrayCreationExpressionSyntax arrayCreation => ConstantValueForArray(arrayCreation.Initializer),
                 

@@ -29,8 +29,8 @@ public class MonoCecilMemberResolver(MonoCecilContext context) : IMemberResolver
             if (!method.ContainingType.IsGenericType)
                 return found.VariableName.MakeGenericInstanceMethod(context, method);
 
-            var declaringTypeResolveExp = context.TypeResolver.ResolveAny(method.ContainingType);
-            var exps = found.VariableName.CloneMethodReferenceOverriding(context, new() { ["DeclaringType"] = declaringTypeResolveExp }, method, out var variable);
+            var declaringType = context.TypeResolver.ResolveAny(method.ContainingType);
+            var exps = found.VariableName.CloneMethodReferenceOverriding(context, new() { ["DeclaringType"] = declaringType.Expression }, method, out var variable);
             context.Generate(exps);
             return variable.MakeGenericInstanceMethod(context, method);
         }
@@ -48,7 +48,7 @@ public class MonoCecilMemberResolver(MonoCecilContext context) : IMemberResolver
         if (method.IsGenericMethod)
         {
             var (referencedMethodTypeParameters, returnReferencesTypeParameter) = CollectReferencedMethodTypeParameters(method);
-            var returnType = !returnReferencesTypeParameter ? context.TypeResolver.ResolveAny(method.ReturnType) : context.TypeResolver.Bcl.System.Void;
+            var returnType = !returnReferencesTypeParameter ? context.TypeResolver.ResolveAny(method.ReturnType) : (ResolvedType) context.TypeResolver.Bcl.System.Void;
             var tempMethodVar = context.Naming.SyntheticVariable(method.Name, ElementKind.MemberReference);
             context.Generate($$"""
                                        var {{tempMethodVar}} = new MethodReference("{{method.Name}}", {{returnType}}, {{context.TypeResolver.ResolveAny(method.ContainingType)}})
@@ -122,7 +122,7 @@ public class MonoCecilMemberResolver(MonoCecilContext context) : IMemberResolver
             $"TypeHelpers.ResolveMethod(typeof({declaringTypeName}), \"{method.Name}\",{ReflectionBindingsFlags(method)}{method.Parameters.Aggregate("", (acc, curr) => acc + ", \"" + curr.Type.GetReflectionName() + "\"")})");
     }
 
-    public string ResolveMethod(string declaringTypeName, string declaringTypeVariable, string methodNameForVariableRegistration, string resolvedReturnType, IReadOnlyList<ParameterSpec> parameters, int typeParameterCountCount, MemberOptions options)
+    public string ResolveMethod(string declaringTypeName, string declaringTypeVariable, string methodNameForVariableRegistration, ResolvedType returnType, IReadOnlyList<ParameterSpec> parameters, int typeParameterCountCount, MemberOptions options)
     {
         throw new NotImplementedException();
     }

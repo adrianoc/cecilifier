@@ -4,6 +4,7 @@ using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.ApiDriver.Handles;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
+using Cecilifier.Core.TypeSystem;
 using Microsoft.CodeAnalysis;
 
 namespace Cecilifier.ApiDriver.MonoCecil;
@@ -69,6 +70,7 @@ public class SnippetRunner
         {
             CilOperandValue cilOperand => $", {cilOperand.Value}",
             CilLocalVariableHandle fieldHandle => $", {fieldHandle.Value}",
+            ResolvedType rt => rt.Expression == null ? string.Empty : $", {rt.Expression}", 
             _ => operand == null ? string.Empty : $", {operand}"
         };
         

@@ -1,10 +1,13 @@
 using System.Runtime.CompilerServices;
 using System.Reflection.Emit;
+using Cecilifier.Core.TypeSystem;
 
 namespace Cecilifier.Core.Misc
 {
     public static class InstructionRepresentationExtensions
     {
+        internal static InstructionRepresentation WithOperand(this OpCode opCode, in ResolvedType operand) => WithOperand(opCode, operand.Expression);
+        
         internal static InstructionRepresentation WithOperand(this OpCode opCode, string operand)
         {
             return new InstructionRepresentation { OpCode = opCode, Operand = operand };

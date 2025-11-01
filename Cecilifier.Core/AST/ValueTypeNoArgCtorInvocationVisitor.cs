@@ -1,8 +1,8 @@
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Variables;
 using System.Reflection.Emit;
-using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.ApiDriver.Handles;
+using Cecilifier.Core.TypeSystem;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.CSharp;
@@ -81,7 +81,7 @@ namespace Cecilifier.Core.AST
             var accessedMember = ModelExtensions.GetSymbolInfo(Context.SemanticModel, node).Symbol.EnsureNotNull();
             if (accessedMember.ContainingType.SpecialType == SpecialType.System_ValueType)
             {
-                Context.SetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, ResolvedStructType());
+                Context.SetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, ResolvedStructType().Expression);
             }
         }
 
@@ -195,6 +195,6 @@ namespace Cecilifier.Core.AST
             context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Pop);
         }
 
-        private string ResolvedStructType() =>  Context.TypeResolver.ResolveAny(ctorInfo.Symbol.ContainingType);
+        private ResolvedType ResolvedStructType() =>  Context.TypeResolver.ResolveAny(ctorInfo.Symbol.ContainingType);
     }
 }

@@ -11,7 +11,8 @@ namespace Cecilifier.Core.Tests.Integration
     [TestFixture(typeof(SystemReflectionMetadataContext))]
     [EnableForContext<SystemReflectionMetadataContext>(
         nameof(TestSingleField), 
-        nameof(TestStatic), 
+        nameof(TestStatic),
+        nameof(TestSimpleArray),
         nameof(TestInternalFields), 
         nameof(TestInitializedFieldSingleCtor), 
         nameof(TestAssignment), 
@@ -21,7 +22,9 @@ namespace Cecilifier.Core.Tests.Integration
         nameof(TestSingleRefField),
         nameof(TestInitializedFieldNoCtor),
         nameof(TestInitializedFieldWithBaseCtor),
-        nameof(TestInitializedFieldMultipleCtor))]
+        nameof(TestInitializedFieldMultipleCtor),
+        nameof(TestSimpleFieldsInSingleDeclaration),
+        nameof(TestVolatileField))]
     public class FieldsTestCase<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
     {
         [Test]

@@ -5,8 +5,8 @@ using Cecilifier.Core.AST.MemberDependencies;
 using Cecilifier.Core.CodeGeneration;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
-using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
+using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -133,7 +133,7 @@ namespace Cecilifier.Core.AST
             }
         }
         
-        private string ProcessBase(TypeDeclarationSyntax classDeclaration)
+        private ResolvedType ProcessBase(TypeDeclarationSyntax classDeclaration)
         {
             var classSymbol = DeclaredSymbolFor(classDeclaration);
             return Context.TypeResolver.ResolveAny(classSymbol.BaseType);
@@ -224,14 +224,14 @@ namespace Cecilifier.Core.AST
             HandleAttributesInTypeParameter(context, typeParameters);
         }
 
-        private static string BaseTypeFor(IVisitorContext context, ITypeSymbol typeSymbol)
+        private static ResolvedType BaseTypeFor(IVisitorContext context, ITypeSymbol typeSymbol)
         {
             if (typeSymbol.BaseType == null)
                 return null;
 
             EnsureForwardedTypeDefinition(context, typeSymbol.BaseType, []);
 
-            return typeSymbol.BaseType.IsGenericType ? null : context.TypeResolver.ResolveAny(typeSymbol.BaseType);
+            return typeSymbol.BaseType.IsGenericType ? default : context.TypeResolver.ResolveAny(typeSymbol.BaseType);
         }
 
         private void EnsureCurrentTypeHasADefaultCtor(TypeDeclarationSyntax node, string typeLocalVar)

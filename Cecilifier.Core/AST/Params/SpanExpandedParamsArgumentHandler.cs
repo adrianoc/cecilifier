@@ -3,6 +3,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Cecilifier.Core.CodeGeneration;
 using Cecilifier.Core.Extensions;
+using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
 
 #nullable enable
@@ -13,7 +14,7 @@ internal class SpanExpandedParamsArgumentHandler : ExpandedParamsArgumentHandler
 {
     private readonly string _inlineArrayVariableName;
     private readonly OpCode _stindOpCode;
-    private readonly string _inlineArrayType;
+    private readonly ResolvedType _inlineArrayType;
     private readonly ITypeSymbol _paramsParameterType;
 
     public SpanExpandedParamsArgumentHandler(IVisitorContext context, IParameterSymbol paramsParameter, ArgumentListSyntax argumentList, string ilVar) : base(context, paramsParameter, argumentList, ilVar)

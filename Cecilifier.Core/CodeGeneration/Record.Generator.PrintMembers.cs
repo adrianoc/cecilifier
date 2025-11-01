@@ -9,6 +9,7 @@ using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
+using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
 
 namespace Cecilifier.Core.CodeGeneration;
@@ -28,7 +29,7 @@ internal partial class RecordGenerator
 
         var builderParameter = new ParameterSpec("builder", context.TypeResolver.ResolveAny(context.RoslynTypeSystem.ForType<StringBuilder>()), RefKind.None, Constants.ParameterAttributes.None);
         string methodModifiers = $"MethodAttributes.Family | {(HasBaseRecord(record) ? Constants.Cecil.HideBySigVirtual : Constants.Cecil.HideBySigNewSlotVirtual)}";
-        Func<IVisitorContext, string> returnTypeResolver = ctx => context.TypeResolver.Bcl.System.Boolean;
+        Func<IVisitorContext, ResolvedType> returnTypeResolver = ctx => ctx.TypeResolver.Bcl.System.Boolean;
         var printMembersDeclExps = context.ApiDefinitionsFactory.Method(
                                                                 context, 
                                                                 new BodiedMemberDefinitionContext(PrintMembersMethodName, PrintMembersVar, recordTypeDefinitionVariable, MemberOptions.None, IlContext.None), 
@@ -80,7 +81,7 @@ internal partial class RecordGenerator
                 OpCodes.Ldarg_1,
                 OpCodes.Ldarg_0,
                 OpCodes.Call.WithOperand(ClosedGenericMethodFor($"get_{property.Name}", recordTypeDefinitionVariable)),
-                OpCodes.Box.WithOperand(context.TypeResolver.ResolveAny(property.Type)).IgnoreIf(property.Type.TypeKind != TypeKind.TypeParameter),
+                OpCodes.Box.WithOperand(context.TypeResolver.ResolveAny(property.Type).Expression).IgnoreIf(property.Type.TypeKind != TypeKind.TypeParameter),
                 OpCodes.Callvirt.WithOperand(stringBuilderAppendMethod.MethodResolverExpression(context)),
                 OpCodes.Pop
             ]);
@@ -106,7 +107,7 @@ internal partial class RecordGenerator
                 OpCodes.Ldarg_1,
                 OpCodes.Ldarg_0,
                 OpCodes.Ldfld.WithOperand($"""new FieldReference("{field.Name}", {context.TypeResolver.ResolveAny(field.Type)}, {TypeOrClosedTypeFor(recordTypeDefinitionVariable)})"""),
-                OpCodes.Box.WithOperand(context.TypeResolver.ResolveAny(field.Type)).IgnoreIf(field.Type.TypeKind != TypeKind.TypeParameter),
+                OpCodes.Box.WithOperand(context.TypeResolver.ResolveAny(field.Type).Expression).IgnoreIf(field.Type.TypeKind != TypeKind.TypeParameter),
                 OpCodes.Callvirt.WithOperand(stringBuilderAppendMethod.MethodResolverExpression(context)),
                 OpCodes.Pop
             ]);
