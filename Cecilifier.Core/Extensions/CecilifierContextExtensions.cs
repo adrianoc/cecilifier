@@ -152,7 +152,7 @@ public static class CecilifierContextExtensions
         //      and the check for retrieving the method variable bellow fails (because definition of the variable
         //      for the method definition has been postponed also).
         //      For now there are not tests relying on forwarded methods in SRM
-        if (Cecilifier.xxxx)
+        if (Cecilifier.IsSRM)
             return;
         
         if (!method.IsDefinedInCurrentAssembly(context)) 

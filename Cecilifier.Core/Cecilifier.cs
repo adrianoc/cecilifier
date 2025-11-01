@@ -41,7 +41,7 @@ namespace Cecilifier.Core
             var semanticModel = comp.GetSemanticModel(syntaxTree);
             var context = TContext.CreateContext(options, semanticModel);
 
-            xxxx = typeof(TContext).Name.Contains("SystemReflectionMetadataContext");
+            IsSRM = typeof(TContext).Name.Contains("SystemReflectionMetadataContext");
 
             CecilifierInterpolatedStringHandler.BaseIndentation = context.Indentation;
             var visitor = new CompilationUnitVisitor(context);
@@ -54,7 +54,7 @@ namespace Cecilifier.Core
             return new CecilifierResult(reader, mainTypeName, context.Mappings, context, context.Diagnostics);
         }
 
-        public static bool xxxx;
+        public static bool IsSRM;
 
         private static OutputKind OutputKindFor(SyntaxTree syntaxTree)
         {
