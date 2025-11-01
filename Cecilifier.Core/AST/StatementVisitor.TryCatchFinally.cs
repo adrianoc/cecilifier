@@ -123,7 +123,7 @@ namespace Cecilifier.Core.AST
         private struct ExceptionHandlerEntry
         {
             public Mono.Cecil.Cil.ExceptionHandlerType Kind;
-            public string CatchType;
+            public ResolvedType CatchType;
             public string TryStart;
             public string TryEnd;
             public string HandlerStart;

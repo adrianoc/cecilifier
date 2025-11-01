@@ -21,7 +21,7 @@ internal record struct PropertyGenerationData(
     string Name, 
     IDictionary<string, string> AccessorModifiers,
     bool IsStatic,
-    Func<ResolveTargetKind, string> Type, 
+    Func<ResolveTargetKind, ResolvedType> Type, 
     string TypeNameForRegistration, 
     IReadOnlyList<ParameterSpec> Parameters,
     string BackingFieldModifiers =null, // Not used, unless on auto-properties

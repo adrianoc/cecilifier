@@ -40,18 +40,18 @@ namespace Cecilifier.Core.Misc
             return $"var {genParamDefVar} = new Mono.Cecil.GenericParameter(\"{genericParamName}\", {typeParameterOwnerVar});";
         }
 
-        public static string ParameterDoesNotHandleParamsKeywordOrDefaultValue(string name, RefKind byRef, string resolvedType, string? paramAttributes = null)
+        public static string ParameterDoesNotHandleParamsKeywordOrDefaultValue(string name, RefKind byRef, ResolvedType resolvedType, string? paramAttributes = null)
         {
             paramAttributes ??= Constants.ParameterAttributes.None;
             if (RefKind.None != byRef)
             {
-                resolvedType = new ResolvedType(resolvedType).MakeByReferenceType();
+                resolvedType = resolvedType.MakeByReferenceType();
             }
 
             return $"new ParameterDefinition(\"{name}\", {paramAttributes}, {resolvedType})";
         }
 
-        public static IEnumerable<string> Parameter(string name, RefKind byRef, string? paramsAttributeTypeName, string methodVar, string paramVar, string resolvedType, string paramAttributes, (string? Value, bool Present) defaultParameterValue)
+        public static IEnumerable<string> Parameter(string name, RefKind byRef, string? paramsAttributeTypeName, string methodVar, string paramVar, ResolvedType resolvedType, string paramAttributes, (string? Value, bool Present) defaultParameterValue)
         {
             var exps = new List<string>();
 
@@ -103,7 +103,7 @@ namespace Cecilifier.Core.Misc
             };
         }
 
-        private static string FunctionPointerTypeBasedCecilType(ITypeResolver resolver, IFunctionPointerTypeSymbol functionPointer, Func<string, string, string, string> factory)
+        private static string FunctionPointerTypeBasedCecilType(ITypeResolver resolver, IFunctionPointerTypeSymbol functionPointer, Func<string, string, ResolvedType, string> factory)
         {
             var parameters = $"Parameters={{ {string.Join(',', functionPointer.Signature.Parameters.Select(p => ParameterDoesNotHandleParamsKeywordOrDefaultValue(p.Name, p.RefKind, resolver.ResolveAny(p.Type))))} }}";
             var returnType = resolver.ResolveAny(functionPointer.Signature.ReturnType);
@@ -166,7 +166,7 @@ namespace Cecilifier.Core.Misc
             /// <param name="context"></param>
             /// <param name="listOfTTypeSymbol"><see cref="ITypeSymbol"/> for the List{T}.</param>
             /// <param name="elementCount">Number of elements to be stored.</param>
-            public static (DefinitionVariable, string) InstantiateListToStoreElements(IVisitorContext context, string ilVar, INamedTypeSymbol listOfTTypeSymbol, int elementCount)
+            public static (DefinitionVariable, ResolvedType) InstantiateListToStoreElements(IVisitorContext context, string ilVar, INamedTypeSymbol listOfTTypeSymbol, int elementCount)
             {
                 var resolvedListTypeArgument = context.TypeResolver.ResolveAny(listOfTTypeSymbol.TypeArguments[0]);
 
@@ -202,7 +202,7 @@ namespace Cecilifier.Core.Misc
                 return (spanToList, resolvedListTypeArgument);
             }
             
-            public static string GetSpanIndexerGetter(IVisitorContext context, string typeArgument)
+            public static string GetSpanIndexerGetter(IVisitorContext context, ResolvedType typeArgument)
             {
                 var methodVar = context.Naming.SyntheticVariable("getItem", ElementKind.Method);
                 var declaringType = context.TypeResolver.ResolveAny(context.RoslynTypeSystem.SystemSpan).MakeGenericInstanceType(typeArgument);

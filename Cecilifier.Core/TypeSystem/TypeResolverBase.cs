@@ -22,12 +22,27 @@ namespace Cecilifier.Core.TypeSystem
         // Resolvers for api drivers that need to generate different code based on the target can override this method.
         public virtual ResolvedType ResolveAny(ITypeSymbol type, ResolveTargetKind _ = ResolveTargetKind.None, string cecilTypeParameterProviderVar = null)
         {
-            return (string) ResolveLocalVariableType(type)
-                   ?? (string) ResolveNestedType(type)
-                   ?? (string) ResolvePredefinedAndComposedTypes(type)
-                   ?? (string) ResolveGenericType(type, cecilTypeParameterProviderVar)
-                   ?? (string) ResolveTypeParameter(type, cecilTypeParameterProviderVar)
-                   ?? Resolve(type);
+            var resolvedType = ResolveLocalVariableType(type);
+            if (resolvedType)
+                return resolvedType;
+            
+            resolvedType = ResolveNestedType(type);
+            if (resolvedType)
+                return resolvedType;
+            
+            resolvedType = ResolvePredefinedAndComposedTypes(type);
+            if (resolvedType)
+                return resolvedType;
+
+            resolvedType = ResolveGenericType(type, cecilTypeParameterProviderVar);
+            if (resolvedType)
+                return resolvedType;
+                    
+            resolvedType = ResolveTypeParameter(type, cecilTypeParameterProviderVar);
+            if (resolvedType)
+                return resolvedType;
+                
+            return Resolve(type);
         }
        
         private ResolvedType ResolveNestedType(ITypeSymbol type)

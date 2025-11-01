@@ -68,7 +68,7 @@ public class PrimaryConstructorGenerator
                                     false,
                                     resolveTargetKind => context.TypeResolver.ResolveAny(propertyType, resolveTargetKind),
                                     propertyType.ToDisplayString(),
-                                    Array.Empty<ParameterSpec>(),
+                                    [],
                                     "FieldAttributes.Private",
                                     OpCodes.Stfld,
                                     OpCodes.Ldfld);

@@ -66,7 +66,7 @@ internal static class CollectionExpressionProcessor
         
         var currentMethodVar = context.DefinitionVariables.GetLastOf(VariableMemberKind.Method).VariableName;
         var inlineArrayElementType = spanTypeSymbol.TypeArguments[0];
-        var inlineArrayTypeVar = new ResolvedType(inlineArrayVar).MakeGenericInstanceType(context.TypeResolver.ResolveAny(inlineArrayElementType));
+        var inlineArrayTypeVar = inlineArrayVar.MakeGenericInstanceType(context.TypeResolver.ResolveAny(inlineArrayElementType));
         var inlineArrayLocalVar = context.ApiDefinitionsFactory.LocalVariable(context, "buffer", currentMethodVar, inlineArrayTypeVar).VariableName;
         
         // Initializes the inline array
@@ -104,7 +104,7 @@ internal static class CollectionExpressionProcessor
         context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, OpCodes.Call, inlineArrayAsSpanMethodVar);
     }
 
-    private static string GetOrEmitSyntheticInlineArrayFor(CollectionExpressionSyntax node, IVisitorContext context)
+    private static ResolvedType GetOrEmitSyntheticInlineArrayFor(CollectionExpressionSyntax node, IVisitorContext context)
     {
         return InlineArrayGenerator.GetOrGenerateInlineArrayType(context, node.Elements.Count, $"Declares an inline array for backing the data for the collection expression: {node.SourceDetails()}");
     }

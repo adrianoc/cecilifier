@@ -56,13 +56,13 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
         return methodRefVar;
     }
     
-    public string ResolveMethod(string declaringTypeName, string declaringTypeVariable, string methodNameForVariableRegistration, string resolvedReturnType, IReadOnlyList<ParameterSpec> parameters, int typeParameterCountCount, MemberOptions options)
+    public string ResolveMethod(string declaringTypeName, string declaringTypeVariable, string methodNameForVariableRegistration, ResolvedType returnType, IReadOnlyList<ParameterSpec> parameters, int typeParameterCountCount, MemberOptions options)
     {
         var methodReferenceToFind = new MethodDefinitionVariable(
                                                 VariableMemberKind.MethodReference,
                                                 declaringTypeName,
                                                 methodNameForVariableRegistration,
-                                                parameters.Select(p => p.ElementType).ToArray(),
+                                                parameters.Select(p => p.ElementType.Expression).ToArray(),
                                                 typeParameterCountCount);
         
         var found = context.DefinitionVariables.GetMethodVariable(methodReferenceToFind);
@@ -77,18 +77,16 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
                                                             VariableMemberKind.MethodSignature,
                                                             declaringTypeName,
                                                             methodNameForVariableRegistration,
-                                                            parameters.Select(p => p.ElementType).ToArray(),
+                                                            parameters.Select(p => p.ElementType.Expression).ToArray(),
                                                             typeParameterCountCount,
                                                             methodSignatureVar));
 
-        var modifierVariable = string.Empty;
+        var requiredModifierOrEmpty = string.Empty;
         if ((options & MemberOptions.InitOnly) != 0)
         {
-            modifierVariable = context.TypedTypeResolver.Resolve(context.RoslynTypeSystem.ForType(typeof(IsExternalInit).FullName));
+            var modifierVariable = context.TypedTypeResolver.Resolve(context.RoslynTypeSystem.ForType(typeof(IsExternalInit).FullName));
+            requiredModifierOrEmpty = $"returnTypeEncoder.CustomModifiers().AddModifier({modifierVariable}, isOptional: false);";
         }
-        var requiredModifierOrEmpty = (options & MemberOptions.InitOnly) != 0 
-                                    ? $"returnTypeEncoder.CustomModifiers().AddModifier({modifierVariable}, isOptional: false);" 
-                                    : "";
         
         context.Generate($$"""
                               var {{methodSignatureBlobVar}} = new BlobBuilder();
@@ -99,7 +97,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
                                       returnTypeEncoder => 
                                       {
                                         {{requiredModifierOrEmpty}}
-                                        returnTypeEncoder.{{resolvedReturnType}};
+                                        returnTypeEncoder.{{returnType}};
                                       },
                                       parameters => 
                                       {

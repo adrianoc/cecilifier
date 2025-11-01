@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Cecilifier.ApiDriver.SystemReflectionMetadata.CustomAttributes;
 using Cecilifier.ApiDriver.SystemReflectionMetadata.DelayedDefinitions;
+using Cecilifier.ApiDriver.SystemReflectionMetadata.TypeSystem;
 using Cecilifier.Core;
 using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.ApiDriver.Attributes;
@@ -26,7 +27,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         string typeNamespace, 
         string typeName, 
         string attrs, 
-        string resolvedBaseType, 
+        ResolvedType baseType, 
         DefinitionVariable outerTypeVariable, 
         bool isStructWithNoFields,
         IEnumerable<ITypeSymbol> interfaces, 
@@ -50,7 +51,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                                                                   {attrs},
                                                                   metadata.GetOrAddString("{typeNamespace}"),
                                                                   metadata.GetOrAddString("{typeName}"),
-                                                                  {resolvedBaseType},
+                                                                  {baseType},
                                                                   fieldList: {typeRecord.FirstFieldHandle ?? "MetadataTokens.FieldDefinitionHandle(1)"},
                                                                   methodList: {typeRecord.FirstMethodHandle ?? "MetadataTokens.MethodDefinitionHandle(1)"});
                                  """));
@@ -116,7 +117,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         string methodModifiers,
         IReadOnlyList<ParameterSpec> parameters,
         IList<string> typeParameters,
-        Func<IVisitorContext, string> returnTypeResolver,
+        Func<IVisitorContext, ResolvedType> returnTypeResolver,
         out MethodDefinitionVariable methodDefinitionVariable)
     {
         var methodRefVar = context.MemberResolver.ResolveMethod(
@@ -137,7 +138,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                                                 VariableMemberKind.MethodSignature,
                                                 declaringTypeName,
                                                 definitionContext.Member.Identifier,
-                                                parameters.Select(p => p.ElementType).ToArray(),
+                                                parameters.Select(p => p.ElementType.Expression).ToArray(),
                                                 typeParameters.Count);
 
             var methodSignatureVar = ctx.DefinitionVariables.GetMethodVariable(methodReferenceToFind);
@@ -161,7 +162,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                                         VariableMemberKind.Method,
                                         declaringTypeName,
                                         definitionContext.Member.Name,
-                                        parameters.Select(p => p.ElementType).ToArray(),
+                                        parameters.Select(p => p.ElementType.Expression).ToArray(),
                                         0,
                                         methodDefVar);
             
@@ -210,7 +211,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         return Field(context, definitionContext, fieldOrEvent.ContainingType.ToDisplayString(), fieldOrEvent.Name, context.TypeResolver.ResolveAny(fieldType, ResolveTargetKind.Field),  fieldAttributes, isVolatile, isByRef, constantValue);
     }
 
-    public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext definitionContext, string declaringTypeName, string name, string fieldType, string fieldAttributes, bool isVolatile, bool isByRef, object? constantValue = null)
+    public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext definitionContext, string declaringTypeName, string name, ResolvedType fieldType, string fieldAttributes, bool isVolatile, bool isByRef, object? constantValue = null)
     {
         Debug.Assert(definitionContext.ParentDefinitionVariable != null);
         ((SystemReflectionMetadataContext) context).DelayedDefinitionsManager.RegisterFieldDefinition(definitionContext.ParentDefinitionVariable, definitionContext.DefinitionVariable);
@@ -227,20 +228,17 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                              """);
         if (isVolatile)
         {
-            // TODO: Gambiarra !!!
-            if (fieldType.StartsWith("Type()."))
-            {
-                var signatureTypeEncoderVar =  context.Naming.SyntheticVariable($"{definitionContext.Identifier}_TypeEncoder", ElementKind.Field);
-                exps[expCount++] = Format($"""
-                                           var {signatureTypeEncoderVar} = {fieldEncoderVar}.Type();
-                                           {signatureTypeEncoderVar}.CustomModifiers().AddModifier({context.TypeResolver.Resolve(context.RoslynTypeSystem.ForType(typeof(IsVolatile).FullName))}, isOptional: false);
-                                           {signatureTypeEncoderVar}.{fieldType.Substring("Type().".Length)};
-                                           """);
-            }
+            var details = fieldType.GetDetails<ResolvedTypeDetails>();
+            var signatureTypeEncoderVar =  context.Naming.SyntheticVariable($"{definitionContext.Identifier}_TypeEncoder", ElementKind.Field);
+            exps[expCount++] = Format($"""
+                                       var {signatureTypeEncoderVar} = {fieldEncoderVar}.{details.TypeEncoderProvider};
+                                       {signatureTypeEncoderVar}.CustomModifiers().AddModifier({context.TypeResolver.Resolve(context.RoslynTypeSystem.ForType(typeof(IsVolatile).FullName))}, isOptional: false);
+                                       {signatureTypeEncoderVar}.{details.MethodBuilder};
+                                       """);
         }
         else
         {
-            exps[expCount++] = Format($"{fieldEncoderVar}.{fieldType};");
+            exps[expCount++] = Format($"{fieldEncoderVar}.{fieldType.Expression};");
         }
         
         exps[expCount++] = Format($"""var {definitionContext.DefinitionVariable} = metadata.AddFieldDefinition({fieldAttributes}, metadata.GetOrAddString("{name}"), metadata.GetOrAddBlob({fieldSignatureVar}));""");
@@ -251,9 +249,9 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         return span.Slice(0, expCount).ToArray();
     }
 
-    public IEnumerable<string> MethodBody(IVisitorContext context, string methodName, IlContext ilContext, string[] localVariableTypes, InstructionRepresentation[] instructions) => [];
+    public IEnumerable<string> MethodBody(IVisitorContext context, string methodName, IlContext ilContext, ResolvedType[] localVariableTypes, InstructionRepresentation[] instructions) => [];
 
-    public DefinitionVariable LocalVariable(IVisitorContext context, string variableName, string methodDefinitionVariableName, string resolvedVarType)
+    public DefinitionVariable LocalVariable(IVisitorContext context, string variableName, string methodDefinitionVariableName, ResolvedType resolvedVarType)
     {
         var variableIndex = TypedContext(context).DelayedDefinitionsManager.RegisterLocalVariable(variableName, resolvedVarType,  (ctx, localVariableEncoderVar, localVarType) =>
         {
@@ -266,7 +264,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         return context.DefinitionVariables.RegisterNonMethod(string.Empty, variableName, VariableMemberKind.LocalVariable, variableIndex.ToString());
     }
 
-    public IEnumerable<string> Property(IVisitorContext context, BodiedMemberDefinitionContext definitionContext, string declaringTypeName, List<ParameterSpec> propertyParameters, string propertyType)
+    public IEnumerable<string> Property(IVisitorContext context, BodiedMemberDefinitionContext definitionContext, string declaringTypeName, List<ParameterSpec> propertyParameters, ResolvedType propertyType)
     {
         var propertySignatureTempVar =  context.Naming
                                                     .With(NamingOptions.NoCasingElementNames)

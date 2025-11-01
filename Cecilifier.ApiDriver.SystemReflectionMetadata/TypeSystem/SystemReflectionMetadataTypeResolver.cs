@@ -50,11 +50,18 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
         {
             return "Void()";
         }
-        
-        if (type.IsPrimitiveType() || type.SpecialType == SpecialType.System_String || type.SpecialType == SpecialType.System_Object)
-            return $"{(kind <= ResolveTargetKind.ArrayElementType ? "" : "Type().")}{type.MetadataName}()";
 
-        return $"""{(kind <= ResolveTargetKind.ArrayElementType ? "" : $"Type(isByRef: {isByRef.ToKeyword()}).")}Type({ResolveAny(type, ResolveTargetKind.None)}, isValueType: {type.IsValueType.ToKeyword()})""";
+        var resolvedTypeDetails = new ResolvedTypeDetails();
+        if (type.IsPrimitiveType() || type.SpecialType == SpecialType.System_String || type.SpecialType == SpecialType.System_Object)
+            return ResolvedType.FromDetails(
+                            resolvedTypeDetails
+                                .WithTypeEncoder(kind <= ResolveTargetKind.ArrayElementType ? "" : "Type()")
+                                .WithMethodBuilder($"{type.MetadataName}()"));
+
+        return ResolvedType.FromDetails(
+            resolvedTypeDetails
+                .WithTypeEncoder(kind <= ResolveTargetKind.ArrayElementType ? "" : $"Type(isByRef: {isByRef.ToKeyword()})")
+                .WithMethodBuilder($"Type({ResolveAny(type, ResolveTargetKind.None)}, isValueType: {type.IsValueType.ToKeyword()})"));
     }
 
     public override ResolvedType ResolvePredefinedType(ITypeSymbol type) => $"""

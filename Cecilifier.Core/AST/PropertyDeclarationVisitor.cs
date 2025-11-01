@@ -299,7 +299,7 @@ namespace Cecilifier.Core.AST
             return ModifiersToCecil<FieldAttributes>(m, "Private", FieldDeclarationVisitor.MapFieldAttributesFor);
         }
 
-        private string AddPropertyDefinition(BasePropertyDeclarationSyntax propertyDeclarationSyntax, string declaringTypeVariable, string declaringTypeName, string propName, List<ParameterSpec> propertyParameters, string propertyType)
+        private string AddPropertyDefinition(BasePropertyDeclarationSyntax propertyDeclarationSyntax, string declaringTypeVariable, string declaringTypeName, string propName, List<ParameterSpec> propertyParameters, ResolvedType propertyType)
         {
             var propDefVar = Context.Naming.PropertyDeclaration(propertyDeclarationSyntax);
             var mdc = new BodiedMemberDefinitionContext(propName, propDefVar, declaringTypeVariable, propertyDeclarationSyntax.IsStatic() ?  MemberOptions.Static : MemberOptions.None, IlContext.None);

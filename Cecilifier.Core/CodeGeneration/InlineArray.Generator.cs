@@ -9,6 +9,7 @@ using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
+using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
 
 namespace Cecilifier.Core.CodeGeneration;
@@ -16,7 +17,7 @@ namespace Cecilifier.Core.CodeGeneration;
 internal class InlineArrayGenerator
 {
     internal static void Reset() => _typeVariablePerElementCount.Clear();
-    public static string GetOrGenerateInlineArrayType(IVisitorContext context, int elementCount, string comment)
+    public static ResolvedType GetOrGenerateInlineArrayType(IVisitorContext context, int elementCount, string comment)
     {
         ref var typeVar = ref CollectionsMarshal.GetValueRefOrAddDefault(_typeVariablePerElementCount, elementCount, out var exists)!;
         if (!exists)
@@ -57,7 +58,7 @@ internal class InlineArrayGenerator
             context.Generate($"assembly.MainModule.Types.Add({typeVar});\n");
         }
         
-        return typeVar;
+        return new ResolvedType(typeVar);
     }
 
     private static Dictionary<int, string> _typeVariablePerElementCount = new();

@@ -23,7 +23,7 @@ public static class CecilifierContextExtensions
         context.Generate(exps);
     }
     
-    internal static DefinitionVariable AddLocalVariableToCurrentMethod(this IVisitorContext context, string localVarName, string varType)
+    internal static DefinitionVariable AddLocalVariableToCurrentMethod(this IVisitorContext context, string localVarName, ResolvedType varType)
     {
         var currentMethod = context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
         if (!currentMethod.IsValid)

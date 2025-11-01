@@ -3,6 +3,7 @@ using System.Reflection.Emit;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Cecilifier.Core.Extensions;
+using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
 
 namespace Cecilifier.Core.AST
@@ -10,15 +11,15 @@ namespace Cecilifier.Core.AST
     internal class NoArgsValueTypeObjectCreatingInAssignmentVisitor : SyntaxWalkerBase
     {
         private readonly string ilVar;
-        private readonly string resolvedInstantiatedType;
+        private readonly ResolvedType instantiatedType;
         private readonly Func<DefinitionVariable> tempValueTypeDeclarer;
         private readonly BaseObjectCreationExpressionSyntax objectCreationExpression;
 
-        internal NoArgsValueTypeObjectCreatingInAssignmentVisitor(IVisitorContext ctx, string ilVar, string resolvedInstantiatedType, Func<DefinitionVariable> tempValueTypeDeclarer,
+        internal NoArgsValueTypeObjectCreatingInAssignmentVisitor(IVisitorContext ctx, string ilVar, ResolvedType instantiatedType, Func<DefinitionVariable> tempValueTypeDeclarer,
             BaseObjectCreationExpressionSyntax objectCreationExpression) : base(ctx)
         {
             this.ilVar = ilVar;
-            this.resolvedInstantiatedType = resolvedInstantiatedType;
+            this.instantiatedType = instantiatedType;
             this.tempValueTypeDeclarer = tempValueTypeDeclarer;
             this.objectCreationExpression = objectCreationExpression;
         }
@@ -44,7 +45,7 @@ namespace Cecilifier.Core.AST
 
             //...since we have an `assignment` to an array element which is of type
             //struct, we need to load the element address instead. 
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldelema, resolvedInstantiatedType);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldelema, instantiatedType);
             InitializeAndProcessObjectInitializerExpression();
         }
 
@@ -109,7 +110,7 @@ namespace Cecilifier.Core.AST
                 Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Dup);
             }
 
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Initobj, resolvedInstantiatedType);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Initobj, instantiatedType);
             ValueTypeNoArgCtorInvocationVisitor.ProcessInitializerIfNotNull(Context, ilVar,  objectCreationExpression.Initializer);
         }
     }

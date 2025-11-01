@@ -100,7 +100,7 @@ namespace Cecilifier.Core.AST
             HandleAttributesInMemberDeclaration(node.AttributeLists, evtDefVar, VariableMemberKind.None);
         }
 
-        private string AddAccessor(EventFieldDeclarationSyntax node, IEventSymbol eventSymbol, string accessorName, string backingFieldVar, string eventType, Func<EventFieldDeclarationSyntax, IEventSymbol, string, string, string, IEnumerable<string>> methodBodyFactory)
+        private string AddAccessor(EventFieldDeclarationSyntax node, IEventSymbol eventSymbol, string accessorName, string backingFieldVar, ResolvedType eventType, Func<EventFieldDeclarationSyntax, IEventSymbol, string, string, string, IEnumerable<string>> methodBodyFactory)
         {
             var methodVar = Context.Naming.SyntheticVariable(accessorName, ElementKind.Method);
             var isInterfaceDef = eventSymbol.ContainingType.TypeKind == TypeKind.Interface;
@@ -117,7 +117,7 @@ namespace Cecilifier.Core.AST
             return methodVar;
         }
 
-        private MethodDefinitionVariable AddAccessor(MemberDeclarationSyntax node, IEventSymbol eventSymbol, string methodVar, string accessorName, string eventType, IEnumerable<string> methodBodyExpressions)
+        private MethodDefinitionVariable AddAccessor(MemberDeclarationSyntax node, IEventSymbol eventSymbol, string methodVar, string accessorName, ResolvedType eventType, IEnumerable<string> methodBodyExpressions)
         {
             var accessorModifiers = AccessModifiersForEventAccessors(node, eventSymbol.ContainingType);
             var methodName = $"{accessorName}_{eventSymbol.Name}";
@@ -158,7 +158,7 @@ namespace Cecilifier.Core.AST
 
             // static member access does not have a *this* so simply replace with *Nop*
             var lgarg_0 = isStatic ? OpCodes.Nop : OpCodes.Ldarg_0;
-            string[] localVariableTypes = [];
+            ResolvedType[] localVariableTypes = [];
             InstructionRepresentation[] instructions = [
                 lgarg_0,
                 ldfld.WithOperand(fieldVar),
@@ -198,7 +198,7 @@ namespace Cecilifier.Core.AST
 
             // static member access does not have a *this* so simply replace with *Nop*
             var lgarg_0 = isStatic ? OpCodes.Nop : OpCodes.Ldarg_0;
-            string[] localVariableTypes = [];
+            ResolvedType[] localVariableTypes = [];
             InstructionRepresentation[] instructions = [
                 lgarg_0,
                 ldfld.WithOperand(fieldVar),
@@ -252,10 +252,10 @@ namespace Cecilifier.Core.AST
             return fields.First();
         }
 
-        private string AddEventDefinition(MemberDeclarationSyntax eventFieldDeclaration, string eventDeclaringTypeVar, string eventName, string eventType, string addAccessor, string removeAccessor)
+        private string AddEventDefinition(MemberDeclarationSyntax eventFieldDeclaration, string eventDeclaringTypeVar, string eventName, ResolvedType eventType, string addAccessor, string removeAccessor)
         {
             var evtDefVar = Context.Naming.EventDeclaration(eventFieldDeclaration);
-            WriteCecilExpression(Context, $"var {evtDefVar} = new EventDefinition(\"{eventName}\", EventAttributes.None, {eventType});");
+            WriteCecilExpression(Context, $"var {evtDefVar} = new EventDefinition(\"{eventName}\", EventAttributes.None, {eventType.Expression});");
             WriteCecilExpression(Context, $"{evtDefVar}.AddMethod = {addAccessor};");
             WriteCecilExpression(Context, $"{evtDefVar}.RemoveMethod = {removeAccessor};");
             WriteCecilExpression(Context, $"{eventDeclaringTypeVar}.Events.Add({evtDefVar});");

@@ -8,7 +8,7 @@ namespace Cecilifier.Core.TypeSystem
     {
         public SystemTypeSystem(ITypeResolver typeResolver, IVisitorContext context)
         {
-            _resolvedTypes = new Dictionary<SpecialType, string>
+            _resolvedTypes = new Dictionary<SpecialType, ResolvedType>
             {
                 [SpecialType.System_Int32] = typeResolver.ResolvePredefinedType(context.RoslynTypeSystem.SystemInt32),
                 [SpecialType.System_Int64] = typeResolver.ResolvePredefinedType(context.RoslynTypeSystem.SystemInt64),
@@ -26,20 +26,20 @@ namespace Cecilifier.Core.TypeSystem
             };
         }
 
-        public string Int32 => _resolvedTypes[SpecialType.System_Int32];
-        public string Int64 => _resolvedTypes[SpecialType.System_Int64];
-        public string String => _resolvedTypes[SpecialType.System_String];
-        public string Object => _resolvedTypes[SpecialType.System_Object];
-        public string Boolean => _resolvedTypes[SpecialType.System_Boolean];
-        public string IntPtr => _resolvedTypes[SpecialType.System_IntPtr];
-        public string Void => _resolvedTypes[SpecialType.System_Void];
-        public string Enum => _resolvedTypes[SpecialType.System_Enum];
-        public string MulticastDelegate => _resolvedTypes[SpecialType.System_MulticastDelegate];
-        public string AsyncCallback => _resolvedTypes[SpecialType.System_AsyncCallback];
-        public string IAsyncResult => _resolvedTypes[SpecialType.System_IAsyncResult];
-        public string NullableOfT => _resolvedTypes[SpecialType.System_Nullable_T];
-        public string ValueType => _resolvedTypes[SpecialType.System_ValueType];
+        public ResolvedType Int32 => _resolvedTypes[SpecialType.System_Int32];
+        public ResolvedType Int64 => _resolvedTypes[SpecialType.System_Int64];
+        public ResolvedType String => _resolvedTypes[SpecialType.System_String];
+        public ResolvedType Object => _resolvedTypes[SpecialType.System_Object];
+        public ResolvedType Boolean => _resolvedTypes[SpecialType.System_Boolean];
+        public ResolvedType IntPtr => _resolvedTypes[SpecialType.System_IntPtr];
+        public ResolvedType Void => _resolvedTypes[SpecialType.System_Void];
+        public ResolvedType Enum => _resolvedTypes[SpecialType.System_Enum];
+        public ResolvedType MulticastDelegate => _resolvedTypes[SpecialType.System_MulticastDelegate];
+        public ResolvedType AsyncCallback => _resolvedTypes[SpecialType.System_AsyncCallback];
+        public ResolvedType IAsyncResult => _resolvedTypes[SpecialType.System_IAsyncResult];
+        public ResolvedType NullableOfT => _resolvedTypes[SpecialType.System_Nullable_T];
+        public ResolvedType ValueType => _resolvedTypes[SpecialType.System_ValueType];
 
-        private readonly IReadOnlyDictionary<SpecialType, string> _resolvedTypes;
+        private readonly IReadOnlyDictionary<SpecialType, ResolvedType> _resolvedTypes;
     }
 }
