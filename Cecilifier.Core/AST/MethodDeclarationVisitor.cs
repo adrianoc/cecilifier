@@ -149,13 +149,13 @@ namespace Cecilifier.Core.AST
 
                 AddToOverridenMethodsIfAppropriated(methodVar, methodSymbol);
 
+                if (methodSymbol.HasCovariantReturnType())
+                {
+                    AddCecilExpression($"{methodVar}.CustomAttributes.Add(new CustomAttribute(assembly.MainModule.Import(typeof(System.Runtime.CompilerServices.PreserveBaseOverridesAttribute).GetConstructor(BindingFlags.Public | BindingFlags.Instance, null, new Type[0], null))));");
+                }
+                
                 if (modifiersTokens.IndexOf(SyntaxKind.ExternKeyword) == -1)
                 {
-                    if (methodSymbol.HasCovariantReturnType())
-                    {
-                        AddCecilExpression($"{methodVar}.CustomAttributes.Add(new CustomAttribute(assembly.MainModule.Import(typeof(System.Runtime.CompilerServices.PreserveBaseOverridesAttribute).GetConstructor(BindingFlags.Public | BindingFlags.Instance, null, new Type[0], null))));");
-                    }
-
                     // if the method is a local function use `simpleName` as the method name (instead of `methodName`) since, in this context,
                     // the latter is a `mangled name` and any reference to the method will use its `unmangled name` for lookups which would fail
                     // should we use `methodName` as the registered name.

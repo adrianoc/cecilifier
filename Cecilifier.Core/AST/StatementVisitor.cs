@@ -193,31 +193,27 @@ namespace Cecilifier.Core.AST
             ExpressionVisitor.Visit(Context, _ilVar, node.Condition);
 
             var elsePrologVarName = Context.Naming.Label("elseEntryPoint");
-            WriteCecilExpression(Context, $"var {elsePrologVarName} = {_ilVar}.Create(OpCodes.Nop);");
-            Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Brfalse, elsePrologVarName);
-
+            Context.ApiDriver.DefineLabel(Context, _ilVar, elsePrologVarName);
+            Context.ApiDriver.WriteCilBranch(Context, _ilVar, OpCodes.Brfalse, elsePrologVarName);
+            
             Context.WriteComment("if body");
             node.Statement.Accept(this);
 
             var elseEndTargetVarName = Context.Naming.Label("elseEnd");
-            WriteCecilExpression(Context, $"var {elseEndTargetVarName} = {_ilVar}.Create(OpCodes.Nop);");
+            Context.ApiDriver.DefineLabel(Context, _ilVar, elseEndTargetVarName);
             if (node.Else != null)
             {
                 using var _ = LineInformationTracker.Track(Context, node.Else);
-                var branchToEndOfIfStatementVarName = Context.Naming.Label("endOfIf");
-                WriteCecilExpression(Context, $"var {branchToEndOfIfStatementVarName} = {_ilVar}.Create(OpCodes.Br, {elseEndTargetVarName});");
-                WriteCecilExpression(Context, $"{_ilVar}.Append({branchToEndOfIfStatementVarName});");
-
-                WriteCecilExpression(Context, $"{_ilVar}.Append({elsePrologVarName});");
+                Context.ApiDriver.WriteCilBranch(Context, _ilVar, OpCodes.Br, elseEndTargetVarName);
+                Context.ApiDriver.MarkLabel(Context, _ilVar, elsePrologVarName);
                 node.Else.Statement.Accept(this);
             }
             else
             {
-                WriteCecilExpression(Context, $"{_ilVar}.Append({elsePrologVarName});");
+                Context.ApiDriver.MarkLabel(Context, _ilVar, elsePrologVarName);
             }
-
-            WriteCecilExpression(Context, $"{_ilVar}.Append({elseEndTargetVarName});");
-            WriteCecilExpression(Context, $"{Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method).VariableName}.Body.OptimizeMacros();");
+            
+            Context.ApiDriver.MarkLabel(Context, _ilVar, elseEndTargetVarName);
             Context.WriteComment($" end if ({node.HumanReadableSummary()})");
         }
 
