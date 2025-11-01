@@ -1,8 +1,10 @@
 using Cecilifier.ApiDriver.MonoCecil.TypeSystem;
 using Cecilifier.Core;
 using Cecilifier.Core.AST;
+using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.TypeSystem;
+using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 
 namespace Cecilifier.ApiDriver.MonoCecil;
@@ -26,5 +28,7 @@ public class MonoCecilContext : CecilifierContextBase, IVisitorContext
         return ((string) AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")).Split(Path.PathSeparator);
     }
 
-    public override void OnFinishedTypeDeclaration() { }
+    public override void OnFinishedTypeDeclaration() { } // Nothing to do here for Mono.Cecil
+
+    public override DefinitionVariable GetMethodVariable(IMethodSymbol method) => DefinitionVariables.GetMethodVariable(method.AsMethodDefinitionVariable());
 }

@@ -93,8 +93,7 @@ namespace Cecilifier.Core.AST
 
             // check the methods of the property because we do not register the property itself, only its methods. 
             var methodToCheck = propInfo.GetMethod ?? propInfo.SetMethod;
-            var found = Context.DefinitionVariables.GetMethodVariable(methodToCheck.AsMethodDefinitionVariable());
-            return found.IsValid;
+            return Context.GetMethodVariable(methodToCheck).IsValid;
         }
 
         private void AddDefaultMemberAttribute(string declaringTypeDefinitionVar, string value)

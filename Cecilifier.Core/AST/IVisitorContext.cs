@@ -36,6 +36,7 @@ public interface IVisitorContext
     SemanticModel SemanticModel { get; }
 
     DefinitionVariableManager DefinitionVariables { get; }
+    DefinitionVariable GetMethodVariable(IMethodSymbol method);
 
     LinkedListNode<string> CurrentLine { get; }
     int CecilifiedLineNumber { get; }
@@ -71,6 +72,7 @@ public interface IVisitorContext
     void ClearFlag(string name);
 
     #endregion
+
 }
 
 public class IlContext
