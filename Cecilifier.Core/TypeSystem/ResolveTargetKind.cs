@@ -9,4 +9,5 @@ public enum ResolveTargetKind
     LocalVariable,
     Parameter,
     ReturnType,
+    Instruction,
 }

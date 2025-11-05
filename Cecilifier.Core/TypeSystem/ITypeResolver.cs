@@ -9,7 +9,7 @@ namespace Cecilifier.Core.TypeSystem
         ResolvedType ResolveLocalVariableType(ITypeSymbol type);
         ResolvedType Resolve(string typeName);
         ResolvedType Resolve(ITypeSymbol type);
-        ResolvedType MakeArrayType(ITypeSymbol elementType);
+        ResolvedType MakeArrayType(ITypeSymbol elementType, ResolveTargetKind resolveTargetKind);
 
         Bcl Bcl { get; }
     }

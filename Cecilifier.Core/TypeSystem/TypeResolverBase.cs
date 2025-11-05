@@ -20,7 +20,7 @@ namespace Cecilifier.Core.TypeSystem
         public Bcl Bcl { get; }
 
         // Resolvers for api drivers that need to generate different code based on the target can override this method.
-        public virtual ResolvedType ResolveAny(ITypeSymbol type, ResolveTargetKind _ = ResolveTargetKind.None, string cecilTypeParameterProviderVar = null)
+        public virtual ResolvedType ResolveAny(ITypeSymbol type, ResolveTargetKind resolveTargetKind = ResolveTargetKind.None, string cecilTypeParameterProviderVar = null)
         {
             var resolvedType = ResolveLocalVariableType(type);
             if (resolvedType)
@@ -30,7 +30,7 @@ namespace Cecilifier.Core.TypeSystem
             if (resolvedType)
                 return resolvedType;
             
-            resolvedType = ResolvePredefinedAndComposedTypes(type);
+            resolvedType = ResolvePredefinedAndComposedTypes(type, resolveTargetKind);
             if (resolvedType)
                 return resolvedType;
 
@@ -78,17 +78,17 @@ namespace Cecilifier.Core.TypeSystem
         public abstract ResolvedType Resolve(ITypeSymbol type);
         public abstract ResolvedType ResolvePredefinedType(ITypeSymbol type);
 
-        public abstract ResolvedType MakeArrayType(ITypeSymbol elementType);
+        public abstract ResolvedType MakeArrayType(ITypeSymbol elementType, ResolveTargetKind resolveTargetKind);
 
         protected abstract ResolvedType MakePointerType(ITypeSymbol pointerType);
 
         protected abstract ResolvedType MakeFunctionPointerType(IFunctionPointerTypeSymbol functionPointer);
         
-        private ResolvedType ResolvePredefinedAndComposedTypes(ITypeSymbol type)
+        private ResolvedType ResolvePredefinedAndComposedTypes(ITypeSymbol type, ResolveTargetKind resolveTargetKind)
         {
             if (type is IArrayTypeSymbol array)
             {
-                return MakeArrayType(array.ElementType);
+                return MakeArrayType(array.ElementType, resolveTargetKind);
             }
 
             if (type is IPointerTypeSymbol pointerType)

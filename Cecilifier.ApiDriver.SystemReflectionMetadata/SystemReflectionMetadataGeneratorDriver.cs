@@ -100,6 +100,13 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
                          
                          return {{entryPointExpression}};
                     }
+                    
+                    static int TokenForType(Action<SignatureTypeEncoder> encode, MetadataBuilder metadata)
+                 	{
+                 	    var signatureEncoder = new SignatureTypeEncoder(new BlobBuilder());
+                        encode(signatureEncoder);
+                        return MetadataTokens.GetToken(metadata.AddTypeSpecification(metadata.GetOrAddBlob(signatureEncoder.Builder)));
+                 	}
                  }
                  """;
     }
@@ -133,6 +140,7 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
                     CilToken handle => $"{il.VariableName}.Token({handle.VariableName});",
                     // Even though the real operand type may be `Boolean` the operand value and the opCode emitted are for Int32 (that is because IL handles bools as ints)  
                     CilOperandValue { Type.SpecialType: SpecialType.System_Boolean } operandValue => $"{il.VariableName}.CodeBuilder.WriteInt32({operandValue.Value});",
+                    CilOperandValue { Type.SpecialType: SpecialType.System_Char } operandValue => $"{il.VariableName}.CodeBuilder.WriteInt32({operandValue.Value});",
                     CilOperandValue { Type.TypeKind: TypeKind.Enum } enumValue => $"{il.VariableName}.CodeBuilder.Write{((INamedTypeSymbol) enumValue.Type).EnumUnderlyingType!.Name}({(int)enumValue.Value});",
                     CilOperandValue operandValue => $"{il.VariableName}.CodeBuilder.Write{operandValue.Type.Name}({operandValue.Value});",
                     CilLocalVariableHandle localVariableHandle => $"{il.VariableName}.CodeBuilder.WriteInt32({localVariableHandle.Value});",

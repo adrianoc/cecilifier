@@ -55,12 +55,12 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
         if (type.IsPrimitiveType() || type.SpecialType == SpecialType.System_String || type.SpecialType == SpecialType.System_Object)
             return ResolvedType.FromDetails(
                             resolvedTypeDetails
-                                .WithTypeEncoder(kind <= ResolveTargetKind.ArrayElementType ? "" : "Type()")
+                                .WithTypeEncoder(TypeEncoderFor(kind, isByRef))
                                 .WithMethodBuilder($"{type.MetadataName}()"));
 
         return ResolvedType.FromDetails(
             resolvedTypeDetails
-                .WithTypeEncoder(kind <= ResolveTargetKind.ArrayElementType ? "" : $"Type(isByRef: {isByRef.ToKeyword()})")
+                .WithTypeEncoder(TypeEncoderFor(kind, isByRef))
                 .WithMethodBuilder($"Type({ResolveAny(type, ResolveTargetKind.None)}, isValueType: {type.IsValueType.ToKeyword()})"));
     }
 
@@ -71,9 +71,12 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
                                                                                           metadata.GetOrAddString("{type.Name}"))
                                                                              """;
 
-    public override ResolvedType MakeArrayType(ITypeSymbol elementType)
+    public override ResolvedType MakeArrayType(ITypeSymbol elementType, ResolveTargetKind resolveTargetKind)
     {
-        return $"Type().SZArray().{ResolveForTargetKind(elementType, ResolveTargetKind.ArrayElementType, isByRef: false)}";
+        var details = new ResolvedTypeDetails();
+        return ResolvedType.FromDetails(
+                    details.WithTypeEncoder(TypeEncoderFor(resolveTargetKind, false))
+                        .WithMethodBuilder($"SZArray().{ResolveAny(elementType, ResolveTargetKind.ArrayElementType)}"));
     }
 
     protected override ResolvedType MakePointerType(ITypeSymbol pointerType)
@@ -84,5 +87,12 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
     protected override ResolvedType MakeFunctionPointerType(IFunctionPointerTypeSymbol functionPointer)
     {
         throw new NotImplementedException();
+    }
+    
+    private static string TypeEncoderFor(ResolveTargetKind kind, bool isByRef)
+    {
+        if (kind == ResolveTargetKind.Instruction)
+            return "TokenForType(enc => enc%, metadata)";
+        return kind <= ResolveTargetKind.ArrayElementType ? "" : $"Type(isByRef: {isByRef.ToKeyword()})%";
     }
 }

@@ -39,7 +39,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
                                                method.Parameters.Select(p => $"""
                                                                                   parameters
                                                                                           .AddParameter()
-                                                                                          .{context.TypedTypeResolver.ResolveForTargetKind(p.Type, ResolveTargetKind.Parameter, p.RefKind != RefKind.None)};
+                                                                                          .{context.TypedTypeResolver.ResolveAny(p.Type, ResolveTargetKind.Parameter)};
                                                                               """))}}
                                    });
 

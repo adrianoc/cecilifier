@@ -10,7 +10,7 @@ public class MonoCecilTypeResolver(MonoCecilContext context) : TypeResolverBase<
     public override ResolvedType Resolve(ITypeSymbol type) => Resolve($"""{type.ToDisplayString()}""");
     
     public override ResolvedType ResolvePredefinedType(ITypeSymbol type) => $"assembly.MainModule.TypeSystem.{type.Name}";
-    public override ResolvedType MakeArrayType(ITypeSymbol elementType) => ResolveAny(elementType) + ".MakeArrayType()";
+    public override ResolvedType MakeArrayType(ITypeSymbol elementType, ResolveTargetKind _) => ResolveAny(elementType) + ".MakeArrayType()";
     protected override ResolvedType MakePointerType(ITypeSymbol pointerType) => ResolveAny(pointerType) + ".MakePointerType()";
 
     protected override ResolvedType MakeFunctionPointerType(IFunctionPointerTypeSymbol functionPointer)

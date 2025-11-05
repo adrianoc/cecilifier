@@ -52,7 +52,7 @@ namespace Cecilifier.Core.AST
                                                     new BodiedMemberDefinitionContext("<Main>$", "programMain", methodVar, typeVar, MemberOptions.Static, ilContext),
                                                     "Program",
                                                     "MethodAttributes.Private | MethodAttributes.HideBySig | MethodAttributes.Static",
-                                                    [new ParameterSpec("args", context.TypeResolver.MakeArrayType(context.RoslynTypeSystem.SystemString), RefKind.None, Constants.ParameterAttributes.None)],
+                                                    [new ParameterSpec("args", context.TypeResolver.MakeArrayType(context.RoslynTypeSystem.SystemString, ResolveTargetKind.Parameter), RefKind.None, Constants.ParameterAttributes.None)],
                                                     [],
                                                     ctx => ctx.TypeResolver.ResolveAny(hasReturnStatement ? context.RoslynTypeSystem.SystemInt32 : context.RoslynTypeSystem.SystemVoid, ResolveTargetKind.ReturnType),
                                                     out _);

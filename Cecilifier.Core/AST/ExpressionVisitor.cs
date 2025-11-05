@@ -15,6 +15,7 @@ using Cecilifier.Core.CodeGeneration.Extensions;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Mappings;
+using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
 
 using static Cecilifier.Core.Misc.CodeGenerationHelpers;
@@ -1576,7 +1577,7 @@ namespace Cecilifier.Core.AST
 
         private void ProcessArrayCreation(ITypeSymbol elementType, InitializerExpressionSyntax? initializer)
         {
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Newarr, Context.TypeResolver.ResolveAny(elementType).AsToken());
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Newarr, Context.TypeResolver.ResolveAny(elementType, ResolveTargetKind.Instruction).AsToken());
             if (PrivateImplementationDetailsGenerator.IsApplicableTo(initializer, Context))
                 ArrayInitializationProcessor.InitializeOptimized(this, elementType, initializer.Expressions);
             else
