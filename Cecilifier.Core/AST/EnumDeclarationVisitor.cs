@@ -30,18 +30,16 @@ namespace Cecilifier.Core.AST
             var outerTypeVariable = Context.DefinitionVariables.GetVariable(enumSymbol.ContainingType?.ToDisplayString(), VariableMemberKind.Type, enumSymbol.ContainingType?.ContainingSymbol.ToDisplayString());
             var enumTypeVariable = Context.Naming.Type(node);
             var typeDef = Context.ApiDefinitionsFactory.Type(
-                                                        Context, 
-                                                        enumTypeVariable, 
+                                                        Context,
+                                                        new MemberDefinitionContext(enumSymbol.Name, enumTypeVariable, outerTypeVariable.IsValid ? outerTypeVariable.VariableName : null),
                                                         enumSymbol.ContainingNamespace?.FullyQualifiedName() ?? string.Empty, 
-                                                        enumSymbol.Name, 
                                                         TypeModifiersToCecil(enumSymbol, node.Modifiers) + " | TypeAttributes.Sealed", 
                                                         Context.TypeResolver.Bcl.System.Enum, 
-                                                        outerTypeVariable, 
                                                         false, 
                                                         [], 
                                                         [], 
-                                                        [], 
-                                                        new string[0]);
+                                                        [],
+                                                        Array.Empty<string>());
             AddCecilExpressions(Context, typeDef);
 
             var parentName = enumSymbol.ContainingSymbol.ToDisplayString();

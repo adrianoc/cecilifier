@@ -27,14 +27,13 @@ internal partial class TypeDeclarationVisitor
 
         EnsureContainingTypeForwarded(node, delegateSymbol);
         var outerTypeVariable = Context.DefinitionVariables.GetVariable(delegateSymbol.ContainingType?.ToDisplayString(), VariableMemberKind.Type, delegateSymbol.ContainingType?.ContainingSymbol.ToDisplayString());
+        var definitionContext = new MemberDefinitionContext(node.Identifier.Text, typeVar, outerTypeVariable.IsValid ? outerTypeVariable.VariableName : null);
         var typeDef = Context.ApiDefinitionsFactory.Type(
-                                                    Context, 
-                                                    typeVar, 
-                                                    delegateSymbol.ContainingNamespace?.FullyQualifiedName() ?? string.Empty, 
-                                                    node.Identifier.ValueText, 
+                                                    Context,
+                                                    definitionContext,
+                                                    delegateSymbol.ContainingNamespace?.FullyQualifiedName() ?? string.Empty,
                                                     CecilDefinitionsFactory.DefaultTypeAttributeFor(TypeKind.Delegate, false).AppendModifier(accessibility), 
                                                     Context.TypeResolver.Bcl.System.MulticastDelegate, 
-                                                    outerTypeVariable, 
                                                     false, 
                                                     [], 
                                                     node.TypeParameterList?.Parameters, 

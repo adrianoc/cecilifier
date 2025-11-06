@@ -16,9 +16,64 @@ using Cecilifier.Core.Variables;
 
 namespace Cecilifier.ApiDriver.MonoCecil;
 
-internal partial class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverDefinitionsFactory
+internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverDefinitionsFactory
 {
     public string MappedTypeModifiersFor(INamedTypeSymbol type, SyntaxTokenList modifiers) => RoslynToApiDriverModifiers(type, modifiers);
+
+    public IEnumerable<string> Type(
+                                IVisitorContext context, 
+                                MemberDefinitionContext definitionContext, 
+                                string typeNamespace, 
+                                string attrs, 
+                                ResolvedType baseType, 
+                                bool isStructWithNoFields, 
+                                IEnumerable<ITypeSymbol> interfaces,
+                                IEnumerable<TypeParameterSyntax>? ownTypeParameters, 
+                                IEnumerable<TypeParameterSyntax> outerTypeParameters, 
+                                params string[] properties)
+    {
+        var typeName = definitionContext.Name;
+        var typeVar = definitionContext.DefinitionVariable;
+        
+        var typeParamList = ownTypeParameters?.ToArray() ?? [];
+        if (typeParamList.Length > 0)
+        {
+            typeName = typeName + "`" + typeParamList.Length;
+        }
+
+        var exps = new List<string>();
+        var typeDefExp = $"var {typeVar} = new TypeDefinition(\"{typeNamespace}\", \"{typeName}\", {attrs}{(baseType ? $", {baseType}" : "")})";
+        if (properties.Length > 0)
+        {
+            exps.Add($"{typeDefExp} {{ {string.Join(',', properties)} }};");
+        }
+        else
+        {
+            exps.Add($"{typeDefExp};");
+        }
+
+        // add type parameters from outer types. 
+        var outerTypeParametersArray = outerTypeParameters.ToArray();
+        ProcessGenericTypeParameters(typeVar, context, outerTypeParametersArray.Concat(typeParamList).ToArray(), exps);
+            
+        foreach (var itf in interfaces)
+        {
+            exps.Add($"{typeVar}.Interfaces.Add(new InterfaceImplementation({context.TypeResolver.ResolveAny(itf)}));");
+        }
+
+        if (definitionContext.ParentDefinitionVariable != null)
+            exps.Add($"{definitionContext.ParentDefinitionVariable}.NestedTypes.Add({typeVar});"); // type is an inner type 
+        else
+            exps.Add($"assembly.MainModule.Types.Add({typeVar});");
+
+        if (isStructWithNoFields)
+        {
+            exps.Add($"{typeVar}.ClassSize = 1;");
+            exps.Add($"{typeVar}.PackingSize = 0;");
+        }
+
+        return exps;
+    }
 
     public IEnumerable<string> Type(
         IVisitorContext context,
@@ -61,7 +116,7 @@ internal partial class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IAp
         }
 
         if (outerTypeVariable.IsValid && outerTypeVariable.VariableName != typeVar)
-            exps.Add($"{outerTypeVariable.VariableName}.NestedTypes.Add({typeVar});"); // type is a inner type of *context.CurrentType* 
+            exps.Add($"{outerTypeVariable.VariableName}.NestedTypes.Add({typeVar});"); // type is an inner type of *context.CurrentType* 
         else
             exps.Add($"assembly.MainModule.Types.Add({typeVar});");
 

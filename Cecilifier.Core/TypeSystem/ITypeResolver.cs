@@ -9,6 +9,9 @@ namespace Cecilifier.Core.TypeSystem
         ResolvedType ResolveLocalVariableType(ITypeSymbol type);
         ResolvedType Resolve(string typeName);
         ResolvedType Resolve(ITypeSymbol type);
+        
+        //TODO: Come up with a better abstraction and/or name.
+        ResolvedType ResolveX(string variableName, ResolveTargetKind kind, bool isByRef, bool isValueType);
         ResolvedType MakeArrayType(ITypeSymbol elementType, ResolveTargetKind resolveTargetKind);
 
         Bcl Bcl { get; }

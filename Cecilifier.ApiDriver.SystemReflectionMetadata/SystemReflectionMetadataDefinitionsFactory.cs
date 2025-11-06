@@ -21,6 +21,54 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
 {
     public string MappedTypeModifiersFor(INamedTypeSymbol type, SyntaxTokenList modifiers) => RoslynToApiDriverModifiers(type, modifiers);
 
+    public IEnumerable<string> Type(IVisitorContext context, MemberDefinitionContext definitionContext, string typeNamespace, string attrs, ResolvedType baseType, bool isStructWithNoFields, IEnumerable<ITypeSymbol> interfaces,
+        IEnumerable<TypeParameterSyntax>? ownTypeParameters, IEnumerable<TypeParameterSyntax> outerTypeParameters, params string[] properties)
+    {
+        var typeName = definitionContext.Identifier;
+        var typeVar = definitionContext.DefinitionVariable;
+        
+        yield return Format($"""
+                      // Add a type reference for the new type. Types/Member references to the new type uses this.
+                      var {typeVar} = metadata.AddTypeReference(mainModuleHandle, metadata.GetOrAddString("{typeNamespace}"), metadata.GetOrAddString("{typeName}"));
+                      """);
+
+        // We need to pass the handle of the 1st field/method defined in the module so we need to postpone the type generation after we have visited
+        // all types/members.
+        TypedContext(context).DelayedDefinitionsManager.RegisterTypeDefinition(typeVar, $"{typeNamespace}.{typeName}", DefineDelayed);
+        void DefineDelayed(SystemReflectionMetadataContext ctx, TypeDefinitionRecord typeRecord)
+        {
+            var typeDefVar = ctx.Naming.Type(typeName, ElementKind.Class);
+            ctx.Generate(Format($"""
+                                 var {typeDefVar} = metadata.AddTypeDefinition(
+                                                                  {attrs},
+                                                                  metadata.GetOrAddString("{typeNamespace}"),
+                                                                  metadata.GetOrAddString("{typeName}"),
+                                                                  {baseType},
+                                                                  fieldList: {typeRecord.FirstFieldHandle ?? "MetadataTokens.FieldDefinitionHandle(1)"},
+                                                                  methodList: {typeRecord.FirstMethodHandle ?? "MetadataTokens.MethodDefinitionHandle(1)"});
+                                 """));
+
+            // Add attributes to the type definition
+            foreach (var attributeEmitter in typeRecord.Attributes)
+            {
+                attributeEmitter(ctx, typeDefVar);    
+            }
+            
+            foreach (var property in typeRecord.Properties)
+            {
+                // process each property passing the type definition variable (as opposed to the type reference variable) 
+                property.Processor(context, property.Name, property.DefinitionVariable, property.DeclaringTypeName, typeDefVar);
+            }
+            
+            var firstProperty = typeRecord.Properties.FirstOrDefault();
+            if (firstProperty.IsValid)
+            {
+                context.Generate($"metadata.AddPropertyMap({typeDefVar}, {firstProperty.DefinitionVariable});");
+                context.WriteNewLine();
+            }
+        }
+    }
+
     public IEnumerable<string> Type(
         IVisitorContext context, 
         string typeVar, 

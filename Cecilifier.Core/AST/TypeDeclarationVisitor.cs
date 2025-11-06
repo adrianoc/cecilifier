@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.AST.MemberDependencies;
 using Cecilifier.Core.CodeGeneration;
 using Cecilifier.Core.Extensions;
@@ -208,12 +209,10 @@ namespace Cecilifier.Core.AST
             var isStructWithNoFields = typeSymbol.TypeKind == TypeKind.Struct && typeSymbol.GetMembers().Length == 0;
             var typeDefinitionExp = context.ApiDefinitionsFactory.Type(
                 context,
-                typeDeclarationVar,
+                new MemberDefinitionContext(typeSymbol.Name, typeDeclarationVar, outerTypeVariable.IsValid ? outerTypeVariable.VariableName : null),
                 typeSymbol.ContainingNamespace?.FullyQualifiedName() ?? string.Empty,
-                typeSymbol.Name,
                 context.ApiDefinitionsFactory.MappedTypeModifiersFor((INamedTypeSymbol)typeSymbol, typeModifiers),
                 BaseTypeFor(context, typeSymbol),
-                outerTypeVariable,
                 isStructWithNoFields,
                 typeSymbol.Interfaces,
                 typeParameters,

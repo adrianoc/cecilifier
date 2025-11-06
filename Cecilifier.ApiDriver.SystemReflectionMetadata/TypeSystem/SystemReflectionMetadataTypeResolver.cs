@@ -63,6 +63,15 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
                 .WithTypeEncoder(TypeEncoderFor(kind, isByRef))
                 .WithMethodBuilder($"Type({ResolveAny(type, ResolveTargetKind.None)}, isValueType: {type.IsValueType.ToKeyword()})"));
     }
+    
+    public override ResolvedType ResolveX(string variableName, ResolveTargetKind kind, bool isByRef, bool isValueType)
+    {
+        var resolvedTypeDetails = new ResolvedTypeDetails();
+        return ResolvedType.FromDetails(
+            resolvedTypeDetails
+                .WithTypeEncoder(TypeEncoderFor(kind, isByRef))
+                .WithMethodBuilder($"Type({variableName}, isValueType: {isValueType.ToKeyword()})"));
+    }
 
     public override ResolvedType ResolvePredefinedType(ITypeSymbol type) => $"""
                                                                              metadata.AddTypeReference(

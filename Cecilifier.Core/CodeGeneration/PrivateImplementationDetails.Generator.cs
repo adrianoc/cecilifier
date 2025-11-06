@@ -3,12 +3,15 @@
 using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Reflection.Emit;
+using System.Threading;
 using Cecilifier.Core.ApiDriver;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -285,7 +288,7 @@ internal partial class PrivateImplementationDetailsGenerator
         
         var privateImplementationDetailsVar = GetOrCreatePrivateImplementationDetailsTypeVariable(context);
         var rawDataTypeVar = GetOrCreateRawDataType(context, bufferSize);
-        
+
         // Add a field to hold the static initialization data.
         //
         //                                                                  field type                                                      Field name = Hash(initialization data)             RVA computed by Cecil
@@ -328,13 +331,22 @@ internal partial class PrivateImplementationDetailsGenerator
 
         context.WriteNewLine();
         context.WriteComment($"{rawDataHolderStructName} struct.");
-        context.WriteComment($"This struct is emitted by the compiler and is used to hold raw data used in arrays/span initialization optimizations");
+        context.WriteComment("This struct is emitted by the compiler and is used to hold raw data used in arrays/span initialization optimizations");
         
         var rawDataHolderTypeVar = context.Naming.Type("rawDataTypeVar", ElementKind.Struct);
-        string typeNamespace = string.Empty;
-        var baseTypeName = context.TypeResolver.ResolveAny(context.RoslynTypeSystem.SystemValueType);
-        DefinitionVariable outerTypeVariable = GetOrCreatePrivateImplementationDetailsTypeVariable(context);
-        var privateImplementationDetails = context.ApiDefinitionsFactory.Type(context, rawDataHolderTypeVar, typeNamespace, rawDataHolderStructName, Constants.CompilerGeneratedTypes.StaticArrayRawDataHolderTypeModifiers, baseTypeName, outerTypeVariable, false, Array.Empty<ITypeSymbol>(), Array.Empty<TypeParameterSyntax>(), Array.Empty<TypeParameterSyntax>(), $"ClassSize = {sizeInBytes}", "PackingSize = 1");
+        var outerTypeVariable = GetOrCreatePrivateImplementationDetailsTypeVariable(context);
+        var privateImplementationDetails = context.ApiDefinitionsFactory.Type(
+                                                                    context, 
+                                                                    new MemberDefinitionContext(rawDataHolderStructName, rawDataHolderTypeVar, outerTypeVariable.IsValid ? outerTypeVariable.VariableName : null), 
+                                                                    string.Empty, 
+                                                                    Constants.CompilerGeneratedTypes.StaticArrayRawDataHolderTypeModifiers, 
+                                                                    context.TypeResolver.ResolveAny(context.RoslynTypeSystem.SystemValueType), 
+                                                                    false, 
+                                                                    [], 
+                                                                    [], 
+                                                                    [], 
+                                                                    $"ClassSize = {sizeInBytes}", 
+                                                                    "PackingSize = 1");
 
         context.Generate(privateImplementationDetails);
 
@@ -343,7 +355,7 @@ internal partial class PrivateImplementationDetailsGenerator
                                                                 rawDataHolderStructName, 
                                                                 VariableMemberKind.Type, 
                                                                 rawDataHolderTypeVar);
-        return rawDataTypeVar.VariableName;
+        return context.TypeResolver.ResolveX(rawDataTypeVar.VariableName, ResolveTargetKind.Field, false, true);
     }
 
     private static DefinitionVariable GetOrCreatePrivateImplementationDetailsTypeVariable(IVisitorContext context)
@@ -357,18 +369,20 @@ internal partial class PrivateImplementationDetailsGenerator
         context.WriteComment("This type is emitted by the compiler.");
         
         var privateImplementationDetailsVar = context.Naming.Type("privateImplementationDetails", ElementKind.Class);
+        var memberDefinitionContext = new MemberDefinitionContext(Constants.CompilerGeneratedTypes.PrivateImplementationDetails, privateImplementationDetailsVar, null)
+        {
+            NameAsValidIdentifier = "privateImplementationDetails"
+        };
         var exps = context.ApiDefinitionsFactory.Type(
-                                                    context, 
-                                                    privateImplementationDetailsVar, 
+                                                    context,
+                                                    memberDefinitionContext,
                                                     string.Empty, 
-                                                    Constants.CompilerGeneratedTypes.PrivateImplementationDetails, 
                                                     Constants.CompilerGeneratedTypes.PrivateImplementationDetailsModifiers, 
                                                     context.TypeResolver.ResolveAny(context.RoslynTypeSystem.SystemObject), 
-                                                    DefinitionVariable.NotFound, 
                                                     false, 
-                                                    Array.Empty<ITypeSymbol>(),
-                                                    Array.Empty<TypeParameterSyntax>(),
-                                                    Array.Empty<TypeParameterSyntax>());
+                                                    [],
+                                                    [],
+                                                    []);
         context.Generate(exps);
 
         return context.DefinitionVariables.RegisterNonMethod(string.Empty, Constants.CompilerGeneratedTypes.PrivateImplementationDetails, VariableMemberKind.Type, privateImplementationDetailsVar);

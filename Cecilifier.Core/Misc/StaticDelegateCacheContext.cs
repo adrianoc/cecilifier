@@ -82,12 +82,11 @@ public struct StaticDelegateCacheContext
 
         string attrs = Constants.Cecil.StaticClassAttributes.AppendModifier("TypeAttributes.NestedPrivate");
         var cacheTypeExps = context.ApiDefinitionsFactory.Type(
-                                                                context, 
-                                                                cachedTypeVar, 
-                                                                DeclaringTypeNamespace, 
-                                                                cacheTypeName, attrs, 
+                                                                context,
+                                                                new MemberDefinitionContext(cacheTypeName, cachedTypeVar, outerTypeVariable.IsValid ? outerTypeVariable.VariableName : null),
+                                                                DeclaringTypeNamespace,
+                                                                attrs,
                                                                 context.TypeResolver.Bcl.System.Object, 
-                                                                outerTypeVariable, 
                                                                 false, 
                                                                 [], 
                                                                 [], 

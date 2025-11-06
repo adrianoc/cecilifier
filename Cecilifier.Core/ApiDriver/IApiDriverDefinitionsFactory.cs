@@ -15,8 +15,7 @@ public interface IApiDriverDefinitionsFactory
 {
     public string MappedTypeModifiersFor(INamedTypeSymbol type, SyntaxTokenList modifiers);
 
-    /// <summary>Generates the code for a type declaration.
-    /// </summary>
+    /// <summary>Generates the code for a type declaration.</summary>
     /// <remarks>
     /// 1. At IL level, type parameters from *outer* types are considered to be part of a inner type whence these type parameters need to be added to the list of type parameters even
     ///    if the type being declared is not a generic type.
@@ -25,12 +24,10 @@ public interface IApiDriverDefinitionsFactory
     ///    # of the type parameters declared by the type being declared).
     /// </remarks>
     /// <param name="context"></param>
-    /// <param name="typeVar"></param>
+    /// <param name="definitionContext"></param>
     /// <param name="typeNamespace"></param>
-    /// <param name="typeName"></param>
     /// <param name="attrs"></param>
     /// <param name="baseType"></param>
-    /// <param name="outerTypeVariable"></param>
     /// <param name="isStructWithNoFields"></param>
     /// <param name="interfaces"></param>
     /// <param name="ownTypeParameters"></param>
@@ -39,12 +36,10 @@ public interface IApiDriverDefinitionsFactory
     /// <returns></returns>
     public IEnumerable<string> Type(
         IVisitorContext context,
-        string typeVar,
+        MemberDefinitionContext definitionContext,
         string typeNamespace,
-        string typeName,
         string attrs,
         ResolvedType baseType,
-        DefinitionVariable outerTypeVariable,
         bool isStructWithNoFields,
         IEnumerable<ITypeSymbol> interfaces,
         IEnumerable<TypeParameterSyntax>? ownTypeParameters,

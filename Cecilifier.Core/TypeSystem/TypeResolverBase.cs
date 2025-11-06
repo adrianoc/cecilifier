@@ -74,6 +74,8 @@ namespace Cecilifier.Core.TypeSystem
             return null;
         }
 
+        public virtual ResolvedType ResolveX(string variableName, ResolveTargetKind kind, bool isByRef, bool isValueType) => variableName;
+        
         public abstract ResolvedType Resolve(string typeName);
         public abstract ResolvedType Resolve(ITypeSymbol type);
         public abstract ResolvedType ResolvePredefinedType(ITypeSymbol type);

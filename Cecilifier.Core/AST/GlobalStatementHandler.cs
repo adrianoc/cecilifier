@@ -24,12 +24,10 @@ namespace Cecilifier.Core.AST
             typeVar = context.Naming.Type("topLevelStatements", ElementKind.Class);
             var typeExps = context.ApiDefinitionsFactory.Type(
                                                         context,
-                                                        typeVar,
-                                                        string.Empty, // global statements cannot be declared in namespace
-                                                        "Program",
+                                                        new MemberDefinitionContext("Program", typeVar, null /*Top level type has no outer type.*/),
+                                                        string.Empty, // global statements cannot be declared in namespaces
                                                         typeModifiers,
                                                         context.TypeResolver.Bcl.System.Object,
-                                                        DefinitionVariable.NotFound, // Top level type has no outer type.
                                                         false,
                                                         [], 
                                                         [], 
