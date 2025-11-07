@@ -208,15 +208,16 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
 
     public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext definitionContext, ISymbol fieldOrEvent, ITypeSymbol fieldType, string fieldAttributes, bool isVolatile, bool isByRef, object? constantValue = null)
     {
-        return Field(context, definitionContext, fieldOrEvent.ContainingType.ToDisplayString(), fieldOrEvent.Name, context.TypeResolver.ResolveAny(fieldType, ResolveTargetKind.Field),  fieldAttributes, isVolatile, isByRef, constantValue);
+        return Field(context, definitionContext, fieldOrEvent.ContainingType.ToDisplayString(), context.TypeResolver.ResolveAny(fieldType, ResolveTargetKind.Field),  fieldAttributes, isVolatile, isByRef, constantValue);
     }
 
-    public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext definitionContext, string declaringTypeName, string name, ResolvedType fieldType, string fieldAttributes, bool isVolatile, bool isByRef, object? constantValue = null)
+    public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext definitionContext, string declaringTypeName, ResolvedType fieldType, string fieldAttributes, bool isVolatile, bool isByRef,
+        object? constantValue = null)
     {
         Debug.Assert(definitionContext.ParentDefinitionVariable != null);
         ((SystemReflectionMetadataContext) context).DelayedDefinitionsManager.RegisterFieldDefinition(definitionContext.ParentDefinitionVariable, definitionContext.DefinitionVariable);
         
-        context.DefinitionVariables.RegisterNonMethod(declaringTypeName, name, VariableMemberKind.Field, definitionContext.DefinitionVariable);
+        context.DefinitionVariables.RegisterNonMethod(declaringTypeName, definitionContext.Name, VariableMemberKind.Field, definitionContext.DefinitionVariable);
         var fieldSignatureVar = context.Naming.SyntheticVariable($"{definitionContext.Identifier}_Signature", ElementKind.Field);
         var fieldEncoderVar = context.Naming.SyntheticVariable($"{definitionContext.Identifier}_Encoder", ElementKind.Field);
         Buffer256<string> exps = new();
@@ -241,7 +242,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
             exps[expCount++] = Format($"{fieldEncoderVar}.{fieldType.Expression};");
         }
         
-        exps[expCount++] = Format($"""var {definitionContext.DefinitionVariable} = metadata.AddFieldDefinition({fieldAttributes}, metadata.GetOrAddString("{name}"), metadata.GetOrAddBlob({fieldSignatureVar}));""");
+        exps[expCount++] = Format($"""var {definitionContext.DefinitionVariable} = metadata.AddFieldDefinition({fieldAttributes}, metadata.GetOrAddString("{definitionContext.Name}"), metadata.GetOrAddBlob({fieldSignatureVar}));""");
         if (constantValue != null) 
             exps[expCount++] = $"metadata.AddConstant({definitionContext.DefinitionVariable}, {constantValue});{Environment.NewLine}";
 

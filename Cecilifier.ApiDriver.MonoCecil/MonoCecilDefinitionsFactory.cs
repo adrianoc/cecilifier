@@ -221,18 +221,19 @@ internal partial class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IAp
 
     public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext definitionContext, ISymbol fieldOrEvent, ITypeSymbol fieldType, string fieldAttributes, bool isVolatile, bool isByRef, object? constantValue = null)
     {
-        return Field(context, definitionContext, fieldOrEvent.ContainingType.ToDisplayString(), fieldOrEvent.Name, context.TypeResolver.ResolveAny(fieldType, ResolveTargetKind.Field), fieldAttributes, isVolatile, isByRef, constantValue);
+        return Field(context, definitionContext, fieldOrEvent.ContainingType.ToDisplayString(), context.TypeResolver.ResolveAny(fieldType, ResolveTargetKind.Field), fieldAttributes, isVolatile, isByRef, constantValue);
     }
 
-    public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext definitionContext, string declaringTypeName, string name, ResolvedType fieldType, string fieldAttributes, bool isVolatile, bool isByRef, object? constantValue = null)
+    public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext definitionContext, string declaringTypeName, ResolvedType fieldType, string fieldAttributes, bool isVolatile, bool isByRef,
+        object? constantValue = null)
     {
         if (isByRef)
             fieldType = fieldType.MakeByReferenceType();
         
-        context.DefinitionVariables.RegisterNonMethod(declaringTypeName, name, VariableMemberKind.Field, definitionContext.DefinitionVariable);
+        context.DefinitionVariables.RegisterNonMethod(declaringTypeName, definitionContext.Name, VariableMemberKind.Field, definitionContext.DefinitionVariable);
         
         var resolvedFieldType = ProcessRequiredModifiers(context, fieldType, isVolatile);
-        var fieldExp = $"var {definitionContext.DefinitionVariable} = new FieldDefinition(\"{name}\", {fieldAttributes}, {resolvedFieldType})";
+        var fieldExp = $"var {definitionContext.DefinitionVariable} = new FieldDefinition(\"{definitionContext.Name}\", {fieldAttributes}, {resolvedFieldType})";
         List<string> exps = 
         [
             constantValue != null ? $"{fieldExp} {{ Constant = {constantValue} }} ;" : $"{fieldExp};",

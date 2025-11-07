@@ -51,7 +51,7 @@ namespace Cecilifier.Core.AST
                 //.class private auto ansi MyEnum
                 var fieldVar = Context.Naming.LocalVariable(node);
                 var definitionContext = new MemberDefinitionContext("value__", "value__", fieldVar, enumTypeVariable);
-                var valueFieldExp = Context.ApiDefinitionsFactory.Field(Context, definitionContext, declaringTypeName, "value__", Context.TypeResolver.ResolveAny(Context.RoslynTypeSystem.SystemInt32, ResolveTargetKind.Field), "FieldAttributes.SpecialName | FieldAttributes.RTSpecialName | FieldAttributes.Public", false, false, null);
+                var valueFieldExp = Context.ApiDefinitionsFactory.Field(Context, definitionContext, declaringTypeName, Context.TypeResolver.ResolveAny(Context.RoslynTypeSystem.SystemInt32, ResolveTargetKind.Field), "FieldAttributes.SpecialName | FieldAttributes.RTSpecialName | FieldAttributes.Public", false, false, null);
                 AddCecilExpressions(Context, valueFieldExp);
 
                 HandleAttributesInMemberDeclaration(node.AttributeLists, enumTypeVariable, VariableMemberKind.Type);
@@ -75,7 +75,7 @@ namespace Cecilifier.Core.AST
             //      to allow Api Drivers (the need for this first appeared in SRM) to decide how to encode/emit the code. For now we ignore that this reference is 100% certain to be the type
             //      definition for the parent enum (and that we have that variable name in enumVarDef) and re-resolve it in a way that it will return a valid reference.
             var enumType = Context.TypeResolver.ResolveAny(Context.SemanticModel.GetDeclaredSymbol(node.Parent).EnsureNotNull<ISymbol, INamedTypeSymbol>(), ResolveTargetKind.Field);
-            var exp = Context.ApiDefinitionsFactory.Field(Context, new MemberDefinitionContext(node.Identifier.ValueText, fieldVar, enumVarDef.VariableName), declaringTypeName, node.Identifier.ValueText, enumType, "FieldAttributes.Static | FieldAttributes.Literal | FieldAttributes.Public | FieldAttributes.HasDefault", false, false, enumMemberValue);
+            var exp = Context.ApiDefinitionsFactory.Field(Context, new MemberDefinitionContext(node.Identifier.ValueText, fieldVar, enumVarDef.VariableName), declaringTypeName, enumType, "FieldAttributes.Static | FieldAttributes.Literal | FieldAttributes.Public | FieldAttributes.HasDefault", false, false, enumMemberValue);
             AddCecilExpressions(Context, exp);
 
             HandleAttributesInMemberDeclaration(node.AttributeLists, fieldVar, VariableMemberKind.Field);

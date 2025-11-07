@@ -151,7 +151,7 @@ internal class PropertyGenerator
 
         var name = Utils.BackingFieldNameForAutoProperty(property.Name);
         var memberDefinitionContext = new MemberDefinitionContext(name, $"{property.Name}BackingField", _backingFieldVar, property.DeclaringTypeVariable);
-        var backingFieldExps = Context.ApiDefinitionsFactory.Field(Context, memberDefinitionContext, property.DeclaringTypeNameForRegistration, name, property.Type(ResolveTargetKind.Field), property.BackingFieldModifiers, false, false, null);
+        var backingFieldExps = Context.ApiDefinitionsFactory.Field(Context, memberDefinitionContext, property.DeclaringTypeNameForRegistration, property.Type(ResolveTargetKind.Field), property.BackingFieldModifiers, false, false, null);
         
         Context.Generate(backingFieldExps);
         Context.AddCompilerGeneratedAttributeTo(_backingFieldVar, VariableMemberKind.Field);
