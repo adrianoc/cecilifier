@@ -41,7 +41,7 @@ internal class InlineArrayGenerator
             var fieldVar = context.Naming.SyntheticVariable("_element0", ElementKind.Field);
             string declaringTypeName = $"{typeVar}.Name";
             
-            var fieldExps = context.ApiDefinitionsFactory.Field(context, new MemberDefinitionContext("_element0", fieldVar, typeVar), declaringTypeName, typeParameterVar, "FieldAttributes.Private", false, false, null);
+            var fieldExps = context.ApiDefinitionsFactory.Field(context, new MemberDefinitionContext("_element0", fieldVar, typeVar), declaringTypeName, typeParameterVar, "FieldAttributes.Private", false, false);
             context.Generate(fieldExps);
 
             //[InlineArray(2)]

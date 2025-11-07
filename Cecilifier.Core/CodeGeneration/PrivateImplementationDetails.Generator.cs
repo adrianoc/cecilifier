@@ -103,9 +103,9 @@ internal partial class PrivateImplementationDetailsGenerator
 
         InstructionRepresentation[] instructions = [
             OpCodes.Ldarg_0,
-            OpCodes.Call.WithOperand(unsafeAsVar),
+            OpCodes.Call.WithOperand(unsafeAsVar.AsToken()),
             OpCodes.Ldarg_1,
-            OpCodes.Call.WithOperand(memoryMarshalCreateSpanVar),
+            OpCodes.Call.WithOperand(memoryMarshalCreateSpanVar.AsToken()),
             OpCodes.Ret
         ];
         var exps = context.ApiDefinitionsFactory.MethodBody(context, methodName, context.ApiDriver.NewIlContext(context, methodName, methodVar), [], instructions);
@@ -180,7 +180,7 @@ internal partial class PrivateImplementationDetailsGenerator
 
         InstructionRepresentation[] instructions = [
             OpCodes.Ldarg_0,
-            OpCodes.Call.WithOperand(unsafeAsVarName),
+            OpCodes.Call.WithOperand(unsafeAsVarName.AsToken()),
             OpCodes.Ret
         ];
         var ilContext = context.ApiDriver.NewIlContext(context, "UnsafeAs", methodVar);
@@ -241,9 +241,9 @@ internal partial class PrivateImplementationDetailsGenerator
 
         InstructionRepresentation[] instructions = [
             OpCodes.Ldarg_0,
-            OpCodes.Call.WithOperand(unsafeAsVarName),
+            OpCodes.Call.WithOperand(unsafeAsVarName.AsToken()),
             OpCodes.Ldarg_1,
-            OpCodes.Call.WithOperand(unsafeAddVarName),
+            OpCodes.Call.WithOperand(unsafeAddVarName.AsToken()),
             OpCodes.Ret
         ];
         var methodBodyExpressions = context.ApiDefinitionsFactory.MethodBody(context, "UnsafeAdd", context.ApiDriver.NewIlContext(context, "UnsafeAdd", methodVar), [], instructions);
@@ -271,7 +271,7 @@ internal partial class PrivateImplementationDetailsGenerator
         var bufferSize = elementSizeInBytes * elements.Count;
         byte[] toReturn = null;
         var toBeHashed = bufferSize <= Constants.MaxStackAlloc ? stackalloc byte[bufferSize] : toReturn = ArrayPool<byte>.Shared.Rent(bufferSize);
-        Span<byte> target = toBeHashed;
+        var target = toBeHashed;
         foreach (var element in elements)
         {
             converter(target, element);
@@ -284,28 +284,27 @@ internal partial class PrivateImplementationDetailsGenerator
         var fieldName = Convert.ToHexString(hash);
         var found = context.DefinitionVariables.GetVariable(fieldName, VariableMemberKind.Field, Constants.CompilerGeneratedTypes.PrivateImplementationDetails);
         if (found.IsValid)
+        {
+            if (toReturn is not null)
+            {
+                ArrayPool<byte>.Shared.Return(toReturn);
+            }
             return found.VariableName;
+        }
         
         var privateImplementationDetailsVar = GetOrCreatePrivateImplementationDetailsTypeVariable(context);
         var rawDataTypeVar = GetOrCreateRawDataType(context, bufferSize);
 
         // Add a field to hold the static initialization data.
         //
-        //                                                                  field type                                                      Field name = Hash(initialization data)             RVA computed by Cecil
-        //                                            +--------------------------------------------------------+                          +-------------------------                          +----------------------
-        //                                           /                                                          \                        /                                                   / 
+        //                                                                  field type                                    Field name = Hash(initialization data)                                RVA computed by Cecil
+        //                                            +--------------------------------------------------------+       +-------------------------                                           +----------------------
+        //                                           /                                                          \     /                                                                    / 
         // .field assembly static initonly valuetype '<PrivateImplementationDetails>'/'__StaticArrayInitTypeSize=3' '039058C6F2C0CB492C533B0A4D14EF77CC0F78ABCCCED5287D84A1A2011CFB81' at I_00002B50
         var fieldVar = context.Naming.SyntheticVariable("arrayInitializerData", ElementKind.Field);
         var memberDefinitionContext = new MemberDefinitionContext(fieldName, fieldVar, privateImplementationDetailsVar.VariableName);
-        var fieldExpressions = context.ApiDefinitionsFactory.Field(context, memberDefinitionContext, privateImplementationDetailsVar.MemberName, rawDataTypeVar, Constants.CompilerGeneratedTypes.StaticArrayInitFieldModifiers, false, false);
+        var fieldExpressions = context.ApiDefinitionsFactory.Field(context, memberDefinitionContext, privateImplementationDetailsVar.MemberName, rawDataTypeVar, Constants.CompilerGeneratedTypes.StaticArrayInitFieldModifiers, false, false, new FieldInitializationData(toBeHashed));
         context.Generate(fieldExpressions);
-        var initializationByteArrayAsString = new StringBuilder();
-        foreach (var itemValue in toBeHashed)
-        {
-            initializationByteArrayAsString.Append($"0x{itemValue:x2},");
-        }
-        
-        context.Generate($"{fieldVar}.InitialValue = [ { initializationByteArrayAsString } ];");
         context.WriteNewLine();
 
         if (toReturn is not null)
@@ -335,9 +334,14 @@ internal partial class PrivateImplementationDetailsGenerator
         
         var rawDataHolderTypeVar = context.Naming.Type("rawDataTypeVar", ElementKind.Struct);
         var outerTypeVariable = GetOrCreatePrivateImplementationDetailsTypeVariable(context);
+        var definitionContext = new MemberDefinitionContext(rawDataHolderStructName, rawDataHolderTypeVar, outerTypeVariable.IsValid ? outerTypeVariable.VariableName : null)
+        {
+            NameAsValidIdentifier = "staticArrayInitType"
+        };
+        
         var privateImplementationDetails = context.ApiDefinitionsFactory.Type(
                                                                     context, 
-                                                                    new MemberDefinitionContext(rawDataHolderStructName, rawDataHolderTypeVar, outerTypeVariable.IsValid ? outerTypeVariable.VariableName : null), 
+                                                                    definitionContext, 
                                                                     string.Empty, 
                                                                     Constants.CompilerGeneratedTypes.StaticArrayRawDataHolderTypeModifiers, 
                                                                     context.TypeResolver.ResolveAny(context.RoslynTypeSystem.SystemValueType), 

@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Text;
 using Cecilifier.ApiDriver.SystemReflectionMetadata.CustomAttributes;
 using Cecilifier.ApiDriver.SystemReflectionMetadata.DelayedDefinitions;
 using Cecilifier.ApiDriver.SystemReflectionMetadata.TypeSystem;
@@ -24,25 +25,24 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
     public IEnumerable<string> Type(IVisitorContext context, MemberDefinitionContext definitionContext, string typeNamespace, string attrs, ResolvedType baseType, bool isStructWithNoFields, IEnumerable<ITypeSymbol> interfaces,
         IEnumerable<TypeParameterSyntax>? ownTypeParameters, IEnumerable<TypeParameterSyntax> outerTypeParameters, params string[] properties)
     {
-        var typeName = definitionContext.Identifier;
         var typeVar = definitionContext.DefinitionVariable;
         
         yield return Format($"""
                       // Add a type reference for the new type. Types/Member references to the new type uses this.
-                      var {typeVar} = metadata.AddTypeReference(mainModuleHandle, metadata.GetOrAddString("{typeNamespace}"), metadata.GetOrAddString("{typeName}"));
+                      var {typeVar} = metadata.AddTypeReference(mainModuleHandle, metadata.GetOrAddString("{typeNamespace}"), metadata.GetOrAddString("{definitionContext.Name}"));
                       """);
 
         // We need to pass the handle of the 1st field/method defined in the module so we need to postpone the type generation after we have visited
         // all types/members.
-        TypedContext(context).DelayedDefinitionsManager.RegisterTypeDefinition(typeVar, $"{typeNamespace}.{typeName}", DefineDelayed);
+        TypedContext(context).DelayedDefinitionsManager.RegisterTypeDefinition(typeVar, $"{typeNamespace}.{definitionContext.Name}", DefineDelayed);
         void DefineDelayed(SystemReflectionMetadataContext ctx, TypeDefinitionRecord typeRecord)
         {
-            var typeDefVar = ctx.Naming.Type(typeName, ElementKind.Class);
+            var typeDefVar = ctx.Naming.Type(definitionContext.Identifier, ElementKind.Class);
             ctx.Generate(Format($"""
                                  var {typeDefVar} = metadata.AddTypeDefinition(
                                                                   {attrs},
                                                                   metadata.GetOrAddString("{typeNamespace}"),
-                                                                  metadata.GetOrAddString("{typeName}"),
+                                                                  metadata.GetOrAddString("{definitionContext.Name}"),
                                                                   {baseType},
                                                                   fieldList: {typeRecord.FirstFieldHandle ?? "MetadataTokens.FieldDefinitionHandle(1)"},
                                                                   methodList: {typeRecord.FirstMethodHandle ?? "MetadataTokens.MethodDefinitionHandle(1)"});
@@ -254,13 +254,12 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         });
     }
 
-    public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext definitionContext, ISymbol fieldOrEvent, ITypeSymbol fieldType, string fieldAttributes, bool isVolatile, bool isByRef, object? constantValue = null)
+    public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext definitionContext, ISymbol fieldOrEvent, ITypeSymbol fieldType, string fieldAttributes, bool isVolatile, bool isByRef, in FieldInitializationData initializer = default)
     {
-        return Field(context, definitionContext, fieldOrEvent.ContainingType.ToDisplayString(), context.TypeResolver.ResolveAny(fieldType, ResolveTargetKind.Field),  fieldAttributes, isVolatile, isByRef, constantValue);
+        return Field(context, definitionContext, fieldOrEvent.ContainingType.ToDisplayString(), context.TypeResolver.ResolveAny(fieldType, ResolveTargetKind.Field),  fieldAttributes, isVolatile, isByRef, initializer);
     }
 
-    public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext definitionContext, string declaringTypeName, ResolvedType fieldType, string fieldAttributes, bool isVolatile, bool isByRef,
-        object? constantValue = null)
+    public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext definitionContext, string declaringTypeName, ResolvedType fieldType, string fieldAttributes, bool isVolatile, bool isByRef, in FieldInitializationData initializer = default)
     {
         Debug.Assert(definitionContext.ParentDefinitionVariable != null);
         ((SystemReflectionMetadataContext) context).DelayedDefinitionsManager.RegisterFieldDefinition(definitionContext.ParentDefinitionVariable, definitionContext.DefinitionVariable);
@@ -291,9 +290,23 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         }
         
         exps[expCount++] = Format($"""var {definitionContext.DefinitionVariable} = metadata.AddFieldDefinition({fieldAttributes}, metadata.GetOrAddString("{definitionContext.Name}"), metadata.GetOrAddBlob({fieldSignatureVar}));""");
-        if (constantValue != null) 
-            exps[expCount++] = $"metadata.AddConstant({definitionContext.DefinitionVariable}, {constantValue});{Environment.NewLine}";
+        if (initializer.ConstantValue != null)
+        {
+            exps[expCount++] = $"metadata.AddConstant({definitionContext.DefinitionVariable}, {initializer.ConstantValue});{Environment.NewLine}";
+        }
+        else if (initializer.InitializationData.Length > 0)
+        {
+            var initializationByteArrayAsString = new StringBuilder();
+            foreach (var itemValue in initializer.InitializationData)
+            {
+                initializationByteArrayAsString.Append($"0x{itemValue:x2},");
+            }
 
+            var offsetVarName = $"offset_{definitionContext.Identifier}";
+            exps[expCount++] = $"var {offsetVarName} = mappedFieldData.Count;{Environment.NewLine}";
+            exps[expCount++] = $"mappedFieldData.WriteBytes((ImmutableArray<byte>) [{initializationByteArrayAsString}]);{Environment.NewLine}";
+            exps[expCount++] = $"metadata.AddFieldRelativeVirtualAddress({definitionContext.DefinitionVariable}, {offsetVarName});{Environment.NewLine}";
+        }
         Span<string> span = exps;
         return span.Slice(0, expCount).ToArray();
     }

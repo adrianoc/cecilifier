@@ -68,8 +68,8 @@ public class ArrayInitializationProcessor
             StringToSpanOfBytesConverters.For(elementType.FullyQualifiedName()));
 
         context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, OpCodes.Dup);
-        context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, OpCodes.Ldtoken, backingFieldVar);
-        context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, OpCodes.Call, initializeArrayHelper);
+        context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, OpCodes.Ldtoken, backingFieldVar.AsToken());
+        context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, OpCodes.Call, initializeArrayHelper.AsToken());
     }
 }
 

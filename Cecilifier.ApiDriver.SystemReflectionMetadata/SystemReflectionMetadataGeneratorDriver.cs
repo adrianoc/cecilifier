@@ -30,9 +30,10 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
                         using (var peStream = new FileStream($"{args[0]}", FileMode.Create))
                         {
                             var ilBuilder = new BlobBuilder();
+                            var mappedFieldData = new BlobBuilder();
                             var metadataBuilder = new MetadataBuilder();
-                            var entryPointOrNull = GenerateIL(metadataBuilder, ilBuilder, "{{mainTypeName}}");
-                            WritePEImage(peStream, metadataBuilder, ilBuilder, entryPointOrNull);
+                            var entryPointOrNull = GenerateIL(metadataBuilder, ilBuilder, "{{mainTypeName}}", mappedFieldData);
+                            WritePEImage(peStream, metadataBuilder, ilBuilder, entryPointOrNull, mappedFieldData);
                             peStream.Position = 0;
                         }
 
@@ -47,7 +48,8 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
                                     Stream peStream,
                                     MetadataBuilder metadataBuilder,
                                     BlobBuilder ilBuilder,
-                                    MethodDefinitionHandle entryPointHandle)
+                                    MethodDefinitionHandle entryPointHandle,
+                                    BlobBuilder mappedFieldData)
                     {
                          var peHeaderBuilder = new PEHeaderBuilder(
                                                     imageCharacteristics: entryPointHandle.IsNil ? Characteristics.Dll : Characteristics.ExecutableImage,
@@ -60,7 +62,8 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
                                                 ilBuilder,
                                                 entryPoint: entryPointHandle,
                                                 flags: CorFlags.ILOnly,
-                                                deterministicIdProvider: content => s_contentId);
+                                                deterministicIdProvider: content => s_contentId,
+                                                mappedFieldData: mappedFieldData);
 
                          var peBlob = new BlobBuilder();
                          var contentId = peBuilder.Serialize(peBlob);
@@ -68,7 +71,7 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
                          peBlob.WriteContentTo(peStream);
                     }
                     
-                    static MethodDefinitionHandle GenerateIL(MetadataBuilder metadata, BlobBuilder ilBuilder, string mainTypeName)
+                    static MethodDefinitionHandle GenerateIL(MetadataBuilder metadata, BlobBuilder ilBuilder, string mainTypeName, BlobBuilder mappedFieldData)
                     {
                          var moduleAndAssemblyName = metadata.GetOrAddString(mainTypeName);
                          var mainModuleHandle = metadata.AddModule(

@@ -49,7 +49,7 @@ namespace Cecilifier.Core.AST
                 //.class private auto ansi MyEnum
                 var fieldVar = Context.Naming.LocalVariable(node);
                 var definitionContext = new MemberDefinitionContext("value__", "value__", fieldVar, enumTypeVariable);
-                var valueFieldExp = Context.ApiDefinitionsFactory.Field(Context, definitionContext, declaringTypeName, Context.TypeResolver.ResolveAny(Context.RoslynTypeSystem.SystemInt32, ResolveTargetKind.Field), "FieldAttributes.SpecialName | FieldAttributes.RTSpecialName | FieldAttributes.Public", false, false, null);
+                var valueFieldExp = Context.ApiDefinitionsFactory.Field(Context, definitionContext, declaringTypeName, Context.TypeResolver.ResolveAny(Context.RoslynTypeSystem.SystemInt32, ResolveTargetKind.Field), "FieldAttributes.SpecialName | FieldAttributes.RTSpecialName | FieldAttributes.Public", false, false);
                 AddCecilExpressions(Context, valueFieldExp);
 
                 HandleAttributesInMemberDeclaration(node.AttributeLists, enumTypeVariable, VariableMemberKind.Type);

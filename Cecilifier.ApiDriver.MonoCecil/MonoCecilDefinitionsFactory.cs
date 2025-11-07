@@ -274,13 +274,12 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
         return [exp + ";", $"{definitionContext.Member.ParentDefinitionVariable}.Methods.Add({definitionContext.Member.DefinitionVariable});"];
     }
 
-    public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext definitionContext, ISymbol fieldOrEvent, ITypeSymbol fieldType, string fieldAttributes, bool isVolatile, bool isByRef, object? constantValue = null)
+    public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext definitionContext, ISymbol fieldOrEvent, ITypeSymbol fieldType, string fieldAttributes, bool isVolatile, bool isByRef, in FieldInitializationData initializer = default)
     {
-        return Field(context, definitionContext, fieldOrEvent.ContainingType.ToDisplayString(), context.TypeResolver.ResolveAny(fieldType, ResolveTargetKind.Field), fieldAttributes, isVolatile, isByRef, constantValue);
+        return Field(context, definitionContext, fieldOrEvent.ContainingType.ToDisplayString(), context.TypeResolver.ResolveAny(fieldType, ResolveTargetKind.Field), fieldAttributes, isVolatile, isByRef, in initializer);
     }
 
-    public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext definitionContext, string declaringTypeName, ResolvedType fieldType, string fieldAttributes, bool isVolatile, bool isByRef,
-        object? constantValue = null)
+    public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext definitionContext, string declaringTypeName, ResolvedType fieldType, string fieldAttributes, bool isVolatile, bool isByRef, in FieldInitializationData initializer = default)
     {
         if (isByRef)
             fieldType = fieldType.MakeByReferenceType();
@@ -291,9 +290,20 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
         var fieldExp = $"var {definitionContext.DefinitionVariable} = new FieldDefinition(\"{definitionContext.Name}\", {fieldAttributes}, {resolvedFieldType})";
         List<string> exps = 
         [
-            constantValue != null ? $"{fieldExp} {{ Constant = {constantValue} }} ;" : $"{fieldExp};",
+            initializer.ConstantValue != null ? $"{fieldExp} {{ Constant = {initializer.ConstantValue} }} ;" : $"{fieldExp};",
             $"{definitionContext.ParentDefinitionVariable}.Fields.Add({definitionContext.DefinitionVariable});"
         ];
+
+        if (initializer.InitializationData.Length > 0)
+        {
+            var initializationByteArrayAsString = new StringBuilder();
+            foreach (var itemValue in initializer.InitializationData)
+            {
+                initializationByteArrayAsString.Append($"0x{itemValue:x2},");
+            }
+        
+            exps.Add($"{definitionContext.DefinitionVariable}.InitialValue = [ { initializationByteArrayAsString } ];");
+        }
 
         return exps;
     }
