@@ -59,7 +59,7 @@ public struct Constants
         public static string StaticArrayInitTypeNameFor(long size) =>  $"__StaticArrayInitTypeSize={size}";
         public const string StaticArrayRawDataHolderTypeModifiers = "TypeAttributes.NestedAssembly | TypeAttributes.Sealed | TypeAttributes.AnsiClass | TypeAttributes.ExplicitLayout";
         /// <summary>modifiers for compiler emitted field holding the data used to optimize array/stackalloc initialization</summary>
-        public const string StaticArrayInitFieldModifiers = "FieldAttributes.Assembly | FieldAttributes.Static | FieldAttributes.InitOnly";
+        public const string StaticArrayInitFieldModifiers = "FieldAttributes.Assembly | FieldAttributes.Static | FieldAttributes.InitOnly | FieldAttributes.HasFieldRVA";
     }
 
     public struct Common

@@ -210,7 +210,7 @@ public class StackallocTests : CecilifierUnitTestBase
         \s+//This struct is emitted by the compiler and is used to hold raw data used in arrays/span initialization optimizations
         \s+var (st_rawDataTypeVar_\d+) = new TypeDefinition\("", "__StaticArrayInitTypeSize=3", TypeAttributes.NestedAssembly \| TypeAttributes.Sealed \| TypeAttributes.AnsiClass \| TypeAttributes.ExplicitLayout.+\) \{ ClassSize = 3,PackingSize = 1 \};
         \s+\1.NestedTypes.Add\(\2\);
-        \s+var (fld_arrayInitializerData_\d+) = new FieldDefinition\("[A-Z0-9]+", FieldAttributes.Assembly \| FieldAttributes.Static \| FieldAttributes.InitOnly, \2\);
+        \s+var (fld_arrayInitializerData_\d+) = new FieldDefinition\("[A-Z0-9]+", FieldAttributes.Assembly \| FieldAttributes.Static \| FieldAttributes.InitOnly | FieldAttributes.HasFieldRVA, \2\);
         \s+\1.Fields.Add\(\3\);
         \s+\3.InitialValue = \[ 0x01,0x02,0x03, \];
         \s+//duplicates the top of the stack \(the newly `stackalloced` buffer\) and initialize it from the raw buffer \(\3\).
