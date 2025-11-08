@@ -20,7 +20,7 @@ internal partial class DelayedDefinitionsManagerTests
         context.DelayedDefinitionsManager.ProcessDefinitions(context);
         
         foreach (var typeVariable in typeVariables)
-            Assert.That(testContext.Result[typeVariable].FirstMethodHandle, Is.EqualTo("MetadataTokens.MethodDefinitionHandle(1)"));
+            Assert.That(testContext.Result[typeVariable].FirstMethodHandle, Is.EqualTo("MetadataTokens.MethodDefinitionHandle(metadata.GetRowCount(TableIndex.MethodDef) + 1)"));
     }
     
     [Test]
@@ -43,8 +43,8 @@ internal partial class DelayedDefinitionsManagerTests
         var testContext = new DelayedDefinitionsManagerTestContext();
         
         var context = NewContext();
-        context.DelayedDefinitionsManager.RegisterMethodDefinition("T1V1", (ctx, tdr) => "T1M1");
-        context.DelayedDefinitionsManager.RegisterMethodDefinition("T1V2", (ctx, tdr) => "T1M2");
+        context.DelayedDefinitionsManager.RegisterMethodDefinition("T1V", (ctx, tdr) => "T1M1");
+        context.DelayedDefinitionsManager.RegisterMethodDefinition("T1V", (ctx, tdr) => "T1M2");
         context.DelayedDefinitionsManager.RegisterTypeDefinition("T1V", "T1", testContext.OnTypeRegistration);
         
         context.DelayedDefinitionsManager.ProcessDefinitions(context);
@@ -65,8 +65,13 @@ internal partial class DelayedDefinitionsManagerTests
         
         context.DelayedDefinitionsManager.ProcessDefinitions(context);
         
-        Assert.That(testContext.Result["T1V"].FirstMethodHandle, Is.EqualTo("TheMethod"));
-        Assert.That(testContext.Result["T2V"].FirstMethodHandle, Is.EqualTo("TheMethod"));
+        AssertMethodToken(declaringTypeName, "T1V");
+        AssertMethodToken(declaringTypeName, "T2V");
+
+        void AssertMethodToken(string typeWithMethodVariable, string testTypeVariable)
+        {
+            Assert.That(testContext.Result[testTypeVariable].FirstMethodHandle, Is.EqualTo(typeWithMethodVariable == testTypeVariable ? "TheMethod" : "MetadataTokens.MethodDefinitionHandle(metadata.GetRowCount(TableIndex.MethodDef) + 1)"));
+        }
     }        
     
     [Test]
@@ -100,7 +105,8 @@ internal partial class DelayedDefinitionsManagerTests
         
         context.DelayedDefinitionsManager.ProcessDefinitions(context);
         
-        Assert.That(testContext.Result["T1V"].FirstMethodHandle, Is.EqualTo("T2M"));
+
+        Assert.That(testContext.Result["T1V"].FirstMethodHandle, Is.EqualTo("MetadataTokens.MethodDefinitionHandle(metadata.GetRowCount(TableIndex.MethodDef) + 1)"));
         Assert.That(testContext.Result["T2V"].FirstMethodHandle, Is.EqualTo("T2M"));
         Assert.That(testContext.Result["T3V"].FirstMethodHandle, Is.EqualTo("T3M"));
     }
@@ -120,9 +126,9 @@ internal partial class DelayedDefinitionsManagerTests
         
         context.DelayedDefinitionsManager.ProcessDefinitions(context);
         
-        Assert.That(testContext.Result["T1V"].FirstMethodHandle, Is.EqualTo("T2M"));
+        Assert.That(testContext.Result["T1V"].FirstMethodHandle, Is.EqualTo("MetadataTokens.MethodDefinitionHandle(metadata.GetRowCount(TableIndex.MethodDef) + 1)"));
         Assert.That(testContext.Result["T2V"].FirstMethodHandle, Is.EqualTo("T2M"));
-        Assert.That(testContext.Result["T3V"].FirstMethodHandle, Is.EqualTo("T4M"));
+        Assert.That(testContext.Result["T3V"].FirstMethodHandle, Is.EqualTo("MetadataTokens.MethodDefinitionHandle(metadata.GetRowCount(TableIndex.MethodDef) + 1)"));
         Assert.That(testContext.Result["T4V"].FirstMethodHandle, Is.EqualTo("T4M"));
     }
     

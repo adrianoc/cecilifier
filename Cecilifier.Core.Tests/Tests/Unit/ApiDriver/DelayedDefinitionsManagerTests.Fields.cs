@@ -57,7 +57,7 @@ internal partial class DelayedDefinitionsManagerTests : CecilifierContextBasedTe
         context.DelayedDefinitionsManager.RegisterTypeDefinition("T2V", "T2", testContext.OnTypeRegistration);
         context.DelayedDefinitionsManager.ProcessDefinitions(context);
         
-        Assert.That(testContext.Result["T1V"].FirstFieldHandle, Is.EqualTo("T2F"));
+        Assert.That(testContext.Result["T1V"].FirstFieldHandle, Is.EqualTo("MetadataTokens.FieldDefinitionHandle(metadata.GetRowCount(TableIndex.Field) + 1)"));
         Assert.That(testContext.Result["T2V"].FirstFieldHandle, Is.EqualTo("T2F"));
     }
     
@@ -74,8 +74,8 @@ internal partial class DelayedDefinitionsManagerTests : CecilifierContextBasedTe
         
         context.DelayedDefinitionsManager.ProcessDefinitions(context);
         
-        Assert.That(testContext.Result["T1V"].FirstFieldHandle, Is.EqualTo("TheField"));
-        Assert.That(testContext.Result["T2V"].FirstFieldHandle, Is.EqualTo("TheField"));
+        Assert.That(testContext.Result["T1V"].FirstFieldHandle, Is.EqualTo(declaringTypeVariable == "T1V" ? "TheField" : "MetadataTokens.FieldDefinitionHandle(metadata.GetRowCount(TableIndex.Field) + 1)"));
+        Assert.That(testContext.Result["T2V"].FirstFieldHandle, Is.EqualTo(declaringTypeVariable == "T2V" ? "TheField" : "MetadataTokens.FieldDefinitionHandle(metadata.GetRowCount(TableIndex.Field) + 1)"));
     }
     
     [Test]
@@ -92,7 +92,7 @@ internal partial class DelayedDefinitionsManagerTests : CecilifierContextBasedTe
         
         context.DelayedDefinitionsManager.ProcessDefinitions(context);
         
-        Assert.That(testContext.Result["T1V"].FirstFieldHandle, Is.EqualTo("T2F"));
+        Assert.That(testContext.Result["T1V"].FirstFieldHandle, Is.EqualTo("MetadataTokens.FieldDefinitionHandle(metadata.GetRowCount(TableIndex.Field) + 1)"));
         Assert.That(testContext.Result["T2V"].FirstFieldHandle, Is.EqualTo("T2F"));
         Assert.That(testContext.Result["T3V"].FirstFieldHandle, Is.EqualTo("T3F"));
     }    
