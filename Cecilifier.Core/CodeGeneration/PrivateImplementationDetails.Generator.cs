@@ -13,6 +13,7 @@ using System.Text;
 using System.Reflection.Emit;
 using System.Threading;
 using Cecilifier.Core.ApiDriver;
+using Cecilifier.Core.ApiDriver.DefinitionsFactory;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -348,9 +349,9 @@ internal partial class PrivateImplementationDetailsGenerator
                                                                     false, 
                                                                     [], 
                                                                     [], 
-                                                                    [], 
-                                                                    $"ClassSize = {sizeInBytes}", 
-                                                                    "PackingSize = 1");
+                                                                    [],
+                                                                    new TypeLayoutProperty(TypeLayoutPropertyKind.ClassSize, sizeInBytes.ToString()),
+                                                                    new TypeLayoutProperty(TypeLayoutPropertyKind.PackingSize, "1"));
 
         context.Generate(privateImplementationDetails);
 

@@ -1,6 +1,7 @@
 #nullable enable
 using System.Collections.Generic;
 using System.Reflection.Emit;
+using Cecilifier.Core.ApiDriver.DefinitionsFactory;
 using Cecilifier.Core.AST;
 using Microsoft.CodeAnalysis;
 

@@ -9,7 +9,7 @@ using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace Cecilifier.Core.ApiDriver;
+namespace Cecilifier.Core.ApiDriver.DefinitionsFactory;
 
 public interface IApiDriverDefinitionsFactory
 {
@@ -44,7 +44,7 @@ public interface IApiDriverDefinitionsFactory
         IEnumerable<ITypeSymbol> interfaces,
         IEnumerable<TypeParameterSyntax>? ownTypeParameters,
         IEnumerable<TypeParameterSyntax> outerTypeParameters,
-        params string[] properties);
+        params TypeLayoutProperty[] properties);
 
     public IEnumerable<string> Method(IVisitorContext context, IMethodSymbol methodSymbol, BodiedMemberDefinitionContext bodiedMemberDefinitionContext, string methodName, string methodModifiers,
         IParameterSymbol[] resolvedParameterTypes, IList<TypeParameterSyntax> typeParameters);

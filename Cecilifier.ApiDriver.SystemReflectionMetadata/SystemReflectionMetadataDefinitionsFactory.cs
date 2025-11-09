@@ -7,6 +7,7 @@ using Cecilifier.ApiDriver.SystemReflectionMetadata.TypeSystem;
 using Cecilifier.Core;
 using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.ApiDriver.Attributes;
+using Cecilifier.Core.ApiDriver.DefinitionsFactory;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
@@ -23,7 +24,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
     public string MappedTypeModifiersFor(INamedTypeSymbol type, SyntaxTokenList modifiers) => RoslynToApiDriverModifiers(type, modifiers);
 
     public IEnumerable<string> Type(IVisitorContext context, MemberDefinitionContext definitionContext, string typeNamespace, string attrs, ResolvedType baseType, bool isStructWithNoFields, IEnumerable<ITypeSymbol> interfaces,
-        IEnumerable<TypeParameterSyntax>? ownTypeParameters, IEnumerable<TypeParameterSyntax> outerTypeParameters, params string[] properties)
+        IEnumerable<TypeParameterSyntax>? ownTypeParameters, IEnumerable<TypeParameterSyntax> outerTypeParameters, params TypeLayoutProperty[] properties)
     {
         var typeVar = definitionContext.DefinitionVariable;
         
@@ -72,6 +73,15 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                 var parentTypeDefinitionVariable =  ctx.DelayedDefinitionsManager.GetTypeDefinitionVariableFromTypeReferenceVariable(definitionContext.ParentDefinitionVariable);
                 context.Generate($"metadata.AddNestedType({typeRecord.TypeDefinitionVariable}, {parentTypeDefinitionVariable});"); // type is an inner type
                 context.WriteNewLine();
+            }
+
+            if (properties.Length > 0)
+            {
+                
+                var packingSize = properties.SingleOrDefault(p => p.Kind == TypeLayoutPropertyKind.PackingSize).Value;
+                var clasSize = properties.SingleOrDefault(p => p.Kind == TypeLayoutPropertyKind.ClassSize).Value;
+                
+                context.Generate($"metadata.AddTypeLayout({typeRecord.TypeDefinitionVariable}, {packingSize}, {clasSize});");
             }
         }
     }

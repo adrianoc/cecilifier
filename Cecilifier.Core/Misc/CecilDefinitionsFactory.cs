@@ -97,7 +97,7 @@ namespace Cecilifier.Core.Misc
                 TypeKind.Struct => "TypeAttributes.Sealed |" + basicClassAttrs,
                 TypeKind.Class => basicClassAttrs,
                 TypeKind.Interface => "TypeAttributes.Interface | TypeAttributes.Abstract | TypeAttributes.BeforeFieldInit",
-                TypeKind.Delegate => "TypeAttributes.Sealed",
+                TypeKind.Delegate => "TypeAttributes.Sealed | TypeAttributes.AnsiClass",
                 TypeKind.Enum => string.Empty,
                 _ => throw new Exception("Not supported type declaration: " + typeKind)
             };

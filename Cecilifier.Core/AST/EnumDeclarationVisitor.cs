@@ -38,8 +38,7 @@ namespace Cecilifier.Core.AST
                                                         false, 
                                                         [], 
                                                         [], 
-                                                        [],
-                                                        Array.Empty<string>());
+                                                        []);
             AddCecilExpressions(Context, typeDef);
 
             var parentName = enumSymbol.ContainingSymbol.ToDisplayString();

@@ -37,8 +37,7 @@ internal partial class TypeDeclarationVisitor
                                                     false, 
                                                     [], 
                                                     node.TypeParameterList?.Parameters, 
-                                                    [], 
-                                                    "IsAnsiClass = true");
+                                                    []);
 
         AddCecilExpressions(Context, typeDef);
         HandleAttributesInMemberDeclaration(node.AttributeLists, typeVar, VariableMemberKind.Type);

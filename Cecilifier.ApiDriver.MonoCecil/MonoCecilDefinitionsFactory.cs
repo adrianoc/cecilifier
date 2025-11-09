@@ -7,6 +7,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Cecilifier.Core;
 using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.ApiDriver.Attributes;
+using Cecilifier.Core.ApiDriver.DefinitionsFactory;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
@@ -30,7 +31,7 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
                                 IEnumerable<ITypeSymbol> interfaces,
                                 IEnumerable<TypeParameterSyntax>? ownTypeParameters, 
                                 IEnumerable<TypeParameterSyntax> outerTypeParameters, 
-                                params string[] properties)
+                                params TypeLayoutProperty[] properties)
     {
         var typeName = definitionContext.Name;
         var typeVar = definitionContext.DefinitionVariable;
@@ -45,7 +46,7 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
         var typeDefExp = $"var {typeVar} = new TypeDefinition(\"{typeNamespace}\", \"{typeName}\", {attrs}{(baseType ? $", {baseType}" : "")})";
         if (properties.Length > 0)
         {
-            exps.Add($"{typeDefExp} {{ {string.Join(',', properties)} }};");
+            exps.Add($"{typeDefExp} {{ {string.Join(',', properties.Select(p => $"{p.Kind} = {p.Value}"))} }};");
         }
         else
         {

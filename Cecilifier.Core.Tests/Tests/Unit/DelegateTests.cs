@@ -14,7 +14,7 @@ public class DelegateTests : CecilifierUnitTestBase
         var result = RunCecilifier("class C { public delegate int D(); }");
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
 
-        var matches = Regex.Matches(cecilifiedCode, @"var (del_D\d+) = new TypeDefinition\("""", ""D"", .+ImportReference\(typeof\(System.MulticastDelegate\)\)\).+;");
+        var matches = Regex.Matches(cecilifiedCode, @"var (del_D\d+) = new TypeDefinition\("""", ""D"", .+ImportReference\(typeof\(System.MulticastDelegate\)\)\);");
         Assert.That(matches.Count, Is.EqualTo(1));
 
         Assert.That(cecilifiedCode, Does.Match(@"var m_invoke_\d+ = new MethodDefinition\(""Invoke"", .+assembly.MainModule.TypeSystem.Int32\)"));
