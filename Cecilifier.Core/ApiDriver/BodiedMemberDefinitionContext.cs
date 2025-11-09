@@ -33,4 +33,6 @@ public readonly record struct MemberDefinitionContext(string Name, string? NameA
     /// The equivalent of the <see cref="Name"/> of the member with the guarantee it is safe to be used as an identifier in C# code.
     /// </summary>
     public string Identifier => NameAsValidIdentifier ?? Name;
+
+    public string ContainingTypeName { get; init; } = string.Empty;
 }

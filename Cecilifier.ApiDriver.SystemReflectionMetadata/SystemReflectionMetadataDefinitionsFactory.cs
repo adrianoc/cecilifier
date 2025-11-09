@@ -27,10 +27,10 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         IEnumerable<TypeParameterSyntax>? ownTypeParameters, IEnumerable<TypeParameterSyntax> outerTypeParameters, params TypeLayoutProperty[] properties)
     {
         var typeVar = definitionContext.DefinitionVariable;
-        
+        var resolutionScope = definitionContext.ParentDefinitionVariable ?? "mainModuleHandle";
         yield return Format($"""
                       // Add a type reference for the new type. Types/Member references to the new type uses this.
-                      var {typeVar} = metadata.AddTypeReference(mainModuleHandle, metadata.GetOrAddString("{typeNamespace}"), metadata.GetOrAddString("{definitionContext.Name}"));
+                      var {typeVar} = metadata.AddTypeReference({resolutionScope}, metadata.GetOrAddString("{typeNamespace}"), metadata.GetOrAddString("{definitionContext.Name}"));
                       """);
 
         // We need to pass the handle of the 1st field/method defined in the module so we need to postpone the type generation after we have visited

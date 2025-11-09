@@ -335,10 +335,16 @@ internal partial class PrivateImplementationDetailsGenerator
         
         var rawDataHolderTypeVar = context.Naming.Type("rawDataTypeVar", ElementKind.Struct);
         var outerTypeVariable = GetOrCreatePrivateImplementationDetailsTypeVariable(context);
-        var definitionContext = new MemberDefinitionContext(rawDataHolderStructName, rawDataHolderTypeVar, outerTypeVariable.IsValid ? outerTypeVariable.VariableName : null)
-        {
-            NameAsValidIdentifier = "staticArrayInitType"
-        };
+        Debug.Assert(outerTypeVariable.IsValid);
+        
+        var definitionContext = new MemberDefinitionContext(
+                                            rawDataHolderStructName, 
+                                            rawDataHolderTypeVar, 
+                                            outerTypeVariable.VariableName)
+                                            {
+                                                NameAsValidIdentifier = "staticArrayInitType",
+                                                ContainingTypeName = outerTypeVariable.MemberName
+                                            };
         
         var privateImplementationDetails = context.ApiDefinitionsFactory.Type(
                                                                     context, 
