@@ -8,8 +8,8 @@ record DelayedDefinitionsManagerTestContext
 {
     public Dictionary<string, TypeDefinitionRecord> Result { get; } = new();
 
-    public void OnTypeRegistration(SystemReflectionMetadataContext context, TypeDefinitionRecord typeDefinitionRecord)
+    public void OnTypeRegistration(SystemReflectionMetadataContext context, ref TypeDefinitionRecord typeDefinitionRecord)
     {
-        Result[typeDefinitionRecord.TypeVarName] = typeDefinitionRecord;
+        Result[typeDefinitionRecord.TypeReferenceVariable] = typeDefinitionRecord;
     }
 }

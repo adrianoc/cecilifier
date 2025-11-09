@@ -6,6 +6,7 @@ using Cecilifier.Core.TypeSystem;
 
 namespace Cecilifier.ApiDriver.SystemReflectionMetadata.DelayedDefinitions;
 
+internal delegate void DelayedTypeDefinitionAction(SystemReflectionMetadataContext context, ref TypeDefinitionRecord definitionRecord);
 /// <summary>
 /// System.Reflection.Metadata model requires members (methods, field) as well as parameters
 /// to be defined before the containing member (type, method, property) whereas Cecilifier
@@ -24,7 +25,7 @@ public class DelayedDefinitionsManager
     private string? _firstMethodHandleVariable;
     private string? _firstFieldHandleVariable;
 
-    internal void RegisterTypeDefinition(string typeVarName, string typeQualifiedName, Action<SystemReflectionMetadataContext, TypeDefinitionRecord> action)
+    internal void RegisterTypeDefinition(string typeVarName, string typeQualifiedName, DelayedTypeDefinitionAction action)
     {
         _postponedTypeDefinitionDetails.Add(new TypeDefinitionRecord(typeQualifiedName, typeVarName)
         {
@@ -67,6 +68,17 @@ public class DelayedDefinitionsManager
         _postponedTypeDefinitionDetails[^1].Attributes.Add(attributeEmitter);
     }
 
+    public string GetTypeDefinitionVariableFromTypeReferenceVariable(string typeReferenceVariable)
+    {
+        var associatedRecord = _postponedTypeDefinitionDetails.FirstOrDefault(rec => rec.TypeReferenceVariable == typeReferenceVariable);
+        if (associatedRecord == default)
+            throw new ArgumentException(nameof(typeReferenceVariable));
+        
+        return string.IsNullOrWhiteSpace(associatedRecord.TypeDefinitionVariable) 
+            ? throw new InvalidOperationException($"The 'type definition variable' for the type reference '{typeReferenceVariable}' has not been set.") 
+            : associatedRecord.TypeDefinitionVariable;
+    }
+
     internal void ProcessDefinitions(SystemReflectionMetadataContext context)
     {
         if (_postponedTypeDefinitionDetails.Count == 0)
@@ -82,7 +94,7 @@ public class DelayedDefinitionsManager
         for (var index = 0; index < postponedTypeDefinitions.Length; index++)
         {
             ref var typeRecord = ref postponedTypeDefinitions[index];
-            typeRecord.DefinitionFunction(context, typeRecord);
+            typeRecord.DefinitionFunction(context, ref typeRecord);
         }
         
         _postponedMethodDefinitionDetails.Clear();
@@ -98,7 +110,7 @@ public class DelayedDefinitionsManager
         {
             for (int i = 0; i < postponedTypeDefinitions.Length; i++)
             {
-                if (postponedTypeDefinitions[i].TypeVarName == typeVar)
+                if (postponedTypeDefinitions[i].TypeReferenceVariable == typeVar)
                 {
                     Debug.Assert(postponedTypeDefinitions[i].FirstFieldHandle == null);
                     postponedTypeDefinitions[i].FirstFieldHandle = fieldVar;
@@ -116,7 +128,7 @@ public class DelayedDefinitionsManager
 
             for (int i = 0; i < postponedTypeDefinitions.Length; i++)
             {
-                if (postponedTypeDefinitions[i].TypeVarName == methodRecord.DeclaringTypeVarName && postponedTypeDefinitions[i].FirstMethodHandle == null)
+                if (postponedTypeDefinitions[i].TypeReferenceVariable == methodRecord.DeclaringTypeVarName && postponedTypeDefinitions[i].FirstMethodHandle == null)
                 {
                     postponedTypeDefinitions[i].FirstMethodHandle = methodHandleVariableName;
                 }

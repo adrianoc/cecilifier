@@ -35,11 +35,11 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         // We need to pass the handle of the 1st field/method defined in the module so we need to postpone the type generation after we have visited
         // all types/members.
         TypedContext(context).DelayedDefinitionsManager.RegisterTypeDefinition(typeVar, $"{typeNamespace}.{definitionContext.Name}", DefineDelayed);
-        void DefineDelayed(SystemReflectionMetadataContext ctx, TypeDefinitionRecord typeRecord)
+        void DefineDelayed(SystemReflectionMetadataContext ctx, ref TypeDefinitionRecord typeRecord)
         {
-            var typeDefVar = ctx.Naming.Type(definitionContext.Identifier, ElementKind.Class);
+            typeRecord.TypeDefinitionVariable = ctx.Naming.Type(definitionContext.Identifier, ElementKind.Class);
             ctx.Generate(Format($"""
-                                 var {typeDefVar} = metadata.AddTypeDefinition(
+                                 var {typeRecord.TypeDefinitionVariable} = metadata.AddTypeDefinition(
                                                                   {attrs},
                                                                   metadata.GetOrAddString("{typeNamespace}"),
                                                                   metadata.GetOrAddString("{definitionContext.Name}"),
@@ -51,19 +51,26 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
             // Add attributes to the type definition
             foreach (var attributeEmitter in typeRecord.Attributes)
             {
-                attributeEmitter(ctx, typeDefVar);    
+                attributeEmitter(ctx, typeRecord.TypeDefinitionVariable);    
             }
             
             foreach (var property in typeRecord.Properties)
             {
                 // process each property passing the type definition variable (as opposed to the type reference variable) 
-                property.Processor(context, property.Name, property.DefinitionVariable, property.DeclaringTypeName, typeDefVar);
+                property.Processor(context, property.Name, property.DefinitionVariable, property.DeclaringTypeName, typeRecord.TypeDefinitionVariable);
             }
             
             var firstProperty = typeRecord.Properties.FirstOrDefault();
             if (firstProperty.IsValid)
             {
-                context.Generate($"metadata.AddPropertyMap({typeDefVar}, {firstProperty.DefinitionVariable});");
+                context.Generate($"metadata.AddPropertyMap({typeRecord.TypeDefinitionVariable}, {firstProperty.DefinitionVariable});");
+                context.WriteNewLine();
+            }
+            
+            if (definitionContext.ParentDefinitionVariable != null)
+            {
+                var parentTypeDefinitionVariable =  ctx.DelayedDefinitionsManager.GetTypeDefinitionVariableFromTypeReferenceVariable(definitionContext.ParentDefinitionVariable);
+                context.Generate($"metadata.AddNestedType({typeRecord.TypeDefinitionVariable}, {parentTypeDefinitionVariable});"); // type is an inner type
                 context.WriteNewLine();
             }
         }
@@ -91,7 +98,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         // We need to pass the handle of the 1st field/method defined in the module so we need to postpone the type generation after we have visited
         // all types/members.
         TypedContext(context).DelayedDefinitionsManager.RegisterTypeDefinition(typeVar, $"{typeNamespace}.{typeName}", DefineDelayed);
-        void DefineDelayed(SystemReflectionMetadataContext ctx, TypeDefinitionRecord typeRecord)
+        void DefineDelayed(SystemReflectionMetadataContext ctx, ref TypeDefinitionRecord typeRecord)
         {
             var typeDefVar = ctx.Naming.Type(typeName, ElementKind.Class);
             ctx.Generate(Format($"""
