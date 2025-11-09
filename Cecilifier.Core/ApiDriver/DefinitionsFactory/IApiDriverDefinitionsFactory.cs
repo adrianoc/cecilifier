@@ -67,12 +67,3 @@ public interface IApiDriverDefinitionsFactory
     IEnumerable<string> Property(IVisitorContext context, BodiedMemberDefinitionContext definitionContext, string declaringTypeName, List<ParameterSpec> propertyParameters, ResolvedType propertyType);
     IEnumerable<string> Attribute(IVisitorContext context, IMethodSymbol attributeCtor, string attributeVarBaseName, string attributeTargetVar, VariableMemberKind targetKind, params CustomAttributeArgument[] arguments);
 }
-
-public ref struct FieldInitializationData(ReadOnlySpan<byte> initializationData, object? constantValue = null)
-{
-    public ReadOnlySpan<byte> InitializationData { get; } = initializationData;
-    public object? ConstantValue { get; } = constantValue;
-    
-    public static implicit operator FieldInitializationData(string value) => new(ReadOnlySpan<byte>.Empty, value);
-    public static implicit operator FieldInitializationData(int value) => new(ReadOnlySpan<byte>.Empty, value);
-}
