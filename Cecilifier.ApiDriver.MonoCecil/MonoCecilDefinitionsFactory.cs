@@ -76,60 +76,6 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
         return exps;
     }
 
-    public IEnumerable<string> Type(
-        IVisitorContext context,
-        string typeVar,
-        string typeNamespace,
-        string typeName,
-        string attrs,
-        ResolvedType baseType,
-        DefinitionVariable outerTypeVariable,
-        bool isStructWithNoFields,
-        IEnumerable<ITypeSymbol> interfaces,
-        IEnumerable<TypeParameterSyntax>? ownTypeParameters,
-        IEnumerable<TypeParameterSyntax> outerTypeParameters,
-        params string[] properties)
-    {
-        var typeParamList = ownTypeParameters?.ToArray() ?? [];
-        if (typeParamList.Length > 0)
-        {
-            typeName = typeName + "`" + typeParamList.Length;
-        }
-
-        var exps = new List<string>();
-        var typeDefExp = $"var {typeVar} = new TypeDefinition(\"{typeNamespace}\", \"{typeName}\", {attrs}{(baseType ? $", {baseType}" : "")})";
-        if (properties.Length > 0)
-        {
-            exps.Add($"{typeDefExp} {{ {string.Join(',', properties)} }};");
-        }
-        else
-        {
-            exps.Add($"{typeDefExp};");
-        }
-
-        // add type parameters from outer types. 
-        var outerTypeParametersArray = outerTypeParameters.ToArray();
-        ProcessGenericTypeParameters(typeVar, context, outerTypeParametersArray.Concat(typeParamList).ToArray(), exps);
-            
-        foreach (var itf in interfaces)
-        {
-            exps.Add($"{typeVar}.Interfaces.Add(new InterfaceImplementation({context.TypeResolver.ResolveAny(itf)}));");
-        }
-
-        if (outerTypeVariable.IsValid && outerTypeVariable.VariableName != typeVar)
-            exps.Add($"{outerTypeVariable.VariableName}.NestedTypes.Add({typeVar});"); // type is an inner type of *context.CurrentType* 
-        else
-            exps.Add($"assembly.MainModule.Types.Add({typeVar});");
-
-        if (isStructWithNoFields)
-        {
-            exps.Add($"{typeVar}.ClassSize = 1;");
-            exps.Add($"{typeVar}.PackingSize = 0;");
-        }
-
-        return exps;
-    }
-
     public IEnumerable<string> Method(IVisitorContext context, IMethodSymbol methodSymbol, BodiedMemberDefinitionContext bodiedMemberDefinitionContext, string methodName, string methodModifiers,
         IParameterSymbol[] resolvedParameterTypes, IList<TypeParameterSyntax> typeParameters)
     {
