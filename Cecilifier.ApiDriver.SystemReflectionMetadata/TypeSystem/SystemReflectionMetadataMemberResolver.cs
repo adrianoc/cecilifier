@@ -121,26 +121,25 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
 
     public string ResolveDefaultConstructor(ITypeSymbol baseType, string derivedTypeVar)
     {
-        var voidParameterlessMethodRef = context.DefinitionVariables.GetVariable("voidParameterlessMethodRef", VariableMemberKind.MethodReference);
+        var voidParameterlessMethodRef = context.DefinitionVariables.GetVariable("voidParameterlessMethodRef", VariableMemberKind.MethodReference, baseType.Name);
         if (!voidParameterlessMethodRef.IsValid)
         {
             var voidParameterlessMethodRefVarName = context.Naming.SyntheticVariable("voidParameterlessMethod", ElementKind.MemberReference);
+            var parameterlessCtorSignatureVarName = $"ctorSignature_{DateTime.Now.Ticks}";
             context.Generate($$"""
-                                          var parameterlessCtorSignature = new BlobBuilder();
+                                          var {{parameterlessCtorSignatureVarName}} = new BlobBuilder();
                                           
-                                          new BlobEncoder(parameterlessCtorSignature).
+                                          new BlobEncoder({{parameterlessCtorSignatureVarName}}).
                                                  MethodSignature(isInstanceMethod: true).
                                                  Parameters(0, returnType => returnType.Void(), parameters => { });
-                                          
-                                          var parameterlessCtorBlobIndex = metadata.GetOrAddBlob(parameterlessCtorSignature);
                                           
                                           var {{voidParameterlessMethodRefVarName}} = metadata.AddMemberReference(
                                                                                                     {{context.TypeResolver.ResolveAny(baseType)}},
                                                                                                     metadata.GetOrAddString(".ctor"),
-                                                                                                    parameterlessCtorBlobIndex);
+                                                                                                    metadata.GetOrAddBlob({{parameterlessCtorSignatureVarName}}));
                                           """);
             
-            voidParameterlessMethodRef = context.DefinitionVariables.RegisterNonMethod("", "voidParameterlessMethodRef", VariableMemberKind.MethodReference, voidParameterlessMethodRefVarName);
+            voidParameterlessMethodRef = context.DefinitionVariables.RegisterNonMethod(baseType.Name, "voidParameterlessMethodRef", VariableMemberKind.MethodReference, voidParameterlessMethodRefVarName);
         }
         
         return voidParameterlessMethodRef.VariableName;
