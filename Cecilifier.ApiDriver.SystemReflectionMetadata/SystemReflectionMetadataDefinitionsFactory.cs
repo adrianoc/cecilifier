@@ -202,7 +202,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
             var ctorDefVar = ctx.Naming.SyntheticVariable($"{typeName}_Ctor", ElementKind.MemberReference);
             ctx.Generate($"""
                                    var {ctorDefVar} = metadata.AddMethodDefinition(
-                                                             {(isStatic ? "MethodAttributes.Private | MethodAttributes.Static" : "MethodAttributes.Public")} | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName,
+                                                             {(isStatic ? "MethodAttributes.Private | MethodAttributes.Static" : methodAccessibility)} | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName,
                                                              MethodImplAttributes.IL | MethodImplAttributes.Managed,
                                                              metadata.GetOrAddString("{(isStatic ? ".cctor" : ".ctor")}"),
                                                              metadata.GetOrAddBlob({parameterlessCtorSignatureVar}),
