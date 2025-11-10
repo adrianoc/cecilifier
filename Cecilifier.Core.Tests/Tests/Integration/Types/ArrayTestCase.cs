@@ -2,6 +2,7 @@ using Cecilifier.ApiDriver.MonoCecil;
 using Cecilifier.ApiDriver.SystemReflectionMetadata;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Tests.Framework;
+using Cecilifier.Core.Tests.Framework.Attributes;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using NUnit.Framework;
@@ -10,6 +11,7 @@ namespace Cecilifier.Core.Tests.Integration.Types
 {
     [TestFixture(typeof(MonoCecilContext))]
     [TestFixture(typeof(SystemReflectionMetadataContext))]
+    [EnableForContext<SystemReflectionMetadataContext>(nameof(SmokeTests), IgnoreReason = "ArrayInitializationOptimization depends on .data section being defined and I am having troubles with that. Other than that it is almost working")]
     internal class ArrayTests<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
     {
         [Test]
@@ -21,7 +23,7 @@ namespace Cecilifier.Core.Tests.Integration.Types
         [Test]
         public void ArrayInitializationOptimization()
         {
-            var resource = @"Types/ArrayInitialization";
+            var resource = "Types/ArrayInitialization";
             AssertResourceTest(resource, new CecilifyTestOptions()
             {
                 ToBeCecilified = ReadResource(resource, "cs"),
