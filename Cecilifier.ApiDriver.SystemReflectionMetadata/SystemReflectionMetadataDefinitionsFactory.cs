@@ -44,7 +44,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                                                                   {attrs},
                                                                   metadata.GetOrAddString("{typeNamespace}"),
                                                                   metadata.GetOrAddString("{definitionContext.Name}"),
-                                                                  {baseType},
+                                                                  {baseType.Expression ?? "default" },
                                                                   fieldList: {typeRecord.FirstFieldHandle ?? "MetadataTokens.FieldDefinitionHandle(1)"},
                                                                   methodList: {typeRecord.FirstMethodHandle ?? "MetadataTokens.MethodDefinitionHandle(1)"});
                                  """));
@@ -100,13 +100,17 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
             Debug.Assert(methodSignatureVar.IsValid);
             
             var methodDefVar = context.Naming.SyntheticVariable(bodiedMemberDefinitionContext.Member.Identifier, ElementKind.Method);
+            var bodyOffset = methodSymbol.ContainingType.TypeKind == TypeKind.Interface 
+                                            ? "-1" 
+                                            : $"methodBodyStream.AddMethodBody({bodiedMemberDefinitionContext.IlContext.VariableName}, localVariablesSignature: {methodRecord.LocalSignatureHandleVariable})";
+            
             ctx.Generate($"""
                           var {methodDefVar}  = metadata.AddMethodDefinition(
                                                     {methodModifiers},
                                                     MethodImplAttributes.IL | MethodImplAttributes.Managed,
                                                     metadata.GetOrAddString("{methodName}"),
                                                     {methodSignatureVar.VariableName},
-                                                    methodBodyStream.AddMethodBody({bodiedMemberDefinitionContext.IlContext.VariableName}, localVariablesSignature: {methodRecord.LocalSignatureHandleVariable}),
+                                                    {bodyOffset},
                                                     parameterList: {methodRecord.FirstParameterHandle});
                           """);
             
