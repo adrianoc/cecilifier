@@ -95,8 +95,8 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
                             default(StringHandle),
                             metadata.GetOrAddString("<Module>"),
                             baseType: default(EntityHandle),
-                            fieldList: MetadataTokens.FieldDefinitionHandle(1),
-                            methodList: MetadataTokens.MethodDefinitionHandle(1));
+                            fieldList: MetadataTokens.FieldDefinitionHandle(metadata.GetRowCount(TableIndex.Field) + 1),
+                            methodList: MetadataTokens.MethodDefinitionHandle(metadata.GetRowCount(TableIndex.MethodDef) + 1));
                             
                          var methodBodyStream = new MethodBodyStreamEncoder(ilBuilder);
                          

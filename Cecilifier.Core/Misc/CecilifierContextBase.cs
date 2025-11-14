@@ -83,7 +83,7 @@ namespace Cecilifier.Core.Misc
             }
         }
 
-        public abstract void OnFinishedTypeDeclaration();
+        public abstract void OnFinishedTypeDeclaration(INamedTypeSymbol typeSymbol);
 
         public IMethodSymbol GetDeclaredSymbol(BaseMethodDeclarationSyntax methodDeclaration)
         {

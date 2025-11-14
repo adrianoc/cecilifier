@@ -14,10 +14,12 @@ namespace Cecilifier.Core.AST
 {
     internal class EnumDeclarationVisitor : SyntaxWalkerBase
     {
+        private readonly INamedTypeSymbol _enumSymbol;
         private EnumMemberValueCollector _memberCollector;
 
-        public EnumDeclarationVisitor(IVisitorContext context) : base(context)
+        public EnumDeclarationVisitor(IVisitorContext context, INamedTypeSymbol enumSymbol) : base(context)
         {
+            _enumSymbol = enumSymbol;
         }
 
         public override void VisitEnumDeclaration(EnumDeclarationSyntax node)
@@ -26,14 +28,13 @@ namespace Cecilifier.Core.AST
             _memberCollector = new EnumMemberValueCollector();
             node.Accept(_memberCollector);
 
-            var enumSymbol = Context.SemanticModel.GetDeclaredSymbol(node).EnsureNotNull<ISymbol, INamedTypeSymbol>($"Something really bad happened. Roslyn failed to resolve the symbol for the enum {node.Identifier.Text}");
-            var outerTypeVariable = Context.DefinitionVariables.GetVariable(enumSymbol.ContainingType?.ToDisplayString(), VariableMemberKind.Type, enumSymbol.ContainingType?.ContainingSymbol.ToDisplayString());
+            var outerTypeVariable = Context.DefinitionVariables.GetVariable(_enumSymbol.ContainingType?.ToDisplayString(), VariableMemberKind.Type, _enumSymbol.ContainingType?.ContainingSymbol.ToDisplayString());
             var enumTypeVariable = Context.Naming.Type(node);
             var typeDef = Context.ApiDefinitionsFactory.Type(
                                                         Context,
-                                                        new MemberDefinitionContext(enumSymbol.Name, enumTypeVariable, outerTypeVariable.IsValid ? outerTypeVariable.VariableName : null),
-                                                        enumSymbol.ContainingNamespace?.FullyQualifiedName() ?? string.Empty, 
-                                                        TypeModifiersToCecil(enumSymbol, node.Modifiers) + " | TypeAttributes.Sealed", 
+                                                        new MemberDefinitionContext(_enumSymbol.Name, enumTypeVariable, outerTypeVariable.IsValid ? outerTypeVariable.VariableName : null),
+                                                        _enumSymbol.ContainingNamespace?.FullyQualifiedName() ?? string.Empty, 
+                                                        TypeModifiersToCecil(_enumSymbol, node.Modifiers) + " | TypeAttributes.Sealed", 
                                                         Context.TypeResolver.Bcl.System.Enum, 
                                                         false, 
                                                         [], 
@@ -41,9 +42,9 @@ namespace Cecilifier.Core.AST
                                                         []);
             AddCecilExpressions(Context, typeDef);
 
-            var parentName = enumSymbol.ContainingSymbol.ToDisplayString();
-            string declaringTypeName = enumSymbol.ToDisplayString();
-            using (Context.DefinitionVariables.WithCurrent(parentName, enumSymbol.FullyQualifiedName(), VariableMemberKind.Type, enumTypeVariable))
+            var parentName = _enumSymbol.ContainingSymbol.ToDisplayString();
+            string declaringTypeName = _enumSymbol.ToDisplayString();
+            using (Context.DefinitionVariables.WithCurrent(parentName, _enumSymbol.FullyQualifiedName(), VariableMemberKind.Type, enumTypeVariable))
             {
                 //.class private auto ansi MyEnum
                 var fieldVar = Context.Naming.LocalVariable(node);

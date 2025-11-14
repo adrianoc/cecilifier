@@ -32,7 +32,7 @@ namespace Cecilifier.Core.AST
                 ProcessMembers(node);
                 base.VisitInterfaceDeclaration(node);
             }
-            Context.OnFinishedTypeDeclaration();
+            Context.OnFinishedTypeDeclaration(interfaceSymbol);
         }
 
         public override void VisitClassDeclaration(ClassDeclarationSyntax node)
@@ -48,7 +48,7 @@ namespace Cecilifier.Core.AST
             {
                 ProcessTypeDeclaration(node, definitionVar);
             }
-            Context.OnFinishedTypeDeclaration();
+            Context.OnFinishedTypeDeclaration(classSymbol);
         }
 
         public override void VisitStructDeclaration(StructDeclarationSyntax node)
@@ -61,7 +61,7 @@ namespace Cecilifier.Core.AST
                 ProcessTypeDeclaration(node, definitionVar);
                 ProcessStructPseudoAttributes(definitionVar, structSymbol);
             }
-            Context.OnFinishedTypeDeclaration();
+            Context.OnFinishedTypeDeclaration(structSymbol);
         }
 
         public override void VisitRecordDeclaration(RecordDeclarationSyntax node)
@@ -71,19 +71,19 @@ namespace Cecilifier.Core.AST
             var recordSymbol = Context.SemanticModel.GetDeclaredSymbol(node).EnsureNotNull();
             using var variable = Context.DefinitionVariables.WithCurrent(recordSymbol.ContainingSymbol.ToDisplayString(), recordSymbol.OriginalDefinition.ToDisplayString(), VariableMemberKind.Type, definitionVar);
             ProcessTypeDeclaration(node, definitionVar);
-            
 
             RecordGenerator generator = new(Context, definitionVar, node);
             generator.AddNullabilityAttributesToTypeDefinition(definitionVar);
             generator.AddSyntheticMembers();
-            Context.OnFinishedTypeDeclaration();
+            Context.OnFinishedTypeDeclaration(recordSymbol);
         }
 
         public override void VisitEnumDeclaration(EnumDeclarationSyntax node)
         {
             using var _ = LineInformationTracker.Track(Context, node);
-            node.Accept(new EnumDeclarationVisitor(Context));
-            Context.OnFinishedTypeDeclaration();
+            var enumSymbol = Context.SemanticModel.GetDeclaredSymbol(node).EnsureNotNull<ISymbol, INamedTypeSymbol>($"Something really bad happened. Roslyn failed to resolve the symbol for the enum {node.Identifier.Text}");
+            node.Accept(new EnumDeclarationVisitor(Context, enumSymbol));
+            Context.OnFinishedTypeDeclaration(enumSymbol);
         }
 
         void ProcessTypeDeclaration(TypeDeclarationSyntax node, string definitionVar)

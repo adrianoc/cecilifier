@@ -90,7 +90,7 @@ namespace Cecilifier.Core.AST
             if (!node.Statement.IsKind(SyntaxKind.ReturnStatement))
                 context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Ret);
 
-            context.OnFinishedTypeDeclaration();
+            context.OnFinishedTypeDeclaration(null);
             return true;
 
             bool IsLastGlobalStatement(CompilationUnitSyntax compilation, int index)

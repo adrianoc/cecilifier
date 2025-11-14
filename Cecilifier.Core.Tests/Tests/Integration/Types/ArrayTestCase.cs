@@ -17,7 +17,7 @@ namespace Cecilifier.Core.Tests.Integration.Types
         [Test]
         public void SmokeTests()
         {
-            AssertResourceTest(@"Types/ArraySmoke");
+            AssertResourceTest("Types/ArraySmoke");
         }
         
         [Test]

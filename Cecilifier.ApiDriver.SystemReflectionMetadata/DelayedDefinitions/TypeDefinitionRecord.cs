@@ -23,16 +23,15 @@ internal record struct TypeDefinitionRecord(string TypeQualifiedName, string Typ
     public string? FirstFieldHandle { get; set; }
 
     /// <summary>
-    /// The name of the variable representing the definition of the first method of the type. <see cref="FirstFieldHandle"/>
+    /// The name of the variable representing the definition of the first method of the type. <see cref="FirstFieldHandle"/> 
     /// </summary>
     public string? FirstMethodHandle { get; set; }
     
     public IList<PropertyDefinitionRecord> Properties { get; } = new List<PropertyDefinitionRecord>();
 
-    /// <summary>
-    /// 
-    /// </summary>
     public required DelayedTypeDefinitionAction DefinitionFunction { internal get; init; }
 
     public IList<Action<IVisitorContext, string>> Attributes { get; }  = new List<Action<IVisitorContext, string>>();
+    
+    public IList<MethodDefinitionRecord> Methods { get; } = new List<MethodDefinitionRecord>();
 }

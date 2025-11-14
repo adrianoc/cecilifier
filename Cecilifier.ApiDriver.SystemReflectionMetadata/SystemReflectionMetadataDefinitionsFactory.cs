@@ -263,10 +263,8 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                 initializationByteArrayAsString.Append($"0x{itemValue:x2},");
             }
 
-            var offsetVarName = $"offset_{definitionContext.Identifier}";
-            exps[expCount++] = $"var {offsetVarName} = mappedFieldData.Count;{Environment.NewLine}";
+            exps[expCount++] = $"metadata.AddFieldRelativeVirtualAddress({definitionContext.DefinitionVariable}, mappedFieldData.Count);{Environment.NewLine}";
             exps[expCount++] = $"mappedFieldData.WriteBytes((ImmutableArray<byte>) [{initializationByteArrayAsString}]);{Environment.NewLine}";
-            exps[expCount++] = $"metadata.AddFieldRelativeVirtualAddress({definitionContext.DefinitionVariable}, {offsetVarName});{Environment.NewLine}";
         }
         Span<string> span = exps;
         return span.Slice(0, expCount).ToArray();

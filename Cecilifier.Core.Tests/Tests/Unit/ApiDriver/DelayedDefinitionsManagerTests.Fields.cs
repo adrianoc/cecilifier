@@ -25,8 +25,8 @@ internal partial class DelayedDefinitionsManagerTests : CecilifierContextBasedTe
         var testContext = new DelayedDefinitionsManagerTestContext();
         var context = NewContext();
         
-        context.DelayedDefinitionsManager.RegisterFieldDefinition("T1V", "T1F");
         context.DelayedDefinitionsManager.RegisterTypeDefinition("T1V", "T1", testContext.OnTypeRegistration);
+        context.DelayedDefinitionsManager.RegisterFieldDefinition("T1V", "T1F");
         context.DelayedDefinitionsManager.ProcessDefinitions(context);
         
         Assert.That(testContext.Result["T1V"].FirstFieldHandle, Is.EqualTo("T1F"));
@@ -38,9 +38,9 @@ internal partial class DelayedDefinitionsManagerTests : CecilifierContextBasedTe
         var testContext = new DelayedDefinitionsManagerTestContext();
         var context = NewContext();
         
+        context.DelayedDefinitionsManager.RegisterTypeDefinition("T1V", "T1", testContext.OnTypeRegistration);
         context.DelayedDefinitionsManager.RegisterFieldDefinition("T1V", "T1F1");
         context.DelayedDefinitionsManager.RegisterFieldDefinition("T1V", "T1F2");
-        context.DelayedDefinitionsManager.RegisterTypeDefinition("T1V", "T1", testContext.OnTypeRegistration);
         context.DelayedDefinitionsManager.ProcessDefinitions(context);
         
         Assert.That(testContext.Result["T1V"].FirstFieldHandle, Is.EqualTo("T1F1"));
@@ -52,9 +52,9 @@ internal partial class DelayedDefinitionsManagerTests : CecilifierContextBasedTe
         var testContext = new DelayedDefinitionsManagerTestContext();
         var context = NewContext();
         
-        context.DelayedDefinitionsManager.RegisterFieldDefinition("T2V", "T2F");
         context.DelayedDefinitionsManager.RegisterTypeDefinition("T1V", "T1", testContext.OnTypeRegistration);
         context.DelayedDefinitionsManager.RegisterTypeDefinition("T2V", "T2", testContext.OnTypeRegistration);
+        context.DelayedDefinitionsManager.RegisterFieldDefinition("T2V", "T2F");
         context.DelayedDefinitionsManager.ProcessDefinitions(context);
         
         Assert.That(testContext.Result["T1V"].FirstFieldHandle, Is.EqualTo("MetadataTokens.FieldDefinitionHandle(metadata.GetRowCount(TableIndex.Field) + 1)"));
@@ -68,9 +68,9 @@ internal partial class DelayedDefinitionsManagerTests : CecilifierContextBasedTe
         var testContext = new DelayedDefinitionsManagerTestContext();
         var context = NewContext();
         
-        context.DelayedDefinitionsManager.RegisterFieldDefinition(declaringTypeVariable, "TheField");
         context.DelayedDefinitionsManager.RegisterTypeDefinition("T1V", "T1", testContext.OnTypeRegistration);
         context.DelayedDefinitionsManager.RegisterTypeDefinition("T2V", "T2", testContext.OnTypeRegistration);
+        context.DelayedDefinitionsManager.RegisterFieldDefinition(declaringTypeVariable, "TheField");
         
         context.DelayedDefinitionsManager.ProcessDefinitions(context);
         
@@ -84,11 +84,11 @@ internal partial class DelayedDefinitionsManagerTests : CecilifierContextBasedTe
         var testContext = new DelayedDefinitionsManagerTestContext();
         var context = NewContext();
         
-        context.DelayedDefinitionsManager.RegisterFieldDefinition("T2V", "T2F");
-        context.DelayedDefinitionsManager.RegisterFieldDefinition("T3V", "T3F");
         context.DelayedDefinitionsManager.RegisterTypeDefinition("T1V", "T1", testContext.OnTypeRegistration);
         context.DelayedDefinitionsManager.RegisterTypeDefinition("T2V", "T2", testContext.OnTypeRegistration);
         context.DelayedDefinitionsManager.RegisterTypeDefinition("T3V", "T3", testContext.OnTypeRegistration);
+        context.DelayedDefinitionsManager.RegisterFieldDefinition("T2V", "T2F");
+        context.DelayedDefinitionsManager.RegisterFieldDefinition("T3V", "T3F");
         
         context.DelayedDefinitionsManager.ProcessDefinitions(context);
         
