@@ -160,13 +160,17 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
             var methodDefVar = definitionContext.Member.DefinitionVariable;
             var firstParameterHandle = AddParametersMetadata(ctx, parameters.Select(p => p.Name));
 
+            var methodBodyOffset = definitionContext.IlContext != null
+                                                ? $"methodBodyStream.AddMethodBody({definitionContext.IlContext.VariableName}, localVariablesSignature: {methodRecord.LocalSignatureHandleVariable})"
+                                                : "-1"; // ilcontext is null meaning the method don't have a body and we need to set offset to -1
+            
             ctx.Generate($"""
                           var {methodDefVar}  = metadata.AddMethodDefinition(
                                                     {methodModifiers},
                                                     MethodImplAttributes.IL | MethodImplAttributes.Managed,
                                                     metadata.GetOrAddString("{definitionContext.Member.Name}"),
                                                     {methodSignatureVar.VariableName},
-                                                    methodBodyStream.AddMethodBody({definitionContext.IlContext.VariableName}, localVariablesSignature: {methodRecord.LocalSignatureHandleVariable}),
+                                                    {methodBodyOffset},
                                                     parameterList: {firstParameterHandle});
                           """);
             ctx.WriteNewLine();

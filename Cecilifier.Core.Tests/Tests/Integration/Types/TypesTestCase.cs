@@ -16,7 +16,10 @@ namespace Cecilifier.Core.Tests.Integration.Types
         nameof(InheritanceSameCompilationUnitTest), 
         nameof(InheritanceTest), 
         nameof(InnerClassTest),
-        nameof(InterfaceDefinitionTest), IgnoreReason = "Not implemented")]
+        nameof(InterfaceDefinitionTest),
+        nameof(InterfaceWithPropertiesTest), 
+        IgnoreReason = "Not implemented")]
+    
     public class TypesTestCase<TContext> : ResourceTestBase<TContext> where TContext : IVisitorContext
     {
         [TestCase("SimpleTypeWithAttribute")]
