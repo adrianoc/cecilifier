@@ -23,8 +23,16 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
 {
     public string MappedTypeModifiersFor(INamedTypeSymbol type, SyntaxTokenList modifiers) => RoslynToApiDriverModifiers(type, modifiers);
 
-    public IEnumerable<string> Type(IVisitorContext context, MemberDefinitionContext definitionContext, string typeNamespace, string attrs, ResolvedType baseType, bool isStructWithNoFields, IEnumerable<ITypeSymbol> interfaces,
-        IEnumerable<TypeParameterSyntax>? ownTypeParameters, IEnumerable<TypeParameterSyntax> outerTypeParameters, params TypeLayoutProperty[] properties)
+    public IEnumerable<string> Type(
+                        IVisitorContext context, 
+                        MemberDefinitionContext definitionContext, 
+                        string typeNamespace, string attrs, 
+                        ResolvedType baseType, 
+                        bool isStructWithNoFields, 
+                        IEnumerable<ITypeSymbol> interfaces,
+                        IEnumerable<TypeParameterSyntax>? ownTypeParameters, 
+                        IEnumerable<TypeParameterSyntax> outerTypeParameters, 
+                        params TypeLayoutProperty[] properties)
     {
         var typeVar = definitionContext.DefinitionVariable;
         var resolutionScope = definitionContext.ParentDefinitionVariable ?? "mainModuleHandle";
@@ -48,7 +56,8 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                                                                   fieldList: {typeRecord.FirstFieldHandle ?? "MetadataTokens.FieldDefinitionHandle(1)"},
                                                                   methodList: {typeRecord.FirstMethodHandle ?? "MetadataTokens.MethodDefinitionHandle(1)"});
                                  """));
-
+            context.WriteNewLine();
+            
             // Add attributes to the type definition
             foreach (var attributeEmitter in typeRecord.Attributes)
             {
@@ -82,6 +91,13 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                 var clasSize = properties.SingleOrDefault(p => p.Kind == TypeLayoutPropertyKind.ClassSize).Value;
                 
                 context.Generate($"metadata.AddTypeLayout({typeRecord.TypeDefinitionVariable}, {packingSize}, {clasSize});");
+                context.WriteNewLine();
+            }
+            
+            foreach(var itf in interfaces)
+            {
+                context.Generate($"metadata.AddInterfaceImplementation({typeRecord.TypeDefinitionVariable}, {context.TypeResolver.ResolveAny(itf, ResolveTargetKind.None)});");
+                context.WriteNewLine();
             }
         }
     }

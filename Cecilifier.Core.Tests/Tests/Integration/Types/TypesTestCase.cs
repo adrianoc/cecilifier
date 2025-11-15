@@ -18,6 +18,7 @@ namespace Cecilifier.Core.Tests.Integration.Types
         nameof(InnerClassTest),
         nameof(InterfaceDefinitionTest),
         nameof(InterfaceWithPropertiesTest), 
+        nameof(InterfaceImplementationTest),
         IgnoreReason = "Not implemented")]
     
     public class TypesTestCase<TContext> : ResourceTestBase<TContext> where TContext : IVisitorContext
