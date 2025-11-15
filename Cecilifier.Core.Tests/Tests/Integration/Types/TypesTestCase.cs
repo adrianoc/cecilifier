@@ -11,6 +11,8 @@ namespace Cecilifier.Core.Tests.Integration.Types
     [TestFixture(typeof(SystemReflectionMetadataContext), TestName = "SRM")]
     [EnableForContext<SystemReflectionMetadataContext>(
         nameof(SimplestTest), 
+        nameof(SimpleValueTypeTest),
+        nameof(TypeInitializeTest),
         nameof(SealedClassTest), 
         nameof(AbstractClassTest), 
         nameof(InheritanceSameCompilationUnitTest), 
