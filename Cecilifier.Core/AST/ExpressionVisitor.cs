@@ -60,8 +60,12 @@ namespace Cecilifier.Core.AST
             {
                 if (left.SpecialType == SpecialType.System_String)
                 {
-                    var concatArgType = right.SpecialType == SpecialType.System_String ? "string" : "object";
-                    ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Call, $"assembly.MainModule.Import(typeof(string).GetMethod(\"Concat\", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public, null, new[] {{ typeof({concatArgType}), typeof({concatArgType}) }}, null))");
+                    var concatArgType = right.SpecialType == SpecialType.System_String ? SpecialType.System_String  : SpecialType.System_Object ;
+                    var concatMethod = ctx.MemberResolver.ResolveMethod(
+                                                        ctx.RoslynTypeSystem.ForType<string>().GetMembers("Concat").OfType<IMethodSymbol>()
+                                                                    .Single(m => m.Parameters.Length == 2 && m.Parameters[0].Type.SpecialType == concatArgType && m.Parameters[1].Type.SpecialType == concatArgType));
+                    
+                    ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Call, new CilToken(concatMethod));
                 }
                 else
                 {

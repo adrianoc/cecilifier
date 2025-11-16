@@ -109,8 +109,8 @@ public class ResourceTestBase<TContext> : CecilifierTestBase<TContext> where TCo
         return cecilifyResult;
     }
 
-    
-    protected Stream ReadResourceIfPresent(string resourceName, string type)
+
+    private Stream ReadResourceIfPresent(string resourceName, string type)
     {
         var resourcePath = resourceName.GetPathOfTextResource(type);
         return File.Exists(resourcePath) ? ReadResource(resourcePath) : null; 
