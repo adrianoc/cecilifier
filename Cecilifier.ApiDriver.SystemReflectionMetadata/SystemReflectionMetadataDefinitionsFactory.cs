@@ -102,7 +102,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         }
     }
 
-    public IEnumerable<string> Method(IVisitorContext context, IMethodSymbol methodSymbol, BodiedMemberDefinitionContext bodiedMemberDefinitionContext, string methodName, string methodModifiers, IParameterSymbol[] resolvedParameterTypes, IList<TypeParameterSyntax> typeParameters)
+    public IEnumerable<string> Method(IVisitorContext context, IMethodSymbol methodSymbol, BodiedMemberDefinitionContext bodiedMemberDefinitionContext, string methodName, string methodModifiers, IList<TypeParameterSyntax> typeParameters)
     {
         // Resolve the method to make sure there's a method ref available (this will be used to fulfill any references to this method)
         context.MemberResolver.ResolveMethod(methodSymbol);
@@ -120,6 +120,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                                             ? "-1" 
                                             : $"methodBodyStream.AddMethodBody({bodiedMemberDefinitionContext.IlContext.VariableName}, localVariablesSignature: {methodRecord.LocalSignatureHandleVariable})";
             
+            var firstParameterHandle = AddParametersMetadata(ctx, methodSymbol.Parameters.Select(p => p.Name));
             ctx.Generate($"""
                           var {methodDefVar}  = metadata.AddMethodDefinition(
                                                     {methodModifiers},
@@ -127,7 +128,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                                                     metadata.GetOrAddString("{methodName}"),
                                                     {methodSignatureVar.VariableName},
                                                     {bodyOffset},
-                                                    parameterList: {methodRecord.FirstParameterHandle});
+                                                    parameterList: {firstParameterHandle});
                           """);
             
             ctx.WriteNewLine();
@@ -379,10 +380,11 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         }
         else
         {
-            // in cases which the attribute is being applied not to a type (a method, a field, etc), the target member may not yet b processed
-            // so a callback is registered to be invoked when the tha member is processed and its associated variable is registered.
+            // in cases which the target of the attribute is not a type (i.e. it is a method, a field, etc), the target member
+            // may not have been processed yet, so a callback is registered to be invoked when the that member is processed and
+            // its associated variable registered.
             // The same approach could be used with types but that would require that the variable used to hold the type definition to be
-            // defined up-front which would add more complexity so in that case we simply delegate to `DelayedDefinitionManager`
+            // defined up-front which would add more complexity, so in that case we simply delegate to `DelayedDefinitionManager`
             context.DefinitionVariables.ExecuteUponVariableRegistration(attributeTargetVar, context, (ctx, state) =>
             {
                 var target = (NonTypeAttributeTargetState) state;

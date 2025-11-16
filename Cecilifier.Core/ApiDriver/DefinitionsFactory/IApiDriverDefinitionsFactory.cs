@@ -46,8 +46,7 @@ public interface IApiDriverDefinitionsFactory
         IEnumerable<TypeParameterSyntax> outerTypeParameters,
         params TypeLayoutProperty[] properties);
 
-    public IEnumerable<string> Method(IVisitorContext context, IMethodSymbol methodSymbol, BodiedMemberDefinitionContext bodiedMemberDefinitionContext, string methodName, string methodModifiers,
-        IParameterSymbol[] resolvedParameterTypes, IList<TypeParameterSyntax> typeParameters);
+    public IEnumerable<string> Method(IVisitorContext context, IMethodSymbol methodSymbol, BodiedMemberDefinitionContext bodiedMemberDefinitionContext, string methodName, string methodModifiers, IList<TypeParameterSyntax> typeParameters);
 
     public IEnumerable<string> Method(IVisitorContext context,
         BodiedMemberDefinitionContext definitionContext,
