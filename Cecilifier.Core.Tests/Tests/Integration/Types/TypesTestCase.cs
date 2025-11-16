@@ -13,6 +13,7 @@ namespace Cecilifier.Core.Tests.Integration.Types
         nameof(SimplestTest), 
         nameof(SimpleValueTypeTest),
         nameof(TypeInitializeTest),
+        nameof(ReadOnlyStructTest),
         nameof(SealedClassTest), 
         nameof(AbstractClassTest), 
         nameof(InheritanceSameCompilationUnitTest), 

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.ApiDriver;
+using Cecilifier.Core.ApiDriver.Attributes;
 using Cecilifier.Core.AST.MemberDependencies;
 using Cecilifier.Core.CodeGeneration;
 using Cecilifier.Core.Extensions;
@@ -243,21 +244,22 @@ namespace Cecilifier.Core.AST
             if (structSymbol.IsReadOnly)
             {
                 var ctor = Context.RoslynTypeSystem.IsReadOnlyAttribute.ParameterlessCtor();
-                Context.Generate($"{structDefinitionVar}.CustomAttributes.Add(new CustomAttribute({ctor.MethodResolverExpression(Context)}));");
+                var attrExps = Context.ApiDefinitionsFactory.Attribute(Context, ctor, structSymbol.Name, structDefinitionVar, VariableMemberKind.Type);
+                Context.Generate(attrExps);
             }
 
             if (structSymbol.IsRefLikeType)
             {
                 var ctor = Context.RoslynTypeSystem.IsByRefLikeAttribute.ParameterlessCtor();
-                Context.Generate($"{structDefinitionVar}.CustomAttributes.Add(new CustomAttribute({ctor.MethodResolverExpression(Context)}));\n");
-
+                var exps = Context.ApiDefinitionsFactory.Attribute(Context, ctor, structSymbol.Name, structDefinitionVar, VariableMemberKind.Type);
+                Context.Generate(exps);
+                
                 var obsoleteAttrCtor = Context.RoslynTypeSystem.SystemObsoleteAttribute.Ctor(Context.RoslynTypeSystem.SystemString, Context.RoslynTypeSystem.SystemBoolean);
-                var obsoleteAttributeVar = Context.Naming.SyntheticVariable("obsolete", ElementKind.Attribute);
                 const string RefStructObsoleteMsg = "Types with embedded references are not supported in this version of your compiler.";
-                Context.Generate($"var {obsoleteAttributeVar} = new CustomAttribute({obsoleteAttrCtor.MethodResolverExpression(Context)});\n");
-                Context.Generate($"{obsoleteAttributeVar}.ConstructorArguments.Add(new CustomAttributeArgument({Context.TypeResolver.Bcl.System.String}, \"{RefStructObsoleteMsg}\"));\n");
-                Context.Generate($"{obsoleteAttributeVar}.ConstructorArguments.Add(new CustomAttributeArgument({Context.TypeResolver.Bcl.System.Boolean}, true));\n");
-                Context.Generate($"{structDefinitionVar}.CustomAttributes.Add({obsoleteAttributeVar});\n");
+                exps = Context.ApiDefinitionsFactory.Attribute(Context, obsoleteAttrCtor, "obsolete", structDefinitionVar, VariableMemberKind.Type,
+                                            new CustomAttributeArgument { Value = RefStructObsoleteMsg}, 
+                                            new CustomAttributeArgument { Value = true});
+                Context.Generate(exps);
             }
         }
     }

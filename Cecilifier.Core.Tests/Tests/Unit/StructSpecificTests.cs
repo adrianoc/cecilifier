@@ -11,7 +11,12 @@ public class StructSpecificTests : CecilifierUnitTestBase
     public void ReadOnlyStructDeclaration()
     {
         var result = RunCecilifier("readonly struct RO { }");
-        Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match(@$"st_rO_\d+\.CustomAttributes\.Add\(new CustomAttribute\(.+typeof\(System.Runtime.CompilerServices.IsReadOnlyAttribute\), "".ctor"".+\)\);"));
+        Assert.That(
+            result.GeneratedCode.ReadToEnd(), 
+            Does.Match("""
+                       var (?<attrVar>attr_.+) = new CustomAttribute\(.+ImportReference\(.+ResolveMethod\(typeof\(System.Runtime.CompilerServices.IsReadOnlyAttribute\), ".ctor",.+\)\)\);
+                       \s+st_rO_\d+\.CustomAttributes\.Add\(\k<attrVar>\);
+                       """));
     }
 
     [TestCase("using System.Runtime.InteropServices; [StructLayout(LayoutKind.Auto, Size = 4)] struct S {}", "AutoLayout", TestName = "AutoLayout")]
@@ -28,7 +33,11 @@ public class StructSpecificTests : CecilifierUnitTestBase
     {
         var result = RunCecilifier("ref struct RS { }");
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
-        Assert.That(cecilifiedCode, Does.Match(@"st_rS_\d+\.CustomAttributes\.Add\(new CustomAttribute\(.+typeof\(System.Runtime.CompilerServices.IsByRefLikeAttribute\), "".ctor"".+\)\);"));
+        Assert.That(cecilifiedCode, Does.Match(
+            """
+            var (?<attrVar>attr_rS_\d+) = new CustomAttribute\(.+ImportReference\(.+ResolveMethod\(typeof\(.+IsByRefLikeAttribute\), ".ctor",.+\)\)\);
+            \s+st_rS_\d+.CustomAttributes.Add\(\k<attrVar>\);
+            """));
         Assert.That(cecilifiedCode, Does.Match(@"attr_obsolete_\d+\.ConstructorArguments\.Add\(new CustomAttributeArgument\(.+Boolean, true\)\);"));
         Assert.That(cecilifiedCode, Does.Match(@"st_rS_\d+\.CustomAttributes\.Add\(attr_obsolete_\d+\);"));
     }
