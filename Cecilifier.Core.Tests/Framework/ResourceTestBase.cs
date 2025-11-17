@@ -30,7 +30,7 @@ public class ResourceTestBase<TContext> : CecilifierTestBase<TContext> where TCo
     protected void AssertResourceTestWithExplicitExpectation(CecilifyTestOptions options, string methodSignature)
     {
         options.ToBeCecilified ??= ReadResource(options.ResourceName, "cs");
-        using var expectedILStream = ReadResourceIfPresent(options.ResourceName, $"{ExpectedILSuffixForContext()}.cs.il") 
+        using var expectedILStream = ReadResourceIfPresent(options.ResourceName, $"cs.il.{ExpectedILSuffixForContext()}") 
                                      ?? ReadResource(options.ResourceName, "cs.il");
         
         var expectedIL = ReadToEnd(expectedILStream);
@@ -112,7 +112,7 @@ public class ResourceTestBase<TContext> : CecilifierTestBase<TContext> where TCo
 
     private Stream ReadResourceIfPresent(string resourceName, string type)
     {
-        var resourcePath = resourceName.GetPathOfTextResource(type);
+        var resourcePath = resourceName.GetPathOfResource($".{type}");
         return File.Exists(resourcePath) ? ReadResource(resourcePath) : null; 
     }
 

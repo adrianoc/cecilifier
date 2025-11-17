@@ -14,7 +14,7 @@ namespace Cecilifier.Core.Tests.Framework
             return GetPathOfResource(resourceName, type);
         }
 
-        private static string GetPathOfResource(string resourceName, string type)
+        public static string GetPathOfResource(this string resourceName, string type)
         {
             return Path.Combine("TestResources/Integration", resourceName + type);
         }

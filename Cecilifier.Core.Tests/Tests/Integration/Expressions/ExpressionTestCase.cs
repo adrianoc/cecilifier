@@ -23,7 +23,9 @@ namespace Cecilifier.Core.Tests.Integration
         nameof(TestValueTypeAddress),
         nameof(TestTernaryOperator),
         nameof(TestParameterAssignment),
-        nameof(TestUnaryExpressions))]
+        nameof(TestUnaryExpressions),
+        nameof(TestTypeInferenceInDeclarations),
+        nameof(TestMultipleLocalVariableAssignment))]
     public class ExpressionTestCase<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
     {
         [Test]

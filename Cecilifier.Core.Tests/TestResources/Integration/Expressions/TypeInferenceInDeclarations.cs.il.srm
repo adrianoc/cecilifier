@@ -1,0 +1,26 @@
+﻿.locals init (System.Int32 V_0, System.Int32 V_1, System.String V_2)
+IL_0000: ldc.i4 10
+IL_0005: stloc V_0
+IL_0009: nop
+IL_000a: nop
+IL_000b: ldloc V_0
+IL_000f: nop
+IL_0010: nop
+IL_0011: ldc.i4 10
+IL_0016: add
+IL_0017: stloc V_1
+IL_001b: nop
+IL_001c: nop
+IL_001d: ldarg.0
+IL_001e: ldloc V_1
+IL_0022: nop
+IL_0023: nop
+IL_0024: call System.String TypeInferenceInDeclarations::Bar(System.Int32)
+IL_0029: stloc V_2
+IL_002d: nop
+IL_002e: nop
+IL_002f: ldloc V_2
+IL_0033: nop
+IL_0034: nop
+IL_0035: call System.Void System.Console::WriteLine(System.String)
+IL_003a: ret
