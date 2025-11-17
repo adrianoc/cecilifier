@@ -66,8 +66,9 @@ internal static class CollectionExpressionProcessor
         
         var currentMethodVar = context.DefinitionVariables.GetLastOf(VariableMemberKind.Method).VariableName;
         var inlineArrayElementType = spanTypeSymbol.TypeArguments[0];
-        var inlineArrayTypeVar = inlineArrayVar.MakeGenericInstanceType(context.TypeResolver.ResolveAny(inlineArrayElementType));
-        var inlineArrayLocalVar = context.ApiDefinitionsFactory.LocalVariable(context, "buffer", currentMethodVar, inlineArrayTypeVar).VariableName;
+        var inlineArrayTypeVar = inlineArrayVar.MakeGenericInstanceType(context.TypeResolver.ResolveAny(inlineArrayElementType, ResolveTargetKind.Instruction));
+        var inlineArrayTypeVarForLocal = inlineArrayVar.MakeGenericInstanceType(context.TypeResolver.ResolveAny(inlineArrayElementType, ResolveTargetKind.LocalVariable));
+        var inlineArrayLocalVar = context.ApiDefinitionsFactory.LocalVariable(context, "buffer", currentMethodVar, inlineArrayTypeVarForLocal).VariableName;
         
         // Initializes the inline array
         context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, OpCodes.Ldloca_S, inlineArrayLocalVar);
@@ -80,7 +81,7 @@ internal static class CollectionExpressionProcessor
             .MakeGenericInstanceMethod(context, openInlineArrayElementRef.MemberName, [$"{inlineArrayLocalVar}.VariableType", context.TypeResolver.ResolveAny(spanTypeSymbol.TypeArguments[0])]);
         
         var storeOpCode = inlineArrayElementType.StindOpCodeFor();
-        var targetElementType = storeOpCode == OpCodes.Stobj ? context.TypeResolver.ResolveAny(inlineArrayElementType) : null; // Stobj expects the type of the object being stored.
+        var targetElementType = storeOpCode == OpCodes.Stobj ? context.TypeResolver.ResolveAny(inlineArrayElementType, ResolveTargetKind.Instruction) : null; // Stobj expects the type of the object being stored.
         var collectionExpressionOperation = context.SemanticModel.GetOperation(node).EnsureNotNull<IOperation, ICollectionExpressionOperation>();
         var index = 0;
         foreach (var element in node.Elements)
@@ -112,7 +113,7 @@ internal static class CollectionExpressionProcessor
     private static void HandleAssignmentToArray(ExpressionVisitor visitor, CollectionExpressionSyntax node, IArrayTypeSymbol arrayTypeSymbol)
     {
         visitor.Context.ApiDriver.WriteCilInstruction(visitor.Context, visitor.ILVariable, OpCodes.Ldc_I4, node.Elements.Count);
-        visitor.Context.ApiDriver.WriteCilInstruction(visitor.Context, visitor.ILVariable, OpCodes.Newarr, visitor.Context.TypeResolver.ResolveAny(arrayTypeSymbol.ElementType));
+        visitor.Context.ApiDriver.WriteCilInstruction(visitor.Context, visitor.ILVariable, OpCodes.Newarr, visitor.Context.TypeResolver.ResolveAny(arrayTypeSymbol.ElementType, ResolveTargetKind.Instruction).AsToken());
             
         if (PrivateImplementationDetailsGenerator.IsApplicableTo(node, visitor.Context))
             ArrayInitializationProcessor.InitializeOptimized(visitor, arrayTypeSymbol.ElementType, node.Elements);

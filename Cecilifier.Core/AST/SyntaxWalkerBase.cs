@@ -477,7 +477,7 @@ namespace Cecilifier.Core.AST
                     // calls to virtual methods on custom value types needs to be constrained (don't know why, but the generated IL for such scenarios does `constrains`).
                     // the only methods that falls into this category are virtual methods on Object (ToString()/Equals()/GetHashCode())
                     if (usageResult.Target is { IsOverride: true } && usageResult.Target.ContainingType.IsNonPrimitiveValueType(Context))
-                        Context.SetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, Context.TypeResolver.ResolveAny(loadedType).Expression);
+                        Context.SetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, Context.TypeResolver.ResolveAny(loadedType, ResolveTargetKind.Instruction).Expression);
                     return true;
                 }
 
@@ -501,7 +501,7 @@ namespace Cecilifier.Core.AST
                 }
                 
                 Context.ApiDriver.WriteCilInstruction(Context, ilVar, loadOpCode, operand);
-                Context.SetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, Context.TypeResolver.ResolveAny(loadedType).Expression);
+                Context.SetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, Context.TypeResolver.ResolveAny(loadedType, ResolveTargetKind.Instruction).Expression);
                 return true;
             }
 
@@ -587,7 +587,7 @@ namespace Cecilifier.Core.AST
             if (needsLoadIndirect)
             {
                 var opCode = type.LdindOpCodeFor();
-                Context.ApiDriver.WriteCilInstruction(Context, ilVar, opCode, opCode == OpCodes.Ldobj ? Context.TypeResolver.ResolveAny(type) : null);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, opCode, opCode == OpCodes.Ldobj ? Context.TypeResolver.ResolveAny(type, ResolveTargetKind.Instruction) : null);
             }
         }
 

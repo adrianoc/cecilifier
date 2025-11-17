@@ -8,6 +8,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
+using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
 
 namespace Cecilifier.Core.AST
@@ -64,7 +65,7 @@ namespace Cecilifier.Core.AST
                 Context.MoveLinesToEnd(InstructionPrecedingValueToLoad, lastInstructionLoadingRhs);
                 var arrayElementType = Context.SemanticModel.GetTypeInfo(node).Type.EnsureNotNull();
                 var stelemOpCode = arrayElementType.StelemOpCode();
-                var operand = stelemOpCode == OpCodes.Stelem ? Context.TypeResolver.ResolveAny(arrayElementType) : null;
+                var operand = stelemOpCode == OpCodes.Stelem ? Context.TypeResolver.ResolveAny(arrayElementType, ResolveTargetKind.Instruction) : null;
                 Context.ApiDriver.WriteCilInstruction(Context, ilVar, stelemOpCode, operand);
             }
         }
