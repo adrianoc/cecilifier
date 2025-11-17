@@ -141,7 +141,7 @@ public class OperatorsTests : CecilifierUnitTestBase
         TestName = "Array Numeric Primitive")]
     [TestCase(
         "string s = \"10\"; s += \"32\";",
-        @"(il_topLevelMain_\d\.Emit\(OpCodes\.)Ldstr, ""10""\);\s+\1Stloc, (l_s_\d+)\);\s+//s \+= ""32"";\s+\1Ldloc, \2\);\s+\1Ldstr, ""32""\);\s+\1Call, .+Import\(typeof\(string\)\.GetMethod\(""Concat"".+\)\);\s+\1Stloc, \2\);\s+\1Ret\);",
+        @"(il_topLevelMain_\d\.Emit\(OpCodes\.)Ldstr, ""10""\);\s+\1Stloc, (l_s_\d+)\);\s+//s \+= ""32"";\s+\1Ldloc, \2\);\s+\1Ldstr, ""32""\);\s+\1Call, .+ImportReference\(.+""Concat"".+\)\);\s+\1Stloc, \2\);\s+\1Ret\);",
         TestName = "String")]
     [TestCase(
         "C c = new C(); c += 42; class C { public static C operator+(C c, int i) => c; }",
