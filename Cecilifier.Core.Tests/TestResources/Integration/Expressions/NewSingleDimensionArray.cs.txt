@@ -3,7 +3,7 @@
     public int value;
 }
 
-class NewSingleDimentionArray
+class NewSingleDimensionArray
 {
 	private static int[] Inferred()
 	{
@@ -45,9 +45,9 @@ class NewSingleDimentionArray
 	    return new string[1];
 	}
 	
-	private static NewSingleDimentionArray[] TypeDefinedInSameAssembly()
+	private static NewSingleDimensionArray[] TypeDefinedInSameAssembly()
 	{
-	    return new NewSingleDimentionArray[2];
+	    return new NewSingleDimensionArray[2];
 	}
 	
 	private static S[] CustomValueType() { return new S[1]; }
