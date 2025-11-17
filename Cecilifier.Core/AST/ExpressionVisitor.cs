@@ -515,7 +515,7 @@ namespace Cecilifier.Core.AST
             if (!targetEvaluationDoNotHaveSideEffects)
                 Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Dup);
 
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Brtrue_S, whenTrueLabel);
+            Context.ApiDriver.WriteCilBranch(Context, ilVar, OpCodes.Brtrue_S, whenTrueLabel);
 
             if (!targetEvaluationDoNotHaveSideEffects)
                 Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Pop);
@@ -530,10 +530,10 @@ namespace Cecilifier.Core.AST
             Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloca_S, tempNullableVar);
             Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Initobj, resolvedConcreteNullableType);
             Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloc, tempNullableVar);
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Br, conditionalEnd);
+            Context.ApiDriver.WriteCilBranch(Context, ilVar, OpCodes.Br, conditionalEnd);
 
             // handle not null case...
-            AddCecilExpression("{0}.Append({1});", ilVar, whenTrueLabel);
+            Context.ApiDriver.MarkLabel(Context, ilVar, whenTrueLabel);
             if (targetEvaluationDoNotHaveSideEffects)
                 node.Expression.Accept(this);
 
@@ -547,7 +547,7 @@ namespace Cecilifier.Core.AST
                 OpCodes.Newobj,
                 nullableCtor.MethodResolverExpression(Context));
 
-            AddCecilExpression("{0}.Append({1});", ilVar, conditionalEnd);
+            Context.ApiDriver.MarkLabel(Context, ilVar, conditionalEnd);
         }
 
         public override void VisitConditionalExpression(ConditionalExpressionSyntax node)
@@ -558,15 +558,15 @@ namespace Cecilifier.Core.AST
             var whenFalse = EmitTargetLabel("whenFalse");
 
             Visit(node.Condition);
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Brfalse_S, whenFalse);
+            Context.ApiDriver.WriteCilBranch(Context, ilVar, OpCodes.Brfalse_S, whenFalse);
 
             Visit(node.WhenTrue);
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Br_S, conditionEnd);
+            Context.ApiDriver.WriteCilBranch(Context, ilVar, OpCodes.Br_S, conditionEnd);
 
-            AddCecilExpression("{0}.Append({1});", ilVar, whenFalse);
+            Context.ApiDriver.MarkLabel(Context, ilVar, whenFalse);
             Visit(node.WhenFalse);
 
-            AddCecilExpression("{0}.Append({1});", ilVar, conditionEnd);
+            Context.ApiDriver.MarkLabel(Context, ilVar, conditionEnd);
         }
 
         public override void VisitIdentifierName(IdentifierNameSyntax node)
@@ -1590,12 +1590,12 @@ namespace Cecilifier.Core.AST
             else
                 ArrayInitializationProcessor.InitializeUnoptimized(this, elementType, initializer?.Expressions, initializer != null ? Context.SemanticModel.GetOperation(initializer) : null);
         }
+
         string EmitTargetLabel(string relatedToName)
         {
-            var instVarName = Context.Naming.Label(relatedToName);
-            AddCecilExpression($"var {instVarName} = {ilVar}.Create({OpCodes.Nop.ConstantName()});");
-
-            return instVarName;
+            var labelVariable = Context.Naming.Label(relatedToName);
+            Context.ApiDriver.DefineLabel(Context, ilVar, labelVariable);
+            return labelVariable;
         }
 
         private static void PopIfNotConsumed(IVisitorContext ctx, string ilVar, ExpressionSyntax node)

@@ -169,7 +169,8 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
 
     public void WriteCilBranch(IVisitorContext context, IlContext il, OpCode branchOpCode, string targetLabel, string? comment = null)
     {
-        context.Generate($"{il.VariableName}.Branch(ILOpCode.{branchOpCode.OpCodeName()}, {targetLabel});");
+        var mappedOpCodeName = MapSystemReflectionOpCodeNameToSystemReflectionMetadata(branchOpCode);
+        context.Generate($"{il.VariableName}.Branch(ILOpCode.{mappedOpCodeName}, {targetLabel});");
         context.WriteNewLine();
     }
 

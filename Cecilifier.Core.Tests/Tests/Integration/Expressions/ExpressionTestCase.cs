@@ -20,7 +20,8 @@ namespace Cecilifier.Core.Tests.Integration
         nameof(TestLocalVariableInitialization),
         nameof(TestTimes),
         nameof(TestNewPrimitive),
-        nameof(TestValueTypeAddress))]
+        nameof(TestValueTypeAddress),
+        nameof(TestTernaryOperator))]
     public class ExpressionTestCase<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
     {
         [Test]
