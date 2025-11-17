@@ -106,6 +106,16 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
     {
         // Resolve the method to make sure there's a method ref available (this will be used to fulfill any references to this method)
         context.MemberResolver.ResolveMethod(methodSymbol);
+        
+        var paramIndexOffset = methodSymbol.IsStatic ? 0 : 1;
+        // register all parameters so we can reference them when emitting the method body
+        foreach (var parameter in methodSymbol.Parameters)
+        {
+            // This is a hack. SRM accesses parameters by index, and Cecilifier does not have a way to pass that index around; it only has variable names,
+            // so we record the `index` of the parameter as the variable name.
+            // Code that emits Ldarg/Starg/etc will use this `name` (actually the parameter index) as its operand (this is similar to the way we handle local variables)
+            context.DefinitionVariables.RegisterNonMethod(methodSymbol.ToDisplayString(), parameter.Name, VariableMemberKind.Parameter, (parameter.Ordinal + paramIndexOffset).ToString());
+        }
 
         var memberParentDefinitionVariable = bodiedMemberDefinitionContext.Member.ParentDefinitionVariable ?? throw new ArgumentNullException(nameof(bodiedMemberDefinitionContext.Member.ParentDefinitionVariable));
         ((SystemReflectionMetadataContext) context).DelayedDefinitionsManager.RegisterMethodDefinition(memberParentDefinitionVariable, (ctx, methodRecord) =>
@@ -160,6 +170,13 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                                                             definitionContext.Options);
 
         methodDefinitionVariable = context.DefinitionVariables.FindByVariableName<MethodDefinitionVariable>(methodRefVar) ?? MethodDefinitionVariable.MethodNotFound;
+        
+        // register all parameters so we can reference them when emitting the method body
+        for (int i = 0; i < parameters.Count; i++)
+        {
+            context.DefinitionVariables.RegisterNonMethod(definitionContext.Member.ContainingTypeName,  parameters[i].Name, VariableMemberKind.Parameter, $"{i + 1}");
+        }
+
         TypedContext(context).DelayedDefinitionsManager.RegisterMethodDefinition(definitionContext.Member.ParentDefinitionVariable, (ctx, methodRecord) =>
         {
             EmitLocalVariables(ctx, definitionContext.Member.Identifier, in methodRecord);
@@ -179,7 +196,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
 
             var methodBodyOffset = definitionContext.IlContext != null
                                                 ? $"methodBodyStream.AddMethodBody({definitionContext.IlContext.VariableName}, localVariablesSignature: {methodRecord.LocalSignatureHandleVariable})"
-                                                : "-1"; // ilcontext is null meaning the method don't have a body and we need to set offset to -1
+                                                : "-1"; // ilcontext is null meaning the method don't have a body whence we need to set offset to -1
             
             ctx.Generate($"""
                           var {methodDefVar}  = metadata.AddMethodDefinition(
@@ -430,17 +447,16 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
 
     private static string AddParametersMetadata(SystemReflectionMetadataContext ctx, IEnumerable<string> parameters)
     {
+        var parameterList = parameters.ToList();
+        if (parameterList.Count == 0)
+            return "MetadataTokens.ParameterHandle(metadata.GetRowCount(TableIndex.Param) + 1)";
+
+        var firstParameterHandle = ctx.Naming.SyntheticVariable(parameterList[0], ElementKind.Parameter);
+        ctx.Generate($"var {firstParameterHandle} = ");
         
-        var firstParameterHandle = "MetadataTokens.ParameterHandle(metadata.GetRowCount(TableIndex.Param) + 1)";
-        int i = 1;
-        foreach (var p in parameters)
+        for(int i = 0; i < parameterList.Count; i++)
         {
-            if (i == 1)
-            {
-                firstParameterHandle = ctx.Naming.SyntheticVariable(p, ElementKind.Parameter);
-                ctx.Generate($"var {firstParameterHandle} = ");
-            }
-            ctx.Generate($"""metadata.AddParameter(ParameterAttributes.None, metadata.GetOrAddString("{p}"), {i++});""");
+            ctx.Generate($"""metadata.AddParameter(ParameterAttributes.None, metadata.GetOrAddString("{parameterList[i]}"), {i+1});""");
             ctx.WriteNewLine();
         }
         
