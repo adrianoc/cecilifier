@@ -351,7 +351,7 @@ namespace Cecilifier.Core.AST
             }
             else
             {
-                if (HandleLoadAddress(ilVar, targetType, node, OpCodes.Ldelema, Context.TypeResolver.ResolveAny(targetType).Expression))
+                if (HandleLoadAddress(ilVar, targetType, node, OpCodes.Ldelema, Context.TypeResolver.ResolveAny(targetType).Expression.AsToken()))
                     return;
                 
                 var ldelemOpCodeToUse = targetType.LdelemOpCode();
@@ -1287,7 +1287,7 @@ namespace Cecilifier.Core.AST
         private void StoreTopOfStackInLocalVariableAndLoad(ExpressionSyntax expressionSyntax, ITypeSymbol type)
         {
             var tempLocalName = StoreTopOfStackInLocalVariable(Context, ilVar, "tmp", type).VariableName;
-            if (!HandleLoadAddress(ilVar, type, expressionSyntax, OpCodes.Ldloca_S, tempLocalName))
+            if (!HandleLoadAddress(ilVar, type, expressionSyntax, OpCodes.Ldloca_S, tempLocalName.AsLocalVariable()))
             {
                 // HandleLoadAddress() does not handle scenarios in which a value type instantiation is passed as an 
                 // 'in parameter' to a method (that method is already complex, so I don't want to make it even more

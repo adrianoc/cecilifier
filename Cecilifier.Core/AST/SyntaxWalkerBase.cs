@@ -212,7 +212,7 @@ namespace Cecilifier.Core.AST
                     Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Box, Context.TypeResolver.ResolveAny(literalType));
                 }
                 else
-                    Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloca_S, tempLocalName);
+                    Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloca_S, tempLocalName.AsLocalVariable());
             }
         }
 
@@ -340,7 +340,7 @@ namespace Cecilifier.Core.AST
                                                 : method.ToDisplayString();
             
             var operand = Context.DefinitionVariables.GetVariable(paramSymbol.Name, VariableMemberKind.Parameter, declaringMethodName).VariableName;
-            if (HandleLoadAddress(ilVar, paramSymbol.Type, node, OpCodes.Ldarga, operand))
+            if (HandleLoadAddress(ilVar, paramSymbol.Type, node, OpCodes.Ldarga, operand.AsToken()))
                 return;
 
             if (InlineArrayProcessor.HandleInlineArrayConversionToSpan(Context, ilVar, paramSymbol.Type, node, OpCodes.Ldarga_S, paramSymbol.Name, VariableMemberKind.Parameter, declaringMethodName))
@@ -390,7 +390,7 @@ namespace Cecilifier.Core.AST
             if (!fieldSymbol.IsStatic && node.IsMemberAccessThroughImplicitThis())
                 Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldarg_0);
 
-            if (HandleLoadAddress(ilVar, fieldSymbol.Type, node, fieldSymbol.IsStatic ? OpCodes.Ldsflda : OpCodes.Ldflda, resolvedFieldVariable))
+            if (HandleLoadAddress(ilVar, fieldSymbol.Type, node, fieldSymbol.IsStatic ? OpCodes.Ldsflda : OpCodes.Ldflda, resolvedFieldVariable.AsToken()))
             {
                 return;
             }
@@ -407,7 +407,7 @@ namespace Cecilifier.Core.AST
         protected void ProcessLocalVariable(string ilVar, SimpleNameSyntax localVarSyntax, ILocalSymbol symbol)
         {
             var operand = Context.DefinitionVariables.GetVariable(symbol.Name, VariableMemberKind.LocalVariable).VariableName;
-            if (HandleLoadAddress(ilVar, symbol.Type, localVarSyntax, OpCodes.Ldloca, operand))
+            if (HandleLoadAddress(ilVar, symbol.Type, localVarSyntax, OpCodes.Ldloca, operand.AsLocalVariable()))
                 return;
 
             if (InlineArrayProcessor.HandleInlineArrayConversionToSpan(Context, ilVar, symbol.Type, localVarSyntax, OpCodes.Ldloca_S, symbol.Name, VariableMemberKind.LocalVariable))
@@ -427,7 +427,7 @@ namespace Cecilifier.Core.AST
             Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Conv_U);
         }
 
-        protected bool HandleLoadAddress(string ilVar, ITypeSymbol loadedType, CSharpSyntaxNode node, OpCode loadOpCode, string operand)
+        protected bool HandleLoadAddress<TOperand>(string ilVar, ITypeSymbol loadedType, CSharpSyntaxNode node, OpCode loadOpCode, TOperand operand)
         {
             var parentNode = (CSharpSyntaxNode)node.Parent;
             return HandleCallOnTypeParameter() || HandleCallOnValueType() || HandleRefAssignment() || HandleParameter() || HandleInlineArrayElementAccess();
@@ -463,7 +463,7 @@ namespace Cecilifier.Core.AST
                             throw new InvalidOperationException($"Cannot find ordinary load op code for {loadOpCode}");
 
                         if (loadOpCode == OpCodes.Ldelem)
-                            operand = null;
+                            operand = default;
                         
                         Context.ApiDriver.WriteCilInstruction(Context, ilVar, ordinaryLoad, operand);
                         Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Box, Context.TypeResolver.ResolveAny(loadedType));

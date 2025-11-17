@@ -18,7 +18,9 @@ namespace Cecilifier.Core.Tests.Integration
         nameof(TestLessThan),
         nameof(TestLocalVariableAssignment),
         nameof(TestLocalVariableInitialization),
-        nameof(TestTimes))]
+        nameof(TestTimes),
+        nameof(TestNewPrimitive),
+        nameof(TestValueTypeAddress))]
     public class ExpressionTestCase<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
     {
         [Test]

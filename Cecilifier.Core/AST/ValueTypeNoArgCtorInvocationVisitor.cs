@@ -77,7 +77,7 @@ namespace Cecilifier.Core.AST
         public override void VisitMemberAccessExpression(MemberAccessExpressionSyntax node)
         {
             var valueTypeLocalVariable = DeclareAndInitializeValueTypeLocalVariable();
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloca, valueTypeLocalVariable.VariableName);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloca, new CilLocalVariableHandle(valueTypeLocalVariable.VariableName));
             var accessedMember = ModelExtensions.GetSymbolInfo(Context.SemanticModel, node).Symbol.EnsureNotNull();
             if (accessedMember.ContainingType.SpecialType == SpecialType.System_ValueType)
             {
@@ -138,9 +138,7 @@ namespace Cecilifier.Core.AST
 
         private DefinitionVariable DeclareAndInitializeValueTypeLocalVariable()
         {
-            var resolvedVarType = ResolvedStructType();
-            var tempLocal = Context.AddLocalVariableToCurrentMethod("vt", resolvedVarType);
-            
+            var tempLocal = Context.AddLocalVariableToCurrentMethod("vt", Context.TypeResolver.ResolveAny(ctorInfo.Symbol.ContainingType, ResolveTargetKind.LocalVariable));
             using var _ = Context.DefinitionVariables.WithVariable(tempLocal);
             
             switch (ctorInfo.Symbol.ContainingType.SpecialType)
@@ -170,14 +168,14 @@ namespace Cecilifier.Core.AST
 
         private void InitValueTypeLocalVariable(string localVariable)
         {
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloca_S, localVariable);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloca_S, localVariable.AsToken());
             Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Initobj, ResolvedStructType());
 
             if (objectCreationExpressionSyntax.Initializer is not null)
             {
                 // To process an InitializerExpressionSyntax, ExpressionVisitor expects the top of the stack to contain
                 // the reference of the object to be set.
-                // Since initialisation of value types through a parameterless ctor uses the `initobj` instruction
+                // Since initialization of value types through a parameterless ctor uses the `initobj` instruction
                 // at this point there's no object reference in the stack (it was consumed by the `Initobj` instruction)
                 // so we push the address of the variable that we just initialised again. Notice that after processing
                 // the initializer we need to pop this reference from the stack again.
