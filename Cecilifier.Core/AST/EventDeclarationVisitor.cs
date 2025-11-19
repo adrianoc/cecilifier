@@ -40,7 +40,7 @@ namespace Cecilifier.Core.AST
 
             eventDeclaringTypeVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Type);
 
-            var eventType = Context.TypeResolver.ResolveAny(eventSymbol.Type);
+            var eventType = Context.TypeResolver.ResolveAny(eventSymbol.Type, ResolveTargetKind.None);
             var eventAccessorsDefVarMapping = new Dictionary<string, string>();
             foreach (var acc in node.AccessorList.Accessors)
             {
@@ -168,7 +168,7 @@ namespace Cecilifier.Core.AST
                 OpCodes.Ldloc_1,
                 OpCodes.Ldarg.WithOperand(isStatic ? "0" : "1"),
                 OpCodes.Call.WithOperand(removeMethod),
-                OpCodes.Castclass.WithOperand(Context.TypeResolver.ResolveAny(eventSymbol.Type)),
+                OpCodes.Castclass.WithOperand(Context.TypeResolver.ResolveAny(eventSymbol.Type, ResolveTargetKind.Instruction)),
                 OpCodes.Stloc_2,
                 lgarg_0,
                 ldflda.WithOperand(fieldVar),
@@ -208,7 +208,7 @@ namespace Cecilifier.Core.AST
                 OpCodes.Ldloc_1,
                 OpCodes.Ldarg.WithOperand(isStatic ? "0" : "1"),
                 OpCodes.Call.WithOperand(combineMethod),
-                OpCodes.Castclass.WithOperand(Context.TypeResolver.ResolveAny(eventSymbol.Type)),
+                OpCodes.Castclass.WithOperand(Context.TypeResolver.ResolveAny(eventSymbol.Type, ResolveTargetKind.Instruction)),
                 OpCodes.Stloc_2,
                 lgarg_0,
                 ldflda.WithOperand(fieldVar),
@@ -252,6 +252,7 @@ namespace Cecilifier.Core.AST
             return fields.First();
         }
 
+        //TODO: Remove eventDeclaringTypeVar from this method and use the field?
         private string AddEventDefinition(MemberDeclarationSyntax eventFieldDeclaration, string eventDeclaringTypeVar, string eventName, ResolvedType eventType, string addAccessor, string removeAccessor)
         {
             var evtDefVar = Context.Naming.EventDeclaration(eventFieldDeclaration);

@@ -7,6 +7,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Cecilifier.Core.CodeGeneration;
 using Cecilifier.Core.Extensions;
+using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
 
 namespace Cecilifier.Core.AST;
@@ -160,8 +161,8 @@ public class InlineArrayProcessor
                                 context,
                                 openGenericTypeVar.MemberName,
                                 [
-                                    context.TypeResolver.ResolveAny(inlineArrayType), // TBuffer
-                                    context.TypeResolver.ResolveAny(InlineArrayElementTypeFrom(inlineArrayType)) // TElement
+                                    context.TypeResolver.ResolveAny(inlineArrayType, ResolveTargetKind.None), // TBuffer
+                                    context.TypeResolver.ResolveAny(InlineArrayElementTypeFrom(inlineArrayType), ResolveTargetKind.None) // TElement
                                 ]);
         return varName;
     }

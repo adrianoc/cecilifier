@@ -217,7 +217,7 @@ namespace Cecilifier.Core.AST
         private void EmitIndirectStore(ITypeSymbol typeBeingStored)
         {
             var indirectStoreOpCode = typeBeingStored.StindOpCodeFor();
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, indirectStoreOpCode, indirectStoreOpCode == OpCodes.Stobj ? Context.TypeResolver.ResolveAny(typeBeingStored.ElementTypeSymbolOf()) : null);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, indirectStoreOpCode, indirectStoreOpCode == OpCodes.Stobj ? Context.TypeResolver.ResolveAny(typeBeingStored.ElementTypeSymbolOf(), ResolveTargetKind.Instruction) : null);
         }
 
         private void PropertyAssignment(IdentifierNameSyntax node, IPropertySymbol property)

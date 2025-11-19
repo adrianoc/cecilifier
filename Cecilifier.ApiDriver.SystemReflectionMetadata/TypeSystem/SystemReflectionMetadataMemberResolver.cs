@@ -17,7 +17,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
         if (found.IsValid)
             return found.VariableName;
             
-        var containingTypeRefVar= context.TypeResolver.ResolveAny(method.ContainingType);
+        var containingTypeRefVar= context.TypeResolver.ResolveAny(method.ContainingType, ResolveTargetKind.TypeReference);
         var methodSignatureBlobVar = context.Naming.SyntheticVariable($"{method.ToValidVariableName()}BlobBuilder", ElementKind.MemberReference);
         var methodRefVar = context.Naming.SyntheticVariable($"{method.ToValidVariableName()}", ElementKind.MemberReference);
         
@@ -31,7 +31,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
                            new BlobEncoder({{methodSignatureBlobVar}}).
                                MethodSignature(isInstanceMethod: {{ isInstanceMethod.ToKeyword() }}).
                                Parameters({{method.Parameters.Length}},
-                                   returnType => returnType.{{context.TypedTypeResolver.ResolveForTargetKind(method.ReturnType, ResolveTargetKind.ReturnType, method.IsByRef())}},
+                                   returnType => returnType.{{context.TypedTypeResolver.ResolveForTargetKind(method.ReturnType, method.ToTypeResolutionContext())}},
                                    parameters => 
                                    {
                                        {{
@@ -39,7 +39,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
                                                method.Parameters.Select(p => $"""
                                                                                   parameters
                                                                                           .AddParameter()
-                                                                                          .{context.TypedTypeResolver.ResolveAny(p.Type, ResolveTargetKind.Parameter)};
+                                                                                          .{context.TypedTypeResolver.ResolveAny(p.Type, new TypeResolutionContext(ResolveTargetKind.Parameter, p.Type.IsValueType ? TypeResolutionOptions.IsValueType : TypeResolutionOptions.None))};
                                                                               """))}}
                                    });
 
@@ -84,7 +84,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
         var requiredModifierOrEmpty = string.Empty;
         if ((options & MemberOptions.InitOnly) != 0)
         {
-            var modifierVariable = context.TypedTypeResolver.Resolve(context.RoslynTypeSystem.ForType(typeof(IsExternalInit).FullName));
+            var modifierVariable = context.TypedTypeResolver.Resolve(context.RoslynTypeSystem.ForType(typeof(IsExternalInit).FullName), ResolveTargetKind.TypeReference);
             requiredModifierOrEmpty = $"returnTypeEncoder.CustomModifiers().AddModifier({modifierVariable}, isOptional: false);";
         }
         
@@ -134,7 +134,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
                                                  Parameters(0, returnType => returnType.Void(), parameters => { });
                                           
                                           var {{voidParameterlessMethodRefVarName}} = metadata.AddMemberReference(
-                                                                                                    {{context.TypeResolver.ResolveAny(baseType)}},
+                                                                                                    {{context.TypeResolver.ResolveAny(baseType, ResolveTargetKind.TypeReference)}},
                                                                                                     metadata.GetOrAddString(".ctor"),
                                                                                                     metadata.GetOrAddBlob({{parameterlessCtorSignatureVarName}}));
                                           """);
@@ -151,14 +151,14 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
         if (found.IsValid)
             return found.VariableName;
 
-        var resolvedDeclaringType = context.TypeResolver.ResolveAny(field.ContainingType);
+        var resolvedDeclaringType = context.TypeResolver.ResolveAny(field.ContainingType, new TypeResolutionContext(ResolveTargetKind.TypeReference, TypeResolutionOptions.None));
 
         var fieldSignatureVarName = context.Naming.SyntheticVariable($"{field.ToValidVariableName()}_Signature", ElementKind.MemberReference);
         var fieldRefVarName = context.Naming.SyntheticVariable(field.Name, ElementKind.Field);
         var typeResolver = (SystemReflectionMetadataTypeResolver) context.TypeResolver;
         context.Generate($"""
                           BlobBuilder {fieldSignatureVarName} = new();
-                          new BlobEncoder({fieldSignatureVarName}).Field().{typeResolver.ResolveForTargetKind(field.Type, ResolveTargetKind.Field, false)};
+                          new BlobEncoder({fieldSignatureVarName}).Field().{typeResolver.ResolveForTargetKind(field.Type, new TypeResolutionContext(ResolveTargetKind.Field, field.RefKind != RefKind.None ? TypeResolutionOptions.IsByRef : TypeResolutionOptions.None))};
                           var {fieldRefVarName} = metadata.AddMemberReference({resolvedDeclaringType}, metadata.GetOrAddString("{field.Name}"), metadata.GetOrAddBlob({fieldSignatureVarName}));
                           """);
         

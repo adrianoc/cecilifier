@@ -59,7 +59,7 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
             
         foreach (var itf in interfaces)
         {
-            exps.Add($"{typeVar}.Interfaces.Add(new InterfaceImplementation({context.TypeResolver.ResolveAny(itf)}));");
+            exps.Add($"{typeVar}.Interfaces.Add(new InterfaceImplementation({context.TypeResolver.ResolveAny(itf, ResolveTargetKind.TypeReference)}));");
         }
 
         if (definitionContext.ParentDefinitionVariable != null)
@@ -80,7 +80,7 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
     {
         var exps = new List<string>();
 
-        var resolvedReturnType = context.TypeResolver.ResolveAny(methodSymbol.ReturnType);
+        var resolvedReturnType = context.TypeResolver.ResolveAny(methodSymbol.ReturnType, methodSymbol.ToTypeResolutionContext());
         var refReturn = methodSymbol.ReturnsByRef || methodSymbol.ReturnsByRefReadonly;
         if (refReturn)
             resolvedReturnType = resolvedReturnType.MakeByReferenceType();
@@ -91,7 +91,7 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
         ProcessGenericTypeParameters(bodiedMemberDefinitionContext.Member.DefinitionVariable, context, typeParameters, exps);
         if (methodSymbol.ReturnType.IsTypeParameterOrIsGenericTypeReferencingTypeParameter())
         {
-            resolvedReturnType = context.TypeResolver.ResolveAny(methodSymbol.ReturnType);
+            resolvedReturnType = context.TypeResolver.ResolveAny(methodSymbol.ReturnType, methodSymbol.ToTypeResolutionContext());
             exps.Add($"{bodiedMemberDefinitionContext.Member.DefinitionVariable}.ReturnType = {(refReturn ? resolvedReturnType.MakeByReferenceType() : resolvedReturnType)};");
         }
 
@@ -117,7 +117,7 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
         Func<IVisitorContext, ResolvedType> f = returnTypeResolver; 
         if ((definitionContext.Options & MemberOptions.InitOnly) == MemberOptions.InitOnly)
         {
-            returnTypeResolver = ctx => $"new RequiredModifierType({context.TypeResolver.Resolve(ctx.RoslynTypeSystem.ForType(typeof(IsExternalInit).FullName))}, {f(ctx)})";
+            returnTypeResolver = ctx => $"new RequiredModifierType({context.TypeResolver.Resolve(ctx.RoslynTypeSystem.ForType(typeof(IsExternalInit).FullName), in TypeResolution.DefaultContext)}, {f(ctx)})";
         }
         
         // if the method has type parameters we need to postpone setting the return type (using void as a placeholder, since we need to pass something) until the generic parameters has been
@@ -289,7 +289,7 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
 
         for(int i = 0; i < positionalArguments.Length; i++)
         {
-            var attributeArgument = $"new CustomAttributeArgument({context.TypeResolver.ResolveAny(attributeCtor.Parameters[i].Type.OriginalDefinition)}, {CustomAttributeArgumentValueFor(context, positionalArguments[i].Value)})";
+            var attributeArgument = $"new CustomAttributeArgument({context.TypeResolver.ResolveAny(attributeCtor.Parameters[i].Type.OriginalDefinition, ResolveTargetKind.TypeReference)}, {CustomAttributeArgumentValueFor(context, positionalArguments[i].Value)})";
             exps[expIndex++] = $"{attributeVar}.ConstructorArguments.Add({attributeArgument});";
         }
         expIndex += ProcessAttributeNamedArguments(context, exps.Slice(expIndex), attributeVar, namedArguments);
@@ -321,7 +321,7 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
             var sb = new StringBuilder("new [] {");
             foreach (var arrayItem in array)
             {
-                sb.Append($"new CustomAttributeArgument({context.TypeResolver.Resolve(context.RoslynTypeSystem.ForType(arrayItem.GetType().FullName))}, {CustomAttributeArgumentValueFor(context, arrayItem)}), ");
+                sb.Append($"new CustomAttributeArgument({context.TypeResolver.Resolve(context.RoslynTypeSystem.ForType(arrayItem.GetType().FullName), ResolveTargetKind.TypeReference)}, {CustomAttributeArgumentValueFor(context, arrayItem)}), ");
             }
             sb.Remove(sb.Length - 2, 2); // Removes the last ", "
             sb.Append('}');
@@ -371,7 +371,7 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
             {
                 var systemValueTypeRef = Utils.ImportFromMainModule("typeof(System.ValueType)");
                 var constraintType = typeParam.HasUnmanagedTypeConstraint
-                    ? $"{systemValueTypeRef}.MakeRequiredModifierType({context.TypeResolver.ResolveAny(context.RoslynTypeSystem.ForType<System.Runtime.InteropServices.UnmanagedType>())})"
+                    ? $"{systemValueTypeRef}.MakeRequiredModifierType({context.TypeResolver.ResolveAny(context.RoslynTypeSystem.ForType<System.Runtime.InteropServices.UnmanagedType>(), ResolveTargetKind.TypeReference)})"
                     : systemValueTypeRef;
 
                 exps.Add($"{genParamDefVar}.Constraints.Add(new GenericParameterConstraint({constraintType}));");
@@ -398,7 +398,7 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
 
             foreach (var type in typeParam.ConstraintTypes)
             {
-                exps.Add($"{genParamDefVar}.Constraints.Add(new GenericParameterConstraint({context.TypeResolver.ResolveAny(type)}));");
+                exps.Add($"{genParamDefVar}.Constraints.Add(new GenericParameterConstraint({context.TypeResolver.ResolveAny(type, ResolveTargetKind.TypeReference)}));");
             }
         }
     }
@@ -447,7 +447,7 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
             return originalType;
         
         var id = context.Naming.RequiredModifier();
-        context.Generate($"var {id} = new RequiredModifierType({context.TypeResolver.Resolve(typeof(IsVolatile).FullName)}, {originalType});");
+        context.Generate($"var {id} = new RequiredModifierType({context.TypeResolver.Resolve(typeof(IsVolatile).FullName, ResolveTargetKind.TypeReference)}, {originalType});");
         
         return id;
     }

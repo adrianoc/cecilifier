@@ -7,7 +7,6 @@ using System.Reflection.Emit;
 using Cecilifier.Core.CodeGeneration;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
-using Cecilifier.Core.Naming;
 using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
 
@@ -78,7 +77,7 @@ internal static class CollectionExpressionProcessor
             .GetOrEmmitInlineArrayElementRefMethod(context);
         var inlineArrayElementRefMethodVar = openInlineArrayElementRef
             .VariableName
-            .MakeGenericInstanceMethod(context, openInlineArrayElementRef.MemberName, [$"{inlineArrayLocalVar}.VariableType", context.TypeResolver.ResolveAny(spanTypeSymbol.TypeArguments[0])]);
+            .MakeGenericInstanceMethod(context, openInlineArrayElementRef.MemberName, [$"{inlineArrayLocalVar}.VariableType", context.TypeResolver.ResolveAny(spanTypeSymbol.TypeArguments[0], ResolveTargetKind.TypeReference)]);
         
         var storeOpCode = inlineArrayElementType.StindOpCodeFor();
         var targetElementType = storeOpCode == OpCodes.Stobj ? context.TypeResolver.ResolveAny(inlineArrayElementType, ResolveTargetKind.Instruction) : null; // Stobj expects the type of the object being stored.
@@ -99,7 +98,7 @@ internal static class CollectionExpressionProcessor
         var openInlineArrayAsSpanVar = PrivateImplementationDetailsGenerator.GetOrEmmitInlineArrayAsSpanMethod(context);
         var inlineArrayAsSpanMethodVar = openInlineArrayAsSpanVar
                                             .VariableName
-                                            .MakeGenericInstanceMethod(context, openInlineArrayAsSpanVar.MemberName, [$"{inlineArrayLocalVar}.VariableType", context.TypeResolver.ResolveAny(spanTypeSymbol.TypeArguments[0])]);
+                                            .MakeGenericInstanceMethod(context, openInlineArrayAsSpanVar.MemberName, [$"{inlineArrayLocalVar}.VariableType", context.TypeResolver.ResolveAny(spanTypeSymbol.TypeArguments[0], ResolveTargetKind.TypeReference)]);
         context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, OpCodes.Ldloca_S, inlineArrayLocalVar);
         context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, OpCodes.Ldc_I4, node.Elements.Count);
         context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, OpCodes.Call, inlineArrayAsSpanMethodVar);

@@ -106,7 +106,7 @@ internal partial class RecordGenerator
                 OpCodes.Pop,
                 OpCodes.Ldarg_1,
                 OpCodes.Ldarg_0,
-                OpCodes.Ldfld.WithOperand($"""new FieldReference("{field.Name}", {context.TypeResolver.ResolveAny(field.Type, ResolveTargetKind.Instruction)}, {TypeOrClosedTypeFor(recordTypeDefinitionVariable)})"""),
+                OpCodes.Ldfld.WithOperand($"""new FieldReference("{field.Name}", {context.TypeResolver.ResolveAny(field.Type, ResolveTargetKind.TypeReference)}, {TypeOrClosedTypeFor(recordTypeDefinitionVariable)})"""),
                 OpCodes.Box.WithOperand(context.TypeResolver.ResolveAny(field.Type, ResolveTargetKind.Instruction).Expression).IgnoreIf(field.Type.TypeKind != TypeKind.TypeParameter),
                 OpCodes.Callvirt.WithOperand(stringBuilderAppendMethod.MethodResolverExpression(context)),
                 OpCodes.Pop

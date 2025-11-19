@@ -14,15 +14,9 @@ namespace Cecilifier.ApiDriver.SystemReflectionMetadata.TypeSystem;
 //          call to ResolveX()
 public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContext context) : TypeResolverBase<SystemReflectionMetadataContext>(context)
 {
-    public override ResolvedType ResolveAny(ITypeSymbol type, ResolveTargetKind resolveTargetKind = ResolveTargetKind.None, string? cecilTypeParameterProviderVar = null)
-    {
-        return resolveTargetKind == ResolveTargetKind.None || type.TypeKind == TypeKind.Array ||  type.TypeKind == TypeKind.Pointer
-            ? base.ResolveAny(type, resolveTargetKind, cecilTypeParameterProviderVar) 
-            : ResolveForTargetKind(type, resolveTargetKind, false);        
-    }
-
-    public override ResolvedType Resolve(string typeName) => throw new NotSupportedException(nameof(Resolve));
-    public override ResolvedType Resolve(ITypeSymbol type)
+    public override ResolvedType Resolve(string typeName, in TypeResolutionContext resolutionContext) => throw new NotSupportedException(nameof(Resolve));
+    
+    public override ResolvedType Resolve(ITypeSymbol type, in TypeResolutionContext resolutionContext)
     {
         var memberRefVarName = _context.Naming.SyntheticVariable($"{type.ToValidVariableName()}", ElementKind.MemberReference);
         var assemblyReferenceName = _context.AssemblyResolver.Resolve(_context, type.ContainingAssembly);
@@ -34,17 +28,17 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
                            """);
         _context.WriteNewLine();
 
-        return memberRefVarName;
+        if (resolutionContext.TargetKind == ResolveTargetKind.TypeReference)
+            return memberRefVarName;
+        
+        return ApplySpecificSyntax(memberRefVarName, in resolutionContext);
     }
 
     /// <summary>
     /// Returns an expression that is suitable to be used with Parameter/Locals/Field/ReturnTypeEncoder
     /// </summary>
-    /// <param name="type"></param>
-    /// <param name="kind"></param>
-    /// <param name="isByRef"></param>
     /// <returns></returns>
-    public ResolvedType ResolveForTargetKind(ITypeSymbol type, ResolveTargetKind kind, bool isByRef)
+    public ResolvedType ResolveForTargetKind(ITypeSymbol type, in TypeResolutionContext resolutionContext)
     {
         if (type.SpecialType == SpecialType.System_Void)
         {
@@ -52,56 +46,76 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
         }
 
         var resolvedTypeDetails = new ResolvedTypeDetails();
-        if (type.IsPrimitiveType() || type.SpecialType == SpecialType.System_String || type.SpecialType == SpecialType.System_Object)
+        if (type.IsPrimitiveType() || type.SpecialType == SpecialType.System_String || type.SpecialType == SpecialType.System_Object || type.SpecialType == SpecialType.System_IntPtr)
             return ResolvedType.FromDetails(
                             resolvedTypeDetails
-                                .WithTypeEncoder(TypeEncoderFor(kind, isByRef))
+                                .WithTypeEncoder(TypeEncoderFor(in resolutionContext))
                                 .WithMethodBuilder($"{type.MetadataName}()"));
 
         return ResolvedType.FromDetails(
             resolvedTypeDetails
-                .WithTypeEncoder(TypeEncoderFor(kind, isByRef))
-                .WithMethodBuilder($"Type({ResolveAny(type, ResolveTargetKind.None)}, isValueType: {type.IsValueType.ToKeyword()})"));
+                .WithTypeEncoder(TypeEncoderFor(in resolutionContext))
+                .WithMethodBuilder($"Type({ResolveAny(type, TypeResolution.DefaultContext)}, isValueType: {type.IsValueType.ToKeyword()})"));
     }
-    
-    public override ResolvedType ResolveX(string variableName, ResolveTargetKind kind, bool isByRef, bool isValueType)
+
+    public override ResolvedType ApplySpecificSyntax(string variableName, in TypeResolutionContext resolutionContext)
     {
         var resolvedTypeDetails = new ResolvedTypeDetails();
         return ResolvedType.FromDetails(
             resolvedTypeDetails
-                .WithTypeEncoder(TypeEncoderFor(kind, isByRef))
-                .WithMethodBuilder($"Type({variableName}, isValueType: {isValueType.ToKeyword()})"));
+                .WithTypeEncoder(TypeEncoderFor(in resolutionContext))
+                .WithMethodBuilder($"Type({variableName}, isValueType: { ((resolutionContext.Options & TypeResolutionOptions.IsValueType) == TypeResolutionOptions.IsValueType).ToKeyword()})"));
     }
 
-    public override ResolvedType ResolvePredefinedType(ITypeSymbol type) => $"""
-                                                                             metadata.AddTypeReference(
-                                                                                          {_context.AssemblyResolver.Resolve(_context, _context.RoslynTypeSystem.SystemObject.ContainingAssembly)},
-                                                                                          metadata.GetOrAddString("{type.ContainingNamespace.Name}"),
-                                                                                          metadata.GetOrAddString("{type.Name}"))
-                                                                             """;
+    public override ResolvedType ResolvePredefinedType(ITypeSymbol type, in TypeResolutionContext resolutionContext)
+    {
+        if (resolutionContext.TargetKind == ResolveTargetKind.TypeReference)
+            return $"""
+                      metadata.AddTypeReference(
+                          {_context.AssemblyResolver.Resolve(_context, _context.RoslynTypeSystem.SystemObject.ContainingAssembly)},
+                           metadata.GetOrAddString("{type.ContainingNamespace.Name}"),
+                          metadata.GetOrAddString("{type.Name}"))
+                      """;
+        return ResolveForTargetKind(type, resolutionContext);
+    }
 
-    public override ResolvedType MakeArrayType(ITypeSymbol elementType, ResolveTargetKind resolveTargetKind)
+    public override ResolvedType ResolveLocalVariableType(ITypeSymbol type, in TypeResolutionContext context)
+    {
+        var resolved = base.ResolveLocalVariableType(type, in context);
+        if (resolved&& context.TargetKind != ResolveTargetKind.TypeReference)
+        {
+            return ResolvedType.FromDetails(
+                new ResolvedTypeDetails()
+                    .WithTypeEncoder(TypeEncoderFor(in context))
+                    .WithMethodBuilder($"Type({resolved.Expression}, isValueType: {context.Options.HasFlag(TypeResolutionOptions.IsValueType).ToKeyword()})"));
+
+        }
+        return resolved;
+    }
+
+    public override ResolvedType MakeArrayType(ITypeSymbol elementType, in TypeResolutionContext resolutionContext)
     {
         var details = new ResolvedTypeDetails();
         return ResolvedType.FromDetails(
-                    details.WithTypeEncoder(TypeEncoderFor(resolveTargetKind, false))
-                        .WithMethodBuilder($"SZArray().{ResolveAny(elementType, ResolveTargetKind.ArrayElementType)}"));
+                    details.WithTypeEncoder(TypeEncoderFor(in resolutionContext))
+                        .WithMethodBuilder($"SZArray().{ResolveAny(elementType, new TypeResolutionContext(ResolveTargetKind.ArrayElementType, resolutionContext.Options))}"));
     }
 
-    protected override ResolvedType MakePointerType(ITypeSymbol pointerType)
+    protected override ResolvedType MakePointerType(ITypeSymbol pointerType, in TypeResolutionContext resolutionContext)
     {
         throw new NotImplementedException();
     }
 
-    protected override ResolvedType MakeFunctionPointerType(IFunctionPointerTypeSymbol functionPointer)
+    protected override ResolvedType MakeFunctionPointerType(IFunctionPointerTypeSymbol functionPointer, in TypeResolutionContext resolutionContext)
     {
         throw new NotImplementedException();
     }
     
-    private static string TypeEncoderFor(ResolveTargetKind kind, bool isByRef)
+    private static string TypeEncoderFor(in TypeResolutionContext resolutionContext)
     {
-        if (kind == ResolveTargetKind.Instruction)
+        if (resolutionContext.TargetKind == ResolveTargetKind.Instruction)
             return "TokenForType(enc => enc%, metadata)";
-        return kind <= ResolveTargetKind.ArrayElementType ? "" : $"Type(isByRef: {isByRef.ToKeyword()})%";
+        var isByRef = ((resolutionContext.Options & TypeResolutionOptions.IsByRef) == TypeResolutionOptions.IsByRef).ToKeyword();
+        return resolutionContext.TargetKind <= ResolveTargetKind.ArrayElementType ? "" : $"Type(isByRef: {isByRef})%";
     }
 }

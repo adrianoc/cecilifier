@@ -219,7 +219,7 @@ namespace Cecilifier.Core.Extensions
         {
             return expression switch
             {
-                TypeOfExpressionSyntax typeOf => new RawCSharpCode(context.TypeResolver.ResolveAny(context.SemanticModel.GetTypeInfo(typeOf.Type).Type).Expression),
+                TypeOfExpressionSyntax typeOf => new RawCSharpCode(context.TypeResolver.ResolveAny(context.SemanticModel.GetTypeInfo(typeOf.Type).Type, ResolveTargetKind.TypeReference).Expression),
                 ImplicitArrayCreationExpressionSyntax implicitArrayCreation => ConstantValueForArray(implicitArrayCreation.Initializer),
                 ArrayCreationExpressionSyntax arrayCreation => ConstantValueForArray(arrayCreation.Initializer),
                 

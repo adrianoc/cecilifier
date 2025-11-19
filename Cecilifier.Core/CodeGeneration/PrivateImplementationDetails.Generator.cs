@@ -3,15 +3,11 @@
 using System;
 using System.Buffers;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Globalization;
 using System.Linq;
 using System.Security.Cryptography;
-using System.Text;
 using System.Reflection.Emit;
-using System.Threading;
 using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.ApiDriver.DefinitionsFactory;
 using Microsoft.CodeAnalysis;
@@ -327,7 +323,7 @@ internal partial class PrivateImplementationDetailsGenerator
         var rawDataHolderStructName = Constants.CompilerGeneratedTypes.StaticArrayInitTypeNameFor(sizeInBytes);
         var found = context.DefinitionVariables.GetVariable(rawDataHolderStructName, VariableMemberKind.Type, Constants.CompilerGeneratedTypes.PrivateImplementationDetails);
         if (found.IsValid)
-            return new ResolvedType(found.VariableName);
+            return context.TypeResolver.ApplySpecificSyntax(found.VariableName, new TypeResolutionContext(ResolveTargetKind.Field, TypeResolutionOptions.IsValueType));
 
         context.WriteNewLine();
         context.WriteComment($"{rawDataHolderStructName} struct.");
@@ -351,7 +347,7 @@ internal partial class PrivateImplementationDetailsGenerator
                                                                     definitionContext, 
                                                                     string.Empty, 
                                                                     Constants.CompilerGeneratedTypes.StaticArrayRawDataHolderTypeModifiers, 
-                                                                    context.TypeResolver.ResolveAny(context.RoslynTypeSystem.SystemValueType), 
+                                                                    context.TypeResolver.ResolveAny(context.RoslynTypeSystem.SystemValueType, ResolveTargetKind.TypeReference), 
                                                                     false, 
                                                                     [], 
                                                                     [], 
@@ -366,7 +362,8 @@ internal partial class PrivateImplementationDetailsGenerator
                                                                 rawDataHolderStructName, 
                                                                 VariableMemberKind.Type, 
                                                                 rawDataHolderTypeVar);
-        return context.TypeResolver.ResolveX(rawDataTypeVar.VariableName, ResolveTargetKind.Field, false, true);
+        
+        return context.TypeResolver.ApplySpecificSyntax(rawDataTypeVar.VariableName, new TypeResolutionContext(ResolveTargetKind.Field, TypeResolutionOptions.IsValueType));
     }
 
     private static DefinitionVariable GetOrCreatePrivateImplementationDetailsTypeVariable(IVisitorContext context)
@@ -389,7 +386,7 @@ internal partial class PrivateImplementationDetailsGenerator
                                                     memberDefinitionContext,
                                                     string.Empty, 
                                                     Constants.CompilerGeneratedTypes.PrivateImplementationDetailsModifiers, 
-                                                    context.TypeResolver.ResolveAny(context.RoslynTypeSystem.SystemObject), 
+                                                    context.TypeResolver.ResolveAny(context.RoslynTypeSystem.SystemObject, ResolveTargetKind.TypeReference), 
                                                     false, 
                                                     [],
                                                     [],

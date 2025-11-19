@@ -116,7 +116,7 @@ namespace Cecilifier.Core.AST
 
             operatorHandlers[SyntaxKind.IsKeyword] = BinaryOperatorHandler.Raw((ctx, ilVar, _, rightType) =>
             {
-                ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Isinst, ctx.TypeResolver.ResolveAny(rightType));
+                ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Isinst, ctx.TypeResolver.ResolveAny(rightType, ResolveTargetKind.Instruction));
                 ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Ldnull);
                 ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Cgt);
             }, visitRightOperand: false); // Isinst opcode takes the type to check as a parameter (instead of taking it from the stack) so
@@ -321,7 +321,7 @@ namespace Cecilifier.Core.AST
                 {
                     if (UsageVisitor.GetInstance(Context).Visit(node.Parent) == UsageKind.CallTarget)
                     {
-                        Context.SetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, Context.TypeResolver.ResolveAny(elementType).Expression);
+                        Context.SetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, Context.TypeResolver.ResolveAny(elementType, ResolveTargetKind.TypeReference).Expression);
                         return;
                     }
                     
@@ -331,7 +331,7 @@ namespace Cecilifier.Core.AST
                 
                 // ... otherwise, we need to take the top of the stack (address of the element) and load the actual instance to the stack.
                 var loadOpCode = elementType.LdindOpCodeFor();
-                Context.ApiDriver.WriteCilInstruction(Context, ilVar, loadOpCode, loadOpCode == OpCodes.Ldobj ? Context.TypeResolver.ResolveAny(elementType) : null);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, loadOpCode, loadOpCode == OpCodes.Ldobj ? Context.TypeResolver.ResolveAny(elementType, ResolveTargetKind.Instruction) : null);
                 return;
             }
 
@@ -351,11 +351,11 @@ namespace Cecilifier.Core.AST
             }
             else
             {
-                if (HandleLoadAddress(ilVar, targetType, node, OpCodes.Ldelema, Context.TypeResolver.ResolveAny(targetType).Expression.AsToken()))
+                if (HandleLoadAddress(ilVar, targetType, node, OpCodes.Ldelema, Context.TypeResolver.ResolveAny(targetType, ResolveTargetKind.Field).Expression.AsToken()))
                     return;
                 
                 var ldelemOpCodeToUse = targetType.LdelemOpCode();
-                Context.ApiDriver.WriteCilInstruction(Context, ilVar, ldelemOpCodeToUse, ldelemOpCodeToUse == OpCodes.Ldelem ? Context.TypeResolver.ResolveAny(targetType) : null);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, ldelemOpCodeToUse, ldelemOpCodeToUse == OpCodes.Ldelem ? Context.TypeResolver.ResolveAny(targetType, ResolveTargetKind.None) : null);
             }
         }
 
@@ -474,7 +474,7 @@ namespace Cecilifier.Core.AST
             {
                 var localSymbol = Context.SemanticModel.GetSymbolInfo(node).Symbol.EnsureNotNull<ISymbol, ILocalSymbol>();
                 var designation = ((SingleVariableDesignationSyntax) node.Designation);
-                var resolvedOutArgType = Context.TypeResolver.ResolveAny(localSymbol.Type);
+                var resolvedOutArgType = Context.TypeResolver.ResolveAny(localSymbol.Type, ResolveTargetKind.LocalVariable);
 
                 DefinitionVariable methodVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
                 var outLocalName = Context.ApiDefinitionsFactory.LocalVariable(Context, designation.Identifier.Text, methodVar.VariableName, resolvedOutArgType).VariableName;
@@ -523,8 +523,8 @@ namespace Cecilifier.Core.AST
             // code to handle null case 
             var currentMethodVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
             var expressionTypeInfo = Context.SemanticModel.GetTypeInfo(node);
-            var resolvedConcreteNullableType = Context.TypeResolver.ResolveAny(expressionTypeInfo.Type, ResolveTargetKind.None);
-            var resolvedConcreteNullableTypeForLocal = Context.TypeResolver.ResolveAny(expressionTypeInfo.Type, ResolveTargetKind.LocalVariable);
+            var resolvedConcreteNullableType = Context.TypeResolver.ResolveAny(expressionTypeInfo.Type!, ResolveTargetKind.None);
+            var resolvedConcreteNullableTypeForLocal = Context.TypeResolver.ResolveAny(expressionTypeInfo.Type!, ResolveTargetKind.LocalVariable);
             var tempNullableVar = Context.ApiDefinitionsFactory.LocalVariable(Context, "nullable", currentMethodVar.VariableName, resolvedConcreteNullableTypeForLocal).VariableName;
 
             Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloca_S, tempNullableVar);
@@ -917,9 +917,9 @@ namespace Cecilifier.Core.AST
         {
             using var _ = LineInformationTracker.Track(Context, node);
 
-            var varType = Context.TypeResolver.ResolveAny(Context.SemanticModel.GetTypeInfo(node.Type).Type, ResolveTargetKind.None);
+            var varType = Context.TypeResolver.ResolveAny(Context.SemanticModel.GetTypeInfo(node.Type).Type.EnsureNotNull(), ResolveTargetKind.None);
             var localVarName = ((SingleVariableDesignationSyntax) node.Designation).Identifier.ValueText;
-            var varTypeForLocal = Context.TypeResolver.ResolveAny(Context.SemanticModel.GetTypeInfo(node.Type).Type, ResolveTargetKind.LocalVariable);
+            var varTypeForLocal = Context.TypeResolver.ResolveAny(Context.SemanticModel.GetTypeInfo(node.Type).Type.EnsureNotNull(), ResolveTargetKind.LocalVariable);
             var localVar = Context.AddLocalVariableToCurrentMethod(localVarName, varTypeForLocal).VariableName;
 
             Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Isinst, varType);
@@ -933,9 +933,9 @@ namespace Cecilifier.Core.AST
         {
             using var _ = LineInformationTracker.Track(Context, node);
 
-            var varType = Context.TypeResolver.ResolveAny(Context.SemanticModel.GetTypeInfo(node.Type!).Type, ResolveTargetKind.None);
+            var varType = Context.TypeResolver.ResolveAny(Context.SemanticModel.GetTypeInfo(node.Type!).Type.EnsureNotNull(), ResolveTargetKind.None);
             var localVarName = LocalVariableNameOrDefault(node, "tmp");
-            var varTypeForLocalVariable = Context.TypeResolver.ResolveAny(Context.SemanticModel.GetTypeInfo(node.Type!).Type, ResolveTargetKind.LocalVariable);
+            var varTypeForLocalVariable = Context.TypeResolver.ResolveAny(Context.SemanticModel.GetTypeInfo(node.Type!).Type.EnsureNotNull(), ResolveTargetKind.LocalVariable);
             var localVar = Context.AddLocalVariableToCurrentMethod(localVarName, varTypeForLocalVariable).VariableName;
 
             var typeDoesNotMatchVar = CreateCilInstruction(ilVar, OpCodes.Ldc_I4_0);

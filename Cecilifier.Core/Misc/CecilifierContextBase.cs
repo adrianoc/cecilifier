@@ -112,6 +112,10 @@ namespace Cecilifier.Core.Misc
 
         public void Generate(string expression)
         {
+            if (expression.Contains("Box"))
+            {
+                Console.WriteLine();
+            }
             var lineCount = expression.CountNewLines();
             CecilifiedLineNumber += lineCount;
             

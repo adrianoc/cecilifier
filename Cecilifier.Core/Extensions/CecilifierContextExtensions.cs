@@ -46,7 +46,8 @@ public static class CecilifierContextExtensions
         }
         else if (operation is IConversionOperation { Operand.Type: not null } conversion2 && context.SemanticModel.Compilation.ClassifyConversion(conversion2.Operand.Type, operation.Type).IsBoxing)
         {
-            context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Box, context.TypeResolver.ResolveAny(conversion2.Operand.Type, ResolveTargetKind.Instruction).AsToken());
+            var resolutionContext = new TypeResolutionContext(ResolveTargetKind.Instruction, conversion2.Operand.Type.IsValueType ? TypeResolutionOptions.IsValueType : TypeResolutionOptions.None);
+            context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Box, context.TypeResolver.ResolveAny(conversion2.Operand.Type, resolutionContext).AsToken());
         }
         else if (operation is IConversionOperation { Conversion.IsNullable: true } nullableConversion && !nullableConversion.Syntax.IsKind(SyntaxKind.CoalesceExpression))
         {

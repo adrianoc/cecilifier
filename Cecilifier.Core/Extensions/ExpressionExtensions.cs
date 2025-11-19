@@ -6,6 +6,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Cecilifier.Core.AST;
+using Cecilifier.Core.TypeSystem;
 
 namespace Cecilifier.Core.Extensions
 {
@@ -58,7 +59,7 @@ namespace Cecilifier.Core.Extensions
                 var conversion = context.SemanticModel.GetConversion(expression);
                 if (conversion.IsImplicit && NeedsBoxing(context, expression, typeInfo.Type))
                 {
-                    context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Box, context.TypeResolver.ResolveAny(typeInfo.Type));
+                    context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Box, context.TypeResolver.ResolveAny(typeInfo.Type, ResolveTargetKind.TypeReference));
                 }
             }
 
@@ -82,7 +83,7 @@ namespace Cecilifier.Core.Extensions
 
                 bool TypeIsReferenceType(IVisitorContext context, ExpressionSyntax expression, ITypeSymbol rightType)
                 {
-                    if (expression.Parent is not EqualsValueClauseSyntax equalsValueClauseSyntax) return false;
+                    if (expression.Parent is not EqualsValueClauseSyntax) return false;
                     Debug.Assert(expression.Parent.Parent.IsKind(SyntaxKind.VariableDeclarator));
 
                     // get the type of the declared variable. For instance, in `int x = 10;`, expression='10',

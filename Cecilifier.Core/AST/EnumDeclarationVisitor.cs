@@ -72,7 +72,7 @@ namespace Cecilifier.Core.AST
             //TODO: Consider introducing (or reusing ?) some abstraction so the code can add more information (like, is this a variable name? is this the result of TypeResolver.Resolve() ? etc)
             //      to allow Api Drivers (the need for this first appeared in SRM) to decide how to encode/emit the code. For now we ignore that this reference is 100% certain to be the type
             //      definition for the parent enum (and that we have that variable name in enumVarDef) and re-resolve it in a way that it will return a valid reference.
-            var enumType = Context.TypeResolver.ResolveAny(Context.SemanticModel.GetDeclaredSymbol(node.Parent).EnsureNotNull<ISymbol, INamedTypeSymbol>(), ResolveTargetKind.Field);
+            var enumType = Context.TypeResolver.ResolveAny(Context.SemanticModel.GetDeclaredSymbol(node.Parent).EnsureNotNull<ISymbol, INamedTypeSymbol>(), new TypeResolutionContext(ResolveTargetKind.Field, TypeResolutionOptions.IsValueType));
             var exp = Context.ApiDefinitionsFactory.Field(Context, new MemberDefinitionContext(node.Identifier.ValueText, fieldVar, enumVarDef.VariableName), declaringTypeName, enumType, "FieldAttributes.Static | FieldAttributes.Literal | FieldAttributes.Public | FieldAttributes.HasDefault", false, false, enumMemberValue);
             AddCecilExpressions(Context, exp);
 

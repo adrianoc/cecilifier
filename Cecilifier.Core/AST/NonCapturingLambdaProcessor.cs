@@ -78,7 +78,7 @@ namespace Cecilifier.Core.AST
                                                             "MethodAttributes.Public | MethodAttributes.Static",
                                                             lambda.ParameterList().Select(ParamSpecFor).ToArray(),
                                                             [],
-                                                            ctx => ctx.TypeResolver.ResolveAny(returnType),
+                                                            ctx => ctx.TypeResolver.ResolveAny(returnType, ResolveTargetKind.ReturnType),
                                                             out var methodDefinitionVariable); 
             
             context.Generate(methodExps);

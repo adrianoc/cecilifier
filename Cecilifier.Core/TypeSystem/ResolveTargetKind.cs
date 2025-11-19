@@ -10,4 +10,5 @@ public enum ResolveTargetKind
     Parameter,
     ReturnType,
     Instruction,
+    TypeReference
 }

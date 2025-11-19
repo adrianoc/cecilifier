@@ -23,7 +23,7 @@ internal class SpanExpandedParamsArgumentHandler : ExpandedParamsArgumentHandler
         _stindOpCode = _paramsParameterType.StindOpCodeFor();
         
         var openInlineArrayType = InlineArrayGenerator.GetOrGenerateInlineArrayType(context, argumentList.Arguments.Count, "InlineArray to store the `params` values.");
-        _inlineArrayType = openInlineArrayType.MakeGenericInstanceType([context.TypeResolver.ResolveAny(_paramsParameterType)]);
+        _inlineArrayType = openInlineArrayType.MakeGenericInstanceType([context.TypeResolver.ResolveAny(_paramsParameterType, ResolveTargetKind.None)]);
 
         var inlineArrayBuffer = context.AddLocalVariableToCurrentMethod($"{paramsParameter.Name}Arg", _inlineArrayType);
         _inlineArrayVariableName = inlineArrayBuffer.VariableName;
@@ -59,6 +59,6 @@ internal class SpanExpandedParamsArgumentHandler : ExpandedParamsArgumentHandler
     
     string MakeGenericInstanceMethod(DefinitionVariable genericMethodVariable)
     {
-        return genericMethodVariable.VariableName.MakeGenericInstanceMethod(Context, genericMethodVariable.MemberName, [ _inlineArrayType, Context.TypeResolver.ResolveAny(_paramsParameterType)]);
+        return genericMethodVariable.VariableName.MakeGenericInstanceMethod(Context, genericMethodVariable.MemberName, [ _inlineArrayType, Context.TypeResolver.ResolveAny(_paramsParameterType, ResolveTargetKind.TypeReference)]);
     }
 }

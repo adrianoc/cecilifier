@@ -96,7 +96,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
             
             foreach(var itf in interfaces)
             {
-                context.Generate($"metadata.AddInterfaceImplementation({typeRecord.TypeDefinitionVariable}, {context.TypeResolver.ResolveAny(itf, ResolveTargetKind.None)});");
+                context.Generate($"metadata.AddInterfaceImplementation({typeRecord.TypeDefinitionVariable}, {context.TypeResolver.ResolveAny(itf, ResolveTargetKind.TypeReference)});");
                 context.WriteNewLine();
             }
         }
@@ -283,7 +283,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
             var signatureTypeEncoderVar =  context.Naming.SyntheticVariable($"{definitionContext.Identifier}_TypeEncoder", ElementKind.Field);
             exps[expCount++] = Format($"""
                                        var {signatureTypeEncoderVar} = {fieldEncoderVar}.{details.TypeEncoderProvider};
-                                       {signatureTypeEncoderVar}.CustomModifiers().AddModifier({context.TypeResolver.Resolve(context.RoslynTypeSystem.ForType(typeof(IsVolatile).FullName))}, isOptional: false);
+                                       {signatureTypeEncoderVar}.CustomModifiers().AddModifier({context.TypeResolver.Resolve(context.RoslynTypeSystem.ForType(typeof(IsVolatile).FullName), ResolveTargetKind.TypeReference)}, isOptional: false);
                                        {signatureTypeEncoderVar}.{details.MethodBuilder};
                                        """);
         }

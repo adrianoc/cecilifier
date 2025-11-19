@@ -22,20 +22,11 @@ public readonly record struct ResolvedType
                                                     ? throw new NullReferenceException() 
                                                     : (TDetails)_details;
 
-    public string Expression
-    {
-        get
-        {
-            if (_details != null)
-            {
-                return _details.ToString();
-            }
-
-            return _resolved;
-        }
-    }
+    public string Expression => _details != null ? _details.ToString() : _resolved;
 
     public static implicit operator ResolvedType(string typeName) => new(typeName);
+    public static implicit operator bool(in ResolvedType rt) => rt.Expression != null;
+    
     public static bool operator true(in ResolvedType rt) => rt.Expression != null;
     public static bool operator false(ResolvedType rt) => rt.Expression == null;
     

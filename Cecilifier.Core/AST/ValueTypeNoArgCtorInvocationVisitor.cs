@@ -81,7 +81,7 @@ namespace Cecilifier.Core.AST
             var accessedMember = ModelExtensions.GetSymbolInfo(Context.SemanticModel, node).Symbol.EnsureNotNull();
             if (accessedMember.ContainingType.SpecialType == SpecialType.System_ValueType)
             {
-                Context.SetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, ResolvedStructType().Expression);
+                Context.SetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, ResolvedStructType(ResolveTargetKind.TypeReference).Expression);
             }
         }
 
@@ -121,7 +121,7 @@ namespace Cecilifier.Core.AST
 
         public override void VisitAssignmentExpression(AssignmentExpressionSyntax node)
         {
-            var instantiatedType = ResolvedStructType();
+            var instantiatedType = ResolvedStructType(ResolveTargetKind.Instruction);
             var visitor = new NoArgsValueTypeObjectCreatingInAssignmentVisitor(Context, ilVar, instantiatedType, DeclareAndInitializeValueTypeLocalVariable, objectCreationExpressionSyntax);
             node.Left.Accept(visitor);
             TargetOfAssignmentIsValueType = visitor.TargetOfAssignmentIsValueType;
@@ -169,7 +169,7 @@ namespace Cecilifier.Core.AST
         private void InitValueTypeLocalVariable(string localVariable)
         {
             Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloca_S, localVariable.AsToken());
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Initobj, ResolvedStructType());
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Initobj, ResolvedStructType(ResolveTargetKind.Instruction));
 
             if (objectCreationExpressionSyntax.Initializer is not null)
             {
@@ -193,6 +193,6 @@ namespace Cecilifier.Core.AST
             context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Pop);
         }
 
-        private ResolvedType ResolvedStructType() =>  Context.TypeResolver.ResolveAny(ctorInfo.Symbol.ContainingType);
+        private ResolvedType ResolvedStructType(ResolveTargetKind targetKind) =>  Context.TypeResolver.ResolveAny(ctorInfo.Symbol.ContainingType, targetKind);
     }
 }

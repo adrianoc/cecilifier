@@ -10,19 +10,19 @@ namespace Cecilifier.Core.TypeSystem
         {
             _resolvedTypes = new Dictionary<SpecialType, ResolvedType>
             {
-                [SpecialType.System_Int32] = typeResolver.ResolvePredefinedType(context.RoslynTypeSystem.SystemInt32),
-                [SpecialType.System_Int64] = typeResolver.ResolvePredefinedType(context.RoslynTypeSystem.SystemInt64),
-                [SpecialType.System_IntPtr] = typeResolver.ResolvePredefinedType(context.RoslynTypeSystem.SystemIntPtr),
-                [SpecialType.System_String] = typeResolver.ResolvePredefinedType(context.RoslynTypeSystem.SystemString),
-                [SpecialType.System_Void] = typeResolver.ResolvePredefinedType(context.RoslynTypeSystem.SystemVoid),
-                [SpecialType.System_Object] = typeResolver.ResolvePredefinedType(context.RoslynTypeSystem.SystemObject),
-                [SpecialType.System_Boolean] = typeResolver.ResolvePredefinedType(context.RoslynTypeSystem.SystemBoolean),
-                [SpecialType.System_Enum] = typeResolver.ResolveAny(context.RoslynTypeSystem.ForType<System.Enum>()),
-                [SpecialType.System_ValueType] = typeResolver.ResolveAny(context.RoslynTypeSystem.ForType<System.ValueType>()),
-                [SpecialType.System_MulticastDelegate] = typeResolver.ResolveAny(context.RoslynTypeSystem.ForType<System.MulticastDelegate>()),
-                [SpecialType.System_AsyncCallback] = typeResolver.ResolveAny(context.RoslynTypeSystem.ForType<System.AsyncCallback>()),
-                [SpecialType.System_IAsyncResult] = typeResolver.ResolveAny(context.RoslynTypeSystem.ForType<System.IAsyncResult>()),
-                [SpecialType.System_Nullable_T] = typeResolver.ResolveAny(context.RoslynTypeSystem.ForType<System.Nullable<int>>().OriginalDefinition),
+                [SpecialType.System_Int32] = typeResolver.ResolvePredefinedType(context.RoslynTypeSystem.SystemInt32, ResolveTargetKind.TypeReference),
+                [SpecialType.System_Int64] = typeResolver.ResolvePredefinedType(context.RoslynTypeSystem.SystemInt64, ResolveTargetKind.TypeReference),
+                [SpecialType.System_IntPtr] = typeResolver.ResolvePredefinedType(context.RoslynTypeSystem.SystemIntPtr, ResolveTargetKind.TypeReference),
+                [SpecialType.System_String] = typeResolver.ResolvePredefinedType(context.RoslynTypeSystem.SystemString, ResolveTargetKind.TypeReference),
+                [SpecialType.System_Void] = typeResolver.ResolvePredefinedType(context.RoslynTypeSystem.SystemVoid, ResolveTargetKind.TypeReference),
+                [SpecialType.System_Object] = typeResolver.ResolvePredefinedType(context.RoslynTypeSystem.SystemObject, ResolveTargetKind.TypeReference),
+                [SpecialType.System_Boolean] = typeResolver.ResolvePredefinedType(context.RoslynTypeSystem.SystemBoolean, ResolveTargetKind.TypeReference),
+                [SpecialType.System_Enum] = typeResolver.ResolveAny(context.RoslynTypeSystem.ForType<System.Enum>(), ResolveTargetKind.TypeReference),
+                [SpecialType.System_ValueType] = typeResolver.ResolveAny(context.RoslynTypeSystem.ForType<System.ValueType>(), ResolveTargetKind.TypeReference),
+                [SpecialType.System_MulticastDelegate] = typeResolver.ResolveAny(context.RoslynTypeSystem.ForType<System.MulticastDelegate>(), ResolveTargetKind.TypeReference),
+                [SpecialType.System_AsyncCallback] = typeResolver.ResolveAny(context.RoslynTypeSystem.ForType<System.AsyncCallback>(), ResolveTargetKind.TypeReference),
+                [SpecialType.System_IAsyncResult] = typeResolver.ResolveAny(context.RoslynTypeSystem.ForType<System.IAsyncResult>(), ResolveTargetKind.TypeReference),
+                [SpecialType.System_Nullable_T] = typeResolver.ResolveAny(context.RoslynTypeSystem.ForType<System.Nullable<int>>().OriginalDefinition, ResolveTargetKind.TypeReference),
             };
         }
 
