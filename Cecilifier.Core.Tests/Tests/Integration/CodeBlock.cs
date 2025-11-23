@@ -6,9 +6,8 @@ using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration
 {
-    // These tests have explicit IL expectation which differs from SRM so we only test Mono.Cecil.
-    // 
     [TestFixture(typeof(MonoCecilContext))] 
+    [TestFixture(typeof(SystemReflectionMetadataContext))]
     public class BlockTestCase<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
     {
         [Test]
@@ -27,13 +26,6 @@ namespace Cecilifier.Core.Tests.Integration
         public void NestedIfStatementTest()
         {
             AssertResourceTestWithExplicitExpectation("CodeBlock/Conditional/NestedIfStatement", "System.Void NestedIfStatement::Foo(System.Int32)");
-        }
-
-        [Test]
-        [Ignore("Not Implemented yet")]
-        public void SwitchStatementTest()
-        {
-            AssertResourceTest("CodeBlock/Conditional/");
         }
     }
 }

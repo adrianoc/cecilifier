@@ -1,0 +1,21 @@
+.locals ()
+IL_0000: ldarg.1
+IL_0001: ldc.i4 10
+IL_0006: cgt
+IL_0008: brfalse IL_002c
+IL_000d: ldarg.1
+IL_000e: ldc.i4 20
+IL_0013: ceq
+IL_0015: brfalse IL_0027
+IL_001a: ldarg.0
+IL_001b: ldarg.1
+IL_001c: ldc.i4 1
+IL_0021: sub
+IL_0022: call System.Void NestedIfStatement::Foo(System.Int32)
+IL_0027: br IL_0039
+IL_002c: ldarg.0
+IL_002d: ldarg.1
+IL_002e: ldc.i4 1
+IL_0033: add
+IL_0034: call System.Void NestedIfStatement::Foo(System.Int32)
+IL_0039: ret
