@@ -62,9 +62,14 @@ namespace Cecilifier.Core.Extensions
             return type.ToDisplayString(includingTypeParameters ? QualifiedNameIncludingTypeParametersFormat : QualifiedNameWithoutTypeParametersFormat);
         }
         
-        public static string ToValidVariableName(this ISymbol type)
+        public static string ToValidVariableName(this ISymbol symbol)
         {
-            return type.ToDisplayString(ValidVariableNameFormat);
+            return symbol switch
+            {
+                IMethodSymbol { MethodKind: MethodKind.UserDefinedOperator} method => method.Name,
+                IMethodSymbol method => method.ToDisplayString(ValidVariableNameFormat),
+                _ => symbol.ToDisplayString(ValidVariableNameFormat)
+            };
         }
         
         public static string GetReflectionName(this ITypeSymbol typeSymbol)

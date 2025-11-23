@@ -103,7 +103,7 @@ public static class CecilifierContextExtensions
             case SpecialType.System_Decimal:
                 var operand = target.GetMembers().OfType<IMethodSymbol>()
                     .Single(m => m.MethodKind == MethodKind.Constructor && m.Parameters.Length == 1 && m.Parameters[0].Type.SpecialType == source.SpecialType);
-                context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Newobj, operand.MethodResolverExpression(context));
+                context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Newobj, operand.MethodResolverExpression(context).AsToken());
                 break;
             
             default: return false;

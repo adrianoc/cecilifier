@@ -31,7 +31,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
                            new BlobEncoder({{methodSignatureBlobVar}}).
                                MethodSignature(isInstanceMethod: {{ isInstanceMethod.ToKeyword() }}).
                                Parameters({{method.Parameters.Length}},
-                                   returnType => returnType.{{context.TypedTypeResolver.ResolveForTargetKind(method.ReturnType, method.ToTypeResolutionContext())}},
+                                   returnType => returnType.{{context.TypedTypeResolver.ResolveAny(method.ReturnType, method.ToTypeResolutionContext())}},
                                    parameters => 
                                    {
                                        {{

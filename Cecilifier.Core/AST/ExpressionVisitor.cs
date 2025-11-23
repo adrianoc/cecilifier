@@ -1617,7 +1617,7 @@ namespace Cecilifier.Core.AST
             var operatorMethod = r ?? l;
             if (operatorMethod != null)
             {
-                context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Call, operatorMethod.MethodResolverExpression(context));
+                context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Call, operatorMethod.MethodResolverExpression(context).AsToken());
             }
             else
             {
