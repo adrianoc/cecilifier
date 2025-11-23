@@ -57,9 +57,9 @@ namespace Cecilifier.Core.Extensions
                                                                             ? $"<{method.ContainingSymbol.Name}>g__{method.Name}|0_0"
                                                                             : method.Name;
 
-        public static string FullyQualifiedName(this ISymbol type, bool includingTypeParameters = true)
+        public static string FullyQualifiedName(this ISymbol symbol, bool includingTypeParameters = true)
         {
-            return type.ToDisplayString(includingTypeParameters ? QualifiedNameIncludingTypeParametersFormat : QualifiedNameWithoutTypeParametersFormat);
+            return symbol.ToDisplayString(includingTypeParameters ? QualifiedNameIncludingTypeParametersFormat : QualifiedNameWithoutTypeParametersFormat);
         }
         
         public static string ToValidVariableName(this ISymbol symbol)
@@ -113,9 +113,9 @@ namespace Cecilifier.Core.Extensions
             _ => throw new NotSupportedException($"({symbol.Kind}) symbol {symbol.ToDisplayString()} is not supported.")
         };
 
-        public static bool IsDefinedInCurrentAssembly<T>(this T method, IVisitorContext ctx) where T : ISymbol
+        public static bool IsDefinedInCurrentAssembly<T>(this T symbol, IVisitorContext ctx) where T : ISymbol
         {
-            return SymbolEqualityComparer.Default.Equals(method.ContainingAssembly, ctx.SemanticModel.Compilation.Assembly);
+            return SymbolEqualityComparer.Default.Equals(symbol.ContainingAssembly, ctx.SemanticModel.Compilation.Assembly);
         }
 
         public static bool IsByRef(this ISymbol symbol) =>
