@@ -14,20 +14,20 @@ namespace Cecilifier.Core.Tests.Integration
         nameof(TestAdd2),
         nameof(TestBox),
         nameof(TestDoubleLocalVariableInitialization),
-        nameof(TestEquals),
-        nameof(TestLessThan),
         nameof(TestLocalVariableAssignment),
         nameof(TestLocalVariableInitialization),
         nameof(TestTimes),
-        nameof(TestNewPrimitive),
-        nameof(TestValueTypeAddress),
-        nameof(TestTernaryOperator),
         nameof(TestParameterAssignment),
         nameof(TestUnaryExpressions),
-        nameof(TestTypeInferenceInDeclarations),
         nameof(TestMultipleLocalVariableAssignment),
         nameof(TestDoubleLocalVariableInitializationComplex),
-        nameof(TestModulus))]
+        nameof(TestModulus),
+        nameof(TestEquals),
+        nameof(TestLessThan),
+        nameof(TestTernaryOperator),
+        nameof(TestTypeInferenceInDeclarations),
+        nameof(TestValueTypeAddress),
+        nameof(TestNewPrimitive))]
     public class ExpressionTestCase<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
     {
         [Test]
