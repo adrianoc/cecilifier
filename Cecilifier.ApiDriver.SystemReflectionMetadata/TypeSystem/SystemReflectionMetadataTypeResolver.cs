@@ -5,13 +5,6 @@ using Microsoft.CodeAnalysis;
 
 namespace Cecilifier.ApiDriver.SystemReflectionMetadata.TypeSystem;
 
-//TODO: Consider having 2 overload for each ResolveX() method.
-//        - One returning an expression (exactly as of original implementation)
-//        - A seconde one returning a list of expressions to allow for instance, to register new variable definitions
-//          to store intermediate values (for instance, when resolving types in general
-//          it may be required to introduce an assembly reference. If the code can only return expressions
-//          it becomes hard (if not impossible) to store this reference in a variable to be used in a future
-//          call to ResolveX()
 public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContext context) : TypeResolverBase<SystemReflectionMetadataContext>(context)
 {
     public override ResolvedType Resolve(string typeName, in TypeResolutionContext resolutionContext) => throw new NotSupportedException(nameof(Resolve));
@@ -38,7 +31,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
     /// Returns an expression that is suitable to be used with Parameter/Locals/Field/ReturnTypeEncoder
     /// </summary>
     /// <returns></returns>
-    public ResolvedType ResolveForTargetKind(ITypeSymbol type, in TypeResolutionContext resolutionContext)
+    private ResolvedType ResolveForTargetKind(ITypeSymbol type, in TypeResolutionContext resolutionContext)
     {
         if (type.SpecialType == SpecialType.System_Void)
         {
