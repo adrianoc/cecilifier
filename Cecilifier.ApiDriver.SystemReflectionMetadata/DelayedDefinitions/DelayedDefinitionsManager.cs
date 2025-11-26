@@ -125,16 +125,13 @@ public class DelayedDefinitionsManager
 
     private void EnsureTypeDefinitionRecordsHaveFirstHandlesInitialized()
     {
-        const string methodListForTypeWithNoMethods= "MetadataTokens.MethodDefinitionHandle(metadata.GetRowCount(TableIndex.MethodDef) + 1)";
-        const string fieldListForTypeWithNoFields = "MetadataTokens.FieldDefinitionHandle(metadata.GetRowCount(TableIndex.Field) + 1)";
-
         foreach (var typeDeclarationVarName in _typeDefinitionOrder)
         {
             ref var typeRecord = ref CollectionsMarshal.GetValueRefOrNullRef(_postponedTypeDefinitions, typeDeclarationVarName);
             Debug.Assert(!Unsafe.IsNullRef(ref typeRecord));
             
-            typeRecord.FirstMethodHandle ??= methodListForTypeWithNoMethods;
-            typeRecord.FirstFieldHandle ??= fieldListForTypeWithNoFields;
+            typeRecord.FirstMethodHandle ??= ApiDriverConstants.MethodDefinitionTableNextAvailableEntry;
+            typeRecord.FirstFieldHandle ??= ApiDriverConstants.FieldDefinitionTableNextAvailableEntry;
         }
     }
     

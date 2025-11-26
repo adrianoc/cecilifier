@@ -60,8 +60,8 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                                                                   metadata.GetOrAddString("{typeNamespace}"),
                                                                   metadata.GetOrAddString("{definitionContext.Name}"),
                                                                   {baseType.Expression ?? "default" },
-                                                                  fieldList: {firstFieldHandle ?? "MetadataTokens.FieldDefinitionHandle(1)"},
-                                                                  methodList: {typeRecord.FirstMethodHandle ?? "MetadataTokens.MethodDefinitionHandle(1)"});
+                                                                  fieldList: {firstFieldHandle ?? ApiDriverConstants.FieldDefinitionTableNextAvailableEntry},
+                                                                  methodList: {typeRecord.FirstMethodHandle ?? ApiDriverConstants.MethodDefinitionTableNextAvailableEntry});
                                  """));
             context.WriteNewLine();
             
