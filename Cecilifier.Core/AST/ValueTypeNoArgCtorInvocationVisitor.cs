@@ -65,19 +65,19 @@ namespace Cecilifier.Core.AST
         public override void VisitReturnStatement(ReturnStatementSyntax node)
         {
             var valueTypeLocalVariable = DeclareAndInitializeValueTypeLocalVariable();
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloc, valueTypeLocalVariable.VariableName);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloc, valueTypeLocalVariable.VariableName.AsToken());
         }
 
         public override void VisitArrowExpressionClause(ArrowExpressionClauseSyntax node)
         {
             var valueTypeLocalVariable = DeclareAndInitializeValueTypeLocalVariable();
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloc, valueTypeLocalVariable.VariableName);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloc, valueTypeLocalVariable.VariableName.AsToken());
         }
 
         public override void VisitMemberAccessExpression(MemberAccessExpressionSyntax node)
         {
             var valueTypeLocalVariable = DeclareAndInitializeValueTypeLocalVariable();
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloca, new CilLocalVariableHandle(valueTypeLocalVariable.VariableName));
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloca, new CilLocalVariableHandle(valueTypeLocalVariable.VariableName.AsToken()));
             var accessedMember = ModelExtensions.GetSymbolInfo(Context.SemanticModel, node).Symbol.EnsureNotNull();
             if (accessedMember.ContainingType.SpecialType == SpecialType.System_ValueType)
             {
@@ -131,7 +131,7 @@ namespace Cecilifier.Core.AST
         {
             var valueTypeLocalVariable = DeclareAndInitializeValueTypeLocalVariable();
             var loadOpCode = node.IsPassedAsInParameter(Context) ? OpCodes.Ldloca : OpCodes.Ldloc;
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, loadOpCode, valueTypeLocalVariable.VariableName);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, loadOpCode, valueTypeLocalVariable.VariableName.AsToken());
         }
 
         public bool TargetOfAssignmentIsValueType { get; private set; }
@@ -169,7 +169,7 @@ namespace Cecilifier.Core.AST
         private void InitValueTypeLocalVariable(string localVariable)
         {
             Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloca_S, localVariable.AsToken());
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Initobj, ResolvedStructType(ResolveTargetKind.Instruction));
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Initobj, ResolvedStructType(ResolveTargetKind.Instruction).AsToken());
 
             if (objectCreationExpressionSyntax.Initializer is not null)
             {

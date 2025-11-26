@@ -247,7 +247,7 @@ namespace Cecilifier.Core.AST
             // in this case we need to load the address of the field since the expression ^5 (IndexerExpression) will result in a call to System.Index ctor (which is a value type and expects
             // the address of the value type to be in the top of the stack
             var operand = Context.DefinitionVariables.GetVariable(dec.Identifier.Text, VariableMemberKind.Field, declaringTypeSymbol.ToDisplayString()).VariableName;
-            Context.ApiDriver.WriteCilInstruction(Context, il, OpCodes.Ldflda, operand);
+            Context.ApiDriver.WriteCilInstruction(Context, il, OpCodes.Ldflda, operand.AsToken());
             ExpressionVisitor.Visit(Context, il, dec.Initializer);
             return true;
         }

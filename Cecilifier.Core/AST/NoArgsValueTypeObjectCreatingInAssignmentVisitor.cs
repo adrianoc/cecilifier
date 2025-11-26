@@ -68,7 +68,7 @@ namespace Cecilifier.Core.AST
                 case SymbolKind.Local:
                     var operand = Context.DefinitionVariables.GetVariable(node.Identifier.ValueText, VariableMemberKind.LocalVariable).VariableName;
                     var localSymbol = (ILocalSymbol) info.Symbol;
-                    Context.ApiDriver.WriteCilInstruction(Context, ilVar, localSymbol.RefKind == RefKind.None ? OpCodes.Ldloca_S : OpCodes.Ldloc_S, operand);
+                    Context.ApiDriver.WriteCilInstruction(Context, ilVar, localSymbol.RefKind == RefKind.None ? OpCodes.Ldloca_S : OpCodes.Ldloc_S, operand.AsToken());
                     break;
 
                 case SymbolKind.Field:
@@ -76,12 +76,12 @@ namespace Cecilifier.Core.AST
                     var fieldResolverExpression = fs.FieldResolverExpression(Context);
                     if (info.Symbol.IsStatic)
                     {
-                        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldsflda, fieldResolverExpression);
+                        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldsflda, fieldResolverExpression.AsToken());
                     }
                     else
                     {
                         Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldarg_0);
-                        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldflda, fieldResolverExpression);
+                        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldflda, fieldResolverExpression.AsToken());
                     }
                     break;
 
@@ -105,12 +105,12 @@ namespace Cecilifier.Core.AST
         {
             if (objectCreationExpression.Initializer != null)
             {
-                // See comment in ValueTypeNoArgCtorInvocationVisitor.InitValueTypeLocalVariable() for an explanation on why we
+                // See the comment in ValueTypeNoArgCtorInvocationVisitor.InitValueTypeLocalVariable() for an explanation on why we
                 // duplicate the top of the stack.
                 Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Dup);
             }
 
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Initobj, instantiatedType);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Initobj, instantiatedType.AsToken());
             ValueTypeNoArgCtorInvocationVisitor.ProcessInitializerIfNotNull(Context, ilVar,  objectCreationExpression.Initializer);
         }
     }
