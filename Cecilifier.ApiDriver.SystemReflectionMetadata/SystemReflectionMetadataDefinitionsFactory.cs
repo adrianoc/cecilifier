@@ -307,7 +307,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
             Buffer16<string> expsDef = new();
             byte expCountDef = 0;
 
-            var fieldVariableName = context.Naming.SyntheticVariable($"{definitionContext.Name}", ElementKind.Field);
+            var fieldVariableName = context.Naming.SyntheticVariable($"{definitionContext.NameAsValidIdentifier}", ElementKind.Field);
             var varPrefix = index == 0 ? $"var {fieldVariableName} = " : "";
             expsDef[expCountDef++] = Format($"""{varPrefix}metadata.AddFieldDefinition({fieldAttributes}, metadata.GetOrAddString("{definitionContext.Name}"), metadata.GetOrAddBlob({fieldSignatureVar}));""");
             if (initializer.ConstantValue != null)
