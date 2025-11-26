@@ -46,6 +46,13 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         TypedContext(context).DelayedDefinitionsManager.RegisterTypeDefinition(typeVar, $"{typeNamespace}.{definitionContext.Name}", DefineDelayed);
         void DefineDelayed(SystemReflectionMetadataContext ctx, ref TypeDefinitionRecord typeRecord)
         {
+            string? firstFieldHandle = null;
+            for(int i = 0; i < typeRecord.Fields.Count; i++)
+            {
+                var fieldHandle = typeRecord.Fields[i].Invoke(i);
+                firstFieldHandle ??= fieldHandle;
+            }
+            
             typeRecord.TypeDefinitionVariable = ctx.Naming.Type(definitionContext.Identifier, ElementKind.Class);
             ctx.Generate(Format($"""
                                  var {typeRecord.TypeDefinitionVariable} = metadata.AddTypeDefinition(
@@ -53,7 +60,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                                                                   metadata.GetOrAddString("{typeNamespace}"),
                                                                   metadata.GetOrAddString("{definitionContext.Name}"),
                                                                   {baseType.Expression ?? "default" },
-                                                                  fieldList: {typeRecord.FirstFieldHandle ?? "MetadataTokens.FieldDefinitionHandle(1)"},
+                                                                  fieldList: {firstFieldHandle ?? "MetadataTokens.FieldDefinitionHandle(1)"},
                                                                   methodList: {typeRecord.FirstMethodHandle ?? "MetadataTokens.MethodDefinitionHandle(1)"});
                                  """));
             context.WriteNewLine();
@@ -262,21 +269,20 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         return Field(context, definitionContext, fieldOrEvent.ContainingType.ToDisplayString(), context.TypeResolver.ResolveAny(fieldType, ResolveTargetKind.Field),  fieldAttributes, isVolatile, isByRef, initializer);
     }
 
-    public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext definitionContext, string declaringTypeName, ResolvedType fieldType, string fieldAttributes, bool isVolatile, bool isByRef, in FieldInitializationData initializer = default)
+    public IEnumerable<string> Field(IVisitorContext context, MemberDefinitionContext definitionContext, string declaringTypeName, ResolvedType fieldType, string fieldAttributes, bool isVolatile, bool isByRef, FieldInitializationData initializer = default)
     {
         Debug.Assert(definitionContext.ParentDefinitionVariable != null);
-        ((SystemReflectionMetadataContext) context).DelayedDefinitionsManager.RegisterFieldDefinition(definitionContext.ParentDefinitionVariable, definitionContext.DefinitionVariable);
         
-        context.DefinitionVariables.RegisterNonMethod(declaringTypeName, definitionContext.Name, VariableMemberKind.Field, definitionContext.DefinitionVariable);
         var fieldSignatureVar = context.Naming.SyntheticVariable($"{definitionContext.Identifier}_Signature", ElementKind.Field);
         var fieldEncoderVar = context.Naming.SyntheticVariable($"{definitionContext.Identifier}_Encoder", ElementKind.Field);
-        Buffer256<string> exps = new();
+        
+        Buffer16<string> exps = new();
         byte expCount = 0;
         exps[expCount++] = Environment.NewLine;
         exps[expCount++] = Format($"""
-                             BlobBuilder {fieldSignatureVar} = new();
-                             var {fieldEncoderVar} = new BlobEncoder({fieldSignatureVar}).Field();
-                             """);
+                                   BlobBuilder {fieldSignatureVar} = new();
+                                   var {fieldEncoderVar} = new BlobEncoder({fieldSignatureVar}).Field();
+                                   """);
         if (isVolatile)
         {
             var details = fieldType.GetDetails<ResolvedTypeDetails>();
@@ -292,22 +298,39 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
             exps[expCount++] = Format($"{fieldEncoderVar}.{fieldType.Expression};");
         }
         
-        exps[expCount++] = Format($"""var {definitionContext.DefinitionVariable} = metadata.AddFieldDefinition({fieldAttributes}, metadata.GetOrAddString("{definitionContext.Name}"), metadata.GetOrAddBlob({fieldSignatureVar}));""");
-        if (initializer.ConstantValue != null)
+        //Define a field reference and register it.
+        exps[expCount++] = Format($"""var {definitionContext.DefinitionVariable} = metadata.AddMemberReference({definitionContext.ParentDefinitionVariable}, metadata.GetOrAddString("{definitionContext.Name}"), metadata.GetOrAddBlob({fieldSignatureVar}));""");
+        context.DefinitionVariables.RegisterNonMethod(declaringTypeName, definitionContext.Name, VariableMemberKind.Field, definitionContext.DefinitionVariable);
+        
+        TypedContext(context).DelayedDefinitionsManager.RegisterFieldDefinition(definitionContext.ParentDefinitionVariable, index =>
         {
-            exps[expCount++] = $"metadata.AddConstant({definitionContext.DefinitionVariable}, {initializer.ConstantValue});{Environment.NewLine}";
-        }
-        else if (initializer.InitializationData.Length > 0)
-        {
-            var initializationByteArrayAsString = new StringBuilder();
-            foreach (var itemValue in initializer.InitializationData)
-            {
-                initializationByteArrayAsString.Append($"0x{itemValue:x2},");
-            }
+            Buffer16<string> expsDef = new();
+            byte expCountDef = 0;
 
-            exps[expCount++] = $"metadata.AddFieldRelativeVirtualAddress({definitionContext.DefinitionVariable}, mappedFieldData.Count);{Environment.NewLine}";
-            exps[expCount++] = $"mappedFieldData.WriteBytes((ImmutableArray<byte>) [{initializationByteArrayAsString}]);{Environment.NewLine}";
-        }
+            var fieldVariableName = context.Naming.SyntheticVariable($"{definitionContext.Name}", ElementKind.Field);
+            var varPrefix = index == 0 ? $"var {fieldVariableName} = " : "";
+            expsDef[expCountDef++] = Format($"""{varPrefix}metadata.AddFieldDefinition({fieldAttributes}, metadata.GetOrAddString("{definitionContext.Name}"), metadata.GetOrAddBlob({fieldSignatureVar}));""");
+            if (initializer.ConstantValue != null)
+            {
+                expsDef[expCountDef++] = $"metadata.AddConstant({definitionContext.DefinitionVariable}, {initializer.ConstantValue});{Environment.NewLine}";
+            }
+            else if (initializer.InitializationData?.Length > 0)
+            {
+                var initializationByteArrayAsString = new StringBuilder();
+                foreach (var itemValue in initializer.InitializationData)
+                {
+                    initializationByteArrayAsString.Append($"0x{itemValue:x2},");
+                }
+
+                expsDef[expCountDef++] = $"metadata.AddFieldRelativeVirtualAddress({definitionContext.DefinitionVariable}, mappedFieldData.Count);{Environment.NewLine}";
+                expsDef[expCountDef++] = $"mappedFieldData.WriteBytes((ImmutableArray<byte>) [{initializationByteArrayAsString}]);{Environment.NewLine}";
+            }
+            
+            Span<string> span = expsDef;
+            context.Generate(span.Slice(0, expCountDef).ToArray());
+            return index == 0 ? fieldVariableName : null;
+        });
+        
         Span<string> span = exps;
         return span.Slice(0, expCount).ToArray();
     }

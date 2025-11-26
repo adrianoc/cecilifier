@@ -53,6 +53,14 @@ public class DelayedDefinitionsManager
         
         typeRecordOrNullRef.FirstFieldHandle ??= fieldVariableName;
     }
+    
+    internal void RegisterFieldDefinition(string declaringTypeVarName, Func<int, string?> fieldDefinitionFunction)
+    {
+        ref var typeRecordOrNullRef = ref CollectionsMarshal.GetValueRefOrNullRef(_postponedTypeDefinitions, declaringTypeVarName);
+        Debug.Assert(!Unsafe.IsNullRef(ref typeRecordOrNullRef), $"The type '{declaringTypeVarName}' has not been registered yet.");
+        
+        typeRecordOrNullRef.Fields.Add(fieldDefinitionFunction);
+    }
 
     public int RegisterLocalVariable(string localVarName, ResolvedType resolvedVarType, Action<IVisitorContext, string, ResolvedType> action)
     {

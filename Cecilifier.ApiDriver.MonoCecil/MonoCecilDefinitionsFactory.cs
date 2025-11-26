@@ -222,10 +222,10 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
 
     public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext definitionContext, ISymbol fieldOrEvent, ITypeSymbol fieldType, string fieldAttributes, bool isVolatile, bool isByRef, in FieldInitializationData initializer = default)
     {
-        return Field(context, definitionContext, fieldOrEvent.ContainingType.ToDisplayString(), context.TypeResolver.ResolveAny(fieldType, ResolveTargetKind.Field), fieldAttributes, isVolatile, isByRef, in initializer);
+        return Field(context, definitionContext, fieldOrEvent.ContainingType.ToDisplayString(), context.TypeResolver.ResolveAny(fieldType, ResolveTargetKind.Field), fieldAttributes, isVolatile, isByRef, initializer);
     }
 
-    public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext definitionContext, string declaringTypeName, ResolvedType fieldType, string fieldAttributes, bool isVolatile, bool isByRef, in FieldInitializationData initializer = default)
+    public IEnumerable<string> Field(IVisitorContext context, MemberDefinitionContext definitionContext, string declaringTypeName, ResolvedType fieldType, string fieldAttributes, bool isVolatile, bool isByRef, FieldInitializationData initializer = default)
     {
         if (isByRef)
             fieldType = fieldType.MakeByReferenceType();
@@ -240,7 +240,7 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
             $"{definitionContext.ParentDefinitionVariable}.Fields.Add({definitionContext.DefinitionVariable});"
         ];
 
-        if (initializer.InitializationData.Length > 0)
+        if (initializer.InitializationData?.Length > 0)
         {
             var initializationByteArrayAsString = new StringBuilder();
             foreach (var itemValue in initializer.InitializationData)

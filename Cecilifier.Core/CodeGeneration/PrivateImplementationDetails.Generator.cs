@@ -300,7 +300,7 @@ internal partial class PrivateImplementationDetailsGenerator
         // .field assembly static initonly valuetype '<PrivateImplementationDetails>'/'__StaticArrayInitTypeSize=3' '039058C6F2C0CB492C533B0A4D14EF77CC0F78ABCCCED5287D84A1A2011CFB81' at I_00002B50
         var fieldVar = context.Naming.SyntheticVariable("arrayInitializerData", ElementKind.Field);
         var memberDefinitionContext = new MemberDefinitionContext(fieldName, fieldVar, privateImplementationDetailsVar.VariableName);
-        var fieldExpressions = context.ApiDefinitionsFactory.Field(context, memberDefinitionContext, privateImplementationDetailsVar.MemberName, rawDataTypeVar, Constants.CompilerGeneratedTypes.StaticArrayInitFieldModifiers, false, false, new FieldInitializationData(toBeHashed));
+        var fieldExpressions = context.ApiDefinitionsFactory.Field(context, memberDefinitionContext, privateImplementationDetailsVar.MemberName, rawDataTypeVar, Constants.CompilerGeneratedTypes.StaticArrayInitFieldModifiers, false, false, new FieldInitializationData(toBeHashed.ToArray()));
         context.Generate(fieldExpressions);
         context.WriteNewLine();
 

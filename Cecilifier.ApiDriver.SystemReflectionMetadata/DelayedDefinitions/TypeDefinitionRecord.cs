@@ -28,6 +28,8 @@ internal record struct TypeDefinitionRecord(string TypeQualifiedName, string Typ
     public string? FirstMethodHandle { get; set; }
     
     public IList<PropertyDefinitionRecord> Properties { get; } = new List<PropertyDefinitionRecord>();
+    
+    internal IList<Func<int, string?>> Fields { get; } = new List<Func<int, string?>>();
 
     public required DelayedTypeDefinitionAction DefinitionFunction { internal get; init; }
 
