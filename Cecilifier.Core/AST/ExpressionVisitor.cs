@@ -1083,9 +1083,9 @@ namespace Cecilifier.Core.AST
             var type = Context.SemanticModel.GetTypeInfo(operand).Type;
             var tempLocalName = StoreTopOfStackInLocalVariable(Context, ilVar, "tmp", type).VariableName;
             
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloc, tempLocalName);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloc, tempLocalName.AsLocalVariable());
             assignmentVisitor.InstructionPrecedingValueToLoad = Context.CurrentLine;
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloc, tempLocalName);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloc, tempLocalName.AsLocalVariable());
 
             if (!isPrefix)
             {
