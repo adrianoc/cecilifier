@@ -308,11 +308,11 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
             byte expCountDef = 0;
 
             var fieldVariableName = context.Naming.SyntheticVariable($"{definitionContext.NameAsValidIdentifier}", ElementKind.Field);
-            var varPrefix = index == 0 ? $"var {fieldVariableName} = " : "";
+            var varPrefix = index == 0 || initializer ? $"var {fieldVariableName} = " : "";
             expsDef[expCountDef++] = Format($"""{varPrefix}metadata.AddFieldDefinition({fieldAttributes}, metadata.GetOrAddString("{definitionContext.Name}"), metadata.GetOrAddBlob({fieldSignatureVar}));""");
             if (initializer.ConstantValue != null)
             {
-                expsDef[expCountDef++] = $"metadata.AddConstant({definitionContext.DefinitionVariable}, {initializer.ConstantValue});{Environment.NewLine}";
+                expsDef[expCountDef++] = $"metadata.AddConstant({fieldVariableName}, {initializer.ConstantValue});{Environment.NewLine}";
             }
             else if (initializer.InitializationData?.Length > 0)
             {
@@ -322,7 +322,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                     initializationByteArrayAsString.Append($"0x{itemValue:x2},");
                 }
 
-                expsDef[expCountDef++] = $"metadata.AddFieldRelativeVirtualAddress({definitionContext.DefinitionVariable}, mappedFieldData.Count);{Environment.NewLine}";
+                expsDef[expCountDef++] = $"metadata.AddFieldRelativeVirtualAddress({fieldVariableName}, mappedFieldData.Count);{Environment.NewLine}";
                 expsDef[expCountDef++] = $"mappedFieldData.WriteBytes((ImmutableArray<byte>) [{initializationByteArrayAsString}]);{Environment.NewLine}";
             }
             

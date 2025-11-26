@@ -10,4 +10,6 @@ public readonly struct FieldInitializationData(byte[] initializationData, object
     
     public static implicit operator FieldInitializationData(string value) => new(Array.Empty<byte>(), value);
     public static implicit operator FieldInitializationData(int value) => new(Array.Empty<byte>(), value);
+    
+    public static implicit operator bool(in FieldInitializationData data) => data.InitializationData != null || data.ConstantValue != null;
 }
