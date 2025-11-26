@@ -535,7 +535,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 
                 if (!CheckTypeMember(memberVisitor, sourceMember, target, targetFields))
                 {
-                    continue;
+                    return false;
                 }
 
                 var targetField = targetFields[sourceMember.FullName];
