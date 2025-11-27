@@ -66,6 +66,7 @@ namespace Cecilifier.Core.Extensions
         {
             return symbol switch
             {
+                IMethodSymbol { MethodKind: MethodKind.Conversion} method => method.ReturnType.ToDisplayString(ValidVariableNameFormat),
                 IMethodSymbol { MethodKind: MethodKind.UserDefinedOperator} method => method.Name,
                 IMethodSymbol method => method.ToDisplayString(ValidVariableNameFormat),
                 _ => symbol.ToDisplayString(ValidVariableNameFormat)

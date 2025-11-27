@@ -1,0 +1,16 @@
+﻿.locals init (System.Index V_0)
+IL_0000: ldc.i4 42
+IL_0005: call System.Index System.Index::op_Implicit(System.Int32)
+IL_000a: stloc V_0
+IL_000e: nop
+IL_000f: nop
+IL_0010: ldarg.2
+IL_0011: ldloca V_0
+IL_0015: nop
+IL_0016: nop
+IL_0017: ldarg.2
+IL_0018: ldlen
+IL_0019: conv.i4
+IL_001a: call System.Int32 System.Index::GetOffset(System.Int32)
+IL_001f: ldelem.i4
+IL_0020: ret
