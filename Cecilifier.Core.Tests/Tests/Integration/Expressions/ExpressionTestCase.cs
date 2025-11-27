@@ -29,7 +29,8 @@ namespace Cecilifier.Core.Tests.Integration
         nameof(TestNewPrimitive),
         nameof(TestNewCustom),
         nameof(TestNewSingleDimensionArray),
-        nameof(TestUnaryExpressions))]
+        nameof(TestUnaryExpressions),
+        nameof(TestIncrementDecrementExpressions))]
     public class ExpressionTestCase<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
     {
         [Test]

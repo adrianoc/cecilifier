@@ -1,0 +1,20 @@
+﻿.locals init (System.Int32 V_0)
+IL_0000: ldarg.0
+IL_0001: ldarg.1
+IL_0002: stfld System.Int32 PostDecrementField::f
+IL_0007: ldarg.0
+IL_0008: ldfld System.Int32 PostDecrementField::f
+IL_000d: stloc V_0
+IL_0011: nop
+IL_0012: nop
+IL_0013: ldloc V_0
+IL_0017: nop
+IL_0018: nop
+IL_0019: ldarg.0
+IL_001a: ldloc V_0
+IL_001e: nop
+IL_001f: nop
+IL_0020: ldc.i4.1
+IL_0021: sub
+IL_0022: stfld System.Int32 PostDecrementField::f
+IL_0027: ret

@@ -1,0 +1,10 @@
+﻿.locals ()
+IL_0000: ldarg.1
+IL_0001: ldc.i4.1
+IL_0002: sub
+IL_0003: dup
+IL_0004: starg.s 1
+IL_0006: nop
+IL_0007: nop
+IL_0008: nop
+IL_0009: ret

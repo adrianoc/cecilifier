@@ -1,0 +1,16 @@
+﻿.locals init (System.Int32 V_0)
+IL_0000: ldarg.1
+IL_0001: dup
+IL_0002: ldc.i4.1
+IL_0003: add
+IL_0004: starg.s 1
+IL_0006: nop
+IL_0007: nop
+IL_0008: nop
+IL_0009: stloc V_0
+IL_000d: nop
+IL_000e: nop
+IL_000f: ldloc V_0
+IL_0013: nop
+IL_0014: nop
+IL_0015: ret
