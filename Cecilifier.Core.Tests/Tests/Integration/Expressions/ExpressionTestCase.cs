@@ -31,7 +31,9 @@ namespace Cecilifier.Core.Tests.Integration
         nameof(TestNewSingleDimensionArray),
         nameof(TestUnaryExpressions),
         nameof(TestIncrementDecrementExpressions),
-        nameof(TestRangeExpression))]
+        nameof(TestIndexerAccess),
+        nameof(TestRangeExpression),
+        nameof(TestIndexExpression))]
     public class ExpressionTestCase<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
     {
         [Test]
@@ -167,6 +169,7 @@ namespace Cecilifier.Core.Tests.Integration
         [TestCase("PropertyRead")]
         [TestCase("ArrayWrite")]
         [TestCase("PropertyWrite")]
+        [ParameterizedResourceFilter<SystemReflectionMetadataContext>("ArrayRead", "ArrayWrite", IgnoreReason = "Other tests depends on generics which are not supported as of today")]
         public void TestIndexerAccess(string prefix)
         {
             AssertResourceTest($"Expressions/{prefix}IndexerAccess");
