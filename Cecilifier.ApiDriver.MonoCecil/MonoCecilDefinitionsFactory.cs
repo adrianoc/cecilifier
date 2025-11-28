@@ -8,6 +8,7 @@ using Cecilifier.Core;
 using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.ApiDriver.Attributes;
 using Cecilifier.Core.ApiDriver.DefinitionsFactory;
+using Cecilifier.Core.ApiDriver.Handles;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
@@ -200,8 +201,20 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
 
         string OperandFor(InstructionRepresentation inst)
         {
-            return inst.Operand?.Insert(0, ", ")
-                   ?? inst.BranchTargetTag?.Replace(inst.BranchTargetTag, $", {tagToInstructionDefMapping[inst.BranchTargetTag]}")
+            if (inst.Operand != null)
+            {
+                string operandValue = inst.Operand switch
+                {
+                    CilToken token => token.VariableName,
+                    string str => str,
+                    DefinitionVariable definitionVariable => definitionVariable.VariableName,
+                    _ => (string) inst.Operand
+                };
+                
+                return $", {operandValue}";
+            }
+
+            return inst.BranchTargetTag?.Replace(inst.BranchTargetTag, $", {tagToInstructionDefMapping[inst.BranchTargetTag]}")
                    ?? string.Empty;
         }
     }

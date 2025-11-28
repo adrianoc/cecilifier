@@ -155,7 +155,7 @@ namespace Cecilifier.Core.AST
             var isStatic = eventSymbol.IsStatic;
             var (ldfld, ldflda) = isStatic ? (OpCodes.Ldsfld, OpCodes.Ldsflda) : (OpCodes.Ldfld, OpCodes.Ldflda);
 
-            var removeMethod = Utils.ImportFromMainModule("typeof(Delegate).GetMethod(\"Remove\")");
+            var removeMethod = Context.MemberResolver.ResolveMethod(Context.RoslynTypeSystem.ForType<Delegate>().GetMembers("Remove").Single().EnsureNotNull<ISymbol, IMethodSymbol>());
             var compareExchangeExps = CompareExchangeMethodResolvingExps(backingFieldVar, out var compExcVar);
 
             var fieldVar = Utils.MakeGenericTypeIfAppropriate(Context, eventSymbol, backingFieldVar, eventDeclaringTypeVar.VariableName);
@@ -165,20 +165,20 @@ namespace Cecilifier.Core.AST
             ResolvedType[] localVariableTypes = [];
             InstructionRepresentation[] instructions = [
                 lgarg_0,
-                ldfld.WithOperand(fieldVar),
+                ldfld.WithOperand(fieldVar.AsToken()),
                 OpCodes.Stloc_0,
                 OpCodes.Ldloc_0.WithInstructionMarker("LoopStart"),
                 OpCodes.Stloc_1,
                 OpCodes.Ldloc_1,
                 OpCodes.Ldarg.WithOperand(isStatic ? "0" : "1"),
-                OpCodes.Call.WithOperand(removeMethod),
-                OpCodes.Castclass.WithOperand(Context.TypeResolver.ResolveAny(eventSymbol.Type, ResolveTargetKind.Instruction)),
+                OpCodes.Call.WithOperand(removeMethod.AsToken()),
+                OpCodes.Castclass.WithOperand(Context.TypeResolver.ResolveAny(eventSymbol.Type, ResolveTargetKind.Instruction).Expression.AsToken()),
                 OpCodes.Stloc_2,
                 lgarg_0,
-                ldflda.WithOperand(fieldVar),
+                ldflda.WithOperand(fieldVar.AsToken()),
                 OpCodes.Ldloc_2,
                 OpCodes.Ldloc_1,
-                OpCodes.Call.WithOperand(compExcVar),
+                OpCodes.Call.WithOperand(compExcVar.AsToken()),
                 OpCodes.Stloc_0,
                 OpCodes.Ldloc_0,
                 OpCodes.Ldloc_1,
@@ -195,7 +195,8 @@ namespace Cecilifier.Core.AST
             var isStatic = eventSymbol.IsStatic;
             var (ldfld, ldflda) = isStatic ? (OpCodes.Ldsfld, OpCodes.Ldsflda) : (OpCodes.Ldfld, OpCodes.Ldflda);
 
-            var combineMethod = Utils.ImportFromMainModule("typeof(Delegate).GetMethods().Single(m => m.Name == \"Combine\" && m.IsStatic && m.GetParameters().Length == 2)");
+            var combineOverloads = Context.RoslynTypeSystem.ForType<Delegate>().GetMembers("Combine").OfType<IMethodSymbol>();
+            var combineMethod = Context.MemberResolver.ResolveMethod(combineOverloads.Single(m => m.IsStatic && m.Parameters.Length == 2).EnsureNotNull<ISymbol, IMethodSymbol>());
             var compareExchangeExps = CompareExchangeMethodResolvingExps(backingFieldVar, out var compExcVar);
 
             var fieldVar = Utils.MakeGenericTypeIfAppropriate(Context, eventSymbol, backingFieldVar, eventDeclaringTypeVar.VariableName);
@@ -205,20 +206,20 @@ namespace Cecilifier.Core.AST
             ResolvedType[] localVariableTypes = [];
             InstructionRepresentation[] instructions = [
                 lgarg_0,
-                ldfld.WithOperand(fieldVar),
+                ldfld.WithOperand(fieldVar.AsToken()),
                 OpCodes.Stloc_0,
                 OpCodes.Ldloc_0.WithInstructionMarker("LoopStart"),
                 OpCodes.Stloc_1,
                 OpCodes.Ldloc_1,
                 OpCodes.Ldarg.WithOperand(isStatic ? "0" : "1"),
-                OpCodes.Call.WithOperand(combineMethod),
-                OpCodes.Castclass.WithOperand(Context.TypeResolver.ResolveAny(eventSymbol.Type, ResolveTargetKind.Instruction)),
+                OpCodes.Call.WithOperand(combineMethod.AsToken()),
+                OpCodes.Castclass.WithOperand(Context.TypeResolver.ResolveAny(eventSymbol.Type, ResolveTargetKind.Instruction).Expression.AsToken()),
                 OpCodes.Stloc_2,
                 lgarg_0,
-                ldflda.WithOperand(fieldVar),
+                ldflda.WithOperand(fieldVar.AsToken()),
                 OpCodes.Ldloc_2,
                 OpCodes.Ldloc_1,
-                OpCodes.Call.WithOperand(compExcVar),
+                OpCodes.Call.WithOperand(compExcVar.AsToken()),
                 OpCodes.Stloc_0,
                 OpCodes.Ldloc_0,
                 OpCodes.Ldloc_1,
