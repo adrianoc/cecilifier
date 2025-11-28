@@ -109,11 +109,10 @@ namespace Cecilifier.Core.AST
             if (!isInterfaceDef)
             {
                 ilContext = Context.ApiDriver.NewIlContext(Context, accessorName, methodVar);
-                methodBodyExpressions = methodBodyFactory(node, eventSymbol, accessorName, methodVar, backingFieldVar, ilContext)
-                                                .Append($"{methodVar}.Body.InitLocals = true;");
+                methodBodyExpressions = methodBodyFactory(node, eventSymbol, accessorName, methodVar, backingFieldVar, ilContext);
             }
 
-            AddAccessor(node, eventSymbol, ilContext, methodVar, accessorName, eventType, methodBodyExpressions);
+            AddAccessor(node, eventSymbol, in ilContext, methodVar, accessorName, eventType, methodBodyExpressions);
             if (!isInterfaceDef)
             {
                 CreateLocalVarsForEventRegistrationMethods(methodVar, accessorName, in eventType);
