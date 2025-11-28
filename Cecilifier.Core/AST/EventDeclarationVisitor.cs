@@ -51,7 +51,7 @@ namespace Cecilifier.Core.AST
                 var methodVar = Context.Naming.SyntheticVariable(acc.Keyword.ValueText, ElementKind.Method);
                 var ilContext = Context.ApiDriver.NewIlContext(Context, acc.Keyword.ValueText, methodVar);
                 var body = Context.ApiDefinitionsFactory.MethodBody(Context, acc.Keyword.ValueText, ilContext, [], []);
-                var accessorMethodVar = AddAccessor(node, eventSymbol, methodVar, acc.Keyword.ValueText, eventType, body);
+                var accessorMethodVar = AddAccessor(node, eventSymbol, in ilContext, methodVar, acc.Keyword.ValueText, eventType, body);
                 using (Context.DefinitionVariables.WithVariable(accessorMethodVar))
                 {
                     StatementVisitor.Visit(Context, ilContext.VariableName, acc.Body);
@@ -100,30 +100,35 @@ namespace Cecilifier.Core.AST
             HandleAttributesInMemberDeclaration(node.AttributeLists, evtDefVar, VariableMemberKind.None);
         }
 
-        private string AddAccessor(EventFieldDeclarationSyntax node, IEventSymbol eventSymbol, string accessorName, string backingFieldVar, ResolvedType eventType, Func<EventFieldDeclarationSyntax, IEventSymbol, string, string, string, IEnumerable<string>> methodBodyFactory)
+        private string AddAccessor(EventFieldDeclarationSyntax node, IEventSymbol eventSymbol, string accessorName, string backingFieldVar, ResolvedType eventType, Func<EventFieldDeclarationSyntax, IEventSymbol, string, string, string, IlContext, IEnumerable<string>> methodBodyFactory)
         {
             var methodVar = Context.Naming.SyntheticVariable(accessorName, ElementKind.Method);
             var isInterfaceDef = eventSymbol.ContainingType.TypeKind == TypeKind.Interface;
             IEnumerable<string> methodBodyExpressions = Array.Empty<string>();
+            IlContext ilContext = default;
             if (!isInterfaceDef)
             {
-                var localVarsExps = CreateLocalVarsForEventRegistrationMethods(methodVar, backingFieldVar);
-                methodBodyExpressions = methodBodyFactory(node, eventSymbol, accessorName, methodVar, backingFieldVar)
-                                                .Concat(localVarsExps)
+                ilContext = Context.ApiDriver.NewIlContext(Context, accessorName, methodVar);
+                methodBodyExpressions = methodBodyFactory(node, eventSymbol, accessorName, methodVar, backingFieldVar, ilContext)
                                                 .Append($"{methodVar}.Body.InitLocals = true;");
             }
 
-            AddAccessor(node, eventSymbol, methodVar, accessorName, eventType, methodBodyExpressions);
+            AddAccessor(node, eventSymbol, ilContext, methodVar, accessorName, eventType, methodBodyExpressions);
+            if (!isInterfaceDef)
+            {
+                CreateLocalVarsForEventRegistrationMethods(methodVar, accessorName, in eventType);
+            }
+
             return methodVar;
         }
 
-        private MethodDefinitionVariable AddAccessor(MemberDeclarationSyntax node, IEventSymbol eventSymbol, string methodVar, string accessorName, ResolvedType eventType, IEnumerable<string> methodBodyExpressions)
+        private MethodDefinitionVariable AddAccessor(MemberDeclarationSyntax node, IEventSymbol eventSymbol, in IlContext ilContext, string methodVar, string accessorName, ResolvedType eventType, IEnumerable<string> methodBodyExpressions)
         {
             var accessorModifiers = AccessModifiersForEventAccessors(node, eventSymbol.ContainingType);
             var methodName = $"{accessorName}_{eventSymbol.Name}";
             var methodExps = Context.ApiDefinitionsFactory.Method(
                                                                                 Context, 
-                                                                                new BodiedMemberDefinitionContext(methodName, methodVar, eventDeclaringTypeVar.VariableName, eventSymbol.IsStatic ? MemberOptions.Static : MemberOptions.None, IlContext.None), 
+                                                                                new BodiedMemberDefinitionContext(methodName, methodVar, eventDeclaringTypeVar.VariableName, eventSymbol.IsStatic ? MemberOptions.Static : MemberOptions.None, ilContext), 
                                                                                 eventDeclaringTypeVar.MemberName, 
                                                                                 accessorModifiers, 
                                                                                 [ new ParameterSpec("value", eventType, RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = eventSymbol.Type.ToDisplayString() }],
@@ -140,13 +145,13 @@ namespace Cecilifier.Core.AST
             return node.Modifiers.ModifiersForSyntheticMethod("MethodAttributes.SpecialName", typeSymbol);
         }
 
-        private IEnumerable<string> CreateLocalVarsForEventRegistrationMethods(string methodVar, string backingFieldVar)
+        private void CreateLocalVarsForEventRegistrationMethods(string methodVar, string eventAccessorName, in ResolvedType eventType)
         {
             for (int i = 0; i < 3; i++)
-                yield return $"{methodVar}.Body.Variables.Add(new VariableDefinition({backingFieldVar}.FieldType));";
+                Context.ApiDefinitionsFactory.LocalVariable(Context, Context.Naming.SyntheticVariable(eventAccessorName, ElementKind.LocalVariable), methodVar, eventType);
         }
 
-        private IEnumerable<string> RemoveMethodBody(EventFieldDeclarationSyntax context, IEventSymbol eventSymbol, string accessorName, string removeMethodVar, string backingFieldVar)
+        private IEnumerable<string> RemoveMethodBody(EventFieldDeclarationSyntax context, IEventSymbol eventSymbol, string accessorName, string removeMethodVar, string backingFieldVar, IlContext ilContext)
         {
             var isStatic = eventSymbol.IsStatic;
             var (ldfld, ldflda) = isStatic ? (OpCodes.Ldsfld, OpCodes.Ldsflda) : (OpCodes.Ldfld, OpCodes.Ldflda);
@@ -181,12 +186,12 @@ namespace Cecilifier.Core.AST
                 OpCodes.Bne_Un_S.WithBranchOperand("LoopStart"),
                 OpCodes.Ret
             ];
-            var bodyExps = Context.ApiDefinitionsFactory.MethodBody(Context, accessorName, Context.ApiDriver.NewIlContext(Context, accessorName, removeMethodVar), localVariableTypes, instructions);
+            var bodyExps = Context.ApiDefinitionsFactory.MethodBody(Context, accessorName, ilContext, localVariableTypes, instructions);
 
             return compareExchangeExps.Concat(bodyExps);
         }
 
-        private IEnumerable<string> AddMethodBody(EventFieldDeclarationSyntax context, IEventSymbol eventSymbol, string accessorName, string addMethodVar, string backingFieldVar)
+        private IEnumerable<string> AddMethodBody(EventFieldDeclarationSyntax context, IEventSymbol eventSymbol, string accessorName, string addMethodVar, string backingFieldVar, IlContext ilContext)
         {
             var isStatic = eventSymbol.IsStatic;
             var (ldfld, ldflda) = isStatic ? (OpCodes.Ldsfld, OpCodes.Ldsflda) : (OpCodes.Ldfld, OpCodes.Ldflda);
@@ -222,7 +227,7 @@ namespace Cecilifier.Core.AST
                 OpCodes.Nop,
                 OpCodes.Ret
             ];
-            var bodyExps = Context.ApiDefinitionsFactory.MethodBody(Context, accessorName, Context.ApiDriver.NewIlContext(Context, accessorName, addMethodVar), localVariableTypes, instructions);
+            var bodyExps = Context.ApiDefinitionsFactory.MethodBody(Context, accessorName, ilContext, localVariableTypes, instructions);
 
             return compareExchangeExps.Concat(bodyExps);
         }

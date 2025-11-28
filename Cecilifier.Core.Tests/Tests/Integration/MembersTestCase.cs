@@ -9,7 +9,6 @@ namespace Cecilifier.Core.Tests.Integration
 {
     [TestFixture(typeof(MonoCecilContext))]
     [TestFixture(typeof(SystemReflectionMetadataContext))]
-    [EnableForContext<SystemReflectionMetadataContext>(nameof(TestForwardReferences), IgnoreReason = "Not implemented yet")]
     public class MembersTestCase<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
     {
         [Test]
@@ -21,6 +20,7 @@ namespace Cecilifier.Core.Tests.Integration
         [TestCase("SimpleEvent")]
         [TestCase("StaticEvent")]
         [TestCase("GenericEventHandler")]
+        [ParameterizedResourceFilter<SystemReflectionMetadataContext>("SimpleEvent")]
         public void TestEvents(string testName)
         {
             AssertResourceTest($"Members/Events/{testName}");
