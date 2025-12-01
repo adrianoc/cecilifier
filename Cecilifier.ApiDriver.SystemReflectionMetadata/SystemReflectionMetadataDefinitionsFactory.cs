@@ -106,6 +106,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                 context.Generate($"metadata.AddInterfaceImplementation({typeRecord.TypeDefinitionVariable}, {context.TypeResolver.ResolveAny(itf, ResolveTargetKind.TypeReference)});");
                 context.WriteNewLine();
             }
+            context.WriteNewLine();
         }
     }
 
@@ -147,7 +148,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                                                     {bodyOffset},
                                                     parameterList: {firstParameterHandle});
                           """);
-            
+            ctx.WriteNewLine();
             ctx.WriteNewLine();
             
             ctx.DefinitionVariables.RegisterMethod(methodSymbol.AsMethodDefinitionVariable(methodDefVar));
@@ -215,6 +216,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                                                     parameterList: {firstParameterHandle});
                           """);
             ctx.WriteNewLine();
+            ctx.WriteNewLine();
             
             var toBeRegistered = new MethodDefinitionVariable(
                                         VariableMemberKind.Method,
@@ -242,7 +244,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                      .MethodSignature(isInstanceMethod: {{ (!isStatic).ToKeyword()}})
                      .Parameters(0, returnType => returnType.Void(), parameters => { });
               """);
-
+        
         var parentDefinitionVariable = definitionContext.Member.ParentDefinitionVariable ?? throw new ArgumentNullException(nameof(definitionContext.Member.ParentDefinitionVariable));
         TypedContext(context).DelayedDefinitionsManager.RegisterMethodDefinition(parentDefinitionVariable, (ctx, methodRecord) =>
         {
@@ -259,6 +261,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                                                              parameterList: {methodRecord.FirstParameterHandle});
                                    """);
             
+            ctx.WriteNewLine();
             ctx.WriteNewLine();
             return ctorDefVar;
         });
@@ -475,14 +478,15 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
             return "MetadataTokens.ParameterHandle(metadata.GetRowCount(TableIndex.Param) + 1)";
 
         var firstParameterHandle = ctx.Naming.SyntheticVariable(parameterList[0], ElementKind.Parameter);
-        ctx.Generate($"var {firstParameterHandle} = ");
-        
         for(int i = 0; i < parameterList.Count; i++)
         {
-            ctx.Generate($"""metadata.AddParameter(ParameterAttributes.None, metadata.GetOrAddString("{parameterList[i]}"), {i+1});""");
+            if (i == 0)
+                ctx.Generate($"""var {firstParameterHandle} = metadata.AddParameter(ParameterAttributes.None, metadata.GetOrAddString("{parameterList[i]}"), {i+1});""");
+            else
+                ctx.Generate($"""metadata.AddParameter(ParameterAttributes.None, metadata.GetOrAddString("{parameterList[i]}"), {i+1});""");
             ctx.WriteNewLine();
         }
-        
+        ctx.WriteNewLine();
         return firstParameterHandle;
     }
 

@@ -66,7 +66,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
             return $"""
                       metadata.AddTypeReference(
                           {_context.AssemblyResolver.Resolve(_context, _context.RoslynTypeSystem.SystemObject.ContainingAssembly)},
-                           metadata.GetOrAddString("{type.ContainingNamespace.Name}"),
+                          metadata.GetOrAddString("{type.ContainingNamespace.Name}"),
                           metadata.GetOrAddString("{type.Name}"))
                       """;
         return ResolveForTargetKind(type, resolutionContext);

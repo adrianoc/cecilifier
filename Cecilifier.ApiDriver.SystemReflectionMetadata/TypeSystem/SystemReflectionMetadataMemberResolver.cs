@@ -134,7 +134,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
                                                  Parameters(0, returnType => returnType.Void(), parameters => { });
                                           
                                           var {{voidParameterlessMethodRefVarName}} = metadata.AddMemberReference(
-                                                                                                    {{context.TypeResolver.ResolveAny(baseType, ResolveTargetKind.TypeReference)}},
+                                                                                                    {{context.TypeResolver.ResolveAny(baseType, ResolveTargetKind.TypeReference).Expression}},
                                                                                                     metadata.GetOrAddString(".ctor"),
                                                                                                     metadata.GetOrAddBlob({{parameterlessCtorSignatureVarName}}));
                                           """);

@@ -90,6 +90,8 @@ namespace Cecilifier.Core.AST
             if (!node.Statement.IsKind(SyntaxKind.ReturnStatement))
                 context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Ret);
 
+            context.WriteNewLine();
+            
             context.OnFinishedTypeDeclaration(null);
             return true;
 
