@@ -1570,7 +1570,7 @@ namespace Cecilifier.Core.AST
                     break;
                 
                 case SymbolKind.Event:
-                    ProcessEvent(ilVar, node, (IEventSymbol) member.Symbol);
+                    ProcessEvent(node, (IEventSymbol) member.Symbol);
                     break;
 
                 default:
@@ -1626,6 +1626,34 @@ namespace Cecilifier.Core.AST
             else
             {
                 context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Rem);
+            }
+        }
+        
+        private void ProcessEvent(SimpleNameSyntax node, IEventSymbol eventSymbol)
+        {
+            var nodeParent = (CSharpSyntaxNode) node.Parent!;
+            Debug.Assert(nodeParent != null);
+
+            var resolvedFieldVariable = Context.MemberResolver.ResolveEventField(eventSymbol);
+            if (!eventSymbol.IsStatic && node.IsMemberAccessThroughImplicitThis())
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldarg_0);
+
+            if (HandleLoadAddress(ilVar, eventSymbol.Type, node, eventSymbol.IsStatic ? OpCodes.Ldsflda : OpCodes.Ldflda, resolvedFieldVariable.AsToken()))
+            {
+                return;
+            }
+
+            var opCode = eventSymbol.LoadOpCodeForFieldAccess();
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, opCode, resolvedFieldVariable.AsToken());
+
+            if (node.Parent.IsKind(SyntaxKind.InvocationExpression))
+            {
+                _lastInstructionLoadingTargetOfInvocation = Context.CurrentLine;
+                // Node is being used as the target of an invocation, something like `MyEvent(...)`; this is the equivalent of `MyEvent.Invoke(...)`
+                // but since there's no explicit reference to `Invoke()` method we need to emit the invocation manually (as opposed to simply letting 
+                // roslyn keep visiting the nodes and eventually emitting the call when it reaches the `Invoke()` node).
+                var invokeMethod = eventSymbol.Type.GetMembers("Invoke").OfType<IMethodSymbol>().Single();
+                Context.AddCallToMethod(invokeMethod,  ilVar);
             }
         }
     }

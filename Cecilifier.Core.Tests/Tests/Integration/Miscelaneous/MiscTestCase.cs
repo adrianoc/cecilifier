@@ -9,7 +9,7 @@ namespace Cecilifier.Core.Tests.Integration
 {
     [TestFixture(typeof(MonoCecilContext))]
     [TestFixture(typeof(SystemReflectionMetadataContext))]
-    [EnableForContext<SystemReflectionMetadataContext>(nameof(TestTopLevelStatements), nameof(TestNamespaces), IgnoreReason = "Not implemented yet")]
+    [EnableForContext<SystemReflectionMetadataContext>(nameof(TestTopLevelStatements), nameof(TestNamespaces), nameof(AttributesOnMembers), IgnoreReason = "Not implemented yet")]
     public class MiscTestCase<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
     {
         [TestCase("Parameters")]
@@ -75,6 +75,7 @@ namespace Cecilifier.Core.Tests.Integration
         [TestCase("InterfaceAndMembers")]
         [TestCase("EnumAndMembers")]
         [TestCase("StructAndMembers")]
+        [ParameterizedResourceFilter<SystemReflectionMetadataContext>("StructAndMembers")]
         public void AttributesOnMembers(string typeKind)
         {
             AssertResourceTest($"Misc/Attributes/AttributesOn{typeKind}");

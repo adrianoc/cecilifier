@@ -402,24 +402,6 @@ namespace Cecilifier.Core.AST
             HandlePotentialDelegateInvocationOn(node, fieldSymbol.Type, ilVar);
             HandlePotentialRefLoad(ilVar, node, fieldSymbol.Type);
         }
-        
-        protected void ProcessEvent(string ilVar, SimpleNameSyntax node, IEventSymbol eventSymbol)
-        {
-            var nodeParent = (CSharpSyntaxNode) node.Parent;
-            Debug.Assert(nodeParent != null);
-
-            var resolvedFieldVariable = Context.MemberResolver.ResolveEventField(eventSymbol);
-            if (!eventSymbol.IsStatic && node.IsMemberAccessThroughImplicitThis())
-                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldarg_0);
-
-            if (HandleLoadAddress(ilVar, eventSymbol.Type, node, eventSymbol.IsStatic ? OpCodes.Ldsflda : OpCodes.Ldflda, resolvedFieldVariable.AsToken()))
-            {
-                return;
-            }
-
-            var opCode = eventSymbol.LoadOpCodeForFieldAccess();
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, opCode, resolvedFieldVariable.AsToken());
-        }
 
         protected void ProcessLocalVariable(string ilVar, SimpleNameSyntax localVarSyntax, ILocalSymbol symbol)
         {

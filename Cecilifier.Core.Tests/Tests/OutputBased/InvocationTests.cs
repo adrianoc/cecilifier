@@ -13,9 +13,10 @@ public class InvocationTests<TContext> : OutputBasedTestBase<TContext> where TCo
     
     [Test]
     public void ExplicitDelegateInvocation() => AssertOutput("System.Action a = M; a.Invoke(); static void M() => System.Console.Write(42);", "42");
-   
-    [Test]
-    public void ExplicitEventInvocation() => AssertOutput("""
+    
+    [TestCase(".Invoke", TestName = "Explicit")]
+    [TestCase("", TestName = "Implicit")]
+    public void EventRising(string calledMethod) => AssertOutput($$"""
                                                                     var x = new SimpleEvent();
                                                                     
                                                                     x.TheEvent += Handle;
@@ -25,9 +26,8 @@ public class InvocationTests<TContext> : OutputBasedTestBase<TContext> where TCo
                                                                     
                                                                     public class SimpleEvent
                                                                     {
-                                                                        public void Trigger() => TheEvent.Invoke(this, null);
                                                                         public event System.EventHandler TheEvent;
+                                                                        public void Trigger() => TheEvent{{calledMethod}}(this, null);
                                                                     }
                                                                     """, "42");
-    
 }

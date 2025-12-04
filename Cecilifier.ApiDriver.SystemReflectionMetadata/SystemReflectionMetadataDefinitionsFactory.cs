@@ -126,14 +126,14 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         }
 
         var memberParentDefinitionVariable = bodiedMemberDefinitionContext.Member.ParentDefinitionVariable ?? throw new ArgumentNullException(nameof(bodiedMemberDefinitionContext.Member.ParentDefinitionVariable));
-        ((SystemReflectionMetadataContext) context).DelayedDefinitionsManager.RegisterMethodDefinition(memberParentDefinitionVariable, (ctx, methodRecord) =>
+        TypedContext(context).DelayedDefinitionsManager.RegisterMethodDefinition(memberParentDefinitionVariable, (ctx, methodRecord) =>
         {
             EmitLocalVariables(ctx, bodiedMemberDefinitionContext.Member.Identifier, in methodRecord);
             
             var methodSignatureVar = ctx.DefinitionVariables.GetMethodVariable(methodSymbol.AsMethodVariable(VariableMemberKind.MethodSignature));
             Debug.Assert(methodSignatureVar.IsValid);
             
-            var methodDefVar = context.Naming.SyntheticVariable(bodiedMemberDefinitionContext.Member.Identifier, ElementKind.Method);
+            var methodDefVar = bodiedMemberDefinitionContext.IlContext!.AssociatedMethodVariable;
             var bodyOffset = methodSymbol.ContainingType.TypeKind == TypeKind.Interface 
                                             ? "-1" 
                                             : $"methodBodyStream.AddMethodBody({bodiedMemberDefinitionContext.IlContext.VariableName}, localVariablesSignature: {methodRecord.LocalSignatureHandleVariable})";
@@ -150,8 +150,8 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                           """);
             ctx.WriteNewLine();
             ctx.WriteNewLine();
-            
-            ctx.DefinitionVariables.RegisterMethod(methodSymbol.AsMethodDefinitionVariable(methodDefVar));
+
+            ctx.DefinitionVariables.ExecuteDependentRegistrations(methodDefVar);
             
             return methodDefVar;
         });
@@ -227,6 +227,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                                         methodDefVar);
             
             ctx.DefinitionVariables.RegisterMethod(toBeRegistered);
+            ctx.DefinitionVariables.ExecuteDependentRegistrations(methodDefVar);
             
             return methodDefVar;
         });
@@ -377,6 +378,8 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                                                   MethodSemanticsAttributes.{accessor.Item2},
                                                   {accessor.Item1.VariableName});
                                   """);
+                
+                context.DefinitionVariables.ExecuteDependentRegistrations(propertyDefinitionVariable);
                 context.WriteNewLine();
             }
         });
@@ -425,10 +428,10 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         {
             // in cases which the target of the attribute is not a type (i.e. it is a method, a field, etc), the target member
             // may not have been processed yet, so a callback is registered to be invoked when the that member is processed and
-            // its associated variable registered.
-            // The same approach could be used with types but that would require that the variable used to hold the type definition to be
-            // defined up-front which would add more complexity, so in that case we simply delegate to `DelayedDefinitionManager`
-            context.DefinitionVariables.ExecuteUponVariableRegistration(attributeTargetVar, context, (ctx, state) =>
+            // it's safe to reference its registered variable.
+            // The same approach could be used with types but that would require that the variable name used to hold the type definition
+            // to be known up-front which would add complexity, so in that case we simply delegate to `DelayedDefinitionManager`
+            context.DefinitionVariables.RegisterDependentOnRegistration(attributeTargetVar, context, (ctx, state) =>
             {
                 var target = (NonTypeAttributeTargetState) state;
                 AddAttributeTo(ctx, target.AttributeTarget, target.ResolvedAttributeCtor, target.AttributeEncoderVariable);

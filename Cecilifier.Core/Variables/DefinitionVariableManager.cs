@@ -1,8 +1,10 @@
+#nullable enable
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.AST;
-using Mono.Cecil.Cil;
+using Cecilifier.Core.Extensions;
 
 namespace Cecilifier.Core.Variables;
 
@@ -33,7 +35,7 @@ public class DefinitionVariableManager
         return definitionVariable;
     }
 
-    public TVariableType FindByVariableName<TVariableType>(string variableName) where TVariableType : DefinitionVariable
+    public TVariableType? FindByVariableName<TVariableType>(string variableName) where TVariableType : DefinitionVariable
     {
         return _definitionVariables.OfType<TVariableType>().FirstOrDefault(candidate => candidate.VariableName == variableName);
     }
@@ -52,7 +54,7 @@ public class DefinitionVariableManager
         return DefinitionVariable.NotFound;
     }
 
-    public DefinitionVariable GetVariable(string memberName, VariableMemberKind variableMemberKind, string parentName = null)
+    public DefinitionVariable GetVariable(string memberName, VariableMemberKind variableMemberKind, string? parentName = null)
     {
         var tbf = new DefinitionVariable(parentName ?? string.Empty, memberName, variableMemberKind);
         for (var i = _definitionVariables.Count - 1; i >= 0; i--)
@@ -142,7 +144,7 @@ public class DefinitionVariableManager
         return new ScopedDefinitionVariable(_definitionVariables, _definitionVariables.Count, true);
     }
 
-    public void ExecuteUponVariableRegistration(string targetVariable, IVisitorContext context, Action<IVisitorContext, object> toExecute, object state)
+    public void RegisterDependentOnRegistration(string targetVariable, IVisitorContext context, Action<IVisitorContext, object> toExecute, object state)
     {
         var found = _definitionVariables.SingleOrDefault(candidate => candidate.VariableName == targetVariable);
         if (found == null)
@@ -157,15 +159,19 @@ public class DefinitionVariableManager
         }
         toExecute(context, state);
     }
+
+    public void ExecuteDependentRegistrations(string targetVariable)
+    {
+        if (!_executeUponRegistration.Remove(targetVariable, out var toExecuteList))
+            return;
+        
+        foreach (var toExecute in toExecuteList)
+            toExecute.Function(toExecute.Context,toExecute.State);
+    }
     
     private void RegisterVariable(DefinitionVariable definitionVariable)
     {
         _definitionVariables.Add(definitionVariable);
-        if (_executeUponRegistration.Remove(definitionVariable.VariableName, out var toExecuteList))
-        {
-            foreach (var toExecute in toExecuteList)
-                toExecute.Function(toExecute.Context,toExecute.State);
-        }
     }
 
     private record struct ExecuteUponRegistrationState(IVisitorContext Context, Action<IVisitorContext, object> Function, object State);
