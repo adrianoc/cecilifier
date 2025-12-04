@@ -176,13 +176,7 @@ namespace Cecilifier.Core.AST
 
         private string AddOrUpdateMethodDefinition(IMethodSymbol methodSymbol, string declaringTypeName, string variableName, string simpleName, string methodName, string methodModifiers, SeparatedSyntaxList<ParameterSyntax> parameters, IList<TypeParameterSyntax> typeParameters)
         {
-            // for ctors we want to use the `methodName` (== .ctor) instead of the `simpleName` (== ctor) otherwise we may fail to find existing variables.
-            var tbf = new MethodDefinitionVariable(
-                    declaringTypeName, 
-                    methodSymbol.MethodKind == MethodKind.Constructor ? methodName : simpleName, 
-                    parameters.Select(paramSyntax => Context.GetTypeInfo(paramSyntax.Type).Type.ToDisplayString()).ToArray(), 
-                    typeParameters.Count);
-            
+            var tbf = methodSymbol.AsMethodDefinitionVariable();
             var found = Context.DefinitionVariables.GetMethodVariable(tbf);
             if (found.IsValid)
             {
