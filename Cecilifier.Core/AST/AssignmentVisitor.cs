@@ -176,7 +176,7 @@ namespace Cecilifier.Core.AST
                 && !node.Parent.IsKind(SyntaxKind.SimpleMemberAccessExpression))
             {
                 // we have either 1) an assignment to member in object initializer. For instance, var x = new Foo { Value = 1 }
-                // i.e, `Value = 1`, in which case the stack top will contain the reference to the newly instantiate object;
+                // i.e, `Value = 1`, in which case the stack top will contain the reference to the newly instantiated object;
                 // in this case we only need to duplicate the top of the stack, or 2) an implicit reference to `this`.
                 var loadOpCode = node.Parent != null && node.Parent.Parent.IsKind(SyntaxKind.ObjectInitializerExpression)
                                         ? OpCodes.Dup
