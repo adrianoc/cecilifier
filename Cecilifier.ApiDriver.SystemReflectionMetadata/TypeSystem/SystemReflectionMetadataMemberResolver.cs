@@ -168,4 +168,9 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
         
         return fieldRefVarName;
     }
+
+    public string ResolveEventField(IEventSymbol aEvent)
+    {
+        throw new NotImplementedException();
+    }
 }

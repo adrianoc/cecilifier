@@ -174,7 +174,7 @@ namespace Cecilifier.Core.Extensions
             };
         }
 
-        public static void EnsureFieldExists(this IFieldSymbol fieldSymbol, IVisitorContext context, SimpleNameSyntax node)
+        public static void EnsureFieldExists(this ISymbol fieldSymbol, IVisitorContext context, SimpleNameSyntax node)
         {
             if (fieldSymbol.ContainingType?.TypeKind == TypeKind.Enum)
                 return; // Enum members can never be forward referenced.

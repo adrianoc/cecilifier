@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Text;
 using Cecilifier.ApiDriver.MonoCecil.Extensions;
@@ -258,5 +257,20 @@ public class MonoCecilMemberResolver(MonoCecilContext context) : IMemberResolver
 
         var declaringTypeName = field.ContainingType.FullyQualifiedName();
         return Utils.ImportFromMainModule($"TypeHelpers.ResolveField(\"{declaringTypeName}\",\"{field.Name}\")");
+    }
+
+    public string ResolveEventField(IEventSymbol eventSymbol)
+    {
+        if (!eventSymbol.IsDefinedInCurrentAssembly(context))
+            throw new InvalidOperationException($"Event field {eventSymbol.Name} must be defined in the current assembly.");
+        
+        var found = context.DefinitionVariables.GetVariable(eventSymbol.Name, VariableMemberKind.Field, eventSymbol.ContainingType.OriginalDefinition.ToDisplayString());
+        found.ThrowIfVariableIsNotValid();
+
+        var resolvedField = eventSymbol.ContainingType.IsGenericType
+            ? $$"""new FieldReference({{found.VariableName}}.Name, {{found.VariableName}}.FieldType, {{context.TypeResolver.ResolveAny(eventSymbol.ContainingType, ResolveTargetKind.TypeReference)}})""" 
+            : found.VariableName;
+                
+        return resolvedField;
     }
 }

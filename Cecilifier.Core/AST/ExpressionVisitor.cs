@@ -1568,6 +1568,10 @@ namespace Cecilifier.Core.AST
                 case SymbolKind.TypeParameter:
                     Context.SetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, Context.TypeResolver.ResolveAny((ITypeSymbol) member.Symbol, ResolveTargetKind.None).Expression);
                     break;
+                
+                case SymbolKind.Event:
+                    ProcessEvent(ilVar, node, (IEventSymbol) member.Symbol);
+                    break;
 
                 default:
                     trackIfNotPartOfTypeName.Discard();
