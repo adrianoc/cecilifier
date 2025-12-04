@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.AST;
-using Cecilifier.Core.Extensions;
 
 namespace Cecilifier.Core.Variables;
 
@@ -146,18 +145,12 @@ public class DefinitionVariableManager
 
     public void RegisterDependentOnRegistration(string targetVariable, IVisitorContext context, Action<IVisitorContext, object> toExecute, object state)
     {
-        var found = _definitionVariables.SingleOrDefault(candidate => candidate.VariableName == targetVariable);
-        if (found == null)
+        if (!_executeUponRegistration.TryGetValue(targetVariable, out var toExecuteList))
         {
-            if (!_executeUponRegistration.TryGetValue(targetVariable, out var toExecuteList))
-            {
-                toExecuteList = new List<ExecuteUponRegistrationState>();
-                _executeUponRegistration.TryAdd(targetVariable, toExecuteList);
-            }
-            toExecuteList.Add(new ExecuteUponRegistrationState(context, toExecute, state));
-            return;
+            toExecuteList = new List<ExecuteUponRegistrationState>();
+            _executeUponRegistration.TryAdd(targetVariable, toExecuteList);
         }
-        toExecute(context, state);
+        toExecuteList.Add(new ExecuteUponRegistrationState(context, toExecute, state));
     }
 
     public void ExecuteDependentRegistrations(string targetVariable)
@@ -166,7 +159,7 @@ public class DefinitionVariableManager
             return;
         
         foreach (var toExecute in toExecuteList)
-            toExecute.Function(toExecute.Context,toExecute.State);
+            toExecute.Function(toExecute.Context, toExecute.State);
     }
     
     private void RegisterVariable(DefinitionVariable definitionVariable)

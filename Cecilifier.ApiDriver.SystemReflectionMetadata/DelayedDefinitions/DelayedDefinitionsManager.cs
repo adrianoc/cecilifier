@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.TypeSystem;
+using Cecilifier.Core.Variables;
 
 namespace Cecilifier.ApiDriver.SystemReflectionMetadata.DelayedDefinitions;
 
@@ -31,7 +32,6 @@ public class DelayedDefinitionsManager
         _postponedTypeDefinitions.Add(typeVarName, new TypeDefinitionRecord(typeQualifiedName, typeVarName)
         {
             DefinitionFunction = action,
-            FirstFieldHandle = null,
             FirstMethodHandle = null
         });
         
@@ -46,20 +46,12 @@ public class DelayedDefinitionsManager
         declaringTypeRecord.Methods.Add(_currentMethod = new MethodDefinitionRecord(newMethodFunc, declaringTypeVarName));
     }
     
-    internal void RegisterFieldDefinition(string declaringTypeVarName, string fieldVariableName)
-    {
-        ref var typeRecordOrNullRef = ref CollectionsMarshal.GetValueRefOrNullRef(_postponedTypeDefinitions, declaringTypeVarName);
-        Debug.Assert(!Unsafe.IsNullRef(ref typeRecordOrNullRef));
-        
-        typeRecordOrNullRef.FirstFieldHandle ??= fieldVariableName;
-    }
-    
-    internal void RegisterFieldDefinition(string declaringTypeVarName, Func<int, string?> fieldDefinitionFunction)
+    internal void RegisterFieldDefinition(string declaringTypeVarName, in FieldDefinitionRecord field)
     {
         ref var typeRecordOrNullRef = ref CollectionsMarshal.GetValueRefOrNullRef(_postponedTypeDefinitions, declaringTypeVarName);
         Debug.Assert(!Unsafe.IsNullRef(ref typeRecordOrNullRef), $"The type '{declaringTypeVarName}' has not been registered yet.");
         
-        typeRecordOrNullRef.Fields.Add(fieldDefinitionFunction);
+        typeRecordOrNullRef.Fields.Add(field);
     }
 
     public int RegisterLocalVariable(string localVarName, ResolvedType resolvedVarType, Action<IVisitorContext, string, ResolvedType> action)
@@ -76,6 +68,23 @@ public class DelayedDefinitionsManager
         GetCurrentTypeDefinition().Properties.Add(new PropertyDefinitionRecord(propertyName, propertyDefinitionVariable, declaringTypeName, propertyProcessor));
     }
 
+    /// <summary>
+    /// This method must be invoked after the member has been registered with the DelayedDefinitionsManager, in most cases
+    /// this means after the equivalent method in <see cref="Cecilifier.Core.ApiDriver.DefinitionsFactory.IApiDriverDefinitionsFactory"/> has been invoked.
+    /// </summary>
+    public void AddAttributeEmitterToCurrentMember(VariableMemberKind kind, Action<IVisitorContext, string> attributeEmitter)
+    {
+        ref var currentType = ref GetCurrentTypeDefinition();
+        if (kind == VariableMemberKind.Type)
+        {
+            currentType.Attributes.Add(attributeEmitter);
+        }
+        else if (kind == VariableMemberKind.Field)
+        {
+            currentType.Fields[^1].Attributes.Add(attributeEmitter);
+        }
+    }
+    
     public void AddAttributeToCurrentType(Action<IVisitorContext, string> attributeEmitter)
     {
         GetCurrentTypeDefinition().Attributes.Add(attributeEmitter);
@@ -131,7 +140,6 @@ public class DelayedDefinitionsManager
             Debug.Assert(!Unsafe.IsNullRef(ref typeRecord));
             
             typeRecord.FirstMethodHandle ??= ApiDriverConstants.MethodDefinitionTableNextAvailableEntry;
-            typeRecord.FirstFieldHandle ??= ApiDriverConstants.FieldDefinitionTableNextAvailableEntry;
         }
     }
     

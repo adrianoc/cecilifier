@@ -1,9 +1,11 @@
+using Cecilifier.ApiDriver.SystemReflectionMetadata;
+using Cecilifier.Core.Tests.Tests.Unit.Framework;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Tests.Unit.ApiDriver;
 
 [TestFixture]
-internal partial class DelayedDefinitionsManagerTests
+internal class DelayedDefinitionsManagerTests : CecilifierContextBasedTestBase<SystemReflectionMetadataContext>
 {
     [TestCase("T1V", "T2V")]
     [TestCase("T1V")]

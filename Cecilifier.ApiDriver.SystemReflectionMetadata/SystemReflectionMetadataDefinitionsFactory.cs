@@ -49,7 +49,9 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
             string? firstFieldHandle = null;
             for(int i = 0; i < typeRecord.Fields.Count; i++)
             {
-                var fieldHandle = typeRecord.Fields[i].Invoke(i);
+                var field = typeRecord.Fields[i];
+                
+                var fieldHandle = field.DefinitionFunction(field);
                 firstFieldHandle ??= fieldHandle;
             }
             
@@ -68,7 +70,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
             // Add attributes to the type definition
             foreach (var attributeEmitter in typeRecord.Attributes)
             {
-                attributeEmitter(ctx, typeRecord.TypeDefinitionVariable);    
+                attributeEmitter(ctx, typeRecord.TypeDefinitionVariable);
             }
             
             foreach (var property in typeRecord.Properties)
@@ -306,13 +308,13 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         exps[expCount++] = Format($"""var {definitionContext.DefinitionVariable} = metadata.AddMemberReference({definitionContext.ParentDefinitionVariable}, metadata.GetOrAddString("{definitionContext.Name}"), metadata.GetOrAddBlob({fieldSignatureVar}));""");
         context.DefinitionVariables.RegisterNonMethod(declaringTypeName, definitionContext.Name, VariableMemberKind.Field, definitionContext.DefinitionVariable);
         
-        TypedContext(context).DelayedDefinitionsManager.RegisterFieldDefinition(definitionContext.ParentDefinitionVariable, index =>
+        var toAdd = new FieldDefinitionRecord(fieldRecord =>
         {
             Buffer16<string> expsDef = new();
             byte expCountDef = 0;
 
             var fieldVariableName = context.Naming.SyntheticVariable($"{definitionContext.NameAsValidIdentifier}", ElementKind.Field);
-            var varPrefix = index == 0 || initializer ? $"var {fieldVariableName} = " : "";
+            var varPrefix = fieldRecord.Index == 0 || initializer || fieldRecord.Attributes.Count > 0 ? $"var {fieldVariableName} = " : "";
             expsDef[expCountDef++] = Format($"""{varPrefix}metadata.AddFieldDefinition({fieldAttributes}, metadata.GetOrAddString("{definitionContext.Name}"), metadata.GetOrAddBlob({fieldSignatureVar}));""");
             if (initializer.ConstantValue != null)
             {
@@ -332,8 +334,15 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
             
             Span<string> span = expsDef;
             context.Generate(span.Slice(0, expCountDef).ToArray());
-            return index == 0 ? fieldVariableName : null;
+            foreach (var attributeEmitter in fieldRecord.Attributes)
+            {
+                attributeEmitter(context, fieldVariableName);
+            }
+            
+            return fieldRecord.Index == 0 ? fieldVariableName : null;
         });
+
+        TypedContext(context).DelayedDefinitionsManager.RegisterFieldDefinition(definitionContext.ParentDefinitionVariable, toAdd);
         
         Span<string> span = exps;
         return span.Slice(0, expCount).ToArray();
@@ -417,20 +426,20 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         
         var resolvedAttrCtor = context.MemberResolver.ResolveMethod(attributeCtor);
 
-        if (targetKind == VariableMemberKind.Type)
+        if (targetKind == VariableMemberKind.Type || targetKind == VariableMemberKind.Field)
         {
-            TypedContext(context).DelayedDefinitionsManager.AddAttributeToCurrentType((ctx, typeDefinitionVariable) =>
+            TypedContext(context).DelayedDefinitionsManager.AddAttributeEmitterToCurrentMember(targetKind, (ctx, typeDefinitionVariable) =>
             {
                 AddAttributeTo(ctx, typeDefinitionVariable, resolvedAttrCtor, attributeEncoderVariable);
             });
         }
         else
         {
-            // in cases which the target of the attribute is not a type (i.e. it is a method, a field, etc), the target member
-            // may not have been processed yet, so a callback is registered to be invoked when the that member is processed and
-            // it's safe to reference its registered variable.
-            // The same approach could be used with types but that would require that the variable name used to hold the type definition
-            // to be known up-front which would add complexity, so in that case we simply delegate to `DelayedDefinitionManager`
+            // in cases which the target of the attribute is not a type/field (i.e. it is a method, etc), the target member
+            // may not have been processed yet (i.e. we only have a type/member reference at this point), so a callback is
+            // registered to be invoked when the that member is processed and it's safe to reference its registered variable.
+            // The same approach could be used with types/fields but that would require that the variable name used to hold the
+            // type definition to be known up-front adding complexity, so in that case we simply delegate to `DelayedDefinitionManager`
             context.DefinitionVariables.RegisterDependentOnRegistration(attributeTargetVar, context, (ctx, state) =>
             {
                 var target = (NonTypeAttributeTargetState) state;

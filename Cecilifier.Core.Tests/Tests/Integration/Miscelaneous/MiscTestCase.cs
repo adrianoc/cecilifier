@@ -75,7 +75,7 @@ namespace Cecilifier.Core.Tests.Integration
         [TestCase("InterfaceAndMembers")]
         [TestCase("EnumAndMembers")]
         [TestCase("StructAndMembers")]
-        [ParameterizedResourceFilter<SystemReflectionMetadataContext>("StructAndMembers")]
+        [ParameterizedResourceFilter<SystemReflectionMetadataContext>("StructAndMembers", "EnumAndMembers")]
         public void AttributesOnMembers(string typeKind)
         {
             AssertResourceTest($"Misc/Attributes/AttributesOn{typeKind}");
