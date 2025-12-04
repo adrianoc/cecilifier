@@ -183,7 +183,7 @@ public static class CecilifierContextExtensions
                                                                     context, 
                                                                     new BodiedMemberDefinitionContext(methodName, methodNameForVariableRegistration,methodDeclarationVar, null, MemberOptions.None, IlContext.None), 
                                                                     null,
-                                                                    "MethodAttributes.Private",
+                                                                    method.MethodsModifier(),
                                                                     method.Parameters.Select( p => new ParameterSymbolParameterSpec(p, context)).ToArray(),
                                                                     method.GetTypeParameterSyntax().Select(tps => tps.Identifier.Text).ToArray(),
                                                                     ctx => method.ReturnsByRef 

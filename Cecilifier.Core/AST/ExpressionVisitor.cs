@@ -1420,7 +1420,7 @@ namespace Cecilifier.Core.AST
             Context.EnsureForwardedMethod(method.OverriddenMethod ?? method.OriginalDefinition);
             CecilDefinitionsFactory.InstantiateDelegate(Context, ilVar, delegateType, method.MethodResolverExpression(Context), new StaticDelegateCacheContext()
             {
-                IsStaticDelegate = method.IsStatic,
+                IsStaticDelegate = method.IsStatic || method.MethodKind == MethodKind.LocalFunction,
                 Method = method,
                 CacheBackingField = null,
                 context = Context

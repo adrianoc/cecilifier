@@ -5,6 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Reflection.Emit;
+using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -352,5 +353,29 @@ namespace Cecilifier.Core.Extensions
         internal static string? ParamsAttributeMatchingType(this IParameterSymbol paramsParameter) => paramsParameter.IsParams 
                                                                                                         ? paramsParameter.Type.Kind ==  SymbolKind.ArrayType ? typeof(ParamArrayAttribute).FullName : typeof(ParamCollectionAttribute).FullName
                                                                                                         : null;
+
+        internal static string MethodsModifier(this IMethodSymbol methodSymbol)
+        {
+            const string methodAttributesEnumName = "MethodAttributes";
+            var methodModifiers = methodSymbol.DeclaredAccessibility switch
+            {
+                Accessibility.ProtectedAndInternal => $"{methodAttributesEnumName}.FamANDAssem",
+                Accessibility.ProtectedOrInternal  => $"{methodAttributesEnumName}.FamORAssem",
+                Accessibility.Protected  => $"{methodAttributesEnumName}.Family",
+                _  => $"{methodAttributesEnumName}.{methodSymbol.DeclaredAccessibility}",
+            };
+
+            var modifiers = new StringBuilder(methodModifiers);
+            if (methodSymbol.IsStatic)
+                modifiers.AppendModifier($"{methodAttributesEnumName}.Static");
+            
+            if (methodSymbol.IsAbstract)
+                modifiers.AppendModifier($"{methodAttributesEnumName}.Abstract");
+            
+            if (methodSymbol.IsVirtual)
+                modifiers.AppendModifier($"{methodAttributesEnumName}.Virtual");
+                
+            return modifiers.ToString();
+        }
     }
 }
