@@ -148,9 +148,7 @@ namespace Cecilifier.Core.Misc
             var currentType = context.DefinitionVariables.GetLastOf(VariableMemberKind.Type);
             if (currentType.IsValid && currentType.MemberName != staticDelegateCacheContext.Method.ContainingType.Name)
             {
-                context.WriteComment($"*****************************************************************");
-                context.WriteComment($"WARNING: Converting static method ({staticDelegateCacheContext.Method.FullyQualifiedName()}) to delegate in a type other than the one defining it may generate incorrect code. Access type: {currentType.MemberName}, Method type: {staticDelegateCacheContext.Method.ContainingType.Name}");
-                context.WriteComment($"*****************************************************************");
+                context.EmitWarning($"Converting static method ({staticDelegateCacheContext.Method.FullyQualifiedName()}) to delegate in a type other than the one defining it may generate incorrect code. Access type: {currentType.MemberName}, Method type: {staticDelegateCacheContext.Method.ContainingType.Name}");
             }
         }
 
