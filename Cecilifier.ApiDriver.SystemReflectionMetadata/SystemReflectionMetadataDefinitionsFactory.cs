@@ -272,7 +272,8 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
 
     public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext definitionContext, ISymbol fieldOrEvent, ITypeSymbol fieldType, string fieldAttributes, bool isVolatile, bool isByRef, in FieldInitializationData initializer = default)
     {
-        return Field(context, definitionContext, fieldOrEvent.ContainingType.ToDisplayString(), context.TypeResolver.ResolveAny(fieldType, ResolveTargetKind.Field),  fieldAttributes, isVolatile, isByRef, initializer);
+        var resolvedType = context.TypeResolver.ResolveAny(fieldType, new TypeResolutionContext(ResolveTargetKind.Field, fieldType.ElementTypeSymbolOf().IsValueType ? TypeResolutionOptions.IsValueType : TypeResolutionOptions.None));
+        return Field(context, definitionContext, fieldOrEvent.ContainingType.ToDisplayString(), resolvedType,  fieldAttributes, isVolatile, isByRef, initializer);
     }
 
     public IEnumerable<string> Field(IVisitorContext context, MemberDefinitionContext definitionContext, string declaringTypeName, ResolvedType fieldType, string fieldAttributes, bool isVolatile, bool isByRef, FieldInitializationData initializer = default)
@@ -284,7 +285,6 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         
         Buffer16<string> exps = new();
         byte expCount = 0;
-        exps[expCount++] = Environment.NewLine;
         exps[expCount++] = Format($"""
                                    BlobBuilder {fieldSignatureVar} = new();
                                    var {fieldEncoderVar} = new BlobEncoder({fieldSignatureVar}).Field();
@@ -313,7 +313,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
             Buffer16<string> expsDef = new();
             byte expCountDef = 0;
 
-            var fieldVariableName = context.Naming.SyntheticVariable($"{definitionContext.NameAsValidIdentifier}", ElementKind.Field);
+            var fieldVariableName = context.Naming.SyntheticVariable($"{definitionContext.Identifier}", ElementKind.Field);
             var varPrefix = fieldRecord.Index == 0 || initializer || fieldRecord.Attributes.Count > 0 ? $"var {fieldVariableName} = " : "";
             expsDef[expCountDef++] = Format($"""{varPrefix}metadata.AddFieldDefinition({fieldAttributes}, metadata.GetOrAddString("{definitionContext.Name}"), metadata.GetOrAddBlob({fieldSignatureVar}));""");
             if (initializer.ConstantValue != null)
@@ -409,10 +409,9 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
     public IEnumerable<string> Attribute(IVisitorContext context, IMethodSymbol attributeCtor, string attributeVarBaseName, string attributeTargetVar, VariableMemberKind targetKind, params CustomAttributeArgument[] arguments)
     {
         var attributeEncoderVariable = context.DefinitionVariables.GetVariable("EncoderMetaName", VariableMemberKind.None, attributeVarBaseName);
-
         if (!attributeEncoderVariable.IsValid)
         {
-            var attributeEncoderVariableName = context.Naming.SyntheticVariable($"{attributeVarBaseName}_blobBuilder", ElementKind.MemberReference);
+            var attributeEncoderVariableName = context.Naming.SyntheticVariable($"{attributeVarBaseName}_blobEncoder", ElementKind.MemberReference);
             var attributeEncoder = new AttributeEncoder(context, attributeEncoderVariableName, attributeCtor.ContainingType.Name);
             var namedArguments = arguments.OfType<CustomAttributeNamedArgument>().ToList();
             var encodedArguments = attributeEncoder.Encode(arguments.Except(namedArguments).ToList(), namedArguments);
@@ -425,7 +424,6 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         }
         
         var resolvedAttrCtor = context.MemberResolver.ResolveMethod(attributeCtor);
-
         if (targetKind == VariableMemberKind.Type || targetKind == VariableMemberKind.Field)
         {
             TypedContext(context).DelayedDefinitionsManager.AddAttributeEmitterToCurrentMember(targetKind, (ctx, typeDefinitionVariable) =>
@@ -453,7 +451,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                               metadata.AddCustomAttribute(
                                          parent: {targetVariable},
                                          constructor: {resolvedAttributeCtor},
-                                         value: metadata.GetOrAddBlob({attributeEncoderVariable}));
+                                         value: metadata.GetOrAddBlob({attributeEncoderVariable}.Builder));
                               """);
             ctx.Generate(attr);
             ctx.WriteNewLine();

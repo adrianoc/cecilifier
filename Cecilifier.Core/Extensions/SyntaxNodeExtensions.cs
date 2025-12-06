@@ -205,7 +205,7 @@ namespace Cecilifier.Core.Extensions
                     Name= argument.NameEquals!.Name.Identifier.Text, 
                     Value = constantValue.Value, 
                     Kind = namedArgumentSymbol!.Kind == SymbolKind.Field ? NamedArgumentKind.Field : NamedArgumentKind.Property,
-                    ResolvedType = context.TypeResolver.ResolveAny(namedArgumentSymbol.GetMemberType(), ResolveTargetKind.Parameter)
+                    ResolvedType = context.TypeResolver.ResolveAny(namedArgumentSymbol.GetMemberType(), ResolveTargetKind.AttributeNamedArgument)
                 };
             }
         }

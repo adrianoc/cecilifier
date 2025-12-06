@@ -332,9 +332,9 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
                 return "new CustomAttributeArgument[0]";
             
             var sb = new StringBuilder("new [] {");
-            foreach (var arrayItem in array)
+            foreach (CustomAttributeArgument arrayItem in array)
             {
-                sb.Append($"new CustomAttributeArgument({context.TypeResolver.Resolve(context.RoslynTypeSystem.ForType(arrayItem.GetType().FullName), ResolveTargetKind.TypeReference)}, {CustomAttributeArgumentValueFor(context, arrayItem)}), ");
+                sb.Append($"new CustomAttributeArgument({context.TypeResolver.Resolve(context.RoslynTypeSystem.ForType(arrayItem.Value.GetType().FullName), ResolveTargetKind.TypeReference)}, {CustomAttributeArgumentValueFor(context, arrayItem.Value)}), ");
             }
             sb.Remove(sb.Length - 2, 2); // Removes the last ", "
             sb.Append('}');

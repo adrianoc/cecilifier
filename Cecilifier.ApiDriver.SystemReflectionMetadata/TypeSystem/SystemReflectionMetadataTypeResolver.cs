@@ -75,7 +75,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
     public override ResolvedType ResolveLocalVariableType(ITypeSymbol type, in TypeResolutionContext context)
     {
         var resolved = base.ResolveLocalVariableType(type, in context);
-        if (resolved&& context.TargetKind != ResolveTargetKind.TypeReference)
+        if (resolved && context.TargetKind != ResolveTargetKind.TypeReference)
         {
             return ResolvedType.FromDetails(
                 new ResolvedTypeDetails()
@@ -89,9 +89,18 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
     public override ResolvedType MakeArrayType(ITypeSymbol elementType, in TypeResolutionContext resolutionContext)
     {
         var details = new ResolvedTypeDetails();
+        var methodBuilderByKind = resolutionContext.TargetKind == ResolveTargetKind.AttributeNamedArgument ? "SZArray().ElementType()" : "SZArray()";
+        if (resolutionContext.TargetKind == ResolveTargetKind.AttributeNamedArgument && elementType.TypeKind == TypeKind.Enum)
+        {
+            var enumDeclaringAssembly = elementType.IsDefinedInCurrentAssembly(_context) ? string.Empty : $",{elementType.ContainingAssembly.ToDisplayString()}";
+            return ResolvedType.FromDetails(
+                details.WithMethodBuilder($"""{methodBuilderByKind}.Enum("{elementType.ToDisplayString()}{enumDeclaringAssembly}")"""));
+            
+        }
+        
         return ResolvedType.FromDetails(
-                    details.WithTypeEncoder(TypeEncoderFor(in resolutionContext))
-                        .WithMethodBuilder($"SZArray().{ResolveAny(elementType, new TypeResolutionContext(ResolveTargetKind.ArrayElementType, resolutionContext.Options))}"));
+                    details.WithTypeEncoder(TypeEncoderForArrayElement(in resolutionContext))
+                        .WithMethodBuilder($"{methodBuilderByKind}.{ResolveAny(elementType, new TypeResolutionContext(ResolveTargetKind.ArrayElementType, resolutionContext.Options))}"));
     }
 
     protected override ResolvedType MakePointerType(ITypeSymbol pointerType, in TypeResolutionContext resolutionContext)
@@ -108,7 +117,29 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
     {
         if (resolutionContext.TargetKind == ResolveTargetKind.Instruction)
             return "TokenForType(enc => enc%, metadata)";
+        
         var isByRef = ((resolutionContext.Options & TypeResolutionOptions.IsByRef) == TypeResolutionOptions.IsByRef).ToKeyword();
-        return resolutionContext.TargetKind <= ResolveTargetKind.ArrayElementType ? "" : $"Type(isByRef: {isByRef})%";
+        return resolutionContext.TargetKind switch
+        {
+            ResolveTargetKind.None => "",
+            ResolveTargetKind.ArrayElementType => "",
+            ResolveTargetKind.AttributeNamedArgument or ResolveTargetKind.AttributeArgument => "ScalarType()%",
+            _ => $"Type(isByRef: {isByRef})%",
+        };
+    }
+    
+    private static string TypeEncoderForArrayElement(in TypeResolutionContext resolutionContext)
+    {
+        if (resolutionContext.TargetKind == ResolveTargetKind.Instruction)
+            return "TokenForType(enc => enc%, metadata)";
+        
+        var isByRef = ((resolutionContext.Options & TypeResolutionOptions.IsByRef) == TypeResolutionOptions.IsByRef).ToKeyword();
+        return resolutionContext.TargetKind switch
+        {
+            ResolveTargetKind.AttributeNamedArgument => "",
+            ResolveTargetKind.None => "",
+            ResolveTargetKind.ArrayElementType => "",
+            _ => $"Type(isByRef: {isByRef})%",
+        };
     }
 }
