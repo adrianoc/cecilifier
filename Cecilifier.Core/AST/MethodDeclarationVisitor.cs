@@ -145,7 +145,7 @@ namespace Cecilifier.Core.AST
                                             typeParameters);
 
                 HandleAttributesInMemberDeclaration(attributes, TargetDoesNotMatch, SyntaxKind.ReturnKeyword, methodVar, VariableMemberKind.None); // Normal method attrs.
-                HandleAttributesInMemberDeclaration(attributes, TargetMatches, SyntaxKind.ReturnKeyword, $"{methodVar}.MethodReturnType", VariableMemberKind.Field); // [return:Attr]
+                HandleAttributesInMemberDeclaration(attributes, TargetMatches, SyntaxKind.ReturnKeyword, $"{methodVar}.MethodReturnType", VariableMemberKind.None); // [return:Attr]
 
                 AddToOverridenMethodsIfAppropriated(methodVar, methodSymbol);
 

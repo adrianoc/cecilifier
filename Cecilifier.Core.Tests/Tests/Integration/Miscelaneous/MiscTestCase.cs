@@ -9,7 +9,7 @@ namespace Cecilifier.Core.Tests.Integration
 {
     [TestFixture(typeof(MonoCecilContext))]
     [TestFixture(typeof(SystemReflectionMetadataContext))]
-    [EnableForContext<SystemReflectionMetadataContext>(nameof(TestTopLevelStatements), nameof(TestNamespaces), nameof(AttributesOnMembers), IgnoreReason = "Not implemented yet")]
+    [EnableForContext<SystemReflectionMetadataContext>(nameof(TestTopLevelStatements), nameof(TestNamespaces), nameof(TestNamespaces), nameof(AttributesOnMembers), nameof(TestAttributesOnExplicitTargets), IgnoreReason = "Not implemented yet")]
     public class MiscTestCase<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
     {
         [TestCase("Parameters")]
@@ -84,7 +84,7 @@ namespace Cecilifier.Core.Tests.Integration
         [Test]
         public void TestAttributesOnExplicitTargets()
         {
-            AssertResourceTest($@"Misc/Attributes/AttributesOnExplicitTargets");
+            AssertResourceTest("Misc/Attributes/AttributesOnExplicitTargets");
         }
 
         [Test]

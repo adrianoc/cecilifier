@@ -19,51 +19,53 @@ internal struct AttributeEncoder
         AttributeBuilderVariable = attributeEncoderVarVariableName;
     }
 
-    public string AttributeBuilderVariable { get; }
+    private string AttributeBuilderVariable { get; }
 
     internal string Encode(IList<CustomAttributeArgument> arguments, IList<CustomAttributeNamedArgument> namedArguments)
     {
         _attributeEncoderVar = _context.Naming.SyntheticVariable(_attributeName, ElementKind.Attribute);
-
+        
+        var fixedArgumentsEncoderVariableName = _context.Naming.SyntheticVariable("argumentEncoder", ElementKind.LocalVariable);
+        var namedArgumentsEncoderVariableName = _context.Naming.SyntheticVariable("namedArgumentsEncoder", ElementKind.LocalVariable);
         StringBuilder encoded = new($"""
                                      var {AttributeBuilderVariable} = new BlobBuilder();
                                      var {_attributeEncoderVar} = new BlobEncoder({AttributeBuilderVariable});
 
-                                     {_attributeEncoderVar}.CustomAttributeSignature(out var fixedArgumentsEncoder, out var namedArgumentsEncoder);
+                                     {_attributeEncoderVar}.CustomAttributeSignature(out var {fixedArgumentsEncoderVariableName}, out var {namedArgumentsEncoderVariableName});
                                      """);
 
-        EncodeArguments(arguments, encoded);
-        EncodeNamedArguments(namedArguments, encoded);
+        EncodeArguments(fixedArgumentsEncoderVariableName, arguments, encoded);
+        EncodeNamedArguments(namedArgumentsEncoderVariableName, namedArguments, encoded);
 
         return encoded.ToString();
     }
 
-    private void EncodeArguments(IList<CustomAttributeArgument> arguments, StringBuilder encoded)
+    private void EncodeArguments(string fixedArgumentsEncoderVariableName, IList<CustomAttributeArgument> arguments, StringBuilder encoded)
     {
         foreach (var argument in arguments)
         {
-            EncodeArgument(argument, encoded);
+            EncodeArgument(fixedArgumentsEncoderVariableName, argument, encoded);
         }
     }
 
-    private void EncodeArgument(CustomAttributeArgument customAttributeArgument, StringBuilder encoded)
+    private void EncodeArgument(string argumentsEncoderVariableName, CustomAttributeArgument customAttributeArgument, StringBuilder encoded)
     {
         if (customAttributeArgument.Values != null)
-            EncodeArray(encoded, customAttributeArgument);
+            EncodeArray(argumentsEncoderVariableName, encoded, customAttributeArgument);
         else
-            EncodeScalar(encoded, customAttributeArgument);
+            EncodeScalar(argumentsEncoderVariableName, encoded, customAttributeArgument);
     }
 
-    private void EncodeScalar(StringBuilder encoded, CustomAttributeArgument customAttributeArgument)
+    private void EncodeScalar(string argumentsEncoderVariableName, StringBuilder encoded, CustomAttributeArgument customAttributeArgument)
     {
-        encoded.AppendLine($"""fixedArgumentsEncoder.AddArgument().{ScalarExpressionFor(customAttributeArgument)};""");
+        encoded.AppendLine($"""{argumentsEncoderVariableName}.AddArgument().{ScalarExpressionFor(customAttributeArgument)};""");
     }
 
-    private void EncodeArray(StringBuilder encoded, CustomAttributeArgument customAttributeArgument)
+    private void EncodeArray(string argumentsEncoderVariableName, StringBuilder encoded, CustomAttributeArgument customAttributeArgument)
     {
         encoded.AppendLine($$"""
                              {
-                                 var arrayEncoder = fixedArgumentsEncoder.AddArgument().Vector().Count({{customAttributeArgument.Values!.Length}});
+                                 var arrayEncoder = {{argumentsEncoderVariableName}}.AddArgument().Vector().Count({{customAttributeArgument.Values!.Length}});
                              """);
 
         for (int i = 0; i < customAttributeArgument.Values!.Length; i++)
@@ -76,7 +78,7 @@ internal struct AttributeEncoder
 
     private string ScalarExpressionFor(CustomAttributeArgument customAttributeArgument) => $"Scalar().Constant({customAttributeArgument.Value.ValueText()})";
 
-    private void EncodeNamedArguments(IList<CustomAttributeNamedArgument> namedArguments, StringBuilder encoded)
+    private void EncodeNamedArguments(string namedArgumentsEncoderVariableName, IList<CustomAttributeNamedArgument> namedArguments, StringBuilder encoded)
     {
         if (namedArguments.Count == 0)
         {
@@ -84,7 +86,7 @@ internal struct AttributeEncoder
         }
         else
         {
-            encoded.AppendLine($"var nae = namedArgumentsEncoder.Count({namedArguments.Count});");
+            encoded.AppendLine($"var nae = {namedArgumentsEncoderVariableName}.Count({namedArguments.Count});");
             foreach (var namedArgument in namedArguments)
             {
                 encoded.AppendLine($"""
