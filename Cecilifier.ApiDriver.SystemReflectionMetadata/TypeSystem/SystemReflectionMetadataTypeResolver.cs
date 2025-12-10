@@ -1,6 +1,7 @@
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.TypeSystem;
+using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 
 namespace Cecilifier.ApiDriver.SystemReflectionMetadata.TypeSystem;
@@ -8,10 +9,20 @@ namespace Cecilifier.ApiDriver.SystemReflectionMetadata.TypeSystem;
 public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContext context) : TypeResolverBase<SystemReflectionMetadataContext>(context)
 {
     public override ResolvedType Resolve(string typeName, in TypeResolutionContext resolutionContext) => throw new NotSupportedException($"{typeName} (context: {resolutionContext})");
-    
+
     public override ResolvedType Resolve(ITypeSymbol type, in TypeResolutionContext resolutionContext)
     {
-        var memberRefVarName = _context.Naming.SyntheticVariable($"{type.ToValidVariableName()}", ElementKind.MemberReference);
+        
+        var memberRefVar = _context.DefinitionVariables.GetVariable(type.ToDisplayString(), VariableMemberKind.Type, type.ContainingSymbol.ToDisplayString());
+        var memberRefVarName = memberRefVar.IsValid 
+                                        ? memberRefVar.VariableName
+                                        : _context.Naming.SyntheticVariable(type.ToValidVariableName(), ElementKind.MemberReference);
+        if (!memberRefVar.IsValid)
+        {
+            _context.DefinitionVariables.RegisterNonMethod(type.ContainingSymbol.ToDisplayString(), type.ToDisplayString(), VariableMemberKind.Type, memberRefVarName);
+        }
+        
+        
         var assemblyReferenceName = _context.AssemblyResolver.Resolve(_context, type.ContainingAssembly);
         _context.Generate($"""
                            var {memberRefVarName} = metadata.AddTypeReference(
@@ -63,12 +74,24 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
     public override ResolvedType ResolvePredefinedType(ITypeSymbol type, in TypeResolutionContext resolutionContext)
     {
         if (resolutionContext.TargetKind == ResolveTargetKind.TypeReference)
-            return $"""
-                      metadata.AddTypeReference(
-                          {_context.AssemblyResolver.Resolve(_context, _context.RoslynTypeSystem.SystemObject.ContainingAssembly)},
-                          metadata.GetOrAddString("{type.ContainingNamespace.Name}"),
-                          metadata.GetOrAddString("{type.Name}"))
-                      """;
+        {
+            var mangledTypeVariableName = $"resolved-type$=>{type.ToDisplayString()}";
+            var found = _context.DefinitionVariables.GetVariable(mangledTypeVariableName, VariableMemberKind.Type, type.ContainingAssembly.ToDisplayString());
+            if (found.IsValid)
+                return found.VariableName;
+            
+            var resolvedTypeVariable = _context.Naming.SyntheticVariable(type.Name, ElementKind.MemberReference);
+            _context.DefinitionVariables.RegisterNonMethod(type.ContainingAssembly.ToDisplayString(), mangledTypeVariableName, VariableMemberKind.Type, resolvedTypeVariable);
+            
+            _context.Generate($"""
+                     var {resolvedTypeVariable} = metadata.AddTypeReference(
+                                        {_context.AssemblyResolver.Resolve(_context, _context.RoslynTypeSystem.SystemObject.ContainingAssembly)},
+                                        metadata.GetOrAddString("{type.ContainingNamespace.Name}"),
+                                        metadata.GetOrAddString("{type.Name}"));
+                     """);
+            
+            return resolvedTypeVariable;
+        }
         return ResolveForTargetKind(type, resolutionContext);
     }
 
