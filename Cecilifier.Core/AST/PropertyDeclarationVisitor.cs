@@ -171,7 +171,10 @@ namespace Cecilifier.Core.AST
             void AddSetterMethod(IPropertySymbol property, AccessorDeclarationSyntax accessor)
             {
                 var setMethodVar = Context.Naming.SyntheticVariable("set", ElementKind.LocalVariable);
-                var ilContext = Context.ApiDriver.NewIlContext(Context, "set", setMethodVar);
+                var ilContext = propertySymbol.ContainingType.TypeKind == TypeKind.Interface 
+                                                            ? null 
+                                                            : Context.ApiDriver.NewIlContext(Context, "set", setMethodVar);
+                
                 using var methodVariableScope = generator.AddSetterMethodDeclaration(
                                                                     in propertyGenerationData,
                                                                     setMethodVar,
@@ -196,13 +199,13 @@ namespace Cecilifier.Core.AST
                     ExpressionVisitor.Visit(Context, ilContext, accessor.ExpressionBody!);
                 }
 
-                Context.ApiDriver.WriteCilInstruction(Context, ilContext, OpCodes.Ret);
+                Context.ApiDriver.WriteCilInstruction(Context, ilContext!, OpCodes.Ret);
             }
 
             ScopedDefinitionVariable AddGetterMethodGuts(string getMethodVar, out IlContext? ilContext)
             {
                 Context.WriteComment("Getter");
-                var il = propertySymbol.ContainingType.TypeKind != TypeKind.Interface 
+                ilContext = propertySymbol.ContainingType.TypeKind != TypeKind.Interface 
                                                             ? Context.ApiDriver.NewIlContext(Context, "get", getMethodVar) 
                                                             : null;
                 
@@ -211,9 +214,7 @@ namespace Cecilifier.Core.AST
                                                         getMethodVar, 
                                                         propertySymbol.HasCovariantGetter(), 
                                                         GetOverridenMethod(propertySymbol.GetMethod),
-                                                        il);
-
-                ilContext = propertySymbol.ContainingType.TypeKind != TypeKind.Interface ? il : null;
+                                                        ilContext);
                 return methodVariableScope;
             }
 

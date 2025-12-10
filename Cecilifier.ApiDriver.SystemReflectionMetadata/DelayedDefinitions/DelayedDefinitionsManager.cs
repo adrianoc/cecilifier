@@ -1,11 +1,13 @@
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Cecilifier.Core.AST;
-using Cecilifier.Core.Naming;
 using Cecilifier.Core.TypeSystem;
+using Cecilifier.Core.Variables;
 
 namespace Cecilifier.ApiDriver.SystemReflectionMetadata.DelayedDefinitions;
 
+internal delegate void DelayedTypeDefinitionAction(SystemReflectionMetadataContext context, ref TypeDefinitionRecord definitionRecord);
 /// <summary>
 /// System.Reflection.Metadata model requires members (methods, field) as well as parameters
 /// to be defined before the containing member (type, method, property) whereas Cecilifier
@@ -13,130 +15,145 @@ namespace Cecilifier.ApiDriver.SystemReflectionMetadata.DelayedDefinitions;
 /// member definitions.
 ///
 /// Upon visiting types/members, SRM driver adds a type/member *reference* and postpones
-/// the related type/member *definition* when finishing visiting types. 
+/// the related type/member *definition* when finishing visiting types.
 /// </summary>
+/// <remarks>
+/// 
+/// </remarks>
 public class DelayedDefinitionsManager
 {
-    private readonly List<TypeDefinitionRecord> _postponedTypeDefinitionDetails = new();
-    private readonly List<MethodDefinitionRecord> _postponedMethodDefinitionDetails = new();
-    private readonly Dictionary<string, string> _firstFieldByTypeVariable = new();
+    private readonly Dictionary<string, TypeDefinitionRecord> _postponedTypeDefinitions = new();
+    private readonly List<string> _typeDefinitionOrder = new();
 
-    private string? _firstMethodHandleVariable;
-    private string? _firstFieldHandleVariable;
+    private MethodDefinitionRecord _currentMethod;
 
-    internal void RegisterTypeDefinition(string typeVarName, string typeQualifiedName, Action<SystemReflectionMetadataContext, TypeDefinitionRecord> action)
+    internal void RegisterTypeDefinition(string typeVarName, string typeQualifiedName, DelayedTypeDefinitionAction action)
     {
-        _postponedTypeDefinitionDetails.Add(new TypeDefinitionRecord(typeQualifiedName, typeVarName)
+        _postponedTypeDefinitions.Add(typeVarName, new TypeDefinitionRecord(typeQualifiedName, typeVarName)
         {
             DefinitionFunction = action,
-            FirstFieldHandle = null,
             FirstMethodHandle = null
         });
+        
+        _typeDefinitionOrder.Add(typeVarName);
     }
 
     internal void RegisterMethodDefinition(string declaringTypeVarName, Func<SystemReflectionMetadataContext, MethodDefinitionRecord, string> newMethodFunc)
     {
-        _postponedMethodDefinitionDetails.Add(new MethodDefinitionRecord(newMethodFunc, declaringTypeVarName));
+        ref var declaringTypeRecord = ref CollectionsMarshal.GetValueRefOrNullRef(_postponedTypeDefinitions, declaringTypeVarName);
+        Debug.Assert(!Unsafe.IsNullRef(ref declaringTypeRecord));
+        
+        declaringTypeRecord.Methods.Add(_currentMethod = new MethodDefinitionRecord(newMethodFunc, declaringTypeVarName));
     }
     
-    internal void RegisterFieldDefinition(string parentDefinitionVariableName, string fieldVariableName)
+    internal void RegisterFieldDefinition(string declaringTypeVarName, in FieldDefinitionRecord field)
     {
-        _firstFieldHandleVariable ??= fieldVariableName;
-        _firstFieldByTypeVariable.TryAdd(parentDefinitionVariableName, fieldVariableName);
+        ref var typeRecordOrNullRef = ref CollectionsMarshal.GetValueRefOrNullRef(_postponedTypeDefinitions, declaringTypeVarName);
+        Debug.Assert(!Unsafe.IsNullRef(ref typeRecordOrNullRef), $"The type '{declaringTypeVarName}' has not been registered yet.");
+        
+        typeRecordOrNullRef.Fields.Add(field);
     }
 
     public int RegisterLocalVariable(string localVarName, ResolvedType resolvedVarType, Action<IVisitorContext, string, ResolvedType> action)
     {
+        Debug.Assert(_currentMethod != null);
         var localVariable = new LocalVariableRecord(localVarName, resolvedVarType, action);
-        _postponedMethodDefinitionDetails[^1].LocalVariables.Add(localVariable);
 
-        return _postponedMethodDefinitionDetails[^1].LocalVariables.Count - 1;
+        _currentMethod.LocalVariables.Add(localVariable);
+        return _currentMethod.LocalVariables.Count - 1;
     }
     
     public void RegisterProperty(string propertyName,string propertyDefinitionVariable, string declaringTypeName, string declaringTypeVariable, Action<IVisitorContext, string, string, string, string> propertyProcessor)
     {
-        //TODO: For now assume the last type is the current one. This may not hold true if we need to process type B while processing type A and after
-        //      finishing processing B we get back to process the reminder of A. 
-        //      We need to track current `type` (pushing when start visiting, popping when finish).
-        //      Same thing for Local Variable wrt methods.
-        _postponedTypeDefinitionDetails[^1].Properties.Add(new PropertyDefinitionRecord(propertyName, propertyDefinitionVariable, declaringTypeName, propertyProcessor));
+        GetCurrentTypeDefinition().Properties.Add(new PropertyDefinitionRecord(propertyName, propertyDefinitionVariable, declaringTypeName, propertyProcessor));
     }
 
+    /// <summary>
+    /// This method must be invoked after the member has been registered with the DelayedDefinitionsManager, in most cases
+    /// this means after the equivalent method in <see cref="Cecilifier.Core.ApiDriver.DefinitionsFactory.IApiDriverDefinitionsFactory"/> has been invoked.
+    /// </summary>
+    public void AddAttributeEmitterToCurrentMember(VariableMemberKind kind, Action<IVisitorContext, string> attributeEmitter)
+    {
+        ref var currentType = ref GetCurrentTypeDefinition();
+        if (kind == VariableMemberKind.Type)
+        {
+            currentType.Attributes.Add(attributeEmitter);
+        }
+        else if (kind == VariableMemberKind.Field)
+        {
+            currentType.Fields[^1].Attributes.Add(attributeEmitter);
+        }
+    }
+    
     public void AddAttributeToCurrentType(Action<IVisitorContext, string> attributeEmitter)
     {
-        _postponedTypeDefinitionDetails[^1].Attributes.Add(attributeEmitter);
+        GetCurrentTypeDefinition().Attributes.Add(attributeEmitter);
+    }
+
+    public string GetTypeDefinitionVariableFromTypeReferenceVariable(string typeReferenceVariable)
+    {
+        var associatedRecord = _postponedTypeDefinitions.Single(rec => rec.Value.TypeReferenceVariable == typeReferenceVariable).Value;
+        return string.IsNullOrWhiteSpace(associatedRecord.TypeDefinitionVariable) 
+            ? throw new InvalidOperationException($"The 'type definition variable' for the type reference '{typeReferenceVariable}' has not been set.") 
+            : associatedRecord.TypeDefinitionVariable;
     }
 
     internal void ProcessDefinitions(SystemReflectionMetadataContext context)
     {
-        if (_postponedTypeDefinitionDetails.Count == 0)
+        if (_postponedTypeDefinitions.Count == 0)
             return;
         
-        var postponedTypeDefinitions = CollectionsMarshal.AsSpan(_postponedTypeDefinitionDetails);
+        ProcessMethodRecords(context);
+        EnsureTypeDefinitionRecordsHaveFirstHandlesInitialized();
 
-        ProcessFields(postponedTypeDefinitions);
-        ProcessMethodRecords(context, postponedTypeDefinitions);
-        
-        UpdateTypeDefinitionRecords(postponedTypeDefinitions);
-
-        for (var index = 0; index < postponedTypeDefinitions.Length; index++)
+        foreach (var typeVarName in _typeDefinitionOrder)
         {
-            ref var typeRecord = ref postponedTypeDefinitions[index];
-            typeRecord.DefinitionFunction(context, typeRecord);
+            ref var typeRecord = ref CollectionsMarshal.GetValueRefOrNullRef(_postponedTypeDefinitions, typeVarName);
+            Debug.Assert(!Unsafe.IsNullRef(ref typeRecord));
+            
+            typeRecord.DefinitionFunction(context, ref typeRecord);
         }
-        
-        _postponedMethodDefinitionDetails.Clear();
-        _postponedTypeDefinitionDetails.Clear();
-        
-        _firstMethodHandleVariable = null;
-        _firstFieldHandleVariable = null;
+        _postponedTypeDefinitions.Clear();
+        _typeDefinitionOrder.Clear();
+    }
+    
+    private void ProcessMethodRecords(SystemReflectionMetadataContext context)
+    {
+        foreach (var typeDeclarationVarName in _typeDefinitionOrder)
+        {
+            ref var typeRecordOrNullRef = ref CollectionsMarshal.GetValueRefOrNullRef(_postponedTypeDefinitions, typeDeclarationVarName);
+            Debug.Assert(!Unsafe.IsNullRef(ref typeRecordOrNullRef));
+            
+            foreach (var methodRecord in typeRecordOrNullRef.Methods)
+            {
+                var methodHandleVariableName = methodRecord.DefinitionFunction(context, methodRecord);
+                typeRecordOrNullRef.FirstMethodHandle ??= methodHandleVariableName;
+            }
+        }
     }
 
-    private void ProcessFields(Span<TypeDefinitionRecord> postponedTypeDefinitions)
+    private void EnsureTypeDefinitionRecordsHaveFirstHandlesInitialized()
     {
-        foreach (var (typeVar, fieldVar) in _firstFieldByTypeVariable)
+        foreach (var typeDeclarationVarName in _typeDefinitionOrder)
         {
-            for (int i = 0; i < postponedTypeDefinitions.Length; i++)
-            {
-                if (postponedTypeDefinitions[i].TypeVarName == typeVar)
-                {
-                    Debug.Assert(postponedTypeDefinitions[i].FirstFieldHandle == null);
-                    postponedTypeDefinitions[i].FirstFieldHandle = fieldVar;
-                }
-            }
+            ref var typeRecord = ref CollectionsMarshal.GetValueRefOrNullRef(_postponedTypeDefinitions, typeDeclarationVarName);
+            Debug.Assert(!Unsafe.IsNullRef(ref typeRecord));
+            
+            typeRecord.FirstMethodHandle ??= ApiDriverConstants.MethodDefinitionTableNextAvailableEntry;
         }
     }
     
-    private void ProcessMethodRecords(SystemReflectionMetadataContext context, Span<TypeDefinitionRecord> postponedTypeDefinitions)
+    private ref TypeDefinitionRecord GetCurrentTypeDefinition()
     {
-        foreach (var methodRecord in _postponedMethodDefinitionDetails)
-        {
-            var methodHandleVariableName = methodRecord.DefinitionFunction(context, methodRecord);
-            _firstMethodHandleVariable ??= methodHandleVariableName;
+        // This assumes that the last type definition is the current one. This may not hold true if we need to process types in a mixed order (e.g. start processing A then
+        // need to emit B and when finishing processing B we get back to process A. After getting back to A this method will incorrectly return B as the current type.
+        // We may need to revisit this and track the current type in a stack (and push/pop accordingly when visiting/processing types).
+        Debug.Assert(_typeDefinitionOrder.Count > 0);
+        var currentTypeVarName = _typeDefinitionOrder[^1];
 
-            for (int i = 0; i < postponedTypeDefinitions.Length; i++)
-            {
-                if (postponedTypeDefinitions[i].TypeVarName == methodRecord.DeclaringTypeVarName && postponedTypeDefinitions[i].FirstMethodHandle == null)
-                {
-                    postponedTypeDefinitions[i].FirstMethodHandle = methodHandleVariableName;
-                }
-            }
-        }
-    }
-
-    private void UpdateTypeDefinitionRecords(Span<TypeDefinitionRecord> postponedTypeDefinitions)
-    {
-        _firstMethodHandleVariable ??= "MetadataTokens.MethodDefinitionHandle(1)";
-        _firstFieldHandleVariable ??= "MetadataTokens.FieldDefinitionHandle(metadata.GetRowCount(TableIndex.Field) + 1)";
+        ref var valueRefOrNullRef = ref CollectionsMarshal.GetValueRefOrNullRef(_postponedTypeDefinitions, currentTypeVarName);
+        Debug.Assert(!Unsafe.IsNullRef(ref valueRefOrNullRef));
         
-        postponedTypeDefinitions[^1].FirstMethodHandle ??= _firstMethodHandleVariable;
-        postponedTypeDefinitions[^1].FirstFieldHandle ??= _firstFieldHandleVariable;
-        
-        for (var index = _postponedTypeDefinitionDetails.Count - 2; index >= 0; index--)
-        {
-            ref var typeRecord = ref postponedTypeDefinitions[index];
-            typeRecord.FirstMethodHandle ??= postponedTypeDefinitions[index + 1].FirstMethodHandle;
-            typeRecord.FirstFieldHandle ??= postponedTypeDefinitions[index + 1].FirstFieldHandle;
-        }
+        return ref valueRefOrNullRef;
     }
 }

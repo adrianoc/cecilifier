@@ -205,7 +205,7 @@ namespace Cecilifier.Core.Extensions
                     Name= argument.NameEquals!.Name.Identifier.Text, 
                     Value = constantValue.Value, 
                     Kind = namedArgumentSymbol!.Kind == SymbolKind.Field ? NamedArgumentKind.Field : NamedArgumentKind.Property,
-                    ResolvedType = context.TypeResolver.ResolveAny(namedArgumentSymbol.GetMemberType(), ResolveTargetKind.Parameter)
+                    ResolvedType = context.TypeResolver.ResolveAny(namedArgumentSymbol.GetMemberType(), ResolveTargetKind.AttributeNamedArgument)
                 };
             }
         }
@@ -219,7 +219,7 @@ namespace Cecilifier.Core.Extensions
         {
             return expression switch
             {
-                TypeOfExpressionSyntax typeOf => new RawCSharpCode(context.TypeResolver.ResolveAny(context.SemanticModel.GetTypeInfo(typeOf.Type).Type).Expression),
+                TypeOfExpressionSyntax typeOf => new RawCSharpCode(context.TypeResolver.ResolveAny(context.SemanticModel.GetTypeInfo(typeOf.Type).Type, ResolveTargetKind.TypeReference).Expression),
                 ImplicitArrayCreationExpressionSyntax implicitArrayCreation => ConstantValueForArray(implicitArrayCreation.Initializer),
                 ArrayCreationExpressionSyntax arrayCreation => ConstantValueForArray(arrayCreation.Initializer),
                 

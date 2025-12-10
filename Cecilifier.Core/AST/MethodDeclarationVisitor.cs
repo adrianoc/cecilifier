@@ -145,7 +145,7 @@ namespace Cecilifier.Core.AST
                                             typeParameters);
 
                 HandleAttributesInMemberDeclaration(attributes, TargetDoesNotMatch, SyntaxKind.ReturnKeyword, methodVar, VariableMemberKind.None); // Normal method attrs.
-                HandleAttributesInMemberDeclaration(attributes, TargetMatches, SyntaxKind.ReturnKeyword, $"{methodVar}.MethodReturnType", VariableMemberKind.Field); // [return:Attr]
+                HandleAttributesInMemberDeclaration(attributes, TargetMatches, SyntaxKind.ReturnKeyword, $"{methodVar}.MethodReturnType", VariableMemberKind.None); // [return:Attr]
 
                 AddToOverridenMethodsIfAppropriated(methodVar, methodSymbol);
 
@@ -154,7 +154,7 @@ namespace Cecilifier.Core.AST
                     AddCecilExpression($"{methodVar}.CustomAttributes.Add(new CustomAttribute(assembly.MainModule.Import(typeof(System.Runtime.CompilerServices.PreserveBaseOverridesAttribute).GetConstructor(BindingFlags.Public | BindingFlags.Instance, null, new Type[0], null))));");
                 }
                 
-                if (modifiersTokens.IndexOf(SyntaxKind.ExternKeyword) == -1)
+                if (!methodSymbol.IsExtern)
                 {
                     // if the method is a local function use `simpleName` as the method name (instead of `methodName`) since, in this context,
                     // the latter is a `mangled name` and any reference to the method will use its `unmangled name` for lookups which would fail
@@ -176,13 +176,7 @@ namespace Cecilifier.Core.AST
 
         private string AddOrUpdateMethodDefinition(IMethodSymbol methodSymbol, string declaringTypeName, string variableName, string simpleName, string methodName, string methodModifiers, SeparatedSyntaxList<ParameterSyntax> parameters, IList<TypeParameterSyntax> typeParameters)
         {
-            // for ctors we want to use the `methodName` (== .ctor) instead of the `simpleName` (== ctor) otherwise we may fail to find existing variables.
-            var tbf = new MethodDefinitionVariable(
-                    declaringTypeName, 
-                    methodSymbol.MethodKind == MethodKind.Constructor ? methodName : simpleName, 
-                    parameters.Select(paramSyntax => Context.GetTypeInfo(paramSyntax.Type).Type.ToDisplayString()).ToArray(), 
-                    typeParameters.Count);
-            
+            var tbf = methodSymbol.AsMethodDefinitionVariable();
             var found = Context.DefinitionVariables.GetMethodVariable(tbf);
             if (found.IsValid)
             {
@@ -242,7 +236,7 @@ namespace Cecilifier.Core.AST
             
             var declaringTypeVarName = context.DefinitionVariables.GetLastOf(VariableMemberKind.Type).VariableName;
             var parameterSymbols = parameters.Select(p => context.SemanticModel.GetDeclaredSymbol(p)).ToArray();
-            var exps = context.ApiDefinitionsFactory.Method(context, methodSymbol, new BodiedMemberDefinitionContext(methodName, simpleName, methodVar, declaringTypeVarName, MemberOptions.None, ilContext), methodName, methodModifiers, parameterSymbols, typeParameters);
+            var exps = context.ApiDefinitionsFactory.Method(context, methodSymbol, new BodiedMemberDefinitionContext(methodName, simpleName, methodVar, declaringTypeVarName, MemberOptions.None, ilContext), methodName, methodModifiers, typeParameters);
             AddCecilExpressions(context, exps);
 
             //TODO: Temporary setting ilVar until we change its type to IlContext...

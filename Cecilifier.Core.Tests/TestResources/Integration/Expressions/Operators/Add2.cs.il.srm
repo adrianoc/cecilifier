@@ -1,0 +1,20 @@
+.locals init (System.String V_0)
+IL_0000: ldarg.0
+IL_0001: ldc.i4 10
+IL_0006: box System.Int32
+IL_000b: call System.String System.String::Concat(System.Object,System.Object)
+IL_0010: stloc V_0
+IL_0014: nop
+IL_0015: nop
+IL_0016: ldstr "constant"
+IL_001b: ldarg.1
+IL_001c: box System.Int32
+IL_0021: call System.String System.String::Concat(System.Object,System.Object)
+IL_0026: stloc V_0
+IL_002a: nop
+IL_002b: nop
+IL_002c: ldloc V_0
+IL_0030: nop
+IL_0031: nop
+IL_0032: call System.Void System.Console::WriteLine(System.String)
+IL_0037: ret

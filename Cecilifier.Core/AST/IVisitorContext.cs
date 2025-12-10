@@ -4,6 +4,7 @@ using System.Reflection.Emit;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Cecilifier.Core.ApiDriver;
+using Cecilifier.Core.ApiDriver.DefinitionsFactory;
 using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
@@ -41,7 +42,7 @@ public interface IVisitorContext
     LinkedListNode<string> CurrentLine { get; }
     int CecilifiedLineNumber { get; }
 
-    void OnFinishedTypeDeclaration();
+    void OnFinishedTypeDeclaration(INamedTypeSymbol typeSymbol);
 
     IMethodSymbol GetDeclaredSymbol(BaseMethodDeclarationSyntax methodDeclaration);
     ITypeSymbol GetDeclaredSymbol(BaseTypeDeclarationSyntax classDeclaration);

@@ -9,7 +9,23 @@ namespace Cecilifier.Core.Tests.Integration
 {
     [TestFixture(typeof(MonoCecilContext))]
     [TestFixture(typeof(SystemReflectionMetadataContext))]
-    [EnableForContext<SystemReflectionMetadataContext>(nameof(TestNoParameters), nameof(TestReturnValue))]
+    [EnableForContext<SystemReflectionMetadataContext>(nameof(NonVirtualMethodCallTest),
+        nameof(TestCtorWithParameters),
+        nameof(TestDefaultCtorFromBaseClass),
+        nameof(TestExplicityDefaultCtor),
+        nameof(TestExternalMethodReference),
+        nameof(TestInterfaceMethodVirtualImplementation),
+        nameof(TestMethodCallOnValueType),
+        nameof(TestMethodInvocation),
+        nameof(TestMultipleParameters),
+        nameof(TestMutuallyRecursive),
+        nameof(TestNoParameters),
+        nameof(TestRefReturn),
+        nameof(TestReturnValue),
+        nameof(TestSelfReferencingCtor),
+        nameof(TestSingleSimpleParameter),
+        nameof(TestTypeWithNoArgCtorAndInnerClass),
+        nameof(TestVariableNumberOfParameters))]
     public class MethodTestCase<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
     {
         [Test]
@@ -148,6 +164,7 @@ namespace Cecilifier.Core.Tests.Integration
         [TestCase("ArrayParam")]
         [TestCase("ParamIndexer")]
         [TestCase("RefReturnField")]
+        [ParameterizedResourceFilter<SystemReflectionMetadataContext>("ArrayParam", "RefReturnField")]
         public void TestRefReturn(string test, string ignoredErrors = null)
         {
             var options = new CecilifyTestOptions { ResourceName = $"Members/Methods/{test}", IgnoredILErrors = ignoredErrors };

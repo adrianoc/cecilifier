@@ -12,7 +12,7 @@ public class AttributesTest : CecilifierUnitTestBase
     {
         var result = RunCecilifier($"[My(\"type\")] {AttributeDefinition}");
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
-        Assert.That(cecilifiedCode, Does.Match(@"var ctor_myAttribute_\d+ = new MethodDefinition\("".ctor"", MethodAttributes.Private, assembly.MainModule.TypeSystem.Void\);")); // This represents the ctor with argument
+        Assert.That(cecilifiedCode, Does.Match(@"var ctor_myAttribute_\d+ = new MethodDefinition\("".ctor"", MethodAttributes.Public, assembly.MainModule.TypeSystem.Void\);")); // This represents the ctor with argument
         Assert.That(cecilifiedCode, Does.Not.Match(@"var ctor_myAttribute_\d+ = new MethodDefinition\("".ctor"", MethodAttributes.Public \| MethodAttributes.HideBySig \| MethodAttributes.RTSpecialName \| MethodAttributes.SpecialName, assembly.MainModule.TypeSystem.Void\);"), "Parameterless ctor not expected");
         Assert.That(cecilifiedCode, Does.Match(@"cls_myAttribute_\d+\.CustomAttributes.Add\(attr_myAttribute_\d+\);"), "Custom attribute should be be added");
         Assert.That(cecilifiedCode, Does.Match(@"var attr_myAttribute_\d+ = new CustomAttribute\(ctor_myAttribute_\d+\);"), "Reference to class declaring MyAttribute should be used when instantiating the custom attribute");

@@ -65,23 +65,23 @@ namespace Cecilifier.Core.AST
         public override void VisitReturnStatement(ReturnStatementSyntax node)
         {
             var valueTypeLocalVariable = DeclareAndInitializeValueTypeLocalVariable();
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloc, valueTypeLocalVariable.VariableName);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloc, valueTypeLocalVariable.VariableName.AsToken());
         }
 
         public override void VisitArrowExpressionClause(ArrowExpressionClauseSyntax node)
         {
             var valueTypeLocalVariable = DeclareAndInitializeValueTypeLocalVariable();
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloc, valueTypeLocalVariable.VariableName);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloc, valueTypeLocalVariable.VariableName.AsToken());
         }
 
         public override void VisitMemberAccessExpression(MemberAccessExpressionSyntax node)
         {
             var valueTypeLocalVariable = DeclareAndInitializeValueTypeLocalVariable();
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloca, valueTypeLocalVariable.VariableName);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloca, new CilLocalVariableHandle(valueTypeLocalVariable.VariableName.AsToken()));
             var accessedMember = ModelExtensions.GetSymbolInfo(Context.SemanticModel, node).Symbol.EnsureNotNull();
             if (accessedMember.ContainingType.SpecialType == SpecialType.System_ValueType)
             {
-                Context.SetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, ResolvedStructType().Expression);
+                Context.SetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, ResolvedStructType(ResolveTargetKind.TypeReference).Expression);
             }
         }
 
@@ -121,7 +121,7 @@ namespace Cecilifier.Core.AST
 
         public override void VisitAssignmentExpression(AssignmentExpressionSyntax node)
         {
-            var instantiatedType = ResolvedStructType();
+            var instantiatedType = ResolvedStructType(ResolveTargetKind.Instruction);
             var visitor = new NoArgsValueTypeObjectCreatingInAssignmentVisitor(Context, ilVar, instantiatedType, DeclareAndInitializeValueTypeLocalVariable, objectCreationExpressionSyntax);
             node.Left.Accept(visitor);
             TargetOfAssignmentIsValueType = visitor.TargetOfAssignmentIsValueType;
@@ -131,16 +131,14 @@ namespace Cecilifier.Core.AST
         {
             var valueTypeLocalVariable = DeclareAndInitializeValueTypeLocalVariable();
             var loadOpCode = node.IsPassedAsInParameter(Context) ? OpCodes.Ldloca : OpCodes.Ldloc;
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, loadOpCode, valueTypeLocalVariable.VariableName);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, loadOpCode, valueTypeLocalVariable.VariableName.AsToken());
         }
 
         public bool TargetOfAssignmentIsValueType { get; private set; }
 
         private DefinitionVariable DeclareAndInitializeValueTypeLocalVariable()
         {
-            var resolvedVarType = ResolvedStructType();
-            var tempLocal = Context.AddLocalVariableToCurrentMethod("vt", resolvedVarType);
-            
+            var tempLocal = Context.AddLocalVariableToCurrentMethod("vt", Context.TypeResolver.ResolveAny(ctorInfo.Symbol.ContainingType, ResolveTargetKind.LocalVariable));
             using var _ = Context.DefinitionVariables.WithVariable(tempLocal);
             
             switch (ctorInfo.Symbol.ContainingType.SpecialType)
@@ -170,14 +168,14 @@ namespace Cecilifier.Core.AST
 
         private void InitValueTypeLocalVariable(string localVariable)
         {
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloca_S, localVariable);
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Initobj, ResolvedStructType());
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloca_S, localVariable.AsToken());
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Initobj, ResolvedStructType(ResolveTargetKind.Instruction).AsToken());
 
             if (objectCreationExpressionSyntax.Initializer is not null)
             {
                 // To process an InitializerExpressionSyntax, ExpressionVisitor expects the top of the stack to contain
                 // the reference of the object to be set.
-                // Since initialisation of value types through a parameterless ctor uses the `initobj` instruction
+                // Since initialization of value types through a parameterless ctor uses the `initobj` instruction
                 // at this point there's no object reference in the stack (it was consumed by the `Initobj` instruction)
                 // so we push the address of the variable that we just initialised again. Notice that after processing
                 // the initializer we need to pop this reference from the stack again.
@@ -195,6 +193,6 @@ namespace Cecilifier.Core.AST
             context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Pop);
         }
 
-        private ResolvedType ResolvedStructType() =>  Context.TypeResolver.ResolveAny(ctorInfo.Symbol.ContainingType);
+        private ResolvedType ResolvedStructType(ResolveTargetKind targetKind) =>  Context.TypeResolver.ResolveAny(ctorInfo.Symbol.ContainingType, targetKind);
     }
 }

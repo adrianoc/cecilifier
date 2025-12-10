@@ -24,12 +24,10 @@ namespace Cecilifier.Core.AST
             typeVar = context.Naming.Type("topLevelStatements", ElementKind.Class);
             var typeExps = context.ApiDefinitionsFactory.Type(
                                                         context,
-                                                        typeVar,
-                                                        string.Empty, // global statements cannot be declared in namespace
-                                                        "Program",
+                                                        new MemberDefinitionContext("Program", typeVar, null /*Top level type has no outer type.*/),
+                                                        string.Empty, // global statements cannot be declared in namespaces
                                                         typeModifiers,
                                                         context.TypeResolver.Bcl.System.Object,
-                                                        DefinitionVariable.NotFound, // Top level type has no outer type.
                                                         false,
                                                         [], 
                                                         [], 
@@ -52,7 +50,7 @@ namespace Cecilifier.Core.AST
                                                     new BodiedMemberDefinitionContext("<Main>$", "programMain", methodVar, typeVar, MemberOptions.Static, ilContext),
                                                     "Program",
                                                     "MethodAttributes.Private | MethodAttributes.HideBySig | MethodAttributes.Static",
-                                                    [new ParameterSpec("args", context.TypeResolver.MakeArrayType(context.RoslynTypeSystem.SystemString), RefKind.None, Constants.ParameterAttributes.None)],
+                                                    [new ParameterSpec("args", context.TypeResolver.MakeArrayType(context.RoslynTypeSystem.SystemString, ResolveTargetKind.Parameter), RefKind.None, Constants.ParameterAttributes.None)],
                                                     [],
                                                     ctx => ctx.TypeResolver.ResolveAny(hasReturnStatement ? context.RoslynTypeSystem.SystemInt32 : context.RoslynTypeSystem.SystemVoid, ResolveTargetKind.ReturnType),
                                                     out _);
@@ -92,7 +90,9 @@ namespace Cecilifier.Core.AST
             if (!node.Statement.IsKind(SyntaxKind.ReturnStatement))
                 context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Ret);
 
-            context.OnFinishedTypeDeclaration();
+            context.WriteNewLine();
+            
+            context.OnFinishedTypeDeclaration(null);
             return true;
 
             bool IsLastGlobalStatement(CompilationUnitSyntax compilation, int index)

@@ -5,6 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Reflection.Emit;
+using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -57,14 +58,20 @@ namespace Cecilifier.Core.Extensions
                                                                             ? $"<{method.ContainingSymbol.Name}>g__{method.Name}|0_0"
                                                                             : method.Name;
 
-        public static string FullyQualifiedName(this ISymbol type, bool includingTypeParameters = true)
+        public static string FullyQualifiedName(this ISymbol symbol, bool includingTypeParameters = true)
         {
-            return type.ToDisplayString(includingTypeParameters ? QualifiedNameIncludingTypeParametersFormat : QualifiedNameWithoutTypeParametersFormat);
+            return symbol.ToDisplayString(includingTypeParameters ? QualifiedNameIncludingTypeParametersFormat : QualifiedNameWithoutTypeParametersFormat);
         }
         
-        public static string ToValidVariableName(this ISymbol type)
+        public static string ToValidVariableName(this ISymbol symbol)
         {
-            return type.ToDisplayString(ValidVariableNameFormat);
+            return symbol switch
+            {
+                IMethodSymbol { MethodKind: MethodKind.Conversion} method => method.ReturnType.ToDisplayString(ValidVariableNameFormat),
+                IMethodSymbol { MethodKind: MethodKind.UserDefinedOperator} method => method.Name,
+                IMethodSymbol method => method.ToDisplayString(ValidVariableNameFormat),
+                _ => symbol.ToDisplayString(ValidVariableNameFormat)
+            };
         }
         
         public static string GetReflectionName(this ITypeSymbol typeSymbol)
@@ -108,9 +115,9 @@ namespace Cecilifier.Core.Extensions
             _ => throw new NotSupportedException($"({symbol.Kind}) symbol {symbol.ToDisplayString()} is not supported.")
         };
 
-        public static bool IsDefinedInCurrentAssembly<T>(this T method, IVisitorContext ctx) where T : ISymbol
+        public static bool IsDefinedInCurrentAssembly<T>(this T symbol, IVisitorContext ctx) where T : ISymbol
         {
-            return SymbolEqualityComparer.Default.Equals(method.ContainingAssembly, ctx.SemanticModel.Compilation.Assembly);
+            return SymbolEqualityComparer.Default.Equals(symbol.ContainingAssembly, ctx.SemanticModel.Compilation.Assembly);
         }
 
         public static bool IsByRef(this ISymbol symbol) =>
@@ -167,7 +174,7 @@ namespace Cecilifier.Core.Extensions
             };
         }
 
-        public static void EnsureFieldExists(this IFieldSymbol fieldSymbol, IVisitorContext context, SimpleNameSyntax node)
+        public static void EnsureFieldExists(this ISymbol fieldSymbol, IVisitorContext context, SimpleNameSyntax node)
         {
             if (fieldSymbol.ContainingType?.TypeKind == TypeKind.Enum)
                 return; // Enum members can never be forward referenced.
@@ -346,5 +353,29 @@ namespace Cecilifier.Core.Extensions
         internal static string? ParamsAttributeMatchingType(this IParameterSymbol paramsParameter) => paramsParameter.IsParams 
                                                                                                         ? paramsParameter.Type.Kind ==  SymbolKind.ArrayType ? typeof(ParamArrayAttribute).FullName : typeof(ParamCollectionAttribute).FullName
                                                                                                         : null;
+
+        internal static string MethodsModifier(this IMethodSymbol methodSymbol)
+        {
+            const string methodAttributesEnumName = "MethodAttributes";
+            var methodModifiers = methodSymbol.DeclaredAccessibility switch
+            {
+                Accessibility.ProtectedAndInternal => $"{methodAttributesEnumName}.FamANDAssem",
+                Accessibility.ProtectedOrInternal  => $"{methodAttributesEnumName}.FamORAssem",
+                Accessibility.Protected  => $"{methodAttributesEnumName}.Family",
+                _  => $"{methodAttributesEnumName}.{methodSymbol.DeclaredAccessibility}",
+            };
+
+            var modifiers = new StringBuilder(methodModifiers);
+            if (methodSymbol.IsStatic)
+                modifiers.AppendModifier($"{methodAttributesEnumName}.Static");
+            
+            if (methodSymbol.IsAbstract)
+                modifiers.AppendModifier($"{methodAttributesEnumName}.Abstract");
+            
+            if (methodSymbol.IsVirtual)
+                modifiers.AppendModifier($"{methodAttributesEnumName}.Virtual");
+                
+            return modifiers.ToString();
+        }
     }
 }

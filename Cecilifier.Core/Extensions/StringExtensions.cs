@@ -8,6 +8,7 @@ namespace Cecilifier.Core.Extensions
     {
         public static int CountNewLines(this string value) => value.AsSpan().Count('\n');
         
+        public static CilLocalVariableHandle AsLocalVariable(this string value) => new(value);
         public static CilToken AsToken(this string value) => new(value);
         public static CilToken AsToken(this ResolvedType value) => new(value.Expression);
     }

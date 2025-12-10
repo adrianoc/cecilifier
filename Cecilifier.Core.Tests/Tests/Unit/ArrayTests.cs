@@ -157,7 +157,7 @@ public class ArrayTests : CecilifierUnitTestBase
                   \s+//This struct is emitted by the compiler and is used to hold raw data used in arrays/span initialization optimizations
                   \s+var (st_rawDataTypeVar_\d+) = new TypeDefinition\("", "__StaticArrayInitTypeSize=12", TypeAttributes.NestedAssembly \| TypeAttributes.Sealed \| TypeAttributes.AnsiClass \| TypeAttributes.ExplicitLayout.+\) \{ ClassSize = 12,PackingSize = 1 \};
                   \s+\1.NestedTypes.Add\(\2\);
-                  \s+var (fld_arrayInitializerData_\d+) = new FieldDefinition\("[A-Z0-9]+", FieldAttributes.Assembly \| FieldAttributes.Static \| FieldAttributes.InitOnly, \2\);
+                  \s+var (fld_arrayInitializerData_\d+) = new FieldDefinition\("[A-Z0-9]+", FieldAttributes.Assembly \| FieldAttributes.Static \| FieldAttributes.InitOnly | FieldAttributes.HasFieldRVA, \2\);
                   \s+\1.Fields.Add\(\3\);
                   \s+\3.InitialValue = \[ 0x01,0x00,0x00,0x00,0x02,0x00,0x00,0x00,0x03,0x00,0x00,0x00, \];
                   \s+(il_.+).Emit\(OpCodes.Dup\);

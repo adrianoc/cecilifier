@@ -9,61 +9,57 @@ namespace Cecilifier.ApiDriver.SystemReflectionMetadata.CustomAttributes;
 internal struct AttributeEncoder
 {
     private readonly IVisitorContext _context;
-    private string _attributeEncoderVar;
+    private readonly string _attributeEncoderVar;
     private readonly string _attributeName;
 
-    public AttributeEncoder(IVisitorContext context, string attributeEncoderVarVariableName, string attributeName)
+    public AttributeEncoder(IVisitorContext context, string attributeEncoderVariableName, string attributeName)
     {
         _context = context;
         _attributeName = attributeName;
-        AttributeBuilderVariable = attributeEncoderVarVariableName;
+        _attributeEncoderVar = attributeEncoderVariableName;
     }
-
-    public string AttributeBuilderVariable { get; }
 
     internal string Encode(IList<CustomAttributeArgument> arguments, IList<CustomAttributeNamedArgument> namedArguments)
     {
-        _attributeEncoderVar = _context.Naming.SyntheticVariable(_attributeName, ElementKind.Attribute);
-
+        var fixedArgumentsEncoderVariableName = _context.Naming.SyntheticVariable($"{_attributeName}ArgumentEncoder", ElementKind.LocalVariable);
+        var namedArgumentsEncoderVariableName = _context.Naming.SyntheticVariable($"{_attributeName}NamedArgumentsEncoder", ElementKind.LocalVariable);
         StringBuilder encoded = new($"""
-                                     var {AttributeBuilderVariable} = new BlobBuilder();
-                                     var {_attributeEncoderVar} = new BlobEncoder({AttributeBuilderVariable});
-
-                                     {_attributeEncoderVar}.CustomAttributeSignature(out var fixedArgumentsEncoder, out var namedArgumentsEncoder);
+                                     var {_attributeEncoderVar} = new BlobEncoder(new BlobBuilder());
+                                     {_attributeEncoderVar}.CustomAttributeSignature(out var {fixedArgumentsEncoderVariableName}, out var {namedArgumentsEncoderVariableName});
                                      """);
 
-        EncodeArguments(arguments, encoded);
-        EncodeNamedArguments(namedArguments, encoded);
+        EncodeArguments(fixedArgumentsEncoderVariableName, arguments, encoded);
+        EncodeNamedArguments(namedArgumentsEncoderVariableName, namedArguments, encoded);
 
         return encoded.ToString();
     }
 
-    private void EncodeArguments(IList<CustomAttributeArgument> arguments, StringBuilder encoded)
+    private void EncodeArguments(string fixedArgumentsEncoderVariableName, IList<CustomAttributeArgument> arguments, StringBuilder encoded)
     {
         foreach (var argument in arguments)
         {
-            EncodeArgument(argument, encoded);
+            EncodeArgument(fixedArgumentsEncoderVariableName, argument, encoded);
         }
     }
 
-    private void EncodeArgument(CustomAttributeArgument customAttributeArgument, StringBuilder encoded)
+    private void EncodeArgument(string argumentsEncoderVariableName, CustomAttributeArgument customAttributeArgument, StringBuilder encoded)
     {
         if (customAttributeArgument.Values != null)
-            EncodeArray(encoded, customAttributeArgument);
+            EncodeArray(argumentsEncoderVariableName, encoded, customAttributeArgument);
         else
-            EncodeScalar(encoded, customAttributeArgument);
+            EncodeScalar(argumentsEncoderVariableName, encoded, customAttributeArgument);
     }
 
-    private void EncodeScalar(StringBuilder encoded, CustomAttributeArgument customAttributeArgument)
+    private void EncodeScalar(string argumentsEncoderVariableName, StringBuilder encoded, CustomAttributeArgument customAttributeArgument)
     {
-        encoded.AppendLine($"""fixedArgumentsEncoder.AddArgument().{ScalarExpressionFor(customAttributeArgument)};""");
+        encoded.AppendLine($"""{argumentsEncoderVariableName}.AddArgument().{ScalarExpressionFor(customAttributeArgument)};""");
     }
 
-    private void EncodeArray(StringBuilder encoded, CustomAttributeArgument customAttributeArgument)
+    private void EncodeArray(string argumentsEncoderVariableName, StringBuilder encoded, CustomAttributeArgument customAttributeArgument)
     {
         encoded.AppendLine($$"""
                              {
-                                 var arrayEncoder = fixedArgumentsEncoder.AddArgument().Vector().Count({{customAttributeArgument.Values!.Length}});
+                                 var arrayEncoder = {{argumentsEncoderVariableName}}.AddArgument().Vector().Count({{customAttributeArgument.Values!.Length}});
                              """);
 
         for (int i = 0; i < customAttributeArgument.Values!.Length; i++)
@@ -76,7 +72,7 @@ internal struct AttributeEncoder
 
     private string ScalarExpressionFor(CustomAttributeArgument customAttributeArgument) => $"Scalar().Constant({customAttributeArgument.Value.ValueText()})";
 
-    private void EncodeNamedArguments(IList<CustomAttributeNamedArgument> namedArguments, StringBuilder encoded)
+    private void EncodeNamedArguments(string namedArgumentsEncoderVariableName, IList<CustomAttributeNamedArgument> namedArguments, StringBuilder encoded)
     {
         if (namedArguments.Count == 0)
         {
@@ -84,17 +80,54 @@ internal struct AttributeEncoder
         }
         else
         {
-            encoded.AppendLine($"var nae = namedArgumentsEncoder.Count({namedArguments.Count});");
+            encoded.AppendLine("// Attribute, named arguments");
+            encoded.AppendLine($"var nae = {namedArgumentsEncoderVariableName}.Count({namedArguments.Count});");
             foreach (var namedArgument in namedArguments)
             {
-                encoded.AppendLine($"""
-                                    nae.AddArgument(
-                                                isField: {(namedArgument.Kind == NamedArgumentKind.Field).ToKeyword()}, 
-                                                enc => enc.ScalarType().{namedArgument.ResolvedType}, 
-                                                nameEncoder => nameEncoder.Name("{namedArgument.Name}"),
-                                                literalEncoder => literalEncoder.{ScalarExpressionFor(namedArgument)});
-                                    """);
+                EncodeNamedArgument(namedArgument, encoded, "typeEncoder", "literalEncoder");
             }
         }
+    }
+
+    private void EncodeNamedArgument(CustomAttributeNamedArgument namedArgument, StringBuilder encoded, string typeEncoder, string literalEncoder)
+    {
+        encoded.AppendLine($"// Named argument: {namedArgument.Name}");
+        if (namedArgument.Values == null)
+            EncodeNamedArgumentScalar(namedArgument, encoded);
+        else
+            EncodeNamedArgumentArray(namedArgument, encoded);
+        encoded.AppendLine();
+    }
+
+    private void EncodeNamedArgumentArray(CustomAttributeNamedArgument namedArgument, StringBuilder encoded)
+    {
+        const string AvoidRedeclarationOfVars = "NamedArgumentEncoderVarsAlreadyDeclared";
+        var varOrEmpty = string.Empty;
+        if (!_context.HasFlag(AvoidRedeclarationOfVars))
+        {
+            varOrEmpty = "var ";
+            _context.SetFlag(AvoidRedeclarationOfVars);
+        }
+
+        encoded.AppendLine($"""nae.AddArgument(isField: {(namedArgument.Kind == NamedArgumentKind.Field).ToKeyword()}, out {varOrEmpty}typeEncoder, out {varOrEmpty}nameEncoder, out {varOrEmpty}literalEncoder);""");
+        encoded.AppendLine($"""typeEncoder.{namedArgument.ResolvedType};""");
+        encoded.AppendLine($"""nameEncoder.Name("{namedArgument.Name}");""");
+        
+        var literalsEncoderVariable = _context.Naming.SyntheticVariable("arrayEncoder", ElementKind.LocalVariable);
+        encoded.AppendLine($"var {literalsEncoderVariable} = literalEncoder.Vector().Count({namedArgument.Values!.Length});");
+        for (int i = 0; i < namedArgument.Values.Length; i++)
+        {
+            encoded.AppendLine($"{literalsEncoderVariable}.AddLiteral().{ScalarExpressionFor(namedArgument.Values[i])};");
+        }
+    }
+
+    private void EncodeNamedArgumentScalar(CustomAttributeNamedArgument namedArgument, StringBuilder encoded)
+    {
+        encoded.AppendLine($"""
+                            nae.AddArgument(isField: {(namedArgument.Kind == NamedArgumentKind.Field).ToKeyword()}, 
+                                    typeEncoder => typeEncoder.{namedArgument.ResolvedType}, 
+                                    nameEncoder => nameEncoder.Name("{namedArgument.Name}"), 
+                                    literalEncoder => literalEncoder.{ScalarExpressionFor(namedArgument)});
+                            """);
     }
 }

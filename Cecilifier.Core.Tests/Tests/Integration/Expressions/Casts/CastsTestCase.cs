@@ -1,11 +1,14 @@
 using Cecilifier.ApiDriver.MonoCecil;
+using Cecilifier.ApiDriver.SystemReflectionMetadata;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Tests.Framework;
+using Cecilifier.Core.Tests.Framework.Attributes;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration.Casts
 {
     [TestFixture(typeof(MonoCecilContext), TestName = "Mono.Cecil")]
+    [TestFixture(typeof(SystemReflectionMetadataContext), TestName = "System.Reflection.Metadata")]
     public class CastsTestCase<TContext> : ResourceTestBase<TContext> where TContext : IVisitorContext
     {
         [Test]
@@ -27,12 +30,14 @@ namespace Cecilifier.Core.Tests.Integration.Casts
         }
 
         [Test]
+        [ParameterizedResourceFilter<SystemReflectionMetadataContext>(IgnoreReason = "Generic types are not supported as of today on SRM")]
         public void TestGenericTypeParameter([Values("object", "T")] string source, [Values("object", "T")] string target)
         {
             AssertResourceTestWithParameters("Expressions/Casts/GenericTypeCasts", source, target);
         }
 
         [Test]
+        [ParameterizedResourceFilter<SystemReflectionMetadataContext>(IgnoreReason = "Generic types are not supported as of today on SRM")]
         public void TestGenerics([Values("Base<int>", "Derived")] string source, [Values("Base<int>", "Derived")] string target)
         {
             AssertResourceTestWithParameters("Expressions/Casts/GenericTypeCasts", source, target);

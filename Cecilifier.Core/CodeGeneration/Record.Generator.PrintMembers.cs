@@ -27,7 +27,7 @@ internal partial class RecordGenerator
         context.WriteNewLine();
         context.WriteComment($"{record.Identifier.ValueText}.{PrintMembersMethodName}()");
 
-        var builderParameter = new ParameterSpec("builder", context.TypeResolver.ResolveAny(context.RoslynTypeSystem.ForType<StringBuilder>()), RefKind.None, Constants.ParameterAttributes.None);
+        var builderParameter = new ParameterSpec("builder", context.TypeResolver.ResolveAny(context.RoslynTypeSystem.ForType<StringBuilder>(), ResolveTargetKind.Parameter), RefKind.None, Constants.ParameterAttributes.None);
         string methodModifiers = $"MethodAttributes.Family | {(HasBaseRecord(record) ? Constants.Cecil.HideBySigVirtual : Constants.Cecil.HideBySigNewSlotVirtual)}";
         Func<IVisitorContext, ResolvedType> returnTypeResolver = ctx => ctx.TypeResolver.Bcl.System.Boolean;
         var printMembersDeclExps = context.ApiDefinitionsFactory.Method(
@@ -81,7 +81,7 @@ internal partial class RecordGenerator
                 OpCodes.Ldarg_1,
                 OpCodes.Ldarg_0,
                 OpCodes.Call.WithOperand(ClosedGenericMethodFor($"get_{property.Name}", recordTypeDefinitionVariable)),
-                OpCodes.Box.WithOperand(context.TypeResolver.ResolveAny(property.Type).Expression).IgnoreIf(property.Type.TypeKind != TypeKind.TypeParameter),
+                OpCodes.Box.WithOperand(context.TypeResolver.ResolveAny(property.Type, ResolveTargetKind.None).Expression).IgnoreIf(property.Type.TypeKind != TypeKind.TypeParameter),
                 OpCodes.Callvirt.WithOperand(stringBuilderAppendMethod.MethodResolverExpression(context)),
                 OpCodes.Pop
             ]);
@@ -106,8 +106,8 @@ internal partial class RecordGenerator
                 OpCodes.Pop,
                 OpCodes.Ldarg_1,
                 OpCodes.Ldarg_0,
-                OpCodes.Ldfld.WithOperand($"""new FieldReference("{field.Name}", {context.TypeResolver.ResolveAny(field.Type)}, {TypeOrClosedTypeFor(recordTypeDefinitionVariable)})"""),
-                OpCodes.Box.WithOperand(context.TypeResolver.ResolveAny(field.Type).Expression).IgnoreIf(field.Type.TypeKind != TypeKind.TypeParameter),
+                OpCodes.Ldfld.WithOperand($"""new FieldReference("{field.Name}", {context.TypeResolver.ResolveAny(field.Type, ResolveTargetKind.TypeReference)}, {TypeOrClosedTypeFor(recordTypeDefinitionVariable)})"""),
+                OpCodes.Box.WithOperand(context.TypeResolver.ResolveAny(field.Type, ResolveTargetKind.Instruction).Expression).IgnoreIf(field.Type.TypeKind != TypeKind.TypeParameter),
                 OpCodes.Callvirt.WithOperand(stringBuilderAppendMethod.MethodResolverExpression(context)),
                 OpCodes.Pop
             ]);
@@ -151,10 +151,10 @@ internal partial class RecordGenerator
     private string PrintMembersMethodToCall(INamedTypeSymbol stringBuilderSymbol)
     {
         if (_recordSymbol is { IsGenericType: true })
-            return $$"""new MethodReference("PrintMembers", {{context.TypeResolver.Bcl.System.Boolean}}, {{context.TypeResolver.ResolveAny(_recordSymbol)}}) { HasThis = true, Parameters = { new ParameterDefinition({{context.TypeResolver.ResolveAny(stringBuilderSymbol)}}) } }""";
+            return $$"""new MethodReference("PrintMembers", {{context.TypeResolver.Bcl.System.Boolean}}, {{context.TypeResolver.ResolveAny(_recordSymbol, ResolveTargetKind.None)}}) { HasThis = true, Parameters = { new ParameterDefinition({{context.TypeResolver.ResolveAny(stringBuilderSymbol, ResolveTargetKind.Parameter)}}) } }""";
             
         return HasBaseRecord(context, _recordSymbol) 
-            ? $$"""new MethodReference("PrintMembers", {{context.TypeResolver.Bcl.System.Boolean}}, {{context.TypeResolver.ResolveAny(_recordSymbol.BaseType)}}) { HasThis = true, Parameters = { new ParameterDefinition({{ context.TypeResolver.ResolveAny(stringBuilderSymbol) }}) } }"""
+            ? $$"""new MethodReference("PrintMembers", {{context.TypeResolver.Bcl.System.Boolean}}, {{context.TypeResolver.ResolveAny(_recordSymbol.BaseType, ResolveTargetKind.None)}}) { HasThis = true, Parameters = { new ParameterDefinition({{ context.TypeResolver.ResolveAny(stringBuilderSymbol, ResolveTargetKind.Parameter) }}) } }"""
             : PrintMembersVar;
     }
 }

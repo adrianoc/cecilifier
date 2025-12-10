@@ -31,10 +31,13 @@ public class LocalFunctionTests : CecilifierUnitTestBase
     {
         var result = RunCecilifier($"System.Console.WriteLine(LocalFoo()); {staticOrInstance} int LocalFoo() => 42;");
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
-
+        
+        var expectedAttributes = staticOrInstance == "static" 
+                                        ? "MethodAttributes.Private | MethodAttributes.Static" 
+                                        : "MethodAttributes.Private";
         Assert.That(
             cecilifiedCode,
-            Contains.Substring("var m_localFoo_6 = new MethodDefinition(\"<<Main>$>g__LocalFoo|0_0\", MethodAttributes.Private, assembly.MainModule.TypeSystem.Int32);"));
+            Contains.Substring($"var m_localFoo_6 = new MethodDefinition(\"<<Main>$>g__LocalFoo|0_0\", {expectedAttributes}, assembly.MainModule.TypeSystem.Int32);"));
 
         // asserts that il_topLevelMain_3 is the variable holding the ILProcessor for the top level statement body.
         Assert.That(cecilifiedCode, Contains.Substring("var il_topLevelMain_4 = m_topLevelMain_3.Body.GetILProcessor();"));

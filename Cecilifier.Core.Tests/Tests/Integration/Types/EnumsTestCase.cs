@@ -18,7 +18,7 @@ namespace Cecilifier.Core.Tests.Integration.Types
         [TestCase("EnumFlags")]
         public void SimplestTest(string testCaseName)
         {
-            AssertResourceTest($@"Types/Enums/{testCaseName}");
+            AssertResourceTest($"Types/Enums/{testCaseName}");
         }
     }
 }

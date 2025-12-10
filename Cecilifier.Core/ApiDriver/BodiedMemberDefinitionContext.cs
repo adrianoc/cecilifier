@@ -9,7 +9,7 @@ namespace Cecilifier.Core.ApiDriver;
 /// Defines a context used to define members with bodies, for instance methods, properties, events, etc.
 /// </summary>
 [DebuggerDisplay("BodiedMemberDefinitionContext({Member}, {Options}, {IlContext})")]
-public record struct BodiedMemberDefinitionContext(MemberDefinitionContext Member, MemberOptions Options, IlContext IlContext)
+public record struct BodiedMemberDefinitionContext(MemberDefinitionContext Member, MemberOptions Options, IlContext? IlContext)
 {
     public BodiedMemberDefinitionContext(string name, string nameAsValidIdentifier, string definitionVariable, string? parentDefinitionVariable, MemberOptions options, IlContext ilContext) :
         this(new MemberDefinitionContext(name, nameAsValidIdentifier, definitionVariable, parentDefinitionVariable), options, ilContext)
@@ -33,4 +33,6 @@ public readonly record struct MemberDefinitionContext(string Name, string? NameA
     /// The equivalent of the <see cref="Name"/> of the member with the guarantee it is safe to be used as an identifier in C# code.
     /// </summary>
     public string Identifier => NameAsValidIdentifier ?? Name;
+
+    public string ContainingTypeName { get; init; } = string.Empty;
 }

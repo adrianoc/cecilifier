@@ -1,11 +1,22 @@
 using Cecilifier.ApiDriver.MonoCecil;
+using Cecilifier.ApiDriver.SystemReflectionMetadata;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Tests.Framework;
+using Cecilifier.Core.Tests.Framework.Attributes;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration
 {
     [TestFixture(typeof(MonoCecilContext))]
+    [TestFixture(typeof(SystemReflectionMetadataContext))]
+    [EnableForContext<SystemReflectionMetadataContext>(
+        nameof(TestTopLevelStatements), 
+        nameof(TestNamespaces), 
+        nameof(TestNamespaces), 
+        nameof(AttributesOnMembers), 
+        nameof(TestAttributesOnExplicitTargets), 
+        nameof(TestAttributeWithArrayInitializer), 
+        IgnoreReason = "Not implemented yet")]
     public class MiscTestCase<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
     {
         [TestCase("Parameters")]
@@ -71,6 +82,7 @@ namespace Cecilifier.Core.Tests.Integration
         [TestCase("InterfaceAndMembers")]
         [TestCase("EnumAndMembers")]
         [TestCase("StructAndMembers")]
+        [ParameterizedResourceFilter<SystemReflectionMetadataContext>("StructAndMembers", "EnumAndMembers")]
         public void AttributesOnMembers(string typeKind)
         {
             AssertResourceTest($"Misc/Attributes/AttributesOn{typeKind}");
@@ -79,7 +91,7 @@ namespace Cecilifier.Core.Tests.Integration
         [Test]
         public void TestAttributesOnExplicitTargets()
         {
-            AssertResourceTest($@"Misc/Attributes/AttributesOnExplicitTargets");
+            AssertResourceTest("Misc/Attributes/AttributesOnExplicitTargets");
         }
 
         [Test]

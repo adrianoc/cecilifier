@@ -8,7 +8,7 @@ namespace Cecilifier.Core.Misc
     {
         internal static InstructionRepresentation WithOperand(this OpCode opCode, in ResolvedType operand) => WithOperand(opCode, operand.Expression);
         
-        internal static InstructionRepresentation WithOperand(this OpCode opCode, string operand)
+        internal static InstructionRepresentation WithOperand<TOperand>(this OpCode opCode, TOperand operand)
         {
             return new InstructionRepresentation { OpCode = opCode, Operand = operand };
         }

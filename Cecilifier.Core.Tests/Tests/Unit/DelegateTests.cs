@@ -14,7 +14,7 @@ public class DelegateTests : CecilifierUnitTestBase
         var result = RunCecilifier("class C { public delegate int D(); }");
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
 
-        var matches = Regex.Matches(cecilifiedCode, @"var (del_D\d+) = new TypeDefinition\("""", ""D"", .+ImportReference\(typeof\(System.MulticastDelegate\)\)\).+;");
+        var matches = Regex.Matches(cecilifiedCode, @"var (del_D\d+) = new TypeDefinition\("""", ""D"", .+ImportReference\(typeof\(System.MulticastDelegate\)\)\);");
         Assert.That(matches.Count, Is.EqualTo(1));
 
         Assert.That(cecilifiedCode, Does.Match(@"var m_invoke_\d+ = new MethodDefinition\(""Invoke"", .+assembly.MainModule.TypeSystem.Int32\)"));
@@ -80,7 +80,7 @@ public class DelegateTests : CecilifierUnitTestBase
     {
         var result = RunCecilifier("class Foo { public static void M(int i) { } } class Bar { System.Action<int> Instantiate() { return Foo.M; } }");
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
-        Assert.That(cecilifiedCode, Contains.Substring("WARNING: Converting static method (M) to delegate in a type other than the one defining it may generate incorrect code. Access type: Bar, Method type: Foo"));
+        Assert.That(cecilifiedCode, Contains.Substring("#warning Converting static method (M) to delegate in a type other than the one defining it may generate incorrect code. Access type: Bar, Method type: Foo"));
     }
 
     [TestCase(@"class C { float F() => 42.0F; void M() { var r = new System.Func<float>(F); } }", TestName = "Explicit")]

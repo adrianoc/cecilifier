@@ -30,9 +30,11 @@ public class SystemReflectionMetadataContext : CecilifierContextBase, IVisitorCo
 
     public override DefinitionVariable GetMethodVariable(IMethodSymbol method) => DefinitionVariables.GetMethodVariable(method.AsMethodVariable(VariableMemberKind.MethodSignature));
 
-    public override void OnFinishedTypeDeclaration()
+    public override void OnFinishedTypeDeclaration(INamedTypeSymbol typeSymbol)
     {
-        DelayedDefinitionsManager.ProcessDefinitions(this);
+        // Only process delayed definitions if we're not processing a nested type.
+        if(typeSymbol == null || typeSymbol.ContainingType == null)
+            DelayedDefinitionsManager.ProcessDefinitions(this);
     }
     
     public SystemReflectionMetadataTypeResolver TypedTypeResolver => (SystemReflectionMetadataTypeResolver)TypeResolver;

@@ -1,6 +1,7 @@
 ﻿using System.Reflection.Emit;
 using Cecilifier.Core;
 using Cecilifier.Core.ApiDriver;
+using Cecilifier.Core.ApiDriver.DefinitionsFactory;
 using Cecilifier.Core.ApiDriver.Handles;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
@@ -30,9 +31,10 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
                         using (var peStream = new FileStream($"{args[0]}", FileMode.Create))
                         {
                             var ilBuilder = new BlobBuilder();
+                            var mappedFieldData = new BlobBuilder();
                             var metadataBuilder = new MetadataBuilder();
-                            var entryPointOrNull = GenerateIL(metadataBuilder, ilBuilder, "{{mainTypeName}}");
-                            WritePEImage(peStream, metadataBuilder, ilBuilder, entryPointOrNull);
+                            var entryPointOrNull = GenerateIL(metadataBuilder, ilBuilder, "{{mainTypeName}}", mappedFieldData);
+                            WritePEImage(peStream, metadataBuilder, ilBuilder, entryPointOrNull, mappedFieldData);
                             peStream.Position = 0;
                         }
 
@@ -47,7 +49,8 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
                                     Stream peStream,
                                     MetadataBuilder metadataBuilder,
                                     BlobBuilder ilBuilder,
-                                    MethodDefinitionHandle entryPointHandle)
+                                    MethodDefinitionHandle entryPointHandle,
+                                    BlobBuilder mappedFieldData)
                     {
                          var peHeaderBuilder = new PEHeaderBuilder(
                                                     imageCharacteristics: entryPointHandle.IsNil ? Characteristics.Dll : Characteristics.ExecutableImage,
@@ -60,7 +63,8 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
                                                 ilBuilder,
                                                 entryPoint: entryPointHandle,
                                                 flags: CorFlags.ILOnly,
-                                                deterministicIdProvider: content => s_contentId);
+                                                deterministicIdProvider: content => s_contentId,
+                                                mappedFieldData: mappedFieldData);
 
                          var peBlob = new BlobBuilder();
                          var contentId = peBuilder.Serialize(peBlob);
@@ -68,7 +72,7 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
                          peBlob.WriteContentTo(peStream);
                     }
                     
-                    static MethodDefinitionHandle GenerateIL(MetadataBuilder metadata, BlobBuilder ilBuilder, string mainTypeName)
+                    static MethodDefinitionHandle GenerateIL(MetadataBuilder metadata, BlobBuilder ilBuilder, string mainTypeName, BlobBuilder mappedFieldData)
                     {
                          var moduleAndAssemblyName = metadata.GetOrAddString(mainTypeName);
                          var mainModuleHandle = metadata.AddModule(
@@ -91,8 +95,8 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
                             default(StringHandle),
                             metadata.GetOrAddString("<Module>"),
                             baseType: default(EntityHandle),
-                            fieldList: MetadataTokens.FieldDefinitionHandle(1),
-                            methodList: MetadataTokens.MethodDefinitionHandle(1));
+                            fieldList: MetadataTokens.FieldDefinitionHandle(metadata.GetRowCount(TableIndex.Field) + 1),
+                            methodList: MetadataTokens.MethodDefinitionHandle(metadata.GetRowCount(TableIndex.MethodDef) + 1));
                             
                          var methodBodyStream = new MethodBodyStreamEncoder(ilBuilder);
                          
@@ -100,6 +104,13 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
                          
                          return {{entryPointExpression}};
                     }
+                    
+                    static int TokenForType(Action<SignatureTypeEncoder> encode, MetadataBuilder metadata)
+                 	{
+                 	    var signatureEncoder = new SignatureTypeEncoder(new BlobBuilder());
+                        encode(signatureEncoder);
+                        return MetadataTokens.GetToken(metadata.AddTypeSpecification(metadata.GetOrAddBlob(signatureEncoder.Builder)));
+                 	}
                  }
                  """;
     }
@@ -133,6 +144,7 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
                     CilToken handle => $"{il.VariableName}.Token({handle.VariableName});",
                     // Even though the real operand type may be `Boolean` the operand value and the opCode emitted are for Int32 (that is because IL handles bools as ints)  
                     CilOperandValue { Type.SpecialType: SpecialType.System_Boolean } operandValue => $"{il.VariableName}.CodeBuilder.WriteInt32({operandValue.Value});",
+                    CilOperandValue { Type.SpecialType: SpecialType.System_Char } operandValue => $"{il.VariableName}.CodeBuilder.WriteInt32({operandValue.Value});",
                     CilOperandValue { Type.TypeKind: TypeKind.Enum } enumValue => $"{il.VariableName}.CodeBuilder.Write{((INamedTypeSymbol) enumValue.Type).EnumUnderlyingType!.Name}({(int)enumValue.Value});",
                     CilOperandValue operandValue => $"{il.VariableName}.CodeBuilder.Write{operandValue.Type.Name}({operandValue.Value});",
                     CilLocalVariableHandle localVariableHandle => $"{il.VariableName}.CodeBuilder.WriteInt32({localVariableHandle.Value});",
@@ -157,7 +169,8 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
 
     public void WriteCilBranch(IVisitorContext context, IlContext il, OpCode branchOpCode, string targetLabel, string? comment = null)
     {
-        context.Generate($"{il.VariableName}.Branch(ILOpCode.{branchOpCode.OpCodeName()}, {targetLabel});");
+        var mappedOpCodeName = MapSystemReflectionOpCodeNameToSystemReflectionMetadata(branchOpCode);
+        context.Generate($"{il.VariableName}.Branch(ILOpCode.{mappedOpCodeName}, {targetLabel});");
         context.WriteNewLine();
     }
 

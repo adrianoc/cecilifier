@@ -7,6 +7,8 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Cecilifier.Core;
 using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.ApiDriver.Attributes;
+using Cecilifier.Core.ApiDriver.DefinitionsFactory;
+using Cecilifier.Core.ApiDriver.Handles;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
@@ -16,24 +18,25 @@ using Cecilifier.Core.Variables;
 
 namespace Cecilifier.ApiDriver.MonoCecil;
 
-internal partial class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverDefinitionsFactory
+internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverDefinitionsFactory
 {
     public string MappedTypeModifiersFor(INamedTypeSymbol type, SyntaxTokenList modifiers) => RoslynToApiDriverModifiers(type, modifiers);
 
     public IEnumerable<string> Type(
-        IVisitorContext context,
-        string typeVar,
-        string typeNamespace,
-        string typeName,
-        string attrs,
-        ResolvedType baseType,
-        DefinitionVariable outerTypeVariable,
-        bool isStructWithNoFields,
-        IEnumerable<ITypeSymbol> interfaces,
-        IEnumerable<TypeParameterSyntax>? ownTypeParameters,
-        IEnumerable<TypeParameterSyntax> outerTypeParameters,
-        params string[] properties)
+                                IVisitorContext context, 
+                                MemberDefinitionContext definitionContext, 
+                                string typeNamespace, 
+                                string attrs, 
+                                ResolvedType baseType, 
+                                bool isStructWithNoFields, 
+                                IEnumerable<ITypeSymbol> interfaces,
+                                IEnumerable<TypeParameterSyntax>? ownTypeParameters, 
+                                IEnumerable<TypeParameterSyntax> outerTypeParameters, 
+                                params TypeLayoutProperty[] properties)
     {
+        var typeName = definitionContext.Name;
+        var typeVar = definitionContext.DefinitionVariable;
+        
         var typeParamList = ownTypeParameters?.ToArray() ?? [];
         if (typeParamList.Length > 0)
         {
@@ -44,7 +47,7 @@ internal partial class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IAp
         var typeDefExp = $"var {typeVar} = new TypeDefinition(\"{typeNamespace}\", \"{typeName}\", {attrs}{(baseType ? $", {baseType}" : "")})";
         if (properties.Length > 0)
         {
-            exps.Add($"{typeDefExp} {{ {string.Join(',', properties)} }};");
+            exps.Add($"{typeDefExp} {{ {string.Join(',', properties.Select(p => $"{p.Kind} = {p.Value}"))} }};");
         }
         else
         {
@@ -57,11 +60,11 @@ internal partial class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IAp
             
         foreach (var itf in interfaces)
         {
-            exps.Add($"{typeVar}.Interfaces.Add(new InterfaceImplementation({context.TypeResolver.ResolveAny(itf)}));");
+            exps.Add($"{typeVar}.Interfaces.Add(new InterfaceImplementation({context.TypeResolver.ResolveAny(itf, ResolveTargetKind.TypeReference)}));");
         }
 
-        if (outerTypeVariable.IsValid && outerTypeVariable.VariableName != typeVar)
-            exps.Add($"{outerTypeVariable.VariableName}.NestedTypes.Add({typeVar});"); // type is a inner type of *context.CurrentType* 
+        if (definitionContext.ParentDefinitionVariable != null)
+            exps.Add($"{definitionContext.ParentDefinitionVariable}.NestedTypes.Add({typeVar});"); // type is an inner type 
         else
             exps.Add($"assembly.MainModule.Types.Add({typeVar});");
 
@@ -74,12 +77,11 @@ internal partial class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IAp
         return exps;
     }
 
-    public IEnumerable<string> Method(IVisitorContext context, IMethodSymbol methodSymbol, BodiedMemberDefinitionContext bodiedMemberDefinitionContext, string methodName, string methodModifiers,
-        IParameterSymbol[] resolvedParameterTypes, IList<TypeParameterSyntax> typeParameters)
+    public IEnumerable<string> Method(IVisitorContext context, IMethodSymbol methodSymbol, BodiedMemberDefinitionContext bodiedMemberDefinitionContext, string methodName, string methodModifiers, IList<TypeParameterSyntax> typeParameters)
     {
         var exps = new List<string>();
 
-        var resolvedReturnType = context.TypeResolver.ResolveAny(methodSymbol.ReturnType);
+        var resolvedReturnType = context.TypeResolver.ResolveAny(methodSymbol.ReturnType, methodSymbol.ToTypeResolutionContext());
         var refReturn = methodSymbol.ReturnsByRef || methodSymbol.ReturnsByRefReadonly;
         if (refReturn)
             resolvedReturnType = resolvedReturnType.MakeByReferenceType();
@@ -90,7 +92,7 @@ internal partial class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IAp
         ProcessGenericTypeParameters(bodiedMemberDefinitionContext.Member.DefinitionVariable, context, typeParameters, exps);
         if (methodSymbol.ReturnType.IsTypeParameterOrIsGenericTypeReferencingTypeParameter())
         {
-            resolvedReturnType = context.TypeResolver.ResolveAny(methodSymbol.ReturnType);
+            resolvedReturnType = context.TypeResolver.ResolveAny(methodSymbol.ReturnType, methodSymbol.ToTypeResolutionContext());
             exps.Add($"{bodiedMemberDefinitionContext.Member.DefinitionVariable}.ReturnType = {(refReturn ? resolvedReturnType.MakeByReferenceType() : resolvedReturnType)};");
         }
 
@@ -116,7 +118,7 @@ internal partial class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IAp
         Func<IVisitorContext, ResolvedType> f = returnTypeResolver; 
         if ((definitionContext.Options & MemberOptions.InitOnly) == MemberOptions.InitOnly)
         {
-            returnTypeResolver = ctx => $"new RequiredModifierType({context.TypeResolver.Resolve(ctx.RoslynTypeSystem.ForType(typeof(IsExternalInit).FullName))}, {f(ctx)})";
+            returnTypeResolver = ctx => $"new RequiredModifierType({context.TypeResolver.Resolve(ctx.RoslynTypeSystem.ForType(typeof(IsExternalInit).FullName), in TypeResolution.DefaultContext)}, {f(ctx)})";
         }
         
         // if the method has type parameters we need to postpone setting the return type (using void as a placeholder, since we need to pass something) until the generic parameters has been
@@ -199,8 +201,20 @@ internal partial class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IAp
 
         string OperandFor(InstructionRepresentation inst)
         {
-            return inst.Operand?.Insert(0, ", ")
-                   ?? inst.BranchTargetTag?.Replace(inst.BranchTargetTag, $", {tagToInstructionDefMapping[inst.BranchTargetTag]}")
+            if (inst.Operand != null)
+            {
+                string operandValue = inst.Operand switch
+                {
+                    CilToken token => token.VariableName,
+                    string str => str,
+                    DefinitionVariable definitionVariable => definitionVariable.VariableName,
+                    _ => (string) inst.Operand
+                };
+                
+                return $", {operandValue}";
+            }
+
+            return inst.BranchTargetTag?.Replace(inst.BranchTargetTag, $", {tagToInstructionDefMapping[inst.BranchTargetTag]}")
                    ?? string.Empty;
         }
     }
@@ -219,25 +233,36 @@ internal partial class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IAp
         return [exp + ";", $"{definitionContext.Member.ParentDefinitionVariable}.Methods.Add({definitionContext.Member.DefinitionVariable});"];
     }
 
-    public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext definitionContext, ISymbol fieldOrEvent, ITypeSymbol fieldType, string fieldAttributes, bool isVolatile, bool isByRef, object? constantValue = null)
+    public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext definitionContext, ISymbol fieldOrEvent, ITypeSymbol fieldType, string fieldAttributes, bool isVolatile, bool isByRef, in FieldInitializationData initializer = default)
     {
-        return Field(context, definitionContext, fieldOrEvent.ContainingType.ToDisplayString(), fieldOrEvent.Name, context.TypeResolver.ResolveAny(fieldType, ResolveTargetKind.Field), fieldAttributes, isVolatile, isByRef, constantValue);
+        return Field(context, definitionContext, fieldOrEvent.ContainingType.ToDisplayString(), context.TypeResolver.ResolveAny(fieldType, ResolveTargetKind.Field), fieldAttributes, isVolatile, isByRef, initializer);
     }
 
-    public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext definitionContext, string declaringTypeName, string name, ResolvedType fieldType, string fieldAttributes, bool isVolatile, bool isByRef, object? constantValue = null)
+    public IEnumerable<string> Field(IVisitorContext context, MemberDefinitionContext definitionContext, string declaringTypeName, ResolvedType fieldType, string fieldAttributes, bool isVolatile, bool isByRef, FieldInitializationData initializer = default)
     {
         if (isByRef)
             fieldType = fieldType.MakeByReferenceType();
         
-        context.DefinitionVariables.RegisterNonMethod(declaringTypeName, name, VariableMemberKind.Field, definitionContext.DefinitionVariable);
+        context.DefinitionVariables.RegisterNonMethod(declaringTypeName, definitionContext.Name, VariableMemberKind.Field, definitionContext.DefinitionVariable);
         
         var resolvedFieldType = ProcessRequiredModifiers(context, fieldType, isVolatile);
-        var fieldExp = $"var {definitionContext.DefinitionVariable} = new FieldDefinition(\"{name}\", {fieldAttributes}, {resolvedFieldType})";
+        var fieldExp = $"var {definitionContext.DefinitionVariable} = new FieldDefinition(\"{definitionContext.Name}\", {fieldAttributes}, {resolvedFieldType})";
         List<string> exps = 
         [
-            constantValue != null ? $"{fieldExp} {{ Constant = {constantValue} }} ;" : $"{fieldExp};",
+            initializer.ConstantValue != null ? $"{fieldExp} {{ Constant = {initializer.ConstantValue} }} ;" : $"{fieldExp};",
             $"{definitionContext.ParentDefinitionVariable}.Fields.Add({definitionContext.DefinitionVariable});"
         ];
+
+        if (initializer.InitializationData?.Length > 0)
+        {
+            var initializationByteArrayAsString = new StringBuilder();
+            foreach (var itemValue in initializer.InitializationData)
+            {
+                initializationByteArrayAsString.Append($"0x{itemValue:x2},");
+            }
+        
+            exps.Add($"{definitionContext.DefinitionVariable}.InitialValue = [ { initializationByteArrayAsString } ];");
+        }
 
         return exps;
     }
@@ -277,7 +302,7 @@ internal partial class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IAp
 
         for(int i = 0; i < positionalArguments.Length; i++)
         {
-            var attributeArgument = $"new CustomAttributeArgument({context.TypeResolver.ResolveAny(attributeCtor.Parameters[i].Type.OriginalDefinition)}, {CustomAttributeArgumentValueFor(context, positionalArguments[i].Value)})";
+            var attributeArgument = $"new CustomAttributeArgument({context.TypeResolver.ResolveAny(attributeCtor.Parameters[i].Type.OriginalDefinition, ResolveTargetKind.TypeReference)}, {CustomAttributeArgumentValueFor(context, positionalArguments[i].Value)})";
             exps[expIndex++] = $"{attributeVar}.ConstructorArguments.Add({attributeArgument});";
         }
         expIndex += ProcessAttributeNamedArguments(context, exps.Slice(expIndex), attributeVar, namedArguments);
@@ -307,9 +332,9 @@ internal partial class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IAp
                 return "new CustomAttributeArgument[0]";
             
             var sb = new StringBuilder("new [] {");
-            foreach (var arrayItem in array)
+            foreach (CustomAttributeArgument arrayItem in array)
             {
-                sb.Append($"new CustomAttributeArgument({context.TypeResolver.Resolve(context.RoslynTypeSystem.ForType(arrayItem.GetType().FullName))}, {CustomAttributeArgumentValueFor(context, arrayItem)}), ");
+                sb.Append($"new CustomAttributeArgument({context.TypeResolver.Resolve(context.RoslynTypeSystem.ForType(arrayItem.Value.GetType().FullName), ResolveTargetKind.TypeReference)}, {CustomAttributeArgumentValueFor(context, arrayItem.Value)}), ");
             }
             sb.Remove(sb.Length - 2, 2); // Removes the last ", "
             sb.Append('}');
@@ -359,7 +384,7 @@ internal partial class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IAp
             {
                 var systemValueTypeRef = Utils.ImportFromMainModule("typeof(System.ValueType)");
                 var constraintType = typeParam.HasUnmanagedTypeConstraint
-                    ? $"{systemValueTypeRef}.MakeRequiredModifierType({context.TypeResolver.ResolveAny(context.RoslynTypeSystem.ForType<System.Runtime.InteropServices.UnmanagedType>())})"
+                    ? $"{systemValueTypeRef}.MakeRequiredModifierType({context.TypeResolver.ResolveAny(context.RoslynTypeSystem.ForType<System.Runtime.InteropServices.UnmanagedType>(), ResolveTargetKind.TypeReference)})"
                     : systemValueTypeRef;
 
                 exps.Add($"{genParamDefVar}.Constraints.Add(new GenericParameterConstraint({constraintType}));");
@@ -386,7 +411,7 @@ internal partial class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IAp
 
             foreach (var type in typeParam.ConstraintTypes)
             {
-                exps.Add($"{genParamDefVar}.Constraints.Add(new GenericParameterConstraint({context.TypeResolver.ResolveAny(type)}));");
+                exps.Add($"{genParamDefVar}.Constraints.Add(new GenericParameterConstraint({context.TypeResolver.ResolveAny(type, ResolveTargetKind.TypeReference)}));");
             }
         }
     }
@@ -435,7 +460,7 @@ internal partial class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IAp
             return originalType;
         
         var id = context.Naming.RequiredModifier();
-        context.Generate($"var {id} = new RequiredModifierType({context.TypeResolver.Resolve(typeof(IsVolatile).FullName)}, {originalType});");
+        context.Generate($"var {id} = new RequiredModifierType({context.TypeResolver.Resolve(typeof(IsVolatile).FullName, ResolveTargetKind.TypeReference)}, {originalType});");
         
         return id;
     }

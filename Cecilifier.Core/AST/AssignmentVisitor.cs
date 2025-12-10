@@ -8,6 +8,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
+using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
 
 namespace Cecilifier.Core.AST
@@ -64,7 +65,7 @@ namespace Cecilifier.Core.AST
                 Context.MoveLinesToEnd(InstructionPrecedingValueToLoad, lastInstructionLoadingRhs);
                 var arrayElementType = Context.SemanticModel.GetTypeInfo(node).Type.EnsureNotNull();
                 var stelemOpCode = arrayElementType.StelemOpCode();
-                var operand = stelemOpCode == OpCodes.Stelem ? Context.TypeResolver.ResolveAny(arrayElementType) : null;
+                var operand = stelemOpCode == OpCodes.Stelem ? Context.TypeResolver.ResolveAny(arrayElementType, ResolveTargetKind.Instruction) : null;
                 Context.ApiDriver.WriteCilInstruction(Context, ilVar, stelemOpCode, operand);
             }
         }
@@ -175,7 +176,7 @@ namespace Cecilifier.Core.AST
                 && !node.Parent.IsKind(SyntaxKind.SimpleMemberAccessExpression))
             {
                 // we have either 1) an assignment to member in object initializer. For instance, var x = new Foo { Value = 1 }
-                // i.e, `Value = 1`, in which case the stack top will contain the reference to the newly instantiate object;
+                // i.e, `Value = 1`, in which case the stack top will contain the reference to the newly instantiated object;
                 // in this case we only need to duplicate the top of the stack, or 2) an implicit reference to `this`.
                 var loadOpCode = node.Parent != null && node.Parent.Parent.IsKind(SyntaxKind.ObjectInitializerExpression)
                                         ? OpCodes.Dup
@@ -216,7 +217,7 @@ namespace Cecilifier.Core.AST
         private void EmitIndirectStore(ITypeSymbol typeBeingStored)
         {
             var indirectStoreOpCode = typeBeingStored.StindOpCodeFor();
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, indirectStoreOpCode, indirectStoreOpCode == OpCodes.Stobj ? Context.TypeResolver.ResolveAny(typeBeingStored.ElementTypeSymbolOf()) : null);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, indirectStoreOpCode, indirectStoreOpCode == OpCodes.Stobj ? Context.TypeResolver.ResolveAny(typeBeingStored.ElementTypeSymbolOf(), ResolveTargetKind.Instruction) : null);
         }
 
         private void PropertyAssignment(IdentifierNameSyntax node, IPropertySymbol property)

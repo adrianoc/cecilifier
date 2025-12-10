@@ -17,7 +17,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
         if (found.IsValid)
             return found.VariableName;
             
-        var containingTypeRefVar= context.TypeResolver.ResolveAny(method.ContainingType);
+        var containingTypeRefVar= context.TypeResolver.ResolveAny(method.ContainingType, ResolveTargetKind.TypeReference);
         var methodSignatureBlobVar = context.Naming.SyntheticVariable($"{method.ToValidVariableName()}BlobBuilder", ElementKind.MemberReference);
         var methodRefVar = context.Naming.SyntheticVariable($"{method.ToValidVariableName()}", ElementKind.MemberReference);
         
@@ -31,7 +31,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
                            new BlobEncoder({{methodSignatureBlobVar}}).
                                MethodSignature(isInstanceMethod: {{ isInstanceMethod.ToKeyword() }}).
                                Parameters({{method.Parameters.Length}},
-                                   returnType => returnType.{{context.TypedTypeResolver.ResolveForTargetKind(method.ReturnType, ResolveTargetKind.ReturnType, method.IsByRef())}},
+                                   returnType => returnType.{{context.TypedTypeResolver.ResolveAny(method.ReturnType, method.ToTypeResolutionContext())}},
                                    parameters => 
                                    {
                                        {{
@@ -39,7 +39,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
                                                method.Parameters.Select(p => $"""
                                                                                   parameters
                                                                                           .AddParameter()
-                                                                                          .{context.TypedTypeResolver.ResolveForTargetKind(p.Type, ResolveTargetKind.Parameter, p.RefKind != RefKind.None)};
+                                                                                          .{context.TypedTypeResolver.ResolveAny(p.Type, new TypeResolutionContext(ResolveTargetKind.Parameter, p.Type.IsValueType ? TypeResolutionOptions.IsValueType : TypeResolutionOptions.None))};
                                                                               """))}}
                                    });
 
@@ -84,7 +84,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
         var requiredModifierOrEmpty = string.Empty;
         if ((options & MemberOptions.InitOnly) != 0)
         {
-            var modifierVariable = context.TypedTypeResolver.Resolve(context.RoslynTypeSystem.ForType(typeof(IsExternalInit).FullName));
+            var modifierVariable = context.TypedTypeResolver.Resolve(context.RoslynTypeSystem.ForType(typeof(IsExternalInit).FullName), ResolveTargetKind.TypeReference);
             requiredModifierOrEmpty = $"returnTypeEncoder.CustomModifiers().AddModifier({modifierVariable}, isOptional: false);";
         }
         
@@ -121,26 +121,25 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
 
     public string ResolveDefaultConstructor(ITypeSymbol baseType, string derivedTypeVar)
     {
-        var voidParameterlessMethodRef = context.DefinitionVariables.GetVariable("voidParameterlessMethodRef", VariableMemberKind.MethodReference);
+        var voidParameterlessMethodRef = context.DefinitionVariables.GetVariable("voidParameterlessMethodRef", VariableMemberKind.MethodReference, baseType.Name);
         if (!voidParameterlessMethodRef.IsValid)
         {
             var voidParameterlessMethodRefVarName = context.Naming.SyntheticVariable("voidParameterlessMethod", ElementKind.MemberReference);
+            var parameterlessCtorSignatureVarName = $"ctorSignature_{DateTime.Now.Ticks}";
             context.Generate($$"""
-                                          var parameterlessCtorSignature = new BlobBuilder();
+                                          var {{parameterlessCtorSignatureVarName}} = new BlobBuilder();
                                           
-                                          new BlobEncoder(parameterlessCtorSignature).
+                                          new BlobEncoder({{parameterlessCtorSignatureVarName}}).
                                                  MethodSignature(isInstanceMethod: true).
                                                  Parameters(0, returnType => returnType.Void(), parameters => { });
                                           
-                                          var parameterlessCtorBlobIndex = metadata.GetOrAddBlob(parameterlessCtorSignature);
-                                          
                                           var {{voidParameterlessMethodRefVarName}} = metadata.AddMemberReference(
-                                                                                                    {{context.TypeResolver.ResolveAny(baseType)}},
+                                                                                                    {{context.TypeResolver.ResolveAny(baseType, ResolveTargetKind.TypeReference).Expression}},
                                                                                                     metadata.GetOrAddString(".ctor"),
-                                                                                                    parameterlessCtorBlobIndex);
+                                                                                                    metadata.GetOrAddBlob({{parameterlessCtorSignatureVarName}}));
                                           """);
             
-            voidParameterlessMethodRef = context.DefinitionVariables.RegisterNonMethod("", "voidParameterlessMethodRef", VariableMemberKind.MethodReference, voidParameterlessMethodRefVarName);
+            voidParameterlessMethodRef = context.DefinitionVariables.RegisterNonMethod(baseType.Name, "voidParameterlessMethodRef", VariableMemberKind.MethodReference, voidParameterlessMethodRefVarName);
         }
         
         return voidParameterlessMethodRef.VariableName;
@@ -152,14 +151,14 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
         if (found.IsValid)
             return found.VariableName;
 
-        var resolvedDeclaringType = context.TypeResolver.ResolveAny(field.ContainingType);
+        var resolvedDeclaringType = context.TypeResolver.ResolveAny(field.ContainingType, new TypeResolutionContext(ResolveTargetKind.TypeReference, TypeResolutionOptions.None));
 
         var fieldSignatureVarName = context.Naming.SyntheticVariable($"{field.ToValidVariableName()}_Signature", ElementKind.MemberReference);
         var fieldRefVarName = context.Naming.SyntheticVariable(field.Name, ElementKind.Field);
         var typeResolver = (SystemReflectionMetadataTypeResolver) context.TypeResolver;
         context.Generate($"""
                           BlobBuilder {fieldSignatureVarName} = new();
-                          new BlobEncoder({fieldSignatureVarName}).Field().{typeResolver.ResolveForTargetKind(field.Type, ResolveTargetKind.Field, false)};
+                          new BlobEncoder({fieldSignatureVarName}).Field().{typeResolver.ResolveAny(field.Type, new TypeResolutionContext(ResolveTargetKind.Field, field.RefKind != RefKind.None ? TypeResolutionOptions.IsByRef : TypeResolutionOptions.None))};
                           var {fieldRefVarName} = metadata.AddMemberReference({resolvedDeclaringType}, metadata.GetOrAddString("{field.Name}"), metadata.GetOrAddBlob({fieldSignatureVarName}));
                           """);
         
@@ -168,5 +167,10 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
         context.DefinitionVariables.RegisterNonMethod(field.ContainingType.ToDisplayString(), field.Name, VariableMemberKind.Field, fieldRefVarName);
         
         return fieldRefVarName;
+    }
+
+    public string ResolveEventField(IEventSymbol aEvent)
+    {
+        throw new NotImplementedException();
     }
 }

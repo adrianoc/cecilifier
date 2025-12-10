@@ -98,8 +98,7 @@ function initializeSite(
 
         window.onresize = function(ev) {
             updateEditorsSize();
-        }
-        
+        }        
         updateEditorsSize();
 
         initializeFormattingSettings();
@@ -117,6 +116,8 @@ class Foo
 {
     void Bar() => Console.WriteLine("Hello World!");
 }`);
+        
+        initializeFromPreviousSession();
         
         csharpCode.focus();
         focusedEditor = csharpCode;
@@ -915,6 +916,8 @@ function send(websocket, format, targetApi) {
         return;
     }
 
+    setLastUsedTargetApi(targetApi);
+    
     removeMarkersFromCSharpCode();
 
     showSpinner();
@@ -1188,4 +1191,27 @@ function CloseModalDialog(id) {
 
     assembliesReferenceDialogNode.parentElement.classList.remove("opened");
     assembliesReferenceDialogNode.parentElement.style.display="none";
+}
+
+function initializeFromPreviousSession() {
+    const cookieName = `previousSession`;
+    const previousSessionStateJson = getCookie(cookieName);
+    
+    if (previousSessionStateJson.length === 0) {
+        return;
+    }
+
+    let previousSessionState = JSON.parse(previousSessionStateJson);
+    try {
+        document.getElementById('targetApiButton').innerText = previousSessionState.targetApi;
+    }
+    catch (e) {
+        console.log(`Error parsing previous session state: ${e}`);
+    }
+}
+
+function setLastUsedTargetApi(targetApi) {
+    const cookieName = `previousSession`;
+    const previousSessionState = { targetApi: targetApi };
+    setCookie(cookieName, JSON.stringify(previousSessionState), 365);
 }

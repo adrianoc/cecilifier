@@ -32,27 +32,6 @@ namespace Cecilifier.Web
 {
     public class Startup
     {
-        private const string ProjectContents = """
-                                               <Project Sdk="Microsoft.NET.Sdk">
-                                                   <PropertyGroup>
-                                                       <OutputType>Exe</OutputType>
-                                                       <TargetFramework>net9.0</TargetFramework>
-                                                   </PropertyGroup>
-                                                   <ItemGroup>
-                                                       <PackageReference Include="Mono.Cecil" Version="0.11.6" />
-                                                       <PackageReference Include="Cecilifier.TypeMapGenerator" Version="1.0.0" />
-                                                   </ItemGroup>
-                                               </Project>
-                                               """;
-
-        private const string NugetConfigForCecilifiedProject = """
-                                                               <configuration>
-                                                                   <packageSources>
-                                                                       <add key="CecilifierCodeGenerators" value="./NugetLocalRepo/" />
-                                                                   </packageSources>
-                                                               </configuration>
-                                                               """;
-
         private static HttpClient discordConnection = new();
         private static IDictionary<long, uint> seemClientIPHashCodes = new Dictionary<long, uint>();
 
@@ -61,7 +40,7 @@ namespace Cecilifier.Web
             Configuration = configuration;
         }
 
-        public IConfiguration Configuration { get; }
+        private IConfiguration Configuration { get; }
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
@@ -215,14 +194,7 @@ namespace Cecilifier.Web
 
                     if (deployKind == 'Z')
                     {
-                        var responseData = ZipProject(
-                            ("Program.cs", await cecilifiedResult.GeneratedCode.ReadToEndAsync()),
-                            ("Cecilified.csproj", ProjectContents),
-                            ("nuget.config", NugetConfigForCecilifiedProject),
-                            ("NugetLocalRepo/Cecilifier.TypeMapGenerator.1.0.0.nupkg", "file-relative-path://Cecilifier.TypeMapGenerator.1.0.0.nupkg"),
-                            NameAndContentFromResource("Cecilifier.Web.Runtime")
-                        );
-
+                        var responseData = ZipProject(CecilifierModel.CompressedProjectContentsFor(await cecilifiedResult.GeneratedCode.ReadToEndAsync(), toBeCecilified.TargetApi));
                         var output = new Memory<byte>(buffer);
                         var ret = Base64.EncodeToUtf8(responseData, output.Span, out var bytesConsumed, out var bytesWritten);
                         if (ret == OperationStatus.Done)
@@ -404,13 +376,6 @@ namespace Cecilifier.Web
         }}";
 
             return SendJsonMessageToChatAsync(toSend);
-        }
-
-        (string fileName, string contents) NameAndContentFromResource(string resourceName)
-        {
-            var rm = new ResourceManager(resourceName, typeof(Startup).Assembly);
-            var contents = rm.GetString("TypeHelpers");
-            return ("RuntimeHelper.cs", contents);
         }
     }
 }

@@ -5,6 +5,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Reflection.Emit;
 using Cecilifier.Core.ApiDriver;
+using Cecilifier.Core.ApiDriver.DefinitionsFactory;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
@@ -82,7 +83,7 @@ namespace Cecilifier.Core.Misc
             }
         }
 
-        public abstract void OnFinishedTypeDeclaration();
+        public abstract void OnFinishedTypeDeclaration(INamedTypeSymbol typeSymbol);
 
         public IMethodSymbol GetDeclaredSymbol(BaseMethodDeclarationSyntax methodDeclaration)
         {

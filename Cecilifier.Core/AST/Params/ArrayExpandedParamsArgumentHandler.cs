@@ -6,6 +6,7 @@ using Cecilifier.Core.ApiDriver.Handles;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Cecilifier.Core.Extensions;
+using Cecilifier.Core.TypeSystem;
 
 namespace Cecilifier.Core.AST.Params;
 
@@ -16,9 +17,9 @@ internal class ArrayExpandedParamsArgumentHandler : ExpandedParamsArgumentHandle
         _currentIndex = 0;
         _stelemOpCode = ElementType.StelemOpCode();
         
-        _backingVariableName = Context.AddLocalVariableToCurrentMethod($"{paramsParameter.Name}Params", Context.TypeResolver.ResolveAny(paramsParameter.Type));
+        _backingVariableName = Context.AddLocalVariableToCurrentMethod($"{paramsParameter.Name}Params", Context.TypeResolver.ResolveAny(paramsParameter.Type, ResolveTargetKind.LocalVariable));
         
-        var paramsType = Context.TypeResolver.ResolveAny(ElementType);
+        var paramsType = Context.TypeResolver.ResolveAny(ElementType,ResolveTargetKind.Instruction);
         Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldc_I4, ElementCount);
         Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Newarr, paramsType.AsToken());
         Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Stloc, new CilLocalVariableHandle(_backingVariableName));

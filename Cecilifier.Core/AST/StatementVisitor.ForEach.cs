@@ -7,6 +7,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
+using Cecilifier.Core.TypeSystem;
 
 namespace Cecilifier.Core.AST
 {
@@ -27,8 +28,8 @@ namespace Cecilifier.Core.AST
                 // save array in local variable...
                 var arrayVariable = CodeGenerationHelpers.StoreTopOfStackInLocalVariable(Context, _ilVar, "array", enumerableType);
                 
-                var loopVariable = Context.AddLocalVariableToCurrentMethod(node.Identifier.ValueText, Context.TypeResolver.ResolveAny(enumerableType.ElementTypeSymbolOf())).VariableName;
-                var loopIndexVar = Context.AddLocalVariableToCurrentMethod("index", Context.TypeResolver.ResolveAny(Context.RoslynTypeSystem.SystemInt32)).VariableName;
+                var loopVariable = Context.AddLocalVariableToCurrentMethod(node.Identifier.ValueText, Context.TypeResolver.ResolveAny(enumerableType.ElementTypeSymbolOf(), ResolveTargetKind.LocalVariable)).VariableName;
+                var loopIndexVar = Context.AddLocalVariableToCurrentMethod("index", Context.TypeResolver.ResolveAny(Context.RoslynTypeSystem.SystemInt32, ResolveTargetKind.LocalVariable)).VariableName;
 
                 var conditionCheckLabelVar = CreateCilInstruction(_ilVar, OpCodes.Nop);
                 Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Br, conditionCheckLabelVar);
@@ -94,7 +95,7 @@ namespace Cecilifier.Core.AST
             if (forEachHandlerContext.GetEnumeratorMethod.ReturnType.IsValueType || forEachHandlerContext.GetEnumeratorMethod.ReturnType.TypeKind == TypeKind.TypeParameter)
             {
                 Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloca, forEachHandlerContext.EnumeratorVariableName);
-                Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Constrained, Context.TypeResolver.ResolveAny(forEachHandlerContext.GetEnumeratorMethod.ReturnType));
+                Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Constrained, Context.TypeResolver.ResolveAny(forEachHandlerContext.GetEnumeratorMethod.ReturnType, ResolveTargetKind.Instruction));
                 Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Callvirt, Context.RoslynTypeSystem.SystemIDisposable.GetMembers("Dispose").OfType<IMethodSymbol>().Single().MethodResolverExpression(Context));
             }
             else
@@ -113,7 +114,8 @@ namespace Cecilifier.Core.AST
             // Adds a variable to store current value in the foreach loop.
             Context.WriteNewLine();
             Context.WriteComment("variable to store current value in the foreach loop.");
-            var foreachCurrentValueVarName = Context.AddLocalVariableToCurrentMethod(node.Identifier.ValueText, Context.TypeResolver.ResolveAny(forEachHandlerContext.EnumeratorCurrentProperty.GetMemberType())).VariableName;
+            var resolvedType = Context.TypeResolver.ResolveAny(forEachHandlerContext.EnumeratorCurrentProperty.GetMemberType(), ResolveTargetKind.LocalVariable);
+            var foreachCurrentValueVarName = Context.AddLocalVariableToCurrentMethod(node.Identifier.ValueText, resolvedType).VariableName;
             
             var endOfLoopLabelVar = Context.Naming.Label("endForEach");
             CreateCilInstruction(_ilVar, endOfLoopLabelVar, OpCodes.Nop);

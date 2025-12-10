@@ -46,7 +46,8 @@ public static class CecilifierContextExtensions
         }
         else if (operation is IConversionOperation { Operand.Type: not null } conversion2 && context.SemanticModel.Compilation.ClassifyConversion(conversion2.Operand.Type, operation.Type).IsBoxing)
         {
-            context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Box, context.TypeResolver.ResolveAny(conversion2.Operand.Type).AsToken());
+            var resolutionContext = new TypeResolutionContext(ResolveTargetKind.Instruction, conversion2.Operand.Type.IsValueType ? TypeResolutionOptions.IsValueType : TypeResolutionOptions.None);
+            context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Box, context.TypeResolver.ResolveAny(conversion2.Operand.Type, resolutionContext).AsToken());
         }
         else if (operation is IConversionOperation { Conversion.IsNullable: true } nullableConversion && !nullableConversion.Syntax.IsKind(SyntaxKind.CoalesceExpression))
         {
@@ -102,7 +103,7 @@ public static class CecilifierContextExtensions
             case SpecialType.System_Decimal:
                 var operand = target.GetMembers().OfType<IMethodSymbol>()
                     .Single(m => m.MethodKind == MethodKind.Constructor && m.Parameters.Length == 1 && m.Parameters[0].Type.SpecialType == source.SpecialType);
-                context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Newobj, operand.MethodResolverExpression(context));
+                context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Newobj, operand.MethodResolverExpression(context).AsToken());
                 break;
             
             default: return false;
@@ -182,7 +183,7 @@ public static class CecilifierContextExtensions
                                                                     context, 
                                                                     new BodiedMemberDefinitionContext(methodName, methodNameForVariableRegistration,methodDeclarationVar, null, MemberOptions.None, IlContext.None), 
                                                                     null,
-                                                                    "MethodAttributes.Private",
+                                                                    method.MethodsModifier(),
                                                                     method.Parameters.Select( p => new ParameterSymbolParameterSpec(p, context)).ToArray(),
                                                                     method.GetTypeParameterSyntax().Select(tps => tps.Identifier.Text).ToArray(),
                                                                     ctx => method.ReturnsByRef 

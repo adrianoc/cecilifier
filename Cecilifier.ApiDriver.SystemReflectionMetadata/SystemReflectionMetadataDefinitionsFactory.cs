@@ -1,11 +1,13 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Text;
 using Cecilifier.ApiDriver.SystemReflectionMetadata.CustomAttributes;
 using Cecilifier.ApiDriver.SystemReflectionMetadata.DelayedDefinitions;
 using Cecilifier.ApiDriver.SystemReflectionMetadata.TypeSystem;
 using Cecilifier.Core;
 using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.ApiDriver.Attributes;
+using Cecilifier.Core.ApiDriver.DefinitionsFactory;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
@@ -22,88 +24,136 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
     public string MappedTypeModifiersFor(INamedTypeSymbol type, SyntaxTokenList modifiers) => RoslynToApiDriverModifiers(type, modifiers);
 
     public IEnumerable<string> Type(
-        IVisitorContext context, 
-        string typeVar, 
-        string typeNamespace, 
-        string typeName, 
-        string attrs, 
-        ResolvedType baseType, 
-        DefinitionVariable outerTypeVariable, 
-        bool isStructWithNoFields,
-        IEnumerable<ITypeSymbol> interfaces, 
-        IEnumerable<TypeParameterSyntax>? ownTypeParameters, 
-        IEnumerable<TypeParameterSyntax> outerTypeParameters, 
-        params string[] properties)
+                        IVisitorContext context, 
+                        MemberDefinitionContext definitionContext, 
+                        string typeNamespace, string attrs, 
+                        ResolvedType baseType, 
+                        bool isStructWithNoFields, 
+                        IEnumerable<ITypeSymbol> interfaces,
+                        IEnumerable<TypeParameterSyntax>? ownTypeParameters, 
+                        IEnumerable<TypeParameterSyntax> outerTypeParameters, 
+                        params TypeLayoutProperty[] properties)
     {
+        var typeVar = definitionContext.DefinitionVariable;
+        var resolutionScope = definitionContext.ParentDefinitionVariable ?? "mainModuleHandle";
         yield return Format($"""
                       // Add a type reference for the new type. Types/Member references to the new type uses this.
-                      var {typeVar} = metadata.AddTypeReference(mainModuleHandle, metadata.GetOrAddString("{typeNamespace}"), metadata.GetOrAddString("{typeName}"));
+                      var {typeVar} = metadata.AddTypeReference({resolutionScope}, metadata.GetOrAddString("{typeNamespace}"), metadata.GetOrAddString("{definitionContext.Name}"));
                       """);
 
         // We need to pass the handle of the 1st field/method defined in the module so we need to postpone the type generation after we have visited
         // all types/members.
-        TypedContext(context).DelayedDefinitionsManager.RegisterTypeDefinition(typeVar, $"{typeNamespace}.{typeName}", DefineDelayed);
-        void DefineDelayed(SystemReflectionMetadataContext ctx, TypeDefinitionRecord typeRecord)
+        TypedContext(context).DelayedDefinitionsManager.RegisterTypeDefinition(typeVar, $"{typeNamespace}.{definitionContext.Name}", DefineDelayed);
+        void DefineDelayed(SystemReflectionMetadataContext ctx, ref TypeDefinitionRecord typeRecord)
         {
-            var typeDefVar = ctx.Naming.Type(typeName, ElementKind.Class);
+            string? firstFieldHandle = null;
+            for(int i = 0; i < typeRecord.Fields.Count; i++)
+            {
+                var field = typeRecord.Fields[i];
+                
+                var fieldHandle = field.DefinitionFunction(field);
+                firstFieldHandle ??= fieldHandle;
+            }
+            
+            typeRecord.TypeDefinitionVariable = ctx.Naming.Type(definitionContext.Identifier, ElementKind.Class);
             ctx.Generate(Format($"""
-                                 var {typeDefVar} = metadata.AddTypeDefinition(
+                                 var {typeRecord.TypeDefinitionVariable} = metadata.AddTypeDefinition(
                                                                   {attrs},
                                                                   metadata.GetOrAddString("{typeNamespace}"),
-                                                                  metadata.GetOrAddString("{typeName}"),
-                                                                  {baseType},
-                                                                  fieldList: {typeRecord.FirstFieldHandle ?? "MetadataTokens.FieldDefinitionHandle(1)"},
-                                                                  methodList: {typeRecord.FirstMethodHandle ?? "MetadataTokens.MethodDefinitionHandle(1)"});
+                                                                  metadata.GetOrAddString("{definitionContext.Name}"),
+                                                                  {baseType.Expression ?? "default" },
+                                                                  fieldList: {firstFieldHandle ?? ApiDriverConstants.FieldDefinitionTableNextAvailableEntry},
+                                                                  methodList: {typeRecord.FirstMethodHandle ?? ApiDriverConstants.MethodDefinitionTableNextAvailableEntry});
                                  """));
-
+            context.WriteNewLine();
+            
             // Add attributes to the type definition
             foreach (var attributeEmitter in typeRecord.Attributes)
             {
-                attributeEmitter(ctx, typeDefVar);    
+                attributeEmitter(ctx, typeRecord.TypeDefinitionVariable);
             }
             
             foreach (var property in typeRecord.Properties)
             {
                 // process each property passing the type definition variable (as opposed to the type reference variable) 
-                property.Processor(context, property.Name, property.DefinitionVariable, property.DeclaringTypeName, typeDefVar);
+                property.Processor(context, property.Name, property.DefinitionVariable, property.DeclaringTypeName, typeRecord.TypeDefinitionVariable);
             }
             
             var firstProperty = typeRecord.Properties.FirstOrDefault();
             if (firstProperty.IsValid)
             {
-                context.Generate($"metadata.AddPropertyMap({typeDefVar}, {firstProperty.DefinitionVariable});");
+                context.Generate($"metadata.AddPropertyMap({typeRecord.TypeDefinitionVariable}, {firstProperty.DefinitionVariable});");
                 context.WriteNewLine();
             }
+            
+            if (definitionContext.ParentDefinitionVariable != null)
+            {
+                var parentTypeDefinitionVariable =  ctx.DelayedDefinitionsManager.GetTypeDefinitionVariableFromTypeReferenceVariable(definitionContext.ParentDefinitionVariable);
+                context.Generate($"metadata.AddNestedType({typeRecord.TypeDefinitionVariable}, {parentTypeDefinitionVariable});"); // type is an inner type
+                context.WriteNewLine();
+            }
+
+            if (properties.Length > 0)
+            {
+                
+                var packingSize = properties.SingleOrDefault(p => p.Kind == TypeLayoutPropertyKind.PackingSize).Value;
+                var clasSize = properties.SingleOrDefault(p => p.Kind == TypeLayoutPropertyKind.ClassSize).Value;
+                
+                context.Generate($"metadata.AddTypeLayout({typeRecord.TypeDefinitionVariable}, {packingSize}, {clasSize});");
+                context.WriteNewLine();
+            }
+            
+            foreach(var itf in interfaces)
+            {
+                context.Generate($"metadata.AddInterfaceImplementation({typeRecord.TypeDefinitionVariable}, {context.TypeResolver.ResolveAny(itf, ResolveTargetKind.TypeReference)});");
+                context.WriteNewLine();
+            }
+            context.WriteNewLine();
         }
     }
 
-    public IEnumerable<string> Method(IVisitorContext context, IMethodSymbol methodSymbol, BodiedMemberDefinitionContext bodiedMemberDefinitionContext, string methodName, string methodModifiers, IParameterSymbol[] resolvedParameterTypes, IList<TypeParameterSyntax> typeParameters)
+    public IEnumerable<string> Method(IVisitorContext context, IMethodSymbol methodSymbol, BodiedMemberDefinitionContext bodiedMemberDefinitionContext, string methodName, string methodModifiers, IList<TypeParameterSyntax> typeParameters)
     {
         // Resolve the method to make sure there's a method ref available (this will be used to fulfill any references to this method)
         context.MemberResolver.ResolveMethod(methodSymbol);
+        
+        var paramIndexOffset = methodSymbol.IsStatic ? 0 : 1;
+        // register all parameters so we can reference them when emitting the method body
+        foreach (var parameter in methodSymbol.Parameters)
+        {
+            // This is a hack. SRM accesses parameters by index, and Cecilifier does not have a way to pass that index around; it only has variable names,
+            // so we record the `index` of the parameter as the variable name.
+            // Code that emits Ldarg/Starg/etc will use this `name` (actually the parameter index) as its operand (this is similar to the way we handle local variables)
+            context.DefinitionVariables.RegisterNonMethod(methodSymbol.ToDisplayString(), parameter.Name, VariableMemberKind.Parameter, (parameter.Ordinal + paramIndexOffset).ToString());
+        }
 
         var memberParentDefinitionVariable = bodiedMemberDefinitionContext.Member.ParentDefinitionVariable ?? throw new ArgumentNullException(nameof(bodiedMemberDefinitionContext.Member.ParentDefinitionVariable));
-        ((SystemReflectionMetadataContext) context).DelayedDefinitionsManager.RegisterMethodDefinition(memberParentDefinitionVariable, (ctx, methodRecord) =>
+        TypedContext(context).DelayedDefinitionsManager.RegisterMethodDefinition(memberParentDefinitionVariable, (ctx, methodRecord) =>
         {
             EmitLocalVariables(ctx, bodiedMemberDefinitionContext.Member.Identifier, in methodRecord);
             
             var methodSignatureVar = ctx.DefinitionVariables.GetMethodVariable(methodSymbol.AsMethodVariable(VariableMemberKind.MethodSignature));
             Debug.Assert(methodSignatureVar.IsValid);
             
-            var methodDefVar = context.Naming.SyntheticVariable(bodiedMemberDefinitionContext.Member.Identifier, ElementKind.Method);
+            var methodDefVar = bodiedMemberDefinitionContext.IlContext!.AssociatedMethodVariable;
+            var bodyOffset = methodSymbol.ContainingType.TypeKind == TypeKind.Interface 
+                                            ? "-1" 
+                                            : $"methodBodyStream.AddMethodBody({bodiedMemberDefinitionContext.IlContext.VariableName}, localVariablesSignature: {methodRecord.LocalSignatureHandleVariable})";
+            
+            var firstParameterHandle = AddParametersMetadata(ctx, methodSymbol.Parameters.Select(p => p.Name));
             ctx.Generate($"""
                           var {methodDefVar}  = metadata.AddMethodDefinition(
                                                     {methodModifiers},
                                                     MethodImplAttributes.IL | MethodImplAttributes.Managed,
                                                     metadata.GetOrAddString("{methodName}"),
                                                     {methodSignatureVar.VariableName},
-                                                    methodBodyStream.AddMethodBody({bodiedMemberDefinitionContext.IlContext.VariableName}, localVariablesSignature: {methodRecord.LocalSignatureHandleVariable}),
-                                                    parameterList: {methodRecord.FirstParameterHandle});
+                                                    {bodyOffset},
+                                                    parameterList: {firstParameterHandle});
                           """);
-            
             ctx.WriteNewLine();
-            
-            ctx.DefinitionVariables.RegisterMethod(methodSymbol.AsMethodDefinitionVariable(methodDefVar));
+            ctx.WriteNewLine();
+
+            ctx.DefinitionVariables.ExecuteDependentRegistrations(methodDefVar);
             
             return methodDefVar;
         });
@@ -130,6 +180,13 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                                                             definitionContext.Options);
 
         methodDefinitionVariable = context.DefinitionVariables.FindByVariableName<MethodDefinitionVariable>(methodRefVar) ?? MethodDefinitionVariable.MethodNotFound;
+        
+        // register all parameters so we can reference them when emitting the method body
+        for (int i = 0; i < parameters.Count; i++)
+        {
+            context.DefinitionVariables.RegisterNonMethod(definitionContext.Member.ContainingTypeName,  parameters[i].Name, VariableMemberKind.Parameter, $"{i + 1}");
+        }
+
         TypedContext(context).DelayedDefinitionsManager.RegisterMethodDefinition(definitionContext.Member.ParentDefinitionVariable, (ctx, methodRecord) =>
         {
             EmitLocalVariables(ctx, definitionContext.Member.Identifier, in methodRecord);
@@ -147,15 +204,20 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
             var methodDefVar = definitionContext.Member.DefinitionVariable;
             var firstParameterHandle = AddParametersMetadata(ctx, parameters.Select(p => p.Name));
 
+            var methodBodyOffset = definitionContext.IlContext != null
+                                                ? $"methodBodyStream.AddMethodBody({definitionContext.IlContext.VariableName}, localVariablesSignature: {methodRecord.LocalSignatureHandleVariable})"
+                                                : "-1"; // ilcontext is null meaning the method don't have a body whence we need to set offset to -1
+            
             ctx.Generate($"""
                           var {methodDefVar}  = metadata.AddMethodDefinition(
                                                     {methodModifiers},
                                                     MethodImplAttributes.IL | MethodImplAttributes.Managed,
                                                     metadata.GetOrAddString("{definitionContext.Member.Name}"),
                                                     {methodSignatureVar.VariableName},
-                                                    methodBodyStream.AddMethodBody({definitionContext.IlContext.VariableName}, localVariablesSignature: {methodRecord.LocalSignatureHandleVariable}),
+                                                    {methodBodyOffset},
                                                     parameterList: {firstParameterHandle});
                           """);
+            ctx.WriteNewLine();
             ctx.WriteNewLine();
             
             var toBeRegistered = new MethodDefinitionVariable(
@@ -167,6 +229,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                                         methodDefVar);
             
             ctx.DefinitionVariables.RegisterMethod(toBeRegistered);
+            ctx.DefinitionVariables.ExecuteDependentRegistrations(methodDefVar);
             
             return methodDefVar;
         });
@@ -184,7 +247,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                      .MethodSignature(isInstanceMethod: {{ (!isStatic).ToKeyword()}})
                      .Parameters(0, returnType => returnType.Void(), parameters => { });
               """);
-
+        
         var parentDefinitionVariable = definitionContext.Member.ParentDefinitionVariable ?? throw new ArgumentNullException(nameof(definitionContext.Member.ParentDefinitionVariable));
         TypedContext(context).DelayedDefinitionsManager.RegisterMethodDefinition(parentDefinitionVariable, (ctx, methodRecord) =>
         {
@@ -193,7 +256,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
             var ctorDefVar = ctx.Naming.SyntheticVariable($"{typeName}_Ctor", ElementKind.MemberReference);
             ctx.Generate($"""
                                    var {ctorDefVar} = metadata.AddMethodDefinition(
-                                                             {(isStatic ? "MethodAttributes.Private | MethodAttributes.Static" : "MethodAttributes.Public")} | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName,
+                                                             {(isStatic ? "MethodAttributes.Private | MethodAttributes.Static" : methodAccessibility)} | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName,
                                                              MethodImplAttributes.IL | MethodImplAttributes.Managed,
                                                              metadata.GetOrAddString("{(isStatic ? ".cctor" : ".ctor")}"),
                                                              metadata.GetOrAddBlob({parameterlessCtorSignatureVar}),
@@ -202,37 +265,37 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                                    """);
             
             ctx.WriteNewLine();
+            ctx.WriteNewLine();
             return ctorDefVar;
         });
     }
 
-    public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext definitionContext, ISymbol fieldOrEvent, ITypeSymbol fieldType, string fieldAttributes, bool isVolatile, bool isByRef, object? constantValue = null)
+    public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext definitionContext, ISymbol fieldOrEvent, ITypeSymbol fieldType, string fieldAttributes, bool isVolatile, bool isByRef, in FieldInitializationData initializer = default)
     {
-        return Field(context, definitionContext, fieldOrEvent.ContainingType.ToDisplayString(), fieldOrEvent.Name, context.TypeResolver.ResolveAny(fieldType, ResolveTargetKind.Field),  fieldAttributes, isVolatile, isByRef, constantValue);
+        var resolvedType = context.TypeResolver.ResolveAny(fieldType, new TypeResolutionContext(ResolveTargetKind.Field, fieldType.ElementTypeSymbolOf().IsValueType ? TypeResolutionOptions.IsValueType : TypeResolutionOptions.None));
+        return Field(context, definitionContext, fieldOrEvent.ContainingType.ToDisplayString(), resolvedType,  fieldAttributes, isVolatile, isByRef, initializer);
     }
 
-    public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext definitionContext, string declaringTypeName, string name, ResolvedType fieldType, string fieldAttributes, bool isVolatile, bool isByRef, object? constantValue = null)
+    public IEnumerable<string> Field(IVisitorContext context, MemberDefinitionContext definitionContext, string declaringTypeName, ResolvedType fieldType, string fieldAttributes, bool isVolatile, bool isByRef, FieldInitializationData initializer = default)
     {
         Debug.Assert(definitionContext.ParentDefinitionVariable != null);
-        ((SystemReflectionMetadataContext) context).DelayedDefinitionsManager.RegisterFieldDefinition(definitionContext.ParentDefinitionVariable, definitionContext.DefinitionVariable);
         
-        context.DefinitionVariables.RegisterNonMethod(declaringTypeName, name, VariableMemberKind.Field, definitionContext.DefinitionVariable);
         var fieldSignatureVar = context.Naming.SyntheticVariable($"{definitionContext.Identifier}_Signature", ElementKind.Field);
         var fieldEncoderVar = context.Naming.SyntheticVariable($"{definitionContext.Identifier}_Encoder", ElementKind.Field);
-        Buffer256<string> exps = new();
+        
+        Buffer16<string> exps = new();
         byte expCount = 0;
-        exps[expCount++] = Environment.NewLine;
         exps[expCount++] = Format($"""
-                             BlobBuilder {fieldSignatureVar} = new();
-                             var {fieldEncoderVar} = new BlobEncoder({fieldSignatureVar}).Field();
-                             """);
+                                   BlobBuilder {fieldSignatureVar} = new();
+                                   var {fieldEncoderVar} = new BlobEncoder({fieldSignatureVar}).Field();
+                                   """);
         if (isVolatile)
         {
             var details = fieldType.GetDetails<ResolvedTypeDetails>();
             var signatureTypeEncoderVar =  context.Naming.SyntheticVariable($"{definitionContext.Identifier}_TypeEncoder", ElementKind.Field);
             exps[expCount++] = Format($"""
                                        var {signatureTypeEncoderVar} = {fieldEncoderVar}.{details.TypeEncoderProvider};
-                                       {signatureTypeEncoderVar}.CustomModifiers().AddModifier({context.TypeResolver.Resolve(context.RoslynTypeSystem.ForType(typeof(IsVolatile).FullName))}, isOptional: false);
+                                       {signatureTypeEncoderVar}.CustomModifiers().AddModifier({context.TypeResolver.Resolve(context.RoslynTypeSystem.ForType(typeof(IsVolatile).FullName), ResolveTargetKind.TypeReference)}, isOptional: false);
                                        {signatureTypeEncoderVar}.{details.MethodBuilder};
                                        """);
         }
@@ -241,10 +304,46 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
             exps[expCount++] = Format($"{fieldEncoderVar}.{fieldType.Expression};");
         }
         
-        exps[expCount++] = Format($"""var {definitionContext.DefinitionVariable} = metadata.AddFieldDefinition({fieldAttributes}, metadata.GetOrAddString("{name}"), metadata.GetOrAddBlob({fieldSignatureVar}));""");
-        if (constantValue != null) 
-            exps[expCount++] = $"metadata.AddConstant({definitionContext.DefinitionVariable}, {constantValue});{Environment.NewLine}";
+        //Define a field reference and register it.
+        exps[expCount++] = Format($"""var {definitionContext.DefinitionVariable} = metadata.AddMemberReference({definitionContext.ParentDefinitionVariable}, metadata.GetOrAddString("{definitionContext.Name}"), metadata.GetOrAddBlob({fieldSignatureVar}));""");
+        context.DefinitionVariables.RegisterNonMethod(declaringTypeName, definitionContext.Name, VariableMemberKind.Field, definitionContext.DefinitionVariable);
+        
+        var toAdd = new FieldDefinitionRecord(fieldRecord =>
+        {
+            Buffer16<string> expsDef = new();
+            byte expCountDef = 0;
 
+            var fieldVariableName = context.Naming.SyntheticVariable($"{definitionContext.Identifier}", ElementKind.Field);
+            var varPrefix = fieldRecord.Index == 0 || initializer || fieldRecord.Attributes.Count > 0 ? $"var {fieldVariableName} = " : "";
+            expsDef[expCountDef++] = Format($"""{varPrefix}metadata.AddFieldDefinition({fieldAttributes}, metadata.GetOrAddString("{definitionContext.Name}"), metadata.GetOrAddBlob({fieldSignatureVar}));""");
+            if (initializer.ConstantValue != null)
+            {
+                expsDef[expCountDef++] = $"metadata.AddConstant({fieldVariableName}, {initializer.ConstantValue});{Environment.NewLine}";
+            }
+            else if (initializer.InitializationData?.Length > 0)
+            {
+                var initializationByteArrayAsString = new StringBuilder();
+                foreach (var itemValue in initializer.InitializationData)
+                {
+                    initializationByteArrayAsString.Append($"0x{itemValue:x2},");
+                }
+
+                expsDef[expCountDef++] = $"metadata.AddFieldRelativeVirtualAddress({fieldVariableName}, mappedFieldData.Count);{Environment.NewLine}";
+                expsDef[expCountDef++] = $"mappedFieldData.WriteBytes((ImmutableArray<byte>) [{initializationByteArrayAsString}]);{Environment.NewLine}";
+            }
+            
+            Span<string> span = expsDef;
+            context.Generate(span.Slice(0, expCountDef).ToArray());
+            foreach (var attributeEmitter in fieldRecord.Attributes)
+            {
+                attributeEmitter(context, fieldVariableName);
+            }
+            
+            return fieldRecord.Index == 0 ? fieldVariableName : null;
+        });
+
+        TypedContext(context).DelayedDefinitionsManager.RegisterFieldDefinition(definitionContext.ParentDefinitionVariable, toAdd);
+        
         Span<string> span = exps;
         return span.Slice(0, expCount).ToArray();
     }
@@ -288,6 +387,8 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                                                   MethodSemanticsAttributes.{accessor.Item2},
                                                   {accessor.Item1.VariableName});
                                   """);
+                
+                context.DefinitionVariables.ExecuteDependentRegistrations(propertyDefinitionVariable);
                 context.WriteNewLine();
             }
         });
@@ -308,10 +409,9 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
     public IEnumerable<string> Attribute(IVisitorContext context, IMethodSymbol attributeCtor, string attributeVarBaseName, string attributeTargetVar, VariableMemberKind targetKind, params CustomAttributeArgument[] arguments)
     {
         var attributeEncoderVariable = context.DefinitionVariables.GetVariable("EncoderMetaName", VariableMemberKind.None, attributeVarBaseName);
-
         if (!attributeEncoderVariable.IsValid)
         {
-            var attributeEncoderVariableName = context.Naming.SyntheticVariable($"{attributeVarBaseName}_blobBuilder", ElementKind.MemberReference);
+            var attributeEncoderVariableName = context.Naming.SyntheticVariable($"{attributeVarBaseName}_blobEncoder", ElementKind.MemberReference);
             var attributeEncoder = new AttributeEncoder(context, attributeEncoderVariableName, attributeCtor.ContainingType.Name);
             var namedArguments = arguments.OfType<CustomAttributeNamedArgument>().ToList();
             var encodedArguments = attributeEncoder.Encode(arguments.Except(namedArguments).ToList(), namedArguments);
@@ -324,21 +424,21 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         }
         
         var resolvedAttrCtor = context.MemberResolver.ResolveMethod(attributeCtor);
-
-        if (targetKind == VariableMemberKind.Type)
+        if (targetKind == VariableMemberKind.Type || targetKind == VariableMemberKind.Field)
         {
-            TypedContext(context).DelayedDefinitionsManager.AddAttributeToCurrentType((ctx, typeDefinitionVariable) =>
+            TypedContext(context).DelayedDefinitionsManager.AddAttributeEmitterToCurrentMember(targetKind, (ctx, typeDefinitionVariable) =>
             {
                 AddAttributeTo(ctx, typeDefinitionVariable, resolvedAttrCtor, attributeEncoderVariable);
             });
         }
         else
         {
-            // in cases which the attribute is being applied not to a type (a method, a field, etc), the target member may not yet b processed
-            // so a callback is registered to be invoked when the tha member is processed and its associated variable is registered.
-            // The same approach could be used with types but that would require that the variable used to hold the type definition to be
-            // defined up-front which would add more complexity so in that case we simply delegate to `DelayedDefinitionManager`
-            context.DefinitionVariables.ExecuteUponVariableRegistration(attributeTargetVar, context, (ctx, state) =>
+            // in cases which the target of the attribute is not a type/field (i.e. it is a method, etc), the target member
+            // may not have been processed yet (i.e. we only have a type/member reference at this point), so a callback is
+            // registered to be invoked when the that member is processed and it's safe to reference its registered variable.
+            // The same approach could be used with types/fields but that would require that the variable name used to hold the
+            // type definition to be known up-front adding complexity, so in that case we simply delegate to `DelayedDefinitionManager`
+            context.DefinitionVariables.RegisterDependentOnRegistration(attributeTargetVar, context, (ctx, state) =>
             {
                 var target = (NonTypeAttributeTargetState) state;
                 AddAttributeTo(ctx, target.AttributeTarget, target.ResolvedAttributeCtor, target.AttributeEncoderVariable);
@@ -351,7 +451,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                               metadata.AddCustomAttribute(
                                          parent: {targetVariable},
                                          constructor: {resolvedAttributeCtor},
-                                         value: metadata.GetOrAddBlob({attributeEncoderVariable}));
+                                         value: metadata.GetOrAddBlob({attributeEncoderVariable}.Builder));
                               """);
             ctx.Generate(attr);
             ctx.WriteNewLine();
@@ -383,20 +483,20 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
 
     private static string AddParametersMetadata(SystemReflectionMetadataContext ctx, IEnumerable<string> parameters)
     {
-        
-        var firstParameterHandle = "MetadataTokens.ParameterHandle(metadata.GetRowCount(TableIndex.Param) + 1)";
-        int i = 1;
-        foreach (var p in parameters)
+        var parameterList = parameters.ToList();
+        if (parameterList.Count == 0)
+            return "MetadataTokens.ParameterHandle(metadata.GetRowCount(TableIndex.Param) + 1)";
+
+        var firstParameterHandle = ctx.Naming.SyntheticVariable(parameterList[0], ElementKind.Parameter);
+        for(int i = 0; i < parameterList.Count; i++)
         {
-            if (i == 1)
-            {
-                firstParameterHandle = ctx.Naming.SyntheticVariable(p, ElementKind.Parameter);
-                ctx.Generate($"var {firstParameterHandle} = ");
-            }
-            ctx.Generate($"""metadata.AddParameter(ParameterAttributes.None, metadata.GetOrAddString("{p}"), {i++});""");
+            if (i == 0)
+                ctx.Generate($"""var {firstParameterHandle} = metadata.AddParameter(ParameterAttributes.None, metadata.GetOrAddString("{parameterList[i]}"), {i+1});""");
+            else
+                ctx.Generate($"""metadata.AddParameter(ParameterAttributes.None, metadata.GetOrAddString("{parameterList[i]}"), {i+1});""");
             ctx.WriteNewLine();
         }
-        
+        ctx.WriteNewLine();
         return firstParameterHandle;
     }
 

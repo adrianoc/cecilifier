@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Cecilifier.Core.ApiDriver;
+using Cecilifier.Core.ApiDriver.Attributes;
 using Cecilifier.Core.AST.MemberDependencies;
 using Cecilifier.Core.CodeGeneration;
 using Cecilifier.Core.Extensions;
@@ -31,7 +33,7 @@ namespace Cecilifier.Core.AST
                 ProcessMembers(node);
                 base.VisitInterfaceDeclaration(node);
             }
-            Context.OnFinishedTypeDeclaration();
+            Context.OnFinishedTypeDeclaration(interfaceSymbol);
         }
 
         public override void VisitClassDeclaration(ClassDeclarationSyntax node)
@@ -47,7 +49,7 @@ namespace Cecilifier.Core.AST
             {
                 ProcessTypeDeclaration(node, definitionVar);
             }
-            Context.OnFinishedTypeDeclaration();
+            Context.OnFinishedTypeDeclaration(classSymbol);
         }
 
         public override void VisitStructDeclaration(StructDeclarationSyntax node)
@@ -60,7 +62,7 @@ namespace Cecilifier.Core.AST
                 ProcessTypeDeclaration(node, definitionVar);
                 ProcessStructPseudoAttributes(definitionVar, structSymbol);
             }
-            Context.OnFinishedTypeDeclaration();
+            Context.OnFinishedTypeDeclaration(structSymbol);
         }
 
         public override void VisitRecordDeclaration(RecordDeclarationSyntax node)
@@ -70,19 +72,19 @@ namespace Cecilifier.Core.AST
             var recordSymbol = Context.SemanticModel.GetDeclaredSymbol(node).EnsureNotNull();
             using var variable = Context.DefinitionVariables.WithCurrent(recordSymbol.ContainingSymbol.ToDisplayString(), recordSymbol.OriginalDefinition.ToDisplayString(), VariableMemberKind.Type, definitionVar);
             ProcessTypeDeclaration(node, definitionVar);
-            
 
             RecordGenerator generator = new(Context, definitionVar, node);
             generator.AddNullabilityAttributesToTypeDefinition(definitionVar);
             generator.AddSyntheticMembers();
-            Context.OnFinishedTypeDeclaration();
+            Context.OnFinishedTypeDeclaration(recordSymbol);
         }
 
         public override void VisitEnumDeclaration(EnumDeclarationSyntax node)
         {
             using var _ = LineInformationTracker.Track(Context, node);
-            node.Accept(new EnumDeclarationVisitor(Context));
-            Context.OnFinishedTypeDeclaration();
+            var enumSymbol = Context.SemanticModel.GetDeclaredSymbol(node).EnsureNotNull<ISymbol, INamedTypeSymbol>($"Something really bad happened. Roslyn failed to resolve the symbol for the enum {node.Identifier.Text}");
+            node.Accept(new EnumDeclarationVisitor(Context, enumSymbol));
+            Context.OnFinishedTypeDeclaration(enumSymbol);
         }
 
         void ProcessTypeDeclaration(TypeDeclarationSyntax node, string definitionVar)
@@ -136,7 +138,7 @@ namespace Cecilifier.Core.AST
         private ResolvedType ProcessBase(TypeDeclarationSyntax classDeclaration)
         {
             var classSymbol = DeclaredSymbolFor(classDeclaration);
-            return Context.TypeResolver.ResolveAny(classSymbol.BaseType);
+            return Context.TypeResolver.ResolveAny(classSymbol.BaseType, ResolveTargetKind.TypeReference);
         }
 
         private void HandleTypeDeclaration(TypeDeclarationSyntax node, string varName)
@@ -208,12 +210,10 @@ namespace Cecilifier.Core.AST
             var isStructWithNoFields = typeSymbol.TypeKind == TypeKind.Struct && typeSymbol.GetMembers().Length == 0;
             var typeDefinitionExp = context.ApiDefinitionsFactory.Type(
                 context,
-                typeDeclarationVar,
+                new MemberDefinitionContext(typeSymbol.Name, typeDeclarationVar, outerTypeVariable.IsValid ? outerTypeVariable.VariableName : null),
                 typeSymbol.ContainingNamespace?.FullyQualifiedName() ?? string.Empty,
-                typeSymbol.Name,
                 context.ApiDefinitionsFactory.MappedTypeModifiersFor((INamedTypeSymbol)typeSymbol, typeModifiers),
                 BaseTypeFor(context, typeSymbol),
-                outerTypeVariable,
                 isStructWithNoFields,
                 typeSymbol.Interfaces,
                 typeParameters,
@@ -231,7 +231,7 @@ namespace Cecilifier.Core.AST
 
             EnsureForwardedTypeDefinition(context, typeSymbol.BaseType, []);
 
-            return typeSymbol.BaseType.IsGenericType ? default : context.TypeResolver.ResolveAny(typeSymbol.BaseType);
+            return typeSymbol.BaseType.IsGenericType ? default : context.TypeResolver.ResolveAny(typeSymbol.BaseType, ResolveTargetKind.TypeReference);
         }
 
         private void EnsureCurrentTypeHasADefaultCtor(TypeDeclarationSyntax node, string typeLocalVar)
@@ -244,21 +244,22 @@ namespace Cecilifier.Core.AST
             if (structSymbol.IsReadOnly)
             {
                 var ctor = Context.RoslynTypeSystem.IsReadOnlyAttribute.ParameterlessCtor();
-                Context.Generate($"{structDefinitionVar}.CustomAttributes.Add(new CustomAttribute({ctor.MethodResolverExpression(Context)}));");
+                var attrExps = Context.ApiDefinitionsFactory.Attribute(Context, ctor, structSymbol.Name, structDefinitionVar, VariableMemberKind.Type);
+                Context.Generate(attrExps);
             }
 
             if (structSymbol.IsRefLikeType)
             {
                 var ctor = Context.RoslynTypeSystem.IsByRefLikeAttribute.ParameterlessCtor();
-                Context.Generate($"{structDefinitionVar}.CustomAttributes.Add(new CustomAttribute({ctor.MethodResolverExpression(Context)}));\n");
-
+                var exps = Context.ApiDefinitionsFactory.Attribute(Context, ctor, structSymbol.Name, structDefinitionVar, VariableMemberKind.Type);
+                Context.Generate(exps);
+                
                 var obsoleteAttrCtor = Context.RoslynTypeSystem.SystemObsoleteAttribute.Ctor(Context.RoslynTypeSystem.SystemString, Context.RoslynTypeSystem.SystemBoolean);
-                var obsoleteAttributeVar = Context.Naming.SyntheticVariable("obsolete", ElementKind.Attribute);
                 const string RefStructObsoleteMsg = "Types with embedded references are not supported in this version of your compiler.";
-                Context.Generate($"var {obsoleteAttributeVar} = new CustomAttribute({obsoleteAttrCtor.MethodResolverExpression(Context)});\n");
-                Context.Generate($"{obsoleteAttributeVar}.ConstructorArguments.Add(new CustomAttributeArgument({Context.TypeResolver.Bcl.System.String}, \"{RefStructObsoleteMsg}\"));\n");
-                Context.Generate($"{obsoleteAttributeVar}.ConstructorArguments.Add(new CustomAttributeArgument({Context.TypeResolver.Bcl.System.Boolean}, true));\n");
-                Context.Generate($"{structDefinitionVar}.CustomAttributes.Add({obsoleteAttributeVar});\n");
+                exps = Context.ApiDefinitionsFactory.Attribute(Context, obsoleteAttrCtor, "obsolete", structDefinitionVar, VariableMemberKind.Type,
+                                            new CustomAttributeArgument { Value = RefStructObsoleteMsg}, 
+                                            new CustomAttributeArgument { Value = true});
+                Context.Generate(exps);
             }
         }
     }

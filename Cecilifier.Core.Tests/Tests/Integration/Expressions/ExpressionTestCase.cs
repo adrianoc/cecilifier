@@ -1,11 +1,39 @@
 using Cecilifier.ApiDriver.MonoCecil;
+using Cecilifier.ApiDriver.SystemReflectionMetadata;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Tests.Framework;
+using Cecilifier.Core.Tests.Framework.Attributes;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration
 {
     [TestFixture(typeof(MonoCecilContext))]
+    [TestFixture(typeof(SystemReflectionMetadataContext))]
+    [EnableForContext<SystemReflectionMetadataContext>(
+        nameof(TestAdd),
+        nameof(TestAdd2),
+        nameof(TestBox),
+        nameof(TestDoubleLocalVariableInitialization),
+        nameof(TestLocalVariableAssignment),
+        nameof(TestLocalVariableInitialization),
+        nameof(TestTimes),
+        nameof(TestParameterAssignment),
+        nameof(TestMultipleLocalVariableAssignment),
+        nameof(TestDoubleLocalVariableInitializationComplex),
+        nameof(TestModulus),
+        nameof(TestEquals),
+        nameof(TestLessThan),
+        nameof(TestTernaryOperator),
+        nameof(TestTypeInferenceInDeclarations),
+        nameof(TestValueTypeAddress),
+        nameof(TestNewPrimitive),
+        nameof(TestNewCustom),
+        nameof(TestNewSingleDimensionArray),
+        nameof(TestUnaryExpressions),
+        nameof(TestIncrementDecrementExpressions),
+        nameof(TestIndexerAccess),
+        nameof(TestRangeExpression),
+        nameof(TestIndexExpression))]
     public class ExpressionTestCase<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
     {
         [Test]
@@ -141,6 +169,7 @@ namespace Cecilifier.Core.Tests.Integration
         [TestCase("PropertyRead")]
         [TestCase("ArrayWrite")]
         [TestCase("PropertyWrite")]
+        [ParameterizedResourceFilter<SystemReflectionMetadataContext>("ArrayRead", "ArrayWrite", IgnoreReason = "Other tests depends on generics which are not supported as of today")]
         public void TestIndexerAccess(string prefix)
         {
             AssertResourceTest($"Expressions/{prefix}IndexerAccess");

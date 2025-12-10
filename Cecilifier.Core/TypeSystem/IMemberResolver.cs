@@ -12,4 +12,5 @@ public interface IMemberResolver
     
     string ResolveDefaultConstructor(ITypeSymbol baseType, string derivedTypeVar);
     string ResolveField(IFieldSymbol field);
+    string ResolveEventField(IEventSymbol aEvent);
 }

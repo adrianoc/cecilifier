@@ -2,10 +2,9 @@
 using System;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
-using Cecilifier.Core.TypeSystem;
 using Microsoft.CodeAnalysis;
 
-namespace Cecilifier.Core.ApiDriver;
+namespace Cecilifier.Core.TypeSystem;
 
 public record ParameterSpec(string Name, ResolvedType ElementType, RefKind RefKind, string Attributes, string? DefaultValue = null, Func<IVisitorContext, string, string>? ElementTypeResolver = null)
 {

@@ -9,3 +9,9 @@ public struct Buffer256<T>
 {
     private T _data;
 }
+
+[InlineArray(16)]
+public struct Buffer16<T>
+{
+    private T _data;
+}

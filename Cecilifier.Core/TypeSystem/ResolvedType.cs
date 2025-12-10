@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 
 namespace Cecilifier.Core.TypeSystem;
 
@@ -9,6 +10,7 @@ namespace Cecilifier.Core.TypeSystem;
 /// A resolved type can be either the name of a variable in the generated code that stores an expression returned by one of the methods of <see cref="ITypeResolver"/>
 /// or the expression itself.
 /// </remarks>
+[DebuggerDisplay( "{(bool) this}")]
 public readonly record struct ResolvedType
 {
     private readonly string _resolved;
@@ -22,20 +24,11 @@ public readonly record struct ResolvedType
                                                     ? throw new NullReferenceException() 
                                                     : (TDetails)_details;
 
-    public string Expression
-    {
-        get
-        {
-            if (_details != null)
-            {
-                return _details.ToString();
-            }
-
-            return _resolved;
-        }
-    }
+    public string Expression => _details != null ? _details.ToString() : _resolved;
 
     public static implicit operator ResolvedType(string typeName) => new(typeName);
+    public static implicit operator bool(in ResolvedType rt) => rt.Expression != null;
+    
     public static bool operator true(in ResolvedType rt) => rt.Expression != null;
     public static bool operator false(ResolvedType rt) => rt.Expression == null;
     

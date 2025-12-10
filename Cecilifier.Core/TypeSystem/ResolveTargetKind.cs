@@ -9,4 +9,8 @@ public enum ResolveTargetKind
     LocalVariable,
     Parameter,
     ReturnType,
+    Instruction,
+    TypeReference,
+    AttributeNamedArgument,
+    AttributeArgument
 }

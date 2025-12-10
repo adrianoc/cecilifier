@@ -9,7 +9,23 @@ namespace Cecilifier.Core.Tests.Integration.Types
 {
     [TestFixture(typeof(MonoCecilContext), TestName = "Mono.Cecil")]
     [TestFixture(typeof(SystemReflectionMetadataContext), TestName = "SRM")]
-    [EnableForContext<SystemReflectionMetadataContext>(nameof(SimplestTest), nameof(SealedClassTest), IgnoreReason = "Not implemented")]
+    [EnableForContext<SystemReflectionMetadataContext>(
+        nameof(ForwardTypeReferenceTest),
+        nameof(InheritanceSameCompilationUnitTest),
+        nameof(InheritanceTest),
+        nameof(InnerClassTest),
+        nameof(InterfaceDefinitionTest),
+        nameof(InterfaceImplementationTest),
+        nameof(InterfaceWithPropertiesTest),
+        nameof(PartialClassTest),
+        nameof(ReadOnlyStructTest),
+        nameof(SealedClassTest),
+        nameof(SimplestTest),
+        nameof(SimpleValueTypeTest),
+        nameof(TypeInitializeTest),
+        nameof(AbstractClassTest),
+        IgnoreReason = "Not implemented")]
+    
     public class TypesTestCase<TContext> : ResourceTestBase<TContext> where TContext : IVisitorContext
     {
         [TestCase("SimpleTypeWithAttribute")]

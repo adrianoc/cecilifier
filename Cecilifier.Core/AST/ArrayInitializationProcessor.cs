@@ -7,6 +7,7 @@ using Microsoft.CodeAnalysis.Operations;
 using Cecilifier.Core.CodeGeneration;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
+using Cecilifier.Core.TypeSystem;
 
 namespace Cecilifier.Core.AST;
 
@@ -24,7 +25,7 @@ public class ArrayInitializationProcessor
     {
         var context = visitor.Context;
         var stelemOpCode = elementType.StelemOpCode();
-        var resolvedElementType = context.TypeResolver.ResolveAny(elementType);
+        var resolvedElementType = context.TypeResolver.ResolveAny(elementType, ResolveTargetKind.Instruction);
 
         for (var i = 0; i < elements?.Count; i++)
         {
@@ -68,8 +69,8 @@ public class ArrayInitializationProcessor
             StringToSpanOfBytesConverters.For(elementType.FullyQualifiedName()));
 
         context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, OpCodes.Dup);
-        context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, OpCodes.Ldtoken, backingFieldVar);
-        context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, OpCodes.Call, initializeArrayHelper);
+        context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, OpCodes.Ldtoken, backingFieldVar.AsToken());
+        context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, OpCodes.Call, initializeArrayHelper.AsToken());
     }
 }
 
