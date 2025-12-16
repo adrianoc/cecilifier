@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Cecilifier.ApiDriver.SystemReflectionMetadata.DelayedDefinitions;
 
@@ -27,12 +28,12 @@ public class DelayedDefinitionsManager
 
     private MethodDefinitionRecord _currentMethod;
 
-    internal void RegisterTypeDefinition(string typeVarName, string typeQualifiedName, DelayedTypeDefinitionAction action)
+    internal void RegisterTypeDefinition(string typeVarName, DelayedTypeDefinitionAction action)
     {
-        _postponedTypeDefinitions.Add(typeVarName, new TypeDefinitionRecord(typeQualifiedName, typeVarName)
+        _postponedTypeDefinitions.Add(typeVarName, new TypeDefinitionRecord(typeVarName)
         {
             DefinitionFunction = action,
-            FirstMethodHandle = null
+            FirstMethodHandle = null,
         });
         
         _typeDefinitionOrder.Add(typeVarName);

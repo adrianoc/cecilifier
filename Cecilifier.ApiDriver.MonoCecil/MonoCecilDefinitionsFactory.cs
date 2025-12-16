@@ -54,8 +54,7 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
             exps.Add($"{typeDefExp};");
         }
 
-        // add type parameters from outer types. 
-        var outerTypeParametersArray = outerTypeParameters.ToArray();
+        var outerTypeParametersArray = outerTypeParameters.ToArray(); // include type parameters from outer types.
         ProcessGenericTypeParameters(typeVar, context, outerTypeParametersArray.Concat(typeParamList).ToArray(), exps);
             
         foreach (var itf in interfaces)

@@ -209,15 +209,15 @@ namespace Cecilifier.Core.AST
             var outerTypeVariable = context.DefinitionVariables.GetVariable(typeSymbol.ContainingType?.ToDisplayString(), VariableMemberKind.Type, typeSymbol.ContainingType?.ContainingSymbol.ToDisplayString());
             var isStructWithNoFields = typeSymbol.TypeKind == TypeKind.Struct && typeSymbol.GetMembers().Length == 0;
             var typeDefinitionExp = context.ApiDefinitionsFactory.Type(
-                context,
-                new MemberDefinitionContext(typeSymbol.Name, typeDeclarationVar, outerTypeVariable.IsValid ? outerTypeVariable.VariableName : null),
-                typeSymbol.ContainingNamespace?.FullyQualifiedName() ?? string.Empty,
-                context.ApiDefinitionsFactory.MappedTypeModifiersFor((INamedTypeSymbol)typeSymbol, typeModifiers),
-                BaseTypeFor(context, typeSymbol),
-                isStructWithNoFields,
-                typeSymbol.Interfaces,
-                typeParameters,
-                outerTypeParameters);
+                                                            context,
+                                                            new MemberDefinitionContext(typeSymbol.Name, typeDeclarationVar, outerTypeVariable.IsValid ? outerTypeVariable.VariableName : null),
+                                                            typeSymbol.ContainingNamespace?.FullyQualifiedName() ?? string.Empty,
+                                                            context.ApiDefinitionsFactory.MappedTypeModifiersFor((INamedTypeSymbol)typeSymbol, typeModifiers),
+                                                            BaseTypeFor(context, typeSymbol),
+                                                            isStructWithNoFields,
+                                                            typeSymbol.Interfaces,
+                                                            typeParameters,
+                                                            outerTypeParameters);
 
             AddCecilExpressions(context, typeDefinitionExp);
 
