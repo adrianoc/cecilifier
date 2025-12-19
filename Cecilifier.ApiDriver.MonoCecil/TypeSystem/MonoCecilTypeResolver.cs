@@ -1,3 +1,4 @@
+using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.TypeSystem;
 using Microsoft.CodeAnalysis;
@@ -16,5 +17,13 @@ public class MonoCecilTypeResolver(MonoCecilContext context) : TypeResolverBase<
     protected override ResolvedType MakeFunctionPointerType(IFunctionPointerTypeSymbol functionPointer, in TypeResolutionContext resolutionContext)
     {
         return CecilDefinitionsFactory.FunctionPointerType(this, functionPointer);
+    }
+
+    protected override ResolvedType MakeGenericInstanceType(ResolvedType typeReference, INamedTypeSymbol genericTypeSymbol, in TypeResolutionContext resolutionContext)
+    {
+        var typeArgs = CollectTypeArguments(genericTypeSymbol, [], resolutionContext.TypeParameterProviderVar);
+        return typeArgs.Count > 0
+            ? typeReference.MakeGenericInstanceType(typeArgs)
+            : typeReference;
     }
 }

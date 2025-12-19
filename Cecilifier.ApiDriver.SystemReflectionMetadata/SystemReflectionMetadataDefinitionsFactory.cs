@@ -134,7 +134,12 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                 // register a variable representing the type parameter; uses its index as its name since in SRM the type parameter is represented by its index. 
                 context.DefinitionVariables.RegisterNonMethod(parentName, genericParamName, VariableMemberKind.TypeParameter, i.ToString());
             }
-        }        
+        }
+    }
+
+    public void UpdateBaseTypeIfNeeded(IVisitorContext context, ITypeSymbol typeSymbol, string typeDefinitionVariable)
+    {
+        // No op on SRM.
     }
 
     public IEnumerable<string> Method(IVisitorContext context, IMethodSymbol methodSymbol, BodiedMemberDefinitionContext bodiedMemberDefinitionContext, string methodName, string methodModifiers, IList<TypeParameterSyntax> typeParameters)

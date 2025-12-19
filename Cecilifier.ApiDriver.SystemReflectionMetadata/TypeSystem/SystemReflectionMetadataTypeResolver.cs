@@ -109,6 +109,30 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
         return resolved;
     }
 
+    protected override ResolvedType MakeGenericInstanceType(ResolvedType typeReference, INamedTypeSymbol genericTypeSymbol, in TypeResolutionContext resolutionContext)
+    {
+        if (genericTypeSymbol.TypeArguments.Length == 0)
+            return typeReference;
+        
+        var genericInstanceTypeVar = context.Naming.SyntheticVariable($"{genericTypeSymbol.ToValidVariableName()}Instantiation", ElementKind.GenericInstance);
+        context.Generate($$"""
+                           TypeSpecificationHandle {{genericInstanceTypeVar}} = default;
+                           {
+                               var be = new BlobEncoder(new BlobBuilder());
+                               var typeSpecificationSig = be.TypeSpecificationSignature();
+                               var gti = typeSpecificationSig.GenericInstantiation({{typeReference.Expression}}, {{genericTypeSymbol.TypeArguments.Length}}, isValueType: {{genericTypeSymbol.IsValueType.ToKeyword()}});    
+                               {{
+                                   genericTypeSymbol.TypeArguments.Select(
+                                           targ => $"gti.AddArgument().{context.TypedTypeResolver.ResolveAny(targ, ResolveTargetKind.GenericTypeArgument)};\n{context.IndentationContents}    ")
+                                       .Aggregate("", (acc, s) => acc + s)
+                               }}
+                               {{genericInstanceTypeVar}} = metadata.AddTypeSpecification(metadata.GetOrAddBlob(be.Builder));
+                           }
+                           """);
+            
+        return genericInstanceTypeVar;
+    }
+
     public override ResolvedType MakeArrayType(ITypeSymbol elementType, in TypeResolutionContext resolutionContext)
     {
         var details = new ResolvedTypeDetails();
@@ -145,6 +169,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
         return resolutionContext.TargetKind switch
         {
             ResolveTargetKind.None => "",
+            ResolveTargetKind.GenericTypeArgument => "",
             ResolveTargetKind.ArrayElementType => "",
             ResolveTargetKind.AttributeNamedArgument or ResolveTargetKind.AttributeArgument => "ScalarType()%",
             _ => $"Type(isByRef: {isByRef})%",

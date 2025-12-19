@@ -76,6 +76,17 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
         return exps;
     }
 
+    public void UpdateBaseTypeIfNeeded(IVisitorContext context, ITypeSymbol typeSymbol, string typeDefinitionVariable)
+    {
+        // we postpone setting the base type because it may depend on generic parameters defined in the class itself (for instance 'class C<T> : Base<T> {}')
+        // and these are introduced by the code in ApiDefinitionsFactory.Type() which it itself the call expecting the base type. 
+        if (typeSymbol.BaseType is not { IsGenericType: true })
+            return;
+
+        var resolvedBaseType = context.TypeResolver.ResolveAny(typeSymbol.BaseType, ResolveTargetKind.TypeReference);
+        context.Generate($"{typeDefinitionVariable}.BaseType = {resolvedBaseType};");
+    }
+
     public IEnumerable<string> Method(IVisitorContext context, IMethodSymbol methodSymbol, BodiedMemberDefinitionContext bodiedMemberDefinitionContext, string methodName, string methodModifiers, IList<TypeParameterSyntax> typeParameters)
     {
         var exps = new List<string>();

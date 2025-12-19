@@ -161,29 +161,23 @@ namespace Cecilifier.Core.TypeSystem
             }
 
             var genericType = Resolve(OpenGenericTypeName(genericTypeSymbol.ConstructedFrom), in resolutionContext);
-            return genericTypeSymbol.IsDefinition
+            return genericTypeSymbol.IsDefinition 
                 ? genericType
                 : MakeGenericInstanceType(genericType, genericTypeSymbol, in resolutionContext);
         }
 
-        private IList<ResolvedType> CollectTypeArguments(INamedTypeSymbol typeArgumentProvider, List<ResolvedType> collectTo, string cecilTypeParameterProviderVar)
+        protected IList<ResolvedType> CollectTypeArguments(INamedTypeSymbol typeArgumentProvider, List<ResolvedType> collectTo, string cecilTypeParameterProviderVar)
         {
             if (typeArgumentProvider.ContainingType != null)
             {
                 CollectTypeArguments(typeArgumentProvider.ContainingType, collectTo, cecilTypeParameterProviderVar);
             }
-            collectTo.AddRange(typeArgumentProvider.TypeArguments.Where(t => t.Kind != SymbolKind.ErrorType).Select(t => ResolveAny(t, ResolveTargetKind.TypeReference.ToTypeResolutionContext(cecilTypeParameterProviderVar))));
+            collectTo.AddRange(typeArgumentProvider.TypeArguments.Where(t => t.Kind != SymbolKind.ErrorType).Select(t => ResolveAny(t, ResolveTargetKind.GenericTypeArgument.ToTypeResolutionContext(cecilTypeParameterProviderVar))));
 
             return collectTo;
         }
 
-        private ResolvedType MakeGenericInstanceType(ResolvedType typeReference, INamedTypeSymbol genericTypeSymbol, in TypeResolutionContext resolutionContext)
-        {
-            var typeArgs = CollectTypeArguments(genericTypeSymbol, [], resolutionContext.TypeParameterProviderVar);
-            return typeArgs.Count > 0
-                ? typeReference.MakeGenericInstanceType(typeArgs)
-                : typeReference;
-        }
+        protected abstract ResolvedType MakeGenericInstanceType(ResolvedType typeReference, INamedTypeSymbol genericTypeSymbol, in TypeResolutionContext resolutionContext);
 
         private string OpenGenericTypeName(ITypeSymbol type)
         {

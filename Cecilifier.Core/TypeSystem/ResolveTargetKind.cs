@@ -12,5 +12,6 @@ public enum ResolveTargetKind
     Instruction,
     TypeReference,
     AttributeNamedArgument,
-    AttributeArgument
+    AttributeArgument,
+    GenericTypeArgument
 }

@@ -46,6 +46,8 @@ public interface IApiDriverDefinitionsFactory
         IEnumerable<TypeParameterSyntax> outerTypeParameters,
         params TypeLayoutProperty[] properties);
 
+    void UpdateBaseTypeIfNeeded(IVisitorContext context, ITypeSymbol typeSymbol, string typeDefinitionVariable);
+    
     public IEnumerable<string> Method(IVisitorContext context, IMethodSymbol methodSymbol, BodiedMemberDefinitionContext bodiedMemberDefinitionContext, string methodName, string methodModifiers, IList<TypeParameterSyntax> typeParameters);
 
     public IEnumerable<string> Method(IVisitorContext context,
