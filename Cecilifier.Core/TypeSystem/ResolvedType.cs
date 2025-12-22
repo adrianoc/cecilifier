@@ -10,7 +10,7 @@ namespace Cecilifier.Core.TypeSystem;
 /// A resolved type can be either the name of a variable in the generated code that stores an expression returned by one of the methods of <see cref="ITypeResolver"/>
 /// or the expression itself.
 /// </remarks>
-[DebuggerDisplay( "{(bool) this}")]
+[DebuggerDisplay( "Valid: {(bool) this}, Expression: {Expression}")]
 public readonly record struct ResolvedType
 {
     private readonly string _resolved;
