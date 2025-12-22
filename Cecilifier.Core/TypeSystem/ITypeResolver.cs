@@ -9,7 +9,6 @@ public interface ITypeResolver
     ResolvedType ResolveAny(ITypeSymbol type, in TypeResolutionContext resolutionContext);
     ResolvedType ResolvePredefinedType(ITypeSymbol type, in TypeResolutionContext resolutionContext);
     ResolvedType ResolveLocalVariableType(ITypeSymbol type, in TypeResolutionContext context);
-    ResolvedType Resolve(string typeName, in TypeResolutionContext resolutionContext);
     ResolvedType Resolve(ITypeSymbol type, in TypeResolutionContext resolutionContext);
     
     /// <summary>

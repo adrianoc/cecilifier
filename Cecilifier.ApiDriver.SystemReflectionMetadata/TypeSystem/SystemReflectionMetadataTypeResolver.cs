@@ -8,8 +8,6 @@ namespace Cecilifier.ApiDriver.SystemReflectionMetadata.TypeSystem;
 
 public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContext context) : TypeResolverBase<SystemReflectionMetadataContext>(context)
 {
-    public override ResolvedType Resolve(string typeName, in TypeResolutionContext resolutionContext) => throw new NotSupportedException($"{typeName} (context: {resolutionContext})");
-
     public override ResolvedType Resolve(ITypeSymbol type, in TypeResolutionContext resolutionContext)
     {
         

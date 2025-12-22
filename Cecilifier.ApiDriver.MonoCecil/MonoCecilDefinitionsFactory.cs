@@ -470,7 +470,7 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
             return originalType;
         
         var id = context.Naming.RequiredModifier();
-        context.Generate($"var {id} = new RequiredModifierType({context.TypeResolver.Resolve(typeof(IsVolatile).FullName, ResolveTargetKind.TypeReference)}, {originalType});");
+        context.Generate($"var {id} = new RequiredModifierType({context.TypeResolver.Resolve(context.RoslynTypeSystem.ForType(typeof(IsVolatile).FullName), ResolveTargetKind.TypeReference)}, {originalType});");
         
         return id;
     }
