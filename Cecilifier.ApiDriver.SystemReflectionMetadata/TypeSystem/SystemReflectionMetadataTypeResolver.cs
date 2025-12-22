@@ -26,7 +26,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
                            var {memberRefVarName} = metadata.AddTypeReference(
                                                                 {assemblyReferenceName},
                                                                 metadata.GetOrAddString("{type.ContainingNamespace.FullyQualifiedName()}"),
-                                                                metadata.GetOrAddString("{type.Name}"));
+                                                                metadata.GetOrAddString("{type.Name}{GenericRankAnnotation(type)}"));
                            """);
         _context.WriteNewLine();
 
@@ -34,6 +34,14 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
             return memberRefVarName;
         
         return ApplySpecificSyntax(memberRefVarName, in resolutionContext);
+    }
+
+    private string GenericRankAnnotation(ITypeSymbol type)
+    {
+        if (type is INamedTypeSymbol { IsGenericType: true}  namedType)
+            return $"`{namedType.TypeArguments.Length}";
+        
+        return string.Empty;
     }
 
     /// <summary>
