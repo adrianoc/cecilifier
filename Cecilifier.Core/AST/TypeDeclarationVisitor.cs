@@ -195,12 +195,13 @@ namespace Cecilifier.Core.AST
 
             var outerTypeVariable = context.DefinitionVariables.GetVariable(typeSymbol.ContainingType?.ToDisplayString(), VariableMemberKind.Type, typeSymbol.ContainingType?.ContainingSymbol.ToDisplayString());
             var isStructWithNoFields = typeSymbol.TypeKind == TypeKind.Struct && typeSymbol.GetMembers().Length == 0;
+            PrepareBaseType(context, typeSymbol);
             var typeDefinitionExp = context.ApiDefinitionsFactory.Type(
                                                             context,
                                                             new MemberDefinitionContext(typeSymbol.Name, typeDeclarationVar, outerTypeVariable.IsValid ? outerTypeVariable.VariableName : null),
                                                             typeSymbol.ContainingNamespace?.FullyQualifiedName() ?? string.Empty,
                                                             context.ApiDefinitionsFactory.MappedTypeModifiersFor((INamedTypeSymbol)typeSymbol, typeModifiers),
-                                                            BaseTypeFor(context, typeSymbol),
+                                                            typeSymbol.BaseType,
                                                             isStructWithNoFields,
                                                             typeSymbol.Interfaces,
                                                             typeParameters,
@@ -213,25 +214,12 @@ namespace Cecilifier.Core.AST
             HandleAttributesInTypeParameter(context, typeParameters);
         }
 
-        private static ResolvedType BaseTypeFor(IVisitorContext context, ITypeSymbol typeSymbol)
+        private static void PrepareBaseType(IVisitorContext context, ITypeSymbol typeSymbol)
         {
-            if (typeSymbol.BaseType == null)
-                return default;
-
+            if (typeSymbol.BaseType == null || typeSymbol.BaseType.IsGenericType && typeSymbol.BaseType.TypeArguments.Any(t => t.TypeKind == TypeKind.TypeParameter))
+                return;
+                
             EnsureForwardedTypeDefinition(context, typeSymbol.BaseType, []);
-
-            // TODO: (SRM)
-            // if base type is generic and the base type references a type parameter from the type being declared, Mono.Cecil driver  
-            // will mishandle the type parameter as an external type and produce invalid code. In this scenario that driver ignores
-            // the base type and relies on UpdateBaseTypeIfNeeded() being called after the generic type parameters being processed 
-            // (and whence resolving then produces the correct result).
-            // BTOH we assume that SRM does not need to postpone this (and hence have an empty implementation for UpdateBaseTypeIfNeeded())
-            // this assumption and the following check will be challenged when we add a test like class Foo<T> {} class Bar<TBar> : Foo<TBar> {}
-            // in SRM.
-            if (typeSymbol.BaseType.IsGenericType && typeSymbol.BaseType.TypeArguments.Any(t => t.TypeKind == TypeKind.TypeParameter))
-                return default;
-            
-            return context.TypeResolver.ResolveAny(typeSymbol.BaseType, ResolveTargetKind.TypeReference);
         }
 
         private void EnsureCurrentTypeHasADefaultCtor(TypeDeclarationSyntax node, string typeLocalVar)

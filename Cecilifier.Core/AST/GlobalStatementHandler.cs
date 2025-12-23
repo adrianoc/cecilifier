@@ -27,7 +27,7 @@ namespace Cecilifier.Core.AST
                                                         new MemberDefinitionContext("Program", typeVar, null /*Top level type has no outer type.*/),
                                                         string.Empty, // global statements cannot be declared in namespaces
                                                         typeModifiers,
-                                                        context.TypeResolver.Bcl.System.Object,
+                                                        context.RoslynTypeSystem.SystemObject,
                                                         false,
                                                         [], 
                                                         [], 

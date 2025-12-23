@@ -27,7 +27,7 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
                                 MemberDefinitionContext definitionContext, 
                                 string typeNamespace, 
                                 string attrs, 
-                                ResolvedType baseType, 
+                                ITypeSymbol? baseType, 
                                 bool isStructWithNoFields, 
                                 IEnumerable<ITypeSymbol> interfaces,
                                 IEnumerable<TypeParameterSyntax>? ownTypeParameters, 
@@ -44,7 +44,12 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
         }
 
         var exps = new List<string>();
-        var typeDefExp = $"var {typeVar} = new TypeDefinition(\"{typeNamespace}\", \"{typeName}\", {attrs}{(baseType ? $", {baseType}" : "")})";
+
+        ResolvedType resolvedBaseType = baseType == null || (baseType is INamedTypeSymbol { IsGenericType: true } genericInstance && genericInstance.TypeArguments.Any(t => t.TypeKind == TypeKind.TypeParameter))
+                ? null
+                : context.TypeResolver.ResolveAny(baseType, ResolveTargetKind.TypeReference);
+
+        var typeDefExp = $"var {typeVar} = new TypeDefinition(\"{typeNamespace}\", \"{typeName}\", {attrs}{(resolvedBaseType != null ? $", {resolvedBaseType}" : "")})";
         if (properties.Length > 0)
         {
             exps.Add($"{typeDefExp} {{ {string.Join(',', properties.Select(p => $"{p.Kind} = {p.Value}"))} }};");

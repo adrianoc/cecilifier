@@ -39,7 +39,7 @@ public interface IApiDriverDefinitionsFactory
         MemberDefinitionContext definitionContext,
         string typeNamespace,
         string attrs,
-        ResolvedType baseType,
+        ITypeSymbol? baseType,
         bool isStructWithNoFields,
         IEnumerable<ITypeSymbol> interfaces,
         IEnumerable<TypeParameterSyntax>? ownTypeParameters,

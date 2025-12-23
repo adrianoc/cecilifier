@@ -28,7 +28,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                         IVisitorContext context, 
                         MemberDefinitionContext definitionContext, 
                         string typeNamespace, string attrs, 
-                        ResolvedType baseType, 
+                        ITypeSymbol? baseType, 
                         bool isStructWithNoFields, 
                         IEnumerable<ITypeSymbol> interfaces,
                         IEnumerable<TypeParameterSyntax>? ownTypeParameters, 
@@ -67,7 +67,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                                                                   {attrs},
                                                                   metadata.GetOrAddString("{typeNamespace}"),
                                                                   metadata.GetOrAddString("{fixedTypeName}"),
-                                                                  {baseType.Expression ?? "default" },
+                                                                  { (baseType == null ? "default" : context.TypeResolver.ResolveAny(baseType!, ResolveTargetKind.TypeReference)) },
                                                                   fieldList: {firstFieldHandle ?? ApiDriverConstants.FieldDefinitionTableNextAvailableEntry},
                                                                   methodList: {typeRecord.FirstMethodHandle ?? ApiDriverConstants.MethodDefinitionTableNextAvailableEntry});
                                  """));

@@ -35,7 +35,7 @@ namespace Cecilifier.Core.AST
                                                         new MemberDefinitionContext(_enumSymbol.Name, enumTypeVariable, outerTypeVariable.IsValid ? outerTypeVariable.VariableName : null),
                                                         _enumSymbol.ContainingNamespace?.FullyQualifiedName() ?? string.Empty, 
                                                         TypeModifiersToCecil(_enumSymbol, node.Modifiers) + " | TypeAttributes.Sealed", 
-                                                        Context.TypeResolver.Bcl.System.Enum, 
+                                                        Context.RoslynTypeSystem.SystemEnum, 
                                                         false, 
                                                         [], 
                                                         [], 

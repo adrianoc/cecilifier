@@ -51,6 +51,8 @@ public struct RoslynTypeSystem
         SystemRuntimeCompilerServicesUnsafe = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(Unsafe).FullName);
         SystemRuntimeInteropServicesMemoryMarshal = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(MemoryMarshal).FullName);
         SystemRuntimeCompilerServicesCompilerGeneratedAttribute = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(CompilerGeneratedAttribute).FullName);
+        SystemEnum =  ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Enum);
+        SystemMulticastDelegate =  ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_MulticastDelegate);
     }
 
     public ITypeSymbol SystemIndex { get; }
@@ -87,6 +89,8 @@ public struct RoslynTypeSystem
     public ITypeSymbol SystemRuntimeCompilerServicesUnsafe { get;  }
     public ITypeSymbol SystemRuntimeInteropServicesMemoryMarshal { get; }
     public ITypeSymbol SystemCollectionsGenericICollectionOfT { get; }
+    public ITypeSymbol SystemEnum { get; }
+    public ITypeSymbol SystemMulticastDelegate { get; }
 
     public readonly ITypeSymbol ForType<TType>()
     {
