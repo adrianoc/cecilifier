@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+using System;
 using System.Linq;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
@@ -60,7 +60,7 @@ namespace Cecilifier.Core.TypeSystem
 
             if (found != null && type is INamedTypeSymbol { IsGenericType: true } genericTypeSymbol)
             {
-                return MakeGenericInstanceType(found, genericTypeSymbol, new TypeResolutionContext(ResolveTargetKind.None, TypeResolutionOptions.None, found));
+                return MakeGenericInstanceType(found, genericTypeSymbol, new TypeResolutionContext(context.TargetKind, context.Options, found));
             }
 
             return new ResolvedType(found);
@@ -165,15 +165,21 @@ namespace Cecilifier.Core.TypeSystem
                 : MakeGenericInstanceType(genericType, genericTypeSymbol, in resolutionContext);
         }
 
-        protected IList<ResolvedType> CollectTypeArguments(INamedTypeSymbol typeArgumentProvider, List<ResolvedType> collectTo, string cecilTypeParameterProviderVar)
+        protected ReadOnlySpan<ITypeSymbol> CollectTypeArguments(INamedTypeSymbol typeArgumentProvider, ref Buffer256<ITypeSymbol> collectTo)
         {
+            int count = 0;
             if (typeArgumentProvider.ContainingType != null)
             {
-                CollectTypeArguments(typeArgumentProvider.ContainingType, collectTo, cecilTypeParameterProviderVar);
+                count += CollectTypeArguments(typeArgumentProvider.ContainingType, ref collectTo).Length;
             }
-            collectTo.AddRange(typeArgumentProvider.TypeArguments.Where(t => t.Kind != SymbolKind.ErrorType).Select(t => ResolveAny(t, ResolveTargetKind.TypeReference.ToTypeResolutionContext(cecilTypeParameterProviderVar))));
 
-            return collectTo;
+            Span<ITypeSymbol> typeArguments = collectTo;
+            foreach (var t in typeArgumentProvider.TypeArguments.Where(t => t.Kind != SymbolKind.ErrorType))
+            {
+                typeArguments[count++] = t;
+            }
+
+            return typeArguments.Slice(0, count);
         }
 
         protected abstract ResolvedType MakeGenericInstanceType(ResolvedType typeReference, INamedTypeSymbol genericTypeSymbol, in TypeResolutionContext resolutionContext);

@@ -112,6 +112,11 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
                         return MetadataTokens.GetToken(metadata.AddTypeSpecification(metadata.GetOrAddBlob(signatureEncoder.Builder)));
                  	}
                  }
+                 
+                 internal static class Extensions
+                 {
+                    internal static void WithSignatureTypeEncoder(this SignatureTypeEncoder ste, Action<SignatureTypeEncoder> encodingAction) => encodingAction(ste);
+                 }
                  """;
     }
 

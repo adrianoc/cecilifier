@@ -1,3 +1,5 @@
+using System.Collections.Immutable;
+using Cecilifier.Core;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.TypeSystem;
@@ -39,9 +41,13 @@ public class MonoCecilTypeResolver(MonoCecilContext context) : TypeResolverBase<
 
     protected override ResolvedType MakeGenericInstanceType(ResolvedType typeReference, INamedTypeSymbol genericTypeSymbol, in TypeResolutionContext resolutionContext)
     {
-        var typeArgs = CollectTypeArguments(genericTypeSymbol, [], resolutionContext.TypeParameterProviderVar);
-        return typeArgs.Count > 0
-            ? typeReference.MakeGenericInstanceType(typeArgs)
-            : typeReference;
+        Buffer256<ITypeSymbol> g = new();
+        var resolutionContextTypeParameterProviderVar = resolutionContext.TypeParameterProviderVar;
+        var typeArgs = CollectTypeArguments(genericTypeSymbol, ref g)
+                                                        .ToImmutableArray()
+                                                        .Select(t => _context.TypeResolver.ResolveAny(t, ResolveTargetKind.TypeReference.ToTypeResolutionContext(resolutionContextTypeParameterProviderVar)))
+                                                        .ToImmutableArray();
+        
+        return typeArgs.Length > 0 ? typeReference.MakeGenericInstanceType(typeArgs) : typeReference;
     }
 }

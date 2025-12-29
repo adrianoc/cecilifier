@@ -45,7 +45,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                       var {typeVar} = metadata.AddTypeReference({resolutionScope}, metadata.GetOrAddString("{typeNamespace}"), metadata.GetOrAddString("{fixedTypeName}"));
                       """);
         
-        ProcessGenericTypeParameters(typeVar, context, typeParameters, new List<string>());
+        ProcessGenericTypeParameters(context, typeParameters);
         
         // We need to pass the handle of the 1st field/method defined in the module so we need to postpone the type generation after we have visited
         // all types/members.
@@ -115,7 +115,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
             }
 
             var index = 0;
-            foreach (var genericTypeParameter in typeParameters)
+            foreach (var genericTypeParameter in outerTypeParameters.Concat(typeParameters))
             {
                 ctx.Generate($"""metadata.AddGenericParameter({typeRecord.TypeDefinitionVariable}, GenericParameterAttributes.None, metadata.GetOrAddString("{genericTypeParameter.Identifier.Text}"), {index++});""");
                 ctx.WriteNewLine();
@@ -123,7 +123,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
             ctx.WriteNewLine();
         }
         
-        static void ProcessGenericTypeParameters(string memberDefVar, IVisitorContext context, IList<TypeParameterSyntax> typeParamList, IList<string> exps)
+        static void ProcessGenericTypeParameters(IVisitorContext context, IList<TypeParameterSyntax> typeParamList)
         {
             for (int i = 0; i < typeParamList.Count; i++)
             {
@@ -531,7 +531,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         return firstParameterHandle;
     }
 
-    static string Format(CecilifierInterpolatedStringHandler cecilFormattedString) => cecilFormattedString.Result;
+    static string Format(CecilifierInterpolatedStringHandler cecilFormattedString) => StringExtensions.Indented(cecilFormattedString);
 }
 
 file record struct NonTypeAttributeTargetState (string AttributeTarget, string ResolvedAttributeCtor, string AttributeEncoderVariable);
