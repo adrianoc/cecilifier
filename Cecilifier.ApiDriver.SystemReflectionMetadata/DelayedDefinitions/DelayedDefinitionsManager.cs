@@ -85,11 +85,6 @@ public class DelayedDefinitionsManager
             currentType.Fields[^1].Attributes.Add(attributeEmitter);
         }
     }
-    
-    public void AddAttributeToCurrentType(Action<IVisitorContext, string> attributeEmitter)
-    {
-        GetCurrentTypeDefinition().Attributes.Add(attributeEmitter);
-    }
 
     public string GetTypeDefinitionVariableFromTypeReferenceVariable(string typeReferenceVariable)
     {
