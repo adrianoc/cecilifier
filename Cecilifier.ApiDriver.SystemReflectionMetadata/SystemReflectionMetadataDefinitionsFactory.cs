@@ -162,7 +162,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         {
             EmitLocalVariables(ctx, bodiedMemberDefinitionContext.Member.Identifier, in methodRecord);
             
-            var methodSignatureVar = ctx.DefinitionVariables.GetMethodVariable(methodSymbol.AsMethodVariable(VariableMemberKind.MethodSignature));
+            var methodSignatureVar = ctx.DefinitionVariables.GetMethodVariable(methodSymbol.AsMethodDefinitionVariable(VariableMemberKind.MethodSignature));
             Debug.Assert(methodSignatureVar.IsValid);
             
             var methodDefVar = bodiedMemberDefinitionContext.IlContext!.AssociatedMethodVariable;

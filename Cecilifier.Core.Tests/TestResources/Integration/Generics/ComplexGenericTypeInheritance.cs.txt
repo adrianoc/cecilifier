@@ -4,6 +4,14 @@ class G<S, T>
 {
 }
 
-class TestType<X> : G<int, X>
+class TestType1<TT> : G<int, TT>
+{
+}
+
+class TestType2<TT1, TT2> : G<TT1, TT2>
+{
+}
+
+class TestType3<TT1, TT2> : G<TT2, TT1>
 {
 }

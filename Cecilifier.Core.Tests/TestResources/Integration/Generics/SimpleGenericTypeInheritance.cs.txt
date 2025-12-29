@@ -7,3 +7,7 @@ class G<T>
 class GenericTypeInheritFromTypeInSameAssembly<T> : G<int>
 {
 }
+
+class BaseTypeReferencing_DeclaringTypeTypeParameter<TP> : G<TP>
+{
+}

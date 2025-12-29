@@ -106,10 +106,14 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
         var resolved = base.ResolveLocalVariableType(type, in context);
         if (resolved && context.TargetKind != ResolveTargetKind.TypeReference)
         {
+            var methodBuilder = context.TargetKind == ResolveTargetKind.GenericTypeArgument 
+                ? $"GenericTypeParameter({resolved.Expression})" 
+                : $"Type({resolved.Expression}, isValueType: {context.Options.HasFlag(TypeResolutionOptions.IsValueType).ToKeyword()})";
+            
             return ResolvedType.FromDetails(
                 new ResolvedTypeDetails()
                     .WithTypeEncoder(TypeEncoderFor(in context))
-                    .WithMethodBuilder($"Type({resolved.Expression}, isValueType: {context.Options.HasFlag(TypeResolutionOptions.IsValueType).ToKeyword()})"));
+                    .WithMethodBuilder(methodBuilder));
 
         }
         return resolved;

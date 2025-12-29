@@ -82,7 +82,7 @@ namespace Cecilifier.Core.Tests.Integration
         [TestCase("GenericTypesInheritance", TestName = "GenericTypesInheritance")]
         [TestCase("SimpleGenericTypeInheritance", TestName = "SimpleGenericTypeInheritance")]
         [TestCase("ComplexGenericTypeInheritance", TestName = "ComplexGenericTypeInheritance")]
-        [ParameterizedResourceFilter<SystemReflectionMetadataContext>("GenericTypesInheritance", "SimpleGenericTypeInheritance")]
+        [ParameterizedResourceFilter<SystemReflectionMetadataContext>("GenericTypesInheritance", "SimpleGenericTypeInheritance", "ComplexGenericTypeInheritance")]
         public void TestGenericTypesInheritance(string testScenario)
         {
             AssertResourceTest($"Generics/{testScenario}");

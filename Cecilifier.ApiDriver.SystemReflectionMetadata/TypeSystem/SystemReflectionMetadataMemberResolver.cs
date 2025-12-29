@@ -12,7 +12,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
 {
     public string ResolveMethod(IMethodSymbol method)
     {
-        var toBeFound = method.AsMethodVariable(VariableMemberKind.MethodReference);
+        var toBeFound = method.AsRawMethodDefinitionVariable(VariableMemberKind.MethodReference);
         var found = context.DefinitionVariables.GetMethodVariable(toBeFound);
         if (found.IsValid)
             return found.VariableName;
@@ -22,7 +22,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
         var methodRefVar = context.Naming.SyntheticVariable($"{method.ToValidVariableName()}", ElementKind.MemberReference);
         
         var methodSignatureVar = context.Naming.SyntheticVariable($"{method.Name}Signature", ElementKind.MemberReference);
-        context.DefinitionVariables.RegisterMethod(method.AsMethodVariable(VariableMemberKind.MethodSignature, methodSignatureVar));
+        context.DefinitionVariables.RegisterMethod(method.AsMethodDefinitionVariable(VariableMemberKind.MethodSignature, methodSignatureVar));
 
         var isInstanceMethod = !method.IsStatic && method.MethodKind != MethodKind.LocalFunction; // local functions are always declared as static (we don't support capturing variables)
         context.Generate($$"""

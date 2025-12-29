@@ -171,7 +171,7 @@ namespace Cecilifier.Core.TypeSystem
             {
                 CollectTypeArguments(typeArgumentProvider.ContainingType, collectTo, cecilTypeParameterProviderVar);
             }
-            collectTo.AddRange(typeArgumentProvider.TypeArguments.Where(t => t.Kind != SymbolKind.ErrorType).Select(t => ResolveAny(t, ResolveTargetKind.GenericTypeArgument.ToTypeResolutionContext(cecilTypeParameterProviderVar))));
+            collectTo.AddRange(typeArgumentProvider.TypeArguments.Where(t => t.Kind != SymbolKind.ErrorType).Select(t => ResolveAny(t, ResolveTargetKind.TypeReference.ToTypeResolutionContext(cecilTypeParameterProviderVar))));
 
             return collectTo;
         }

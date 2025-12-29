@@ -28,7 +28,7 @@ public class SystemReflectionMetadataContext : CecilifierContextBase, IVisitorCo
     
     public SystemReflectionMetadataAssemblyResolver AssemblyResolver { get; init; }
 
-    public override DefinitionVariable GetMethodVariable(IMethodSymbol method) => DefinitionVariables.GetMethodVariable(method.AsMethodVariable(VariableMemberKind.MethodSignature));
+    public override DefinitionVariable GetMethodVariable(IMethodSymbol method) => DefinitionVariables.GetMethodVariable(method.AsMethodDefinitionVariable(VariableMemberKind.MethodSignature));
 
     public override void OnFinishedTypeDeclaration(INamedTypeSymbol typeSymbol)
     {
