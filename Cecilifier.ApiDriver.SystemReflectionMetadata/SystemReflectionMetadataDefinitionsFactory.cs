@@ -311,15 +311,11 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
     {
         Debug.Assert(definitionContext.ParentDefinitionVariable != null);
         
-        var fieldSignatureVar = context.Naming.SyntheticVariable($"{definitionContext.Identifier}_Signature", ElementKind.Field);
         var fieldEncoderVar = context.Naming.SyntheticVariable($"{definitionContext.Identifier}_Encoder", ElementKind.Field);
         
         Buffer16<string> exps = new();
         byte expCount = 0;
-        exps[expCount++] = Format($"""
-                                   BlobBuilder {fieldSignatureVar} = new();
-                                   var {fieldEncoderVar} = new BlobEncoder({fieldSignatureVar}).Field();
-                                   """);
+        exps[expCount++] = Format($"var {fieldEncoderVar} = new BlobEncoder(new BlobBuilder()).Field();");
         if (isVolatile)
         {
             var details = fieldType.GetDetails<ResolvedTypeDetails>();
@@ -336,7 +332,8 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         }
         
         //Define a field reference and register it.
-        exps[expCount++] = Format($"""var {definitionContext.DefinitionVariable} = metadata.AddMemberReference({definitionContext.ParentDefinitionVariable}, metadata.GetOrAddString("{definitionContext.Name}"), metadata.GetOrAddBlob({fieldSignatureVar}));""");
+        exps[expCount++] = Format($"""var {definitionContext.DefinitionVariable} = metadata.AddMemberReference({definitionContext.ParentDefinitionVariable}, metadata.GetOrAddString("{definitionContext.Name}"), metadata.GetOrAddBlob({fieldEncoderVar}.Builder));""");
+        exps[expCount++] = ""; // this will force a new line to be added.
         context.DefinitionVariables.RegisterNonMethod(declaringTypeName, definitionContext.Name, VariableMemberKind.Field, definitionContext.DefinitionVariable);
         
         var toAdd = new FieldDefinitionRecord(fieldRecord =>
@@ -346,7 +343,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
 
             var fieldVariableName = context.Naming.SyntheticVariable($"{definitionContext.Identifier}", ElementKind.Field);
             var varPrefix = fieldRecord.Index == 0 || initializer || fieldRecord.Attributes.Count > 0 ? $"var {fieldVariableName} = " : "";
-            expsDef[expCountDef++] = Format($"""{varPrefix}metadata.AddFieldDefinition({fieldAttributes}, metadata.GetOrAddString("{definitionContext.Name}"), metadata.GetOrAddBlob({fieldSignatureVar}));""");
+            expsDef[expCountDef++] = Format($"""{varPrefix}metadata.AddFieldDefinition({fieldAttributes}, metadata.GetOrAddString("{definitionContext.Name}"), metadata.GetOrAddBlob({fieldEncoderVar}.Builder));""");
             if (initializer.ConstantValue != null)
             {
                 expsDef[expCountDef++] = $"metadata.AddConstant({fieldVariableName}, {initializer.ConstantValue});{Environment.NewLine}";
