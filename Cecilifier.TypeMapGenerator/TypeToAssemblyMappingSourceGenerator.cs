@@ -13,13 +13,13 @@ namespace Cecilifier.TypeMapGenerator;
 #pragma warning disable RS1035
 
 [Generator]
-public class SampleIncrementalSourceGenerator : ISourceGenerator
+public class SampleIncrementalSourceGenerator : IIncrementalGenerator
 {
-    public void Initialize(GeneratorInitializationContext context)
+    public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        context.RegisterForPostInitialization(c =>
+        context.RegisterSourceOutput(context.CompilationProvider, (spc, compilation) => 
         {
-            c.AddSource(
+            spc.AddSource(
                 "TypeToAssemblyNameReferenceMap.gen.cs",
                 $$"""
                 // Generated on {{DateTime.Now}}
@@ -93,8 +93,8 @@ public class SampleIncrementalSourceGenerator : ISourceGenerator
         var assemblyName = metadataReader.GetAssemblyDefinition().GetAssemblyName();
         string assemblyNameReference;
         
-        assemblyReferences.Append($"""var ar{index} = AssemblyNameReference.Parse("{ assemblyName.FullName }");{Environment.NewLine}""");
-        assemblyNameReferenceCache[assemblyName.FullName.GetHashCode()] = assemblyNameReference = $"ar{index}";
+        assemblyReferences.Append($"""var {IdentifierFor(assemblyName)} = AssemblyNameReference.Parse("{ assemblyName.FullName }");{Environment.NewLine}""");
+        assemblyNameReferenceCache[assemblyName.FullName.GetHashCode()] = assemblyNameReference = IdentifierFor(assemblyName);
 
         foreach(var td in metadataReader.TypeDefinitions.Select(th => metadataReader.GetTypeDefinition(th)).Where(IsPublic))
         {
@@ -114,8 +114,8 @@ public class SampleIncrementalSourceGenerator : ISourceGenerator
             if (!assemblyNameReferenceCache.TryGetValue(assemblyName.FullName.GetHashCode(), out assemblyNameReference))
             {
                 index++;
-                assemblyReferences.Append($"""var ar{index} = AssemblyNameReference.Parse("{ assemblyName.FullName }");{Environment.NewLine}""");
-                assemblyNameReferenceCache[assemblyName.FullName.GetHashCode()] = assemblyNameReference = $"ar{index}";
+                assemblyReferences.Append($"""var {IdentifierFor(assemblyName)} = AssemblyNameReference.Parse("{ assemblyName.FullName }");{Environment.NewLine}""");
+                assemblyNameReferenceCache[assemblyName.FullName.GetHashCode()] = assemblyNameReference = IdentifierFor(assemblyName);
             }
 
             // TODO: Do we need to use FullNameFor() ?
@@ -126,6 +126,11 @@ public class SampleIncrementalSourceGenerator : ISourceGenerator
         return assemblyReferences.ToString();
 
         static bool IsPublic(TypeDefinition typeDefinition) => (typeDefinition.Attributes & TypeAttributes.VisibilityMask) != TypeAttributes.NotPublic;
+    }
+
+    private string IdentifierFor(AssemblyName assemblyName)
+    {
+        return assemblyName.Name.Replace('.', '_');
     }
 
     private static string FullNameFor(MetadataReader metadataReader, TypeDefinition td)
