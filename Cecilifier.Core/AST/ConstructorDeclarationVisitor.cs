@@ -7,7 +7,6 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Reflection.Emit;
 using Cecilifier.Core.ApiDriver;
-using Cecilifier.Core.ApiDriver.Handles;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Misc;
@@ -122,7 +121,6 @@ namespace Cecilifier.Core.AST
         /// <param name="processInitializers">Action in charge of handling constructor initializers</param>
         private void DefaultCtorInjector(string typeDefVar, string normalizedTypeName, string typeName, string ctorAccessibility, string baseCtor, bool isStatic, Action<IlContext> processInitializers)
         {
-            Context.WriteNewLine();
             Context.WriteComment($"** Constructor: {normalizedTypeName}() **");
 
             var ilContext = AddOrUpdateParameterlessCtorDefinition(
@@ -142,6 +140,7 @@ namespace Cecilifier.Core.AST
             }
 
             Context.ApiDriver.WriteCilInstruction(Context, ilContext, OpCodes.Ret);
+            Context.WriteNewLine();
         }
 
         private IlContext AddOrUpdateParameterlessCtorDefinition(string typeName, string normalizedTypeName, string typeDefVar, string ctorAccessibility, bool isStatic, string ctorLocalVar)
