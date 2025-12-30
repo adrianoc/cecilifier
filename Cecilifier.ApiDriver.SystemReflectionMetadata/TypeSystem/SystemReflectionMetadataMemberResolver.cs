@@ -12,7 +12,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
 {
     public string ResolveMethod(IMethodSymbol method)
     {
-        var toBeFound = method.AsMethodVariable(VariableMemberKind.MethodReference);
+        var toBeFound = method.AsRawMethodDefinitionVariable(VariableMemberKind.MethodReference);
         var found = context.DefinitionVariables.GetMethodVariable(toBeFound);
         if (found.IsValid)
             return found.VariableName;
@@ -22,7 +22,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
         var methodRefVar = context.Naming.SyntheticVariable($"{method.ToValidVariableName()}", ElementKind.MemberReference);
         
         var methodSignatureVar = context.Naming.SyntheticVariable($"{method.Name}Signature", ElementKind.MemberReference);
-        context.DefinitionVariables.RegisterMethod(method.AsMethodVariable(VariableMemberKind.MethodSignature, methodSignatureVar));
+        context.DefinitionVariables.RegisterMethod(method.AsMethodDefinitionVariable(VariableMemberKind.MethodSignature, methodSignatureVar));
 
         var isInstanceMethod = !method.IsStatic && method.MethodKind != MethodKind.LocalFunction; // local functions are always declared as static (we don't support capturing variables)
         context.Generate($$"""
@@ -119,30 +119,10 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
           return methodRefVar;
     }
 
-    public string ResolveDefaultConstructor(ITypeSymbol baseType, string derivedTypeVar)
+    public string ResolveDefaultConstructor(ITypeSymbol baseType, string _/*derivedTypeVar*/)
     {
-        var voidParameterlessMethodRef = context.DefinitionVariables.GetVariable("voidParameterlessMethodRef", VariableMemberKind.MethodReference, baseType.Name);
-        if (!voidParameterlessMethodRef.IsValid)
-        {
-            var voidParameterlessMethodRefVarName = context.Naming.SyntheticVariable("voidParameterlessMethod", ElementKind.MemberReference);
-            var parameterlessCtorSignatureVarName = $"ctorSignature_{DateTime.Now.Ticks}";
-            context.Generate($$"""
-                                          var {{parameterlessCtorSignatureVarName}} = new BlobBuilder();
-                                          
-                                          new BlobEncoder({{parameterlessCtorSignatureVarName}}).
-                                                 MethodSignature(isInstanceMethod: true).
-                                                 Parameters(0, returnType => returnType.Void(), parameters => { });
-                                          
-                                          var {{voidParameterlessMethodRefVarName}} = metadata.AddMemberReference(
-                                                                                                    {{context.TypeResolver.ResolveAny(baseType, ResolveTargetKind.TypeReference).Expression}},
-                                                                                                    metadata.GetOrAddString(".ctor"),
-                                                                                                    metadata.GetOrAddBlob({{parameterlessCtorSignatureVarName}}));
-                                          """);
-            
-            voidParameterlessMethodRef = context.DefinitionVariables.RegisterNonMethod(baseType.Name, "voidParameterlessMethodRef", VariableMemberKind.MethodReference, voidParameterlessMethodRefVarName);
-        }
-        
-        return voidParameterlessMethodRef.VariableName;
+        var parameterlessCtor = baseType.GetMembers(".ctor").OfType<IMethodSymbol>().Single(m => m.Parameters.Length == 0);
+        return ResolveMethod(parameterlessCtor);
     }
     
     public string ResolveField(IFieldSymbol field)

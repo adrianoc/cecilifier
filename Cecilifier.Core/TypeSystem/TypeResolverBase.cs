@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+using System;
 using System.Linq;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
@@ -46,7 +46,6 @@ namespace Cecilifier.Core.TypeSystem
         }
 
         public virtual ResolvedType ApplySpecificSyntax(string variableName, in TypeResolutionContext resolutionContext) => variableName;
-        public abstract ResolvedType Resolve(string typeName, in TypeResolutionContext resolutionContext);
         public abstract ResolvedType Resolve(ITypeSymbol type, in TypeResolutionContext resolutionContext);
         public abstract ResolvedType ResolvePredefinedType(ITypeSymbol type, in TypeResolutionContext resolutionContext);
         public abstract ResolvedType MakeArrayType(ITypeSymbol elementType, in TypeResolutionContext resolutionContext);
@@ -61,7 +60,7 @@ namespace Cecilifier.Core.TypeSystem
 
             if (found != null && type is INamedTypeSymbol { IsGenericType: true } genericTypeSymbol)
             {
-                return MakeGenericInstanceType(found, genericTypeSymbol, new TypeResolutionContext(ResolveTargetKind.None, TypeResolutionOptions.None, found));
+                return MakeGenericInstanceType(found, genericTypeSymbol, new TypeResolutionContext(context.TargetKind, context.Options, found));
             }
 
             return new ResolvedType(found);
@@ -160,41 +159,29 @@ namespace Cecilifier.Core.TypeSystem
                 return null;
             }
 
-            var genericType = Resolve(OpenGenericTypeName(genericTypeSymbol.ConstructedFrom), in resolutionContext);
-            return genericTypeSymbol.IsDefinition
+            var genericType = Resolve(genericTypeSymbol.ConstructedFrom,  in resolutionContext);
+            return genericTypeSymbol.IsDefinition 
                 ? genericType
                 : MakeGenericInstanceType(genericType, genericTypeSymbol, in resolutionContext);
         }
 
-        private IList<ResolvedType> CollectTypeArguments(INamedTypeSymbol typeArgumentProvider, List<ResolvedType> collectTo, string cecilTypeParameterProviderVar)
+        protected ReadOnlySpan<ITypeSymbol> CollectTypeArguments(INamedTypeSymbol typeArgumentProvider, ref Buffer256<ITypeSymbol> collectTo)
         {
+            int count = 0;
             if (typeArgumentProvider.ContainingType != null)
             {
-                CollectTypeArguments(typeArgumentProvider.ContainingType, collectTo, cecilTypeParameterProviderVar);
+                count += CollectTypeArguments(typeArgumentProvider.ContainingType, ref collectTo).Length;
             }
-            collectTo.AddRange(typeArgumentProvider.TypeArguments.Where(t => t.Kind != SymbolKind.ErrorType).Select(t => ResolveAny(t, ResolveTargetKind.TypeReference.ToTypeResolutionContext(cecilTypeParameterProviderVar))));
 
-            return collectTo;
+            Span<ITypeSymbol> typeArguments = collectTo;
+            foreach (var t in typeArgumentProvider.TypeArguments.Where(t => t.Kind != SymbolKind.ErrorType))
+            {
+                typeArguments[count++] = t;
+            }
+
+            return typeArguments.Slice(0, count);
         }
 
-        private ResolvedType MakeGenericInstanceType(ResolvedType typeReference, INamedTypeSymbol genericTypeSymbol, in TypeResolutionContext resolutionContext)
-        {
-            var typeArgs = CollectTypeArguments(genericTypeSymbol, [], resolutionContext.TypeParameterProviderVar);
-            return typeArgs.Count > 0
-                ? typeReference.MakeGenericInstanceType(typeArgs)
-                : typeReference;
-        }
-
-        private string OpenGenericTypeName(ITypeSymbol type)
-        {
-            var genericTypeWithTypeParameters = type.ToString();
-
-            var genOpenBraceIndex = genericTypeWithTypeParameters.IndexOf('<');
-            var genCloseBraceIndex = genericTypeWithTypeParameters.LastIndexOf('>');
-
-            var nts = (INamedTypeSymbol) type;
-            var commas = new string(',', nts.TypeParameters.Length - 1);
-            return genericTypeWithTypeParameters.Remove(genOpenBraceIndex + 1, genCloseBraceIndex - genOpenBraceIndex - 1).Insert(genOpenBraceIndex + 1, commas);
-        }
+        protected abstract ResolvedType MakeGenericInstanceType(ResolvedType typeReference, INamedTypeSymbol genericTypeSymbol, in TypeResolutionContext resolutionContext);
     }
 }

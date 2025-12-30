@@ -86,7 +86,7 @@ public struct StaticDelegateCacheContext
                                                                 new MemberDefinitionContext(cacheTypeName, cachedTypeVar, outerTypeVariable.IsValid ? outerTypeVariable.VariableName : null),
                                                                 DeclaringTypeNamespace,
                                                                 attrs,
-                                                                context.TypeResolver.Bcl.System.Object, 
+                                                                context.RoslynTypeSystem.SystemObject, 
                                                                 false, 
                                                                 [], 
                                                                 [], 

@@ -134,12 +134,6 @@ namespace Cecilifier.Core.AST
                 member.Accept(visitor);
             }
         }
-        
-        private ResolvedType ProcessBase(TypeDeclarationSyntax classDeclaration)
-        {
-            var classSymbol = DeclaredSymbolFor(classDeclaration);
-            return Context.TypeResolver.ResolveAny(classSymbol.BaseType, ResolveTargetKind.TypeReference);
-        }
 
         private void HandleTypeDeclaration(TypeDeclarationSyntax node, string varName)
         {
@@ -149,13 +143,6 @@ namespace Cecilifier.Core.AST
             if (!found.IsValid || !found.IsForwarded)
             {
                 AddTypeDefinition(Context, varName, typeSymbol, node.Modifiers, node.TypeParameterList?.Parameters, node.CollectOuterTypeArguments());
-            }
-
-            if (typeSymbol.BaseType?.IsGenericType == true)
-            {
-                // we postpone setting the base type because it may depend on generic parameters defined in the class itself (for instance 'class C<T> : Base<T> {}')
-                // and these are introduced by the code in CecilDefinitionsFactory.Type().
-                WriteCecilExpression(Context, $"{varName}.BaseType = {ProcessBase(node)};");
             }
 
             HandleAttributesInMemberDeclaration(node.AttributeLists, varName, VariableMemberKind.Type);
@@ -208,30 +195,31 @@ namespace Cecilifier.Core.AST
 
             var outerTypeVariable = context.DefinitionVariables.GetVariable(typeSymbol.ContainingType?.ToDisplayString(), VariableMemberKind.Type, typeSymbol.ContainingType?.ContainingSymbol.ToDisplayString());
             var isStructWithNoFields = typeSymbol.TypeKind == TypeKind.Struct && typeSymbol.GetMembers().Length == 0;
+            PrepareBaseType(context, typeSymbol);
             var typeDefinitionExp = context.ApiDefinitionsFactory.Type(
-                context,
-                new MemberDefinitionContext(typeSymbol.Name, typeDeclarationVar, outerTypeVariable.IsValid ? outerTypeVariable.VariableName : null),
-                typeSymbol.ContainingNamespace?.FullyQualifiedName() ?? string.Empty,
-                context.ApiDefinitionsFactory.MappedTypeModifiersFor((INamedTypeSymbol)typeSymbol, typeModifiers),
-                BaseTypeFor(context, typeSymbol),
-                isStructWithNoFields,
-                typeSymbol.Interfaces,
-                typeParameters,
-                outerTypeParameters);
+                                                            context,
+                                                            new MemberDefinitionContext(typeSymbol.Name, typeDeclarationVar, outerTypeVariable.IsValid ? outerTypeVariable.VariableName : null),
+                                                            typeSymbol.ContainingNamespace?.FullyQualifiedName() ?? string.Empty,
+                                                            context.ApiDefinitionsFactory.MappedTypeModifiersFor((INamedTypeSymbol)typeSymbol, typeModifiers),
+                                                            typeSymbol.BaseType,
+                                                            isStructWithNoFields,
+                                                            typeSymbol.Interfaces,
+                                                            typeParameters,
+                                                            outerTypeParameters);
 
             AddCecilExpressions(context, typeDefinitionExp);
+
+            context.ApiDefinitionsFactory.UpdateBaseTypeIfNeeded(context, typeSymbol, typeDeclarationVar);
 
             HandleAttributesInTypeParameter(context, typeParameters);
         }
 
-        private static ResolvedType BaseTypeFor(IVisitorContext context, ITypeSymbol typeSymbol)
+        private static void PrepareBaseType(IVisitorContext context, ITypeSymbol typeSymbol)
         {
-            if (typeSymbol.BaseType == null)
-                return null;
-
+            if (typeSymbol.BaseType == null || typeSymbol.BaseType.IsGenericType && typeSymbol.BaseType.TypeArguments.Any(t => t.TypeKind == TypeKind.TypeParameter))
+                return;
+                
             EnsureForwardedTypeDefinition(context, typeSymbol.BaseType, []);
-
-            return typeSymbol.BaseType.IsGenericType ? default : context.TypeResolver.ResolveAny(typeSymbol.BaseType, ResolveTargetKind.TypeReference);
         }
 
         private void EnsureCurrentTypeHasADefaultCtor(TypeDeclarationSyntax node, string typeLocalVar)

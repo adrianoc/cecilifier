@@ -15,6 +15,7 @@ using Cecilifier.Core.Naming;
 using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Cecilifier.ApiDriver.SystemReflectionMetadata;
@@ -27,23 +28,28 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                         IVisitorContext context, 
                         MemberDefinitionContext definitionContext, 
                         string typeNamespace, string attrs, 
-                        ResolvedType baseType, 
+                        ITypeSymbol? baseType, 
                         bool isStructWithNoFields, 
                         IEnumerable<ITypeSymbol> interfaces,
                         IEnumerable<TypeParameterSyntax>? ownTypeParameters, 
                         IEnumerable<TypeParameterSyntax> outerTypeParameters, 
                         params TypeLayoutProperty[] properties)
     {
+        var typeParameters = (ownTypeParameters ?? []).ToList();
+        
+        var fixedTypeName = typeParameters.Count > 0 ? $"{definitionContext.Name}`{typeParameters.Count}": definitionContext.Name;
         var typeVar = definitionContext.DefinitionVariable;
         var resolutionScope = definitionContext.ParentDefinitionVariable ?? "mainModuleHandle";
         yield return Format($"""
                       // Add a type reference for the new type. Types/Member references to the new type uses this.
-                      var {typeVar} = metadata.AddTypeReference({resolutionScope}, metadata.GetOrAddString("{typeNamespace}"), metadata.GetOrAddString("{definitionContext.Name}"));
+                      var {typeVar} = metadata.AddTypeReference({resolutionScope}, metadata.GetOrAddString("{typeNamespace}"), metadata.GetOrAddString("{fixedTypeName}"));
                       """);
-
+        
+        ProcessGenericTypeParameters(context, typeParameters);
+        
         // We need to pass the handle of the 1st field/method defined in the module so we need to postpone the type generation after we have visited
         // all types/members.
-        TypedContext(context).DelayedDefinitionsManager.RegisterTypeDefinition(typeVar, $"{typeNamespace}.{definitionContext.Name}", DefineDelayed);
+        TypedContext(context).DelayedDefinitionsManager.RegisterTypeDefinition(typeVar, DefineDelayed);
         void DefineDelayed(SystemReflectionMetadataContext ctx, ref TypeDefinitionRecord typeRecord)
         {
             string? firstFieldHandle = null;
@@ -60,12 +66,12 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                                  var {typeRecord.TypeDefinitionVariable} = metadata.AddTypeDefinition(
                                                                   {attrs},
                                                                   metadata.GetOrAddString("{typeNamespace}"),
-                                                                  metadata.GetOrAddString("{definitionContext.Name}"),
-                                                                  {baseType.Expression ?? "default" },
+                                                                  metadata.GetOrAddString("{fixedTypeName}"),
+                                                                  { (baseType == null ? "default" : context.TypeResolver.ResolveAny(baseType!, ResolveTargetKind.TypeReference)) },
                                                                   fieldList: {firstFieldHandle ?? ApiDriverConstants.FieldDefinitionTableNextAvailableEntry},
                                                                   methodList: {typeRecord.FirstMethodHandle ?? ApiDriverConstants.MethodDefinitionTableNextAvailableEntry});
                                  """));
-            context.WriteNewLine();
+            ctx.WriteNewLine();
             
             // Add attributes to the type definition
             foreach (var attributeEmitter in typeRecord.Attributes)
@@ -76,31 +82,30 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
             foreach (var property in typeRecord.Properties)
             {
                 // process each property passing the type definition variable (as opposed to the type reference variable) 
-                property.Processor(context, property.Name, property.DefinitionVariable, property.DeclaringTypeName, typeRecord.TypeDefinitionVariable);
+                property.Processor(ctx, property.Name, property.DefinitionVariable, property.DeclaringTypeName, typeRecord.TypeDefinitionVariable);
             }
             
             var firstProperty = typeRecord.Properties.FirstOrDefault();
             if (firstProperty.IsValid)
             {
-                context.Generate($"metadata.AddPropertyMap({typeRecord.TypeDefinitionVariable}, {firstProperty.DefinitionVariable});");
-                context.WriteNewLine();
+                ctx.Generate($"metadata.AddPropertyMap({typeRecord.TypeDefinitionVariable}, {firstProperty.DefinitionVariable});");
+                ctx.WriteNewLine();
             }
             
             if (definitionContext.ParentDefinitionVariable != null)
             {
                 var parentTypeDefinitionVariable =  ctx.DelayedDefinitionsManager.GetTypeDefinitionVariableFromTypeReferenceVariable(definitionContext.ParentDefinitionVariable);
-                context.Generate($"metadata.AddNestedType({typeRecord.TypeDefinitionVariable}, {parentTypeDefinitionVariable});"); // type is an inner type
-                context.WriteNewLine();
+                ctx.Generate($"metadata.AddNestedType({typeRecord.TypeDefinitionVariable}, {parentTypeDefinitionVariable});"); // type is an inner type
+                ctx.WriteNewLine();
             }
 
             if (properties.Length > 0)
             {
-                
                 var packingSize = properties.SingleOrDefault(p => p.Kind == TypeLayoutPropertyKind.PackingSize).Value;
                 var clasSize = properties.SingleOrDefault(p => p.Kind == TypeLayoutPropertyKind.ClassSize).Value;
                 
-                context.Generate($"metadata.AddTypeLayout({typeRecord.TypeDefinitionVariable}, {packingSize}, {clasSize});");
-                context.WriteNewLine();
+                ctx.Generate($"metadata.AddTypeLayout({typeRecord.TypeDefinitionVariable}, {packingSize}, {clasSize});");
+                ctx.WriteNewLine();
             }
             
             foreach(var itf in interfaces)
@@ -108,8 +113,33 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                 context.Generate($"metadata.AddInterfaceImplementation({typeRecord.TypeDefinitionVariable}, {context.TypeResolver.ResolveAny(itf, ResolveTargetKind.TypeReference)});");
                 context.WriteNewLine();
             }
-            context.WriteNewLine();
+
+            var index = 0;
+            foreach (var genericTypeParameter in outerTypeParameters.Concat(typeParameters))
+            {
+                ctx.Generate($"""metadata.AddGenericParameter({typeRecord.TypeDefinitionVariable}, GenericParameterAttributes.None, metadata.GetOrAddString("{genericTypeParameter.Identifier.Text}"), {index++});""");
+                ctx.WriteNewLine();
+            }
+            ctx.WriteNewLine();
         }
+        
+        static void ProcessGenericTypeParameters(IVisitorContext context, IList<TypeParameterSyntax> typeParamList)
+        {
+            for (int i = 0; i < typeParamList.Count; i++)
+            {
+                var symbol = context.SemanticModel.GetDeclaredSymbol(typeParamList[i]).EnsureNotNull();
+                var genericParamName = typeParamList[i].Identifier.Text;
+                var parentName = symbol.TypeParameterKind == TypeParameterKind.Method ? symbol.DeclaringMethod?.OriginalDefinition.ToDisplayString() : symbol.DeclaringType?.OriginalDefinition.ToDisplayString();
+
+                // register a variable representing the type parameter; uses its index as its name since in SRM the type parameter is represented by its index. 
+                context.DefinitionVariables.RegisterNonMethod(parentName, genericParamName, VariableMemberKind.TypeParameter, i.ToString());
+            }
+        }
+    }
+
+    public void UpdateBaseTypeIfNeeded(IVisitorContext context, ITypeSymbol typeSymbol, string typeDefinitionVariable)
+    {
+        // No op on SRM.
     }
 
     public IEnumerable<string> Method(IVisitorContext context, IMethodSymbol methodSymbol, BodiedMemberDefinitionContext bodiedMemberDefinitionContext, string methodName, string methodModifiers, IList<TypeParameterSyntax> typeParameters)
@@ -132,7 +162,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         {
             EmitLocalVariables(ctx, bodiedMemberDefinitionContext.Member.Identifier, in methodRecord);
             
-            var methodSignatureVar = ctx.DefinitionVariables.GetMethodVariable(methodSymbol.AsMethodVariable(VariableMemberKind.MethodSignature));
+            var methodSignatureVar = ctx.DefinitionVariables.GetMethodVariable(methodSymbol.AsMethodDefinitionVariable(VariableMemberKind.MethodSignature));
             Debug.Assert(methodSignatureVar.IsValid);
             
             var methodDefVar = bodiedMemberDefinitionContext.IlContext!.AssociatedMethodVariable;
@@ -239,7 +269,8 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
 
     public IEnumerable<string> Constructor(IVisitorContext context, BodiedMemberDefinitionContext definitionContext, string typeName, bool isStatic, string methodAccessibility, string[] paramTypes, string? methodDefinitionPropertyValues = null)
     {
-        var parameterlessCtorSignatureVar = context.Naming.SyntheticVariable($"{typeName}_ctorSignature", ElementKind.MemberReference);
+        var nameAsIdentifier = typeName.ToValidIdentifier();
+        var parameterlessCtorSignatureVar = context.Naming.SyntheticVariable($"{nameAsIdentifier}_ctorSignature", ElementKind.MemberReference);
         yield return Format(
             $$"""
               var {{parameterlessCtorSignatureVar}} = new BlobBuilder();
@@ -253,7 +284,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         {
             EmitLocalVariables(ctx, "ctor", in methodRecord);
             
-            var ctorDefVar = ctx.Naming.SyntheticVariable($"{typeName}_Ctor", ElementKind.MemberReference);
+            var ctorDefVar = ctx.Naming.SyntheticVariable($"{nameAsIdentifier}_Ctor", ElementKind.MemberReference);
             ctx.Generate($"""
                                    var {ctorDefVar} = metadata.AddMethodDefinition(
                                                              {(isStatic ? "MethodAttributes.Private | MethodAttributes.Static" : methodAccessibility)} | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName,
@@ -280,15 +311,11 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
     {
         Debug.Assert(definitionContext.ParentDefinitionVariable != null);
         
-        var fieldSignatureVar = context.Naming.SyntheticVariable($"{definitionContext.Identifier}_Signature", ElementKind.Field);
         var fieldEncoderVar = context.Naming.SyntheticVariable($"{definitionContext.Identifier}_Encoder", ElementKind.Field);
         
         Buffer16<string> exps = new();
         byte expCount = 0;
-        exps[expCount++] = Format($"""
-                                   BlobBuilder {fieldSignatureVar} = new();
-                                   var {fieldEncoderVar} = new BlobEncoder({fieldSignatureVar}).Field();
-                                   """);
+        exps[expCount++] = Format($"var {fieldEncoderVar} = new BlobEncoder(new BlobBuilder()).Field();");
         if (isVolatile)
         {
             var details = fieldType.GetDetails<ResolvedTypeDetails>();
@@ -305,7 +332,8 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         }
         
         //Define a field reference and register it.
-        exps[expCount++] = Format($"""var {definitionContext.DefinitionVariable} = metadata.AddMemberReference({definitionContext.ParentDefinitionVariable}, metadata.GetOrAddString("{definitionContext.Name}"), metadata.GetOrAddBlob({fieldSignatureVar}));""");
+        exps[expCount++] = Format($"""var {definitionContext.DefinitionVariable} = metadata.AddMemberReference({definitionContext.ParentDefinitionVariable}, metadata.GetOrAddString("{definitionContext.Name}"), metadata.GetOrAddBlob({fieldEncoderVar}.Builder));""");
+        exps[expCount++] = ""; // this will force a new line to be added.
         context.DefinitionVariables.RegisterNonMethod(declaringTypeName, definitionContext.Name, VariableMemberKind.Field, definitionContext.DefinitionVariable);
         
         var toAdd = new FieldDefinitionRecord(fieldRecord =>
@@ -315,7 +343,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
 
             var fieldVariableName = context.Naming.SyntheticVariable($"{definitionContext.Identifier}", ElementKind.Field);
             var varPrefix = fieldRecord.Index == 0 || initializer || fieldRecord.Attributes.Count > 0 ? $"var {fieldVariableName} = " : "";
-            expsDef[expCountDef++] = Format($"""{varPrefix}metadata.AddFieldDefinition({fieldAttributes}, metadata.GetOrAddString("{definitionContext.Name}"), metadata.GetOrAddBlob({fieldSignatureVar}));""");
+            expsDef[expCountDef++] = Format($"""{varPrefix}metadata.AddFieldDefinition({fieldAttributes}, metadata.GetOrAddString("{definitionContext.Name}"), metadata.GetOrAddBlob({fieldEncoderVar}.Builder));""");
             if (initializer.ConstantValue != null)
             {
                 expsDef[expCountDef++] = $"metadata.AddConstant({fieldVariableName}, {initializer.ConstantValue});{Environment.NewLine}";
@@ -500,7 +528,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         return firstParameterHandle;
     }
 
-    static string Format(CecilifierInterpolatedStringHandler cecilFormattedString) => cecilFormattedString.Result;
+    static string Format(CecilifierInterpolatedStringHandler cecilFormattedString) => StringExtensions.Indented(cecilFormattedString);
 }
 
 file record struct NonTypeAttributeTargetState (string AttributeTarget, string ResolvedAttributeCtor, string AttributeEncoderVariable);

@@ -37,6 +37,8 @@ namespace Cecilifier.Core.Misc
             Services.Add(new GenericInstanceMethodCacheService<int, string>());
         }
         
+        public string IndentationContents => indentation;
+        
         public int Indentation => indentation.Length;
         
         public IILGeneratorApiDriver ApiDriver { get; protected init; }

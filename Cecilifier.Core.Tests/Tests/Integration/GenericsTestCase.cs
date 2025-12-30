@@ -1,16 +1,21 @@
 using Cecilifier.ApiDriver.MonoCecil;
+using Cecilifier.ApiDriver.SystemReflectionMetadata;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Tests.Framework;
+using Cecilifier.Core.Tests.Framework.Attributes;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration
 {
     [TestFixture(typeof(MonoCecilContext))]
+    [TestFixture(typeof(SystemReflectionMetadataContext))]
+    [EnableForContext<SystemReflectionMetadataContext>(nameof(TestGenericOuterAndInnerPermutations), nameof(TestSimplestGenericTypeDefinition), nameof(TestGenericTypesInheritance), IgnoreReason = "Not implemented")]
     public class GenericsTestCase<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
     {
         [TestCase("GenericOuterNonGenericInner")]
         [TestCase("GenericOuterSingleGenericInner")]
         [TestCase("GenericOuterDeepGenericInner")]
+        [ParameterizedResourceFilter<SystemReflectionMetadataContext>("GenericOuterNonGenericInner", "GenericOuterDeepGenericInner")]
         public void TestGenericOuterAndInnerPermutations(string testName)
         {
             AssertResourceTest(new CecilifyTestOptions
@@ -59,7 +64,7 @@ namespace Cecilifier.Core.Tests.Integration
         [Test]
         public void TestSimplestGenericTypeDefinition()
         {
-            AssertResourceTest(@"Generics/SimplestGenericTypeDefinition");
+            AssertResourceTest("Generics/SimplestGenericTypeDefinition");
         }
 
         [TestCase("ExternalGenericTypeInstantiation")]
@@ -78,6 +83,7 @@ namespace Cecilifier.Core.Tests.Integration
         [TestCase("GenericTypesInheritance", TestName = "GenericTypesInheritance")]
         [TestCase("SimpleGenericTypeInheritance", TestName = "SimpleGenericTypeInheritance")]
         [TestCase("ComplexGenericTypeInheritance", TestName = "ComplexGenericTypeInheritance")]
+        [ParameterizedResourceFilter<SystemReflectionMetadataContext>("GenericTypesInheritance", "SimpleGenericTypeInheritance", "ComplexGenericTypeInheritance")]
         public void TestGenericTypesInheritance(string testScenario)
         {
             AssertResourceTest($"Generics/{testScenario}");

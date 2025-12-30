@@ -27,7 +27,7 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
                                 MemberDefinitionContext definitionContext, 
                                 string typeNamespace, 
                                 string attrs, 
-                                ResolvedType baseType, 
+                                ITypeSymbol? baseType, 
                                 bool isStructWithNoFields, 
                                 IEnumerable<ITypeSymbol> interfaces,
                                 IEnumerable<TypeParameterSyntax>? ownTypeParameters, 
@@ -44,7 +44,12 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
         }
 
         var exps = new List<string>();
-        var typeDefExp = $"var {typeVar} = new TypeDefinition(\"{typeNamespace}\", \"{typeName}\", {attrs}{(baseType ? $", {baseType}" : "")})";
+
+        ResolvedType resolvedBaseType = baseType == null || (baseType is INamedTypeSymbol { IsGenericType: true } genericInstance && genericInstance.TypeArguments.Any(t => t.TypeKind == TypeKind.TypeParameter))
+                ? null
+                : context.TypeResolver.ResolveAny(baseType, ResolveTargetKind.TypeReference);
+
+        var typeDefExp = $"var {typeVar} = new TypeDefinition(\"{typeNamespace}\", \"{typeName}\", {attrs}{(resolvedBaseType != null ? $", {resolvedBaseType}" : "")})";
         if (properties.Length > 0)
         {
             exps.Add($"{typeDefExp} {{ {string.Join(',', properties.Select(p => $"{p.Kind} = {p.Value}"))} }};");
@@ -54,8 +59,7 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
             exps.Add($"{typeDefExp};");
         }
 
-        // add type parameters from outer types. 
-        var outerTypeParametersArray = outerTypeParameters.ToArray();
+        var outerTypeParametersArray = outerTypeParameters.ToArray(); // include type parameters from outer types.
         ProcessGenericTypeParameters(typeVar, context, outerTypeParametersArray.Concat(typeParamList).ToArray(), exps);
             
         foreach (var itf in interfaces)
@@ -75,6 +79,17 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
         }
 
         return exps;
+    }
+
+    public void UpdateBaseTypeIfNeeded(IVisitorContext context, ITypeSymbol typeSymbol, string typeDefinitionVariable)
+    {
+        // we postpone setting the base type because it may depend on generic parameters defined in the class itself (for instance 'class C<T> : Base<T> {}')
+        // and these are introduced by the code in ApiDefinitionsFactory.Type() which it itself the call expecting the base type. 
+        if (typeSymbol.BaseType is not { IsGenericType: true })
+            return;
+
+        var resolvedBaseType = context.TypeResolver.ResolveAny(typeSymbol.BaseType, ResolveTargetKind.TypeReference);
+        context.Generate($"{typeDefinitionVariable}.BaseType = {resolvedBaseType};");
     }
 
     public IEnumerable<string> Method(IVisitorContext context, IMethodSymbol methodSymbol, BodiedMemberDefinitionContext bodiedMemberDefinitionContext, string methodName, string methodModifiers, IList<TypeParameterSyntax> typeParameters)
@@ -460,7 +475,7 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
             return originalType;
         
         var id = context.Naming.RequiredModifier();
-        context.Generate($"var {id} = new RequiredModifierType({context.TypeResolver.Resolve(typeof(IsVolatile).FullName, ResolveTargetKind.TypeReference)}, {originalType});");
+        context.Generate($"var {id} = new RequiredModifierType({context.TypeResolver.Resolve(context.RoslynTypeSystem.ForType(typeof(IsVolatile).FullName), ResolveTargetKind.TypeReference)}, {originalType});");
         
         return id;
     }

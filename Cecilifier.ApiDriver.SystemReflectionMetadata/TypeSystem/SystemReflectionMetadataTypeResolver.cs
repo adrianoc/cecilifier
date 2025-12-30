@@ -1,3 +1,5 @@
+using System.Collections.Immutable;
+using Cecilifier.Core;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.TypeSystem;
@@ -8,8 +10,6 @@ namespace Cecilifier.ApiDriver.SystemReflectionMetadata.TypeSystem;
 
 public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContext context) : TypeResolverBase<SystemReflectionMetadataContext>(context)
 {
-    public override ResolvedType Resolve(string typeName, in TypeResolutionContext resolutionContext) => throw new NotSupportedException($"{typeName} (context: {resolutionContext})");
-
     public override ResolvedType Resolve(ITypeSymbol type, in TypeResolutionContext resolutionContext)
     {
         
@@ -28,7 +28,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
                            var {memberRefVarName} = metadata.AddTypeReference(
                                                                 {assemblyReferenceName},
                                                                 metadata.GetOrAddString("{type.ContainingNamespace.FullyQualifiedName()}"),
-                                                                metadata.GetOrAddString("{type.Name}"));
+                                                                metadata.GetOrAddString("{type.Name}{GenericRankAnnotation(type)}"));
                            """);
         _context.WriteNewLine();
 
@@ -36,6 +36,14 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
             return memberRefVarName;
         
         return ApplySpecificSyntax(memberRefVarName, in resolutionContext);
+    }
+
+    private string GenericRankAnnotation(ITypeSymbol type)
+    {
+        if (type is INamedTypeSymbol { IsGenericType: true}  namedType)
+            return $"`{namedType.TypeArguments.Length}";
+        
+        return string.Empty;
     }
 
     /// <summary>
@@ -84,12 +92,10 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
             _context.DefinitionVariables.RegisterNonMethod(type.ContainingAssembly.ToDisplayString(), mangledTypeVariableName, VariableMemberKind.Type, resolvedTypeVariable);
             
             _context.Generate($"""
-                     var {resolvedTypeVariable} = metadata.AddTypeReference(
-                                        {_context.AssemblyResolver.Resolve(_context, _context.RoslynTypeSystem.SystemObject.ContainingAssembly)},
-                                        metadata.GetOrAddString("{type.ContainingNamespace.Name}"),
-                                        metadata.GetOrAddString("{type.Name}"));
+                     var {resolvedTypeVariable} = metadata.AddTypeReference({_context.AssemblyResolver.Resolve(_context, _context.RoslynTypeSystem.SystemObject.ContainingAssembly)}, metadata.GetOrAddString("{type.ContainingNamespace.Name}"), metadata.GetOrAddString("{type.Name}"));
                      """);
             
+            _context.WriteNewLine();
             return resolvedTypeVariable;
         }
         return ResolveForTargetKind(type, resolutionContext);
@@ -100,13 +106,55 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
         var resolved = base.ResolveLocalVariableType(type, in context);
         if (resolved && context.TargetKind != ResolveTargetKind.TypeReference)
         {
+            var methodBuilder = context.TargetKind == ResolveTargetKind.GenericTypeArgument 
+                ? $"GenericTypeParameter({resolved.Expression})" 
+                : $"Type({resolved.Expression}, isValueType: {context.Options.HasFlag(TypeResolutionOptions.IsValueType).ToKeyword()})";
+
+            if ((context.TargetKind == ResolveTargetKind.Field || context.TargetKind == ResolveTargetKind.Parameter) && type is INamedTypeSymbol { IsGenericType: true })
+            {
+                methodBuilder = resolved.Expression;
+            }
+            
             return ResolvedType.FromDetails(
                 new ResolvedTypeDetails()
                     .WithTypeEncoder(TypeEncoderFor(in context))
-                    .WithMethodBuilder($"Type({resolved.Expression}, isValueType: {context.Options.HasFlag(TypeResolutionOptions.IsValueType).ToKeyword()})"));
+                    .WithMethodBuilder(methodBuilder));
 
         }
         return resolved;
+    }
+
+    protected override ResolvedType MakeGenericInstanceType(ResolvedType typeReference, INamedTypeSymbol genericTypeSymbol, in TypeResolutionContext resolutionContext)
+    {
+        Buffer256<ITypeSymbol> typeArgumentsBuffer = new();
+        ReadOnlySpan<ITypeSymbol> typeArguments = CollectTypeArguments(genericTypeSymbol, ref typeArgumentsBuffer);
+        
+        if (typeArguments.Length == 0)
+            return typeReference;
+
+        if (resolutionContext.TargetKind == ResolveTargetKind.Field || resolutionContext.TargetKind == ResolveTargetKind.Parameter)
+        {
+            return MakeGenericInstanceTypeForFieldDeclaration(typeReference, genericTypeSymbol, typeArguments);
+        }
+        
+        var genericInstanceTypeVar = context.Naming.SyntheticVariable($"{genericTypeSymbol.ToValidVariableName()}Instantiation", ElementKind.GenericInstance);
+        context.Generate($$"""
+                           TypeSpecificationHandle {{genericInstanceTypeVar}} = default;
+                           {
+                               var be = new BlobEncoder(new BlobBuilder());
+                               var typeSpecificationSig = be.TypeSpecificationSignature();
+                               var gti = typeSpecificationSig.GenericInstantiation({{typeReference.Expression}}, {{typeArguments.Length}}, isValueType: {{genericTypeSymbol.IsValueType.ToKeyword()}});    
+                               {{
+                                   typeArguments.ToImmutableArray().Select(
+                                           targ => $"gti.AddArgument().{context.TypedTypeResolver.ResolveAny(targ, ResolveTargetKind.GenericTypeArgument)};\n")
+                                       .Aggregate("", (acc, s) => acc + s)
+                               }}
+                               {{genericInstanceTypeVar}} = metadata.AddTypeSpecification(metadata.GetOrAddBlob(be.Builder));
+                           }
+                           """);
+        context.WriteNewLine();
+        
+        return genericInstanceTypeVar;
     }
 
     public override ResolvedType MakeArrayType(ITypeSymbol elementType, in TypeResolutionContext resolutionContext)
@@ -145,6 +193,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
         return resolutionContext.TargetKind switch
         {
             ResolveTargetKind.None => "",
+            ResolveTargetKind.GenericTypeArgument => "",
             ResolveTargetKind.ArrayElementType => "",
             ResolveTargetKind.AttributeNamedArgument or ResolveTargetKind.AttributeArgument => "ScalarType()%",
             _ => $"Type(isByRef: {isByRef})%",
@@ -164,5 +213,21 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
             ResolveTargetKind.ArrayElementType => "",
             _ => $"Type(isByRef: {isByRef})%",
         };
+    }
+    
+    private ResolvedType MakeGenericInstanceTypeForFieldDeclaration(ResolvedType typeReference, INamedTypeSymbol genericTypeSymbol, ReadOnlySpan<ITypeSymbol> typeArguments)
+    {
+        var ret = $$"""
+                    WithSignatureTypeEncoder(typeSignatureEncoder => 
+                    {
+                        var gi = typeSignatureEncoder.GenericInstantiation({{typeReference.Expression}}, {{typeArguments.Length}}, isValueType: {{genericTypeSymbol.IsValueType.ToKeyword()}});
+                        {{
+                            typeArguments.ToImmutableArray().Select(
+                                    targ => $"gi.AddArgument().{context.TypedTypeResolver.ResolveAny(targ, ResolveTargetKind.GenericTypeArgument)};\n    ")
+                                .Aggregate("", (acc, s) => acc + s)
+                        }}
+                    })
+                    """;
+        return ret;
     }
 }

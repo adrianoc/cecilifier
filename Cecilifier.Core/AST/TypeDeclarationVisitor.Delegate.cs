@@ -33,7 +33,7 @@ internal partial class TypeDeclarationVisitor
                                                     definitionContext,
                                                     delegateSymbol.ContainingNamespace?.FullyQualifiedName() ?? string.Empty,
                                                     CecilDefinitionsFactory.DefaultTypeAttributeFor(TypeKind.Delegate, false).AppendModifier(accessibility), 
-                                                    Context.TypeResolver.Bcl.System.MulticastDelegate, 
+                                                    Context.RoslynTypeSystem.SystemMulticastDelegate, 
                                                     false, 
                                                     [], 
                                                     node.TypeParameterList?.Parameters, 

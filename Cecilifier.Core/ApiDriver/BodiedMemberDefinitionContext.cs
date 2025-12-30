@@ -22,7 +22,7 @@ public record struct BodiedMemberDefinitionContext(MemberDefinitionContext Membe
     }
 }
 
-[DebuggerDisplay("MemberDefinitionContext({DefinitionVariable}, {ParentDefinitionVariable})")]
+[DebuggerDisplay("MemberDefinitionContext(Name:{Name}, Variable:{DefinitionVariable}, ParentVariable: {ParentDefinitionVariable})")]
 public readonly record struct MemberDefinitionContext(string Name, string? NameAsValidIdentifier, string DefinitionVariable, string? ParentDefinitionVariable)
 {
     public MemberDefinitionContext(string name, string definitionVariable, string? parentDefinitionVariable) : this(name, null, definitionVariable, parentDefinitionVariable)

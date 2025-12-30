@@ -1,4 +1,6 @@
 using System;
+using System.Text.RegularExpressions;
+using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.ApiDriver.Handles;
 using Cecilifier.Core.TypeSystem;
 
@@ -6,6 +8,10 @@ namespace Cecilifier.Core.Extensions
 {
     public static class StringExtensions
     {
+        public static string Indented(CecilifierInterpolatedStringHandler value) => value.Result;
+        
+        public static string ToValidIdentifier(this string value) => Regex.Replace(value, "[^a-zA-Z0-9_]", "");
+        
         public static int CountNewLines(this string value) => value.AsSpan().Count('\n');
         
         public static CilLocalVariableHandle AsLocalVariable(this string value) => new(value);

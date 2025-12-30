@@ -1,4 +1,5 @@
 using Cecilifier.Core.AST;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Cecilifier.ApiDriver.SystemReflectionMetadata.DelayedDefinitions;
 
@@ -7,7 +8,7 @@ namespace Cecilifier.ApiDriver.SystemReflectionMetadata.DelayedDefinitions;
 /// </summary>
 /// <param name="TypeQualifiedName"></param>
 /// <param name="TypeReferenceVariable">Name of the variable that stores the type reference emitted to represent a type definition. See <see cref="TypeDefinitionVariable"/></param>
-internal record struct TypeDefinitionRecord(string TypeQualifiedName, string TypeReferenceVariable)
+internal record struct TypeDefinitionRecord(string TypeReferenceVariable)
 {
     
     /// <summary>
