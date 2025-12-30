@@ -7,7 +7,6 @@ using System.Reflection.PortableExecutable;
 using System.Security.Cryptography;
 using System.Text;
 using Cecilifier.Core.AST;
-using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.Tests.Framework.AssemblyDiff;
 using Cecilifier.Core.Tests.Framework.ILVerification;
