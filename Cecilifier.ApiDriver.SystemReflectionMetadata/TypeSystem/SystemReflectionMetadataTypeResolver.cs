@@ -92,12 +92,10 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
             _context.DefinitionVariables.RegisterNonMethod(type.ContainingAssembly.ToDisplayString(), mangledTypeVariableName, VariableMemberKind.Type, resolvedTypeVariable);
             
             _context.Generate($"""
-                     var {resolvedTypeVariable} = metadata.AddTypeReference(
-                                        {_context.AssemblyResolver.Resolve(_context, _context.RoslynTypeSystem.SystemObject.ContainingAssembly)},
-                                        metadata.GetOrAddString("{type.ContainingNamespace.Name}"),
-                                        metadata.GetOrAddString("{type.Name}"));
+                     var {resolvedTypeVariable} = metadata.AddTypeReference({_context.AssemblyResolver.Resolve(_context, _context.RoslynTypeSystem.SystemObject.ContainingAssembly)}, metadata.GetOrAddString("{type.ContainingNamespace.Name}"), metadata.GetOrAddString("{type.Name}"));
                      """);
             
+            _context.WriteNewLine();
             return resolvedTypeVariable;
         }
         return ResolveForTargetKind(type, resolutionContext);
