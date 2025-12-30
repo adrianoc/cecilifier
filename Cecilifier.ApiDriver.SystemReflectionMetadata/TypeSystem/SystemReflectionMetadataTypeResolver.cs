@@ -217,17 +217,17 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
     
     private ResolvedType MakeGenericInstanceTypeForFieldDeclaration(ResolvedType typeReference, INamedTypeSymbol genericTypeSymbol, ReadOnlySpan<ITypeSymbol> typeArguments)
     {
-        var ret = StringExtensions.Indented($$"""
-                                              WithSignatureTypeEncoder(typeSignatureEncoder => 
-                                              {
-                                                 var gi = typeSignatureEncoder.GenericInstantiation({{typeReference.Expression}}, {{typeArguments.Length}}, isValueType: {{genericTypeSymbol.IsValueType.ToKeyword()}});
-                                                 {{
-                                                     typeArguments.ToImmutableArray().Select(
-                                                             targ => $"gi.AddArgument().{context.TypedTypeResolver.ResolveAny(targ, ResolveTargetKind.GenericTypeArgument)};\n")
-                                                         .Aggregate("", (acc, s) => acc + s)
-                                                 }}
-                                              });
-                                              """);
+        var ret = $$"""
+                    WithSignatureTypeEncoder(typeSignatureEncoder => 
+                    {
+                        var gi = typeSignatureEncoder.GenericInstantiation({{typeReference.Expression}}, {{typeArguments.Length}}, isValueType: {{genericTypeSymbol.IsValueType.ToKeyword()}});
+                        {{
+                            typeArguments.ToImmutableArray().Select(
+                                    targ => $"gi.AddArgument().{context.TypedTypeResolver.ResolveAny(targ, ResolveTargetKind.GenericTypeArgument)};\n    ")
+                                .Aggregate("", (acc, s) => acc + s)
+                        }}
+                    })
+                    """;
         return ret;
     }
 }
