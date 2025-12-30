@@ -45,13 +45,13 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
                                 true);
                     }
                     
-                    static void WritePEImage(
+                     static void WritePEImage(
                                     Stream peStream,
                                     MetadataBuilder metadataBuilder,
                                     BlobBuilder ilBuilder,
                                     MethodDefinitionHandle entryPointHandle,
                                     BlobBuilder mappedFieldData)
-                    {
+                     {
                          var peHeaderBuilder = new PEHeaderBuilder(
                                                     imageCharacteristics: entryPointHandle.IsNil ? Characteristics.Dll : Characteristics.ExecutableImage,
                                                     machine: Machine.Unknown);
@@ -70,10 +70,10 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
                          var contentId = peBuilder.Serialize(peBlob);
 
                          peBlob.WriteContentTo(peStream);
-                    }
+                     }
                     
-                    static MethodDefinitionHandle GenerateIL(MetadataBuilder metadata, BlobBuilder ilBuilder, string mainTypeName, BlobBuilder mappedFieldData)
-                    {
+                     static MethodDefinitionHandle GenerateIL(MetadataBuilder metadata, BlobBuilder ilBuilder, string mainTypeName, BlobBuilder mappedFieldData)
+                     {
                          var moduleAndAssemblyName = metadata.GetOrAddString(mainTypeName);
                          var mainModuleHandle = metadata.AddModule(
                              0,
@@ -103,14 +103,14 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
                  {{cecilifiedCode}}
                          
                          return {{entryPointExpression}};
-                    }
+                     }
                     
-                    static int TokenForType(Action<SignatureTypeEncoder> encode, MetadataBuilder metadata)
-                 	{
-                 	    var signatureEncoder = new SignatureTypeEncoder(new BlobBuilder());
-                        encode(signatureEncoder);
-                        return MetadataTokens.GetToken(metadata.AddTypeSpecification(metadata.GetOrAddBlob(signatureEncoder.Builder)));
-                 	}
+                     static int TokenForType(Action<SignatureTypeEncoder> encode, MetadataBuilder metadata)
+                     {
+                         var signatureEncoder = new SignatureTypeEncoder(new BlobBuilder());
+                         encode(signatureEncoder);
+                         return MetadataTokens.GetToken(metadata.AddTypeSpecification(metadata.GetOrAddBlob(signatureEncoder.Builder)));
+                     }
                  }
                  
                  internal static class Extensions
