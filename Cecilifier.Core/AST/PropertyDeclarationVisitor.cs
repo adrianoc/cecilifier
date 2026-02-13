@@ -129,7 +129,8 @@ namespace Cecilifier.Core.AST
             var propertyGenerationData = new PropertyGenerationData(
                                     propertySymbol.ContainingType.ToDisplayString(),
                                     propertyDeclaringTypeVar,
-                                    propertySymbol.ContainingSymbol is INamedTypeSymbol { IsGenericType: true} && propertySymbol.IsDefinedInCurrentAssembly(Context),
+                                    // is INamedTypeSymbol { IsGenericType: true} && propertySymbol.IsDefinedInCurrentAssembly(Context)
+                                    (INamedTypeSymbol) propertySymbol.ContainingSymbol,
                                     propDefVar,
                                     propertyName,
                                     AccessorsModifiersFor(node, propertySymbol),

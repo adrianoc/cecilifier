@@ -182,6 +182,6 @@ namespace Cecilifier.Core.TypeSystem
             return typeArguments.Slice(0, count);
         }
 
-        protected abstract ResolvedType MakeGenericInstanceType(ResolvedType typeReference, INamedTypeSymbol genericTypeSymbol, in TypeResolutionContext resolutionContext);
+        public abstract ResolvedType MakeGenericInstanceType(ResolvedType typeReference, INamedTypeSymbol genericTypeSymbol, in TypeResolutionContext resolutionContext);
     }
 }

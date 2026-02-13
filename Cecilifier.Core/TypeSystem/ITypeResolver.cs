@@ -23,6 +23,8 @@ public interface ITypeResolver
     ResolvedType ApplySpecificSyntax(string variableName, in TypeResolutionContext resolutionContext);
     
     ResolvedType MakeArrayType(ITypeSymbol elementType, in TypeResolutionContext resolutionContext);
+    
+    ResolvedType MakeGenericInstanceType(ResolvedType typeReference, INamedTypeSymbol genericTypeSymbol, in TypeResolutionContext resolutionContext);
 
     Bcl Bcl { get; }
 }

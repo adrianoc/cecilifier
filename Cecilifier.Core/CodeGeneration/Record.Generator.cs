@@ -729,7 +729,7 @@ internal partial class RecordGenerator
         PropertyGenerationData propertyData = new(
             _recordSymbol.OriginalDefinition.ToDisplayString(),
             recordTypeDefinitionVariable,
-            record.TypeParameterList?.Parameters.Count > 0,
+            _recordSymbol,
             equalityContractPropertyVar,
             propertyName,
             new Dictionary<string, string> { ["get"] = "MethodAttributes.Family | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.NewSlot | MethodAttributes.Virtual" },

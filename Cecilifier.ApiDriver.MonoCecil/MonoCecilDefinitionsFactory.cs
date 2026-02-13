@@ -175,6 +175,14 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
         return exps;
     }
 
+    public IEnumerable<string> FieldReference(IVisitorContext context, string fieldReferenceVariable, string fieldName, ResolvedType fieldType, in ResolvedType declaringType)
+    {
+        return
+        [
+            $"""var {fieldReferenceVariable} = new FieldReference("{fieldName}", {fieldType}, {declaringType.Expression});"""
+        ];
+    }
+
     public IEnumerable<string> MethodBody(IVisitorContext context, string methodName, IlContext ilContext, ResolvedType[] localVariableTypes, InstructionRepresentation[] instructions)
     {
         var tagToInstructionDefMapping = new Dictionary<string, string>();

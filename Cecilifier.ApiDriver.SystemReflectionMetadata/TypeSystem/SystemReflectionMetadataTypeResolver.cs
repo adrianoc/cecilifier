@@ -124,7 +124,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
         return resolved;
     }
 
-    protected override ResolvedType MakeGenericInstanceType(ResolvedType typeReference, INamedTypeSymbol genericTypeSymbol, in TypeResolutionContext resolutionContext)
+    public override ResolvedType MakeGenericInstanceType(ResolvedType typeReference, INamedTypeSymbol genericTypeSymbol, in TypeResolutionContext resolutionContext)
     {
         Buffer256<ITypeSymbol> typeArgumentsBuffer = new();
         ReadOnlySpan<ITypeSymbol> typeArguments = CollectTypeArguments(genericTypeSymbol, ref typeArgumentsBuffer);

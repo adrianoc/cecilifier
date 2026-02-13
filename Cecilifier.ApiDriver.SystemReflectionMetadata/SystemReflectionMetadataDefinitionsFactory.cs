@@ -376,6 +376,20 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         return span.Slice(0, expCount).ToArray();
     }
 
+    public IEnumerable<string> FieldReference(IVisitorContext context, string fieldReferenceVariable, string fieldName, ResolvedType fieldType, in ResolvedType declaringType)
+    {
+        Buffer16<string> exps = new();
+        var count = -1;
+
+        var tempSignatureVarName = context.Naming.SyntheticVariable($"{fieldName.ToValidIdentifier()}Sig", ElementKind.MemberReference);
+        exps[++count] = $"var {tempSignatureVarName} = new BlobEncoder(new BlobBuilder()).Field();";
+        exps[++count] = $"{tempSignatureVarName}.{fieldType.Expression};";
+        exps[++count] = $"""var {fieldReferenceVariable} = metadata.AddMemberReference({declaringType.Expression}, metadata.GetOrAddString("{fieldName}"), metadata.GetOrAddBlob({tempSignatureVarName}.Builder));""";
+        Span<string> span = exps;
+        
+        return span.Slice(0, count + 1).ToArray();
+    }
+
     public IEnumerable<string> MethodBody(IVisitorContext context, string methodName, IlContext ilContext, ResolvedType[] localVariableTypes, InstructionRepresentation[] instructions) => [];
 
     public DefinitionVariable LocalVariable(IVisitorContext context, string variableName, string methodDefinitionVariableName, ResolvedType resolvedVarType)
