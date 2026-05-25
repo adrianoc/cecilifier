@@ -110,7 +110,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
                 ? $"GenericTypeParameter({resolved.Expression})" 
                 : $"Type({resolved.Expression}, isValueType: {context.Options.HasFlag(TypeResolutionOptions.IsValueType).ToKeyword()})";
 
-            if ((context.TargetKind == ResolveTargetKind.Field || context.TargetKind == ResolveTargetKind.Parameter) && type is INamedTypeSymbol { IsGenericType: true })
+            if ((context.TargetKind == ResolveTargetKind.Field || context.TargetKind == ResolveTargetKind.Parameter || context.TargetKind == ResolveTargetKind.ReturnType) && type is INamedTypeSymbol { IsGenericType: true })
             {
                 methodBuilder = resolved.Expression;
             }
@@ -132,7 +132,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
         if (typeArguments.Length == 0)
             return typeReference;
 
-        if (resolutionContext.TargetKind == ResolveTargetKind.Field || resolutionContext.TargetKind == ResolveTargetKind.Parameter)
+        if (resolutionContext.TargetKind == ResolveTargetKind.Field || resolutionContext.TargetKind == ResolveTargetKind.Parameter || resolutionContext.TargetKind == ResolveTargetKind.ReturnType)
         {
             return MakeGenericInstanceTypeForFieldDeclaration(typeReference, genericTypeSymbol, typeArguments);
         }
