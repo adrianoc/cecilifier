@@ -15,7 +15,7 @@ namespace Cecilifier.Core.Tests.Integration
         [TestCase("GenericOuterNonGenericInner")]
         [TestCase("GenericOuterSingleGenericInner")]
         [TestCase("GenericOuterDeepGenericInner")]
-        [ParameterizedResourceFilter<SystemReflectionMetadataContext>("GenericOuterNonGenericInner", "GenericOuterSingleGenericInner", "GenericOuterDeepGenericInner")]
+        //[ParameterizedResourceFilter<SystemReflectionMetadataContext>("GenericOuterNonGenericInner", "GenericOuterSingleGenericInner", "GenericOuterDeepGenericInner")]
         public void TestGenericOuterAndInnerPermutations(string testName)
         {
             AssertResourceTest(new CecilifyTestOptions
