@@ -24,8 +24,8 @@ class Test<T>
     Outer<T>.Inner<T> Method_T_T(Outer<T>.Inner<T> p) => p;
     
     //TODO: Enable when other scenarios are fixed. AOT it crashes the tests.
-    //object Cast(object o) => (Outer<T>.Inner<T>) o;
-    object TypeOf() => typeof(Outer<T>.Inner<T>);
+    object Cast(object o) => (Outer<T>.Inner<T>) o;
+    //object TypeOf() => typeof(Outer<T>.Inner<T>);
 
     void Instantiate_Int_String() { Method_Int_String(new Outer<int>.Inner<string>()); }    
     void Instantiate_T_T() { Method_T_T(new Outer<T>.Inner<T>()); }

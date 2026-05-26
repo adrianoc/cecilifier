@@ -104,6 +104,12 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
     public override ResolvedType ResolveLocalVariableType(ITypeSymbol type, in TypeResolutionContext context)
     {
         var resolved = base.ResolveLocalVariableType(type, in context);
+
+        if (resolved && context.TargetKind == ResolveTargetKind.Instruction)
+        {
+            return new ResolvedType($"MetadataTokens.GetToken({resolved})");
+        }
+        
         if (resolved && context.TargetKind != ResolveTargetKind.TypeReference)
         {
             var methodBuilder = context.TargetKind == ResolveTargetKind.GenericTypeArgument 
