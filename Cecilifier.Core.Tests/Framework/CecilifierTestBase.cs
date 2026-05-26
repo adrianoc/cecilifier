@@ -150,7 +150,7 @@ public class CecilifierTestBase<TContext> where TContext : IVisitorContext
 
         var outputAssemblyPath = OutputAssemblyPath(Path.GetFileNameWithoutExtension(testBasePath));
         var testCompilationResult = new CecilifyResult(cecilifiedCode, cecilifierRunnerPath, outputAssemblyPath);
-        if (File.Exists(outputAssemblyPath))
+        if (File.Exists(outputAssemblyPath) && new FileInfo(outputAssemblyPath).Length > 0)
             return testCompilationResult;
             
         CopyFilesNextToGeneratedExecutable(cecilifierRunnerPath, refsToCopy);

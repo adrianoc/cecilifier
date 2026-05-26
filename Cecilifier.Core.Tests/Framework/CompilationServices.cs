@@ -73,7 +73,7 @@ namespace Cecilifier.Core.Tests.Framework
 
             var hash = computeCacheKey();
             var outputFilePath = $"{targetPath}-{hash}.{(exe ? "exe" : "dll")}";
-            if (File.Exists(outputFilePath))
+            if (File.Exists(outputFilePath) && new FileInfo(outputFilePath).Length > 0)
             {
                 return outputFilePath;
             }
