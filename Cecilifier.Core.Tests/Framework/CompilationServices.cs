@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -11,17 +12,17 @@ namespace Cecilifier.Core.Tests.Framework
 {
     internal class CompilationServices
     {
-        public static string CompileDLL(string targetPath, string source, params string[] references)
+        public static string CompileDLL(string targetPath, string source, string[] preprocessorSymbols, params string[] references)
         {
-            return InternalCompile(targetPath, source, false, references);
+            return InternalCompile(targetPath, source, false, preprocessorSymbols, references);
         }
 
-        public static string CompileExe(string targetPath, string source, params string[] references)
+        public static string CompileExe(string targetPath, string source, string[] preprocessorSymbols, params string[] references)
         {
-            return InternalCompile(targetPath, source, true, references);
+            return InternalCompile(targetPath, source, true, preprocessorSymbols, references);
         }
 
-        private static string InternalCompile(string targetPath, string source, bool exe, string[] references)
+        private static string InternalCompile(string targetPath, string source, bool exe, string[] preprocessorSymbols, string[] references)
         {
             var targetFolder = Path.GetDirectoryName(targetPath);
             if (!Directory.Exists(targetFolder))
@@ -29,14 +30,15 @@ namespace Cecilifier.Core.Tests.Framework
                 Directory.CreateDirectory(targetFolder);
             }
             
-            var hash = BitConverter.ToString(SHA1.Create().ComputeHash(Encoding.ASCII.GetBytes(source))).Replace("-", "");
+            var hash = HashFor(source, preprocessorSymbols);
+
             var outputFilePath = $"{targetPath}-{hash}.{(exe ? "exe" : "dll")}";
             if (File.Exists(outputFilePath))
             {
                 return outputFilePath;
             }
 
-            var syntaxTree = SyntaxFactory.ParseSyntaxTree(SourceText.From(source), new CSharpParseOptions(LanguageVersion.Preview));
+            var syntaxTree = SyntaxFactory.ParseSyntaxTree(SourceText.From(source), new CSharpParseOptions(LanguageVersion.Preview, preprocessorSymbols: preprocessorSymbols));
 
             var compilationOptions = new CSharpCompilationOptions(
                 exe ? OutputKind.ConsoleApplication : OutputKind.DynamicallyLinkedLibrary,
@@ -62,7 +64,7 @@ namespace Cecilifier.Core.Tests.Framework
 
             return outputFilePath;
         }
-        
+
         public static string InternalCompile(string targetPath, string source, bool exe, string[] references, Func<string> computeCacheKey)
         {
             var targetFolder = Path.GetDirectoryName(targetPath);
@@ -102,6 +104,20 @@ namespace Cecilifier.Core.Tests.Framework
             compilation.Emit(outputAssembly, outputPdb);
 
             return outputFilePath;
+        }
+        
+        private static string HashFor(string source, string[] preprocessorSymbols)
+        {
+            using var hasher = SHA1.Create();
+            
+            hasher.Initialize();
+            var sourceBytes = Encoding.ASCII.GetBytes(source);
+            hasher.TransformBlock(Encoding.ASCII.GetBytes(source), 0, sourceBytes.Length, null, 0);
+            foreach (var preprocessorSymbol in preprocessorSymbols)
+                hasher.TransformBlock(Encoding.ASCII.GetBytes(preprocessorSymbol), 0, preprocessorSymbol.Length, null, 0);
+            hasher.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
+
+            return BitConverter.ToString(hasher.Hash).Replace("-", "");
         }
     }
 }

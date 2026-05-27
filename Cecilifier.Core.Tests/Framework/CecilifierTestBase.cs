@@ -35,8 +35,8 @@ public class CecilifierTestBase<TContext> where TContext : IVisitorContext
         var targetPath = Path.Combine(Path.GetDirectoryName(cecilifiedAssemblyPath), Path.GetFileNameWithoutExtension(cecilifiedAssemblyPath) + "-Expected");
 
         return buildType == BuildType.Exe
-            ? CompilationServices.CompileExe(targetPath, tbc, GetDotNetAssemblyReferences())
-            : CompilationServices.CompileDLL(targetPath, tbc, GetDotNetAssemblyReferences());
+            ? CompilationServices.CompileExe(targetPath, tbc, TContext.GetPreprocessorSymbols(), GetDotNetAssemblyReferences())
+            : CompilationServices.CompileDLL(targetPath, tbc, TContext.GetPreprocessorSymbols(), GetDotNetAssemblyReferences());
     }
 
     class AssemblyResolver : IResolver
@@ -238,7 +238,11 @@ public class CecilifierTestBase<TContext> where TContext : IVisitorContext
         stream.Position = 0;
         return Cecilifier.Process<TContext>(
             stream,
-            new CecilifierOptions { References = GetDotNetAssemblyReferences(), Naming = new DefaultNameStrategy() });
+            new CecilifierOptions
+            {
+                References = GetDotNetAssemblyReferences(), Naming = new DefaultNameStrategy(),
+                PreprocessorSymbols = TContext.GetPreprocessorSymbols()
+            });
     }
 
     private static string[] GetDotNetAssemblyReferences()
