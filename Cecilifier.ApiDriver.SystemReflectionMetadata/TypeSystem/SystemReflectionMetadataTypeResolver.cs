@@ -12,7 +12,6 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
 {
     public override ResolvedType Resolve(ITypeSymbol type, in TypeResolutionContext resolutionContext)
     {
-        
         var memberRefVar = _context.DefinitionVariables.GetVariable(type.ToDisplayString(), VariableMemberKind.Type, type.ContainingSymbol.ToDisplayString());
         var memberRefVarName = memberRefVar.IsValid 
                                         ? memberRefVar.VariableName
