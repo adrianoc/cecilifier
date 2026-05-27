@@ -844,7 +844,7 @@ namespace Cecilifier.Core.AST
 
             AddCilInstruction(ilVar, OpCodes.Ldtoken, Context.GetTypeInfo(node.Type).Type);
             string operand = getTypeFromHandleSymbol.MethodResolverExpression(Context);
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Call, operand);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Call, new CilToken(operand));
         }
 
         public override void VisitRangeExpression(RangeExpressionSyntax node)
