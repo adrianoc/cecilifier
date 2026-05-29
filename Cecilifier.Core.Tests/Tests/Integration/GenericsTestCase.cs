@@ -9,7 +9,7 @@ namespace Cecilifier.Core.Tests.Integration
 {
     [TestFixture(typeof(MonoCecilContext))]
     [TestFixture(typeof(SystemReflectionMetadataContext))]
-    [EnableForContext<SystemReflectionMetadataContext>(nameof(TestGenericOuterAndInnerPermutations), nameof(TestSimplestGenericTypeDefinition), nameof(TestGenericTypesInheritance), IgnoreReason = "Not implemented")]
+    [EnableForContext<SystemReflectionMetadataContext>(nameof(TestGenericOuterAndInnerPermutations), nameof(TestSimplestGenericTypeDefinition), nameof(TestGenericTypesInheritance), nameof(TestGenericTypesAsMembers), IgnoreReason = "Not implemented")]
     public class GenericsTestCase<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
     {
         [TestCase("GenericOuterNonGenericInner")]
@@ -57,7 +57,7 @@ namespace Cecilifier.Core.Tests.Integration
         [Test]
         public void TestGenericTypesAsMembers()
         {
-            AssertResourceTest(@"Generics/GenericTypesAsMembers");
+            AssertResourceTest("Generics/GenericTypesAsMembers");
         }
 
         [Test]
