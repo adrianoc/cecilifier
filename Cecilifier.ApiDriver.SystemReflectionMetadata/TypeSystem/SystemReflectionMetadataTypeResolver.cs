@@ -31,7 +31,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
                            """);
         _context.WriteNewLine();
 
-        if (resolutionContext.TargetKind is ResolveTargetKind.TypeReference or ResolveTargetKind.ReturnType)
+        if (resolutionContext.TargetKind is ResolveTargetKind.TypeReference || type is INamedTypeSymbol { IsGenericType: true })
             return memberRefVarName;
         
         return ApplySpecificSyntax(memberRefVarName, in resolutionContext);
@@ -109,7 +109,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
             return new ResolvedType($"MetadataTokens.GetToken({resolved})");
         }
         
-        if (resolved && context.TargetKind != ResolveTargetKind.TypeReference && (context.TargetKind != ResolveTargetKind.ReturnType || type is not INamedTypeSymbol { IsGenericType: true }))
+        if (resolved && context.TargetKind != ResolveTargetKind.TypeReference && ((context.TargetKind != ResolveTargetKind.Field && context.TargetKind != ResolveTargetKind.ReturnType) || type is not INamedTypeSymbol { IsGenericType: true }))
         {
             var methodBuilder = context.TargetKind == ResolveTargetKind.GenericTypeArgument 
                 ? $"GenericTypeParameter({resolved.Expression})" 
@@ -137,11 +137,10 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
         if (typeArguments.Length == 0)
             return typeReference;
 
-        if (resolutionContext.TargetKind == ResolveTargetKind.Field || resolutionContext.TargetKind == ResolveTargetKind.Parameter || resolutionContext.TargetKind == ResolveTargetKind.ReturnType)
+        if (resolutionContext.TargetKind is ResolveTargetKind.Field or ResolveTargetKind.Parameter or ResolveTargetKind.ReturnType)
         {
             var resolved = MakeGenericInstanceTypeForFieldDeclaration(typeReference, genericTypeSymbol, typeArguments);
-            
-            if (resolved && resolutionContext.TargetKind == ResolveTargetKind.ReturnType)
+            if (resolved && resolutionContext.TargetKind is ResolveTargetKind.ReturnType or ResolveTargetKind.Field)
             {
                 return ResolvedType.FromDetails(
                     new ResolvedTypeDetails()
@@ -233,7 +232,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
     private ResolvedType MakeGenericInstanceTypeForFieldDeclaration(ResolvedType typeReference, INamedTypeSymbol genericTypeSymbol, ReadOnlySpan<ITypeSymbol> typeArguments)
     {
         var ret = $$"""
-                    WithSignatureTypeEncoder(typeSignatureEncoder => 
+                    WithSignatureTypeEncoder(typeSignatureEncoder =>
                     {
                         var gi = typeSignatureEncoder.GenericInstantiation({{typeReference.Expression}}, {{typeArguments.Length}}, isValueType: {{genericTypeSymbol.IsValueType.ToKeyword()}});
                         {{

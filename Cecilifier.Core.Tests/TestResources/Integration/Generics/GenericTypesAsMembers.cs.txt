@@ -2,10 +2,10 @@ using System.Collections.Generic;
 
 class GenericTypesAsMembers
 {
-#if API_DRIVER_MONO_CECIL
     public IList<int> asField;
-    public IList<int> Property { get { return asField; } set { asField = value; } }
     private IDictionary<int, string> typeWithMultipleTypeParameters;
+#if API_DRIVER_MONO_CECIL
+    public IList<int> Property { get { return asField; } set { asField = value; } }
 #endif
     
     public IList<string> Method(IList<string> l)
