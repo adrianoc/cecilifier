@@ -12,8 +12,9 @@ public struct GenericStruct<T>
 class GenericTypeInstantiation
 {
     object ParameterlessClassCtor() => new GenericClass<int>();
+#if! API_DRIVER_SYSTEM_REFLECTION_METADATA
     object ClassCtorWithParameters() => new GenericClass<int>(42);
-    
     object StructCtorWithParameters() => new GenericStruct<int>(42);
-    //object ParameterlessStructCtor() => new GenericStruct<int>();
+    object ParameterlessStructCtor() => new GenericStruct<int>();
+#endif    
 }

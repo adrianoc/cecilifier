@@ -137,10 +137,10 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
         if (typeArguments.Length == 0)
             return typeReference;
 
-        if (resolutionContext.TargetKind is ResolveTargetKind.Field or ResolveTargetKind.Parameter or ResolveTargetKind.ReturnType)
+        if (resolutionContext.TargetKind is ResolveTargetKind.Field or ResolveTargetKind.Parameter or ResolveTargetKind.ReturnType or ResolveTargetKind.LocalVariable)
         {
             var resolved = MakeGenericInstanceTypeForFieldDeclaration(typeReference, genericTypeSymbol, typeArguments);
-            if (resolved && resolutionContext.TargetKind is ResolveTargetKind.ReturnType or ResolveTargetKind.Field)
+            if (resolved && resolutionContext.TargetKind is ResolveTargetKind.ReturnType or ResolveTargetKind.Field or  ResolveTargetKind.LocalVariable)
             {
                 return ResolvedType.FromDetails(
                     new ResolvedTypeDetails()
