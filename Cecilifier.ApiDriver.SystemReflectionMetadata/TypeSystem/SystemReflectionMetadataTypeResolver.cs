@@ -111,7 +111,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
         
         if (resolved && context.TargetKind != ResolveTargetKind.TypeReference && ((context.TargetKind != ResolveTargetKind.Field && context.TargetKind != ResolveTargetKind.ReturnType) || type is not INamedTypeSymbol { IsGenericType: true }))
         {
-            var methodBuilder = context.TargetKind == ResolveTargetKind.GenericTypeArgument 
+            var methodBuilder = context.TargetKind == ResolveTargetKind.GenericTypeArgument || type.TypeKind == TypeKind.TypeParameter
                 ? $"GenericTypeParameter({resolved.Expression})" 
                 : $"Type({resolved.Expression}, isValueType: {context.Options.HasFlag(TypeResolutionOptions.IsValueType).ToKeyword()})";
 

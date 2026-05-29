@@ -4,9 +4,8 @@ class GenericTypesAsMembers
 {
     public IList<int> asField;
     private IDictionary<int, string> typeWithMultipleTypeParameters;
-#if API_DRIVER_MONO_CECIL
+
     public IList<int> Property { get { return asField; } set { asField = value; } }
-#endif
     
     public IList<string> Method(IList<string> l)
     {
