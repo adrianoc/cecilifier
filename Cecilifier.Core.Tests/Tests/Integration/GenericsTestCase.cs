@@ -12,9 +12,10 @@ namespace Cecilifier.Core.Tests.Integration
     [EnableForContext<SystemReflectionMetadataContext>(
         nameof(TestGenericOuterAndInnerPermutations), 
         nameof(TestSimplestGenericTypeDefinition), 
-        nameof(TestGenericTypesInheritance), 
         nameof(TestGenericTypesAsMembers),
-        nameof(TestGenericTypeInstantiation), IgnoreReason = "Not implemented")]
+        nameof(TestGenericTypeInstantiation),
+        nameof(TestGenericTypesInheritance), 
+        IgnoreReason = "Not implemented")]
     public class GenericsTestCase<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
     {
         [TestCase("GenericOuterNonGenericInner")]
@@ -81,7 +82,7 @@ namespace Cecilifier.Core.Tests.Integration
         [Test]
         public void TestGenericTypeDefinitionWithMembers()
         {
-            AssertResourceTest(@"Generics/GenericTypeDefinitionWithMembers");
+            AssertResourceTest("Generics/GenericTypeDefinitionWithMembers");
         }
 
         [TestCase("GenericTypesInheritance", TestName = "GenericTypesInheritance")]
@@ -126,7 +127,7 @@ namespace Cecilifier.Core.Tests.Integration
         [Test]
         public void TestInnerTypeFromExternalAssembly()
         {
-            AssertResourceTestBinary(@"Generics/InnerTypeFromExternalAssembly");
+            AssertResourceTestBinary("Generics/InnerTypeFromExternalAssembly");
         }
         
         [Test]
