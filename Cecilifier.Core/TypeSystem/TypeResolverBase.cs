@@ -121,6 +121,7 @@ namespace Cecilifier.Core.TypeSystem
                 || type.SpecialType == SpecialType.System_Delegate
                 || type.SpecialType == SpecialType.System_MulticastDelegate
                 || type.SpecialType == SpecialType.System_AsyncCallback
+                || type.SpecialType == SpecialType.System_RuntimeTypeHandle
                 || type.TypeKind == TypeKind.Interface)
             {
                 return null;
@@ -182,6 +183,6 @@ namespace Cecilifier.Core.TypeSystem
             return typeArguments.Slice(0, count);
         }
 
-        protected abstract ResolvedType MakeGenericInstanceType(ResolvedType typeReference, INamedTypeSymbol genericTypeSymbol, in TypeResolutionContext resolutionContext);
+        public abstract ResolvedType MakeGenericInstanceType(ResolvedType typeReference, INamedTypeSymbol genericTypeSymbol, in TypeResolutionContext resolutionContext);
     }
 }

@@ -3,12 +3,12 @@ using System.Collections.Generic;
 class GenericTypesAsMembers
 {
     public IList<int> asField;
+    private IDictionary<int, string> typeWithMultipleTypeParameters;
+
     public IList<int> Property { get { return asField; } set { asField = value; } }
     
     public IList<string> Method(IList<string> l)
     {
         return l;
-    }
-    
-    private IDictionary<int, string> typeWithMultipleTypeParameters;
+    }    
 }

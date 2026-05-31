@@ -39,7 +39,7 @@ public class MonoCecilTypeResolver(MonoCecilContext context) : TypeResolverBase<
         return CecilDefinitionsFactory.FunctionPointerType(this, functionPointer);
     }
 
-    protected override ResolvedType MakeGenericInstanceType(ResolvedType typeReference, INamedTypeSymbol genericTypeSymbol, in TypeResolutionContext resolutionContext)
+    public override ResolvedType MakeGenericInstanceType(ResolvedType typeReference, INamedTypeSymbol genericTypeSymbol, in TypeResolutionContext resolutionContext)
     {
         Buffer256<ITypeSymbol> g = new();
         var resolutionContextTypeParameterProviderVar = resolutionContext.TypeParameterProviderVar;

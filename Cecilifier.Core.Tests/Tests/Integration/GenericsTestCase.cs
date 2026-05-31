@@ -9,13 +9,18 @@ namespace Cecilifier.Core.Tests.Integration
 {
     [TestFixture(typeof(MonoCecilContext))]
     [TestFixture(typeof(SystemReflectionMetadataContext))]
-    [EnableForContext<SystemReflectionMetadataContext>(nameof(TestGenericOuterAndInnerPermutations), nameof(TestSimplestGenericTypeDefinition), nameof(TestGenericTypesInheritance), IgnoreReason = "Not implemented")]
+    [EnableForContext<SystemReflectionMetadataContext>(
+        nameof(TestGenericOuterAndInnerPermutations), 
+        nameof(TestSimplestGenericTypeDefinition), 
+        nameof(TestGenericTypesAsMembers),
+        nameof(TestGenericTypeInstantiation),
+        nameof(TestGenericTypesInheritance), 
+        IgnoreReason = "Not implemented")]
     public class GenericsTestCase<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
     {
         [TestCase("GenericOuterNonGenericInner")]
         [TestCase("GenericOuterSingleGenericInner")]
         [TestCase("GenericOuterDeepGenericInner")]
-        [ParameterizedResourceFilter<SystemReflectionMetadataContext>("GenericOuterNonGenericInner", "GenericOuterDeepGenericInner")]
         public void TestGenericOuterAndInnerPermutations(string testName)
         {
             AssertResourceTest(new CecilifyTestOptions
@@ -58,7 +63,7 @@ namespace Cecilifier.Core.Tests.Integration
         [Test]
         public void TestGenericTypesAsMembers()
         {
-            AssertResourceTest(@"Generics/GenericTypesAsMembers");
+            AssertResourceTest("Generics/GenericTypesAsMembers");
         }
 
         [Test]
@@ -77,13 +82,12 @@ namespace Cecilifier.Core.Tests.Integration
         [Test]
         public void TestGenericTypeDefinitionWithMembers()
         {
-            AssertResourceTest(@"Generics/GenericTypeDefinitionWithMembers");
+            AssertResourceTest("Generics/GenericTypeDefinitionWithMembers");
         }
 
         [TestCase("GenericTypesInheritance", TestName = "GenericTypesInheritance")]
         [TestCase("SimpleGenericTypeInheritance", TestName = "SimpleGenericTypeInheritance")]
         [TestCase("ComplexGenericTypeInheritance", TestName = "ComplexGenericTypeInheritance")]
-        [ParameterizedResourceFilter<SystemReflectionMetadataContext>("GenericTypesInheritance", "SimpleGenericTypeInheritance", "ComplexGenericTypeInheritance")]
         public void TestGenericTypesInheritance(string testScenario)
         {
             AssertResourceTest($"Generics/{testScenario}");
@@ -123,7 +127,7 @@ namespace Cecilifier.Core.Tests.Integration
         [Test]
         public void TestInnerTypeFromExternalAssembly()
         {
-            AssertResourceTestBinary(@"Generics/InnerTypeFromExternalAssembly");
+            AssertResourceTestBinary("Generics/InnerTypeFromExternalAssembly");
         }
         
         [Test]

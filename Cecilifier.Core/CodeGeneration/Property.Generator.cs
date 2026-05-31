@@ -16,7 +16,7 @@ namespace Cecilifier.Core.CodeGeneration;
 internal record struct PropertyGenerationData(
     string DeclaringTypeNameForRegistration,
     string DeclaringTypeVariable,
-    bool DeclaringTypeIsGeneric,
+    INamedTypeSymbol DeclaringTypeSymbol,
     string Variable, 
     string Name, 
     IDictionary<string, string> AccessorModifiers,
@@ -83,7 +83,7 @@ internal class PropertyGenerator
         if (!property.IsStatic)
             Context.ApiDriver.WriteCilInstruction(Context, ilContext, OpCodes.Ldarg_1);
 
-        var operand = property.DeclaringTypeIsGeneric ? MakeGenericInstanceType(in property) : _backingFieldVar;
+        var operand = property.DeclaringTypeSymbol is { IsGenericType: true } ? BackingFieldReferenceOnGenericInstanceType(in property) : _backingFieldVar;
         Context.ApiDriver.WriteCilInstruction(Context, ilContext, property.StoreOpCode, operand.AsToken());
         Context.AddCompilerGeneratedAttributeTo(ilContext.AssociatedMethodVariable, VariableMemberKind.Method);
     }
@@ -126,7 +126,7 @@ internal class PropertyGenerator
             Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldarg_0);
         
         Debug.Assert(_backingFieldVar != null);
-        var operand = propertyGenerationData.DeclaringTypeIsGeneric ? MakeGenericInstanceType(in propertyGenerationData) : _backingFieldVar;
+        var operand = propertyGenerationData.DeclaringTypeSymbol is { IsGenericType: true } ? BackingFieldReferenceOnGenericInstanceType(in propertyGenerationData) : _backingFieldVar;
         Context.ApiDriver.WriteCilInstruction(Context, ilVar, propertyGenerationData.LoadOpCode, operand.AsToken());
         Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ret);
         
@@ -157,16 +157,13 @@ internal class PropertyGenerator
         Context.AddCompilerGeneratedAttributeTo(_backingFieldVar, VariableMemberKind.Field);
     }
     
-    private string MakeGenericInstanceType(ref readonly PropertyGenerationData property)
+    private string BackingFieldReferenceOnGenericInstanceType(ref readonly PropertyGenerationData property)
     {
-        var genTypeVar = Context.Naming.SyntheticVariable(property.Name, ElementKind.GenericInstance);
-        var fieldRefVar = Context.Naming.MemberReference("fld_");
+        var closedDeclaringType = Context.TypeResolver.MakeGenericInstanceType(property.DeclaringTypeVariable, property.DeclaringTypeSymbol, new TypeResolutionContext(ResolveTargetKind.TypeReference, property.DeclaringTypeSymbol.IsValueType ? TypeResolutionOptions.IsValueType : TypeResolutionOptions.None ));
         
-        Context.Generate(
-            [
-                $"var {genTypeVar} = {property.DeclaringTypeVariable}.MakeGenericInstanceType({property.DeclaringTypeVariable}.GenericParameters.ToArray());",
-                $"var {fieldRefVar} = new FieldReference({_backingFieldVar}.Name, {_backingFieldVar}.FieldType, {genTypeVar});"
-            ]);
+        var fieldRefVar = Context.Naming.MemberReference($"backingField_{property.Name}");
+        var exps = Context.ApiDefinitionsFactory.FieldReference(Context, fieldRefVar, Utils.BackingFieldNameForAutoProperty(property.Name), property.Type(ResolveTargetKind.Field), in closedDeclaringType);
+        Context.Generate(exps);
         return fieldRefVar;
     }
 }

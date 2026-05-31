@@ -491,7 +491,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
             }
             else if (scopesToIgnore.Contains(frInstruction.DeclaringType.Scope) || scopesToIgnore.Contains(frCurrent.DeclaringType.Scope))
             {
-                validationResult = frInstruction.FieldType.FullName == frCurrent.FieldType.FullName;
+                validationResult = ValidateTypeReference(frInstruction.FieldType, frCurrent.FieldType);
             }
             else
             {
@@ -499,6 +499,38 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                                    frInstruction.DeclaringType.Scope.Name == "System.Private.CoreLib" 
                                             && (frCurrent.DeclaringType.Scope.Name == "System.Runtime" || frCurrent.DeclaringType.Scope.Name == "mscorlib"); 
             }
+            return true;
+        }
+        
+        private static bool TryValidateGenericParameter(TypeReference lhs, TypeReference rhs, out bool result)
+        {
+            result = false;
+            
+            var lhsGenericParameter = lhs as GenericParameter;
+            var rhsGenericParameter = rhs as GenericParameter;
+
+            if (lhsGenericParameter == null && rhsGenericParameter == null)
+            {
+                return false;
+            }
+
+            if (lhsGenericParameter != null ^ rhsGenericParameter != null)
+            {
+                result = false;
+                return true;
+            }
+            
+            // both are GenericParameter instances
+            if (lhsGenericParameter.Owner is TypeReference lhsOwner && rhsGenericParameter.Owner is TypeReference rhsOwner)
+            {
+                var lhsIndex = lhsOwner.GenericParameters.IndexOf(lhsGenericParameter);
+                var rhsIndex = rhsOwner.GenericParameters.IndexOf(rhsGenericParameter);
+                
+                result = lhsIndex == rhsIndex && ValidateTypeReference(lhsOwner, rhsOwner);
+                return true;
+            }
+            
+            result = true;
             return true;
         }
 
@@ -702,25 +734,50 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
             return (ret, 1);
         }
 
-        private static bool ValidateTypeReference(TypeReference typeLhs, TypeReference typeRhs)
+        static bool ValidateTypeReference(TypeReference lhsType, TypeReference rhsType)
         {
-            var typeNameMatches = typeLhs.FullName == typeRhs.FullName;
-            if (!typeNameMatches)
-            {
+            if (TryValidateGenericParameter(lhsType, rhsType, out var validationResult))
+                return validationResult;
+            
+            if (lhsType.Namespace != rhsType.Namespace || lhsType.Name != rhsType.Name)
                 return false;
-            }
 
-            switch (typeLhs)
+            var lhsGenericInstance = lhsType as GenericInstanceType;
+            var rhsGenericInstance = rhsType as GenericInstanceType;
+            
+            if (lhsGenericInstance != null ^ rhsGenericInstance != null)
+                return false;
+
+            if (lhsGenericInstance == null) // both are not GenericInstanceType
             {
-                case ArrayType lhsAt:
-                    var rhsAt = typeRhs as ArrayType;
-                    return ValidateTypeReference(lhsAt.ElementType, rhsAt?.ElementType);
-
-                case GenericInstanceType _:
-                    var rhsGen = typeRhs as GenericInstanceType;
-                    return rhsGen != null;
+                var lhsArray = lhsType as ArrayType;
+                var rhsArray = rhsType as ArrayType;
+                if (lhsArray != null ^ rhsArray != null)
+                    return false;
+                
+                if (lhsArray != null)
+                    return ValidateTypeReference(lhsArray.ElementType, rhsArray.ElementType);
+                
+                return true;
             }
+            
+            return CompareGenericType(lhsGenericInstance, rhsGenericInstance);
+        }
 
+        private static bool CompareGenericType(GenericInstanceType lhs, GenericInstanceType rhs)
+        {
+            if (lhs.GenericArguments.Count != rhs.GenericArguments.Count)
+                return false;
+
+            for (int i = 0; i != lhs.GenericArguments.Count; i++)
+            {
+                var lhsTypeArgument = lhs.GenericArguments[i];
+                var rhsTypeArgument = rhs.GenericArguments[i];
+
+                if (!ValidateTypeReference(lhsTypeArgument, rhsTypeArgument))
+                    return false;
+            }
+            
             return true;
         }
 

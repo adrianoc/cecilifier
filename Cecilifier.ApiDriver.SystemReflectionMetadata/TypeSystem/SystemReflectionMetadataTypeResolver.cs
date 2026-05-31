@@ -12,7 +12,6 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
 {
     public override ResolvedType Resolve(ITypeSymbol type, in TypeResolutionContext resolutionContext)
     {
-        
         var memberRefVar = _context.DefinitionVariables.GetVariable(type.ToDisplayString(), VariableMemberKind.Type, type.ContainingSymbol.ToDisplayString());
         var memberRefVarName = memberRefVar.IsValid 
                                         ? memberRefVar.VariableName
@@ -32,7 +31,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
                            """);
         _context.WriteNewLine();
 
-        if (resolutionContext.TargetKind == ResolveTargetKind.TypeReference)
+        if (resolutionContext.TargetKind is ResolveTargetKind.TypeReference || type is INamedTypeSymbol { IsGenericType: true })
             return memberRefVarName;
         
         return ApplySpecificSyntax(memberRefVarName, in resolutionContext);
@@ -104,13 +103,19 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
     public override ResolvedType ResolveLocalVariableType(ITypeSymbol type, in TypeResolutionContext context)
     {
         var resolved = base.ResolveLocalVariableType(type, in context);
-        if (resolved && context.TargetKind != ResolveTargetKind.TypeReference)
+
+        if (resolved && context.TargetKind == ResolveTargetKind.Instruction)
         {
-            var methodBuilder = context.TargetKind == ResolveTargetKind.GenericTypeArgument 
+            return new ResolvedType($"MetadataTokens.GetToken({resolved})");
+        }
+        
+        if (resolved && context.TargetKind != ResolveTargetKind.TypeReference && ((context.TargetKind != ResolveTargetKind.Field && context.TargetKind != ResolveTargetKind.ReturnType && context.TargetKind != ResolveTargetKind.LocalVariable) || type is not INamedTypeSymbol { IsGenericType: true }))
+        {
+            var methodBuilder = context.TargetKind == ResolveTargetKind.GenericTypeArgument || type.TypeKind == TypeKind.TypeParameter
                 ? $"GenericTypeParameter({resolved.Expression})" 
                 : $"Type({resolved.Expression}, isValueType: {context.Options.HasFlag(TypeResolutionOptions.IsValueType).ToKeyword()})";
 
-            if ((context.TargetKind == ResolveTargetKind.Field || context.TargetKind == ResolveTargetKind.Parameter) && type is INamedTypeSymbol { IsGenericType: true })
+            if ((context.TargetKind is ResolveTargetKind.Field or ResolveTargetKind.Parameter) && type is INamedTypeSymbol { IsGenericType: true })
             {
                 methodBuilder = resolved.Expression;
             }
@@ -124,7 +129,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
         return resolved;
     }
 
-    protected override ResolvedType MakeGenericInstanceType(ResolvedType typeReference, INamedTypeSymbol genericTypeSymbol, in TypeResolutionContext resolutionContext)
+    public override ResolvedType MakeGenericInstanceType(ResolvedType typeReference, INamedTypeSymbol genericTypeSymbol, in TypeResolutionContext resolutionContext)
     {
         Buffer256<ITypeSymbol> typeArgumentsBuffer = new();
         ReadOnlySpan<ITypeSymbol> typeArguments = CollectTypeArguments(genericTypeSymbol, ref typeArgumentsBuffer);
@@ -132,9 +137,17 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
         if (typeArguments.Length == 0)
             return typeReference;
 
-        if (resolutionContext.TargetKind == ResolveTargetKind.Field || resolutionContext.TargetKind == ResolveTargetKind.Parameter)
+        if (resolutionContext.TargetKind is ResolveTargetKind.Field or ResolveTargetKind.Parameter or ResolveTargetKind.ReturnType or ResolveTargetKind.LocalVariable)
         {
-            return MakeGenericInstanceTypeForFieldDeclaration(typeReference, genericTypeSymbol, typeArguments);
+            var resolved = MakeGenericInstanceTypeForFieldDeclaration(typeReference, genericTypeSymbol, typeArguments);
+            if (resolved && resolutionContext.TargetKind is ResolveTargetKind.ReturnType or ResolveTargetKind.Field or  ResolveTargetKind.LocalVariable)
+            {
+                return ResolvedType.FromDetails(
+                    new ResolvedTypeDetails()
+                        .WithTypeEncoder(TypeEncoderFor(in resolutionContext))
+                        .WithMethodBuilder(resolved.Expression));
+            }
+            return resolved;
         }
         
         var genericInstanceTypeVar = context.Naming.SyntheticVariable($"{genericTypeSymbol.ToValidVariableName()}Instantiation", ElementKind.GenericInstance);
@@ -215,10 +228,11 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
         };
     }
     
+    //TODO: Method name is misleading. It is being also used for parameters/return types. What is the common thing about those
     private ResolvedType MakeGenericInstanceTypeForFieldDeclaration(ResolvedType typeReference, INamedTypeSymbol genericTypeSymbol, ReadOnlySpan<ITypeSymbol> typeArguments)
     {
         var ret = $$"""
-                    WithSignatureTypeEncoder(typeSignatureEncoder => 
+                    WithSignatureTypeEncoder(typeSignatureEncoder =>
                     {
                         var gi = typeSignatureEncoder.GenericInstantiation({{typeReference.Expression}}, {{typeArguments.Length}}, isValueType: {{genericTypeSymbol.IsValueType.ToKeyword()}});
                         {{

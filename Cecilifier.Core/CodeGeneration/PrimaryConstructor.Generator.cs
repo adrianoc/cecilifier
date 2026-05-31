@@ -58,7 +58,7 @@ public class PrimaryConstructorGenerator
         var propertyData = new PropertyGenerationData(
                                     declaringType.OriginalDefinition.ToDisplayString(),
                                     declaringTypeVariable.VariableName,
-                                    declaringType.TypeParameters.Length > 0,
+                                    declaringType,
                                     propDefVar,
                                     parameter.Identifier.Text,
                                     new Dictionary<string, string>

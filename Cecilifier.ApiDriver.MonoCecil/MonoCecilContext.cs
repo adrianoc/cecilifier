@@ -27,6 +27,8 @@ public class MonoCecilContext : CecilifierContextBase, IVisitorContext
         return ((string) AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")).Split(Path.PathSeparator);
     }
 
+    public static string[] GetPreprocessorSymbols() => ["API_DRIVER_MONO_CECIL"];
+
     public override void OnFinishedTypeDeclaration(INamedTypeSymbol _) { } // Nothing to do here for Mono.Cecil
 
     public override DefinitionVariable GetMethodVariable(IMethodSymbol method) => DefinitionVariables.GetMethodVariable(method.AsMethodDefinitionVariable());

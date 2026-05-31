@@ -7,7 +7,6 @@ using System.Reflection.PortableExecutable;
 using System.Security.Cryptography;
 using System.Text;
 using Cecilifier.Core.AST;
-using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.Tests.Framework.AssemblyDiff;
 using Cecilifier.Core.Tests.Framework.ILVerification;
@@ -36,8 +35,8 @@ public class CecilifierTestBase<TContext> where TContext : IVisitorContext
         var targetPath = Path.Combine(Path.GetDirectoryName(cecilifiedAssemblyPath), Path.GetFileNameWithoutExtension(cecilifiedAssemblyPath) + "-Expected");
 
         return buildType == BuildType.Exe
-            ? CompilationServices.CompileExe(targetPath, tbc, GetDotNetAssemblyReferences())
-            : CompilationServices.CompileDLL(targetPath, tbc, GetDotNetAssemblyReferences());
+            ? CompilationServices.CompileExe(targetPath, tbc, TContext.GetPreprocessorSymbols(), GetDotNetAssemblyReferences())
+            : CompilationServices.CompileDLL(targetPath, tbc, TContext.GetPreprocessorSymbols(), GetDotNetAssemblyReferences());
     }
 
     class AssemblyResolver : IResolver
@@ -151,7 +150,7 @@ public class CecilifierTestBase<TContext> where TContext : IVisitorContext
 
         var outputAssemblyPath = OutputAssemblyPath(Path.GetFileNameWithoutExtension(testBasePath));
         var testCompilationResult = new CecilifyResult(cecilifiedCode, cecilifierRunnerPath, outputAssemblyPath);
-        if (File.Exists(outputAssemblyPath))
+        if (File.Exists(outputAssemblyPath) && new FileInfo(outputAssemblyPath).Length > 0)
             return testCompilationResult;
             
         CopyFilesNextToGeneratedExecutable(cecilifierRunnerPath, refsToCopy);
@@ -239,7 +238,11 @@ public class CecilifierTestBase<TContext> where TContext : IVisitorContext
         stream.Position = 0;
         return Cecilifier.Process<TContext>(
             stream,
-            new CecilifierOptions { References = GetDotNetAssemblyReferences(), Naming = new DefaultNameStrategy() });
+            new CecilifierOptions
+            {
+                References = GetDotNetAssemblyReferences(), Naming = new DefaultNameStrategy(),
+                PreprocessorSymbols = TContext.GetPreprocessorSymbols()
+            });
     }
 
     private static string[] GetDotNetAssemblyReferences()

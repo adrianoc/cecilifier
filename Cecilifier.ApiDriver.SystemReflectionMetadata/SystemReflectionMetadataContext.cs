@@ -56,6 +56,7 @@ public class SystemReflectionMetadataContext : CecilifierContextBase, IVisitorCo
             throw new Exception("DOTNET_ROOT environment variable is not set");
         }       
         return Directory.GetFiles($"{dotnetRoot}/packs/Microsoft.NETCore.App.Ref/{Environment.Version}/ref/net{Environment.Version.Major}.{Environment.Version.Minor}", "*.dll");
-        
     }
+    
+    public static string[] GetPreprocessorSymbols() => ["API_DRIVER_SYSTEM_REFLECTION_METADATA"];
 }
