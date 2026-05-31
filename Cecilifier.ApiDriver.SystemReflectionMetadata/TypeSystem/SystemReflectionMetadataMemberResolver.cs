@@ -36,7 +36,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
                                    {
                                        {{
                                            string.Join('\n',
-                                               method.Parameters.Select(p => $"""
+                                               method.OriginalDefinition.Parameters.Select(p => $"""
                                                                                   parameters
                                                                                           .AddParameter()
                                                                                           .{context.TypedTypeResolver.ResolveAny(p.Type, new TypeResolutionContext(ResolveTargetKind.Parameter, p.Type.IsValueType ? TypeResolutionOptions.IsValueType : TypeResolutionOptions.None))};

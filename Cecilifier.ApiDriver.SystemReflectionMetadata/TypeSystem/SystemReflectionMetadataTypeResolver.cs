@@ -109,7 +109,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
             return new ResolvedType($"MetadataTokens.GetToken({resolved})");
         }
         
-        if (resolved && context.TargetKind != ResolveTargetKind.TypeReference && ((context.TargetKind != ResolveTargetKind.Field && context.TargetKind != ResolveTargetKind.ReturnType) || type is not INamedTypeSymbol { IsGenericType: true }))
+        if (resolved && context.TargetKind != ResolveTargetKind.TypeReference && ((context.TargetKind != ResolveTargetKind.Field && context.TargetKind != ResolveTargetKind.ReturnType && context.TargetKind != ResolveTargetKind.LocalVariable) || type is not INamedTypeSymbol { IsGenericType: true }))
         {
             var methodBuilder = context.TargetKind == ResolveTargetKind.GenericTypeArgument || type.TypeKind == TypeKind.TypeParameter
                 ? $"GenericTypeParameter({resolved.Expression})" 
