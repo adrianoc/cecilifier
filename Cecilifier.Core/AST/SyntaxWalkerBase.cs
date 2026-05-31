@@ -694,7 +694,7 @@ namespace Cecilifier.Core.AST
                 var parentName = symbol.TypeParameterKind == TypeParameterKind.Method ? symbol.DeclaringMethod?.OriginalDefinition.ToDisplayString() : symbol.DeclaringType?.OriginalDefinition.ToDisplayString();
                 var typeParamVariable = context.DefinitionVariables.GetVariable(typeParameter.Identifier.Text, VariableMemberKind.TypeParameter, parentName);
                 if (!typeParamVariable.IsValid)
-                    throw new Exception($"Failed to find variable for {parentName}.{symbol.FullyQualifiedName()}");
+                    throw new Exception($"Failed to find variable for type parameter '{parentName}.{symbol.FullyQualifiedName()}'");
                 
                 HandleAttributesInMemberDeclaration(context, typeParameter.AttributeLists, typeParamVariable.VariableName, VariableMemberKind.TypeParameter);
             }
