@@ -24,15 +24,15 @@ public class DefinitionsFactoryBase
         {
             if (modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword)))
             {
-                typeAttributes = typeAttributes.AppendModifier(Constants.Cecil.StaticTypeAttributes);
+                typeAttributes = typeAttributes.AppendEnumFlag(Constants.Cecil.StaticTypeAttributes);
                 modifiers = modifiers.Remove(SyntaxFactory.Token(SyntaxKind.StaticKeyword));
             }
 
-            return typeAttributes.AppendModifier(RoslynToApiDriverModifier(modifiers, m => "TypeAttributes.Nested" + m.ValueText.PascalCase())).ToString();
+            return typeAttributes.AppendEnumFlag(RoslynToApiDriverModifier(modifiers, m => "TypeAttributes.Nested" + m.ValueText.PascalCase())).ToString();
         }
 
         var convertedModifiers = RoslynToApiDriverModifier<TypeAttributes>(modifiers, "NotPublic", MapAttribute);
-        return typeAttributes.AppendModifier(convertedModifiers).ToString();
+        return typeAttributes.AppendEnumFlag(convertedModifiers).ToString();
 
         IEnumerable<string> MapAttribute(SyntaxToken token)
         {
@@ -72,7 +72,7 @@ public class DefinitionsFactoryBase
 
         if (!typeSymbol.TryGetAttribute<StructLayoutAttribute>(out var structLayoutAttribute))
         {
-            typeAttributes.AppendModifier("TypeAttributes.SequentialLayout");
+            typeAttributes.AppendEnumFlag("TypeAttributes.SequentialLayout");
         }
         else
         {
@@ -84,7 +84,7 @@ public class DefinitionsFactoryBase
                 _ => throw new ArgumentException($"Invalid StructLayout value for {typeSymbol.Name}")
             };
 
-            typeAttributes.AppendModifier(specifiedLayout);
+            typeAttributes.AppendEnumFlag(specifiedLayout);
         }
     }
 
@@ -105,13 +105,13 @@ public class DefinitionsFactoryBase
         var modifierStr = finalModifierList
             .SelectMany(mapAttribute)
             .Where(attr => !string.IsNullOrEmpty(attr))
-            .Aggregate(new StringBuilder(), (acc, curr) => acc.AppendModifier($"{targetEnum}.{curr}"));
+            .Aggregate(new StringBuilder(), (acc, curr) => acc.AppendEnumFlag($"{targetEnum}.{curr}"));
 
         modifierStr.Append(accessibilityModifiers);
 
         if (!syntaxTokens.Any(m => m.IsKind(SyntaxKind.PrivateKeyword) || m.IsKind(SyntaxKind.InternalKeyword) || m.IsKind(SyntaxKind.PrivateKeyword) || m.IsKind(SyntaxKind.PublicKeyword) ||
                                    m.IsKind(SyntaxKind.ProtectedKeyword)))
-            modifierStr.AppendModifier($"{targetEnum}.{defaultAccessibility}");
+            modifierStr.AppendEnumFlag($"{targetEnum}.{defaultAccessibility}");
 
         return modifierStr.ToString();
 
@@ -143,7 +143,7 @@ public class DefinitionsFactoryBase
     {
         var cecilModifierStr = modifiers.Aggregate(new StringBuilder(), (acc, token) =>
         {
-            acc.AppendModifier(map(token));
+            acc.AppendEnumFlag(map(token));
             return acc;
         });
 

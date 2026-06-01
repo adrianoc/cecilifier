@@ -76,11 +76,11 @@ namespace Cecilifier.Core.Extensions
             {
                 if (methodSymbol.IsExplicitMethodImplementation())
                 {
-                    modifiersStr = Constants.Cecil.InterfaceMethodDefinitionAttributes.AppendModifier("MethodAttributes.Final");
+                    modifiersStr = Constants.Cecil.InterfaceMethodDefinitionAttributes.AppendEnumFlag("MethodAttributes.Final");
                 }
                 else if (lastDeclaredIn.ContainingType.TypeKind == TypeKind.Interface && !methodSymbol.IsStatic)
                 {
-                    modifiersStr = Constants.Cecil.InterfaceMethodDefinitionAttributes.AppendModifier(
+                    modifiersStr = Constants.Cecil.InterfaceMethodDefinitionAttributes.AppendEnumFlag(
                                        SymbolEqualityComparer.Default.Equals(lastDeclaredIn.ContainingType, methodSymbol.ContainingType)
                                            ? "MethodAttributes.Abstract"
                                            : "MethodAttributes.Final");
@@ -96,13 +96,13 @@ namespace Cecilifier.Core.Extensions
             var cecilModifiersStr = new StringBuilder(SyntaxWalkerBase.ModifiersToCecil<MethodAttributes>(validModifiers.ToList(), defaultAccessibility, MapMethodAttributeFor));
             if (specificModifiers != null)
             {
-                cecilModifiersStr.AppendModifier(specificModifiers);
+                cecilModifiersStr.AppendEnumFlag(specificModifiers);
             }
 
-            cecilModifiersStr.AppendModifier("MethodAttributes.HideBySig").AppendModifier(modifiersStr);
+            cecilModifiersStr.AppendEnumFlag("MethodAttributes.HideBySig").AppendEnumFlag(modifiersStr);
             if (methodSymbol.HasCovariantReturnType())
             {
-                cecilModifiersStr.AppendModifier("MethodAttributes.NewSlot");
+                cecilModifiersStr.AppendEnumFlag("MethodAttributes.NewSlot");
             }
             return cecilModifiersStr.ToString();
         }
@@ -115,11 +115,11 @@ namespace Cecilifier.Core.Extensions
             var validModifiers = RemoveSourceModifiersWithNoILEquivalent(modifiers);
 
             var cecilModifiersStr = new StringBuilder(SyntaxWalkerBase.ModifiersToCecil<MethodAttributes>(validModifiers.ToList(), defaultAccessibility, MapMethodAttributeFor));
-            cecilModifiersStr.AppendModifier(specificModifiers);
-            cecilModifiersStr.AppendModifier("MethodAttributes.HideBySig").AppendModifier(modifiersStr);
+            cecilModifiersStr.AppendEnumFlag(specificModifiers);
+            cecilModifiersStr.AppendEnumFlag("MethodAttributes.HideBySig").AppendEnumFlag(modifiersStr);
 
             if (declaringType.TypeKind == TypeKind.Interface)
-                cecilModifiersStr.AppendModifier(Constants.Cecil.InterfaceMethodDefinitionAttributes).AppendModifier("MethodAttributes.Abstract");
+                cecilModifiersStr.AppendEnumFlag(Constants.Cecil.InterfaceMethodDefinitionAttributes).AppendEnumFlag("MethodAttributes.Abstract");
 
             return cecilModifiersStr.ToString();
         }
@@ -186,7 +186,7 @@ namespace Cecilifier.Core.Extensions
                     case SyntaxKind.OverrideKeyword:
                         return "MethodAttributes.Virtual";
                     case SyntaxKind.AbstractKeyword:
-                        return "MethodAttributes.Virtual | MethodAttributes.Abstract".AppendModifier(typeKind != TypeKind.Interface || !modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword)) ? "MethodAttributes.NewSlot" : string.Empty);
+                        return "MethodAttributes.Virtual | MethodAttributes.Abstract".AppendEnumFlag(typeKind != TypeKind.Interface || !modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword)) ? "MethodAttributes.NewSlot" : string.Empty);
                     case SyntaxKind.SealedKeyword:
                         return "MethodAttributes.Final";
                     case SyntaxKind.NewKeyword:

@@ -36,20 +36,20 @@ namespace Cecilifier.Core.Extensions
             });
         }
 
-        public static string AppendModifier(this string to, string modifier)
+        public static string AppendEnumFlag(this string to, string flag)
         {
-            if (string.IsNullOrWhiteSpace(modifier))
+            if (string.IsNullOrWhiteSpace(flag))
                 return to;
 
             if (string.IsNullOrEmpty(to))
-                return modifier;
+                return flag;
 
-            return $"{to} | {modifier}";
+            return $"{to} | {flag}";
         }
 
-        public static StringBuilder AppendModifier(this StringBuilder to, string modifier)
+        public static StringBuilder AppendEnumFlag(this StringBuilder to, string flag)
         {
-            if (string.IsNullOrWhiteSpace(modifier))
+            if (string.IsNullOrWhiteSpace(flag))
             {
                 return to;
             }
@@ -59,8 +59,28 @@ namespace Cecilifier.Core.Extensions
                 to.Append(" | ");
             }
 
-            to.Append(modifier);
+            to.Append(flag);
             return to;
+        }
+        
+        public static Span<char> AppendEnumFlag(this Span<char> to, ReadOnlySpan<char> flag, bool isFirst = true)
+        {
+            if (flag.Length == 0)
+            {
+                return to;
+            }
+
+            if (!isFirst)
+            {
+                ReadOnlySpan<char> span = " | ".AsSpan();
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(span.Length, to.Length);
+                span.CopyTo(to);
+                to = to.Slice(span.Length);
+            }
+
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(flag.Length, to.Length);
+            flag.CopyTo(to);
+            return to.Slice(flag.Length);
         }
 
         public static T ResolveDeclaringType<T>(this SyntaxNode node) where T : BaseTypeDeclarationSyntax

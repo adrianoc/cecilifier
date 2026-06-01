@@ -79,7 +79,7 @@ internal partial class RecordGenerator
                                                                                 context, 
                                                                                 new BodiedMemberDefinitionContext( CloneMethodName, "Clone", cloneMethodVar, recordTypeDefinitionVariable, MemberOptions.None, IlContext.None),  
                                                                                 recordTypeDefinitionVariable,
-                                                                                Constants.Cecil.HideBySigNewSlotVirtual.AppendModifier("MethodAttributes.Public"), 
+                                                                                Constants.Cecil.HideBySigNewSlotVirtual.AppendEnumFlag("MethodAttributes.Public"), 
                                                                                 [], 
                                                                                 [], 
                                                                                 ctx => ctx.TypeResolver.ResolveAny(_recordSymbol, ResolveTargetKind.ReturnType), 
@@ -125,7 +125,7 @@ internal partial class RecordGenerator
                                 new BodiedMemberDefinitionContext("ctor", copyCtorVar, recordTypeDefinitionVariable, MemberOptions.None, IlContext.None), 
                                 _recordSymbol.OriginalDefinition.ToDisplayString(), 
                                 false, 
-                                Constants.Cecil.CtorAttributes.AppendModifier("MethodAttributes.Family | MethodAttributes.HideBySig"), 
+                                Constants.Cecil.CtorAttributes.AppendEnumFlag("MethodAttributes.Family | MethodAttributes.HideBySig"), 
                                 new[] { _recordSymbol.ToDisplayString() });
 
             context.Generate(

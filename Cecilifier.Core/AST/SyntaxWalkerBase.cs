@@ -252,12 +252,12 @@ namespace Cecilifier.Core.AST
             var modifierStr = finalModifierList
                 .SelectMany(mapAttribute)
                 .Where(attr => !string.IsNullOrEmpty(attr))
-                .Aggregate(new StringBuilder(), (acc, curr) => acc.AppendModifier($"{targetEnum}.{curr}"));
+                .Aggregate(new StringBuilder(), (acc, curr) => acc.AppendEnumFlag($"{targetEnum}.{curr}"));
 
             modifierStr.Append(accessibilityModifiers);
 
             if (!modifiers.Any(m => m.IsKind(SyntaxKind.PrivateKeyword) || m.IsKind(SyntaxKind.InternalKeyword) || m.IsKind(SyntaxKind.PrivateKeyword) || m.IsKind(SyntaxKind.PublicKeyword) || m.IsKind(SyntaxKind.ProtectedKeyword)))
-                modifierStr.AppendModifier($"{targetEnum}.{defaultAccessibility}");
+                modifierStr.AppendEnumFlag($"{targetEnum}.{defaultAccessibility}");
 
             return modifierStr.ToString();
 
@@ -808,11 +808,11 @@ namespace Cecilifier.Core.AST
             string PInvokeAttributesFrom(AttributeSyntax attr)
             {
                 return CallingConventionFrom(attr)
-                    .AppendModifier(CharSetFrom(attr))
-                    .AppendModifier(SetLastErrorFrom(attr))
-                    .AppendModifier(ExactSpellingFrom(attr))
-                    .AppendModifier(BestFitMappingFrom(attr))
-                    .AppendModifier(ThrowOnUnmappableCharFrom(attr))
+                    .AppendEnumFlag(CharSetFrom(attr))
+                    .AppendEnumFlag(SetLastErrorFrom(attr))
+                    .AppendEnumFlag(ExactSpellingFrom(attr))
+                    .AppendEnumFlag(BestFitMappingFrom(attr))
+                    .AppendEnumFlag(ThrowOnUnmappableCharFrom(attr))
                     .ToString();
             }
 

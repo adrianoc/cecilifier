@@ -151,7 +151,7 @@ namespace Cecilifier.Core.Extensions
             if (string.IsNullOrWhiteSpace(refRelatedAttr) && string.IsNullOrWhiteSpace(optionalAttribute))
                 return Constants.ParameterAttributes.None;
 
-            return refRelatedAttr.AppendModifier(optionalAttribute);
+            return refRelatedAttr.AppendEnumFlag(optionalAttribute);
         }
 
         public static (string Value, bool Present) ExplicitDefaultValue(this IParameterSymbol symbol, bool rawString = true)
@@ -367,13 +367,13 @@ namespace Cecilifier.Core.Extensions
 
             var modifiers = new StringBuilder(methodModifiers);
             if (methodSymbol.IsStatic)
-                modifiers.AppendModifier($"{methodAttributesEnumName}.Static");
+                modifiers.AppendEnumFlag($"{methodAttributesEnumName}.Static");
             
             if (methodSymbol.IsAbstract)
-                modifiers.AppendModifier($"{methodAttributesEnumName}.Abstract");
+                modifiers.AppendEnumFlag($"{methodAttributesEnumName}.Abstract");
             
             if (methodSymbol.IsVirtual)
-                modifiers.AppendModifier($"{methodAttributesEnumName}.Virtual");
+                modifiers.AppendEnumFlag($"{methodAttributesEnumName}.Virtual");
                 
             return modifiers.ToString();
         }

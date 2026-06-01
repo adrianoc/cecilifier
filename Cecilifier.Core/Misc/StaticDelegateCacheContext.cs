@@ -80,7 +80,7 @@ public struct StaticDelegateCacheContext
         var cachedTypeVar = context.Naming.Type("", ElementKind.Class);
         var outerTypeVariable = context.DefinitionVariables.GetVariable(Method.ContainingType.ToDisplayString(), VariableMemberKind.Type, Method.ContainingType.ContainingSymbol.ToDisplayString());
 
-        string attrs = Constants.Cecil.StaticClassAttributes.AppendModifier("TypeAttributes.NestedPrivate");
+        string attrs = Constants.Cecil.StaticClassAttributes.AppendEnumFlag("TypeAttributes.NestedPrivate");
         var cacheTypeExps = context.ApiDefinitionsFactory.Type(
                                                                 context,
                                                                 new MemberDefinitionContext(cacheTypeName, cachedTypeVar, outerTypeVariable.IsValid ? outerTypeVariable.VariableName : null),
