@@ -17,6 +17,7 @@ namespace Cecilifier.Core.Tests.Integration
         nameof(TestGenericTypesInheritance),
         nameof(TestGenericTypeConstraints),
         nameof(TestGenericTypeUsedAsConstraint),
+        nameof(TestCoContraVariance),
         IgnoreReason = "Not implemented")]
     public class GenericsTestCase<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
     {
@@ -123,7 +124,7 @@ namespace Cecilifier.Core.Tests.Integration
         [Test]
         public void TestCoContraVariance()
         {
-            AssertResourceTest(@"Generics/CoContraVariance");
+            AssertResourceTest("Generics/CoContraVariance");
         }
 
         [Test]

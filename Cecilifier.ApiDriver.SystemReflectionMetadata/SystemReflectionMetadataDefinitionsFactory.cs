@@ -136,7 +136,6 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
 
     private static void AddTypeParameters(SystemReflectionMetadataContext ctx, IEnumerable<TypeParameterSyntax> typeParameters, TypeDefinitionRecord typeRecord)
     {
-        // notnull => nothing ???
         var index = 0;
         foreach (var genericTypeParameter in typeParameters)
         {
@@ -189,6 +188,12 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
 
         if (typeParameterSymbol.HasValueTypeConstraint)
             target = target.AppendEnumFlag("GenericParameterAttributes.NotNullableValueTypeConstraint", target.Length == span.Length);
+        
+        if (typeParameterSymbol.Variance == VarianceKind.In)
+            target = target.AppendEnumFlag("GenericParameterAttributes.Contravariant", target.Length == span.Length);
+        
+        if (typeParameterSymbol.Variance == VarianceKind.Out)
+            target = target.AppendEnumFlag("GenericParameterAttributes.Covariant", target.Length == span.Length);
         
         if (span.Length != target.Length)
             return span.Slice(0, span.Length - target.Length).ToString();

@@ -12,15 +12,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
 {
     protected override ResolvedType ResolveFromAssembly(ITypeSymbol type, in TypeResolutionContext resolutionContext)
     {
-        var memberRefVar = _context.DefinitionVariables.GetVariable(type.ToDisplayString(), VariableMemberKind.Type, type.ContainingSymbol.ToDisplayString());
-        var memberRefVarName = memberRefVar.IsValid 
-                                        ? memberRefVar.VariableName
-                                        : _context.Naming.SyntheticVariable(type.ToValidVariableName(), ElementKind.MemberReference);
-        if (!memberRefVar.IsValid)
-        {
-            _context.DefinitionVariables.RegisterNonMethod(type.ContainingSymbol.ToDisplayString(), type.ToDisplayString(), VariableMemberKind.Type, memberRefVarName);
-        }
-        
+        var memberRefVarName = _context.Naming.SyntheticVariable(type.ToValidVariableName(), ElementKind.MemberReference);
         
         var assemblyReferenceName = _context.AssemblyResolver.Resolve(_context, type.ContainingAssembly);
         _context.Generate($"""
@@ -31,10 +23,20 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
                            """);
         _context.WriteNewLine();
 
+        RegisterVariableIfNeeded(type, memberRefVarName, in resolutionContext);
+        
         if (resolutionContext.TargetKind is ResolveTargetKind.TypeReference or ResolveTargetKind.GenericTypeParameterConstraint || type is INamedTypeSymbol { IsGenericType: true })
             return memberRefVarName;
         
         return ApplySpecificSyntax(memberRefVarName, in resolutionContext);
+    }
+
+    private void RegisterVariableIfNeeded(ITypeSymbol type, string variableName, in TypeResolutionContext resolutionContext)
+    {
+        if (!resolutionContext.Options.HasFlag(TypeResolutionOptions.RegisterVariables))
+            return;
+        
+        _context.DefinitionVariables.RegisterNonMethod(type.ContainingSymbol.OriginalDefinition.ToDisplayString(), type.OriginalDefinition.ToDisplayString(), VariableMemberKind.Type, variableName);
     }
 
     private string GenericRankAnnotation(ITypeSymbol type)
@@ -130,7 +132,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
 
             if (context.TargetKind is ResolveTargetKind.GenericTypeParameterConstraint || (context.TargetKind is ResolveTargetKind.Field or ResolveTargetKind.Parameter && type is INamedTypeSymbol { IsGenericType: true }))
             {
-                methodBuilder = resolved.Expression;
+                return resolved.Expression;
             }
             
             return ResolvedType.FromDetails(
@@ -154,7 +156,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
         if (resolutionContext.TargetKind is ResolveTargetKind.Field or ResolveTargetKind.Parameter or ResolveTargetKind.ReturnType or ResolveTargetKind.LocalVariable)
         {
             var resolved = MakeGenericInstanceType(typeReference, genericTypeSymbol, typeArguments);
-            if (resolved && resolutionContext.TargetKind is ResolveTargetKind.ReturnType or ResolveTargetKind.Field or ResolveTargetKind.LocalVariable)
+            if (resolved && resolutionContext.TargetKind is ResolveTargetKind.ReturnType or ResolveTargetKind.Field or ResolveTargetKind.LocalVariable or ResolveTargetKind.Parameter)
             {
                 return ResolvedType.FromDetails(
                     new ResolvedTypeDetails()
