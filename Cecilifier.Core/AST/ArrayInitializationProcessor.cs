@@ -25,7 +25,7 @@ public class ArrayInitializationProcessor
     {
         var context = visitor.Context;
         var stelemOpCode = elementType.StelemOpCode();
-        var resolvedElementType = context.TypeResolver.ResolveAny(elementType, ResolveTargetKind.Instruction);
+        var resolvedElementType = context.TypeResolver.Resolve(elementType, ResolveTargetKind.Instruction);
 
         for (var i = 0; i < elements?.Count; i++)
         {

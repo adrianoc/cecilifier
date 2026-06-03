@@ -68,7 +68,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                                                                   {attrs},
                                                                   metadata.GetOrAddString("{typeNamespace}"),
                                                                   metadata.GetOrAddString("{fixedTypeName}"),
-                                                                  { (baseType == null ? "default" : context.TypeResolver.ResolveAny(baseType!, ResolveTargetKind.TypeReference)) },
+                                                                  { (baseType == null ? "default" : context.TypeResolver.Resolve(baseType!, ResolveTargetKind.TypeReference)) },
                                                                   fieldList: {firstFieldHandle ?? ApiDriverConstants.FieldDefinitionTableNextAvailableEntry},
                                                                   methodList: {typeRecord.FirstMethodHandle ?? ApiDriverConstants.MethodDefinitionTableNextAvailableEntry});
                                  """));
@@ -111,7 +111,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
             
             foreach(var itf in interfaces)
             {
-                context.Generate($"metadata.AddInterfaceImplementation({typeRecord.TypeDefinitionVariable}, {context.TypeResolver.ResolveAny(itf, ResolveTargetKind.TypeReference)});");
+                context.Generate($"metadata.AddInterfaceImplementation({typeRecord.TypeDefinitionVariable}, {context.TypeResolver.Resolve(itf, ResolveTargetKind.TypeReference)});");
                 context.WriteNewLine();
             }
 
@@ -150,7 +150,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
             foreach (var constraint in typeParameterSymbol.ConstraintTypes)
             {
                 ctx.WriteNewLine();
-                var resolvedType = ctx.TypeResolver.ResolveAny(constraint, ResolveTargetKind.GenericTypeParameterConstraint);
+                var resolvedType = ctx.TypeResolver.Resolve(constraint, ResolveTargetKind.GenericTypeParameterConstraint);
                 ctx.Generate(Format($"metadata.AddGenericParameterConstraint({typeParameterVarName}, {resolvedType});"));
             }
 
@@ -362,7 +362,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
 
     public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext definitionContext, ISymbol fieldOrEvent, ITypeSymbol fieldType, string fieldAttributes, bool isVolatile, bool isByRef, in FieldInitializationData initializer = default)
     {
-        var resolvedType = context.TypeResolver.ResolveAny(fieldType, new TypeResolutionContext(ResolveTargetKind.Field, fieldType.ElementTypeSymbolOf().IsValueType ? TypeResolutionOptions.IsValueType : TypeResolutionOptions.None));
+        var resolvedType = context.TypeResolver.Resolve(fieldType, new TypeResolutionContext(ResolveTargetKind.Field, fieldType.ElementTypeSymbolOf().IsValueType ? TypeResolutionOptions.IsValueType : TypeResolutionOptions.None));
         return Field(context, definitionContext, fieldOrEvent.ContainingType.ToDisplayString(), resolvedType,  fieldAttributes, isVolatile, isByRef, initializer);
     }
 

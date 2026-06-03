@@ -54,7 +54,7 @@ namespace Cecilifier.Core.AST
 
         protected void AddCilInstruction(string ilVar, OpCode opCode, ITypeSymbol type)
         {
-            var operand = Context.TypeResolver.ResolveAny(type, new TypeResolutionContext(ResolveTargetKind.Instruction, type.IsValueType ? TypeResolutionOptions.IsValueType : TypeResolutionOptions.None));
+            var operand = Context.TypeResolver.Resolve(type, new TypeResolutionContext(ResolveTargetKind.Instruction, type.IsValueType ? TypeResolutionOptions.IsValueType : TypeResolutionOptions.None));
             Context.ApiDriver.WriteCilInstruction(Context, ilVar, opCode, new CilToken(operand.Expression));
         }
 
@@ -89,7 +89,7 @@ namespace Cecilifier.Core.AST
 
             if (type.SpecialType == SpecialType.None && type.IsValueType && type.TypeKind != TypeKind.Pointer || type.SpecialType == SpecialType.System_DateTime)
             {
-                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Initobj, Context.TypeResolver.ResolveAny(type, ResolveTargetKind.Instruction));
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Initobj, Context.TypeResolver.Resolve(type, ResolveTargetKind.Instruction));
                 return;
             }
 
@@ -155,7 +155,7 @@ namespace Cecilifier.Core.AST
             if (type is not ITypeParameterSymbol typeParameterSymbol)
                 return false;
 
-            var resolvedType = Context.TypeResolver.ResolveAny(type, ResolveTargetKind.Instruction);
+            var resolvedType = Context.TypeResolver.Resolve(type, ResolveTargetKind.Instruction);
             
             // in an assignment expression we already have memory allocated to hold the value
             // in this case we don´t need to add a local variable.
@@ -180,7 +180,7 @@ namespace Cecilifier.Core.AST
             else
             {
                 // no variable exists yet (for instance, passing `default(T)` as a parameter) so we add one.
-                var storageVariable = Context.AddLocalVariableToCurrentMethod(type.Name, Context.TypeResolver.ResolveAny(type, ResolveTargetKind.LocalVariable));
+                var storageVariable = Context.AddLocalVariableToCurrentMethod(type.Name, Context.TypeResolver.Resolve(type, ResolveTargetKind.LocalVariable));
                 
                 Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloca_S, storageVariable.VariableName);
                 Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Initobj, resolvedType);
@@ -208,7 +208,7 @@ namespace Cecilifier.Core.AST
                 if (!usageResult.Target.IsVirtual && SymbolEqualityComparer.Default.Equals(usageResult.Target.ContainingType, Context.RoslynTypeSystem.SystemObject))
                 {
                     Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloc, tempLocalName);
-                    Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Box, Context.TypeResolver.ResolveAny(literalType, ResolveTargetKind.Instruction));
+                    Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Box, Context.TypeResolver.Resolve(literalType, ResolveTargetKind.Instruction));
                 }
                 else
                     Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloca_S, tempLocalName.AsLocalVariable());
@@ -300,12 +300,12 @@ namespace Cecilifier.Core.AST
         {
             var typeInfo = Context.GetTypeInfo(expression);
             var type = (typeInfo.Type ?? typeInfo.ConvertedType).EnsureNotNull();
-            return Context.TypeResolver.ResolveAny(type, new TypeResolutionContext(resolveTargetKind, type.IsValueType ? TypeResolutionOptions.IsValueType : TypeResolutionOptions.None));
+            return Context.TypeResolver.Resolve(type, new TypeResolutionContext(resolveTargetKind, type.IsValueType ? TypeResolutionOptions.IsValueType : TypeResolutionOptions.None));
         }
 
         protected ResolvedType ResolveType(TypeSyntax type, ResolveTargetKind resolveTargetKind)
         {
-            var resolvedType = Context.TypeResolver.ResolveAny(ResolveTypeSymbol(type), resolveTargetKind);
+            var resolvedType = Context.TypeResolver.Resolve(ResolveTypeSymbol(type), resolveTargetKind);
             //TODO: Can't this check be moved inside the Resolve() method as the other checks for arrays,
             return type is RefTypeSyntax ? resolvedType.MakeByReferenceType() : resolvedType;
         }
@@ -465,7 +465,7 @@ namespace Cecilifier.Core.AST
                             operand = default;
                         
                         Context.ApiDriver.WriteCilInstruction(Context, ilVar, ordinaryLoad, operand);
-                        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Box, Context.TypeResolver.ResolveAny(loadedType, ResolveTargetKind.Instruction));
+                        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Box, Context.TypeResolver.Resolve(loadedType, ResolveTargetKind.Instruction));
                     }
                     else
                         Context.ApiDriver.WriteCilInstruction(Context, ilVar, loadOpCode, operand);
@@ -476,7 +476,7 @@ namespace Cecilifier.Core.AST
                     // calls to virtual methods on custom value types needs to be constrained (don't know why, but the generated IL for such scenarios does `constrains`).
                     // the only methods that falls into this category are virtual methods on Object (ToString()/Equals()/GetHashCode())
                     if (usageResult.Target is { IsOverride: true } && usageResult.Target.ContainingType.IsNonPrimitiveValueType(Context))
-                        Context.SetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, Context.TypeResolver.ResolveAny(loadedType, ResolveTargetKind.Instruction).Expression);
+                        Context.SetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, Context.TypeResolver.Resolve(loadedType, ResolveTargetKind.Instruction).Expression);
                     return true;
                 }
 
@@ -500,7 +500,7 @@ namespace Cecilifier.Core.AST
                 }
                 
                 Context.ApiDriver.WriteCilInstruction(Context, ilVar, loadOpCode, operand);
-                Context.SetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, Context.TypeResolver.ResolveAny(loadedType, ResolveTargetKind.Instruction).Expression);
+                Context.SetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, Context.TypeResolver.Resolve(loadedType, ResolveTargetKind.Instruction).Expression);
                 return true;
             }
 
@@ -586,7 +586,7 @@ namespace Cecilifier.Core.AST
             if (needsLoadIndirect)
             {
                 var opCode = type.LdindOpCodeFor();
-                Context.ApiDriver.WriteCilInstruction(Context, ilVar, opCode, opCode == OpCodes.Ldobj ? Context.TypeResolver.ResolveAny(type, ResolveTargetKind.Instruction) : null);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, opCode, opCode == OpCodes.Ldobj ? Context.TypeResolver.Resolve(type, ResolveTargetKind.Instruction) : null);
             }
         }
 

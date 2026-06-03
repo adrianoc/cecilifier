@@ -17,12 +17,12 @@ namespace Cecilifier.Core.TypeSystem
                 [SpecialType.System_Void] = typeResolver.ResolvePredefinedType(context.RoslynTypeSystem.SystemVoid, ResolveTargetKind.TypeReference),
                 [SpecialType.System_Object] = typeResolver.ResolvePredefinedType(context.RoslynTypeSystem.SystemObject, ResolveTargetKind.TypeReference),
                 [SpecialType.System_Boolean] = typeResolver.ResolvePredefinedType(context.RoslynTypeSystem.SystemBoolean, ResolveTargetKind.TypeReference),
-                [SpecialType.System_Enum] = typeResolver.ResolveAny(context.RoslynTypeSystem.ForType<System.Enum>(), ResolveTargetKind.TypeReference),
-                [SpecialType.System_ValueType] = typeResolver.ResolveAny(context.RoslynTypeSystem.ForType<System.ValueType>(), ResolveTargetKind.TypeReference),
-                [SpecialType.System_MulticastDelegate] = typeResolver.ResolveAny(context.RoslynTypeSystem.ForType<System.MulticastDelegate>(), ResolveTargetKind.TypeReference),
-                [SpecialType.System_AsyncCallback] = typeResolver.ResolveAny(context.RoslynTypeSystem.ForType<System.AsyncCallback>(), ResolveTargetKind.TypeReference),
-                [SpecialType.System_IAsyncResult] = typeResolver.ResolveAny(context.RoslynTypeSystem.ForType<System.IAsyncResult>(), ResolveTargetKind.TypeReference),
-                [SpecialType.System_Nullable_T] = typeResolver.ResolveAny(context.RoslynTypeSystem.ForType<System.Nullable<int>>().OriginalDefinition, ResolveTargetKind.TypeReference),
+                [SpecialType.System_Enum] = typeResolver.Resolve(context.RoslynTypeSystem.ForType<System.Enum>(), ResolveTargetKind.TypeReference),
+                [SpecialType.System_ValueType] = typeResolver.Resolve(context.RoslynTypeSystem.ForType<System.ValueType>(), ResolveTargetKind.TypeReference),
+                [SpecialType.System_MulticastDelegate] = typeResolver.Resolve(context.RoslynTypeSystem.ForType<System.MulticastDelegate>(), ResolveTargetKind.TypeReference),
+                [SpecialType.System_AsyncCallback] = typeResolver.Resolve(context.RoslynTypeSystem.ForType<System.AsyncCallback>(), ResolveTargetKind.TypeReference),
+                [SpecialType.System_IAsyncResult] = typeResolver.Resolve(context.RoslynTypeSystem.ForType<System.IAsyncResult>(), ResolveTargetKind.TypeReference),
+                [SpecialType.System_Nullable_T] = typeResolver.Resolve(context.RoslynTypeSystem.ForType<System.Nullable<int>>().OriginalDefinition, ResolveTargetKind.TypeReference),
             };
         }
 

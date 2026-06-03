@@ -138,7 +138,7 @@ namespace Cecilifier.Core.AST
 
         private DefinitionVariable DeclareAndInitializeValueTypeLocalVariable()
         {
-            var tempLocal = Context.AddLocalVariableToCurrentMethod("vt", Context.TypeResolver.ResolveAny(ctorInfo.Symbol.ContainingType, ResolveTargetKind.LocalVariable));
+            var tempLocal = Context.AddLocalVariableToCurrentMethod("vt", Context.TypeResolver.Resolve(ctorInfo.Symbol.ContainingType, ResolveTargetKind.LocalVariable));
             using var _ = Context.DefinitionVariables.WithVariable(tempLocal);
             
             switch (ctorInfo.Symbol.ContainingType.SpecialType)
@@ -193,6 +193,6 @@ namespace Cecilifier.Core.AST
             context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Pop);
         }
 
-        private ResolvedType ResolvedStructType(ResolveTargetKind targetKind) =>  Context.TypeResolver.ResolveAny(ctorInfo.Symbol.ContainingType, targetKind);
+        private ResolvedType ResolvedStructType(ResolveTargetKind targetKind) =>  Context.TypeResolver.Resolve(ctorInfo.Symbol.ContainingType, targetKind);
     }
 }

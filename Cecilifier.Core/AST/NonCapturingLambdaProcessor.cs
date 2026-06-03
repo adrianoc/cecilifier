@@ -78,7 +78,7 @@ namespace Cecilifier.Core.AST
                                                             "MethodAttributes.Public | MethodAttributes.Static",
                                                             lambda.ParameterList().Select(ParamSpecFor).ToArray(),
                                                             [],
-                                                            ctx => ctx.TypeResolver.ResolveAny(returnType, ResolveTargetKind.ReturnType),
+                                                            ctx => ctx.TypeResolver.Resolve(returnType, ResolveTargetKind.ReturnType),
                                                             out var methodDefinitionVariable); 
             
             context.Generate(methodExps);
@@ -87,7 +87,7 @@ namespace Cecilifier.Core.AST
             {
                 return new ParameterSpec(
                     parameter.Identifier.Text, 
-                    context.TypeResolver.ResolveAny(namedTypeSymbol.TypeArguments[parameterIndex], ResolveTargetKind.Parameter),
+                    context.TypeResolver.Resolve(namedTypeSymbol.TypeArguments[parameterIndex], ResolveTargetKind.Parameter),
                     RefKind.None,
                     parameter.Default != null ? Constants.ParameterAttributes.Optional : Constants.ParameterAttributes.None,
                     parameter.Accept(DefaultParameterExtractorVisitor.Instance));

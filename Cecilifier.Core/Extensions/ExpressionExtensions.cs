@@ -59,7 +59,7 @@ namespace Cecilifier.Core.Extensions
                 var conversion = context.SemanticModel.GetConversion(expression);
                 if (conversion.IsImplicit && NeedsBoxing(context, expression, typeInfo.Type))
                 {
-                    context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Box, context.TypeResolver.ResolveAny(typeInfo.Type, ResolveTargetKind.TypeReference));
+                    context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Box, context.TypeResolver.Resolve(typeInfo.Type, ResolveTargetKind.TypeReference));
                 }
             }
 

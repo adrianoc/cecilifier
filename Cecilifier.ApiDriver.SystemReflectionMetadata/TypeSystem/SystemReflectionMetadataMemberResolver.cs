@@ -17,7 +17,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
         if (found.IsValid)
             return found.VariableName;
             
-        var containingTypeRefVar= context.TypeResolver.ResolveAny(method.ContainingType, ResolveTargetKind.TypeReference);
+        var containingTypeRefVar= context.TypeResolver.Resolve(method.ContainingType, ResolveTargetKind.TypeReference);
         var methodSignatureBlobVar = context.Naming.SyntheticVariable($"{method.ToValidVariableName()}BlobBuilder", ElementKind.MemberReference);
         var methodRefVar = context.Naming.SyntheticVariable($"{method.ToValidVariableName()}", ElementKind.MemberReference);
         
@@ -31,7 +31,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
                            new BlobEncoder({{methodSignatureBlobVar}}).
                                MethodSignature(isInstanceMethod: {{ isInstanceMethod.ToKeyword() }}).
                                Parameters({{method.Parameters.Length}},
-                                   returnType => returnType.{{context.TypedTypeResolver.ResolveAny(method.ReturnType, method.ToTypeResolutionContext())}},
+                                   returnType => returnType.{{context.TypedTypeResolver.Resolve(method.ReturnType, method.ToTypeResolutionContext())}},
                                    parameters => 
                                    {
                                        {{
@@ -39,7 +39,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
                                                method.OriginalDefinition.Parameters.Select(p => $"""
                                                                                   parameters
                                                                                           .AddParameter()
-                                                                                          .{context.TypedTypeResolver.ResolveAny(p.Type, new TypeResolutionContext(ResolveTargetKind.Parameter, p.Type.IsValueType ? TypeResolutionOptions.IsValueType : TypeResolutionOptions.None))};
+                                                                                          .{context.TypedTypeResolver.Resolve(p.Type, new TypeResolutionContext(ResolveTargetKind.Parameter, p.Type.IsValueType ? TypeResolutionOptions.IsValueType : TypeResolutionOptions.None))};
                                                                               """))}}
                                    });
 
@@ -131,14 +131,14 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
         if (found.IsValid)
             return found.VariableName;
 
-        var resolvedDeclaringType = context.TypeResolver.ResolveAny(field.ContainingType, new TypeResolutionContext(ResolveTargetKind.TypeReference, TypeResolutionOptions.None));
+        var resolvedDeclaringType = context.TypeResolver.Resolve(field.ContainingType, new TypeResolutionContext(ResolveTargetKind.TypeReference, TypeResolutionOptions.None));
 
         var fieldSignatureVarName = context.Naming.SyntheticVariable($"{field.ToValidVariableName()}_Signature", ElementKind.MemberReference);
         var fieldRefVarName = context.Naming.SyntheticVariable(field.Name, ElementKind.Field);
         var typeResolver = (SystemReflectionMetadataTypeResolver) context.TypeResolver;
         context.Generate($"""
                           BlobBuilder {fieldSignatureVarName} = new();
-                          new BlobEncoder({fieldSignatureVarName}).Field().{typeResolver.ResolveAny(field.Type, new TypeResolutionContext(ResolveTargetKind.Field, field.RefKind != RefKind.None ? TypeResolutionOptions.IsByRef : TypeResolutionOptions.None))};
+                          new BlobEncoder({fieldSignatureVarName}).Field().{typeResolver.Resolve(field.Type, new TypeResolutionContext(ResolveTargetKind.Field, field.RefKind != RefKind.None ? TypeResolutionOptions.IsByRef : TypeResolutionOptions.None))};
                           var {fieldRefVarName} = metadata.AddMemberReference({resolvedDeclaringType}, metadata.GetOrAddString("{field.Name}"), metadata.GetOrAddBlob({fieldSignatureVarName}));
                           """);
         

@@ -161,8 +161,8 @@ public class InlineArrayProcessor
                                 context,
                                 openGenericTypeVar.MemberName,
                                 [
-                                    context.TypeResolver.ResolveAny(inlineArrayType, ResolveTargetKind.None), // TBuffer
-                                    context.TypeResolver.ResolveAny(InlineArrayElementTypeFrom(inlineArrayType), ResolveTargetKind.None) // TElement
+                                    context.TypeResolver.Resolve(inlineArrayType, ResolveTargetKind.None), // TBuffer
+                                    context.TypeResolver.Resolve(InlineArrayElementTypeFrom(inlineArrayType), ResolveTargetKind.None) // TElement
                                 ]);
         return varName;
     }

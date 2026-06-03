@@ -10,7 +10,7 @@ namespace Cecilifier.ApiDriver.SystemReflectionMetadata.TypeSystem;
 
 public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContext context) : TypeResolverBase<SystemReflectionMetadataContext>(context)
 {
-    public override ResolvedType Resolve(ITypeSymbol type, in TypeResolutionContext resolutionContext)
+    protected override ResolvedType ResolveFromAssembly(ITypeSymbol type, in TypeResolutionContext resolutionContext)
     {
         var memberRefVar = _context.DefinitionVariables.GetVariable(type.ToDisplayString(), VariableMemberKind.Type, type.ContainingSymbol.ToDisplayString());
         var memberRefVarName = memberRefVar.IsValid 
@@ -66,7 +66,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
         return ResolvedType.FromDetails(
             resolvedTypeDetails
                 .WithTypeEncoder(TypeEncoderFor(in resolutionContext))
-                .WithMethodBuilder($"Type({ResolveAny(type, TypeResolution.DefaultContext)}, isValueType: {type.IsValueType.ToKeyword()})"));
+                .WithMethodBuilder($"Type({Resolve(type, TypeResolution.DefaultContext)}, isValueType: {type.IsValueType.ToKeyword()})"));
     }
 
     public override ResolvedType ApplySpecificSyntax(string variableName, in TypeResolutionContext resolutionContext)
@@ -173,7 +173,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
                                var gti = typeSpecificationSig.GenericInstantiation({{typeReference.Expression}}, {{typeArguments.Length}}, isValueType: {{genericTypeSymbol.IsValueType.ToKeyword()}});    
                                {{
                                    typeArguments.ToImmutableArray().Select(
-                                           targ => $"gti.AddArgument().{context.TypedTypeResolver.ResolveAny(targ, ResolveTargetKind.GenericTypeArgument)};\n")
+                                           targ => $"gti.AddArgument().{context.TypedTypeResolver.Resolve(targ, ResolveTargetKind.GenericTypeArgument)};\n")
                                        .Aggregate("", (acc, s) => acc + s)
                                }}
                                {{genericInstanceTypeVar}} = metadata.AddTypeSpecification(metadata.GetOrAddBlob(typeSpecificationSig.Builder));
@@ -198,7 +198,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
         
         return ResolvedType.FromDetails(
                     details.WithTypeEncoder(TypeEncoderForArrayElement(in resolutionContext))
-                        .WithMethodBuilder($"{methodBuilderByKind}.{ResolveAny(elementType, new TypeResolutionContext(ResolveTargetKind.ArrayElementType, resolutionContext.Options))}"));
+                        .WithMethodBuilder($"{methodBuilderByKind}.{Resolve(elementType, new TypeResolutionContext(ResolveTargetKind.ArrayElementType, resolutionContext.Options))}"));
     }
 
     protected override ResolvedType MakePointerType(ITypeSymbol pointerType, in TypeResolutionContext resolutionContext)
@@ -251,7 +251,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
                         var gi = typeSignatureEncoder.GenericInstantiation({{typeReference.Expression}}, {{typeArguments.Length}}, isValueType: {{genericTypeSymbol.IsValueType.ToKeyword()}});
                         {{
                             typeArguments.ToImmutableArray().Select(
-                                    targ => $"gi.AddArgument().{context.TypedTypeResolver.ResolveAny(targ, ResolveTargetKind.GenericTypeArgument)};\n    ")
+                                    targ => $"gi.AddArgument().{context.TypedTypeResolver.Resolve(targ, ResolveTargetKind.GenericTypeArgument)};\n    ")
                                 .Aggregate("", (acc, s) => acc + s)
                         }}
                     })

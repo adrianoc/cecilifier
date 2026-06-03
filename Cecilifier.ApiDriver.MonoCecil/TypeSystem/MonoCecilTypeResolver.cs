@@ -9,7 +9,7 @@ namespace Cecilifier.ApiDriver.MonoCecil.TypeSystem;
 
 public class MonoCecilTypeResolver(MonoCecilContext context) : TypeResolverBase<MonoCecilContext>(context)
 {
-    public override ResolvedType Resolve(ITypeSymbol type, in TypeResolutionContext resolutionContext)
+    protected override ResolvedType ResolveFromAssembly(ITypeSymbol type, in TypeResolutionContext resolutionContext)
     {
         if (type.ContainingType != null)
             return Utils.ImportFromMainModule($"typeof({$"""{type.ToDisplayString()}"""})");
@@ -31,8 +31,8 @@ public class MonoCecilTypeResolver(MonoCecilContext context) : TypeResolverBase<
     }
 
     public override ResolvedType ResolvePredefinedType(ITypeSymbol type, in TypeResolutionContext resolutionContext) => $"assembly.MainModule.TypeSystem.{type.Name}";
-    public override ResolvedType MakeArrayType(ITypeSymbol elementType, in TypeResolutionContext resolutionContext) => ResolveAny(elementType, in resolutionContext) + ".MakeArrayType()";
-    protected override ResolvedType MakePointerType(ITypeSymbol pointerType, in TypeResolutionContext resolutionContext) => ResolveAny(pointerType, in resolutionContext) + ".MakePointerType()";
+    public override ResolvedType MakeArrayType(ITypeSymbol elementType, in TypeResolutionContext resolutionContext) => Resolve(elementType, in resolutionContext) + ".MakeArrayType()";
+    protected override ResolvedType MakePointerType(ITypeSymbol pointerType, in TypeResolutionContext resolutionContext) => Resolve(pointerType, in resolutionContext) + ".MakePointerType()";
 
     protected override ResolvedType MakeFunctionPointerType(IFunctionPointerTypeSymbol functionPointer, in TypeResolutionContext resolutionContext)
     {
@@ -45,7 +45,7 @@ public class MonoCecilTypeResolver(MonoCecilContext context) : TypeResolverBase<
         var resolutionContextTypeParameterProviderVar = resolutionContext.TypeParameterProviderVar;
         var typeArgs = CollectTypeArguments(genericTypeSymbol, ref g)
                                                         .ToImmutableArray()
-                                                        .Select(t => _context.TypeResolver.ResolveAny(t, ResolveTargetKind.TypeReference.ToTypeResolutionContext(resolutionContextTypeParameterProviderVar)))
+                                                        .Select(t => _context.TypeResolver.Resolve(t, ResolveTargetKind.TypeReference.ToTypeResolutionContext(resolutionContextTypeParameterProviderVar)))
                                                         .ToImmutableArray();
         
         return typeArgs.Length > 0 ? typeReference.MakeGenericInstanceType(typeArgs) : typeReference;

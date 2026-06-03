@@ -20,7 +20,7 @@ namespace Cecilifier.Core.TypeSystem
         public Bcl Bcl { get; }
 
         // Resolvers for api drivers that need to generate different code based on the target can override this method.
-        public virtual ResolvedType ResolveAny(ITypeSymbol type, in TypeResolutionContext resolutionContext)
+        public virtual ResolvedType Resolve(ITypeSymbol type, in TypeResolutionContext resolutionContext)
         {
             var resolvedType = ResolveLocalVariableType(type, in resolutionContext);
             if (resolvedType)
@@ -42,11 +42,10 @@ namespace Cecilifier.Core.TypeSystem
             if (resolvedType)
                 return resolvedType;
                 
-            return Resolve(type, in resolutionContext);
+            return ResolveFromAssembly(type, in resolutionContext);
         }
 
         public virtual ResolvedType ApplySpecificSyntax(string variableName, in TypeResolutionContext resolutionContext) => variableName;
-        public abstract ResolvedType Resolve(ITypeSymbol type, in TypeResolutionContext resolutionContext);
         public abstract ResolvedType ResolvePredefinedType(ITypeSymbol type, in TypeResolutionContext resolutionContext);
         public abstract ResolvedType MakeArrayType(ITypeSymbol elementType, in TypeResolutionContext resolutionContext);
         protected abstract ResolvedType MakePointerType(ITypeSymbol pointerType, in TypeResolutionContext resolutionContext);
@@ -76,7 +75,7 @@ namespace Cecilifier.Core.TypeSystem
             {
                 // collects the type arguments for all types in the parent chain. 
                 var typeArguments = nestedType.GetAllTypeArguments().ToArray();
-                var resolveNestedType = new ResolvedType($"""TypeHelpers.NewRawNestedTypeReference("{type.Name}", module: assembly.MainModule, {ResolveAny(type.ContainingType.OriginalDefinition, in resolutionContext)}, isValueType: {type.IsValueType.ToKeyword()}, {typeArguments.Length})""");
+                var resolveNestedType = new ResolvedType($"""TypeHelpers.NewRawNestedTypeReference("{type.Name}", module: assembly.MainModule, {Resolve(type.ContainingType.OriginalDefinition, in resolutionContext)}, isValueType: {type.IsValueType.ToKeyword()}, {typeArguments.Length})""");
             
                 // if type is a generic type definition we return the open, resolved type
                 // otherwise this method is expected to return a 'GenericInstanceType'.
@@ -89,7 +88,7 @@ namespace Cecilifier.Core.TypeSystem
                 // and the parent's type generic parameters are added to nested types) 
                 return type.IsDefinition 
                     ? resolveNestedType 
-                    : resolveNestedType.MakeGenericInstanceType(typeArguments.Select(t => _context.TypeResolver.ResolveAny(t, new TypeResolutionContext(ResolveTargetKind.None, TypeResolutionOptions.None))).ToArray());
+                    : resolveNestedType.MakeGenericInstanceType(typeArguments.Select(t => _context.TypeResolver.Resolve(t, new TypeResolutionContext(ResolveTargetKind.None, TypeResolutionOptions.None))).ToArray());
             }
 
             return null;
@@ -122,6 +121,7 @@ namespace Cecilifier.Core.TypeSystem
                 || type.SpecialType == SpecialType.System_MulticastDelegate
                 || type.SpecialType == SpecialType.System_AsyncCallback
                 || type.SpecialType == SpecialType.System_RuntimeTypeHandle
+                || type.SpecialType == SpecialType.System_Runtime_CompilerServices_IsVolatile
                 || type.TypeKind == TypeKind.Interface)
             {
                 return null;
@@ -160,7 +160,7 @@ namespace Cecilifier.Core.TypeSystem
                 return null;
             }
 
-            var genericType = Resolve(genericTypeSymbol.ConstructedFrom,  in resolutionContext);
+            var genericType = ResolveFromAssembly(genericTypeSymbol.ConstructedFrom,  in resolutionContext);
             return genericTypeSymbol.IsDefinition 
                 ? genericType
                 : MakeGenericInstanceType(genericType, genericTypeSymbol, in resolutionContext);
@@ -184,5 +184,6 @@ namespace Cecilifier.Core.TypeSystem
         }
 
         public abstract ResolvedType MakeGenericInstanceType(ResolvedType typeReference, INamedTypeSymbol genericTypeSymbol, in TypeResolutionContext resolutionContext);
+        protected abstract ResolvedType ResolveFromAssembly(ITypeSymbol type, in TypeResolutionContext resolutionContext);
     }
 }

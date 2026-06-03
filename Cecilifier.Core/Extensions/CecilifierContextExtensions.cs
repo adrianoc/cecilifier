@@ -47,7 +47,7 @@ public static class CecilifierContextExtensions
         else if (operation is IConversionOperation { Operand.Type: not null } conversion2 && context.SemanticModel.Compilation.ClassifyConversion(conversion2.Operand.Type, operation.Type).IsBoxing)
         {
             var resolutionContext = new TypeResolutionContext(ResolveTargetKind.Instruction, conversion2.Operand.Type.IsValueType ? TypeResolutionOptions.IsValueType : TypeResolutionOptions.None);
-            context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Box, context.TypeResolver.ResolveAny(conversion2.Operand.Type, resolutionContext).AsToken());
+            context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Box, context.TypeResolver.Resolve(conversion2.Operand.Type, resolutionContext).AsToken());
         }
         else if (operation is IConversionOperation { Conversion.IsNullable: true } nullableConversion && !nullableConversion.Syntax.IsKind(SyntaxKind.CoalesceExpression))
         {
@@ -178,7 +178,7 @@ public static class CecilifierContextExtensions
                 : context.Naming.MethodDeclaration((BaseMethodDeclarationSyntax) method.DeclaringSyntaxReferences.SingleOrDefault()?.GetSyntax());
         }
 
-        var resolvedReturnType = context.TypeResolver.ResolveAny(method.ReturnType, ResolveTargetKind.ReturnType);
+        var resolvedReturnType = context.TypeResolver.Resolve(method.ReturnType, ResolveTargetKind.ReturnType);
         var exps = context.ApiDefinitionsFactory.Method(
                                                                     context, 
                                                                     new BodiedMemberDefinitionContext(methodName, methodNameForVariableRegistration,methodDeclarationVar, null, MemberOptions.None, IlContext.None), 

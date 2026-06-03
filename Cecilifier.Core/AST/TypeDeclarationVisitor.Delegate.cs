@@ -88,7 +88,7 @@ internal partial class TypeDeclarationVisitor
                                                                         Constants.Cecil.DelegateMethodAttributes,
                                                                         [new ParameterSpec("ar", Context.TypeResolver.Bcl.System.IAsyncResult, RefKind.None, Constants.ParameterAttributes.None)],
                                                                         [],
-                                                                        ctx => ctx.TypeResolver.ResolveAny(Context.GetTypeInfo(node.ReturnType).Type, ResolveTargetKind.ReturnType),
+                                                                        ctx => ctx.TypeResolver.Resolve(Context.GetTypeInfo(node.ReturnType).Type, ResolveTargetKind.ReturnType),
                                                                         out var _);
 
             endInvokeExps = endInvokeExps.Concat([$"{endInvokeMethodVar}.HasThis = true;", $"{endInvokeMethodVar}.IsRuntime = true;"]);

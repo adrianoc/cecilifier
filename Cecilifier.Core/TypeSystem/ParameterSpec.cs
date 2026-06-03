@@ -15,7 +15,7 @@ public record ParameterSpec(string Name, ResolvedType ElementType, RefKind RefKi
 
 public record ParameterSymbolParameterSpec(IParameterSymbol Parameter, IVisitorContext Context) : ParameterSpec(Parameter.Name, string.Empty, Parameter.RefKind, Constants.ParameterAttributes.None)
 {
-    public override ResolvedType ElementType => Context.TypeResolver.ResolveAny(Parameter.Type, ResolveTargetKind.Parameter);
+    public override ResolvedType ElementType => Context.TypeResolver.Resolve(Parameter.Type, ResolveTargetKind.Parameter);
 
     public override string? ParamsAttributeName  => Parameter.ParamsAttributeMatchingType(); 
 }

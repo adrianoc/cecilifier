@@ -46,7 +46,7 @@ public class PrimaryConstructorGenerator
         var propDefVar = context.Naming.SyntheticVariable(parameter.Identifier.Text, ElementKind.Property);
         var paramSymbol = context.SemanticModel.GetDeclaredSymbol(parameter).EnsureNotNull<ISymbol, IParameterSymbol>();
         var definitionContext = new BodiedMemberDefinitionContext(parameter.Identifier.Text, propDefVar, declaringTypeVariable.VariableName, MemberOptions.None, IlContext.None);
-        var exps = context.ApiDefinitionsFactory.Property(context, definitionContext, declaringTypeVariable.MemberName, [], context.TypeResolver.ResolveAny(paramSymbol.Type, ResolveTargetKind.None));
+        var exps = context.ApiDefinitionsFactory.Property(context, definitionContext, declaringTypeVariable.MemberName, [], context.TypeResolver.Resolve(paramSymbol.Type, ResolveTargetKind.None));
         
         context.Generate(exps);
         context.Generate($"{typeDefinitionVariable}.Properties.Add({propDefVar});");
@@ -67,7 +67,7 @@ public class PrimaryConstructorGenerator
                                         ["set"] = publicPropertyMethodAttributes
                                     },
                                     false,
-                                    resolveTargetKind => context.TypeResolver.ResolveAny(propertyType, resolveTargetKind),
+                                    resolveTargetKind => context.TypeResolver.Resolve(propertyType, resolveTargetKind),
                                     propertyType.ToDisplayString(),
                                     [],
                                     "FieldAttributes.Private",
@@ -136,7 +136,7 @@ public class PrimaryConstructorGenerator
         var ctorExps = context.ApiDefinitionsFactory.MethodBody(context, $"ctor_{typeDeclaration.Identifier.ValueText}", ilContext, [], []);
         context.Generate(ctorExps);
 
-        var resolvedType = context.TypeResolver.ResolveAny(typeSymbol, ResolveTargetKind.TypeReference);
+        var resolvedType = context.TypeResolver.Resolve(typeSymbol, ResolveTargetKind.TypeReference);
         Func<string, string> fieldRefResolver = backingFieldVar => typeDeclaration.TypeParameterList?.Parameters.Count > 0 
             ? $"new FieldReference({backingFieldVar}.Name, {backingFieldVar}.FieldType, {resolvedType})" 
             : backingFieldVar;
@@ -146,7 +146,7 @@ public class PrimaryConstructorGenerator
         {
             context.WriteComment($"Parameter: {parameter.Identifier}");
             var paramVar = context.Naming.Parameter(parameter);
-            var parameterType = context.TypeResolver.ResolveAny(ModelExtensions.GetTypeInfo(context.SemanticModel, parameter.Type!).Type, ResolveTargetKind.Parameter);
+            var parameterType = context.TypeResolver.Resolve(ModelExtensions.GetTypeInfo(context.SemanticModel, parameter.Type!).Type, ResolveTargetKind.Parameter);
             var paramExps = CecilDefinitionsFactory.Parameter(parameter.Identifier.ValueText, RefKind.None, null, ctorVar, paramVar, parameterType, Constants.ParameterAttributes.None, ("", false));
             context.Generate(paramExps);
 

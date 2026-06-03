@@ -40,7 +40,7 @@ namespace Cecilifier.Core.AST
 
             eventDeclaringTypeVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Type);
 
-            var eventType = Context.TypeResolver.ResolveAny(eventSymbol.Type, ResolveTargetKind.None);
+            var eventType = Context.TypeResolver.Resolve(eventSymbol.Type, ResolveTargetKind.None);
             var eventAccessorsDefVarMapping = new Dictionary<string, string>();
             foreach (var acc in node.AccessorList.Accessors)
             {
@@ -132,7 +132,7 @@ namespace Cecilifier.Core.AST
                                                                                 accessorModifiers, 
                                                                                 [ new ParameterSpec("value", eventType, RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = eventSymbol.Type.ToDisplayString() }],
                                                                                 [], 
-                                                                                ctx => ctx.TypeResolver.ResolveAny(Context.RoslynTypeSystem.SystemVoid, ResolveTargetKind.ReturnType),  
+                                                                                ctx => ctx.TypeResolver.Resolve(Context.RoslynTypeSystem.SystemVoid, ResolveTargetKind.ReturnType),  
                                                                                 out var eventAccessorMethodVar);
 
             AddCecilExpressions(Context, methodExps.Concat(methodBodyExpressions));
@@ -172,7 +172,7 @@ namespace Cecilifier.Core.AST
                 OpCodes.Ldloc_1,
                 OpCodes.Ldarg.WithOperand(isStatic ? "0" : "1"),
                 OpCodes.Call.WithOperand(removeMethod.AsToken()),
-                OpCodes.Castclass.WithOperand(Context.TypeResolver.ResolveAny(eventSymbol.Type, ResolveTargetKind.Instruction).Expression.AsToken()),
+                OpCodes.Castclass.WithOperand(Context.TypeResolver.Resolve(eventSymbol.Type, ResolveTargetKind.Instruction).Expression.AsToken()),
                 OpCodes.Stloc_2,
                 lgarg_0,
                 ldflda.WithOperand(fieldVar.AsToken()),
@@ -213,7 +213,7 @@ namespace Cecilifier.Core.AST
                 OpCodes.Ldloc_1,
                 OpCodes.Ldarg.WithOperand(isStatic ? "0" : "1"),
                 OpCodes.Call.WithOperand(combineMethod.AsToken()),
-                OpCodes.Castclass.WithOperand(Context.TypeResolver.ResolveAny(eventSymbol.Type, ResolveTargetKind.Instruction).Expression.AsToken()),
+                OpCodes.Castclass.WithOperand(Context.TypeResolver.Resolve(eventSymbol.Type, ResolveTargetKind.Instruction).Expression.AsToken()),
                 OpCodes.Stloc_2,
                 lgarg_0,
                 ldflda.WithOperand(fieldVar.AsToken()),

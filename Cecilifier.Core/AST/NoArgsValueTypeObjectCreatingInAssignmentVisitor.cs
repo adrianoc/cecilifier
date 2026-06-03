@@ -32,7 +32,7 @@ namespace Cecilifier.Core.AST
             {
                 var tempVar = tempValueTypeDeclarer();
                 Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloc, tempVar.VariableName);
-                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Stobj, Context.TypeResolver.ResolveAny(elementType, ResolveTargetKind.Instruction));
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Stobj, Context.TypeResolver.Resolve(elementType, ResolveTargetKind.Instruction));
                 return;
             }
             

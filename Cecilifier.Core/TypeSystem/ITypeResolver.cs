@@ -6,10 +6,9 @@ namespace Cecilifier.Core.TypeSystem;
 
 public interface ITypeResolver
 {
-    ResolvedType ResolveAny(ITypeSymbol type, in TypeResolutionContext resolutionContext);
+    ResolvedType Resolve(ITypeSymbol type, in TypeResolutionContext resolutionContext);
     ResolvedType ResolvePredefinedType(ITypeSymbol type, in TypeResolutionContext resolutionContext);
     ResolvedType ResolveLocalVariableType(ITypeSymbol type, in TypeResolutionContext context);
-    ResolvedType Resolve(ITypeSymbol type, in TypeResolutionContext resolutionContext);
     
     /// <summary>
     /// Some Api drivers may use different syntaxes depending on the usage (i.e. when being used to declare

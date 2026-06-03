@@ -63,7 +63,7 @@ internal class PropertyGenerator
                                             property.AccessorModifiers["set"], 
                                             completeParamList, 
                                             typeParameters,
-                                            ctx => ctx.TypeResolver.ResolveAny(Context.RoslynTypeSystem.SystemVoid, ResolveTargetKind.ReturnType),
+                                            ctx => ctx.TypeResolver.Resolve(Context.RoslynTypeSystem.SystemVoid, ResolveTargetKind.ReturnType),
                                             out var methodDefinitionVariable);
 
         var methodVariableScope = Context.DefinitionVariables.WithCurrentMethod(methodDefinitionVariable);
