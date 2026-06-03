@@ -31,7 +31,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
                            """);
         _context.WriteNewLine();
 
-        if (resolutionContext.TargetKind is ResolveTargetKind.TypeReference || type is INamedTypeSymbol { IsGenericType: true })
+        if (resolutionContext.TargetKind is ResolveTargetKind.TypeReference or ResolveTargetKind.GenericTypeParameterConstraint || type is INamedTypeSymbol { IsGenericType: true })
             return memberRefVarName;
         
         return ApplySpecificSyntax(memberRefVarName, in resolutionContext);
@@ -103,19 +103,32 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
     public override ResolvedType ResolveLocalVariableType(ITypeSymbol type, in TypeResolutionContext context)
     {
         var resolved = base.ResolveLocalVariableType(type, in context);
+        if (!resolved)
+            return resolved;
 
-        if (resolved && context.TargetKind == ResolveTargetKind.Instruction)
+        if (context.TargetKind == ResolveTargetKind.Instruction)
         {
             return new ResolvedType($"MetadataTokens.GetToken({resolved})");
         }
+
+        if (type.TypeKind == TypeKind.TypeParameter && context.TargetKind == ResolveTargetKind.GenericTypeParameterConstraint)
+        {
+            var typeParameterBlobEncoderVar = _context.Naming.SyntheticVariable(type.Name, ElementKind.GenericParameter);
+            var typeParameterTypeSpecificationVar = _context.Naming.SyntheticVariable(type.Name, ElementKind.GenericParameter);
+            
+            _context.Generate($"var {typeParameterBlobEncoderVar} = new BlobEncoder(new BlobBuilder());");
+            _context.Generate($"{typeParameterBlobEncoderVar}.TypeSpecificationSignature().GenericTypeParameter({resolved});");
+            _context.Generate($"TypeSpecificationHandle {typeParameterTypeSpecificationVar} = metadata.AddTypeSpecification(metadata.GetOrAddBlob({typeParameterBlobEncoderVar}.Builder));");
+            return new ResolvedType(typeParameterTypeSpecificationVar);
+        }
         
-        if (resolved && context.TargetKind != ResolveTargetKind.TypeReference && ((context.TargetKind != ResolveTargetKind.Field && context.TargetKind != ResolveTargetKind.ReturnType && context.TargetKind != ResolveTargetKind.LocalVariable) || type is not INamedTypeSymbol { IsGenericType: true }))
+        if (context.TargetKind != ResolveTargetKind.TypeReference && ((context.TargetKind != ResolveTargetKind.Field && context.TargetKind != ResolveTargetKind.ReturnType && context.TargetKind != ResolveTargetKind.LocalVariable) || type is not INamedTypeSymbol { IsGenericType: true }))
         {
             var methodBuilder = context.TargetKind == ResolveTargetKind.GenericTypeArgument || type.TypeKind == TypeKind.TypeParameter
                 ? $"GenericTypeParameter({resolved.Expression})" 
                 : $"Type({resolved.Expression}, isValueType: {context.Options.HasFlag(TypeResolutionOptions.IsValueType).ToKeyword()})";
 
-            if ((context.TargetKind is ResolveTargetKind.Field or ResolveTargetKind.Parameter) && type is INamedTypeSymbol { IsGenericType: true })
+            if (context.TargetKind is ResolveTargetKind.GenericTypeParameterConstraint || (context.TargetKind is ResolveTargetKind.Field or ResolveTargetKind.Parameter && type is INamedTypeSymbol { IsGenericType: true }))
             {
                 methodBuilder = resolved.Expression;
             }
@@ -126,6 +139,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
                     .WithMethodBuilder(methodBuilder));
 
         }
+        
         return resolved;
     }
 
@@ -139,14 +153,15 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
 
         if (resolutionContext.TargetKind is ResolveTargetKind.Field or ResolveTargetKind.Parameter or ResolveTargetKind.ReturnType or ResolveTargetKind.LocalVariable)
         {
-            var resolved = MakeGenericInstanceTypeForFieldDeclaration(typeReference, genericTypeSymbol, typeArguments);
-            if (resolved && resolutionContext.TargetKind is ResolveTargetKind.ReturnType or ResolveTargetKind.Field or  ResolveTargetKind.LocalVariable)
+            var resolved = MakeGenericInstanceType(typeReference, genericTypeSymbol, typeArguments);
+            if (resolved && resolutionContext.TargetKind is ResolveTargetKind.ReturnType or ResolveTargetKind.Field or ResolveTargetKind.LocalVariable)
             {
                 return ResolvedType.FromDetails(
                     new ResolvedTypeDetails()
                         .WithTypeEncoder(TypeEncoderFor(in resolutionContext))
                         .WithMethodBuilder(resolved.Expression));
             }
+
             return resolved;
         }
         
@@ -154,15 +169,14 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
         context.Generate($$"""
                            TypeSpecificationHandle {{genericInstanceTypeVar}} = default;
                            {
-                               var be = new BlobEncoder(new BlobBuilder());
-                               var typeSpecificationSig = be.TypeSpecificationSignature();
+                               var typeSpecificationSig = new BlobEncoder(new BlobBuilder()).TypeSpecificationSignature();
                                var gti = typeSpecificationSig.GenericInstantiation({{typeReference.Expression}}, {{typeArguments.Length}}, isValueType: {{genericTypeSymbol.IsValueType.ToKeyword()}});    
                                {{
                                    typeArguments.ToImmutableArray().Select(
                                            targ => $"gti.AddArgument().{context.TypedTypeResolver.ResolveAny(targ, ResolveTargetKind.GenericTypeArgument)};\n")
                                        .Aggregate("", (acc, s) => acc + s)
                                }}
-                               {{genericInstanceTypeVar}} = metadata.AddTypeSpecification(metadata.GetOrAddBlob(be.Builder));
+                               {{genericInstanceTypeVar}} = metadata.AddTypeSpecification(metadata.GetOrAddBlob(typeSpecificationSig.Builder));
                            }
                            """);
         context.WriteNewLine();
@@ -207,6 +221,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
         {
             ResolveTargetKind.None => "",
             ResolveTargetKind.GenericTypeArgument => "",
+            ResolveTargetKind.GenericTypeParameterConstraint => "",
             ResolveTargetKind.ArrayElementType => "",
             ResolveTargetKind.AttributeNamedArgument or ResolveTargetKind.AttributeArgument => "ScalarType()%",
             _ => $"Type(isByRef: {isByRef})%",
@@ -228,8 +243,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
         };
     }
     
-    //TODO: Method name is misleading. It is being also used for parameters/return types. What is the common thing about those
-    private ResolvedType MakeGenericInstanceTypeForFieldDeclaration(ResolvedType typeReference, INamedTypeSymbol genericTypeSymbol, ReadOnlySpan<ITypeSymbol> typeArguments)
+    private ResolvedType MakeGenericInstanceType(ResolvedType typeReference, INamedTypeSymbol genericTypeSymbol, ReadOnlySpan<ITypeSymbol> typeArguments)
     {
         var ret = $$"""
                     WithSignatureTypeEncoder(typeSignatureEncoder =>

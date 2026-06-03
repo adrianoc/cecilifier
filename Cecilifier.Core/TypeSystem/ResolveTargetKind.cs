@@ -13,5 +13,6 @@ public enum ResolveTargetKind
     TypeReference,
     AttributeNamedArgument,
     AttributeArgument,
-    GenericTypeArgument
+    GenericTypeArgument,
+    GenericTypeParameterConstraint
 }

@@ -14,7 +14,9 @@ namespace Cecilifier.Core.Tests.Integration
         nameof(TestSimplestGenericTypeDefinition), 
         nameof(TestGenericTypesAsMembers),
         nameof(TestGenericTypeInstantiation),
-        nameof(TestGenericTypesInheritance), 
+        nameof(TestGenericTypesInheritance),
+        nameof(TestGenericTypeConstraints),
+        nameof(TestGenericTypeUsedAsConstraint),
         IgnoreReason = "Not implemented")]
     public class GenericsTestCase<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
     {
@@ -109,7 +111,7 @@ namespace Cecilifier.Core.Tests.Integration
         [Test]
         public void TestGenericTypeConstraints()
         {
-            AssertResourceTest(@"Generics/GenericTypeConstraints");
+            AssertResourceTest("Generics/GenericTypeConstraints");
         }
 
         [Test]
