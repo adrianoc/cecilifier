@@ -9,6 +9,24 @@ namespace Cecilifier.ApiDriver.MonoCecil.TypeSystem;
 
 public class MonoCecilTypeResolver(MonoCecilContext context) : TypeResolverBase<MonoCecilContext>(context)
 {
+    protected override ResolvedType ResolveTypeParameter(ITypeSymbol type, in TypeResolutionContext resolutionContext)
+    {
+        if (type is not ITypeParameterSymbol typeParameterSymbol)
+            return null;
+
+        if (resolutionContext.TypeParameterProviderVar == null)
+            return null;
+            
+        var resolvedType = typeParameterSymbol.ContainingSymbol.Kind switch
+        {
+            SymbolKind.NamedType => $"(({resolutionContext.TypeParameterProviderVar} is MethodReference methodReference) ? ((GenericInstanceType) methodReference.DeclaringType).ElementType : (IGenericParameterProvider) {resolutionContext.TypeParameterProviderVar} ).GenericParameters[{typeParameterSymbol.Ordinal}]",
+            SymbolKind.Method => $"{resolutionContext.TypeParameterProviderVar}.GenericParameters[{typeParameterSymbol.Ordinal}]",
+            _ => null
+        };
+
+        return new ResolvedType(resolvedType);
+    }
+    
     protected override ResolvedType ResolveFromAssembly(ITypeSymbol type, in TypeResolutionContext resolutionContext)
     {
         if (type.ContainingType != null)

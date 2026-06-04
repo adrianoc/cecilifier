@@ -10,6 +10,14 @@ namespace Cecilifier.ApiDriver.SystemReflectionMetadata.TypeSystem;
 
 public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContext context) : TypeResolverBase<SystemReflectionMetadataContext>(context)
 {
+    protected override ResolvedType ResolveTypeParameter(ITypeSymbol type, in TypeResolutionContext resolutionContext)
+    {
+        if (type is not ITypeParameterSymbol typeParameterSymbol)
+            return null;
+
+        return new ResolvedType($"Type(isByRef: false).GenericTypeParameter({typeParameterSymbol.Ordinal})");
+    }
+
     protected override ResolvedType ResolveFromAssembly(ITypeSymbol type, in TypeResolutionContext resolutionContext)
     {
         var memberRefVarName = _context.Naming.SyntheticVariable(type.ToValidVariableName(), ElementKind.MemberReference);

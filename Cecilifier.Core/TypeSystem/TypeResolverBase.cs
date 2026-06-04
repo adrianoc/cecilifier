@@ -50,6 +50,7 @@ namespace Cecilifier.Core.TypeSystem
         public abstract ResolvedType MakeArrayType(ITypeSymbol elementType, in TypeResolutionContext resolutionContext);
         protected abstract ResolvedType MakePointerType(ITypeSymbol pointerType, in TypeResolutionContext resolutionContext);
         protected abstract ResolvedType MakeFunctionPointerType(IFunctionPointerTypeSymbol functionPointer, in TypeResolutionContext resolutionContext);
+        protected abstract ResolvedType ResolveTypeParameter(ITypeSymbol type, in TypeResolutionContext resolutionContext);
        
         public virtual ResolvedType ResolveLocalVariableType(ITypeSymbol type, in TypeResolutionContext context)
         {
@@ -128,24 +129,6 @@ namespace Cecilifier.Core.TypeSystem
             }
 
             return ResolvePredefinedType(type, in resolutionContext);
-        }
-
-        private ResolvedType ResolveTypeParameter(ITypeSymbol type, in TypeResolutionContext resolutionContext)
-        {
-            if (type is not ITypeParameterSymbol typeParameterSymbol)
-                return null;
-
-            if (resolutionContext.TypeParameterProviderVar == null)
-                return null;
-            
-            var resolvedType = typeParameterSymbol.ContainingSymbol.Kind switch
-            {
-                SymbolKind.NamedType => $"(({resolutionContext.TypeParameterProviderVar} is MethodReference methodReference) ? ((GenericInstanceType) methodReference.DeclaringType).ElementType : (IGenericParameterProvider) {resolutionContext.TypeParameterProviderVar} ).GenericParameters[{typeParameterSymbol.Ordinal}]",
-                SymbolKind.Method => $"{resolutionContext.TypeParameterProviderVar}.GenericParameters[{typeParameterSymbol.Ordinal}]",
-                _ => null
-            };
-
-            return new ResolvedType(resolvedType);
         }
         
         private ResolvedType ResolveGenericType(ITypeSymbol type, in TypeResolutionContext resolutionContext)
