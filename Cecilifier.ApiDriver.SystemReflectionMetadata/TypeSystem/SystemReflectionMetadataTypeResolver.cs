@@ -15,7 +15,13 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
         if (type is not ITypeParameterSymbol typeParameterSymbol)
             return null;
 
-        return new ResolvedType($"Type(isByRef: false).GenericTypeParameter({typeParameterSymbol.Ordinal})");
+        return ResolvedType.FromDetails(
+            new ResolvedTypeDetails()
+                    .WithTypeEncoder(TypeEncoderFor(in resolutionContext))
+                    .WithMethodBuilder(
+                        typeParameterSymbol.TypeParameterKind == TypeParameterKind.Type  
+                            ? $"GenericTypeParameter({typeParameterSymbol.Ordinal})"
+                            : $"GenericMethodTypeParameter({typeParameterSymbol.Ordinal})"));
     }
 
     protected override ResolvedType ResolveFromAssembly(ITypeSymbol type, in TypeResolutionContext resolutionContext)

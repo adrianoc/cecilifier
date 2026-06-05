@@ -29,9 +29,9 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
                            var {{methodSignatureBlobVar}} = new BlobBuilder();
 
                            new BlobEncoder({{methodSignatureBlobVar}}).
-                               MethodSignature(isInstanceMethod: {{ isInstanceMethod.ToKeyword() }}).
+                               MethodSignature(isInstanceMethod: {{ isInstanceMethod.ToKeyword() }}, genericParameterCount: {{method.TypeArguments.Length}}).
                                Parameters({{method.Parameters.Length}},
-                                   returnType => returnType.{{context.TypedTypeResolver.Resolve(method.ReturnType, method.ToTypeResolutionContext())}},
+                                   returnType => returnType.{{context.TypedTypeResolver.Resolve(method.OriginalDefinition.ReturnType, method.ToTypeResolutionContext())}},
                                    parameters => 
                                    {
                                        {{
@@ -49,10 +49,25 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
                                                                metadata.GetOrAddString("{{method.MappedName()}}"),
                                                                {{methodSignatureVar}});
                            """);
-        
+
         context.WriteNewLine();
-        
         context.DefinitionVariables.RegisterMethod(toBeFound.WithVariableName(methodRefVar));
+
+        if (method.IsGenericMethod)
+        {
+            var methodSpecificationVar = context.Naming.GenericInstance(method);
+            context.Generate($$"""
+                              MethodSpecificationHandle {{methodSpecificationVar}}; 
+                              {
+                                  var tempMethodSignature = new BlobEncoder(new BlobBuilder()).MethodSpecificationSignature({{method.TypeArguments.Length}});
+                                  {{
+                                      string.Join('\n', method.TypeArguments.Select(typeArgument => $"tempMethodSignature.AddArgument().{context.TypeResolver.Resolve(typeArgument, ResolveTargetKind.GenericTypeArgument.ToTypeResolutionContext())};"))
+                                  }}
+                                  {{methodSpecificationVar}} = metadata.AddMethodSpecification({{methodRefVar}}, metadata.GetOrAddBlob(tempMethodSignature.Builder));
+                              }
+                              """);
+            methodRefVar = methodSpecificationVar;
+        }
         return methodRefVar;
     }
     
