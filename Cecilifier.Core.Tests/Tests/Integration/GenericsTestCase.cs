@@ -21,6 +21,7 @@ namespace Cecilifier.Core.Tests.Integration
         nameof(TestGenericTypeConstraints),
         nameof(TestGenericTypeUsedAsConstraint),
         nameof(TestCoContraVariance),
+        nameof(TestGenericMethodInstanceFromAssembly),
         IgnoreReason = "Not implemented")]
     public class GenericsTestCase<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
     {
