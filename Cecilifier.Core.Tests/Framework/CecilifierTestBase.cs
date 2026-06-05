@@ -21,7 +21,7 @@ public record struct CecilifyResult(string CecilifiedCode, string CecilifiedAsse
 
 public class CecilifierTestBase<TContext> where TContext : IVisitorContext
 {
-    private protected string cecilifiedCode;
+    private string cecilifiedCode;
 
     [SetUp]
     public void Setup()

@@ -11,15 +11,16 @@ namespace Cecilifier.Core.Tests.Integration
     [TestFixture(typeof(SystemReflectionMetadataContext))]
     [EnableForContext<SystemReflectionMetadataContext>(
         nameof(TestGenericOuterAndInnerPermutations), 
-        nameof(TestSimplestGenericTypeDefinition), 
+        nameof(TestInstanceNonGenericMethodsOnGenericTypes),
+        nameof(TestGenericExplicitStaticMethods),
+        nameof(TestGenericInferredStaticMethods),
         nameof(TestGenericTypesAsMembers),
+        nameof(TestSimplestGenericTypeDefinition), 
         nameof(TestGenericTypeInstantiation),
         nameof(TestGenericTypesInheritance),
         nameof(TestGenericTypeConstraints),
         nameof(TestGenericTypeUsedAsConstraint),
         nameof(TestCoContraVariance),
-        nameof(TestInstanceNonGenericMethodsOnGenericTypes),
-        nameof(TestGenericExplicitStaticMethods),
         IgnoreReason = "Not implemented")]
     public class GenericsTestCase<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
     {
