@@ -461,6 +461,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         var variableIndex = TypedContext(context).DelayedDefinitionsManager.RegisterLocalVariable(variableName, resolvedVarType,  (ctx, localVariableEncoderVar, localVarType) =>
         {
             context.Generate($"{localVariableEncoderVar}.AddVariable().{localVarType};");
+            context.WriteNewLine();
         });
 
         // This is a hack. SRM accesses local variables by index, and Cecilifier does not have a way to pass that index around; it only has variable names,

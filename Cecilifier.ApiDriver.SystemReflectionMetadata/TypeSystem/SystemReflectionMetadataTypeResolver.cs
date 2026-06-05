@@ -45,14 +45,6 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
         return ApplySpecificSyntax(memberRefVarName, in resolutionContext);
     }
 
-    private void RegisterVariableIfNeeded(ITypeSymbol type, string variableName, in TypeResolutionContext resolutionContext)
-    {
-        if (!resolutionContext.Options.HasFlag(TypeResolutionOptions.RegisterVariables))
-            return;
-        
-        _context.DefinitionVariables.RegisterNonMethod(type.ContainingSymbol.OriginalDefinition.ToDisplayString(), type.OriginalDefinition.ToDisplayString(), VariableMemberKind.Type, variableName);
-    }
-
     private string GenericRankAnnotation(ITypeSymbol type)
     {
         if (type is INamedTypeSymbol { IsGenericType: true}  namedType)
@@ -96,28 +88,30 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
 
     public override ResolvedType ResolvePredefinedType(ITypeSymbol type, in TypeResolutionContext resolutionContext)
     {
-        if (resolutionContext.TargetKind == ResolveTargetKind.TypeReference)
-        {
-            var mangledTypeVariableName = $"resolved-type$=>{type.ToDisplayString()}";
-            var found = _context.DefinitionVariables.GetVariable(mangledTypeVariableName, VariableMemberKind.Type, type.ContainingAssembly.ToDisplayString());
-            if (found.IsValid)
-                return found.VariableName;
-            
-            var resolvedTypeVariable = _context.Naming.SyntheticVariable(type.Name, ElementKind.MemberReference);
-            _context.DefinitionVariables.RegisterNonMethod(type.ContainingAssembly.ToDisplayString(), mangledTypeVariableName, VariableMemberKind.Type, resolvedTypeVariable);
-            
-            _context.Generate($"""
-                     var {resolvedTypeVariable} = metadata.AddTypeReference({_context.AssemblyResolver.Resolve(_context, _context.RoslynTypeSystem.SystemObject.ContainingAssembly)}, metadata.GetOrAddString("{type.ContainingNamespace.Name}"), metadata.GetOrAddString("{type.Name}"));
-                     """);
-            
-            _context.WriteNewLine();
-            return resolvedTypeVariable;
-        }
-        return ResolveForTargetKind(type, resolutionContext);
+          if (resolutionContext.TargetKind != ResolveTargetKind.TypeReference)
+              return ResolveForTargetKind(type, resolutionContext);
+              
+          var mangledTypeVariableName = $"resolved-type$=>{type.ToDisplayString()}";
+          var found = _context.DefinitionVariables.GetVariable(mangledTypeVariableName, VariableMemberKind.Type, type.ContainingAssembly.ToDisplayString());
+          if (found.IsValid)
+              return found.VariableName;
+              
+          var resolvedTypeVariable = _context.Naming.SyntheticVariable(type.Name, ElementKind.MemberReference);
+          _context.DefinitionVariables.RegisterNonMethod(type.ContainingAssembly.ToDisplayString(), mangledTypeVariableName, VariableMemberKind.Type, resolvedTypeVariable);
+              
+          _context.Generate($"""
+                             var {resolvedTypeVariable} = metadata.AddTypeReference({_context.AssemblyResolver.Resolve(_context, _context.RoslynTypeSystem.SystemObject.ContainingAssembly)}, metadata.GetOrAddString("{type.ContainingNamespace.Name}"), metadata.GetOrAddString("{type.Name}"));
+                             """);
+              
+          _context.WriteNewLine();
+          return resolvedTypeVariable;
     }
 
     public override ResolvedType ResolveLocalVariableType(ITypeSymbol type, in TypeResolutionContext context)
     {
+        if (context.TargetKind == ResolveTargetKind.GenericTypeArgument)
+            return null;
+        
         var resolved = base.ResolveLocalVariableType(type, in context);
         if (!resolved)
             return resolved;
@@ -129,12 +123,17 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
 
         if (type.TypeKind == TypeKind.TypeParameter && context.TargetKind == ResolveTargetKind.GenericTypeParameterConstraint)
         {
+            //TODO: Try to register/lookup a variable for the type parameter type specification to avoid duplication.
             var typeParameterBlobEncoderVar = _context.Naming.SyntheticVariable(type.Name, ElementKind.GenericParameter);
             var typeParameterTypeSpecificationVar = _context.Naming.SyntheticVariable(type.Name, ElementKind.GenericParameter);
             
-            _context.Generate($"var {typeParameterBlobEncoderVar} = new BlobEncoder(new BlobBuilder());");
-            _context.Generate($"{typeParameterBlobEncoderVar}.TypeSpecificationSignature().GenericTypeParameter({resolved});");
-            _context.Generate($"TypeSpecificationHandle {typeParameterTypeSpecificationVar} = metadata.AddTypeSpecification(metadata.GetOrAddBlob({typeParameterBlobEncoderVar}.Builder));");
+            _context.Generate(StringExtensions.Indented($"""
+                                                         var {typeParameterBlobEncoderVar} = new BlobEncoder(new BlobBuilder());
+                                                         {typeParameterBlobEncoderVar}.TypeSpecificationSignature().GenericTypeParameter({resolved});
+                                                         TypeSpecificationHandle {typeParameterTypeSpecificationVar} = metadata.AddTypeSpecification(metadata.GetOrAddBlob({typeParameterBlobEncoderVar}.Builder));
+                                                         """));
+
+            _context.WriteNewLine();
             return new ResolvedType(typeParameterTypeSpecificationVar);
         }
         
@@ -274,4 +273,12 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
                     """;
         return ret;
     }
+    
+    private void RegisterVariableIfNeeded(ITypeSymbol type, string variableName, in TypeResolutionContext resolutionContext)
+    {
+        if (!resolutionContext.Options.HasFlag(TypeResolutionOptions.RegisterVariables))
+            return;
+        
+        _context.DefinitionVariables.RegisterNonMethod(type.ContainingSymbol.OriginalDefinition.ToDisplayString(), type.OriginalDefinition.ToDisplayString(), VariableMemberKind.Type, variableName);
+    }    
 }

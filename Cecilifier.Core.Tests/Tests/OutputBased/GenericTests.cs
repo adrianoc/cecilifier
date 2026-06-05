@@ -9,7 +9,7 @@ namespace Cecilifier.Core.Tests.OutputBased;
 
 [TestFixture(typeof(MonoCecilContext))]
 [TestFixture(typeof(SystemReflectionMetadataContext))]
-[EnableForContext<SystemReflectionMetadataContext>(IgnoreReason = "Not implemented yet")]
+[EnableForContext<SystemReflectionMetadataContext>(nameof(NonGenericTypedProperty_OnGenericType_Works), IgnoreReason = "Not implemented yet")]
 public class GenericTests<TContext> : OutputBasedTestBase<TContext> where TContext : IVisitorContext
 {
     [Test]
