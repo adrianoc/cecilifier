@@ -13,7 +13,6 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
     public string ResolveMethod(IMethodSymbol method)
     {
         var methodRefVar = context.Naming.SyntheticVariable($"{method.ToValidVariableName()}", ElementKind.MemberReference);
-        
         var toBeFound = method.AsRawMethodDefinitionVariable(VariableMemberKind.MethodReference);
         var found = context.DefinitionVariables.GetMethodVariable(toBeFound);
         if (found.IsValid)
@@ -22,36 +21,42 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
         }
         else
         {
+            var methodSignatureVariableToFind = method.AsMethodDefinitionVariable(VariableMemberKind.MethodSignature);
+
+            var methodSignatureVarName = context.Naming.SyntheticVariable($"{method.Name}Signature", ElementKind.MemberReference);
+            var methodSignatureVar = FindOrRegisterVariable(context, method, methodSignatureVariableToFind, methodSignatureVarName, null!, static (ctx, method, methodSignatureVarName, _) =>
+            {
+                var isInstanceMethod = !method.IsStatic && method.MethodKind != MethodKind.LocalFunction; // local functions are always declared as static (we don't support capturing variables)
+                var methodSignatureBlobVar = ctx.Naming.SyntheticVariable($"{method.ToValidVariableName()}BlobBuilder", ElementKind.MemberReference);
+
+                ctx.Generate($$"""
+                                   var {{methodSignatureBlobVar}} = new BlobBuilder();
+
+                                   new BlobEncoder({{methodSignatureBlobVar}}).
+                                       MethodSignature(isInstanceMethod: {{isInstanceMethod.ToKeyword()}}, genericParameterCount: {{method.TypeArguments.Length}}).
+                                       Parameters({{method.Parameters.Length}},
+                                           returnType => returnType.{{ctx.TypedTypeResolver.Resolve(method.OriginalDefinition.ReturnType, method.ToTypeResolutionContext())}},
+                                           parameters =>
+                                           {
+                                               {{
+                                                   string.Join('\n',
+                                                       method.OriginalDefinition.Parameters.Select(p => $"""
+                                                                                                             parameters
+                                                                                                                     .AddParameter()
+                                                                                                                     .{ctx.TypedTypeResolver.Resolve(p.Type, new TypeResolutionContext(ResolveTargetKind.Parameter, p.Type.IsValueType ? TypeResolutionOptions.IsValueType : TypeResolutionOptions.None))};
+                                                                                                         """))}}
+                                           });
+
+                                   var {{methodSignatureVarName}} = metadata.GetOrAddBlob({{methodSignatureBlobVar}});
+                                   """);
+            });
+
             var containingTypeRefVar = context.TypeResolver.Resolve(method.ContainingType, ResolveTargetKind.TypeReference);
-            var methodSignatureBlobVar = context.Naming.SyntheticVariable($"{method.ToValidVariableName()}BlobBuilder", ElementKind.MemberReference);
-
-            var methodSignatureVar = context.Naming.SyntheticVariable($"{method.Name}Signature", ElementKind.MemberReference);
-            context.DefinitionVariables.RegisterMethod(method.AsMethodDefinitionVariable(VariableMemberKind.MethodSignature, methodSignatureVar));
-
-            var isInstanceMethod = !method.IsStatic && method.MethodKind != MethodKind.LocalFunction; // local functions are always declared as static (we don't support capturing variables)
             context.Generate($$"""
-                               var {{methodSignatureBlobVar}} = new BlobBuilder();
-
-                               new BlobEncoder({{methodSignatureBlobVar}}).
-                                   MethodSignature(isInstanceMethod: {{isInstanceMethod.ToKeyword()}}, genericParameterCount: {{method.TypeArguments.Length}}).
-                                   Parameters({{method.Parameters.Length}},
-                                       returnType => returnType.{{context.TypedTypeResolver.Resolve(method.OriginalDefinition.ReturnType, method.ToTypeResolutionContext())}},
-                                       parameters => 
-                                       {
-                                           {{
-                                               string.Join('\n',
-                                                   method.OriginalDefinition.Parameters.Select(p => $"""
-                                                                                                         parameters
-                                                                                                                 .AddParameter()
-                                                                                                                 .{context.TypedTypeResolver.Resolve(p.Type, new TypeResolutionContext(ResolveTargetKind.Parameter, p.Type.IsValueType ? TypeResolutionOptions.IsValueType : TypeResolutionOptions.None))};
-                                                                                                     """))}}
-                                       });
-
-                               var {{methodSignatureVar}} = metadata.GetOrAddBlob({{methodSignatureBlobVar}});
                                var {{methodRefVar}} = metadata.AddMemberReference(
                                                                    {{containingTypeRefVar}},
                                                                    metadata.GetOrAddString("{{method.MappedName()}}"),
-                                                                   {{methodSignatureVar}});
+                                                                   {{methodSignatureVar.VariableName}});
                                """);
 
             context.WriteNewLine();
@@ -60,22 +65,27 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
 
         if (method.IsGenericMethod)
         {
-            var methodSpecificationVar = context.Naming.GenericInstance(method);
-            context.Generate($$"""
-                              MethodSpecificationHandle {{methodSpecificationVar}}; 
-                              {
-                                  var tempMethodSignature = new BlobEncoder(new BlobBuilder()).MethodSpecificationSignature({{method.TypeArguments.Length}});
-                                  {{
-                                      string.Join('\n', method.TypeArguments.Select(typeArgument => $"tempMethodSignature.AddArgument().{context.TypeResolver.Resolve(typeArgument, ResolveTargetKind.GenericTypeArgument.ToTypeResolutionContext())};"))
-                                  }}
-                                  {{methodSpecificationVar}} = metadata.AddMethodSpecification({{methodRefVar}}, metadata.GetOrAddBlob(tempMethodSignature.Builder));
-                              }
-                              """);
-            methodRefVar = methodSpecificationVar;
+            var tbf = method.AsRawMethodDefinitionVariable(VariableMemberKind.MethodInstantiation);
+            var instantiationVar = FindOrRegisterVariable(context, method, tbf, context.Naming.GenericInstance(method), methodRefVar, static (ctx, method, methodSpecificationVar, openMethodVar) =>
+            {
+                ctx.Generate($$"""
+                                   MethodSpecificationHandle {{methodSpecificationVar}}; 
+                                   {
+                                       var tempMethodSignature = new BlobEncoder(new BlobBuilder()).MethodSpecificationSignature({{method.TypeArguments.Length}});
+                                       {{
+                                           string.Join('\n', method.TypeArguments.Select(typeArgument => $"tempMethodSignature.AddArgument().{ctx.TypeResolver.Resolve(typeArgument, ResolveTargetKind.GenericTypeArgument.ToTypeResolutionContext())};"))
+                                       }}
+                                       {{methodSpecificationVar}} = metadata.AddMethodSpecification({{openMethodVar}}, metadata.GetOrAddBlob(tempMethodSignature.Builder));
+                                   }
+                                   """);
+                ctx.WriteNewLine();
+            });
+            
+            methodRefVar = instantiationVar.VariableName;
         }
         return methodRefVar;
     }
-    
+
     public string ResolveMethod(string declaringTypeName, string declaringTypeVariable, string methodNameForVariableRegistration, ResolvedType returnType, IReadOnlyList<ParameterSpec> parameters, int typeParameterCountCount, MemberOptions options)
     {
         var methodReferenceToFind = new MethodDefinitionVariable(
@@ -84,11 +94,11 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
                                                 methodNameForVariableRegistration,
                                                 parameters.Select(p => p.ElementType.Expression).ToArray(),
                                                 typeParameterCountCount);
-        
+
         var found = context.DefinitionVariables.GetMethodVariable(methodReferenceToFind);
         if (found.IsValid)
             return found.VariableName;
-          
+
         var methodSignatureBlobVar = context.Naming.SyntheticVariable($"{methodNameForVariableRegistration}_blobBuilder", ElementKind.MemberReference);
         var methodSignatureVar = context.Naming.SyntheticVariable($"{methodNameForVariableRegistration}_Signature", ElementKind.MemberReference);
         var methodRefVar = context.Naming.SyntheticVariable($"{methodNameForVariableRegistration}", ElementKind.MemberReference);
@@ -107,7 +117,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
             var modifierVariable = context.TypedTypeResolver.Resolve(context.RoslynTypeSystem.ForType(typeof(IsExternalInit).FullName), ResolveTargetKind.TypeReference);
             requiredModifierOrEmpty = $"returnTypeEncoder.CustomModifiers().AddModifier({modifierVariable}, isOptional: false);";
         }
-        
+
         context.Generate($$"""
                               var {{methodSignatureBlobVar}} = new BlobBuilder();
 
@@ -132,7 +142,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
                                                                   metadata.GetOrAddString("{{methodNameForVariableRegistration}}"),
                                                                   {{methodSignatureVar}});
                               """);
-          
+
           context.WriteNewLine();
           context.DefinitionVariables.RegisterMethod(methodReferenceToFind.WithVariableName(methodRefVar));
 
@@ -144,7 +154,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
         var parameterlessCtor = baseType.GetMembers(".ctor").OfType<IMethodSymbol>().Single(m => m.Parameters.Length == 0);
         return ResolveMethod(parameterlessCtor);
     }
-    
+
     public string ResolveField(IFieldSymbol field)
     {
         var found = context.DefinitionVariables.GetVariable(field.Name, VariableMemberKind.Field, field.ContainingType.ToDisplayString());
@@ -161,11 +171,11 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
                           new BlobEncoder({fieldSignatureVarName}).Field().{typeResolver.Resolve(field.Type, new TypeResolutionContext(ResolveTargetKind.Field, field.RefKind != RefKind.None ? TypeResolutionOptions.IsByRef : TypeResolutionOptions.None))};
                           var {fieldRefVarName} = metadata.AddMemberReference({resolvedDeclaringType}, metadata.GetOrAddString("{field.Name}"), metadata.GetOrAddBlob({fieldSignatureVarName}));
                           """);
-        
+
         context.WriteNewLine();
-        
+
         context.DefinitionVariables.RegisterNonMethod(field.ContainingType.ToDisplayString(), field.Name, VariableMemberKind.Field, fieldRefVarName);
-        
+
         return fieldRefVarName;
     }
 
@@ -173,4 +183,18 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
     {
         throw new NotImplementedException();
     }
+
+    #region Non public members
+    private static DefinitionVariable FindOrRegisterVariable(SystemReflectionMetadataContext context, IMethodSymbol method, MethodDefinitionVariable tbf, string variableNameToRegister, string openMethodVar, Action<SystemReflectionMetadataContext, IMethodSymbol, string, string> action)
+    {
+        var instantiationVar = context.DefinitionVariables.GetMethodVariable(tbf);
+        if (!instantiationVar.IsValid)
+        {
+            action(context, method, variableNameToRegister, openMethodVar);
+            instantiationVar = context.DefinitionVariables.RegisterMethod(tbf.WithVariableName(variableNameToRegister));
+        }
+
+        return instantiationVar;
+    }
+    #endregion
 }
