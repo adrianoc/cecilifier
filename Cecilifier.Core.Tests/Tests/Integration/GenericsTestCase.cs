@@ -12,17 +12,18 @@ namespace Cecilifier.Core.Tests.Integration
     [EnableForContext<SystemReflectionMetadataContext>(
         nameof(TestGenericOuterAndInnerPermutations), 
         nameof(TestInstanceNonGenericMethodsOnGenericTypes),
-        nameof(TestGenericExplicitStaticMethods),
         nameof(TestGenericInferredStaticMethods),
+        nameof(TestGenericExplicitStaticMethods),
+        nameof(TestGenericMethodInstanceFromAssembly),
         nameof(TestGenericTypesAsMembers),
         nameof(TestSimplestGenericTypeDefinition), 
         nameof(TestGenericTypeInstantiation),
         nameof(TestGenericTypesInheritance),
+        nameof(TestGenericMethods),
+        nameof(TestGenericMethodConstraints),
         nameof(TestGenericTypeConstraints),
         nameof(TestGenericTypeUsedAsConstraint),
         nameof(TestCoContraVariance),
-        nameof(TestGenericMethodInstanceFromAssembly),
-        nameof(TestGenericMethods),
         IgnoreReason = "Not implemented")]
     public class GenericsTestCase<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
     {
@@ -103,7 +104,6 @@ namespace Cecilifier.Core.Tests.Integration
 
         [TestCase("GenericMethods")]
         [TestCase("GenericMethodReturningGenericTypeParameter")]
-        [ParameterizedResourceFilter<SystemReflectionMetadataContext>("GenericMethods")]
         public void TestGenericMethods(string testName)
         {
             AssertResourceTest($"Generics/{testName}");
@@ -112,7 +112,7 @@ namespace Cecilifier.Core.Tests.Integration
         [Test]
         public void TestGenericMethodConstraints()
         {
-            AssertResourceTest(@"Generics/GenericMethodConstraints");
+            AssertResourceTest("Generics/GenericMethodConstraints");
         }
 
         [Test]
