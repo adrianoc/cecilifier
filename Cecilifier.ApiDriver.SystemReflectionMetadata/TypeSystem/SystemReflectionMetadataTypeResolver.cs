@@ -17,11 +17,8 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
 
         return ResolvedType.FromDetails(
             new ResolvedTypeDetails()
-                    .WithTypeEncoder(TypeEncoderFor(in resolutionContext))
-                    .WithMethodBuilder(
-                        typeParameterSymbol.TypeParameterKind == TypeParameterKind.Type  
-                            ? $"GenericTypeParameter({typeParameterSymbol.Ordinal})"
-                            : $"GenericMethodTypeParameter({typeParameterSymbol.Ordinal})"));
+                .WithTypeEncoder(TypeEncoderFor(in resolutionContext))
+                .WithMethodBuilder(GenericParameterExpressionFor(typeParameterSymbol)));
     }
 
     protected override ResolvedType ResolveFromAssembly(ITypeSymbol type, in TypeResolutionContext resolutionContext)
@@ -129,7 +126,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
             
             _context.Generate(StringExtensions.Indented($"""
                                                          var {typeParameterBlobEncoderVar} = new BlobEncoder(new BlobBuilder());
-                                                         {typeParameterBlobEncoderVar}.TypeSpecificationSignature().GenericTypeParameter({resolved});
+                                                         {typeParameterBlobEncoderVar}.TypeSpecificationSignature().{GenericParameterExpressionFor((ITypeParameterSymbol) type)};
                                                          TypeSpecificationHandle {typeParameterTypeSpecificationVar} = metadata.AddTypeSpecification(metadata.GetOrAddBlob({typeParameterBlobEncoderVar}.Builder));
                                                          """));
 
@@ -140,7 +137,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
         if (context.TargetKind != ResolveTargetKind.TypeReference && ((context.TargetKind != ResolveTargetKind.Field && context.TargetKind != ResolveTargetKind.ReturnType && context.TargetKind != ResolveTargetKind.LocalVariable) || type is not INamedTypeSymbol { IsGenericType: true }))
         {
             var methodBuilder = context.TargetKind == ResolveTargetKind.GenericTypeArgument || type.TypeKind == TypeKind.TypeParameter
-                ? $"GenericTypeParameter({resolved.Expression})" 
+                ? GenericParameterExpressionFor((ITypeParameterSymbol) type)
                 : $"Type({resolved.Expression}, isValueType: {context.Options.HasFlag(TypeResolutionOptions.IsValueType).ToKeyword()})";
 
             if (context.TargetKind is ResolveTargetKind.GenericTypeParameterConstraint || (context.TargetKind is ResolveTargetKind.Field or ResolveTargetKind.Parameter && type is INamedTypeSymbol { IsGenericType: true }))
@@ -152,7 +149,6 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
                 new ResolvedTypeDetails()
                     .WithTypeEncoder(TypeEncoderFor(in context))
                     .WithMethodBuilder(methodBuilder));
-
         }
         
         return resolved;
@@ -280,5 +276,9 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
             return;
         
         _context.DefinitionVariables.RegisterNonMethod(type.ContainingSymbol.OriginalDefinition.ToDisplayString(), type.OriginalDefinition.ToDisplayString(), VariableMemberKind.Type, variableName);
-    }    
+    }
+    
+    private string GenericParameterExpressionFor(ITypeParameterSymbol typeParameter) => typeParameter.TypeParameterKind == TypeParameterKind.Type
+        ? $"GenericTypeParameter({typeParameter.Ordinal})"
+        : $"GenericMethodTypeParameter({typeParameter.Ordinal})";
 }

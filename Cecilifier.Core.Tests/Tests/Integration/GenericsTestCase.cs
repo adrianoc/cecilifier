@@ -22,6 +22,7 @@ namespace Cecilifier.Core.Tests.Integration
         nameof(TestGenericTypeUsedAsConstraint),
         nameof(TestCoContraVariance),
         nameof(TestGenericMethodInstanceFromAssembly),
+        nameof(TestGenericMethods),
         IgnoreReason = "Not implemented")]
     public class GenericsTestCase<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
     {
@@ -102,6 +103,7 @@ namespace Cecilifier.Core.Tests.Integration
 
         [TestCase("GenericMethods")]
         [TestCase("GenericMethodReturningGenericTypeParameter")]
+        [ParameterizedResourceFilter<SystemReflectionMetadataContext>("GenericMethods")]
         public void TestGenericMethods(string testName)
         {
             AssertResourceTest($"Generics/{testName}");

@@ -48,8 +48,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         
         DefineGenericTypeParametersVariables(context, typeParameters);
         
-        // We need to pass the handle of the 1st field/method defined in the module so we need to postpone the type generation after we have visited
-        // all types/members.
+        // We need to pass the handle of the 1st field/method defined in the module so we need to postpone the type generation after we have visited all types/members.
         TypedContext(context).DelayedDefinitionsManager.RegisterTypeDefinition(typeVar, DefineDelayed);
         void DefineDelayed(SystemReflectionMetadataContext ctx, ref TypeDefinitionRecord typeRecord)
         {
@@ -115,90 +114,10 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                 context.WriteNewLine();
             }
 
-            AddTypeParameters(ctx, outerTypeParameters.Concat(typeParameters), typeRecord);
+            AddTypeParameters(ctx, outerTypeParameters.Concat(typeParameters), typeRecord.TypeDefinitionVariable);
             
             ctx.WriteNewLine();
         }
-        
-        static void DefineGenericTypeParametersVariables(IVisitorContext context, IList<TypeParameterSyntax> typeParamList)
-        {
-            for (int i = 0; i < typeParamList.Count; i++)
-            {
-                var symbol = context.SemanticModel.GetDeclaredSymbol(typeParamList[i]).EnsureNotNull();
-                var genericParamName = typeParamList[i].Identifier.Text;
-                var parentName = symbol.TypeParameterKind == TypeParameterKind.Method ? symbol.DeclaringMethod?.OriginalDefinition.ToDisplayString() : symbol.DeclaringType?.OriginalDefinition.ToDisplayString();
-
-                // register a variable representing the type parameter; uses its index as its name since in SRM the type parameter is represented by its index. 
-                context.DefinitionVariables.RegisterNonMethod(parentName, genericParamName, VariableMemberKind.TypeParameter, i.ToString());
-            }
-        }
-    }
-
-    private static void AddTypeParameters(SystemReflectionMetadataContext ctx, IEnumerable<TypeParameterSyntax> typeParameters, TypeDefinitionRecord typeRecord)
-    {
-        var index = 0;
-        foreach (var genericTypeParameter in typeParameters)
-        {
-            var typeParameterSymbol = ctx.SemanticModel.GetDeclaredSymbol(genericTypeParameter).EnsureNotNull();
-            var typeParameterVarName = ctx.Naming.SyntheticVariable(typeParameterSymbol.Name, ElementKind.GenericParameter);
-            var varAssignment = typeParameterSymbol.ConstraintTypes.Length > 0 || typeParameterSymbol.HasValueTypeConstraint || typeParameterSymbol.HasUnmanagedTypeConstraint 
-                ? $"var {typeParameterVarName} = "
-                : string.Empty; 
-                
-            ctx.Generate($"""{varAssignment}metadata.AddGenericParameter({typeRecord.TypeDefinitionVariable}, {GenericParameterAttributesFor(typeParameterSymbol)}, metadata.GetOrAddString("{genericTypeParameter.Identifier.Text}"), {index++});""");
-            foreach (var constraint in typeParameterSymbol.ConstraintTypes)
-            {
-                ctx.WriteNewLine();
-                var resolvedType = ctx.TypeResolver.Resolve(constraint, ResolveTargetKind.GenericTypeParameterConstraint);
-                ctx.Generate(Format($"metadata.AddGenericParameterConstraint({typeParameterVarName}, {resolvedType});"));
-            }
-
-            ctx.WriteNewLine();
-
-            if (typeParameterSymbol.HasUnmanagedTypeConstraint)
-            {
-                ctx.Generate(Format($$"""
-                                      {
-                                          var typeSpecificationSig = new BlobEncoder(new BlobBuilder()).TypeSpecificationSignature();
-                                          typeSpecificationSig.CustomModifiers().AddModifier({{ctx.TypeResolver.Resolve(ctx.RoslynTypeSystem.ForType<UnmanagedType>(), ResolveTargetKind.TypeReference)}}, isOptional: false);
-                                          typeSpecificationSig.Type({{ctx.TypeResolver.Bcl.System.ValueType}}, isValueType: true);
-                                          metadata.AddGenericParameterConstraint({{typeParameterVarName}}, metadata.AddTypeSpecification(metadata.GetOrAddBlob(typeSpecificationSig.Builder)));
-                                      }
-                                      """));
-                ctx.WriteNewLine();
-            } 
-            else if (typeParameterSymbol.HasValueTypeConstraint)
-            {
-                ctx.Generate(Format($"metadata.AddGenericParameterConstraint({typeParameterVarName}, {ctx.TypeResolver.Bcl.System.ValueType});"));
-                ctx.WriteNewLine();
-            }
-            
-        }
-    }
-
-    private static string GenericParameterAttributesFor(ITypeParameterSymbol typeParameterSymbol)
-    {
-        Span<char> span = stackalloc char[1024];
-        Span<char> target = span;
-        if (typeParameterSymbol.HasReferenceTypeConstraint)
-            target = target.AppendEnumFlag("GenericParameterAttributes.ReferenceTypeConstraint");
-        
-        if (typeParameterSymbol.HasConstructorConstraint || typeParameterSymbol.HasValueTypeConstraint)
-            target = target.AppendEnumFlag("GenericParameterAttributes.DefaultConstructorConstraint", target.Length == span.Length);
-
-        if (typeParameterSymbol.HasValueTypeConstraint)
-            target = target.AppendEnumFlag("GenericParameterAttributes.NotNullableValueTypeConstraint", target.Length == span.Length);
-        
-        if (typeParameterSymbol.Variance == VarianceKind.In)
-            target = target.AppendEnumFlag("GenericParameterAttributes.Contravariant", target.Length == span.Length);
-        
-        if (typeParameterSymbol.Variance == VarianceKind.Out)
-            target = target.AppendEnumFlag("GenericParameterAttributes.Covariant", target.Length == span.Length);
-        
-        if (span.Length != target.Length)
-            return span.Slice(0, span.Length - target.Length).ToString();
-        
-        return "GenericParameterAttributes.None";
     }
 
     public void UpdateBaseTypeIfNeeded(IVisitorContext context, ITypeSymbol typeSymbol, string typeDefinitionVariable)
@@ -210,6 +129,8 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
     {
         // Resolve the method to make sure there's a method ref available (this will be used to fulfill any references to this method)
         context.MemberResolver.ResolveMethod(methodSymbol);
+        
+        DefineGenericTypeParametersVariables(context, typeParameters);
         
         var paramIndexOffset = methodSymbol.IsStatic ? 0 : 1;
         // register all parameters so we can reference them when emitting the method body
@@ -246,6 +167,8 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                           """);
             ctx.WriteNewLine();
             ctx.WriteNewLine();
+            
+            AddTypeParameters(ctx, typeParameters, methodDefVar);
 
             ctx.DefinitionVariables.ExecuteDependentRegistrations(methodDefVar);
             
@@ -608,6 +531,86 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
     }
 
     static string Format(CecilifierInterpolatedStringHandler cecilFormattedString) => StringExtensions.Indented(cecilFormattedString);
+    
+    private static void AddTypeParameters(SystemReflectionMetadataContext ctx, IEnumerable<TypeParameterSyntax> typeParameters, string entityHandleVariable)
+    //private static void AddTypeParameters(SystemReflectionMetadataContext ctx, IEnumerable<TypeParameterSyntax> typeParameters, TypeDefinitionRecord typeRecord)
+    {
+        var index = 0;
+        foreach (var genericTypeParameter in typeParameters)
+        {
+            var typeParameterSymbol = ctx.SemanticModel.GetDeclaredSymbol(genericTypeParameter).EnsureNotNull();
+            var typeParameterVarName = ctx.Naming.SyntheticVariable(typeParameterSymbol.Name, ElementKind.GenericParameter);
+            
+            // We only need to assign the newly constructed generic type parameter if we need to set a `type` constraint 
+            var varAssignment = typeParameterSymbol.ConstraintTypes.Length > 0 || typeParameterSymbol.HasValueTypeConstraint || typeParameterSymbol.HasUnmanagedTypeConstraint 
+                ? $"var {typeParameterVarName} = "
+                : string.Empty; 
+                
+            ctx.Generate($"""{varAssignment}metadata.AddGenericParameter({entityHandleVariable}, {GenericParameterAttributesFor(typeParameterSymbol)}, metadata.GetOrAddString("{genericTypeParameter.Identifier.Text}"), {index++});""");
+            foreach (var constraint in typeParameterSymbol.ConstraintTypes)
+            {
+                ctx.WriteNewLine();
+                var resolvedType = ctx.TypeResolver.Resolve(constraint, ResolveTargetKind.GenericTypeParameterConstraint);
+                ctx.Generate(Format($"metadata.AddGenericParameterConstraint({typeParameterVarName}, {resolvedType});"));
+            }
+
+            ctx.WriteNewLine();
+
+            if (typeParameterSymbol.HasUnmanagedTypeConstraint)
+            {
+                ctx.Generate(Format($$"""
+                                      {
+                                          var typeSpecificationSig = new BlobEncoder(new BlobBuilder()).TypeSpecificationSignature();
+                                          typeSpecificationSig.CustomModifiers().AddModifier({{ctx.TypeResolver.Resolve(ctx.RoslynTypeSystem.ForType<UnmanagedType>(), ResolveTargetKind.TypeReference)}}, isOptional: false);
+                                          typeSpecificationSig.Type({{ctx.TypeResolver.Bcl.System.ValueType}}, isValueType: true);
+                                          metadata.AddGenericParameterConstraint({{typeParameterVarName}}, metadata.AddTypeSpecification(metadata.GetOrAddBlob(typeSpecificationSig.Builder)));
+                                      }
+                                      """));
+                ctx.WriteNewLine();
+            } 
+            else if (typeParameterSymbol.HasValueTypeConstraint)
+            {
+                ctx.Generate(Format($"metadata.AddGenericParameterConstraint({typeParameterVarName}, {ctx.TypeResolver.Bcl.System.ValueType});"));
+                ctx.WriteNewLine();
+            }
+        }
+        static string GenericParameterAttributesFor(ITypeParameterSymbol typeParameterSymbol)
+        {
+            Span<char> span = stackalloc char[1024];
+            Span<char> target = span;
+            if (typeParameterSymbol.HasReferenceTypeConstraint)
+                target = target.AppendEnumFlag("GenericParameterAttributes.ReferenceTypeConstraint");
+            
+            if (typeParameterSymbol.HasConstructorConstraint || typeParameterSymbol.HasValueTypeConstraint)
+                target = target.AppendEnumFlag("GenericParameterAttributes.DefaultConstructorConstraint", target.Length == span.Length);
+
+            if (typeParameterSymbol.HasValueTypeConstraint)
+                target = target.AppendEnumFlag("GenericParameterAttributes.NotNullableValueTypeConstraint", target.Length == span.Length);
+            
+            if (typeParameterSymbol.Variance == VarianceKind.In)
+                target = target.AppendEnumFlag("GenericParameterAttributes.Contravariant", target.Length == span.Length);
+            
+            if (typeParameterSymbol.Variance == VarianceKind.Out)
+                target = target.AppendEnumFlag("GenericParameterAttributes.Covariant", target.Length == span.Length);
+            
+            if (span.Length != target.Length)
+                return span.Slice(0, span.Length - target.Length).ToString();
+            
+            return "GenericParameterAttributes.None";
+        }
+    }
+    
+    private static void DefineGenericTypeParametersVariables(IVisitorContext context, IList<TypeParameterSyntax> typeParamList)
+    {
+        for (int i = 0; i < typeParamList.Count; i++)
+        {
+            var symbol = context.SemanticModel.GetDeclaredSymbol(typeParamList[i]).EnsureNotNull();
+            var parentName = symbol.TypeParameterKind == TypeParameterKind.Method ? symbol.DeclaringMethod?.OriginalDefinition.ToDisplayString() : symbol.DeclaringType?.OriginalDefinition.ToDisplayString();
+
+            // register a variable representing the type parameter; uses its index as its name since in SRM the type parameter is represented by its index. 
+            context.DefinitionVariables.RegisterNonMethod(parentName, typeParamList[i].Identifier.Text, VariableMemberKind.TypeParameter, i.ToString());
+        }
+    }
 }
 
 file record struct NonTypeAttributeTargetState (string AttributeTarget, string ResolvedAttributeCtor, string AttributeEncoderVariable);
