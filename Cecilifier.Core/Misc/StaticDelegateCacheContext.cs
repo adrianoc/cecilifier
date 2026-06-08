@@ -69,7 +69,7 @@ public struct StaticDelegateCacheContext
         cacheTypeVar.Properties[counterName] = ++staticMethodToDelegateConversionCount;
 
         CacheBackingField = context.Naming.SyntheticVariable("cachedDelegate", ElementKind.Field);
-        var fieldExps = context.ApiDefinitionsFactory.Field(context, new MemberDefinitionContext(backingFieldName, CacheBackingField, (string)cacheTypeVar), cacheInnerTypeName, delegateType, Constants.Cecil.StaticFieldAttributes, false, false, null);
+        var fieldExps = context.ApiDefinitionsFactory.Field(context, new MemberDefinitionContext(backingFieldName, $"{Method.Name}_cachingField",CacheBackingField, (string)cacheTypeVar), cacheInnerTypeName, delegateType, Constants.Cecil.StaticFieldAttributes, false, false, null);
         context.Generate(fieldExps);
 
         return CacheBackingField;
@@ -80,10 +80,10 @@ public struct StaticDelegateCacheContext
         var cachedTypeVar = context.Naming.Type("", ElementKind.Class);
         var outerTypeVariable = context.DefinitionVariables.GetVariable(Method.ContainingType.ToDisplayString(), VariableMemberKind.Type, Method.ContainingType.ContainingSymbol.ToDisplayString());
 
-        string attrs = Constants.Cecil.StaticClassAttributes.AppendEnumFlag("TypeAttributes.NestedPrivate");
+        var attrs = Constants.Cecil.StaticClassAttributes.AppendEnumFlag("TypeAttributes.NestedPrivate");
         var cacheTypeExps = context.ApiDefinitionsFactory.Type(
                                                                 context,
-                                                                new MemberDefinitionContext(cacheTypeName, cachedTypeVar, outerTypeVariable.IsValid ? outerTypeVariable.VariableName : null),
+                                                                new MemberDefinitionContext(cacheTypeName, "cache", cachedTypeVar, outerTypeVariable.IsValid ? outerTypeVariable.VariableName : null),
                                                                 DeclaringTypeNamespace,
                                                                 attrs,
                                                                 context.RoslynTypeSystem.SystemObject, 
