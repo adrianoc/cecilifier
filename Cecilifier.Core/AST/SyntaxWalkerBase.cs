@@ -652,7 +652,7 @@ namespace Cecilifier.Core.AST
             if (typeSymbol is IFunctionPointerTypeSymbol functionPointer)
             {
                 var operand = CecilDefinitionsFactory.CallSite(Context.TypeResolver, functionPointer);
-                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Calli, operand);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Calli, operand.AsToken());
                 return;
             }
 
@@ -663,7 +663,7 @@ namespace Cecilifier.Core.AST
                 : ((IMethodSymbol) typeSymbol.GetMembers("Invoke").SingleOrDefault()).MethodResolverExpression(Context);
 
             OnLastInstructionLoadingTargetOfInvocation();
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Callvirt, resolvedMethod);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Callvirt, resolvedMethod.AsToken());
         }
 
         /// <summary>
