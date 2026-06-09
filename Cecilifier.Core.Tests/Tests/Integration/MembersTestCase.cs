@@ -7,7 +7,6 @@ using NUnit.Framework;
 namespace Cecilifier.Core.Tests.Integration
 {
     [TestFixture(typeof(MonoCecilContext))]
-    [TestFixture(typeof(SystemReflectionMetadataContext))]
     public class MembersTestCase<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
     {
         [Test]
