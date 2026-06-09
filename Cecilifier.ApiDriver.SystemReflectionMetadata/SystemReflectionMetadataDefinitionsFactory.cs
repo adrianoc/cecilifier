@@ -395,9 +395,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
 
     public IEnumerable<string> Property(IVisitorContext context, BodiedMemberDefinitionContext definitionContext, string declaringTypeName, List<ParameterSpec> propertyParameters, ResolvedType propertyType)
     {
-        var propertySignatureTempVar =  context.Naming
-                                                    .With(NamingOptions.NoCasingElementNames)
-                                                    .Without(NamingOptions.CamelCaseElementNames).SyntheticVariable($"{definitionContext.Member.Name.CamelCase()}_blobBuilder", ElementKind.MemberReference);
+        var propertySignatureTempVar =  context.Naming.SyntheticVariable($"{definitionContext.Member.Name}BlobBuilder", ElementKind.None);
 
         TypedContext(context).DelayedDefinitionsManager.RegisterProperty(definitionContext.Member.Name, definitionContext.Member.DefinitionVariable, declaringTypeName, definitionContext.Member.ParentDefinitionVariable!, 
             static (context,  propertyName, propertyDefinitionVariable, declaringTypeName, declaringTypeVariable) =>

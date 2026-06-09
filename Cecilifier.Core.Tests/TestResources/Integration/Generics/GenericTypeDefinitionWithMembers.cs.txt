@@ -1,14 +1,18 @@
 using System;
 
-//public delegate T TheDelegate<T>(T t);
+#if !API_DRIVER_SYSTEM_REFLECTION_METADATA && !API_DRIVER_MONO_CECIL
+public delegate T TheDelegate<T>(T t);
+#endif
 
 public class GenericClass<T>
 {
     public T theField;
     public T TheProperty  { get; set; }
     public T TheMethod(T p) { return p; }
-    
-    //public delegate T TheDelegate(T t);
+
+#if !API_DRIVER_SYSTEM_REFLECTION_METADATA && !API_DRIVER_MONO_CECIL
+    public delegate T TheDelegate(T t);
+#endif
 }
 
 public struct GenericStruct<T> 
@@ -17,13 +21,19 @@ public struct GenericStruct<T>
     public T TheProperty  { get; set; }
     public T TheMethod(T p) { return p; }
     
-    //public delegate T TheDelegate(T t);
+#if !API_DRIVER_SYSTEM_REFLECTION_METADATA && !API_DRIVER_MONO_CECIL
+    //TODO: Generic delegates are not supported yet
+    public delegate T TheDelegate(T t);
+#endif
 }
 
 public interface IGenericInterface<T> 
 {
     T TheProperty  { get; set; }
     T TheMethod(T p);
-    
+
+//TODO: Events are not supported in SRM yet.
+#if !API_DRIVER_SYSTEM_REFLECTION_METADATA
     event EventHandler<T> TheEventT;
+#endif
 }

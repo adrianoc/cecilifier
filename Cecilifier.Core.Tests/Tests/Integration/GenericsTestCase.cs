@@ -18,12 +18,15 @@ namespace Cecilifier.Core.Tests.Integration
         nameof(TestGenericTypesAsMembers),
         nameof(TestSimplestGenericTypeDefinition), 
         nameof(TestGenericTypeInstantiation),
+        nameof(TestGenericTypeDefinitionWithMembers),
         nameof(TestGenericTypesInheritance),
         nameof(TestGenericMethods),
         nameof(TestGenericMethodConstraints),
         nameof(TestGenericTypeConstraints),
         nameof(TestGenericTypeUsedAsConstraint),
         nameof(TestCoContraVariance),
+        nameof(TestUsageOfNonGenericMethodOnGenericType),
+        nameof(UsageOfNonGenericMethodOnGenericTypeFromExternalAssembly),
         IgnoreReason = "Not implemented")]
     public class GenericsTestCase<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
     {
