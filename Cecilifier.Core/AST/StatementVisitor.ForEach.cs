@@ -28,14 +28,20 @@ namespace Cecilifier.Core.AST
                 // save array in local variable...
                 var arrayVariable = CodeGenerationHelpers.StoreTopOfStackInLocalVariable(Context, _ilVar, "array", enumerableType);
                 
+                var conditionCheckLabelVar = Context.Naming.Label("ConditionCheckLabel");
+                var firstLoopBodyInstructionLabelVar = Context.Naming.Label("FirstLoopBodyInstructionLabel");
+                
+                Context.ApiDriver.DefineLabel(Context, _ilVar, conditionCheckLabelVar);
+                Context.ApiDriver.DefineLabel(Context, _ilVar, firstLoopBodyInstructionLabelVar);
+                
                 var loopVariable = Context.AddLocalVariableToCurrentMethod(node.Identifier.ValueText, Context.TypeResolver.Resolve(enumerableType.ElementTypeSymbolOf(), ResolveTargetKind.LocalVariable)).VariableName;
                 var loopIndexVar = Context.AddLocalVariableToCurrentMethod("index", Context.TypeResolver.Resolve(Context.RoslynTypeSystem.SystemInt32, ResolveTargetKind.LocalVariable)).VariableName;
 
-                var conditionCheckLabelVar = CreateCilInstruction(_ilVar, OpCodes.Nop);
-                Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Br, conditionCheckLabelVar);
-                var firstLoopBodyInstructionVar = CreateCilInstruction(_ilVar, OpCodes.Ldloc, arrayVariable.VariableName);
-                WriteCecilExpression(Context, $"{_ilVar}.Append({firstLoopBodyInstructionVar});");
-                Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloc, loopIndexVar);
+                Context.ApiDriver.WriteCilBranch(Context, _ilVar, OpCodes.Br, conditionCheckLabelVar);
+
+                Context.ApiDriver.MarkLabel(Context, _ilVar, firstLoopBodyInstructionLabelVar);
+                Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloc, new CilLocalVariableHandle(arrayVariable.VariableName));
+                Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloc, new CilLocalVariableHandle(loopIndexVar));
                 Context.ApiDriver.WriteCilInstruction(Context, _ilVar, enumerableType.ElementTypeSymbolOf().LdelemOpCode());
                 Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Stloc, new CilLocalVariableHandle(loopVariable));
 
@@ -48,12 +54,12 @@ namespace Cecilifier.Core.AST
                 Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Stloc, new CilLocalVariableHandle(loopIndexVar));
                 
                 // condition check...
-                WriteCecilExpression(Context, $"{_ilVar}.Append({conditionCheckLabelVar});");
+                Context.ApiDriver.MarkLabel(Context, _ilVar, conditionCheckLabelVar);
                 Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloc, new CilLocalVariableHandle(loopIndexVar));
-                Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloc, arrayVariable.VariableName);
+                Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloc, new CilLocalVariableHandle(arrayVariable.VariableName));
                 Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldlen);
                 Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Conv_I4);
-                Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Blt, firstLoopBodyInstructionVar);
+                Context.ApiDriver.WriteCilBranch(Context, _ilVar, OpCodes.Blt, firstLoopBodyInstructionLabelVar);
             }
             
             void ProcessForEachOverEnumerable()

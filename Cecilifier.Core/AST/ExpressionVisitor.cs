@@ -1245,7 +1245,7 @@ namespace Cecilifier.Core.AST
             }
 
             Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldnull);
-            CecilDefinitionsFactory.InstantiateDelegate(Context, ilVar, Context.GetTypeInfo(node).ConvertedType!, syntheticMethodVariable.VariableName, new StaticDelegateCacheContext
+            CodeGenerationHelpers.InstantiateDelegate(Context, ilVar, Context.GetTypeInfo(node).ConvertedType!, syntheticMethodVariable.VariableName, new StaticDelegateCacheContext
             {
                 IsStaticDelegate = false
             });
@@ -1418,7 +1418,7 @@ namespace Cecilifier.Core.AST
             //IL_0002: ldftn string Test::M(int32)
             //IL_0008: newobj instance void class [System.Private.CoreLib]System.Func`2<int32, string>::.ctor(object, native int)
             Context.EnsureForwardedMethod(method.OverriddenMethod ?? method.OriginalDefinition);
-            CecilDefinitionsFactory.InstantiateDelegate(Context, ilVar, delegateType, method.MethodResolverExpression(Context), new StaticDelegateCacheContext()
+            InstantiateDelegate(Context, ilVar, delegateType, method.MethodResolverExpression(Context), new StaticDelegateCacheContext()
             {
                 IsStaticDelegate = method.IsStatic || method.MethodKind == MethodKind.LocalFunction,
                 Method = method,

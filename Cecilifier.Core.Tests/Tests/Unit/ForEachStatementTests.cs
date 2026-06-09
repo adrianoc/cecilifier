@@ -135,12 +135,12 @@ public class ForEachStatementTests : CecilifierUnitTestBase
         Assert.That(
             cecilifiedCode, 
             Does.Match("""
-                       (il_topLevelMain_\d+\.)Append\(nop_\d+\);
+                       (il_topLevelMain_\d+\.)Append\(lbl_conditionCheckLabel_\d+\);
                        (\s+\1Emit\(OpCodes\.)Ldloc, l_index_\d+\);
                        \2Ldloc, l_array_\d+\);
                        \2Ldlen\);
                        \2Conv_I4\);
-                       \2Blt, ldloc_\d+\);
+                       \2Blt, lbl_firstLoopBodyInstructionLabel_\d+\);
                        """), 
             "Array loop index check code does not match");
          
