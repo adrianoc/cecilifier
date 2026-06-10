@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
+using Cecilifier.Core.TypeSystem;
 using Microsoft.CodeAnalysis;
 
 #nullable enable
@@ -14,18 +15,18 @@ namespace Cecilifier.Core.Misc
         //TODO: Move to Cecil related code (Cecilifier.ApiDriver.MonoCecil project)
         public static string ImportFromMainModule(string expression) => $"assembly.MainModule.ImportReference({expression})";
 
-        public static string MakeGenericTypeIfAppropriate(IVisitorContext context, ISymbol memberSymbol, string backingFieldVar, string memberDeclaringTypeVar)
+        public static string? MakeGenericTypeIfAppropriate(IVisitorContext context, IEventSymbol memberSymbol, string fieldName)
         {
-            if (!(memberSymbol.ContainingSymbol is INamedTypeSymbol ts) || !ts.IsGenericType || !memberSymbol.IsDefinedInCurrentAssembly(context))
-                return backingFieldVar;
+            if (!(memberSymbol.Type is INamedTypeSymbol ts) || !ts.IsGenericType || !memberSymbol.IsDefinedInCurrentAssembly(context))
+                return null;
 
-            var genTypeVar = context.Naming.GenericInstance(memberSymbol);
-            context.Generate($"var {genTypeVar} = {memberDeclaringTypeVar}.MakeGenericInstanceType({memberDeclaringTypeVar}.GenericParameters.ToArray());");
-            context.WriteNewLine();
-
+            var openTypeRef = context.TypeResolver.Resolve(memberSymbol.Type.OriginalDefinition, ResolveTargetKind.LocalVariable);
+            var declaringType = context.TypeResolver.Resolve(memberSymbol.ContainingType, ResolveTargetKind.LocalVariable);
+            var instantiatedGenericType = context.TypeResolver.MakeGenericInstanceType(openTypeRef, ts, ResolveTargetKind.LocalVariable);
+            
             var fieldRefVar = context.Naming.MemberReference("fld_");
-            context.Generate($"var {fieldRefVar} = new FieldReference({backingFieldVar}.Name, {backingFieldVar}.FieldType, {genTypeVar});");
-            context.WriteNewLine();
+            var fieldRefStatements = context.ApiDefinitionsFactory.FieldReference(context, fieldRefVar, fieldName, instantiatedGenericType, declaringType);
+            context.Generate(fieldRefStatements);
 
             return fieldRefVar;
         }

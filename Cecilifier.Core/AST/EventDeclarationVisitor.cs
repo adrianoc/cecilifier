@@ -150,15 +150,15 @@ namespace Cecilifier.Core.AST
                 Context.ApiDefinitionsFactory.LocalVariable(Context, Context.Naming.SyntheticVariable(eventAccessorName, ElementKind.LocalVariable), methodVar, eventType);
         }
 
-        private IEnumerable<string> RemoveMethodBody(EventFieldDeclarationSyntax context, IEventSymbol eventSymbol, string accessorName, string removeMethodVar, string backingFieldVar, IlContext ilContext)
+        private IEnumerable<string> RemoveMethodBody(EventFieldDeclarationSyntax eventSyntax, IEventSymbol eventSymbol, string accessorName, string removeMethodVar, string backingFieldVar, IlContext ilContext)
         {
             var isStatic = eventSymbol.IsStatic;
             var (ldfld, ldflda) = isStatic ? (OpCodes.Ldsfld, OpCodes.Ldsflda) : (OpCodes.Ldfld, OpCodes.Ldflda);
 
             var removeMethod = Context.MemberResolver.ResolveMethod(Context.RoslynTypeSystem.ForType<Delegate>().GetMembers("Remove").Single().EnsureNotNull<ISymbol, IMethodSymbol>());
-            var compareExchangeExps = CompareExchangeMethodResolvingExps(eventSymbol.Type, out var compExcVar);
+            var compExcVar = CompareExchangeMethodResolvingExps(eventSymbol.Type);
 
-            var fieldVar = Utils.MakeGenericTypeIfAppropriate(Context, eventSymbol, backingFieldVar, eventDeclaringTypeVar.VariableName);
+            var fieldVar = Utils.MakeGenericTypeIfAppropriate(Context, eventSymbol, eventSymbol.Name) ?? backingFieldVar;
 
             // static member access does not have a *this* so simply replace with *Nop*
             var lgarg_0 = isStatic ? OpCodes.Nop : OpCodes.Ldarg_0;
@@ -187,19 +187,19 @@ namespace Cecilifier.Core.AST
             ];
             var bodyExps = Context.ApiDefinitionsFactory.MethodBody(Context, accessorName, ilContext, localVariableTypes, instructions);
 
-            return compareExchangeExps.Concat(bodyExps);
+            return bodyExps;
         }
 
-        private IEnumerable<string> AddMethodBody(EventFieldDeclarationSyntax context, IEventSymbol eventSymbol, string accessorName, string addMethodVar, string backingFieldVar, IlContext ilContext)
+        private IEnumerable<string> AddMethodBody(EventFieldDeclarationSyntax eventField, IEventSymbol eventSymbol, string accessorName, string addMethodVar, string backingFieldVar, IlContext ilContext)
         {
             var isStatic = eventSymbol.IsStatic;
             var (ldfld, ldflda) = isStatic ? (OpCodes.Ldsfld, OpCodes.Ldsflda) : (OpCodes.Ldfld, OpCodes.Ldflda);
 
             var combineOverloads = Context.RoslynTypeSystem.ForType<Delegate>().GetMembers("Combine").OfType<IMethodSymbol>();
             var combineMethod = Context.MemberResolver.ResolveMethod(combineOverloads.Single(m => m.IsStatic && m.Parameters.Length == 2).EnsureNotNull<ISymbol, IMethodSymbol>());
-            var compareExchangeExps = CompareExchangeMethodResolvingExps(eventSymbol.Type, out var compExcVar);
+            var compExcVar = CompareExchangeMethodResolvingExps(eventSymbol.Type);
 
-            var fieldVar = Utils.MakeGenericTypeIfAppropriate(Context, eventSymbol, backingFieldVar, eventDeclaringTypeVar.VariableName);
+            var fieldVar = Utils.MakeGenericTypeIfAppropriate(Context, eventSymbol, eventSymbol.Name) ?? backingFieldVar;
 
             // static member access does not have a *this* so simply replace with *Nop*
             var lgarg_0 = isStatic ? OpCodes.Nop : OpCodes.Ldarg_0;
@@ -229,18 +229,17 @@ namespace Cecilifier.Core.AST
             ];
             var bodyExps = Context.ApiDefinitionsFactory.MethodBody(Context, accessorName, ilContext, localVariableTypes, instructions);
 
-            return compareExchangeExps.Concat(bodyExps);
+            return bodyExps;
         }
 
-        private IEnumerable<string> CompareExchangeMethodResolvingExps(ITypeSymbol typeArgument, out string compExcVar)
+        private string CompareExchangeMethodResolvingExps(ITypeSymbol typeArgument)
         {
             var interlockedTypeSymbol = Context.SemanticModel.Compilation.GetTypeByMetadataName(typeof(System.Threading.Interlocked).FullName!).EnsureNotNull<ITypeSymbol>();
             var compareExchangeMethodSymbol = interlockedTypeSymbol.GetMembers("CompareExchange").OfType<IMethodSymbol>().Single(m => m.IsGenericMethod);
 
             var closeCompareExchangeMethod = compareExchangeMethodSymbol.Construct(typeArgument);
-            compExcVar = Context.MemberResolver.ResolveMethod(closeCompareExchangeMethod);
 
-            return [];
+            return Context.MemberResolver.ResolveMethod(closeCompareExchangeMethod);
         }
 
         private string AddBackingField(EventFieldDeclarationSyntax node)
