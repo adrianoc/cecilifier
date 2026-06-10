@@ -345,7 +345,7 @@ namespace Cecilifier.Core.AST
             if (InlineArrayProcessor.HandleInlineArrayConversionToSpan(Context, ilVar, paramSymbol.Type, node, OpCodes.Ldarga_S, paramSymbol.Name, VariableMemberKind.Parameter, declaringMethodName))
                 return;
             
-            Utils.EnsureNotNull(node.Parent);
+            node.Parent.EnsureNotNull();
             // We only support non-capturing lambda expressions so we handle those as static (even if the code does not mark them explicitly as such)
             // if/when we decide to support lambdas that captures variables/fields/params/etc we will probably need to revisit this.
             var adjustedParameterIndex = paramSymbol.Ordinal + (method.IsStatic || method.MethodKind == MethodKind.AnonymousFunction || method.MethodKind == MethodKind.LocalFunction ? 0 : 1);

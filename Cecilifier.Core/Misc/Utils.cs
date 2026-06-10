@@ -1,5 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
-using System.Runtime.CompilerServices;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.TypeSystem;
@@ -31,10 +29,6 @@ namespace Cecilifier.Core.Misc
             return fieldRefVar;
         }
 
-        public static T EnsureNotNull<T>([NotNullIfNotNull(nameof(node))] T? node, [CallerArgumentExpression("node")] string? msg = null) where T : SyntaxNode
-        {
-            return node.EnsureNotNull<T, T>();
-        }
         public static string BackingFieldNameForAutoProperty(string propertyName) => $"<{propertyName}>k__BackingField";
     }
 }

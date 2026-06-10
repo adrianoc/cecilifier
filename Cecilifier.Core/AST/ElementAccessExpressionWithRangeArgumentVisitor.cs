@@ -1,13 +1,11 @@
 using System.Linq;
 using System.Reflection.Emit;
-using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.ApiDriver.Handles;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Misc;
-
 
 namespace Cecilifier.Core.AST;
 
@@ -44,14 +42,14 @@ internal class ElementAccessExpressionWithRangeArgumentVisitor : SyntaxWalkerBas
         using var _ = Context.WithFlag<ContextFlagReseter>(Constants.ContextFlags.InRangeExpression);
 
         // Compute range start index
-        Utils.EnsureNotNull(node.LeftOperand).Accept(_expressionVisitor);
+        node.LeftOperand.EnsureNotNull().Accept(_expressionVisitor);
 
         var startIndexVar = CodeGenerationHelpers.StoreTopOfStackInLocalVariable(Context, _ilVar, "startIndex", Context.RoslynTypeSystem.SystemInt32).VariableName;
 
         // Compute number of elements to slice
 
         // compute range right index.
-        Utils.EnsureNotNull(node.RightOperand).Accept(_expressionVisitor);
+        node.RightOperand.EnsureNotNull().Accept(_expressionVisitor);
 
         Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloc, startIndexVar);
         Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Sub);

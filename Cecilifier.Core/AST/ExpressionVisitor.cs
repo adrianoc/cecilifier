@@ -1184,7 +1184,7 @@ namespace Cecilifier.Core.AST
 
         private void ProcessIndexerExpressionInElementAccessExpression(PrefixUnaryExpressionSyntax indexerExpression, ElementAccessExpressionSyntax elementAccessExpressionSyntax)
         {
-            Utils.EnsureNotNull(elementAccessExpressionSyntax);
+            elementAccessExpressionSyntax.EnsureNotNull();
 
             Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Dup); // Duplicate the target of the element access expression
 

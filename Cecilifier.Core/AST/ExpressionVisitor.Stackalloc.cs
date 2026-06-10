@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Reflection.Emit;
-using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.ApiDriver.Handles;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -66,7 +65,7 @@ partial class ExpressionVisitor
         Debug.Assert(arrayType.RankSpecifiers.Count == 1);
         if (rankNode.IsKind(SyntaxKind.OmittedArraySizeExpression))
         {
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldc_I4, Utils.EnsureNotNull(node.Initializer).Expressions.Count);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldc_I4, node.Initializer.EnsureNotNull().Expressions.Count);
         }
 
         var stackallocSpanAssignmentTracker = new StackallocSpanAssignmentTracker(node, Context);

@@ -130,6 +130,12 @@ namespace Cecilifier.Core.Extensions
 
             return (TTarget) source;
         }
+        
+        public static T EnsureNotNull<T>([NotNullIfNotNull(nameof(node))] this T? node, [CallerArgumentExpression("node")] string? msg = null) where T : SyntaxNode
+        {
+            return node.EnsureNotNull<T, T>(msg);
+        }
+        
         #nullable restore
         
         internal static bool IsPassedAsInParameter(this ArgumentSyntax toBeChecked, IVisitorContext context)
