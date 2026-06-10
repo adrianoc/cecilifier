@@ -255,7 +255,7 @@ namespace Cecilifier.Core.AST
         {
             var typeSymbol = Context.GetDeclaredSymbol(type);
             if (typeSymbol == null)
-                return Utils.ImportFromMainModule($"TypeHelpers.DefaultCtorFor({typeDefVar}.BaseType)");
+                return Context.MemberResolver.ImportReference($"TypeHelpers.DefaultCtorFor({typeDefVar}.BaseType)");
 
             return Context.MemberResolver.ResolveDefaultConstructor(typeSymbol.BaseType, typeDefVar);
         }

@@ -405,7 +405,7 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
 
             if (typeParam.HasValueTypeConstraint)
             {
-                var systemValueTypeRef = Utils.ImportFromMainModule("typeof(System.ValueType)");
+                var systemValueTypeRef = context.TypeResolver.Bcl.System.ValueType;
                 var constraintType = typeParam.HasUnmanagedTypeConstraint
                     ? $"{systemValueTypeRef}.MakeRequiredModifierType({context.TypeResolver.Resolve(context.RoslynTypeSystem.ForType<System.Runtime.InteropServices.UnmanagedType>(), ResolveTargetKind.TypeReference)})"
                     : systemValueTypeRef;

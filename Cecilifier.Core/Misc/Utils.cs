@@ -10,9 +10,6 @@ namespace Cecilifier.Core.Misc
     {
         public static string ConstructorMethodName(bool isStatic) => $".{(isStatic ? Constants.Cecil.StaticConstructorName : Constants.Cecil.InstanceConstructorName)}";
 
-        //TODO: Move to Cecil related code (Cecilifier.ApiDriver.MonoCecil project)
-        public static string ImportFromMainModule(string expression) => $"assembly.MainModule.ImportReference({expression})";
-
         public static string? MakeGenericTypeIfAppropriate(IVisitorContext context, IEventSymbol memberSymbol, string fieldName)
         {
             if (!(memberSymbol.Type is INamedTypeSymbol ts) || !ts.IsGenericType || !memberSymbol.IsDefinedInCurrentAssembly(context))

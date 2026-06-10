@@ -190,7 +190,7 @@ partial class ExpressionVisitor
         AddCecilExpression($"{spanCtorVar}.Parameters.Add({CecilDefinitionsFactory.ParameterDoesNotHandleParamsKeywordOrDefaultValue("ptr", RefKind.None, Context.TypeResolver.Resolve(voidPtr, ResolveTargetKind.Parameter))});");
         AddCecilExpression($"{spanCtorVar}.Parameters.Add({CecilDefinitionsFactory.ParameterDoesNotHandleParamsKeywordOrDefaultValue("length", RefKind.None, Context.TypeResolver.Bcl.System.Int32)});");
 
-        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Newobj, Utils.ImportFromMainModule($"{spanCtorVar}"));
+        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Newobj, Context.MemberResolver.ImportReference($"{spanCtorVar}"));
     }
 }
 

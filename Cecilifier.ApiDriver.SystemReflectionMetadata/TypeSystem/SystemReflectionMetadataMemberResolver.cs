@@ -184,6 +184,8 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
         throw new NotImplementedException();
     }
 
+    public string ImportReference(string expression) => expression; // In SRM this is a noop
+    
     #region Non public members
     private static DefinitionVariable FindOrRegisterVariable(SystemReflectionMetadataContext context, IMethodSymbol method, MethodDefinitionVariable tbf, string variableNameToRegister, string openMethodVar, Action<SystemReflectionMetadataContext, IMethodSymbol, string, string> action)
     {

@@ -117,8 +117,8 @@ public class MonoCecilMemberResolver(MonoCecilContext context) : IMemberResolver
             return ResolveMethodFromGenericType(method, context);
         }
 
-        return Utils.ImportFromMainModule(
-            $"TypeHelpers.ResolveMethod(typeof({declaringTypeName}), \"{method.Name}\",{ReflectionBindingsFlags(method)}{method.Parameters.Aggregate("", (acc, curr) => acc + ", \"" + curr.Type.GetReflectionName() + "\"")})");
+        return ((MonoCecilTypeResolver) context.TypeResolver).ImportReference(
+            $"TypeHelpers.ResolveMethod(typeof({declaringTypeName}), \"{method.Name}\",{ReflectionBindingsFlags(method)}{method.Parameters.Aggregate("", (acc, curr) => acc + ", \"" + curr.Type.GetReflectionName() + "\"")})").Expression;
     }
 
     public string ResolveMethod(string declaringTypeName, string declaringTypeVariable, string methodNameForVariableRegistration, ResolvedType returnType, IReadOnlyList<ParameterSpec> parameters, int typeParameterCountCount, MemberOptions options)
@@ -134,7 +134,7 @@ public class MonoCecilMemberResolver(MonoCecilContext context) : IMemberResolver
             return $"new MethodReference(\".ctor\", {context.TypeResolver.Bcl.System.Void} ,{baseTypeVarDef}) {{ HasThis = true }}";
         }
 
-        return Utils.ImportFromMainModule($"TypeHelpers.DefaultCtorFor({derivedTypeVar}.BaseType)");
+        return ImportReference($"TypeHelpers.DefaultCtorFor({derivedTypeVar}.BaseType)");
     }
 
     private static (HashSet<ITypeParameterSymbol>, bool) CollectReferencedMethodTypeParameters(IMethodSymbol method)
@@ -256,7 +256,7 @@ public class MonoCecilMemberResolver(MonoCecilContext context) : IMemberResolver
         }
 
         var declaringTypeName = field.ContainingType.FullyQualifiedName();
-        return Utils.ImportFromMainModule($"TypeHelpers.ResolveField(\"{declaringTypeName}\",\"{field.Name}\")");
+        return ImportReference($"TypeHelpers.ResolveField(\"{declaringTypeName}\",\"{field.Name}\")");
     }
 
     public string ResolveEventField(IEventSymbol eventSymbol)
@@ -273,4 +273,6 @@ public class MonoCecilMemberResolver(MonoCecilContext context) : IMemberResolver
                 
         return resolvedField;
     }
+
+    public string ImportReference(string expression) => $"assembly.MainModule.ImportReference({expression})";
 }

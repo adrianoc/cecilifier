@@ -30,7 +30,7 @@ public class MonoCecilTypeResolver(MonoCecilContext context) : TypeResolverBase<
     protected override ResolvedType ResolveFromAssembly(ITypeSymbol type, in TypeResolutionContext resolutionContext)
     {
         if (type.ContainingType != null)
-            return Utils.ImportFromMainModule($"typeof({$"""{type.ToDisplayString()}"""})");
+            return ImportReference($"typeof({$"""{type.ToDisplayString()}"""})");
 
         var formatOptions = SymbolDisplayFormat.FullyQualifiedFormat
                                         .RemoveGenericsOptions(SymbolDisplayGenericsOptions.IncludeTypeParameters)
@@ -45,7 +45,7 @@ public class MonoCecilTypeResolver(MonoCecilContext context) : TypeResolverBase<
             nameToResolve = $"{nameToResolve}<{commas}>";
         }
         
-        return Utils.ImportFromMainModule($"typeof({$"""{nameToResolve}"""})");
+        return ImportReference($"typeof({$"""{nameToResolve}"""})");
     }
 
     public override ResolvedType ResolvePredefinedType(ITypeSymbol type, in TypeResolutionContext resolutionContext) => $"assembly.MainModule.TypeSystem.{type.Name}";
@@ -68,4 +68,6 @@ public class MonoCecilTypeResolver(MonoCecilContext context) : TypeResolverBase<
         
         return typeArgs.Length > 0 ? typeReference.MakeGenericInstanceType(typeArgs) : typeReference;
     }
+
+    internal ResolvedType ImportReference(ResolvedType typeReference) => $"assembly.MainModule.ImportReference({typeReference})";
 }
