@@ -156,7 +156,7 @@ namespace Cecilifier.Core.AST
             var (ldfld, ldflda) = isStatic ? (OpCodes.Ldsfld, OpCodes.Ldsflda) : (OpCodes.Ldfld, OpCodes.Ldflda);
 
             var removeMethod = Context.MemberResolver.ResolveMethod(Context.RoslynTypeSystem.ForType<Delegate>().GetMembers("Remove").Single().EnsureNotNull<ISymbol, IMethodSymbol>());
-            var compareExchangeExps = CompareExchangeMethodResolvingExps(backingFieldVar, out var compExcVar);
+            var compareExchangeExps = CompareExchangeMethodResolvingExps(eventSymbol.Type, out var compExcVar);
 
             var fieldVar = Utils.MakeGenericTypeIfAppropriate(Context, eventSymbol, backingFieldVar, eventDeclaringTypeVar.VariableName);
 
@@ -197,7 +197,7 @@ namespace Cecilifier.Core.AST
 
             var combineOverloads = Context.RoslynTypeSystem.ForType<Delegate>().GetMembers("Combine").OfType<IMethodSymbol>();
             var combineMethod = Context.MemberResolver.ResolveMethod(combineOverloads.Single(m => m.IsStatic && m.Parameters.Length == 2).EnsureNotNull<ISymbol, IMethodSymbol>());
-            var compareExchangeExps = CompareExchangeMethodResolvingExps(backingFieldVar, out var compExcVar);
+            var compareExchangeExps = CompareExchangeMethodResolvingExps(eventSymbol.Type, out var compExcVar);
 
             var fieldVar = Utils.MakeGenericTypeIfAppropriate(Context, eventSymbol, backingFieldVar, eventDeclaringTypeVar.VariableName);
 
@@ -232,12 +232,15 @@ namespace Cecilifier.Core.AST
             return compareExchangeExps.Concat(bodyExps);
         }
 
-        private IEnumerable<string> CompareExchangeMethodResolvingExps(string backingFieldVar, out string compExcVar)
+        private IEnumerable<string> CompareExchangeMethodResolvingExps(ITypeSymbol typeArgument, out string compExcVar)
         {
-            var openCompExcVar = Context.Naming.MemberReference("openCompExc");
-            var exp1 = $"var {openCompExcVar} = {Utils.ImportFromMainModule("typeof(System.Threading.Interlocked).GetMethods().Single(m => m.Name == \"CompareExchange\" && m.IsGenericMethodDefinition)")};";
+            var interlockedTypeSymbol = Context.SemanticModel.Compilation.GetTypeByMetadataName(typeof(System.Threading.Interlocked).FullName!).EnsureNotNull<ITypeSymbol>();
+            var compareExchangeMethodSymbol = interlockedTypeSymbol.GetMembers("CompareExchange").OfType<IMethodSymbol>().Single(m => m.IsGenericMethod);
 
-            return new[] { exp1 }.Concat(openCompExcVar.MakeGenericInstanceMethod(Context, "compExp", [$"{backingFieldVar}.FieldType"], out compExcVar));
+            var closeCompareExchangeMethod = compareExchangeMethodSymbol.Construct(typeArgument);
+            compExcVar = Context.MemberResolver.ResolveMethod(closeCompareExchangeMethod);
+
+            return [];
         }
 
         private string AddBackingField(EventFieldDeclarationSyntax node)
