@@ -92,6 +92,19 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                 ctx.WriteNewLine();
             }
             
+            foreach (var eventRecord in typeRecord.Events)
+            {
+                // process each event passing the type definition variable 
+                eventRecord.Processor(ctx, eventRecord.Name, eventRecord.DefinitionVariable, eventRecord.DeclaringTypeName);
+            }
+            
+            var firstEvent = typeRecord.Events.FirstOrDefault();
+            if (firstEvent.IsValid)
+            {
+                ctx.Generate($"metadata.AddEventMap({typeRecord.TypeDefinitionVariable}, {firstEvent.DefinitionVariable});");
+                ctx.WriteNewLine();
+            }
+            
             if (definitionContext.ParentDefinitionVariable != null)
             {
                 var parentTypeDefinitionVariable =  ctx.DelayedDefinitionsManager.GetTypeDefinitionVariableFromTypeReferenceVariable(definitionContext.ParentDefinitionVariable);
@@ -377,7 +390,31 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         return span.Slice(0, count + 1).ToArray();
     }
 
-    public IEnumerable<string> MethodBody(IVisitorContext context, string methodName, IlContext ilContext, ResolvedType[] localVariableTypes, InstructionRepresentation[] instructions) => [];
+    public IEnumerable<string> MethodBody(IVisitorContext context, string methodName, IlContext ilContext, ResolvedType[] localVariableTypes, InstructionRepresentation[] instructions)
+    {
+        var exps = new List<string>(instructions.Length);
+        
+        var tagToLabelVariable = new Dictionary<string, string>();
+        // emit an instruction for each instruction that has a 'Tag'
+        foreach (var instruction in instructions.Where(inst => !inst.Ignore))
+        {
+            if (instruction.Tag != null)
+            {
+                var labelVariable = context.Naming.SyntheticVariable(instruction.Tag, ElementKind.Label);
+                
+                exps.Add(context.ApiDriver.EmitDefineLabel(context, ilContext, labelVariable));
+                exps.Add(context.ApiDriver.EmitMarkLabel(context, ilContext, labelVariable));
+                
+                tagToLabelVariable[instruction.Tag] = labelVariable;
+            }
+
+            exps.Add(instruction.BranchTargetTag != null 
+                ? context.ApiDriver.EmitCilBranchInstruction(context, ilContext, instruction.OpCode, tagToLabelVariable[instruction.BranchTargetTag]) 
+                : context.ApiDriver.EmitCilInstruction(context, ilContext, instruction.OpCode, instruction.Operand));
+        }
+        
+        return exps.ToArray();
+    }
 
     public DefinitionVariable LocalVariable(IVisitorContext context, string variableName, string methodDefinitionVariableName, ResolvedType resolvedVarType)
     {
@@ -432,6 +469,35 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                 
                 var {{definitionContext.Member.DefinitionVariable}} = metadata.AddProperty(PropertyAttributes.None, metadata.GetOrAddString("{{definitionContext.Member.Name}}"), metadata.GetOrAddBlob({{propertySignatureTempVar}}));
                 """)];
+    }
+
+    public IEnumerable<string> Event(IVisitorContext context, BodiedMemberDefinitionContext eventSpec, string declaringTypeName, ResolvedType eventType, string addAccessorVariable, string removeAccessorVariable)
+    {
+        TypedContext(context).DelayedDefinitionsManager.RegisterEvent(eventSpec.Member.Name, eventSpec.Member.DefinitionVariable, declaringTypeName, 
+            static (context,  eventName, eventDefinitionVariable, declaringTypeName) =>
+        {
+            var addMethodVariable = context.DefinitionVariables.GetVariable($"add_{eventName}", VariableMemberKind.Method, declaringTypeName);
+            var removeMethodVariable = context.DefinitionVariables.GetVariable($"remove_{eventName}", VariableMemberKind.Method, declaringTypeName);
+
+            foreach (var accessor in new[] {(addMethodVariable, "Adder"), (removeMethodVariable, "Remover") })
+            {
+                if (!accessor.Item1.IsValid)
+                    continue;
+                
+                context.Generate($"""
+                                  // Associate method {accessor.Item1.MemberName} with event {eventName}
+                                  metadata.AddMethodSemantics(
+                                                  {eventDefinitionVariable},
+                                                  MethodSemanticsAttributes.{accessor.Item2},
+                                                  {accessor.Item1.VariableName});
+                                  """);
+                
+                context.DefinitionVariables.ExecuteDependentRegistrations(eventDefinitionVariable);
+                context.WriteNewLine();
+            }
+        });
+        
+        return [Format($$"""var {{eventSpec.Member.DefinitionVariable}} = metadata.AddEvent(EventAttributes.None, metadata.GetOrAddString("{{eventSpec.Member.Name}}"), {{eventType}});""")];
     }
 
     public IEnumerable<string> Attribute(IVisitorContext context, IMethodSymbol attributeCtor, string attributeVarBaseName, string attributeTargetVar, VariableMemberKind targetKind, params CustomAttributeArgument[] arguments)

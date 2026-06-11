@@ -43,7 +43,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
                                                        method.OriginalDefinition.Parameters.Select(p => $"""
                                                                                                              parameters
                                                                                                                      .AddParameter()
-                                                                                                                     .{ctx.TypedTypeResolver.Resolve(p.Type, new TypeResolutionContext(ResolveTargetKind.Parameter, p.Type.IsValueType ? TypeResolutionOptions.IsValueType : TypeResolutionOptions.None))};
+                                                                                                                     .{ctx.TypedTypeResolver.Resolve(p.Type, new TypeResolutionContext(ResolveTargetKind.Parameter, TypeResolutionOptionsFor(p)))};
                                                                                                          """))}}
                                            });
 
@@ -85,7 +85,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
         }
         return methodRefVar;
     }
-
+    
     public string ResolveMethod(string declaringTypeName, string declaringTypeVariable, string methodNameForVariableRegistration, ResolvedType returnType, IReadOnlyList<ParameterSpec> parameters, int typeParameterCountCount, MemberOptions options)
     {
         var methodReferenceToFind = new MethodDefinitionVariable(
@@ -197,6 +197,15 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
         }
 
         return instantiationVar;
+    }
+    
+    private static TypeResolutionOptions TypeResolutionOptionsFor(IParameterSymbol parameter)
+    {
+        var byRefState= parameter.RefKind != RefKind.None 
+            ? TypeResolutionOptions.IsByRef 
+            : TypeResolutionOptions.None;
+            
+        return (parameter.Type.IsValueType ? TypeResolutionOptions.IsValueType : TypeResolutionOptions.None) | byRefState;
     }
     #endregion
 }

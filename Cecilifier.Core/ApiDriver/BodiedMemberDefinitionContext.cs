@@ -1,7 +1,6 @@
 #nullable enable
 using System.Diagnostics;
 using Cecilifier.Core.AST;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Cecilifier.Core.ApiDriver;
 

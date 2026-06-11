@@ -4,7 +4,6 @@ using System.Runtime.InteropServices;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Cecilifier.ApiDriver.SystemReflectionMetadata.DelayedDefinitions;
 
@@ -67,6 +66,11 @@ public class DelayedDefinitionsManager
     public void RegisterProperty(string propertyName,string propertyDefinitionVariable, string declaringTypeName, string declaringTypeVariable, Action<IVisitorContext, string, string, string, string> propertyProcessor)
     {
         GetCurrentTypeDefinition().Properties.Add(new PropertyDefinitionRecord(propertyName, propertyDefinitionVariable, declaringTypeName, propertyProcessor));
+    }
+    
+    public void RegisterEvent(string eventName,string propertyDefinitionVariable, string declaringTypeName, Action<IVisitorContext, string, string, string> eventProcessor)
+    {
+        GetCurrentTypeDefinition().Events.Add(new EventDefinitionRecord(eventName, propertyDefinitionVariable, declaringTypeName, eventProcessor));
     }
 
     /// <summary>

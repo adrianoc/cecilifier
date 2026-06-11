@@ -174,9 +174,14 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
 
     public void WriteCilBranch(IVisitorContext context, IlContext il, OpCode branchOpCode, string targetLabel, string? comment = null)
     {
-        var mappedOpCodeName = MapSystemReflectionOpCodeNameToSystemReflectionMetadata(branchOpCode);
-        context.Generate($"{il.VariableName}.Branch(ILOpCode.{mappedOpCodeName}, {targetLabel});");
+        context.Generate(EmitCilBranchInstruction(context, il, branchOpCode, targetLabel, comment));
         context.WriteNewLine();
+    }
+
+    public string EmitCilBranchInstruction(IVisitorContext context, IlContext il, OpCode branchOpCode, string targetLabel, string? comment = null)
+    {
+        var mappedOpCodeName = MapSystemReflectionOpCodeNameToSystemReflectionMetadata(branchOpCode);
+        return $"{il.VariableName}.Branch(ILOpCode.{mappedOpCodeName}, {targetLabel});";
     }
 
     public void DefineLabel(IVisitorContext context, IlContext il, string labelVariable)
@@ -185,11 +190,15 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
         context.WriteNewLine();
     }
 
+    public string EmitDefineLabel(IVisitorContext context, IlContext il, string labelVariable) => $"var {labelVariable} = {il.VariableName}.DefineLabel();";
+
     public void MarkLabel(IVisitorContext context, IlContext il, string labelVariable)
     {
         context.Generate($"{il.VariableName}.MarkLabel({labelVariable});");
         context.WriteNewLine();
     }
+    
+    public string EmitMarkLabel(IVisitorContext context, IlContext il, string labelVariable) => $"{il.VariableName}.MarkLabel({labelVariable});";
 
     public void AddMethodSemantics(IVisitorContext context, string targetVariable, string methodVariable, MethodKind methodKind)
     {

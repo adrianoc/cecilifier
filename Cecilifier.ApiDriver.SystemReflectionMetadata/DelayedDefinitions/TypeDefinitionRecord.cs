@@ -23,6 +23,8 @@ internal record struct TypeDefinitionRecord(string TypeReferenceVariable)
     
     public IList<PropertyDefinitionRecord> Properties { get; } = new List<PropertyDefinitionRecord>();
     
+    public IList<EventDefinitionRecord> Events { get; } = new List<EventDefinitionRecord>();
+    
     internal IList<FieldDefinitionRecord> Fields { get; } = new List<FieldDefinitionRecord>();
 
     public required DelayedTypeDefinitionAction DefinitionFunction { internal get; init; }

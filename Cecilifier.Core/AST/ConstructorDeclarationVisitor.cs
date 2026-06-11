@@ -36,7 +36,7 @@ namespace Cecilifier.Core.AST
         private void HandleStaticConstructor(ConstructorDeclarationSyntax node)
         {
             var variableName = Context.Naming.Constructor(node.ResolveDeclaringType<BaseTypeDeclarationSyntax>(), true);
-            ProcessMethodDeclaration(node, variableName, Constants.Cecil.StaticConstructorName, $".{Constants.Cecil.StaticConstructorName}", false, ctorVar =>
+            ProcessMethodDeclaration(node, variableName, Constants.Cecil.StaticConstructorName, $".{Constants.Cecil.StaticConstructorName}", ctorVar =>
             {
                 var declaringType = node.Parent.ResolveDeclaringType<TypeDeclarationSyntax>();
                 ProcessFieldInitialization(declaringType, ilVar, true);
@@ -51,7 +51,7 @@ namespace Cecilifier.Core.AST
             var callBaseMethod = base.VisitConstructorDeclaration;
 
             var ctorVariable = Context.Naming.Constructor(declaringType, false);
-            ProcessMethodDeclaration(node, ctorVariable, "ctor", ".ctor", false, ctorVar =>
+            ProcessMethodDeclaration(node, ctorVariable, "ctor", ".ctor", ctorVar =>
             {
                 if (node.Initializer == null || node.Initializer.IsKind(SyntaxKind.BaseConstructorInitializer))
                 {

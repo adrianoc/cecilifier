@@ -40,7 +40,7 @@ namespace Cecilifier.Core.AST
 
             eventDeclaringTypeVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Type);
 
-            var eventType = Context.TypeResolver.Resolve(eventSymbol.Type, ResolveTargetKind.None);
+            var eventType = Context.TypeResolver.Resolve(eventSymbol.Type, ResolveTargetKind.TypeReference);
             var eventAccessorsDefVarMapping = new Dictionary<string, string>();
             foreach (var acc in node.AccessorList.Accessors)
             {
@@ -51,7 +51,7 @@ namespace Cecilifier.Core.AST
                 var methodVar = Context.Naming.SyntheticVariable(acc.Keyword.ValueText, ElementKind.Method);
                 var ilContext = Context.ApiDriver.NewIlContext(Context, acc.Keyword.ValueText, methodVar);
                 var body = Context.ApiDefinitionsFactory.MethodBody(Context, acc.Keyword.ValueText, ilContext, [], []);
-                var accessorMethodVar = AddAccessor(node, eventSymbol, in ilContext, methodVar, acc.Keyword.ValueText, eventType, body);
+                var accessorMethodVar = AddAccessor(node, eventSymbol, in ilContext, methodVar, acc.Keyword.ValueText, body);
                 using (Context.DefinitionVariables.WithVariable(accessorMethodVar))
                 {
                     StatementVisitor.Visit(Context, ilContext.VariableName, acc.Body);
@@ -63,7 +63,7 @@ namespace Cecilifier.Core.AST
 
             Context.WriteNewLine();
             Context.WriteComment($"Event: {node.Identifier.Text}");
-            var evtDefVar = AddEventDefinition(node, node.Identifier.Text, eventType, eventAccessorsDefVarMapping["add"], eventAccessorsDefVarMapping["remove"]);
+            var evtDefVar = AddEventDefinition(node, eventSymbol, eventType, eventAccessorsDefVarMapping["add"], eventAccessorsDefVarMapping["remove"]);
             HandleAttributesInMemberDeclaration(node.AttributeLists, evtDefVar, VariableMemberKind.None);
         }
 
@@ -92,19 +92,19 @@ namespace Cecilifier.Core.AST
                 ? string.Empty
                 : AddBackingField(node); // backing field will have same name as the event
 
-            var eventType = ResolveType(node.Declaration.Type, ResolveTargetKind.None);
-            var addAccessorVar = AddAccessor(node, eventSymbol, "add", backingFieldVar, eventType, AddMethodBody);
-            var removeAccessorVar = AddAccessor(node, eventSymbol, "remove", backingFieldVar, eventType, RemoveMethodBody);
+            var eventType = ResolveType(node.Declaration.Type, ResolveTargetKind.TypeReference);
+            var addAccessorVar = AddAccessor(node, eventSymbol, "add", backingFieldVar, AddMethodBody);
+            var removeAccessorVar = AddAccessor(node, eventSymbol, "remove", backingFieldVar, RemoveMethodBody);
 
-            var evtDefVar = AddEventDefinition(node, eventSymbol.Name, eventType, addAccessorVar, removeAccessorVar);
+            var evtDefVar = AddEventDefinition(node, eventSymbol, eventType, addAccessorVar, removeAccessorVar);
             HandleAttributesInMemberDeclaration(node.AttributeLists, evtDefVar, VariableMemberKind.None);
         }
 
-        private string AddAccessor(EventFieldDeclarationSyntax node, IEventSymbol eventSymbol, string accessorName, string backingFieldVar, ResolvedType eventType, Func<EventFieldDeclarationSyntax, IEventSymbol, string, string, string, IlContext, IEnumerable<string>> methodBodyFactory)
+        private string AddAccessor(EventFieldDeclarationSyntax node, IEventSymbol eventSymbol, string accessorName, string backingFieldVar, Func<EventFieldDeclarationSyntax, IEventSymbol, string, string, string, IlContext, IEnumerable<string>> methodBodyFactory)
         {
             var methodVar = Context.Naming.SyntheticVariable(accessorName, ElementKind.Method);
             var isInterfaceDef = eventSymbol.ContainingType.TypeKind == TypeKind.Interface;
-            IEnumerable<string> methodBodyExpressions = Array.Empty<string>();
+            IEnumerable<string> methodBodyExpressions = [];
             IlContext ilContext = default;
             if (!isInterfaceDef)
             {
@@ -112,16 +112,16 @@ namespace Cecilifier.Core.AST
                 methodBodyExpressions = methodBodyFactory(node, eventSymbol, accessorName, methodVar, backingFieldVar, ilContext);
             }
 
-            AddAccessor(node, eventSymbol, in ilContext, methodVar, accessorName, eventType, methodBodyExpressions);
+            AddAccessor(node, eventSymbol, in ilContext, methodVar, accessorName, methodBodyExpressions);
             if (!isInterfaceDef)
             {
-                CreateLocalVarsForEventRegistrationMethods(methodVar, accessorName, in eventType);
+                CreateLocalVarsForEventRegistrationMethods(methodVar, accessorName, Context.TypeResolver.Resolve(eventSymbol.Type, ResolveTargetKind.LocalVariable));
             }
 
             return methodVar;
         }
 
-        private MethodDefinitionVariable AddAccessor(MemberDeclarationSyntax node, IEventSymbol eventSymbol, in IlContext ilContext, string methodVar, string accessorName, ResolvedType eventType, IEnumerable<string> methodBodyExpressions)
+        private MethodDefinitionVariable AddAccessor(MemberDeclarationSyntax node, IEventSymbol eventSymbol, in IlContext ilContext, string methodVar, string accessorName, IEnumerable<string> methodBodyExpressions)
         {
             var accessorModifiers = AccessModifiersForEventAccessors(node, eventSymbol.ContainingType);
             var methodName = $"{accessorName}_{eventSymbol.Name}";
@@ -130,7 +130,7 @@ namespace Cecilifier.Core.AST
                                                                                 new BodiedMemberDefinitionContext(methodName, methodVar, eventDeclaringTypeVar.VariableName, eventSymbol.IsStatic ? MemberOptions.Static : MemberOptions.None, ilContext), 
                                                                                 eventDeclaringTypeVar.MemberName, 
                                                                                 accessorModifiers, 
-                                                                                [ new ParameterSpec("value", eventType, RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = eventSymbol.Type.ToDisplayString() }],
+                                                                                [ new ParameterSpec("value", Context.TypeResolver.Resolve(eventSymbol.Type, ResolveTargetKind.Parameter), RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = eventSymbol.Type.ToDisplayString() }],
                                                                                 [], 
                                                                                 ctx => ctx.TypeResolver.Resolve(Context.RoslynTypeSystem.SystemVoid, ResolveTargetKind.ReturnType),  
                                                                                 out var eventAccessorMethodVar);
@@ -170,7 +170,7 @@ namespace Cecilifier.Core.AST
                 OpCodes.Ldloc_0.WithInstructionMarker("LoopStart"),
                 OpCodes.Stloc_1,
                 OpCodes.Ldloc_1,
-                OpCodes.Ldarg.WithOperand(isStatic ? "0" : "1"),
+                OpCodes.Ldarg.WithOperand(isStatic ? 0 : 1),
                 OpCodes.Call.WithOperand(removeMethod.AsToken()),
                 OpCodes.Castclass.WithOperand(Context.TypeResolver.Resolve(eventSymbol.Type, ResolveTargetKind.Instruction).Expression.AsToken()),
                 OpCodes.Stloc_2,
@@ -203,6 +203,7 @@ namespace Cecilifier.Core.AST
 
             // static member access does not have a *this* so simply replace with *Nop*
             var lgarg_0 = isStatic ? OpCodes.Nop : OpCodes.Ldarg_0;
+            
             ResolvedType[] localVariableTypes = [];
             InstructionRepresentation[] instructions = [
                 lgarg_0,
@@ -211,7 +212,7 @@ namespace Cecilifier.Core.AST
                 OpCodes.Ldloc_0.WithInstructionMarker("LoopStart"),
                 OpCodes.Stloc_1,
                 OpCodes.Ldloc_1,
-                OpCodes.Ldarg.WithOperand(isStatic ? "0" : "1"),
+                OpCodes.Ldarg.WithOperand(isStatic ? 0 : 1),
                 OpCodes.Call.WithOperand(combineMethod.AsToken()),
                 OpCodes.Castclass.WithOperand(Context.TypeResolver.Resolve(eventSymbol.Type, ResolveTargetKind.Instruction).Expression.AsToken()),
                 OpCodes.Stloc_2,
@@ -227,9 +228,8 @@ namespace Cecilifier.Core.AST
                 OpCodes.Nop,
                 OpCodes.Ret
             ];
-            var bodyExps = Context.ApiDefinitionsFactory.MethodBody(Context, accessorName, ilContext, localVariableTypes, instructions);
 
-            return bodyExps;
+            return Context.ApiDefinitionsFactory.MethodBody(Context, accessorName, ilContext, localVariableTypes, instructions);
         }
 
         private string CompareExchangeMethodResolvingExps(ITypeSymbol typeArgument)
@@ -259,14 +259,18 @@ namespace Cecilifier.Core.AST
             return fields.First();
         }
 
-        private string AddEventDefinition(MemberDeclarationSyntax eventFieldDeclaration, string eventName, ResolvedType eventType, string addAccessor, string removeAccessor)
+        private string AddEventDefinition(MemberDeclarationSyntax eventFieldDeclaration, IEventSymbol eventSymbol, ResolvedType eventType, string addAccessorVariable, string removeAccessorVariable)
         {
             var evtDefVar = Context.Naming.EventDeclaration(eventFieldDeclaration);
-            WriteCecilExpression(Context, $"var {evtDefVar} = new EventDefinition(\"{eventName}\", EventAttributes.None, {eventType.Expression});");
-            WriteCecilExpression(Context, $"{evtDefVar}.AddMethod = {addAccessor};");
-            WriteCecilExpression(Context, $"{evtDefVar}.RemoveMethod = {removeAccessor};");
-            WriteCecilExpression(Context, $"{eventDeclaringTypeVar.VariableName}.Events.Add({evtDefVar});");
-
+            var exps = Context.ApiDefinitionsFactory.Event(
+                                                        Context, 
+                                                        new BodiedMemberDefinitionContext(eventSymbol.Name, eventSymbol.Name.ToValidIdentifier(), evtDefVar, eventDeclaringTypeVar.VariableName, MemberOptions.None, IlContext.None), 
+                                                        eventSymbol.ContainingType.ToDisplayString(),
+                                                        eventType,
+                                                        addAccessorVariable, 
+                                                        removeAccessorVariable);
+            Context.Generate(exps);
+            
             return evtDefVar;
         }
 

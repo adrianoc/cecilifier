@@ -66,7 +66,6 @@ namespace Cecilifier.Core.AST
                 Context.Naming.MethodDeclaration(node),
                 node.Identifier.ValueText,
                 MethodNameOf(node),
-                refReturn,
                 _ => base.VisitMethodDeclaration(node),
                 node.TypeParameterList?.Parameters.ToArray());
         }
@@ -202,7 +201,7 @@ namespace Cecilifier.Core.AST
             return variableName;
         }
 
-        protected void ProcessMethodDeclaration<T>(T node, string variableName, string simpleName, string fqName, bool refReturn, Action<string> runWithCurrent, IList<TypeParameterSyntax> typeParameters = null) where T : BaseMethodDeclarationSyntax
+        protected void ProcessMethodDeclaration<T>(T node, string variableName, string simpleName, string fqName, Action<string> runWithCurrent, IList<TypeParameterSyntax> typeParameters = null) where T : BaseMethodDeclarationSyntax
         {
             var methodSymbol = Context.GetDeclaredSymbol(node);
             ProcessMethodDeclarationInternal(

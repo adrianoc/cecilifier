@@ -231,7 +231,7 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
                     CilToken token => token.VariableName,
                     string str => str,
                     DefinitionVariable definitionVariable => definitionVariable.VariableName,
-                    _ => (string) inst.Operand
+                    _ => inst.Operand.ToString()!
                 };
                 
                 return $", {operandValue}";
@@ -345,6 +345,19 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
             }
             return i;
         }
+    }
+
+    public IEnumerable<string> Event(IVisitorContext context, BodiedMemberDefinitionContext eventSpec, string declaringTypeName, ResolvedType eventType, string addAccessorVariable, string removeAccessorVariable)
+    {
+        var evtDefVar = eventSpec.Member.DefinitionVariable;
+
+        return 
+        [
+            $"var {evtDefVar} = new EventDefinition(\"{eventSpec.Member.Name}\", EventAttributes.None, {eventType.Expression});",
+            $"{evtDefVar}.AddMethod = {addAccessorVariable};",
+            $"{evtDefVar}.RemoveMethod = {removeAccessorVariable};",
+            $"{eventSpec.Member.ParentDefinitionVariable}.Events.Add({evtDefVar});"
+        ];
     }
 
     private static string CustomAttributeArgumentValueFor(IVisitorContext context, object argument)

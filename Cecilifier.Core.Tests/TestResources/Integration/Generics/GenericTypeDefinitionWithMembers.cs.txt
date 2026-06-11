@@ -32,8 +32,5 @@ public interface IGenericInterface<T>
     T TheProperty  { get; set; }
     T TheMethod(T p);
 
-//TODO: Events are not supported in SRM yet.
-#if !API_DRIVER_SYSTEM_REFLECTION_METADATA
     event EventHandler<T> TheEventT;
-#endif
 }

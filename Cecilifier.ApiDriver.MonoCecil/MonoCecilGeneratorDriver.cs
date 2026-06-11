@@ -91,7 +91,13 @@ public class SnippetRunner
 
     public void WriteCilBranch(IVisitorContext context, IlContext il, OpCode branchOpCode, string targetLabel, string? comment = null)
     {
-        WriteCilInstruction(context, il, branchOpCode, targetLabel, comment);
+        context.Generate(EmitCilInstruction(context, il, branchOpCode, targetLabel, comment));
+        context.WriteNewLine();
+    }
+    
+    public string EmitCilBranchInstruction(IVisitorContext context, IlContext il, OpCode branchOpCode, string targetLabel, string? comment = null)
+    {
+        return EmitCilInstruction(context, il, branchOpCode, targetLabel, comment);
     }
 
     public void DefineLabel(IVisitorContext context, IlContext il, string labelVariable)
@@ -99,12 +105,16 @@ public class SnippetRunner
         context.Generate($"var {labelVariable} = {il.VariableName}.Create(OpCodes.Nop);");
         context.WriteNewLine();
     }
-
+    
+    public string EmitDefineLabel(IVisitorContext context, IlContext il, string labelVariable) => $"var {labelVariable} = {il.VariableName}.Create(OpCodes.Nop);";
+    
     public void MarkLabel(IVisitorContext context, IlContext il, string labelVariable)
     {
         context.Generate($"{il.VariableName}.Append({labelVariable});");
         context.WriteNewLine();
     }
+
+    public string EmitMarkLabel(IVisitorContext context, IlContext il, string labelVariable) => $"{il.VariableName}.Append({labelVariable});";
 
     public IlContext NewIlContext(IVisitorContext context, string memberName, string relatedMethodVar)
     {

@@ -26,9 +26,13 @@ public interface IILGeneratorApiDriver
     void WriteCilInstruction<T>(IVisitorContext context, IlContext il, OpCode opCode, T? operand, string? comment = null);
     void WriteCilInstruction(IVisitorContext context, IlContext il, OpCode opCode);
     void WriteCilBranch(IVisitorContext context, IlContext il, OpCode branchOpCode, string targetLabel, string? comment = null);
+    string EmitCilBranchInstruction(IVisitorContext context, IlContext il, OpCode branchOpCode, string targetLabel, string? comment = null);
     
     void DefineLabel(IVisitorContext context, IlContext il, string labelVariable);
+    string EmitDefineLabel(IVisitorContext context, IlContext il, string labelVariable);
+    
     void MarkLabel(IVisitorContext context, IlContext il, string labelVariable);
+    string EmitMarkLabel(IVisitorContext context, IlContext il, string labelVariable);
     
     void AddMethodSemantics(IVisitorContext context, string targetVariable, string methodVariable, MethodKind methodKind);
 }
