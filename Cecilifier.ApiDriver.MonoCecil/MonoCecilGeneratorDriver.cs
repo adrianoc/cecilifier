@@ -54,6 +54,8 @@ public class SnippetRunner
 }}";
     }
 
+    public ApiDriverCapabilities DriverCapabilities => ApiDriverCapabilities.RequiresForwardReferences | ApiDriverCapabilities.RequiresExplicitParameterSyntaxHandling;
+
     public int PreambleLineCount => 25; // The # of lines before the 1st cecilified line of code (see `cecilifiedCode` parameter from AsCecilApplication())
 
     public IReadOnlyCollection<string> AssemblyReferences { get; } = 

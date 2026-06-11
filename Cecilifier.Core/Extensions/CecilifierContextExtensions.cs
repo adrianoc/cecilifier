@@ -148,12 +148,9 @@ public static class CecilifierContextExtensions
      */
     public static void EnsureForwardedMethod(this IVisitorContext context, IMethodSymbol method)
     {
-        //TODO: The code of this method is causing problems when visiting methods in SRM; that driver
-        //      will emit a method reference immediately and postpone the method definition to later
-        //      and the check for retrieving the method variable bellow fails (because definition of the variable
-        //      for the method definition has been postponed also).
-        //      For now there are not tests relying on forwarded methods in SRM
-        if (Cecilifier.IsSRM)
+        // Some drivers do not require forward method references. For instance, SRM driver will emit a method reference
+        // when visiting a method definition and postpone the method definition emission.
+        if (!context.ApiDriver.DriverCapabilities.HasFlag(ApiDriverCapabilities.RequiresForwardReferences))
             return;
         
         if (!method.IsDefinedInCurrentAssembly(context)) 

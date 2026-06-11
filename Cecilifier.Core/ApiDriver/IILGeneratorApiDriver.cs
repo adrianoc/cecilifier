@@ -14,6 +14,8 @@ namespace Cecilifier.Core.ApiDriver;
 /// </summary>
 public interface IILGeneratorApiDriver
 {
+    ApiDriverCapabilities DriverCapabilities => ApiDriverCapabilities.None;
+    
     string AsCecilApplication(string cecilifiedCode, string mainTypeName, string? entryPointVar);
     int PreambleLineCount { get; }
     IReadOnlyCollection<string> AssemblyReferences { get; }

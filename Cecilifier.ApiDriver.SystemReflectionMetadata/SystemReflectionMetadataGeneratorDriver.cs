@@ -120,6 +120,8 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
                  """;
     }
 
+    public ApiDriverCapabilities DriverCapabilities => ApiDriverCapabilities.None;
+    
     public int PreambleLineCount => 74;
     
     public IReadOnlyCollection<string> AssemblyReferences { get; } = [typeof(System.Reflection.Metadata.BlobBuilder).Assembly.Location];

@@ -82,9 +82,7 @@ namespace Cecilifier.Core.AST
 
         public override void VisitParameter(ParameterSyntax node)
         {
-            //TODO: Introduce a way for contexts specify that the related ApiDriver does not need
-            //      to handle ParameterSyntax ?
-            if (Context.GetType().Name.Contains("SystemReflectionMetadataContext"))
+            if (!Context.ApiDriver.DriverCapabilities.HasFlag(ApiDriverCapabilities.RequiresExplicitParameterSyntaxHandling))
             {
                 return;
             }
@@ -135,7 +133,6 @@ namespace Cecilifier.Core.AST
                 
                 var methodVar = AddOrUpdateMethodDefinition(
                                             methodSymbol,
-                                            declaringTypeName,
                                             variableName,
                                             simpleName,
                                             methodName,
@@ -173,7 +170,7 @@ namespace Cecilifier.Core.AST
             }
         }
 
-        private string AddOrUpdateMethodDefinition(IMethodSymbol methodSymbol, string declaringTypeName, string variableName, string simpleName, string methodName, string methodModifiers, SeparatedSyntaxList<ParameterSyntax> parameters, IList<TypeParameterSyntax> typeParameters)
+        private string AddOrUpdateMethodDefinition(IMethodSymbol methodSymbol, string variableName, string simpleName, string methodName, string methodModifiers, SeparatedSyntaxList<ParameterSyntax> parameters, IList<TypeParameterSyntax> typeParameters)
         {
             var tbf = methodSymbol.AsMethodDefinitionVariable();
             var found = Context.DefinitionVariables.GetMethodVariable(tbf);
