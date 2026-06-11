@@ -305,14 +305,18 @@ namespace Cecilifier.Core.AST
 
         protected ResolvedType ResolveType(TypeSyntax type, ResolveTargetKind resolveTargetKind)
         {
+            // RefTypeSyntax nodes do not have an ITypeSymbol representation. Instead, they are mapped to
+            // specific properties in other symbol types; for instance, the information for a `ref return`
+            // method is mapped in IMethodSymbol.ReturnsByRef property and trying to get the symbol info
+            // for such types fails whence we `unwrap` (remove the `ref` information) the type, resolve
+            // the symbol and then `wrap` the result.
             var resolvedType = Context.TypeResolver.Resolve(ResolveTypeSymbol(type), resolveTargetKind);
-            //TODO: Can't this check be moved inside the Resolve() method as the other checks for arrays,
             return type is RefTypeSyntax ? resolvedType.MakeByReferenceType() : resolvedType;
         }
         
         protected ITypeSymbol ResolveTypeSymbol(TypeSyntax type)
         {
-            // Special case types that Context.GetTypeInfo() is not able to handle. As of Oct/2024 only the ones below are requires such special handling.
+            // Special case types that Context.GetTypeInfo() is not able to handle. As of Jun/2026 only the ones below require such special handling.
             var typeToCheck = type switch
             {
                 RefTypeSyntax refType  => refType.Type,
