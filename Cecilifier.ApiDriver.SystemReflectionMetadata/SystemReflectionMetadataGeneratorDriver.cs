@@ -156,7 +156,6 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
                     CilOperandValue operandValue => $"{il.VariableName}.CodeBuilder.Write{operandValue.Type.Name}({operandValue.Value});",
                     CilLocalVariableHandle localVariableHandle => $"{il.VariableName}.CodeBuilder.WriteInt32({localVariableHandle.Value});",
 
-                    //TODO: Fix name of WriteX() method to be called; it is not always derivable from the type  
                     _ => $"{il.VariableName}.CodeBuilder.Write{operand.GetType().Name}({operand});"
                 }            
             }}
