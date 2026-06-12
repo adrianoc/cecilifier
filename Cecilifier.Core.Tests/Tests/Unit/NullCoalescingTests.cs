@@ -59,12 +59,12 @@ public class NullCoalescingTests : CecilifierUnitTestBase
                                                                  \k<emit>Stloc, \k<left>\);
                                                                  \k<emit>Ldloca_S, \k<left>\);
                                                                  \k<emit>Call,.+typeof\(System.Nullable<System.Int32>\).+"get_HasValue".+\);
-                                                                 \s+var (?<loadLeftValue>loadLeftValueTarget_\d+) = il_M_\d+.Create\(OpCodes.Ldloc_S, \k<left>\);
+                                                                 \s+var (?<loadLeftValue>loadLeftValueTarget_\d+) = il_M_\d+.Create\(OpCodes.Nop\);
                                                                  \k<emit>Brtrue_S, \k<loadLeftValue>\);
                                                                  \k<emit>Ldarg_1\);
                                                                  \k<emit>Ret\);
-                                                                 \s+il_M_\d+\.Body\.Instructions.Add\(\k<loadLeftValue>\);
-                                                                 \k<emit>Ret\);
+                                                                 \s+il_M_\d+\.Append\(\k<loadLeftValue>\);
+                                                                 \k<emit>Ldloc, \k<left>\);
                                                                  """));
     }
     
@@ -92,9 +92,8 @@ public class NullCoalescingTests : CecilifierUnitTestBase
                        \k<emit>Unbox_Any, assembly.MainModule.TypeSystem.Int32\);
                        \k<emit>Newobj,.+System.Nullable<>.+MakeGenericType\(typeof\(System.Int32\)\).GetConstructors\(\).Single\(ctor => ctor.GetParameters\(\).Length == 1\)\)\);
                        \k<emit>Ret\);
-                       \s+il_m3_\d+\.Body\.Instructions\.Add\(\k<loadLeftValue>\);
-                       \k<emit>Ret\);
-                       \s+//End of local function\.
+                       \s+il_m3_\d+\.Append\(\k<loadLeftValue>\);
+                       \k<emit>Ldloc, l_leftValue_\d+\);
                        """));
     }
 }

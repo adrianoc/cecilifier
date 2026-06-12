@@ -136,18 +136,18 @@ namespace Cecilifier.Core.AST
                     ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Stloc, new CilLocalVariableHandle(evaluatedLeftVar.VariableName));
                     ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Ldloca_S, new CilLocalVariableHandle(evaluatedLeftVar.VariableName));
                     ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Call, lhsType.GetMembers("get_HasValue").OfType<IMethodSymbol>().Single().MethodResolverExpression(ctx));
-                    
+
                     var loadLeftValueInst = ctx.Naming.Instruction("loadLeftValueTarget");
-                    //TODO: we can't generate like this. We need to call into the driver to generate the instruction
-                    ctx.Generate($"var {loadLeftValueInst} = {ilVar}.Create({OpCodes.Ldloc_S.ConstantName()}, {evaluatedLeftVar.VariableName});");
-                    ctx.WriteNewLine();
+                    ctx.ApiDriver.DefineLabel(ctx, ilVar, loadLeftValueInst);
 
-                    ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Brtrue_S, loadLeftValueInst);
-
+                    ctx.ApiDriver.WriteCilBranch(ctx, ilVar, OpCodes.Brtrue_S, loadLeftValueInst);
                     binaryExpression.Right.Accept(expressionVisitor);
                     binaryExpression.Right.InjectRequiredConversions(ctx, ilVar);
                     ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Ret);
-                    ctx.Generate($"{ilVar}.Body.Instructions.Add({loadLeftValueInst});");
+                    
+                    ctx.ApiDriver.MarkLabel(ctx, ilVar, loadLeftValueInst);
+                    ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Ldloc, new CilLocalVariableHandle(evaluatedLeftVar.VariableName));
+                    
                     ctx.WriteNewLine();
                     // method handler will add the required ret
                 }
