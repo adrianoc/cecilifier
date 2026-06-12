@@ -230,6 +230,7 @@ public class StructSpecificTests : CecilifierUnitTestBase
               //Parameters of 'S TernaryOperators\(int i\) => i == 2 \? new S\(\): new S\(\);'
               \s+var p_i_4 = new ParameterDefinition\("i", ParameterAttributes.None, assembly.MainModule.TypeSystem.Int32\);
               \s+m_ternaryOperators_2.Parameters.Add\(p_i_4\);
+              \s+var il_ternaryOperators_\d+ = m_ternaryOperators_\d+.Body.GetILProcessor\(\);
               \s+//i == 2 \? new S\(\): new S\(\)
               \s+var lbl_conditionEnd_5 = il_ternaryOperators_3.Create\(OpCodes.Nop\);
               \s+var lbl_whenFalse_6 = il_ternaryOperators_3.Create\(OpCodes.Nop\);

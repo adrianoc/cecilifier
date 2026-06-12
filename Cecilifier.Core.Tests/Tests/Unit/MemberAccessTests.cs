@@ -24,6 +24,7 @@ public class MemberAccessTests : CecilifierUnitTestBase
                                                                     //Parameters of 'string C<T>\(T t\) where T : struct => t.ToString\(\);'
                                                                     \s+var (p_t_\d+) = new ParameterDefinition\("t", ParameterAttributes.None, (gp_T_\d+)\);
                                                                     \s+m_C_\d+.Parameters.Add\(\1\);
+                                                                    \s+var il_C_\d+ = m_C_\d+.Body.GetILProcessor\(\);
                                                                     \s+//t\.ToString\(\)
                                                                     (\s+il_C_\d+\.Emit\(OpCodes\.)Ldarga, \1\);
                                                                     \3Constrained, \2\);
@@ -35,6 +36,7 @@ public class MemberAccessTests : CecilifierUnitTestBase
                                                               //Parameters of 'string C<T>\(T t\) where T : IFoo => t.Get\(\);'
                                                               \s+var (p_t_\d+) = new ParameterDefinition\("t", ParameterAttributes.None, (gp_T_\d+)\);
                                                               \s+m_C_\d+.Parameters.Add\(\1\);
+                                                              \s+var il_C_\d+ = m_C_\d+.Body.GetILProcessor\(\);
                                                               \s+//t\.Get\(\)
                                                               (\s+il_C_\d+\.Emit\(OpCodes\.)Ldarga, \1\);
                                                               \3Constrained, \2\);
@@ -46,6 +48,7 @@ public class MemberAccessTests : CecilifierUnitTestBase
                                                                   //Parameters of 'string C<T>\(T t\) where T : IFoo => t.ToString\(\);'
                                                                   \s+var (p_t_\d+) = new ParameterDefinition\("t", ParameterAttributes.None, (gp_T_\d+)\);
                                                                   \s+m_C_\d+.Parameters.Add\(\1\);
+                                                                  \s+var il_C_\d+ = m_C_\d+.Body.GetILProcessor\(\);
                                                                   \s+//t\.ToString\(\)
                                                                   (\s+il_C_\d+\.Emit\(OpCodes\.)Ldarga, \1\);
                                                                   \3Constrained, \2\);
@@ -57,6 +60,7 @@ public class MemberAccessTests : CecilifierUnitTestBase
                                                    //Parameters of 'string C<T>\(T t\) => t.ToString\(\);'
                                                    \s+var (p_t_\d+) = new ParameterDefinition\("t", ParameterAttributes.None, (gp_T_\d+)\);
                                                    \s+m_C_\d+.Parameters.Add\(\1\);
+                                                   \s+var il_C_\d+ = m_C_\d+.Body.GetILProcessor\(\);
                                                    \s+//t\.ToString\(\)
                                                    (\s+il_C_\d+\.Emit\(OpCodes\.)Ldarga, \1\);
                                                    \3Constrained, \2\);
@@ -68,6 +72,7 @@ public class MemberAccessTests : CecilifierUnitTestBase
                                                                    //Parameters of 'string C<T>\(T t\) where T : class => t.ToString\(\);'
                                                                    \s+var (p_t_\d+) = new ParameterDefinition\("t", ParameterAttributes.None, (gp_T_\d+)\);
                                                                    \s+m_C_\d+.Parameters.Add\(\1\);
+                                                                   \s+var il_C_\d+ = m_C_\d+.Body.GetILProcessor\(\);
                                                                    \s+//t\.ToString\(\)
                                                                    (\s+il_C_\d+\.Emit\(OpCodes\.)Ldarg_1\);
                                                                    \3Box, \2\);
@@ -79,6 +84,7 @@ public class MemberAccessTests : CecilifierUnitTestBase
                                                                  //Parameters of 'string C<T>\(T t\) where T : Foo => t.ToString\(\);'
                                                                  \s+var (p_t_\d+) = new ParameterDefinition\("t", ParameterAttributes.None, (gp_T_\d+)\);
                                                                  \s+m_C_\d+.Parameters.Add\(\1\);
+                                                                 \s+var il_C_\d+ = m_C_\d+.Body.GetILProcessor\(\);
                                                                  \s+//t.ToString\(\)
                                                                  (\s+il_C_\d+\.Emit\(OpCodes\.)Ldarg_1\);
                                                                  \3Box, \2\);

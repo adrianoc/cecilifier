@@ -106,10 +106,11 @@ namespace Cecilifier.Core.Tests.Tests.Unit
                     @"m_M_2.ReturnType = gp_T_1;\s+" +
                     @"cls_foo_0.Methods.Add\(m_M_2\);\s+" +
                     @"m_M_2.Body.InitLocals = true;\s+" +
-                    @"var il_M_3 = m_M_2.Body.GetILProcessor\(\);\s+" + 
                     @"//Parameters of 'T M\(T t\) { T tl = t; t = tl; return t; }'\s+" + 
                     @"var p_t_4 = new ParameterDefinition\(""t"", ParameterAttributes.None, gp_T_1\);\s+" +
-                    @"m_M_2.Parameters.Add\(p_t_4\);\s+"));
+                    @"m_M_2.Parameters.Add\(p_t_4\);\s+" +
+                    @"var il_M_3 = m_M_2.Body.GetILProcessor\(\);\s+" 
+                    ));
 
             Assert.That(cecilifiedCode, Does.Match("""
                                                    //t = tl;

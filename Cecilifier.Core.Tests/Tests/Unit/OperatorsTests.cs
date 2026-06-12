@@ -240,6 +240,7 @@ public class OperatorsTests : CecilifierUnitTestBase
         """
         var (p_o_\d+) = new ParameterDefinition\("o", ParameterAttributes.None, assembly.MainModule.TypeSystem.Object\);
         \s+m_foo_\d+.Parameters.Add\(\1\);
+        \s+var il_foo_\d+ = m_foo_\d+.Body.GetILProcessor\(\);
         \s+//o != null
         (\s+il_foo_\d+\.Emit\(OpCodes\.)Ldarg_0\);
         \2Ldnull\);
@@ -254,6 +255,7 @@ public class OperatorsTests : CecilifierUnitTestBase
         """
                 var (p_o_\d+) = new ParameterDefinition\("o", ParameterAttributes.None, assembly.MainModule.TypeSystem.Object\);
                 \s+m_foo_\d+.Parameters.Add\(\1\);
+                \s+var il_foo_\d+ = m_foo_\d+.Body.GetILProcessor\(\);
                 \s+//o == null
                 (\s+il_foo_\d+\.Emit\(OpCodes\.)Ldarg_0\);
                 \2Ldnull\);
@@ -265,6 +267,7 @@ public class OperatorsTests : CecilifierUnitTestBase
         """
                 var (p_o_\d+) = new ParameterDefinition\("o", ParameterAttributes.None, (?<tt>gp_T_\d+)\);
                 \s+m_foo_\d+.Parameters.Add\(\1\);
+                \s+var il_foo_\d+ = m_foo_\d+.Body.GetILProcessor\(\);
                 \s+//o == null
                 (\s+il_foo_\d+\.Emit\(OpCodes\.)Ldarg_0\);
                 \2Box, \k<tt>\);

@@ -15,7 +15,7 @@ namespace Cecilifier.Core.AST
 {
     class MethodDeclarationVisitor : SyntaxWalkerBase
     {
-        protected string ilVar;
+        protected IlContext ilVar;
 
         public MethodDeclarationVisitor(IVisitorContext context) : base(context)
         {
@@ -228,18 +228,11 @@ namespace Cecilifier.Core.AST
             context.WriteComment($"Method : {methodName}");
 
             TypeDeclarationVisitor.EnsureForwardedTypeDefinition(context, methodSymbol.ReturnType, []);
-            var ilContext = context.ApiDriver.NewIlContext(context, simpleName, methodVar);
+            ilVar = context.ApiDriver.NewIlContext(context, simpleName, methodVar);
             
             var declaringTypeVarName = context.DefinitionVariables.GetLastOf(VariableMemberKind.Type).VariableName;
-            var parameterSymbols = parameters.Select(p => context.SemanticModel.GetDeclaredSymbol(p)).ToArray();
-            var exps = context.ApiDefinitionsFactory.Method(context, methodSymbol, new BodiedMemberDefinitionContext(methodName, simpleName, methodVar, declaringTypeVarName, MemberOptions.None, ilContext), methodName, methodModifiers, typeParameters);
+            var exps = context.ApiDefinitionsFactory.Method(context, methodSymbol, new BodiedMemberDefinitionContext(methodName, simpleName, methodVar, declaringTypeVarName, MemberOptions.None, ilVar), methodName, methodModifiers, typeParameters);
             AddCecilExpressions(context, exps);
-
-            //TODO: Temporary setting ilVar until we change its type to IlContext...
-            if (!methodSymbol.IsAbstract && methodSymbol.ContainingType.TypeKind != TypeKind.Interface && !methodSymbol.IsExtern)
-            {
-                ilVar = ilContext.VariableName;
-            }
 
             HandleAttributesInTypeParameter(context, typeParameters);
         }
