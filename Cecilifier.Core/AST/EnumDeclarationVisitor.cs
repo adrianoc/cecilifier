@@ -69,9 +69,10 @@ namespace Cecilifier.Core.AST
             var enumMemberSymbol = Context.SemanticModel.GetDeclaredSymbol(node).EnsureNotNull();
             var fieldVar = Context.Naming.LocalVariable(node);
             var declaringTypeName = enumMemberSymbol.ContainingSymbol.ToDisplayString();
-            //TODO: Consider introducing (or reusing ?) some abstraction so the code can add more information (like, is this a variable name? is this the result of TypeResolver.Resolve() ? etc)
-            //      to allow Api Drivers (the need for this first appeared in SRM) to decide how to encode/emit the code. For now we ignore that this reference is 100% certain to be the type
-            //      definition for the parent enum (and that we have that variable name in enumVarDef) and re-resolve it in a way that it will return a valid reference.
+            
+            // Some Api Drivers have different syntaxes/apis for type resolution depending on the usage of the resolve type (is it used as a field type? parameter?
+            // method return? etc) so we can't reuse 'enumVarDef' (which represents the resolved enum type encoded to be used in a type definition).  
+            // Re-resolve the enum type  in a way that it will return a valid reference to be used as a field type.
             var enumType = Context.TypeResolver.Resolve(Context.SemanticModel.GetDeclaredSymbol(node.Parent).EnsureNotNull<ISymbol, INamedTypeSymbol>(), new TypeResolutionContext(ResolveTargetKind.Field, TypeResolutionOptions.IsValueType));
             var exp = Context.ApiDefinitionsFactory.Field(Context, new MemberDefinitionContext(node.Identifier.ValueText, fieldVar, enumVarDef.VariableName), declaringTypeName, enumType, "FieldAttributes.Static | FieldAttributes.Literal | FieldAttributes.Public | FieldAttributes.HasDefault", false, false, enumMemberValue);
             AddCecilExpressions(Context, exp);
