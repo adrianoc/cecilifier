@@ -296,7 +296,7 @@ namespace Cecilifier.Core.AST
             if (node.AccessorList != null && node.AccessorList.Accessors.Any(acc => acc.IsKind(SyntaxKind.InitAccessorDeclaration)))
                 m = m.Append(SyntaxFactory.Token(SyntaxKind.ReadOnlyKeyword)); // properties with `init` accessors are considered `readonly`
 
-            return ModifiersToCecil<FieldAttributes>(m, "Private", FieldDeclarationVisitor.MapFieldAttributesFor);
+            return ModifiersAsString<System.Reflection.FieldAttributes>(m, "Private", FieldDeclarationVisitor.MapFieldAttributesFor);
         }
 
         private string AddPropertyDefinition(BasePropertyDeclarationSyntax propertyDeclarationSyntax, string declaringTypeVariable, string declaringTypeName, string propName, List<ParameterSpec> propertyParameters, ResolvedType propertyType)

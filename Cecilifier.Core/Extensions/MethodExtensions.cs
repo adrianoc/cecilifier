@@ -93,7 +93,7 @@ namespace Cecilifier.Core.Extensions
 
             var validModifiers = RemoveSourceModifiersWithNoILEquivalent(modifiers);
 
-            var cecilModifiersStr = new StringBuilder(SyntaxWalkerBase.ModifiersToCecil<MethodAttributes>(validModifiers.ToList(), defaultAccessibility, MapMethodAttributeFor));
+            var cecilModifiersStr = new StringBuilder(SyntaxWalkerBase.ModifiersAsString<System.Reflection.MethodAttributes>(validModifiers.ToList(), defaultAccessibility, MapMethodAttributeFor));
             if (specificModifiers != null)
             {
                 cecilModifiersStr.AppendEnumFlag(specificModifiers);
@@ -114,7 +114,7 @@ namespace Cecilifier.Core.Extensions
 
             var validModifiers = RemoveSourceModifiersWithNoILEquivalent(modifiers);
 
-            var cecilModifiersStr = new StringBuilder(SyntaxWalkerBase.ModifiersToCecil<MethodAttributes>(validModifiers.ToList(), defaultAccessibility, MapMethodAttributeFor));
+            var cecilModifiersStr = new StringBuilder(SyntaxWalkerBase.ModifiersAsString<System.Reflection.MethodAttributes>(validModifiers.ToList(), defaultAccessibility, MapMethodAttributeFor));
             cecilModifiersStr.AppendEnumFlag(specificModifiers);
             cecilModifiersStr.AppendEnumFlag("MethodAttributes.HideBySig").AppendEnumFlag(modifiersStr);
 

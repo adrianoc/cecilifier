@@ -235,8 +235,7 @@ namespace Cecilifier.Core.AST
 
         protected string TypeModifiersToCecil(INamedTypeSymbol typeSymbol, SyntaxTokenList modifiers) => Context.ApiDefinitionsFactory.MappedTypeModifiersFor(typeSymbol, modifiers);
 
-        //TODO: Probably we need to abstract this one also
-        internal static string ModifiersToCecil<TEnumAttr>(
+        internal static string ModifiersAsString<TEnumAttr>(
             IEnumerable<SyntaxToken> modifiers,
             string defaultAccessibility,
             Func<SyntaxToken, IEnumerable<string>> mapAttribute) where TEnumAttr : Enum
