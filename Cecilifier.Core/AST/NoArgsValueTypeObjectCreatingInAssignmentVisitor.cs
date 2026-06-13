@@ -10,12 +10,12 @@ namespace Cecilifier.Core.AST
 {
     internal class NoArgsValueTypeObjectCreatingInAssignmentVisitor : SyntaxWalkerBase
     {
-        private readonly string ilVar;
+        private readonly IlContext ilVar;
         private readonly ResolvedType instantiatedType;
         private readonly Func<DefinitionVariable> tempValueTypeDeclarer;
         private readonly BaseObjectCreationExpressionSyntax objectCreationExpression;
 
-        internal NoArgsValueTypeObjectCreatingInAssignmentVisitor(IVisitorContext ctx, string ilVar, ResolvedType instantiatedType, Func<DefinitionVariable> tempValueTypeDeclarer,
+        internal NoArgsValueTypeObjectCreatingInAssignmentVisitor(IVisitorContext ctx, IlContext ilVar, ResolvedType instantiatedType, Func<DefinitionVariable> tempValueTypeDeclarer,
             BaseObjectCreationExpressionSyntax objectCreationExpression) : base(ctx)
         {
             this.ilVar = ilVar;

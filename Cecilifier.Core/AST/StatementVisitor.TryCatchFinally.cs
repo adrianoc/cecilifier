@@ -11,12 +11,12 @@ namespace Cecilifier.Core.AST
 {
     internal partial class StatementVisitor
     {
-        private void ProcessTryCatchFinallyBlock<TState>(string ilVar, CSharpSyntaxNode tryStatement, CatchClauseSyntax[] catches, Action<TState>? finallyBlockHandler, TState state = default)
+        private void ProcessTryCatchFinallyBlock<TState>(IlContext ilVar, CSharpSyntaxNode tryStatement, CatchClauseSyntax[] catches, Action<TState>? finallyBlockHandler, TState state = default)
         {
             ProcessWithInTryCatchFinallyBlock(ilVar, _ => tryStatement.Accept(this), catches, finallyBlockHandler, state);
         }
 
-        private void ProcessWithInTryCatchFinallyBlock<TState>(string ilVar, Action<TState> toProcess, CatchClauseSyntax[] catches, Action<TState> finallyBlockHandler, TState state)
+        private void ProcessWithInTryCatchFinallyBlock<TState>(IlContext ilVar, Action<TState> toProcess, CatchClauseSyntax[] catches, Action<TState>? finallyBlockHandler, TState state)
         {
             var exceptionHandlerTable = new ExceptionHandlerEntry[catches.Length + (finallyBlockHandler != null ? 1 : 0)];
 
@@ -42,7 +42,8 @@ namespace Cecilifier.Core.AST
 
             HandleFinallyClause(ilVar, finallyBlockHandler, exceptionHandlerTable, state);
 
-            AddCecilExpression($"{ilVar}.Append({firstInstructionAfterTryCatchBlock});");
+            //TODO: Mono.Cecil specific
+            AddCecilExpression($"{ilVar.VariableName}.Append({firstInstructionAfterTryCatchBlock});");
 
             WriteExceptionHandlers(exceptionHandlerTable);
         }
@@ -67,7 +68,7 @@ namespace Cecilifier.Core.AST
             }
         }
 
-        private void HandleCatchClause(string ilVar, CatchClauseSyntax node, ExceptionHandlerEntry[] exceptionHandlerTable, int currentIndex, string firstInstructionAfterTryCatchBlock)
+        private void HandleCatchClause(IlContext ilVar, CatchClauseSyntax node, ExceptionHandlerEntry[] exceptionHandlerTable, int currentIndex, string firstInstructionAfterTryCatchBlock)
         {
             exceptionHandlerTable[currentIndex].Kind = Mono.Cecil.Cil.ExceptionHandlerType.Catch;
             exceptionHandlerTable[currentIndex].HandlerStart = AddCilInstructionWithLocalVariable(ilVar, OpCodes.Pop); // pops the exception object from stack...
@@ -90,7 +91,7 @@ namespace Cecilifier.Core.AST
             Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Leave, firstInstructionAfterTryCatchBlock);
         }
 
-        private void HandleFinallyClause<TState>(string ilVar, Action<TState> finallyBlockHandler, ExceptionHandlerEntry[] exceptionHandlerTable, TState state)
+        private void HandleFinallyClause<TState>(IlContext ilVar, Action<TState>? finallyBlockHandler, ExceptionHandlerEntry[] exceptionHandlerTable, TState state)
         {
             if (finallyBlockHandler == null)
                 return;

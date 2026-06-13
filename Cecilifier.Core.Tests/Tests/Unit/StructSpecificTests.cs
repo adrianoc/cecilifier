@@ -162,9 +162,9 @@ public class StructSpecificTests : CecilifierUnitTestBase
                       """));
     }
 
-    [TestCase("=> new Test();", TestName = "Bodied")]
-    [TestCase("{ return new Test(); }", TestName = "Return")]
-    public void ReturnStructInstantiationAsReferenceType(string body)
+    [TestCase("=> new Test();", true, TestName = "Bodied")]
+    [TestCase("{ return new Test(); }", false, TestName = "Return")]
+    public void ReturnStructInstantiationAsReferenceType(string body, bool checkIlVariable)
     {
         var result = RunCecilifier(
             $$"""
@@ -177,10 +177,10 @@ public class StructSpecificTests : CecilifierUnitTestBase
         
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
         Assert.That(cecilifiedCode, Does.Match(
-             """
+             $"""
              \s+//(?:return )?new Test\(\);?
              .+var (l_vt_\d+) = new VariableDefinition\((st_test_\d+)\);
-             .+m_M_3.Body.Variables.Add\(\1\);
+             .+m_M_3.Body.Variables.Add\(\1\);{(checkIlVariable ? @"\n\s+var il_M_\d+ = m_M_\d+.Body.GetILProcessor\(\);": "")}
              (.+il_M_\d+.Emit\(OpCodes\.)Ldloca_S, \1\);
              \3Initobj, \2\);
              \3Ldloc, \1\);
@@ -230,8 +230,8 @@ public class StructSpecificTests : CecilifierUnitTestBase
               //Parameters of 'S TernaryOperators\(int i\) => i == 2 \? new S\(\): new S\(\);'
               \s+var p_i_4 = new ParameterDefinition\("i", ParameterAttributes.None, assembly.MainModule.TypeSystem.Int32\);
               \s+m_ternaryOperators_2.Parameters.Add\(p_i_4\);
-              \s+var il_ternaryOperators_\d+ = m_ternaryOperators_\d+.Body.GetILProcessor\(\);
               \s+//i == 2 \? new S\(\): new S\(\)
+              \s+var il_ternaryOperators_\d+ = m_ternaryOperators_\d+.Body.GetILProcessor\(\);
               \s+var lbl_conditionEnd_5 = il_ternaryOperators_3.Create\(OpCodes.Nop\);
               \s+var lbl_whenFalse_6 = il_ternaryOperators_3.Create\(OpCodes.Nop\);
               (\s+il_ternaryOperators_\d+\.Emit\(OpCodes\.)Ldarg_1\);
@@ -475,6 +475,7 @@ public class StructSpecificTests : CecilifierUnitTestBase
         """,
         """
             //field.M\(42\)
+            \s+var il_call_\d+ = m_call_\d+.Body.GetILProcessor\(\);
             \s+il_call_\d+.Emit\(OpCodes\.Ldarg_0\);
             \s+il_call_\d+.Emit\(OpCodes\.Ldflda, new FieldReference\(fld_field_\d+.Name, fld_field_\d+.FieldType, cls_field_\d+.MakeGenericInstanceType\(gp_T_\d+\)\)\);
             """,

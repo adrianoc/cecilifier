@@ -74,7 +74,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             Assert.That(result.Mappings[4].Source.Begin.Line, Is.EqualTo(1), message);
             Assert.That(result.Mappings[4].Source.Begin.Column, Is.EqualTo(35), message);
 
-            Assert.That(result.Mappings[4].Cecilified.Begin.Line, Is.EqualTo(42), message);
+            Assert.That(result.Mappings[4].Cecilified.Begin.Line, Is.EqualTo(41), message);
             Assert.That(result.Mappings[4].Cecilified.End.Line, Is.EqualTo(46), message);
         }
 

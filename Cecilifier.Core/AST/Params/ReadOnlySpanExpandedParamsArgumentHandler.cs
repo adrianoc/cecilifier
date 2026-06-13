@@ -8,7 +8,7 @@ namespace Cecilifier.Core.AST.Params;
 
 internal class ReadOnlySpanExpandedParamsArgumentHandler : SpanExpandedParamsArgumentHandler
 {
-    public ReadOnlySpanExpandedParamsArgumentHandler(IVisitorContext context, IParameterSymbol paramsParameter, ArgumentListSyntax argumentList, string ilVar) 
+    public ReadOnlySpanExpandedParamsArgumentHandler(IVisitorContext context, IParameterSymbol paramsParameter, ArgumentListSyntax argumentList, IlContext ilVar) 
         : base(context, paramsParameter, argumentList, ilVar)
     {
     }

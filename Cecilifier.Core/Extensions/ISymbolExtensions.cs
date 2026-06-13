@@ -297,7 +297,7 @@ namespace Cecilifier.Core.Extensions
                    || (type.ContainingType != null && (SymbolEqualityComparer.Default.Equals(type.ContainingType, type) ? false : HasTypeArgumentOfTypeFromCecilifiedCodeTransitive(type.ContainingType, context)));
         }
         
-        internal static ExpandedParamsArgumentHandler? CreateExpandedParamsUsageHandler(this IMethodSymbol methodSymbol, ExpressionVisitor expressionVisitor, string ilVar, ArgumentListSyntax argumentList)
+        internal static ExpandedParamsArgumentHandler? CreateExpandedParamsUsageHandler(this IMethodSymbol methodSymbol, ExpressionVisitor expressionVisitor, IlContext ilVar, ArgumentListSyntax argumentList)
         {
             var paramsParameter = methodSymbol.Parameters.FirstOrDefault(p => p.IsParams);
             if (paramsParameter == null || !IsExpandedForm(argumentList, paramsParameter))

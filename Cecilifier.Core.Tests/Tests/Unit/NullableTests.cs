@@ -110,6 +110,7 @@ public class NullableTests : CecilifierUnitTestBase
         var result = RunCecilifier("""int? M(object o) => (int) o;""");
         Assert.That(result.GeneratedCode.ReadToEnd(),  Does.Match("""
                                                                   \s+//\(int\) o
+                                                                  \s+var il_M_\d+ = m_M_\d+.Body.GetILProcessor\(\);
                                                                   (?<emit>\s+il_M_\d+\.Emit\(OpCodes\.)Ldarg_0\);
                                                                   \k<emit>Unbox_Any, assembly.MainModule.TypeSystem.Int32\);
                                                                   \k<emit>Newobj,.+ImportReference\(typeof\(System.Nullable<>\)\.MakeGenericType\(typeof\(System.Int32\)\)\.GetConstructors\(\).+\);
@@ -122,6 +123,7 @@ public class NullableTests : CecilifierUnitTestBase
         "class C { void M(int? p) => p = null; }",
         """
         //p = null
+        \s+var il_M_\d+ = m_M_\d+.Body.GetILProcessor\(\);
         \s+il_M_2.Emit\(OpCodes.Ldarga, p_p_\d+\);
         \s+il_M_2.Emit\(OpCodes.Initobj, .+ImportReference\(typeof\(System.Nullable<>\)\).MakeGenericInstanceType\(.+Int32\)\);
         """,
@@ -148,6 +150,7 @@ public class NullableTests : CecilifierUnitTestBase
         "class C { void M(int? p) => M(null); }", 
         """
         //M\(null\)
+        \s+var il_M_\d+ = m_M_\d+.Body.GetILProcessor\(\);
         (\s+il_M_\d+\.Emit\(OpCodes\.)Ldarg_0\);
         \s+var (?<var>l_tmpNull_\d+) = new VariableDefinition\(.+ImportReference\(.+System.Nullable<>\)\).MakeGenericInstanceType\(.+Int32\)\);
         \s+m_M_\d+.Body.Variables.Add\(\k<var>\);
@@ -161,6 +164,7 @@ public class NullableTests : CecilifierUnitTestBase
         "class C { void M(int? p) => f = null;  int ?f; }", 
         """
                       //f = null
+                      \s+var il_M_\d+ = m_M_\d+.Body.GetILProcessor\(\);
                       (\s+il_M_\d+\.Emit\(OpCodes\.)Ldarg_0\);
                       \1Ldflda, fld_f_\d+\);
                       \1Initobj, .+ImportReference\(typeof\(System.Nullable<>\)\).MakeGenericInstanceType\(.+Int32\)\);

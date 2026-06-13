@@ -122,7 +122,7 @@ namespace Cecilifier.Core.Misc
             /// <param name="context"></param>
             /// <param name="listOfTTypeSymbol"><see cref="ITypeSymbol"/> for the List{T}.</param>
             /// <param name="elementCount">Number of elements to be stored.</param>
-            public static (DefinitionVariable, ResolvedType) InstantiateListToStoreElements(IVisitorContext context, string ilVar, INamedTypeSymbol listOfTTypeSymbol, int elementCount)
+            public static (DefinitionVariable, ResolvedType) InstantiateListToStoreElements(IVisitorContext context, IlContext ilVar, INamedTypeSymbol listOfTTypeSymbol, int elementCount)
             {
                 var resolvedListTypeArgument = context.TypeResolver.Resolve(listOfTTypeSymbol.TypeArguments[0], ResolveTargetKind.TypeReference);
 

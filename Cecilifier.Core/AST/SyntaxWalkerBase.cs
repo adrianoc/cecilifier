@@ -52,37 +52,38 @@ namespace Cecilifier.Core.AST
             Context.WriteNewLine();
         }
 
-        protected void AddCilInstruction(string ilVar, OpCode opCode, ITypeSymbol type)
+        protected void AddCilInstruction(IlContext ilVar, OpCode opCode, ITypeSymbol type)
         {
             var operand = Context.TypeResolver.Resolve(type, new TypeResolutionContext(ResolveTargetKind.Instruction, type.IsValueType ? TypeResolutionOptions.IsValueType : TypeResolutionOptions.None));
             Context.ApiDriver.WriteCilInstruction(Context, ilVar, opCode, new CilToken(operand.Expression));
         }
 
-        protected string AddCilInstructionWithLocalVariable(string ilVar, OpCode opCode)
+        //TODO: This code is Mono.Cecil specific. Abstract and add/enable tests to cover those in SRM
+        protected string AddCilInstructionWithLocalVariable(IlContext ilVar, OpCode opCode)
         {
             var instVar = CreateCilInstruction(ilVar, opCode);
-            AddCecilExpression($"{ilVar}.Append({instVar});");
+            AddCecilExpression($"{ilVar.VariableName}.Append({instVar});");
             
             return instVar;
         }
 
-        protected string CreateCilInstruction(string ilVar, OpCode opCode, object operand = null)
+        protected string CreateCilInstruction(IlContext ilVar, OpCode opCode, object operand = null)
         {
             var operandStr = operand == null ? string.Empty : $", {operand}";
             var instVar = Context.Naming.Instruction(opCode.OpCodeName());
-            AddCecilExpression($"var {instVar} = {ilVar}.Create({opCode.ConstantName()}{operandStr});");
+            AddCecilExpression($"var {instVar} = {ilVar.VariableName}.Create({opCode.ConstantName()}{operandStr});");
 
             return instVar;
         }
 
-        protected string CreateCilInstruction(string ilVar, string instVar, OpCode opCode, object operand = null)
+        protected string CreateCilInstruction(IlContext ilVar, string instVar, OpCode opCode, object operand = null)
         {
             var operandStr = operand == null ? string.Empty : $", {operand}";
-            AddCecilExpression($"var {instVar} = {ilVar}.Create({opCode.ConstantName()}{operandStr});");
+            AddCecilExpression($"var {instVar} = {ilVar.VariableName}.Create({opCode.ConstantName()}{operandStr});");
             return instVar;
         }
 
-        protected void LoadLiteralValue(string ilVar, ITypeSymbol type, string value, UsageResult usageResult, SyntaxNode parent)
+        protected void LoadLiteralValue(IlContext ilVar, ITypeSymbol type, string value, UsageResult usageResult, SyntaxNode parent)
         {
             if (LoadDefaultValueForTypeParameter(ilVar, type, parent))
                 return;
@@ -150,7 +151,7 @@ namespace Cecilifier.Core.AST
             }
         }
 
-        private bool LoadDefaultValueForTypeParameter(string ilVar, ITypeSymbol type, SyntaxNode parent)
+        private bool LoadDefaultValueForTypeParameter(IlContext ilVar, ITypeSymbol type, SyntaxNode parent)
         {
             if (type is not ITypeParameterSymbol typeParameterSymbol)
                 return false;
@@ -198,7 +199,7 @@ namespace Cecilifier.Core.AST
             return true;
         }
 
-        private void LoadLiteralToStackHandlingCallOnValueTypeLiterals(string ilVar, ITypeSymbol literalType, object literalValue, UsageResult usageResult)
+        private void LoadLiteralToStackHandlingCallOnValueTypeLiterals(IlContext ilVar, ITypeSymbol literalType, object literalValue, UsageResult usageResult)
         {
             var opCode = literalType.LoadOpCodeFor();
             Context.ApiDriver.WriteCilInstruction(Context, ilVar, opCode, literalType.ToCilOperandValue(literalValue));
@@ -332,7 +333,7 @@ namespace Cecilifier.Core.AST
 
         }
 
-        protected void ProcessParameter(string ilVar, SimpleNameSyntax node, IParameterSymbol paramSymbol)
+        protected void ProcessParameter(IlContext ilVar, SimpleNameSyntax node, IParameterSymbol paramSymbol)
         {
             var method = (IMethodSymbol) paramSymbol.ContainingSymbol;
             //TODO: Investigate whether we should/could extract the logic to get a valid method name to an extension method and
@@ -366,7 +367,7 @@ namespace Cecilifier.Core.AST
             HandlePotentialRefLoad(ilVar, node, paramSymbol.Type);
         }
 
-        protected void ProcessField(string ilVar, SimpleNameSyntax node, IFieldSymbol fieldSymbol)
+        protected void ProcessField(IlContext ilVar, SimpleNameSyntax node, IFieldSymbol fieldSymbol)
         {
             var nodeParent = (CSharpSyntaxNode) node.Parent;
             Debug.Assert(nodeParent != null);
@@ -406,7 +407,7 @@ namespace Cecilifier.Core.AST
             HandlePotentialRefLoad(ilVar, node, fieldSymbol.Type);
         }
 
-        protected void ProcessLocalVariable(string ilVar, SimpleNameSyntax localVarSyntax, ILocalSymbol symbol)
+        protected void ProcessLocalVariable(IlContext ilVar, SimpleNameSyntax localVarSyntax, ILocalSymbol symbol)
         {
             var operand = Context.DefinitionVariables.GetVariable(symbol.Name, VariableMemberKind.LocalVariable).VariableName;
             if (HandleLoadAddress(ilVar, symbol.Type, localVarSyntax, OpCodes.Ldloca, operand.AsLocalVariable()))
@@ -421,7 +422,7 @@ namespace Cecilifier.Core.AST
             HandlePotentialFixedLoad(ilVar, symbol);
             HandlePotentialRefLoad(ilVar, localVarSyntax, symbol.Type);
         }
-        private void HandlePotentialFixedLoad(string ilVar, ILocalSymbol symbol)
+        private void HandlePotentialFixedLoad(IlContext ilVar, ILocalSymbol symbol)
         {
             if (!symbol.IsFixed)
                 return;
@@ -429,7 +430,7 @@ namespace Cecilifier.Core.AST
             Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Conv_U);
         }
 
-        protected bool HandleLoadAddress<TOperand>(string ilVar, ITypeSymbol loadedType, CSharpSyntaxNode node, OpCode loadOpCode, TOperand operand)
+        protected bool HandleLoadAddress<TOperand>(IlContext ilVar, ITypeSymbol loadedType, CSharpSyntaxNode node, OpCode loadOpCode, TOperand operand)
         {
             var parentNode = (CSharpSyntaxNode)node.Parent;
             return HandleCallOnTypeParameter() || HandleCallOnValueType() || HandleRefAssignment() || HandleParameter() || HandleInlineArrayElementAccess();
@@ -545,7 +546,7 @@ namespace Cecilifier.Core.AST
             bool IsPseudoAssignmentToValueType() => Context.HasFlag(Constants.ContextFlags.PseudoAssignmentToIndex);
         }
 
-        protected void HandlePotentialRefLoad(string ilVar, SyntaxNode expression, ITypeSymbol type)
+        protected void HandlePotentialRefLoad(IlContext ilVar, SyntaxNode expression, ITypeSymbol type)
         {
             var needsLoadIndirect = false;
 
@@ -644,7 +645,7 @@ namespace Cecilifier.Core.AST
             return node.Parent.IsKind(SyntaxKind.BracketedArgumentList);
         }
 
-        private void HandlePotentialDelegateInvocationOn(SimpleNameSyntax node, ITypeSymbol typeSymbol, string ilVar)
+        private void HandlePotentialDelegateInvocationOn(SimpleNameSyntax node, ITypeSymbol typeSymbol, IlContext ilVar)
         {
             var invocation = node.Parent as InvocationExpressionSyntax;
             if (invocation == null || invocation.Expression != node)

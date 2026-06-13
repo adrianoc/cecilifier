@@ -15,7 +15,6 @@ using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
-using FieldAttributes = Mono.Cecil.FieldAttributes;
 
 #nullable enable
 namespace Cecilifier.Core.AST
@@ -192,11 +191,11 @@ namespace Cecilifier.Core.AST
                 }
                 else if (accessor.Body != null)
                 {
-                    StatementVisitor.Visit(Context, ilContext, accessor.Body);
+                    StatementVisitor.Visit(Context, ilContext!, accessor.Body);
                 }
                 else
                 {
-                    ExpressionVisitor.Visit(Context, ilContext, accessor.ExpressionBody!);
+                    ExpressionVisitor.Visit(Context, ilContext!, accessor.ExpressionBody!);
                 }
 
                 Context.ApiDriver.WriteCilInstruction(Context, ilContext!, OpCodes.Ret);
@@ -247,7 +246,7 @@ namespace Cecilifier.Core.AST
                 }
             }
 
-            void ProcessExpressionBodiedGetter(string ilVar, ArrowExpressionClauseSyntax? expression)
+            void ProcessExpressionBodiedGetter(IlContext ilVar, ArrowExpressionClauseSyntax? expression)
             {
                 ExpressionVisitor.Visit(Context, ilVar, expression!);
                 Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ret);

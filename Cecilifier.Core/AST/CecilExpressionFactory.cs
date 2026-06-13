@@ -6,7 +6,7 @@ namespace Cecilifier.Core.AST;
 
 internal static class CecilExpressionFactory
 {
-    public static void EmitThrow(IVisitorContext context, string ilVar, ExpressionSyntax expression)
+    public static void EmitThrow(IVisitorContext context, IlContext ilVar, ExpressionSyntax expression)
     {
         _ = LineInformationTracker.Track(context, expression);
         ExpressionVisitor.Visit(context, ilVar, expression);

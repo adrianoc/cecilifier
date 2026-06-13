@@ -27,7 +27,7 @@ namespace Cecilifier.Core.AST
     {
         private static readonly Dictionary<SyntaxKind, BinaryOperatorHandler> operatorHandlers = new();
 
-        private readonly string ilVar;
+        private readonly IlContext ilVar;
         private readonly Stack<LinkedListNode<string>> callFixList = new Stack<LinkedListNode<string>>();
 
         // if true, while visiting an AssignmentExpression its left side must not be visited.
@@ -154,7 +154,8 @@ namespace Cecilifier.Core.AST
                 else
                 {
                     var returnInstruction = ctx.Naming.Instruction("return");
-                    ctx.Generate($"var {returnInstruction} = {ilVar}.Create({OpCodes.Nop.ConstantName()});");
+                    //TODO: Mono.Cecil specific code. Abstract it
+                    ctx.Generate($"var {returnInstruction} = {ilVar.VariableName}.Create({OpCodes.Nop.ConstantName()});");
                     ctx.WriteNewLine();
 
                     binaryExpression.Left.Accept(expressionVisitor);
@@ -164,7 +165,8 @@ namespace Cecilifier.Core.AST
                     ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Pop); // removes evaluated LEFT expression from stack
                     binaryExpression.Right.Accept(expressionVisitor);
                     binaryExpression.Right.InjectRequiredConversions(ctx, ilVar);
-                    ctx.Generate($"{ilVar}.Body.Instructions.Add({returnInstruction});");
+                    //TODO: Mono.Cecil specific code. Abstract it
+                    ctx.Generate($"{ilVar.VariableName}.Body.Instructions.Add({returnInstruction});");
                     ctx.WriteNewLine();
                 }
             });
@@ -188,14 +190,14 @@ namespace Cecilifier.Core.AST
             }
         }
 
-        private ExpressionVisitor(IVisitorContext ctx, string ilVar) : base(ctx)
+        private ExpressionVisitor(IVisitorContext ctx, IlContext ilVar) : base(ctx)
         {
             this.ilVar = ilVar;
         }
 
-        public string ILVariable => ilVar;
+        public IlContext ILVariable => ilVar;
 
-        internal static bool Visit(IVisitorContext ctx, string ilVar, SyntaxNode node)
+        internal static bool Visit(IVisitorContext ctx, IlContext ilVar, SyntaxNode node)
         {
             if (node == null)
             {
@@ -208,7 +210,7 @@ namespace Cecilifier.Core.AST
             return ev.skipLeftSideVisitingInAssignment;
         }
 
-        internal static bool VisitAndPopIfNotConsumed(IVisitorContext ctx, string ilVar, ExpressionSyntax node)
+        internal static bool VisitAndPopIfNotConsumed(IVisitorContext ctx, IlContext ilVar, ExpressionSyntax node)
         {
             var ret = Visit(ctx, ilVar, node);
             PopIfNotConsumed(ctx, ilVar, node);
@@ -373,7 +375,12 @@ namespace Cecilifier.Core.AST
                 return;
 
             var visitor = new AssignmentVisitor(Context, ilVar, node);
-
+            
+            // Force materialization of the variable before capturing 'Context.CurrentLine' since later 'InstructionPrecedingValueToLoad'
+            // may be used to move lines around, and the code instantiating the representation of the 'il context'
+            // needs to be taken into account. Failing to materialize the code here may result in the 'il variable' to be used
+            // before its declaration.
+            ilVar.Materialize();
             visitor.InstructionPrecedingValueToLoad = Context.CurrentLine;
             Visit(node.Right);
             node.Right.InjectRequiredConversions(Context, ilVar);
@@ -964,11 +971,11 @@ namespace Cecilifier.Core.AST
                 }
             }
 
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldc_I4_1); // if the execution (at runtime) reaches this point it means the 
-                                                                 // pattern is a match
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldc_I4_1); // if the execution (at runtime) reaches this point, it means the pattern is a match
             Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Br_S, typeMatchesVar);
-            AddCecilExpression($"{ilVar}.Append({typeDoesNotMatchVar});");
-            AddCecilExpression($"{ilVar}.Append({typeMatchesVar});");
+            //TODO: Mono.Cecil specific code... abstract it to use ApiDriver apis.
+            AddCecilExpression($"{ilVar.VariableName}.Append({typeDoesNotMatchVar});");
+            AddCecilExpression($"{ilVar.VariableName}.Append({typeMatchesVar});");
 
             string LocalVariableNameOrDefault(RecursivePatternSyntax toCheck, string defaultValue)
             {
@@ -1493,7 +1500,9 @@ namespace Cecilifier.Core.AST
             }
             else
             {
+                ilVar.Materialize(); // See comment in VisitAssignmentExpression().
                 Visit(target);
+                
                 var callContext = (FirstInstruction: _lastInstructionLoadingTargetOfInvocation, LastInstruction: Context.CurrentLine);
 
                 StackallocAsArgumentFixer.Current?.MarkEndOfComputedCallTargetBlock(callContext.FirstInstruction);
@@ -1602,7 +1611,7 @@ namespace Cecilifier.Core.AST
             return labelVariable;
         }
 
-        private static void PopIfNotConsumed(IVisitorContext ctx, string ilVar, ExpressionSyntax node)
+        private static void PopIfNotConsumed(IVisitorContext ctx, IlContext ilVar, ExpressionSyntax node)
         {
             var nodeType = ctx.GetTypeInfo(node).Type.EnsureNotNull();
             if (!node.IsKind(SyntaxKind.SimpleAssignmentExpression)
@@ -1613,7 +1622,7 @@ namespace Cecilifier.Core.AST
             }
         }
 
-        private static void HandleModulusExpression(IVisitorContext context, string ilVar, ITypeSymbol lhs, ITypeSymbol rhs)
+        private static void HandleModulusExpression(IVisitorContext context, IlContext ilVar, ITypeSymbol lhs, ITypeSymbol rhs)
         {
             var l = lhs.GetMembers("op_Modulus").OfType<IMethodSymbol>().SingleOrDefault();
             var r = rhs.GetMembers("op_Modulus").OfType<IMethodSymbol>().SingleOrDefault();

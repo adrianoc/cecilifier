@@ -59,8 +59,6 @@ namespace Cecilifier.Core.AST
 
         public override void VisitMethodDeclaration(MethodDeclarationSyntax node)
         {
-            var refReturn = node.ReturnType is RefTypeSyntax;
-
             ProcessMethodDeclaration(
                 node,
                 Context.Naming.MethodDeclaration(node),
@@ -185,8 +183,7 @@ namespace Cecilifier.Core.AST
                 //      inside AddMethodDefinition() call bellow.
                 if (ilVar == null && !methodSymbol.IsExtern)
                 {
-                    var ilContext = Context.ApiDriver.NewIlContext(Context, simpleName, found.VariableName);
-                    ilVar = ilContext.VariableName;
+                    ilVar = Context.ApiDriver.NewIlContext(Context, simpleName, found.VariableName);
                 }
                 
                 var declaringTypeVarName = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Type).VariableName;

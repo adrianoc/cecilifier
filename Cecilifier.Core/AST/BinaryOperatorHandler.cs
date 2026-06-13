@@ -10,11 +10,11 @@ namespace Cecilifier.Core.AST;
 
 internal sealed class BinaryOperatorHandler
 {
-    private readonly Action<IVisitorContext,string,BinaryExpressionSyntax, ExpressionVisitor>? _handler;
-    private readonly Action<IVisitorContext, string, ITypeSymbol?, ITypeSymbol?>? _rawHandler;
+    private readonly Action<IVisitorContext, IlContext, BinaryExpressionSyntax, ExpressionVisitor>? _handler;
+    private readonly Action<IVisitorContext, IlContext, ITypeSymbol?, ITypeSymbol?>? _rawHandler;
     private readonly bool _visitRightOperand;
 
-    public void Process(IVisitorContext context, string ilVar, BinaryExpressionSyntax binaryExpression, ExpressionVisitor visitor)
+    public void Process(IVisitorContext context, IlContext ilVar, BinaryExpressionSyntax binaryExpression, ExpressionVisitor visitor)
     {
         if (_handler != null)
         {
@@ -42,7 +42,7 @@ internal sealed class BinaryOperatorHandler
         }
     }
     
-    public void ProcessRaw(IVisitorContext context, string ilVar, ExpressionSyntax left, ExpressionSyntax right)
+    public void ProcessRaw(IVisitorContext context, IlContext ilVar, ExpressionSyntax left, ExpressionSyntax right)
     {
         if (_rawHandler == null) 
             throw new InvalidOperationException("The constructor taking two ITypeSymbols should be used to initialize this instance.");
@@ -54,17 +54,17 @@ internal sealed class BinaryOperatorHandler
             context.SemanticModel.GetTypeInfo(right).Type);
     }
 
-    public BinaryOperatorHandler(Action<IVisitorContext, string, BinaryExpressionSyntax, ExpressionVisitor> handler)
+    public BinaryOperatorHandler(Action<IVisitorContext, IlContext, BinaryExpressionSyntax, ExpressionVisitor> handler)
     {
         _handler = handler;
         _visitRightOperand = true;
     }
 
-    private BinaryOperatorHandler(Action<IVisitorContext, string, ITypeSymbol, ITypeSymbol> action, bool visitRightOperand)
+    private BinaryOperatorHandler(Action<IVisitorContext, IlContext, ITypeSymbol, ITypeSymbol> action, bool visitRightOperand)
     {
         _rawHandler = action!;
         _visitRightOperand = visitRightOperand;
     }
     
-    public static BinaryOperatorHandler Raw(Action<IVisitorContext, string, ITypeSymbol, ITypeSymbol> action, bool visitRightOperand = true) => new(action, visitRightOperand);
+    public static BinaryOperatorHandler Raw(Action<IVisitorContext, IlContext, ITypeSymbol, ITypeSymbol> action, bool visitRightOperand = true) => new(action, visitRightOperand);
 }

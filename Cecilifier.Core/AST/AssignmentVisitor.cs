@@ -15,10 +15,10 @@ namespace Cecilifier.Core.AST
 {
     internal class AssignmentVisitor : SyntaxWalkerBase
     {
-        private readonly string ilVar;
+        private readonly IlContext ilVar;
         private readonly AssignmentExpressionSyntax assignment;
 
-        internal AssignmentVisitor(IVisitorContext ctx, string ilVar, AssignmentExpressionSyntax node) : base(ctx)
+        internal AssignmentVisitor(IVisitorContext ctx, IlContext ilVar, AssignmentExpressionSyntax node) : base(ctx)
         {
             this.ilVar = ilVar;
             assignment = node;
@@ -26,7 +26,7 @@ namespace Cecilifier.Core.AST
             PreProcessRefOutAssignments(node.Left);
         }
 
-        internal AssignmentVisitor(IVisitorContext ctx, string ilVar) : base(ctx)
+        internal AssignmentVisitor(IVisitorContext ctx, IlContext ilVar) : base(ctx)
         {
             this.ilVar = ilVar;
         }

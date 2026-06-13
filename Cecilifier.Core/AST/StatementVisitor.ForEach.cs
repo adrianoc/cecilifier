@@ -111,7 +111,8 @@ namespace Cecilifier.Core.AST
                 Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Brfalse_S, skipDisposeMethodCallNopVar);
                 Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloc, forEachHandlerContext.EnumeratorVariableName);
                 Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Callvirt, Context.RoslynTypeSystem.SystemIDisposable.GetMembers("Dispose").OfType<IMethodSymbol>().Single().MethodResolverExpression(Context));
-                AddCecilExpression($"{_ilVar}.Append({skipDisposeMethodCallNopVar});");
+                //TODO: Mono.Cecil specific
+                AddCecilExpression($"{_ilVar.VariableName}.Append({skipDisposeMethodCallNopVar});");
             }
         }
 
@@ -154,7 +155,8 @@ namespace Cecilifier.Core.AST
             Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Br, forEachLoopBegin);
             Context.WriteNewLine();
             Context.WriteComment("end of foreach loop");
-            Context.Generate($"{_ilVar}.Append({endOfLoopLabelVar});");
+            //TODO: Mono.Cecil specific
+            Context.Generate($"{_ilVar.VariableName}.Append({endOfLoopLabelVar});");
             Context.WriteNewLine();
         }
 

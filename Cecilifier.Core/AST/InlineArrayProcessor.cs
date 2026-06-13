@@ -13,7 +13,7 @@ using Cecilifier.Core.Variables;
 namespace Cecilifier.Core.AST;
 public class InlineArrayProcessor
 {
-    internal static bool HandleInlineArrayConversionToSpan(IVisitorContext context, string ilVar, ITypeSymbol fromType, SyntaxNode fromNode, OpCode opcode, string name, VariableMemberKind memberKind, string parentName = null)
+    internal static bool HandleInlineArrayConversionToSpan(IVisitorContext context, IlContext ilVar, ITypeSymbol fromType, SyntaxNode fromNode, OpCode opcode, string name, VariableMemberKind memberKind, string parentName = null)
     {
         int inlineArrayLength = InlineArrayLengthFrom(fromType);
         if (inlineArrayLength == -1)
@@ -82,7 +82,7 @@ public class InlineArrayProcessor
     /// All this method needs to do is to convert the inline array => Span{T} and use the same code that handles
     /// 'indexing' a Span{T} with ranges.  
     /// </summary>
-    internal static bool TryHandleRangeElementAccess(IVisitorContext context, ExpressionVisitor expressionVisitor, string ilVar, ElementAccessExpressionSyntax elementAccess, out ITypeSymbol elementType)
+    internal static bool TryHandleRangeElementAccess(IVisitorContext context, ExpressionVisitor expressionVisitor, IlContext ilVar, ElementAccessExpressionSyntax elementAccess, out ITypeSymbol elementType)
     {
         elementType = null;
         if (elementAccess.Expression.IsKind(SyntaxKind.ElementAccessExpression))
@@ -110,7 +110,7 @@ public class InlineArrayProcessor
         return false;
     }
     
-    internal static bool TryHandleIntIndexElementAccess(IVisitorContext context, string ilVar, ElementAccessExpressionSyntax elementAccess, out ITypeSymbol elementType)
+    internal static bool TryHandleIntIndexElementAccess(IVisitorContext context, IlContext ilVar, ElementAccessExpressionSyntax elementAccess, out ITypeSymbol elementType)
     {
         elementType = null;
         if (elementAccess.Expression.IsKind(SyntaxKind.ElementAccessExpression))

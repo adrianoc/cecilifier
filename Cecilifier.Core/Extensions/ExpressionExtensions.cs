@@ -33,7 +33,7 @@ namespace Cecilifier.Core.Extensions
 
             throw new ArgumentException($"{node.Kind()} is not supported.");
         }
-        public static void InjectRequiredConversions(this ExpressionSyntax expression, IVisitorContext context, string ilVar, Action loadArrayIntoStack = null)
+        public static void InjectRequiredConversions(this ExpressionSyntax expression, IVisitorContext context, IlContext ilVar, Action loadArrayIntoStack = null)
         {
             var operation = context.SemanticModel.GetOperation(expression);
             if (SymbolEqualityComparer.Default.Equals(operation?.Type, context.RoslynTypeSystem.SystemIndex) && !expression.IsKind(SyntaxKind.IndexExpression) && loadArrayIntoStack != null)

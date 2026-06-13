@@ -32,7 +32,7 @@ public static class CecilifierContextExtensions
         return context.ApiDefinitionsFactory.LocalVariable(context, localVarName, currentMethod.VariableName, varType);
     }
 
-    internal static bool TryApplyConversions(this IVisitorContext context, string ilVar, IOperation operation)
+    internal static bool TryApplyConversions(this IVisitorContext context, IlContext ilVar, IOperation operation)
     {
         if (operation is IConversionOperation { Conversion.IsNumeric: true } elementConversion)
         {
@@ -72,7 +72,7 @@ public static class CecilifierContextExtensions
         return true;
     }
 
-    private static bool TryApplyNumericConversion(this IVisitorContext context, string ilVar, ITypeSymbol source, ITypeSymbol target)
+    private static bool TryApplyNumericConversion(this IVisitorContext context, IlContext ilVar, ITypeSymbol source, ITypeSymbol target)
     {
         if (source.SpecialType == target.SpecialType)
             return true;
@@ -112,7 +112,7 @@ public static class CecilifierContextExtensions
         return true;
     }
 
-    internal static void AddCallToMethod(this IVisitorContext context, IMethodSymbol method, string ilVar, MethodDispatchInformation dispatchInformation = MethodDispatchInformation.MostLikelyVirtual)
+    internal static void AddCallToMethod(this IVisitorContext context, IMethodSymbol method, IlContext ilVar, MethodDispatchInformation dispatchInformation = MethodDispatchInformation.MostLikelyVirtual)
     {
         var needsVirtualDispatch = (method.IsVirtual || method.IsAbstract || method.IsOverride) && !method.ContainingType.IsPrimitiveType();
 

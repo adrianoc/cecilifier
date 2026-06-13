@@ -20,14 +20,15 @@ namespace Cecilifier.Core.AST
 {
     internal partial class StatementVisitor : SyntaxWalkerBase
     {
-        private string _ilVar;
+        private IlContext _ilVar;
 
-        private StatementVisitor(IVisitorContext ctx, string ilVar) : base(ctx)
+        private StatementVisitor(IVisitorContext ctx, IlContext ilVar) : base(ctx)
         {
             _ilVar = ilVar;
+            _ilVar.Materialize();
         }
 
-        internal static void Visit(IVisitorContext context, string ilVar, CSharpSyntaxNode node)
+        internal static void Visit(IVisitorContext context, IlContext ilVar, CSharpSyntaxNode node)
         {
             node.Accept(new StatementVisitor(context, ilVar));
         }
@@ -135,7 +136,8 @@ namespace Cecilifier.Core.AST
                 using var _ = LineInformationTracker.Track(Context, switchSection);
                 Context.WriteNewLine();
                 Context.WriteComment($"{switchSection.Labels.First().ToString()} (code)");
-                AddCecilExpression($"{_ilVar}.Append({nextTestLabels[currentLabelIndex]});");
+                //TODO: Mono.Cecil specific
+                AddCecilExpression($"{_ilVar.VariableName}.Append({nextTestLabels[currentLabelIndex]});");
                 foreach (var statement in switchSection.Statements)
                 {
                     statement.Accept(this);
@@ -145,7 +147,8 @@ namespace Cecilifier.Core.AST
 
             Context.WriteNewLine();
             Context.WriteComment("End of switch");
-            AddCecilExpression($"{_ilVar}.Append({endOfSwitchLabel});");
+            //TODO: Mono.Cecil specific
+            AddCecilExpression($"{_ilVar.VariableName}.Append({endOfSwitchLabel});");
 
             breakToInstructionVars.Pop();
         }
@@ -279,7 +282,7 @@ namespace Cecilifier.Core.AST
 
                 Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Callvirt, Context.RoslynTypeSystem.SystemIDisposable.GetMembers("Dispose").OfType<IMethodSymbol>().Single().MethodResolverExpression(Context));
                 if (lastFinallyInstructionLabel != null)
-                    AddCecilExpression($"{_ilVar}.Append({lastFinallyInstructionLabel});");
+                    AddCecilExpression($"{_ilVar.VariableName}.Append({lastFinallyInstructionLabel});"); //TODO: Mono.Cecil specific
             }
 
             ProcessTryCatchFinallyBlock<ForEachHandlerContext>(_ilVar, node.Statement, Array.Empty<CatchClauseSyntax>(), FinallyBlockHandler);

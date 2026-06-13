@@ -24,8 +24,8 @@ public class MemberAccessTests : CecilifierUnitTestBase
                                                                     //Parameters of 'string C<T>\(T t\) where T : struct => t.ToString\(\);'
                                                                     \s+var (p_t_\d+) = new ParameterDefinition\("t", ParameterAttributes.None, (gp_T_\d+)\);
                                                                     \s+m_C_\d+.Parameters.Add\(\1\);
-                                                                    \s+var il_C_\d+ = m_C_\d+.Body.GetILProcessor\(\);
                                                                     \s+//t\.ToString\(\)
+                                                                    \s+var il_C_\d+ = m_C_\d+.Body.GetILProcessor\(\);
                                                                     (\s+il_C_\d+\.Emit\(OpCodes\.)Ldarga, \1\);
                                                                     \3Constrained, \2\);
                                                                     \3Callvirt, .+ImportReference\(.+ResolveMethod\(typeof\(System.Object\), "ToString",.+\)\)\);
@@ -36,8 +36,8 @@ public class MemberAccessTests : CecilifierUnitTestBase
                                                               //Parameters of 'string C<T>\(T t\) where T : IFoo => t.Get\(\);'
                                                               \s+var (p_t_\d+) = new ParameterDefinition\("t", ParameterAttributes.None, (gp_T_\d+)\);
                                                               \s+m_C_\d+.Parameters.Add\(\1\);
-                                                              \s+var il_C_\d+ = m_C_\d+.Body.GetILProcessor\(\);
                                                               \s+//t\.Get\(\)
+                                                              \s+var il_C_\d+ = m_C_\d+.Body.GetILProcessor\(\);
                                                               (\s+il_C_\d+\.Emit\(OpCodes\.)Ldarga, \1\);
                                                               \3Constrained, \2\);
                                                               \3Callvirt, m_get_1\);
@@ -48,8 +48,8 @@ public class MemberAccessTests : CecilifierUnitTestBase
                                                                   //Parameters of 'string C<T>\(T t\) where T : IFoo => t.ToString\(\);'
                                                                   \s+var (p_t_\d+) = new ParameterDefinition\("t", ParameterAttributes.None, (gp_T_\d+)\);
                                                                   \s+m_C_\d+.Parameters.Add\(\1\);
-                                                                  \s+var il_C_\d+ = m_C_\d+.Body.GetILProcessor\(\);
                                                                   \s+//t\.ToString\(\)
+                                                                  \s+var il_C_\d+ = m_C_\d+.Body.GetILProcessor\(\);
                                                                   (\s+il_C_\d+\.Emit\(OpCodes\.)Ldarga, \1\);
                                                                   \3Constrained, \2\);
                                                                   \3Callvirt, .+ImportReference\(.+ResolveMethod\(typeof\(System.Object\), "ToString",.+\)\)\);
@@ -60,8 +60,8 @@ public class MemberAccessTests : CecilifierUnitTestBase
                                                    //Parameters of 'string C<T>\(T t\) => t.ToString\(\);'
                                                    \s+var (p_t_\d+) = new ParameterDefinition\("t", ParameterAttributes.None, (gp_T_\d+)\);
                                                    \s+m_C_\d+.Parameters.Add\(\1\);
-                                                   \s+var il_C_\d+ = m_C_\d+.Body.GetILProcessor\(\);
                                                    \s+//t\.ToString\(\)
+                                                   \s+var il_C_\d+ = m_C_\d+.Body.GetILProcessor\(\);
                                                    (\s+il_C_\d+\.Emit\(OpCodes\.)Ldarga, \1\);
                                                    \3Constrained, \2\);
                                                    \3Callvirt, .+ImportReference\(.+ResolveMethod\(typeof\(System.Object\), "ToString",.+\)\)\);
@@ -72,8 +72,8 @@ public class MemberAccessTests : CecilifierUnitTestBase
                                                                    //Parameters of 'string C<T>\(T t\) where T : class => t.ToString\(\);'
                                                                    \s+var (p_t_\d+) = new ParameterDefinition\("t", ParameterAttributes.None, (gp_T_\d+)\);
                                                                    \s+m_C_\d+.Parameters.Add\(\1\);
-                                                                   \s+var il_C_\d+ = m_C_\d+.Body.GetILProcessor\(\);
                                                                    \s+//t\.ToString\(\)
+                                                                   \s+var il_C_\d+ = m_C_\d+.Body.GetILProcessor\(\);
                                                                    (\s+il_C_\d+\.Emit\(OpCodes\.)Ldarg_1\);
                                                                    \3Box, \2\);
                                                                    \3Callvirt, .+ImportReference\(.+ResolveMethod\(typeof\(System.Object\), "ToString",.+\)\)\);
@@ -84,8 +84,8 @@ public class MemberAccessTests : CecilifierUnitTestBase
                                                                  //Parameters of 'string C<T>\(T t\) where T : Foo => t.ToString\(\);'
                                                                  \s+var (p_t_\d+) = new ParameterDefinition\("t", ParameterAttributes.None, (gp_T_\d+)\);
                                                                  \s+m_C_\d+.Parameters.Add\(\1\);
-                                                                 \s+var il_C_\d+ = m_C_\d+.Body.GetILProcessor\(\);
                                                                  \s+//t.ToString\(\)
+                                                                 \s+var il_C_\d+ = m_C_\d+.Body.GetILProcessor\(\);
                                                                  (\s+il_C_\d+\.Emit\(OpCodes\.)Ldarg_1\);
                                                                  \3Box, \2\);
                                                                  \3Callvirt, .+ImportReference\(.+ResolveMethod\(typeof\(System.Object\), "ToString",.+\)\)\);
@@ -274,24 +274,25 @@ class Bar {{ public void M() {{ }} }}
                       remove { base.MyEvent -= value; }
                   } 
               }
-              """, true, TestName = "Same compilation Unit (Event)")]
+              """, false, true, TestName = "Same compilation Unit (Event)")]
     
     [TestCase("""
               using System;
               class Derived : Exception { public override Exception GetBaseException() => base.GetBaseException(); }
-              """, TestName = "External type")]
-    public void AccessingMember_ThroughBaseKeyword(string source, bool requiresExtraParameterInCall = false)
+              """, true, TestName = "External type")]
+    public void AccessingMember_ThroughBaseKeyword(string source, bool checkIlVar = false, bool requiresExtraParameterInCall = false)
     {
         var result = RunCecilifier(source);
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
 
         var pattern = $"""
                       \s+//.*base\..+(?:\(\))?;?
+                      { (checkIlVar ? @"\s+var il_getBaseException_\d+ = m_getBaseException_\d+.Body.GetILProcessor\(\);" : "")}
                       (\s+il_.+\d+\.Emit\(OpCodes\.)Ldarg_0\);
                       { (requiresExtraParameterInCall ? @"(\s+il_.+\d+\.Emit\(OpCodes\.)Ldarg_1\);" : "")}
                       \1Call,.+\);
                       """;
-        if (!requiresExtraParameterInCall)
+        if (!requiresExtraParameterInCall || !checkIlVar)
             pattern = pattern.Replace("\n\n", "\n");
         
         Assert.That(cecilifiedCode, Does.Match(pattern));
@@ -317,6 +318,7 @@ class Bar {{ public void M() {{ }} }}
         var actual = result.GeneratedCode.ReadToEnd();
         Assert.That(actual, Does.Match("""
                                           //field = toSet
+                                          \s+var il_set_\d+ = m_set_\d+.Body.GetILProcessor\(\);
                                           (?<emit>\s+il_set_\d+\.Emit\(OpCodes\.)Ldarg_0\);
                                           \k<emit>Ldarg_1\);
                                           \k<emit>Stfld, new FieldReference\(fld_field_\d+.Name, fld_field_\d+.FieldType, cls_C_\d+.MakeGenericInstanceType\(gp_T_\d+\)\)\);
@@ -324,6 +326,7 @@ class Bar {{ public void M() {{ }} }}
         
         Assert.That(actual, Does.Match("""
                                           //Property = toSet
+                                          \s+var il_setProperty_\d+ = m_setProperty_\d+.Body.GetILProcessor\(\);
                                           (?<emit>\s+il_setProperty_\d+\.Emit\(OpCodes\.)Ldarg_0\);
                                           \k<emit>Ldarg_1\);
                                           \s+var (?<setter>r_set_Property_\d+) = new MethodReference\(l_set_\d+.Name, l_set_\d+.ReturnType\) {.+DeclaringType = cls_C_\d+.MakeGenericInstanceType\(gp_T_\d+\).+};
@@ -359,6 +362,7 @@ class Bar {{ public void M() {{ }} }}
         var actual = result.GeneratedCode.ReadToEnd();
         Assert.That(actual, Does.Match("""
                                           //Console.WriteLine\(item\)
+                                          \s+var il_print_\d+ = m_print_\d+.Body.GetILProcessor\(\);
                                           (?<emit>\s+il_print_\d+.Emit\(OpCodes\.)Ldarg_0\);
                                           \k<emit>Ldfld, new FieldReference\((?<fieldRef>fld_item_\d+).Name, \k<fieldRef>.FieldType, st_ref_0.MakeGenericInstanceType\(gp_T_1\).+\);
                                           \k<emit>Ldobj, gp_T_1\);

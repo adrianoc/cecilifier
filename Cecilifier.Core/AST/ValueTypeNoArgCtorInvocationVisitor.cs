@@ -32,10 +32,10 @@ namespace Cecilifier.Core.AST
     internal class ValueTypeNoArgCtorInvocationVisitor : SyntaxWalkerBase
     {
         private readonly SymbolInfo ctorInfo;
-        private readonly string ilVar;
+        private readonly IlContext ilVar;
         private readonly BaseObjectCreationExpressionSyntax objectCreationExpressionSyntax;
 
-        internal ValueTypeNoArgCtorInvocationVisitor(IVisitorContext ctx, string ilVar, BaseObjectCreationExpressionSyntax objectCreationExpressionSyntax, SymbolInfo ctorInfo) : base(ctx)
+        internal ValueTypeNoArgCtorInvocationVisitor(IVisitorContext ctx, IlContext ilVar, BaseObjectCreationExpressionSyntax objectCreationExpressionSyntax, SymbolInfo ctorInfo) : base(ctx)
         {
             this.ctorInfo = ctorInfo;
             this.ilVar = ilVar;
@@ -184,7 +184,7 @@ namespace Cecilifier.Core.AST
             }
         }
 
-        internal static void ProcessInitializerIfNotNull(IVisitorContext context, string ilVar, InitializerExpressionSyntax initializer)
+        internal static void ProcessInitializerIfNotNull(IVisitorContext context, IlContext ilVar, InitializerExpressionSyntax initializer)
         {
             if (initializer == null)
                 return;

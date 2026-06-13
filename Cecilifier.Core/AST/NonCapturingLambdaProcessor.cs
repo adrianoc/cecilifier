@@ -93,8 +93,7 @@ namespace Cecilifier.Core.AST
                     parameter.Accept(DefaultParameterExtractorVisitor.Instance));
             }
 
-            var syntheticIlVar = context.Naming.ILProcessor(syntheticMethodName);
-            context.Generate($"var {syntheticIlVar} = {methodVar}.Body.GetILProcessor();");
+            var syntheticIlVar = context.ApiDriver.NewIlContext(context, syntheticMethodName, methodVar);
             context.WriteNewLine();
 
             using (context.DefinitionVariables.WithVariable(methodDefinitionVariable))

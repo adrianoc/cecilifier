@@ -11,7 +11,7 @@ namespace Cecilifier.Core.Misc;
 
 public struct CodeGenerationHelpers
 {
-    internal static DefinitionVariable StoreTopOfStackInLocalVariable(IVisitorContext context, string ilVar, string variableName, ITypeSymbol type)
+    internal static DefinitionVariable StoreTopOfStackInLocalVariable(IVisitorContext context, IlContext ilVar, string variableName, ITypeSymbol type)
     {
         var methodVar = context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
         var resolvedVarType = context.TypeResolver.Resolve(type, ResolveTargetKind.LocalVariable);
@@ -20,7 +20,7 @@ public struct CodeGenerationHelpers
         return tempLocalDefinitionVariable;
     }
 
-    internal static void InstantiateDelegate(IVisitorContext context, string ilVar, ITypeSymbol delegateType, string targetMethodExp, StaticDelegateCacheContext staticDelegateCacheContext)
+    internal static void InstantiateDelegate(IVisitorContext context, IlContext ilVar, ITypeSymbol delegateType, string targetMethodExp, StaticDelegateCacheContext staticDelegateCacheContext)
     {
         // To match Roslyn implementation we need to cache static method do delegate conversions.
         if (staticDelegateCacheContext.IsStaticDelegate)

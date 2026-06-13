@@ -84,11 +84,9 @@ public class PrimaryConstructorGenerator
             context.WriteComment($"{propertyData.Name} getter");
             var getMethodVar = context.Naming.SyntheticVariable($"get{propertyData.Name}", ElementKind.Method);
             // properties for primary ctor parameters cannot override base properties, so hasCovariantReturn = false and overridenMethod = null (none)
-            var ilVar = context.Naming.ILProcessor($"get{propertyData.Name}");
+            var ilVar = context.ApiDriver.NewIlContext(context, $"get{propertyData.Name}", getMethodVar);
             using (propertyGenerator.AddGetterMethodDeclaration(in propertyData, getMethodVar, false, null, ilVar))
             {
-                context.Generate([$"var {ilVar} = {getMethodVar}.Body.GetILProcessor();"]);
-                
                 propertyGenerator.AddAutoGetterMethodImplementation(in propertyData, ilVar, getMethodVar);
             }
             context.WriteNewLine();
@@ -153,21 +151,21 @@ public class PrimaryConstructorGenerator
             if (!uniqueParameters.Contains(parameter))
                 continue;
             
-            context.ApiDriver.WriteCilInstruction(context, ilContext.VariableName, OpCodes.Ldarg_0);
-            context.ApiDriver.WriteCilInstruction(context, ilContext.VariableName, OpCodes.Ldarg, paramVar);
+            context.ApiDriver.WriteCilInstruction(context, ilContext, OpCodes.Ldarg_0);
+            context.ApiDriver.WriteCilInstruction(context, ilContext, OpCodes.Ldarg, paramVar);
 
             var backingFieldVar = context.DefinitionVariables.GetVariable(Utils.BackingFieldNameForAutoProperty(parameter.Identifier.ValueText), VariableMemberKind.Field, typeSymbol.OriginalDefinition.ToDisplayString());
             if (!backingFieldVar.IsValid)
                 throw new InvalidOperationException($"Backing field variable for property '{parameter.Identifier.ValueText}' could not be found.");
 
-            context.ApiDriver.WriteCilInstruction(context, ilContext.VariableName, OpCodes.Stfld, fieldRefResolver(backingFieldVar.VariableName));
+            context.ApiDriver.WriteCilInstruction(context, ilContext, OpCodes.Stfld, fieldRefResolver(backingFieldVar.VariableName));
         }
 
         if (!typeSymbol.IsValueType)
-            InvokeBaseConstructor(context, ilContext.VariableName, typeDeclaration);
-        context.ApiDriver.WriteCilInstruction(context, ilContext.VariableName, OpCodes.Ret);
+            InvokeBaseConstructor(context, ilContext, typeDeclaration);
+        context.ApiDriver.WriteCilInstruction(context, ilContext, OpCodes.Ret);
 
-        static void InvokeBaseConstructor(IVisitorContext context, string ctorIlVar, TypeDeclarationSyntax typeDeclaration)
+        static void InvokeBaseConstructor(IVisitorContext context, IlContext ctorIlVar, TypeDeclarationSyntax typeDeclaration)
         {
             string baseCtor;
             context.ApiDriver.WriteCilInstruction(context, ctorIlVar, OpCodes.Ldarg_0);

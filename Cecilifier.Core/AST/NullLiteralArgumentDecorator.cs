@@ -25,9 +25,9 @@ internal ref struct  NullLiteralArgumentDecorator
 {
     private string _localVariableName;
     private readonly IVisitorContext _context;
-    private readonly string _ilVar;
+    private readonly IlContext _ilVar;
         
-    public NullLiteralArgumentDecorator(IVisitorContext context, ArgumentSyntax node, string ilVar)
+    public NullLiteralArgumentDecorator(IVisitorContext context, ArgumentSyntax node, IlContext ilVar)
     {
         if (node.Expression is not LiteralExpressionSyntax { RawKind: (int) SyntaxKind.NullLiteralExpression })
             return;

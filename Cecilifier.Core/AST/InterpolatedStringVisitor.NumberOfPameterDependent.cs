@@ -12,7 +12,7 @@ namespace Cecilifier.Core.AST
     {
         private readonly int _numberOfArguments;
 
-        public InterpolatedStringUpTo3ArgumentsVisitor(IVisitorContext context, string ilVar, ExpressionVisitor expressionVisitor, int numberOfArguments) : base(context, ilVar, expressionVisitor)
+        public InterpolatedStringUpTo3ArgumentsVisitor(IVisitorContext context, IlContext ilVar, ExpressionVisitor expressionVisitor, int numberOfArguments) : base(context, ilVar, expressionVisitor)
         {
             _numberOfArguments = numberOfArguments;
         }
@@ -27,7 +27,7 @@ namespace Cecilifier.Core.AST
 
     internal class InterpolatedStringWithMoreThan3ArgumentsVisitor : InterpolatedStringVisitor
     {
-        public InterpolatedStringWithMoreThan3ArgumentsVisitor(IVisitorContext context, string ilVar, ExpressionVisitor expressionVisitor, int numberOfArguments) : base(context, ilVar, expressionVisitor)
+        public InterpolatedStringWithMoreThan3ArgumentsVisitor(IVisitorContext context, IlContext ilVar, ExpressionVisitor expressionVisitor, int numberOfArguments) : base(context, ilVar, expressionVisitor)
         {
             _numberOfArguments = numberOfArguments;
         }

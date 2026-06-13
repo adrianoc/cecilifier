@@ -246,11 +246,11 @@ internal class StackallocAsArgumentFixer : IStackallocAsArgumentFixer
     private readonly Queue<string> localVariablesStoringOriginalArguments = new();
 
     private readonly IVisitorContext context;
-    private readonly string ilVar;
+    private readonly IlContext ilVar;
     private LinkedListNode<string> lastLoadTargetOfCallInstruction;
     private readonly LinkedListNode<string> firstLoadTargetOfCallInstruction;
 
-    private StackallocAsArgumentFixer(IVisitorContext context, string ilVar)
+    private StackallocAsArgumentFixer(IVisitorContext context, IlContext ilVar)
     {
         firstLoadTargetOfCallInstruction = context.CurrentLine;
         this.context = context;
@@ -310,7 +310,7 @@ internal class StackallocAsArgumentFixer : IStackallocAsArgumentFixer
         context.MoveLineAfter(callInstruction, context.CurrentLine);
     }
 
-    internal static StackallocPassedAsSpanDisposal TrackPassingStackAllocToSpanArgument(IVisitorContext context, InvocationExpressionSyntax node, string ilVar)
+    internal static StackallocPassedAsSpanDisposal TrackPassingStackAllocToSpanArgument(IVisitorContext context, InvocationExpressionSyntax node, IlContext ilVar)
     {
         // the expression may represent: i) a method invocation, ii) a delegate invocation or iii) nameof() expression.
         // for the last 2 cases, `method` will be `null` and code will early out. 

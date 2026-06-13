@@ -240,8 +240,8 @@ public class OperatorsTests : CecilifierUnitTestBase
         """
         var (p_o_\d+) = new ParameterDefinition\("o", ParameterAttributes.None, assembly.MainModule.TypeSystem.Object\);
         \s+m_foo_\d+.Parameters.Add\(\1\);
-        \s+var il_foo_\d+ = m_foo_\d+.Body.GetILProcessor\(\);
         \s+//o != null
+        \s+var il_foo_\d+ = m_foo_\d+.Body.GetILProcessor\(\);
         (\s+il_foo_\d+\.Emit\(OpCodes\.)Ldarg_0\);
         \2Ldnull\);
         \2Ceq\);
@@ -255,8 +255,8 @@ public class OperatorsTests : CecilifierUnitTestBase
         """
                 var (p_o_\d+) = new ParameterDefinition\("o", ParameterAttributes.None, assembly.MainModule.TypeSystem.Object\);
                 \s+m_foo_\d+.Parameters.Add\(\1\);
-                \s+var il_foo_\d+ = m_foo_\d+.Body.GetILProcessor\(\);
                 \s+//o == null
+                \s+var il_foo_\d+ = m_foo_\d+.Body.GetILProcessor\(\);
                 (\s+il_foo_\d+\.Emit\(OpCodes\.)Ldarg_0\);
                 \2Ldnull\);
                 \2Ceq\);
@@ -267,13 +267,13 @@ public class OperatorsTests : CecilifierUnitTestBase
         """
                 var (p_o_\d+) = new ParameterDefinition\("o", ParameterAttributes.None, (?<tt>gp_T_\d+)\);
                 \s+m_foo_\d+.Parameters.Add\(\1\);
-                \s+var il_foo_\d+ = m_foo_\d+.Body.GetILProcessor\(\);
                 \s+//o == null
-                (\s+il_foo_\d+\.Emit\(OpCodes\.)Ldarg_0\);
-                \2Box, \k<tt>\);
-                \2Ldnull\);
-                \2Ceq\);
-                \2Ret\);
+                \s+var il_foo_\d+ = m_foo_\d+.Body.GetILProcessor\(\);
+                (?<emit>\s+il_foo_\d+\.Emit\(OpCodes\.)Ldarg_0\);
+                \k<emit>Box, \k<tt>\);
+                \k<emit>Ldnull\);
+                \k<emit>Ceq\);
+                \k<emit>Ret\);
                 """, TestName = "Type Parameter ==")]
     public void EqualityAndInequalityOperators_AgainstNull_DoesNotInvokeOverloadOnSystemObject(string code, string expected)
     {

@@ -152,7 +152,7 @@ namespace Cecilifier.Core.Misc
             CecilifiedLineNumber++;
         }
 
-        public void WriteCilInstructionAfter(string ilVar, OpCode opCode, LinkedListNode<string> after)
+        public void WriteCilInstructionAfter(IlContext ilVar, OpCode opCode, LinkedListNode<string> after)
         {
             var toBeWritten = ApiDriver.EmitCilInstruction<string>(this, ilVar, opCode, null);
             output.AddAfter(after, $"{indentation}{toBeWritten}{Environment.NewLine}");

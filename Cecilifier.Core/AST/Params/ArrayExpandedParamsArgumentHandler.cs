@@ -12,7 +12,7 @@ namespace Cecilifier.Core.AST.Params;
 
 internal class ArrayExpandedParamsArgumentHandler : ExpandedParamsArgumentHandler
 {
-    public ArrayExpandedParamsArgumentHandler(IVisitorContext context, IParameterSymbol paramsParameter, ArgumentListSyntax argumentList, string ilVar) : base(context, paramsParameter, argumentList, ilVar)
+    public ArrayExpandedParamsArgumentHandler(IVisitorContext context, IParameterSymbol paramsParameter, ArgumentListSyntax argumentList, IlContext ilVar) : base(context, paramsParameter, argumentList, ilVar)
     {
         _currentIndex = 0;
         _stelemOpCode = ElementType.StelemOpCode();

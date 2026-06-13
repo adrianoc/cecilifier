@@ -54,8 +54,8 @@ namespace Cecilifier.Core.AST
                 var accessorMethodVar = AddAccessor(node, eventSymbol, in ilContext, methodVar, acc.Keyword.ValueText, body);
                 using (Context.DefinitionVariables.WithVariable(accessorMethodVar))
                 {
-                    StatementVisitor.Visit(Context, ilContext.VariableName, acc.Body);
-                    Context.ApiDriver.WriteCilInstruction(Context, ilContext.VariableName, OpCodes.Ret);
+                    StatementVisitor.Visit(Context, ilContext, acc.Body);
+                    Context.ApiDriver.WriteCilInstruction(Context, ilContext, OpCodes.Ret);
                 }
 
                 eventAccessorsDefVarMapping[acc.Keyword.ValueText] = methodVar;

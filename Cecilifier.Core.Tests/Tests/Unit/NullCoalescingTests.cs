@@ -15,6 +15,7 @@ public class NullCoalescingTests : CecilifierUnitTestBase
             result.GeneratedCode.ReadToEnd(), 
             Does.Match("""
                        //o1 \?\? o2
+                       \s+var il_M_\d+ = m_M_6.Body.GetILProcessor\(\);
                        \s+var return_\d+ = (?<il>il_M_\d+)\.Create\(OpCodes.Nop\);
                        (?<emit>\s+\k<il>\.Emit\(OpCodes\.)Ldarg_0\);
                        \k<emit>Dup\);
@@ -34,6 +35,7 @@ public class NullCoalescingTests : CecilifierUnitTestBase
             result.GeneratedCode.ReadToEnd(), 
             Does.Match("""
                        //M2\(n\) \?\? o2
+                       \s+var il_M_\d+ = m_M_\d+.Body.GetILProcessor\(\);
                        \s+var return_\d+ = (?<il>il_M_\d+\.)Create\(OpCodes.Nop\);
                        (?<emit>\s+\k<il>Emit\(OpCodes\.)Ldarg_0\);
                        \k<emit>Call, m_m2_\d+\);
@@ -53,6 +55,7 @@ public class NullCoalescingTests : CecilifierUnitTestBase
         var result = RunCecilifier("int? M(int? i1, int? i2) => i1 ?? i2;");
         Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match("""
                                                                  //i1 \?\? i2
+                                                                 \s+var il_M_\d+ = m_M_\d+.Body.GetILProcessor\(\);
                                                                  (?<emit>\s+il_M_\d+\.Emit\(OpCodes\.)Ldarg_0\);
                                                                  \s+var (?<left>l_leftValue_\d+) = new VariableDefinition\(.+ImportReference\(.+Nullable<>\)\)\.MakeGenericInstanceType\(.+Int32\)\);
                                                                  \s+m_M_\d+.Body.Variables.Add\(\k<left>\);

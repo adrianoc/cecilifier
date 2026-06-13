@@ -11,7 +11,7 @@ namespace Cecilifier.Core.AST;
 
 internal class ElementAccessExpressionWithRangeArgumentVisitor : SyntaxWalkerBase
 {
-    internal ElementAccessExpressionWithRangeArgumentVisitor(IVisitorContext context, string ilVar, ExpressionVisitor expressionVisitor, bool targetAlreadyLoaded = false) : base(context)
+    internal ElementAccessExpressionWithRangeArgumentVisitor(IVisitorContext context, IlContext ilVar, ExpressionVisitor expressionVisitor, bool targetAlreadyLoaded = false) : base(context)
     {
         _expressionVisitor = expressionVisitor;
         _targetAlreadyLoaded = targetAlreadyLoaded;
@@ -114,6 +114,6 @@ internal class ElementAccessExpressionWithRangeArgumentVisitor : SyntaxWalkerBas
     private readonly ExpressionVisitor _expressionVisitor;
     private readonly bool _targetAlreadyLoaded;
     private string _spanCopyVariable;
-    private readonly string _ilVar;
+    private readonly IlContext _ilVar;
     private ITypeSymbol _targetSpanType; // Span<T> in which indexer is being invoked
 }

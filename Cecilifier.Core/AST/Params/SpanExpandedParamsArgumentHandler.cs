@@ -17,7 +17,7 @@ internal class SpanExpandedParamsArgumentHandler : ExpandedParamsArgumentHandler
     private readonly ResolvedType _inlineArrayType;
     private readonly ITypeSymbol _paramsParameterType;
 
-    public SpanExpandedParamsArgumentHandler(IVisitorContext context, IParameterSymbol paramsParameter, ArgumentListSyntax argumentList, string ilVar) : base(context, paramsParameter, argumentList, ilVar)
+    public SpanExpandedParamsArgumentHandler(IVisitorContext context, IParameterSymbol paramsParameter, ArgumentListSyntax argumentList, IlContext ilVar) : base(context, paramsParameter, argumentList, ilVar)
     {
         _paramsParameterType = paramsParameter.Type.ElementTypeSymbolOf();
         _stindOpCode = _paramsParameterType.StindOpCodeFor();
