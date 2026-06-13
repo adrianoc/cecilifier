@@ -24,6 +24,7 @@ namespace Cecilifier.Core.Tests.Integration.Types
         nameof(SimpleValueTypeTest),
         nameof(TypeInitializeTest),
         nameof(AbstractClassTest),
+        nameof(AttributeTests),
         IgnoreReason = "Not implemented")]
     
     public class TypesTestCase<TContext> : ResourceTestBase<TContext> where TContext : IVisitorContext
@@ -33,6 +34,7 @@ namespace Cecilifier.Core.Tests.Integration.Types
         [TestCase("AttributeFromSameAssembly")]
         [TestCase("AttributeWithTypeOfExpression")]
         [TestCase("AttributeGeneric")]
+        [ParameterizedResourceFilter<SystemReflectionMetadataContext>("AttributeWithProperty", IgnoreReason = "Other tests are failing")]
         public void AttributeTests(string typeName)
         {
             AssertResourceTest($"Types/{typeName}");

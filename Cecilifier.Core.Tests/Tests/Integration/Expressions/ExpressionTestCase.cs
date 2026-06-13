@@ -169,7 +169,6 @@ namespace Cecilifier.Core.Tests.Integration
         [TestCase("PropertyRead")]
         [TestCase("ArrayWrite")]
         [TestCase("PropertyWrite")]
-        [ParameterizedResourceFilter<SystemReflectionMetadataContext>("ArrayRead", "ArrayWrite", IgnoreReason = "Other tests depends on generics which are not supported as of today")]
         public void TestIndexerAccess(string prefix)
         {
             AssertResourceTest($"Expressions/{prefix}IndexerAccess");
@@ -198,6 +197,7 @@ namespace Cecilifier.Core.Tests.Integration
         [TestCase("Instance_Method")]
         [TestCase("Static_Method")]
         [TestCase("LocalVariablesInitializer")]
+        [ParameterizedResourceFilter<SystemReflectionMetadataContext>("Parameters", "LocalVariables", "Static_Method", "LocalVariablesInitializer")]
         public void TestDelegateAssignment(string memberType)
         {
             AssertResourceTest(new CecilifyTestOptions { ResourceName = $"Expressions/DelegateAssignment_{memberType}" });

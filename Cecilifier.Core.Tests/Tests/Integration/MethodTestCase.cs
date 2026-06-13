@@ -9,7 +9,9 @@ namespace Cecilifier.Core.Tests.Integration
 {
     [TestFixture(typeof(MonoCecilContext))]
     [TestFixture(typeof(SystemReflectionMetadataContext))]
-    [EnableForContext<SystemReflectionMetadataContext>(nameof(NonVirtualMethodCallTest),
+    [EnableForContext<SystemReflectionMetadataContext>(
+        nameof(NonVirtualMethodCallTest),
+        nameof(TestOverloads),
         nameof(TestCtorWithParameters),
         nameof(TestDefaultCtorFromBaseClass),
         nameof(TestExplicityDefaultCtor),
@@ -20,6 +22,7 @@ namespace Cecilifier.Core.Tests.Integration
         nameof(TestMultipleParameters),
         nameof(TestMutuallyRecursive),
         nameof(TestNoParameters),
+        nameof(TestParameterModifiers),
         nameof(TestRefReturn),
         nameof(TestReturnValue),
         nameof(TestSelfReferencingCtor),
