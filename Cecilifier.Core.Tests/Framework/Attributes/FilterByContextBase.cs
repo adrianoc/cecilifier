@@ -1,3 +1,4 @@
+//#define RUN_TESTS_ANYWAY
 #nullable enable
 using System;
 using System.Collections.Generic;
@@ -26,6 +27,9 @@ internal class FilterByContextBase<T> : Attribute where T : IVisitorContext
 
     protected bool DisableTestIfNotApplicable(ITest test, string testName)
     {
+#if RUN_TESTS_ANYWAY
+    return false;
+#else
         if (_enabledTests.Contains(testName))
             return false;
         
@@ -33,5 +37,6 @@ internal class FilterByContextBase<T> : Attribute where T : IVisitorContext
         test.Properties[PropertyNames.SkipReason].Add(IgnoreReason);
 
         return true;
+#endif        
     }
 }
