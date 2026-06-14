@@ -24,6 +24,7 @@ namespace Cecilifier.Core.Tests.Integration.Types
         nameof(SimpleValueTypeTest),
         nameof(TypeInitializeTest),
         nameof(AbstractClassTest),
+        nameof(ExplicitInterfaceImplementationTest),
         nameof(AttributeTests),
         IgnoreReason = "Not implemented")]
     

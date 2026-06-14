@@ -154,20 +154,16 @@ namespace Cecilifier.Core.AST
                 else
                 {
                     var returnInstruction = ctx.Naming.Instruction("return");
-                    //TODO: Mono.Cecil specific code. Abstract it
-                    ctx.Generate($"var {returnInstruction} = {ilVar.VariableName}.Create({OpCodes.Nop.ConstantName()});");
-                    ctx.WriteNewLine();
+                    ctx.ApiDriver.DefineLabel(ctx, ilVar, returnInstruction);
 
                     binaryExpression.Left.Accept(expressionVisitor);
                     ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Dup);
-                    ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Brtrue_S, returnInstruction);
+                    ctx.ApiDriver.WriteCilBranch(ctx, ilVar, OpCodes.Brtrue_S, returnInstruction);
 
                     ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Pop); // removes evaluated LEFT expression from stack
                     binaryExpression.Right.Accept(expressionVisitor);
                     binaryExpression.Right.InjectRequiredConversions(ctx, ilVar);
-                    //TODO: Mono.Cecil specific code. Abstract it
-                    ctx.Generate($"{ilVar.VariableName}.Body.Instructions.Add({returnInstruction});");
-                    ctx.WriteNewLine();
+                    ctx.ApiDriver.MarkLabel(ctx, ilVar, returnInstruction);
                 }
             });
         }
@@ -826,6 +822,7 @@ namespace Cecilifier.Core.AST
             else if (conversion.IsBoxing || conversion.IsImplicit && conversion.IsReference && castSourceType.TypeKind == TypeKind.TypeParameter)
             {
                 AddCilInstruction(ilVar, OpCodes.Box, castSourceType);
+
             }
             else if (conversion.IsUnboxing)
             {

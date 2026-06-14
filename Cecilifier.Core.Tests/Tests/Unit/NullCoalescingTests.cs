@@ -22,7 +22,7 @@ public class NullCoalescingTests : CecilifierUnitTestBase
                        \k<emit>Brtrue_S, return_\d+\);
                        \k<emit>Pop\);
                        \k<emit>Ldarg_1\);
-                       \s+\k<il>\.Body\.Instructions\.Add\(return_\d+\);
+                       \s+\k<il>\.Append\(return_\d+\);
                        \k<emit>Ret\);
                        """));
     }
@@ -43,7 +43,7 @@ public class NullCoalescingTests : CecilifierUnitTestBase
                        \k<emit>Brtrue_S, return_\d+\);
                        \k<emit>Pop\);
                        \k<emit>Ldarg_1\);
-                       \s+\k<il>Body\.Instructions.Add\(return_\d+\);
+                       \s+\k<il>Append\(return_\d+\);
                        \k<emit>Ret\);
                        \s+//End of local function
                        """));

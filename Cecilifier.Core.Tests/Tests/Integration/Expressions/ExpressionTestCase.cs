@@ -33,7 +33,10 @@ namespace Cecilifier.Core.Tests.Integration
         nameof(TestIncrementDecrementExpressions),
         nameof(TestIndexerAccess),
         nameof(TestRangeExpression),
-        nameof(TestIndexExpression))]
+        nameof(TestIndexExpression),
+        nameof(TestDelegateAssignment),
+        nameof(TestDelegateInvocation)
+        )]
     public class ExpressionTestCase<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
     {
         [Test]
@@ -197,7 +200,6 @@ namespace Cecilifier.Core.Tests.Integration
         [TestCase("Instance_Method")]
         [TestCase("Static_Method")]
         [TestCase("LocalVariablesInitializer")]
-        [ParameterizedResourceFilter<SystemReflectionMetadataContext>("Parameters", "LocalVariables", "Static_Method", "LocalVariablesInitializer")]
         public void TestDelegateAssignment(string memberType)
         {
             AssertResourceTest(new CecilifyTestOptions { ResourceName = $"Expressions/DelegateAssignment_{memberType}" });

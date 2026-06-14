@@ -10,12 +10,12 @@ namespace Cecilifier.Core.Tests.Integration
     [TestFixture(typeof(MonoCecilContext))]
     [TestFixture(typeof(SystemReflectionMetadataContext))]
     [EnableForContext<SystemReflectionMetadataContext>(
-        nameof(TestTopLevelStatements), 
-        nameof(TestNamespaces), 
+        nameof(TestTopLevelStatements),
         nameof(TestNamespaces), 
         nameof(AttributesOnMembers), 
         nameof(TestAttributesOnExplicitTargets), 
         nameof(TestAttributeWithArrayInitializer), 
+        nameof(TestDelegateInvocation), 
         IgnoreReason = "Not implemented yet")]
     public class MiscTestCase<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
     {
@@ -23,6 +23,7 @@ namespace Cecilifier.Core.Tests.Integration
         [TestCase("Parameters2")]
         [TestCase("LocalVariables")]
         [TestCase("OnFields")]
+        [ParameterizedResourceFilter<SystemReflectionMetadataContext>("Parameters2")]
         public void TestDelegateInvocation(string storageType)
         {
             AssertResourceTest($"Misc/DelegateInvocation_{storageType}");
@@ -82,7 +83,7 @@ namespace Cecilifier.Core.Tests.Integration
         [TestCase("InterfaceAndMembers")]
         [TestCase("EnumAndMembers")]
         [TestCase("StructAndMembers")]
-        [ParameterizedResourceFilter<SystemReflectionMetadataContext>("StructAndMembers", "EnumAndMembers")]
+        [ParameterizedResourceFilter<SystemReflectionMetadataContext>("ClassAndMembers", "InterfaceAndMembers", "StructAndMembers", "EnumAndMembers")]
         public void AttributesOnMembers(string typeKind)
         {
             AssertResourceTest($"Misc/Attributes/AttributesOn{typeKind}");

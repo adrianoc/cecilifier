@@ -167,7 +167,7 @@ namespace Cecilifier.Core.Tests.Integration
         [TestCase("ArrayParam")]
         [TestCase("ParamIndexer")]
         [TestCase("RefReturnField")]
-        [ParameterizedResourceFilter<SystemReflectionMetadataContext>("ArrayParam", "RefReturnField")]
+        [ParameterizedResourceFilter<SystemReflectionMetadataContext>("ArrayParam", "RefReturnField", "RefParam",  "RefParamBodied")]
         public void TestRefReturn(string test, string ignoredErrors = null)
         {
             var options = new CecilifyTestOptions { ResourceName = $"Members/Methods/{test}", IgnoredILErrors = ignoredErrors };

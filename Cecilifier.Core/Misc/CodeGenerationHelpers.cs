@@ -51,7 +51,7 @@ public struct CodeGenerationHelpers
         {
             context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Ldftn, targetMethodExp.AsToken());
             var delegateCtor = delegateType.GetMembers().OfType<IMethodSymbol>().FirstOrDefault(m => m.Name == ".ctor");
-            context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Newobj, delegateCtor.MethodResolverExpression(context));
+            context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Newobj, delegateCtor.MethodResolverExpression(context).AsToken());
         }
     }
 
