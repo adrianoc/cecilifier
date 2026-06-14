@@ -552,6 +552,8 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         }
     }
 
+    public void OverrideBaseMethod(IVisitorContext context, string methodVar, string? overridenMethod) { /*NOOP on SRM */}
+
     private SystemReflectionMetadataContext TypedContext(IVisitorContext context) => ((SystemReflectionMetadataContext) context);
     
     static void EmitLocalVariables(SystemReflectionMetadataContext context, string methodName, ref readonly MethodDefinitionRecord methodRecord)
@@ -597,7 +599,6 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
     static string Format(CecilifierInterpolatedStringHandler cecilFormattedString) => StringExtensions.Indented(cecilFormattedString);
     
     private static void AddTypeParameters(SystemReflectionMetadataContext ctx, IEnumerable<TypeParameterSyntax> typeParameters, string entityHandleVariable)
-    //private static void AddTypeParameters(SystemReflectionMetadataContext ctx, IEnumerable<TypeParameterSyntax> typeParameters, TypeDefinitionRecord typeRecord)
     {
         var index = 0;
         foreach (var genericTypeParameter in typeParameters)

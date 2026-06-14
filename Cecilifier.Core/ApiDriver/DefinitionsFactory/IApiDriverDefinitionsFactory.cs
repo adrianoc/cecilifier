@@ -71,4 +71,6 @@ public interface IApiDriverDefinitionsFactory
     IEnumerable<string> Attribute(IVisitorContext context, IMethodSymbol attributeCtor, string attributeVarBaseName, string attributeTargetVar, VariableMemberKind targetKind, params CustomAttributeArgument[] arguments);
 
     IEnumerable<string> Event(IVisitorContext context, BodiedMemberDefinitionContext eventSpec, string declaringTypeName, ResolvedType eventType, string addAccessorVariable, string removeAccessorVariable);
+
+    void OverrideBaseMethod(IVisitorContext context, string methodVar, string? overridenMethod);
 }

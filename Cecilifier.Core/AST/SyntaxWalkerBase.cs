@@ -898,8 +898,7 @@ namespace Cecilifier.Core.AST
         protected void AddToOverridenMethodsIfAppropriated(string methodVar, IMethodSymbol method)
         {
             var overridenMethod = GetOverridenMethod(method);
-            if (overridenMethod != null)
-                WriteCecilExpression(Context, $"{methodVar}.Overrides.Add({overridenMethod});");
+            Context.ApiDefinitionsFactory.OverrideBaseMethod(Context, methodVar, overridenMethod);
         }
         
         protected string GetOverridenMethod(IMethodSymbol method)
