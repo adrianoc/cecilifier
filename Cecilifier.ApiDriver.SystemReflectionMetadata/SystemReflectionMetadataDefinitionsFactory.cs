@@ -552,7 +552,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         }
     }
 
-    public void OverrideBaseMethod(IVisitorContext context, string methodVar, string? overridenMethod) { /*NOOP on SRM */}
+    public void OverrideBaseMethod(IVisitorContext context, string overriderMethodVar, string? overridenMethod) { /*NOOP on SRM */}
 
     private SystemReflectionMetadataContext TypedContext(IVisitorContext context) => ((SystemReflectionMetadataContext) context);
     

@@ -72,5 +72,13 @@ public interface IApiDriverDefinitionsFactory
 
     IEnumerable<string> Event(IVisitorContext context, BodiedMemberDefinitionContext eventSpec, string declaringTypeName, ResolvedType eventType, string addAccessorVariable, string removeAccessorVariable);
 
-    void OverrideBaseMethod(IVisitorContext context, string methodVar, string? overridenMethod);
+    /// <summary>
+    /// Emits code to override a method from a base class.
+    /// </summary>
+    /// <param name="context">Visitor context to use.</param>
+    /// <param name="overriderMethodVar">Expression representing the method overriding the base method. Note that commonly this is the name of a variable holding the data representing a method definition.</param>
+    /// <param name="overridenMethod">
+    /// Expression representing the base method being overriden. If this is 'null' <paramref name="overriderMethodVar"/> does not override any method and whence no code is generated."/>
+    /// </param>
+    void OverrideBaseMethod(IVisitorContext context, string overriderMethodVar, string? overridenMethod);
 }

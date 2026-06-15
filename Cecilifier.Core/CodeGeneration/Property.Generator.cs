@@ -68,7 +68,7 @@ internal class PropertyGenerator
 
         var methodVariableScope = Context.DefinitionVariables.WithCurrentMethod(methodDefinitionVariable);
         Context.Generate(exps);
-        AddToOverridenMethodsIfAppropriated(accessorMethodVar, overridenMethod);
+        Context.ApiDefinitionsFactory.OverrideBaseMethod(Context, accessorMethodVar, overridenMethod);
 
         Context.ApiDriver.AddMethodSemantics(Context, property.Variable, accessorMethodVar, MethodKind.PropertySet);
         
@@ -107,7 +107,7 @@ internal class PropertyGenerator
         
         var scopedVariable = Context.DefinitionVariables.WithCurrentMethod(methodDefinitionVariable);
         
-        AddToOverridenMethodsIfAppropriated(accessorMethodVar, overridenMethod);
+        Context.ApiDefinitionsFactory.OverrideBaseMethod(Context, accessorMethodVar, overridenMethod);
         
         Context.Generate([
             hasCovariantReturn ? 
@@ -131,15 +131,6 @@ internal class PropertyGenerator
         Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ret);
         
         Context.AddCompilerGeneratedAttributeTo(getMethodVar, VariableMemberKind.Method);
-    }
-    
-    private void AddToOverridenMethodsIfAppropriated(string accessorMethodVar, string overridenMethod)
-    {
-        if (string.IsNullOrWhiteSpace(overridenMethod))
-            return;
-        
-        Context.Generate($"{accessorMethodVar}.Overrides.Add({overridenMethod});");
-        Context.WriteNewLine();
     }
 
     private void AddBackingFieldIfNeeded(ref readonly PropertyGenerationData property)

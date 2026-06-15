@@ -361,12 +361,13 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
         ];
     }
 
-    public void OverrideBaseMethod(IVisitorContext context, string methodVar, string? overridenMethod)
+    public void OverrideBaseMethod(IVisitorContext context, string overriderMethodVar, string? overridenMethod)
     {
         if (overridenMethod == null)
             return;
         
-        context.Generate($"{methodVar}.Overrides.Add({overridenMethod});");
+        context.Generate($"{overriderMethodVar}.Overrides.Add({overridenMethod});");
+        context.WriteNewLine();
     }
 
     private static string CustomAttributeArgumentValueFor(IVisitorContext context, object argument)
