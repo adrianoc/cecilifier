@@ -78,7 +78,7 @@ namespace Cecilifier.Core.TypeSystem
                 var typeArguments = nestedType.GetAllTypeArguments().ToArray();
                 var resolveNestedType = new ResolvedType($"""TypeHelpers.NewRawNestedTypeReference("{type.Name}", module: assembly.MainModule, {Resolve(type.ContainingType.OriginalDefinition, in resolutionContext)}, isValueType: {type.IsValueType.ToKeyword()}, {typeArguments.Length})""");
             
-                // if type is a generic type definition we return the open, resolved type
+                // if type is a generic type definition, we return the open, resolved type
                 // otherwise this method is expected to return a 'GenericInstanceType'.
                 // Note that in this case even if the parent type is the generic one,
                 // in IL, we need to create a 'GenericInstanceType' of the nested 
@@ -89,7 +89,7 @@ namespace Cecilifier.Core.TypeSystem
                 // and the parent's type generic parameters are added to nested types) 
                 return type.IsDefinition 
                     ? resolveNestedType 
-                    : resolveNestedType.MakeGenericInstanceType(typeArguments.Select(t => _context.TypeResolver.Resolve(t, new TypeResolutionContext(ResolveTargetKind.None, TypeResolutionOptions.None))).ToArray());
+                    : MakeGenericInstanceType(resolveNestedType, nestedType, new TypeResolutionContext(ResolveTargetKind.None, TypeResolutionOptions.None));
             }
 
             return null;

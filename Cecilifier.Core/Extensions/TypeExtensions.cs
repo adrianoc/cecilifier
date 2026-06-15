@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.ApiDriver.Handles;
 using Microsoft.CodeAnalysis;
 using Cecilifier.Core.AST;
@@ -15,11 +14,6 @@ namespace Cecilifier.Core.Extensions
     {
         public static bool IsNonPrimitiveValueType(this ITypeSymbol type, IVisitorContext context) => !type.IsPrimitiveType() 
                                                                                                       && (type.IsValueType || SymbolEqualityComparer.Default.Equals(type, context.RoslynTypeSystem.SystemValueType));
-        
-        public static ResolvedType MakeByReferenceType(this ResolvedType type)
-        {
-            return $"{type}.MakeByReferenceType()";
-        }
         
         public static ResolvedType MakeGenericInstanceType(this ResolvedType type, IEnumerable<ResolvedType> typeArguments)
         {

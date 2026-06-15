@@ -40,22 +40,22 @@ namespace Cecilifier.Core.Misc
             return $"var {genParamDefVar} = new Mono.Cecil.GenericParameter(\"{genericParamName}\", {typeParameterOwnerVar});";
         }
 
-        public static string ParameterDoesNotHandleParamsKeywordOrDefaultValue(string name, RefKind byRef, ResolvedType resolvedType, string? paramAttributes = null)
+        public static string ParameterDoesNotHandleParamsKeywordOrDefaultValue(ITypeResolver resolver, string name, RefKind byRef, ResolvedType resolvedType, string? paramAttributes = null)
         {
             paramAttributes ??= Constants.ParameterAttributes.None;
             if (RefKind.None != byRef)
             {
-                resolvedType = resolvedType.MakeByReferenceType();
+                resolvedType = resolver.MakeByRefType(resolvedType);
             }
 
             return $"new ParameterDefinition(\"{name}\", {paramAttributes}, {resolvedType})";
         }
 
-        public static IEnumerable<string> Parameter(string name, RefKind byRef, string? paramsAttributeTypeName, string methodVar, string paramVar, ResolvedType resolvedType, string paramAttributes, (string? Value, bool Present) defaultParameterValue)
+        public static IEnumerable<string> Parameter(IVisitorContext ctx, string name, RefKind byRef, string? paramsAttributeTypeName, string methodVar, string paramVar, ResolvedType resolvedType, string paramAttributes, (string? Value, bool Present) defaultParameterValue)
         {
             var exps = new List<string>();
 
-            exps.Add($"var {paramVar} = {ParameterDoesNotHandleParamsKeywordOrDefaultValue(name, byRef, resolvedType, paramAttributes)};");
+            exps.Add($"var {paramVar} = {ParameterDoesNotHandleParamsKeywordOrDefaultValue(ctx.TypeResolver, name, byRef, resolvedType, paramAttributes)};");
             if (!string.IsNullOrWhiteSpace(paramsAttributeTypeName))
             {
                 exps.Add($"{paramVar}.CustomAttributes.Add(new CustomAttribute(assembly.MainModule.Import(typeof({paramsAttributeTypeName}).GetConstructor(BindingFlags.Public | BindingFlags.Instance, null, new Type[0], null))));");
@@ -79,6 +79,7 @@ namespace Cecilifier.Core.Misc
         public static IEnumerable<string> Parameter(IVisitorContext context, IParameterSymbol paramSymbol, string methodVar, string paramVar)
         {
             return Parameter(
+                context,
                 paramSymbol.Name,
                 paramSymbol.RefKind,
                 paramSymbol.ParamsAttributeMatchingType(),
@@ -105,7 +106,7 @@ namespace Cecilifier.Core.Misc
 
         private static string FunctionPointerTypeBasedCecilType(ITypeResolver resolver, IFunctionPointerTypeSymbol functionPointer, Func<string, string, ResolvedType, string> factory)
         {
-            var parameters = $"Parameters={{ {string.Join(',', functionPointer.Signature.Parameters.Select(p => ParameterDoesNotHandleParamsKeywordOrDefaultValue(p.Name, p.RefKind, resolver.Resolve(p.Type, ResolveTargetKind.Parameter))))} }}";
+            var parameters = $"Parameters={{ {string.Join(',', functionPointer.Signature.Parameters.Select(p => ParameterDoesNotHandleParamsKeywordOrDefaultValue(resolver, p.Name, p.RefKind, resolver.Resolve(p.Type, ResolveTargetKind.Parameter))))} }}";
             var returnType = resolver.Resolve(functionPointer.Signature.ReturnType, ResolveTargetKind.ReturnType);
             return factory("HasThis = false", parameters, returnType);
         }

@@ -172,7 +172,7 @@ namespace Cecilifier.Core.AST
 
                 var currentMethodVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
                 var localVar = node.Declaration.Variables[0];
-                var resolvedVarType = Context.TypeResolver.Resolve(pointerType.PointedAtType, ResolveTargetKind.LocalVariable).MakeByReferenceType();
+                var resolvedVarType = Context.TypeResolver.MakeByRefType(Context.TypeResolver.Resolve(pointerType.PointedAtType, new TypeResolutionContext(ResolveTargetKind.LocalVariable, TypeResolutionOptions.IsByRef)));
                 Context.ApiDefinitionsFactory.LocalVariable(Context, localVar.Identifier.Text, currentMethodVar.VariableName, resolvedVarType);
                 ProcessVariableInitialization(localVar, declaredType);
             }

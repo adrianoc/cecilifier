@@ -99,7 +99,7 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
         var resolvedReturnType = context.TypeResolver.Resolve(methodSymbol.ReturnType, methodSymbol.ToTypeResolutionContext());
         var refReturn = methodSymbol.ReturnsByRef || methodSymbol.ReturnsByRefReadonly;
         if (refReturn)
-            resolvedReturnType = resolvedReturnType.MakeByReferenceType();
+            resolvedReturnType = context.TypeResolver.MakeByRefType(resolvedReturnType);
 
         // for type parameters we may need to postpone setting the return type (using void as a placeholder, since we need to pass something) until the generic parameters has been
         // handled. This is required because the type parameter may be defined by the method being processed.
@@ -108,7 +108,7 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
         if (methodSymbol.ReturnType.IsTypeParameterOrIsGenericTypeReferencingTypeParameter())
         {
             resolvedReturnType = context.TypeResolver.Resolve(methodSymbol.ReturnType, methodSymbol.ToTypeResolutionContext());
-            exps.Add($"{bodiedMemberDefinitionContext.Member.DefinitionVariable}.ReturnType = {(refReturn ? resolvedReturnType.MakeByReferenceType() : resolvedReturnType)};");
+            exps.Add($"{bodiedMemberDefinitionContext.Member.DefinitionVariable}.ReturnType = {(refReturn ? context.TypeResolver.MakeByRefType(resolvedReturnType) : resolvedReturnType)};");
         }
 
         exps.Add($"{context.DefinitionVariables.GetLastOf(VariableMemberKind.Type).VariableName}.Methods.Add({bodiedMemberDefinitionContext.Member.DefinitionVariable});");
@@ -147,6 +147,7 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
         {
             var paramVar = context.Naming.SyntheticVariable(parameter.Name, ElementKind.Parameter);
             var parameterExp = CecilDefinitionsFactory.Parameter(
+                                                                            context,
                                                                             parameter.Name,
                                                                             parameter.RefKind,
                                                                             parameter.ParamsAttributeName, // for now,the only callers for this method don't have any `params` parameters.
@@ -264,7 +265,7 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
     public IEnumerable<string> Field(IVisitorContext context, MemberDefinitionContext definitionContext, string declaringTypeName, ResolvedType fieldType, string fieldAttributes, bool isVolatile, bool isByRef, FieldInitializationData initializer = default)
     {
         if (isByRef)
-            fieldType = fieldType.MakeByReferenceType();
+            fieldType = context.TypeResolver.MakeByRefType(fieldType);
         
         context.DefinitionVariables.RegisterNonMethod(declaringTypeName, definitionContext.Name, VariableMemberKind.Field, definitionContext.DefinitionVariable);
         

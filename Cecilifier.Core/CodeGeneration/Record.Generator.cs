@@ -131,7 +131,7 @@ internal partial class RecordGenerator
             context.Generate(
             [
                 ..exps,
-                ..CecilDefinitionsFactory.Parameter("other", RefKind.None, null, copyCtorVar, context.Naming.Parameter("other"), context.TypeResolver.Resolve(_recordSymbol, ResolveTargetKind.Parameter), Constants.ParameterAttributes.None, (null, false))
+                ..CecilDefinitionsFactory.Parameter(context, "other", RefKind.None, null, copyCtorVar, context.Naming.Parameter("other"), context.TypeResolver.Resolve(_recordSymbol, ResolveTargetKind.Parameter), Constants.ParameterAttributes.None, (null, false))
             ]);
         }
         else
@@ -641,7 +641,6 @@ internal partial class RecordGenerator
         foreach (var targetType in targetTypes)
         {
             var openEqualityComparerType = context.TypeResolver.Resolve(context.RoslynTypeSystem.ForType(typeof(EqualityComparer<>).FullName), ResolveTargetKind.TypeReference);
-            //var openEqualityComparerType = context.TypeResolver.ResolveAny(context.SemanticModel.Compilation.GetTypeByMetadataName(typeof(EqualityComparer<>).FullName!));
             if (equalityComparerDataByType.ContainsKey(targetType.Name))
                 continue;
             

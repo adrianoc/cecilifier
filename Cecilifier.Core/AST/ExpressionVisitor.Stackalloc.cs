@@ -187,8 +187,8 @@ partial class ExpressionVisitor
         AddCecilExpression($"var {spanCtorVar} = new MethodReference(\".ctor\", {Context.TypeResolver.Bcl.System.Void}, {spanInstanceType}) {{ HasThis = true }};");
         
         var voidPtr = Context.SemanticModel.Compilation.CreatePointerTypeSymbol(Context.RoslynTypeSystem.SystemVoid);
-        AddCecilExpression($"{spanCtorVar}.Parameters.Add({CecilDefinitionsFactory.ParameterDoesNotHandleParamsKeywordOrDefaultValue("ptr", RefKind.None, Context.TypeResolver.Resolve(voidPtr, ResolveTargetKind.Parameter))});");
-        AddCecilExpression($"{spanCtorVar}.Parameters.Add({CecilDefinitionsFactory.ParameterDoesNotHandleParamsKeywordOrDefaultValue("length", RefKind.None, Context.TypeResolver.Bcl.System.Int32)});");
+        AddCecilExpression($"{spanCtorVar}.Parameters.Add({CecilDefinitionsFactory.ParameterDoesNotHandleParamsKeywordOrDefaultValue(Context.TypeResolver, "ptr", RefKind.None, Context.TypeResolver.Resolve(voidPtr, ResolveTargetKind.Parameter))});");
+        AddCecilExpression($"{spanCtorVar}.Parameters.Add({CecilDefinitionsFactory.ParameterDoesNotHandleParamsKeywordOrDefaultValue(Context.TypeResolver,"length", RefKind.None, Context.TypeResolver.Bcl.System.Int32)});");
 
         Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Newobj, Context.MemberResolver.ImportReference($"{spanCtorVar}"));
     }

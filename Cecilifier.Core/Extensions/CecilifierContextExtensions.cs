@@ -184,7 +184,7 @@ public static class CecilifierContextExtensions
                                                                     method.Parameters.Select( p => new ParameterSymbolParameterSpec(p, context)).ToArray(),
                                                                     method.GetTypeParameterSyntax().Select(tps => tps.Identifier.Text).ToArray(),
                                                                     ctx => method.ReturnsByRef 
-                                                                        ? resolvedReturnType.MakeByReferenceType()
+                                                                        ? context.TypeResolver.MakeByRefType(resolvedReturnType)
                                                                         : resolvedReturnType,
                                                                     out _);
         context.Generate(exps);

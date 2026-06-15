@@ -155,7 +155,7 @@ internal partial class PrivateImplementationDetailsGenerator
         Func<IVisitorContext, ResolvedType> returnTypeResolver = ctx =>
         {
             var spanTypeParameter = ResolveOwnedGenericParameter(ctx, "TElement", methodTypeQualifiedName);
-            return new ResolvedType(spanTypeParameter).MakeByReferenceType();
+            return context.TypeResolver.MakeByRefType(new ResolvedType(spanTypeParameter));
         };
         var methodExpressions = context.ApiDefinitionsFactory.Method(
                                                                     context, 
@@ -211,7 +211,7 @@ internal partial class PrivateImplementationDetailsGenerator
         Func<IVisitorContext, ResolvedType> returnTypeResolver = ctx =>
         {
             var spanTypeParameter = ResolveOwnedGenericParameter(ctx, "TElement", methodTypeQualifiedName);
-            return new ResolvedType(spanTypeParameter).MakeByReferenceType();
+            return context.TypeResolver.MakeByRefType(new ResolvedType(spanTypeParameter));
         };
         var methodExpressions = context.ApiDefinitionsFactory.Method(
             context, 
@@ -255,12 +255,8 @@ internal partial class PrivateImplementationDetailsGenerator
     
     private static string ResolveOwnedGenericParameter(IVisitorContext context, string name, string methodTypeQualifiedName)
     {
-        var spanTypeParameter = context.DefinitionVariables.GetVariable(
-            name, 
-            VariableMemberKind.TypeParameter, 
-            methodTypeQualifiedName);
-
-        return spanTypeParameter.VariableName;
+        var spanTypeParameter = context.DefinitionVariables.GetVariable(name, VariableMemberKind.TypeParameter, methodTypeQualifiedName);
+        return spanTypeParameter;
     }
 
     internal static string GetOrCreateInitializationBackingFieldVariableName(IVisitorContext context, int elementSizeInBytes, IList<string> elements, SpanAction<byte, string> converter)
