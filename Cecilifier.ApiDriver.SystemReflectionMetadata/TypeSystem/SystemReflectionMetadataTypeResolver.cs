@@ -222,6 +222,8 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
         throw new NotImplementedException();
     }
     
+    public override ResolvedType MakeByRefType(in ResolvedType resolvedType) => resolvedType; // noop in SRM. ByRef types are handled during type resolution.
+    
     private static string TypeEncoderFor(in TypeResolutionContext resolutionContext)
     {
         if (resolutionContext.TargetKind == ResolveTargetKind.Instruction)

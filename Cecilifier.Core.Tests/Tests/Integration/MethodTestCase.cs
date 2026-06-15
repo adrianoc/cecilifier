@@ -24,11 +24,14 @@ namespace Cecilifier.Core.Tests.Integration
         nameof(TestNoParameters),
         nameof(TestParameterModifiers),
         nameof(TestRefReturn),
+        nameof(TestRefLocals),
+        nameof(TestRefProperties),
         nameof(TestReturnValue),
         nameof(TestSelfReferencingCtor),
         nameof(TestSingleSimpleParameter),
         nameof(TestTypeWithNoArgCtorAndInnerClass),
         nameof(TestVariableNumberOfParameters),
+        nameof(TestReturnDelegate),
         nameof(TestDelegateAsParameter)
         )]
     public class MethodTestCase<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
@@ -169,7 +172,6 @@ namespace Cecilifier.Core.Tests.Integration
         [TestCase("ArrayParam")]
         [TestCase("ParamIndexer")]
         [TestCase("RefReturnField")]
-        [ParameterizedResourceFilter<SystemReflectionMetadataContext>("ArrayParam", "RefReturnField", "RefParam",  "RefParamBodied")]
         public void TestRefReturn(string test, string ignoredErrors = null)
         {
             var options = new CecilifyTestOptions { ResourceName = $"Members/Methods/{test}", IgnoredILErrors = ignoredErrors };

@@ -310,8 +310,9 @@ namespace Cecilifier.Core.AST
             // method is mapped in IMethodSymbol.ReturnsByRef property and trying to get the symbol info
             // for such types fails whence we `unwrap` (remove the `ref` information) the type, resolve
             // the symbol and then `wrap` the result.
-            var resolvedType = Context.TypeResolver.Resolve(ResolveTypeSymbol(type), resolveTargetKind);
-            return type is RefTypeSyntax ? resolvedType.MakeByReferenceType() : resolvedType;
+            var isByRef = type is RefTypeSyntax;
+            var resolvedType = Context.TypeResolver.Resolve(ResolveTypeSymbol(type), new TypeResolutionContext(resolveTargetKind, isByRef ? TypeResolutionOptions.IsByRef : TypeResolutionOptions.None));
+            return isByRef ? Context.TypeResolver.MakeByRefType(resolvedType) : resolvedType;
         }
         
         protected ITypeSymbol ResolveTypeSymbol(TypeSyntax type)

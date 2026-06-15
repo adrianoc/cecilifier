@@ -20,10 +20,9 @@ public interface ITypeResolver
     /// <param name="resolutionContext">context to be considered when applying syntax</param>
     /// <returns>an expression valid to be used in the specified <paramref name="resolutionContext"/></returns>
     ResolvedType ApplySpecificSyntax(string variableName, in TypeResolutionContext resolutionContext);
-    
     ResolvedType MakeArrayType(ITypeSymbol elementType, in TypeResolutionContext resolutionContext);
-    
     ResolvedType MakeGenericInstanceType(ResolvedType typeReference, INamedTypeSymbol genericTypeSymbol, in TypeResolutionContext resolutionContext);
+    ResolvedType MakeByRefType(in ResolvedType resolvedType);
 
     Bcl Bcl { get; }
 }
