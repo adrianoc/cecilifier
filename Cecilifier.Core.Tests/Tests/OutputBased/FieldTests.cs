@@ -9,11 +9,12 @@ namespace Cecilifier.Core.Tests.OutputBased;
 
 [TestFixture(typeof(MonoCecilContext))]
 [TestFixture(typeof(SystemReflectionMetadataContext))]
-[EnableForContext<SystemReflectionMetadataContext>(nameof(Simple), IgnoreReason = "Not implemented yet")]
+[EnableForContext<SystemReflectionMetadataContext>(nameof(Simple), nameof(InstanceFieldOnGenericType), nameof(StaticFieldOnGenericType), IgnoreReason = "Not implemented yet")]
 public class FieldTests<TContext> : OutputBasedTestBase<TContext> where TContext : IVisitorContext
 {
     [TestCase("int", "field = 42", "42",  TestName = "Non generic")]
     [TestCase("T", "field = true", "True", TestName = "Generic")]
+    [ParameterizedResourceFilter<SystemReflectionMetadataContext>("int")]
     public void InstanceFieldOnGenericType(string fieldType, string fieldInitialization, string expectedOutput)
     {
         AssertOutput($$"""
@@ -27,6 +28,7 @@ public class FieldTests<TContext> : OutputBasedTestBase<TContext> where TContext
     
     [TestCase("int", "42", "42",  TestName = "Non generic")]
     [TestCase("T", "true", "True", TestName = "Generic")]
+    [ParameterizedResourceFilter<SystemReflectionMetadataContext>("int")]
     public void StaticFieldOnGenericType(string fieldType, string fieldValue, string expectedOutput)
     {
         AssertOutput($$"""

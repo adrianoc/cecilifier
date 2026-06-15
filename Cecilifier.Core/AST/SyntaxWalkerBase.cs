@@ -590,7 +590,10 @@ namespace Cecilifier.Core.AST
             if (needsLoadIndirect)
             {
                 var opCode = type.LdindOpCodeFor();
-                Context.ApiDriver.WriteCilInstruction(Context, ilVar, opCode, opCode == OpCodes.Ldobj ? Context.TypeResolver.Resolve(type, ResolveTargetKind.Instruction) : null);
+                if (opCode == OpCodes.Ldobj)
+                    Context.ApiDriver.WriteCilInstruction(Context, ilVar, opCode, Context.TypeResolver.Resolve(type, ResolveTargetKind.TypeReference).AsToken());
+                else
+                    Context.ApiDriver.WriteCilInstruction(Context, ilVar, opCode, (string) null);
             }
         }
 

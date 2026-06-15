@@ -28,7 +28,9 @@ namespace Cecilifier.Core.Tests.Integration
         nameof(TestSelfReferencingCtor),
         nameof(TestSingleSimpleParameter),
         nameof(TestTypeWithNoArgCtorAndInnerClass),
-        nameof(TestVariableNumberOfParameters))]
+        nameof(TestVariableNumberOfParameters),
+        nameof(TestDelegateAsParameter)
+        )]
     public class MethodTestCase<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
     {
         [Test]
