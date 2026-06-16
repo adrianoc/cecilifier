@@ -118,7 +118,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
             return new ResolvedType($"MetadataTokens.GetToken({resolved})");
         }
 
-        if (type.TypeKind == TypeKind.TypeParameter && context.TargetKind == ResolveTargetKind.GenericTypeParameterConstraint)
+        if (type.TypeKind == TypeKind.TypeParameter && context.TargetKind is ResolveTargetKind.GenericTypeParameterConstraint or ResolveTargetKind.TypeReference)
         {
             //TODO: Try to register/lookup a variable for the type parameter type specification to avoid duplication.
             var typeParameterBlobEncoderVar = _context.Naming.SyntheticVariable(type.Name, ElementKind.GenericParameter);

@@ -122,6 +122,7 @@ namespace Cecilifier.Core.TypeSystem
                 || type.SpecialType == SpecialType.System_MulticastDelegate
                 || type.SpecialType == SpecialType.System_AsyncCallback
                 || type.SpecialType == SpecialType.System_RuntimeTypeHandle
+                || type.SpecialType == SpecialType.System_RuntimeFieldHandle
                 || type.SpecialType == SpecialType.System_Runtime_CompilerServices_IsVolatile
                 || type.TypeKind == TypeKind.Interface)
             {

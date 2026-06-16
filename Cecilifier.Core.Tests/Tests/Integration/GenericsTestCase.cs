@@ -15,6 +15,7 @@ namespace Cecilifier.Core.Tests.Integration
         nameof(TestGenericInferredStaticMethods),
         nameof(TestGenericExplicitStaticMethods),
         nameof(TestGenericMethodInstanceFromAssembly),
+        nameof(TestMethodInvocationOnGenericParameter),
         nameof(TestGenericTypesAsMembers),
         nameof(TestSimplestGenericTypeDefinition), 
         nameof(TestGenericTypeInstantiation),

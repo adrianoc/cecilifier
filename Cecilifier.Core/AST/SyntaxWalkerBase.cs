@@ -505,7 +505,7 @@ namespace Cecilifier.Core.AST
                 }
                 
                 Context.ApiDriver.WriteCilInstruction(Context, ilVar, loadOpCode, operand);
-                Context.SetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, Context.TypeResolver.Resolve(loadedType, ResolveTargetKind.Instruction).Expression);
+                Context.SetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, Context.TypeResolver.Resolve(loadedType, ResolveTargetKind.TypeReference).Expression);
                 return true;
             }
 
