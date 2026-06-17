@@ -71,5 +71,12 @@ public class MonoCecilTypeResolver(MonoCecilContext context) : TypeResolverBase<
     
     public override ResolvedType MakeByRefType(in ResolvedType resolvedType) =>  $"{resolvedType}.MakeByReferenceType()";
 
+    protected override ResolvedType ResolveNestedType(INamedTypeSymbol type, in TypeResolutionContext resolutionContext)
+    {
+        // collects the type arguments for all types in the parent chain. 
+        var typeArguments = type.GetAllTypeArguments().ToArray();
+        return new ResolvedType($"""TypeHelpers.NewRawNestedTypeReference("{type.Name}", module: assembly.MainModule, {Resolve(type.ContainingType.OriginalDefinition, in resolutionContext)}, isValueType: {type.IsValueType.ToKeyword()}, {typeArguments.Length})""");
+    }
+
     internal ResolvedType ImportReference(ResolvedType typeReference) => $"assembly.MainModule.ImportReference({typeReference})";
 }

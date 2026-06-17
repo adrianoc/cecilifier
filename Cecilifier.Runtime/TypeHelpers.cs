@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Numerics;
 using System.Reflection;
 using Mono.Cecil;
 
@@ -12,7 +11,7 @@ namespace Cecilifier.Runtime
     {
         public static TypeReference NewRawNestedTypeReference(string typeName, ModuleDefinition module, TypeReference declaringType, bool isValueType, int typeParameterCount)
         {
-            var typeReference = new TypeReference(String.Empty, typeName, module, declaringType.Scope) { DeclaringType = declaringType, IsValueType = isValueType ? true : false };
+            var typeReference = new TypeReference(String.Empty, typeName, module, declaringType.Scope) { DeclaringType = declaringType, IsValueType = isValueType };
             for(int i =0; i < typeParameterCount; i++)
                 typeReference.GenericParameters.Add(new GenericParameter(typeReference));
             

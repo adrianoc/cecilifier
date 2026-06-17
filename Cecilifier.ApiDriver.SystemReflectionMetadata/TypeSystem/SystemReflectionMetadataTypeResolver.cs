@@ -223,7 +223,13 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
     }
     
     public override ResolvedType MakeByRefType(in ResolvedType resolvedType) => resolvedType; // noop in SRM. ByRef types are handled during type resolution.
-    
+
+    protected override ResolvedType ResolveNestedType(INamedTypeSymbol type, in TypeResolutionContext resolutionContext)
+    {
+        return ResolveFromAssembly(type, in resolutionContext);
+        //return $"metadata.{type.FullyQualifiedName()}";
+    }
+
     private static string TypeEncoderFor(in TypeResolutionContext resolutionContext)
     {
         if (resolutionContext.TargetKind == ResolveTargetKind.Instruction)
