@@ -157,9 +157,11 @@ internal partial class PrivateImplementationDetailsGenerator
             var spanTypeParameter = ResolveOwnedGenericParameter(ctx, "TElement", TypeParameterKind.Method, methodTypeQualifiedName);
             return context.TypeResolver.MakeByRefType(new ResolvedType(spanTypeParameter));
         };
+        
+        var ilContext = context.ApiDriver.NewIlContext(context, "UnsafeAs", methodVar);
         var methodExpressions = context.ApiDefinitionsFactory.Method(
                                                                     context, 
-                                                                    new BodiedMemberDefinitionContext("InlineArrayFirstElementRef", methodTypeQualifiedName, methodVar, privateImplementationDetailsVar.VariableName, MemberOptions.None, IlContext.None), 
+                                                                    new BodiedMemberDefinitionContext("InlineArrayFirstElementRef", methodTypeQualifiedName, methodVar, privateImplementationDetailsVar.VariableName, MemberOptions.None, ilContext), 
                                                                     declaringTypeName, 
                                                                     "MethodAttributes.Assembly | MethodAttributes.Static | MethodAttributes.HideBySig", 
                                                                     parameters, 
@@ -180,7 +182,6 @@ internal partial class PrivateImplementationDetailsGenerator
             OpCodes.Call.WithOperand(unsafeAsVarName.AsToken()),
             OpCodes.Ret
         ];
-        var ilContext = context.ApiDriver.NewIlContext(context, "UnsafeAs", methodVar);
         var exps = context.ApiDefinitionsFactory.MethodBody(context, "UnsafeAs", ilContext, [], instructions);
         context.Generate(exps);
         context.WriteNewLine();
