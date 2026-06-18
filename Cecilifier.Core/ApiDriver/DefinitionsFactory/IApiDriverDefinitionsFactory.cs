@@ -50,6 +50,21 @@ public interface IApiDriverDefinitionsFactory
     
     public IEnumerable<string> Method(IVisitorContext context, IMethodSymbol methodSymbol, BodiedMemberDefinitionContext bodiedMemberDefinitionContext, string methodName, string methodModifiers, IList<TypeParameterSyntax> typeParameters);
 
+    /// <summary>Generates the statements using the Api Driver API to emit the specified method.</summary>
+    /// <param name="context">The visitor context used during processing.</param>
+    /// <param name="definitionContext">Details about the method being defined.</param>
+    /// <param name="declaringTypeName">The name of the declaring type.</param>
+    /// <param name="methodModifiers">Modifiers to be applied to the method.</param>
+    /// <param name="parameters">List of parameters.</param>
+    /// <param name="typeParameters">In case of generic methods lists all method Type Parameters; empty otherwise.</param>
+    /// <param name="returnTypeResolver">A Fun&lt;T&gt; responsible to resolve the method return's type.</param>
+    /// <param name="methodDefinitionVariable">the <see cref="MethodDefinitionVariable"/> used to store the data representing the just emitted method. This is used when emitting code that references the method.</param>
+    /// <remarks>
+    /// This overload is best suited to emit methods being synthetyzed by an Api Driver, i.e. in scenarios in which the method is not present in the source code; this is most
+    /// commonly seem when dealing with code that C# compiler 'lowers' before emitting the IL (for instance, for inline arrays C# compiler emits an extra type named
+    /// &lt;PrivateImplementationDetail&gt; with multiple methods.
+    /// </remarks>
+    /// <returns>A list of statements to emit the method using the Api Driver API.</returns>
     public IEnumerable<string> Method(IVisitorContext context,
         BodiedMemberDefinitionContext definitionContext,
         string declaringTypeName,

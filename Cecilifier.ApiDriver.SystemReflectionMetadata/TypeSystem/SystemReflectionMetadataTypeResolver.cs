@@ -23,7 +23,6 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
     
     public override ResolvedType ResolveTypeParameter(ResolvedType genericTypeParameter, TypeParameterKind typeParameterKind, in TypeResolutionContext resolutionContext)
     {
-        
         return ResolvedType.FromDetails(
             new ResolvedTypeDetails()
                 .WithTypeEncoder(TypeEncoderFor(in resolutionContext))
