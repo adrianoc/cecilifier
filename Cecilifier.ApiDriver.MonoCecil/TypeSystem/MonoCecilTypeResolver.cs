@@ -26,6 +26,9 @@ public class MonoCecilTypeResolver(MonoCecilContext context) : TypeResolverBase<
 
         return new ResolvedType(resolvedType);
     }
+
+    // Mono.Cecil represents Generic Type Parameters as instances of a type, so this method is a no-op in that Api Driver.
+    public override ResolvedType ResolveTypeParameter(ResolvedType genericTypeParameter, TypeParameterKind typeParameterKind, in TypeResolutionContext resolutionContext) => genericTypeParameter;
     
     protected override ResolvedType ResolveFromAssembly(ITypeSymbol type, in TypeResolutionContext resolutionContext)
     {

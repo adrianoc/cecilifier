@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Reflection;
 using System.Text;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Naming;
@@ -12,7 +11,6 @@ using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using MethodAttributes=Mono.Cecil.MethodAttributes;
 
 namespace Cecilifier.Core.Extensions
 {

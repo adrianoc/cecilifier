@@ -20,6 +20,15 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
                 .WithTypeEncoder(TypeEncoderFor(in resolutionContext))
                 .WithMethodBuilder(GenericParameterExpressionFor(typeParameterSymbol)));
     }
+    
+    public override ResolvedType ResolveTypeParameter(ResolvedType genericTypeParameter, TypeParameterKind typeParameterKind, in TypeResolutionContext resolutionContext)
+    {
+        
+        return ResolvedType.FromDetails(
+            new ResolvedTypeDetails()
+                .WithTypeEncoder(TypeEncoderFor(in resolutionContext))
+                .WithMethodBuilder(GenericParameterExpressionFor(genericTypeParameter, typeParameterKind)));
+    }
 
     protected override ResolvedType ResolveFromAssembly(ITypeSymbol type, in TypeResolutionContext resolutionContext)
     {
@@ -283,4 +292,8 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
     private string GenericParameterExpressionFor(ITypeParameterSymbol typeParameter) => typeParameter.TypeParameterKind == TypeParameterKind.Type
         ? $"GenericTypeParameter({typeParameter.Ordinal})"
         : $"GenericMethodTypeParameter({typeParameter.Ordinal})";
+    
+    private string GenericParameterExpressionFor(ResolvedType genericTypeParameter, TypeParameterKind typeParameterKind)=> typeParameterKind == TypeParameterKind.Type
+        ? $"GenericTypeParameter({genericTypeParameter})"
+        : $"GenericMethodTypeParameter({genericTypeParameter})";
 }

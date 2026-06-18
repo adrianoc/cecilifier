@@ -6,7 +6,7 @@ using Microsoft.CodeAnalysis;
 
 namespace Cecilifier.Core.TypeSystem;
 
-public record ParameterSpec(string Name, ResolvedType ElementType, RefKind RefKind, string Attributes, string? DefaultValue = null, Func<IVisitorContext, string, string>? ElementTypeResolver = null)
+public record ParameterSpec(string Name, ResolvedType ElementType, RefKind RefKind, string Attributes, string? DefaultValue = null, Func<IVisitorContext, ParameterSpec, string>? ElementTypeResolver = null)
 {
     public virtual ResolvedType ElementType { get; } = ElementType;
     public string? RegistrationTypeName { get; init; }

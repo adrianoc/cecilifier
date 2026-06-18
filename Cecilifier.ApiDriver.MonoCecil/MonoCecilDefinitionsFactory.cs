@@ -153,7 +153,7 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
                                                                             parameter.ParamsAttributeName, // for now,the only callers for this method don't have any `params` parameters.
                                                                             definitionContext.Member.DefinitionVariable,
                                                                             paramVar,
-                                                                            parameter.ElementTypeResolver != null ? parameter.ElementTypeResolver(context, parameter.ElementType.Expression) : parameter.ElementType,
+                                                                            parameter.ElementTypeResolver != null ? parameter.ElementTypeResolver(context, parameter) : parameter.ElementType,
                                                                             parameter.Attributes,
                                                                             (parameter.DefaultValue, parameter.DefaultValue != null));
 

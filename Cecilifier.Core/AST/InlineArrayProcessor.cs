@@ -29,7 +29,7 @@ public class InlineArrayProcessor
         // ldci4 fromNode.Length (size of the inline array)
         context.ApiDriver.WriteCilInstruction(context, ilVar, opcode, context.DefinitionVariables.GetVariable(name, memberKind, parentName).VariableName);
         context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Ldc_I4, inlineArrayLength);
-        context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Call, InlineArrayAsSpanMethodFor(context, fromType));
+        context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Call, InlineArrayAsSpanMethodFor(context, fromType).AsToken());
         return true;
 
         static bool IsNodeAssignedToLocalVariable(IVisitorContext context, SyntaxNode nodeToCheck)
@@ -63,7 +63,7 @@ public class InlineArrayProcessor
                 return false;
 
             var variableDeclaration = (VariableDeclarationSyntax) parent.Parent.Parent!;
-            var declaredVariableType = ModelExtensions.GetTypeInfo(context.SemanticModel, variableDeclaration.Type);
+            var declaredVariableType = context.SemanticModel.GetTypeInfo(variableDeclaration.Type);
 
             return SymbolEqualityComparer.Default.Equals(declaredVariableType.Type?.OriginalDefinition, context.RoslynTypeSystem.SystemSpan);
         }
@@ -157,6 +157,7 @@ public class InlineArrayProcessor
     
     static string PrivateImplementationInlineArrayGenericInstanceMethodFor(IVisitorContext context, DefinitionVariable openGenericTypeVar, ITypeSymbol inlineArrayType)
     {
+        //TODO: Fix the call to MakeGenericInstanceMethod, replace with ApiDriver abstraction
         var varName = openGenericTypeVar.VariableName.MakeGenericInstanceMethod(
                                 context,
                                 openGenericTypeVar.MemberName,

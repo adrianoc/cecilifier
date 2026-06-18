@@ -200,12 +200,14 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         Func<IVisitorContext, ResolvedType> returnTypeResolver,
         out MethodDefinitionVariable methodDefinitionVariable)
     {
+        DefineGenericTypeParametersVariables(context, definitionContext.Member.Identifier, typeParameters);
+        
         var methodRefVar = context.MemberResolver.ResolveMethod(
-                                                            declaringTypeName, 
-                                                            definitionContext.Member.ParentDefinitionVariable, 
-                                                            definitionContext.Member.Identifier, 
-                                                            returnTypeResolver(context), 
-                                                            parameters, 
+                                                            declaringTypeName,
+                                                            definitionContext.Member.ParentDefinitionVariable,
+                                                            definitionContext.Member.Identifier,
+                                                            returnTypeResolver(context),
+                                                            parameters,
                                                             typeParameters.Count,
                                                             definitionContext.Options);
 
@@ -674,6 +676,15 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
 
             // register a variable representing the type parameter; uses its index as its name since in SRM the type parameter is represented by its index. 
             context.DefinitionVariables.RegisterNonMethod(parentName, typeParamList[i].Identifier.Text, VariableMemberKind.TypeParameter, i.ToString());
+        }
+    }
+    
+    private static void DefineGenericTypeParametersVariables(IVisitorContext context, string parentName, IList<string> typeParamList)
+    {
+        for (int i = 0; i < typeParamList.Count; i++)
+        {
+            // register a variable representing the type parameter; uses its index as its name since in SRM the type parameter is represented by its index. 
+            context.DefinitionVariables.RegisterNonMethod(parentName, typeParamList[i], VariableMemberKind.TypeParameter, i.ToString());
         }
     }
 }

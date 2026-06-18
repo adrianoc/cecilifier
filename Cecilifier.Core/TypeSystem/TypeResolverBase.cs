@@ -51,6 +51,7 @@ namespace Cecilifier.Core.TypeSystem
         protected abstract ResolvedType MakePointerType(ITypeSymbol pointerType, in TypeResolutionContext resolutionContext);
         protected abstract ResolvedType MakeFunctionPointerType(IFunctionPointerTypeSymbol functionPointer, in TypeResolutionContext resolutionContext);
         protected abstract ResolvedType ResolveTypeParameter(ITypeSymbol type, in TypeResolutionContext resolutionContext);
+        public abstract ResolvedType ResolveTypeParameter(ResolvedType genericTypeParameter, TypeParameterKind typeParameterKind, in TypeResolutionContext resolutionContext);
        
         public virtual ResolvedType ResolveLocalVariableType(ITypeSymbol type, in TypeResolutionContext context)
         {
@@ -169,7 +170,6 @@ namespace Cecilifier.Core.TypeSystem
 
         public abstract ResolvedType MakeGenericInstanceType(ResolvedType typeReference, INamedTypeSymbol genericTypeSymbol, in TypeResolutionContext resolutionContext);
         public abstract ResolvedType MakeByRefType(in ResolvedType resolvedType);
-        
         
         protected abstract ResolvedType ResolveFromAssembly(ITypeSymbol type, in TypeResolutionContext resolutionContext);
     }

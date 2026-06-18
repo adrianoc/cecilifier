@@ -132,7 +132,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
                                       parameters => 
                                       {
                                           {{
-                                              string.Join('\n', parameters.Select(p => $"parameters.AddParameter().{p.ElementType};"))
+                                              string.Join('\n', parameters.Select(p => $"parameters.AddParameter().{ p.ElementTypeResolver?.Invoke(context, p) ?? p.ElementType.Expression };"))
                                           }}
                                       });
 
