@@ -24,12 +24,11 @@ public interface ITypeResolver
     
     /// <summary>
     /// Some Api drivers may use different syntaxes depending on the usage (i.e. when being used to declare
-    /// a local variable, when being used as the base type of a class, when being used as a type parameter, etc).
-    ///
-    /// Some Api drivers will simply return the <paramref name="variableName"/> as is."/> 
+    /// a local variable, as the base type of classes, as a type parameter, etc).
     /// </summary>
     /// <param name="variableName">the name of the variable representing a type reference.</param>
     /// <param name="resolutionContext">context to be considered when applying syntax</param>
+    /// <remarks>Some Api drivers will simply return the <paramref name="variableName"/> as is."/></remarks>
     /// <returns>an expression valid to be used in the specified <paramref name="resolutionContext"/></returns>
     ResolvedType ApplySpecificSyntax(string variableName, in TypeResolutionContext resolutionContext);
     ResolvedType MakeArrayType(ITypeSymbol elementType, in TypeResolutionContext resolutionContext);

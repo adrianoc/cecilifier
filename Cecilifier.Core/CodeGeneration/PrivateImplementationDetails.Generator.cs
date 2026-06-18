@@ -69,8 +69,8 @@ internal partial class PrivateImplementationDetailsGenerator
         var methodTypeQualifiedName = $"{privateImplementationDetailsVar.MemberName}.{methodName}";
         string declaringTypeName = $"{privateImplementationDetailsVar.MemberName}";
         IReadOnlyList<ParameterSpec> parameters = [ 
-            new ParameterSpec("buffer", "TBuffer", RefKind.Ref, Constants.ParameterAttributes.None, null, (context, paramSpec) => ResolveOwnedGenericParameter(context, paramSpec.ElementType.Expression, TypeParameterKind.Method, methodTypeQualifiedName)), 
-            new ParameterSpec("length", context.TypeResolver.Bcl.System.Int32, RefKind.None, Constants.ParameterAttributes.None)
+            new("buffer", "TBuffer", RefKind.Ref, Constants.ParameterAttributes.None, null, (context, paramSpec) => ResolveOwnedGenericParameter(context, paramSpec.ElementType.Expression, TypeParameterKind.Method, methodTypeQualifiedName)), 
+            new("length", context.TypeResolver.ApplySpecificSyntax(context.TypeResolver.Bcl.System.Int32.Expression, ResolveTargetKind.Parameter), RefKind.None, Constants.ParameterAttributes.None)
         ];
         Func<IVisitorContext, ResolvedType> returnTypeResolver = ctx =>
         {
@@ -206,7 +206,7 @@ internal partial class PrivateImplementationDetailsGenerator
         string declaringTypeName = $"{privateImplementationDetailsVar.MemberName}";
         IReadOnlyList<ParameterSpec> parameters = [ 
             new("buffer", "TBuffer", RefKind.Ref, Constants.ParameterAttributes.None, null, (ctx, paramSpec) => ResolveOwnedGenericParameter(ctx, paramSpec.ElementType.Expression, TypeParameterKind.Method, methodTypeQualifiedName)),
-            new("index", context.TypeResolver.Bcl.System.Int32, RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = "int" }
+            new("index", context.TypeResolver.ApplySpecificSyntax(context.TypeResolver.Bcl.System.Int32.Expression, ResolveTargetKind.Parameter), RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = "int" }
         ];
         IList<string> typeParameters = ["TBuffer", "TElement"];
         Func<IVisitorContext, ResolvedType> returnTypeResolver = ctx =>
@@ -316,10 +316,10 @@ internal partial class PrivateImplementationDetailsGenerator
     private static ResolvedType GetOrCreateRawDataType(IVisitorContext context, long sizeInBytes)
     {
         if (sizeInBytes == sizeof(int))
-            return context.TypeResolver.Bcl.System.Int32;
+            return context.TypeResolver.ApplySpecificSyntax(context.TypeResolver.Bcl.System.Int32.Expression, ResolveTargetKind.Field);
         
         if (sizeInBytes == sizeof(long))
-            return context.TypeResolver.Bcl.System.Int64;
+            return context.TypeResolver.ApplySpecificSyntax(context.TypeResolver.Bcl.System.Int64.Expression, ResolveTargetKind.Field);
         
         var rawDataHolderStructName = Constants.CompilerGeneratedTypes.StaticArrayInitTypeNameFor(sizeInBytes);
         var found = context.DefinitionVariables.GetVariable(rawDataHolderStructName, VariableMemberKind.Type, Constants.CompilerGeneratedTypes.PrivateImplementationDetails);
