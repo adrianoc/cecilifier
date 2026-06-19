@@ -93,10 +93,12 @@ internal partial class PrivateImplementationDetailsGenerator
         var tElementVar = ResolveOwnedGenericParameter(context, "TElement", TypeParameterKind.Method, methodTypeQualifiedName);
 
         context.WriteComment("Unsafe.As() generic instance method");
-        var unsafeAsVar = GetUnsafeAsMethod(context).MethodResolverExpression(context).MakeGenericInstanceMethod(context, "unsafeAs", [tBufferVar, tElementVar]);
+        IReadOnlyList<ResolvedType> resolvedTypeArguments = [tBufferVar, tElementVar];
+        var unsafeAsVar = context.MemberResolver.MakeGeneticInstanceMethod(GetUnsafeAsMethod(context).MethodResolverExpression(context), "unsafeAs", resolvedTypeArguments);
         
         context.WriteComment($"MemoryMarshal.{createSpanMethodName}() generic instance method");
-        var memoryMarshalCreateSpanVar = GetMemoryMarshalCreateSpanMethod(context, createSpanMethodName).MethodResolverExpression(context).MakeGenericInstanceMethod(context, "createSpan", [tElementVar]);
+        IReadOnlyList<ResolvedType> resolvedTypeArguments1 = [tElementVar];
+        var memoryMarshalCreateSpanVar = context.MemberResolver.MakeGeneticInstanceMethod(GetMemoryMarshalCreateSpanMethod(context, createSpanMethodName).MethodResolverExpression(context), "createSpan", resolvedTypeArguments1);
 
         InstructionRepresentation[] instructions = [
             OpCodes.Ldarg_0,
@@ -173,10 +175,8 @@ internal partial class PrivateImplementationDetailsGenerator
         var tBufferTypeParameter = ResolveOwnedGenericParameter(context, "TBuffer", TypeParameterKind.Method, methodTypeQualifiedName);
         var tElementTypeParameter = ResolveOwnedGenericParameter(context, "TElement", TypeParameterKind.Method, methodTypeQualifiedName);
 
-        var unsafeAsVarName = GetUnsafeAsMethod(context)
-            .MethodResolverExpression(context)
-            .MakeGenericInstanceMethod(context, "unsafeAs", [tBufferTypeParameter, tElementTypeParameter]);
-
+        // TODO: unsafeAs? why lower case? shouldn't it be UnsafeAs ?
+        var unsafeAsVarName = context.MemberResolver.MakeGeneticInstanceMethod(GetUnsafeAsMethod(context).MethodResolverExpression(context), "unsafeAs", [tBufferTypeParameter, tElementTypeParameter]);
         InstructionRepresentation[] instructions = [
             OpCodes.Ldarg_0,
             OpCodes.Call.WithOperand(unsafeAsVarName.AsToken()),
@@ -229,14 +229,10 @@ internal partial class PrivateImplementationDetailsGenerator
         var tbufferTypeParameter = ResolveOwnedGenericParameter(context, "TBuffer", TypeParameterKind.Method, methodTypeQualifiedName);
         var telementTypeParameter = ResolveOwnedGenericParameter(context, "TElement", TypeParameterKind.Method, methodTypeQualifiedName);
 
-        var unsafeAsVarName = GetUnsafeAsMethod(context)
-                                        .MethodResolverExpression(context)
-                                        .MakeGenericInstanceMethod(context, "unsafeAs", [tbufferTypeParameter, telementTypeParameter]);
-        
-        var unsafeAddVarName = GetUnsafeAddMethod(context)
-                                        .MethodResolverExpression(context)
-                                        .MakeGenericInstanceMethod(context, "unsafeAdd", [telementTypeParameter]);
+        IReadOnlyList<ResolvedType> resolvedTypeArguments = [tbufferTypeParameter, telementTypeParameter];
+        var unsafeAsVarName = context.MemberResolver.MakeGeneticInstanceMethod(GetUnsafeAsMethod(context).MethodResolverExpression(context), "unsafeAs", resolvedTypeArguments);
 
+        var unsafeAddVarName = context.MemberResolver.MakeGeneticInstanceMethod(GetUnsafeAddMethod(context).MethodResolverExpression(context), "unsafeAdd", [telementTypeParameter]);
         InstructionRepresentation[] instructions = [
             OpCodes.Ldarg_0,
             OpCodes.Call.WithOperand(unsafeAsVarName.AsToken()),

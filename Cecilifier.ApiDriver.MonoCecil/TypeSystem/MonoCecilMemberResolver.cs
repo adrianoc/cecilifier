@@ -6,6 +6,7 @@ using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
+using Cecilifier.Core.Services;
 using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
@@ -105,9 +106,10 @@ public class MonoCecilMemberResolver(MonoCecilContext context) : IMemberResolver
 
             toDispose.ForEach(v => v.Dispose());
 
+            IReadOnlyList<ResolvedType> resolvedTypeArguments = method.TypeArguments.Select(t => context.TypeResolver.Resolve(t, ResolveTargetKind.TypeReference)).ToList();
             return method.IsDefinition
                 ? tempMethodVar
-                : tempMethodVar.MakeGenericInstanceMethod(context, method.Name, method.TypeArguments.Select(t => context.TypeResolver.Resolve(t, ResolveTargetKind.TypeReference)).ToList());
+                : context.MemberResolver.MakeGeneticInstanceMethod(tempMethodVar, method.Name, resolvedTypeArguments);
         }
 
         if (method.Parameters.Any(p => p.Type.IsTypeParameterOrIsGenericTypeReferencingTypeParameter())
@@ -277,4 +279,30 @@ public class MonoCecilMemberResolver(MonoCecilContext context) : IMemberResolver
     }
 
     public string ImportReference(string expression) => $"assembly.MainModule.ImportReference({expression})";
+
+    public string MakeGeneticInstanceMethod(string methodReferenceVariable, string methodName, IReadOnlyList<ResolvedType> resolvedTypeArguments)
+    {
+        var hash = new HashCode();
+        hash.Add(methodReferenceVariable);
+        hash.Add(resolvedTypeArguments.Count);
+        foreach (var t in resolvedTypeArguments)
+            hash.Add(t);
+
+        var varName = context.Services.Get<GenericInstanceMethodCacheService<int, string>>().GetOrCreate(hash.ToHashCode(), (context, methodName, resolvedTypeArguments, methodReferenceVariable),
+            static (hashCode, state) =>
+            {
+                var genericInstanceVarName = state.context.Naming.SyntheticVariable(state.methodName, ElementKind.GenericInstance);
+            
+                state.context.Generate($"var {genericInstanceVarName} = new GenericInstanceMethod({state.methodReferenceVariable});");
+                state.context.WriteNewLine();
+                foreach (var t in state.resolvedTypeArguments)
+                {
+                    state.context.Generate($"{genericInstanceVarName}.GenericArguments.Add({t});");
+                    state.context.WriteNewLine();
+                }
+                return genericInstanceVarName;
+            });
+        
+        return varName;
+    }
 }

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Cecilifier.Core.ApiDriver;
+using Cecilifier.Core.AST;
 using Microsoft.CodeAnalysis;
 
 namespace Cecilifier.Core.TypeSystem;
@@ -24,4 +25,6 @@ public interface IMemberResolver
     string ResolveField(IFieldSymbol field);
     string ResolveEventField(IEventSymbol aEvent);
     string ImportReference(string expression);
+    
+    string MakeGeneticInstanceMethod(string methodReferenceVariable, string methodName, IReadOnlyList<ResolvedType> resolvedTypeArguments);
 }

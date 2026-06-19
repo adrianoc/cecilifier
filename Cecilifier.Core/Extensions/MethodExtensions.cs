@@ -131,13 +131,13 @@ namespace Cecilifier.Core.Extensions
             hash.Add(resolvedTypeArguments.Count);
             foreach (var t in resolvedTypeArguments)
                 hash.Add(t);
-
+            
             List<string> exps = new();
             varName = context.Services.Get<GenericInstanceMethodCacheService<int, string>>().GetOrCreate(hash.ToHashCode(), (context, methodName, resolvedTypeArguments, methodReferenceVariable, exps),
                 static (hashCode, state) =>
                 {
                     var genericInstanceVarName = state.context.Naming.SyntheticVariable(state.methodName, ElementKind.GenericInstance);
-
+            
                     state.exps.Add($"var {genericInstanceVarName} = new GenericInstanceMethod({state.methodReferenceVariable});");
                     foreach (var t in state.resolvedTypeArguments)
                     {
@@ -145,18 +145,10 @@ namespace Cecilifier.Core.Extensions
                     }
                     return genericInstanceVarName;
                 });
-
+            
             return exps;
         }
-        
-        public static string MakeGenericInstanceMethod(this string methodReferenceVariable, IVisitorContext context, string methodName, IReadOnlyList<ResolvedType> resolvedTypeArguments)
-        {
-            var exps = methodReferenceVariable.MakeGenericInstanceMethod(context, methodName, resolvedTypeArguments, out var genericInstanceVarName);
-            context.Generate(exps);
 
-            return genericInstanceVarName;
-        }
-        
         public static string MakeGenericInstanceMethod(this string methodReferenceVariable, IVisitorContext context, IMethodSymbol method)
         {
             if (method.IsGenericMethod is false)

@@ -139,7 +139,7 @@ namespace Cecilifier.Core.Misc
 
                 // Calls 'CollectionsMarshal.SetCount(list, num)' on the list.
                 var collectionMarshalTypeSymbol = context.SemanticModel.Compilation.GetTypeByMetadataName(typeof(System.Runtime.InteropServices.CollectionsMarshal).FullName!).EnsureNotNull();
-                var setCountMethod = collectionMarshalTypeSymbol.GetMembers("SetCount").OfType<IMethodSymbol>().Single().MethodResolverExpression(context).MakeGenericInstanceMethod(context, "SetCount", [ resolvedListTypeArgument ]); 
+                var setCountMethod = context.MemberResolver.MakeGeneticInstanceMethod(collectionMarshalTypeSymbol.GetMembers("SetCount").OfType<IMethodSymbol>().Single().MethodResolverExpression(context), "SetCount", [ resolvedListTypeArgument ]); 
                 
                 context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Dup);
                 context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Ldc_I4, elementCount);
@@ -153,7 +153,7 @@ namespace Cecilifier.Core.Misc
 
                 context.ApiDriver.WriteCilInstruction(context, ilVar, 
                     OpCodes.Call, 
-                    collectionMarshalTypeSymbol.GetMembers("AsSpan").OfType<IMethodSymbol>().Single().MethodResolverExpression(context).MakeGenericInstanceMethod(context, "AsSpan", [ resolvedListTypeArgument ]));
+                    context.MemberResolver.MakeGeneticInstanceMethod(collectionMarshalTypeSymbol.GetMembers("AsSpan").OfType<IMethodSymbol>().Single().MethodResolverExpression(context), "AsSpan", [ resolvedListTypeArgument ]));
                 context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Stloc, new CilLocalVariableHandle(spanToList.VariableName));
                 
                 return (spanToList, resolvedListTypeArgument);

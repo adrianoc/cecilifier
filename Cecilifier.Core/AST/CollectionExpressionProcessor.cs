@@ -73,11 +73,9 @@ internal static class CollectionExpressionProcessor
         context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, OpCodes.Ldloca_S, inlineArrayLocalVar);
         context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, OpCodes.Initobj, inlineArrayTypeVar);
 
-        var openInlineArrayElementRef = PrivateImplementationDetailsGenerator
-            .GetOrEmmitInlineArrayElementRefMethod(context);
-        var inlineArrayElementRefMethodVar = openInlineArrayElementRef
-            .VariableName
-            .MakeGenericInstanceMethod(context, openInlineArrayElementRef.MemberName, [$"{inlineArrayLocalVar}.VariableType", context.TypeResolver.Resolve(spanTypeSymbol.TypeArguments[0], ResolveTargetKind.TypeReference)]);
+        var openInlineArrayElementRef = PrivateImplementationDetailsGenerator.GetOrEmmitInlineArrayElementRefMethod(context);
+        IReadOnlyList<ResolvedType> resolvedTypeArguments = [$"{inlineArrayLocalVar}.VariableType", context.TypeResolver.Resolve(spanTypeSymbol.TypeArguments[0], ResolveTargetKind.TypeReference)];
+        var inlineArrayElementRefMethodVar = context.MemberResolver.MakeGeneticInstanceMethod(openInlineArrayElementRef.VariableName, openInlineArrayElementRef.MemberName, resolvedTypeArguments);
         
         var storeOpCode = inlineArrayElementType.StindOpCodeFor();
         var targetElementType = storeOpCode == OpCodes.Stobj ? context.TypeResolver.Resolve(inlineArrayElementType, ResolveTargetKind.Instruction) : null; // Stobj expects the type of the object being stored.
@@ -96,9 +94,8 @@ internal static class CollectionExpressionProcessor
         
         // convert the initialized InlineArray to a span and put it in the stack.
         var openInlineArrayAsSpanVar = PrivateImplementationDetailsGenerator.GetOrEmmitInlineArrayAsSpanMethod(context);
-        var inlineArrayAsSpanMethodVar = openInlineArrayAsSpanVar
-                                            .VariableName
-                                            .MakeGenericInstanceMethod(context, openInlineArrayAsSpanVar.MemberName, [$"{inlineArrayLocalVar}.VariableType", context.TypeResolver.Resolve(spanTypeSymbol.TypeArguments[0], ResolveTargetKind.TypeReference)]);
+        IReadOnlyList<ResolvedType> typeArguments = [$"{inlineArrayLocalVar}.VariableType", context.TypeResolver.Resolve(spanTypeSymbol.TypeArguments[0], ResolveTargetKind.TypeReference)];
+        var inlineArrayAsSpanMethodVar = context.MemberResolver.MakeGeneticInstanceMethod(openInlineArrayAsSpanVar.VariableName, openInlineArrayAsSpanVar.MemberName, typeArguments);
         context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, OpCodes.Ldloca_S, inlineArrayLocalVar);
         context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, OpCodes.Ldc_I4, node.Elements.Count);
         context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, OpCodes.Call, inlineArrayAsSpanMethodVar);

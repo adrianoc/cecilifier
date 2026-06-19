@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -133,7 +134,7 @@ public class InlineArrayProcessor
             ExpressionVisitor.Visit(context, ilVar, elementAccess.ArgumentList.Arguments[0].Expression);
             method = InlineArrayElementRefMethodFor(context, inlineArrayType);
         }
-        context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Call, method);
+        context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Call, method.AsToken());
 
         elementType = InlineArrayElementTypeFrom(inlineArrayType);
         return true;
@@ -157,15 +158,12 @@ public class InlineArrayProcessor
     
     static string PrivateImplementationInlineArrayGenericInstanceMethodFor(IVisitorContext context, DefinitionVariable openGenericTypeVar, ITypeSymbol inlineArrayType)
     {
-        //TODO: Fix the call to MakeGenericInstanceMethod, replace with ApiDriver abstraction
-        var varName = openGenericTypeVar.VariableName.MakeGenericInstanceMethod(
-                                context,
-                                openGenericTypeVar.MemberName,
-                                [
-                                    context.TypeResolver.Resolve(inlineArrayType, ResolveTargetKind.None), // TBuffer
-                                    context.TypeResolver.Resolve(InlineArrayElementTypeFrom(inlineArrayType), ResolveTargetKind.None) // TElement
-                                ]);
-        return varName;
+        IReadOnlyList<ResolvedType> resolvedTypeArguments = 
+        [
+            context.TypeResolver.Resolve(inlineArrayType, ResolveTargetKind.None), // TBuffer
+            context.TypeResolver.Resolve(InlineArrayElementTypeFrom(inlineArrayType), ResolveTargetKind.None) // TElement
+        ];
+        return context.MemberResolver.MakeGeneticInstanceMethod(openGenericTypeVar.VariableName, openGenericTypeVar.MemberName, resolvedTypeArguments);
     }
 
     private static ITypeSymbol InlineArrayElementTypeFrom(ITypeSymbol inlineArrayType)

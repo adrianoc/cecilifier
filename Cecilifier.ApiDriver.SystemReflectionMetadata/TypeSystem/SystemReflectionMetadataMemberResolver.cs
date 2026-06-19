@@ -183,8 +183,42 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
     }
 
     public string ImportReference(string expression) => expression; // In SRM this is a noop
-    
+
+    public string MakeGeneticInstanceMethod(string methodReferenceVariable, string methodName, IReadOnlyList<ResolvedType> resolvedTypeArguments)
+    {
+        // TODO: Pass method's parent name.
+        var tbf = new MethodDefinitionVariable(VariableMemberKind.MethodInstantiation, "parent?", methodName, [], resolvedTypeArguments.Select(rt => rt.Expression).ToArray());
+        var instantiationVar = FindOrRegisterVariable(context, resolvedTypeArguments, tbf, context.Naming.SyntheticVariable(methodName, ElementKind.GenericInstance), methodReferenceVariable, static (ctx, typeArguments, methodSpecificationVar, openMethodVar) =>
+        {
+            ctx.Generate($$"""
+                           MethodSpecificationHandle {{methodSpecificationVar}}; 
+                           {
+                               var tempMethodSignature = new BlobEncoder(new BlobBuilder()).MethodSpecificationSignature({{typeArguments.Count}});
+                               {{
+                                   string.Join('\n', typeArguments.Select(typeArgument => $"tempMethodSignature.AddArgument().{typeArgument};"))
+                               }}
+                               {{methodSpecificationVar}} = metadata.AddMethodSpecification({{openMethodVar}}, metadata.GetOrAddBlob(tempMethodSignature.Builder));
+                           }
+                           """);
+            ctx.WriteNewLine();
+        });
+            
+        return  instantiationVar.VariableName;
+    }
+
     #region Non public members
+    private static DefinitionVariable FindOrRegisterVariable(SystemReflectionMetadataContext context, IReadOnlyList<ResolvedType> resolvedTypeArguments, MethodDefinitionVariable tbf, string variableNameToRegister, string openMethodVar, Action<SystemReflectionMetadataContext, IReadOnlyList<ResolvedType>, string, string> action)
+    {
+        var instantiationVar = context.DefinitionVariables.GetMethodVariable(tbf);
+        if (!instantiationVar.IsValid)
+        {
+            action(context, resolvedTypeArguments, variableNameToRegister, openMethodVar);
+            instantiationVar = context.DefinitionVariables.RegisterMethod(tbf.WithVariableName(variableNameToRegister));
+        }
+
+        return instantiationVar;
+    }
+    
     private static DefinitionVariable FindOrRegisterVariable(SystemReflectionMetadataContext context, IMethodSymbol method, MethodDefinitionVariable tbf, string variableNameToRegister, string openMethodVar, Action<SystemReflectionMetadataContext, IMethodSymbol, string, string> action)
     {
         var instantiationVar = context.DefinitionVariables.GetMethodVariable(tbf);

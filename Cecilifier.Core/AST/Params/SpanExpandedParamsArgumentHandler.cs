@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Reflection.Emit;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -59,6 +60,7 @@ internal class SpanExpandedParamsArgumentHandler : ExpandedParamsArgumentHandler
     
     string MakeGenericInstanceMethod(DefinitionVariable genericMethodVariable)
     {
-        return genericMethodVariable.VariableName.MakeGenericInstanceMethod(Context, genericMethodVariable.MemberName, [ _inlineArrayType, Context.TypeResolver.Resolve(_paramsParameterType, ResolveTargetKind.TypeReference)]);
+        IReadOnlyList<ResolvedType> resolvedTypeArguments = [ _inlineArrayType, Context.TypeResolver.Resolve(_paramsParameterType, ResolveTargetKind.TypeReference)];
+        return Context.MemberResolver.MakeGeneticInstanceMethod(genericMethodVariable.VariableName, genericMethodVariable.MemberName, resolvedTypeArguments);
     }
 }
