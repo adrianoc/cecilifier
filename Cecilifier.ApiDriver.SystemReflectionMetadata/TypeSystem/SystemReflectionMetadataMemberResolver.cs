@@ -207,30 +207,17 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
     }
 
     #region Non public members
-    private static DefinitionVariable FindOrRegisterVariable(SystemReflectionMetadataContext context, IReadOnlyList<ResolvedType> resolvedTypeArguments, MethodDefinitionVariable tbf, string variableNameToRegister, string openMethodVar, Action<SystemReflectionMetadataContext, IReadOnlyList<ResolvedType>, string, string> action)
+    private static DefinitionVariable FindOrRegisterVariable<TTypeArgumentsState>(SystemReflectionMetadataContext context, TTypeArgumentsState typeArgumentsState, MethodDefinitionVariable tbf, string variableNameToRegister, string openMethodVar, Action<SystemReflectionMetadataContext, TTypeArgumentsState, string, string> action)
     {
         var instantiationVar = context.DefinitionVariables.GetMethodVariable(tbf);
         if (!instantiationVar.IsValid)
         {
-            action(context, resolvedTypeArguments, variableNameToRegister, openMethodVar);
+            action(context, typeArgumentsState, variableNameToRegister, openMethodVar);
             instantiationVar = context.DefinitionVariables.RegisterMethod(tbf.WithVariableName(variableNameToRegister));
         }
 
         return instantiationVar;
     }
-    
-    private static DefinitionVariable FindOrRegisterVariable(SystemReflectionMetadataContext context, IMethodSymbol method, MethodDefinitionVariable tbf, string variableNameToRegister, string openMethodVar, Action<SystemReflectionMetadataContext, IMethodSymbol, string, string> action)
-    {
-        var instantiationVar = context.DefinitionVariables.GetMethodVariable(tbf);
-        if (!instantiationVar.IsValid)
-        {
-            action(context, method, variableNameToRegister, openMethodVar);
-            instantiationVar = context.DefinitionVariables.RegisterMethod(tbf.WithVariableName(variableNameToRegister));
-        }
-
-        return instantiationVar;
-    }
-    
     private static TypeResolutionOptions TypeResolutionOptionsFor(IParameterSymbol parameter)
     {
         var byRefState= parameter.RefKind != RefKind.None 
