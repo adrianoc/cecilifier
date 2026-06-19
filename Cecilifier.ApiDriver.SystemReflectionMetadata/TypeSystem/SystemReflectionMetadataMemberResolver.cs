@@ -186,9 +186,9 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
 
     public string MakeGeneticInstanceMethod(string methodReferenceVariable, string methodName, IReadOnlyList<ResolvedType> resolvedTypeArguments)
     {
-        // TODO: Pass method's parent name.
         var tbf = new MethodDefinitionVariable(VariableMemberKind.MethodInstantiation, "parent?", methodName, [], resolvedTypeArguments.Select(rt => rt.Expression).ToArray());
-        var instantiationVar = FindOrRegisterVariable(context, resolvedTypeArguments, tbf, context.Naming.SyntheticVariable(methodName, ElementKind.GenericInstance), methodReferenceVariable, static (ctx, typeArguments, methodSpecificationVar, openMethodVar) =>
+        var methodVariableName = context.Naming.SyntheticVariable(methodName, ElementKind.GenericInstance);
+        var instantiationVar = FindOrRegisterVariable(context, resolvedTypeArguments, tbf, methodVariableName, methodReferenceVariable, static (ctx, typeArguments, methodSpecificationVar, openMethodVar) =>
         {
             ctx.Generate($$"""
                            MethodSpecificationHandle {{methodSpecificationVar}}; 

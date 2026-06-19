@@ -176,7 +176,6 @@ internal partial class PrivateImplementationDetailsGenerator
         var tBufferTypeParameter = ResolveOwnedGenericParameter(context, "TBuffer", TypeParameterKind.Method, ResolveTargetKind.GenericTypeArgument, methodTypeQualifiedName);
         var tElementTypeParameter = ResolveOwnedGenericParameter(context, "TElement", TypeParameterKind.Method, ResolveTargetKind.GenericTypeArgument, methodTypeQualifiedName);
 
-        // TODO: unsafeAs? why lower case? shouldn't it be UnsafeAs ?
         var unsafeAsVarName = context.MemberResolver.MakeGeneticInstanceMethod(GetUnsafeAsMethod(context).MethodResolverExpression(context), "unsafeAs", [tBufferTypeParameter, tElementTypeParameter]);
         InstructionRepresentation[] instructions = [
             OpCodes.Ldarg_0,
@@ -215,7 +214,7 @@ internal partial class PrivateImplementationDetailsGenerator
             var spanTypeParameter = ResolveOwnedGenericParameter(ctx, "TElement", TypeParameterKind.Method, ResolveTargetKind.ReturnType,  methodTypeQualifiedName);
             return context.TypeResolver.MakeByRefType(new ResolvedType(spanTypeParameter));
         };
-        var ilContext = context.ApiDriver.NewIlContext(context, "UnsafeAdd", methodVar);
+        var ilContext = context.ApiDriver.NewIlContext(context, "InlineArrayElementRef", methodVar);
         var methodExpressions = context.ApiDefinitionsFactory.Method(
             context, 
             new BodiedMemberDefinitionContext("InlineArrayElementRef", methodTypeQualifiedName, methodVar, privateImplementationDetailsVar.VariableName, MemberOptions.Static, ilContext), 

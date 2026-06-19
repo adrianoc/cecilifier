@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using Cecilifier.Core.ApiDriver;
-using Cecilifier.Core.AST;
 using Microsoft.CodeAnalysis;
 
 namespace Cecilifier.Core.TypeSystem;
