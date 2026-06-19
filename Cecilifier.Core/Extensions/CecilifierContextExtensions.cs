@@ -123,13 +123,13 @@ public static class CecilifierContextExtensions
 
         EnsureForwardedMethod(context, method);
 
-        var operand = method.MethodResolverExpression(context);
         if (context.TryGetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, out var constrainedType))
         {
             context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Constrained, constrainedType.AsToken()); 
             context.ClearFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint);
         }
 
+        var operand = method.MethodResolverExpression(context);
         context.ApiDriver.WriteCilInstruction(context, ilVar, opCode, operand.AsToken());
     }
 

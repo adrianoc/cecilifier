@@ -182,7 +182,7 @@ internal partial class PrivateImplementationDetailsGenerator
             OpCodes.Call.WithOperand(unsafeAsVarName.AsToken()),
             OpCodes.Ret
         ];
-        var exps = context.ApiDefinitionsFactory.MethodBody(context, "UnsafeAs", ilContext, [], instructions);
+        var exps = context.ApiDefinitionsFactory.MethodBody(context, "InlineArrayFirstElementRef", ilContext, [], instructions);
         context.Generate(exps);
         context.WriteNewLine();
         context.WriteComment("-------------------------------");

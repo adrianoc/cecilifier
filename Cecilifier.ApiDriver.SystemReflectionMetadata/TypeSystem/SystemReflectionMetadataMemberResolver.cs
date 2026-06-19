@@ -41,9 +41,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
                                                {{
                                                    string.Join('\n',
                                                        method.OriginalDefinition.Parameters.Select(p => $"""
-                                                                                                             parameters
-                                                                                                                     .AddParameter()
-                                                                                                                     .{ctx.TypedTypeResolver.Resolve(p.Type, new TypeResolutionContext(ResolveTargetKind.Parameter, TypeResolutionOptionsFor(p)))};
+                                                                                                             parameters.AddParameter().{ctx.TypedTypeResolver.Resolve(p.Type, new TypeResolutionContext(ResolveTargetKind.Parameter, TypeResolutionOptionsFor(p)))};
                                                                                                          """))}}
                                            });
 
@@ -73,7 +71,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
                                    {
                                        var tempMethodSignature = new BlobEncoder(new BlobBuilder()).MethodSpecificationSignature({{method.TypeArguments.Length}});
                                        {{
-                                           string.Join('\n', method.TypeArguments.Select(typeArgument => $"tempMethodSignature.AddArgument().{ctx.TypeResolver.Resolve(typeArgument, ResolveTargetKind.GenericTypeArgument.ToTypeResolutionContext())};"))
+                                           string.Join('\n', method.TypeArguments.Select(typeArgument => $"tempMethodSignature.AddArgument().{ctx.TypeResolver.Resolve(typeArgument, ResolveTargetKind.GenericTypeArgument.ToTypeResolutionContext())}; // {typeArgument.Name}"))
                                        }}
                                        {{methodSpecificationVar}} = metadata.AddMethodSpecification({{openMethodVar}}, metadata.GetOrAddBlob(tempMethodSignature.Builder));
                                    }

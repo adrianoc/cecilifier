@@ -1,5 +1,8 @@
+using System.Diagnostics;
+
 namespace Cecilifier.Core.AST;
 
+[DebuggerDisplay("{VariableName} (method: {AssociatedMethodVariable})")]
 public class IlContext
 {
     protected IlContext(string variableName, string relatedMethodVar) => (VariableName, AssociatedMethodVariable) = (variableName, relatedMethodVar);
