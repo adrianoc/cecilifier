@@ -156,7 +156,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         }
 
         var memberParentDefinitionVariable = bodiedMemberDefinitionContext.Member.ParentDefinitionVariable ?? throw new ArgumentNullException(nameof(bodiedMemberDefinitionContext.Member.ParentDefinitionVariable));
-        TypedContext(context).DelayedDefinitionsManager.RegisterMethodDefinition(memberParentDefinitionVariable, (ctx, methodRecord) =>
+        TypedContext(context).DelayedDefinitionsManager.RegisterMethodDefinition(memberParentDefinitionVariable,bodiedMemberDefinitionContext.Member.DefinitionVariable, (ctx, methodRecord) =>
         {
             EmitLocalVariables(ctx, bodiedMemberDefinitionContext.Member.Identifier, in methodRecord);
             
@@ -219,19 +219,19 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
             context.DefinitionVariables.RegisterNonMethod(definitionContext.Member.ContainingTypeName,  parameters[i].Name, VariableMemberKind.Parameter, $"{i + 1}");
         }
 
-        TypedContext(context).DelayedDefinitionsManager.RegisterMethodDefinition(definitionContext.Member.ParentDefinitionVariable, (ctx, methodRecord) =>
+        TypedContext(context).DelayedDefinitionsManager.RegisterMethodDefinition(definitionContext.Member.ParentDefinitionVariable, definitionContext.Member.DefinitionVariable, (ctx, methodRecord) =>
         {
             EmitLocalVariables(ctx, definitionContext.Member.Identifier, in methodRecord);
             
             var methodReferenceToFind = new MethodDefinitionVariable(
                                                 VariableMemberKind.MethodSignature,
                                                 declaringTypeName,
-                                                definitionContext.Member.Identifier,
+                                                definitionContext.Member.Name,
                                                 parameters.Select(p => p.ElementType.Expression).ToArray(),
-                                                typeParameters.Count);
+                                                typeParameters.ToArray());
 
             var methodSignatureVar = ctx.DefinitionVariables.GetMethodVariable(methodReferenceToFind);
-            Debug.Assert(methodSignatureVar.IsValid);
+            methodSignatureVar.ThrowIfVariableIsNotValid($"Method={declaringTypeName}.{definitionContext.Member.Name}");
             
             var methodDefVar = definitionContext.Member.DefinitionVariable;
             var firstParameterHandle = AddParametersMetadata(ctx, parameters.Select(p => p.Name));
@@ -282,7 +282,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
               """);
         
         var parentDefinitionVariable = definitionContext.Member.ParentDefinitionVariable ?? throw new ArgumentNullException(nameof(definitionContext.Member.ParentDefinitionVariable));
-        TypedContext(context).DelayedDefinitionsManager.RegisterMethodDefinition(parentDefinitionVariable, (ctx, methodRecord) =>
+        TypedContext(context).DelayedDefinitionsManager.RegisterMethodDefinition(parentDefinitionVariable, definitionContext.Member.DefinitionVariable, (ctx, methodRecord) =>
         {
             EmitLocalVariables(ctx, "ctor", in methodRecord);
             
@@ -420,7 +420,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
 
     public DefinitionVariable LocalVariable(IVisitorContext context, string variableName, string methodDefinitionVariableName, ResolvedType resolvedVarType)
     {
-        var variableIndex = TypedContext(context).DelayedDefinitionsManager.RegisterLocalVariable(variableName, resolvedVarType,  (ctx, localVariableEncoderVar, localVarType) =>
+        var variableIndex = TypedContext(context).DelayedDefinitionsManager.RegisterLocalVariable(methodDefinitionVariableName, variableName, resolvedVarType,  (ctx, localVariableEncoderVar, localVarType) =>
         {
             context.Generate($"{localVariableEncoderVar}.AddVariable().{localVarType};");
             context.WriteNewLine();

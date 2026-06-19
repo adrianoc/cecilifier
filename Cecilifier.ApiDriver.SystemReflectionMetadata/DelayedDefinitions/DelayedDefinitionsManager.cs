@@ -25,8 +25,6 @@ public class DelayedDefinitionsManager
     private readonly Dictionary<string, TypeDefinitionRecord> _postponedTypeDefinitions = new();
     private readonly List<string> _typeDefinitionOrder = new();
 
-    private MethodDefinitionRecord _currentMethod;
-
     internal void RegisterTypeDefinition(string typeVarName, DelayedTypeDefinitionAction action)
     {
         _postponedTypeDefinitions.Add(typeVarName, new TypeDefinitionRecord(typeVarName)
@@ -38,12 +36,12 @@ public class DelayedDefinitionsManager
         _typeDefinitionOrder.Add(typeVarName);
     }
 
-    internal void RegisterMethodDefinition(string declaringTypeVarName, Func<SystemReflectionMetadataContext, MethodDefinitionRecord, string> newMethodFunc)
+    internal void RegisterMethodDefinition(string declaringTypeVarName, string methodVar, Func<SystemReflectionMetadataContext, MethodDefinitionRecord, string> newMethodFunc)
     {
         ref var declaringTypeRecord = ref CollectionsMarshal.GetValueRefOrNullRef(_postponedTypeDefinitions, declaringTypeVarName);
         Debug.Assert(!Unsafe.IsNullRef(ref declaringTypeRecord));
         
-        declaringTypeRecord.Methods.Add(_currentMethod = new MethodDefinitionRecord(newMethodFunc, declaringTypeVarName));
+        declaringTypeRecord.Methods.Add(new MethodDefinitionRecord(newMethodFunc, methodVar));
     }
     
     internal void RegisterFieldDefinition(string declaringTypeVarName, in FieldDefinitionRecord field)
@@ -54,13 +52,15 @@ public class DelayedDefinitionsManager
         typeRecordOrNullRef.Fields.Add(field);
     }
 
-    public int RegisterLocalVariable(string localVarName, ResolvedType resolvedVarType, Action<IVisitorContext, string, ResolvedType> action)
+    public int RegisterLocalVariable(string declaringMethodVariable, string localVarName, ResolvedType resolvedVarType, Action<IVisitorContext, string, ResolvedType> action)
     {
-        Debug.Assert(_currentMethod != null);
         var localVariable = new LocalVariableRecord(localVarName, resolvedVarType, action);
 
-        _currentMethod.LocalVariables.Add(localVariable);
-        return _currentMethod.LocalVariables.Count - 1;
+        var method = _postponedTypeDefinitions.Values.SelectMany(ptd => ptd.Methods).Single(pmd => pmd.MethodVariable == declaringMethodVariable);
+        Debug.Assert(method != null, $"Method with variable name {declaringMethodVariable} was not found.");
+
+        method.LocalVariables.Add(localVariable);
+        return method.LocalVariables.Count - 1;
     }
     
     public void RegisterProperty(string propertyName,string propertyDefinitionVariable, string declaringTypeName, string declaringTypeVariable, Action<IVisitorContext, string, string, string, string> propertyProcessor)
