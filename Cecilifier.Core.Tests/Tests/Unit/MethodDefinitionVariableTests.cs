@@ -11,18 +11,18 @@ public class MethodDefinitionVariableTests
     public void EqualsTests([Values] VariableMemberKind kind, [Values("Parent", null)] string parentTypeName, [Values("p1", null)] string parameter)
     {
         var parameters = parameter != null ? new[] { parameter } : Array.Empty<string>();
-        var tbt = new MethodDefinitionVariable(parentTypeName, "methodName", parameters, 0);
+        var tbt = new MethodDefinitionVariable(parentTypeName, "methodName", parameters, []);
         Assert.That(tbt.Equals(tbt), Is.True);
     }
 
     [Test]
-    public void EqualityOperatorsTests([Values] VariableMemberKind kind, [Values("Parent", null)] string parentTypeName, [Values(0, 1, 2)] byte typeParameterCount, [Values("p1", null)] string parameter)
+    public void EqualityOperatorsTests([Values] VariableMemberKind kind, [Values("Parent", null)] string parentTypeName, [Values(new string[0], new[] { "A" }, new[] { "A", "B"})] string[] typeParameters, [Values("p1", null)] string parameter)
     {
         var parameters = parameter != null ? [parameter] : Array.Empty<string>();
-        var tbt = new MethodDefinitionVariable(parentTypeName, "methodName", parameters, typeParameterCount);
-        var shouldBeEqual = new MethodDefinitionVariable(parentTypeName, "methodName", parameters, typeParameterCount);
+        var tbt = new MethodDefinitionVariable(parentTypeName, "methodName", parameters, typeParameters);
+        var shouldBeEqual = new MethodDefinitionVariable(parentTypeName, "methodName", parameters, typeParameters);
 
-        const byte TypeParameterCountNotMatchingAnyArgumentForTest = 42;
+        string[] TypeParameterCountNotMatchingAnyArgumentForTest = ["A", "B", "C"];
         var shouldNotBeEqual = new MethodDefinitionVariable(parentTypeName, "methodName", parameters, TypeParameterCountNotMatchingAnyArgumentForTest);
 
         Assert.That(tbt.Equals(shouldBeEqual), Is.True);
@@ -38,8 +38,8 @@ public class MethodDefinitionVariableTests
     public void GetHashCodeTests([Values] VariableMemberKind kind, [Values("Parent", null)] string parentTypeName, [Values("p1", null)] string parameter)
     {
         var parameters = parameter != null ? [parameter] : Array.Empty<string>();
-        var tbt = new MethodDefinitionVariable(parentTypeName, "methodName", parameters, 0);
-        var shouldBeEqual = new MethodDefinitionVariable(parentTypeName, "methodName", parameters, 0);
+        var tbt = new MethodDefinitionVariable(parentTypeName, "methodName", parameters, []);
+        var shouldBeEqual = new MethodDefinitionVariable(parentTypeName, "methodName", parameters, []);
 
         Assert.That(tbt.GetHashCode(), Is.EqualTo(shouldBeEqual.GetHashCode()));
     }

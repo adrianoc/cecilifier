@@ -1,30 +1,31 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
+using Cecilifier.Core.Extensions;
 
 namespace Cecilifier.Core.Variables;
 
 [ExcludeFromCodeCoverage]
 public class MethodDefinitionVariable : DefinitionVariable, IEquatable<MethodDefinitionVariable>
 {
-    public static readonly MethodDefinitionVariable MethodNotFound = new MethodDefinitionVariable(string.Empty, string.Empty, [], 0);
+    public static readonly MethodDefinitionVariable MethodNotFound = new MethodDefinitionVariable(string.Empty, string.Empty, [], []);
     
-    public MethodDefinitionVariable(string parentTypeName, string methodName, string[] parameterTypeNames, int typeParameterCountCount, string variableName = null) 
-        : this(VariableMemberKind.Method, parentTypeName, methodName, parameterTypeNames, typeParameterCountCount, variableName)
+    public MethodDefinitionVariable(string parentTypeName, string methodName, string[] parameterTypeNames, string[] typeParameters, string variableName = null) 
+        : this(VariableMemberKind.Method, parentTypeName, methodName, parameterTypeNames, typeParameters, variableName)
     {
     }
     
-    public MethodDefinitionVariable(VariableMemberKind methodKind, string parentTypeName, string methodName, string[] parameterTypeNames, int typeParameterCountCount, string variableName = null) 
+    public MethodDefinitionVariable(VariableMemberKind methodKind, string parentTypeName, string methodName, string[] parameterTypeNames, string[] typeParameters, string variableName = null) 
         : base(parentTypeName, methodName, methodKind, variableName)
     {
         Parameters = parameterTypeNames;
-        TypeParameterCount = typeParameterCountCount;
+        TypeParameters = typeParameters;
     }
     
-    public MethodDefinitionVariable WithVariableName(string variableName) => new(Kind, ParentName, MemberName, Parameters, TypeParameterCount, variableName);
+    public MethodDefinitionVariable WithVariableName(string variableName) => new(Kind, ParentName, MemberName, Parameters, TypeParameters, variableName);
     
     private string[] Parameters { get; }
     
-    private int TypeParameterCount { get; }
+    private string[] TypeParameters { get; }
 
     public bool Equals(MethodDefinitionVariable other)
     {
@@ -56,7 +57,7 @@ public class MethodDefinitionVariable : DefinitionVariable, IEquatable<MethodDef
             }
         }
 
-        return TypeParameterCount == other.TypeParameterCount;
+        return TypeParameters.ComputeHashCode() == other.TypeParameters.ComputeHashCode();
     }
 
     public static bool operator ==(MethodDefinitionVariable lhs, MethodDefinitionVariable rhs)
@@ -97,8 +98,8 @@ public class MethodDefinitionVariable : DefinitionVariable, IEquatable<MethodDef
         unchecked
         {
             return (base.GetHashCode() * 397) 
-                   ^ (Parameters != null ? Parameters.GetHashCode() : 0)
-                   ^ TypeParameterCount.GetHashCode();
+                   ^ Parameters.ComputeHashCode()
+                   ^ TypeParameters.ComputeHashCode();
         }
     }
 

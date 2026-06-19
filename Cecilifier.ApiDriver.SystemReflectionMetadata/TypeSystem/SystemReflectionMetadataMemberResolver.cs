@@ -84,14 +84,14 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
         return methodRefVar;
     }
     
-    public string ResolveMethod(string declaringTypeName, string declaringTypeVariable, string methodNameForVariableRegistration, ResolvedType returnType, IReadOnlyList<ParameterSpec> parameters, int typeParameterCountCount, MemberOptions options)
+    public string ResolveMethod(string declaringTypeName, string declaringTypeVariable, string methodName, ResolvedType returnType, IReadOnlyList<ParameterSpec> parameters, IReadOnlyList<string> typeParameters, MemberOptions options)
     {
         var methodReferenceToFind = new MethodDefinitionVariable(
                                                 VariableMemberKind.MethodReference,
                                                 declaringTypeName,
                                                 methodNameForVariableRegistration,
                                                 parameters.Select(p => p.ElementType.Expression).ToArray(),
-                                                typeParameterCountCount);
+                                                typeParameters.ToArray());
 
         var found = context.DefinitionVariables.GetMethodVariable(methodReferenceToFind);
         if (found.IsValid)
@@ -106,7 +106,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
                                                             declaringTypeName,
                                                             methodNameForVariableRegistration,
                                                             parameters.Select(p => p.ElementType.Expression).ToArray(),
-                                                            typeParameterCountCount,
+                                                            typeParameters.ToArray(),
                                                             methodSignatureVar));
 
         var requiredModifierOrEmpty = string.Empty;

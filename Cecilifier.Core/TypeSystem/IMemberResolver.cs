@@ -18,7 +18,7 @@ public interface IMemberResolver
     /// <param name="method"></param>
     /// <returns>Returns an expression that represents the resolved method.</returns>
     string ResolveMethod(IMethodSymbol method);
-    string ResolveMethod(string declaringTypeName, string declaringTypeVariable, string methodNameForVariableRegistration, ResolvedType returnType, IReadOnlyList<ParameterSpec> parameters, int typeParameterCountCount, MemberOptions options);
+    string ResolveMethod(string declaringTypeName, string declaringTypeVariable, string methodName, ResolvedType returnType, IReadOnlyList<ParameterSpec> parameters, IReadOnlyList<string> typeParameters, MemberOptions options);
     
     string ResolveDefaultConstructor(ITypeSymbol baseType, string derivedTypeVar);
     string ResolveField(IFieldSymbol field);

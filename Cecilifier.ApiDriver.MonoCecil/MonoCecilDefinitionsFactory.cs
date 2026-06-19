@@ -163,7 +163,7 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
 
         if (definitionContext.Member.ParentDefinitionVariable != null)
         {
-            methodVariable = context.DefinitionVariables.RegisterMethod(declaringTypeName, definitionContext.Member.Name, parameters.Select(p => p.RegistrationTypeName).ToArray(), typeParameters.Count, definitionContext.Member.DefinitionVariable);
+            methodVariable = context.DefinitionVariables.RegisterMethod(declaringTypeName, definitionContext.Member.Name, parameters.Select(p => p.RegistrationTypeName).ToArray(), typeParameters.ToArray(), definitionContext.Member.DefinitionVariable);
             exps =
             [
                 ..exps,
@@ -246,7 +246,7 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
     public IEnumerable<string> Constructor(IVisitorContext context, BodiedMemberDefinitionContext definitionContext, string typeName, bool isStatic, string methodAccessibility, string[] paramTypes, string? methodDefinitionPropertyValues = null)
     {
         var ctorName = Utils.ConstructorMethodName(isStatic);
-        context.DefinitionVariables.RegisterMethod(typeName, ctorName, paramTypes, 0, definitionContext.Member.DefinitionVariable);
+        context.DefinitionVariables.RegisterMethod(typeName, ctorName, paramTypes, [], definitionContext.Member.DefinitionVariable);
 
         var exp = $@"var {definitionContext.Member.DefinitionVariable} = new MethodDefinition(""{ctorName}"", {methodAccessibility} | MethodAttributes.HideBySig | {Constants.Cecil.CtorAttributes}, assembly.MainModule.TypeSystem.Void)";
         if (methodDefinitionPropertyValues != null)

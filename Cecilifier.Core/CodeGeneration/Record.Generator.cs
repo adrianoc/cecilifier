@@ -277,8 +277,8 @@ internal partial class RecordGenerator
         
         context.Generate(inequalityOperatorMethodExps);
 
-        var equalityMethodDefinitionVariable = context.DefinitionVariables.GetMethodVariable(new MethodDefinitionVariable(_recordSymbol.OriginalDefinition.ToDisplayString(), "op_Equality", [$"{_recordSymbol.ToDisplayString()}?", $"{_recordSymbol.ToDisplayString()}?"], 0)).VariableName;
-        if (_recordSymbol is INamedTypeSymbol { IsGenericType: true })
+        var equalityMethodDefinitionVariable = context.DefinitionVariables.GetMethodVariable(new MethodDefinitionVariable(_recordSymbol.OriginalDefinition.ToDisplayString(), "op_Equality", [$"{_recordSymbol.ToDisplayString()}?", $"{_recordSymbol.ToDisplayString()}?"], [])).VariableName;
+        if (_recordSymbol is { IsGenericType: true })
         {
             var var = equalityMethodDefinitionVariable;
             equalityMethodDefinitionVariable = context.Naming.SyntheticVariable("equalsOperator", ElementKind.GenericInstance);
@@ -912,7 +912,7 @@ internal partial class RecordGenerator
     
     string GetGetterMethodVar(ITypeSymbol candidate, string propertyName)
     {
-        var getterMethodVar = context.DefinitionVariables.GetMethodVariable(new MethodDefinitionVariable(candidate.OriginalDefinition.ToDisplayString(), $"get_{propertyName}", [], 0));
+        var getterMethodVar = context.DefinitionVariables.GetMethodVariable(new MethodDefinitionVariable(candidate.OriginalDefinition.ToDisplayString(), $"get_{propertyName}", [], []));
         if (getterMethodVar.IsValid)
         {
             if (candidate is INamedTypeSymbol { IsGenericType: true })

@@ -154,7 +154,13 @@ namespace Cecilifier.Core.AST
                     // the latter is a `mangled name` and any reference to the method will use its `unmangled name` for lookups which would fail
                     // should we use `methodName` as the registered name.
                     var nameUsedInRegisteredVariable = methodSymbol.MethodKind == MethodKind.LocalFunction ? simpleName : methodName;
-                    WithCurrentMethod(declaringTypeName, methodVar, nameUsedInRegisteredVariable, parameters.Select(p => Context.SemanticModel.GetDeclaredSymbol(p).Type.ToDisplayString()).ToArray(), methodSymbol.TypeParameters.Length, runWithCurrent);
+                    WithCurrentMethod(
+                        declaringTypeName, 
+                        methodVar, 
+                        nameUsedInRegisteredVariable, 
+                        parameters.Select(p => Context.SemanticModel.GetDeclaredSymbol(p).Type.ToDisplayString()).ToArray(), 
+                        methodSymbol.TypeParameters.Select(tp => tp.Name).ToArray(), 
+                        runWithCurrent);
                     
                     if (!methodSymbol.IsAbstract && !node.DescendantNodes().Any(n => n.IsKind(SyntaxKind.ReturnStatement)))
                     {
@@ -163,7 +169,12 @@ namespace Cecilifier.Core.AST
                 }
                 else
                 {
-                    Context.DefinitionVariables.RegisterMethod(declaringTypeName, methodName, parameters.Select(p => Context.GetTypeInfo(p.Type).Type.ToDisplayString()).ToArray(), typeParameters.Count, methodVar);
+                    Context.DefinitionVariables.RegisterMethod(
+                        declaringTypeName, 
+                        methodName, 
+                        parameters.Select(p => Context.GetTypeInfo(p.Type).Type.ToDisplayString()).ToArray(), 
+                        typeParameters.Select(tp => tp.Identifier.Text).ToArray(), 
+                        methodVar);
                 }
             }
         }

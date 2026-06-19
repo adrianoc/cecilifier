@@ -208,7 +208,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                                                             definitionContext.Member.Identifier,
                                                             returnTypeResolver(context),
                                                             parameters,
-                                                            typeParameters.Count,
+                                                            typeParameters.ToArray(),
                                                             definitionContext.Options);
 
         methodDefinitionVariable = context.DefinitionVariables.FindByVariableName<MethodDefinitionVariable>(methodRefVar) ?? MethodDefinitionVariable.MethodNotFound;
@@ -257,7 +257,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                                         declaringTypeName,
                                         definitionContext.Member.Name,
                                         parameters.Select(p => p.ElementType.Expression).ToArray(),
-                                        0,
+                                        [], //TODO: This seems wrong. If the method is generic shouldn't we pass the generic type parameters?
                                         methodDefVar);
             
             ctx.DefinitionVariables.RegisterMethod(toBeRegistered);

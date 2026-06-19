@@ -146,7 +146,7 @@ namespace Cecilifier.Core.AST
         private IlContext AddOrUpdateParameterlessCtorDefinition(string typeName, string normalizedTypeName, string typeDefVar, string ctorAccessibility, bool isStatic, string ctorLocalVar)
         {
             var ctorName = isStatic ? "cctor" : "ctor";
-            var found = Context.DefinitionVariables.GetMethodVariable(new MethodDefinitionVariable(typeName, Utils.ConstructorMethodName(isStatic), [], 0));
+            var found = Context.DefinitionVariables.GetMethodVariable(new MethodDefinitionVariable(typeName, Utils.ConstructorMethodName(isStatic), [], []));
             if (found.IsValid)
             {
                 //TODO: This is Cecil specific. Abstract it and add a test in SRM that exercises it

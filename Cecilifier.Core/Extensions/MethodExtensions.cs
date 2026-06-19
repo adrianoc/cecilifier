@@ -60,7 +60,7 @@ namespace Cecilifier.Core.Extensions
                 method.ContainingType.ToDisplayString(),
                 method.Name,
                 method.Parameters.Select(p => p.Type.ToDisplayString()).ToArray(),
-                method.TypeParameters.Length,
+                method.TypeParameters.Select(tp => tp.Name).ToArray(),
                 variableName);
         }
 
