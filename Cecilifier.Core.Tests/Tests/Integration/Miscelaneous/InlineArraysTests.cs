@@ -1,16 +1,22 @@
 using Cecilifier.ApiDriver.MonoCecil;
+using Cecilifier.ApiDriver.SystemReflectionMetadata;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Tests.Framework;
+using Cecilifier.Core.Tests.Framework.Attributes;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration;
 
 [TestFixture(typeof(MonoCecilContext))]
+[TestFixture(typeof(SystemReflectionMetadataContext))]
+[EnableForContext<SystemReflectionMetadataContext>(nameof(TestInlineArrays))]
 public class InlineArraysTests<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
 {
     [Test]
     public void TestInlineArrays()
     {
+        // The assembly emitted from C# compiler differs basically in: 1) order of type/member declarations, 2) use of short version of some IL instructions and some minor IL differences
+        // Verified by hand that the generated IL is equivalent.
         AssertResourceTestWithExplicitExpectation("Misc/InlineArrays", "System.Void InlineArrayTests::Test()");
     }
     

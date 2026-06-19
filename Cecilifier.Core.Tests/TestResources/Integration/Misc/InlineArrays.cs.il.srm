@@ -1,0 +1,78 @@
+﻿.locals init (ByteBuffer V_0, InterfaceBuffer V_1, StructBuffer V_2, SomeStruct V_3)
+IL_0000: ldloca.s V_0
+IL_0002: nop
+IL_0003: nop
+IL_0004: nop
+IL_0005: initobj ByteBuffer
+IL_000b: ldloca V_0
+IL_000f: nop
+IL_0010: nop
+IL_0011: call !!1& <PrivateImplementationDetails>::InlineArrayFirstElementRef<ByteBuffer,System.Byte>(!!0&)
+IL_0016: ldc.i4 1
+IL_001b: stind.i1
+IL_001c: ldloca V_0
+IL_0020: nop
+IL_0021: nop
+IL_0022: ldc.i4 1
+IL_0027: call !!1& <PrivateImplementationDetails>::InlineArrayElementRef<ByteBuffer,System.Byte>(!!0&,System.Int32)
+IL_002c: ldloca V_0
+IL_0030: nop
+IL_0031: nop
+IL_0032: call !!1& <PrivateImplementationDetails>::InlineArrayFirstElementRef<ByteBuffer,System.Byte>(!!0&)
+IL_0037: ldind.u1
+IL_0038: ldc.i4 1
+IL_003d: add
+IL_003e: conv.u1
+IL_003f: stind.i1
+IL_0040: ldloca V_0
+IL_0044: nop
+IL_0045: nop
+IL_0046: ldc.i4 1
+IL_004b: call !!1& <PrivateImplementationDetails>::InlineArrayElementRef<ByteBuffer,System.Byte>(!!0&,System.Int32)
+IL_0050: ldind.u1
+IL_0051: call System.Void System.Console::WriteLine(System.Int32)
+IL_0056: ldloca.s V_1
+IL_0058: nop
+IL_0059: nop
+IL_005a: nop
+IL_005b: initobj InterfaceBuffer
+IL_0061: ldloca V_1
+IL_0065: nop
+IL_0066: nop
+IL_0067: call !!1& <PrivateImplementationDetails>::InlineArrayFirstElementRef<InterfaceBuffer,System.IComparable>(!!0&)
+IL_006c: ldc.i4 1
+IL_0071: box System.Int32
+IL_0076: stind.ref
+IL_0077: ldloca.s V_2
+IL_0079: nop
+IL_007a: nop
+IL_007b: nop
+IL_007c: initobj StructBuffer
+IL_0082: ldloca V_2
+IL_0086: nop
+IL_0087: nop
+IL_0088: call !!1& <PrivateImplementationDetails>::InlineArrayFirstElementRef<StructBuffer,SomeStruct>(!!0&)
+IL_008d: ldloca.s V_3
+IL_008f: nop
+IL_0090: nop
+IL_0091: nop
+IL_0092: initobj SomeStruct
+IL_0098: ldloca.s V_3
+IL_009a: nop
+IL_009b: nop
+IL_009c: nop
+IL_009d: dup
+IL_009e: ldc.i4 42
+IL_00a3: stfld System.Int32 SomeStruct::Value
+IL_00a8: pop
+IL_00a9: ldloc V_3
+IL_00ad: nop
+IL_00ae: nop
+IL_00af: stobj SomeStruct
+IL_00b4: ldloca V_2
+IL_00b8: nop
+IL_00b9: nop
+IL_00ba: call !!1& <PrivateImplementationDetails>::InlineArrayFirstElementRef<StructBuffer,SomeStruct>(!!0&)
+IL_00bf: ldfld System.Int32 SomeStruct::Value
+IL_00c4: call System.Void System.Console::WriteLine(System.Int32)
+IL_00c9: ret

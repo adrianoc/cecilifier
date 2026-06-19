@@ -69,28 +69,29 @@ internal partial class PrivateImplementationDetailsGenerator
         var methodTypeQualifiedName = $"{privateImplementationDetailsVar.MemberName}.{methodName}";
         string declaringTypeName = $"{privateImplementationDetailsVar.MemberName}";
         IReadOnlyList<ParameterSpec> parameters = [ 
-            new("buffer", "TBuffer", RefKind.Ref, Constants.ParameterAttributes.None, null, (context, paramSpec) => ResolveOwnedGenericParameter(context, paramSpec.ElementType.Expression, TypeParameterKind.Method, methodTypeQualifiedName)), 
+            new("buffer", "TBuffer", RefKind.Ref, Constants.ParameterAttributes.None, null, (context, paramSpec) => ResolveOwnedGenericParameter(context, paramSpec.ElementType.Expression, TypeParameterKind.Method, ResolveTargetKind.Parameter, methodTypeQualifiedName)), 
             new("length", context.TypeResolver.ApplySpecificSyntax(context.TypeResolver.Bcl.System.Int32.Expression, ResolveTargetKind.Parameter), RefKind.None, Constants.ParameterAttributes.None)
         ];
         Func<IVisitorContext, ResolvedType> returnTypeResolver = ctx =>
         {
-            var spanTypeParameter = ResolveOwnedGenericParameter(context, "TElement", TypeParameterKind.Method, methodTypeQualifiedName);
+            var spanTypeParameter = ResolveOwnedGenericParameter(context, "TElement", TypeParameterKind.Method, ResolveTargetKind.ReturnType, methodTypeQualifiedName);
             return ctx.TypeResolver.Resolve(containingType, ResolveTargetKind.ReturnType).MakeGenericInstanceType(spanTypeParameter);
         };
+        var ilContext = context.ApiDriver.NewIlContext(context, methodName, methodVar);
         var methodExpressions = context.ApiDefinitionsFactory.Method(
-                                                                    context, 
-                                                                    new BodiedMemberDefinitionContext(methodName, methodTypeQualifiedName,methodVar, privateImplementationDetailsVar.VariableName, MemberOptions.None, IlContext.None), 
-                                                                    declaringTypeName, 
-                                                                    "MethodAttributes.Assembly | MethodAttributes.Static | MethodAttributes.HideBySig", 
+                                                                    context,
+                                                                    new BodiedMemberDefinitionContext(methodName, methodTypeQualifiedName,methodVar, privateImplementationDetailsVar.VariableName, MemberOptions.Static, ilContext),
+                                                                    declaringTypeName,
+                                                                    "MethodAttributes.Assembly | MethodAttributes.Static | MethodAttributes.HideBySig",
                                                                     parameters,
-                                                                    ["TBuffer", "TElement"], 
+                                                                    ["TBuffer", "TElement"],
                                                                     returnTypeResolver,
                                                                     out var methodDefinitionVariable);
 
         context.Generate(methodExpressions);
         
-        var tBufferVar = ResolveOwnedGenericParameter(context, "TBuffer", TypeParameterKind.Method, methodTypeQualifiedName);
-        var tElementVar = ResolveOwnedGenericParameter(context, "TElement", TypeParameterKind.Method, methodTypeQualifiedName);
+        var tBufferVar = ResolveOwnedGenericParameter(context, "TBuffer", TypeParameterKind.Method, ResolveTargetKind.GenericTypeArgument, methodTypeQualifiedName);
+        var tElementVar = ResolveOwnedGenericParameter(context, "TElement", TypeParameterKind.Method, ResolveTargetKind.GenericTypeArgument, methodTypeQualifiedName);
 
         context.WriteComment("Unsafe.As() generic instance method");
         IReadOnlyList<ResolvedType> resolvedTypeArguments = [tBufferVar, tElementVar];
@@ -107,7 +108,7 @@ internal partial class PrivateImplementationDetailsGenerator
             OpCodes.Call.WithOperand(memoryMarshalCreateSpanVar.AsToken()),
             OpCodes.Ret
         ];
-        var exps = context.ApiDefinitionsFactory.MethodBody(context, methodName, context.ApiDriver.NewIlContext(context, methodName, methodVar), [], instructions);
+        var exps = context.ApiDefinitionsFactory.MethodBody(context, methodName, ilContext, [], instructions);
         context.Generate(exps);
         
         return methodDefinitionVariable;
@@ -152,18 +153,18 @@ internal partial class PrivateImplementationDetailsGenerator
 
         var methodTypeQualifiedName = $"{privateImplementationDetailsVar.MemberName}.InlineArrayFirstElementRef".ToValidIdentifier();
         string declaringTypeName = $"{privateImplementationDetailsVar.MemberName}";
-        IReadOnlyList<ParameterSpec> parameters = [ new("buffer", "TBuffer", RefKind.Ref,  Constants.ParameterAttributes.None, null, (ctx, paramSpec) => ResolveOwnedGenericParameter(ctx, paramSpec.ElementType.Expression, TypeParameterKind.Method, methodTypeQualifiedName))];
+        IReadOnlyList<ParameterSpec> parameters = [ new("buffer", "TBuffer", RefKind.Ref,  Constants.ParameterAttributes.None, null, (ctx, paramSpec) => ResolveOwnedGenericParameter(ctx, paramSpec.ElementType.Expression, TypeParameterKind.Method, ResolveTargetKind.Parameter, methodTypeQualifiedName))];
         IList<string> typeParameters = ["TBuffer", "TElement"];
         Func<IVisitorContext, ResolvedType> returnTypeResolver = ctx =>
         {
-            var spanTypeParameter = ResolveOwnedGenericParameter(ctx, "TElement", TypeParameterKind.Method, methodTypeQualifiedName);
+            var spanTypeParameter = ResolveOwnedGenericParameter(ctx, "TElement", TypeParameterKind.Method, ResolveTargetKind.ReturnType, methodTypeQualifiedName);
             return context.TypeResolver.MakeByRefType(new ResolvedType(spanTypeParameter));
         };
         
-        var ilContext = context.ApiDriver.NewIlContext(context, "UnsafeAs", methodVar);
+        var ilContext = context.ApiDriver.NewIlContext(context, "InlineArrayFirstElementRef", methodVar);
         var methodExpressions = context.ApiDefinitionsFactory.Method(
                                                                     context, 
-                                                                    new BodiedMemberDefinitionContext("InlineArrayFirstElementRef", methodTypeQualifiedName, methodVar, privateImplementationDetailsVar.VariableName, MemberOptions.None, ilContext), 
+                                                                    new BodiedMemberDefinitionContext("InlineArrayFirstElementRef", methodTypeQualifiedName, methodVar, privateImplementationDetailsVar.VariableName, MemberOptions.Static, ilContext), 
                                                                     declaringTypeName, 
                                                                     "MethodAttributes.Assembly | MethodAttributes.Static | MethodAttributes.HideBySig", 
                                                                     parameters, 
@@ -172,8 +173,8 @@ internal partial class PrivateImplementationDetailsGenerator
                                                                     out var methodDefinitionVariable);
         context.Generate(methodExpressions);
         
-        var tBufferTypeParameter = ResolveOwnedGenericParameter(context, "TBuffer", TypeParameterKind.Method, methodTypeQualifiedName);
-        var tElementTypeParameter = ResolveOwnedGenericParameter(context, "TElement", TypeParameterKind.Method, methodTypeQualifiedName);
+        var tBufferTypeParameter = ResolveOwnedGenericParameter(context, "TBuffer", TypeParameterKind.Method, ResolveTargetKind.GenericTypeArgument, methodTypeQualifiedName);
+        var tElementTypeParameter = ResolveOwnedGenericParameter(context, "TElement", TypeParameterKind.Method, ResolveTargetKind.GenericTypeArgument, methodTypeQualifiedName);
 
         // TODO: unsafeAs? why lower case? shouldn't it be UnsafeAs ?
         var unsafeAsVarName = context.MemberResolver.MakeGeneticInstanceMethod(GetUnsafeAsMethod(context).MethodResolverExpression(context), "unsafeAs", [tBufferTypeParameter, tElementTypeParameter]);
@@ -205,18 +206,19 @@ internal partial class PrivateImplementationDetailsGenerator
         var methodTypeQualifiedName = $"{privateImplementationDetailsVar.MemberName}.InlineArrayElementRef".ToValidIdentifier();
         string declaringTypeName = $"{privateImplementationDetailsVar.MemberName}";
         IReadOnlyList<ParameterSpec> parameters = [ 
-            new("buffer", "TBuffer", RefKind.Ref, Constants.ParameterAttributes.None, null, (ctx, paramSpec) => ResolveOwnedGenericParameter(ctx, paramSpec.ElementType.Expression, TypeParameterKind.Method, methodTypeQualifiedName)),
+            new("buffer", "TBuffer", RefKind.Ref, Constants.ParameterAttributes.None, null, (ctx, paramSpec) => ResolveOwnedGenericParameter(ctx, paramSpec.ElementType.Expression, TypeParameterKind.Method, ResolveTargetKind.Parameter, methodTypeQualifiedName)),
             new("index", context.TypeResolver.ApplySpecificSyntax(context.TypeResolver.Bcl.System.Int32.Expression, ResolveTargetKind.Parameter), RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = "int" }
         ];
         IList<string> typeParameters = ["TBuffer", "TElement"];
         Func<IVisitorContext, ResolvedType> returnTypeResolver = ctx =>
         {
-            var spanTypeParameter = ResolveOwnedGenericParameter(ctx, "TElement", TypeParameterKind.Method, methodTypeQualifiedName);
+            var spanTypeParameter = ResolveOwnedGenericParameter(ctx, "TElement", TypeParameterKind.Method, ResolveTargetKind.ReturnType,  methodTypeQualifiedName);
             return context.TypeResolver.MakeByRefType(new ResolvedType(spanTypeParameter));
         };
+        var ilContext = context.ApiDriver.NewIlContext(context, "UnsafeAdd", methodVar);
         var methodExpressions = context.ApiDefinitionsFactory.Method(
             context, 
-            new BodiedMemberDefinitionContext("InlineArrayElementRef", methodTypeQualifiedName, methodVar, privateImplementationDetailsVar.VariableName, MemberOptions.None, IlContext.None), 
+            new BodiedMemberDefinitionContext("InlineArrayElementRef", methodTypeQualifiedName, methodVar, privateImplementationDetailsVar.VariableName, MemberOptions.Static, ilContext), 
             declaringTypeName, 
             "MethodAttributes.Assembly | MethodAttributes.Static | MethodAttributes.HideBySig", 
             parameters, 
@@ -226,8 +228,8 @@ internal partial class PrivateImplementationDetailsGenerator
 
         context.Generate(methodExpressions);
         
-        var tbufferTypeParameter = ResolveOwnedGenericParameter(context, "TBuffer", TypeParameterKind.Method, methodTypeQualifiedName);
-        var telementTypeParameter = ResolveOwnedGenericParameter(context, "TElement", TypeParameterKind.Method, methodTypeQualifiedName);
+        var tbufferTypeParameter = ResolveOwnedGenericParameter(context, "TBuffer", TypeParameterKind.Method, ResolveTargetKind.GenericTypeArgument, methodTypeQualifiedName);
+        var telementTypeParameter = ResolveOwnedGenericParameter(context, "TElement", TypeParameterKind.Method, ResolveTargetKind.GenericTypeArgument, methodTypeQualifiedName);
 
         IReadOnlyList<ResolvedType> resolvedTypeArguments = [tbufferTypeParameter, telementTypeParameter];
         var unsafeAsVarName = context.MemberResolver.MakeGeneticInstanceMethod(GetUnsafeAsMethod(context).MethodResolverExpression(context), "unsafeAs", resolvedTypeArguments);
@@ -240,7 +242,7 @@ internal partial class PrivateImplementationDetailsGenerator
             OpCodes.Call.WithOperand(unsafeAddVarName.AsToken()),
             OpCodes.Ret
         ];
-        var methodBodyExpressions = context.ApiDefinitionsFactory.MethodBody(context, "UnsafeAdd", context.ApiDriver.NewIlContext(context, "UnsafeAdd", methodVar), [], instructions);
+        var methodBodyExpressions = context.ApiDefinitionsFactory.MethodBody(context, "UnsafeAdd", ilContext, [], instructions);
         
         context.Generate(methodBodyExpressions);
         context.WriteNewLine();
@@ -250,14 +252,14 @@ internal partial class PrivateImplementationDetailsGenerator
         return methodDefinitionVariable;
     }
     
-    private static string ResolveOwnedGenericParameter(IVisitorContext context, string typeParameterName, TypeParameterKind typeParameterKind, string methodTypeQualifiedName)
+    private static string ResolveOwnedGenericParameter(IVisitorContext context, string typeParameterName, TypeParameterKind typeParameterKind,  ResolveTargetKind targetKind, string methodTypeQualifiedName)
     {
         var foundVar = context.DefinitionVariables.GetVariable(typeParameterName, VariableMemberKind.TypeParameter, methodTypeQualifiedName);
         foundVar.ThrowIfVariableIsNotValid();
         
         // In reality this method is invoked to obtain the 'return type' of a method as well as some parameters. In this specific case `ResolveTargetKind.ReturnType` 
         // works as expected for both scenarios.
-        return context.TypeResolver.ResolveTypeParameter(foundVar.VariableName, typeParameterKind, new TypeResolutionContext(ResolveTargetKind.ReturnType, TypeResolutionOptions.IsByRef)).Expression;
+        return context.TypeResolver.ResolveTypeParameter(foundVar.VariableName, typeParameterKind, new TypeResolutionContext(targetKind, TypeResolutionOptions.IsByRef)).Expression;
     }
 
     internal static string GetOrCreateInitializationBackingFieldVariableName(IVisitorContext context, int elementSizeInBytes, IList<string> elements, SpanAction<byte, string> converter)

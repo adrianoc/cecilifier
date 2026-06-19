@@ -61,7 +61,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
             context.DefinitionVariables.RegisterMethod(toBeFound.WithVariableName(methodRefVar));
         }
 
-        if (method.IsGenericMethod)
+        if (method.IsGenericMethod && (!method.IsDefinition || method.IsDefinedInCurrentAssembly(context)))
         {
             var tbf = method.AsRawMethodDefinitionVariable(VariableMemberKind.MethodInstantiation);
             var instantiationVar = FindOrRegisterVariable(context, method, tbf, context.Naming.GenericInstance(method), methodRefVar, static (ctx, method, methodSpecificationVar, openMethodVar) =>
@@ -89,7 +89,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
         var methodReferenceToFind = new MethodDefinitionVariable(
                                                 VariableMemberKind.MethodReference,
                                                 declaringTypeName,
-                                                methodNameForVariableRegistration,
+                                                methodName,
                                                 parameters.Select(p => p.ElementType.Expression).ToArray(),
                                                 typeParameters.ToArray());
 
@@ -97,18 +97,18 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
         if (found.IsValid)
             return found.VariableName;
 
-        var methodSignatureBlobVar = context.Naming.SyntheticVariable($"{methodNameForVariableRegistration}_blobBuilder", ElementKind.MemberReference);
-        var methodSignatureVar = context.Naming.SyntheticVariable($"{methodNameForVariableRegistration}_Signature", ElementKind.MemberReference);
-        var methodRefVar = context.Naming.SyntheticVariable($"{methodNameForVariableRegistration}", ElementKind.MemberReference);
-        
+        var safeMethodName = methodName.ToValidIdentifier();
+        var methodSignatureBlobVar = context.Naming.SyntheticVariable($"{safeMethodName}_blobBuilder", ElementKind.MemberReference);
+        var methodSignatureVar = context.Naming.SyntheticVariable($"{safeMethodName}_Signature", ElementKind.MemberReference);
+        var methodRefVar = context.Naming.SyntheticVariable($"{safeMethodName}", ElementKind.MemberReference);
+
         context.DefinitionVariables.RegisterMethod(new MethodDefinitionVariable(
                                                             VariableMemberKind.MethodSignature,
                                                             declaringTypeName,
-                                                            methodNameForVariableRegistration,
+                                                            methodName,
                                                             parameters.Select(p => p.ElementType.Expression).ToArray(),
                                                             typeParameters.ToArray(),
                                                             methodSignatureVar));
-
         var requiredModifierOrEmpty = string.Empty;
         if ((options & MemberOptions.InitOnly) != 0)
         {
@@ -137,7 +137,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
                               var {{methodSignatureVar}} = metadata.GetOrAddBlob({{methodSignatureBlobVar}});
                               var {{methodRefVar}} = metadata.AddMemberReference(
                                                                   {{declaringTypeVariable}},
-                                                                  metadata.GetOrAddString("{{methodNameForVariableRegistration}}"),
+                                                                  metadata.GetOrAddString("{{methodName}}"),
                                                                   {{methodSignatureVar}});
                               """);
 

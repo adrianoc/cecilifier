@@ -179,7 +179,7 @@ namespace Cecilifier.Core.AST
                 // at this point there's no object reference in the stack (it was consumed by the `Initobj` instruction)
                 // so we push the address of the variable that we just initialised again. Notice that after processing
                 // the initializer we need to pop this reference from the stack again.
-                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloca_S, localVariable);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloca_S, localVariable.AsLocalVariable());
                 ProcessInitializerIfNotNull(Context, ilVar, objectCreationExpressionSyntax.Initializer);
             }
         }

@@ -140,10 +140,10 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
 
     public IEnumerable<string> Method(IVisitorContext context, IMethodSymbol methodSymbol, BodiedMemberDefinitionContext bodiedMemberDefinitionContext, string methodName, string methodModifiers, IList<TypeParameterSyntax> typeParameters)
     {
+        DefineGenericTypeParametersVariables(context, typeParameters);
+
         // Resolve the method to make sure there's a method ref available (this will be used to fulfill any references to this method)
         context.MemberResolver.ResolveMethod(methodSymbol);
-        
-        DefineGenericTypeParametersVariables(context, typeParameters);
         
         var paramIndexOffset = methodSymbol.IsStatic ? 0 : 1;
         // register all parameters so we can reference them when emitting the method body
@@ -205,7 +205,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         var methodRefVar = context.MemberResolver.ResolveMethod(
                                                             declaringTypeName,
                                                             definitionContext.Member.ParentDefinitionVariable,
-                                                            definitionContext.Member.Identifier,
+                                                            definitionContext.Member.Name,
                                                             returnTypeResolver(context),
                                                             parameters,
                                                             typeParameters.ToArray(),
