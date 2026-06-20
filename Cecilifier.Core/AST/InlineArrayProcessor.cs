@@ -14,7 +14,7 @@ using Cecilifier.Core.Variables;
 namespace Cecilifier.Core.AST;
 public class InlineArrayProcessor
 {
-    internal static bool HandleInlineArrayConversionToSpan(IVisitorContext context, IlContext ilVar, ITypeSymbol fromType, SyntaxNode fromNode, OpCode opcode, string name, VariableMemberKind memberKind, string parentName = null)
+    internal static bool HandleInlineArrayConversionToSpan<TOperand>(IVisitorContext context, IlContext ilVar, ITypeSymbol fromType, SyntaxNode fromNode, OpCode opcode, TOperand operand)
     {
         int inlineArrayLength = InlineArrayLengthFrom(fromType);
         if (inlineArrayLength == -1)
@@ -28,7 +28,7 @@ public class InlineArrayProcessor
         
         // ldloca.s address of fromNode.
         // ldci4 fromNode.Length (size of the inline array)
-        context.ApiDriver.WriteCilInstruction(context, ilVar, opcode, context.DefinitionVariables.GetVariable(name, memberKind, parentName).VariableName);
+        context.ApiDriver.WriteCilInstruction(context, ilVar, opcode, operand);
         context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Ldc_I4, inlineArrayLength);
         context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Call, InlineArrayAsSpanMethodFor(context, fromType).AsToken());
         return true;
@@ -100,7 +100,11 @@ public class InlineArrayProcessor
             var memberParentName = storageVariableMemberKind == VariableMemberKind.LocalVariable ? string.Empty : storageSymbol.ContainingSymbol.ToDisplayString();
             
             // Takes the inline array and convert to a Span<T>
-            HandleInlineArrayConversionToSpan(context, ilVar, inlineArrayType, elementAccess, storageSymbol.LoadAddressOpcodeForMember(), elementAccess.Expression.ToString(), storageVariableMemberKind, memberParentName);
+            var storageVariableVar = context.DefinitionVariables.GetVariable(elementAccess.Expression.ToString(), storageVariableMemberKind, memberParentName);
+            storageVariableVar.ThrowIfVariableIsNotValid($"Definition variable for storage {storageSymbol.Name} not found.");
+            
+            var details = storageSymbol.LoadAddressDetailsForForMember();
+            HandleInlineArrayConversionToSpan(context, ilVar, inlineArrayType, elementAccess, details.OpCode, details.Factory(storageVariableVar.VariableName));
             
             // at this point we have a Span<T> (for the inline array) at the top of the stack so just delegate to the visitor in charge of handling
             // indexing Span<T> with a range.

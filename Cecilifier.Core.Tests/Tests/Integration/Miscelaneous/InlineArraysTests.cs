@@ -2,14 +2,12 @@ using Cecilifier.ApiDriver.MonoCecil;
 using Cecilifier.ApiDriver.SystemReflectionMetadata;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Tests.Framework;
-using Cecilifier.Core.Tests.Framework.Attributes;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration;
 
 [TestFixture(typeof(MonoCecilContext))]
 [TestFixture(typeof(SystemReflectionMetadataContext))]
-[EnableForContext<SystemReflectionMetadataContext>(nameof(TestInlineArrays))]
 public class InlineArraysTests<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
 {
     [Test]

@@ -169,6 +169,8 @@ namespace Cecilifier.Core.TypeSystem
         }
 
         public abstract ResolvedType MakeGenericInstanceType(ResolvedType typeReference, INamedTypeSymbol genericTypeSymbol, in TypeResolutionContext resolutionContext);
+        public abstract ResolvedType MakeGenericInstanceType(ResolvedType openGenericType, Span<ResolvedType> typeArguments, in TypeResolutionContext resolutionContext);
+        
         public abstract ResolvedType MakeByRefType(in ResolvedType resolvedType);
         
         protected abstract ResolvedType ResolveFromAssembly(ITypeSymbol type, in TypeResolutionContext resolutionContext);

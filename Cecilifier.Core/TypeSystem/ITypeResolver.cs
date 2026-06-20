@@ -1,5 +1,6 @@
 #nullable enable
 
+using System;
 using Microsoft.CodeAnalysis;
 
 namespace Cecilifier.Core.TypeSystem;
@@ -33,6 +34,7 @@ public interface ITypeResolver
     ResolvedType ApplySpecificSyntax(string variableName, in TypeResolutionContext resolutionContext);
     ResolvedType MakeArrayType(ITypeSymbol elementType, in TypeResolutionContext resolutionContext);
     ResolvedType MakeGenericInstanceType(ResolvedType typeReference, INamedTypeSymbol genericTypeSymbol, in TypeResolutionContext resolutionContext);
+    ResolvedType MakeGenericInstanceType(ResolvedType openGenericType, Span<ResolvedType> typeArguments, in TypeResolutionContext resolutionContext);
     ResolvedType MakeByRefType(in ResolvedType resolvedType);
 
     Bcl Bcl { get; }

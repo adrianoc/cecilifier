@@ -17,6 +17,8 @@ using Cecilifier.Core.Variables;
 
 namespace Cecilifier.Core.Extensions
 {
+    public record LoadAddressDetails(OpCode OpCode, Func<string, object> Factory);
+
     public static class ISymbolExtensions
     {
         private static readonly SymbolDisplayFormat QualifiedNameWithoutTypeParametersFormat = new SymbolDisplayFormat(typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces)
@@ -213,14 +215,17 @@ namespace Cecilifier.Core.Extensions
         public static OpCode LoadOpCodeForFieldAccess(this ISymbol symbol) => symbol.IsStatic ? OpCodes.Ldsfld : OpCodes.Ldfld;
         public static OpCode StoreOpCodeForFieldAccess(this ISymbol symbol) => symbol.IsStatic ? OpCodes.Stsfld : OpCodes.Stfld;
 
-        public static OpCode LoadAddressOpcodeForMember(this ISymbol symbol) => symbol.Kind switch
+        public static LoadAddressDetails LoadAddressDetailsForForMember(this ISymbol symbol) => symbol.Kind switch
         {
-            SymbolKind.Field => symbol.IsStatic ? OpCodes.Ldsflda : OpCodes.Ldflda,
-            SymbolKind.Parameter => OpCodes.Ldarg_S,
-            SymbolKind.Local => OpCodes.Ldloca_S,
+            SymbolKind.Field => new LoadAddressDetails(symbol.IsStatic ? OpCodes.Ldsflda : OpCodes.Ldflda, AsToken),
+            SymbolKind.Parameter => new LoadAddressDetails(OpCodes.Ldarg_S, AsToken),
+            SymbolKind.Local => new LoadAddressDetails(OpCodes.Ldloca_S, AsLocalVariable),
             _ => throw new ArgumentException($"Invalid symbol type for {symbol} ({symbol.Kind})")
         };
 
+        static object AsLocalVariable(string expression) => expression.AsLocalVariable();
+        static object AsToken(string expression) => expression.AsToken();
+    
         public static OpCode LoadOpCodeFor(this ITypeSymbol type)
         {
             return type.SpecialType switch

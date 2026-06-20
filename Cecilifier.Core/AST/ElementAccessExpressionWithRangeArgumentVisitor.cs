@@ -27,7 +27,7 @@ internal class ElementAccessExpressionWithRangeArgumentVisitor : SyntaxWalkerBas
         var elementAccessExpressionType = Context.SemanticModel.GetTypeInfo(node).Type.EnsureNotNull();
         _targetSpanType = elementAccessExpressionType;
         _spanCopyVariable = CodeGenerationHelpers.StoreTopOfStackInLocalVariable(Context, _ilVar, "localSpanCopy", elementAccessExpressionType).VariableName;
-        Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloca, _spanCopyVariable);
+        Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloca, _spanCopyVariable.AsLocalVariable());
 
         node.ArgumentList.Accept(this); // Visit the argument list with ourselves.
 
@@ -51,13 +51,13 @@ internal class ElementAccessExpressionWithRangeArgumentVisitor : SyntaxWalkerBas
         // compute range right index.
         node.RightOperand.EnsureNotNull().Accept(_expressionVisitor);
 
-        Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloc, startIndexVar);
+        Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloc, startIndexVar.AsLocalVariable());
         Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Sub);
         
         var elementCountVar = CodeGenerationHelpers.StoreTopOfStackInLocalVariable(Context, _ilVar, "elementCount", Context.RoslynTypeSystem.SystemInt32).VariableName;
 
-        Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloc, startIndexVar);
-        Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloc, elementCountVar);
+        Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloc, startIndexVar.AsLocalVariable());
+        Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloc, elementCountVar.AsLocalVariable());
     }
 
     // This will handle usages like s[r]
@@ -88,8 +88,8 @@ internal class ElementAccessExpressionWithRangeArgumentVisitor : SyntaxWalkerBas
         Context.AddCallToMethod(systemRange.GetMembers().OfType<IPropertySymbol>().Single(p => p.Name == "Start").GetMethod, _ilVar, MethodDispatchInformation.MostLikelyVirtual);
         var indexVar = CodeGenerationHelpers.StoreTopOfStackInLocalVariable(Context, _ilVar, "index", systemIndex).VariableName;
 
-        Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloca, indexVar);
-        Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloc, spanLengthVar);
+        Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloca, indexVar.AsLocalVariable());
+        Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloc, spanLengthVar.AsLocalVariable());
         Context.AddCallToMethod(systemIndex.GetMembers().OfType<IMethodSymbol>().Single(p => p.Name == "GetOffset"), _ilVar, MethodDispatchInformation.MostLikelyVirtual);
 
         var startIndexVar = CodeGenerationHelpers.StoreTopOfStackInLocalVariable(Context, _ilVar, "startIndex", Context.RoslynTypeSystem.SystemInt32).VariableName;
@@ -97,18 +97,18 @@ internal class ElementAccessExpressionWithRangeArgumentVisitor : SyntaxWalkerBas
         // Calculate number of elements to slice.
         Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloca, rangeVar);
         Context.AddCallToMethod(systemRange.GetMembers().OfType<IPropertySymbol>().Single(p => p.Name == "End").GetMethod, _ilVar, MethodDispatchInformation.MostLikelyVirtual);
-        Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Stloc, new CilLocalVariableHandle(indexVar));
+        Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Stloc, indexVar.AsLocalVariable());
 
-        Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloca, indexVar);
-        Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloc, spanLengthVar);
+        Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloca, indexVar.AsLocalVariable());
+        Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloc, spanLengthVar.AsLocalVariable());
         Context.AddCallToMethod(systemIndex.GetMembers().OfType<IMethodSymbol>().Single(p => p.Name == "GetOffset"), _ilVar, MethodDispatchInformation.MostLikelyVirtual);
-        Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloc, startIndexVar);
+        Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloc, startIndexVar.AsLocalVariable());
         Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Sub);
         var elementCountVar = CodeGenerationHelpers.StoreTopOfStackInLocalVariable(Context, _ilVar, "elementCount", Context.RoslynTypeSystem.SystemInt32).VariableName;
 
-        Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloca, _spanCopyVariable);
-        Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloc, startIndexVar);
-        Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloc, elementCountVar);
+        Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloca, _spanCopyVariable.AsLocalVariable());
+        Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloc, startIndexVar.AsLocalVariable());
+        Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloc, elementCountVar.AsLocalVariable());
     }
 
     private readonly ExpressionVisitor _expressionVisitor;

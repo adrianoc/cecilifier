@@ -163,10 +163,11 @@ namespace Cecilifier.Core.AST
             if (parent is AssignmentExpressionSyntax assignment)
             {
                 var targetOfAssignmentSymbol = Context.SemanticModel.GetSymbolInfo(assignment.Left).Symbol.EnsureNotNull();
-                var loadAddressOpcode = targetOfAssignmentSymbol.LoadAddressOpcodeForMember(); // target of assignment may be a local, field or parameter so we need to figure out the correct opcode to load its address
+                //var loadAddressOpcode = targetOfAssignmentSymbol.LoadAddressOpcodeForMember(); // target of assignment may be a local, field or parameter so we need to figure out the correct opcode to load its address
+                var loadAddressDetails = targetOfAssignmentSymbol.LoadAddressDetailsForForMember(); // target of assignment may be a local, field or parameter so we need to figure out the correct opcode to load its address
                 var storageVariable = Context.DefinitionVariables.GetVariable(targetOfAssignmentSymbol.Name, targetOfAssignmentSymbol.ToVariableMemberKind(), targetOfAssignmentSymbol.Kind == SymbolKind.Local ? string.Empty : targetOfAssignmentSymbol.ContainingSymbol.ToDisplayString());
                 
-                Context.ApiDriver.WriteCilInstruction(Context, ilVar, loadAddressOpcode, storageVariable.VariableName);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, loadAddressDetails.OpCode, loadAddressDetails.Factory(storageVariable.VariableName));
                 Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Initobj, resolvedType);
             }
             else if (parent.Parent is VariableDeclaratorSyntax equalsValueClauseSyntax)
@@ -347,7 +348,9 @@ namespace Cecilifier.Core.AST
             if (HandleLoadAddress(ilVar, paramSymbol.Type, node, OpCodes.Ldarga, operand.AsToken()))
                 return;
 
-            if (InlineArrayProcessor.HandleInlineArrayConversionToSpan(Context, ilVar, paramSymbol.Type, node, OpCodes.Ldarga_S, paramSymbol.Name, VariableMemberKind.Parameter, declaringMethodName))
+            var parameterVariable = Context.DefinitionVariables.GetVariable(paramSymbol.Name, VariableMemberKind.Parameter, declaringMethodName);
+            // We should not validate the parameterVariable here because paramSymbol.Type may not be an 'InlineArray' in which case the variable is not expected to be defined. 
+            if (InlineArrayProcessor.HandleInlineArrayConversionToSpan(Context, ilVar, paramSymbol.Type, node, OpCodes.Ldarga_S, parameterVariable.VariableName.AsToken()))
                 return;
             
             node.Parent.EnsureNotNull();
@@ -414,7 +417,9 @@ namespace Cecilifier.Core.AST
             if (HandleLoadAddress(ilVar, symbol.Type, localVarSyntax, OpCodes.Ldloca, operand.AsLocalVariable()))
                 return;
 
-            if (InlineArrayProcessor.HandleInlineArrayConversionToSpan(Context, ilVar, symbol.Type, localVarSyntax, OpCodes.Ldloca_S, symbol.Name, VariableMemberKind.LocalVariable))
+            var localVariableVar = Context.DefinitionVariables.GetVariable(symbol.Name, VariableMemberKind.LocalVariable);
+            localVariableVar.ThrowIfVariableIsNotValid($"Variable definition for local variable {symbol.Name} from {symbol.ContainingSymbol.ToDisplayString()} not found.");
+            if (InlineArrayProcessor.HandleInlineArrayConversionToSpan(Context, ilVar, symbol.Type, localVarSyntax, OpCodes.Ldloca_S, localVariableVar.VariableName.AsLocalVariable()))
                 return;
 
             Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloc, new CilLocalVariableHandle(operand));

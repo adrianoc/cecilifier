@@ -203,6 +203,11 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
         return genericInstanceTypeVar;
     }
 
+    public override ResolvedType MakeGenericInstanceType(ResolvedType openGenericType, Span<ResolvedType> typeArguments, in TypeResolutionContext resolutionContext)
+    {
+        throw new NotImplementedException();
+    }
+
     public override ResolvedType MakeArrayType(ITypeSymbol elementType, in TypeResolutionContext resolutionContext)
     {
         var details = new ResolvedTypeDetails();

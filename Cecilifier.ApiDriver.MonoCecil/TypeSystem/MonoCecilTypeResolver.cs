@@ -72,6 +72,12 @@ public class MonoCecilTypeResolver(MonoCecilContext context) : TypeResolverBase<
         return typeArgs.Length > 0 ? typeReference.MakeGenericInstanceType(typeArgs) : typeReference;
     }
     
+    
+    public override ResolvedType MakeGenericInstanceType(ResolvedType openGenericType, Span<ResolvedType> typeArguments, in TypeResolutionContext resolutionContext)
+    {
+        return typeArguments.Length > 0 ? openGenericType.MakeGenericInstanceType(typeArguments.ToArray()) : openGenericType;
+    }
+    
     public override ResolvedType MakeByRefType(in ResolvedType resolvedType) =>  $"{resolvedType}.MakeByReferenceType()";
 
     internal ResolvedType ImportReference(ResolvedType typeReference) => $"assembly.MainModule.ImportReference({typeReference})";
