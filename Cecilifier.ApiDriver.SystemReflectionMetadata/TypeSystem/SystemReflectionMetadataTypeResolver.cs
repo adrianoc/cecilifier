@@ -114,9 +114,6 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
 
     public override ResolvedType ResolveLocalVariableType(ITypeSymbol type, in TypeResolutionContext context)
     {
-        if (context.TargetKind == ResolveTargetKind.GenericTypeArgument)
-            return null;
-        
         var resolved = base.ResolveLocalVariableType(type, in context);
         if (!resolved)
             return resolved;
@@ -170,7 +167,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
         if (typeArguments.Length == 0)
             return typeReference;
 
-        if (resolutionContext.TargetKind is ResolveTargetKind.Field or ResolveTargetKind.Parameter or ResolveTargetKind.ReturnType or ResolveTargetKind.LocalVariable)
+        if (resolutionContext.TargetKind is ResolveTargetKind.Field or ResolveTargetKind.Parameter or ResolveTargetKind.ReturnType or ResolveTargetKind.LocalVariable or ResolveTargetKind.GenericTypeArgument)
         {
             var resolved = MakeGenericInstanceType(typeReference, genericTypeSymbol, typeArguments);
             if (resolved && resolutionContext.TargetKind is ResolveTargetKind.ReturnType or ResolveTargetKind.Field or ResolveTargetKind.LocalVariable or ResolveTargetKind.Parameter)
@@ -205,7 +202,41 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
 
     public override ResolvedType MakeGenericInstanceType(ResolvedType openGenericType, Span<ResolvedType> typeArguments, in TypeResolutionContext resolutionContext)
     {
-        throw new NotImplementedException();
+        if (typeArguments.Length == 0)
+            return openGenericType;
+
+        var isValueType = (resolutionContext.Options & TypeResolutionOptions.IsValueType) == TypeResolutionOptions.IsValueType;
+        if (resolutionContext.TargetKind is ResolveTargetKind.Field or ResolveTargetKind.Parameter or ResolveTargetKind.ReturnType or ResolveTargetKind.LocalVariable or ResolveTargetKind.GenericTypeArgument)
+        {
+            var resolved = MakeGenericInstanceType(openGenericType,  isValueType: isValueType, typeArguments);
+            if (resolved && resolutionContext.TargetKind is ResolveTargetKind.ReturnType or ResolveTargetKind.Field or ResolveTargetKind.LocalVariable or ResolveTargetKind.Parameter)
+            {
+                return ResolvedType.FromDetails(
+                    new ResolvedTypeDetails()
+                        .WithTypeEncoder(TypeEncoderFor(in resolutionContext))
+                        .WithMethodBuilder(resolved.Expression));
+            }
+
+            return resolved;
+        }
+        
+        var genericInstanceTypeVar = context.Naming.SyntheticVariable("type", ElementKind.GenericInstance);
+        context.Generate($$"""
+                           TypeSpecificationHandle {{genericInstanceTypeVar}} = default;
+                           {
+                               var typeSpecificationSig = new BlobEncoder(new BlobBuilder()).TypeSpecificationSignature();
+                               var gti = typeSpecificationSig.GenericInstantiation({{openGenericType.Expression}}, {{typeArguments.Length}}, isValueType: {{isValueType.ToKeyword()}});    
+                               {{
+                                   typeArguments.ToImmutableArray().Select(
+                                           targ => $"gti.AddArgument().{targ.ToString()};\n")
+                                       .Aggregate("", (acc, s) => acc + s)
+                               }}
+                               {{genericInstanceTypeVar}} = metadata.AddTypeSpecification(metadata.GetOrAddBlob(typeSpecificationSig.Builder));
+                           }
+                           """);
+        context.WriteNewLine();
+        
+        return genericInstanceTypeVar;
     }
 
     public override ResolvedType MakeArrayType(ITypeSymbol elementType, in TypeResolutionContext resolutionContext)
@@ -279,6 +310,20 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
                             typeArguments.ToImmutableArray().Select(
                                     targ => $"gi.AddArgument().{context.TypedTypeResolver.Resolve(targ, ResolveTargetKind.GenericTypeArgument)};\n    ")
                                 .Aggregate("", (acc, s) => acc + s)
+                        }}
+                    })
+                    """;
+        return ret;
+    }
+    
+    private ResolvedType MakeGenericInstanceType(ResolvedType typeReference, bool isValueType, ReadOnlySpan<ResolvedType> typeArguments)
+    {
+        var ret = $$"""
+                    WithSignatureTypeEncoder(typeSignatureEncoder =>
+                    {
+                        var gi = typeSignatureEncoder.GenericInstantiation({{typeReference.Expression}}, {{typeArguments.Length}}, isValueType: {{isValueType.ToKeyword()}});
+                        {{
+                            typeArguments.ToImmutableArray().Select(targ => targ.ToString()).Aggregate("", (acc, s) => acc + s)
                         }}
                     })
                     """;

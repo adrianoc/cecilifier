@@ -41,6 +41,23 @@ namespace Cecilifier.Core.Extensions
             SpecialType.System_UInt64 => true,
             _ => false
         };
+        
+        public static bool IsConsideredPreDefinedType(this ITypeSymbol type)
+        {
+            return !(type.SpecialType == SpecialType.None
+                   || type.SpecialType == SpecialType.System_Array
+                   || type.SpecialType == SpecialType.System_Enum
+                   || type.SpecialType == SpecialType.System_ValueType
+                   || type.SpecialType == SpecialType.System_Decimal
+                   || type.SpecialType == SpecialType.System_DateTime
+                   || type.SpecialType == SpecialType.System_Delegate
+                   || type.SpecialType == SpecialType.System_MulticastDelegate
+                   || type.SpecialType == SpecialType.System_AsyncCallback
+                   || type.SpecialType == SpecialType.System_RuntimeTypeHandle
+                   || type.SpecialType == SpecialType.System_RuntimeFieldHandle
+                   || type.SpecialType == SpecialType.System_Runtime_CompilerServices_IsVolatile
+                   || type.TypeKind == TypeKind.Interface);
+        }
 
         public static ITypeSymbol ElementTypeSymbolOf(this ITypeSymbol type) => type switch
         {

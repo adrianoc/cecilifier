@@ -261,6 +261,9 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                                         methodDefVar);
             
             ctx.DefinitionVariables.RegisterMethod(toBeRegistered);
+            
+            AddTypeParameters(ctx, typeParameters, methodDefVar);
+            
             ctx.DefinitionVariables.ExecuteDependentRegistrations(methodDefVar);
             
             return methodDefVar;
@@ -664,6 +667,21 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                 return span.Slice(0, span.Length - target.Length).ToString();
             
             return "GenericParameterAttributes.None";
+        }
+    }
+
+    // Assumes type parameters:
+    // - Have no constraints (GenericParameterAttributes.None)
+    // - Have no attributes (GenericParameterAttributes.None)
+    private static void AddTypeParameters(SystemReflectionMetadataContext ctx, IEnumerable<string> typeParameterNames, string entityHandleVariable)
+    {
+        var index = 0;
+        foreach (var typeParameterName in typeParameterNames)
+        {
+            var varAssignment = string.Empty; 
+                
+            ctx.Generate($"""{varAssignment}metadata.AddGenericParameter({entityHandleVariable}, GenericParameterAttributes.None, metadata.GetOrAddString("{typeParameterName}"), {index++});""");
+            ctx.WriteNewLine();
         }
     }
     

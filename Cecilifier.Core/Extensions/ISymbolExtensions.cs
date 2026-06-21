@@ -13,6 +13,7 @@ using Cecilifier.Core.AST;
 using Cecilifier.Core.AST.Params;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
+using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
 
 namespace Cecilifier.Core.Extensions
@@ -301,6 +302,8 @@ namespace Cecilifier.Core.Extensions
             return type.TypeArguments.Any(t => t.IsDefinedInCurrentAssembly(context)) 
                    || (type.ContainingType != null && (SymbolEqualityComparer.Default.Equals(type.ContainingType, type) ? false : HasTypeArgumentOfTypeFromCecilifiedCodeTransitive(type.ContainingType, context)));
         }
+
+        public static TypeResolutionOptions GetTypeResolutionOptions(this ITypeSymbol type) => type.IsValueType ? TypeResolutionOptions.IsValueType : TypeResolutionOptions.None; 
         
         internal static ExpandedParamsArgumentHandler? CreateExpandedParamsUsageHandler(this IMethodSymbol methodSymbol, ExpressionVisitor expressionVisitor, IlContext ilVar, ArgumentListSyntax argumentList)
         {

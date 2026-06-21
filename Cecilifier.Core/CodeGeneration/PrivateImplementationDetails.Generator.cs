@@ -71,13 +71,11 @@ internal partial class PrivateImplementationDetailsGenerator
         IReadOnlyList<ParameterSpec> parameters = [ 
             new("buffer", "TBuffer", RefKind.Ref, Constants.ParameterAttributes.None, null, (context, paramSpec) => ResolveOwnedGenericParameter(context, paramSpec.ElementType.Expression, TypeParameterKind.Method, ResolveTargetKind.Parameter, methodTypeQualifiedName)), 
             new("length", context.TypeResolver.Resolve(context.RoslynTypeSystem.SystemInt32, ResolveTargetKind.Parameter), RefKind.None, Constants.ParameterAttributes.None)
-            //new("length", context.TypeResolver.ApplySpecificSyntax(context.TypeResolver.Bcl.System.Int32.Expression, ResolveTargetKind.Parameter), RefKind.None, Constants.ParameterAttributes.None)
         ];
         Func<IVisitorContext, ResolvedType> returnTypeResolver = ctx =>
         {
             var spanTypeParameter = ResolveOwnedGenericParameter(context, "TElement", TypeParameterKind.Method, ResolveTargetKind.ReturnType, methodTypeQualifiedName);
-            //return ctx.TypeResolver.Resolve(containingType, ResolveTargetKind.ReturnType).MakeGenericInstanceType(spanTypeParameter);
-            return ctx.TypeResolver.MakeGenericInstanceType(ctx.TypeResolver.Resolve(containingType, ResolveTargetKind.ReturnType), [new ResolvedType(spanTypeParameter)], ResolveTargetKind.ReturnType);
+            return ctx.TypeResolver.MakeGenericInstanceType(ctx.TypeResolver.Resolve(containingType, new TypeResolutionContext(ResolveTargetKind.ReturnType, containingType.GetTypeResolutionOptions())), [new ResolvedType(spanTypeParameter)], ResolveTargetKind.ReturnType);
         };
         var ilContext = context.ApiDriver.NewIlContext(context, methodName, methodVar);
         var methodExpressions = context.ApiDefinitionsFactory.Method(
@@ -209,7 +207,6 @@ internal partial class PrivateImplementationDetailsGenerator
         IReadOnlyList<ParameterSpec> parameters = [ 
             new("buffer", "TBuffer", RefKind.Ref, Constants.ParameterAttributes.None, null, (ctx, paramSpec) => ResolveOwnedGenericParameter(ctx, paramSpec.ElementType.Expression, TypeParameterKind.Method, ResolveTargetKind.Parameter, methodTypeQualifiedName)),
             new("index", context.TypeResolver.Resolve(context.RoslynTypeSystem.SystemInt32, ResolveTargetKind.Parameter), RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = "int" }
-            //new("index", context.TypeResolver.ApplySpecificSyntax(context.TypeResolver.Bcl.System.Int32.Expression, ResolveTargetKind.Parameter), RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = "int" }
         ];
         IList<string> typeParameters = ["TBuffer", "TElement"];
         Func<IVisitorContext, ResolvedType> returnTypeResolver = ctx =>

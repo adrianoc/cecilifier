@@ -120,7 +120,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
                               var {{methodSignatureBlobVar}} = new BlobBuilder();
 
                               new BlobEncoder({{methodSignatureBlobVar}}).
-                                  MethodSignature(isInstanceMethod: {{(options != MemberOptions.Static).ToKeyword()}}).
+                                  MethodSignature(isInstanceMethod: {{(options != MemberOptions.Static).ToKeyword()}}, genericParameterCount: {{typeParameters.Count}}).
                                   Parameters({{parameters.Count}},
                                       returnTypeEncoder => 
                                       {
