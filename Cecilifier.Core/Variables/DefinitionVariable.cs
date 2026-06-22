@@ -19,7 +19,7 @@ public class DefinitionVariable : IEquatable<DefinitionVariable>
     public string MemberName { get; }
     public VariableMemberKind Kind { get; }
     public string VariableName { get; }
-    public bool IsValid { get; private set; }
+    public bool IsValid { get; protected set; }
     public bool IsForwarded { get; internal set; }
 
     public IDictionary<string, object> Properties { get; } = new Dictionary<string, object>();

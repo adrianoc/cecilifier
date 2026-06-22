@@ -74,8 +74,8 @@ internal partial class PrivateImplementationDetailsGenerator
         ];
         Func<IVisitorContext, ResolvedType> returnTypeResolver = ctx =>
         {
-            var spanTypeParameter = ResolveOwnedGenericParameter(context, "TElement", TypeParameterKind.Method, ResolveTargetKind.ReturnType, methodTypeQualifiedName);
-            return ctx.TypeResolver.MakeGenericInstanceType(ctx.TypeResolver.Resolve(containingType, new TypeResolutionContext(ResolveTargetKind.ReturnType, containingType.GetTypeResolutionOptions())), [new ResolvedType(spanTypeParameter)], ResolveTargetKind.ReturnType);
+            var spanTypeParameter = ResolveOwnedGenericParameter(context, "TElement", TypeParameterKind.Method, ResolveTargetKind.GenericTypeArgument, methodTypeQualifiedName);
+            return ctx.TypeResolver.MakeGenericInstanceType(ctx.TypeResolver.Resolve(containingType, new TypeResolutionContext(ResolveTargetKind.ReturnType, containingType.GetTypeResolutionOptions())), [new ResolvedType(spanTypeParameter)], new TypeResolutionContext(ResolveTargetKind.ReturnType, containingType.GetTypeResolutionOptions()));
         };
         var ilContext = context.ApiDriver.NewIlContext(context, methodName, methodVar);
         var methodExpressions = context.ApiDefinitionsFactory.Method(

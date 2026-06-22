@@ -164,8 +164,8 @@ public class InlineArrayProcessor
     {
         IReadOnlyList<ResolvedType> resolvedTypeArguments = 
         [
-            context.TypeResolver.Resolve(inlineArrayType, ResolveTargetKind.None), // TBuffer
-            context.TypeResolver.Resolve(InlineArrayElementTypeFrom(inlineArrayType), ResolveTargetKind.None) // TElement
+            context.TypeResolver.Resolve(inlineArrayType, ResolveTargetKind.GenericTypeArgument), // TBuffer
+            context.TypeResolver.Resolve(InlineArrayElementTypeFrom(inlineArrayType), ResolveTargetKind.GenericTypeArgument) // TElement
         ];
         return context.MemberResolver.MakeGeneticInstanceMethod(openGenericTypeVar.VariableName, openGenericTypeVar.MemberName, resolvedTypeArguments);
     }

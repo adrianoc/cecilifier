@@ -93,7 +93,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
                                                 parameters.Select(p => p.ElementType.Expression).ToArray(),
                                                 typeParameters.ToArray());
 
-        var found = context.DefinitionVariables.GetMethodVariable(methodReferenceToFind);
+        var found = LookupRegisteredMethod(declaringTypeName, methodName, parameters, typeParameters);
         if (found.IsValid)
             return found.VariableName;
 
@@ -204,6 +204,19 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
         });
             
         return  instantiationVar.VariableName;
+    }
+
+    internal MethodDefinitionVariable LookupRegisteredMethod(string declaringTypeName, string methodName,  IReadOnlyList<ParameterSpec> parameters, IReadOnlyList<string> typeParameters)
+    {
+        var methodReferenceToFind = new MethodDefinitionVariable(
+                                            VariableMemberKind.MethodReference,
+                                            declaringTypeName,
+                                            methodName,
+                                            parameters.Select(p => p.ElementType.Expression).ToArray(),
+                                            typeParameters.ToArray());
+
+        var found = context.DefinitionVariables.GetMethodVariable(methodReferenceToFind);
+        return found.IsValid ?  (MethodDefinitionVariable) found : MethodDefinitionVariable.MethodNotFound;
     }
 
     #region Non public members

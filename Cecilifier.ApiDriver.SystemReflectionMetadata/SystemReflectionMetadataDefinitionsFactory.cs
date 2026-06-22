@@ -200,6 +200,15 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         Func<IVisitorContext, ResolvedType> returnTypeResolver,
         out MethodDefinitionVariable methodDefinitionVariable)
     {
+        // Some parts of the code assumes that once this method returns the variable specified in 'definitionContext.Member.DefinitionVariable`
+        // have been defined.
+        // Since in SRM the definition of that variable will be postponed to the end of the processing (see 'DelayedDefinitionManager') when this
+        // method returns a variable to store a 'method reference' have been registered instead so we check if that 'method reference' has already
+        // been registered and do not schedule another registration/processing for the method.
+        methodDefinitionVariable = ((SystemReflectionMetadataMemberResolver) context.MemberResolver).LookupRegisteredMethod(declaringTypeName, definitionContext.Member.Name, parameters, typeParameters.AsReadOnly());
+        if (methodDefinitionVariable.IsValid)
+            return Array.Empty<string>();
+        
         DefineGenericTypeParametersVariables(context, definitionContext.Member.Identifier, typeParameters);
         
         var methodRefVar = context.MemberResolver.ResolveMethod(

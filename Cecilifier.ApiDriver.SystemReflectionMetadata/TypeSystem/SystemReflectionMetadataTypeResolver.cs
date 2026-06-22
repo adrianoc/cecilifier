@@ -139,9 +139,10 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
             return new ResolvedType(typeParameterTypeSpecificationVar);
         }
         
+        if (context.TargetKind != ResolveTargetKind.GenericTypeArgument || type is not INamedTypeSymbol { IsGenericType: true })
         if (context.TargetKind != ResolveTargetKind.TypeReference && ((context.TargetKind != ResolveTargetKind.Field && context.TargetKind != ResolveTargetKind.ReturnType && context.TargetKind != ResolveTargetKind.LocalVariable) || type is not INamedTypeSymbol { IsGenericType: true }))
         {
-            var methodBuilder = context.TargetKind == ResolveTargetKind.GenericTypeArgument || type.TypeKind == TypeKind.TypeParameter
+            var methodBuilder = type.TypeKind == TypeKind.TypeParameter
                 ? GenericParameterExpressionFor((ITypeParameterSymbol) type)
                 : $"Type({resolved.Expression}, isValueType: {context.Options.HasFlag(TypeResolutionOptions.IsValueType).ToKeyword()})";
 
@@ -205,7 +206,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
         if (typeArguments.Length == 0)
             return openGenericType;
 
-        var isValueType = (resolutionContext.Options & TypeResolutionOptions.IsValueType) == TypeResolutionOptions.IsValueType;
+        var isValueType = resolutionContext.Options.HasFlag(TypeResolutionOptions.IsValueType);
         if (resolutionContext.TargetKind is ResolveTargetKind.Field or ResolveTargetKind.Parameter or ResolveTargetKind.ReturnType or ResolveTargetKind.LocalVariable or ResolveTargetKind.GenericTypeArgument)
         {
             var resolved = MakeGenericInstanceType(openGenericType,  isValueType: isValueType, typeArguments);
@@ -323,7 +324,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
                     {
                         var gi = typeSignatureEncoder.GenericInstantiation({{typeReference.Expression}}, {{typeArguments.Length}}, isValueType: {{isValueType.ToKeyword()}});
                         {{
-                            typeArguments.ToImmutableArray().Select(targ => targ.ToString()).Aggregate("", (acc, s) => acc + s)
+                            typeArguments.ToImmutableArray().Select(targ => $"gi.AddArgument().{targ};\n    ").Aggregate("", (acc, s) => acc + s)
                         }}
                     })
                     """;
