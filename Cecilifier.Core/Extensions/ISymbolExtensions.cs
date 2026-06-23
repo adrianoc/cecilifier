@@ -139,7 +139,7 @@ namespace Cecilifier.Core.Extensions
 
         [ExcludeFromCodeCoverage]
         [return: NotNull]
-        public static T EnsureNotNull<T>([NotNullIfNotNull("symbol")] this T? symbol, [CallerArgumentExpression(nameof(symbol))] string expression = null) where T : ISymbol
+        public static T EnsureNotNull<T>([NotNullIfNotNull("symbol")] this T? symbol, [CallerArgumentExpression(nameof(symbol))] string? expression = null) where T : ISymbol
         {
             if (symbol == null)
                 throw new NullReferenceException($"Expression '{expression}' is expected to be non null.");
@@ -186,7 +186,7 @@ namespace Cecilifier.Core.Extensions
             if (declaringSyntaxReference == null)
                 return;
             
-            var fieldDeclaration = declaringSyntaxReference.GetSyntax().Parent.Parent.EnsureNotNull<SyntaxNode,FieldDeclarationSyntax>();
+            var fieldDeclaration = declaringSyntaxReference.GetSyntax().Parent.Parent.EnsureNotNull<SyntaxNode, FieldDeclarationSyntax>();
             if (fieldDeclaration.Span.Start > node.Span.End)
             {
                 // this is a forward reference, process it...

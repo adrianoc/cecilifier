@@ -96,4 +96,6 @@ public interface IApiDriverDefinitionsFactory
     /// Expression representing the base method being overriden. If this is 'null' <paramref name="overriderMethodVar"/> does not override any method and whence no code is generated."/>
     /// </param>
     void OverrideBaseMethod(IVisitorContext context, string overriderMethodVar, string? overridenMethod);
+
+    IEnumerable<string> PInvoke(IVisitorContext context, string moduleName, string methodVar, string methodName, ReadOnlySpan<CustomAttributeArgument> customAttributeArguments);
 }

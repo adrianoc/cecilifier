@@ -7,8 +7,6 @@ using Cecilifier.Core.AST.MemberDependencies;
 using Cecilifier.Core.CodeGeneration;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
-using Cecilifier.Core.Naming;
-using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -145,7 +143,7 @@ namespace Cecilifier.Core.AST
                 AddTypeDefinition(Context, varName, typeSymbol, node.Modifiers, node.TypeParameterList?.Parameters, node.CollectOuterTypeArguments());
             }
 
-            HandleAttributesInMemberDeclaration(node.AttributeLists, varName, VariableMemberKind.Type);
+            HandleAttributesInMemberDeclaration(typeSymbol.Name, node.AttributeLists, varName, VariableMemberKind.Type);
 
             NonCapturingLambdaProcessor.InjectSyntheticMethodsForNonCapturingLambdas(Context, node, varName);
 

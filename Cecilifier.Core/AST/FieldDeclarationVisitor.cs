@@ -81,7 +81,7 @@ namespace Cecilifier.Core.AST
                                                             isByRef,
                                                             constant.Value.ValueText());
                 AddCecilExpressions(Context, exps);
-                HandleAttributesInMemberDeclaration(node.AttributeLists, fieldVar, VariableMemberKind.Field);
+                HandleAttributesInMemberDeclaration(fieldSymbol.Name, node.AttributeLists, fieldVar, VariableMemberKind.Field);
             }
 
             return fieldDefVars;

@@ -1,5 +1,6 @@
 using System.Buffers;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -15,6 +16,9 @@ using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
+using Mono.Cecil;
+using CustomAttributeArgument = Cecilifier.Core.ApiDriver.Attributes.CustomAttributeArgument;
+using CustomAttributeNamedArgument = Cecilifier.Core.ApiDriver.Attributes.CustomAttributeNamedArgument;
 
 namespace Cecilifier.ApiDriver.MonoCecil;
 
@@ -368,6 +372,128 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
         
         context.Generate($"{overriderMethodVar}.Overrides.Add({overridenMethod});");
         context.WriteNewLine();
+    }
+
+    public IEnumerable<string> PInvoke(IVisitorContext context, string moduleName, string methodVar, string methodName, ReadOnlySpan<CustomAttributeArgument> customAttributeArguments)
+    {
+        var existingModuleVar = context.DefinitionVariables.GetVariable(moduleName, VariableMemberKind.ModuleReference);
+
+        var moduleVar = existingModuleVar.IsValid
+                                    ? existingModuleVar.VariableName
+                                    : context.Naming.SyntheticVariable("dllImportModule", ElementKind.LocalVariable);
+
+        var exps = new List<string>();
+        if (!existingModuleVar.IsValid)
+        {
+            exps.AddRange([
+                $"""var {moduleVar} = new ModuleReference("{moduleName}");""",
+                $"assembly.MainModule.ModuleReferences.Add({moduleVar});"
+            ]);
+        }
+
+        exps.AddRange([
+            $"{methodVar}.PInvokeInfo = new PInvokeInfo({ PInvokeAttributesFrom(customAttributeArguments) }, { EntryPoint(customAttributeArguments) }, {moduleVar});",
+            $"{methodVar}.Body = null;",
+            $"{methodVar}.ImplAttributes = {MethodImplAttributes(customAttributeArguments)};",
+        ]);
+
+        context.DefinitionVariables.RegisterNonMethod("", moduleName, VariableMemberKind.ModuleReference, moduleVar);
+
+        return exps;
+
+        static string EntryPoint(ReadOnlySpan<CustomAttributeArgument> customAttributeArguments) => $"""
+                                                                                                     "{AttributePropertyOrDefaultValue(customAttributeArguments, "EntryPoint","") }"
+                                                                                                     """;
+
+        static string MethodImplAttributes(ReadOnlySpan<CustomAttributeArgument> customAttributeArguments)
+        {
+            var preserveSig = Boolean.Parse(AttributePropertyOrDefaultValue(customAttributeArguments, "PreserveSig", "true"));
+            
+            return preserveSig
+                    ? "MethodImplAttributes.PreserveSig | MethodImplAttributes.Managed"
+                    : "MethodImplAttributes.Managed";
+        }
+
+        static StringBuilder CallingConventionFrom(ReadOnlySpan<CustomAttributeArgument> customAttributeArguments)
+        {
+            var callConventionSpan = AttributePropertyOrDefaultValue(customAttributeArguments, "CallingConvention", "Winapi").AsSpan();
+            
+            // ensures we use the enum member simple name; Parse() fails if we pass a qualified enum member
+            var index = callConventionSpan.LastIndexOf('.');
+            callConventionSpan = callConventionSpan.Slice(index + 1);
+            
+            return new StringBuilder(CallingConventionToCecil(Enum.Parse<CallingConvention>(callConventionSpan)));
+        }
+
+        static string CharSetFrom(ReadOnlySpan<CustomAttributeArgument> customAttributeArguments)
+        {
+            var enumMemberName = AttributePropertyOrDefaultValue(customAttributeArguments, "CharSet", "None").AsSpan();
+
+            // Only use the actual enum member name Parse() fails if we pass a qualified enum member
+            var index = enumMemberName.LastIndexOf('.');
+            enumMemberName = enumMemberName.Slice(index + 1);
+
+            var charSet = Enum.Parse<CharSet>(enumMemberName);
+            return charSet == CharSet.None ? string.Empty : $"PInvokeAttributes.CharSet{charSet}";
+        }
+
+        static string SetLastErrorFrom(ReadOnlySpan<CustomAttributeArgument> customAttributeArguments)
+        {
+            var setLastError = bool.Parse(AttributePropertyOrDefaultValue(customAttributeArguments, "SetLastError", "false"));
+            return setLastError ? "PInvokeAttributes.SupportsLastError" : string.Empty;
+        }
+
+        static string ExactSpellingFrom(ReadOnlySpan<CustomAttributeArgument> customAttributeArguments)
+        {
+            var exactSpelling = bool.Parse(AttributePropertyOrDefaultValue(customAttributeArguments, "ExactSpelling", "false"));
+            return exactSpelling ? "PInvokeAttributes.NoMangle" : string.Empty;
+        }
+
+        static string BestFitMappingFrom(ReadOnlySpan<CustomAttributeArgument> customAttributeArguments)
+        {
+            var bestFitMapping = bool.Parse(AttributePropertyOrDefaultValue(customAttributeArguments, "BestFitMapping", "true"));
+            return bestFitMapping ? "PInvokeAttributes.BestFitEnabled" : "PInvokeAttributes.BestFitDisabled";
+        }
+
+        static string ThrowOnUnmappableCharFrom(ReadOnlySpan<CustomAttributeArgument> customAttributeArguments)
+        {
+            var bestFitMapping = bool.Parse(AttributePropertyOrDefaultValue(customAttributeArguments, "ThrowOnUnmappableChar", "false"));
+            return bestFitMapping ? "PInvokeAttributes.ThrowOnUnmappableCharEnabled" : "PInvokeAttributes.ThrowOnUnmappableCharDisabled";
+        }
+
+        // For more information and default values see
+        // https://docs.microsoft.com/en-us/dotnet/api/system.runtime.interopservices.dllimportattribute
+        static string PInvokeAttributesFrom(ReadOnlySpan<CustomAttributeArgument> customAttributeArguments)
+        {
+            return CallingConventionFrom(customAttributeArguments)
+                    .AppendEnumFlag(CharSetFrom(customAttributeArguments))
+                    .AppendEnumFlag(SetLastErrorFrom(customAttributeArguments))
+                    .AppendEnumFlag(ExactSpellingFrom(customAttributeArguments))
+                    .AppendEnumFlag(BestFitMappingFrom(customAttributeArguments))
+                    .AppendEnumFlag(ThrowOnUnmappableCharFrom(customAttributeArguments))
+                    .ToString();
+        }
+
+        static string AttributePropertyOrDefaultValue(ReadOnlySpan<CustomAttributeArgument> customAttributeArguments, string propertyName, string defaultValue)
+        {
+            return customAttributeArguments.ToArray().OfType<CustomAttributeNamedArgument>().FirstOrDefault(arg => arg.Name == propertyName)?.Value?.ToString() ?? defaultValue;
+        }
+        
+        static string CallingConventionToCecil(CallingConvention callingConvention)
+        {
+            var pinvokeAttribute = callingConvention switch
+            {
+                CallingConvention.Cdecl => PInvokeAttributes.CallConvCdecl,
+                CallingConvention.Winapi => PInvokeAttributes.CallConvWinapi,
+                CallingConvention.FastCall => PInvokeAttributes.CallConvFastcall,
+                CallingConvention.StdCall => PInvokeAttributes.CallConvStdCall,
+                CallingConvention.ThisCall => PInvokeAttributes.CallConvThiscall,
+
+                _ => throw new Exception($"Unexpected calling convention: {callingConvention}")
+            };
+
+            return $"PInvokeAttributes.{pinvokeAttribute.ToString()}";
+        }
     }
 
     private static string CustomAttributeArgumentValueFor(IVisitorContext context, object argument)

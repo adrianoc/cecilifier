@@ -104,7 +104,7 @@ namespace Cecilifier.Core.AST
                 AddCecilExpressions(Context, exps);
             }
 
-            HandleAttributesInMemberDeclaration(node.AttributeLists, paramVar, VariableMemberKind.Parameter);
+            HandleAttributesInMemberDeclaration(node.Identifier.Text, node.AttributeLists, paramVar, VariableMemberKind.Parameter);
 
             base.VisitParameter(node);
         }
@@ -134,12 +134,12 @@ namespace Cecilifier.Core.AST
                                             variableName,
                                             simpleName,
                                             methodName,
-                                            modifiersTokens.MethodModifiersToCecil(GetSpecificModifiers(), methodSymbol),
+                                            modifiersTokens.MethodModifiersToCecil(Context, GetSpecificModifiers(), methodSymbol),
                                             parameters,
                                             typeParameters);
 
-                HandleAttributesInMemberDeclaration(attributes, TargetDoesNotMatch, SyntaxKind.ReturnKeyword, methodVar, VariableMemberKind.None); // Normal method attrs.
-                HandleAttributesInMemberDeclaration(attributes, TargetMatches, SyntaxKind.ReturnKeyword, $"{methodVar}.MethodReturnType", VariableMemberKind.None); // [return:Attr]
+                HandleAttributesInMemberDeclaration(simpleName, attributes, TargetDoesNotMatch, SyntaxKind.ReturnKeyword, methodVar, VariableMemberKind.None); // Normal method attrs.
+                HandleAttributesInMemberDeclaration(simpleName, attributes, TargetMatches, SyntaxKind.ReturnKeyword, $"{methodVar}.MethodReturnType", VariableMemberKind.None); // [return:Attr]
 
                 AddToOverridenMethodsIfAppropriated(methodVar, methodSymbol);
 
@@ -236,7 +236,7 @@ namespace Cecilifier.Core.AST
             context.WriteComment($"Method : {methodName}");
 
             TypeDeclarationVisitor.EnsureForwardedTypeDefinition(context, methodSymbol.ReturnType, []);
-            ilVar = context.ApiDriver.NewIlContext(context, simpleName, methodVar);
+            ilVar = methodSymbol.IsExtern ? new EmptyBodyIlContext(methodVar)  : context.ApiDriver.NewIlContext(context, simpleName, methodVar);
             
             var declaringTypeVarName = context.DefinitionVariables.GetLastOf(VariableMemberKind.Type).VariableName;
             var exps = context.ApiDefinitionsFactory.Method(context, methodSymbol, new BodiedMemberDefinitionContext(methodName, simpleName, methodVar, declaringTypeVarName, MemberOptions.None, ilVar), methodName, methodModifiers, typeParameters);

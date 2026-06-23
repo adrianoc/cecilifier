@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Naming;
@@ -64,7 +65,7 @@ namespace Cecilifier.Core.Extensions
                 variableName);
         }
 
-        public static string MethodModifiersToCecil(this IEnumerable<SyntaxToken> modifiers, string specificModifiers = null, IMethodSymbol methodSymbol = null)
+        public static string MethodModifiersToCecil(this IEnumerable<SyntaxToken> modifiers, IVisitorContext context, string specificModifiers = null, IMethodSymbol methodSymbol = null)
         {
             var lastDeclaredIn = methodSymbol.FindLastDefinition();
             var modifiersStr = MapExplicitModifiers(modifiers, lastDeclaredIn.ContainingType.TypeKind);
@@ -72,6 +73,8 @@ namespace Cecilifier.Core.Extensions
             var defaultAccessibility = lastDeclaredIn.ContainingType.TypeKind == TypeKind.Interface ? "Public" : "Private";
             if (modifiersStr == string.Empty && methodSymbol != null)
             {
+                modifiersStr = modifiersStr.AppendEnumFlag(context.MemberResolver.MapSpecificAttributes(methodSymbol));
+                
                 if (methodSymbol.IsExplicitMethodImplementation())
                 {
                     modifiersStr = Constants.Cecil.InterfaceMethodDefinitionAttributes.AppendEnumFlag("MethodAttributes.Final");
@@ -91,7 +94,7 @@ namespace Cecilifier.Core.Extensions
 
             var validModifiers = RemoveSourceModifiersWithNoILEquivalent(modifiers);
 
-            var cecilModifiersStr = new StringBuilder(SyntaxWalkerBase.ModifiersAsString<System.Reflection.MethodAttributes>(validModifiers.ToList(), defaultAccessibility, MapMethodAttributeFor));
+            var cecilModifiersStr = new StringBuilder(SyntaxWalkerBase.ModifiersAsString<MethodAttributes>(validModifiers.ToList(), defaultAccessibility, MapMethodAttributeFor));
             if (specificModifiers != null)
             {
                 cecilModifiersStr.AppendEnumFlag(specificModifiers);
@@ -102,6 +105,7 @@ namespace Cecilifier.Core.Extensions
             {
                 cecilModifiersStr.AppendEnumFlag("MethodAttributes.NewSlot");
             }
+
             return cecilModifiersStr.ToString();
         }
 

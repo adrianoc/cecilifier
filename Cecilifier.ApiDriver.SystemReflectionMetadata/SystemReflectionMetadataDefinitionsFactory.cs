@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -18,6 +19,7 @@ using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using CustomAttributeNamedArgument = Cecilifier.Core.ApiDriver.Attributes.CustomAttributeNamedArgument;
 
 namespace Cecilifier.ApiDriver.SystemReflectionMetadata;
 
@@ -164,15 +166,16 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
             Debug.Assert(methodSignatureVar.IsValid);
             
             var methodDefVar = bodiedMemberDefinitionContext.IlContext!.AssociatedMethodVariable;
-            var bodyOffset = methodSymbol.ContainingType.TypeKind == TypeKind.Interface 
+            var bodyOffset = methodSymbol.ContainingType.TypeKind == TypeKind.Interface || methodSymbol.IsExtern 
                                             ? "-1" 
                                             : $"methodBodyStream.AddMethodBody({bodiedMemberDefinitionContext.IlContext.VariableName}, localVariablesSignature: {methodRecord.LocalSignatureHandleVariable})";
             
             var firstParameterHandle = AddParametersMetadata(ctx, methodSymbol.Parameters.Select(p => p.Name));
+            var methodImplAttributes = "MethodImplAttributes.IL | MethodImplAttributes.Managed".AppendEnumFlag(GetMethodImplementationFlagsStringFrom(methodSymbol.MethodImplementationFlags));
             ctx.Generate($"""
                           var {methodDefVar}  = metadata.AddMethodDefinition(
                                                     {methodModifiers},
-                                                    MethodImplAttributes.IL | MethodImplAttributes.Managed,
+                                                    {methodImplAttributes},
                                                     metadata.GetOrAddString("{methodName}"),
                                                     {methodSignatureVar.VariableName},
                                                     {bodyOffset},
@@ -189,6 +192,23 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         });
         
         yield break;
+ 
+        static string GetMethodImplementationFlagsStringFrom(MethodImplAttributes methodImplAttributes)
+        {
+            StringBuilder result = new();
+            const string enumName = nameof(MethodImplAttributes);
+            // Ignore 0, since both MethodImplAttributes.IL and MethodImplAttributes.Managed have this value and both
+            // are mapped to IL name :( (we hard code these two flags in the code - see the caller of this method)
+            foreach (var enumMember in Enum.GetValues<MethodImplAttributes>().Where(em => em != 0))
+            {
+                if (methodImplAttributes.HasFlag(enumMember))
+                {
+                    result.AppendEnumFlag($"{enumName}.{enumMember}");
+                }
+            }
+            
+            return result.ToString();
+        }
     }
 
     public IEnumerable<string> Method(IVisitorContext context,
@@ -567,6 +587,41 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
     }
 
     public void OverrideBaseMethod(IVisitorContext context, string overriderMethodVar, string? overridenMethod) { /*NOOP on SRM */}
+
+    public IEnumerable<string> PInvoke(IVisitorContext context, string moduleName, string methodVar, string methodName, ReadOnlySpan<CustomAttributeArgument> customAttributeArguments)
+    {
+        var methodImportAttributes = DllImportProcessor.MethodImportAttributesFrom(customAttributeArguments);
+        var entryPoint = DllImportProcessor.EntryPoint(customAttributeArguments, methodName);
+        context.DefinitionVariables.RegisterDependentOnRegistration(methodVar, context, (ctx, _) =>
+        {
+            // retrieve the variable for the native module, if other pinvokes targetting the module has already been processed.
+            var moduleVar = GetOrRegisterModuleReference(ctx, moduleName);
+            moduleVar.ThrowIfVariableIsNotValid($"Unable to find/register variable for module {moduleName}");
+
+            ctx.Generate($"""
+                            metadata.AddMethodImport(
+                                    method: {methodVar},
+                                    attributes: {methodImportAttributes},
+                                    name: metadata.GetOrAddString({entryPoint}),
+                                    module: {moduleVar.VariableName});                        
+                            """);
+        }, null);
+
+        return [];
+        
+        static DefinitionVariable GetOrRegisterModuleReference(IVisitorContext context, string moduleName)
+        {
+            var moduleVar = context.DefinitionVariables.GetVariable($"module-{moduleName}",  VariableMemberKind.ModuleReference);
+            if (moduleVar.IsValid)
+                return moduleVar;
+            
+            var moduleVarName = context.Naming.SyntheticVariable($"{Path.GetFileNameWithoutExtension(moduleName)}ModuleRef", ElementKind.None);
+            context.Generate($"""var {moduleVarName} = metadata.AddModuleReference(metadata.GetOrAddString("{moduleName}"));""");
+            context.WriteNewLine();
+
+            return context.DefinitionVariables.RegisterNonMethod(string.Empty, moduleName, VariableMemberKind.ModuleReference, moduleVarName);
+        }
+    }
 
     private SystemReflectionMetadataContext TypedContext(IVisitorContext context) => ((SystemReflectionMetadataContext) context);
     

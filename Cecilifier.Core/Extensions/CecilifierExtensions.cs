@@ -58,9 +58,8 @@ namespace Cecilifier.Core.Extensions
             {
                 to.Append(" | ");
             }
-
-            to.Append(flag);
-            return to;
+            
+            return to.Append(flag);
         }
         
         public static Span<char> AppendEnumFlag(this Span<char> to, ReadOnlySpan<char> flag, bool isFirst = true)

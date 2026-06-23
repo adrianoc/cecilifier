@@ -40,7 +40,7 @@ internal partial class TypeDeclarationVisitor
                                                     []);
 
         AddCecilExpressions(Context, typeDef);
-        HandleAttributesInMemberDeclaration(node.AttributeLists, typeVar, VariableMemberKind.Type);
+        HandleAttributesInMemberDeclaration(node.Identifier.Text, node.AttributeLists, typeVar, VariableMemberKind.Type);
 
         using (Context.DefinitionVariables.WithCurrent(delegateSymbol.ContainingSymbol?.OriginalDefinition.ToDisplayString() ?? string.Empty, delegateSymbol.OriginalDefinition.ToDisplayString(), VariableMemberKind.Type, typeVar))
         {

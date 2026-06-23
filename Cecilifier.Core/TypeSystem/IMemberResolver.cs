@@ -26,4 +26,6 @@ public interface IMemberResolver
     string ImportReference(string expression);
     
     string MakeGeneticInstanceMethod(string methodReferenceVariable, string methodName, IReadOnlyList<ResolvedType> resolvedTypeArguments);
+    
+    string MapSpecificAttributes(IMethodSymbol method);
 }

@@ -305,4 +305,6 @@ public class MonoCecilMemberResolver(MonoCecilContext context) : IMemberResolver
         
         return varName;
     }
+
+    public string MapSpecificAttributes(IMethodSymbol method) => string.Empty; // No-op on Mono.Cecil
 }

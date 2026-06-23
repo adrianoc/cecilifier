@@ -4,19 +4,15 @@ using System.Diagnostics;
 using System.Linq;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Text;
-using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.ApiDriver.Handles;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
-using Cecilifier.Core.Naming;
 using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Mono.Cecil;
 using CecilOpCodes = Mono.Cecil.Cil.OpCodes;
 
 using static Cecilifier.Core.Misc.CodeGenerationHelpers;
@@ -284,11 +280,6 @@ namespace Cecilifier.Core.AST
 
                 return false;
             }
-        }
-
-        protected static void WriteCecilExpression(IVisitorContext context, CecilifierInterpolatedStringHandler value)
-        {
-            WriteCecilExpression(context, value.Result);
         }
 
         private static void WriteCecilExpression(IVisitorContext context, string value)
@@ -685,18 +676,18 @@ namespace Cecilifier.Core.AST
         /// </summary>
         protected virtual void OnLastInstructionLoadingTargetOfInvocation() { }
 
-        protected void HandleAttributesInMemberDeclaration(in SyntaxList<AttributeListSyntax> nodeAttributeLists, Func<AttributeTargetSpecifierSyntax, SyntaxKind, bool> predicate, SyntaxKind toMatch, string whereToAdd, VariableMemberKind targetKind)
+        protected void HandleAttributesInMemberDeclaration(string memberName, in SyntaxList<AttributeListSyntax> nodeAttributeLists, Func<AttributeTargetSpecifierSyntax, SyntaxKind, bool> predicate, SyntaxKind toMatch, string whereToAdd, VariableMemberKind targetKind)
         {
             var attributeLists = nodeAttributeLists.Where(c => predicate(c.Target, toMatch));
-            HandleAttributesInMemberDeclaration(attributeLists, whereToAdd, targetKind);
+            HandleAttributesInMemberDeclaration(memberName, attributeLists, whereToAdd, targetKind);
         }
 
         protected static bool TargetDoesNotMatch(AttributeTargetSpecifierSyntax target, SyntaxKind operand) => target == null || !target.Identifier.IsKind(operand);
         protected static bool TargetMatches(AttributeTargetSpecifierSyntax target, SyntaxKind operand) => target != null && target.Identifier.IsKind(operand);
 
-        protected void HandleAttributesInMemberDeclaration(IEnumerable<AttributeListSyntax> attributeLists, string varName, VariableMemberKind targetKind)
+        protected void HandleAttributesInMemberDeclaration(string memberName, IEnumerable<AttributeListSyntax> attributeLists, string varName, VariableMemberKind targetKind)
         {
-            HandleAttributesInMemberDeclaration(Context, attributeLists, varName, targetKind);
+            HandleAttributesInMemberDeclaration(Context, memberName, attributeLists, varName, targetKind);
         }
 
         protected static void HandleAttributesInTypeParameter(IVisitorContext context, IEnumerable<TypeParameterSyntax> typeParameters)
@@ -709,18 +700,18 @@ namespace Cecilifier.Core.AST
                 if (!typeParamVariable.IsValid)
                     throw new Exception($"Failed to find variable for type parameter '{parentName}.{symbol.FullyQualifiedName()}'");
                 
-                HandleAttributesInMemberDeclaration(context, typeParameter.AttributeLists, typeParamVariable.VariableName, VariableMemberKind.TypeParameter);
+                HandleAttributesInMemberDeclaration(context, typeParameter.Identifier.Text, typeParameter.AttributeLists, typeParamVariable.VariableName, VariableMemberKind.TypeParameter);
             }
         }
 
-        private static void HandleAttributesInMemberDeclaration(IVisitorContext context, IEnumerable<AttributeListSyntax> attributeLists, string targetDeclarationVar, VariableMemberKind targetKind)
+        private static void HandleAttributesInMemberDeclaration(IVisitorContext context, string memberName, IEnumerable<AttributeListSyntax> attributeLists, string targetDeclarationVar, VariableMemberKind targetKind)
         {
             foreach (var attribute in attributeLists.SelectMany(al => al.Attributes))
             {
                 var attrType = context.SemanticModel.GetTypeInfo(attribute).Type.EnsureNotNull();
                 var attrsExp = attrType.AttributeKind() switch
                     {
-                        AttributeKind.DllImport => ProcessDllImportAttribute(context, attribute, targetDeclarationVar),
+                        AttributeKind.DllImport => ProcessDllImportAttribute(context, memberName, attribute, targetDeclarationVar),
                         AttributeKind.StructLayout => ProcessStructLayoutAttribute(attribute, targetDeclarationVar),
                         _ => ProcessNormalMemberAttribute(context, attribute, targetDeclarationVar, targetKind)
                     };
@@ -729,110 +720,10 @@ namespace Cecilifier.Core.AST
             }
         }
 
-        private static IEnumerable<string> ProcessDllImportAttribute(IVisitorContext context, AttributeSyntax attribute, string methodVar)
+        private static IEnumerable<string> ProcessDllImportAttribute(IVisitorContext context, string methodName, AttributeSyntax attribute, string methodVar)
         {
-            var moduleName = attribute.ArgumentList?.Arguments.First().ToFullString();
-            var existingModuleVar = context.DefinitionVariables.GetVariable(moduleName, VariableMemberKind.ModuleReference);
-
-            var moduleVar = existingModuleVar.IsValid
-                ? existingModuleVar.VariableName
-                : context.Naming.SyntheticVariable("dllImportModule", ElementKind.LocalVariable);
-
-            var exps = new List<string>
-            {
-                $"{methodVar}.PInvokeInfo = new PInvokeInfo({ PInvokeAttributesFrom(attribute) }, { EntryPoint() }, {moduleVar});",
-                $"{methodVar}.Body = null;",
-                $"{methodVar}.ImplAttributes = {MethodImplAttributes()};",
-            };
-
-            if (!existingModuleVar.IsValid)
-            {
-                exps.InsertRange(0, new[]
-                {
-                    $"var {moduleVar} = new ModuleReference({moduleName});",
-                    $"assembly.MainModule.ModuleReferences.Add({moduleVar});",
-                });
-            }
-
-            context.DefinitionVariables.RegisterNonMethod("", moduleName, VariableMemberKind.ModuleReference, moduleVar);
-
-            return exps;
-
-            string EntryPoint() => attribute.ArgumentList?.Arguments.FirstOrDefault(arg => arg.NameEquals?.Name.Identifier.Text == "EntryPoint")?.Expression.ToString() ?? "\"\"";
-
-            string MethodImplAttributes()
-            {
-                var preserveSig = Boolean.Parse(AttributePropertyOrDefaultValue(attribute, "PreserveSig", "true"));
-                return preserveSig
-                    ? "MethodImplAttributes.PreserveSig | MethodImplAttributes.Managed"
-                    : "MethodImplAttributes.Managed";
-            }
-
-            StringBuilder CallingConventionFrom(AttributeSyntax attr)
-            {
-                var callConventionSpan = (attr.ArgumentList?.Arguments.FirstOrDefault(arg => arg.NameEquals?.Name.Identifier.Text == "CallingConvention")?.Expression.ToFullString()
-                                           ?? "Winapi").AsSpan();
-
-                // ensures we use the enum member simple name; Parse() fails if we pass a qualified enum member
-                var index = callConventionSpan.LastIndexOf('.');
-                callConventionSpan = callConventionSpan.Slice(index + 1);
-
-                return new StringBuilder(CallingConventionToCecil(Enum.Parse<CallingConvention>(callConventionSpan)));
-            }
-
-            string CharSetFrom(AttributeSyntax attr)
-            {
-                var enumMemberName = AttributePropertyOrDefaultValue(attr, "CharSet", "None").AsSpan();
-
-                // Only use the actual enum member name Parse() fails if we pass a qualified enum member
-                var index = enumMemberName.LastIndexOf('.');
-                enumMemberName = enumMemberName.Slice(index + 1);
-
-                var charSet = Enum.Parse<CharSet>(enumMemberName);
-                return charSet == CharSet.None ? string.Empty : $"PInvokeAttributes.CharSet{charSet}";
-            }
-
-            string SetLastErrorFrom(AttributeSyntax attr)
-            {
-                var setLastError = bool.Parse(AttributePropertyOrDefaultValue(attr, "SetLastError", "false"));
-                return setLastError ? "PInvokeAttributes.SupportsLastError" : string.Empty;
-            }
-
-            string ExactSpellingFrom(AttributeSyntax attr)
-            {
-                var exactSpelling = bool.Parse(AttributePropertyOrDefaultValue(attr, "ExactSpelling", "false"));
-                return exactSpelling ? "PInvokeAttributes.NoMangle" : string.Empty;
-            }
-
-            string BestFitMappingFrom(AttributeSyntax attr)
-            {
-                var bestFitMapping = bool.Parse(AttributePropertyOrDefaultValue(attr, "BestFitMapping", "true"));
-                return bestFitMapping ? "PInvokeAttributes.BestFitEnabled" : "PInvokeAttributes.BestFitDisabled";
-            }
-
-            string ThrowOnUnmappableCharFrom(AttributeSyntax attr)
-            {
-                var bestFitMapping = bool.Parse(AttributePropertyOrDefaultValue(attr, "ThrowOnUnmappableChar", "false"));
-                return bestFitMapping ? "PInvokeAttributes.ThrowOnUnmappableCharEnabled" : "PInvokeAttributes.ThrowOnUnmappableCharDisabled";
-            }
-
-            // For more information and default values see
-            // https://docs.microsoft.com/en-us/dotnet/api/system.runtime.interopservices.dllimportattribute
-            string PInvokeAttributesFrom(AttributeSyntax attr)
-            {
-                return CallingConventionFrom(attr)
-                    .AppendEnumFlag(CharSetFrom(attr))
-                    .AppendEnumFlag(SetLastErrorFrom(attr))
-                    .AppendEnumFlag(ExactSpellingFrom(attr))
-                    .AppendEnumFlag(BestFitMappingFrom(attr))
-                    .AppendEnumFlag(ThrowOnUnmappableCharFrom(attr))
-                    .ToString();
-            }
-
-            string AttributePropertyOrDefaultValue(AttributeSyntax attr, string propertyName, string defaultValue)
-            {
-                return attr.ArgumentList?.Arguments.FirstOrDefault(arg => arg.NameEquals?.Name.Identifier.Text == propertyName)?.Expression.ToFullString() ?? defaultValue;
-            }
+            var moduleName = ((LiteralExpressionSyntax)attribute.ArgumentList!.Arguments.First().Expression).Token.ValueText;
+            return context.ApiDefinitionsFactory.PInvoke(context, moduleName, methodVar, methodName, attribute.ArgumentList.ToCustomAttributeArguments(context).ToArray());
         }
 
         private static IEnumerable<string> ProcessStructLayoutAttribute(AttributeSyntax attribute, string typeVar)
@@ -853,22 +744,6 @@ namespace Cecilifier.Core.AST
                 var parameterAssignmentExpression = (LiteralExpressionSyntax) attribute.ArgumentList?.Arguments.FirstOrDefault(a => a.NameEquals?.Name.Identifier.Text == parameterName)?.Expression;
                 return parameterAssignmentExpression?.TryGetLiteralValueFor<int>(out var ret) == true ? ret : 0;
             }
-        }
-
-        private static string CallingConventionToCecil(CallingConvention callingConvention)
-        {
-            var pinvokeAttribute = callingConvention switch
-            {
-                CallingConvention.Cdecl => PInvokeAttributes.CallConvCdecl,
-                CallingConvention.Winapi => PInvokeAttributes.CallConvWinapi,
-                CallingConvention.FastCall => PInvokeAttributes.CallConvFastcall,
-                CallingConvention.StdCall => PInvokeAttributes.CallConvStdCall,
-                CallingConvention.ThisCall => PInvokeAttributes.CallConvThiscall,
-
-                _ => throw new Exception($"Unexpected calling convention: {callingConvention}")
-            };
-
-            return $"PInvokeAttributes.{pinvokeAttribute.ToString()}";
         }
 
         private static IEnumerable<string> ProcessNormalMemberAttribute(IVisitorContext context, AttributeSyntax attribute, string targetDeclarationVar, VariableMemberKind targetKind)

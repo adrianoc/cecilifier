@@ -10,12 +10,14 @@ namespace Cecilifier.Core.Tests.Integration
     [TestFixture(typeof(MonoCecilContext))]
     [TestFixture(typeof(SystemReflectionMetadataContext))]
     [EnableForContext<SystemReflectionMetadataContext>(
-        nameof(TestTopLevelStatements),
+        nameof(TestDelegateInvocation),
+        nameof(TestAccessibilityModifiers),
         nameof(TestNamespaces), 
         nameof(AttributesOnMembers), 
         nameof(TestAttributesOnExplicitTargets), 
         nameof(TestAttributeWithArrayInitializer), 
-        nameof(TestDelegateInvocation), 
+        nameof(TestDllImport), 
+        nameof(TestTopLevelStatements),
         IgnoreReason = "Not implemented yet")]
     public class MiscTestCase<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
     {
@@ -104,7 +106,7 @@ namespace Cecilifier.Core.Tests.Integration
         [Test]
         public void TestDllImport()
         {
-            AssertResourceTest($@"Misc/Attributes/DllImportAttribute");
+            AssertResourceTest("Misc/Attributes/DllImportAttribute");
         }
 
         [TestCase("TopLevelStatementsExplicitReturn")]

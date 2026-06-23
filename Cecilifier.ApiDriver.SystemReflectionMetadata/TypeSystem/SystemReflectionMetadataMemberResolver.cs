@@ -206,6 +206,8 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
         return  instantiationVar.VariableName;
     }
 
+    public string MapSpecificAttributes(IMethodSymbol method) => method.IsExtern ? "MethodAttributes.PinvokeImpl" : string.Empty;
+
     internal MethodDefinitionVariable LookupRegisteredMethod(string declaringTypeName, string methodName,  IReadOnlyList<ParameterSpec> parameters, IReadOnlyList<string> typeParameters)
     {
         var methodReferenceToFind = new MethodDefinitionVariable(

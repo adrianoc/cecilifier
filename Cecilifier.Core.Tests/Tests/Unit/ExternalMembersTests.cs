@@ -118,7 +118,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             var result = RunCecilifier("using System.Runtime.InteropServices; public class C { [DllImport(\"Bar\")] public static extern int M(); [DllImport(\"Bar2\")] public static extern void M2(); }");
             var cecilifiedCode = result.GeneratedCode.ReadToEnd();
 
-            var matches = Regex.Matches(cecilifiedCode, "new PInvokeInfo\\(.+, \".?\", (?<targetModule>.+)\\);");
+            var matches = Regex.Matches(cecilifiedCode, "new PInvokeInfo\\(.+,\\s+\".?\", (?<targetModule>.+)\\);");
             Assert.That(matches.Count, Is.EqualTo(2), matches.Aggregate("Actual:", (acc, curr) => acc + (acc[^1] == ':' ? " " : " ,") + curr.Groups["targetModule"].Value));
         }
     }
