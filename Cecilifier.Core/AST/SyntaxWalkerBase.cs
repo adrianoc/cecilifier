@@ -54,13 +54,16 @@ namespace Cecilifier.Core.AST
             Context.ApiDriver.WriteCilInstruction(Context, ilVar, opCode, new CilToken(operand.Expression));
         }
 
-        //TODO: This code is Mono.Cecil specific. Abstract and add/enable tests to cover those in SRM
         protected string AddCilInstructionWithLocalVariable(IlContext ilVar, OpCode opCode)
         {
-            var instVar = CreateCilInstruction(ilVar, opCode);
-            AddCecilExpression($"{ilVar.VariableName}.Append({instVar});");
+             var labelVariable = Context.Naming.Label("label");
             
-            return instVar;
+            Context.ApiDriver.DefineLabel(Context, ilVar, labelVariable);
+            Context.ApiDriver.MarkLabel(Context, ilVar, labelVariable);
+            if (opCode !=  OpCodes.Nop)
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, opCode);
+            
+            return labelVariable;
         }
 
         protected string CreateCilInstruction(IlContext ilVar, OpCode opCode, object operand = null)

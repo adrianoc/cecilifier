@@ -165,8 +165,8 @@ public class ForEachStatementTests : CecilifierUnitTestBase
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
         Assert.That(cecilifiedCode, Does.Match("""
                                                //finally start
-                                               \s+var nop_\d+ = (?<il>il_topLevelMain_\d+\.)Create\(OpCodes.Nop\);
-                                               \s+\k<il>Append\(nop_\d+\);
+                                               \s+var lbl_label_\d+ = (?<il>il_topLevelMain_\d+\.)Create\(OpCodes.Nop\);
+                                               \s+\k<il>Append\(lbl_label_\d+\);
                                                (?<emit>\s+\k<il>Emit\(OpCodes\.)Ldloca, l_enumerator_\d+\);
                                                \k<emit>Constrained, st_enumerator_0\);
                                                \k<emit>Callvirt, .+ImportReference\(.+ResolveMethod\(typeof\(System.IDisposable\), "Dispose",.+\)\)\);
@@ -200,8 +200,8 @@ public class ForEachStatementTests : CecilifierUnitTestBase
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
         Assert.That(cecilifiedCode, Does.Match("""
                                                //finally start
-                                               \s+var nop_\d+ = il_use_\d+.Create\(OpCodes.Nop\);
-                                               \s+(il_use_\d+)\.Append\(nop_\d+\);
+                                               \s+var lbl_label_\d+ = il_use_\d+.Create\(OpCodes.Nop\);
+                                               \s+(il_use_\d+)\.Append\(lbl_label_\d+\);
                                                \s+var (?<skip_disposable>nop_\d+) = \1.Create\(OpCodes.Nop\);
                                                (?<e>\s+\1\.Emit\(OpCodes\.)Ldloc, (?<enum_var>l_enumerator_\d+)\);
                                                \3Brfalse_S, \k<skip_disposable>\);

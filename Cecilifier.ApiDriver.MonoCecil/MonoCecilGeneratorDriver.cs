@@ -6,6 +6,7 @@ using Cecilifier.Core.ApiDriver.Handles;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.TypeSystem;
+using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 
 namespace Cecilifier.ApiDriver.MonoCecil;
@@ -139,5 +140,33 @@ public class SnippetRunner
         context.Generate([
                 $"{methodVariable}.Body = new MethodBody({methodVariable});",
                 $"{targetVariable}.{accessor} = {methodVariable};" ]);
+    }
+
+    public void WriteExceptionHandlers(IVisitorContext context, IlContext ilVar, IEnumerable<ExceptionHandlerEntry> exceptionHandlerTable)
+    {
+        string methodVar = context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
+        foreach (var handlerEntry in exceptionHandlerTable)
+        {
+            context.Generate($"{methodVar}.Body.ExceptionHandlers.Add(new ExceptionHandler(ExceptionHandlerType.{handlerEntry.Kind})");
+            context.WriteNewLine();
+            context.Generate("{");
+            context.WriteNewLine();
+            if (handlerEntry.Kind == ExceptionHandlerKind.Catch)
+            {
+                context.Generate($"    CatchType = {handlerEntry.CatchType},");
+                context.WriteNewLine();
+            }
+
+            context.Generate($"    TryStart = {handlerEntry.TryStart},");
+            context.WriteNewLine();
+            context.Generate($"    TryEnd = {handlerEntry.TryEnd},");
+            context.WriteNewLine();
+            context.Generate($"    HandlerStart = {handlerEntry.HandlerStart},");
+            context.WriteNewLine();
+            context.Generate($"    HandlerEnd = {handlerEntry.HandlerEnd}");
+            context.WriteNewLine();
+            context.Generate("});");
+            context.WriteNewLine();
+        }
     }
 }
