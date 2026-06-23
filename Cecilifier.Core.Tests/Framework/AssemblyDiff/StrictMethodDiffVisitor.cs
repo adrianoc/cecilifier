@@ -76,12 +76,20 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 
         public bool VisitMemberProperties(MethodDefinition sourceMethod, MethodDefinition targetMethod)
         {
-            if (sourceMethod.IsStatic == targetMethod.IsStatic && sourceMethod.HasThis == targetMethod.HasThis) 
-                return true;
+            var ret = true;
+            if (sourceMethod.IsStatic != targetMethod.IsStatic || sourceMethod.HasThis != targetMethod.HasThis)
+            {
+                output.WriteLine($"Methods have mismatching staticness\n\tExpected: {sourceMethod.FullName} (IsStatic={sourceMethod.IsStatic}, HasThis={sourceMethod.HasThis})\n\tActual:   {targetMethod.FullName} (IsStatic={targetMethod.IsStatic}, HasThis={targetMethod.HasThis})");
+                ret = false;
+            }
 
-            output.WriteLine($"Methods have mismatching staticness\n\tExpected: {sourceMethod.FullName} (IsStatic={sourceMethod.IsStatic}, HasThis={sourceMethod.HasThis})\n\tActual:   {targetMethod.FullName} (IsStatic={targetMethod.IsStatic}, HasThis={targetMethod.HasThis})");
-            return false;
+            if (sourceMethod.ImplAttributes != targetMethod.ImplAttributes)
+            {
+                output.WriteLine($"Methods have mismatching ImplAttributes\n\tExpected: {sourceMethod.FullName} (ImplAttributes={sourceMethod.ImplAttributes})\n\tActual:   {targetMethod.FullName} (ImplAttributes={targetMethod.ImplAttributes})");
+                ret = false;
+            }
 
+            return ret;
         }
 
         private string FormatLocalVariables(Collection<VariableDefinition> variables)
