@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection.Emit;
+using Cecilifier.Core.ApiDriver;
+using Cecilifier.Core.Extensions;
 using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis.CSharp;
@@ -30,11 +32,13 @@ namespace Cecilifier.Core.AST
 
             Context.WriteNewLine();
             Context.WriteComment("Try end");
+
+            var firstInstructionAfterTryCatchBlock = Context.Naming.Label("exceptionBlockEnd");
+            Context.ApiDriver.DefineLabel(Context, ilVar, firstInstructionAfterTryCatchBlock);
             
-            var firstInstructionAfterTryCatchBlock = CreateCilInstruction(ilVar, OpCodes.Nop);
             exceptionHandlerTable[^1].HandlerEnd = firstInstructionAfterTryCatchBlock; // sets up last handler end instruction
 
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Leave, firstInstructionAfterTryCatchBlock);
+            Context.ApiDriver.WriteCilBranch(Context, ilVar, OpCodes.Leave, firstInstructionAfterTryCatchBlock);
 
             for (var i = 0; i < catches.Length; i++)
             {
@@ -43,8 +47,7 @@ namespace Cecilifier.Core.AST
 
             HandleFinallyClause(ilVar, finallyBlockHandler, exceptionHandlerTable, state);
 
-            //TODO: Mono.Cecil specific
-            AddCecilExpression($"{ilVar.VariableName}.Append({firstInstructionAfterTryCatchBlock});");
+            Context.ApiDriver.MarkLabel(Context, ilVar, firstInstructionAfterTryCatchBlock);
 
             Context.ApiDriver.WriteExceptionHandlers(Context, ilVar, exceptionHandlerTable);
         }
@@ -66,10 +69,10 @@ namespace Cecilifier.Core.AST
 
             exceptionHandlerTable[currentIndex].TryStart = exceptionHandlerTable[0].TryStart;
             exceptionHandlerTable[currentIndex].TryEnd = exceptionHandlerTable[0].TryEnd;
-            exceptionHandlerTable[currentIndex].CatchType = ResolveType(node.Declaration!.Type, ResolveTargetKind.None);
+            exceptionHandlerTable[currentIndex].CatchType = ResolveType(node.Declaration!.Type, ResolveTargetKind.TypeReference);
 
             VisitCatchClause(node);
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Leave, firstInstructionAfterTryCatchBlock);
+            Context.ApiDriver.WriteCilBranch(Context, ilVar, OpCodes.Leave, firstInstructionAfterTryCatchBlock);
         }
 
         private void HandleFinallyClause<TState>(IlContext ilVar, Action<TState>? finallyBlockHandler, ExceptionHandlerEntry[] exceptionHandlerTable, TState state)

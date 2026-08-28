@@ -10,32 +10,34 @@ IL_0017: nop
 IL_0018: ldarg.0
 IL_0019: ldc.i4 3
 IL_001e: call System.Void NestedTryCatchFinally::Foo(System.Int32)
-IL_0023: leave IL_0046
-IL_0028: pop
-IL_0029: ldarg.0
-IL_002a: ldc.i4 4
-IL_002f: call System.Void NestedTryCatchFinally::Foo(System.Int32)
-IL_0034: leave IL_0046
-IL_0039: nop
-IL_003a: ldarg.0
-IL_003b: ldc.i4 5
-IL_0040: call System.Void NestedTryCatchFinally::Foo(System.Int32)
-IL_0045: endfinally
-IL_0046: nop
-IL_0047: leave IL_006a
-IL_004c: pop
-IL_004d: ldarg.0
-IL_004e: ldc.i4 6
-IL_0053: call System.Void NestedTryCatchFinally::Foo(System.Int32)
-IL_0058: leave IL_006a
-IL_005d: nop
-IL_005e: ldarg.0
-IL_005f: ldc.i4 7
-IL_0064: call System.Void NestedTryCatchFinally::Foo(System.Int32)
-IL_0069: endfinally
-IL_006a: nop
-IL_006b: ret
-.try IL_0017 to IL_0028 catch System.Exception handler IL_0028 to IL_0039
-.try IL_0017 to IL_0039 finally handler IL_0039 to IL_0046
-.try IL_000b to IL_004c catch System.Exception handler IL_004c to IL_005d
-.try IL_000b to IL_005d finally handler IL_005d to IL_006a
+IL_0023: leave IL_0047
+IL_0028: nop
+IL_0029: pop
+IL_002a: ldarg.0
+IL_002b: ldc.i4 4
+IL_0030: call System.Void NestedTryCatchFinally::Foo(System.Int32)
+IL_0035: leave IL_0047
+IL_003a: nop
+IL_003b: ldarg.0
+IL_003c: ldc.i4 5
+IL_0041: call System.Void NestedTryCatchFinally::Foo(System.Int32)
+IL_0046: endfinally
+IL_0047: nop
+IL_0048: leave IL_006c
+IL_004d: nop
+IL_004e: pop
+IL_004f: ldarg.0
+IL_0050: ldc.i4 6
+IL_0055: call System.Void NestedTryCatchFinally::Foo(System.Int32)
+IL_005a: leave IL_006c
+IL_005f: nop
+IL_0060: ldarg.0
+IL_0061: ldc.i4 7
+IL_0066: call System.Void NestedTryCatchFinally::Foo(System.Int32)
+IL_006b: endfinally
+IL_006c: nop
+IL_006d: ret
+.try IL_0017 to IL_0028 catch System.Exception handler IL_0028 to IL_003a
+.try IL_0017 to IL_003a finally handler IL_003a to IL_0047
+.try IL_000b to IL_004d catch System.Exception handler IL_004d to IL_005f
+.try IL_000b to IL_005f finally handler IL_005f to IL_006c

@@ -1,5 +1,4 @@
-﻿using System.Reflection.Emit;
-using Cecilifier.Core;
+﻿using Cecilifier.Core;
 using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.ApiDriver.DefinitionsFactory;
 using Cecilifier.Core.ApiDriver.Handles;
@@ -7,6 +6,7 @@ using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.TypeSystem;
 using Microsoft.CodeAnalysis;
+using OpCode = System.Reflection.Emit.OpCode;
 
 namespace Cecilifier.ApiDriver.SystemReflectionMetadata;
 
@@ -155,7 +155,6 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
                     CilOperandValue { Type.TypeKind: TypeKind.Enum } enumValue => $"{il.VariableName}.CodeBuilder.Write{((INamedTypeSymbol) enumValue.Type).EnumUnderlyingType!.Name}({(int)enumValue.Value});",
                     CilOperandValue operandValue => $"{il.VariableName}.CodeBuilder.Write{operandValue.Type.Name}({operandValue.Value});",
                     CilLocalVariableHandle localVariableHandle => $"{il.VariableName}.CodeBuilder.WriteInt32({localVariableHandle.Value});",
-
                     _ => $"{il.VariableName}.CodeBuilder.Write{operand.GetType().Name}({operand});"
                 }            
             }}
@@ -204,6 +203,25 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
     public void AddMethodSemantics(IVisitorContext context, string targetVariable, string methodVariable, MethodKind methodKind)
     {
         // In SRM, properties/event methods are handled in IApiDriverDefinitionsFactory.Property(). 
+    }
+
+    public void WriteExceptionHandlers(IVisitorContext context, IlContext ilVar, IEnumerable<ExceptionHandlerEntry> exceptionHandlerTable)
+    {
+        foreach (var entry in exceptionHandlerTable)
+        {
+            if (entry.Kind == ExceptionHandlerKind.Catch)
+            {
+                context.Generate($"{ilVar.VariableName}.ControlFlowBuilder.AddCatchRegion({entry.TryStart}, {entry.TryEnd}, {entry.HandlerStart}, {entry.HandlerEnd}, {entry.CatchType});");
+            }
+            else if (entry.Kind == ExceptionHandlerKind.Finally)
+            {
+                context.Generate($"{ilVar.VariableName}.ControlFlowBuilder.AddFinallyRegion({entry.TryStart}, {entry.TryEnd}, {entry.HandlerStart}, {entry.HandlerEnd});");
+            }
+            else
+            {
+                throw new NotSupportedException($"Unhandled exception handler kind: {entry.Kind}");
+            }
+        }
     }
 
     /// <summary>
