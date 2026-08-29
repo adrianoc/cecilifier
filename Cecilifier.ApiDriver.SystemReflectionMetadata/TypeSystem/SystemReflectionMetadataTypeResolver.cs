@@ -254,12 +254,15 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
         
         return ResolvedType.FromDetails(
                     details.WithTypeEncoder(TypeEncoderForArrayElement(in resolutionContext))
-                        .WithMethodBuilder($"{methodBuilderByKind}.{Resolve(elementType, new TypeResolutionContext(ResolveTargetKind.ArrayElementType, resolutionContext.Options))}"));
+                        .WithMethodBuilder($"{methodBuilderByKind}.{Resolve(elementType, new TypeResolutionContext(ResolveTargetKind.ComposedElementType, resolutionContext.Options))}"));
     }
 
     protected override ResolvedType MakePointerType(ITypeSymbol pointerType, in TypeResolutionContext resolutionContext)
     {
-        throw new NotImplementedException();
+        var details = new ResolvedTypeDetails();
+        return ResolvedType.FromDetails(
+            details.WithTypeEncoder(TypeEncoderFor(in resolutionContext))
+                .WithMethodBuilder($"Pointer().{Resolve(pointerType, new TypeResolutionContext(ResolveTargetKind.ComposedElementType, resolutionContext.Options))}"));
     }
 
     protected override ResolvedType MakeFunctionPointerType(IFunctionPointerTypeSymbol functionPointer, in TypeResolutionContext resolutionContext)
@@ -280,7 +283,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
             ResolveTargetKind.None => "",
             ResolveTargetKind.GenericTypeArgument => "",
             ResolveTargetKind.GenericTypeParameterConstraint => "",
-            ResolveTargetKind.ArrayElementType => "",
+            ResolveTargetKind.ComposedElementType => "",
             ResolveTargetKind.AttributeNamedArgument or ResolveTargetKind.AttributeArgument => "ScalarType()%",
             _ => $"Type(isByRef: {isByRef})%",
         };
@@ -296,7 +299,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
         {
             ResolveTargetKind.AttributeNamedArgument => "",
             ResolveTargetKind.None => "",
-            ResolveTargetKind.ArrayElementType => "",
+            ResolveTargetKind.ComposedElementType => "",
             _ => $"Type(isByRef: {isByRef})%",
         };
     }
