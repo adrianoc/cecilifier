@@ -1,89 +1,53 @@
 ﻿.locals init (Buffer`1<System.String> V_0, System.Span`1<System.String> V_1, System.Span`1<System.String> V_2, System.Int32 V_3, System.Int32 V_4)
 IL_0000: ldloca.s V_0
-IL_0002: nop
-IL_0003: nop
-IL_0004: nop
-IL_0005: initobj Buffer`1<System.String>
-IL_000b: ldloca V_0
-IL_000f: nop
-IL_0010: nop
-IL_0011: call !!1& <PrivateImplementationDetails>::InlineArrayFirstElementRef<Buffer`1<System.String>,System.String>(!!0&)
-IL_0016: ldstr "zero"
-IL_001b: stind.ref
-IL_001c: ldloca V_0
-IL_0020: nop
-IL_0021: nop
-IL_0022: ldc.i4 1
-IL_0027: call !!1& <PrivateImplementationDetails>::InlineArrayElementRef<Buffer`1<System.String>,System.String>(!!0&,System.Int32)
-IL_002c: ldstr "um, une, one"
-IL_0031: stind.ref
-IL_0032: ldloca V_0
-IL_0036: nop
-IL_0037: nop
-IL_0038: ldc.i4 2
-IL_003d: call !!1& <PrivateImplementationDetails>::InlineArrayElementRef<Buffer`1<System.String>,System.String>(!!0&,System.Int32)
-IL_0042: ldstr "dois, deux, two"
-IL_0047: stind.ref
-IL_0048: ldloca V_0
-IL_004c: nop
-IL_004d: nop
-IL_004e: ldarg.1
-IL_004f: call !!1& <PrivateImplementationDetails>::InlineArrayElementRef<Buffer`1<System.String>,System.String>(!!0&,System.Int32)
-IL_0054: ldstr "i"
-IL_0059: stind.ref
-IL_005a: ldloca.s V_0
-IL_005c: nop
-IL_005d: nop
-IL_005e: nop
-IL_005f: ldc.i4 10
-IL_0064: call System.Span`1<!!1> <PrivateImplementationDetails>::InlineArrayAsSpan<Buffer`1<System.String>,System.String>(!!0&,System.Int32)
-IL_0069: stloc V_2
-IL_006d: nop
-IL_006e: nop
-IL_006f: ldloca V_2
-IL_0073: nop
-IL_0074: nop
-IL_0075: ldc.i4 2
-IL_007a: stloc V_3
-IL_007e: nop
-IL_007f: nop
-IL_0080: ldc.i4 5
-IL_0085: ldloc V_3
-IL_0089: nop
-IL_008a: nop
-IL_008b: sub
-IL_008c: stloc V_4
-IL_0090: nop
-IL_0091: nop
-IL_0092: ldloc V_3
-IL_0096: nop
-IL_0097: nop
-IL_0098: ldloc V_4
-IL_009c: nop
-IL_009d: nop
-IL_009e: call System.Span`1<!0> System.Span`1<System.String>::Slice(System.Int32,System.Int32)
-IL_00a3: stloc V_1
-IL_00a7: nop
-IL_00a8: nop
-IL_00a9: ldloca V_1
-IL_00ad: nop
-IL_00ae: nop
-IL_00af: ldc.i4 0
-IL_00b4: call !0& System.Span`1<System.String>::get_Item(System.Int32)
-IL_00b9: ldind.ref
-IL_00ba: call System.Void System.Console::WriteLine(System.String)
-IL_00bf: ldloca V_1
-IL_00c3: nop
-IL_00c4: nop
-IL_00c5: ldc.i4 1
-IL_00ca: call !0& System.Span`1<System.String>::get_Item(System.Int32)
-IL_00cf: ldind.ref
-IL_00d0: call System.Void System.Console::WriteLine(System.String)
-IL_00d5: ldloca V_1
-IL_00d9: nop
-IL_00da: nop
-IL_00db: ldarg.1
-IL_00dc: call !0& System.Span`1<System.String>::get_Item(System.Int32)
-IL_00e1: ldind.ref
-IL_00e2: call System.Void System.Console::WriteLine(System.String)
-IL_00e7: ret
+IL_0002: initobj Buffer`1<System.String>
+IL_0008: ldloca V_0
+IL_000c: call !!1& <PrivateImplementationDetails>::InlineArrayFirstElementRef<Buffer`1<System.String>,System.String>(!!0&)
+IL_0011: ldstr "zero"
+IL_0016: stind.ref
+IL_0017: ldloca V_0
+IL_001b: ldc.i4 1
+IL_0020: call !!1& <PrivateImplementationDetails>::InlineArrayElementRef<Buffer`1<System.String>,System.String>(!!0&,System.Int32)
+IL_0025: ldstr "um, une, one"
+IL_002a: stind.ref
+IL_002b: ldloca V_0
+IL_002f: ldc.i4 2
+IL_0034: call !!1& <PrivateImplementationDetails>::InlineArrayElementRef<Buffer`1<System.String>,System.String>(!!0&,System.Int32)
+IL_0039: ldstr "dois, deux, two"
+IL_003e: stind.ref
+IL_003f: ldloca V_0
+IL_0043: ldarg.1
+IL_0044: call !!1& <PrivateImplementationDetails>::InlineArrayElementRef<Buffer`1<System.String>,System.String>(!!0&,System.Int32)
+IL_0049: ldstr "i"
+IL_004e: stind.ref
+IL_004f: ldloca.s V_0
+IL_0051: ldc.i4 10
+IL_0056: call System.Span`1<!!1> <PrivateImplementationDetails>::InlineArrayAsSpan<Buffer`1<System.String>,System.String>(!!0&,System.Int32)
+IL_005b: stloc V_2
+IL_005f: ldloca V_2
+IL_0063: ldc.i4 2
+IL_0068: stloc V_3
+IL_006c: ldc.i4 5
+IL_0071: ldloc V_3
+IL_0075: sub
+IL_0076: stloc V_4
+IL_007a: ldloc V_3
+IL_007e: ldloc V_4
+IL_0082: call System.Span`1<!0> System.Span`1<System.String>::Slice(System.Int32,System.Int32)
+IL_0087: stloc V_1
+IL_008b: ldloca V_1
+IL_008f: ldc.i4 0
+IL_0094: call !0& System.Span`1<System.String>::get_Item(System.Int32)
+IL_0099: ldind.ref
+IL_009a: call System.Void System.Console::WriteLine(System.String)
+IL_009f: ldloca V_1
+IL_00a3: ldc.i4 1
+IL_00a8: call !0& System.Span`1<System.String>::get_Item(System.Int32)
+IL_00ad: ldind.ref
+IL_00ae: call System.Void System.Console::WriteLine(System.String)
+IL_00b3: ldloca V_1
+IL_00b7: ldarg.1
+IL_00b8: call !0& System.Span`1<System.String>::get_Item(System.Int32)
+IL_00bd: ldind.ref
+IL_00be: call System.Void System.Console::WriteLine(System.String)
+IL_00c3: ret

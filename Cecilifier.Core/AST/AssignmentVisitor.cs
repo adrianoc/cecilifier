@@ -245,7 +245,7 @@ namespace Cecilifier.Core.AST
 
             field.EnsureFieldExists(Context, name);
             var fieldReference = field.FieldResolverExpression(Context);
-            MemberAssignment(field.Type, field.RefKind, fieldReference, field.StoreOpCodeForFieldAccess());
+            MemberAssignment(field.Type, field.RefKind, fieldReference.AsToken(), field.StoreOpCodeForFieldAccess());
         }
 
         private void LocalVariableAssignment(ILocalSymbol localVariable)
@@ -266,10 +266,10 @@ namespace Cecilifier.Core.AST
             {
                 throw new InvalidOperationException("Invalid definition variable");
             }
-            MemberAssignment(memberType, memberRefKind, memberDefinitionVariable.VariableName, storeOpCode);
+            MemberAssignment(memberType, memberRefKind, memberDefinitionVariable.VariableName.AsLocalVariable(), storeOpCode);
         }
         
-        private void MemberAssignment(ITypeSymbol memberType, RefKind memberRefKind, string memberReference, OpCode storeOpCode)
+        private void MemberAssignment<TOperand>(ITypeSymbol memberType, RefKind memberRefKind, TOperand memberReference, OpCode storeOpCode)
         {
             if (NeedsIndirectStore(memberType, memberRefKind))
             {
@@ -277,7 +277,7 @@ namespace Cecilifier.Core.AST
             }
             else
             {
-                Context.ApiDriver.WriteCilInstruction(Context, ilVar, storeOpCode, memberReference.AsToken());
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, storeOpCode, memberReference);
             }
         }
 

@@ -47,7 +47,7 @@ namespace Cecilifier.Core.AST
             // our direct parent is a using statement, which means we have something like:
             // using(new Value()) {}
             var valueTypeLocalVariable = DeclareAndInitializeValueTypeLocalVariable();
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloc, valueTypeLocalVariable.VariableName);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloc, valueTypeLocalVariable.VariableName.AsLocalVariable());
         }
 
         public override void VisitEqualsValueClause(EqualsValueClauseSyntax node)
@@ -168,7 +168,7 @@ namespace Cecilifier.Core.AST
 
         private void InitValueTypeLocalVariable(string localVariable)
         {
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloca_S, localVariable.AsToken());
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloca_S, localVariable.AsLocalVariable());
             Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Initobj, ResolvedStructType(ResolveTargetKind.Instruction).AsToken());
 
             if (objectCreationExpressionSyntax.Initializer is not null)

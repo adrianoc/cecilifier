@@ -1,4 +1,6 @@
-﻿using Cecilifier.Core;
+﻿using System.Diagnostics;
+using System.Reflection.Emit;
+using Cecilifier.Core;
 using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.ApiDriver.DefinitionsFactory;
 using Cecilifier.Core.ApiDriver.Handles;
@@ -154,11 +156,13 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
                     CilOperandValue { Type.SpecialType: SpecialType.System_Char } operandValue => $"{il.VariableName}.CodeBuilder.WriteInt32({operandValue.Value});",
                     CilOperandValue { Type.TypeKind: TypeKind.Enum } enumValue => $"{il.VariableName}.CodeBuilder.Write{((INamedTypeSymbol) enumValue.Type).EnumUnderlyingType!.Name}({(int)enumValue.Value});",
                     CilOperandValue operandValue => $"{il.VariableName}.CodeBuilder.Write{operandValue.Type.Name}({operandValue.Value});",
-                    CilLocalVariableHandle localVariableHandle => $"{il.VariableName}.CodeBuilder.WriteInt32({localVariableHandle.Value});",
+                    CilLocalVariableHandle localVariableHandle => $"{il.VariableName}.CodeBuilder.{WriteMethodFor(opCode)}({localVariableHandle.Value});",
                     _ => $"{il.VariableName}.CodeBuilder.Write{operand.GetType().Name}({operand});"
                 }            
             }}
             """";
+
+        static string WriteMethodFor(OpCode opCode) => opCode.Size == 1 ? "WriteByte" : "WriteInt16";
     }
 
     public void WriteCilInstruction<T>(IVisitorContext context, IlContext il, OpCode opCode, T? operand, string? comment = null)
