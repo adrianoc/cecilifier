@@ -166,7 +166,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
             Debug.Assert(methodSignatureVar.IsValid);
             
             var methodDefVar = bodiedMemberDefinitionContext.IlContext!.AssociatedMethodVariable;
-            var bodyOffset = methodSymbol.ContainingType.TypeKind == TypeKind.Interface || methodSymbol.IsExtern 
+            var bodyOffset = methodSymbol.ContainingType.TypeKind == TypeKind.Interface || methodSymbol.IsExtern || methodSymbol.IsAbstract
                                             ? "-1" 
                                             : $"methodBodyStream.AddMethodBody({bodiedMemberDefinitionContext.IlContext.VariableName}, localVariablesSignature: {methodRecord.LocalSignatureHandleVariable})";
             

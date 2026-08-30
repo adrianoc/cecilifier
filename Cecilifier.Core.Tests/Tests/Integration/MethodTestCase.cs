@@ -10,11 +10,13 @@ namespace Cecilifier.Core.Tests.Integration
     [TestFixture(typeof(MonoCecilContext))]
     [TestFixture(typeof(SystemReflectionMetadataContext))]
     [EnableForContext<SystemReflectionMetadataContext>(
-        nameof(NonVirtualMethodCallTest),
+        nameof(TestAbstractMethod),
+        nameof(OutVariablesTest),
         nameof(TestOverloads),
+        nameof(NonVirtualMethodCallTest),
         nameof(TestCtorWithParameters),
         nameof(TestDefaultCtorFromBaseClass),
-        nameof(TestExplicityDefaultCtor),
+        nameof(TestExplicitDefaultCtor),
         nameof(TestExternalMethodReference),
         nameof(TestInterfaceMethodVirtualImplementation),
         nameof(TestMethodCallOnValueType),
@@ -23,6 +25,7 @@ namespace Cecilifier.Core.Tests.Integration
         nameof(TestMutuallyRecursive),
         nameof(TestNoParameters),
         nameof(TestParameterModifiers),
+        nameof(TestRefParameters),
         nameof(TestRefReturn),
         nameof(TestRefLocals),
         nameof(TestRefProperties),
@@ -55,7 +58,7 @@ namespace Cecilifier.Core.Tests.Integration
         }
 
         [Test]
-        public void TestExplicityDefaultCtor()
+        public void TestExplicitDefaultCtor()
         {
             AssertResourceTest("Members/Methods/ExplicityDefaultCtor");
         }
