@@ -34,6 +34,7 @@ namespace Cecilifier.Core.Tests.Integration
         nameof(TestSingleSimpleParameter),
         nameof(TestTypeWithNoArgCtorAndInnerClass),
         nameof(TestVariableNumberOfParameters),
+        nameof(TestVirtualMethod),
         nameof(TestReturnDelegate),
         nameof(TestDelegateAsParameter)
         )]

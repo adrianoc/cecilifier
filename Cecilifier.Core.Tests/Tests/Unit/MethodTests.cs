@@ -37,7 +37,7 @@ public class MethodTests : CecilifierUnitTestBase
         Assert.That(cecilifiedCode, Does.Match("""var m_get_6 = new MethodDefinition\("Get",.+cls_D_\d+\);"""));
         Assert.That(cecilifiedCode, Does.Match(@"m_get_6\.CustomAttributes\.Add\(.+typeof\(.+PreserveBaseOverridesAttribute\).+\);"));
         Assert.That(cecilifiedCode, Contains.Substring("m_get_6.Overrides.Add(m_get_1);"));
-        Assert.That(cecilifiedCode, Contains.Substring("il_callIt_10.Emit(OpCodes.Callvirt, m_get_6);"));
+        Assert.That(cecilifiedCode, Contains.Substring("il_callIt_10.Emit(OpCodes.Callvirt, m_get_1);"));
     }
 
     [Test]

@@ -98,7 +98,7 @@ public class PropertyTests : CecilifierUnitTestBase
 
         Assert.That(cecilifiedCode, Contains.Substring("var m_get_8 = new MethodDefinition(\"get_Prop\", MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.HideBySig | MethodAttributes.Virtual | MethodAttributes.NewSlot, cls_D_6);"));
         Assert.That(cecilifiedCode, Does.Match(@"m_get_8\.CustomAttributes\.Add\(.+typeof\(.+PreserveBaseOverridesAttribute\).+\);"));
-        Assert.That(cecilifiedCode, Contains.Substring("il_callIt_12.Emit(OpCodes.Callvirt, m_get_8);"));
+        Assert.That(cecilifiedCode, Contains.Substring("il_callIt_12.Emit(OpCodes.Callvirt, m_get_2);"));
     }
 
     [Test]

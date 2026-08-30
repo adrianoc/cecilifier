@@ -129,8 +129,15 @@ public static class CecilifierContextExtensions
             context.ClearFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint);
         }
 
-        var operand = method.MethodResolverExpression(context);
+        var operand = GetMethodToInvoke(method).MethodResolverExpression(context);
         context.ApiDriver.WriteCilInstruction(context, ilVar, opCode, operand.AsToken());
+        static IMethodSymbol GetMethodToInvoke(IMethodSymbol method)
+        {
+            if (method.ContainingType.IsValueType)
+                return method;
+            
+            return method.OverriddenMethod ?? method;
+        }
     }
 
     /*
