@@ -167,6 +167,7 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
 
     public void WriteCilInstruction<T>(IVisitorContext context, IlContext il, OpCode opCode, T? operand, string? comment = null)
     {
+        Debug.Assert(opCode.FlowControl != FlowControl.Branch);
         context.Generate($"{EmitCilInstruction(context, il, opCode, operand, comment)}"); // Use interpolated string to force usage of CecilifierInterpolatedStringHandler
         context.WriteNewLine();
     }
@@ -216,10 +217,12 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
             if (entry.Kind == ExceptionHandlerKind.Catch)
             {
                 context.Generate($"{ilVar.VariableName}.ControlFlowBuilder.AddCatchRegion({entry.TryStart}, {entry.TryEnd}, {entry.HandlerStart}, {entry.HandlerEnd}, {entry.CatchType});");
+                context.WriteNewLine();
             }
             else if (entry.Kind == ExceptionHandlerKind.Finally)
             {
                 context.Generate($"{ilVar.VariableName}.ControlFlowBuilder.AddFinallyRegion({entry.TryStart}, {entry.TryEnd}, {entry.HandlerStart}, {entry.HandlerEnd});");
+                context.WriteNewLine();
             }
             else
             {
