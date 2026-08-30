@@ -5,136 +5,116 @@ using Cecilifier.Core.Tests.Framework;
 using Cecilifier.Core.Tests.Framework.Attributes;
 using NUnit.Framework;
 
-namespace Cecilifier.Core.Tests.Integration.Types
+namespace Cecilifier.Core.Tests.Integration.Types;
+
+[TestFixture(typeof(MonoCecilContext), TestName = "Mono.Cecil")]
+[TestFixture(typeof(SystemReflectionMetadataContext), TestName = "SRM")]
+public class TypesTestCase<TContext> : ResourceTestBase<TContext> where TContext : IVisitorContext
 {
-    [TestFixture(typeof(MonoCecilContext), TestName = "Mono.Cecil")]
-    [TestFixture(typeof(SystemReflectionMetadataContext), TestName = "SRM")]
-    [EnableForContext<SystemReflectionMetadataContext>(
-        nameof(ForwardTypeReferenceTest),
-        nameof(InheritanceSameCompilationUnitTest),
-        nameof(InheritanceTest),
-        nameof(InnerClassTest),
-        nameof(InterfaceDefinitionTest),
-        nameof(InterfaceImplementationTest),
-        nameof(InterfaceWithPropertiesTest),
-        nameof(PartialClassTest),
-        nameof(ReadOnlyStructTest),
-        nameof(SealedClassTest),
-        nameof(SimplestTest),
-        nameof(SimpleValueTypeTest),
-        nameof(TypeInitializeTest),
-        nameof(AbstractClassTest),
-        nameof(ExplicitInterfaceImplementationTest),
-        nameof(AttributeTests),
-        IgnoreReason = "Not implemented")]
-    
-    public class TypesTestCase<TContext> : ResourceTestBase<TContext> where TContext : IVisitorContext
+    [TestCase("SimpleTypeWithAttribute")]
+    [TestCase("AttributeWithProperty")]
+    [TestCase("AttributeFromSameAssembly")]
+    [TestCase("AttributeWithTypeOfExpression")]
+    [TestCase("AttributeGeneric")]
+    [ParameterizedResourceFilter<SystemReflectionMetadataContext>("AttributeWithProperty", IgnoreReason = "Other tests are failing")]
+    public void AttributeTests(string typeName)
     {
-        [TestCase("SimpleTypeWithAttribute")]
-        [TestCase("AttributeWithProperty")]
-        [TestCase("AttributeFromSameAssembly")]
-        [TestCase("AttributeWithTypeOfExpression")]
-        [TestCase("AttributeGeneric")]
-        [ParameterizedResourceFilter<SystemReflectionMetadataContext>("AttributeWithProperty", IgnoreReason = "Other tests are failing")]
-        public void AttributeTests(string typeName)
-        {
-            AssertResourceTest($"Types/{typeName}");
-        }
+        AssertResourceTest($"Types/{typeName}");
+    }
 
-        [Test]
-        public void AbstractClassTest()
-        {
-            AssertResourceTest("Types/AbstractClass");
-        }
+    [Test]
+    public void AbstractClassTest()
+    {
+        AssertResourceTest("Types/AbstractClass");
+    }
 
-        [Test]
-        public void ExplicitInterfaceImplementationTest()
-        {
-            AssertResourceTest("Types/ExplicitInterfaceImplementation");
-        }
+    [Test]
+    public void ExplicitInterfaceImplementationTest()
+    {
+        AssertResourceTest("Types/ExplicitInterfaceImplementation");
+    }
 
-        [Test]
-        public void ForwardTypeReferenceTest()
-        {
-            AssertResourceTest("Types/ForwardTypeReference");
-        }
+    [Test]
+    public void ForwardTypeReferenceTest()
+    {
+        AssertResourceTest("Types/ForwardTypeReference");
+    }
 
-        [Test]
-        public void InheritanceSameCompilationUnitTest()
-        {
-            AssertResourceTest("Types/InheritanceSameCompilationUnit");
-        }
+    [Test]
+    public void InheritanceSameCompilationUnitTest()
+    {
+        AssertResourceTest("Types/InheritanceSameCompilationUnit");
+    }
 
-        [Test]
-        public void InheritanceTest()
-        {
-            AssertResourceTest("Types/Inheritance");
-        }
+    [Test]
+    public void InheritanceTest()
+    {
+        AssertResourceTest("Types/Inheritance");
+    }
 
-        [Test]
-        public void InnerClassTest()
-        {
-            AssertResourceTest("Types/InnerClass");
-        }
+    [Test]
+    public void InnerClassTest()
+    {
+        AssertResourceTest("Types/InnerClass");
+    }
 
-        [Test]
-        public void InterfaceDefinitionTest()
-        {
-            AssertResourceTest("Types/InterfaceDefinition");
-        }
+    [Test]
+    public void InterfaceDefinitionTest()
+    {
+        AssertResourceTest("Types/InterfaceDefinition");
+    }
 
-        [Test]
-        public void InterfaceWithPropertiesTest()
-        {
-            AssertResourceTest("Types/InterfaceWithProperties");
-        }
+    [Test]
+    public void InterfaceWithPropertiesTest()
+    {
+        AssertResourceTest("Types/InterfaceWithProperties");
+    }
 
-        [Test]
-        public void InterfaceImplementationTest()
-        {
-            AssertResourceTest("Types/InterfaceImplementation");
-        }
+    [Test]
+    public void InterfaceImplementationTest()
+    {
+        AssertResourceTest("Types/InterfaceImplementation");
+    }
 
-        [Test]
-        public void MultipleInterfaceImplementationTest()
-        {
-            AssertResourceTest("Types/MultipleInterfaceImplementation");
-        }
+    [Test]
+    public void MultipleInterfaceImplementationTest()
+    {
+        AssertResourceTest("Types/MultipleInterfaceImplementation");
+    }
 
-        [Test]
-        public void PartialClassTest()
-        {
-            AssertResourceTest("Types/PartialClass");
-        }
+    [Test]
+    public void PartialClassTest()
+    {
+        AssertResourceTest("Types/PartialClass");
+    }
 
-        [Test]
-        public void SealedClassTest()
-        {
-            AssertResourceTest("Types/SealedClass");
-        }
+    [Test]
+    public void SealedClassTest()
+    {
+        AssertResourceTest("Types/SealedClass");
+    }
 
-        [Test]
-        public void SimplestTest()
-        {
-            AssertResourceTest("Types/Simplest");
-        }
+    [Test]
+    public void SimplestTest()
+    {
+        AssertResourceTest("Types/Simplest");
+    }
 
-        [Test]
-        public void SimpleValueTypeTest()
-        {
-            AssertResourceTest("Types/SimpleValueType");
-        }
+    [Test]
+    public void SimpleValueTypeTest()
+    {
+        AssertResourceTest("Types/SimpleValueType");
+    }
 
-        [Test]
-        public void TypeInitializeTest()
-        {
-            AssertResourceTest("Types/TypeInitializer");
-        }
+    [Test]
+    public void TypeInitializeTest()
+    {
+        AssertResourceTest("Types/TypeInitializer");
+    }
 
-        [Test]
-        public void ReadOnlyStructTest()
-        {
-            AssertResourceTest("Types/ReadOnlyStruct");
-        }
+    [Test]
+    public void ReadOnlyStructTest()
+    {
+        AssertResourceTest("Types/ReadOnlyStruct");
     }
 }
