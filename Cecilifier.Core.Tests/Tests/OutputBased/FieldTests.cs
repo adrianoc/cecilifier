@@ -9,7 +9,6 @@ namespace Cecilifier.Core.Tests.OutputBased;
 
 [TestFixture(typeof(MonoCecilContext))]
 [TestFixture(typeof(SystemReflectionMetadataContext))]
-[EnableForContext<SystemReflectionMetadataContext>(nameof(Simple), nameof(InstanceFieldOnGenericType), nameof(StaticFieldOnGenericType), IgnoreReason = "Not implemented yet")]
 public class FieldTests<TContext> : OutputBasedTestBase<TContext> where TContext : IVisitorContext
 {
     [TestCase("int", "field = 42", "42",  TestName = "Non generic")]
