@@ -245,7 +245,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         // register all parameters so we can reference them when emitting the method body
         for (int i = 0; i < parameters.Count; i++)
         {
-            context.DefinitionVariables.RegisterNonMethod(definitionContext.Member.ContainingTypeName,  parameters[i].Name, VariableMemberKind.Parameter, $"{i + 1}");
+            context.DefinitionVariables.RegisterNonMethod(definitionContext.Member.Identifier,  parameters[i].Name, VariableMemberKind.Parameter, $"{i + 1}");
         }
 
         TypedContext(context).DelayedDefinitionsManager.RegisterMethodDefinition(definitionContext.Member.ParentDefinitionVariable, definitionContext.Member.DefinitionVariable, (ctx, methodRecord) =>

@@ -9,34 +9,6 @@ namespace Cecilifier.Core.Tests.Integration
 {
     [TestFixture(typeof(MonoCecilContext))]
     [TestFixture(typeof(SystemReflectionMetadataContext))]
-    [EnableForContext<SystemReflectionMetadataContext>(
-        nameof(TestAdd),
-        nameof(TestAdd2),
-        nameof(TestBox),
-        nameof(TestDoubleLocalVariableInitialization),
-        nameof(TestLocalVariableAssignment),
-        nameof(TestLocalVariableInitialization),
-        nameof(TestTimes),
-        nameof(TestParameterAssignment),
-        nameof(TestMultipleLocalVariableAssignment),
-        nameof(TestDoubleLocalVariableInitializationComplex),
-        nameof(TestModulus),
-        nameof(TestEquals),
-        nameof(TestLessThan),
-        nameof(TestTernaryOperator),
-        nameof(TestTypeInferenceInDeclarations),
-        nameof(TestValueTypeAddress),
-        nameof(TestNewPrimitive),
-        nameof(TestNewCustom),
-        nameof(TestNewSingleDimensionArray),
-        nameof(TestUnaryExpressions),
-        nameof(TestIncrementDecrementExpressions),
-        nameof(TestIndexerAccess),
-        nameof(TestRangeExpression),
-        nameof(TestIndexExpression),
-        nameof(TestDelegateAssignment),
-        nameof(TestDelegateInvocation)
-        )]
     public class ExpressionTestCase<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
     {
         [Test]
@@ -178,6 +150,7 @@ namespace Cecilifier.Core.Tests.Integration
         }
 
         [Test]
+        [DisableForContext<SystemReflectionMetadataContext>(IgnoreReason = "SRM throws exception complaining about generic type parameters not being sorted.")]
         public void TestArrayLength()
         {
             AssertResourceTest("Expressions/ArrayLength");
