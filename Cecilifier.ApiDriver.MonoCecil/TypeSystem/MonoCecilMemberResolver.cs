@@ -125,7 +125,36 @@ public class MonoCecilMemberResolver(MonoCecilContext context) : IMemberResolver
 
     public string ResolveMethod(string declaringTypeName, string declaringTypeVariable, string methodName, ResolvedType returnType, IReadOnlyList<ParameterSpec> parameters, IReadOnlyList<string> typeParameters, MemberOptions options)
     {
-        throw new NotImplementedException();
+        // Unfortunately here we don't have enough information about the method and its declaring type. If the declaring type is a generic type instance, the generated code need to import the method
+        // and by doing that the generic type information is lost. To fix this we need to set the `DeclaringType` of the method to the correct generic instance type.
+        // most likely there's a better way achieve this but as of today I don't know how (maybe use the ImportReference(MethodReference, IGenericParameterProvider) ?)
+        var correctDeclaringType = context.Naming.SyntheticVariable("declaringType", ElementKind.Method);
+        context.Generate($"""var {correctDeclaringType} = {declaringTypeVariable};""");
+        context.WriteNewLine();
+        
+        var methodWithIncorrectDeclaringType = context.Naming.SyntheticVariable("tmpMethod", ElementKind.MemberReference);
+        context.Generate($"""var {methodWithIncorrectDeclaringType} = assembly.MainModule.ImportReference({correctDeclaringType}.ElementType.Resolve().Methods.Single(m => m.Name == "{methodName}" && m.Parameters.Count == {parameters.Count}));""");
+        context.WriteNewLine();
+
+        var variable = context.Naming.SyntheticVariable("genericMethod", ElementKind.MemberReference);
+        context.Generate($$"""
+                          var {{variable}} = new MethodReference({{methodWithIncorrectDeclaringType}}.Name, {{methodWithIncorrectDeclaringType}}.ReturnType)
+                          {
+                                HasThis = {{methodWithIncorrectDeclaringType}}.HasThis,
+                                CallingConvention = {{methodWithIncorrectDeclaringType}}.CallingConvention,
+                                ExplicitThis = {{methodWithIncorrectDeclaringType}}.ExplicitThis,
+                                DeclaringType = {{methodWithIncorrectDeclaringType}}.DeclaringType.MakeGenericInstanceType({{correctDeclaringType}}.GenericArguments.ToArray()),
+                          };
+                          """);
+        context.WriteNewLine();
+        
+        for (int i = 0; i < parameters.Count; i++)
+        {
+            context.Generate($"""{variable}.Parameters.Add(new ParameterDefinition({methodWithIncorrectDeclaringType}.Parameters[{i}].Name, {methodWithIncorrectDeclaringType}.Parameters[{i}].Attributes, {methodWithIncorrectDeclaringType}.Parameters[{i}].ParameterType));""");
+            context.WriteNewLine();
+        }
+       
+        return variable;
     }
 
     public string ResolveDefaultConstructor(ITypeSymbol baseType, string derivedTypeVar)
@@ -181,6 +210,7 @@ public class MonoCecilMemberResolver(MonoCecilContext context) : IMemberResolver
         // resolve declaring type of the method.
         var targetTypeVarName = context.Naming.SyntheticVariable($"{method.ContainingType.Name}", ElementKind.LocalVariable);
         var resolvedTargetTypeExp = context.TypeResolver.MakeGenericInstanceType(
+                                                method.ContainingType.OriginalDefinition.NameIncludingTypeParametersAndArguments(),
                                                 context.TypeResolver.Resolve(method.ContainingType.OriginalDefinition, ResolveTargetKind.TypeReference),
                                                 method.ContainingType, 
                                                 ResolveTargetKind.None);

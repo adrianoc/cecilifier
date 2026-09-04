@@ -150,7 +150,7 @@ internal class PropertyGenerator
     
     private string BackingFieldReferenceOnGenericInstanceType(ref readonly PropertyGenerationData property)
     {
-        var closedDeclaringType = Context.TypeResolver.MakeGenericInstanceType(property.DeclaringTypeVariable, property.DeclaringTypeSymbol, new TypeResolutionContext(ResolveTargetKind.TypeReference, property.DeclaringTypeSymbol.IsValueType ? TypeResolutionOptions.IsValueType : TypeResolutionOptions.None ));
+        var closedDeclaringType = Context.TypeResolver.MakeGenericInstanceType(property.DeclaringTypeSymbol.NameIncludingTypeParametersAndArguments(), property.DeclaringTypeVariable, property.DeclaringTypeSymbol, new TypeResolutionContext(ResolveTargetKind.TypeReference, property.DeclaringTypeSymbol.IsValueType ? TypeResolutionOptions.IsValueType : TypeResolutionOptions.None ));
         
         var fieldRefVar = Context.Naming.MemberReference($"backingField_{property.Name}");
         var exps = Context.ApiDefinitionsFactory.FieldReference(Context, fieldRefVar, Utils.BackingFieldNameForAutoProperty(property.Name), property.Type(ResolveTargetKind.Field), in closedDeclaringType);

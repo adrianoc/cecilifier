@@ -56,6 +56,7 @@ namespace Cecilifier.Core.Extensions
                    || type.SpecialType == SpecialType.System_RuntimeTypeHandle
                    || type.SpecialType == SpecialType.System_RuntimeFieldHandle
                    || type.SpecialType == SpecialType.System_Runtime_CompilerServices_IsVolatile
+                   || type.SpecialType == SpecialType.System_Nullable_T
                    || type.TypeKind == TypeKind.Interface);
         }
 

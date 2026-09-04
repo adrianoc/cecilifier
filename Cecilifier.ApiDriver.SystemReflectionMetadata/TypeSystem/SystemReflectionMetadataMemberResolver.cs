@@ -47,6 +47,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
 
                                    var {{methodSignatureVarName}} = metadata.GetOrAddBlob({{methodSignatureBlobVar}});
                                    """);
+                ctx.WriteNewLine();
             });
 
             var containingTypeRefVar = context.TypeResolver.Resolve(method.ContainingType, ResolveTargetKind.TypeReference);

@@ -93,7 +93,17 @@ public class NullCoalescingTests : CecilifierUnitTestBase
                        (?<emit>\s+il_m3_\d+\.Emit\(OpCodes\.)Brtrue_S, (?<loadLeftValue>loadLeftValueTarget_\d+)\);
                        \k<emit>Ldarg_1\);
                        \k<emit>Unbox_Any, assembly.MainModule.TypeSystem.Int32\);
-                       \k<emit>Newobj,.+System.Nullable<>.+MakeGenericType\(typeof\(System.Int32\)\).GetConstructors\(\).Single\(ctor => ctor.GetParameters\(\).Length == 1\)\)\);
+                       \s+var (?<type>m_declaringType_\d+) = assembly.MainModule.ImportReference\(typeof\(System.Nullable<>\)\).MakeGenericInstanceType\(assembly.MainModule.TypeSystem.Int32\);
+                       \s+var (?<ctor>r_tmpMethod_\d+) = assembly.MainModule.ImportReference\(\k<type>.ElementType.Resolve\(\).Methods.Single\(m => m.Name == ".ctor" && m.Parameters.Count == 1\)\);
+                       \s+var r_genericMethod_\d+ = new MethodReference\(\k<ctor>.Name, \k<ctor>.ReturnType\)
+                       \s+{
+                       \s+HasThis = \k<ctor>.HasThis,
+                       \s+CallingConvention = \k<ctor>.CallingConvention,
+                       \s+ExplicitThis = \k<ctor>.ExplicitThis,
+                       \s+DeclaringType = \k<ctor>.DeclaringType.MakeGenericInstanceType\(\k<type>.GenericArguments.ToArray\(\)\),
+                       \s+};
+                       \s+r_genericMethod_\d+.Parameters.Add\(new ParameterDefinition\(\k<ctor>.Parameters\[0\].Name, \k<ctor>.Parameters\[0\].Attributes, \k<ctor>.Parameters\[0\].ParameterType\)\);
+                       \k<emit>Newobj, r_genericMethod_18\);
                        \k<emit>Ret\);
                        \s+il_m3_\d+\.Append\(\k<loadLeftValue>\);
                        \k<emit>Ldloc, l_leftValue_\d+\);

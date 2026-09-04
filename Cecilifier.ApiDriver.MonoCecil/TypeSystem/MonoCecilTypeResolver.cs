@@ -60,7 +60,7 @@ public class MonoCecilTypeResolver(MonoCecilContext context) : TypeResolverBase<
         return CecilDefinitionsFactory.FunctionPointerType(this, functionPointer);
     }
 
-    public override ResolvedType MakeGenericInstanceType(ResolvedType typeReference, INamedTypeSymbol genericTypeSymbol, in TypeResolutionContext resolutionContext)
+    public override ResolvedType MakeGenericInstanceType(string typeName, ResolvedType openGenericType, INamedTypeSymbol genericTypeSymbol, in TypeResolutionContext resolutionContext)
     {
         Buffer256<ITypeSymbol> g = new();
         var resolutionContextTypeParameterProviderVar = resolutionContext.TypeParameterProviderVar;
@@ -69,11 +69,11 @@ public class MonoCecilTypeResolver(MonoCecilContext context) : TypeResolverBase<
                                                         .Select(t => _context.TypeResolver.Resolve(t, ResolveTargetKind.TypeReference.ToTypeResolutionContext(resolutionContextTypeParameterProviderVar)))
                                                         .ToImmutableArray();
         
-        return typeArgs.Length > 0 ? typeReference.MakeGenericInstanceType(typeArgs) : typeReference;
+        return typeArgs.Length > 0 ? openGenericType.MakeGenericInstanceType(typeArgs) : openGenericType;
     }
     
     
-    public override ResolvedType MakeGenericInstanceType(ResolvedType openGenericType, Span<ResolvedType> typeArguments, in TypeResolutionContext resolutionContext)
+    public override ResolvedType MakeGenericInstanceType(string typeName, ResolvedType openGenericType, Span<ResolvedType> typeArguments, in TypeResolutionContext resolutionContext)
     {
         return typeArguments.Length > 0 ? openGenericType.MakeGenericInstanceType(typeArguments.ToArray()) : openGenericType;
     }

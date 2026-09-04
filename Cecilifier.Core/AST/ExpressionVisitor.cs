@@ -135,7 +135,7 @@ namespace Cecilifier.Core.AST
                     
                     ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Stloc, new CilLocalVariableHandle(evaluatedLeftVar.VariableName));
                     ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Ldloca_S, new CilLocalVariableHandle(evaluatedLeftVar.VariableName));
-                    ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Call, lhsType.GetMembers("get_HasValue").OfType<IMethodSymbol>().Single().MethodResolverExpression(ctx));
+                    ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Call, lhsType.GetMembers("get_HasValue").OfType<IMethodSymbol>().Single().MethodResolverExpression(ctx).AsToken());
 
                     var loadLeftValueInst = ctx.Naming.Instruction("loadLeftValueTarget");
                     ctx.ApiDriver.DefineLabel(ctx, ilVar, loadLeftValueInst);

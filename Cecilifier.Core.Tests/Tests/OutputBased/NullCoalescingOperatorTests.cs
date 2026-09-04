@@ -10,8 +10,9 @@ namespace Cecilifier.Core.Tests.OutputBased;
 [TestFixture(typeof(MonoCecilContext))]
 [TestFixture(typeof(SystemReflectionMetadataContext))]
 [EnableForContext<SystemReflectionMetadataContext>(
-    nameof(TestAssociative), 
     nameof(SimpleReferenceType), 
+    nameof(Convoluted), 
+    nameof(TestAssociative), 
     IgnoreReason = "Not implemented yet")]
 public class NullCoalescingOperatorTests<TContext> : OutputBasedTestBase<TContext> where TContext : IVisitorContext
 {

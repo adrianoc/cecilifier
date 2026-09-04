@@ -51,6 +51,8 @@ public static class CecilifierContextExtensions
         }
         else if (operation is IConversionOperation { Conversion.IsNullable: true } nullableConversion && !nullableConversion.Syntax.IsKind(SyntaxKind.CoalesceExpression))
         {
+            //TODO: This code is very similar to the one handling coalescing operator below (before that code got fixed to handle SRM). Most likely we will want to extract some
+            //      common code and reuse.
             context.ApiDriver.WriteCilInstruction(context, 
                 ilVar, 
                 OpCodes.Newobj,
@@ -61,15 +63,27 @@ public static class CecilifierContextExtensions
                  && SymbolEqualityComparer.Default.Equals(coalesce.Value.Type?.OriginalDefinition, context.RoslynTypeSystem.SystemNullableOfT)
                  )
         {
-            context.ApiDriver.WriteCilInstruction(context, 
-                ilVar, 
+            var targetType = context.TypeResolver.Resolve(coalesce.Type, ResolveTargetKind.GenericTypeArgument);
+            var closedNullable = context.TypeResolver.MakeGenericInstanceType(context.RoslynTypeSystem.SystemNullableOfT.NameIncludingTypeParametersAndArguments(), context.TypeResolver.Bcl.System.NullableOfT, [targetType], new TypeResolutionContext(ResolveTargetKind.Instruction, TypeResolutionOptions.IsValueType));
+            var returnType = context.TypeResolver.Resolve(context.RoslynTypeSystem.SystemVoid, ResolveTargetKind.ReturnType);
+            var resolvedCtor = context.MemberResolver.ResolveMethod("", closedNullable.Expression, ".ctor", returnType, [NullableTypeParameter(context)], [], MemberOptions.None);
+            
+            context.ApiDriver.WriteCilInstruction(context,
+                ilVar,
                 OpCodes.Newobj,
-                $"assembly.MainModule.ImportReference(typeof(System.Nullable<>).MakeGenericType(typeof({coalesce.Type?.FullyQualifiedName()})).GetConstructors().Single(ctor => ctor.GetParameters().Length == 1))");
+                resolvedCtor.AsToken());
         }
         else
             return false;
 
         return true;
+        
+        static ParameterSpec NullableTypeParameter(IVisitorContext context)
+        {
+            var typeParameterSymbol = context.RoslynTypeSystem.SystemNullableOfT.TypeParameters[0];
+            var resolvedNullableTypeParameter = context.TypeResolver.Resolve(typeParameterSymbol, ResolveTargetKind.TypeReference);
+            return new ParameterSpec(typeParameterSymbol.Name, resolvedNullableTypeParameter, RefKind.None, string.Empty);
+        }
     }
 
     private static bool TryApplyNumericConversion(this IVisitorContext context, IlContext ilVar, ITypeSymbol source, ITypeSymbol target)

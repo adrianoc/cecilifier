@@ -77,9 +77,32 @@ namespace Cecilifier.Core.Extensions
             };
         }
         
+        public static string NameIncludingTypeParametersAndArguments(this ISymbol symbol)
+        {
+            return symbol switch
+            {
+                INamedTypeSymbol {TypeArguments.Length: > 0 } namedTypeSymbol => $"{namedTypeSymbol.Name}_{namedTypeSymbol.TypeArguments.Aggregate(new StringBuilder(), MemberNameIncludingContainingType)}",
+                INamedTypeSymbol {TypeParameters.Length: > 0 } namedTypeSymbol => $"{namedTypeSymbol.Name}_{namedTypeSymbol.TypeParameters.Aggregate(new StringBuilder(), MemberNameIncludingContainingType)}",
+                INamedTypeSymbol namedTypeSymbol => $"{namedTypeSymbol.Name}",
+                
+                _ => throw new NotSupportedException($"Symbol {symbol.ToDisplayString()} is not supported.")
+            };
+
+            // In some scenarios we may want/need to register variables for types and take their containing type symbol. 
+            StringBuilder MemberNameIncludingContainingType(StringBuilder acc, ITypeSymbol type)
+            {
+                HashCode hashCode = new();
+                hashCode.Add(type.Name);
+                hashCode.Add(type.ContainingSymbol?.Name);
+                acc.Append($"{hashCode.ToHashCode()}");
+                
+                return acc;
+            }
+        }
+        
         public static string GetReflectionName(this ITypeSymbol typeSymbol)
         {
-            var sb = new System.Text.StringBuilder();
+            var sb = new StringBuilder();
 
             if (typeSymbol is IArrayTypeSymbol array)
             {

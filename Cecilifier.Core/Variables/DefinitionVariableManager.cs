@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.AST;
+using Cecilifier.Core.TypeSystem;
 
 namespace Cecilifier.Core.Variables;
 
@@ -67,6 +68,18 @@ public class DefinitionVariableManager
         return DefinitionVariable.NotFound;
     }
 
+    public DefinitionVariable GetOrRegisterNonMethodVariable<TState>(string memberName, string parentName, VariableMemberKind variableMemberKind, in TypeResolutionContext resolutionContext, TState state, Func<TState, string> registerFunction) where TState : allows ref struct
+    {
+        var found = (resolutionContext.Options & TypeResolutionOptions.RegisterVariables) == TypeResolutionOptions.RegisterVariables
+            ? GetVariable(memberName, variableMemberKind, parentName)
+            : new DefinitionVariable(parentName, memberName, variableMemberKind, registerFunction(state));
+        
+        if (found.IsValid)
+            return found;
+        
+        return RegisterNonMethod(parentName, memberName, variableMemberKind, registerFunction(state));
+    }
+    
     public DefinitionVariable GetLastOf(VariableMemberKind kind)
     {
         var index = _definitionStack.FindLastIndex(c => c.Kind == kind);
@@ -168,4 +181,5 @@ public class DefinitionVariableManager
     }
 
     private record struct ExecuteUponRegistrationState(IVisitorContext Context, Action<IVisitorContext, object> Function, object State);
+
 }

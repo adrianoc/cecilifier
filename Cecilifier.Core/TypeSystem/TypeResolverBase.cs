@@ -61,7 +61,7 @@ namespace Cecilifier.Core.TypeSystem
 
             if (found != null && type is INamedTypeSymbol { IsGenericType: true } genericTypeSymbol)
             {
-                return MakeGenericInstanceType(found, genericTypeSymbol, new TypeResolutionContext(context.TargetKind, context.Options, found));
+                return MakeGenericInstanceType(genericTypeSymbol.NameIncludingTypeParametersAndArguments(),found, genericTypeSymbol, new TypeResolutionContext(context.TargetKind, context.Options, found));
             }
 
             return new ResolvedType(found);
@@ -90,7 +90,7 @@ namespace Cecilifier.Core.TypeSystem
                 // and the parent's type generic parameters are added to nested types) 
                 return type.IsDefinition 
                     ? resolveNestedType 
-                    : MakeGenericInstanceType(resolveNestedType, nestedType, new TypeResolutionContext(ResolveTargetKind.None, TypeResolutionOptions.None));
+                    : MakeGenericInstanceType(nestedType.NameIncludingTypeParametersAndArguments(), resolveNestedType, nestedType, new TypeResolutionContext(ResolveTargetKind.None, TypeResolutionOptions.None));
             }
 
             return null;
@@ -133,7 +133,7 @@ namespace Cecilifier.Core.TypeSystem
             var genericType = ResolveFromAssembly(genericTypeSymbol.ConstructedFrom,  in resolutionContext);
             return genericTypeSymbol.IsDefinition 
                 ? genericType
-                : MakeGenericInstanceType(genericType, genericTypeSymbol, in resolutionContext);
+                : MakeGenericInstanceType(genericTypeSymbol.NameIncludingTypeParametersAndArguments(), genericType, genericTypeSymbol, in resolutionContext);
         }
 
         protected ReadOnlySpan<ITypeSymbol> CollectTypeArguments(INamedTypeSymbol typeArgumentProvider, ref Buffer256<ITypeSymbol> collectTo)
@@ -153,8 +153,8 @@ namespace Cecilifier.Core.TypeSystem
             return typeArguments.Slice(0, count);
         }
 
-        public abstract ResolvedType MakeGenericInstanceType(ResolvedType typeReference, INamedTypeSymbol genericTypeSymbol, in TypeResolutionContext resolutionContext);
-        public abstract ResolvedType MakeGenericInstanceType(ResolvedType openGenericType, Span<ResolvedType> typeArguments, in TypeResolutionContext resolutionContext);
+        public abstract ResolvedType MakeGenericInstanceType(string typeName, ResolvedType openGenericType, INamedTypeSymbol genericTypeSymbol, in TypeResolutionContext resolutionContext);
+        public abstract ResolvedType MakeGenericInstanceType(string typeName, ResolvedType openGenericType, Span<ResolvedType> typeArguments, in TypeResolutionContext resolutionContext);
         
         public abstract ResolvedType MakeByRefType(in ResolvedType resolvedType);
         

@@ -150,7 +150,7 @@ namespace Cecilifier.Core.Tests.Integration
         }
 
         [Test]
-        [DisableForContext<SystemReflectionMetadataContext>(IgnoreReason = "SRM throws exception complaining about generic type parameters not being sorted.")]
+        [DisableForContext<SystemReflectionMetadataContext>(IgnoreReason = "SRM throws exception complaining about generic type parameters not being sorted. #111")]
         public void TestArrayLength()
         {
             AssertResourceTest("Expressions/ArrayLength");

@@ -85,7 +85,7 @@ public struct RoslynTypeSystem
     public ITypeSymbol SystemValueType { get; }
     public ITypeSymbol SystemRuntimeCompilerServicesRuntimeHelpers { get; }
     public ITypeSymbol SystemRuntimeCompilerServicesCompilerGeneratedAttribute { get; }
-    public ITypeSymbol SystemNullableOfT { get; }
+    public INamedTypeSymbol SystemNullableOfT { get; }
     public ITypeSymbol SystemRuntimeCompilerServicesUnsafe { get;  }
     public ITypeSymbol SystemRuntimeInteropServicesMemoryMarshal { get; }
     public ITypeSymbol SystemCollectionsGenericICollectionOfT { get; }

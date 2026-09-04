@@ -33,8 +33,8 @@ public interface ITypeResolver
     /// <returns>an expression valid to be used in the specified <paramref name="resolutionContext"/></returns>
     ResolvedType ApplySpecificSyntax(string variableName, in TypeResolutionContext resolutionContext);
     ResolvedType MakeArrayType(ITypeSymbol elementType, in TypeResolutionContext resolutionContext);
-    ResolvedType MakeGenericInstanceType(ResolvedType typeReference, INamedTypeSymbol genericTypeSymbol, in TypeResolutionContext resolutionContext);
-    ResolvedType MakeGenericInstanceType(ResolvedType openGenericType, Span<ResolvedType> typeArguments, in TypeResolutionContext resolutionContext);
+    ResolvedType MakeGenericInstanceType(string typeName, ResolvedType openGenericType, INamedTypeSymbol genericTypeSymbol, in TypeResolutionContext resolutionContext);
+    ResolvedType MakeGenericInstanceType(string typeName, ResolvedType openGenericType, Span<ResolvedType> typeArguments, in TypeResolutionContext resolutionContext);
     ResolvedType MakeByRefType(in ResolvedType resolvedType);
 
     Bcl Bcl { get; }
