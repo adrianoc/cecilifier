@@ -182,26 +182,26 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
             return resolved;
         }
 
-        var definitionVariable = context.DefinitionVariables.GetOrRegisterNonMethodVariable(typeName, string.Empty, VariableMemberKind.None,
+        var definitionVariable = _context.DefinitionVariables.GetOrRegisterNonMethodVariable(typeName, string.Empty, VariableMemberKind.None,
             new TypeResolutionContext(ResolveTargetKind.None, TypeResolutionOptions.RegisterVariables),
             typeArguments,
             state =>
             {
-                var genericInstanceTypeVar = context.Naming.SyntheticVariable($"{genericTypeSymbol.ToValidVariableName()}Instantiation", ElementKind.GenericInstance);
-                context.Generate($$"""
+                var genericInstanceTypeVar = _context.Naming.SyntheticVariable($"{genericTypeSymbol.ToValidVariableName()}Instantiation", ElementKind.GenericInstance);
+                _context.Generate($$"""
                                    TypeSpecificationHandle {{genericInstanceTypeVar}} = default;
                                    {
                                        var typeSpecificationSig = new BlobEncoder(new BlobBuilder()).TypeSpecificationSignature();
                                        var gti = typeSpecificationSig.GenericInstantiation({{openGenericType.Expression}}, {{state.Length}}, isValueType: {{genericTypeSymbol.IsValueType.ToKeyword()}});    
                                        {{
                                            state.ToImmutableArray().Select(
-                                                   targ => $"gti.AddArgument().{context.TypedTypeResolver.Resolve(targ, ResolveTargetKind.GenericTypeArgument)};\n")
+                                                   targ => $"gti.AddArgument().{_context.TypedTypeResolver.Resolve(targ, ResolveTargetKind.GenericTypeArgument)};\n")
                                                .Aggregate("", (acc, s) => acc + s)
                                        }}
                                        {{genericInstanceTypeVar}} = metadata.AddTypeSpecification(metadata.GetOrAddBlob(typeSpecificationSig.Builder));
                                    }
                                    """);
-                context.WriteNewLine();
+                _context.WriteNewLine();
 
                 return genericInstanceTypeVar;
             });
@@ -231,7 +231,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
         }
 
         var immutableArray = typeArguments.ToImmutableArray();
-        var definitionVariable = context.DefinitionVariables.GetOrRegisterNonMethodVariable(
+        var definitionVariable = _context.DefinitionVariables.GetOrRegisterNonMethodVariable(
             typeName, 
             string.Empty, 
             VariableMemberKind.None, 
@@ -239,8 +239,8 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
             string.Empty,
             _ =>
         {
-            var genericInstanceTypeVar = context.Naming.SyntheticVariable("Instantiation", ElementKind.GenericInstance);
-            context.Generate($$"""
+            var genericInstanceTypeVar = _context.Naming.SyntheticVariable("Instantiation", ElementKind.GenericInstance);
+            _context.Generate($$"""
                                TypeSpecificationHandle {{genericInstanceTypeVar}} = default;
                                {
                                    var typeSpecificationSig = new BlobEncoder(new BlobBuilder()).TypeSpecificationSignature();
@@ -251,7 +251,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
                                    {{genericInstanceTypeVar}} = metadata.AddTypeSpecification(metadata.GetOrAddBlob(typeSpecificationSig.Builder));
                                }
                                """);
-            context.WriteNewLine();
+            _context.WriteNewLine();
 
             return genericInstanceTypeVar;
         });
@@ -332,7 +332,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
                         var gi = typeSignatureEncoder.GenericInstantiation({{openGenericType.Expression}}, {{typeArguments.Length}}, isValueType: {{genericTypeSymbol.IsValueType.ToKeyword()}});
                         {{
                             typeArguments.ToImmutableArray().Select(
-                                    targ => $"gi.AddArgument().{context.TypedTypeResolver.Resolve(targ, ResolveTargetKind.GenericTypeArgument)};\n    ")
+                                    targ => $"gi.AddArgument().{_context.TypedTypeResolver.Resolve(targ, ResolveTargetKind.GenericTypeArgument)};\n    ")
                                 .Aggregate("", (acc, s) => acc + s)
                         }}
                     })

@@ -167,7 +167,7 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
 
         if (definitionContext.Member.ParentDefinitionVariable != null)
         {
-            methodVariable = context.DefinitionVariables.RegisterMethod(declaringTypeName, definitionContext.Member.Name, parameters.Select(p => p.RegistrationTypeName).ToArray(), typeParameters.ToArray(), definitionContext.Member.DefinitionVariable);
+            methodVariable = context.DefinitionVariables.RegisterMethod(declaringTypeName, definitionContext.Member.Name, parameters.Select(p => p.RegistrationTypeName).ToArray()!, typeParameters.ToArray(), definitionContext.Member.DefinitionVariable);
             exps =
             [
                 ..exps,
@@ -330,7 +330,7 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
 
         for(int i = 0; i < positionalArguments.Length; i++)
         {
-            var attributeArgument = $"new CustomAttributeArgument({context.TypeResolver.Resolve(attributeCtor.Parameters[i].Type.OriginalDefinition, ResolveTargetKind.TypeReference)}, {CustomAttributeArgumentValueFor(context, positionalArguments[i].Value)})";
+            var attributeArgument = $"new CustomAttributeArgument({context.TypeResolver.Resolve(attributeCtor.Parameters[i].Type.OriginalDefinition, ResolveTargetKind.TypeReference)}, {CustomAttributeArgumentValueFor(context, positionalArguments[i].Value!)})";
             exps[expIndex++] = $"{attributeVar}.ConstructorArguments.Add({attributeArgument});";
         }
         expIndex += ProcessAttributeNamedArguments(context, exps.Slice(expIndex), attributeVar, namedArguments);
@@ -345,7 +345,7 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
             foreach (var namedArgument in namedArguments)
             {
                 var container = (namedArgument.Kind == NamedArgumentKind.Field ? "Fields" : "Properties");
-                var value = $"new CustomAttributeArgument({namedArgument.ResolvedType}, {CustomAttributeArgumentValueFor(context, namedArgument.Value)})";
+                var value = $"new CustomAttributeArgument({namedArgument.ResolvedType}, {CustomAttributeArgumentValueFor(context, namedArgument.Value!)})";
                 exps[i++] = $"{customAttrVariable}.{container}.Add(new CustomAttributeNamedArgument(\"{namedArgument.Name}\", {value}));";
             }
             return i;
@@ -506,7 +506,7 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
             var sb = new StringBuilder("new [] {");
             foreach (CustomAttributeArgument arrayItem in array)
             {
-                sb.Append($"new CustomAttributeArgument({context.TypeResolver.Resolve(context.RoslynTypeSystem.ForType(arrayItem.Value.GetType().FullName), ResolveTargetKind.TypeReference)}, {CustomAttributeArgumentValueFor(context, arrayItem.Value)}), ");
+                sb.Append($"new CustomAttributeArgument({context.TypeResolver.Resolve(context.RoslynTypeSystem.ForType(arrayItem.Value!.GetType().FullName), ResolveTargetKind.TypeReference)}, {CustomAttributeArgumentValueFor(context, arrayItem.Value)}), ");
             }
             sb.Remove(sb.Length - 2, 2); // Removes the last ", "
             sb.Append('}');

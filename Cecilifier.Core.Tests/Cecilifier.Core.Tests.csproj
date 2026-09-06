@@ -13,8 +13,8 @@
     <NoWarn>$(NoWarn);NU1603</NoWarn>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Basic.Reference.Assemblies.Net90" Version="1.8.4" />
     <PackageReference Include="coverlet.collector" Version="6.0.4">
+    <PackageReference Include="Basic.Reference.Assemblies.Net100" Version="1.8.11" />
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>

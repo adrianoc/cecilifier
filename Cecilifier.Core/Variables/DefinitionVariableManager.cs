@@ -156,7 +156,7 @@ public class DefinitionVariableManager
         return new ScopedDefinitionVariable(_definitionVariables, _definitionVariables.Count, true);
     }
 
-    public void RegisterDependentOnRegistration(string targetVariable, IVisitorContext context, Action<IVisitorContext, object> toExecute, object state)
+    public void RegisterDependentOnRegistration(string targetVariable, IVisitorContext context, Action<IVisitorContext, object?> toExecute, object? state)
     {
         if (!_executeUponRegistration.TryGetValue(targetVariable, out var toExecuteList))
         {
@@ -180,6 +180,6 @@ public class DefinitionVariableManager
         _definitionVariables.Add(definitionVariable);
     }
 
-    private record struct ExecuteUponRegistrationState(IVisitorContext Context, Action<IVisitorContext, object> Function, object State);
+    private record struct ExecuteUponRegistrationState(IVisitorContext Context, Action<IVisitorContext, object?> Function, object? State);
 
 }
