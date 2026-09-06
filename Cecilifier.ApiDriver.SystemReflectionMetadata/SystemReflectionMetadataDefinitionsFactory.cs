@@ -248,6 +248,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
             context.DefinitionVariables.RegisterNonMethod(definitionContext.Member.Identifier,  parameters[i].Name, VariableMemberKind.Parameter, $"{i + 1}");
         }
 
+        Debug.Assert(definitionContext.Member.ParentDefinitionVariable != null);
         TypedContext(context).DelayedDefinitionsManager.RegisterMethodDefinition(definitionContext.Member.ParentDefinitionVariable, definitionContext.Member.DefinitionVariable, (ctx, methodRecord) =>
         {
             EmitLocalVariables(ctx, definitionContext.Member.Identifier, in methodRecord);
@@ -318,6 +319,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         {
             EmitLocalVariables(ctx, "ctor", in methodRecord);
             
+            Debug.Assert(definitionContext.IlContext != null);
             var ctorDefVar = ctx.Naming.SyntheticVariable($"{nameAsIdentifier}_Ctor", ElementKind.MemberReference);
             ctx.Generate($"""
                                    var {ctorDefVar} = metadata.AddMethodDefinition(
@@ -568,6 +570,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
             // type definition to be known up-front adding complexity, so in that case we simply delegate to `DelayedDefinitionManager`
             context.DefinitionVariables.RegisterDependentOnRegistration(attributeTargetVar, context, (ctx, state) =>
             {
+                Debug.Assert(state != null);
                 var target = (NonTypeAttributeTargetState) state;
                 AddAttributeTo(ctx, target.AttributeTarget, target.ResolvedAttributeCtor, target.AttributeEncoderVariable);
             }, new NonTypeAttributeTargetState(attributeTargetVar, resolvedAttrCtor, attributeEncoderVariable.VariableName));
@@ -756,7 +759,8 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
             var symbol = context.SemanticModel.GetDeclaredSymbol(typeParamList[i]).EnsureNotNull();
             var parentName = symbol.TypeParameterKind == TypeParameterKind.Method ? symbol.DeclaringMethod?.OriginalDefinition.ToDisplayString() : symbol.DeclaringType?.OriginalDefinition.ToDisplayString();
 
-            // register a variable representing the type parameter; uses its index as its name since in SRM the type parameter is represented by its index. 
+            // register a variable representing the type parameter; uses its index as its name since in SRM the type parameter is represented by its index.
+            Debug.Assert(parentName != null);
             context.DefinitionVariables.RegisterNonMethod(parentName, typeParamList[i].Identifier.Text, VariableMemberKind.TypeParameter, i.ToString());
         }
     }

@@ -14,7 +14,7 @@ internal record struct TypeDefinitionRecord(string TypeReferenceVariable)
     /// <summary>
     /// Name of the variable that stores the type definition emitted to represent a type definition. This is only valid after the type has been processed. See <see cref="TypeReferenceVariable"/>
     /// </summary>
-    public string TypeDefinitionVariable { get; internal set; }
+    public string? TypeDefinitionVariable { get; internal set; }
 
     /// <summary>
     /// The name of the variable representing the definition of the first method of the type. <see cref="FirstFieldHandle"/> 

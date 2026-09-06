@@ -24,7 +24,8 @@ public class MonoCecilContext : CecilifierContextBase, IVisitorContext
     public static IVisitorContext CreateContext(CecilifierOptions options, SemanticModel semanticModel) => new MonoCecilContext(options, semanticModel);
     public static string[] BclAssembliesForCompilation()
     {
-        return ((string) AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")).Split(Path.PathSeparator);
+        var data = AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES");
+        return data != null ? ((string) data).Split(Path.PathSeparator) : Array.Empty<string>();
     }
 
     public static string[] GetPreprocessorSymbols() => ["API_DRIVER_MONO_CECIL"];
