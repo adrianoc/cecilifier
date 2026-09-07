@@ -128,6 +128,19 @@ class Foo
     setTooltips(cecilifierVersion, frameWorkVersion, buildDate, buildGitRevision);
     initializeWebSocket();
     disableScroll();
+
+    displayTour();
+}
+
+function displayTour(force) {
+    const showTour = getCookie("showTour");
+    if (showTour === "false" && (force === false || force === undefined))
+        return;
+
+    setCookie("showTour", "false", 1000);
+
+    var intro = introJs.tour();
+    intro.start();
 }
 
 function configureKeyboardShortcuts() {
