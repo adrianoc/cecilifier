@@ -63,7 +63,7 @@
     <table style="width: 100%; height: 100%">
     <tbody>
       <tr style="position: absolute; top: 0; right: 0px; left: 0px">
-          <td style="width: 50%; padding-left: 0px;" data-intro="Code to be cecilified, a.k.a the <b>Source</b>.<br/>You can write or paste your C# code here." data-step="1"><div id="csharpcode"></div></td>
+          <td style="width: 50%; padding-left: 0px;" data-intro="Code to be cecilified, a.k.a the <b>Source</b>.<br/>You can write or paste any valid C# code here." data-step="1"><div id="csharpcode"></div></td>
           <td style="width: 50%; padding-left: 0px;" data-intro="Cecilified (generated) code, i.e., the equivalent Mono.Cecil/System.Reflection.Metadata API calls that produces the equivalent of compiling the entered C# <b>source</b> code (left pane)." data-step="2"><div id="cecilifiedcode"></div></td>
       </tr>
       <tr style="height: 40px">
@@ -82,7 +82,7 @@
                   <button class="button" id="copyToClipboard" onclick="copyToClipboard('copyPastHelper');"><i class="fa fa-copy"></i></button>
                   <button class="button" id="changeSettings" onclick="changeCecilifierSettings();" data-intro="Opens settings page where you can customize Cecilifier's behavior (for instance prefixes used in variable names in the generated code)." data-step="6"><i class="fas fa-sliders-h"></i></button>
                   <button class="button" id="showFixedBugsInStaging" onclick="showListOfFixedIssuesInStagingServer(true);"><i class="fa fa-bug fa-lg"></i></button>
-                  <button class="button" id="assembly_references_button" onclick="ShowAssemblyReferencesDialog('Assembly References', 'ssss');"><i class="fas fa-database"></i></button>
+                  <button class="button" id="assembly_references_button" onclick="ShowAssemblyReferencesDialog('Assembly References', 'ssss');" data-intro="Use this to add (drag and drop) a list of assemblies referenced by the source code (max size per assembly is 8 MB)." data-step="7"><i class="fas fa-database"></i></button>
                   <button class="button" id="showGuide" onclick="displayTour(true);"><i class="fa-solid fa-signs-post"></i></button>
                   
                   <span id="keyboard-shortcuts">
