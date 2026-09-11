@@ -13,7 +13,7 @@ public class Program
 public class CecilifierExtensionsBenchmarks
 {
     [ParamsSource(nameof(PascalCaseValues))]
-    private string PascalCaseValue { get; set; } = string.Empty;
+    public string PascalCaseValue { get; set; } = string.Empty;
 
     [Benchmark(Baseline = true)]
     public string PascalCaseNaive()
