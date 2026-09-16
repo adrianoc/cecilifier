@@ -2,42 +2,12 @@ using Cecilifier.ApiDriver.MonoCecil;
 using Cecilifier.ApiDriver.SystemReflectionMetadata;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Tests.Framework;
-using Cecilifier.Core.Tests.Framework.Attributes;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration
 {
     [TestFixture(typeof(MonoCecilContext))]
     [TestFixture(typeof(SystemReflectionMetadataContext))]
-    [EnableForContext<SystemReflectionMetadataContext>(
-        nameof(TestAbstractMethod),
-        nameof(OutVariablesTest),
-        nameof(TestOverloads),
-        nameof(NonVirtualMethodCallTest),
-        nameof(TestCtorWithParameters),
-        nameof(TestDefaultCtorFromBaseClass),
-        nameof(TestExplicitDefaultCtor),
-        nameof(TestExternalMethodReference),
-        nameof(TestInterfaceMethodVirtualImplementation),
-        nameof(TestMethodCallOnValueType),
-        nameof(TestMethodInvocation),
-        nameof(TestMultipleParameters),
-        nameof(TestMutuallyRecursive),
-        nameof(TestNoParameters),
-        nameof(TestParameterModifiers),
-        nameof(TestRefParameters),
-        nameof(TestRefReturn),
-        nameof(TestRefLocals),
-        nameof(TestRefProperties),
-        nameof(TestReturnValue),
-        nameof(TestSelfReferencingCtor),
-        nameof(TestSingleSimpleParameter),
-        nameof(TestTypeWithNoArgCtorAndInnerClass),
-        nameof(TestVariableNumberOfParameters),
-        nameof(TestVirtualMethod),
-        nameof(TestReturnDelegate),
-        nameof(TestDelegateAsParameter)
-        )]
     public class MethodTestCase<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
     {
         [Test]

@@ -92,7 +92,7 @@ public class ForEachStatementTests : CecilifierUnitTestBase
         Assert.That(cecilifiedCode, Does.Match("""
                                                //variable to store the returned 'IEnumerator<T>'.
                                                \s+il_M_\d+.Emit\(OpCodes.Callvirt, .+ImportReference\(.+ResolveMethod\(typeof\(System.Collections.Generic.List<System.Int32>\), "GetEnumerator",.+\)\)\);
-                                               \s+var l_enumerator_\d+ = new VariableDefinition\(.+ImportReference\(typeof\(System.Collections.Generic.List<int>.Enumerator\)\)\);
+                                               \s+var l_enumerator_\d+ = new VariableDefinition\(.+NewRawNestedTypeReference\("Enumerator",.+, .+ImportReference\(typeof\(.+List<>\)\), isValueType: true, 1\).MakeGenericInstanceType\(.+Int32\)\);
                                                """));
         
         Assert.That(cecilifiedCode, Does.Match("""

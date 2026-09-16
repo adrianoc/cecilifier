@@ -9,6 +9,13 @@ namespace Cecilifier.ApiDriver.MonoCecil.TypeSystem;
 
 public class MonoCecilTypeResolver(MonoCecilContext context) : TypeResolverBase<MonoCecilContext>(context)
 {
+    protected override ResolvedType ResolveNestedTypeCore(INamedTypeSymbol type, in TypeResolutionContext resolutionContext)
+    {
+        // collects the type arguments for all types in the parent chain. 
+        var typeArguments = type.GetAllTypeArguments().ToArray();
+        return new ResolvedType($"""TypeHelpers.NewRawNestedTypeReference("{type.Name}", module: assembly.MainModule, {Resolve(type.ContainingType.OriginalDefinition, in resolutionContext)}, isValueType: {type.IsValueType.ToKeyword()}, {typeArguments.Length})""");
+    }
+
     protected override ResolvedType ResolveTypeParameter(ITypeSymbol type, in TypeResolutionContext resolutionContext)
     {
         if (type is not ITypeParameterSymbol typeParameterSymbol)

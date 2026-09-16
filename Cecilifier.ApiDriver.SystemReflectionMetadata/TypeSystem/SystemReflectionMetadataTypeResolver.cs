@@ -10,6 +10,18 @@ namespace Cecilifier.ApiDriver.SystemReflectionMetadata.TypeSystem;
 
 public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContext context) : TypeResolverBase<SystemReflectionMetadataContext>(context)
 {
+    protected override ResolvedType ResolveNestedTypeCore(INamedTypeSymbol type, in TypeResolutionContext resolutionContext)
+    {
+        var enclosingType = Resolve(type.ContainingType, new TypeResolutionContext(ResolveTargetKind.TypeReference, TypeResolutionOptions.OpenGenericType));
+
+        var variableName = _context.Naming.SyntheticVariable(type.ToValidVariableName(), ElementKind.MemberReference);
+        _context.Generate($"""
+                         var {variableName} = metadata.AddTypeReference({enclosingType.Expression}, default(StringHandle), metadata.GetOrAddString("{type.Name}"));
+                         """);
+        _context.WriteNewLine();
+        return variableName;
+    }
+
     protected override ResolvedType ResolveTypeParameter(ITypeSymbol type, in TypeResolutionContext resolutionContext)
     {
         if (type is not ITypeParameterSymbol typeParameterSymbol)
