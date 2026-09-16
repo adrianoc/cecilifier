@@ -49,8 +49,6 @@ public class PrimaryConstructorGenerator
         var exps = context.ApiDefinitionsFactory.Property(context, definitionContext, declaringTypeVariable.MemberName, [], context.TypeResolver.Resolve(paramSymbol.Type, ResolveTargetKind.None));
         
         context.Generate(exps);
-        context.Generate($"{typeDefinitionVariable}.Properties.Add({propDefVar});");
-        context.WriteNewLine();
         context.WriteNewLine();
 
         var publicPropertyMethodAttributes = "MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName";
@@ -144,8 +142,8 @@ public class PrimaryConstructorGenerator
         {
             context.WriteComment($"Parameter: {parameter.Identifier}");
             var paramVar = context.Naming.Parameter(parameter);
-            var parameterType = context.TypeResolver.Resolve(ModelExtensions.GetTypeInfo(context.SemanticModel, parameter.Type!).Type, ResolveTargetKind.Parameter);
-            var paramExps = CecilDefinitionsFactory.Parameter(context, parameter.Identifier.ValueText, RefKind.None, null, ctorVar, paramVar, parameterType, Constants.ParameterAttributes.None, ("", false));
+            var parameterType = context.TypeResolver.Resolve(ModelExtensions.GetTypeInfo(context.SemanticModel, parameter.Type!).Type!, ResolveTargetKind.Parameter);
+            var paramExps = context.ApiDefinitionsFactory.Parameter(context, new ParameterSpec(parameter.Identifier.ValueText, parameterType, RefKind.None, Constants.ParameterAttributes.None), ctorVar, paramVar); 
             context.Generate(paramExps);
 
             if (!uniqueParameters.Contains(parameter))

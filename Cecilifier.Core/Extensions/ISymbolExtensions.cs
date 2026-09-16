@@ -180,23 +180,23 @@ namespace Cecilifier.Core.Extensions
             return refRelatedAttr.AppendEnumFlag(optionalAttribute);
         }
 
-        public static (string Value, bool Present) ExplicitDefaultValue(this IParameterSymbol symbol, bool rawString = true)
+        public static DefaultValue ExplicitDefaultValue(this IParameterSymbol symbol, bool rawString = true)
         {
             if (!symbol.HasExplicitDefaultValue)
-                return (null, false);
+                return default;
 
             if (symbol.ExplicitDefaultValue == null)
-                return (null, true);
+                return new (null, true);
 
             if (symbol.Type.SpecialType == SpecialType.System_String && rawString)
-                return ((string)symbol.ExplicitDefaultValue, true);
+                return new((string)symbol.ExplicitDefaultValue, true);
             
             var value = SymbolDisplay.FormatPrimitive(symbol.ExplicitDefaultValue, !rawString, false);
             return symbol.Type.SpecialType switch
             {
-                SpecialType.System_Single => ($"{value}f", true),
-                SpecialType.System_Double => ($"{value}d", true),
-                _ => (value, true)
+                SpecialType.System_Single => new ($"{value}f", true),
+                SpecialType.System_Double => new ($"{value}d", true),
+                _ => new (value, true)
             };
         }
 
@@ -326,7 +326,12 @@ namespace Cecilifier.Core.Extensions
                    || (type.ContainingType != null && (SymbolEqualityComparer.Default.Equals(type.ContainingType, type) ? false : HasTypeArgumentOfTypeFromCecilifiedCodeTransitive(type.ContainingType, context)));
         }
 
-        public static TypeResolutionOptions GetTypeResolutionOptions(this ITypeSymbol type) => type.IsValueType ? TypeResolutionOptions.IsValueType : TypeResolutionOptions.None; 
+        public static TypeResolutionOptions GetTypeResolutionOptions(this ITypeSymbol type) => type.IsValueType ? TypeResolutionOptions.IsValueType : TypeResolutionOptions.None;
+
+        public static ParameterSpec ToParameterSpec(this IParameterSymbol parameter, IVisitorContext context, string methodVar) => new ParameterSymbolParameterSpec(parameter, context, methodVar)
+        {
+            DefaultValue = parameter.ExplicitDefaultValue(rawString: false), Attributes = parameter.AsParameterAttribute()
+        };
         
         internal static ExpandedParamsArgumentHandler? CreateExpandedParamsUsageHandler(this IMethodSymbol methodSymbol, ExpressionVisitor expressionVisitor, IlContext ilVar, ArgumentListSyntax argumentList)
         {

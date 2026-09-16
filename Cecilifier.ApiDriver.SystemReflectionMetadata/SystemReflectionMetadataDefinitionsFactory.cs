@@ -135,6 +135,18 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         }
     }
 
+    public void SetStructLayoutAttribute(IVisitorContext context, string structDefinitionVariable, TypeLayoutProperty[] properties)
+    {
+        if (properties.Length == 0)
+            return;
+        
+        var packingSize = properties.SingleOrDefault(p => p.Kind == TypeLayoutPropertyKind.PackingSize).Value;
+        var clasSize = properties.SingleOrDefault(p => p.Kind == TypeLayoutPropertyKind.ClassSize).Value;
+                
+        context.Generate($"metadata.AddTypeLayout({structDefinitionVariable}, {packingSize}, {clasSize});");
+        context.WriteNewLine();
+    }
+
     public void UpdateBaseTypeIfNeeded(IVisitorContext context, ITypeSymbol typeSymbol, string typeDefinitionVariable)
     {
         // No op on SRM.
@@ -335,6 +347,11 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
             ctx.WriteNewLine();
             return ctorDefVar;
         });
+    }
+
+    public IEnumerable<string> Parameter(IVisitorContext context, ParameterSpec parameterSpec, string memberVar, string paramVar)
+    {
+        throw new NotImplementedException();
     }
 
     public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext definitionContext, ISymbol fieldOrEvent, ITypeSymbol fieldType, string fieldAttributes, bool isVolatile, bool isByRef, in FieldInitializationData initializer = default)
@@ -624,6 +641,11 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
 
             return context.DefinitionVariables.RegisterNonMethod(string.Empty, moduleName, VariableMemberKind.ModuleReference, moduleVarName);
         }
+    }
+
+    IEnumerable<string> IApiDriverDefinitionsFactory.SetStructLayoutAttribute(IVisitorContext context, string structDefinitionVariable, TypeLayoutProperty[] properties)
+    {
+        return [];
     }
 
     private SystemReflectionMetadataContext TypedContext(IVisitorContext context) => ((SystemReflectionMetadataContext) context);

@@ -100,7 +100,7 @@ public class MonoCecilMemberResolver(MonoCecilContext context) : IMemberResolver
             foreach (var parameter in method.Parameters)
             {
                 var tempParamVar = context.Naming.SyntheticVariable(parameter.Name, ElementKind.Parameter);
-                var exps = CecilDefinitionsFactory.Parameter(context, parameter.OriginalDefinition, tempMethodVar, tempParamVar);
+                var exps = context.ApiDefinitionsFactory.Parameter(context, parameter.OriginalDefinition.ToParameterSpec(context, tempMethodVar), tempMethodVar, tempParamVar);
                 context.Generate(exps);
             }
 

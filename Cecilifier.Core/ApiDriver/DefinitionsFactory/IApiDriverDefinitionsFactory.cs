@@ -76,6 +76,9 @@ public interface IApiDriverDefinitionsFactory
     );
 
     public IEnumerable<string> Constructor(IVisitorContext context, BodiedMemberDefinitionContext definitionContext, string typeName, bool isStatic, string methodAccessibility, string[] paramTypes, string? methodDefinitionPropertyValues = null);
+    
+    public IEnumerable<string> Parameter(IVisitorContext context, ParameterSpec parameterSpec, string memberVar, string paramVar);
+    
     public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext definitionContext, ISymbol fieldOrEvent, ITypeSymbol fieldType, string fieldAttributes, bool isVolatile, bool isByRef, in FieldInitializationData initializer = default);
     public IEnumerable<string> Field(IVisitorContext context, MemberDefinitionContext definitionContext, string declaringTypeName, ResolvedType fieldType, string fieldAttributes, bool isVolatile, bool isByRef, FieldInitializationData initializer = default);
     public IEnumerable<string> FieldReference(IVisitorContext context, string fieldReferenceVariable, string fieldName, ResolvedType fieldType, in ResolvedType declaringType);
@@ -98,4 +101,6 @@ public interface IApiDriverDefinitionsFactory
     void OverrideBaseMethod(IVisitorContext context, string overriderMethodVar, string? overridenMethod);
 
     IEnumerable<string> PInvoke(IVisitorContext context, string moduleName, string methodVar, string methodName, ReadOnlySpan<CustomAttributeArgument> customAttributeArguments);
+
+    IEnumerable<string> SetStructLayoutAttribute(IVisitorContext context, string structDefinitionVariable, TypeLayoutProperty[] properties);
 }

@@ -69,7 +69,7 @@ internal partial class PrivateImplementationDetailsGenerator
         var methodTypeQualifiedName = $"{privateImplementationDetailsVar.MemberName}.{methodName}";
         string declaringTypeName = $"{privateImplementationDetailsVar.MemberName}";
         IReadOnlyList<ParameterSpec> parameters = [ 
-            new("buffer", "TBuffer", RefKind.Ref, Constants.ParameterAttributes.None, null, (context, paramSpec) => ResolveOwnedGenericParameter(context, paramSpec.ElementType.Expression, TypeParameterKind.Method, ResolveTargetKind.Parameter, methodTypeQualifiedName)), 
+            new("buffer", "TBuffer", RefKind.Ref, Constants.ParameterAttributes.None, default, (context, paramSpec) => ResolveOwnedGenericParameter(context, paramSpec.ElementType.Expression, TypeParameterKind.Method, ResolveTargetKind.Parameter, methodTypeQualifiedName)), 
             new("length", context.TypeResolver.Resolve(context.RoslynTypeSystem.SystemInt32, ResolveTargetKind.Parameter), RefKind.None, Constants.ParameterAttributes.None)
         ];
         Func<IVisitorContext, ResolvedType> returnTypeResolver = ctx =>

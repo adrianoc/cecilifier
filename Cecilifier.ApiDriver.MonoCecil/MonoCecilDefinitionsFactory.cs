@@ -147,20 +147,19 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
         if (typeParameters.Count > 0)
             exps.Add($"{definitionContext.Member.DefinitionVariable}.ReturnType = {returnTypeResolver(context)};");
 
+        if (definitionContext.Options.HasFlag(MemberOptions.IsRuntime))
+        {
+            exps.Add($"{definitionContext.Member.DefinitionVariable}.IsRuntime = true;");    
+        }
+        
+        exps.Add($"{definitionContext.Member.DefinitionVariable}.HasThis = {(!definitionContext.Options.HasFlag(MemberOptions.Static)).ToKeyword()};");    
+        exps.Add($"{definitionContext.Member.DefinitionVariable}.IsStatic = {definitionContext.Options.HasFlag(MemberOptions.Static).ToKeyword()};");    
+        
         foreach (var parameter in parameters)
         {
             var paramVar = context.Naming.SyntheticVariable(parameter.Name, ElementKind.Parameter);
-            var parameterExp = CecilDefinitionsFactory.Parameter(
-                                                                            context,
-                                                                            parameter.Name,
-                                                                            parameter.RefKind,
-                                                                            parameter.ParamsAttributeName, // for now,the only callers for this method don't have any `params` parameters.
-                                                                            definitionContext.Member.DefinitionVariable,
-                                                                            paramVar,
-                                                                            parameter.ElementTypeResolver != null ? parameter.ElementTypeResolver(context, parameter) : parameter.ElementType,
-                                                                            parameter.Attributes,
-                                                                            (parameter.DefaultValue, parameter.DefaultValue != null));
-
+            var parameterExp = Parameter(context, parameter, definitionContext.Member.DefinitionVariable, paramVar);
+           
             context.DefinitionVariables.RegisterNonMethod(definitionContext.Member.Identifier, parameter.Name, VariableMemberKind.Parameter, paramVar);
             exps.AddRange(parameterExp);
         }
@@ -176,6 +175,25 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
         }
         else
             methodVariable = MethodDefinitionVariable.MethodNotFound;
+
+        return exps;
+    }
+
+    public IEnumerable<string> Parameter(IVisitorContext context, ParameterSpec parameterSpec, string memberVar, string paramVar)
+    {
+        var exps = new List<string>();
+
+        var parameterType = parameterSpec.ElementTypeResolver != null ? parameterSpec.ElementTypeResolver(context, parameterSpec) : parameterSpec.ElementType;
+        exps.Add($"var {paramVar} = {ParameterDoesNotHandleParamsKeywordOrDefaultValue(context.TypeResolver, parameterSpec.Name, parameterSpec.RefKind, parameterType, parameterSpec.Attributes)};");
+        if (!string.IsNullOrWhiteSpace(parameterSpec.ParamsAttributeName))
+        {
+            exps.Add($"{paramVar}.CustomAttributes.Add(new CustomAttribute(assembly.MainModule.Import(typeof({parameterSpec.ParamsAttributeName}).GetConstructor(BindingFlags.Public | BindingFlags.Instance, null, new Type[0], null))));");
+        }
+
+        if (parameterSpec.DefaultValue.Present)
+            exps.Add($"{paramVar}.Constant = {parameterSpec.DefaultValue.Value ?? "null" };");
+
+        exps.Add($"{memberVar}.Parameters.Add({paramVar});");
 
         return exps;
     }
@@ -496,6 +514,15 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
         }
     }
 
+    public IEnumerable<string> SetStructLayoutAttribute(IVisitorContext context, string structDefinitionVariable, TypeLayoutProperty[] properties)
+    {
+        return
+        [
+            $"{structDefinitionVariable}.ClassSize = { properties.SingleOrDefault(p => p.Kind == TypeLayoutPropertyKind.ClassSize).Value };",
+            $"{structDefinitionVariable}.PackingSize = { properties.SingleOrDefault(p => p.Kind == TypeLayoutPropertyKind.PackingSize).Value };",
+        ];
+    }
+
     private static string CustomAttributeArgumentValueFor(IVisitorContext context, object argument)
     {
         if (argument is Array array)
@@ -635,5 +662,16 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
         context.Generate($"var {id} = new RequiredModifierType({context.TypeResolver.Resolve(context.RoslynTypeSystem.ForType(typeof(IsVolatile).FullName), ResolveTargetKind.TypeReference)}, {originalType});");
         
         return id;
+    }
+    
+    private static string ParameterDoesNotHandleParamsKeywordOrDefaultValue(ITypeResolver resolver, string name, RefKind byRef, ResolvedType resolvedType, string? paramAttributes = null)
+    {
+        paramAttributes ??= Constants.ParameterAttributes.None;
+        if (RefKind.None != byRef)
+        {
+            resolvedType = resolver.MakeByRefType(resolvedType);
+        }
+
+        return $"new ParameterDefinition(\"{name}\", {paramAttributes}, {resolvedType})";
     }
 }

@@ -22,6 +22,8 @@ public class MethodTests : CecilifierUnitTestBase
         Assert.That(cecilifiedCode, Does.Match(
             """
                   \s+var (m_get_\d+) = new MethodDefinition\("get_P",.+(cls_derived_\d+)\);
+                  \s+\1\.HasThis = true;
+                  \s+\1\.IsStatic = false;
                   \s+\2.Methods.Add\(m_get_\d+\);
                   \s+\1.Overrides.Add\(m_get_2\);
                   """));
