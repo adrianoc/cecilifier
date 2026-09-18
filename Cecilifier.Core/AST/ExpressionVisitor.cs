@@ -227,7 +227,16 @@ namespace Cecilifier.Core.AST
             using var _ = LineInformationTracker.Track(Context, node);
             Context.WriteComment(node.Expression.ToString());
             node.Expression.Accept(this);
-            node.Expression.InjectRequiredConversions(Context, ilVar);
+
+            var declaringMethod = Context.SemanticModel.GetDeclaredSymbol(node.Parent!).EnsureNotNull();
+            if (declaringMethod.GetMemberType().SpecialType == SpecialType.System_Void && PopIfNotConsumed(Context, ilVar, node.Expression))
+            {
+                Context.WriteNewLine();
+            }
+            else
+            {
+                node.Expression.InjectRequiredConversions(Context, ilVar);
+            }
         }
 
         public override void VisitInitializerExpression(InitializerExpressionSyntax node)
@@ -1608,7 +1617,7 @@ namespace Cecilifier.Core.AST
             return labelVariable;
         }
 
-        private static void PopIfNotConsumed(IVisitorContext ctx, IlContext ilVar, ExpressionSyntax node)
+        private static bool PopIfNotConsumed(IVisitorContext ctx, IlContext ilVar, ExpressionSyntax node)
         {
             var nodeType = ctx.GetTypeInfo(node).Type.EnsureNotNull();
             if (!node.IsKind(SyntaxKind.SimpleAssignmentExpression)
@@ -1616,7 +1625,10 @@ namespace Cecilifier.Core.AST
                 && nodeType.SpecialType != SpecialType.System_Void)
             {
                 ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Pop);
+                return true;
             }
+
+            return false;
         }
 
         private static void HandleModulusExpression(IVisitorContext context, IlContext ilVar, ITypeSymbol lhs, ITypeSymbol rhs)
