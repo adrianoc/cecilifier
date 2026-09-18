@@ -75,4 +75,23 @@ public class GenericTests<TContext> : OutputBasedTestBase<TContext> where TConte
                      """, 
             "42 42");
     }
+
+    [TestCase("Bar<int>")]
+    [TestCase("System.Collections.Generic.List<int>")]
+    public void Class_InheritingFromGenericType_DoesNotThrow_Issue346(string baseType)
+    {
+        AssertOutput($$"""
+                     using System;
+                     
+                     new Foo().Baz();
+                     
+                     class Bar<T> {}
+                     
+                     class Foo : {{baseType}}
+                     {
+                         public void Baz() => Console.WriteLine("Class with generic base type");
+                     }
+                     """, 
+            "Class with generic base type");
+    }
 }
