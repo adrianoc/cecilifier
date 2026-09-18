@@ -28,14 +28,20 @@ namespace Cecilifier.Core.AST
                 // save array in local variable...
                 var arrayVariable = CodeGenerationHelpers.StoreTopOfStackInLocalVariable(Context, _ilVar, "array", enumerableType);
                 
-                var loopVariable = Context.AddLocalVariableToCurrentMethod(node.Identifier.ValueText, Context.TypeResolver.ResolveAny(enumerableType.ElementTypeSymbolOf(), ResolveTargetKind.LocalVariable)).VariableName;
-                var loopIndexVar = Context.AddLocalVariableToCurrentMethod("index", Context.TypeResolver.ResolveAny(Context.RoslynTypeSystem.SystemInt32, ResolveTargetKind.LocalVariable)).VariableName;
+                var conditionCheckLabelVar = Context.Naming.Label("ConditionCheckLabel");
+                var firstLoopBodyInstructionLabelVar = Context.Naming.Label("FirstLoopBodyInstructionLabel");
+                
+                Context.ApiDriver.DefineLabel(Context, _ilVar, conditionCheckLabelVar);
+                Context.ApiDriver.DefineLabel(Context, _ilVar, firstLoopBodyInstructionLabelVar);
+                
+                var loopVariable = Context.AddLocalVariableToCurrentMethod(node.Identifier.ValueText, Context.TypeResolver.Resolve(enumerableType.ElementTypeSymbolOf(), ResolveTargetKind.LocalVariable)).VariableName;
+                var loopIndexVar = Context.AddLocalVariableToCurrentMethod("index", Context.TypeResolver.Resolve(Context.RoslynTypeSystem.SystemInt32, ResolveTargetKind.LocalVariable)).VariableName;
 
-                var conditionCheckLabelVar = CreateCilInstruction(_ilVar, OpCodes.Nop);
-                Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Br, conditionCheckLabelVar);
-                var firstLoopBodyInstructionVar = CreateCilInstruction(_ilVar, OpCodes.Ldloc, arrayVariable.VariableName);
-                WriteCecilExpression(Context, $"{_ilVar}.Append({firstLoopBodyInstructionVar});");
-                Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloc, loopIndexVar);
+                Context.ApiDriver.WriteCilBranch(Context, _ilVar, OpCodes.Br, conditionCheckLabelVar);
+
+                Context.ApiDriver.MarkLabel(Context, _ilVar, firstLoopBodyInstructionLabelVar);
+                Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloc, new CilLocalVariableHandle(arrayVariable.VariableName));
+                Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloc, new CilLocalVariableHandle(loopIndexVar));
                 Context.ApiDriver.WriteCilInstruction(Context, _ilVar, enumerableType.ElementTypeSymbolOf().LdelemOpCode());
                 Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Stloc, new CilLocalVariableHandle(loopVariable));
 
@@ -48,12 +54,12 @@ namespace Cecilifier.Core.AST
                 Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Stloc, new CilLocalVariableHandle(loopIndexVar));
                 
                 // condition check...
-                WriteCecilExpression(Context, $"{_ilVar}.Append({conditionCheckLabelVar});");
+                Context.ApiDriver.MarkLabel(Context, _ilVar, conditionCheckLabelVar);
                 Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloc, new CilLocalVariableHandle(loopIndexVar));
-                Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloc, arrayVariable.VariableName);
+                Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloc, new CilLocalVariableHandle(arrayVariable.VariableName));
                 Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldlen);
                 Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Conv_I4);
-                Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Blt, firstLoopBodyInstructionVar);
+                Context.ApiDriver.WriteCilBranch(Context, _ilVar, OpCodes.Blt, firstLoopBodyInstructionLabelVar);
             }
             
             void ProcessForEachOverEnumerable()
@@ -95,7 +101,7 @@ namespace Cecilifier.Core.AST
             if (forEachHandlerContext.GetEnumeratorMethod.ReturnType.IsValueType || forEachHandlerContext.GetEnumeratorMethod.ReturnType.TypeKind == TypeKind.TypeParameter)
             {
                 Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloca, forEachHandlerContext.EnumeratorVariableName);
-                Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Constrained, Context.TypeResolver.ResolveAny(forEachHandlerContext.GetEnumeratorMethod.ReturnType, ResolveTargetKind.Instruction));
+                Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Constrained, Context.TypeResolver.Resolve(forEachHandlerContext.GetEnumeratorMethod.ReturnType, ResolveTargetKind.Instruction));
                 Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Callvirt, Context.RoslynTypeSystem.SystemIDisposable.GetMembers("Dispose").OfType<IMethodSymbol>().Single().MethodResolverExpression(Context));
             }
             else
@@ -105,7 +111,8 @@ namespace Cecilifier.Core.AST
                 Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Brfalse_S, skipDisposeMethodCallNopVar);
                 Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloc, forEachHandlerContext.EnumeratorVariableName);
                 Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Callvirt, Context.RoslynTypeSystem.SystemIDisposable.GetMembers("Dispose").OfType<IMethodSymbol>().Single().MethodResolverExpression(Context));
-                AddCecilExpression($"{_ilVar}.Append({skipDisposeMethodCallNopVar});");
+                //TODO: Mono.Cecil specific
+                AddCecilExpression($"{_ilVar.VariableName}.Append({skipDisposeMethodCallNopVar});");
             }
         }
 
@@ -114,7 +121,7 @@ namespace Cecilifier.Core.AST
             // Adds a variable to store current value in the foreach loop.
             Context.WriteNewLine();
             Context.WriteComment("variable to store current value in the foreach loop.");
-            var resolvedType = Context.TypeResolver.ResolveAny(forEachHandlerContext.EnumeratorCurrentProperty.GetMemberType(), ResolveTargetKind.LocalVariable);
+            var resolvedType = Context.TypeResolver.Resolve(forEachHandlerContext.EnumeratorCurrentProperty.GetMemberType(), ResolveTargetKind.LocalVariable);
             var foreachCurrentValueVarName = Context.AddLocalVariableToCurrentMethod(node.Identifier.ValueText, resolvedType).VariableName;
             
             var endOfLoopLabelVar = Context.Naming.Label("endForEach");
@@ -148,7 +155,8 @@ namespace Cecilifier.Core.AST
             Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Br, forEachLoopBegin);
             Context.WriteNewLine();
             Context.WriteComment("end of foreach loop");
-            Context.Generate($"{_ilVar}.Append({endOfLoopLabelVar});");
+            //TODO: Mono.Cecil specific
+            Context.Generate($"{_ilVar.VariableName}.Append({endOfLoopLabelVar});");
             Context.WriteNewLine();
         }
 

@@ -106,10 +106,11 @@ namespace Cecilifier.Core.Tests.Tests.Unit
                     @"m_M_2.ReturnType = gp_T_1;\s+" +
                     @"cls_foo_0.Methods.Add\(m_M_2\);\s+" +
                     @"m_M_2.Body.InitLocals = true;\s+" +
-                    @"var il_M_3 = m_M_2.Body.GetILProcessor\(\);\s+" + 
                     @"//Parameters of 'T M\(T t\) { T tl = t; t = tl; return t; }'\s+" + 
                     @"var p_t_4 = new ParameterDefinition\(""t"", ParameterAttributes.None, gp_T_1\);\s+" +
-                    @"m_M_2.Parameters.Add\(p_t_4\);\s+"));
+                    @"m_M_2.Parameters.Add\(p_t_4\);\s+" +
+                    @"var il_M_3 = m_M_2.Body.GetILProcessor\(\);\s+" 
+                    ));
 
             Assert.That(cecilifiedCode, Does.Match("""
                                                    //t = tl;
@@ -140,6 +141,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
                            \s+r_createInstance_4.ReturnType = gi_T_5;
                            \s+var gi_createInstance_6 = new GenericInstanceMethod\(r_createInstance_4\);
                            \s+gi_createInstance_6.GenericArguments.Add\(gp_T_\d+\);
+                           \s+var il_M_\d+ = m_M_\d+.Body.GetILProcessor\(\);
                            \s+il_M_\d+.Emit\(OpCodes.Call, gi_createInstance_6\);
                            """));
             
@@ -561,6 +563,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit
             var cecilifiedCode = result.GeneratedCode.ReadToEnd();
             Assert.That(cecilifiedCode, Does.Match("""
                                                                 \s+//array\[0\].ToString\(\)
+                                                                \s+var il_M_\d+ = m_M_\d+.Body.GetILProcessor\(\);
                                                                 (?<prefix>\s+il_M_\d+\.Emit\(OpCodes\.)Ldarg_0\);
                                                                 \k<prefix>Ldc_I4, 0\);
                                                                 \k<prefix>Readonly\);
@@ -672,8 +675,8 @@ namespace Cecilifier.Core.Tests.Tests.Unit
                                                               \s+\k<overload>.GenericParameters.Add\(gp_T_4\);
                                                               \s+cls_inner_\d+.Methods.Add\(\k<overload>\);
                                                               \s+\k<overload>.Body.InitLocals = true;
-                                                              \s+var il_M_3 = \k<overload>.Body.GetILProcessor\(\);
                                                               \s+//M<T>\(\)
+                                                              \s+var il_M_3 = \k<overload>.Body.GetILProcessor\(\);
                                                               \s+il_M_3.Emit\(OpCodes.Ldarg_0\);
                                                               \s+var (?<gen_method>gi_M_\d+) = new GenericInstanceMethod\(\k<overload>\);
                                                               \s+\k<gen_method>.GenericArguments.Add\(gp_T_4\);

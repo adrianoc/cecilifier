@@ -12,7 +12,7 @@ namespace Cecilifier.Core.Tests.OutputBased;
 
 [TestFixture(typeof(MonoCecilContext), TestName = "Mono.Cecil")]
 [TestFixture(typeof(SystemReflectionMetadataContext), TestName = "System.Reflection.Metadata")]
-[EnableForContext<SystemReflectionMetadataContext>(IgnoreReason = "Not implemented yet")]
+[EnableForContext<SystemReflectionMetadataContext>("ArrayWith3OrMoreElements", "ArrayWith2OrMoreElements", IgnoreReason = "Not implemented yet")]
 public class CollectionExpressionTests<TContext> : OutputBasedTestBase<TContext> where TContext : IVisitorContext
 {
     [Test]
@@ -86,6 +86,7 @@ public class CollectionExpressionTests<TContext> : OutputBasedTestBase<TContext>
     }
     
     [Test]
+    [ParameterizedResourceFilter<SystemReflectionMetadataContext>("long[]")]
     public void ImplicitNumericConversions_Are_Applied([Values("List<long>", "long[]", "Span<long>")] string targetType, [Values("[2, 1]", "[5, 4, 3, 2, 1]")] string items)
     {
         AssertOutput(
@@ -108,6 +109,7 @@ public class CollectionExpressionTests<TContext> : OutputBasedTestBase<TContext>
     }
     
     [Test]
+    [ParameterizedResourceFilter<SystemReflectionMetadataContext>("object[]")]
     public void BoxConversions_Are_Applied([Values("List<object>", "object[]", "Span<object>")] string targetType, [Values("[2, 1]", "[5, 4, 3, 2, 1]")] string items)
     {
         AssertConversionIsApplied(targetType, items, "object");

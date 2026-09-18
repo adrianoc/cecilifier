@@ -15,13 +15,14 @@ public class NullCoalescingTests : CecilifierUnitTestBase
             result.GeneratedCode.ReadToEnd(), 
             Does.Match("""
                        //o1 \?\? o2
+                       \s+var il_M_\d+ = m_M_6.Body.GetILProcessor\(\);
                        \s+var return_\d+ = (?<il>il_M_\d+)\.Create\(OpCodes.Nop\);
                        (?<emit>\s+\k<il>\.Emit\(OpCodes\.)Ldarg_0\);
                        \k<emit>Dup\);
                        \k<emit>Brtrue_S, return_\d+\);
                        \k<emit>Pop\);
                        \k<emit>Ldarg_1\);
-                       \s+\k<il>\.Body\.Instructions\.Add\(return_\d+\);
+                       \s+\k<il>\.Append\(return_\d+\);
                        \k<emit>Ret\);
                        """));
     }
@@ -34,6 +35,7 @@ public class NullCoalescingTests : CecilifierUnitTestBase
             result.GeneratedCode.ReadToEnd(), 
             Does.Match("""
                        //M2\(n\) \?\? o2
+                       \s+var il_M_\d+ = m_M_\d+.Body.GetILProcessor\(\);
                        \s+var return_\d+ = (?<il>il_M_\d+\.)Create\(OpCodes.Nop\);
                        (?<emit>\s+\k<il>Emit\(OpCodes\.)Ldarg_0\);
                        \k<emit>Call, m_m2_\d+\);
@@ -41,7 +43,7 @@ public class NullCoalescingTests : CecilifierUnitTestBase
                        \k<emit>Brtrue_S, return_\d+\);
                        \k<emit>Pop\);
                        \k<emit>Ldarg_1\);
-                       \s+\k<il>Body\.Instructions.Add\(return_\d+\);
+                       \s+\k<il>Append\(return_\d+\);
                        \k<emit>Ret\);
                        \s+//End of local function
                        """));
@@ -53,18 +55,19 @@ public class NullCoalescingTests : CecilifierUnitTestBase
         var result = RunCecilifier("int? M(int? i1, int? i2) => i1 ?? i2;");
         Assert.That(result.GeneratedCode.ReadToEnd(), Does.Match("""
                                                                  //i1 \?\? i2
+                                                                 \s+var il_M_\d+ = m_M_\d+.Body.GetILProcessor\(\);
                                                                  (?<emit>\s+il_M_\d+\.Emit\(OpCodes\.)Ldarg_0\);
                                                                  \s+var (?<left>l_leftValue_\d+) = new VariableDefinition\(.+ImportReference\(.+Nullable<>\)\)\.MakeGenericInstanceType\(.+Int32\)\);
                                                                  \s+m_M_\d+.Body.Variables.Add\(\k<left>\);
                                                                  \k<emit>Stloc, \k<left>\);
                                                                  \k<emit>Ldloca_S, \k<left>\);
                                                                  \k<emit>Call,.+typeof\(System.Nullable<System.Int32>\).+"get_HasValue".+\);
-                                                                 \s+var (?<loadLeftValue>loadLeftValueTarget_\d+) = il_M_\d+.Create\(OpCodes.Ldloc_S, \k<left>\);
+                                                                 \s+var (?<loadLeftValue>loadLeftValueTarget_\d+) = il_M_\d+.Create\(OpCodes.Nop\);
                                                                  \k<emit>Brtrue_S, \k<loadLeftValue>\);
                                                                  \k<emit>Ldarg_1\);
                                                                  \k<emit>Ret\);
-                                                                 \s+il_M_\d+\.Body\.Instructions.Add\(\k<loadLeftValue>\);
-                                                                 \k<emit>Ret\);
+                                                                 \s+il_M_\d+\.Append\(\k<loadLeftValue>\);
+                                                                 \k<emit>Ldloc, \k<left>\);
                                                                  """));
     }
     
@@ -90,11 +93,20 @@ public class NullCoalescingTests : CecilifierUnitTestBase
                        (?<emit>\s+il_m3_\d+\.Emit\(OpCodes\.)Brtrue_S, (?<loadLeftValue>loadLeftValueTarget_\d+)\);
                        \k<emit>Ldarg_1\);
                        \k<emit>Unbox_Any, assembly.MainModule.TypeSystem.Int32\);
-                       \k<emit>Newobj,.+System.Nullable<>.+MakeGenericType\(typeof\(System.Int32\)\).GetConstructors\(\).Single\(ctor => ctor.GetParameters\(\).Length == 1\)\)\);
+                       \s+var (?<type>m_declaringType_\d+) = assembly.MainModule.ImportReference\(typeof\(System.Nullable<>\)\).MakeGenericInstanceType\(assembly.MainModule.TypeSystem.Int32\);
+                       \s+var (?<ctor>r_tmpMethod_\d+) = assembly.MainModule.ImportReference\(\k<type>.ElementType.Resolve\(\).Methods.Single\(m => m.Name == ".ctor" && m.Parameters.Count == 1\)\);
+                       \s+var r_genericMethod_\d+ = new MethodReference\(\k<ctor>.Name, \k<ctor>.ReturnType\)
+                       \s+{
+                       \s+HasThis = \k<ctor>.HasThis,
+                       \s+CallingConvention = \k<ctor>.CallingConvention,
+                       \s+ExplicitThis = \k<ctor>.ExplicitThis,
+                       \s+DeclaringType = \k<ctor>.DeclaringType.MakeGenericInstanceType\(\k<type>.GenericArguments.ToArray\(\)\),
+                       \s+};
+                       \s+r_genericMethod_\d+.Parameters.Add\(new ParameterDefinition\(\k<ctor>.Parameters\[0\].Name, \k<ctor>.Parameters\[0\].Attributes, \k<ctor>.Parameters\[0\].ParameterType\)\);
+                       \k<emit>Newobj, r_genericMethod_18\);
                        \k<emit>Ret\);
-                       \s+il_m3_\d+\.Body\.Instructions\.Add\(\k<loadLeftValue>\);
-                       \k<emit>Ret\);
-                       \s+//End of local function\.
+                       \s+il_m3_\d+\.Append\(\k<loadLeftValue>\);
+                       \k<emit>Ldloc, l_leftValue_\d+\);
                        """));
     }
 }

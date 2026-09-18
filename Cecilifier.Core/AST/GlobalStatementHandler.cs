@@ -20,7 +20,7 @@ namespace Cecilifier.Core.AST
 
             var hasReturnStatement = firstGlobalStatement.Parent!.DescendantNodes().Any(node => node.IsKind(SyntaxKind.ReturnStatement));
 
-            var typeModifiers = CecilDefinitionsFactory.DefaultTypeAttributeFor(TypeKind.Class, false).AppendModifier("TypeAttributes.NotPublic | TypeAttributes.AutoLayout");
+            var typeModifiers = CecilDefinitionsFactory.DefaultTypeAttributeFor(TypeKind.Class, false).AppendEnumFlag("TypeAttributes.NotPublic | TypeAttributes.AutoLayout");
             typeVar = context.Naming.Type("topLevelStatements", ElementKind.Class);
             var typeExps = context.ApiDefinitionsFactory.Type(
                                                         context,
@@ -44,29 +44,28 @@ namespace Cecilifier.Core.AST
                     null);
 
             methodVar = context.Naming.SyntheticVariable("topLevelMain", ElementKind.Method);
-            var ilContext = context.ApiDriver.NewIlContext(context, "topLevelMain", methodVar);
+            ilVar = context.ApiDriver.NewIlContext(context, "topLevelMain", methodVar);
             var methodExps = context.ApiDefinitionsFactory.Method(
                                                     context,
-                                                    new BodiedMemberDefinitionContext("<Main>$", "programMain", methodVar, typeVar, MemberOptions.Static, ilContext),
+                                                    new BodiedMemberDefinitionContext("<Main>$", "programMain", methodVar, typeVar, MemberOptions.Static, ilVar),
                                                     "Program",
                                                     "MethodAttributes.Private | MethodAttributes.HideBySig | MethodAttributes.Static",
                                                     [new ParameterSpec("args", context.TypeResolver.MakeArrayType(context.RoslynTypeSystem.SystemString, ResolveTargetKind.Parameter), RefKind.None, Constants.ParameterAttributes.None)],
                                                     [],
-                                                    ctx => ctx.TypeResolver.ResolveAny(hasReturnStatement ? context.RoslynTypeSystem.SystemInt32 : context.RoslynTypeSystem.SystemVoid, ResolveTargetKind.ReturnType),
+                                                    ctx => ctx.TypeResolver.Resolve(hasReturnStatement ? context.RoslynTypeSystem.SystemInt32 : context.RoslynTypeSystem.SystemVoid, ResolveTargetKind.ReturnType),
                                                     out _);
             context.Generate(methodExps);
             
-            var mainBodyExps = context.ApiDefinitionsFactory.MethodBody(context, "topLevelMain", ilContext, [], []);
+            var mainBodyExps = context.ApiDefinitionsFactory.MethodBody(context, "topLevelMain", ilVar, [], []);
             context.Generate(mainBodyExps);
 
-            ilVar = ilContext.VariableName; // TODO: (remove) This forces the related ILProcessor variable to be emitted.
             NonCapturingLambdaProcessor.InjectSyntheticMethodsForNonCapturingLambdas(context, firstGlobalStatement, typeVar);
         }
 
         public bool HandleGlobalStatement(GlobalStatementSyntax node)
         {
             using (context.DefinitionVariables.WithCurrent("<global namespace>", "Program", VariableMemberKind.Type, typeVar))
-            using (context.DefinitionVariables.WithCurrentMethod("Program", "<Main>$", [], 0, methodVar))
+            using (context.DefinitionVariables.WithCurrentMethod("Program", "<Main>$", [], [], methodVar))
             {
                 if (node.Statement.IsKind(SyntaxKind.LocalFunctionStatement))
                 {
@@ -103,7 +102,7 @@ namespace Cecilifier.Core.AST
 
         public string MainMethodDefinitionVariable => methodVar;
 
-        private readonly string ilVar;
+        private readonly IlContext ilVar;
         private readonly string methodVar;
         private readonly string typeVar;
         private readonly IVisitorContext context;

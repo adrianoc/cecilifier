@@ -25,10 +25,10 @@ namespace Cecilifier.Core.AST.Params;
 /// </summary>
 internal abstract class ExpandedParamsArgumentHandler
 {
-    protected readonly string ilVar;
+    protected readonly IlContext ilVar;
     protected int _currentIndex;
 
-    protected ExpandedParamsArgumentHandler(IVisitorContext context, IParameterSymbol paramsParameter, ArgumentListSyntax argumentList, string ilVar)
+    protected ExpandedParamsArgumentHandler(IVisitorContext context, IParameterSymbol paramsParameter, ArgumentListSyntax argumentList, IlContext ilVar)
     {
         Context = context;
         ElementType = paramsParameter.Type.ElementTypeSymbolOf(); 

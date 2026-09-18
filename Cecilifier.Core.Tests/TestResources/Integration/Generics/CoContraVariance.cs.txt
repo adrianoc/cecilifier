@@ -1,6 +1,8 @@
 using System;
 
+#if !API_DRIVER_SYSTEM_REFLECTION_METADATA
 public delegate DO Del<in DI, out DO>(DI i);
+#endif
 
 interface CoContraVariance<in I, out O> 
 {

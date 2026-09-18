@@ -61,7 +61,6 @@ public class InterfaceTests : CecilifierUnitTestBase
                         var (m_M_\d+) = new MethodDefinition\("IFoo<Foo>.M",.+\);
                         \s+(cls_foo_\d+).Methods.Add\(\1\);
                         \s+m_M_5.Body.InitLocals = true;
-                        \s+var il_M_\d+ = m_M_\d+.Body.GetILProcessor\(\);
                         \s+m_M_\d+.Overrides.Add\(new MethodReference\(m_M_2.Name, m_M_2.ReturnType\) {.+DeclaringType = itf_iFoo_\d+.MakeGenericInstanceType\(\2\),.+\);
                         """,
         TestName = "Generics")]

@@ -34,7 +34,7 @@ internal class DelayedDefinitionsManagerTests : CecilifierContextBasedTestBase<S
         var context = NewContext();
         
         context.DelayedDefinitionsManager.RegisterTypeDefinition("T1V", testContext.OnTypeRegistration);
-        context.DelayedDefinitionsManager.RegisterMethodDefinition("T1V", (ctx, tdr) => "T1M1");
+        context.DelayedDefinitionsManager.RegisterMethodDefinition("T1V", "M1V", (ctx, tdr) => "T1M1");
         
         context.DelayedDefinitionsManager.ProcessDefinitions(context);
         
@@ -48,8 +48,8 @@ internal class DelayedDefinitionsManagerTests : CecilifierContextBasedTestBase<S
         
         var context = NewContext();
         context.DelayedDefinitionsManager.RegisterTypeDefinition("T1V", testContext.OnTypeRegistration);
-        context.DelayedDefinitionsManager.RegisterMethodDefinition("T1V", (ctx, tdr) => "T1M1");
-        context.DelayedDefinitionsManager.RegisterMethodDefinition("T1V", (ctx, tdr) => "T1M2");
+        context.DelayedDefinitionsManager.RegisterMethodDefinition("T1V", "M1V", (ctx, tdr) => "T1M1");
+        context.DelayedDefinitionsManager.RegisterMethodDefinition("T1V", "M2V",(ctx, tdr) => "T1M2");
         
         context.DelayedDefinitionsManager.ProcessDefinitions(context);
         
@@ -65,7 +65,7 @@ internal class DelayedDefinitionsManagerTests : CecilifierContextBasedTestBase<S
         
         context.DelayedDefinitionsManager.RegisterTypeDefinition("T1V",  testContext.OnTypeRegistration);
         context.DelayedDefinitionsManager.RegisterTypeDefinition("T2V",  testContext.OnTypeRegistration);
-        context.DelayedDefinitionsManager.RegisterMethodDefinition(declaringTypeName, (ctx, tdr) => "TheMethod");
+        context.DelayedDefinitionsManager.RegisterMethodDefinition(declaringTypeName, "M1V",(ctx, tdr) => "TheMethod");
         
         context.DelayedDefinitionsManager.ProcessDefinitions(context);
         
@@ -86,8 +86,8 @@ internal class DelayedDefinitionsManagerTests : CecilifierContextBasedTestBase<S
         
         context.DelayedDefinitionsManager.RegisterTypeDefinition("T1V",  testContext.OnTypeRegistration);
         context.DelayedDefinitionsManager.RegisterTypeDefinition("T2V",  testContext.OnTypeRegistration);
-        context.DelayedDefinitionsManager.RegisterMethodDefinition("T1V", (ctx, tdr) => "T1M");
-        context.DelayedDefinitionsManager.RegisterMethodDefinition("T2V", (ctx, tdr) => "T2M");
+        context.DelayedDefinitionsManager.RegisterMethodDefinition("T1V", "M1V", (ctx, tdr) => "T1M");
+        context.DelayedDefinitionsManager.RegisterMethodDefinition("T2V", "M2V", (ctx, tdr) => "T2M");
         
         context.DelayedDefinitionsManager.ProcessDefinitions(context);
         
@@ -104,8 +104,8 @@ internal class DelayedDefinitionsManagerTests : CecilifierContextBasedTestBase<S
         context.DelayedDefinitionsManager.RegisterTypeDefinition("T1V",  testContext.OnTypeRegistration);
         context.DelayedDefinitionsManager.RegisterTypeDefinition("T2V",  testContext.OnTypeRegistration);
         context.DelayedDefinitionsManager.RegisterTypeDefinition("T3V",  testContext.OnTypeRegistration);
-        context.DelayedDefinitionsManager.RegisterMethodDefinition("T2V", (ctx, tdr) => "T2M");
-        context.DelayedDefinitionsManager.RegisterMethodDefinition("T3V", (ctx, tdr) => "T3M");
+        context.DelayedDefinitionsManager.RegisterMethodDefinition("T2V", "M1V", (ctx, tdr) => "T2M");
+        context.DelayedDefinitionsManager.RegisterMethodDefinition("T3V", "M2V", (ctx, tdr) => "T3M");
         
         context.DelayedDefinitionsManager.ProcessDefinitions(context);
         
@@ -125,8 +125,8 @@ internal class DelayedDefinitionsManagerTests : CecilifierContextBasedTestBase<S
         context.DelayedDefinitionsManager.RegisterTypeDefinition("T2V",  testContext.OnTypeRegistration);
         context.DelayedDefinitionsManager.RegisterTypeDefinition("T3V",  testContext.OnTypeRegistration);
         context.DelayedDefinitionsManager.RegisterTypeDefinition("T4V",  testContext.OnTypeRegistration);
-        context.DelayedDefinitionsManager.RegisterMethodDefinition("T2V", (ctx, tdr) => "T2M");
-        context.DelayedDefinitionsManager.RegisterMethodDefinition("T4V", (ctx, tdr) => "T4M");
+        context.DelayedDefinitionsManager.RegisterMethodDefinition("T2V", "M1V", (ctx, tdr) => "T2M");
+        context.DelayedDefinitionsManager.RegisterMethodDefinition("T4V", "M2V", (ctx, tdr) => "T4M");
         
         context.DelayedDefinitionsManager.ProcessDefinitions(context);
         

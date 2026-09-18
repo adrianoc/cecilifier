@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.Core.AST;
+using Cecilifier.Core.TypeSystem;
 
 namespace Cecilifier.Core.Variables;
 
@@ -19,9 +20,9 @@ public class DefinitionVariableManager
         return variable;
     }
 
-    public MethodDefinitionVariable RegisterMethod(string parentName, string methodName, string[] parameterTypes, int typeParameterCount, string definitionVariableName)
+    public MethodDefinitionVariable RegisterMethod(string parentName, string methodName, string[] parameterTypes, string[] typeParameters, string definitionVariableName)
     {
-        var definitionVariable = new MethodDefinitionVariable(parentName, methodName, parameterTypes, typeParameterCount, definitionVariableName);
+        var definitionVariable = new MethodDefinitionVariable(parentName, methodName, parameterTypes, typeParameters, definitionVariableName);
         RegisterVariable(definitionVariable);
         return definitionVariable;
     }
@@ -67,6 +68,18 @@ public class DefinitionVariableManager
         return DefinitionVariable.NotFound;
     }
 
+    public DefinitionVariable GetOrRegisterNonMethodVariable<TState>(string memberName, string parentName, VariableMemberKind variableMemberKind, in TypeResolutionContext resolutionContext, TState state, Func<TState, string> registerFunction) where TState : allows ref struct
+    {
+        var found = (resolutionContext.Options & TypeResolutionOptions.RegisterVariables) == TypeResolutionOptions.RegisterVariables
+            ? GetVariable(memberName, variableMemberKind, parentName)
+            : new DefinitionVariable(parentName, memberName, variableMemberKind, registerFunction(state));
+        
+        if (found.IsValid)
+            return found;
+        
+        return RegisterNonMethod(parentName, memberName, variableMemberKind, registerFunction(state));
+    }
+    
     public DefinitionVariable GetLastOf(VariableMemberKind kind)
     {
         var index = _definitionStack.FindLastIndex(c => c.Kind == kind);
@@ -78,9 +91,9 @@ public class DefinitionVariableManager
     }
     public IEnumerable<DefinitionVariable> GetVariablesOf(VariableMemberKind kind) => _definitionVariables.Where(candidate => candidate.Kind == kind);
 
-    public ScopedDefinitionVariable WithCurrentMethod(string parentName, string memberName, string[] paramTypes, int typeParameterCount, string definitionVariableName)
+    public ScopedDefinitionVariable WithCurrentMethod(string parentName, string memberName, string[] paramTypes, string[] typeParameters, string definitionVariableName)
     {
-        var registered = RegisterMethod(parentName, memberName, paramTypes, typeParameterCount, definitionVariableName);
+        var registered = RegisterMethod(parentName, memberName, paramTypes, typeParameters, definitionVariableName);
         return WithVariable(registered);
     }
 
@@ -143,7 +156,7 @@ public class DefinitionVariableManager
         return new ScopedDefinitionVariable(_definitionVariables, _definitionVariables.Count, true);
     }
 
-    public void RegisterDependentOnRegistration(string targetVariable, IVisitorContext context, Action<IVisitorContext, object> toExecute, object state)
+    public void RegisterDependentOnRegistration(string targetVariable, IVisitorContext context, Action<IVisitorContext, object?> toExecute, object? state)
     {
         if (!_executeUponRegistration.TryGetValue(targetVariable, out var toExecuteList))
         {
@@ -167,5 +180,6 @@ public class DefinitionVariableManager
         _definitionVariables.Add(definitionVariable);
     }
 
-    private record struct ExecuteUponRegistrationState(IVisitorContext Context, Action<IVisitorContext, object> Function, object State);
+    private record struct ExecuteUponRegistrationState(IVisitorContext Context, Action<IVisitorContext, object?> Function, object? State);
+
 }

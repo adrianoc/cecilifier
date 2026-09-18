@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection.Emit;
+using Cecilifier.Core.ApiDriver;
+using Cecilifier.Core.Extensions;
 using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis.CSharp;
@@ -11,17 +13,18 @@ namespace Cecilifier.Core.AST
 {
     internal partial class StatementVisitor
     {
-        private void ProcessTryCatchFinallyBlock<TState>(string ilVar, CSharpSyntaxNode tryStatement, CatchClauseSyntax[] catches, Action<TState>? finallyBlockHandler, TState state = default)
+        private void ProcessTryCatchFinallyBlock<TState>(IlContext ilVar, CSharpSyntaxNode tryStatement, CatchClauseSyntax[] catches, Action<TState>? finallyBlockHandler, TState state = default)
         {
             ProcessWithInTryCatchFinallyBlock(ilVar, _ => tryStatement.Accept(this), catches, finallyBlockHandler, state);
         }
 
-        private void ProcessWithInTryCatchFinallyBlock<TState>(string ilVar, Action<TState> toProcess, CatchClauseSyntax[] catches, Action<TState> finallyBlockHandler, TState state)
+        private void ProcessWithInTryCatchFinallyBlock<TState>(IlContext ilVar, Action<TState> toProcess, CatchClauseSyntax[] catches, Action<TState>? finallyBlockHandler, TState state)
         {
             var exceptionHandlerTable = new ExceptionHandlerEntry[catches.Length + (finallyBlockHandler != null ? 1 : 0)];
 
             Context.WriteNewLine();
             Context.WriteComment("Try start");
+            
             var tryStartVar = AddCilInstructionWithLocalVariable(ilVar, OpCodes.Nop);
             exceptionHandlerTable[0].TryStart = tryStartVar;
 
@@ -29,11 +32,13 @@ namespace Cecilifier.Core.AST
 
             Context.WriteNewLine();
             Context.WriteComment("Try end");
+
+            var firstInstructionAfterTryCatchBlock = Context.Naming.Label("exceptionBlockEnd");
+            Context.ApiDriver.DefineLabel(Context, ilVar, firstInstructionAfterTryCatchBlock);
             
-            var firstInstructionAfterTryCatchBlock = CreateCilInstruction(ilVar, OpCodes.Nop);
             exceptionHandlerTable[^1].HandlerEnd = firstInstructionAfterTryCatchBlock; // sets up last handler end instruction
 
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Leave, firstInstructionAfterTryCatchBlock);
+            Context.ApiDriver.WriteCilBranch(Context, ilVar, OpCodes.Leave, firstInstructionAfterTryCatchBlock);
 
             for (var i = 0; i < catches.Length; i++)
             {
@@ -42,34 +47,14 @@ namespace Cecilifier.Core.AST
 
             HandleFinallyClause(ilVar, finallyBlockHandler, exceptionHandlerTable, state);
 
-            AddCecilExpression($"{ilVar}.Append({firstInstructionAfterTryCatchBlock});");
+            Context.ApiDriver.MarkLabel(Context, ilVar, firstInstructionAfterTryCatchBlock);
 
-            WriteExceptionHandlers(exceptionHandlerTable);
+            Context.ApiDriver.WriteExceptionHandlers(Context, ilVar, exceptionHandlerTable);
         }
 
-        private void WriteExceptionHandlers(IEnumerable<ExceptionHandlerEntry> exceptionHandlerTable)
+        private void HandleCatchClause(IlContext ilVar, CatchClauseSyntax node, ExceptionHandlerEntry[] exceptionHandlerTable, int currentIndex, string firstInstructionAfterTryCatchBlock)
         {
-            string methodVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
-            foreach (var handlerEntry in exceptionHandlerTable)
-            {
-                AddCecilExpression($"{methodVar}.Body.ExceptionHandlers.Add(new ExceptionHandler(ExceptionHandlerType.{handlerEntry.Kind})");
-                AddCecilExpression("{");
-                if (handlerEntry.Kind == Mono.Cecil.Cil.ExceptionHandlerType.Catch)
-                {
-                    AddCecilExpression($"    CatchType = {handlerEntry.CatchType},");
-                }
-
-                AddCecilExpression($"    TryStart = {handlerEntry.TryStart},");
-                AddCecilExpression($"    TryEnd = {handlerEntry.TryEnd},");
-                AddCecilExpression($"    HandlerStart = {handlerEntry.HandlerStart},");
-                AddCecilExpression($"    HandlerEnd = {handlerEntry.HandlerEnd}");
-                AddCecilExpression("});");
-            }
-        }
-
-        private void HandleCatchClause(string ilVar, CatchClauseSyntax node, ExceptionHandlerEntry[] exceptionHandlerTable, int currentIndex, string firstInstructionAfterTryCatchBlock)
-        {
-            exceptionHandlerTable[currentIndex].Kind = Mono.Cecil.Cil.ExceptionHandlerType.Catch;
+            exceptionHandlerTable[currentIndex].Kind = ExceptionHandlerKind.Catch;
             exceptionHandlerTable[currentIndex].HandlerStart = AddCilInstructionWithLocalVariable(ilVar, OpCodes.Pop); // pops the exception object from stack...
 
             if (currentIndex == 0)
@@ -84,13 +69,13 @@ namespace Cecilifier.Core.AST
 
             exceptionHandlerTable[currentIndex].TryStart = exceptionHandlerTable[0].TryStart;
             exceptionHandlerTable[currentIndex].TryEnd = exceptionHandlerTable[0].TryEnd;
-            exceptionHandlerTable[currentIndex].CatchType = ResolveType(node.Declaration!.Type, ResolveTargetKind.None);
+            exceptionHandlerTable[currentIndex].CatchType = ResolveType(node.Declaration!.Type, ResolveTargetKind.TypeReference);
 
             VisitCatchClause(node);
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Leave, firstInstructionAfterTryCatchBlock);
+            Context.ApiDriver.WriteCilBranch(Context, ilVar, OpCodes.Leave, firstInstructionAfterTryCatchBlock);
         }
 
-        private void HandleFinallyClause<TState>(string ilVar, Action<TState> finallyBlockHandler, ExceptionHandlerEntry[] exceptionHandlerTable, TState state)
+        private void HandleFinallyClause<TState>(IlContext ilVar, Action<TState>? finallyBlockHandler, ExceptionHandlerEntry[] exceptionHandlerTable, TState state)
         {
             if (finallyBlockHandler == null)
                 return;
@@ -99,7 +84,7 @@ namespace Cecilifier.Core.AST
 
             exceptionHandlerTable[finallyEntryIndex].TryStart = exceptionHandlerTable[0].TryStart;
             exceptionHandlerTable[finallyEntryIndex].TryEnd = exceptionHandlerTable[0].TryEnd;
-            exceptionHandlerTable[finallyEntryIndex].Kind = Mono.Cecil.Cil.ExceptionHandlerType.Finally;
+            exceptionHandlerTable[finallyEntryIndex].Kind = ExceptionHandlerKind.Finally;
 
             Context.WriteNewLine();
             Context.WriteComment("finally start");
@@ -118,16 +103,6 @@ namespace Cecilifier.Core.AST
             
             Context.WriteNewLine();
             Context.WriteComment("finally end");
-        }
-        
-        private struct ExceptionHandlerEntry
-        {
-            public Mono.Cecil.Cil.ExceptionHandlerType Kind;
-            public ResolvedType CatchType;
-            public string TryStart;
-            public string TryEnd;
-            public string HandlerStart;
-            public string HandlerEnd;
         }
     }
 }

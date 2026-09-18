@@ -1,6 +1,6 @@
 namespace Cecilifier.ApiDriver.SystemReflectionMetadata.DelayedDefinitions;
 
-internal record MethodDefinitionRecord(Func<SystemReflectionMetadataContext, MethodDefinitionRecord, string> DefinitionFunction, string DeclaringTypeVarName)
+internal record MethodDefinitionRecord(Func<SystemReflectionMetadataContext, MethodDefinitionRecord, string> DefinitionFunction, string MethodVariable)
 {
     public string FirstParameterHandle => "MetadataTokens.ParameterHandle(metadata.GetRowCount(TableIndex.Param) + 1)";
     public string LocalSignatureHandleVariable { get; set; } = "default(StandaloneSignatureHandle)";

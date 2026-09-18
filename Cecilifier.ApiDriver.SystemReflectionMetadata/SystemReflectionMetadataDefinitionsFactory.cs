@@ -1,5 +1,7 @@
 using System.Diagnostics;
+using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using Cecilifier.ApiDriver.SystemReflectionMetadata.CustomAttributes;
 using Cecilifier.ApiDriver.SystemReflectionMetadata.DelayedDefinitions;
@@ -17,6 +19,7 @@ using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using CustomAttributeNamedArgument = Cecilifier.Core.ApiDriver.Attributes.CustomAttributeNamedArgument;
 
 namespace Cecilifier.ApiDriver.SystemReflectionMetadata;
 
@@ -45,10 +48,9 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                       var {typeVar} = metadata.AddTypeReference({resolutionScope}, metadata.GetOrAddString("{typeNamespace}"), metadata.GetOrAddString("{fixedTypeName}"));
                       """);
         
-        ProcessGenericTypeParameters(context, typeParameters);
+        DefineGenericTypeParametersVariables(context, typeParameters);
         
-        // We need to pass the handle of the 1st field/method defined in the module so we need to postpone the type generation after we have visited
-        // all types/members.
+        // We need to pass the handle of the 1st field/method defined in the module so we need to postpone the type generation after we have visited all types/members.
         TypedContext(context).DelayedDefinitionsManager.RegisterTypeDefinition(typeVar, DefineDelayed);
         void DefineDelayed(SystemReflectionMetadataContext ctx, ref TypeDefinitionRecord typeRecord)
         {
@@ -67,7 +69,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                                                                   {attrs},
                                                                   metadata.GetOrAddString("{typeNamespace}"),
                                                                   metadata.GetOrAddString("{fixedTypeName}"),
-                                                                  { (baseType == null ? "default" : context.TypeResolver.ResolveAny(baseType!, ResolveTargetKind.TypeReference)) },
+                                                                  { (baseType == null ? "default" : context.TypeResolver.Resolve(baseType!, ResolveTargetKind.TypeReference)) },
                                                                   fieldList: {firstFieldHandle ?? ApiDriverConstants.FieldDefinitionTableNextAvailableEntry},
                                                                   methodList: {typeRecord.FirstMethodHandle ?? ApiDriverConstants.MethodDefinitionTableNextAvailableEntry});
                                  """));
@@ -92,6 +94,19 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                 ctx.WriteNewLine();
             }
             
+            foreach (var eventRecord in typeRecord.Events)
+            {
+                // process each event passing the type definition variable 
+                eventRecord.Processor(ctx, eventRecord.Name, eventRecord.DefinitionVariable, eventRecord.DeclaringTypeName);
+            }
+            
+            var firstEvent = typeRecord.Events.FirstOrDefault();
+            if (firstEvent.IsValid)
+            {
+                ctx.Generate($"metadata.AddEventMap({typeRecord.TypeDefinitionVariable}, {firstEvent.DefinitionVariable});");
+                ctx.WriteNewLine();
+            }
+            
             if (definitionContext.ParentDefinitionVariable != null)
             {
                 var parentTypeDefinitionVariable =  ctx.DelayedDefinitionsManager.GetTypeDefinitionVariableFromTypeReferenceVariable(definitionContext.ParentDefinitionVariable);
@@ -110,30 +125,13 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
             
             foreach(var itf in interfaces)
             {
-                context.Generate($"metadata.AddInterfaceImplementation({typeRecord.TypeDefinitionVariable}, {context.TypeResolver.ResolveAny(itf, ResolveTargetKind.TypeReference)});");
+                context.Generate($"metadata.AddInterfaceImplementation({typeRecord.TypeDefinitionVariable}, {context.TypeResolver.Resolve(itf, ResolveTargetKind.TypeReference)});");
                 context.WriteNewLine();
             }
 
-            var index = 0;
-            foreach (var genericTypeParameter in outerTypeParameters.Concat(typeParameters))
-            {
-                ctx.Generate($"""metadata.AddGenericParameter({typeRecord.TypeDefinitionVariable}, GenericParameterAttributes.None, metadata.GetOrAddString("{genericTypeParameter.Identifier.Text}"), {index++});""");
-                ctx.WriteNewLine();
-            }
+            AddTypeParameters(ctx, outerTypeParameters.Concat(typeParameters), typeRecord.TypeDefinitionVariable);
+            
             ctx.WriteNewLine();
-        }
-        
-        static void ProcessGenericTypeParameters(IVisitorContext context, IList<TypeParameterSyntax> typeParamList)
-        {
-            for (int i = 0; i < typeParamList.Count; i++)
-            {
-                var symbol = context.SemanticModel.GetDeclaredSymbol(typeParamList[i]).EnsureNotNull();
-                var genericParamName = typeParamList[i].Identifier.Text;
-                var parentName = symbol.TypeParameterKind == TypeParameterKind.Method ? symbol.DeclaringMethod?.OriginalDefinition.ToDisplayString() : symbol.DeclaringType?.OriginalDefinition.ToDisplayString();
-
-                // register a variable representing the type parameter; uses its index as its name since in SRM the type parameter is represented by its index. 
-                context.DefinitionVariables.RegisterNonMethod(parentName, genericParamName, VariableMemberKind.TypeParameter, i.ToString());
-            }
         }
     }
 
@@ -144,6 +142,8 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
 
     public IEnumerable<string> Method(IVisitorContext context, IMethodSymbol methodSymbol, BodiedMemberDefinitionContext bodiedMemberDefinitionContext, string methodName, string methodModifiers, IList<TypeParameterSyntax> typeParameters)
     {
+        DefineGenericTypeParametersVariables(context, typeParameters);
+
         // Resolve the method to make sure there's a method ref available (this will be used to fulfill any references to this method)
         context.MemberResolver.ResolveMethod(methodSymbol);
         
@@ -158,7 +158,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         }
 
         var memberParentDefinitionVariable = bodiedMemberDefinitionContext.Member.ParentDefinitionVariable ?? throw new ArgumentNullException(nameof(bodiedMemberDefinitionContext.Member.ParentDefinitionVariable));
-        TypedContext(context).DelayedDefinitionsManager.RegisterMethodDefinition(memberParentDefinitionVariable, (ctx, methodRecord) =>
+        TypedContext(context).DelayedDefinitionsManager.RegisterMethodDefinition(memberParentDefinitionVariable,bodiedMemberDefinitionContext.Member.DefinitionVariable, (ctx, methodRecord) =>
         {
             EmitLocalVariables(ctx, bodiedMemberDefinitionContext.Member.Identifier, in methodRecord);
             
@@ -166,15 +166,16 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
             Debug.Assert(methodSignatureVar.IsValid);
             
             var methodDefVar = bodiedMemberDefinitionContext.IlContext!.AssociatedMethodVariable;
-            var bodyOffset = methodSymbol.ContainingType.TypeKind == TypeKind.Interface 
+            var bodyOffset = methodSymbol.ContainingType.TypeKind == TypeKind.Interface || methodSymbol.IsExtern || methodSymbol.IsAbstract
                                             ? "-1" 
                                             : $"methodBodyStream.AddMethodBody({bodiedMemberDefinitionContext.IlContext.VariableName}, localVariablesSignature: {methodRecord.LocalSignatureHandleVariable})";
             
             var firstParameterHandle = AddParametersMetadata(ctx, methodSymbol.Parameters.Select(p => p.Name));
+            var methodImplAttributes = "MethodImplAttributes.IL | MethodImplAttributes.Managed".AppendEnumFlag(GetMethodImplementationFlagsStringFrom(methodSymbol.MethodImplementationFlags));
             ctx.Generate($"""
                           var {methodDefVar}  = metadata.AddMethodDefinition(
                                                     {methodModifiers},
-                                                    MethodImplAttributes.IL | MethodImplAttributes.Managed,
+                                                    {methodImplAttributes},
                                                     metadata.GetOrAddString("{methodName}"),
                                                     {methodSignatureVar.VariableName},
                                                     {bodyOffset},
@@ -182,6 +183,8 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                           """);
             ctx.WriteNewLine();
             ctx.WriteNewLine();
+            
+            AddTypeParameters(ctx, typeParameters, methodDefVar);
 
             ctx.DefinitionVariables.ExecuteDependentRegistrations(methodDefVar);
             
@@ -189,6 +192,23 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         });
         
         yield break;
+ 
+        static string GetMethodImplementationFlagsStringFrom(MethodImplAttributes methodImplAttributes)
+        {
+            StringBuilder result = new();
+            const string enumName = nameof(MethodImplAttributes);
+            // Ignore 0, since both MethodImplAttributes.IL and MethodImplAttributes.Managed have this value and both
+            // are mapped to IL name :( (we hard code these two flags in the code - see the caller of this method)
+            foreach (var enumMember in Enum.GetValues<MethodImplAttributes>().Where(em => em != 0))
+            {
+                if (methodImplAttributes.HasFlag(enumMember))
+                {
+                    result.AppendEnumFlag($"{enumName}.{enumMember}");
+                }
+            }
+            
+            return result.ToString();
+        }
     }
 
     public IEnumerable<string> Method(IVisitorContext context,
@@ -200,13 +220,24 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         Func<IVisitorContext, ResolvedType> returnTypeResolver,
         out MethodDefinitionVariable methodDefinitionVariable)
     {
+        // Some parts of the code assumes that once this method returns the variable specified in 'definitionContext.Member.DefinitionVariable`
+        // have been defined.
+        // Since in SRM the definition of that variable will be postponed to the end of the processing (see 'DelayedDefinitionManager') when this
+        // method returns a variable to store a 'method reference' have been registered instead so we check if that 'method reference' has already
+        // been registered and do not schedule another registration/processing for the method.
+        methodDefinitionVariable = ((SystemReflectionMetadataMemberResolver) context.MemberResolver).LookupRegisteredMethod(declaringTypeName, definitionContext.Member.Name, parameters, typeParameters.AsReadOnly());
+        if (methodDefinitionVariable.IsValid)
+            return Array.Empty<string>();
+        
+        DefineGenericTypeParametersVariables(context, definitionContext.Member.Identifier, typeParameters);
+        
         var methodRefVar = context.MemberResolver.ResolveMethod(
-                                                            declaringTypeName, 
-                                                            definitionContext.Member.ParentDefinitionVariable, 
-                                                            definitionContext.Member.Identifier, 
-                                                            returnTypeResolver(context), 
-                                                            parameters, 
-                                                            typeParameters.Count,
+                                                            declaringTypeName,
+                                                            definitionContext.Member.ParentDefinitionVariable,
+                                                            definitionContext.Member.Name,
+                                                            returnTypeResolver(context),
+                                                            parameters,
+                                                            typeParameters.ToArray(),
                                                             definitionContext.Options);
 
         methodDefinitionVariable = context.DefinitionVariables.FindByVariableName<MethodDefinitionVariable>(methodRefVar) ?? MethodDefinitionVariable.MethodNotFound;
@@ -214,22 +245,23 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         // register all parameters so we can reference them when emitting the method body
         for (int i = 0; i < parameters.Count; i++)
         {
-            context.DefinitionVariables.RegisterNonMethod(definitionContext.Member.ContainingTypeName,  parameters[i].Name, VariableMemberKind.Parameter, $"{i + 1}");
+            context.DefinitionVariables.RegisterNonMethod(definitionContext.Member.Identifier,  parameters[i].Name, VariableMemberKind.Parameter, $"{i + 1}");
         }
 
-        TypedContext(context).DelayedDefinitionsManager.RegisterMethodDefinition(definitionContext.Member.ParentDefinitionVariable, (ctx, methodRecord) =>
+        Debug.Assert(definitionContext.Member.ParentDefinitionVariable != null);
+        TypedContext(context).DelayedDefinitionsManager.RegisterMethodDefinition(definitionContext.Member.ParentDefinitionVariable, definitionContext.Member.DefinitionVariable, (ctx, methodRecord) =>
         {
             EmitLocalVariables(ctx, definitionContext.Member.Identifier, in methodRecord);
             
             var methodReferenceToFind = new MethodDefinitionVariable(
                                                 VariableMemberKind.MethodSignature,
                                                 declaringTypeName,
-                                                definitionContext.Member.Identifier,
+                                                definitionContext.Member.Name,
                                                 parameters.Select(p => p.ElementType.Expression).ToArray(),
-                                                typeParameters.Count);
+                                                typeParameters.ToArray());
 
             var methodSignatureVar = ctx.DefinitionVariables.GetMethodVariable(methodReferenceToFind);
-            Debug.Assert(methodSignatureVar.IsValid);
+            methodSignatureVar.ThrowIfVariableIsNotValid($"Method={declaringTypeName}.{definitionContext.Member.Name}");
             
             var methodDefVar = definitionContext.Member.DefinitionVariable;
             var firstParameterHandle = AddParametersMetadata(ctx, parameters.Select(p => p.Name));
@@ -255,10 +287,13 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                                         declaringTypeName,
                                         definitionContext.Member.Name,
                                         parameters.Select(p => p.ElementType.Expression).ToArray(),
-                                        0,
+                                        [], //TODO: This seems wrong. If the method is generic shouldn't we pass the generic type parameters?
                                         methodDefVar);
             
             ctx.DefinitionVariables.RegisterMethod(toBeRegistered);
+            
+            AddTypeParameters(ctx, typeParameters, methodDefVar);
+            
             ctx.DefinitionVariables.ExecuteDependentRegistrations(methodDefVar);
             
             return methodDefVar;
@@ -280,10 +315,11 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
               """);
         
         var parentDefinitionVariable = definitionContext.Member.ParentDefinitionVariable ?? throw new ArgumentNullException(nameof(definitionContext.Member.ParentDefinitionVariable));
-        TypedContext(context).DelayedDefinitionsManager.RegisterMethodDefinition(parentDefinitionVariable, (ctx, methodRecord) =>
+        TypedContext(context).DelayedDefinitionsManager.RegisterMethodDefinition(parentDefinitionVariable, definitionContext.Member.DefinitionVariable, (ctx, methodRecord) =>
         {
             EmitLocalVariables(ctx, "ctor", in methodRecord);
             
+            Debug.Assert(definitionContext.IlContext != null);
             var ctorDefVar = ctx.Naming.SyntheticVariable($"{nameAsIdentifier}_Ctor", ElementKind.MemberReference);
             ctx.Generate($"""
                                    var {ctorDefVar} = metadata.AddMethodDefinition(
@@ -303,7 +339,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
 
     public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext definitionContext, ISymbol fieldOrEvent, ITypeSymbol fieldType, string fieldAttributes, bool isVolatile, bool isByRef, in FieldInitializationData initializer = default)
     {
-        var resolvedType = context.TypeResolver.ResolveAny(fieldType, new TypeResolutionContext(ResolveTargetKind.Field, fieldType.ElementTypeSymbolOf().IsValueType ? TypeResolutionOptions.IsValueType : TypeResolutionOptions.None));
+        var resolvedType = context.TypeResolver.Resolve(fieldType, new TypeResolutionContext(ResolveTargetKind.Field, fieldType.ElementTypeSymbolOf().IsValueType ? TypeResolutionOptions.IsValueType : TypeResolutionOptions.None));
         return Field(context, definitionContext, fieldOrEvent.ContainingType.ToDisplayString(), resolvedType,  fieldAttributes, isVolatile, isByRef, initializer);
     }
 
@@ -390,13 +426,38 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         return span.Slice(0, count + 1).ToArray();
     }
 
-    public IEnumerable<string> MethodBody(IVisitorContext context, string methodName, IlContext ilContext, ResolvedType[] localVariableTypes, InstructionRepresentation[] instructions) => [];
+    public IEnumerable<string> MethodBody(IVisitorContext context, string methodName, IlContext ilContext, ResolvedType[] localVariableTypes, InstructionRepresentation[] instructions)
+    {
+        var exps = new List<string>(instructions.Length);
+        
+        var tagToLabelVariable = new Dictionary<string, string>();
+        // emit an instruction for each instruction that has a 'Tag'
+        foreach (var instruction in instructions.Where(inst => !inst.Ignore))
+        {
+            if (instruction.Tag != null)
+            {
+                var labelVariable = context.Naming.SyntheticVariable(instruction.Tag, ElementKind.Label);
+                
+                exps.Add(context.ApiDriver.EmitDefineLabel(context, ilContext, labelVariable));
+                exps.Add(context.ApiDriver.EmitMarkLabel(context, ilContext, labelVariable));
+                
+                tagToLabelVariable[instruction.Tag] = labelVariable;
+            }
+
+            exps.Add(instruction.BranchTargetTag != null 
+                ? context.ApiDriver.EmitCilBranchInstruction(context, ilContext, instruction.OpCode, tagToLabelVariable[instruction.BranchTargetTag]) 
+                : context.ApiDriver.EmitCilInstruction(context, ilContext, instruction.OpCode, instruction.Operand));
+        }
+        
+        return exps.ToArray();
+    }
 
     public DefinitionVariable LocalVariable(IVisitorContext context, string variableName, string methodDefinitionVariableName, ResolvedType resolvedVarType)
     {
-        var variableIndex = TypedContext(context).DelayedDefinitionsManager.RegisterLocalVariable(variableName, resolvedVarType,  (ctx, localVariableEncoderVar, localVarType) =>
+        var variableIndex = TypedContext(context).DelayedDefinitionsManager.RegisterLocalVariable(methodDefinitionVariableName, variableName, resolvedVarType,  (ctx, localVariableEncoderVar, localVarType) =>
         {
             context.Generate($"{localVariableEncoderVar}.AddVariable().{localVarType};");
+            context.WriteNewLine();
         });
 
         // This is a hack. SRM accesses local variables by index, and Cecilifier does not have a way to pass that index around; it only has variable names,
@@ -407,9 +468,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
 
     public IEnumerable<string> Property(IVisitorContext context, BodiedMemberDefinitionContext definitionContext, string declaringTypeName, List<ParameterSpec> propertyParameters, ResolvedType propertyType)
     {
-        var propertySignatureTempVar =  context.Naming
-                                                    .With(NamingOptions.NoCasingElementNames)
-                                                    .Without(NamingOptions.CamelCaseElementNames).SyntheticVariable($"{definitionContext.Member.Name.CamelCase()}_blobBuilder", ElementKind.MemberReference);
+        var propertySignatureTempVar =  context.Naming.SyntheticVariable($"{definitionContext.Member.Name}BlobBuilder", ElementKind.None);
 
         TypedContext(context).DelayedDefinitionsManager.RegisterProperty(definitionContext.Member.Name, definitionContext.Member.DefinitionVariable, declaringTypeName, definitionContext.Member.ParentDefinitionVariable!, 
             static (context,  propertyName, propertyDefinitionVariable, declaringTypeName, declaringTypeVariable) =>
@@ -448,6 +507,35 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                 """)];
     }
 
+    public IEnumerable<string> Event(IVisitorContext context, BodiedMemberDefinitionContext eventSpec, string declaringTypeName, ResolvedType eventType, string addAccessorVariable, string removeAccessorVariable)
+    {
+        TypedContext(context).DelayedDefinitionsManager.RegisterEvent(eventSpec.Member.Name, eventSpec.Member.DefinitionVariable, declaringTypeName, 
+            static (context,  eventName, eventDefinitionVariable, declaringTypeName) =>
+        {
+            var addMethodVariable = context.DefinitionVariables.GetVariable($"add_{eventName}", VariableMemberKind.Method, declaringTypeName);
+            var removeMethodVariable = context.DefinitionVariables.GetVariable($"remove_{eventName}", VariableMemberKind.Method, declaringTypeName);
+
+            foreach (var accessor in new[] {(addMethodVariable, "Adder"), (removeMethodVariable, "Remover") })
+            {
+                if (!accessor.Item1.IsValid)
+                    continue;
+                
+                context.Generate($"""
+                                  // Associate method {accessor.Item1.MemberName} with event {eventName}
+                                  metadata.AddMethodSemantics(
+                                                  {eventDefinitionVariable},
+                                                  MethodSemanticsAttributes.{accessor.Item2},
+                                                  {accessor.Item1.VariableName});
+                                  """);
+                
+                context.DefinitionVariables.ExecuteDependentRegistrations(eventDefinitionVariable);
+                context.WriteNewLine();
+            }
+        });
+        
+        return [Format($$"""var {{eventSpec.Member.DefinitionVariable}} = metadata.AddEvent(EventAttributes.None, metadata.GetOrAddString("{{eventSpec.Member.Name}}"), {{eventType}});""")];
+    }
+
     public IEnumerable<string> Attribute(IVisitorContext context, IMethodSymbol attributeCtor, string attributeVarBaseName, string attributeTargetVar, VariableMemberKind targetKind, params CustomAttributeArgument[] arguments)
     {
         var attributeEncoderVariable = context.DefinitionVariables.GetVariable("EncoderMetaName", VariableMemberKind.None, attributeVarBaseName);
@@ -482,6 +570,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
             // type definition to be known up-front adding complexity, so in that case we simply delegate to `DelayedDefinitionManager`
             context.DefinitionVariables.RegisterDependentOnRegistration(attributeTargetVar, context, (ctx, state) =>
             {
+                Debug.Assert(state != null);
                 var target = (NonTypeAttributeTargetState) state;
                 AddAttributeTo(ctx, target.AttributeTarget, target.ResolvedAttributeCtor, target.AttributeEncoderVariable);
             }, new NonTypeAttributeTargetState(attributeTargetVar, resolvedAttrCtor, attributeEncoderVariable.VariableName));
@@ -497,6 +586,43 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                               """);
             ctx.Generate(attr);
             ctx.WriteNewLine();
+        }
+    }
+
+    public void OverrideBaseMethod(IVisitorContext context, string overriderMethodVar, string? overridenMethod) { /*NOOP on SRM */}
+
+    public IEnumerable<string> PInvoke(IVisitorContext context, string moduleName, string methodVar, string methodName, ReadOnlySpan<CustomAttributeArgument> customAttributeArguments)
+    {
+        var methodImportAttributes = DllImportProcessor.MethodImportAttributesFrom(customAttributeArguments);
+        var entryPoint = DllImportProcessor.EntryPoint(customAttributeArguments, methodName);
+        context.DefinitionVariables.RegisterDependentOnRegistration(methodVar, context, (ctx, _) =>
+        {
+            // retrieve the variable for the native module, if other pinvokes targetting the module has already been processed.
+            var moduleVar = GetOrRegisterModuleReference(ctx, moduleName);
+            moduleVar.ThrowIfVariableIsNotValid($"Unable to find/register variable for module {moduleName}");
+
+            ctx.Generate($"""
+                            metadata.AddMethodImport(
+                                    method: {methodVar},
+                                    attributes: {methodImportAttributes},
+                                    name: metadata.GetOrAddString({entryPoint}),
+                                    module: {moduleVar.VariableName});                        
+                            """);
+        }, null);
+
+        return [];
+        
+        static DefinitionVariable GetOrRegisterModuleReference(IVisitorContext context, string moduleName)
+        {
+            var moduleVar = context.DefinitionVariables.GetVariable($"module-{moduleName}",  VariableMemberKind.ModuleReference);
+            if (moduleVar.IsValid)
+                return moduleVar;
+            
+            var moduleVarName = context.Naming.SyntheticVariable($"{Path.GetFileNameWithoutExtension(moduleName)}ModuleRef", ElementKind.None);
+            context.Generate($"""var {moduleVarName} = metadata.AddModuleReference(metadata.GetOrAddString("{moduleName}"));""");
+            context.WriteNewLine();
+
+            return context.DefinitionVariables.RegisterNonMethod(string.Empty, moduleName, VariableMemberKind.ModuleReference, moduleVarName);
         }
     }
 
@@ -543,6 +669,110 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
     }
 
     static string Format(CecilifierInterpolatedStringHandler cecilFormattedString) => StringExtensions.Indented(cecilFormattedString);
+    
+    private static void AddTypeParameters(SystemReflectionMetadataContext ctx, IEnumerable<TypeParameterSyntax> typeParameters, string entityHandleVariable)
+    {
+        var index = 0;
+        foreach (var genericTypeParameter in typeParameters)
+        {
+            var typeParameterSymbol = ctx.SemanticModel.GetDeclaredSymbol(genericTypeParameter).EnsureNotNull();
+            var typeParameterVarName = ctx.Naming.SyntheticVariable(typeParameterSymbol.Name, ElementKind.GenericParameter);
+            
+            // We only need to assign the newly constructed generic type parameter if we need to set a `type` constraint 
+            var varAssignment = typeParameterSymbol.ConstraintTypes.Length > 0 || typeParameterSymbol.HasValueTypeConstraint || typeParameterSymbol.HasUnmanagedTypeConstraint 
+                ? $"var {typeParameterVarName} = "
+                : string.Empty; 
+                
+            ctx.Generate($"""{varAssignment}metadata.AddGenericParameter({entityHandleVariable}, {GenericParameterAttributesFor(typeParameterSymbol)}, metadata.GetOrAddString("{genericTypeParameter.Identifier.Text}"), {index++});""");
+            foreach (var constraint in typeParameterSymbol.ConstraintTypes)
+            {
+                ctx.WriteNewLine();
+                var resolvedType = ctx.TypeResolver.Resolve(constraint, ResolveTargetKind.GenericTypeParameterConstraint);
+                ctx.Generate(Format($"metadata.AddGenericParameterConstraint({typeParameterVarName}, {resolvedType});"));
+            }
+
+            ctx.WriteNewLine();
+
+            if (typeParameterSymbol.HasUnmanagedTypeConstraint)
+            {
+                ctx.Generate(Format($$"""
+                                      {
+                                          var typeSpecificationSig = new BlobEncoder(new BlobBuilder()).TypeSpecificationSignature();
+                                          typeSpecificationSig.CustomModifiers().AddModifier({{ctx.TypeResolver.Resolve(ctx.RoslynTypeSystem.ForType<UnmanagedType>(), ResolveTargetKind.TypeReference)}}, isOptional: false);
+                                          typeSpecificationSig.Type({{ctx.TypeResolver.Bcl.System.ValueType}}, isValueType: true);
+                                          metadata.AddGenericParameterConstraint({{typeParameterVarName}}, metadata.AddTypeSpecification(metadata.GetOrAddBlob(typeSpecificationSig.Builder)));
+                                      }
+                                      """));
+                ctx.WriteNewLine();
+            } 
+            else if (typeParameterSymbol.HasValueTypeConstraint)
+            {
+                ctx.Generate(Format($"metadata.AddGenericParameterConstraint({typeParameterVarName}, {ctx.TypeResolver.Bcl.System.ValueType});"));
+                ctx.WriteNewLine();
+            }
+        }
+        static string GenericParameterAttributesFor(ITypeParameterSymbol typeParameterSymbol)
+        {
+            Span<char> span = stackalloc char[1024];
+            Span<char> target = span;
+            if (typeParameterSymbol.HasReferenceTypeConstraint)
+                target = target.AppendEnumFlag("GenericParameterAttributes.ReferenceTypeConstraint");
+            
+            if (typeParameterSymbol.HasConstructorConstraint || typeParameterSymbol.HasValueTypeConstraint)
+                target = target.AppendEnumFlag("GenericParameterAttributes.DefaultConstructorConstraint", target.Length == span.Length);
+
+            if (typeParameterSymbol.HasValueTypeConstraint)
+                target = target.AppendEnumFlag("GenericParameterAttributes.NotNullableValueTypeConstraint", target.Length == span.Length);
+            
+            if (typeParameterSymbol.Variance == VarianceKind.In)
+                target = target.AppendEnumFlag("GenericParameterAttributes.Contravariant", target.Length == span.Length);
+            
+            if (typeParameterSymbol.Variance == VarianceKind.Out)
+                target = target.AppendEnumFlag("GenericParameterAttributes.Covariant", target.Length == span.Length);
+            
+            if (span.Length != target.Length)
+                return span.Slice(0, span.Length - target.Length).ToString();
+            
+            return "GenericParameterAttributes.None";
+        }
+    }
+
+    // Assumes type parameters:
+    // - Have no constraints (GenericParameterAttributes.None)
+    // - Have no attributes (GenericParameterAttributes.None)
+    private static void AddTypeParameters(SystemReflectionMetadataContext ctx, IEnumerable<string> typeParameterNames, string entityHandleVariable)
+    {
+        var index = 0;
+        foreach (var typeParameterName in typeParameterNames)
+        {
+            var varAssignment = string.Empty; 
+                
+            ctx.Generate($"""{varAssignment}metadata.AddGenericParameter({entityHandleVariable}, GenericParameterAttributes.None, metadata.GetOrAddString("{typeParameterName}"), {index++});""");
+            ctx.WriteNewLine();
+        }
+    }
+    
+    private static void DefineGenericTypeParametersVariables(IVisitorContext context, IList<TypeParameterSyntax> typeParamList)
+    {
+        for (int i = 0; i < typeParamList.Count; i++)
+        {
+            var symbol = context.SemanticModel.GetDeclaredSymbol(typeParamList[i]).EnsureNotNull();
+            var parentName = symbol.TypeParameterKind == TypeParameterKind.Method ? symbol.DeclaringMethod?.OriginalDefinition.ToDisplayString() : symbol.DeclaringType?.OriginalDefinition.ToDisplayString();
+
+            // register a variable representing the type parameter; uses its index as its name since in SRM the type parameter is represented by its index.
+            Debug.Assert(parentName != null);
+            context.DefinitionVariables.RegisterNonMethod(parentName, typeParamList[i].Identifier.Text, VariableMemberKind.TypeParameter, i.ToString());
+        }
+    }
+    
+    private static void DefineGenericTypeParametersVariables(IVisitorContext context, string parentName, IList<string> typeParamList)
+    {
+        for (int i = 0; i < typeParamList.Count; i++)
+        {
+            // register a variable representing the type parameter; uses its index as its name since in SRM the type parameter is represented by its index. 
+            context.DefinitionVariables.RegisterNonMethod(parentName, typeParamList[i], VariableMemberKind.TypeParameter, i.ToString());
+        }
+    }
 }
 
 file record struct NonTypeAttributeTargetState (string AttributeTarget, string ResolvedAttributeCtor, string AttributeEncoderVariable);

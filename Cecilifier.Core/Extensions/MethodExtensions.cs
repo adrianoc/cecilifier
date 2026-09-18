@@ -12,7 +12,6 @@ using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using MethodAttributes=Mono.Cecil.MethodAttributes;
 
 namespace Cecilifier.Core.Extensions
 {
@@ -62,11 +61,11 @@ namespace Cecilifier.Core.Extensions
                 method.ContainingType.ToDisplayString(),
                 method.Name,
                 method.Parameters.Select(p => p.Type.ToDisplayString()).ToArray(),
-                method.TypeParameters.Length,
+                method.TypeParameters.Select(tp => tp.Name).ToArray(),
                 variableName);
         }
 
-        public static string MethodModifiersToCecil(this IEnumerable<SyntaxToken> modifiers, string specificModifiers = null, IMethodSymbol methodSymbol = null)
+        public static string MethodModifiersToCecil(this IEnumerable<SyntaxToken> modifiers, IVisitorContext context, string specificModifiers = null, IMethodSymbol methodSymbol = null)
         {
             var lastDeclaredIn = methodSymbol.FindLastDefinition();
             var modifiersStr = MapExplicitModifiers(modifiers, lastDeclaredIn.ContainingType.TypeKind);
@@ -74,13 +73,15 @@ namespace Cecilifier.Core.Extensions
             var defaultAccessibility = lastDeclaredIn.ContainingType.TypeKind == TypeKind.Interface ? "Public" : "Private";
             if (modifiersStr == string.Empty && methodSymbol != null)
             {
+                modifiersStr = modifiersStr.AppendEnumFlag(context.MemberResolver.MapSpecificAttributes(methodSymbol));
+                
                 if (methodSymbol.IsExplicitMethodImplementation())
                 {
-                    modifiersStr = Constants.Cecil.InterfaceMethodDefinitionAttributes.AppendModifier("MethodAttributes.Final");
+                    modifiersStr = Constants.Cecil.InterfaceMethodDefinitionAttributes.AppendEnumFlag("MethodAttributes.Final");
                 }
                 else if (lastDeclaredIn.ContainingType.TypeKind == TypeKind.Interface && !methodSymbol.IsStatic)
                 {
-                    modifiersStr = Constants.Cecil.InterfaceMethodDefinitionAttributes.AppendModifier(
+                    modifiersStr = Constants.Cecil.InterfaceMethodDefinitionAttributes.AppendEnumFlag(
                                        SymbolEqualityComparer.Default.Equals(lastDeclaredIn.ContainingType, methodSymbol.ContainingType)
                                            ? "MethodAttributes.Abstract"
                                            : "MethodAttributes.Final");
@@ -93,17 +94,18 @@ namespace Cecilifier.Core.Extensions
 
             var validModifiers = RemoveSourceModifiersWithNoILEquivalent(modifiers);
 
-            var cecilModifiersStr = new StringBuilder(SyntaxWalkerBase.ModifiersToCecil<MethodAttributes>(validModifiers.ToList(), defaultAccessibility, MapMethodAttributeFor));
+            var cecilModifiersStr = new StringBuilder(SyntaxWalkerBase.ModifiersAsString<MethodAttributes>(validModifiers.ToList(), defaultAccessibility, MapMethodAttributeFor));
             if (specificModifiers != null)
             {
-                cecilModifiersStr.AppendModifier(specificModifiers);
+                cecilModifiersStr.AppendEnumFlag(specificModifiers);
             }
 
-            cecilModifiersStr.AppendModifier("MethodAttributes.HideBySig").AppendModifier(modifiersStr);
+            cecilModifiersStr.AppendEnumFlag("MethodAttributes.HideBySig").AppendEnumFlag(modifiersStr);
             if (methodSymbol.HasCovariantReturnType())
             {
-                cecilModifiersStr.AppendModifier("MethodAttributes.NewSlot");
+                cecilModifiersStr.AppendEnumFlag("MethodAttributes.NewSlot");
             }
+
             return cecilModifiersStr.ToString();
         }
 
@@ -114,12 +116,12 @@ namespace Cecilifier.Core.Extensions
 
             var validModifiers = RemoveSourceModifiersWithNoILEquivalent(modifiers);
 
-            var cecilModifiersStr = new StringBuilder(SyntaxWalkerBase.ModifiersToCecil<MethodAttributes>(validModifiers.ToList(), defaultAccessibility, MapMethodAttributeFor));
-            cecilModifiersStr.AppendModifier(specificModifiers);
-            cecilModifiersStr.AppendModifier("MethodAttributes.HideBySig").AppendModifier(modifiersStr);
+            var cecilModifiersStr = new StringBuilder(SyntaxWalkerBase.ModifiersAsString<System.Reflection.MethodAttributes>(validModifiers.ToList(), defaultAccessibility, MapMethodAttributeFor));
+            cecilModifiersStr.AppendEnumFlag(specificModifiers);
+            cecilModifiersStr.AppendEnumFlag("MethodAttributes.HideBySig").AppendEnumFlag(modifiersStr);
 
             if (declaringType.TypeKind == TypeKind.Interface)
-                cecilModifiersStr.AppendModifier(Constants.Cecil.InterfaceMethodDefinitionAttributes).AppendModifier("MethodAttributes.Abstract");
+                cecilModifiersStr.AppendEnumFlag(Constants.Cecil.InterfaceMethodDefinitionAttributes).AppendEnumFlag("MethodAttributes.Abstract");
 
             return cecilModifiersStr.ToString();
         }
@@ -133,13 +135,13 @@ namespace Cecilifier.Core.Extensions
             hash.Add(resolvedTypeArguments.Count);
             foreach (var t in resolvedTypeArguments)
                 hash.Add(t);
-
+            
             List<string> exps = new();
             varName = context.Services.Get<GenericInstanceMethodCacheService<int, string>>().GetOrCreate(hash.ToHashCode(), (context, methodName, resolvedTypeArguments, methodReferenceVariable, exps),
                 static (hashCode, state) =>
                 {
                     var genericInstanceVarName = state.context.Naming.SyntheticVariable(state.methodName, ElementKind.GenericInstance);
-
+            
                     state.exps.Add($"var {genericInstanceVarName} = new GenericInstanceMethod({state.methodReferenceVariable});");
                     foreach (var t in state.resolvedTypeArguments)
                     {
@@ -147,24 +149,16 @@ namespace Cecilifier.Core.Extensions
                     }
                     return genericInstanceVarName;
                 });
-
+            
             return exps;
         }
-        
-        public static string MakeGenericInstanceMethod(this string methodReferenceVariable, IVisitorContext context, string methodName, IReadOnlyList<ResolvedType> resolvedTypeArguments)
-        {
-            var exps = methodReferenceVariable.MakeGenericInstanceMethod(context, methodName, resolvedTypeArguments, out var genericInstanceVarName);
-            context.Generate(exps);
 
-            return genericInstanceVarName;
-        }
-        
         public static string MakeGenericInstanceMethod(this string methodReferenceVariable, IVisitorContext context, IMethodSymbol method)
         {
             if (method.IsGenericMethod is false)
                 return methodReferenceVariable;
             
-            var exps = methodReferenceVariable.MakeGenericInstanceMethod(context, method.Name, method.TypeArguments.Select(t => context.TypeResolver.ResolveAny(t, ResolveTargetKind.TypeReference)).ToList(), out var genericInstanceVarName);
+            var exps = methodReferenceVariable.MakeGenericInstanceMethod(context, method.Name, method.TypeArguments.Select(t => context.TypeResolver.Resolve(t, ResolveTargetKind.TypeReference)).ToList(), out var genericInstanceVarName);
             context.Generate(exps);
 
             return genericInstanceVarName;
@@ -186,7 +180,7 @@ namespace Cecilifier.Core.Extensions
                     case SyntaxKind.OverrideKeyword:
                         return "MethodAttributes.Virtual";
                     case SyntaxKind.AbstractKeyword:
-                        return "MethodAttributes.Virtual | MethodAttributes.Abstract".AppendModifier(typeKind != TypeKind.Interface || !modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword)) ? "MethodAttributes.NewSlot" : string.Empty);
+                        return "MethodAttributes.Virtual | MethodAttributes.Abstract".AppendEnumFlag(typeKind != TypeKind.Interface || !modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword)) ? "MethodAttributes.NewSlot" : string.Empty);
                     case SyntaxKind.SealedKeyword:
                         return "MethodAttributes.Final";
                     case SyntaxKind.NewKeyword:

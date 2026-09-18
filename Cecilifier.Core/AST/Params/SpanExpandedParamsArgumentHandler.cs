@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Reflection.Emit;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -17,13 +18,13 @@ internal class SpanExpandedParamsArgumentHandler : ExpandedParamsArgumentHandler
     private readonly ResolvedType _inlineArrayType;
     private readonly ITypeSymbol _paramsParameterType;
 
-    public SpanExpandedParamsArgumentHandler(IVisitorContext context, IParameterSymbol paramsParameter, ArgumentListSyntax argumentList, string ilVar) : base(context, paramsParameter, argumentList, ilVar)
+    public SpanExpandedParamsArgumentHandler(IVisitorContext context, IParameterSymbol paramsParameter, ArgumentListSyntax argumentList, IlContext ilVar) : base(context, paramsParameter, argumentList, ilVar)
     {
         _paramsParameterType = paramsParameter.Type.ElementTypeSymbolOf();
         _stindOpCode = _paramsParameterType.StindOpCodeFor();
         
         var openInlineArrayType = InlineArrayGenerator.GetOrGenerateInlineArrayType(context, argumentList.Arguments.Count, "InlineArray to store the `params` values.");
-        _inlineArrayType = openInlineArrayType.MakeGenericInstanceType([context.TypeResolver.ResolveAny(_paramsParameterType, ResolveTargetKind.None)]);
+        _inlineArrayType = openInlineArrayType.MakeGenericInstanceType([context.TypeResolver.Resolve(_paramsParameterType, ResolveTargetKind.None)]);
 
         var inlineArrayBuffer = context.AddLocalVariableToCurrentMethod($"{paramsParameter.Name}Arg", _inlineArrayType);
         _inlineArrayVariableName = inlineArrayBuffer.VariableName;
@@ -59,6 +60,7 @@ internal class SpanExpandedParamsArgumentHandler : ExpandedParamsArgumentHandler
     
     string MakeGenericInstanceMethod(DefinitionVariable genericMethodVariable)
     {
-        return genericMethodVariable.VariableName.MakeGenericInstanceMethod(Context, genericMethodVariable.MemberName, [ _inlineArrayType, Context.TypeResolver.ResolveAny(_paramsParameterType, ResolveTargetKind.TypeReference)]);
+        IReadOnlyList<ResolvedType> resolvedTypeArguments = [ _inlineArrayType, Context.TypeResolver.Resolve(_paramsParameterType, ResolveTargetKind.TypeReference)];
+        return Context.MemberResolver.MakeGeneticInstanceMethod(genericMethodVariable.VariableName, genericMethodVariable.MemberName, resolvedTypeArguments);
     }
 }

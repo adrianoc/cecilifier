@@ -65,22 +65,20 @@ internal static class CollectionExpressionProcessor
         
         var currentMethodVar = context.DefinitionVariables.GetLastOf(VariableMemberKind.Method).VariableName;
         var inlineArrayElementType = spanTypeSymbol.TypeArguments[0];
-        var inlineArrayTypeVar = inlineArrayVar.MakeGenericInstanceType(context.TypeResolver.ResolveAny(inlineArrayElementType, ResolveTargetKind.Instruction));
-        var inlineArrayTypeVarForLocal = inlineArrayVar.MakeGenericInstanceType(context.TypeResolver.ResolveAny(inlineArrayElementType, ResolveTargetKind.LocalVariable));
+        var inlineArrayTypeVar = inlineArrayVar.MakeGenericInstanceType(context.TypeResolver.Resolve(inlineArrayElementType, ResolveTargetKind.Instruction));
+        var inlineArrayTypeVarForLocal = inlineArrayVar.MakeGenericInstanceType(context.TypeResolver.Resolve(inlineArrayElementType, ResolveTargetKind.LocalVariable));
         var inlineArrayLocalVar = context.ApiDefinitionsFactory.LocalVariable(context, "buffer", currentMethodVar, inlineArrayTypeVarForLocal).VariableName;
         
         // Initializes the inline array
         context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, OpCodes.Ldloca_S, inlineArrayLocalVar);
         context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, OpCodes.Initobj, inlineArrayTypeVar);
 
-        var openInlineArrayElementRef = PrivateImplementationDetailsGenerator
-            .GetOrEmmitInlineArrayElementRefMethod(context);
-        var inlineArrayElementRefMethodVar = openInlineArrayElementRef
-            .VariableName
-            .MakeGenericInstanceMethod(context, openInlineArrayElementRef.MemberName, [$"{inlineArrayLocalVar}.VariableType", context.TypeResolver.ResolveAny(spanTypeSymbol.TypeArguments[0], ResolveTargetKind.TypeReference)]);
+        var openInlineArrayElementRef = PrivateImplementationDetailsGenerator.GetOrEmmitInlineArrayElementRefMethod(context);
+        IReadOnlyList<ResolvedType> resolvedTypeArguments = [$"{inlineArrayLocalVar}.VariableType", context.TypeResolver.Resolve(spanTypeSymbol.TypeArguments[0], ResolveTargetKind.TypeReference)];
+        var inlineArrayElementRefMethodVar = context.MemberResolver.MakeGeneticInstanceMethod(openInlineArrayElementRef.VariableName, openInlineArrayElementRef.MemberName, resolvedTypeArguments);
         
         var storeOpCode = inlineArrayElementType.StindOpCodeFor();
-        var targetElementType = storeOpCode == OpCodes.Stobj ? context.TypeResolver.ResolveAny(inlineArrayElementType, ResolveTargetKind.Instruction) : null; // Stobj expects the type of the object being stored.
+        var targetElementType = storeOpCode == OpCodes.Stobj ? context.TypeResolver.Resolve(inlineArrayElementType, ResolveTargetKind.Instruction) : null; // Stobj expects the type of the object being stored.
         var collectionExpressionOperation = context.SemanticModel.GetOperation(node).EnsureNotNull<IOperation, ICollectionExpressionOperation>();
         var index = 0;
         foreach (var element in node.Elements)
@@ -96,9 +94,8 @@ internal static class CollectionExpressionProcessor
         
         // convert the initialized InlineArray to a span and put it in the stack.
         var openInlineArrayAsSpanVar = PrivateImplementationDetailsGenerator.GetOrEmmitInlineArrayAsSpanMethod(context);
-        var inlineArrayAsSpanMethodVar = openInlineArrayAsSpanVar
-                                            .VariableName
-                                            .MakeGenericInstanceMethod(context, openInlineArrayAsSpanVar.MemberName, [$"{inlineArrayLocalVar}.VariableType", context.TypeResolver.ResolveAny(spanTypeSymbol.TypeArguments[0], ResolveTargetKind.TypeReference)]);
+        IReadOnlyList<ResolvedType> typeArguments = [$"{inlineArrayLocalVar}.VariableType", context.TypeResolver.Resolve(spanTypeSymbol.TypeArguments[0], ResolveTargetKind.TypeReference)];
+        var inlineArrayAsSpanMethodVar = context.MemberResolver.MakeGeneticInstanceMethod(openInlineArrayAsSpanVar.VariableName, openInlineArrayAsSpanVar.MemberName, typeArguments);
         context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, OpCodes.Ldloca_S, inlineArrayLocalVar);
         context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, OpCodes.Ldc_I4, node.Elements.Count);
         context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, OpCodes.Call, inlineArrayAsSpanMethodVar);
@@ -112,7 +109,7 @@ internal static class CollectionExpressionProcessor
     private static void HandleAssignmentToArray(ExpressionVisitor visitor, CollectionExpressionSyntax node, IArrayTypeSymbol arrayTypeSymbol)
     {
         visitor.Context.ApiDriver.WriteCilInstruction(visitor.Context, visitor.ILVariable, OpCodes.Ldc_I4, node.Elements.Count);
-        visitor.Context.ApiDriver.WriteCilInstruction(visitor.Context, visitor.ILVariable, OpCodes.Newarr, visitor.Context.TypeResolver.ResolveAny(arrayTypeSymbol.ElementType, ResolveTargetKind.Instruction).AsToken());
+        visitor.Context.ApiDriver.WriteCilInstruction(visitor.Context, visitor.ILVariable, OpCodes.Newarr, visitor.Context.TypeResolver.Resolve(arrayTypeSymbol.ElementType, ResolveTargetKind.Instruction).AsToken());
             
         if (PrivateImplementationDetailsGenerator.IsApplicableTo(node, visitor.Context))
             ArrayInitializationProcessor.InitializeOptimized(visitor, arrayTypeSymbol.ElementType, node.Elements);

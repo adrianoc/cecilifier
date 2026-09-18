@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -13,7 +14,7 @@ using Cecilifier.Core.Variables;
 namespace Cecilifier.Core.AST;
 public class InlineArrayProcessor
 {
-    internal static bool HandleInlineArrayConversionToSpan(IVisitorContext context, string ilVar, ITypeSymbol fromType, SyntaxNode fromNode, OpCode opcode, string name, VariableMemberKind memberKind, string parentName = null)
+    internal static bool HandleInlineArrayConversionToSpan<TOperand>(IVisitorContext context, IlContext ilVar, ITypeSymbol fromType, SyntaxNode fromNode, OpCode opcode, TOperand operand)
     {
         int inlineArrayLength = InlineArrayLengthFrom(fromType);
         if (inlineArrayLength == -1)
@@ -27,9 +28,9 @@ public class InlineArrayProcessor
         
         // ldloca.s address of fromNode.
         // ldci4 fromNode.Length (size of the inline array)
-        context.ApiDriver.WriteCilInstruction(context, ilVar, opcode, context.DefinitionVariables.GetVariable(name, memberKind, parentName).VariableName);
+        context.ApiDriver.WriteCilInstruction(context, ilVar, opcode, operand);
         context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Ldc_I4, inlineArrayLength);
-        context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Call, InlineArrayAsSpanMethodFor(context, fromType));
+        context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Call, InlineArrayAsSpanMethodFor(context, fromType).AsToken());
         return true;
 
         static bool IsNodeAssignedToLocalVariable(IVisitorContext context, SyntaxNode nodeToCheck)
@@ -63,7 +64,7 @@ public class InlineArrayProcessor
                 return false;
 
             var variableDeclaration = (VariableDeclarationSyntax) parent.Parent.Parent!;
-            var declaredVariableType = ModelExtensions.GetTypeInfo(context.SemanticModel, variableDeclaration.Type);
+            var declaredVariableType = context.SemanticModel.GetTypeInfo(variableDeclaration.Type);
 
             return SymbolEqualityComparer.Default.Equals(declaredVariableType.Type?.OriginalDefinition, context.RoslynTypeSystem.SystemSpan);
         }
@@ -82,7 +83,7 @@ public class InlineArrayProcessor
     /// All this method needs to do is to convert the inline array => Span{T} and use the same code that handles
     /// 'indexing' a Span{T} with ranges.  
     /// </summary>
-    internal static bool TryHandleRangeElementAccess(IVisitorContext context, ExpressionVisitor expressionVisitor, string ilVar, ElementAccessExpressionSyntax elementAccess, out ITypeSymbol elementType)
+    internal static bool TryHandleRangeElementAccess(IVisitorContext context, ExpressionVisitor expressionVisitor, IlContext ilVar, ElementAccessExpressionSyntax elementAccess, out ITypeSymbol elementType)
     {
         elementType = null;
         if (elementAccess.Expression.IsKind(SyntaxKind.ElementAccessExpression))
@@ -99,7 +100,11 @@ public class InlineArrayProcessor
             var memberParentName = storageVariableMemberKind == VariableMemberKind.LocalVariable ? string.Empty : storageSymbol.ContainingSymbol.ToDisplayString();
             
             // Takes the inline array and convert to a Span<T>
-            HandleInlineArrayConversionToSpan(context, ilVar, inlineArrayType, elementAccess, storageSymbol.LoadAddressOpcodeForMember(), elementAccess.Expression.ToString(), storageVariableMemberKind, memberParentName);
+            var storageVariableVar = context.DefinitionVariables.GetVariable(elementAccess.Expression.ToString(), storageVariableMemberKind, memberParentName);
+            storageVariableVar.ThrowIfVariableIsNotValid($"Definition variable for storage {storageSymbol.Name} not found.");
+            
+            var details = storageSymbol.LoadAddressDetailsForForMember();
+            HandleInlineArrayConversionToSpan(context, ilVar, inlineArrayType, elementAccess, details.OpCode, details.Factory(storageVariableVar.VariableName));
             
             // at this point we have a Span<T> (for the inline array) at the top of the stack so just delegate to the visitor in charge of handling
             // indexing Span<T> with a range.
@@ -110,7 +115,7 @@ public class InlineArrayProcessor
         return false;
     }
     
-    internal static bool TryHandleIntIndexElementAccess(IVisitorContext context, string ilVar, ElementAccessExpressionSyntax elementAccess, out ITypeSymbol elementType)
+    internal static bool TryHandleIntIndexElementAccess(IVisitorContext context, IlContext ilVar, ElementAccessExpressionSyntax elementAccess, out ITypeSymbol elementType)
     {
         elementType = null;
         if (elementAccess.Expression.IsKind(SyntaxKind.ElementAccessExpression))
@@ -133,7 +138,7 @@ public class InlineArrayProcessor
             ExpressionVisitor.Visit(context, ilVar, elementAccess.ArgumentList.Arguments[0].Expression);
             method = InlineArrayElementRefMethodFor(context, inlineArrayType);
         }
-        context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Call, method);
+        context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Call, method.AsToken());
 
         elementType = InlineArrayElementTypeFrom(inlineArrayType);
         return true;
@@ -157,14 +162,12 @@ public class InlineArrayProcessor
     
     static string PrivateImplementationInlineArrayGenericInstanceMethodFor(IVisitorContext context, DefinitionVariable openGenericTypeVar, ITypeSymbol inlineArrayType)
     {
-        var varName = openGenericTypeVar.VariableName.MakeGenericInstanceMethod(
-                                context,
-                                openGenericTypeVar.MemberName,
-                                [
-                                    context.TypeResolver.ResolveAny(inlineArrayType, ResolveTargetKind.None), // TBuffer
-                                    context.TypeResolver.ResolveAny(InlineArrayElementTypeFrom(inlineArrayType), ResolveTargetKind.None) // TElement
-                                ]);
-        return varName;
+        IReadOnlyList<ResolvedType> resolvedTypeArguments = 
+        [
+            context.TypeResolver.Resolve(inlineArrayType, ResolveTargetKind.GenericTypeArgument), // TBuffer
+            context.TypeResolver.Resolve(InlineArrayElementTypeFrom(inlineArrayType), ResolveTargetKind.GenericTypeArgument) // TElement
+        ];
+        return context.MemberResolver.MakeGeneticInstanceMethod(openGenericTypeVar.VariableName, openGenericTypeVar.MemberName, resolvedTypeArguments);
     }
 
     private static ITypeSymbol InlineArrayElementTypeFrom(ITypeSymbol inlineArrayType)

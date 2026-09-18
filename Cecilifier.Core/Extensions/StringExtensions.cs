@@ -17,5 +17,16 @@ namespace Cecilifier.Core.Extensions
         public static CilLocalVariableHandle AsLocalVariable(this string value) => new(value);
         public static CilToken AsToken(this string value) => new(value);
         public static CilToken AsToken(this ResolvedType value) => new(value.Expression);
+
+        public static int ComputeHashCode(this string[] values)
+        {
+            if (values == null) return 0;
+            
+            var hash = new HashCode();
+            foreach (var v in values)
+                hash.Add(v);
+            
+            return hash.ToHashCode();
+        }
     }
 }

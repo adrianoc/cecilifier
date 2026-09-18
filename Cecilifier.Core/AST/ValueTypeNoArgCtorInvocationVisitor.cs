@@ -32,10 +32,10 @@ namespace Cecilifier.Core.AST
     internal class ValueTypeNoArgCtorInvocationVisitor : SyntaxWalkerBase
     {
         private readonly SymbolInfo ctorInfo;
-        private readonly string ilVar;
+        private readonly IlContext ilVar;
         private readonly BaseObjectCreationExpressionSyntax objectCreationExpressionSyntax;
 
-        internal ValueTypeNoArgCtorInvocationVisitor(IVisitorContext ctx, string ilVar, BaseObjectCreationExpressionSyntax objectCreationExpressionSyntax, SymbolInfo ctorInfo) : base(ctx)
+        internal ValueTypeNoArgCtorInvocationVisitor(IVisitorContext ctx, IlContext ilVar, BaseObjectCreationExpressionSyntax objectCreationExpressionSyntax, SymbolInfo ctorInfo) : base(ctx)
         {
             this.ctorInfo = ctorInfo;
             this.ilVar = ilVar;
@@ -47,7 +47,7 @@ namespace Cecilifier.Core.AST
             // our direct parent is a using statement, which means we have something like:
             // using(new Value()) {}
             var valueTypeLocalVariable = DeclareAndInitializeValueTypeLocalVariable();
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloc, valueTypeLocalVariable.VariableName);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloc, valueTypeLocalVariable.VariableName.AsLocalVariable());
         }
 
         public override void VisitEqualsValueClause(EqualsValueClauseSyntax node)
@@ -138,7 +138,7 @@ namespace Cecilifier.Core.AST
 
         private DefinitionVariable DeclareAndInitializeValueTypeLocalVariable()
         {
-            var tempLocal = Context.AddLocalVariableToCurrentMethod("vt", Context.TypeResolver.ResolveAny(ctorInfo.Symbol.ContainingType, ResolveTargetKind.LocalVariable));
+            var tempLocal = Context.AddLocalVariableToCurrentMethod("vt", Context.TypeResolver.Resolve(ctorInfo.Symbol.ContainingType, ResolveTargetKind.LocalVariable));
             using var _ = Context.DefinitionVariables.WithVariable(tempLocal);
             
             switch (ctorInfo.Symbol.ContainingType.SpecialType)
@@ -168,7 +168,7 @@ namespace Cecilifier.Core.AST
 
         private void InitValueTypeLocalVariable(string localVariable)
         {
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloca_S, localVariable.AsToken());
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloca_S, localVariable.AsLocalVariable());
             Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Initobj, ResolvedStructType(ResolveTargetKind.Instruction).AsToken());
 
             if (objectCreationExpressionSyntax.Initializer is not null)
@@ -179,12 +179,12 @@ namespace Cecilifier.Core.AST
                 // at this point there's no object reference in the stack (it was consumed by the `Initobj` instruction)
                 // so we push the address of the variable that we just initialised again. Notice that after processing
                 // the initializer we need to pop this reference from the stack again.
-                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloca_S, localVariable);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloca_S, localVariable.AsLocalVariable());
                 ProcessInitializerIfNotNull(Context, ilVar, objectCreationExpressionSyntax.Initializer);
             }
         }
 
-        internal static void ProcessInitializerIfNotNull(IVisitorContext context, string ilVar, InitializerExpressionSyntax initializer)
+        internal static void ProcessInitializerIfNotNull(IVisitorContext context, IlContext ilVar, InitializerExpressionSyntax initializer)
         {
             if (initializer == null)
                 return;
@@ -193,6 +193,6 @@ namespace Cecilifier.Core.AST
             context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Pop);
         }
 
-        private ResolvedType ResolvedStructType(ResolveTargetKind targetKind) =>  Context.TypeResolver.ResolveAny(ctorInfo.Symbol.ContainingType, targetKind);
+        private ResolvedType ResolvedStructType(ResolveTargetKind targetKind) =>  Context.TypeResolver.Resolve(ctorInfo.Symbol.ContainingType, targetKind);
     }
 }

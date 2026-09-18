@@ -33,7 +33,7 @@ namespace Cecilifier.Core.Extensions
 
             throw new ArgumentException($"{node.Kind()} is not supported.");
         }
-        public static void InjectRequiredConversions(this ExpressionSyntax expression, IVisitorContext context, string ilVar, Action loadArrayIntoStack = null)
+        public static void InjectRequiredConversions(this ExpressionSyntax expression, IVisitorContext context, IlContext ilVar, Action loadArrayIntoStack = null)
         {
             var operation = context.SemanticModel.GetOperation(expression);
             if (SymbolEqualityComparer.Default.Equals(operation?.Type, context.RoslynTypeSystem.SystemIndex) && !expression.IsKind(SyntaxKind.IndexExpression) && loadArrayIntoStack != null)
@@ -59,7 +59,7 @@ namespace Cecilifier.Core.Extensions
                 var conversion = context.SemanticModel.GetConversion(expression);
                 if (conversion.IsImplicit && NeedsBoxing(context, expression, typeInfo.Type))
                 {
-                    context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Box, context.TypeResolver.ResolveAny(typeInfo.Type, ResolveTargetKind.TypeReference));
+                    context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Box, context.TypeResolver.Resolve(typeInfo.Type, ResolveTargetKind.TypeReference));
                 }
             }
 

@@ -32,7 +32,7 @@ internal partial class TypeDeclarationVisitor
                                                     Context,
                                                     definitionContext,
                                                     delegateSymbol.ContainingNamespace?.FullyQualifiedName() ?? string.Empty,
-                                                    CecilDefinitionsFactory.DefaultTypeAttributeFor(TypeKind.Delegate, false).AppendModifier(accessibility), 
+                                                    CecilDefinitionsFactory.DefaultTypeAttributeFor(TypeKind.Delegate, false).AppendEnumFlag(accessibility), 
                                                     Context.RoslynTypeSystem.SystemMulticastDelegate, 
                                                     false, 
                                                     [], 
@@ -40,7 +40,7 @@ internal partial class TypeDeclarationVisitor
                                                     []);
 
         AddCecilExpressions(Context, typeDef);
-        HandleAttributesInMemberDeclaration(node.AttributeLists, typeVar, VariableMemberKind.Type);
+        HandleAttributesInMemberDeclaration(node.Identifier.Text, node.AttributeLists, typeVar, VariableMemberKind.Type);
 
         using (Context.DefinitionVariables.WithCurrent(delegateSymbol.ContainingSymbol?.OriginalDefinition.ToDisplayString() ?? string.Empty, delegateSymbol.OriginalDefinition.ToDisplayString(), VariableMemberKind.Type, typeVar))
         {
@@ -88,7 +88,7 @@ internal partial class TypeDeclarationVisitor
                                                                         Constants.Cecil.DelegateMethodAttributes,
                                                                         [new ParameterSpec("ar", Context.TypeResolver.Bcl.System.IAsyncResult, RefKind.None, Constants.ParameterAttributes.None)],
                                                                         [],
-                                                                        ctx => ctx.TypeResolver.ResolveAny(Context.GetTypeInfo(node.ReturnType).Type, ResolveTargetKind.ReturnType),
+                                                                        ctx => ctx.TypeResolver.Resolve(Context.GetTypeInfo(node.ReturnType).Type, ResolveTargetKind.ReturnType),
                                                                         out var _);
 
             endInvokeExps = endInvokeExps.Concat([$"{endInvokeMethodVar}.HasThis = true;", $"{endInvokeMethodVar}.IsRuntime = true;"]);

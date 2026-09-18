@@ -58,6 +58,7 @@ public class DefaultExpressions : CecilifierUnitTestBase
 
     private const string DefaultTypeParameterExpectation = """
                                                            \s+m_M_\d+.Body.Variables.Add\((l_T_\d+)\);
+                                                           \s+var il_M_\d+ = m_M_\d+.Body.GetILProcessor\(\);
                                                            \s+il_M_\d+.Emit\(OpCodes.Ldloca_S, \1\);
                                                            \s+il_M_\d+.Emit\(OpCodes.Initobj, gp_T_\d+\);
                                                            \s+il_M_\d+.Emit\(OpCodes.Ldloc, \1\);

@@ -15,10 +15,10 @@ namespace Cecilifier.Core.AST
 {
     internal class AssignmentVisitor : SyntaxWalkerBase
     {
-        private readonly string ilVar;
+        private readonly IlContext ilVar;
         private readonly AssignmentExpressionSyntax assignment;
 
-        internal AssignmentVisitor(IVisitorContext ctx, string ilVar, AssignmentExpressionSyntax node) : base(ctx)
+        internal AssignmentVisitor(IVisitorContext ctx, IlContext ilVar, AssignmentExpressionSyntax node) : base(ctx)
         {
             this.ilVar = ilVar;
             assignment = node;
@@ -26,7 +26,7 @@ namespace Cecilifier.Core.AST
             PreProcessRefOutAssignments(node.Left);
         }
 
-        internal AssignmentVisitor(IVisitorContext ctx, string ilVar) : base(ctx)
+        internal AssignmentVisitor(IVisitorContext ctx, IlContext ilVar) : base(ctx)
         {
             this.ilVar = ilVar;
         }
@@ -65,7 +65,7 @@ namespace Cecilifier.Core.AST
                 Context.MoveLinesToEnd(InstructionPrecedingValueToLoad, lastInstructionLoadingRhs);
                 var arrayElementType = Context.SemanticModel.GetTypeInfo(node).Type.EnsureNotNull();
                 var stelemOpCode = arrayElementType.StelemOpCode();
-                var operand = stelemOpCode == OpCodes.Stelem ? Context.TypeResolver.ResolveAny(arrayElementType, ResolveTargetKind.Instruction) : null;
+                var operand = stelemOpCode == OpCodes.Stelem ? Context.TypeResolver.Resolve(arrayElementType, ResolveTargetKind.Instruction) : null;
                 Context.ApiDriver.WriteCilInstruction(Context, ilVar, stelemOpCode, operand);
             }
         }
@@ -217,7 +217,7 @@ namespace Cecilifier.Core.AST
         private void EmitIndirectStore(ITypeSymbol typeBeingStored)
         {
             var indirectStoreOpCode = typeBeingStored.StindOpCodeFor();
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, indirectStoreOpCode, indirectStoreOpCode == OpCodes.Stobj ? Context.TypeResolver.ResolveAny(typeBeingStored.ElementTypeSymbolOf(), ResolveTargetKind.Instruction) : null);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, indirectStoreOpCode, indirectStoreOpCode == OpCodes.Stobj ? Context.TypeResolver.Resolve(typeBeingStored.ElementTypeSymbolOf(), ResolveTargetKind.Instruction) : null);
         }
 
         private void PropertyAssignment(IdentifierNameSyntax node, IPropertySymbol property)
@@ -245,7 +245,7 @@ namespace Cecilifier.Core.AST
 
             field.EnsureFieldExists(Context, name);
             var fieldReference = field.FieldResolverExpression(Context);
-            MemberAssignment(field.Type, field.RefKind, fieldReference, field.StoreOpCodeForFieldAccess());
+            MemberAssignment(field.Type, field.RefKind, fieldReference.AsToken(), field.StoreOpCodeForFieldAccess());
         }
 
         private void LocalVariableAssignment(ILocalSymbol localVariable)
@@ -266,10 +266,10 @@ namespace Cecilifier.Core.AST
             {
                 throw new InvalidOperationException("Invalid definition variable");
             }
-            MemberAssignment(memberType, memberRefKind, memberDefinitionVariable.VariableName, storeOpCode);
+            MemberAssignment(memberType, memberRefKind, memberDefinitionVariable.VariableName.AsLocalVariable(), storeOpCode);
         }
         
-        private void MemberAssignment(ITypeSymbol memberType, RefKind memberRefKind, string memberReference, OpCode storeOpCode)
+        private void MemberAssignment<TOperand>(ITypeSymbol memberType, RefKind memberRefKind, TOperand memberReference, OpCode storeOpCode)
         {
             if (NeedsIndirectStore(memberType, memberRefKind))
             {
@@ -277,7 +277,7 @@ namespace Cecilifier.Core.AST
             }
             else
             {
-                Context.ApiDriver.WriteCilInstruction(Context, ilVar, storeOpCode, memberReference.AsToken());
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, storeOpCode, memberReference);
             }
         }
 

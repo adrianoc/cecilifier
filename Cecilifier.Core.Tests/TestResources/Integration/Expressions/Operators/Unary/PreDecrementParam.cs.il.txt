@@ -1,4 +1,4 @@
-﻿.locals init ()
+﻿.locals init (System.Int32 V_0)
 IL_0000: ldarg.1
 IL_0001: ldc.i4.1
 IL_0002: sub

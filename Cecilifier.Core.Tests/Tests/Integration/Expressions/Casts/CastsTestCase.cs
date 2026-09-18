@@ -37,7 +37,6 @@ namespace Cecilifier.Core.Tests.Integration.Casts
         }
 
         [Test]
-        [ParameterizedResourceFilter<SystemReflectionMetadataContext>(IgnoreReason = "Generic types are not supported as of today on SRM")]
         public void TestGenerics([Values("Base<int>", "Derived")] string source, [Values("Base<int>", "Derived")] string target)
         {
             AssertResourceTestWithParameters("Expressions/Casts/GenericTypeCasts", source, target);

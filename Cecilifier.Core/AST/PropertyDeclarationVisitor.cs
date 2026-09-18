@@ -15,7 +15,6 @@ using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
-using FieldAttributes = Mono.Cecil.FieldAttributes;
 
 #nullable enable
 namespace Cecilifier.Core.AST
@@ -60,8 +59,8 @@ namespace Cecilifier.Core.AST
             var propDefVar = AddPropertyDefinition(node, propertyDeclaringTypeVar.VariableName, propertyDeclaringTypeVar.MemberName, propName, propertyParameters, propertyType);
             var backingFieldVar = ProcessPropertyAccessors(node, propertyDeclaringTypeVar.VariableName, propDefVar, propName, propertyParameters, node.ExpressionBody);
 
-            HandleAttributesInMemberDeclaration(node.AttributeLists, TargetDoesNotMatch, SyntaxKind.FieldKeyword, propDefVar, VariableMemberKind.None); // Normal property attrs
-            HandleAttributesInMemberDeclaration(node.AttributeLists, TargetMatches, SyntaxKind.FieldKeyword, backingFieldVar ?? String.Empty, VariableMemberKind.Field); // [field: attr], i.e, attr belongs to the backing field.
+            HandleAttributesInMemberDeclaration(propName, node.AttributeLists, TargetDoesNotMatch, SyntaxKind.FieldKeyword, propDefVar, VariableMemberKind.None); // Normal property attrs
+            HandleAttributesInMemberDeclaration(propName, node.AttributeLists, TargetMatches, SyntaxKind.FieldKeyword, backingFieldVar ?? String.Empty, VariableMemberKind.Field); // [field: attr], i.e, attr belongs to the backing field.
         }
 
         public override void VisitPropertyDeclaration(PropertyDeclarationSyntax node)
@@ -79,10 +78,10 @@ namespace Cecilifier.Core.AST
             var propDefVar = AddPropertyDefinition(node, propertyDeclaringTypeVar.VariableName, propertyDeclaringTypeVar.MemberName, propName, [], propertyType);
             var backingFieldVar = ProcessPropertyAccessors(node, propertyDeclaringTypeVar.VariableName, propDefVar, node.Identifier.ValueText, NoParameters, node.ExpressionBody);
 
-            HandleAttributesInMemberDeclaration(node.AttributeLists, TargetDoesNotMatch, SyntaxKind.FieldKeyword, propDefVar, VariableMemberKind.None); // Normal property attrs
+            HandleAttributesInMemberDeclaration(node.Identifier.Text, node.AttributeLists, TargetDoesNotMatch, SyntaxKind.FieldKeyword, propDefVar, VariableMemberKind.None); // Normal property attrs
             // Attributes targeting backing field is only valid on auto-properties.
             if (node.AccessorList?.Accessors.All(a => a.Body == null && a.ExpressionBody == null) == true)
-                HandleAttributesInMemberDeclaration(node.AttributeLists, TargetMatches, SyntaxKind.FieldKeyword, backingFieldVar ?? string.Empty, VariableMemberKind.Field); // [field: attr], i.e, attr belongs to the backing field.
+                HandleAttributesInMemberDeclaration(node.Identifier.Text, node.AttributeLists, TargetMatches, SyntaxKind.FieldKeyword, backingFieldVar ?? string.Empty, VariableMemberKind.Field); // [field: attr], i.e, attr belongs to the backing field.
         }
 
         private bool PropertyAlreadyProcessed(BasePropertyDeclarationSyntax node)
@@ -129,7 +128,6 @@ namespace Cecilifier.Core.AST
             var propertyGenerationData = new PropertyGenerationData(
                                     propertySymbol.ContainingType.ToDisplayString(),
                                     propertyDeclaringTypeVar,
-                                    // is INamedTypeSymbol { IsGenericType: true} && propertySymbol.IsDefinedInCurrentAssembly(Context)
                                     (INamedTypeSymbol) propertySymbol.ContainingSymbol,
                                     propDefVar,
                                     propertyName,
@@ -193,11 +191,11 @@ namespace Cecilifier.Core.AST
                 }
                 else if (accessor.Body != null)
                 {
-                    StatementVisitor.Visit(Context, ilContext, accessor.Body);
+                    StatementVisitor.Visit(Context, ilContext!, accessor.Body);
                 }
                 else
                 {
-                    ExpressionVisitor.Visit(Context, ilContext, accessor.ExpressionBody!);
+                    ExpressionVisitor.Visit(Context, ilContext!, accessor.ExpressionBody!);
                 }
 
                 Context.ApiDriver.WriteCilInstruction(Context, ilContext!, OpCodes.Ret);
@@ -248,7 +246,7 @@ namespace Cecilifier.Core.AST
                 }
             }
 
-            void ProcessExpressionBodiedGetter(string ilVar, ArrowExpressionClauseSyntax? expression)
+            void ProcessExpressionBodiedGetter(IlContext ilVar, ArrowExpressionClauseSyntax? expression)
             {
                 ExpressionVisitor.Visit(Context, ilVar, expression!);
                 Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ret);
@@ -260,7 +258,7 @@ namespace Cecilifier.Core.AST
             if (node.AccessorList == null)
             {
                 Debug.Assert(propertySymbol.GetMethod != null);
-                var accessorModifiers = node.Modifiers.MethodModifiersToCecil(Constants.Cecil.MethodAttributesSpecialName, propertySymbol.GetMethod);
+                var accessorModifiers = node.Modifiers.MethodModifiersToCecil(Context,Constants.Cecil.MethodAttributesSpecialName, propertySymbol.GetMethod);
                 return new Dictionary<string, string?>()
                 {
                     ["get"] = accessorModifiers
@@ -284,7 +282,7 @@ namespace Cecilifier.Core.AST
                     : node.Modifiers;
                     
                 var accessorSymbol = accessorKind == SyntaxKind.GetAccessorDeclaration ? propertySymbol.GetMethod : propertySymbol.SetMethod;
-                return modifiers.MethodModifiersToCecil(Constants.Cecil.MethodAttributesSpecialName, accessorSymbol);
+                return modifiers.MethodModifiersToCecil(Context, Constants.Cecil.MethodAttributesSpecialName, accessorSymbol);
             }
         }
 
@@ -297,7 +295,7 @@ namespace Cecilifier.Core.AST
             if (node.AccessorList != null && node.AccessorList.Accessors.Any(acc => acc.IsKind(SyntaxKind.InitAccessorDeclaration)))
                 m = m.Append(SyntaxFactory.Token(SyntaxKind.ReadOnlyKeyword)); // properties with `init` accessors are considered `readonly`
 
-            return ModifiersToCecil<FieldAttributes>(m, "Private", FieldDeclarationVisitor.MapFieldAttributesFor);
+            return ModifiersAsString<System.Reflection.FieldAttributes>(m, "Private", FieldDeclarationVisitor.MapFieldAttributesFor);
         }
 
         private string AddPropertyDefinition(BasePropertyDeclarationSyntax propertyDeclarationSyntax, string declaringTypeVariable, string declaringTypeName, string propName, List<ParameterSpec> propertyParameters, ResolvedType propertyType)

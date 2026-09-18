@@ -18,7 +18,7 @@ namespace Cecilifier.Core.AST
 
         public override void VisitCompilationUnit(CompilationUnitSyntax node)
         {
-            HandleAttributesInMemberDeclaration(node.AttributeLists, "assembly", VariableMemberKind.None); // There's no enum member for assembly.. for now we use None.
+            HandleAttributesInMemberDeclaration("assembly", node.AttributeLists, "assembly", VariableMemberKind.None); // There's no enum member for assembly.. for now we use None.
             VisitDelegates();
             VisitDeclaredTypesSortedByDependencies();
             

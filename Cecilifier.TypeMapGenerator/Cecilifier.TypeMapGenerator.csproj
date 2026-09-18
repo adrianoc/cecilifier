@@ -15,9 +15,9 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.11.0" PrivateAssets="all" />
-        <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.12.0-3.final" PrivateAssets="all" />
-        <PackageReference Include="System.Reflection.Metadata" Version="9.0.11" PrivateAssets="all" />
+        <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="5.9.0" PrivateAssets="all" />
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.0.0" PrivateAssets="all" />
+        <PackageReference Include="System.Reflection.Metadata" Version="10.0.12" PrivateAssets="all" />
         <PackageReference Include="System.Runtime.InteropServices.RuntimeInformation" Version="4.3.0" PrivateAssets="all" />
     </ItemGroup>
 
@@ -25,6 +25,6 @@
         <!-- Package the generator in the analyzer directory of the nuget package -->
         <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
 
-        <None Include="README.md" Pack="true" PackagePath="\"/>
+        <None Include="README.md" Pack="true" PackagePath="\" />
     </ItemGroup>    
 </Project>

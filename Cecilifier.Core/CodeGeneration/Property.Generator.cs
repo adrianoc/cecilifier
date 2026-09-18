@@ -63,12 +63,12 @@ internal class PropertyGenerator
                                             property.AccessorModifiers["set"], 
                                             completeParamList, 
                                             typeParameters,
-                                            ctx => ctx.TypeResolver.ResolveAny(Context.RoslynTypeSystem.SystemVoid, ResolveTargetKind.ReturnType),
+                                            ctx => ctx.TypeResolver.Resolve(Context.RoslynTypeSystem.SystemVoid, ResolveTargetKind.ReturnType),
                                             out var methodDefinitionVariable);
 
         var methodVariableScope = Context.DefinitionVariables.WithCurrentMethod(methodDefinitionVariable);
         Context.Generate(exps);
-        AddToOverridenMethodsIfAppropriated(accessorMethodVar, overridenMethod);
+        Context.ApiDefinitionsFactory.OverrideBaseMethod(Context, accessorMethodVar, overridenMethod);
 
         Context.ApiDriver.AddMethodSemantics(Context, property.Variable, accessorMethodVar, MethodKind.PropertySet);
         
@@ -107,7 +107,7 @@ internal class PropertyGenerator
         
         var scopedVariable = Context.DefinitionVariables.WithCurrentMethod(methodDefinitionVariable);
         
-        AddToOverridenMethodsIfAppropriated(accessorMethodVar, overridenMethod);
+        Context.ApiDefinitionsFactory.OverrideBaseMethod(Context, accessorMethodVar, overridenMethod);
         
         Context.Generate([
             hasCovariantReturn ? 
@@ -118,7 +118,7 @@ internal class PropertyGenerator
         return scopedVariable;
     }
    
-    internal void AddAutoGetterMethodImplementation(ref readonly PropertyGenerationData propertyGenerationData, string ilVar, string getMethodVar)
+    internal void AddAutoGetterMethodImplementation(ref readonly PropertyGenerationData propertyGenerationData, IlContext ilVar, string getMethodVar)
     {
         AddBackingFieldIfNeeded(in propertyGenerationData);
 
@@ -131,15 +131,6 @@ internal class PropertyGenerator
         Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ret);
         
         Context.AddCompilerGeneratedAttributeTo(getMethodVar, VariableMemberKind.Method);
-    }
-    
-    private void AddToOverridenMethodsIfAppropriated(string accessorMethodVar, string overridenMethod)
-    {
-        if (string.IsNullOrWhiteSpace(overridenMethod))
-            return;
-        
-        Context.Generate($"{accessorMethodVar}.Overrides.Add({overridenMethod});");
-        Context.WriteNewLine();
     }
 
     private void AddBackingFieldIfNeeded(ref readonly PropertyGenerationData property)
@@ -159,7 +150,7 @@ internal class PropertyGenerator
     
     private string BackingFieldReferenceOnGenericInstanceType(ref readonly PropertyGenerationData property)
     {
-        var closedDeclaringType = Context.TypeResolver.MakeGenericInstanceType(property.DeclaringTypeVariable, property.DeclaringTypeSymbol, new TypeResolutionContext(ResolveTargetKind.TypeReference, property.DeclaringTypeSymbol.IsValueType ? TypeResolutionOptions.IsValueType : TypeResolutionOptions.None ));
+        var closedDeclaringType = Context.TypeResolver.MakeGenericInstanceType(property.DeclaringTypeSymbol.NameIncludingTypeParametersAndArguments(), property.DeclaringTypeVariable, property.DeclaringTypeSymbol, new TypeResolutionContext(ResolveTargetKind.TypeReference, property.DeclaringTypeSymbol.IsValueType ? TypeResolutionOptions.IsValueType : TypeResolutionOptions.None ));
         
         var fieldRefVar = Context.Naming.MemberReference($"backingField_{property.Name}");
         var exps = Context.ApiDefinitionsFactory.FieldReference(Context, fieldRefVar, Utils.BackingFieldNameForAutoProperty(property.Name), property.Type(ResolveTargetKind.Field), in closedDeclaringType);

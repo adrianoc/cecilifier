@@ -6,7 +6,7 @@ namespace Cecilifier.Core.Tests.Framework
     {
         public static string GetPathOfTextResource(this string resourceName, string type)
         {
-            return GetPathOfResource(resourceName, "." + type + ".txt");
+            return GetPathOfResource(resourceName, $".{type}.txt");
         }
 
         public static string GetPathOfBinaryResource(this string resourceName, string type)

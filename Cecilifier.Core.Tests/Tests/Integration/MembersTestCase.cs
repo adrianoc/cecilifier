@@ -1,11 +1,14 @@
 using Cecilifier.ApiDriver.MonoCecil;
+using Cecilifier.ApiDriver.SystemReflectionMetadata;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Tests.Framework;
+using Cecilifier.Core.Tests.Framework.Attributes;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration
 {
     [TestFixture(typeof(MonoCecilContext))]
+    [TestFixture(typeof(SystemReflectionMetadataContext))]
     public class MembersTestCase<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
     {
         [Test]
@@ -17,6 +20,7 @@ namespace Cecilifier.Core.Tests.Integration
         [TestCase("SimpleEvent")]
         [TestCase("StaticEvent")]
         [TestCase("GenericEventHandler")]
+        [ParameterizedResourceFilter<SystemReflectionMetadataContext>("SimpleEvent", "StaticEvent")]
         public void TestEvents(string testName)
         {
             AssertResourceTest($"Members/Events/{testName}");

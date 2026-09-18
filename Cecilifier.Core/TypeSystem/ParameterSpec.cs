@@ -6,7 +6,7 @@ using Microsoft.CodeAnalysis;
 
 namespace Cecilifier.Core.TypeSystem;
 
-public record ParameterSpec(string Name, ResolvedType ElementType, RefKind RefKind, string Attributes, string? DefaultValue = null, Func<IVisitorContext, string, string>? ElementTypeResolver = null)
+public record ParameterSpec(string Name, ResolvedType ElementType, RefKind RefKind, string Attributes, string? DefaultValue = null, Func<IVisitorContext, ParameterSpec, string>? ElementTypeResolver = null)
 {
     public virtual ResolvedType ElementType { get; } = ElementType;
     public string? RegistrationTypeName { get; init; }
@@ -15,7 +15,7 @@ public record ParameterSpec(string Name, ResolvedType ElementType, RefKind RefKi
 
 public record ParameterSymbolParameterSpec(IParameterSymbol Parameter, IVisitorContext Context) : ParameterSpec(Parameter.Name, string.Empty, Parameter.RefKind, Constants.ParameterAttributes.None)
 {
-    public override ResolvedType ElementType => Context.TypeResolver.ResolveAny(Parameter.Type, ResolveTargetKind.Parameter);
+    public override ResolvedType ElementType => Context.TypeResolver.Resolve(Parameter.Type, ResolveTargetKind.Parameter);
 
     public override string? ParamsAttributeName  => Parameter.ParamsAttributeMatchingType(); 
 }

@@ -155,7 +155,7 @@ function computeSHA256(base64Contents) {
 
 function StoreReferenceAssembliesLocallyAndClose() {
     storeReferenceAssembliesLocally();
-    CloseDialog();
+    CloseModalDialog('assembly_references_dialog_id');
 }
 
 function sendMissingAssemblyReferences(missingAssemblyHashes, continuation) {

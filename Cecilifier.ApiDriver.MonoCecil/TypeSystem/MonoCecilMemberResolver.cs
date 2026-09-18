@@ -6,6 +6,7 @@ using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
+using Cecilifier.Core.Services;
 using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
@@ -28,7 +29,7 @@ public class MonoCecilMemberResolver(MonoCecilContext context) : IMemberResolver
             if (!method.ContainingType.IsGenericType)
                 return found.VariableName.MakeGenericInstanceMethod(context, method);
 
-            var declaringType = context.TypeResolver.ResolveAny(method.ContainingType, ResolveTargetKind.TypeReference);
+            var declaringType = context.TypeResolver.Resolve(method.ContainingType, ResolveTargetKind.TypeReference);
             var exps = found.VariableName.CloneMethodReferenceOverriding(context, new() { ["DeclaringType"] = declaringType.Expression }, method, out var variable);
             context.Generate(exps);
             return variable.MakeGenericInstanceMethod(context, method);
@@ -47,10 +48,10 @@ public class MonoCecilMemberResolver(MonoCecilContext context) : IMemberResolver
         if (method.IsGenericMethod)
         {
             var (referencedMethodTypeParameters, returnReferencesTypeParameter) = CollectReferencedMethodTypeParameters(method);
-            var returnType = !returnReferencesTypeParameter ? context.TypeResolver.ResolveAny(method.ReturnType, ResolveTargetKind.TypeReference) : context.TypeResolver.Bcl.System.Void;
+            var returnType = !returnReferencesTypeParameter ? context.TypeResolver.Resolve(method.ReturnType, ResolveTargetKind.TypeReference) : context.TypeResolver.Bcl.System.Void;
             var tempMethodVar = context.Naming.SyntheticVariable(method.Name, ElementKind.MemberReference);
             context.Generate($$"""
-                                       var {{tempMethodVar}} = new MethodReference("{{method.Name}}", {{returnType}}, {{context.TypeResolver.ResolveAny(method.ContainingType, ResolveTargetKind.TypeReference)}})
+                                       var {{tempMethodVar}} = new MethodReference("{{method.Name}}", {{returnType}}, {{context.TypeResolver.Resolve(method.ContainingType, ResolveTargetKind.TypeReference)}})
                                                    {
                                                        HasThis = {{(!method.IsStatic).ToKeyword()}},
                                                        ExplicitThis = false,
@@ -85,12 +86,12 @@ public class MonoCecilMemberResolver(MonoCecilContext context) : IMemberResolver
 
             if (returnReferencesTypeParameter)
             {
-                var resolvedReturnType = context.TypeResolver.ResolveAny(method.OriginalDefinition.ReturnType, method.OriginalDefinition.ToTypeResolutionContext(tempMethodVar));
+                var resolvedReturnType = context.TypeResolver.Resolve(method.OriginalDefinition.ReturnType, method.OriginalDefinition.ToTypeResolutionContext(tempMethodVar));
 
                 // the information about the type being passed as `ref` is not in the ITypeSymbol so we need to check and produce
                 // a Mono.Cecil.ByReferenceType
                 if (method.ReturnsByRef || method.ReturnsByRefReadonly)
-                    resolvedReturnType = resolvedReturnType.MakeByReferenceType();
+                    resolvedReturnType = context.TypeResolver.MakeByRefType(resolvedReturnType);
 
                 context.Generate($"{tempMethodVar}.ReturnType = {resolvedReturnType};");
                 context.WriteNewLine();
@@ -105,9 +106,10 @@ public class MonoCecilMemberResolver(MonoCecilContext context) : IMemberResolver
 
             toDispose.ForEach(v => v.Dispose());
 
+            IReadOnlyList<ResolvedType> resolvedTypeArguments = method.TypeArguments.Select(t => context.TypeResolver.Resolve(t, ResolveTargetKind.TypeReference)).ToList();
             return method.IsDefinition
                 ? tempMethodVar
-                : tempMethodVar.MakeGenericInstanceMethod(context, method.Name, method.TypeArguments.Select(t => context.TypeResolver.ResolveAny(t, ResolveTargetKind.TypeReference)).ToList());
+                : context.MemberResolver.MakeGeneticInstanceMethod(tempMethodVar, method.Name, resolvedTypeArguments);
         }
 
         if (method.Parameters.Any(p => p.Type.IsTypeParameterOrIsGenericTypeReferencingTypeParameter())
@@ -117,13 +119,42 @@ public class MonoCecilMemberResolver(MonoCecilContext context) : IMemberResolver
             return ResolveMethodFromGenericType(method, context);
         }
 
-        return Utils.ImportFromMainModule(
-            $"TypeHelpers.ResolveMethod(typeof({declaringTypeName}), \"{method.Name}\",{ReflectionBindingsFlags(method)}{method.Parameters.Aggregate("", (acc, curr) => acc + ", \"" + curr.Type.GetReflectionName() + "\"")})");
+        return ((MonoCecilTypeResolver) context.TypeResolver).ImportReference(
+            $"TypeHelpers.ResolveMethod(typeof({declaringTypeName}), \"{method.Name}\",{ReflectionBindingsFlags(method)}{method.Parameters.Aggregate("", (acc, curr) => acc + ", \"" + curr.Type.GetReflectionName() + "\"")})").Expression;
     }
 
-    public string ResolveMethod(string declaringTypeName, string declaringTypeVariable, string methodNameForVariableRegistration, ResolvedType returnType, IReadOnlyList<ParameterSpec> parameters, int typeParameterCountCount, MemberOptions options)
+    public string ResolveMethod(string declaringTypeName, string declaringTypeVariable, string methodName, ResolvedType returnType, IReadOnlyList<ParameterSpec> parameters, IReadOnlyList<string> typeParameters, MemberOptions options)
     {
-        throw new NotImplementedException();
+        // Unfortunately here we don't have enough information about the method and its declaring type. If the declaring type is a generic type instance, the generated code need to import the method
+        // and by doing that the generic type information is lost. To fix this we need to set the `DeclaringType` of the method to the correct generic instance type.
+        // most likely there's a better way achieve this but as of today I don't know how (maybe use the ImportReference(MethodReference, IGenericParameterProvider) ?)
+        var correctDeclaringType = context.Naming.SyntheticVariable("declaringType", ElementKind.Method);
+        context.Generate($"""var {correctDeclaringType} = {declaringTypeVariable};""");
+        context.WriteNewLine();
+        
+        var methodWithIncorrectDeclaringType = context.Naming.SyntheticVariable("tmpMethod", ElementKind.MemberReference);
+        context.Generate($"""var {methodWithIncorrectDeclaringType} = assembly.MainModule.ImportReference({correctDeclaringType}.ElementType.Resolve().Methods.Single(m => m.Name == "{methodName}" && m.Parameters.Count == {parameters.Count}));""");
+        context.WriteNewLine();
+
+        var variable = context.Naming.SyntheticVariable("genericMethod", ElementKind.MemberReference);
+        context.Generate($$"""
+                          var {{variable}} = new MethodReference({{methodWithIncorrectDeclaringType}}.Name, {{methodWithIncorrectDeclaringType}}.ReturnType)
+                          {
+                                HasThis = {{methodWithIncorrectDeclaringType}}.HasThis,
+                                CallingConvention = {{methodWithIncorrectDeclaringType}}.CallingConvention,
+                                ExplicitThis = {{methodWithIncorrectDeclaringType}}.ExplicitThis,
+                                DeclaringType = {{methodWithIncorrectDeclaringType}}.DeclaringType.MakeGenericInstanceType({{correctDeclaringType}}.GenericArguments.ToArray()),
+                          };
+                          """);
+        context.WriteNewLine();
+        
+        for (int i = 0; i < parameters.Count; i++)
+        {
+            context.Generate($"""{variable}.Parameters.Add(new ParameterDefinition({methodWithIncorrectDeclaringType}.Parameters[{i}].Name, {methodWithIncorrectDeclaringType}.Parameters[{i}].Attributes, {methodWithIncorrectDeclaringType}.Parameters[{i}].ParameterType));""");
+            context.WriteNewLine();
+        }
+       
+        return variable;
     }
 
     public string ResolveDefaultConstructor(ITypeSymbol baseType, string derivedTypeVar)
@@ -134,7 +165,7 @@ public class MonoCecilMemberResolver(MonoCecilContext context) : IMemberResolver
             return $"new MethodReference(\".ctor\", {context.TypeResolver.Bcl.System.Void} ,{baseTypeVarDef}) {{ HasThis = true }}";
         }
 
-        return Utils.ImportFromMainModule($"TypeHelpers.DefaultCtorFor({derivedTypeVar}.BaseType)");
+        return ImportReference($"TypeHelpers.DefaultCtorFor({derivedTypeVar}.BaseType)");
     }
 
     private static (HashSet<ITypeParameterSymbol>, bool) CollectReferencedMethodTypeParameters(IMethodSymbol method)
@@ -174,18 +205,21 @@ public class MonoCecilMemberResolver(MonoCecilContext context) : IMemberResolver
         }
     }
 
-    private static string ResolveMethodFromGenericType(IMethodSymbol method, IVisitorContext _context)
+    private static string ResolveMethodFromGenericType(IMethodSymbol method, IVisitorContext context)
     {
         // resolve declaring type of the method.
-        var targetTypeVarName = _context.Naming.SyntheticVariable($"{method.ContainingType.Name}", ElementKind.LocalVariable);
-        var resolvedTargetTypeExp = _context.TypeResolver.ResolveAny(method.ContainingType.OriginalDefinition, ResolveTargetKind.TypeReference)
-                                                .MakeGenericInstanceType(
-                                                    method.ContainingType.GetAllTypeArguments().Select(t => _context.TypeResolver.ResolveAny(t, ResolveTargetKind.TypeReference)));
-        _context.Generate($"var {targetTypeVarName} = {resolvedTargetTypeExp};");
-        _context.WriteNewLine();
+        var targetTypeVarName = context.Naming.SyntheticVariable($"{method.ContainingType.Name}", ElementKind.LocalVariable);
+        var resolvedTargetTypeExp = context.TypeResolver.MakeGenericInstanceType(
+                                                method.ContainingType.OriginalDefinition.NameIncludingTypeParametersAndArguments(),
+                                                context.TypeResolver.Resolve(method.ContainingType.OriginalDefinition, ResolveTargetKind.TypeReference),
+                                                method.ContainingType, 
+                                                ResolveTargetKind.None);
+        
+        context.Generate($"var {targetTypeVarName} = {resolvedTargetTypeExp};");
+        context.WriteNewLine();
 
         // find the original method.
-        var originalMethodVar = _context.Naming.SyntheticVariable($"open{method.Name}", ElementKind.LocalVariable);
+        var originalMethodVar = context.Naming.SyntheticVariable($"open{method.Name}", ElementKind.LocalVariable);
 
         var methodParameterNames = method.Parameters.Aggregate(new StringBuilder(), (acc, curr) => acc.Append($"""
                                                                                                                "{curr.Type.FullyQualifiedName()}",
@@ -194,13 +228,13 @@ public class MonoCecilMemberResolver(MonoCecilContext context) : IMemberResolver
             ? $" && !m.Parameters.Select(p => p.ParameterType.FullName).Except([{methodParameterNames}]).Any()"
             : string.Empty;
 
-        _context.Generate(
-            $"""var {originalMethodVar} = {_context.TypeResolver.ResolveAny(method.ContainingType.OriginalDefinition, ResolveTargetKind.TypeReference)}.Resolve().Methods.First(m => m.Name == "{method.Name}" && m.Parameters.Count == {method.Parameters.Length}{parameterTypesCheck});""");
-        _context.WriteNewLine();
+        context.Generate(
+            $"""var {originalMethodVar} = {context.TypeResolver.Resolve(method.ContainingType.OriginalDefinition, ResolveTargetKind.TypeReference)}.Resolve().Methods.First(m => m.Name == "{method.Name}" && m.Parameters.Count == {method.Parameters.Length}{parameterTypesCheck});""");
+        context.WriteNewLine();
 
         // Instantiates a MethodReference representing the called method.
-        var targetMethodVar = _context.Naming.SyntheticVariable($"{method.Name}", ElementKind.MemberReference);
-        _context.Generate(
+        var targetMethodVar = context.Naming.SyntheticVariable($"{method.Name}", ElementKind.MemberReference);
+        context.Generate(
             $$"""
               var {{targetMethodVar}} = new MethodReference("{{method.Name}}", assembly.MainModule.ImportReference({{originalMethodVar}}).ReturnType)
                           {
@@ -210,14 +244,14 @@ public class MonoCecilMemberResolver(MonoCecilContext context) : IMemberResolver
                                CallingConvention = {{originalMethodVar}}.CallingConvention,
                           };
               """);
-        _context.WriteNewLine();
+        context.WriteNewLine();
 
         // Add original parameters to the MethodReference
         foreach (var parameter in method.Parameters)
         {
-            _context.Generate(
+            context.Generate(
                 $"""{targetMethodVar}.Parameters.Add(new ParameterDefinition("{parameter.Name}", {originalMethodVar}.Parameters[{parameter.Ordinal}].Attributes, {originalMethodVar}.Parameters[{parameter.Ordinal}].ParameterType));""");
-            _context.WriteNewLine();
+            context.WriteNewLine();
         }
 
         return targetMethodVar;
@@ -249,14 +283,14 @@ public class MonoCecilMemberResolver(MonoCecilContext context) : IMemberResolver
             found.ThrowIfVariableIsNotValid();
 
             var resolvedField = field.ContainingType.IsGenericType
-                ? $$"""new FieldReference({{found.VariableName}}.Name, {{found.VariableName}}.FieldType, {{context.TypeResolver.ResolveAny(field.ContainingType, ResolveTargetKind.TypeReference)}})""" 
+                ? $$"""new FieldReference({{found.VariableName}}.Name, {{found.VariableName}}.FieldType, {{context.TypeResolver.Resolve(field.ContainingType, ResolveTargetKind.TypeReference)}})""" 
                 : found.VariableName;
                 
             return resolvedField;
         }
 
         var declaringTypeName = field.ContainingType.FullyQualifiedName();
-        return Utils.ImportFromMainModule($"TypeHelpers.ResolveField(\"{declaringTypeName}\",\"{field.Name}\")");
+        return ImportReference($"TypeHelpers.ResolveField(\"{declaringTypeName}\",\"{field.Name}\")");
     }
 
     public string ResolveEventField(IEventSymbol eventSymbol)
@@ -268,9 +302,39 @@ public class MonoCecilMemberResolver(MonoCecilContext context) : IMemberResolver
         found.ThrowIfVariableIsNotValid();
 
         var resolvedField = eventSymbol.ContainingType.IsGenericType
-            ? $$"""new FieldReference({{found.VariableName}}.Name, {{found.VariableName}}.FieldType, {{context.TypeResolver.ResolveAny(eventSymbol.ContainingType, ResolveTargetKind.TypeReference)}})""" 
+            ? $$"""new FieldReference({{found.VariableName}}.Name, {{found.VariableName}}.FieldType, {{context.TypeResolver.Resolve(eventSymbol.ContainingType, ResolveTargetKind.TypeReference)}})""" 
             : found.VariableName;
                 
         return resolvedField;
     }
+
+    public string ImportReference(string expression) => $"assembly.MainModule.ImportReference({expression})";
+
+    public string MakeGeneticInstanceMethod(string methodReferenceVariable, string methodName, IReadOnlyList<ResolvedType> resolvedTypeArguments)
+    {
+        var hash = new HashCode();
+        hash.Add(methodReferenceVariable);
+        hash.Add(resolvedTypeArguments.Count);
+        foreach (var t in resolvedTypeArguments)
+            hash.Add(t);
+
+        var varName = context.Services.Get<GenericInstanceMethodCacheService<int, string>>().GetOrCreate(hash.ToHashCode(), (context, methodName, resolvedTypeArguments, methodReferenceVariable),
+            static (hashCode, state) =>
+            {
+                var genericInstanceVarName = state.context.Naming.SyntheticVariable(state.methodName, ElementKind.GenericInstance);
+            
+                state.context.Generate($"var {genericInstanceVarName} = new GenericInstanceMethod({state.methodReferenceVariable});");
+                state.context.WriteNewLine();
+                foreach (var t in state.resolvedTypeArguments)
+                {
+                    state.context.Generate($"{genericInstanceVarName}.GenericArguments.Add({t});");
+                    state.context.WriteNewLine();
+                }
+                return genericInstanceVarName;
+            });
+        
+        return varName;
+    }
+
+    public string MapSpecificAttributes(IMethodSymbol method) => string.Empty; // No-op on Mono.Cecil
 }

@@ -12,7 +12,7 @@ namespace Cecilifier.Core.AST
 {
     internal abstract class InterpolatedStringVisitor : SyntaxWalkerBase
     {
-        public static InterpolatedStringVisitor For(InterpolatedStringExpressionSyntax node, IVisitorContext context, string ilVar, ExpressionVisitor expressionVisitor)
+        public static InterpolatedStringVisitor For(InterpolatedStringExpressionSyntax node, IVisitorContext context, IlContext ilVar, ExpressionVisitor expressionVisitor)
         {
             var numberOfArguments = node.Contents.OfType<InterpolationSyntax>().Count();
             return numberOfArguments <= 3
@@ -26,7 +26,7 @@ namespace Cecilifier.Core.AST
                                                                                 .GetMembers("Format")
                                                                                 .OfType<IMethodSymbol>();
 
-        protected InterpolatedStringVisitor(IVisitorContext context, string ilVar, ExpressionVisitor expressionVisitor) : base(context)
+        protected InterpolatedStringVisitor(IVisitorContext context, IlContext ilVar, ExpressionVisitor expressionVisitor) : base(context)
         {
             _ilVar = ilVar;
             _expressionVisitor = expressionVisitor;
@@ -69,8 +69,8 @@ namespace Cecilifier.Core.AST
             _computedFormat.Append(node.TextToken.ToFullString());
         }
 
-        protected readonly string _ilVar;
-        protected byte _currentParameterIndex = 0;
+        protected readonly IlContext _ilVar;
+        protected byte _currentParameterIndex;
 
         private readonly StringBuilder _computedFormat = new();
         private readonly ExpressionVisitor _expressionVisitor;

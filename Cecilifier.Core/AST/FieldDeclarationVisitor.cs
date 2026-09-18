@@ -55,7 +55,7 @@ namespace Cecilifier.Core.AST
             var fieldDefVars = new List<string>(variableDeclarationSyntax.Variables.Count);
 
             var fieldType = ResolveTypeSymbol(variableDeclarationSyntax.Type);
-            var fieldAttributes = ModifiersToCecil<FieldAttributes>(modifiers, "Private", MapFieldAttributesFor);
+            var fieldAttributes = ModifiersAsString<FieldAttributes>(modifiers, "Private", MapFieldAttributesFor);
             var isByRef = variableDeclarationSyntax.Type is RefTypeSyntax;
 
             foreach (var field in variableDeclarationSyntax.Variables)
@@ -81,7 +81,7 @@ namespace Cecilifier.Core.AST
                                                             isByRef,
                                                             constant.Value.ValueText());
                 AddCecilExpressions(Context, exps);
-                HandleAttributesInMemberDeclaration(node.AttributeLists, fieldVar, VariableMemberKind.Field);
+                HandleAttributesInMemberDeclaration(fieldSymbol.Name, node.AttributeLists, fieldVar, VariableMemberKind.Field);
             }
 
             return fieldDefVars;

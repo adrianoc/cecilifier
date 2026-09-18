@@ -15,4 +15,5 @@ public enum VariableMemberKind
     ModuleReference = 1 << 7,
     MethodSignature = 1 << 8,
     MethodReference = 1 << 9,
+    MethodInstantiation = 1 << 10,
 }

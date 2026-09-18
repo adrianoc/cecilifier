@@ -2,14 +2,12 @@ using Cecilifier.ApiDriver.MonoCecil;
 using Cecilifier.ApiDriver.SystemReflectionMetadata;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Tests.Framework;
-using Cecilifier.Core.Tests.Framework.Attributes;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration
 {
     [TestFixture(typeof(MonoCecilContext))]
     [TestFixture(typeof(SystemReflectionMetadataContext))]
-    [EnableForContext<SystemReflectionMetadataContext>(nameof(TestForStatement))]
     public class StatementTests<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
     {
         [TestCase("System.Int32* FixedStatementTest::Test()", TestName = "Return")]
@@ -34,19 +32,19 @@ namespace Cecilifier.Core.Tests.Integration
         [Test]
         public void TestSwitchStatement()
         {
-            AssertResourceTestWithExplicitExpectation(@"Statements/SwitchStatement", "System.Int32 SwitchStatement::M(System.Int32)");
+            AssertResourceTestWithExplicitExpectation("Statements/SwitchStatement", "System.Int32 SwitchStatement::M(System.Int32)");
         }
 
         [Test]
         public void TestUsingWithStructExpression()
         {
-            AssertResourceTestWithExplicitExpectation(@"Statements/UsingStatement.StructExpression", "System.Void UsingStatementTest::WithStructExpression()");
+            AssertResourceTestWithExplicitExpectation("Statements/UsingStatement.StructExpression", "System.Void UsingStatementTest::WithStructExpression()");
         }
 
         [Test]
         public void TestUsingStatement()
         {
-            AssertResourceTest(@"Statements/UsingStatement");
+            AssertResourceTest("Statements/UsingStatement");
         }
     }
 }

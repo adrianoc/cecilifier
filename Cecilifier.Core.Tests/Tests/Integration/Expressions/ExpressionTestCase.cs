@@ -9,31 +9,6 @@ namespace Cecilifier.Core.Tests.Integration
 {
     [TestFixture(typeof(MonoCecilContext))]
     [TestFixture(typeof(SystemReflectionMetadataContext))]
-    [EnableForContext<SystemReflectionMetadataContext>(
-        nameof(TestAdd),
-        nameof(TestAdd2),
-        nameof(TestBox),
-        nameof(TestDoubleLocalVariableInitialization),
-        nameof(TestLocalVariableAssignment),
-        nameof(TestLocalVariableInitialization),
-        nameof(TestTimes),
-        nameof(TestParameterAssignment),
-        nameof(TestMultipleLocalVariableAssignment),
-        nameof(TestDoubleLocalVariableInitializationComplex),
-        nameof(TestModulus),
-        nameof(TestEquals),
-        nameof(TestLessThan),
-        nameof(TestTernaryOperator),
-        nameof(TestTypeInferenceInDeclarations),
-        nameof(TestValueTypeAddress),
-        nameof(TestNewPrimitive),
-        nameof(TestNewCustom),
-        nameof(TestNewSingleDimensionArray),
-        nameof(TestUnaryExpressions),
-        nameof(TestIncrementDecrementExpressions),
-        nameof(TestIndexerAccess),
-        nameof(TestRangeExpression),
-        nameof(TestIndexExpression))]
     public class ExpressionTestCase<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
     {
         [Test]
@@ -169,13 +144,13 @@ namespace Cecilifier.Core.Tests.Integration
         [TestCase("PropertyRead")]
         [TestCase("ArrayWrite")]
         [TestCase("PropertyWrite")]
-        [ParameterizedResourceFilter<SystemReflectionMetadataContext>("ArrayRead", "ArrayWrite", IgnoreReason = "Other tests depends on generics which are not supported as of today")]
         public void TestIndexerAccess(string prefix)
         {
             AssertResourceTest($"Expressions/{prefix}IndexerAccess");
         }
 
         [Test]
+        [DisableForContext<SystemReflectionMetadataContext>(IgnoreReason = "SRM throws exception complaining about generic type parameters not being sorted. #111")]
         public void TestArrayLength()
         {
             AssertResourceTest("Expressions/ArrayLength");

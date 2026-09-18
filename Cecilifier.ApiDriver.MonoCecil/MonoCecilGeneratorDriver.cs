@@ -6,6 +6,7 @@ using Cecilifier.Core.ApiDriver.Handles;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.TypeSystem;
+using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 
 namespace Cecilifier.ApiDriver.MonoCecil;
@@ -54,6 +55,8 @@ public class SnippetRunner
 }}";
     }
 
+    public ApiDriverCapabilities DriverCapabilities => ApiDriverCapabilities.RequiresForwardReferences | ApiDriverCapabilities.RequiresExplicitParameterSyntaxHandling;
+
     public int PreambleLineCount => 25; // The # of lines before the 1st cecilified line of code (see `cecilifiedCode` parameter from AsCecilApplication())
 
     public IReadOnlyCollection<string> AssemblyReferences { get; } = 
@@ -91,7 +94,13 @@ public class SnippetRunner
 
     public void WriteCilBranch(IVisitorContext context, IlContext il, OpCode branchOpCode, string targetLabel, string? comment = null)
     {
-        WriteCilInstruction(context, il, branchOpCode, targetLabel, comment);
+        context.Generate(EmitCilInstruction(context, il, branchOpCode, targetLabel, comment));
+        context.WriteNewLine();
+    }
+    
+    public string EmitCilBranchInstruction(IVisitorContext context, IlContext il, OpCode branchOpCode, string targetLabel, string? comment = null)
+    {
+        return EmitCilInstruction(context, il, branchOpCode, targetLabel, comment);
     }
 
     public void DefineLabel(IVisitorContext context, IlContext il, string labelVariable)
@@ -99,12 +108,16 @@ public class SnippetRunner
         context.Generate($"var {labelVariable} = {il.VariableName}.Create(OpCodes.Nop);");
         context.WriteNewLine();
     }
-
+    
+    public string EmitDefineLabel(IVisitorContext context, IlContext il, string labelVariable) => $"var {labelVariable} = {il.VariableName}.Create(OpCodes.Nop);";
+    
     public void MarkLabel(IVisitorContext context, IlContext il, string labelVariable)
     {
         context.Generate($"{il.VariableName}.Append({labelVariable});");
         context.WriteNewLine();
     }
+
+    public string EmitMarkLabel(IVisitorContext context, IlContext il, string labelVariable) => $"{il.VariableName}.Append({labelVariable});";
 
     public IlContext NewIlContext(IVisitorContext context, string memberName, string relatedMethodVar)
     {
@@ -127,5 +140,33 @@ public class SnippetRunner
         context.Generate([
                 $"{methodVariable}.Body = new MethodBody({methodVariable});",
                 $"{targetVariable}.{accessor} = {methodVariable};" ]);
+    }
+
+    public void WriteExceptionHandlers(IVisitorContext context, IlContext ilVar, IEnumerable<ExceptionHandlerEntry> exceptionHandlerTable)
+    {
+        string methodVar = context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
+        foreach (var handlerEntry in exceptionHandlerTable)
+        {
+            context.Generate($"{methodVar}.Body.ExceptionHandlers.Add(new ExceptionHandler(ExceptionHandlerType.{handlerEntry.Kind})");
+            context.WriteNewLine();
+            context.Generate("{");
+            context.WriteNewLine();
+            if (handlerEntry.Kind == ExceptionHandlerKind.Catch)
+            {
+                context.Generate($"    CatchType = {handlerEntry.CatchType},");
+                context.WriteNewLine();
+            }
+
+            context.Generate($"    TryStart = {handlerEntry.TryStart},");
+            context.WriteNewLine();
+            context.Generate($"    TryEnd = {handlerEntry.TryEnd},");
+            context.WriteNewLine();
+            context.Generate($"    HandlerStart = {handlerEntry.HandlerStart},");
+            context.WriteNewLine();
+            context.Generate($"    HandlerEnd = {handlerEntry.HandlerEnd}");
+            context.WriteNewLine();
+            context.Generate("});");
+            context.WriteNewLine();
+        }
     }
 }

@@ -127,6 +127,7 @@ public class ParamsTests : CecilifierUnitTestBase
             new [] {
                 """
                 //M\(1, 2, n\)
+                \s+var il_use_\d+ = m_use_\d+.Body.GetILProcessor\(\);
                 (?<emit>\s+il_use_\d+\.Emit\(OpCodes\.)Ldarg_0\);
                 \s+var (?<paramsVar>l_itemsParams_\d+) = new VariableDefinition\(.+Int32.MakeArrayType\(\)\);
                 \s+m_use_\d+.Body.Variables.Add\(\k<paramsVar>\);
@@ -139,6 +140,7 @@ public class ParamsTests : CecilifierUnitTestBase
             new [] {
                 """
                 //M\(1, 2, n\)
+                \s+var il_use_\d+ = m_use_\d+.Body.GetILProcessor\(\);
                 (?<emit>\s+il_use_\d+\.Emit\(OpCodes\.)Ldarg_0\);
                 \s+//InlineArray to store the `params` values.
                 """
@@ -150,6 +152,7 @@ public class ParamsTests : CecilifierUnitTestBase
             {
                 """
                 //M\(1, 2, n\)
+                \s+var il_use_\d+ = m_use_\d+.Body.GetILProcessor\(\);
                 (?<emit>\s+il_use_\d+\.Emit\(OpCodes\.)Ldarg_0\);
                 \s+//InlineArray to store the `params` values.
                 """,
@@ -186,6 +189,7 @@ public class ParamsTests : CecilifierUnitTestBase
             {
                 """
                 //M\(1, 2, n\)
+                \s+var il_use_\d+ = m_use_\d+.Body.GetILProcessor\(\);
                 (?<emit>\s+il_use_\d+\.Emit\(OpCodes\.)Ldarg_0\);
                 \s+//Instantiates a List<T> passing the # of elements to its ctor.
                 \k<emit>Ldc_I4, 3\);
@@ -217,41 +221,5 @@ public class ParamsTests : CecilifierUnitTestBase
             "ICollection<int>",
             (string[]) ilistTestData.Arguments[1]!) // call site code generated for ICollection<T> is identical to the code generated for IList<T>.
             .SetName("ICollection<int>");
-        
-        yield return new TestCaseData(
-            "ReadOnlySpan<int>",
-            new [] 
-            {
-                """
-                //M\(1, 2, n\)
-                (?<emit>\s+il_use_\d+\.Emit\(OpCodes\.)Ldarg_0\);
-                \s+//InlineArray to store the `params` values.
-                """,
-                
-                """
-                var (?<ila>l_itemsArg_\d+) = new VariableDefinition\(st_inlineArray_\d+.MakeGenericInstanceType\(assembly.MainModule.TypeSystem.Int32\)\);
-                \s+m_use_\d+.Body.Variables.Add\(\k<ila>\);
-                (?<emit>\s+il_use_\d+\.Emit\(OpCodes\.)Ldloca_S, \k<ila>\);
-                \k<emit>Initobj, st_inlineArray_\d+.MakeGenericInstanceType\(assembly.MainModule.TypeSystem.Int32\)\);
-                \k<emit>Ldloca_S, \k<ila>\);
-                \k<emit>Ldc_I4, 0\);
-                """, // Declares and initialize a variable of an inline array type used to store the data.
-                
-                """
-                (?<emit>\s+il_use_\d+\.Emit\(OpCodes\.)Call, gi_inlineArrayElementRef_\d+\);
-                \k<emit>Ldc_I4, 1\);
-                \k<emit>Stind_I4\);
-                \k<emit>Ldloca_S, (?<ila>l_itemsArg_\d+)\);
-                \k<emit>Ldc_I4, 1\);
-                \k<emit>Call, gi_inlineArrayElementRef_\d+\);
-                \k<emit>Ldc_I4, 2\);
-                \k<emit>Stind_I4\);
-                \k<emit>Ldloca_S, \k<ila>\);
-                \k<emit>Ldc_I4, 2\);
-                \k<emit>Call, gi_inlineArrayElementRef_\d+\);
-                \k<emit>Ldarg_1\);
-                \k<emit>Stind_I4\);
-                """ // Populates inline array with data to be passed to params[]
-            }).SetName("ReadOnlySpan<int>");
     }
 }

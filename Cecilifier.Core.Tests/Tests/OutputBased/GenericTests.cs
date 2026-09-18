@@ -9,7 +9,6 @@ namespace Cecilifier.Core.Tests.OutputBased;
 
 [TestFixture(typeof(MonoCecilContext))]
 [TestFixture(typeof(SystemReflectionMetadataContext))]
-[EnableForContext<SystemReflectionMetadataContext>(IgnoreReason = "Not implemented yet")]
 public class GenericTests<TContext> : OutputBasedTestBase<TContext> where TContext : IVisitorContext
 {
     [Test]
@@ -53,4 +52,27 @@ public class GenericTests<TContext> : OutputBasedTestBase<TContext> where TConte
             "123");
     }
     
+    [Test]
+    [DisableForContext<SystemReflectionMetadataContext>(IgnoreReason = "Throws `Metadata table GenericParam not sorted.` (#375)")]
+    public void TypeParameterMetadataTables_AreSorted()
+    {
+        AssertOutput("""
+                     using System;
+                     using System.Collections.Generic;
+                     
+                     Console.Write($"{TestSubject<char>.M1(42)} {TestSubject<char>.M2(42)}");
+                     
+                     class TestSubject<TC>
+                     {
+                         // This fails
+                         public static int M1(int v) => v;
+                         public static T M2<T>(T v) => v;
+                         
+                         // This works! :/
+                         //public static T M2<T>(T v) => v;
+                         //public static int M1(int v) => v;
+                     }
+                     """, 
+            "42 42");
+    }
 }

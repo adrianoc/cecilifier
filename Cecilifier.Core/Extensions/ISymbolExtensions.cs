@@ -13,10 +13,13 @@ using Cecilifier.Core.AST;
 using Cecilifier.Core.AST.Params;
 using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
+using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
 
 namespace Cecilifier.Core.Extensions
 {
+    public record LoadAddressDetails(OpCode OpCode, Func<string, object> Factory);
+
     public static class ISymbolExtensions
     {
         private static readonly SymbolDisplayFormat QualifiedNameWithoutTypeParametersFormat = new SymbolDisplayFormat(typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces)
@@ -74,9 +77,32 @@ namespace Cecilifier.Core.Extensions
             };
         }
         
+        public static string NameIncludingTypeParametersAndArguments(this ISymbol symbol)
+        {
+            return symbol switch
+            {
+                INamedTypeSymbol {TypeArguments.Length: > 0 } namedTypeSymbol => $"{namedTypeSymbol.Name}_{namedTypeSymbol.TypeArguments.Aggregate(new StringBuilder(), MemberNameIncludingContainingType)}",
+                INamedTypeSymbol {TypeParameters.Length: > 0 } namedTypeSymbol => $"{namedTypeSymbol.Name}_{namedTypeSymbol.TypeParameters.Aggregate(new StringBuilder(), MemberNameIncludingContainingType)}",
+                INamedTypeSymbol namedTypeSymbol => $"{namedTypeSymbol.Name}",
+                
+                _ => throw new NotSupportedException($"Symbol {symbol.ToDisplayString()} is not supported.")
+            };
+
+            // In some scenarios we may want/need to register variables for types and take their containing type symbol. 
+            StringBuilder MemberNameIncludingContainingType(StringBuilder acc, ITypeSymbol type)
+            {
+                HashCode hashCode = new();
+                hashCode.Add(type.Name);
+                hashCode.Add(type.ContainingSymbol?.Name);
+                acc.Append($"{hashCode.ToHashCode()}");
+                
+                return acc;
+            }
+        }
+        
         public static string GetReflectionName(this ITypeSymbol typeSymbol)
         {
-            var sb = new System.Text.StringBuilder();
+            var sb = new StringBuilder();
 
             if (typeSymbol is IArrayTypeSymbol array)
             {
@@ -136,7 +162,7 @@ namespace Cecilifier.Core.Extensions
 
         [ExcludeFromCodeCoverage]
         [return: NotNull]
-        public static T EnsureNotNull<T>([NotNullIfNotNull("symbol")] this T? symbol, [CallerArgumentExpression(nameof(symbol))] string expression = null) where T : ISymbol
+        public static T EnsureNotNull<T>([NotNullIfNotNull("symbol")] this T? symbol, [CallerArgumentExpression(nameof(symbol))] string? expression = null) where T : ISymbol
         {
             if (symbol == null)
                 throw new NullReferenceException($"Expression '{expression}' is expected to be non null.");
@@ -151,7 +177,7 @@ namespace Cecilifier.Core.Extensions
             if (string.IsNullOrWhiteSpace(refRelatedAttr) && string.IsNullOrWhiteSpace(optionalAttribute))
                 return Constants.ParameterAttributes.None;
 
-            return refRelatedAttr.AppendModifier(optionalAttribute);
+            return refRelatedAttr.AppendEnumFlag(optionalAttribute);
         }
 
         public static (string Value, bool Present) ExplicitDefaultValue(this IParameterSymbol symbol, bool rawString = true)
@@ -183,7 +209,7 @@ namespace Cecilifier.Core.Extensions
             if (declaringSyntaxReference == null)
                 return;
             
-            var fieldDeclaration = declaringSyntaxReference.GetSyntax().Parent.Parent.EnsureNotNull<SyntaxNode,FieldDeclarationSyntax>();
+            var fieldDeclaration = declaringSyntaxReference.GetSyntax().Parent.Parent.EnsureNotNull<SyntaxNode, FieldDeclarationSyntax>();
             if (fieldDeclaration.Span.Start > node.Span.End)
             {
                 // this is a forward reference, process it...
@@ -213,14 +239,17 @@ namespace Cecilifier.Core.Extensions
         public static OpCode LoadOpCodeForFieldAccess(this ISymbol symbol) => symbol.IsStatic ? OpCodes.Ldsfld : OpCodes.Ldfld;
         public static OpCode StoreOpCodeForFieldAccess(this ISymbol symbol) => symbol.IsStatic ? OpCodes.Stsfld : OpCodes.Stfld;
 
-        public static OpCode LoadAddressOpcodeForMember(this ISymbol symbol) => symbol.Kind switch
+        public static LoadAddressDetails LoadAddressDetailsForForMember(this ISymbol symbol) => symbol.Kind switch
         {
-            SymbolKind.Field => symbol.IsStatic ? OpCodes.Ldsflda : OpCodes.Ldflda,
-            SymbolKind.Parameter => OpCodes.Ldarg_S,
-            SymbolKind.Local => OpCodes.Ldloca_S,
+            SymbolKind.Field => new LoadAddressDetails(symbol.IsStatic ? OpCodes.Ldsflda : OpCodes.Ldflda, AsToken),
+            SymbolKind.Parameter => new LoadAddressDetails(OpCodes.Ldarg_S, AsToken),
+            SymbolKind.Local => new LoadAddressDetails(OpCodes.Ldloca_S, AsLocalVariable),
             _ => throw new ArgumentException($"Invalid symbol type for {symbol} ({symbol.Kind})")
         };
 
+        static object AsLocalVariable(string expression) => expression.AsLocalVariable();
+        static object AsToken(string expression) => expression.AsToken();
+    
         public static OpCode LoadOpCodeFor(this ITypeSymbol type)
         {
             return type.SpecialType switch
@@ -296,8 +325,10 @@ namespace Cecilifier.Core.Extensions
             return type.TypeArguments.Any(t => t.IsDefinedInCurrentAssembly(context)) 
                    || (type.ContainingType != null && (SymbolEqualityComparer.Default.Equals(type.ContainingType, type) ? false : HasTypeArgumentOfTypeFromCecilifiedCodeTransitive(type.ContainingType, context)));
         }
+
+        public static TypeResolutionOptions GetTypeResolutionOptions(this ITypeSymbol type) => type.IsValueType ? TypeResolutionOptions.IsValueType : TypeResolutionOptions.None; 
         
-        internal static ExpandedParamsArgumentHandler? CreateExpandedParamsUsageHandler(this IMethodSymbol methodSymbol, ExpressionVisitor expressionVisitor, string ilVar, ArgumentListSyntax argumentList)
+        internal static ExpandedParamsArgumentHandler? CreateExpandedParamsUsageHandler(this IMethodSymbol methodSymbol, ExpressionVisitor expressionVisitor, IlContext ilVar, ArgumentListSyntax argumentList)
         {
             var paramsParameter = methodSymbol.Parameters.FirstOrDefault(p => p.IsParams);
             if (paramsParameter == null || !IsExpandedForm(argumentList, paramsParameter))
@@ -367,13 +398,13 @@ namespace Cecilifier.Core.Extensions
 
             var modifiers = new StringBuilder(methodModifiers);
             if (methodSymbol.IsStatic)
-                modifiers.AppendModifier($"{methodAttributesEnumName}.Static");
+                modifiers.AppendEnumFlag($"{methodAttributesEnumName}.Static");
             
             if (methodSymbol.IsAbstract)
-                modifiers.AppendModifier($"{methodAttributesEnumName}.Abstract");
+                modifiers.AppendEnumFlag($"{methodAttributesEnumName}.Abstract");
             
             if (methodSymbol.IsVirtual)
-                modifiers.AppendModifier($"{methodAttributesEnumName}.Virtual");
+                modifiers.AppendEnumFlag($"{methodAttributesEnumName}.Virtual");
                 
             return modifiers.ToString();
         }

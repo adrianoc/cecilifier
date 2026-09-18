@@ -109,9 +109,9 @@ class Foo<TFoo> {{ }}");
                        \s+var (?<m>m_M_\d+) = new MethodDefinition\("M",.+\);
                        \s+cls_foo_\d+.Methods.Add\(\k<m>\);
                        \s+m_M_\d+.Body.InitLocals = true;
-                       \s+var il_M_\d+ = m_M_\d+.Body.GetILProcessor\(\);
                        \s+var (?<attr>attr_myGenericAttribute_\d+) = new CustomAttribute\(.+(?<attrCtor>ctor_myGenericAttribute_\d+).Name, \k<attrCtor>.ReturnType\) {.+DeclaringType = cls_myGenericAttribute_\d+.MakeGenericInstanceType\(assembly.MainModule.TypeSystem.Int32\), .+\);
                        \s+\k<m>.CustomAttributes.Add\(\k<attr>\);
+                       \s+var il_M_\d+ = m_M_\d+.Body.GetILProcessor\(\);
                        """));
     }
     

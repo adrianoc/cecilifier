@@ -20,14 +20,15 @@ namespace Cecilifier.Core.AST
 {
     internal partial class StatementVisitor : SyntaxWalkerBase
     {
-        private string _ilVar;
+        private IlContext _ilVar;
 
-        private StatementVisitor(IVisitorContext ctx, string ilVar) : base(ctx)
+        private StatementVisitor(IVisitorContext ctx, IlContext ilVar) : base(ctx)
         {
             _ilVar = ilVar;
+            _ilVar.Materialize();
         }
 
-        internal static void Visit(IVisitorContext context, string ilVar, CSharpSyntaxNode node)
+        internal static void Visit(IVisitorContext context, IlContext ilVar, CSharpSyntaxNode node)
         {
             node.Accept(new StatementVisitor(context, ilVar));
         }
@@ -88,14 +89,16 @@ namespace Cecilifier.Core.AST
             Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Stloc, new CilLocalVariableHandle(evaluatedExpressionVariable)); // stores evaluated expression in local var
 
             // Add label to end of switch
-            var endOfSwitchLabel = CreateCilInstruction(_ilVar, Context.Naming.Label("endOfSwitch"), OpCodes.Nop);
+            var endOfSwitchLabel = Context.Naming.Label("endOfSwitch");
+            Context.ApiDriver.DefineLabel(Context, _ilVar, endOfSwitchLabel);
+            
             breakToInstructionVars.Push(endOfSwitchLabel);
 
             // Write the switch conditions.
             var nextTestLabels = node.Sections.Select( (_, index) =>
             {
                 var labelName = Context.Naming.Label($"caseCode_{index}");
-                CreateCilInstruction(_ilVar, labelName, OpCodes.Nop);
+                Context.ApiDriver.DefineLabel(Context, _ilVar, labelName);
                 return labelName;
             }).ToArray();
 
@@ -105,7 +108,7 @@ namespace Cecilifier.Core.AST
             {
                 if (switchSection.Labels.First().Kind() == SyntaxKind.DefaultSwitchLabel)
                 {
-                    Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Br, nextTestLabels[currentLabelIndex]);
+                    Context.ApiDriver.WriteCilBranch(Context, _ilVar, OpCodes.Br, nextTestLabels[currentLabelIndex]);
                     hasDefault = true;
                     continue;
                 }
@@ -116,9 +119,9 @@ namespace Cecilifier.Core.AST
                     
                     Context.WriteNewLine();
                     Context.WriteComment($"{sectionLabel.ToString()} (condition)");
-                    Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloc, evaluatedExpressionVariable);
+                    Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloc, evaluatedExpressionVariable.AsLocalVariable());
                     ExpressionVisitor.Visit(Context, _ilVar, sectionLabel);
-                    Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Beq_S, nextTestLabels[currentLabelIndex]);
+                    Context.ApiDriver.WriteCilBranch(Context, _ilVar, OpCodes.Beq_S, nextTestLabels[currentLabelIndex]);
                 }
                 currentLabelIndex++;
             }
@@ -126,7 +129,7 @@ namespace Cecilifier.Core.AST
             // if at runtime the code hits this point and the switch does not have a default section
             // it means none of the labels matched so just jump to the end of the switch.
             if (!hasDefault)
-                Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Br, endOfSwitchLabel);
+                Context.ApiDriver.WriteCilBranch(Context, _ilVar, OpCodes.Br, endOfSwitchLabel);
 
             // Write the statements for each switch section...
             currentLabelIndex = 0;
@@ -135,7 +138,7 @@ namespace Cecilifier.Core.AST
                 using var _ = LineInformationTracker.Track(Context, switchSection);
                 Context.WriteNewLine();
                 Context.WriteComment($"{switchSection.Labels.First().ToString()} (code)");
-                AddCecilExpression($"{_ilVar}.Append({nextTestLabels[currentLabelIndex]});");
+                Context.ApiDriver.MarkLabel(Context, _ilVar, nextTestLabels[currentLabelIndex]);
                 foreach (var statement in switchSection.Statements)
                 {
                     statement.Accept(this);
@@ -145,7 +148,7 @@ namespace Cecilifier.Core.AST
 
             Context.WriteNewLine();
             Context.WriteComment("End of switch");
-            AddCecilExpression($"{_ilVar}.Append({endOfSwitchLabel});");
+            Context.ApiDriver.MarkLabel(Context, _ilVar, endOfSwitchLabel);
 
             breakToInstructionVars.Pop();
         }
@@ -157,7 +160,7 @@ namespace Cecilifier.Core.AST
                 throw new InvalidOperationException("Invalid break.");
             }
 
-            Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Br, breakToInstructionVars.Peek());
+            Context.ApiDriver.WriteCilBranch(Context, _ilVar, OpCodes.Br, breakToInstructionVars.Peek());
         }
 
         public override void VisitFixedStatement(FixedStatementSyntax node)
@@ -169,7 +172,7 @@ namespace Cecilifier.Core.AST
 
                 var currentMethodVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
                 var localVar = node.Declaration.Variables[0];
-                var resolvedVarType = Context.TypeResolver.ResolveAny(pointerType.PointedAtType, ResolveTargetKind.LocalVariable).MakeByReferenceType();
+                var resolvedVarType = Context.TypeResolver.MakeByRefType(Context.TypeResolver.Resolve(pointerType.PointedAtType, new TypeResolutionContext(ResolveTargetKind.LocalVariable, TypeResolutionOptions.IsByRef)));
                 Context.ApiDefinitionsFactory.LocalVariable(Context, localVar.Identifier.Text, currentMethodVar.VariableName, resolvedVarType);
                 ProcessVariableInitialization(localVar, declaredType);
             }
@@ -264,22 +267,24 @@ namespace Cecilifier.Core.AST
                 string? lastFinallyInstructionLabel = null;
                 if (usingType.TypeKind == TypeKind.TypeParameter || usingType.IsValueType)
                 {
-                    Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloca, localVarDef);
-                    Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Constrained, $"{localVarDef}.VariableType");
+                    Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloca, localVarDef.AsLocalVariable());
+                    Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Constrained,  Context.TypeResolver.Resolve(usingType, ResolveTargetKind.TypeReference).AsToken());
                 }
                 else
                 {
                     lastFinallyInstructionLabel = Context.Naming.SyntheticVariable("endFinally", ElementKind.Label);
 
-                    Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloc, localVarDef);
-                    CreateCilInstruction(_ilVar, lastFinallyInstructionLabel, OpCodes.Nop);
-                    Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Brfalse, lastFinallyInstructionLabel, "check if the disposable is not null");
-                    Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloc, localVarDef);
+                    Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloc, localVarDef.AsLocalVariable());
+                    Context.ApiDriver.DefineLabel(Context, _ilVar, lastFinallyInstructionLabel);
+                    Context.ApiDriver.WriteCilBranch(Context, _ilVar, OpCodes.Brfalse, lastFinallyInstructionLabel, "check if the disposable is not null");
+                    Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloc, localVarDef.AsLocalVariable());
                 }
 
-                Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Callvirt, Context.RoslynTypeSystem.SystemIDisposable.GetMembers("Dispose").OfType<IMethodSymbol>().Single().MethodResolverExpression(Context));
+                Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Callvirt, Context.RoslynTypeSystem.SystemIDisposable.GetMembers("Dispose").OfType<IMethodSymbol>().Single().MethodResolverExpression(Context).AsToken());
                 if (lastFinallyInstructionLabel != null)
-                    AddCecilExpression($"{_ilVar}.Append({lastFinallyInstructionLabel});");
+                {
+                    Context.ApiDriver.MarkLabel(Context, _ilVar, lastFinallyInstructionLabel);
+                }
             }
 
             ProcessTryCatchFinallyBlock<ForEachHandlerContext>(_ilVar, node.Statement, Array.Empty<CatchClauseSyntax>(), FinallyBlockHandler);

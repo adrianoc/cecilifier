@@ -2,6 +2,7 @@
 {
 	int M(int p)
 	{
+	    int dummy; // here only to ensure SRM will emit a `init` directive for the method.
 	    return --p;
 	}
 }

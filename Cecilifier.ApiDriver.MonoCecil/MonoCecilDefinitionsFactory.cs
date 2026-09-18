@@ -1,5 +1,6 @@
 using System.Buffers;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -15,6 +16,9 @@ using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
+using Mono.Cecil;
+using CustomAttributeArgument = Cecilifier.Core.ApiDriver.Attributes.CustomAttributeArgument;
+using CustomAttributeNamedArgument = Cecilifier.Core.ApiDriver.Attributes.CustomAttributeNamedArgument;
 
 namespace Cecilifier.ApiDriver.MonoCecil;
 
@@ -47,7 +51,7 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
 
         ResolvedType resolvedBaseType = baseType == null || (baseType is INamedTypeSymbol { IsGenericType: true } genericInstance && genericInstance.TypeArguments.Any(t => t.TypeKind == TypeKind.TypeParameter))
                 ? null
-                : context.TypeResolver.ResolveAny(baseType, ResolveTargetKind.TypeReference);
+                : context.TypeResolver.Resolve(baseType, ResolveTargetKind.TypeReference);
 
         var typeDefExp = $"var {typeVar} = new TypeDefinition(\"{typeNamespace}\", \"{typeName}\", {attrs}{(resolvedBaseType != null ? $", {resolvedBaseType}" : "")})";
         if (properties.Length > 0)
@@ -64,7 +68,7 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
             
         foreach (var itf in interfaces)
         {
-            exps.Add($"{typeVar}.Interfaces.Add(new InterfaceImplementation({context.TypeResolver.ResolveAny(itf, ResolveTargetKind.TypeReference)}));");
+            exps.Add($"{typeVar}.Interfaces.Add(new InterfaceImplementation({context.TypeResolver.Resolve(itf, ResolveTargetKind.TypeReference)}));");
         }
 
         if (definitionContext.ParentDefinitionVariable != null)
@@ -88,7 +92,7 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
         if (typeSymbol.BaseType is not { IsGenericType: true })
             return;
 
-        var resolvedBaseType = context.TypeResolver.ResolveAny(typeSymbol.BaseType, ResolveTargetKind.TypeReference);
+        var resolvedBaseType = context.TypeResolver.Resolve(typeSymbol.BaseType, ResolveTargetKind.TypeReference);
         context.Generate($"{typeDefinitionVariable}.BaseType = {resolvedBaseType};");
     }
 
@@ -96,10 +100,10 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
     {
         var exps = new List<string>();
 
-        var resolvedReturnType = context.TypeResolver.ResolveAny(methodSymbol.ReturnType, methodSymbol.ToTypeResolutionContext());
+        var resolvedReturnType = context.TypeResolver.Resolve(methodSymbol.ReturnType, methodSymbol.ToTypeResolutionContext());
         var refReturn = methodSymbol.ReturnsByRef || methodSymbol.ReturnsByRefReadonly;
         if (refReturn)
-            resolvedReturnType = resolvedReturnType.MakeByReferenceType();
+            resolvedReturnType = context.TypeResolver.MakeByRefType(resolvedReturnType);
 
         // for type parameters we may need to postpone setting the return type (using void as a placeholder, since we need to pass something) until the generic parameters has been
         // handled. This is required because the type parameter may be defined by the method being processed.
@@ -107,8 +111,8 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
         ProcessGenericTypeParameters(bodiedMemberDefinitionContext.Member.DefinitionVariable, context, typeParameters, exps);
         if (methodSymbol.ReturnType.IsTypeParameterOrIsGenericTypeReferencingTypeParameter())
         {
-            resolvedReturnType = context.TypeResolver.ResolveAny(methodSymbol.ReturnType, methodSymbol.ToTypeResolutionContext());
-            exps.Add($"{bodiedMemberDefinitionContext.Member.DefinitionVariable}.ReturnType = {(refReturn ? resolvedReturnType.MakeByReferenceType() : resolvedReturnType)};");
+            resolvedReturnType = context.TypeResolver.Resolve(methodSymbol.ReturnType, methodSymbol.ToTypeResolutionContext());
+            exps.Add($"{bodiedMemberDefinitionContext.Member.DefinitionVariable}.ReturnType = {(refReturn ? context.TypeResolver.MakeByRefType(resolvedReturnType) : resolvedReturnType)};");
         }
 
         exps.Add($"{context.DefinitionVariables.GetLastOf(VariableMemberKind.Type).VariableName}.Methods.Add({bodiedMemberDefinitionContext.Member.DefinitionVariable});");
@@ -147,12 +151,13 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
         {
             var paramVar = context.Naming.SyntheticVariable(parameter.Name, ElementKind.Parameter);
             var parameterExp = CecilDefinitionsFactory.Parameter(
+                                                                            context,
                                                                             parameter.Name,
                                                                             parameter.RefKind,
                                                                             parameter.ParamsAttributeName, // for now,the only callers for this method don't have any `params` parameters.
                                                                             definitionContext.Member.DefinitionVariable,
                                                                             paramVar,
-                                                                            parameter.ElementTypeResolver != null ? parameter.ElementTypeResolver(context, parameter.ElementType.Expression) : parameter.ElementType,
+                                                                            parameter.ElementTypeResolver != null ? parameter.ElementTypeResolver(context, parameter) : parameter.ElementType,
                                                                             parameter.Attributes,
                                                                             (parameter.DefaultValue, parameter.DefaultValue != null));
 
@@ -162,7 +167,7 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
 
         if (definitionContext.Member.ParentDefinitionVariable != null)
         {
-            methodVariable = context.DefinitionVariables.RegisterMethod(declaringTypeName, definitionContext.Member.Name, parameters.Select(p => p.RegistrationTypeName).ToArray(), typeParameters.Count, definitionContext.Member.DefinitionVariable);
+            methodVariable = context.DefinitionVariables.RegisterMethod(declaringTypeName, definitionContext.Member.Name, parameters.Select(p => p.RegistrationTypeName).ToArray()!, typeParameters.ToArray(), definitionContext.Member.DefinitionVariable);
             exps =
             [
                 ..exps,
@@ -231,7 +236,7 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
                     CilToken token => token.VariableName,
                     string str => str,
                     DefinitionVariable definitionVariable => definitionVariable.VariableName,
-                    _ => (string) inst.Operand
+                    _ => inst.Operand.ToString()!
                 };
                 
                 return $", {operandValue}";
@@ -245,7 +250,7 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
     public IEnumerable<string> Constructor(IVisitorContext context, BodiedMemberDefinitionContext definitionContext, string typeName, bool isStatic, string methodAccessibility, string[] paramTypes, string? methodDefinitionPropertyValues = null)
     {
         var ctorName = Utils.ConstructorMethodName(isStatic);
-        context.DefinitionVariables.RegisterMethod(typeName, ctorName, paramTypes, 0, definitionContext.Member.DefinitionVariable);
+        context.DefinitionVariables.RegisterMethod(typeName, ctorName, paramTypes, [], definitionContext.Member.DefinitionVariable);
 
         var exp = $@"var {definitionContext.Member.DefinitionVariable} = new MethodDefinition(""{ctorName}"", {methodAccessibility} | MethodAttributes.HideBySig | {Constants.Cecil.CtorAttributes}, assembly.MainModule.TypeSystem.Void)";
         if (methodDefinitionPropertyValues != null)
@@ -258,13 +263,13 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
 
     public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext definitionContext, ISymbol fieldOrEvent, ITypeSymbol fieldType, string fieldAttributes, bool isVolatile, bool isByRef, in FieldInitializationData initializer = default)
     {
-        return Field(context, definitionContext, fieldOrEvent.ContainingType.ToDisplayString(), context.TypeResolver.ResolveAny(fieldType, ResolveTargetKind.Field), fieldAttributes, isVolatile, isByRef, initializer);
+        return Field(context, definitionContext, fieldOrEvent.ContainingType.ToDisplayString(), context.TypeResolver.Resolve(fieldType, ResolveTargetKind.Field), fieldAttributes, isVolatile, isByRef, initializer);
     }
 
     public IEnumerable<string> Field(IVisitorContext context, MemberDefinitionContext definitionContext, string declaringTypeName, ResolvedType fieldType, string fieldAttributes, bool isVolatile, bool isByRef, FieldInitializationData initializer = default)
     {
         if (isByRef)
-            fieldType = fieldType.MakeByReferenceType();
+            fieldType = context.TypeResolver.MakeByRefType(fieldType);
         
         context.DefinitionVariables.RegisterNonMethod(declaringTypeName, definitionContext.Name, VariableMemberKind.Field, definitionContext.DefinitionVariable);
         
@@ -325,7 +330,7 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
 
         for(int i = 0; i < positionalArguments.Length; i++)
         {
-            var attributeArgument = $"new CustomAttributeArgument({context.TypeResolver.ResolveAny(attributeCtor.Parameters[i].Type.OriginalDefinition, ResolveTargetKind.TypeReference)}, {CustomAttributeArgumentValueFor(context, positionalArguments[i].Value)})";
+            var attributeArgument = $"new CustomAttributeArgument({context.TypeResolver.Resolve(attributeCtor.Parameters[i].Type.OriginalDefinition, ResolveTargetKind.TypeReference)}, {CustomAttributeArgumentValueFor(context, positionalArguments[i].Value!)})";
             exps[expIndex++] = $"{attributeVar}.ConstructorArguments.Add({attributeArgument});";
         }
         expIndex += ProcessAttributeNamedArguments(context, exps.Slice(expIndex), attributeVar, namedArguments);
@@ -340,10 +345,154 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
             foreach (var namedArgument in namedArguments)
             {
                 var container = (namedArgument.Kind == NamedArgumentKind.Field ? "Fields" : "Properties");
-                var value = $"new CustomAttributeArgument({namedArgument.ResolvedType}, {CustomAttributeArgumentValueFor(context, namedArgument.Value)})";
+                var value = $"new CustomAttributeArgument({namedArgument.ResolvedType}, {CustomAttributeArgumentValueFor(context, namedArgument.Value!)})";
                 exps[i++] = $"{customAttrVariable}.{container}.Add(new CustomAttributeNamedArgument(\"{namedArgument.Name}\", {value}));";
             }
             return i;
+        }
+    }
+
+    public IEnumerable<string> Event(IVisitorContext context, BodiedMemberDefinitionContext eventSpec, string declaringTypeName, ResolvedType eventType, string addAccessorVariable, string removeAccessorVariable)
+    {
+        var evtDefVar = eventSpec.Member.DefinitionVariable;
+
+        return 
+        [
+            $"var {evtDefVar} = new EventDefinition(\"{eventSpec.Member.Name}\", EventAttributes.None, {eventType.Expression});",
+            $"{evtDefVar}.AddMethod = {addAccessorVariable};",
+            $"{evtDefVar}.RemoveMethod = {removeAccessorVariable};",
+            $"{eventSpec.Member.ParentDefinitionVariable}.Events.Add({evtDefVar});"
+        ];
+    }
+
+    public void OverrideBaseMethod(IVisitorContext context, string overriderMethodVar, string? overridenMethod)
+    {
+        if (overridenMethod == null)
+            return;
+        
+        context.Generate($"{overriderMethodVar}.Overrides.Add({overridenMethod});");
+        context.WriteNewLine();
+    }
+
+    public IEnumerable<string> PInvoke(IVisitorContext context, string moduleName, string methodVar, string methodName, ReadOnlySpan<CustomAttributeArgument> customAttributeArguments)
+    {
+        var existingModuleVar = context.DefinitionVariables.GetVariable(moduleName, VariableMemberKind.ModuleReference);
+
+        var moduleVar = existingModuleVar.IsValid
+                                    ? existingModuleVar.VariableName
+                                    : context.Naming.SyntheticVariable("dllImportModule", ElementKind.LocalVariable);
+
+        var exps = new List<string>();
+        if (!existingModuleVar.IsValid)
+        {
+            exps.AddRange([
+                $"""var {moduleVar} = new ModuleReference("{moduleName}");""",
+                $"assembly.MainModule.ModuleReferences.Add({moduleVar});"
+            ]);
+        }
+
+        exps.AddRange([
+            $"{methodVar}.PInvokeInfo = new PInvokeInfo({ PInvokeAttributesFrom(customAttributeArguments) }, { EntryPoint(customAttributeArguments) }, {moduleVar});",
+            $"{methodVar}.Body = null;",
+            $"{methodVar}.ImplAttributes = {MethodImplAttributes(customAttributeArguments)};",
+        ]);
+
+        context.DefinitionVariables.RegisterNonMethod("", moduleName, VariableMemberKind.ModuleReference, moduleVar);
+
+        return exps;
+
+        static string EntryPoint(ReadOnlySpan<CustomAttributeArgument> customAttributeArguments) => $"""
+                                                                                                     "{AttributePropertyOrDefaultValue(customAttributeArguments, "EntryPoint","") }"
+                                                                                                     """;
+
+        static string MethodImplAttributes(ReadOnlySpan<CustomAttributeArgument> customAttributeArguments)
+        {
+            var preserveSig = Boolean.Parse(AttributePropertyOrDefaultValue(customAttributeArguments, "PreserveSig", "true"));
+            
+            return preserveSig
+                    ? "MethodImplAttributes.PreserveSig | MethodImplAttributes.Managed"
+                    : "MethodImplAttributes.Managed";
+        }
+
+        static StringBuilder CallingConventionFrom(ReadOnlySpan<CustomAttributeArgument> customAttributeArguments)
+        {
+            var callConventionSpan = AttributePropertyOrDefaultValue(customAttributeArguments, "CallingConvention", "Winapi").AsSpan();
+            
+            // ensures we use the enum member simple name; Parse() fails if we pass a qualified enum member
+            var index = callConventionSpan.LastIndexOf('.');
+            callConventionSpan = callConventionSpan.Slice(index + 1);
+            
+            return new StringBuilder(CallingConventionToCecil(Enum.Parse<CallingConvention>(callConventionSpan)));
+        }
+
+        static string CharSetFrom(ReadOnlySpan<CustomAttributeArgument> customAttributeArguments)
+        {
+            var enumMemberName = AttributePropertyOrDefaultValue(customAttributeArguments, "CharSet", "None").AsSpan();
+
+            // Only use the actual enum member name Parse() fails if we pass a qualified enum member
+            var index = enumMemberName.LastIndexOf('.');
+            enumMemberName = enumMemberName.Slice(index + 1);
+
+            var charSet = Enum.Parse<CharSet>(enumMemberName);
+            return charSet == CharSet.None ? string.Empty : $"PInvokeAttributes.CharSet{charSet}";
+        }
+
+        static string SetLastErrorFrom(ReadOnlySpan<CustomAttributeArgument> customAttributeArguments)
+        {
+            var setLastError = bool.Parse(AttributePropertyOrDefaultValue(customAttributeArguments, "SetLastError", "false"));
+            return setLastError ? "PInvokeAttributes.SupportsLastError" : string.Empty;
+        }
+
+        static string ExactSpellingFrom(ReadOnlySpan<CustomAttributeArgument> customAttributeArguments)
+        {
+            var exactSpelling = bool.Parse(AttributePropertyOrDefaultValue(customAttributeArguments, "ExactSpelling", "false"));
+            return exactSpelling ? "PInvokeAttributes.NoMangle" : string.Empty;
+        }
+
+        static string BestFitMappingFrom(ReadOnlySpan<CustomAttributeArgument> customAttributeArguments)
+        {
+            var bestFitMapping = bool.Parse(AttributePropertyOrDefaultValue(customAttributeArguments, "BestFitMapping", "true"));
+            return bestFitMapping ? "PInvokeAttributes.BestFitEnabled" : "PInvokeAttributes.BestFitDisabled";
+        }
+
+        static string ThrowOnUnmappableCharFrom(ReadOnlySpan<CustomAttributeArgument> customAttributeArguments)
+        {
+            var bestFitMapping = bool.Parse(AttributePropertyOrDefaultValue(customAttributeArguments, "ThrowOnUnmappableChar", "false"));
+            return bestFitMapping ? "PInvokeAttributes.ThrowOnUnmappableCharEnabled" : "PInvokeAttributes.ThrowOnUnmappableCharDisabled";
+        }
+
+        // For more information and default values see
+        // https://docs.microsoft.com/en-us/dotnet/api/system.runtime.interopservices.dllimportattribute
+        static string PInvokeAttributesFrom(ReadOnlySpan<CustomAttributeArgument> customAttributeArguments)
+        {
+            return CallingConventionFrom(customAttributeArguments)
+                    .AppendEnumFlag(CharSetFrom(customAttributeArguments))
+                    .AppendEnumFlag(SetLastErrorFrom(customAttributeArguments))
+                    .AppendEnumFlag(ExactSpellingFrom(customAttributeArguments))
+                    .AppendEnumFlag(BestFitMappingFrom(customAttributeArguments))
+                    .AppendEnumFlag(ThrowOnUnmappableCharFrom(customAttributeArguments))
+                    .ToString();
+        }
+
+        static string AttributePropertyOrDefaultValue(ReadOnlySpan<CustomAttributeArgument> customAttributeArguments, string propertyName, string defaultValue)
+        {
+            return customAttributeArguments.ToArray().OfType<CustomAttributeNamedArgument>().FirstOrDefault(arg => arg.Name == propertyName)?.Value?.ToString() ?? defaultValue;
+        }
+        
+        static string CallingConventionToCecil(CallingConvention callingConvention)
+        {
+            var pinvokeAttribute = callingConvention switch
+            {
+                CallingConvention.Cdecl => PInvokeAttributes.CallConvCdecl,
+                CallingConvention.Winapi => PInvokeAttributes.CallConvWinapi,
+                CallingConvention.FastCall => PInvokeAttributes.CallConvFastcall,
+                CallingConvention.StdCall => PInvokeAttributes.CallConvStdCall,
+                CallingConvention.ThisCall => PInvokeAttributes.CallConvThiscall,
+
+                _ => throw new Exception($"Unexpected calling convention: {callingConvention}")
+            };
+
+            return $"PInvokeAttributes.{pinvokeAttribute.ToString()}";
         }
     }
 
@@ -357,7 +506,7 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
             var sb = new StringBuilder("new [] {");
             foreach (CustomAttributeArgument arrayItem in array)
             {
-                sb.Append($"new CustomAttributeArgument({context.TypeResolver.Resolve(context.RoslynTypeSystem.ForType(arrayItem.Value.GetType().FullName), ResolveTargetKind.TypeReference)}, {CustomAttributeArgumentValueFor(context, arrayItem.Value)}), ");
+                sb.Append($"new CustomAttributeArgument({context.TypeResolver.Resolve(context.RoslynTypeSystem.ForType(arrayItem.Value!.GetType().FullName), ResolveTargetKind.TypeReference)}, {CustomAttributeArgumentValueFor(context, arrayItem.Value)}), ");
             }
             sb.Remove(sb.Length - 2, 2); // Removes the last ", "
             sb.Append('}');
@@ -405,9 +554,9 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
 
             if (typeParam.HasValueTypeConstraint)
             {
-                var systemValueTypeRef = Utils.ImportFromMainModule("typeof(System.ValueType)");
+                var systemValueTypeRef = context.TypeResolver.Bcl.System.ValueType;
                 var constraintType = typeParam.HasUnmanagedTypeConstraint
-                    ? $"{systemValueTypeRef}.MakeRequiredModifierType({context.TypeResolver.ResolveAny(context.RoslynTypeSystem.ForType<System.Runtime.InteropServices.UnmanagedType>(), ResolveTargetKind.TypeReference)})"
+                    ? $"{systemValueTypeRef}.MakeRequiredModifierType({context.TypeResolver.Resolve(context.RoslynTypeSystem.ForType<System.Runtime.InteropServices.UnmanagedType>(), ResolveTargetKind.TypeReference)})"
                     : systemValueTypeRef;
 
                 exps.Add($"{genParamDefVar}.Constraints.Add(new GenericParameterConstraint({constraintType}));");
@@ -434,7 +583,7 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
 
             foreach (var type in typeParam.ConstraintTypes)
             {
-                exps.Add($"{genParamDefVar}.Constraints.Add(new GenericParameterConstraint({context.TypeResolver.ResolveAny(type, ResolveTargetKind.TypeReference)}));");
+                exps.Add($"{genParamDefVar}.Constraints.Add(new GenericParameterConstraint({context.TypeResolver.Resolve(type, ResolveTargetKind.TypeReference)}));");
             }
         }
     }

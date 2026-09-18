@@ -1,6 +1,4 @@
 using System.Reflection.Emit;
-using Cecilifier.Core.ApiDriver;
-using Cecilifier.Core.ApiDriver.Handles;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Cecilifier.Core.Extensions;
@@ -9,9 +7,9 @@ namespace Cecilifier.Core.AST
 {
     internal class ConstructorInitializerVisitor : SyntaxWalkerBase
     {
-        private readonly string ilVar;
+        private readonly IlContext ilVar;
 
-        internal ConstructorInitializerVisitor(IVisitorContext ctx, string ilVar) : base(ctx)
+        internal ConstructorInitializerVisitor(IVisitorContext ctx, IlContext ilVar) : base(ctx)
         {
             this.ilVar = ilVar;
         }

@@ -130,6 +130,12 @@ namespace Cecilifier.Core.Extensions
 
             return (TTarget) source;
         }
+        
+        public static T EnsureNotNull<T>([NotNullIfNotNull(nameof(node))] this T? node, [CallerArgumentExpression("node")] string? msg = null) where T : SyntaxNode
+        {
+            return node.EnsureNotNull<T, T>(msg);
+        }
+        
         #nullable restore
         
         internal static bool IsPassedAsInParameter(this ArgumentSyntax toBeChecked, IVisitorContext context)
@@ -205,7 +211,7 @@ namespace Cecilifier.Core.Extensions
                     Name= argument.NameEquals!.Name.Identifier.Text, 
                     Value = constantValue.Value, 
                     Kind = namedArgumentSymbol!.Kind == SymbolKind.Field ? NamedArgumentKind.Field : NamedArgumentKind.Property,
-                    ResolvedType = context.TypeResolver.ResolveAny(namedArgumentSymbol.GetMemberType(), ResolveTargetKind.AttributeNamedArgument)
+                    ResolvedType = context.TypeResolver.Resolve(namedArgumentSymbol.GetMemberType(), ResolveTargetKind.AttributeNamedArgument)
                 };
             }
         }
@@ -219,7 +225,7 @@ namespace Cecilifier.Core.Extensions
         {
             return expression switch
             {
-                TypeOfExpressionSyntax typeOf => new RawCSharpCode(context.TypeResolver.ResolveAny(context.SemanticModel.GetTypeInfo(typeOf.Type).Type, ResolveTargetKind.TypeReference).Expression),
+                TypeOfExpressionSyntax typeOf => new RawCSharpCode(context.TypeResolver.Resolve(context.SemanticModel.GetTypeInfo(typeOf.Type).Type, ResolveTargetKind.TypeReference).Expression),
                 ImplicitArrayCreationExpressionSyntax implicitArrayCreation => ConstantValueForArray(implicitArrayCreation.Initializer),
                 ArrayCreationExpressionSyntax arrayCreation => ConstantValueForArray(arrayCreation.Initializer),
                 

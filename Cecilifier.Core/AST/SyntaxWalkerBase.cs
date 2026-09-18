@@ -4,19 +4,15 @@ using System.Diagnostics;
 using System.Linq;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Text;
-using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.ApiDriver.Handles;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
-using Cecilifier.Core.Naming;
 using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Mono.Cecil;
 using CecilOpCodes = Mono.Cecil.Cil.OpCodes;
 
 using static Cecilifier.Core.Misc.CodeGenerationHelpers;
@@ -52,44 +48,48 @@ namespace Cecilifier.Core.AST
             Context.WriteNewLine();
         }
 
-        protected void AddCilInstruction(string ilVar, OpCode opCode, ITypeSymbol type)
+        protected void AddCilInstruction(IlContext ilVar, OpCode opCode, ITypeSymbol type)
         {
-            var operand = Context.TypeResolver.ResolveAny(type, new TypeResolutionContext(ResolveTargetKind.Instruction, type.IsValueType ? TypeResolutionOptions.IsValueType : TypeResolutionOptions.None));
+            var operand = Context.TypeResolver.Resolve(type, new TypeResolutionContext(ResolveTargetKind.Instruction, type.IsValueType ? TypeResolutionOptions.IsValueType : TypeResolutionOptions.None));
             Context.ApiDriver.WriteCilInstruction(Context, ilVar, opCode, new CilToken(operand.Expression));
         }
 
-        protected string AddCilInstructionWithLocalVariable(string ilVar, OpCode opCode)
+        protected string AddCilInstructionWithLocalVariable(IlContext ilVar, OpCode opCode)
         {
-            var instVar = CreateCilInstruction(ilVar, opCode);
-            AddCecilExpression($"{ilVar}.Append({instVar});");
+             var labelVariable = Context.Naming.Label("label");
             
-            return instVar;
+            Context.ApiDriver.DefineLabel(Context, ilVar, labelVariable);
+            Context.ApiDriver.MarkLabel(Context, ilVar, labelVariable);
+            if (opCode !=  OpCodes.Nop)
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, opCode);
+            
+            return labelVariable;
         }
 
-        protected string CreateCilInstruction(string ilVar, OpCode opCode, object operand = null)
+        protected string CreateCilInstruction(IlContext ilVar, OpCode opCode, object operand = null)
         {
             var operandStr = operand == null ? string.Empty : $", {operand}";
             var instVar = Context.Naming.Instruction(opCode.OpCodeName());
-            AddCecilExpression($"var {instVar} = {ilVar}.Create({opCode.ConstantName()}{operandStr});");
+            AddCecilExpression($"var {instVar} = {ilVar.VariableName}.Create({opCode.ConstantName()}{operandStr});");
 
             return instVar;
         }
 
-        protected string CreateCilInstruction(string ilVar, string instVar, OpCode opCode, object operand = null)
+        protected string CreateCilInstruction(IlContext ilVar, string instVar, OpCode opCode, object operand = null)
         {
             var operandStr = operand == null ? string.Empty : $", {operand}";
-            AddCecilExpression($"var {instVar} = {ilVar}.Create({opCode.ConstantName()}{operandStr});");
+            AddCecilExpression($"var {instVar} = {ilVar.VariableName}.Create({opCode.ConstantName()}{operandStr});");
             return instVar;
         }
 
-        protected void LoadLiteralValue(string ilVar, ITypeSymbol type, string value, UsageResult usageResult, SyntaxNode parent)
+        protected void LoadLiteralValue(IlContext ilVar, ITypeSymbol type, string value, UsageResult usageResult, SyntaxNode parent)
         {
             if (LoadDefaultValueForTypeParameter(ilVar, type, parent))
                 return;
 
             if (type.SpecialType == SpecialType.None && type.IsValueType && type.TypeKind != TypeKind.Pointer || type.SpecialType == SpecialType.System_DateTime)
             {
-                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Initobj, Context.TypeResolver.ResolveAny(type, ResolveTargetKind.Instruction));
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Initobj, Context.TypeResolver.Resolve(type, ResolveTargetKind.Instruction));
                 return;
             }
 
@@ -150,22 +150,23 @@ namespace Cecilifier.Core.AST
             }
         }
 
-        private bool LoadDefaultValueForTypeParameter(string ilVar, ITypeSymbol type, SyntaxNode parent)
+        private bool LoadDefaultValueForTypeParameter(IlContext ilVar, ITypeSymbol type, SyntaxNode parent)
         {
             if (type is not ITypeParameterSymbol typeParameterSymbol)
                 return false;
 
-            var resolvedType = Context.TypeResolver.ResolveAny(type, ResolveTargetKind.Instruction);
+            var resolvedType = Context.TypeResolver.Resolve(type, ResolveTargetKind.Instruction);
             
             // in an assignment expression we already have memory allocated to hold the value
             // in this case we don´t need to add a local variable.
             if (parent is AssignmentExpressionSyntax assignment)
             {
                 var targetOfAssignmentSymbol = Context.SemanticModel.GetSymbolInfo(assignment.Left).Symbol.EnsureNotNull();
-                var loadAddressOpcode = targetOfAssignmentSymbol.LoadAddressOpcodeForMember(); // target of assignment may be a local, field or parameter so we need to figure out the correct opcode to load its address
+                //var loadAddressOpcode = targetOfAssignmentSymbol.LoadAddressOpcodeForMember(); // target of assignment may be a local, field or parameter so we need to figure out the correct opcode to load its address
+                var loadAddressDetails = targetOfAssignmentSymbol.LoadAddressDetailsForForMember(); // target of assignment may be a local, field or parameter so we need to figure out the correct opcode to load its address
                 var storageVariable = Context.DefinitionVariables.GetVariable(targetOfAssignmentSymbol.Name, targetOfAssignmentSymbol.ToVariableMemberKind(), targetOfAssignmentSymbol.Kind == SymbolKind.Local ? string.Empty : targetOfAssignmentSymbol.ContainingSymbol.ToDisplayString());
                 
-                Context.ApiDriver.WriteCilInstruction(Context, ilVar, loadAddressOpcode, storageVariable.VariableName);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, loadAddressDetails.OpCode, loadAddressDetails.Factory(storageVariable.VariableName));
                 Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Initobj, resolvedType);
             }
             else if (parent.Parent is VariableDeclaratorSyntax equalsValueClauseSyntax)
@@ -180,7 +181,7 @@ namespace Cecilifier.Core.AST
             else
             {
                 // no variable exists yet (for instance, passing `default(T)` as a parameter) so we add one.
-                var storageVariable = Context.AddLocalVariableToCurrentMethod(type.Name, Context.TypeResolver.ResolveAny(type, ResolveTargetKind.LocalVariable));
+                var storageVariable = Context.AddLocalVariableToCurrentMethod(type.Name, Context.TypeResolver.Resolve(type, ResolveTargetKind.LocalVariable));
                 
                 Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloca_S, storageVariable.VariableName);
                 Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Initobj, resolvedType);
@@ -198,7 +199,7 @@ namespace Cecilifier.Core.AST
             return true;
         }
 
-        private void LoadLiteralToStackHandlingCallOnValueTypeLiterals(string ilVar, ITypeSymbol literalType, object literalValue, UsageResult usageResult)
+        private void LoadLiteralToStackHandlingCallOnValueTypeLiterals(IlContext ilVar, ITypeSymbol literalType, object literalValue, UsageResult usageResult)
         {
             var opCode = literalType.LoadOpCodeFor();
             Context.ApiDriver.WriteCilInstruction(Context, ilVar, opCode, literalType.ToCilOperandValue(literalValue));
@@ -208,7 +209,7 @@ namespace Cecilifier.Core.AST
                 if (!usageResult.Target.IsVirtual && SymbolEqualityComparer.Default.Equals(usageResult.Target.ContainingType, Context.RoslynTypeSystem.SystemObject))
                 {
                     Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloc, tempLocalName);
-                    Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Box, Context.TypeResolver.ResolveAny(literalType, ResolveTargetKind.Instruction));
+                    Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Box, Context.TypeResolver.Resolve(literalType, ResolveTargetKind.Instruction));
                 }
                 else
                     Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloca_S, tempLocalName.AsLocalVariable());
@@ -225,9 +226,9 @@ namespace Cecilifier.Core.AST
             return Context.GetDeclaredSymbol(node).EnsureNotNull<ITypeSymbol, INamedTypeSymbol>();
         }
 
-        protected void WithCurrentMethod(string declaringTypeName, string localVariable, string methodName, string[] paramTypes, int typeParameterCount, Action<string> action)
+        protected void WithCurrentMethod(string declaringTypeName, string localVariable, string methodName, string[] paramTypes, string[] typeParameters, Action<string> action)
         {
-            using (Context.DefinitionVariables.WithCurrentMethod(declaringTypeName, methodName, paramTypes, typeParameterCount, localVariable))
+            using (Context.DefinitionVariables.WithCurrentMethod(declaringTypeName, methodName, paramTypes, typeParameters, localVariable))
             {
                 action(methodName);
             }
@@ -235,8 +236,7 @@ namespace Cecilifier.Core.AST
 
         protected string TypeModifiersToCecil(INamedTypeSymbol typeSymbol, SyntaxTokenList modifiers) => Context.ApiDefinitionsFactory.MappedTypeModifiersFor(typeSymbol, modifiers);
 
-        //TODO: Probably we need to abstract this one also
-        internal static string ModifiersToCecil<TEnumAttr>(
+        internal static string ModifiersAsString<TEnumAttr>(
             IEnumerable<SyntaxToken> modifiers,
             string defaultAccessibility,
             Func<SyntaxToken, IEnumerable<string>> mapAttribute) where TEnumAttr : Enum
@@ -252,12 +252,12 @@ namespace Cecilifier.Core.AST
             var modifierStr = finalModifierList
                 .SelectMany(mapAttribute)
                 .Where(attr => !string.IsNullOrEmpty(attr))
-                .Aggregate(new StringBuilder(), (acc, curr) => acc.AppendModifier($"{targetEnum}.{curr}"));
+                .Aggregate(new StringBuilder(), (acc, curr) => acc.AppendEnumFlag($"{targetEnum}.{curr}"));
 
             modifierStr.Append(accessibilityModifiers);
 
             if (!modifiers.Any(m => m.IsKind(SyntaxKind.PrivateKeyword) || m.IsKind(SyntaxKind.InternalKeyword) || m.IsKind(SyntaxKind.PrivateKeyword) || m.IsKind(SyntaxKind.PublicKeyword) || m.IsKind(SyntaxKind.ProtectedKeyword)))
-                modifierStr.AppendModifier($"{targetEnum}.{defaultAccessibility}");
+                modifierStr.AppendEnumFlag($"{targetEnum}.{defaultAccessibility}");
 
             return modifierStr.ToString();
 
@@ -285,11 +285,6 @@ namespace Cecilifier.Core.AST
             }
         }
 
-        protected static void WriteCecilExpression(IVisitorContext context, CecilifierInterpolatedStringHandler value)
-        {
-            WriteCecilExpression(context, value.Result);
-        }
-
         private static void WriteCecilExpression(IVisitorContext context, string value)
         {
             context.Generate(value);
@@ -300,19 +295,24 @@ namespace Cecilifier.Core.AST
         {
             var typeInfo = Context.GetTypeInfo(expression);
             var type = (typeInfo.Type ?? typeInfo.ConvertedType).EnsureNotNull();
-            return Context.TypeResolver.ResolveAny(type, new TypeResolutionContext(resolveTargetKind, type.IsValueType ? TypeResolutionOptions.IsValueType : TypeResolutionOptions.None));
+            return Context.TypeResolver.Resolve(type, new TypeResolutionContext(resolveTargetKind, type.IsValueType ? TypeResolutionOptions.IsValueType : TypeResolutionOptions.None));
         }
 
         protected ResolvedType ResolveType(TypeSyntax type, ResolveTargetKind resolveTargetKind)
         {
-            var resolvedType = Context.TypeResolver.ResolveAny(ResolveTypeSymbol(type), resolveTargetKind);
-            //TODO: Can't this check be moved inside the Resolve() method as the other checks for arrays,
-            return type is RefTypeSyntax ? resolvedType.MakeByReferenceType() : resolvedType;
+            // RefTypeSyntax nodes do not have an ITypeSymbol representation. Instead, they are mapped to
+            // specific properties in other symbol types; for instance, the information for a `ref return`
+            // method is mapped in IMethodSymbol.ReturnsByRef property and trying to get the symbol info
+            // for such types fails whence we `unwrap` (remove the `ref` information) the type, resolve
+            // the symbol and then `wrap` the result.
+            var isByRef = type is RefTypeSyntax;
+            var resolvedType = Context.TypeResolver.Resolve(ResolveTypeSymbol(type), new TypeResolutionContext(resolveTargetKind, isByRef ? TypeResolutionOptions.IsByRef : TypeResolutionOptions.None));
+            return isByRef ? Context.TypeResolver.MakeByRefType(resolvedType) : resolvedType;
         }
         
         protected ITypeSymbol ResolveTypeSymbol(TypeSyntax type)
         {
-            // Special case types that Context.GetTypeInfo() is not able to handle. As of Oct/2024 only the ones below are requires such special handling.
+            // Special case types that Context.GetTypeInfo() is not able to handle. As of Jun/2026 only the ones below require such special handling.
             var typeToCheck = type switch
             {
                 RefTypeSyntax refType  => refType.Type,
@@ -329,7 +329,7 @@ namespace Cecilifier.Core.AST
 
         }
 
-        protected void ProcessParameter(string ilVar, SimpleNameSyntax node, IParameterSymbol paramSymbol)
+        protected void ProcessParameter(IlContext ilVar, SimpleNameSyntax node, IParameterSymbol paramSymbol)
         {
             var method = (IMethodSymbol) paramSymbol.ContainingSymbol;
             //TODO: Investigate whether we should/could extract the logic to get a valid method name to an extension method and
@@ -342,10 +342,12 @@ namespace Cecilifier.Core.AST
             if (HandleLoadAddress(ilVar, paramSymbol.Type, node, OpCodes.Ldarga, operand.AsToken()))
                 return;
 
-            if (InlineArrayProcessor.HandleInlineArrayConversionToSpan(Context, ilVar, paramSymbol.Type, node, OpCodes.Ldarga_S, paramSymbol.Name, VariableMemberKind.Parameter, declaringMethodName))
+            var parameterVariable = Context.DefinitionVariables.GetVariable(paramSymbol.Name, VariableMemberKind.Parameter, declaringMethodName);
+            // We should not validate the parameterVariable here because paramSymbol.Type may not be an 'InlineArray' in which case the variable is not expected to be defined. 
+            if (InlineArrayProcessor.HandleInlineArrayConversionToSpan(Context, ilVar, paramSymbol.Type, node, OpCodes.Ldarga_S, parameterVariable.VariableName.AsToken()))
                 return;
             
-            Utils.EnsureNotNull(node.Parent);
+            node.Parent.EnsureNotNull();
             // We only support non-capturing lambda expressions so we handle those as static (even if the code does not mark them explicitly as such)
             // if/when we decide to support lambdas that captures variables/fields/params/etc we will probably need to revisit this.
             var adjustedParameterIndex = paramSymbol.Ordinal + (method.IsStatic || method.MethodKind == MethodKind.AnonymousFunction || method.MethodKind == MethodKind.LocalFunction ? 0 : 1);
@@ -363,7 +365,7 @@ namespace Cecilifier.Core.AST
             HandlePotentialRefLoad(ilVar, node, paramSymbol.Type);
         }
 
-        protected void ProcessField(string ilVar, SimpleNameSyntax node, IFieldSymbol fieldSymbol)
+        protected void ProcessField(IlContext ilVar, SimpleNameSyntax node, IFieldSymbol fieldSymbol)
         {
             var nodeParent = (CSharpSyntaxNode) node.Parent;
             Debug.Assert(nodeParent != null);
@@ -403,13 +405,15 @@ namespace Cecilifier.Core.AST
             HandlePotentialRefLoad(ilVar, node, fieldSymbol.Type);
         }
 
-        protected void ProcessLocalVariable(string ilVar, SimpleNameSyntax localVarSyntax, ILocalSymbol symbol)
+        protected void ProcessLocalVariable(IlContext ilVar, SimpleNameSyntax localVarSyntax, ILocalSymbol symbol)
         {
             var operand = Context.DefinitionVariables.GetVariable(symbol.Name, VariableMemberKind.LocalVariable).VariableName;
             if (HandleLoadAddress(ilVar, symbol.Type, localVarSyntax, OpCodes.Ldloca, operand.AsLocalVariable()))
                 return;
 
-            if (InlineArrayProcessor.HandleInlineArrayConversionToSpan(Context, ilVar, symbol.Type, localVarSyntax, OpCodes.Ldloca_S, symbol.Name, VariableMemberKind.LocalVariable))
+            var localVariableVar = Context.DefinitionVariables.GetVariable(symbol.Name, VariableMemberKind.LocalVariable);
+            localVariableVar.ThrowIfVariableIsNotValid($"Variable definition for local variable {symbol.Name} from {symbol.ContainingSymbol.ToDisplayString()} not found.");
+            if (InlineArrayProcessor.HandleInlineArrayConversionToSpan(Context, ilVar, symbol.Type, localVarSyntax, OpCodes.Ldloca_S, localVariableVar.VariableName.AsLocalVariable()))
                 return;
 
             Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloc, new CilLocalVariableHandle(operand));
@@ -418,7 +422,7 @@ namespace Cecilifier.Core.AST
             HandlePotentialFixedLoad(ilVar, symbol);
             HandlePotentialRefLoad(ilVar, localVarSyntax, symbol.Type);
         }
-        private void HandlePotentialFixedLoad(string ilVar, ILocalSymbol symbol)
+        private void HandlePotentialFixedLoad(IlContext ilVar, ILocalSymbol symbol)
         {
             if (!symbol.IsFixed)
                 return;
@@ -426,7 +430,7 @@ namespace Cecilifier.Core.AST
             Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Conv_U);
         }
 
-        protected bool HandleLoadAddress<TOperand>(string ilVar, ITypeSymbol loadedType, CSharpSyntaxNode node, OpCode loadOpCode, TOperand operand)
+        protected bool HandleLoadAddress<TOperand>(IlContext ilVar, ITypeSymbol loadedType, CSharpSyntaxNode node, OpCode loadOpCode, TOperand operand)
         {
             var parentNode = (CSharpSyntaxNode)node.Parent;
             return HandleCallOnTypeParameter() || HandleCallOnValueType() || HandleRefAssignment() || HandleParameter() || HandleInlineArrayElementAccess();
@@ -465,7 +469,7 @@ namespace Cecilifier.Core.AST
                             operand = default;
                         
                         Context.ApiDriver.WriteCilInstruction(Context, ilVar, ordinaryLoad, operand);
-                        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Box, Context.TypeResolver.ResolveAny(loadedType, ResolveTargetKind.Instruction));
+                        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Box, Context.TypeResolver.Resolve(loadedType, ResolveTargetKind.Instruction));
                     }
                     else
                         Context.ApiDriver.WriteCilInstruction(Context, ilVar, loadOpCode, operand);
@@ -476,7 +480,7 @@ namespace Cecilifier.Core.AST
                     // calls to virtual methods on custom value types needs to be constrained (don't know why, but the generated IL for such scenarios does `constrains`).
                     // the only methods that falls into this category are virtual methods on Object (ToString()/Equals()/GetHashCode())
                     if (usageResult.Target is { IsOverride: true } && usageResult.Target.ContainingType.IsNonPrimitiveValueType(Context))
-                        Context.SetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, Context.TypeResolver.ResolveAny(loadedType, ResolveTargetKind.Instruction).Expression);
+                        Context.SetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, Context.TypeResolver.Resolve(loadedType, ResolveTargetKind.Instruction).Expression);
                     return true;
                 }
 
@@ -500,7 +504,7 @@ namespace Cecilifier.Core.AST
                 }
                 
                 Context.ApiDriver.WriteCilInstruction(Context, ilVar, loadOpCode, operand);
-                Context.SetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, Context.TypeResolver.ResolveAny(loadedType, ResolveTargetKind.Instruction).Expression);
+                Context.SetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, Context.TypeResolver.Resolve(loadedType, ResolveTargetKind.TypeReference).Expression);
                 return true;
             }
 
@@ -542,7 +546,7 @@ namespace Cecilifier.Core.AST
             bool IsPseudoAssignmentToValueType() => Context.HasFlag(Constants.ContextFlags.PseudoAssignmentToIndex);
         }
 
-        protected void HandlePotentialRefLoad(string ilVar, SyntaxNode expression, ITypeSymbol type)
+        protected void HandlePotentialRefLoad(IlContext ilVar, SyntaxNode expression, ITypeSymbol type)
         {
             var needsLoadIndirect = false;
 
@@ -586,7 +590,10 @@ namespace Cecilifier.Core.AST
             if (needsLoadIndirect)
             {
                 var opCode = type.LdindOpCodeFor();
-                Context.ApiDriver.WriteCilInstruction(Context, ilVar, opCode, opCode == OpCodes.Ldobj ? Context.TypeResolver.ResolveAny(type, ResolveTargetKind.Instruction) : null);
+                if (opCode == OpCodes.Ldobj)
+                    Context.ApiDriver.WriteCilInstruction(Context, ilVar, opCode, Context.TypeResolver.Resolve(type, ResolveTargetKind.TypeReference).AsToken());
+                else
+                    Context.ApiDriver.WriteCilInstruction(Context, ilVar, opCode, (string) null);
             }
         }
 
@@ -641,7 +648,7 @@ namespace Cecilifier.Core.AST
             return node.Parent.IsKind(SyntaxKind.BracketedArgumentList);
         }
 
-        private void HandlePotentialDelegateInvocationOn(SimpleNameSyntax node, ITypeSymbol typeSymbol, string ilVar)
+        private void HandlePotentialDelegateInvocationOn(SimpleNameSyntax node, ITypeSymbol typeSymbol, IlContext ilVar)
         {
             var invocation = node.Parent as InvocationExpressionSyntax;
             if (invocation == null || invocation.Expression != node)
@@ -652,7 +659,7 @@ namespace Cecilifier.Core.AST
             if (typeSymbol is IFunctionPointerTypeSymbol functionPointer)
             {
                 var operand = CecilDefinitionsFactory.CallSite(Context.TypeResolver, functionPointer);
-                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Calli, operand);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Calli, operand.AsToken());
                 return;
             }
 
@@ -663,7 +670,7 @@ namespace Cecilifier.Core.AST
                 : ((IMethodSymbol) typeSymbol.GetMembers("Invoke").SingleOrDefault()).MethodResolverExpression(Context);
 
             OnLastInstructionLoadingTargetOfInvocation();
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Callvirt, resolvedMethod);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Callvirt, resolvedMethod.AsToken());
         }
 
         /// <summary>
@@ -672,18 +679,18 @@ namespace Cecilifier.Core.AST
         /// </summary>
         protected virtual void OnLastInstructionLoadingTargetOfInvocation() { }
 
-        protected void HandleAttributesInMemberDeclaration(in SyntaxList<AttributeListSyntax> nodeAttributeLists, Func<AttributeTargetSpecifierSyntax, SyntaxKind, bool> predicate, SyntaxKind toMatch, string whereToAdd, VariableMemberKind targetKind)
+        protected void HandleAttributesInMemberDeclaration(string memberName, in SyntaxList<AttributeListSyntax> nodeAttributeLists, Func<AttributeTargetSpecifierSyntax, SyntaxKind, bool> predicate, SyntaxKind toMatch, string whereToAdd, VariableMemberKind targetKind)
         {
             var attributeLists = nodeAttributeLists.Where(c => predicate(c.Target, toMatch));
-            HandleAttributesInMemberDeclaration(attributeLists, whereToAdd, targetKind);
+            HandleAttributesInMemberDeclaration(memberName, attributeLists, whereToAdd, targetKind);
         }
 
         protected static bool TargetDoesNotMatch(AttributeTargetSpecifierSyntax target, SyntaxKind operand) => target == null || !target.Identifier.IsKind(operand);
         protected static bool TargetMatches(AttributeTargetSpecifierSyntax target, SyntaxKind operand) => target != null && target.Identifier.IsKind(operand);
 
-        protected void HandleAttributesInMemberDeclaration(IEnumerable<AttributeListSyntax> attributeLists, string varName, VariableMemberKind targetKind)
+        protected void HandleAttributesInMemberDeclaration(string memberName, IEnumerable<AttributeListSyntax> attributeLists, string varName, VariableMemberKind targetKind)
         {
-            HandleAttributesInMemberDeclaration(Context, attributeLists, varName, targetKind);
+            HandleAttributesInMemberDeclaration(Context, memberName, attributeLists, varName, targetKind);
         }
 
         protected static void HandleAttributesInTypeParameter(IVisitorContext context, IEnumerable<TypeParameterSyntax> typeParameters)
@@ -694,20 +701,20 @@ namespace Cecilifier.Core.AST
                 var parentName = symbol.TypeParameterKind == TypeParameterKind.Method ? symbol.DeclaringMethod?.OriginalDefinition.ToDisplayString() : symbol.DeclaringType?.OriginalDefinition.ToDisplayString();
                 var typeParamVariable = context.DefinitionVariables.GetVariable(typeParameter.Identifier.Text, VariableMemberKind.TypeParameter, parentName);
                 if (!typeParamVariable.IsValid)
-                    throw new Exception($"Failed to find variable for {parentName}.{symbol.FullyQualifiedName()}");
+                    throw new Exception($"Failed to find variable for type parameter '{parentName}.{symbol.FullyQualifiedName()}'");
                 
-                HandleAttributesInMemberDeclaration(context, typeParameter.AttributeLists, typeParamVariable.VariableName, VariableMemberKind.TypeParameter);
+                HandleAttributesInMemberDeclaration(context, typeParameter.Identifier.Text, typeParameter.AttributeLists, typeParamVariable.VariableName, VariableMemberKind.TypeParameter);
             }
         }
 
-        private static void HandleAttributesInMemberDeclaration(IVisitorContext context, IEnumerable<AttributeListSyntax> attributeLists, string targetDeclarationVar, VariableMemberKind targetKind)
+        private static void HandleAttributesInMemberDeclaration(IVisitorContext context, string memberName, IEnumerable<AttributeListSyntax> attributeLists, string targetDeclarationVar, VariableMemberKind targetKind)
         {
             foreach (var attribute in attributeLists.SelectMany(al => al.Attributes))
             {
                 var attrType = context.SemanticModel.GetTypeInfo(attribute).Type.EnsureNotNull();
                 var attrsExp = attrType.AttributeKind() switch
                     {
-                        AttributeKind.DllImport => ProcessDllImportAttribute(context, attribute, targetDeclarationVar),
+                        AttributeKind.DllImport => ProcessDllImportAttribute(context, memberName, attribute, targetDeclarationVar),
                         AttributeKind.StructLayout => ProcessStructLayoutAttribute(attribute, targetDeclarationVar),
                         _ => ProcessNormalMemberAttribute(context, attribute, targetDeclarationVar, targetKind)
                     };
@@ -716,110 +723,10 @@ namespace Cecilifier.Core.AST
             }
         }
 
-        private static IEnumerable<string> ProcessDllImportAttribute(IVisitorContext context, AttributeSyntax attribute, string methodVar)
+        private static IEnumerable<string> ProcessDllImportAttribute(IVisitorContext context, string methodName, AttributeSyntax attribute, string methodVar)
         {
-            var moduleName = attribute.ArgumentList?.Arguments.First().ToFullString();
-            var existingModuleVar = context.DefinitionVariables.GetVariable(moduleName, VariableMemberKind.ModuleReference);
-
-            var moduleVar = existingModuleVar.IsValid
-                ? existingModuleVar.VariableName
-                : context.Naming.SyntheticVariable("dllImportModule", ElementKind.LocalVariable);
-
-            var exps = new List<string>
-            {
-                $"{methodVar}.PInvokeInfo = new PInvokeInfo({ PInvokeAttributesFrom(attribute) }, { EntryPoint() }, {moduleVar});",
-                $"{methodVar}.Body = null;",
-                $"{methodVar}.ImplAttributes = {MethodImplAttributes()};",
-            };
-
-            if (!existingModuleVar.IsValid)
-            {
-                exps.InsertRange(0, new[]
-                {
-                    $"var {moduleVar} = new ModuleReference({moduleName});",
-                    $"assembly.MainModule.ModuleReferences.Add({moduleVar});",
-                });
-            }
-
-            context.DefinitionVariables.RegisterNonMethod("", moduleName, VariableMemberKind.ModuleReference, moduleVar);
-
-            return exps;
-
-            string EntryPoint() => attribute.ArgumentList?.Arguments.FirstOrDefault(arg => arg.NameEquals?.Name.Identifier.Text == "EntryPoint")?.Expression.ToString() ?? "\"\"";
-
-            string MethodImplAttributes()
-            {
-                var preserveSig = Boolean.Parse(AttributePropertyOrDefaultValue(attribute, "PreserveSig", "true"));
-                return preserveSig
-                    ? "MethodImplAttributes.PreserveSig | MethodImplAttributes.Managed"
-                    : "MethodImplAttributes.Managed";
-            }
-
-            StringBuilder CallingConventionFrom(AttributeSyntax attr)
-            {
-                var callConventionSpan = (attr.ArgumentList?.Arguments.FirstOrDefault(arg => arg.NameEquals?.Name.Identifier.Text == "CallingConvention")?.Expression.ToFullString()
-                                           ?? "Winapi").AsSpan();
-
-                // ensures we use the enum member simple name; Parse() fails if we pass a qualified enum member
-                var index = callConventionSpan.LastIndexOf('.');
-                callConventionSpan = callConventionSpan.Slice(index + 1);
-
-                return new StringBuilder(CallingConventionToCecil(Enum.Parse<CallingConvention>(callConventionSpan)));
-            }
-
-            string CharSetFrom(AttributeSyntax attr)
-            {
-                var enumMemberName = AttributePropertyOrDefaultValue(attr, "CharSet", "None").AsSpan();
-
-                // Only use the actual enum member name Parse() fails if we pass a qualified enum member
-                var index = enumMemberName.LastIndexOf('.');
-                enumMemberName = enumMemberName.Slice(index + 1);
-
-                var charSet = Enum.Parse<CharSet>(enumMemberName);
-                return charSet == CharSet.None ? string.Empty : $"PInvokeAttributes.CharSet{charSet}";
-            }
-
-            string SetLastErrorFrom(AttributeSyntax attr)
-            {
-                var setLastError = bool.Parse(AttributePropertyOrDefaultValue(attr, "SetLastError", "false"));
-                return setLastError ? "PInvokeAttributes.SupportsLastError" : string.Empty;
-            }
-
-            string ExactSpellingFrom(AttributeSyntax attr)
-            {
-                var exactSpelling = bool.Parse(AttributePropertyOrDefaultValue(attr, "ExactSpelling", "false"));
-                return exactSpelling ? "PInvokeAttributes.NoMangle" : string.Empty;
-            }
-
-            string BestFitMappingFrom(AttributeSyntax attr)
-            {
-                var bestFitMapping = bool.Parse(AttributePropertyOrDefaultValue(attr, "BestFitMapping", "true"));
-                return bestFitMapping ? "PInvokeAttributes.BestFitEnabled" : "PInvokeAttributes.BestFitDisabled";
-            }
-
-            string ThrowOnUnmappableCharFrom(AttributeSyntax attr)
-            {
-                var bestFitMapping = bool.Parse(AttributePropertyOrDefaultValue(attr, "ThrowOnUnmappableChar", "false"));
-                return bestFitMapping ? "PInvokeAttributes.ThrowOnUnmappableCharEnabled" : "PInvokeAttributes.ThrowOnUnmappableCharDisabled";
-            }
-
-            // For more information and default values see
-            // https://docs.microsoft.com/en-us/dotnet/api/system.runtime.interopservices.dllimportattribute
-            string PInvokeAttributesFrom(AttributeSyntax attr)
-            {
-                return CallingConventionFrom(attr)
-                    .AppendModifier(CharSetFrom(attr))
-                    .AppendModifier(SetLastErrorFrom(attr))
-                    .AppendModifier(ExactSpellingFrom(attr))
-                    .AppendModifier(BestFitMappingFrom(attr))
-                    .AppendModifier(ThrowOnUnmappableCharFrom(attr))
-                    .ToString();
-            }
-
-            string AttributePropertyOrDefaultValue(AttributeSyntax attr, string propertyName, string defaultValue)
-            {
-                return attr.ArgumentList?.Arguments.FirstOrDefault(arg => arg.NameEquals?.Name.Identifier.Text == propertyName)?.Expression.ToFullString() ?? defaultValue;
-            }
+            var moduleName = ((LiteralExpressionSyntax)attribute.ArgumentList!.Arguments.First().Expression).Token.ValueText;
+            return context.ApiDefinitionsFactory.PInvoke(context, moduleName, methodVar, methodName, attribute.ArgumentList.ToCustomAttributeArguments(context).ToArray());
         }
 
         private static IEnumerable<string> ProcessStructLayoutAttribute(AttributeSyntax attribute, string typeVar)
@@ -840,22 +747,6 @@ namespace Cecilifier.Core.AST
                 var parameterAssignmentExpression = (LiteralExpressionSyntax) attribute.ArgumentList?.Arguments.FirstOrDefault(a => a.NameEquals?.Name.Identifier.Text == parameterName)?.Expression;
                 return parameterAssignmentExpression?.TryGetLiteralValueFor<int>(out var ret) == true ? ret : 0;
             }
-        }
-
-        private static string CallingConventionToCecil(CallingConvention callingConvention)
-        {
-            var pinvokeAttribute = callingConvention switch
-            {
-                CallingConvention.Cdecl => PInvokeAttributes.CallConvCdecl,
-                CallingConvention.Winapi => PInvokeAttributes.CallConvWinapi,
-                CallingConvention.FastCall => PInvokeAttributes.CallConvFastcall,
-                CallingConvention.StdCall => PInvokeAttributes.CallConvStdCall,
-                CallingConvention.ThisCall => PInvokeAttributes.CallConvThiscall,
-
-                _ => throw new Exception($"Unexpected calling convention: {callingConvention}")
-            };
-
-            return $"PInvokeAttributes.{pinvokeAttribute.ToString()}";
         }
 
         private static IEnumerable<string> ProcessNormalMemberAttribute(IVisitorContext context, AttributeSyntax attribute, string targetDeclarationVar, VariableMemberKind targetKind)
@@ -894,8 +785,7 @@ namespace Cecilifier.Core.AST
         protected void AddToOverridenMethodsIfAppropriated(string methodVar, IMethodSymbol method)
         {
             var overridenMethod = GetOverridenMethod(method);
-            if (overridenMethod != null)
-                WriteCecilExpression(Context, $"{methodVar}.Overrides.Add({overridenMethod});");
+            Context.ApiDefinitionsFactory.OverrideBaseMethod(Context, methodVar, overridenMethod);
         }
         
         protected string GetOverridenMethod(IMethodSymbol method)

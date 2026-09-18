@@ -1,4 +1,5 @@
-﻿using System.Reflection.Emit;
+﻿using System.Diagnostics;
+using System.Reflection.Emit;
 using Cecilifier.Core;
 using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.ApiDriver.DefinitionsFactory;
@@ -7,6 +8,7 @@ using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.TypeSystem;
 using Microsoft.CodeAnalysis;
+using OpCode = System.Reflection.Emit.OpCode;
 
 namespace Cecilifier.ApiDriver.SystemReflectionMetadata;
 
@@ -120,6 +122,8 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
                  """;
     }
 
+    public ApiDriverCapabilities DriverCapabilities => ApiDriverCapabilities.None;
+    
     public int PreambleLineCount => 74;
     
     public IReadOnlyCollection<string> AssemblyReferences { get; } = [typeof(System.Reflection.Metadata.BlobBuilder).Assembly.Location];
@@ -152,17 +156,18 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
                     CilOperandValue { Type.SpecialType: SpecialType.System_Char } operandValue => $"{il.VariableName}.CodeBuilder.WriteInt32({operandValue.Value});",
                     CilOperandValue { Type.TypeKind: TypeKind.Enum } enumValue => $"{il.VariableName}.CodeBuilder.Write{((INamedTypeSymbol) enumValue.Type).EnumUnderlyingType!.Name}({(int)enumValue.Value});",
                     CilOperandValue operandValue => $"{il.VariableName}.CodeBuilder.Write{operandValue.Type.Name}({operandValue.Value});",
-                    CilLocalVariableHandle localVariableHandle => $"{il.VariableName}.CodeBuilder.WriteInt32({localVariableHandle.Value});",
-
-                    //TODO: Fix name of WriteX() method to be called; it is not always derivable from the type  
+                    CilLocalVariableHandle localVariableHandle => $"{il.VariableName}.CodeBuilder.{WriteMethodFor(opCode)}({localVariableHandle.Value});",
                     _ => $"{il.VariableName}.CodeBuilder.Write{operand.GetType().Name}({operand});"
                 }            
             }}
             """";
+
+        static string WriteMethodFor(OpCode opCode) => opCode.Size == 1 ? "WriteByte" : "WriteInt16";
     }
 
     public void WriteCilInstruction<T>(IVisitorContext context, IlContext il, OpCode opCode, T? operand, string? comment = null)
     {
+        Debug.Assert(opCode.FlowControl != FlowControl.Branch);
         context.Generate($"{EmitCilInstruction(context, il, opCode, operand, comment)}"); // Use interpolated string to force usage of CecilifierInterpolatedStringHandler
         context.WriteNewLine();
     }
@@ -174,9 +179,14 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
 
     public void WriteCilBranch(IVisitorContext context, IlContext il, OpCode branchOpCode, string targetLabel, string? comment = null)
     {
-        var mappedOpCodeName = MapSystemReflectionOpCodeNameToSystemReflectionMetadata(branchOpCode);
-        context.Generate($"{il.VariableName}.Branch(ILOpCode.{mappedOpCodeName}, {targetLabel});");
+        context.Generate(EmitCilBranchInstruction(context, il, branchOpCode, targetLabel, comment));
         context.WriteNewLine();
+    }
+
+    public string EmitCilBranchInstruction(IVisitorContext context, IlContext il, OpCode branchOpCode, string targetLabel, string? comment = null)
+    {
+        var mappedOpCodeName = MapSystemReflectionOpCodeNameToSystemReflectionMetadata(branchOpCode);
+        return $"{il.VariableName}.Branch(ILOpCode.{mappedOpCodeName}, {targetLabel});";
     }
 
     public void DefineLabel(IVisitorContext context, IlContext il, string labelVariable)
@@ -185,15 +195,40 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
         context.WriteNewLine();
     }
 
+    public string EmitDefineLabel(IVisitorContext context, IlContext il, string labelVariable) => $"var {labelVariable} = {il.VariableName}.DefineLabel();";
+
     public void MarkLabel(IVisitorContext context, IlContext il, string labelVariable)
     {
         context.Generate($"{il.VariableName}.MarkLabel({labelVariable});");
         context.WriteNewLine();
     }
+    
+    public string EmitMarkLabel(IVisitorContext context, IlContext il, string labelVariable) => $"{il.VariableName}.MarkLabel({labelVariable});";
 
     public void AddMethodSemantics(IVisitorContext context, string targetVariable, string methodVariable, MethodKind methodKind)
     {
         // In SRM, properties/event methods are handled in IApiDriverDefinitionsFactory.Property(). 
+    }
+
+    public void WriteExceptionHandlers(IVisitorContext context, IlContext ilVar, IEnumerable<ExceptionHandlerEntry> exceptionHandlerTable)
+    {
+        foreach (var entry in exceptionHandlerTable)
+        {
+            if (entry.Kind == ExceptionHandlerKind.Catch)
+            {
+                context.Generate($"{ilVar.VariableName}.ControlFlowBuilder.AddCatchRegion({entry.TryStart}, {entry.TryEnd}, {entry.HandlerStart}, {entry.HandlerEnd}, {entry.CatchType});");
+                context.WriteNewLine();
+            }
+            else if (entry.Kind == ExceptionHandlerKind.Finally)
+            {
+                context.Generate($"{ilVar.VariableName}.ControlFlowBuilder.AddFinallyRegion({entry.TryStart}, {entry.TryEnd}, {entry.HandlerStart}, {entry.HandlerEnd});");
+                context.WriteNewLine();
+            }
+            else
+            {
+                throw new NotSupportedException($"Unhandled exception handler kind: {entry.Kind}");
+            }
+        }
     }
 
     /// <summary>

@@ -9,13 +9,6 @@ namespace Cecilifier.Core.Tests.Integration
 {
     [TestFixture(typeof(MonoCecilContext))]
     [TestFixture(typeof(SystemReflectionMetadataContext))]
-    [EnableForContext<SystemReflectionMetadataContext>(
-        nameof(TestGenericOuterAndInnerPermutations), 
-        nameof(TestSimplestGenericTypeDefinition), 
-        nameof(TestGenericTypesAsMembers),
-        nameof(TestGenericTypeInstantiation),
-        nameof(TestGenericTypesInheritance), 
-        IgnoreReason = "Not implemented")]
     public class GenericsTestCase<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
     {
         [TestCase("GenericOuterNonGenericInner")]
@@ -33,7 +26,7 @@ namespace Cecilifier.Core.Tests.Integration
         [Test]
         public void TestInstanceNonGenericMethodsOnGenericTypes()
         {
-            AssertResourceTest(@"Generics/InstanceNonGenericMethodsOnGenericTypes");
+            AssertResourceTest("Generics/InstanceNonGenericMethodsOnGenericTypes");
         }
 
         [Test]
@@ -103,13 +96,13 @@ namespace Cecilifier.Core.Tests.Integration
         [Test]
         public void TestGenericMethodConstraints()
         {
-            AssertResourceTest(@"Generics/GenericMethodConstraints");
+            AssertResourceTest("Generics/GenericMethodConstraints");
         }
 
         [Test]
         public void TestGenericTypeConstraints()
         {
-            AssertResourceTest(@"Generics/GenericTypeConstraints");
+            AssertResourceTest("Generics/GenericTypeConstraints");
         }
 
         [Test]
@@ -121,7 +114,7 @@ namespace Cecilifier.Core.Tests.Integration
         [Test]
         public void TestCoContraVariance()
         {
-            AssertResourceTest(@"Generics/CoContraVariance");
+            AssertResourceTest("Generics/CoContraVariance");
         }
 
         [Test]

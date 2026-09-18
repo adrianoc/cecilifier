@@ -25,9 +25,9 @@ internal ref struct  NullLiteralArgumentDecorator
 {
     private string _localVariableName;
     private readonly IVisitorContext _context;
-    private readonly string _ilVar;
+    private readonly IlContext _ilVar;
         
-    public NullLiteralArgumentDecorator(IVisitorContext context, ArgumentSyntax node, string ilVar)
+    public NullLiteralArgumentDecorator(IVisitorContext context, ArgumentSyntax node, IlContext ilVar)
     {
         if (node.Expression is not LiteralExpressionSyntax { RawKind: (int) SyntaxKind.NullLiteralExpression })
             return;
@@ -38,7 +38,7 @@ internal ref struct  NullLiteralArgumentDecorator
             
         // we have a `null` being passed to a Nullable<T> parameter so we need to emit code
         // for steps 1 & 2 as outlined in the remarks section above.
-        var local = context.AddLocalVariableToCurrentMethod("tmpNull", context.TypeResolver.ResolveAny(argType, ResolveTargetKind.LocalVariable));
+        var local = context.AddLocalVariableToCurrentMethod("tmpNull", context.TypeResolver.Resolve(argType, ResolveTargetKind.LocalVariable));
         context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Ldloca_S, local.VariableName);
             
         _localVariableName = local.VariableName;

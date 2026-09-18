@@ -7,7 +7,7 @@ namespace Cecilifier.Core.Tests.Tests.Unit;
 public class GenericTypeTests : CecilifierUnitTestBase
 {
     [TestCase("var x = typeof(System.Collections.Generic.Dictionary<int, int>.Enumerator);",
-        """il_topLevelMain_\d+.Emit\(OpCodes.Ldtoken, assembly.MainModule.ImportReference\(typeof\(System.Collections.Generic.Dictionary<int, int>.Enumerator\)\)\);""")]
+        """il_topLevelMain_\d+.Emit\(OpCodes.Ldtoken, .+NewRawNestedTypeReference\("Enumerator", .+, .+ImportReference\(typeof\(.+Dictionary<,>\)\), isValueType: true, 2\).MakeGenericInstanceType\(.+Int32\)\)""")]
 
     [TestCase("class Foo { void Bar(System.Collections.Generic.Dictionary<int, int> dict) { var enu = dict.GetEnumerator(); } }",
         """
@@ -27,7 +27,7 @@ public class GenericTypeTests : CecilifierUnitTestBase
         var r = RunCecilifier("class C { System.Collections.Generic.List<int>.Enumerator e; }");
         Assert.That(
             r.GeneratedCode.ReadToEnd(),
-            Does.Match("""var fld_e_1 = new FieldDefinition\("e", FieldAttributes.Private, assembly.MainModule.ImportReference\(typeof\(System.Collections.Generic.List<int>.Enumerator\)\)\);"""));
+            Does.Match("""var fld_e_1 = new FieldDefinition\("e", FieldAttributes.Private, .+NewRawNestedTypeReference\("Enumerator", module: .+, .+ImportReference\(typeof\(System.Collections.Generic.List<>\)\), isValueType: true, 1\).MakeGenericInstanceType\(assembly.MainModule.TypeSystem.Int32\)\);"""));
     }
     
     [Test]

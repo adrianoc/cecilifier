@@ -1,8 +1,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using Cecilifier.ApiDriver.MonoCecil;
+using Cecilifier.ApiDriver.SystemReflectionMetadata;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
+using Cecilifier.Core.Tests.Framework.Attributes;
 using Cecilifier.Core.Tests.Tests.Unit.Framework;
 using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
@@ -16,6 +18,8 @@ namespace Cecilifier.Core.Tests.Tests.Unit;
 #nullable enable
 
 [TestFixture(typeof(MonoCecilContext))]
+[TestFixture(typeof(SystemReflectionMetadataContext))]
+[EnableForContext<SystemReflectionMetadataContext>(IgnoreReason = "Not Supported")]
 internal class TypeResolverTests<TContext> : CecilifierContextBasedTestBase<TContext> where TContext : IVisitorContext
 {
     protected override string Snippet =>
@@ -56,7 +60,7 @@ internal class TypeResolverTests<TContext> : CecilifierContextBasedTestBase<TCon
 
         // Simulates type parameter `T` being registered under type `Foo`
         using var _ = context.DefinitionVariables.WithCurrent("Foo<T>", "T", VariableMemberKind.TypeParameter, "TypeParameter_T_var");
-        var resolved = context.TypeResolver.ResolveAny(m1Symbol.ReturnType, m1Symbol.ToTypeResolutionContext("fakeReference")); 
+        var resolved = context.TypeResolver.Resolve(m1Symbol.ReturnType, m1Symbol.ToTypeResolutionContext("fakeReference")); 
         
         Assert.That(resolved.Expression, Does.Match(@".+ImportReference\(typeof\(System.Func<>\)\)\.MakeGenericInstanceType\(TypeParameter_T_var\)"));
     }
@@ -70,7 +74,7 @@ internal class TypeResolverTests<TContext> : CecilifierContextBasedTestBase<TCon
 
         // Simulates type parameter `T` being registered under method `M2`
         using var _ = context.DefinitionVariables.WithCurrent("Foo<T>.M2<TM>()", "TM", VariableMemberKind.TypeParameter, "TypeParameter_TM_var");
-        var resolved = context.TypeResolver.ResolveAny(methodSymbol.OriginalDefinition.ReturnType, methodSymbol.OriginalDefinition.ToTypeResolutionContext("fakeReference")); 
+        var resolved = context.TypeResolver.Resolve(methodSymbol.OriginalDefinition.ReturnType, methodSymbol.OriginalDefinition.ToTypeResolutionContext("fakeReference")); 
         
         Assert.That(resolved.Expression, Does.Match(@".+ImportReference\(typeof\(System.Func<>\)\)\.MakeGenericInstanceType\(TypeParameter_TM_var\)"));
     }    
@@ -85,7 +89,7 @@ internal class TypeResolverTests<TContext> : CecilifierContextBasedTestBase<TCon
         // Simulates type parameters `T` & `TM` being registered under their respective members.
         using var t = context.DefinitionVariables.WithCurrent("Foo<T>", "T", VariableMemberKind.TypeParameter, "TypeParameter_Foo");
         using var tm = context.DefinitionVariables.WithCurrent("Foo<T>.M3<TM>()", "TM", VariableMemberKind.TypeParameter, "TypeParameter_M3");
-        var resolved = context.TypeResolver.ResolveAny(methodSymbol.OriginalDefinition.ReturnType, methodSymbol.OriginalDefinition.ToTypeResolutionContext("fakeReference")); 
+        var resolved = context.TypeResolver.Resolve(methodSymbol.OriginalDefinition.ReturnType, methodSymbol.OriginalDefinition.ToTypeResolutionContext("fakeReference")); 
         
         Assert.That(resolved.Expression, Does.Match(@".+ImportReference\(typeof\(System.Func<,>\)\)\.MakeGenericInstanceType\(TypeParameter_Foo, TypeParameter_M3\)"));
     }
@@ -99,7 +103,7 @@ internal class TypeResolverTests<TContext> : CecilifierContextBasedTestBase<TCon
         var methodSymbol = context.SemanticModel.GetSymbolInfo(convertAllInvocation.Expression).Symbol.EnsureNotNull<ISymbol, IMethodSymbol>();
 
         // Check the return type of `ConvertAll()` invocation
-        var resolved = context.TypeResolver.ResolveAny(methodSymbol.OriginalDefinition.ReturnType, methodSymbol.OriginalDefinition.ToTypeResolutionContext("methodReference"));
+        var resolved = context.TypeResolver.Resolve(methodSymbol.OriginalDefinition.ReturnType, methodSymbol.OriginalDefinition.ToTypeResolutionContext("methodReference"));
         Assert.That(resolved.Expression, Does.Match(@".+ImportReference\(typeof\(System.Collections.Generic.List<>\)\)\.MakeGenericInstanceType\(methodReference.GenericParameters\[0\]\)"));
     }
     
@@ -122,7 +126,7 @@ internal class TypeResolverTests<TContext> : CecilifierContextBasedTestBase<TCon
         var methodSymbol = context.SemanticModel.GetDeclaredSymbol(methodSyntax).EnsureNotNull<ISymbol, IMethodSymbol>();
 
         using var bar = context.DefinitionVariables.WithCurrent("<global namespace>", "Bar", VariableMemberKind.Type, "BarDefinition");
-        var resolved = context.TypeResolver.ResolveAny(methodSymbol.OriginalDefinition.ReturnType, methodSymbol.OriginalDefinition.ToTypeResolutionContext("methodReference"));
+        var resolved = context.TypeResolver.Resolve(methodSymbol.OriginalDefinition.ReturnType, methodSymbol.OriginalDefinition.ToTypeResolutionContext("methodReference"));
         Assert.That(
             resolved.Expression, 
             Does.Match(expectedTypeReference));
@@ -134,7 +138,7 @@ internal class TypeResolverTests<TContext> : CecilifierContextBasedTestBase<TCon
         var context = NewContext();
         var methodSyntax = GetMethodSyntax(context, "F");
         var methodSymbol = context.SemanticModel.GetDeclaredSymbol(methodSyntax).EnsureNotNull<ISymbol, IMethodSymbol>();
-        var resolved = context.TypeResolver.ResolveAny(methodSymbol.OriginalDefinition.ReturnType, methodSymbol.OriginalDefinition.ToTypeResolutionContext("methodReference"));
+        var resolved = context.TypeResolver.Resolve(methodSymbol.OriginalDefinition.ReturnType, methodSymbol.OriginalDefinition.ToTypeResolutionContext("methodReference"));
         Assert.That(
             resolved.Expression, 
             Does.Match("""assembly.MainModule.ImportReference\(typeof\(Cecilifier.Core.Tests.Tests.Unit.D.F\)\)"""));

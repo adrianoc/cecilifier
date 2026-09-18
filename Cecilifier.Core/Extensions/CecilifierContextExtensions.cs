@@ -32,7 +32,7 @@ public static class CecilifierContextExtensions
         return context.ApiDefinitionsFactory.LocalVariable(context, localVarName, currentMethod.VariableName, varType);
     }
 
-    internal static bool TryApplyConversions(this IVisitorContext context, string ilVar, IOperation operation)
+    internal static bool TryApplyConversions(this IVisitorContext context, IlContext ilVar, IOperation operation)
     {
         if (operation is IConversionOperation { Conversion.IsNumeric: true } elementConversion)
         {
@@ -46,11 +46,13 @@ public static class CecilifierContextExtensions
         }
         else if (operation is IConversionOperation { Operand.Type: not null } conversion2 && context.SemanticModel.Compilation.ClassifyConversion(conversion2.Operand.Type, operation.Type).IsBoxing)
         {
-            var resolutionContext = new TypeResolutionContext(ResolveTargetKind.Instruction, conversion2.Operand.Type.IsValueType ? TypeResolutionOptions.IsValueType : TypeResolutionOptions.None);
-            context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Box, context.TypeResolver.ResolveAny(conversion2.Operand.Type, resolutionContext).AsToken());
+            var resolutionContext = new TypeResolutionContext(ResolveTargetKind.TypeReference, conversion2.Operand.Type.IsValueType ? TypeResolutionOptions.IsValueType : TypeResolutionOptions.None);
+            context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Box, context.TypeResolver.Resolve(conversion2.Operand.Type, resolutionContext).AsToken());
         }
         else if (operation is IConversionOperation { Conversion.IsNullable: true } nullableConversion && !nullableConversion.Syntax.IsKind(SyntaxKind.CoalesceExpression))
         {
+            //TODO: This code is very similar to the one handling coalescing operator below (before that code got fixed to handle SRM). Most likely we will want to extract some
+            //      common code and reuse.
             context.ApiDriver.WriteCilInstruction(context, 
                 ilVar, 
                 OpCodes.Newobj,
@@ -61,18 +63,30 @@ public static class CecilifierContextExtensions
                  && SymbolEqualityComparer.Default.Equals(coalesce.Value.Type?.OriginalDefinition, context.RoslynTypeSystem.SystemNullableOfT)
                  )
         {
-            context.ApiDriver.WriteCilInstruction(context, 
-                ilVar, 
+            var targetType = context.TypeResolver.Resolve(coalesce.Type, ResolveTargetKind.GenericTypeArgument);
+            var closedNullable = context.TypeResolver.MakeGenericInstanceType(context.RoslynTypeSystem.SystemNullableOfT.NameIncludingTypeParametersAndArguments(), context.TypeResolver.Bcl.System.NullableOfT, [targetType], new TypeResolutionContext(ResolveTargetKind.Instruction, TypeResolutionOptions.IsValueType));
+            var returnType = context.TypeResolver.Resolve(context.RoslynTypeSystem.SystemVoid, ResolveTargetKind.ReturnType);
+            var resolvedCtor = context.MemberResolver.ResolveMethod("", closedNullable.Expression, ".ctor", returnType, [NullableTypeParameter(context)], [], MemberOptions.None);
+            
+            context.ApiDriver.WriteCilInstruction(context,
+                ilVar,
                 OpCodes.Newobj,
-                $"assembly.MainModule.ImportReference(typeof(System.Nullable<>).MakeGenericType(typeof({coalesce.Type?.FullyQualifiedName()})).GetConstructors().Single(ctor => ctor.GetParameters().Length == 1))");
+                resolvedCtor.AsToken());
         }
         else
             return false;
 
         return true;
+        
+        static ParameterSpec NullableTypeParameter(IVisitorContext context)
+        {
+            var typeParameterSymbol = context.RoslynTypeSystem.SystemNullableOfT.TypeParameters[0];
+            var resolvedNullableTypeParameter = context.TypeResolver.Resolve(typeParameterSymbol, ResolveTargetKind.TypeReference);
+            return new ParameterSpec(typeParameterSymbol.Name, resolvedNullableTypeParameter, RefKind.None, string.Empty);
+        }
     }
 
-    private static bool TryApplyNumericConversion(this IVisitorContext context, string ilVar, ITypeSymbol source, ITypeSymbol target)
+    private static bool TryApplyNumericConversion(this IVisitorContext context, IlContext ilVar, ITypeSymbol source, ITypeSymbol target)
     {
         if (source.SpecialType == target.SpecialType)
             return true;
@@ -112,7 +126,7 @@ public static class CecilifierContextExtensions
         return true;
     }
 
-    internal static void AddCallToMethod(this IVisitorContext context, IMethodSymbol method, string ilVar, MethodDispatchInformation dispatchInformation = MethodDispatchInformation.MostLikelyVirtual)
+    internal static void AddCallToMethod(this IVisitorContext context, IMethodSymbol method, IlContext ilVar, MethodDispatchInformation dispatchInformation = MethodDispatchInformation.MostLikelyVirtual)
     {
         var needsVirtualDispatch = (method.IsVirtual || method.IsAbstract || method.IsOverride) && !method.ContainingType.IsPrimitiveType();
 
@@ -123,14 +137,21 @@ public static class CecilifierContextExtensions
 
         EnsureForwardedMethod(context, method);
 
-        var operand = method.MethodResolverExpression(context);
         if (context.TryGetFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint, out var constrainedType))
         {
-            context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Constrained, constrainedType); 
+            context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Constrained, constrainedType.AsToken()); 
             context.ClearFlag(Constants.ContextFlags.MemberReferenceRequiresConstraint);
         }
 
+        var operand = GetMethodToInvoke(method).MethodResolverExpression(context);
         context.ApiDriver.WriteCilInstruction(context, ilVar, opCode, operand.AsToken());
+        static IMethodSymbol GetMethodToInvoke(IMethodSymbol method)
+        {
+            if (method.ContainingType.IsValueType)
+                return method;
+            
+            return method.OverriddenMethod ?? method;
+        }
     }
 
     /*
@@ -148,12 +169,9 @@ public static class CecilifierContextExtensions
      */
     public static void EnsureForwardedMethod(this IVisitorContext context, IMethodSymbol method)
     {
-        //TODO: The code of this method is causing problems when visiting methods in SRM; that driver
-        //      will emit a method reference immediately and postpone the method definition to later
-        //      and the check for retrieving the method variable bellow fails (because definition of the variable
-        //      for the method definition has been postponed also).
-        //      For now there are not tests relying on forwarded methods in SRM
-        if (Cecilifier.IsSRM)
+        // Some drivers do not require forward method references. For instance, SRM driver will emit a method reference
+        // when visiting a method definition and postpone the method definition emission.
+        if (!context.ApiDriver.DriverCapabilities.HasFlag(ApiDriverCapabilities.RequiresForwardReferences))
             return;
         
         if (!method.IsDefinedInCurrentAssembly(context)) 
@@ -178,7 +196,7 @@ public static class CecilifierContextExtensions
                 : context.Naming.MethodDeclaration((BaseMethodDeclarationSyntax) method.DeclaringSyntaxReferences.SingleOrDefault()?.GetSyntax());
         }
 
-        var resolvedReturnType = context.TypeResolver.ResolveAny(method.ReturnType, ResolveTargetKind.ReturnType);
+        var resolvedReturnType = context.TypeResolver.Resolve(method.ReturnType, ResolveTargetKind.ReturnType);
         var exps = context.ApiDefinitionsFactory.Method(
                                                                     context, 
                                                                     new BodiedMemberDefinitionContext(methodName, methodNameForVariableRegistration,methodDeclarationVar, null, MemberOptions.None, IlContext.None), 
@@ -187,7 +205,7 @@ public static class CecilifierContextExtensions
                                                                     method.Parameters.Select( p => new ParameterSymbolParameterSpec(p, context)).ToArray(),
                                                                     method.GetTypeParameterSyntax().Select(tps => tps.Identifier.Text).ToArray(),
                                                                     ctx => method.ReturnsByRef 
-                                                                        ? resolvedReturnType.MakeByReferenceType()
+                                                                        ? context.TypeResolver.MakeByRefType(resolvedReturnType)
                                                                         : resolvedReturnType,
                                                                     out _);
         context.Generate(exps);

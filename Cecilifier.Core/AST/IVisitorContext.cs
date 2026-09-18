@@ -50,7 +50,7 @@ public interface IVisitorContext
     TypeInfo GetTypeInfo(TypeSyntax node);
     TypeInfo GetTypeInfo(ExpressionSyntax expressionSyntax);
 
-    void WriteCilInstructionAfter(string ilVar, OpCode opCode, LinkedListNode<string> after);
+    void WriteCilInstructionAfter(IlContext ilVar, OpCode opCode, LinkedListNode<string> after);
     void Generate(CecilifierInterpolatedStringHandler expression);
     void Generate(string expression);
     void Generate(IEnumerable<string> expressions);
@@ -75,16 +75,4 @@ public interface IVisitorContext
 
     #endregion
 
-}
-
-public class IlContext
-{
-    protected IlContext(string variableName, string relatedMethodVar) => (VariableName, AssociatedMethodVariable) = (variableName, relatedMethodVar);
-    public static readonly IlContext None = new IlContext(string.Empty, string.Empty);
-    
-    //TODO: Remove these implicit operators and fix all usages of il variable names
-    public static implicit operator IlContext(string variableName) => new(variableName, "N/A");
-    public static implicit operator string(IlContext x) => x.VariableName;
-    public virtual string VariableName { get; }
-    public string AssociatedMethodVariable { get; }
 }

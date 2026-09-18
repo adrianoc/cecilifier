@@ -36,7 +36,7 @@ namespace Cecilifier.Core.AST
         private void HandleStaticConstructor(ConstructorDeclarationSyntax node)
         {
             var variableName = Context.Naming.Constructor(node.ResolveDeclaringType<BaseTypeDeclarationSyntax>(), true);
-            ProcessMethodDeclaration(node, variableName, Constants.Cecil.StaticConstructorName, $".{Constants.Cecil.StaticConstructorName}", false, ctorVar =>
+            ProcessMethodDeclaration(node, variableName, Constants.Cecil.StaticConstructorName, $".{Constants.Cecil.StaticConstructorName}", ctorVar =>
             {
                 var declaringType = node.Parent.ResolveDeclaringType<TypeDeclarationSyntax>();
                 ProcessFieldInitialization(declaringType, ilVar, true);
@@ -51,7 +51,7 @@ namespace Cecilifier.Core.AST
             var callBaseMethod = base.VisitConstructorDeclaration;
 
             var ctorVariable = Context.Naming.Constructor(declaringType, false);
-            ProcessMethodDeclaration(node, ctorVariable, "ctor", ".ctor", false, ctorVar =>
+            ProcessMethodDeclaration(node, ctorVariable, "ctor", ".ctor", ctorVar =>
             {
                 if (node.Initializer == null || node.Initializer.IsKind(SyntaxKind.BaseConstructorInitializer))
                 {
@@ -146,7 +146,7 @@ namespace Cecilifier.Core.AST
         private IlContext AddOrUpdateParameterlessCtorDefinition(string typeName, string normalizedTypeName, string typeDefVar, string ctorAccessibility, bool isStatic, string ctorLocalVar)
         {
             var ctorName = isStatic ? "cctor" : "ctor";
-            var found = Context.DefinitionVariables.GetMethodVariable(new MethodDefinitionVariable(typeName, Utils.ConstructorMethodName(isStatic), [], 0));
+            var found = Context.DefinitionVariables.GetMethodVariable(new MethodDefinitionVariable(typeName, Utils.ConstructorMethodName(isStatic), [], []));
             if (found.IsValid)
             {
                 //TODO: This is Cecil specific. Abstract it and add a test in SRM that exercises it
@@ -255,7 +255,7 @@ namespace Cecilifier.Core.AST
         {
             var typeSymbol = Context.GetDeclaredSymbol(type);
             if (typeSymbol == null)
-                return Utils.ImportFromMainModule($"TypeHelpers.DefaultCtorFor({typeDefVar}.BaseType)");
+                return Context.MemberResolver.ImportReference($"TypeHelpers.DefaultCtorFor({typeDefVar}.BaseType)");
 
             return Context.MemberResolver.ResolveDefaultConstructor(typeSymbol.BaseType, typeDefVar);
         }

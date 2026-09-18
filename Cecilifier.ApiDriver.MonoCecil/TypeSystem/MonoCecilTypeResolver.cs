@@ -9,10 +9,38 @@ namespace Cecilifier.ApiDriver.MonoCecil.TypeSystem;
 
 public class MonoCecilTypeResolver(MonoCecilContext context) : TypeResolverBase<MonoCecilContext>(context)
 {
-    public override ResolvedType Resolve(ITypeSymbol type, in TypeResolutionContext resolutionContext)
+    protected override ResolvedType ResolveNestedTypeCore(INamedTypeSymbol type, in TypeResolutionContext resolutionContext)
+    {
+        // collects the type arguments for all types in the parent chain. 
+        var typeArguments = type.GetAllTypeArguments().ToArray();
+        return new ResolvedType($"""TypeHelpers.NewRawNestedTypeReference("{type.Name}", module: assembly.MainModule, {Resolve(type.ContainingType.OriginalDefinition, in resolutionContext)}, isValueType: {type.IsValueType.ToKeyword()}, {typeArguments.Length})""");
+    }
+
+    protected override ResolvedType ResolveTypeParameter(ITypeSymbol type, in TypeResolutionContext resolutionContext)
+    {
+        if (type is not ITypeParameterSymbol typeParameterSymbol)
+            return null;
+
+        if (resolutionContext.TypeParameterProviderVar == null)
+            return null;
+            
+        var resolvedType = typeParameterSymbol.ContainingSymbol.Kind switch
+        {
+            SymbolKind.NamedType => $"(({resolutionContext.TypeParameterProviderVar} is MethodReference methodReference) ? ((GenericInstanceType) methodReference.DeclaringType).ElementType : (IGenericParameterProvider) {resolutionContext.TypeParameterProviderVar} ).GenericParameters[{typeParameterSymbol.Ordinal}]",
+            SymbolKind.Method => $"{resolutionContext.TypeParameterProviderVar}.GenericParameters[{typeParameterSymbol.Ordinal}]",
+            _ => null
+        };
+
+        return new ResolvedType(resolvedType);
+    }
+
+    // Mono.Cecil represents Generic Type Parameters as instances of a type, so this method is a no-op in that Api Driver.
+    public override ResolvedType ResolveTypeParameter(ResolvedType genericTypeParameter, TypeParameterKind typeParameterKind, in TypeResolutionContext resolutionContext) => genericTypeParameter;
+    
+    protected override ResolvedType ResolveFromAssembly(ITypeSymbol type, in TypeResolutionContext resolutionContext)
     {
         if (type.ContainingType != null)
-            return Utils.ImportFromMainModule($"typeof({$"""{type.ToDisplayString()}"""})");
+            return ImportReference($"typeof({$"""{type.ToDisplayString()}"""})");
 
         var formatOptions = SymbolDisplayFormat.FullyQualifiedFormat
                                         .RemoveGenericsOptions(SymbolDisplayGenericsOptions.IncludeTypeParameters)
@@ -27,27 +55,37 @@ public class MonoCecilTypeResolver(MonoCecilContext context) : TypeResolverBase<
             nameToResolve = $"{nameToResolve}<{commas}>";
         }
         
-        return Utils.ImportFromMainModule($"typeof({$"""{nameToResolve}"""})");
+        return ImportReference($"typeof({$"""{nameToResolve}"""})");
     }
 
     public override ResolvedType ResolvePredefinedType(ITypeSymbol type, in TypeResolutionContext resolutionContext) => $"assembly.MainModule.TypeSystem.{type.Name}";
-    public override ResolvedType MakeArrayType(ITypeSymbol elementType, in TypeResolutionContext resolutionContext) => ResolveAny(elementType, in resolutionContext) + ".MakeArrayType()";
-    protected override ResolvedType MakePointerType(ITypeSymbol pointerType, in TypeResolutionContext resolutionContext) => ResolveAny(pointerType, in resolutionContext) + ".MakePointerType()";
+    public override ResolvedType MakeArrayType(ITypeSymbol elementType, in TypeResolutionContext resolutionContext) => Resolve(elementType, in resolutionContext) + ".MakeArrayType()";
+    protected override ResolvedType MakePointerType(ITypeSymbol pointerType, in TypeResolutionContext resolutionContext) => Resolve(pointerType, in resolutionContext) + ".MakePointerType()";
 
     protected override ResolvedType MakeFunctionPointerType(IFunctionPointerTypeSymbol functionPointer, in TypeResolutionContext resolutionContext)
     {
         return CecilDefinitionsFactory.FunctionPointerType(this, functionPointer);
     }
 
-    public override ResolvedType MakeGenericInstanceType(ResolvedType typeReference, INamedTypeSymbol genericTypeSymbol, in TypeResolutionContext resolutionContext)
+    public override ResolvedType MakeGenericInstanceType(string typeName, ResolvedType openGenericType, INamedTypeSymbol genericTypeSymbol, in TypeResolutionContext resolutionContext)
     {
         Buffer256<ITypeSymbol> g = new();
         var resolutionContextTypeParameterProviderVar = resolutionContext.TypeParameterProviderVar;
         var typeArgs = CollectTypeArguments(genericTypeSymbol, ref g)
                                                         .ToImmutableArray()
-                                                        .Select(t => _context.TypeResolver.ResolveAny(t, ResolveTargetKind.TypeReference.ToTypeResolutionContext(resolutionContextTypeParameterProviderVar)))
+                                                        .Select(t => _context.TypeResolver.Resolve(t, ResolveTargetKind.TypeReference.ToTypeResolutionContext(resolutionContextTypeParameterProviderVar)))
                                                         .ToImmutableArray();
         
-        return typeArgs.Length > 0 ? typeReference.MakeGenericInstanceType(typeArgs) : typeReference;
+        return typeArgs.Length > 0 ? openGenericType.MakeGenericInstanceType(typeArgs) : openGenericType;
     }
+    
+    
+    public override ResolvedType MakeGenericInstanceType(string typeName, ResolvedType openGenericType, Span<ResolvedType> typeArguments, in TypeResolutionContext resolutionContext)
+    {
+        return typeArguments.Length > 0 ? openGenericType.MakeGenericInstanceType(typeArguments.ToArray()) : openGenericType;
+    }
+    
+    public override ResolvedType MakeByRefType(in ResolvedType resolvedType) =>  $"{resolvedType}.MakeByReferenceType()";
+
+    internal ResolvedType ImportReference(ResolvedType typeReference) => $"assembly.MainModule.ImportReference({typeReference})";
 }
