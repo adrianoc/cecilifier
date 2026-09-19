@@ -47,46 +47,48 @@ internal partial class TypeDeclarationVisitor
             var ctorLocalVar = Context.Naming.Delegate(node);
 
             // Delegate ctor
-            string[] paramTypes = ["System.Object", "System.IntPtr"];
+            var parameters = new ParameterSpec[]
+            {
+                new("target", Context.TypeResolver.Bcl.System.Object, RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = "System.Object" },
+                new("method", Context.TypeResolver.Bcl.System.IntPtr, RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = "System.IntPtr" },
+            };
             var exps = Context.ApiDefinitionsFactory.Constructor(
                 Context, 
                 new BodiedMemberDefinitionContext("ctor", ctorLocalVar, typeVar, MemberOptions.None, IlContext.None), 
                 node.Identifier.Text, 
                 false, 
                 "MethodAttributes.FamANDAssem | MethodAttributes.Family", 
-                paramTypes, 
+                parameters, 
                 "IsRuntime = true");
             Context.Generate(exps);
-            
-            exps = Context.ApiDefinitionsFactory.Parameter(Context, new ParameterSpec("target", Context.TypeResolver.Bcl.System.Object, RefKind.None, Constants.ParameterAttributes.None), ctorLocalVar, Context.Naming.Parameter("target"));
-            Context.Generate(exps);
-            
-            exps = Context.ApiDefinitionsFactory.Parameter(Context, new ParameterSpec("method", Context.TypeResolver.Bcl.System.IntPtr, RefKind.None, Constants.ParameterAttributes.None), ctorLocalVar, Context.Naming.Parameter("method"));
-            Context.Generate(exps);
 
+            var invokeMethodVar = Context.Naming.SyntheticVariable("Invoke", ElementKind.Method);
+            var invokeParameters = node.ParameterList.Parameters.Select(p => p.ToParameterSpec(Context, invokeMethodVar)).ToArray();
             // Invoke() method
             AddDelegateMethod(
                 node.Identifier.Text,
                 typeVar,
                 "Invoke",
+                invokeMethodVar,
                 ResolveType(node.ReturnType, ResolveTargetKind.ReturnType),
-                node.ParameterList.Parameters,
-                (methodVar, param) => CecilDefinitionsFactory.Parameter(Context, param, methodVar, Context.Naming.Parameter(param)));
-
-            // BeginInvoke() method
-            var beginInvokeMethodVar = AddDelegateMethod(
-                                                node.Identifier.Text,
-                                                typeVar,
-                                                "BeginInvoke",
-                                                Context.TypeResolver.Bcl.System.IAsyncResult,
-                                                node.ParameterList.Parameters,
-                                                (methodVar, param) => CecilDefinitionsFactory.Parameter(Context, param, methodVar, Context.Naming.Parameter(param)));
-
-            exps = Context.ApiDefinitionsFactory.Parameter(Context, new ParameterSpec("asyncCallback", Context.TypeResolver.Bcl.System.AsyncCallback, RefKind.None, Constants.ParameterAttributes.None), beginInvokeMethodVar, Context.Naming.Parameter("asyncCallback"));
-            Context.Generate(exps);
+                invokeParameters);
             
-            exps = Context.ApiDefinitionsFactory.Parameter(Context, new ParameterSpec("target", Context.TypeResolver.Bcl.System.Object, RefKind.None, Constants.ParameterAttributes.None), beginInvokeMethodVar, Context.Naming.Parameter("target"));
-            Context.Generate(exps);
+            // BeginInvoke() method
+            var beginInvokeMethodVar = Context.Naming.SyntheticVariable("BeginInvoke", ElementKind.Method);
+            IReadOnlyList<ParameterSpec> beginInvokeParameters =
+            [
+                ..node.ParameterList.Parameters.Select(p => p.ToParameterSpec(Context, beginInvokeMethodVar)),
+                new("asyncCallback", Context.TypeResolver.Bcl.System.AsyncCallback, RefKind.None, Constants.ParameterAttributes.None),
+                new("target", Context.TypeResolver.Bcl.System.Object, RefKind.None, Constants.ParameterAttributes.None)
+            ];
+            
+           AddDelegateMethod(
+                    node.Identifier.Text,
+                    typeVar,
+                    "BeginInvoke",
+                    beginInvokeMethodVar,
+                    Context.TypeResolver.Bcl.System.IAsyncResult,
+                    beginInvokeParameters);
 
             // EndInvoke() method
             var endInvokeMethodVar = Context.Naming.SyntheticVariable("EndInvoke", ElementKind.Method);
@@ -104,22 +106,21 @@ internal partial class TypeDeclarationVisitor
             base.VisitDelegateDeclaration(node);
         }
 
-        string AddDelegateMethod(string delegateName, string delegateTypeVariable, string methodName, ResolvedType returnType, in SeparatedSyntaxList<ParameterSyntax> parameters, Func<string, ParameterSyntax, IEnumerable<string>> parameterHandler)
+        return;
+
+        void AddDelegateMethod(string delegateName, string delegateTypeVariable, string methodName, string methodVar, ResolvedType returnType, IReadOnlyList<ParameterSpec> parameters)
         {
-            var methodLocalVar = Context.Naming.SyntheticVariable(methodName, ElementKind.Method);
-            BodiedMemberDefinitionContext methodDefinitionContext = new(methodName, methodLocalVar, delegateTypeVariable, MemberOptions.IsRuntime, Context.ApiDriver.NewIlContext(Context, methodName, methodLocalVar)); 
+            BodiedMemberDefinitionContext methodDefinitionContext = new(methodName, methodVar, delegateTypeVariable, MemberOptions.IsRuntime, Context.ApiDriver.NewIlContext(Context, methodName, methodVar)); 
             var methodToAdd = Context.ApiDefinitionsFactory.Method(
                                                     Context,
                                                     methodDefinitionContext,
                                                     delegateName,
                                                     Constants.Cecil.DelegateMethodAttributes,
-                                                    parameters.Select(param => Context.SemanticModel.GetDeclaredSymbol(param).EnsureNotNull<ISymbol, IParameterSymbol>().ToParameterSpec(Context, methodLocalVar)).ToArray(),
+                                                    parameters,
                                                     [],
                                                     ctx => returnType,
                                                     out var methodDefinitionVariable);
             Context.Generate(methodToAdd);
-            
-            return methodLocalVar;
         }
     }
 

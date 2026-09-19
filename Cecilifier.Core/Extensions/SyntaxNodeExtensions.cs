@@ -120,6 +120,9 @@ namespace Cecilifier.Core.Extensions
             
             return nodeBeingAccessed.IsKind(SyntaxKind.NameColon)  ? AST.MethodDispatchInformation.MostLikelyVirtual : AST.MethodDispatchInformation.MostLikelyNonVirtual ;
         }
+        
+        public static ParameterSpec ToParameterSpec(this ParameterSyntax parameter, IVisitorContext context, string methodVar) => 
+            context.SemanticModel.GetDeclaredSymbol(parameter)?.ToParameterSpec(context, methodVar);  
 
         #nullable enable
         [return: NotNull]

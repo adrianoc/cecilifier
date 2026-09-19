@@ -265,10 +265,10 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
         }
     }
 
-    public IEnumerable<string> Constructor(IVisitorContext context, BodiedMemberDefinitionContext definitionContext, string typeName, bool isStatic, string methodAccessibility, string[] paramTypes, string? methodDefinitionPropertyValues = null)
+    public IEnumerable<string> Constructor(IVisitorContext context, BodiedMemberDefinitionContext definitionContext, string typeName, bool isStatic, string methodAccessibility, ParameterSpec[] parameters, string? methodDefinitionPropertyValues = null)
     {
         var ctorName = Utils.ConstructorMethodName(isStatic);
-        context.DefinitionVariables.RegisterMethod(typeName, ctorName, paramTypes, [], definitionContext.Member.DefinitionVariable);
+        context.DefinitionVariables.RegisterMethod(typeName, ctorName, parameters.Select(p => p.RegistrationTypeName).ToArray()!, [], definitionContext.Member.DefinitionVariable);
 
         var exp = $@"var {definitionContext.Member.DefinitionVariable} = new MethodDefinition(""{ctorName}"", {methodAccessibility} | MethodAttributes.HideBySig | {Constants.Cecil.CtorAttributes}, assembly.MainModule.TypeSystem.Void)";
         if (methodDefinitionPropertyValues != null)
@@ -276,7 +276,16 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
             exp = exp + $"{{ {methodDefinitionPropertyValues} }}";
         }
 
-        return [exp + ";", $"{definitionContext.Member.ParentDefinitionVariable}.Methods.Add({definitionContext.Member.DefinitionVariable});"];
+        var exps = new List<string> { exp + ";" };
+        foreach (var parameter in parameters)
+        {
+            var paramVar = context.Naming.Parameter("ctor");
+            exps.AddRange(Parameter(context, parameter, definitionContext.Member.DefinitionVariable, paramVar));
+            context.DefinitionVariables.RegisterNonMethod(definitionContext.Member.Identifier, parameter.Name, VariableMemberKind.Parameter, paramVar);
+        }
+        exps.Add($"{definitionContext.Member.ParentDefinitionVariable}.Methods.Add({definitionContext.Member.DefinitionVariable});");
+
+        return exps;
     }
 
     public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext definitionContext, ISymbol fieldOrEvent, ITypeSymbol fieldType, string fieldAttributes, bool isVolatile, bool isByRef, in FieldInitializationData initializer = default)

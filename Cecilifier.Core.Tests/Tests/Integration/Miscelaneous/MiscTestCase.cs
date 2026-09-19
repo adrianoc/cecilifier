@@ -13,6 +13,7 @@ namespace Cecilifier.Core.Tests.Integration
         nameof(TestDelegateInvocation),
         nameof(TestAccessibilityModifiers),
         nameof(TestNamespaces), 
+        nameof(TestPointerTypes), 
         nameof(AttributesOnMembers), 
         nameof(TestAttributesOnExplicitTargets), 
         nameof(TestAttributeWithArrayInitializer), 
