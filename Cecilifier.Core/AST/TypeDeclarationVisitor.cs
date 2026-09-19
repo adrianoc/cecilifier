@@ -205,7 +205,7 @@ namespace Cecilifier.Core.AST
                                                             typeParameters,
                                                             outerTypeParameters);
 
-            AddCecilExpressions(context, typeDefinitionExp);
+            context.Generate(typeDefinitionExp);
 
             context.ApiDefinitionsFactory.UpdateBaseTypeIfNeeded(context, typeSymbol, typeDeclarationVar);
 

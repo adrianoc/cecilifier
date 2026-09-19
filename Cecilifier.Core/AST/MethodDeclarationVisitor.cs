@@ -101,7 +101,7 @@ namespace Cecilifier.Core.AST
 
                 Context.DefinitionVariables.RegisterNonMethod(containingSymbol.OriginalDefinition.ToDisplayString(), node.Identifier.ValueText, VariableMemberKind.Parameter, paramVar);
                 var exps = CecilDefinitionsFactory.Parameter(Context, node, methodVar.VariableName, paramVar);
-                AddCecilExpressions(Context, exps);
+                Context.Generate(exps);
             }
 
             HandleAttributesInMemberDeclaration(node.Identifier.Text, node.AttributeLists, paramVar, VariableMemberKind.Parameter);
@@ -240,7 +240,7 @@ namespace Cecilifier.Core.AST
             
             var declaringTypeVarName = context.DefinitionVariables.GetLastOf(VariableMemberKind.Type).VariableName;
             var exps = context.ApiDefinitionsFactory.Method(context, methodSymbol, new BodiedMemberDefinitionContext(methodName, simpleName, methodVar, declaringTypeVarName, MemberOptions.None, ilVar), methodName, methodModifiers, typeParameters);
-            AddCecilExpressions(context, exps);
+            context.Generate(exps);
 
             HandleAttributesInTypeParameter(context, typeParameters);
         }

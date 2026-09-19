@@ -39,7 +39,7 @@ internal partial class TypeDeclarationVisitor
                                                     node.TypeParameterList?.Parameters, 
                                                     []);
 
-        AddCecilExpressions(Context, typeDef);
+        Context.Generate(typeDef);
         HandleAttributesInMemberDeclaration(node.Identifier.Text, node.AttributeLists, typeVar, VariableMemberKind.Type);
 
         using (Context.DefinitionVariables.WithCurrent(delegateSymbol.ContainingSymbol?.OriginalDefinition.ToDisplayString() ?? string.Empty, delegateSymbol.OriginalDefinition.ToDisplayString(), VariableMemberKind.Type, typeVar))
@@ -101,7 +101,7 @@ internal partial class TypeDeclarationVisitor
                                                                         [],
                                                                         ctx => ctx.TypeResolver.Resolve(Context.GetTypeInfo(node.ReturnType).Type, ResolveTargetKind.ReturnType),
                                                                         out var _);
-            AddCecilExpressions(Context, endInvokeExps);
+            Context.Generate(endInvokeExps);
             
             base.VisitDelegateDeclaration(node);
         }

@@ -30,14 +30,6 @@ namespace Cecilifier.Core.AST
 
         public IVisitorContext Context { get; }
 
-        protected static void AddCecilExpressions(IVisitorContext context, IEnumerable<string> exps)
-        {
-            foreach (var exp in exps)
-            {
-                WriteCecilExpression(context, exp);
-            }
-        }
-
         protected void AddCecilExpression(string exp)
         {
             WriteCecilExpression(Context, exp);
@@ -720,7 +712,7 @@ namespace Cecilifier.Core.AST
                         _ => ProcessNormalMemberAttribute(context, attribute, targetDeclarationVar, targetKind)
                     };
                 
-                AddCecilExpressions(context, attrsExp);
+                context.Generate(attrsExp);
             }
         }
 
