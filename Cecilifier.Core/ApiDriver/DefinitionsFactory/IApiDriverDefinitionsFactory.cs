@@ -75,7 +75,7 @@ public interface IApiDriverDefinitionsFactory
         out MethodDefinitionVariable methodDefinitionVariable // we can't use the method name in some scenarios (indexers, for instance) 
     );
 
-    public IEnumerable<string> Constructor(IVisitorContext context, BodiedMemberDefinitionContext definitionContext, string typeName, bool isStatic, string methodAccessibility, ParameterSpec[] parameters, string? methodDefinitionPropertyValues = null);
+    public IEnumerable<string> Constructor(IVisitorContext context, BodiedMemberDefinitionContext definitionContext, string typeName, bool isStatic, string methodAccessibility, ParameterSpec[] parameters);
     
     public IEnumerable<string> Parameter(IVisitorContext context, ParameterSpec parameterSpec, string memberVar, string paramVar);
     

@@ -22,7 +22,7 @@ internal partial class TypeDeclarationVisitor
         Context.WriteComment($"Delegate: {node.Identifier.Text}");
         
         var typeVar = Context.Naming.Delegate(node);
-        var delegateSymbol = Context.SemanticModel.GetDeclaredSymbol(node).EnsureNotNull<ISymbol, INamedTypeSymbol>();
+        var delegateSymbol = ModelExtensions.GetDeclaredSymbol(Context.SemanticModel, node).EnsureNotNull<ISymbol, INamedTypeSymbol>();
         var accessibility = TypeModifiersToCecil(delegateSymbol, node.Modifiers);
 
         EnsureContainingTypeForwarded(node, delegateSymbol);
@@ -49,17 +49,17 @@ internal partial class TypeDeclarationVisitor
             // Delegate ctor
             var parameters = new ParameterSpec[]
             {
-                new("target", Context.TypeResolver.Bcl.System.Object, RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = "System.Object" },
-                new("method", Context.TypeResolver.Bcl.System.IntPtr, RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = "System.IntPtr" },
+                new("target", Context.TypeResolver.Resolve(Context.RoslynTypeSystem.SystemObject, ResolveTargetKind.Parameter), RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = "System.Object" },
+                new("method", Context.TypeResolver.Resolve(Context.RoslynTypeSystem.SystemIntPtr, ResolveTargetKind.Parameter), RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = "System.IntPtr" },
             };
+            
             var exps = Context.ApiDefinitionsFactory.Constructor(
                 Context, 
-                new BodiedMemberDefinitionContext("ctor", ctorLocalVar, typeVar, MemberOptions.None, IlContext.None), 
+                new BodiedMemberDefinitionContext("ctor", ctorLocalVar, typeVar, MemberOptions.IsRuntime, null), 
                 node.Identifier.Text, 
                 false, 
                 "MethodAttributes.FamANDAssem | MethodAttributes.Family", 
-                parameters, 
-                "IsRuntime = true");
+                parameters);
             Context.Generate(exps);
 
             var invokeMethodVar = Context.Naming.SyntheticVariable("Invoke", ElementKind.Method);
@@ -78,39 +78,41 @@ internal partial class TypeDeclarationVisitor
             IReadOnlyList<ParameterSpec> beginInvokeParameters =
             [
                 ..node.ParameterList.Parameters.Select(p => p.ToParameterSpec(Context, beginInvokeMethodVar)),
-                new("asyncCallback", Context.TypeResolver.Bcl.System.AsyncCallback, RefKind.None, Constants.ParameterAttributes.None),
-                new("target", Context.TypeResolver.Bcl.System.Object, RefKind.None, Constants.ParameterAttributes.None)
+                new("asyncCallback", Context.TypeResolver.Resolve(Context.RoslynTypeSystem.SystemAsyncCallback, ResolveTargetKind.Parameter), RefKind.None, Constants.ParameterAttributes.None),
+                new("target", Context.TypeResolver.Resolve(Context.RoslynTypeSystem.SystemObject, ResolveTargetKind.Parameter), RefKind.None, Constants.ParameterAttributes.None)
             ];
-            
-           AddDelegateMethod(
+
+            var asyncResultTypeSymbol = Context.RoslynTypeSystem.ForType<IAsyncResult>();
+            AddDelegateMethod(
                     node.Identifier.Text,
                     typeVar,
                     "BeginInvoke",
                     beginInvokeMethodVar,
-                    Context.TypeResolver.Bcl.System.IAsyncResult,
+                    Context.TypeResolver.Resolve(asyncResultTypeSymbol, ResolveTargetKind.ReturnType),
                     beginInvokeParameters);
 
             // EndInvoke() method
             var endInvokeMethodVar = Context.Naming.SyntheticVariable("EndInvoke", ElementKind.Method);
             var endInvokeExps = Context.ApiDefinitionsFactory.Method(
                                                                         Context,
-                                                                        new BodiedMemberDefinitionContext("EndInvoke", endInvokeMethodVar, typeVar, MemberOptions.IsRuntime, IlContext.None),
+                                                                        new BodiedMemberDefinitionContext("EndInvoke", endInvokeMethodVar, typeVar, MemberOptions.IsRuntime, null),
                                                                         "declaringTypeName",
                                                                         Constants.Cecil.DelegateMethodAttributes,
-                                                                        [new ParameterSpec("ar", Context.TypeResolver.Bcl.System.IAsyncResult, RefKind.None, Constants.ParameterAttributes.None)],
+                                                                        [new ParameterSpec("ar", Context.TypeResolver.Resolve(asyncResultTypeSymbol, ResolveTargetKind.Parameter), RefKind.None, Constants.ParameterAttributes.None)],
                                                                         [],
                                                                         ctx => ctx.TypeResolver.Resolve(Context.GetTypeInfo(node.ReturnType).Type, ResolveTargetKind.ReturnType),
                                                                         out var _);
             Context.Generate(endInvokeExps);
             
             base.VisitDelegateDeclaration(node);
+            Context.OnFinishedTypeDeclaration(delegateSymbol);
         }
 
         return;
 
         void AddDelegateMethod(string delegateName, string delegateTypeVariable, string methodName, string methodVar, ResolvedType returnType, IReadOnlyList<ParameterSpec> parameters)
         {
-            BodiedMemberDefinitionContext methodDefinitionContext = new(methodName, methodVar, delegateTypeVariable, MemberOptions.IsRuntime, Context.ApiDriver.NewIlContext(Context, methodName, methodVar)); 
+            BodiedMemberDefinitionContext methodDefinitionContext = new(methodName, methodVar, delegateTypeVariable, MemberOptions.IsRuntime, null); 
             var methodToAdd = Context.ApiDefinitionsFactory.Method(
                                                     Context,
                                                     methodDefinitionContext,
@@ -119,7 +121,7 @@ internal partial class TypeDeclarationVisitor
                                                     parameters,
                                                     [],
                                                     ctx => returnType,
-                                                    out var methodDefinitionVariable);
+                                                    out var _);
             Context.Generate(methodToAdd);
         }
     }

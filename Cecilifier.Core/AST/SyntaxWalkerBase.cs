@@ -657,10 +657,22 @@ namespace Cecilifier.Core.AST
             }
 
             var localDelegateDeclaration = Context.TypeResolver.ResolveLocalVariableType(typeSymbol, ResolveTargetKind.TypeReference);
-            //TODO: Cecil dependent code. This assumes that local variable is a MethodReference or similar. Can't we simply look for the method variable instead?
+            
+            //TODO: FIX THIS HACK. We are checking localDelegateDeclarion var twice  
             var resolvedMethod = localDelegateDeclaration != null
                 ? $"{localDelegateDeclaration}.Methods.Single(m => m.Name == \"Invoke\")"
                 : ((IMethodSymbol) typeSymbol.GetMembers("Invoke").SingleOrDefault()).MethodResolverExpression(Context);
+
+            if (localDelegateDeclaration != null)
+            {
+                var target = Context.SemanticModel.GetSymbolInfo(node).Symbol.EnsureNotNull().GetMemberType();
+                resolvedMethod = ((IMethodSymbol) target.GetMembers("Invoke").SingleOrDefault()).MethodResolverExpression(Context);
+            }
+
+            // //TODO: Cecil dependent code. This assumes that local variable is a MethodReference or similar. Can't we simply look for the method variable instead?
+            // var resolvedMethod = localDelegateDeclaration != null
+            //     ? $"{localDelegateDeclaration}.Methods.Single(m => m.Name == \"Invoke\")"
+            //     : ((IMethodSymbol) typeSymbol.GetMembers("Invoke").SingleOrDefault()).MethodResolverExpression(Context);
 
             OnLastInstructionLoadingTargetOfInvocation();
             Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Callvirt, resolvedMethod.AsToken());

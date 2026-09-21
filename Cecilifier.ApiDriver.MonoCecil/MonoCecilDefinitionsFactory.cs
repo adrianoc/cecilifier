@@ -265,18 +265,19 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
         }
     }
 
-    public IEnumerable<string> Constructor(IVisitorContext context, BodiedMemberDefinitionContext definitionContext, string typeName, bool isStatic, string methodAccessibility, ParameterSpec[] parameters, string? methodDefinitionPropertyValues = null)
+    public IEnumerable<string> Constructor(IVisitorContext context, BodiedMemberDefinitionContext definitionContext, string typeName, bool isStatic, string methodAccessibility, ParameterSpec[] parameters)
     {
         var ctorName = Utils.ConstructorMethodName(isStatic);
         context.DefinitionVariables.RegisterMethod(typeName, ctorName, parameters.Select(p => p.RegistrationTypeName).ToArray()!, [], definitionContext.Member.DefinitionVariable);
 
-        var exp = $@"var {definitionContext.Member.DefinitionVariable} = new MethodDefinition(""{ctorName}"", {methodAccessibility} | MethodAttributes.HideBySig | {Constants.Cecil.CtorAttributes}, assembly.MainModule.TypeSystem.Void)";
-        if (methodDefinitionPropertyValues != null)
+        var exps = new List<string>();
+        exps.Add($@"var {definitionContext.Member.DefinitionVariable} = new MethodDefinition(""{ctorName}"", {methodAccessibility} | MethodAttributes.HideBySig | {Constants.Cecil.CtorAttributes}, assembly.MainModule.TypeSystem.Void);");
+        if (definitionContext.Options.HasFlag(MemberOptions.IsRuntime))
         {
-            exp = exp + $"{{ {methodDefinitionPropertyValues} }}";
+            exps[^1] = exps[^1].Substring(0, exps[^1].Length - 1); // removes the last `;`
+            exps.Add("{ IsRuntime = true };");
         }
 
-        var exps = new List<string> { exp + ";" };
         foreach (var parameter in parameters)
         {
             var paramVar = context.Naming.Parameter("ctor");

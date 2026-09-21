@@ -118,8 +118,7 @@ public class PrimaryConstructorGenerator
             typeName, 
             false, 
             "MethodAttributes.Public", 
-            parameters, 
-            null);
+            parameters);
         var ctorExp = exps;
         context.Generate(ctorExp);
 

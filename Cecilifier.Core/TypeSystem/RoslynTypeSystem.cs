@@ -53,6 +53,7 @@ public struct RoslynTypeSystem
         SystemRuntimeCompilerServicesCompilerGeneratedAttribute = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(CompilerGeneratedAttribute).FullName);
         SystemEnum =  ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Enum);
         SystemMulticastDelegate =  ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_MulticastDelegate);
+        SystemAsyncCallback = ForType<AsyncCallback>();
     }
 
     public ITypeSymbol SystemIndex { get; }
@@ -91,6 +92,7 @@ public struct RoslynTypeSystem
     public ITypeSymbol SystemCollectionsGenericICollectionOfT { get; }
     public ITypeSymbol SystemEnum { get; }
     public ITypeSymbol SystemMulticastDelegate { get; }
+    public ITypeSymbol SystemAsyncCallback { get; }
 
     public readonly ITypeSymbol ForType<TType>()
     {

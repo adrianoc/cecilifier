@@ -285,7 +285,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
             ctx.Generate($"""
                           var {methodDefVar}  = metadata.AddMethodDefinition(
                                                     {methodModifiers},
-                                                    MethodImplAttributes.IL | MethodImplAttributes.Managed,
+                                                    { "MethodImplAttributes.IL | MethodImplAttributes.Managed".AppendEnumFlagConditional("MethodImplAttributes.Runtime", definitionContext.Options.HasFlag(MemberOptions.IsRuntime)) },
                                                     metadata.GetOrAddString("{definitionContext.Member.Name}"),
                                                     {methodSignatureVar.VariableName},
                                                     {methodBodyOffset},
@@ -314,16 +314,21 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         return [];
     }
 
-    public IEnumerable<string> Constructor(IVisitorContext context, BodiedMemberDefinitionContext definitionContext, string typeName, bool isStatic, string methodAccessibility, ParameterSpec[] parameters, string? methodDefinitionPropertyValues = null)
+    public IEnumerable<string> Constructor(IVisitorContext context, BodiedMemberDefinitionContext definitionContext, string typeName, bool isStatic, string methodAccessibility, ParameterSpec[] parameters)
     {
         var nameAsIdentifier = typeName.ToValidIdentifier();
-        var parameterlessCtorSignatureVar = context.Naming.SyntheticVariable($"{nameAsIdentifier}_ctorSignature", ElementKind.MemberReference);
+        var parameterCtorSignatureVar = context.Naming.SyntheticVariable($"{nameAsIdentifier}_ctorSignature", ElementKind.MemberReference);
         yield return Format(
             $$"""
-              var {{parameterlessCtorSignatureVar}} = new BlobBuilder();
-              new BlobEncoder({{parameterlessCtorSignatureVar}})
+              var {{parameterCtorSignatureVar}} = new BlobBuilder();
+              new BlobEncoder({{parameterCtorSignatureVar}})
                      .MethodSignature(isInstanceMethod: {{ (!isStatic).ToKeyword()}})
-                     .Parameters(0, returnType => returnType.Void(), parameters => { });
+                     .Parameters({{parameters.Length}}, returnType => returnType.Void(), parameters => 
+                     {
+                     {{
+                         string.Join('\n', parameters.Select(p => $"""parameters.AddParameter().{p.ElementType};"""))
+                     }} 
+                     });
               """);
         
         var parentDefinitionVariable = definitionContext.Member.ParentDefinitionVariable ?? throw new ArgumentNullException(nameof(definitionContext.Member.ParentDefinitionVariable));
@@ -331,17 +336,21 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         {
             EmitLocalVariables(ctx, "ctor", in methodRecord);
             
-            Debug.Assert(definitionContext.IlContext != null);
+            var ctorBodyOffset = definitionContext.IlContext != null                
+                 ? $"methodBodyStream.AddMethodBody({definitionContext.IlContext.VariableName}, localVariablesSignature: {methodRecord.LocalSignatureHandleVariable})"
+                 : "-1"; // ilcontext is null meaning the method don't have a body whence we need to set offset to -1
+            
             var ctorDefVar = ctx.Naming.SyntheticVariable($"{nameAsIdentifier}_Ctor", ElementKind.MemberReference);
+            var ctorAttributes = "MethodImplAttributes.IL | MethodImplAttributes.Managed".AppendEnumFlagConditional("MethodImplAttributes.Runtime", definitionContext.Options.HasFlag(MemberOptions.IsRuntime));
             ctx.Generate($"""
-                                   var {ctorDefVar} = metadata.AddMethodDefinition(
-                                                             {(isStatic ? "MethodAttributes.Private | MethodAttributes.Static" : methodAccessibility)} | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName,
-                                                             MethodImplAttributes.IL | MethodImplAttributes.Managed,
-                                                             metadata.GetOrAddString("{(isStatic ? ".cctor" : ".ctor")}"),
-                                                             metadata.GetOrAddBlob({parameterlessCtorSignatureVar}),
-                                                             methodBodyStream.AddMethodBody({definitionContext.IlContext.VariableName}, localVariablesSignature: {methodRecord.LocalSignatureHandleVariable}),
-                                                             parameterList: {methodRecord.FirstParameterHandle});
-                                   """);
+                 var {ctorDefVar} = metadata.AddMethodDefinition(
+                                           {(isStatic ? "MethodAttributes.Private | MethodAttributes.Static" : methodAccessibility)} | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName,
+                                           {ctorAttributes},
+                                           metadata.GetOrAddString("{(isStatic ? ".cctor" : ".ctor")}"),
+                                           metadata.GetOrAddBlob({parameterCtorSignatureVar}),
+                                           {ctorBodyOffset},
+                                           parameterList: {methodRecord.FirstParameterHandle});
+                 """);
             
             ctx.WriteNewLine();
             ctx.WriteNewLine();
