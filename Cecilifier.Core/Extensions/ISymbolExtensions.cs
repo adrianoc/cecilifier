@@ -249,7 +249,16 @@ namespace Cecilifier.Core.Extensions
 
         static object AsLocalVariable(string expression) => expression.AsLocalVariable();
         static object AsToken(string expression) => expression.AsToken();
-    
+
+        public static OpCode LoadOpCodeFor(this ISymbol member) => member switch
+        {
+            IParameterSymbol => OpCodes.Ldarg,
+            IFieldSymbol => OpCodes.Ldfld,
+            ILocalSymbol => OpCodes.Ldloc,
+            _ => throw new InvalidOperationException($"Unsupported symbol type {member.GetType().Namespace} for {member.Name}")
+        };
+        
+        //TODO: Rename to LoadOpcodeForLiteral
         public static OpCode LoadOpCodeFor(this ITypeSymbol type)
         {
             return type.SpecialType switch

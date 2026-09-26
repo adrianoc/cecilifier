@@ -563,7 +563,7 @@ namespace Cecilifier.Core.AST
                 needsLoadIndirect =
                     assigment.Left != expression &&
                     (assigment.Right == expression && sourceIsByRef && !targetIsByRef // simple assignment like: nonRef = ref;
-                    || sourceIsByRef && !assigment.Right.IsKind(SyntaxKind.RefExpression)); // complex assignment like: nonRef = ref + 10;
+                    || sourceIsByRef && (!assigment.Right.IsKind(SyntaxKind.RefExpression) && !assigment.Right.IsKind(SyntaxKind.PreDecrementExpression) && !assigment.Right.IsKind(SyntaxKind.PreIncrementExpression))); // complex assignment like: nonRef = ref + 10;
             }
             else if (argument != null)
             {

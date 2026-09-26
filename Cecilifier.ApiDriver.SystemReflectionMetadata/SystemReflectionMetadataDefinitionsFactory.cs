@@ -159,7 +159,9 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         // Resolve the method to make sure there's a method ref available (this will be used to fulfill any references to this method)
         context.MemberResolver.ResolveMethod(methodSymbol);
         
-        var paramIndexOffset = methodSymbol.IsStatic ? 0 : 1;
+        //TODO: Introduce ISymbolExtensions.AdjustedParameterIndex(this IParameterSymbol parameter) and removed duplication (search for MethodKind.LocalFunction)
+        var paramIndexOffset = (methodSymbol.IsStatic || methodSymbol.MethodKind == MethodKind.LocalFunction)? 0 : 1; // Local functions are always handled as static
+        
         // register all parameters so we can reference them when emitting the method body
         foreach (var parameter in methodSymbol.Parameters)
         {
