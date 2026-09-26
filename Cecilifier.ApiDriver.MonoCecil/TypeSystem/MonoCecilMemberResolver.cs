@@ -143,7 +143,7 @@ public class MonoCecilMemberResolver(MonoCecilContext context) : IMemberResolver
                                 HasThis = {{methodWithIncorrectDeclaringType}}.HasThis,
                                 CallingConvention = {{methodWithIncorrectDeclaringType}}.CallingConvention,
                                 ExplicitThis = {{methodWithIncorrectDeclaringType}}.ExplicitThis,
-                                DeclaringType = {{methodWithIncorrectDeclaringType}}.DeclaringType.MakeGenericInstanceType({{correctDeclaringType}}.GenericArguments.ToArray()),
+                                DeclaringType = {{correctDeclaringType}},
                           };
                           """);
         context.WriteNewLine();

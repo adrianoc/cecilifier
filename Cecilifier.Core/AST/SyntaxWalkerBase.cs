@@ -194,7 +194,7 @@ namespace Cecilifier.Core.AST
 
         private void LoadLiteralToStackHandlingCallOnValueTypeLiterals(IlContext ilVar, ITypeSymbol literalType, object literalValue, UsageResult usageResult)
         {
-            var opCode = literalType.LoadOpCodeFor();
+            var opCode = literalType.LoadOpcodeForLiteral();
             Context.ApiDriver.WriteCilInstruction(Context, ilVar, opCode, literalType.ToCilOperandValue(literalValue));
             if (usageResult.Kind == UsageKind.CallTarget)
             {
@@ -341,9 +341,7 @@ namespace Cecilifier.Core.AST
                 return;
             
             node.Parent.EnsureNotNull();
-            // We only support non-capturing lambda expressions so we handle those as static (even if the code does not mark them explicitly as such)
-            // if/when we decide to support lambdas that captures variables/fields/params/etc we will probably need to revisit this.
-            var adjustedParameterIndex = paramSymbol.Ordinal + (method.IsStatic || method.MethodKind == MethodKind.AnonymousFunction || method.MethodKind == MethodKind.LocalFunction ? 0 : 1);
+            var adjustedParameterIndex = paramSymbol.AdjustedParameterIndex();
             if (adjustedParameterIndex > 3)
             {
                 Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldarg, adjustedParameterIndex);

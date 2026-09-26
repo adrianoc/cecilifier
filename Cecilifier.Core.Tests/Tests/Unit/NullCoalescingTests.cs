@@ -100,10 +100,10 @@ public class NullCoalescingTests : CecilifierUnitTestBase
                        \s+HasThis = \k<ctor>.HasThis,
                        \s+CallingConvention = \k<ctor>.CallingConvention,
                        \s+ExplicitThis = \k<ctor>.ExplicitThis,
-                       \s+DeclaringType = \k<ctor>.DeclaringType.MakeGenericInstanceType\(\k<type>.GenericArguments.ToArray\(\)\),
+                       \s+DeclaringType = \k<type>,
                        \s+};
                        \s+r_genericMethod_\d+.Parameters.Add\(new ParameterDefinition\(\k<ctor>.Parameters\[0\].Name, \k<ctor>.Parameters\[0\].Attributes, \k<ctor>.Parameters\[0\].ParameterType\)\);
-                       \k<emit>Newobj, r_genericMethod_18\);
+                       \k<emit>Newobj, r_genericMethod_21\);
                        \k<emit>Ret\);
                        \s+il_m3_\d+\.Append\(\k<loadLeftValue>\);
                        \k<emit>Ldloc, l_leftValue_\d+\);

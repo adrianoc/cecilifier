@@ -158,17 +158,14 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
 
         // Resolve the method to make sure there's a method ref available (this will be used to fulfill any references to this method)
         context.MemberResolver.ResolveMethod(methodSymbol);
-        
-        //TODO: Introduce ISymbolExtensions.AdjustedParameterIndex(this IParameterSymbol parameter) and removed duplication (search for MethodKind.LocalFunction)
-        var paramIndexOffset = (methodSymbol.IsStatic || methodSymbol.MethodKind == MethodKind.LocalFunction)? 0 : 1; // Local functions are always handled as static
-        
+
         // register all parameters so we can reference them when emitting the method body
         foreach (var parameter in methodSymbol.Parameters)
         {
             // This is a hack. SRM accesses parameters by index, and Cecilifier does not have a way to pass that index around; it only has variable names,
             // so we record the `index` of the parameter as the variable name.
             // Code that emits Ldarg/Starg/etc will use this `name` (actually the parameter index) as its operand (this is similar to the way we handle local variables)
-            context.DefinitionVariables.RegisterNonMethod(methodSymbol.ToDisplayString(), parameter.Name, VariableMemberKind.Parameter, (parameter.Ordinal + paramIndexOffset).ToString());
+            context.DefinitionVariables.RegisterNonMethod(methodSymbol.ToDisplayString(), parameter.Name, VariableMemberKind.Parameter, parameter.AdjustedParameterIndex().ToString());
         }
 
         var memberParentDefinitionVariable = bodiedMemberDefinitionContext.Member.ParentDefinitionVariable ?? throw new ArgumentNullException(nameof(bodiedMemberDefinitionContext.Member.ParentDefinitionVariable));

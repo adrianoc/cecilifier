@@ -258,8 +258,7 @@ namespace Cecilifier.Core.Extensions
             _ => throw new InvalidOperationException($"Unsupported symbol type {member.GetType().Namespace} for {member.Name}")
         };
         
-        //TODO: Rename to LoadOpcodeForLiteral
-        public static OpCode LoadOpCodeFor(this ITypeSymbol type)
+        public static OpCode LoadOpcodeForLiteral(this ITypeSymbol type)
         {
             return type.SpecialType switch
             {
@@ -310,6 +309,13 @@ namespace Cecilifier.Core.Extensions
             _ => throw new ArgumentOutOfRangeException(nameof(literalType), literalType, null)
         };
 
+        // We only support non-capturing lambda expressions so we handle those as static (even if the code does not mark them explicitly as such)
+        // if/when we decide to support lambdas that captures variables/fields/params/etc we will probably need to revisit this.
+        public static int AdjustedParameterIndex(this IParameterSymbol parameter) => parameter.Ordinal + 
+                                                                                     (parameter.ContainingSymbol.IsStatic 
+                                                                                      || ((IMethodSymbol) parameter.ContainingSymbol).MethodKind == MethodKind.LocalFunction
+                                                                                      || ((IMethodSymbol) parameter.ContainingSymbol).MethodKind == MethodKind.AnonymousFunction ? 0 : 1); // Local functions are always handled as static;
+        
         public static IMethodSymbol ParameterlessCtor(this ITypeSymbol self) => self.GetMembers(".ctor").OfType<IMethodSymbol>().Single(ctor => ctor.Parameters.Length == 0);
         public static IMethodSymbol Ctor(this ITypeSymbol self, params ITypeSymbol[] parameters) => self.GetMembers(".ctor")
                                                                                                 .OfType<IMethodSymbol>()
