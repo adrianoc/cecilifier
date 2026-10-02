@@ -40,7 +40,7 @@ namespace Cecilifier.Core.AST
                                                         [], 
                                                         [], 
                                                         []);
-            AddCecilExpressions(Context, typeDef);
+            Context.Generate(typeDef);
 
             var parentName = _enumSymbol.ContainingSymbol.ToDisplayString();
             string declaringTypeName = _enumSymbol.ToDisplayString();
@@ -50,7 +50,7 @@ namespace Cecilifier.Core.AST
                 var fieldVar = Context.Naming.LocalVariable(node);
                 var definitionContext = new MemberDefinitionContext("value__", "value__", fieldVar, enumTypeVariable);
                 var valueFieldExp = Context.ApiDefinitionsFactory.Field(Context, definitionContext, declaringTypeName, Context.TypeResolver.Resolve(Context.RoslynTypeSystem.SystemInt32, ResolveTargetKind.Field), "FieldAttributes.SpecialName | FieldAttributes.RTSpecialName | FieldAttributes.Public", false, false);
-                AddCecilExpressions(Context, valueFieldExp);
+                Context.Generate(valueFieldExp);
 
                 HandleAttributesInMemberDeclaration(node.Identifier.Text, node.AttributeLists, enumTypeVariable, VariableMemberKind.Type);
 
@@ -75,7 +75,7 @@ namespace Cecilifier.Core.AST
             // Re-resolve the enum type  in a way that it will return a valid reference to be used as a field type.
             var enumType = Context.TypeResolver.Resolve(Context.SemanticModel.GetDeclaredSymbol(node.Parent).EnsureNotNull<ISymbol, INamedTypeSymbol>(), new TypeResolutionContext(ResolveTargetKind.Field, TypeResolutionOptions.IsValueType));
             var exp = Context.ApiDefinitionsFactory.Field(Context, new MemberDefinitionContext(node.Identifier.ValueText, fieldVar, enumVarDef.VariableName), declaringTypeName, enumType, "FieldAttributes.Static | FieldAttributes.Literal | FieldAttributes.Public | FieldAttributes.HasDefault", false, false, enumMemberValue);
-            AddCecilExpressions(Context, exp);
+            Context.Generate(exp);
 
             HandleAttributesInMemberDeclaration(node.Identifier.Text, node.AttributeLists, fieldVar, VariableMemberKind.Field);
 

@@ -46,6 +46,19 @@ namespace Cecilifier.Core.Extensions
 
             return $"{to} | {flag}";
         }
+        
+        public static string AppendEnumFlagConditional(this string to, string flag, bool condition)
+        {
+            if (!condition) return to;
+            
+            if (string.IsNullOrWhiteSpace(flag))
+                return to;
+
+            if (string.IsNullOrEmpty(to))
+                return flag;
+
+            return $"{to} | {flag}";
+        }
 
         public static StringBuilder AppendEnumFlag(this StringBuilder to, string flag)
         {

@@ -51,43 +51,12 @@ namespace Cecilifier.Core.Misc
             return $"new ParameterDefinition(\"{name}\", {paramAttributes}, {resolvedType})";
         }
 
-        public static IEnumerable<string> Parameter(IVisitorContext ctx, string name, RefKind byRef, string? paramsAttributeTypeName, string methodVar, string paramVar, ResolvedType resolvedType, string paramAttributes, (string? Value, bool Present) defaultParameterValue)
-        {
-            var exps = new List<string>();
-
-            exps.Add($"var {paramVar} = {ParameterDoesNotHandleParamsKeywordOrDefaultValue(ctx.TypeResolver, name, byRef, resolvedType, paramAttributes)};");
-            if (!string.IsNullOrWhiteSpace(paramsAttributeTypeName))
-            {
-                exps.Add($"{paramVar}.CustomAttributes.Add(new CustomAttribute(assembly.MainModule.Import(typeof({paramsAttributeTypeName}).GetConstructor(BindingFlags.Public | BindingFlags.Instance, null, new Type[0], null))));");
-            }
-
-            if (defaultParameterValue.Present)
-                exps.Add($"{paramVar}.Constant = {defaultParameterValue.Value ?? "null" };");
-
-            exps.Add($"{methodVar}.Parameters.Add({paramVar});");
-
-            return exps;
-        }
-
         public static IEnumerable<string> Parameter(IVisitorContext context, ParameterSyntax node, string methodVar, string paramVar)
         {
+            // This has no ApiDriver specific APIs calls so for now I'll leave it in this class (even though it is not Cecil specific)
             var paramSymbol = context.SemanticModel.GetDeclaredSymbol(node);
-            TypeDeclarationVisitor.EnsureForwardedTypeDefinition(context, paramSymbol!.Type, Array.Empty<TypeParameterSyntax>());
-            return Parameter(context, paramSymbol, methodVar, paramVar);
-        }
-
-        public static IEnumerable<string> Parameter(IVisitorContext context, IParameterSymbol paramSymbol, string methodVar, string paramVar)
-        {
-            return Parameter(
-                context,
-                paramSymbol.Name,
-                paramSymbol.RefKind,
-                paramSymbol.ParamsAttributeMatchingType(),
-                methodVar,
-                paramVar,
-                context.TypeResolver.Resolve(paramSymbol.Type, ResolveTargetKind.Parameter.ToTypeResolutionContext(methodVar)),
-                paramSymbol.AsParameterAttribute(),
-                paramSymbol.ExplicitDefaultValue(rawString: false));
+            TypeDeclarationVisitor.EnsureForwardedTypeDefinition(context, paramSymbol!.Type, []);
+            return context.ApiDefinitionsFactory.Parameter(context, paramSymbol.ToParameterSpec(context, methodVar), methodVar, paramVar);
         }
 
         public static string DefaultTypeAttributeFor(TypeKind typeKind, bool hasStaticCtor)

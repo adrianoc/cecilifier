@@ -20,8 +20,13 @@ public class DelegateTests : CecilifierUnitTestBase
         Assert.That(cecilifiedCode, Does.Match(@"var m_invoke_\d+ = new MethodDefinition\(""Invoke"", .+assembly.MainModule.TypeSystem.Int32\)"));
 
         Assert.That(cecilifiedCode, Does.Match(@"var m_beginInvoke_\d+ = new MethodDefinition\(""BeginInvoke"",.+ImportReference\(typeof\(System\.IAsyncResult\)\)\).*"));
-        Assert.That(cecilifiedCode, Does.Match(@"m_beginInvoke_\d+.Parameters.Add\(new ParameterDefinition\(assembly.MainModule.ImportReference\(typeof\(System.AsyncCallback\)\)\)\);\s+"));
-        Assert.That(cecilifiedCode, Does.Match(@"m_beginInvoke_\d+.Parameters.Add\(new ParameterDefinition\(assembly.MainModule.TypeSystem.Object\)\);\s+"));
+        
+        Assert.That(cecilifiedCode, Does.Match("""
+                                               \s+var (?<callback>p_asyncCallback_\d+) = new ParameterDefinition\("asyncCallback", ParameterAttributes.None, .+ImportReference\(typeof\(System.AsyncCallback\)\)\);
+                                               \s+m_beginInvoke_\d+.Parameters.Add\(\k<callback>\);
+                                               \s+var (?<target>p_target_\d+) = new ParameterDefinition\("target", ParameterAttributes.None, assembly.MainModule.TypeSystem.Object\);
+                                               \s+m_beginInvoke_\d+.Parameters.Add\(\k<target>\);
+                                               """));
 
         Assert.That(cecilifiedCode, Does.Match(@"var m_endInvoke_\d+ = new MethodDefinition\(""EndInvoke"",.+assembly.MainModule.TypeSystem.Int32\);\s+"));
         Assert.That(cecilifiedCode, Does.Match(@"var p_ar_\d+ = new ParameterDefinition\(""ar"",.+ImportReference\(typeof\(System.IAsyncResult\)\)\);"));

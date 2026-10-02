@@ -13,6 +13,7 @@ namespace Cecilifier.Core.Tests.Integration
         nameof(TestDelegateInvocation),
         nameof(TestAccessibilityModifiers),
         nameof(TestNamespaces), 
+        nameof(TestPointerTypes), 
         nameof(AttributesOnMembers), 
         nameof(TestAttributesOnExplicitTargets), 
         nameof(TestAttributeWithArrayInitializer), 
@@ -25,7 +26,6 @@ namespace Cecilifier.Core.Tests.Integration
         [TestCase("Parameters2")]
         [TestCase("LocalVariables")]
         [TestCase("OnFields")]
-        [ParameterizedResourceFilter<SystemReflectionMetadataContext>("Parameters2")]
         public void TestDelegateInvocation(string storageType)
         {
             AssertResourceTest($"Misc/DelegateInvocation_{storageType}");
@@ -85,7 +85,6 @@ namespace Cecilifier.Core.Tests.Integration
         [TestCase("InterfaceAndMembers")]
         [TestCase("EnumAndMembers")]
         [TestCase("StructAndMembers")]
-        [ParameterizedResourceFilter<SystemReflectionMetadataContext>("ClassAndMembers", "InterfaceAndMembers", "StructAndMembers", "EnumAndMembers")]
         public void AttributesOnMembers(string typeKind)
         {
             AssertResourceTest($"Misc/Attributes/AttributesOn{typeKind}");

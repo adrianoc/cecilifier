@@ -25,4 +25,15 @@ public class StatementTests<TContext> : OutputBasedTestBase<TContext> where TCon
                      }    
                      """, "No Arguments|@Else");
     }
+
+    [Test]
+    public void Unconsumed_ReturnType_DoesNotCrash_Issue338()
+    {
+        AssertOutput("""
+                     M("X");
+                     System.Console.Write("Reached this point");
+                     
+                     void M(string s) => s.ToUpper();
+                     """, "Reached this point");
+    }
 }

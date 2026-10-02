@@ -91,6 +91,8 @@ public class ParamsTests : CecilifierUnitTestBase
             Does.Match($"""
                          //M\(1, 2, 3\);
                          \s+var (?<mv>m_M_\d+) = new MethodDefinition\(".+g__M\|0_0", MethodAttributes.Private, assembly.MainModule.TypeSystem.Void\);
+                         \s+\k<mv>\.HasThis = true;
+                         \s+\k<mv>\.IsStatic = false;
                          \s+var (?<pp>p_items_\d+) = new ParameterDefinition\("items", ParameterAttributes.None,{actualCecilParameterType}.?\);
                          \s+\k<pp>\.CustomAttributes\.Add\(new CustomAttribute\(.+{paramsAttribute}\)\.GetConstructor\(.+\)\)\)\);
                          \s+\k<mv>\.Parameters\.Add\(\k<pp>\);

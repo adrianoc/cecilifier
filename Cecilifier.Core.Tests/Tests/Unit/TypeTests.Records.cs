@@ -77,6 +77,8 @@ public class RecordTests : CecilifierUnitTestBase
         Assert.That(cecilifiedCode, Does.Match("""
                                                //IEquatable<>.Equals\(TheRecord other\)
                                                \s+var (?<eq>m_equals_\d+) = new MethodDefinition\("Equals", (MethodAttributes.)Public \| \1HideBySig \| \1NewSlot \| \1Virtual, .+TypeSystem.Boolean\);
+                                               \s+\k<eq>\.HasThis = true;
+                                               \s+\k<eq>\.IsStatic = false;
                                                \s+var (?<param>p_other_\d+) = new ParameterDefinition\("other", ParameterAttributes.None, (?<rec_var>rec_theRecord_\d+)\);
                                                \s+\k<eq>.Parameters.Add\(\k<param>\);
                                                \s+\k<rec_var>.Methods.Add\(\k<eq>\);
@@ -186,6 +188,8 @@ public class RecordTests : CecilifierUnitTestBase
             Assert.That(cecilifiedCode, Does.Match($"""
                                                     //{propertyName} getter
                                                     \s+var (m_get{propertyName}_\d+) = new MethodDefinition\("get_{propertyName}", (MethodAttributes\.)Public \| \2HideBySig \| \2SpecialName, {propertyType}\);
+                                                    \s+\1\.HasThis = true;
+                                                    \s+\1\.IsStatic = false;
                                                     \s+rec_theRecord_\d+.Methods.Add\(\1\);
                                                     """));
         
@@ -193,6 +197,8 @@ public class RecordTests : CecilifierUnitTestBase
             Assert.That(cecilifiedCode, Does.Match($"""
                                                     //{propertyName} init
                                                     \s+var (m_set{propertyName}_\d+) = new MethodDefinition\("set_{propertyName}", (MethodAttributes\.)Public \| \2HideBySig \| \2SpecialName, new RequiredModifierType\(.+ImportReference\(typeof\(.+IsExternalInit\)\), .+Void\)\);
+                                                    \s+\1.HasThis = true;
+                                                    \s+\1.IsStatic = false;
                                                     \s+var (p_value_\d+) = new ParameterDefinition\("value", ParameterAttributes.None, {propertyType}\);
                                                     \s+\1.Parameters.Add\(\3\);
                                                     \s+rec_theRecord_\d+.Methods.Add\(\1\);

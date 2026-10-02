@@ -70,7 +70,7 @@ namespace Cecilifier.Core.Extensions
             //       - is constrained to 'struct'
             //    2. Source of assignment (or variable initialization) to a reference type
             //    3. Argument for a reference type parameter
-            // requires boxing, but for some reason, the conversion returned by GetConversion() does not reflects that. 
+            // requires boxing, but for some reason, the conversion returned by GetConversion() does not reflect that. 
             static bool NeedsBoxing(IVisitorContext context, ExpressionSyntax expression, ITypeSymbol type)
             {
                 var needsBoxing = type.TypeKind == TypeKind.TypeParameter && 

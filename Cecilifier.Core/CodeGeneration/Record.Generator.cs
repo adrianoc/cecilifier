@@ -125,14 +125,12 @@ internal partial class RecordGenerator
                                 new BodiedMemberDefinitionContext("ctor", copyCtorVar, recordTypeDefinitionVariable, MemberOptions.None, IlContext.None), 
                                 _recordSymbol.OriginalDefinition.ToDisplayString(), 
                                 false, 
-                                Constants.Cecil.CtorAttributes.AppendEnumFlag("MethodAttributes.Family | MethodAttributes.HideBySig"), 
-                                new[] { _recordSymbol.ToDisplayString() });
+                                Constants.Cecil.CtorAttributes.AppendEnumFlag("MethodAttributes.Family | MethodAttributes.HideBySig"),
+                                [
+                                    new ParameterSpec("other", context.TypeResolver.Resolve(_recordSymbol, ResolveTargetKind.Parameter), RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = _recordSymbol.ToDisplayString() }
+                                ]);
 
-            context.Generate(
-            [
-                ..exps,
-                ..CecilDefinitionsFactory.Parameter(context, "other", RefKind.None, null, copyCtorVar, context.Naming.Parameter("other"), context.TypeResolver.Resolve(_recordSymbol, ResolveTargetKind.Parameter), Constants.ParameterAttributes.None, (null, false))
-            ]);
+            context.Generate(exps);
         }
         else
             context.Generate($"{recordTypeDefinitionVariable}.Methods.Add({copyCtorVar});");
@@ -208,7 +206,7 @@ internal partial class RecordGenerator
         Func<IVisitorContext, ResolvedType> returnTypeResolver = ctx => ctx.TypeResolver.Bcl.System.Boolean;
         var equalsOperatorMethodExps = context.ApiDefinitionsFactory.Method(
                                                                         context, 
-                                                                        new BodiedMemberDefinitionContext(methodName, equalsOperatorMethodVar, recordTypeDefinitionVariable, MemberOptions.None, IlContext.None), 
+                                                                        new BodiedMemberDefinitionContext(methodName, equalsOperatorMethodVar, recordTypeDefinitionVariable, MemberOptions.Static, IlContext.None), 
                                                                         declaringTypeName, 
                                                                         Constants.Cecil.PublicOverrideOperatorAttributes, 
                                                                         parameters, 
@@ -243,7 +241,6 @@ internal partial class RecordGenerator
 
         var bodyExps = context.ApiDefinitionsFactory.MethodBody(context, methodName, context.ApiDriver.NewIlContext(context, methodName, equalsOperatorMethodVar), [], equalsBodyInstructions);
         context.Generate(bodyExps);
-        context.Generate($"{recordTypeDefinitionVariable}.Methods.Add({equalsOperatorMethodVar});");
         AddCompilerGeneratedAttributeTo(context, equalsOperatorMethodVar, VariableMemberKind.Method);
         
         if (!_recordSymbol.IsValueType)
@@ -267,7 +264,7 @@ internal partial class RecordGenerator
         Func<IVisitorContext, ResolvedType> returnTypeResolver = ctx => ctx.TypeResolver.Bcl.System.Boolean;
         var inequalityOperatorMethodExps = context.ApiDefinitionsFactory.Method(
             context, 
-            new BodiedMemberDefinitionContext(methodName, inequalityOperatorMethodVar, recordTypeDefinitionVariable, MemberOptions.None, IlContext.None), 
+            new BodiedMemberDefinitionContext(methodName, inequalityOperatorMethodVar, recordTypeDefinitionVariable, MemberOptions.Static, IlContext.None), 
             declaringTypeName, 
             Constants.Cecil.PublicOverrideOperatorAttributes, 
             parameters, 

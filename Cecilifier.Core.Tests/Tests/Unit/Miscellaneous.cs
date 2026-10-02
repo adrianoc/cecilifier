@@ -38,10 +38,12 @@ public static class ObjectMaker
 {
 	public static bool Test(CustomDelegate cd) => cd == null;
 }";
-            var expectedCecilifiedCode = @"il_test_10.Emit\(OpCodes.Ldarg_0\).+\s+" +
-                                         @"il_test_10.Emit\(OpCodes.Ldnull\).+\s+" +
-                                         @"il_test_10.Emit\(OpCodes.Ceq\).+\s+" +
-                                         @"il_test_10.Emit\(OpCodes.Ret\);";
+            var expectedCecilifiedCode = """
+                                         (?<emit>\s+il_test_\d+.Emit\(OpCodes\.)Ldarg_0\);
+                                         \k<emit>Ldnull\);
+                                         \k<emit>Ceq\);
+                                         \k<emit>Ret\);
+                                         """;
 
             var result = RunCecilifier(code);
             var cecilifiedCode = result.GeneratedCode.ReadToEnd();

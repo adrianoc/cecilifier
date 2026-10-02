@@ -1,11 +1,12 @@
 using Cecilifier.Core.Extensions;
+using Cecilifier.Core.TypeSystem;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Cecilifier.Core.AST;
 
-internal class DefaultParameterExtractorVisitor : CSharpSyntaxVisitor<string>
+internal class DefaultParameterExtractorVisitor : CSharpSyntaxVisitor<DefaultValue>
 {
     public static DefaultParameterExtractorVisitor Instance { get; private set; }
 
@@ -20,20 +21,20 @@ internal class DefaultParameterExtractorVisitor : CSharpSyntaxVisitor<string>
         this.context = context;
     }
 
-    public override string VisitParameter(ParameterSyntax node)
+    public override DefaultValue VisitParameter(ParameterSyntax node)
     {
         if (node.Default == null)
-            return null;
+            return default;
 
         return node.Default.Value.Accept(this);
     }
 
-    public override string VisitPrefixUnaryExpression(PrefixUnaryExpressionSyntax node)
+    public override DefaultValue VisitPrefixUnaryExpression(PrefixUnaryExpressionSyntax node)
     {
-        return $"{node.OperatorToken}{node.Operand.Accept(this)}";
+        return $"{node.OperatorToken}{node.Operand.Accept(this).Value}";
     }
 
-    public override string VisitLiteralExpression(LiteralExpressionSyntax node)
+    public override DefaultValue VisitLiteralExpression(LiteralExpressionSyntax node)
     {
         if (node.IsKind(SyntaxKind.DefaultLiteralExpression))
             return context.GetTypeInfo(node).Type.ValueForDefaultLiteral() ?? "null";
@@ -45,7 +46,7 @@ internal class DefaultParameterExtractorVisitor : CSharpSyntaxVisitor<string>
         return literalValue;
     }
 
-    public override string VisitDefaultExpression(DefaultExpressionSyntax node) => context.GetTypeInfo(node.Type).Type.ValueForDefaultLiteral();
+    public override DefaultValue VisitDefaultExpression(DefaultExpressionSyntax node) => context.GetTypeInfo(node.Type).Type.ValueForDefaultLiteral();
 
     private readonly IVisitorContext context;
 }

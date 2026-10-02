@@ -403,7 +403,7 @@ function setTooltips(cecilifierVersion,
                      frameWorkVersion,
                      buildDate,
                      buildGitRevision) {
-    let msg = `Cecilifier is meant to make it easier to learn how to use <a href="https://github.com/jbevain/cecil" target="_blank">Mono.Cecil</a>.<br/>You can read more details about it in its <a href="https://programing-fun.blogspot.com/2019/02/making-it-easier-to-getting-started.html" target="_blank">blog announcement</a>.<br/><br/>Version ${cecilifierVersion} (${frameWorkVersion})<br/>Git Commig: <a href="https://github.com/adrianoc/cecilifier/commit/${buildGitRevision}">${buildGitRevision}</a></br>Built on: ${buildDate}`;
+    let msg = `Cecilifier is meant to make it easier to learn how to use <a href="https://github.com/jbevain/cecil" target="_blank">Mono.Cecil</a> / <a href="https://learn.microsoft.com/en-us/dotnet/api/system.reflection.metadata" target="_blank">System.Reflection.Metadata</a>.<br/>You can read more details about it in its <a href="https://programing-fun.blogspot.com/2019/02/making-it-easier-to-getting-started.html" target="_blank">blog announcement</a>.<br/><br/>Version ${cecilifierVersion} (${frameWorkVersion})<br/>Git Commit: <a href="https://github.com/adrianoc/cecilifier/commit/${buildGitRevision}">${buildGitRevision}</a></br>Built on: ${buildDate}`;
     
     let defaultDelay =  [500, null];
     tippy('#aboutSpan2', {

@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.Extensions;
+using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
@@ -178,9 +179,15 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
         return fieldRefVarName;
     }
 
-    public string ResolveEventField(IEventSymbol aEvent)
+    public string ResolveEventField(IEventSymbol eventSymbol)
     {
-        throw new NotImplementedException();
+        if (!eventSymbol.IsDefinedInCurrentAssembly(context))
+            throw new InvalidOperationException($"Event field {eventSymbol.Name} must be defined in the current assembly.");
+        
+        var found = context.DefinitionVariables.GetVariable(eventSymbol.Name, VariableMemberKind.Field, eventSymbol.ContainingType.OriginalDefinition.ToDisplayString());
+        found.ThrowIfVariableIsNotValid();
+
+        return Utils.MakeGenericTypeIfAppropriate(context, eventSymbol, eventSymbol.Name) ?? found.VariableName;
     }
 
     public string ImportReference(string expression) => expression; // In SRM this is a noop

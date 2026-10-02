@@ -12,7 +12,7 @@ namespace Cecilifier.Core.Tests.OutputBased;
 
 [TestFixture(typeof(MonoCecilContext), TestName = "Mono.Cecil")]
 [TestFixture(typeof(SystemReflectionMetadataContext), TestName = "System.Reflection.Metadata")]
-[EnableForContext<SystemReflectionMetadataContext>("ArrayWith3OrMoreElements", "ArrayWith2OrMoreElements", IgnoreReason = "Not implemented yet")]
+[EnableForContext<SystemReflectionMetadataContext>( nameof(ArrayWith3OrMoreElements), nameof(ArrayWith2OrLessElements), nameof(ImplicitNumericConversions_Are_Applied), nameof(BoxConversions_Are_Applied), IgnoreReason = "Not implemented yet")]
 public class CollectionExpressionTests<TContext> : OutputBasedTestBase<TContext> where TContext : IVisitorContext
 {
     [Test]

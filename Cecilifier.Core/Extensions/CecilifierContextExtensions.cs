@@ -51,33 +51,30 @@ public static class CecilifierContextExtensions
         }
         else if (operation is IConversionOperation { Conversion.IsNullable: true } nullableConversion && !nullableConversion.Syntax.IsKind(SyntaxKind.CoalesceExpression))
         {
-            //TODO: This code is very similar to the one handling coalescing operator below (before that code got fixed to handle SRM). Most likely we will want to extract some
-            //      common code and reuse.
-            context.ApiDriver.WriteCilInstruction(context, 
-                ilVar, 
-                OpCodes.Newobj,
-                $"assembly.MainModule.ImportReference(typeof(System.Nullable<>).MakeGenericType(typeof({nullableConversion.Operand.Type.FullyQualifiedName()})).GetConstructors().Single(ctor => ctor.GetParameters().Length == 1))");
+            EmitNewobjOpcodeFor(context, in ilVar, nullableConversion.Operand.Type);
         }
         else if (operation is ICoalesceOperation coalesce 
                  && !SymbolEqualityComparer.Default.Equals(coalesce.Type?.OriginalDefinition, context.RoslynTypeSystem.SystemNullableOfT)
                  && SymbolEqualityComparer.Default.Equals(coalesce.Value.Type?.OriginalDefinition, context.RoslynTypeSystem.SystemNullableOfT)
                  )
         {
-            var targetType = context.TypeResolver.Resolve(coalesce.Type, ResolveTargetKind.GenericTypeArgument);
-            var closedNullable = context.TypeResolver.MakeGenericInstanceType(context.RoslynTypeSystem.SystemNullableOfT.NameIncludingTypeParametersAndArguments(), context.TypeResolver.Bcl.System.NullableOfT, [targetType], new TypeResolutionContext(ResolveTargetKind.Instruction, TypeResolutionOptions.IsValueType));
-            var returnType = context.TypeResolver.Resolve(context.RoslynTypeSystem.SystemVoid, ResolveTargetKind.ReturnType);
-            var resolvedCtor = context.MemberResolver.ResolveMethod("", closedNullable.Expression, ".ctor", returnType, [NullableTypeParameter(context)], [], MemberOptions.None);
-            
-            context.ApiDriver.WriteCilInstruction(context,
-                ilVar,
-                OpCodes.Newobj,
-                resolvedCtor.AsToken());
+            EmitNewobjOpcodeFor(context, in ilVar, coalesce.Type);
         }
         else
             return false;
 
         return true;
-        
+
+        static void EmitNewobjOpcodeFor(IVisitorContext context, in IlContext ilContext, ITypeSymbol type)
+        {
+            var resolvedType = context.TypeResolver.Resolve(type, ResolveTargetKind.GenericTypeArgument);
+            var closedNullable = context.TypeResolver.MakeGenericInstanceType(context.RoslynTypeSystem.SystemNullableOfT.NameIncludingTypeParametersAndArguments(), context.TypeResolver.Bcl.System.NullableOfT, [resolvedType], new TypeResolutionContext(ResolveTargetKind.Instruction, TypeResolutionOptions.IsValueType));
+            var returnType = context.TypeResolver.Resolve(context.RoslynTypeSystem.SystemVoid, ResolveTargetKind.ReturnType);
+            var resolvedCtor = context.MemberResolver.ResolveMethod("", closedNullable.Expression, ".ctor", returnType, [NullableTypeParameter(context)], [], MemberOptions.None);
+            
+            context.ApiDriver.WriteCilInstruction(context, ilContext, OpCodes.Newobj, resolvedCtor.AsToken());
+        }
+
         static ParameterSpec NullableTypeParameter(IVisitorContext context)
         {
             var typeParameterSymbol = context.RoslynTypeSystem.SystemNullableOfT.TypeParameters[0];
@@ -202,7 +199,7 @@ public static class CecilifierContextExtensions
                                                                     new BodiedMemberDefinitionContext(methodName, methodNameForVariableRegistration,methodDeclarationVar, null, MemberOptions.None, IlContext.None), 
                                                                     null,
                                                                     method.MethodsModifier(),
-                                                                    method.Parameters.Select( p => new ParameterSymbolParameterSpec(p, context)).ToArray(),
+                                                                    method.Parameters.Select( p => new ParameterSymbolParameterSpec(p, context, methodDeclarationVar)).ToArray(),
                                                                     method.GetTypeParameterSyntax().Select(tps => tps.Identifier.Text).ToArray(),
                                                                     ctx => method.ReturnsByRef 
                                                                         ? context.TypeResolver.MakeByRefType(resolvedReturnType)

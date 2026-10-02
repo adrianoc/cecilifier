@@ -22,7 +22,7 @@ internal partial class TypeDeclarationVisitor
         Context.WriteComment($"Delegate: {node.Identifier.Text}");
         
         var typeVar = Context.Naming.Delegate(node);
-        var delegateSymbol = Context.SemanticModel.GetDeclaredSymbol(node).EnsureNotNull<ISymbol, INamedTypeSymbol>();
+        var delegateSymbol = ModelExtensions.GetDeclaredSymbol(Context.SemanticModel, node).EnsureNotNull<ISymbol, INamedTypeSymbol>();
         var accessibility = TypeModifiersToCecil(delegateSymbol, node.Modifiers);
 
         EnsureContainingTypeForwarded(node, delegateSymbol);
@@ -39,7 +39,7 @@ internal partial class TypeDeclarationVisitor
                                                     node.TypeParameterList?.Parameters, 
                                                     []);
 
-        AddCecilExpressions(Context, typeDef);
+        Context.Generate(typeDef);
         HandleAttributesInMemberDeclaration(node.Identifier.Text, node.AttributeLists, typeVar, VariableMemberKind.Type);
 
         using (Context.DefinitionVariables.WithCurrent(delegateSymbol.ContainingSymbol?.OriginalDefinition.ToDisplayString() ?? string.Empty, delegateSymbol.OriginalDefinition.ToDisplayString(), VariableMemberKind.Type, typeVar))
@@ -47,73 +47,82 @@ internal partial class TypeDeclarationVisitor
             var ctorLocalVar = Context.Naming.Delegate(node);
 
             // Delegate ctor
-            string[] paramTypes = ["System.Object", "System.IntPtr"];
+            var parameters = new ParameterSpec[]
+            {
+                new("target", Context.TypeResolver.Resolve(Context.RoslynTypeSystem.SystemObject, ResolveTargetKind.Parameter), RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = "System.Object" },
+                new("method", Context.TypeResolver.Resolve(Context.RoslynTypeSystem.SystemIntPtr, ResolveTargetKind.Parameter), RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = "System.IntPtr" },
+            };
+            
             var exps = Context.ApiDefinitionsFactory.Constructor(
                 Context, 
-                new BodiedMemberDefinitionContext("ctor", ctorLocalVar, typeVar, MemberOptions.None, IlContext.None), 
+                new BodiedMemberDefinitionContext("ctor", ctorLocalVar, typeVar, MemberOptions.IsRuntime, null), 
                 node.Identifier.Text, 
                 false, 
                 "MethodAttributes.FamANDAssem | MethodAttributes.Family", 
-                paramTypes, 
-                "IsRuntime = true");
+                parameters);
             Context.Generate(exps);
-            AddCecilExpression($"{ctorLocalVar}.Parameters.Add(new ParameterDefinition({Context.TypeResolver.Bcl.System.Object}));");
-            AddCecilExpression($"{ctorLocalVar}.Parameters.Add(new ParameterDefinition({Context.TypeResolver.Bcl.System.IntPtr}));");
 
+            var invokeMethodVar = Context.Naming.SyntheticVariable("Invoke", ElementKind.Method);
+            var invokeParameters = node.ParameterList.Parameters.Select(p => p.ToParameterSpec(Context, invokeMethodVar)).ToArray();
             // Invoke() method
             AddDelegateMethod(
+                node.Identifier.Text,
                 typeVar,
                 "Invoke",
+                invokeMethodVar,
                 ResolveType(node.ReturnType, ResolveTargetKind.ReturnType),
-                node.ParameterList.Parameters,
-                (methodVar, param) => CecilDefinitionsFactory.Parameter(Context, param, methodVar, Context.Naming.Parameter(param)));
-
+                invokeParameters);
+            
             // BeginInvoke() method
-            var beginInvokeMethodVar = AddDelegateMethod(
-                                                 typeVar,
-                                                 "BeginInvoke",
-                                                 Context.TypeResolver.Bcl.System.IAsyncResult,
-                                                 node.ParameterList.Parameters,
-                                                 (methodVar, param) => CecilDefinitionsFactory.Parameter(Context, param, methodVar, Context.Naming.Parameter(param)));
+            var beginInvokeMethodVar = Context.Naming.SyntheticVariable("BeginInvoke", ElementKind.Method);
+            IReadOnlyList<ParameterSpec> beginInvokeParameters =
+            [
+                ..node.ParameterList.Parameters.Select(p => p.ToParameterSpec(Context, beginInvokeMethodVar)),
+                new("asyncCallback", Context.TypeResolver.Resolve(Context.RoslynTypeSystem.SystemAsyncCallback, ResolveTargetKind.Parameter), RefKind.None, Constants.ParameterAttributes.None),
+                new("target", Context.TypeResolver.Resolve(Context.RoslynTypeSystem.SystemObject, ResolveTargetKind.Parameter), RefKind.None, Constants.ParameterAttributes.None)
+            ];
 
-            AddCecilExpression($"{beginInvokeMethodVar}.Parameters.Add(new ParameterDefinition({Context.TypeResolver.Bcl.System.AsyncCallback}));");
-            AddCecilExpression($"{beginInvokeMethodVar}.Parameters.Add(new ParameterDefinition({Context.TypeResolver.Bcl.System.Object}));");
+            var asyncResultTypeSymbol = Context.RoslynTypeSystem.ForType<IAsyncResult>();
+            AddDelegateMethod(
+                    node.Identifier.Text,
+                    typeVar,
+                    "BeginInvoke",
+                    beginInvokeMethodVar,
+                    Context.TypeResolver.Resolve(asyncResultTypeSymbol, ResolveTargetKind.ReturnType),
+                    beginInvokeParameters);
 
             // EndInvoke() method
             var endInvokeMethodVar = Context.Naming.SyntheticVariable("EndInvoke", ElementKind.Method);
             var endInvokeExps = Context.ApiDefinitionsFactory.Method(
                                                                         Context,
-                                                                        new BodiedMemberDefinitionContext("EndInvoke", endInvokeMethodVar, typeVar, MemberOptions.None, IlContext.None),
+                                                                        new BodiedMemberDefinitionContext("EndInvoke", endInvokeMethodVar, typeVar, MemberOptions.IsRuntime, null),
                                                                         "declaringTypeName",
                                                                         Constants.Cecil.DelegateMethodAttributes,
-                                                                        [new ParameterSpec("ar", Context.TypeResolver.Bcl.System.IAsyncResult, RefKind.None, Constants.ParameterAttributes.None)],
+                                                                        [new ParameterSpec("ar", Context.TypeResolver.Resolve(asyncResultTypeSymbol, ResolveTargetKind.Parameter), RefKind.None, Constants.ParameterAttributes.None)],
                                                                         [],
                                                                         ctx => ctx.TypeResolver.Resolve(Context.GetTypeInfo(node.ReturnType).Type, ResolveTargetKind.ReturnType),
                                                                         out var _);
-
-            endInvokeExps = endInvokeExps.Concat([$"{endInvokeMethodVar}.HasThis = true;", $"{endInvokeMethodVar}.IsRuntime = true;"]);
-            AddCecilExpressions(Context, endInvokeExps);
+            Context.Generate(endInvokeExps);
             
             base.VisitDelegateDeclaration(node);
+            Context.OnFinishedTypeDeclaration(delegateSymbol);
         }
 
-        string AddDelegateMethod(string typeLocalVar, string methodName, ResolvedType returnType, in SeparatedSyntaxList<ParameterSyntax> parameters, Func<string, ParameterSyntax, IEnumerable<string>> parameterHandler)
+        return;
+
+        void AddDelegateMethod(string delegateName, string delegateTypeVariable, string methodName, string methodVar, ResolvedType returnType, IReadOnlyList<ParameterSpec> parameters)
         {
-            var methodLocalVar = Context.Naming.SyntheticVariable(methodName, ElementKind.Method);
-            AddCecilExpression(
-                $@"var {methodLocalVar} = new MethodDefinition(""{methodName}"", {Constants.Cecil.DelegateMethodAttributes}, {returnType})
-				{{
-					HasThis = true,
-					IsRuntime = true,
-				}};");
-
-            foreach (var param in parameters)
-            {
-                AddCecilExpressions(Context, parameterHandler(methodLocalVar, param));
-            }
-
-            AddCecilExpression($"{typeLocalVar}.Methods.Add({methodLocalVar});");
-            return methodLocalVar;
+            BodiedMemberDefinitionContext methodDefinitionContext = new(methodName, methodVar, delegateTypeVariable, MemberOptions.IsRuntime, null); 
+            var methodToAdd = Context.ApiDefinitionsFactory.Method(
+                                                    Context,
+                                                    methodDefinitionContext,
+                                                    delegateName,
+                                                    Constants.Cecil.DelegateMethodAttributes,
+                                                    parameters,
+                                                    [],
+                                                    ctx => returnType,
+                                                    out var _);
+            Context.Generate(methodToAdd);
         }
     }
 

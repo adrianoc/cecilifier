@@ -16,7 +16,7 @@ namespace Cecilifier.Core.AST
     internal class AssignmentVisitor : SyntaxWalkerBase
     {
         private readonly IlContext ilVar;
-        private readonly AssignmentExpressionSyntax assignment;
+        private readonly AssignmentExpressionSyntax assignment; // null if handling a pre/post increment
 
         internal AssignmentVisitor(IVisitorContext ctx, IlContext ilVar, AssignmentExpressionSyntax node) : base(ctx)
         {
@@ -25,12 +25,13 @@ namespace Cecilifier.Core.AST
 
             PreProcessRefOutAssignments(node.Left);
         }
-
-        internal AssignmentVisitor(IVisitorContext ctx, IlContext ilVar) : base(ctx)
+        private AssignmentVisitor(IVisitorContext ctx, IlContext ilVar) : base(ctx)
         {
             this.ilVar = ilVar;
         }
 
+        internal static AssignmentVisitor ForPrePostOperators(IVisitorContext ctx, IlContext ilVar) => new AssignmentVisitor(ctx, ilVar);
+        
         public LinkedListNode<string> InstructionPrecedingValueToLoad { get; set; }
 
         /*
@@ -283,6 +284,9 @@ namespace Cecilifier.Core.AST
 
         private bool NeedsIndirectStore(ITypeSymbol assignmentTargetMemberType, RefKind assignmentTargetMemberRefKind)
         {
+            if (assignment == null)
+                return assignmentTargetMemberRefKind != RefKind.None;
+            
             return (assignmentTargetMemberType is IPointerTypeSymbol && !assignment.Right.IsKind(SyntaxKind.AddressOfExpression) && Context.SemanticModel.GetTypeInfo(assignment.Right).Type!.Kind != SymbolKind.PointerType)
                    || assignmentTargetMemberRefKind != RefKind.None && !assignment.Right.IsKind(SyntaxKind.RefExpression);
         }

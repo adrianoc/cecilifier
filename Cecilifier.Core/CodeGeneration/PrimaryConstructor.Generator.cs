@@ -49,8 +49,6 @@ public class PrimaryConstructorGenerator
         var exps = context.ApiDefinitionsFactory.Property(context, definitionContext, declaringTypeVariable.MemberName, [], context.TypeResolver.Resolve(paramSymbol.Type, ResolveTargetKind.None));
         
         context.Generate(exps);
-        context.Generate($"{typeDefinitionVariable}.Properties.Add({propDefVar});");
-        context.WriteNewLine();
         context.WriteNewLine();
 
         var publicPropertyMethodAttributes = "MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName";
@@ -113,15 +111,14 @@ public class PrimaryConstructorGenerator
         
         var ctorVar = context.Naming.Constructor(typeDeclaration, false);
         string typeName = typeSymbol.OriginalDefinition.ToDisplayString();
-        string[] paramTypes = typeDeclaration.ParameterList?.Parameters.Select(p => p.Type?.ToString()).ToArray() ?? [];
+        var parameters = typeDeclaration.ParameterList?.Parameters.Select(p => p.ToParameterSpec(context, ctorVar)).ToArray() ?? [];
         var exps = context.ApiDefinitionsFactory.Constructor(
             context, 
             new BodiedMemberDefinitionContext("ctor", ctorVar, recordTypeDefinitionVariable, MemberOptions.None, IlContext.None), 
             typeName, 
             false, 
             "MethodAttributes.Public", 
-            paramTypes, 
-            null);
+            parameters);
         var ctorExp = exps;
         context.Generate(ctorExp);
 
@@ -142,17 +139,14 @@ public class PrimaryConstructorGenerator
         var uniqueParameters = typeDeclaration.GetUniqueParameters(context).ToHashSet();
         foreach (var parameter in typeDeclaration.ParameterList.Parameters)
         {
-            context.WriteComment($"Parameter: {parameter.Identifier}");
-            var paramVar = context.Naming.Parameter(parameter);
-            var parameterType = context.TypeResolver.Resolve(ModelExtensions.GetTypeInfo(context.SemanticModel, parameter.Type!).Type, ResolveTargetKind.Parameter);
-            var paramExps = CecilDefinitionsFactory.Parameter(context, parameter.Identifier.ValueText, RefKind.None, null, ctorVar, paramVar, parameterType, Constants.ParameterAttributes.None, ("", false));
-            context.Generate(paramExps);
-
             if (!uniqueParameters.Contains(parameter))
                 continue;
             
+            var paramVar = context.DefinitionVariables.GetVariable(parameter.Identifier.ValueText, VariableMemberKind.Parameter, "ctor");
+            paramVar.ThrowIfVariableIsNotValid();
+            
             context.ApiDriver.WriteCilInstruction(context, ilContext, OpCodes.Ldarg_0);
-            context.ApiDriver.WriteCilInstruction(context, ilContext, OpCodes.Ldarg, paramVar);
+            context.ApiDriver.WriteCilInstruction(context, ilContext, OpCodes.Ldarg, paramVar.VariableName);
 
             var backingFieldVar = context.DefinitionVariables.GetVariable(Utils.BackingFieldNameForAutoProperty(parameter.Identifier.ValueText), VariableMemberKind.Field, typeSymbol.OriginalDefinition.ToDisplayString());
             if (!backingFieldVar.IsValid)

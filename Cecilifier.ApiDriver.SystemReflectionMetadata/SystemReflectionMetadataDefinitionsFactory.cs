@@ -135,6 +135,18 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         }
     }
 
+    public void SetStructLayoutAttribute(IVisitorContext context, string structDefinitionVariable, TypeLayoutProperty[] properties)
+    {
+        if (properties.Length == 0)
+            return;
+        
+        var packingSize = properties.SingleOrDefault(p => p.Kind == TypeLayoutPropertyKind.PackingSize).Value;
+        var clasSize = properties.SingleOrDefault(p => p.Kind == TypeLayoutPropertyKind.ClassSize).Value;
+                
+        context.Generate($"metadata.AddTypeLayout({structDefinitionVariable}, {packingSize}, {clasSize});");
+        context.WriteNewLine();
+    }
+
     public void UpdateBaseTypeIfNeeded(IVisitorContext context, ITypeSymbol typeSymbol, string typeDefinitionVariable)
     {
         // No op on SRM.
@@ -146,15 +158,14 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
 
         // Resolve the method to make sure there's a method ref available (this will be used to fulfill any references to this method)
         context.MemberResolver.ResolveMethod(methodSymbol);
-        
-        var paramIndexOffset = methodSymbol.IsStatic ? 0 : 1;
+
         // register all parameters so we can reference them when emitting the method body
         foreach (var parameter in methodSymbol.Parameters)
         {
             // This is a hack. SRM accesses parameters by index, and Cecilifier does not have a way to pass that index around; it only has variable names,
             // so we record the `index` of the parameter as the variable name.
             // Code that emits Ldarg/Starg/etc will use this `name` (actually the parameter index) as its operand (this is similar to the way we handle local variables)
-            context.DefinitionVariables.RegisterNonMethod(methodSymbol.ToDisplayString(), parameter.Name, VariableMemberKind.Parameter, (parameter.Ordinal + paramIndexOffset).ToString());
+            context.DefinitionVariables.RegisterNonMethod(methodSymbol.ToDisplayString(), parameter.Name, VariableMemberKind.Parameter, parameter.AdjustedParameterIndex().ToString());
         }
 
         var memberParentDefinitionVariable = bodiedMemberDefinitionContext.Member.ParentDefinitionVariable ?? throw new ArgumentNullException(nameof(bodiedMemberDefinitionContext.Member.ParentDefinitionVariable));
@@ -273,7 +284,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
             ctx.Generate($"""
                           var {methodDefVar}  = metadata.AddMethodDefinition(
                                                     {methodModifiers},
-                                                    MethodImplAttributes.IL | MethodImplAttributes.Managed,
+                                                    { "MethodImplAttributes.IL | MethodImplAttributes.Managed".AppendEnumFlagConditional("MethodImplAttributes.Runtime", definitionContext.Options.HasFlag(MemberOptions.IsRuntime)) },
                                                     metadata.GetOrAddString("{definitionContext.Member.Name}"),
                                                     {methodSignatureVar.VariableName},
                                                     {methodBodyOffset},
@@ -302,16 +313,21 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         return [];
     }
 
-    public IEnumerable<string> Constructor(IVisitorContext context, BodiedMemberDefinitionContext definitionContext, string typeName, bool isStatic, string methodAccessibility, string[] paramTypes, string? methodDefinitionPropertyValues = null)
+    public IEnumerable<string> Constructor(IVisitorContext context, BodiedMemberDefinitionContext definitionContext, string typeName, bool isStatic, string methodAccessibility, ParameterSpec[] parameters)
     {
         var nameAsIdentifier = typeName.ToValidIdentifier();
-        var parameterlessCtorSignatureVar = context.Naming.SyntheticVariable($"{nameAsIdentifier}_ctorSignature", ElementKind.MemberReference);
+        var parameterCtorSignatureVar = context.Naming.SyntheticVariable($"{nameAsIdentifier}_ctorSignature", ElementKind.MemberReference);
         yield return Format(
             $$"""
-              var {{parameterlessCtorSignatureVar}} = new BlobBuilder();
-              new BlobEncoder({{parameterlessCtorSignatureVar}})
+              var {{parameterCtorSignatureVar}} = new BlobBuilder();
+              new BlobEncoder({{parameterCtorSignatureVar}})
                      .MethodSignature(isInstanceMethod: {{ (!isStatic).ToKeyword()}})
-                     .Parameters(0, returnType => returnType.Void(), parameters => { });
+                     .Parameters({{parameters.Length}}, returnType => returnType.Void(), parameters => 
+                     {
+                     {{
+                         string.Join('\n', parameters.Select(p => $"""parameters.AddParameter().{p.ElementType};"""))
+                     }} 
+                     });
               """);
         
         var parentDefinitionVariable = definitionContext.Member.ParentDefinitionVariable ?? throw new ArgumentNullException(nameof(definitionContext.Member.ParentDefinitionVariable));
@@ -319,22 +335,31 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         {
             EmitLocalVariables(ctx, "ctor", in methodRecord);
             
-            Debug.Assert(definitionContext.IlContext != null);
+            var ctorBodyOffset = definitionContext.IlContext != null                
+                 ? $"methodBodyStream.AddMethodBody({definitionContext.IlContext.VariableName}, localVariablesSignature: {methodRecord.LocalSignatureHandleVariable})"
+                 : "-1"; // ilcontext is null meaning the method don't have a body whence we need to set offset to -1
+            
             var ctorDefVar = ctx.Naming.SyntheticVariable($"{nameAsIdentifier}_Ctor", ElementKind.MemberReference);
+            var ctorAttributes = "MethodImplAttributes.IL | MethodImplAttributes.Managed".AppendEnumFlagConditional("MethodImplAttributes.Runtime", definitionContext.Options.HasFlag(MemberOptions.IsRuntime));
             ctx.Generate($"""
-                                   var {ctorDefVar} = metadata.AddMethodDefinition(
-                                                             {(isStatic ? "MethodAttributes.Private | MethodAttributes.Static" : methodAccessibility)} | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName,
-                                                             MethodImplAttributes.IL | MethodImplAttributes.Managed,
-                                                             metadata.GetOrAddString("{(isStatic ? ".cctor" : ".ctor")}"),
-                                                             metadata.GetOrAddBlob({parameterlessCtorSignatureVar}),
-                                                             methodBodyStream.AddMethodBody({definitionContext.IlContext.VariableName}, localVariablesSignature: {methodRecord.LocalSignatureHandleVariable}),
-                                                             parameterList: {methodRecord.FirstParameterHandle});
-                                   """);
+                 var {ctorDefVar} = metadata.AddMethodDefinition(
+                                           {(isStatic ? "MethodAttributes.Private | MethodAttributes.Static" : methodAccessibility)} | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName,
+                                           {ctorAttributes},
+                                           metadata.GetOrAddString("{(isStatic ? ".cctor" : ".ctor")}"),
+                                           metadata.GetOrAddBlob({parameterCtorSignatureVar}),
+                                           {ctorBodyOffset},
+                                           parameterList: {methodRecord.FirstParameterHandle});
+                 """);
             
             ctx.WriteNewLine();
             ctx.WriteNewLine();
             return ctorDefVar;
         });
+    }
+
+    public IEnumerable<string> Parameter(IVisitorContext context, ParameterSpec parameterSpec, string memberVar, string paramVar)
+    {
+        throw new NotImplementedException();
     }
 
     public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext definitionContext, ISymbol fieldOrEvent, ITypeSymbol fieldType, string fieldAttributes, bool isVolatile, bool isByRef, in FieldInitializationData initializer = default)
@@ -624,6 +649,11 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
 
             return context.DefinitionVariables.RegisterNonMethod(string.Empty, moduleName, VariableMemberKind.ModuleReference, moduleVarName);
         }
+    }
+
+    IEnumerable<string> IApiDriverDefinitionsFactory.SetStructLayoutAttribute(IVisitorContext context, string structDefinitionVariable, TypeLayoutProperty[] properties)
+    {
+        return [];
     }
 
     private SystemReflectionMetadataContext TypedContext(IVisitorContext context) => ((SystemReflectionMetadataContext) context);

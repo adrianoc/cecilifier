@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using System.Text;
+using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.ApiDriver.Handles;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Misc;
@@ -28,14 +29,6 @@ namespace Cecilifier.Core.AST
         }
 
         public IVisitorContext Context { get; }
-
-        protected static void AddCecilExpressions(IVisitorContext context, IEnumerable<string> exps)
-        {
-            foreach (var exp in exps)
-            {
-                WriteCecilExpression(context, exp);
-            }
-        }
 
         protected void AddCecilExpression(string exp)
         {
@@ -201,7 +194,7 @@ namespace Cecilifier.Core.AST
 
         private void LoadLiteralToStackHandlingCallOnValueTypeLiterals(IlContext ilVar, ITypeSymbol literalType, object literalValue, UsageResult usageResult)
         {
-            var opCode = literalType.LoadOpCodeFor();
+            var opCode = literalType.LoadOpcodeForLiteral();
             Context.ApiDriver.WriteCilInstruction(Context, ilVar, opCode, literalType.ToCilOperandValue(literalValue));
             if (usageResult.Kind == UsageKind.CallTarget)
             {
@@ -348,9 +341,7 @@ namespace Cecilifier.Core.AST
                 return;
             
             node.Parent.EnsureNotNull();
-            // We only support non-capturing lambda expressions so we handle those as static (even if the code does not mark them explicitly as such)
-            // if/when we decide to support lambdas that captures variables/fields/params/etc we will probably need to revisit this.
-            var adjustedParameterIndex = paramSymbol.Ordinal + (method.IsStatic || method.MethodKind == MethodKind.AnonymousFunction || method.MethodKind == MethodKind.LocalFunction ? 0 : 1);
+            var adjustedParameterIndex = paramSymbol.AdjustedParameterIndex();
             if (adjustedParameterIndex > 3)
             {
                 Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldarg, adjustedParameterIndex);
@@ -570,7 +561,7 @@ namespace Cecilifier.Core.AST
                 needsLoadIndirect =
                     assigment.Left != expression &&
                     (assigment.Right == expression && sourceIsByRef && !targetIsByRef // simple assignment like: nonRef = ref;
-                    || sourceIsByRef && !assigment.Right.IsKind(SyntaxKind.RefExpression)); // complex assignment like: nonRef = ref + 10;
+                    || sourceIsByRef && (!assigment.Right.IsKind(SyntaxKind.RefExpression) && !assigment.Right.IsKind(SyntaxKind.PreDecrementExpression) && !assigment.Right.IsKind(SyntaxKind.PreIncrementExpression))); // complex assignment like: nonRef = ref + 10;
             }
             else if (argument != null)
             {
@@ -664,10 +655,22 @@ namespace Cecilifier.Core.AST
             }
 
             var localDelegateDeclaration = Context.TypeResolver.ResolveLocalVariableType(typeSymbol, ResolveTargetKind.TypeReference);
-            //TODO: Cecil dependent code. This assumes that local variable is a MethodReference or similar. Can't we simply look for the method variable instead?
+            
+            //TODO: FIX THIS HACK. We are checking localDelegateDeclarion var twice  
             var resolvedMethod = localDelegateDeclaration != null
                 ? $"{localDelegateDeclaration}.Methods.Single(m => m.Name == \"Invoke\")"
                 : ((IMethodSymbol) typeSymbol.GetMembers("Invoke").SingleOrDefault()).MethodResolverExpression(Context);
+
+            if (localDelegateDeclaration != null)
+            {
+                var target = Context.SemanticModel.GetSymbolInfo(node).Symbol.EnsureNotNull().GetMemberType();
+                resolvedMethod = ((IMethodSymbol) target.GetMembers("Invoke").SingleOrDefault()).MethodResolverExpression(Context);
+            }
+
+            // //TODO: Cecil dependent code. This assumes that local variable is a MethodReference or similar. Can't we simply look for the method variable instead?
+            // var resolvedMethod = localDelegateDeclaration != null
+            //     ? $"{localDelegateDeclaration}.Methods.Single(m => m.Name == \"Invoke\")"
+            //     : ((IMethodSymbol) typeSymbol.GetMembers("Invoke").SingleOrDefault()).MethodResolverExpression(Context);
 
             OnLastInstructionLoadingTargetOfInvocation();
             Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Callvirt, resolvedMethod.AsToken());
@@ -715,11 +718,11 @@ namespace Cecilifier.Core.AST
                 var attrsExp = attrType.AttributeKind() switch
                     {
                         AttributeKind.DllImport => ProcessDllImportAttribute(context, memberName, attribute, targetDeclarationVar),
-                        AttributeKind.StructLayout => ProcessStructLayoutAttribute(attribute, targetDeclarationVar),
+                        AttributeKind.StructLayout => ProcessStructLayoutAttribute(context, attribute, targetDeclarationVar),
                         _ => ProcessNormalMemberAttribute(context, attribute, targetDeclarationVar, targetKind)
                     };
                 
-                AddCecilExpressions(context, attrsExp);
+                context.Generate(attrsExp);
             }
         }
 
@@ -729,18 +732,20 @@ namespace Cecilifier.Core.AST
             return context.ApiDefinitionsFactory.PInvoke(context, moduleName, methodVar, methodName, attribute.ArgumentList.ToCustomAttributeArguments(context).ToArray());
         }
 
-        private static IEnumerable<string> ProcessStructLayoutAttribute(AttributeSyntax attribute, string typeVar)
+        private static IEnumerable<string> ProcessStructLayoutAttribute(IVisitorContext context, AttributeSyntax attribute, string typeVar)
         {
             Debug.Assert(attribute.ArgumentList != null);
             if (attribute.ArgumentList.Arguments.Count == 0 || attribute.ArgumentList.Arguments.All(a => a.NameEquals == null))
-                return Array.Empty<string>();
-
-            return new[]
-            {
-                $"{typeVar}.ClassSize = { AssignedValue(attribute, "Size") };",
-                $"{typeVar}.PackingSize = { AssignedValue(attribute, "Pack") };",
-            };
-
+                return [];
+            
+            return context.ApiDefinitionsFactory.SetStructLayoutAttribute(
+                context, 
+                typeVar, 
+                [
+                    new TypeLayoutProperty(TypeLayoutPropertyKind.ClassSize, AssignedValue(attribute, "Size") + ""),
+                    new TypeLayoutProperty(TypeLayoutPropertyKind.PackingSize, AssignedValue(attribute, "Pack") + "")
+                ]);
+            
             static int AssignedValue(AttributeSyntax attribute, string parameterName)
             {
                 // whenever Size/Pack are omitted the corresponding property should be set to 0. See Ecma-335 II 22.8.

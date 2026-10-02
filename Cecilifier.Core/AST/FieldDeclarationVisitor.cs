@@ -80,7 +80,7 @@ namespace Cecilifier.Core.AST
                                                             modifiers.Any(m => m.IsKind(SyntaxKind.VolatileKeyword)),
                                                             isByRef,
                                                             constant.Value.ValueText());
-                AddCecilExpressions(Context, exps);
+                Context.Generate(exps);
                 HandleAttributesInMemberDeclaration(fieldSymbol.Name, node.AttributeLists, fieldVar, VariableMemberKind.Field);
             }
 

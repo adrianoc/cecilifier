@@ -67,9 +67,29 @@ public class NullableTests : CecilifierUnitTestBase
         //return Bar\(i1\);
         (\s+il_test_\d+\.Emit\(OpCodes\.)Ldarg_0\);
         \1Ldarg_1\);
-        (?<implicit_nullable_conversion>\1Newobj, .+ImportReference\(typeof\(System.Nullable<>\).MakeGenericType\(typeof\(System.Int32\)\).GetConstructors\(\).+;)
-        \1Call, m_bar_1\);
-        \k<implicit_nullable_conversion>
+        \s+var m_declaringType_7 = assembly.MainModule.ImportReference\(typeof\(System.Nullable<>\)\).MakeGenericInstanceType\(assembly.MainModule.TypeSystem.Int32\);
+        \s+var r_tmpMethod_8 = assembly.MainModule.ImportReference\(m_declaringType_7.ElementType.Resolve\(\).Methods.Single\(m => m.Name == ".ctor" && m.Parameters.Count == 1\)\);
+        \s+var r_genericMethod_9 = new MethodReference\(r_tmpMethod_8.Name, r_tmpMethod_8.ReturnType\)
+        \s+{
+        \s+HasThis = r_tmpMethod_8.HasThis,
+        \s+CallingConvention = r_tmpMethod_8.CallingConvention,
+        \s+ExplicitThis = r_tmpMethod_8.ExplicitThis,
+        \s+DeclaringType = m_declaringType_7,
+        \s+};
+        \s+r_genericMethod_9.Parameters.Add\(new ParameterDefinition\(r_tmpMethod_8.Parameters\[0\].Name, r_tmpMethod_8.Parameters\[0\].Attributes, r_tmpMethod_8.Parameters\[0\].ParameterType\)\);
+        \s+il_test_5.Emit\(OpCodes.Newobj, r_genericMethod_9\);
+        \s+il_test_5.Emit\(OpCodes.Call, m_bar_1\);
+        \s+var m_declaringType_10 = assembly.MainModule.ImportReference\(typeof\(System.Nullable<>\)\).MakeGenericInstanceType\(assembly.MainModule.TypeSystem.Int32\);
+        \s+var r_tmpMethod_11 = assembly.MainModule.ImportReference\(m_declaringType_10.ElementType.Resolve\(\).Methods.Single\(m => m.Name == ".ctor" && m.Parameters.Count == 1\)\);
+        \s+var r_genericMethod_12 = new MethodReference\(r_tmpMethod_11.Name, r_tmpMethod_11.ReturnType\)
+        \s+{
+        \s+HasThis = r_tmpMethod_11.HasThis,
+        \s+CallingConvention = r_tmpMethod_11.CallingConvention,
+        \s+ExplicitThis = r_tmpMethod_11.ExplicitThis,
+        \s+DeclaringType = m_declaringType_10,
+        \s+};
+        \s+r_genericMethod_12.Parameters.Add\(new ParameterDefinition\(r_tmpMethod_11.Parameters\[0\].Name, r_tmpMethod_11.Parameters\[0\].Attributes, r_tmpMethod_11.Parameters\[0\].ParameterType\)\);
+        \1Newobj, r_genericMethod_12\);
         \1Ret\);
         """,
         TestName = "Method parameter and return value"
@@ -92,7 +112,17 @@ public class NullableTests : CecilifierUnitTestBase
         """
         //p = 41;
         (\s+il_bar_\d+\.Emit\(OpCodes\.)Ldc_I4, 41\);
-        \1Newobj, .+ImportReference\(typeof\(System.Nullable<>\).MakeGenericType\(typeof\(System.Int32\)\).GetConstructors\(\).+;
+        \s+var m_declaringType_4 = .+ImportReference\(typeof\(System.Nullable<>\)\).MakeGenericInstanceType\(assembly.MainModule.TypeSystem.Int32\);
+        \s+var r_tmpMethod_5 = .+ImportReference\(m_declaringType_4.ElementType.Resolve\(\).Methods.Single\(m => m.Name == ".ctor" && m.Parameters.Count == 1\)\);
+        \s+var r_genericMethod_6 = new MethodReference\(r_tmpMethod_5.Name, r_tmpMethod_5.ReturnType\)
+        \s+{
+        \s+HasThis = r_tmpMethod_5.HasThis,
+        \s+CallingConvention = r_tmpMethod_5.CallingConvention,
+        \s+ExplicitThis = r_tmpMethod_5.ExplicitThis,
+        \s+DeclaringType = m_declaringType_4,
+        \s+};
+        \s+r_genericMethod_6.Parameters.Add\(new ParameterDefinition\(.+Parameters\[0\].Name, .+Parameters\[0\].Attributes, .+.Parameters\[0\].ParameterType\)\);
+        \1Newobj, r_genericMethod_6\);
         \1Starg_S, p_p_3\);
         """,
         TestName = "Variable assignment"
@@ -113,8 +143,17 @@ public class NullableTests : CecilifierUnitTestBase
                                                                   \s+var il_M_\d+ = m_M_\d+.Body.GetILProcessor\(\);
                                                                   (?<emit>\s+il_M_\d+\.Emit\(OpCodes\.)Ldarg_0\);
                                                                   \k<emit>Unbox_Any, assembly.MainModule.TypeSystem.Int32\);
-                                                                  \k<emit>Newobj,.+ImportReference\(typeof\(System.Nullable<>\)\.MakeGenericType\(typeof\(System.Int32\)\)\.GetConstructors\(\).+\);
-                                                                  \k<emit>Ret\);
+                                                                  \s+var m_declaringType_9 = assembly.MainModule.ImportReference\(typeof\(System.Nullable<>\)\).MakeGenericInstanceType\(.+Int32\);
+                                                                  \s+var r_tmpMethod_10 = assembly.MainModule.ImportReference\(m_declaringType_9.ElementType.Resolve\(\).Methods.Single\(m => m.Name == ".ctor" && m.Parameters.Count == 1\)\);
+                                                                  \s+var r_genericMethod_11 = new MethodReference\(r_tmpMethod_10.Name, r_tmpMethod_10.ReturnType\)
+                                                                  \s+{
+                                                                  \s+HasThis = r_tmpMethod_10.HasThis,
+                                                                  \s+CallingConvention = r_tmpMethod_10.CallingConvention,
+                                                                  \s+ExplicitThis = r_tmpMethod_10.ExplicitThis,
+                                                                  \s+DeclaringType = m_declaringType_9,
+                                                                  \s+};
+                                                                  \s+r_genericMethod_11.Parameters.Add\(new ParameterDefinition\(.+Parameters\[0\].Name, .+Parameters\[0\].Attributes, .+Parameters\[0\].ParameterType\)\);
+                                                                  \k<emit>Newobj, r_genericMethod_11\);
                                                                   """));
     }
 

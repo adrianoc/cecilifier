@@ -180,23 +180,23 @@ namespace Cecilifier.Core.Extensions
             return refRelatedAttr.AppendEnumFlag(optionalAttribute);
         }
 
-        public static (string Value, bool Present) ExplicitDefaultValue(this IParameterSymbol symbol, bool rawString = true)
+        public static DefaultValue ExplicitDefaultValue(this IParameterSymbol symbol, bool rawString = true)
         {
             if (!symbol.HasExplicitDefaultValue)
-                return (null, false);
+                return default;
 
             if (symbol.ExplicitDefaultValue == null)
-                return (null, true);
+                return new (null, true);
 
             if (symbol.Type.SpecialType == SpecialType.System_String && rawString)
-                return ((string)symbol.ExplicitDefaultValue, true);
+                return new((string)symbol.ExplicitDefaultValue, true);
             
             var value = SymbolDisplay.FormatPrimitive(symbol.ExplicitDefaultValue, !rawString, false);
             return symbol.Type.SpecialType switch
             {
-                SpecialType.System_Single => ($"{value}f", true),
-                SpecialType.System_Double => ($"{value}d", true),
-                _ => (value, true)
+                SpecialType.System_Single => new ($"{value}f", true),
+                SpecialType.System_Double => new ($"{value}d", true),
+                _ => new (value, true)
             };
         }
 
@@ -249,8 +249,16 @@ namespace Cecilifier.Core.Extensions
 
         static object AsLocalVariable(string expression) => expression.AsLocalVariable();
         static object AsToken(string expression) => expression.AsToken();
-    
-        public static OpCode LoadOpCodeFor(this ITypeSymbol type)
+
+        public static OpCode LoadOpCodeFor(this ISymbol member) => member switch
+        {
+            IParameterSymbol => OpCodes.Ldarg,
+            IFieldSymbol => OpCodes.Ldfld,
+            ILocalSymbol => OpCodes.Ldloc,
+            _ => throw new InvalidOperationException($"Unsupported symbol type {member.GetType().Namespace} for {member.Name}")
+        };
+        
+        public static OpCode LoadOpcodeForLiteral(this ITypeSymbol type)
         {
             return type.SpecialType switch
             {
@@ -301,6 +309,13 @@ namespace Cecilifier.Core.Extensions
             _ => throw new ArgumentOutOfRangeException(nameof(literalType), literalType, null)
         };
 
+        // We only support non-capturing lambda expressions so we handle those as static (even if the code does not mark them explicitly as such)
+        // if/when we decide to support lambdas that captures variables/fields/params/etc we will probably need to revisit this.
+        public static int AdjustedParameterIndex(this IParameterSymbol parameter) => parameter.Ordinal + 
+                                                                                     (parameter.ContainingSymbol.IsStatic 
+                                                                                      || ((IMethodSymbol) parameter.ContainingSymbol).MethodKind == MethodKind.LocalFunction
+                                                                                      || ((IMethodSymbol) parameter.ContainingSymbol).MethodKind == MethodKind.AnonymousFunction ? 0 : 1); // Local functions are always handled as static;
+        
         public static IMethodSymbol ParameterlessCtor(this ITypeSymbol self) => self.GetMembers(".ctor").OfType<IMethodSymbol>().Single(ctor => ctor.Parameters.Length == 0);
         public static IMethodSymbol Ctor(this ITypeSymbol self, params ITypeSymbol[] parameters) => self.GetMembers(".ctor")
                                                                                                 .OfType<IMethodSymbol>()
@@ -326,7 +341,12 @@ namespace Cecilifier.Core.Extensions
                    || (type.ContainingType != null && (SymbolEqualityComparer.Default.Equals(type.ContainingType, type) ? false : HasTypeArgumentOfTypeFromCecilifiedCodeTransitive(type.ContainingType, context)));
         }
 
-        public static TypeResolutionOptions GetTypeResolutionOptions(this ITypeSymbol type) => type.IsValueType ? TypeResolutionOptions.IsValueType : TypeResolutionOptions.None; 
+        public static TypeResolutionOptions GetTypeResolutionOptions(this ITypeSymbol type) => type.IsValueType ? TypeResolutionOptions.IsValueType : TypeResolutionOptions.None;
+
+        public static ParameterSpec ToParameterSpec(this IParameterSymbol parameter, IVisitorContext context, string methodVar) => new ParameterSymbolParameterSpec(parameter, context, methodVar)
+        {
+            DefaultValue = parameter.ExplicitDefaultValue(rawString: false), Attributes = parameter.AsParameterAttribute()
+        };
         
         internal static ExpandedParamsArgumentHandler? CreateExpandedParamsUsageHandler(this IMethodSymbol methodSymbol, ExpressionVisitor expressionVisitor, IlContext ilVar, ArgumentListSyntax argumentList)
         {

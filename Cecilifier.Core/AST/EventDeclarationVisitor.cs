@@ -135,7 +135,7 @@ namespace Cecilifier.Core.AST
                                                                                 ctx => ctx.TypeResolver.Resolve(Context.RoslynTypeSystem.SystemVoid, ResolveTargetKind.ReturnType),  
                                                                                 out var eventAccessorMethodVar);
 
-            AddCecilExpressions(Context, methodExps.Concat(methodBodyExpressions));
+            Context.Generate(methodExps.Concat(methodBodyExpressions));
             return eventAccessorMethodVar;
         }
 

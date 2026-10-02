@@ -227,7 +227,16 @@ namespace Cecilifier.Core.AST
             using var _ = LineInformationTracker.Track(Context, node);
             Context.WriteComment(node.Expression.ToString());
             node.Expression.Accept(this);
-            node.Expression.InjectRequiredConversions(Context, ilVar);
+
+            var declaringMethod = Context.SemanticModel.GetDeclaredSymbol(node.Parent!).EnsureNotNull();
+            if (declaringMethod.GetMemberType().SpecialType == SpecialType.System_Void && PopIfNotConsumed(Context, ilVar, node.Expression))
+            {
+                Context.WriteNewLine();
+            }
+            else
+            {
+                node.Expression.InjectRequiredConversions(Context, ilVar);
+            }
         }
 
         public override void VisitInitializerExpression(InitializerExpressionSyntax node)
@@ -1049,32 +1058,68 @@ namespace Cecilifier.Core.AST
 
         private void ProcessPrefixPostfixOperators(ExpressionSyntax operand, OpCode opCode, bool isPrefix)
         {
-            using var _ = LineInformationTracker.Track(Context, operand);
+             using var _ = LineInformationTracker.Track(Context, operand);
             Visit(operand);
-            operand.InjectRequiredConversions(Context, ilVar);
 
-            var assignmentVisitor = new AssignmentVisitor(Context, ilVar);
+            var assignmentVisitor = AssignmentVisitor.ForPrePostOperators(Context, ilVar);
 
             var operandInfo = Context.SemanticModel.GetSymbolInfo(operand);
-            if (operandInfo.Symbol != null && operandInfo.Symbol.Kind != SymbolKind.Field && operandInfo.Symbol.Kind != SymbolKind.Property) // Fields / Properties requires more complex handling to load the owning reference.
+            if (operandInfo.Symbol != null && (operandInfo.Symbol.Kind == SymbolKind.Local || operandInfo.Symbol.Kind == SymbolKind.Parameter)) // Fields / Properties / Events requires more complex handling to load the owning reference.
             {
-                if (!isPrefix) // For *postfix* operators we duplicate the value *before* applying the operator...
+                if (operandInfo.Symbol.IsByRef())
                 {
-                    Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Dup);
+                    if (isPrefix)
+                    {
+                        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Dup);
+                        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Dup);
+                        Context.ApiDriver.WriteCilInstruction(Context, ilVar, operandInfo.Symbol.GetMemberType().LdindOpCodeFor());
+                        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldc_I4_1);
+                        Context.ApiDriver.WriteCilInstruction(Context, ilVar, opCode);
+
+                        //assign (top of stack to the operand)
+                        assignmentVisitor.InstructionPrecedingValueToLoad = Context.CurrentLine;
+                        operand.Accept(assignmentVisitor);
+                        Context.ApiDriver.WriteCilInstruction(Context, ilVar, operandInfo.Symbol.GetMemberType().LdindOpCodeFor());
+                    }
+                    else
+                    {
+                        var targetVariable = Context.DefinitionVariables.GetVariable(operandInfo.Symbol.Name, operandInfo.Symbol.ToVariableMemberKind(), operandInfo.Symbol.ContainingSymbol.ToDisplayString());
+                        targetVariable.ThrowIfVariableIsNotValid();
+                        Context.ApiDriver.WriteCilInstruction(Context, ilVar, operandInfo.Symbol.LoadOpCodeFor(), targetVariable.VariableName.AsToken());
+                        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Dup);
+                        Context.ApiDriver.WriteCilInstruction(Context, ilVar, operandInfo.Symbol.GetMemberType().LdindOpCodeFor());
+                        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldc_I4_1);
+                        Context.ApiDriver.WriteCilInstruction(Context, ilVar, opCode);
+                        
+                        //assign (top of stack to the operand)
+                        assignmentVisitor.InstructionPrecedingValueToLoad = Context.CurrentLine;
+                        operand.Accept(assignmentVisitor);
+                    }
                 }
-
-                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldc_I4_1);
-                Context.ApiDriver.WriteCilInstruction(Context, ilVar, opCode);
-
-                if (isPrefix) // For prefix operators we duplicate the value *after* applying the operator...
+                else
                 {
-                    Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Dup);
+                    if (isPrefix)
+                    {
+                        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldc_I4_1);
+                        Context.ApiDriver.WriteCilInstruction(Context, ilVar, opCode);
+                        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Dup);
+                        
+                        //assign (top of stack to the operand)
+                        assignmentVisitor.InstructionPrecedingValueToLoad = Context.CurrentLine;
+                        operand.Accept(assignmentVisitor);                        
+                    }
+                    else
+                    {
+                        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Dup);
+                        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldc_I4_1);
+                        Context.ApiDriver.WriteCilInstruction(Context, ilVar, opCode);
+
+                        //assign (top of stack to the operand)
+                        assignmentVisitor.InstructionPrecedingValueToLoad = Context.CurrentLine;
+                        operand.Accept(assignmentVisitor);                        
+                    }
                 }
-
-                //assign (top of stack to the operand)
-                assignmentVisitor.InstructionPrecedingValueToLoad = Context.CurrentLine;
-                operand.Accept(assignmentVisitor);
-
+                
                 return;
             }
 
@@ -1540,7 +1585,8 @@ namespace Cecilifier.Core.AST
                     return arguments[expressionParameter.Ordinal].Expression.ToFullString();
             }
 
-            return arg.ExplicitDefaultValue(rawString: true).Value;
+            var defaultValue = arg.ExplicitDefaultValue(rawString: true);
+            return defaultValue.Value!;
         }
 
         private void HandleIdentifier(SimpleNameSyntax node)
@@ -1608,7 +1654,7 @@ namespace Cecilifier.Core.AST
             return labelVariable;
         }
 
-        private static void PopIfNotConsumed(IVisitorContext ctx, IlContext ilVar, ExpressionSyntax node)
+        private static bool PopIfNotConsumed(IVisitorContext ctx, IlContext ilVar, ExpressionSyntax node)
         {
             var nodeType = ctx.GetTypeInfo(node).Type.EnsureNotNull();
             if (!node.IsKind(SyntaxKind.SimpleAssignmentExpression)
@@ -1616,7 +1662,10 @@ namespace Cecilifier.Core.AST
                 && nodeType.SpecialType != SpecialType.System_Void)
             {
                 ctx.ApiDriver.WriteCilInstruction(ctx, ilVar, OpCodes.Pop);
+                return true;
             }
+
+            return false;
         }
 
         private static void HandleModulusExpression(IVisitorContext context, IlContext ilVar, ITypeSymbol lhs, ITypeSymbol rhs)
