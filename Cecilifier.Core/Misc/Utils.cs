@@ -15,9 +15,9 @@ namespace Cecilifier.Core.Misc
             if (!(memberSymbol.Type is INamedTypeSymbol ts) || !ts.IsGenericType || !memberSymbol.IsDefinedInCurrentAssembly(context))
                 return null;
 
-            var openTypeRef = context.TypeResolver.Resolve(memberSymbol.Type.OriginalDefinition, ResolveTargetKind.LocalVariable);
-            var declaringType = context.TypeResolver.Resolve(memberSymbol.ContainingType, ResolveTargetKind.LocalVariable);
-            var instantiatedGenericType = context.TypeResolver.MakeGenericInstanceType(memberSymbol.Type.OriginalDefinition.NameIncludingTypeParametersAndArguments(), openTypeRef, ts, ResolveTargetKind.LocalVariable);
+            var openTypeRef = context.TypeResolver.Resolve(memberSymbol.Type.OriginalDefinition, ResolveTargetKind.TypeReference);
+            var declaringType = context.TypeResolver.Resolve(memberSymbol.ContainingType, ResolveTargetKind.TypeReference);
+            var instantiatedGenericType = context.TypeResolver.MakeGenericInstanceType(memberSymbol.Type.OriginalDefinition.NameIncludingTypeParametersAndArguments(), openTypeRef, ts, ResolveTargetKind.Field);
             
             var fieldRefVar = context.Naming.MemberReference("fld_");
             var fieldRefStatements = context.ApiDefinitionsFactory.FieldReference(context, fieldRefVar, fieldName, instantiatedGenericType, declaringType);

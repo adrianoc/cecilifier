@@ -9,7 +9,7 @@ namespace Cecilifier.Core.Tests.OutputBased;
 
 [TestFixture(typeof(MonoCecilContext))]
 [TestFixture(typeof(SystemReflectionMetadataContext))]
-[EnableForContext<SystemReflectionMetadataContext>(IgnoreReason = "Not implemented yet")]
+[EnableForContext<SystemReflectionMetadataContext>(nameof(EventDefinedInGenericType), IgnoreReason = "Not implemented yet")]
 public class MemberAccessTests<TContext> : OutputBasedTestBase<TContext> where TContext : IVisitorContext
 {
     [Test]
@@ -39,5 +39,24 @@ public class MemberAccessTests<TContext> : OutputBasedTestBase<TContext> where T
                     }
                     """, "1031");
         
-    }    
+    }
+
+    [Test]
+    public void EventDefinedInGenericType()
+    {
+        AssertOutput("""
+                     var f = new Foo<int>();
+                     f.TheEvent += Print;
+                     f.Trigger(42);
+                     
+                     static void Print(int i) => System.Console.Write(i);
+                     struct Foo<T>
+                     {
+                        public event System.Action<T> TheEvent;
+                        
+                        public void Trigger(T t) => TheEvent.Invoke(t);
+                     }
+                     """,
+            "42");
+    }
 }
