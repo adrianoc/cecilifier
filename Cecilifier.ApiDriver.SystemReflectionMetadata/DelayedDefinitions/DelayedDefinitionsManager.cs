@@ -4,10 +4,14 @@ using System.Runtime.InteropServices;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Cecilifier.ApiDriver.SystemReflectionMetadata.DelayedDefinitions;
 
 internal delegate void DelayedTypeDefinitionAction(SystemReflectionMetadataContext context, ref TypeDefinitionRecord definitionRecord);
+
+internal record struct TypeParameterDefinitionRecord(IList<TypeParameterSyntax> TypeParameterSyntaxes, IList<string> TypeParameterStrings, string MethodDefinitionVariable);
+
 /// <summary>
 /// System.Reflection.Metadata model requires members (methods, field) as well as parameters
 /// to be defined before the containing member (type, method, property) whereas Cecilifier
@@ -24,6 +28,7 @@ public class DelayedDefinitionsManager
 {
     private readonly Dictionary<string, TypeDefinitionRecord> _postponedTypeDefinitions = new();
     private readonly List<string> _typeDefinitionOrder = new();
+    private readonly List<TypeParameterDefinitionRecord> _typeParameters = new();
 
     internal void RegisterTypeDefinition(string typeVarName, DelayedTypeDefinitionAction action)
     {
@@ -47,7 +52,7 @@ public class DelayedDefinitionsManager
     internal void RegisterFieldDefinition(string declaringTypeVarName, in FieldDefinitionRecord field)
     {
         ref var typeRecordOrNullRef = ref CollectionsMarshal.GetValueRefOrNullRef(_postponedTypeDefinitions, declaringTypeVarName);
-        Debug.Assert(!Unsafe.IsNullRef(ref typeRecordOrNullRef), $"The type '{declaringTypeVarName}' has not been registered yet.");
+        Debug.Assert(!Unsafe.IsNullRef(ref typeRecordOrNullRef), $"[Field Index: {field.Index}] The type '{declaringTypeVarName}' has not been registered yet.");
         
         typeRecordOrNullRef.Fields.Add(field);
     }
@@ -73,6 +78,35 @@ public class DelayedDefinitionsManager
         GetCurrentTypeDefinition().Events.Add(new EventDefinitionRecord(eventName, propertyDefinitionVariable, declaringTypeName, eventProcessor));
     }
 
+    internal void RegisterTypeParameters(IList<TypeParameterSyntax> typeParameters, string methodDefVar)
+    {
+        _typeParameters.Add(new TypeParameterDefinitionRecord(typeParameters, [], methodDefVar));
+    }
+    
+    internal void RegisterTypeParameters(IList<string> typeParameters, string methodDefVar)
+    {
+        _typeParameters.Add(new TypeParameterDefinitionRecord([], typeParameters, methodDefVar));
+    }
+
+    /*
+     * In order to ensure generic type parameter table respects the sorting rules from ECMA XXXX
+     * we need to emit the type parameters for methods only after emitting all types whence we postpone it.
+     */
+    public void EmitTypeParameters(IVisitorContext context)
+    {
+        foreach (var typeParameter in _typeParameters)
+        {
+            if (typeParameter.TypeParameterSyntaxes.Count > 0)
+            {
+                SRMUtils.AddTypeParameters(context, typeParameter.TypeParameterSyntaxes, typeParameter.MethodDefinitionVariable);
+            }
+            else if(typeParameter.TypeParameterStrings.Count > 0)
+            {
+                SRMUtils.AddTypeParameters(context, typeParameter.TypeParameterStrings, typeParameter.MethodDefinitionVariable);
+            }
+        }
+    }
+    
     /// <summary>
     /// This method must be invoked after the member has been registered with the DelayedDefinitionsManager, in most cases
     /// this means after the equivalent method in <see cref="Cecilifier.Core.ApiDriver.DefinitionsFactory.IApiDriverDefinitionsFactory"/> has been invoked.
@@ -102,47 +136,25 @@ public class DelayedDefinitionsManager
     {
         if (_postponedTypeDefinitions.Count == 0)
             return;
-        
-        ProcessMethodRecords(context);
-        EnsureTypeDefinitionRecordsHaveFirstHandlesInitialized();
 
         foreach (var typeVarName in _typeDefinitionOrder)
         {
             ref var typeRecord = ref CollectionsMarshal.GetValueRefOrNullRef(_postponedTypeDefinitions, typeVarName);
             Debug.Assert(!Unsafe.IsNullRef(ref typeRecord));
             
+            foreach (var methodRecord in typeRecord.Methods)
+            {
+                var methodHandleVariableName = methodRecord.DefinitionFunction(context, methodRecord);
+                typeRecord.FirstMethodHandle ??= methodHandleVariableName;
+            }
+            
+            typeRecord.FirstMethodHandle ??= ApiDriverConstants.MethodDefinitionTableNextAvailableEntry;
             typeRecord.DefinitionFunction(context, ref typeRecord);
         }
         _postponedTypeDefinitions.Clear();
         _typeDefinitionOrder.Clear();
     }
-    
-    private void ProcessMethodRecords(SystemReflectionMetadataContext context)
-    {
-        foreach (var typeDeclarationVarName in _typeDefinitionOrder)
-        {
-            ref var typeRecordOrNullRef = ref CollectionsMarshal.GetValueRefOrNullRef(_postponedTypeDefinitions, typeDeclarationVarName);
-            Debug.Assert(!Unsafe.IsNullRef(ref typeRecordOrNullRef));
-            
-            foreach (var methodRecord in typeRecordOrNullRef.Methods)
-            {
-                var methodHandleVariableName = methodRecord.DefinitionFunction(context, methodRecord);
-                typeRecordOrNullRef.FirstMethodHandle ??= methodHandleVariableName;
-            }
-        }
-    }
 
-    private void EnsureTypeDefinitionRecordsHaveFirstHandlesInitialized()
-    {
-        foreach (var typeDeclarationVarName in _typeDefinitionOrder)
-        {
-            ref var typeRecord = ref CollectionsMarshal.GetValueRefOrNullRef(_postponedTypeDefinitions, typeDeclarationVarName);
-            Debug.Assert(!Unsafe.IsNullRef(ref typeRecord));
-            
-            typeRecord.FirstMethodHandle ??= ApiDriverConstants.MethodDefinitionTableNextAvailableEntry;
-        }
-    }
-    
     private ref TypeDefinitionRecord GetCurrentTypeDefinition()
     {
         // This assumes that the last type definition is the current one. This may not hold true if we need to process types in a mixed order (e.g. start processing A then

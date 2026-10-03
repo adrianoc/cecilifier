@@ -117,7 +117,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
           _context.DefinitionVariables.RegisterNonMethod(type.ContainingAssembly.ToDisplayString(), mangledTypeVariableName, VariableMemberKind.Type, resolvedTypeVariable);
               
           _context.Generate($"""
-                             var {resolvedTypeVariable} = metadata.AddTypeReference({_context.AssemblyResolver.Resolve(_context, _context.RoslynTypeSystem.SystemObject.ContainingAssembly)}, metadata.GetOrAddString("{type.ContainingNamespace.Name}"), metadata.GetOrAddString("{type.MetadataName}"));
+                             var {resolvedTypeVariable} = metadata.AddTypeReference({_context.AssemblyResolver.Resolve(_context, _context.RoslynTypeSystem.SystemObject.ContainingAssembly)}, metadata.GetOrAddString("{type.ContainingNamespace.FullyQualifiedName()}"), metadata.GetOrAddString("{type.MetadataName}"));
                              """);
               
           _context.WriteNewLine();
@@ -207,7 +207,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
                                        var gti = typeSpecificationSig.GenericInstantiation({{openGenericType.Expression}}, {{state.Length}}, isValueType: {{genericTypeSymbol.IsValueType.ToKeyword()}});    
                                        {{
                                            state.ToImmutableArray().Select(
-                                                   targ => $"gti.AddArgument().{_context.TypedTypeResolver.Resolve(targ, ResolveTargetKind.GenericTypeArgument)};\n")
+                                                   targ => $"gti.AddArgument().{_context.TypedTypeResolver.Resolve(targ, targ.NewTypeResolutionContextFor(ResolveTargetKind.GenericTypeArgument))};\n")
                                                .Aggregate("", (acc, s) => acc + s)
                                        }}
                                        {{genericInstanceTypeVar}} = metadata.AddTypeSpecification(metadata.GetOrAddBlob(typeSpecificationSig.Builder));
@@ -221,7 +221,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
         definitionVariable.ThrowIfVariableIsNotValid();
         return definitionVariable.VariableName;
     }
-
+    
     public override ResolvedType MakeGenericInstanceType(string typeName, ResolvedType openGenericType, Span<ResolvedType> typeArguments, in TypeResolutionContext resolutionContext)
     {
         if (typeArguments.Length == 0)
@@ -344,7 +344,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
                         var gi = typeSignatureEncoder.GenericInstantiation({{openGenericType.Expression}}, {{typeArguments.Length}}, isValueType: {{genericTypeSymbol.IsValueType.ToKeyword()}});
                         {{
                             typeArguments.ToImmutableArray().Select(
-                                    targ => $"gi.AddArgument().{_context.TypedTypeResolver.Resolve(targ, ResolveTargetKind.GenericTypeArgument)};\n    ")
+                                    targ => $"gi.AddArgument().{_context.TypedTypeResolver.Resolve(targ, targ.NewTypeResolutionContextFor(ResolveTargetKind.GenericTypeArgument))};\n    ")
                                 .Aggregate("", (acc, s) => acc + s)
                         }}
                     })

@@ -45,6 +45,8 @@ public interface IVisitorContext
 
     void OnFinishedTypeDeclaration(INamedTypeSymbol typeSymbol);
 
+    void FinishCodeGeneration();
+
     IMethodSymbol GetDeclaredSymbol(BaseMethodDeclarationSyntax methodDeclaration);
     ITypeSymbol GetDeclaredSymbol(BaseTypeDeclarationSyntax classDeclaration);
     TypeInfo GetTypeInfo(TypeSyntax node);

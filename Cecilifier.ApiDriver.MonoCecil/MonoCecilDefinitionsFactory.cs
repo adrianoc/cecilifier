@@ -42,13 +42,9 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
         var typeVar = definitionContext.DefinitionVariable;
         
         var typeParamList = ownTypeParameters?.ToArray() ?? [];
-        if (typeParamList.Length > 0)
-        {
-            typeName = typeName + "`" + typeParamList.Length;
-        }
+        typeName = TypeNameFor(typeName, typeParamList);
 
         var exps = new List<string>();
-
         ResolvedType resolvedBaseType = baseType == null || (baseType is INamedTypeSymbol { IsGenericType: true } genericInstance && genericInstance.TypeArguments.Any(t => t.TypeKind == TypeKind.TypeParameter))
                 ? null
                 : context.TypeResolver.Resolve(baseType, ResolveTargetKind.TypeReference);
@@ -84,7 +80,21 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
 
         return exps;
     }
-
+    
+    public IEnumerable<string> Type(IVisitorContext context, MemberDefinitionContext definitionContext, string typeNamespace, string attrs, ResolvedType? baseType, bool isStructWithNoFields, IEnumerable<ResolvedType> interfaces, IEnumerable<string>? ownTypeParameters, IEnumerable<string>? outerTypeParameters, params TypeLayoutProperty[] properties)
+    {
+        List<string> exps = [$"""var {definitionContext.DefinitionVariable} = new TypeDefinition(string.Empty, "{TypeNameFor(definitionContext.Name, ownTypeParameters)}", TypeAttributes.NotPublic | TypeAttributes.AutoLayout | TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit | TypeAttributes.Sealed, {context.TypeResolver.Bcl.System.ValueType});"""];
+        foreach (var typeParameterName in ownTypeParameters ?? Array.Empty<string>())
+        {
+            var typeParameterVar = context.Naming.SyntheticVariable(typeParameterName, ElementKind.GenericParameter);
+            exps.Add(CecilDefinitionsFactory.GenericParameter(context, $"{definitionContext.Identifier}", definitionContext.DefinitionVariable, typeParameterName, typeParameterVar));
+            exps.Add($"""{definitionContext.DefinitionVariable}.GenericParameters.Add({typeParameterVar});""");
+        }
+        exps.Add($"assembly.MainModule.Types.Add({definitionContext.DefinitionVariable});\n");
+        
+        return exps;
+    }
+    
     public void UpdateBaseTypeIfNeeded(IVisitorContext context, ITypeSymbol typeSymbol, string typeDefinitionVariable)
     {
         // we postpone setting the base type because it may depend on generic parameters defined in the class itself (for instance 'class C<T> : Base<T> {}')
@@ -122,7 +132,7 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
         }
         return exps;
     }
-
+    
     public IEnumerable<string> Method(IVisitorContext context,
         BodiedMemberDefinitionContext definitionContext,
         string declaringTypeName,
@@ -683,5 +693,13 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
         }
 
         return $"new ParameterDefinition(\"{name}\", {paramAttributes}, {resolvedType})";
+    }
+
+    private static string TypeNameFor<T>(string typeName, IEnumerable<T>? typeParamList)
+    {
+        var count = typeParamList?.Count();
+        return count > 0 
+            ? $"{typeName}`{count}"
+            : typeName;
     }
 }

@@ -23,7 +23,7 @@ internal class SpanExpandedParamsArgumentHandler : ExpandedParamsArgumentHandler
         _paramsParameterType = paramsParameter.Type.ElementTypeSymbolOf();
         _stindOpCode = _paramsParameterType.StindOpCodeFor();
         
-        var openInlineArrayType = InlineArrayGenerator.GetOrGenerateInlineArrayType(context, argumentList.Arguments.Count, "InlineArray to store the `params` values.");
+        var (openInlineArrayType, _) = InlineArrayGenerator.GetOrGenerateInlineArrayType(context, argumentList.Arguments.Count, "InlineArray to store the `params` values.");
         _inlineArrayType = openInlineArrayType.MakeGenericInstanceType([context.TypeResolver.Resolve(_paramsParameterType, ResolveTargetKind.None)]);
 
         var inlineArrayBuffer = context.AddLocalVariableToCurrentMethod($"{paramsParameter.Name}Arg", _inlineArrayType);

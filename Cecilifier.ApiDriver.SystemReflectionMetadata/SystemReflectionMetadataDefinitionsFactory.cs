@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Text;
 using Cecilifier.ApiDriver.SystemReflectionMetadata.CustomAttributes;
 using Cecilifier.ApiDriver.SystemReflectionMetadata.DelayedDefinitions;
@@ -48,7 +47,12 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                       var {typeVar} = metadata.AddTypeReference({resolutionScope}, metadata.GetOrAddString("{typeNamespace}"), metadata.GetOrAddString("{fixedTypeName}"));
                       """);
         
-        DefineGenericTypeParametersVariables(context, typeParameters);
+        if (typeParameters.Count > 0)
+        {
+            var parentName = context.SemanticModel.GetDeclaredSymbol(typeParameters.First())?.ContainingType.OriginalDefinition.ToDisplayString() ?? throw new Exception();
+            DefineGenericTypeParametersVariables(context, parentName, typeParameters.Select(tp => tp.Identifier.ValueText));
+        }
+        
         
         // We need to pass the handle of the 1st field/method defined in the module so we need to postpone the type generation after we have visited all types/members.
         TypedContext(context).DelayedDefinitionsManager.RegisterTypeDefinition(typeVar, DefineDelayed);
@@ -129,22 +133,110 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                 context.WriteNewLine();
             }
 
-            AddTypeParameters(ctx, outerTypeParameters.Concat(typeParameters), typeRecord.TypeDefinitionVariable);
+            SRMUtils.AddTypeParameters(ctx, outerTypeParameters.Concat(typeParameters), typeRecord.TypeDefinitionVariable);
             
             ctx.WriteNewLine();
         }
     }
 
-    public void SetStructLayoutAttribute(IVisitorContext context, string structDefinitionVariable, TypeLayoutProperty[] properties)
+    public IEnumerable<string> Type(IVisitorContext context, MemberDefinitionContext definitionContext, string typeNamespace, string attrs, ResolvedType? baseType, bool isStructWithNoFields, IEnumerable<ResolvedType> interfaces, IEnumerable<string>? ownTypeParameters, IEnumerable<string>? outerTypeParameters, params TypeLayoutProperty[] properties)
     {
-        if (properties.Length == 0)
-            return;
+        var typeParameters = (ownTypeParameters ?? []).ToList();
         
-        var packingSize = properties.SingleOrDefault(p => p.Kind == TypeLayoutPropertyKind.PackingSize).Value;
-        var clasSize = properties.SingleOrDefault(p => p.Kind == TypeLayoutPropertyKind.ClassSize).Value;
+        var fixedTypeName = typeParameters.Count > 0 ? $"{definitionContext.Name}`{typeParameters.Count}": definitionContext.Name;
+        var typeVar = definitionContext.DefinitionVariable;
+        var resolutionScope = definitionContext.ParentDefinitionVariable ?? "mainModuleHandle";
+        yield return Format($"""
+                      // Add a type reference for the new type. Types/Member references to the new type uses this.
+                      var {typeVar} = metadata.AddTypeReference({resolutionScope}, metadata.GetOrAddString("{typeNamespace}"), metadata.GetOrAddString("{fixedTypeName}"));
+                      """);
+        
+        DefineGenericTypeParametersVariables(context, definitionContext.Identifier, typeParameters);
+        
+        // We need to pass the handle of the 1st field/method defined in the module so we need to postpone the type generation after we have visited all types/members.
+        TypedContext(context).DelayedDefinitionsManager.RegisterTypeDefinition(typeVar, DefineDelayed);
+        //TODO: Refactor to eliminate code duplication from the other Type() method.
+        void DefineDelayed(SystemReflectionMetadataContext ctx, ref TypeDefinitionRecord typeRecord)
+        {
+            string? firstFieldHandle = null;
+            for(int i = 0; i < typeRecord.Fields.Count; i++)
+            {
+                var field = typeRecord.Fields[i];
                 
-        context.Generate($"metadata.AddTypeLayout({structDefinitionVariable}, {packingSize}, {clasSize});");
-        context.WriteNewLine();
+                var fieldHandle = field.DefinitionFunction(field);
+                firstFieldHandle ??= fieldHandle;
+            }
+            
+            typeRecord.TypeDefinitionVariable = ctx.Naming.Type(definitionContext.Identifier, ElementKind.Class);
+            ctx.Generate(Format($"""
+                                 var {typeRecord.TypeDefinitionVariable} = metadata.AddTypeDefinition(
+                                                                  {attrs},
+                                                                  metadata.GetOrAddString("{typeNamespace}"),
+                                                                  metadata.GetOrAddString("{fixedTypeName}"),
+                                                                  { (baseType == null ? "default" : baseType.Value.Expression)},
+                                                                  fieldList: {firstFieldHandle ?? ApiDriverConstants.FieldDefinitionTableNextAvailableEntry},
+                                                                  methodList: {typeRecord.FirstMethodHandle ?? ApiDriverConstants.MethodDefinitionTableNextAvailableEntry});
+                                 """));
+            ctx.WriteNewLine();
+            
+            // Add attributes to the type definition
+            foreach (var attributeEmitter in typeRecord.Attributes)
+            {
+                attributeEmitter(ctx, typeRecord.TypeDefinitionVariable);
+            }
+            
+            foreach (var property in typeRecord.Properties)
+            {
+                // process each property passing the type definition variable (as opposed to the type reference variable) 
+                property.Processor(ctx, property.Name, property.DefinitionVariable, property.DeclaringTypeName, typeRecord.TypeDefinitionVariable);
+            }
+            
+            var firstProperty = typeRecord.Properties.FirstOrDefault();
+            if (firstProperty.IsValid)
+            {
+                ctx.Generate($"metadata.AddPropertyMap({typeRecord.TypeDefinitionVariable}, {firstProperty.DefinitionVariable});");
+                ctx.WriteNewLine();
+            }
+            
+            foreach (var eventRecord in typeRecord.Events)
+            {
+                // process each event passing the type definition variable 
+                eventRecord.Processor(ctx, eventRecord.Name, eventRecord.DefinitionVariable, eventRecord.DeclaringTypeName);
+            }
+            
+            var firstEvent = typeRecord.Events.FirstOrDefault();
+            if (firstEvent.IsValid)
+            {
+                ctx.Generate($"metadata.AddEventMap({typeRecord.TypeDefinitionVariable}, {firstEvent.DefinitionVariable});");
+                ctx.WriteNewLine();
+            }
+            
+            if (definitionContext.ParentDefinitionVariable != null)
+            {
+                var parentTypeDefinitionVariable =  ctx.DelayedDefinitionsManager.GetTypeDefinitionVariableFromTypeReferenceVariable(definitionContext.ParentDefinitionVariable);
+                ctx.Generate($"metadata.AddNestedType({typeRecord.TypeDefinitionVariable}, {parentTypeDefinitionVariable});"); // type is an inner type
+                ctx.WriteNewLine();
+            }
+
+            if (properties.Length > 0)
+            {
+                var packingSize = properties.SingleOrDefault(p => p.Kind == TypeLayoutPropertyKind.PackingSize).Value;
+                var clasSize = properties.SingleOrDefault(p => p.Kind == TypeLayoutPropertyKind.ClassSize).Value;
+                
+                ctx.Generate($"metadata.AddTypeLayout({typeRecord.TypeDefinitionVariable}, {packingSize}, {clasSize});");
+                ctx.WriteNewLine();
+            }
+            
+            foreach(var itf in interfaces)
+            {
+                context.Generate($"metadata.AddInterfaceImplementation({typeRecord.TypeDefinitionVariable}, {itf.Expression});");
+                context.WriteNewLine();
+            }
+
+            SRMUtils.AddTypeParameters(ctx, (outerTypeParameters ?? Array.Empty<string>()).Concat(typeParameters), typeRecord.TypeDefinitionVariable);
+            
+            ctx.WriteNewLine();
+        }
     }
 
     public void UpdateBaseTypeIfNeeded(IVisitorContext context, ITypeSymbol typeSymbol, string typeDefinitionVariable)
@@ -154,7 +246,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
 
     public IEnumerable<string> Method(IVisitorContext context, IMethodSymbol methodSymbol, BodiedMemberDefinitionContext bodiedMemberDefinitionContext, string methodName, string methodModifiers, IList<TypeParameterSyntax> typeParameters)
     {
-        DefineGenericTypeParametersVariables(context, typeParameters);
+        DefineGenericTypeParametersVariables(context, methodSymbol.OriginalDefinition.ToDisplayString(), typeParameters.Select(tp => tp.Identifier.ValueText));
 
         // Resolve the method to make sure there's a method ref available (this will be used to fulfill any references to this method)
         context.MemberResolver.ResolveMethod(methodSymbol);
@@ -169,7 +261,8 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         }
 
         var memberParentDefinitionVariable = bodiedMemberDefinitionContext.Member.ParentDefinitionVariable ?? throw new ArgumentNullException(nameof(bodiedMemberDefinitionContext.Member.ParentDefinitionVariable));
-        TypedContext(context).DelayedDefinitionsManager.RegisterMethodDefinition(memberParentDefinitionVariable,bodiedMemberDefinitionContext.Member.DefinitionVariable, (ctx, methodRecord) =>
+        var delayedDefinitionsManager = TypedContext(context).DelayedDefinitionsManager;
+        delayedDefinitionsManager.RegisterMethodDefinition(memberParentDefinitionVariable,bodiedMemberDefinitionContext.Member.DefinitionVariable, (ctx, methodRecord) =>
         {
             EmitLocalVariables(ctx, bodiedMemberDefinitionContext.Member.Identifier, in methodRecord);
             
@@ -195,9 +288,8 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
             ctx.WriteNewLine();
             ctx.WriteNewLine();
             
-            AddTypeParameters(ctx, typeParameters, methodDefVar);
-
             ctx.DefinitionVariables.ExecuteDependentRegistrations(methodDefVar);
+            delayedDefinitionsManager.RegisterTypeParameters(typeParameters, methodDefVar);
             
             return methodDefVar;
         });
@@ -302,9 +394,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                                         methodDefVar);
             
             ctx.DefinitionVariables.RegisterMethod(toBeRegistered);
-            
-            AddTypeParameters(ctx, typeParameters, methodDefVar);
-            
+            ctx.DelayedDefinitionsManager.RegisterTypeParameters(typeParameters, methodDefVar);
             ctx.DefinitionVariables.ExecuteDependentRegistrations(methodDefVar);
             
             return methodDefVar;
@@ -699,108 +789,14 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
     }
 
     static string Format(CecilifierInterpolatedStringHandler cecilFormattedString) => StringExtensions.Indented(cecilFormattedString);
-    
-    private static void AddTypeParameters(SystemReflectionMetadataContext ctx, IEnumerable<TypeParameterSyntax> typeParameters, string entityHandleVariable)
+
+    private static void DefineGenericTypeParametersVariables(IVisitorContext context, string parentName, IEnumerable<string> typeParamList)
     {
-        var index = 0;
-        foreach (var genericTypeParameter in typeParameters)
-        {
-            var typeParameterSymbol = ctx.SemanticModel.GetDeclaredSymbol(genericTypeParameter).EnsureNotNull();
-            var typeParameterVarName = ctx.Naming.SyntheticVariable(typeParameterSymbol.Name, ElementKind.GenericParameter);
-            
-            // We only need to assign the newly constructed generic type parameter if we need to set a `type` constraint 
-            var varAssignment = typeParameterSymbol.ConstraintTypes.Length > 0 || typeParameterSymbol.HasValueTypeConstraint || typeParameterSymbol.HasUnmanagedTypeConstraint 
-                ? $"var {typeParameterVarName} = "
-                : string.Empty; 
-                
-            ctx.Generate($"""{varAssignment}metadata.AddGenericParameter({entityHandleVariable}, {GenericParameterAttributesFor(typeParameterSymbol)}, metadata.GetOrAddString("{genericTypeParameter.Identifier.Text}"), {index++});""");
-            foreach (var constraint in typeParameterSymbol.ConstraintTypes)
-            {
-                ctx.WriteNewLine();
-                var resolvedType = ctx.TypeResolver.Resolve(constraint, ResolveTargetKind.GenericTypeParameterConstraint);
-                ctx.Generate(Format($"metadata.AddGenericParameterConstraint({typeParameterVarName}, {resolvedType});"));
-            }
-
-            ctx.WriteNewLine();
-
-            if (typeParameterSymbol.HasUnmanagedTypeConstraint)
-            {
-                ctx.Generate(Format($$"""
-                                      {
-                                          var typeSpecificationSig = new BlobEncoder(new BlobBuilder()).TypeSpecificationSignature();
-                                          typeSpecificationSig.CustomModifiers().AddModifier({{ctx.TypeResolver.Resolve(ctx.RoslynTypeSystem.ForType<UnmanagedType>(), ResolveTargetKind.TypeReference)}}, isOptional: false);
-                                          typeSpecificationSig.Type({{ctx.TypeResolver.Bcl.System.ValueType}}, isValueType: true);
-                                          metadata.AddGenericParameterConstraint({{typeParameterVarName}}, metadata.AddTypeSpecification(metadata.GetOrAddBlob(typeSpecificationSig.Builder)));
-                                      }
-                                      """));
-                ctx.WriteNewLine();
-            } 
-            else if (typeParameterSymbol.HasValueTypeConstraint)
-            {
-                ctx.Generate(Format($"metadata.AddGenericParameterConstraint({typeParameterVarName}, {ctx.TypeResolver.Bcl.System.ValueType});"));
-                ctx.WriteNewLine();
-            }
-        }
-        static string GenericParameterAttributesFor(ITypeParameterSymbol typeParameterSymbol)
-        {
-            Span<char> span = stackalloc char[1024];
-            Span<char> target = span;
-            if (typeParameterSymbol.HasReferenceTypeConstraint)
-                target = target.AppendEnumFlag("GenericParameterAttributes.ReferenceTypeConstraint");
-            
-            if (typeParameterSymbol.HasConstructorConstraint || typeParameterSymbol.HasValueTypeConstraint)
-                target = target.AppendEnumFlag("GenericParameterAttributes.DefaultConstructorConstraint", target.Length == span.Length);
-
-            if (typeParameterSymbol.HasValueTypeConstraint)
-                target = target.AppendEnumFlag("GenericParameterAttributes.NotNullableValueTypeConstraint", target.Length == span.Length);
-            
-            if (typeParameterSymbol.Variance == VarianceKind.In)
-                target = target.AppendEnumFlag("GenericParameterAttributes.Contravariant", target.Length == span.Length);
-            
-            if (typeParameterSymbol.Variance == VarianceKind.Out)
-                target = target.AppendEnumFlag("GenericParameterAttributes.Covariant", target.Length == span.Length);
-            
-            if (span.Length != target.Length)
-                return span.Slice(0, span.Length - target.Length).ToString();
-            
-            return "GenericParameterAttributes.None";
-        }
-    }
-
-    // Assumes type parameters:
-    // - Have no constraints (GenericParameterAttributes.None)
-    // - Have no attributes (GenericParameterAttributes.None)
-    private static void AddTypeParameters(SystemReflectionMetadataContext ctx, IEnumerable<string> typeParameterNames, string entityHandleVariable)
-    {
-        var index = 0;
-        foreach (var typeParameterName in typeParameterNames)
-        {
-            var varAssignment = string.Empty; 
-                
-            ctx.Generate($"""{varAssignment}metadata.AddGenericParameter({entityHandleVariable}, GenericParameterAttributes.None, metadata.GetOrAddString("{typeParameterName}"), {index++});""");
-            ctx.WriteNewLine();
-        }
-    }
-    
-    private static void DefineGenericTypeParametersVariables(IVisitorContext context, IList<TypeParameterSyntax> typeParamList)
-    {
-        for (int i = 0; i < typeParamList.Count; i++)
-        {
-            var symbol = context.SemanticModel.GetDeclaredSymbol(typeParamList[i]).EnsureNotNull();
-            var parentName = symbol.TypeParameterKind == TypeParameterKind.Method ? symbol.DeclaringMethod?.OriginalDefinition.ToDisplayString() : symbol.DeclaringType?.OriginalDefinition.ToDisplayString();
-
-            // register a variable representing the type parameter; uses its index as its name since in SRM the type parameter is represented by its index.
-            Debug.Assert(parentName != null);
-            context.DefinitionVariables.RegisterNonMethod(parentName, typeParamList[i].Identifier.Text, VariableMemberKind.TypeParameter, i.ToString());
-        }
-    }
-    
-    private static void DefineGenericTypeParametersVariables(IVisitorContext context, string parentName, IList<string> typeParamList)
-    {
-        for (int i = 0; i < typeParamList.Count; i++)
+        int i = 0;
+        foreach(var typeParameter in typeParamList)
         {
             // register a variable representing the type parameter; uses its index as its name since in SRM the type parameter is represented by its index. 
-            context.DefinitionVariables.RegisterNonMethod(parentName, typeParamList[i], VariableMemberKind.TypeParameter, i.ToString());
+            context.DefinitionVariables.RegisterNonMethod(parentName, typeParameter, VariableMemberKind.TypeParameter, i++.ToString());
         }
     }
 }

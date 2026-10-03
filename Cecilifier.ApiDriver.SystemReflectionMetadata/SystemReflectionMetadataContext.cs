@@ -36,7 +36,12 @@ public class SystemReflectionMetadataContext : CecilifierContextBase, IVisitorCo
         if(typeSymbol == null || typeSymbol.ContainingType == null)
             DelayedDefinitionsManager.ProcessDefinitions(this);
     }
-    
+
+    public override void FinishCodeGeneration()
+    {
+        DelayedDefinitionsManager.EmitTypeParameters(this);
+    }
+
     public SystemReflectionMetadataTypeResolver TypedTypeResolver => (SystemReflectionMetadataTypeResolver)TypeResolver;
     
     public static IVisitorContext CreateContext(CecilifierOptions options, SemanticModel semanticModel) => new SystemReflectionMetadataContext(options, semanticModel);

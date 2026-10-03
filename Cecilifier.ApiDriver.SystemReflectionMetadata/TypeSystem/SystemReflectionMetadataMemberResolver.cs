@@ -40,10 +40,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
                                            parameters =>
                                            {
                                                {{
-                                                   string.Join('\n',
-                                                       method.OriginalDefinition.Parameters.Select(p => $"""
-                                                                                                             parameters.AddParameter().{ctx.TypedTypeResolver.Resolve(p.Type, new TypeResolutionContext(ResolveTargetKind.Parameter, TypeResolutionOptionsFor(p)))};
-                                                                                                         """))}}
+                                                   string.Join('\n', method.OriginalDefinition.Parameters.Select(p => ParameterExpressionFor(ctx, p)))}}
                                            });
 
                                    var {{methodSignatureVarName}} = metadata.GetOrAddBlob({{methodSignatureBlobVar}});
@@ -85,7 +82,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
         }
         return methodRefVar;
     }
-    
+
     public string ResolveMethod(string declaringTypeName, string declaringTypeVariable, string methodName, ResolvedType returnType, IReadOnlyList<ParameterSpec> parameters, IReadOnlyList<string> typeParameters, MemberOptions options)
     {
         var methodReferenceToFind = new MethodDefinitionVariable(
@@ -131,9 +128,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
                                       },
                                       parameters => 
                                       {
-                                          {{
-                                              string.Join('\n', parameters.Select(p => $"parameters.AddParameter().{ p.ElementTypeResolver?.Invoke(context, p) ?? p.ElementType.Expression };"))
-                                          }}
+                                          {{ string.Join('\n', parameters.Select(p => ParameterExpressionFor(context, p))) }}
                                       });
 
                               var {{methodSignatureVar}} = metadata.GetOrAddBlob({{methodSignatureBlobVar}});
@@ -241,6 +236,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
 
         return instantiationVar;
     }
+    
     private static TypeResolutionOptions TypeResolutionOptionsFor(IParameterSymbol parameter)
     {
         var byRefState= parameter.RefKind != RefKind.None 
@@ -249,5 +245,16 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
             
         return (parameter.Type.IsValueType ? TypeResolutionOptions.IsValueType : TypeResolutionOptions.None) | byRefState;
     }
+    
+    private static string ParameterExpressionFor(SystemReflectionMetadataContext ctx, IParameterSymbol p)
+    {
+        var resolvedParameterType = ctx.TypedTypeResolver.Resolve(p.Type, new TypeResolutionContext(ResolveTargetKind.Parameter, TypeResolutionOptionsFor(p)));
+        return p.HasExplicitDefaultValue 
+            ? $"""metadata.AddConstant(parameters.AddParameter().{resolvedParameterType}, {p.ExplicitDefaultValue});""" 
+            : $"""parameters.AddParameter().{resolvedParameterType};""";
+    }
+    
+    private static string ParameterExpressionFor(SystemReflectionMetadataContext context, ParameterSpec p) => $"""parameters.AddParameter().{p.ElementTypeResolver?.Invoke(context, p) ?? p.ElementType.Expression};""";
+
     #endregion
 }

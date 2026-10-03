@@ -52,6 +52,7 @@ public struct Constants
 
     public struct CompilerGeneratedTypes
     {
+        public static string InlineArrayNameForLength(int length) => $"<>y_InlineArray{length}";
         public const string PrivateImplementationDetails = "<PrivateImplementationDetails>";
         public const string PrivateImplementationDetailsModifiers = "TypeAttributes.NotPublic | TypeAttributes.Sealed | TypeAttributes.AnsiClass | TypeAttributes.AutoLayout";
         

@@ -47,7 +47,7 @@ public class ParamsTests : CecilifierUnitTestBase
                             """)]
     
     [TestCase("IList<long>", """
-                             (?<emit>\s+il_use_\d+\.Emit\(OpCodes\.)Call, m_getItem_\d+\);
+                             (?<emit>\s+il_use_\d+\.Emit\(OpCodes\.)Call, r_get_Item_\d+\);
                              \k<emit>Ldarg_1\);
                              \k<emit>Conv_I8\);
                              \k<emit>Stind_I8\);
@@ -200,17 +200,17 @@ public class ParamsTests : CecilifierUnitTestBase
                 """,
                 """
                 (?<emit>\s+il_use_\d+\.Emit\(OpCodes\.)Ldc_I4, 0\);
-                \k<emit>Call, m_getItem_\d+\);
+                \k<emit>Call, r_get_Item_\d+\);
                 \k<emit>Ldc_I4, 1\);
                 \k<emit>Stind_I4\);
                 \k<emit>Ldloca_S, l_listSpan_\d+\);
                 \k<emit>Ldc_I4, 1\);
-                \k<emit>Call, m_getItem_\d+\);
+                \k<emit>Call, r_get_Item_\d+\);
                 \k<emit>Ldc_I4, 2\);
                 \k<emit>Stind_I4\);
                 \k<emit>Ldloca_S, l_listSpan_\d+\);
                 \k<emit>Ldc_I4, 2\);
-                \k<emit>Call, m_getItem_\d+\);
+                \k<emit>Call, r_get_Item_\d+\);
                 \k<emit>Ldarg_1\);
                 \k<emit>Stind_I4\);
                 \k<emit>Call, m_M_\d+\);
