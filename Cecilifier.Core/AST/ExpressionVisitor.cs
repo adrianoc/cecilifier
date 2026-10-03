@@ -362,7 +362,7 @@ namespace Cecilifier.Core.AST
                     return;
                 
                 var ldelemOpCodeToUse = targetType.LdelemOpCode();
-                Context.ApiDriver.WriteCilInstruction(Context, ilVar, ldelemOpCodeToUse, ldelemOpCodeToUse == OpCodes.Ldelem ? Context.TypeResolver.Resolve(targetType, ResolveTargetKind.None) : null);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, ldelemOpCodeToUse, ldelemOpCodeToUse == OpCodes.Ldelem ? Context.TypeResolver.Resolve(targetType, ResolveTargetKind.TypeReference).AsToken() : default);
             }
         }
 

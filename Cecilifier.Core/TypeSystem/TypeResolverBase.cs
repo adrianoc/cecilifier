@@ -98,7 +98,7 @@ namespace Cecilifier.Core.TypeSystem
         {
             if (type is IArrayTypeSymbol array)
             {
-                return MakeArrayType(array.ElementType, in resolutionContext);
+                return MakeArrayType(array.ElementType, new TypeResolutionContext(resolutionContext.TargetKind, resolutionContext.Options | (array.ElementType.IsValueType ? TypeResolutionOptions.IsValueType : TypeResolutionOptions.None)));
             }
 
             if (type is IPointerTypeSymbol pointerType)

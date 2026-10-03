@@ -141,7 +141,7 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
     {
         var mappedOpCodeName = MapSystemReflectionOpCodeNameToSystemReflectionMetadata(opCode);
         var emitted = $"{il.VariableName}.OpCode(ILOpCode.{mappedOpCodeName});{(comment != null ? $" // {comment}" : string.Empty)}";
-        if (operand == null || operand is ResolvedType { Expression: null })
+        if (operand == null || operand is ResolvedType { Expression: null } || operand is CilToken { VariableName: null })
             return emitted;
 
         return $$""""
@@ -236,6 +236,12 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
     /// </summary>
     private static string MapSystemReflectionOpCodeNameToSystemReflectionMetadata(OpCode opCode)
     {
+        if (opCode == OpCodes.Stelem)
+            return "Stelem";
+        
+        if (opCode == OpCodes.Ldelem)
+            return "Ldelem";
+        
         var reflectionOpCodeName = opCode.OpCodeName();
         var index = reflectionOpCodeName.IndexOf('_');
         if (index > -1)
