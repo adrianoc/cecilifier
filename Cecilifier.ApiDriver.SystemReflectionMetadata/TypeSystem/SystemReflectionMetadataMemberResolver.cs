@@ -112,7 +112,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
         if ((options & MemberOptions.InitOnly) != 0)
         {
             var modifierVariable = context.TypedTypeResolver.Resolve(context.RoslynTypeSystem.ForType(typeof(IsExternalInit).FullName), ResolveTargetKind.TypeReference);
-            requiredModifierOrEmpty = $"returnTypeEncoder.CustomModifiers().AddModifier({modifierVariable}, isOptional: false);";
+            requiredModifierOrEmpty = $"returnTypeEncoder.CustomModifiers().AddModifier({modifierVariable}, isOptional: false);\n";
         }
 
         context.Generate($$"""
@@ -123,8 +123,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
                                   Parameters({{parameters.Count}},
                                       returnTypeEncoder => 
                                       {
-                                        {{requiredModifierOrEmpty}}
-                                        returnTypeEncoder.{{returnType}};
+                                          {{requiredModifierOrEmpty}}returnTypeEncoder.{{returnType}};
                                       },
                                       parameters => 
                                       {

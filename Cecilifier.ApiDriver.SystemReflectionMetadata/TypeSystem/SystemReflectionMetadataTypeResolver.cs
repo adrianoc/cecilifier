@@ -341,11 +341,10 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
         var ret = $$"""
                     WithSignatureTypeEncoder(typeSignatureEncoder =>
                     {
-                        var gi = typeSignatureEncoder.GenericInstantiation({{openGenericType.Expression}}, {{typeArguments.Length}}, isValueType: {{genericTypeSymbol.IsValueType.ToKeyword()}});
+                        var gi = typeSignatureEncoder.GenericInstantiation({{openGenericType}}, {{typeArguments.Length}}, isValueType: {{genericTypeSymbol.IsValueType.ToKeyword()}});
                         {{
-                            typeArguments.ToImmutableArray().Select(
-                                    targ => $"gi.AddArgument().{_context.TypedTypeResolver.Resolve(targ, targ.NewTypeResolutionContextFor(ResolveTargetKind.GenericTypeArgument))};\n    ")
-                                .Aggregate("", (acc, s) => acc + s)
+                            string.Join("\n    ",
+                                typeArguments.ToImmutableArray().Select(targ => $"gi.AddArgument().{_context.TypedTypeResolver.Resolve(targ, targ.NewTypeResolutionContextFor(ResolveTargetKind.GenericTypeArgument))};"))
                         }}
                     })
                     """;
@@ -359,7 +358,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
                     {
                         var gi = typeSignatureEncoder.GenericInstantiation({{openGenericType.Expression}}, {{typeArguments.Length}}, isValueType: {{isValueType.ToKeyword()}});
                         {{
-                            typeArguments.ToImmutableArray().Select(targ => $"gi.AddArgument().{targ};\n    ").Aggregate("", (acc, s) => acc + s)
+                            string.Join("\\n    ", typeArguments.ToImmutableArray().Select(targ => $"gi.AddArgument().{targ};"))
                         }}
                     })
                     """;
