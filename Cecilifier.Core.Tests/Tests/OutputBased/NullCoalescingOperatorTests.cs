@@ -12,7 +12,9 @@ namespace Cecilifier.Core.Tests.OutputBased;
 [EnableForContext<SystemReflectionMetadataContext>(
     nameof(SimpleReferenceType), 
     nameof(Convoluted), 
-    nameof(TestAssociative), 
+    nameof(TestAssociative),
+    nameof(SimpleNullableValueType),
+    nameof(MixedNullableValueType_AndReferenceType),
     IgnoreReason = "Not implemented yet")]
 public class NullCoalescingOperatorTests<TContext> : OutputBasedTestBase<TContext> where TContext : IVisitorContext
 {

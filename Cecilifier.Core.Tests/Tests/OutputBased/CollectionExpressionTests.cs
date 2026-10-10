@@ -106,7 +106,6 @@ public class CollectionExpressionTests<TContext> : OutputBasedTestBase<TContext>
     }
     
     [Test]
-    [ParameterizedResourceFilter<SystemReflectionMetadataContext>("object[]")]
     public void BoxConversions_Are_Applied([Values("List<object>", "object[]", "Span<object>")] string targetType, [Values("[2, 1]", "[5, 4, 3, 2, 1]")] string items)
     {
         AssertConversionIsApplied(targetType, items, "object");
