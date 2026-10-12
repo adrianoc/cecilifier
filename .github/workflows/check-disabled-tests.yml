@@ -9,14 +9,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Grep for the issue 
         run : grep -rHn -E "Test\(.*Ignore=.+#${{ github.event.issue.number }}.+\)" --include="*.cs" . > sources-referencing-closed-issues.txt && \
               grep -rHn -E "Ignore\(.+?#${{ github.event.issue.number }}.+\)" --include="*.cs" . >> sources-referencing-closed-issues.txt && \
               grep -rHn -E "IgnoreReason\s*=.*#${{ github.event.issue.number }}.*" --include="*.cs" . >> sources-referencing-closed-issues.txt && \
               grep -rHn -E "SetIgnore\(.+?#${{ github.event.issue.number }}.+\)" --include="*.cs" . >> sources-referencing-closed-issues.txt || true
       - name: Checking grep resuls
-        uses : actions/github-script@v6
+        uses : actions/github-script@v9
         with: 
           script: |
 
