@@ -1285,7 +1285,7 @@ namespace Cecilifier.Core.AST
         {
             // We handle all lambdas as static, i.e, non-capturing.
             // use the lambda string representation to lookup the variable with the synthetic method definition
-            var syntheticMethodVariable = Context.DefinitionVariables.GetVariable(node.GetSyntheticMethodName(), VariableMemberKind.Method, node.ToString());
+            var syntheticMethodVariable = Context.DefinitionVariables.GetVariable(node.GetSyntheticMethodName(), VariableMemberKind.Method | VariableMemberKind.MethodReference, node.ToString());
             if (!syntheticMethodVariable.IsValid)
             {
                 // if we fail to resolve the variable it means this is un unsupported scenario (like a lambda that captures context)
@@ -1294,7 +1294,7 @@ namespace Cecilifier.Core.AST
             }
 
             Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldnull);
-            CodeGenerationHelpers.InstantiateDelegate(Context, ilVar, Context.GetTypeInfo(node).ConvertedType!, syntheticMethodVariable.VariableName, new StaticDelegateCacheContext
+            InstantiateDelegate(Context, ilVar, Context.GetTypeInfo(node).ConvertedType!, syntheticMethodVariable.VariableName, new StaticDelegateCacheContext
             {
                 IsStaticDelegate = false
             });

@@ -2,10 +2,7 @@ using System;
 using System.Collections;
 using System.Linq;
 using Cecilifier.ApiDriver.MonoCecil;
-using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.AST;
-using Cecilifier.Core.Misc;
-using Cecilifier.Core.Tests.Tests.Unit.Framework;
 using Cecilifier.Core.Variables;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -84,9 +81,9 @@ namespace Cecilifier.Core.Tests.Tests.Unit
 
                     @"var l_l_3 = new VariableDefinition(assembly.MainModule.TypeSystem.Int32);
 			m_lambda_0_55_0.Body.Variables.Add(l_l_3);
-			il_lambda_0_55_2.Emit(OpCodes.Ldc_I4, 42);
-			il_lambda_0_55_2.Emit(OpCodes.Stloc, l_l_3);
-			il_lambda_0_55_2.Emit(OpCodes.Ret);").SetName("Lambda Without Explicit Return"),
+			il_lambda_0_55_1.Emit(OpCodes.Ldc_I4, 42);
+			il_lambda_0_55_1.Emit(OpCodes.Stloc, l_l_3);
+			il_lambda_0_55_1.Emit(OpCodes.Ret);").SetName("Lambda Without Explicit Return"),
 
                 new TestCaseData(
                     @"Func<int, int> f = i => { int l = i; return l; };",
@@ -94,12 +91,12 @@ namespace Cecilifier.Core.Tests.Tests.Unit
                     @"//int l = i;
 			var l_l_3 = new VariableDefinition(assembly.MainModule.TypeSystem.Int32);
 			m_lambda_0_58_0.Body.Variables.Add(l_l_3);
-			il_lambda_0_58_2.Emit(OpCodes.Ldarg_0);
-			il_lambda_0_58_2.Emit(OpCodes.Stloc, l_l_3);
+			il_lambda_0_58_1.Emit(OpCodes.Ldarg_0);
+			il_lambda_0_58_1.Emit(OpCodes.Stloc, l_l_3);
 
 			//return l;
-			il_lambda_0_58_2.Emit(OpCodes.Ldloc, l_l_3);
-			il_lambda_0_58_2.Emit(OpCodes.Ret);").SetName("Local Variable Initialization"),
+			il_lambda_0_58_1.Emit(OpCodes.Ldloc, l_l_3);
+			il_lambda_0_58_1.Emit(OpCodes.Ret);").SetName("Local Variable Initialization"),
 
                 new TestCaseData(
                     @"Func<int, int> f = i => { int l; l = i; return l; };",
@@ -109,12 +106,12 @@ namespace Cecilifier.Core.Tests.Tests.Unit
 			m_lambda_0_58_0.Body.Variables.Add(l_l_3);
 
 			//l = i;
-			il_lambda_0_58_2.Emit(OpCodes.Ldarg_0);
-			il_lambda_0_58_2.Emit(OpCodes.Stloc, l_l_3);
+			il_lambda_0_58_1.Emit(OpCodes.Ldarg_0);
+			il_lambda_0_58_1.Emit(OpCodes.Stloc, l_l_3);
 
 			//return l;
-			il_lambda_0_58_2.Emit(OpCodes.Ldloc, l_l_3);
-			il_lambda_0_58_2.Emit(OpCodes.Ret);").SetName("Local Variable Assignment"),
+			il_lambda_0_58_1.Emit(OpCodes.Ldloc, l_l_3);
+			il_lambda_0_58_1.Emit(OpCodes.Ret);").SetName("Local Variable Assignment"),
 
                 new TestCaseData(
                     @"Func<int, int> f = i => { int l = i + 1; return l; };",
@@ -122,14 +119,14 @@ namespace Cecilifier.Core.Tests.Tests.Unit
                     @"//int l = i + 1;
 			var l_l_3 = new VariableDefinition(assembly.MainModule.TypeSystem.Int32);
 			m_lambda_0_58_0.Body.Variables.Add(l_l_3);
-			il_lambda_0_58_2.Emit(OpCodes.Ldarg_0);
-			il_lambda_0_58_2.Emit(OpCodes.Ldc_I4, 1);
-			il_lambda_0_58_2.Emit(OpCodes.Add);
-			il_lambda_0_58_2.Emit(OpCodes.Stloc, l_l_3);
+			il_lambda_0_58_1.Emit(OpCodes.Ldarg_0);
+			il_lambda_0_58_1.Emit(OpCodes.Ldc_I4, 1);
+			il_lambda_0_58_1.Emit(OpCodes.Add);
+			il_lambda_0_58_1.Emit(OpCodes.Stloc, l_l_3);
 
 			//return l;
-			il_lambda_0_58_2.Emit(OpCodes.Ldloc, l_l_3);
-			il_lambda_0_58_2.Emit(OpCodes.Ret);").SetName("Local Variable Initialization With Expression"),
+			il_lambda_0_58_1.Emit(OpCodes.Ldloc, l_l_3);
+			il_lambda_0_58_1.Emit(OpCodes.Ret);").SetName("Local Variable Initialization With Expression"),
 
                 new TestCaseData(
                     @"Func<int, int> f = i => { int l = i; l = l + 1; return l; };",
@@ -137,18 +134,18 @@ namespace Cecilifier.Core.Tests.Tests.Unit
                     @"//int l = i;
 			var l_l_3 = new VariableDefinition(assembly.MainModule.TypeSystem.Int32);
 			m_lambda_0_58_0.Body.Variables.Add(l_l_3);
-			il_lambda_0_58_2.Emit(OpCodes.Ldarg_0);
-			il_lambda_0_58_2.Emit(OpCodes.Stloc, l_l_3);
+			il_lambda_0_58_1.Emit(OpCodes.Ldarg_0);
+			il_lambda_0_58_1.Emit(OpCodes.Stloc, l_l_3);
 
 			//l = l + 1;
-			il_lambda_0_58_2.Emit(OpCodes.Ldloc, l_l_3);
-			il_lambda_0_58_2.Emit(OpCodes.Ldc_I4, 1);
-			il_lambda_0_58_2.Emit(OpCodes.Add);
-			il_lambda_0_58_2.Emit(OpCodes.Stloc, l_l_3);
+			il_lambda_0_58_1.Emit(OpCodes.Ldloc, l_l_3);
+			il_lambda_0_58_1.Emit(OpCodes.Ldc_I4, 1);
+			il_lambda_0_58_1.Emit(OpCodes.Add);
+			il_lambda_0_58_1.Emit(OpCodes.Stloc, l_l_3);
 
 			//return l;
-			il_lambda_0_58_2.Emit(OpCodes.Ldloc, l_l_3);
-			il_lambda_0_58_2.Emit(OpCodes.Ret);").SetName("Local Variable In Expression"),
+			il_lambda_0_58_1.Emit(OpCodes.Ldloc, l_l_3);
+			il_lambda_0_58_1.Emit(OpCodes.Ret);").SetName("Local Variable In Expression"),
             };
         }
 
